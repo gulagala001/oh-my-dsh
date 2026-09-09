@@ -17,6 +17,7 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   const root = mkdtempSync(join(tmpdir(), 'trisoul-x-dsh-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   mkdirSync(home); mkdirSync(workspace); mkdirSync(join(workspace, '.agents', 'skills', 'test-skill'), { recursive: true });
   writeFileSync(join(workspace, '.agents', 'skills', 'test-skill', 'SKILL.md'), '---\nname: test-skill\ndescription: Verify a fixture.\n---\nInclude SKILL_FIXTURE in the result.\n');
+  writeFileSync(join(workspace, 'verify.mjs'), 'import {readFileSync} from "node:fs";import assert from "node:assert/strict";assert.ok(readFileSync("fixture.txt","utf8").startsWith("ORIGINAL_FIXTURE_42"));console.log("VERIFIED_LEDGER_FIXTURE")');
   writeFileSync(join(workspace, 'AGENTS.md'), 'Project instruction marker: PROJECT_FIXTURE.\n');
   const payloads = [], content = 'ORIGINAL_FIXTURE_42\n' + 'source material '.repeat(600);
   let calls = 0, recallRange, recallReply;
@@ -32,10 +33,12 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
     else if (recallRange) {
       tool('recall', { query: 'original fixture', from: recallRange.from, to: recallRange.to }); recallRange = null; recallReply = true;
     } else if (recallReply) { chunk({ role: 'assistant', content: 'Original record retrieved.' }, 'stop'); }
-    else if (calls++ === 0) tool('todo_write', { todos: [{ content: 'Write and verify the fixture.', status: 'in_progress', source: 'Run native fixture tools.', verification: { method: 'Read fixture.txt and check ORIGINAL_FIXTURE_42.' } }] });
+    else if (calls++ === 0) tool('todo_write', { op: 'excerpt', from: 'Run native fixture tools.', to: 'Run native fixture tools.', tasks: [{ title: 'Write and verify the fixture.', anchor: { from: 'Run native fixture tools.', to: 'Run native fixture tools.' } }] });
     else if (calls === 2) tool('write', { file_path: 'fixture.txt', content });
     else if (calls <= 7) tool('read', { file_path: 'fixture.txt' });
-    else if (calls === 8) tool('todo_write', { todos: [{ content: 'Write and verify the fixture.', status: 'completed', source: 'Run native fixture tools.', verification: { method: 'Read fixture.txt and check ORIGINAL_FIXTURE_42.', result: 'Read the actual fixture.txt; ORIGINAL_FIXTURE_42 is present.' } }] });
+    else if (calls === 8) tool('todo_write', { op: 'link', links: [{ task: 'T1', kind: 'test', path: 'verify.mjs', cmd: 'node verify.mjs' }] });
+    else if (calls === 9) tool('todo_write', { op: 'run', tasks: ['T1'] });
+    else if (calls === 10) tool('todo_write', { op: 'check', updates: [{ id: 'T1', done: true }] });
     else { chunk({ role: 'assistant', content: 'Native tools completed.' }, 'stop'); }
     res.write(`data: ${JSON.stringify({ id: 'fixture', choices: [], usage: { prompt_tokens: 200, completion_tokens: 50, total_tokens: 250 } })}\n\n`);
     res.end('data: [DONE]\n\n');
@@ -65,14 +68,15 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   assert.equal((await api('/scope' + q)).locked, false);
   await api('/scope' + q, { scope: 'project' });
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: id, mode: 'queue', content: [{ type: 'text', text: 'Run native fixture tools.' }], clientTimeZone: 'Asia/Shanghai' });
-  const state = await until(async () => { const s = await api('/state' + q); return s.running === 'idle' && s.context?.digestCount && !s.live && s.metrics.main?.calls >= 9 && s; });
+  const state = await until(async () => { const s = await api('/state' + q); return s.running === 'idle' && s.context?.digestCount && !s.live && s.metrics.main?.calls >= 11 && s; });
   assert.equal(readFileSync(join(workspace, 'fixture.txt'), 'utf8'), content);
   assert.equal((await api('/scope' + q)).scope, 'project'); assert.equal((await api('/scope' + q)).locked, true);
   const locked = await fetch(base + '/trisoul-x/api/scope' + q, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ scope: 'full' }) }); assert.equal(locked.status, 409);
   await api('/settings', { memoryScope: 'full' }); assert.equal((await api('/scope' + q)).scope, 'project');
   assert.ok(state.actions.injections); assert.ok(state.metrics.background.calls);
   assert.equal(state.tasks.length, 1); assert.equal(state.tasks[0].status, 'completed');
-  assert.match(state.tasks[0].verification.result, /actual fixture.txt/);
+  assert.equal(state.tasks[0].links[0].lastRun.pass, true); assert.match(state.tasks[0].links[0].lastRun.tail, /VERIFIED_LEDGER_FIXTURE/);
+  assert.equal(state.tasks[0].id, 'T1'); assert.equal(state.tasks[0].source, 'Run native fixture tools');
   const names = payloads.find(p => p.tools?.some(t => t.function.name === 'read')).tools.map(t => t.function.name);
   for (const name of ['read', 'write', 'edit', 'glob', 'grep', 'bash', 'skill', 'subagent', 'note', 'recall', 'todo_write', 'web_fetch']) assert.ok(names.includes(name), 'missing tool ' + name);
   assert.ok(names.some(n => n.startsWith('job_'))); assert.ok(!names.some(n => /vote|submit_draft/.test(n)));
@@ -92,6 +96,6 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   assert.ok(payloads.some(p => p.messages.some(m => m.role === 'tool' && typeof m.content === 'string' && m.content.includes('ORIGINAL_FIXTURE_42'))));
   assert.ok(payloads.some(p => JSON.stringify(p.messages).includes('Working state')));
   const continued = await api('/state' + q); assert.equal(continued.tasks[0].status, 'completed');
-  assert.match(continued.tasks[0].verification.result, /actual fixture.txt/);
+  assert.equal(continued.tasks[0].links[0].lastRun.pass, true); assert.match(continued.tasks[0].links[0].lastRun.tail, /VERIFIED_LEDGER_FIXTURE/);
   assert.ok(!log.includes('cannot get property'), log.replace(/token=\S+/g, 'token=[redacted]'));
 });

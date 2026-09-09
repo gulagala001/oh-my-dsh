@@ -1,4 +1,4 @@
-import { MAIN_PERSONA, REPLY_GUIDE, NOTE_GUIDE } from './prompts.mjs';
+import { MAIN_PERSONA, NOTE_GUIDE } from './prompts.mjs';
 import { Canvas } from './canvas.mjs';
 import { eventText, sessionEvents, substantive } from './hub.mjs';
 import { registerTasks } from './tasks.mjs';
@@ -7,11 +7,11 @@ export const inject = ['trisoulX', 'systemPrompt', 'tools', 'llm', 'tokenMeter',
 const result = { schema: { type: 'string' }, render: (_args, text) => [{ type: 'text', text }] };
 export function apply(ctx) {
   const hub = ctx.trisoulX;
-  ctx.systemPrompt.section({ name: 'trisoul-x:persona', order: 0, text: ['You are trisoul_x.', MAIN_PERSONA, REPLY_GUIDE, "Respond in the user's language."].join('\n\n') });
+  ctx.systemPrompt.section({ name: 'trisoul-x:persona', order: 0, text: ['You are trisoul_x.', MAIN_PERSONA, "Respond in the user's language."].join('\n\n') });
   const canvas = new Canvas(ctx, hub);
   hub.canvas = canvas;
   ctx.effect(() => () => { if (hub.canvas === canvas) hub.canvas = undefined; });
-  registerTasks(ctx);
+  hub.todoStore = registerTasks(ctx);
   ctx.tools.register({ name: 'note', description: NOTE_GUIDE,
     parameters: { type: 'object', properties: { text: { type: 'string', description: 'Note content' } }, required: ['text'] }, output: result,
     async execute({ text }, { agent }) { const state = hub.store.state(agent.session.id); state.notes.push({ text, at: Date.now() }); hub.store.save(state); return text; },

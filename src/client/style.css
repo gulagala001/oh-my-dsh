@@ -38,3 +38,6 @@
 .tx-frame span:first-child { overflow-wrap: anywhere; }
 .tx-live { font-weight: 400; color: var(--dsw-alias-text-secondary); }
 .tx-panel summary { cursor: pointer; }
+
+.tx-evidence { margin: 12px 0 0; border-left: 2px solid var(--dsw-alias-border-l3); padding-left: 12px; }
+.tx-evidence pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }

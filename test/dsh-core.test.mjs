@@ -9,8 +9,8 @@ import { Hub, SCRIBE, message, eventText } from '../src/hub.mjs';
 import { HubStore } from '../src/hub-store.mjs';
 import { Canvas, selectRegion } from '../src/canvas.mjs';
 import { Config } from '../src/config.mjs';
-import { registerTasks, currentTasks } from '../src/tasks.mjs';
-import { MAIN_PERSONA, MEMORY_CONSTITUTION, SURGEON_SYSTEM, OPS_DESC, TASK_GUIDE, TASK_VERIFY_GUIDE } from '../src/prompts.mjs';
+import { TASK_DESCRIPTION } from '../src/tasks.mjs';
+import { MAIN_PERSONA, MEMORY_CONSTITUTION, SURGEON_SYSTEM, OPS_DESC } from '../src/prompts.mjs';
 
 function setup(t) {
   const dir = mkdtempSync(join(tmpdir(), 'trisoul-x-core-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
@@ -38,31 +38,13 @@ const condensed = { blocks: [{ type: 'text', text: 'Done: read source material. 
 test('original persona passages, memory constitution and surgeon remain intact', () => {
   const original = JSON.parse(readFileSync(new URL('./fixtures/prompt-origin.json', import.meta.url), 'utf8'));
   const a = original.personas.align.split('\n\n'), b = original.personas.erudite.split('\n\n'), c = original.personas.empiric.split('\n\n');
-  const autonomy = b[2].replace("The user is not watching in real time and cannot answer questions mid-task, so asking 'Want me to…?' or 'Shall I…?' will block the work. ", '');
-  for (const passage of [a[0], a[3], a[4], b[0], b[1], autonomy, b[5], c[5]]) assert.ok(MAIN_PERSONA.includes(passage));
+  for (const passage of [a[0], a[3], a[4], a[5], b[0], b[1], b[2], c[5]]) assert.ok(MAIN_PERSONA.includes(passage));
   assert.equal(MEMORY_CONSTITUTION, original.constitution); assert.equal(SURGEON_SYSTEM, original.surgeon);
   assert.deepEqual(OPS_DESC, { ...original.ops, ops: original.ops.ops.replace(' (the curation job cleans it up)', '') });
   assert.ok(!SCRIBE.includes('Output JSON (JSON only)'));
-  assert.ok(TASK_GUIDE.includes(original.todo.replace("The todo list's completion marker. ", '').replace(' (remove:[ids])', '').replace('your draft.', 'your reply.')));
-  for (const paragraph of original.verify.split('\n\n').slice(2, 4)) assert.ok(TASK_VERIFY_GUIDE.includes(paragraph));
-});
-
-test('one task snapshot holds requirement, progress and verification across turns and replay', async t => {
-  const { session, agent, hub } = setup(t); let tool, projection;
-  registerTasks({ tools: { register(value) { tool = value; } }, sessionProjections: { register(value) { projection = value; } } });
-  session.append('turn/start', { turn: 1 });
-  const todos = [{ content: 'Complete the fixture.', status: 'in_progress', source: 'My original requirement.', verification: { method: 'Read actual fixture.txt.' } }];
-  await tool.execute({ todos }, { agent }); hub.observe(session, session.snapshotEvents().at(-1));
-  todos[0] = { ...todos[0], status: 'completed', verification: { ...todos[0].verification, result: 'Read fixture.txt: 42.' } };
-  await tool.execute({ todos }, { agent }); hub.observe(session, session.snapshotEvents().at(-1));
-  session.append('turn/end', { turn: 1, reason: { kind: 'completed' } }); session.append('turn/start', { turn: 2 });
-  assert.deepEqual(projection.apply(todos, { type: 'turn/start' }), todos);
-  const replay = Session.create(session.id, session.snapshotEvents(), session.header);
-  assert.deepEqual(currentTasks(replay), todos);
-  hub.publish(agent); assert.ok(session.deriveMessages().some(m => JSON.stringify(m).includes('Read fixture.txt: 42.')));
-  // A missing verification record remains visible as missing; it is not a programmatic completion gate.
-  await tool.execute({ todos: [{ content: 'A completed task without a recorded check.', status: 'completed' }] }, { agent });
-  assert.equal(currentTasks(session)[0].status, 'completed');
+  assert.ok(TASK_DESCRIPTION.includes(original.todo.replaceAll('your draft', 'your reply')));
+  assert.ok(TASK_DESCRIPTION.includes(original.taskMap.replace('use the todo tool', 'use op:check').replaceAll('your draft', 'your reply')));
+  assert.ok(TASK_DESCRIPTION.includes(original.verify));
 });
 
 test('memory scope, atomic batches, versions, restoration and per-session usage survive reload', t => {

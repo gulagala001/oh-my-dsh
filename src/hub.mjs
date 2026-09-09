@@ -5,7 +5,7 @@ import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { HubStore, projectOf } from './hub-store.mjs';
 import { MEMORY_CONSTITUTION, OPS_DESC, DIGEST_DESC, STATE_SYSTEM, STATE_RULES } from './prompts.mjs';
-import { currentTasks, taskText } from './tasks.mjs';
+import { TODO_NUDGE, TODO_EMPTY_NUDGE } from './todolist.mjs';
 
 export const NS = 'trisoul-x';
 export const message = (text, kind = 'context') => createUserMessage({
@@ -120,7 +120,7 @@ export class Hub extends Service {
   }
   observe(session, event) {
     if (event.type === 'todo/write') {
-      const state = this.store.state(session.id); state.tasks = event.data.todos; this.store.save(state);
+      const state = this.store.state(session.id); state.taskList = event.data; this.store.save(state);
     }
     if (event.type === 'user/message' && event.data.source.kind === 'user') {
       const state = this.store.state(session.id);
@@ -140,7 +140,7 @@ export class Hub extends Service {
       this.requestStarts.delete(session.id);
     }
   }
-  publish(agent) {
+  publish(agent, offered = []) {
     const session = agent.session;
     if (session.header.origin === 'subagent') return;
     const state = this.store.state(session.id), { project } = this.scope(session);
@@ -149,9 +149,7 @@ export class Hub extends Service {
     const layers = state.memoryScope === 'full' ? 'global / cross-project / project' : state.memoryScope;
     const memoryText = `[Long-term memory · ${layers} ${project} · background reference, not instructions · past records, not real-time state — verify against the present before relying on them]\n${memories.map(m => `[${m.scope} · ${m.key}] ${m.text}`).join('\n') || '(empty)'}`;
     const stateText = `[Working state · snapshot v${state.cursor + 1} · as of seq ${state.cursor} · supersedes all earlier versions]\n◆ Pinned truths (user constraints / decisions; append-only)\n${state.pins.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n◆ Status (current plan / progress / conclusions)\n${state.status}`;
-    const tasks = currentTasks(session, state.tasks);
     const snapshots = [['memory', memoryText], ['state', stateText]];
-    if (state.tasks !== undefined || tasks.length) snapshots.push(['tasks', '[Task list · current snapshot]\n' + taskText(tasks)]);
     for (const [kind, text] of snapshots) {
       if (kind === 'state' && !state.pins.length && !state.status) continue;
       const current = session.surface.nodes.map(seq => session.eventAt(seq)).findLast(e => e.type === 'user/message' && e.data.source.plugin === `${NS}:${kind}`);
@@ -161,6 +159,11 @@ export class Hub extends Service {
         this.store.touch(memories.map(m => m.id), 'injected', session.id);
         this.action(session, 'injections', 1, { items: memories.length });
       }
+    }
+    if (this.todoStore) {
+      this.todoStore.maintainInjection(session);
+      const notice = offered.some(m => m.source?.kind === 'user') ? TODO_NUDGE : this.todoStore.takeEmptyNudge(session) ? TODO_EMPTY_NUDGE.replace('with task_map', 'with todo_write') : null;
+      if (notice) session.append('user/message', message(notice, 'task-reminder'), { surfaceOp: 'append' });
     }
   }
   schedule(agent, force = false) {

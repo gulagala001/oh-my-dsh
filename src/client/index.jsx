@@ -79,11 +79,17 @@ function ContextPanel({ sessionId, useTabInfo }) {
   const compact = async () => { setStatus('正在整理…'); try { const r = await api(`/compact${suffix(sessionId)}`, {}); setStatus(r.changed ? '已整理，原文仍可回捞' : '目前没有适合整理的较早区间'); await reload(); } catch (e) { setStatus(e.message); } };
   return <div className="tx-panel"><h2>工作上下文</h2><p className="tx-muted">{data?.live ? `${kindName[data.live.kind]}正在更新…` : `已消化 ${fmt(context?.digestCount)} 个区间`}</p>
     {error && <p role="alert" className="tx-error">{error}</p>}
-    <h3>任务与验证</h3>{data?.tasks?.length ? data.tasks.map((task, i) => <article className="tx-note" key={i}>
-      <div className="tx-meta">{({ pending: '待开始', in_progress: '进行中', completed: '已完成' })[task.status]}</div><strong>{task.content}</strong>
-      {task.source && <p className="tx-muted">需求原文：{task.source}</p>}
-      {task.verification ? <><p>验证方式：{task.verification.method}</p><p className={task.verification.result ? '' : 'tx-muted'}>验证结果：{task.verification.result || '待验证'}</p></> : <p className="tx-muted">尚未记录验证方式。</p>}
-    </article>) : <p className="tx-muted">多步骤任务会在这里列出计划、进展与验证结果。</p>}
+    <h3>任务与验证</h3>{data?.tasks?.length ? data.tasks.map((task, i) => <article className="tx-note" key={task.id || i}>
+      <div className="tx-meta">{task.id} · {task.status === 'completed' ? '已完成' : '未完成'}</div><strong>{task.content}</strong>
+      {task.anchor ? <p className="tx-muted">需求原文 [{task.sourceMessage}] · {task.sourceExcerpt}：{task.source}</p> : <p className="tx-muted">旧版任务尚未绑定原文锚点。{task.source && '原备注：' + task.source}</p>}
+      {task.links?.length ? task.links.map(link => <div className="tx-evidence" key={link.id}>
+        <div className="tx-meta">{link.id} · {link.kind === 'test' ? '测试' : '文字证据'}{link.kind === 'test' && ' · ' + (link.lastRun ? link.lastRun.timedOut ? 'TIMEOUT' : link.lastRun.pass ? 'PASS' : 'FAIL' : '尚未运行')}</div>
+        {link.path && <div className="tx-path">{link.path}</div>}{link.cmd && <pre>{link.cmd}</pre>}
+        {link.note && <p>{link.note}</p>}{link.reason && <p className="tx-muted">原因：{link.reason}</p>}
+        {link.lastRun?.tail && <details><summary>实际运行输出</summary><pre>{link.lastRun.tail}</pre></details>}
+      </div>) : <p className="tx-muted">尚未关联验证证据。</p>}
+      {task.verification && <details><summary>旧版验证文字记录</summary><p>{task.verification.method}</p><p>{task.verification.result}</p></details>}
+    </article>) : <p className="tx-muted">多步骤任务会在这里列出需求原文、进展与验证证据。</p>}
     <h3>约束与决定</h3>{context?.pins?.length ? <ul>{context.pins.map((p, i) => <li key={i}>{p}</li>)}</ul> : <p className="tx-muted">随对话逐步积累。</p>}
     <h3>当前状态</h3><div className="tx-prose">{context?.status || '尚未形成状态记录。'}</div>
     {context?.notes?.length > 0 && <><h3>工作笔记</h3>{context.notes.map((note, i) => <div className="tx-note" key={i}>{note.text}</div>)}</>}

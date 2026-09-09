@@ -32,7 +32,7 @@ dsh plugin --profile YOUR_PROFILE add link:/absolute/path/to/trisoul_x
 - **工作上下文**：右侧栏查看任务与验证、约束、状态、笔记与工作纪要，也可手动整理较早上下文。
 - **记忆**：当前会话或整个记忆库，支持内容/项目/层级筛选、编辑、版本恢复、批量删除与恢复、注入及召回记录。
 - **执行监控**：当前会话及子代理或全部会话，查看主执行、子代理、记忆后台、整理后台的用量、缓存、失败、耗时、上下文组成及记忆动作。
-- **任务与验证**：一个 `todo_write` 维护完整任务列表，每条任务包含内容、状态、需求原话及验证方式/实际结果。以 DSH `todo/write` 事件持久化，原生清单和工作上下文面板共用同一份记录，继续对话仍可查看。
+- **任务与验证**：一个 `todo_write` 合并原 `task_map` / `todo` / `verify_link` 操作，保留原文摘录、必需锚点、稳定任务/证据 ID、按项编辑和勾选。编辑任务会自动取消完成并清除旧证据；测试或文字证据可挂接、执行、撤销和查看。以 DSH `todo/write` 事件持久化，原生清单和工作上下文面板共用同一份记录，继续对话仍可查看。
 - **通用工具**：文件读写和搜索、Shell、后台作业、网页、技能、按需子代理、目标和工作流由 DSH 提供。细节沿用宿主“轨迹”、设置和工具卡片。
 - **记忆与画布**：后台原生工具提交 digest、约束、状态和记忆操作；优先整理已消化并释放的区间。用户原话与近期工具往返保留，原始事件可通过 `recall` 回捞。
 
@@ -46,7 +46,8 @@ dsh plugin --profile YOUR_PROFILE add link:/absolute/path/to/trisoul_x
 | --- | --- |
 | `cordis.patch.yml` / `presets/` | 宿主安装补丁与 Agent 组合 |
 | `src/index.mjs` / `src/dsh-agent.mjs` | 插件接入、事件、设置和普通扩展工具 |
-| `src/tasks.mjs` | 任务定义、状态与验证的统一记录 |
+| `src/todolist.mjs` | 原版摘录、锚点、任务状态、验证链接与测试运行 |
+| `src/tasks.mjs` | 原任务操作、勾选与验证入口的合并 |
 | `src/prompts.mjs` | 原文融合及必要接口适配 |
 | `src/hub.mjs` / `src/hub-store.mjs` | 后台记忆、范围、状态、版本与统计 |
 | `src/canvas.mjs` | DSH V3 上下文区间整理 |
@@ -59,4 +60,4 @@ dsh plugin --profile YOUR_PROFILE add link:/absolute/path/to/trisoul_x
 
 [提示词逐项对照及改动原因](PROMPT_CHANGES.md)，[工作约定](AGENTS.md)，[上游许可](THIRD_PARTY_NOTICES.md)。
 
-`pnpm test` 使用临时目录、本地模拟模型和真实 DSH profile，不调用付费模型。覆盖原文保留、范围绑定与隔离、记忆版本和失败回退、原生工具与项目指令/技能目录、V3 整理与原文回捞、统一任务记录和跨轮恢复。另已使用用户授权的 DeepSeek v4 flash 完成真实文件、技能、子代理和记忆后台联调。
+`pnpm test` 使用临时目录、本地模拟模型和真实 DSH profile，不调用付费模型。覆盖原文保留、范围绑定与隔离、原文锚点与歧义消解、按项操作及编辑联动、真实验证运行与取消、记忆版本和失败回退、原生工具与项目指令/技能目录、V3 整理与原文回捞、统一任务记录和跨轮恢复。另已使用用户授权的 DeepSeek v4 flash 完成真实文件、技能、子代理和记忆后台联调。

@@ -25,9 +25,9 @@ export function apply(ctx, config) {
     hub.requestStarts.set(agent.session.id, Date.now());
     return next();
   }, { global: true });
-  ctx.on('agent/pre-step', async ({ agent, signal }, next) => {
+  ctx.on('agent/pre-step', async ({ agent, messages, signal }, next) => {
     if (agent.session.header.agentPreset === 'trisoul-x' && !signal.aborted) {
-      hub.publish(agent);
+      hub.publish(agent, messages);
       try { await hub.canvas.compactIfNeeded(agent, 'pressure', signal); }
       catch (error) { if (!signal.aborted) ctx.logger.warn(`上下文整理：${error.message}`); }
     }
@@ -86,7 +86,7 @@ export function apply(ctx, config) {
           send(res, 200, {
             config: hub.config(), directory, metrics, actions, sessionCount: all.length,
             context: stored ? { pins: stored.pins, status: stored.status, notes: stored.notes, checkpoint: stored.checkpoint, cursor: stored.cursor, digestCount: stored.digests.length } : null,
-            tasks: currentTasks(session, stored?.tasks),
+            tasks: currentTasks(session, stored?.taskList ?? stored?.tasks),
             activity: all.flatMap(s => s.activity).sort((a, b) => b.at - a.at).slice(0, 60),
             live: id ? ([...hub.live.values()].find(call => call.sessionId === id) ?? null) : [...hub.live.values()],
             liveCalls: [...hub.live.values()].filter(call => !id || url.searchParams.get('range') === 'all' || ids.has(call.sessionId)),
