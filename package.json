@@ -4,7 +4,15 @@
   "private": true,
   "type": "module",
   "description": "从最小核心构建的通用 Agent：单模型执行、上下文与记忆",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "dev": "node --watch src/server.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@earendil-works/pi-ai": "0.82.1"
+  },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.19"
   }
 }

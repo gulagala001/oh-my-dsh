@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark"><title>trisoul_x</title>
+  <link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script>
+</head>
+<body>
+  <aside id="sidebar">
+    <a class="brand" href="/" aria-label="trisoul_x 首页"><span class="brand-mark">x</span><span>trisoul<span class="brand-x">_x</span></span></a>
+    <button id="new-chat" class="new-chat"><span>＋</span>新对话<span class="key-hint">⌘ K</span></button>
+    <div class="sidebar-label">对话</div><nav id="session-list" aria-label="历史对话"></nav>
+    <div class="sidebar-bottom"><span class="small-dot"></span><span>本地工作空间</span></div>
+  </aside>
+  <main>
+    <header class="topbar">
+      <button id="menu" class="icon-button mobile-only" aria-label="切换对话列表">☰</button>
+      <div class="session-heading"><span id="session-title">新对话</span><span id="header-cwd"></span></div>
+      <div class="header-actions"><button id="context-toggle" class="quiet-button" aria-expanded="false">工作空间</button><button id="settings-open" class="icon-button" aria-label="设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2.5"/><circle cx="15" cy="17" r="2.5"/></svg></button></div>
+    </header>
+    <div id="scroll-area">
+      <section id="welcome"><div class="welcome-mark">x</div><div class="eyebrow">TRISOUL_X</div><h1>从一个想法开始。</h1><p>把任务交给我，一起往前推进。</p></section>
+      <section id="messages" aria-label="对话内容"></section>
+    </div>
+    <div class="composer-wrap">
+      <div id="run-status" role="status" aria-live="polite"></div>
+      <form id="composer"><label class="sr-only" for="message-input">消息</label><textarea id="message-input" rows="2" placeholder="描述任务，或接着聊…"></textarea><div class="composer-bottom"><button id="cwd-open" type="button" class="directory-button" aria-label="选择工作目录"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5h6l2 2h8v9H2z"/></svg><span id="cwd-label">工作目录</span></button><div class="composer-actions"><span id="model-label">未配置模型</span><button id="send" type="submit" aria-label="发送消息">↑</button></div></div></form>
+      <div class="composer-caption"><span>Enter 发送 · Shift + Enter 换行</span><span id="usage-label"></span></div>
+    </div>
+  </main>
+  <aside id="workspace" hidden>
+    <div class="workspace-header"><span>工作空间</span><button id="context-close" class="icon-button" aria-label="关闭工作空间">×</button></div>
+    <div class="tabs" role="tablist" aria-label="工作空间内容"><button data-panel="context" class="active" role="tab" aria-selected="true">上下文</button><button data-panel="memory" role="tab" aria-selected="false">记忆</button><button data-panel="tasks" role="tab" aria-selected="false">任务</button></div>
+    <div id="workspace-content"></div>
+  </aside>
+  <dialog id="settings-dialog">
+    <form id="settings-form"><div class="dialog-heading"><div><h2>模型设置</h2><p>连接你的模型，开始工作。</p></div><button type="button" class="icon-button dialog-close" aria-label="关闭设置">×</button></div>
+      <fieldset data-route="main"><legend>主模型</legend><label>协议<select name="api"><option value="openai-completions">OpenAI 兼容 · Chat Completions</option><option value="openai-responses">OpenAI Responses</option><option value="anthropic-messages">Anthropic Messages</option><option value="google-generative-ai">Google Gemini</option></select></label><label>API 地址<input name="baseUrl" type="url" placeholder="https://…/v1" required></label><div class="form-row"><label>模型<input name="model" placeholder="模型 ID" required></label><label>API Key<input name="apiKey" type="password" autocomplete="off" placeholder="输入密钥"></label></div><details class="advanced"><summary>模型参数</summary><div class="form-row"><label>上下文窗口<input name="contextWindow" type="number" min="1"></label><label>最大输出<input name="maxTokens" type="number" min="1"></label></div><label>思考强度<select name="reasoning"><option value="">模型默认</option><option value="low">低</option><option value="medium">中</option><option value="high">高</option><option value="xhigh">更高</option><option value="max">最高</option></select></label></details></fieldset>
+      <label class="check-row"><input id="same-model" type="checkbox" checked>上下文与记忆使用同一模型</label>
+      <fieldset data-route="background" hidden><legend>后台模型</legend><label>协议<select name="api"><option value="openai-completions">OpenAI 兼容 · Chat Completions</option><option value="openai-responses">OpenAI Responses</option><option value="anthropic-messages">Anthropic Messages</option><option value="google-generative-ai">Google Gemini</option></select></label><label>API 地址<input name="baseUrl" type="url" placeholder="https://…/v1"></label><div class="form-row"><label>模型<input name="model" placeholder="模型 ID"></label><label>API Key<input name="apiKey" type="password" autocomplete="off" placeholder="输入密钥"></label></div></fieldset>
+      <p id="settings-error" class="form-error" role="alert"></p><div class="dialog-footer"><button type="button" class="quiet-button dialog-close">取消</button><button type="submit" class="primary-button">保存设置</button></div>
+    </form>
+  </dialog>
+  <dialog id="cwd-dialog"><form id="cwd-form"><div class="dialog-heading"><h2>工作目录</h2><button type="button" class="icon-button dialog-close" aria-label="关闭工作目录">×</button></div><label>本机目录<input id="cwd-input" placeholder="/path/to/project" required></label><p class="form-hint">在这个目录开始新对话。</p><p id="cwd-error" class="form-error" role="alert"></p><div class="dialog-footer"><button type="submit" class="primary-button">开始新对话</button></div></form></dialog>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
