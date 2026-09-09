@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Menu } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Menu } from '@deepseek-ai/dsh-client-ui-primitives';
 import css from './style.css';
 
 const api = async (path, value) => {
@@ -23,7 +23,7 @@ function MemoryScopeChip({ sessionId, useSessions }) {
   const pick = async scope => { setOpen(false); try { setState(await api('/scope' + suffix(sessionId), { scope })); setError(''); } catch (e) { setError(e.message); await load(); } };
   if (!state) return null;
   const locked = state.locked || current?.blank === false;
-  const chip = <button type="button" className="tx-scope-chip" title={error || (locked ? '本会话已绑定记忆范围' : '选择新会话的记忆范围')} aria-label={'记忆范围：' + labels[state.scope]} aria-haspopup={locked ? undefined : 'menu'} aria-expanded={locked ? undefined : open} onClick={() => { if (!locked) { void load(); setOpen(!open); } }}><span>记忆</span><strong>{labels[state.scope]}</strong>{!locked && <span>▾</span>}</button>;
+  const chip = <button type="button" className="tx-scope-chip" title={error || (locked ? '本会话已绑定记忆范围' : '选择新会话的记忆范围')} aria-label={'记忆范围：' + labels[state.scope]} aria-haspopup={locked ? undefined : 'menu'} aria-expanded={locked ? undefined : open} onClick={() => { if (!locked) { void load(); setOpen(!open); } }}><Icon name="memory" size={13}/><strong>{labels[state.scope]}</strong>{!locked && <span>▾</span>}</button>;
   return locked ? chip : <Menu open={open} anchor={chip} compact portal side="top" selectedId={state.scope} items={Object.entries(labels).map(([id, label]) => ({ id, label }))} onSelect={pick} onClose={() => setOpen(false)}/>;
 }
 
@@ -43,204 +43,247 @@ function useSnapshot(id, visible = true, range = 'session') {
   return { data, error, reload };
 }
 
-function RouteFields({ label, route, directory, onChange }) {
-  return <fieldset className="tx-fieldset"><legend>{label}</legend><p className="tx-muted">留空时跟随当前对话的主模型。</p>
-    <div className="tx-row"><label>提供方<select value={route.provider} onChange={e => onChange({ ...route, provider: e.target.value, model: '' })}><option value="">跟随主模型</option>{directory.map(p => <option key={p.id} value={p.id}>{p.name || p.id}</option>)}</select></label>
-      <label>模型<input list={`tx-models-${label}`} value={route.model} placeholder="跟随主模型" onChange={e => onChange({ ...route, model: e.target.value })}/><datalist id={`tx-models-${label}`}>{(directory.find(p => p.id === route.provider)?.models || []).map(m => <option key={m.id} value={m.id}/>)}</datalist></label></div>
-    <label>推理强度<select value={route.effort || 'off'} onChange={e => onChange({ ...route, effort: e.target.value })}><option value="off">关闭（模型支持时）</option><option value="inherit">提供方默认</option></select></label>
-    <label>温度<input type="number" min="0" max="2" step="0.1" value={route.temperature} onChange={e => onChange({ ...route, temperature: Number(e.target.value) })}/></label>
-  </fieldset>;
-}
 
+const compactNumber = n => Number(n || 0) >= 1000000 ? (n / 1000000).toFixed(1) + 'M' : Number(n || 0) >= 1000 ? (n / 1000).toFixed(1) + 'k' : fmt(n);
+const duration = ms => !ms ? '—' : ms >= 60000 ? `${Math.floor(ms / 60000)}m ${Math.round(ms % 60000 / 1000)}s` : `${(ms / 1000).toFixed(1)}s`;
+const shortDate = at => at ? new Date(at).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+const inputTokens = m => (m?.inputTokens || 0) + (m?.cacheReadTokens || 0) + (m?.cacheWriteTokens || 0);
+const cx = (...parts) => parts.filter(Boolean).join(' ');
+function Icon({ name, size = 16 }) {
+  const paths = {
+    settings: 'M4 7h16M4 17h16M8 4v6M16 14v6', memory: 'M8 3h8l4 4v10l-4 4H8l-4-4V7l4-4ZM9 8h6v8H9z',
+    context: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h5', monitor: 'M3 17h4l3-10 4 14 3-10h4',
+    search: 'M20 20l-5-5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0', plus: 'M12 5v14M5 12h14',
+    arrow: 'M14 5l-7 7 7 7', check: 'M5 12l4 4L19 6', close: 'M6 6l12 12M6 18L18 6',
+    filter: 'M4 7h16M7 12h10M10 17h4', pin: 'M9 3h6l-1 5 4 4v2H6v-2l4-4-1-5ZM12 14v7',
+    refresh: 'M20 7v5h-5M4 17v-5h5M5 8a7 7 0 0 1 12-3l3 3M19 16A7 7 0 0 1 7 19l-3-3',
+    chevron: 'M9 5l7 7-7 7', clock: 'M12 8v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
+    edit: 'M15 5l4 4M4 20l5-1L20 8l-4-4L5 15l-1 5Z', layers: 'M12 3l10 6-10 6L2 9l10-6ZM2 13l10 6 10-6M2 17l10 6 10-6',
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] || paths.context}/></svg>;
+}
+function Action({ children, icon, primary, quiet, className, ...props }) {
+  return <button type="button" className={cx('tx-button', primary && 'tx-primary', quiet && 'tx-quiet', !children && 'tx-icon-button', className)} {...props}>{icon && <Icon name={icon}/>} {children}</button>;
+}
+function Tabs({ value, onChange, items, label }) {
+  return <div className="tx-tabs" role="tablist" aria-label={label}>{items.map(([id, title, count]) => <button type="button" role="tab" aria-selected={value === id} key={id} onClick={() => onChange(id)}>{title}{count != null && <span>{count}</span>}</button>)}</div>;
+}
+function Segments({ value, onChange, items, label }) {
+  return <div className="tx-segments" role="group" aria-label={label}>{items.map(([id, title]) => <button key={id} type="button" aria-pressed={value === id} onClick={() => onChange(id)}>{title}</button>)}</div>;
+}
+function Header({ icon, title, subtitle, actions }) {
+  return <header className="tx-page-head"><div className="tx-title-line"><span className="tx-page-icon"><Icon name={icon} size={20}/></span><div><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div></div>{actions && <div className="tx-head-actions">{actions}</div>}</header>;
+}
+function Empty({ icon = 'layers', title, children }) { return <div className="tx-empty"><span><Icon name={icon} size={24}/></span><h3>{title}</h3>{children && <p>{children}</p>}</div>; }
+function Badge({ children, tone }) { return <span className={cx('tx-badge', tone && 'tx-' + tone)}>{children}</span>; }
+function Alert({ children, error }) { return children ? <div className={cx('tx-alert', error && 'tx-alert-error')} role={error ? 'alert' : 'status'}>{children}</div> : null; }
+function Fold({ title, subtitle, children, count, open = false }) {
+  return <details className="tx-fold" open={open || undefined}><summary><div><strong>{title}</strong>{subtitle && <small>{subtitle}</small>}</div>{count != null && <Badge>{count}</Badge>}<Icon name="chevron"/></summary><div className="tx-fold-body">{children}</div></details>;
+}
+function Toggle({ label, hint, checked, onChange }) {
+  return <label className="tx-toggle-row"><span><strong>{label}</strong>{hint && <small>{hint}</small>}</span><input type="checkbox" role="switch" checked={checked} onChange={e => onChange(e.target.checked)}/></label>;
+}
+function Numbers({ fields, config, onChange }) {
+  return <div className="tx-form-grid">{fields.map(([key, label, min = 0, step = 1, max]) => <label className="tx-field" key={key}><span>{label}</span><input type="number" min={min} step={step} max={max} value={config[key] ?? 0} onChange={e => onChange(key, Number(e.target.value))}/></label>)}</div>;
+}
+function RouteFields({ route, directory, onChange }) {
+  const list = React.useId();
+  return <div className="tx-form-grid"><label className="tx-field"><span>提供方</span><select value={route.provider} onChange={e => onChange({ ...route, provider: e.target.value, model: '' })}><option value="">跟随主模型</option>{directory.map(p => <option key={p.id} value={p.id}>{p.name || p.id}</option>)}</select></label>
+    <label className="tx-field"><span>模型</span><input list={list} value={route.model} placeholder="跟随主模型" onChange={e => onChange({ ...route, model: e.target.value })}/><datalist id={list}>{(directory.find(p => p.id === route.provider)?.models || []).map(m => <option key={m.id} value={m.id}/>)}</datalist></label>
+    <label className="tx-field"><span>推理强度</span><select value={route.effort || 'off'} onChange={e => onChange({ ...route, effort: e.target.value })}><option value="off">关闭（模型支持时）</option><option value="inherit">提供方默认</option></select></label>
+    <label className="tx-field"><span>温度</span><input type="number" min="0" max="2" step="0.1" value={route.temperature} onChange={e => onChange({ ...route, temperature: Number(e.target.value) })}/></label>
+  </div>;
+}
+const presets = { always: [3, 10000, 6], medium: [6, 20000, 10], slow: [10, 40000, 15] };
+const routeModeOf = c => (c.backgroundMode === 'unified' ? [c.unifiedBackground] : [c.background, c.canvas, c.surgeon]).every(r => !r?.provider && !r?.model && (!r?.effort || r.effort === 'off') && (r?.temperature ?? 0.7) === 0.7) ? 'follow' : c.backgroundMode;
+const advancedGroups = [
+  ['记忆消化与整理', '何时提取记忆、整理重复内容', [['digestEvery', '每批消化事件数', 1], ['flushIdleMs', '空闲间隔 · 毫秒（0 关闭）'], ['curateMinGapMs', '整理最短间隔 · 毫秒'], ['curateEvery', '每几批整理一次（0 自动）']], [['digestBatchMax', '批次事件上限'], ['digestEventChars', '单事件字符上限'], ['digestMaxTokens', '消化输出 Token 上限'], ['catchupMax', '恢复时补消化事件上限'], ['contextMemories', '记忆表条目上限'], ['recallMaxTokens', '检索输出 Token 上限'], ['curateLimit', '整理每轮条目上限'], ['curateOpsMax', '每轮操作数上限'], ['curateMaxTokens', '整理输出 Token 上限']]],
+  ['任务记忆', '补注数量、文档更新方式与频率', [['injectLimit', '开场条目数（0 不限）'], ['injectBatch', '每次补注条目数', 1], ['injectMaxPerSession', '每会话注入次数'], ['injectPickTimeoutMs', '首次检索等待 · 毫秒'], ['supplementMinSteps', '文档更新最短步数']]],
+  ['工作状态', '状态提炼的重试与资源上限', [['stateFailCooldownSteps', '失败后间隔步数'], ['stateFailLimit', '连续失败暂停压缩（0 关闭）']], [['stateBatchMax', '批次事件上限'], ['statePinnedMax', '固定约束条目上限'], ['stateEventChars', '单事件字符上限'], ['stateMaxTokens', '输出 Token 上限']]],
+  ['上下文整理', '保留范围、压缩条件与失败重试', [['keepTailEvents', '保留最近事件数', 2], ['minRegionEvents', '区间最少事件数', 1], ['surgeryFailCooldownSteps', '失败后间隔步数'], ['shadowStale', '旧快照清理数量（0 关闭）'], ['thresholdRatio', '窗口压力比例', 0.1, 0.05, 0.95]], [['thresholdChars', '固定字符阈值（0 使用比例）'], ['thresholdFallbackChars', '窗口未知时的字符阈值'], ['surgeonMaxTokens', '输出 Token 上限']]],
+  ['压缩检查', '遗漏事实的检查与补记方式', [], [['probeSourceChars', '参考材料字符上限'], ['probeMaxTokens', '输出 Token 上限'], ['probePatchChars', '材料补记字符上限']]],
+];
 function Settings() {
-  const [config, setConfig] = useState(null), [directory, setDirectory] = useState([]), [status, setStatus] = useState('');
+  const [config, setConfig] = useState(null), [directory, setDirectory] = useState([]), [status, setStatus] = useState(''), [failed, setFailed] = useState(false);
+  const [page, setPage] = useState('basic'), [routing, setRouting] = useState('follow'), [custom, setCustom] = useState(false), [saving, setSaving] = useState(false);
   const saved = useRef(null);
-  useEffect(() => { api('/state').then(s => { saved.current = s.config; setConfig(s.config); setDirectory(s.directory); }).catch(e => setStatus(e.message)); }, []);
-  if (!config) return <div className="tx-panel">{status || '正在读取设置…'}</div>;
-  const save = async e => { e.preventDefault(); setStatus('正在保存…'); try { const patch = Object.fromEntries(Object.entries(config).filter(([key, value]) => key !== 'dataDir' && JSON.stringify(value) !== JSON.stringify(saved.current[key]))); const next = await api('/settings', patch); saved.current = next; setConfig(next); setStatus('已保存'); } catch (error) { setStatus(error.message); } };
-  return <form className="tx-panel tx-settings" onSubmit={save}>
-    <div className="tx-heading"><span className="tx-mark">x</span><div><h2>trisoul_x</h2><p className="tx-muted">主模型在 DSH 模型设置与对话选项中配置。</p></div></div>
-    <fieldset className="tx-fieldset"><legend>后台模型</legend><select aria-label="后台模型配置方式" value={config.backgroundMode} onChange={e => setConfig({ ...config, backgroundMode: e.target.value })}><option value="unified">统一配置</option><option value="separate">分别配置</option></select></fieldset>
-    {(config.backgroundMode === 'unified' ? [['unifiedBackground', '全部后台作业']] : [['background', '记忆消化、检索与整理'], ['canvas', '状态提炼与探针'], ['surgeon', '上下文整理']]).map(([key, label]) => <RouteFields key={key} label={label} route={config[key]} directory={directory} onChange={route => setConfig({ ...config, [key]: route })}/>)}
-    <fieldset className="tx-fieldset"><legend>新会话默认记忆范围</legend><p className="tx-muted">也可在对话输入区选择；开始对话后沿用已绑定的范围。</p><select aria-label="默认记忆范围" value={config.memoryScope} onChange={e => setConfig({ ...config, memoryScope: e.target.value })}>
-      <option value="full">全局 + 跨项目 + 本项目</option><option value="project">仅本项目</option><option value="session">仅当前会话</option></select></fieldset>
-    <fieldset className="tx-fieldset"><legend>压缩频率</legend><p className="tx-muted">控制整理间隔、最小区间和状态更新频率。保存后下一步生效。</p>
-      <div className="tx-row">{Object.entries({ always: [3, 10000, 6], medium: [6, 20000, 10], slow: [10, 40000, 15] }).map(([name, values]) => <Button key={name} type="button" variant={['surgeryCooldownSteps', 'minRegionTokens', 'stateEvery'].every((k, i) => config[k] === values[i]) ? undefined : 'outline'} onClick={() => setConfig({ ...config, surgeryCooldownSteps: values[0], minRegionTokens: values[1], stateEvery: values[2] })}>{({ always: '频繁', medium: '适中', slow: '较少' })[name]}</Button>)}</div>
-      <div className="tx-row">{[['surgeryCooldownSteps', '整理间隔步数', 0], ['minRegionTokens', '区间最小 Token 数', 1], ['stateEvery', '每批状态事件数', 1]].map(([key, label, min]) => <label key={key}>{label}<input type="number" min={min} step="1" value={config[key]} onChange={e => setConfig({ ...config, [key]: Number(e.target.value) })}/></label>)}</div>
-    </fieldset>
-    {[
-      ['记忆消化', [['digestEvery', '每批消化事件数', 1], ['flushIdleMs', '空闲消化与轮巡间隔（毫秒，0 关闭）'], ['curateMinGapMs', '同一分片整理最短间隔（毫秒）'], ['curateEvery', '每几批消化轮巡一次（0 关闭）']]],
-      ['记忆补注', [['injectLimit', '开场条目数（0 不限）'], ['injectBatch', '每次补注条目数', 1], ['injectMaxPerSession', '每会话注入次数（0 停止补注）'], ['injectPickTimeoutMs', '首次检索等待毫秒（0 立即排队）'], ['supplementMinSteps', '文档换代最短步数']]],
-      ['上下文', [['keepTailEvents', '保留最近事件数', 2], ['minRegionEvents', '区间最少事件数', 1], ['thresholdRatio', '窗口压力比例', 0.1, 0.05, 0.95], ['surgeryFailCooldownSteps', '整理失败冷却步数'], ['shadowStale', '积累多少旧版快照后清理（0 关闭）']]],
-      ['状态与探针', [['stateFailCooldownSteps', '状态提炼失败冷却步数'], ['stateFailLimit', '连续失败后暂停压缩（0 关闭）']]],
-    ].map(([title, fields]) => <details key={title} className="tx-fieldset"><summary>{title}</summary><div className="tx-row">{fields.map(([key, label, min = 0, step = 1, max]) => <label key={key}>{label}<input type="number" min={min} max={max} step={step} value={config[key]} onChange={e => setConfig({ ...config, [key]: Number(e.target.value) })}/></label>)}</div>
-      {title === '记忆补注' && <label>补注方式<select value={config.supplementMode} onChange={e => setConfig({ ...config, supplementMode: e.target.value })}><option value="renew">任务文档按版本追加</option><option value="rewrite">原位更新补注</option><option value="append">逐批追加补注</option></select></label>}
-      {title === '上下文' && [['requireShorter', '整理后需比原材料短'], ['semanticCompaction', '按记忆消化结果整理'], ['mergeCheckpoints', '合并较早工作纪要'], ['userRetirement', '允许压缩较早用户消息']].map(([key, label]) => <label key={key} className="tx-check"><input type="checkbox" checked={config[key]} onChange={e => setConfig({ ...config, [key]: e.target.checked })}/>{label}</label>)}
-      {title === '状态与探针' && <>{[['stateEnabled', '提炼工作状态'], ['probeEnabled', '压缩后运行事实探针']].map(([key, label]) => <label key={key} className="tx-check"><input type="checkbox" checked={config[key]} onChange={e => setConfig({ ...config, [key]: e.target.checked })}/>{label}</label>)}<label>探针遗漏事实的补记方式<select value={config.probePatch} onChange={e => setConfig({ ...config, probePatch: e.target.value })}><option value="ride">随下一次整理写入</option><option value="qa">立即补入问答</option><option value="material">立即补入参考材料</option></select></label></>}
-    </details>)}
-    <details className="tx-fieldset"><summary>可选批次与长度上限</summary><p className="tx-muted">以下长度、条目和输出上限设为 0 时不限制；超时设为 0 时不计时。</p><div className="tx-row">{[
-      ['jobTimeoutMs', '后台作业超时（毫秒）'], ['digestBatchMax', '消化批次事件上限'], ['digestEventChars', '消化单事件字符上限'], ['digestMaxTokens', '消化输出 Token 上限'], ['catchupMax', '恢复会话补消化事件上限'], ['contextMemories', '消化记忆表条目上限'], ['recallMaxTokens', '检索输出 Token 上限'], ['curateLimit', '整理分片每轮条目上限'], ['curateOpsMax', '整理操作数上限'], ['curateMaxTokens', '整理输出 Token 上限'], ['stateBatchMax', '状态批次事件上限'], ['statePinnedMax', '固定约束条目上限'], ['stateEventChars', '状态单事件字符上限'], ['stateMaxTokens', '状态输出 Token 上限'], ['surgeonMaxTokens', '压缩输出 Token 上限'], ['probeSourceChars', '探针材料字符上限'], ['probeMaxTokens', '探针输出 Token 上限'], ['probePatchChars', '材料补记字符上限'],
-    ].map(([key, label]) => <label key={key}>{label}<input type="number" min="0" step="1" value={config[key]} onChange={e => setConfig({ ...config, [key]: Number(e.target.value) })}/></label>)}</div>
-    <label>固定字符压力阈值（0 使用窗口比例）<input type="number" min="0" value={config.thresholdChars} onChange={e => setConfig({ ...config, thresholdChars: Number(e.target.value) })}/></label><label>窗口未知时的字符阈值<input type="number" min="0" value={config.thresholdFallbackChars} onChange={e => setConfig({ ...config, thresholdFallbackChars: Number(e.target.value) })}/></label></details>
-    <div className="tx-row"><Button type="submit">保存设置</Button><span role="status" className="tx-muted">{status}</span></div>
+  useEffect(() => { api('/state').then(s => { saved.current = s.config; setConfig(s.config); setRouting(routeModeOf(s.config)); setDirectory(s.directory); }).catch(e => { setStatus(e.message); setFailed(true); }); }, []);
+  const field = (key, value) => { setConfig(c => ({ ...c, [key]: value })); setStatus(''); };
+  if (!config) return <div className="tx-app"><Header icon="settings" title="偏好设置"/><Empty title={failed ? '暂时无法读取设置' : '正在读取设置'}>{status}</Empty></div>;
+  const dirty = JSON.stringify(config) !== JSON.stringify(saved.current);
+  const selectedPreset = Object.entries(presets).find(([, v]) => ['surgeryCooldownSteps', 'minRegionTokens', 'stateEvery'].every((k, i) => config[k] === v[i]))?.[0];
+  const save = async e => {
+    e.preventDefault(); setSaving(true); setFailed(false);
+    try { const patch = Object.fromEntries(Object.entries(config).filter(([key, value]) => key !== 'dataDir' && JSON.stringify(value) !== JSON.stringify(saved.current[key]))); const next = await api('/settings', patch); saved.current = next; setConfig(next); setStatus('设置已保存'); }
+    catch (e) { setFailed(true); setStatus(e.message); } finally { setSaving(false); }
+  };
+  const selectRoute = mode => { setRouting(mode); if (mode === 'follow') { field('backgroundMode', 'unified'); field('unifiedBackground', { provider: '', model: '', temperature: 0.7, effort: 'off' }); } else field('backgroundMode', mode); };
+  return <form className="tx-app tx-settings" onSubmit={save}>
+    <Header icon="settings" title="偏好设置" subtitle="模型、记忆与上下文"/>
+    <Tabs label="设置分类" value={page} onChange={setPage} items={[[ 'basic', '常用' ], [ 'advanced', '高级' ]]}/>
+    <div className="tx-body">{page === 'basic' ? <>
+      <section className="tx-section"><div className="tx-section-heading"><h3>后台模型</h3><span className="tx-muted">主模型在 DSH 中设置</span></div>
+        <Segments label="后台模型配置方式" value={routing} onChange={selectRoute} items={[[ 'follow', '跟随主模型' ], [ 'unified', '统一配置' ], [ 'separate', '分别配置' ]]}/>
+        {routing === 'follow' ? <div className="tx-inline-note"><Icon name="layers"/>记忆、状态与整理使用当前对话的模型。</div> : routing === 'unified' ? <div className="tx-route-fields"><RouteFields route={config.unifiedBackground} directory={directory} onChange={r => field('unifiedBackground', r)}/></div> : <div className="tx-route-list">{[['background', '记忆'], ['canvas', '状态与检查'], ['surgeon', '上下文整理']].map(([key, label]) => <Fold key={key} title={label} subtitle={config[key].model || '跟随主模型'}><RouteFields route={config[key]} directory={directory} onChange={r => field(key, r)}/></Fold>)}</div>}
+      </section>
+      <section className="tx-section"><div className="tx-section-heading"><h3>默认记忆范围</h3><Badge>新会话</Badge></div><div className="tx-choice-grid" role="group" aria-label="默认记忆范围">{[['full', '完全版', '全局与项目记忆'], ['project', '项目级', '仅使用本项目记忆'], ['session', '会话级', '仅在当前会话中使用']].map(([id, title, hint]) => <button type="button" key={id} aria-pressed={config.memoryScope === id} onClick={() => field('memoryScope', id)}><span className="tx-choice-mark">{config.memoryScope === id ? <Icon name="check" size={13}/> : null}</span><strong>{title}</strong><small>{hint}</small></button>)}</div><p className="tx-help">也可在输入区选择，开始对话后绑定到该会话。</p></section>
+      <section className="tx-section"><div className="tx-section-heading"><h3>上下文整理频率</h3></div><Segments label="压缩频率" value={custom || !selectedPreset ? 'custom' : selectedPreset} onChange={id => { setCustom(id === 'custom'); if (presets[id]) { const values = presets[id]; setConfig(c => ({ ...c, surgeryCooldownSteps: values[0], minRegionTokens: values[1], stateEvery: values[2] })); setStatus(''); } }} items={[[ 'always', '频繁' ], [ 'medium', '适中' ], [ 'slow', '较少' ], [ 'custom', '自定义' ]]}/>
+        {custom || !selectedPreset ? <Numbers config={config} onChange={field} fields={[[ 'surgeryCooldownSteps', '整理间隔步数' ], [ 'minRegionTokens', '最小区间 Token', 1 ], [ 'stateEvery', '每批状态事件数', 1 ]]}/> : <p className="tx-help">{({ always: '更及时地整理已完成内容。', medium: '让内容积累一段时间后再整理。', slow: '减少整理调用，保留更长的近期上下文。' })[selectedPreset]}</p>}
+      </section>
+      <section className="tx-section tx-switches"><Toggle label="持续更新工作状态" hint="记录用户约束与当前任务进展" checked={config.stateEnabled} onChange={v => field('stateEnabled', v)}/><Toggle label="检查压缩后的事实" hint="发现遗漏时保留补记，供后续整理使用" checked={config.probeEnabled} onChange={v => field('probeEnabled', v)}/></section>
+    </> : <><p className="tx-help tx-advanced-intro">通常保留默认值即可。展开某一项，再调整对应参数。</p>{advancedGroups.map(([title, hint, fields, limits]) => <Fold key={title} title={title} subtitle={hint}>
+      {title === '任务记忆' && <label className="tx-field"><span>文档更新方式</span><select value={config.supplementMode} onChange={e => field('supplementMode', e.target.value)}><option value="renew">按版本追加</option><option value="rewrite">原位更新</option><option value="append">逐批追加</option></select></label>}
+      {title === '压缩检查' && <label className="tx-field"><span>遗漏事实如何补记</span><select value={config.probePatch} onChange={e => field('probePatch', e.target.value)}><option value="ride">随下次整理写入</option><option value="qa">立即补入问答</option><option value="material">立即补入参考材料</option></select></label>}
+      <Numbers fields={fields} config={config} onChange={field}/>
+      {title === '上下文整理' && <div className="tx-switches">{[['semanticCompaction', '按消化结果选择区间'], ['mergeCheckpoints', '合并较早工作纪要'], ['requireShorter', '整理后应短于原材料'], ['userRetirement', '允许压缩较早用户消息']].map(([key, label]) => <Toggle key={key} label={label} checked={config[key]} onChange={v => field(key, v)}/>)}</div>}
+      {limits && <details className="tx-subfold"><summary>可选资源上限</summary><p className="tx-help">长度、条目和输出上限为 0 时不限制。</p><Numbers fields={limits} config={config} onChange={field}/></details>}
+    </Fold>)}<Fold title="后台作业超时" subtitle="控制单次后台调用的最长等待时间"><Numbers fields={[[ 'jobTimeoutMs', '超时 · 毫秒（0 不限制）' ]]} config={config} onChange={field}/></Fold></>}
+    </div><footer className="tx-savebar"><span className={failed ? 'tx-error' : 'tx-muted'} role="status">{status || (dirty ? '有未保存的更改' : '更改后保存即可生效')}</span><div className="tx-actions"><Action quiet disabled={!dirty || saving} onClick={() => { setConfig(saved.current); setRouting(routeModeOf(saved.current)); setStatus(''); }}>撤销</Action><Action type="submit" primary disabled={!dirty || saving} icon={saving ? 'clock' : 'check'}>{saving ? '保存中' : '保存设置'}</Action></div></footer>
   </form>;
 }
 
+function Evidence({ link }) {
+  const verdict = link.kind === 'test' ? link.lastRun ? link.lastRun.timedOut ? '超时' : link.lastRun.pass ? '通过' : '未通过' : '未运行' : '文字证据';
+  return <div className="tx-evidence"><div className="tx-row-between"><strong>{link.path || (link.kind === 'test' ? '测试验证' : '文字记录')}</strong><Badge tone={link.lastRun?.pass ? 'good' : link.lastRun ? 'warn' : undefined}>{verdict}</Badge></div>
+    {link.cmd && <pre>{link.cmd}</pre>}{link.note && <p className="tx-prose">{link.note}</p>}{link.reason && <p className="tx-help">原因：{link.reason}</p>}
+    {link.lastRun?.tail && <details className="tx-subfold"><summary>查看运行输出</summary><pre>{link.lastRun.tail}</pre></details>}
+  </div>;
+}
 function ContextPanel({ sessionId, useTabInfo }) {
-  const { tab } = useTabInfo(); const { data, error, reload } = useSnapshot(sessionId, tab.visible);
-  const [status, setStatus] = useState('');
-  const context = data?.context;
-  const compact = async () => { setStatus('正在整理…'); try { const r = await api(`/compact${suffix(sessionId)}`, {}); setStatus(r.changed ? '已整理，原文仍可回捞' : '目前没有适合整理的较早区间'); await reload(); } catch (e) { setStatus(e.message); } };
-  return <div className="tx-panel"><h2>工作上下文</h2><p className="tx-muted">{data?.live ? `${kindName[data.live.kind]}正在更新…` : `已消化 ${fmt(context?.digestCount)} 个区间`}</p>
-    {error && <p role="alert" className="tx-error">{error}</p>}
-    <h3>任务与验证</h3>{data?.tasks?.length ? data.tasks.map((task, i) => <article className="tx-note" key={task.id || i}>
-      <div className="tx-meta">{task.id} · {task.status === 'completed' ? '已完成' : '未完成'}</div><strong>{task.content}</strong>
-      {task.anchor ? <p className="tx-muted">需求原文 [{task.sourceMessage}] · {task.sourceExcerpt}：{task.source}</p> : <p className="tx-muted">旧版任务尚未绑定原文锚点。{task.source && '原备注：' + task.source}</p>}
-      {task.links?.length ? task.links.map(link => <div className="tx-evidence" key={link.id}>
-        <div className="tx-meta">{link.id} · {link.kind === 'test' ? '测试' : '文字证据'}{link.kind === 'test' && ' · ' + (link.lastRun ? link.lastRun.timedOut ? 'TIMEOUT' : link.lastRun.pass ? 'PASS' : 'FAIL' : '尚未运行')}</div>
-        {link.path && <div className="tx-path">{link.path}</div>}{link.cmd && <pre>{link.cmd}</pre>}
-        {link.note && <p>{link.note}</p>}{link.reason && <p className="tx-muted">原因：{link.reason}</p>}
-        {link.lastRun?.tail && <details><summary>实际运行输出</summary><pre>{link.lastRun.tail}</pre></details>}
-      </div>) : <p className="tx-muted">尚未关联验证证据。</p>}
-      {task.verification && <details><summary>旧版验证文字记录</summary><p>{task.verification.method}</p><p>{task.verification.result}</p></details>}
-    </article>) : <p className="tx-muted">多步骤任务会在这里列出需求原文、进展与验证证据。</p>}
-    {data?.taskRelease?.total > 0 && <p className="tx-muted">最近收尾：{data.taskRelease.done}/{data.taskRelease.total} 完成 · 测试型 {data.taskRelease.tested} · 文字型 {data.taskRelease.textOnly}</p>}
-    <h3>约束与决定</h3>{context?.pins?.length ? <ul>{context.pins.map((p, i) => <li key={i}>{p}</li>)}</ul> : <p className="tx-muted">随对话逐步积累。</p>}
-    <h3>当前状态</h3><div className="tx-prose">{context?.status || '尚未形成状态记录。'}</div>
-    {context?.stateFailures > 0 && <p className="tx-error">状态提炼连续失败 {context.stateFailures} 次</p>}
-    <h3>任务记忆文档</h3><p className="tx-muted">版本 {context?.workdocVersion || 0} · 待补注 {context?.supplementPending || 0} 条</p><div className="tx-prose">{context?.workdoc || '任务相关记忆会在这里汇集与更新。'}</div>
-    {context?.probe && <details><summary>最近压缩探针 · {context.probe.error ? '作业失败' : context.probe.ok ? '通过' : '待补记'}</summary><p>{context.probe.question}</p><p>参考：{context.probe.expected} · 回答：{context.probe.got}</p>{context.probe.error && <p className="tx-error">{context.probe.error}</p>}</details>}
-    {context?.probeNotes?.length > 0 && <details><summary>待写入纪要的补记（{context.probeNotes.length}）</summary>{context.probeNotes.map((line, i) => <p key={i}>{line}</p>)}</details>}
-    {context?.notes?.length > 0 && <><h3>工作笔记</h3>{context.notes.map((note, i) => <div className="tx-note" key={i}>{note.text}</div>)}</>}
-    {context?.checkpoint && <><h3>工作纪要</h3><div className="tx-prose">{context.checkpoint.text}</div></>}
-    <div className="tx-footer"><Button onClick={compact} disabled={data?.running !== 'idle' || status === '正在整理…'}>整理较早上下文</Button><p role="status" className="tx-muted">{status}</p></div>
+  const { tab } = useTabInfo(), { data, error, reload } = useSnapshot(sessionId, tab.visible);
+  const [page, setPage] = useState('tasks'), [status, setStatus] = useState(''), [compacting, setCompacting] = useState(false), [failed, setFailed] = useState(false);
+  const context = data?.context, tasks = data?.tasks || [], done = tasks.filter(t => t.status === 'completed').length;
+  const compact = async () => { setCompacting(true); setStatus(''); setFailed(false); try { const r = await api('/compact' + suffix(sessionId), {}); setStatus(r.changed ? '已整理较早上下文，原文仍可回捞。' : '目前没有适合整理的较早内容。'); await reload(); } catch (e) { setFailed(true); setStatus(e.message); } finally { setCompacting(false); } };
+  return <div className="tx-app"><Header icon="context" title="工作上下文" subtitle="任务、状态与正在使用的记忆" actions={<Action quiet icon={compacting ? 'clock' : 'layers'} disabled={data?.running !== 'idle' || compacting} onClick={compact}>{compacting ? '整理中' : '整理'}</Action>}/>
+    <div className="tx-context-summary"><div><span className="tx-status-dot"/><span>{data?.running !== 'idle' && data?.running ? '正在执行' : tasks.length && done === tasks.length ? '任务已完成' : tasks.length ? '任务待继续' : '等待新任务'}</span></div>{tasks.length > 0 && <span><strong>{done}</strong> / {tasks.length} 完成</span>}</div>
+    {tasks.length > 0 && <div className="tx-progress" role="progressbar" aria-label="任务完成进度" aria-valuenow={done} aria-valuemin={0} aria-valuemax={tasks.length}><i style={{ width: `${done / tasks.length * 100}%` }}/></div>}
+    <Tabs label="上下文分类" value={page} onChange={setPage} items={[[ 'tasks', '任务', tasks.length || undefined ], [ 'state', '工作状态' ], [ 'memory', '记忆文档' ]]}/>
+    <div className="tx-body"><Alert error>{error}</Alert><Alert error={failed}>{status}</Alert>
+      {page === 'tasks' && <>{tasks.length ? <div className="tx-task-list">{tasks.map((task, i) => <article className="tx-task" key={task.id || i}>
+        <div className="tx-task-title"><span className={cx('tx-task-check', task.status === 'completed' && 'is-done')}>{task.status === 'completed' ? <Icon name="check" size={13}/> : <span/>}</span><strong>{task.content}</strong><span className="tx-task-id">{task.id}</span></div>
+        <div className="tx-task-badges"><Badge tone={task.status === 'completed' ? 'good' : undefined}>{task.status === 'completed' ? '已完成' : '待完成'}</Badge>{task.links?.some(l => l.lastRun?.pass) ? <Badge tone="good">测试通过</Badge> : <Badge>{task.links?.length ? '已有证据' : '待验证'}</Badge>}</div>
+        <details className="tx-task-detail"><summary>需求原文与验证 <Icon name="chevron" size={13}/></summary><div className="tx-quote">{task.source || '尚未绑定原文锚点'}{task.anchor && <small>消息 {task.sourceMessage} · 摘录 {task.sourceExcerpt}</small>}</div>
+          {task.links?.length ? task.links.map(link => <Evidence key={link.id} link={link}/>) : <p className="tx-help">完成任务后，关联实际验证证据。</p>}
+          {task.verification && <p className="tx-prose">{task.verification.method}<br/>{task.verification.result}</p>}
+        </details>
+      </article>)}</div> : <Empty icon="check" title="任务会在这里展开">多步骤工作开始后，可以查看需求、进展与验证结果。</Empty>}
+      {data?.taskRelease?.total > 0 && <div className="tx-footnote">最近收尾 · {data.taskRelease.done}/{data.taskRelease.total} 完成 · 测试型 {data.taskRelease.tested} · 文字型 {data.taskRelease.textOnly}</div>}</>}
+      {page === 'state' && <><section className="tx-section"><div className="tx-section-heading"><h3>当前状态</h3><Badge>{fmt(context?.digestCount)} 个已消化区间</Badge></div>{context?.status ? <div className="tx-prose tx-state-text">{context.status}</div> : <Empty icon="context" title="状态尚未形成">对话推进后，这里会更新计划、进度和结论。</Empty>}{context?.stateFailures > 0 && <Alert error>状态提炼连续失败 {context.stateFailures} 次。</Alert>}</section>
+        <section className="tx-section"><div className="tx-section-heading"><h3>约束与决定</h3><Badge>{context?.pins?.length || 0}</Badge></div>{context?.pins?.length ? context.pins.map((pin, i) => <div className="tx-pin" key={i}><Icon name="pin"/><span>{pin}</span></div>) : <p className="tx-help">用户确定的约束和决定会保留在这里。</p>}</section>
+        {context?.notes?.length > 0 && <Fold title="工作笔记" count={context.notes.length}>{context.notes.map((note, i) => <div className="tx-note-line" key={i}><p className="tx-prose">{note.text}</p><small>{shortDate(note.at)}</small></div>)}</Fold>}
+      </>}
+      {page === 'memory' && <><section className="tx-section"><div className="tx-section-heading"><h3>任务记忆文档</h3>{context?.workdocVersion > 0 && <Badge>v{context.workdocVersion}</Badge>}</div>{context?.workdoc ? <div className="tx-prose tx-document">{context.workdoc}</div> : <Empty icon="memory" title="还没有任务记忆">找到与当前工作相关的记忆后，会在这里汇集与更新。</Empty>}{context?.supplementPending > 0 && <p className="tx-help">另有 {context.supplementPending} 条记忆等待补入。</p>}</section>
+        {context?.checkpoint && <Fold title="较早工作的纪要" subtitle={shortDate(context.checkpoint.at)}><div className="tx-prose tx-document">{context.checkpoint.text}</div></Fold>}
+        {context?.probe && <Fold title="最近压缩检查" subtitle={context.probe.error ? '调用失败' : context.probe.ok ? '事实检查通过' : '发现遗漏，已记录补记'}><p>{context.probe.question}</p><div className="tx-detail-grid"><span>参考答案</span><strong>{context.probe.expected || '—'}</strong><span>实际回答</span><strong>{context.probe.got || '—'}</strong></div><Alert error>{context.probe.error}</Alert></Fold>}
+        {context?.probeNotes?.length > 0 && <Fold title="待写入纪要的补记" count={context.probeNotes.length}>{context.probeNotes.map((line, i) => <div className="tx-note-line" key={i}>{line}</div>)}</Fold>}
+      </>}
+    </div>
   </div>;
 }
 
+const actionNames = { injections: '记忆注入', recalls: '记忆召回', rawRecalls: '原文回捞', digests: '记忆消化', digestErrors: '消化失败', digestDeferred: '失败批次暂存', curations: '记忆整理', curationErrors: '整理失败', workdocVersions: '文档更新', states: '状态更新', stateErrors: '状态失败', surgeries: '上下文整理', surgeryErrors: '压缩失败', retrievalFallbacks: '检索回退', injectionErrors: '补注失败', probePassed: '事实检查通过', probeFailed: '事实待补记', probeErrors: '检查调用失败', staleVersions: '旧快照清理', digestFallbacks: '采用消化底稿' };
 function MemoryPanel({ sessionId, useTabInfo }) {
   const { tab } = useTabInfo();
-  const [data, setData] = useState({ items: [], projects: [], trace: [] }), [edit, setEdit] = useState(null), [error, setError] = useState('');
+  const [data, setData] = useState({ items: [], projects: [], trace: [] }), [edit, setEdit] = useState(null), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
   const [view, setView] = useState('session'), [query, setQuery] = useState(''), [scope, setScope] = useState('all'), [project, setProject] = useState('');
-  const [history, setHistory] = useState(false), [touched, setTouched] = useState(false), [selected, setSelected] = useState([]);
-  const load = useCallback(async () => { try { setData(await api('/memories' + suffix(sessionId) + '&view=' + view)); setError(''); } catch (e) { setError(e.message); } }, [sessionId, view]);
-  useEffect(() => {
-    if (!tab.visible) return;
-    let active = true, timer;
-    const tick = async () => { await load(); if (active) timer = setTimeout(tick, 2500); };
-    void tick(); return () => { active = false; clearTimeout(timer); };
-  }, [load, tab.visible]);
-  const save = async e => { e.preventDefault(); try { await api('/memories' + suffix(sessionId), { ...edit, op: edit.id ? 'update' : 'add', target: edit.id || '', project: edit.project || data.scope.project }); setEdit(null); await load(); } catch (e) { setError(e.message); } };
-  const change = async (op, ids) => { try { for (const id of ids) await api('/memories' + suffix(sessionId), { op, target: id, text: '用户在记忆面板删除' }); setSelected([]); await load(); } catch (e) { setError(e.message); await load(); } };
+  const [filters, setFilters] = useState(false), [history, setHistory] = useState(false), [touched, setTouched] = useState(false), [selecting, setSelecting] = useState(false), [selected, setSelected] = useState([]), [expanded, setExpanded] = useState([]);
+  const key = `${sessionId}:${view}`, current = useRef(key); current.current = key;
+  const load = useCallback(async () => { try { const d = await api('/memories' + suffix(sessionId) + '&view=' + view); if (current.current === key) { setData(d); setError(''); } } catch (e) { if (current.current === key) setError(e.message); } }, [sessionId, view, key]);
+  useEffect(() => { setEdit(null); setSelected([]); setSelecting(false); setProject(''); }, [sessionId]);
+  useEffect(() => { if (!tab.visible) return; let active = true, timer; const tick = async () => { await load(); if (active) timer = setTimeout(tick, 2500); }; void tick(); return () => { active = false; clearTimeout(timer); }; }, [load, tab.visible]);
+  const save = async e => { e.preventDefault(); setBusy(true); try { await api('/memories' + suffix(sessionId), { ...edit, key: edit.key.trim() || edit.text.trim().replace(/\s+/g, ' ').slice(0, 40), op: edit.id ? 'update' : 'add', target: edit.id || '', project: edit.project || data.scope.project }); setEdit(null); await load(); setNotice('记忆已保存'); } catch (e) { setError(e.message); } finally { setBusy(false); } };
+  const change = async (op, ids) => { setBusy(true); try { for (const id of ids) await api('/memories' + suffix(sessionId), { op, target: id, text: '用户在记忆面板移入历史' }); setSelected([]); await load(); setNotice(op === 'restore' ? '已恢复所选记忆' : op === 'delete' ? '已永久删除所选版本' : '已移入历史，可随时恢复'); } catch (e) { setError(e.message); } finally { setBusy(false); } };
+  const curate = async () => { setBusy(true); try { const r = await api('/curate' + suffix(sessionId), {}); setNotice(r.queued ? '整理已安排，结果会自动更新' : '当前没有待整理的记忆'); await load(); } catch (e) { setError(e.message); } finally { setBusy(false); } };
   const visible = data.items.filter(m => (history || (!m.retired && !m.supersededBy)) && (!touched || m.touched) && (scope === 'all' || m.scope === scope) && (!project || m.project === project) && (!query || [m.text, m.key, m.project].join(' ').toLowerCase().includes(query.toLowerCase())));
-  const active = data.items.filter(m => !m.retired && !m.supersededBy);
-  return <div className="tx-panel"><h2>记忆</h2><p className="tx-muted">有效 {active.length} · 当前可见 {active.filter(m => m.visible).length} · 本会话使用 {data.items.filter(m => m.touched).length}</p>
-    <div className="tx-row"><Button disabled={!data.scope} onClick={() => setEdit({ scope: 'project', project: data.scope.project, key: 'note.' + Date.now(), text: '' })}>新增记忆</Button><Button variant="outline" onClick={load}>刷新</Button><Button variant="outline" disabled={!sessionId || data.scope?.mode === 'session'} onClick={async () => { try { await api('/curate' + suffix(sessionId), {}); await load(); } catch (e) { setError(e.message); } }}>整理记忆</Button></div>
-    <div className="tx-row"><label>查看范围<select value={view} onChange={e => { setView(e.target.value); setSelected([]); }}><option value="session">本会话可用</option><option value="all">整个记忆库</option></select></label><label>层级<select value={scope} onChange={e => setScope(e.target.value)}><option value="all">全部层级</option>{Object.entries(scopeName).map(([id, text]) => <option key={id} value={id}>{text}</option>)}</select></label></div>
-    {view === 'all' && <label>项目<select value={project} onChange={e => setProject(e.target.value)}><option value="">全部项目</option>{data.projects.map(p => <option key={p} value={p}>{projectLabel(p)}</option>)}</select></label>}
-    {data.health && <details className="tx-fieldset"><summary>记忆库状态</summary><p className="tx-muted">有效 {data.health.active} · 已退役 {data.health.retired} · 旧版本 {data.health.versions} · 当前可见 {fmt(data.health.chars)} 字符 · 尚未使用 {data.health.unused} 条 · 跨项目候选 {data.health.promotionGroups} 组</p>{Object.entries(data.health.shards.lastAt).map(([shard, at]) => <p key={shard} className="tx-meta tx-path">{shard} · {new Date(at).toLocaleString()} · 游标 {data.health.shards.cursors[shard] || 0}</p>)}</details>}
-    <input aria-label="搜索记忆" placeholder="搜索内容、名称或项目…" value={query} onChange={e => setQuery(e.target.value)}/>
-    <div className="tx-row"><label className="tx-check"><input type="checkbox" checked={history} onChange={e => setHistory(e.target.checked)}/>含已删除和旧版本</label><label className="tx-check"><input type="checkbox" checked={touched} onChange={e => setTouched(e.target.checked)}/>仅本会话使用过</label></div>
-    {selected.length > 0 && <div className="tx-row"><span>已选 {selected.length} 条</span><Button size="sm" onClick={() => change('retire', selected)}>批量删除</Button><Button size="sm" variant="outline" onClick={() => change('restore', selected)}>批量恢复</Button></div>}
-    {error && <p className="tx-error" role="alert">{error}</p>}
-    {edit && <form className="tx-fieldset" onSubmit={save}><label>层级<select value={edit.scope} onChange={e => setEdit({ ...edit, scope: e.target.value })}>{Object.entries(scopeName).map(([id, text]) => <option key={id} value={id}>{text}</option>)}</select></label>
-      {edit.scope === 'project' && (edit.project?.startsWith('session:') ? <p className="tx-muted">所属：{edit.project === data.scope.project ? '当前会话' : projectLabel(edit.project)}</p> : <label>所属项目<input value={edit.project || ''} required onChange={e => setEdit({ ...edit, project: e.target.value })}/></label>)}
-      <label>名称<input value={edit.key} required onChange={e => setEdit({ ...edit, key: e.target.value })}/></label><label>内容<textarea value={edit.text} required rows="5" onChange={e => setEdit({ ...edit, text: e.target.value })}/></label>
-      <div className="tx-row"><Button type="submit">保存</Button><Button type="button" variant="outline" onClick={() => setEdit(null)}>取消</Button></div></form>}
-    {!visible.length && <p className="tx-muted">没有符合当前条件的记忆。</p>}
-    {visible.map(m => <article key={m.id} className={'tx-note' + (m.retired || m.supersededBy ? ' tx-history' : '')}>
-      <div className="tx-row"><input className="tx-select" type="checkbox" aria-label={'选择 ' + m.key} checked={selected.includes(m.id)} onChange={e => setSelected(e.target.checked ? [...selected, m.id] : selected.filter(id => id !== m.id))}/><div className="tx-meta">{m.project?.startsWith('session:') ? '会话' : scopeName[m.scope]} · {m.key}{m.retired ? ' · 已删除' : m.supersededBy ? ' · 旧版本' : ''}</div></div><p>{m.text}</p>
-      <div className="tx-meta">来源 {m.source === 'user' ? '手动' : m.source === 'curate' ? '记忆整理' : '记忆中枢'} · {new Date(m.at).toLocaleString()} · 注入 {m.usage?.injected || 0} · 召回 {m.usage?.recalled || 0}</div>
-      {m.project && <div className="tx-meta tx-path">{m.project === data.scope.project && m.project.startsWith('session:') ? '当前会话' : projectLabel(m.project)}</div>}
-      {!m.retired && !m.supersededBy ? <div className="tx-row"><Button variant="ghost" size="sm" onClick={() => setEdit(m)}>编辑</Button><Button variant="ghost" size="sm" onClick={() => change('retire', [m.id])}>删除</Button></div> : <div className="tx-row"><Button variant="ghost" size="sm" onClick={() => change('restore', [m.id])}>恢复此版本</Button><Button variant="ghost" size="sm" onClick={() => change('delete', [m.id])}>永久删除此版本</Button></div>}
-    </article>)}
-    <details className="tx-footer"><summary>本会话的注入与召回记录</summary>{data.trace.slice().reverse().map((e, i) => <div className="tx-activity" key={i}>{new Date(e.at).toLocaleTimeString()} · {({ injections: '注入', recalls: '召回', rawRecalls: '回捞原文', digests: '消化', digestErrors: '消化失败', surgeries: '上下文整理', surgeryErrors: '整理失败' })[e.name] || e.name}{e.items !== undefined ? ' · ' + e.items + ' 条' : ''}{e.query && <p>{e.query}</p>}{e.error && <p className="tx-error">{e.error}</p>}</div>)}</details>
+  const active = data.items.filter(m => !m.retired && !m.supersededBy), filterCount = Number(history) + Number(touched) + Number(scope !== 'all') + Number(Boolean(project));
+  return <div className="tx-app"><Header icon="memory" title="记忆" subtitle="保留值得带到下一次工作的内容" actions={<Action primary icon="plus" disabled={!data.scope} onClick={() => { setError(''); setEdit({ scope: 'project', project: data.scope.project, key: '', text: '' }); }}>新增</Action>}/>
+    <div className="tx-memory-tools"><div className="tx-search"><Icon name="search"/><input aria-label="搜索记忆" placeholder="搜索记忆…" value={query} onChange={e => setQuery(e.target.value)}/>{query && <Action quiet icon="close" aria-label="清除搜索" onClick={() => setQuery('')}/>}</div>
+      <div className="tx-row-between"><Segments label="记忆查看范围" value={view} onChange={v => { setView(v); setSelected([]); setProject(''); }} items={[[ 'session', '当前范围' ], [ 'all', '整个记忆库' ]]}/><Action quiet icon="filter" aria-expanded={filters} onClick={() => setFilters(!filters)}>筛选{filterCount ? ` ${filterCount}` : ''}</Action></div>
+      {filters && <div className="tx-filter-box"><div className="tx-form-grid"><label className="tx-field"><span>层级</span><select value={scope} onChange={e => setScope(e.target.value)}><option value="all">全部层级</option>{Object.entries(scopeName).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>{view === 'all' && <label className="tx-field"><span>所属项目</span><select value={project} onChange={e => setProject(e.target.value)}><option value="">全部项目</option>{data.projects.map(p => <option key={p} value={p}>{projectLabel(p)}</option>)}</select></label>}</div><label className="tx-check"><input type="checkbox" checked={history} onChange={e => setHistory(e.target.checked)}/>包含历史版本</label><label className="tx-check"><input type="checkbox" checked={touched} onChange={e => setTouched(e.target.checked)}/>仅本会话使用过</label></div>}
+      <div className="tx-list-toolbar"><span>{query || filterCount ? `${visible.length} 条匹配` : `${active.length} 条有效记忆`}</span><div className="tx-actions"><Action quiet onClick={() => { setSelecting(!selecting); setSelected([]); }}>{selecting ? '取消选择' : '选择'}</Action><Action quiet icon="refresh" aria-label="刷新记忆" onClick={load}/><Action quiet disabled={!sessionId || data.scope?.mode === 'session' || busy} onClick={curate}>整理</Action></div></div>
+    </div>
+    <div className="tx-body tx-memory-body"><Alert error>{error}</Alert><Alert>{notice}</Alert>{!visible.length && <Empty icon="memory" title={query || filterCount ? '没有找到匹配的记忆' : '从一条值得记住的事开始'}>{query || filterCount ? '试试其他关键词，或调整筛选条件。' : '工作中形成的稳定事实会逐渐出现在这里，也可以手动添加。'}</Empty>}
+      {visible.map(m => { const archived = m.retired || m.supersededBy, open = expanded.includes(m.id); return <article className={cx('tx-memory-item', archived && 'tx-archived', selected.includes(m.id) && 'tx-selected-item')} key={m.id}>
+        <div className="tx-memory-meta"><div className="tx-actions">{selecting && <input type="checkbox" aria-label={'选择 ' + m.key} checked={selected.includes(m.id)} onChange={e => setSelected(e.target.checked ? [...selected, m.id] : selected.filter(id => id !== m.id))}/>}<Badge tone={archived ? undefined : 'soft'}>{m.project?.startsWith('session:') ? '会话' : scopeName[m.scope]}</Badge><span className="tx-memory-key" title={m.key}>{m.key}</span></div>{archived && <Badge>{m.retired ? '已退役' : '旧版本'}</Badge>}</div>
+        <p className={cx('tx-memory-text', m.text.length > 240 && !open && 'tx-clamped')}>{m.text}</p>{m.text.length > 240 && <button type="button" className="tx-text-button" onClick={() => setExpanded(open ? expanded.filter(id => id !== m.id) : [...expanded, m.id])}>{open ? '收起' : '展开全文'}</button>}
+        <div className="tx-memory-bottom"><span>{m.source === 'user' ? '手动记录' : m.source === 'curate' ? '整理更新' : '自动记忆'} · {shortDate(m.at)}</span><div className="tx-actions">{!archived ? <><Action quiet aria-label={'编辑 ' + m.key} icon="edit" onClick={() => { setError(''); setEdit(m); }}/><Action quiet disabled={busy} onClick={() => change('retire', [m.id])}>移入历史</Action></> : <Action quiet disabled={busy} onClick={() => change('restore', [m.id])}>恢复</Action>}</div></div>
+        <details className="tx-memory-details"><summary>使用与版本</summary><div className="tx-detail-grid"><span>注入 / 召回</span><strong>{m.usage?.injected || 0} / {m.usage?.recalled || 0}</strong><span>当前范围可见</span><strong>{m.visible ? '是' : '否'}</strong></div>{m.project && <p className="tx-path tx-help">{projectLabel(m.project)}</p>}{m.previous && <p className="tx-help">包含上一版本记录，可在历史版本中查看。</p>}{archived && <Action quiet className="tx-danger" disabled={busy} onClick={() => change('delete', [m.id])}>永久删除此版本</Action>}</details>
+      </article>; })}
+      <div className="tx-memory-footer"><Fold title="记忆库详情" subtitle="使用情况与分片整理记录">{data.health && <><div className="tx-detail-grid"><span>有效 / 已退役</span><strong>{data.health.active} / {data.health.retired}</strong><span>历史版本</span><strong>{data.health.versions}</strong><span>尚未使用</span><strong>{data.health.unused}</strong><span>当前可见字符</span><strong>{fmt(data.health.chars)}</strong><span>跨项目候选组</span><strong>{data.health.promotionGroups}</strong></div>{Object.entries(data.health.shards.lastAt).map(([shard, at]) => <div className="tx-shard" key={shard}><strong>{shard.startsWith('project:') ? projectLabel(shard.slice(8)) : scopeName[shard]}</strong><span>{shortDate(at)} · 游标 {data.health.shards.cursors[shard] || 0}</span></div>)}</>}</Fold>
+      <Fold title="本会话的记忆活动" count={data.trace.length}>{data.trace.slice().reverse().map((e, i) => <div className="tx-trace-row" key={i}><div><strong>{actionNames[e.name] || e.name}</strong><span>{shortDate(e.at)}{e.items != null ? ` · ${e.items} 条` : ''}</span></div>{e.query && <p>{e.query}</p>}{e.error && <p className="tx-error">{e.error}</p>}</div>)}</Fold></div>
+    </div>
+    {selecting && selected.length > 0 && <footer className="tx-batchbar"><strong>已选 {selected.length} 条</strong><div className="tx-actions"><Action quiet disabled={busy} onClick={() => change('restore', selected)}>恢复</Action><Action disabled={busy} onClick={() => change('retire', selected)}>移入历史</Action></div></footer>}
+    {edit && <form className="tx-editor" onSubmit={save}><Header icon="memory" title={edit.id ? '编辑记忆' : '新增记忆'} subtitle="记录清楚、稳定、可复用的事实" actions={<Action quiet icon="close" aria-label="关闭记忆编辑" disabled={busy} onClick={() => setEdit(null)}/>}/><div className="tx-body"><Alert error>{error}</Alert><label className="tx-field"><span>记忆内容</span><textarea rows="8" required autoFocus placeholder="需要记住什么？" value={edit.text} onChange={e => setEdit({ ...edit, text: e.target.value })}/></label><label className="tx-field"><span>记忆范围</span><select value={edit.scope} onChange={e => setEdit({ ...edit, scope: e.target.value })}>{Object.entries(scopeName).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label><Fold title="更多属性" subtitle="名称与所属项目"><label className="tx-field"><span>名称（可选）</span><input value={edit.key} placeholder="默认使用内容开头" onChange={e => setEdit({ ...edit, key: e.target.value })}/></label>{edit.scope === 'project' && (edit.project?.startsWith('session:') ? <p className="tx-help">所属：{projectLabel(edit.project)}</p> : <label className="tx-field"><span>所属项目</span><input required value={edit.project || ''} onChange={e => setEdit({ ...edit, project: e.target.value })}/></label>)}</Fold></div><footer className="tx-savebar"><span className="tx-muted">保存后即可用于后续工作</span><div className="tx-actions"><Action quiet disabled={busy} onClick={() => setEdit(null)}>取消</Action><Action primary type="submit" disabled={busy} icon="check">{busy ? '保存中' : '保存记忆'}</Action></div></footer></form>}
   </div>;
 }
 
 const frameKind = kind => kind === 'checkpoint' ? '纪要' : kind.includes('state') ? '状态' : kind.includes('memory') ? '记忆' : kind.includes('task') || kind.includes('todo') ? '任务' : kind === 'model' ? '模型' : kind === 'user' ? '用户' : kind === 'tool' || kind.includes('tool') ? '工具' : '系统';
-const frameColor = kind => ({ 纪要: '#6ba89c', 状态: '#8c9dcc', 记忆: '#bd9a75', 任务: '#b390ad', 模型: '#7393a6', 用户: '#b5a05a', 工具: '#9aa77a', 系统: '#94999f' })[frameKind(kind)];
+const frameColor = kind => ({ 纪要: '#3476e6', 状态: '#759be4', 记忆: '#82bfe4', 任务: '#8490bf', 模型: '#476fad', 用户: '#a0bcdf', 工具: '#669aaf', 系统: '#a2aaba' })[frameKind(kind)];
+const callId = call => `${call.sessionId}:${call.kind}:${call.at}`;
+function FrameBar({ nodes = [], total, cached = 0 }) {
+  const size = total || nodes.reduce((n, item) => n + (item.tokens || 0), 0) || 1;
+  return <div className="tx-frame-visual"><div className="tx-frame-bar">{nodes.map(n => <i key={n.seq} style={{ flex: n.tokens || 0.1, background: frameColor(n.kind) }} title={`#${n.seq} ${frameKind(n.kind)} · ${fmt(n.tokens)} tokens`}/>)}</div>{cached > 0 && <div className="tx-cache-line" style={{ width: `${Math.min(100, cached / size * 100)}%` }}/>}</div>;
+}
+function FrameLegend() { return <div className="tx-legend">{['checkpoint', 'state', 'memory', 'tasks', 'model', 'user', 'tool', 'system'].map(kind => <span key={kind}><i style={{ background: frameColor(kind) }}/>{frameKind(kind)}</span>)}</div>; }
 function ContextHistory({ data }) {
   const frames = data.contextHistory || [], [selected, setSelected] = useState(null);
-  const current = frames.find(f => f.at === selected) || frames.at(-1);
-  const max = Math.max(1, ...frames.map(f => f.totalTokens));
-  return <details className="tx-fieldset"><summary>上下文演变（{frames.length} 次请求）</summary>
-    <p className="tx-muted">每行是一次模型请求；长度表示上下文大小，下方绿线表示提供方返回的缓存读取量。</p>
-    <div className="tx-history-chart">{frames.map((frame, i) => <button key={frame.at + ':' + i} type="button" className={'tx-history-row' + (current === frame ? ' tx-selected' : '')} onClick={() => setSelected(frame.at)} title={`第 ${frame.turn} 回合 · 第 ${frame.step} 步 · ${fmt(frame.totalTokens)} tokens`}>
-      <span>{frame.turn}.{frame.step}</span><div className="tx-history-scale"><div className="tx-history-bar" style={{ width: `${Math.max(0.2, frame.totalTokens / max * 100)}%` }}>{frame.nodes.map(n => <i key={n.seq} style={{ flex: n.tokens || 0.1, background: frameColor(n.kind) }} title={`#${n.seq} ${frameKind(n.kind)} · ${fmt(n.tokens)} tokens`}/>)}</div><div className="tx-cache-bar" style={{ width: `${Math.min(frame.totalTokens, frame.cacheReadTokens) / max * 100}%` }}/></div><span>{fmt(frame.totalTokens)}</span>
-    </button>)}</div>
-    <div className="tx-legend">{['checkpoint', 'state', 'memory', 'tasks', 'model', 'user', 'tool', 'system'].map(kind => <span key={kind}><i style={{ background: frameColor(kind) }}/>{frameKind(kind)}</span>)}</div>
-    {current && <p className="tx-muted">已选第 {current.turn} 回合、第 {current.step} 步 · 上下文 {fmt(current.totalTokens)} tokens · 缓存读取 {fmt(current.cacheReadTokens)}</p>}
-  </details>;
+  const selectedFrame = frames.find(f => f.at === selected) || frames.at(-1), max = Math.max(1, ...frames.map(f => f.totalTokens));
+  if (!frames.length) return <Empty icon="layers" title="等待下一次请求">请求发出后，可以在这里查看上下文与缓存的变化。</Empty>;
+  return <div className="tx-context-history"><div className="tx-section-heading"><h3>上下文演变</h3><span className="tx-muted">最近 {frames.length} 次请求</span></div><p className="tx-help">每行对应一次请求。蓝色底线表示缓存读取量。</p>
+    <div className="tx-history-chart">{frames.map((frame, i) => <button key={frame.at + ':' + i} type="button" className={cx('tx-history-row', selectedFrame === frame && 'tx-selected')} onClick={() => setSelected(frame.at)} title={`第 ${frame.turn} 回合 · 第 ${frame.step} 步 · ${fmt(frame.totalTokens)} tokens`}>
+      <span>{frame.turn}.{frame.step}</span><div className="tx-history-scale"><div style={{ width: `${Math.max(0.2, frame.totalTokens / max * 100)}%` }}><FrameBar nodes={frame.nodes} total={frame.totalTokens} cached={frame.cacheReadTokens}/></div></div><span>{compactNumber(frame.totalTokens)}</span>
+    </button>)}</div><FrameLegend/>
+    {selectedFrame && <div className="tx-selected-frame"><Badge>第 {selectedFrame.turn} 回合 · 第 {selectedFrame.step} 步</Badge><div className="tx-detail-grid"><span>上下文 Token</span><strong>{fmt(selectedFrame.totalTokens)}</strong><span>缓存读取 Token</span><strong>{fmt(selectedFrame.cacheReadTokens)}</strong></div></div>}
+  </div>;
 }
-function Timeline({ data }) {
-  const calls = (data.activity || []).slice().reverse();
-  return <details className="tx-fieldset" open><summary>组件调用轨迹</summary><p className="tx-muted">从左到右按调用完成顺序排列；悬停可查看回合、步骤和耗时。</p><div className="tx-timeline">
-    {Object.entries(kindName).filter(([kind]) => calls.some(c => c.kind === kind)).map(([kind, label]) => <div key={kind} className="tx-timeline-row"><span>{label}</span><div>{calls.map((call, i) => <i key={i} className={call.kind === kind ? call.error ? 'tx-call-error' : 'tx-call' : ''} title={call.kind === kind ? `${label} · ${call.turn ?? '—'}.${call.step ?? '—'} · ${new Date(call.at).toLocaleTimeString()} · ${(call.durationMs / 1000).toFixed(1)}s${call.error ? ' · ' + call.error : ''}` : undefined}/>)}</div></div>)}
-  </div></details>;
+function Timeline({ calls, onSelect }) {
+  const ordered = calls.slice().reverse();
+  if (!ordered.length) return <Empty icon="monitor" title="等待第一次执行">开始对话后，各组件的调用会出现在这里。</Empty>;
+  return <section className="tx-section"><div className="tx-section-heading"><h3>调用轨迹</h3><span className="tx-muted">从左到右 · 点击查看</span></div><div className="tx-timeline">
+    {Object.entries(kindName).filter(([kind]) => ordered.some(c => c.kind === kind)).map(([kind, label]) => <div key={kind} className="tx-timeline-row"><span>{label}</span><div>{ordered.map((call, i) => call.kind === kind ? <button key={i} type="button" className={call.error ? 'tx-call-error' : 'tx-call'} onClick={() => onSelect(call)} aria-label={`${label} · ${shortDate(call.at)} · ${duration(call.durationMs)}`} title={`${label} · ${call.turn ?? '—'}.${call.step ?? '—'} · ${duration(call.durationMs)}${call.error ? ' · ' + call.error : ''}`}/> : <i key={i}/>)}</div></div>)}
+  </div><div className="tx-legend"><span><i style={{ background: 'var(--tx-blue)' }}/>完成调用</span><span><i style={{ background: 'var(--tx-danger)' }}/>调用失败</span></div></section>;
+}
+function Monitor({ sessionId, useTabInfo }) {
+  const { tab } = useTabInfo(), [range, setRange] = useState('session'), [page, setPage] = useState('overview'), [stage, setStage] = useState('all'), [failures, setFailures] = useState(false), [selected, setSelected] = useState(null);
+  const { data, error } = useSnapshot(sessionId, tab.visible, range), actions = data?.actions || {}, live = data?.liveCalls || [], metrics = data?.metrics || {};
+  const totals = Object.values(metrics).reduce((out, m) => ({ calls: out.calls + (m.calls || 0), errors: out.errors + (m.errors || 0), input: out.input + inputTokens(m), output: out.output + (m.outputTokens || 0), cache: out.cache + (m.cacheReadTokens || 0), ms: out.ms + (m.durationMs || 0) }), { calls: 0, errors: 0, input: 0, output: 0, cache: 0, ms: 0 });
+  const activity = (data?.activity || []).filter(a => (stage === 'all' || a.kind === stage) && (!failures || a.error));
+  const choose = call => { setPage('calls'); setStage('all'); setFailures(false); setSelected(callId(call)); };
+  const running = data?.running && data.running !== 'idle';
+  return <div className="tx-app"><Header icon="monitor" title="执行监控" subtitle="看清每次调用与上下文变化"/>
+    <div className="tx-monitor-top"><Segments label="监控统计范围" value={range} onChange={setRange} items={[[ 'session', '当前会话' ], [ 'all', '全部会话' ]]}/><div className={cx('tx-running-label', (running || live.length > 0) && 'is-running')}><span className="tx-status-dot"/>{running ? '执行中' : live.length ? '后台运行中' : '空闲'}</div></div>
+    <Tabs label="监控分类" value={page} onChange={setPage} items={[[ 'overview', '概览' ], [ 'calls', '调用记录' ], [ 'context', '上下文' ]]}/>
+    <div className="tx-body"><Alert error>{error}</Alert>
+      {page === 'overview' && <><div className="tx-stats-grid">{[['总用量', compactNumber(totals.input + totals.output), 'tokens'], ['缓存命中', totals.input ? (totals.cache / totals.input * 100).toFixed(1) + '%' : '—', '输入缓存'], ['模型调用', fmt(totals.calls), `${totals.errors} 次失败`], ['累计用时', duration(totals.ms), '各组件合计']].map(([label, value, hint]) => <div className="tx-stat" key={label}><span>{label}</span><strong>{value}</strong><small>{hint}</small></div>)}</div>
+        {live.length > 0 && <div className="tx-live-list">{live.map((call, i) => <div key={i}><span className="tx-pulse"/><div><strong>{kindName[call.kind] || call.kind}</strong><small>{call.model}</small></div><span>{duration(Date.now() - call.startedAt)}</span></div>)}</div>}
+        <Timeline calls={data?.activity || []} onSelect={choose}/>
+        {Object.keys(metrics).length > 0 && <section className="tx-section"><div className="tx-section-heading"><h3>组件用量</h3><span className="tx-muted">调用 / Token</span></div>{Object.entries(kindName).filter(([kind]) => metrics[kind]?.calls).map(([kind, label]) => { const m = metrics[kind], last = data?.activity?.find(a => a.kind === kind), total = inputTokens(m) + (m.outputTokens || 0); return <details className="tx-component" key={kind}><summary><span><i className={cx('tx-component-dot', m.errors > 0 && 'has-error')}/>{label}</span><span><strong>{fmt(m.calls)}</strong><small>{compactNumber(total)} tok</small><Icon name="chevron" size={13}/></span></summary><div className="tx-component-details"><div className="tx-detail-grid"><span>输入 / 输出</span><strong>{fmt(inputTokens(m))} / {fmt(m.outputTokens)}</strong><span>缓存命中</span><strong>{inputTokens(m) ? ((m.cacheReadTokens || 0) / inputTokens(m) * 100).toFixed(1) + '%' : '—'}</strong><span>推理 Token</span><strong>{m.reasoningTokens == null ? '—' : fmt(m.reasoningTokens)}</strong><span>峰值输入 / 累计用时</span><strong>{compactNumber(m.peakContext)} / {duration(m.durationMs)}</strong><span>失败</span><strong>{fmt(m.errors)}</strong></div>{last && <p className="tx-help tx-path">{last.provider} / {last.model}</p>}{m.unmetered > 0 && <p className="tx-help">{m.unmetered} 次调用未返回用量</p>}</div></details>; })}</section>}
+        <Fold title="记忆与压缩统计" subtitle="后台流程的累计执行结果"><div className="tx-detail-grid">{[['记忆消化 / 失败', `${fmt(actions.digests)} / ${fmt(actions.digestErrors)}`], ['记忆整理 / 失败', `${fmt(actions.curations)} / ${fmt(actions.curationErrors)}`], ['注入 / 文档更新', `${fmt(actions.injections)} / ${fmt(actions.workdocVersions)}`], ['状态提炼 / 失败', `${fmt(actions.states)} / ${fmt(actions.stateErrors)}`], ['召回 / 命中条数', `${fmt(actions.recalls)} / ${fmt(actions.recallHits)}`], ['检索回退', fmt(actions.retrievalFallbacks)], ['压缩 / 失败', `${fmt(actions.surgeries)} / ${fmt(actions.surgeryErrors)}`], ['事实检查：通过 / 遗漏', `${fmt(actions.probePassed)} / ${fmt(actions.probeFailed)}`], ['检查调用失败', fmt(actions.probeErrors)], ['原文回捞 / 旧快照清理', `${fmt(actions.rawRecalls)} / ${fmt(actions.staleVersions)}`], ['压缩后字符占比', actions.compactInputChars ? (actions.compactOutputChars / actions.compactInputChars * 100).toFixed(1) + '%' : '—']].map(([label, value]) => <React.Fragment key={label}><span>{label}</span><strong>{value}</strong></React.Fragment>)}</div></Fold>
+      </>}
+      {page === 'calls' && <><div className="tx-call-filters"><label className="tx-field"><select aria-label="调用组件" value={stage} onChange={e => setStage(e.target.value)}><option value="all">全部组件</option>{Object.entries(kindName).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label><label className="tx-check"><input type="checkbox" checked={failures} onChange={e => setFailures(e.target.checked)}/>仅失败</label></div>
+        {activity.length ? activity.map(call => <details key={callId(call)} className={cx('tx-call-row', call.error && 'tx-failed-call')} open={selected === callId(call) || undefined}><summary><span className="tx-call-icon"><Icon name={call.error ? 'close' : 'check'} size={14}/></span><div><strong>{kindName[call.kind] || call.kind}</strong><small>{shortDate(call.at)}{call.step != null ? ` · 第 ${call.step} 步` : ''}</small></div><span>{duration(call.durationMs)}</span><Icon name="chevron" size={13}/></summary><div className="tx-call-detail"><p className="tx-help tx-path">{call.provider} / {call.model}</p><div className="tx-detail-grid"><span>输入 / 输出</span><strong>{fmt(inputTokens(call.usage))} / {fmt(call.usage?.outputTokens)}</strong><span>缓存读取</span><strong>{fmt(call.usage?.cacheReadTokens)}</strong>{call.effort && <><span>推理强度</span><strong>{call.effort}</strong></>}</div><p className="tx-help tx-path">会话 {call.sessionId}</p><Alert error>{call.error}</Alert></div></details>) : <Empty icon="clock" title="这里还没有调用记录">{failures ? '当前筛选范围内没有失败调用。' : '模型调用完成后，会按时间列在这里。'}</Empty>}
+        <p className="tx-footnote">完整消息与工具往返可在 DSH「轨迹」中查看。</p>
+      </>}
+      {page === 'context' && <>{data?.meter ? <section className="tx-section"><div className="tx-section-heading"><h3>当前会话</h3><Badge>{fmt(data.frame?.length)} 条记录</Badge></div><div className="tx-context-number">{compactNumber(data.meter.totalTokens)}<span>tokens</span></div><FrameBar nodes={(data.frame || []).map(n => ({ ...n, kind: n.checkpoint ? 'checkpoint' : n.kind }))}/><FrameLegend/><details className="tx-subfold"><summary>查看各条记录</summary>{data.frame?.map(n => <div className="tx-frame-row" key={n.seq}><span>#{n.seq} · {frameKind(n.checkpoint ? 'checkpoint' : n.kind)}</span><span>{compactNumber(n.tokens)} tok</span></div>)}</details></section> : <Empty icon="layers" title="尚无上下文读数">继续一次对话后即可查看。</Empty>}{data && <ContextHistory data={data}/>}</>}
+    </div>
+  </div>;
 }
 function StatsLine({ sessionId }) {
   const { data } = useSnapshot(sessionId, Boolean(sessionId));
   if (!data?.metrics?.main?.calls) return null;
-  const m = data.metrics.main, allInput = (m.inputTokens || 0) + (m.cacheReadTokens || 0) + (m.cacheWriteTokens || 0);
-  return <div className="tx-stats-line" aria-label="trisoul_x 运行统计">上下文 {fmt(data.meter?.totalTokens)} tok · 主执行 {fmt(m.calls)} 次 · 缓存 {allInput ? Math.round((m.cacheReadTokens || 0) / allInput * 100) : 0}% · 整理 {fmt(data.actions?.surgeries)} 次{data.liveCalls?.length ? ' · 后台作业 ' + data.liveCalls.length : ''}</div>;
+  const m = data.metrics.main, total = inputTokens(m);
+  return <div className="tx-stats-line" aria-label="trisoul_x 运行统计"><span><Icon name="layers" size={12}/>{compactNumber(data.meter?.totalTokens)} 上下文</span><span>{total ? Math.round((m.cacheReadTokens || 0) / total * 100) : 0}% 缓存</span><span>{fmt(data.actions?.surgeries)} 次整理</span>{data.liveCalls?.length > 0 && <span className="tx-stats-active"><i/>后台运行中</span>}</div>;
 }
-
-function Monitor({ sessionId, useTabInfo }) {
-  const { tab } = useTabInfo();
-  const [range, setRange] = useState('session'), [stage, setStage] = useState('all'), [failures, setFailures] = useState(false);
-  const { data, error } = useSnapshot(sessionId, tab.visible, range);
-  const activity = (data?.activity || []).filter(a => (stage === 'all' || a.kind === stage) && (!failures || a.error));
-  const actions = data?.actions || {};
-  const input = usage => (usage?.inputTokens || 0) + (usage?.cacheReadTokens || 0) + (usage?.cacheWriteTokens || 0);
-  const live = data?.liveCalls || [];
-  return <div className="tx-panel"><h2>执行监控</h2>
-    <label>统计范围<select value={range} onChange={e => setRange(e.target.value)}><option value="session">当前会话与子代理</option><option value="all">全部会话</option></select></label>
-    <p className="tx-muted">{fmt(data?.sessionCount)} 个会话 · 当前对话 {({ idle: '空闲', running: '执行中', busy: '执行中' })[data?.running] || data?.running || '空闲'}</p>
-    {error && <p className="tx-error" role="alert">{error}</p>}
-    {data && <Timeline data={data}/>}
-    <div className="tx-metrics">{Object.entries(kindName).map(([kind, label]) => {
-      const m = data?.metrics?.[kind] || {}, last = data?.activity?.find(a => a.kind === kind), active = live.find(a => a.kind === kind);
-      return <section className="tx-metric" key={kind}><h3>{label}{active && <span className="tx-live"> · 运行中</span>}</h3>
-        <strong>{fmt(m.calls)} <small>次调用</small></strong><dl>
-          <dt>输入 / 输出</dt><dd>{fmt(input(m))} / {fmt(m.outputTokens)}</dd><dt>缓存命中</dt><dd>{input(m) ? `${((m.cacheReadTokens || 0) / input(m) * 100).toFixed(1)}%` : '—'}</dd>
-          <dt>推理 Token</dt><dd>{m.reasoningTokens == null ? '—' : fmt(m.reasoningTokens)}</dd><dt>峰值输入</dt><dd>{fmt(m.peakContext)}</dd>
-          <dt>累计耗时</dt><dd>{m.durationMs ? `${(m.durationMs / 1000).toFixed(1)} s` : '—'}</dd><dt>失败</dt><dd>{fmt(m.errors)}</dd>
-        </dl><p className="tx-meta tx-path">{active ? `${active.provider} / ${active.model}` : last ? `${last.provider} / ${last.model}` : '尚无调用'}</p>
-        {m.unmetered > 0 && <p className="tx-meta">{m.unmetered} 次调用未返回用量</p>}{last?.error && <p className="tx-error">{last.error}</p>}
-      </section>;
-    })}</div>
-    <h3>记忆与画布</h3><div className="tx-metric"><dl>
-      <dt>记忆消化 / 失败</dt><dd>{fmt(actions.digests)} / {fmt(actions.digestErrors)}</dd><dt>记忆注入</dt><dd>{fmt(actions.injections)}</dd>
-      <dt>任务文档版本</dt><dd>{fmt(actions.workdocVersions)}</dd><dt>状态提炼 / 失败</dt><dd>{fmt(actions.states)} / {fmt(actions.stateErrors)}</dd><dt>检索降级</dt><dd>{fmt(actions.retrievalFallbacks)}</dd>
-      <dt>探针通过 / 遗漏 / 作业失败</dt><dd>{fmt(actions.probePassed)} / {fmt(actions.probeFailed)} / {fmt(actions.probeErrors)}</dd><dt>旧快照清理</dt><dd>{fmt(actions.staleVersions)}</dd>
-      <dt>记忆整理 / 失败</dt><dd>{fmt(actions.curations)} / {fmt(actions.curationErrors)}</dd>
-      <dt>召回 / 命中条数</dt><dd>{fmt(actions.recalls)} / {fmt(actions.recallHits)}</dd><dt>原文回捞</dt><dd>{fmt(actions.rawRecalls)}</dd>
-      <dt>上下文整理 / 失败</dt><dd>{fmt(actions.surgeries)} / {fmt(actions.surgeryErrors)}</dd>
-      <dt>整理后字符占比</dt><dd>{actions.compactInputChars ? `${(actions.compactOutputChars / actions.compactInputChars * 100).toFixed(1)}%` : '—'}</dd>
-    </dl></div>
-    <h3>当前会话的上下文</h3><p className="tx-muted">{data?.meter ? `约 ${fmt(data.meter.totalTokens)} tokens · ${fmt(data.frame.length)} 条可见记录` : '继续一次对话后可查看上下文读数'}</p>
-    {data && <ContextHistory data={data}/>}
-    <details><summary>上下文组成</summary>{data?.frame?.map(n => <div className="tx-frame" key={n.seq}><span>#{n.seq} {n.checkpoint ? '工作纪要' : n.kind}</span><span>{fmt(n.tokens)} tok</span></div>)}</details>
-    <h3>最近调用</h3><div className="tx-row"><label>组件<select value={stage} onChange={e => setStage(e.target.value)}><option value="all">全部组件</option>{Object.entries(kindName).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label><label className="tx-check"><input type="checkbox" checked={failures} onChange={e => setFailures(e.target.checked)}/>仅失败</label></div>
-    {activity.map((a, i) => <details className={`tx-activity${a.error ? ' tx-error' : ''}`} key={i}><summary>{kindName[a.kind]} · {new Date(a.at).toLocaleTimeString()}{a.durationMs ? ` · ${(a.durationMs / 1000).toFixed(1)} s` : ''}{a.error ? ' · 失败' : ''}</summary>
-      <p className="tx-meta tx-path">{a.provider} / {a.model}<br/>{a.sessionId}</p>
-      <p className="tx-meta">输入 {fmt(input(a.usage))} · 输出 {fmt(a.usage?.outputTokens)} · 缓存读取 {fmt(a.usage?.cacheReadTokens)}{a.effort ? ` · 推理强度 ${a.effort}` : ''}</p>{a.error && <p>{a.error}</p>}
-    </details>)}
-    {!activity.length && <p className="tx-muted">没有符合条件的调用记录。</p>}
-    <p className="tx-muted tx-footer">详细消息与工具往返可在 DSH 的“轨迹”中查看。Token 按提供方返回的用量统计。</p>
-  </div>;
-}
-
-const Mark = ({ size = 26 }) => <span className="tx-mark" style={{ fontSize: size }}>x</span>;
+const Mark = ({ size = 28 }) => <span className="tx-brand-mark" style={{ width: size, height: size }} aria-hidden="true"><svg width="72%" height="72%" viewBox="0 0 32 32" fill="none"><path d="M8 7.5c5 0 7 17 16 17M24 7.5c-5 0-7 17-16 17" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round"/></svg></span>;
 export const inject = ['slots', 'sidebarRightTabs'];
 export function apply(ctx) {
   ctx.effect(() => { const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css; document.head.appendChild(tag); return () => tag.remove(); });
-  for (const [seat, Component] of [['sidebar.brand.mark', Mark], ['sidebar.brand.name', () => <strong>trisoul_x</strong>], ['conversation.hero.brand.mark', () => <Mark size={64}/>]]) ctx.slots.inject(seat, () => ctx.slots.register({ name: seat }, Component));
+  for (const [seat, Component] of [['sidebar.brand.mark', Mark], ['sidebar.brand.name', () => <strong className="tx-wordmark">trisoul<span>_x</span></strong>], ['conversation.hero.brand.mark', () => <Mark size={64}/>]]) ctx.slots.inject(seat, () => ctx.slots.register({ name: seat }, Component));
   ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'trisoul-x', order: 16, label: () => 'trisoul_x' }, Settings));
   ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register({ name: 'conversation.composer.dock', id: 'trisoul-x-stats', order: 30 }, StatsLine));
   ctx.slots.inject('conversation.input.left', () => ctx.slots.register({ name: 'conversation.input.left', id: 'trisoul-memory-scope', order: 50 }, MemoryScopeChip));
   for (const [kind, title, description, Component] of [
-    ['trisoul-x-context', '工作上下文', '任务与验证、约束和工作纪要', ContextPanel],
+    ['trisoul-x-context', '工作上下文', '任务进展、工作状态与记忆文档', ContextPanel],
     ['trisoul-x-memory', '记忆', '查看与编辑分层记忆', MemoryPanel],
     ['trisoul-x-monitor', '执行监控', '调用、用量与后台作业', Monitor],
   ]) {

@@ -3,7 +3,7 @@ import { BlockAssembler, assembleAssistantStream, createUserMessage } from '@dee
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { HubStore, projectOf, memoryLineage } from './hub-store.mjs';
+import { HubStore, projectOf, memoryLineage, matchesProject } from './hub-store.mjs';
 import { MEMORY_CONSTITUTION, OPS_DESC, DIGEST_DESC, CURATE_RULES } from './prompts.mjs';
 import { MemoryContext } from './memory-context.mjs';
 import { StateZone } from './state-zone.mjs';
@@ -63,8 +63,9 @@ export class Hub extends Service {
     this.store = new HubStore(config.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), NS));
     this.presetRoot = fileURLToPath(new URL('../presets/', import.meta.url));
     this.memoryContext = new MemoryContext(this); this.stateZone = new StateZone(this);
-    this.efforts = new Map(); this.idleTimers = new Map(); this.agents = new Map(); this.resumed = new Set(); this.disposedAgents = new Set();
-    this.jobs = new Map(); this.controllers = new Map(); this.pending = new Set();
+    this.efforts = new Map(); this.idleTimers = new Map(); this.agents = new Map(); this.disposedAgents = new Set();
+    this.digestQueue = new Map(); this.digesting = false;
+    this.jobs = new Map(); this.controllers = new Map();
     this.live = new Map(); this.requestStarts = new Map(); this.taskReviews = new Map();
     this.curations = new Map(); this.curationTail = Promise.resolve(); this.curationClosed = false;
     ctx.effect(() => () => {
@@ -229,25 +230,64 @@ export class Hub extends Service {
     agent.steer(notice);
     if (reviewing) this.taskReviews.set(session.id, { turn, messageId: notice.id, ids: store.textReviewLinkIds(session) });
   }
+  startDigestSession(agent) {
+    const session = agent.session, state = this.store.state(session.id);
+    this.disposedAgents.delete(session.id); this.agents.set(session.id, agent);
+    // Newly encountered sessions/forks start here; known sessions replay their unfinished tail.
+    if (!state.digestInitialized) {
+      if (state.cursor < 0 && !state.started && !state.digests.length) state.cursor = session.seq - 1;
+      state.digestInitialized = true; this.store.save(state);
+    }
+    this.digestQueue ??= new Map();
+    if (!this.digestQueue.has(session.id) && this.config().catchupMax > 0) {
+      const backlog = sessionEvents(session).filter(e => e.seq > state.cursor && substantive(e) && eventText(session, e).trim());
+      if (backlog.length > this.config().catchupMax) {
+        state.cursor = backlog.at(-this.config().catchupMax).seq - 1; this.store.save(state);
+      }
+    }
+    void this.schedule(agent);
+  }
   schedule(agent, force = false) {
     const session = agent.session;
-    if (session.header.origin === 'subagent') return Promise.resolve();
-    if (this.jobs.has(session.id)) { if (force) this.pending.add(session.id); return this.jobs.get(session.id); }
-    const state = this.store.state(session.id), cfg = this.config();
-    let fresh = sessionEvents(session).filter(e => e.seq > state.cursor && substantive(e) && eventText(session, e).trim());
-    if (!this.resumed.has(session.id)) { this.resumed.add(session.id); if (cfg.catchupMax > 0) fresh = fresh.slice(-cfg.catchupMax); }
-    if (!fresh.length || (!force && fresh.length < cfg.digestEvery)) return Promise.resolve();
-    if (cfg.digestBatchMax > 0) fresh = fresh.slice(0, Math.max(cfg.digestEvery, cfg.digestBatchMax));
-    const controller = new AbortController(); this.controllers.set(session.id, controller);
-    const job = this.digest(agent, fresh, controller.signal).catch(error => {
-      if (!controller.signal.aborted) { this.ctx.logger.warn(`记忆整理：${error.message}`); this.action(session, 'digestErrors', 1, { error: error.message }); }
-    }).finally(() => {
-      this.jobs.delete(session.id); this.controllers.delete(session.id);
-      if (this.pending.delete(session.id)) void this.schedule(agent, true);
-      else this.armIdle(agent);
-    });
-    this.jobs.set(session.id, job);
-    return job;
+    if (session.header.origin === 'subagent' || this.curationClosed || this.disposedAgents?.has(session.id)) return Promise.resolve();
+    this.agents.set(session.id, agent); this.lastDigestAgent = agent;
+    this.digestQueue ??= new Map();
+    let pending = this.digestQueue.get(session.id);
+    if (!pending) {
+      pending = { agent, events: [], scanSeq: this.store.state(session.id).cursor, retries: 0, urgent: false };
+      this.digestQueue.set(session.id, pending);
+    }
+    pending.agent = agent;
+    const fresh = sessionEvents(session).filter(e => e.seq > pending.scanSeq && substantive(e) && eventText(session, e).trim());
+    pending.scanSeq = session.seq - 1; pending.events.push(...fresh);
+    if (force && pending.events.length) pending.urgent = true;
+    if (fresh.length) this.armIdle(agent);
+    return this.drainDigests();
+  }
+  drainDigests() {
+    if (this.digesting) return this.digestRun;
+    this.digestQueue ??= new Map();
+    const next = () => [...this.digestQueue.values()].find(p => p.events.length && (p.urgent || p.events.length >= this.config().digestEvery));
+    if (this.curationClosed || !next()) return Promise.resolve();
+    this.digesting = true;
+    this.digestRun = (async () => {
+      for (let pending; !this.curationClosed && (pending = next());) {
+        const { agent } = pending, session = agent.session, cfg = this.config();
+        const batch = pending.events.splice(0, cfg.digestBatchMax > 0 ? Math.max(cfg.digestEvery, cfg.digestBatchMax) : pending.events.length);
+        pending.urgent = false;
+        const controller = new AbortController(); this.controllers.set(session.id, controller);
+        const job = this.digest(agent, batch, controller.signal); this.jobs.set(session.id, job);
+        try { await job; pending.retries = 0; }
+        catch (error) {
+          if (!controller.signal.aborted) {
+            this.ctx.logger.warn(`记忆消化：${error.message}`); this.action(session, 'digestErrors', 1, { error: error.message });
+            if (pending.retries < 1) { pending.retries++; pending.events.unshift(...batch); }
+            else { pending.retries = 0; this.action(session, 'digestDeferred', 1, { from: batch[0].seq, to: batch.at(-1).seq }); }
+          }
+        } finally { this.jobs.delete(session.id); this.controllers.delete(session.id); }
+      }
+    })().finally(() => { this.digesting = false; this.digestRun = undefined; this.armIdle(); });
+    return this.digestRun;
   }
   async digest(agent, fresh, signal) {
     const session = agent.session, state = this.store.state(session.id), { project } = this.scope(session);
@@ -282,23 +322,35 @@ export class Hub extends Service {
     else if (cfg.curateEvery > 0 && state.digestCount % cfg.curateEvery === 0) this.requestCuration(agent, this.store.pickShard(this.curationKey(session), this.scope(session)), 'cadence');
   }
   armIdle(agent) {
-    const id = agent.session.id; clearTimeout(this.idleTimers.get(id));
-    if (this.curationClosed || this.disposedAgents?.has(id)) return;
-    if (!this.config().flushIdleMs) return;
-    const timer = setTimeout(async () => {
-      this.idleTimers.delete(id);
-      await this.schedule(agent, true);
-      const shard = this.store.pickShard(undefined, this.scope(agent.session));
-      if (shard) this.requestCuration(agent, shard, 'idle');
-      if (!this.curationClosed) this.armIdle(agent);
-    }, this.config().flushIdleMs);
-    timer.unref(); this.idleTimers.set(id, timer);
+    for (const timer of this.idleTimers.values()) clearTimeout(timer);
+    this.idleTimers.clear();
+    if (agent && !this.disposedAgents?.has(agent.session.id)) this.lastDigestAgent = agent;
+    if (this.curationClosed || !this.config().flushIdleMs) return;
+    const actor = this.lastDigestAgent && !this.disposedAgents?.has(this.lastDigestAgent.session.id) ? this.lastDigestAgent : [...this.agents.values()].at(-1);
+    if (!actor) return;
+    const timer = setTimeout(() => { this.idleTimers.clear(); void this.onIdle(actor).catch(error => this.ctx.logger.warn(`空闲整理：${error.message}`)); }, this.config().flushIdleMs);
+    timer.unref(); this.idleTimers.set('memory', timer);
+  }
+  async onIdle(agent) {
+    if (this.curationClosed) return;
+    if (this.digesting) { this.armIdle(agent); return; }
+    const queues = this.digestQueue ?? new Map(), hasPending = () => [...queues.values()].some(p => p.events.length);
+    for (let guard = queues.size + 1; guard > 0 && hasPending() && !this.curationClosed; guard--) {
+      for (const pending of queues.values()) if (pending.events.length) pending.urgent = true;
+      await this.drainDigests();
+    }
+    if (this.curationClosed) return;
+    if (hasPending() || this.digesting || [...this.curations.values()].some(job => job.running)) { this.armIdle(agent); return; }
+    const shard = this.store.pickShard(this.curationKey(agent.session), this.scope(agent.session));
+    if (shard) { await this.requestCuration(agent, shard, 'idle'); this.armIdle(agent); }
   }
   disposeAgent(agent) {
     const id = agent.session.id;
     this.disposedAgents?.add(id); this.memoryContext.dispose(id);
     this.taskReviews.delete(id); this.controllers.get(id)?.abort(); this.stateZone.dispose(id); this.canvas?.prober?.dispose(id);
-    clearTimeout(this.idleTimers.get(id)); this.idleTimers.delete(id); this.agents.delete(id);
+    this.digestQueue?.delete(id); this.agents.delete(id);
+    if (this.lastDigestAgent?.session.id === id) this.lastDigestAgent = undefined;
+    this.armIdle();
   }
   curationKey(session) { return `project:${this.scope(session).project}`; }
   requestCuration(agent, shard = this.curationKey(agent.session), trigger = 'signal') {
@@ -352,7 +404,7 @@ export class Hub extends Service {
     if (mode === 'session') return;
     const cfg = this.config(), window = this.store.curateWindow(shard, cfg.curateLimit), now = Date.now();
     const scope = shard.startsWith('project:') ? 'project' : shard, project = scope === 'project' ? shard.slice(8) : undefined;
-    if (mode === 'project' && project !== this.scope(session).project) return;
+    if (mode === 'project' && !matchesProject(project, this.scope(session).project)) return;
     const candidates = scope === 'cross' && mode === 'full' ? this.store.crossCandidates() : [];
     const entries = window.entries, editable = [...entries, ...candidates.flatMap(g => g.entries)];
     if (window.total < 2 && editable.length < 2) { this.store.markCurated(shard, 0); return; }

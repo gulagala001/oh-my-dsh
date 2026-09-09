@@ -1,6 +1,7 @@
 import { mkdirSync, existsSync, readFileSync, writeFileSync, renameSync, readdirSync } from 'node:fs';
-import { join, resolve, dirname } from 'node:path';
+import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { projectKeyOf, sameProject } from './project.mjs';
 
 const read = (path, fallback) => existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : fallback;
 export function memoryLineage(entry, history) {
@@ -14,15 +15,9 @@ export function memoryLineage(entry, history) {
   }
   return { at: first.at, depth, origin };
 }
-export function projectOf(cwd) {
-  let dir = resolve(cwd);
-  while (!existsSync(join(dir, '.git'))) {
-    const parent = dirname(dir);
-    if (parent === dir) return resolve(cwd);
-    dir = parent;
-  }
-  return dir;
-}
+export const projectOf = cwd => projectKeyOf(cwd) ?? process.cwd();
+// Session keys are identities, not filesystem paths.
+export const matchesProject = (memory, current) => memory?.startsWith('session:') || current?.startsWith('session:') ? memory === current : sameProject(memory, current);
 
 export const activeMemory = m => !m.retired && !m.supersededBy;
 const publicProject = m => m.scope === 'project' && m.project && !m.project.startsWith('session:');
@@ -59,19 +54,19 @@ export class HubStore {
   }
   memories(project, mode = 'full', history = false) {
     return read(join(this.dir, 'memory.json'), []).filter(m => (history || (!m.retired && !m.supersededBy))
-      && (m.scope === 'project' ? m.project === project : mode === 'full'));
+      && (m.scope === 'project' ? matchesProject(m.project, project) : mode === 'full'));
   }
   allMemories() { return read(join(this.dir, 'memory.json'), []); }
   curationState() { return read(join(this.dir, 'curation.json'), { cursors: {}, lastAt: {} }); }
   shardEntries(shard) {
-    return this.allMemories().filter(m => activeMemory(m) && (shard.startsWith('project:') ? publicProject(m) && m.project === shard.slice(8) : m.scope === shard)).sort(byAge);
+    return this.allMemories().filter(m => activeMemory(m) && (shard.startsWith('project:') ? publicProject(m) && matchesProject(m.project, shard.slice(8)) : m.scope === shard)).sort(byAge);
   }
   crossCandidates() {
     const list = this.allMemories().filter(m => activeMemory(m) && publicProject(m)).sort(byAge), used = new Set(), groups = [];
     for (let i = 0; i < list.length; i++) {
       const a = list[i]; if (used.has(a.id)) continue;
       const entries = [a];
-      for (const b of list.slice(i + 1)) if (!used.has(b.id) && b.project !== a.project && (a.key === b.key || textSimilarity(a.text, b.text) >= 0.6)) entries.push(b);
+      for (const b of list.slice(i + 1)) if (!used.has(b.id) && !sameProject(b.project, a.project) && !sameProject(a.project, b.project) && (a.key === b.key || textSimilarity(a.text, b.text) >= 0.6)) entries.push(b);
       if (new Set(entries.map(m => m.project)).size >= 2) { for (const m of entries) used.add(m.id); groups.push({ key: a.key, entries }); }
     }
     return groups;
@@ -88,13 +83,15 @@ export class HubStore {
   pickShard(preferred, { mode = 'full', project } = {}) {
     if (mode === 'session') return;
     const all = this.allMemories().filter(activeMemory), cross = mode === 'full' ? this.crossCandidates() : [], state = this.curationState();
-    const shards = mode === 'project' ? [`project:${project}`] : [...new Set([...all.filter(m => m.scope !== 'project').map(m => m.scope), ...(cross.length ? ['cross'] : []), ...all.filter(publicProject).map(m => `project:${m.project}`)])];
+    const projects = [...new Set(all.filter(publicProject).map(m => m.project))];
+    const roots = projects.filter(p => !projects.some(q => q !== p && sameProject(p, q))).sort();
+    const shards = mode === 'project' ? [`project:${project}`] : [...new Set([...all.filter(m => m.scope !== 'project').map(m => m.scope), ...(cross.length ? ['cross'] : []), ...roots.map(p => `project:${p}`)])];
     const dirty = shard => {
       const entries = this.shardEntries(shard), last = state.lastAt[shard];
       if (shard === 'cross' && cross.length && (!Number.isFinite(last) || cross.some(g => g.entries.some(m => m.at > last)))) return true;
       return entries.length >= 2 && (!Number.isFinite(last) || state.cursors[shard] > 0 || entries.some(m => m.at > last));
     };
-    if (preferred && shards.includes(preferred) && dirty(preferred)) return preferred;
+    if (preferred && (mode === 'full' || preferred === `project:${project}`) && dirty(preferred)) return preferred;
     return shards.filter(dirty).sort((a, b) => (state.lastAt[a] || 0) - (state.lastAt[b] || 0))[0];
   }
   deleteMemory(id) {
@@ -141,27 +138,45 @@ export class HubStore {
     old.supersededBy = next.id; all.push(next); this.write('memory.json', all);
   }
   memoryOps(project, ops, source = 'scribe', mode = 'full', observed) {
-    const all = read(join(this.dir, 'memory.json'), []), history = new Map(all.map(m => [m.id, m]));
+    const all = this.allMemories(), history = new Map(all.map(m => [m.id, m])), manual = source === 'user';
+    const visible = m => m.scope === 'project' ? matchesProject(m.project, project) : mode === 'full';
+    const allowed = m => manual || (mode === 'full' ? !m.project?.startsWith('session:') : m.scope === 'project' && matchesProject(m.project, project));
+    const head = entry => { const seen = new Set(); while (entry?.supersededBy && !seen.has(entry.id) && history.has(entry.supersededBy)) { seen.add(entry.id); entry = history.get(entry.supersededBy); } return entry; };
+    const find = ref => {
+      if (!ref) return;
+      if (history.has(ref)) return head(history.get(ref));
+      const candidates = all.filter(m => m.key === ref || m.key === String(ref).toLowerCase());
+      const live = candidates.filter(activeMemory), pool = live.length ? live : candidates;
+      return head(pool.find(visible) ?? pool.at(-1));
+    };
     for (const op of ops) {
-      const scope = mode === 'full' ? (op.scope ?? 'project') : 'project';
-      if (!['add', 'update', 'retire'].includes(op.op) || !['global', 'cross', 'project'].includes(scope)) throw new Error('记忆操作或范围无效');
-      const old = all.findLast(m => !m.retired && !m.supersededBy
-        && (op.target ? m.id === op.target || m.key === op.target : m.key === op.key)
-        && (source === 'curate' && op.op !== 'add' ? (observed?.has(m.id) && (m.scope === 'project' ? (!m.project?.startsWith('session:') && (mode === 'full' || m.project === project)) : mode === 'full')) : m.scope === scope && (scope !== 'project' || m.project === project)));
-      const origin = old ? memoryLineage(old, history).origin : source;
+      if (!['add', 'update', 'retire'].includes(op.op) || (op.scope && !['global', 'cross', 'project'].includes(op.scope))) throw new Error('记忆操作或范围无效');
+      let old = op.op !== 'add' ? find(op.target || op.key) : undefined;
+      if (old && !allowed(old)) throw new Error('记忆目标不在当前范围');
       if (source === 'curate' && old && !observed?.has(old.id)) throw new Error('整理目标已变化，本批保留原记忆等待重试');
-      if (source === 'curate' && op.op !== 'add') {
-        if (!old || !observed?.has(old.id)) throw new Error('整理目标已变化，本批保留原记忆等待重试');
-        if (op.op === 'retire' && (old.scope === 'global' || origin === 'user')) continue;
-        if (old.scope === 'global' && scope !== 'global') continue;
+      if (op.op === 'retire') {
+        if (source === 'curate' && (!old || !observed?.has(old.id))) throw new Error('整理目标已变化，本批保留原记忆等待重试');
+        if (!old || !activeMemory(old)) continue;
+        if ((!manual && memoryLineage(old, history).origin === 'user') || (source === 'curate' && old.scope === 'global')) continue;
+        old.retired = Date.now(); old.retiredReason = op.text; continue;
       }
-      const targetProject = scope === 'project' ? (source === 'curate' && old?.scope === 'project' ? old.project : project) : undefined;
+      const text = op.text?.trim(), key = op.key?.trim() || old?.key;
+      if (!key || !text) throw new Error('记忆需要名称和内容');
+      if (!old) {
+        if (all.some(m => activeMemory(m) && visible(m) && m.text === text)) continue;
+        old = all.find(m => activeMemory(m) && visible(m) && m.key === key);
+        if (source === 'curate' && old && !observed?.has(old.id)) throw new Error('整理目标已变化，本批保留原记忆等待重试');
+      }
+      if (old && !activeMemory(old)) old = undefined;
+      if (old && key !== old.key && all.some(m => m.id !== old.id && activeMemory(m) && visible(m) && m.key === key)) throw new Error('目标名称已有其他记忆，请合并到现有条目');
+      let scope = mode === 'full' ? (op.scope || old?.scope || 'project') : 'project';
+      const ranks = { project: 1, cross: 2, global: 3 };
+      if (!manual && old && ranks[scope] < ranks[old.scope]) scope = old.scope;
+      const targetProject = scope === 'project' ? (old?.project || project) : undefined;
       if (scope === 'project' && !targetProject) throw new Error('项目记忆需要所属项目');
-      if (op.op === 'retire') { if (old) { old.retired = Date.now(); old.retiredReason = op.text; } continue; }
-      if (!op.key?.trim() || !op.text?.trim()) throw new Error('记忆需要名称和内容');
-      if (source === 'curate' && all.some(m => m.id !== old?.id && !m.retired && !m.supersededBy && m.key === op.key.trim() && m.scope === scope && (scope !== 'project' || m.project === targetProject))) throw new Error('整理目标名称已有其他记忆，请合并到现有条目');
-      if (old?.text === op.text.trim() && old.scope === scope && old.key === op.key.trim()) continue;
-      const next = { id: randomUUID(), scope, key: op.key.trim(), text: op.text.trim(), source, origin: source === 'user' ? 'user' : origin, at: Date.now(), ...(old?.usage ? { usage: { ...old.usage } } : {}), ...(scope === 'project' ? { project: targetProject } : {}) };
+      if (old?.text === text && old.scope === scope && old.key === key) continue;
+      const origin = old ? memoryLineage(old, history).origin : source;
+      const next = { id: randomUUID(), scope, key, text, source, origin: manual ? 'user' : origin, at: Date.now(), ...(old?.usage ? { usage: { ...old.usage } } : {}), ...(scope === 'project' ? { project: targetProject } : {}) };
       if (old) { old.supersededBy = next.id; next.previous = old.id; }
       all.push(next); history.set(next.id, next);
     }

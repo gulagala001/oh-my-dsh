@@ -191,7 +191,7 @@ test('idle flush digests a short tail then rotates a dirty shard without another
   store.memoryOps(dir, [1, 2].map(i => ({ op: 'add', key: 'idle.' + i, text: 'Idle fact ' + i })));
   user('One short event.');
   hub.call = async (_a, kind) => kind === 'background' ? answer('save_context', { digest: 'Short tail saved.', workdoc: '', phaseClosed: false, compactable: true, nowCompactable: [], ops: [], signals: { overlap: false, conflict: false } }) : answer('memory_curate', { ops: [] });
-  hub.armIdle(agent);
+  await hub.schedule(agent); hub.armIdle(agent);
   const end = Date.now() + 1000;
   while (!store.state(session.id).actions.curations && Date.now() < end) await new Promise(r => setTimeout(r, 10));
   assert.equal(store.state(session.id).digests.length, 1); assert.equal(store.state(session.id).actions.curations, 1);

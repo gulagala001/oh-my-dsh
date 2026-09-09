@@ -1,6 +1,6 @@
 import { Config } from './config.mjs';
 import { Hub, NS } from './hub.mjs';
-import { eventText, sessionEvents } from './hub.mjs';
+import { eventText, sessionEvents, substantive } from './hub.mjs';
 import { CONTEXT_WINDOW_EXCEEDED_CODE } from '@deepseek-ai/dsh-llm';
 import { currentTasks } from './tasks.mjs';
 
@@ -59,7 +59,7 @@ export function apply(ctx, config) {
   ctx.on('agent/session-start', ({ agent, source }) => {
     if (agent.session.header.agentPreset !== 'trisoul-x' || agent.session.header.origin === 'subagent') return;
     const state = hub.store.state(agent.session.id);
-    hub.disposedAgents.delete(agent.session.id); hub.agents.set(agent.session.id, agent);
+    hub.startDigestSession(agent);
     if (source === 'resume') { const record = hub.memoryContext.record(agent.session); record.opened = true; record.taskDone = false; }
     if (source === 'compact') state.memoryReinject = true;
     hub.store.save(state); hub.armIdle(agent);
@@ -68,11 +68,10 @@ export function apply(ctx, config) {
     if (session.header.agentPreset !== 'trisoul-x') return;
     hub.observe(session, event);
     const agent = ctx.agents.get(session.id);
-    if (agent && event.type === 'user/message' && event.data.source.kind === 'user') {
-      hub.armIdle(agent);
-      if (/记住|以后都|从今往后|决定|别再|不要再/.test(eventText(session, event))) void hub.schedule(agent, true);
+    if (agent && substantive(event)) {
+      const urgent = event.type === 'user/message' && event.data.source.kind === 'user' && /记住|以后都|从今往后|决定|别再|不要再/.test(eventText(session, event));
+      void hub.schedule(agent, urgent);
     }
-    if (agent && (event.type === 'step/end' || event.type === 'turn/end')) void hub.schedule(agent, event.type === 'turn/end');
   }, { global: true });
   ctx.inject(['webServer'], web => {
     web.effect(() => web.webServer.register({ kind: 'prefix', path: '/trisoul-x/api', async handler(req, res) {

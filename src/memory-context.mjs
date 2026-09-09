@@ -20,9 +20,9 @@ const renewHead = (v, seq) => `[Task memory · snapshot v${v} · as of seq ${seq
 export function lexicalPick(query, pool, limit = 0) {
   const terms = new Set();
   for (const token of query.toLowerCase().split(/\s+/).filter(Boolean)) {
-    for (const part of token.split(/([\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]+)/u).filter(Boolean)) {
+    for (const part of token.split(/([\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]+)/u).filter(Boolean)) {
       if (/^[\p{P}\p{S}]+$/u.test(part)) continue;
-      if (!/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(part)) terms.add(part);
+      if (!/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(part)) terms.add(part);
       else if (part.length === 1) terms.add(part);
       else for (let i = 0; i + 1 < part.length; i++) terms.add(part.slice(i, i + 2));
     }
@@ -100,10 +100,10 @@ export class MemoryContext {
     }
   }
   enqueue(session, list) {
-    const s = this.record(session), active = new Set(this.hub.memories(session).map(m => m.id));
+    const s = this.record(session), memories = this.hub.memories(session), active = new Set(memories.map(m => m.id));
     for (const m of list) {
       if (!active.has(m.id) || s.ids.includes(m.id) || s.pending.includes(m.id)) continue;
-      if (this.hub.config().supplementMode === 'renew' && s.fingerprints.includes(fp(m.text))) { s.ids.push(m.id); continue; }
+      if (this.hub.config().supplementMode === 'renew' && (s.fingerprints.includes(fp(m.text)) || memories.some(n => s.pending.includes(n.id) && fp(n.text) === fp(m.text)))) { s.ids.push(m.id); continue; }
       s.pending.push(m.id);
     }
     this.save(session);
