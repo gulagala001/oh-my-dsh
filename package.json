@@ -3,16 +3,56 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "从最小核心构建的通用 Agent：单模型执行、上下文与记忆",
+  "description": "基于 DSH 的通用单模型插件：三官原文融合、画布式上下文与分层记忆",
   "scripts": {
-    "start": "node src/server.mjs",
-    "dev": "node --watch src/server.mjs",
+    "build": "node scripts/build.mjs",
+    "start": "node scripts/start.mjs",
+    "dev": "node scripts/build.mjs && node scripts/start.mjs",
     "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
-    "@earendil-works/pi-ai": "0.82.1"
+    "@deepseek-ai/cordis": "4.0.2",
+    "@deepseek-ai/dsh": "0.1.5-alpha.1",
+    "@deepseek-ai/dsh-compaction": "0.1.5-alpha.1",
+    "@deepseek-ai/dsh-llm": "0.1.5-alpha.1",
+    "@deepseek-ai/schemastery": "3.18.2",
+    "zod": "4.5.4"
   },
   "engines": {
     "node": ">=22.19"
+  },
+  "main": "src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./agent": "./src/dsh-agent.mjs",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-sidebar-right",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ]
+    }
+  },
+  "files": [
+    "src",
+    "lib",
+    "presets",
+    "cordis.patch.yml",
+    "README.md",
+    "PROMPT_CHANGES.md",
+    "scripts",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "devDependencies": {
+    "@deepseek-ai/dsh-session": "0.1.5-alpha.1",
+    "esbuild": "0.25.12"
   }
 }

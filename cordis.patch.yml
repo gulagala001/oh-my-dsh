@@ -1,0 +1,30 @@
+- insert:
+    - id: trisoul-x
+      name: trisoul_x
+
+- id: agent-presets
+  inject: [trisoulX]
+  config:
+    default: trisoul-x
+    roots:
+      - path: !!js ctx.trisoulX.presetRoot
+        trust: system
+
+- id: system-prompt
+  config:
+    includeHarnessIdentity: false
+
+- id: fs-observation-policy
+  disabled: true
+
+- id: sandbox-policy
+  config:
+    mode: danger-full-access
+    workspaceRoot: !!js process.cwd()
+
+- id: approval
+  config:
+    policy: never
+
+- id: ui-brand-official
+  disabled: true

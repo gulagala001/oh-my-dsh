@@ -1,5 +1,9 @@
 allowBuilds:
+  '@deepseek-ai/dsh-subprocess-local': true
   '@google/genai': true
+  esbuild: true
+  koffi: true
+  node-pty: true
   protobufjs: true
-patchedDependencies:
-  '@earendil-works/pi-ai@0.82.1': patches/@earendil-works__pi-ai@0.82.1.patch
+minimumReleaseAgeExclude:
+  - '@deepseek-ai/*'

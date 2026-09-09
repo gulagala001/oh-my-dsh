@@ -1,0 +1,129 @@
+import { Config } from './config.mjs';
+import { Hub, NS } from './hub.mjs';
+import { eventText, sessionEvents } from './hub.mjs';
+import { CONTEXT_WINDOW_EXCEEDED_CODE } from '@deepseek-ai/dsh-llm';
+import { currentTasks } from './tasks.mjs';
+
+export { Config };
+export const name = 'trisoul-x';
+export const inject = ['llm', 'agents', 'sessions', 'settings', 'tokenMeter'];
+
+const send = (res, status, value) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(value)); };
+async function readBody(req) { let body = ''; for await (const part of req) body += part; return JSON.parse(body); }
+
+export function apply(ctx, config) {
+  const hub = new Hub(ctx, config);
+  ctx.settings.installSection(ctx, NS, Config, config, { setSource: source => { hub.getConfig = source; }, onChange() {} });
+  ctx.on('system-prompt/assemble', async (_assembly, _context, next) => {
+    const assembly = await next();
+    if (!assembly.sections.some(s => s.name === 'trisoul-x:persona')) return assembly;
+    return { ...assembly,
+      sections: assembly.sections.map(s => ['tool:write', 'tool:edit'].includes(s.name) ? { ...s, text: s.text.replace(' (the default fs-observation-policy requires it)', '') } : s),
+    };
+  }, { global: true });
+  ctx.on('agent/request', ({ agent }, next) => {
+    hub.requestStarts.set(agent.session.id, Date.now());
+    return next();
+  }, { global: true });
+  ctx.on('agent/pre-step', async ({ agent, signal }, next) => {
+    if (agent.session.header.agentPreset === 'trisoul-x' && !signal.aborted) {
+      hub.publish(agent);
+      try { await hub.canvas.compactIfNeeded(agent, 'pressure', signal); }
+      catch (error) { if (!signal.aborted) ctx.logger.warn(`上下文整理：${error.message}`); }
+    }
+    return next();
+  }, { global: true });
+  ctx.on('agent/request-error', async ({ agent, failure, signal }, next) => {
+    if (agent.session.header.agentPreset === 'trisoul-x' && failure.code === CONTEXT_WINDOW_EXCEEDED_CODE && !signal.aborted) {
+      try {
+        if (await hub.canvas.compactIfNeeded(agent, 'context-overflow', signal)) return { kind: 'retry' };
+      } catch (error) { if (!signal.aborted) ctx.logger.warn(`上下文整理：${error.message}`); }
+    }
+    return next();
+  }, { global: true });
+  ctx.on('session/event', (session, event) => {
+    if (session.header.agentPreset !== 'trisoul-x') return;
+    hub.observe(session, event);
+    const agent = ctx.agents.get(session.id);
+    if (agent && (event.type === 'step/end' || event.type === 'turn/end')) void hub.schedule(agent, event.type === 'turn/end');
+  }, { global: true });
+  ctx.inject(['webServer'], web => {
+    web.effect(() => web.webServer.register({ kind: 'prefix', path: '/trisoul-x/api', async handler(req, res) {
+      try {
+        const url = new URL(req.url, 'http://localhost');
+        const id = url.searchParams.get('session');
+        const agent = id ? ctx.agents.get(id) : undefined;
+        const session = agent?.session ?? (id ? ctx.sessions.get(id) : undefined);
+        const stored = id ? hub.store.state(id) : undefined;
+        const scopeSession = session ?? { id: id || 'settings', header: { cwd: stored?.cwd || process.cwd() } };
+        if (url.pathname === '/trisoul-x/api/scope') {
+          const locked = Boolean(stored?.started || (session && sessionEvents(session).some(e => e.type === 'user/message' && e.data.source.kind === 'user')));
+          if (req.method === 'POST') {
+            if (locked) { send(res, 409, { error: '这个会话已开始，记忆范围已绑定' }); return; }
+            const { scope } = await readBody(req);
+            if (!['full', 'project', 'session'].includes(scope)) throw new Error('记忆范围无效');
+            if (stored) { stored.memoryScope = scope; hub.store.save(stored); }
+            else await ctx.settings.update(NS, { memoryScope: scope });
+          }
+          send(res, 200, { scope: stored?.memoryScope || hub.config().memoryScope, locked, default: hub.config().memoryScope }); return;
+        }
+        if (url.pathname === '/trisoul-x/api/state' && req.method === 'GET') {
+          const directory = await Promise.all(ctx.llm.listProviders().map(async provider => ({ ...provider, models: await ctx.llm.listModels(provider.id).catch(() => []) })));
+          const states = hub.store.allStates(), ids = new Set(id ? [id] : states.map(s => s.id));
+          for (let changed = true; changed;) {
+            changed = false;
+            for (const s of states) if (ids.has(s.parentSession) && !ids.has(s.id)) { ids.add(s.id); changed = true; }
+          }
+          const all = url.searchParams.get('range') === 'all' ? states : states.filter(s => ids.has(s.id));
+          const metrics = {};
+          for (const state of all) for (const [kind, m] of Object.entries(state.metrics)) {
+            const target = metrics[kind] ??= {};
+            for (const [key, n] of Object.entries(m)) target[key] = key === 'peakContext' ? Math.max(target[key] || 0, n) : (target[key] || 0) + n;
+          }
+          const actions = {};
+          for (const state of all) for (const [key, n] of Object.entries(state.actions || {})) actions[key] = (actions[key] || 0) + n;
+          const meter = session ? ctx.tokenMeter.measure(session) : null;
+          send(res, 200, {
+            config: hub.config(), directory, metrics, actions, sessionCount: all.length,
+            context: stored ? { pins: stored.pins, status: stored.status, notes: stored.notes, checkpoint: stored.checkpoint, cursor: stored.cursor, digestCount: stored.digests.length } : null,
+            tasks: currentTasks(session, stored?.tasks),
+            activity: all.flatMap(s => s.activity).sort((a, b) => b.at - a.at).slice(0, 60),
+            live: id ? ([...hub.live.values()].find(call => call.sessionId === id) ?? null) : [...hub.live.values()],
+            liveCalls: [...hub.live.values()].filter(call => !id || url.searchParams.get('range') === 'all' || ids.has(call.sessionId)),
+            scope: hub.scope(scopeSession), running: agent?.status ?? 'idle',
+            meter,
+            frame: session ? meter.nodes.map(n => { const e = session.eventAt(n.seq), m = session.deriveEventMessage(e); return { seq: n.seq, role: m?.role, kind: m?.source?.plugin || m?.source?.kind || e.type, tokens: n.tokens, chars: eventText(session, e).length, checkpoint: Boolean(m?.source?.compactionId) }; }) : [],
+            route: session?.requestHeader()?.config ? { provider: session.requestHeader().config.provider, model: session.requestHeader().config.model } : null,
+          }); return;
+        }
+        if (url.pathname === '/trisoul-x/api/settings' && req.method === 'POST') {
+          await ctx.settings.update(NS, await readBody(req)); send(res, 200, hub.config()); return;
+        }
+        if (url.pathname === '/trisoul-x/api/memories') {
+          if (req.method === 'GET') {
+            const all = hub.store.allMemories(), visibleIds = new Set(hub.memories(scopeSession, true).map(m => m.id));
+            const items = (url.searchParams.get('view') === 'all' ? all : all.filter(m => visibleIds.has(m.id))).map(m => ({ ...m, visible: visibleIds.has(m.id), touched: m.usage?.sessions?.includes(id) || m.usage?.lastSessionId === id }));
+            send(res, 200, { items, scope: hub.scope(scopeSession), projects: [...new Set(all.filter(m => m.project).map(m => m.project))], trace: stored?.memoryTrace || [] }); return;
+          }
+          if (req.method === 'POST') {
+            const input = await readBody(req);
+            if (input.op === 'restore') hub.store.restore(input.target);
+            else if (input.op === 'update') hub.store.edit(input.target, input);
+            else if (input.op === 'retire') {
+              const old = hub.store.allMemories().find(m => m.id === input.target);
+              if (!old) throw new Error('找不到这条记忆');
+              hub.store.memoryOps(old.project, [{ ...old, ...input }], 'user');
+            } else hub.store.memoryOps(input.project || hub.scope(scopeSession).project, [input], 'user');
+            send(res, 200, { ok: true }); return;
+          }
+        }
+        if (url.pathname === '/trisoul-x/api/compact' && req.method === 'POST') {
+          if (!agent) throw new Error('先继续一次对话，再整理这个会话');
+          const result = await hub.canvas.compactNow(agent, new AbortController().signal);
+          send(res, 200, { changed: Boolean(result) }); return;
+        }
+        send(res, 404, { error: '接口不存在' });
+      } catch (error) { send(res, 400, { error: error.message }); }
+    } }));
+  });
+}

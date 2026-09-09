@@ -1,50 +1,62 @@
 # trisoul_x
 
-从最小核心构建的通用 Agent。一个主模型负责执行，上下文与记忆维持长任务连续性。
+DSH 的通用单模型插件。保留原 trisoul 的分层提示词、三官行为原文、画布式上下文与分层记忆；通用工具、技能、会话和按需子代理复用宿主。
+
+当前适配 **DSH 0.1.5-alpha.1**（2026-09-08 发布）。npm 的 `latest` 标签当时仍指向 0.1.2-rc.1，因此依赖固定到已发布的新版本。
 
 ## 运行
 
-需要 Node.js ≥22.19 和 pnpm。
+需要 Node.js ≥22.19、pnpm。
 
 ```sh
 pnpm install
+pnpm build
 pnpm start
 ```
 
-打开 [本地页面](http://127.0.0.1:3082)，在设置中填写 API 地址、模型和密钥。默认一个模型同时负责主对话与后台整理，也可以单独配置后台模型。`PORT` 可改端口，`TRISOUL_X_DATA` 可改数据目录。
+默认端口 **3083**，`PORT` 可改。使用终端打印的登录链接打开 DSH。主模型在 DSH 的“设置 → 模型”和对话模型选项中配置；插件的后台模型、记忆范围和画布参数在“设置 → trisoul_x”中配置。
 
-也可通过 `TRISOUL_X_BASE_URL`、`TRISOUL_X_MODEL`、`TRISOUL_X_API_KEY` 提供初始配置，页面保存的配置优先。默认协议为 OpenAI Chat Completions。协议适配还接入 Responses、Anthropic Messages 和 Google Gemini；本轮真实联调使用 Chat Completions + DeepSeek v4 flash。
+本项目启动器使用独立 `data/dsh` 目录和 `trisoul-x` profile。`DSH_HOME` 可指定其他数据目录。首次启动使用 DSH 官方 CLI 创建 web profile 并安装本地插件，不修改原 trisoul 的配置。
 
-## 当前能力
+已有 DSH 0.1.5-alpha.1 的用户也可在自己选择的 profile 中安装：
 
-- 自然语言流式对话、原生工具循环、停止执行、会话持久化与恢复。
-- `read` / `write` / `edit` / `bash` / `web_fetch`，以及按需使用的 `tasks` / `note` / `recall`。
-- 后台通过一次原生工具提交，同时维护长期记忆、工作状态与区间摘要。
-- 全局、跨项目、本项目三层记忆；覆盖历史保留，支持页面编辑、删除及按需检索。
-- 工作状态按版本追加；优先整理已消化且释放的区间，上下文压力较大时整理较早内容；保留用户原话和最近工具往返，原文可按序号回捞。
-- 对话为主的 UI，可展开上下文、记忆和任务；支持窄屏及系统明暗主题。
+```sh
+dsh plugin --profile YOUR_PROFILE add link:/absolute/path/to/trisoul_x
+```
 
-当前聚焦文本对话、本地工具与上下文记忆。
+安装前先在源码目录运行 `pnpm build`，安装后重启宿主。该 bundle 将默认 Agent preset 设为 trisoul-x，并按本项目约定配置完整访问和无需审批。
 
-## 结构
+## 使用
 
-单包，无构建步骤。Node HTTP 服务提供 API 和静态页面；唯一直接运行依赖是原项目使用的模型适配库 `@earendil-works/pi-ai`。
+- **记忆范围**：与原 trisoul 同位置，位于对话输入区工具行左侧。首次发消息前可选完全版、项目级、会话级；发出后绑定该会话。设置中的默认范围只影响未绑定的新会话。
+- **工作上下文**：右侧栏查看任务与验证、约束、状态、笔记与工作纪要，也可手动整理较早上下文。
+- **记忆**：当前会话或整个记忆库，支持内容/项目/层级筛选、编辑、版本恢复、批量删除与恢复、注入及召回记录。
+- **执行监控**：当前会话及子代理或全部会话，查看主执行、子代理、记忆后台、整理后台的用量、缓存、失败、耗时、上下文组成及记忆动作。
+- **任务与验证**：一个 `todo_write` 维护完整任务列表，每条任务包含内容、状态、需求原话及验证方式/实际结果。以 DSH `todo/write` 事件持久化，原生清单和工作上下文面板共用同一份记录，继续对话仍可查看。
+- **通用工具**：文件读写和搜索、Shell、后台作业、网页、技能、按需子代理、目标和工作流由 DSH 提供。细节沿用宿主“轨迹”、设置和工具卡片。
+- **记忆与画布**：后台原生工具提交 digest、约束、状态和记忆操作；优先整理已消化并释放的区间。用户原话与近期工具往返保留，原始事件可通过 `recall` 回捞。
 
-| 文件 | 职责 |
+`web_search` 需要宿主搜索服务的有效配置；主对话模型的 Ark 密钥不等于搜索凭据。MCP 由 DSH 宿主配置，本轮未连接额外 MCP 服务。
+
+## 代码
+
+一个包，一份插件 UI 构建；会话与模型执行循环全部由 DSH 承担。
+
+| 位置 | 职责 |
 | --- | --- |
-| `src/agent.mjs` | 单模型执行循环 |
-| `src/llm.mjs` | 原生模型协议适配 |
-| `src/tools.mjs` | 普通工具 |
-| `src/context.mjs` | 记忆、工作状态与区域整理 |
-| `src/store.mjs` | 会话事件与记忆存储 |
-| `src/prompts.mjs` | 从原文融合的提示词 |
-| `src/server.mjs` | HTTP / SSE |
-| `web/` | 页面、样式与交互 |
+| `cordis.patch.yml` / `presets/` | 宿主安装补丁与 Agent 组合 |
+| `src/index.mjs` / `src/dsh-agent.mjs` | 插件接入、事件、设置和普通扩展工具 |
+| `src/tasks.mjs` | 任务定义、状态与验证的统一记录 |
+| `src/prompts.mjs` | 原文融合及必要接口适配 |
+| `src/hub.mjs` / `src/hub-store.mjs` | 后台记忆、范围、状态、版本与统计 |
+| `src/canvas.mjs` | DSH V3 上下文区间整理 |
+| `src/client/` | 输入区选择器、设置与右侧面板 |
+| `scripts/` | UI 构建与独立 profile 启动 |
 
-`data/` 存放本机配置（含密钥）、会话与记忆，已被 Git 忽略。原 trisoul 的运行数据与配置未迁入。`patches/` 只保留模型适配库大工具参数的解析性能修补。
+`data/` 已忽略。首次使用独立启动器时，可承接本目录中早期原型的模型配置和记忆；原型对话日志继续保留在 `data/sessions/`，未转换成 DSH 会话。新对话由 DSH 保存。原 trisoul 项目及数据未改动。
 
-## 提示词与验证
+## 提示词与测试
 
-原文基准为 trisoul 提交 `4189f90305e545dbb82654f561fc4d83eed96d03`。遵循 [AGENTS.md](AGENTS.md)，逐项变更和理由见 [PROMPT_CHANGES.md](PROMPT_CHANGES.md)；原文快照仅用于对照测试。
+[提示词逐项对照及改动原因](PROMPT_CHANGES.md)，[工作约定](AGENTS.md)，[上游许可](THIRD_PARTY_NOTICES.md)。
 
-`pnpm test` 覆盖真实文件执行、HTTP 与 SDK 流式衔接、停止与截断处理、会话恢复、记忆覆盖与区间回捞，以及提示词原文保留。测试使用临时目录与本地模型端点，不调用付费 API。
+`pnpm test` 使用临时目录、本地模拟模型和真实 DSH profile，不调用付费模型。覆盖原文保留、范围绑定与隔离、记忆版本和失败回退、原生工具与项目指令/技能目录、V3 整理与原文回捞、统一任务记录和跨轮恢复。另已使用用户授权的 DeepSeek v4 flash 完成真实文件、技能、子代理和记忆后台联调。
