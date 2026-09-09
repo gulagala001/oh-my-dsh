@@ -42,9 +42,17 @@ test('original persona passages, memory constitution and surgeon remain intact',
   assert.equal(MEMORY_CONSTITUTION, original.constitution); assert.equal(SURGEON_SYSTEM, original.surgeon);
   assert.deepEqual(OPS_DESC, { ...original.ops, ops: original.ops.ops.replace(' (the curation job cleans it up)', '') });
   assert.ok(!SCRIBE.includes('Output JSON (JSON only)'));
-  assert.ok(TASK_DESCRIPTION.includes(original.todo.replaceAll('your draft', 'your reply')));
-  assert.ok(TASK_DESCRIPTION.includes(original.taskMap.replace('use the todo tool', 'use op:check').replaceAll('your draft', 'your reply')));
-  assert.ok(TASK_DESCRIPTION.includes(original.verify));
+  // The approved merge changes introductions, deletion, timing and view wording.
+  // Requirement anchoring, completion conditions and evidence standards keep the original text.
+  const taskText = TASK_DESCRIPTION.replace(/\s+/g, ' ');
+  for (const passage of [
+    original.taskMap.slice(0, original.taskMap.indexOf(' Keep the list honest')),
+    original.taskMap.slice(original.taskMap.indexOf('Each task'), original.taskMap.indexOf(' op:transcript')),
+    original.taskMap.slice(original.taskMap.indexOf('op:transcript'), original.taskMap.indexOf(' op:view')),
+    original.todo.slice(original.todo.indexOf('Never check off'), original.todo.indexOf(' Remove a task')),
+    ...original.verify.split('\n\n').slice(2, 5),
+    original.verify.split('\n\n').at(-1).split(' op:view')[0],
+  ]) assert.ok(taskText.includes(passage.replace(/\s+/g, ' ')), passage);
 });
 
 test('memory scope, atomic batches, versions, restoration and per-session usage survive reload', t => {

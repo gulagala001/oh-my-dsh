@@ -5,12 +5,6 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import { accessSync, constants, realpathSync } from 'node:fs'
 import { resolve as resolvePath, extname } from 'node:path'
 
-/** 对齐官（align）专属：todo list 结构工具名 */
-export const TASK_MAP_TOOL = 'task_map'
-/** 实证官（empiric）专属：验证链接工具名 */
-export const VERIFY_LINK_TOOL = 'verify_link'
-/** 三魂共用完成态工具名（宿主注册，actions 栏可用；顶替原装 todo_write） */
-export const TODO_TOOL = 'todo'
 /** 清单快照事件类型（持久化 + UI 投影共用一份事件源）。用原装 todo_write 的事件类型而不自造：dsh 读日志只认它
  *  生成的 KNOWN_SESSION_EVENT_TYPES 清单，未知类型须带 ignorable 标记，而 session.append 的信封没有该字段可打——
  *  自造类型写得进读不出（08-29 病例：跑过 task_map 的会话 resume 时整条日志被拒）。data 带原装形
@@ -35,44 +29,6 @@ export const TODO_INJECTION_ID_PREFIX = 'trisoul-todolist-'
 const RUN_TAIL_CHARS = 2000
 /** 单个测试文件的执行上限（对齐本仓 run_verify 前例 tsc 300s；防挂死拖住取证轮） */
 const RUN_TIMEOUT_MS = 300_000
-
-// ---------- 工具 schema（lookup 栏；描述/参数逐字取自 spec 2.1/2.2、4.1/4.2） ----------
-
-export function taskMapSchema() {
-  return {
-    name: TASK_MAP_TOOL,
-    description: "Creates and edits the todo list anchored to the user's own wording — a clear, complete todo list greatly raises the completion rate in medium-to-large tasks. Use it when the task takes three or more distinct steps, when the user lists several things at once, or when new instructions arrive mid-task — capture them right away. Skip it for single-step work and plain conversation — a list there is overhead, not help. op:excerpt copies a block of the user's own words in as the raw material the todo list is parsed from — quote its opening and closing words verbatim ({from, to}) — together with the tasks that cover it (`tasks:[...]` in the same call). Tasks are added, edited and removed through op:add/edit/remove. Keep the list honest as work progresses: remove tasks that are no longer relevant or turn out impossible from the list entirely (op:remove), and rewrite a task overtaken by newer instructions into what can actually be done (op:edit) — say why in your draft. Each task selects a sub-range within an excerpt as its `anchor` ({from, to}). op:transcript returns the verbatim list of user messages in this session, numbered [1], [2], … — you only need it when a quote appears in more than one message: check the numbering and add msg to the excerpt. op:view returns the full todo list including excerpts. (To check tasks off, use the todo tool; editing a task itself clears its checkmark and verification links.)",
-    parameters: {
-      type: 'object',
-      properties: {
-        op: { type: 'string', enum: ['excerpt', 'add', 'edit', 'remove', 'view', 'transcript'], description: 'Operation kind' },
-        from: { type: 'string', description: 'Required for excerpt: opening words of the block, verbatim, unique within its message' },
-        to: { type: 'string', description: 'Required for excerpt: closing words of the block, verbatim, unique within its message' },
-        msg: { type: 'integer', description: 'Only for excerpt when the quote appears in more than one user message: which message, using the [n] numbering from op:transcript' },
-        tasks: { type: 'array', description: 'Required for excerpt/add/edit: each entry is {"id": edit only — the task to change, "title": one line stating what the task requires, "anchor": {"excerpt": excerpt id — only needed when the quote appears in more than one excerpt, "from": opening words of the sub-range, verbatim, "to": closing words, verbatim}}.', items: { type: 'object' } },
-        ids: { type: 'array', items: { type: 'string' }, description: 'Required for remove: ids of the tasks to delete' },
-      },
-      required: ['op'],
-    },
-  }
-}
-
-export function verifyLinkSchema() {
-  return {
-    name: VERIFY_LINK_TOOL,
-    description: `The tasks' verification-link tool, used to raise the real completion rate of the todo list. A task counts as verified only through what is linked here.\n\nWhen to link: link the evidence the moment a task is done — not in one sweep after everything is built.\n\nHow a test earns its place: start from the task's own words — if that sentence is true, what must be observable? The test asserts exactly that, in the same scope as the sentence — no narrower, and no premises the user never stated. It must exercise the changed code path against real behavior — the repository's own test runner, real dependencies, not mocks of the thing under test. A test the implementation cannot fail proves nothing. Prefer the repository's own test command (cmd) over a hand-made script.\n\nWhat does not count: a test written from the implementation instead of from the task's words; a green run whose test never reaches the changed path; a scenario narrower or easier than the one the user described; a text note that restates the task title.\n\nEvidence ranks, strongest first: (1) a real-environment run doing what the user would do; (2) an automated end-to-end test; (3) a targeted probe of the exact code path; (4) a smoke check that it starts and responds; (5) a text record. Link the highest rung you can actually run here; a lower rung only when every higher one is genuinely impossible — and reason must say why. A "text" note must name its evidence — the command run, the output seen, or the file and place inspected.\n\nOps: op:link attaches evidence to a task — a test file (kind "test") or a text record (kind "text"). op:run runs the linked tests — with cmd, the command as given; without it, the file bare by extension — and reports PASS / FAIL / TIMEOUT with the output tail. op:unlink withdraws links that no longer hold (the files themselves are untouched). op:view returns every task with its completion state and evidence.`,
-    parameters: {
-      type: 'object',
-      properties: {
-        op: { type: 'string', enum: ['link', 'run', 'unlink', 'view'], description: 'Operation kind' },
-        links: { type: 'array', description: 'Required for link: each entry is {"task": task id, "kind": "test" or "text", "path": for test — the test file path (relative to the session working directory); for text — optional supporting file, "note": for text — one line naming what was observed (command, output, or file and place), "reason": for text — one line on why no higher rung of the evidence ladder is runnable here, "cmd": for test — optional; the exact command that runs this test the way the repository runs it (e.g. "npx vitest run tests/x.test.ts", "go test ./pkg/...", "cargo test alias"); without cmd the file is run bare by its extension (node / pytest / bash)}', items: { type: 'object' } },
-        tasks: { type: 'array', items: { type: 'string' }, description: "Optional for run: which tasks' linked tests to execute (default: every task with test links)" },
-        ids: { type: 'array', items: { type: 'string' }, description: 'Required for unlink: link ids to withdraw' },
-      },
-      required: ['op'],
-    },
-  }
-}
 
 // ---------- transcript（单编号 [n]，取自会话全量日志、不受手术影响） ----------
 
@@ -141,16 +97,23 @@ const locateErrText = (r, where) => r.err === 'multi'
 
 const box4 = (done) => done ? '[done]' : '[    ]'
 /** 含节选原文的完整树（op:view 与变更回执共用） */
-function renderTree(rec) {
+function renderTree(rec, includeEvidence = false) {
   if (!rec.excerpts.length && !rec.tasks.length) return 'Todo list is empty.'
-  const lines = ['Todo list (E = excerpt, T = task):']
+  const lines = [includeEvidence ? 'Todo list (E = excerpt, T = task, L = link):' : 'Todo list (E = excerpt, T = task):']
+  const appendTask = (t, suffix) => {
+    lines.push(`  ${t.id} ${box4(t.done)} ${t.title}${suffix}`)
+    if (includeEvidence) {
+      if (!t.links.length) lines.push('    no links')
+      for (const l of t.links) lines.push(`    ${linkLine(l)}`)
+    }
+  }
   for (const ex of rec.excerpts) {
     lines.push(`${ex.id} [msg ${ex.msg}] "${ex.text}"`)
     for (const t of rec.tasks.filter(t => t.anchor?.excerpt === ex.id)) {
-      lines.push(`  ${t.id} ${box4(t.done)} ${t.title} ← "${ex.text.slice(t.anchor.start, t.anchor.end)}"`)
+      appendTask(t, ` ← "${ex.text.slice(t.anchor.start, t.anchor.end)}"`)
     }
   }
-  for (const t of rec.tasks.filter(t => !t.anchor)) lines.push(`  ${t.id} ${box4(t.done)} ${t.title} — legacy task; add its original-wording anchor with op:edit`);
+  for (const t of rec.tasks.filter(t => !t.anchor)) appendTask(t, ' — legacy task; add its original-wording anchor with op:edit')
   return lines.join('\n')
 }
 /** 单条链接的视图行体（4.3：test 显示跑没跑/结果，text 带 ⚠ 分型标记） */
@@ -161,7 +124,7 @@ const testLabel = (l) => `${l.path}${l.cmd ? ` (${l.cmd})` : ''}`
 const linkLine = (l) => l.kind === 'text'
   ? `${l.id} text — "${l.note}" ⚠ text evidence${l.reason ? ` — reason: "${l.reason}"` : ''}`
   : `${l.id} test ${testLabel(l)} — ${runState(l)}`
-/** 含验证态的视图（op:view / op:run 回执尾部） */
+/** op:run 回执尾部的验证结果。 */
 function renderVerifyView(rec) {
   if (!rec.tasks.length) return 'No tasks yet.'
   const lines = ['Verification view (T = task, L = link):']
@@ -341,12 +304,12 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     return undefined
   }
 
-  /** task_map（A 专属，lookup 当场执行）：整调用原子——任何错误零写入 */
+  /** 摘录与任务结构操作；整调用原子。 */
   const execTaskMap = (session, args) => {
     const rec = getRec(session)
     const op = args?.op
     if (op === 'transcript') return { text: transcriptText(session) }
-    if (op === 'view') return { text: renderTree(rec) }
+    if (op === 'view') return { text: renderTree(rec, true) }
     if (op === 'excerpt') {
       const msgs = userMessages(session)
       if (typeof args.from !== 'string' || !args.from || typeof args.to !== 'string' || !args.to) {
@@ -450,12 +413,11 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     return err(`Rejected: unknown op "${String(op)}".`)
   }
 
-  /** todo（三魂共用，actions 栏）：编辑完成态 + 任务消除（2026-08-31 拍板下放；与 task_map op:remove 同语义——原子、未知 id 整拒）；整调用原子 */
-  const execTodo = (session, updates, removeIds) => {
+  /** 更新完成状态；删除任务由 op:remove 处理。 */
+  const execCheck = (session, updates) => {
     const rec = getRec(session)
     const ups = Array.isArray(updates) ? updates : []
-    const rms = Array.isArray(removeIds) ? removeIds : []
-    if (!ups.length && !rms.length) return err('Rejected: updates or remove must be a non-empty array.')
+    if (!ups.length) return err('Rejected: op:check requires updates.')
     const next = clone(rec)
     const seen = []
     for (const u of ups) {
@@ -465,24 +427,14 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       t.done = u.done
       seen.push([t.id, u.done])
     }
-    for (const id of rms) {
-      if (typeof id !== 'string' || !id) return err('Rejected: remove entries must be task ids.')
-      const i = next.tasks.findIndex(t => t.id === id)
-      if (i < 0) return err(`Rejected: unknown task id ${id}.`)
-      next.tasks.splice(i, 1)
-    }
     commit(session, rec, next)
-    const parts = []
-    if (seen.length) parts.push(`Updated: ${seen.map(([id, d]) => `${id} → ${d ? 'done' : 'open'}`).join(', ')}.`)
-    if (rms.length) parts.push(`Tasks removed: ${rms.join(', ')}.`)
-    return { text: `${parts.join(' ')} Tasks: ${rec.tasks.filter(t => t.done).length}/${rec.tasks.length} done.` }
+    return { text: `Updated: ${seen.map(([id, d]) => `${id} → ${d ? 'done' : 'open'}`).join(', ')}. Tasks: ${rec.tasks.filter(t => t.done).length}/${rec.tasks.length} done.` }
   }
 
-  /** verify_link（C 专属，lookup 当场执行）：link/run/unlink/view */
+  /** 验证证据操作：link/run/unlink。 */
   const execVerifyLink = async (session, args, cwd, signal) => {
     const rec = getRec(session)
     const op = args?.op
-    if (op === 'view') return { text: renderVerifyView(rec) }
     if (op === 'link') {
       const next = clone(rec)
       const entries = Array.isArray(args.links) ? args.links : []
@@ -606,38 +558,5 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
   }
   const revOf = (session) => getRec(session).rev
 
-  return { execTaskMap, execTodo, execVerifyLink, takeNudge, takeEmptyNudge, maintainInjection, revOf, snapshot: session => clone(getRec(session)) }
-}
-
-// ---------- todo 宿主工具定义（ctx.tools.register 用；描述/参数逐字 spec 3.1/3.2） ----------
-
-export function todoToolDefinition(store) {
-  return {
-    name: TODO_TOOL,
-    description: "The todo list's completion marker. Decide how a task will be verified before building it, and check it off the moment it is fully done — one at a time, as you go, not all of them at the end. Never check off a task while its tests are failing, the implementation is partial, or an error on it is unresolved; when several are checked together, that must hold for every one of them. Uncheck a task that turns out not to be done. Remove a task (remove:[ids]) only when it no longer belongs on the list — irrelevant, impossible, or overtaken by newer instructions — never because it is hard; say why in your draft.",
-    parameters: {
-      type: 'object',
-      properties: {
-        updates: {
-          type: 'array',
-          description: 'Each entry is {"id": task id, "done": true or false}',
-          items: { type: 'object', properties: { id: { type: 'string' }, done: { type: 'boolean' } }, required: ['id', 'done'], additionalProperties: false },
-        },
-        remove: { type: 'array', items: { type: 'string' }, description: 'Task ids to delete from the list entirely' },
-      },
-      required: [],
-    },
-    output: {
-      schema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'], additionalProperties: false },
-      render: (_args, value) => [{ type: 'text', text: value.text }],
-    },
-    async execute(args, exec) {
-      const session = exec?.agent?.session
-      if (!session) throw new Error('todo requires an owning agent session')
-      const r = store.execTodo(session, args?.updates, args?.remove)
-      if (r.isError) throw new Error(r.text)
-      return { text: r.text }
-    },
-    presentCall: (args) => ({ card: 'generic', title: 'Update todo list', kind: 'other', rawInput: args }),
-  }
+  return { execTaskMap, execCheck, execVerifyLink, takeNudge, takeEmptyNudge, maintainInjection, revOf, snapshot: session => clone(getRec(session)) }
 }

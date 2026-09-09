@@ -23,7 +23,8 @@ const quote = '登录必须支持邮箱验证码，还要有注册功能。';
 const excerpt = { op: 'excerpt', from: '登录必须支持', to: '注册功能', tasks: [task('邮箱验证码登录', '登录必须支持', '邮箱验证码'), task('注册', '注册功能')] };
 
 test('one tool preserves real excerpts and mandatory anchors, with atomic failures and stable IDs', async t => {
-  const { session, call, user } = setup(t); user(quote);
+  const { session, tool, call, user } = setup(t); user(quote);
+  assert.equal(Object.hasOwn(tool.parameters.properties, 'remove'), false);
   await assert.rejects(call({ ...excerpt, tasks: [{ title: 'missing anchor' }] }), /needs anchor/);
   assert.equal(session.snapshotEvents().filter(e => e.type === 'todo/write').length, 0);
   await call(excerpt);
@@ -31,6 +32,8 @@ test('one tool preserves real excerpts and mandatory anchors, with atomic failur
   assert.equal(snap.excerpts[0].text, '登录必须支持邮箱验证码，还要有注册功能');
   assert.deepEqual(snap.tasks.map(t => t.id), ['T1', 'T2']);
   assert.equal(currentTasks(session)[0].source, '登录必须支持邮箱验证码');
+  await assert.rejects(call({ op: 'check', remove: ['T2'] }), /op:check requires updates/);
+  assert.equal(currentTasks(session).length, 2);
   await call({ op: 'check', updates: [{ id: 'T1', done: true }] });
   await assert.rejects(call({ op: 'remove', ids: ['T2', 'missing'] }), /unknown task/);
   assert.equal(currentTasks(session).length, 2);
@@ -58,8 +61,15 @@ test('linked tests really run; edits clear completion and evidence; replay prese
   writeFileSync(join(dir, 'check.mjs'), 'console.log("REAL_LEDGER_TEST_OK")');
   await call({ op: 'link', links: [{ task: 'T1', kind: 'test', path: 'check.mjs', cmd: 'node check.mjs' }] });
   assert.equal(currentTasks(session)[0].links[0].lastRun, null);
+  const pendingView = await call({ op: 'view' });
+  assert.equal(pendingView.match(/^  T1 /gm)?.length, 1);
+  assert.equal(pendingView.match(/^  T2 /gm)?.length, 1);
+  assert.match(pendingView, /E1 \[msg 1\].*登录必须支持邮箱验证码/);
+  assert.match(pendingView, /T1 .*邮箱验证码登录[^\n]*\n    L1 test check\.mjs \(node check\.mjs\) — not run yet/);
+  assert.match(pendingView, /T2 .*注册[^\n]*\n    no links/);
   assert.match(await call({ op: 'run', tasks: ['T1'] }), /PASS.*REAL_LEDGER_TEST_OK/);
   await call({ op: 'check', updates: [{ id: 'T1', done: true }] });
+  assert.match(await call({ op: 'view' }), /T1 \[done\][^\n]*\n    L1 [^\n]* — PASS/);
   const data = session.snapshotEvents().at(-1).data;
   assert.equal(data.tasks[0].links[0].lastRun.pass, true);
   assert.equal(projection.apply(data.todos, { type: 'turn/start' }), data.todos);
@@ -76,7 +86,7 @@ test('text evidence retains its source and reason, and can be unlinked without a
   await assert.rejects(call({ op: 'link', links: [{ task: 'T1', kind: 'text', note: 'looked good' }] }), /requires reason/);
   await call({ op: 'link', links: [{ task: 'T1', kind: 'text', note: 'Inspected app.ts:12', reason: 'No runnable environment in this fixture.' }] });
   const item = currentTasks(session)[0]; assert.equal(item.links[0].reason, 'No runnable environment in this fixture.');
-  assert.match(await call({ op: 'view' }), /text evidence/);
+  assert.match(await call({ op: 'view' }), /T1 [^\n]*\n    L1 text — "Inspected app.ts:12" ⚠ text evidence — reason: "No runnable environment in this fixture\."/);
   await call({ op: 'unlink', ids: ['L1'] }); assert.deepEqual(currentTasks(session)[0].links, []);
   assert.equal(currentTasks(session).length, 2);
 });
