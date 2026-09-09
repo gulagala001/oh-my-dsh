@@ -85,7 +85,8 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   const created = await rpc('session/create', { cwd: workspace, agentPreset: 'trisoul-x' }), id = created.sessionId, q = '?session=' + id;
   assert.equal((await api('/scope' + q)).locked, false);
   await api('/scope' + q, { scope: 'project' });
-  const updated = await api('/settings', { injectLimit: 1, supplementMinSteps: 1, shadowStale: 1, backgroundMode: 'unified', unifiedBackground: { provider: 'fixture', model: 'fixture', temperature: 0.2 } });
+  // This finite fixture uses short batches to exercise background work within its scripted turn.
+  const updated = await api('/settings', { digestEvery: 8, stateEvery: 6, injectLimit: 1, supplementMinSteps: 1, shadowStale: 1, backgroundMode: 'unified', unifiedBackground: { provider: 'fixture', model: 'fixture', temperature: 0.2 } });
   assert.equal(updated.injectLimit, 1); assert.equal(updated.unifiedBackground.temperature, 0.2);
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: id, mode: 'queue', content: [{ type: 'text', text: 'Run native fixture tools.' }], clientTimeZone: 'Asia/Shanghai' });
   const reviewed = await until(async () => { const s = await api('/state' + q); return s.running === 'idle' && s.context?.digestCount && !s.live && s.metrics.main?.calls >= 13 && s.actions.curations && s; });

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Menu } from '@deepseek-ai/dsh-client-ui-primitives';
+import { FREQUENCY_PRESETS as presets } from '../frequency.mjs';
 import css from './style.css';
 
 const api = async (path, value) => {
@@ -94,7 +95,6 @@ function RouteFields({ route, directory, onChange }) {
     <label className="tx-field"><span>温度</span><input type="number" min="0" max="2" step="0.1" value={route.temperature} onChange={e => onChange({ ...route, temperature: Number(e.target.value) })}/></label>
   </div>;
 }
-const presets = { always: [3, 10000, 6], medium: [6, 20000, 10], slow: [10, 40000, 15] };
 const routeModeOf = c => (c.backgroundMode === 'unified' ? [c.unifiedBackground] : [c.background, c.canvas, c.surgeon]).every(r => !r?.provider && !r?.model && (!r?.effort || r.effort === 'off') && (r?.temperature ?? 0.7) === 0.7) ? 'follow' : c.backgroundMode;
 const advancedGroups = [
   ['记忆消化与整理', '何时提取记忆、整理重复内容', [['digestEvery', '每批消化事件数', 1], ['flushIdleMs', '空闲间隔 · 毫秒（0 关闭）'], ['curateMinGapMs', '整理最短间隔 · 毫秒'], ['curateEvery', '每几批整理一次（0 自动）']], [['digestBatchMax', '批次事件上限'], ['digestEventChars', '单事件字符上限'], ['digestMaxTokens', '消化输出 Token 上限'], ['catchupMax', '恢复时补消化事件上限'], ['contextMemories', '记忆表条目上限'], ['recallMaxTokens', '检索输出 Token 上限'], ['curateLimit', '整理每轮条目上限'], ['curateOpsMax', '每轮操作数上限'], ['curateMaxTokens', '整理输出 Token 上限']]],
@@ -111,7 +111,7 @@ function Settings() {
   const field = (key, value) => { setConfig(c => ({ ...c, [key]: value })); setStatus(''); };
   if (!config) return <div className="tx-app"><Header icon="settings" title="偏好设置"/><Empty title={failed ? '暂时无法读取设置' : '正在读取设置'}>{status}</Empty></div>;
   const dirty = JSON.stringify(config) !== JSON.stringify(saved.current);
-  const selectedPreset = Object.entries(presets).find(([, v]) => ['surgeryCooldownSteps', 'minRegionTokens', 'stateEvery'].every((k, i) => config[k] === v[i]))?.[0];
+  const selectedPreset = Object.entries(presets).find(([, values]) => Object.entries(values).every(([key, value]) => config[key] === value))?.[0];
   const save = async e => {
     e.preventDefault(); setSaving(true); setFailed(false);
     try { const patch = Object.fromEntries(Object.entries(config).filter(([key, value]) => key !== 'dataDir' && JSON.stringify(value) !== JSON.stringify(saved.current[key]))); const next = await api('/settings', patch); saved.current = next; setConfig(next); setStatus('设置已保存'); }
@@ -127,8 +127,9 @@ function Settings() {
         {routing === 'follow' ? <div className="tx-inline-note"><Icon name="layers"/>记忆、状态与整理使用当前对话的模型。</div> : routing === 'unified' ? <div className="tx-route-fields"><RouteFields route={config.unifiedBackground} directory={directory} onChange={r => field('unifiedBackground', r)}/></div> : <div className="tx-route-list">{[['background', '记忆'], ['canvas', '状态与检查'], ['surgeon', '上下文整理']].map(([key, label]) => <Fold key={key} title={label} subtitle={config[key].model || '跟随主模型'}><RouteFields route={config[key]} directory={directory} onChange={r => field(key, r)}/></Fold>)}</div>}
       </section>
       <section className="tx-section"><div className="tx-section-heading"><h3>默认记忆范围</h3><Badge>新会话</Badge></div><div className="tx-choice-grid" role="group" aria-label="默认记忆范围">{[['full', '完全版', '全局与项目记忆'], ['project', '项目级', '仅使用本项目记忆'], ['session', '会话级', '仅在当前会话中使用']].map(([id, title, hint]) => <button type="button" key={id} aria-pressed={config.memoryScope === id} onClick={() => field('memoryScope', id)}><span className="tx-choice-mark">{config.memoryScope === id ? <Icon name="check" size={13}/> : null}</span><strong>{title}</strong><small>{hint}</small></button>)}</div><p className="tx-help">也可在输入区选择，开始对话后绑定到该会话。</p></section>
-      <section className="tx-section"><div className="tx-section-heading"><h3>上下文整理频率</h3></div><Segments label="压缩频率" value={custom || !selectedPreset ? 'custom' : selectedPreset} onChange={id => { setCustom(id === 'custom'); if (presets[id]) { const values = presets[id]; setConfig(c => ({ ...c, surgeryCooldownSteps: values[0], minRegionTokens: values[1], stateEvery: values[2] })); setStatus(''); } }} items={[[ 'always', '频繁' ], [ 'medium', '适中' ], [ 'slow', '较少' ], [ 'custom', '自定义' ]]}/>
-        {custom || !selectedPreset ? <Numbers config={config} onChange={field} fields={[[ 'surgeryCooldownSteps', '整理间隔步数' ], [ 'minRegionTokens', '最小区间 Token', 1 ], [ 'stateEvery', '每批状态事件数', 1 ]]}/> : <p className="tx-help">{({ always: '更及时地整理已完成内容。', medium: '让内容积累一段时间后再整理。', slow: '减少整理调用，保留更长的近期上下文。' })[selectedPreset]}</p>}
+      <section className="tx-section"><div className="tx-section-heading"><h3>状态、记忆与整理频率</h3></div><Segments label="更新频率" value={custom || !selectedPreset ? 'custom' : selectedPreset} onChange={id => { setCustom(id === 'custom'); if (presets[id]) { setConfig(c => ({ ...c, ...presets[id] })); setStatus(''); } }} items={[[ 'always', '频繁' ], [ 'medium', '适中' ], [ 'slow', '较少' ], [ 'custom', '自定义' ]]}/>
+        {custom || !selectedPreset ? <Numbers config={config} onChange={field} fields={[[ 'stateEvery', '状态提炼 · 事件数', 1 ], [ 'digestEvery', '记忆消化 · 事件数', 1 ], [ 'supplementMinSteps', '记忆文档 · 最短步数' ], [ 'surgeryCooldownSteps', '上下文整理 · 间隔步数' ], [ 'minRegionTokens', '最小整理区间 · Token', 1 ]]}/> : <p className="tx-help">状态每 {config.stateEvery} 条事件提炼，记忆文档至少间隔 {config.supplementMinSteps} 步更新。{({ always: '更及时地跟进进展。', medium: '积累一段进展后再更新。', slow: '减少后台调用与文档更新。' })[selectedPreset]}</p>}
+        <p className="tx-help">一条用户消息、模型回复或工具结果各算一条事件；一步指一次主模型调用。档位同时调整记忆消化、状态提炼、文档更新和上下文整理。</p>
       </section>
       <section className="tx-section tx-switches"><Toggle label="持续更新工作状态" hint="记录用户约束与当前任务进展" checked={config.stateEnabled} onChange={v => field('stateEnabled', v)}/><Toggle label="检查压缩后的事实" hint="发现遗漏时保留补记，供后续整理使用" checked={config.probeEnabled} onChange={v => field('probeEnabled', v)}/></section>
     </> : <><p className="tx-help tx-advanced-intro">通常保留默认值即可。展开某一项，再调整对应参数。</p>{advancedGroups.map(([title, hint, fields, limits]) => <Fold key={title} title={title} subtitle={hint}>

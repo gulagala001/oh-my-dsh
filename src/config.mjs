@@ -1,6 +1,8 @@
 import z from '@deepseek-ai/schemastery';
+import { FREQUENCY_PRESETS } from './frequency.mjs';
 
 const route = z.object({ provider: z.string().default(''), model: z.string().default(''), temperature: z.number().default(0.7), effort: z.string().default('off') });
+const cadence = FREQUENCY_PRESETS.medium;
 export const Config = z.object({
   dataDir: z.string(),
   memoryScope: z.union(['full', 'project', 'session']).default('full'),
@@ -10,7 +12,7 @@ export const Config = z.object({
   canvas: route.default({}),
   surgeon: route.default({}),
   jobTimeoutMs: z.number().step(1).min(0).default(120000),
-  digestEvery: z.number().step(1).min(1).default(8),
+  digestEvery: z.number().step(1).min(1).default(cadence.digestEvery),
   digestBatchMax: z.number().step(1).min(0).default(0),
   digestEventChars: z.number().step(1).min(0).default(0),
   digestMaxTokens: z.number().step(1).min(0).default(0),
@@ -21,11 +23,11 @@ export const Config = z.object({
   injectBatch: z.number().step(1).min(1).default(8),
   injectMaxPerSession: z.number().step(1).min(0).default(4),
   injectPickTimeoutMs: z.number().step(1).min(0).default(8000),
-  supplementMinSteps: z.number().step(1).min(0).default(10),
+  supplementMinSteps: z.number().step(1).min(0).default(cadence.supplementMinSteps),
   supplementMode: z.union(['renew', 'rewrite', 'append']).default('renew'),
   recallMaxTokens: z.number().step(1).min(0).default(0),
   stateEnabled: z.boolean().default(true),
-  stateEvery: z.number().step(1).min(1).default(6),
+  stateEvery: z.number().step(1).min(1).default(cadence.stateEvery),
   stateBatchMax: z.number().step(1).min(0).default(0),
   statePinnedMax: z.number().step(1).min(0).default(0),
   stateEventChars: z.number().step(1).min(0).default(0),
@@ -49,9 +51,9 @@ export const Config = z.object({
   mergeCheckpoints: z.boolean().default(true),
   semanticCompaction: z.boolean().default(true),
   minRegionEvents: z.number().step(1).min(1).default(3),
-  minRegionTokens: z.number().step(1).min(1).default(10000),
+  minRegionTokens: z.number().step(1).min(1).default(cadence.minRegionTokens),
   keepTailEvents: z.number().step(1).min(2).default(30),
-  surgeryCooldownSteps: z.number().step(1).min(0).default(3),
+  surgeryCooldownSteps: z.number().step(1).min(0).default(cadence.surgeryCooldownSteps),
   surgeryFailCooldownSteps: z.number().step(1).min(0).default(3),
   thresholdChars: z.number().step(1).min(0).default(0),
   thresholdFallbackChars: z.number().step(1).min(0).default(1000000),
