@@ -7,15 +7,18 @@ import { Session } from '@deepseek-ai/dsh-session';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { Hub, MEMORY_CURATE } from '../src/hub.mjs';
 import { HubStore } from '../src/hub-store.mjs';
+import { MemoryContext } from '../src/memory-context.mjs';
+import { StateZone } from '../src/state-zone.mjs';
 import { Config } from '../src/config.mjs';
 
 const reply = (name, args) => ({ blocks: [{ type: 'tool-call', name, arguments: JSON.stringify(args) }] });
-const batch = (signals, ops = []) => reply('save_context', { digest: 'Recorded facts.', pin: [], status: '', compactable: true, nowCompactable: [], ops, signals });
+const batch = (signals, ops = []) => reply('save_context', { digest: 'Recorded facts.', workdoc: '', phaseClosed: false, compactable: true, nowCompactable: [], ops, signals });
 function setup(t, mode = 'full') {
-  const dir = mkdtempSync(join(tmpdir(), 'trisoul-x-curation-')), store = new HubStore(dir), config = Config({ curateMinGapMs: 0 });
+  const dir = mkdtempSync(join(tmpdir(), 'trisoul-x-curation-')), store = new HubStore(dir), config = Config({ curateMinGapMs: 0, injectMaxPerSession: 0 });
   const session = Session.create('curation', undefined, { version: 3, id: 'curation', createdAt: 1, cwd: dir, isSeeded: false, agentPreset: 'trisoul-x' });
   const state = store.state(session.id); state.memoryScope = mode; store.save(state);
   const hub = Object.assign(Object.create(Hub.prototype), { store, getConfig: () => config, curations: new Map(), curationTail: Promise.resolve(), curationClosed: false, ctx: { logger: { warn() {} } } });
+  hub.memoryContext = new MemoryContext(hub); hub.stateZone = new StateZone(hub);
   const agent = { session, options: {} };
   const fresh = () => [session.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'Remember these facts.' }], source: { kind: 'user' } }), { surfaceOp: 'append' })];
   t.after(() => { hub.disposeCuration(); rmSync(dir, { recursive: true, force: true }); });
@@ -36,7 +39,7 @@ test('overlap triggers real memory merging and retirement with versions and usag
     if (kind === 'background') return batch({ overlap: true, conflict: false });
     assert.equal(request.tools[0].name, MEMORY_CURATE.name);
     assert.ok(JSON.stringify(request.tools).includes('(the curation job cleans it up)'));
-    assert.match(JSON.stringify(request.messages), /injected 1/);
+    assert.match(JSON.stringify(request.messages), /injected=1/);
     return reply('memory_curate', { ops: [
       { op: 'update', scope: 'project', key: kept.key, target: kept.id, text: 'Use tabs for indentation.' },
       { op: 'retire', scope: 'project', target: duplicate.id, text: 'Merged into format.one.' },

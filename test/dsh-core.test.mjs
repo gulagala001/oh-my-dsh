@@ -8,14 +8,17 @@ import { createUserMessage, createMessage, createToolResultMessage, createSystem
 import { Hub, SCRIBE, message, eventText } from '../src/hub.mjs';
 import { HubStore } from '../src/hub-store.mjs';
 import { Canvas, selectRegion } from '../src/canvas.mjs';
+import { MemoryContext } from '../src/memory-context.mjs';
+import { StateZone } from '../src/state-zone.mjs';
 import { Config } from '../src/config.mjs';
 import { TASK_DESCRIPTION, VERIFICATION_DESCRIPTION } from '../src/tasks.mjs';
 import { MAIN_PERSONA, MEMORY_CONSTITUTION, SURGEON_SYSTEM, OPS_DESC, CURATE_RULES, DIGEST_DESC } from '../src/prompts.mjs';
 
 function setup(t) {
   const dir = mkdtempSync(join(tmpdir(), 'trisoul-x-core-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
-  const store = new HubStore(dir), config = Config({ minRegionTokens: 100, keepTailEvents: 4 });
+  const store = new HubStore(dir), config = Config({ minRegionTokens: 100, keepTailEvents: 4, minRegionEvents: 2, flushIdleMs: 0, probeEnabled: false });
   const hub = Object.assign(Object.create(Hub.prototype), { store, getConfig: () => config, jobs: new Map(), controllers: new Map(), pending: new Set(), ctx: { logger: { warn() {} } } });
+  hub.memoryContext = new MemoryContext(hub); hub.stateZone = new StateZone(hub); hub.resumed = new Set(); hub.idleTimers = new Map(); hub.agents = new Map();
   const session = Session.create('test', undefined, { version: 3, id: 'test', createdAt: 1, cwd: dir, isSeeded: false, agentPreset: 'trisoul-x' });
   const agent = { session, options: { provider: 'test', model: 'test' } };
   const ctx = { tokenMeter: { measure(s) { const nodes = s.surface.nodes.map(seq => ({ seq, heuristicTokens: Math.ceil(eventText(s, s.eventAt(seq)).length / 4) })); return { nodes, totalTokens: nodes.reduce((n, e) => n + e.heuristicTokens, 0) }; } } };
@@ -85,9 +88,12 @@ test('failed or incomplete background commits leave the cursor and memory unchan
   const { hub, store, agent, session } = setup(t); addTurns(session, 1);
   hub.call = async () => ({ blocks: [{ type: 'text', text: 'incomplete' }] });
   await hub.schedule(agent, true); assert.equal(store.state(session.id).cursor, -1);
-  hub.call = async () => ({ blocks: [{ type: 'tool-call', name: 'save_context', arguments: JSON.stringify({ digest: 'Read source', pin: ['Constraint 1'], status: 'Working', compactable: true, nowCompactable: [], signals: { overlap: false, conflict: false }, ops: [{ op: 'add', scope: 'project', key: 'file', text: 'a.txt', target: '' }] }) }] });
+  hub.call = async () => ({ blocks: [{ type: 'tool-call', name: 'save_context', arguments: JSON.stringify({ digest: 'Read source', workdoc: '', phaseClosed: false, compactable: true, nowCompactable: [], signals: { overlap: false, conflict: false }, ops: [{ op: 'add', scope: 'project', key: 'file', text: 'a.txt', target: '' }] }) }] });
   await hub.schedule(agent, true); const state = store.state(session.id);
-  assert.equal(state.digests.length, 1); assert.deepEqual(state.pins, ['Constraint 1']);
+  assert.equal(state.digests.length, 1); assert.deepEqual(state.pins, []);
+  hub.call = async () => ({ blocks: [{ type: 'tool-call', name: 'save_state', arguments: { pin: ['Constraint 1'], status: 'Working' } }] });
+  await hub.stateZone.distill(agent, session.snapshotEvents().filter(e => e.type === 'user/message' && e.data.source.kind === 'user'), new AbortController().signal);
+  assert.deepEqual(state.pins, ['Constraint 1']);
   hub.publish(agent); assert.ok(session.deriveMessages().some(m => JSON.stringify(m).includes('Working state')));
   const seq = session.seq; hub.publish(agent); assert.equal(session.seq, seq);
 });

@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Session } from '@deepseek-ai/dsh-session';
 import { createUserMessage, createAssistantMessage } from '@deepseek-ai/dsh-llm';
+import { HubStore } from '../src/hub-store.mjs';
 import { Hub } from '../src/hub.mjs';
 import { createTodoStore } from '../src/todolist.mjs';
 import { registerTasks, currentTasks } from '../src/tasks.mjs';
@@ -179,7 +180,7 @@ test('failed evidence snapshot writes leave links and counters unchanged', async
 
 test('stopping reminders restore unfinished tasks, missing evidence and one-time text review', async t => {
   const { session, store, call, verify, user } = setup(t), notices = [];
-  const hub = Object.assign(Object.create(Hub.prototype), { todoStore: store, taskReviews: new Map() });
+  const hub = Object.assign(Object.create(Hub.prototype), { todoStore: store, taskReviews: new Map(), store: new HubStore(session.header.cwd) });
   const agent = { session, steer: notice => notices.push(notice) }, signal = new AbortController().signal;
   const stop = () => hub.finishTasks(agent, 1, signal);
   stop(); assert.equal(notices.length, 0);
@@ -224,7 +225,7 @@ test('stopping reminders respect cancellation, planning and subagents; an unansw
   user(quote); await call({ ...excerpt, tasks: [excerpt.tasks[0]] });
   await call({ op: 'check', updates: [{ id: 'T1', done: true }] });
   await verify({ op: 'link', links: [{ task: 'T1', kind: 'text', note: 'Observed source.', reason: 'Fixture only.' }] });
-  const hub = Object.assign(Object.create(Hub.prototype), { todoStore: store, taskReviews: new Map() });
+  const hub = Object.assign(Object.create(Hub.prototype), { todoStore: store, taskReviews: new Map(), store: new HubStore(session.header.cwd) });
   const agent = { session, steer: m => notices.push(m) }, ac = new AbortController();
   hub.finishTasks(agent, 1, ac.signal); const review = notices.at(-1);
   session.append('user/message', review, { surfaceOp: 'append' });

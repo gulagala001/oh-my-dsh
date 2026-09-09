@@ -33,8 +33,13 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
     const chunk = (delta, finish = null) => res.write(`data: ${JSON.stringify({ id: 'fixture', object: 'chat.completion.chunk', model: 'fixture', created: 1, choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`);
     const tool = (name, args) => chunk({ role: 'assistant', tool_calls: [{ index: 0, id: 'call-' + payloads.length, type: 'function', function: { name, arguments: JSON.stringify(args) } }] }, 'tool_calls');
     if (p.tools?.some(t => t.function.name === 'save_context')) {
-      tool('save_context', { digest: 'Read the fixture.', pin: ['Keep the source fixture intact.'], status: 'Native tools completed.', compactable: true, nowCompactable: [], signals: { overlap: !curationSignalled, conflict: false }, ops: [{ op: 'add', scope: 'project', key: 'fixture.result', text: 'Fixture result is 42.', target: '' }] });
+      tool('save_context', { digest: 'Read the fixture. Fixture result is 42.', workdoc: JSON.stringify(p.messages).includes('Current task memo document') ? 'Fixture result is 42.' : '', phaseClosed: false, compactable: true, nowCompactable: [], signals: { overlap: !curationSignalled, conflict: false }, ops: [{ op: 'add', scope: 'project', key: 'fixture.result', text: 'Fixture result is 42.', target: '' }] });
       curationSignalled = true;
+    } else if (p.tools?.some(t => t.function.name === 'save_state')) {
+      tool('save_state', { pin: ['Keep the source fixture intact.'], status: 'Native tools completed.' });
+    } else if (p.tools?.some(t => t.function.name === 'select_memories')) { tool('select_memories', { indexes: [0] });
+    } else if (p.tools?.some(t => t.function.name === 'record_probe')) { tool('record_probe', { question: 'What is the fixture result?', expected: '42' });
+    } else if (p.messages?.some(m => m.role === 'system' && m.content?.includes('You are the answerer'))) { chunk({ role: 'assistant', content: '42' }, 'stop');
     } else if (p.tools?.some(t => t.function.name === 'memory_curate')) {
       tool('memory_curate', { ops: [{ op: 'retire', scope: 'project', key: 'fixture.duplicate', target: 'fixture-memory-duplicate', text: 'Duplicate of fixture.result.' }] });
     } else if (!p.tools?.length) { chunk({ role: 'assistant', content: 'Done: inspected the fixture. Not yet done: report the result.' }, 'stop'); }
@@ -59,8 +64,10 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   writeFileSync(join(home, 'settings.yaml'), JSON.stringify(settings));
   writeFileSync(join(home, '.credentials.yaml'), JSON.stringify({ version: 1, refs: { TRISOUL_X_FIXTURE_KEY: 'fixture-key' } }), { mode: 0o600 });
   const child = spawn(process.execPath, ['scripts/start.mjs'], { cwd: new URL('../', import.meta.url), env: { ...process.env, DSH_HOME: home, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
+  let complete = false;
   let log = ''; child.stdout.on('data', d => { log += d; }); child.stderr.on('data', d => { log += d; });
   t.after(async () => {
+    if (!complete) console.error('Integration diagnostics', { calls, payloads: payloads.length, log: log.slice(-7000).replace(/token=\S+/g, 'token=[redacted]') });
     if (child.exitCode === null) { child.kill('SIGTERM'); await Promise.race([once(child, 'exit'), new Promise(r => setTimeout(r, 5000).unref())]); }
     provider.closeAllConnections(); await new Promise(done => provider.close(done)); rmSync(root, { recursive: true, force: true });
   });
@@ -78,9 +85,15 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   const created = await rpc('session/create', { cwd: workspace, agentPreset: 'trisoul-x' }), id = created.sessionId, q = '?session=' + id;
   assert.equal((await api('/scope' + q)).locked, false);
   await api('/scope' + q, { scope: 'project' });
+  const updated = await api('/settings', { injectLimit: 1, supplementMinSteps: 1, shadowStale: 1, backgroundMode: 'unified', unifiedBackground: { provider: 'fixture', model: 'fixture', temperature: 0.2 } });
+  assert.equal(updated.injectLimit, 1); assert.equal(updated.unifiedBackground.temperature, 0.2);
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: id, mode: 'queue', content: [{ type: 'text', text: 'Run native fixture tools.' }], clientTimeZone: 'Asia/Shanghai' });
   const reviewed = await until(async () => { const s = await api('/state' + q); return s.running === 'idle' && s.context?.digestCount && !s.live && s.metrics.main?.calls >= 13 && s.actions.curations && s; });
   assert.equal(reviewed.metrics.curation.calls, 1);
+  assert.ok(reviewed.metrics.state.calls); assert.ok(reviewed.metrics.recall.calls);
+  assert.match(reviewed.context.workdoc, /42/); assert.ok(reviewed.context.workdocVersion > 0);
+  assert.ok(reviewed.contextHistory.length > 0);
+  assert.ok(payloads.some(p => p.tools?.some(t => t.function.name === 'save_state') && p.temperature === 0.2));
   const memoryFile = JSON.parse(readFileSync(join(home, 'trisoul-x', 'memory.json'), 'utf8'));
   assert.equal(memoryFile.find(m => m.id === 'fixture-memory-duplicate').retiredReason, 'Duplicate of fixture.result.');
   assert.ok(payloads.some(p => p.tools?.some(t => t.function.name === 'memory_curate') && JSON.stringify(p.messages).includes('fixture-memory-duplicate')));
@@ -110,7 +123,8 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   assert.ok(JSON.stringify(payloads).includes('PROJECT_FIXTURE')); assert.ok(JSON.stringify(payloads).includes('test-skill'));
   const memories = await api('/memories' + q); assert.ok(memories.items.some(m => m.key === 'fixture.result'));
   const compact = await api('/compact' + q, {}); assert.equal(compact.changed, true);
-  const after = await api('/state' + q); assert.ok(after.frame.some(n => n.checkpoint));
+  const after = await until(async () => { const s = await api('/state' + q); return s.context?.probe && !s.live && s; });
+  assert.equal(after.context.probe.ok, true, JSON.stringify(after.context.probe)); assert.equal(after.actions.probePassed, 1); assert.ok(after.frame.some(n => n.checkpoint));
   assert.ok(after.actions.surgeries); assert.ok(after.frame.filter(n => n.kind === 'user').length >= 1);
   recallRange = after.context.checkpoint;
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: id, mode: 'queue', content: [{ type: 'text', text: 'Retrieve the original fixture.' }], clientTimeZone: 'Asia/Shanghai' });
@@ -119,6 +133,13 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   assert.ok(payloads.some(p => JSON.stringify(p.messages).includes('Working state')));
   const continued = await api('/state' + q); assert.equal(continued.tasks[0].status, 'completed');
   const continuedTest = continued.tasks[0].links.find(l => l.kind === 'test');
+  assert.equal(continued.taskRelease.tested, 1);
+  await api('/memories' + q, { op: 'add', scope: 'project', key: 'manual.test', text: 'User-created fact.' });
+  let manual = (await api('/memories' + q)).items.find(m => m.key === 'manual.test');
+  await api('/memories' + q, { op: 'update', target: manual.id, text: 'Edited fact.' });
+  await api('/memories' + q, { op: 'delete', target: manual.id });
+  const managed = await api('/memories' + q); assert.ok(!managed.items.some(m => m.id === manual.id)); assert.ok(managed.health.active > 0);
   assert.equal(continuedTest.lastRun.pass, true); assert.match(continuedTest.lastRun.tail, /VERIFIED_LEDGER_FIXTURE/);
   assert.ok(!log.includes('cannot get property'), log.replace(/token=\S+/g, 'token=[redacted]'));
+  complete = true;
 });

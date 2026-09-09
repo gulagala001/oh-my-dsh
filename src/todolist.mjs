@@ -532,6 +532,10 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
   const unresolvedText = (session) => `[todo list] Unresolved tasks remain:\n${blockingLines(getRec(session)).join('\n')}`
   const unqualifiedText = (session) => `[todo list] Every task is checked off, but these lack qualifying evidence:\n${blockingLines(getRec(session)).join('\n')}\nLink real evidence, or uncheck what is not actually done.`
   const reviewTargets = (rec) => rec.tasks.filter(t => textOnly(t) && t.links.some(l => l.kind === 'text' && l.asked !== true))
+  const releaseSummary = (session) => {
+    const rec = getRec(session)
+    return { total: rec.tasks.length, done: rec.tasks.filter(t => t.done).length, tested: rec.tasks.filter(passedTest).length, textOnly: rec.tasks.filter(textOnly).length }
+  }
   const textReviewLinkIds = (session) => reviewTargets(getRec(session)).flatMap(t => t.links.filter(l => l.kind === 'text' && l.asked !== true).map(l => l.id))
   const textReviewText = (session) => {
     const targets = reviewTargets(getRec(session))
@@ -593,5 +597,5 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
   }
   const revOf = (session) => getRec(session).rev
 
-  return { execTaskMap, execCheck, execVerifyLink, gateState, unresolvedText, unqualifiedText, textReviewText, textReviewLinkIds, markTextReviewed, takeNudge, takeEmptyNudge, maintainInjection, revOf, snapshot: session => clone(getRec(session)) }
+  return { execTaskMap, execCheck, execVerifyLink, releaseSummary, gateState, unresolvedText, unqualifiedText, textReviewText, textReviewLinkIds, markTextReviewed, takeNudge, takeEmptyNudge, maintainInjection, revOf, snapshot: session => clone(getRec(session)) }
 }

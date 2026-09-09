@@ -23,17 +23,18 @@ export function apply(ctx) {
       scope: { type: 'string', enum: ['all', 'global', 'cross', 'project'], description: 'Memory layer: all (default, everything visible to this session) / global / cross (cross-project) / project (this project)' },
       from: { type: 'integer', description: 'First event sequence to retrieve' }, to: { type: 'integer', description: 'Last event sequence to retrieve' },
     } }, output: result,
-    async execute(a, { agent }) {
+    async execute(a, { agent, signal }) {
       const session = agent.session;
       if (Number.isInteger(a.from) && Number.isInteger(a.to)) {
-        const events = sessionEvents(session).filter(e => e.seq >= a.from && e.seq <= a.to && substantive(e));
+        const lo = Math.min(a.from, a.to), hi = Math.max(a.from, a.to);
+        const events = sessionEvents(session).filter(e => e.seq >= lo && e.seq <= hi && substantive(e));
         hub.action(session, 'rawRecalls', 1, { query: a.query, from: a.from, to: a.to, items: events.length });
         return events.map(e => `[${e.seq} ${e.type}] ${eventText(session, e)}`).join('\n') || 'No messages in this range.';
       }
-      const words = a.query.toLowerCase().match(/[a-z0-9_-]+|[\p{Script=Han}]/gu) ?? [];
-      const hits = hub.memories(session).filter(m => !a.scope || a.scope === 'all' || m.scope === a.scope).map(m => ({ ...m, score: words.reduce((n, w) => n + Number(`${m.key} ${m.text}`.toLowerCase().includes(w)), 0) })).filter(m => m.score).sort((a, b) => b.score - a.score);
+      const pool = hub.memories(session).filter(m => !a.scope || a.scope === 'all' || m.scope === a.scope);
+      const { hits, mode } = await hub.memoryContext.pick(agent, a.query, pool, { signal });
       hub.store.touch(hits.map(m => m.id), 'recalled', session.id);
-      hub.action(session, 'recalls', 1, { query: a.query, items: hits.length });
+      hub.action(session, 'recalls', 1, { query: a.query, items: hits.length, mode });
       return hits.map(m => `[${m.scope} · ${m.key}] ${m.text}`).join('\n') || 'No related memories.';
     },
   });

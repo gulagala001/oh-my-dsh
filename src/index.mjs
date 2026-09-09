@@ -13,7 +13,7 @@ async function readBody(req) { let body = ''; for await (const part of req) body
 
 export function apply(ctx, config) {
   const hub = new Hub(ctx, config);
-  ctx.settings.installSection(ctx, NS, Config, config, { setSource: source => { hub.getConfig = source; }, onChange() {} });
+  ctx.settings.installSection(ctx, NS, Config, config, { setSource: source => { hub.getConfig = source; }, onChange() { for (const agent of hub.agents.values()) hub.armIdle(agent); } });
   ctx.on('system-prompt/assemble', async (_assembly, _context, next) => {
     const assembly = await next();
     if (!assembly.sections.some(s => s.name === 'trisoul-x:persona')) return assembly;
@@ -21,13 +21,24 @@ export function apply(ctx, config) {
       sections: assembly.sections.map(s => ['tool:write', 'tool:edit'].includes(s.name) ? { ...s, text: s.text.replace(' (the default fs-observation-policy requires it)', '') } : s),
     };
   }, { global: true });
-  ctx.on('agent/request', ({ agent }, next) => {
+  ctx.on('agent/request', async ({ agent, turn, step }, next) => {
+    if (agent.session.header.agentPreset !== 'trisoul-x') return next();
     hub.requestStarts.set(agent.session.id, Date.now());
-    return next();
+    const request = await next();
+    if (agent.session.header.agentPreset === 'trisoul-x') hub.captureFrame(agent, turn, step);
+    return request;
   }, { global: true });
   ctx.on('agent/pre-step', async ({ agent, messages, signal }, next) => {
     if (agent.session.header.agentPreset === 'trisoul-x' && !signal.aborted) {
       hub.publish(agent, messages);
+      void hub.stateZone.preStep(agent, signal);
+      try {
+        if (hub.store.state(agent.session.id).memoryReinject) {
+          await hub.memoryContext.compact(agent, signal);
+          delete hub.store.state(agent.session.id).memoryReinject;
+        }
+        await hub.memoryContext.preStep(agent, messages, signal);
+      } catch (error) { if (!signal.aborted) ctx.logger.warn(`记忆补注：${error.message}`); }
       try { await hub.canvas.compactIfNeeded(agent, 'pressure', signal); }
       catch (error) { if (!signal.aborted) ctx.logger.warn(`上下文整理：${error.message}`); }
     }
@@ -44,11 +55,23 @@ export function apply(ctx, config) {
   ctx.on('agent/turn-stopping', ({ agent, turn, signal }) => {
     if (agent.session.header.agentPreset === 'trisoul-x') hub.finishTasks(agent, turn, signal);
   }, { global: true });
-  ctx.on('agent/disposed', ({ agent }) => { hub.taskReviews.delete(agent.session.id); }, { global: true });
+  ctx.on('agent/disposed', ({ agent }) => hub.disposeAgent(agent), { global: true });
+  ctx.on('agent/session-start', ({ agent, source }) => {
+    if (agent.session.header.agentPreset !== 'trisoul-x' || agent.session.header.origin === 'subagent') return;
+    const state = hub.store.state(agent.session.id);
+    hub.disposedAgents.delete(agent.session.id); hub.agents.set(agent.session.id, agent);
+    if (source === 'resume') { const record = hub.memoryContext.record(agent.session); record.opened = true; record.taskDone = false; }
+    if (source === 'compact') state.memoryReinject = true;
+    hub.store.save(state); hub.armIdle(agent);
+  }, { global: true });
   ctx.on('session/event', (session, event) => {
     if (session.header.agentPreset !== 'trisoul-x') return;
     hub.observe(session, event);
     const agent = ctx.agents.get(session.id);
+    if (agent && event.type === 'user/message' && event.data.source.kind === 'user') {
+      hub.armIdle(agent);
+      if (/记住|以后都|从今往后|决定|别再|不要再/.test(eventText(session, event))) void hub.schedule(agent, true);
+    }
     if (agent && (event.type === 'step/end' || event.type === 'turn/end')) void hub.schedule(agent, event.type === 'turn/end');
   }, { global: true });
   ctx.inject(['webServer'], web => {
@@ -72,7 +95,7 @@ export function apply(ctx, config) {
           send(res, 200, { scope: stored?.memoryScope || hub.config().memoryScope, locked, default: hub.config().memoryScope }); return;
         }
         if (url.pathname === '/trisoul-x/api/state' && req.method === 'GET') {
-          const directory = await Promise.all(ctx.llm.listProviders().map(async provider => ({ ...provider, models: await ctx.llm.listModels(provider.id).catch(() => []) })));
+          const directory = id ? [] : await Promise.all(ctx.llm.listProviders().map(async provider => ({ ...provider, models: await ctx.llm.listModels(provider.id).catch(() => []) })));
           const states = hub.store.allStates(), ids = new Set(id ? [id] : states.map(s => s.id));
           for (let changed = true; changed;) {
             changed = false;
@@ -89,14 +112,15 @@ export function apply(ctx, config) {
           const meter = session ? ctx.tokenMeter.measure(session) : null;
           send(res, 200, {
             config: hub.config(), directory, metrics, actions, sessionCount: all.length,
-            context: stored ? { pins: stored.pins, status: stored.status, notes: stored.notes, checkpoint: stored.checkpoint, cursor: stored.cursor, digestCount: stored.digests.length } : null,
-            tasks: currentTasks(session, stored?.taskList ?? stored?.tasks),
+            contextHistory: stored?.contextHistory || [],
+            context: stored ? { pins: stored.pins, status: stored.status, notes: stored.notes, checkpoint: stored.checkpoint, cursor: stored.cursor, digestCount: stored.digests.length, stateCursor: stored.stateCursor, stateFailures: stored.stateFailures || 0, workdoc: stored.memoryContext?.doc || '', workdocVersion: stored.memoryContext?.version || 0, supplementPending: stored.memoryContext?.pending.length || 0, probe: stored.probe, probeNotes: stored.probeNotes || [], memoryTrace: stored.memoryTrace } : null,
+            tasks: currentTasks(session, stored?.taskList ?? stored?.tasks), taskRelease: stored?.taskRelease,
             activity: all.flatMap(s => s.activity).sort((a, b) => b.at - a.at).slice(0, 60),
             live: id ? ([...hub.live.values()].find(call => call.sessionId === id) ?? null) : [...hub.live.values()],
             liveCalls: [...hub.live.values()].filter(call => !id || url.searchParams.get('range') === 'all' || ids.has(call.sessionId)),
             scope: hub.scope(scopeSession), running: agent?.status ?? 'idle',
             meter,
-            frame: session ? meter.nodes.map(n => { const e = session.eventAt(n.seq), m = session.deriveEventMessage(e); return { seq: n.seq, role: m?.role, kind: m?.source?.plugin || m?.source?.kind || e.type, tokens: n.tokens, chars: eventText(session, e).length, checkpoint: Boolean(m?.source?.compactionId) }; }) : [],
+            frame: session ? meter.nodes.map(n => { const e = session.eventAt(n.seq), m = session.deriveEventMessage(e); return { seq: n.seq, role: m?.role, kind: m?.source?.plugin || m?.source?.kind || e.type, tokens: n.tokens ?? n.heuristicTokens, chars: eventText(session, e).length, checkpoint: Boolean(m?.source?.compactionId) }; }) : [],
             route: session?.requestHeader()?.config ? { provider: session.requestHeader().config.provider, model: session.requestHeader().config.model } : null,
           }); return;
         }
@@ -107,11 +131,12 @@ export function apply(ctx, config) {
           if (req.method === 'GET') {
             const all = hub.store.allMemories(), visibleIds = new Set(hub.memories(scopeSession, true).map(m => m.id));
             const items = (url.searchParams.get('view') === 'all' ? all : all.filter(m => visibleIds.has(m.id))).map(m => ({ ...m, visible: visibleIds.has(m.id), touched: m.usage?.sessions?.includes(id) || m.usage?.lastSessionId === id }));
-            send(res, 200, { items, scope: hub.scope(scopeSession), projects: [...new Set(all.filter(m => m.project).map(m => m.project))], trace: stored?.memoryTrace || [] }); return;
+            send(res, 200, { items, scope: hub.scope(scopeSession), projects: [...new Set(all.filter(m => m.project).map(m => m.project))], trace: stored?.memoryTrace || [], health: hub.store.health(hub.scope(scopeSession).project, hub.scope(scopeSession).mode) }); return;
           }
           if (req.method === 'POST') {
             const input = await readBody(req);
-            if (input.op === 'restore') hub.store.restore(input.target);
+            if (input.op === 'delete') hub.store.deleteMemory(input.target);
+            else if (input.op === 'restore') hub.store.restore(input.target);
             else if (input.op === 'update') hub.store.edit(input.target, input);
             else if (input.op === 'retire') {
               const old = hub.store.allMemories().find(m => m.id === input.target);
@@ -120,6 +145,12 @@ export function apply(ctx, config) {
             } else hub.store.memoryOps(input.project || hub.scope(scopeSession).project, [input], 'user');
             send(res, 200, { ok: true }); return;
           }
+        }
+        if (url.pathname === '/trisoul-x/api/curate' && req.method === 'POST') {
+          if (!agent) throw new Error('先继续一次对话，再整理这个会话的记忆');
+          const shard = hub.store.pickShard(hub.curationKey(session), hub.scope(session));
+          if (shard) await hub.requestCuration(agent, shard, 'manual');
+          send(res, 200, { queued: Boolean(shard) }); return;
         }
         if (url.pathname === '/trisoul-x/api/compact' && req.method === 'POST') {
           if (!agent) throw new Error('先继续一次对话，再整理这个会话');
