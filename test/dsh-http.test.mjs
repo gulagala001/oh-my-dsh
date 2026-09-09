@@ -36,8 +36,8 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
     else if (calls++ === 0) tool('todo_write', { op: 'excerpt', from: 'Run native fixture tools.', to: 'Run native fixture tools.', tasks: [{ title: 'Write and verify the fixture.', anchor: { from: 'Run native fixture tools.', to: 'Run native fixture tools.' } }] });
     else if (calls === 2) tool('write', { file_path: 'fixture.txt', content });
     else if (calls <= 7) tool('read', { file_path: 'fixture.txt' });
-    else if (calls === 8) tool('todo_write', { op: 'link', links: [{ task: 'T1', kind: 'test', path: 'verify.mjs', cmd: 'node verify.mjs' }] });
-    else if (calls === 9) tool('todo_write', { op: 'run', tasks: ['T1'] });
+    else if (calls === 8) tool('verify_link', { op: 'link', links: [{ task: 'T1', kind: 'test', path: 'verify.mjs', cmd: 'node verify.mjs' }] });
+    else if (calls === 9) tool('verify_link', { op: 'run', tasks: ['T1'] });
     else if (calls === 10) tool('todo_write', { op: 'check', updates: [{ id: 'T1', done: true }] });
     else { chunk({ role: 'assistant', content: 'Native tools completed.' }, 'stop'); }
     res.write(`data: ${JSON.stringify({ id: 'fixture', choices: [], usage: { prompt_tokens: 200, completion_tokens: 50, total_tokens: 250 } })}\n\n`);
@@ -78,9 +78,9 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   assert.equal(state.tasks[0].links[0].lastRun.pass, true); assert.match(state.tasks[0].links[0].lastRun.tail, /VERIFIED_LEDGER_FIXTURE/);
   assert.equal(state.tasks[0].id, 'T1'); assert.equal(state.tasks[0].source, 'Run native fixture tools');
   const names = payloads.find(p => p.tools?.some(t => t.function.name === 'read')).tools.map(t => t.function.name);
-  for (const name of ['read', 'write', 'edit', 'glob', 'grep', 'bash', 'skill', 'subagent', 'note', 'recall', 'todo_write', 'web_fetch']) assert.ok(names.includes(name), 'missing tool ' + name);
+  for (const name of ['read', 'write', 'edit', 'glob', 'grep', 'bash', 'skill', 'subagent', 'note', 'recall', 'todo_write', 'verify_link', 'web_fetch']) assert.ok(names.includes(name), 'missing tool ' + name);
   assert.ok(names.some(n => n.startsWith('job_'))); assert.ok(!names.some(n => /vote|submit_draft/.test(n)));
-  assert.equal(names.filter(n => ['todo_write', 'task_map', 'todo', 'verify_link', 'tasks'].includes(n)).length, 1);
+  assert.deepEqual(names.filter(n => ['todo_write', 'task_map', 'todo', 'verify_link', 'tasks'].includes(n)).sort(), ['todo_write', 'verify_link']);
   assert.ok(payloads.every(p => p.response_format === undefined));
   assert.ok(!JSON.stringify(payloads).includes('the default fs-observation-policy requires it'));
   assert.ok(JSON.stringify(payloads).includes('Never check off a task while its tests are failing'));

@@ -12,19 +12,26 @@ function setup(t) {
   const dir = mkdtempSync(join(tmpdir(), 'trisoul-x-ledger-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
   const session = Session.create('ledger', undefined, { id: 'ledger', version: 3, createdAt: 1, cwd: dir, isSeeded: false });
   session.append('turn/start', { turn: 1 });
-  let tool, projection;
-  const store = registerTasks({ tools: { register(t) { tool = t; } }, sessionProjections: { register(p) { projection = p; } } });
+  const tools = new Map(); let projection;
+  const store = registerTasks({ tools: { register(t) { tools.set(t.name, t); } }, sessionProjections: { register(p) { projection = p; } } });
+  const tool = tools.get('todo_write'), verification = tools.get('verify_link');
   const call = (args, signal = new AbortController().signal) => tool.execute(args, { agent: { session }, signal });
+  const verify = (args, signal = new AbortController().signal) => verification.execute(args, { agent: { session }, signal });
   const user = text => session.append('user/message', createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'user' } }), { surfaceOp: 'append' });
-  return { dir, session, store, tool, projection, call, user };
+  return { dir, session, store, tool, verification, projection, call, verify, user };
 }
 const task = (title, from, to = from) => ({ title, anchor: { from, to } });
 const quote = '登录必须支持邮箱验证码，还要有注册功能。';
 const excerpt = { op: 'excerpt', from: '登录必须支持', to: '注册功能', tasks: [task('邮箱验证码登录', '登录必须支持', '邮箱验证码'), task('注册', '注册功能')] };
 
-test('one tool preserves real excerpts and mandatory anchors, with atomic failures and stable IDs', async t => {
-  const { session, tool, call, user } = setup(t); user(quote);
+test('task tool preserves real excerpts and mandatory anchors, with atomic failures and stable IDs', async t => {
+  const { session, tool, verification, call, verify, user } = setup(t); user(quote);
   assert.equal(Object.hasOwn(tool.parameters.properties, 'remove'), false);
+  assert.equal(Object.hasOwn(tool.parameters.properties, 'links'), false);
+  assert.deepEqual(tool.parameters.properties.tasks.items, { type: 'object' });
+  assert.deepEqual(verification.parameters.properties.tasks.items, { type: 'string' });
+  await assert.rejects(call({ op: 'link', links: [] }), /unknown op/);
+  await assert.rejects(verify({ op: 'check', updates: [] }), /unknown op/);
   await assert.rejects(call({ ...excerpt, tasks: [{ title: 'missing anchor' }] }), /needs anchor/);
   assert.equal(session.snapshotEvents().filter(e => e.type === 'todo/write').length, 0);
   await call(excerpt);
@@ -57,19 +64,21 @@ test('ambiguous quotes require message/excerpt selection; punctuation changes pr
 });
 
 test('linked tests really run; edits clear completion and evidence; replay preserves the full ledger', async t => {
-  const { dir, session, call, user, projection } = setup(t); user(quote); await call(excerpt);
+  const { dir, session, call, verify, user, projection } = setup(t); user(quote); await call(excerpt);
   writeFileSync(join(dir, 'check.mjs'), 'console.log("REAL_LEDGER_TEST_OK")');
-  await call({ op: 'link', links: [{ task: 'T1', kind: 'test', path: 'check.mjs', cmd: 'node check.mjs' }] });
+  await verify({ op: 'link', links: [{ task: 'T1', kind: 'test', path: 'check.mjs', cmd: 'node check.mjs' }] });
   assert.equal(currentTasks(session)[0].links[0].lastRun, null);
   const pendingView = await call({ op: 'view' });
   assert.equal(pendingView.match(/^  T1 /gm)?.length, 1);
   assert.equal(pendingView.match(/^  T2 /gm)?.length, 1);
   assert.match(pendingView, /E1 \[msg 1\].*登录必须支持邮箱验证码/);
-  assert.match(pendingView, /T1 .*邮箱验证码登录[^\n]*\n    L1 test check\.mjs \(node check\.mjs\) — not run yet/);
-  assert.match(pendingView, /T2 .*注册[^\n]*\n    no links/);
-  assert.match(await call({ op: 'run', tasks: ['T1'] }), /PASS.*REAL_LEDGER_TEST_OK/);
+  assert.ok(!pendingView.includes('L1'));
+  const evidenceView = await verify({ op: 'view' });
+  assert.match(evidenceView, /T1 .*邮箱验证码登录[^\n]*\n  L1 test check\.mjs \(node check\.mjs\) — not run yet/);
+  assert.match(evidenceView, /T2 .*注册 — no links/);
+  assert.match(await verify({ op: 'run', tasks: ['T1'] }), /PASS.*REAL_LEDGER_TEST_OK/);
   await call({ op: 'check', updates: [{ id: 'T1', done: true }] });
-  assert.match(await call({ op: 'view' }), /T1 \[done\][^\n]*\n    L1 [^\n]* — PASS/);
+  assert.match(await verify({ op: 'view' }), /T1 \[done\][^\n]*\n  L1 [^\n]* — PASS/);
   const data = session.snapshotEvents().at(-1).data;
   assert.equal(data.tasks[0].links[0].lastRun.pass, true);
   assert.equal(projection.apply(data.todos, { type: 'turn/start' }), data.todos);
@@ -81,13 +90,31 @@ test('linked tests really run; edits clear completion and evidence; replay prese
   assert.ok(existsSync(join(dir, 'check.mjs')));
 });
 
+test('task edits wait for running verification and then invalidate its evidence', async t => {
+  const { dir, session, call, verify, user } = setup(t); user(quote); await call(excerpt);
+  writeFileSync(join(dir, 'held.mjs'), 'import {writeFileSync,existsSync} from "node:fs";writeFileSync("started","yes");while(!existsSync("release")) await new Promise(r=>setTimeout(r,10));console.log("REAL_PASS")');
+  await verify({ op: 'link', links: [{ task: 'T1', kind: 'test', path: 'held.mjs' }] });
+  const ac = new AbortController(); t.after(() => ac.abort());
+  const running = verify({ op: 'run', tasks: ['T1'] }, ac.signal);
+  const end = Date.now() + 5000;
+  while (!existsSync(join(dir, 'started')) && Date.now() < end) await new Promise(r => setTimeout(r, 10));
+  assert.ok(existsSync(join(dir, 'started')));
+  const editing = call({ op: 'edit', tasks: [{ id: 'T1', title: '新登录要求' }] });
+  await new Promise(r => setImmediate(r));
+  writeFileSync(join(dir, 'release'), 'yes');
+  const [result] = await Promise.all([running, editing]); assert.match(result, /PASS.*REAL_PASS/);
+  const item = currentTasks(session)[0];
+  assert.equal(item.title, '新登录要求'); assert.equal(item.done, false); assert.deepEqual(item.links, []);
+  assert.match(await verify({ op: 'view' }), /T1 .*新登录要求 — no links/);
+});
+
 test('text evidence retains its source and reason, and can be unlinked without affecting other tasks', async t => {
-  const { session, call, user } = setup(t); user(quote); await call(excerpt);
-  await assert.rejects(call({ op: 'link', links: [{ task: 'T1', kind: 'text', note: 'looked good' }] }), /requires reason/);
-  await call({ op: 'link', links: [{ task: 'T1', kind: 'text', note: 'Inspected app.ts:12', reason: 'No runnable environment in this fixture.' }] });
+  const { session, call, verify, user } = setup(t); user(quote); await call(excerpt);
+  await assert.rejects(verify({ op: 'link', links: [{ task: 'T1', kind: 'text', note: 'looked good' }] }), /requires reason/);
+  await verify({ op: 'link', links: [{ task: 'T1', kind: 'text', note: 'Inspected app.ts:12', reason: 'No runnable environment in this fixture.' }] });
   const item = currentTasks(session)[0]; assert.equal(item.links[0].reason, 'No runnable environment in this fixture.');
-  assert.match(await call({ op: 'view' }), /T1 [^\n]*\n    L1 text — "Inspected app.ts:12" ⚠ text evidence — reason: "No runnable environment in this fixture\."/);
-  await call({ op: 'unlink', ids: ['L1'] }); assert.deepEqual(currentTasks(session)[0].links, []);
+  assert.match(await verify({ op: 'view' }), /T1 [^\n]*\n  L1 text — "Inspected app.ts:12" ⚠ text evidence — reason: "No runnable environment in this fixture\."/);
+  await verify({ op: 'unlink', ids: ['L1'] }); assert.deepEqual(currentTasks(session)[0].links, []);
   assert.equal(currentTasks(session).length, 2);
 });
 

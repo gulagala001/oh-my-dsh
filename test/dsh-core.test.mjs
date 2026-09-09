@@ -9,7 +9,7 @@ import { Hub, SCRIBE, message, eventText } from '../src/hub.mjs';
 import { HubStore } from '../src/hub-store.mjs';
 import { Canvas, selectRegion } from '../src/canvas.mjs';
 import { Config } from '../src/config.mjs';
-import { TASK_DESCRIPTION } from '../src/tasks.mjs';
+import { TASK_DESCRIPTION, VERIFICATION_DESCRIPTION } from '../src/tasks.mjs';
 import { MAIN_PERSONA, MEMORY_CONSTITUTION, SURGEON_SYSTEM, OPS_DESC } from '../src/prompts.mjs';
 
 function setup(t) {
@@ -42,17 +42,15 @@ test('original persona passages, memory constitution and surgeon remain intact',
   assert.equal(MEMORY_CONSTITUTION, original.constitution); assert.equal(SURGEON_SYSTEM, original.surgeon);
   assert.deepEqual(OPS_DESC, { ...original.ops, ops: original.ops.ops.replace(' (the curation job cleans it up)', '') });
   assert.ok(!SCRIBE.includes('Output JSON (JSON only)'));
-  // The approved merge changes introductions, deletion, timing and view wording.
-  // Requirement anchoring, completion conditions and evidence standards keep the original text.
+  // Task definition and completion remain merged; verification keeps its complete original prompt.
   const taskText = TASK_DESCRIPTION.replace(/\s+/g, ' ');
   for (const passage of [
     original.taskMap.slice(0, original.taskMap.indexOf(' Keep the list honest')),
     original.taskMap.slice(original.taskMap.indexOf('Each task'), original.taskMap.indexOf(' op:transcript')),
     original.taskMap.slice(original.taskMap.indexOf('op:transcript'), original.taskMap.indexOf(' op:view')),
-    original.todo.slice(original.todo.indexOf('Never check off'), original.todo.indexOf(' Remove a task')),
-    ...original.verify.split('\n\n').slice(2, 5),
-    original.verify.split('\n\n').at(-1).split(' op:view')[0],
+    original.todo.slice(original.todo.indexOf('Decide'), original.todo.indexOf(' Remove a task')),
   ]) assert.ok(taskText.includes(passage.replace(/\s+/g, ' ')), passage);
+  assert.equal(VERIFICATION_DESCRIPTION, original.verify);
 });
 
 test('memory scope, atomic batches, versions, restoration and per-session usage survive reload', t => {

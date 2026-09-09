@@ -97,15 +97,11 @@ const locateErrText = (r, where) => r.err === 'multi'
 
 const box4 = (done) => done ? '[done]' : '[    ]'
 /** 含节选原文的完整树（op:view 与变更回执共用） */
-function renderTree(rec, includeEvidence = false) {
+function renderTree(rec) {
   if (!rec.excerpts.length && !rec.tasks.length) return 'Todo list is empty.'
-  const lines = [includeEvidence ? 'Todo list (E = excerpt, T = task, L = link):' : 'Todo list (E = excerpt, T = task):']
+  const lines = ['Todo list (E = excerpt, T = task):']
   const appendTask = (t, suffix) => {
     lines.push(`  ${t.id} ${box4(t.done)} ${t.title}${suffix}`)
-    if (includeEvidence) {
-      if (!t.links.length) lines.push('    no links')
-      for (const l of t.links) lines.push(`    ${linkLine(l)}`)
-    }
   }
   for (const ex of rec.excerpts) {
     lines.push(`${ex.id} [msg ${ex.msg}] "${ex.text}"`)
@@ -124,7 +120,7 @@ const testLabel = (l) => `${l.path}${l.cmd ? ` (${l.cmd})` : ''}`
 const linkLine = (l) => l.kind === 'text'
   ? `${l.id} text — "${l.note}" ⚠ text evidence${l.reason ? ` — reason: "${l.reason}"` : ''}`
   : `${l.id} test ${testLabel(l)} — ${runState(l)}`
-/** op:run 回执尾部的验证结果。 */
+/** verify_link 的 view 与 run 回执尾部共用验证视图。 */
 function renderVerifyView(rec) {
   if (!rec.tasks.length) return 'No tasks yet.'
   const lines = ['Verification view (T = task, L = link):']
@@ -309,7 +305,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     const rec = getRec(session)
     const op = args?.op
     if (op === 'transcript') return { text: transcriptText(session) }
-    if (op === 'view') return { text: renderTree(rec, true) }
+    if (op === 'view') return { text: renderTree(rec) }
     if (op === 'excerpt') {
       const msgs = userMessages(session)
       if (typeof args.from !== 'string' || !args.from || typeof args.to !== 'string' || !args.to) {
@@ -431,10 +427,11 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     return { text: `Updated: ${seen.map(([id, d]) => `${id} → ${d ? 'done' : 'open'}`).join(', ')}. Tasks: ${rec.tasks.filter(t => t.done).length}/${rec.tasks.length} done.` }
   }
 
-  /** 验证证据操作：link/run/unlink。 */
+  /** 验证证据操作：link/run/unlink/view。 */
   const execVerifyLink = async (session, args, cwd, signal) => {
     const rec = getRec(session)
     const op = args?.op
+    if (op === 'view') return { text: renderVerifyView(rec) }
     if (op === 'link') {
       const next = clone(rec)
       const entries = Array.isArray(args.links) ? args.links : []
