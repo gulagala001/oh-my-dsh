@@ -3,9 +3,9 @@ import { dirname, join } from 'node:path';
 import { callModel } from './llm.mjs';
 import { TOOLS, executeTool } from './tools.mjs';
 import { ContextHub, messagesFor } from './context.mjs';
-import { MAIN_PERSONA, NATIVE_PROTOCOL, REPLY_GUIDE } from './prompts.mjs';
+import { MAIN_PERSONA, REPLY_GUIDE } from './prompts.mjs';
 
-export const SYSTEM = ['You are trisoul_x.', MAIN_PERSONA, NATIVE_PROTOCOL, REPLY_GUIDE, "Respond in the user's language."].join('\n\n');
+export const SYSTEM = ['You are trisoul_x.', MAIN_PERSONA, REPLY_GUIDE, "Respond in the user's language."].join('\n\n');
 
 function instructions(cwd) {
   let dir = cwd;

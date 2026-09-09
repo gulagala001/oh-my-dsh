@@ -6,7 +6,7 @@ export function messagesFor(session) {
   const checkpoint = session.events.findLast(e => e.type === 'checkpoint');
   const to = checkpoint?.to ?? -1;
   const messages = session.events.filter(e => e.type === 'message' && e.seq <= to && e.message.role === 'user').map(e => e.message);
-  if (checkpoint) messages.push(userMessage(`[Work record · seq ${checkpoint.from}..${checkpoint.to}] Condensed from your own earlier work in this session — treat it as done and continue; don't redo or restate it. For verbatim details condensed away, call recall with {"query":"what you need","from":${checkpoint.from},"to":${checkpoint.to}}.\n${checkpoint.text}`, checkpoint.at));
+  if (checkpoint) messages.push(userMessage(`[Work record · seq ${checkpoint.from}..${checkpoint.to}] Condensed from your own earlier work in this session — continue from the recorded progress and carry forward unfinished work. For verbatim details condensed away, call recall with {"query":"what you need","from":${checkpoint.from},"to":${checkpoint.to}}.\n${checkpoint.text}`, checkpoint.at));
   for (const event of session.events) {
     if (event.seq <= to) continue;
     if (event.type === 'message') messages.push(event.message);
@@ -18,7 +18,7 @@ export function messagesFor(session) {
 const FIELD = { type: 'string' };
 const COMMIT = {
   name: 'save_context', constrainedSampling: false,
-  description: 'Commit this maintenance batch once. This records context and memories; it does not perform the user task.',
+  description: 'Save this batch’s digest, working state, and memory changes.',
   parameters: {
     type: 'object', required: ['digest', 'pin', 'status', 'compactable', 'nowCompactable', 'ops'],
     properties: {

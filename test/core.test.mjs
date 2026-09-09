@@ -131,12 +131,13 @@ test('compaction preserves user instructions and tool pairing; originals remain 
 test('curated persona passages and memory/condenser wording are preserved from the original snapshot', () => {
   const original = JSON.parse(readFileSync(new URL('./fixtures/prompt-origin.json', import.meta.url), 'utf8'));
   const a = original.personas.align.split('\n\n'), b = original.personas.erudite.split('\n\n'), c = original.personas.empiric.split('\n\n');
-  for (const passage of [a[0], a[3], a[4], b[0], b[1], b[2], b[5], c[5]]) assert.ok(MAIN_PERSONA.includes(passage));
+  const autonomy = b[2].replace("The user is not watching in real time and cannot answer questions mid-task, so asking 'Want me to…?' or 'Shall I…?' will block the work. ", '');
+  for (const passage of [a[0], a[3], a[4], b[0], b[1], autonomy, b[5], c[5]]) assert.ok(MAIN_PERSONA.includes(passage));
   assert.ok(MAIN_PERSONA.includes('confidence and correctness are unrelated'));
   assert.ok(MAIN_PERSONA.includes('"Complete" means verified: decide beforehand what result would count'));
   assert.equal(MEMORY_CONSTITUTION, original.constitution);
   assert.equal(SURGEON_SYSTEM, original.surgeon);
-  assert.deepEqual(OPS_DESC, original.ops);
+  assert.deepEqual(OPS_DESC, { ...original.ops, ops: original.ops.ops.replace(" (the curation job cleans it up)", '') });
   assert.ok(!SCRIBE.includes('Output JSON (JSON only)'));
 });
 
