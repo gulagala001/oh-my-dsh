@@ -51,7 +51,7 @@ export class Hub extends Service {
     this.store = new HubStore(config.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), NS));
     this.presetRoot = fileURLToPath(new URL('../presets/', import.meta.url));
     this.jobs = new Map(); this.controllers = new Map(); this.pending = new Set();
-    this.live = new Map(); this.requestStarts = new Map();
+    this.live = new Map(); this.requestStarts = new Map(); this.taskReviews = new Map();
     ctx.effect(() => () => { for (const c of this.controllers.values()) c.abort(); });
   }
   config() { return this.getConfig(); }
@@ -165,6 +165,27 @@ export class Hub extends Service {
       const notice = offered.some(m => m.source?.kind === 'user') ? TODO_NUDGE : this.todoStore.takeEmptyNudge(session) ? TODO_EMPTY_NUDGE.replace('with task_map', 'with todo_write') : null;
       if (notice) session.append('user/message', message(notice, 'task-reminder'), { surfaceOp: 'append' });
     }
+  }
+  finishTasks(agent, turn, signal) {
+    const session = agent.session, store = this.todoStore;
+    if (!store || signal.aborted || session.header.origin === 'subagent') return;
+    const events = session.snapshotEvents();
+    if (events.findLast(e => e.type === 'plan/mode')?.data.active) return;
+    const answer = events.findLast(e => e.type === 'assistant/message' || e.type === 'assistant/attempt');
+    if (answer && ['error', 'aborted', 'max-tokens'].includes(assembleAssistantStream(answer.data.stream).finish.kind)) return;
+    const pending = this.taskReviews.get(session.id);
+    if (pending?.turn === turn) {
+      const delivered = events.find(e => e.type === 'user/message' && e.data.id === pending.messageId);
+      if (delivered && answer?.seq > delivered.seq) store.markTextReviewed(session, pending.ids);
+    }
+    this.taskReviews.delete(session.id);
+    const state = store.gateState(session);
+    const text = state.undone ? store.unresolvedText(session)
+      : state.unqualified ? store.unqualifiedText(session) : store.textReviewText(session);
+    if (!text) return;
+    const reviewing = state.pass, notice = message(text, reviewing ? 'task-review' : 'task-reminder');
+    agent.steer(notice);
+    if (reviewing) this.taskReviews.set(session.id, { turn, messageId: notice.id, ids: store.textReviewLinkIds(session) });
   }
   schedule(agent, force = false) {
     const session = agent.session;

@@ -4,7 +4,8 @@ import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from 'no
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Session } from '@deepseek-ai/dsh-session';
-import { createUserMessage } from '@deepseek-ai/dsh-llm';
+import { createUserMessage, createAssistantMessage } from '@deepseek-ai/dsh-llm';
+import { Hub } from '../src/hub.mjs';
 import { createTodoStore } from '../src/todolist.mjs';
 import { registerTasks, currentTasks } from '../src/tasks.mjs';
 
@@ -174,4 +175,67 @@ test('failed evidence snapshot writes leave links and counters unchanged', async
   const failing = { id: session.id, snapshotEvents: () => session.snapshotEvents(), append() { throw Error('write failed'); } };
   await assert.rejects(store.execVerifyLink(failing, { op: 'link', links: [{ task: 'T1', kind: 'text', note: 'read file', reason: 'fixture only' }] }, dir), /write failed/);
   assert.equal(store.snapshot(session).tasks[0].links.length, 0); assert.equal(store.snapshot(session).nextL, 1);
+});
+
+test('stopping reminders restore unfinished tasks, missing evidence and one-time text review', async t => {
+  const { session, store, call, verify, user } = setup(t), notices = [];
+  const hub = Object.assign(Object.create(Hub.prototype), { todoStore: store, taskReviews: new Map() });
+  const agent = { session, steer: notice => notices.push(notice) }, signal = new AbortController().signal;
+  const stop = () => hub.finishTasks(agent, 1, signal);
+  stop(); assert.equal(notices.length, 0);
+  user(quote); await call(excerpt);
+  stop(); assert.match(notices.at(-1).content[0].text, /^\[todo list\] Unresolved tasks remain:\nT1 \[    \].*\nT2/);
+  await call({ op: 'check', updates: [{ id: 'T1', done: true }, { id: 'T2', done: true }] });
+  stop(); assert.match(notices.at(-1).content[0].text, /^\[todo list\] Every task is checked off, but these lack qualifying evidence:/);
+  assert.ok(notices.at(-1).content[0].text.endsWith('Link real evidence, or uncheck what is not actually done.'));
+  await verify({ op: 'link', links: ['T1', 'T2'].map(task => ({ task, kind: 'text', note: 'Inspected fixture source.', reason: 'No runnable target in this fixture.' })) });
+  stop();
+  const review = notices.at(-1), text = review.content[0].text;
+  assert.match(text, /^\[todo list\] Tasks whose only evidence is a text record:/);
+  assert.ok(text.includes('your reason no higher rung was runnable: "No runnable target in this fixture."'));
+  assert.ok(text.endsWith('Re-check each reason against what is actually available here. If a higher rung is runnable after all, build and link it; if not, they stay as they are.'));
+  assert.equal(store.snapshot(session).tasks[0].links[0].asked, false);
+  session.append('user/message', review, { surfaceOp: 'append' });
+  session.append('assistant/message', { turn: 1, step: 1, stream: [], message: createAssistantMessage({ content: [{ type: 'text', text: 'Rechecked both reasons.' }], source: { provider: 'fixture', model: 'fixture' } }) }, { surfaceOp: 'append' });
+  const before = notices.length, revision = store.revOf(session);
+  stop(); assert.equal(notices.length, before); assert.equal(store.revOf(session), revision);
+  assert.ok(store.snapshot(session).tasks.every(t => t.links[0].asked));
+  assert.equal(session.snapshotEvents().at(-1).data.quiet, true);
+  const restored = createTodoStore(); assert.equal(restored.textReviewText(session), undefined);
+  await verify({ op: 'unlink', ids: ['L1'] });
+  await verify({ op: 'link', links: [{ task: 'T1', kind: 'text', note: 'New observation.', reason: 'Fixture still cannot run.' }] });
+  stop(); assert.equal(notices.length, before + 1); assert.match(notices.at(-1).content[0].text, /L3 text/);
+});
+
+test('review acknowledgement only marks shown links and remains atomic on failed persistence', async t => {
+  const { session, store, call, verify, user } = setup(t); user(quote); await call(excerpt);
+  await verify({ op: 'link', links: [{ task: 'T1', kind: 'text', note: 'First observation.', reason: 'Fixture only.' }] });
+  const shown = store.textReviewLinkIds(session);
+  await verify({ op: 'link', links: [{ task: 'T1', kind: 'text', note: 'Later observation.', reason: 'Fixture only.' }] });
+  const failing = { id: session.id, snapshotEvents: () => session.snapshotEvents(), append() { throw Error('write failed'); } };
+  assert.throws(() => store.markTextReviewed(failing, shown), /write failed/);
+  assert.ok(store.snapshot(session).tasks[0].links.every(l => l.asked === false));
+  store.markTextReviewed(session, shown);
+  assert.deepEqual(store.snapshot(session).tasks[0].links.map(l => l.asked), [true, false]);
+});
+
+test('stopping reminders respect cancellation, planning and subagents; an unanswered review is retried', async t => {
+  const { session, store, call, verify, user } = setup(t), notices = [];
+  user(quote); await call({ ...excerpt, tasks: [excerpt.tasks[0]] });
+  await call({ op: 'check', updates: [{ id: 'T1', done: true }] });
+  await verify({ op: 'link', links: [{ task: 'T1', kind: 'text', note: 'Observed source.', reason: 'Fixture only.' }] });
+  const hub = Object.assign(Object.create(Hub.prototype), { todoStore: store, taskReviews: new Map() });
+  const agent = { session, steer: m => notices.push(m) }, ac = new AbortController();
+  hub.finishTasks(agent, 1, ac.signal); const review = notices.at(-1);
+  session.append('user/message', review, { surfaceOp: 'append' });
+  ac.abort(); hub.finishTasks(agent, 1, ac.signal);
+  assert.equal(store.snapshot(session).tasks[0].links[0].asked, false);
+  const signal = new AbortController().signal;
+  hub.finishTasks(agent, 2, signal); assert.equal(notices.length, 2);
+  const count = notices.length;
+  session.append('plan/mode', { active: true });
+  hub.finishTasks(agent, 2, signal); assert.equal(notices.length, count);
+  session.append('plan/mode', { active: false });
+  const child = { ...agent, session: { id: session.id, header: { ...session.header, origin: 'subagent' } } };
+  hub.finishTasks(child, 2, signal); assert.equal(notices.length, count);
 });

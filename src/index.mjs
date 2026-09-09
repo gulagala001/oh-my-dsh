@@ -41,6 +41,10 @@ export function apply(ctx, config) {
     }
     return next();
   }, { global: true });
+  ctx.on('agent/turn-stopping', ({ agent, turn, signal }) => {
+    if (agent.session.header.agentPreset === 'trisoul-x') hub.finishTasks(agent, turn, signal);
+  }, { global: true });
+  ctx.on('agent/disposed', ({ agent }) => { hub.taskReviews.delete(agent.session.id); }, { global: true });
   ctx.on('session/event', (session, event) => {
     if (session.header.agentPreset !== 'trisoul-x') return;
     hub.observe(session, event);

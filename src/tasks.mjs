@@ -61,8 +61,7 @@ export function currentTasks(session, cached) {
   });
 }
 
-export function registerTasks(ctx) {
-  const store = createTodoStore();
+export function registerTasks(ctx, store = createTodoStore()) {
   const schema = z.array(z.object({ content: z.string(), status: z.enum(['pending', 'in_progress', 'completed']) })).nullable();
   ctx.sessionProjections.register({
     key: 'todos', stateSchema: schema, init: () => null,

@@ -137,6 +137,15 @@ function renderInjection(rec) {
   if (!rec.tasks.length) return '[todo list]\n(empty — all tasks were removed)'
   return ['[todo list]', ...rec.tasks.map(t => `${t.done ? '[x]' : '[ ]'} ${t.id} ${t.title}`)].join('\n')
 }
+
+// Original task-completion reminders; shared by the single-model stopping hook.
+const qualified = (l) => l.kind === 'text' || l.lastRun?.pass === true
+const deficitClause = (l) => l.kind === 'text'
+  ? `${l.id} text — "${l.note}"`
+  : `${l.id} test ${testLabel(l)}, ${runState(l)}`
+const reviewClause = (l) => `${l.id} text — "${l.note}"${l.reason ? ` — your reason no higher rung was runnable: "${l.reason}"` : ''}`
+const REVIEW_TAIL = 'Re-check each reason against what is actually available here. If a higher rung is runnable after all, build and link it; if not, they stay as they are.'
+
 // ---------- 测试运行器（op:run 真执行；按扩展名定运行器，py 走 pytest→裸跑级联） ----------
 
 /** 扩展名 → 运行器族：'node' | 'python' | 'bash' | null（null = 只认可执行文件） */
@@ -240,11 +249,11 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     return r
   }
   /** Commit the durable V3 snapshot before advancing the in-memory ledger. */
-  const commit = (session, r, next) => {
-    session.append(TODOLIST_EVENT, { todos: todosOf(next.tasks), excerpts: next.excerpts, tasks: next.tasks, nextE: next.nextE, nextT: next.nextT, nextL: next.nextL })
+  const commit = (session, r, next, { quiet = false } = {}) => {
+    session.append(TODOLIST_EVENT, { todos: todosOf(next.tasks), excerpts: next.excerpts, tasks: next.tasks, nextE: next.nextE, nextT: next.nextT, nextL: next.nextL, ...(quiet ? { quiet: true } : {}) })
     r.excerpts = next.excerpts; r.tasks = next.tasks
     r.nextE = next.nextE; r.nextT = next.nextT; r.nextL = next.nextL
-    r.rev++
+    if (!quiet) r.rev++
   }
   const clone = (r) => structuredClone({ excerpts: r.excerpts, tasks: r.tasks, nextE: r.nextE, nextT: r.nextT, nextL: r.nextL })
   const err = (text) => ({ text, isError: true })
@@ -451,7 +460,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       }
       const made = []
       for (const s of staged) {
-        const link = { id: `L${next.nextL++}`, kind: s.kind, path: s.path, note: s.note, reason: s.reason, lastRun: null, ...(s.kind === 'test' ? { cmd: s.cmd } : {}) }
+        const link = { id: `L${next.nextL++}`, kind: s.kind, path: s.path, note: s.note, reason: s.reason, lastRun: null, ...(s.kind === 'test' ? { cmd: s.cmd } : { asked: false }) }
         s.task.links.push(link)
         made.push({ link, task: s.task })
       }
@@ -512,6 +521,35 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     return err(`Rejected: unknown op "${String(op)}".`)
   }
 
+  const gateState = (session) => {
+    const rec = getRec(session)
+    const undone = rec.tasks.filter(t => !t.done).length
+    const unqualified = rec.tasks.filter(t => !t.links.some(qualified)).length
+    return { pass: rec.tasks.length === 0 || (undone === 0 && unqualified === 0), undone, unqualified, total: rec.tasks.length }
+  }
+  const blockingLines = (rec) => rec.tasks.filter(t => !t.done || !t.links.some(qualified))
+    .map(t => `${t.id} ${box4(t.done)} ${t.title} — ${t.links.length ? t.links.map(deficitClause).join(' · ') : 'no link to real, valid evidence that the task is done'}`)
+  const unresolvedText = (session) => `[todo list] Unresolved tasks remain:\n${blockingLines(getRec(session)).join('\n')}`
+  const unqualifiedText = (session) => `[todo list] Every task is checked off, but these lack qualifying evidence:\n${blockingLines(getRec(session)).join('\n')}\nLink real evidence, or uncheck what is not actually done.`
+  const reviewTargets = (rec) => rec.tasks.filter(t => textOnly(t) && t.links.some(l => l.kind === 'text' && l.asked !== true))
+  const textReviewLinkIds = (session) => reviewTargets(getRec(session)).flatMap(t => t.links.filter(l => l.kind === 'text' && l.asked !== true).map(l => l.id))
+  const textReviewText = (session) => {
+    const targets = reviewTargets(getRec(session))
+    if (!targets.length) return undefined
+    const lines = targets.map(t => `${t.id} ${box4(t.done)} ${t.title} — ${t.links.filter(l => l.kind === 'text').map(reviewClause).join(' · ')}`)
+    return `[todo list] Tasks whose only evidence is a text record:\n${lines.join('\n')}\n${REVIEW_TAIL}`
+  }
+  // Mark only links included in the delivered review; newly linked evidence gets its own review.
+  const markTextReviewed = (session, ids) => {
+    const rec = getRec(session), next = clone(rec), included = new Set(ids)
+    let n = 0
+    for (const t of reviewTargets(next)) for (const l of t.links) {
+      if (l.kind === 'text' && l.asked !== true && included.has(l.id)) { l.asked = true; n++ }
+    }
+    if (n) commit(session, rec, next, { quiet: true })
+    return n
+  }
+
   /** I1 领取：本会话出现更新的用户消息 → 发一次提醒（随 A 的请求注入，阅后即焚） */
   const takeNudge = (session) => {
     const rec = getRec(session)
@@ -555,5 +593,5 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
   }
   const revOf = (session) => getRec(session).rev
 
-  return { execTaskMap, execCheck, execVerifyLink, takeNudge, takeEmptyNudge, maintainInjection, revOf, snapshot: session => clone(getRec(session)) }
+  return { execTaskMap, execCheck, execVerifyLink, gateState, unresolvedText, unqualifiedText, textReviewText, textReviewLinkIds, markTextReviewed, takeNudge, takeEmptyNudge, maintainInjection, revOf, snapshot: session => clone(getRec(session)) }
 }
