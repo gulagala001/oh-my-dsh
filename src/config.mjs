@@ -7,6 +7,7 @@ export const Config = z.object({
   background: route.default({}),
   surgeon: route.default({}),
   stateEvery: z.number().step(1).min(1).default(8),
+  curateMinGapMs: z.number().step(1).min(0).default(180000),
   minRegionTokens: z.number().step(1).min(1).default(4000),
   keepTailEvents: z.number().step(1).min(2).default(30),
   surgeryCooldownSteps: z.number().step(1).min(0).default(3),

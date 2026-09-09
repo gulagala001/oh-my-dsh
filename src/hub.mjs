@@ -3,8 +3,8 @@ import { BlockAssembler, assembleAssistantStream, createUserMessage } from '@dee
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { HubStore, projectOf } from './hub-store.mjs';
-import { MEMORY_CONSTITUTION, OPS_DESC, DIGEST_DESC, STATE_SYSTEM, STATE_RULES } from './prompts.mjs';
+import { HubStore, projectOf, memoryLineage } from './hub-store.mjs';
+import { MEMORY_CONSTITUTION, OPS_DESC, DIGEST_DESC, STATE_SYSTEM, STATE_RULES, CURATE_RULES } from './prompts.mjs';
 import { TODO_NUDGE, TODO_EMPTY_NUDGE } from './todolist.mjs';
 
 export const NS = 'trisoul-x';
@@ -26,12 +26,16 @@ const str = description => ({ type: 'string', ...(description ? { description } 
 export const SAVE_CONTEXT = {
   name: 'save_context', description: 'Save this batch’s digest, working state, and memory changes.',
   parameters: {
-    type: 'object', required: ['digest', 'pin', 'status', 'compactable', 'nowCompactable', 'ops'],
+    type: 'object', required: ['digest', 'pin', 'status', 'compactable', 'nowCompactable', 'ops', 'signals'],
     properties: {
       digest: str(DIGEST_DESC.digest), pin: { type: 'array', items: str(), description: 'pin lists only pinned entries that newly appeared in this batch of events ([] if none; never repeat existing entries).' },
       status: str('status is the complete snapshot every time (carry over the still-valid parts of the old status, fold away what\'s finished or obsolete).'),
       compactable: { type: 'boolean', description: DIGEST_DESC.compactable },
       nowCompactable: { type: 'array', items: { type: 'integer' }, description: DIGEST_DESC.nowCompactable },
+      signals: { type: 'object', required: ['overlap', 'conflict'], additionalProperties: false, properties: {
+        overlap: { type: 'boolean', description: DIGEST_DESC.overlap },
+        conflict: { type: 'boolean', description: DIGEST_DESC.conflict },
+      } },
       ops: { type: 'array', description: OPS_DESC.ops, items: {
         type: 'object', required: ['op', 'scope', 'key', 'text', 'target'], properties: {
           op: { ...str(OPS_DESC.op), enum: ['add', 'update', 'retire'] },
@@ -43,6 +47,11 @@ export const SAVE_CONTEXT = {
   },
 };
 export const SCRIBE = [MEMORY_CONSTITUTION, STATE_SYSTEM, STATE_RULES, 'Submit the result using save_context.'].join('\n\n');
+export const MEMORY_CURATE = {
+  name: 'memory_curate', description: 'Save the memory curation operations.',
+  parameters: { type: 'object', required: ['ops'], properties: { ops: SAVE_CONTEXT.parameters.properties.ops } },
+};
+export const CURATOR = [MEMORY_CONSTITUTION, CURATE_RULES, 'Submit the result using memory_curate.'].join('\n\n');
 
 export class Hub extends Service {
   constructor(ctx, config) {
@@ -52,7 +61,11 @@ export class Hub extends Service {
     this.presetRoot = fileURLToPath(new URL('../presets/', import.meta.url));
     this.jobs = new Map(); this.controllers = new Map(); this.pending = new Set();
     this.live = new Map(); this.requestStarts = new Map(); this.taskReviews = new Map();
-    ctx.effect(() => () => { for (const c of this.controllers.values()) c.abort(); });
+    this.curations = new Map(); this.curationTail = Promise.resolve(); this.curationClosed = false;
+    ctx.effect(() => () => {
+      for (const c of this.controllers.values()) c.abort();
+      this.disposeCuration();
+    });
   }
   config() { return this.getConfig(); }
   scope(session) {
@@ -144,6 +157,7 @@ export class Hub extends Service {
     const session = agent.session;
     if (session.header.origin === 'subagent') return;
     const state = this.store.state(session.id), { project } = this.scope(session);
+    if (state.curationPending && !this.curations.get(this.curationKey(session))?.running) this.requestCuration(agent);
     if (!state.memoryScope) { state.memoryScope = this.config().memoryScope; this.store.save(state); }
     const memories = this.memories(session);
     const layers = state.memoryScope === 'full' ? 'global / cross-project / project' : state.memoryScope;
@@ -214,12 +228,83 @@ export class Hub extends Service {
     const call = result.blocks.findLast(b => b.type === 'tool-call' && b.name === SAVE_CONTEXT.name);
     if (!call) throw new Error('后台没有提交结果，本批留待下次整理。');
     const a = typeof call.arguments === 'string' ? JSON.parse(call.arguments) : call.arguments;
-    if (typeof a.digest !== 'string' || !Array.isArray(a.pin) || !a.pin.every(p => typeof p === 'string') || typeof a.status !== 'string' || typeof a.compactable !== 'boolean' || !Array.isArray(a.nowCompactable) || !Array.isArray(a.ops)) throw new Error('后台结果缺少必要字段，本批未写入。');
-    this.ops(session, a.ops, 'scribe');
+    if (typeof a.digest !== 'string' || !Array.isArray(a.pin) || !a.pin.every(p => typeof p === 'string') || typeof a.status !== 'string' || typeof a.compactable !== 'boolean' || !Array.isArray(a.nowCompactable) || !Array.isArray(a.ops) || typeof a.signals?.overlap !== 'boolean' || typeof a.signals?.conflict !== 'boolean') throw new Error('后台结果缺少必要字段，本批未写入。');
+    const before = this.memories(session), after = this.ops(session, a.ops, 'scribe');
+    const touched = before.some(m => !after.some(n => n.id === m.id));
     state.cursor = fresh.at(-1).seq;
-    state.pins = [...new Set([...state.pins, ...a.pin])]; state.status = a.status;
+    state.pins = [...new Set([...state.pins, ...a.pin])]; state.status = a.status; state.signals = a.signals;
     state.digests.push({ id: state.cursor, from: fresh[0].seq, to: state.cursor, summary: a.digest, compactable: a.compactable, release: a.nowCompactable });
     this.store.save(state);
     this.action(session, 'digests', 1, { from: fresh[0].seq, to: state.cursor, added: a.ops.filter(o => o.op === 'add').length, updated: a.ops.filter(o => o.op === 'update').length, retired: a.ops.filter(o => o.op === 'retire').length });
+    if (touched || a.signals.overlap || a.signals.conflict || state.curationPending) this.requestCuration(agent);
+  }
+  curationKey(session) { const { mode, project } = this.scope(session); return JSON.stringify([mode, project]); }
+  requestCuration(agent) {
+    if (this.curationClosed || agent.session.header.origin === 'subagent' || this.scope(agent.session).mode === 'session') return;
+    const state = this.store.state(agent.session.id); state.curationPending = true; this.store.save(state);
+    const key = this.curationKey(agent.session);
+    let job = this.curations.get(key);
+    if (!job) {
+      job = { pending: new Set(), lastAt: state.curatedAt || 0, running: false };
+      this.curations.set(key, job);
+    }
+    job.agent = agent; job.pending.add(agent.session.id);
+    return this.drainCuration(job);
+  }
+  drainCuration(job) {
+    if (this.curationClosed || job.running || !job.pending.size) return job.promise;
+    clearTimeout(job.timer);
+    const delay = job.lastAt + this.config().curateMinGapMs - Date.now();
+    if (delay > 0) {
+      job.timer = setTimeout(() => this.drainCuration(job), delay); job.timer.unref();
+      return;
+    }
+    job.running = true;
+    const agent = job.agent, ids = [...job.pending]; job.pending.clear();
+    const controller = new AbortController(); job.controller = controller;
+    job.promise = this.curationTail.catch(() => {}).then(async () => {
+      controller.signal.throwIfAborted();
+      await this.curate(agent, controller.signal);
+      for (const id of ids) {
+        const state = this.store.state(id); state.curatedAt = Date.now();
+        state.curationPending = job.pending.has(id); this.store.save(state);
+      }
+    }).catch(error => {
+      if (!controller.signal.aborted) {
+        this.ctx.logger.warn(`记忆整理：${error.message}`);
+        this.action(agent.session, 'curationErrors', 1, { error: error.message });
+      }
+    }).finally(() => {
+      job.running = false; job.lastAt = Date.now(); job.controller = undefined;
+      if (job.pending.size) this.drainCuration(job);
+    });
+    this.curationTail = job.promise;
+    return job.promise;
+  }
+  disposeCuration() {
+    this.curationClosed = true;
+    for (const job of this.curations.values()) { clearTimeout(job.timer); job.controller?.abort(); }
+  }
+  async curate(agent, signal) {
+    const session = agent.session, { project, mode } = this.scope(session);
+    if (mode === 'session') return;
+    const entries = this.memories(session);
+    if (entries.length < 2) return;
+    const history = new Map(this.store.allMemories().map(m => [m.id, m])), now = Date.now();
+    const ago = at => Number.isFinite(at) ? `${Math.max(0, Math.floor((now - at) / 86400000))}d` : 'unknown';
+    const date = at => Number.isFinite(at) ? new Date(at).toISOString() : 'never';
+    const lines = entries.map(m => {
+      const lineage = memoryLineage(m, history);
+      return `- id=${m.id} | ${m.scope}${m.project ? `(${m.project})` : ''} | key=${m.key} | ${m.text} [age ${ago(lineage.at)} · updated ${ago(m.at)} · injected ${m.usage?.injected || 0} (${date(m.usage?.injectedAt)}) · recalled ${m.usage?.recalled || 0} (${date(m.usage?.recalledAt)}) · src ${lineage.origin} · v ${lineage.depth}]`;
+    });
+    const input = `Today: ${new Date(now).toISOString().slice(0, 10)}\nCurrent project (git root / cwd): ${project}\nSelected memory range: ${mode}\nEditable entries (global may only merge/update text; no retiring, no demoting):\n${lines.join('\n')}`;
+    const result = await this.call(agent, 'curation', { system: CURATOR, messages: [message(input)], tools: [MEMORY_CURATE] }, signal);
+    signal.throwIfAborted();
+    const call = result.blocks.findLast(b => b.type === 'tool-call' && b.name === MEMORY_CURATE.name);
+    if (!call) throw new Error('整理作业没有提交 memory_curate，保留待整理状态');
+    const args = typeof call.arguments === 'string' ? JSON.parse(call.arguments) : call.arguments;
+    if (!Array.isArray(args?.ops)) throw new Error('整理结果缺少 ops，保留待整理状态');
+    const after = this.store.memoryOps(project, args.ops, 'curate', mode, new Set(entries.map(m => m.id)));
+    this.action(session, 'curations', 1, { changed: entries.filter(m => !after.some(n => n.id === m.id)).length });
   }
 }

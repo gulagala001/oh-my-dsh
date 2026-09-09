@@ -10,7 +10,7 @@ import { HubStore } from '../src/hub-store.mjs';
 import { Canvas, selectRegion } from '../src/canvas.mjs';
 import { Config } from '../src/config.mjs';
 import { TASK_DESCRIPTION, VERIFICATION_DESCRIPTION } from '../src/tasks.mjs';
-import { MAIN_PERSONA, MEMORY_CONSTITUTION, SURGEON_SYSTEM, OPS_DESC } from '../src/prompts.mjs';
+import { MAIN_PERSONA, MEMORY_CONSTITUTION, SURGEON_SYSTEM, OPS_DESC, CURATE_RULES, DIGEST_DESC } from '../src/prompts.mjs';
 
 function setup(t) {
   const dir = mkdtempSync(join(tmpdir(), 'trisoul-x-core-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
@@ -40,7 +40,9 @@ test('original persona passages, memory constitution and surgeon remain intact',
   const a = original.personas.align.split('\n\n'), b = original.personas.erudite.split('\n\n'), c = original.personas.empiric.split('\n\n');
   for (const passage of [a[0], a[3], a[4], a[5], b[0], b[1], b[2], c[5]]) assert.ok(MAIN_PERSONA.includes(passage));
   assert.equal(MEMORY_CONSTITUTION, original.constitution); assert.equal(SURGEON_SYSTEM, original.surgeon);
-  assert.deepEqual(OPS_DESC, { ...original.ops, ops: original.ops.ops.replace(' (the curation job cleans it up)', '') });
+  assert.deepEqual(OPS_DESC, original.ops);
+  assert.equal(CURATE_RULES, original.curate);
+  assert.equal(DIGEST_DESC.overlap, original.overlap); assert.equal(DIGEST_DESC.conflict, original.conflict);
   assert.ok(!SCRIBE.includes('Output JSON (JSON only)'));
   // Task definition and completion remain merged; verification keeps its complete original prompt.
   const taskText = TASK_DESCRIPTION.replace(/\s+/g, ' ');
@@ -83,7 +85,7 @@ test('failed or incomplete background commits leave the cursor and memory unchan
   const { hub, store, agent, session } = setup(t); addTurns(session, 1);
   hub.call = async () => ({ blocks: [{ type: 'text', text: 'incomplete' }] });
   await hub.schedule(agent, true); assert.equal(store.state(session.id).cursor, -1);
-  hub.call = async () => ({ blocks: [{ type: 'tool-call', name: 'save_context', arguments: JSON.stringify({ digest: 'Read source', pin: ['Constraint 1'], status: 'Working', compactable: true, nowCompactable: [], ops: [{ op: 'add', scope: 'project', key: 'file', text: 'a.txt', target: '' }] }) }] });
+  hub.call = async () => ({ blocks: [{ type: 'tool-call', name: 'save_context', arguments: JSON.stringify({ digest: 'Read source', pin: ['Constraint 1'], status: 'Working', compactable: true, nowCompactable: [], signals: { overlap: false, conflict: false }, ops: [{ op: 'add', scope: 'project', key: 'file', text: 'a.txt', target: '' }] }) }] });
   await hub.schedule(agent, true); const state = store.state(session.id);
   assert.equal(state.digests.length, 1); assert.deepEqual(state.pins, ['Constraint 1']);
   hub.publish(agent); assert.ok(session.deriveMessages().some(m => JSON.stringify(m).includes('Working state')));

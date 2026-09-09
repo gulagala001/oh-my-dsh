@@ -10,7 +10,7 @@ const api = async (path, value) => {
 };
 const suffix = id => `?${id ? `session=${encodeURIComponent(id)}` : ''}`;
 const fmt = n => Number(n || 0).toLocaleString();
-const kindName = { main: '主执行', subagent: '子代理', background: '记忆与状态', surgeon: '上下文整理' };
+const kindName = { main: '主执行', subagent: '子代理', background: '记忆与状态', curation: '记忆整理', surgeon: '上下文整理' };
 const scopeName = { global: '全局', cross: '跨项目', project: '本项目' };
 const projectLabel = p => p?.startsWith('session:') ? `会话 ${p.slice(-8)}` : p;
 
@@ -64,7 +64,7 @@ function Settings() {
     <fieldset className="tx-fieldset"><legend>新会话默认记忆范围</legend><p className="tx-muted">也可在对话输入区选择；开始对话后沿用已绑定的范围。</p><select aria-label="默认记忆范围" value={config.memoryScope} onChange={e => setConfig({ ...config, memoryScope: e.target.value })}>
       <option value="full">全局 + 跨项目 + 本项目</option><option value="project">仅本项目</option><option value="session">仅当前会话</option></select></fieldset>
     <fieldset className="tx-fieldset"><legend>画布与上下文</legend><div className="tx-row">{[
-      ['stateEvery', '每批整理的消息数', 1, 1], ['minRegionTokens', '区间最小 Token 数', 1, 500],
+      ['stateEvery', '每批整理的消息数', 1, 1], ['curateMinGapMs', '记忆整理最短间隔（毫秒）', 0, 1000], ['minRegionTokens', '区间最小 Token 数', 1, 500],
       ['keepTailEvents', '保留最近消息数', 2, 1], ['surgeryCooldownSteps', '整理间隔步数', 0, 1],
       ['thresholdRatio', '窗口压力比例', 0.1, 0.05],
     ].map(([key, label, min, step]) => <label key={key}>{label}<input type="number" min={min} step={step} max={key === 'thresholdRatio' ? 0.95 : undefined} value={config[key]} onChange={e => setConfig({ ...config, [key]: Number(e.target.value) })}/></label>)}</div></fieldset>
@@ -129,7 +129,7 @@ function MemoryPanel({ sessionId, useTabInfo }) {
     {!visible.length && <p className="tx-muted">没有符合当前条件的记忆。</p>}
     {visible.map(m => <article key={m.id} className={'tx-note' + (m.retired || m.supersededBy ? ' tx-history' : '')}>
       <div className="tx-row"><input className="tx-select" type="checkbox" aria-label={'选择 ' + m.key} checked={selected.includes(m.id)} onChange={e => setSelected(e.target.checked ? [...selected, m.id] : selected.filter(id => id !== m.id))}/><div className="tx-meta">{m.project?.startsWith('session:') ? '会话' : scopeName[m.scope]} · {m.key}{m.retired ? ' · 已删除' : m.supersededBy ? ' · 旧版本' : ''}</div></div><p>{m.text}</p>
-      <div className="tx-meta">来源 {m.source === 'user' ? '手动' : '记忆中枢'} · {new Date(m.at).toLocaleString()} · 注入 {m.usage?.injected || 0} · 召回 {m.usage?.recalled || 0}</div>
+      <div className="tx-meta">来源 {m.source === 'user' ? '手动' : m.source === 'curate' ? '记忆整理' : '记忆中枢'} · {new Date(m.at).toLocaleString()} · 注入 {m.usage?.injected || 0} · 召回 {m.usage?.recalled || 0}</div>
       {m.project && <div className="tx-meta tx-path">{m.project === data.scope.project && m.project.startsWith('session:') ? '当前会话' : projectLabel(m.project)}</div>}
       {!m.retired && !m.supersededBy ? <div className="tx-row"><Button variant="ghost" size="sm" onClick={() => setEdit(m)}>编辑</Button><Button variant="ghost" size="sm" onClick={() => change('retire', [m.id])}>删除</Button></div> : <Button variant="ghost" size="sm" onClick={() => change('restore', [m.id])}>恢复此版本</Button>}
     </article>)}
@@ -162,6 +162,7 @@ function Monitor({ sessionId, useTabInfo }) {
     })}</div>
     <h3>记忆与画布</h3><div className="tx-metric"><dl>
       <dt>记忆消化 / 失败</dt><dd>{fmt(actions.digests)} / {fmt(actions.digestErrors)}</dd><dt>记忆注入</dt><dd>{fmt(actions.injections)}</dd>
+      <dt>记忆整理 / 失败</dt><dd>{fmt(actions.curations)} / {fmt(actions.curationErrors)}</dd>
       <dt>召回 / 命中条数</dt><dd>{fmt(actions.recalls)} / {fmt(actions.recallHits)}</dd><dt>原文回捞</dt><dd>{fmt(actions.rawRecalls)}</dd>
       <dt>上下文整理 / 失败</dt><dd>{fmt(actions.surgeries)} / {fmt(actions.surgeryErrors)}</dd>
       <dt>整理后字符占比</dt><dd>{actions.compactInputChars ? `${(actions.compactOutputChars / actions.compactInputChars * 100).toFixed(1)}%` : '—'}</dd>

@@ -16,11 +16,16 @@ async function until(fn, timeout = 30000) {
 test('official DSH profile → plugin → native tools → memory → V3 canvas → raw recall', { timeout: 90000 }, async t => {
   const root = mkdtempSync(join(tmpdir(), 'trisoul-x-dsh-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   mkdirSync(home); mkdirSync(workspace); mkdirSync(join(workspace, '.agents', 'skills', 'test-skill'), { recursive: true });
+  mkdirSync(join(home, 'trisoul-x'));
+  writeFileSync(join(home, 'trisoul-x', 'memory.json'), JSON.stringify([
+    { id: 'fixture-memory-kept', scope: 'project', project: workspace, key: 'fixture.result', text: 'Fixture result is 42.', source: 'scribe', at: 1 },
+    { id: 'fixture-memory-duplicate', scope: 'project', project: workspace, key: 'fixture.duplicate', text: 'The fixture result equals 42.', source: 'scribe', at: 1 },
+  ]));
   writeFileSync(join(workspace, '.agents', 'skills', 'test-skill', 'SKILL.md'), '---\nname: test-skill\ndescription: Verify a fixture.\n---\nInclude SKILL_FIXTURE in the result.\n');
   writeFileSync(join(workspace, 'verify.mjs'), 'import {readFileSync} from "node:fs";import assert from "node:assert/strict";assert.ok(readFileSync("fixture.txt","utf8").startsWith("ORIGINAL_FIXTURE_42"));console.log("VERIFIED_LEDGER_FIXTURE")');
   writeFileSync(join(workspace, 'AGENTS.md'), 'Project instruction marker: PROJECT_FIXTURE.\n');
   const payloads = [], content = 'ORIGINAL_FIXTURE_42\n' + 'source material '.repeat(600);
-  let calls = 0, recallRange, recallReply;
+  let calls = 0, recallRange, recallReply, curationSignalled = false;
   const provider = createServer(async (req, res) => {
     let body = ''; for await (const part of req) body += part;
     const p = JSON.parse(body); payloads.push(p);
@@ -28,7 +33,10 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
     const chunk = (delta, finish = null) => res.write(`data: ${JSON.stringify({ id: 'fixture', object: 'chat.completion.chunk', model: 'fixture', created: 1, choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`);
     const tool = (name, args) => chunk({ role: 'assistant', tool_calls: [{ index: 0, id: 'call-' + payloads.length, type: 'function', function: { name, arguments: JSON.stringify(args) } }] }, 'tool_calls');
     if (p.tools?.some(t => t.function.name === 'save_context')) {
-      tool('save_context', { digest: 'Read the fixture.', pin: ['Keep the source fixture intact.'], status: 'Native tools completed.', compactable: true, nowCompactable: [], ops: [{ op: 'add', scope: 'project', key: 'fixture.result', text: 'Fixture result is 42.', target: '' }] });
+      tool('save_context', { digest: 'Read the fixture.', pin: ['Keep the source fixture intact.'], status: 'Native tools completed.', compactable: true, nowCompactable: [], signals: { overlap: !curationSignalled, conflict: false }, ops: [{ op: 'add', scope: 'project', key: 'fixture.result', text: 'Fixture result is 42.', target: '' }] });
+      curationSignalled = true;
+    } else if (p.tools?.some(t => t.function.name === 'memory_curate')) {
+      tool('memory_curate', { ops: [{ op: 'retire', scope: 'project', key: 'fixture.duplicate', target: 'fixture-memory-duplicate', text: 'Duplicate of fixture.result.' }] });
     } else if (!p.tools?.length) { chunk({ role: 'assistant', content: 'Done: inspected the fixture. Not yet done: report the result.' }, 'stop'); }
     else if (recallRange) {
       tool('recall', { query: 'original fixture', from: recallRange.from, to: recallRange.to }); recallRange = null; recallReply = true;
@@ -71,7 +79,11 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   assert.equal((await api('/scope' + q)).locked, false);
   await api('/scope' + q, { scope: 'project' });
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: id, mode: 'queue', content: [{ type: 'text', text: 'Run native fixture tools.' }], clientTimeZone: 'Asia/Shanghai' });
-  const reviewed = await until(async () => { const s = await api('/state' + q); return s.running === 'idle' && s.context?.digestCount && !s.live && s.metrics.main?.calls >= 13 && s; });
+  const reviewed = await until(async () => { const s = await api('/state' + q); return s.running === 'idle' && s.context?.digestCount && !s.live && s.metrics.main?.calls >= 13 && s.actions.curations && s; });
+  assert.equal(reviewed.metrics.curation.calls, 1);
+  const memoryFile = JSON.parse(readFileSync(join(home, 'trisoul-x', 'memory.json'), 'utf8'));
+  assert.equal(memoryFile.find(m => m.id === 'fixture-memory-duplicate').retiredReason, 'Duplicate of fixture.result.');
+  assert.ok(payloads.some(p => p.tools?.some(t => t.function.name === 'memory_curate') && JSON.stringify(p.messages).includes('fixture-memory-duplicate')));
   assert.equal(reviewed.tasks[0].links[0].asked, true);
   assert.equal(reviewed.frame.filter(n => n.kind === 'trisoul-x:task-review').length, 1);
   const firstTurn = JSON.stringify(payloads.filter(p => p.tools?.some(t => t.function.name === 'verify_link')).map(p => p.messages));
