@@ -55,6 +55,7 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
     else if (calls === 13) chunk({ role: 'assistant', content: 'Rechecked the recorded reason.' }, 'stop');
     else if (calls === 14) tool('verify_link', { op: 'link', links: [{ task: 'T1', kind: 'test', path: 'verify.mjs', cmd: 'node verify.mjs' }] });
     else if (calls === 15) tool('verify_link', { op: 'run', tasks: ['T1'] });
+    else if (calls === 16) tool('present', { files: [{ path: 'fixture.txt', description: 'Verified fixture output.' }] });
     else { chunk({ role: 'assistant', content: 'Native tools completed.' }, 'stop'); }
     res.write(`data: ${JSON.stringify({ id: 'fixture', choices: [], usage: { prompt_tokens: 200, completion_tokens: 50, total_tokens: 250 } })}\n\n`);
     res.end('data: [DONE]\n\n');
@@ -114,7 +115,8 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   assert.equal(testLink.lastRun.pass, true); assert.match(testLink.lastRun.tail, /VERIFIED_LEDGER_FIXTURE/);
   assert.equal(state.tasks[0].id, 'T1'); assert.equal(state.tasks[0].source, 'Run native fixture tools');
   const names = payloads.find(p => p.tools?.some(t => t.function.name === 'read')).tools.map(t => t.function.name);
-  for (const name of ['read', 'write', 'edit', 'glob', 'grep', 'bash', 'skill', 'subagent', 'note', 'recall', 'todo_write', 'verify_link', 'web_fetch']) assert.ok(names.includes(name), 'missing tool ' + name);
+  for (const name of ['read', 'write', 'edit', 'glob', 'grep', 'bash', 'skill', 'subagent', 'note', 'recall', 'todo_write', 'verify_link', 'web_fetch', 'present']) assert.ok(names.includes(name), 'missing tool ' + name);
+  assert.ok(payloads.some(p => p.messages.some(m => m.role === 'tool' && typeof m.content === 'string' && m.content.includes('Presented fixture.txt'))));
   assert.ok(names.some(n => n.startsWith('job_'))); assert.ok(!names.some(n => /vote|submit_draft/.test(n)));
   assert.deepEqual(names.filter(n => ['todo_write', 'task_map', 'todo', 'verify_link', 'tasks'].includes(n)).sort(), ['todo_write', 'verify_link']);
   assert.ok(payloads.every(p => p.response_format === undefined));
