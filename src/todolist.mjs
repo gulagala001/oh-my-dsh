@@ -148,12 +148,13 @@ const REVIEW_TAIL = 'Re-check each reason against what is actually available her
 
 // ---------- 测试运行器（op:run 真执行；按扩展名定运行器，py 走 pytest→裸跑级联） ----------
 
-/** 扩展名 → 运行器族：'node' | 'python' | 'bash' | null（null = 只认可执行文件） */
+/** 按文件扩展名选择运行器；未知扩展名只认可执行文件。 */
 export function runnerFor(p) {
   const ext = extname(String(p ?? '')).toLowerCase()
   if (ext === '.js' || ext === '.mjs' || ext === '.cjs') return 'node'
   if (ext === '.py') return 'python'
   if (ext === '.sh') return 'bash'
+  if (ext === '.ps1') return 'pwsh'
   return null
 }
 /** Resolve a linked file relative to the session workspace. */
@@ -167,7 +168,7 @@ function existingPath(cwd, p) {
  *  - 超时：自管计时器，到点杀**整个进程组**（子进程用 detached 起成组长）——bash -c 复合命令会 fork，只杀 bash 会留孤儿测试进程；
  *    SIGTERM 两秒不退再 SIGKILL。timedOut 由自己的标记判，不再靠 execFile 的 killed+SIGTERM 猜（旧 `!signal?.aborted` 守卫恒真）。
  *  - 上游中止（用户点停止）：同样杀组，但结果标 aborted——它与测试本身无关，调用方不得记成 FAIL。
- *  - 其余：exit 0 = ok。win32 无进程组语义，退回只杀直接子进程。 */
+ *  - 其余：exit 0 = ok。Windows 用 taskkill /T /F 停止整个进程树。 */
 const execP = (cmd, args, cwd, signal, timeoutMs) => new Promise((res) => {
   if (signal?.aborted) return res({ ok: false, aborted: true, timedOut: false, out: '' })
   const grouped = process.platform !== 'win32'
@@ -177,10 +178,39 @@ const execP = (cmd, args, cwd, signal, timeoutMs) => new Promise((res) => {
     if (grouped) { try { process.kill(-child.pid, sig); return } catch { /* 组已不在，退回单杀 */ } }
     try { child.kill(sig) } catch { /* 已退出 */ }
   }
-  const stop = () => { killGroup('SIGTERM'); forceTimer = setTimeout(() => killGroup('SIGKILL'), 2000) }
+  const stop = () => {
+    if (!grouped && child?.pid) {
+      execFile('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true }, error => {
+        if (error) killGroup('SIGKILL')
+      })
+      return
+    }
+    if (child?.pid) {
+      try { process.kill(-child.pid, 'SIGTERM') } catch {
+        // Some launchers keep children in their own shared process group.
+        // Stop only this test's descendants when it has no private group.
+        execFile('ps', ['-A', '-o', 'pid=,ppid='], (error, output) => {
+          const children = new Map()
+          if (!error) for (const row of output.trim().split('\n')) {
+            const [pid, parent] = row.trim().split(/\s+/).map(Number)
+            if (pid > 0 && parent > 0) children.set(parent, [...(children.get(parent) || []), pid])
+          }
+          const kill = pid => {
+            for (const descendant of children.get(pid) || []) kill(descendant)
+            try { process.kill(pid, 'SIGKILL') } catch { /* already exited */ }
+          }
+          kill(child.pid)
+        })
+        return
+      }
+      forceTimer = setTimeout(() => killGroup('SIGKILL'), 2000)
+      return
+    }
+    killGroup('SIGTERM'); forceTimer = setTimeout(() => killGroup('SIGKILL'), 2000)
+  }
   const onAbort = () => { aborted = true; stop() }
   try {
-    child = execFile(cmd, args, { cwd, maxBuffer: 64 * 1024 * 1024, detached: grouped }, (err, stdout, stderr) => {
+    child = execFile(cmd, args, { cwd, maxBuffer: 64 * 1024 * 1024, detached: grouped, windowsHide: true }, (err, stdout, stderr) => {
       clearTimeout(killTimer); clearTimeout(forceTimer); signal?.removeEventListener?.('abort', onAbort)
       res({ ok: !err && !timedOut && !aborted, code: err?.code, aborted, timedOut: timedOut && !aborted, out: `${stdout ?? ''}${stderr ?? ''}`.trim() })
     })
@@ -188,22 +218,26 @@ const execP = (cmd, args, cwd, signal, timeoutMs) => new Promise((res) => {
     signal?.addEventListener?.('abort', onAbort, { once: true })
   } catch (e) { clearTimeout(killTimer); res({ ok: false, aborted: false, timedOut: false, out: String(e?.message ?? e) }) }
 })
-/** 跑一条已链接的 test：有 cmd 按仓库自己的命令跑（bash -c，cwd = 会话目录）；无 cmd 按扩展名裸跑。exit 0 = PASS。
+/** 跑一条已链接的 test：有 cmd 用当前平台的 Shell（Windows: pwsh，其余: bash）；无 cmd 按扩展名运行。exit 0 = PASS。
  *  py 先 pytest（-x -q）；pytest 缺席或收不到测试（exit 5）再裸跑 */
 async function runTestLink(link, real, cwd, signal, timeoutMs) {
-  if (link.cmd) return execP('bash', ['-c', link.cmd], cwd, signal, timeoutMs)
+  if (link.cmd) return process.platform === 'win32'
+    ? execP('pwsh', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', `$ErrorActionPreference = 'Stop'\n& {\n${link.cmd}\n}\nif ($LASTEXITCODE -ne $null) { exit $LASTEXITCODE }`], cwd, signal, timeoutMs)
+    : execP('bash', ['-c', link.cmd], cwd, signal, timeoutMs)
   const path = link.path
   const kind = runnerFor(path)
-  if (kind === 'node') return execP('node', [real], cwd, signal, timeoutMs)
+  if (kind === 'node') return execP(process.execPath, [real], cwd, signal, timeoutMs)
   if (kind === 'bash') return execP('bash', [real], cwd, signal, timeoutMs)
+  if (kind === 'pwsh') return execP('pwsh', ['-NoLogo', '-NoProfile', '-NonInteractive', '-File', real], cwd, signal, timeoutMs)
   if (kind === 'python') {
-    const r = await execP('python3', ['-m', 'pytest', '-x', '-q', real], cwd, signal, timeoutMs)
+    const python = process.platform === 'win32' ? 'python' : 'python3'
+    const r = await execP(python, ['-m', 'pytest', '-x', '-q', real], cwd, signal, timeoutMs)
     if (r.ok || r.timedOut || r.aborted) return r
-    if (r.code === 5 || /No module named pytest/i.test(r.out)) return execP('python3', [real], cwd, signal, timeoutMs)
+    if (r.code === 5 || /No module named pytest/i.test(r.out)) return execP(python, [real], cwd, signal, timeoutMs)
     return r
   }
   try { accessSync(real, constants.X_OK); return execP(real, [], cwd, signal, timeoutMs) } catch {}
-  return { ok: false, timedOut: false, out: `No runner for ${path} — give cmd (the repository's own test command for this file), or link a .js/.mjs/.cjs/.py/.sh file.` }
+  return { ok: false, timedOut: false, out: `No runner for ${path} — give cmd (the repository's own test command for this file), or link a .js/.mjs/.cjs/.py/.sh/.ps1 file.` }
 }
 
 // ---------- 清单存储（会话持久：每次变更 append 快照事件，重启从事件恢复） ----------

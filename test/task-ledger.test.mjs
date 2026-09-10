@@ -122,7 +122,7 @@ test('text evidence retains its source and reason, and can be unlinked without a
 
 test('FAIL, TIMEOUT and cancellation keep distinct real execution results', async t => {
   const { dir, session, user } = setup(t); user(quote);
-  const store = createTodoStore({ runTimeoutMs: 250 }); store.execTaskMap(session, excerpt);
+  const store = createTodoStore({ runTimeoutMs: 1000 }); store.execTaskMap(session, excerpt);
   writeFileSync(join(dir, 'fail.mjs'), 'console.error("EXPECTED_FAILURE");process.exit(1)');
   await store.execVerifyLink(session, { op: 'link', links: [{ task: 'T1', kind: 'test', path: 'fail.mjs' }] }, dir);
   assert.match((await store.execVerifyLink(session, { op: 'run', tasks: ['T1'] }, dir)).text, /FAIL.*EXPECTED_FAILURE/);
@@ -168,6 +168,57 @@ test('cancelling a running linked test stops its process and retains earlier evi
   assert.match((await run).text, /Run aborted/);
   assert.deepEqual(store.snapshot(session).tasks[0].links[0].lastRun, prior);
   assert.equal(existsSync(join(dir, 'should-not-exist')), false);
+});
+
+test('custom verification commands preserve a native program failure', async t => {
+  const { dir, call, verify, user } = setup(t); user(quote); await call(excerpt);
+  writeFileSync(join(dir, 'failure check.mjs'), 'console.error("NATIVE_FAILURE");process.exit(7)');
+  await verify({ op: 'link', links: [{ task: 'T1', kind: 'test', path: 'failure check.mjs', cmd: 'node "failure check.mjs"' }] });
+  assert.match(await verify({ op: 'run', tasks: ['T1'] }), /FAIL.*NATIVE_FAILURE/);
+});
+
+test('Windows verification runs PowerShell commands and ps1 files', { skip: process.platform !== 'win32' }, async t => {
+  const { dir, call, verify, user } = setup(t); user(quote); await call(excerpt);
+  writeFileSync(join(dir, 'space check.ps1'), 'Write-Output "POWERSHELL_FILE_OK"\n');
+  await verify({ op: 'link', links: [
+    { task: 'T1', kind: 'test', path: 'space check.ps1' },
+    { task: 'T2', kind: 'test', path: 'space check.ps1', cmd: '$value = 7; if ($value -ne 7) { throw "bad value" }; Write-Output "POWERSHELL_COMMAND_OK"' },
+  ] });
+  const result = await verify({ op: 'run' });
+  assert.match(result, /PASS.*POWERSHELL_FILE_OK/);
+  assert.match(result, /PASS.*POWERSHELL_COMMAND_OK/);
+});
+
+test('Windows verification reports terminating PowerShell errors as failures', { skip: process.platform !== 'win32' }, async t => {
+  const { dir, call, verify, user } = setup(t); user(quote); await call(excerpt);
+  writeFileSync(join(dir, 'check.ps1'), 'Write-Output "unused"');
+  await verify({ op: 'link', links: [{ task: 'T1', kind: 'test', path: 'check.ps1', cmd: 'Write-Error "POWERSHELL_FAILURE"' }] });
+  assert.match(await verify({ op: 'run' }), /FAIL[\s\S]*POWERSHELL_FAILURE/);
+});
+
+test('cancelling a shell verification stops its descendant process', async t => {
+  const { dir, call, verify, user } = setup(t); user(quote); await call(excerpt);
+  writeFileSync(join(dir, 'descendant.mjs'), 'import {writeFileSync} from "node:fs";let ticks=0;setInterval(()=>writeFileSync("ticks",String(++ticks)),20);process.send("ready")');
+  writeFileSync(join(dir, 'parent.mjs'), 'import {fork} from "node:child_process";import {writeFileSync} from "node:fs";const child=fork("descendant.mjs");child.on("message",()=>writeFileSync("descendant.pid",String(child.pid)));setInterval(()=>{},1000)');
+  await verify({ op: 'link', links: [{ task: 'T1', kind: 'test', path: 'parent.mjs', cmd: 'node parent.mjs' }] });
+  const ac = new AbortController(); let pid, timer;
+  const run = verify({ op: 'run', tasks: ['T1'] }, ac.signal);
+  try {
+    const end = Date.now() + 10000;
+    while ((!existsSync(join(dir, 'descendant.pid')) || !existsSync(join(dir, 'ticks'))) && Date.now() < end) await new Promise(r => setTimeout(r, 20));
+    assert.ok(existsSync(join(dir, 'descendant.pid')));
+    pid = Number(readFileSync(join(dir, 'descendant.pid'), 'utf8'));
+    ac.abort();
+    const result = await Promise.race([run, new Promise((_, reject) => { timer = setTimeout(() => reject(Error('Descendant kept the verification alive')), 5000); })]);
+    assert.match(result, /Run aborted/);
+    const ticks = readFileSync(join(dir, 'ticks'), 'utf8');
+    await new Promise(r => setTimeout(r, 200));
+    assert.equal(readFileSync(join(dir, 'ticks'), 'utf8'), ticks);
+  } finally {
+    clearTimeout(timer); ac.abort();
+    if (pid) { try { process.kill(pid, 'SIGKILL'); } catch {} }
+    await run;
+  }
 });
 
 test('failed evidence snapshot writes leave links and counters unchanged', async t => {

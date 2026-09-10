@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -69,7 +69,11 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   let log = ''; child.stdout.on('data', d => { log += d; }); child.stderr.on('data', d => { log += d; });
   t.after(async () => {
     if (!complete) console.error('Integration diagnostics', { calls, payloads: payloads.length, log: log.slice(-7000).replace(/token=\S+/g, 'token=[redacted]') });
-    if (child.exitCode === null) { child.kill('SIGTERM'); await Promise.race([once(child, 'exit'), new Promise(r => setTimeout(r, 5000).unref())]); }
+    if (child.exitCode === null) {
+      if (process.platform === 'win32') { try { execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true }); } catch {} }
+      else child.kill('SIGTERM');
+      if (child.exitCode === null) await Promise.race([once(child, 'exit'), new Promise(r => setTimeout(r, 5000).unref())]);
+    }
     provider.closeAllConnections(); await new Promise(done => provider.close(done)); rmSync(root, { recursive: true, force: true });
   });
   const bootstrap = await until(() => {
@@ -115,7 +119,7 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   assert.equal(testLink.lastRun.pass, true); assert.match(testLink.lastRun.tail, /VERIFIED_LEDGER_FIXTURE/);
   assert.equal(state.tasks[0].id, 'T1'); assert.equal(state.tasks[0].source, 'Run native fixture tools');
   const names = payloads.find(p => p.tools?.some(t => t.function.name === 'read')).tools.map(t => t.function.name);
-  for (const name of ['read', 'write', 'edit', 'glob', 'grep', 'bash', 'skill', 'subagent', 'note', 'recall', 'todo_write', 'verify_link', 'web_fetch', 'present']) assert.ok(names.includes(name), 'missing tool ' + name);
+  for (const name of ['read', 'write', 'edit', 'glob', 'grep', process.platform === 'win32' ? 'pwsh' : 'bash', 'skill', 'subagent', 'note', 'recall', 'todo_write', 'verify_link', 'web_fetch', 'present']) assert.ok(names.includes(name), 'missing tool ' + name);
   assert.ok(payloads.some(p => p.messages.some(m => m.role === 'tool' && typeof m.content === 'string' && m.content.includes('Presented fixture.txt'))));
   assert.ok(names.some(n => n.startsWith('job_'))); assert.ok(!names.some(n => /vote|submit_draft/.test(n)));
   assert.deepEqual(names.filter(n => ['todo_write', 'task_map', 'todo', 'verify_link', 'tasks'].includes(n)).sort(), ['todo_write', 'verify_link']);

@@ -13,7 +13,14 @@
   "bugs": {
     "url": "https://github.com/gulagala001/trisoul_x/issues"
   },
-  "keywords": ["dsh", "deepseek-harness", "agent", "memory", "context", "plugin"],
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "agent",
+    "memory",
+    "context",
+    "plugin"
+  ],
   "scripts": {
     "build": "node scripts/build.mjs",
     "start": "node scripts/start.mjs",
@@ -21,11 +28,6 @@
     "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
-    "@deepseek-ai/cordis": "4.0.2",
-    "@deepseek-ai/dsh": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-compaction": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-llm": "0.1.5-rc.1",
-    "@deepseek-ai/schemastery": "3.18.2",
     "zod": "4.5.4"
   },
   "engines": {
@@ -63,6 +65,31 @@
   ],
   "devDependencies": {
     "@deepseek-ai/dsh-session": "0.1.5-rc.1",
-    "esbuild": "0.25.12"
+    "esbuild": "0.25.12",
+    "@deepseek-ai/cordis": "4.0.2",
+    "@deepseek-ai/dsh-compaction": "0.1.5-rc.1",
+    "@deepseek-ai/dsh-llm": "0.1.5-rc.1",
+    "@deepseek-ai/schemastery": "3.18.2",
+    "@deepseek-ai/dsh": "0.1.5-rc.1"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.2",
+    "@deepseek-ai/dsh-compaction": "0.1.5-rc.1",
+    "@deepseek-ai/dsh-llm": "0.1.5-rc.1",
+    "@deepseek-ai/schemastery": "3.18.2"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-compaction": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-llm": {
+      "optional": true
+    },
+    "@deepseek-ai/schemastery": {
+      "optional": true
+    }
   }
 }

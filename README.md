@@ -8,6 +8,8 @@ trisoul_x 由 trisoul 重构而来，将三官的执行原则融合进一个主�
 
 **独立仓库 · DSH 插件 · 单主模型 · 原生工具调用**
 
+可以直接安装到已有 DSH Web，继续使用原来的端口、模型配置与会话。Windows、macOS 和 Linux 使用同一套插件入口。
+
 当前版本 **0.1.0**，适配 **DSH 0.1.5-rc.1**。这是持续迭代中的早期版本，DSH 依赖已固定到同一候选版本；升级宿主前需要重新验证兼容性。
 
 ## 核心能力
@@ -25,7 +27,7 @@ trisoul_x 由 trisoul 重构而来，将三官的执行原则融合进一个主�
 
 ## 与 DSH 的关系
 
-X 通过插件和 Agent preset 接入 DSH，使用宿主的模型执行循环和 Web 框架。仓库包含启动脚本，可自动创建独立 profile 并安装本地插件，无需修改 DSH 源码。
+X 通过插件和 Agent preset 接入 DSH，复用宿主的模型执行循环、Web 框架与 SDK。前端构建产物随插件提供，安装后直接出现在原来的 DSH 页面。仓库另附独立试用脚本，默认使用 3083；插件本身不绑定端口。
 
 ```mermaid
 flowchart TB
@@ -43,7 +45,44 @@ flowchart TB
     class A,C,M,P plugin
 ```
 
-## 快速开始
+## 安装到现有 DSH（推荐）
+
+适用 **DSH 0.1.5-rc.1**，需要 Node.js ≥22.19、pnpm 11.21.0 和 Git。**Windows 使用 PowerShell 7（`pwsh`）**，无需 WSL；Python 验证文件需要另有 Python，`.sh` 文件需要 Bash。
+
+先停止当前 DSH Web，在终端或 PowerShell 中安装：
+
+```sh
+dsh plugin --profile web add github:gulagala001/trisoul_x
+```
+
+然后按原来的方式重新启动 DSH，例如：
+
+```sh
+dsh web
+```
+
+打开这次启动打印的登录链接，继续使用原来的 **3080**（或自己配置的端口）。页面中会出现 X 的记忆、工作上下文、监控与设置；新建会话使用 `trisoul-x` Agent preset。已有模型和凭据沿用宿主配置，已有会话保持各自的 Agent preset。
+
+如果原服务用了自定义 profile，把命令中的 `web` 替换为其名称；如果设置了 `DSH_HOME`，安装时必须使用同一个值。无需克隆仓库、手动构建或另外运行 `pnpm start`。
+
+插件会将该 profile 的默认 Agent preset 设为 `trisoul-x`，并应用完整文件/命令访问、关闭执行审批的运行配置；profile 自己的覆盖配置优先于插件。
+
+<details>
+<summary>更新与卸载</summary>
+
+停止服务后，重新执行安装命令可更新 GitHub 版本；再按原来的方式启动。
+
+卸载：
+
+```sh
+dsh plugin --profile web remove trisoul_x
+```
+
+重启后恢复宿主配置。卸载不删除模型配置、凭据、会话或 X 的记忆文件；使用 `trisoul-x` preset 的旧会话需要重新安装插件后才能继续运行。
+
+</details>
+
+## 本地开发或独立试用
 
 需要 **Node.js ≥22.19**、Git 和 **pnpm 11.21.0**。推荐使用 Node.js 24。尚未安装 pnpm 时，可运行 `npm install -g pnpm@11.21.0`。
 
@@ -70,12 +109,12 @@ PORT=3090 pnpm start
 DSH_HOME=/absolute/path/to/x-data pnpm start
 ```
 
-仓库的默认运行配置会设置完整文件与命令访问，并关闭执行审批；安装到已有 profile 时也会应用这组设置。
+Windows PowerShell 可用 `$env:PORT = '3090'` 或 `$env:DSH_HOME = 'C:\x-data'` 设置环境变量，再运行 `pnpm start`。
 
 <details>
-<summary>安装到已有 DSH，或在 macOS 后台打开</summary>
+<summary>链接本地开发代码，或在 macOS 后台打开</summary>
 
-已有 **DSH 0.1.5-rc.1** 时，先在 X 源码目录安装依赖并构建，再将插件链接到目标 profile：
+开发插件时，先在 X 源码目录安装依赖并构建，再将本地代码链接到目标 profile：
 
 ```sh
 dsh plugin --profile YOUR_PROFILE add link:/absolute/path/to/trisoul_x
@@ -122,17 +161,17 @@ node scripts/launch-macos.mjs
 
 ## 数据与维护
 
-默认数据目录为 `data/dsh/`，与其他 DSH 安装隔离；指定 `DSH_HOME` 时以该目录为准。
+作为插件安装时，数据使用现有 DSH 的数据目录：默认 `~/.dsh/`（Windows 为用户目录下的 `.dsh`），或服务已有的 `DSH_HOME`。X 自身的记录位于其中的 `trisoul-x/`。只有仓库的独立试用脚本默认使用 `data/dsh/`。
 
 | 路径（相对于数据目录） | 内容 |
 | --- | --- |
 | `settings.yaml` / `.credentials.yaml` | DSH 设置与本机凭据 |
-| `profiles/trisoul-x/` | 独立 profile 与插件安装信息 |
+| `profiles/<profile>/` | 当前 profile 与插件安装信息，通常是 `web` |
 | `sessions/` | DSH 会话事件 |
 | `trisoul-x/memory.json` | 插件记忆及版本 |
 | `trisoul-x/sessions/` / `trisoul-x/curation.json` | 工作状态、监控记录与整理进度 |
 
-`data/`、环境文件与运行日志已加入 Git 忽略规则。备份时停止服务并保存整个数据目录。更新代码后重新运行 `pnpm install --frozen-lockfile` 和 `pnpm build`，再启动服务。
+`data/`、环境文件与运行日志已加入 Git 忽略规则。备份时停止服务并保存整个数据目录。本地开发代码更新后，重新运行 `pnpm install --frozen-lockfile` 和 `pnpm build`，再启动服务。
 
 遇到 `dsh web authentication required` 时，重新打开当前服务打印的完整登录链接。首次启动需要下载 DSH profile 依赖；如果失败，先查看终端中的安装错误。
 
@@ -144,6 +183,10 @@ pnpm test
 ```
 
 自动测试使用临时数据目录、本地模拟模型与真实 DSH profile，不需要模型密钥。覆盖提示词原文、任务锚点与证据、跨轮恢复、记忆范围与版本、后台消化与整理、状态更新、上下文压缩、事实探针、原文回捞和原生文件交付。
+
+Windows 的验证命令使用 PowerShell，支持直接关联 `.ps1` 文件；macOS/Linux 的自定义命令继续使用 Bash。停止验证时终止测试进程树。CI 在 Linux 和 Windows 上运行，包含 PowerShell 执行、失败结果与进程取消检查。
+
+DSH CLI 仅作为本地开发依赖；宿主 SDK 声明为由 DSH 提供的 peer dependencies，避免安装插件时重复安装一套宿主及其原生依赖。
 
 | 位置 | 职责 |
 | --- | --- |
