@@ -2,11 +2,11 @@ import z from '@deepseek-ai/schemastery';
 import { FREQUENCY_PRESETS } from './frequency.mjs';
 
 const route = z.object({ provider: z.string().default(''), model: z.string().default(''), temperature: z.number().default(0.7), effort: z.string().default('off') });
-const cadence = FREQUENCY_PRESETS.medium;
+const cadence = FREQUENCY_PRESETS.always;
 export const Config = z.object({
   dataDir: z.string(),
-  memoryScope: z.union(['full', 'project', 'session']).default('full'),
-  backgroundMode: z.union(['unified', 'separate']).default('separate'),
+  memoryScope: z.union(['full', 'project', 'session']).default('project'),
+  backgroundMode: z.union(['unified', 'separate']).default('unified'),
   unifiedBackground: route.default({}),
   background: route.default({}),
   canvas: route.default({}),

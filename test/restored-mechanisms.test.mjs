@@ -43,7 +43,7 @@ test('restored prompt text stays original; state, digest, picker and probe use d
 });
 
 test('task memory picks semantically, rewrites by version, throttles and survives restart without duplicate opening', async t => {
-  const { cfg, store, hub, session, agent, dir } = setup(t, { injectLimit: 1, injectBatch: 1, supplementMinSteps: 2, injectMaxPerSession: 5 });
+  const { cfg, store, hub, session, agent, dir } = setup(t, { memoryScope: 'full', injectLimit: 1, injectBatch: 1, supplementMinSteps: 2, injectMaxPerSession: 5 });
   store.memoryOps(dir, [{ op: 'add', scope: 'global', key: 'user', text: 'Use Chinese.' }, { op: 'add', key: 'a', text: 'The deployment uses the blue cluster.' }, { op: 'add', key: 'b', text: 'The database uses port 6543.' }, { op: 'add', key: 'c', text: 'The documentation lives in docs/.' }]);
   const mc = hub.memoryContext;
   hub.call = async (_a, kind, req) => { assert.equal(kind, 'recall'); assert.match(JSON.stringify(req.messages), /blue cluster/); return answer('select_memories', { indexes: [0] }); };
@@ -122,7 +122,7 @@ test('phase close releases earlier gaps; latest state and task snapshots stay wh
 });
 
 test('sharded curation resumes windows and promotes cross-project candidates without private session material', async t => {
-  const { hub, store, session, agent, dir, cfg } = setup(t, { curateLimit: 2, injectMaxPerSession: 0 });
+  const { hub, store, session, agent, dir, cfg } = setup(t, { memoryScope: 'full', curateLimit: 2, injectMaxPerSession: 0 });
   store.memoryOps(dir, [1, 2, 3].map(i => ({ op: 'add', key: 'local.' + i, text: 'Local fact ' + i })));
   const window = store.curateWindow('project:' + dir, 2); assert.equal(window.entries.length, 2); store.markCurated('project:' + dir, window.next);
   assert.equal(new HubStore(dir).curateWindow('project:' + dir, 2).entries.length, 1);
@@ -175,7 +175,7 @@ test('immediate QA patch uses a complete V3 lifecycle and preserves recoverable 
 });
 
 test('oversized surgeon output falls back to the stored digest and honors live route settings', async t => {
-  const { hub, cfg, store, session, agent, canvas, assistant, user } = setup(t, { probeEnabled: false });
+  const { hub, cfg, store, session, agent, canvas, assistant, user } = setup(t, { backgroundMode: 'separate', probeEnabled: false });
   user('Inspect'); const a = assistant('Material '.repeat(200)), b = assistant('More '.repeat(300));
   store.state(session.id).digests.push({ id: b.seq, from: a.seq, to: b.seq, summary: 'Done: source inspected; continue from result 42.', compactable: true, release: [] });
   hub.call = async () => text('Oversized '.repeat(1000));
