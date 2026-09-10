@@ -3,7 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "基于 DSH 的通用单模型插件：三官原文融合、画布式上下文与分层记忆",
+  "description": "面向持续任务的 DSH 通用 Agent 插件：分层提示词、任务与验证、画布式上下文和分层记忆",
+  "packageManager": "pnpm@11.21.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gulagala001/trisoul_x.git"
+  },
+  "homepage": "https://github.com/gulagala001/trisoul_x#readme",
+  "bugs": {
+    "url": "https://github.com/gulagala001/trisoul_x/issues"
+  },
+  "keywords": ["dsh", "deepseek-harness", "agent", "memory", "context", "plugin"],
   "scripts": {
     "build": "node scripts/build.mjs",
     "start": "node scripts/start.mjs",

@@ -1,10 +1,11 @@
 import { build } from 'esbuild';
 import { mkdir, readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 
 await mkdir(new URL('../lib/', import.meta.url), { recursive: true });
 await build({
-  entryPoints: [new URL('../src/client/index.jsx', import.meta.url).pathname],
-  outfile: new URL('../lib/client.js', import.meta.url).pathname,
+  entryPoints: [fileURLToPath(new URL('../src/client/index.jsx', import.meta.url))],
+  outfile: fileURLToPath(new URL('../lib/client.js', import.meta.url)),
   bundle: true, platform: 'browser', format: 'cjs', target: 'es2022',
   external: ['react', 'react/jsx-runtime', '@deepseek-ai/cordis', '@deepseek-ai/dsh-client-ui-primitives'],
   banner: { js: 'window.__ModuleLoader__.load({id:"trisoul_x",factory:(require)=>{var module={exports:{}};var exports=module.exports;' },

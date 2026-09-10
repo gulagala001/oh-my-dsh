@@ -1,4 +1,4 @@
-import { openSync, closeSync, readFileSync } from 'node:fs';
+import { openSync, closeSync, readFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn, execFileSync } from 'node:child_process';
@@ -13,6 +13,7 @@ const ready = async () => {
 
 try {
   if (!await ready()) {
+    mkdirSync(dirname(logPath), { recursive: true });
     const log = openSync(logPath, 'w', 0o600);
     const child = spawn(process.execPath, [join(root, 'scripts', 'start.mjs')], {
       cwd: root, detached: true, stdio: ['ignore', log, log],
