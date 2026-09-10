@@ -28,6 +28,36 @@ function MemoryScopeChip({ sessionId, useSessions }) {
   return locked ? chip : <Menu open={open} anchor={chip} compact portal side="top" selectedId={state.scope} items={Object.entries(labels).map(([id, label]) => ({ id, label }))} onSelect={pick} onClose={() => setOpen(false)}/>;
 }
 
+function BetterTodoChip({ sessionId, useSessions }) {
+  const [state, setState] = useState(null), [open, setOpen] = useState(false), [saving, setSaving] = useState(false), [error, setError] = useState('');
+  const current = useSessions(s => s.byId[sessionId]), active = useRef(sessionId), revision = useRef(0), writing = useRef(null); active.current = sessionId;
+  const load = useCallback(async () => {
+    if (writing.current?.sessionId === sessionId) return;
+    const ticket = ++revision.current;
+    try { const next = await api('/better-todo' + suffix(sessionId)); if (active.current === sessionId && revision.current === ticket) { setState({ sessionId, ...next }); setError(''); } }
+    catch (e) { if (active.current === sessionId && revision.current === ticket) setError(e.message); }
+  }, [sessionId]);
+  useEffect(() => { setOpen(false); setSaving(false); setError(''); }, [sessionId]);
+  useEffect(() => { void load(); }, [load, current?.running]);
+  const ready = state?.sessionId === sessionId;
+  const toggle = async key => {
+    if (!ready || saving) return;
+    const write = { sessionId }; writing.current = write; ++revision.current;
+    setSaving(true); setError('');
+    try {
+      const next = await api('/better-todo' + suffix(sessionId), { [key]: !state[key] });
+      if (active.current === sessionId) setState({ sessionId, ...next });
+    } catch (e) { if (active.current === sessionId) setError(e.message); }
+    finally { if (writing.current === write) writing.current = null; if (active.current === sessionId) setSaving(false); }
+  };
+  const chip = <button type="button" className={cx('tx-scope-chip', 'tx-bt-chip', ready && !state.todo && !state.verification && 'tx-bt-off')} aria-label="BT · Better Todo" aria-haspopup="menu" aria-expanded={open} title="Better Todo · 收尾提醒" onClick={() => { void load(); setOpen(!open); }}><strong>BT</strong><span>▾</span></button>;
+  const items = [{ type: 'label', id: 'title', text: 'Better Todo' }, ...[
+    ['todo', '待办完成提醒', '仍有未完成待办时提醒继续'],
+    ['verification', '验证完成提醒', '缺少验证证据时提醒，含文字证据复核'],
+  ].map(([id, label, hint]) => ({ id, disabled: !ready || saving, label: <span className="tx-bt-option"><span><strong>{label}</strong><small>{hint}</small></span><span className="tx-bt-state"><small>{ready ? state[id] ? '开' : '关' : '…'}</small><i className={cx('tx-bt-toggle', ready && state[id] && 'tx-on')} aria-hidden="true"/></span></span> }))];
+  return <Menu open={open} anchor={chip} items={items} footer={[{ type: 'label', id: 'status', text: error || '仅本会话 · 可随时更改' }]} onSelect={toggle} onClose={() => setOpen(false)} portal side="top" align="end" compact autoFocus/>;
+}
+
 function useSnapshot(id, visible = true, range = 'session') {
   const [data, setData] = useState(null), [error, setError] = useState('');
   const key = `${id}:${range}`, current = useRef(key); current.current = key;
@@ -283,6 +313,7 @@ export function apply(ctx) {
   ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'trisoul-x', order: 16, label: () => 'trisoul_x' }, Settings));
   ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register({ name: 'conversation.composer.dock', id: 'trisoul-x-stats', order: 30 }, StatsLine));
   ctx.slots.inject('conversation.input.left', () => ctx.slots.register({ name: 'conversation.input.left', id: 'trisoul-memory-scope', order: 50 }, MemoryScopeChip));
+  ctx.slots.inject('conversation.input.right', () => ctx.slots.register({ name: 'conversation.input.right', id: 'trisoul-better-todo', order: 100 }, BetterTodoChip));
   for (const [kind, title, description, Component] of [
     ['trisoul-x-context', '工作上下文', '任务进展、工作状态与记忆文档', ContextPanel],
     ['trisoul-x-memory', '记忆', '查看与编辑分层记忆', MemoryPanel],

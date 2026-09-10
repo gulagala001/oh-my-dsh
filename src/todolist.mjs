@@ -561,10 +561,16 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     const unqualified = rec.tasks.filter(t => !t.links.some(qualified)).length
     return { pass: rec.tasks.length === 0 || (undone === 0 && unqualified === 0), undone, unqualified, total: rec.tasks.length }
   }
-  const blockingLines = (rec) => rec.tasks.filter(t => !t.done || !t.links.some(qualified))
-    .map(t => `${t.id} ${box4(t.done)} ${t.title} — ${t.links.length ? t.links.map(deficitClause).join(' · ') : 'no link to real, valid evidence that the task is done'}`)
-  const unresolvedText = (session) => `[todo list] Unresolved tasks remain:\n${blockingLines(getRec(session)).join('\n')}`
-  const unqualifiedText = (session) => `[todo list] Every task is checked off, but these lack qualifying evidence:\n${blockingLines(getRec(session)).join('\n')}\nLink real evidence, or uncheck what is not actually done.`
+  const blockingLines = (rec, { todo = true, verification = true } = {}) => rec.tasks
+    .filter(t => (todo && !t.done) || (verification && !t.links.some(qualified)))
+    .map(t => `${t.id} ${box4(t.done)} ${t.title}${verification ? ` — ${t.links.length ? t.links.map(deficitClause).join(' · ') : 'no link to real, valid evidence that the task is done'}` : ''}`)
+  const unresolvedText = (session, options) => `[todo list] Unresolved tasks remain:\n${blockingLines(getRec(session), options).join('\n')}`
+  const unqualifiedText = (session) => {
+    const rec = getRec(session), heading = rec.tasks.every(t => t.done)
+      ? '[todo list] Every task is checked off, but these lack qualifying evidence:'
+      : '[todo list] These tasks lack qualifying evidence:'
+    return `${heading}\n${blockingLines(rec, { todo: false }).join('\n')}\nLink real evidence, or uncheck what is not actually done.`
+  }
   const reviewTargets = (rec) => rec.tasks.filter(t => textOnly(t) && t.links.some(l => l.kind === 'text' && l.asked !== true))
   const releaseSummary = (session) => {
     const rec = getRec(session)

@@ -82,6 +82,18 @@ export function apply(ctx, config) {
         const session = agent?.session ?? (id ? ctx.sessions.get(id) : undefined);
         const stored = id ? hub.store.state(id) : undefined;
         const scopeSession = session ?? { id: id || 'settings', header: { cwd: stored?.cwd || process.cwd() } };
+        if (url.pathname === '/trisoul-x/api/better-todo') {
+          if (!id) { send(res, 400, { error: '请选择一个会话' }); return; }
+          if (req.method === 'POST') {
+            const input = await readBody(req), patch = {};
+            for (const key of ['todo', 'verification']) if (Object.hasOwn(input, key)) {
+              if (typeof input[key] !== 'boolean') { send(res, 400, { error: '提醒选项必须为开或关' }); return; }
+              patch[key] = input[key];
+            }
+            send(res, 200, hub.setTaskReminders(scopeSession, patch)); return;
+          }
+          send(res, 200, hub.taskReminders(scopeSession)); return;
+        }
         if (url.pathname === '/trisoul-x/api/scope') {
           const locked = Boolean(stored?.started || (session && sessionEvents(session).some(e => e.type === 'user/message' && e.data.source.kind === 'user')));
           if (req.method === 'POST') {

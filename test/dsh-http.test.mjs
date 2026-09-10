@@ -88,6 +88,11 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   };
   const api = async (path, body) => { const r = await fetch(base + '/trisoul-x/api' + path, body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); const value = await r.json(); assert.ok(r.ok, JSON.stringify(value)); return value; };
   const created = await rpc('session/create', { cwd: workspace, agentPreset: 'trisoul-x' }), id = created.sessionId, q = '?session=' + id;
+  assert.deepEqual(await api('/better-todo' + q), { todo: true, verification: false });
+  assert.deepEqual(await api('/better-todo' + q, { verification: true }), { todo: true, verification: true });
+  const other = await rpc('session/create', { cwd: workspace, agentPreset: 'trisoul-x' });
+  assert.deepEqual(await api('/better-todo?session=' + other.sessionId), { todo: true, verification: false });
+  assert.equal(JSON.parse(readFileSync(join(home, 'trisoul-x', 'sessions', id + '.json'), 'utf8')).betterTodo.verification, true);
   assert.equal((await api('/scope' + q)).locked, false);
   await api('/scope' + q, { scope: 'project' });
   // This finite fixture uses short batches to exercise background work within its scripted turn.
@@ -107,6 +112,7 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   assert.equal(reviewed.frame.filter(n => n.kind === 'trisoul-x:task-review').length, 1);
   const firstTurn = JSON.stringify(payloads.filter(p => p.tools?.some(t => t.function.name === 'verify_link')).map(p => p.messages));
   for (const reminder of ['[todo list] Unresolved tasks remain:', '[todo list] Every task is checked off, but these lack qualifying evidence:', '[todo list] Tasks whose only evidence is a text record:', 'Re-check each reason against what is actually available here.']) assert.ok(firstTurn.includes(reminder), reminder);
+  assert.deepEqual(await api('/better-todo' + q, { verification: false }), { todo: true, verification: false });
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: id, mode: 'queue', content: [{ type: 'text', text: 'Run the real verification command now.' }], clientTimeZone: 'Asia/Shanghai' });
   const state = await until(async () => { const s = await api('/state' + q); return s.running === 'idle' && !s.live && s.tasks[0]?.links.some(l => l.kind === 'test' && l.lastRun?.pass) && s; });
   assert.equal(readFileSync(join(workspace, 'fixture.txt'), 'utf8'), content);

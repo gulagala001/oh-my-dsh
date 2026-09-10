@@ -75,6 +75,17 @@ export class Hub extends Service {
     });
   }
   config() { return this.getConfig(); }
+  taskReminders(session) {
+    const saved = this.store.state(session.id).betterTodo;
+    return { todo: saved?.todo ?? true, verification: saved?.verification ?? false };
+  }
+  setTaskReminders(session, patch) {
+    const state = this.store.state(session.id), next = { ...this.taskReminders(session), ...patch };
+    this.store.save({ ...state, betterTodo: next });
+    state.betterTodo = next;
+    if (!next.verification) this.taskReviews.delete(session.id);
+    return next;
+  }
   scope(session) {
     const state = this.store.state(session.id);
     let root = state, parentId = session.header.parentSession;
@@ -212,21 +223,23 @@ export class Hub extends Service {
     if (events.findLast(e => e.type === 'plan/mode')?.data.active) return;
     const answer = events.findLast(e => e.type === 'assistant/message' || e.type === 'assistant/attempt');
     if (answer && ['error', 'aborted', 'max-tokens'].includes(assembleAssistantStream(answer.data.stream).finish.kind)) return;
-    const pending = this.taskReviews.get(session.id);
-    if (pending?.turn === turn) {
+    const reminders = this.taskReminders(session), pending = this.taskReviews.get(session.id);
+    if (reminders.verification && pending?.turn === turn) {
       const delivered = events.find(e => e.type === 'user/message' && e.data.id === pending.messageId);
       if (delivered && answer?.seq > delivered.seq) store.markTextReviewed(session, pending.ids);
     }
     this.taskReviews.delete(session.id);
     const state = store.gateState(session);
-    const text = state.undone ? store.unresolvedText(session)
-      : state.unqualified ? store.unqualifiedText(session) : store.textReviewText(session);
+    let text, reviewing = false;
+    if (reminders.todo && state.undone) text = store.unresolvedText(session, { verification: reminders.verification });
+    else if (reminders.verification && state.unqualified) text = store.unqualifiedText(session);
+    else if (reminders.verification) { text = store.textReviewText(session); reviewing = Boolean(text); }
     if (!text) {
       const summary = store.releaseSummary(session);
       if (summary.total) { const saved = this.store.state(session.id); saved.taskRelease = { ...summary, at: Date.now(), turn }; this.store.save(saved); }
       return;
     }
-    const reviewing = state.pass, notice = message(text, reviewing ? 'task-review' : 'task-reminder');
+    const notice = message(text, reviewing ? 'task-review' : 'task-reminder');
     agent.steer(notice);
     if (reviewing) this.taskReviews.set(session.id, { turn, messageId: notice.id, ids: store.textReviewLinkIds(session) });
   }

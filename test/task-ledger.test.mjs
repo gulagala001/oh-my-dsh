@@ -232,6 +232,7 @@ test('failed evidence snapshot writes leave links and counters unchanged', async
 test('stopping reminders restore unfinished tasks, missing evidence and one-time text review', async t => {
   const { session, store, call, verify, user } = setup(t), notices = [];
   const hub = Object.assign(Object.create(Hub.prototype), { todoStore: store, taskReviews: new Map(), store: new HubStore(session.header.cwd) });
+  hub.setTaskReminders(session, { todo: true, verification: true });
   const agent = { session, steer: notice => notices.push(notice) }, signal = new AbortController().signal;
   const stop = () => hub.finishTasks(agent, 1, signal);
   stop(); assert.equal(notices.length, 0);
@@ -277,6 +278,7 @@ test('stopping reminders respect cancellation, planning and subagents; an unansw
   await call({ op: 'check', updates: [{ id: 'T1', done: true }] });
   await verify({ op: 'link', links: [{ task: 'T1', kind: 'text', note: 'Observed source.', reason: 'Fixture only.' }] });
   const hub = Object.assign(Object.create(Hub.prototype), { todoStore: store, taskReviews: new Map(), store: new HubStore(session.header.cwd) });
+  hub.setTaskReminders(session, { todo: true, verification: true });
   const agent = { session, steer: m => notices.push(m) }, ac = new AbortController();
   hub.finishTasks(agent, 1, ac.signal); const review = notices.at(-1);
   session.append('user/message', review, { surfaceOp: 'append' });
@@ -290,4 +292,55 @@ test('stopping reminders respect cancellation, planning and subagents; an unansw
   session.append('plan/mode', { active: false });
   const child = { ...agent, session: { id: session.id, header: { ...session.header, origin: 'subagent' } } };
   hub.finishTasks(child, 2, signal); assert.equal(notices.length, count);
+});
+
+test('BT switches control todo and verification reminders independently', async t => {
+  const { session, store, call, verify, user } = setup(t), notices = [];
+  const hub = Object.assign(Object.create(Hub.prototype), { todoStore: store, taskReviews: new Map(), store: new HubStore(session.header.cwd) });
+  const agent = { session, steer: notice => notices.push(notice) }, signal = new AbortController().signal;
+  const stop = () => hub.finishTasks(agent, 1, signal);
+  assert.deepEqual(hub.taskReminders(session), { todo: true, verification: false });
+  user(quote); await call(excerpt);
+  await call({ op: 'check', updates: [{ id: 'T2', done: true }] });
+  stop();
+  assert.match(notices.at(-1).content[0].text, /Unresolved tasks remain:\nT1/);
+  assert.doesNotMatch(notices.at(-1).content[0].text, /T2|evidence|no link/);
+  hub.setTaskReminders(session, { todo: false });
+  let count = notices.length; stop(); assert.equal(notices.length, count);
+  assert.deepEqual(currentTasks(session).map(t => t.done), [false, true]);
+  hub.setTaskReminders(session, { verification: true });
+  stop();
+  assert.match(notices.at(-1).content[0].text, /^\[todo list\] These tasks lack qualifying evidence:/);
+  assert.doesNotMatch(notices.at(-1).content[0].text, /Every task is checked off/);
+  await verify({ op: 'link', links: [{ task: 'T1', kind: 'text', note: 'Observed the source.', reason: 'Fixture only.' }] });
+  stop();
+  assert.match(notices.at(-1).content[0].text, /T2/);
+  assert.doesNotMatch(notices.at(-1).content[0].text, /T1/);
+  await verify({ op: 'link', links: [{ task: 'T2', kind: 'text', note: 'Observed the result.', reason: 'Fixture only.' }] });
+  stop(); assert.match(notices.at(-1).content[0].text, /Tasks whose only evidence is a text record/);
+  assert.ok(hub.taskReviews.has(session.id));
+  hub.setTaskReminders(session, { verification: false });
+  assert.equal(hub.taskReviews.has(session.id), false);
+  count = notices.length; stop(); assert.equal(notices.length, count);
+  assert.ok(store.snapshot(session).tasks.every(t => !t.links[0].asked));
+  hub.setTaskReminders(session, { verification: true });
+  stop(); assert.match(notices.at(-1).content[0].text, /Tasks whose only evidence is a text record/);
+  hub.setTaskReminders(session, { todo: true, verification: false });
+  await call({ op: 'check', updates: [{ id: 'T1', done: true }] });
+  count = notices.length; stop(); assert.equal(notices.length, count);
+});
+
+test('BT choices persist per session and a failed save keeps the previous choices', t => {
+  const { session } = setup(t);
+  const hub = Object.assign(Object.create(Hub.prototype), { taskReviews: new Map(), store: new HubStore(session.header.cwd) });
+  hub.setTaskReminders(session, { todo: false, verification: true });
+  const other = { id: 'other' };
+  assert.deepEqual(hub.taskReminders(other), { todo: true, verification: false });
+  hub.store = new HubStore(session.header.cwd);
+  assert.deepEqual(hub.taskReminders(session), { todo: false, verification: true });
+  const saved = hub.store.save;
+  hub.store.save = () => { throw Error('save failed'); };
+  assert.throws(() => hub.setTaskReminders(session, { todo: true, verification: false }), /save failed/);
+  assert.deepEqual(hub.taskReminders(session), { todo: false, verification: true });
+  hub.store.save = saved;
 });
