@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "面向持续任务的 DSH 通用 Agent 插件：分层提示词、任务与验证、画布式上下文和分层记忆",
+  "description": "DSH 记忆与上下文增强插件：分层记忆、任务与验证、上下文整理及运行监控。",
   "packageManager": "pnpm@11.21.0",
   "repository": {
     "type": "git",
