@@ -112,6 +112,8 @@ dsh plugin --profile YOUR_PROFILE add link:/absolute/path/to/trisoul_x
 
 重启该 profile 后生效。插件 bundle 会将默认 Agent preset 设为 `trisoul-x`。
 
+DSH 0.1.5-rc.1 在 Windows 转发本地安装命令时会拆分带空格的源路径；本地 `link:` 开发请使用不含空格的源码路径。上面的 GitHub 安装命令不含本地源路径。
+
 macOS 用户完成安装和构建后，也可执行：
 
 ```sh

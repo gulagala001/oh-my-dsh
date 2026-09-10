@@ -18,8 +18,9 @@ async function until(fn, ms = 30000) {
 }
 
 test('install into stock web, coexist with stock presets, switch both ways and resume', { timeout: 240000 }, async t => {
-  const root = mkdtempSync(join(tmpdir(), 'trisoul x stock-')), home = join(root, 'home'), cwd = join(root, 'workspace'), pkg = join(root, 'plugin');
-  for (const path of [home, cwd, pkg]) mkdirSync(path);
+  const root = mkdtempSync(join(tmpdir(), 'trisoul x stock-')), home = join(root, 'home'), cwd = join(root, 'workspace');
+  const pkg = mkdtempSync(join(tmpdir(), 'trisoul-x-package-'));
+  for (const path of [home, cwd]) mkdirSync(path);
   const manifest = JSON.parse(readFileSync(join(repo, 'package.json'), 'utf8'));
   for (const file of ['package.json', ...manifest.files]) cpSync(join(repo, file), join(pkg, file), { recursive: true });
   const env = { ...process.env, DSH_HOME: home }; delete env.DSH_PERMISSION_MODE;
@@ -56,6 +57,7 @@ test('install into stock web, coexist with stock presets, switch both ways and r
     await stop(); provider.closeAllConnections(); await new Promise(r => provider.close(r));
     if (!complete) console.error(log.slice(-8000).replace(/token=\S+/g, 'token=[redacted]'));
     rmSync(root, { recursive: true, force: true });
+    rmSync(pkg, { recursive: true, force: true });
   });
   const boot = async () => {
     log = '';
@@ -95,7 +97,13 @@ test('install into stock web, coexist with stock presets, switch both ways and r
   assert.equal(oldSnapshot.projections.values.todos[0].status, 'completed');
   await stop();
   const settingsBefore = readFileSync(join(home, 'settings.yaml'), 'utf8'), credentialsBefore = readFileSync(join(home, '.credentials.yaml'), 'utf8');
-  runCli(['plugin', '--profile', 'web', 'add', `file:${pkg}`]);
+  // CI exercises the public GitHub installation command at the exact tested
+  // commit; local runs install the uncommitted package contents. Keep the local
+  // source path space-free for DSH's Windows pnpm forwarder, while the profile
+  // and installed package still live under the spaced test path.
+  const source = process.env.GITHUB_REPOSITORY && process.env.GITHUB_SHA
+    ? `github:${process.env.GITHUB_REPOSITORY}#${process.env.GITHUB_SHA}` : `file:${pkg}`;
+  runCli(['plugin', '--profile', 'web', 'add', source]);
   assert.ok(readFileSync(join(home, 'settings.yaml'), 'utf8') === settingsBefore, 'installation preserves model settings');
   assert.ok(readFileSync(join(home, '.credentials.yaml'), 'utf8') === credentialsBefore, 'installation preserves credentials');
 
