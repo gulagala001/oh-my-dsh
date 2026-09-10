@@ -2,18 +2,19 @@ import { Config } from './config.mjs';
 import { Hub, NS } from './hub.mjs';
 import { eventText, sessionEvents, substantive } from './hub.mjs';
 import { CONTEXT_WINDOW_EXCEEDED_CODE } from '@deepseek-ai/dsh-llm';
-import { currentTasks } from './tasks.mjs';
+import { currentTasks, restoreTaskProjection } from './tasks.mjs';
 import { ensureSystemHead } from './system-head.mjs';
 
 export { Config };
 export const name = 'trisoul-x';
-export const inject = ['llm', 'agents', 'sessions', 'settings', 'tokenMeter'];
+export const inject = ['llm', 'agents', 'sessions', 'settings', 'tokenMeter', 'sessionProjections'];
 
 const send = (res, status, value) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(value)); };
 async function readBody(req) { let body = ''; for await (const part of req) body += part; return JSON.parse(body); }
 
 export function apply(ctx, config) {
   const hub = new Hub(ctx, config);
+  const isX = session => (ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset) === 'trisoul-x';
   ctx.settings.installSection(ctx, NS, Config, config, { setSource: source => { hub.getConfig = source; }, onChange() { for (const agent of hub.agents.values()) hub.armIdle(agent); } });
   ctx.on('system-prompt/assemble', async (_assembly, _context, next) => {
     const assembly = await next();
@@ -23,17 +24,18 @@ export function apply(ctx, config) {
     };
   }, { global: true });
   ctx.on('agent/request', async ({ agent }, next) => {
-    if (agent.session.header.agentPreset !== 'trisoul-x') return next();
+    if (!isX(agent.session)) return next();
     hub.requestStarts.set(agent.session.id, Date.now());
     return next();
   }, { global: true });
   ctx.on('agent/assistant-stream', ({ agent, frame }) => {
     // DSH has committed the prompt, admitted input and built the request at start.
-    if (frame.type === 'start' && agent.session.header.agentPreset === 'trisoul-x') hub.captureFrame(agent, frame.turn, frame.step);
+    if (frame.type === 'start' && isX(agent.session)) hub.captureFrame(agent, frame.turn, frame.step);
   }, { global: true });
   ctx.on('agent/pre-step', async ({ agent, messages, signal, turn, step }, next) => {
-    if (agent.session.header.agentPreset === 'trisoul-x' && !signal.aborted) {
+    if (isX(agent.session) && !signal.aborted) {
       ensureSystemHead(agent.session, { turn, step });
+      restoreTaskProjection(ctx, agent.session);
       hub.publish(agent, messages);
       void hub.stateZone.preStep(agent, signal);
       try {
@@ -49,7 +51,7 @@ export function apply(ctx, config) {
     return next();
   }, { global: true });
   ctx.on('agent/request-error', async ({ agent, failure, signal }, next) => {
-    if (agent.session.header.agentPreset === 'trisoul-x' && failure.code === CONTEXT_WINDOW_EXCEEDED_CODE && !signal.aborted) {
+    if (isX(agent.session) && failure.code === CONTEXT_WINDOW_EXCEEDED_CODE && !signal.aborted) {
       try {
         if (await hub.canvas.compactIfNeeded(agent, 'context-overflow', signal)) return { kind: 'retry' };
       } catch (error) { if (!signal.aborted) ctx.logger.warn(`上下文整理：${error.message}`); }
@@ -57,11 +59,11 @@ export function apply(ctx, config) {
     return next();
   }, { global: true });
   ctx.on('agent/turn-stopping', ({ agent, turn, signal }) => {
-    if (agent.session.header.agentPreset === 'trisoul-x') hub.finishTasks(agent, turn, signal);
+    if (isX(agent.session)) hub.finishTasks(agent, turn, signal);
   }, { global: true });
   ctx.on('agent/disposed', ({ agent }) => hub.disposeAgent(agent), { global: true });
   ctx.on('agent/session-start', ({ agent, source }) => {
-    if (agent.session.header.agentPreset !== 'trisoul-x' || agent.session.header.origin === 'subagent') return;
+    if (!isX(agent.session) || agent.session.header.origin === 'subagent') return;
     const state = hub.store.state(agent.session.id);
     hub.startDigestSession(agent);
     if (source === 'resume') { const record = hub.memoryContext.record(agent.session); record.opened = true; record.taskDone = false; }
@@ -69,7 +71,7 @@ export function apply(ctx, config) {
     hub.store.save(state); hub.armIdle(agent);
   }, { global: true });
   ctx.on('session/event', (session, event) => {
-    if (session.header.agentPreset !== 'trisoul-x') return;
+    if (!isX(session)) return;
     hub.observe(session, event);
     const agent = ctx.agents.get(session.id);
     if (agent && substantive(event)) {

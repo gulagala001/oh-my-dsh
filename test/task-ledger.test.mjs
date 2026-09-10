@@ -8,7 +8,7 @@ import { createUserMessage, createAssistantMessage } from '@deepseek-ai/dsh-llm'
 import { HubStore } from '../src/hub-store.mjs';
 import { Hub } from '../src/hub.mjs';
 import { createTodoStore } from '../src/todolist.mjs';
-import { registerTasks, currentTasks } from '../src/tasks.mjs';
+import { registerTasks, currentTasks, restoreTaskProjection } from '../src/tasks.mjs';
 
 function setup(t) {
   const dir = mkdtempSync(join(tmpdir(), 'trisoul-x-ledger-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
@@ -83,7 +83,16 @@ test('linked tests really run; edits clear completion and evidence; replay prese
   assert.match(await verify({ op: 'view' }), /T1 \[done\][^\n]*\n  L1 [^\n]* — PASS/);
   const data = session.snapshotEvents().at(-1).data;
   assert.equal(data.tasks[0].links[0].lastRun.pass, true);
-  assert.equal(projection.apply(data.todos, { type: 'turn/start' }), data.todos);
+  assert.equal(projection.apply(data.todos, { type: 'turn/start' }), null, 'shared todos projection follows the stock turn reset');
+  session.append('turn/start', { turn: 2 });
+  const context = session.deriveMessages(), revision = session.seq;
+  const projectionCtx = { sessionProjections: { stateOf: () => session.snapshotEvents().reduce(projection.apply, null) } };
+  restoreTaskProjection(projectionCtx, session);
+  assert.deepEqual(projectionCtx.sessionProjections.stateOf(), data.todos, 'X restores its persistent task dock');
+  assert.deepEqual(session.deriveMessages(), context, 'restoring the dock adds no model-visible content');
+  assert.equal(session.seq, revision + 1);
+  restoreTaskProjection(projectionCtx, session);
+  assert.equal(session.seq, revision + 1, 'the same turn does not keep republishing the dock');
   const replay = Session.create(session.id, JSON.parse(JSON.stringify(session.snapshotEvents())), session.header);
   assert.deepEqual(currentTasks(replay), currentTasks(session));
   await call({ op: 'edit', tasks: [{ id: 'T1', title: '更新登录要求' }] });

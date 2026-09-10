@@ -62,11 +62,13 @@ export function currentTasks(session, cached) {
 }
 
 export function registerTasks(ctx, store = createTodoStore()) {
+  // Shared root-realm key: match DSH's todos@2 fold, including its turn reset.
+  // The full X ledger remains in todo/write data and is restored independently.
   const schema = z.array(z.object({ content: z.string(), status: z.enum(['pending', 'in_progress', 'completed']) })).nullable();
   ctx.sessionProjections.register({
     key: 'todos', stateSchema: schema, init: () => null,
-    apply: (state, event) => event.type === 'todo/write' ? event.data.todos : state,
-    wire: { viewSchema: schema, view: state => state }, stateVersion: 4,
+    apply: (state, event) => event.type === 'todo/write' ? event.data.todos : event.type === 'turn/start' ? null : state,
+    wire: { viewSchema: schema, view: state => state }, stateVersion: 2,
   });
   const pending = new Map();
   const definitions = [
@@ -96,4 +98,13 @@ export function registerTasks(ctx, store = createTodoStore()) {
     presentCall: args => ({ card: 'generic', title: title + ' · ' + args.op, kind: 'other', rawInput: args }),
   });
   return store;
+}
+
+export function restoreTaskProjection(ctx, session) {
+  if (ctx.sessionProjections.stateOf(session, 'todos') !== null) return;
+  const last = session.snapshotEvents().findLast(e => e.type === 'todo/write');
+  if (!last?.data.tasks?.length) return;
+  // Restore X's persistent task dock after the shared projection's turn reset.
+  // A quiet snapshot changes neither the ledger revision nor model context.
+  session.append('todo/write', { ...last.data, quiet: true });
 }
