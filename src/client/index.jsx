@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Menu } from '@deepseek-ai/dsh-client-ui-primitives';
 import { FREQUENCY_PRESETS as presets } from '../frequency.mjs';
+import { frameTokens, contextHistoryLayout } from './context-history.mjs';
 import css from './style.css';
 
 const api = async (path, value) => {
@@ -251,20 +252,19 @@ function MemoryPanel({ sessionId, useTabInfo }) {
 const frameKind = kind => kind === 'checkpoint' ? '纪要' : kind.includes('state') ? '状态' : kind.includes('memory') ? '记忆' : kind.includes('task') || kind.includes('todo') ? '任务' : kind === 'model' ? '模型' : kind === 'user' ? '用户' : kind === 'tool' || kind.includes('tool') ? '工具' : '系统';
 const frameColor = kind => ({ 纪要: '#3476e6', 状态: '#759be4', 记忆: '#82bfe4', 任务: '#8490bf', 模型: '#476fad', 用户: '#a0bcdf', 工具: '#669aaf', 系统: '#a2aaba' })[frameKind(kind)];
 const callId = call => `${call.sessionId}:${call.kind}:${call.at}`;
-function FrameBar({ nodes = [], total, cached = 0 }) {
-  const size = total || nodes.reduce((n, item) => n + (item.tokens || 0), 0) || 1;
-  return <div className="tx-frame-visual"><div className="tx-frame-bar">{nodes.map(n => <i key={n.seq} style={{ flex: n.tokens || 0.1, background: frameColor(n.kind) }} title={`#${n.seq} ${frameKind(n.kind)} · ${fmt(n.tokens)} tokens`}/>)}</div>{cached > 0 && <div className="tx-cache-line" style={{ width: `${Math.min(100, cached / size * 100)}%` }}/>}</div>;
+function FrameBar({ nodes = [] }) {
+  return <div className="tx-frame-bar">{nodes.map(n => <i key={n.seq} style={{ flex: n.tokens || 0, background: frameColor(n.kind) }} title={`#${n.seq} ${frameKind(n.kind)} · 约 ${fmt(n.tokens)} tokens`}/>)}</div>;
 }
 function FrameLegend() { return <div className="tx-legend">{['checkpoint', 'state', 'memory', 'tasks', 'model', 'user', 'tool', 'system'].map(kind => <span key={kind}><i style={{ background: frameColor(kind) }}/>{frameKind(kind)}</span>)}</div>; }
 function ContextHistory({ data }) {
   const frames = data.contextHistory || [], [selected, setSelected] = useState(null);
-  const selectedFrame = frames.find(f => f.at === selected) || frames.at(-1), max = Math.max(1, ...frames.map(f => f.totalTokens));
+  const selectedFrame = frames.find(f => f.at === selected) || frames.at(-1), rows = contextHistoryLayout(frames);
   if (!frames.length) return <Empty icon="layers" title="等待下一次请求">请求发出后，可以在这里查看上下文与缓存的变化。</Empty>;
-  return <div className="tx-context-history"><div className="tx-section-heading"><h3>上下文演变</h3><span className="tx-muted">最近 {frames.length} 次请求</span></div><p className="tx-help">每行对应一次请求。蓝色底线表示缓存读取量。</p>
-    <div className="tx-history-chart">{frames.map((frame, i) => <button key={frame.at + ':' + i} type="button" className={cx('tx-history-row', selectedFrame === frame && 'tx-selected')} onClick={() => setSelected(frame.at)} title={`第 ${frame.turn} 回合 · 第 ${frame.step} 步 · ${fmt(frame.totalTokens)} tokens`}>
-      <span>{frame.turn}.{frame.step}</span><div className="tx-history-scale"><div style={{ width: `${Math.max(0.2, frame.totalTokens / max * 100)}%` }}><FrameBar nodes={frame.nodes} total={frame.totalTokens} cached={frame.cacheReadTokens}/></div></div><span>{compactNumber(frame.totalTokens)}</span>
+  return <div className="tx-context-history"><div className="tx-section-heading"><h3>上下文演变</h3><span className="tx-muted">最近 {frames.length} 次请求</span></div><p className="tx-help">色块按记录估算，所有行共用刻度。下方细轨为实际输入，蓝色部分为缓存读取量。</p>
+    <div className="tx-history-chart">{rows.map(({ frame, tokens, width, inputWidth, cacheWidth }, i) => <button key={frame.at + ':' + i} type="button" className={cx('tx-history-row', selectedFrame === frame && 'tx-selected')} onClick={() => setSelected(frame.at)} title={`第 ${frame.turn} 回合 · 第 ${frame.step} 步 · 记录估算 ${fmt(tokens)} tokens`}>
+      <span>{frame.turn}.{frame.step}</span><div className="tx-history-scale"><div style={{ width: `${width}%` }}><FrameBar nodes={frame.nodes}/></div><div className="tx-history-usage"><i style={{ width: `${inputWidth}%` }}/><b style={{ width: `${cacheWidth}%` }}/></div></div><span>≈{compactNumber(tokens)}</span>
     </button>)}</div><FrameLegend/>
-    {selectedFrame && <div className="tx-selected-frame"><Badge>第 {selectedFrame.turn} 回合 · 第 {selectedFrame.step} 步</Badge><div className="tx-detail-grid"><span>上下文 Token</span><strong>{fmt(selectedFrame.totalTokens)}</strong><span>缓存读取 Token</span><strong>{fmt(selectedFrame.cacheReadTokens)}</strong></div></div>}
+    {selectedFrame && <div className="tx-selected-frame"><Badge>第 {selectedFrame.turn} 回合 · 第 {selectedFrame.step} 步</Badge><div className="tx-detail-grid"><span>记录估算 Token</span><strong>≈{fmt(frameTokens(selectedFrame.nodes))}</strong><span>实际输入 Token</span><strong>{selectedFrame.inputTokens === undefined ? '未记录' : fmt(selectedFrame.inputTokens)}</strong><span>缓存读取 Token</span><strong>{fmt(selectedFrame.cacheReadTokens)}</strong></div></div>}
   </div>;
 }
 function Timeline({ calls, onSelect }) {

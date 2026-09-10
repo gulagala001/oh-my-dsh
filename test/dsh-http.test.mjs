@@ -104,6 +104,11 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   assert.ok(reviewed.metrics.state.calls); assert.ok(reviewed.metrics.recall.calls);
   assert.match(reviewed.context.workdoc, /42/); assert.ok(reviewed.context.workdocVersion > 0);
   assert.ok(reviewed.contextHistory.length > 0);
+  const firstFrame = reviewed.contextHistory[0];
+  assert.ok(firstFrame.nodes.some(n => n.kind === '@deepseek-ai/dsh-system-prompt' && n.tokens > 0), 'request snapshot includes the committed system prompt');
+  assert.ok(firstFrame.nodes.some(n => n.kind === 'user'), 'request snapshot includes the admitted user message');
+  assert.equal(reviewed.contextHistory.length, payloads.filter(p => p.tools?.some(t => t.function.name === 'todo_write')).length, 'one snapshot per main request, excluding background calls');
+  assert.equal(firstFrame.inputTokens, 200, 'reported input excludes response tokens');
   assert.ok(payloads.some(p => p.tools?.some(t => t.function.name === 'save_state') && p.temperature === 0.2));
   const memoryFile = JSON.parse(readFileSync(join(home, 'trisoul-x', 'memory.json'), 'utf8'));
   assert.equal(memoryFile.find(m => m.id === 'fixture-memory-duplicate').retiredReason, 'Duplicate of fixture.result.');

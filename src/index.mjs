@@ -22,12 +22,14 @@ export function apply(ctx, config) {
       sections: assembly.sections.map(s => ['tool:write', 'tool:edit'].includes(s.name) ? { ...s, text: s.text.replace(' (the default fs-observation-policy requires it)', '') } : s),
     };
   }, { global: true });
-  ctx.on('agent/request', async ({ agent, turn, step }, next) => {
+  ctx.on('agent/request', async ({ agent }, next) => {
     if (agent.session.header.agentPreset !== 'trisoul-x') return next();
     hub.requestStarts.set(agent.session.id, Date.now());
-    const request = await next();
-    if (agent.session.header.agentPreset === 'trisoul-x') hub.captureFrame(agent, turn, step);
-    return request;
+    return next();
+  }, { global: true });
+  ctx.on('agent/assistant-stream', ({ agent, frame }) => {
+    // DSH has committed the prompt, admitted input and built the request at start.
+    if (frame.type === 'start' && agent.session.header.agentPreset === 'trisoul-x') hub.captureFrame(agent, frame.turn, frame.step);
   }, { global: true });
   ctx.on('agent/pre-step', async ({ agent, messages, signal, turn, step }, next) => {
     if (agent.session.header.agentPreset === 'trisoul-x' && !signal.aborted) {

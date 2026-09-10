@@ -126,7 +126,8 @@ export class Hub extends Service {
     const recent = session.requestHeader()?.config;
     const frame = state.pendingFrame;
     if (['main', 'subagent'].includes(kind) && frame) {
-      state.contextHistory ??= []; state.contextHistory.push({ ...frame, cacheReadTokens: entry.usage?.cacheReadTokens || 0 });
+      const inputTokens = entry.usage ? (entry.usage.inputTokens || 0) + (entry.usage.cacheReadTokens || 0) + (entry.usage.cacheWriteTokens || 0) : undefined;
+      state.contextHistory ??= []; state.contextHistory.push({ ...frame, inputTokens, cacheReadTokens: entry.usage?.cacheReadTokens || 0 });
       state.contextHistory = state.contextHistory.slice(-80); delete state.pendingFrame;
     }
     const completed = session.snapshotEvents().findLast(e => e.type === 'step/end');
