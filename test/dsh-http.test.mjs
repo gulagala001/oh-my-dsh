@@ -96,7 +96,7 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   assert.equal((await api('/scope' + q)).locked, false);
   await api('/scope' + q, { scope: 'project' });
   // This finite fixture uses short batches to exercise background work within its scripted turn.
-  const updated = await api('/settings', { digestEvery: 8, stateEvery: 6, injectLimit: 1, supplementMinSteps: 1, shadowStale: 1, backgroundMode: 'unified', unifiedBackground: { provider: 'fixture', model: 'fixture', temperature: 0.2 } });
+  const updated = await api('/settings', { digestEvery: 8, stateEvery: 6, injectLimit: 1, supplementMinSteps: 1, shadowStale: 0, backgroundMode: 'unified', unifiedBackground: { provider: 'fixture', model: 'fixture', temperature: 0.2 } });
   assert.equal(updated.injectLimit, 1); assert.equal(updated.unifiedBackground.temperature, 0.2);
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: id, mode: 'queue', content: [{ type: 'text', text: 'Run native fixture tools.' }], clientTimeZone: 'Asia/Shanghai' });
   const reviewed = await until(async () => { const s = await api('/state' + q); return s.running === 'idle' && s.context?.digestCount && !s.live && s.metrics.main?.calls >= 13 && s.actions.curations && s; });
@@ -125,6 +125,14 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   assert.equal(testLink.lastRun.pass, true); assert.match(testLink.lastRun.tail, /VERIFIED_LEDGER_FIXTURE/);
   assert.equal(state.tasks[0].id, 'T1'); assert.equal(state.tasks[0].source, 'Run native fixture tools');
   const names = payloads.find(p => p.tools?.some(t => t.function.name === 'read')).tools.map(t => t.function.name);
+  const mainRequests = payloads.filter(p => p.tools?.some(t => t.function.name === 'todo_write'));
+  assert.equal(mainRequests[0].messages[0].role, 'system', 'startup injections must follow the system prompt');
+  assert.ok(mainRequests[0].messages[0].content.startsWith('You are trisoul_x.'));
+  for (let i = 1; i < mainRequests.length; i++) {
+    assert.equal(mainRequests[i].messages[0].role, 'system');
+    assert.equal(mainRequests[i].messages[0].content, mainRequests[0].messages[0].content);
+    assert.deepEqual(mainRequests[i].messages.slice(0, mainRequests[i - 1].messages.length), mainRequests[i - 1].messages, 'normal steps preserve the previous request prefix');
+  }
   for (const name of ['read', 'write', 'edit', 'glob', 'grep', process.platform === 'win32' ? 'pwsh' : 'bash', 'skill', 'subagent', 'note', 'recall', 'todo_write', 'verify_link', 'web_fetch', 'present']) assert.ok(names.includes(name), 'missing tool ' + name);
   assert.ok(payloads.some(p => p.messages.some(m => m.role === 'tool' && typeof m.content === 'string' && m.content.includes('Presented fixture.txt'))));
   assert.ok(names.some(n => n.startsWith('job_'))); assert.ok(!names.some(n => /vote|submit_draft/.test(n)));
@@ -145,6 +153,10 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   assert.ok(payloads.some(p => p.messages.some(m => m.role === 'tool' && typeof m.content === 'string' && m.content.includes('ORIGINAL_FIXTURE_42'))));
   assert.ok(payloads.some(p => JSON.stringify(p.messages).includes('Working state')));
   const continued = await api('/state' + q); assert.equal(continued.tasks[0].status, 'completed');
+  for (const p of payloads.filter(p => p.tools?.some(t => t.function.name === 'todo_write'))) {
+    assert.equal(p.messages[0].role, 'system', 'compaction keeps the system role');
+    assert.equal(p.messages[0].content, mainRequests[0].messages[0].content, 'compaction does not rewrite the system text');
+  }
   const continuedTest = continued.tasks[0].links.find(l => l.kind === 'test');
   assert.equal(continued.taskRelease.tested, 1);
   await api('/memories' + q, { op: 'add', scope: 'project', key: 'manual.test', text: 'User-created fact.' });

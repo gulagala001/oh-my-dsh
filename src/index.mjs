@@ -3,6 +3,7 @@ import { Hub, NS } from './hub.mjs';
 import { eventText, sessionEvents, substantive } from './hub.mjs';
 import { CONTEXT_WINDOW_EXCEEDED_CODE } from '@deepseek-ai/dsh-llm';
 import { currentTasks } from './tasks.mjs';
+import { ensureSystemHead } from './system-head.mjs';
 
 export { Config };
 export const name = 'trisoul-x';
@@ -28,8 +29,9 @@ export function apply(ctx, config) {
     if (agent.session.header.agentPreset === 'trisoul-x') hub.captureFrame(agent, turn, step);
     return request;
   }, { global: true });
-  ctx.on('agent/pre-step', async ({ agent, messages, signal }, next) => {
+  ctx.on('agent/pre-step', async ({ agent, messages, signal, turn, step }, next) => {
     if (agent.session.header.agentPreset === 'trisoul-x' && !signal.aborted) {
+      ensureSystemHead(agent.session, { turn, step });
       hub.publish(agent, messages);
       void hub.stateZone.preStep(agent, signal);
       try {

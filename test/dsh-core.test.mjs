@@ -10,6 +10,7 @@ import { HubStore } from '../src/hub-store.mjs';
 import { Canvas, selectRegion } from '../src/canvas.mjs';
 import { MemoryContext } from '../src/memory-context.mjs';
 import { StateZone } from '../src/state-zone.mjs';
+import { ensureSystemHead } from '../src/system-head.mjs';
 import { Config } from '../src/config.mjs';
 import { TASK_DESCRIPTION, VERIFICATION_DESCRIPTION } from '../src/tasks.mjs';
 import { MAIN_PERSONA, MEMORY_CONSTITUTION, SURGEON_SYSTEM, OPS_DESC, CURATE_RULES, DIGEST_DESC } from '../src/prompts.mjs';
@@ -37,6 +38,34 @@ function addTurns(session, count = 8, splitUsers = true) {
   }
 }
 const condensed = { blocks: [{ type: 'text', text: 'Done: read source material. Not yet done: finish the task.' }], provider: 'test', model: 'test' };
+
+test('system slot precedes startup context and old sessions are repaired once without changing text', t => {
+  const { session } = setup(t);
+  assert.equal(ensureSystemHead(session, { turn: 1, step: 1 }), true);
+  const slot = session.surface.nodes[0];
+  session.append('user/message', message('Opening memory', 'memory'), { surfaceOp: 'append' });
+  session.append('system/message', { turn: 1, step: 1, message: createSystemMessage('Original system text.', '@deepseek-ai/dsh-system-prompt') }, { surfaceOp: { op: 'replace', startSeq: slot, endSeq: slot }, sourceEventSeqs: [slot] });
+  assert.equal(session.deriveMessages()[0].role, 'system');
+  const before = session.seq;
+  assert.equal(ensureSystemHead(session, { turn: 1, step: 2 }), false);
+  assert.equal(session.seq, before);
+
+  const old = Session.create('old', undefined, { ...session.header, id: 'old' });
+  for (const text of ['Todo reminder', 'Opening memory', 'Task memory']) old.append('user/message', message(text), { surfaceOp: 'append' });
+  old.append('system/message', { turn: 1, step: 1, message: createSystemMessage('Original system text.', '@deepseek-ai/dsh-system-prompt') }, { surfaceOp: 'append' });
+  old.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'User request' }], source: { kind: 'user' } }), { surfaceOp: 'append' });
+  const original = old.deriveMessages();
+  ensureSystemHead(old, { turn: 2, step: 1 });
+  assert.deepEqual(old.deriveMessages(), [original[3], ...original.slice(0, 3), original[4]]);
+  const repaired = old.seq;
+  ensureSystemHead(old, { turn: 2, step: 2 });
+  assert.equal(old.seq, repaired);
+  assert.deepEqual(Session.create(old.id, old.snapshotEvents(), old.header).deriveMessages(), old.deriveMessages());
+  old.append('system/message', { turn: 2, step: 2, message: createSystemMessage('Updated system text.', '@deepseek-ai/dsh-system-prompt') }, { surfaceOp: 'append' });
+  const inHistory = [...old.surface.nodes];
+  ensureSystemHead(old, { turn: 2, step: 3 });
+  assert.deepEqual(old.surface.nodes, inHistory, 'later in-history system updates are not moved');
+});
 
 test('original persona passages, memory constitution and surgeon remain intact', () => {
   const original = JSON.parse(readFileSync(new URL('./fixtures/prompt-origin.json', import.meta.url), 'utf8'));
@@ -138,5 +167,28 @@ test('failed surgery preserves surface and closes the V3 lifecycle once', async 
   await assert.rejects(canvas.compactRegion(range.start, range.end, agent, new AbortController().signal), /disconnected/);
   assert.deepEqual(session.surface.nodes, before);
   assert.equal(session.snapshotEvents().filter(e => e.type === 'compaction/end').length, 1);
+  Session.create(session.id, session.snapshotEvents(), session.header);
+});
+
+test('tool-shaped compaction output preserves the original surface; quoted failure evidence remains usable', async t => {
+  const { canvas, hub, session, agent, store, config } = setup(t); addTurns(session);
+  const range = selectRegion(session, store.state(session.id), config, true), before = [...session.surface.nodes];
+  const xml = '<tool_call><function=todo_write><parameter=op>view</parameter></function></tool_call>';
+  for (const blocks of [
+    [{ type: 'text', text: xml }],
+    [{ type: 'text', text: 'I will continue the task. ' + xml }],
+    [{ type: 'text', text: '```xml\n' + xml + '\n```' }],
+    [{ type: 'text', text: 'Done: read the source.' }, { type: 'tool-call', name: 'todo_write', id: 'bad-summary-call', arguments: '{"op":"view"}' }],
+  ]) {
+    hub.call = async () => ({ ...condensed, blocks });
+    await assert.rejects(canvas.compactRegion(range.start, range.end, agent, new AbortController().signal), /工具调用/);
+    assert.deepEqual(session.surface.nodes, before);
+    assert.equal(store.state(session.id).checkpoint, undefined);
+  }
+  assert.equal(session.snapshotEvents().filter(e => e.type === 'compaction/summary').length, 0);
+  const evidence = 'Errors: the provider emitted this as text and the call failed:\n```xml\n' + xml + '\n```\nNot yet done: retry the task.';
+  hub.call = async () => ({ ...condensed, blocks: [{ type: 'text', text: evidence }] });
+  await canvas.compactRegion(range.start, range.end, agent, new AbortController().signal);
+  assert.equal(store.state(session.id).checkpoint.text, evidence);
   Session.create(session.id, session.snapshotEvents(), session.header);
 });

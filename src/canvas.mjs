@@ -3,7 +3,7 @@ import { createUserMessage, createSystemMessage } from '@deepseek-ai/dsh-llm';
 import { randomUUID } from 'node:crypto';
 import { Prober, digestMaterial } from './probe.mjs';
 import { SURGEON_SYSTEM } from './prompts.mjs';
-import { NS, contentText, eventText, message, sessionEvents, substantive } from './hub.mjs';
+import { NS, eventText, message, sessionEvents, substantive } from './hub.mjs';
 
 const checkpoint = e => e.type === 'user/message' && Boolean(e.data.source.compactionId);
 export const estimateTokens = text => {
@@ -12,6 +12,18 @@ export const estimateTokens = text => {
 };
 const source = e => e.type === 'user/message' ? e.data.source.plugin : undefined;
 const shadow = e => e.type === 'system/message' && e.data.message?.source?.plugin === NS + ':shadow';
+export function summaryText(blocks) {
+  const text = blocks.filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+  // Preserve quoted failure evidence, but do not commit a fresh attempted action
+  // as a work record. No XML is interpreted or turned into an executable call.
+  const prose = text.replace(/```[\s\S]*?```|~~~[\s\S]*?~~~/g, '').replace(/`[^`\n]*`/g, '').replace(/^\s*>.*$/gm, '');
+  const invocation = /<tool_call>\s*<function\s*=/i;
+  if (blocks.some(b => b.type === 'tool-call' || b.type === 'tool-result') || invocation.test(prose) || (!prose.trim() && invocation.test(text))) {
+    throw new Error('整理结果包含未执行的工具调用，原文仍保留');
+  }
+  if (!text) throw new Error('整理结果为空，原文仍保留');
+  return text;
+}
 function surfaceInfo(session, config) {
   const surface = session.surface.nodes.map(seq => session.eventAt(seq)), latest = new Map();
   for (const e of surface) if (['state', 'tasks', 'task-memory'].some(k => source(e) === NS + ':' + k)) latest.set(source(e), Math.max(latest.get(source(e)) ?? -1, e.seq));
@@ -145,11 +157,10 @@ export class Canvas extends CompactionEngine {
     try {
       const result = await this.hub.call(agent, 'surgeon', { system: SURGEON_SYSTEM, messages: [message(source)], purpose: 'compaction', ...(cfg.surgeonMaxTokens > 0 ? { maxTokens: cfg.surgeonMaxTokens } : {}) }, signal);
       signal?.throwIfAborted();
-      let text = contentText(result.blocks).trim();
+      let text = summaryText(result.blocks);
       const header = `[Work record · seq ${lo}..${hi}] Condensed from your own earlier work in this session — continue from the recorded progress and carry forward unfinished work. For verbatim details condensed away, call recall with {"query":"what you need","from":${lo},"to":${hi}}.`;
-      if (!text) throw new Error('整理结果为空，原文仍保留');
       if (cfg.requireShorter !== false && header.length + 1 + text.length >= raw.length + notesBlock.length) {
-        if (draft && header.length + 1 + draft.length < raw.length + notesBlock.length) { text = draft; this.hub.action(session, 'digestFallbacks'); }
+        if (draft && header.length + 1 + draft.length < raw.length + notesBlock.length) { text = summaryText([{ type: 'text', text: draft }]); this.hub.action(session, 'digestFallbacks'); }
         else throw new Error('整理结果未缩短，原文仍保留');
       }
       const current = session.surface.nodes, a = current.indexOf(start), b = current.indexOf(end);
@@ -180,6 +191,7 @@ export class Canvas extends CompactionEngine {
     } finally { this.busy.delete(session.id); }
   }
   async patchCheckpoint(agent, old, text, signal) {
+    summaryText([{ type: 'text', text }]);
     const apply = async ownSignal => {
       signal?.throwIfAborted(); ownSignal?.throwIfAborted();
       const session = agent.session;
