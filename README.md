@@ -16,6 +16,8 @@ pnpm start
 
 默认端口 **3083**，`PORT` 可改。使用终端打印的登录链接打开 DSH。主模型在 DSH 的“设置 → 模型”和对话模型选项中配置；插件的后台模型、记忆范围和画布参数在“设置 → trisoul_x”中配置。
 
+本机启动台已有蓝色图标 **trisoul_x 3083**，应用位于 `~/Applications/trisoul_x 3083.app`，调用 `scripts/launch-macos.mjs`。点击后按需在后台启动 3083，再打开带认证的网页；服务已运行时直接打开。启动器等待登录链接写入，并兼容 DSH 的 303 登录跳转。
+
 本项目启动器使用独立 `data/dsh` 目录和 `trisoul-x` profile。`DSH_HOME` 可指定其他数据目录。首次启动使用 DSH 官方 CLI 创建 web profile 并安装本地插件，不修改原 trisoul 的配置。
 
 已有 DSH 0.1.5-rc.1 的用户也可在自己选择的 profile 中安装：
