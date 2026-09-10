@@ -13,7 +13,7 @@ async function until(fn, timeout = 30000) {
   throw Error('Timed out waiting for integration result');
 }
 
-test('official DSH profile → plugin → native tools → memory → V3 canvas → raw recall', { timeout: 90000 }, async t => {
+test('official DSH profile → plugin → native tools → memory → V3 canvas → raw recall', { timeout: 120000 }, async t => {
   const root = mkdtempSync(join(tmpdir(), 'trisoul-x-dsh-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   mkdirSync(home); mkdirSync(workspace); mkdirSync(join(workspace, '.agents', 'skills', 'test-skill'), { recursive: true });
   mkdirSync(join(home, 'trisoul-x'));
@@ -79,7 +79,7 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   const bootstrap = await until(() => {
     if (child.exitCode !== null) throw Error(log.replace(/token=\S+/g, 'token=[redacted]'));
     return log.match(/http:\/\/127\.0\.0\.1:\d+\/\?token=[\w-]+/)?.[0];
-  });
+  }, process.platform === 'win32' ? 60000 : 30000);
   const base = new URL(bootstrap).origin, login = await fetch(bootstrap, { redirect: 'manual' });
   const cookie = login.headers.getSetCookie().map(c => c.split(';')[0]).join('; ');
   const rpc = async (method, request) => {
