@@ -5,6 +5,11 @@ const route = z.object({ provider: z.string().default(''), model: z.string().def
 const cadence = FREQUENCY_PRESETS.always;
 export const Config = z.object({
   dataDir: z.string(),
+  computerUseEnabled: z.boolean().default(true),
+  computerUseBrowserExecutable: z.string().default(''),
+  computerUseChromeUserDataDir: z.string().default(''),
+  computerUseNativeBinary: z.string().default(''),
+  computerUseNativeSocket: z.string().default(''),
   memoryScope: z.union(['full', 'project', 'session']).default('project'),
   backgroundMode: z.union(['unified', 'separate']).default('unified'),
   unifiedBackground: route.default({}),

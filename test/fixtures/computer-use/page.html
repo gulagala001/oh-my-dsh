@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><title>Computer Use · 测试工作台</title>
+<style>body{font:16px system-ui;margin:40px auto;max-width:900px;color:#172b4d;background:#f4f7fc}main{padding:32px;background:white;border:1px solid #d9e2f0;border-radius:16px}h1{font-size:25px}section{margin:24px 0}button,input,select,textarea{font:inherit;margin:6px;padding:9px}button{cursor:pointer}output{display:block;white-space:pre-wrap;padding:12px;background:#eef4ff}#scroll{height:120px;overflow:auto;border:1px solid #bbb}#drag{background:#367af5;color:white;padding:16px;width:90px}#drop{border:2px dashed #367af5;padding:25px;width:220px}</style>
+<main><h1>Computer Use 测试工作台</h1><p>隔离的本地验证页面，所有输入只保存在当前页面。</p>
+<section><label>姓名<input id="name" aria-label="姓名"></label><label>备注<textarea id="note" aria-label="备注"></textarea></label><label><input type="checkbox" id="check">启用通知</label><label>语言<select id="language"><option value="zh">中文</option><option value="en">English</option></select></label><button id="save-as">另存为</button><button id="save">保存</button><output id="result" aria-live="polite">尚未保存</output></section>
+<section><button id="delayed">延迟出现</button><div id="async"></div><button id="replace">替换控件</button><span id="replace-zone"><button id="original">原控件</button></span><button id="reload" onclick="location.reload()">重新加载</button></section>
+<section><button id="dialog">打开对话框</button><label>上传测试文件<input type="file" id="upload" multiple></label><output id="files">尚未上传</output><a id="download" href="/download" download="fixture.txt">下载测试文件</a></section>
+<section><div id="scroll"><div style="height:400px">滚动区域</div><button id="bottom">底部按钮</button></div></section>
+<section><div id="drag" draggable="true">拖动此项</div><div id="drop">放到这里</div></section>
+<section><button class="duplicate">重复按钮</button><button class="duplicate">重复按钮</button><div id="shadow"></div><iframe title="测试框架" src="/frame"></iframe></section>
+</main><script>
+window.fixtureEvents=[];
+window.fixtureMouseHeld=false;addEventListener('mousedown',()=>fixtureMouseHeld=true,true);addEventListener('mouseup',()=>fixtureMouseHeld=false,true);
+window.fixtureMoveCount=0;window.fixtureLastButtons=0;addEventListener('mousemove',e=>{fixtureMoveCount++;fixtureLastButtons=e.buttons},true);
+const record=(type,value)=>{fixtureEvents.push({type,value,at:performance.now()});document.querySelector('#result').textContent=JSON.stringify({type,value})};
+document.querySelector('#save').onclick=()=>record('save',{name:document.querySelector('#name').value,note:document.querySelector('#note').value,checked:document.querySelector('#check').checked,language:document.querySelector('#language').value});
+document.querySelector('#save-as').onclick=()=>record('save-as',null);
+document.querySelector('#delayed').onclick=()=>setTimeout(()=>{const b=document.createElement('button');b.textContent='延迟按钮';b.onclick=()=>record('delayed',true);document.querySelector('#async').append(b)},350);
+document.querySelector('#replace').onclick=()=>{document.querySelector('#replace-zone').innerHTML='<button id="replacement">新控件</button>';document.querySelector('#replacement').onclick=()=>record('replacement',true)};
+document.querySelector('#original').onclick=()=>record('original',true);
+document.querySelector('#dialog').onclick=()=>record('dialog',prompt('测试输入',''));
+document.querySelector('#upload').onchange=e=>{document.querySelector('#files').textContent=[...e.target.files].map(f=>f.name).join(', ');record('upload',[...e.target.files].map(f=>({name:f.name,size:f.size})))};
+document.querySelector('#bottom').onclick=()=>record('bottom',true);
+document.querySelector('#drag').ondragstart=e=>e.dataTransfer.setData('text/plain','fixture');
+document.querySelector('#drop').ondragover=e=>e.preventDefault();document.querySelector('#drop').ondrop=e=>{e.preventDefault();record('drop',e.dataTransfer.getData('text/plain'));e.currentTarget.textContent='已放置'};
+document.querySelectorAll('.duplicate').forEach((b,i)=>b.onclick=()=>record('duplicate',i));
+const shadow=document.querySelector('#shadow').attachShadow({mode:'open'});shadow.innerHTML='<button>Shadow 按钮</button>';shadow.firstChild.onclick=()=>record('shadow',true);
+</script></html>

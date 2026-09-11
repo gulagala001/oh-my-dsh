@@ -30,7 +30,8 @@ test('task tool preserves real excerpts and mandatory anchors, with atomic failu
   const { session, tool, verification, call, verify, user } = setup(t); user(quote);
   assert.equal(Object.hasOwn(tool.parameters.properties, 'remove'), false);
   assert.equal(Object.hasOwn(tool.parameters.properties, 'links'), false);
-  assert.deepEqual(tool.parameters.properties.tasks.items, { type: 'object' });
+  assert.equal(tool.parameters.properties.tasks.items.properties.anchor.properties.from.type, 'string');
+  assert.equal(verification.parameters.properties.links.items.properties.task.type, 'string');
   assert.deepEqual(verification.parameters.properties.tasks.items, { type: 'string' });
   await assert.rejects(call({ op: 'link', links: [] }), /unknown op/);
   await assert.rejects(verify({ op: 'check', updates: [] }), /unknown op/);
@@ -50,6 +51,27 @@ test('task tool preserves real excerpts and mandatory anchors, with atomic failu
   assert.deepEqual(currentTasks(session).map(t => [t.id, t.status]), [['T1', 'completed']]);
   await call({ op: 'add', tasks: [task('注册恢复', '注册功能')] });
   assert.deepEqual(currentTasks(session).map(t => t.id), ['T1', 'T3']);
+});
+
+test('excerpt failures identify the task outside its selection and preserve an atomic retry', async t => {
+  const { session, call, verify, user } = setup(t);
+  const text = '打开网页。填写姓名青禾。获取截图，保留标签页。下一步基于截图描述结果。'; user(text);
+  const request = { op: 'excerpt', from: '打开网页', to: '保留标签页', tasks: [task('打开网页', '打开网页'), task('填写姓名', '填写姓名青禾'), task('描述截图', '下一步基于截图描述结果')] };
+  await assert.rejects(call(request), error => {
+    assert.match(error.message, /tasks\[2\]/);
+    assert.match(error.message, /outside the selected excerpt/);
+    assert.match(error.message, /下一步基于截图描述结果/);
+    assert.match(error.message, /Selected excerpt from message \[1\]/);
+    return true;
+  });
+  assert.equal(session.snapshotEvents().filter(e => e.type === 'todo/write').length, 0);
+  await assert.rejects(verify({ op: 'link', links: [{ kind: 'text', note: 'observed screenshot', reason: 'interactive check' }] }), /links\[0\].task is required.*No tasks have been recorded/s);
+  await call({ ...request, to: '下一步基于截图描述结果' });
+  assert.deepEqual(currentTasks(session).map(t => t.id), ['T1', 'T2', 'T3']);
+  assert.equal(currentTasks(session)[2].source, '下一步基于截图描述结果');
+  await call({ op: 'edit', tasks: [{ id: 'T1', title: '打开测试网页', anchor: null }] });
+  assert.equal(currentTasks(session)[0].source, '打开网页');
+  await assert.rejects(verify({ op: 'link', links: [{ kind: 'text', note: 'observed', reason: 'interactive check' }] }), /Use an existing task ID: T1, T2, T3/);
 });
 
 test('ambiguous quotes require message/excerpt selection; punctuation changes preserve the actual quoted text', async t => {

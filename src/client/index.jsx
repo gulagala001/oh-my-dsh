@@ -3,6 +3,9 @@ import { Menu } from '@deepseek-ai/dsh-client-ui-primitives';
 import { FREQUENCY_PRESETS as presets } from '../frequency.mjs';
 import { frameTokens, contextHistoryLayout } from './context-history.mjs';
 import css from './style.css';
+import shellCss from './shell.css';
+import { ComputerIcon } from './computer-icons.jsx';
+import { applyComputerUseClient, ComputerPane } from './computer-use.jsx';
 
 const api = async (path, value) => {
   const response = await fetch(`/trisoul-x/api${path}`, value === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
@@ -299,28 +302,59 @@ function Monitor({ sessionId, useTabInfo }) {
     </div>
   </div>;
 }
-function StatsLine({ sessionId }) {
+function StatsLine({ sessionId, onOpen }) {
   const { data } = useSnapshot(sessionId, Boolean(sessionId));
   if (!data?.metrics?.main?.calls) return null;
   const m = data.metrics.main, total = inputTokens(m);
-  return <div className="tx-stats-line" aria-label="trisoul_x 运行统计"><span><Icon name="layers" size={12}/>{compactNumber(data.meter?.totalTokens)} 上下文</span><span>{total ? Math.round((m.cacheReadTokens || 0) / total * 100) : 0}% 缓存</span><span>{fmt(data.actions?.surgeries)} 次整理</span>{data.liveCalls?.length > 0 && <span className="tx-stats-active"><i/>后台运行中</span>}</div>;
+  return <button type="button" className="tx-stats-line" aria-label="查看运行统计" title={`上下文 ${fmt(data.meter?.totalTokens)} tokens · 缓存命中 ${total ? Math.round((m.cacheReadTokens || 0) / total * 100) : 0}% · 已整理 ${fmt(data.actions?.surgeries)} 次`} onClick={onOpen}><Icon name="layers" size={12}/><span>{compactNumber(data.meter?.totalTokens)} 上下文</span>{data.liveCalls?.length > 0 && <i className="tx-stats-running" aria-label="后台运行中"/>}</button>;
 }
 const Mark = ({ size = 28 }) => <span className="tx-brand-mark" style={{ width: size, height: size }} aria-hidden="true"><svg width="72%" height="72%" viewBox="0 0 32 32" fill="none"><path d="M8 7.5c5 0 7 17 16 17M24 7.5c-5 0-7 17-16 17" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round"/></svg></span>;
-export const inject = ['slots', 'sidebarRightTabs'];
+export const inject = ['slots', 'sidebarRightTabs', 'sidebarRight'];
 export function apply(ctx) {
-  ctx.effect(() => { const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css; document.head.appendChild(tag); return () => tag.remove(); });
-  for (const [seat, Component] of [['sidebar.brand.mark', Mark], ['sidebar.brand.name', () => <strong className="tx-wordmark">trisoul<span>_x</span></strong>], ['conversation.hero.brand.mark', () => <Mark size={64}/>]]) ctx.slots.inject(seat, () => ctx.slots.register({ name: seat }, Component));
+  const openPanel = section => ctx.sidebarRight.openTab('trisoul-x-workbench', { params: { section } });
+  const sections = [
+    ['tasks', '任务', 'context', ContextPanel],
+    ['memory', '记忆', 'memory', MemoryPanel],
+    ['computer', '电脑', 'computer', ComputerPane],
+    ['monitor', '监控', 'monitor', Monitor],
+  ];
+  function Workbench({ initialSection = 'tasks', ...props }) {
+    const { tab } = props.useTabInfo();
+    const section = sections.some(([id]) => id === tab.navigation?.params?.section) ? tab.navigation.params.section : initialSection;
+    return <div className="tx-workbench">
+      <nav className="tx-workbench-nav" aria-label="工作台导航">
+        {sections.map(([id, label, icon]) => <button key={id} type="button" aria-current={section === id ? 'page' : undefined} onClick={() => tab.actions.openTab('trisoul-x-workbench', { params: { section: id }, replaceTab: tab.kind !== 'trisoul-x-workbench' })}>{icon === 'computer' ? <ComputerIcon size={15}/> : <Icon name={icon} size={15}/>}<span>{label}</span></button>)}
+      </nav>
+      {sections.map(([id, , , Component]) => <section key={id} className="tx-workbench-page" hidden={section !== id} aria-label={sections.find(([key]) => key === id)[1]}>
+        <Component {...props} useTabInfo={() => { const info = props.useTabInfo(); return { ...info, tab: { ...info.tab, visible: info.tab.visible && section === id } }; }} conversation={ctx.get('conversation')}/>
+      </section>)}
+    </div>;
+  }
+  const { ComputerEntry } = applyComputerUseClient(ctx, { integrated: true, openPanel, renderPane: props => <Workbench {...props} initialSection="computer"/> });
+  function ComposerDock(props) {
+    return <div className="tx-composer-dock"><div className="tx-composer-tools"><button type="button" className="tx-workbench-entry" aria-label="打开工作台" onClick={() => openPanel('tasks')}><Icon name="context" size={14}/><span>工作台</span></button><ComputerEntry {...props}/></div><StatsLine {...props} onOpen={() => openPanel('monitor')}/></div>;
+  }
+  ctx.effect(() => {
+    const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css + '\n' + shellCss; document.head.appendChild(tag);
+    document.documentElement.classList.add('trisoul-shell');
+    return () => { tag.remove(); document.documentElement.classList.remove('trisoul-shell'); };
+  });
+  for (const [seat, Component] of [['sidebar.brand.mark', Mark], ['sidebar.brand.name', () => <strong className="tx-wordmark">trisoul<span>_x</span></strong>], ['conversation.hero.brand.mark', () => <Mark size={52}/>]]) ctx.slots.inject(seat, () => ctx.slots.register({ name: seat }, Component));
   ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'trisoul-x', order: 16, label: () => 'trisoul_x' }, Settings));
-  ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register({ name: 'conversation.composer.dock', id: 'trisoul-x-stats', order: 30 }, StatsLine));
+  ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register({ name: 'conversation.composer.dock', id: 'trisoul-x-tools', order: 25 }, ComposerDock));
   ctx.slots.inject('conversation.input.left', () => ctx.slots.register({ name: 'conversation.input.left', id: 'trisoul-memory-scope', order: 50 }, MemoryScopeChip));
   ctx.slots.inject('conversation.input.right', () => ctx.slots.register({ name: 'conversation.input.right', id: 'trisoul-better-todo', order: 100 }, BetterTodoChip));
-  for (const [kind, title, description, Component] of [
-    ['trisoul-x-context', '工作上下文', '任务进展、工作状态与记忆文档', ContextPanel],
-    ['trisoul-x-memory', '记忆', '查看与编辑分层记忆', MemoryPanel],
-    ['trisoul-x-monitor', '执行监控', '调用、用量与后台作业', Monitor],
+  const workbenchId = 'trisoul_x/trisoul-x-workbench';
+  ctx.effect(() => ctx.sidebarRightTabs.register({ id: workbenchId, kind: 'trisoul-x-workbench', title: () => '工作台', guide: [{ order: 5, title: () => '工作台', description: () => '任务、记忆、电脑与运行监控', icon: props => <Icon name="context" {...props}/> }] }));
+  ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({ name: 'sidebar.right.pane.tab', key: workbenchId }, Workbench));
+  // Keep restored tabs and old links working; new navigation uses one workbench.
+  for (const [kind, title, initialSection] of [
+    ['trisoul-x-context', '工作上下文', 'tasks'],
+    ['trisoul-x-memory', '记忆', 'memory'],
+    ['trisoul-x-monitor', '执行监控', 'monitor'],
   ]) {
     const id = `trisoul_x/${kind}`;
-    ctx.effect(() => ctx.sidebarRightTabs.register({ id, kind, title: () => title, guide: [{ order: 5, title: () => title, description: () => description, icon: Mark }] }));
-    ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({ name: 'sidebar.right.pane.tab', key: id }, Component));
+    ctx.effect(() => ctx.sidebarRightTabs.register({ id, kind, title: () => title, guide: [] }));
+    ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({ name: 'sidebar.right.pane.tab', key: id }, props => <Workbench {...props} initialSection={initialSection}/>));
   }
 }

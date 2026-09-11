@@ -9,3 +9,4 @@ dist/
 data/
 .credentials.yaml
 *.tgz
+/cu-artifacts/

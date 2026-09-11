@@ -1,0 +1,26 @@
+<!doctype html><meta charset="utf-8"><title>Computer Use 坐标验收</title>
+<style>html,body{margin:0;background:#f4f6fb}canvas{display:block;width:1800px;height:1600px;touch-action:auto}</style>
+<canvas width="1800" height="1600" aria-label="坐标验收画布"></canvas>
+<script>
+const canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d');
+const state=window.geometryFixture={clicks:[],events:[],redHit:false,dragging:false,dragComplete:false,viewportAtLoad:{width:innerWidth,height:innerHeight}};
+const red={x:260,y:150},blue={x:180,y:260},drop={x:480,y:260};
+const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+function draw(){
+  ctx.clearRect(0,0,1800,1600);
+  const circle=(p,r,color,fill=true)=>{ctx.beginPath();ctx.arc(p.x,p.y,r,0,2*Math.PI);ctx.fillStyle=ctx.strokeStyle=color;ctx.lineWidth=4;if(fill)ctx.fill();else ctx.stroke();};
+  ctx.fillStyle='#142b4e';ctx.font='20px sans-serif';ctx.fillText('点选红靶，再将蓝点拖入蓝环',30,35);
+  circle(red,18,state.redHit?'#1c8c58':'#dc3545');
+  circle(drop,24,state.dragComplete?'#1c8c58':'#286ce2',false);
+  circle(state.dragging?state.pointer:state.dragComplete?drop:blue,14,'#286ce2');
+}
+canvas.addEventListener('pointerdown',e=>{
+  const p={x:e.pageX,y:e.pageY};state.clicks.push(p);
+  if(distance(p,red)<=18){if(!state.redHit)state.events.push({type:'red-hit'});state.redHit=true;}
+  if(distance(p,blue)<=14&&!state.dragComplete){state.events.push({type:'drag-start'});state.dragging=true;state.pointer=p;canvas.setPointerCapture(e.pointerId);}
+  draw();
+});
+canvas.addEventListener('pointermove',e=>{if(state.dragging){state.pointer={x:e.pageX,y:e.pageY};draw();}});
+canvas.addEventListener('pointerup',e=>{if(state.dragging){state.dragComplete=distance({x:e.pageX,y:e.pageY},drop)<=24;state.events.push({type:state.dragComplete?'drag-complete':'drag-miss'});state.dragging=false;draw();}});
+draw();
+</script>

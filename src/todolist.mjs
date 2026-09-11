@@ -291,6 +291,14 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
   }
   const clone = (r) => structuredClone({ excerpts: r.excerpts, tasks: r.tasks, nextE: r.nextE, nextT: r.nextT, nextL: r.nextL })
   const err = (text) => ({ text, isError: true })
+  const excerptTaskError = (message, entry, index, ex, source) => {
+    const lines = [message, `Failed entry: tasks[${index}] (${JSON.stringify(entry?.title ?? '')}). No excerpt or tasks from this call were saved.`]
+    const a = entry?.anchor
+    if (!a || typeof a.from !== 'string' || typeof a.to !== 'string') lines.push('Each task needs its own nested anchor: {"title":"...","anchor":{"from":"words inside the excerpt","to":"words inside the excerpt"}}.')
+    else if (locate(source.text, a.from, a.to).ok && !locate(ex.text, a.from, a.to).ok) lines.push(`This anchor exists in user message [${source.n}] outside the selected excerpt. Extend the outer from/to so this task is included, or use a separate excerpt for it. Anchor: ${JSON.stringify({from:a.from,to:a.to})}.`)
+    lines.push(`Selected excerpt from message [${source.n}]${ex.text.length > 3000 ? ' (first 3000 characters)' : ''}:\n${JSON.stringify(ex.text.slice(0, 3000))}`)
+    return err(lines.join('\n'))
+  }
 
   /** 全局 anchor 定位（add/edit）：显式 excerpt id 优先；否则唯一命中的节选；跨节选歧义/多命中/无命中硬拒 */
   const resolveAnchor = (excerpts, anchor) => {
@@ -392,9 +400,9 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       next.excerpts.push(ex)
       const entries = Array.isArray(args.tasks) ? args.tasks : []
       const firstT = next.nextT
-      for (const entry of entries) {
+      for (const [index, entry] of entries.entries()) {
         const e = buildTask(next, entry, ex)
-        if (e) return err(e)
+        if (e) return excerptTaskError(e, entry, index, ex, m)
       }
       commit(session, rec, next)
       const ids = entries.length ? (entries.length === 1 ? `T${firstT}` : `T${firstT}–T${next.nextT - 1}`) : 'none'
@@ -480,7 +488,8 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       const entries = Array.isArray(args.links) ? args.links : []
       if (!entries.length) return err('Rejected: op:link requires links.')
       const staged = []
-      for (const e of entries) {
+      for (const [index, e] of entries.entries()) {
+        if (typeof e?.task !== 'string' || !e.task) return err(`Rejected: links[${index}].task is required. ${next.tasks.length ? `Use an existing task ID: ${next.tasks.map(t => t.id).join(', ')}.` : 'No tasks have been recorded; correct the rejected todo_write call before linking evidence.'} No links were saved.`)
         const t = next.tasks.find(x => x.id === e?.task)
         if (!t) return err(`Rejected: unknown task id ${e?.task}.`)
         if (e.kind !== 'test' && e.kind !== 'text') return err('Rejected: kind must be "test" or "text".')

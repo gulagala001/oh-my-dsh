@@ -1,0 +1,26 @@
+<!doctype html><meta charset="utf-8"><title>Computer Use 视觉定位</title>
+<style>html,body{margin:0;overflow:hidden;background:#f4f6fb}canvas{display:block;width:100vw;height:100vh;touch-action:none}</style>
+<canvas aria-label="视觉操作画布"></canvas>
+<script>
+const canvas=document.querySelector('canvas'),context=canvas.getContext('2d');
+const state={clicks:[],events:[],redHit:false,dragging:false,dragComplete:false};window.visualFixture=state;
+let points;
+function draw(){
+  const w=innerWidth,h=innerHeight,d=devicePixelRatio;
+  canvas.width=Math.round(w*d);canvas.height=Math.round(h*d);context.setTransform(d,0,0,d,0,0);
+  points={red:{x:w*.78,y:h*.32},blue:{x:w*.24,y:h*.72},drop:{x:w*.74,y:h*.72}};
+  const circle=(p,r,color,filled=true)=>{context.beginPath();context.arc(p.x,p.y,r,0,Math.PI*2);context.fillStyle=color;context.strokeStyle=color;context.lineWidth=5;if(filled)context.fill();else context.stroke();};
+  context.fillStyle='#142b4e';context.font='24px sans-serif';context.fillText('视觉定位测试',40,55);
+  context.font='18px sans-serif';context.fillText('点击红色靶心，再把蓝色圆点拖入蓝色圆环。',40,90);
+  circle(points.red,24,state.redHit?'#1c8c58':'#dc3545');
+  context.fillStyle='#142b4e';context.textAlign='center';context.fillText(state.redHit?'点击成功':'红色靶心',points.red.x,points.red.y+54);
+  circle(points.drop,34,state.dragComplete?'#1c8c58':'#286ce2',false);
+  circle(state.dragging?state.pointer:state.dragComplete?points.drop:points.blue,20,'#286ce2');
+  context.fillStyle='#142b4e';context.fillText(state.dragComplete?'拖拽成功':'拖入此圆环',points.drop.x,points.drop.y+62);context.textAlign='left';
+}
+const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+canvas.addEventListener('pointerdown',event=>{const p={x:event.clientX,y:event.clientY};state.clicks.push(p);if(distance(p,points.red)<=24){if(!state.redHit)state.events.push({type:'red-hit'});state.redHit=true;}if(distance(p,points.blue)<=20&&!state.dragComplete){state.events.push({type:'drag-start'});state.dragging=true;state.pointer=p;canvas.setPointerCapture(event.pointerId);}draw();});
+canvas.addEventListener('pointermove',event=>{if(state.dragging){state.pointer={x:event.clientX,y:event.clientY};draw();}});
+canvas.addEventListener('pointerup',event=>{if(state.dragging){state.dragComplete=distance({x:event.clientX,y:event.clientY},points.drop)<=34;state.events.push({type:state.dragComplete?'drag-complete':'drag-miss'});state.dragging=false;draw();}});
+window.addEventListener('resize',draw);draw();
+</script>

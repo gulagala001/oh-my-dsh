@@ -1,0 +1,20 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { join, resolve } from 'node:path';
+import { signNativeBundle } from './computer-use-signing.mjs';
+import { nativeBuildInfo, NATIVE_SOURCES } from '../src/computer-use/native-build.mjs';
+
+if(process.platform!=='darwin')throw new Error('This native target is macOS; build and test it on macOS.');
+const root=fileURLToPath(new URL('../',import.meta.url));
+const output=resolve(process.env.TRISOUL_CU_NATIVE_OUTPUT??join(root,'dist','Trisoul Computer Use.app'));
+await mkdir(join(output,'Contents','MacOS'),{recursive:true});
+const build=await nativeBuildInfo();
+execFileSync('clang',['-fobjc-arc','-O2','-mmacosx-version-min=14.0','-Werror=return-type',`-DTRISOUL_BUILD_ID="${build.build}"`,`-DTRISOUL_VERSION="${build.version}"`,`-DTRISOUL_PROTOCOL=${build.protocol}`,'-framework','Cocoa','-framework','ApplicationServices','-framework','ImageIO','-framework','ScreenCaptureKit','-framework','CoreMedia','-framework','CoreVideo',...NATIVE_SOURCES.map(f=>join(root,'native','computer-use',f)),'-o',join(output,'Contents','MacOS','trisoul-computer-use')],{stdio:'inherit'});
+await writeFile(join(output,'Contents','Info.plist'),'<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>ai.trisoul.computer-use</string><key>CFBundleName</key><string>Trisoul Computer Use</string><key>CFBundleExecutable</key><string>trisoul-computer-use</string><key>CFBundlePackageType</key><string>APPL</string><key>CFBundleShortVersionString</key><string>0.1.0</string><key>CFBundleVersion</key><string>1</string><key>LSMinimumSystemVersion</key><string>14.0</string><key>LSUIElement</key><true/><key>NSScreenCaptureUsageDescription</key><string>Capture the application window you selected for Computer Use.</string></dict></plist>');
+execFileSync('plutil',['-replace','CFBundleShortVersionString','-string',build.version,join(output,'Contents/Info.plist')]);
+execFileSync('plutil',['-replace','CFBundleVersion','-string','2',join(output,'Contents/Info.plist')]);
+execFileSync('plutil',['-insert','TrisoulBuildID','-string',build.build,join(output,'Contents/Info.plist')]);
+execFileSync('plutil',['-insert','TrisoulProtocol','-integer',String(build.protocol),join(output,'Contents/Info.plist')]);
+await signNativeBundle(output);
+console.log(output);

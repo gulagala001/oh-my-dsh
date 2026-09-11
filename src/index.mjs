@@ -4,6 +4,11 @@ import { eventText, sessionEvents, substantive } from './hub.mjs';
 import { CONTEXT_WINDOW_EXCEEDED_CODE } from '@deepseek-ai/dsh-llm';
 import { currentTasks, restoreTaskProjection } from './tasks.mjs';
 import { ensureSystemHead } from './system-head.mjs';
+import { join } from 'node:path';
+import { ComputerUseManager } from './computer-use/manager.mjs';
+import { mountComputerUseHttp } from './computer-use/http.mjs';
+import { ImageCoordinates, mountImageCoordinates } from './computer-use/image-coordinates.mjs';
+import {announceFreshComputerRuntime}from'./computer-use/runtime-context.mjs';
 
 export { Config };
 export const name = 'trisoul-x';
@@ -14,8 +19,17 @@ async function readBody(req) { let body = ''; for await (const part of req) body
 
 export function apply(ctx, config) {
   const hub = new Hub(ctx, config);
+  hub.computerImages = new ImageCoordinates();
+  mountImageCoordinates(ctx, hub.computerImages);
+  ctx.settings.installSection(ctx, NS, Config, config, { setSource: source => { hub.getConfig = source; }, onChange() {
+    if (hub.computerUse) void hub.computerUse.setEnabled(hub.config().computerUseEnabled !== false).catch(error => ctx.logger.warn(error.message));
+    for (const agent of hub.agents.values()) hub.armIdle(agent);
+  } });
+  const computerConfig = hub.config();
+  hub.computerUse = new ComputerUseManager(join(hub.store.dir, 'computer-use'), { enabled: computerConfig.computerUseEnabled !== false, browser: { executablePath: computerConfig.computerUseBrowserExecutable || undefined }, extension: { chromeUserDataDir: computerConfig.computerUseChromeUserDataDir || undefined }, native: { binary: computerConfig.computerUseNativeBinary || undefined, socket: computerConfig.computerUseNativeSocket || undefined } });
+  ctx.effect(() => () => hub.computerUse.close());
+  mountComputerUseHttp(ctx, hub);
   const isX = session => (ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset) === 'trisoul-x';
-  ctx.settings.installSection(ctx, NS, Config, config, { setSource: source => { hub.getConfig = source; }, onChange() { for (const agent of hub.agents.values()) hub.armIdle(agent); } });
   ctx.on('system-prompt/assemble', async (_assembly, _context, next) => {
     const assembly = await next();
     if (!assembly.sections.some(s => s.name === 'trisoul-x:persona')) return assembly;
@@ -35,6 +49,7 @@ export function apply(ctx, config) {
   ctx.on('agent/pre-step', async ({ agent, messages, signal, turn, step }, next) => {
     if (isX(agent.session) && !signal.aborted) {
       ensureSystemHead(agent.session, { turn, step });
+      if(hub.config().computerUseEnabled!==false)announceFreshComputerRuntime(hub.computerUse,agent.session);
       restoreTaskProjection(ctx, agent.session);
       hub.publish(agent, messages);
       void hub.stateZone.preStep(agent, signal);
@@ -61,7 +76,11 @@ export function apply(ctx, config) {
   ctx.on('agent/turn-stopping', ({ agent, turn, signal }) => {
     if (isX(agent.session)) hub.finishTasks(agent, turn, signal);
   }, { global: true });
-  ctx.on('agent/disposed', ({ agent }) => hub.disposeAgent(agent), { global: true });
+  ctx.on('agent/disposed', async ({ agent }) => {
+    hub.computerImages.clear(agent.session.id);
+    hub.disposeAgent(agent);
+    if (hub.computerUse.sessions.has(agent.session.id)) { await hub.computerUse.reset(agent.session.id); await hub.computerUse.endTurn(agent.session.id); }
+  }, { global: true });
   ctx.on('agent/session-start', ({ agent, source }) => {
     if (!isX(agent.session) || agent.session.header.origin === 'subagent') return;
     const state = hub.store.state(agent.session.id);
@@ -71,6 +90,7 @@ export function apply(ctx, config) {
     hub.store.save(state); hub.armIdle(agent);
   }, { global: true });
   ctx.on('session/event', (session, event) => {
+    if (event.type === 'turn/end') void hub.computerUse.endTurn(session.id);
     if (!isX(session)) return;
     hub.observe(session, event);
     const agent = ctx.agents.get(session.id);
