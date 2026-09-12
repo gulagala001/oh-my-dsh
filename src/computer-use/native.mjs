@@ -197,7 +197,7 @@ export class NativeHost {
   async showSetup(){return nativeValue(await this.call('ui-permissions','show_setup'));}
   async list(sessionId,signal){
     const v=nativeValue(await this.call(sessionId,'list_apps',{},signal));
-    return(v.apps??[]).map(a=>({id:a.bundle_id??String(a.pid),displayName:a.name,pid:a.pid,isRunning:a.running,path:a.launch_path}));
+    return(v.apps??[]).map(a=>({id:a.bundle_id??String(a.pid),displayName:a.name,pid:a.pid,isRunning:a.running,path:a.launch_path,...(a.discovery_error?{unavailableReason:a.discovery_error}:{})}));
   }
   async windows(sessionId,pid,signal){const value=nativeValue(await this.call(sessionId,'list_windows',{pid},signal));return(value.windows??[]).map(window=>({...window,...(value.process_identity?{processIdentity:value.process_identity}:{})}));}
   async shareWindows(signal) {

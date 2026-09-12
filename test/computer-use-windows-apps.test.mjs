@@ -94,7 +94,7 @@ $shortcut.Save()`);
   let installed, catalog;
   for (let i = 0; i < 80; i++) { catalog = await host.list('app-launch'); installed = catalog.find(app => app.displayName === title); if (installed) break; await delay(250); }
   await writeFile(join(artifacts, 'application-catalog.json'), JSON.stringify(catalog, null, 2));
-  assert.ok(installed, 'the Windows Applications folder discovers the fixture shortcut');
+  assert.ok(installed, 'Windows application discovery includes the fixture shortcut');
   assert.equal(installed.isRunning, false); assert.match(installed.id, /^win-app:/);
   await writeFile(join(artifacts, 'installed-app.json'), JSON.stringify(installed, null, 2));
   await assert.rejects(host.call('window-share-app-list', 'launch_app', { name: installed.id }), error => error.code === 'READ_ONLY_SESSION');

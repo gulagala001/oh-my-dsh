@@ -18,6 +18,6 @@ try {
     child.once('exit', code => code === 0 ? resolve() : reject(new Error('Windows desktop build failed (' + code + ')')));
   });
   if ((await windowsNativeBuild(info.arch)).build !== info.build) throw new Error('Desktop sources changed during build; build again.');
-  await writeFile(join(output, 'build.json'), JSON.stringify({ ...info, capabilities: ['windows', 'accessibility', 'screenshots', 'preview', 'keyboard', 'click', 'drag', 'paste', 'uia-actions', 'structured-scroll'], input: true }) + '\n');
+  await writeFile(join(output, 'build.json'), JSON.stringify({ ...info, capabilities: ['windows', 'applications', 'launch-app', 'accessibility', 'screenshots', 'preview', 'keyboard', 'click', 'drag', 'paste', 'uia-actions', 'structured-scroll'], input: true }) + '\n');
   console.log(JSON.stringify({ ...info, output }));
 } finally { await rm(intermediate, { recursive: true, force: true }); }

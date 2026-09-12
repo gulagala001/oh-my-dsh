@@ -9,10 +9,10 @@ using Microsoft.Win32.SafeHandles;
 // Window matching uses application IDs or executable paths, never window titles.
 internal sealed class AppCatalog : IDisposable
 {
-    private sealed record App(string Key, string Name, string? Executable, string Arguments, string? ModelId)
+    private sealed record App(string Key, string Name, string? Executable, string Arguments, string? ModelId, string? UnavailableReason = null)
     {
         internal string Id => "win-app:" + Key;
-        internal string Path => Executable ?? "shell:AppsFolder\\" + Key;
+        internal string Path => Executable ?? (Key.StartsWith("shortcut:", StringComparison.Ordinal) ? Key[9..] : "shell:AppsFolder\\" + Key);
     }
     private sealed record Running(WindowTarget Window, string? Executable, string? ModelId);
     private readonly Thread thread;
@@ -46,15 +46,16 @@ internal sealed class AppCatalog : IDisposable
             items = ((dynamic)folder).Items(); int count = ((dynamic)items).Count;
             if (count > 4096) throw new NativeFailure("APP_DISCOVERY_LIMIT", "The Windows application catalog exceeds the discovery limit; use an executable path");
             var result = new List<App>(); bool opened = false;
-            void Add(App app, object item)
+            void Add(App app, object? item)
             {
                 result.Add(app);
                 if (result.Count > 4096) throw new NativeFailure("APP_DISCOVERY_LIMIT", "The Windows application catalog exceeds the discovery limit; use an executable path");
                 if (open?.Key != app.Key) return;
+                if (app.UnavailableReason is not null) throw new NativeFailure("APP_UNAVAILABLE", app.UnavailableReason);
                 if (!string.Equals(open.Executable, app.Executable, StringComparison.OrdinalIgnoreCase) || open.Arguments != app.Arguments || open.ModelId != app.ModelId)
                     throw new NativeFailure("APP_CHANGED", "The application launcher changed; refresh discovery before launching it");
                 token.ThrowIfCancellationRequested(); WindowCatalog.RequireInteractive();
-                ((dynamic)item).InvokeVerb("open"); opened = true;
+                ((dynamic)item!).InvokeVerb("open"); opened = true;
             }
             for (int i = 0; i < count; i++)
             {
@@ -82,6 +83,7 @@ internal sealed class AppCatalog : IDisposable
                 foreach (var path in Directory.EnumerateFiles(directory, "*.lnk", options))
                 {
                     token.ThrowIfCancellationRequested(); object? container = null, item = null, link = null;
+                    string key = "shortcut:" + System.IO.Path.GetFullPath(path);
                     try
                     {
                         container = ((dynamic)shell!).NameSpace(System.IO.Path.GetDirectoryName(path));
@@ -90,8 +92,15 @@ internal sealed class AppCatalog : IDisposable
                         link = ((dynamic)item).GetLink; if (link is null) continue;
                         string executable = Environment.ExpandEnvironmentVariables((string)((dynamic)link).Path);
                         if (!System.IO.Path.IsPathFullyQualified(executable) || !executable.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) continue;
-                        var app = new App("shortcut:" + System.IO.Path.GetFullPath(path), (string)((dynamic)item).Name, System.IO.Path.GetFullPath(executable), (string)((dynamic)link).Arguments, Property(item, "System.AppUserModel.ID"));
+                        var app = new App(key, (string)((dynamic)item).Name, System.IO.Path.GetFullPath(executable), (string)((dynamic)link).Arguments, Property(item, "System.AppUserModel.ID"));
                         Add(app, item); if (opened) return result.ToArray();
+                    }
+                    catch (Exception error) when (error is COMException or UnauthorizedAccessException)
+                    {
+                        if (open?.Key == key) throw;
+                        // An inaccessible shortcut must not hide the rest of
+                        // the application catalog or look like a usable app.
+                        Add(new App(key, System.IO.Path.GetFileNameWithoutExtension(path), null, "", null, "Windows could not read this shortcut: " + error.Message), null);
                     }
                     finally { Release(link); Release(item); Release(container); }
                 }
@@ -141,7 +150,7 @@ internal sealed class AppCatalog : IDisposable
             token.ThrowIfCancellationRequested(); var running = windows.Where(window => Matches(app, window)).ToArray();
             foreach (var window in running) known.Add(window.Window.window_id);
             int[] pids = running.Select(window => window.Window.pid).Distinct().ToArray();
-            result.Add(new { bundle_id = app.Id, name = app.Name, pid = pids.Length == 1 ? pids[0] : 0, running = running.Length > 0, launch_path = app.Path, windows = running.Select(window => new { window.Window.pid, window.Window.window_id, window.Window.title }).ToArray() });
+            result.Add(new { bundle_id = app.Id, name = app.Name, pid = pids.Length == 1 ? pids[0] : 0, running = running.Length > 0, launch_path = app.Path, discovery_error = app.UnavailableReason, windows = running.Select(window => new { window.Window.pid, window.Window.window_id, window.Window.title }).ToArray() });
         }
         foreach (var group in windows.Where(window => !known.Contains(window.Window.window_id)).GroupBy(window => window.Window.app_id))
         { var first = group.First(); result.Add(new { bundle_id = group.Key, name = first.Window.app_name, pid = first.Window.pid, running = true, launch_path = first.Executable, windows = group.Select(window => new { window.Window.pid, window.Window.window_id, window.Window.title }).ToArray() }); }
@@ -169,6 +178,7 @@ internal sealed class AppCatalog : IDisposable
                 var matches = Installed(token).Where(app => string.Equals(app.Id, query, StringComparison.OrdinalIgnoreCase) || string.Equals(app.Name, query, StringComparison.OrdinalIgnoreCase) || string.Equals(app.Path, query, StringComparison.OrdinalIgnoreCase)).ToArray();
                 if (matches.Length > 1 && matches.Skip(1).Any(app => !SameLauncher(matches[0], app))) throw new NativeFailure("APP_AMBIGUOUS", "Application names are ambiguous; select an exact discovered application ID");
                 selected = matches.FirstOrDefault();
+                if (selected?.UnavailableReason is not null) throw new NativeFailure("APP_UNAVAILABLE", selected.UnavailableReason);
                 candidates = selected is not null ? windows.Where(window => Matches(selected, window)).ToArray() : windows.Where(window => string.Equals(window.Window.app_name, query, StringComparison.OrdinalIgnoreCase)).ToArray();
                 if (selected is null && candidates.Length == 0) throw new NativeFailure("APP_NOT_FOUND", "No exact installed or running application matched; discover its ID or use its executable path");
             }
