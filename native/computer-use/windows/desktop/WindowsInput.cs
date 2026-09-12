@@ -61,7 +61,11 @@ internal sealed class WindowsInput(Action<object>? pointer = null)
         if (foregroundLost) throw new NativeFailure("FOREGROUND_LOST", "Foreground control was interrupted; bind the current target again");
         if (intervention is null || !intervention.Alive) throw new NativeFailure("INPUT_MONITOR_LOST", "The desktop input monitor stopped; bind the application again");
         if (recovery is not null && recovery.HasExited) throw new NativeFailure("INPUT_MONITOR_LOST", "The drag recovery process stopped unexpectedly");
-        if (intervention.Revision != baseline) throw new NativeFailure("USER_INTERVENTION", "Desktop control stopped because the user or another input source intervened");
+        if (intervention.Revision != baseline)
+        {
+            if (Environment.GetEnvironmentVariable("TRISOUL_CU_INPUT_DIAGNOSTICS") == "1") Console.Error.WriteLine(intervention.LastIntervention);
+            throw new NativeFailure("USER_INTERVENTION", "Desktop control stopped because the user or another input source intervened");
+        }
     }
     internal void Check(WindowTarget target, CancellationToken token)
     {
@@ -181,6 +185,8 @@ internal sealed class InputIntervention : IDisposable
     private readonly Hook keyboard, mouse;
     private readonly ManualResetEventSlim ready = new();
     private long revision;
+    private string? lastIntervention;
+    internal string? LastIntervention => Volatile.Read(ref lastIntervention);
     private uint threadId;
     private Exception? failure;
     private volatile bool alive;
@@ -189,8 +195,13 @@ internal sealed class InputIntervention : IDisposable
     internal InputIntervention(ulong tag)
     {
         this.tag = tag;
-        keyboard = (code, message, data) => { if (code >= 0 && Marshal.PtrToStructure<Keyboard>(data).Extra.ToUInt64() != this.tag) Interlocked.Increment(ref revision); return CallNextHookEx(IntPtr.Zero, code, message, data); };
-        mouse = (code, message, data) => { if (code >= 0 && Marshal.PtrToStructure<Mouse>(data).Extra.ToUInt64() != this.tag) Interlocked.Increment(ref revision); return CallNextHookEx(IntPtr.Zero, code, message, data); };
+        void Changed(string kind, uint flags, UIntPtr extra)
+        {
+            Volatile.Write(ref lastIntervention, $"Input intervention: {kind}, flags={flags:x}, extra={extra.ToUInt64():x}, expected={this.tag:x}");
+            Interlocked.Increment(ref revision);
+        }
+        keyboard = (code, message, data) => { if (code >= 0) { var value = Marshal.PtrToStructure<Keyboard>(data); if (value.Extra.ToUInt64() != this.tag) Changed("keyboard", value.Flags, value.Extra); } return CallNextHookEx(IntPtr.Zero, code, message, data); };
+        mouse = (code, message, data) => { if (code >= 0) { var value = Marshal.PtrToStructure<Mouse>(data); if (value.Extra.ToUInt64() != this.tag) Changed("mouse", value.Flags, value.Extra); } return CallNextHookEx(IntPtr.Zero, code, message, data); };
         thread = new Thread(Watch) { IsBackground = true, Name = "OhMyDsh input monitor" };
         thread.Start(); ready.Wait();
         if (failure is not null) { thread.Join(); ready.Dispose(); throw failure; }

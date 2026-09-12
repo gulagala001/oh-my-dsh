@@ -65,6 +65,7 @@ jobs:
         if: always() && !cancelled()
         env:
           TRISOUL_CU_WINDOWS_NATIVE_TEST: '1'
+          TRISOUL_CU_INPUT_DIAGNOSTICS: '1'
         shell: pwsh
         run: |
           node --test --test-reporter=tap test/computer-use-windows-native.test.mjs *> cu-artifacts/windows-native.log

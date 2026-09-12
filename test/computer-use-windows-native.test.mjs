@@ -17,8 +17,13 @@ const run = promisify(execFile), dotnet = process.env.TRISOUL_CU_DOTNET || 'dotn
 test('Windows native installation, read-only observation and input operate on real WPF windows', { skip: process.platform !== 'win32' || process.env.TRISOUL_CU_WINDOWS_NATIVE_TEST !== '1' ? 'requires an interactive Windows desktop and TRISOUL_CU_WINDOWS_NATIVE_TEST=1' : false, timeout: 360000 }, async t => {
   const root = await mkdtemp(join(tmpdir(), 'oh-my-dsh-native-'));
   const artifact = resolve('cu-artifacts', 'windows-native-' + Date.now()); await mkdir(artifact, { recursive: true });
-  const clients = []; let native;
+  const clients = []; let native, fixture;
   t.after(async () => {
+    const diagnostics = await Promise.allSettled([
+      fixture && !fixture.closed ? fixture.request('fixture', { action: 'state' }).then(state => writeFile(join(artifact, 'last-application-state.json'), JSON.stringify(state, null, 2))) : undefined,
+      Promise.all(Array.from(native?.connections.values() ?? [], async pending => { const connection = await pending.catch(() => null); return connection ? { pid: connection.client.child.pid, stderr: connection.client.stderr } : null; })).then(state => writeFile(join(artifact, 'native-connections.json'), JSON.stringify(state, null, 2))),
+    ]);
+    for (const result of diagnostics) if (result.status === 'rejected') t.diagnostic('Could not save Windows diagnostics: ' + result.reason.message);
     await native?.close();
     for (const client of clients) await client.close();
     await writeFile(join(artifact, 'processes.json'), JSON.stringify(clients.map(client => ({ pid: client.child.pid, exitCode: client.child.exitCode, signal: client.child.signalCode, stderr: client.stderr })), null, 2));
@@ -34,7 +39,7 @@ test('Windows native installation, read-only observation and input operate on re
   assert.equal((await runtime.install()).binary, binary, 'a verified installation is reused');
   const fixtureOutput = join(root, 'fixture');
   await run(dotnet, ['publish', fileURLToPath(new URL('./fixtures/computer-use/windows-desktop/Fixture.csproj', import.meta.url)), '-c', 'Release', '-r', expected.rid, '--self-contained', 'true', '-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true', '-p:BaseIntermediateOutputPath=' + join(root, 'fixture-obj') + '/', '-o', fixtureOutput, '--nologo'], { timeout: 120000, maxBuffer: 1024 * 1024 });
-  const fixture = new McpClient(join(fixtureOutput, 'OhMyDsh.DesktopFixture.exe')); clients.push(fixture);
+  fixture = new McpClient(join(fixtureOutput, 'OhMyDsh.DesktopFixture.exe')); clients.push(fixture);
   const original = await fixture.request('fixture', { action: 'state' });
   const connect = async label => {
     const client = new McpClient(binary, ['mcp']); clients.unshift(client);
@@ -128,7 +133,7 @@ test('Windows native installation, read-only observation and input operate on re
     for (let i = 0; i < 100; i++) { const state = await applicationState(); if (predicate(state)) return state; await delay(20); }
     assert.fail('The real application did not receive the expected input: ' + JSON.stringify(await applicationState()));
   };
-  for (const button of ['left', 'right', 'middle']) await native.invoke('controller', binding.id, 'click', [from, { button }]);
+  for (const button of ['left', 'right', 'middle']) { t.diagnostic('Actual Windows pointer: ' + button); await native.invoke('controller', binding.id, 'click', [from, { button }]); }
   const clicked = await waitState(state => state.pointerEvents.filter(event => event.kind === 'up').length === 3);
   assert.deepEqual(clicked.pointerEvents.filter(event => event.kind === 'down').map(event => event.button), ['Left', 'Right', 'Middle']);
   assert.deepEqual(clicked.pointerEvents.filter(event => event.kind === 'up').map(event => event.button), ['Left', 'Right', 'Middle']);

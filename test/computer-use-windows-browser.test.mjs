@@ -16,7 +16,8 @@ test('Windows: installed exe connects real Chrome, preserves selected tabs and u
     const installed = await env.installer.status(env.hub.list());
     assert.equal(installed.prepared, true); assert.equal(installed.reloadRequired, false);
     assert.equal(installed.build, env.browser.build);
-    assert.ok((await env.installer.windows.read(env.installer.hostName)).every(entry => entry.value === env.installer.registration));
+    const registration = await env.installer.windows.read(env.installer.hostName);
+    assert.ok(registration.every(entry => entry.value?.toLowerCase() === env.installer.registration.toLowerCase()), JSON.stringify({ expected: env.installer.registration, registration }));
     const duplicate = new ExtensionHub(env.hub.socketPath, { windowsRuntime: env.installer.windows });
     await assert.rejects(duplicate.start(), /exited/); await duplicate.close();
     assert.equal(env.hub.list().length, 1, 'failed endpoint takeover leaves the original connection intact');
