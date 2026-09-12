@@ -19,6 +19,8 @@ internal static class FixtureProgram
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         var panel = new StackPanel { Margin = new Thickness(18) };
         var editor = new TextBox { Text = "Windows 观察验收 中文🙂", MinHeight = 36 };
+        var clipboard = new ClipboardFixture();
+        DataObject.AddPastingHandler(editor, clipboard.Pasting);
         AutomationProperties.SetName(editor, "测试内容"); AutomationProperties.SetAutomationId(editor, "fixture-editor");
         var marker = new Border { Width = 240, Height = 120, Background = new SolidColorBrush(Color.FromRgb(220, 30, 50)), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 16, 0, 0) };
         // Name a normal accessible WPF control at the center of the red patch.
@@ -79,6 +81,9 @@ internal static class FixtureProgram
                         var action = args.TryGetProperty("action", out var operation) ? operation.GetString() : "state";
                         object result = await app.Dispatcher.InvokeAsync(() =>
                         {
+                            if (action == "clipboard-seed") { clipboard.Mode = args.GetProperty("mode").GetString()!; clipboard.Seed(args.GetProperty("text").GetString()!); return clipboard.State(); }
+                            if (action == "clipboard-state") return clipboard.State();
+                            if (action == "clipboard-restore") { clipboard.Restore(); return new { restored = true }; }
                             if (action == "text") editor.Text = args.GetProperty("text").GetString() ?? "";
                             if (action == "focus") { first.Activate(); editor.Focus(); Keyboard.Focus(editor); }
                             if (action == "external-input") { GetCursorPos(out var before); if (!SetCursorPos(before.X + 1, before.Y)) throw new InvalidOperationException("External fixture pointer input failed"); }
@@ -95,7 +100,7 @@ internal static class FixtureProgram
                         await Console.Out.WriteLineAsync(JsonSerializer.Serialize(new { jsonrpc = "2.0", id, result }));
                     }
                 }
-                finally { await app.Dispatcher.InvokeAsync(() => { timer.Stop(); app.Shutdown(); }); }
+                finally { await app.Dispatcher.InvokeAsync(() => { clipboard.Restore(); timer.Stop(); app.Shutdown(); }); }
             });
         };
         app.Run();
