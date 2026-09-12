@@ -19,6 +19,8 @@ internal sealed class WindowsInput(Action<object>? pointer = null)
     private long baseline;
     private long activatedWindow;
     private bool foregroundLost;
+    private Point? expectedCursor;
+    private bool cursorIntervened;
     private WindowsInputEvent[] pendingReleases = [];
     private readonly List<WindowsInputEvent> acceptedInputs = new();
     private Process? recovery;
@@ -69,6 +71,13 @@ internal sealed class WindowsInput(Action<object>? pointer = null)
             if (Environment.GetEnvironmentVariable("TRISOUL_CU_INPUT_DIAGNOSTICS") == "1") Console.Error.WriteLine(intervention.LastIntervention);
             throw new NativeFailure("USER_INTERVENTION", "Desktop control stopped because the user or another input source intervened");
         }
+        // SetCursorPos can move the pointer without producing a low-level
+        // mouse hook. Also compare the real desktop position between our own
+        // sends, so software pointer changes cannot silently inherit control.
+        if (!GetCursorPos(out var current)) throw new NativeFailure("INPUT_MONITOR_LOST", "Could not read the desktop cursor position");
+        if (expectedCursor is { } expected && (expected.X != current.X || expected.Y != current.Y)) cursorIntervened = true;
+        expectedCursor ??= current;
+        if (cursorIntervened) throw new NativeFailure("USER_INTERVENTION", "Desktop control stopped because the cursor moved outside the controller's input");
     }
     internal void Check(WindowTarget target, CancellationToken token)
     {
@@ -86,6 +95,11 @@ internal sealed class WindowsInput(Action<object>? pointer = null)
         acceptedInputs.AddRange(events.Take(checked((int)accepted)));
         pendingReleases = WindowsInputEvents.Releases(acceptedInputs);
         if (pendingReleases.Length == 0) acceptedInputs.Clear();
+        if (events.Take(checked((int)accepted)).Any(item => item.Type == 0))
+        {
+            if (!GetCursorPos(out var current)) throw new NativeFailure("INPUT_MONITOR_LOST", "Could not confirm the cursor position after native input");
+            expectedCursor = current;
+        }
         if (accepted == events.Length)
         {
             if (events.Any(item => item.Type == 0) && GetCursorPos(out var at)) Report(target, at.X, at.Y, events.Any(item => item.Type == 0 && (item.Value.Mouse.Flags & (2 | 8 | 32)) != 0));

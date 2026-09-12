@@ -551,7 +551,7 @@ export class ComputerUseManager {
   async setupStatus() {
     await this.extensionReady;
     const executable = this.browser.runtimePath ?? browserExecutablePath(this.browser.executablePath);
-    const native = { platform: process.platform, supported: this.native.supported(), installed: this.native.available(), installing: !!this.native.installing, accessibility: null, screenRecording: null };
+    const native = { platform: process.platform, supported: this.native.supported(), installed: this.native.available(), installing: !!this.native.installing, removing: !!this.native.removing, removable: typeof this.native.uninstall === 'function' && !this.native.externalBinary, accessibility: null, screenRecording: null };
     if (native.installed) {
       try { Object.assign(native,await this.native.installationStatus());const permissions = await this.native.permissions('ui-permissions'); if (permissions.platform === 'win32') { native.interactive = permissions.interactive; native.captureSupported = permissions.capture_supported; } else { native.accessibility = permissions.accessibility; native.screenRecording = permissions.screen_recording; } }
       catch (error) { native.error = error.message; if (native.platform === 'win32') native.repairRequired = true; }
@@ -595,20 +595,26 @@ export class ComputerUseManager {
     this.extensionSetup = operation; return operation.promise;
   }
   async installNative() {
-    await this.native.install({beforeReplace:async()=>{
+    await this.native.install({ beforeReplace: () => this.prepareNativeChange('update') });
+  }
+  async removeNative() {
+    if (typeof this.native.uninstall !== 'function') throw new Error('当前平台尚未提供桌面运行时卸载');
+    return this.native.uninstall({ beforeRemove: () => this.prepareNativeChange('remove') });
+  }
+  async prepareNativeChange(action) {
+      const message = action === 'remove' ? '桌面控制正在移除；重新安装后可再次选择应用' : '桌面控制正在更新，完成后请重新选择应用';
       const ids=new Set([...this.native.targets.values()].map(target=>target.sessionId));
       for(const state of this.sessions.values())if(state.target?.kind==='app')ids.add(state.id);
-      for(const view of this.nativeViews.views.values())this.nativeViews.publish(view,'closed',{reason:'runtime-update',message:'桌面控制正在更新，完成后请重新选择应用'});
+      for(const view of this.nativeViews.views.values())this.nativeViews.publish(view,'closed',{reason:'runtime-'+action,message});
       await this.nativeViews.close();
       for(const id of ids){
         const state=this.sessions.get(id);if(!state)continue;
         for(const [key,entry]of state.previewTargets)if(entry.target.kind==='app')state.previewTargets.delete(key);
-        await state.runtime.stop(new Error('桌面控制正在更新，完成后请重新选择应用'));
+        await state.runtime.stop(new Error(message));
         this.clearPointer(state);
         if(state.target?.kind==='app'){state.target=null;state.nativeTarget=null;this.preview.delete(id);}
         state.status=state.stopped?'stopped':'idle';this.publishControl(state);
       }
-    }});
   }
   async close() {
     this.closed = true;

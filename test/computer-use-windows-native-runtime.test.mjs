@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile, readFile, readdir, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdtemp, mkdir, writeFile, readFile, readdir, rm, symlink, lstat } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { WindowsNativeRuntime } from '../src/computer-use/windows-native-runtime.mjs';
 import { WindowsNativeHost } from '../src/computer-use/windows-native.mjs';
@@ -83,4 +83,67 @@ test('Windows native update restarts old transports even if another process alre
   assert.equal(replaced, 1); assert.equal(client.closed, true); assert.equal(host.connections.size, 0);
   await host.close(); await assert.rejects(host.connection('late'), /已关闭/);
   assert.equal(appDocumentation('darwin'), APP_DOCUMENTATION); assert.match(appDocumentation('win32'), /super\/meta\/win mean the Windows key/);
+});
+
+test('Windows native removal stops clients before deleting only its owned files and permits reinstall', async t => {
+  const f = await fixture(t); await f.install(); const original = f.runtime.binary();
+  f.state.build = 'b'.repeat(64); await f.install(); const current = f.runtime.binary();
+  const note = join(dirname(current), 'user-note.txt'); await writeFile(note, 'keep this file');
+  let stopped = 0;
+  const result = await f.runtime.uninstall({ beforeRemove: async () => { assert.equal(await readFile(current, 'utf8'), f.state.build); stopped++; } });
+  assert.equal(stopped, 1); assert.equal(result.removed, true); assert.equal(f.runtime.binary(), null);
+  await assert.rejects(readFile(current), { code: 'ENOENT' }); await assert.rejects(readFile(original), { code: 'ENOENT' });
+  assert.equal(await readFile(note, 'utf8'), 'keep this file'); assert.ok(result.retained.includes(dirname(current)));
+  assert.equal((await f.runtime.uninstall()).removed, true);
+  await f.install(); assert.equal((await f.runtime.installedInfo()).build, f.state.build);
+  assert.equal(await readFile(note, 'utf8'), 'keep this file');
+});
+
+test('Windows native removal leaves installation usable when input cleanup is unconfirmed', async t => {
+  const f = await fixture(t); await f.install(); const current = f.runtime.binary();
+  await assert.rejects(f.runtime.uninstall({ beforeRemove: async () => { throw new Error('cleanup is unconfirmed'); } }), /cleanup is unconfirmed/);
+  assert.equal(f.runtime.binary(), current); assert.equal((await f.runtime.installedInfo()).build, f.state.build);
+  await f.runtime.uninstall(); assert.equal(f.runtime.binary(), null);
+});
+
+test('Windows native host removal closes control and read-only transports before removing the executable', async t => {
+  const f = await fixture(t); await f.install(); const binary = f.runtime.binary();
+  const host = new WindowsNativeHost(f.root, { platform: 'win32', osRelease: '10.0.22631', runtime: f.runtime });
+  const ended = [], closed = [];
+  for (const id of ['controller', 'native-preview-video', 'ui-permissions']) {
+    const client = { closed: false, call: async name => { assert.equal(name, 'end_session'); assert.equal(await readFile(binary, 'utf8'), f.state.build); ended.push(id); return {}; }, close: async () => { client.closed = true; closed.push(id); } };
+    host.connections.set(id, Promise.resolve({ label: id, client, info: {} }));
+  }
+  let prepared = false;
+  await host.uninstall({ beforeRemove: async () => { prepared = true; assert.deepEqual(ended, []); } });
+  assert.equal(prepared, true); assert.equal(ended.length, 3); assert.equal(closed.length, 3);
+  assert.equal(host.connections.size, 0); assert.equal(host.available(), false);
+  await assert.rejects(host.connection('late'), /安装/);
+  await host.install(); assert.equal(host.available(), true); await host.close();
+});
+
+test('a compiler started before Windows removal cannot resurrect the runtime after removal', async t => {
+  const f = await fixture(t); await f.install(); f.state.build = 'b'.repeat(64);
+  const originalCompile = f.runtime.compile;
+  let proceed, entered;
+  const gate = new Promise(resolve => { proceed = resolve; }), started = new Promise(resolve => { entered = resolve; });
+  f.runtime.compile = async output => { entered(); await gate; await originalCompile(output); };
+  const updating = f.install(); const rejected = assert.rejects(updating, /构建期间移除/);
+  await started;
+  const other = new WindowsNativeRuntime(f.root, { ...f.runtime, compile: originalCompile });
+  await other.uninstall(); assert.equal(other.binary(), null);
+  proceed(); await rejected;
+  assert.equal(other.binary(), null);
+  assert.equal((await readdir(other.directory)).some(name => /^[a-f0-9]{64}-/.test(name)), false);
+  await other.install(); assert.equal((await other.installedInfo()).build, f.state.build);
+});
+
+test('Windows removal rebuilds a trusted helper for a damaged executable and preserves foreign generations', async t => {
+  const f = await fixture(t); await f.install(); const current = f.runtime.binary();
+  await writeFile(current, 'damaged');
+  const foreign = join(f.runtime.directory, 'f'.repeat(64) + '-00000000-0000-0000-0000-000000000000');
+  const outside = join(f.root, 'other-application'); await mkdir(outside); await writeFile(join(outside, 'data.txt'), 'not ours');
+  await symlink(outside, foreign, process.platform === 'win32' ? 'junction' : 'dir');
+  const result = await f.runtime.uninstall(); assert.equal(result.removed, true); assert.equal(f.runtime.binary(), null);
+  assert.equal(await readFile(join(outside, 'data.txt'), 'utf8'), 'not ours'); assert.equal((await lstat(foreign)).isSymbolicLink(), true);
 });

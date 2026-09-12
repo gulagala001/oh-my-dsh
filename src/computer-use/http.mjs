@@ -43,6 +43,7 @@ export function mountComputerUseHttp(ctx,hub){
         if(op==='setup'){
           const request=await body(req);
           if(request.action==='install-native')await manager.installNative();
+          else if(request.action==='remove-native')await manager.removeNative();
           else if(request.action==='install-extension')await manager.installExtension();
           else if(request.action==='remove-extension')await manager.removeExtension();
           else if(request.action==='permissions')await manager.native.showSetup();

@@ -41,6 +41,7 @@ export class WindowsNativeHost extends NativeHost {
   async install({ beforeReplace } = {}) {
     if (!this.supported()) throw new Error('Windows 桌面控制需要 Windows 10 2004 或更新版本');
     if (this.externalBinary) throw new Error('当前使用手动指定的运行时，请先更新该程序');
+    if (this.removing) throw new Error('Windows 桌面运行时正在移除，请等待完成');
     if (this.installing) return this.installing;
     let replaced = false;
     const replace = async () => {
@@ -59,6 +60,19 @@ export class WindowsNativeHost extends NativeHost {
       this.binary = this.runtime.binary() ?? '';
     })().finally(() => { this.replacing = false; this.installing = null; });
     return this.installing;
+  }
+  async uninstall({ beforeRemove } = {}) {
+    if (this.closed) throw new Error('Windows 桌面控制已关闭');
+    if (this.externalBinary) throw new Error('当前使用手动指定的运行时，请自行移除该程序');
+    if (this.installing) throw new Error('Windows 桌面运行时正在安装，请等待完成后再移除');
+    if (this.removing) return this.removing;
+    this.removing = this.runtime.uninstall({ beforeRemove: async () => {
+      if (this.closed) throw new Error('Windows 桌面控制已关闭');
+      this.replacing = true;
+      await beforeRemove?.();
+      await Promise.all([...this.connections.keys()].map(id => this.release(id)));
+    } }).finally(() => { this.binary = this.runtime.binary() ?? ''; this.replacing = false; this.removing = null; });
+    return this.removing;
   }
   async connection(sessionId) {
     if (this.closed) throw new Error('Windows 桌面控制已关闭');
@@ -119,7 +133,7 @@ export class WindowsNativeHost extends NativeHost {
     throw Object.assign(new Error('Windows 原生连接异常退出，未取得完整清理确认；请检查目标并重试停止。'), { code: 'NATIVE_CLEANUP_UNCONFIRMED', cause: original });
   }
   async close() {
-    this.closed = true; await this.installing?.catch(() => {});
+    this.closed = true; await this.installing?.catch(() => {}); await this.removing?.catch(() => {});
     await super.close();
   }
 }

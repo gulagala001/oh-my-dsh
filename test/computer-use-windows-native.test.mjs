@@ -169,5 +169,10 @@ test('Windows native installation, read-only observation and input operate on re
   const shared = await share.call('get_window_share', identity); assert.ok(shared.content.some(item => item.type === 'image'));
   await fixture.request('fixture', { action: 'close' });
   await assert.rejects(share.call('get_window_state', identity), error => ['STALE_WINDOW', 'APP_EXITED'].includes(error.code));
+  for (const client of clients) if (client !== fixture) await client.close();
+  const preserved = await fixture.request('fixture', { action: 'state' });
+  await native.uninstall(); assert.equal(native.available(), false); assert.equal(runtime.binary(), null);
+  assert.equal((await fixture.request('fixture', { action: 'state' })).second, preserved.second, 'runtime removal preserves the other user application window');
+  await native.install(); assert.equal(native.available(), true);
   await writeFile(join(artifact, 'report.json'), JSON.stringify({ status: 'passed', platform: process.platform, arch: process.arch, runtime: JSON.parse(await readFile(join(output, 'build.json'), 'utf8')), dpi: target.dpi, installationTested: ['publish', 'nativeLock', 'probe', 'reuse'], inputTested: ['setValue', 'selectText', 'pressKey', 'typeText', 'semanticClick', 'physicalPointer', 'leftRightMiddle', 'drag', 'cancelledDragRelease', 'release'], inputPending: ['clipboard', 'physicalUserIntervention'] }, null, 2));
 });
