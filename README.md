@@ -152,7 +152,7 @@ dsh web
 
 </details>
 
-[Computer Use 使用说明](docs/usage.md#computer-use预览版) · [已实现范围与验证记录](COMPUTER_USE_HANDOFF.md)
+[Computer Use 使用说明](docs/usage.md#computer-use预览版) · [平台与运行条件](docs/usage.md#平台与运行条件)
 
 <a id="support"></a>
 
@@ -168,7 +168,7 @@ dsh web
 | 原生桌面与窗口分享 | 当前仅实现 macOS 14+；开发版本机编译需要 Apple Command Line Tools。Windows／Linux 原生服务尚未实现。 |
 | 独立弹出预览 | 需要 Document Picture-in-Picture 支持；默认页内预览不依赖该 API。 |
 
-锁屏使用、全局窗口分享快捷键、复杂 CSS 命中、完整跨应用兼容和部分导出能力仍待完善。详细边界见 [Computer Use 基线](COMPUTER_USE_BASELINE.md)。
+锁屏使用、全局窗口分享快捷键、复杂 CSS 命中、完整跨应用兼容和部分导出能力仍待完善。详细边界见 [使用指南](docs/usage.md#computer-use预览版)。
 
 <details>
 <summary>近期更新 · 2026-09-12</summary>
@@ -183,9 +183,8 @@ dsh web
 ## 文档与参与
 
 - [使用与开发指南](docs/usage.md)：安装、日常操作、模型与频率配置、数据备份及测试。
-- [Computer Use 当前交接](COMPUTER_USE_HANDOFF.md)：实现进展、已知问题与实测边界。
-- [提示词变更记录](PROMPT_CHANGES.md)：主模型及后台任务提示词的调整依据。
-- [提交问题或建议](https://github.com/gulagala001/oh-my-dsh/issues)：请附上 DSH／Node.js 版本、复现步骤与脱敏错误；代码贡献前请阅读 [项目约定](AGENTS.md)。
+- [开发与验证](docs/usage.md#开发与验证)：源码入口、运行环境与自动化测试。
+- [提交问题或建议](https://github.com/gulagala001/oh-my-dsh/issues)：请附上 DSH／Node.js 版本、复现步骤与脱敏错误。
 
 ## 来源与许可
 

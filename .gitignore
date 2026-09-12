@@ -10,3 +10,11 @@ data/
 .credentials.yaml
 *.tgz
 /cu-artifacts/
+
+# Local collaboration notes and development records
+/AGENTS.md
+/COMPUTER_USE_HANDOFF.md
+/COMPUTER_USE_BASELINE.md
+/COMPUTER_USE_ASSESSMENT.md
+/PROMPT_CHANGES.md
+/WINDOWS_HANDOFF.md

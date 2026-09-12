@@ -65,12 +65,11 @@
     "presets",
     "cordis.patch.yml",
     "README.md",
-    "COMPUTER_USE_BASELINE.md",
-    "PROMPT_CHANGES.md",
     "scripts",
     "native",
     "browser-extension",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "docs"
   ],
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.2",

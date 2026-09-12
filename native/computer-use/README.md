@@ -1,6 +1,6 @@
 # Native Computer Use 开发运行时
 
-目前在 macOS 14.8.7 / Apple Silicon 上实测。完整能力与未完成项见根目录 `COMPUTER_USE_BASELINE.md`。
+目前在 macOS 14.8.7 / Apple Silicon 上实测。使用条件与当前限制见 [使用指南](../../docs/usage.md#平台与运行条件)。
 
 ```sh
 node scripts/build-computer-use-native.mjs

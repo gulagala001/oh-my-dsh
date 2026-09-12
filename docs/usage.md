@@ -238,9 +238,7 @@ node scripts/launch-macos.mjs
 
 </details>
 
-内置及扩展浏览器的操作、原生 AppKit 操作和真实 DSH 界面已有回归验证。外置扩展安装更新与高级接口、完整原生键盘／跨应用富文本兼容、介入检测、锁屏、发行安装更新和 Windows 原生控制仍在开发；完整范围与实测限制见 [Computer Use 基线](../COMPUTER_USE_BASELINE.md)。目前不能视为完整复刻 Codex。
-
-开发接手请先读 [当前交接说明](../COMPUTER_USE_HANDOFF.md)；其中保留已验证行为、已知问题和未完成项。
+内置及扩展浏览器的操作、原生 AppKit 操作和真实 DSH 界面已有回归验证。外置扩展安装更新与高级接口、完整原生键盘／跨应用富文本兼容、介入检测、锁屏、发行安装更新和 Windows 原生控制仍在开发；请按本页列出的平台与运行条件使用。目前不能视为完整复刻 Codex。
 
 ## 工作方式
 
@@ -306,5 +304,5 @@ DSH CLI 仅作为本地开发依赖；宿主 SDK 声明为由 DSH 提供的 peer
 | `src/client/` | 工作台、设置、对话工具栏、批注与实时预览 |
 | `scripts/` / `test/` | 构建、启动与测试 |
 
-提示词说明与变更理由见 [PROMPT_CHANGES.md](../PROMPT_CHANGES.md)，项目协作约定见 [AGENTS.md](../AGENTS.md)。报告问题时，请提供 Node.js/DSH 版本、复现步骤和脱敏后的错误信息。
+报告问题时，请提供 Node.js/DSH 版本、复现步骤和脱敏后的错误信息。
 
