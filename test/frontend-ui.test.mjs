@@ -89,6 +89,18 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await settings.getByRole('tab', { name: '高级', exact: true }).click();
   await screenshot('settings-advanced');
   await page.keyboard.press('Escape');
+  const release = f.holdNextReply();
+  try {
+    await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: f.sessionId, mode: 'queue', content: [{ type: 'text', text: '检查运行图标' }] });
+    await page.locator('html[data-omd-running]').waitFor();
+    const rotor = page.locator('.tx-brand-mark .omd-whale-rotor').first();
+    const transform = await rotor.evaluate(el => getComputedStyle(el).transform);
+    await until(async () => await rotor.evaluate(el => getComputedStyle(el).transform) !== transform);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await until(async () => await rotor.evaluate(el => getComputedStyle(el).animationName) === 'none');
+  } finally { release(); }
+  await until(async () => !(await page.locator('html').getAttribute('data-omd-running')) && !(await page.locator('html').evaluate(el => el.hasAttribute('data-omd-running'))));
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   if (process.env.TRISOUL_UI_ARTIFACTS) await writeFile(join(root, 'visible-elements.json'), JSON.stringify(await page.locator('[data-chat-flow-key]').evaluateAll(els => els.map(el => ({ attrs: [...el.attributes].map(a => [a.name, a.value]), html: el.innerHTML.slice(-14000) }))), null, 2));
   assert.deepEqual(errors, []);
 });

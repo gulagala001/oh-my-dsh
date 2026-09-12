@@ -31,7 +31,7 @@
 .trisoul-shell .pXSMma_previewBadge { font-size: 10px; line-height: 16px; font-weight: 400; color: var(--tx-shell-muted); background: var(--tx-shell-hover); border: 0; }
 .trisoul-shell .pXSMma_workspace { color: var(--tx-shell-muted); font-size: 12px; }
 .trisoul-shell .pXSMma_folder { color: var(--tx-shell-muted); }
-.trisoul-shell [data-slot='conversation.hero.brand.mark'] .tx-brand-mark { width: 38px !important; height: 38px !important; border-radius: 11px; }
+.trisoul-shell [data-slot='conversation.hero.brand.mark'] .tx-brand-mark { width: 64px; height: 64px; }
 
 /* Project navigation: compact rows, a quiet create action and a clear selection. */
 .trisoul-shell .hHd-Xa_root { border-right: 1px solid var(--tx-shell-line); }

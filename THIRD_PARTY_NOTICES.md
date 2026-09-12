@@ -4,6 +4,8 @@ The Agent preset was originally adapted from DeepSeek Harness 0.1.5-alpha.1, com
 
 The shared `todos` projection in `src/tasks.mjs` follows the state version and reducer behavior of `@deepseek-ai/dsh-tool-todo` 0.1.5-rc.1.
 
+The whale contours in `src/client/brand.mjs` are adapted from the animated whale in DSH 0.1.5-rc.1 (`ui-conversation/HeroShell`). Generated copies appear in the web favicon, Chrome popup and README logo. The lighting and orbit effects are modifications for Oh My DSH.
+
 Source: https://github.com/deepseek-ai/deepseek-harness
 
 MIT License
