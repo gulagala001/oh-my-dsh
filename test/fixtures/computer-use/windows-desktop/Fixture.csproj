@@ -9,4 +9,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AssemblyName>OhMyDsh.DesktopFixture</AssemblyName>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../../native/computer-use/windows/desktop/ClipboardSnapshot.cs" Link="ClipboardSnapshot.cs" />
+  </ItemGroup>
 </Project>

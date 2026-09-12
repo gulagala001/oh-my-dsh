@@ -12,8 +12,9 @@ using System.Windows.Threading;
 internal static class FixtureProgram
 {
     [STAThread]
-    public static void Main()
+    public static void Main(string[] launchArgs)
     {
+        if (ClipboardFixture.RunProbe(launchArgs) is int code) { Environment.ExitCode = code; return; }
         SetProcessDpiAwarenessContext(new IntPtr(-4));
         bool standalone = Path.GetFileNameWithoutExtension(Environment.ProcessPath!).EndsWith(".Standalone", StringComparison.Ordinal);
         if (!standalone)
@@ -88,6 +89,7 @@ internal static class FixtureProgram
                         {
                             if (action == "clipboard-seed") { clipboard.Mode = args.GetProperty("mode").GetString()!; clipboard.Seed(args.GetProperty("text").GetString()!); return clipboard.State(); }
                             if (action == "clipboard-state") return clipboard.State();
+                            if (action == "clipboard-atomic") return clipboard.AtomicProbe();
                             if (action == "clipboard-restore") { clipboard.Restore(); return new { restored = true }; }
                             if (action == "text") editor.Text = args.GetProperty("text").GetString() ?? "";
                             if (action == "focus") { first.Activate(); editor.Focus(); Keyboard.Focus(editor); }

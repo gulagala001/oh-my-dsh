@@ -1,7 +1,5 @@
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 internal sealed class WindowsClipboard : IDisposable
@@ -10,8 +8,9 @@ internal sealed class WindowsClipboard : IDisposable
     private readonly string identity = Guid.NewGuid().ToString("N");
     private readonly Thread thread;
     private readonly Dispatcher dispatcher;
-    private DataObject? saved;
-    private uint ownership;
+    private ClipboardSnapshot? saved;
+    private IntPtr owner;
+    private bool restoring;
     private bool published;
     private long lastRead;
     private long targetReads, lastTargetRead;
@@ -28,26 +27,10 @@ internal sealed class WindowsClipboard : IDisposable
     {
         token.ThrowIfCancellationRequested();
         uint before = GetClipboardSequenceNumber();
-        var original = Clipboard.GetDataObject(); saved = new DataObject();
-        if (original is not null) foreach (string format in original.GetFormats(false))
-        {
-            token.ThrowIfCancellationRequested();
-            object? value = original.GetData(format, false);
-            // Materialize the original representations before changing their
-            // owner. Unsupported opaque data is an error, never silently lost.
-            object copy = value switch
-            {
-                string item => item,
-                byte[] bytes => bytes.ToArray(),
-                string[] names => names.ToArray(),
-                MemoryStream memory => new MemoryStream(memory.ToArray()),
-                BitmapSource bitmap => CopyBitmap(bitmap),
-                _ => throw new NativeFailure("CLIPBOARD_UNAVAILABLE", "The current clipboard contains a format that cannot be preserved; paste was not started")
-            };
-            saved.SetData(format, copy, false);
-        }
+        var formats = Clipboard.GetDataObject()?.GetFormats(false) ?? [];
+        saved = ClipboardSnapshot.Read(formats, before, token);
         token.ThrowIfCancellationRequested();
-        if (GetClipboardSequenceNumber() != before) throw new NativeFailure("CLIPBOARD_CHANGED", "The clipboard changed while preparing paste; the newer value was kept");
+        if (GetClipboardSequenceNumber() != saved.Sequence) throw new NativeFailure("CLIPBOARD_CHANGED", "The clipboard changed while preparing paste; the newer value was kept");
         var data = new DataObject(); data.SetData(DataFormats.UnicodeText, text); if (html is not null) data.SetData(DataFormats.Html, ClipboardHtml.Encode(html)); data.SetData(Marker, identity, false);
         var tracked = new TrackingData(data, format =>
         {
@@ -57,26 +40,32 @@ internal sealed class WindowsClipboard : IDisposable
             if (reader != IntPtr.Zero && GetWindowThreadProcessId(reader, out uint pid) != 0 && pid == targetPid)
             { Interlocked.Increment(ref targetReads); Interlocked.Exchange(ref lastTargetRead, Environment.TickCount64); }
         });
-        Clipboard.SetDataObject(tracked, false); published = true; ownership = GetClipboardSequenceNumber();
+        Clipboard.SetDataObject(tracked, false); published = true; owner = GetClipboardOwner();
+        if (owner == IntPtr.Zero || GetWindowThreadProcessId(owner, out uint publisher) == 0 || publisher != Environment.ProcessId) throw new NativeFailure("CLIPBOARD_CHANGED", "The clipboard owner changed during publication");
         if (!Owns()) throw new NativeFailure("CLIPBOARD_CHANGED", "The clipboard changed while publishing paste data");
     }).Task;
-    private static BitmapSource CopyBitmap(BitmapSource bitmap) { var copy = bitmap.Clone(); copy.Freeze(); return copy; }
-    private bool Owns() => published && GetClipboardSequenceNumber() == ownership && Clipboard.GetData(Marker) is string value && value == identity && GetClipboardSequenceNumber() == ownership;
+    private bool Owns() => published && owner != IntPtr.Zero && GetClipboardOwner() == owner && (restoring || Clipboard.GetData(Marker) is string value && value == identity) && GetClipboardOwner() == owner;
     internal Task<bool> IsOwner() => dispatcher.InvokeAsync(Owns).Task;
     internal Task<bool> Restore() => dispatcher.InvokeAsync(() =>
     {
         if (!published) return true;
-        if (!Owns()) { published = false; return false; }
-        try { if (saved!.GetFormats(false).Length == 0) Clipboard.Clear(); else Clipboard.SetDataObject(saved, true); }
+        bool restored;
+        try
+        {
+            if (!Owns()) { published = false; return false; }
+            restored = saved!.Restore(owner, () => restoring = true);
+        }
         catch (Exception error) { throw new NativeFailure("CLIPBOARD_RESTORE_PENDING", "The prior clipboard has not been restored; retry Stop. " + error.Message); }
-        published = false; return true;
+        published = false; return restored;
     }).Task;
     public void Dispose()
     {
         if (published) throw new NativeFailure("CLIPBOARD_RESTORE_PENDING", "Restore the clipboard before closing its provider");
+        saved?.Dispose(); saved = null;
         dispatcher.InvokeShutdown(); if (!thread.Join(2000)) throw new NativeFailure("CLIPBOARD_RESTORE_PENDING", "Clipboard provider shutdown has not finished");
     }
     [DllImport("user32.dll")] private static extern uint GetClipboardSequenceNumber();
+    [DllImport("user32.dll")] private static extern IntPtr GetClipboardOwner();
     [DllImport("user32.dll")] private static extern IntPtr GetOpenClipboardWindow();
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
     private sealed class TrackingData(DataObject data, Action<string> read) : IDataObject

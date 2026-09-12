@@ -77,11 +77,21 @@ test('Windows paste delivers real clipboard formats and preserves newer copies',
       else assert.equal(resultError, undefined, JSON.stringify(resultError));
       assert.equal(clipboard.text, sample.newer ?? baseline.text, 'restore must preserve a newer copy or recover the prior text');
       assert.equal(clipboard.bytes, baseline.bytes, 'restore retains the original custom binary representation');
+      assert.equal(clipboard.pixels, baseline.pixels, 'restore retains the original bitmap pixels');
+      assert.deepEqual(clipboard.files, baseline.files, 'restore retains the original Unicode file-drop paths');
       assert.equal(clipboard.pastes, baseline.pastes + 1, 'the actual WPF paste handler must receive the operation');
       if (sample.expected) assert.equal(state.text, sample.expected);
       else assert.equal(state.text, '原编辑内容');
       if (sample.format === 'html') { assert.match(clipboard.observedHtml, /StartHTML:\d+/); assert.match(clipboard.observedHtml, /<b>富文本中文🙂<\/b>/); }
     } finally { await native.release(sample.name); }
+  });
+  await t.test('atomic restoration, partial-write retry and a newer external copy', async () => {
+    const result = await command('clipboard-atomic');
+    await writeFile(join(artifact, 'atomic-restore.json'), JSON.stringify(result, null, 2));
+    assert.equal(result.locked, true, 'another process cannot open the clipboard during restoration');
+    assert.equal(result.partial, true, 'the interrupted attempt must really transfer a format first');
+    assert.equal(result.restored, true, 'an interrupted restore retains a complete retryable backup');
+    assert.equal(result.newer, true, 'an external copy before locking must survive restoration');
   });
   t.diagnostic('Windows clipboard evidence: ' + artifact);
 });
