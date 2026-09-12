@@ -9,7 +9,7 @@ export function PageAnnotation({ sessionId, frame, target, inputActions, convers
   const [hovered,setHovered]=useState(null),[busyAction,setBusyAction]=useState('');
   const [styleDraft,setStyleDraft]=useState({}),[stylePreview,setStylePreview]=useState(null);const controlEpoch=useRef(0);
   const dialog=useRef(null),image=useRef(null),drag=useRef(null),opener=useRef(null),epoch=useRef(0),request=useRef(null),activeSession=useRef(sessionId);activeSession.current=sessionId;
-  useEffect(()=>{setSnapshot(null);setBusy(false);setLoading(false);setError('');setRegion(null);drag.current=null;return()=>{epoch.current++;request.current?.abort();};},[sessionId]);
+  useEffect(()=>{setSnapshot(null);setBusy(false);setBusyAction('');setLoading(false);setError('');setRegion(null);drag.current=null;return()=>{epoch.current++;request.current?.abort();};},[sessionId]);
   useEffect(()=>{if(snapshot)dialog.current?.showModal();else dialog.current?.close();},[snapshot]);
   const close=()=>{epoch.current++;request.current?.abort();dialog.current?.close();setSnapshot(null);setBusy(false);setBusyAction('');setLoading(false);setHovered(null);drag.current=null;opener.current?.focus({preventScroll:true});};
   const open=async()=>{

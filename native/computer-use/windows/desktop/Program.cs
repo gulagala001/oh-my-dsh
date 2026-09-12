@@ -127,7 +127,11 @@ internal sealed class DesktopObservation : IDisposable
     private WindowCapture Capture(WindowTarget target)
     {
         string key = target.process_identity + ":" + target.window_id;
-        if (!captures.TryGetValue(key, out var capture)) { capture = new WindowCapture(target); captures.Add(key, capture); }
+        if (captures.TryGetValue(key, out var capture) && capture.DisplayChanged)
+        {
+            capture.Dispose(); captures.Remove(key); capture = null;
+        }
+        if (capture is null) { capture = new WindowCapture(WindowCatalog.Read(target.pid, target.window_id, target.process_identity)); captures.Add(key, capture); }
         return capture;
     }
     internal async Task Cleanup()

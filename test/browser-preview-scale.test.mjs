@@ -29,7 +29,14 @@ test('device preview fit, percentage geometry, overflow and input coordinates ar
   await page.waitForFunction(before=>document.querySelector('.tx-cu-live-surface').clientWidth<before,beforePaneResize);
   const fit=async()=>surface.evaluate(el=>{const r=el.getBoundingClientRect(),s=el.closest('.tx-cu-preview-stage');return {width:r.width,height:r.height,stageWidth:s.clientWidth,stageHeight:s.clientHeight,overflowX:s.scrollWidth>s.clientWidth,overflowY:s.scrollHeight>s.clientHeight};});
   let fitted=await fit();assert.ok(fitted.width<=fitted.stageWidth&&fitted.height<=fitted.stageHeight+1);assert.equal(fitted.overflowX,false);assert.equal(fitted.overflowY,false);
-  const beforeHeader=fitted.width;await page.locator('header').evaluate(el=>el.style.height='100px');await page.waitForFunction(before=>document.querySelector('.tx-cu-live-surface').clientWidth<before,beforeHeader);
+  const beforeHeader=fitted.width;await page.locator('header').evaluate(el=>el.style.height='100px');
+  // ResizeObserver and flex layout may settle in separate rendering passes.
+  // Require the final fit computed from the actual available space.
+  await page.waitForFunction(before=>{
+    const image=document.querySelector('.tx-cu-live-surface'),stage=image.closest('.tx-cu-preview-stage'),box=image.getBoundingClientRect();
+    const expected=Math.min(800,stage.clientWidth-40,(stage.clientHeight-20)*800/600);
+    return box.width<before&&Math.abs(box.width-expected)<1&&box.height<=stage.clientHeight;
+  },beforeHeader);
   fitted=await fit();assert.ok(fitted.height<=fitted.stageHeight+1,'fit reacts to toolbar height, not just window resize');
   assert.deepEqual(await page.evaluate(()=>window.calls),[]);assert.equal(await page.evaluate(()=>window.streams),1,'zoom never reconnects the observed page');
   await setScale('1.5');

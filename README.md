@@ -16,11 +16,12 @@
 <p align="center">
   <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.0.0"><img src="https://img.shields.io/badge/version-1.0.0-3478F6?style=flat-square" alt="Version 1.0.0" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.5--rc.1-475569?style=flat-square" alt="DSH 0.1.5-rc.1" /></a>
-  <a href="#support"><img src="https://img.shields.io/badge/status-preview-64748B?style=flat-square" alt="Preview" /></a>
+  <a href="#support"><img src="https://img.shields.io/badge/status-early_access-64748B?style=flat-square" alt="Early access" /></a>
 </p>
 
 <p align="center">
-  <a href="#quickstart"><strong>快速开始</strong></a> ·
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.0.0"><strong>下载 1.0 正式先行版</strong></a> ·
+  <a href="#quickstart">快速开始</a> ·
   <a href="#features">功能亮点</a> ·
   <a href="#computer-use">Computer Use</a> ·
   <a href="docs/usage.md">使用指南</a> ·
@@ -38,6 +39,8 @@ Oh My DSH 把任务、记忆、电脑和监控放进同一个工作台。助手�
 <a id="quickstart"></a>
 
 ## 快速开始
+
+**1.0 正式先行版**：[下载完整源码包](https://github.com/gulagala001/oh-my-dsh/releases/download/v1.0.0/oh-my-dsh-v1.0.0.zip) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.0.0)。源码包包含已构建的界面，首次使用需安装依赖；Windows 用户可直接查看 [安装说明](docs/windows.md#安装与试用)。
 
 已有 **DSH 0.1.5-rc.1 Web**？停止服务后安装插件：
 
@@ -83,7 +86,7 @@ dsh web
     </td>
     <td width="50%" valign="top">
       <h3>操作网页与应用</h3>
-      <p>控制内置浏览器、已连接的 Chrome 标签与 Mac 应用。读取控件、截图、点击和输入，在实时预览中查看进展。</p>
+      <p>控制内置浏览器、已连接的 Chrome 标签与 Windows／Mac 应用。读取控件、截图、点击和输入，在实时预览中查看进展。</p>
     </td>
   </tr>
   <tr>
@@ -100,7 +103,9 @@ dsh web
 
 ### 一个工作台，四个入口
 
-**任务 · 记忆 · 电脑 · 监控** 复用同一个右侧标签，切换时保留未保存的编辑。界面采用 DSH 与 Codex 的融合风格，统一浅色／深色主题与窄窗布局；连续电脑操作默认折叠，截图按需展开。
+**任务 · 记忆 · 电脑 · 监控** 复用同一个右侧标签，切换时保留未保存的编辑。界面采用 DSH 与 Codex 的融合风格，统一浅色／深色主题与窄窗布局。
+
+操作记录按 **总摘要 → 操作列表 → 单项结果／缩略图 → 大图** 逐层展开。思考、上下文注入和压缩记录统一收纳，收起再打开时保留各项展开选择；对话正文与交付结果始终是阅读重点。
 
 输入区保留记忆范围和 **BT（Better Todo）**：待办完成提醒默认开启，验证完成提醒默认关闭，两个开关按会话独立保存。
 
@@ -137,7 +142,9 @@ dsh web
 ![对话页内的双窗口堆叠预览与右侧实时画面](docs/images/native-preview-stack.png)
 
 - **实时观察**：画面与助手光标同步显示；停止后仍可看图，也可选择独立弹出预览。
-- **浏览器协作**：地址栏、标签页、画面内接管、上传下载和页面截图；已有 Chrome 通过扩展连接。
+- **浏览器协作**：紧凑地址栏与标签页、页面查找、历史记录、下载面板和外部浏览器打开；内置页面随侧栏实际重新排版。
+- **设备预览**：设置页面尺寸、旋转、调整预览比例或自动适应；拖动边框调整尺寸，支持方向键微调与 Esc 取消。
+- **查看与接管**：查看其他标签时保留助手当前目标；需要手动输入时停止并接管，完成后恢复助手控制。
 - **文件交付**：导出当前页 MHTML 快照，保存已加载的图片、字体、样式与视频资源，结果成为持久会话附件。
 - **页面工具**：兼容的 Chromium 153+ 可发现并调用网页公开的 WebMCP 工具。
 
@@ -145,7 +152,7 @@ dsh web
 
 ### 圈出问题，再给出修改方向
 
-用 **分享窗口** 把 Mac 窗口截图与文字加入草稿；用 **批注页面** 圈选区域或点选元素，附上修改说明。元素批注支持跨源嵌套框架。
+用 **分享窗口** 把 Windows／Mac 窗口截图与文字加入草稿；用 **批注页面** 圈选区域或点选元素，附上修改说明。元素批注支持跨源嵌套框架。
 
 选择元素后，可预览宽高、字号、颜色与间距。插件在真实网页临时应用样式，采集图片后恢复；把预览交给助手后，再继续修改项目源码。
 
@@ -164,28 +171,31 @@ dsh web
 
 <a id="support"></a>
 
-## 当前支持范围
+## 平台与运行环境
 
-当前为 **1.0.0 正式先行版**，依赖固定到 **DSH 0.1.5-rc.1**；升级宿主前需重新验证兼容性。
+当前版本为 **1.0.0 正式先行版**，适配 **DSH 0.1.5-rc.1**。
 
 | 功能 | 当前支持 |
 | --- | --- |
 | 任务、记忆、上下文与监控 | Windows、macOS、Linux 共用插件入口，独立于桌面控制。 |
 | 内置浏览器 | 使用独立配置控制 Chrome／Chromium，提供实时预览、网页操作和文件交付；内置无头浏览器隐藏滚动条以保持截图布局稳定。 |
 | 已有 Chrome 扩展 | 提供 Windows、macOS、Linux 的本机连接与注册，连接已有标签页，见 [Windows 使用说明](docs/windows.md)。 |
-| 原生桌面与窗口分享 | 支持 macOS 14+，并提供 Windows 10 2004+ 开发适配。首次本机编译分别需要 Apple Command Line Tools 或 .NET 10 SDK；Linux 原生桌面尚未实现。 |
+| 原生桌面与窗口分享 | macOS 14+、Windows 10 2004+。首次安装分别需要 Apple Command Line Tools 或 .NET 10 SDK；在电脑面板中完成安装、更新与连接管理。 |
 | 独立弹出预览 | 需要 Document Picture-in-Picture 支持；默认页内预览不依赖该 API。 |
 
-锁屏使用、全局窗口分享快捷键、复杂 CSS 命中、完整跨应用兼容和部分导出能力仍待完善。详细边界见 [使用指南](docs/usage.md#computer-use预览版)。
+[Windows 安装与使用](docs/windows.md) · [完整使用指南](docs/usage.md) · [版本说明](https://github.com/gulagala001/oh-my-dsh/releases)
 
 <details>
-<summary>近期更新 · 2026-09-12</summary>
+<summary>1.0 正式先行版 · 2026-09-13</summary>
 
+- Windows 原生桌面、已有 Chrome 连接、应用发现与启动、中文输入、剪贴板和常用显示缩放。
+- 操作记录分层展开、思考与上下文收纳，大图查看、页面批注、窗口分享与可拖动悬浮预览。
+- 浏览器自适应排版、设备边框拖动、页面查找、历史记录与下载面板。
 - 新增深海极光鲸鱼图标：悬停摆尾、会话运行光轨，统一侧栏、欢迎页与网页图标。
 - 统一工作台和对话工具栏，完善浅色／深色主题与窄窗布局。
-- 新增网页与 Mac 应用操控、多目标堆叠预览、窗口分享、批注和样式预览。
+- 网页与 Windows／Mac 应用操控、多目标堆叠预览、窗口分享、批注和样式预览。
 - 接入页面／素材导出与 WebMCP。
-- 0.1.1 同时修复原版模式与 Oh My DSH 共存时的任务投影冲突，以及切换模式后后台功能的判断问题；保留任务摘录、锚点和验证记录。
+- 保留任务摘录、锚点和验证记录，支持原版 Agent 与 Oh My DSH 在同一宿主中切换。
 
 </details>
 

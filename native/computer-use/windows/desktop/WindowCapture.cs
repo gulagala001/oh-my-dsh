@@ -12,6 +12,7 @@ internal sealed record WindowFrame(string Data, int Width, int Height, WindowBou
 internal sealed class WindowCapture : IDisposable
 {
     private readonly WindowTarget target;
+    private readonly WindowBounds desktopBounds = ReadDesktopBounds();
     private readonly IDirect3DDevice device;
     private readonly GraphicsCaptureItem item;
     private readonly Direct3D11CaptureFramePool pool;
@@ -22,6 +23,10 @@ internal sealed class WindowCapture : IDisposable
     private readonly object gate = new();
 
     internal static bool Supported => GraphicsCaptureSession.IsSupported();
+    // A display mode change can leave a WGC session alive but no longer
+    // producing frames. Its D3D resources must be recreated for that desktop.
+    internal bool DisplayChanged => desktopBounds != ReadDesktopBounds();
+    private static WindowBounds ReadDesktopBounds() => new(GetSystemMetrics(76), GetSystemMetrics(77), GetSystemMetrics(78), GetSystemMetrics(79));
     internal WindowCapture(WindowTarget target)
     {
         WindowCatalog.RequireInteractive();
@@ -164,5 +169,6 @@ internal sealed class WindowCapture : IDisposable
         IntPtr CreateForMonitor(IntPtr monitor, in Guid iid);
     }
     [DllImport("d3d11.dll")] private static extern int D3D11CreateDevice(IntPtr adapter, int driver, IntPtr software, uint flags, IntPtr levels, uint levelCount, uint sdk, out IntPtr device, out uint feature, out IntPtr context);
+    [DllImport("user32.dll")] private static extern int GetSystemMetrics(int index);
     [DllImport("d3d11.dll")] private static extern int CreateDirect3D11DeviceFromDXGIDevice(IntPtr dxgi, out IntPtr device);
 }
