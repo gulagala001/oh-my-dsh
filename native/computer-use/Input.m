@@ -256,7 +256,7 @@ static void CUWithKeyboardFocus(CUSession *session,CUWindow *target,void (^deliv
   }@finally{CUFinishKeyboardFocus(target,synthetic);}
 }
 NSDictionary *CUInput(CUSession *session,NSString *name,NSDictionary *args) {
-  if(!AXIsProcessTrusted())CUFail(@"ACCESSIBILITY_PERMISSION",@"Enable Accessibility for Trisoul Computer Use.");
+  if(!AXIsProcessTrusted())CUFail(@"ACCESSIBILITY_PERMISSION",@"Enable Accessibility for Oh My DSH Computer Use.");
   CUWindow *target=CUResolveWindow(session,args);[session check];
   BOOL indexed=args[@"element_index"]||args[@"element_token"];AXUIElementRef element=indexed?CUElementFor(session,target,args):NULL;
   if([name isEqual:@"paste"]){

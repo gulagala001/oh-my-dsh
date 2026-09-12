@@ -107,7 +107,7 @@ try{
     await page.evaluate(()=>localStorage.setItem('cu-external-session','preserve'));
     const inventory=await(await fetch(origin+'/trisoul-x/computer-use/inventory?session='+sessionId,{method:'POST',headers:{cookie}})).json();
     const browser=inventory.browsers?.find(browser=>browser.id===external.browser.id),tab=browser?.tabs.find(tab=>tab.url===fixtureUrl);
-    if(!tab)throw new Error('Existing Chrome fixture did not appear in the actual TrisoulX inventory');
+    if(!tab)throw new Error('Existing Chrome fixture did not appear in the actual Oh My DSH inventory');
     externalReference={kind:'tab',id:tab.id,browser:browser.id,url:tab.url,title:tab.title};
     report.browserId=browser.id;
   }
@@ -129,7 +129,7 @@ try{
   if(nativeScrollTest)task='请使用 computer_use 操作原生测试应用 '+nativeTarget+'。先把「Inner viewport」内部滚动区向下滚动一页，截图确认。然后把「Outer viewport」外部滚动区向右滚动一页，再截图确认。按这个顺序完成，不要让另一个滚动区跟着误滚，也不要移动系统鼠标或激活目标应用。最后简短描述实际结果。';
   if(nativeKeyboardTest)task='请使用 computer_use 操作原生测试应用 '+nativeTarget+'。点击「编辑区」，用键盘全选并键入两行文字：第一行「中文🌿」，第二行「second」。再用键盘把第二行的首字母改为大写，成为「Second」，保持第一行和换行不变。最后按 Command+S 触发测试应用的保存菜单，截图确认并简短描述实际结果。这次专门测试按键与键入，不能用 setValue 或 paste 代替键盘输入；保持用户当前前台应用不变。';
   if(contentTest)task='请使用 computer_use 打开 '+fixture.url+'，点击「加载素材」与「更新页面」，观察更新后的内容。把当前页面导出为可保存的页面文件，并保存这个页面已加载的图片和样式素材；如果有坏图或获取失败，准确报告，不能说全部成功。最后截图确认，保留标签页，并给出导出文件、素材目录和清单的绝对路径。使用 Computer Use 提供的页面导出和素材接口，不用脚本自行下载或重建文件。';
-  if(webmcpTest)task='请使用 computer_use 打开 '+fixture.url+'，发现页面公开的 WebMCP 工具，用对应工具把备注设成「TrisoulX WebMCP」。然后点击页面上的「替换工具」，重新发现当前工具，再通过 WebMCP 把备注设成「新工具已生效」。两次都要核对页面实际显示，最后截图并保留标签页，简短报告。备注必须由 WebMCP 工具修改，不用 DOM 脚本直接改值。';
+  if(webmcpTest)task='请使用 computer_use 打开 '+fixture.url+'，发现页面公开的 WebMCP 工具，用对应工具把备注设成「Oh My DSH WebMCP」。然后点击页面上的「替换工具」，重新发现当前工具，再通过 WebMCP 把备注设成「新工具已生效」。两次都要核对页面实际显示，最后截图并保留标签页，简短报告。备注必须由 WebMCP 工具修改，不用 DOM 脚本直接改值。';
   if(frameTest)task='请用 computer_use 打开 '+fixture.url+'，根据用户批注的文字信息定位内层输入框，先观察当前页面，再将它填为「框架批注验收」，点击同框架的「框架按钮」。外层输入框保留空白。截图并保留标签供我查看。批注只提供旧快照的位置和身份信息，操作前重新观察，不把快照坐标直接用于当前页面。用户批注：'+JSON.stringify(report.annotation);
   if(visualTest&&!externalReference)task=task.replace('打开 '+fixture.url,'打开 '+fixtureUrl);
   if(externalReference)task=task.replace('打开 '+fixture.url, '操作这个已有 Chrome 标签页：<computer-use-target>'+JSON.stringify(externalReference)+'</computer-use-target>')+' 请使用所引用的 Chrome 扩展连接。';

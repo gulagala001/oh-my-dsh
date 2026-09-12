@@ -19,7 +19,7 @@ static SCStreamConfiguration *CUPreviewConfiguration(CGRect bounds){
   double scale=MIN(1.,1600./MAX(bounds.size.width,bounds.size.height));
   SCStreamConfiguration *config=[SCStreamConfiguration new];config.width=MAX(1,llround(bounds.size.width*scale));config.height=MAX(1,llround(bounds.size.height*scale));
   config.minimumFrameInterval=CMTimeMake(1,15);config.queueDepth=3;config.pixelFormat=kCVPixelFormatType_32BGRA;config.showsCursor=NO;config.capturesAudio=NO;
-  config.ignoreShadowsSingleWindow=YES;config.captureResolution=SCCaptureResolutionNominal;config.colorSpaceName=kCGColorSpaceSRGB;config.streamName=@"TrisoulX · 实时画面";
+  config.ignoreShadowsSingleWindow=YES;config.captureResolution=SCCaptureResolutionNominal;config.colorSpaceName=kCGColorSpaceSRGB;config.streamName=@"Oh My DSH · 实时画面";
   return config;
 }
 static NSData *CUPreviewJPEG(CVPixelBufferRef buffer){
@@ -151,7 +151,7 @@ static NSData *CUPreviewJPEG(CVPixelBufferRef buffer){
 
 NSDictionary *CUStartPreview(CUSession *session,NSDictionary *args){
   if(session.preview)CUFail(@"PREVIEW_ACTIVE",@"This connection already has a window preview.");
-  if(!CGPreflightScreenCaptureAccess())CUFail(@"SCREEN_RECORDING_PERMISSION",@"Enable Screen Recording for Trisoul Computer Use.");
+  if(!CGPreflightScreenCaptureAccess())CUFail(@"SCREEN_RECORDING_PERMISSION",@"Enable Screen Recording for Oh My DSH Computer Use.");
   CUWindow *target=CUResolveWindow(session,args);
   if(![args[@"process_identity"]isEqual:target.processIdentity])CUFail(@"STALE_PROCESS",@"Re-select the application before opening its live view.");
   // macOS 14's ReplayKit connection can stop responding after helper restarts.

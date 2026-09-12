@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, rm, writeFile, rename, cp } from 'node:fs/promises';
-import { tmpdir, homedir } from 'node:os';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -18,7 +18,7 @@ test('native surface: real cursor ordering, clean images and nested scrolling', 
   const bundle = 'ai.trisoul.surface.test.' + process.pid;
   const app = join(directory, 'Fixture.app'), executable = join(app, 'Contents/MacOS/Fixture');
   const manager = new ComputerUseManager(join(directory, 'host'), {
-    native: { socket, binary: process.env.TRISOUL_CU_NATIVE_BINARY ?? join(homedir(), 'Applications/Trisoul Computer Use.app/Contents/MacOS/trisoul-computer-use') },
+    native: { socket, binary: process.env.TRISOUL_CU_NATIVE_BINARY },
   });
   const fixtures = [];
   t.after(async () => {

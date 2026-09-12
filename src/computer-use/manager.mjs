@@ -131,7 +131,7 @@ export class ComputerUseManager {
     return this.extensionViews.get(browser);
   }
   browserInfo(browser) {
-    return browser === this.browser ? { id: 'browser', name: 'trisoulx Browser', type: 'managed', profile: 'Computer Use' } : { ...browser.info };
+    return browser === this.browser ? { id: 'browser', name: 'Oh My DSH Browser', type: 'managed', profile: 'Computer Use' } : { ...browser.info };
   }
   setTarget(state, target) {
     const previous = state.target; state.target = target;

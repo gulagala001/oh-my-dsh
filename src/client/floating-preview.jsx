@@ -28,12 +28,12 @@ export function FloatingPreview({sessionId,state,url,api,onState,onError,onRevea
   },[popup]);
   const open=async()=>{
     if(owned.current&&!owned.current.closed){owned.current.close();return;}
-    if(!window.documentPictureInPicture){onError('当前浏览器不支持置顶悬浮预览，请用新版 Chrome 打开 TrisoulX。');return;}
+    if(!window.documentPictureInPicture){onError('当前浏览器不支持置顶悬浮预览，请用新版 Chrome 打开 Oh My DSH。');return;}
     const revision=generation.current;setOpening(true);
     try{
       const next=await window.documentPictureInPicture.requestWindow({width:400,height:320});
       if(revision!==generation.current){next.close();return;}
-      next.document.title='TrisoulX · 操控预览';
+      next.document.title='Oh My DSH · 操控预览';
       const style=next.document.createElement('style');style.textContent=css;next.document.head.append(style);
       owned.current=next;
       next.addEventListener('pagehide',()=>{if(owned.current===next){owned.current=null;setPopup(null);}},{once:true});

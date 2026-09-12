@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { cp, mkdtemp, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
-import { tmpdir, homedir } from 'node:os';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -22,7 +22,7 @@ const socket=process.env.TRISOUL_CU_NATIVE_SOCKET;
 test('native paste: rich formats and clipboard lifecycle in an actual editor', {skip:process.platform!=='darwin'||!socket,timeout:45000},async t=>{
   const directory=await mkdtemp(join(tmpdir(),'trisoul-cu-paste-'));
   const bundle='ai.trisoul.paste.test.'+process.pid,app=join(directory,'Paste.app'),report=join(directory,'truth.json'),command=join(directory,'command.json');
-  const manager=new ComputerUseManager(join(directory,'host'),{native:{socket,binary:process.env.TRISOUL_CU_NATIVE_BINARY??join(homedir(),'Applications/Trisoul Computer Use.app/Contents/MacOS/trisoul-computer-use')}});
+  const manager=new ComputerUseManager(join(directory,'host'),{native:{socket,binary:process.env.TRISOUL_CU_NATIVE_BINARY}});
   const read=async()=>{try{return JSON.parse(await readFile(report,'utf8'));}catch{return null;}};
   const wait=async predicate=>{for(let i=0;i<300;i++){const value=await read();if(value&&predicate(value))return value;await delay(10);}assert.fail('Fixture did not reach the expected state');};
   const cmd=async(action,args={})=>{const id=randomUUID();await writeFile(command+'.tmp',JSON.stringify({id,action,...args}));await rename(command+'.tmp',command);return wait(value=>value.commandId===id);};

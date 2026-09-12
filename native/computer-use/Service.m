@@ -207,8 +207,8 @@ static int CUProxy(NSString *path,BOOL stop) {
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)application hasVisibleWindows:(BOOL)flag { [self setup:nil];return YES; }
 - (void)stopAll:(id)sender { @synchronized(registry){for(CUSession *session in sessions)CUStop(session,nil,NO);} }
 - (void)setup:(id)sender {
-  if(!self.setupWindow){self.setupWindow=[[NSWindow alloc]initWithContentRect:NSMakeRect(0,0,500,320) styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable backing:NSBackingStoreBuffered defer:NO];self.setupWindow.title=@"Trisoul Computer Use";self.setupWindow.releasedWhenClosed=NO;self.setupWindow.delegate=self;
-    NSTextField *heading=[NSTextField labelWithString:@"让 trisoulx 操作你的 Mac"];heading.font=[NSFont boldSystemFontOfSize:22];heading.frame=NSMakeRect(26,255,448,35);[self.setupWindow.contentView addSubview:heading];
+  if(!self.setupWindow){self.setupWindow=[[NSWindow alloc]initWithContentRect:NSMakeRect(0,0,500,320) styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable backing:NSBackingStoreBuffered defer:NO];self.setupWindow.title=@"Oh My DSH Computer Use";self.setupWindow.releasedWhenClosed=NO;self.setupWindow.delegate=self;
+    NSTextField *heading=[NSTextField labelWithString:@"让 Oh My DSH 操作你的 Mac"];heading.font=[NSFont boldSystemFontOfSize:22];heading.frame=NSMakeRect(26,255,448,35);[self.setupWindow.contentView addSubview:heading];
     NSTextField *help=[NSTextField wrappingLabelWithString:@"开启以下权限后，就可以在对话中选择应用、查看画面并交给助手操作。你可以随时从对话或菜单栏停止。"];help.textColor=NSColor.secondaryLabelColor;help.frame=NSMakeRect(26,195,448,50);[self.setupWindow.contentView addSubview:help];
     NSTextField *axTitle=[NSTextField labelWithString:@"辅助功能"];axTitle.font=[NSFont boldSystemFontOfSize:14];axTitle.frame=NSMakeRect(26,162,220,22);[self.setupWindow.contentView addSubview:axTitle];
     self.accessibilityStatus=[NSTextField labelWithString:@""];self.accessibilityStatus.frame=NSMakeRect(26,140,220,20);[self.setupWindow.contentView addSubview:self.accessibilityStatus];
@@ -216,7 +216,7 @@ static int CUProxy(NSString *path,BOOL stop) {
     NSTextField *screenTitle=[NSTextField labelWithString:@"屏幕录制"];screenTitle.font=[NSFont boldSystemFontOfSize:14];screenTitle.frame=NSMakeRect(26,102,220,22);[self.setupWindow.contentView addSubview:screenTitle];
     self.screenStatus=[NSTextField labelWithString:@""];self.screenStatus.frame=NSMakeRect(26,80,220,20);[self.setupWindow.contentView addSubview:self.screenStatus];
     NSButton *screen=[NSButton buttonWithTitle:@"打开屏幕录制设置" target:self action:@selector(screen:)];screen.frame=NSMakeRect(285,83,190,35);[self.setupWindow.contentView addSubview:screen];
-    NSTextField *footer=[NSTextField wrappingLabelWithString:@"请在系统设置中找到 Trisoul Computer Use。\n授权后，这里的状态和 trisoulx 面板会自动更新。"];footer.font=[NSFont systemFontOfSize:11];footer.textColor=NSColor.secondaryLabelColor;footer.frame=NSMakeRect(26,20,448,40);[self.setupWindow.contentView addSubview:footer];[self.setupWindow center];}
+    NSTextField *footer=[NSTextField wrappingLabelWithString:@"请在系统设置中找到 Oh My DSH Computer Use。\n授权后，这里的状态和 Oh My DSH 面板会自动更新。"];footer.font=[NSFont systemFontOfSize:11];footer.textColor=NSColor.secondaryLabelColor;footer.frame=NSMakeRect(26,20,448,40);[self.setupWindow.contentView addSubview:footer];[self.setupWindow center];}
   [self refreshPermissions:nil];[self.permissionTimer invalidate];self.permissionTimer=[NSTimer scheduledTimerWithTimeInterval:1.5 target:self selector:@selector(refreshPermissions:) userInfo:nil repeats:YES];
   [self.setupWindow makeKeyAndOrderFront:nil];[NSApp activateIgnoringOtherApps:YES];
 }

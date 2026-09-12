@@ -4,7 +4,7 @@ async function update(action = 'status', tabId) {
   if (busy) return; busy = true;
   try {
     const state = await chrome.runtime.sendMessage({action,tabId});
-    $('status').textContent = state.connected ? '已连接 trisoul-x' : state.connecting ? '正在连接 trisoul-x…' : '未连接';
+    $('status').textContent = state.connected ? '已连接 Oh My DSH' : state.connecting ? '正在连接 Oh My DSH…' : '未连接';
     $('error').hidden = !state.error; $('error').textContent = state.error ?? '';
     $('details').hidden = !state.detail; $('detail').textContent = state.detail ?? '';
     $('connect').hidden = state.connected || state.connecting; $('disconnect').hidden = !state.connected && !state.connecting;

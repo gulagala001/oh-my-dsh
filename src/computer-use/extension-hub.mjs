@@ -37,7 +37,7 @@ export class ExtensionHub extends EventEmitter {
     const timer = setTimeout(() => socket.destroy(new Error('Extension handshake timed out')), 3000); timer.unref();
     const reader = new NativeMessageReader(message => {
       if (!connection.info) {
-        if (message?.type !== 'hello' || message.protocol !== 2 || !/^[a-z0-9-]{8,80}$/i.test(message.instanceId ?? '')) throw new Error('Unsupported extension handshake. Update the extension and trisoul-x together.');
+        if (message?.type !== 'hello' || message.protocol !== 2 || !/^[a-z0-9-]{8,80}$/i.test(message.instanceId ?? '')) throw new Error('Unsupported extension handshake. Update the extension and Oh My DSH together.');
         const id = 'chrome:' + message.instanceId;
         if (this.connections.has(id)) throw new Error('This browser profile is already connected');
         connection.info = { id, type: 'extension', name: String(message.name || 'Chrome').slice(0, 120), userAgent: String(message.userAgent??'').slice(0,512), epoch: connection.epoch, version: typeof message.version === 'string' ? message.version.slice(0, 32) : null, build: /^[a-f0-9]{64}$/.test(message.build ?? '') ? message.build : null };

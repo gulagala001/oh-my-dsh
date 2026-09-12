@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import {joi
 import {keyboardFixture} from './fixtures/computer-use/keyboard.mjs';import {ComputerUseManager} from '../src/computer-use/manager.mjs';
 const socket=process.env.TRISOUL_CU_NATIVE_SOCKET;
 test('window-bound input supports apps without AX control focus but rejects unknown window focus',{skip:!socket||process.platform!=='darwin',timeout:20000},async t=>{
- const fixture=await keyboardFixture(),manager=new ComputerUseManager(join(fixture.root,'host'),{native:{socket,binary:process.env.TRISOUL_CU_NATIVE_BINARY??join(homedir(),'Applications/Trisoul Computer Use.app/Contents/MacOS/trisoul-computer-use')}});
+ const fixture=await keyboardFixture(),manager=new ComputerUseManager(join(fixture.root,'host'),{native:{socket,binary:process.env.TRISOUL_CU_NATIVE_BINARY}});
  t.after(async()=>{await manager.close();await fixture.close();console.log('Opaque-focus fixture:',fixture.root);});
  const run=async code=>{const r=await manager.execute('opaque',code);assert.equal(r.error,undefined,JSON.stringify(r.error));return r;};
  await run(`const app=await cua.getApp(${JSON.stringify(fixture.bundle)});await app.getScreenshot();await app.click([350,190]);`);

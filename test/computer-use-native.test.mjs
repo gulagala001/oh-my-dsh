@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir, homedir } from 'node:os';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { ComputerUseManager } from '../src/computer-use/manager.mjs';
@@ -19,7 +19,7 @@ test('native: actual AppKit effects, persistent JS and in-flight cancellation', 
   const app = join(directory, 'Fixture.app'), executable = join(app, 'Contents/MacOS/Fixture');
   const report = join(directory, 'ground-truth.json');
   const manager = new ComputerUseManager(join(directory, 'host'), {
-    native: { socket, binary: process.env.TRISOUL_CU_NATIVE_BINARY ?? join(homedir(), 'Applications/Trisoul Computer Use.app/Contents/MacOS/trisoul-computer-use') },
+    native: { socket, binary: process.env.TRISOUL_CU_NATIVE_BINARY },
   });
   let pid;
   t.after(async () => {

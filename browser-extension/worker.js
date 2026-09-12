@@ -99,7 +99,7 @@ async function connect() {
     });
     current.onDisconnect.addListener(() => {
       if (port !== current) return;
-      detail = chrome.runtime.lastError?.message ?? ''; error = enabled ? '与 trisoul-x 的连接已断开。启动连接服务后可重新连接。' : '';
+      detail = chrome.runtime.lastError?.message ?? ''; error = enabled ? '与 Oh My DSH 的连接已断开。启动连接服务后可重新连接。' : '';
       ready = false; port = null;
       void stopAll('connection-lost');
       for (const creation of transport.creations.values()) void cancelCreation(creation).catch(cause => { error = '取消新标签页失败'; detail = cause.message; });

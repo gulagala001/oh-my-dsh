@@ -308,7 +308,7 @@ function StatsLine({ sessionId, onOpen }) {
   const m = data.metrics.main, total = inputTokens(m);
   return <button type="button" className="tx-stats-line" aria-label="查看运行统计" title={`上下文 ${fmt(data.meter?.totalTokens)} tokens · 缓存命中 ${total ? Math.round((m.cacheReadTokens || 0) / total * 100) : 0}% · 已整理 ${fmt(data.actions?.surgeries)} 次`} onClick={onOpen}><Icon name="layers" size={12}/><span>{compactNumber(data.meter?.totalTokens)} 上下文</span>{data.liveCalls?.length > 0 && <i className="tx-stats-running" aria-label="后台运行中"/>}</button>;
 }
-const Mark = ({ size = 28 }) => <span className="tx-brand-mark" style={{ width: size, height: size }} aria-hidden="true"><svg width="72%" height="72%" viewBox="0 0 32 32" fill="none"><path d="M8 7.5c5 0 7 17 16 17M24 7.5c-5 0-7 17-16 17" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round"/></svg></span>;
+const Mark = ({ size = 28 }) => <span className="tx-brand-mark" style={{ width: size, height: size }} aria-hidden="true"><svg width="72%" height="72%" viewBox="0 0 32 32" fill="none"><path d="M7 8l8 8-8 8M18 24h8" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"/></svg></span>;
 export const inject = ['slots', 'sidebarRightTabs', 'sidebarRight'];
 export function apply(ctx) {
   const openPanel = section => ctx.sidebarRight.openTab('trisoul-x-workbench', { params: { section } });
@@ -337,10 +337,26 @@ export function apply(ctx) {
   ctx.effect(() => {
     const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css + '\n' + shellCss; document.head.appendChild(tag);
     document.documentElement.classList.add('trisoul-shell');
-    return () => { tag.remove(); document.documentElement.classList.remove('trisoul-shell'); };
+    // DSH owns the session title; only replace its fixed product suffix.
+    let hostTitle = document.title, brandedTitle;
+    const updateTitle = () => {
+      const title = document.title;
+      if (title === 'DeepSeek Harness' || title.endsWith(' — DeepSeek Harness')) {
+        hostTitle = title;
+        brandedTitle = title.replace(/DeepSeek Harness$/, 'Oh My DSH');
+        document.title = brandedTitle;
+      }
+    };
+    const titleObserver = new MutationObserver(updateTitle);
+    titleObserver.observe(document.querySelector('title'), { childList: true, subtree: true, characterData: true });
+    updateTitle();
+    const icon = document.createElement('link'); icon.rel = 'icon'; icon.type = 'image/svg+xml';
+    icon.href = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="22" fill="#3478F6"/><path d="M24 26l14 14-14 14M44 54h14" fill="none" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+    document.head.append(icon);
+    return () => { titleObserver.disconnect(); if (document.title === brandedTitle) document.title = hostTitle; icon.remove(); tag.remove(); document.documentElement.classList.remove('trisoul-shell'); };
   });
-  for (const [seat, Component] of [['sidebar.brand.mark', Mark], ['sidebar.brand.name', () => <strong className="tx-wordmark">trisoul<span>_x</span></strong>], ['conversation.hero.brand.mark', () => <Mark size={52}/>]]) ctx.slots.inject(seat, () => ctx.slots.register({ name: seat }, Component));
-  ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'trisoul-x', order: 16, label: () => 'trisoul_x' }, Settings));
+  for (const [seat, Component] of [['sidebar.brand.mark', Mark], ['sidebar.brand.name', () => <strong className="tx-wordmark">Oh My <span>DSH</span></strong>], ['conversation.hero.brand.mark', () => <Mark size={52}/>]]) ctx.slots.inject(seat, () => ctx.slots.register({ name: seat }, Component));
+  ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'trisoul-x', order: 16, label: () => 'Oh My DSH' }, Settings));
   ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register({ name: 'conversation.composer.dock', id: 'trisoul-x-tools', order: 25 }, ComposerDock));
   ctx.slots.inject('conversation.input.left', () => ctx.slots.register({ name: 'conversation.input.left', id: 'trisoul-memory-scope', order: 50 }, MemoryScopeChip));
   ctx.slots.inject('conversation.input.right', () => ctx.slots.register({ name: 'conversation.input.right', id: 'trisoul-better-todo', order: 100 }, BetterTodoChip));

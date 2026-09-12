@@ -6,7 +6,7 @@ import {keyboardFixture} from './fixtures/computer-use/keyboard.mjs';
 import {ComputerUseManager} from '../src/computer-use/manager.mjs';
 const socket=process.env.TRISOUL_CU_NATIVE_SOCKET;
 test('native setValue confirms settled values and interrupts a batch when the editor reverts',{skip:process.platform!=='darwin'||!socket,timeout:25000},async t=>{
-  const fixture=await keyboardFixture(),manager=new ComputerUseManager(join(fixture.root,'host'),{native:{socket,binary:process.env.TRISOUL_CU_NATIVE_BINARY??join(homedir(),'Applications/Trisoul Computer Use.app/Contents/MacOS/trisoul-computer-use')}});
+  const fixture=await keyboardFixture(),manager=new ComputerUseManager(join(fixture.root,'host'),{native:{socket,binary:process.env.TRISOUL_CU_NATIVE_BINARY}});
   t.after(async()=>{await manager.close();await fixture.close();});
   const run=code=>manager.execute('set-value',code);
   assert.equal((await run(`const app=await cua.getApp(${JSON.stringify(fixture.bundle)});const ax=await app.getAXState({emit:false,disableDiffing:true});const editor=Number(ax.match(/\\[(\\d+)\\] AXTextArea 编辑区/)[1]);`)).error,undefined);

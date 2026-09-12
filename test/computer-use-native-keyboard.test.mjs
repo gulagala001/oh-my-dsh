@@ -9,7 +9,7 @@ import {ComputerUseManager} from '../src/computer-use/manager.mjs';
 
 const socket=process.env.TRISOUL_CU_NATIVE_SOCKET;
 test('native keyboard and clicks reach the actual target without moving user focus',{skip:process.platform!=='darwin'||!socket,timeout:45000},async t=>{
-  const fixture=await keyboardFixture(),manager=new ComputerUseManager(join(fixture.root,'host'),{native:{socket,binary:process.env.TRISOUL_CU_NATIVE_BINARY??join(homedir(),'Applications/Trisoul Computer Use.app/Contents/MacOS/trisoul-computer-use')}});
+  const fixture=await keyboardFixture(),manager=new ComputerUseManager(join(fixture.root,'host'),{native:{socket,binary:process.env.TRISOUL_CU_NATIVE_BINARY}});
   t.after(async()=>{await writeFile(join(fixture.root,'final.json'),JSON.stringify(await fixture.truth(),null,2));await manager.close();await fixture.close();console.log('Native keyboard artifacts:',fixture.root);});
   const run=async code=>{const result=await manager.execute('keys',code);assert.equal(result.error,undefined,JSON.stringify(result.error));return result;};
   await run(`const app=await cua.getApp(${JSON.stringify(fixture.bundle)});const state=await app.getAXState({emit:false,disableDiffing:true});const editor=Number(state.match(/\\[(\\d+)\\] AXTextArea 编辑区/)[1]);const pad=Number(state.match(/\\[(\\d+)\\] AXGroup 事件区/)[1]);await app.getScreenshot();`);

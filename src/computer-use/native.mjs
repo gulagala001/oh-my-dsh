@@ -18,6 +18,13 @@ import { nativeKeyChord, nativeClickOptions } from './native-keys.mjs';
 const runFile = promisify(execFile);
 const bundleSuffix = '/Contents/MacOS/trisoul-computer-use';
 
+export function defaultNativeBinary(applications = join(homedir(), 'Applications')) {
+  const current = join(applications, 'Oh My DSH Computer Use.app', bundleSuffix.slice(1));
+  const legacy = join(applications, 'Trisoul Computer Use.app', bundleSuffix.slice(1));
+  // Upgrade existing installations in place, retaining their permission identity.
+  return existsSync(current) || !existsSync(legacy) ? current : legacy;
+}
+
 export function nativeValue(result) {
   let value=result.structuredContent;
   if(value===undefined) {
@@ -32,7 +39,7 @@ export function nativeValue(result) {
 // belongs to this host; conversations receive independent, revocable leases.
 export class NativeHost {
   constructor(directory,{binary,socket}={}) {
-    this.binary=binary??join(homedir(),'Applications/Trisoul Computer Use.app/Contents/MacOS/trisoul-computer-use');
+    this.binary=binary??defaultNativeBinary();
     const hostId=createHash('sha256').update(directory).digest('hex').slice(0,16);
     // Unix socket paths have a small byte limit; DSH session paths can be long.
     this.socket=socket??join(tmpdir(),`trisoul-cu-${process.getuid?.()??'user'}-${hostId}.sock`);
@@ -49,19 +56,19 @@ export class NativeHost {
     const app=binary.slice(0,-bundleSuffix.length);
     const {stdout}=await runFile('plutil',['-convert','json','-o','-',join(app,'Contents/Info.plist')],{maxBuffer:65536});
     const info=JSON.parse(stdout);
-    if(info.CFBundleIdentifier!=='ai.trisoul.computer-use')throw new Error('该应用不是 Trisoul Computer Use，不能覆盖');
+    if(info.CFBundleIdentifier!=='ai.trisoul.computer-use')throw new Error('该应用不是 Oh My DSH Computer Use，不能覆盖');
     const file=await stat(binary);
-    return {version:info.CFBundleShortVersionString??'unknown',build:info.TrisoulBuildID??null,protocol:info.TrisoulProtocol??0,identity:`${file.dev}:${file.ino}:${file.mtimeMs}:${file.size}`};
+    return {displayName:info.CFBundleDisplayName??info.CFBundleName??'Oh My DSH Computer Use',version:info.CFBundleShortVersionString??'unknown',build:info.TrisoulBuildID??null,protocol:info.TrisoulProtocol??0,identity:`${file.dev}:${file.ino}:${file.mtimeMs}:${file.size}`};
   }
   async installationStatus() {
     if(!this.supported())return {};
     const expected=await this.expectedBuild(),installed=await this.installedInfo(),running=installed?await this.probeInfo():null;
-    return {version:installed?.version??null,expectedVersion:expected.version,updateAvailable:!!installed&&installed.build!==expected.build,runningVersion:running?.serverInfo?.version??null,restartRequired:!!running&&installed?.build===expected.build&&running._meta?.trisoul?.build!==expected.build};
+    return {displayName:installed?.displayName??'Oh My DSH Computer Use',version:installed?.version??null,expectedVersion:expected.version,updateAvailable:!!installed&&installed.build!==expected.build,runningVersion:running?.serverInfo?.version??null,restartRequired:!!running&&installed?.build===expected.build&&running._meta?.trisoul?.build!==expected.build};
   }
   async install({beforeReplace}={}) {
     if (!this.supported()) throw new Error('桌面控制运行时目前仅支持 macOS 14 或更新版本');
     if (this.installing) return this.installing;
-    if (!this.binary.endsWith('.app' + bundleSuffix)) throw new Error('原生运行时路径必须指向 Trisoul Computer Use.app 中的程序');
+    if (!this.binary.endsWith('.app' + bundleSuffix)) throw new Error('原生运行时路径必须指向 Computer Use 应用包中的程序');
     const destination = this.binary.slice(0, -bundleSuffix.length);
     this.installing = (async () => {
       const expected=await this.expectedBuild(),initial=await this.installedInfo();
@@ -69,7 +76,7 @@ export class NativeHost {
       if(initial?.build===expected.build&&(!running||running._meta?.trisoul?.build===expected.build))return;
       await mkdir(dirname(destination), { recursive: true });
       const staging = await mkdtemp(join(dirname(destination), '.trisoul-cu-install-'));
-      const output=join(staging,'Trisoul Computer Use.app'),candidate=join(output,'Contents/MacOS/trisoul-computer-use');
+      const output=join(staging,'Oh My DSH Computer Use.app'),candidate=join(output,'Contents/MacOS/trisoul-computer-use');
       let unlock,swapped=false,published=false,hadDaemon=false;
       try {
         if(initial?.build!==expected.build){
@@ -119,7 +126,7 @@ export class NativeHost {
     return this.launch();
   }
   async launch(){
-    if(!this.available())throw new Error('Native Computer Use runtime is not installed. Install Trisoul Computer Use.app in ~/Applications before controlling desktop apps.');
+    if(!this.available())throw new Error('Native Computer Use runtime is not installed. Install Oh My DSH Computer Use.app in ~/Applications before controlling desktop apps.');
     if(this.starting)return this.starting;
     this.starting=(async()=>{
       if(await this.probe())return;
@@ -157,7 +164,7 @@ export class NativeHost {
         const client=new McpClient(this.binary,['mcp','--socket',this.socket]);
         try{
           const info=await client.initialize();
-          if(info.serverInfo?.name!=='trisoul-computer-use'||(info._meta?.trisoul?.protocol!==NATIVE_PROTOCOL&&info.serverInfo?.version!=='0.1.0'))throw new Error(`Unsupported native runtime: ${info.serverInfo?.name} ${info.serverInfo?.version}. Install the matching Trisoul Computer Use application.`);
+          if(info.serverInfo?.name!=='trisoul-computer-use'||(info._meta?.trisoul?.protocol!==NATIVE_PROTOCOL&&info.serverInfo?.version!=='0.1.0'))throw new Error(`Unsupported native runtime: ${info.serverInfo?.name} ${info.serverInfo?.version}. Install the matching Oh My DSH Computer Use application.`);
           const label='trisoul-'+randomUUID();await client.call('start_session',{session:label});
           return{client,label,info};
         }catch(error){await client.close();throw error;}

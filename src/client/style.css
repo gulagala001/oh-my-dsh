@@ -254,7 +254,7 @@
 .tx-history-usage > b { background: var(--tx-blue); }
 .tx-selected-frame { padding: 14px; margin-top: 18px; background: var(--tx-hover); border-radius: 9px; }
 .tx-brand-mark { display: inline-grid; place-items: center; background: #3877e8; color: #fff; border-radius: 27%; flex-shrink: 0; box-shadow: none; }
-.tx-wordmark { letter-spacing: -.6px; font-weight: 600; font-size: 17px; color: var(--tx-text); }
+.tx-wordmark { letter-spacing: -.6px; font-weight: 600; font-size: 16px; white-space: nowrap; color: var(--tx-text); }
 .tx-wordmark > span { color: var(--tx-blue); }
 .tx-scope-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--tx-muted); font: inherit; font-size: 11px; cursor: pointer; }
 .tx-scope-chip strong { font-weight: 500; }

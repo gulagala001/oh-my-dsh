@@ -6,6 +6,10 @@ import { frontendFixture, until } from './fixtures/frontend.mjs';
 
 test('DSH frontend: one workbench, preserved edits, compact composer and both themes', { timeout: 90000 }, async t => {
   const f = await frontendFixture(t), { page, root, errors } = f;
+  assert.equal(await page.locator('.tx-wordmark').innerText(), 'Oh My DSH');
+  await until(async () => (await page.title()).endsWith(' — Oh My DSH'));
+  assert.match(await page.title(), /整理工作台和对话界面/);
+  assert.equal(await page.getByText('trisoul_x', { exact: true }).count(), 0);
   const screenshot = async name => { if (process.env.TRISOUL_UI_ARTIFACTS) { await page.mouse.move(1, 1); await page.evaluate(() => Promise.all(document.getAnimations().filter(a => a.effect?.getTiming().iterations !== Infinity).map(a => a.finished.catch(() => {})))); await page.screenshot({ path: join(root, name + '.png') }); } };
   t.after(async () => { if (process.env.TRISOUL_UI_ARTIFACTS) console.log('Frontend UI artifacts:', root); });
   assert.equal(await page.locator('.tx-composer-dock').count(), 1);
@@ -69,7 +73,7 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await screenshot('conversation-narrow-dark');
   await page.getByRole('button', { name: '设置', exact: true }).click();
   const settingsDialog = page.getByRole('dialog');
-  await settingsDialog.getByRole('button', { name: 'trisoul_x', exact: true }).click();
+  await settingsDialog.getByRole('button', { name: 'Oh My DSH', exact: true }).click();
   const settings = page.locator('.tx-settings');
   await settings.getByRole('button', { name: '保存设置', exact: true }).waitFor();
   await screenshot('settings-dark');

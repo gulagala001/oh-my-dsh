@@ -152,7 +152,7 @@ NSDictionary *CUObserve(CUSession *session,NSDictionary *args) {
   NSMutableArray *content=[NSMutableArray new];
   CUWindow *treeSnapshot=nil;
   if(tree){
-    if(!AXIsProcessTrusted())CUFail(@"ACCESSIBILITY_PERMISSION",@"Enable Accessibility for Trisoul Computer Use in macOS Settings.");
+    if(!AXIsProcessTrusted())CUFail(@"ACCESSIBILITY_PERMISSION",@"Enable Accessibility for Oh My DSH Computer Use in macOS Settings.");
     AXUIElementRef app=AXUIElementCreateApplication(target.pid);AXUIElementSetMessagingTimeout(app,.25);
 
     CFMutableDictionaryRef previous=CFDictionaryCreateMutable(NULL,0,&kCFTypeDictionaryKeyCallBacks,&kCFTypeDictionaryValueCallBacks);
@@ -190,7 +190,7 @@ NSDictionary *CUObserve(CUSession *session,NSDictionary *args) {
   }
   [session check];
   if(shot){
-    if(!CGPreflightScreenCaptureAccess())CUFail(@"SCREEN_RECORDING_PERMISSION",@"Enable Screen Recording for Trisoul Computer Use in macOS Settings.");
+    if(!CGPreflightScreenCaptureAccess())CUFail(@"SCREEN_RECORDING_PERMISSION",@"Enable Screen Recording for Oh My DSH Computer Use in macOS Settings.");
     CGImageRef captured=CUCapture(session,target,[args[@"max_dimension"] doubleValue]);
     if(!captured)CUFail(@"CAPTURE_UNAVAILABLE",@"The requested window cannot currently be captured.");
     CGFloat width=CGImageGetWidth(captured),height=CGImageGetHeight(captured),maximum=[args[@"max_dimension"] doubleValue];

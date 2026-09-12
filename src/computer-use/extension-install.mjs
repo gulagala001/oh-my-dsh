@@ -49,7 +49,7 @@ export class ExtensionInstaller {
     const host = await readFile(new URL('../../scripts/computer-use-extension-host.mjs', import.meta.url));
     const hostPath = join(this.directory, 'native-host.mjs'), origin = 'chrome-extension://' + extensionId + '/';
     const launcher = Buffer.from('#!/bin/sh\nexec ' + [this.nodePath, hostPath, '--socket', this.socketPath, '--extension-origin', origin].map(quote).join(' ') + ' "$@"\n');
-    const registration = Buffer.from(JSON.stringify({ name: HOST, description: 'Trisoul Computer Use browser connection', path: this.launcher, type: 'stdio', allowed_origins: [origin] }, null, 2) + '\n');
+    const registration = Buffer.from(JSON.stringify({ name: HOST, description: 'Oh My DSH Computer Use browser connection', path: this.launcher, type: 'stdio', allowed_origins: [origin] }, null, 2) + '\n');
     return { files, manifest, extensionId, build, host, launcher, registration };
   }
   async status(browsers = []) {
@@ -82,10 +82,10 @@ export class ExtensionInstaller {
       if (previous?.path !== this.launcher || previous?.name !== HOST) throw new Error('这个 Chrome 已连接其他实例。本次没有替换现有连接程序：' + this.registration);
     }
     const oldReceipt = await read(this.receipt); let receipt;
-    if (oldReceipt) { try { receipt = JSON.parse(oldReceipt); } catch {} if (receipt?.owner !== OWNER) throw new Error('已有安装记录不属于 Trisoul Computer Use'); }
+    if (oldReceipt) { try { receipt = JSON.parse(oldReceipt); } catch {} if (receipt?.owner !== OWNER) throw new Error('已有安装记录不属于 Oh My DSH Computer Use'); }
     if (!receipt) {
       const existing = await readdir(this.directory).catch(error => { if (error.code === 'ENOENT') return []; throw error; });
-      if (existing.length) throw new Error('安装目录已有其他内容，请选择独立的 TrisoulX 数据目录');
+      if (existing.length) throw new Error('安装目录已有其他内容，请选择独立的 Oh My DSH 数据目录');
       // Retain ownership after an interrupted first install. A retry can
       // repair our partial files without treating them as somebody else's.
       await atomicWrite(this.receipt, Buffer.from(JSON.stringify({ owner: OWNER, files: [] }) + '\n'));

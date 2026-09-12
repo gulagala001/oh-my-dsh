@@ -63,7 +63,7 @@ static BOOL hideAXFocus=NO, wrongAXWindow=NO, acceptsWebAX=NO, webAXEnabled=NO;
   NSMenuItem *edit=[NSMenuItem new];edit.title=@"Edit";edit.submenu=[NSMenu new];[menu addItem:edit];
   for(NSArray *item in @[@[@"Undo",@"undo:",@"z"],@[@"Select All",@"selectAll:",@"a"],@[@"Paste",@"paste:",@"v"]])[edit.submenu addItemWithTitle:item[0] action:NSSelectorFromString(item[1]) keyEquivalent:item[2]];
   NSApp.mainMenu=menu;
-  self.window=[[NSWindow alloc]initWithContentRect:NSMakeRect(150,150,700,500) styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskResizable backing:NSBackingStoreBuffered defer:NO];self.window.releasedWhenClosed=NO;self.window.title=@"Trisoul Keyboard Fixture";
+  self.window=[[NSWindow alloc]initWithContentRect:NSMakeRect(150,150,700,500) styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskResizable backing:NSBackingStoreBuffered defer:NO];self.window.releasedWhenClosed=NO;self.window.title=@"Oh My DSH Keyboard Fixture";
   NSView *content=self.window.contentView;NSTextField *title=[NSTextField labelWithString:@"键盘、文字与多击验收"];title.font=[NSFont boldSystemFontOfSize:23];title.frame=NSMakeRect(25,442,650,35);[content addSubview:title];
   NSScrollView *scroll=[[NSScrollView alloc]initWithFrame:NSMakeRect(25,200,650,225)];scroll.hasVerticalScroller=YES;scroll.borderType=NSBezelBorder;[content addSubview:scroll];
   self.editor=[[ControlledEditor alloc]initWithFrame:NSMakeRect(0,0,630,225)];self.editor.richText=NO;self.editor.font=[NSFont systemFontOfSize:20];self.editor.string=@"alpha beta gamma\n第二行中文 🌿\nthird line";self.editor.accessibilityLabel=@"编辑区";self.editor.delegate=self;scroll.documentView=self.editor;

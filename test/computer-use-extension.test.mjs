@@ -54,7 +54,7 @@ test('real Chrome extension: native messaging, targeted input, popup stop and co
   context.on('dialog',()=>{});
   popup = await context.newPage(); await popup.goto(origin+'popup.html');
   const connected = await until(()=>hub.list()[0]);
-  await popup.getByText('已连接 trisoul-x',{exact:true}).waitFor();
+  await popup.getByText('已连接 Oh My DSH',{exact:true}).waitFor();
   const page = await context.newPage(); await page.goto(fixture.url);
   await page.evaluate(()=>localStorage.setItem('extension-fixture','keep-existing-session'));
   const tabs = await hub.call(connected.id,'tabs.list'); const tab = tabs.find(value=>value.url===fixture.url+'/'); assert.ok(tab);

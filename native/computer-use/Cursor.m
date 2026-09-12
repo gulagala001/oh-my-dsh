@@ -96,7 +96,7 @@ static void CUCursorMain(dispatch_block_t action, BOOL wait) {
   frame=CGRectIntersection(frame,bounds);if(CGRectIsEmpty(frame)){[self hide];return;}
   if(!self.panel){
     self.panel=[[CUCursorPanel alloc]initWithContentRect:NSZeroRect styleMask:NSWindowStyleMaskBorderless|NSWindowStyleMaskNonactivatingPanel backing:NSBackingStoreBuffered defer:NO];
-    self.panel.title=@"Trisoul assistant cursor";self.panel.opaque=NO;self.panel.backgroundColor=NSColor.clearColor;self.panel.hasShadow=NO;
+    self.panel.title=@"Oh My DSH assistant cursor";self.panel.opaque=NO;self.panel.backgroundColor=NSColor.clearColor;self.panel.hasShadow=NO;
     self.panel.ignoresMouseEvents=YES;self.panel.hidesOnDeactivate=NO;self.panel.releasedWhenClosed=NO;self.panel.animationBehavior=NSWindowAnimationBehaviorNone;
     self.panel.floatingPanel=NO;
     self.panel.collectionBehavior=NSWindowCollectionBehaviorCanJoinAllSpaces|NSWindowCollectionBehaviorFullScreenAuxiliary|NSWindowCollectionBehaviorIgnoresCycle;

@@ -36,7 +36,7 @@ export async function extensionFixture(t, options = {}) {
   }
   context=await chromium.launchPersistentContext(profile,{channel:'chromium',headless:options.headless??true,...(options.viewport!==undefined?{viewport:options.viewport}:{}),args:['--site-per-process','--disable-extensions-except='+extension,'--load-extension='+extension,...(options.args??[])]});
   context.on('dialog',()=>{});popup=await context.newPage();await popup.goto(origin+'popup.html');
-  await popup.getByText('已连接 trisoul-x',{exact:true}).waitFor({timeout:10000});
+  await popup.getByText('已连接 Oh My DSH',{exact:true}).waitFor({timeout:10000});
   const worker=context.serviceWorkers().find(worker=>worker.url()===origin+'worker.js');
   const instanceId=await worker.evaluate(async()=> (await chrome.storage.local.get('instanceId')).instanceId);
   const browser=hub?hub.list()[0]:{id:'chrome:'+instanceId};

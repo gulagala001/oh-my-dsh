@@ -15,7 +15,7 @@ function ChromeSetup({ extension, busy, act, onError }) {
     {installation?.supported ? <>
       {(!installation.prepared || installation.updateAvailable) && <div className="tx-cu-setup-install"><p>先准备本机连接程序，再在 Chrome 中加载扩展。开发版无需商店账号，首次加载需要开启 Chrome 的开发者模式。</p><button type="button" disabled={!!busy || installation.preparing} onClick={() => act('install-extension')}>{busy === 'install-extension' || installation.preparing ? '正在准备…' : installation.updateAvailable ? '更新 Chrome 连接' : '准备 Chrome 连接'}</button></div>}
       {installation.prepared && (!connected || installation.reloadRequired) && <div className="tx-cu-extension-steps">
-        <p>{installation.reloadRequired ? '扩展文件已更新，请在 Chrome 扩展管理页重新加载 Trisoul Computer Use。' : '在 Chrome 地址栏打开 chrome://extensions，开启「开发者模式」，点击「加载已解压的扩展程序」，选择下面的目录。'}</p>
+        <p>{installation.reloadRequired ? '扩展文件已更新，请在 Chrome 扩展管理页重新加载 Oh My DSH Computer Use。' : '在 Chrome 地址栏打开 chrome://extensions，开启「开发者模式」，点击「加载已解压的扩展程序」，选择下面的目录。'}</p>
         <div className="tx-cu-setup-actions"><button type="button" onClick={() => copy('chrome://extensions', 'page')}>{copied === 'page' ? '已复制地址' : '复制扩展页地址'}</button><button type="button" onClick={() => copy(installation.extensionPath, 'folder')}>{copied === 'folder' ? '已复制目录' : '复制扩展目录'}</button></div>
         <code>{installation.extensionPath}</code><p className="tx-cu-muted">加载成功后会自动显示「已连接」。</p>
       </div>}
@@ -53,12 +53,12 @@ export function ComputerSetup({ sessionId, visible, api }) {
         {!setup.browser.installed && <p>请安装 Chrome，或在插件目录运行 <code>pnpm exec playwright install chromium</code>，然后重新打开浏览器。</p>}
         <details className="tx-cu-setup-advanced"><summary>浏览器详情</summary><p>网页登录保存在独立配置中。首次使用可能需要在 macOS 系统提示中允许浏览器访问钥匙串。</p><code>{setup.browser.path}</code></details>
         <ChromeSetup extension={setup.extension} busy={busy} act={act} onError={setError}/>
-        {!native.supported ? <p className="tx-cu-muted">此平台的原生应用控制尚未实现。浏览器功能可单独使用。</p> : !native.installed ? <div className="tx-cu-setup-install"><strong>安装桌面控制</strong><p>安装 Trisoul Computer Use 后，可选择并操作 Mac 应用。当前开发版会在本机编译，需要 Apple Command Line Tools；发行版安装包尚未提供。</p><button type="button" disabled={!!busy || native.installing} onClick={() => act('install-native')}>{busy === 'install-native' || native.installing ? '正在编译并安装…' : '安装桌面控制'}</button></div> : <>
+        {!native.supported ? <p className="tx-cu-muted">此平台的原生应用控制尚未实现。浏览器功能可单独使用。</p> : !native.installed ? <div className="tx-cu-setup-install"><strong>安装桌面控制</strong><p>安装 Oh My DSH Computer Use 后，可选择并操作 Mac 应用。当前开发版会在本机编译，需要 Apple Command Line Tools；发行版安装包尚未提供。</p><button type="button" disabled={!!busy || native.installing} onClick={() => act('install-native')}>{busy === 'install-native' || native.installing ? '正在编译并安装…' : '安装桌面控制'}</button></div> : <>
           {(native.updateAvailable||native.restartRequired)&&<div className="tx-cu-setup-install"><strong>{native.updateAvailable?'桌面控制有更新':'桌面控制需要重启'}</strong><p>会暂停当前桌面操作，完成后请重新选择应用。</p><button type="button" disabled={!!busy||native.installing} onClick={()=>act('install-native')}>{busy==='install-native'||native.installing?'正在更新桌面控制…':native.updateAvailable?'更新桌面控制':'重启桌面控制'}</button></div>}
           <Permission title="辅助功能" detail="读取应用控件并操作所选窗口" value={native.accessibility}/>
           <Permission title="屏幕录制" detail="向助手提供所选应用的画面" value={native.screenRecording}/>
           {native.error && <p className="tx-cu-error" role="alert">{native.error}</p>}
-          <div className="tx-cu-setup-actions"><span className="tx-cu-muted">系统设置中的应用名称：Trisoul Computer Use</span><button type="button" disabled={!!busy} onClick={() => act('permissions')}>{busy === 'permissions' ? '正在打开…' : '打开权限设置'}</button></div>
+          <div className="tx-cu-setup-actions"><span className="tx-cu-muted">系统设置中的应用名称：{native.displayName??'Oh My DSH Computer Use'}</span><button type="button" disabled={!!busy} onClick={() => act('permissions')}>{busy === 'permissions' ? '正在打开…' : '打开权限设置'}</button></div>
           <details className="tx-cu-setup-advanced"><summary>桌面控制版本</summary><p>已安装 {native.version??'未知'}{native.runningVersion&&native.runningVersion!==native.version?` · 正在运行 ${native.runningVersion}`:''}</p></details>
         </>}
       </>}

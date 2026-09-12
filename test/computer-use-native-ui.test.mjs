@@ -1,21 +1,22 @@
+import { defaultNativeBinary } from '../src/computer-use/native.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {execFileSync,spawn} from 'node:child_process';
 import {mkdtemp,mkdir,readFile,writeFile} from 'node:fs/promises';
-import {tmpdir,homedir} from 'node:os';
+import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 import {chromium} from 'playwright';
 import {keyboardFixture} from './fixtures/computer-use/keyboard.mjs';
 
-const nativeBinary=process.env.TRISOUL_CU_NATIVE_BINARY??join(homedir(),'Applications/Trisoul Computer Use.app/Contents/MacOS/trisoul-computer-use');
+const nativeBinary=process.env.TRISOUL_CU_NATIVE_BINARY??defaultNativeBinary();
 test('DSH native UI: live window, stable stream between turns, cursor and stopped observation',{skip:process.platform!=='darwin'||!process.env.TRISOUL_CU_NATIVE_SOCKET,timeout:60000},async t=>{
   const root=await mkdtemp(join(tmpdir(),'trisoul-cu-native-ui-')),home=join(root,'home'),workspace=join(root,'workspace'),app=join(root,'Fixture.app'),report=join(root,'truth.json'),command=join(root,'command.json'),bundle='ai.trisoul.nativeui.'+process.pid;
   const until=async(fn)=>{const deadline=Date.now()+12000;while(Date.now()<deadline){const value=await fn();if(value)return value;await delay(30);}throw Error('Native UI did not reach the expected state');};
   await mkdir(home);await mkdir(workspace);await mkdir(join(app,'Contents/MacOS'),{recursive:true});
   execFileSync('clang',['-fobjc-arc','-framework','Cocoa',new URL('./fixtures/computer-use/NativeFixture.m',import.meta.url).pathname,'-o',join(app,'Contents/MacOS/Fixture')]);
-  await writeFile(join(app,'Contents/Info.plist'),`<?xml version="1.0"?><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>${bundle}</string><key>CFBundleName</key><string>Trisoul UI Fixture</string><key>CFBundleExecutable</key><string>Fixture</string><key>CFBundlePackageType</key><string>APPL</string></dict></plist>`);
+  await writeFile(join(app,'Contents/Info.plist'),`<?xml version="1.0"?><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>${bundle}</string><key>CFBundleName</key><string>Oh My DSH UI Fixture</string><key>CFBundleExecutable</key><string>Fixture</string><key>CFBundlePackageType</key><string>APPL</string></dict></plist>`);
   execFileSync('open',['-n','-g',app,'--args','--report',report,'--command',command]);
   const pid=await until(async()=>{try{return JSON.parse(await readFile(report,'utf8')).pid;}catch{}});
   const second=await keyboardFixture();t.after(()=>second.close());
@@ -70,8 +71,8 @@ test('DSH native UI: live window, stable stream between turns, cursor and stoppe
   const floating=pip.getByLabel('悬浮操控预览');await floating.locator('img').waitFor();
   await until(()=>floating.locator('img').evaluate(img=>img.complete&&img.naturalWidth>0));
   await prompt('第二个预览');await until(async()=>await floating.locator('.tx-cu-preview-card').count()===2);
-  const originalCard=floating.locator('.tx-cu-preview-card').filter({has:pip.getByRole('button',{name:'进入窗口：Trisoul UI Fixture',exact:true})});
-  const secondCard=floating.locator('.tx-cu-preview-card').filter({has:pip.getByRole('button',{name:'进入窗口：Trisoul Keyboard Fixture',exact:true})});
+  const originalCard=floating.locator('.tx-cu-preview-card').filter({has:pip.getByRole('button',{name:'进入窗口：Oh My DSH UI Fixture',exact:true})});
+  const secondCard=floating.locator('.tx-cu-preview-card').filter({has:pip.getByRole('button',{name:'进入窗口：Oh My DSH Keyboard Fixture',exact:true})});
   await until(()=>secondCard.locator('img').evaluate(img=>img.complete&&img.naturalWidth>0));
   await pip.screenshot({path:join(root,'native-floating-stack.png')});
   await floating.getByRole('button',{name:'展开 2',exact:true}).click();

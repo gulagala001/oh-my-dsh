@@ -6,7 +6,7 @@
 node scripts/build-computer-use-native.mjs
 ```
 
-产物是 `dist/Trisoul Computer Use.app`。安装到 `~/Applications`，开启该应用的辅助功能和屏幕录制权限。也可在 Computer Use 面板的「运行环境与权限」点击「安装桌面控制」：本机编译和签名完成后，原子放入安装目录；重复点击不会覆盖已有应用。此开发安装方式需要 Apple Command Line Tools。更新正在使用的运行时前，应先结束控制会话并退出该应用，随后替换程序并重开。
+产物是 `dist/Oh My DSH Computer Use.app`。新安装使用新名称；检测到旧版 `Trisoul Computer Use.app` 时原位更新，保留原 bundle ID、签名身份与权限。安装到 `~/Applications`，开启该应用的辅助功能和屏幕录制权限。也可在 Computer Use 面板的「运行环境与权限」点击「安装桌面控制」：本机编译和签名完成后，原子放入安装目录；重复点击不会覆盖已有应用。此开发安装方式需要 Apple Command Line Tools。更新正在使用的运行时前，应先结束控制会话并退出该应用，随后替换程序并重开。
 
 开发构建自动使用持久本地签名，身份保存于 `~/Library/Application Support/trisoul-x/development-signing` 的专用 keychain。签名时暂时加入 keychain 搜索列表，完成后移除并锁定；不修改 login keychain 内容或系统证书信任。此目录属于本机私有开发材料，不应提交或分发。
 

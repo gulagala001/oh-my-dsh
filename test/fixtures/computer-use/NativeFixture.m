@@ -48,7 +48,7 @@
   index=[args indexOfObject:@"--command"];if(index!=NSNotFound&&index+1<args.count)self.commandPath=args[index+1];
   self.window = [[NSWindow alloc] initWithContentRect:NSMakeRect(150,150,660,430) styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskResizable backing:NSBackingStoreBuffered defer:NO];
   self.window.releasedWhenClosed=NO;
-  self.window.title = @"Trisoul Computer Use Fixture";
+  self.window.title = @"Oh My DSH Computer Use Fixture";
   NSView *view = self.window.contentView;
   NSTextField *heading = [NSTextField labelWithString:@"Computer Use 原生测试工作台"];
   heading.frame = NSMakeRect(28,365,600,30); heading.font = [NSFont boldSystemFontOfSize:21]; [view addSubview:heading];

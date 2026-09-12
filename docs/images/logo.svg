@@ -2,6 +2,6 @@
   <title>Oh My DSH</title>
   <rect width="80" height="80" rx="22" fill="#3478F6"/>
   <g transform="translate(11.2 11.2) scale(1.8)">
-    <path d="M8 7.5c5 0 7 17 16 17M24 7.5c-5 0-7 17-16 17" stroke="white" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M7 8l8 8-8 8M18 24h8" stroke="white" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>

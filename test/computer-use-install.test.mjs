@@ -4,19 +4,35 @@ import { mkdtemp, rm, stat, readdir, mkdir, writeFile, readFile } from 'node:fs/
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { NativeHost } from '../src/computer-use/native.mjs';
+import { NativeHost, defaultNativeBinary } from '../src/computer-use/native.mjs';
 import { setTimeout as delay } from 'node:timers/promises';
 import { legacyBundle } from './fixtures/computer-use/native-runtime.mjs';
 import { ComputerUseManager } from '../src/computer-use/manager.mjs';
 
+test('native bundle location keeps old installations and uses the new name for fresh ones', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'omd-install-location-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const legacy = join(root, 'Trisoul Computer Use.app/Contents/MacOS/trisoul-computer-use');
+  const current = join(root, 'Oh My DSH Computer Use.app/Contents/MacOS/trisoul-computer-use');
+  assert.equal(defaultNativeBinary(root), current);
+  await mkdir(join(root, 'Trisoul Computer Use.app/Contents/MacOS'), { recursive: true });
+  await writeFile(legacy, 'existing runtime');
+  assert.equal(defaultNativeBinary(root), legacy);
+  await mkdir(join(root, 'Oh My DSH Computer Use.app/Contents/MacOS'), { recursive: true });
+  await writeFile(current, 'new installation');
+  assert.equal(defaultNativeBinary(root), current);
+  assert.equal(await readFile(legacy, 'utf8'), 'existing runtime');
+});
+
 test('native setup installs a complete signed bundle once and opens its permission panel', { skip: process.platform !== 'darwin', timeout: 45000 }, async t => {
   const root = await mkdtemp(join(tmpdir(), 'trisoul-cu-install-'));
-  const binary = join(root, 'Trisoul Computer Use.app/Contents/MacOS/trisoul-computer-use');
+  const binary = join(root, 'Oh My DSH Computer Use.app/Contents/MacOS/trisoul-computer-use');
   const host = new NativeHost(root, { binary });
   t.after(async () => { await host.close(); await rm(root, { recursive: true, force: true }); });
   assert.equal(host.available(), false);
   await Promise.all([host.install(), host.install()]);
   assert.equal(host.available(), true);
+  assert.equal((await host.installedInfo()).displayName, 'Oh My DSH Computer Use');
   const installed = await stat(binary);
   await host.install();
   assert.equal((await stat(binary)).mtimeMs, installed.mtimeMs, 'repeated setup does not replace an installed runtime');
@@ -42,6 +58,8 @@ test('native upgrade replaces the signed bundle and verifies the actual new daem
   let boundary=0;await host.install({beforeReplace:async()=>{boundary++;assert.equal((await host.probeInfo()).serverInfo.version,'0.1.0');}});
   assert.equal(boundary,1);assert.equal(old.client.closed,true);
   const expected=await host.expectedBuild(),updated=await host.installedInfo(),live=await host.probeInfo();
+  assert.equal(updated.displayName, 'Oh My DSH Computer Use');
+  assert.equal(host.binary, binary, 'an old bundle is upgraded in place');
   assert.equal(updated.build,expected.build);assert.notEqual(updated.identity,installed.identity);
   assert.equal(live._meta.trisoul.build,expected.build);assert.notEqual(live._meta.trisoul.pid,permissions.source.pid);
   assert.equal((await host.installationStatus()).updateAvailable,false);
