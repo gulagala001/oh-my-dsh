@@ -81,6 +81,7 @@ test('the external Chrome window shows the real assistant cursor across zoom and
   await run(`const tab=await cua.getTab(${JSON.stringify(tab.id)},{browser:${JSON.stringify(tab.browserId)}}); await tab.markDeliverable();`);
   const rawCapture = () => cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true, captureBeyondViewport: false });
   for (const [zoom, scale, pan] of [[1, 1, false], [1, 2, true], [1.5, 2, true]]) {
+    t.diagnostic(`cursor scenario zoom=${zoom} scale=${scale}: reload`);
     await page.reload();
     // macOS overlay scrollbars legitimately fade after a click. Keep only
     // this pixel-equality fixture static; production pages retain their styles.
@@ -88,6 +89,7 @@ test('the external Chrome window shows the real assistant cursor across zoom and
     await worker.evaluate(async ({ id, zoom }) => chrome.tabs.setZoom(id, zoom), { id: nativeId, zoom });
     await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: scale });
     if (pan) await panViewport(cdp, headful ? 100 : 180);
+    t.diagnostic(`cursor scenario zoom=${zoom} scale=${scale}: capture and click`);
     const initial = viewportGeometry(await cdp.send('Page.getLayoutMetrics'));
     assert.equal(initial.scale, scale); assert.equal(initial.zoom, zoom); if (pan) assert.ok(initial.pageX > 20);
     const before = await backend.invoke('test', tab.id, 'getScreenshot');
@@ -119,6 +121,7 @@ test('the external Chrome window shows the real assistant cursor across zoom and
     assert.ok(pointer.x * initial.scale + 24 < common.width && pointer.y * initial.scale + 28 < common.height);
     assert.ok((await beforeImage.extract(common).ensureAlpha().raw().toBuffer()).equals(await afterImage.extract(common).ensureAlpha().raw().toBuffer()), 'the model must receive unchanged visible page pixels without the helper cursor');
     assert.deepEqual(viewportGeometry(await cdp.send('Page.getLayoutMetrics')), initial);
+    t.diagnostic(`cursor scenario zoom=${zoom} scale=${scale}: pixels and geometry passed`);
     const status = await env.popup.evaluate(() => chrome.runtime.sendMessage({ action: 'status' }));
     assert.ok(status.controls.every(control => !control.cursorError), JSON.stringify(status.controls));
     if (process.env.TRISOUL_CU_UI_ARTIFACTS) await writeFile(join(root, `window-cursor-${zoom}-${scale}.png`), Buffer.from(image, 'base64'));

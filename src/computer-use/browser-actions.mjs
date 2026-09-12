@@ -3,7 +3,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { point } from './coordinates.mjs';
 import { listPageAssets, bundlePageAssets, exportPageContent } from './browser-content.mjs';
 import { fetchWebMcpTools, callWebMcpTool, cancelWebMcp, webMcpAvailable } from './browser-webmcp.mjs';
-import { captureViewport, captureFullPage, observeScreenshot, screenshotGeometry, sameScreenshotGeometry, staleScreenshot } from './browser-screenshot.mjs';
+import { captureViewport, captureFullPage, observeScreenshot, withViewportTransaction, screenshotGeometry, sameScreenshotGeometry, staleScreenshot } from './browser-screenshot.mjs';
 
 const stale = () => Object.assign(new Error('This element belongs to an old or detached page. Read the current state again.'), { code: 'STALE_ELEMENT' });
 const keys = { cmd: 'Meta', super: 'Meta', ctrl: 'Control', control: 'Control', alt: 'Alt', option: 'Alt', shift: 'Shift', return: 'Enter', enter: 'Enter', esc: 'Escape', escape: 'Escape', backspace: 'Backspace', delete: 'Delete', tab: 'Tab', space: 'Space', left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown', home: 'Home', end: 'End', pageup: 'PageUp', pagedown: 'PageDown' };
@@ -242,16 +242,20 @@ export class BrowserActions {
   validateViewport(size){if(!size||!['width','height'].every(key=>Number.isInteger(size[key])&&size[key]>0&&size[key]<=10000000))throw new Error('Viewport width and height must be positive integers within Chromium limits.');}
   async setViewport(record,size){
     this.validateViewport(size);
-    if(record.dialog||record.nativeDialog)throw new Error('Answer the open JavaScript dialog before changing the viewport.');
-    const geometry=await screenshotGeometry(record),{result}=await record.cdp.send('Runtime.evaluate',{expression:'window.devicePixelRatio',returnByValue:true});
-    record.viewportOverride=true;
-    await record.cdp.send('Emulation.setDeviceMetricsOverride',{width:Math.round(size.width*geometry.zoom),height:Math.round(size.height*geometry.zoom),deviceScaleFactor:result.value/geometry.zoom,mobile:false});
-    record.screenshotFrame=null;
+    return withViewportTransaction(record,async()=>{
+      if(record.dialog||record.nativeDialog)throw new Error('Answer the open JavaScript dialog before changing the viewport.');
+      const geometry=await screenshotGeometry(record),{result}=await record.cdp.send('Runtime.evaluate',{expression:'window.devicePixelRatio',returnByValue:true});
+      record.viewportOverride=true;
+      await record.cdp.send('Emulation.setDeviceMetricsOverride',{width:Math.round(size.width*geometry.zoom),height:Math.round(size.height*geometry.zoom),deviceScaleFactor:result.value/geometry.zoom,mobile:false});
+      record.screenshotFrame=null;
+    });
   }
   async resetViewport(record){
-    if(!record.viewportOverride)return;
-    if(!record.page.isClosed())await record.cdp.send('Emulation.clearDeviceMetricsOverride');
-    record.viewportOverride=false;record.screenshotFrame=null;
+    return withViewportTransaction(record,async()=>{
+      if(!record.viewportOverride)return;
+      if(!record.page.isClosed())await record.cdp.send('Emulation.clearDeviceMetricsOverride');
+      record.viewportOverride=false;record.screenshotFrame=null;
+    });
   }
   async browserViewport(sessionId,size,signal){
     signal?.throwIfAborted();

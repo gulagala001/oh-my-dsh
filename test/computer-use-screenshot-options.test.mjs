@@ -96,7 +96,16 @@ for(const backend of ['managed','extension']){
     await s.page.reload();await s.page.evaluate(()=>scrollTo(100,80));
     const before=await s.driver.send('Page.getLayoutMetrics');let result;
     try{result=await s.run('await nodeRepl.emitImage(await tab.screenshot({fullPage:true}));');}
-    catch(error){t.diagnostic(JSON.stringify({backend,owned,before,after:await s.driver.send('Page.getLayoutMetrics')}));throw error;}
+    catch(error){
+      const after=await s.driver.send('Page.getLayoutMetrics'),recovery=[];
+      // Diagnose renderer restoration without changing page styles, emulation
+      // or the original assertion. Keep this data when platform CI fails.
+      for(const [method,params]of [['DOMSnapshot.captureSnapshot',{computedStyles:[]}],['Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false}]]){
+        try{await s.driver.send(method,params);recovery.push({method,metrics:await s.driver.send('Page.getLayoutMetrics')});}
+        catch(probeError){recovery.push({method,error:probeError.message});}
+      }
+      t.diagnostic(JSON.stringify({backend,owned,before,after,recovery}));throw error;
+    }
     const block=result.blocks.find(block=>block.type==='image'),meta=await sharp(Buffer.from(block.data,'base64')).metadata();assert.equal(meta.width,Math.ceil(before.cssContentSize.width));assert.equal(meta.height,Math.ceil(before.cssContentSize.height));
     assert.deepEqual((await s.driver.send('Page.getLayoutMetrics')).cssVisualViewport,before.cssVisualViewport);
     assert.deepEqual((await s.driver.send('Page.getLayoutMetrics')).cssLayoutViewport,before.cssLayoutViewport);

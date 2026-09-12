@@ -1,6 +1,10 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Buffers.Binary;
 
 // Preserve rendered clipboard representations, not OLE's private transport
 // metadata. Restore checks ownership and writes under one native clipboard lock.
@@ -20,10 +24,18 @@ internal sealed class ClipboardSnapshot : IDisposable
             {
                 token.ThrowIfCancellationRequested();
                 uint format = (uint)DataFormats.GetDataFormat(name).Id;
-                // Preserve bitmap pixels as transferable global memory. Windows
-                // synthesizes CF_BITMAP from CF_DIBV5 for bitmap consumers; a
-                // copied GDI handle is not our durable backup representation.
-                if (format == 2) format = 17; // CF_BITMAP -> CF_DIBV5
+                // Serialize actual bitmap pixels with an explicit V5 header,
+                // instead of relying on the synthesized DIB's memory layout.
+                if (format == 2)
+                {
+                    if (!formats.Any(value => DataFormats.GetDataFormat(value).Id == 17) && captured.Add(17))
+                    {
+                        var bitmap = GetClipboardData(2);
+                        if (bitmap == IntPtr.Zero) throw new NativeFailure("CLIPBOARD_UNAVAILABLE", "The current clipboard bitmap could not be preserved");
+                        snapshot.entries.Add(Entry.Bitmap(bitmap));
+                    }
+                    continue;
+                }
                 if (!captured.Add(format)) continue;
                 var data = GetClipboardData(format);
                 if (data == IntPtr.Zero) throw new NativeFailure("CLIPBOARD_UNAVAILABLE", "The current clipboard format could not be preserved: " + name);
@@ -68,6 +80,31 @@ internal sealed class ClipboardSnapshot : IDisposable
     {
         internal readonly uint Format = format;
         internal IntPtr Handle = handle;
+        internal static Entry Bitmap(IntPtr source)
+        {
+            var bitmap = Imaging.CreateBitmapSourceFromHBitmap(source, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+            var image = new FormatConvertedBitmap(bitmap, PixelFormats.Bgra32, null, 0);
+            int stride = checked(image.PixelWidth * 4), size = checked(stride * image.PixelHeight);
+            var bytes = new byte[checked(124 + size)];
+            void Header(int offset, int value) => BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(offset, 4), value);
+            Header(0, 124); Header(4, image.PixelWidth); Header(8, -image.PixelHeight);
+            bytes[12] = 1; bytes[14] = 32; // one plane, 32 bits per pixel
+            Header(16, 3); Header(20, size); // BI_BITFIELDS, top-down BGRA
+            Header(40, 0x00ff0000); Header(44, 0x0000ff00); Header(48, 0x000000ff); Header(52, unchecked((int)0xff000000));
+            Header(56, 0x73524742); // LCS_sRGB
+            image.CopyPixels(Int32Rect.Empty, bytes, stride, 124);
+            var memory = GlobalAlloc(0x42, (UIntPtr)bytes.Length);
+            if (memory == IntPtr.Zero) throw new OutOfMemoryException();
+            try
+            {
+                var target = GlobalLock(memory);
+                if (target == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+                try { Marshal.Copy(bytes, 0, target, bytes.Length); }
+                finally { GlobalUnlock(memory); }
+                return new Entry(17, memory);
+            }
+            catch { GlobalFree(memory); throw; }
+        }
         internal static Entry Copy(uint format, IntPtr source)
         {
             IntPtr copy;

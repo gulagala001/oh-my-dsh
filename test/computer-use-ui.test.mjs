@@ -397,7 +397,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
     // The arrow has a 35ms motion transition; visibility can precede arrival.
     // Keep the same sub-2px assertion and require convergence within 250ms.
     let tip, expectedTip;
-    await until(async()=>{tip=await assistantCursor.boundingBox();expectedTip=await point(target.getByLabel('姓名',{exact:true}));return tip&&Math.abs(tip.x+2-expectedTip.x)<2&&Math.abs(tip.y+2-expectedTip.y)<2;},250);
+    await until(async()=>{tip=await assistantCursor.boundingBox();expectedTip=await point(target.getByLabel('姓名',{exact:true}));return tip&&Math.abs(tip.x+2-expectedTip.x)<2&&Math.abs(tip.y+2-expectedTip.y)<2;},250).catch(error=>{throw new Error(error.message+': '+JSON.stringify({tip,expectedTip,viewport}),{cause:error});});
     assert.ok(Math.abs(tip.x + 2 - expectedTip.x) < 2 && Math.abs(tip.y + 2 - expectedTip.y) < 2, 'the assistant arrow tip must match the actual control in the displayed image: '+JSON.stringify({tip,expectedTip}));
     assert.equal(await assistantCursor.evaluate(element => getComputedStyle(element).pointerEvents), 'none');
     await page.locator('.tx-cu-pane .tx-cu-cursor-pulse').waitFor();

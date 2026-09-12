@@ -2,15 +2,37 @@ import sharp from 'sharp';
 import { setTimeout as delay } from 'node:timers/promises';
 
 // Chromium temporarily changes target-wide viewport/preferences for capture.
-// Separate model/preview CDP sessions must not overlap those transactions.
+// Captures and explicit viewport changes across model/preview CDP sessions
+// must not overlap: a capture can otherwise restore over a newer set/reset.
 const captures = new Map();
 
-export async function observeScreenshot(record, options = {}, signal, capture) {
-  screenshotOptions(options);
+export async function withViewportTransaction(record, operation, signal) {
   signal?.throwIfAborted();
   const key = record.id ?? record;
   const previous = captures.get(key);
-  const pending = (previous?.catch(() => {}) ?? Promise.resolve()).then(async () => {
+  const pending = (previous?.catch(() => {}) ?? Promise.resolve()).then(() => {
+    signal?.throwIfAborted();
+    return operation();
+  });
+  captures.set(key, pending);
+  const clear = () => { if (captures.get(key) === pending) captures.delete(key); };
+  void pending.then(clear, clear);
+  // Return cancellation promptly while retaining the transaction's place in
+  // the queue until its predecessor and any in-flight CDP restoration finish.
+  if (!signal) return pending;
+  let cancel;
+  const aborted = new Promise((_, reject) => {
+    cancel = () => reject(signal.reason);
+    signal.addEventListener('abort', cancel, { once: true });
+    if (signal.aborted) cancel();
+  });
+  try { return await Promise.race([pending, aborted]); }
+  finally { signal.removeEventListener('abort', cancel); }
+}
+
+export async function observeScreenshot(record, options = {}, signal, capture) {
+  screenshotOptions(options);
+  return withViewportTransaction(record, async () => {
     for (let attempt = 0; attempt < 2; attempt++) {
       signal?.throwIfAborted();
       const before = await screenshotGeometry(record);
@@ -30,21 +52,7 @@ export async function observeScreenshot(record, options = {}, signal, capture) {
       return { screenshot, screenshotFrame };
     }
     throw staleScreenshot();
-  });
-  captures.set(key, pending);
-  const clear = () => { if (captures.get(key) === pending) captures.delete(key); };
-  void pending.then(clear, clear);
-  // Return cancellation promptly while retaining the transaction's place in
-  // the queue until its predecessor and any in-flight CDP restoration finish.
-  if (!signal) return pending;
-  let cancel;
-  const aborted = new Promise((_, reject) => {
-    cancel = () => reject(signal.reason);
-    signal.addEventListener('abort', cancel, { once: true });
-    if (signal.aborted) cancel();
-  });
-  try { return await Promise.race([pending, aborted]); }
-  finally { signal.removeEventListener('abort', cancel); }
+  }, signal);
 }
 
 export const staleScreenshot = () => Object.assign(new Error('The screenshot geometry has changed. Capture the current screenshot before using point coordinates.'), { code: 'STALE_SCREENSHOT' });
