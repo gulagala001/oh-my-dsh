@@ -24,13 +24,25 @@ internal sealed class DpiFixture : IDisposable
         RequireCi(); original ??= Read();
         var mode = new DisplayMode { Size = 220 };
         if (!EnumDisplaySettingsW(null, -1, ref mode)) throw new Win32Exception();
-        if (mode.Width < 2560 || mode.Height < 1440)
+        var choices = new List<DisplayMode>();
+        for (int index = 0; index < 512; index++)
+        {
+            var candidate = new DisplayMode { Size = 220 };
+            if (!EnumDisplaySettingsW(null, index, ref candidate)) break;
+            if (candidate.Width >= 1600 && candidate.Height >= 1200) choices.Add(candidate);
+        }
+        // Use a driver-advertised mode with at least 800x600 effective pixels
+        // at 200%. Basic VM adapters often offer 1600x1200 but not 1440p.
+        var selected = choices.OrderBy(value => (long)value.Width * value.Height).FirstOrDefault();
+        if (selected.Width == 0) throw new InvalidOperationException("CI display has no advertised resolution sufficient for 200% DPI");
+        if (mode.Width != selected.Width || mode.Height != selected.Height)
         {
             originalMode ??= mode;
-            SetResolution(Math.Max(mode.Width, 2560u), Math.Max(mode.Height, 1440u));
+            SetResolution(selected.Width, selected.Height);
         }
-        return new { width = Math.Max(mode.Width, 2560u), height = Math.Max(mode.Height, 1440u) };
+        return new { width = selected.Width, height = selected.Height };
     }
+
     private static void SetResolution(uint width, uint height)
     {
         var mode = new DisplayMode { Size = 220, Fields = 0x00180000, Width = width, Height = height };
