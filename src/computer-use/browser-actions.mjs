@@ -242,15 +242,19 @@ export class BrowserActions {
   validateViewport(size){if(!size||!['width','height'].every(key=>Number.isInteger(size[key])&&size[key]>0&&size[key]<=10000000))throw new Error('Viewport width and height must be positive integers within Chromium limits.');}
   async setViewport(record,size){
     this.validateViewport(size);
-    return withViewportTransaction(record,async()=>{
+    record.pendingViewportSets=(record.pendingViewportSets??0)+1;
+    try{return await withViewportTransaction(record,async()=>{
       if(record.dialog||record.nativeDialog)throw new Error('Answer the open JavaScript dialog before changing the viewport.');
       const geometry=await screenshotGeometry(record),{result}=await record.cdp.send('Runtime.evaluate',{expression:'window.devicePixelRatio',returnByValue:true});
       record.viewportOverride=true;
       await record.cdp.send('Emulation.setDeviceMetricsOverride',{width:Math.round(size.width*geometry.zoom),height:Math.round(size.height*geometry.zoom),deviceScaleFactor:result.value/geometry.zoom,mobile:false});
       record.screenshotFrame=null;
-    });
+    });}finally{record.pendingViewportSets--;}
   }
   async resetViewport(record){
+    // Observer teardown must not wait for an unrelated, possibly lost capture
+    // reply. A queued resize still needs a reset after it actually applies.
+    if(!record.viewportOverride&&!record.pendingViewportSets)return;
     return withViewportTransaction(record,async()=>{
       if(!record.viewportOverride)return;
       if(!record.page.isClosed())await record.cdp.send('Emulation.clearDeviceMetricsOverride');

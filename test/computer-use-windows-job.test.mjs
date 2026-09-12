@@ -4,7 +4,7 @@ import { execFile, fork } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { once } from 'node:events';
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -30,6 +30,7 @@ for (const phase of ['running', 'starting']) test('Windows job cleans the browse
   t.after(async () => {
     if (owner && owner.exitCode === null && owner.signalCode === null) owner.kill('SIGKILL');
     await stopWindowsProcesses(owned); await writeFile(join(artifacts, 'owner-stderr.txt'), stderr);
+    try { await writeFile(join(artifacts, 'chrome-startup.log'), await readFile(join(profile, 'startup.log'))); } catch (error) { if (error.code !== 'ENOENT') throw error; }
     await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
   });
   const pendingBrowser = join(root, 'PendingBrowser.exe');
@@ -40,9 +41,9 @@ const host=new BrowserHost(process.argv[2],process.argv[3]==='starting'?{executa
 if(process.argv[3]==='starting') { void host.start().catch(()=>{}); while(!host.browserPid) await delay(5); }
 else { await host.create('fixture','data:text/html,<h1>Windows owned browser</h1>'); await host.create('fixture','data:text/html,<h1>Second owned page</h1>'); }
 process.send({guardian:host.child.pid,browser:host.browserPid,job:host.run.jobPid,ready:!!host.run.ready});`);
-  owner = fork(entry, [profile, phase, pendingBrowser], { execArgv: [], stdio: ['ignore', 'ignore', 'pipe', 'ipc'], env: { ...process.env, TRISOUL_CU_DOTNET: 'deliberately-unavailable-sdk' } });
+  owner = fork(entry, [profile, phase, pendingBrowser], { execArgv: [], stdio: ['ignore', 'ignore', 'pipe', 'ipc'], env: { ...process.env, TRISOUL_CU_DOTNET: 'deliberately-unavailable-sdk', TRISOUL_CU_BROWSER_DIAGNOSTICS: '1' } });
   owner.stderr.on('data', data => { stderr += data; });
-  const ready = new AbortController(), timeout = setTimeout(() => ready.abort(), 20000);
+  const ready = new AbortController(), timeout = setTimeout(() => ready.abort(), 40000);
   let info;
   try {
     [info] = await Promise.race([

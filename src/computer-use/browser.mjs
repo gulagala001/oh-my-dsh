@@ -34,14 +34,14 @@ function browserProcessId(endpoint, timeoutMs = 2000) {
       socket?.terminate();
       if (error) reject(Object.assign(error, { connected: opened })); else resolve(pid);
     };
-    const timer = setTimeout(() => finish(new Error('Browser process verification timed out')), timeoutMs);
+    const timer = setTimeout(() => finish(Object.assign(new Error('Browser process verification timed out'), { retryable: true })), timeoutMs);
     try { socket = new WebSocket(endpoint); } catch (error) { finish(error); return; }
     socket.addEventListener('open', () => {
       opened = true;
       try { socket.send(JSON.stringify({ id: 1, method: 'SystemInfo.getProcessInfo' })); } catch (error) { finish(error); }
     });
-    socket.addEventListener('error', () => finish(new Error('Could not connect to the browser debugger')));
-    socket.addEventListener('close', () => finish(new Error('Browser debugger closed')));
+    socket.addEventListener('error', () => finish(Object.assign(new Error('Could not connect to the browser debugger'), { retryable: true })));
+    socket.addEventListener('close', () => finish(Object.assign(new Error('Browser debugger closed'), { retryable: true })));
     socket.addEventListener('message', event => {
       try {
         const reply = JSON.parse(event.data); if (reply.id !== 1) return;
@@ -89,7 +89,11 @@ export class BrowserHost extends BrowserActions {
     await rm(portFile, { force: true });
     if (this.closing) throw new Error('Computer Use browser is shutting down');
     const run = { id: randomUUID(), ready: false, lost: false, requestedStop: false, stderr: '', phase: 'guardian', portFileState: 'unread' }; this.run = run;
-    const args = [executable, `--user-data-dir=${this.directory}`, '--remote-debugging-port=0', '--remote-debugging-address=127.0.0.1', '--no-first-run', '--no-default-browser-check', '--no-startup-window', '--disable-background-networking', '--enable-blink-features=WebMCP', ...(this.headless ? ['--headless=new'] : [])];
+    // Full-page Chromium capture hides scrollbars internally. Use that same
+    // rendering policy from the first layout in our headless profile so a
+    // screenshot cannot change gutter width, wrapping or responsive breakpoints.
+    const args = [executable, `--user-data-dir=${this.directory}`, '--remote-debugging-port=0', '--remote-debugging-address=127.0.0.1', '--no-first-run', '--no-default-browser-check', '--no-startup-window', '--disable-background-networking', '--enable-blink-features=WebMCP', ...(this.headless ? ['--headless=new', '--hide-scrollbars'] : [])];
+    if (process.env.TRISOUL_CU_BROWSER_DIAGNOSTICS === '1') args.push('--enable-logging', '--log-file=' + join(this.directory, 'startup.log'));
     const child = fork(new URL('./browser-process.mjs', import.meta.url), args, { execArgv: [], stdio: ['ignore', 'ignore', 'pipe', 'ipc'], windowsHide: true, detached: process.platform !== 'win32' });
     run.child = child; this.child = child; this.browserPid = null;
     run.exited = new Promise(resolve => {
@@ -110,7 +114,9 @@ export class BrowserHost extends BrowserActions {
       if (message.type === 'cleanup-error') run.cleanupError = new Error(message.message);
     });
     child.stderr.on('data', data => { run.stderr = (run.stderr + data.toString()).slice(-8192); });
-    const deadline = Date.now() + 15000;
+    // A cold Windows profile can still be initializing after 15 seconds.
+    // Bound the entire launch, including debugger connection retries.
+    const deadline = Date.now() + (process.platform === 'win32' ? 30000 : 15000);
     try {
       while (Date.now() < deadline) {
         if (this.closing) throw new Error('Computer Use browser is shutting down');
@@ -125,14 +131,21 @@ export class BrowserHost extends BrowserActions {
         if (run.lost || run.launchError) throw run.launchError ?? new Error('Browser exited during startup');
         const endpoint = debuggingEndpoint(address);
         if (endpoint && run.browserPid) {
-          if (await browserProcessId(endpoint) !== run.browserPid) throw new Error('Browser debugger belongs to another process; the profile is already in use.');
+          let pid;
+          try { pid = await browserProcessId(endpoint, Math.max(1, Math.min(2000, deadline - Date.now()))); }
+          catch (error) {
+            if (!error.retryable) throw error;
+            run.verificationError = error.message;
+            await delay(40); continue;
+          }
+          if (pid !== run.browserPid) throw new Error('Browser debugger belongs to another process; the profile is already in use.');
           if (run.lost || run.launchError) throw run.launchError ?? new Error('Browser exited during startup');
           this.endpoint = run.endpoint = endpoint; run.ready = true; return run;
         }
         await delay(40);
       }
       throw new Error('Browser startup timed out' + (run.stderr.trim() ? ': ' + run.stderr.trim() : ''), {
-        cause: { phase: run.phase, browserPid: run.browserPid, jobPid: run.jobPid, portFile: run.portFileState },
+        cause: { phase: run.phase, browserPid: run.browserPid, jobPid: run.jobPid, portFile: run.portFileState, verification: run.verificationError },
       });
     } catch (error) { await this.terminateBrowser(run); throw error; }
   }

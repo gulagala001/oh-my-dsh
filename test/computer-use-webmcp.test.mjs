@@ -15,8 +15,11 @@ for (const backend of ['managed', 'extension']) test(`${backend}: native WebMCP 
   const env = backend === 'extension' ? await extensionFixture(t, { fixture, args: ['--enable-blink-features=WebMCP'] }) : null;
   // The isolated Chromium fixture has no user credentials. Like Playwright's
   // own launch, it uses a mock keychain; production browser launches do not.
-  const executablePath = process.platform === 'darwin' ? join(root, 'test-chromium') : chromium.executablePath();
-  if (process.platform === 'darwin') await writeFile(executablePath, '#!/bin/sh\nexec ' + "'" + (process.env.TRISOUL_CU_TEST_BROWSER_EXECUTABLE ?? chromium.executablePath()).replaceAll("'", "'\\''") + "'" + ' --use-mock-keychain "$@"\n', { mode: 0o700 });
+  const executablePath = process.platform !== 'win32' ? join(root, 'test-chromium') : chromium.executablePath();
+  // Match Playwright's isolated test launch on Linux runners whose AppArmor
+  // policy prevents the downloaded Chromium from creating its user namespace.
+  // This wrapper is only for the fixture, never a production browser profile.
+  if (process.platform !== 'win32') await writeFile(executablePath, '#!/bin/sh\nexec ' + "'" + (process.env.TRISOUL_CU_TEST_BROWSER_EXECUTABLE ?? chromium.executablePath()).replaceAll("'", "'\\''") + "'" + (process.platform === 'darwin' ? ' --use-mock-keychain' : ' --no-sandbox') + ' "$@"\n', { mode: 0o700 });
   const manager = new ComputerUseManager(root, { ...(env ? { extensionHub: env.hub } : { browser: { executablePath } }), native: { binary: join(root, 'missing') } });
   t.after(async () => { await manager.close(); await rm(root, { recursive: true, force: true }); });
   const run = async code => { const r = await manager.execute('test', code); assert.equal(r.error, undefined, r.error?.message); return r; };

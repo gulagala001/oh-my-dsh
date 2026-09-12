@@ -93,8 +93,10 @@ test('the external Chrome window shows the real assistant cursor across zoom and
     const initial = viewportGeometry(await cdp.send('Page.getLayoutMetrics'));
     assert.equal(initial.scale, scale); assert.equal(initial.zoom, zoom); if (pan) assert.ok(initial.pageX > 20);
     const before = await backend.invoke('test', tab.id, 'getScreenshot');
+    t.diagnostic(`cursor scenario zoom=${zoom} scale=${scale}: baseline captured`);
     const focused = await page.evaluate(() => document.activeElement.tagName);
     await run('await tab.click([240,200]);');
+    t.diagnostic(`cursor scenario zoom=${zoom} scale=${scale}: input completed`);
     const layer = page.locator('[data-trisoul-cursor]'); await layer.waitFor({ timeout: 8000 });
     await delay(50); // Let the short movement interpolation reach its endpoint.
     const pointer = manager.sessions.get('test').pointer; assert.ok(pointer);
@@ -108,6 +110,7 @@ test('the external Chrome window shows the real assistant cursor across zoom and
     assert.ok(count > 25 * dpr * dpr && minX - x < 5 * dpr && minY - y < 5 * dpr, JSON.stringify({ zoom, scale, pan, x, y, count, minX, minY, dpr }));
     assert.equal(await page.evaluate(() => document.activeElement.tagName), focused, 'showing the pointer must not steal focus');
     const after = await backend.invoke('test', tab.id, 'getScreenshot');
+    t.diagnostic(`cursor scenario zoom=${zoom} scale=${scale}: model capture completed`);
     if (process.env.TRISOUL_CU_UI_ARTIFACTS) {
       await writeFile(join(root, `before-${zoom}-${scale}.png`), Buffer.from(before.screenshot, 'base64'));
       await writeFile(join(root, `after-${zoom}-${scale}.png`), Buffer.from(after.screenshot, 'base64'));
