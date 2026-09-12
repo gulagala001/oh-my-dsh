@@ -43,7 +43,8 @@ export function mountComputerUseHttp(ctx,hub){
         if(op==='setup'){
           const request=await body(req);
           if(request.action==='install-native')await manager.installNative();
-          else if(request.action==='install-extension')await manager.extensionInstaller.prepare();
+          else if(request.action==='install-extension')await manager.installExtension();
+          else if(request.action==='remove-extension')await manager.removeExtension();
           else if(request.action==='permissions')await manager.native.showSetup();
           else {send(res,400,{error:'未知的设置操作'});return;}
           send(res,200,await manager.setupStatus());return;

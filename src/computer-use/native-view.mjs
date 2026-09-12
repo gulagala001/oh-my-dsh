@@ -32,7 +32,7 @@ export class NativeViews {
     while(!view.closed){try{
     const connection=await this.native.connection(view.sessionId);
     if(connection.info._meta?.trisoul?.build!==(await this.native.expectedBuild()).build)throw new Error('桌面控制运行时需要更新后才能打开实时画面');
-    await this.native.call(view.sessionId,'start_preview',{pid:view.target.pid,window_id:view.target.windowId,process_identity:view.target.processIdentity},view.controller.signal);
+    await this.native.call(view.sessionId,'start_preview',{pid:view.target.pid,window_id:view.target.windowId,process_identity:view.target.processIdentity,owner_session_id:view.target.sessionId},view.controller.signal);
     if(view.closed)return;
     view.startedAt=Date.now();
     return;

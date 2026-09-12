@@ -2,14 +2,15 @@ import { mkdtemp, mkdir, readFile, writeFile, rm, cp } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { chromium } from 'playwright';
-import { ExtensionHub } from '../../../src/computer-use/extension-hub.mjs';
+import { ExtensionHub, extensionSocketPath } from '../../../src/computer-use/extension-hub.mjs';
 import { ExtensionInstaller } from '../../../src/computer-use/extension-install.mjs';
 import { startFixture } from './server.mjs';
 
 export async function extensionFixture(t, options = {}) {
   const root=await mkdtemp(join(process.platform==='darwin'?'/tmp':tmpdir(),options.prefix??'trisoul-ext-cdp-'));
+  if (process.platform === 'win32' && !options.prepared) return windowsFixture(t, root, options);
   const profile=options.profile??join(root,'profile'),hub=options.socketPath?null:new ExtensionHub(join(root,'bridge.sock'));
   let context,fixture,popup,installer;
   t.after(async()=>{
@@ -42,4 +43,37 @@ export async function extensionFixture(t, options = {}) {
   const browser=hub?hub.list()[0]:{id:'chrome:'+instanceId};
   if(!browser)throw new Error('Extension did not connect: '+await popup.locator('body').innerText());
   return{root,context,fixture,hub,browser,popup,origin,installer};
+}
+
+async function windowsFixture(t, root, options) {
+  const source = join(root, 'source'), profile = options.profile ?? join(root, 'profile');
+  // Windows registration is per user, not per profile. Use a unique host name
+  // in this isolated extension copy so tests never touch the user's connection.
+  const hostName = 'ai.trisoul.test_' + randomUUID().replaceAll('-', '');
+  await cp(options.extensionPath ?? new URL('../../../browser-extension', import.meta.url), source, { recursive: true });
+  const workerPath = join(source, 'worker.js'), workerSource = await readFile(workerPath, 'utf8');
+  if (!workerSource.includes("const HOST = 'ai.trisoul.computer_use';")) throw new Error('Fixture native host declaration changed');
+  await writeFile(workerPath, workerSource.replace("const HOST = 'ai.trisoul.computer_use';", 'const HOST = ' + JSON.stringify(hostName) + ';'));
+  const socketPath = options.socketPath ?? extensionSocketPath(root);
+  const installer = new ExtensionInstaller(join(root, 'runtime'), socketPath, { chromeUserDataDir: profile, source, hostName });
+  const hub = options.socketPath ? null : new ExtensionHub(socketPath, { windowsRuntime: installer.windows });
+  let context, fixture;
+  t.after(async () => {
+    const closed = await Promise.allSettled([context?.close(), hub?.close(), options.fixture ? undefined : fixture?.close()]);
+    await installer.unregister();
+    // Windows Chrome/bridge shutdown can briefly retain directory handles.
+    if (!process.env.TRISOUL_CU_UI_ARTIFACTS) await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
+    const errors = closed.filter(result => result.status === 'rejected').map(result => result.reason);
+    if (errors.length) throw new AggregateError(errors, 'Windows extension fixture cleanup failed');
+  });
+  await installer.prepare(); await hub?.start();
+  fixture = options.fixture ?? await startFixture();
+  const installation = await installer.status(), origin = 'chrome-extension://' + installation.extensionId + '/';
+  context = await chromium.launchPersistentContext(profile, { channel: 'chromium', headless: options.headless ?? true, ...(options.viewport !== undefined ? { viewport: options.viewport } : {}), args: ['--site-per-process', '--disable-extensions-except=' + installer.extensionPath, '--load-extension=' + installer.extensionPath, ...(options.args ?? [])] });
+  context.on('dialog', () => {});
+  const popup = await context.newPage(); await popup.goto(origin + 'popup.html');
+  await popup.getByText('已连接 Oh My DSH', { exact: true }).waitFor({ timeout: 10000 });
+  const worker = context.serviceWorkers().find(worker => worker.url() === origin + 'worker.js');
+  const instanceId = await worker.evaluate(async () => (await chrome.storage.local.get('instanceId')).instanceId);
+  return { root, context, fixture, hub, browser: hub?.list()[0] ?? { id: 'chrome:' + instanceId }, popup, origin, installer };
 }

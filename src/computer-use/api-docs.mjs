@@ -230,3 +230,20 @@ or paste when text should be inserted without those key actions. Element clicks
 honor mouseButton and clickCount; middle clicks and multiple clicks use actual
 pointer events at the observed element's visible input surface.
 `;
+
+export function appDocumentation(platform = process.platform) {
+  if (platform !== 'win32') return APP_DOCUMENTATION;
+  return APP_DOCUMENTATION + `
+Windows desktop behavior: actions use the selected foreground window. Reading a
+window or its preview does not activate it. Mouse/keyboard intervention stops
+control; wait for the user to resume before rebinding. Keep the desktop unlocked.
+On Windows, super/meta/win mean the Windows key, not Command. Use ctrl+a for
+Select All and ctrl+c/ctrl+v for clipboard shortcuts. Command/cmd and fn are not
+Windows modifiers. Punctuation uses the target's keyboard layout. Ctrl+Alt+Delete
+cannot be synthesized. Window/app discovery currently lists running applications;
+choose an exact discovered id and windowId when names or windows are ambiguous.
+Scrolling uses the selected UI Automation scroll area, or the nearest such area
+at a screenshot point; controls without a readable scroll pattern report that
+limitation. Windows cannot inject into a higher-privilege or secure desktop.
+`;
+}

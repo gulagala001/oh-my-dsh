@@ -11,17 +11,22 @@ const aliases={return:'enter',esc:'escape',prior:'pageup',page_up:'pageup',next:
 };
 const shifted={exclam:'1',at:'2',numbersign:'3',dollar:'4',percent:'5',asciicircum:'6',ampersand:'7',asterisk:'8',parenleft:'9',parenright:'0',underscore:'-',plus:'=',braceleft:'[',braceright:']',bar:'\\',colon:';',quotedbl:"'",less:',',greater:'.',question:'/',asciitilde:'`',
   '!':'1','@':'2','#':'3','$':'4','%':'5','^':'6','&':'7','*':'8','(':'9',')':'0','_':'-','+':'=','{':'[','}':']','|':'\\',':':';','"':"'",'<':',','>':'.','?':'/','~':'`'};
+const windowsSymbols={exclam:'!',at:'@',numbersign:'#',dollar:'$',percent:'%',asciicircum:'^',ampersand:'&',asterisk:'*',parenleft:'(',parenright:')',underscore:'_',plus:'+',braceleft:'{',braceright:'}',bar:'|',colon:':',quotedbl:'"',less:'<',greater:'>',question:'?',asciitilde:'~'};
 const named=new Set(['enter','tab','space','backspace','escape','home','end','pageup','pagedown','delete','left','right','up','down','help','insert','kp_decimal','kp_multiply','kp_add','kp_clear','kp_divide','kp_enter','kp_subtract','kp_equal',...Array.from({length:20},(_,i)=>'f'+(i+1)),...Array.from({length:10},(_,i)=>'kp_'+i)]);
 
-export function nativeKeyChord(value){
+export function nativeKeyChord(value,platform='darwin'){
+  if(!['darwin','win32'].includes(platform))throw new Error('Unsupported native keyboard platform: '+platform);
+  const platformModifiers=platform==='win32'?new Map([...modifiers].filter(([key])=>!['cmd','command','fn'].includes(key)).map(([key,value])=>[key,value==='cmd'?'win':value]).concat([['win','win'],['windows','win'],['win_l','win'],['win_r','win']])):modifiers;
   if(typeof value!=='string'||!value.trim())throw new Error('pressKey requires a key or a + separated chord.');
   const parts=value.trim()==='+'?['plus']:value.trim().split(/\s*\+\s*/),last=parts.pop(),flags=new Set();
-  for(const part of parts){const modifier=modifiers.get(part.toLowerCase());if(!modifier)throw new Error('Unknown keyboard modifier: '+part);flags.add(modifier);}
-  if(!last||modifiers.has(last.toLowerCase()))throw new Error('A key chord must include a non-modifier key, for example super+a.');
+  for(const part of parts){const modifier=platformModifiers.get(part.toLowerCase());if(!modifier)throw new Error('Unknown keyboard modifier: '+part);flags.add(modifier);}
+  if(!last||platformModifiers.has(last.toLowerCase()))throw new Error('A key chord must include a non-modifier key, for example super+a.');
   let key=last.toLowerCase().replace(/^numpad_/,'kp_');
   if(/^[A-Z]$/.test(last)||key==='iso_left_tab')flags.add('shift');
-  if(Object.hasOwn(shifted,key)){flags.add('shift');key=shifted[key];}else key=aliases[key]??key;
-  if(!named.has(key)&&!/^[a-z0-9=\-\[\]\\;',./`]$/.test(key))throw new Error('Unsupported key: '+last);
+  if(platform==='win32')key=windowsSymbols[key]??aliases[key]??key;
+  else if(Object.hasOwn(shifted,key)){flags.add('shift');key=shifted[key];}else key=aliases[key]??key;
+  if(!named.has(key)&&!(platform==='win32'&&(/^f2[1-4]$/.test(key)||/^[!@#$%^&*()_+{}|:"<>?~]$/.test(key)))&&!/^[a-z0-9=\-\[\]\\;',./`]$/.test(key))throw new Error('Unsupported key: '+last);
+  if(platform==='win32'&&['fn','kp_equal'].includes(key))throw new Error('Unsupported Windows key: '+last);
   return {key,modifiers:[...flags]};
 }
 

@@ -65,6 +65,25 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await page.getByRole('button', { name: '运行环境与权限', exact: true }).click();
   await page.getByText('Chrome 扩展', { exact: true }).waitFor();
   await screenshot('computer-setup');
+  const setupState = await page.evaluate(async session => (await fetch('/trisoul-x/computer-use/setup?session='+encodeURIComponent(session))).json(), f.sessionId);
+  let windowsInstalled = false, repairRequired = false;
+  const windowsSetup = async route => {
+    if (route.request().method() === 'POST') { assert.equal(route.request().postDataJSON().action, 'install-native'); windowsInstalled = true; repairRequired = false; }
+    await route.fulfill({ json: { ...setupState, native: { platform: 'win32', supported: true, installed: windowsInstalled, interactive: windowsInstalled, captureSupported: windowsInstalled, repairRequired, version: '0.1.1' } } });
+  };
+  await page.route('**/trisoul-x/computer-use/setup?*', windowsSetup);
+  try {
+    await until(async () => (await page.locator('.tx-cu-setup').innerText()).includes('.NET 10 SDK'));
+    assert.doesNotMatch(await page.locator('.tx-cu-setup').innerText(), /Apple Command Line Tools|操作 Mac 应用/);
+    await page.getByRole('button', { name: '安装桌面控制', exact: true }).click();
+    await page.locator('.tx-cu-setup-row').filter({ hasText: 'Windows 桌面' }).getByText('可用', { exact: true }).waitFor();
+    assert.equal(await page.locator('.tx-cu-setup-row').filter({ hasText: '辅助功能' }).count(), 0);
+    assert.equal(await page.getByRole('button', { name: '打开权限设置', exact: true }).count(), 0);
+    repairRequired = true;
+    await page.getByRole('button', { name: '修复桌面控制', exact: true }).click();
+    await page.getByRole('button', { name: '修复桌面控制', exact: true }).waitFor({ state: 'hidden' });
+    await screenshot('windows-setup');
+  } finally { await page.unroute('**/trisoul-x/computer-use/setup?*', windowsSetup); }
   const light = await workbench.evaluate(el => getComputedStyle(el).backgroundColor);
   await page.emulateMedia({ colorScheme: 'dark' });
   await until(async () => await workbench.evaluate(el => getComputedStyle(el).backgroundColor) !== light);

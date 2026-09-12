@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { BrowserHost, browserExecutablePath } from './browser.mjs';
 import { NativeHost } from './native.mjs';
+import { WindowsNativeHost } from './windows-native.mjs';
 import { NativeViews } from './native-view.mjs';
 import { ComputerRuntime } from './runtime.mjs';
 import { BrowserViews } from './browser-view.mjs';
@@ -44,13 +45,13 @@ export class ComputerUseManager {
     } };
     this.browser = new BrowserHost(join(directory, 'browser-profile'), { ...options.browser, ...callbacks });
     this.browserViews = new BrowserViews(this.browser);
-    this.native = new NativeHost(directory, options.native);
+    this.native = process.platform === 'win32' ? new WindowsNativeHost(directory, options.native) : new NativeHost(directory, options.native);
     this.nativeViews = new NativeViews(this.native);
     this.sessions = new Map(); this.preview = new Map(); this.sharing = new Map(); this.closed = false; this.enabled = options.enabled !== false;
     this.extensionBrowsers = new Map(); this.extensionViews = new Map(); this.retiredExtensions = new Set();
-    this.extensionHub = options.extensionHub ?? new ExtensionHub(extensionSocketPath(directory));
+    this.extensionInstaller = new ExtensionInstaller(directory, options.extensionHub?.socketPath ?? extensionSocketPath(directory), options.extension);
+    this.extensionHub = options.extensionHub ?? new ExtensionHub(this.extensionInstaller.socketPath, { windowsRuntime: this.extensionInstaller.windows });
     this.ownsExtensionHub = !options.extensionHub;
-    this.extensionInstaller = new ExtensionInstaller(directory, this.extensionHub.socketPath, options.extension);
     this.extensionConnected = info => {
       const previous = this.extensionBrowsers.get(info.id);
       if (previous?.info.epoch === info.epoch) return;
@@ -204,6 +205,10 @@ export class ComputerUseManager {
         return result;
       } catch (error) {
         const failure = signal?.aborted ? signal.reason : error;
+        if (target.kind === 'app' && ['USER_INTERVENTION', 'FOREGROUND_LOST', 'INPUT_MONITOR_LOST'].includes(failure?.code)) {
+          session.stopped = true; session.controlEpoch++; this.publishControl(session);
+          void this.stop(id).catch(cleanup => { session.stopError = { operation: 'stop', message: cleanup.message, at: Date.now() }; });
+        }
         const cancelled = ['NAVIGATION_SUPERSEDED', 'COMPUTER_USE_STOPPED'].includes(failure?.code);
         if (!cancelled) session.lastError = { operation, message: failure.message, at: Date.now() };
         this.recordOperation(session, { target: target.id, kind: target.kind, operation, elapsedMs: Math.round(performance.now() - started), at: Date.now(), ok: false, cancelled, error: failure.message }); throw failure;
@@ -546,13 +551,48 @@ export class ComputerUseManager {
   async setupStatus() {
     await this.extensionReady;
     const executable = this.browser.runtimePath ?? browserExecutablePath(this.browser.executablePath);
-    const native = { supported: this.native.supported(), installed: this.native.available(), installing: !!this.native.installing, accessibility: null, screenRecording: null };
+    const native = { platform: process.platform, supported: this.native.supported(), installed: this.native.available(), installing: !!this.native.installing, accessibility: null, screenRecording: null };
     if (native.installed) {
-      try { Object.assign(native,await this.native.installationStatus());const permissions = await this.native.permissions('ui-permissions'); native.accessibility = permissions.accessibility; native.screenRecording = permissions.screen_recording; }
-      catch (error) { native.error = error.message; }
+      try { Object.assign(native,await this.native.installationStatus());const permissions = await this.native.permissions('ui-permissions'); if (permissions.platform === 'win32') { native.interactive = permissions.interactive; native.captureSupported = permissions.capture_supported; } else { native.accessibility = permissions.accessibility; native.screenRecording = permissions.screen_recording; } }
+      catch (error) { native.error = error.message; if (native.platform === 'win32') native.repairRequired = true; }
     }
     const browsers = this.extensionHub.list();
-    return { browser: { installed: existsSync(executable), name: executable.includes('ms-playwright') ? 'Chromium · Playwright 固定版本' : 'Chrome / Chromium', path: executable, running: !!this.browser.endpoint && !this.browser.closing }, extension: { ready: !!this.extensionHub.server, browsers, error: this.extensionError ?? null, installation: await this.extensionInstaller.status(browsers) }, native };
+    return { browser: { installed: existsSync(executable), name: executable.includes('ms-playwright') ? 'Chromium · Playwright 固定版本' : 'Chrome / Chromium', path: executable, running: !!this.browser.endpoint && !this.browser.closing }, extension: { ready: !!this.extensionHub.server && !this.extensionHub.server.failure, browsers, error: this.extensionError ?? this.extensionHub.server?.failure?.message ?? null, installation: await this.extensionInstaller.status(browsers) }, native };
+  }
+  async installExtension() {
+    return this.configureExtension('install', async () => {
+    await this.extensionInstaller.prepare();
+    if (this.closed) throw new Error('Oh My DSH 已关闭，请重新启动后连接 Chrome');
+    const command = this.extensionInstaller.windows ? (await this.extensionInstaller.windows.command()).command : null;
+    if (this.ownsExtensionHub && (!this.extensionHub.server || this.extensionHub.server.failure || (command && command !== this.extensionHub.server.command))) {
+      await this.extensionHub.close();
+      await this.extensionHub.start(); this.extensionError = null;
+    }
+    });
+  }
+  async removeExtension() {
+    return this.configureExtension('remove', async () => {
+    await this.extensionReady;
+    for (const browser of this.extensionBrowsers.values()) browser.closing = true;
+    for (const state of this.sessions.values()) if (state.target?.kind === 'tab' && this.extensionBrowsers.has(state.target.browserId)) await this.stop(state.id);
+    // Just like plugin disposal, never cut the last CDP connection before an
+    // uncertain temporary page style has actually been restored.
+    await Promise.all([...this.extensionViews.values()].flatMap(views => [...views.views.values()].filter(view => view.stylePreview).map(view => restoreStylePreview(view))));
+    for (const views of this.extensionViews.values()) await views.close();
+    for (const browser of this.extensionBrowsers.values()) { await browser.close(); browser.invalidate(); }
+    if (this.ownsExtensionHub) await this.extensionHub.close();
+    await this.extensionInstaller.unregister(); this.extensionError = null;
+    });
+  }
+  async configureExtension(action, work) {
+    if (this.closed) throw new Error('Oh My DSH 已关闭');
+    if (this.extensionSetup) {
+      if (this.extensionSetup.action !== action) throw new Error('Chrome 连接正在配置，请等待当前操作完成');
+      return this.extensionSetup.promise;
+    }
+    const operation = { action };
+    operation.promise = Promise.resolve().then(work).finally(() => { if (this.extensionSetup === operation) this.extensionSetup = null; });
+    this.extensionSetup = operation; return operation.promise;
   }
   async installNative() {
     await this.native.install({beforeReplace:async()=>{
@@ -572,6 +612,7 @@ export class ComputerUseManager {
   }
   async close() {
     this.closed = true;
+    await this.extensionSetup?.promise.catch(() => {});
     for (const state of this.sessions.values()) state.uiAction?.abort(new Error('Computer Use plugin unloaded'));
     const stopping = [this.stopSharing(), ...[...this.sessions.values()].map(async state => { await state.runtime.stop(new Error('Computer Use plugin unloaded')); await state.uiActionPending?.catch(() => {}); })];
     const stopped=Promise.allSettled(stopping);

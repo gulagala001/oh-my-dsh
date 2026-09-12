@@ -1,0 +1,78 @@
+name: Windows Computer Use
+
+on:
+  push:
+    branches: ['codex/windows-adaptation']
+  pull_request:
+    paths:
+      - 'src/computer-use/**'
+      - 'native/computer-use/windows/**'
+      - 'scripts/*windows*'
+      - 'test/*windows*'
+      - 'test/fixtures/computer-use/windows-*'
+      - 'test/fixtures/computer-use/windows-*/**'
+      - '.github/workflows/windows-computer-use.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-cu-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install chromium
+      - run: pnpm build
+      - name: Windows environment
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force cu-artifacts | Out-Null
+          [ordered]@{
+            os = [Environment]::OSVersion.VersionString
+            interactive = [Environment]::UserInteractive
+            session = (Get-Process -Id $PID).SessionId
+            architecture = $env:PROCESSOR_ARCHITECTURE
+          } | ConvertTo-Json | Set-Content -Encoding utf8 cu-artifacts/windows-environment.json
+      - name: Windows bridge and native protocols
+        shell: pwsh
+        run: |
+          node --test --test-reporter=tap --test-concurrency=1 test/computer-use-windows-install.test.mjs test/computer-use-windows-bridge.test.mjs test/computer-use-windows-native-runtime.test.mjs test/computer-use-windows-native-protocol.test.mjs test/computer-use-windows-input-events.test.mjs test/computer-use-windows-input-recovery.test.mjs *> cu-artifacts/windows-protocols.log
+          $testExit = $LASTEXITCODE
+          Get-Content cu-artifacts/windows-protocols.log
+          exit $testExit
+      - name: Real Windows browser connection
+        shell: pwsh
+        run: |
+          node --test --test-reporter=tap test/computer-use-windows-browser.test.mjs *> cu-artifacts/windows-browser.log
+          $testExit = $LASTEXITCODE
+          Get-Content cu-artifacts/windows-browser.log
+          exit $testExit
+      - name: Real Windows desktop
+        if: always() && !cancelled()
+        env:
+          TRISOUL_CU_WINDOWS_NATIVE_TEST: '1'
+        shell: pwsh
+        run: |
+          node --test --test-reporter=tap test/computer-use-windows-native.test.mjs *> cu-artifacts/windows-native.log
+          $testExit = $LASTEXITCODE
+          Get-Content cu-artifacts/windows-native.log
+          exit $testExit
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: windows-computer-use
+          path: cu-artifacts/
+          retention-days: 7

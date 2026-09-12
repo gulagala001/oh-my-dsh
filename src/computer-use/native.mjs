@@ -263,7 +263,7 @@ export class NativeHost {
   }
   async invoke(sessionId,id,method,args=[],signal){
     const t=this.targets.get(id);if(!t||t.sessionId!==sessionId)throw new Error('This native target has been released. Bind the application again.');
-    const base={pid:t.pid,window_id:t.windowId};
+    const base={pid:t.pid,window_id:t.windowId,...(t.processIdentity?{process_identity:t.processIdentity}:{})};
     if(['getAXState','getScreenshot','getAXStateAndScreenshot'].includes(method)){
       const raw=await this.call(sessionId,'get_window_state',{...base,include_screenshot:method!=='getAXState',include_accessibility_tree:method!=='getScreenshot',max_dimension:1600},signal);
       const state=nativeValue(raw);
@@ -293,7 +293,7 @@ export class NativeHost {
     else if(method==='setValue'){name='set_value';input={...base,...element(),value:String(args[1])};}
     else if(method==='typeText'){name='type_text';input={...base,text:args[0],delay_ms:0};}
     else if(method==='paste'){name='paste';input={...base,...nativePastePayload(args[0],args[1])};}
-    else if(method==='pressKey'){name='press_key';input={...base,...nativeKeyChord(args[0])};}
+    else if(method==='pressKey'){name='press_key';input={...base,...nativeKeyChord(args[0],this.platform==='win32'?'win32':'darwin')};}
     else if(method==='scroll'){name='scroll';input={...base,...(typeof args[0]==='number'?element():point(args[0])),direction:args[1],amount:args[2]??1,by:'page'};}
     else if(method==='drag'){const from=point(args[0]),to=point(args[1]);name='drag';input={...base,from_x:from.x,from_y:from.y,to_x:to.x,to_y:to.y};}
     else if(method==='selectText'){name='select_text';input={...base,...element(),text:args[1],selection_type:args[2]?.selectionType??'select',prefix:args[2]?.prefix,suffix:args[2]?.suffix};}

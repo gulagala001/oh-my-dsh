@@ -172,7 +172,7 @@ dsh web
 | --- | --- |
 | 任务、记忆、上下文与监控 | Windows、macOS、Linux 共用插件入口，独立于桌面控制。 |
 | 内置浏览器 | 已实现独立配置与 Chrome／Chromium 操控；完整交互证据主要来自 macOS，Windows／Linux 仍需各自实机验收。 |
-| 已有 Chrome 扩展 | 安装器支持 macOS／Linux；macOS 已有连接与操作验证，Windows 安装桥接尚未实现。 |
+| 已有 Chrome 扩展 | 安装器支持 macOS／Linux；Windows 现提供可执行桥接与注册的开发适配，需在目标设备运行自检，见 [Windows 使用说明](docs/windows.md)。 |
 | 原生桌面与窗口分享 | 当前仅实现 macOS 14+；开发版本机编译需要 Apple Command Line Tools。Windows／Linux 原生服务尚未实现。 |
 | 独立弹出预览 | 需要 Document Picture-in-Picture 支持；默认页内预览不依赖该 API。 |
 

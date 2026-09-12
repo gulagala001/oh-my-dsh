@@ -7,6 +7,7 @@ import { mkdirSync, lstatSync, chmodSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { NativeMessageReader, encodeNativeMessage } from './native-messaging.mjs';
+import { WindowsPipeServer } from './windows-pipe.mjs';
 
 export function extensionSocketPath(directory) {
   const key = createHash('sha256').update(resolve(directory)).digest('hex').slice(0, 24);
@@ -20,11 +21,20 @@ export function extensionSocketPath(directory) {
 }
 
 export class ExtensionHub extends EventEmitter {
-  constructor(socketPath) {
+  constructor(socketPath, { windowsRuntime } = {}) {
     super(); this.socketPath = socketPath; this.connections = new Map(); this.sockets = new Set(); this.sequence = 0;
+    this.windowsRuntime = windowsRuntime;
   }
   async start() {
     if (this.server) throw new Error('Extension hub already started');
+    if (process.platform === 'win32' || this.windowsRuntime) {
+      if (!this.windowsRuntime) throw new Error('Windows browser connections require the current-user pipe helper');
+      const { command, args } = await this.windowsRuntime.command();
+      const server = new WindowsPipeServer(command, args, socket => this.accept(socket));
+      try { await server.listen(this.socketPath); this.server = server; }
+      catch (error) { await new Promise(resolve => server.close(resolve)); throw error; }
+      return;
+    }
     const server = createServer(socket => this.accept(socket));
     await new Promise((resolve, reject) => { server.once('error', reject); server.listen(this.socketPath, resolve); });
     this.server = server;
