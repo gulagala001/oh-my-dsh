@@ -72,6 +72,14 @@ jobs:
           $testExit = $LASTEXITCODE
           Get-Content cu-artifacts/windows-native.log
           exit $testExit
+      - name: Windows runtime setup UI
+        if: always() && !cancelled()
+        shell: pwsh
+        run: |
+          node --test --test-reporter=tap test/computer-use-windows-setup-ui.test.mjs *> cu-artifacts/windows-setup-ui.log
+          $testExit = $LASTEXITCODE
+          Get-Content cu-artifacts/windows-setup-ui.log
+          exit $testExit
       - uses: actions/upload-artifact@v7
         if: always()
         with:

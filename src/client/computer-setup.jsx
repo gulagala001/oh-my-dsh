@@ -61,7 +61,7 @@ export function ComputerSetup({ sessionId, visible, api }) {
           </>:<><Permission title="辅助功能" detail="读取应用控件并操作所选窗口" value={native.accessibility}/><Permission title="屏幕录制" detail="向助手提供所选应用的画面" value={native.screenRecording}/></>}
           {native.error && <p className="tx-cu-error" role="alert">{native.error}</p>}
           {native.platform!=='win32'&&<div className="tx-cu-setup-actions"><span className="tx-cu-muted">系统设置中的应用名称：{native.displayName??'Oh My DSH Computer Use'}</span><button type="button" disabled={!!busy} onClick={() => act('permissions')}>{busy === 'permissions' ? '正在打开…' : '打开权限设置'}</button></div>}
-          <details className="tx-cu-setup-advanced"><summary>桌面控制版本</summary><p>已安装 {native.version??'未知'}{native.runningVersion&&native.runningVersion!==native.version?` · 正在运行 ${native.runningVersion}`:''}</p></details>
+          <details className="tx-cu-setup-advanced"><summary>桌面控制版本</summary><p>已安装 {native.version??'未知'}{native.runningVersion&&native.runningVersion!==native.version?` · 正在运行 ${native.runningVersion}`:''}</p>{native.removable&&<><div className="tx-cu-setup-actions"><button type="button" disabled={!!busy||native.installing||native.removing} onClick={()=>act('remove-native')}>{busy==='remove-native'||native.removing?'正在移除桌面控制…':'移除桌面控制'}</button></div><p>移除会停止桌面操控与预览，应用窗口和用户文件保留。需要时可重新安装。</p></>}</details>
         </>}
       </>}
     </div>}

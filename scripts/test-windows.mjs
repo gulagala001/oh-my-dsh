@@ -44,11 +44,12 @@ try {
   await step('build', process.execPath, ['scripts/build.mjs']);
   await step('core', process.execPath, ['--test', '--test-reporter=tap', '--test-concurrency=1', 'test/build.test.mjs', 'test/dsh-core.test.mjs', 'test/task-ledger.test.mjs', 'test/context-history.test.mjs', 'test/memory-parity.test.mjs', 'test/memory-curation.test.mjs', 'test/restored-mechanisms.test.mjs', 'test/dsh-http.test.mjs', 'test/dsh-install.test.mjs']);
   await step('browser', process.execPath, ['--test', '--test-reporter=tap', '--test-concurrency=1', 'test/computer-use-browser.test.mjs', 'test/computer-use-view.test.mjs', 'test/computer-use-files.test.mjs', 'test/computer-use-windows-install.test.mjs', 'test/computer-use-windows-bridge.test.mjs', 'test/computer-use-windows-browser.test.mjs']);
-  await step('frontend', process.execPath, ['--test', '--test-reporter=tap', '--test-concurrency=1', 'test/computer-use-annotation.test.mjs', 'test/frontend-ui.test.mjs', 'test/computer-use-ui.test.mjs']);
+  await step('frontend', process.execPath, ['--test', '--test-reporter=tap', '--test-concurrency=1', 'test/computer-use-annotation.test.mjs', 'test/frontend-ui.test.mjs', 'test/computer-use-ui.test.mjs', 'test/computer-use-windows-setup-ui.test.mjs']);
   report.nativeDesktop.observation = 'running';
   await step('native-desktop', process.execPath, ['--test', '--test-reporter=tap', '--test-concurrency=1', 'test/computer-use-windows-native-protocol.test.mjs', 'test/computer-use-windows-input-events.test.mjs', 'test/computer-use-windows-input-recovery.test.mjs', 'test/computer-use-windows-native-runtime.test.mjs', 'test/computer-use-windows-native.test.mjs'], 600000, { TRISOUL_CU_WINDOWS_NATIVE_TEST: '1' });
   report.nativeDesktop.observation = 'passed';
-  report.nativeDesktop.input = 'keyboard-and-uia-passed'; report.nativeDesktop.pluginAdapter = 'passed';
+  report.nativeDesktop.input = 'keyboard-uia-and-pointer-passed'; report.nativeDesktop.pluginAdapter = 'passed'; report.nativeDesktop.installation = 'install-uninstall-reinstall-passed';
+  report.nativeDesktop.remaining = report.nativeDesktop.remaining.filter(item => !['physical pointer and drag', 'uninstall'].includes(item));
   report.status = 'passed';
   console.log('本次 Windows 自检项目通过。报告中的 remaining 项仍须分别验证，此结果不代表 Windows 全部能力完成。');
 } catch (error) {
