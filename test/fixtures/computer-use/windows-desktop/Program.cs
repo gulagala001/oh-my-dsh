@@ -23,6 +23,15 @@ internal static class FixtureProgram
         // Name a normal accessible WPF control at the center of the red patch.
         var markerLabel = new TextBlock { Text = "颜色标记", Foreground = Brushes.White };
         marker.Child = markerLabel; AutomationProperties.SetName(markerLabel, "颜色标记");
+        var pointerEvents = new List<object>();
+        void Pointer(string kind, MouseEventArgs e, string? button = null)
+        {
+            var at = marker.PointToScreen(e.GetPosition(marker));
+            pointerEvents.Add(new { kind, button, x = at.X, y = at.Y, held = e.LeftButton == MouseButtonState.Pressed, at = Environment.TickCount64 });
+        }
+        marker.MouseDown += (_, e) => Pointer("down", e, e.ChangedButton.ToString());
+        marker.MouseUp += (_, e) => Pointer("up", e, e.ChangedButton.ToString());
+        marker.MouseMove += (_, e) => { if (e.LeftButton == MouseButtonState.Pressed) Pointer("move", e); };
         var secret = new PasswordBox { Password = "fixture-secret-must-not-leak" }; AutomationProperties.SetName(secret, "密码");
         var clock = new TextBlock(); AutomationProperties.SetName(clock, "变化计数");
         int clicks = 0; bool revertNext = false;
@@ -67,7 +76,7 @@ internal static class FixtureProgram
                             if (action == "restore") { first.WindowState = WindowState.Normal; second.Activate(); }
                             if (action == "close") first.Close();
                             GetCursorPos(out var cursor);
-                            return new { pid = Environment.ProcessId, first = firstClosed ? 0 : new WindowInteropHelper(first).Handle.ToInt64(), second = new WindowInteropHelper(second).Handle.ToInt64(), foreground = GetForegroundWindow().ToInt64(), cursor = new { x = cursor.X, y = cursor.Y }, text = editor.Text, selectionStart = editor.SelectionStart, selectionLength = editor.SelectionLength, clicks, held = new { left = (GetAsyncKeyState(1) & 0x8000) != 0, ctrl = (GetAsyncKeyState(0x11) & 0x8000) != 0, shift = (GetAsyncKeyState(0x10) & 0x8000) != 0, alt = (GetAsyncKeyState(0x12) & 0x8000) != 0 } };
+                            return new { pid = Environment.ProcessId, first = firstClosed ? 0 : new WindowInteropHelper(first).Handle.ToInt64(), second = new WindowInteropHelper(second).Handle.ToInt64(), foreground = GetForegroundWindow().ToInt64(), cursor = new { x = cursor.X, y = cursor.Y }, text = editor.Text, selectionStart = editor.SelectionStart, selectionLength = editor.SelectionLength, clicks, pointerEvents = pointerEvents.ToArray(), held = new { left = (GetAsyncKeyState(1) & 0x8000) != 0, right = (GetAsyncKeyState(2) & 0x8000) != 0, middle = (GetAsyncKeyState(4) & 0x8000) != 0, ctrl = (GetAsyncKeyState(0x11) & 0x8000) != 0, shift = (GetAsyncKeyState(0x10) & 0x8000) != 0, alt = (GetAsyncKeyState(0x12) & 0x8000) != 0 } };
                         });
                         await Console.Out.WriteLineAsync(JsonSerializer.Serialize(new { jsonrpc = "2.0", id, result }));
                     }

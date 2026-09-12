@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -57,8 +57,12 @@ export class WindowsNativeRuntime {
     if (!existsSync(marker) && (await readdir(this.directory)).length) throw new Error('Windows 桌面运行时目录已有其他内容，未覆盖');
     try { await writeFile(marker, JSON.stringify({ owner }) + '\n', { flag: 'wx' }); }
     catch (error) { if (error.code !== 'EEXIST' || JSON.parse(await readFile(marker, 'utf8')).owner !== owner) throw new Error('Windows 桌面运行时目录不属于 Oh My DSH'); }
-    const staging = await mkdtemp(join(this.directory, '.build-'));
-    let unlock, published = false, prior = null, name;
+    // Only publish the pointer after validation. In particular the lock helper
+    // runs from this generation: Windows cannot rename its executable directory
+    // while it owns the installation mutex.
+    const name = expected.build + '-' + randomUUID(), staging = join(this.directory, name);
+    await mkdir(staging);
+    let unlock, published = false, prior = null;
     try {
       await this.compile(staging);
       const candidate = join(staging, expected.executable), info = await this.inspect(candidate);
@@ -73,8 +77,6 @@ export class WindowsNativeRuntime {
       prior = this.pointer();
       if ((await this.buildInfo()).build !== expected.build) throw new Error('Windows 桌面运行时源码发生变化，请重新更新');
       await beforeReplace?.();
-      name = expected.build + '-' + randomUUID();
-      await rename(staging, join(this.directory, name));
       await this.publish({ owner, directory: name }); published = true;
       await check(join(this.directory, name, expected.executable));
       return await this.installedInfo();
@@ -84,7 +86,7 @@ export class WindowsNativeRuntime {
         catch (recovery) { throw new Error('Windows 桌面更新失败，恢复安装记录也未完成；原版本目录已保留：' + this.directory); }
       }
       throw error;
-    } finally { await unlock?.(); await rm(staging, { recursive: true, force: true }); }
+    } finally { await unlock?.(); if (!published) await rm(staging, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }); }
   }
   async publish(value) {
     const temporary = join(this.directory, '.current-' + randomUUID());

@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
@@ -51,7 +51,11 @@ export class WindowsExtensionRuntime {
     if (!existsSync(marker) && (await readdir(this.directory)).length) throw new Error('Windows 连接程序目录已有其他内容，未覆盖');
     try { await writeFile(marker, JSON.stringify({ owner: 'trisoul-x-browser-bridge' }) + '\n', { flag: 'wx' }); }
     catch (error) { if (error.code !== 'EEXIST' || JSON.parse(await readFile(marker, 'utf8')).owner !== 'trisoul-x-browser-bridge') throw new Error('Windows 连接程序目录不属于 Oh My DSH'); }
-    const staging = await mkdtemp(join(this.directory, '.build-'));
+    // Build in the eventual generation directory, but keep it undiscoverable
+    // until verification publishes current.json. Windows can retain executable
+    // directory handles after the probe exits; moving that directory can fail.
+    const name = expected.build + '-' + randomUUID(), staging = join(this.directory, name);
+    await mkdir(staging); let published = false;
     try {
       try {
         await run(process.execPath, [fileURLToPath(new URL('../../scripts/build-computer-use-windows.mjs', import.meta.url))], { windowsHide: true, timeout: 180000, maxBuffer: 2 * 1024 * 1024, env: { ...process.env, TRISOUL_CU_WINDOWS_OUTPUT: staging } });
@@ -62,12 +66,10 @@ export class WindowsExtensionRuntime {
       await writeFile(join(staging, 'build.json'), JSON.stringify({ owner: 'trisoul-x-browser-bridge', build: expected.build, sha256 }) + '\n');
       // Publish a fresh generation even when repairing the same source build.
       // Windows may still have the old executable open; never overwrite it.
-      const name = expected.build + '-' + randomUUID();
-      await rename(staging, join(this.directory, name));
       const pointer = join(this.directory, '.current-' + randomUUID());
-      try { await writeFile(pointer, JSON.stringify({ build: expected.build, directory: name }) + '\n', { flag: 'wx' }); await rename(pointer, join(this.directory, 'current.json')); }
+      try { await writeFile(pointer, JSON.stringify({ build: expected.build, directory: name }) + '\n', { flag: 'wx' }); await rename(pointer, join(this.directory, 'current.json')); published = true; }
       finally { await rm(pointer, { force: true }); }
-    } finally { await rm(staging, { recursive: true, force: true }); }
+    } finally { if (!published) await rm(staging, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }); }
   }
   async call(args) { const { command } = await this.command(); return JSON.parse((await run(command, args, { windowsHide: true, timeout: 10000, maxBuffer: 65536 })).stdout); }
   async lock(host) { const { command } = await this.command(); return nativeLock(command, 'HKCU/Chrome/NativeMessagingHosts/' + host); }

@@ -16,7 +16,7 @@ async function fixture(t) {
     buildInfo: async () => expected(),
     compile: async path => { await writeFile(join(path, expected().executable), state.build); if (state.changedDuringBuild) state.build = 'c'.repeat(64); },
     inspect: async binary => ({ name: 'oh-my-dsh-windows-desktop', protocol: 1, build: await readFile(binary, 'utf8') }),
-    probe: async binary => { state.probes.push(binary); if (state.failPublished && !binary.includes('.build-')) throw new Error('simulated launch failure'); return { serverInfo: { name: 'trisoul-computer-use' }, _meta: { trisoul: { protocol: 1, build: await readFile(binary, 'utf8') } } }; },
+    probe: async binary => { state.probes.push(binary); if (state.failPublished && runtime.binary() === binary) throw new Error('simulated launch failure'); return { serverInfo: { name: 'trisoul-computer-use' }, _meta: { trisoul: { protocol: 1, build: await readFile(binary, 'utf8') } } }; },
     lock: async () => async () => { state.unlock++; },
   });
   return { root, runtime, state, install: () => runtime.install({ beforeReplace: async () => { state.replace++; } }) };
