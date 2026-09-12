@@ -25,13 +25,18 @@ test('Windows managed browser shutdown confirms its own processes have exited an
     await browser.close().catch(error => t.diagnostic('Browser cleanup error: ' + error.message));
     // Recovery is separate from the assertions. Only previously observed
     // descendants with the same creation time can be stopped by this fixture.
-    if (owned.length) await run('pwsh', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', `foreach ($expected in (ConvertFrom-Json $env:OMD_OWNED_PROCESSES)) {
+    if (owned.length) await run('pwsh', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', `$failed=$false
+foreach ($expected in (ConvertFrom-Json $env:OMD_OWNED_PROCESSES)) {
   $process=$null
   try {
     $process=[Diagnostics.Process]::GetProcessById([int]$expected.pid); $handle=$process.SafeHandle
-    if ($process.StartTime.ToUniversalTime().Ticks.ToString() -eq $expected.created) { $process.Kill(); $process.WaitForExit(5000) | Out-Null }
-  } catch {} finally { if($process){$process.Dispose()} }
-}`], { windowsHide: true, timeout: 15000, env: { ...process.env, OMD_OWNED_PROCESSES: JSON.stringify(owned.reverse()) } });
+    if ($process.StartTime.ToUniversalTime().Ticks.ToString() -eq $expected.created) { $process.Kill(); if(!$process.WaitForExit(5000)){throw 'Owned fixture process did not exit'} }
+  } catch [System.ArgumentException] { # The observed process has already exited.
+  } catch { if(!$process -or !$process.HasExited){$failed=$true; Write-Error $_} }
+  finally { if($process){$process.Dispose()} }
+}
+if($failed){exit 1}
+exit 0`], { windowsHide: true, timeout: 15000, env: { ...process.env, OMD_OWNED_PROCESSES: JSON.stringify(owned.reverse()) } });
     await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
     t.diagnostic('Windows managed process evidence: ' + artifacts);
   });

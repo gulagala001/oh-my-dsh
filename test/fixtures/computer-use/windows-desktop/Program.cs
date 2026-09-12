@@ -28,7 +28,7 @@ internal static class FixtureProgram
         void Pointer(string kind, MouseEventArgs e, string? button = null)
         {
             var at = marker.PointToScreen(e.GetPosition(marker));
-            pointerEvents.Add(new { kind, button, x = at.X, y = at.Y, held = e.LeftButton == MouseButtonState.Pressed, at = Environment.TickCount64 });
+            pointerEvents.Add(new { kind, button, clickCount = e is MouseButtonEventArgs press ? press.ClickCount : 0, x = at.X, y = at.Y, held = e.LeftButton == MouseButtonState.Pressed, at = Environment.TickCount64 });
         }
         marker.MouseDown += (_, e) => Pointer("down", e, e.ChangedButton.ToString());
         marker.MouseUp += (_, e) => Pointer("up", e, e.ChangedButton.ToString());
@@ -47,6 +47,11 @@ internal static class FixtureProgram
         panel.Children.Add(editor); panel.Children.Add(marker); panel.Children.Add(secret); panel.Children.Add(clock); panel.Children.Add(button);
         var first = new Window { Title = "Oh My DSH Windows Observation Fixture", Width = 640, Height = 420, Left = 100, Top = 100, Content = panel };
         var second = new Window { Title = "Oh My DSH Occluding Fixture", Width = 280, Height = 240, Left = 150, Top = 150, Content = new TextBlock { Text = "遮挡窗口", Background = Brushes.CornflowerBlue } };
+        var toggle = new CheckBox { Content = "复选操作" }; AutomationProperties.SetName(toggle, "复选操作");
+        var expand = new Expander { Header = "展开操作", Content = new TextBlock { Text = "展开后的内容" } }; AutomationProperties.SetName(expand, "展开操作");
+        var rows = new StackPanel(); for (int i = 0; i < 100; i++) rows.Children.Add(new TextBlock { Text = "滚动行 " + i, Height = 24 });
+        var scrolling = new ScrollViewer { Content = rows, Height = 180, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }; AutomationProperties.SetName(scrolling, "滚动区域");
+        var controls = new StackPanel { Margin = new Thickness(18) }; controls.Children.Add(toggle); controls.Children.Add(expand); controls.Children.Add(scrolling);
         bool firstClosed = false;
         first.Closed += (_, _) => firstClosed = true;
         var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) }; int revision = 0;
@@ -78,13 +83,14 @@ internal static class FixtureProgram
                             if (action == "focus") { first.Activate(); editor.Focus(); Keyboard.Focus(editor); }
                             if (action == "external-input") { GetCursorPos(out var before); if (!SetCursorPos(before.X + 1, before.Y)) throw new InvalidOperationException("External fixture pointer input failed"); }
                             if (action == "reject-next-value") revertNext = true;
+                            if (action == "controls") { first.Content = controls; first.Activate(); }
                             if (action == "move") { first.Left = args.GetProperty("x").GetDouble(); first.Top = args.GetProperty("y").GetDouble(); }
                             if (action == "resize") { first.Width = args.GetProperty("width").GetDouble(); first.Height = args.GetProperty("height").GetDouble(); }
                             if (action == "minimize") first.WindowState = WindowState.Minimized;
                             if (action == "restore") { first.WindowState = WindowState.Normal; second.Activate(); }
                             if (action == "close") first.Close();
                             GetCursorPos(out var cursor);
-                            return new { pid = Environment.ProcessId, first = firstClosed ? 0 : new WindowInteropHelper(first).Handle.ToInt64(), second = new WindowInteropHelper(second).Handle.ToInt64(), foreground = GetForegroundWindow().ToInt64(), cursor = new { x = cursor.X, y = cursor.Y }, text = editor.Text, selectionStart = editor.SelectionStart, selectionLength = editor.SelectionLength, clicks, pointerEvents = pointerEvents.ToArray(), held = new { left = (GetAsyncKeyState(1) & 0x8000) != 0, right = (GetAsyncKeyState(2) & 0x8000) != 0, middle = (GetAsyncKeyState(4) & 0x8000) != 0, ctrl = (GetAsyncKeyState(0x11) & 0x8000) != 0, shift = (GetAsyncKeyState(0x10) & 0x8000) != 0, alt = (GetAsyncKeyState(0x12) & 0x8000) != 0 } };
+                            return new { pid = Environment.ProcessId, first = firstClosed ? 0 : new WindowInteropHelper(first).Handle.ToInt64(), second = new WindowInteropHelper(second).Handle.ToInt64(), foreground = GetForegroundWindow().ToInt64(), cursor = new { x = cursor.X, y = cursor.Y }, text = editor.Text, selectionStart = editor.SelectionStart, selectionLength = editor.SelectionLength, clicks, pointerEvents = pointerEvents.ToArray(), doubleClickTime = GetDoubleClickTime(), controls = new { toggled = toggle.IsChecked, expanded = expand.IsExpanded, scrollOffset = scrolling.VerticalOffset, viewport = scrolling.ViewportHeight }, held = new { left = (GetAsyncKeyState(1) & 0x8000) != 0, right = (GetAsyncKeyState(2) & 0x8000) != 0, middle = (GetAsyncKeyState(4) & 0x8000) != 0, ctrl = (GetAsyncKeyState(0x11) & 0x8000) != 0, shift = (GetAsyncKeyState(0x10) & 0x8000) != 0, alt = (GetAsyncKeyState(0x12) & 0x8000) != 0 } };
                         });
                         await Console.Out.WriteLineAsync(JsonSerializer.Serialize(new { jsonrpc = "2.0", id, result }));
                     }
@@ -97,6 +103,7 @@ internal static class FixtureProgram
     [StructLayout(LayoutKind.Sequential)] private struct Point { public int X, Y; }
     [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int key);
+    [DllImport("user32.dll")] private static extern uint GetDoubleClickTime();
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetCursorPos(out Point point);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetCursorPos(int x, int y);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetProcessDpiAwarenessContext(IntPtr context);

@@ -91,8 +91,9 @@ $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut($link)
 $shortcut.TargetPath = [IO.Path]::GetFullPath($env:OMD_TEST_EXE)
 $shortcut.Save()`);
-  let installed;
-  for (let i = 0; i < 80; i++) { installed = (await host.list('app-launch')).find(app => app.displayName === title); if (installed) break; await delay(250); }
+  let installed, catalog;
+  for (let i = 0; i < 80; i++) { catalog = await host.list('app-launch'); installed = catalog.find(app => app.displayName === title); if (installed) break; await delay(250); }
+  await writeFile(join(artifacts, 'application-catalog.json'), JSON.stringify(catalog, null, 2));
   assert.ok(installed, 'the Windows Applications folder discovers the fixture shortcut');
   assert.equal(installed.isRunning, false); assert.match(installed.id, /^win-app:/);
   await writeFile(join(artifacts, 'installed-app.json'), JSON.stringify(installed, null, 2));
