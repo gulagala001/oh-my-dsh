@@ -102,6 +102,7 @@ export class BrowserHost extends BrowserActions {
       });
     });
     child.on('message', message => {
+      if (message.type === 'browser-job-started') run.jobPid = message.pid;
       if (message.type === 'browser-started') { run.browserPid = message.pid; if (this.run === run) this.browserPid = message.pid; }
       if (message.type === 'launch-error') run.launchError = new Error(message.message);
       if (message.type === 'browser-exited') { run.launchError ??= new Error(`Browser exited (${message.code ?? message.signal})`); this.invalidate(run, run.launchError); }

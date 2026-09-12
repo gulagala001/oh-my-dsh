@@ -78,6 +78,7 @@ internal sealed class AppCatalog : IDisposable
             // menu alongside packaged applications, without launching links.
             foreach (var directory in new[] { Environment.GetFolderPath(Environment.SpecialFolder.Programs), Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms) }.Distinct(StringComparer.OrdinalIgnoreCase))
             {
+                if (Environment.GetEnvironmentVariable("TRISOUL_CU_INPUT_DIAGNOSTICS") == "1") Console.Error.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { diagnostic = "app-discovery-root", path = directory, exists = Directory.Exists(directory) }));
                 if (!Directory.Exists(directory)) continue;
                 var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint };
                 foreach (var path in Directory.EnumerateFiles(directory, "*.lnk", options))

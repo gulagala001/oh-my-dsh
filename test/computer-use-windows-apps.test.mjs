@@ -85,12 +85,18 @@ if (Test-Path -LiteralPath $link) { Remove-Item -LiteralPath $link }`);
   await closeApp(again);
   await assert.rejects(host.bind('app-launch', target.bundleId), error => error.code === 'STALE_PROCESS');
   await host.release('app-launch');
-  await ps(`$link = Join-Path ([Environment]::GetFolderPath('Programs')) ($env:OMD_TEST_SHORTCUT + '.lnk')
+  const shortcutCreated = await ps(`$ErrorActionPreference='Stop'
+$link = Join-Path ([Environment]::GetFolderPath('Programs')) ($env:OMD_TEST_SHORTCUT + '.lnk')
 if (Test-Path -LiteralPath $link) { throw 'Refusing to replace an existing shortcut' }
 $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut($link)
 $shortcut.TargetPath = [IO.Path]::GetFullPath($env:OMD_TEST_EXE)
-$shortcut.Save()`);
+$shortcut.Save()
+if(!(Test-Path -LiteralPath $link)){throw 'The fixture shortcut was not created'}
+$shellFolder=(New-Object -ComObject Shell.Application).NameSpace((Split-Path -Parent $link))
+$item=$shellFolder.ParseName((Split-Path -Leaf $link))
+[pscustomobject]@{file=$link;target=$shortcut.TargetPath;name=$item.Name;shellTarget=$item.GetLink.Path;programs=[Environment]::GetFolderPath('Programs')} | ConvertTo-Json -Compress`);
+  await writeFile(join(artifacts, 'shortcut-created.json'), shortcutCreated.stdout);
   let installed, catalog;
   for (let i = 0; i < 80; i++) { catalog = await host.list('app-launch'); installed = catalog.find(app => app.displayName === title); if (installed) break; await delay(250); }
   await writeFile(join(artifacts, 'application-catalog.json'), JSON.stringify(catalog, null, 2));

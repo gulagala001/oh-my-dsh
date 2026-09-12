@@ -65,7 +65,7 @@ jobs:
         if: always() && !cancelled()
         shell: pwsh
         run: |
-          node --test --test-reporter=tap --test-concurrency=1 test/computer-use-windows-managed.test.mjs test/computer-use-build-refresh.test.mjs *> cu-artifacts/windows-managed.log
+          node --test --test-reporter=tap --test-concurrency=1 test/computer-use-windows-managed.test.mjs test/computer-use-windows-job.test.mjs test/computer-use-build-refresh.test.mjs *> cu-artifacts/windows-managed.log
           $testExit = $LASTEXITCODE
           Get-Content cu-artifacts/windows-managed.log
           exit $testExit
