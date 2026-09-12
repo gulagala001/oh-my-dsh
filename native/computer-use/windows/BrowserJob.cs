@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -69,15 +70,63 @@ public static class OhMyDshBrowserJob
     }
     private static void Stop(IntPtr job)
     {
-        if (!TerminateJobObject(job, 1)) Fail("Could not terminate the browser job");
+        var handles = new List<IntPtr>(); var seen = new HashSet<uint>();
         Stopwatch deadline = Stopwatch.StartNew();
-        while (true)
+        try
         {
-            Accounting info;
-            if (!QueryInformationJobObject(job, 1, out info, (uint)Marshal.SizeOf(typeof(Accounting)), IntPtr.Zero)) Fail("Could not confirm browser job cleanup");
-            if (info.ActiveProcesses == 0) return;
-            if (deadline.ElapsedMilliseconds > 5000) throw new InvalidOperationException("The Windows browser job is still releasing its processes");
-            Thread.Sleep(20);
+            CaptureProcesses(job, handles, seen);
+            if (!TerminateJobObject(job, 1)) Fail("Could not terminate the browser job");
+            while (true)
+            {
+                CaptureProcesses(job, handles, seen);
+                Accounting info;
+                if (!QueryInformationJobObject(job, 1, out info, (uint)Marshal.SizeOf(typeof(Accounting)), IntPtr.Zero)) Fail("Could not confirm browser job cleanup");
+                if (info.ActiveProcesses == 0) break;
+                if (deadline.ElapsedMilliseconds > 5000) throw new InvalidOperationException("The Windows browser job is still releasing its processes");
+                Thread.Sleep(20);
+            }
+            // Job accounting can remove a terminating process before its
+            // final handles are released. Wait on the original OS process
+            // handles as well, not just the job's active-process counter.
+            foreach (IntPtr handle in handles)
+                if (WaitForSingleObject(handle, (uint)Math.Max(0, 5000 - deadline.ElapsedMilliseconds)) != 0) throw new InvalidOperationException("A Windows browser child has not finished exiting");
+        }
+        finally { foreach (IntPtr handle in handles) CloseHandle(handle); }
+    }
+    private static void CaptureProcesses(IntPtr job, List<IntPtr> handles, HashSet<uint> seen)
+    {
+        for (int capacity = 64; ; capacity = checked(capacity * 2))
+        {
+            int size = checked(8 + capacity * IntPtr.Size); IntPtr data = Marshal.AllocHGlobal(size);
+            try
+            {
+                if (!QueryJobProcesses(job, 3, data, (uint)size, IntPtr.Zero))
+                {
+                    if (Marshal.GetLastWin32Error() == 234) continue;
+                    Fail("Could not enumerate the owned browser job");
+                }
+                int count = Marshal.ReadInt32(data, 4);
+                if (count < 0 || count > capacity) throw new InvalidOperationException("Invalid Windows job process list");
+                for (int i = 0; i < count; i++)
+                {
+                    uint id = checked((uint)Marshal.ReadIntPtr(data, 8 + i * IntPtr.Size).ToInt64());
+                    if (seen.Contains(id)) continue;
+                    IntPtr handle = OpenProcess(0x101000, false, id); // SYNCHRONIZE | QUERY_LIMITED_INFORMATION
+                    if (handle == IntPtr.Zero)
+                    {
+                        if (Marshal.GetLastWin32Error() == 87) continue; // Already exited.
+                        Fail("Could not observe an owned browser child");
+                    }
+                    bool belongs;
+                    if (!IsProcessInJob(handle, job, out belongs)) { CloseHandle(handle); Fail("Could not verify browser child ownership"); }
+                    // A PID may have disappeared between enumeration and
+                    // OpenProcess. Never wait on or stop a replacement process.
+                    if (!belongs) { CloseHandle(handle); continue; }
+                    seen.Add(id); handles.Add(handle);
+                }
+                return;
+            }
+            finally { Marshal.FreeHGlobal(data); }
         }
     }
     private static bool Exited(IntPtr process)
@@ -127,6 +176,9 @@ public static class OhMyDshBrowserJob
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true, ExactSpelling = true)] private static extern IntPtr CreateJobObjectW(IntPtr attributes, string name);
     [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetInformationJobObject(IntPtr job, int type, ref ExtendedLimits info, uint length);
     [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool QueryInformationJobObject(IntPtr job, int type, out Accounting info, uint length, IntPtr returnedLength);
+    [DllImport("kernel32.dll", EntryPoint = "QueryInformationJobObject", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool QueryJobProcesses(IntPtr job, int type, IntPtr info, uint length, IntPtr returnedLength);
+    [DllImport("kernel32.dll", SetLastError = true)] private static extern IntPtr OpenProcess(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint pid);
+    [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool IsProcessInJob(IntPtr process, IntPtr job, [MarshalAs(UnmanagedType.Bool)] out bool belongs);
     [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool AssignProcessToJobObject(IntPtr job, IntPtr process);
     [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool TerminateJobObject(IntPtr job, uint code);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true, ExactSpelling = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool CreateProcessW(string application, StringBuilder commandLine, IntPtr processAttributes, IntPtr threadAttributes, [MarshalAs(UnmanagedType.Bool)] bool inheritHandles, uint flags, IntPtr environment, string directory, ref StartupInfo startup, out ProcessInfo process);
