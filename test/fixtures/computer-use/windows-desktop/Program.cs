@@ -69,6 +69,7 @@ internal static class FixtureProgram
                         {
                             if (action == "text") editor.Text = args.GetProperty("text").GetString() ?? "";
                             if (action == "focus") { first.Activate(); editor.Focus(); Keyboard.Focus(editor); }
+                            if (action == "external-input") { GetCursorPos(out var before); if (!SetCursorPos(before.X + 1, before.Y)) throw new InvalidOperationException("External fixture pointer input failed"); }
                             if (action == "reject-next-value") revertNext = true;
                             if (action == "move") { first.Left = args.GetProperty("x").GetDouble(); first.Top = args.GetProperty("y").GetDouble(); }
                             if (action == "resize") { first.Width = args.GetProperty("width").GetDouble(); first.Height = args.GetProperty("height").GetDouble(); }
@@ -90,5 +91,6 @@ internal static class FixtureProgram
     [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int key);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetCursorPos(out Point point);
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetCursorPos(int x, int y);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetProcessDpiAwarenessContext(IntPtr context);
 }

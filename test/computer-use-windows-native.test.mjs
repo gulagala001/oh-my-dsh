@@ -154,6 +154,9 @@ test('Windows native installation, read-only observation and input operate on re
   const released = await waitState(state => !state.held.left && state.pointerEvents.filter(event => event.kind === 'up').length === 5);
   assert.ok(Object.values(released.held).every(held => held === false));
   await writeFile(join(artifact, 'pointer-events.json'), JSON.stringify(released, null, 2));
+  await fixture.request('fixture', { action: 'external-input' });
+  await assert.rejects(native.invoke('controller', binding.id, 'typeText', ['must not type after external input']), error => error.code === 'USER_INTERVENTION');
+  assert.equal((await applicationState()).text, released.text, 'unowned input still stops the controller before it types');
   await native.release('controller');
   assert.ok(Object.values((await fixture.request('fixture', { action: 'state' })).held).every(held => held === false));
   assert.ok((await nextFrame()).sequence > later.sequence, 'the independent preview continues after native control is released');

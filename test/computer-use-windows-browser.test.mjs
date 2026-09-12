@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { writeFile, readFile } from 'node:fs/promises';
+import { writeFile, readFile, access } from 'node:fs/promises';
+import { constants } from 'node:fs';
 import { join } from 'node:path';
 import { ExtensionBrowser } from '../src/computer-use/extension-browser.mjs';
 import { BrowserViews } from '../src/computer-use/browser-view.mjs';
@@ -14,6 +15,15 @@ test('Windows: installed exe connects real Chrome, preserves selected tabs and u
   const unrelated = await env.context.newPage(); await unrelated.goto(env.fixture.url + '/unrelated');
   try {
     const installed = await env.installer.status(env.hub.list());
+    if (!installed.prepared) {
+      const bundle = await env.installer.bundle();
+      const expectedFiles = [...bundle.files].map(([name, data]) => [join(env.installer.extensionPath, name), data]);
+      expectedFiles.push([env.installer.registration, bundle.registration], [bundle.windowsConfig.path, bundle.windowsConfig.data]);
+      const changed = [];
+      for (const [path, expected] of expectedFiles) if (!(await readFile(path)).equals(expected)) changed.push(path);
+      const executableAccess = await Promise.allSettled([access(env.installer.nodePath, constants.X_OK), access(env.installer.launcher, constants.X_OK)]);
+      t.diagnostic(JSON.stringify({ installed, receipt: JSON.parse(await readFile(env.installer.receipt, 'utf8')), registry: await env.installer.windows.read(env.installer.hostName), registration: env.installer.registration, runtime: bundle.runtime, runtimeValid: await env.installer.windows.valid(), changed, executableAccess }));
+    }
     assert.equal(installed.prepared, true); assert.equal(installed.reloadRequired, false);
     assert.equal(installed.build, env.browser.build);
     const registration = await env.installer.windows.read(env.installer.hostName);

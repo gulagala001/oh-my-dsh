@@ -9,7 +9,10 @@ using System.Text;
 // owned and released on the same MTA as UIA actions; observation has no lease.
 internal sealed class WindowsInput(Action<object>? pointer = null)
 {
-    internal readonly ulong Tag = BitConverter.ToUInt64(RandomNumberGenerator.GetBytes(8));
+    // Windows mouse hooks can return only the low DWORD of SendInput's
+    // pointer-sized extra information. Use a nonzero positive 31-bit marker
+    // so keyboard, mouse and recovery processes compare the same value.
+    internal readonly ulong Tag = (uint)RandomNumberGenerator.GetInt32(1, int.MaxValue);
     private Mutex? mutex;
     private InputIntervention? intervention;
     private bool ownsMutex;
@@ -200,8 +203,8 @@ internal sealed class InputIntervention : IDisposable
             Volatile.Write(ref lastIntervention, $"Input intervention: {kind}, flags={flags:x}, extra={extra.ToUInt64():x}, expected={this.tag:x}");
             Interlocked.Increment(ref revision);
         }
-        keyboard = (code, message, data) => { if (code >= 0) { var value = Marshal.PtrToStructure<Keyboard>(data); if (value.Extra.ToUInt64() != this.tag) Changed("keyboard", value.Flags, value.Extra); } return CallNextHookEx(IntPtr.Zero, code, message, data); };
-        mouse = (code, message, data) => { if (code >= 0) { var value = Marshal.PtrToStructure<Mouse>(data); if (value.Extra.ToUInt64() != this.tag) Changed("mouse", value.Flags, value.Extra); } return CallNextHookEx(IntPtr.Zero, code, message, data); };
+        keyboard = (code, message, data) => { if (code >= 0) { var value = Marshal.PtrToStructure<Keyboard>(data); if ((value.Flags & 0x10) == 0 || value.Extra.ToUInt64() != this.tag) Changed("keyboard", value.Flags, value.Extra); } return CallNextHookEx(IntPtr.Zero, code, message, data); };
+        mouse = (code, message, data) => { if (code >= 0) { var value = Marshal.PtrToStructure<Mouse>(data); if ((value.Flags & 1) == 0 || value.Extra.ToUInt64() != this.tag) Changed("mouse", value.Flags, value.Extra); } return CallNextHookEx(IntPtr.Zero, code, message, data); };
         thread = new Thread(Watch) { IsBackground = true, Name = "OhMyDsh input monitor" };
         thread.Start(); ready.Wait();
         if (failure is not null) { thread.Join(); ready.Dispose(); throw failure; }
