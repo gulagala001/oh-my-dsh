@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdtemp, mkdir, copyFile, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, copyFile, writeFile, readFile, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +11,8 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { WindowsNativeHost } from '../src/computer-use/windows-native.mjs';
 import { windowsNativeBuild } from '../src/computer-use/windows-native-build.mjs';
+import { windowsProcessSnapshot, stopWindowsProcesses } from './fixtures/computer-use/windows-processes.mjs';
+import { cleanupFixture } from './fixtures/process.mjs';
 
 const run = promisify(execFile), dotnet = process.env.TRISOUL_CU_DOTNET || 'dotnet';
 test('Windows discovers installed apps, launches exact executables and Start menu entries, and preserves apps on Stop', { skip: process.platform !== 'win32' || process.env.TRISOUL_CU_WINDOWS_NATIVE_TEST !== '1', timeout: 360000 }, async t => {
@@ -106,5 +108,31 @@ $item=$shellFolder.ParseName((Split-Path -Leaf $link))
   const launched = await host.bind('app-launch', installed.id);
   assert.match((await host.invoke('app-launch', launched.id, 'getAXState')).state, /Windows 观察验收 中文🙂/);
   await closeApp(launched);
+  if(process.env.GITHUB_ACTIONS==='true')await t.test('ordinary Notepad editing saves Unicode text and Stop preserves the app',async()=>{
+    const note=join(root,'ordinary-note.txt'),text='Oh My DSH 日常编辑 中文🙂';
+    await writeFile(note,'Ordinary editing fixture');
+    const existing=await windowsProcessSnapshot();let owned;
+    try{
+      await run('pwsh',['-NoLogo','-NoProfile','-NonInteractive','-Command',"$start=[Diagnostics.ProcessStartInfo]::new((Join-Path $env:WINDIR 'System32\\notepad.exe')); $start.UseShellExecute=$false; $start.ArgumentList.Add($env:OMD_NOTE_FILE); [void][Diagnostics.Process]::Start($start)"],{windowsHide:true,timeout:10000,env:{...process.env,OMD_NOTE_FILE:note}});
+      let app;
+      for(let i=0;i<80;i++){app=(await host.list('ordinary-notepad')).find(item=>item.isRunning&&/notepad/i.test(item.displayName+' '+item.path));if(app)break;await delay(100);}
+      assert.ok(app,'the real Windows Notepad must expose a running application');
+      const binding=await host.bind('ordinary-notepad',app.id),target=host.targets.get(binding.id);
+      owned=(await windowsProcessSnapshot()).find(item=>item.pid===target.pid&&!existing.some(old=>old.pid===item.pid&&old.created===item.created));
+      assert.ok(owned,'the fixture must own this newly launched Notepad process');
+      const observation=await host.invoke('ordinary-notepad',binding.id,'getAXStateAndScreenshot');
+      assert.match(observation.state,/Ordinary editing fixture/);assert.ok(observation.screenshot);
+      await host.invoke('ordinary-notepad',binding.id,'pressKey',['ctrl+a']);
+      await host.invoke('ordinary-notepad',binding.id,'typeText',[text]);
+      await host.invoke('ordinary-notepad',binding.id,'pressKey',['ctrl+s']);
+      let saved;
+      for(let i=0;i<100;i++){saved=(await readFile(note,'utf8')).replace(/^\uFEFF/,'');if(saved===text)break;await delay(20);}
+      assert.equal(saved,text,'real Notepad must save the exact Unicode text to the test file');
+      await host.release('ordinary-notepad');
+      assert.ok((await host.windows('ordinary-observer',target.pid)).length,'Stop must preserve the actual Notepad window');
+      await host.release('ordinary-observer');
+      await writeFile(join(artifacts,'ordinary-notepad.json'),JSON.stringify({status:'passed',unicodeSaved:true,stopPreservesApplication:true},null,2));
+    }finally{await cleanupFixture([()=>host.release('ordinary-notepad'),()=>owned&&stopWindowsProcesses([owned])]);}
+  });
   await writeFile(join(artifacts, 'report.json'), JSON.stringify({ status: 'passed', executableLaunch: true, installedApplicationLaunch: true, staleReferencesRejected: true, stopPreservesApplication: true }, null, 2));
 });

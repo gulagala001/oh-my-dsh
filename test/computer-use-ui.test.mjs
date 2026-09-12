@@ -11,6 +11,7 @@ import sharp from 'sharp';
 import { startFixture } from './fixtures/computer-use/server.mjs';
 import { extensionFixture } from './fixtures/computer-use/extension.mjs';
 import { extensionSocketPath } from '../src/computer-use/extension-hub.mjs';
+import { viewportGeometry, sameScreenshotGeometry } from '../src/computer-use/browser-screenshot.mjs';
 import { legacyBundle } from './fixtures/computer-use/native-runtime.mjs';
 import { stopFixtureProcess } from './fixtures/process.mjs';
 
@@ -92,6 +93,13 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   await context.addInitScript(() => {
     const original = EventSource.prototype.addEventListener;
     EventSource.prototype.addEventListener = function(type, listener, options) {
+      if (type === 'frame') return original.call(this, type, event => {
+        const { data, ...frame } = JSON.parse(event.data);
+        const frames = window.__cuDisplayedFrames ??= new Map();
+        frames.set(data, frame);
+        while (frames.size > 32) frames.delete(frames.keys().next().value);
+        listener.call(this, event);
+      }, options);
       if (type !== 'navigation') return original.call(this, type, listener, options);
       return original.call(this, type, event => {
         const deliver = () => listener.call(this, event);
@@ -213,7 +221,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   assert.ok(Math.abs(afterDrag.x-beforeDrag.x+100)<2&&Math.abs(afterDrag.y-beforeDrag.y+80)<2,'dragging the header moves the preview by the pointer delta: '+JSON.stringify({beforeDrag,dragStart,afterDrag}));
   await inlinePreview.locator('.tx-cu-preview-open').first().click();
   await until(async()=>await inlinePreview.evaluate(element=>element.classList.contains('is-zoomed')));
-  const zoomBox=await inlinePreview.boundingBox();assert.ok(zoomBox.width>afterDrag.width&&zoomBox.height>afterDrag.height,'clicking the card enlarges the actual preview');
+  const zoomBox=await inlinePreview.boundingBox();assert.ok(zoomBox.width>afterDrag.width&&zoomBox.height>afterDrag.height,'clicking the card enlarges the actual preview: '+JSON.stringify({afterDrag,zoomBox}));
   const controlAfter=(await (await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json());
   assert.equal(controlAfter.target.id,controlBefore.target.id);assert.equal(controlAfter.status,controlBefore.status);assert.equal(controlAfter.controlEpoch,controlBefore.controlEpoch);
   assert.deepEqual(viewWrites,[],'moving and enlarging are local read-only UI; they do not pause, reveal or change control');
@@ -372,22 +380,33 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   // Only this observer reads the page. Every tested input goes through the
   // actual React pane, authenticated HTTP, manager, and separate browser.
   const point = async locator => {
-    let rect = await locator.boundingBox(), box = await image.boundingBox();
-    let { cssVisualViewport: viewport } = await cdp.send('Page.getLayoutMetrics');
-    // A revealed Chrome window can screencast only the top of an emulated
-    // viewport. The PNG/JPEG retains uniform pixel scale; its height is not
-    // proof that it contains the full DOM viewport.
-    const visibleHeight=()=>Math.min(viewport.clientHeight,box.height*viewport.clientWidth/box.width);
+    let rect, box, viewport, frame;
+    const readDisplayed = async () => {
+      const displayed = await image.evaluate(element => {
+        if (!element.complete || !element.naturalWidth) return null;
+        const frame = window.__cuDisplayedFrames?.get(element.src.split(',')[1]);
+        return frame ? { frame, box: element.getBoundingClientRect().toJSON() } : null;
+      });
+      if (!displayed) return false;
+      const before = viewportGeometry(await cdp.send('Page.getLayoutMetrics'));
+      const nextRect = await locator.boundingBox(), metrics = await cdp.send('Page.getLayoutMetrics');
+      const after = viewportGeometry(metrics);
+      // DOM-derived click coordinates must describe the decoded image on
+      // screen, not merely any intermediate frame produced by smooth scroll.
+      if (!nextRect || !sameScreenshotGeometry(before, after) || !sameScreenshotGeometry(displayed.frame.geometry, after)) return false;
+      rect = nextRect; box = displayed.box; frame = displayed.frame; viewport = metrics.cssVisualViewport;
+      return true;
+    };
+    await until(readDisplayed);
+    // A revealed window can show only the top of an emulated viewport. Keep
+    // coordinates in the actual frame's CSS dimensions and uniform scale.
+    const visibleHeight = () => Math.min(viewport.clientHeight, frame.height);
     if (rect.y < 0 || rect.y + rect.height > visibleHeight()) {
-      const oldImage = await image.getAttribute('src');
       await page.mouse.move(box.x + box.width - 4, box.y + box.height / 2);
       await page.mouse.wheel(0, rect.y + rect.height / 2 - visibleHeight() / 2);
-      await until(async () => { const r = await locator.boundingBox(); return r.y >= 0 && r.y + r.height <= visibleHeight(); });
-      await until(async () => (await image.getAttribute('src')) !== oldImage);
-      rect = await locator.boundingBox(); box = await image.boundingBox();
-      ({ cssVisualViewport: viewport } = await cdp.send('Page.getLayoutMetrics'));
+      await until(async () => await readDisplayed() && rect.y >= 0 && rect.y + rect.height <= visibleHeight());
     }
-    return { x: box.x + (rect.x + rect.width / 2) * box.width / viewport.clientWidth, y: box.y + (rect.y + rect.height / 2) * box.width / viewport.clientWidth };
+    return { x: box.x + (rect.x + rect.width / 2) * box.width / frame.width, y: box.y + (rect.y + rect.height / 2) * box.height / frame.height };
   };
   const click = async locator => { const p = await point(locator); await page.mouse.click(p.x, p.y); };
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '助手光标验收' }] });

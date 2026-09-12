@@ -6,7 +6,7 @@
 
 ## 安装到现有 DSH（推荐）
 
-适用 **DSH 0.1.5-rc.1**，需要 Node.js ≥22.19、pnpm 11.21.0 和 Git。**Windows 使用 PowerShell 7（`pwsh`）**，无需 WSL；Python 验证文件需要另有 Python，`.sh` 文件需要 Bash。
+适用 **DSH 0.1.5-rc.1**，需要 Node.js ≥22.19、pnpm 11.23.0 和 Git。**Windows 使用 PowerShell 7（`pwsh`）**，无需 WSL；Python 验证文件需要另有 Python，`.sh` 文件需要 Bash。
 
 先停止当前 DSH Web，在终端或 PowerShell 中安装：
 
@@ -43,7 +43,7 @@ dsh plugin --profile web remove trisoul_x
 
 ## 本地开发或独立试用
 
-需要 **Node.js ≥22.19**、Git 和 **pnpm 11.21.0**。推荐使用 Node.js 24。尚未安装 pnpm 时，可运行 `npm install -g pnpm@11.21.0`。
+需要 **Node.js ≥22.19**、Git 和 **pnpm 11.23.0**。推荐使用 Node.js 24。尚未安装 pnpm 时，可运行 `npm install -g pnpm@11.23.0`。
 
 ```sh
 git clone https://github.com/gulagala001/oh-my-dsh.git

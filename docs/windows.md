@@ -2,7 +2,7 @@
 
 Windows 上使用同一套 Oh My DSH 插件、任务、记忆和工作台。内置浏览器使用独立配置；已有 Chrome 扩展和原生桌面提供开发适配。桌面部分使用 Windows 前台输入、UI Automation 和窗口捕获，不同应用的兼容性需要在目标设备上验证。
 
-需要 Node.js 24、pnpm 11.21.0、Git 和 PowerShell 7。首次准备 Windows Chrome 连接或安装桌面控制还需要 **.NET 10 SDK** 和可访问 NuGet 的网络；编译后的程序自带运行时，不要求每次运行都启动 SDK。
+需要 Node.js 24、pnpm 11.23.0、Git 和 PowerShell 7。首次准备 Windows Chrome 连接或安装桌面控制还需要 **.NET 10 SDK** 和可访问 NuGet 的网络；编译后的程序自带运行时，不要求每次运行都启动 SDK。
 
 ## 安装与试用
 

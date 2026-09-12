@@ -196,7 +196,14 @@ export class BrowserViews {
     view.stopping = (async () => {
       await view.ready?.catch(() => {});
       await restoreStylePreview(view);
-      // Disconnecting removes the screencast's CDP session. Renderer replies
+      // Dialog-closed can precede the reply to the user's answer. Disabling
+      // control must not detach this channel while that answer is returning.
+      if (view.dialogReplies?.size) {
+        let timer;
+        try { await Promise.race([Promise.allSettled([...view.dialogReplies]),new Promise(resolve=>{timer=setTimeout(resolve,this.observationTimeoutMs);})]); }
+        finally { clearTimeout(timer); }
+      }
+      // Disconnecting removes the screencast's CDP session. Screencast replies
       // can be lost during page closure; they must not gate observer teardown.
       if (!view.dialog) void view.cdp?.send('Page.stopScreencast').catch(() => {});
       try { await this.browser.disconnect(view.sessionId); }
@@ -220,7 +227,9 @@ export class BrowserViews {
       const record = connection?.pages.get(tabId);
       const previous = record?.pendingAction;
       const answer = async () => {
-        await view.cdp.send('Page.handleJavaScriptDialog', { accept: input.accept === true, ...(typeof input.text === 'string' ? { promptText: input.text } : {}) });
+        const reply=view.cdp.send('Page.handleJavaScriptDialog', { accept: input.accept === true, ...(typeof input.text === 'string' ? { promptText: input.text } : {}) });
+        (view.dialogReplies??=new Set()).add(reply);
+        try { await reply; } finally { view.dialogReplies.delete(reply); }
         await previous;
       };
       if (record) { record.dialog = null; return this.browser.perform(record, answer); }

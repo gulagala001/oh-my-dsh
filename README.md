@@ -31,7 +31,7 @@
   <img src="docs/images/workbench-memory.png" width="100%" alt="Oh My DSH：在对话旁的统一工作台中查看和维护项目记忆" />
 </p>
 
-Oh My DSH 把任务、记忆、电脑和监控放进同一个工作台。助手可以保存项目约定，整理长对话，关联任务与验证结果，也能打开网页或操作 Mac 应用。你可以随时查看它记住了什么、做到了哪一步，以及正在操作的画面。
+Oh My DSH 把任务、记忆、电脑和监控放进同一个工作台。助手可以保存项目约定，整理长对话，关联任务与验证结果，也能打开网页或操作 Windows、Mac 应用。你可以随时查看它记住了什么、做到了哪一步，以及正在操作的画面。
 
 作为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 插件运行，沿用已有的模型配置、会话、文件、工具与技能。
 
@@ -55,7 +55,7 @@ dsh web
 
 为兼容已有安装，插件 ID 与 Agent preset 继续使用 `trisoul_x` / `trisoul-x`。
 
-需要 **Node.js ≥22.19、pnpm 11.21.0 和 Git**；Windows 使用 **PowerShell 7**。模型需支持原生工具调用，理解截图还需要图像输入能力。自定义 profile 和 `DSH_HOME` 应沿用原配置。
+需要 **Node.js ≥22.19、pnpm 11.23.0 和 Git**；Windows 使用 **PowerShell 7**。模型需支持原生工具调用，理解截图还需要图像输入能力。自定义 profile 和 `DSH_HOME` 应沿用原配置。
 
 插件会设置 Oh My DSH 为默认 Agent preset，并应用完整文件／命令访问、关闭执行审批的配置；profile 自己的覆盖配置优先。
 
@@ -171,9 +171,9 @@ dsh web
 | 功能 | 当前支持 |
 | --- | --- |
 | 任务、记忆、上下文与监控 | Windows、macOS、Linux 共用插件入口，独立于桌面控制。 |
-| 内置浏览器 | 已实现独立配置与 Chrome／Chromium 操控；完整交互证据主要来自 macOS，Windows／Linux 仍需各自实机验收。 |
-| 已有 Chrome 扩展 | 安装器支持 macOS／Linux；Windows 现提供可执行桥接与注册的开发适配，需在目标设备运行自检，见 [Windows 使用说明](docs/windows.md)。 |
-| 原生桌面与窗口分享 | 当前仅实现 macOS 14+；开发版本机编译需要 Apple Command Line Tools。Windows／Linux 原生服务尚未实现。 |
+| 内置浏览器 | 使用独立配置控制 Chrome／Chromium，提供实时预览、网页操作和文件交付；内置无头浏览器隐藏滚动条以保持截图布局稳定。 |
+| 已有 Chrome 扩展 | 提供 Windows、macOS、Linux 的本机连接与注册，连接已有标签页，见 [Windows 使用说明](docs/windows.md)。 |
+| 原生桌面与窗口分享 | 支持 macOS 14+，并提供 Windows 10 2004+ 开发适配。首次本机编译分别需要 Apple Command Line Tools 或 .NET 10 SDK；Linux 原生桌面尚未实现。 |
 | 独立弹出预览 | 需要 Document Picture-in-Picture 支持；默认页内预览不依赖该 API。 |
 
 锁屏使用、全局窗口分享快捷键、复杂 CSS 命中、完整跨应用兼容和部分导出能力仍待完善。详细边界见 [使用指南](docs/usage.md#computer-use预览版)。

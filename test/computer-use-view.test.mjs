@@ -326,10 +326,20 @@ test('disabling control still lets the user answer a dialog needed to release in
   await s.manager.navigate('test', { tabId: s.tab.id, controlEpoch: 0, url: s.fixture.url + '/mousedown-dialog' });
   await s.input({ type: 'pointerdown', ...await s.position(s.page.getByRole('button', { name: '打开对话框', exact: true })) });
   await until(() => s.dialog()?.message === 'On down');
+  const view=s.manager.browserViews.views.get(s.tab.id),send=view.cdp.send.bind(view.cdp);
+  let releaseReply,handled;
+  const replyGate=new Promise(resolve=>{releaseReply=resolve;}),dialogHandled=new Promise(resolve=>{handled=resolve;});
+  t.after(()=>releaseReply());
+  view.cdp.send=(method,...args)=>{
+    const reply=send(method,...args);
+    return method==='Page.handleJavaScriptDialog'?reply.then(async result=>{handled();await replyGate;return result;}):reply;
+  };
   const disabled = s.manager.setEnabled(false);
   await assert.rejects(s.manager.execute('test', 'nodeRepl.write(42)'), /disabled/);
-  await s.input({ type: 'dialog', accept: true, text: '关闭控制后回答' });
-  await disabled;
+  const answered=s.input({ type: 'dialog', accept: true, text: '关闭控制后回答' });answered.catch(()=>{});
+  await dialogHandled;await until(()=>view.closed);
+  assert.equal(s.manager.browser.connections.has(view.sessionId),true,'disabling must retain the observation transport until the dialog answer has returned');
+  releaseReply();await Promise.all([answered,disabled]);
   assert.equal(s.manager.status('test').enabled, false);
   await s.manager.setEnabled(true); await s.manager.resume('test');
   assert.equal((await s.manager.execute('test', 'nodeRepl.write(42)')).blocks[0].text, '42');
