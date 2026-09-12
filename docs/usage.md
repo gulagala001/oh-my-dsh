@@ -2,7 +2,7 @@
 
 [返回项目首页](../README.md) · [安装](#安装到现有-dsh推荐) · [日常使用](#日常使用) · [Computer Use](#computer-use预览版) · [开发与验证](#开发与验证)
 
-当前版本 **0.1.1**，适配 **DSH 0.1.5-rc.1**。本页保留安装、操作、配置与实测边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
+当前版本 **1.0.0 正式先行版**，适配 **DSH 0.1.5-rc.1**。本页保留安装、操作、配置与实测边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
 ## 安装到现有 DSH（推荐）
 

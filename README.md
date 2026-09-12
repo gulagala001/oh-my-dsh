@@ -20,11 +20,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.0.0"><strong>下载 1.0 正式先行版</strong></a> ·
-  <a href="#quickstart">快速开始</a> ·
+  <a href="#quickstart"><strong>安装插件</strong></a> ·
   <a href="#features">功能亮点</a> ·
   <a href="#computer-use">Computer Use</a> ·
   <a href="docs/usage.md">使用指南</a> ·
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.0.0">版本说明</a> ·
   <a href="https://github.com/gulagala001/oh-my-dsh/issues">反馈问题</a>
 </p>
 
@@ -40,9 +40,7 @@ Oh My DSH 把任务、记忆、电脑和监控放进同一个工作台。助手�
 
 ## 快速开始
 
-**1.0 正式先行版**：[下载完整源码包](https://github.com/gulagala001/oh-my-dsh/releases/download/v1.0.0/oh-my-dsh-v1.0.0.zip) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.0.0)。源码包包含已构建的界面，首次使用需安装依赖；Windows 用户可直接查看 [安装说明](docs/windows.md#安装与试用)。
-
-已有 **DSH 0.1.5-rc.1 Web**？停止服务后安装插件：
+Oh My DSH 通过 **DSH 的插件管理器**安装。已有 **DSH 0.1.5-rc.1 Web** 时，先停止服务，然后在终端或 PowerShell 中运行：
 
 ```sh
 dsh plugin --profile web add github:gulagala001/oh-my-dsh
@@ -62,7 +60,16 @@ dsh web
 
 插件会设置 Oh My DSH 为默认 Agent preset，并应用完整文件／命令访问、关闭执行审批的配置；profile 自己的覆盖配置优先。
 
-[从源码试用](docs/usage.md#本地开发或独立试用) · [更新与卸载](docs/usage.md#安装到现有-dsh推荐) · [模型与后台配置](docs/usage.md#日常使用)
+[Windows 安装说明](docs/windows.md#安装与试用) · [更新与卸载](docs/usage.md#安装到现有-dsh推荐) · [模型与后台配置](docs/usage.md#日常使用)
+
+<details>
+<summary>源码下载与独立开发</summary>
+
+[1.0 源码 ZIP](https://github.com/gulagala001/oh-my-dsh/releases/download/v1.0.0/oh-my-dsh-v1.0.0.zip) 用于保存源码、手动部署或二次开发，包含已构建的界面。普通插件安装直接使用上面的命令即可。
+
+[从源码试用](docs/usage.md#本地开发或独立试用) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.0.0)
+
+</details>
 
 <a id="features"></a>
 

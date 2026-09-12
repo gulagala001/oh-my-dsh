@@ -1,10 +1,22 @@
-# Windows 开发版使用
+# Windows 插件使用
 
 Windows 上使用同一套 Oh My DSH 插件、任务、记忆和工作台。内置浏览器使用独立配置；已有 Chrome 扩展和原生桌面提供开发适配。桌面部分使用 Windows 前台输入、UI Automation 和窗口捕获，不同应用的兼容性需要在目标设备上验证。
 
 需要 Node.js 24、pnpm 11.23.0、Git 和 PowerShell 7。首次准备 Windows Chrome 连接或安装桌面控制还需要 **.NET 10 SDK** 和可访问 NuGet 的网络；编译后的程序自带运行时，不要求每次运行都启动 SDK。
 
 ## 安装与试用
+
+已有 **DSH 0.1.5-rc.1 Web** 时，先停止服务，在 PowerShell 7 中安装插件：
+
+```powershell
+dsh plugin --profile web add github:gulagala001/oh-my-dsh
+if ($LASTEXITCODE -ne 0) { throw '插件安装失败' }
+dsh web
+```
+
+打开启动时打印的登录链接，新建会话并选择 **Oh My DSH**，通过输入区的 **工作台** 和 **电脑** 使用插件。已有模型、凭据和会话沿用 DSH；自定义 profile 或 `DSH_HOME` 应保持原配置。此方式无需先下载 ZIP、手动构建或另起一套服务。
+
+### 从源码独立试用（可选）
 
 在 PowerShell 7 中进入完整源码目录。DSH 0.1.5-rc.1 的本地 `link:` 转发尚有路径含空格的限制，源码可放在 `C:\src\oh-my-dsh`。
 
