@@ -1,4 +1,4 @@
-import { access, chmod, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
+import { access, chmod, mkdir, readFile, readdir, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
@@ -43,6 +43,15 @@ export class ExtensionInstaller {
     this.receipt = join(this.directory, 'installation.json');
   }
   supported() { return ['darwin', 'linux', 'win32'].includes(this.platform); }
+  async matchesWindowsRegistration(path) {
+    if (typeof path !== 'string') return false;
+    if (path.toLowerCase() === this.registration.toLowerCase()) return true;
+    // .NET expands existing 8.3 paths (e.g. RUNNER~1), while Node can retain
+    // their short spelling. Resolve both existing files before treating the
+    // registration as foreign; missing or different files remain a mismatch.
+    try { const [actual, expected] = await Promise.all([realpath(path), realpath(this.registration)]); return actual.toLowerCase() === expected.toLowerCase(); }
+    catch (error) { if (['ENOENT', 'ENOTDIR'].includes(error.code)) return false; throw error; }
+  }
   async bundle() {
     const files = await sourceFiles(this.source), manifest = JSON.parse(files.get('manifest.json'));
     if (!manifest.key || !files.has('worker.js')) throw new Error('The extension bundle is incomplete');
@@ -67,7 +76,7 @@ export class ExtensionInstaller {
     let prepared = receipt?.owner === OWNER && !receipt.removed && receipt.build === bundle.build && receipt.nodePath === this.nodePath && receipt.socketPath === this.socketPath;
     if (prepared && this.windows) {
       prepared = receipt.runtimeBuild === bundle.runtime.build && receipt.launcher === this.launcher && await this.windows.valid();
-      if (prepared) prepared = (await this.windows.read(this.hostName)).every(entry => entry.hasValue && entry.value?.toLowerCase() === this.registration.toLowerCase());
+      if (prepared) prepared = (await Promise.all((await this.windows.read(this.hostName)).map(async entry => entry.hasValue && await this.matchesWindowsRegistration(entry.value)))).every(Boolean);
     }
     if (prepared) {
       const files = [...bundle.files].map(([name, data]) => [join(this.extensionPath, name), data]);
@@ -99,7 +108,7 @@ export class ExtensionInstaller {
     const oldReceipt = await read(this.receipt); let receipt;
     if (oldReceipt) { try { receipt = JSON.parse(oldReceipt); } catch {} if (receipt?.owner !== OWNER) throw new Error('已有安装记录不属于 Oh My DSH Computer Use'); }
     const registryBefore = this.windows ? await this.windows.read(this.hostName) : null;
-    if (registryBefore?.some(entry => entry.hasValue && entry.value?.toLowerCase() !== this.registration.toLowerCase())) throw new Error('这个 Chrome 已连接其他实例。本次没有替换注册表中的连接程序。');
+    if (registryBefore && (await Promise.all(registryBefore.map(async entry => !entry.hasValue || await this.matchesWindowsRegistration(entry.value)))).some(matches => !matches)) throw new Error('这个 Chrome 已连接其他实例。本次没有替换注册表中的连接程序。');
     const registration = await read(this.registration);
     if (registration && !registration.equals(bundle.registration)) {
       let previous; try { previous = JSON.parse(registration); } catch {}

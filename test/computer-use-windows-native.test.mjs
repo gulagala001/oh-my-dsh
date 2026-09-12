@@ -133,7 +133,7 @@ test('Windows native installation, read-only observation and input operate on re
     for (let i = 0; i < 100; i++) { const state = await applicationState(); if (predicate(state)) return state; await delay(20); }
     assert.fail('The real application did not receive the expected input: ' + JSON.stringify(await applicationState()));
   };
-  for (const button of ['left', 'right', 'middle']) { t.diagnostic('Actual Windows pointer: ' + button); await native.invoke('controller', binding.id, 'click', [from, { button }]); }
+  for (const button of ['left', 'right', 'middle']) { t.diagnostic('Actual Windows pointer: ' + button); await native.invoke('controller', binding.id, 'click', [from, { mouseButton: button }]); }
   const clicked = await waitState(state => state.pointerEvents.filter(event => event.kind === 'up').length === 3);
   assert.deepEqual(clicked.pointerEvents.filter(event => event.kind === 'down').map(event => event.button), ['Left', 'Right', 'Middle']);
   assert.deepEqual(clicked.pointerEvents.filter(event => event.kind === 'up').map(event => event.button), ['Left', 'Right', 'Middle']);

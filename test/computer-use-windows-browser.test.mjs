@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { writeFile, readFile, access } from 'node:fs/promises';
+import { writeFile, readFile, access, realpath } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join } from 'node:path';
 import { ExtensionBrowser } from '../src/computer-use/extension-browser.mjs';
@@ -27,7 +27,9 @@ test('Windows: installed exe connects real Chrome, preserves selected tabs and u
     assert.equal(installed.prepared, true); assert.equal(installed.reloadRequired, false);
     assert.equal(installed.build, env.browser.build);
     const registration = await env.installer.windows.read(env.installer.hostName);
-    assert.ok(registration.every(entry => entry.value?.toLowerCase() === env.installer.registration.toLowerCase()), JSON.stringify({ expected: env.installer.registration, registration }));
+    const registeredPaths = await Promise.all(registration.map(entry => realpath(entry.value)));
+    assert.ok(registeredPaths.every(path => path.toLowerCase() === registeredPaths[0].toLowerCase()));
+    assert.equal(registeredPaths[0].toLowerCase(), (await realpath(env.installer.registration)).toLowerCase());
     const duplicate = new ExtensionHub(env.hub.socketPath, { windowsRuntime: env.installer.windows });
     await assert.rejects(duplicate.start(), /exited/); await duplicate.close();
     assert.equal(env.hub.list().length, 1, 'failed endpoint takeover leaves the original connection intact');

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, cp, writeFile, readFile, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdtemp, mkdir, cp, writeFile, readFile, rm, symlink } from 'node:fs/promises';
+import { join, dirname, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 import { ExtensionInstaller } from '../src/computer-use/extension-install.mjs';
 
@@ -87,6 +87,20 @@ test('Windows status detects a moved registration and preserves its new owner on
   assert.equal(runtime.records[0].value, 'C:\\new-owner\\host.json');
   await assert.rejects(installer.unregister(), /changed during recovery/);
   assert.equal(runtime.records[0].value, 'C:\\new-owner\\host.json');
+});
+
+test('Windows registration resolves filesystem aliases without accepting another manifest', async t => {
+  const { installer, runtime, root } = await fixture(t); await installer.prepare();
+  const alias = join(root, 'registration-alias');
+  await symlink(dirname(installer.registration), alias, process.platform === 'win32' ? 'junction' : 'dir');
+  runtime.records = runtime.records.map(entry => ({ ...entry, value: join(alias, basename(installer.registration)) }));
+  assert.equal((await installer.status()).prepared, true);
+  await installer.prepare(); assert.equal((await installer.status()).prepared, true);
+  const foreign = join(root, 'other-manifest.json'); await cp(installer.registration, foreign);
+  runtime.records[0].value = foreign;
+  assert.equal((await installer.status()).prepared, false);
+  await assert.rejects(installer.prepare(), /其他实例/);
+  assert.equal(runtime.records[0].value, foreign);
 });
 
 test('Windows removal restores the prior registration and allows preparation again', async t => {
