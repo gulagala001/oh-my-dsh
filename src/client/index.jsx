@@ -343,11 +343,17 @@ export function apply(ctx) {
   const { ComputerEntry } = applyComputerUseClient(ctx, { integrated: true, openPanel, renderPane: props => <Workbench {...props} initialSection="computer"/> });
   function ComposerDock(props) {
     const running = props.useSessions(s => Boolean(s.byId[props.sessionId]?.running));
+    const [usageOpen, setUsageOpen] = useState(false);
+    useEffect(() => { setUsageOpen(false); }, [props.sessionId]);
+    useEffect(() => {
+      document.documentElement.toggleAttribute('data-omd-usage-expanded', usageOpen);
+      return () => document.documentElement.removeAttribute('data-omd-usage-expanded');
+    }, [usageOpen]);
     useEffect(() => {
       document.documentElement.toggleAttribute('data-omd-running', running);
       return () => document.documentElement.removeAttribute('data-omd-running');
     }, [running]);
-    return <div className="tx-composer-dock"><div className="tx-composer-tools"><button type="button" className="tx-workbench-entry" aria-label="打开工作台" onClick={() => openPanel('tasks')}><Icon name="context" size={14}/><span>工作台</span></button><ComputerEntry {...props}/></div><StatsLine {...props} onOpen={() => openPanel('monitor')}/></div>;
+    return <div className="tx-composer-dock"><div className="tx-composer-tools"><button type="button" className="tx-workbench-entry" aria-label="打开工作台" onClick={() => openPanel('tasks')}><Icon name="context" size={15}/><span>工作台</span></button><ComputerEntry {...props}/></div><button type="button" className="tx-usage-toggle" aria-label="用量详情" aria-expanded={usageOpen} onClick={() => setUsageOpen(value => !value)}><Icon name="monitor" size={14}/><span>用量</span><Icon name="chevron" size={12}/></button><StatsLine {...props} onOpen={() => openPanel('monitor')}/></div>;
   }
   ctx.effect(() => {
     const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css + '\n' + shellCss + '\n' + whaleCss; document.head.appendChild(tag);

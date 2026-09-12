@@ -17,3 +17,15 @@ test('invalid or modifier-only native input is rejected before dispatch',()=>{
   assert.deepEqual(nativeClickOptions({mouseButton:'m',clickCount:5}),{button:'middle',count:5});
   for(const options of [null,'right',{mouseButton:'other'},{clickCount:0},{clickCount:-1},{clickCount:1.5},{clickCount:Infinity}])assert.throws(()=>nativeClickOptions(options));
 });
+test('Windows chords use Win independently of Ctrl and preserve Mac mappings',()=>{
+  for(const name of ['win','Windows','Super_R','Meta_L','win_r'])assert.deepEqual(nativeKeyChord(name+'+e','win32'),{key:'e',modifiers:['win']});
+  assert.deepEqual(nativeKeyChord('Control_L+Alt_L+Delete','win32'),{key:'delete',modifiers:['ctrl','alt']});
+  assert.deepEqual(nativeKeyChord('Ctrl+Shift+greater','win32'),{key:'>',modifiers:['ctrl','shift']});
+  assert.deepEqual(nativeKeyChord('at','win32'),{key:'@',modifiers:[]});
+  assert.deepEqual(nativeKeyChord('+','win32'),{key:'+',modifiers:[]});
+  assert.deepEqual(nativeKeyChord('F24','win32'),{key:'f24',modifiers:[]});
+  assert.deepEqual(nativeKeyChord('KP_Enter','win32'),{key:'kp_enter',modifiers:[]});
+  for(const name of ['cmd+a','command+c','fn+left','Win','kp_equal','F25'])assert.throws(()=>nativeKeyChord(name,'win32'));
+  assert.deepEqual(nativeKeyChord('super+a','darwin'),{key:'a',modifiers:['cmd']});
+  assert.throws(()=>nativeKeyChord('win+a','darwin'));
+});

@@ -2,16 +2,22 @@ name: CI
 
 on:
   push:
+    branches: ['main']
   pull_request:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+    timeout-minutes: 20
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -26,7 +32,13 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - uses: pnpm/action-setup@v6
+      - uses: actions/setup-dotnet@v6
+        if: runner.os == 'Windows'
+        with:
+          dotnet-version: '10.0.x'
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm build
-      - run: pnpm test
+      # Real browser fixtures are resource intensive and some exercise the
+      # shared desktop. Keep platform results independent and run files in order.
+      - run: node --test --test-concurrency=1 test/*.test.mjs

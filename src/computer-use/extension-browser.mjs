@@ -41,7 +41,7 @@ export class ExtensionBrowser extends BrowserActions {
   }
   forget(id, error) {
     const info = this.records.get(id); if (!info) return;
-    this.records.delete(id); this.tabs.delete(String(info.nativeTabId)); this.owners.delete(id);
+    this.records.delete(id); this.tabs.delete(String(info.nativeTabId)); this.owners.delete(id);this.downloadSessions.delete(id);
     if (error) this.onControlLost?.(id, error);
     this.onTabClosed?.(id);
   }

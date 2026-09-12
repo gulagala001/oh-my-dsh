@@ -10,6 +10,12 @@ data/
 .credentials.yaml
 *.tgz
 /cu-artifacts/
+/native/computer-use/windows/bin/
+/native/computer-use/windows/obj/
+/native/computer-use/windows/desktop/bin/
+/native/computer-use/windows/desktop/obj/
+/test/fixtures/computer-use/windows-desktop/bin/
+/test/fixtures/computer-use/windows-desktop/obj/
 
 # Local collaboration notes and development records
 /AGENTS.md

@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import {basename} from 'node:path';
+import {access} from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import { point } from './coordinates.mjs';
 import { listPageAssets, bundlePageAssets, exportPageContent } from './browser-content.mjs';
 import { fetchWebMcpTools, callWebMcpTool, cancelWebMcp, webMcpAvailable } from './browser-webmcp.mjs';
-import { captureViewport, captureFullPage, cropViewport, screenshotOptions, screenshotGeometry, sameScreenshotGeometry, staleScreenshot } from './browser-screenshot.mjs';
+import { captureViewport, captureFullPage, observeScreenshot, withViewportTransaction, screenshotGeometry, sameScreenshotGeometry, staleScreenshot } from './browser-screenshot.mjs';
 
 const stale = () => Object.assign(new Error('This element belongs to an old or detached page. Read the current state again.'), { code: 'STALE_ELEMENT' });
 const keys = { cmd: 'Meta', super: 'Meta', ctrl: 'Control', control: 'Control', alt: 'Alt', option: 'Alt', shift: 'Shift', return: 'Enter', enter: 'Enter', esc: 'Escape', escape: 'Escape', backspace: 'Backspace', delete: 'Delete', tab: 'Tab', space: 'Space', left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown', home: 'Home', end: 'End', pageup: 'PageUp', pagedown: 'PageDown' };
@@ -13,10 +15,12 @@ const supportedLocator = new Set(['locator', 'getByRole', 'getByText', 'getByLab
 const readMethods = new Set(['count', 'innerText', 'textContent', 'allInnerTexts', 'allTextContents', 'inputValue', 'getAttribute', 'isVisible', 'isEnabled', 'isChecked', 'boundingBox', 'ariaSnapshot', 'waitFor']);
 
 export class BrowserActions {
-  constructor({ id = 'browser', onTabClosed, onBrowserLost, onPointer, wantsPointer } = {}) {
+  constructor({ id = 'browser', onTabClosed, onBrowserLost, onPointer, wantsPointer, onVisit } = {}) {
     this.id = id; this.connections = new Map(); this.owners = new Map(); this.records = new Map(); this.nextElementId = 0;
     this.onTabClosed = onTabClosed; this.onBrowserLost = onBrowserLost; this.onPointer = onPointer; this.wantsPointer = wantsPointer;
+    this.onVisit=onVisit;
     this.viewportPresets=new Map();
+    this.downloadHistory=new Map();this.downloadSessions=new Map();this.downloadObservers=new Map();
   }
   recordId(_connection, targetInfo) { return targetInfo.targetId; }
   async bind(connection, page) {
@@ -27,19 +31,39 @@ export class BrowserActions {
     const id = this.recordId(connection, targetInfo);
     const record = { id, page, cdp, generation: 0, elements: new Map(), ids: new Map(), previous: new Map(), logs: [], downloads: new Map(), frames: new Map(), heldButtons: new Set(), heldKeys: new Set(), buttonReleases: new Map(), keyReleases: new Map(), pointer: { x: 0, y: 0 } };
     record.coordinateId = randomUUID();
+    cdp.on('Page.downloadWillBegin',event=>{
+      const owner=this.owners.get(id)?.sessionId??this.downloadSessions.get(id);if(!owner||this.downloadHistory.has(event.guid))return;
+      this.downloadHistory.set(event.guid,{id:event.guid,sessionId:owner,tabId:id,browserId:this.id,filename:event.suggestedFilename,url:event.url,startedAt:Date.now(),state:'inProgress',receivedBytes:0,totalBytes:0});
+    });
+    cdp.on('Page.downloadProgress',event=>{
+      const entry=this.downloadHistory.get(event.guid);if(!entry||!['inProgress','unobserved'].includes(entry.state))return;
+      Object.assign(entry,{state:event.state,receivedBytes:event.receivedBytes,totalBytes:event.totalBytes});
+    });
     cdp.on('Page.javascriptDialogOpening', value => { record.nativeDialog = value; });
     cdp.on('Page.javascriptDialogClosed', () => { record.dialog = null; record.nativeDialog = null; });
     await cdp.send('Page.enable');
     this.checkConnection(connection);
     connection.pages.set(id, record);
-    page.on('framenavigated', () => { record.generation++; record.elements.clear(); record.previous.clear(); });
+    if(!this.downloadObservers.has(id))this.downloadObservers.set(id,new Set());
+    this.downloadObservers.get(id).add(record);
+    const visit=()=>{
+      const url=page.url();this.visit(id,url);
+      void page.title().then(title=>{if(!page.isClosed()&&page.url()===url)this.visit(id,url,title);},()=>{});
+    };
+    page.on('framenavigated', frame => { record.generation++; record.elements.clear(); record.previous.clear();if(frame===page.mainFrame())visit(); });
+    page.on('domcontentloaded',visit);page.on('load',visit);
     page.on('close', () => {
       connection.pages.delete(id);
+      const observers=this.downloadObservers.get(id);observers?.delete(record);
+      if(observers?.size===0){
+        this.downloadObservers.delete(id);
+        for(const download of this.downloadHistory.values())if(download.tabId===id&&download.state==='inProgress')download.state='unobserved';
+      }
       // Playwright emits Page.close for CDP disconnection as well as actual
       // tab closure. Only an actual tab close releases global ownership.
       setTimeout(() => {
         if (!connection.closing && connection.browser.isConnected()) {
-          const known = this.records.delete(id); this.owners.delete(id);
+          const known = this.records.delete(id); this.owners.delete(id);this.downloadSessions.delete(id);
           if (known) this.onTabClosed?.(id);
         }
       }, 0);
@@ -48,7 +72,17 @@ export class BrowserActions {
     page.on('pageerror', error => { record.logs.push({ level: 'error', text: error.message.slice(0,4000), at: Date.now() }); if (record.logs.length > 100) record.logs.shift(); });
     page.on('dialog', dialog => { record.dialog = dialog; record.wake?.({ dialog: { type: dialog.type(), message: dialog.message(), defaultValue: dialog.defaultValue() } }); });
     page.on('filechooser', chooser => { record.filechooser = chooser; });
-    page.on('download', download => { const id = randomUUID(); record.downloads.set(id, download); });
+    page.on('download', download => {
+      const downloadId=randomUUID();record.downloads.set(downloadId,download);
+      // Public Playwright path() resolves only after completion. Chromium's
+      // allowAndName path ends in its download GUID, shared with Page events.
+      void download.path().then(async path=>{
+        const entry=path&&this.downloadHistory.get(basename(path));if(!entry)return;
+        // Every CDP observer receives the event, but only the connection that
+        // configured Chromium's download directory owns the actual file.
+        await access(path);entry.path=path;
+      }).catch(()=>{});
+    });
     this.records.set(id, { ...this.records.get(id), id, title: targetInfo.title, url: page.url(), browserId: this.id });
     return record;
   }
@@ -56,6 +90,14 @@ export class BrowserActions {
     const owner = this.owners.get(id);
     if (owner && owner.sessionId !== sessionId) throw new Error('This tab is being controlled by another conversation.');
     if (!owner) this.owners.set(id, { sessionId, created, keep: false });
+    // Download attribution outlives the model's turn-scoped input lease.
+    // A later explicit selection transfers future downloads, never old ones.
+    this.downloadSessions.set(id,sessionId);
+    const known=this.records.get(id);if(known)this.visit(id,known.url,known.title);
+  }
+  visit(tabId,url,title=''){
+    const sessionId=this.owners.get(tabId)?.sessionId??this.downloadSessions.get(tabId);
+    if(sessionId)this.onVisit?.({sessionId,tabId,browserId:this.id,url,title});
   }
   keepForUser(sessionId, id) {
     const owner = this.owners.get(id);
@@ -237,33 +279,30 @@ export class BrowserActions {
     return captureViewport(record, geometry ?? await screenshotGeometry(record));
   }
   async observeScreenshot(record, options = {}, signal) {
-    screenshotOptions(options);
-    for (let attempt = 0; attempt < 2; attempt++) {
-      signal?.throwIfAborted();
-      const before = await screenshotGeometry(record);
-      const data = await this.capture(record, options, before);
-      const {screenshot,region}=options.fullPage?{screenshot:data,region:{x:0,y:0,scale:1}}:await cropViewport(data,before,options.clip);
-      const after = await screenshotGeometry(record); signal?.throwIfAborted();
-      if (!sameScreenshotGeometry(before, after)) {if(options.fullPage)throw staleScreenshot();continue;}
-      const screenshotFrame = { ...after, fullPage: options.fullPage === true, region };
-      record.screenshotFrame = screenshotFrame;
-      return { screenshot, screenshotFrame };
-    }
-    throw staleScreenshot();
+    return observeScreenshot(record, options, signal, (settings, geometry) => this.capture(record, settings, geometry));
   }
   validateViewport(size){if(!size||!['width','height'].every(key=>Number.isInteger(size[key])&&size[key]>0&&size[key]<=10000000))throw new Error('Viewport width and height must be positive integers within Chromium limits.');}
-  async setViewport(record,size){
+  async setViewport(record,size,mode='device'){
     this.validateViewport(size);
-    if(record.dialog||record.nativeDialog)throw new Error('Answer the open JavaScript dialog before changing the viewport.');
-    const geometry=await screenshotGeometry(record),{result}=await record.cdp.send('Runtime.evaluate',{expression:'window.devicePixelRatio',returnByValue:true});
-    record.viewportOverride=true;
-    await record.cdp.send('Emulation.setDeviceMetricsOverride',{width:Math.round(size.width*geometry.zoom),height:Math.round(size.height*geometry.zoom),deviceScaleFactor:result.value/geometry.zoom,mobile:false});
-    record.screenshotFrame=null;
+    record.pendingViewportSets=(record.pendingViewportSets??0)+1;
+    try{return await withViewportTransaction(record,async()=>{
+      if(record.dialog||record.nativeDialog)throw new Error('Answer the open JavaScript dialog before changing the viewport.');
+      const geometry=await screenshotGeometry(record),{result}=await record.cdp.send('Runtime.evaluate',{expression:'window.devicePixelRatio',returnByValue:true});
+      record.viewportOverride=true;
+      record.viewportMode=mode;
+      await record.cdp.send('Emulation.setDeviceMetricsOverride',{width:Math.round(size.width*geometry.zoom),height:Math.round(size.height*geometry.zoom),deviceScaleFactor:result.value/geometry.zoom,mobile:false});
+      record.screenshotFrame=null;
+    });}finally{record.pendingViewportSets--;}
   }
   async resetViewport(record){
-    if(!record.viewportOverride)return;
-    if(!record.page.isClosed())await record.cdp.send('Emulation.clearDeviceMetricsOverride');
-    record.viewportOverride=false;record.screenshotFrame=null;
+    // Observer teardown must not wait for an unrelated, possibly lost capture
+    // reply. A queued resize still needs a reset after it actually applies.
+    if(!record.viewportOverride&&!record.pendingViewportSets)return;
+    return withViewportTransaction(record,async()=>{
+      if(!record.viewportOverride)return;
+      if(!record.page.isClosed())await record.cdp.send('Emulation.clearDeviceMetricsOverride');
+      record.viewportOverride=false;record.viewportMode=null;record.screenshotFrame=null;
+    });
   }
   async browserViewport(sessionId,size,signal){
     signal?.throwIfAborted();

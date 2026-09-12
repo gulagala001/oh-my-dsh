@@ -13,6 +13,9 @@ async function until(fn) {
   throw new Error('Timed out waiting for browser observation');
 }
 
+// CDP layout dimensions exclude classic scrollbar gutters; innerWidth does not.
+const viewportSize = page => page.evaluate(() => ({ width: document.documentElement.clientWidth, height: document.documentElement.clientHeight, windowWidth: innerWidth, windowHeight: innerHeight }));
+
 async function setup(t) {
   const directory = await mkdtemp(join(tmpdir(), 'trisoul-cu-view-'));
   const manager = new ComputerUseManager(directory, { native: { binary: join(directory, 'absent') } });
@@ -123,8 +126,9 @@ test('live browser: a failed input release stays visible until stop succeeds', {
 
 test('navigation cancels a pending resize screenshot without disconnecting the preview', { timeout: 20000 }, async t => {
   const s = await setup(t), browser = s.manager.browser, original = browser.observeScreenshot.bind(browser);
+  await s.page.addStyleTag({content:'html{overflow:scroll}::-webkit-scrollbar{width:15px;height:15px}'});
   const baseline=await until(async()=>{
-    const size=await s.page.evaluate(()=>({width:innerWidth,height:innerHeight})),view=s.manager.browserViews.views.get(s.tab.id);
+    const size=await viewportSize(s.page),view=s.manager.browserViews.views.get(s.tab.id);
     return !view.flushing&&!view.pending&&s.frame().geometry.layoutWidth===size.width&&s.frame().geometry.layoutHeight===size.height?size:null;
   });
   let stage = 'resize',afterResize;
@@ -132,7 +136,7 @@ test('navigation cancels a pending resize screenshot without disconnecting the p
   t.after(() => clearTimeout(debug));
   let entered, cancelled = false, first = true;
   const ready = new Promise(resolve => { entered = resolve; });
-  const width = baseline.width + 200, height = baseline.height + 80;
+  const width = baseline.windowWidth + 200, height = baseline.windowHeight + 80;
   browser.observeScreenshot = (record, options, signal) => {
     if (!first) return original(record, options, signal); first = false;
     entered();
@@ -143,14 +147,15 @@ test('navigation cancels a pending resize screenshot without disconnecting the p
   };
   t.after(() => { browser.observeScreenshot = original; });
   await s.page.setViewportSize({ width, height });
-  afterResize=await s.page.evaluate(()=>({width:innerWidth,height:innerHeight}));
+  afterResize=await viewportSize(s.page);
+  assert.equal(afterResize.windowWidth,width);assert.equal(afterResize.windowHeight,height);
   stage = 'waiting for screenshot';
   await ready;
   stage = 'navigating';
   const old = s.frame();
   await s.page.goto(s.fixture.url + '/second');
   stage = 'waiting for new frame';
-  await until(() => s.frame().loaderId !== old.loaderId && s.frame().geometry.layoutWidth === width);
+  await until(async () => s.frame().loaderId !== old.loaderId && s.frame().geometry.layoutWidth === (await viewportSize(s.page)).width);
   assert.equal(cancelled, true, 'the old document must abort its outstanding capture');
   assert.equal(s.manager.browserViews.views.get(s.tab.id).closed, false);
   await s.click(s.page.getByLabel('姓名', { exact: true }));
@@ -177,14 +182,16 @@ test('browser navigation follows history, revokes old input and reports current 
 
 test('a real viewport resize refreshes the preview even without a new screencast image', {timeout:15000},async t=>{
   const s=await setup(t),views=s.manager.browserViews,view=views.views.get(s.tab.id),queue=views.queueFrame;
-  const baseline=await until(async()=>{const size=await s.page.evaluate(()=>({width:innerWidth,height:innerHeight}));return !view.flushing&&!view.pending&&s.frame().geometry.layoutWidth===size.width?size:null;});
+  await s.page.addStyleTag({content:'html{overflow:scroll}::-webkit-scrollbar{width:15px;height:15px}'});
+  const baseline=await until(async()=>{const size=await viewportSize(s.page);return !view.flushing&&!view.pending&&s.frame().geometry.layoutWidth===size.width?size:null;});
   // Keep the real CDP resize event and screenshot path. Only suppress JPEG
   // deliveries, as can happen when the visible compositor surface is unchanged.
   views.queueFrame=function(target,pending){if(!pending.event)return queue.call(this,target,pending);};
   t.after(()=>{views.queueFrame=queue;});
-  const width=baseline.width+150,height=baseline.height+70;
+  const width=baseline.windowWidth+150,height=baseline.windowHeight+70;
   await s.page.setViewportSize({width,height});
-  await until(()=>s.frame().geometry.layoutWidth===width&&s.frame().geometry.layoutHeight===height);
+  const current=await viewportSize(s.page);assert.equal(current.windowWidth,width);assert.equal(current.windowHeight,height);
+  await until(()=>s.frame().geometry.layoutWidth===current.width&&s.frame().geometry.layoutHeight===current.height);
   assert.equal(s.frame().mediaType,'image/png');assert.equal(view.closed,false);
   views.queueFrame=queue;
   await s.click(s.page.getByLabel('姓名',{exact:true}));await s.input({type:'text',text:'尺寸改变后仍能接管'});
@@ -319,10 +326,20 @@ test('disabling control still lets the user answer a dialog needed to release in
   await s.manager.navigate('test', { tabId: s.tab.id, controlEpoch: 0, url: s.fixture.url + '/mousedown-dialog' });
   await s.input({ type: 'pointerdown', ...await s.position(s.page.getByRole('button', { name: '打开对话框', exact: true })) });
   await until(() => s.dialog()?.message === 'On down');
+  const view=s.manager.browserViews.views.get(s.tab.id),send=view.cdp.send.bind(view.cdp);
+  let releaseReply,handled;
+  const replyGate=new Promise(resolve=>{releaseReply=resolve;}),dialogHandled=new Promise(resolve=>{handled=resolve;});
+  t.after(()=>releaseReply());
+  view.cdp.send=(method,...args)=>{
+    const reply=send(method,...args);
+    return method==='Page.handleJavaScriptDialog'?reply.then(async result=>{handled();await replyGate;return result;}):reply;
+  };
   const disabled = s.manager.setEnabled(false);
   await assert.rejects(s.manager.execute('test', 'nodeRepl.write(42)'), /disabled/);
-  await s.input({ type: 'dialog', accept: true, text: '关闭控制后回答' });
-  await disabled;
+  const answered=s.input({ type: 'dialog', accept: true, text: '关闭控制后回答' });answered.catch(()=>{});
+  await dialogHandled;await until(()=>view.closed);
+  assert.equal(s.manager.browser.connections.has(view.sessionId),true,'disabling must retain the observation transport until the dialog answer has returned');
+  releaseReply();await Promise.all([answered,disabled]);
   assert.equal(s.manager.status('test').enabled, false);
   await s.manager.setEnabled(true); await s.manager.resume('test');
   assert.equal((await s.manager.execute('test', 'nodeRepl.write(42)')).blocks[0].text, '42');

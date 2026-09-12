@@ -1,0 +1,43 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,writeFile,readFile,rm} from 'node:fs/promises';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {setTimeout as delay} from 'node:timers/promises';
+import {chromium} from 'playwright';
+import {ComputerUseManager} from '../src/computer-use/manager.mjs';
+import {startFixture} from './fixtures/computer-use/server.mjs';
+import {extensionFixture} from './fixtures/computer-use/extension.mjs';
+const until=async fn=>{for(let i=0;i<150;i++){const value=await fn();if(value)return value;await delay(30);}throw Error('download state timed out');};
+
+for(const backend of ['managed','extension'])test(backend+': real downloads deduplicate observers, retain ownership and report completed bytes',{timeout:20000},async t=>{
+  const root=await mkdtemp(join(tmpdir(),'trisoul-downloads-')),fixture=await startFixture(),cleanup=[];
+  const external=backend==='extension'?await extensionFixture({after:fn=>cleanup.push(fn)},{fixture}):null;
+  const launcher=join(root,'browser'),quote=s=>"'"+s.replaceAll("'","'\\''")+"'";
+  if(process.platform==='darwin')await writeFile(launcher,'#!/bin/sh\nexec '+quote(chromium.executablePath())+' --use-mock-keychain "$@"\n',{mode:0o700});
+  const manager=new ComputerUseManager(root,{...(external?{extensionHub:external.hub}:{}),browser:process.platform==='darwin'?{executablePath:launcher}:{},native:{binary:join(root,'missing')}});
+  t.after(async()=>{await manager.close();for(const close of cleanup)await close();await fixture.close();await rm(root,{recursive:true,force:true});});
+  const tab=await manager.dispatch('test','createBrowserTab',[external?.browser.id??'browser',fixture.url]);
+  const browser=manager.browserForTab(tab.id),record=await browser.target('test',tab.id);
+  await until(()=>manager.browsingHistory.list('test').entries.some(entry=>entry.url===fixture.url+'/'));
+  assert.deepEqual(manager.browsingHistory.list('foreign').entries,[]);
+  let frame;const close=await manager.watchBrowser('test',tab.id,(event,value)=>{if(event==='frame')frame=value;},undefined,false,true);await until(()=>frame);
+  const before=manager.status('test');
+  await record.page.locator('#download').click();
+  const items=await until(()=>{const items=manager.listDownloads('test');return items.length===1&&items[0].state==='completed'&&items;});
+  assert.equal(items[0].filename,'fixture.txt');assert.equal(items[0].receivedBytes,29);assert.equal(items[0].totalBytes,29);assert.equal(items[0].path,undefined);assert.equal(items[0].url,undefined);
+  assert.deepEqual(manager.listDownloads('foreign'),[]);assert.throws(()=>manager.downloadFile('foreign',items[0].id),/不属于/);assert.throws(()=>manager.downloadFile('test','../../etc/passwd'),/不属于/);
+  if(backend==='managed'){
+    await until(()=>manager.listDownloads('test')[0].canDownload);
+    assert.equal(await readFile(manager.downloadFile('test',items[0].id).path,'utf8'),'TRISOUL_COMPUTER_USE_FIXTURE\n');
+  }else assert.equal(items[0].canDownload,false,'extension reports the native download, without claiming host file access');
+  assert.equal(manager.status('test').controlEpoch,before.controlEpoch);assert.equal(manager.status('test').target.id,before.target.id);
+  browser.keepForUser('test',tab.id);await manager.endTurn('test');assert.equal(browser.owners.has(tab.id),false,'downloads after a completed model turn still belong to its explicit tab selection');
+  await manager.viewsFor(tab).views.get(tab.id).record.page.locator('#download').click();await until(()=>manager.listDownloads('test').length===2);assert.notEqual(manager.listDownloads('test')[0].id,items[0].id,'separate downloads with the same filename remain distinct');
+  await manager.stop('test');assert.equal(manager.listDownloads('test').length,2,'ending the model connection does not erase captured history');
+  const ended=manager.listDownloads('test').filter(item=>item.state==='completed');
+  const file=backend==='managed'?manager.downloadFile('test',items[0].id).path:null;
+  manager.clearDownloads('test');assert.equal(manager.listDownloads('test').some(item=>ended.some(old=>old.id===item.id)),false);
+  if(file)assert.equal(await readFile(file,'utf8'),'TRISOUL_COMPUTER_USE_FIXTURE\n','clearing a record never deletes its file');
+  await close();
+});

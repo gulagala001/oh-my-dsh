@@ -5,15 +5,16 @@ import { createInterface } from 'node:readline';
 // native authority between conversations.
 export class McpClient {
   constructor(command, args = [], options = {}) {
+    const { onNotification, ...spawnOptions } = options;
     this.sequence = 0; this.pending = new Map(); this.closed = false;
-    this.child = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true, ...options });
+    this.child = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true, ...spawnOptions });
     this.stderr = '';
     this.child.stderr.on('data', data => { this.stderr = (this.stderr + data).slice(-4000); });
     this.lines = createInterface({ input: this.child.stdout, crlfDelay: Infinity });
     this.lines.on('line', line => {
       let message;
       try { message = JSON.parse(line); } catch { return; }
-      if (message.id === undefined) return;
+      if (message.id === undefined) { if (typeof message.method === 'string') { try { onNotification?.(message); } catch {} } return; }
       const pending = this.pending.get(message.id);
       if (!pending) return;
       this.pending.delete(message.id); pending.cleanup();

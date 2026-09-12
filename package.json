@@ -1,10 +1,10 @@
 {
   "name": "trisoul_x",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "DSH Agent 工作台：集成分层记忆、上下文整理、任务验证、网页与 macOS 应用操控、实时预览、页面批注、素材导出和运行监控。",
-  "packageManager": "pnpm@11.21.0",
+  "description": "DSH Agent 工作台：集成分层记忆、上下文整理、任务验证、网页与 Windows/macOS 应用操控、实时预览、页面批注、素材导出和运行监控。",
+  "packageManager": "pnpm@11.23.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gulagala001/oh-my-dsh.git"

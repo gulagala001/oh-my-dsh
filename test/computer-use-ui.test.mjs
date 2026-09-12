@@ -11,6 +11,7 @@ import sharp from 'sharp';
 import { startFixture } from './fixtures/computer-use/server.mjs';
 import { extensionFixture } from './fixtures/computer-use/extension.mjs';
 import { extensionSocketPath } from '../src/computer-use/extension-hub.mjs';
+import { viewportGeometry, sameScreenshotGeometry } from '../src/computer-use/browser-screenshot.mjs';
 import { legacyBundle } from './fixtures/computer-use/native-runtime.mjs';
 import { stopFixtureProcess } from './fixtures/process.mjs';
 
@@ -21,6 +22,8 @@ async function until(fn, timeout = 30000) {
 }
 
 for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browser UI: takeover, navigation, tabs, references and themes', { timeout: 90000, skip: backend === 'extension' && process.platform === 'win32' }, async t => {
+  const began = performance.now(); let stage = 'prepare';
+  const markStage = value => { stage = value; console.log('Computer Use UI stage:', backend, stage, Math.round(performance.now() - began) + 'ms'); };
   const root = await mkdtemp(join(tmpdir(), 'trisoul-cu-ui-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   await mkdir(home); await mkdir(workspace);
   const nativeBinary=process.platform==='darwin'?await legacyBundle(join(root,'native')):join(root,'missing-native');
@@ -53,6 +56,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   let log = '', browser, controlled, page, complete = false; const errors = [];
   child.stdout.on('data', data => { log = (log + data).slice(-15000); }); child.stderr.on('data', data => { log = (log + data).slice(-15000); });
   t.after(async () => {
+    if (!complete) console.log('Computer Use UI unfinished stage:', backend, stage, Math.round(performance.now() - began) + 'ms');
     if (!complete && page && !page.isClosed()) {
       if (process.env.TRISOUL_CU_UI_ARTIFACTS) { await page.screenshot({ path: join(root, 'failure.png') }); console.log('Computer Use failed UI:', root); }
       console.log((await page.locator('body').innerText()).slice(-3000));
@@ -92,6 +96,13 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   await context.addInitScript(() => {
     const original = EventSource.prototype.addEventListener;
     EventSource.prototype.addEventListener = function(type, listener, options) {
+      if (type === 'frame') return original.call(this, type, event => {
+        const { data, ...frame } = JSON.parse(event.data);
+        const frames = window.__cuDisplayedFrames ??= new Map();
+        frames.set(data, frame);
+        while (frames.size > 32) frames.delete(frames.keys().next().value);
+        listener.call(this, event);
+      }, options);
       if (type !== 'navigation') return original.call(this, type, listener, options);
       return original.call(this, type, event => {
         const deliver = () => listener.call(this, event);
@@ -157,13 +168,15 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   target.on('dialog', () => {});
   let cdp = await target.context().newCDPSession(target);
   const checkSavedCard = async () => {
-    await page.getByText(/^1\s*次工具调用$/).click();
-    const group = page.locator('.tx-cu-group-toggle').first();
+    const preview=page.getByLabel('悬浮操控预览');
+    await preview.waitFor();await preview.locator('.tx-cu-preview-open').first().hover();await preview.getByRole('button',{name:'关闭操控预览',exact:true}).click();await preview.waitFor({state:'hidden'});
+    const group = page.locator('button[data-turn-process-tool-calls="1"]');
     await group.waitFor();
     assert.equal(await group.getAttribute('aria-expanded'), 'false');
-    assert.equal(await page.locator('.tx-cu-card').count(), 0, 'closed groups do not mount individual tool cards');
+    assert.equal(await page.locator('.tx-cu-card').isVisible(), false, 'closed operation summaries hide individual rows');
     await group.click();
     const card = page.locator('.tx-cu-card'); await card.waitFor();
+    assert.equal(await page.locator('.tx-cu-group-toggle:visible').count(),1,'a completed turn has only one summary level, not a nested Computer Use group');
     await card.getByText('打开验收页面', { exact: true }).waitFor();
     await card.getByText('已执行', { exact: true }).waitFor();
     assert.equal(await card.locator('img').count(), 0, 'collapsed Computer Use calls must not mount screenshot images');
@@ -181,6 +194,15 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
     assert.ok(filePath.startsWith(home), 'exports reopen their durable host attachment after reload');
     assert.match(await readFile(filePath, 'utf8'), /MIME-Version:/);
     await until(() => card.locator('img').evaluateAll(images => images.length === 1 && images[0].complete && images[0].naturalWidth > 0));
+    const pageCount=context.pages().length;
+    await card.getByRole('button',{name:'查看截图大图',exact:true}).click();
+    const large=page.getByRole('dialog',{name:'截图预览',exact:true});await large.waitFor();
+    assert.equal(context.pages().length,pageCount,'opening a screenshot stays in a modal, not a browser tab');
+    await large.getByRole('button',{name:'实际大小',exact:true}).click();
+    await large.getByRole('button',{name:'适应窗口',exact:true}).click();
+    if(process.env.TRISOUL_CU_UI_ARTIFACTS)await page.screenshot({path:join(root,'screenshot-dialog.png')});
+    await large.press('Escape');await large.waitFor({state:'hidden'});
+    assert.equal(await card.getByRole('button',{name:'查看截图大图',exact:true}).evaluate(element=>document.activeElement===element),true);
     await card.getByText('查看操作与结果', { exact: true }).click();
     assert.match(await card.innerText(), /createBrowserTab/);
     assert.match(await card.innerText(), /RootWebArea/);
@@ -194,26 +216,118 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   await checkSavedCard();
   await entry.click();
   const image = page.getByLabel('浏览器实时画面').locator('img'); await image.waitFor();
+  const layoutMatches=async()=>{const size=await page.locator('.tx-cu-pane .tx-cu-preview-stage').evaluate(el=>({width:el.clientWidth,height:el.clientHeight})),actual=await target.evaluate(()=>({width:innerWidth,height:innerHeight})),rendered=await image.boundingBox();return Math.abs(size.width-actual.width)<2&&Math.abs(size.height-actual.height)<2&&rendered&&Math.abs(rendered.height-size.height)<2;};
+  if(backend==='managed'){
+    await until(layoutMatches);
+    await page.setViewportSize({width:1360,height:920});await until(layoutMatches);
+    await page.setViewportSize({width:1480,height:1000});await until(layoutMatches);
+    if(process.env.TRISOUL_CU_UI_ARTIFACTS)await page.locator('.tx-cu-pane').screenshot({path:join(root,'browser-responsive-layout.png')});
+  }
+  assert.equal(await page.locator('.tx-cu-pane-browser > header').count(),0,'the browser uses its own compact toolbar without a duplicate Computer Use heading');
+  await page.getByRole('textbox',{name:'浏览器地址',exact:true}).press('Control+h');
+  const historyPanel=page.getByRole('dialog',{name:'浏览历史'});await historyPanel.getByRole('searchbox',{name:'搜索浏览历史'}).waitFor();
+  await until(()=>historyPanel.locator('.tx-cu-history-link').count().then(count=>count>0));
+  await historyPanel.getByRole('searchbox').fill('no-matching-history');await historyPanel.getByText('没有匹配的记录').waitFor();
+  await historyPanel.getByRole('searchbox').fill('');
+  if(process.env.TRISOUL_CU_UI_ARTIFACTS)await page.locator('.tx-cu-pane').screenshot({path:join(root,'browser-history-toolbar.png')});
+  await historyPanel.press('Escape');await historyPanel.waitFor({state:'hidden'});
+  await page.getByRole('button',{name:'浏览器选项',exact:true}).click();
+  await page.getByRole('menuitem',{name:'历史记录',exact:true}).click();await historyPanel.waitFor();
+  await page.getByRole('button',{name:'下载记录',exact:true}).click();await historyPanel.waitFor({state:'hidden'});
+  await page.getByRole('dialog',{name:'当前会话下载记录'}).press('Escape');
+  const downloadsButton=page.getByRole('button',{name:'下载记录',exact:true});
+  await downloadsButton.click();const downloadsPanel=page.getByRole('dialog',{name:'当前会话下载记录'});await downloadsPanel.getByText('当前会话还没有下载记录').waitFor();
+  const downloadsBefore=await(await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json();
+  await target.locator('#download').click();await downloadsPanel.getByText('fixture.txt',{exact:true}).waitFor();await downloadsPanel.getByText('已完成 · 29 B',{exact:true}).waitFor();
+  assert.equal(await downloadsPanel.locator('li').count(),1,'model and observation channels must not duplicate one download');
+  const entries=await(await fetch(origin+'/trisoul-x/computer-use/downloads?session='+sessionId,{headers:{cookie}})).json();
+  const foreign=await fetch(origin+'/trisoul-x/computer-use/download-file?session=foreign-session&id='+entries.downloads[0].id,{headers:{cookie}});assert.equal(foreign.status,400);
+  if(backend==='managed'){
+    await downloadsPanel.getByRole('link',{name:'保存文件'}).waitFor();
+    const [saved]=await Promise.all([page.waitForEvent('download'),downloadsPanel.getByRole('link',{name:'保存文件'}).click()]);
+    assert.equal(saved.suggestedFilename(),'fixture.txt');assert.equal(await readFile(await saved.path(),'utf8'),'TRISOUL_COMPUTER_USE_FIXTURE\n');
+  }else await downloadsPanel.getByText('文件保存在原浏览器的下载位置',{exact:true}).waitFor();
+  const downloadsAfter=await(await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json();assert.equal(downloadsAfter.status,downloadsBefore.status);assert.equal(downloadsAfter.controlEpoch,downloadsBefore.controlEpoch);
+  if(process.env.TRISOUL_CU_UI_ARTIFACTS)await downloadsPanel.screenshot({path:join(root,'browser-downloads.png')});
+  await downloadsPanel.press('Escape');assert.equal(await downloadsButton.evaluate(el=>el===document.activeElement),true);await target.evaluate(()=>scrollTo(0,0));
+  if(backend==='managed'){
+    const options=page.getByRole('button',{name:'浏览器选项',exact:true});
+    await options.click();await page.getByRole('menuitem',{name:'截取屏幕截图',exact:true}).click();
+    const screenshot=page.getByRole('dialog',{name:'截图预览',exact:true});await screenshot.waitFor();
+    await until(()=>screenshot.locator('img').evaluate(img=>img.complete&&img.naturalWidth>0));
+    const control=await(await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json();assert.equal(control.status,'idle','menu screenshot does not stop the assistant');
+    if(process.env.TRISOUL_CU_UI_ARTIFACTS)await page.screenshot({path:join(root,'browser-menu-screenshot.png')});
+    await screenshot.press('Escape');await options.click();await page.getByRole('menuitem',{name:'显示设备工具栏',exact:true}).click();
+    const original=await target.evaluate(()=>({width:innerWidth,height:innerHeight}));
+    await page.getByLabel('视口尺寸预设').selectOption('phone');
+    await until(()=>target.evaluate(()=>innerWidth===390&&innerHeight===844));
+    await until(()=>page.getByLabel('视口宽度').inputValue().then(value=>value==='390'));
+    await until(()=>page.getByLabel('浏览器实时画面').locator('.tx-cu-live-surface').boundingBox().then(box=>Math.abs(box.width-390)<1));
+    const deviceEdge=page.getByRole('button',{name:'调整设备宽度（右）',exact:true}),edgeBox=await deviceEdge.boundingBox();
+    await page.mouse.move(edgeBox.x+10,edgeBox.y+80);await page.mouse.down();await page.mouse.move(edgeBox.x+34,edgeBox.y+80);await page.mouse.up();
+    await until(()=>target.evaluate(()=>innerWidth===438&&innerHeight===844));
+    await until(()=>page.getByLabel('视口宽度').inputValue().then(value=>value==='438'));
+    await page.getByLabel('视口尺寸预设').selectOption('phone');await until(()=>target.evaluate(()=>innerWidth===390&&innerHeight===844));
+    if(process.env.TRISOUL_CU_UI_ARTIFACTS)await page.screenshot({path:join(root,'browser-device-toolbar.png')});
+    const scale=page.getByLabel('设备预览缩放'),surface=page.getByLabel('浏览器实时画面').locator('.tx-cu-live-surface');
+    await page.getByRole('button',{name:'恢复助手控制',exact:true}).click();
+    const scaleBefore=await(await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json();
+    const scaleWrites=[],recordScale=request=>{if(request.method()==='POST'&&new URL(request.url()).pathname.startsWith('/trisoul-x/computer-use/'))scaleWrites.push(request.url());};page.on('request',recordScale);
+    await scale.selectOption('0.5');await until(()=>surface.boundingBox().then(box=>Math.abs(box.width-195)<1&&Math.abs(box.height-422)<1));
+    await scale.selectOption('fit');
+    await until(()=>surface.evaluate(el=>{const box=el.getBoundingClientRect(),stage=el.closest('.tx-cu-preview-stage');return box.width+40<=stage.clientWidth+1&&box.height+20<=stage.clientHeight+1&&box.width>120;}));
+    if(process.env.TRISOUL_CU_UI_ARTIFACTS)await page.locator('.tx-cu-pane').screenshot({path:join(root,'browser-device-fit.png')});
+    const scaleAfter=await(await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json();
+    assert.equal(scaleAfter.status,scaleBefore.status);assert.equal(scaleAfter.controlEpoch,scaleBefore.controlEpoch);assert.deepEqual(scaleWrites,[]);page.off('request',recordScale);
+    assert.deepEqual(await target.evaluate(()=>({width:innerWidth,height:innerHeight})),{width:390,height:844},'presentation scale never changes the page viewport');
+    const check=await target.locator('#check').boundingBox(),scaled=await surface.boundingBox();
+    await page.mouse.click(scaled.x+(check.x+check.width/2)*scaled.width/390,scaled.y+(check.y+check.height/2)*scaled.height/844);
+    await until(()=>target.locator('#check').isChecked());
+    await page.mouse.click(scaled.x+(check.x+check.width/2)*scaled.width/390,scaled.y+(check.y+check.height/2)*scaled.height/844);
+    await until(async()=>!await target.locator('#check').isChecked());
+    await scale.selectOption('1');
+    await page.getByRole('button',{name:'旋转视口',exact:true}).click();await until(()=>target.evaluate(()=>innerWidth===844&&innerHeight===390));
+    await until(()=>surface.boundingBox().then(box=>Math.abs(box.width-844)<1));
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'100% overflow stays in the preview, not the app');
+    await page.getByRole('button',{name:'关闭设备工具栏',exact:true}).click();
+    await until(()=>target.evaluate(size=>innerWidth===size.width&&innerHeight===size.height,original));
+    await page.getByRole('button',{name:'恢复助手控制',exact:true}).click();
+    await page.getByRole('textbox',{name:'浏览器地址',exact:true}).press('Control+f');
+    const findInput=page.getByRole('searchbox',{name:'查找文字',exact:true});await findInput.waitFor();assert.equal(await findInput.evaluate(el=>el===document.activeElement),true);
+    const beforeFind=await(await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json();assert.equal(beforeFind.status,'idle','opening find does not take control');
+    await findInput.fill('保存');await until(()=>target.evaluate(()=>getSelection()?.toString()==='保存'));
+    await page.getByRole('search').getByText('已找到',{exact:true}).waitFor();
+    if(process.env.TRISOUL_CU_UI_ARTIFACTS)await page.locator('.tx-cu-pane').screenshot({path:join(root,'browser-find.png')});
+    await findInput.press('Shift+Enter');await until(()=>target.evaluate(()=>getSelection()?.toString()==='保存'));
+    await findInput.fill('definitely-no-matching-text');await page.getByRole('search').getByText('未找到',{exact:true}).waitFor();
+    await findInput.fill('Computer Use');await until(()=>target.evaluate(()=>getSelection()?.toString()==='Computer Use'&&scrollY===0));
+    await findInput.press('Escape');await page.getByRole('search').waitFor({state:'hidden'});
+    await page.getByRole('button',{name:'恢复助手控制',exact:true}).click();
+  }
   // Open a real Document PiP window through a user gesture, not a mocked popup.
+  if(backend==='managed')await until(layoutMatches); // Finish the preceding find-bar layout before attributing writes to floating controls.
   await page.getByRole('button',{name:'悬浮预览',exact:true}).click();
   await page.getByLabel('悬浮操控预览').waitFor();
   assert.equal(await page.evaluate(()=>!!documentPictureInPicture.window),false,'the default preview lives in the conversation page');
   const inlinePreview=page.getByLabel('悬浮操控预览'),previewHeader=inlinePreview.locator('header');
   await until(()=>inlinePreview.evaluate(element=>!!element.style.width&&!!element.style.height));
+  await until(()=>inlinePreview.locator('img').first().evaluate(img=>img.complete&&img.naturalWidth>0));
+  assert.equal(await inlinePreview.evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)','inline preview has no opaque outer panel');
+  if(process.env.TRISOUL_CU_UI_ARTIFACTS)await page.screenshot({path:join(root,'inline-preview-frameless.png')});
   await previewHeader.evaluate(header=>header.addEventListener('pointerdown',event=>{const box=header.parentElement.getBoundingClientRect();window.__previewDragStart={x:event.clientX,y:event.clientY,box:{x:box.x,y:box.y,width:box.width,height:box.height}};},{once:true,capture:true}));
   const controlBefore=(await (await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json());
   const viewWrites=[];const recordViewWrite=request=>{if(request.method()==='POST'&&new URL(request.url()).pathname.startsWith('/trisoul-x/computer-use/'))viewWrites.push(new URL(request.url()).pathname);};
   page.on('request',recordViewWrite);
-  await previewHeader.hover({position:{x:55,y:12}});await page.mouse.down();
+  await inlinePreview.locator('.tx-cu-preview-open').first().hover();await previewHeader.hover({position:{x:55,y:12}});await page.mouse.down();
   const dragStart=await page.evaluate(()=>window.__previewDragStart);assert.ok(dragStart,'pointerdown must reach the visible preview header');
   const beforeDrag=dragStart.box;
   await page.mouse.move(dragStart.x-100,dragStart.y-80,{steps:8});await page.mouse.up();
   await until(async()=>{const box=await inlinePreview.boundingBox();return Math.abs(box.x-beforeDrag.x+100)<2&&Math.abs(box.y-beforeDrag.y+80)<2;});
   const afterDrag=await inlinePreview.boundingBox();
   assert.ok(Math.abs(afterDrag.x-beforeDrag.x+100)<2&&Math.abs(afterDrag.y-beforeDrag.y+80)<2,'dragging the header moves the preview by the pointer delta: '+JSON.stringify({beforeDrag,dragStart,afterDrag}));
-  await inlinePreview.locator('.tx-cu-preview-open').first().click();
+  await inlinePreview.getByRole('button',{name:'放大预览',exact:true}).click();
   await until(async()=>await inlinePreview.evaluate(element=>element.classList.contains('is-zoomed')));
-  const zoomBox=await inlinePreview.boundingBox();assert.ok(zoomBox.width>afterDrag.width&&zoomBox.height>afterDrag.height,'clicking the card enlarges the actual preview');
+  const zoomBox=await inlinePreview.boundingBox();assert.ok(zoomBox.width>afterDrag.width&&zoomBox.height>afterDrag.height,'clicking the card enlarges the actual preview: '+JSON.stringify({afterDrag,zoomBox}));
   const controlAfter=(await (await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json());
   assert.equal(controlAfter.target.id,controlBefore.target.id);assert.equal(controlAfter.status,controlBefore.status);assert.equal(controlAfter.controlEpoch,controlBefore.controlEpoch);
   assert.deepEqual(viewWrites,[],'moving and enlarging are local read-only UI; they do not pause, reveal or change control');
@@ -244,7 +358,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   const popupBefore=(await (await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json());
   const popupWrites=[];const recordPopupWrite=request=>{if(request.method()==='POST'&&new URL(request.url()).pathname.startsWith('/trisoul-x/computer-use/'))popupWrites.push(new URL(request.url()).pathname);};
   context.on('request',recordPopupWrite);
-  await pip.locator('.tx-cu-preview-open').click();
+  await pip.getByRole('button',{name:'放大预览',exact:true}).click();
   await pip.getByRole('button',{name:'缩小预览',exact:true}).waitFor();
   const popupAfter=(await (await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json());
   assert.equal(popupAfter.target.id,popupBefore.target.id);assert.equal(popupAfter.status,popupBefore.status);assert.equal(popupAfter.controlEpoch,popupBefore.controlEpoch);assert.deepEqual(popupWrites,[]);
@@ -254,6 +368,12 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   await until(()=>pip.isClosed());
   assert.equal(target.isClosed(),false,'closing a preview preserves the actual browser tab');
   await page.getByRole('button',{name:'悬浮预览',exact:true}).waitFor();
+  const beforeOpen=await (await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json();
+  await inlinePreview.locator('.tx-cu-preview-open').first().click();
+  await inlinePreview.waitFor({state:'hidden'});
+  await page.getByLabel('浏览器实时画面').waitFor();
+  const afterOpen=await (await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json();
+  assert.equal(afterOpen.target.id,beforeOpen.target.id);assert.equal(afterOpen.controlEpoch,beforeOpen.controlEpoch,'opening the current page does not take control');
   // Annotating a frozen preview must never send input to the controlled page.
   let annotationInputs=0;
   const countAnnotationInput=request=>{if(new URL(request.url()).pathname==='/trisoul-x/computer-use/input')annotationInputs++;};
@@ -372,22 +492,33 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   // Only this observer reads the page. Every tested input goes through the
   // actual React pane, authenticated HTTP, manager, and separate browser.
   const point = async locator => {
-    let rect = await locator.boundingBox(), box = await image.boundingBox();
-    let { cssVisualViewport: viewport } = await cdp.send('Page.getLayoutMetrics');
-    // A revealed Chrome window can screencast only the top of an emulated
-    // viewport. The PNG/JPEG retains uniform pixel scale; its height is not
-    // proof that it contains the full DOM viewport.
-    const visibleHeight=()=>Math.min(viewport.clientHeight,box.height*viewport.clientWidth/box.width);
+    let rect, box, viewport, frame;
+    const readDisplayed = async () => {
+      const displayed = await image.evaluate(element => {
+        if (!element.complete || !element.naturalWidth) return null;
+        const frame = window.__cuDisplayedFrames?.get(element.src.split(',')[1]);
+        return frame ? { frame, box: element.getBoundingClientRect().toJSON() } : null;
+      });
+      if (!displayed) return false;
+      const before = viewportGeometry(await cdp.send('Page.getLayoutMetrics'));
+      const nextRect = await locator.boundingBox(), metrics = await cdp.send('Page.getLayoutMetrics');
+      const after = viewportGeometry(metrics);
+      // DOM-derived click coordinates must describe the decoded image on
+      // screen, not merely any intermediate frame produced by smooth scroll.
+      if (!nextRect || !sameScreenshotGeometry(before, after) || !sameScreenshotGeometry(displayed.frame.geometry, after)) return false;
+      rect = nextRect; box = displayed.box; frame = displayed.frame; viewport = metrics.cssVisualViewport;
+      return true;
+    };
+    await until(readDisplayed);
+    // A revealed window can show only the top of an emulated viewport. Keep
+    // coordinates in the actual frame's CSS dimensions and uniform scale.
+    const visibleHeight = () => Math.min(viewport.clientHeight, frame.height);
     if (rect.y < 0 || rect.y + rect.height > visibleHeight()) {
-      const oldImage = await image.getAttribute('src');
       await page.mouse.move(box.x + box.width - 4, box.y + box.height / 2);
       await page.mouse.wheel(0, rect.y + rect.height / 2 - visibleHeight() / 2);
-      await until(async () => { const r = await locator.boundingBox(); return r.y >= 0 && r.y + r.height <= visibleHeight(); });
-      await until(async () => (await image.getAttribute('src')) !== oldImage);
-      rect = await locator.boundingBox(); box = await image.boundingBox();
-      ({ cssVisualViewport: viewport } = await cdp.send('Page.getLayoutMetrics'));
+      await until(async () => await readDisplayed() && rect.y >= 0 && rect.y + rect.height <= visibleHeight());
     }
-    return { x: box.x + (rect.x + rect.width / 2) * box.width / viewport.clientWidth, y: box.y + (rect.y + rect.height / 2) * box.width / viewport.clientWidth };
+    return { x: box.x + (rect.x + rect.width / 2) * box.width / frame.width, y: box.y + (rect.y + rect.height / 2) * box.height / frame.height };
   };
   const click = async locator => { const p = await point(locator); await page.mouse.click(p.x, p.y); };
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '助手光标验收' }] });
@@ -397,7 +528,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
     // The arrow has a 35ms motion transition; visibility can precede arrival.
     // Keep the same sub-2px assertion and require convergence within 250ms.
     let tip, expectedTip;
-    await until(async()=>{tip=await assistantCursor.boundingBox();expectedTip=await point(target.getByLabel('姓名',{exact:true}));return tip&&Math.abs(tip.x+2-expectedTip.x)<2&&Math.abs(tip.y+2-expectedTip.y)<2;},250);
+    await until(async()=>{tip=await assistantCursor.boundingBox();expectedTip=await point(target.getByLabel('姓名',{exact:true}));return tip&&Math.abs(tip.x+2-expectedTip.x)<2&&Math.abs(tip.y+2-expectedTip.y)<2;},250).catch(async error=>{const {cssVisualViewport:viewport}=await cdp.send('Page.getLayoutMetrics');throw new Error(error.message+': '+JSON.stringify({tip,expectedTip,viewport}),{cause:error});});
     assert.ok(Math.abs(tip.x + 2 - expectedTip.x) < 2 && Math.abs(tip.y + 2 - expectedTip.y) < 2, 'the assistant arrow tip must match the actual control in the displayed image: '+JSON.stringify({tip,expectedTip}));
     assert.equal(await assistantCursor.evaluate(element => getComputedStyle(element).pointerEvents), 'none');
     await page.locator('.tx-cu-pane .tx-cu-cursor-pulse').waitFor();
@@ -454,16 +585,41 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   await page.getByRole('button', { name: '前进', exact: true }).click();
   await until(() => target.url().endsWith('/second'));
   await page.getByRole('button', { name: '重新加载页面', exact: true }).click();
-  const originalTabId = await page.getByLabel('浏览器标签页').inputValue();
+  const picker = page.getByRole('tablist',{name:'浏览器标签页'});
+  const selectedTabId=()=>picker.locator('[aria-selected="true"]').getAttribute('data-tab-id');
+  const originalTabId = await selectedTabId();
+  const browserAddress=page.getByRole('textbox',{name:'浏览器地址',exact:true});
+  await browserAddress.fill('https://unsent.invalid/');await browserAddress.press('Escape');
+  await until(async()=>await browserAddress.inputValue()===target.url());
   await page.getByRole('button', { name: '新建标签页', exact: true }).click();
-  const picker = page.getByLabel('浏览器标签页');
-  await until(async () => (await picker.inputValue()) !== originalTabId);
-  const newId = await picker.inputValue();
-  await until(async () => (await picker.locator('option').evaluateAll(options => options.map(o => o.value))).includes(originalTabId));
-  await picker.selectOption(originalTabId);
-  await until(async () => (await picker.inputValue()) === originalTabId);
+  await page.getByText('开始浏览',{exact:true}).waitFor();
+  const blankPane=await page.locator('.tx-cu-pane').boundingBox(),blankPrompt=await page.locator('.tx-cu-browser-blank').boundingBox();
+  assert.ok(blankPrompt.height>blankPane.height*.5,'new tab uses the pane as its browsing canvas');
+  assert.equal(await page.getByRole('textbox',{name:'浏览器地址'}).evaluate(el=>el===document.activeElement),true,'new tab focuses the address field');
+  if(process.env.TRISOUL_CU_UI_ARTIFACTS)await page.locator('.tx-cu-pane').screenshot({path:join(root,'browser-new-tab.png')});
+  await until(async () => (await selectedTabId()) !== originalTabId);
+  const newId = await selectedTabId();
+  await picker.locator('[data-tab-id="'+originalTabId+'"]').waitFor();
+  await until(()=>picker.locator('[aria-selected="true"]').isEnabled());
+  const availableTabIds=await picker.getByRole('tab').evaluateAll(tabs=>tabs.filter(tab=>!tab.disabled).map(tab=>tab.dataset.tabId));
+  await picker.locator('[aria-selected="true"]').press('Home');await until(async()=>await selectedTabId()===availableTabIds[0]);
+  await picker.locator('[aria-selected="true"]').press('End');await until(async()=>await selectedTabId()===availableTabIds.at(-1));
+  await picker.locator('[data-tab-id="'+newId+'"]').click();await until(async()=>await selectedTabId()===newId);
+  await page.getByRole('button',{name:'悬浮预览',exact:true}).click();
+  const oldPreview=inlinePreview.locator('.tx-cu-preview-card[data-target="'+originalTabId+'"]');
+  await oldPreview.locator('img').waitFor();
+  await oldPreview.getByRole('button').click({position:{x:3,y:30}});
+  await until(()=>inlinePreview.locator('.tx-cu-preview-card').first().getAttribute('data-target').then(id=>id===originalTabId));
+  assert.equal(await selectedTabId(),newId,'promoting a back card must not select its browser target');
+  if(process.env.TRISOUL_CU_UI_ARTIFACTS)await page.screenshot({path:join(root,'inline-preview-promoted.png')});
+  const beforeViewingOld=await (await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json();
+  await oldPreview.getByRole('button').click();
+  await inlinePreview.waitFor({state:'hidden'});
+  await until(async () => (await selectedTabId()) === originalTabId);
+  const afterViewingOld=await (await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json();
+  assert.equal(afterViewingOld.viewTarget.id,originalTabId);assert.equal(afterViewingOld.target.id,beforeViewingOld.target.id);assert.equal(afterViewingOld.controlEpoch,beforeViewingOld.controlEpoch,'opening an old preview only changes the viewed tab');
   await page.getByRole('button', { name: '关闭当前标签页', exact: true }).click();
-  await until(async () => (await picker.inputValue()) === newId);
+  await until(async () => (await selectedTabId()) === newId);
   assert.equal(target.isClosed(), true);
   // Delay a completed response to reproduce rapid typing while the previous
   // request is still in flight. The second Enter must not disappear.
@@ -517,8 +673,11 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   // Exercise the actual pane recovery when its browser process ends. This
   // connection is only an observer; the new browser is opened by the real UI.
   if (external) {
+    markStage('extension popup stop');
     await external.popup.locator('.tab').filter({ hasText: await second.title() }).getByRole('button', { name: '停止', exact: true }).click();
+    markStage('await extension stop notification');
     await page.getByRole('alert').filter({ hasText: 'Control ended' }).waitFor();
+    markStage('reselect retained Chrome tab');
     const existing = page.getByLabel('选择已有标签页');
     await until(async () => (await existing.locator('option').allTextContents()).includes(await second.title()));
     await existing.selectOption({ label: await second.title() });
@@ -539,6 +698,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   await until(() => controlled.contexts()[0].pages().some(tab => tab.url().startsWith(fixture.url)));
   assert.equal(await page.getByRole('alert').count(), 0, 'opening a new target clears the browser-exit error');
   }
+  markStage('browser recovery complete; open setup');
   await page.getByRole('button', { name: '运行环境与权限' }).click();
   await page.locator('.tx-cu-setup-row').filter({ hasText: '内置浏览器' }).getByText('已安装', { exact: true }).waitFor();
   const setup = await (await fetch(origin + '/trisoul-x/computer-use/setup?session=' + sessionId, { headers: { cookie } })).json();
@@ -546,6 +706,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
     await page.locator('.tx-cu-setup-row').filter({ hasText: 'Chrome 扩展' }).getByText('已连接', { exact: true }).waitFor();
     assert.equal(setup.extension.installation.prepared, true); assert.equal(setup.extension.installation.reloadRequired, false);
     await page.getByText('Chrome 连接详情', { exact: true }).click();
+    markStage('repair Chrome connection');
     await page.getByRole('button', { name: '检查并修复连接程序', exact: true }).click();
     await page.getByRole('button', { name: '检查并修复连接程序', exact: true }).waitFor();
   } else {
@@ -558,6 +719,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
     assert.equal(manifest.name, 'ai.trisoul.computer_use');
     if (process.env.TRISOUL_CU_UI_ARTIFACTS) await page.locator('.tx-cu-setup').screenshot({ path: join(root, 'chrome-setup.png') });
   }
+  markStage('connection setup complete; native update');
   if (setup.native.installed) {
     assert.equal(setup.native.updateAvailable,true);assert.equal(setup.native.version,'0.1.0');
     const beforeUpdate=await(await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json();
@@ -565,12 +727,14 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
     if(process.env.TRISOUL_CU_UI_ARTIFACTS)await page.locator('.tx-cu-setup').screenshot({path:join(root,'native-update-before.png')});
     const updateResponse=page.waitForResponse(response=>new URL(response.url()).pathname==='/trisoul-x/computer-use/setup'&&response.request().method()==='POST'&&response.request().postDataJSON()?.action==='install-native');
     await page.getByRole('button',{name:'更新桌面控制',exact:true}).click();
+    markStage('await native update response');
     const completedUpdate=await updateResponse;assert.equal(completedUpdate.status(),200,JSON.stringify(await completedUpdate.json()));
     await page.getByRole('button',{name:'正在更新桌面控制…',exact:true}).waitFor({state:'hidden'});
     const updated=await(await fetch(origin+'/trisoul-x/computer-use/setup?session='+sessionId,{headers:{cookie}})).json();
     assert.equal(updated.native.version,'0.1.1');assert.equal(updated.native.updateAvailable,false);assert.equal(updated.native.restartRequired,false);
     const afterUpdate=await(await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json();
-    assert.equal(afterUpdate.target.id,beforeUpdate.target.id,'native upgrade preserves the unrelated browser target');
+    assert.equal(afterUpdate.target?.id??null,beforeUpdate.target?.id??null,'native upgrade preserves the unrelated model target');
+    assert.ok(beforeUpdate.viewTarget?.id);assert.equal(afterUpdate.viewTarget?.id,beforeUpdate.viewTarget.id,'native upgrade preserves the independent browser view');
     assert.equal(afterUpdate.status,beforeUpdate.status);
     if(process.env.TRISOUL_CU_UI_ARTIFACTS)await page.locator('.tx-cu-setup').screenshot({path:join(root,'native-update-after.png')});
     await page.getByRole('button', { name: '打开权限设置', exact: true }).waitFor();
@@ -580,6 +744,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   }
   assert.equal(await page.locator('[role=alert]').count(), 0);
   assert.deepEqual(errors, []);
+  markStage('native setup complete; themes and narrow layout');
   const lightBackground = await page.locator('.tx-cu-pane').evaluate(element => getComputedStyle(element).backgroundColor);
   if (process.env.TRISOUL_CU_UI_ARTIFACTS) await page.screenshot({ path: join(root, 'pane-light.png') });
   await page.emulateMedia({ colorScheme: 'dark' });
@@ -590,6 +755,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   const overflow = await page.locator('.tx-cu-pane').evaluate(element => element.scrollWidth > element.clientWidth);
   assert.equal(overflow, false, 'the narrow pane must not hide controls in horizontal overflow');
   if (process.env.TRISOUL_CU_UI_ARTIFACTS) { await page.screenshot({ path: join(root, 'pane-narrow.png') }); console.log('Computer Use UI artifacts:', root); }
+  markStage('layout complete; reopen final preview');
   await page.getByRole('button',{name:'悬浮预览',exact:true}).click();
   await page.getByLabel('悬浮操控预览').waitFor();
   assert.equal(await page.evaluate(()=>!!documentPictureInPicture.window),false,'the default preview lives in the conversation page');
@@ -599,11 +765,13 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   const retainedPages=controlled.contexts()[0].pages().filter(p=>!p.isClosed());assert.ok(retainedPages.length);
   const stoppedBefore=await (await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json();
   if(stoppedBefore.status==='stopped')await page.getByRole('button',{name:'恢复助手控制',exact:true}).click();
+  markStage('stop from final preview');
   await stopPip.getByRole('button',{name:'停止操作',exact:true}).click();
   await stopPip.getByText('已停止 · 可手动操作',{exact:true}).waitFor();
   assert.equal((await (await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json()).status,'stopped');
   assert.equal(await stopPip.locator('.tx-cu-assistant-cursor').count(),0);
   assert.ok(retainedPages.every(p=>!p.isClosed()),'stopping from the preview preserves the currently open browser tabs');
+  markStage('final reload closes preview');
   await page.reload();await until(()=>stopPip.isClosed());
   assert.deepEqual(errors,[]);
   complete = true;

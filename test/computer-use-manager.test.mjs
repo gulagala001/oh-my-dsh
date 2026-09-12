@@ -54,6 +54,34 @@ test('a failed native stop is visible and cannot be resumed as if cleanup succee
   assert.equal((await manager.execute('test', 'nodeRepl.write(42)')).blocks[0].text, '42');
 });
 
+test('native runtime removal closes native previews and bindings without changing browser targets', async t => {
+  const manager = await managerFor(t), state = manager.session('native-removal'), browser = manager.session('browser-kept');
+  state.target = { kind: 'app', id: 'native-app', name: 'Fixture' }; state.nativeTarget = state.target;
+  state.previewTargets.set('native-preview', { target: state.target });
+  browser.target = { kind: 'tab', id: 'kept-tab', title: 'Kept page' };
+  const kept = structuredClone(browser.target), events = [];
+  manager.native.targets.set('native-app', { id: 'native-app', sessionId: state.id });
+  manager.nativeViews.views.set('native-preview', { id: 'native-preview', sessionId: 'native-preview-removal', closed: false, controller: new AbortController(), listeners: new Set([(event, value) => events.push({ event, ...value })]) });
+  manager.native.uninstall = async ({ beforeRemove }) => {
+    await beforeRemove();
+    assert.equal(manager.nativeViews.views.size, 0);
+    assert.equal(state.target, null); assert.equal(state.nativeTarget, null);
+    assert.equal(state.previewTargets.size, 0);
+    return { removed: true };
+  };
+  assert.equal((await manager.removeNative()).removed, true);
+  assert.ok(events.some(event => event.event === 'closed' && event.reason === 'runtime-remove'));
+  assert.deepEqual(browser.target, kept);
+});
+
+test('intervention during Windows application launch stops the conversation before another app request', async t => {
+  const manager = await managerFor(t);
+  manager.native.bind = async () => { throw Object.assign(new Error('launch interrupted by user'), { code: 'USER_INTERVENTION' }); };
+  await assert.rejects(manager.dispatch('launch', 'getApp', ['fixture']), error => error.code === 'USER_INTERVENTION');
+  assert.equal(manager.session('launch').stopped, true);
+  await assert.rejects(manager.execute('launch', "await cua.getApp('fixture')"), error => error.code === 'COMPUTER_USE_STOPPED');
+});
+
 test('JavaScript callbacks and arguments cross the worker/browser boundary intact', async t => {
   const manager = await managerFor(t), fixture = await startFixture();
   t.after(() => fixture.close());

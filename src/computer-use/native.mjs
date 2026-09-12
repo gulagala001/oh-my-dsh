@@ -197,7 +197,7 @@ export class NativeHost {
   async showSetup(){return nativeValue(await this.call('ui-permissions','show_setup'));}
   async list(sessionId,signal){
     const v=nativeValue(await this.call(sessionId,'list_apps',{},signal));
-    return(v.apps??[]).map(a=>({id:a.bundle_id??String(a.pid),displayName:a.name,pid:a.pid,isRunning:a.running,path:a.launch_path}));
+    return(v.apps??[]).map(a=>({id:a.bundle_id??String(a.pid),displayName:a.name,pid:a.pid,isRunning:a.running,path:a.launch_path,...(a.discovery_error?{unavailableReason:a.discovery_error}:{})}));
   }
   async windows(sessionId,pid,signal){const value=nativeValue(await this.call(sessionId,'list_windows',{pid},signal));return(value.windows??[]).map(window=>({...window,...(value.process_identity?{processIdentity:value.process_identity}:{})}));}
   async shareWindows(signal) {
@@ -252,7 +252,10 @@ export class NativeHost {
     }
     signal?.throwIfAborted();
     if(windows.length!==1)throw new Error(`Choose a window explicitly with cua.getApp({id:${JSON.stringify(app.id)},windowId:...}). Available windows: ${JSON.stringify(windows.map(w=>({windowId:w.window_id,title:w.title})))}.`);
-    const window=windows[0],key=`${app.pid}:${window.window_id}`,owner=this.owners.get(key);
+    return this.bindWindow(sessionId,app,windows[0]);
+  }
+  bindWindow(sessionId,app,window){
+    const key=`${app.pid}:${window.window_id}`,owner=this.owners.get(key);
     if(owner&&owner!==sessionId)throw new Error('This application window is controlled by another conversation.');
     this.owners.set(key,sessionId);
     const existing=[...this.targets.values()].find(t=>t.key===key&&t.sessionId===sessionId);
@@ -263,7 +266,7 @@ export class NativeHost {
   }
   async invoke(sessionId,id,method,args=[],signal){
     const t=this.targets.get(id);if(!t||t.sessionId!==sessionId)throw new Error('This native target has been released. Bind the application again.');
-    const base={pid:t.pid,window_id:t.windowId};
+    const base={pid:t.pid,window_id:t.windowId,...(t.processIdentity?{process_identity:t.processIdentity}:{})};
     if(['getAXState','getScreenshot','getAXStateAndScreenshot'].includes(method)){
       const raw=await this.call(sessionId,'get_window_state',{...base,include_screenshot:method!=='getAXState',include_accessibility_tree:method!=='getScreenshot',max_dimension:1600},signal);
       const state=nativeValue(raw);
@@ -293,7 +296,7 @@ export class NativeHost {
     else if(method==='setValue'){name='set_value';input={...base,...element(),value:String(args[1])};}
     else if(method==='typeText'){name='type_text';input={...base,text:args[0],delay_ms:0};}
     else if(method==='paste'){name='paste';input={...base,...nativePastePayload(args[0],args[1])};}
-    else if(method==='pressKey'){name='press_key';input={...base,...nativeKeyChord(args[0])};}
+    else if(method==='pressKey'){name='press_key';input={...base,...nativeKeyChord(args[0],this.platform==='win32'?'win32':'darwin')};}
     else if(method==='scroll'){name='scroll';input={...base,...(typeof args[0]==='number'?element():point(args[0])),direction:args[1],amount:args[2]??1,by:'page'};}
     else if(method==='drag'){const from=point(args[0]),to=point(args[1]);name='drag';input={...base,from_x:from.x,from_y:from.y,to_x:to.x,to_y:to.y};}
     else if(method==='selectText'){name='select_text';input={...base,...element(),text:args[1],selection_type:args[2]?.selectionType??'select',prefix:args[2]?.prefix,suffix:args[2]?.suffix};}

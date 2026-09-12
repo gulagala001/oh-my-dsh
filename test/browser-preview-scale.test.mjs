@@ -1,0 +1,57 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {build} from 'esbuild';
+import {chromium} from 'playwright';
+import sharp from 'sharp';
+
+test('device preview fit, percentage geometry, overflow and input coordinates are local',{timeout:15000},async t=>{
+  const data=(await sharp({create:{width:800,height:600,channels:3,background:'#eef4ff'}}).png().toBuffer()).toString('base64');
+  const {outputFiles}=await build({bundle:true,write:false,format:'iife',platform:'browser',define:{'process.env.NODE_ENV':'"production"'},stdin:{resolveDir:process.cwd(),loader:'jsx',contents:`
+    import React,{useState} from 'react';import {createRoot} from 'react-dom/client';import {BrowserPreview} from './src/client/browser-preview.jsx';
+    window.calls=[];window.streams=0;window.resizes=[];
+    window.EventSource=class {constructor(){window.stream=this;window.streams++;this.handlers={};}addEventListener(name,fn){this.handlers[name]=fn;}close(){} emit(name,data){this.handlers[name]?.({data:JSON.stringify(data)});}};
+    function Harness(){const[scale,setScale]=useState('1'),[device,setDevice]=useState(true);window.setScale=setScale;window.setDevice=setDevice;
+      return <div className="tx-cu-pane tx-cu-pane-browser" style={{width:500,height:720}}><header style={{height:60}}>浏览器</header><BrowserPreview sessionId="test" tabId="tab" visible state={{enabled:true,status:'idle'}} deviceMode={device} previewScale={scale} url={()=>'/stream'} api={async(op,id,input)=>{window.calls.push({op,...input});return {status:'idle'};}} onViewportResize={async size=>{window.resizes.push(size);return true;}} onState={()=>{}} onError={message=>window.error=message} onNavigation={()=>{}} onBrowserShortcut={()=>{}}/></div>;
+    }createRoot(document.getElementById('root')).render(<Harness/>);
+  `}});
+  const browser=await chromium.launch({headless:true});t.after(()=>browser.close());const page=await browser.newPage({viewport:{width:800,height:800}});
+  await page.setContent('<style>body{margin:0}</style><div id="root"></div>');await page.addStyleTag({content:await readFile(new URL('../src/client/computer-use.css',import.meta.url),'utf8')});await page.addScriptTag({content:outputFiles[0].text});
+  await page.waitForFunction(()=>window.stream?.handlers.frame);
+  await page.evaluate(data=>{const frame={id:'frame',tabId:'tab',actor:'actor',controlEpoch:7,width:800,height:600,mediaType:'image/png',data};window.stream.emit('ready',frame);window.stream.emit('frame',frame);},data);
+  const surface=page.locator('.tx-cu-live-surface');await page.waitForFunction(()=>document.querySelector('.tx-cu-live-surface img')?.complete);
+  const setScale=async value=>{await page.evaluate(value=>window.setScale(value),value);await page.waitForFunction(value=>document.querySelector('.tx-cu-live').style.getPropertyValue('--cu-device-width')===800*Number(value)+'px',value);};
+  for(const scale of [.25,.5,.75,1,1.25,1.5]){await setScale(String(scale));const box=await surface.boundingBox();assert.ok(Math.abs(box.width-800*scale)<1&&Math.abs(box.height-600*scale)<1);}
+  await page.evaluate(()=>window.setScale('fit'));
+  await page.waitForFunction(()=>document.querySelector('.tx-cu-live-surface').clientWidth===460);
+  const beforePaneResize=await surface.evaluate(el=>el.clientWidth);
+  await page.locator('.tx-cu-pane').evaluate(el=>el.style.height='400px');
+  await page.waitForFunction(before=>document.querySelector('.tx-cu-live-surface').clientWidth<before,beforePaneResize);
+  const fit=async()=>surface.evaluate(el=>{const r=el.getBoundingClientRect(),s=el.closest('.tx-cu-preview-stage');return {width:r.width,height:r.height,stageWidth:s.clientWidth,stageHeight:s.clientHeight,overflowX:s.scrollWidth>s.clientWidth,overflowY:s.scrollHeight>s.clientHeight};});
+  let fitted=await fit();assert.ok(fitted.width<=fitted.stageWidth&&fitted.height<=fitted.stageHeight+1);assert.equal(fitted.overflowX,false);assert.equal(fitted.overflowY,false);
+  const beforeHeader=fitted.width;await page.locator('header').evaluate(el=>el.style.height='100px');await page.waitForFunction(before=>document.querySelector('.tx-cu-live-surface').clientWidth<before,beforeHeader);
+  fitted=await fit();assert.ok(fitted.height<=fitted.stageHeight+1,'fit reacts to toolbar height, not just window resize');
+  assert.deepEqual(await page.evaluate(()=>window.calls),[]);assert.equal(await page.evaluate(()=>window.streams),1,'zoom never reconnects the observed page');
+  await setScale('1.5');
+  await page.locator('.tx-cu-preview-stage').evaluate(el=>{el.scrollLeft=300;el.scrollTop=80;});
+  const box=await surface.boundingBox();await page.mouse.click(box.x+400,box.y+160);
+  await page.waitForFunction(()=>window.calls.some(call=>call.type==='pointerup'));
+  const click=await page.evaluate(()=>window.calls.find(call=>call.type==='pointerdown'));
+  assert.ok(Math.abs(click.x-400/1200)<.002&&Math.abs(click.y-160/900)<.002,JSON.stringify(click));assert.equal(click.frameId,'frame');assert.equal(click.controlEpoch,7);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  await page.evaluate(()=>window.setDevice(false));await page.waitForFunction(()=>!document.querySelector('.tx-cu-live').classList.contains('is-device'));
+  assert.ok(Math.abs((await surface.boundingBox()).width-500)<1,'ordinary preview still fills the pane');
+  await surface.hover({position:{x:100,y:100}});await page.mouse.wheel(0,75);await page.waitForFunction(()=>window.calls.some(call=>call.type==='wheel'));
+  await page.locator('.tx-cu-pane').evaluate(el=>el.style.height='720px');await page.evaluate(()=>{window.setDevice(true);window.setScale('0.5');});
+  const right=page.getByRole('button',{name:'调整设备宽度（右）',exact:true});await right.waitFor();
+  await page.waitForFunction(()=>document.querySelector('.tx-cu-live-surface').clientWidth===400);
+  const calls=await page.evaluate(()=>window.calls.length),handle=await right.boundingBox();
+  await page.mouse.move(handle.x+10,handle.y+80);await page.mouse.down();await page.mouse.move(handle.x+35,handle.y+80);await page.keyboard.press('Escape');await page.mouse.up();
+  assert.deepEqual(await page.evaluate(()=>window.resizes),[],'Escape cancels the drag without changing the viewport');
+  await page.mouse.move(handle.x+10,handle.y+80);await page.mouse.down();await page.mouse.move(handle.x+35,handle.y+80);await page.mouse.up();
+  await page.waitForFunction(()=>window.resizes.length===1);assert.deepEqual(await page.evaluate(()=>window.resizes[0]),{width:900,height:600},'centered-edge dragging accounts for preview scale');
+  await right.press('Shift+ArrowRight');await page.waitForFunction(()=>window.resizes.length===2);assert.deepEqual(await page.evaluate(()=>window.resizes[1]),{width:810,height:600});
+  assert.equal(await page.evaluate(()=>window.calls.length),calls,'resize handles never forward clicks or keys into the remote page');
+  assert.equal(await page.evaluate(()=>window.streams),1,'device mode and resizing keep the observation stream mounted');
+  assert.equal(await page.evaluate(()=>window.error??''),'');
+});

@@ -2,6 +2,8 @@ import WebSocket from 'ws';
 import { randomUUID } from 'node:crypto';
 import { viewportGeometry } from './browser-screenshot.mjs';
 
+const closedReply = ({ id, sessionId }) => ({ id, sessionId, error: { code: -32001, message: 'Browser transport closed before the request completed' } });
+
 // Playwright's public CDP transport lets us observe the actual input, including
 // locator actions after scrolling/hit testing, without replacing those actions
 // or installing event handlers in the website. Observer connections use this
@@ -51,7 +53,12 @@ export class BrowserTransport {
     }));
     socket.on('error', error => { this.reason = error.message; });
     socket.on('close', () => setImmediate(() => {
-      this.closed = true; this.queue = []; this.sessions.clear(); this.requests.clear(); this.observations.clear();
+      this.closed = true; this.queue = []; this.sessions.clear(); this.observations.clear();
+      // A connection EOF need not include Target.detachedFromTarget for every
+      // custom CDP session. Settle its outstanding requests before Playwright
+      // disposes the root connection and removes our message callback.
+      const pending = [...this.requests.values()]; this.requests.clear();
+      for (const request of pending) this.onmessage?.(closedReply(request));
       this.pointer({ hidden: true }); this.onclose?.(this.reason);
     }));
   }
@@ -66,8 +73,8 @@ export class BrowserTransport {
     else if (!this.closed) this.queue.push(data);
   }
   send(message) {
-    if (this.closed) return;
-    if (message.method === 'Page.getFrameTree') this.requests.set(message.id, message);
+    if (this.closed) { setImmediate(() => this.onmessage?.(closedReply(message))); return; }
+    this.requests.set(message.id, { id: message.id, method: message.method, sessionId: message.sessionId });
     const session = this.sessions.get(message.sessionId);
     if (message.method === 'Input.dispatchMouseEvent' && session?.type === 'page' && session.loaderId && this.onPointer && this.wantsPointer(session.targetId)) {
       const { type, x, y, buttons = 0, button, clickCount } = message.params;

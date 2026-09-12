@@ -2,7 +2,7 @@ import inspector from 'node:inspector';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { inspect } from 'node:util';
 import { createHash } from 'node:crypto';
-import { CORE_DOCUMENTATION, BROWSER_DOCUMENTATION, APP_DOCUMENTATION } from './api-docs.mjs';
+import { CORE_DOCUMENTATION, BROWSER_DOCUMENTATION, appDocumentation } from './api-docs.mjs';
 
 const scope = new AsyncLocalStorage(), pending = new Map(); let sequence = 0;
 const send = message => { if (process.connected) process.send(message); };
@@ -21,7 +21,7 @@ const display = value => emit('text',{text:typeof value==='string'?value:inspect
 const shownDocumentation=new Set();
 function documentation(kind){
   for(const name of ['core',kind].filter(Boolean))if(!shownDocumentation.has(name)){
-    display(name==='core'?CORE_DOCUMENTATION:name==='browser'?BROWSER_DOCUMENTATION:APP_DOCUMENTATION);
+    display(name==='core'?CORE_DOCUMENTATION:name==='browser'?BROWSER_DOCUMENTATION:appDocumentation());
     shownDocumentation.add(name);
   }
 }

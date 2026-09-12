@@ -18,6 +18,7 @@ for(const backend of ['managed','extension'])test(backend+': nested frame annota
   // The test observer owns this viewport. A model-owned viewport is correctly
   // removed by Stop and would make the pre-stop annotation stale.
   await view.cdp.send('Emulation.setDeviceMetricsOverride',{width:1280,height:800,deviceScaleFactor:1,mobile:false});
+  await page.frameLocator('#cross').frameLocator('#nested').locator('#target').waitFor({state:'visible'});
   const cross=await(await page.locator('#cross').elementHandle()).contentFrame(),inner=await(await cross.locator('#nested').elementHandle()).contentFrame();await inner.evaluate(()=>scrollTo(0,20));
   const input=()=>({actor,tabId:tab.id,controlEpoch:manager.status('frames').controlEpoch}),capture=()=>manager.annotationSnapshot('frames',input());
   const started=performance.now(),snapshot=await capture();console.log(backend+' frame capture ms:',Math.round(performance.now()-started));

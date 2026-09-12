@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os';
 import sharp from 'sharp';
 import { ComputerUseManager } from '../src/computer-use/manager.mjs';
 import { extensionFixture } from './fixtures/computer-use/extension.mjs';
+import { panViewport } from './fixtures/computer-use/viewport.mjs';
 
 test('the browser cursor is visible, excluded from capture, and does not block stop behind a JavaScript dialog', { timeout: 15000 }, async t => {
   const fixture = await startFixture(), browser = await chromium.launch();
@@ -80,18 +81,22 @@ test('the external Chrome window shows the real assistant cursor across zoom and
   await run(`const tab=await cua.getTab(${JSON.stringify(tab.id)},{browser:${JSON.stringify(tab.browserId)}}); await tab.markDeliverable();`);
   const rawCapture = () => cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true, captureBeyondViewport: false });
   for (const [zoom, scale, pan] of [[1, 1, false], [1, 2, true], [1.5, 2, true]]) {
+    t.diagnostic(`cursor scenario zoom=${zoom} scale=${scale}: reload`);
     await page.reload();
     // macOS overlay scrollbars legitimately fade after a click. Keep only
     // this pixel-equality fixture static; production pages retain their styles.
     await page.evaluate(() => { document.documentElement.style.scrollbarWidth = 'none'; });
     await worker.evaluate(async ({ id, zoom }) => chrome.tabs.setZoom(id, zoom), { id: nativeId, zoom });
     await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: scale });
-    if (pan) { await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true }); await cdp.send('Input.synthesizeScrollGesture', { x: 300, y: headful ? 100 : 180, xDistance: -80, yDistance: 0, gestureSourceType: 'touch', speed: 800 }); }
+    if (pan) await panViewport(cdp, headful ? 100 : 180);
+    t.diagnostic(`cursor scenario zoom=${zoom} scale=${scale}: capture and click`);
     const initial = viewportGeometry(await cdp.send('Page.getLayoutMetrics'));
     assert.equal(initial.scale, scale); assert.equal(initial.zoom, zoom); if (pan) assert.ok(initial.pageX > 20);
     const before = await backend.invoke('test', tab.id, 'getScreenshot');
+    t.diagnostic(`cursor scenario zoom=${zoom} scale=${scale}: baseline captured`);
     const focused = await page.evaluate(() => document.activeElement.tagName);
     await run('await tab.click([240,200]);');
+    t.diagnostic(`cursor scenario zoom=${zoom} scale=${scale}: input completed`);
     const layer = page.locator('[data-trisoul-cursor]'); await layer.waitFor({ timeout: 8000 });
     await delay(50); // Let the short movement interpolation reach its endpoint.
     const pointer = manager.sessions.get('test').pointer; assert.ok(pointer);
@@ -105,6 +110,7 @@ test('the external Chrome window shows the real assistant cursor across zoom and
     assert.ok(count > 25 * dpr * dpr && minX - x < 5 * dpr && minY - y < 5 * dpr, JSON.stringify({ zoom, scale, pan, x, y, count, minX, minY, dpr }));
     assert.equal(await page.evaluate(() => document.activeElement.tagName), focused, 'showing the pointer must not steal focus');
     const after = await backend.invoke('test', tab.id, 'getScreenshot');
+    t.diagnostic(`cursor scenario zoom=${zoom} scale=${scale}: model capture completed`);
     if (process.env.TRISOUL_CU_UI_ARTIFACTS) {
       await writeFile(join(root, `before-${zoom}-${scale}.png`), Buffer.from(before.screenshot, 'base64'));
       await writeFile(join(root, `after-${zoom}-${scale}.png`), Buffer.from(after.screenshot, 'base64'));
@@ -118,6 +124,7 @@ test('the external Chrome window shows the real assistant cursor across zoom and
     assert.ok(pointer.x * initial.scale + 24 < common.width && pointer.y * initial.scale + 28 < common.height);
     assert.ok((await beforeImage.extract(common).ensureAlpha().raw().toBuffer()).equals(await afterImage.extract(common).ensureAlpha().raw().toBuffer()), 'the model must receive unchanged visible page pixels without the helper cursor');
     assert.deepEqual(viewportGeometry(await cdp.send('Page.getLayoutMetrics')), initial);
+    t.diagnostic(`cursor scenario zoom=${zoom} scale=${scale}: pixels and geometry passed`);
     const status = await env.popup.evaluate(() => chrome.runtime.sendMessage({ action: 'status' }));
     assert.ok(status.controls.every(control => !control.cursorError), JSON.stringify(status.controls));
     if (process.env.TRISOUL_CU_UI_ARTIFACTS) await writeFile(join(root, `window-cursor-${zoom}-${scale}.png`), Buffer.from(image, 'base64'));
