@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/commits/main/"><img src="https://img.shields.io/badge/version-0.1.1-3478F6?style=flat-square" alt="Version 0.1.1" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.0.0"><img src="https://img.shields.io/badge/version-1.0.0-3478F6?style=flat-square" alt="Version 1.0.0" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.5--rc.1-475569?style=flat-square" alt="DSH 0.1.5-rc.1" /></a>
   <a href="#support"><img src="https://img.shields.io/badge/status-preview-64748B?style=flat-square" alt="Preview" /></a>
 </p>
@@ -166,7 +166,7 @@ dsh web
 
 ## 当前支持范围
 
-当前为 **0.1.1 预览版**，依赖固定到 **DSH 0.1.5-rc.1**；升级宿主前需重新验证兼容性。
+当前为 **1.0.0 正式先行版**，依赖固定到 **DSH 0.1.5-rc.1**；升级宿主前需重新验证兼容性。
 
 | 功能 | 当前支持 |
 | --- | --- |
