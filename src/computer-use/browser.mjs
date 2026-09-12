@@ -54,8 +54,8 @@ function browserProcessId(endpoint, timeoutMs = 2000) {
 }
 
 export class BrowserHost extends BrowserActions {
-  constructor(directory, { executablePath, headless = true, onTabClosed, onBrowserLost, onPointer, wantsPointer } = {}) {
-    super({ onTabClosed, onBrowserLost, onPointer, wantsPointer });
+  constructor(directory, { executablePath, headless = true, onTabClosed, onBrowserLost, onPointer, wantsPointer, onVisit } = {}) {
+    super({ onTabClosed, onBrowserLost, onPointer, wantsPointer, onVisit });
     this.directory = directory; this.executablePath = executablePath; this.headless = headless;
   }
   async start() {

@@ -14,11 +14,16 @@ import { ExtensionInstaller } from './extension-install.mjs';
 import { mapImagePoints, imageFrameFor } from './image-coordinates.mjs';
 import { captureAnnotation } from './browser-annotation.mjs';
 import { previewElementStyle, restoreStylePreview, styleChanges } from './browser-style-preview.mjs';
+import {findInView} from './browser-find.mjs';
+import {externalWebUrl,openExternalUrl} from './open-external.mjs';
+import {BrowserHistory} from './browser-history.mjs';
 
 export class ComputerUseManager {
   constructor(directory, options = {}) {
     mkdirSync(directory, { recursive: true, mode: 0o700 }); this.directory = directory;
-    const callbacks = { wantsPointer: (id, tabId) => !!this.pointerActive(id, tabId), onPointer: event => this.pointer(event), onTabClosed: tabId => {
+    this.openExternal=options.openExternal??openExternalUrl;
+    this.browsingHistory=new BrowserHistory(join(directory,'browser-history.json'));
+    const callbacks = { onVisit:visit=>this.browsingHistory.remember(visit), wantsPointer: (id, tabId) => !!this.pointerActive(id, tabId), onPointer: event => this.pointer(event), onTabClosed: tabId => {
       for (const state of this.sessions.values()) { state.previewTargets?.delete(tabId); if (state.target?.kind === 'tab' && state.target.id === tabId) {
         this.setTarget(state, null); this.preview.delete(state.id);
       }}
@@ -145,7 +150,7 @@ export class ComputerUseManager {
       this.clearPointer(state);
       this.preview.delete(state.id);
       const viewId=target?.kind==='app'?target.viewId:target?.id;
-      for (const viewer of state.viewers.values()) if (!viewer.stacked&&(viewer.tabId??viewer.targetId) !== viewId) {
+      for (const viewer of state.viewers.values()) if (!viewer.stacked&&!viewer.independent&&(viewer.tabId??viewer.targetId) !== viewId) {
         try { viewer.send('closed', { reason: 'target-changed', message: '当前操作目标已改变' }); } catch {}
       }
       const view=previous?.kind==='app'&&previous.viewId!==viewId&&this.nativeViews.views.get(previous.viewId);if(view&&![...state.viewers.values()].some(v=>v.stacked&&v.targetId===previous.viewId))void this.nativeViews.stop(view).catch(()=>{});
@@ -158,7 +163,7 @@ export class ComputerUseManager {
     const session = this.session(id); signal?.throwIfAborted();
     if (session.ending) { await session.ending; signal?.throwIfAborted(); }
     if (method === 'listBrowsers') return this.browsers().filter(browser => !browser.run?.lost).map(browser => this.browserInfo(browser));
-    if(method==='browserViewport'){await this.browserFor(args[0]).browserViewport(id,args[1],signal);return null;}
+    if(method==='browserViewport'){const browser=this.browserFor(args[0]);await Promise.all([...this.viewsFor({kind:'tab',browserId:browser.id}).views.values()].map(view=>view.layoutPending?.catch(()=>{})));signal?.throwIfAborted();await browser.browserViewport(id,args[1],signal);return null;}
     if (method === 'getBrowser') {
       const browser = this.browserFor(args[0]?.id);
       return { ...this.browserInfo(browser), capabilities: ['accessibility', 'screenshots', 'playwright', 'dialogs', 'viewport', ...(browser === this.browser ? ['files'] : [])] };
@@ -200,7 +205,7 @@ export class ComputerUseManager {
       const started = performance.now();
       try {
         signal?.throwIfAborted();
-        if (target.kind === 'tab') { await this.browserForTab(target.id, target.browserId).target(id, target.id, { signal }); signal?.throwIfAborted(); }
+        if (target.kind === 'tab') { await this.viewsFor(target).views.get(target.id)?.layoutPending?.catch(()=>{});signal?.throwIfAborted();await this.browserForTab(target.id, target.browserId).target(id, target.id, { signal }); signal?.throwIfAborted(); }
         this.setTarget(session, target); session.operation = operation;
         const result = await (target.kind === 'tab' ? this.browserForTab(target.id, target.browserId).invoke(id, target.id, operation, parameters, signal, imageFrameFor(coordinateFrames, target)?.geometry) : this.native.invoke(id, target.id, operation, parameters, signal));
         session.lastError = null;
@@ -324,17 +329,18 @@ export class ComputerUseManager {
       return async()=>{state.viewers.delete(actor);await unsubscribe();};
     }catch(error){state.viewers.delete(actor);await unsubscribe?.().catch(()=>{});throw error;}
   }
-  async watchBrowser(id, tabId, send, signal, stacked=false) {
+  async watchBrowser(id, tabId, send, signal, stacked=false, independent=false) {
     if(this.closed||!this.enabled)throw new Error('Computer Use 已关闭');
     const state = this.session(id);
-    const target=stacked?state.previewTargets.get(tabId)?.target:state.target;
+    const target=stacked?state.previewTargets.get(tabId)?.target:independent?this.viewTarget(state):state.target;
     if (target?.kind !== 'tab' || target.id !== tabId) throw new Error('当前会话没有选择这个浏览器标签页');
+    if(independent&&!stacked)state.viewTarget=target;
     state.userTabs.add(tabId);
-    const actor = randomUUID(); state.viewers.set(actor, { tabId, send, stacked, readOnly:stacked });
+    const actor = randomUUID(); state.viewers.set(actor, { tabId, send, stacked, independent, readOnly:stacked });
     send('ready', { actor, controlEpoch: state.controlEpoch });
     if (state.pointer?.tabId===tabId && Date.now() - state.pointer.at < 1500) send('cursor', state.pointer);
     const subscription = this.viewsFor(target).subscribe(tabId, (type, value) => {
-      if (!stacked&&state.target?.id !== tabId) { send('closed', { reason: 'target-changed', message: '当前操作目标已改变' }); return; }
+      if (!stacked&&(independent?this.viewTarget(state):state.target)?.id !== tabId) { send('closed', { reason: 'target-changed', message: '当前查看的标签页已改变' }); return; }
       send(type, type === 'frame' ? { ...value, actor, controlEpoch: state.controlEpoch, stopped: state.stopped, transitioning: !!state.uiAction || state.resuming === true } : value);
     }, signal);
     let closing;
@@ -355,7 +361,8 @@ export class ComputerUseManager {
     const action = async () => {
       if (!this.enabled && !['dialog', 'release', 'pointerup', 'keyup'].includes(input.type)) throw new Error('Computer Use 已关闭');
       const viewer = state.viewers.get(input.actor);
-      if (!viewer || viewer.readOnly || viewer.tabId !== input.tabId || state.target?.id !== input.tabId) throw new Error('当前画面已断开或操作目标已改变');
+      const target=this.viewerTarget(state,input);
+      if (!target) throw new Error('当前画面已断开或操作目标已改变');
       if (input.controlEpoch !== state.controlEpoch) throw new Error('控制权已经改变，旧操作已取消');
       if ((state.uiAction || state.resuming) && input.type !== 'dialog') throw new Error('控制权正在切换，请等待新画面');
       if (input.type === 'release' && state.manualActor !== input.actor) return this.status(id);
@@ -364,6 +371,10 @@ export class ComputerUseManager {
         if (input.type === 'dialog') void stopping.catch(() => {}); else await stopping;
       }
       if (state.stopError) throw new Error(state.stopError.message);
+      if(viewer.independent&&state.target?.id!==input.tabId){
+        if(!this.enabled||state.controlEpoch!==input.controlEpoch||state.viewers.get(input.actor)!==viewer||!this.viewerTarget(state,input))throw new Error('查看的网页或控制权已改变，请重试');
+        this.adoptViewedTab(state,target);
+      }
       if (state.target?.id !== input.tabId) throw new Error('操作目标已改变，请根据最新画面重试');
       if (state.manualActor && state.manualActor !== input.actor && input.type !== 'dialog') await this.releaseManualInput(id);
       state.manualActor = input.actor;
@@ -387,20 +398,135 @@ export class ComputerUseManager {
       this.publishControl(state);
       return this.status(id);
     };
-    const pending = (state.manualTail ?? Promise.resolve()).then(action, action);
+    const perform=async()=>{state.manualBusy=true;try{const target=this.viewerTarget(state,input);if(target)await this.viewsFor(target).views.get(target.id)?.layoutPending?.catch(()=>{});return await action();}finally{state.manualBusy=false;}};
+    const pending = (state.manualTail ?? Promise.resolve()).then(perform, perform);
     state.manualTail = pending.catch(() => {});
     return pending;
   }
   async annotationSnapshot(id,input,signal){
     if(this.closed||!this.enabled)throw new Error('Computer Use 已关闭');
     const state=this.sessions.get(id),viewer=state?.viewers.get(input.actor);
-    const valid=()=>this.enabled&&state?.target?.kind==='tab'&&state.target.id===input.tabId&&state.viewers.get(input.actor)===viewer&&!viewer?.readOnly&&viewer?.tabId===input.tabId&&input.controlEpoch===state.controlEpoch;
+    const valid=()=>this.enabled&&this.viewerTarget(state,input)&&state.viewers.get(input.actor)===viewer&&input.controlEpoch===state.controlEpoch;
     if(!valid())throw new Error('当前画面或控制权已改变，请重新打开批注');
-    const views=this.viewsFor(state.target),view=views.views.get(input.tabId);
+    const views=this.viewsFor(this.viewerTarget(state,input)),view=views.views.get(input.tabId);
     if(!view||view.closed)throw new Error('当前浏览器画面已断开');
-    const result=await captureAnnotation(views,view,signal);
+    const result=await views.snapshotRead(view,()=>captureAnnotation(views,view,signal));
     signal?.throwIfAborted();if(!valid())throw new Error('当前画面或控制权已改变，请重新打开批注');
     return result;
+  }
+  async viewScreenshot(id,input,signal){
+    const state=this.sessions.get(id),viewer=state?.viewers.get(input.actor),target=this.viewerTarget(state,input);
+    const valid=()=>this.enabled&&!this.closed&&target&&this.viewerTarget(state,input)&&state.viewers.get(input.actor)===viewer&&input.controlEpoch===state.controlEpoch;
+    if(!valid())throw new Error('当前画面已改变，请重新截图');
+    const views=this.viewsFor(target),view=views.views.get(target.id);
+    if(!view||view.closed)throw new Error('当前浏览器画面已断开');
+    const lifetime=AbortSignal.any([view.lifetime.signal,signal].filter(Boolean));
+    const captured=await views.snapshotRead(view,()=>views.browser.observeScreenshot(view.record,{},lifetime));
+    lifetime.throwIfAborted();if(!valid())throw new Error('当前画面已改变，请重新截图');
+    return{data:captured.screenshot,mediaType:'image/png'};
+  }
+  listDownloads(id){
+    if(!this.enabled||this.closed)throw new Error('Computer Use 已关闭');
+    return this.browsers().flatMap(browser=>[...browser.downloadHistory.values()].filter(item=>item.sessionId===id).map(({sessionId,path,url,...item})=>({...item,source:(()=>{try{return new URL(url).host;}catch{return '';}})(),canDownload:!!path&&existsSync(path)}))).sort((a,b)=>b.startedAt-a.startedAt);
+  }
+  clearDownloads(id){
+    if(!this.enabled||this.closed)throw new Error('Computer Use 已关闭');
+    for(const browser of this.browsers())for(const [key,item] of browser.downloadHistory)if(item.sessionId===id&&!['inProgress','unobserved'].includes(item.state))browser.downloadHistory.delete(key);
+    return{downloads:this.listDownloads(id)};
+  }
+  downloadFile(id,downloadId){
+    if(!this.enabled||this.closed)throw new Error('Computer Use 已关闭');
+    for(const browser of this.browsers()){
+      const item=browser.downloadHistory.get(downloadId);
+      if(item?.sessionId===id&&item.state==='completed'&&item.path&&existsSync(item.path))return{path:item.path,filename:item.filename};
+    }
+    throw new Error('文件尚未就绪、已不可用，或不属于当前会话');
+  }
+  async findViewedText(id,input,signal){
+    signal?.throwIfAborted();
+    if(typeof input.query!=='string'||!input.query.length)throw new Error('请输入要查找的文字');
+    const state=this.sessions.get(id),viewer=state?.viewers.get(input.actor),target=this.viewerTarget(state,input);
+    if(!target)throw new Error('当前画面已改变，请重新选择网页');
+    const views=this.viewsFor(target),view=views.views.get(target.id);
+    if(!view||view.closed)throw new Error('当前浏览器画面已断开');
+    const result=await this.userBrowserAction(id,input,async actionSignal=>{
+      const lifetime=AbortSignal.any([actionSignal,view.lifetime.signal,view.document.signal,signal].filter(Boolean));lifetime.throwIfAborted();
+      if(state.viewers.get(input.actor)!==viewer||!this.viewerTarget(state,input))throw new Error('当前画面已改变，请重新选择网页');
+      if(state.target?.id!==target.id)this.adoptViewedTab(state,target);
+      views.browser.claim(id,target.id);
+      return findInView(view,{query:input.query,backward:input.backward===true},lifetime);
+    });
+    return{...this.status(id),find:result};
+  }
+  async layoutViewedTab(id,input,signal){
+    const state=this.sessions.get(id),viewer=state?.viewers.get(input.actor),target=this.viewerTarget(state,input);
+    const valid=()=>!this.closed&&this.enabled&&this.viewerTarget(state,input)&&state.viewers.get(input.actor)===viewer&&state.controlEpoch===input.controlEpoch;
+    if(!target||!valid())throw new Error('当前查看的网页已改变');
+    const views=this.viewsFor(target),browser=views.browser,view=views.views.get(target.id);
+    // This is the embedded browser's layout, never a resize of a user's
+    // existing desktop Chrome window or a floating observer's thumbnail.
+    if(browser!==this.browser)return{layout:'fixed'};
+    browser.validateViewport(input.size);
+    if(!view||view.closed)throw new Error('当前浏览器画面已断开');
+    const records=()=>[...browser.connections.values()].flatMap(connection=>{const record=connection.pages?.get(target.id);return record?[record]:[];});
+    const fixed=()=>browser.viewportPresets.has(id)||records().some(record=>record.viewportOverride&&record.viewportMode!=='layout');
+    const busy=()=>state.uiAction||state.resuming||state.manualBusy||state.queues.has(target.id)||view.resizing||view.dialog||records().some(record=>record.pendingAction||record.heldButtons?.size||record.heldKeys?.size)||(browser.owners.get(target.id)&&browser.owners.get(target.id).sessionId!==id);
+    if(fixed())return{layout:'fixed'};
+    if(busy()||view.layoutPending)return{layout:'deferred'};
+    if(view.layoutSize?.width===input.size.width&&view.layoutSize?.height===input.size.height&&view.latest?.width===input.size.width&&view.latest?.height===input.size.height)return{layout:'applied'};
+    const lifetime=AbortSignal.any([view.lifetime.signal,signal].filter(Boolean)),previous=view.record.viewportOverride?view.layoutSize:null;
+    let changed=false;
+    const pending=(async()=>{
+      view.resizing=true;
+      try{
+        await Promise.allSettled([view.flushing,...(view.readers??[])]);lifetime.throwIfAborted();
+        if(!valid())throw new Error('当前查看的网页已改变');
+        if(fixed())return{layout:'fixed'};
+        if(state.uiAction||state.resuming||state.manualBusy||state.queues.has(target.id)||view.dialog||records().some(record=>record.pendingAction||record.heldButtons?.size||record.heldKeys?.size))return{layout:'deferred'};
+        changed=true;await browser.setViewport(view.record,input.size,'layout');lifetime.throwIfAborted();
+        if(!valid())throw new Error('当前查看的网页已改变');
+        view.layoutSize={...input.size};return{layout:'applied'};
+      }catch(error){
+        if(changed&&!view.closed){if(previous)await browser.setViewport(view.record,previous,'layout');else await browser.resetViewport(view.record);}
+        throw error;
+      }finally{view.resizing=false;if(!view.closed)views.queueFrame(view,{loaderId:view.loaderId,captureOnly:true});}
+    })();
+    view.layoutPending=pending;
+    try{return await pending;}finally{if(view.layoutPending===pending)view.layoutPending=null;}
+  }
+  async resizeViewedTab(id,input,signal){
+    const state=this.sessions.get(id),viewer=state?.viewers.get(input.actor),target=this.viewerTarget(state,input);
+    if(!target)throw new Error('当前画面已改变，请重新选择网页');
+    const views=this.viewsFor(target),view=views.views.get(target.id);
+    if(!view||view.closed)throw new Error('当前浏览器画面已断开');
+    if(input.size!==null)views.browser.validateViewport(input.size);
+    await this.userBrowserAction(id,input,async actionSignal=>{
+      await view.layoutPending?.catch(()=>{});
+      const lifetime=AbortSignal.any([actionSignal,view.lifetime.signal,signal].filter(Boolean));lifetime.throwIfAborted();
+      if(state.viewers.get(input.actor)!==viewer||!this.viewerTarget(state,input))throw new Error('当前画面已改变，请重新选择网页');
+      if(state.target?.id!==target.id)this.adoptViewedTab(state,target);
+      views.browser.claim(id,target.id);
+      // The observer owns the override, so ordinary navigation / stopping the
+      // model cannot accidentally restore the desktop width underneath it.
+      view.resizing=true;
+      let previous,previousMode,changed=false;
+      try{
+        await Promise.allSettled([view.flushing,...(view.readers??[])]);lifetime.throwIfAborted();
+        if(state.viewers.get(input.actor)!==viewer||!this.viewerTarget(state,input))throw new Error('当前画面已改变，请重新选择网页');
+        previous=view.record.viewportOverride&&view.latest?{width:Math.round(view.latest.width),height:Math.round(view.latest.height)}:null;
+        previousMode=view.record.viewportMode;
+        changed=true;
+        if(input.size===null)await views.browser.resetViewport(view.record);else await views.browser.setViewport(view.record,input.size);
+        lifetime.throwIfAborted();
+      }catch(error){
+        if(lifetime.aborted&&changed){
+          try{if(previous)await views.browser.setViewport(view.record,previous,previousMode);else await views.browser.resetViewport(view.record);}
+          catch(cleanup){state.stopError={operation:'viewport',message:cleanup.message,at:Date.now()};state.status='error';throw new AggregateError([error,cleanup],'视口恢复失败：'+cleanup.message);}
+        }
+        throw error;
+      }finally{view.resizing=false;views.queueFrame(view,{loaderId:view.loaderId,captureOnly:true});}
+    });
+    return this.status(id);
   }
   async userBrowserAction(id, input, action, navigation) {
     if (!this.enabled) throw new Error('Computer Use 已关闭');
@@ -412,6 +538,7 @@ export class ComputerUseManager {
     this.publishControl(state);
     const pending = (async () => {
       await state.manualTail?.catch(() => {});
+      const viewed=this.viewerTarget(state,input);if(viewed)await this.viewsFor(viewed).views.get(viewed.id)?.layoutPending?.catch(()=>{});
       await this.stop(id, controller); controller.signal.throwIfAborted();
       if (!this.enabled) throw new Error('Computer Use 已关闭');
       return action(AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]));
@@ -424,12 +551,14 @@ export class ComputerUseManager {
   }
   async annotationStylePreview(id,input,signal){
     styleChanges(input.changes);
-    const state=this.sessions.get(id),viewer=state?.viewers.get(input.actor),target=state?.target;
+    const state=this.sessions.get(id),viewer=state?.viewers.get(input.actor),target=this.viewerTarget(state,input);
     if(viewer?.readOnly||target?.kind!=='tab'||target.id!==input.tabId||viewer?.tabId!==input.tabId)throw new Error('当前画面已改变，请重新打开批注');
     const views=this.viewsFor(target),view=views.views.get(target.id);if(!view||view.closed)throw new Error('当前画面已断开');
     state.stylePreviewActive=true;
     try{
       const result=await this.userBrowserAction(id,input,async actionSignal=>{
+        if(state.viewers.get(input.actor)!==viewer||!this.viewerTarget(state,input))throw new Error('当前画面已改变，请重新打开批注');
+        if(viewer.independent&&state.target?.id!==target.id)this.adoptViewedTab(state,target);
         if(state.target?.id!==target.id)throw new Error('当前目标已改变');
         views.browser.claim(id,target.id);
         return previewElementStyle(views,view,input,AbortSignal.any([actionSignal,signal].filter(Boolean)));
@@ -439,7 +568,7 @@ export class ComputerUseManager {
     finally{state.stylePreviewActive=false;}
   }
   async navigate(id, input) {
-    const state = this.session(id), target = state.target;
+    const state = this.session(id), target = this.viewTarget(state)?.id===input.tabId?this.viewTarget(state):state.target;
     if (!target || target.kind !== 'tab' || target.id !== input.tabId) throw new Error('操作目标已改变，请根据最新画面重试');
     const operation = input.action ?? 'goto';
     if (!['goto', 'back', 'forward', 'reload'].includes(operation)) throw new Error('未知导航操作');
@@ -465,10 +594,11 @@ export class ComputerUseManager {
       }
       // Several quick submissions may be waiting for the same cancelled load.
       // Only the latest one can start; a later explicit Stop invalidates all.
-      if (state.navigationIntents.get(client) !== sequence || state.navigationRevision !== navigation.revision || state.controlEpoch !== epoch || state.target?.id !== target.id) throw superseded();
+      if (state.navigationIntents.get(client) !== sequence || state.navigationRevision !== navigation.revision || state.controlEpoch !== epoch || (state.target?.id !== target.id&&this.viewTarget(state)?.id!==target.id)) throw superseded();
       controlEpoch = state.controlEpoch;
     }
     await this.userBrowserAction(id, { ...input, controlEpoch }, async signal => {
+      if(state.target?.id!==target.id)this.adoptViewedTab(state,target);
       if (state.target?.id !== target.id) throw new Error('操作目标已改变，请重试');
       await this.dispatch(id, 'target', [target, operation, destination ? [destination] : []], signal);
     }, navigation);
@@ -487,10 +617,12 @@ export class ComputerUseManager {
       const state = this.session(id);
       if (input.action === 'new') {
         const target = await this.dispatch(id, 'createBrowserTab', [input.browserId ?? state.target?.browserId ?? 'browser', destination], signal);
+        state.viewTarget=target;state.viewRevision=(state.viewRevision??0)+1;
         state.userTabs.add(target.id);
         this.browserForTab(target.id, target.browserId).keepForUser(id, target.id); return;
       }
       const target = await this.dispatch(id, 'getTab', [input.tabId, { browser: this.browserForTab(input.tabId, input.browserId).id, expected: input.expected }], signal);
+      state.viewTarget=target;state.viewRevision=(state.viewRevision??0)+1;
       state.userTabs.delete(target.id); state.userTabs.add(target.id);
       this.browserForTab(target.id, target.browserId).keepForUser(id, target.id);
       if (input.action === 'close') {
@@ -512,11 +644,56 @@ export class ComputerUseManager {
       }
     });
   }
+  viewTarget(state){
+    return state?.viewTarget&&state.previewTargets.has(state.viewTarget.id)?state.viewTarget:state?.target??null;
+  }
+  viewerTarget(state,input){
+    const viewer=state?.viewers.get(input.actor),target=viewer?.independent?this.viewTarget(state):state?.target;
+    return viewer&&!viewer.readOnly&&viewer.tabId===input.tabId&&target?.kind==='tab'&&target.id===input.tabId?target:null;
+  }
+  adoptViewedTab(state,target){
+    if(this.viewTarget(state)?.id!==target.id||!this.browserForTab(target.id,target.browserId).records.has(target.id))throw new Error('查看的网页已改变，请重新选择');
+    this.browserForTab(target.id,target.browserId).claim(state.id,target.id);
+    this.setTarget(state,target);
+  }
+  async viewTab(id,input){
+    if(this.closed||!this.enabled)throw new Error('Computer Use 已关闭');
+    const state=this.session(id),revision=state.viewRevision=(state.viewRevision??0)+1;
+    if(input.current===true){state.viewTarget=null;return this.status(id);}
+    const tab=(await this.listUserTabs(id)).find(tab=>tab.id===input.tabId&&(!input.browserId||tab.browserId===input.browserId));
+    if(this.closed||!this.enabled)throw new Error('Computer Use 已关闭');
+    if(revision!==state.viewRevision)return this.status(id);
+    if(!tab||!tab.available)throw new Error('这个标签页已关闭或正在被其他对话使用');
+    const browser=this.browserForTab(tab.id,tab.browserId);
+    // Validate/reconnect through the inventory observer, never the model's
+    // channel. This also permits recovery after the extension ends control.
+    await browser.target('ui-tabs',tab.id,{claim:false,signal:AbortSignal.timeout(10000)});
+    if(this.closed||!this.enabled)throw new Error('Computer Use 已关闭');
+    if(revision!==state.viewRevision)return this.status(id);
+    if(!browser.records.has(tab.id))throw new Error('这个标签页已关闭');
+    browser.claim(id,tab.id);browser.keepForUser(id,tab.id);state.userTabs.delete(tab.id);state.userTabs.add(tab.id);
+    state.viewTarget={...tab,kind:'tab'};state.previewTargets.set(tab.id,{target:state.viewTarget});
+    if(!state.target&&state.browserError){state.browserError=null;if(!state.stopError)state.status=state.stopped?'stopped':'idle';}
+    return this.status(id);
+  }
+  async openViewedExternally(id,input,signal){
+    if(this.closed||!this.enabled)throw new Error('Computer Use 已关闭');
+    signal?.throwIfAborted();
+    const state=this.sessions.get(id),target=this.viewTarget(state);
+    if(target?.kind!=='tab'||target.id!==input.tabId)throw new Error('当前查看的网页已改变，请重试');
+    const browser=this.browserForTab(target.id,target.browserId),record=browser.records.get(target.id),owner=browser.owners.get(target.id);
+    if(!record||owner&&owner.sessionId!==id)throw new Error('这个标签页已关闭或正在被其他对话使用');
+    const url=externalWebUrl(record.url);
+    if(externalWebUrl(input.expectedUrl)!==url)throw new Error('页面地址已改变，请根据最新地址重试');
+    await this.openExternal(url,{signal});
+    return this.status(id);
+  }
   async selectPreviousUserTab(id, signal) {
     const state = this.session(id), tabs = await this.listUserTabs(id);
     const available = tabs.filter(tab => tab.available && state.userTabs.has(tab.id));
     const previous = [...state.userTabs].reverse().find(tabId => available.some(tab => tab.id === tabId));
     if (previous) await this.dispatch(id, 'getTab', [previous, { browser: this.browserForTab(previous).id }], signal);
+    state.viewTarget=state.target;state.viewRevision=(state.viewRevision??0)+1;
     for (const tabId of state.userTabs) if (!tabs.some(tab => tab.id === tabId)) state.userTabs.delete(tabId);
   }
   async releaseManualInput(id) {
@@ -543,7 +720,10 @@ export class ComputerUseManager {
   status(id) {
     const state = this.sessions.get(id);
     const target = state?.target?.kind === 'tab' ? { ...state.target, ...this.browsers().find(browser => browser.records.has(state.target.id))?.records.get(state.target.id) } : state?.target ?? null;
-    return { observedAt: performance.now(), enabled: !this.closed && this.enabled, nativeInstalled: this.native.available(), status: state?.browserError && !target ? 'error' : state?.status ?? 'idle', target, previewTargets:[...(state?.previewTargets?.values()??[])].map(({target})=>target.kind==='tab'?{...target,...this.browsers().find(browser=>browser.records.has(target.id))?.records.get(target.id)}:target), controlEpoch: state?.controlEpoch ?? 0, navigationRevision: state?.navigationRevision ?? 0, transitioning: !!state?.uiAction || state?.resuming === true, resuming: state?.resuming === true, operation: state?.operation ?? null, lastError: state?.stopError ?? state?.browserError ?? state?.lastError ?? null, startedAt: state?.startedAt ?? null, previewAt: this.preview.get(id)?.at ?? null, history: state?.history ?? [], operationStats: state ? structuredClone(state.operationStats) : { total: 0, succeeded: 0, failed: 0, cancelled: 0, methods: {} } };
+    const viewed=this.viewTarget(state),viewTarget=viewed?.kind==='tab'?{...viewed,...this.browsers().find(browser=>browser.records.has(viewed.id))?.records.get(viewed.id)}:viewed;
+    const view=viewed?.kind==='tab'?(this.browserViews.views.get(viewed.id)??[...this.extensionViews.values()].map(views=>views.views.get(viewed.id)).find(Boolean)):null;
+    const viewViewport=view?{overridden:!!view.record?.viewportOverride&&view.record.viewportMode!=='layout',layoutSupported:this.browserViews.views.get(viewed.id)===view,width:view.latest?.width,height:view.latest?.height}:null;
+    return { observedAt: performance.now(), enabled: !this.closed && this.enabled, nativeInstalled: this.native.available(), status: state?.browserError && !target ? 'error' : state?.status ?? 'idle', target, viewTarget, viewViewport, viewRevision:state?.viewRevision??0, previewTargets:[...(state?.previewTargets?.values()??[])].map(({target})=>target.kind==='tab'?{...target,...this.browsers().find(browser=>browser.records.has(target.id))?.records.get(target.id)}:target), controlEpoch: state?.controlEpoch ?? 0, navigationRevision: state?.navigationRevision ?? 0, transitioning: !!state?.uiAction || state?.resuming === true, resuming: state?.resuming === true, operation: state?.operation ?? null, lastError: state?.stopError ?? state?.browserError ?? state?.lastError ?? null, startedAt: state?.startedAt ?? null, previewAt: this.preview.get(id)?.at ?? null, history: state?.history ?? [], operationStats: state ? structuredClone(state.operationStats) : { total: 0, succeeded: 0, failed: 0, cancelled: 0, methods: {} } };
   }
   async revealPreview(id,input){
     if(!this.enabled||this.closed)throw new Error('Computer Use 已关闭');

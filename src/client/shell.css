@@ -2,74 +2,116 @@
    selectors below match the installed host and are covered by frontend UI QA. */
 .trisoul-shell {
   --tx-shell-text: var(--dsw-alias-label-primary, CanvasText);
-  --tx-shell-muted: var(--dsw-alias-label-tertiary, GrayText);
+  --tx-shell-muted: var(--dsw-alias-label-secondary, GrayText);
   --tx-shell-bg: var(--dsw-alias-bg-base, Canvas);
   --tx-shell-line: color-mix(in srgb, var(--tx-shell-text) 10%, var(--tx-shell-bg));
   --tx-shell-hover: color-mix(in srgb, var(--tx-shell-text) 4%, var(--tx-shell-bg));
-  --dsh-composer-card-max-width: 800px;
+  --dsw-specific-sidebar-fill: color-mix(in srgb, var(--tx-shell-text) 2.5%, var(--tx-shell-bg));
   -webkit-font-smoothing: antialiased;
 }
+/* The hidden right pane overflows the grid. clip prevents focus/scrollIntoView
+   from horizontally scrolling the entire app, while keeping its paint bounds. */
+.trisoul-shell .pI_x6G_frame { overflow: clip; }
+.trisoul-shell .wSkVaW_root {
+  --dsh-chat-content-width: min(var(--dsh-chat-user-width, 760px), max(160px, calc(var(--dsh-conversation-column-width, 840px) - 64px)));
+  --dsh-composer-card-max-width: calc(var(--dsh-chat-content-width) + 32px);
+}
+.trisoul-shell .wSkVaW_header { min-height: 56px; padding: 10px 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border-bottom: 1px solid var(--tx-shell-line); }
+.trisoul-shell .wSkVaW_titleRow { flex: 1 1 240px; min-width: 0; }
+.trisoul-shell .wSkVaW_headerUtilities { margin-left: 10px; gap: 5px; }
+.trisoul-shell .wSkVaW_tabs { order: -1; flex: 0 0 auto; align-items: center; margin: 0; gap: 2px; padding: 2px; border-radius: 8px; background: var(--tx-shell-hover); }
+.trisoul-shell .wSkVaW_tab { padding: 5px 10px; border-radius: 6px; font-size: 12px; line-height: 18px; font-weight: 400; }
+.trisoul-shell .wSkVaW_tab:after { display: none; }
+.trisoul-shell .wSkVaW_tabActive { background: var(--tx-shell-bg); color: var(--tx-shell-text); box-shadow: 0 1px 3px #00000008; }
 .trisoul-shell [data-composer-card] {
   border: 1px solid var(--tx-shell-line);
-  border-radius: 18px;
-  box-shadow: 0 2px 10px #00000005;
-  gap: 10px;
-  padding-top: 10px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px #00000004;
+  gap: 8px;
+  padding-top: 12px;
   background: var(--dsw-specific-input-major, var(--tx-shell-bg));
 }
 .trisoul-shell [data-composer-card]:focus-within { border-color: color-mix(in srgb, #3877e8 26%, var(--tx-shell-line)); box-shadow: 0 2px 12px #00000008; }
-.trisoul-shell [data-composer-input] { min-height: 42px; padding: 4px 14px 0 16px; font-size: 14px; line-height: 24px; }
-.trisoul-shell [data-composer-placeholder] { left: 16px; font-size: 13px; color: var(--tx-shell-muted); }
-.trisoul-shell .uV2eYG_row { gap: 8px; padding: 2px 10px 8px; }
+.trisoul-shell [data-composer-input] { min-height: 42px; padding: 4px 16px 0; font-size: var(--dsh-content-font-size, 15px); line-height: 25px; }
+.trisoul-shell [data-composer-placeholder] { left: 16px; font-size: 14px; color: var(--tx-shell-muted); }
+.trisoul-shell .uV2eYG_row { gap: 8px; padding: 4px 10px 10px; }
 .trisoul-shell :is(.uV2eYG_tools, .uV2eYG_modes, .uV2eYG_trailing) { gap: 7px; }
 .trisoul-shell .uV2eYG_add { background: transparent; width: 28px; height: 28px; color: var(--tx-shell-muted); }
 .trisoul-shell .uV2eYG_add:hover:not(:disabled) { background: var(--tx-shell-hover); }
 .trisoul-shell .uV2eYG_primary { width: 30px; height: 30px; transform: none; }
-.trisoul-shell [data-slot='conversation.composer.dock'] { display: flex !important; width: 100%; max-width: 800px; padding: 5px 3px 0; box-sizing: border-box; }
-.trisoul-shell [data-composer-stats] { font-size: 10px; opacity: .75; }
-.trisoul-shell .pXSMma_headline { font-size: 25px; font-weight: 550; letter-spacing: -.7px; gap: 12px; margin-bottom: 18px; }
-.trisoul-shell .pXSMma_previewBadge { font-size: 10px; line-height: 16px; font-weight: 400; color: var(--tx-shell-muted); background: var(--tx-shell-hover); border: 0; }
+.trisoul-shell [data-slot='conversation.composer.dock'] { display: flex !important; width: min(var(--dsh-composer-card-max-width), calc(100% - 32px)); max-width: none; padding: 2px 4px 8px; box-sizing: border-box; }
+.trisoul-shell .pXSMma_headline { font-size: 27px; font-weight: 500; letter-spacing: -.6px; gap: 12px; margin-bottom: 20px; }
+.trisoul-shell .pXSMma_previewBadge { font-size: 11px; line-height: 18px; font-weight: 400; color: var(--tx-shell-muted); background: var(--tx-shell-hover); border: 0; }
 .trisoul-shell .pXSMma_workspace { color: var(--tx-shell-muted); font-size: 12px; }
 .trisoul-shell .pXSMma_folder { color: var(--tx-shell-muted); }
 .trisoul-shell [data-slot='conversation.hero.brand.mark'] .tx-brand-mark { width: 64px; height: 64px; }
 
 /* Project navigation: compact rows, a quiet create action and a clear selection. */
-.trisoul-shell .hHd-Xa_root { border-right: 1px solid var(--tx-shell-line); }
-.trisoul-shell .hHd-Xa_logoRow { padding-bottom: 8px; }
+.trisoul-shell .hHd-Xa_root { border-right: 0; }
+.trisoul-shell .hHd-Xa_logoRow { height: 50px; margin-bottom: 6px; padding-bottom: 4px; }
 .trisoul-shell .hHd-Xa_newSession { justify-content: flex-start; border: 0; background: transparent; box-shadow: none; padding-left: 9px; font-size: 13px; font-weight: 500; }
 .trisoul-shell .hHd-Xa_newSession:hover { background: var(--tx-shell-hover); }
 .trisoul-shell .hHd-Xa_collapsed .hHd-Xa_newSession { justify-content: center; padding-left: 0; }
 .trisoul-shell .YDXeBa_title { font-size: 13px; }
-.trisoul-shell .YDXeBa_projectRow { height: 36px; font-weight: 500; }
-.trisoul-shell .YDXeBa_sessionRow { margin-block: 2px; border-radius: 8px; }
-.trisoul-shell .YDXeBa_sessionRow .YDXeBa_title { color: var(--dsw-alias-label-secondary, var(--tx-shell-text)); font-size: 12px; }
+.trisoul-shell .YDXeBa_projectRow { height: 33px; font-weight: 500; }
+.trisoul-shell .YDXeBa_sessionRow { margin-block: 1px; border-radius: 7px; }
+.trisoul-shell .YDXeBa_sessionRow .YDXeBa_title { color: var(--dsw-alias-label-secondary, var(--tx-shell-text)); font-size: 13px; }
 .trisoul-shell .YDXeBa_sessionRow.YDXeBa_selected { background: color-mix(in srgb, #3877e8 8%, var(--tx-shell-bg)); }
 .trisoul-shell .YDXeBa_sessionRow.YDXeBa_selected .YDXeBa_title { color: var(--tx-shell-text); font-weight: 500; }
-.trisoul-shell :is(.YDXeBa_time, .YDXeBa_meta) { font-size: 10px; }
+.trisoul-shell :is(.YDXeBa_time, .YDXeBa_meta) { font-size: 11px; }
 .trisoul-shell .YDXeBa_rowActions { gap: 8px; }
 .trisoul-shell .bhn1Oq_searchButton { color: var(--tx-shell-muted); }
 .trisoul-shell [role=dialog]:not(.tx-cu-share-dialog) { border-radius: 16px; }
 @media (max-width: 760px) {
-  .trisoul-shell [data-composer-card] { border-radius: 14px; }
+  .trisoul-shell .wSkVaW_header { padding: 8px 12px; gap: 6px; }
+  .trisoul-shell .wSkVaW_titleRow { flex-basis: 200px; }
+  .trisoul-shell [data-composer-card] { border-radius: 16px; }
   .trisoul-shell .uV2eYG_row { gap: 5px; padding-inline: 8px; }
   .trisoul-shell :is(.uV2eYG_tools, .uV2eYG_modes, .uV2eYG_trailing) { gap: 4px; }
   .trisoul-shell .tx-composer-dock { padding-inline: 2px; }
 }
-/* Host statistics and X controls share one footer instead of competing for half
-   the row each. Every original statistics popup remains available. */
-.trisoul-shell [data-slot='conversation.composer.dock'] { align-items: center; flex-wrap: wrap; gap: 3px 8px; }
+@media (max-width: 540px) {
+  .trisoul-shell .wSkVaW_titleRow { flex-basis: 100%; }
+  .trisoul-shell .wSkVaW_tabs { margin-left: 0; }
+}
+/* Reveal the original host statistics on demand; keep their live popovers. */
+.trisoul-shell [data-slot='conversation.composer.dock'] { align-items: center; flex-wrap: wrap; gap: 3px 10px; }
 .trisoul-shell .tx-composer-dock { display: contents; }
 .trisoul-shell .tx-composer-tools { order: 0; flex: 1 1 auto; }
-.trisoul-shell [data-composer-stats] { order: 1; flex: 0 1 auto; width: auto; max-width: none; margin: 0; padding: 0; gap: 4px; }
-.trisoul-shell .tx-stats-line { order: 2; }
-.trisoul-shell .bOPqQW_pill { padding: 1px 3px; font-size: 10px; gap: 4px; }
-.trisoul-shell .bOPqQW_pill svg { width: 12px; height: 12px; }
+.trisoul-shell .tx-usage-toggle { order: 1; }
+.trisoul-shell [data-composer-stats] { display: none; order: 2; flex: 1 1 calc(100% - 130px); width: auto; max-width: none; margin: 0; padding: 4px 2px; gap: 8px; opacity: 1; }
+.trisoul-shell .tx-stats-line { display: none; order: 3; }
+.trisoul-shell[data-omd-usage-expanded] [data-composer-stats] { display: flex; }
+.trisoul-shell[data-omd-usage-expanded] .tx-stats-line { display: inline-flex; }
+.trisoul-shell .bOPqQW_pill { padding: 2px 4px; font-size: 11px; gap: 5px; }
+.trisoul-shell .bOPqQW_pill svg { width: 13px; height: 13px; }
 /* Process details read as a disclosure, with the response itself in focus. */
 .trisoul-shell .l_V-RG_root { height: 26px; border-bottom: 0; padding-bottom: 0; }
 .trisoul-shell .l_V-RG_label { font-size: 12px; color: var(--tx-shell-muted); }
-.trisoul-shell .hWmORq_actions { margin-top: 10px; }
-.trisoul-shell .xzv4MW_actions { gap: 5px; opacity: .75; transition: opacity .15s; }
-.trisoul-shell .xzv4MW_actions:hover, .trisoul-shell .xzv4MW_actions:focus-within { opacity: 1; }
-.trisoul-shell :is(.xzv4MW_timeStart, .xzv4MW_timeEnd) { font-size: 10px; }
+.trisoul-shell [data-disclosure-row] { min-height: 28px; font-size: 12px; }
+/* The process is one operation list, not a paragraph-spaced stack of cards.
+   Keep the host renderers, file actions and result bodies fully intact. */
+.trisoul-shell [data-chat-flow-kind=tool-call] { --dsh-chat-flow-gap: 2px; }
+.trisoul-shell [data-turn-process-member] { --dsh-chat-flow-gap: 2px; }
+.trisoul-shell [data-chat-flow-key]:has(.tx-cu-group, [data-cu-process-context]) { --dsh-chat-flow-gap: 2px; }
+.trisoul-shell .tx-cu-group [data-disclosure-row] { height: 26px; min-height: 26px; }
+.trisoul-shell [data-chat-flow-kind=assistant-step]:has(.tx-cu-group) { --dsh-chat-flow-gap: 2px; }
+.trisoul-shell [data-chat-flow-kind=assistant-step]:has(.tx-cu-process-answer[data-process-open]) { --dsh-chat-flow-gap: 2px; }
+.trisoul-shell .tx-cu-process-answer[data-process-open] .hWmORq_body { gap: 2px; }
+.trisoul-shell .tx-cu-process-answer[data-process-open] .hWmORq_body > :not(:has(> [data-variant=think])) { margin-top: 14px; }
+.trisoul-shell [data-turn-process-member][data-chat-flow-kind=context] [data-disclosure-row],
+.trisoul-shell [data-variant=think] [data-disclosure-row] { height: 26px; min-height: 26px; }
+/* The host fixes a collapsed Think container at 24px. Match its row so the
+   next operation never overlaps its 26px hit area. Expanded text stays auto. */
+.trisoul-shell .lcKema_root:not([data-expanded]) { height: 26px; }
+.trisoul-shell [data-chat-flow-kind=tool-call] :is(.o3BgMG_row, .CY-8Ka_root) { height: 26px; min-height: 26px; }
+.trisoul-shell [data-chat-flow-kind=tool-call] :is(.o3BgMG_title, .CY-8Ka_title) { font-size: var(--dsh-content-font-size-secondary, 13px); font-weight: 400; }
+.trisoul-shell [data-chat-flow-kind=tool-call] :is(.o3BgMG_sep, .CY-8Ka_sep) { background: transparent; width: 0; margin-inline: 3px; }
+.trisoul-shell [data-chat-flow-kind=tool-call] .o3BgMG_fileLink { color: var(--dsw-alias-label-tertiary, var(--tx-shell-muted)); }
+.trisoul-shell [data-chat-flow-kind=tool-call] .o3BgMG_fileLink:hover { color: var(--tx-shell-text); }
+.trisoul-shell [data-chat-flow-kind=context] [data-disclosure-row][aria-expanded=false] :is([data-context-source], .XrJvXW_sep) { display: none; }
+.trisoul-shell .hWmORq_actions { margin-top: 12px; }
+.trisoul-shell .xzv4MW_actions { gap: 5px; }
+.trisoul-shell :is(.xzv4MW_timeStart, .xzv4MW_timeEnd) { font-size: 11px; }
 .trisoul-shell .Q51KRG_trigger { font-size: 11px; gap: 4px; padding-inline: 6px; }
-.trisoul-shell .Sixlwa_bubble { border-radius: 16px; padding: 10px 14px; }
+.trisoul-shell .Sixlwa_bubble { border-radius: 18px; padding: 11px 16px; }

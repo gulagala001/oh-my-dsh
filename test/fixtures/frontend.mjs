@@ -16,10 +16,12 @@ export async function until(fn, timeout = 20000) {
 export async function frontendFixture(t) {
   const root = await mkdtemp(join(tmpdir(), 'trisoul-frontend-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   await mkdir(home); await mkdir(workspace);
-  let nextReply, releaseReply;
+  let nextReply, releaseReply, replyFactory;
   const provider = createServer(async (req, res) => {
     let request = ''; for await (const chunk of req) request += chunk; const payload = JSON.parse(request);
     if (payload.tools?.length && nextReply) { const waiting = nextReply; nextReply = null; await waiting; }
+    const custom=payload.tools?.length&&await replyFactory?.(payload);
+    if(custom){res.writeHead(200,{'Content-Type':'text/event-stream'});res.end('data: '+JSON.stringify({id:'ui',object:'chat.completion.chunk',model:'fixture',choices:[{index:0,...custom}]})+'\n\ndata: [DONE]\n\n');return;}
     res.writeHead(200, { 'Content-Type': 'text/event-stream' });
     res.end('data: ' + JSON.stringify({ id: 'ui', object: 'chat.completion.chunk', model: 'fixture', choices: [{ index: 0, delta: { role: 'assistant', content: !payload.tools?.length ? '整理工作台和对话界面' : '已经梳理好今天的工作。\n\n我们会先整理对话与侧栏，再完善电脑操控的实时预览。所有进展都可以在右侧工作台查看。\n\n- 任务：查看当前进展和验证结果\n- 记忆：保留项目约定与重要决定\n- 电脑：查看网页和应用的实时画面\n\n接下来可以继续处理具体页面。' }, finish_reason: 'stop' }] }) + '\n\ndata: [DONE]\n\n');
   });
@@ -61,7 +63,7 @@ export async function frontendFixture(t) {
   await page.goto(origin); await page.getByRole('button', { name: '继续', exact: true }).click();
   await page.getByText('整理工作台和对话界面', { exact: true }).first().click();
   await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
-  return { root, home, page, context, rpc, sessionId, errors, holdNextReply() {
+  return { root, home, page, context, rpc, sessionId, errors, replyWith(factory){replyFactory=factory;}, holdNextReply() {
     nextReply = new Promise(resolve => { releaseReply = resolve; });
     return () => releaseReply?.();
   } };

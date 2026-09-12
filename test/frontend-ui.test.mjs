@@ -10,13 +10,52 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await until(async () => (await page.title()).endsWith(' — Oh My DSH'));
   assert.match(await page.title(), /整理工作台和对话界面/);
   assert.equal(await page.getByText('trisoul_x', { exact: true }).count(), 0);
-  const screenshot = async name => { if (process.env.TRISOUL_UI_ARTIFACTS) { await page.mouse.move(1, 1); await page.evaluate(() => Promise.all(document.getAnimations().filter(a => a.effect?.getTiming().iterations !== Infinity).map(a => a.finished.catch(() => {})))); await page.screenshot({ path: join(root, name + '.png') }); } };
+  const screenshot = async name => {
+    if (!process.env.TRISOUL_UI_ARTIFACTS) return;
+    await page.mouse.move(1, 1);
+    // Wait for the live transition state rather than holding finished promises
+    // from animations that a disclosure or tooltip may replace mid-transition.
+    await page.waitForFunction(() => document.getAnimations().every(a =>
+      a.effect?.getTiming().iterations === Infinity || !a.pending && a.playState !== 'running'), undefined, { timeout: 5000 });
+    await page.screenshot({ path: join(root, name + '.png'), timeout: 5000 });
+  };
   t.after(async () => { if (process.env.TRISOUL_UI_ARTIFACTS) console.log('Frontend UI artifacts:', root); });
   assert.equal(await page.locator('.tx-composer-dock').count(), 1);
   assert.equal(await page.locator('.tx-cu-chip').count(), 1);
   assert.equal(await page.getByRole('button', { name: '分享窗口', exact: true }).count(), 1);
   const composer = page.locator('[data-composer-card]');
+  const headerBox=await page.locator('.wSkVaW_header').boundingBox(),tabsBox=await page.locator('.wSkVaW_tabs').boundingBox();
+  assert.ok(tabsBox.x-headerBox.x<=24,'conversation and trace controls stay on the left side of the header');
   assert.ok((await composer.boundingBox()).height < 160, 'empty composer stays compact');
+  const usageToggle = page.getByRole('button', { name: '用量详情', exact: true });
+  const hostStats = page.locator('[data-composer-stats]');
+  assert.equal(await hostStats.isVisible(), false, 'usage details do not crowd the default composer');
+  await usageToggle.click();
+  assert.equal(await usageToggle.getAttribute('aria-expanded'), 'true');
+  assert.equal(await hostStats.isVisible(), true);
+  const originalUsage = hostStats.getByRole('button').first();
+  await originalUsage.click();
+  assert.equal(await originalUsage.getAttribute('aria-expanded'), 'true', 'original host usage popup remains interactive');
+  await page.keyboard.press('Escape');
+  await usageToggle.click();
+  assert.equal(await hostStats.isVisible(), false);
+  const contextRow = page.locator('[data-chat-flow-kind=context] [data-disclosure-row]').first();
+  const processToggle = page.getByRole('button', { name: /^已思考/ }).first();
+  await processToggle.click();
+  const source = contextRow.locator('[data-context-source]');
+  assert.equal(await source.count(), 1);
+  assert.equal(await source.isVisible(), false, 'technical provenance is deferred until expanded');
+  await contextRow.click();
+  assert.equal(await source.isVisible(), true, 'original context provenance stays accessible');
+  await contextRow.click();
+  await processToggle.click();
+  // A hidden right pane can extend the frame beyond its visible grid. Focus
+  // scrolling must not move that outer shell and crop the conversation.
+  const shellScroll = await page.locator('.pI_x6G_frame').evaluate(el => {
+    el.scrollLeft = 180;
+    return el.scrollLeft;
+  });
+  assert.equal(shellScroll, 0, 'overflowing offscreen panes cannot pan the app frame');
   await screenshot('conversation-light');
   await page.getByRole('button', { name: '打开工作台', exact: true }).click();
   const workbench = page.locator('.tx-workbench'), nav = workbench.getByRole('navigation', { name: '工作台导航' });
@@ -103,6 +142,17 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await until(async () => (await composer.boundingBox())?.width > 450);
   const tools = await page.locator('[data-slot="conversation.composer.dock"]').boundingBox();
   assert.ok(tools.x >= 0 && tools.x + tools.width <= 760, 'composer tools remain on screen');
+  for (const width of [994, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.mouse.move(width - 10, 400);
+    await until(async () => { const box = await composer.boundingBox(); return box?.x >= 0 && box.x + box.width <= width; });
+    await usageToggle.click();
+    await until(async () => { const box = await page.locator('[data-slot="conversation.composer.dock"]').boundingBox(); return box?.x >= 0 && box.x + box.width <= width; });
+    assert.equal(await hostStats.isVisible(), true, 'expanded usage stays available at ' + width + 'px');
+    await screenshot('conversation-' + width + '-usage');
+    await usageToggle.click();
+  }
+  await page.setViewportSize({ width: 760, height: 900 });
   await screenshot('conversation-narrow-dark');
   await page.getByRole('button', { name: '设置', exact: true }).click();
   const settingsDialog = page.getByRole('dialog');

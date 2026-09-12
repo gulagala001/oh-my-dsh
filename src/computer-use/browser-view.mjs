@@ -24,6 +24,11 @@ export class BrowserViews {
     try { return await Promise.race([operation, stopped]); }
     finally { clearTimeout(timer); lifetime.removeEventListener('abort', aborted); }
   }
+  async snapshotRead(view,read){
+    if(view.resizing)throw new Error('正在调整视口，请稍后截图');
+    const pending=Promise.resolve().then(read);view.readers??=new Set();view.readers.add(pending);
+    try{return await pending;}finally{view.readers.delete(pending);}
+  }
 
   async subscribe(tabId, listener, signal) {
     signal?.throwIfAborted();
@@ -115,6 +120,7 @@ export class BrowserViews {
           view.navigation = { tabId: view.tabId, loaderId: view.loaderId, observedAt, url: entry?.url ?? view.record.page.url(), title: targetInfo.title || entry?.title || '', canGoBack: history.currentIndex > 0, canGoForward: history.currentIndex < history.entries.length - 1, loading: view.loading === true };
           const info = this.browser.records.get(view.tabId);
           if (info) this.browser.records.set(view.tabId, { ...info, url: view.navigation.url, title: view.navigation.title });
+          this.browser.visit(view.tabId,view.navigation.url,view.navigation.title);
           view.publish('navigation', view.navigation);
           retryAt = 0;
         } catch (error) {
@@ -132,7 +138,7 @@ export class BrowserViews {
   queueFrame(view,pending){
     if(view.closed)return;
     view.pending={...pending,captureOnly:pending.captureOnly||view.pending?.captureOnly};
-    if(!view.flushing)view.flushing=this.flush(view).finally(()=>{
+    if(!view.flushing&&!view.resizing)view.flushing=this.flush(view).finally(()=>{
       view.flushing=null;
       if(view.pending&&!view.closed)this.queueFrame(view,view.pending);
     });
@@ -140,7 +146,7 @@ export class BrowserViews {
 
   async flush(view) {
     let retryAt = 0;
-    while (view.pending && !view.closed) {
+    while (view.pending && !view.closed && !view.resizing) {
       const { event, loaderId, captureOnly } = view.pending; view.pending = null;
       try {
         if (!captureOnly&&event?.metadata.timestamp && event.metadata.timestamp < (view.screencastAfter ?? 0)) continue;
@@ -195,6 +201,7 @@ export class BrowserViews {
     view.lifetime.abort(new Error('Browser observation closed'));
     view.stopping = (async () => {
       await view.ready?.catch(() => {});
+      await view.layoutPending?.catch(() => {});
       await restoreStylePreview(view);
       // Dialog-closed can precede the reply to the user's answer. Disabling
       // control must not detach this channel while that answer is returning.
