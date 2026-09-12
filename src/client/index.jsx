@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Menu } from '@deepseek-ai/dsh-client-ui-primitives';
 import { FREQUENCY_PRESETS as presets } from '../frequency.mjs';
 import { frameTokens, contextHistoryLayout } from './context-history.mjs';
@@ -36,6 +36,7 @@ function MemoryScopeChip({ sessionId, useSessions }) {
 
 function BetterTodoChip({ sessionId, useSessions }) {
   const [state, setState] = useState(null), [open, setOpen] = useState(false), [saving, setSaving] = useState(false), [error, setError] = useState('');
+  const [notice, setNotice] = useState(false), dialog = useRef(null), noticeId = useId();
   const current = useSessions(s => s.byId[sessionId]), active = useRef(sessionId), revision = useRef(0), writing = useRef(null); active.current = sessionId;
   const load = useCallback(async () => {
     if (writing.current?.sessionId === sessionId) return;
@@ -43,7 +44,8 @@ function BetterTodoChip({ sessionId, useSessions }) {
     try { const next = await api('/better-todo' + suffix(sessionId)); if (active.current === sessionId && revision.current === ticket) { setState({ sessionId, ...next }); setError(''); } }
     catch (e) { if (active.current === sessionId && revision.current === ticket) setError(e.message); }
   }, [sessionId]);
-  useEffect(() => { setOpen(false); setSaving(false); setError(''); }, [sessionId]);
+  useEffect(() => { setOpen(false); setSaving(false); setError(''); setNotice(false); }, [sessionId]);
+  useEffect(() => { if (notice && !dialog.current?.open) dialog.current?.showModal(); else if (!notice) dialog.current?.close(); }, [notice]);
   useEffect(() => { void load(); }, [load, current?.running]);
   const ready = state?.sessionId === sessionId;
   const toggle = async key => {
@@ -52,7 +54,10 @@ function BetterTodoChip({ sessionId, useSessions }) {
     setSaving(true); setError('');
     try {
       const next = await api('/better-todo' + suffix(sessionId), { [key]: !state[key] });
-      if (active.current === sessionId) setState({ sessionId, ...next });
+      if (active.current === sessionId) {
+        setState({ sessionId, ...next });
+        if (key === 'verification' && !state.verification && next.verification) { setOpen(false); setNotice(true); }
+      }
     } catch (e) { if (active.current === sessionId) setError(e.message); }
     finally { if (writing.current === write) writing.current = null; if (active.current === sessionId) setSaving(false); }
   };
@@ -61,7 +66,11 @@ function BetterTodoChip({ sessionId, useSessions }) {
     ['todo', '待办完成提醒', '仍有未完成待办时提醒继续'],
     ['verification', '验证完成提醒', '缺少验证证据时提醒，含文字证据复核'],
   ].map(([id, label, hint]) => ({ id, disabled: !ready || saving, label: <span className="tx-bt-option"><span><strong>{label}</strong><small>{hint}</small></span><span className="tx-bt-state"><small>{ready ? state[id] ? '开' : '关' : '…'}</small><i className={cx('tx-bt-toggle', ready && state[id] && 'tx-on')} aria-hidden="true"/></span></span> }))];
-  return <Menu open={open} anchor={chip} items={items} footer={[{ type: 'label', id: 'status', text: error || '仅本会话 · 可随时更改' }]} onSelect={toggle} onClose={() => setOpen(false)} portal side="top" align="end" compact autoFocus/>;
+  return <><Menu open={open} anchor={chip} items={items} footer={[{ type: 'label', id: 'status', text: error || '仅本会话 · 可随时更改' }]} onSelect={toggle} onClose={() => setOpen(false)} portal side="top" align="end" compact autoFocus/>
+    <dialog ref={dialog} className="tx-bt-notice" aria-labelledby={noticeId} aria-describedby={noticeId+'-body'} onCancel={()=>setNotice(false)} onClose={()=>setNotice(false)}>
+      <h2 id={noticeId}>验证完成提醒</h2><p id={noticeId+'-body'}>此选项将会带来更高的任务完成率，同时也会消耗更多时间和 token。</p>
+      <div><button type="button" autoFocus onClick={()=>setNotice(false)}>知道了</button></div>
+    </dialog></>;
 }
 
 function useSnapshot(id, visible = true, range = 'session') {

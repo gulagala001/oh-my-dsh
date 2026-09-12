@@ -1,18 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { join } from 'node:path';
 import { build } from 'esbuild';
 import { chromium } from 'playwright';
 import sharp from 'sharp';
 
 test('page annotation cancels encoding across sessions and the next draft remains usable',async t=>{
-  const root=fileURLToPath(new URL('../',import.meta.url)),store=join(root,'node_modules/.pnpm');
-  const reactDom=(await readdir(store)).find(name=>name.startsWith('react-dom@18.'));
-  assert.ok(reactDom,'use the installed DSH React runtime');
-  const require=createRequire(join(store,reactDom,'node_modules/react-dom/package.json'));
+  // Component tests declare their React runtime; pnpm's store is not a public
+  // dependency API, and a clean DSH installation only contains bundled React.
+  const root=fileURLToPath(new URL('../',import.meta.url)),require=createRequire(import.meta.url);
   const bundle=await build({stdin:{contents:`import React from 'react';import{createRoot}from'react-dom/client';import{PageAnnotation}from'./src/client/page-annotation.jsx';
     const root=createRoot(document.getElementById('root'));window.added=[];window.created=[];window.released=[];
     window.renderAnnotation=sessionId=>root.render(<PageAnnotation sessionId={sessionId} target={{id:'tab-1',browserId:'browser'}} frame={{tabId:'tab-1',data:window.pixels,mediaType:'image/png',at:1,url:'http://fixture/'}} conversation={{createDrafts:(session,files)=>{window.created.push(session);return files.map((file,i)=>({id:session+'-'+i}));},releaseDraftAttachments:drafts=>window.released.push(drafts)}} inputActions={{addAttachments:ids=>{window.added.push(ids);return true;}}}/>);`,resolveDir:root,loader:'jsx'},bundle:true,write:false,platform:'browser',format:'iife',alias:{react:require.resolve('react'),'react-dom/client':require.resolve('react-dom/client')}});

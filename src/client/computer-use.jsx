@@ -27,7 +27,7 @@ function ComputerChip({sessionId,onOpen,inputActions,conversation}){
   const active=!!state?.target&&(state.status==='running'||state.status==='stopping'||state.status==='error'||state.transitioning);
   return <div ref={previewAnchor} className="tx-cu-chip" title={error||undefined}>
     <button type="button" className="tx-cu-entry" aria-label="打开 Computer Use" title="查看和操作应用、网页" onClick={onOpen}><ScreenIcon/><span>电脑</span></button>
-    <FloatingPreview sessionId={sessionId} state={state} url={url} api={api} onState={setState} onError={setError} onRevealBrowser={onOpen} anchor={previewAnchor}/>
+    <FloatingPreview sessionId={sessionId} state={state} url={url} api={api} onState={setState} onError={setError} anchor={previewAnchor}/>
     <WindowShare sessionId={sessionId} inputActions={inputActions} conversation={conversation}/>
     {state?.vision?.input==='text'&&<span className="tx-cu-vision-warning" title="当前模型仅接收文字，截图不会送入模型。">仅文本模型</span>}
     {state?.target&&<span className="tx-cu-chip-status">{state.resuming?'正在恢复':state.transitioning?'正在载入':names[state.status]}</span>}

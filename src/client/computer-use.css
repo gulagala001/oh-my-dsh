@@ -279,12 +279,16 @@
 .tx-cu-preview-open:focus-visible { outline: 2px solid var(--cu-blue); outline-offset: -2px; }
 .tx-cu-preview-stack:not(.is-expanded) .tx-cu-preview-card:nth-child(n+5) { visibility: hidden; }
 .tx-cu-preview-stack.is-expanded { overflow: auto; display: flex; flex-direction: column; gap: 8px; margin: 0; scrollbar-width: thin; }
+.tx-cu-preview-stack.is-focused .tx-cu-preview-card { visibility: hidden; pointer-events: none; }
+.tx-cu-preview-stack.is-focused .tx-cu-preview-card[data-focused] { visibility: visible; pointer-events: auto; inset: 0; transform: none; }
 .tx-cu-preview-stack.is-expanded .tx-cu-preview-card { position: relative; inset: auto; transform: none; min-height: 180px; flex: 0 0 180px; }
 .tx-cu-floating .tx-cu-preview-stack.is-expanded img { max-height: 180px; }
 .tx-cu-floating > .tx-cu-error { font-size: 11px; line-height: 1.4; margin: 0; max-height: 48px; overflow: auto; }
 .tx-cu-preview-card .tx-cu-reconnect { position: relative; z-index: 5; }
 .tx-cu-floating-inline { inset: auto; z-index: 30; width: min(320px, calc(100vw - 24px)); height: 260px; max-height: calc(100vh - 24px); padding: 8px; border: 1px solid var(--cu-line); border-radius: 14px; box-shadow: var(--cu-shadow); }
-.tx-cu-floating-inline .tx-cu-preview-card .tx-cu-observed-image img { max-height: calc(172px - min(var(--preview-count) - 1, 3)*23px); }
+.tx-cu-floating-inline > header { cursor: grab; touch-action: none; user-select: none; }
+.tx-cu-floating-inline.is-dragging > header { cursor: grabbing; }
+.tx-cu-floating-inline .tx-cu-preview-card .tx-cu-observed-image img { max-height: calc(var(--cu-floating-height, 260px) - 88px - min(var(--preview-count) - 1, 3)*23px); }
 .tx-cu-floating-inline .tx-cu-preview-stack.is-expanded img { max-height: 180px; }
 /* Keep the observer connected while host @/command menus cover the composer. */
 body:has([role=listbox]) .tx-cu-floating-inline { visibility: hidden; pointer-events: none; }

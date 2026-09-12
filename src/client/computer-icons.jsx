@@ -9,6 +9,8 @@ export function ComputerIcon({ name = 'screen', size = 16, ...props }) {
     popout: <><path d="M14 3h7v7m0-7-9 9M10 3H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-4"/></>,
     return: <><path d="M10 14H3V7m0 7 9-9m2 16h4a3 3 0 0 0 3-3V6a3 3 0 0 0-3-3h-4M3 18a3 3 0 0 0 3 3h4"/></>,
     close: <path d="m6 6 12 12M6 18 18 6"/>,
+    expand: <path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>,
+    shrink: <path d="M3 8h5V3m13 5h-5V3M8 21v-5H3m13 5v-5h5"/>,
     chevron: <path d="m9 5 7 7-7 7"/>,
     stack: <><rect x="6" y="8" width="15" height="13" rx="2.5"/><path d="M17 4H6a3 3 0 0 0-3 3v10"/></>,
     stop: <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/>,

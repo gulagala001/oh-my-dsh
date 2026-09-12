@@ -1,4 +1,4 @@
-.tx-app, .tx-scope-chip, .tx-brand-mark, .tx-stats-line, .tx-wordmark, .tx-bt-option, .tx-workbench, .tx-composer-dock {
+.tx-app, .tx-scope-chip, .tx-brand-mark, .tx-stats-line, .tx-wordmark, .tx-bt-option, .tx-bt-notice, .tx-workbench, .tx-composer-dock {
   --tx-bg: var(--dsw-alias-bg-base, Canvas);
   --tx-text: var(--dsw-alias-label-primary, CanvasText);
   --tx-muted: var(--dsw-alias-label-tertiary, GrayText);
@@ -9,6 +9,12 @@
   --tx-hover: color-mix(in srgb, var(--tx-text) 4%, var(--tx-bg));
   --tx-danger: var(--dsw-alias-state-error-primary, #be555e);
 }
+.tx-bt-notice { box-sizing: border-box; width: min(400px, calc(100vw - 32px)); margin: auto; padding: 22px; border: 1px solid var(--tx-line); border-radius: 14px; background: var(--tx-bg); color: var(--tx-text); box-shadow: 0 18px 60px #0003; font: inherit; font-size: 13px; line-height: 1.7; }
+.tx-bt-notice::backdrop { background: #0005; }
+.tx-bt-notice h2 { margin: 0 0 10px; font-size: 15px; font-weight: 600; }
+.tx-bt-notice p { margin: 0; font-size: 13px; line-height: 1.75; }
+.tx-bt-notice > div { display: flex; justify-content: flex-end; margin-top: 20px; }
+.tx-bt-notice button { border: 1px solid var(--tx-blue); border-radius: 7px; background: var(--tx-blue); color: white; padding: 6px 16px; font: inherit; cursor: pointer; }
 .tx-app { height: 100%; min-height: 0; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; position: relative; background: var(--tx-bg); color: var(--tx-text); font-size: 13px; line-height: 1.65; container-type: inline-size; container-name: txpanel; font-variant-numeric: tabular-nums; }
 .tx-app *, .tx-app *::before, .tx-app *::after { box-sizing: border-box; }
 .tx-app h2, .tx-app h3, .tx-app p { margin: 0; }

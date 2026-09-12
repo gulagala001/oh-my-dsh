@@ -155,7 +155,7 @@ test('real Chrome extension: native messaging, targeted input, popup stop and co
   assert.equal(await page.evaluate(()=>localStorage.getItem('extension-fixture')),'keep-existing-session');
   if(process.env.TRISOUL_CU_UI_ARTIFACTS){await popup.screenshot({path:join(root,'extension-disconnected.png')});console.log('Extension UI artifacts:',root);}
   await hub.start();
-  await popup.getByRole('button',{name:'连接 trisoul-x',exact:true}).click();
+  await popup.getByRole('button',{name:'连接 Oh My DSH',exact:true}).click();
   const reconnected = await until(()=>hub.list()[0]);
   assert.equal(reconnected.id,connected.id,'profile identity survives reconnect');
   assert.notEqual(reconnected.epoch,connected.epoch,'every connection has a new lifetime identity');

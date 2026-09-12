@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium } from 'playwright';
+import { stopFixtureProcess } from './process.mjs';
 
 export async function until(fn, timeout = 20000) {
   const deadline = Date.now() + timeout;
@@ -37,7 +38,7 @@ export async function frontendFixture(t) {
     releaseReply?.();
     if (process.env.TRISOUL_UI_ARTIFACTS && page && !page.isClosed()) await page.screenshot({path:join(root,'final-state.png')});
     await browser?.close();
-    if (child.exitCode === null) { child.kill('SIGTERM'); await Promise.race([new Promise(resolve => child.once('exit', resolve)), delay(5000)]); if (child.exitCode === null) child.kill('SIGKILL'); }
+    await stopFixtureProcess(child);
     provider.closeAllConnections(); await new Promise(resolve => provider.close(resolve));
     if (!process.env.TRISOUL_UI_ARTIFACTS) await rm(root, { recursive: true, force: true });
   });
@@ -52,7 +53,7 @@ export async function frontendFixture(t) {
   const { sessionId } = await rpc('session/create', { workspaceId: registered.workspace.workspaceId, agentPreset: 'trisoul-x' });
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '整理工作台和对话界面' }] });
   browser = await chromium.launch({ headless: true, executablePath: chromium.executablePath() });
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: 'light' });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: 'light', locale: 'zh-CN' });
   await context.addCookies(cookie.split('; ').map(value => { const index = value.indexOf('='); return { name: value.slice(0, index), value: value.slice(index + 1), url: origin }; }));
   page = await context.newPage(); page.on('pageerror', error => errors.push(error.message));
   await page.goto(origin); await page.getByRole('button', { name: '继续', exact: true }).click();
