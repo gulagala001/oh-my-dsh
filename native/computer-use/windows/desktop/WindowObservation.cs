@@ -87,7 +87,8 @@ internal sealed partial class WindowObservation : IDisposable
         }
         token.ThrowIfCancellationRequested();
         WindowCatalog.RequireInteractive();
-        if (WindowCatalog.Read(target.pid, target.window_id, target.process_identity).bounds != target.bounds) throw new NativeFailure("WINDOW_MOVED", "The window moved or resized during observation; capture it again");
+        var after = WindowCatalog.Read(target.pid, target.window_id, target.process_identity);
+        if (after.bounds != target.bounds || after.dpi != target.dpi) throw new NativeFailure("WINDOW_MOVED", "The window geometry or DPI changed during observation; capture it again");
         return new Dictionary<string, object?> { ["window_id"] = target.window_id, ["window_title"] = target.title, ["pid"] = target.pid, ["process_identity"] = target.process_identity, ["app_id"] = target.app_id, ["app_name"] = target.app_name, ["bounds"] = target.bounds, ["elements"] = elements, ["focused_element_index"] = focused, ["truncated"] = truncated, ["unreadable"] = unreadable };
     }
     private static string Limit(string value) => value.Length <= 8192 ? value : value[..8192] + " [truncated]";

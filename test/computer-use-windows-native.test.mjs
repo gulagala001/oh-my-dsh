@@ -1,3 +1,4 @@
+import { verifyDisplayScaling } from './fixtures/computer-use/windows-dpi.mjs';
 import { msbuildValue } from '../src/computer-use/windows-build.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -165,6 +166,7 @@ test('Windows native installation, read-only observation and input operate on re
   assert.equal((await applicationState()).text, released.text, 'unowned input still stops the controller before it types');
   await native.release('controller');
   assert.ok(Object.values((await fixture.request('fixture', { action: 'state' })).held).every(held => held === false));
+  const displayScaling = await verifyDisplayScaling({ t, fixture, native, target, artifact, nextFrame });
   await fixture.request('fixture', { action: 'controls' });
   const controls = await native.bind('controls', { id: target.app_id, windowId: target.window_id });
   const controlsState = () => native.invoke('controls', controls.id, 'getAXState', [{ disableDiffing: true }]);
@@ -202,5 +204,5 @@ test('Windows native installation, read-only observation and input operate on re
   await native.uninstall(); assert.equal(native.available(), false); assert.equal(runtime.binary(), null);
   assert.equal((await fixture.request('fixture', { action: 'state' })).second, preserved.second, 'runtime removal preserves the other user application window');
   await native.install(); assert.equal(native.available(), true);
-  await writeFile(join(artifact, 'report.json'), JSON.stringify({ status: 'passed', platform: process.platform, arch: process.arch, runtime: JSON.parse(await readFile(join(output, 'build.json'), 'utf8')), dpi: target.dpi, installationTested: ['publish', 'nativeLock', 'probe', 'reuse', 'uninstall', 'reinstall'], inputTested: ['setValue', 'selectText', 'pressKey', 'typeText', 'semanticClick', 'physicalPointer', 'leftRightMiddle', 'doubleClick', 'drag', 'cancelledDragRelease', 'unownedPointerStop', 'toggle', 'expandCollapse', 'pageScroll', 'release'], inputPending: ['clipboard', 'physicalUserIntervention'] }, null, 2));
+  await writeFile(join(artifact, 'report.json'), JSON.stringify({ status: 'passed', platform: process.platform, arch: process.arch, runtime: JSON.parse(await readFile(join(output, 'build.json'), 'utf8')), dpi: target.dpi, displayScaling, installationTested: ['publish', 'nativeLock', 'probe', 'reuse', 'uninstall', 'reinstall'], inputTested: ['setValue', 'selectText', 'pressKey', 'typeText', 'semanticClick', 'physicalPointer', 'leftRightMiddle', 'doubleClick', 'drag', 'cancelledDragRelease', 'unownedPointerStop', 'toggle', 'expandCollapse', 'pageScroll', 'release'], inputPending: ['clipboard', 'physicalUserIntervention'] }, null, 2));
 });

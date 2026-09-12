@@ -101,7 +101,7 @@ internal sealed class DesktopObservation : IDisposable
                 int maximum = args.TryGetProperty("max_dimension", out var maximumValue) ? maximumValue.GetInt32() : 1600;
                 if (maximum is < 64 or > 4096) throw new NativeFailure("INVALID_ARGUMENT", "max_dimension must be between 64 and 4096");
                 var frame = await Capture(target).Next(maximum, token);
-                if (frame.Bounds != target.bounds) throw new NativeFailure("WINDOW_MOVED", "Window geometry changed between accessibility and screenshot observation");
+                if (frame.Bounds != target.bounds || frame.Dpi != target.dpi) throw new NativeFailure("WINDOW_MOVED", "Window geometry or DPI changed between accessibility and screenshot observation");
                 state["screenshot_width"] = frame.Width; state["screenshot_height"] = frame.Height;
                 state["screenshot_scale"] = (double)frame.Width / frame.Bounds.width;
                 if (!readOnly && name != "get_window_share") await observation.RecordFrame(target, frame);

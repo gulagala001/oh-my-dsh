@@ -7,7 +7,7 @@ using Windows.Graphics.DirectX.Direct3D11;
 using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
 
-internal sealed record WindowFrame(string Data, int Width, int Height, WindowBounds Bounds, long At);
+internal sealed record WindowFrame(string Data, int Width, int Height, WindowBounds Bounds, uint Dpi, long At);
 
 internal sealed class WindowCapture : IDisposable
 {
@@ -16,7 +16,7 @@ internal sealed class WindowCapture : IDisposable
     private readonly GraphicsCaptureItem item;
     private readonly Direct3D11CaptureFramePool pool;
     private readonly GraphicsCaptureSession session;
-    private readonly Channel<(Direct3D11CaptureFrame Frame, WindowBounds Bounds)> frames = Channel.CreateBounded<(Direct3D11CaptureFrame, WindowBounds)>(1);
+    private readonly Channel<(Direct3D11CaptureFrame Frame, WindowBounds Bounds, uint Dpi)> frames = Channel.CreateBounded<(Direct3D11CaptureFrame, WindowBounds, uint)>(1);
     private SizeInt32 size;
     private bool closed, disposed, sessionDisposed, poolDisposed, deviceDisposed;
     private readonly object gate = new();
@@ -66,9 +66,9 @@ internal sealed class WindowCapture : IDisposable
                 var frame = sender.TryGetNextFrame(); if (frame is null) return;
                 try
                 {
-                    var bounds = WindowCatalog.Read(target.pid, target.window_id, target.process_identity).bounds;
+                    var current = WindowCatalog.Read(target.pid, target.window_id, target.process_identity);
                     while (frames.Reader.TryRead(out var old)) old.Frame.Dispose();
-                    if (!frames.Writer.TryWrite((frame, bounds))) frame.Dispose();
+                    if (!frames.Writer.TryWrite((frame, current.bounds, current.dpi))) frame.Dispose();
                 }
                 catch { frame.Dispose(); throw; }
             }
@@ -83,7 +83,7 @@ internal sealed class WindowCapture : IDisposable
             WindowCatalog.RequireInteractive();
             var current = WindowCatalog.Read(target.pid, target.window_id, target.process_identity);
             if (!current.is_on_screen) throw new NativeFailure("WINDOW_NOT_VISIBLE", "The selected window is minimized or unavailable");
-            (Direct3D11CaptureFrame Frame, WindowBounds Bounds) captured;
+            (Direct3D11CaptureFrame Frame, WindowBounds Bounds, uint Dpi) captured;
             try { captured = await frames.Reader.ReadAsync(deadline.Token); }
             catch (ChannelClosedException error) { throw error.InnerException ?? new NativeFailure("CAPTURE_INTERRUPTED", "The window capture stream ended"); }
             using var frame = captured.Frame;
@@ -98,7 +98,7 @@ internal sealed class WindowCapture : IDisposable
                 }
                 continue;
             }
-            if (captured.Bounds != current.bounds || frame.ContentSize.Width != current.bounds.width || frame.ContentSize.Height != current.bounds.height)
+            if (captured.Bounds != current.bounds || captured.Dpi != current.dpi || frame.ContentSize.Width != current.bounds.width || frame.ContentSize.Height != current.bounds.height)
                 throw new NativeFailure("CAPTURE_GEOMETRY_CHANGED", "Window frame and screen geometry do not match; capture again after the window settles");
             using var bitmap = await SoftwareBitmap.CreateCopyFromSurfaceAsync(frame.Surface, BitmapAlphaMode.Ignore).AsTask(deadline.Token);
             using var stream = new InMemoryRandomAccessStream();
@@ -115,8 +115,8 @@ internal sealed class WindowCapture : IDisposable
             WindowCatalog.RequireInteractive();
             lock (gate) { if (closed || disposed) throw new NativeFailure("STALE_WINDOW", "The captured window is no longer available"); }
             var after = WindowCatalog.Read(target.pid, target.window_id, target.process_identity);
-            if (!after.is_on_screen || after.bounds != captured.Bounds) throw new NativeFailure("WINDOW_MOVED", "Window geometry changed while encoding the image; capture again");
-            return new(Convert.ToBase64String(bytes), width, height, captured.Bounds, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+            if (!after.is_on_screen || after.bounds != captured.Bounds || after.dpi != captured.Dpi) throw new NativeFailure("WINDOW_MOVED", "Window geometry or DPI changed while encoding the image; capture again");
+            return new(Convert.ToBase64String(bytes), width, height, captured.Bounds, captured.Dpi, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
         }
     }
     public void Dispose()

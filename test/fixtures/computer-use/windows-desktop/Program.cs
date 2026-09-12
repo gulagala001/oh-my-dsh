@@ -26,6 +26,7 @@ internal static class FixtureProgram
         var panel = new StackPanel { Margin = new Thickness(18) };
         var editor = new TextBox { Text = "Windows 观察验收 中文🙂", MinHeight = 36 };
         var clipboard = new ClipboardFixture();
+        var displayScale = new DpiFixture();
         DataObject.AddPastingHandler(editor, clipboard.Pasting);
         AutomationProperties.SetName(editor, "测试内容"); AutomationProperties.SetAutomationId(editor, "fixture-editor");
         var marker = new Border { Width = 240, Height = 120, Background = new SolidColorBrush(Color.FromRgb(220, 30, 50)), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 16, 0, 0) };
@@ -87,6 +88,8 @@ internal static class FixtureProgram
                         var action = args.TryGetProperty("action", out var operation) ? operation.GetString() : "state";
                         object result = await app.Dispatcher.InvokeAsync(() =>
                         {
+                            if (action == "display-scale") return new { percent = displayScale.Set(args.GetProperty("percent").GetInt32()) };
+                            if (action == "display-scale-restore") { displayScale.Dispose(); return new { restored = true }; }
                             if (action == "clipboard-seed") { clipboard.Mode = args.GetProperty("mode").GetString()!; clipboard.Seed(args.GetProperty("text").GetString()!); return clipboard.State(); }
                             if (action == "clipboard-state") return clipboard.State();
                             if (action == "clipboard-atomic") return clipboard.AtomicProbe();
@@ -102,12 +105,12 @@ internal static class FixtureProgram
                             if (action == "restore") { first.WindowState = WindowState.Normal; second.Activate(); }
                             if (action == "close") first.Close();
                             GetCursorPos(out var cursor);
-                            return new { pid = Environment.ProcessId, first = firstClosed ? 0 : new WindowInteropHelper(first).Handle.ToInt64(), second = new WindowInteropHelper(second).Handle.ToInt64(), foreground = GetForegroundWindow().ToInt64(), cursor = new { x = cursor.X, y = cursor.Y }, text = editor.Text, selectionStart = editor.SelectionStart, selectionLength = editor.SelectionLength, clicks, pointerEvents = pointerEvents.ToArray(), doubleClickTime = GetDoubleClickTime(), controls = new { toggled = toggle.IsChecked, expanded = expand.IsExpanded, scrollOffset = scrolling.VerticalOffset, viewport = scrolling.ViewportHeight }, held = new { left = (GetAsyncKeyState(1) & 0x8000) != 0, right = (GetAsyncKeyState(2) & 0x8000) != 0, middle = (GetAsyncKeyState(4) & 0x8000) != 0, ctrl = (GetAsyncKeyState(0x11) & 0x8000) != 0, shift = (GetAsyncKeyState(0x10) & 0x8000) != 0, alt = (GetAsyncKeyState(0x12) & 0x8000) != 0 } };
+                            return new { pid = Environment.ProcessId, first = firstClosed ? 0 : new WindowInteropHelper(first).Handle.ToInt64(), second = new WindowInteropHelper(second).Handle.ToInt64(), foreground = GetForegroundWindow().ToInt64(), dpi = firstClosed ? 0 : GetDpiForWindow(new WindowInteropHelper(first).Handle), cursor = new { x = cursor.X, y = cursor.Y }, text = editor.Text, selectionStart = editor.SelectionStart, selectionLength = editor.SelectionLength, clicks, pointerEvents = pointerEvents.ToArray(), doubleClickTime = GetDoubleClickTime(), controls = new { toggled = toggle.IsChecked, expanded = expand.IsExpanded, scrollOffset = scrolling.VerticalOffset, viewport = scrolling.ViewportHeight }, held = new { left = (GetAsyncKeyState(1) & 0x8000) != 0, right = (GetAsyncKeyState(2) & 0x8000) != 0, middle = (GetAsyncKeyState(4) & 0x8000) != 0, ctrl = (GetAsyncKeyState(0x11) & 0x8000) != 0, shift = (GetAsyncKeyState(0x10) & 0x8000) != 0, alt = (GetAsyncKeyState(0x12) & 0x8000) != 0 } };
                         });
                         await Console.Out.WriteLineAsync(JsonSerializer.Serialize(new { jsonrpc = "2.0", id, result }));
                     }
                 }
-                finally { await app.Dispatcher.InvokeAsync(() => { clipboard.Restore(); timer.Stop(); app.Shutdown(); }); }
+                finally { await app.Dispatcher.InvokeAsync(() => { try { displayScale.Dispose(); clipboard.Restore(); } finally { timer.Stop(); app.Shutdown(); } }); }
             });
         };
         app.Run();
@@ -116,6 +119,7 @@ internal static class FixtureProgram
     [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int key);
     [DllImport("user32.dll")] private static extern uint GetDoubleClickTime();
+    [DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr hwnd);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetCursorPos(out Point point);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetCursorPos(int x, int y);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetProcessDpiAwarenessContext(IntPtr context);

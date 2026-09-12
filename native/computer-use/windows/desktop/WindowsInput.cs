@@ -78,7 +78,7 @@ internal sealed class WindowsInput(Action<object>? pointer = null)
         // SetCursorPos can move the pointer without producing a low-level
         // mouse hook. Also compare the real desktop position between our own
         // sends, so software pointer changes cannot silently inherit control.
-        if (!GetCursorPos(out var current)) throw new NativeFailure("INPUT_MONITOR_LOST", "Could not read the desktop cursor position");
+        if (!GetPhysicalCursorPos(out var current)) throw new NativeFailure("INPUT_MONITOR_LOST", "Could not read the desktop cursor position");
         if (expectedCursor is { } expected && (expected.X != current.X || expected.Y != current.Y)) cursorIntervened = true;
         expectedCursor ??= current;
         if (cursorIntervened) throw new NativeFailure("USER_INTERVENTION", "Desktop control stopped because the cursor moved outside the controller's input");
@@ -101,12 +101,12 @@ internal sealed class WindowsInput(Action<object>? pointer = null)
         if (pendingReleases.Length == 0) acceptedInputs.Clear();
         if (events.Take(checked((int)accepted)).Any(item => item.Type == 0))
         {
-            if (!GetCursorPos(out var current)) throw new NativeFailure("INPUT_MONITOR_LOST", "Could not confirm the cursor position after native input");
+            if (!GetPhysicalCursorPos(out var current)) throw new NativeFailure("INPUT_MONITOR_LOST", "Could not confirm the cursor position after native input");
             expectedCursor = current;
         }
         if (accepted == events.Length)
         {
-            if (events.Any(item => item.Type == 0) && GetCursorPos(out var at)) Report(target, at.X, at.Y, events.Any(item => item.Type == 0 && (item.Value.Mouse.Flags & (2 | 8 | 32)) != 0));
+            if (events.Any(item => item.Type == 0) && GetPhysicalCursorPos(out var at)) Report(target, at.X, at.Y, events.Any(item => item.Type == 0 && (item.Value.Mouse.Flags & (2 | 8 | 32)) != 0));
             return;
         }
         ReleaseInput();
@@ -189,7 +189,7 @@ internal sealed class WindowsInput(Action<object>? pointer = null)
     [DllImport("user32.dll", SetLastError = true)] private static extern uint SendInput(uint count, WindowsInputEvent[] inputs, int size);
     [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int key);
     [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
-    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetCursorPos(out Point point);
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetPhysicalCursorPos(out Point point);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetForegroundWindow(IntPtr hwnd);
     [DllImport("user32.dll")] private static extern IntPtr WindowFromPoint(Point point);
     [DllImport("user32.dll")] private static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
