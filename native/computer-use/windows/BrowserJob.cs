@@ -11,32 +11,44 @@ using System.Threading.Tasks;
 // compatible with .NET Framework / C# 5: ordinary browsing requires no SDK.
 public static class OhMyDshBrowserJob
 {
-    public static void Run(string executable, string[] arguments)
+    public static void Run(string executable, string[] arguments, int guardianPid)
     {
         Console.OutputEncoding = new UTF8Encoding(false);
         IntPtr job = IntPtr.Zero;
         ProcessInfo process = new ProcessInfo();
-        bool assigned = false;
         try
         {
             // The guardian must still own a live connection before startup.
             Console.WriteLine("{\"type\":\"job-ready\"}");
             if (Console.ReadLine() != "start") return;
-            Task<string> control = Task.Run(() => Console.ReadLine());
             job = CreateJobObjectW(IntPtr.Zero, null);
             if (job == IntPtr.Zero) Fail("Could not create the Windows browser job");
             ExtendedLimits limits = new ExtendedLimits();
             limits.Basic.LimitFlags = 0x2000; // KILL_ON_JOB_CLOSE; no breakaway.
             if (!SetInformationJobObject(job, 9, ref limits, (uint)Marshal.SizeOf(typeof(ExtendedLimits)))) Fail("Could not set browser job limits");
+            // The Node guardian retains a duplicate handle. If this helper is
+            // killed, it can recover this exact job without PID-tree guessing.
+            IntPtr guardian = OpenProcess(0x1040, false, checked((uint)guardianPid));
+            if (guardian == IntPtr.Zero) Fail("Could not retain the browser job in its guardian");
+            IntPtr retained;
+            try
+            {
+                long created = Created(guardian);
+                Console.WriteLine("{\"type\":\"job-retain-ready\",\"created\":\"" + created.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\"}");
+                // Keep this original process handle open across the reply:
+                // neither transfer nor later recovery may follow a reused PID.
+                if (Console.ReadLine() != "retain") return;
+                if (!DuplicateHandle(GetCurrentProcess(), job, guardian, out retained, 0, false, 2)) Fail("Could not duplicate the browser job handle");
+            }
+            finally { CloseHandle(guardian); }
+            Console.WriteLine("{\"type\":\"job-owned\",\"handle\":\"" + retained.ToInt64().ToString(System.Globalization.CultureInfo.InvariantCulture) + "\"}");
+            // Do not create any browser until the guardian has the receipt.
+            if (Console.ReadLine() != "owned") return;
+            Task<string> control = Task.Run(() => Console.ReadLine());
             if (control.IsCompleted) return;
-            StartupInfo startup = new StartupInfo(); startup.Size = (uint)Marshal.SizeOf(typeof(StartupInfo));
             StringBuilder command = new StringBuilder(Quote(executable));
             foreach (string argument in arguments) command.Append(' ').Append(Quote(argument));
-            // No job handle is inherited. The browser cannot run or create
-            // children until it has entered our job, including under a CI job.
-            if (!CreateProcessW(executable, command, IntPtr.Zero, IntPtr.Zero, false, 0x08000004, IntPtr.Zero, null, ref startup, out process)) Fail("Could not create the managed browser");
-            if (!AssignProcessToJobObject(job, process.Process)) Fail("Could not assign the managed browser to its job");
-            assigned = true;
+            process = CreateInJob(job, executable, command);
             if (!control.IsCompleted)
             {
                 if (ResumeThread(process.Thread) == uint.MaxValue) Fail("Could not resume the managed browser");
@@ -54,18 +66,60 @@ public static class OhMyDshBrowserJob
         }
         finally
         {
-            // Assignment failure leaves a suspended process outside the job.
-            // Its original creation handle identifies precisely that process.
-            if (!assigned && process.Process != IntPtr.Zero)
-            {
-                TerminateProcess(process.Process, 1);
-                WaitForSingleObject(process.Process, 5000);
-            }
-            // A broken control/output pipe or an exception also closes the
-            // sole job handle. Windows then terminates all associated children.
+            // The guardian either confirms normal cleanup or uses its retained
+            // handle to recover. Losing both handles kills the entire job.
             if (job != IntPtr.Zero) CloseHandle(job);
             if (process.Thread != IntPtr.Zero) CloseHandle(process.Thread);
             if (process.Process != IntPtr.Zero) CloseHandle(process.Process);
+        }
+    }
+    public static void Recover(int guardianPid, long guardianCreated, long retained)
+    {
+        Console.OutputEncoding = new UTF8Encoding(false);
+        IntPtr guardian = OpenProcess(0x1040, false, checked((uint)guardianPid));
+        if (guardian == IntPtr.Zero) Fail("Could not open the browser job guardian");
+        IntPtr job = IntPtr.Zero;
+        try
+        {
+            if (Created(guardian) != guardianCreated) throw new InvalidOperationException("The browser job guardian identity has changed");
+            if (!DuplicateHandle(guardian, new IntPtr(retained), GetCurrentProcess(), out job, 0, false, 2)) Fail("Could not recover the retained browser job");
+            Stop(job);
+            Console.WriteLine("{\"type\":\"browser-cleaned\"}");
+        }
+        finally { if (job != IntPtr.Zero) CloseHandle(job); CloseHandle(guardian); }
+    }
+    private static long Created(IntPtr process)
+    {
+        long created, exited, kernel, user;
+        if (!GetProcessTimes(process, out created, out exited, out kernel, out user)) Fail("Could not verify the browser guardian creation identity");
+        return created;
+    }
+    private static ProcessInfo CreateInJob(IntPtr job, string executable, StringBuilder command)
+    {
+        IntPtr attributes = IntPtr.Zero, jobs = IntPtr.Zero;
+        IntPtr size = IntPtr.Zero; bool initialized = false;
+        InitializeProcThreadAttributeList(IntPtr.Zero, 1, 0, ref size);
+        if (size == IntPtr.Zero) Fail("Could not size browser process attributes");
+        try
+        {
+            attributes = Marshal.AllocHGlobal(size);
+            if (!InitializeProcThreadAttributeList(attributes, 1, 0, ref size)) Fail("Could not initialize browser process attributes");
+            initialized = true;
+            jobs = Marshal.AllocHGlobal(IntPtr.Size); Marshal.WriteIntPtr(jobs, job);
+            // PROC_THREAD_ATTRIBUTE_JOB_LIST makes assignment part of process
+            // creation. Killing the helper cannot strand an unassigned child.
+            if (!UpdateProcThreadAttribute(attributes, 0, new UIntPtr(0x2000d), jobs, new UIntPtr((uint)IntPtr.Size), IntPtr.Zero, IntPtr.Zero)) Fail("Could not set the browser process job");
+            StartupInfoEx startup = new StartupInfoEx();
+            startup.Startup.Size = (uint)Marshal.SizeOf(typeof(StartupInfoEx)); startup.Attributes = attributes;
+            ProcessInfo result;
+            if (!CreateProcessW(executable, command, IntPtr.Zero, IntPtr.Zero, false, 0x08080004, IntPtr.Zero, null, ref startup, out result)) Fail("Could not create the managed browser in its job");
+            return result;
+        }
+        finally
+        {
+            if (initialized) DeleteProcThreadAttributeList(attributes);
+            if (attributes != IntPtr.Zero) Marshal.FreeHGlobal(attributes);
+            if (jobs != IntPtr.Zero) Marshal.FreeHGlobal(jobs);
         }
     }
     private static void Stop(IntPtr job)
@@ -156,6 +210,7 @@ public static class OhMyDshBrowserJob
         public ushort ShowWindow, ReservedLength;
         public IntPtr ReservedBytes, Input, Output, Error;
     }
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] private struct StartupInfoEx { public StartupInfo Startup; public IntPtr Attributes; }
     [StructLayout(LayoutKind.Sequential)] private struct BasicLimits
     {
         public long ProcessTime, JobTime; public uint LimitFlags;
@@ -178,13 +233,17 @@ public static class OhMyDshBrowserJob
     [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool QueryInformationJobObject(IntPtr job, int type, out Accounting info, uint length, IntPtr returnedLength);
     [DllImport("kernel32.dll", EntryPoint = "QueryInformationJobObject", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool QueryJobProcesses(IntPtr job, int type, IntPtr info, uint length, IntPtr returnedLength);
     [DllImport("kernel32.dll", SetLastError = true)] private static extern IntPtr OpenProcess(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint pid);
+    [DllImport("kernel32.dll")] private static extern IntPtr GetCurrentProcess();
+    [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool DuplicateHandle(IntPtr sourceProcess, IntPtr sourceHandle, IntPtr targetProcess, out IntPtr targetHandle, uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint options);
+    [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetProcessTimes(IntPtr process, out long created, out long exited, out long kernel, out long user);
+    [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool InitializeProcThreadAttributeList(IntPtr list, int count, uint flags, ref IntPtr size);
+    [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool UpdateProcThreadAttribute(IntPtr list, uint flags, UIntPtr attribute, IntPtr value, UIntPtr size, IntPtr previous, IntPtr returned);
+    [DllImport("kernel32.dll")] private static extern void DeleteProcThreadAttributeList(IntPtr list);
     [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool IsProcessInJob(IntPtr process, IntPtr job, [MarshalAs(UnmanagedType.Bool)] out bool belongs);
-    [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool AssignProcessToJobObject(IntPtr job, IntPtr process);
     [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool TerminateJobObject(IntPtr job, uint code);
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true, ExactSpelling = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool CreateProcessW(string application, StringBuilder commandLine, IntPtr processAttributes, IntPtr threadAttributes, [MarshalAs(UnmanagedType.Bool)] bool inheritHandles, uint flags, IntPtr environment, string directory, ref StartupInfo startup, out ProcessInfo process);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true, ExactSpelling = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool CreateProcessW(string application, StringBuilder commandLine, IntPtr processAttributes, IntPtr threadAttributes, [MarshalAs(UnmanagedType.Bool)] bool inheritHandles, uint flags, IntPtr environment, string directory, ref StartupInfoEx startup, out ProcessInfo process);
     [DllImport("kernel32.dll", SetLastError = true)] private static extern uint ResumeThread(IntPtr thread);
     [DllImport("kernel32.dll", SetLastError = true)] private static extern uint WaitForSingleObject(IntPtr handle, uint milliseconds);
     [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetExitCodeProcess(IntPtr process, out uint code);
-    [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool TerminateProcess(IntPtr process, uint code);
     [DllImport("kernel32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool CloseHandle(IntPtr handle);
 }

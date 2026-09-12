@@ -61,9 +61,9 @@ process.send({guardian:host.child.pid,browser:host.browserPid,job:host.run.jobPi
   await rm(root, { recursive: true, force: true });
 });
 
-test('Windows guardian death invalidates old work, releases its job and permits a fresh browser', { skip: process.platform !== 'win32', timeout: 90000 }, async t => {
+for (const component of ['guardian', 'job helper']) test('Windows ' + component + ' death invalidates old work, releases its job and permits a fresh browser', { skip: process.platform !== 'win32', timeout: 90000 }, async t => {
   const root = await mkdtemp(join(tmpdir(), 'omd-job-guardian-'));
-  const artifacts = resolve('cu-artifacts', 'windows-job-guardian-' + Date.now()); await mkdir(artifacts, { recursive: true });
+  const artifacts = resolve('cu-artifacts', 'windows-job-' + component.replaceAll(' ', '-') + '-' + Date.now()); await mkdir(artifacts, { recursive: true });
   const host = new BrowserHost(join(root, 'profile')); let owned = [];
   t.after(async () => { await host.close().catch(error => t.diagnostic(error.message)); await stopWindowsProcesses(owned); await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }); });
   const first = await host.create('fixture', 'data:text/html,<h1>Old Windows page</h1>');
@@ -71,7 +71,12 @@ test('Windows guardian death invalidates old work, releases its job and permits 
   const rejected = assert.rejects(waiting, /closed|exited|crash|disconnected/i);
   owned = windowsProcessTree(await windowsProcessSnapshot(), host.child.pid);
   await writeFile(join(artifacts, 'before.json'), JSON.stringify(owned, null, 2));
-  host.child.kill('SIGKILL'); await rejected; await gone(owned, artifacts);
+  if (component === 'guardian') host.child.kill('SIGKILL');
+  else {
+    const helper = owned.find(process => process.pid === host.run.jobPid); assert.ok(helper);
+    await stopWindowsProcesses([helper]);
+  }
+  await rejected; await gone(owned, artifacts);
   await assert.rejects(host.target('fixture', first.id), /closed|exited/i);
   const second = await host.create('fixture', 'data:text/html,<h1>Fresh Windows page</h1>');
   assert.notEqual(second.id, first.id);

@@ -88,7 +88,7 @@ export class BrowserHost extends BrowserActions {
     }
     await rm(portFile, { force: true });
     if (this.closing) throw new Error('Computer Use browser is shutting down');
-    const run = { id: randomUUID(), ready: false, lost: false, requestedStop: false, stderr: '' }; this.run = run;
+    const run = { id: randomUUID(), ready: false, lost: false, requestedStop: false, stderr: '', phase: 'guardian', portFileState: 'unread' }; this.run = run;
     const args = [executable, `--user-data-dir=${this.directory}`, '--remote-debugging-port=0', '--remote-debugging-address=127.0.0.1', '--no-first-run', '--no-default-browser-check', '--no-startup-window', '--disable-background-networking', '--enable-blink-features=WebMCP', ...(this.headless ? ['--headless=new'] : [])];
     const child = fork(new URL('./browser-process.mjs', import.meta.url), args, { execArgv: [], stdio: ['ignore', 'ignore', 'pipe', 'ipc'], windowsHide: true, detached: process.platform !== 'win32' });
     run.child = child; this.child = child; this.browserPid = null;
@@ -102,8 +102,9 @@ export class BrowserHost extends BrowserActions {
       });
     });
     child.on('message', message => {
-      if (message.type === 'browser-job-started') run.jobPid = message.pid;
-      if (message.type === 'browser-started') { run.browserPid = message.pid; if (this.run === run) this.browserPid = message.pid; }
+      if (message.type === 'browser-job-started') { run.jobPid = message.pid; run.phase = 'job-helper'; }
+      if (message.type === 'browser-job-owned') run.phase = 'job-retained';
+      if (message.type === 'browser-started') { run.browserPid = message.pid; run.phase = 'browser-started'; if (this.run === run) this.browserPid = message.pid; }
       if (message.type === 'launch-error') run.launchError = new Error(message.message);
       if (message.type === 'browser-exited') { run.launchError ??= new Error(`Browser exited (${message.code ?? message.signal})`); this.invalidate(run, run.launchError); }
       if (message.type === 'cleanup-error') run.cleanupError = new Error(message.message);
@@ -119,7 +120,8 @@ export class BrowserHost extends BrowserActions {
         // Chrome can hold an exclusive Windows handle while publishing this
         // file. Retry within the existing startup deadline, then still verify
         // the debugger's actual PID before claiming the profile.
-        try { address = await readFile(portFile, 'utf8'); } catch (error) { if (!['ENOENT', 'EBUSY'].includes(error.code)) throw error; }
+        try { address = await readFile(portFile, 'utf8'); run.portFileState = debuggingEndpoint(address) ? 'valid' : 'partial'; }
+        catch (error) { run.portFileState = error.code; if (!['ENOENT', 'EBUSY'].includes(error.code)) throw error; }
         if (run.lost || run.launchError) throw run.launchError ?? new Error('Browser exited during startup');
         const endpoint = debuggingEndpoint(address);
         if (endpoint && run.browserPid) {
@@ -129,7 +131,9 @@ export class BrowserHost extends BrowserActions {
         }
         await delay(40);
       }
-      throw new Error('Browser startup timed out' + (run.stderr.trim() ? ': ' + run.stderr.trim() : ''));
+      throw new Error('Browser startup timed out' + (run.stderr.trim() ? ': ' + run.stderr.trim() : ''), {
+        cause: { phase: run.phase, browserPid: run.browserPid, jobPid: run.jobPid, portFile: run.portFileState },
+      });
     } catch (error) { await this.terminateBrowser(run); throw error; }
   }
   invalidate(run, reason) {
