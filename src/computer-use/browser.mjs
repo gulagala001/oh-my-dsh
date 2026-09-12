@@ -1,5 +1,5 @@
 import { chromium } from 'playwright';
-import { spawn, fork, execFile } from 'node:child_process';
+import { fork, execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -290,10 +290,15 @@ export class BrowserHost extends BrowserActions {
     run.requestedStop = true;
     const pending = (async () => {
       if (process.platform === 'win32') {
-        if (child.exitCode === null && child.signalCode === null) await new Promise(resolve => {
-          const task = spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
-          task.once('error', resolve); task.once('exit', resolve);
-        });
+        if (child.exitCode === null && child.signalCode === null) {
+          // The guardian owns the browser's exit handle. Killing the guardian
+          // first loses that confirmation while Chrome still holds its files.
+          if (child.connected) await new Promise((resolve, reject) => { child.send({ type: 'stop' }, error => error && child.exitCode === null && child.signalCode === null ? reject(error) : resolve()); });
+          let timer;
+          try { await Promise.race([run.exited, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Windows browser shutdown is still pending; retry Stop.')), 12000); })]); }
+          finally { clearTimeout(timer); }
+        }
+        if (run.cleanupError) throw run.cleanupError;
       } else {
         const signal = async value => {
           try { process.kill(-child.pid, value); return true; }

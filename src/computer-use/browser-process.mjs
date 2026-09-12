@@ -5,7 +5,7 @@ import { spawn, execFile } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const [executable, ...args] = process.argv.slice(2);
-let stopping, browser, exitCode = 0;
+let stopping, browser, browserExited, exitCode = 0;
 const notify = message => {
   if (process.connected) { try { process.send(message, () => {}); } catch {} }
 };
@@ -26,10 +26,23 @@ function stop() {
   if (stopping) return stopping;
   stopping = Promise.resolve().then(async () => {
     if (process.platform === 'win32') {
-      if (browser?.pid) await new Promise(resolve => {
-        const task = spawn('taskkill', ['/PID', String(browser.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
-        task.once('error', resolve); task.once('exit', resolve);
-      });
+      try {
+        if (browser?.pid && browser.exitCode === null && browser.signalCode === null) {
+          const code = await new Promise((resolve, reject) => {
+            const task = spawn('taskkill', ['/PID', String(browser.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore', timeout: 5000 });
+            task.once('error', reject); task.once('exit', resolve);
+          });
+          if (code !== 0 && browser.exitCode === null && browser.signalCode === null) throw new Error('Windows refused to stop the owned browser process tree');
+        }
+        // taskkill returns after requesting termination. Keep the guardian
+        // alive until Node has observed the actual browser process exit.
+        let timer;
+        try { await Promise.race([browserExited, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('The Windows browser did not finish exiting')), 5000); })]); }
+        finally { clearTimeout(timer); }
+      } catch (error) {
+        if (process.connected) await new Promise(resolve => { try { process.send({ type: 'cleanup-error', message: error.message }, () => resolve()); } catch { resolve(); } });
+        process.exit(1);
+      }
       process.exit(exitCode);
     }
     const signalGroup = signal => {
@@ -60,6 +73,7 @@ if (!process.connected || !executable) {
   process.exit(1);
 } else {
   browser = spawn(executable, args, { stdio: ['ignore', 'ignore', 'inherit'], windowsHide: true });
+  browserExited = new Promise(resolve => { browser.once('exit', resolve); browser.once('error', resolve); });
   browser.on('spawn', () => notify({ type: 'browser-started', pid: browser.pid }));
   browser.on('error', error => { exitCode = 1; notify({ type: 'launch-error', message: error.message }); void stop(); });
   browser.on('exit', (code, signal) => { exitCode = code ?? 1; notify({ type: 'browser-exited', code, signal }); void stop(); });

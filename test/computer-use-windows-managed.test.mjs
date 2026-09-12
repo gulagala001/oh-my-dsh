@@ -36,6 +36,9 @@ test('Windows managed browser shutdown confirms its own processes have exited an
     t.diagnostic('Windows managed process evidence: ' + artifacts);
   });
   await browser.create('fixture', 'data:text/html,<title>Managed Windows fixture</title><input>');
+  const connection = await browser.connection('fixture'), cdp = await connection.browser.newBrowserCDPSession();
+  const version = await cdp.send('Browser.getVersion'); await cdp.detach();
+  await writeFile(join(artifacts, 'browser.json'), JSON.stringify({ guardianPid: browser.child.pid, browserPid: browser.browserPid, executable: browser.runtimePath, version }, null, 2));
   const before = await processes(), ids = new Set([browser.child.pid]);
   for (let changed = true; changed;) { changed = false; for (const process of before) if (ids.has(process.parent) && !ids.has(process.pid)) { ids.add(process.pid); changed = true; } }
   owned = before.filter(process => ids.has(process.pid));

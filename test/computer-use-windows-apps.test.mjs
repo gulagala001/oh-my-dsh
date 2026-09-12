@@ -22,9 +22,12 @@ test('Windows discovers installed apps, launches exact executables and Start men
   const title = 'Oh My DSH App Fixture ' + randomUUID();
   const env = { ...process.env, OMD_TEST_EXE: executable, OMD_TEST_OTHER_EXE: otherExecutable, OMD_TEST_SHORTCUT: title };
   const ps = source => run('pwsh', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', source], { env, windowsHide: true, timeout: 20000 });
-  let host;
+  let host; const calls = [];
   t.after(async () => {
+    const connections = await Promise.all(Array.from(host?.connections.values() ?? [], pending => pending.catch(() => null)));
     const closed = await Promise.allSettled([host?.close()]);
+    await writeFile(join(artifacts, 'native-calls.json'), JSON.stringify(calls, null, 2));
+    await writeFile(join(artifacts, 'native-connections.json'), JSON.stringify(connections.filter(Boolean).map(connection => ({ pid: connection.client.child.pid, stderr: connection.client.stderr })), null, 2));
     // This is a test-created executable at a unique path. Stop never closes
     // it; the fixture cleanup separately removes only this app and shortcut.
     await ps(`$expected = [IO.Path]::GetFullPath($env:OMD_TEST_EXE)
@@ -46,6 +49,13 @@ if (Test-Path -LiteralPath $link) { Remove-Item -LiteralPath $link }`);
   await copyFile(join(fixtureOutput, 'OhMyDsh.DesktopFixture.exe'), executable);
   await copyFile(executable, otherExecutable);
   host = new WindowsNativeHost(root, { binary: join(output, expected.executable) });
+  const call = host.call.bind(host);
+  host.call = async (...args) => {
+    const entry = { session: args[0], method: args[1], started: Date.now() }; calls.push(entry);
+    try { return await call(...args); }
+    catch (error) { entry.error = { code: error.code, message: error.message }; throw error; }
+    finally { entry.elapsed = Date.now() - entry.started; }
+  };
   const windowsFor = pid => host.windows('app-launch', pid);
   const closeApp = async binding => {
     const state = (await host.invoke('app-launch', binding.id, 'getAXState', [{ disableDiffing: true }])).state;

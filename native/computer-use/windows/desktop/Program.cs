@@ -64,7 +64,9 @@ internal sealed class DesktopObservation : IDisposable
             if (string.IsNullOrWhiteSpace(query)) throw new NativeFailure("INVALID_ARGUMENT", "An exact application name, ID, or executable path is required");
             long? selected = args.TryGetProperty("window_id", out var id) ? id.GetInt64() : null;
             bool launched = false;
-            var target = await (apps ??= new AppCatalog()).Resolve(query, selected, async () => { await observation.BeforeLaunch(token); launched = true; }, token);
+            // Resolve waits on the Shell STA. Its lease callback must resume
+            // outside that dispatcher or both threads wait for each other.
+            var target = await (apps ??= new AppCatalog()).Resolve(query, selected, async () => { await observation.BeforeLaunch(token).ConfigureAwait(false); launched = true; }, token);
             if (launched) await observation.AfterLaunch(token);
             return NativeProtocol.Result(target);
         }
