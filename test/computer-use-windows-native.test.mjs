@@ -100,6 +100,10 @@ test('Windows native observation reads real WPF controls and occluded pixels wit
   assert.equal((await fixture.request('fixture', { action: 'state' })).text, '应用回退了输入');
   assert.ok(Number.isSafeInteger(buttonId));
   await native.invoke('controller', binding.id, 'click', [buttonId]);
+  // WPF's Invoke provider queues the Click event at DispatcherPriority.Input.
+  // A subsequent Normal-priority fixture state request may overtake it. Wait
+  // for the application's effect; still require exactly one actual click.
+  for (let i = 0; i < 100; i++) { if ((await fixture.request('fixture', { action: 'state' })).clicks !== 0) break; await delay(20); }
   assert.equal((await fixture.request('fixture', { action: 'state' })).clicks, 1);
   await native.release('controller');
   assert.ok(Object.values((await fixture.request('fixture', { action: 'state' })).held).every(held => held === false));

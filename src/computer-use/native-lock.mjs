@@ -9,7 +9,7 @@ export async function nativeLock(binary, path) {
     const timer = setTimeout(() => { child.kill('SIGTERM'); reject(new Error('另一处桌面控制更新尚未结束，请稍后重试')); }, 30000);
     child.once('error', error => { clearTimeout(timer); reject(error); });
     child.once('exit', () => { clearTimeout(timer); reject(new Error('无法锁定桌面控制安装目录')); });
-    child.stdout.on('data', data => { output += data; if (output.includes('locked\n')) { clearTimeout(timer); resolve(); } });
+    child.stdout.on('data', data => { output += data; if (/(?:^|\n)locked\r?\n/.test(output)) { clearTimeout(timer); resolve(); } });
   });
   return async () => {
     if (child.exitCode !== null || child.signalCode !== null) return;

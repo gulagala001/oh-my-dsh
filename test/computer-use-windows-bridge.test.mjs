@@ -65,10 +65,10 @@ test('compiled Windows bridge preserves framed bytes, isolates connections and c
     child.stdout.on('data', data => { state.output += data; }); child.stderr.on('data', data => { state.diagnostic += data; });
     return state;
   };
-  const owner = lock(); await until(() => owner.output.includes('locked\n'));
+  const owner = lock(); await until(() => /(?:^|\n)locked\r?\n/.test(owner.output));
   const waiting = lock(); await until(() => waiting.diagnostic.includes('Waiting for browser installation lock'));
   assert.equal(waiting.output, '');
   owner.child.stdin.end(); await until(() => owner.child.exitCode === 0);
-  await until(() => waiting.output.includes('locked\n'));
+  await until(() => /(?:^|\n)locked\r?\n/.test(waiting.output));
   waiting.child.stdin.end(); await until(() => waiting.child.exitCode === 0);
 });

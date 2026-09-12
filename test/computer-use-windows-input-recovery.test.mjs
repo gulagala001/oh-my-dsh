@@ -27,8 +27,8 @@ test('real recovery process keeps ownership until release succeeds after parent 
     const mutex = 'omd-recovery-' + randomUUID(), log = join(root, name + '.log'), allowed = join(root, name + '.allowed');
     const child = spawn(dotnet, [dll, 'recover', mutex, String(parent.pid), log, allowed], { stdio: ['pipe', 'pipe', 'pipe'] }); processes.push(child);
     let output = ''; child.stdout.on('data', data => { output += data; });
-    await until(() => output.includes('ready\n'));
-    return { parent, child, mutex, log, allowed, arm: async () => { child.stdin.write('arm\n'); await until(() => output.includes('armed\n')); }, clear: async () => { child.stdin.write('clear\n'); await until(() => output.includes('cleared\n')); } };
+    await until(() => /(?:^|\n)ready\r?\n/.test(output));
+    return { parent, child, mutex, log, allowed, arm: async () => { child.stdin.write('arm\n'); await until(() => /(?:^|\n)armed\r?\n/.test(output)); }, clear: async () => { child.stdin.write('clear\n'); await until(() => /(?:^|\n)cleared\r?\n/.test(output)); } };
   };
   const canClaim = async fixture => JSON.parse((await run(dotnet, [dll, 'claim', fixture.mutex])).stdout).owned;
   const crashed = await start('crashed'); await crashed.arm();
