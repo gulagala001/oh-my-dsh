@@ -11,13 +11,13 @@ internal sealed class DpiFixture : IDisposable
     [StructLayout(LayoutKind.Sequential)] private struct ScaleRequest { public Header Header; public int Value; }
     private static readonly int[] Percentages = [100, 125, 150, 175, 200, 225, 250, 300, 350, 400, 450, 500];
     private ScaleInfo? original;
-    internal int Set(int percent)
+    internal object Set(int percent)
     {
         if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true") throw new InvalidOperationException("Display scaling mutation is restricted to disposable CI desktops");
         original ??= Read();
         var info = Read(); int index = Array.IndexOf(Percentages, percent), value = index + info.Minimum;
         if (index < 0 || value < info.Minimum || value > info.Maximum) throw new InvalidOperationException($"Display does not support {percent}% scaling (range {info.Minimum}..{info.Maximum})");
-        Apply(info.Header, value); return percent;
+        Apply(info.Header, value); var after = Read(); return new { percent, requestedRelative = value, actualRelative = after.Current, minimumRelative = after.Minimum, maximumRelative = after.Maximum };
     }
     private static ScaleInfo Read()
     {

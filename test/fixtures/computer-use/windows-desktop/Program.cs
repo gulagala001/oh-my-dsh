@@ -14,8 +14,8 @@ internal static class FixtureProgram
     [STAThread]
     public static void Main(string[] launchArgs)
     {
+        if (!AreDpiAwarenessContextsEqual(GetThreadDpiAwarenessContext(), new IntPtr(-4))) throw new InvalidOperationException("Fixture must start with per-monitor-v2 DPI awareness");
         if (ClipboardFixture.RunProbe(launchArgs) is int code) { Environment.ExitCode = code; return; }
-        SetProcessDpiAwarenessContext(new IntPtr(-4));
         bool standalone = Path.GetFileNameWithoutExtension(Environment.ProcessPath!).EndsWith(".Standalone", StringComparison.Ordinal);
         if (!standalone)
         {
@@ -88,7 +88,7 @@ internal static class FixtureProgram
                         var action = args.TryGetProperty("action", out var operation) ? operation.GetString() : "state";
                         object result = await app.Dispatcher.InvokeAsync(() =>
                         {
-                            if (action == "display-scale") return new { percent = displayScale.Set(args.GetProperty("percent").GetInt32()) };
+                            if (action == "display-scale") return displayScale.Set(args.GetProperty("percent").GetInt32());
                             if (action == "display-scale-restore") { displayScale.Dispose(); return new { restored = true }; }
                             if (action == "clipboard-seed") { clipboard.Mode = args.GetProperty("mode").GetString()!; clipboard.Seed(args.GetProperty("text").GetString()!); return clipboard.State(); }
                             if (action == "clipboard-state") return clipboard.State();
@@ -122,5 +122,6 @@ internal static class FixtureProgram
     [DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr hwnd);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetCursorPos(out Point point);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetCursorPos(int x, int y);
-    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetProcessDpiAwarenessContext(IntPtr context);
+    [DllImport("user32.dll")] private static extern IntPtr GetThreadDpiAwarenessContext();
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool AreDpiAwarenessContextsEqual(IntPtr left, IntPtr right);
 }

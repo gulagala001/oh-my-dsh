@@ -11,7 +11,8 @@ export async function verifyDisplayScaling({ t, fixture, native, target, artifac
   const request = (action, values = {}) => fixture.request('fixture', { action, ...values });
   const wait = async predicate => {
     for (let i = 0; i < 150; i++) { const state = await request('state'); if (predicate(state)) return state; await delay(40); }
-    assert.fail('Display/input did not settle: ' + JSON.stringify(await request('state')));
+    const last = await request('state');
+    assert.fail('Display/input did not settle: ' + JSON.stringify({ dpi: last.dpi, cursor: last.cursor, text: last.text, held: last.held, pointerEvents: last.pointerEvents.slice(-3) }));
   };
   const identity = { pid: target.pid, window_id: target.window_id, process_identity: target.process_identity }, reports = [];
   const capture = async () => {
@@ -28,7 +29,7 @@ export async function verifyDisplayScaling({ t, fixture, native, target, artifac
       const binding = await native.bind('dpi', { id: target.app_id, windowId: target.window_id });
       try {
         await capture();
-        await request('display-scale', { percent });
+        t.diagnostic('Applied display scale: ' + JSON.stringify(await request('display-scale', { percent })));
         const expectedDpi = percent * 96 / 100;
         await wait(state => state.dpi === expectedDpi);
         await assert.rejects(native.invoke('dpi', binding.id, 'click', [{ x: 10, y: 10 }]), error => error.code === 'WINDOW_MOVED', 'old screenshot coordinates cannot survive a DPI change');
