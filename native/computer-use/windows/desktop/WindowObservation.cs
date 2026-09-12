@@ -44,7 +44,7 @@ internal sealed partial class WindowObservation : IDisposable
         var pending = new Stack<(AutomationElement Element, int Depth)>(); pending.Push((root, 0));
         var clock = Stopwatch.StartNew();
         var cache = new CacheRequest { TreeScope = TreeScope.Element, AutomationElementMode = AutomationElementMode.Full };
-        foreach (var property in new[] { AutomationElement.ControlTypeProperty, AutomationElement.NameProperty, AutomationElement.IsEnabledProperty, AutomationElement.IsPasswordProperty, AutomationElement.HasKeyboardFocusProperty, AutomationElement.BoundingRectangleProperty, AutomationElement.AutomationIdProperty, ValuePattern.ValueProperty }) cache.Add(property);
+        foreach (var property in new[] { AutomationElement.ControlTypeProperty, AutomationElement.NameProperty, AutomationElement.IsEnabledProperty, AutomationElement.IsPasswordProperty, AutomationElement.HasKeyboardFocusProperty, AutomationElement.BoundingRectangleProperty, AutomationElement.AutomationIdProperty, AutomationElement.IsTextPatternAvailableProperty, ValuePattern.ValueProperty }) cache.Add(property);
         while (pending.TryPop(out var next))
         {
             token.ThrowIfCancellationRequested();
@@ -66,6 +66,9 @@ internal sealed partial class WindowObservation : IDisposable
                 if (!rectangle.IsEmpty && double.IsFinite(rectangle.Width) && double.IsFinite(rectangle.Height)) row["bounds"] = new { x = rectangle.X, y = rectangle.Y, width = rectangle.Width, height = rectangle.Height };
                 if (current.IsPassword) row["value"] = "[password]";
                 else if (element.GetCachedPropertyValue(ValuePattern.ValueProperty, true) is string value) row["value"] = Limit(value);
+                // Notepad and rich-document editors expose TextPattern rather
+                // than ValuePattern. Read a bounded prefix of their real text.
+                else if (element.GetCachedPropertyValue(AutomationElement.IsTextPatternAvailableProperty, true) is true && element.TryGetCurrentPattern(TextPattern.Pattern, out var text)) row["value"] = Limit(((TextPattern)text).DocumentRange.GetText(8193));
                 if (current.HasKeyboardFocus) focused = index;
                 elements.Add(row);
                 // Traverse a bounded number of siblings without materializing

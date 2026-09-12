@@ -22,6 +22,8 @@ async function until(fn, timeout = 30000) {
 }
 
 for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browser UI: takeover, navigation, tabs, references and themes', { timeout: 90000, skip: backend === 'extension' && process.platform === 'win32' }, async t => {
+  const began = performance.now(); let stage = 'prepare';
+  const markStage = value => { stage = value; console.log('Computer Use UI stage:', backend, stage, Math.round(performance.now() - began) + 'ms'); };
   const root = await mkdtemp(join(tmpdir(), 'trisoul-cu-ui-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   await mkdir(home); await mkdir(workspace);
   const nativeBinary=process.platform==='darwin'?await legacyBundle(join(root,'native')):join(root,'missing-native');
@@ -54,6 +56,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   let log = '', browser, controlled, page, complete = false; const errors = [];
   child.stdout.on('data', data => { log = (log + data).slice(-15000); }); child.stderr.on('data', data => { log = (log + data).slice(-15000); });
   t.after(async () => {
+    if (!complete) console.log('Computer Use UI unfinished stage:', backend, stage, Math.round(performance.now() - began) + 'ms');
     if (!complete && page && !page.isClosed()) {
       if (process.env.TRISOUL_CU_UI_ARTIFACTS) { await page.screenshot({ path: join(root, 'failure.png') }); console.log('Computer Use failed UI:', root); }
       console.log((await page.locator('body').innerText()).slice(-3000));
@@ -536,8 +539,11 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   // Exercise the actual pane recovery when its browser process ends. This
   // connection is only an observer; the new browser is opened by the real UI.
   if (external) {
+    markStage('extension popup stop');
     await external.popup.locator('.tab').filter({ hasText: await second.title() }).getByRole('button', { name: '停止', exact: true }).click();
+    markStage('await extension stop notification');
     await page.getByRole('alert').filter({ hasText: 'Control ended' }).waitFor();
+    markStage('reselect retained Chrome tab');
     const existing = page.getByLabel('选择已有标签页');
     await until(async () => (await existing.locator('option').allTextContents()).includes(await second.title()));
     await existing.selectOption({ label: await second.title() });
@@ -558,6 +564,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   await until(() => controlled.contexts()[0].pages().some(tab => tab.url().startsWith(fixture.url)));
   assert.equal(await page.getByRole('alert').count(), 0, 'opening a new target clears the browser-exit error');
   }
+  markStage('browser recovery complete; open setup');
   await page.getByRole('button', { name: '运行环境与权限' }).click();
   await page.locator('.tx-cu-setup-row').filter({ hasText: '内置浏览器' }).getByText('已安装', { exact: true }).waitFor();
   const setup = await (await fetch(origin + '/trisoul-x/computer-use/setup?session=' + sessionId, { headers: { cookie } })).json();
@@ -565,6 +572,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
     await page.locator('.tx-cu-setup-row').filter({ hasText: 'Chrome 扩展' }).getByText('已连接', { exact: true }).waitFor();
     assert.equal(setup.extension.installation.prepared, true); assert.equal(setup.extension.installation.reloadRequired, false);
     await page.getByText('Chrome 连接详情', { exact: true }).click();
+    markStage('repair Chrome connection');
     await page.getByRole('button', { name: '检查并修复连接程序', exact: true }).click();
     await page.getByRole('button', { name: '检查并修复连接程序', exact: true }).waitFor();
   } else {
@@ -577,6 +585,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
     assert.equal(manifest.name, 'ai.trisoul.computer_use');
     if (process.env.TRISOUL_CU_UI_ARTIFACTS) await page.locator('.tx-cu-setup').screenshot({ path: join(root, 'chrome-setup.png') });
   }
+  markStage('connection setup complete; native update');
   if (setup.native.installed) {
     assert.equal(setup.native.updateAvailable,true);assert.equal(setup.native.version,'0.1.0');
     const beforeUpdate=await(await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json();
@@ -584,6 +593,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
     if(process.env.TRISOUL_CU_UI_ARTIFACTS)await page.locator('.tx-cu-setup').screenshot({path:join(root,'native-update-before.png')});
     const updateResponse=page.waitForResponse(response=>new URL(response.url()).pathname==='/trisoul-x/computer-use/setup'&&response.request().method()==='POST'&&response.request().postDataJSON()?.action==='install-native');
     await page.getByRole('button',{name:'更新桌面控制',exact:true}).click();
+    markStage('await native update response');
     const completedUpdate=await updateResponse;assert.equal(completedUpdate.status(),200,JSON.stringify(await completedUpdate.json()));
     await page.getByRole('button',{name:'正在更新桌面控制…',exact:true}).waitFor({state:'hidden'});
     const updated=await(await fetch(origin+'/trisoul-x/computer-use/setup?session='+sessionId,{headers:{cookie}})).json();
@@ -599,6 +609,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   }
   assert.equal(await page.locator('[role=alert]').count(), 0);
   assert.deepEqual(errors, []);
+  markStage('native setup complete; themes and narrow layout');
   const lightBackground = await page.locator('.tx-cu-pane').evaluate(element => getComputedStyle(element).backgroundColor);
   if (process.env.TRISOUL_CU_UI_ARTIFACTS) await page.screenshot({ path: join(root, 'pane-light.png') });
   await page.emulateMedia({ colorScheme: 'dark' });
@@ -609,6 +620,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   const overflow = await page.locator('.tx-cu-pane').evaluate(element => element.scrollWidth > element.clientWidth);
   assert.equal(overflow, false, 'the narrow pane must not hide controls in horizontal overflow');
   if (process.env.TRISOUL_CU_UI_ARTIFACTS) { await page.screenshot({ path: join(root, 'pane-narrow.png') }); console.log('Computer Use UI artifacts:', root); }
+  markStage('layout complete; reopen final preview');
   await page.getByRole('button',{name:'悬浮预览',exact:true}).click();
   await page.getByLabel('悬浮操控预览').waitFor();
   assert.equal(await page.evaluate(()=>!!documentPictureInPicture.window),false,'the default preview lives in the conversation page');
@@ -618,11 +630,13 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   const retainedPages=controlled.contexts()[0].pages().filter(p=>!p.isClosed());assert.ok(retainedPages.length);
   const stoppedBefore=await (await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json();
   if(stoppedBefore.status==='stopped')await page.getByRole('button',{name:'恢复助手控制',exact:true}).click();
+  markStage('stop from final preview');
   await stopPip.getByRole('button',{name:'停止操作',exact:true}).click();
   await stopPip.getByText('已停止 · 可手动操作',{exact:true}).waitFor();
   assert.equal((await (await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json()).status,'stopped');
   assert.equal(await stopPip.locator('.tx-cu-assistant-cursor').count(),0);
   assert.ok(retainedPages.every(p=>!p.isClosed()),'stopping from the preview preserves the currently open browser tabs');
+  markStage('final reload closes preview');
   await page.reload();await until(()=>stopPip.isClosed());
   assert.deepEqual(errors,[]);
   complete = true;

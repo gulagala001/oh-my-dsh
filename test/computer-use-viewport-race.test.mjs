@@ -16,6 +16,7 @@ test('viewport reset and resize survive an in-flight screenshot restoration', { 
       const original = await size(), actions = new BrowserActions();
       const record = { id: operation, page, cdp };
       await actions.setViewport(record, { width: 500, height: 350 });
+      await page.waitForFunction(() => innerWidth === 500 && innerHeight === 350, {}, { timeout: 1000 });
       assert.deepEqual(await size(), { width: 500, height: 350 });
 
       let entered;
@@ -35,6 +36,8 @@ test('viewport reset and resize survive an in-flight screenshot restoration', { 
       const expected = operation === 'reset' ? original : { width: 640, height: 360 };
       const changed = operation === 'reset' ? actions.resetViewport(record) : actions.setViewport(record, expected);
       await Promise.all([capture, changed]);
+      // CDP acknowledgement precedes the renderer's resize IPC on some hosts.
+      await page.waitForFunction(size => innerWidth === size.width && innerHeight === size.height, expected, { timeout: 1000 });
       assert.deepEqual(await size(), expected, 'the completed capture must not restore its old 500x350 viewport over the requested change');
       assert.equal(record.viewportOverride, operation !== 'reset');
     } finally { await context.close(); }
@@ -64,6 +67,7 @@ test('a no-op viewport reset releases observers without losing a queued resize',
       await nextTurn();
       assert.equal(resetDone, !queuedSet, 'an observer with no override must close without waiting for capture; a queued resize must still precede reset');
       release(); await Promise.all([capture, changed, reset]);
+      await page.waitForFunction(size => innerWidth === size.width && innerHeight === size.height, original, { timeout: 1000 });
       assert.deepEqual(await size(), original);
       assert.ok(!record.viewportOverride);
       assert.equal(record.pendingViewportSets ?? 0, 0);

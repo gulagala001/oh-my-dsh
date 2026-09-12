@@ -108,7 +108,9 @@ $item=$shellFolder.ParseName((Split-Path -Leaf $link))
   const launched = await host.bind('app-launch', installed.id);
   assert.match((await host.invoke('app-launch', launched.id, 'getAXState')).state, /Windows 观察验收 中文🙂/);
   await closeApp(launched);
+  let ordinaryEditing='not-tested';
   if(process.env.GITHUB_ACTIONS==='true')await t.test('ordinary Notepad editing saves Unicode text and Stop preserves the app',async()=>{
+    ordinaryEditing='failed';
     const note=join(root,'ordinary-note.txt'),text='Oh My DSH 日常编辑 中文🙂';
     await writeFile(note,'Ordinary editing fixture');
     const existing=await windowsProcessSnapshot();let owned;
@@ -132,7 +134,8 @@ $item=$shellFolder.ParseName((Split-Path -Leaf $link))
       assert.ok((await host.windows('ordinary-observer',target.pid)).length,'Stop must preserve the actual Notepad window');
       await host.release('ordinary-observer');
       await writeFile(join(artifacts,'ordinary-notepad.json'),JSON.stringify({status:'passed',unicodeSaved:true,stopPreservesApplication:true},null,2));
+      ordinaryEditing='passed';
     }finally{await cleanupFixture([()=>host.release('ordinary-notepad'),()=>owned&&stopWindowsProcesses([owned])]);}
   });
-  await writeFile(join(artifacts, 'report.json'), JSON.stringify({ status: 'passed', executableLaunch: true, installedApplicationLaunch: true, staleReferencesRejected: true, stopPreservesApplication: true }, null, 2));
+  await writeFile(join(artifacts, 'report.json'), JSON.stringify({ status: ordinaryEditing==='failed'?'failed':'passed', ordinaryEditing, executableLaunch: true, installedApplicationLaunch: true, staleReferencesRejected: true, stopPreservesApplication: true }, null, 2));
 });
