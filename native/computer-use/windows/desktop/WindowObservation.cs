@@ -25,14 +25,19 @@ internal sealed partial class WindowObservation : IDisposable
     internal Task<Dictionary<string, object?>> Read(WindowTarget target, CancellationToken token, bool actionable = false) => Run(() => Observe(target, token, actionable));
     internal Task BeforeLaunch(CancellationToken token) => Run(() => { input.BeginLaunch(token); return true; });
     internal Task AfterLaunch(CancellationToken token) => Run(() => { input.CheckUser(token); return true; });
-    private Dictionary<string, object?> Observe(WindowTarget target, CancellationToken token, bool actionable)
+    private AutomationElement ValidateRoot(WindowTarget target)
     {
-        token.ThrowIfCancellationRequested(); WindowCatalog.RequireInteractive();
-        _ = WindowCatalog.Read(target.pid, target.window_id, target.process_identity);
         var root = AutomationElement.FromHandle(new IntPtr(target.window_id));
         if (root.Current.ProcessId != target.pid) throw new NativeFailure("STALE_WINDOW", "The accessibility root belongs to a different process");
         if (roots.TryGetValue(target.window_id, out var previous) && !Automation.Compare(previous, root)) throw new NativeFailure("STALE_WINDOW", "The window accessibility root was replaced; bind its current window");
         roots[target.window_id] = root;
+        return root;
+    }
+    private Dictionary<string, object?> Observe(WindowTarget target, CancellationToken token, bool actionable)
+    {
+        token.ThrowIfCancellationRequested(); WindowCatalog.RequireInteractive();
+        _ = WindowCatalog.Read(target.pid, target.window_id, target.process_identity);
+        var root = ValidateRoot(target);
         var snapshot = NewSnapshot(target);
         var elements = new List<Dictionary<string, object?>>();
         bool truncated = false, unreadable = false; int? focused = null;

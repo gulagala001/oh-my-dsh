@@ -42,7 +42,14 @@ else { await host.create('fixture','data:text/html,<h1>Windows owned browser</h1
 process.send({guardian:host.child.pid,browser:host.browserPid,job:host.run.jobPid,ready:!!host.run.ready});`);
   owner = fork(entry, [profile, phase, pendingBrowser], { execArgv: [], stdio: ['ignore', 'ignore', 'pipe', 'ipc'], env: { ...process.env, TRISOUL_CU_DOTNET: 'deliberately-unavailable-sdk' } });
   owner.stderr.on('data', data => { stderr += data; });
-  const [info] = await once(owner, 'message', { signal: AbortSignal.timeout(20000) });
+  const ready = new AbortController(), timeout = setTimeout(() => ready.abort(), 20000);
+  let info;
+  try {
+    [info] = await Promise.race([
+      once(owner, 'message', { signal: ready.signal }),
+      once(owner, 'exit', { signal: ready.signal }).then(([code, signal]) => { throw new Error(`Browser fixture owner exited before ready (${signal ?? code}): ${stderr}`); }),
+    ]);
+  } finally { clearTimeout(timeout); ready.abort(); }
   owned = windowsProcessTree(await windowsProcessSnapshot(), owner.pid);
   assert.ok(owned.some(process => process.pid === info.guardian)); assert.ok(owned.some(process => process.pid === info.job));
   assert.ok(owned.some(process => process.pid === info.browser));

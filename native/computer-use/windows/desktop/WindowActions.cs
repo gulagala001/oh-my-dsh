@@ -17,12 +17,13 @@ internal sealed partial class WindowObservation
     private Snapshot NewSnapshot(WindowTarget target)
     {
         var snapshot = new Snapshot(target);
-        if (snapshots.TryGetValue(Key(target), out var prior) && prior.Target.bounds == target.bounds) { snapshot.ImageWidth = prior.ImageWidth; snapshot.ImageHeight = prior.ImageHeight; }
+        if (snapshots.TryGetValue(Key(target), out var prior) && prior.Target.bounds == target.bounds && prior.Target.dpi == target.dpi) { snapshot.ImageWidth = prior.ImageWidth; snapshot.ImageHeight = prior.ImageHeight; }
         snapshots[Key(target)] = snapshot; return snapshot;
     }
     internal Task RecordFrame(WindowTarget target, WindowFrame frame) => Run(() =>
     {
-        if (!snapshots.TryGetValue(Key(target), out var snapshot) || snapshot.Target.bounds != target.bounds) snapshot = NewSnapshot(target);
+        if (roots.ContainsKey(target.window_id)) _ = ValidateRoot(target);
+        if (!snapshots.TryGetValue(Key(target), out var snapshot) || snapshot.Target.bounds != target.bounds || snapshot.Target.dpi != target.dpi) snapshot = NewSnapshot(target);
         snapshot.ImageWidth = frame.Width; snapshot.ImageHeight = frame.Height; return true;
     });
     internal Task CloseInput() => Run(() => { RestoreClipboard(); input.Close(); snapshots.Clear(); return true; });
@@ -43,8 +44,7 @@ internal sealed partial class WindowObservation
     private AutomationElement Resolve(Snapshot snapshot, string reference)
     {
         if (!snapshot.Elements.TryGetValue(reference, out var element)) throw new NativeFailure("STALE_ELEMENT", "The element is not in this connection's latest observation");
-        var current = AutomationElement.FromHandle(new IntPtr(snapshot.Target.window_id));
-        if (!roots.TryGetValue(snapshot.Target.window_id, out var root) || !Automation.Compare(root, current)) throw new NativeFailure("STALE_WINDOW", "The accessibility window was replaced; observe and bind its current identity");
+        var root = ValidateRoot(snapshot.Target);
         var parent = element;
         for (int depth = 0; parent is not null && depth < 64; depth++)
         {
@@ -62,7 +62,10 @@ internal sealed partial class WindowObservation
         token.ThrowIfCancellationRequested();
         if (clipboard is not null) throw new NativeFailure("CLIPBOARD_RESTORE_PENDING", "The previous clipboard operation has not finished cleaning up; retry Stop");
         if (!snapshots.TryGetValue(Key(target), out var snapshot)) throw new NativeFailure("OBSERVATION_REQUIRED", "Observe this window on the controlling connection before sending input");
-        if (snapshot.Target.bounds != target.bounds) throw new NativeFailure("WINDOW_MOVED", "The window moved or resized since observation; observe again");
+        if (snapshot.Target.bounds != target.bounds || snapshot.Target.dpi != target.dpi) throw new NativeFailure("WINDOW_MOVED", "The window geometry or DPI changed since observation; observe again");
+        // Keyboard and coordinates also validate any previously observed UIA
+        // root. Screenshot-only use must not require an accessible provider.
+        if (roots.ContainsKey(target.window_id)) _ = ValidateRoot(target);
         string? reference = args.TryGetProperty("element_token", out var elementToken) ? elementToken.GetString() : null;
         AutomationElement? element = reference is not null ? Resolve(snapshot, reference) : null;
         if (method is not ("click" or "press_key" or "type_text" or "set_value" or "select_text" or "scroll" or "drag" or "paste")) throw new NativeFailure("UNSUPPORTED_CAPABILITY", "This Windows action has not been implemented");

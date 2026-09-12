@@ -88,7 +88,7 @@ internal sealed class WindowsInput(Action<object>? pointer = null)
         CheckUser(token); WindowCatalog.RequireInteractive();
         var current = WindowCatalog.Read(target.pid, target.window_id, target.process_identity);
         if (!current.is_on_screen || GetForegroundWindow() != new IntPtr(target.window_id)) { foregroundLost = true; throw new NativeFailure("FOREGROUND_LOST", "The selected window is no longer foreground; control has stopped"); }
-        if (current.bounds != target.bounds) throw new NativeFailure("WINDOW_MOVED", "The target moved or resized; observe its current geometry before continuing");
+        if (current.bounds != target.bounds || current.dpi != target.dpi) throw new NativeFailure("WINDOW_MOVED", "The target geometry or DPI changed; observe it before continuing");
     }
     internal void Send(WindowTarget target, WindowsInputEvent[] events, CancellationToken token)
     {

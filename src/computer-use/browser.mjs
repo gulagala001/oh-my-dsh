@@ -88,7 +88,7 @@ export class BrowserHost extends BrowserActions {
     }
     await rm(portFile, { force: true });
     if (this.closing) throw new Error('Computer Use browser is shutting down');
-    const run = { id: randomUUID(), ready: false, lost: false, requestedStop: false }; this.run = run;
+    const run = { id: randomUUID(), ready: false, lost: false, requestedStop: false, stderr: '' }; this.run = run;
     const args = [executable, `--user-data-dir=${this.directory}`, '--remote-debugging-port=0', '--remote-debugging-address=127.0.0.1', '--no-first-run', '--no-default-browser-check', '--no-startup-window', '--disable-background-networking', '--enable-blink-features=WebMCP', ...(this.headless ? ['--headless=new'] : [])];
     const child = fork(new URL('./browser-process.mjs', import.meta.url), args, { execArgv: [], stdio: ['ignore', 'ignore', 'pipe', 'ipc'], windowsHide: true, detached: process.platform !== 'win32' });
     run.child = child; this.child = child; this.browserPid = null;
@@ -108,7 +108,7 @@ export class BrowserHost extends BrowserActions {
       if (message.type === 'browser-exited') { run.launchError ??= new Error(`Browser exited (${message.code ?? message.signal})`); this.invalidate(run, run.launchError); }
       if (message.type === 'cleanup-error') run.cleanupError = new Error(message.message);
     });
-    child.stderr.on('data', () => {});
+    child.stderr.on('data', data => { run.stderr = (run.stderr + data.toString()).slice(-8192); });
     const deadline = Date.now() + 15000;
     try {
       while (Date.now() < deadline) {
@@ -129,7 +129,7 @@ export class BrowserHost extends BrowserActions {
         }
         await delay(40);
       }
-      throw new Error('Browser startup timed out');
+      throw new Error('Browser startup timed out' + (run.stderr.trim() ? ': ' + run.stderr.trim() : ''));
     } catch (error) { await this.terminateBrowser(run); throw error; }
   }
   invalidate(run, reason) {

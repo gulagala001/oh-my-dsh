@@ -16,6 +16,11 @@ internal static class FixtureProgram
     {
         SetProcessDpiAwarenessContext(new IntPtr(-4));
         bool standalone = Path.GetFileNameWithoutExtension(Environment.ProcessPath!).EndsWith(".Standalone", StringComparison.Ordinal);
+        if (!standalone)
+        {
+            Console.InputEncoding = new System.Text.UTF8Encoding(false, true);
+            Console.OutputEncoding = new System.Text.UTF8Encoding(false);
+        }
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         var panel = new StackPanel { Margin = new Thickness(18) };
         var editor = new TextBox { Text = "Windows 观察验收 中文🙂", MinHeight = 36 };
