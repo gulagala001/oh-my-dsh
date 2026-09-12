@@ -1,3 +1,4 @@
+import { msbuildValue } from '../src/computer-use/windows-build.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
@@ -37,7 +38,11 @@ if (Test-Path -LiteralPath $link) { Remove-Item -LiteralPath $link }`);
   });
   await run(process.execPath, ['scripts/build-computer-use-windows-native.mjs'], { timeout: 180000, env: { ...process.env, TRISOUL_CU_WINDOWS_NATIVE_OUTPUT: output } });
   const expected = await windowsNativeBuild();
-  await run(dotnet, ['publish', fileURLToPath(new URL('./fixtures/computer-use/windows-desktop/Fixture.csproj', import.meta.url)), '-c', 'Release', '-r', expected.rid, '--self-contained', 'true', '-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true', '-p:BaseIntermediateOutputPath=' + join(root, 'obj') + '/', '-o', fixtureOutput, '--nologo'], { timeout: 120000 });
+  const built = await run(dotnet, ['publish', fileURLToPath(new URL('./fixtures/computer-use/windows-desktop/Fixture.csproj', import.meta.url)), '-c', 'Release', '-r', expected.rid, '--self-contained', 'true', '-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true', '-p:BaseIntermediateOutputPath=' + msbuildValue(join(root, 'obj')) + '/', '-p:PublishDir=' + msbuildValue(fixtureOutput) + '/', '--nologo'], { timeout: 120000 }).catch(async error => {
+    await writeFile(join(artifacts, 'fixture-build.txt'), (error.stdout ?? '') + (error.stderr ?? ''));
+    t.diagnostic((error.stdout ?? '') + (error.stderr ?? '')); throw error;
+  });
+  await writeFile(join(artifacts, 'fixture-build.txt'), built.stdout + built.stderr);
   await copyFile(join(fixtureOutput, 'OhMyDsh.DesktopFixture.exe'), executable);
   await copyFile(executable, otherExecutable);
   host = new WindowsNativeHost(root, { binary: join(output, expected.executable) });

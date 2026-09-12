@@ -1,3 +1,4 @@
+import { msbuildValue } from '../src/computer-use/windows-build.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
@@ -23,9 +24,9 @@ test('compiled Windows bridge preserves framed bytes, isolates connections and c
     await Promise.all(children.map(child => child.exitCode !== null || child.signalCode !== null ? undefined : new Promise(resolve => { child.once('exit', resolve); child.kill(); })));
     await rm(root, { recursive: true, force: true });
   });
-  // The portable fixture runs the DLL through dotnet. Avoid generating an
-  // unused apphost (MSBuild's apphost copy mishandles apostrophes in OutDir).
-  await run(dotnet, ['build', fileURLToPath(new URL('../native/computer-use/windows/TrisoulBrowserBridge.csproj', import.meta.url)), '-p:UseAppHost=false', '-o', join(root, 'out'), '-p:BaseIntermediateOutputPath=' + join(root, 'obj') + '/', '--nologo'], { timeout: 40000, env: { ...process.env, DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_NOLOGO: '1' } });
+  // The portable fixture runs the DLL through dotnet; the self-contained
+  // launcher is exercised separately by the real Windows browser fixture.
+  await run(dotnet, ['build', fileURLToPath(new URL('../native/computer-use/windows/TrisoulBrowserBridge.csproj', import.meta.url)), '-p:UseAppHost=false', '-p:OutputPath=' + msbuildValue(join(root, 'out')) + '/', '-p:BaseIntermediateOutputPath=' + msbuildValue(join(root, 'obj')) + '/', '--nologo'], { timeout: 40000, env: { ...process.env, DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_NOLOGO: '1' } });
   const runtime = { command: async () => ({ command: dotnet, args: [dll] }) }, pipe = 'omd-' + randomUUID().replaceAll('-', '').slice(0, 20);
   const origin = 'chrome-extension://' + 'a'.repeat(32) + '/';
   await writeFile(join(root, 'out', 'bridge.json'), JSON.stringify({ pipe, origin }));

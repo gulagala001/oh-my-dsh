@@ -1,3 +1,4 @@
+import { msbuildValue } from '../src/computer-use/windows-build.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
@@ -38,7 +39,7 @@ test('Windows native installation, read-only observation and input operate on re
   assert.equal(JSON.parse((await run(binary, ['info'])).stdout).build, expected.build);
   assert.equal((await runtime.install()).binary, binary, 'a verified installation is reused');
   const fixtureOutput = join(root, 'fixture');
-  await run(dotnet, ['publish', fileURLToPath(new URL('./fixtures/computer-use/windows-desktop/Fixture.csproj', import.meta.url)), '-c', 'Release', '-r', expected.rid, '--self-contained', 'true', '-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true', '-p:BaseIntermediateOutputPath=' + join(root, 'fixture-obj') + '/', '-o', fixtureOutput, '--nologo'], { timeout: 120000, maxBuffer: 1024 * 1024 });
+  await run(dotnet, ['publish', fileURLToPath(new URL('./fixtures/computer-use/windows-desktop/Fixture.csproj', import.meta.url)), '-c', 'Release', '-r', expected.rid, '--self-contained', 'true', '-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true', '-p:BaseIntermediateOutputPath=' + msbuildValue(join(root, 'fixture-obj')) + '/', '-p:PublishDir=' + msbuildValue(fixtureOutput) + '/', '--nologo'], { timeout: 120000, maxBuffer: 1024 * 1024 });
   fixture = new McpClient(join(fixtureOutput, 'OhMyDsh.DesktopFixture.exe')); clients.push(fixture);
   const original = await fixture.request('fixture', { action: 'state' });
   const connect = async label => {

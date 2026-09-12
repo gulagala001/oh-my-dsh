@@ -115,7 +115,10 @@ export class BrowserHost extends BrowserActions {
         if (run.launchError) throw run.launchError;
         if (child.exitCode !== null || child.signalCode !== null) throw new Error(`Browser exited during startup (${child.exitCode ?? child.signalCode}). The Computer Use profile may already be open.`);
         let address;
-        try { address = await readFile(portFile, 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+        // Chrome can hold an exclusive Windows handle while publishing this
+        // file. Retry within the existing startup deadline, then still verify
+        // the debugger's actual PID before claiming the profile.
+        try { address = await readFile(portFile, 'utf8'); } catch (error) { if (!['ENOENT', 'EBUSY'].includes(error.code)) throw error; }
         if (run.lost || run.launchError) throw run.launchError ?? new Error('Browser exited during startup');
         const endpoint = debuggingEndpoint(address);
         if (endpoint && run.browserPid) {

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, cp, mkdir, appendFile, readFile, writeFile, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 test('a running host detects source updates and recovers from a transient source read failure', async t => {
   const root = await mkdtemp(join(tmpdir(), 'trisoul-cu-build-refresh-'));
@@ -13,7 +13,7 @@ test('a running host detects source updates and recovers from a transient source
   await cp(new URL('../src/computer-use', import.meta.url), join(root, 'src/computer-use'), { recursive: true });
   await cp(new URL('../native', import.meta.url), join(root, 'native'), { recursive: true });
   await cp(new URL('../scripts/build-computer-use-native.mjs', import.meta.url), join(root, 'scripts/build-computer-use-native.mjs'));
-  await symlink(new URL('../node_modules', import.meta.url).pathname, join(root, 'node_modules'));
+  await symlink(fileURLToPath(new URL('../node_modules', import.meta.url)), join(root, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
   const { NativeHost } = await import(pathToFileURL(join(root, 'src/computer-use/native.mjs')));
   const host = new NativeHost(root), first = await host.expectedBuild();
   const header = join(root, 'native/computer-use/ComputerUse.h');

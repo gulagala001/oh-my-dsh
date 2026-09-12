@@ -4,13 +4,14 @@ import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { windowsNativeBuild } from '../src/computer-use/windows-native-build.mjs';
+import { msbuildValue } from '../src/computer-use/windows-build.mjs';
 
 const info = await windowsNativeBuild(process.env.TRISOUL_CU_WINDOWS_ARCH || process.arch);
 const output = resolve(process.env.TRISOUL_CU_WINDOWS_NATIVE_OUTPUT || fileURLToPath(new URL('../dist/desktop-' + info.rid, import.meta.url)));
 const intermediate = await mkdtemp(join(tmpdir(), 'oh-my-dsh-desktop-build-'));
 try {
   await mkdir(output, { recursive: true });
-  const args = ['publish', fileURLToPath(new URL('../native/computer-use/windows/desktop/TrisoulDesktop.csproj', import.meta.url)), '-c', 'Release', '-r', info.rid, '--self-contained', 'true', '-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true', '-p:TrisoulBuild=' + info.build, '-p:BaseIntermediateOutputPath=' + intermediate + '/', '-o', output, '--nologo'];
+  const args = ['publish', fileURLToPath(new URL('../native/computer-use/windows/desktop/TrisoulDesktop.csproj', import.meta.url)), '-c', 'Release', '-r', info.rid, '--self-contained', 'true', '-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true', '-p:TrisoulBuild=' + info.build, '-p:BaseIntermediateOutputPath=' + msbuildValue(intermediate) + '/', '-p:PublishDir=' + msbuildValue(output) + '/', '--nologo'];
   await new Promise((resolve, reject) => {
     const child = spawn(process.env.TRISOUL_CU_DOTNET || 'dotnet', args, { stdio: 'inherit', windowsHide: true, env: { ...process.env, DOTNET_NOLOGO: '1', DOTNET_CLI_TELEMETRY_OPTOUT: '1' } });
     child.once('error', reject);

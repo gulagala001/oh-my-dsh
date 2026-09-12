@@ -8,6 +8,6 @@ export async function windowsNativeBuild(arch = process.arch) {
   for (const name of (await readdir(root)).filter(name => /\.(cs|csproj)$/.test(name)).sort()) {
     hash.update(name).update('\0').update(await readFile(new URL(name, root)));
   }
-  for (const name of ['./windows-native-build.mjs', '../../scripts/build-computer-use-windows-native.mjs']) hash.update(name).update('\0').update(await readFile(new URL(name, import.meta.url)));
+  for (const name of ['./windows-native-build.mjs', './windows-build.mjs', '../../scripts/build-computer-use-windows-native.mjs']) hash.update(name).update('\0').update(await readFile(new URL(name, import.meta.url)));
   return { build: hash.digest('hex'), arch, rid: 'win-' + arch, executable: 'OhMyDsh.Desktop.exe', version: '0.1.1', protocol: 1 };
 }
