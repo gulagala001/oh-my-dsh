@@ -3,7 +3,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { point } from './coordinates.mjs';
 import { listPageAssets, bundlePageAssets, exportPageContent } from './browser-content.mjs';
 import { fetchWebMcpTools, callWebMcpTool, cancelWebMcp, webMcpAvailable } from './browser-webmcp.mjs';
-import { captureViewport, captureFullPage, cropViewport, screenshotOptions, screenshotGeometry, sameScreenshotGeometry, staleScreenshot } from './browser-screenshot.mjs';
+import { captureViewport, captureFullPage, observeScreenshot, screenshotGeometry, sameScreenshotGeometry, staleScreenshot } from './browser-screenshot.mjs';
 
 const stale = () => Object.assign(new Error('This element belongs to an old or detached page. Read the current state again.'), { code: 'STALE_ELEMENT' });
 const keys = { cmd: 'Meta', super: 'Meta', ctrl: 'Control', control: 'Control', alt: 'Alt', option: 'Alt', shift: 'Shift', return: 'Enter', enter: 'Enter', esc: 'Escape', escape: 'Escape', backspace: 'Backspace', delete: 'Delete', tab: 'Tab', space: 'Space', left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown', home: 'Home', end: 'End', pageup: 'PageUp', pagedown: 'PageDown' };
@@ -237,19 +237,7 @@ export class BrowserActions {
     return captureViewport(record, geometry ?? await screenshotGeometry(record));
   }
   async observeScreenshot(record, options = {}, signal) {
-    screenshotOptions(options);
-    for (let attempt = 0; attempt < 2; attempt++) {
-      signal?.throwIfAborted();
-      const before = await screenshotGeometry(record);
-      const data = await this.capture(record, options, before);
-      const {screenshot,region}=options.fullPage?{screenshot:data,region:{x:0,y:0,scale:1}}:await cropViewport(data,before,options.clip);
-      const after = await screenshotGeometry(record); signal?.throwIfAborted();
-      if (!sameScreenshotGeometry(before, after)) {if(options.fullPage)throw staleScreenshot();continue;}
-      const screenshotFrame = { ...after, fullPage: options.fullPage === true, region };
-      record.screenshotFrame = screenshotFrame;
-      return { screenshot, screenshotFrame };
-    }
-    throw staleScreenshot();
+    return observeScreenshot(record, options, signal, (settings, geometry) => this.capture(record, settings, geometry));
   }
   validateViewport(size){if(!size||!['width','height'].every(key=>Number.isInteger(size[key])&&size[key]>0&&size[key]<=10000000))throw new Error('Viewport width and height must be positive integers within Chromium limits.');}
   async setViewport(record,size){

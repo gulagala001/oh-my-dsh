@@ -56,6 +56,8 @@ test('Windows paste delivers real clipboard formats and preserves newer copies',
     const binding = await native.bind(sample.name, { id: target.app_id, windowId: original.first });
     let resultError;
     try {
+      const observation = await native.invoke(sample.name, binding.id, 'getAXState', [{ disableDiffing: true }]);
+      assert.match(observation.state, /原编辑内容/);
       await native.invoke(sample.name, binding.id, 'pressKey', ['ctrl+a']);
       const controller = new AbortController();
       const paste = native.invoke(sample.name, binding.id, 'paste', [sample.text, { format: sample.format ?? 'text' }], controller.signal)

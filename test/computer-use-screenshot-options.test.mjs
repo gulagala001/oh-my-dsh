@@ -20,7 +20,50 @@ async function setup(t,backend){
   const browser=manager.browserForTab(tab.id),record=await browser.target('test',tab.id),page=external?external.context.pages().find(page=>page.url().endsWith('/geometry')):(await browser.target('observer',tab.id,{claim:false})).page;
   const driver=await page.context().newCDPSession(page);return {manager,run,tab,browser,record,page,driver,fixture};
 }
+test('a cancelled queued capture never reaches Chromium and does not poison later captures',{timeout:30000},async t=>{
+  const s=await setup(t,'managed'),capture=s.browser.capture.bind(s.browser);
+  let entered,release,count=0;
+  const started=new Promise(resolve=>{entered=resolve;}),gate=new Promise(resolve=>{release=resolve;});
+  s.browser.capture=async(...args)=>{count++;if(count===1){entered();await gate;}return capture(...args);};
+  const controller=new AbortController();
+  const first=s.browser.observeScreenshot(s.record,{});first.catch(()=>{});
+  try{
+    await started;
+    const second=s.browser.observeScreenshot(s.record,{},controller.signal);
+    const rejected=assert.rejects(second,/cancelled queued capture/);
+    controller.abort(new Error('cancelled queued capture'));
+    let timer;
+    try{await Promise.race([rejected,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Cancellation waited for the preceding screenshot')),500);})]);}
+    finally{clearTimeout(timer);}
+    const third=s.browser.observeScreenshot(s.record,{});third.catch(()=>{});
+    await new Promise(resolve=>setImmediate(resolve));assert.equal(count,1,'cancellation must not unlock the preceding capture');
+    release();await Promise.all([first,third]);assert.equal(count,2);
+  }finally{release();s.browser.capture=capture;}
+});
 for(const backend of ['managed','extension']){
+  test(backend+' concurrent captures across CDP observers preserve the live viewport',{timeout:30000,skip:backend==='extension'&&process.platform==='win32'},async t=>{
+    const s=await setup(t,backend);
+    await s.page.setViewportSize({width:800,height:600});
+    await s.page.addStyleTag({content:'html{overflow:scroll}::-webkit-scrollbar{width:15px;height:15px}::-webkit-scrollbar-thumb{background:#777}'});
+    await s.page.evaluate(()=>scrollTo(100,80));
+    const observer=await s.browser.target('capture-observer',s.tab.id,{claim:false});
+    assert.notEqual(observer.cdp,s.record.cdp);
+    const before=await s.driver.send('Page.getLayoutMetrics');
+    const results=await Promise.all([
+      s.browser.observeScreenshot(s.record,{fullPage:true}),
+      s.browser.observeScreenshot(observer,{fullPage:true}),
+      s.browser.observeScreenshot(observer,{}),
+    ]);
+    const after=await s.driver.send('Page.getLayoutMetrics');
+    assert.deepEqual(after.cssVisualViewport,before.cssVisualViewport);
+    assert.deepEqual(after.cssLayoutViewport,before.cssLayoutViewport);
+    for(const result of results.slice(0,2)){
+      const meta=await sharp(Buffer.from(result.screenshot,'base64')).metadata();
+      assert.equal(meta.width,Math.ceil(before.cssContentSize.width));
+      assert.equal(meta.height,Math.ceil(before.cssContentSize.height));
+    }
+    assert.equal(results[2].screenshotFrame.width,before.cssVisualViewport.clientWidth);
+  });
   test(backend+' cropped screenshot preserves pinch/pan and maps emitted image coordinates',{timeout:30000,skip:backend==='extension'&&process.platform==='win32'},async t=>{
     const s=await setup(t,backend);await s.page.setViewportSize({width:1280,height:720});await s.driver.send('Emulation.setPageScaleFactor',{pageScaleFactor:2});
     await panViewport(s.driver);
