@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium } from 'playwright';
-import { stopFixtureProcess } from './process.mjs';
+import { stopFixtureProcess, cleanupFixture, closeFixtureServer } from './process.mjs';
 
 export async function until(fn, timeout = 20000) {
   const deadline = Date.now() + timeout;
@@ -36,11 +36,13 @@ export async function frontendFixture(t) {
   child.stderr.on('data', data => { log = (log + data).slice(-15000); });
   t.after(async () => {
     releaseReply?.();
-    if (process.env.TRISOUL_UI_ARTIFACTS && page && !page.isClosed()) await page.screenshot({path:join(root,'final-state.png')});
-    await browser?.close();
-    await stopFixtureProcess(child);
-    provider.closeAllConnections(); await new Promise(resolve => provider.close(resolve));
-    if (!process.env.TRISOUL_UI_ARTIFACTS) await rm(root, { recursive: true, force: true });
+    await cleanupFixture([
+      async () => { if (process.env.TRISOUL_UI_ARTIFACTS && page && !page.isClosed()) await page.screenshot({path:join(root,'final-state.png')}); },
+      () => browser?.close(),
+      () => stopFixtureProcess(child),
+      () => closeFixtureServer(provider),
+      async () => { if (!process.env.TRISOUL_UI_ARTIFACTS) await rm(root, { recursive: true, force: true }); },
+    ]);
   });
   const bootstrap = await until(() => { if (child.exitCode !== null) throw new Error(log.replace(/token=\S+/g, 'token=[redacted]')); return log.match(/http:\/\/127\.0\.0\.1:\d+\/\?token=[\w-]+/)?.[0]; }, 45000).catch(error => { throw new Error(error.message + '\n' + log.replace(/token=\S+/g, 'token=[redacted]')); });
   const origin = new URL(bootstrap).origin, login = await fetch(bootstrap, { redirect: 'manual' });

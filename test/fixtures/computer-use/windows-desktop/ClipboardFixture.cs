@@ -61,7 +61,7 @@ internal sealed class ClipboardFixture
             var image = new FormatConvertedBitmap(bitmap, PixelFormats.Bgra32, null, 0);
             var data = new byte[image.PixelWidth * image.PixelHeight * 4]; image.CopyPixels(data, image.PixelWidth * 4, 0); pixels = Convert.ToBase64String(data);
         }
-        return new { text = Clipboard.GetText(), bytes = bytes is MemoryStream stream ? Convert.ToBase64String(stream.ToArray()) : null, pixels, files = Clipboard.GetFileDropList().Cast<string>().ToArray(), pastes = Pastes, observedText = ObservedText, observedHtml = ObservedHtml };
+        return new { text = Clipboard.GetText(), bytes = bytes is MemoryStream stream ? Convert.ToBase64String(stream.ToArray()) : null, pixels, formats = Clipboard.GetDataObject()?.GetFormats(false), files = Clipboard.GetFileDropList().Cast<string>().ToArray(), pastes = Pastes, observedText = ObservedText, observedHtml = ObservedHtml };
     }
     internal void Restore()
     {

@@ -15,10 +15,16 @@ internal sealed class ClipboardSnapshot : IDisposable
         try
         {
             if (GetClipboardSequenceNumber() != expected) throw new NativeFailure("CLIPBOARD_CHANGED", "The clipboard changed before it could be preserved");
+            var captured = new HashSet<uint>();
             foreach (string name in formats)
             {
                 token.ThrowIfCancellationRequested();
                 uint format = (uint)DataFormats.GetDataFormat(name).Id;
+                // Preserve bitmap pixels as transferable global memory. Windows
+                // synthesizes CF_BITMAP from CF_DIBV5 for bitmap consumers; a
+                // copied GDI handle is not our durable backup representation.
+                if (format == 2) format = 17; // CF_BITMAP -> CF_DIBV5
+                if (!captured.Add(format)) continue;
                 var data = GetClipboardData(format);
                 if (data == IntPtr.Zero) throw new NativeFailure("CLIPBOARD_UNAVAILABLE", "The current clipboard format could not be preserved: " + name);
                 snapshot.entries.Add(Entry.Copy(format, data));

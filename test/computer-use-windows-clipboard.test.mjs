@@ -52,6 +52,7 @@ test('Windows paste delivers real clipboard formats and preserves newer copies',
   ];
   for (const sample of cases) await t.test(sample.name, async () => {
     const baseline = await command('clipboard-seed', { mode: sample.mode, text: '原剪贴板 ' + sample.name });
+    assert.equal(baseline.pixels, 'ChQe/ygyPP8=', 'the fixture must publish real bitmap pixels before paste');
     await command('text', { text: '原编辑内容' }); await command('focus');
     const binding = await native.bind(sample.name, { id: target.app_id, windowId: original.first });
     let resultError;
@@ -71,7 +72,7 @@ test('Windows paste delivers real clipboard formats and preserves newer copies',
       }
       await paste; await native.release(sample.name);
       const clipboard = await command('clipboard-state'), state = await command('state');
-      await writeFile(join(artifact, sample.name + '.json'), JSON.stringify({ error: resultError, clipboard, text: state.text }, null, 2));
+      await writeFile(join(artifact, sample.name + '.json'), JSON.stringify({ baseline, error: resultError, clipboard, text: state.text }, null, 2));
       if (sample.cancel) assert.match(resultError?.message ?? '', /cancel/i);
       else if (sample.error) assert.equal(resultError?.code, sample.error, JSON.stringify(resultError));
       else assert.equal(resultError, undefined, JSON.stringify(resultError));

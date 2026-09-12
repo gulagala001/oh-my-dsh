@@ -14,8 +14,10 @@ export async function windowsProcessSnapshot() {
 }
 
 export function windowsProcessTree(snapshot, rootPid) {
-  const ids = new Set([rootPid]);
-  for (let changed = true; changed;) { changed = false; for (const process of snapshot) if (ids.has(process.parent) && !ids.has(process.pid)) { ids.add(process.pid); changed = true; } }
+  const root = snapshot.find(process => process.pid === rootPid);
+  if (!root) return [];
+  const ids = new Map([[rootPid, root]]);
+  for (let changed = true; changed;) { changed = false; for (const process of snapshot) if (ids.has(process.parent) && !ids.has(process.pid) && BigInt(process.created) >= BigInt(ids.get(process.parent).created)) { ids.set(process.pid, process); changed = true; } }
   return snapshot.filter(process => ids.has(process.pid));
 }
 
