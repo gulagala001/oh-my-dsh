@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/images/logo.svg" width="80" height="80" alt="Trisoul X" />
+  <img src="docs/images/logo.svg" width="80" height="80" alt="Oh My DSH" />
 </p>
 
-<h1 align="center">Trisoul X</h1>
+<h1 align="center">Oh My DSH</h1>
 
 <p align="center">
   <strong>让 Agent 记住项目，跟进任务，操作网页与应用。</strong>
@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/trisoul_x/commits/main/"><img src="https://img.shields.io/badge/version-0.1.1-3478F6?style=flat-square" alt="Version 0.1.1" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/commits/main/"><img src="https://img.shields.io/badge/version-0.1.1-3478F6?style=flat-square" alt="Version 0.1.1" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.5--rc.1-475569?style=flat-square" alt="DSH 0.1.5-rc.1" /></a>
   <a href="#support"><img src="https://img.shields.io/badge/status-preview-64748B?style=flat-square" alt="Preview" /></a>
 </p>
@@ -24,14 +24,14 @@
   <a href="#features">功能亮点</a> ·
   <a href="#computer-use">Computer Use</a> ·
   <a href="docs/usage.md">使用指南</a> ·
-  <a href="https://github.com/gulagala001/trisoul_x/issues">反馈问题</a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/issues">反馈问题</a>
 </p>
 
 <p align="center">
-  <img src="docs/images/workbench-memory.png" width="100%" alt="Trisoul X：在对话旁的统一工作台中查看和维护项目记忆" />
+  <img src="docs/images/workbench-memory.png" width="100%" alt="Oh My DSH：在对话旁的统一工作台中查看和维护项目记忆" />
 </p>
 
-Trisoul X 把任务、记忆、电脑和监控放进同一个工作台。助手可以保存项目约定，整理长对话，关联任务与验证结果，也能打开网页或操作 Mac 应用。你可以随时查看它记住了什么、做到了哪一步，以及正在操作的画面。
+Oh My DSH 把任务、记忆、电脑和监控放进同一个工作台。助手可以保存项目约定，整理长对话，关联任务与验证结果，也能打开网页或操作 Mac 应用。你可以随时查看它记住了什么、做到了哪一步，以及正在操作的画面。
 
 作为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 插件运行，沿用已有的模型配置、会话、文件、工具与技能。
 
@@ -42,7 +42,7 @@ Trisoul X 把任务、记忆、电脑和监控放进同一个工作台。助手�
 已有 **DSH 0.1.5-rc.1 Web**？停止服务后安装插件：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/trisoul_x
+dsh plugin --profile web add github:gulagala001/oh-my-dsh
 ```
 
 按原来的方式启动：
@@ -52,6 +52,8 @@ dsh web
 ```
 
 打开启动时打印的登录链接，新建会话并选择 **`trisoul-x`**。输入区下方的 **工作台** 和 **电脑** 就是主要入口。
+
+为兼容已有安装，插件 ID 与 Agent preset 继续使用 `trisoul_x` / `trisoul-x`。
 
 需要 **Node.js ≥22.19、pnpm 11.21.0 和 Git**；Windows 使用 **PowerShell 7**。模型需支持原生工具调用，理解截图还需要图像输入能力。自定义 profile 和 `DSH_HOME` 应沿用原配置。
 
@@ -183,7 +185,7 @@ dsh web
 - [使用与开发指南](docs/usage.md)：安装、日常操作、模型与频率配置、数据备份及测试。
 - [Computer Use 当前交接](COMPUTER_USE_HANDOFF.md)：实现进展、已知问题与实测边界。
 - [提示词变更记录](PROMPT_CHANGES.md)：主模型及后台任务提示词的调整依据。
-- [提交问题或建议](https://github.com/gulagala001/trisoul_x/issues)：请附上 DSH／Node.js 版本、复现步骤与脱敏错误；代码贡献前请阅读 [项目约定](AGENTS.md)。
+- [提交问题或建议](https://github.com/gulagala001/oh-my-dsh/issues)：请附上 DSH／Node.js 版本、复现步骤与脱敏错误；代码贡献前请阅读 [项目约定](AGENTS.md)。
 
 ## 来源与许可
 

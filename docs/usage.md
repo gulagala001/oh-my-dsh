@@ -1,8 +1,8 @@
-# 使用与开发指南
+# Oh My DSH 使用与开发指南
 
 [返回项目首页](../README.md) · [安装](#安装到现有-dsh推荐) · [日常使用](#日常使用) · [Computer Use](#computer-use预览版) · [开发与验证](#开发与验证)
 
-当前版本 **0.1.1**，适配 **DSH 0.1.5-rc.1**。本页保留安装、操作、配置与实测边界的详细说明。
+当前版本 **0.1.1**，适配 **DSH 0.1.5-rc.1**。本页保留安装、操作、配置与实测边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
 ## 安装到现有 DSH（推荐）
 
@@ -11,7 +11,7 @@
 先停止当前 DSH Web，在终端或 PowerShell 中安装：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/trisoul_x
+dsh plugin --profile web add github:gulagala001/oh-my-dsh
 ```
 
 然后按原来的方式重新启动 DSH，例如：
@@ -46,8 +46,8 @@ dsh plugin --profile web remove trisoul_x
 需要 **Node.js ≥22.19**、Git 和 **pnpm 11.21.0**。推荐使用 Node.js 24。尚未安装 pnpm 时，可运行 `npm install -g pnpm@11.21.0`。
 
 ```sh
-git clone https://github.com/gulagala001/trisoul_x.git
-cd trisoul_x
+git clone https://github.com/gulagala001/oh-my-dsh.git
+cd oh-my-dsh
 pnpm install --frozen-lockfile
 pnpm build
 pnpm start
@@ -76,7 +76,7 @@ Windows PowerShell 可用 `$env:PORT = '3090'` 或 `$env:DSH_HOME = 'C:\x-data'`
 开发插件时，先在 X 源码目录安装依赖并构建，再将本地代码链接到目标 profile：
 
 ```sh
-dsh plugin --profile YOUR_PROFILE add link:/absolute/path/to/trisoul_x
+dsh plugin --profile YOUR_PROFILE add link:/absolute/path/to/oh-my-dsh
 ```
 
 重启该 profile 后生效。插件 bundle 会将默认 Agent preset 设为 `trisoul-x`。
