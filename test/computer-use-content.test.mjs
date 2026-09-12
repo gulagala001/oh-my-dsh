@@ -32,7 +32,8 @@ for (const backend of ['managed', 'extension']) test(`${backend}: page assets an
   assert.equal(bundle.summary.failedCount, 1);
   assert.match(bundle.failures[0].url, /missing\.png$/);
   for (const item of bundle.assets) {
-    assert.equal((await stat(item.path)).mode & 0o777, 0o600);
+    // Windows exposes synthesized mode bits, not POSIX per-user permissions.
+    if (process.platform !== 'win32') assert.equal((await stat(item.path)).mode & 0o777, 0o600);
     if (item.kind === 'image') assert.deepEqual(await readFile(item.path), fixture.image);
     else assert.equal(await readFile(item.path, 'utf8'), fixture.stylesheet);
   }

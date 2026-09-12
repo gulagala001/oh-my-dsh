@@ -7,6 +7,7 @@ import sharp from 'sharp';
 import {ComputerUseManager} from '../src/computer-use/manager.mjs';
 import {extensionFixture} from './fixtures/computer-use/extension.mjs';
 import {startFixture} from './fixtures/computer-use/server.mjs';
+import {panViewport} from './fixtures/computer-use/viewport.mjs';
 
 async function setup(t,backend){
   const root=await mkdtemp(join(tmpdir(),'trisoul-cu-screenshot-')),cleanups=[];let manager;
@@ -21,8 +22,8 @@ async function setup(t,backend){
 }
 for(const backend of ['managed','extension']){
   test(backend+' cropped screenshot preserves pinch/pan and maps emitted image coordinates',{timeout:30000,skip:backend==='extension'&&process.platform==='win32'},async t=>{
-    const s=await setup(t,backend);await s.page.setViewportSize({width:1280,height:720});await s.driver.send('Emulation.setPageScaleFactor',{pageScaleFactor:2});await s.driver.send('Emulation.setTouchEmulationEnabled',{enabled:true});
-    await s.driver.send('Input.synthesizeScrollGesture',{x:300,y:180,xDistance:-80,yDistance:0,gestureSourceType:'touch',speed:800});
+    const s=await setup(t,backend);await s.page.setViewportSize({width:1280,height:720});await s.driver.send('Emulation.setPageScaleFactor',{pageScaleFactor:2});
+    await panViewport(s.driver);
     const before=await s.driver.send('Page.getLayoutMetrics');
     const full=await s.manager.execute('test','await tab.screenshot({fullPage:true});');assert.match(full.error?.message??'',/pinch zoom/);
     const quiet=await s.run('const cropped=await tab.screenshot({clip:{x:60,y:20,width:260,height:200}});');assert.equal(quiet.blocks.filter(block=>block.type==='image').length,0);
@@ -50,7 +51,9 @@ for(const backend of ['managed','extension']){
     for(const owned of [false,true]){
     if(owned)await s.run('await tab.viewport.set({width:800,height:600});');
     await s.page.reload();await s.page.evaluate(()=>scrollTo(100,80));
-    const before=await s.driver.send('Page.getLayoutMetrics'),result=await s.run('await nodeRepl.emitImage(await tab.screenshot({fullPage:true}));');
+    const before=await s.driver.send('Page.getLayoutMetrics');let result;
+    try{result=await s.run('await nodeRepl.emitImage(await tab.screenshot({fullPage:true}));');}
+    catch(error){t.diagnostic(JSON.stringify({backend,owned,before,after:await s.driver.send('Page.getLayoutMetrics')}));throw error;}
     const block=result.blocks.find(block=>block.type==='image'),meta=await sharp(Buffer.from(block.data,'base64')).metadata();assert.equal(meta.width,Math.ceil(before.cssContentSize.width));assert.equal(meta.height,Math.ceil(before.cssContentSize.height));
     assert.deepEqual((await s.driver.send('Page.getLayoutMetrics')).cssVisualViewport,before.cssVisualViewport);
     assert.deepEqual((await s.driver.send('Page.getLayoutMetrics')).cssLayoutViewport,before.cssLayoutViewport);

@@ -8,6 +8,7 @@ import { ComputerUseManager } from '../src/computer-use/manager.mjs';
 import { ImageCoordinates } from '../src/computer-use/image-coordinates.mjs';
 import { extensionFixture } from './fixtures/computer-use/extension.mjs';
 import { startFixture } from './fixtures/computer-use/server.mjs';
+import { panViewport } from './fixtures/computer-use/viewport.mjs';
 
 async function setup(t, backend) {
   const root = await mkdtemp(join(tmpdir(), 'trisoul-cu-geometry-')), cleanups = []; let manager;
@@ -66,8 +67,7 @@ for (const backend of ['managed', 'extension']) {
     for (const pan of [false, true]) {
       await s.page.reload();
       await s.driver.send('Emulation.setPageScaleFactor', { pageScaleFactor: 2 });
-      await s.driver.send('Emulation.setTouchEmulationEnabled', { enabled: true });
-      if (pan) await s.driver.send('Input.synthesizeScrollGesture', { x: 300, y: 180, xDistance: -80, yDistance: 0, gestureSourceType: 'touch', speed: 800 });
+      if (pan) await panViewport(s.driver);
       const before = await s.driver.send('Page.getLayoutMetrics');
       if (pan) assert.ok(before.cssVisualViewport.pageX > 20, 'the second case must really pan the viewport');
       const { image, frames } = await modelImage(s);
@@ -118,8 +118,7 @@ for (const backend of ['managed', 'extension']) {
         }
         await s.page.reload();
         await s.driver.send('Emulation.setPageScaleFactor', { pageScaleFactor: 2 });
-        await s.driver.send('Emulation.setTouchEmulationEnabled', { enabled: true });
-        if (pan) await s.driver.send('Input.synthesizeScrollGesture', { x: 300, y: 180, xDistance: -80, yDistance: 0, gestureSourceType: 'touch', speed: 800 });
+          if (pan) await panViewport(s.driver);
         const { cssVisualViewport: viewport } = await s.driver.send('Page.getLayoutMetrics');
         assert.equal(viewport.scale, 2, 'the fixture must actually retain two-times pinch zoom');
         assert.equal(viewport.zoom, zoom);

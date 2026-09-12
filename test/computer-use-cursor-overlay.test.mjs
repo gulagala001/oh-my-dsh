@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os';
 import sharp from 'sharp';
 import { ComputerUseManager } from '../src/computer-use/manager.mjs';
 import { extensionFixture } from './fixtures/computer-use/extension.mjs';
+import { panViewport } from './fixtures/computer-use/viewport.mjs';
 
 test('the browser cursor is visible, excluded from capture, and does not block stop behind a JavaScript dialog', { timeout: 15000 }, async t => {
   const fixture = await startFixture(), browser = await chromium.launch();
@@ -86,7 +87,7 @@ test('the external Chrome window shows the real assistant cursor across zoom and
     await page.evaluate(() => { document.documentElement.style.scrollbarWidth = 'none'; });
     await worker.evaluate(async ({ id, zoom }) => chrome.tabs.setZoom(id, zoom), { id: nativeId, zoom });
     await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: scale });
-    if (pan) { await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true }); await cdp.send('Input.synthesizeScrollGesture', { x: 300, y: headful ? 100 : 180, xDistance: -80, yDistance: 0, gestureSourceType: 'touch', speed: 800 }); }
+    if (pan) await panViewport(cdp, headful ? 100 : 180);
     const initial = viewportGeometry(await cdp.send('Page.getLayoutMetrics'));
     assert.equal(initial.scale, scale); assert.equal(initial.zoom, zoom); if (pan) assert.ok(initial.pageX > 20);
     const before = await backend.invoke('test', tab.id, 'getScreenshot');
