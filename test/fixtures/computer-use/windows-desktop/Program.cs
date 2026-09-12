@@ -86,6 +86,8 @@ internal static class FixtureProgram
                         long id = identifier.GetInt64();
                         var args = root.GetProperty("params");
                         var action = args.TryGetProperty("action", out var operation) ? operation.GetString() : "state";
+                        try
+                        {
                         object result = await app.Dispatcher.InvokeAsync(() =>
                         {
                             if (action == "display-scale-prepare") return displayScale.Prepare();
@@ -109,6 +111,8 @@ internal static class FixtureProgram
                             return new { pid = Environment.ProcessId, first = firstClosed ? 0 : new WindowInteropHelper(first).Handle.ToInt64(), second = new WindowInteropHelper(second).Handle.ToInt64(), foreground = GetForegroundWindow().ToInt64(), dpi = firstClosed ? 0 : GetDpiForWindow(new WindowInteropHelper(first).Handle), cursor = new { x = cursor.X, y = cursor.Y }, text = editor.Text, selectionStart = editor.SelectionStart, selectionLength = editor.SelectionLength, clicks, pointerEvents = pointerEvents.ToArray(), doubleClickTime = GetDoubleClickTime(), controls = new { toggled = toggle.IsChecked, expanded = expand.IsExpanded, scrollOffset = scrolling.VerticalOffset, viewport = scrolling.ViewportHeight }, held = new { left = (GetAsyncKeyState(1) & 0x8000) != 0, right = (GetAsyncKeyState(2) & 0x8000) != 0, middle = (GetAsyncKeyState(4) & 0x8000) != 0, ctrl = (GetAsyncKeyState(0x11) & 0x8000) != 0, shift = (GetAsyncKeyState(0x10) & 0x8000) != 0, alt = (GetAsyncKeyState(0x12) & 0x8000) != 0 } };
                         });
                         await Console.Out.WriteLineAsync(JsonSerializer.Serialize(new { jsonrpc = "2.0", id, result }));
+                        }
+                        catch (Exception error) { await Console.Out.WriteLineAsync(JsonSerializer.Serialize(new { jsonrpc = "2.0", id, error = new { code = -32000, message = error.Message } })); }
                     }
                 }
                 finally { await app.Dispatcher.InvokeAsync(() => { try { displayScale.Dispose(); clipboard.Restore(); } finally { timer.Stop(); app.Shutdown(); } }); }

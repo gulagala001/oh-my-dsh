@@ -24,12 +24,12 @@ internal sealed class DpiFixture : IDisposable
         RequireCi(); original ??= Read();
         var mode = new DisplayMode { Size = 220 };
         if (!EnumDisplaySettingsW(null, -1, ref mode)) throw new Win32Exception();
-        if (mode.Width < 1920 || mode.Height < 1080)
+        if (mode.Width < 2560 || mode.Height < 1440)
         {
             originalMode ??= mode;
-            SetResolution(Math.Max(mode.Width, 1920u), Math.Max(mode.Height, 1080u));
+            SetResolution(Math.Max(mode.Width, 2560u), Math.Max(mode.Height, 1440u));
         }
-        return new { width = Math.Max(mode.Width, 1920u), height = Math.Max(mode.Height, 1080u) };
+        return new { width = Math.Max(mode.Width, 2560u), height = Math.Max(mode.Height, 1440u) };
     }
     private static void SetResolution(uint width, uint height)
     {
