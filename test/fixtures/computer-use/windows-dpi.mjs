@@ -14,6 +14,7 @@ export async function verifyDisplayScaling({ t, fixture, native, target, artifac
     const last = await request('state');
     assert.fail('Display/input did not settle: ' + JSON.stringify({ dpi: last.dpi, cursor: last.cursor, text: last.text, held: last.held, pointerEvents: last.pointerEvents.slice(-3) }));
   };
+  const initialDpi = (await request('state')).dpi;
   const identity = { pid: target.pid, window_id: target.window_id, process_identity: target.process_identity }, reports = [];
   const capture = async () => {
     for (let i = 0; ; i++) {
@@ -22,6 +23,7 @@ export async function verifyDisplayScaling({ t, fixture, native, target, artifac
     }
   };
   try {
+    t.diagnostic('DPI test resolution: ' + JSON.stringify(await request('display-scale-prepare')));
     await request('resize', { width: 440, height: 320 });
     await request('move', { x: 20, y: 20 });
     await request('focus');
@@ -80,6 +82,7 @@ export async function verifyDisplayScaling({ t, fixture, native, target, artifac
     });
   } finally {
     await request('display-scale-restore');
+    await wait(state => state.dpi === initialDpi);
     await request('resize', { width: 640, height: 420 });
     await request('move', { x: 100, y: 100 });
   }

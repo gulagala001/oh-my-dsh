@@ -10,10 +10,40 @@ internal sealed class DpiFixture : IDisposable
     [StructLayout(LayoutKind.Sequential)] private struct ScaleInfo { public Header Header; public int Minimum, Current, Maximum; }
     [StructLayout(LayoutKind.Sequential)] private struct ScaleRequest { public Header Header; public int Value; }
     private static readonly int[] Percentages = [100, 125, 150, 175, 200, 225, 250, 300, 350, 400, 450, 500];
+    [StructLayout(LayoutKind.Explicit, Size = 220)] private struct DisplayMode
+    {
+        [FieldOffset(68)] public ushort Size;
+        [FieldOffset(72)] public uint Fields;
+        [FieldOffset(172)] public uint Width;
+        [FieldOffset(176)] public uint Height;
+    }
     private ScaleInfo? original;
+    private DisplayMode? originalMode;
+    internal object Prepare()
+    {
+        RequireCi(); original ??= Read();
+        var mode = new DisplayMode { Size = 220 };
+        if (!EnumDisplaySettingsW(null, -1, ref mode)) throw new Win32Exception();
+        if (mode.Width < 1920 || mode.Height < 1080)
+        {
+            originalMode ??= mode;
+            SetResolution(Math.Max(mode.Width, 1920u), Math.Max(mode.Height, 1080u));
+        }
+        return new { width = Math.Max(mode.Width, 1920u), height = Math.Max(mode.Height, 1080u) };
+    }
+    private static void SetResolution(uint width, uint height)
+    {
+        var mode = new DisplayMode { Size = 220, Fields = 0x00180000, Width = width, Height = height };
+        int result = ChangeDisplaySettingsExW(null, ref mode, IntPtr.Zero, 0, IntPtr.Zero);
+        if (result != 0) throw new InvalidOperationException($"CI display cannot use {width}x{height}: {result}");
+    }
+    private static void RequireCi()
+    {
+        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true") throw new InvalidOperationException("Display mutation is restricted to disposable CI desktops");
+    }
     internal object Set(int percent)
     {
-        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true") throw new InvalidOperationException("Display scaling mutation is restricted to disposable CI desktops");
+        RequireCi();
         original ??= Read();
         var info = Read(); int index = Array.IndexOf(Percentages, percent), value = index + info.Minimum;
         if (index < 0 || value < info.Minimum || value > info.Maximum) throw new InvalidOperationException($"Display does not support {percent}% scaling (range {info.Minimum}..{info.Maximum})");
@@ -39,7 +69,13 @@ internal sealed class DpiFixture : IDisposable
         header.Type = -4; header.Size = Marshal.SizeOf<ScaleRequest>();
         var request = new ScaleRequest { Header = header, Value = value }; Check(DisplayConfigSetDeviceInfo(ref request));
     }
-    public void Dispose() { if (original is { } saved) { Apply(saved.Header, saved.Current); original = null; } }
+    public void Dispose()
+    {
+        if (originalMode is { } mode) { SetResolution(mode.Width, mode.Height); originalMode = null; }
+        if (original is { } saved) { Apply(saved.Header, saved.Current); original = null; }
+    }
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool EnumDisplaySettingsW(string? device, int index, ref DisplayMode mode);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)] private static extern int ChangeDisplaySettingsExW(string? device, ref DisplayMode mode, IntPtr window, uint flags, IntPtr data);
     private static void Check(int result) { if (result != 0) throw new Win32Exception(result, "CI display DPI operation failed"); }
     [DllImport("user32.dll")] private static extern int GetDisplayConfigBufferSizes(uint flags, out uint paths, out uint modes);
     [DllImport("user32.dll")] private static extern int QueryDisplayConfig(uint flags, ref uint paths, IntPtr pathData, ref uint modes, IntPtr modeData, IntPtr topology);

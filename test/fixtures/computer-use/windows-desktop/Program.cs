@@ -88,6 +88,7 @@ internal static class FixtureProgram
                         var action = args.TryGetProperty("action", out var operation) ? operation.GetString() : "state";
                         object result = await app.Dispatcher.InvokeAsync(() =>
                         {
+                            if (action == "display-scale-prepare") return displayScale.Prepare();
                             if (action == "display-scale") return displayScale.Set(args.GetProperty("percent").GetInt32());
                             if (action == "display-scale-restore") { displayScale.Dispose(); return new { restored = true }; }
                             if (action == "clipboard-seed") { clipboard.Mode = args.GetProperty("mode").GetString()!; clipboard.Seed(args.GetProperty("text").GetString()!); return clipboard.State(); }
