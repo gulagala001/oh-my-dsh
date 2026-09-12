@@ -85,6 +85,24 @@ test('Windows native update restarts old transports even if another process alre
   assert.equal(appDocumentation('darwin'), APP_DOCUMENTATION); assert.match(appDocumentation('win32'), /super\/meta\/win mean the Windows key/);
 });
 
+test('Windows app resolution binds only a validated window and retains conversation ownership', async t => {
+  const f = await fixture(t); await f.install(); const expected = await windowsNativeBuild(), calls = [];
+  let result = { pid: 123, window_id: 456, process_identity: '123:created', app_id: 'win-app:fixture', app_name: 'Fixture' };
+  const host = new WindowsNativeHost(f.root, { platform: 'win32', osRelease: '10.0.22631', runtime: f.runtime, client: () => {
+    const client = { closed: false, initialize: async () => ({ serverInfo: { name: 'trisoul-computer-use' }, _meta: { trisoul: { protocol: 1, build: expected.build } } }), call: async (name, args) => { calls.push({ name, args }); return { structuredContent: name === 'launch_app' ? result : { status: 'ok' } }; }, close: async () => { client.closed = true; } }; return client;
+  } });
+  t.after(() => host.close());
+  const app = await host.bind('one', { id: 'Fixture', windowId: 456 });
+  assert.equal(calls.find(call => call.name === 'launch_app').args.window_id, 456);
+  assert.equal(host.targets.get(app.id).processIdentity, '123:created');
+  assert.equal((await host.bind('one', 'win-app:fixture')).id, app.id);
+  await assert.rejects(host.bind('two', 'Fixture'), /another conversation/);
+  result = { ...result, window_id: 0 };
+  await assert.rejects(host.bind('one', 'invalid'), /无效的应用窗口身份/);
+  assert.equal(host.targets.size, 1);
+  await assert.rejects(host.bind('one', { id: 'Fixture', windowId: -1 }), /windowId/);
+});
+
 test('Windows native removal stops clients before deleting only its owned files and permits reinstall', async t => {
   const f = await fixture(t); await f.install(); const original = f.runtime.binary();
   f.state.build = 'b'.repeat(64); await f.install(); const current = f.runtime.binary();

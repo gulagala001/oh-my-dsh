@@ -106,6 +106,18 @@ export class WindowsNativeHost extends NativeHost {
     if (value.platform !== 'win32' || typeof value.interactive !== 'boolean' || typeof value.capture_supported !== 'boolean') throw new Error('Windows 桌面运行时返回了无效的可用性状态');
     return value;
   }
+  async bind(sessionId, query, signal) {
+    signal?.throwIfAborted();
+    const requested = typeof query === 'string' ? { id: query } : query;
+    if (!requested || typeof requested.id !== 'string' || !requested.id.trim()) throw new Error('getApp expects an application name, ID, executable path, or {id, windowId}.');
+    if (requested.windowId !== undefined && (!Number.isSafeInteger(requested.windowId) || requested.windowId <= 0)) throw new Error('windowId must be a current Windows window ID.');
+    const connection = await this.connection(sessionId), expected = await this.expectedBuild();
+    if (connection.info._meta?.trisoul?.build !== expected.build) throw new Error('桌面控制运行时需要更新或重启，请先在运行环境中更新桌面控制');
+    const target = nativeValue(await this.call(sessionId, 'launch_app', { name: requested.id, ...(requested.windowId !== undefined ? { window_id: requested.windowId } : {}) }, signal));
+    if (!Number.isSafeInteger(target.pid) || target.pid <= 0 || !Number.isSafeInteger(target.window_id) || target.window_id <= 0 || typeof target.process_identity !== 'string' || !target.process_identity || typeof target.app_id !== 'string' || !target.app_id || typeof target.app_name !== 'string') throw new Error('Windows 返回了无效的应用窗口身份，未建立控制绑定');
+    signal?.throwIfAborted();
+    return this.bindWindow(sessionId, { id: target.app_id, pid: target.pid, displayName: target.app_name }, { ...target, processIdentity: target.process_identity });
+  }
   async call(sessionId, name, args = {}, signal) {
     const result = await super.call(sessionId, name, args, signal);
     if (name === 'start_preview') this.previewDescriptors.set(sessionId, { key: args.process_identity + ':' + args.window_id, owner: args.owner_session_id });

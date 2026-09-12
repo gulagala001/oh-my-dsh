@@ -15,6 +15,7 @@ internal static class FixtureProgram
     public static void Main()
     {
         SetProcessDpiAwarenessContext(new IntPtr(-4));
+        bool standalone = Path.GetFileNameWithoutExtension(Environment.ProcessPath!).EndsWith(".Standalone", StringComparison.Ordinal);
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         var panel = new StackPanel { Margin = new Thickness(18) };
         var editor = new TextBox { Text = "Windows 观察验收 中文🙂", MinHeight = 36 };
@@ -50,9 +51,15 @@ internal static class FixtureProgram
         first.Closed += (_, _) => firstClosed = true;
         var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) }; int revision = 0;
         timer.Tick += (_, _) => clock.Text = "帧 " + ++revision;
+        if (standalone)
+        {
+            var close = new Button { Content = "关闭测试应用" }; AutomationProperties.SetName(close, "关闭测试应用");
+            close.Click += (_, _) => { timer.Stop(); first.Close(); app.Shutdown(); }; panel.Children.Add(close);
+        }
         app.Startup += (_, _) =>
         {
-            first.Show(); second.Show(); timer.Start();
+            first.Show(); if (!standalone) second.Show(); timer.Start();
+            if (standalone) return;
             _ = Task.Run(async () =>
             {
                 try

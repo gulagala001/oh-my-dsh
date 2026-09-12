@@ -34,6 +34,20 @@ internal sealed class WindowsInput(Action<object>? pointer = null)
 
     internal void Begin(WindowTarget target, CancellationToken token)
     {
+        BeginLaunch(token);
+        var current = WindowCatalog.Read(target.pid, target.window_id, target.process_identity);
+        if (!current.is_on_screen) throw new NativeFailure("WINDOW_NOT_VISIBLE", "Restore the target window before controlling it");
+        if (GetForegroundWindow() != new IntPtr(target.window_id))
+        {
+            if (activatedWindow == target.window_id) { foregroundLost = true; throw new NativeFailure("FOREGROUND_LOST", "The selected window lost foreground after control began; bind its current window again"); }
+            if (!SetForegroundWindow(new IntPtr(target.window_id))) throw new NativeFailure("FOREGROUND_REQUIRED", "Windows did not allow this window to become foreground. Bring the selected window forward and resume control");
+            for (int i = 0; i < 20 && GetForegroundWindow() != new IntPtr(target.window_id); i++) { CheckUser(token); token.WaitHandle.WaitOne(10); }
+        }
+        activatedWindow = target.window_id;
+        Check(target, token);
+    }
+    internal void BeginLaunch(CancellationToken token)
+    {
         token.ThrowIfCancellationRequested();
         if (pendingReleases.Length != 0) throw new NativeFailure("INPUT_CLEANUP_PENDING", "The previous input release has not been confirmed; retry Stop");
         if (!ownsMutex)
@@ -49,16 +63,6 @@ internal sealed class WindowsInput(Action<object>? pointer = null)
             catch { mutex.ReleaseMutex(); ownsMutex = false; throw; }
         }
         CheckUser(token); WindowCatalog.RequireInteractive();
-        var current = WindowCatalog.Read(target.pid, target.window_id, target.process_identity);
-        if (!current.is_on_screen) throw new NativeFailure("WINDOW_NOT_VISIBLE", "Restore the target window before controlling it");
-        if (GetForegroundWindow() != new IntPtr(target.window_id))
-        {
-            if (activatedWindow == target.window_id) { foregroundLost = true; throw new NativeFailure("FOREGROUND_LOST", "The selected window lost foreground after control began; bind its current window again"); }
-            if (!SetForegroundWindow(new IntPtr(target.window_id))) throw new NativeFailure("FOREGROUND_REQUIRED", "Windows did not allow this window to become foreground. Bring the selected window forward and resume control");
-            for (int i = 0; i < 20 && GetForegroundWindow() != new IntPtr(target.window_id); i++) { CheckUser(token); token.WaitHandle.WaitOne(10); }
-        }
-        activatedWindow = target.window_id;
-        Check(target, token);
     }
     internal void CheckUser(CancellationToken token)
     {

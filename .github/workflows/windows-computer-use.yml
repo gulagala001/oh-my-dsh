@@ -68,7 +68,7 @@ jobs:
           TRISOUL_CU_INPUT_DIAGNOSTICS: '1'
         shell: pwsh
         run: |
-          node --test --test-reporter=tap test/computer-use-windows-native.test.mjs *> cu-artifacts/windows-native.log
+          node --test --test-reporter=tap --test-concurrency=1 test/computer-use-windows-native.test.mjs test/computer-use-windows-apps.test.mjs *> cu-artifacts/windows-native.log
           $testExit = $LASTEXITCODE
           Get-Content cu-artifacts/windows-native.log
           exit $testExit

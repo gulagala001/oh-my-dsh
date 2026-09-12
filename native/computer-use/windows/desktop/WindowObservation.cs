@@ -23,6 +23,8 @@ internal sealed partial class WindowObservation : IDisposable
         return result.Task;
     }
     internal Task<Dictionary<string, object?>> Read(WindowTarget target, CancellationToken token, bool actionable = false) => Run(() => Observe(target, token, actionable));
+    internal Task BeforeLaunch(CancellationToken token) => Run(() => { input.BeginLaunch(token); return true; });
+    internal Task AfterLaunch(CancellationToken token) => Run(() => { input.CheckUser(token); return true; });
     private Dictionary<string, object?> Observe(WindowTarget target, CancellationToken token, bool actionable)
     {
         token.ThrowIfCancellationRequested(); WindowCatalog.RequireInteractive();

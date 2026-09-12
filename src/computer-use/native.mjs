@@ -252,7 +252,10 @@ export class NativeHost {
     }
     signal?.throwIfAborted();
     if(windows.length!==1)throw new Error(`Choose a window explicitly with cua.getApp({id:${JSON.stringify(app.id)},windowId:...}). Available windows: ${JSON.stringify(windows.map(w=>({windowId:w.window_id,title:w.title})))}.`);
-    const window=windows[0],key=`${app.pid}:${window.window_id}`,owner=this.owners.get(key);
+    return this.bindWindow(sessionId,app,windows[0]);
+  }
+  bindWindow(sessionId,app,window){
+    const key=`${app.pid}:${window.window_id}`,owner=this.owners.get(key);
     if(owner&&owner!==sessionId)throw new Error('This application window is controlled by another conversation.');
     this.owners.set(key,sessionId);
     const existing=[...this.targets.values()].find(t=>t.key===key&&t.sessionId===sessionId);

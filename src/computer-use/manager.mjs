@@ -180,7 +180,16 @@ export class ComputerUseManager {
       if (expected && (expected.url !== tab.url || expected.title !== tab.title)) throw new Error('The referenced tab changed. Inspect the current tab identity before claiming it.');
       await browser.target(id, tab.id, { signal }); signal?.throwIfAborted(); return this.setTarget(session, { ...tab, kind: 'tab' });
     }
-    if (method === 'getApp') { const app = await this.native.bind(id, args[0], signal); signal?.throwIfAborted(); return this.setTarget(session, app); }
+    if (method === 'getApp') {
+      try { const app = await this.native.bind(id, args[0], signal); signal?.throwIfAborted(); return this.setTarget(session, app); }
+      catch (error) {
+        if (['USER_INTERVENTION', 'FOREGROUND_LOST', 'INPUT_MONITOR_LOST'].includes(error?.code)) {
+          session.stopped = true; session.controlEpoch++; session.lastError = { operation: 'getApp', message: error.message, at: Date.now() }; this.publishControl(session);
+          void this.stop(id).catch(cleanup => { session.stopError = { operation: 'stop', message: cleanup.message, at: Date.now() }; });
+        }
+        throw error;
+      }
+    }
     if (method === 'target') {
       const [target, operation, input = []] = args;
       if (!target || !['app', 'tab'].includes(target.kind) || typeof target.id !== 'string') throw new Error('Invalid Computer Use target');

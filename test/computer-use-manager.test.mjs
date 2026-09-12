@@ -74,6 +74,14 @@ test('native runtime removal closes native previews and bindings without changin
   assert.deepEqual(browser.target, kept);
 });
 
+test('intervention during Windows application launch stops the conversation before another app request', async t => {
+  const manager = await managerFor(t);
+  manager.native.bind = async () => { throw Object.assign(new Error('launch interrupted by user'), { code: 'USER_INTERVENTION' }); };
+  await assert.rejects(manager.dispatch('launch', 'getApp', ['fixture']), error => error.code === 'USER_INTERVENTION');
+  assert.equal(manager.session('launch').stopped, true);
+  await assert.rejects(manager.execute('launch', "await cua.getApp('fixture')"), error => error.code === 'COMPUTER_USE_STOPPED');
+});
+
 test('JavaScript callbacks and arguments cross the worker/browser boundary intact', async t => {
   const manager = await managerFor(t), fixture = await startFixture();
   t.after(() => fixture.close());

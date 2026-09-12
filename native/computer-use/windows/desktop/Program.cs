@@ -4,7 +4,7 @@ using System.Text.Json;
 
 internal static class DesktopProgram
 {
-    internal static readonly string[] Capabilities = ["windows", "accessibility", "screenshots", "preview", "keyboard", "click", "drag", "paste", "uia-actions", "structured-scroll"];
+    internal static readonly string[] Capabilities = ["windows", "applications", "launch-app", "accessibility", "screenshots", "preview", "keyboard", "click", "drag", "paste", "uia-actions", "structured-scroll"];
     internal static readonly string Build = typeof(DesktopProgram).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>().Single(a => a.Key == "TrisoulBuild").Value ?? "development";
     public static async Task<int> Main(string[] args)
     {
@@ -38,6 +38,7 @@ internal static class DesktopProgram
 internal sealed class DesktopObservation : IDisposable
 {
     private readonly WindowObservation observation;
+    private AppCatalog? apps;
     internal DesktopObservation(Action<object>? pointer = null) { observation = new WindowObservation(pointer); }
     private readonly Dictionary<string, WindowCapture> captures = new();
     private WindowTarget? preview;
@@ -54,8 +55,18 @@ internal sealed class DesktopObservation : IDisposable
         }
         if (name == "list_apps")
         {
-            WindowCatalog.RequireInteractive();
-            return NativeProtocol.Result(new { apps = WindowCatalog.List().GroupBy(window => window.app_id).Select(group => new { bundle_id = group.Key, pid = group.First().pid, name = group.First().app_name, running = true }).ToArray() });
+            return await (apps ??= new AppCatalog()).List(token);
+        }
+        if (name == "launch_app")
+        {
+            if (readOnly) throw new NativeFailure("READ_ONLY_SESSION", "An observation connection cannot launch an application");
+            string query = args.TryGetProperty("bundle_id", out var appId) ? appId.GetString() ?? "" : args.GetProperty("name").GetString() ?? "";
+            if (string.IsNullOrWhiteSpace(query)) throw new NativeFailure("INVALID_ARGUMENT", "An exact application name, ID, or executable path is required");
+            long? selected = args.TryGetProperty("window_id", out var id) ? id.GetInt64() : null;
+            bool launched = false;
+            var target = await (apps ??= new AppCatalog()).Resolve(query, selected, async () => { await observation.BeforeLaunch(token); launched = true; }, token);
+            if (launched) await observation.AfterLaunch(token);
+            return NativeProtocol.Result(target);
         }
         if (name is "list_windows" or "list_share_windows")
         {
@@ -122,6 +133,7 @@ internal sealed class DesktopObservation : IDisposable
         await observation.CloseInput();
         foreach (var capture in captures.Values) capture.Dispose();
         captures.Clear(); preview = null;
+        apps?.Dispose(); apps = null;
     }
     public void Dispose() { Cleanup().GetAwaiter().GetResult(); observation.Dispose(); }
 }
