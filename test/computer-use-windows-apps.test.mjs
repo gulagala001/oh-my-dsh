@@ -21,7 +21,7 @@ test('Windows discovers installed apps, launches exact executables and Start men
   const otherExecutable = join(fixtureOutput, 'OhMyDsh.OtherFixture.Standalone.exe');
   const title = 'Oh My DSH App Fixture ' + randomUUID();
   const env = { ...process.env, OMD_TEST_EXE: executable, OMD_TEST_OTHER_EXE: otherExecutable, OMD_TEST_SHORTCUT: title, OMD_SHORTCUT_SOURCE: fileURLToPath(new URL('./fixtures/computer-use/windows-shortcut.cs', import.meta.url)) };
-  const ps = source => run('pwsh', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', source], { env, windowsHide: true, timeout: 20000 });
+  const ps = source => run('pwsh', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', "$OutputEncoding=[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false);\n" + source], { env, windowsHide: true, timeout: 20000 });
   let host; const calls = [];
   t.after(async () => {
     const connections = await Promise.all(Array.from(host?.connections.values() ?? [], pending => pending.catch(() => null)));
@@ -95,6 +95,7 @@ $shellFolder=(New-Object -ComObject Shell.Application).NameSpace((Split-Path -Pa
 $item=$shellFolder.ParseName((Split-Path -Leaf $link))
 [pscustomobject]@{file=$link;target=$target;name=$item.Name;shellTarget=$item.GetLink.Path;programs=[Environment]::GetFolderPath('Programs')} | ConvertTo-Json -Compress`);
   await writeFile(join(artifacts, 'shortcut-created.json'), shortcutCreated.stdout);
+  assert.match(JSON.parse(shortcutCreated.stdout).target, /中文/, 'the native shortcut retains its Unicode target path');
   let installed, catalog;
   for (let i = 0; i < 80; i++) { catalog = await host.list('app-launch'); installed = catalog.find(app => app.displayName === title); if (installed) break; await delay(250); }
   await writeFile(join(artifacts, 'application-catalog.json'), JSON.stringify(catalog, null, 2));
