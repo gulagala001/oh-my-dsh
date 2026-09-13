@@ -4,6 +4,8 @@
 
 OpenCU 从 [Oh My DSH](https://github.com/gulagala001/oh-my-dsh) 的 Computer Use 提取而来，提供相同的操控工具、实时预览和接管体验，可以独立安装到 DSH。Oh My DSH 继续集成全部能力，并直接复用 OpenCU 的实现。
 
+当前版本：[1.0.1](https://github.com/gulagala001/opencu/releases/tag/v1.0.1)。源码、发行包与 SHA-256 校验文件见版本页面。
+
 ## 安装
 
 需要 **DSH 0.1.5-rc.1 Web、Node.js ≥22.19、pnpm 11.23.0 和 Git**。先停止 DSH 服务，再运行：
@@ -77,6 +79,6 @@ pnpm start
 
 `pnpm start` 默认使用仓库下 `data/dsh/` 的独立 DSH 配置，也可设置 `DSH_HOME`。测试使用独立浏览器配置；原生桌面专项按平台与环境条件运行。Windows 自动化配置见 `.github/workflows/windows-computer-use.yml`。
 
-`src/integration.mjs` 与 `src/client/computer-use.jsx` 提供整合入口；浏览器、原生服务、扩展和平台测试都在此仓库维护。Oh My DSH 通过固定版本依赖复用，不维护另一份实现。
+`src/integration.mjs` 与 `src/client/computer-use.jsx` 提供整合入口；浏览器、原生服务、扩展和平台测试都在此仓库维护。Oh My DSH 同步完整发行快照，并校验其中每个文件，不单独修改通用实现。
 
 第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
