@@ -77,6 +77,12 @@ export async function screenshotGeometry(record) {
       };
       walk(document);
       return offsets;
+    }).catch(error => {
+      // A navigation can destroy the evaluation context before the CDP
+      // frameNavigated notification reaches the preview connection. This is
+      // a stale observation, not a broken browser connection.
+      if (/Execution context was destroyed|Frame was detached|frame has been detached/i.test(error.message)) throw staleScreenshot();
+      throw error;
     }))),
   ]);
   const devicePixelRatio = pixelRatio.result?.value;
