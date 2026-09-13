@@ -22,11 +22,19 @@ function useStateView(id,visible=true){
 }
 const ScreenIcon=()=> <ComputerIcon name="screen" size={17}/>;
 const names={running:'正在操作',idle:'就绪',stopped:'已停止',stopping:'正在停止',error:'需要处理'};
-function ComputerChip({sessionId,onOpen,inputActions,conversation}){
+function ComputerChip({sessionId,onOpen,onPresentation,inputActions,conversation}){
   const{state,setState,setError,error}=useStateView(sessionId);const previewAnchor=useRef(null);
+  const presentationHandler=useRef(onPresentation);presentationHandler.current=onPresentation;
+  useEffect(()=>{
+    const request=state?.presentationRequest;
+    if(!request||request.sessionId!==sessionId)return;
+    let live=true;
+    void Promise.resolve().then(()=>{if(live)return presentationHandler.current(request);}).then(applied=>live&&applied!==false&&api('presentation-ack',sessionId,{id:request.id,visible:request.visible}),error=>live&&api('presentation-ack',sessionId,{id:request.id,visible:request.visible,error:error.message})).catch(error=>{if(live)setError(error.message);});
+    return()=>{live=false;};
+  },[sessionId,state?.presentationRequest?.id]);
   if(!sessionId||state?.enabled===false)return null;
   const active=!!state?.target&&(state.status==='running'||state.status==='stopping'||state.status==='error'||state.transitioning);
-  return <div ref={previewAnchor} className="tx-cu-chip" title={error||undefined}>
+  return <div ref={previewAnchor} data-cu-session={sessionId} className="tx-cu-chip" title={error||undefined}>
     <button type="button" className="tx-cu-entry" aria-label="打开 Computer Use" title="查看和操作应用、网页" onClick={onOpen}><ScreenIcon/><span>电脑</span></button>
     <FloatingPreview sessionId={sessionId} state={state} url={url} api={api} onState={setState} onError={setError} anchor={previewAnchor} onOpen={onOpen}/>
     <WindowShare sessionId={sessionId} inputActions={inputActions} conversation={conversation}/>
@@ -48,7 +56,7 @@ export function ComputerPane({sessionId,useTabInfo,inputActions,conversation}){
     {state?.target&&target.id!==state.target.id&&<button type="button" aria-label="查看助手当前画面" title="查看助手当前画面" onClick={()=>act('view-tab',{current:true})}><ComputerIcon name="return" size={15}/></button>}
     {state?.status==='stopped'&&!state?.transitioning?<button type="button" className="is-resume" aria-label="恢复助手控制" title="恢复助手控制" disabled={busy} onClick={()=>act('resume')}><ComputerIcon name="play" size={14}/></button>:<button type="button" aria-label="停止并接管" title="停止并接管" disabled={busy||state?.status==='stopping'} onClick={()=>act('stop')}><ComputerIcon name="stop" size={14}/></button>}
   </>:null;
-  return <div className={'tx-cu-pane'+(target?.kind==='tab'?' tx-cu-pane-browser':'')}>{target?.kind!=='tab'&&<header>
+  return <div data-cu-session={sessionId} data-cu-target={target?.id} className={'tx-cu-pane'+(target?.kind==='tab'?' tx-cu-pane-browser':'')}>{target?.kind!=='tab'&&<header>
     <div className="tx-cu-pane-heading"><ScreenIcon/><div><strong>Computer Use</strong><span className={'tx-cu-status '+(state?.status==='running'?'is-running':'')}>{state?.resuming?'正在恢复':state?.transitioning?'正在载入':names[state?.status]??'连接中'}</span></div></div>
     {state?.target&&target?.id!==state.target.id&&<button type="button" onClick={()=>act('view-tab',{current:true})}>查看助手当前画面</button>}
     <div className="tx-cu-toolbar">{target?.kind==='tab'&&<PageAnnotation sessionId={sessionId} frame={state.enabled?frame:null} target={target} inputActions={inputActions} conversation={conversation} api={api}/>} {state?.status==='stopped'&&!state?.transitioning?<button className="tx-cu-primary" onClick={()=>act('resume')}><ComputerIcon name="play" size={12}/>恢复助手控制</button>:target&&<button className="tx-cu-stop" disabled={busy} onClick={()=>act('stop')}><ComputerIcon name="stop" size={12}/>停止并接管</button>}</div>
@@ -96,7 +104,23 @@ function installComputerUseClient(ctx, shared){
   installComputerReferenceMessages(ctx);
   computerGroupPresentation(ctx);
   ctx.effect(()=>{const style=document.createElement('style');style.dataset.plugin='trisoul-x-computer-use';style.textContent=css;document.head.append(style);return()=>style.remove();});
-  function ComputerEntry(props){const { openPanel } = useOptions();return <ComputerChip {...props} conversation={ctx.get('conversation')} onOpen={()=>openPanel?openPanel('computer'):ctx.sidebarRight.openTab('trisoul-x-computer-use')}/>;}
+  function ComputerEntry(props){
+    const { openPanel } = useOptions();
+    const open=()=>openPanel?openPanel('computer'):ctx.sidebarRight.openTab('trisoul-x-computer-use');
+    const present=async request=>{
+      const latest=await api('state',props.sessionId);
+      const active=()=>document.visibilityState==='visible'&&[...document.querySelectorAll('.tx-cu-chip')].some(node=>node.dataset.cuSession===props.sessionId&&node.getClientRects().length>0);
+      if(latest.presentationRequest?.id!==request.id||Date.now()>=request.expiresAt||!active())return false;
+      const visible=()=>[...document.querySelectorAll('.tx-cu-pane-browser')].some(node=>node.dataset.cuSession===props.sessionId&&node.dataset.cuTarget===request.tabId&&node.getClientRects().length>0&&node.getBoundingClientRect().width>0);
+      if(request.visible)open();
+      else if(visible()&&ctx.sidebarRight.isExpanded())ctx.sidebarRight.toggleExpanded();
+      const end=Date.now()+1800;
+      while(active()&&visible()!==request.visible&&Date.now()<end)await new Promise(resolve=>setTimeout(resolve,30));
+      if(!active())return false;
+      if(visible()!==request.visible)throw new Error('当前 DSH 页面未能切换浏览器预览显示状态。');
+    };
+    return <ComputerChip {...props} conversation={ctx.get('conversation')} onOpen={open} onPresentation={present}/>;
+  }
   function StandaloneEntry(props){const options=useOptions();return options.integrated?null:<ComputerEntry {...props}/>;}
   ctx.slots.inject('conversation.composer.dock',()=>ctx.slots.register({name:'conversation.composer.dock',id:'trisoul-computer-use',order:25},StandaloneEntry));
   const id='trisoul_x/trisoul-x-computer-use';

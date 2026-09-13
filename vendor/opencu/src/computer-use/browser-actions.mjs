@@ -3,6 +3,7 @@ import {basename} from 'node:path';
 import {access} from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import { point } from './coordinates.mjs';
+import { observeNetwork, listNetwork, networkRequest, networkResponseBody } from './browser-network.mjs';
 import { listPageAssets, bundlePageAssets, exportPageContent } from './browser-content.mjs';
 import { fetchWebMcpTools, callWebMcpTool, cancelWebMcp, webMcpAvailable } from './browser-webmcp.mjs';
 import { captureViewport, captureFullPage, observeScreenshot, withViewportTransaction, screenshotGeometry, sameScreenshotGeometry, staleScreenshot } from './browser-screenshot.mjs';
@@ -31,6 +32,7 @@ export class BrowserActions {
     const id = this.recordId(connection, targetInfo);
     const record = { id, page, cdp, generation: 0, elements: new Map(), ids: new Map(), previous: new Map(), logs: [], downloads: new Map(), frames: new Map(), heldButtons: new Set(), heldKeys: new Set(), buttonReleases: new Map(), keyReleases: new Map(), pointer: { x: 0, y: 0 } };
     record.coordinateId = randomUUID();
+    observeNetwork(record);
     cdp.on('Page.downloadWillBegin',event=>{
       const owner=this.owners.get(id)?.sessionId??this.downloadSessions.get(id);if(!owner||this.downloadHistory.has(event.guid))return;
       this.downloadHistory.set(event.guid,{id:event.guid,sessionId:owner,tabId:id,browserId:this.id,filename:event.suggestedFilename,url:event.url,startedAt:Date.now(),state:'inProgress',receivedBytes:0,totalBytes:0});
@@ -344,6 +346,9 @@ export class BrowserActions {
       if (method === 'getScreenshot'||method==='screenshot') return await this.observeScreenshot(record, args[0], signal);
       if (method === 'getAXStateAndScreenshot') return await this.snapshot(record, args[0], signal, true);
       if (method === 'pageAssets.list') return await listPageAssets(record, signal);
+      if (method === 'network.list') return listNetwork(record, args[0]);
+      if (method === 'network.request') return await networkRequest(record, args[0], signal);
+      if (method === 'network.responseBody') return await networkResponseBody(record, args[0], signal);
       if (method === 'pageAssets.bundle') return await bundlePageAssets(record, args[0], signal);
       if (method === 'content.export') return await exportPageContent(record, signal, () => this.frameBindings(record));
       if (method === 'capabilities.list') return [{ id: 'pageAssets', description: 'Inventory and export assets already loaded by the current page.' }, ...(await webMcpAvailable(record, signal) ? [{ id: 'webmcp', description: 'Discover and invoke page-defined tools using the browser WebMCP protocol.' }] : [])];

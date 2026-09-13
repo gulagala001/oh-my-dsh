@@ -163,10 +163,11 @@ export class ComputerUseManager {
     const session = this.session(id); signal?.throwIfAborted();
     if (session.ending) { await session.ending; signal?.throwIfAborted(); }
     if (method === 'listBrowsers') return this.browsers().filter(browser => !browser.run?.lost).map(browser => this.browserInfo(browser));
+    if (method === 'browserVisibility') return this.presentBrowser(id, args[0], args[1], signal);
     if(method==='browserViewport'){const browser=this.browserFor(args[0]);await Promise.all([...this.viewsFor({kind:'tab',browserId:browser.id}).views.values()].map(view=>view.layoutPending?.catch(()=>{})));signal?.throwIfAborted();await browser.browserViewport(id,args[1],signal);return null;}
     if (method === 'getBrowser') {
       const browser = this.browserFor(args[0]?.id);
-      return { ...this.browserInfo(browser), capabilities: ['accessibility', 'screenshots', 'playwright', 'dialogs', 'viewport', ...(browser === this.browser ? ['files'] : [])] };
+      return { ...this.browserInfo(browser), capabilities: ['accessibility', 'screenshots', 'playwright', 'dialogs', 'viewport', 'visibility', ...(browser === this.browser ? ['files'] : [])] };
     }
     if (method === 'listApps') return this.native.available() ? this.native.list(id) : [];
     if (method === 'listTabs') return this.browserFor(args[0]?.browser).list(id, { signal });
@@ -284,6 +285,36 @@ export class ComputerUseManager {
   publishControl(state) {
     if (!this.enabled || state.stopped || state.uiAction || state.resuming) this.clearPointer(state);
     for (const viewer of state.viewers.values()) { try { viewer.send('control', { controlEpoch: state.controlEpoch, stopped: state.stopped, transitioning: !!state.uiAction || state.resuming === true }); } catch {} }
+  }
+  async presentBrowser(id, browserId, visible, signal) {
+    if (typeof visible !== 'boolean') throw new TypeError('visibility.set requires a boolean.');
+    const state = this.session(id), browser = this.browserFor(browserId), target = state.target;
+    if (target?.kind !== 'tab' || this.browserForTab(target.id, target.browserId) !== browser) throw new Error('Select a tab in this browser before changing its DSH preview visibility.');
+    if (state.presentationPending) throw new Error('A browser presentation request is already pending.');
+    if (visible) { state.viewTarget = target; state.viewRevision = (state.viewRevision ?? 0) + 1; }
+    const request = { id: randomUUID(), sessionId: id, visible, tabId: target.id, browserId: browser.id, expiresAt: Date.now() + 5000 };
+    state.presentationRequest = request;
+    try {
+      return await new Promise((resolve, reject) => {
+        const cancel = () => reject(signal.reason ?? new Error('Browser presentation cancelled.'));
+        const timer = setTimeout(() => reject(state.presentationPending?.error ?? new Error('No active DSH page confirmed browser visibility. Open this conversation in DSH and try again.')), 5000);
+        state.presentationPending = { request, resolve, reject, cleanup: () => { clearTimeout(timer); signal?.removeEventListener('abort', cancel); } };
+        signal?.addEventListener('abort', cancel, { once: true });
+        if (signal?.aborted) cancel();
+      });
+    } finally {
+      state.presentationPending?.cleanup(); state.presentationPending = null;
+      if (state.presentationRequest?.id === request.id) state.presentationRequest = null;
+    }
+  }
+  acknowledgePresentation(id, input) {
+    const state = this.session(id), pending = state.presentationPending;
+    if (!pending && state.presentationCompleted?.id === input.id && state.presentationCompleted.visible === input.visible) return { acknowledged: true };
+    if (!pending || input.id !== pending.request.id) throw new Error('This browser presentation request has expired.');
+    if (input.visible !== pending.request.visible) throw new Error('Browser visibility acknowledgement does not match the request.');
+    if (input.error) pending.error = new Error(String(input.error).slice(0, 1000));
+    else { state.presentationCompleted = { id: input.id, visible: input.visible }; pending.resolve({ visible: input.visible, surface: 'dsh-preview', tabId: pending.request.tabId }); }
+    return { acknowledged: true };
   }
   clearPointer(state) {
     this.nativeViews.clearRetainedCursor(state.id);
@@ -731,7 +762,7 @@ export class ComputerUseManager {
     const viewed=this.viewTarget(state),viewTarget=viewed?.kind==='tab'?{...viewed,...this.browsers().find(browser=>browser.records.has(viewed.id))?.records.get(viewed.id)}:viewed;
     const view=viewed?.kind==='tab'?(this.browserViews.views.get(viewed.id)??[...this.extensionViews.values()].map(views=>views.views.get(viewed.id)).find(Boolean)):null;
     const viewViewport=view?{overridden:!!view.record?.viewportOverride&&view.record.viewportMode!=='layout',layoutSupported:this.browserViews.views.get(viewed.id)===view,width:view.latest?.width,height:view.latest?.height}:null;
-    return { observedAt: performance.now(), enabled: !this.closed && this.enabled, nativeInstalled: this.native.available(), status: state?.browserError && !target ? 'error' : state?.status ?? 'idle', target, viewTarget, viewViewport, viewRevision:state?.viewRevision??0, previewTargets:[...(state?.previewTargets?.values()??[])].map(({target})=>target.kind==='tab'?{...target,...this.browsers().find(browser=>browser.records.has(target.id))?.records.get(target.id)}:target), controlEpoch: state?.controlEpoch ?? 0, navigationRevision: state?.navigationRevision ?? 0, transitioning: !!state?.uiAction || state?.resuming === true, resuming: state?.resuming === true, operation: state?.operation ?? null, lastError: state?.stopError ?? state?.browserError ?? state?.lastError ?? null, startedAt: state?.startedAt ?? null, previewAt: this.preview.get(id)?.at ?? null, history: state?.history ?? [], operationStats: state ? structuredClone(state.operationStats) : { total: 0, succeeded: 0, failed: 0, cancelled: 0, methods: {} } };
+    return { presentationRequest: state?.presentationRequest ?? null, observedAt: performance.now(), enabled: !this.closed && this.enabled, nativeInstalled: this.native.available(), status: state?.browserError && !target ? 'error' : state?.status ?? 'idle', target, viewTarget, viewViewport, viewRevision:state?.viewRevision??0, previewTargets:[...(state?.previewTargets?.values()??[])].map(({target})=>target.kind==='tab'?{...target,...this.browsers().find(browser=>browser.records.has(target.id))?.records.get(target.id)}:target), controlEpoch: state?.controlEpoch ?? 0, navigationRevision: state?.navigationRevision ?? 0, transitioning: !!state?.uiAction || state?.resuming === true, resuming: state?.resuming === true, operation: state?.operation ?? null, lastError: state?.stopError ?? state?.browserError ?? state?.lastError ?? null, startedAt: state?.startedAt ?? null, previewAt: this.preview.get(id)?.at ?? null, history: state?.history ?? [], operationStats: state ? structuredClone(state.operationStats) : { total: 0, succeeded: 0, failed: 0, cancelled: 0, methods: {} } };
   }
   async revealPreview(id,input){
     if(!this.enabled||this.closed)throw new Error('Computer Use 已关闭');
