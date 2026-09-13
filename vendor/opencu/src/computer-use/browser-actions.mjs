@@ -32,6 +32,7 @@ export class BrowserActions {
     const id = this.recordId(connection, targetInfo);
     const record = { id, page, cdp, generation: 0, elements: new Map(), ids: new Map(), previous: new Map(), logs: [], downloads: new Map(), frames: new Map(), heldButtons: new Set(), heldKeys: new Set(), buttonReleases: new Map(), keyReleases: new Map(), pointer: { x: 0, y: 0 } };
     record.coordinateId = randomUUID();
+    record.frameGenerations = new WeakMap();
     observeNetwork(record);
     cdp.on('Page.downloadWillBegin',event=>{
       const owner=this.owners.get(id)?.sessionId??this.downloadSessions.get(id);if(!owner||this.downloadHistory.has(event.guid))return;
@@ -52,7 +53,18 @@ export class BrowserActions {
       const url=page.url();this.visit(id,url);
       void page.title().then(title=>{if(!page.isClosed()&&page.url()===url)this.visit(id,url,title);},()=>{});
     };
-    page.on('framenavigated', frame => { record.generation++; record.elements.clear(); record.previous.clear();if(frame===page.mainFrame())visit(); });
+    page.on('framenavigated', frame => {
+      record.generation++;
+      const invalidated = new Set(), main = frame === page.mainFrame();
+      const invalidate = changed => { if (!invalidated.has(changed)) { invalidated.add(changed); record.frameGenerations.set(changed, (record.frameGenerations.get(changed) ?? 0) + 1); } };
+      invalidate(frame);
+      for (const [id, ref] of record.elements) {
+        let ancestor = ref.frame;
+        while (ancestor && ancestor !== frame) ancestor = ancestor.parentFrame();
+        if (main || ancestor === frame || ref.frame.isDetached()) { invalidate(ref.frame); record.elements.delete(id); }
+      }
+      if (main) { record.previous.clear(); visit(); }
+    });
     page.on('domcontentloaded',visit);page.on('load',visit);
     page.on('close', () => {
       connection.pages.delete(id);
@@ -195,6 +207,7 @@ export class BrowserActions {
     if (record.dialog) return { state: JSON.stringify({ dialog: { type: record.dialog.type(), message: record.dialog.message() } }) };
     const generation = record.generation, elements = new Map(), lines = new Map(); let truncated = false;
     for (const { frame, cdp, frameId } of await this.frameBindings(record)) {
+      const frameGeneration = record.frameGenerations.get(frame) ?? 0;
       const { nodes } = await cdp.send('Accessibility.getFullAXTree', { frameId });
       const byId = new Map(nodes.map(n => [n.nodeId, n]));
       const frameKey = frameId;
@@ -210,7 +223,7 @@ export class BrowserActions {
         if (!name && !value && ['none','generic','InlineTextBox'].includes(role)) continue;
         if (role === 'InlineTextBox') continue;
         if (lines.size >= maxElements) { truncated = true; break; }
-        const key = `${generation}:${frameKey}:${node.backendDOMNodeId ?? node.nodeId}`;
+        const key = `${record.frameGenerations.get(record.page.mainFrame()) ?? 0}:${frameGeneration}:${frameKey}:${node.backendDOMNodeId ?? node.nodeId}`;
         if (!record.ids.has(key)) record.ids.set(key, ++this.nextElementId);
         const id = record.ids.get(key); let depth = 0, parent = node.parentId;
         while (parent && depth < 25) { const p = byId.get(parent); if (!p) break; if (!p.ignored) depth++; parent = p.parentId; }
@@ -218,7 +231,7 @@ export class BrowserActions {
         const frameLabel = role === 'RootWebArea' && frame !== record.page.mainFrame() ? ' [iframe ' + JSON.stringify(frame.url()) + ']' : '';
         const line = `${'  '.repeat(depth)}${id} ${role}${name ? ' ' + JSON.stringify(name) : ''}${value ? ' value=' + JSON.stringify(value) : ''}${props.length ? ' [' + props.join(', ') + ']' : ''}${frameLabel}`;
         lines.set(id, line);
-        if (node.backendDOMNodeId) elements.set(id, { backendNodeId: node.backendDOMNodeId, frame, cdp, generation, role });
+        if (node.backendDOMNodeId) elements.set(id, { backendNodeId: node.backendDOMNodeId, frame, cdp, frameGeneration, role });
       }
     }
     const title = await record.page.title(), url = record.page.url();
@@ -236,10 +249,10 @@ export class BrowserActions {
   }
   async element(record, id) {
     const ref = record.elements.get(id);
-    if (!ref || ref.generation !== record.generation || ref.frame.isDetached()) throw stale();
+    if (!ref || ref.frameGeneration !== (record.frameGenerations.get(ref.frame) ?? 0) || ref.frame.isDetached()) throw stale();
     try {
       const element = await this.resolveElement(ref.cdp, ref.frame, ref.backendNodeId);
-      if (ref.generation !== record.generation) { await element.dispose(); throw stale(); }
+      if (ref.frameGeneration !== (record.frameGenerations.get(ref.frame) ?? 0) || ref.frame.isDetached()) { await element.dispose(); throw stale(); }
       return element;
     } catch (error) { throw Object.assign(stale(), { cause: error }); }
   }
