@@ -58,7 +58,30 @@ export async function observeScreenshot(record, options = {}, signal, capture) {
 export const staleScreenshot = () => Object.assign(new Error('The screenshot geometry has changed. Capture the current screenshot before using point coordinates.'), { code: 'STALE_SCREENSHOT' });
 
 export async function screenshotGeometry(record) {
-  return { source: record.coordinateId, generation: record.generation, ...viewportGeometry(await record.cdp.send('Page.getLayoutMetrics')) };
+  const [metrics, pixelRatio, scrolls] = await Promise.all([
+    record.cdp.send('Page.getLayoutMetrics'),
+    record.cdp.send('Runtime.evaluate', { expression: 'window.devicePixelRatio', returnByValue: true }),
+    Promise.all(record.page.frames().map(frame => frame.evaluate(() => {
+      // Top-level layout metrics do not reflect scrolling inside an iframe,
+      // overflow container or shadow tree. Read their offsets without adding
+      // page listeners or changing the document used by the application.
+      const offsets = [[window.scrollX, window.scrollY]];
+      let index = 0;
+      const walk = root => {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+        for (let element = walker.nextNode(); element; element = walker.nextNode()) {
+          const id = index++, x = element.scrollLeft, y = element.scrollTop;
+          if (x || y) offsets.push([id, x, y]);
+          if (element.shadowRoot) walk(element.shadowRoot);
+        }
+      };
+      walk(document);
+      return offsets;
+    }))),
+  ]);
+  const devicePixelRatio = pixelRatio.result?.value;
+  if (!Number.isFinite(devicePixelRatio) || devicePixelRatio <= 0) throw staleScreenshot();
+  return { source: record.coordinateId, generation: record.generation, ...viewportGeometry(metrics), devicePixelRatio, scrollState: JSON.stringify(scrolls) };
 }
 
 export function viewportGeometry(metrics) {
@@ -111,7 +134,13 @@ export async function captureViewport(record, geometry) {
   // only the returned pixels, never the live page as part of observation.
   const { data } = await record.cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true, captureBeyondViewport: false });
   const image = Buffer.from(data, 'base64'), metadata = await sharp(image).metadata();
-  const scale = geometry.rasterScale;
+  // External Chrome surfaces include device scale, while a managed CDP
+  // session can retain its own raster scale despite another session's DPR
+  // override. Match the actual image to those known scales; do not derive an
+  // arbitrary scale from image width, which may include a native scrollbar.
+  const expectedWidth = geometry.width * geometry.scale, expectedHeight = geometry.height * geometry.scale;
+  const error = scale => Math.abs(metadata.width - expectedWidth * scale) + Math.abs(metadata.height - expectedHeight * scale);
+  const scale = error(geometry.devicePixelRatio) < error(geometry.rasterScale) ? geometry.devicePixelRatio : geometry.rasterScale;
   const crop = {
     left: 0, top: 0,
     width: Math.min(metadata.width, Math.round(geometry.width * geometry.scale * scale)),

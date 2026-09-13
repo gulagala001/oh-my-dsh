@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/gulagala001/opencu",
-  "commit": "f8e9ae631703b30507a3f787852a9c800fc1fdc4",
+  "commit": "acf0fa27716f32b1b4ebc4a6250bc4ed0dd65c73",
   "version": "1.0.0",
-  "archiveSha256": "228b28bb8f3ba30f8992048c262fdf7f7bc7e8b41f642ee679dfefca52cf3cd7",
+  "archiveSha256": "cb9a0b6bed1a90fdc8c3f3ae16e49e0ac5afb3c5a372a780b5d95f36823f6a34",
   "files": {
     "README.md": "d594defa21e697b529e47cf185226e84ddc2eea28b1a7c909be002c2a6365808",
     "THIRD_PARTY_NOTICES.md": "c8df3e68a73288f7944f19735c603e4d1698e45923b32d97bb04fe49a519847b",
@@ -90,7 +90,7 @@
     "src/computer-use/browser-history.mjs": "bd900a0c38b4ce1bb86821a4d37db7b521365435e378b7204b1e15e86a71e01d",
     "src/computer-use/browser-network.mjs": "a0becf9f773aaa92e7d0c8bbb5a19da2c3af1ae5ef99a72448e38ac6589acc5a",
     "src/computer-use/browser-process.mjs": "61a707d1d20da02cb89487c7b01056a042b6002070fa309ccf79e5565440a249",
-    "src/computer-use/browser-screenshot.mjs": "45c65274278ce23e1c294657eff58e528901b98d9d6fafd51ec0268162b1c14d",
+    "src/computer-use/browser-screenshot.mjs": "b8fc4f823a4a509dc9fda75cdbb2772f82c95980c9780ff1337805e43c7dcbc7",
     "src/computer-use/browser-style-preview.mjs": "7b94a0b82ad9d2c463440c7b978d78879a881b55b9e6a545275ab728d1211de8",
     "src/computer-use/browser-transport.mjs": "7feabf3131264811f3d9fe4ff47cda3c3cd038b4864d91f5aee5f44979c3ecc9",
     "src/computer-use/browser-view.mjs": "a3afb8dd41a04f2b0cf3ee38cc90a550408280bcf1bc032e3f80d32412d6900c",
