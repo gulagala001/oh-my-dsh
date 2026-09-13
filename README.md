@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.0"><img src="https://img.shields.io/badge/version-1.1.0-3478F6?style=flat-square" alt="Version 1.1.0" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1"><img src="https://img.shields.io/badge/version-1.1.1-3478F6?style=flat-square" alt="Version 1.1.1" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.5--rc.1-475569?style=flat-square" alt="DSH 0.1.5-rc.1" /></a>
   <a href="#support"><img src="https://img.shields.io/badge/status-early_access-64748B?style=flat-square" alt="Early access" /></a>
 </p>
@@ -24,7 +24,7 @@
   <a href="#features">功能亮点</a> ·
   <a href="#computer-use">Computer Use</a> ·
   <a href="docs/usage.md">使用指南</a> ·
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.0">版本说明</a> ·
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1">版本说明</a> ·
   <a href="https://github.com/gulagala001/oh-my-dsh/issues">反馈问题</a>
 </p>
 
@@ -65,9 +65,9 @@ dsh web
 <details>
 <summary>源码下载与独立开发</summary>
 
-[1.1 源码 ZIP](https://github.com/gulagala001/oh-my-dsh/releases/download/v1.1.0/oh-my-dsh-v1.1.0.zip) 用于保存源码、手动部署或二次开发，包含已构建的界面。普通插件安装直接使用上面的命令即可。
+[1.1.1 源码 ZIP](https://github.com/gulagala001/oh-my-dsh/releases/download/v1.1.1/oh-my-dsh-v1.1.1.zip) 用于保存源码、手动部署或二次开发，包含已构建的界面。普通插件安装直接使用上面的命令即可。
 
-[从源码试用](docs/usage.md#本地开发或独立试用) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.0)
+[从源码试用](docs/usage.md#本地开发或独立试用) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1)
 
 </details>
 
@@ -162,7 +162,7 @@ Computer Use 由 [OpenCU](https://github.com/gulagala001/opencu) 提供，安装
 
 ## 平台与运行环境
 
-当前版本为 **1.1.0**，适配 **DSH 0.1.5-rc.1**。
+当前版本为 **1.1.1**，适配 **DSH 0.1.5-rc.1**。
 
 | 功能 | 当前支持 |
 | --- | --- |
