@@ -106,6 +106,14 @@ internal sealed class WindowCapture : IDisposable
             if (captured.Bounds != current.bounds || captured.Dpi != current.dpi || frame.ContentSize.Width != current.bounds.width || frame.ContentSize.Height != current.bounds.height)
                 throw new NativeFailure("CAPTURE_GEOMETRY_CHANGED", "Window frame and screen geometry do not match; capture again after the window settles");
             using var bitmap = await SoftwareBitmap.CreateCopyFromSurfaceAsync(frame.Surface, BitmapAlphaMode.Ignore).AsTask(deadline.Token);
+            // A frame queued across pool recreation can report the new
+            // ContentSize while still carrying the previous pool's texture.
+            // Resizing that texture would silently change point coordinates.
+            if (bitmap.PixelWidth != frame.ContentSize.Width || bitmap.PixelHeight != frame.ContentSize.Height)
+            {
+                if (Environment.GetEnvironmentVariable("TRISOUL_CU_INPUT_DIAGNOSTICS") == "1") Console.Error.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { diagnostic = "capture-texture-size", textureWidth = bitmap.PixelWidth, textureHeight = bitmap.PixelHeight, contentWidth = frame.ContentSize.Width, contentHeight = frame.ContentSize.Height }));
+                continue;
+            }
             using var stream = new InMemoryRandomAccessStream();
             var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, stream).AsTask(deadline.Token);
             encoder.SetSoftwareBitmap(bitmap);
