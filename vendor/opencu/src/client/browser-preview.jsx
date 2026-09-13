@@ -15,7 +15,7 @@ export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api,
   const input = useRef(null), surface = useRef(null), current = useRef(null), queue = useRef([]), draining = useRef(false);
   const pressed = useRef(new Set()), keys = useRef(new Set()), composing = useRef(false);
   const lastPointer = useRef(null);
-  const displayedData = useRef(null);
+  const displayedData = useRef(null), receivedFrame = useRef(null);
   const activeStream=useRef(null);
   const stage=useRef(null),meta=useRef(null),[space,setSpace]=useState({width:0,height:0});
   const [layoutSize,setLayoutSize]=useState(null),layoutResizing=useRef(false);
@@ -76,7 +76,7 @@ export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api,
     return () => element.removeEventListener('wheel', wheel);
   }, [sessionId, tabId, visible, state?.enabled, reconnect]);
   useEffect(() => {
-    setFrame(null); setDialog(null); setCursor(null); current.current = null; displayedData.current = null;callbacks.current.onFrame?.(null);
+    setFrame(null); setDialog(null); setCursor(null); current.current = null; displayedData.current = null; receivedFrame.current = null;callbacks.current.onFrame?.(null);
     if (!visible) return;
     let active = true, navigationObservedAt = -Infinity;
     const stream = new EventSource(url('stream', sessionId) + '&view=1&tab=' + encodeURIComponent(tabId));
@@ -86,6 +86,8 @@ export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api,
     stream.addEventListener('frame', event => {
       if (!active) return;
       const next = JSON.parse(event.data);
+      receivedFrame.current = next;
+      if (current.current?.loaderId && current.current.loaderId !== next.loaderId) current.current.id = undefined;
       if (current.current) Object.assign(current.current, { actor: next.actor, controlEpoch: next.controlEpoch, stopped: next.stopped, transitioning: next.transitioning });
       // A reload can produce identical pixels. The browser won't fire img.load
       // for an unchanged src, but the new document identity must still advance.
@@ -112,7 +114,10 @@ export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api,
       if ((value.observedAt ?? 0) < navigationObservedAt) return;
       navigationObservedAt = value.observedAt ?? 0;
       setCursor(null);
-      if (current.current?.loaderId && value.loaderId !== current.current.loaderId) { current.current.id = undefined; setConnection('connecting');callbacks.current.onFrame?.(null); }
+      // Frame delivery can precede navigation history and img.load. Compare
+      // the received document, not the image that finished decoding earlier.
+      const loaderId = receivedFrame.current?.loaderId ?? current.current?.loaderId;
+      if (loaderId && value.loaderId !== loaderId) { receivedFrame.current = null; if(current.current)current.current.id = undefined; setConnection('connecting');callbacks.current.onFrame?.(null); }
       callbacks.current.onNavigation(value);
     });
     stream.addEventListener('warning', event => { callbacks.current.onError(JSON.parse(event.data).message); });
@@ -213,7 +218,7 @@ export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api,
         if (!pressed.current.size && e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
       }}
       onLostPointerCapture={release} onPointerCancel={release}>
-      {frame ? <img src={'data:' + frame.mediaType + ';base64,' + frame.data} alt="当前浏览器页面；点击可接管操作" draggable={false} onError={()=>{activeStream.current?.close();setConnection('error');stopLocalInput();current.current=null;callbacks.current.onFrame?.(null);callbacks.current.onError('画面加载失败，请重连');}} onLoad={()=>{displayedData.current=frame.data;if(current.current?.actor===frame.actor){current.current={...frame,controlEpoch:current.current.controlEpoch,stopped:current.current.stopped,transitioning:current.current.transitioning};callbacks.current.onFrame?.(frame);}}}/> : <div className="tx-cu-live-placeholder" role="status">{placeholder}</div>}
+      {frame ? <img src={'data:' + frame.mediaType + ';base64,' + frame.data} alt="当前浏览器页面；点击可接管操作" draggable={false} onError={()=>{activeStream.current?.close();setConnection('error');stopLocalInput();current.current=null;callbacks.current.onFrame?.(null);callbacks.current.onError('画面加载失败，请重连');}} onLoad={()=>{displayedData.current=frame.data;if(receivedFrame.current===frame&&current.current?.actor===frame.actor){current.current={...frame,controlEpoch:current.current.controlEpoch,stopped:current.current.stopped,transitioning:current.current.transitioning};callbacks.current.onFrame?.(frame);}}}/> : <div className="tx-cu-live-placeholder" role="status">{placeholder}</div>}
       {visible && enabled.current && connection === 'live' && !dialog && !frame?.browserCursor && <AssistantCursor cursor={cursor} frame={frame}/>}
       <textarea ref={input} className="tx-cu-keyboard" aria-label="浏览器键盘输入" autoCapitalize="off" autoCorrect="off" spellCheck={false}
         onBlur={release} onKeyDown={keyDown} onKeyUp={keyUp}

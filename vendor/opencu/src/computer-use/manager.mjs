@@ -208,14 +208,16 @@ export class ComputerUseManager {
         if (target.kind === 'tab') { await this.viewsFor(target).views.get(target.id)?.layoutPending?.catch(()=>{});signal?.throwIfAborted();await this.browserForTab(target.id, target.browserId).target(id, target.id, { signal }); signal?.throwIfAborted(); }
         this.setTarget(session, target); session.operation = operation;
         const result = await (target.kind === 'tab' ? this.browserForTab(target.id, target.browserId).invoke(id, target.id, operation, parameters, signal, imageFrameFor(coordinateFrames, target)?.geometry) : this.native.invoke(id, target.id, operation, parameters, signal));
-        session.lastError = null;
+        const triggeringFailure = ['dialog.accept', 'dialog.dismiss'].includes(operation) && result?.dialogHandled && result?.triggeringActionError;
+        const partialFailure = triggeringFailure ? 'Dialog handled successfully; the triggering action failed: ' + triggeringFailure.message : null;
+        session.lastError = partialFailure ? { operation, message: partialFailure, at: Date.now() } : null;
         if (target.kind === 'tab' && result?.screenshot) {
           const owner = this.browserForTab(target.id, target.browserId).owners.get(target.id);
           if (owner?.created && !owner.keep) result.retention = 'temporary';
         }
         if (result?.screenshot && session.target?.kind === target.kind && session.target?.id === target.id) this.preview.set(id, { target, data: result.screenshot, at: Date.now() });
         const artifactPath = operation === 'content.export' && typeof result === 'string' ? result : operation === 'pageAssets.bundle' ? result?.manifestPath : undefined;
-        this.recordOperation(session, { target: target.id, kind: target.kind, operation, elapsedMs: Math.round(performance.now() - started), at: Date.now(), ok: true, ...(artifactPath ? { artifactPath } : {}) });
+        this.recordOperation(session, { target: target.id, kind: target.kind, operation, elapsedMs: Math.round(performance.now() - started), at: Date.now(), ok: !partialFailure, ...(partialFailure ? { error: partialFailure, dialogHandled: true } : {}), ...(artifactPath ? { artifactPath } : {}) });
         return result;
       } catch (error) {
         const failure = signal?.aborted ? signal.reason : error;

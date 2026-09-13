@@ -237,7 +237,12 @@ export class BrowserViews {
         const reply=view.cdp.send('Page.handleJavaScriptDialog', { accept: input.accept === true, ...(typeof input.text === 'string' ? { promptText: input.text } : {}) });
         (view.dialogReplies??=new Set()).add(reply);
         try { await reply; } finally { view.dialogReplies.delete(reply); }
-        await previous;
+        try { await previous; }
+        catch (error) {
+          const triggeringActionError = { name: error.name ?? 'Error', message: error.message ?? String(error) };
+          view.publish('warning', { message: '网页提示已处理；触发操作失败：' + triggeringActionError.message });
+          return { dialogHandled: true, triggeringActionError };
+        }
       };
       if (record) { record.dialog = null; return this.browser.perform(record, answer); }
       await answer();
