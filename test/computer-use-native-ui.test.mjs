@@ -1,4 +1,4 @@
-import { defaultNativeBinary } from '../src/computer-use/native.mjs';
+import { defaultNativeBinary } from '#opencu/src/computer-use/native.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';

@@ -2,7 +2,6 @@ import { MAIN_PERSONA, NOTE_GUIDE } from './prompts.mjs';
 import { Canvas } from './canvas.mjs';
 import { eventText, sessionEvents, substantive } from './hub.mjs';
 import { registerTasks } from './tasks.mjs';
-import { registerComputerTools } from './computer-use/tools.mjs';
 
 export const inject = ['trisoulX', 'systemPrompt', 'tools', 'llm', 'tokenMeter', 'sessions', 'sessionProjections'];
 const result = { schema: { type: 'string' }, render: (_args, text) => [{ type: 'text', text }] };
@@ -13,7 +12,6 @@ export function apply(ctx) {
   hub.canvas = canvas;
   ctx.effect(() => () => { if (hub.canvas === canvas) hub.canvas = undefined; });
   hub.todoStore = registerTasks(ctx, hub.todoStore);
-  registerComputerTools(ctx, hub);
   ctx.tools.register({ name: 'note', description: NOTE_GUIDE,
     parameters: { type: 'object', properties: { text: { type: 'string', description: 'Note content' } }, required: ['text'] }, output: result,
     async execute({ text }, { agent }) { const state = hub.store.state(agent.session.id); state.notes.push({ text, at: Date.now() }); hub.store.save(state); return text; },

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { whaleSvg } from '../src/client/brand.mjs';
 
 await mkdir(new URL('../lib/', import.meta.url), { recursive: true });
-for (const destination of ['../docs/images/logo.svg', '../browser-extension/logo.svg']) {
+for (const destination of ['../docs/images/logo.svg']) {
   const url = new URL(destination, import.meta.url);
   await mkdir(new URL('./', url), { recursive: true });
   await writeFile(url, whaleSvg('omd-logo').replace('aria-hidden="true"', 'role="img" aria-label="Oh My DSH"'));

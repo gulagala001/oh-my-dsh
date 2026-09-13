@@ -1,9 +1,9 @@
 {
   "name": "trisoul_x",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "DSH Agent 工作台：集成分层记忆、上下文整理、任务验证、网页与 Windows/macOS 应用操控、实时预览、页面批注、素材导出和运行监控。",
+  "description": "DSH Agent \u5de5\u4f5c\u53f0\uff1a\u96c6\u6210\u5206\u5c42\u8bb0\u5fc6\u3001\u4e0a\u4e0b\u6587\u6574\u7406\u3001\u4efb\u52a1\u9a8c\u8bc1\u3001\u7f51\u9875\u4e0e Windows/macOS \u5e94\u7528\u64cd\u63a7\u3001\u5b9e\u65f6\u9884\u89c8\u3001\u9875\u9762\u6279\u6ce8\u3001\u7d20\u6750\u5bfc\u51fa\u548c\u8fd0\u884c\u76d1\u63a7\u3002",
   "packageManager": "pnpm@11.23.0",
   "repository": {
     "type": "git",
@@ -66,10 +66,9 @@
     "cordis.patch.yml",
     "README.md",
     "scripts",
-    "native",
-    "browser-extension",
     "THIRD_PARTY_NOTICES.md",
-    "docs"
+    "docs",
+    "vendor"
   ],
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.2",
@@ -80,7 +79,10 @@
     "@deepseek-ai/schemastery": "3.18.2",
     "esbuild": "0.25.12",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "playwright": "1.63.0",
+    "sharp": "0.35.4",
+    "ws": "8.21.3"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.2",
@@ -101,5 +103,10 @@
     "@deepseek-ai/schemastery": {
       "optional": true
     }
+  },
+  "imports": {
+    "#opencu/integration": "./vendor/opencu/src/integration.mjs",
+    "#opencu/client-source": "./vendor/opencu/src/client/computer-use.jsx",
+    "#opencu/*": "./vendor/opencu/*"
   }
 }

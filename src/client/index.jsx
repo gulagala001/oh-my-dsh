@@ -4,8 +4,8 @@ import { FREQUENCY_PRESETS as presets } from '../frequency.mjs';
 import { frameTokens, contextHistoryLayout } from './context-history.mjs';
 import css from './style.css';
 import shellCss from './shell.css';
-import { ComputerIcon } from './computer-icons.jsx';
-import { applyComputerUseClient, ComputerPane } from './computer-use.jsx';
+import { ComputerIcon } from '#opencu/src/client/computer-icons.jsx';
+import { applyComputerUseClient, ComputerPane } from '#opencu/client-source';
 import { BrandMark } from './brand.jsx';
 import { whaleCss, whaleSvg } from './brand.mjs';
 

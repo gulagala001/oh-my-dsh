@@ -62,23 +62,4 @@ Windows 使用前台操控；保持桌面解锁，鼠标或键盘介入会停止
 
 ## 在本机运行自检
 
-自检使用独立数据目录、测试页面和专用扩展注册，不使用账号发送消息。需要已安装 .NET 10 SDK，并先下载测试浏览器：
-
-```powershell
-pnpm exec playwright install chromium
-if ($LASTEXITCODE -ne 0) { throw '测试浏览器安装失败' }
-node scripts/test-windows.mjs
-```
-
-脚本检查插件机制、真实浏览器、Windows 可执行桥接、注册与移除以及 DSH 界面，最后打印 `cu-artifacts/windows-check-...` 结果目录。原生测试会打开两个自有测试窗口，检查控件文字、遮挡下的截图、独立预览、文本输入、实际鼠标动作、拖拽取消和卸载／重装；请保持桌面解锁，并在这段测试期间暂时不操作鼠标和键盘。发生失败时，保留其中的 `report.json` 和对应日志以便定位；无需提供模型密钥或个人浏览器配置。
-
-若只运行原生桌面测试，在安装依赖后执行：
-
-```powershell
-$env:TRISOUL_CU_WINDOWS_NATIVE_TEST = '1'
-node --test --test-concurrency=1 test/computer-use-windows-native-protocol.test.mjs test/computer-use-windows-native.test.mjs
-```
-
-原生截图与结果写入 `cu-artifacts/windows-native-...`。报告会区分已经执行的键盘、控件、鼠标、卸载检查和仍待验证的剪贴板、人工物理接管及其他场景。
-
-通过结果仅对应实际执行的自检范围；Windows 原生桌面操控、锁屏、其他设备／架构和日常应用兼容性需分别验证。
+Computer Use 的 Windows 构建、自检与原生测试随实现迁入 [OpenCU](https://github.com/gulagala001/opencu)。完整步骤见 [OpenCU Windows 指南](https://github.com/gulagala001/opencu/blob/main/docs/windows.md#在本机运行自检)。Oh My DSH 安装时自动包含运行所需的 OpenCU，无需另装一套插件。

@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.0.0"><img src="https://img.shields.io/badge/version-1.0.0-3478F6?style=flat-square" alt="Version 1.0.0" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.0"><img src="https://img.shields.io/badge/version-1.1.0-3478F6?style=flat-square" alt="Version 1.1.0" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.5--rc.1-475569?style=flat-square" alt="DSH 0.1.5-rc.1" /></a>
   <a href="#support"><img src="https://img.shields.io/badge/status-early_access-64748B?style=flat-square" alt="Early access" /></a>
 </p>
@@ -24,7 +24,7 @@
   <a href="#features">功能亮点</a> ·
   <a href="#computer-use">Computer Use</a> ·
   <a href="docs/usage.md">使用指南</a> ·
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.0.0">版本说明</a> ·
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.0">版本说明</a> ·
   <a href="https://github.com/gulagala001/oh-my-dsh/issues">反馈问题</a>
 </p>
 
@@ -65,9 +65,9 @@ dsh web
 <details>
 <summary>源码下载与独立开发</summary>
 
-[1.0 源码 ZIP](https://github.com/gulagala001/oh-my-dsh/releases/download/v1.0.0/oh-my-dsh-v1.0.0.zip) 用于保存源码、手动部署或二次开发，包含已构建的界面。普通插件安装直接使用上面的命令即可。
+[1.1 源码 ZIP](https://github.com/gulagala001/oh-my-dsh/releases/download/v1.1.0/oh-my-dsh-v1.1.0.zip) 用于保存源码、手动部署或二次开发，包含已构建的界面。普通插件安装直接使用上面的命令即可。
 
-[从源码试用](docs/usage.md#本地开发或独立试用) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.0.0)
+[从源码试用](docs/usage.md#本地开发或独立试用) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.0)
 
 </details>
 
@@ -120,6 +120,8 @@ dsh web
 
 ## 让助手操作网页与应用
 
+Computer Use 由 [OpenCU](https://github.com/gulagala001/opencu) 提供，安装 Oh My DSH 时自动包含全部能力。只需要浏览器与桌面操控时，也可以独立安装 OpenCU；同时安装共用一套工具、连接和预览。
+
 在输入区用 **`@Browser`**、已连接的 **`@Chrome`** 或应用引用选择目标，然后描述任务：
 
 > 打开这个表单，填写我提供的内容，完成后截图并保留页面。
@@ -160,7 +162,7 @@ dsh web
 
 ## 平台与运行环境
 
-当前版本为 **1.0.0 正式先行版**，适配 **DSH 0.1.5-rc.1**。
+当前版本为 **1.1.0**，适配 **DSH 0.1.5-rc.1**。
 
 | 功能 | 当前支持 |
 | --- | --- |

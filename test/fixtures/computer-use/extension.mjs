@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
 import { chromium } from 'playwright';
-import { ExtensionHub, extensionSocketPath } from '../../../src/computer-use/extension-hub.mjs';
-import { ExtensionInstaller } from '../../../src/computer-use/extension-install.mjs';
+import { ExtensionHub, extensionSocketPath } from '#opencu/src/computer-use/extension-hub.mjs';
+import { ExtensionInstaller } from '#opencu/src/computer-use/extension-install.mjs';
 import { startFixture } from './server.mjs';
 
 export async function extensionFixture(t, options = {}) {
@@ -28,7 +28,7 @@ export async function extensionFixture(t, options = {}) {
   }
   const manifest=JSON.parse(await readFile(join(extension,'manifest.json'),'utf8'));
   const id=createHash('sha256').update(Buffer.from(manifest.key,'base64')).digest('hex').slice(0,32).split('').map(c=>String.fromCharCode(97+parseInt(c,16))).join('');
-  const origin='chrome-extension://'+id+'/',host=fileURLToPath(new URL('../../../scripts/computer-use-extension-host.mjs',import.meta.url)),launcher=join(root,'native-host');
+  const origin='chrome-extension://'+id+'/',host=fileURLToPath(new URL(import.meta.resolve('#opencu/scripts/computer-use-extension-host.mjs'))),launcher=join(root,'native-host');
   if(!options.install&&!options.prepared){
   const quote=value=>"'"+value.replaceAll("'","'\\''")+"'";
   await writeFile(launcher,'#!/bin/sh\nexec '+[process.execPath,host,'--socket',options.socketPath??hub.socketPath,'--extension-origin',origin].map(quote).join(' ')+' "$@"\n',{mode:0o700});

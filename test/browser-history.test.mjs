@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdtemp,readFile,writeFile,rm} from 'node:fs/promises';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {BrowserHistory} from '../src/computer-use/browser-history.mjs';
+import {BrowserHistory} from '#opencu/src/computer-use/browser-history.mjs';
 
 test('browser history preserves visits across restart, isolates sessions and clears only records',async t=>{
   const root=await mkdtemp(join(tmpdir(),'trisoul-browser-history-'));t.after(()=>rm(root,{recursive:true,force:true}));

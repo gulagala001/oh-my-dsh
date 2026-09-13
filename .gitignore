@@ -24,3 +24,9 @@ data/
 /COMPUTER_USE_ASSESSMENT.md
 /PROMPT_CHANGES.md
 /WINDOWS_HANDOFF.md
+
+# Native build caches produced while testing the embedded distribution.
+/vendor/opencu/native/computer-use/windows/bin/
+/vendor/opencu/native/computer-use/windows/obj/
+/vendor/opencu/native/computer-use/windows/desktop/bin/
+/vendor/opencu/native/computer-use/windows/desktop/obj/

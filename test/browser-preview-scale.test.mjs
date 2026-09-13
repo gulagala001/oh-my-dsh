@@ -8,7 +8,7 @@ import sharp from 'sharp';
 test('device preview fit, percentage geometry, overflow and input coordinates are local',{timeout:15000},async t=>{
   const data=(await sharp({create:{width:800,height:600,channels:3,background:'#eef4ff'}}).png().toBuffer()).toString('base64');
   const {outputFiles}=await build({bundle:true,write:false,format:'iife',platform:'browser',define:{'process.env.NODE_ENV':'"production"'},stdin:{resolveDir:process.cwd(),loader:'jsx',contents:`
-    import React,{useState} from 'react';import {createRoot} from 'react-dom/client';import {BrowserPreview} from './src/client/browser-preview.jsx';
+    import React,{useState} from 'react';import {createRoot} from 'react-dom/client';import {BrowserPreview} from '#opencu/src/client/browser-preview.jsx';
     window.calls=[];window.streams=0;window.resizes=[];
     window.EventSource=class {constructor(){window.stream=this;window.streams++;this.handlers={};}addEventListener(name,fn){this.handlers[name]=fn;}close(){} emit(name,data){this.handlers[name]?.({data:JSON.stringify(data)});}};
     function Harness(){const[scale,setScale]=useState('1'),[device,setDevice]=useState(true);window.setScale=setScale;window.setDevice=setDevice;
@@ -16,7 +16,7 @@ test('device preview fit, percentage geometry, overflow and input coordinates ar
     }createRoot(document.getElementById('root')).render(<Harness/>);
   `}});
   const browser=await chromium.launch({headless:true});t.after(()=>browser.close());const page=await browser.newPage({viewport:{width:800,height:800}});
-  await page.setContent('<style>body{margin:0}</style><div id="root"></div>');await page.addStyleTag({content:await readFile(new URL('../src/client/computer-use.css',import.meta.url),'utf8')});await page.addScriptTag({content:outputFiles[0].text});
+  await page.setContent('<style>body{margin:0}</style><div id="root"></div>');await page.addStyleTag({content:await readFile(new URL(import.meta.resolve('#opencu/src/client/computer-use.css')),'utf8')});await page.addScriptTag({content:outputFiles[0].text});
   await page.waitForFunction(()=>window.stream?.handlers.frame);
   await page.evaluate(data=>{const frame={id:'frame',tabId:'tab',actor:'actor',controlEpoch:7,width:800,height:600,mediaType:'image/png',data};window.stream.emit('ready',frame);window.stream.emit('frame',frame);},data);
   const surface=page.locator('.tx-cu-live-surface');await page.waitForFunction(()=>document.querySelector('.tx-cu-live-surface img')?.complete);

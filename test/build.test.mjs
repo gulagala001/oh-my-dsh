@@ -14,8 +14,8 @@ test('UI builds from a checkout whose path contains spaces', t => {
   cpSync(join(root, 'scripts', 'build.mjs'), join(dir, 'scripts', 'build.mjs'));
   cpSync(join(root, 'src', 'client'), join(dir, 'src', 'client'), { recursive: true });
   cpSync(join(root, 'src', 'frequency.mjs'), join(dir, 'src', 'frequency.mjs'));
-  mkdirSync(join(dir, 'src', 'computer-use'));
-  cpSync(join(root, 'src', 'computer-use', 'annotation-geometry.mjs'), join(dir, 'src', 'computer-use', 'annotation-geometry.mjs'));
+  cpSync(join(root, 'package.json'), join(dir, 'package.json'));
+  cpSync(join(root, 'vendor'), join(dir, 'vendor'), { recursive: true });
   symlinkSync(join(root, 'node_modules'), join(dir, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
   execFileSync(process.execPath, ['scripts/build.mjs'], { cwd: dir, stdio: 'pipe' });
   assert.match(readFileSync(join(dir, 'lib', 'client.js'), 'utf8'), /window\.__ModuleLoader__\.load/);

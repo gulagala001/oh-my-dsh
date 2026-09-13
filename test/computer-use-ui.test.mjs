@@ -1,3 +1,4 @@
+import { browserExecutablePath } from '#opencu/src/computer-use/browser.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -10,9 +11,10 @@ import { chromium } from 'playwright';
 import sharp from 'sharp';
 import { startFixture } from './fixtures/computer-use/server.mjs';
 import { extensionFixture } from './fixtures/computer-use/extension.mjs';
-import { extensionSocketPath } from '../src/computer-use/extension-hub.mjs';
-import { viewportGeometry, sameScreenshotGeometry } from '../src/computer-use/browser-screenshot.mjs';
+import { extensionSocketPath } from '#opencu/src/computer-use/extension-hub.mjs';
+import { viewportGeometry, sameScreenshotGeometry } from '#opencu/src/computer-use/browser-screenshot.mjs';
 import { legacyBundle } from './fixtures/computer-use/native-runtime.mjs';
+import { testBrowserExecutable } from './fixtures/computer-use/test-browser.mjs';
 import { stopFixtureProcess } from './fixtures/process.mjs';
 
 async function until(fn, timeout = 30000) {
@@ -26,6 +28,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   const markStage = value => { stage = value; console.log('Computer Use UI stage:', backend, stage, Math.round(performance.now() - began) + 'ms'); };
   const root = await mkdtemp(join(tmpdir(), 'trisoul-cu-ui-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   await mkdir(home); await mkdir(workspace);
+  const testBrowser = await testBrowserExecutable(root, browserExecutablePath());
   const nativeBinary=process.platform==='darwin'?await legacyBundle(join(root,'native')):join(root,'missing-native');
   const fixture = await startFixture(); let toolSent = false, cursorSent = false, external, browserId = 'browser',fixtureTabId; const userMessages = [], userPayloads=[];
   const provider = createServer(async (req, res) => {
@@ -49,7 +52,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   await writeFile(join(home, 'settings.yaml'), JSON.stringify({
     'llm-pi-ai': { providers: { fixture: { api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'CU_UI_FIXTURE', models: [{ id: 'fixture', name: 'fixture', contextWindow: 1000000, maxTokens: 8192, input: ['text', 'image'] }, { id: 'text-fixture', name: '仅文本验收模型', contextWindow: 1000000, maxTokens: 8192, input: ['text'] }] } } },
     'agent-default-model': { provider: 'fixture', model: 'fixture' },
-    'trisoul-x': { stateEnabled: false, probeEnabled: false, digestEvery: 1000, flushIdleMs: 3600000, computerUseChromeUserDataDir: join(root, 'external-profile'),computerUseNativeBinary:nativeBinary },
+    'trisoul-x': { computerUseBrowserExecutable: testBrowser, stateEnabled: false, probeEnabled: false, digestEvery: 1000, flushIdleMs: 3600000, computerUseChromeUserDataDir: join(root, 'external-profile'),computerUseNativeBinary:nativeBinary },
   }));
   await writeFile(join(home, '.credentials.yaml'), JSON.stringify({ version: 1, refs: { CU_UI_FIXTURE: 'local-test-only' } }), { mode: 0o600 });
   const child = spawn(process.execPath, ['scripts/start.mjs'], { cwd: new URL('../', import.meta.url), env: { ...process.env, DSH_HOME: home, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -488,7 +491,13 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   assert.equal(childMetadata.element.framePath[0].title,'测试框架');assert.equal(childMetadata.element.framePath[0].url,fixture.url+'/frame');assert.ok(childMetadata.polygon.length>=4);assert.equal(childMetadata.stylePreview.changes.width,'240px');
   await page.getByRole('button',{name:'发送消息',exact:true}).click();await until(()=>userMessages.some(text=>text.includes('请调整框架里的输入框')&&text.includes('网页批注.txt')));
   await page.getByRole('button',{name:'恢复助手控制',exact:true}).click();await page.locator('.tx-cu-pane').getByText('就绪',{exact:true}).waitFor();
-  const childLiveImage=await image.getAttribute('src');await target.evaluate(()=>scrollTo(0,0));await until(async()=>(await image.getAttribute('src'))!==childLiveImage);
+  await target.evaluate(()=>scrollTo(0,0));
+  await until(async()=>{
+    const displayed=await image.evaluate(element=>element.complete&&window.__cuDisplayedFrames?.get(element.src.split(',')[1]));
+    const geometry=viewportGeometry(await cdp.send('Page.getLayoutMetrics'));
+    const {frameTree}=await cdp.send('Page.getFrameTree');
+    return geometry.pageY===0&&displayed?.loaderId===frameTree.frame.loaderId&&sameScreenshotGeometry(displayed.geometry,geometry);
+  });
   // Only this observer reads the page. Every tested input goes through the
   // actual React pane, authenticated HTTP, manager, and separate browser.
   const point = async locator => {
@@ -500,6 +509,8 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
         return frame ? { frame, box: element.getBoundingClientRect().toJSON() } : null;
       });
       if (!displayed) return false;
+      const { frameTree } = await cdp.send('Page.getFrameTree');
+      if (displayed.frame.loaderId !== frameTree.frame.loaderId) return false;
       const before = viewportGeometry(await cdp.send('Page.getLayoutMetrics'));
       const nextRect = await locator.boundingBox(), metrics = await cdp.send('Page.getLayoutMetrics');
       const after = viewportGeometry(metrics);

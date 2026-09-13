@@ -6,14 +6,14 @@ import {chromium} from 'playwright';
 
 test('tool screenshot opens a modal with fit, original size, Escape and focus restoration',async t=>{
   const{outputFiles}=await build({bundle:true,write:false,format:'iife',platform:'browser',define:{'process.env.NODE_ENV':'"production"'},stdin:{resolveDir:process.cwd(),loader:'jsx',contents:`
-    import React from 'react';import{createRoot}from'react-dom/client';import{SavedImage}from'./src/client/tool-image.jsx';
+    import React from 'react';import{createRoot}from'react-dom/client';import{SavedImage}from'#opencu/src/client/tool-image.jsx';
     const image='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000"><rect width="1600" height="1000" fill="#e5edf9"/><text x="50" y="80" font-size="40">Screenshot</text></svg>');
     createRoot(document.getElementById('root')).render(<div className="tx-cu-card"><SavedImage attachment={{id:'image'}} loadImage={async()=>image}/></div>);
   `}});
   const browser=await chromium.launch({headless:true});t.after(()=>browser.close());
   const page=await browser.newPage({viewport:{width:800,height:600}});
   await page.setContent('<div id="root"></div>');
-  await page.addStyleTag({content:await readFile(new URL('../src/client/computer-use.css',import.meta.url),'utf8')});
+  await page.addStyleTag({content:await readFile(new URL(import.meta.resolve('#opencu/src/client/computer-use.css')),'utf8')});
   await page.addScriptTag({content:outputFiles[0].text});
   const thumbnail=page.getByRole('button',{name:'查看截图大图'});await thumbnail.waitFor();
   assert.equal((await thumbnail.boundingBox()).width,80);

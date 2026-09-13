@@ -153,7 +153,9 @@ node scripts/launch-macos.mjs
 
 </details>
 
-## Computer Use（预览版）
+## Computer Use
+
+Computer Use 的实现与平台测试位于 [OpenCU](https://github.com/gulagala001/opencu)，Oh My DSH 固定版本集成，功能与工作台保持完整。
 
 在同一段对话中，让助手操作网页或 Mac 应用，同时查看实时画面；也可以先分享窗口或批注页面，再让助手根据你的反馈继续工作。
 
@@ -337,9 +339,9 @@ DSH CLI 仅作为本地开发依赖；宿主 SDK 声明为由 DSH 提供的 peer
 | `src/hub.mjs` / `src/hub-store.mjs` | 记忆调度、存储、版本与监控 |
 | `src/memory-context.mjs` / `src/state-zone.mjs` | 记忆检索、文档更新与状态提炼 |
 | `src/canvas.mjs` / `src/probe.mjs` | 上下文整理、检查点与事实探针 |
-| `src/computer-use/` | 操控运行时、浏览器连接、原生通信、截图、批注与导出 |
-| `native/computer-use/` | macOS 原生窗口观察、输入、预览与服务 |
-| `browser-extension/` | 已有 Chrome 的扩展连接与助手光标 |
+| OpenCU 的 `src/computer-use/` | 操控运行时、浏览器连接、原生通信、截图、批注与导出 |
+| OpenCU 的 `native/computer-use/` | macOS 原生窗口观察、输入、预览与服务 |
+| OpenCU 的 `browser-extension/` | 已有 Chrome 的扩展连接与助手光标 |
 | `src/client/` | 工作台、设置、对话工具栏、批注与实时预览 |
 | `scripts/` / `test/` | 构建、启动与测试 |
 

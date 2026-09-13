@@ -6,7 +6,7 @@ import {chromium} from 'playwright';
 
 test('browser menu, device dimensions, screenshot modal and narrow keyboard flow',async t=>{
   const {outputFiles}=await build({bundle:true,write:false,format:'iife',platform:'browser',define:{'process.env.NODE_ENV':'"production"'},stdin:{resolveDir:process.cwd(),loader:'jsx',contents:`
-    import React,{useState} from 'react';import {createRoot} from 'react-dom/client';import {BrowserTools} from './src/client/browser-tools.jsx';
+    import React,{useState} from 'react';import {createRoot} from 'react-dom/client';import {BrowserTools} from '#opencu/src/client/browser-tools.jsx';
     window.calls=[];window.updates=0;
     function Harness(){const[target,setTarget]=useState({id:'tab',kind:'tab'}),[size,setSize]=useState({width:1280,height:720}),[state,setState]=useState({enabled:true,controlEpoch:0}),[previewScale,setPreviewScale]=useState('1');
       window.switchTab=()=>setTarget({id:'other',kind:'tab'});
@@ -16,7 +16,7 @@ test('browser menu, device dimensions, screenshot modal and narrow keyboard flow
   `}});
   const browser=await chromium.launch({headless:true});t.after(()=>browser.close());const page=await browser.newPage({viewport:{width:320,height:650}});
   await page.route('http://localhost/browser-tools',route=>route.fulfill({contentType:'text/html',body:'<style>body{margin:0}</style><div id="root"></div>'}));await page.goto('http://localhost/browser-tools');
-  await page.addStyleTag({content:await readFile(new URL('../src/client/computer-use.css',import.meta.url),'utf8')});await page.addScriptTag({content:outputFiles[0].text});
+  await page.addStyleTag({content:await readFile(new URL(import.meta.resolve('#opencu/src/client/computer-use.css')),'utf8')});await page.addScriptTag({content:outputFiles[0].text});
   const options=page.getByRole('button',{name:'浏览器选项'});
   await options.click();await page.getByRole('menuitem',{name:'显示设备工具栏'}).press('Escape');assert.equal(await options.evaluate(el=>el===document.activeElement),true);
   await options.click();await page.getByRole('menuitem',{name:'显示设备工具栏'}).click();await page.getByRole('form',{name:'设备工具栏'}).waitFor();

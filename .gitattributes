@@ -1,0 +1,2 @@
+# Keep the published OpenCU distribution byte-for-byte on every platform.
+vendor/opencu/** -text

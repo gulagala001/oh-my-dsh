@@ -8,7 +8,7 @@ test('browser tab keyboard focus, address cancellation and narrow layout',async 
   const {outputFiles}=await build({bundle:true,write:false,format:'iife',platform:'browser',define:{'process.env.NODE_ENV':'"production"'},stdin:{resolveDir:process.cwd(),loader:'jsx',contents:`
     import React,{useState} from 'react';
     import {createRoot} from 'react-dom/client';
-    import {BrowserControls} from './src/client/browser-controls.jsx';
+    import {BrowserControls} from '#opencu/src/client/browser-controls.jsx';
     const tabs=[{id:'one',browserId:'browser',title:'First page',url:'https://example.org/one',available:true},{id:'blank',browserId:'browser',title:'',url:'about:blank',available:true},{id:'busy',title:'Another conversation',url:'https://example.org/busy',available:false}];
     window.calls=[];
     function Harness(){const[state,setState]=useState({target:{...tabs[0],kind:'tab'},enabled:true,controlEpoch:1}),[loading,setLoading]=useState(false);window.setLoading=setLoading;
@@ -21,7 +21,7 @@ test('browser tab keyboard focus, address cancellation and narrow layout',async 
   const page=await browser.newPage({viewport:{width:320,height:480}});
   await page.route('http://localhost/browser-controls',route=>route.fulfill({contentType:'text/html',body:'<style>body{margin:0}</style><div id="root"></div>'}));
   await page.goto('http://localhost/browser-controls');
-  await page.addStyleTag({content:await readFile(new URL('../src/client/computer-use.css',import.meta.url),'utf8')});
+  await page.addStyleTag({content:await readFile(new URL(import.meta.resolve('#opencu/src/client/computer-use.css')),'utf8')});
   await page.addScriptTag({content:outputFiles[0].text});
   const tabs=page.getByRole('tablist',{name:'浏览器标签页'}),selected=tabs.locator('[aria-selected="true"]');
   await tabs.getByRole('tab',{name:'Another conversation'}).waitFor();
