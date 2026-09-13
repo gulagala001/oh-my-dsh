@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/gulagala001/opencu",
-  "commit": "066b038b4e1239a5e105b6ce7c8549307ad71351",
+  "commit": "bf6f3a1019248eee0ddb30f63bffc2abe89f576b",
   "version": "1.0.0",
-  "archiveSha256": "abadd2abe7e8c2d1061d70bc2b3da02995d345d73e7a6c57418068a67613621e",
+  "archiveSha256": "6e46fff03a83ee341b9ba210217457c497c92de1decf6ea8fe8630a19e7fd83d",
   "files": {
     "README.md": "d594defa21e697b529e47cf185226e84ddc2eea28b1a7c909be002c2a6365808",
     "THIRD_PARTY_NOTICES.md": "c8df3e68a73288f7944f19735c603e4d1698e45923b32d97bb04fe49a519847b",
@@ -39,7 +39,7 @@
     "native/computer-use/windows/desktop/Program.cs": "cdf258a543eb60bb8809971c9700df1e1bfdb9cdaf9a41fa7113b0daa4a8d1fa",
     "native/computer-use/windows/desktop/TrisoulDesktop.csproj": "1199283936863276eab15cd373e399f4b0f8bc10fb03ae6d19d2eddf9c669754",
     "native/computer-use/windows/desktop/WindowActions.cs": "3035b9a0475c36c369585d4c8928cac0b0324cb59de996c0d622f6799e9db3dc",
-    "native/computer-use/windows/desktop/WindowCapture.cs": "939a543de05b877560695b5d7e5a903cd1d7054008dab20b8b46fbfb84771f5c",
+    "native/computer-use/windows/desktop/WindowCapture.cs": "840ef3e1b3eafde6cbcfa3358232e506170655de0af783ea6ebe2eea627dafec",
     "native/computer-use/windows/desktop/WindowCatalog.cs": "bb86dc9bc573c44a1306e1aed02fbb038773d9eb0761679c12452512e0c61c38",
     "native/computer-use/windows/desktop/WindowObservation.cs": "68692e85f635b7504671659fd745ec278f51f6812fabc4ae125e8dcbde4d9af3",
     "native/computer-use/windows/desktop/WindowsClipboard.cs": "be71727dfa69a14b844904ae7f448a47c23411d314c8ae994ea46004ed48c880",
