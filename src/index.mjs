@@ -29,7 +29,20 @@ export function apply(ctx, config) {
     const assembly = await next();
     if (!assembly.sections.some(s => s.name === 'trisoul-x:persona')) return assembly;
     return { ...assembly,
-      sections: assembly.sections.map(s => ['tool:write', 'tool:edit'].includes(s.name) ? { ...s, text: s.text.replace(' (the default fs-observation-policy requires it)', '') } : s),
+      sections: assembly.sections.map(s => {
+        let text = s.text;
+        if (['tool:write', 'tool:edit'].includes(s.name)) text = text.replace(' (the default fs-observation-policy requires it)', '');
+        if (s.name === 'harness:identity') text = text.replace('You are an AI agent powered by DeepSeek Harness.', 'You are an AI agent.');
+        if (s.name === 'harness:source') text = text
+          .replace('The DeepSeek Harness implementation checkout', 'The host application source checkout')
+          .replace('inspect or extend DSH itself.', 'inspect or extend the host application itself.');
+        if (s.name === 'app:web-surface') text = text.replace('DeepSeek Harness Web GUI', "current application's Web GUI");
+        return text === s.text ? s : { ...s, text };
+      }),
+      contexts: assembly.contexts.map(s => s.name === 'sandbox:policy' ? { ...s, text: s.text
+        .replace('Current DSH file policy:', 'Current file policy:')
+        .replaceAll('The DSH file sandbox', 'The file sandbox')
+        .replaceAll('the DSH file sandbox', 'the file sandbox') } : s),
     };
   }, { global: true });
   ctx.on('agent/request', async ({ agent }, next) => {

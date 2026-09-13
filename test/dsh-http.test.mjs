@@ -145,7 +145,16 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   const names = payloads.find(p => p.tools?.some(t => t.function.name === 'read')).tools.map(t => t.function.name);
   const mainRequests = payloads.filter(p => p.tools?.some(t => t.function.name === 'todo_write'));
   assert.equal(mainRequests[0].messages[0].role, 'system', 'startup injections must follow the system prompt');
-  assert.ok(mainRequests[0].messages[0].content.startsWith('You are an interactive ZCode agent that helps users with software engineering tasks.'));
+  const systemText = mainRequests[0].messages[0].content;
+  assert.ok(systemText.startsWith('You are an interactive ZCode agent that helps users with software engineering tasks.'));
+  assert.ok(systemText.includes('The host application source checkout is at '));
+  assert.ok(systemText.includes("through the current application's Web GUI"));
+  assert.ok(systemText.includes('only dsh web injects window.__DSH_BOOT__'));
+  assert.ok(!systemText.includes('DeepSeek Harness'));
+  const requestText = JSON.stringify(mainRequests[0].messages);
+  assert.ok(requestText.includes('Current file policy:'));
+  assert.ok(!requestText.includes('Current DSH file policy:'));
+  assert.ok(!requestText.includes('DSH file sandbox'));
   for (let i = 1; i < mainRequests.length; i++) {
     assert.equal(mainRequests[i].messages[0].role, 'system');
     assert.equal(mainRequests[i].messages[0].content, mainRequests[0].messages[0].content);
