@@ -185,13 +185,21 @@ try{
       const manifestPath=status.history.findLast(operation=>operation.operation==='pageAssets.bundle'&&operation.ok)?.artifactPath;
       const manifest=manifestPath?JSON.parse(await readFile(manifestPath,'utf8')):null;
       const pageBytes=exported?await readFile(exported,'utf8'):'';
-      const images=manifest?.assets.filter(asset=>asset.kind==='image')??[];
+      const images=manifest?.assets.filter(asset=>asset.kind==='image'&&asset.contentType!=='image/svg+xml')??[];
+      const svgs=manifest?.assets.filter(asset=>asset.kind==='image'&&asset.contentType==='image/svg+xml')??[];
       const styles=manifest?.assets.filter(asset=>asset.kind==='stylesheet')??[];
       report.exports={page:exported,manifest:manifestPath,summary:manifest?.summary};
       const imageBytes=await Promise.all(images.map(asset=>readFile(asset.path)));
+      const svgBytes=await Promise.all(svgs.map(asset=>readFile(asset.path)));
+      const {default:sharp}=await import('sharp');
+      const svgValid=await Promise.all(svgBytes.map(async data=>{
+        const decoder=sharp(data),metadata=await decoder.metadata();
+        const rendered=await decoder.ensureAlpha().raw().toBuffer({resolveWithObject:true});
+        return metadata.format==='svg'&&rendered.info.width===20&&rendered.info.height===20&&rendered.data.subarray((10*20+10)*4,(10*20+10)*4+4).equals(Buffer.from([0,0,0,255]));
+      }));
       const styleBytes=await Promise.all(styles.map(asset=>readFile(asset.path,'utf8')));
       report.formCorrect=report.groundTruth?.result==='已更新的页面内容'&&report.groundTruth?.lazy>0&&/MIME-Version:/.test(pageBytes)&&pageBytes.includes('lazy.png');
-      report.delayedCorrect=images.length===3&&imageBytes.every(data=>data.equals(fixture.image))&&styles.length===1&&styleBytes[0]===fixture.stylesheet&&manifest?.failures.length===1&&manifest.failures[0].url.endsWith('/missing.png');
+      report.delayedCorrect=images.length===3&&imageBytes.every(data=>data.equals(fixture.image))&&svgs.length===1&&svgs[0].path.endsWith('.svg')&&svgValid.every(Boolean)&&styles.length===1&&styleBytes[0]===fixture.stylesheet&&manifest?.failures.length===1&&manifest.failures[0].url.endsWith('/missing.png');
     }
   }finally{await browser?.close();}
   }

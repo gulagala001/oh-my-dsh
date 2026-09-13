@@ -96,6 +96,7 @@ export function mountComputerUseHttp(ctx,hub){
         if(op==='inventory'){send(res,200,await manager.dispatch('ui-inventory','getState'));return;}
         if(op==='tabs'){await manager.changeUserTab(id,await body(req));send(res,200,manager.status(id));return;}
         if(op==='view-tab'){send(res,200,await manager.viewTab(id,await body(req)));return;}
+        if(op==='presentation-ack'){send(res,200,manager.acknowledgePresentation(id,await body(req)));return;}
         if(op==='open-external'){
           const controller=new AbortController();const closed=()=>{if(!res.writableEnded)controller.abort(new Error('打开外部浏览器已取消'));};res.once('close',closed);req.once('aborted',closed);
           try{send(res,200,await manager.openViewedExternally(id,await body(req),controller.signal));}finally{res.off('close',closed);req.off('aborted',closed);}return;

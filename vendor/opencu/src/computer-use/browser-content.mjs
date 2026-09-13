@@ -38,7 +38,7 @@ function renderedAssets() {
     }
     if (tag === 'video') { add(el.currentSrc || el.src, 'video', 'src'); add(el.poster, 'image', 'poster'); }
     if (tag === 'svg' && !el.parentElement?.closest('svg')) {
-      if (inlineSvgs.length < 500) inlineSvgs.push({ markup: el.outerHTML, name: el.getAttribute('aria-label') || el.id || 'inline-svg' });
+      if (inlineSvgs.length < 500) inlineSvgs.push({ markup: new XMLSerializer().serializeToString(el), name: el.getAttribute('aria-label') || el.id || 'inline-svg' });
       else truncated = true;
     }
     for (const pseudo of [null, '::before', '::after']) {
@@ -71,10 +71,15 @@ export async function listPageAssets(record, signal) {
   };
   walk(tree.frameTree);
   for (const asset of dom.assets) add(asset.url, asset.kind, asset.source);
+  const inlineSvgs = dom.inlineSvgs.map(svg => ({ id: randomUUID(), ...svg }));
+  for (const svg of inlineSvgs) {
+    const url = 'inline-svg:' + svg.id;
+    assets.set(url, { id: svg.id, kind: 'image', name: /\.svg$/i.test(svg.name) ? svg.name : svg.name + '.svg', sources: [{ kind: 'inlineSvg' }], url });
+  }
   const byKind = {};
   for (const asset of assets.values()) byKind[asset.kind] = (byKind[asset.kind] ?? 0) + 1;
-  const result = { id: randomUUID(), pageUrl: record.page.url(), assets: [...assets.values()], inlineSvgs: dom.inlineSvgs.map(svg => ({ id: randomUUID(), ...svg })), summary: { byKind, inlineSvgCount: dom.inlineSvgs.length, totalCount: assets.size }, truncated: dom.truncated };
-  record.assetInventory = { result, resources, generation, loadErrors: new Set(dom.loadErrors), frameId: tree.frameTree.frame.id };
+  const result = { id: randomUUID(), pageUrl: record.page.url(), assets: [...assets.values()], inlineSvgs, summary: { byKind, inlineSvgCount: dom.inlineSvgs.length, totalCount: assets.size }, truncated: dom.truncated };
+  record.assetInventory = { result, resources, inlineSvgs: new Map(inlineSvgs.map(svg => [svg.id, svg])), generation, loadErrors: new Set(dom.loadErrors), frameId: tree.frameTree.frame.id };
   return result;
 }
 
@@ -94,13 +99,14 @@ export async function bundlePageAssets(record, options, signal) {
     for (const asset of selected) {
       check(record, inventory.generation, signal);
       if (record.assetInventory !== inventory) throw stale();
-      const resource = inventory.resources.get(asset.url);
-      const contentType = resource?.mimeType ?? (asset.url.startsWith('data:') ? asset.url.slice(5).split(/[;,]/)[0] || 'text/plain' : null);
+      const resource = inventory.resources.get(asset.url), inlineSvg = inventory.inlineSvgs?.get(asset.id);
+      const contentType = inlineSvg ? 'image/svg+xml' : resource?.mimeType ?? (asset.url.startsWith('data:') ? asset.url.slice(5).split(/[;,]/)[0] || 'text/plain' : null);
       try {
         if (!exportable.has(asset.kind)) throw new Error('This asset kind is inventory-only; scripts are not bundled.');
         if (resource?.failed || resource?.canceled || inventory.loadErrors.has(asset.url)) throw new Error('This asset failed to load in the observed page.');
         let data;
-        if (asset.url.startsWith('data:')) {
+        if (inlineSvg) data = Buffer.from(inlineSvg.markup, 'utf8');
+        else if (asset.url.startsWith('data:')) {
           const comma = asset.url.indexOf(',');
           if (comma < 0) throw new Error('Invalid data URL');
           data = /;base64$/i.test(asset.url.slice(0, comma)) ? Buffer.from(asset.url.slice(comma + 1), 'base64') : Buffer.from(decodeURIComponent(asset.url.slice(comma + 1)));
@@ -110,7 +116,8 @@ export async function bundlePageAssets(record, options, signal) {
         }
         check(record, inventory.generation, signal);
         if (data.length > 32 * 1024 * 1024 || bytesWritten + data.length > 128 * 1024 * 1024) throw new Error('Asset export limit reached (32 MiB per file, 128 MiB per bundle).');
-        const path = join(directoryPath, `${assets.length + 1}-${fileName(asset.name)}`);
+        const name = inlineSvg ? fileName(asset.name.replace(/\.svg$/i, '')).slice(0, 96) + '.svg' : fileName(asset.name);
+        const path = join(directoryPath, `${assets.length + 1}-${name}`);
         await writeFile(path, data, { flag: 'wx', mode: 0o600 }); bytesWritten += data.length;
         assets.push({ contentType, id: asset.id, kind: asset.kind, name: asset.name, path, url: asset.url });
       } catch (error) {

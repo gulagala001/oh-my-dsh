@@ -77,7 +77,7 @@ function target(info) {
     result.dialog={get:()=>rpc('target',[info,'dialog.get']),accept:text=>rpc('target',[info,'dialog.accept',[text]]),dismiss:()=>rpc('target',[info,'dialog.dismiss'])};
     result.downloads={list:()=>rpc('target',[info,'downloads.list']),save:(id,path)=>rpc('target',[info,'downloads.save',[id,path]])};
     result.filechooser={setFiles:files=>rpc('target',[info,'filechooser.setFiles',[files]])};
-    result.dev={logs:()=>rpc('target',[info,'logs'])};
+    result.dev={logs:()=>rpc('target',[info,'logs']),network:{list:options=>rpc('target',[info,'network.list',[options]]),request:id=>rpc('target',[info,'network.request',[id]]),responseBody:id=>rpc('target',[info,'network.responseBody',[id]])}};
     result.viewport={set:size=>rpc('target',[info,'viewport.set',[size]]),reset:()=>rpc('target',[info,'viewport.reset'])};
     result.screenshot=(options={})=>result.getScreenshot({...options,emit:false});
     result.content=Object.freeze({export:()=>rpc('target',[info,'content.export'])});
@@ -90,8 +90,9 @@ function target(info) {
 const bind=async(method,args)=>{const info=await rpc(method,args);documentation(info.kind==='tab'?'browser':'app');const bound=target(info);await bound.getAXState({disableDiffing:true});return bound;};
 function browserTarget(info){
   const viewport=Object.freeze({set:size=>rpc('browserViewport',[info.id,size]),reset:()=>rpc('browserViewport',[info.id,null])});
+  const visibility=Object.freeze({set:visible=>rpc('browserVisibility',[info.id,visible])});
   return Object.freeze({...info,browserId:info.id,documentation:async()=>BROWSER_DOCUMENTATION,
-    capabilities:Object.freeze({list:async()=>[{id:'viewport',description:'Temporary viewport sizes for this task’s controlled tabs.'}],get:async id=>{if(id!=='viewport')throw new Error('Browser capability is not available: '+id);return viewport;}}),
+    capabilities:Object.freeze({list:async()=>[{id:'viewport',description:'Temporary viewport sizes for this task’s controlled tabs.'},{id:'visibility',description:'Show or hide the selected tab preview in the active DSH conversation.'}],get:async id=>{if(id==='visibility')return visibility;if(id!=='viewport')throw new Error('Browser capability is not available: '+id);return viewport;}}),
     tabs:{list:()=>rpc('listTabs',[{browser:info.id}]),get:id=>bind('getTab',[id,{browser:info.id}]),new:()=>bind('createBrowserTab',[info.id,'about:blank'])}});
 }
 globalThis.cua=Object.freeze({

@@ -30,6 +30,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   await mkdir(home); await mkdir(workspace);
   const testBrowser = await testBrowserExecutable(root, browserExecutablePath());
   const nativeBinary=process.platform==='darwin'?await legacyBundle(join(root,'native')):join(root,'missing-native');
+  const visibilitySent=new Set();
   const fixture = await startFixture(); let toolSent = false, cursorSent = false, external, browserId = 'browser',fixtureTabId; const userMessages = [], userPayloads=[];
   const provider = createServer(async (req, res) => {
     let data = ''; for await (const chunk of req) data += chunk;
@@ -44,6 +45,11 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
     } else if (!cursorSent && userMessages.some(text => text === '助手光标验收')) {
       cursorSent = true; finish = 'tool_calls';
       delta = { role: 'assistant', tool_calls: [{ index: 0, id: 'cu-cursor-fixture', type: 'function', function: { name: 'computer_use', arguments: JSON.stringify({ title: '检查助手光标', code: `const cursorTab=await cua.getTab(${JSON.stringify(fixtureTabId)},{browser:${JSON.stringify(browserId)}});for(var cursorStep=0;cursorStep<6;cursorStep++){await cursorTab.playwright.getByLabel("姓名",{exact:true}).click(); await new Promise(r=>setTimeout(r,80));} await new Promise(r=>setTimeout(r,700));` }) } }] };
+    }
+    const visibilityCommand=['展示浏览器验收','后台浏览器验收'].find(text=>userMessages.includes(text)&&!visibilitySent.has(text));
+    if(visibilityCommand){
+      visibilitySent.add(visibilityCommand);finish='tool_calls';
+      delta={role:'assistant',tool_calls:[{index:0,id:'cu-visibility-'+visibilitySent.size,type:'function',function:{name:'computer_use',arguments:JSON.stringify({title:visibilityCommand,code:`var vb=await cua.getBrowser({id:${JSON.stringify(browserId)}}); nodeRepl.write(await (await vb.capabilities.get('visibility')).set(${visibilityCommand==='展示浏览器验收'}));`})}}]};
     }
     res.write('data: ' + JSON.stringify({ id: 'ui-fixture', object: 'chat.completion.chunk', model: 'fixture', choices: [{ index: 0, delta, finish_reason: finish }] }) + '\n\n');
     res.end('data: [DONE]\n\n');
@@ -217,6 +223,15 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   await checkSavedCard();
   await page.reload();
   await checkSavedCard();
+  for(const [command,shown] of [['展示浏览器验收',true],['后台浏览器验收',false]]){
+    await rpc('session/prompt',{requestId:crypto.randomUUID(),sessionId,mode:'queue',content:[{type:'text',text:command}]});
+    await until(()=>visibilitySent.has(command));
+    await page.locator('.tx-cu-pane-browser').waitFor({state:shown?'visible':'hidden'});
+    await until(async()=>{const state=await(await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json();return !state.presentationRequest&&state.status==='idle';});
+    assert.equal(await page.locator('.tx-cu-pane-browser').isVisible(),shown,'model visibility request changes the actual DSH preview');
+    assert.equal(target.isClosed(),false,'hiding the preview must leave the real browser tab running');
+  }
+
   await entry.click();
   const image = page.getByLabel('浏览器实时画面').locator('img'); await image.waitFor();
   const layoutMatches=async()=>{const size=await page.locator('.tx-cu-pane .tx-cu-preview-stage').evaluate(el=>({width:el.clientWidth,height:el.clientHeight})),actual=await target.evaluate(()=>({width:innerWidth,height:innerHeight})),rendered=await image.boundingBox();return Math.abs(size.width-actual.width)<2&&Math.abs(size.height-actual.height)<2&&rendered&&Math.abs(rendered.height-size.height)<2;};
