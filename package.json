@@ -30,6 +30,7 @@
   "dependencies": {
     "diff": "9.0.0",
     "html-to-text": "10.0.1",
+    "htmlparser2": "10.1.0",
     "marked": "18.0.12",
     "playwright": "1.63.0",
     "sharp": "0.35.4",

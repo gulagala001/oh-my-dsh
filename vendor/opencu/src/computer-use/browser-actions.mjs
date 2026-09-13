@@ -345,7 +345,7 @@ export class BrowserActions {
       if (method === 'getAXStateAndScreenshot') return await this.snapshot(record, args[0], signal, true);
       if (method === 'pageAssets.list') return await listPageAssets(record, signal);
       if (method === 'pageAssets.bundle') return await bundlePageAssets(record, args[0], signal);
-      if (method === 'content.export') return await exportPageContent(record, signal);
+      if (method === 'content.export') return await exportPageContent(record, signal, () => this.frameBindings(record));
       if (method === 'capabilities.list') return [{ id: 'pageAssets', description: 'Inventory and export assets already loaded by the current page.' }, ...(await webMcpAvailable(record, signal) ? [{ id: 'webmcp', description: 'Discover and invoke page-defined tools using the browser WebMCP protocol.' }] : [])];
       if (method === 'webmcp.fetchTools') return await fetchWebMcpTools(record, signal);
       if (method === 'webmcp.call') return await callWebMcpTool(record, args[0], args[1], args[2], signal);
@@ -355,12 +355,32 @@ export class BrowserActions {
         const dialog = record.dialog, previous = record.pendingAction; record.dialog = null;
         return await this.perform(record, async () => {
           if (method.endsWith('accept')) await dialog.accept(args[0]); else await dialog.dismiss();
-          await previous;
+          try {
+            const outcome = await previous;
+            return outcome?.triggeringActionError ? outcome : null;
+          } catch (error) {
+            // Answering the dialog succeeded; the interrupted action has its
+            // own outcome and must not be reported as an answer failure.
+            return { dialogHandled: true, triggeringActionError: { name: error.name ?? 'Error', message: error.message ?? String(error) } };
+          }
         });
       }
       if (method === 'downloads.list') return [...record.downloads].map(([id,d]) => ({ id, filename: d.suggestedFilename(), url: d.url() }));
       if (method === 'downloads.save') { const d = record.downloads.get(args[0]); if (!d) throw new Error('Unknown download'); await d.saveAs(args[1]); const failure = await d.failure(); if (failure) throw new Error(failure); return { path: args[1], filename: d.suggestedFilename() }; }
-      if (method === 'filechooser.setFiles') { if (!record.filechooser) throw new Error('No file chooser is open'); await record.filechooser.setFiles(args[0]); record.filechooser = null; return null; }
+      if (method === 'filechooser.setFiles') {
+        // The intercepted chooser event can arrive just after click resolves.
+        // Wait for that in-flight event rather than requiring another model call.
+        if (!record.filechooser) {
+          try { await page.waitForEvent('filechooser', { timeout: 1000 }); }
+          catch (error) { signal?.throwIfAborted(); if (error.name === 'TimeoutError') throw new Error('No file chooser is open'); throw error; }
+        }
+        signal?.throwIfAborted();
+        if (!record.filechooser) throw new Error('No file chooser is open');
+        const chooser = record.filechooser;
+        await chooser.setFiles(args[0]);
+        if (record.filechooser === chooser) record.filechooser = null;
+        return null;
+      }
       if (method === 'logs') return record.logs.slice();
       if (method === 'markDeliverable' || method === 'markHandoff') { this.owners.get(id).keep = true; return null; }
       if (method === 'viewport.set') {
@@ -409,6 +429,64 @@ export class BrowserActions {
           if (method === 'click') {
             const options = { button: args[1]?.mouseButton ?? 'left', clickCount: args[1]?.clickCount ?? 1 };
             if (handle) await handle.click(options); else { const [p] = await this.screenshotPoints(record, [args[0]], screenshotFrame); signal?.throwIfAborted(); await page.mouse.click(p.x,p.y,options); }
+          } else if (method === 'selectText') {
+            if (!handle) throw new Error('selectText requires an observed element id');
+            await handle.evaluate((element, { text, options }) => {
+              const { prefix, suffix, selectionType = 'select' } = options;
+              if (typeof text !== 'string' || !text.length) throw new Error('selectText requires non-empty text');
+              if (!['select', 'before', 'after'].includes(selectionType)) throw new Error('selectionType must be select, before or after');
+              if ((prefix !== undefined && typeof prefix !== 'string') || (suffix !== undefined && typeof suffix !== 'string')) throw new Error('prefix and suffix must be strings');
+              const doc = element.ownerDocument;
+              const input = element.localName === 'input' || element.localName === 'textarea';
+              if (input && element.matches(':disabled')) throw new Error('Cannot select text in a disabled input');
+              const segments = [];
+              let value = input ? element.value : '';
+              if (!input) {
+                const append = (text, start, end) => { segments.push({ offset: value.length, text, start, end }); value += text; };
+                const visit = node => {
+                  if (node.nodeType === 3) { append(node.data, [node, 0], [node, node.data.length]); return; }
+                  if (node.nodeType !== 1) return;
+                  const style = doc.defaultView.getComputedStyle(node);
+                  if (style.display === 'none' || style.visibility === 'hidden') return;
+                  const parent = node.parentNode, index = Array.prototype.indexOf.call(parent.childNodes, node);
+                  if (node.localName === 'br') { append('\n', [parent, index], [parent, index + 1]); return; }
+                  const block = ['block', 'list-item', 'table-row'].includes(style.display);
+                  if (block && value && !value.endsWith('\n')) append('\n', [parent, index], [node, 0]);
+                  for (const child of node.childNodes) visit(child);
+                  if (block && value && !value.endsWith('\n')) append('\n', [node, node.childNodes.length], [parent, index + 1]);
+                };
+                for (const child of element.childNodes) visit(child);
+                // A final block separator is not part of the root's visible text.
+                if (segments.at(-1)?.text === '\n' && segments.at(-1).start[0].nodeType !== 3 && !element.innerText?.endsWith('\n')) { value = value.slice(0, -1); segments.pop(); }
+                if (typeof element.innerText === 'string' && value !== element.innerText) throw new Error('This rendered text layout cannot be mapped exactly for selection');
+              }
+              const matches = [];
+              for (let at = value.indexOf(text); at !== -1; at = value.indexOf(text, at + 1)) {
+                if ((prefix === undefined || value.slice(0, at).endsWith(prefix)) && (suffix === undefined || value.slice(at + text.length).startsWith(suffix))) matches.push(at);
+              }
+              if (matches.length !== 1) throw new Error('Selection must match exactly once; use prefix/suffix to disambiguate.');
+              const start = matches[0] + (selectionType === 'after' ? text.length : 0);
+              const end = matches[0] + (selectionType === 'before' ? 0 : text.length);
+              if (input) {
+                if (element.selectionStart === null) throw new Error('This input does not support text selection');
+                element.focus(); element.setSelectionRange(start, end);
+                if (element.getRootNode().activeElement !== element || element.selectionStart !== start || element.selectionEnd !== end) throw new Error('Text input did not accept focus and selection');
+              } else {
+                const point = position => {
+                  const entry = segments.find(({ offset, text }) => position >= offset && position <= offset + text.length);
+                  if (!entry) throw new Error('Text selection range is unavailable');
+                  if (position === entry.offset) return entry.start;
+                  if (position === entry.offset + entry.text.length) return entry.end;
+                  return [entry.start[0], position - entry.offset];
+                };
+                const range = doc.createRange(); range.setStart(...point(start)); range.setEnd(...point(end));
+                element.focus();
+                const active = element.getRootNode().activeElement;
+                if (element.isContentEditable && active !== element && !element.contains(active)) throw new Error('Editable text did not accept focus');
+                if (active && active !== element && !element.contains(active)) active.blur?.();
+                const selection = doc.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+              }
+            }, { text: args[1], options: args[2] ?? {} });
           } else if (method === 'setValue') {
             if (!handle) throw new Error('setValue requires an observed element id');
             const kind = record.elements.get(args[0]).role;

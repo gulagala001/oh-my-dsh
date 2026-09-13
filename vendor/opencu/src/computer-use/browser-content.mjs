@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { readExportForms, preserveExportForms } from './browser-form-export.mjs';
 
 const exportable = new Set(['font', 'image', 'stylesheet', 'video']);
 const stale = () => Object.assign(new Error('The page or asset inventory changed. List the current page assets again.'), { code: 'STALE_ASSET_INVENTORY' });
@@ -126,14 +127,19 @@ export async function bundlePageAssets(record, options, signal) {
   } catch (error) { await rm(directoryPath, { recursive: true, force: true }); throw error; }
 }
 
-export async function exportPageContent(record, signal) {
-  const generation = record.generation;
-  const { data } = await record.cdp.send('Page.captureSnapshot', { format: 'mhtml' });
+export async function exportPageContent(record, signal, frameBindings) {
+  const generation = record.generation, bindings = await frameBindings();
+  const before = await readExportForms(bindings);
   check(record, generation, signal);
+  const { data } = await record.cdp.send('Page.captureSnapshot', { format: 'mhtml' });
+  const after = await readExportForms(bindings);
+  check(record, generation, signal);
+  if (JSON.stringify(before) !== JSON.stringify(after)) throw new Error('Page form values changed while exporting. Try again when the page is stable.');
+  const snapshot = preserveExportForms(data, before);
   const directory = await mkdtemp(join(tmpdir(), 'trisoul-cu-page-'));
   try {
     const path = join(directory, 'page.mhtml');
-    await writeFile(path, data, { flag: 'wx', mode: 0o600 });
+    await writeFile(path, snapshot, { flag: 'wx', mode: 0o600 });
     check(record, generation, signal);
     return path;
   } catch (error) { await rm(directory, { recursive: true, force: true }); throw error; }

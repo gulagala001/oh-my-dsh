@@ -1,6 +1,22 @@
 import { fork } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 
+function appendOutput(c, block) {
+  const size = block.type === 'text' ? Buffer.byteLength(block.text) : Buffer.byteLength(block.data, 'base64');
+  const cap = block.type === 'text' ? 48000 : 16000000;
+  const key = block.type === 'text' ? 'textBytes' : 'imageBytes';
+  if (c[key] + size <= cap) { c[key] += size; c.blocks.push(block); }
+  else if (!c.truncated) {
+    c.truncated = true;
+    if (block.type === 'text') {
+      const remaining = Math.max(0, cap - c[key] - 320);
+      const prefix = new TextDecoder().decode(Buffer.from(block.text).subarray(0, remaining), { stream: true });
+      if (prefix) { c.textBytes += Buffer.byteLength(prefix); c.blocks.push({ type: 'text', text: prefix }); }
+    }
+    c.blocks.push({ type: 'text', text: '[Computer Use output truncated. For more AX text, use const state = await target.getAXState({emit:false,disableDiffing:true}), then nodeRepl.write(state.slice(start,end)) for the needed range.]' });
+  }
+}
+
 export class ComputerRuntime {
   constructor(dispatch, { onStop = async()=>{}, timeoutMs=30000 }={}) {
     this.dispatch=dispatch;this.onStop=onStop;this.timeoutMs=timeoutMs;this.current=null;this.generation=0;
@@ -23,6 +39,10 @@ export class ComputerRuntime {
           operation.then(value=>{
             if (this.current === current && !current.controller.signal.aborted && message.method === 'target') {
               const method = message.args[1];
+              if (['dialog.accept', 'dialog.dismiss'].includes(method) && value?.dialogHandled && value?.triggeringActionError) {
+                const text = 'Dialog handled successfully. The earlier triggering action failed: ' + String(value.triggeringActionError.message).slice(0, 8000) + '\nDo not answer the same dialog again or assume the triggering action completed. Observe the current page before deciding the next action.';
+                appendOutput(current, { type: 'text', text });
+              }
               const files = method === 'content.export' && typeof value === 'string' ? [value]
                 : method === 'pageAssets.bundle' && value?.manifestPath ? [value.manifestPath, ...value.assets.map(asset => asset.path)] : [];
               for (const path of files) if (!current.blocks.some(block => block.type === 'file' && block.path === path)) current.blocks.push({ type: 'file', path });
@@ -31,19 +51,7 @@ export class ComputerRuntime {
           },error=>{if(worker.connected)worker.send({type:'rpc-result',id:message.id,error:{message:error.message,code:error.code}});}).finally(()=>current.pending.delete(operation));
         }
         if(message.type==='output'&&message.execution===this.current?.execution){
-          const c=this.current;
-          const size=message.block.type==='text'?Buffer.byteLength(message.block.text):Buffer.byteLength(message.block.data,'base64');
-          const cap=message.block.type==='text'?48000:16000000;
-          const key=message.block.type==='text'?'textBytes':'imageBytes';
-          if(c[key]+size<=cap){c[key]+=size;c.blocks.push(message.block);}else if(!c.truncated){
-            c.truncated=true;
-            if(message.block.type==='text'){
-              const remaining=Math.max(0,cap-c[key]-320);
-              const prefix=new TextDecoder().decode(Buffer.from(message.block.text).subarray(0,remaining),{stream:true});
-              if(prefix){c.textBytes+=Buffer.byteLength(prefix);c.blocks.push({type:'text',text:prefix});}
-            }
-            c.blocks.push({type:'text',text:'[Computer Use output truncated. For more AX text, use const state = await target.getAXState({emit:false,disableDiffing:true}), then nodeRepl.write(state.slice(start,end)) for the needed range.]'});
-          }
+          appendOutput(this.current, message.block);
         }
         if(message.type==='done'&&message.execution===this.current?.execution){
           const c=this.current;

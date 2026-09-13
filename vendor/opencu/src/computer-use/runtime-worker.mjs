@@ -2,7 +2,7 @@ import inspector from 'node:inspector';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { inspect } from 'node:util';
 import { createHash } from 'node:crypto';
-import { CORE_DOCUMENTATION, BROWSER_DOCUMENTATION, appDocumentation } from './api-docs.mjs';
+import { CORE_DOCUMENTATION, BROWSER_DOCUMENTATION, appDocumentation, documentationTopic } from './api-docs.mjs';
 
 const scope = new AsyncLocalStorage(), pending = new Map(); let sequence = 0;
 const send = message => { if (process.connected) process.send(message); };
@@ -95,6 +95,7 @@ function browserTarget(info){
     tabs:{list:()=>rpc('listTabs',[{browser:info.id}]),get:id=>bind('getTab',[id,{browser:info.id}]),new:()=>bind('createBrowserTab',[info.id,'about:blank'])}});
 }
 globalThis.cua=Object.freeze({
+  documentation:async topic=>documentationTopic(topic),
   getState:async(options={})=>{const state=await rpc('getState');documentation();if(options.emit!==false)display(state);return state;},
   listApps:async(options={})=>{const apps=await rpc('listApps');documentation();if(options.emit!==false)display(apps);return apps;},
   listTabs:async(options={})=>{const tabs=await rpc('listTabs',[options]);documentation();if(options.emit!==false)display(tabs);return tabs;},

@@ -1,11 +1,13 @@
 {
   "type": "module",
+  "packageManager": "pnpm@11.23.0",
   "engines": {
     "node": ">=22.19"
   },
   "dependencies": {
     "diff": "9.0.0",
     "html-to-text": "10.0.1",
+    "htmlparser2": "10.1.0",
     "marked": "18.0.12",
     "playwright": "1.63.0",
     "sharp": "0.35.4",
@@ -59,6 +61,11 @@
     "./scripts/*": "./scripts/*",
     "./native/*": "./native/*"
   },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node scripts/start.mjs",
+    "test": "node --test --test-concurrency=1 test/*.test.mjs"
+  },
   "files": [
     "src",
     "lib",
@@ -82,10 +89,5 @@
         "@deepseek-ai/dsh-client-ui-sidebar"
       ]
     }
-  },
-  "scripts": {
-    "build": "node scripts/build.mjs",
-    "start": "node scripts/start.mjs",
-    "test": "node --test --test-concurrency=1 test/*.test.mjs"
   }
 }

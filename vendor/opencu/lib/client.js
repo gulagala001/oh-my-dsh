@@ -196,7 +196,7 @@ function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api: api2, 
   const input = (0, import_react4.useRef)(null), surface = (0, import_react4.useRef)(null), current = (0, import_react4.useRef)(null), queue = (0, import_react4.useRef)([]), draining = (0, import_react4.useRef)(false);
   const pressed = (0, import_react4.useRef)(/* @__PURE__ */ new Set()), keys = (0, import_react4.useRef)(/* @__PURE__ */ new Set()), composing = (0, import_react4.useRef)(false);
   const lastPointer = (0, import_react4.useRef)(null);
-  const displayedData = (0, import_react4.useRef)(null);
+  const displayedData = (0, import_react4.useRef)(null), receivedFrame = (0, import_react4.useRef)(null);
   const activeStream = (0, import_react4.useRef)(null);
   const stage = (0, import_react4.useRef)(null), meta = (0, import_react4.useRef)(null), [space, setSpace] = (0, import_react4.useState)({ width: 0, height: 0 });
   const [layoutSize, setLayoutSize] = (0, import_react4.useState)(null), layoutResizing = (0, import_react4.useRef)(false);
@@ -307,6 +307,7 @@ function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api: api2, 
     setCursor(null);
     current.current = null;
     displayedData.current = null;
+    receivedFrame.current = null;
     callbacks.current.onFrame?.(null);
     if (!visible) return;
     let active = true, navigationObservedAt = -Infinity;
@@ -319,6 +320,8 @@ function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api: api2, 
     stream.addEventListener("frame", (event) => {
       if (!active) return;
       const next = JSON.parse(event.data);
+      receivedFrame.current = next;
+      if (current.current?.loaderId && current.current.loaderId !== next.loaderId) current.current.id = void 0;
       if (current.current) Object.assign(current.current, { actor: next.actor, controlEpoch: next.controlEpoch, stopped: next.stopped, transitioning: next.transitioning });
       if (displayedData.current === next.data) {
         current.current = next;
@@ -354,8 +357,10 @@ function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api: api2, 
       if ((value.observedAt ?? 0) < navigationObservedAt) return;
       navigationObservedAt = value.observedAt ?? 0;
       setCursor(null);
-      if (current.current?.loaderId && value.loaderId !== current.current.loaderId) {
-        current.current.id = void 0;
+      const loaderId = receivedFrame.current?.loaderId ?? current.current?.loaderId;
+      if (loaderId && value.loaderId !== loaderId) {
+        receivedFrame.current = null;
+        if (current.current) current.current.id = void 0;
         setConnection("connecting");
         callbacks.current.onFrame?.(null);
       }
@@ -532,7 +537,7 @@ function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api: api2, 
       callbacks.current.onError("\u753B\u9762\u52A0\u8F7D\u5931\u8D25\uFF0C\u8BF7\u91CD\u8FDE");
     }, onLoad: () => {
       displayedData.current = frame.data;
-      if (current.current?.actor === frame.actor) {
+      if (receivedFrame.current === frame && current.current?.actor === frame.actor) {
         current.current = { ...frame, controlEpoch: current.current.controlEpoch, stopped: current.current.stopped, transitioning: current.current.transitioning };
         callbacks.current.onFrame?.(frame);
       }
