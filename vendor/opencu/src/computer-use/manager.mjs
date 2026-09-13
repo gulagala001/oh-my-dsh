@@ -284,13 +284,14 @@ export class ComputerUseManager {
     for (const viewer of state.viewers.values()) { try { viewer.send('control', { controlEpoch: state.controlEpoch, stopped: state.stopped, transitioning: !!state.uiAction || state.resuming === true }); } catch {} }
   }
   clearPointer(state) {
+    this.nativeViews.clearRetainedCursor(state.id);
     state.pointerAfter = performance.now();
     state.nativePointerAfter = Date.now();
     if (state.pointer) {
       const browser = this.browsers().find(browser => browser.records.has(state.pointer.tabId));
       void browser?.hideCursor?.(state.id, state.pointer.tabId).catch(() => {});
     }
-    state.pointer = null;
+    state.pointer = null; state.cursorRetained = false;
     for (const viewer of state.viewers.values()) { try { viewer.send('cursor', null); } catch {} }
   }
   pointerActive(id, tabId) {
@@ -300,12 +301,13 @@ export class ComputerUseManager {
   pointer(event) {
     const state = this.sessions.get(event.sessionId);
     if (!state) return;
-    if (event.hidden) { if (state.pointer?.source === event.source) this.clearPointer(state); return; }
+    if (event.hidden) { if (!state.ending && state.pointer?.source === event.source) this.clearPointer(state); return; }
     if (!this.pointerActive(event.sessionId, event.tabId)) return;
     if (!(event.issuedAt > (state.pointerAfter ?? 0))) return;
     if (state.pointer?.source === event.source && state.pointer.sequence >= event.sequence) return;
     if (Date.now() - event.at > 1500) return;
     const { sessionId, targetId, ...pointer } = event;
+    state.cursorRetained = false;
     state.pointer = { ...pointer, controlEpoch: state.controlEpoch };
     for (const viewer of state.viewers.values()) if (viewer.tabId === event.tabId) { try { viewer.send('cursor', state.pointer); } catch {} }
     return true;
@@ -338,10 +340,10 @@ export class ComputerUseManager {
     state.userTabs.add(tabId);
     const actor = randomUUID(); state.viewers.set(actor, { tabId, send, stacked, independent, readOnly:stacked });
     send('ready', { actor, controlEpoch: state.controlEpoch });
-    if (state.pointer?.tabId===tabId && Date.now() - state.pointer.at < 1500) send('cursor', state.pointer);
+    if (state.pointer?.tabId===tabId) send('cursor', state.pointer);
     const subscription = this.viewsFor(target).subscribe(tabId, (type, value) => {
       if (!stacked&&(independent?this.viewTarget(state):state.target)?.id !== tabId) { send('closed', { reason: 'target-changed', message: '当前查看的标签页已改变' }); return; }
-      send(type, type === 'frame' ? { ...value, actor, controlEpoch: state.controlEpoch, stopped: state.stopped, transitioning: !!state.uiAction || state.resuming === true } : value);
+      send(type, type === 'frame' ? { ...value, browserCursor: value.browserCursor && !state.cursorRetained, actor, controlEpoch: state.controlEpoch, stopped: state.stopped, transitioning: !!state.uiAction || state.resuming === true } : value);
     }, signal);
     let closing;
     const close = () => closing ??= (async () => {
@@ -713,7 +715,11 @@ export class ComputerUseManager {
   async reset(id) { await this.session(id).runtime.reset(); }
   async endTurn(id) {
     const state = this.sessions.get(id); if (!state) return;
-    this.clearPointer(state);
+    // Keep the last observed location in the preview while releasing control.
+    // A turn boundary still rejects delayed input observations from that turn.
+    state.pointerAfter = performance.now();
+    state.cursorRetained = !!state.pointer;
+    this.nativeViews.retainCursor(id);
     if (!state.ending) state.ending = Promise.allSettled([state.stopped && state.viewers.size ? Promise.resolve() : Promise.all(this.browsers().map(browser => browser.endTurn(id))), this.native.release(id)]).finally(() => { state.ending = null; });
     await state.ending;
   }

@@ -1,21 +1,14 @@
 import React, { useEffect, useState } from 'react';
 
 export function AssistantCursor({ cursor, frame }) {
-  const [expired, setExpired] = useState(null);
   const [pulseExpired, setPulseExpired] = useState(null);
-  const identity = cursor && cursor.source + ':' + cursor.sequence;
   const pulse = cursor?.press && cursor.source + ':' + cursor.press.sequence;
-  useEffect(() => {
-    if (!identity) return;
-    const timer = setTimeout(() => setExpired(identity), 1500);
-    return () => clearTimeout(timer);
-  }, [identity]);
   useEffect(() => {
     if (!pulse) return;
     const timer = setTimeout(() => setPulseExpired(pulse), 250);
     return () => clearTimeout(timer);
   }, [pulse]);
-  if (!cursor || !frame || expired === identity || cursor.loaderId !== frame.loaderId || !cursor.geometry ||
+  if (!cursor || !frame || cursor.loaderId !== frame.loaderId || !cursor.geometry ||
       Object.keys(cursor.geometry).some(key => cursor.geometry[key] !== frame.geometry?.[key])) return null;
   const x = cursor.x / frame.width, y = cursor.y / frame.height;
   if (x < 0 || x >= 1 || y < 0 || y >= 1) return null;

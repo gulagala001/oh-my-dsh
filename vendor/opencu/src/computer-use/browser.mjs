@@ -249,6 +249,9 @@ export class BrowserHost extends BrowserActions {
       const record = await this.bind(connection, page); this.claim(sessionId, record.id, true);
       const preset = this.viewportPresets.get(sessionId);
       if (preset) { await this.setViewport(record, preset.size); record.viewportPreset = preset.id; }
+      // Finish the new target's initial document before starting its first
+      // requested navigation; a late blank-page load can otherwise abort it.
+      await page.waitForLoadState('domcontentloaded');
       signal?.throwIfAborted(); record.navigating = true;
       try { await page.goto(url, { waitUntil: 'domcontentloaded' }); } finally { record.navigating = false; }
       signal?.throwIfAborted();

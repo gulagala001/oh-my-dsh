@@ -47,21 +47,14 @@ var import_react4 = __toESM(require("react"), 1);
 // src/client/assistant-cursor.jsx
 var import_react = __toESM(require("react"), 1);
 function AssistantCursor({ cursor, frame }) {
-  const [expired, setExpired] = (0, import_react.useState)(null);
   const [pulseExpired, setPulseExpired] = (0, import_react.useState)(null);
-  const identity = cursor && cursor.source + ":" + cursor.sequence;
   const pulse = cursor?.press && cursor.source + ":" + cursor.press.sequence;
-  (0, import_react.useEffect)(() => {
-    if (!identity) return;
-    const timer = setTimeout(() => setExpired(identity), 1500);
-    return () => clearTimeout(timer);
-  }, [identity]);
   (0, import_react.useEffect)(() => {
     if (!pulse) return;
     const timer = setTimeout(() => setPulseExpired(pulse), 250);
     return () => clearTimeout(timer);
   }, [pulse]);
-  if (!cursor || !frame || expired === identity || cursor.loaderId !== frame.loaderId || !cursor.geometry || Object.keys(cursor.geometry).some((key) => cursor.geometry[key] !== frame.geometry?.[key])) return null;
+  if (!cursor || !frame || cursor.loaderId !== frame.loaderId || !cursor.geometry || Object.keys(cursor.geometry).some((key) => cursor.geometry[key] !== frame.geometry?.[key])) return null;
   const x = cursor.x / frame.width, y = cursor.y / frame.height;
   if (x < 0 || x >= 1 || y < 0 || y >= 1) return null;
   const pressed = cursor.buttons !== 0;

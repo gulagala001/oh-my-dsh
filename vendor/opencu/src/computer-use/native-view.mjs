@@ -24,6 +24,14 @@ export class NativeViews {
     try{await view.ready;signal?.throwIfAborted();if(view.failure)throw view.failure;if(view.latest)listener('frame',view.latest);if(view.status)listener('capture',{status:view.status});if(view.cursor)listener('cursor',view.cursor);return close;}
     catch(error){await close().catch(()=>{});throw error;}
   }
+  retainCursor(sessionId) {
+    for (const view of this.views.values()) if (view.target.sessionId === sessionId && view.cursor) {
+      view.retainedCursor = { ...view.cursor, buttons: 0, press: undefined };
+    }
+  }
+  clearRetainedCursor(sessionId) {
+    for (const view of this.views.values()) if (view.target.sessionId === sessionId) view.retainedCursor = null;
+  }
   publish(view,event,value){if(!view.closed)for(const listener of view.listeners){try{listener(event,value);}catch{}}}
   async start(view){
     await this.openCapture(view);if(!view.closed)view.loop=this.poll(view);
@@ -41,7 +49,7 @@ export class NativeViews {
   async recover(view,error){
     if(view.closed)return false;
     if(error.code!=='CAPTURE_INTERRUPTED'||(view.restarts??0)>=2)throw error;
-    view.restarts=(view.restarts??0)+1;view.status='waiting';view.latest=null;view.cursor=null;view.cursorKey=undefined;
+    view.restarts=(view.restarts??0)+1;view.status='waiting';view.latest=null;view.cursor=null;view.retainedCursor=null;view.cursorKey=undefined;
     this.publish(view,'cursor',null);this.publish(view,'capture',{status:'waiting'});
     await this.native.releasePreview(view.sessionId);if(view.closed)return false;
     await delay(100,undefined,{signal:view.controller.signal});if(view.closed)return false;
@@ -60,7 +68,8 @@ export class NativeViews {
           view.latest={id:randomUUID(),targetId:view.id,loaderId:view.target.processIdentity+':'+view.target.windowId,sequence:next.sequence,data:next.data,mediaType:next.mediaType,width:bounds.width,height:bounds.height,pixelWidth:next.pixelWidth,pixelHeight:next.pixelHeight,bounds,geometry:bounds,geometryVerified:next.geometryVerified,at:next.capturedAt};
           this.publish(view,'frame',view.latest);
         }
-        const cursor=next.cursor?{...next.cursor,loaderId:view.target.processIdentity+':'+view.target.windowId}:null,key=JSON.stringify(cursor);
+        if (next.cursor && (next.cursor.source !== view.retainedCursor?.source || next.cursor.sequence !== view.retainedCursor?.sequence)) view.retainedCursor = null;
+        const cursor=next.cursor?{...next.cursor,loaderId:view.target.processIdentity+':'+view.target.windowId}:view.retainedCursor??null,key=JSON.stringify(cursor);
         if(view.cursorKey!==key){view.cursorKey=key;view.cursor=cursor;this.publish(view,'cursor',cursor);}
         if(view.status!==next.status){view.status=next.status;this.publish(view,'capture',{status:next.status});}
       }

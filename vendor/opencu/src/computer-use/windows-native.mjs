@@ -123,7 +123,7 @@ export class WindowsNativeHost extends NativeHost {
     if (name === 'start_preview') this.previewDescriptors.set(sessionId, { key: args.process_identity + ':' + args.window_id, owner: args.owner_session_id });
     if (name === 'preview_frame' && result.structuredContent) {
       const descriptor = this.previewDescriptors.get(sessionId), pointer = this.pointers.get(descriptor?.key);
-      result.structuredContent.cursor = pointer && pointer.sessionId === descriptor.owner && Date.now() - pointer.at < 1500 ? pointer : null;
+      result.structuredContent.cursor = pointer && pointer.sessionId === descriptor.owner ? pointer : null;
     }
     return result;
   }

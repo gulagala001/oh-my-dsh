@@ -23,7 +23,7 @@ export function createCursorLayer(style) {
   for (const [name,value] of Object.entries({ width: '22', height: '27', viewBox: '0 0 22 27', fill: 'none' })) svg.setAttribute(name, value);
   for (const [name,value] of Object.entries({ d: 'M2 2L19 14.5L11.6 15.5L7.7 22.5L2 2Z', fill: '#17191c', stroke: 'white', 'stroke-width': '2', 'stroke-linejoin': 'round' })) path.setAttribute(name, value);
   svg.append(path); arrow.append(svg); shadow.append(arrow);
-  let timer, pulse, press, listening = false; const observedViewport = visualViewport;
+  let pulse, press, listening = false; const observedViewport = visualViewport;
   const hide = () => {
     root.setAttribute('data-trisoul-cursor-hidden', ''); root.remove();
     removeEventListener('pagehide', hide); removeEventListener('scroll', hide);
@@ -32,9 +32,8 @@ export function createCursorLayer(style) {
   return { root, apply(state) {
     if (state.serial < Number(root.getAttribute('data-trisoul-cursor-serial') ?? 0)) return false;
     root.setAttribute('data-trisoul-cursor-serial', state.serial);
-    clearTimeout(timer);
     const p = state.pointer, viewport = visualViewport;
-    if (!p || state.hidden || Date.now() - p.at >= 1500 || !viewport ||
+    if (!p || state.hidden || !viewport ||
       Math.abs(viewport.width - p.geometry.width) > 1 || Math.abs(viewport.height - p.geometry.height) > 1 ||
       Math.abs(viewport.pageLeft - p.geometry.pageX) > 1 || Math.abs(viewport.pageTop - p.geometry.pageY) > 1 ||
       Math.abs(viewport.scale - p.geometry.scale) > .001 || p.x < 0 || p.y < 0 || p.x >= viewport.width || p.y >= viewport.height) { hide(); return false; }
@@ -54,7 +53,6 @@ export function createCursorLayer(style) {
       pulse.style.transform = `translate(${-11 * scale}px,${-11 * scale}px) scale(${scale})`; shadow.append(pulse);
     }
     root.removeAttribute('data-trisoul-cursor-hidden');
-    timer = setTimeout(hide, Math.max(0, 1500 - (Date.now() - p.at)));
     return true;
   } };
 }
@@ -83,7 +81,7 @@ export class CursorOverlay {
   }
   snapshot() { return { serial: this.serial, pointer: this.pointer, hidden: this.suppressed > 0 || !this.active(this.actorId) }; }
   async update(actorId, pointer) {
-    if (!this.active(actorId) || !pointer || Date.now() - pointer.at >= 1500) return;
+    if (!this.active(actorId) || !pointer) return;
     if (this.pointer?.source === pointer.source && this.pointer.sequence >= pointer.sequence) return;
     this.actorId = actorId; this.pointer = pointer; this.serial++; this.dirty = true;
     return this.paint();

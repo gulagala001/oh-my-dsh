@@ -76,7 +76,7 @@ static void CUCursorMain(dispatch_block_t action, BOOL wait) {
 }
 - (void)refresh {
   CUSession *session=self.session;
-  if(!session||atomic_load(&session->cancelled)||![session.label isEqual:self.label]||CUNow()-self.updated>1.5){[self hide];return;}
+  if(!session||atomic_load(&session->cancelled)||![session.label isEqual:self.label]){[self hide];return;}
   @try { if(![CUIdentity(self.pid) isEqual:self.identity]){[self hide];return;} }
   @catch(NSException *error){[self hide];return;}
   NSArray *windows=CFBridgingRelease(CGWindowListCopyWindowInfo(kCGWindowListOptionOnScreenOnly,kCGNullWindowID));
@@ -137,7 +137,7 @@ NSDictionary *CUCursorSnapshot(pid_t pid,CGWindowID window){
   __block NSDictionary *result;
   CUCursorMain(^{for(CUCursor *cursor in visibleCursors.allObjects){
     CUSession *session=cursor.session;
-    if(cursor.pid!=pid||cursor.target!=window||!cursor.panel||!session||atomic_load(&session->cancelled)||CUNow()-cursor.updated>1.5)continue;
+    if(cursor.pid!=pid||cursor.target!=window||!cursor.panel||!session||atomic_load(&session->cancelled))continue;
     CGRect bounds=cursor.bounds;
     NSMutableDictionary *value=[@{@"source":cursor.label,@"sequence":@(llround(cursor.updated*1000000)),@"x":@(cursor.local.x),@"y":@(cursor.local.y),@"buttons":@(cursor.down?1:0),@"geometry":@{@"x":@(bounds.origin.x),@"y":@(bounds.origin.y),@"width":@(bounds.size.width),@"height":@(bounds.size.height)}}mutableCopy];
     value[@"at"]=@(cursor.updatedWall);
