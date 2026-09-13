@@ -145,7 +145,7 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   const names = payloads.find(p => p.tools?.some(t => t.function.name === 'read')).tools.map(t => t.function.name);
   const mainRequests = payloads.filter(p => p.tools?.some(t => t.function.name === 'todo_write'));
   assert.equal(mainRequests[0].messages[0].role, 'system', 'startup injections must follow the system prompt');
-  assert.ok(mainRequests[0].messages[0].content.startsWith('You are Oh My DSH.'));
+  assert.ok(mainRequests[0].messages[0].content.startsWith('You are an interactive ZCode agent that helps users with software engineering tasks.'));
   for (let i = 1; i < mainRequests.length; i++) {
     assert.equal(mainRequests[i].messages[0].role, 'system');
     assert.equal(mainRequests[i].messages[0].content, mainRequests[0].messages[0].content);
