@@ -11,4 +11,4 @@ export async function computerVision(ctx, session, route) {
     return { ...selected, name: info?.name ?? route.model, input: Array.isArray(info?.inputModalities) ? info.inputModalities.includes('image') ? 'image' : 'text' : 'unknown' };
   } catch { return { ...selected, input: 'unknown' }; }
 }
-export const TEXT_ONLY_SCREENSHOT_NOTICE = 'Screenshot captured, but the current model configuration accepts text only: the host omits this image from model input. You have not seen its pixels. Use available accessibility text, or ask the user to select an image-capable model for visual work. Do not claim to have inspected this screenshot.';
+export const TEXT_ONLY_SCREENSHOT_NOTICE = 'Screenshot captured, but the current model configuration accepts text only: the host omits this image from model input. You have not seen its pixels. Do not claim to have inspected this screenshot.';
