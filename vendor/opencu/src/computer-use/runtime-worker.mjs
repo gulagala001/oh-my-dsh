@@ -65,7 +65,7 @@ function target(info) {
       const png=Buffer.from(bytes);
       if(png.length>=24&&png.readUInt32BE(0)===0x89504e47)captures.set(bytes,{digest:digest(bytes),info:{target:info,width:png.readUInt32BE(16),height:png.readUInt32BE(20),...(response.screenshotFrame?{geometry:response.screenshotFrame}:{})}});
     }
-    if(options.emit!==false){if(response.state)display(response.state);if(bytes)await emitImage(bytes);if(response.retention==='temporary')display('This is a temporary tab: it will close when this turn ends. If the user needs the open page or asked to keep it, call await tab.markDeliverable() on this tab before replying. Use markHandoff() for an unfinished task.');}
+    if(options.emit!==false){if(response.state)display(response.state);if(bytes)await emitImage(bytes);}
     return method==='getAXState'?response.state:method==='getScreenshot'?bytes:{state:response.state,screenshot:bytes};
   };
   if(info.kind==='tab') {
