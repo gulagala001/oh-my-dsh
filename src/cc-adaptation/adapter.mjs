@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { DEFAULT_IDENTITY } from './identity.mjs';
 import { createHash } from 'node:crypto';
 
 import { promptText as read, mainPrompt, buildMainPrompt } from './texts.mjs';
@@ -125,6 +126,7 @@ export function inspectCommittedRequest(agent) {
   });
   return { capturedAt: new Date().toISOString(), source: 'committed-session-history',
     systemCount: systems.length, latestSystemHash: sha(systems.at(-1) ?? ''),
+    latestHasDefaultIdentity: (systems.at(-1) ?? '').includes(DEFAULT_IDENTITY),
     latestHasTriSoulX: (systems.at(-1) ?? '').includes('You are TriSoulX.'),
     latestHasOldPersona: (systems.at(-1) ?? '').includes('Before ending your turn, check your last paragraph'),
     tools: tools.map(tool => ({ name: tool.name, schemaHash: sha(tool.parameters), descriptionHash: sha(tool.description) })),

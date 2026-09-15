@@ -146,7 +146,7 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   const mainRequests = payloads.filter(p => p.tools?.some(t => t.function.name === 'todo_write'));
   assert.equal(mainRequests[0].messages[0].role, 'system', 'startup injections must follow the system prompt');
   const systemText = mainRequests[0].messages[0].content;
-  assert.ok(systemText.startsWith('You are TriSoulX.'));
+  assert.ok(systemText.startsWith('You are ZCode.'));
   assert.ok(systemText.includes('The host application source checkout is at '));
   assert.ok(systemText.includes("through the current application's Web GUI"));
   assert.ok(systemText.includes('only dsh web injects window.__DSH_BOOT__'));
