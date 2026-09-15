@@ -6,10 +6,10 @@ Windows 上使用同一套 Oh My DSH 插件、任务、记忆和工作台。内�
 
 ## 安装与试用
 
-已有 **DSH 0.1.5-rc.1 Web** 时，先停止服务，在 PowerShell 7 中安装插件：
+当前预发布版需要 **DSH 0.1.6-alpha.1 Web** 时，先停止服务，在 PowerShell 7 中安装插件：
 
 ```powershell
-dsh plugin --profile web add github:gulagala001/oh-my-dsh
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.2.0-alpha.1
 if ($LASTEXITCODE -ne 0) { throw '插件安装失败' }
 dsh web
 ```
@@ -18,7 +18,7 @@ dsh web
 
 ### 从源码独立试用（可选）
 
-在 PowerShell 7 中进入完整源码目录。DSH 0.1.5-rc.1 的本地 `link:` 转发尚有路径含空格的限制，源码可放在 `C:\src\oh-my-dsh`。
+在 PowerShell 7 中进入完整源码目录。本地 `link:` 开发建议使用不含空格的源码路径，例如 `C:\src\oh-my-dsh`。
 
 ```powershell
 pnpm install --frozen-lockfile

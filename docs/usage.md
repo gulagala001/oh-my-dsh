@@ -2,7 +2,7 @@
 
 [返回项目首页](../README.md) · [安装](#安装到现有-dsh推荐) · [日常使用](#日常使用) · [Computer Use](#computer-use预览版) · [开发与验证](#开发与验证)
 
-当前主分支预发布版本 **1.2.0-alpha.1**，适配 **DSH 0.1.6-alpha.1**，内置 **OpenCU 1.0.1**。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
+当前预发布版本 **1.2.0-alpha.1**，适配 **DSH 0.1.6-alpha.1**，内置 **OpenCU 1.0.1**。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
 ## 安装到现有 DSH（推荐）
 
@@ -11,7 +11,7 @@
 先停止当前 DSH Web，在终端或 PowerShell 中安装：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/oh-my-dsh
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.2.0-alpha.1
 ```
 
 然后按原来的方式重新启动 DSH，例如：
@@ -29,7 +29,7 @@ dsh web
 <details>
 <summary>更新与卸载</summary>
 
-停止服务后，重新执行安装命令可更新 GitHub 版本；再按原来的方式启动。
+停止服务后，使用目标版本的 tag 安装，再按原来的方式启动。以上命令固定安装 1.2.0-alpha.1；如需跟随主分支，可去掉 `#v1.2.0-alpha.1`。从 1.1.1 升级时，先备份数据目录，并按原安装方式将宿主更新至 DSH 0.1.6-alpha.1；插件安装不会自动升级全局 DSH。
 
 卸载：
 
@@ -81,7 +81,7 @@ dsh plugin --profile YOUR_PROFILE add link:/absolute/path/to/oh-my-dsh
 
 重启该 profile 后生效。插件 bundle 会将默认 Agent preset 设为 `trisoul-x`。
 
-DSH 0.1.6-alpha.1 在 Windows 转发本地安装命令时会拆分带空格的源路径；本地 `link:` 开发请使用不含空格的源码路径。上面的 GitHub 安装命令不含本地源路径。
+本地 `link:` 开发建议使用不含空格的源码路径，避免命令转发时的路径兼容问题。上面的 GitHub 安装命令不含本地源路径。
 
 macOS 用户完成安装和构建后，也可执行：
 
@@ -121,6 +121,10 @@ node scripts/launch-macos.mjs
 </details>
 
 ## 日常使用
+
+### 自定义身份认知
+
+在 **设置 → Oh My DSH → 常用 → 身份认知** 中编辑助手的名称、角色和职责，然后点击 **保存设置**。更改从下一次主模型请求生效，适用于已有和新建的 Oh My DSH 主对话；其他行为规则保持原样。留空移除身份描述，点击 **恢复默认身份** 后保存可恢复默认文字。
 
 **记忆范围**在对话输入区工具行选择。完全版使用全局、跨项目与当前项目记忆；项目级只使用本项目记忆；会话级使用该会话的私有范围。首次发消息后范围绑定到会话，子代理继承范围。项目按 Git 根目录识别，同一仓库的子目录共享项目记忆。
 
@@ -346,7 +350,3 @@ DSH CLI 仅作为本地开发依赖；宿主 SDK 声明为由 DSH 提供的 peer
 | `scripts/` / `test/` | 构建、启动与测试 |
 
 报告问题时，请提供 Node.js/DSH 版本、复现步骤和脱敏后的错误信息。
-
-### 自定义身份认知
-
-在 **设置 → Oh My DSH → 常用 → 身份认知** 中编辑助手的名称、角色和职责，然后点击 **保存设置**。更改从下一次主模型请求生效，适用于已有和新建的 Oh My DSH 主对话；其他行为规则保持原样。留空移除身份描述，点击 **恢复默认身份** 后保存可恢复默认文字。
