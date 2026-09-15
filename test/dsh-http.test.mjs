@@ -129,7 +129,7 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   assert.equal(reviewed.tasks[0].links[0].asked, true);
   assert.equal(reviewed.frame.filter(n => n.kind === 'trisoul-x:task-review').length, 1);
   const firstTurn = JSON.stringify(payloads.filter(p => p.tools?.some(t => t.function.name === 'verify_link')).map(p => p.messages));
-  for (const reminder of ['[todo list] Unresolved tasks remain:', '[todo list] Every task is checked off, but these lack qualifying evidence:', '[todo list] Tasks whose only evidence is a text record:', 'Re-check each reason against what is actually available here.']) assert.ok(firstTurn.includes(reminder), reminder);
+  for (const reminder of ['[todo list] Unresolved tasks remain:', '[todo list] Every task is checked off, but these lack qualifying evidence:', '[todo list] Tasks whose only evidence is a text record:', 'Re-check each stated limitation against the tools and environment actually available.']) assert.ok(firstTurn.includes(reminder), reminder);
   assert.deepEqual(await api('/better-todo' + q, { verification: false }), { todo: true, verification: false });
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: id, mode: 'queue', content: [{ type: 'text', text: 'Run the real verification command now.' }], clientTimeZone: 'Asia/Shanghai' });
   const state = await until(async () => { const s = await api('/state' + q); return s.running === 'idle' && !s.live && s.tasks[0]?.links.some(l => l.kind === 'test' && l.lastRun?.pass) && s; });
@@ -146,7 +146,7 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   const mainRequests = payloads.filter(p => p.tools?.some(t => t.function.name === 'todo_write'));
   assert.equal(mainRequests[0].messages[0].role, 'system', 'startup injections must follow the system prompt');
   const systemText = mainRequests[0].messages[0].content;
-  assert.ok(systemText.startsWith('You are an interactive ZCode agent that helps users with software engineering tasks.'));
+  assert.ok(systemText.startsWith('You are TriSoulX.'));
   assert.ok(systemText.includes('The host application source checkout is at '));
   assert.ok(systemText.includes("through the current application's Web GUI"));
   assert.ok(systemText.includes('only dsh web injects window.__DSH_BOOT__'));
@@ -166,8 +166,8 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   assert.deepEqual(names.filter(n => ['todo_write', 'task_map', 'todo', 'verify_link', 'tasks'].includes(n)).sort(), ['todo_write', 'verify_link']);
   assert.ok(payloads.every(p => p.response_format === undefined));
   assert.ok(!JSON.stringify(payloads).includes('the default fs-observation-policy requires it'));
-  assert.ok(JSON.stringify(payloads).includes('Never check off a task while its tests are failing'));
-  assert.ok(JSON.stringify(payloads).includes('A test the implementation cannot fail proves nothing.'));
+  assert.ok(JSON.stringify(payloads).includes('Do not check off a partial implementation, failing tests, or an unresolved error.'));
+  assert.ok(JSON.stringify(payloads).includes('a passing check that cannot expose the relevant failure is not evidence of that requirement.'));
   assert.ok(JSON.stringify(payloads).includes('PROJECT_FIXTURE')); assert.ok(JSON.stringify(payloads).includes('test-skill'));
   const memories = await api('/memories' + q); assert.ok(memories.items.some(m => m.key === 'fixture.result'));
   const compact = await api('/compact' + q, {}); assert.equal(compact.changed, true);

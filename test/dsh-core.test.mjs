@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
@@ -67,24 +68,18 @@ test('system slot precedes startup context and old sessions are repaired once wi
   assert.deepEqual(old.surface.nodes, inHistory, 'later in-history system updates are not moved');
 });
 
-test('original persona passages, memory constitution and surgeon remain intact', () => {
+test('candidate main and task prompts are exact while background prompts remain intact', () => {
   const original = JSON.parse(readFileSync(new URL('./fixtures/prompt-origin.json', import.meta.url), 'utf8'));
-  const a = original.personas.align.split('\n\n'), b = original.personas.erudite.split('\n\n'), c = original.personas.empiric.split('\n\n');
-  for (const passage of [a[0], a[3], a[4], a[5], b[0], b[1], b[2], c[5]]) assert.ok(MAIN_PERSONA.includes(passage));
+  const candidate = JSON.parse(readFileSync(new URL('./fixtures/cc-prompt-hashes.json', import.meta.url), 'utf8'));
+  for (const [name, text] of Object.entries({ MAIN_PERSONA, TASK_DESCRIPTION, VERIFICATION_DESCRIPTION })) {
+    assert.equal(createHash('sha256').update(text).digest('hex'), candidate[name], name);
+  }
   assert.equal(MEMORY_CONSTITUTION, original.constitution); assert.equal(SURGEON_SYSTEM, original.surgeon);
   assert.deepEqual(OPS_DESC, original.ops);
   assert.equal(CURATE_RULES, original.curate);
   assert.equal(DIGEST_DESC.overlap, original.overlap); assert.equal(DIGEST_DESC.conflict, original.conflict);
   assert.ok(!SCRIBE.includes('Output JSON (JSON only)'));
-  // Task definition and completion remain merged; verification keeps its complete original prompt.
-  const taskText = TASK_DESCRIPTION.replace(/\s+/g, ' ');
-  for (const passage of [
-    original.taskMap.slice(0, original.taskMap.indexOf(' Keep the list honest')),
-    original.taskMap.slice(original.taskMap.indexOf('Each task'), original.taskMap.indexOf(' op:transcript')),
-    original.taskMap.slice(original.taskMap.indexOf('op:transcript'), original.taskMap.indexOf(' op:view')),
-    original.todo.slice(original.todo.indexOf('Decide'), original.todo.indexOf(' Remove a task')),
-  ]) assert.ok(taskText.includes(passage.replace(/\s+/g, ' ')), passage);
-  assert.equal(VERIFICATION_DESCRIPTION, original.verify);
+
 });
 
 test('memory scope, atomic batches, versions, restoration and per-session usage survive reload', t => {

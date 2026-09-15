@@ -1,0 +1,1 @@
+Cancel a background job using its `job_id`. Inspect the returned status rather than assuming cancellation has already finished. For a continuable subagent's current turn, use `interrupt_agent` with its agent id instead.

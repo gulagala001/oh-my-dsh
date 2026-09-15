@@ -277,7 +277,7 @@ test('stopping reminders restore unfinished tasks, missing evidence and one-time
   const review = notices.at(-1), text = review.content[0].text;
   assert.match(text, /^\[todo list\] Tasks whose only evidence is a text record:/);
   assert.ok(text.includes('your reason no higher rung was runnable: "No runnable target in this fixture."'));
-  assert.ok(text.endsWith('Re-check each reason against what is actually available here. If a higher rung is runnable after all, build and link it; if not, they stay as they are.'));
+  assert.ok(text.endsWith('Re-check each stated limitation against the tools and environment actually available. If a stronger check can run, perform it and link the result. Otherwise keep the limitation explicit; do not relabel it as verified.'));
   assert.equal(store.snapshot(session).tasks[0].links[0].asked, false);
   session.append('user/message', review, { surfaceOp: 'append' });
   session.append('assistant/message', { turn: 1, step: 1, stream: [], message: createAssistantMessage({ content: [{ type: 'text', text: 'Rechecked both reasons.' }], source: { provider: 'fixture', model: 'fixture' } }) }, { surfaceOp: 'append' });

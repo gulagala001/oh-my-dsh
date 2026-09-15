@@ -14,8 +14,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1"><img src="https://img.shields.io/badge/version-1.1.1-3478F6?style=flat-square" alt="Version 1.1.1" /></a>
-  <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.5--rc.1-475569?style=flat-square" alt="DSH 0.1.5-rc.1" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/tree/main"><img src="https://img.shields.io/badge/version-1.2.0--alpha.1-3478F6?style=flat-square" alt="Version 1.2.0-alpha.1" /></a>
+  <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.6--alpha.1-475569?style=flat-square" alt="DSH 0.1.6-alpha.1" /></a>
   <a href="#support"><img src="https://img.shields.io/badge/status-early_access-64748B?style=flat-square" alt="Early access" /></a>
 </p>
 
@@ -40,7 +40,9 @@ Oh My DSH 把任务、记忆、电脑和监控放进同一个工作台。助手�
 
 ## 快速开始
 
-Oh My DSH 通过 **DSH 的插件管理器**安装。已有 **DSH 0.1.5-rc.1 Web** 时，先停止服务，然后在终端或 PowerShell 中运行：
+主分支使用 **DSH 0.1.6-alpha.1** 和模块化主提示词，属于预发布版本。已发布的 **v1.1.1** 仍对应 DSH 0.1.5-rc.1；下面的 GitHub 安装命令安装当前主分支。
+
+Oh My DSH 通过 **DSH 的插件管理器**安装。已有 **DSH 0.1.6-alpha.1 Web** 时，先停止服务，然后在终端或 PowerShell 中运行：
 
 ```sh
 dsh plugin --profile web add github:gulagala001/oh-my-dsh
@@ -65,7 +67,7 @@ dsh web
 <details>
 <summary>源码下载与独立开发</summary>
 
-[1.1.1 源码 ZIP](https://github.com/gulagala001/oh-my-dsh/releases/download/v1.1.1/oh-my-dsh-v1.1.1.zip) 用于保存源码、手动部署或二次开发，包含已构建的界面。普通插件安装直接使用上面的命令即可。
+[旧版 1.1.1 源码 ZIP](https://github.com/gulagala001/oh-my-dsh/releases/download/v1.1.1/oh-my-dsh-v1.1.1.zip) 用于保存源码、手动部署或二次开发，包含已构建的界面。普通插件安装直接使用上面的命令即可。
 
 [从源码试用](docs/usage.md#本地开发或独立试用) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1)
 
@@ -162,7 +164,7 @@ Computer Use 由 [OpenCU](https://github.com/gulagala001/opencu) 提供，安装
 
 ## 平台与运行环境
 
-当前版本为 **1.1.1**，适配 **DSH 0.1.5-rc.1**。
+当前主分支版本为 **1.2.0-alpha.1**，适配 **DSH 0.1.6-alpha.1**。
 
 | 功能 | 当前支持 |
 | --- | --- |

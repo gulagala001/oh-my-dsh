@@ -1,3 +1,4 @@
+import { promptText } from './cc-adaptation/texts.mjs';
 import { z } from 'zod';
 import { createTodoStore } from './todolist.mjs';
 
@@ -20,15 +21,7 @@ const VERIFICATION_LINK_SCHEMA = { type: 'object', required: ['task', 'kind'], p
 } };
 
 // Original task_map and todo wording, merged as recorded in PROMPT_CHANGES.md.
-export const TASK_DESCRIPTION = `Creates and edits the todo list anchored to the user's own wording — a clear, complete todo list greatly raises the completion rate in medium-to-large tasks. Use it when the task takes three or more distinct steps, when the user lists several things at once, or when new instructions arrive mid-task — capture them right away. Skip it for single-step work and plain conversation — a list there is overhead, not help.
-
-op:excerpt copies a block of the user's own words in as the raw material the todo list is parsed from — quote its opening and closing words verbatim ({from, to}) — together with the tasks that cover it (\`tasks:[...]\` in the same call). Tasks are added, edited and removed through op:add/edit/remove. Each task selects a sub-range within an excerpt as its \`anchor\` ({from, to}). Editing a task itself clears its checkmark and verification links.
-
-Keep the list honest as work progresses: rewrite a task overtaken by newer instructions into what can actually be done (op:edit), and remove a task from the list entirely (op:remove) only when it no longer belongs on the list — irrelevant, impossible, or overtaken by newer instructions — never because it is hard; say why in your reply.
-
-op:check updates completion. Decide how a task will be verified before building it, and check it off the moment it is fully done — one at a time, as you go, not all of them at the end. Never check off a task while its tests are failing, the implementation is partial, or an error on it is unresolved; when several are checked together, that must hold for every one of them. Uncheck a task that turns out not to be done.
-
-op:view returns the full todo list including excerpts. op:transcript returns the verbatim list of user messages in this session, numbered [1], [2], … — you only need it when a quote appears in more than one message: check the numbering and add msg to the excerpt.`;
+export const TASK_DESCRIPTION = promptText('tools/todo-write.md');
 export const TASK_PARAMETERS = {
   type: 'object', required: ['op'], properties: {
     op: {"type":"string","enum":["excerpt","add","edit","remove","check","view","transcript"],"description":"Operation kind"},
@@ -51,17 +44,7 @@ export const TASK_PARAMETERS = {
   ],
 };
 
-export const VERIFICATION_DESCRIPTION = `The tasks' verification-link tool, used to raise the real completion rate of the todo list. A task counts as verified only through what is linked here.
-
-When to link: link the evidence the moment a task is done — not in one sweep after everything is built.
-
-How a test earns its place: start from the task's own words — if that sentence is true, what must be observable? The test asserts exactly that, in the same scope as the sentence — no narrower, and no premises the user never stated. It must exercise the changed code path against real behavior — the repository's own test runner, real dependencies, not mocks of the thing under test. A test the implementation cannot fail proves nothing. Prefer the repository's own test command (cmd) over a hand-made script.
-
-What does not count: a test written from the implementation instead of from the task's words; a green run whose test never reaches the changed path; a scenario narrower or easier than the one the user described; a text note that restates the task title.
-
-Evidence ranks, strongest first: (1) a real-environment run doing what the user would do; (2) an automated end-to-end test; (3) a targeted probe of the exact code path; (4) a smoke check that it starts and responds; (5) a text record. Link the highest rung you can actually run here; a lower rung only when every higher one is genuinely impossible — and reason must say why. A "text" note must name its evidence — the command run, the output seen, or the file and place inspected.
-
-Ops: op:link attaches evidence to a task — a test file (kind "test") or a text record (kind "text"). op:run runs the linked tests — with cmd, the command as given; without it, the file bare by extension — and reports PASS / FAIL / TIMEOUT with the output tail. op:unlink withdraws links that no longer hold (the files themselves are untouched). op:view returns every task with its completion state and evidence.`;
+export const VERIFICATION_DESCRIPTION = promptText('tools/verify-link.md');
 export const VERIFICATION_PARAMETERS = {
   type: 'object', required: ['op'], properties: {
     op: {"type":"string","enum":["link","run","unlink","view"],"description":"Operation kind"},

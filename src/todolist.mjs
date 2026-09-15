@@ -1,3 +1,4 @@
+import { promptText } from './cc-adaptation/texts.mjs';
 // Task ledger adapted from trisoul 4189f90: preserve excerpts, anchors, item operations and evidence.
 // DSH V3 events and a unified model-facing tool are wired in tasks.mjs.
 import { execFile } from 'node:child_process'
@@ -20,9 +21,9 @@ export const textOnly = (t) => !passedTest(t) && (t.links ?? []).some(l => l.kin
  *  只靠文字过关的条目 content 尾加 ⚠ text-only（I7 放行可见，同 wire 格式 UI 零改，08-29(3) 拍板） */
 export const todosOf = (tasks) => (Array.isArray(tasks) ? tasks : []).map(t => ({ content: textOnly(t) ? `${t.title} ⚠ text-only` : t.title, status: t.done ? 'completed' : 'pending' }))
 /** I1：用户发言时随 A 请求注入的提醒（spec I1 逐字） */
-export const TODO_NUDGE = '[todo list] The user has posted new instructions — the todo list may need updating.'
+export const TODO_NUDGE = promptText('runtime/task-nudge.md')
 /** I5 空清单提醒文案（拍板 08-29）：事实—弱建议同 I1 家族，多一个豁免句（此条是「我们猜你忘了」，须给台阶） */
-export const TODO_EMPTY_NUDGE = "[todo list] The task has progressed but the todo list is still empty — if the remaining work is multi-step, consider capturing it with task_map. Just a gentle reminder; ignore if this task doesn't need one."
+export const TODO_EMPTY_NUDGE = promptText('runtime/task-empty.md')
 /** I2 换代注入消息的 id 前缀（canvas 遮蔽/钉最新按 [todo list] 文本头识别，id 前缀供本插件回收计数） */
 export const TODO_INJECTION_ID_PREFIX = 'trisoul-todolist-'
 /** run 失败输出尾巴长度（回执 output tail 的截取；「tail」语义是拍板文案自带的，非预算限制） */
@@ -144,7 +145,7 @@ const deficitClause = (l) => l.kind === 'text'
   ? `${l.id} text — "${l.note}"`
   : `${l.id} test ${testLabel(l)}, ${runState(l)}`
 const reviewClause = (l) => `${l.id} text — "${l.note}"${l.reason ? ` — your reason no higher rung was runnable: "${l.reason}"` : ''}`
-const REVIEW_TAIL = 'Re-check each reason against what is actually available here. If a higher rung is runnable after all, build and link it; if not, they stay as they are.'
+const REVIEW_TAIL = promptText('runtime/evidence-review.md')
 
 // ---------- 测试运行器（op:run 真执行；按扩展名定运行器，py 走 pytest→裸跑级联） ----------
 
@@ -573,7 +574,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
   const blockingLines = (rec, { todo = true, verification = true } = {}) => rec.tasks
     .filter(t => (todo && !t.done) || (verification && !t.links.some(qualified)))
     .map(t => `${t.id} ${box4(t.done)} ${t.title}${verification ? ` — ${t.links.length ? t.links.map(deficitClause).join(' · ') : 'no link to real, valid evidence that the task is done'}` : ''}`)
-  const unresolvedText = (session, options) => `[todo list] Unresolved tasks remain:\n${blockingLines(getRec(session), options).join('\n')}`
+  const unresolvedText = (session, options) => `[todo list] Unresolved tasks remain:\n${blockingLines(getRec(session), options).join('\n')}\nContinue the permitted work that remains. A summary of progress is not completion of these tasks.`
   const unqualifiedText = (session) => {
     const rec = getRec(session), heading = rec.tasks.every(t => t.done)
       ? '[todo list] Every task is checked off, but these lack qualifying evidence:'

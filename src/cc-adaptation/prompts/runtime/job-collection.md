@@ -1,0 +1,1 @@
+Track each job id you start. Completion notifications come from the host; do independent work while a job runs rather than busy-polling or duplicating it. Before reporting the requested work complete, collect still-relevant results with `job_output`. Use `wait: true` only when your next step depends on the result, and cancel obsolete jobs with `job_kill`.

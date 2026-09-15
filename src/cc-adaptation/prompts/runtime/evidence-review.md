@@ -1,0 +1,1 @@
+Re-check each stated limitation against the tools and environment actually available. If a stronger check can run, perform it and link the result. Otherwise keep the limitation explicit; do not relabel it as verified.

@@ -1,3 +1,4 @@
+import { installPromptAdapter } from './cc-adaptation/adapter.mjs';
 import { MAIN_PERSONA, NOTE_GUIDE } from './prompts.mjs';
 import { Canvas } from './canvas.mjs';
 import { eventText, sessionEvents, substantive } from './hub.mjs';
@@ -7,7 +8,8 @@ export const inject = ['trisoulX', 'systemPrompt', 'tools', 'llm', 'tokenMeter',
 const result = { schema: { type: 'string' }, render: (_args, text) => [{ type: 'text', text }] };
 export function apply(ctx) {
   const hub = ctx.trisoulX;
-  ctx.systemPrompt.section({ name: 'trisoul-x:persona', order: 0, text: ['You are an interactive ZCode agent that helps users with software engineering tasks.', MAIN_PERSONA, "Respond in the user's language."].join('\n\n') });
+  ctx.systemPrompt.section({ name: 'trisoul-x:persona', order: 0, text: MAIN_PERSONA, interpolate: false });
+  installPromptAdapter(ctx);
   const canvas = new Canvas(ctx, hub);
   hub.canvas = canvas;
   ctx.effect(() => () => { if (hub.canvas === canvas) hub.canvas = undefined; });

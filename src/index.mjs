@@ -86,7 +86,7 @@ export function apply(ctx, config) {
   ctx.on('agent/disposed', async ({ agent }) => {
     hub.disposeAgent(agent);
   }, { global: true });
-  ctx.on('agent/session-start', ({ agent, source }) => {
+  ctx.on('agent/created', ({ agent, source }) => {
     if (!isX(agent.session) || agent.session.header.origin === 'subagent') return;
     const state = hub.store.state(agent.session.id);
     hub.startDigestSession(agent);

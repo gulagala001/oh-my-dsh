@@ -30,3 +30,5 @@ data/
 /vendor/opencu/native/computer-use/windows/obj/
 /vendor/opencu/native/computer-use/windows/desktop/bin/
 /vendor/opencu/native/computer-use/windows/desktop/obj/
+
+/.trisoulx-migration/

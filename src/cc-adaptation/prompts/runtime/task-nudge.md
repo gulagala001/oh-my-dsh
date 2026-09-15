@@ -1,0 +1,1 @@
+New user instructions may change the remaining work. Update the task list when tracking is useful, using the user's actual wording. For simple conversation or a single straightforward step, continue without creating unnecessary tasks.

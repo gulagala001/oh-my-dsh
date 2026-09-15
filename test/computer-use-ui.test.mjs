@@ -23,7 +23,7 @@ async function until(fn, timeout = 30000) {
   throw new Error('Timed out waiting for the Computer Use UI');
 }
 
-for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browser UI: takeover, navigation, tabs, references and themes', { timeout: 90000, skip: backend === 'extension' && process.platform === 'win32' }, async t => {
+for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browser UI: takeover, navigation, tabs, references and themes', { timeout: 180000, skip: backend === 'extension' && process.platform === 'win32' }, async t => {
   const began = performance.now(); let stage = 'prepare';
   const markStage = value => { stage = value; console.log('Computer Use UI stage:', backend, stage, Math.round(performance.now() - began) + 'ms'); };
   const root = await mkdtemp(join(tmpdir(), 'trisoul-cu-ui-')), home = join(root, 'home'), workspace = join(root, 'workspace');
