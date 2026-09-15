@@ -161,7 +161,7 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await settings.getByRole('button', { name: '保存设置', exact: true }).waitFor();
   const identity = settings.getByLabel('身份提示词', { exact: true });
   const defaultIdentity = await identity.inputValue();
-  assert.match(defaultIdentity, /^You are TriSoulX\./);
+  assert.match(defaultIdentity, /^You are ZCode\./);
   await identity.fill('你是我的研究助手。\n帮助我整理资料。');
   await settings.getByRole('button', { name: '保存设置', exact: true }).click();
   await until(async () => !(await settings.getByRole('button', { name: '保存设置', exact: true }).isEnabled()));
