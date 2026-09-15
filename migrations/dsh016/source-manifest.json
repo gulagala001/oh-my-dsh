@@ -1,0 +1,8 @@
+{
+  "format": "git-tree-sha1",
+  "git_tree": "abb45a9b8ce80c1c7e962857f6bb72a8aa952dfc",
+  "files": 95,
+  "prompt_markdown_files": 87,
+  "roots": ["bindings.json", "cc-prompt-adapter.mjs", "migrate.mjs", "migration.json", "prompts", "state-wrapper-replacement.json", "tests"],
+  "scope": "All migration implementation, tool bindings, prompt Markdown, source replacement metadata and candidate tests. Documentation and this verifier are excluded from this checksum to avoid a self-reference. No tool schema or prompt meaning changed during repository packaging."
+}

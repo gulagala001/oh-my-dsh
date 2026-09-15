@@ -1,0 +1,7 @@
+{
+  "path": "src/state-zone.mjs",
+  "base_git_blob": "30e0cde464afd3c9132bbe35290255a3c1266ee4",
+  "old_line": "    const parts = [`[Working state · snapshot v${++s.stateVersion} · as of seq ${Math.max(0, s.stateCursor)} · supersedes all earlier versions]`];",
+  "new_line": "    const parts = [`[Working state · snapshot v${++s.stateVersion} · as of seq ${Math.max(0, s.stateCursor)} · supersedes all earlier versions] Later user instructions take precedence over earlier recorded decisions.`];",
+  "scope": "Only a main-agent-facing state header; not a full-system deployment patch."
+}

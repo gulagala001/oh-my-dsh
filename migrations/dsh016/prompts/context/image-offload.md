@@ -1,0 +1,1 @@
+Historical images may be omitted from a later request. An image-offload notice is not the image itself. Use the original attachment or the current tool's supported reread path when a visual judgment depends on an omitted image; do not claim to see pixels that were not supplied.

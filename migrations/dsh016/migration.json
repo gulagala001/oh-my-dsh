@@ -1,0 +1,10 @@
+{
+  "version": "0.4.0-candidate",
+  "dsh": "0.1.6-alpha.1",
+  "base_commit": "c79dd01fc34704b2ca66b511f1ab80b2b938c3db",
+  "upstream_commit": "0a15e36e7f82b6ed45af6fa9759f29b40dcd965d",
+  "cc_commit": "8eb1be156b850d09c2bd05df7ea32b0f06c9887d",
+  "previous_prompts": "0.3.2",
+  "deployed": false,
+  "real_host_verified": false
+}
