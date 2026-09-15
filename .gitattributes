@@ -1,2 +1,5 @@
 # Keep the published OpenCU distribution byte-for-byte on every platform.
 vendor/opencu/** -text
+
+# Prompt modules must keep identical bytes on Windows checkouts.
+src/cc-adaptation/prompts/** text eol=lf

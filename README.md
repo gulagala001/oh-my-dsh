@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/tree/main"><img src="https://img.shields.io/badge/version-1.2.0--alpha.1-3478F6?style=flat-square" alt="Version 1.2.0-alpha.1" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.2.0-alpha.1"><img src="https://img.shields.io/badge/version-1.2.0--alpha.1-3478F6?style=flat-square" alt="Version 1.2.0-alpha.1" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.6--alpha.1-475569?style=flat-square" alt="DSH 0.1.6-alpha.1" /></a>
   <a href="#support"><img src="https://img.shields.io/badge/status-early_access-64748B?style=flat-square" alt="Early access" /></a>
 </p>
@@ -24,7 +24,7 @@
   <a href="#features">功能亮点</a> ·
   <a href="#computer-use">Computer Use</a> ·
   <a href="docs/usage.md">使用指南</a> ·
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1">版本说明</a> ·
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.2.0-alpha.1">版本说明</a> ·
   <a href="https://github.com/gulagala001/oh-my-dsh/issues">反馈问题</a>
 </p>
 
@@ -40,12 +40,12 @@ Oh My DSH 把任务、记忆、电脑和监控放进同一个工作台。助手�
 
 ## 快速开始
 
-主分支使用 **DSH 0.1.6-alpha.1** 和模块化主提示词，属于预发布版本。已发布的 **v1.1.1** 仍对应 DSH 0.1.5-rc.1；下面的 GitHub 安装命令安装当前主分支。
+当前 **1.2.0-alpha.1** 为预发布版，使用 **DSH 0.1.6-alpha.1**。下面的安装命令固定到该版本；使用旧版 DSH 0.1.5-rc.1 时，请保留 [v1.1.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1)。升级宿主请沿用原来的安装方式、profile 和 `DSH_HOME`。
 
 Oh My DSH 通过 **DSH 的插件管理器**安装。已有 **DSH 0.1.6-alpha.1 Web** 时，先停止服务，然后在终端或 PowerShell 中运行：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/oh-my-dsh
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.2.0-alpha.1
 ```
 
 按原来的方式启动：
@@ -67,11 +67,19 @@ dsh web
 <details>
 <summary>源码下载与独立开发</summary>
 
-[旧版 1.1.1 源码 ZIP](https://github.com/gulagala001/oh-my-dsh/releases/download/v1.1.1/oh-my-dsh-v1.1.1.zip) 用于保存源码、手动部署或二次开发，包含已构建的界面。普通插件安装直接使用上面的命令即可。
+[1.2.0-alpha.1 源码 ZIP](https://github.com/gulagala001/oh-my-dsh/releases/download/v1.2.0-alpha.1/oh-my-dsh-v1.2.0-alpha.1.zip) 用于保存源码、手动部署或二次开发，包含已构建的界面。普通插件安装直接使用上面的命令即可。
 
-[从源码试用](docs/usage.md#本地开发或独立试用) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1)
+[从源码试用](docs/usage.md#本地开发或独立试用) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.2.0-alpha.1)
 
 </details>
+
+## 1.2.0-alpha.1 更新
+
+- **自定义身份认知**：在 **设置 → Oh My DSH → 常用 → 身份认知** 中编辑助手名称、角色和职责。保存后从下一次主模型请求生效；支持留空和恢复默认，其他行为规则保持原样。
+- **DSH 0.1.6 适配**：更新会话生命周期与 Workflow 接口，支持原生工具和 TypeScript PTC 的当前工具契约。
+- **模块化主提示词**：接入 CC 风格主提示词与工具说明，保留宿主提示词顺序、工具参数和后台记忆／整理机制。
+
+[完整版本说明与下载](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.2.0-alpha.1) · [身份设置说明](docs/usage.md#自定义身份认知)
 
 <a id="features"></a>
 
@@ -164,7 +172,7 @@ Computer Use 由 [OpenCU](https://github.com/gulagala001/opencu) 提供，安装
 
 ## 平台与运行环境
 
-当前主分支版本为 **1.2.0-alpha.1**，适配 **DSH 0.1.6-alpha.1**。
+当前预发布版本为 **1.2.0-alpha.1**，适配 **DSH 0.1.6-alpha.1**。
 
 | 功能 | 当前支持 |
 | --- | --- |
