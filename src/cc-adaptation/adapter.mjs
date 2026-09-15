@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
-import { promptText as read, mainPrompt } from './texts.mjs';
+import { promptText as read, mainPrompt, buildMainPrompt } from './texts.mjs';
 const bindings = JSON.parse(readFileSync(new URL('./bindings.json', import.meta.url), 'utf8'));
 export { mainPrompt };
 const sha = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -99,6 +99,7 @@ export function installPromptAdapter(ctx) {
       if (!renderSdk) throw new Error(`Unsupported PTC SDK language: ${language}`);
     }
     const result = transformAssembly(assembly, context, {
+      main: buildMainPrompt(ctx.trisoulX.config().identityPrompt),
       schemas, renderSdk, definition: name => ctx.tools.get(name, context.scope ?? context.agent),
     });
     const key = sha(result.audit);

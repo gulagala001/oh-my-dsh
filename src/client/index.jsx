@@ -1,3 +1,4 @@
+import { DEFAULT_IDENTITY } from '../cc-adaptation/identity.mjs';
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Menu } from '@deepseek-ai/dsh-client-ui-primitives';
 import { FREQUENCY_PRESETS as presets } from '../frequency.mjs';
@@ -167,6 +168,10 @@ function Settings() {
     <Header icon="settings" title="偏好设置" subtitle="模型、记忆与上下文"/>
     <Tabs label="设置分类" value={page} onChange={setPage} items={[[ 'basic', '常用' ], [ 'advanced', '高级' ]]}/>
     <div className="tx-body">{page === 'basic' ? <>
+      <section className="tx-section"><div className="tx-section-heading"><h3>身份认知</h3><Action quiet disabled={saving || config.identityPrompt === DEFAULT_IDENTITY} onClick={() => field('identityPrompt', DEFAULT_IDENTITY)}>恢复默认身份</Action></div>
+        <label className="tx-field"><span>身份提示词</span><textarea aria-label="身份提示词" rows="6" value={config.identityPrompt ?? DEFAULT_IDENTITY} onChange={e => field('identityPrompt', e.target.value)} placeholder="描述助手是谁，以及它主要帮助你做什么"/></label>
+        <p className="tx-help">应用于所有 Oh My DSH 主对话，保存后从下一次模型请求生效。留空可移除身份描述。</p>
+      </section>
       <section className="tx-section"><div className="tx-section-heading"><h3>后台模型</h3><span className="tx-muted">主模型在 DSH 中设置</span></div>
         <Segments label="后台模型配置方式" value={routing} onChange={selectRoute} items={[[ 'follow', '跟随主模型' ], [ 'unified', '统一配置' ], [ 'separate', '分别配置' ]]}/>
         {routing === 'follow' ? <div className="tx-inline-note"><Icon name="layers"/>记忆、状态与整理使用当前对话的模型。</div> : routing === 'unified' ? <div className="tx-route-fields"><RouteFields route={config.unifiedBackground} directory={directory} onChange={r => field('unifiedBackground', r)}/></div> : <div className="tx-route-list">{[['background', '记忆'], ['canvas', '状态与检查'], ['surgeon', '上下文整理']].map(([key, label]) => <Fold key={key} title={label} subtitle={config[key].model || '跟随主模型'}><RouteFields route={config[key]} directory={directory} onChange={r => field(key, r)}/></Fold>)}</div>}

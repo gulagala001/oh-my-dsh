@@ -1,10 +1,12 @@
 import z from '@deepseek-ai/schemastery';
+import { DEFAULT_IDENTITY } from './cc-adaptation/identity.mjs';
 import { FREQUENCY_PRESETS } from './frequency.mjs';
 
 const route = z.object({ provider: z.string().default(''), model: z.string().default(''), temperature: z.number().default(0.7), effort: z.string().default('off') });
 const cadence = FREQUENCY_PRESETS.always;
 export const Config = z.object({
   dataDir: z.string(),
+  identityPrompt: z.string().default(DEFAULT_IDENTITY),
   computerUseEnabled: z.boolean().default(true),
   computerUseBrowserExecutable: z.string().default(''),
   computerUseChromeUserDataDir: z.string().default(''),
