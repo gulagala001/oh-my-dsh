@@ -1,0 +1,327 @@
+{
+  "bash": {
+    "file": "tools/bash.md",
+    "fields": [
+      "command",
+      "workdir",
+      "timeoutMs"
+    ],
+    "sections": [
+      "tool:bash"
+    ]
+  },
+  "pwsh": {
+    "file": "tools/pwsh.md",
+    "fields": [
+      "command",
+      "workdir"
+    ],
+    "sections": [
+      "tool:pwsh"
+    ]
+  },
+  "read": {
+    "file": "tools/read.md",
+    "fields": [
+      "file_path",
+      "offset",
+      "limit"
+    ],
+    "sections": [
+      "tool:read"
+    ]
+  },
+  "write": {
+    "file": "tools/write.md",
+    "fields": [
+      "file_path",
+      "content"
+    ],
+    "sections": [
+      "tool:write"
+    ]
+  },
+  "edit": {
+    "file": "tools/edit.md",
+    "fields": [
+      "file_path",
+      "old_string",
+      "new_string",
+      "replace_all"
+    ],
+    "sections": [
+      "tool:edit"
+    ]
+  },
+  "read_image": {
+    "file": "tools/read-image.md",
+    "fields": [
+      "file_path"
+    ],
+    "sections": [
+      "tool:read_image"
+    ]
+  },
+  "glob": {
+    "file": "tools/glob.md",
+    "fields": [
+      "pattern",
+      "path"
+    ],
+    "sections": [
+      "tool:glob"
+    ]
+  },
+  "grep": {
+    "file": "tools/grep.md",
+    "fields": [
+      "pattern",
+      "path",
+      "include"
+    ],
+    "sections": [
+      "tool:grep"
+    ]
+  },
+  "ask_user_question": {
+    "file": "tools/ask-user-question.md",
+    "fields": [
+      "questions"
+    ],
+    "sections": [
+      "tool:ask_user_question"
+    ]
+  },
+  "exit_plan_mode": {
+    "file": "tools/exit-plan-mode.md",
+    "fields": [
+      "plan"
+    ],
+    "sections": [
+      "tool:exit_plan_mode"
+    ]
+  },
+  "todo_write": {
+    "file": "tools/todo-write.md",
+    "fields": [
+      "op",
+      "tasks",
+      "updates"
+    ],
+    "sections": [
+      "tool:todo_write"
+    ]
+  },
+  "verify_link": {
+    "file": "tools/verify-link.md",
+    "fields": [
+      "op",
+      "links",
+      "tasks"
+    ],
+    "sections": [
+      "tool:verify_link"
+    ]
+  },
+  "skill": {
+    "file": "tools/skill.md",
+    "fields": [
+      "name"
+    ],
+    "sections": [
+      "tool:skill"
+    ]
+  },
+  "web_fetch": {
+    "file": "tools/web-fetch.md",
+    "fields": [
+      "url"
+    ],
+    "sections": [
+      "tool:web_fetch"
+    ]
+  },
+  "web_search": {
+    "file": "tools/web-search.md",
+    "fields": [
+      "queries"
+    ],
+    "sections": [
+      "tool:web_search"
+    ]
+  },
+  "present": {
+    "file": "tools/present.md",
+    "fields": [
+      "files"
+    ],
+    "sections": [
+      "tool:present"
+    ]
+  },
+  "note": {
+    "file": "tools/note.md",
+    "fields": [
+      "text"
+    ],
+    "sections": [
+      "tool:note"
+    ]
+  },
+  "recall": {
+    "file": "tools/recall.md",
+    "fields": [
+      "query",
+      "scope",
+      "from",
+      "to"
+    ],
+    "sections": [
+      "tool:recall"
+    ]
+  },
+  "subagent": {
+    "file": "tools/subagents.md",
+    "fields": [
+      "prompt"
+    ],
+    "sections": [
+      "tool:subagent"
+    ],
+    "mode": "retain-native"
+  },
+  "subagent_fork": {
+    "file": "tools/subagents.md",
+    "fields": [
+      "prompt"
+    ],
+    "sections": [
+      "tool:subagent_fork"
+    ],
+    "mode": "retain-native"
+  },
+  "send_message": {
+    "file": "tools/send-message.md",
+    "fields": [
+      "agent_id",
+      "message"
+    ],
+    "sections": [
+      "tool:send_message"
+    ]
+  },
+  "list_agents": {
+    "file": "tools/list-agents.md",
+    "fields": [],
+    "sections": [
+      "tool:list_agents"
+    ]
+  },
+  "interrupt_agent": {
+    "file": "tools/interrupt-agent.md",
+    "fields": [
+      "agent_id"
+    ],
+    "sections": [
+      "tool:interrupt_agent"
+    ]
+  },
+  "list_subagent_models": {
+    "file": "tools/list-subagent-models.md",
+    "fields": [
+      "provider",
+      "model"
+    ],
+    "sections": [
+      "tool:list_subagent_models"
+    ],
+    "mode": "retain-native"
+  },
+  "job_output": {
+    "file": "tools/job-output.md",
+    "fields": [
+      "job_id"
+    ],
+    "sections": [
+      "tool:job_output"
+    ]
+  },
+  "job_kill": {
+    "file": "tools/job-kill.md",
+    "fields": [
+      "job_id"
+    ],
+    "sections": [
+      "tool:job_kill"
+    ]
+  },
+  "job_list": {
+    "file": "tools/job-list.md",
+    "fields": [],
+    "sections": [
+      "tool:job_list"
+    ]
+  },
+  "workflow": {
+    "file": "tools/workflow.md",
+    "fields": [
+      "script",
+      "meta"
+    ],
+    "sections": [
+      "tool:workflow"
+    ]
+  },
+  "ralph": {
+    "file": "tools/ralph.md",
+    "fields": [],
+    "sections": [
+      "tool:ralph"
+    ],
+    "mode": "retain-native"
+  },
+  "create_goal": {
+    "file": "tools/goals.md",
+    "fields": [],
+    "sections": [
+      "tool:create_goal"
+    ],
+    "mode": "retain-native"
+  },
+  "get_goal": {
+    "file": "tools/goals.md",
+    "fields": [],
+    "sections": [
+      "tool:get_goal"
+    ],
+    "mode": "retain-native"
+  },
+  "update_goal": {
+    "file": "tools/goals.md",
+    "fields": [
+      "goal_id",
+      "revision"
+    ],
+    "sections": [
+      "tool:update_goal"
+    ],
+    "mode": "retain-native"
+  },
+  "computer_use": {
+    "file": "tools/computer-use.md",
+    "fields": [
+      "code",
+      "title"
+    ],
+    "sections": [
+      "tool:computer_use"
+    ]
+  },
+  "computer_use_reset": {
+    "file": "tools/computer-use-reset.md",
+    "fields": [],
+    "sections": [
+      "tool:computer_use_reset"
+    ]
+  }
+}

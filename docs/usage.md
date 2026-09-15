@@ -2,11 +2,11 @@
 
 [返回项目首页](../README.md) · [安装](#安装到现有-dsh推荐) · [日常使用](#日常使用) · [Computer Use](#computer-use预览版) · [开发与验证](#开发与验证)
 
-当前版本 **1.1.1**，适配 **DSH 0.1.5-rc.1**，内置 **OpenCU 1.0.1**。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
+当前主分支预发布版本 **1.2.0-alpha.1**，适配 **DSH 0.1.6-alpha.1**，内置 **OpenCU 1.0.1**。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
 ## 安装到现有 DSH（推荐）
 
-适用 **DSH 0.1.5-rc.1**，需要 Node.js ≥22.19、pnpm 11.23.0 和 Git。**Windows 使用 PowerShell 7（`pwsh`）**，无需 WSL；Python 验证文件需要另有 Python，`.sh` 文件需要 Bash。
+适用 **DSH 0.1.6-alpha.1**，需要 Node.js ≥22.19、pnpm 11.23.0 和 Git。**Windows 使用 PowerShell 7（`pwsh`）**，无需 WSL；Python 验证文件需要另有 Python，`.sh` 文件需要 Bash。
 
 先停止当前 DSH Web，在终端或 PowerShell 中安装：
 
@@ -81,7 +81,7 @@ dsh plugin --profile YOUR_PROFILE add link:/absolute/path/to/oh-my-dsh
 
 重启该 profile 后生效。插件 bundle 会将默认 Agent preset 设为 `trisoul-x`。
 
-DSH 0.1.5-rc.1 在 Windows 转发本地安装命令时会拆分带空格的源路径；本地 `link:` 开发请使用不含空格的源码路径。上面的 GitHub 安装命令不含本地源路径。
+DSH 0.1.6-alpha.1 在 Windows 转发本地安装命令时会拆分带空格的源路径；本地 `link:` 开发请使用不含空格的源码路径。上面的 GitHub 安装命令不含本地源路径。
 
 macOS 用户完成安装和构建后，也可执行：
 

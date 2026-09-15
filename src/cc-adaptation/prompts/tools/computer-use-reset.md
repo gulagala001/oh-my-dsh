@@ -1,0 +1,1 @@
+Clear persistent Computer Use JavaScript bindings and cancel pending operations. This does not close windows or tabs, undo completed actions, or resume control after a user stop. Select targets again before acting.

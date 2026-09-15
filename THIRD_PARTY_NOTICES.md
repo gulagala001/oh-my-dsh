@@ -76,3 +76,5 @@ Source: https://github.com/websockets/ws
 sharp 0.35.4 is used for screenshot pixel normalization under the Apache License 2.0. Its license and the notices for its native dependencies are included in the installed packages.
 
 Source: https://github.com/lovell/sharp
+
+The modular main-agent prompt adaptation in `src/cc-adaptation` comes from the user-supplied TriSoulX DSH 0.1.6 CC migration candidate 0.4.0. Its fixed comparison source is [the CC prompt snapshot](https://github.com/asgeirtj/system_prompts_leaks/blob/8eb1be156b850d09c2bd05df7ea32b0f06c9887d/Anthropic/claude-code/claude-code-opus-5.md). DSH integration targets 0.1.6-alpha.1; this attribution does not grant additional rights to third-party prompt text.

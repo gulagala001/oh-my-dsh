@@ -43,7 +43,7 @@ export class StateZone {
     if (!s.pins.length && !s.status.trim()) return;
     const last = session.surface.nodes.map(seq => session.eventAt(seq)).findLast(e => e.type === 'user/message' && e.data.source.plugin === 'trisoul-x:state');
     if (!s.stateDirty && last) return;
-    const parts = [`[Working state · snapshot v${++s.stateVersion} · as of seq ${Math.max(0, s.stateCursor)} · supersedes all earlier versions]`];
+    const parts = [`[Working state · snapshot v${++s.stateVersion} · as of seq ${Math.max(0, s.stateCursor)} · supersedes all earlier versions] Later user instructions take precedence over earlier recorded decisions.`];
     if (s.pins.length) parts.push(PIN, s.pins.map((p, i) => `${i + 1}. ${p}`).join('\n'));
     if (s.status.trim()) parts.push(STATUS, s.status.trim());
     session.append('user/message', message(parts.join('\n'), 'state'), { surfaceOp: 'append' });

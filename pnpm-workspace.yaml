@@ -7,3 +7,12 @@ allowBuilds:
   protobufjs: true
 minimumReleaseAgeExclude:
   - '@deepseek-ai/*'
+  - node-addon-native-custom-loader@0.1.6
+  - node-addon-require-builtin-darwin-arm64@0.1.6
+  - node-addon-require-builtin-darwin-x64@0.1.6
+  - node-addon-require-builtin-linux-arm64-gnu@0.1.6
+  - node-addon-require-builtin-linux-x64-gnu@0.1.6
+  - node-addon-require-builtin-win32-arm64-msvc@0.1.6
+  - node-addon-require-builtin-win32-ia32-msvc@0.1.6
+  - node-addon-require-builtin-win32-x64-msvc@0.1.6
+  - node-addon-require-builtin@0.1.6
