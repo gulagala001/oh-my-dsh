@@ -193,5 +193,17 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   const managed = await api('/memories' + q); assert.ok(!managed.items.some(m => m.id === manual.id)); assert.ok(managed.health.active > 0);
   assert.equal(continuedTest.lastRun.pass, true); assert.match(continuedTest.lastRun.tail, /VERIFIED_LEDGER_FIXTURE/);
   assert.ok(!log.includes('cannot get property'), log.replace(/token=\S+/g, 'token=[redacted]'));
+  const customIdentity = '你是身份设置验收助手。\n\nLiteral {{cwd}} stays literal.';
+  const beforeIdentity = (await api('/state' + q)).config.identityPrompt;
+  assert.equal((await api('/settings', { identityPrompt: customIdentity })).identityPrompt, customIdentity);
+  assert.ok(readFileSync(join(home, 'settings.yaml'), 'utf8').includes('身份设置验收助手'));
+  await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: id, mode: 'queue', content: [{ type: 'text', text: 'Check the updated identity.' }] });
+  await until(() => payloads.some(p => p.messages.some(m => m.role === 'system' && m.content.startsWith(customIdentity))));
+  await until(async () => (await api('/state' + q)).running === 'idle');
+  const identityRequest = payloads.findLast(p => p.tools?.some(t => t.function.name === 'todo_write'));
+  const updatedSystem = identityRequest.messages.findLast(m => m.role === 'system').content;
+  assert.equal(updatedSystem, systemText.replace(beforeIdentity, customIdentity));
+  assert.deepEqual(identityRequest.tools, mainRequests[0].tools, 'identity changes preserve every tool contract');
+  await api('/settings', { identityPrompt: beforeIdentity });
   complete = true;
 });

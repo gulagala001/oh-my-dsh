@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { transformAssembly, mainPrompt, inspectCommittedRequest } from '../src/cc-adaptation/adapter.mjs';
-import { promptText } from '../src/cc-adaptation/texts.mjs';
+import { buildMainPrompt, promptText } from '../src/cc-adaptation/texts.mjs';
 
 const context={agent:{session:{header:{origin:'user'}}}};
 const schema=(name,fields=[])=>({name,description:'native '+name,parameters:{type:'object',properties:Object.fromEntries(fields.map(x=>[x,{type:'string',description:'native field '+x}]))}});
@@ -40,4 +40,17 @@ test('real DSH sections without order metadata retain the host sequence', () => 
   ];
   const result = transformAssembly(a, context).assembly.sections;
   assert.deepEqual(result.map(s => s.name), ['trisoul-x:persona', 'trisoul-x:cc-memory', 'z:first-host-rule', 'a:later-host-rule']);
+});
+
+
+test('editable identity preserves all other prompt text and permits an empty identity', () => {
+  const original = mainPrompt.split('\n\n').slice(0, 2).join('\n\n');
+  const body = mainPrompt.slice(original.length + 2);
+  const custom = '你是研究助手。\n\n保留字面量 {{cwd}} 和 ${name}。';
+  assert.equal(buildMainPrompt(custom), custom + '\n\n' + body);
+  assert.equal(buildMainPrompt(''), body);
+  assert.equal(buildMainPrompt(), mainPrompt);
+  const result = transformAssembly(assembly([schema('computer_use',['code','title'])]), context, { main: buildMainPrompt(custom) }).assembly;
+  assert.equal(result.sections[0].text, custom + '\n\n' + body);
+  assert.equal(result.sections[0].interpolate, false);
 });

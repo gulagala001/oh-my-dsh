@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { DEFAULT_IDENTITY } from './identity.mjs';
 
 const root = new URL('./prompts/', import.meta.url);
 /** Only bundle-owned relative Markdown paths; no user paths or template evaluation. */
@@ -10,4 +11,6 @@ export function promptText(path) {
   return readFileSync(new URL(path, root), 'utf8').trim();
 }
 export const MAIN_FILES = Object.freeze(["main/01-identity.md", "main/02-harness.md", "main/03-code-style.md", "main/04-actions-and-results.md", "main/05-context-management.md", "main/06-delivering-work.md", "main/07-corrections.md", "main/08-verification.md"]);
-export const mainPrompt = MAIN_FILES.map(promptText).join('\n\n');
+const mainBody = MAIN_FILES.map(promptText).join('\n\n');
+export const buildMainPrompt = (identity = DEFAULT_IDENTITY) => [identity.trim(), mainBody].filter(Boolean).join('\n\n');
+export const mainPrompt = buildMainPrompt();
