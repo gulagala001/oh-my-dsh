@@ -9,6 +9,8 @@ export function createTransaction(session, state, plan, cfg, pairing) {
   const operations = [], chosen = new Set();
   let inputChars = 0, outputChars = 0;
   for (const choice of plan.choices) {
+    // A keep choice writes nothing, including for legacy control-message records.
+    if (choice.action === 'keep') continue;
     const picked = choice.ids.map((id, i) => {
       const r = map.get(id), observed = choice.observed[i];
       if (!r || r.mergedInto || chosen.has(id) || !observed || observed.version !== r.version || observed.mode !== r.mode || observed.carrierSeq !== (r.carrierSeq ?? null) || observed.sourceHash !== r.sourceHash) throw new Error('记录版本已变化，本轮替换计划作废');
@@ -17,7 +19,6 @@ export function createTransaction(session, state, plan, cfg, pairing) {
       if (!span || !pairing.before(session, span.seqs[0]) || !pairing.after(session, span.seqs.at(-1))) throw new Error('替换范围已变化或工具往返不完整');
       return { r, span };
     }).sort((a, b) => a.span.start - b.span.start);
-    if (choice.action === 'keep') continue;
     if (choice.action !== 'merge' && picked[0].r.mode === choice.action) continue;
     let output;
     if (choice.action === 'merge') {
@@ -44,7 +45,7 @@ export function createTransaction(session, state, plan, cfg, pairing) {
     const slotLive = traceSlot && session.surface.nodes.includes(traceSlot.carrierSeq);
     const firstChanged = Math.min(...operations.map(o => o.position));
     const covered = new Set(state.records.flatMap(r => r.mode === 'raw' ? r.sourceSeqs : [r.carrierSeq]));
-    const anchor = slotLive ? session.eventAt(traceSlot.carrierSeq) : session.surface.nodes.slice(0, firstChanged).map(seq => session.eventAt(seq)).find(e => e.type === 'user/message' && !covered.has(e.seq));
+    const anchor = slotLive ? session.eventAt(traceSlot.carrierSeq) : session.surface.nodes.slice(0, firstChanged).map(seq => session.eventAt(seq)).find(e => actualUser(e) && !covered.has(e.seq));
     if (!anchor) throw new Error('所选摘要之前没有安全的推理承载位置；原文保留。可关闭推理前置后应用此旧会话的替换。');
     if (anchor) {
       const original = slotLive ? traceSlot.original : structuredClone(anchor.data);

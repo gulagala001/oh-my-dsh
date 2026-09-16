@@ -256,3 +256,34 @@ test('legacy backlog counter is rebased once and the corrected count survives re
   const restarted = new ContextPipeline(f.hub, adapter); t.after(() => restarted.dispose());
   assert.equal(restarted.state(f.s).eventsSincePrepare, 7);
 });
+
+test('host reminder before the first user message never becomes a preparation segment', t => {
+  const f = setup(t); const reminder = plugin(f.s, 'New user instructions may change the remaining work.', 'task-review');
+  f.s.surface.nodes.splice(f.s.surface.nodes.indexOf(reminder.seq), 1);
+  f.s.surface.nodes.splice(1, 0, reminder.seq);
+  const events = exchange(f.s, undefined, 'Provider reasoning.');
+  assert.deepEqual(prepareCandidate(f.s, f.state, f.cfg, pairing).map(e => e.seq), events.map(e => e.seq));
+});
+
+test('legacy reminder summary does not block trace and valid replacements in a new session', async t => {
+  const f = setup(t); const reminder = plugin(f.s, 'New user instructions may change the remaining work.', 'task-review');
+  f.s.surface.nodes.splice(f.s.surface.nodes.indexOf(reminder.seq), 1);
+  f.s.surface.nodes.splice(1, 0, reminder.seq);
+  const bad = newRecord(f.s, [reminder], prepared('Legacy reminder'), f.state.binding);
+  f.state.records.push(bad);
+  const good = add(f, 'Actual tool result', 'Provider reasoning.');
+  const users = userMessages(f.s);
+  // Replay a coordinator decision saved by the previous version.
+  f.state.pending = plan(f, [['brief', good]]);
+  f.state.pending.choices.unshift({ action: 'keep', ids: [bad.id], observed: [] });
+  const result = await f.pipeline.applyReady(f.agent, { manual: true, mode: 'brief' });
+  assert.ok(result); assert.equal(f.state.records.find(r => r.id === good.id).mode, 'brief');
+  assert.equal(f.state.records.find(r => r.id === bad.id).mode, 'raw');
+  assert.ok(f.s.surface.nodes.includes(reminder.seq), 'host reminder stays verbatim');
+  assert.deepEqual(userMessages(f.s), users);
+  assert.match(JSON.stringify(f.s.deriveMessages()), /Provider reasoning/);
+  assert.deepEqual(coordinatorInput(f.s, f.state, f.cfg).records.map(r => r.id), [good.id]);
+  assert.equal(f.pipeline.view(f.s).records.find(r => r.id === bad.id).live, false);
+  const replay = new FixtureSession(f.s.id, f.s.snapshotEvents(), f.s.surface.nodes, f.s.header);
+  assert.deepEqual(replay.deriveMessages(), f.s.deriveMessages());
+});
