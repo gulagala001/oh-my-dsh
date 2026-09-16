@@ -23,7 +23,7 @@ export function createTransaction(session, state, plan, cfg, pairing) {
     let output;
     if (choice.action === 'merge') {
       const originals = picked.map(p => p.r), times = originals.flatMap(r => [r.timeStart, r.timeEnd]).filter(Number.isFinite);
-      output = { id: randomUUID(), version: 1, mode: 'detail', summary: choice.summary, documents: structuredClone(choice.documents),
+      output = { id: randomUUID(), version: 1, mode: 'detail', kind: originals.some(r => r.kind === 'full') ? 'full' : 'segment', summary: choice.summary, documents: structuredClone(choice.documents),
         sessionId: session.id, scope: state.binding.scope, project: state.binding.project, createdAt: Date.now(),
         parents: originals.map(r => r.id), sourceSeqs: [...new Set(originals.flatMap(r => r.sourceSeqs))],
         ranges: originals.flatMap(r => r.ranges), sourceHash: hash(originals.map(r => r.sourceHash)),
@@ -39,14 +39,14 @@ export function createTransaction(session, state, plan, cfg, pairing) {
     for (const { span } of picked.slice(1)) operations.push({ id: randomUUID(), kind: 'delete', seqs: span.seqs, text: '', position: span.start });
   }
   if (!operations.length) return null;
-  let traceSlot = structuredClone(state.traceSlot), trace = cfg.traceEnabled ? exposedTrace(session, { maxChars: cfg.traceMaxChars }) : null;
+  let traceSlot = structuredClone(state.traceSlot), trace = cfg.traceEnabled ? exposedTrace(session, { maxChars: cfg.traceMaxChars, afterSeq: state.fullCompaction?.throughSeq ?? -1 }) : null;
   // Only a real, provider-exposed reasoning text can enter this slot.
   if (trace) {
     const slotLive = traceSlot && session.surface.nodes.includes(traceSlot.carrierSeq);
     const firstChanged = Math.min(...operations.map(o => o.position));
     const covered = new Set(state.records.flatMap(r => r.mode === 'raw' ? r.sourceSeqs : [r.carrierSeq]));
     const anchor = slotLive ? session.eventAt(traceSlot.carrierSeq) : session.surface.nodes.slice(0, firstChanged).map(seq => session.eventAt(seq)).find(e => actualUser(e) && !covered.has(e.seq));
-    if (!anchor) throw new Error('所选摘要之前没有安全的推理承载位置；原文保留。可关闭推理前置后应用此旧会话的替换。');
+    if (!anchor && !state.fullCompaction) throw new Error('所选摘要之前没有安全的推理承载位置；原文保留。可关闭推理前置后应用此旧会话的替换。');
     if (anchor) {
       const original = slotLive ? traceSlot.original : structuredClone(anchor.data);
       const originalText = (original.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
@@ -89,6 +89,7 @@ export async function applyTransaction(session, state, tx, store, adapter) {
       if (op.kind === 'trace') tx.traceSlot.carrierSeq = tx.applied[op.id];
     }
     state.records = tx.records; state.traceSlot = tx.traceSlot;
+    if (tx.statePatch) Object.assign(state, tx.statePatch);
     state.pending = null; state.transaction = null;
     state.lastReplacementStep = state.steps;
     state.lastReplacement = { ...(tx.operations.find(o => o.native)?.native || {}), id: tx.id, source: tx.source, at: Date.now(), inputChars: tx.inputChars, outputChars: tx.outputChars,

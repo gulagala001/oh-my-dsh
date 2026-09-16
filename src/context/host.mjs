@@ -31,7 +31,7 @@ export function createHostAdapter(hub) {
           shadowedRange: { start: surfaceOp.startSeq, end: surfaceOp.endSeq }, shadowedSeqs: sourceEventSeqs,
           shadowedTokenCount, llmStreamCall: false });
         const checkpoint = session.append('user/message', {
-          ...createUserMessage({ content: summary, source: compactCheckpointSource(compactionId) }), id: op.id,
+          ...createUserMessage({ content: summary, source: compactCheckpointSource(compactionId, op.sourceCommandId) }), id: op.id,
         }, { surfaceOp, sourceEventSeqs: [start.seq, record.seq, ...sourceEventSeqs] });
         const end = session.append('compaction/end', lifecycle); closed = true;
         op.native = { compactionId, startSeq: start.seq, summarySeq: record.seq, endSeq: end.seq, summary, shadowedRange: { start: surfaceOp.startSeq, end: surfaceOp.endSeq }, shadowedSeqs: sourceEventSeqs, shadowedTokenCount };

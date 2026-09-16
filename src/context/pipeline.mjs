@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { compactFull } from './full-compaction.mjs';
 import { ContextStore } from './store.mjs';
 import { hash, userRevision, userMessages, rawText, actualUser, prepareCandidate, candidateInput, coordinatorInput, newRecord, activeRecords, liveSpan, validatePrepared, normalizeChoices, decodeResult, recordText } from './core.mjs';
 import { createTransaction, applyTransaction } from './transactions.mjs';
@@ -19,7 +20,7 @@ const iso = n => n == null ? '时间未记录' : new Date(n).toISOString();
 
 export class ContextPipeline {
   constructor(hub, adapter) {
-    this.hub = hub; this.adapter = adapter; this.store = new ContextStore(hub.store.dir);
+    this.hub = hub; this.adapter = adapter; this.manualSessions = new Map(); this.store = new ContextStore(hub.store.dir);
     this.agents = new Map(); this.jobs = new Map(); this.timers = new Map(); this.idleSince = new Map(); this.controllers = new Map(); this.closed = false;
   }
   config() { return contextConfig(this.hub.config()); }
@@ -67,7 +68,7 @@ export class ContextPipeline {
     const id = agent.session.id, key = id + ':' + kind;
     clearTimeout(this.timers.get(key)); this.timers.delete(key);
     if (kind === 'idle') this.idleSince.delete(id);
-    if (!delay || this.closed || !this.agents.has(id)) return;
+    if (!delay || this.closed || !this.agents.has(id) || this.manualSessions.has(id)) return;
     // Only pending work in a genuinely idle session gets an idle deadline.
     // Model/tool execution and explicit failure retries are independent of it.
     if (kind === 'idle') {
@@ -101,7 +102,7 @@ export class ContextPipeline {
     this.hub.ctx.logger?.warn?.(`上下文${kind}：${error.message}`);
   }
   async prepare(agent, force = false) {
-    if (this.closed || delegated(agent.session) || !this.config().contextEnabled) return;
+    if (this.closed || delegated(agent.session) || this.manualSessions.has(agent.session.id) || !this.config().contextEnabled) return;
     const session = agent.session, key = session.id + ':prepare';
     if (this.jobs.has(key)) return this.jobs.get(key);
     const s = this.state(session);
@@ -143,7 +144,7 @@ export class ContextPipeline {
     this.jobs.set(key, job); return job;
   }
   async coordinate(agent, force = false) {
-    if (this.closed || delegated(agent.session) || !this.config().contextEnabled) return;
+    if (this.closed || delegated(agent.session) || this.manualSessions.has(agent.session.id) || !this.config().contextEnabled) return;
     const session = agent.session, key = session.id + ':coordinate', s = this.state(session), cfg = this.config();
     // observe()/prepare() mark real changes; joining a call is not a new review.
     if (this.jobs.has(key)) return this.jobs.get(key);
@@ -176,7 +177,7 @@ export class ContextPipeline {
     }).finally(() => { this.jobs.delete(key); this.controllers.delete(key); if (s.review.needed) this.arm(agent, Math.max(1000, cfg.coordinatorMinGapMs), 'coordinate'); });
     this.jobs.set(key, job); return job;
   }
-  async applyReady(agent, { manual = false, ids, mode = 'detail', ignoreCooldown = false, sourceCommandId } = {}) {
+  async applyReady(agent, { manual = false, ids, mode = 'detail', ignoreCooldown = false, sourceCommandId, source, retainTrace = true } = {}) {
     const session = agent.session, s = this.state(session), cfg = this.config();
     if (s.transaction) return applyTransaction(session, s, s.transaction, this.store, this.adapter);
     if (!manual && (!cfg.contextEnabled || !cfg.automaticReplace || (!ignoreCooldown && s.steps - s.lastReplacementStep < cfg.surgeryCooldownSteps))) return null;
@@ -189,26 +190,74 @@ export class ContextPipeline {
         choices: normalizeChoices({ choices: chosen.map(id => ({ action: mode, ids: [id], summary: '', documents: [] })) }, s, session) };
     }
     if (!plan) return null;
-    if (sourceCommandId) plan = { ...plan, sourceCommandId };
+    if (sourceCommandId || source) plan = { ...plan, ...(sourceCommandId ? { sourceCommandId } : {}), ...(source ? { source } : {}) };
     let tx;
-    try { tx = createTransaction(session, s, plan, cfg, this.adapter.pairing); }
+    try { tx = createTransaction(session, s, plan, retainTrace ? cfg : { ...cfg, traceEnabled: false }, this.adapter.pairing); }
     catch (error) { s.pending = null; s.review.needed = true; this.store.notice(s, error.message); if (manual) throw error; return null; }
     if (!tx) { s.pending = null; this.store.save(s); return null; }
     const outcome = await applyTransaction(session, s, tx, this.store, this.adapter);
     this.hub.action(session, 'contextReplacements', 1, outcome);
     return outcome;
   }
-  async preStep(agent) {
+  async requestCompaction(session, agent, operation, { signal, sourceCommandId } = {}) {
+    if (!['processed', 'full'].includes(operation)) throw Error('未知压缩模式');
+    if (delegated(session)) throw Error('请在主会话中使用压缩命令');
+    signal?.throwIfAborted();
+    if (this.manualSessions.has(session.id)) throw Error('本会话正在压缩，请勿重复提交');
+    if (!agent || agent.status !== 'idle') return this.queueManual(session, { operation, sourceCommandId });
+    const run = ownSignal => this.runManual(agent, { operation, sourceCommandId }, signal && ownSignal ? AbortSignal.any([signal, ownSignal]) : signal || ownSignal);
+    const result = agent.runMaintenance ? await agent.runMaintenance(run) : await run();
+    return { changed: Boolean(result), queued: false, result };
+  }
+  async runManual(agent, { operation, sourceCommandId }, signal) {
+    const session = agent.session, id = session.id, s = this.state(session);
+    if (this.closed) throw Error('上下文组件已关闭');
+    if (this.manualSessions.has(id)) throw Error('本会话正在压缩，请勿重复提交');
+    signal?.throwIfAborted();
+    this.manualSessions.set(id, operation);
+    const key = id + ':manual', controller = new AbortController();
+    this.controllers.set(key, controller);
+    const joined = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
+    try {
+      // Superseded background replies cannot republish an old detailed/merge choice.
+      for (const kind of ['prepare', 'coordinate']) this.controllers.get(id + ':' + kind)?.abort();
+      for (const [timerKey, timer] of this.timers) if (timerKey.startsWith(id + ':')) { clearTimeout(timer); this.timers.delete(timerKey); }
+      this.idleSince.delete(id);
+      s.pending = null; s.review.needed = false; this.store.save(s);
+      if (s.transaction) {
+        const recovered = await applyTransaction(session, s, s.transaction, this.store, this.adapter);
+        if (recovered.source === (operation === 'full' ? 'compact-f' : 'compact-p')) return recovered;
+      }
+      joined.throwIfAborted();
+      let result;
+      if (operation === 'full') {
+        const tx = await compactFull(this, agent, joined, sourceCommandId);
+        joined.throwIfAborted();
+        result = tx ? await applyTransaction(session, s, tx, this.store, this.adapter) : null;
+        if (result) this.hub.action(session, 'contextReplacements', 1, result);
+      } else {
+        const ids = activeRecords(s).filter(r => r.mode !== 'brief' && liveSpan(session, r)).map(r => r.id);
+        result = await this.applyReady(agent, { manual: true, ids, mode: 'brief', sourceCommandId, source: 'compact-p', retainTrace: false });
+        s.review.needed = false; s.review.newRecords = 0;
+      }
+      delete s.failures[operation === 'full' ? 'compactFull' : 'compactProcessed']; this.store.save(s);
+      return result;
+    } catch (error) {
+      this.reportError(agent, operation === 'full' ? 'compactFull' : 'compactProcessed', error);
+      throw error;
+    } finally { this.manualSessions.delete(id); this.controllers.delete(key); }
+  }
+  async preStep(agent, signal) {
     if (delegated(agent.session)) return;
     this.agents.set(agent.session.id, agent);
     const s = this.state(agent.session); s.steps++; this.store.save(s);
-    // Only completed work and disk I/O are awaited at the request boundary.
-    if (s.transaction) await this.applyReady(agent);
+    // Ordinary replacement never waits for a model; an explicitly queued /compact-f does.
+    const recovered = s.transaction ? await this.applyReady(agent) : null;
     await this.retireLegacyInjections(agent.session);
     const manual = s.manualQueue[0];
     let result;
     if (manual) {
-      try { result = await this.applyReady(agent, { ...manual, manual: true }); s.manualQueue.shift(); this.store.save(s); }
+      try { result = recovered && manual.operation && recovered.source === (manual.operation === 'full' ? 'compact-f' : 'compact-p') ? recovered : manual.operation ? await this.runManual(agent, manual, signal) : await this.applyReady(agent, { ...manual, manual: true }); s.manualQueue.shift(); this.store.save(s); }
       catch (error) { if (s.transaction) throw error; s.manualQueue.shift(); this.store.notice(s, error.message); }
     } else result = await this.applyReady(agent);
     this.publishMemory(agent.session);
@@ -250,10 +299,12 @@ export class ContextPipeline {
   }
   queueManual(session, args = {}) {
     const s = this.state(session);
+    if (args.operation !== undefined && !['processed', 'full'].includes(args.operation)) throw new Error('未知压缩模式');
     if (args.ids !== undefined && (!Array.isArray(args.ids) || args.ids.some(id => typeof id !== 'string'))) throw new Error('ids 必须是摘要编号数组');
     if (args.mode !== undefined && !['detail', 'brief'].includes(args.mode)) throw new Error('手动替换只能应用已有摘要或文档');
     for (const id of args.ids || []) if (!s.records.some(r => r.id === id && !r.mergedInto && liveSpan(session, r))) throw new Error('选中摘要不在本会话可替换范围');
-    if (!s.manualQueue.length) s.manualQueue.push({ ids: args.ids, mode: args.mode || 'detail' });
+    const request = args.operation ? { operation: args.operation, ...(args.sourceCommandId ? { sourceCommandId: args.sourceCommandId } : {}) } : { ids: args.ids, mode: args.mode || 'detail' };
+    if (!s.manualQueue.some(q => hash(q) === hash(request))) s.manualQueue.push(request);
     this.store.save(s); return { queued: true, changed: false };
   }
   reconfigure() {
@@ -288,7 +339,8 @@ export class ContextPipeline {
       records: s.records.map(({ documents, sourceSeqs, sourceHash, ...r }) => ({ ...r, documentCount: documents.length, live: Boolean(liveSpan(session, { ...r, documents, sourceSeqs, sourceHash })) })),
       failures: s.failures, notices: s.notices, trace: s.traceSlot ? { sourceSeq: s.traceSlot.sourceSeq, sourceAt: s.traceSlot.sourceAt, truncated: s.traceSlot.truncated } : null,
       preparing: this.jobs.has(session.id + ':prepare'), coordinating: this.jobs.has(session.id + ':coordinate'), transactionPending: Boolean(s.transaction),
-      manualQueued: s.manualQueue.length,
+      manualQueued: s.manualQueue.length, manualOperation: this.manualSessions.get(session.id) || null,
+      queuedOperations: s.manualQueue.map(q => q.operation || 'ready'),
       review: { lastAt: s.review.lastAt, choices: s.review.lastChoices || [] } };
   }
   dispose(id) {

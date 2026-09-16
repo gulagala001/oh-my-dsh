@@ -20,7 +20,7 @@ const api = async (path, value) => {
 };
 const suffix = id => `?${id ? `session=${encodeURIComponent(id)}` : ''}`;
 const fmt = n => Number(n || 0).toLocaleString();
-const kindName = { prepare: '上下文预处理', coordinate: '替换中枢', main: '主执行', subagent: '子代理', background: '记忆消化', recall: '记忆检索', state: '状态提炼', curation: '记忆整理', surgeon: '上下文整理', probeAsk: '探针出题', probeAnswer: '探针作答' };
+const kindName = { compactFull: '全量压缩', prepare: '上下文预处理', coordinate: '替换中枢', main: '主执行', subagent: '子代理', background: '记忆消化', recall: '记忆检索', state: '状态提炼', curation: '记忆整理', surgeon: '上下文整理', probeAsk: '探针出题', probeAnswer: '探针作答' };
 function BetterTodoChip({ sessionId, useSessions }) {
   const [state, setState] = useState(null), [open, setOpen] = useState(false), [saving, setSaving] = useState(false), [error, setError] = useState('');
   const [notice, setNotice] = useState(false), dialog = useRef(null), noticeId = useId();

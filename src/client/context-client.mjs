@@ -2,7 +2,7 @@ import { DEFAULT_IDENTITY } from '../cc-adaptation/identity.mjs';
 
 /* Keep the original workbench and host theme. These panels replace only the
  * context/summary settings and slots whose semantics changed in Context v1. */
-export const CONTEXT_UI_VERSION = '1.1.0';
+export const CONTEXT_UI_VERSION = '1.2.0';
 export const CONTEXT_FREQUENCY_PRESETS = Object.freeze({
   always: Object.freeze({ digestEvery: 16, digestWindow: 16, coordinatorEvery: 1, coordinatorMinGapMs: 15000, surgeryCooldownSteps: 10 }),
   medium: Object.freeze({ digestEvery: 32, digestWindow: 32, coordinatorEvery: 2, coordinatorMinGapMs: 30000, surgeryCooldownSteps: 20 }),
@@ -91,7 +91,7 @@ export function createContextUI(React) {
     componentDidUpdate(prev) {
       if (prev.sessionId !== this.props.sessionId) {
         this.epoch++; this.cycle++; this.documentTicket++; this.reviewTicket++;
-        this.setState({ data: null, detail: null, selected: [], review: null, legacy: null, error: '', notice: '', busy: false }); clearTimeout(this.timer); this.tick();
+        this.setState({ data: null, detail: null, selected: [], review: null, legacy: null, error: '', notice: '', busy: false, activeAction: null }); clearTimeout(this.timer); this.tick();
       } else if (!prev.visible && this.props.visible) { this.cycle++; clearTimeout(this.timer); this.tick(); }
     }
     tick = async () => { if (!this.alive) return; const cycle = this.cycle; if (this.props.visible !== false && this.props.sessionId) await this.load(); if (this.alive && cycle === this.cycle) this.timer = setTimeout(this.tick, 2500); };
@@ -104,10 +104,10 @@ export function createContextUI(React) {
     };
     run = async (path, body, success) => {
       if (this.state.busy) return;
-      this.setState({ busy: true, error: '', notice: '' }); const id = this.props.sessionId;
-      try { const result = await api(path + suffix(id), body); if (this.alive && this.props.sessionId === id) { this.setState({ notice: success ? success(result) : result.queued ? '已加入后台队列。' : '已保存', ...(path === '/compact' ? { selected: [] } : {}) }); await this.load(); } }
+      this.setState({ busy: true, activeAction: path, error: '', notice: '' }); const id = this.props.sessionId;
+      try { const result = await api(path + suffix(id), body); if (this.alive && this.props.sessionId === id) { this.setState({ notice: success ? success(result) : result.queued ? '已加入后台队列。' : '已保存', ...(['/compact', '/compact-p', '/compact-f'].includes(path) ? { selected: [] } : {}) }); await this.load(); } }
       catch (e) { if (this.alive && this.props.sessionId === id) this.setState({ error: e.message }); }
-      finally { if (this.alive && this.props.sessionId === id) this.setState({ busy: false }); }
+      finally { if (this.alive && this.props.sessionId === id) this.setState({ busy: false, activeAction: null }); }
     };
     document = async id => {
       const sid = this.props.sessionId, ticket = ++this.documentTicket;
@@ -129,6 +129,8 @@ export function createContextUI(React) {
       const { data: d, error, notice, busy, selected, filter } = this.state;
       const records = (d?.records || []).filter(r => !r.mergedInto);
       const shown = records.filter(r => filter === 'all' || (filter === 'raw' ? r.mode === 'raw' : r.mode !== 'raw'));
+      const locked = busy || Boolean(d?.manualOperation);
+      const fullRunning = d?.manualOperation === 'full' || this.state.activeAction === '/compact-f';
       const ready = records.filter(r => r.live && r.mode === 'raw').length;
       const step = (text, state, running) => h('div', { className: 'cx-stage' }, h('span', { className: 'cx-dot ' + (running ? 'cx-pulse' : '') }), h('div', null, h('strong', null, text), h('small', null, state)));
       return h('div', { className: 'cx-panel cx-context' }, heading('工作上下文', '预处理在后台，替换在请求边界。', 'context', button(null, this.load, { icon: 'refresh', quiet: true, label: '刷新上下文' })),
@@ -136,12 +138,17 @@ export function createContextUI(React) {
           !this.props.sessionId ? empty('先选择一个会话', '这里会显示本会话的分段摘要与替换状态。') : !d ? empty('正在读取上下文', '正在连接当前会话的预处理记录。') : h(React.Fragment, null,
             h('section', { className: 'cx-pipeline-card' }, h('div', { className: 'cx-row' }, h('span', { className: 'cx-eyebrow' }, '处理状态'), badge(names[d.scope?.scope] || '会话', d.scope?.scope === 'session' ? '' : 'blue')),
               h('div', { className: 'cx-stages' }, step('预处理', d.preparing ? '正在生成摘要' : '等待新事件', d.preparing), icon('chevron', 12), step('中枢', d.coordinating ? '正在判断范围' : d.pending ? '结果已准备' : '等待新摘要', d.coordinating), icon('chevron', 12), step('应用', d.transactionPending ? '事务恢复中' : '请求边界替换', d.transactionPending)),
-              h('div', { className: 'cx-metrics' }, h('div', null, h('strong', null, fmt(records.length)), h('span', null, '分段摘要')), h('div', null, h('strong', null, fmt(ready)), h('span', null, '原文待替换')), h('div', null, h('strong', null, fmt(records.reduce((n, r) => n + (r.documentCount || 0), 0))), h('span', null, '详细文档'))),
-              h('div', { className: 'cx-row cx-pipeline-action' }, h('small', null, '只应用已有结果，不现场等待 AI。'), button('应用已准备结果', () => this.run('/compact', {}, r => r.queued ? '已排队，将在下一次请求边界应用。' : r.changed ? '替换已应用，原文仍在日志中。' : '没有可应用的结果，原文保持不变。'), { disabled: busy, primary: true, icon: 'layers' }))),
-            fold('后台操作', '手动触发预处理或中枢判断', h('div', { className: 'cx-actions' }, button('准备摘要', () => this.run('/context/prepare', {}), { disabled: busy || d.preparing, icon: 'context' }), button('运行中枢', () => this.run('/context/coordinate', {}), { disabled: busy || d.coordinating, icon: 'spark' }))),
+              h('div', { className: 'cx-metrics' }, h('div', null, h('strong', null, fmt(records.length)), h('span', null, '分段摘要')), h('div', null, h('strong', null, fmt(ready)), h('span', null, '原文待替换')), h('div', null, h('strong', null, fmt(records.reduce((n, r) => n + (r.documentCount || 0), 0))), h('span', null, '文档存档'))),
+              h('div', { className: 'cx-row cx-pipeline-action' }, h('small', null, '只应用已有结果，不现场等待 AI。'), button('应用已准备结果', () => this.run('/compact', {}, r => r.queued ? '已排队，将在下一次请求边界应用。' : r.changed ? '替换已应用，原文仍在日志中。' : '没有可应用的结果，原文保持不变。'), { disabled: locked, primary: true, icon: 'layers' }))),
+            section('手动压缩', '压缩只改变当前上下文，原始日志和文档存档保留。', h(React.Fragment, null,
+              fullRunning && h('div', { className: 'cx-info', role: 'status' }, icon('clock'), h('p', null, '正在生成全量摘要…摘要生成成功后才替换原文。')),
+              d.manualQueued > 0 && h('p', { className: 'cx-hint', role: 'status' }, '有 ' + d.manualQueued + ' 项压缩操作等待下一次请求边界。'),
+              h('div', { className: 'cx-compact-choice' }, h('div', { className: 'cx-row' }, h('code', null, '/compact-p'), button('已处理片段仅摘要', () => this.run('/compact-p', {}, r => r.message), { disabled: locked || !records.some(r => r.live && r.mode !== 'brief'), icon: 'layers' })), h('p', { className: 'cx-hint' }, '全部已准备片段只保留摘要，不携带详细文档；未处理内容不变，不调用 AI。')),
+              h('div', { className: 'cx-compact-choice' }, h('div', { className: 'cx-row' }, h('code', null, '/compact-f'), button(fullRunning ? '全量压缩中…' : '全量压缩', () => this.run('/compact-f', {}, r => r.message), { disabled: locked, icon: fullRunning ? 'clock' : 'spark' })), h('p', { className: 'cx-hint' }, '调用 AI 将全部对话重新汇总为一份摘要，包含用户消息、工具结果、旧摘要和 Trace；保留系统提示词、工具定义与用户手写全局背景。可能损失细节。')))),
+            fold('后台操作', '手动触发预处理或中枢判断', h('div', { className: 'cx-actions' }, button('准备摘要', () => this.run('/context/prepare', {}), { disabled: locked || d.preparing, icon: 'context' }), button('运行中枢', () => this.run('/context/coordinate', {}), { disabled: locked || d.coordinating, icon: 'spark' }))),
             h('div', { className: 'cx-list-head' }, h('h3', null, '分段摘要'), segments('筛选分段', filter, [['all', '全部'], ['raw', '原文'], ['applied', '已替换']], value => this.setState({ filter: value }))),
             !shown.length ? empty(records.length ? '当前筛选没有内容' : '还没有分段摘要', records.length ? '切换“全部”查看其他记录。' : '达到预处理频率后，这里会自动出现基础摘要和文档。') : h('div', { className: 'cx-list' }, ...shown.map((r, i) => h('article', { className: 'cx-card cx-record ' + (selected.includes(r.id) ? 'cx-selected' : ''), key: r.id },
-              h('div', { className: 'cx-row' }, h('label', { className: 'cx-record-check' }, h('input', { type: 'checkbox', checked: selected.includes(r.id), disabled: !r.live || busy, onChange: e => this.select(r.id, e.target.checked), 'aria-label': '选择 ' + r.id }), h('span', { className: 'cx-record-number' }, String(i + 1).padStart(2, '0')), h('time', null, date(r.timeStart) + ' — ' + time(r.timeEnd))), badge(r.live ? names[r.mode] || r.mode : '历史存档', r.mode === 'raw' ? '' : 'blue')),
+              h('div', { className: 'cx-row' }, h('label', { className: 'cx-record-check' }, h('input', { type: 'checkbox', checked: selected.includes(r.id), disabled: !r.live || locked, onChange: e => this.select(r.id, e.target.checked), 'aria-label': '选择 ' + r.id }), h('span', { className: 'cx-record-number' }, String(i + 1).padStart(2, '0')), h('time', null, date(r.timeStart) + ' — ' + time(r.timeEnd))), badge(r.live ? (r.kind === 'full' ? '全量摘要' : names[r.mode] || r.mode) : '历史存档', r.mode === 'raw' ? '' : 'blue')),
               h('p', { className: 'cx-prose' }, r.summary), h('div', { className: 'cx-record-footer' }, h('small', { title: r.id }, h('code', null, r.id.slice(0, 8)), ' · ', rangeLabel(r.ranges)), button(`${r.documentCount || 0} 份文档`, () => this.document(r.id), { icon: 'context', quiet: true }))))),
             fold('中枢最近的选择', d.review?.choices?.length ? `${d.review.choices.length} 项决定` : '还没有完成的判断', h('div', null,
               ...(d.review?.choices || []).map((c, i) => h('div', { className: 'cx-decision', key: i }, badge(names[c.action] || c.action, 'blue'), h('code', null, c.ids?.map(id => id.slice(0, 8)).join('、')), c.reason && h('p', null, c.reason))),
@@ -150,7 +157,7 @@ export function createContextUI(React) {
               h('p', { className: 'cx-hint' }, d.trace ? '来源事件 #' + d.trace.sourceSeq + (d.trace.truncated ? ' · 按设置截取' : ' · 原文本') : '没有已前置的推理文本；不会生成替代推理。'), d.lastReplacement && h('pre', null, JSON.stringify(d.lastReplacement, null, 2)),
               ...(d.notices || []).slice().reverse().map((n, i) => h('p', { className: 'cx-log-line', key: i }, h('time', null, date(n.at)), ' ', n.text))))),
           h('div', { className: 'cx-footnote' }, icon('info', 13), '退出当前上下文，不等于删除原始记录。')),
-        selected.length > 0 && h('footer', { className: 'cx-savebar cx-selection' }, h('span', null, '已选 ', h('strong', null, selected.length), ' 段'), h('div', { className: 'cx-actions' }, button('取消', () => this.setState({ selected: [] }), { quiet: true }), button('摘要＋文档', () => this.run('/compact', { ids: selected, mode: 'detail' }), { disabled: busy }), button('仅摘要', () => this.run('/compact', { ids: selected, mode: 'brief' }), { disabled: busy, primary: true }))), this.reader());
+        selected.length > 0 && h('footer', { className: 'cx-savebar cx-selection' }, h('span', null, '已选 ', h('strong', null, selected.length), ' 段'), h('div', { className: 'cx-actions' }, button('取消', () => this.setState({ selected: [] }), { quiet: true }), button('摘要＋文档', () => this.run('/compact', { ids: selected, mode: 'detail' }), { disabled: locked }), button('仅摘要', () => this.run('/compact', { ids: selected, mode: 'brief' }), { disabled: locked, primary: true }))), this.reader());
     }
   }
   class SummaryPanel extends PollPanel {
@@ -380,6 +387,7 @@ export const CONTEXT_CSS = `
 .cx-stages{display:flex;justify-content:space-between;gap:6px;align-items:center;margin:22px 0}.cx-stages>svg{color:var(--cx-muted);opacity:.6}.cx-stage{display:flex;align-items:center;gap:7px;min-width:0}.cx-stage strong{display:block;font-size:11px;font-weight:600}.cx-stage small{font-size:9px;display:block;margin-top:2px;white-space:nowrap}
 .cx-dot{display:block;width:7px;height:7px;border-radius:50%;background:color-mix(in srgb,var(--cx-blue) 35%,var(--cx-bg));flex-shrink:0}.cx-pulse{background:var(--cx-blue);box-shadow:0 0 0 4px var(--cx-tint);animation:cx-pulse 1.5s ease-in-out infinite}@keyframes cx-pulse{50%{opacity:.45}}
 .cx-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:12px;padding:15px 0;border-top:1px solid var(--cx-line);border-bottom:1px solid var(--cx-line)}.cx-metrics>div{text-align:center;border-right:1px solid var(--cx-line)}.cx-metrics>div:last-child{border:0}.cx-metrics strong{display:block;font-size:23px;font-weight:550;line-height:1.35;letter-spacing:-.7px}.cx-metrics span{display:block;font-size:10px;margin-top:4px;color:var(--cx-muted)}.cx-pipeline-action{margin-top:14px;flex-wrap:wrap;justify-content:flex-end}.cx-pipeline-action small{margin-right:auto;font-size:10px}
+.cx-compact-choice{padding:12px 0}.cx-compact-choice+.cx-compact-choice{border-top:1px solid var(--cx-line)}.cx-compact-choice>.cx-row{flex-wrap:wrap;margin-bottom:8px}.cx-compact-choice code{font-size:11px}
 .cx-list-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:23px 0 12px}.cx-list-head .cx-segments button{padding:4px 9px;font-size:10px}.cx-card{border:1px solid var(--cx-line);border-radius:11px;padding:14px;margin-bottom:10px;background:var(--cx-bg)}.cx-card.cx-selected{border-color:color-mix(in srgb,var(--cx-blue) 60%,var(--cx-line));background:var(--cx-tint)}
 .cx-record-check{display:flex;gap:7px;align-items:center;min-width:0;cursor:pointer}.cx-record-number{display:none}.cx-record-check time{font-size:10px;color:var(--cx-muted)}.cx-prose{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.85;font-size:12px}.cx-record>.cx-prose{margin:12px 0 9px}.cx-record-footer{display:flex;align-items:center;justify-content:space-between;gap:8px}.cx-record-footer>small{font-size:10px;min-width:0;overflow-wrap:anywhere}.cx-panel code{font:10px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere;color:var(--cx-muted)}.cx-record-footer .cx-btn{font-size:10px;padding:4px 6px;min-height:27px}
 .cx-decision{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0}.cx-decision p{width:100%;font-size:11px;color:var(--cx-muted)}.cx-panel pre{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;font:11px/1.8 ui-monospace,SFMono-Regular,Consolas,monospace;background:var(--cx-soft);border:1px solid var(--cx-line);border-radius:9px;padding:14px;max-height:480px;overflow:auto;margin:10px 0;color:var(--cx-text)}.cx-log-line{font-size:11px;line-height:1.8;padding:8px 0;border-top:1px solid var(--cx-line)}.cx-log-line time{color:var(--cx-muted)}

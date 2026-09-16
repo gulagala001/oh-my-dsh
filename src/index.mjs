@@ -49,8 +49,8 @@ export function apply(ctx, config) {
       state.memoryScope ??= hub.config().memoryScope; hub.store.save(state);
       hub.agents.set(agent.session.id, agent);
       // A pending write-ahead transaction must finish before sending another request.
-      // preStep only awaits prepared replacements and disk flushes, never model work.
-      await hub.context.preStep(agent);
+      // Only an explicitly queued full-compaction command can await model work here.
+      await hub.context.preStep(agent, signal);
       if (hub.todoStore) {
         hub.todoStore.maintainInjection(agent.session);
         const notice = messages.some(m => m.source?.kind === 'user') ? TODO_NUDGE : hub.todoStore.takeEmptyNudge(agent.session) ? TODO_EMPTY_NUDGE.replace('with task_map', 'with todo_write') : null;
