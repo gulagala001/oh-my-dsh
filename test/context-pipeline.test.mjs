@@ -177,3 +177,82 @@ test('blank session can change to private before any publication; started sessio
   blank.header.memoryScope = 'session'; assert.equal(f.pipeline.state(blank).binding.scope, 'session');
   user(blank, 'Private request'); blank.header.memoryScope = 'project'; assert.equal(f.pipeline.state(blank).binding.scope, 'session');
 });
+
+test('one event threshold prepares one short segment instead of draining the backlog', async t => {
+  const f = setup(t, { digestEvery: 32, coordinatorEvery: 999 });
+  for (let i = 0; i < 20; i++) { exchange(f.s); system(f.s); }
+  f.state.eventsSincePrepare = 40;
+  let calls = 0;
+  f.hub.call = async () => { calls++; return { blocks: [{ type: 'tool-call', name: 'prepare_segment', arguments: prepared() }] }; };
+  await f.pipeline.prepare(f.agent);
+  assert.equal(calls, 1);
+  assert.equal(f.state.eventsSincePrepare, 0);
+  await f.pipeline.prepare(f.agent);
+  assert.equal(calls, 1, 'remaining raw segments do not count as new events');
+});
+
+test('events arriving during preparation remain counted for the next threshold', async t => {
+  const f = setup(t, { digestEvery: 8, coordinatorEvery: 999 });
+  for (let i = 0; i < 6; i++) { exchange(f.s); system(f.s); }
+  f.state.eventsSincePrepare = 8; f.pipeline.agents.set(f.s.id, f.agent);
+  let release, calls = 0;
+  f.hub.call = () => { calls++; return calls === 1 ? new Promise(r => { release = r; }) : Promise.resolve({ blocks: [{ type: 'tool-call', name: 'prepare_segment', arguments: prepared() }] }); };
+  const work = f.pipeline.prepare(f.agent);
+  for (const e of exchange(f.s)) f.pipeline.observe(f.s, e);
+  release({ blocks: [{ type: 'tool-call', name: 'prepare_segment', arguments: prepared() }] });
+  await work;
+  assert.equal(calls, 1); assert.equal(f.state.eventsSincePrepare, 2);
+});
+
+test('forced idle preparation does not drain every remaining segment', async t => {
+  const f = setup(t, { digestEvery: 32, coordinatorEvery: 999 });
+  for (let i = 0; i < 5; i++) { exchange(f.s); system(f.s); }
+  f.state.eventsSincePrepare = 10; let calls = 0;
+  f.hub.call = async () => { calls++; return { blocks: [{ type: 'tool-call', name: 'prepare_segment', arguments: prepared() }] }; };
+  await f.pipeline.prepare(f.agent, true);
+  assert.equal(calls, 1); assert.equal(f.state.eventsSincePrepare, 0);
+});
+
+test('coordinator cooldown never triggers preparation or replaces the idle timer', async t => {
+  const f = setup(t, { coordinatorMinGapMs: 20, flushIdleMs: 10000 });
+  add(f); exchange(f.s); f.pipeline.agents.set(f.s.id, f.agent);
+  f.state.review.lastAt = Date.now(); f.state.review.newRecords = 2;
+  const kinds = [];
+  f.hub.call = async (_agent, kind) => { kinds.push(kind); return { blocks: [{ type: 'tool-call', name: 'submit_context_choices', arguments: { choices: [] } }] }; };
+  f.pipeline.arm(f.agent);
+  const idle = f.pipeline.timers.get(f.s.id + ':idle');
+  await f.pipeline.coordinate(f.agent);
+  await new Promise(r => setTimeout(r, 70));
+  assert.deepEqual(kinds, ['coordinate']);
+  assert.equal(f.pipeline.timers.get(f.s.id + ':idle'), idle);
+});
+
+test('failed preparation retains new-event count and incoming events respect retry backoff', async t => {
+  const f = setup(t, { digestEvery: 4, coordinatorEvery: 999 });
+  exchange(f.s); f.state.eventsSincePrepare = 4; f.pipeline.agents.set(f.s.id, f.agent);
+  let calls = 0;
+  f.hub.call = async () => { calls++; throw Error('transient'); };
+  await f.pipeline.prepare(f.agent);
+  assert.equal(f.state.eventsSincePrepare, 4);
+  for (const e of exchange(f.s)) f.pipeline.observe(f.s, e);
+  await f.pipeline.prepare(f.agent);
+  assert.equal(calls, 1); assert.equal(f.state.eventsSincePrepare, 6);
+  f.state.prepareRetryAt = 0;
+  f.hub.call = async () => { calls++; return { blocks: [{ type: 'tool-call', name: 'prepare_segment', arguments: prepared() }] }; };
+  await f.pipeline.prepare(f.agent);
+  assert.equal(calls, 2); assert.equal(f.state.eventsSincePrepare, 0);
+  assert.equal(f.state.failures.prepare, undefined);
+  assert.equal(f.pipeline.timers.has(f.s.id + ':prepare'), false);
+});
+
+test('legacy backlog counter is rebased once and the corrected count survives reload', t => {
+  const f = setup(t); exchange(f.s); f.state.initialized = true;
+  delete f.state.prepareCadenceVersion; f.state.eventsSincePrepare = 39; f.store.save(f.state);
+  const replacement = new ContextPipeline(f.hub, adapter); t.after(() => replacement.dispose());
+  const s = replacement.state(f.s);
+  assert.equal(s.eventsSincePrepare, 0);
+  assert.equal(s.prepareCadenceVersion, 1);
+  s.eventsSincePrepare = 7; replacement.store.save(s);
+  const restarted = new ContextPipeline(f.hub, adapter); t.after(() => restarted.dispose());
+  assert.equal(restarted.state(f.s).eventsSincePrepare, 7);
+});

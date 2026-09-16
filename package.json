@@ -1,6 +1,6 @@
 {
   "name": "trisoul_x",
-  "version": "1.3.0-alpha.2",
+  "version": "1.3.0-alpha.3",
   "private": true,
   "type": "module",
   "description": "DSH 工作台：后台分段预处理、四选一替换中枢、项目摘要时间轴、任务验收与电脑操控。",

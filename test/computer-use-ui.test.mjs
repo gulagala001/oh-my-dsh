@@ -660,7 +660,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
       }
       let complete;
       if (delayed) window.__cuDelayDone = new Promise(resolve => { complete = resolve; });
-      try { const response = await original.apply(window, args); if (delayed) await new Promise(resolve => setTimeout(resolve, 400)); return response; }
+      try { const response = await original.apply(window, args); if (delayed) await new Promise(resolve => { window.__cuReleaseNavigationResponse = resolve; }); return response; }
       finally { complete?.(); }
     };
   }, fixture.url + '/final');
@@ -668,8 +668,12 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   await until(() => controlled.contexts()[0].pages().some(p => p.url() === fixture.url + '/final'));
   const second = controlled.contexts()[0].pages().find(p => p.url() === fixture.url + '/final');
   cdp = await second.context().newCDPSession(second);
+  // Retain a real old observation before navigating away. A browser URL can
+  // change before the extension emits its navigation event on slower CI hosts.
+  await page.waitForFunction(() => (window.__cuDelayedNavigations ?? []).length > 0 && Boolean(window.__cuReleaseNavigationResponse));
   await address.fill(fixture.url + '/mousedown-dialog'); await address.press('Enter');
   await until(() => second.url().endsWith('/mousedown-dialog'));
+  await page.evaluate(() => { window.__cuReleaseNavigationResponse(); delete window.__cuReleaseNavigationResponse; });
   await page.evaluate(async () => { await window.__cuDelayDone; await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); window.__cuRestoreFetch(); delete window.__cuDelayDone; });
   assert.ok(await page.evaluate(() => (window.__cuDelayedNavigations ?? []).length), 'the fixture must really retain an old navigation observation');
   await page.evaluate(async () => { for (const deliver of window.__cuDelayedNavigations) deliver(); delete window.__cuDelayedNavigationUrl; delete window.__cuDelayedNavigations; await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); });
