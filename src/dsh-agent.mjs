@@ -1,3 +1,4 @@
+import { registerContextCommands } from './context/commands.mjs';
 import { installPromptAdapter } from './cc-adaptation/adapter.mjs';
 import { MAIN_PERSONA } from './prompts.mjs';
 import { ReplacementCanvas as Canvas } from './context/host.mjs';
@@ -20,4 +21,5 @@ export function apply(ctx) {
     async execute({ text }, { agent }) { const state = hub.store.state(agent.session.id); state.notes.push({ text, at: Date.now() }); hub.store.save(state); return text; },
   });
   registerContextRecall(ctx, hub);
+  ctx.inject(['commands'], commandCtx => registerContextCommands(commandCtx, hub));
 }

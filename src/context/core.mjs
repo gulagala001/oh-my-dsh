@@ -48,13 +48,13 @@ export function recordText(record, mode = 'detail') {
   const when = record.timeStart == null ? '时间未记录' : new Date(record.timeStart).toISOString() + (record.timeEnd && record.timeEnd !== record.timeStart ? ' — ' + new Date(record.timeEnd).toISOString() : '');
   return `[Context record ${record.id} · ${when} · events ${ranges}]\n${record.summary}`
     + (mode === 'detail' && record.documents.length ? '\n\n' + record.documents.map(d => `## ${d.title}\n${d.text}`).join('\n\n') : '')
-    + `\n[Saved documents: recall({"id":"${record.id}"})]`;
+    + `\n[${record.documents.length ? "Saved documents" : "Archived record"}: recall({"id":"${record.id}"})]`;
 }
 export function activeRecords(state) { return state.records.filter(r => !r.mergedInto); }
 export function liveSpan(session, record) {
   // Older archives may include a host reminder before the first real request.
   // Keep those archives readable, but never replace their control messages.
-  if (record.sourceSeqs.some(seq => protectedSource(session.eventAt(seq)))) return null;
+  if (!(record.kind === 'full' && record.mode !== 'raw') && record.sourceSeqs.some(seq => protectedSource(session.eventAt(seq)))) return null;
   const seqs = record.mode === 'raw' ? record.sourceSeqs : [record.carrierSeq];
   if (!seqs?.length || seqs.some(s => !Number.isSafeInteger(s))) return null;
   const nodes = session.surface.nodes, start = nodes.indexOf(seqs[0]);
@@ -84,9 +84,9 @@ export function normalizeChoices(value, state, session, allowedIds) {
   });
 }
 
-export function exposedTrace(session, { maxChars = 0 } = {}) {
+export function exposedTrace(session, { maxChars = 0, afterSeq = -1 } = {}) {
   for (const e of session.snapshotEvents().slice().reverse()) {
-    if (e.type !== 'assistant/message' || e.data?.message?.source?.plugin) continue;
+    if (e.seq <= afterSeq || e.type !== 'assistant/message' || e.data?.message?.source?.plugin) continue;
     const blocks = e.data?.message?.content;
     if (!Array.isArray(blocks)) continue;
     const text = blocks.filter(b => b.type === 'reasoning' && typeof b.text === 'string').map(b => b.text).join('\n').trim();
@@ -145,7 +145,8 @@ export function candidateInput(session, events, lookback) {
 }
 export function coordinatorInput(session, state, cfg) {
   return {
-    user_messages: userMessages(session),
+    user_messages: userMessages(session).filter(e => e.seq > (state.fullCompaction?.throughSeq ?? -1)),
+    ...(state.fullCompaction ? { compacted_conversation: state.records.find(r => r.id === state.fullCompaction.recordId)?.summary } : {}),
     context: { entries: session.surface.nodes.map((seq, position) => ({ seq, position })), pressureRatio: cfg.pressureRatio ?? null },
     records: activeRecords(state).flatMap(r => {
       const span = liveSpan(session, r);

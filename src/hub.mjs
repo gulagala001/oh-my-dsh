@@ -106,7 +106,7 @@ export class Hub extends Service {
   }
   route(agent, kind) {
     const main = agent.session.requestHeader()?.config ?? agent.options;
-    const custom = this.config().backgroundMode === 'unified' ? this.config().unifiedBackground : this.config()[['surgeon', 'coordinate'].includes(kind) ? 'surgeon' : ['state', 'probeAsk', 'probeAnswer'].includes(kind) ? 'canvas' : 'background'] ?? {};
+    const custom = this.config().backgroundMode === 'unified' ? this.config().unifiedBackground : this.config()[['surgeon', 'coordinate', 'compactFull'].includes(kind) ? 'surgeon' : ['state', 'probeAsk', 'probeAnswer'].includes(kind) ? 'canvas' : 'background'] ?? {};
     return { provider: custom.provider || main.provider, model: custom.model || main.model, temperature: custom.temperature, effort: custom.effort ?? 'off' };
   }
   captureFrame(agent, turn, step) {

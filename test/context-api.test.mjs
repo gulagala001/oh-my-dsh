@@ -11,6 +11,7 @@ function setup() {
   const session = { id: 's', snapshotEvents: () => [] };
   const hub = { config: () => cfg, store: { state: () => legacy, save() {}, memories() { calls.push('legacy-read'); return []; } }, context: {
     state: () => state, view: () => ({ ok: true }), store: { visible: () => [], get(sid, id) { if (id !== 'allowed') throw Error('范围'); return { id }; }, global: () => ({ text: 'manual', revision: 1 }), setGlobal(text, revision) { calls.push('user-save'); if (revision !== 1) throw Error('已被其他窗口更新'); return { text, revision: 2 }; } },
+    manualSessions: new Map(), async requestCompaction(_session, agent, operation) { calls.push(operation); return { queued: !agent || agent.status !== 'idle', changed: false }; },
     queueManual: () => ({ queued: true, changed: false }), applyReady: async () => { calls.push('apply-only'); return null; },
     prepare: async () => { calls.push('prepare'); }, coordinate: async () => { calls.push('coordinate'); }, reconfigure() {},
   } };
@@ -64,3 +65,14 @@ test('idle switch and wait time persist through settings without starting a back
   await assert.rejects(f.call('/settings', 'POST', { idlePreprocessEnabled: 'false' }), /布尔/);
   await assert.rejects(f.call('/settings', 'POST', { flushIdleMs: -1 }), /非负/);
 });
+
+for (const [path, operation] of [['/compact-p', 'processed'], ['/compact-f', 'full']]) {
+  test(path + ' shares its command operation and rejects unsupported arguments/methods', async () => {
+    const f = setup(); assert.equal((await f.call(path)).status, 405);
+    await assert.rejects(f.call(path, 'POST', { ids: ['x'] }), /不接受参数/);
+    assert.equal((await f.call(path, 'POST', {}, { status: 'idle' })).status, 200);
+    const queued = await f.call(path, 'POST', {}, { status: 'running' });
+    assert.equal(queued.status, 202); assert.match(queued.data.message, /已排队/);
+    assert.deepEqual(f.calls, [operation, operation]);
+  });
+}

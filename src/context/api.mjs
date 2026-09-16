@@ -1,3 +1,4 @@
+import { compactionMessage } from './commands.mjs';
 import { contextConfig } from './pipeline.mjs';
 import { userMessages } from './core.mjs';
 
@@ -49,6 +50,15 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
     if (path.endsWith('/prepare')) void hub.context.prepare(agent, true);
     else void hub.context.coordinate(agent, true);
     send(res, 202, { queued: true }); return true;
+  }
+  if (path === '/compact-p' || path === '/compact-f') {
+    if (req.method !== 'POST') { send(res, 405, { error: '请使用 POST' }); return true; }
+    needSession(); const args = await readBody(req);
+    if (!args || typeof args !== 'object' || Array.isArray(args) || Object.keys(args).length) throw Error('该压缩命令不接受参数');
+    if (hub.context.manualSessions?.has(session.id)) { send(res, 409, { error: '本会话正在压缩，请勿重复提交' }); return true; }
+    const operation = path === '/compact-p' ? 'processed' : 'full';
+    const outcome = await hub.context.requestCompaction(session, agent, operation);
+    send(res, outcome.queued ? 202 : 200, { ...outcome, message: compactionMessage(operation, outcome) }); return true;
   }
   if (path === '/compact') {
     if (req.method !== 'POST') { send(res, 405, { error: '请使用 POST' }); return true; }
