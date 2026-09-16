@@ -20,7 +20,7 @@ const iso = n => n == null ? '时间未记录' : new Date(n).toISOString();
 export class ContextPipeline {
   constructor(hub, adapter) {
     this.hub = hub; this.adapter = adapter; this.store = new ContextStore(hub.store.dir);
-    this.agents = new Map(); this.jobs = new Map(); this.timers = new Map(); this.controllers = new Map(); this.closed = false;
+    this.agents = new Map(); this.jobs = new Map(); this.timers = new Map(); this.idleSince = new Map(); this.controllers = new Map(); this.closed = false;
   }
   config() { return contextConfig(this.hub.config()); }
   state(session) {
@@ -63,18 +63,35 @@ export class ContextPipeline {
     if (s.eventsSincePrepare >= this.config().digestEvery) void this.prepare(agent, false);
     if (actualUser(event)) void this.coordinate(agent, true);
   }
-  arm(agent, delay = this.config().flushIdleMs, kind = 'idle') {
+  arm(agent, delay = this.config().flushIdleMs, kind = 'idle', since = Date.now()) {
     const id = agent.session.id, key = id + ':' + kind;
-    clearTimeout(this.timers.get(key));
+    clearTimeout(this.timers.get(key)); this.timers.delete(key);
+    if (kind === 'idle') this.idleSince.delete(id);
     if (!delay || this.closed || !this.agents.has(id)) return;
+    // Only pending work in a genuinely idle session gets an idle deadline.
+    // Model/tool execution and explicit failure retries are independent of it.
+    if (kind === 'idle') {
+      if (!this.config().contextEnabled || agent.status !== 'idle') return;
+      const s = this.state(agent.session);
+      if (!(s.eventsSincePrepare > 0 || s.review.newRecords > 0)) return;
+      this.idleSince.set(id, since);
+    }
     const timer = setTimeout(() => {
       this.timers.delete(key);
+      if (kind === 'idle') this.idleSince.delete(id);
       const work = kind === 'coordinate' ? this.coordinate(agent, true)
-        : kind === 'prepare' ? this.prepare(agent, true)
-        : this.prepare(agent, true).then(() => this.coordinate(agent, true));
+        : kind === 'prepare' ? this.prepare(agent, true) : this.flushIdle(agent);
       void work.catch(e => this.reportError(agent, kind, e));
-    }, delay);
+    }, kind === 'idle' ? Math.max(1, since + delay - Date.now()) : delay);
     timer.unref?.(); this.timers.set(key, timer);
+  }
+  async flushIdle(agent) {
+    if (this.closed || !this.agents.has(agent.session.id) || agent.status !== 'idle' || !this.config().contextEnabled) return;
+    const s = this.state(agent.session);
+    // Reviewing a prepared record must not drain unrelated historical backlog.
+    if (s.eventsSincePrepare > 0) await this.prepare(agent, true);
+    if (!this.closed && this.agents.get(agent.session.id) === agent && agent.status === 'idle'
+      && (s.review.newRecords > 0 || s.review.needed)) await this.coordinate(agent, true);
   }
   reportError(agent, kind, error) {
     const s = this.state(agent.session);
@@ -128,7 +145,8 @@ export class ContextPipeline {
   async coordinate(agent, force = false) {
     if (this.closed || delegated(agent.session) || !this.config().contextEnabled) return;
     const session = agent.session, key = session.id + ':coordinate', s = this.state(session), cfg = this.config();
-    if (this.jobs.has(key)) { s.review.needed = true; return this.jobs.get(key); }
+    // observe()/prepare() mark real changes; joining a call is not a new review.
+    if (this.jobs.has(key)) return this.jobs.get(key);
     if (s.transaction || (!force && s.review.newRecords < cfg.coordinatorEvery)) return;
     const elapsed = Date.now() - s.review.lastAt;
     if (elapsed < cfg.coordinatorMinGapMs) { this.arm(agent, cfg.coordinatorMinGapMs - elapsed, 'coordinate'); return; }
@@ -238,7 +256,14 @@ export class ContextPipeline {
     if (!s.manualQueue.length) s.manualQueue.push({ ids: args.ids, mode: args.mode || 'detail' });
     this.store.save(s); return { queued: true, changed: false };
   }
-  reconfigure() { for (const agent of this.agents.values()) this.arm(agent); }
+  reconfigure() {
+    // Settings may adjust an existing deadline, never wake a dormant session.
+    // Keep its original idle start, including repeated settings callbacks.
+    for (const [id, since] of [...this.idleSince]) {
+      const agent = this.agents.get(id);
+      if (agent) this.arm(agent, this.config().flushIdleMs, 'idle', since);
+    }
+  }
   recall(session, args = {}) {
     const s = this.state(session);
     if ((args.from !== undefined || args.to !== undefined) && (!Number.isSafeInteger(args.from) || !Number.isSafeInteger(args.to))) throw new Error('原文回查需要同时提供 from 和 to');
@@ -270,6 +295,7 @@ export class ContextPipeline {
     if (!id) this.closed = true;
     for (const [key, c] of this.controllers) if (!id || key.startsWith(id + ':')) c.abort();
     for (const [key, timer] of this.timers) if (!id || key.startsWith(id + ':')) { clearTimeout(timer); this.timers.delete(key); }
-    if (id) this.agents.delete(id); else this.agents.clear();
+    if (id) { this.agents.delete(id); this.idleSince.delete(id); }
+    else { this.agents.clear(); this.idleSince.clear(); }
   }
 }
