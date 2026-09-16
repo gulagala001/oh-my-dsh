@@ -53,3 +53,14 @@ test('new settings validate values and reject obsolete probe switches', async ()
 test('document endpoint uses record ACL rather than trusting the requested ID', async () => {
   const f = setup(); await assert.rejects(f.call('/context/document?id=forbidden'), /范围/); assert.equal((await f.call('/context/document?id=allowed')).data.id, 'allowed');
 });
+
+
+test('idle switch and wait time persist through settings without starting a background job', async () => {
+  const f = setup(); assert.equal(f.cfg.idlePreprocessEnabled, false);
+  const on = await f.call('/settings', 'POST', { idlePreprocessEnabled: true, flushIdleMs: 45000 });
+  assert.equal(on.status, 200); assert.equal(on.data.idlePreprocessEnabled, true); assert.equal(f.cfg.flushIdleMs, 45000);
+  await f.call('/settings', 'POST', { idlePreprocessEnabled: false });
+  assert.equal(f.cfg.idlePreprocessEnabled, false); assert.equal(f.cfg.flushIdleMs, 45000); assert.deepEqual(f.calls, []);
+  await assert.rejects(f.call('/settings', 'POST', { idlePreprocessEnabled: 'false' }), /布尔/);
+  await assert.rejects(f.call('/settings', 'POST', { flushIdleMs: -1 }), /非负/);
+});

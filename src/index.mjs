@@ -1,3 +1,4 @@
+import { installImageBudget } from './image-budget.mjs';
 import { Config } from './config.mjs';
 import { neutralizeHostEnvironment } from './cc-adaptation/environment.mjs';
 import { Hub, NS } from './hub.mjs';
@@ -26,6 +27,7 @@ export function apply(ctx, config) {
   const computer = acquireComputerUse(ctx, { getConfig: () => hub.config(), dataDir: join(hub.store.dir, 'computer-use') });
   hub.computerUse = computer.computerUse; hub.computerRefresh = computer.refresh; hub.computerImages = computer.computerImages;
   const isX = session => (ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset) === 'trisoul-x';
+  installImageBudget(ctx, isX);
   ctx.on('system-prompt/assemble', async (_assembly, context, next) => {
     const assembly = await next();
     // Children inherit the preset; stock sessions and non-agent calls stay exact.

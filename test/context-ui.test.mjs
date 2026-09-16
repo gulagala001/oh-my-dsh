@@ -47,3 +47,23 @@ test('new panels inherit host themes and use container width instead of browser 
   assert.match(CONTEXT_CSS, /@container cx \(max-width:400px\)/);
   assert.match(CONTEXT_CSS, /prefers-reduced-motion/); assert.match(CONTEXT_CSS, /\[hidden\].*display:none!important/);
 });
+
+
+test('idle settings are visible by default, off, preserve their delay and do not affect Trace', async () => {
+  const React = await import('react'); const { renderToStaticMarkup } = await import('react-dom/server');
+  const { Config } = await import('../src/config.mjs');
+  const config = Config({}); assert.equal(config.idlePreprocessEnabled, false); assert.equal(config.flushIdleMs, 90000);
+  const { ContextSettings } = createContextUI(React); const panel = new ContextSettings({});
+  panel.state = { ...panel.state, config };
+  const html = renderToStaticMarkup(panel.renderBasic());
+  assert.match(html, /空闲时自动预处理/); assert.match(html, /空闲等待时间 · 秒/);
+  assert.match(html, /disabled=""[^>]*value="90"/);
+  assert.doesNotMatch(html, /aria-label="空闲时自动预处理"[^>]*checked/);
+  const changed = { ...config, idlePreprocessEnabled: true, flushIdleMs: 45000 };
+  assert.deepEqual(contextSettingsPatch(config, changed), { idlePreprocessEnabled: true, flushIdleMs: 45000 });
+  assert.equal(changed.traceEnabled, config.traceEnabled);
+  for (const preset of Object.keys(CONTEXT_FREQUENCY_PRESETS)) {
+    const next = { ...changed, ...contextFrequencyPatch(preset) };
+    assert.equal(next.idlePreprocessEnabled, true); assert.equal(next.flushIdleMs, 45000);
+  }
+});

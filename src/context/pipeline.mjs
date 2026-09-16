@@ -5,11 +5,11 @@ import { createTransaction, applyTransaction } from './transactions.mjs';
 import { PREPARE_SYSTEM, PREPARE_TOOL, COORDINATE_SYSTEM, COORDINATE_TOOL } from './prompts.mjs';
 
 export const DEFAULTS = Object.freeze({ contextEnabled: true, digestEvery: 32, digestWindow: 32, digestLookback: 8,
-  flushIdleMs: 90000, coordinatorEvery: 2, coordinatorMinGapMs: 30000, coordinatorRecentEvents: 12,
+  idlePreprocessEnabled: false, flushIdleMs: 90000, coordinatorEvery: 2, coordinatorMinGapMs: 30000, coordinatorRecentEvents: 12,
   automaticReplace: true, surgeryCooldownSteps: 20, keepTailEvents: 30, traceEnabled: true, traceMaxChars: 0, requireShorter: true });
 export function contextConfig(raw = {}) {
   const cfg = { ...DEFAULTS, ...raw };
-  for (const key of ['contextEnabled', 'automaticReplace', 'traceEnabled', 'requireShorter']) if (typeof cfg[key] !== 'boolean') throw new Error(`${key} 必须为布尔值`);
+  for (const key of ['contextEnabled', 'idlePreprocessEnabled', 'automaticReplace', 'traceEnabled', 'requireShorter']) if (typeof cfg[key] !== 'boolean') throw new Error(`${key} 必须为布尔值`);
   for (const key of ['digestEvery', 'digestWindow', 'coordinatorEvery']) if (!Number.isInteger(cfg[key]) || cfg[key] < 1) throw new Error(`${key} 必须为正整数`);
   for (const key of ['digestLookback', 'flushIdleMs', 'coordinatorMinGapMs', 'coordinatorRecentEvents', 'surgeryCooldownSteps', 'keepTailEvents', 'traceMaxChars']) if (!Number.isInteger(cfg[key]) || cfg[key] < 0) throw new Error(`${key} 必须为非负整数`);
   return cfg;
@@ -71,7 +71,7 @@ export class ContextPipeline {
     // Only pending work in a genuinely idle session gets an idle deadline.
     // Model/tool execution and explicit failure retries are independent of it.
     if (kind === 'idle') {
-      if (!this.config().contextEnabled || agent.status !== 'idle') return;
+      if (!this.config().contextEnabled || !this.config().idlePreprocessEnabled || agent.status !== 'idle') return;
       const s = this.state(agent.session);
       if (!(s.eventsSincePrepare > 0 || s.review.newRecords > 0)) return;
       this.idleSince.set(id, since);
@@ -86,12 +86,12 @@ export class ContextPipeline {
     timer.unref?.(); this.timers.set(key, timer);
   }
   async flushIdle(agent) {
-    if (this.closed || !this.agents.has(agent.session.id) || agent.status !== 'idle' || !this.config().contextEnabled) return;
+    if (this.closed || !this.agents.has(agent.session.id) || agent.status !== 'idle' || !this.config().contextEnabled || !this.config().idlePreprocessEnabled) return;
     const s = this.state(agent.session);
     // Reviewing a prepared record must not drain unrelated historical backlog.
     if (s.eventsSincePrepare > 0) await this.prepare(agent, true);
     if (!this.closed && this.agents.get(agent.session.id) === agent && agent.status === 'idle'
-      && (s.review.newRecords > 0 || s.review.needed)) await this.coordinate(agent, true);
+      && this.config().idlePreprocessEnabled && (s.review.newRecords > 0 || s.review.needed)) await this.coordinate(agent, true);
   }
   reportError(agent, kind, error) {
     const s = this.state(agent.session);

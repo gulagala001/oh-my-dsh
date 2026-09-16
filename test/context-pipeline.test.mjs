@@ -290,9 +290,9 @@ test('legacy reminder summary does not block trace and valid replacements in a n
 
 
 // Virtual time reproduces long model/tool execution without waiting or calling a provider.
-function idleFixture(t) {
+function idleFixture(t, config = {}) {
   t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1000000 });
-  const f = setup(t, { digestEvery: 32, coordinatorEvery: 999, flushIdleMs: 90000 });
+  const f = setup(t, { digestEvery: 32, coordinatorEvery: 999, idlePreprocessEnabled: true, flushIdleMs: 90000, ...config });
   exchange(f.s);
   f.calls = [];
   f.hub.call = async (_agent, kind) => {
@@ -498,4 +498,51 @@ test('disposing during idle preparation never launches a coordinator afterwards'
   release({ blocks: [{ type: 'tool-call', name: 'prepare_segment', arguments: prepared() }] });
   await finishJobs(f); await Promise.resolve();
   assert.deepEqual(f.calls, ['prepare']); assert.equal(f.pipeline.timers.size, 0);
+});
+
+
+test('idle preprocessing is off by default, including old configurations with a wait time', async t => {
+  assert.equal(contextConfig().idlePreprocessEnabled, false);
+  assert.equal(contextConfig({ flushIdleMs: 90000 }).idlePreprocessEnabled, false);
+  assert.throws(() => contextConfig({ idlePreprocessEnabled: 'false' }), /布尔/);
+  const f = idleFixture(t, { idlePreprocessEnabled: false }); f.pipeline.start(f.agent);
+  t.mock.timers.tick(900000); await finishJobs(f);
+  await f.pipeline.flushIdle(f.agent);
+  assert.deepEqual(f.calls, []); assert.equal(f.pipeline.timers.has(f.s.id + ':idle'), false);
+});
+
+test('idle switch cancels a pending timer and is independent from event/manual preparation', async t => {
+  const f = idleFixture(t); f.pipeline.start(f.agent); t.mock.timers.tick(60000);
+  f.cfg.idlePreprocessEnabled = false; f.pipeline.reconfigure();
+  assert.equal(f.cfg.flushIdleMs, 90000, 'retain the configured wait for later use');
+  t.mock.timers.tick(900000); await finishJobs(f); assert.deepEqual(f.calls, []);
+  await f.pipeline.prepare(f.agent, true); await finishJobs(f);
+  assert.deepEqual(f.calls, ['prepare'], 'manual preparation remains available while idle is disabled');
+  f.cfg.digestEvery = 4; f.agent.status = 'running';
+  for (const event of exchange(f.s)) f.pipeline.observe(f.s, event);
+  for (const event of exchange(f.s)) f.pipeline.observe(f.s, event);
+  await finishJobs(f); assert.ok(f.calls.length > 1, 'normal event threshold is not gated by the idle switch');
+});
+
+test('a missed settings callback still cannot run an idle flush after disabling', async t => {
+  const f = idleFixture(t); f.pipeline.start(f.agent); f.cfg.idlePreprocessEnabled = false;
+  t.mock.timers.tick(90000); await finishJobs(f); assert.deepEqual(f.calls, []);
+});
+
+test('enabling idle preprocessing alone does not wake historical sessions', async t => {
+  const f = idleFixture(t, { idlePreprocessEnabled: false }); f.pipeline.start(f.agent);
+  f.cfg.idlePreprocessEnabled = true; f.pipeline.reconfigure();
+  t.mock.timers.tick(90000); await finishJobs(f); assert.deepEqual(f.calls, []);
+  for (const event of exchange(f.s)) f.pipeline.observe(f.s, event);
+  t.mock.timers.tick(89999); await finishJobs(f); assert.deepEqual(f.calls, []);
+  t.mock.timers.tick(1); await finishJobs(f); assert.deepEqual(f.calls, ['prepare', 'coordinate']);
+});
+
+test('disabling while idle preparation runs keeps the result but skips the forced idle review', async t => {
+  const f = idleFixture(t); let release;
+  f.hub.call = async (_agent, kind) => { f.calls.push(kind); return new Promise(resolve => { release = resolve; }); };
+  f.pipeline.start(f.agent); t.mock.timers.tick(90000); assert.deepEqual(f.calls, ['prepare']);
+  f.cfg.idlePreprocessEnabled = false; f.pipeline.reconfigure();
+  release({ blocks: [{ type: 'tool-call', name: 'prepare_segment', arguments: prepared() }] });
+  await finishJobs(f); assert.equal(f.state.records.length, 1); assert.deepEqual(f.calls, ['prepare']);
 });

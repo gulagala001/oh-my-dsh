@@ -39,6 +39,9 @@ importers:
       '@deepseek-ai/dsh':
         specifier: 0.1.6-alpha.1
         version: 0.1.6-alpha.1(ff8476f0221ff4ac39d737c550dabfd9)
+      '@deepseek-ai/dsh-attachment':
+        specifier: 0.1.6-alpha.1
+        version: 0.1.6-alpha.1(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-brand@0.1.6-alpha.1(@deepseek-ai/cordis@4.0.2))
       '@deepseek-ai/dsh-compaction':
         specifier: 0.1.6-alpha.1
         version: 0.1.6-alpha.1(6b9b16b91d2682d982e5ccba8b793587)
