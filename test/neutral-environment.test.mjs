@@ -62,5 +62,5 @@ test('default main and mirror are neutral while the actual environment key remai
   assert.match(promptText('tools/pwsh.md'), /do not bypass it/);
   assert.doesNotMatch(promptText('context/host-gui.md'), /DeepSeek Harness|`dsh web`/);
   assert.doesNotMatch(promptText('context/harness-source.md'), /DeepSeek Harness|extend DSH/);
-  assert.equal(readFileSync(new URL('../src/cc-adaptation/identity.mjs', import.meta.url), 'utf8').includes('You are ZCode.'), true);
+  assert.equal(readFileSync(new URL('../src/cc-adaptation/identity.mjs', import.meta.url), 'utf8').includes('You are an interactive zcode agent that helps users with software engineering tasks.'), true);
 });
