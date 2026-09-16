@@ -20,6 +20,9 @@ export const eventTime = e => {
   return null;
 };
 export const eventSource = e => e.type === 'user/message' ? e.data?.source?.plugin : e.data?.message?.source?.plugin;
+// User requests and host control/context messages are not conversation material
+// that the summarizer may replace, regardless of their surface role.
+const protectedSource = e => !e || e.type === 'user/message' || e.type === 'system/message' || Boolean(eventSource(e));
 export const rawText = (session, e) => textBlocks(session.deriveEventMessage(e)?.content);
 export const sourceHash = (session, seqs) => hash(seqs.map(seq => {
   const e = session.eventAt(seq);
@@ -49,6 +52,9 @@ export function recordText(record, mode = 'detail') {
 }
 export function activeRecords(state) { return state.records.filter(r => !r.mergedInto); }
 export function liveSpan(session, record) {
+  // Older archives may include a host reminder before the first real request.
+  // Keep those archives readable, but never replace their control messages.
+  if (record.sourceSeqs.some(seq => protectedSource(session.eventAt(seq)))) return null;
   const seqs = record.mode === 'raw' ? record.sourceSeqs : [record.carrierSeq];
   if (!seqs?.length || seqs.some(s => !Number.isSafeInteger(s))) return null;
   const nodes = session.surface.nodes, start = nodes.indexOf(seqs[0]);
@@ -100,7 +106,7 @@ export function prepareCandidate(session, state, cfg, pairing) {
   }
   const stop = Math.max(0, nodes.length - cfg.keepTailEvents);
   const boundary = e => {
-    if (!e || e.type === 'system/message' || actualUser(e) || reserved.has(e.seq)) return true;
+    if (protectedSource(e) || reserved.has(e.seq)) return true;
     if (hasOpaqueContent(session.deriveEventMessage(e)?.content)) return true;
     if (e.data?.source?.form === 'snapshot') return true;
     const src = eventSource(e) || '';
