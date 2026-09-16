@@ -15,9 +15,13 @@ export class ContextStore {
   }
   write(path, value) {
     const tmp = `${path}.tmp`;
-    writeFileSync(tmp, JSON.stringify(value, null, 2) + '\n', { mode: 0o600 });
-    const fd = openSync(tmp, 'r');
-    try { fsyncSync(fd); } finally { closeSync(fd); }
+    // Flush the same writable handle on every platform (Windows rejects
+    // FlushFileBuffers/fsync on a read-only handle).
+    const fd = openSync(tmp, 'w', 0o600);
+    try {
+      writeFileSync(fd, JSON.stringify(value, null, 2) + '\n');
+      fsyncSync(fd);
+    } finally { closeSync(fd); }
     renameSync(tmp, path);
   }
   path(id) { return join(this.dir, 'sessions', hash(id) + '.json'); }

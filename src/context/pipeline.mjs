@@ -27,6 +27,13 @@ export class ContextPipeline {
     const scope = this.hub.scope(session);
     const binding = { scope: scope.mode === 'session' ? 'session' : 'project', project: scope.project, title: session.header?.title || session.id };
     const state = this.store.state(session.id, binding);
+    // Older counters measured uncovered backlog, not newly arrived events.
+    // Rebase once; archives stay intact and the ordinary idle flush remains available.
+    if (state.prepareCadenceVersion !== 1) {
+      if (state.initialized) state.eventsSincePrepare = 0;
+      state.prepareCadenceVersion = 1;
+      this.store.save(state);
+    }
     // A blank session can still change its scope before any data has been read or prepared.
     if (!userMessages(session).length && !state.records.length && !state.transaction && !Object.keys(state.publications.catalog).length && state.publications.globalRevision === null && (state.binding.scope !== binding.scope || state.binding.project !== binding.project)) {
       state.binding = binding; this.store.save(state);
@@ -42,6 +49,7 @@ export class ContextPipeline {
       s.initialized = true; this.store.save(s);
     }
     void this.prepare(agent, false); this.arm(agent);
+    if (s.prepareRetryAt > Date.now()) this.arm(agent, s.prepareRetryAt - Date.now(), 'prepare');
   }
   observe(session, event) {
     if (delegated(session) || this.closed || !this.config().contextEnabled) return;
@@ -55,15 +63,18 @@ export class ContextPipeline {
     if (s.eventsSincePrepare >= this.config().digestEvery) void this.prepare(agent, false);
     if (actualUser(event)) void this.coordinate(agent, true);
   }
-  arm(agent, delay = this.config().flushIdleMs) {
-    const id = agent.session.id;
-    clearTimeout(this.timers.get(id));
+  arm(agent, delay = this.config().flushIdleMs, kind = 'idle') {
+    const id = agent.session.id, key = id + ':' + kind;
+    clearTimeout(this.timers.get(key));
     if (!delay || this.closed || !this.agents.has(id)) return;
     const timer = setTimeout(() => {
-      this.timers.delete(id);
-      void this.prepare(agent, true).then(() => this.coordinate(agent, true)).catch(e => this.reportError(agent, 'idle', e));
+      this.timers.delete(key);
+      const work = kind === 'coordinate' ? this.coordinate(agent, true)
+        : kind === 'prepare' ? this.prepare(agent, true)
+        : this.prepare(agent, true).then(() => this.coordinate(agent, true));
+      void work.catch(e => this.reportError(agent, kind, e));
     }, delay);
-    timer.unref?.(); this.timers.set(id, timer);
+    timer.unref?.(); this.timers.set(key, timer);
   }
   reportError(agent, kind, error) {
     const s = this.state(agent.session);
@@ -77,12 +88,14 @@ export class ContextPipeline {
     const session = agent.session, key = session.id + ':prepare';
     if (this.jobs.has(key)) return this.jobs.get(key);
     const s = this.state(session);
+    if (Date.now() < (s.prepareRetryAt || 0)) return;
     if (!force && (s.eventsSincePrepare || 0) < this.config().digestEvery) return;
     const controller = new AbortController(); this.controllers.set(key, controller);
     const job = (async () => {
       do {
         const cfg = this.config(), events = prepareCandidate(session, s, cfg, this.adapter.pairing);
         if (!events) break;
+        const seenEvents = s.eventsSincePrepare || 0;
         const inputs = candidateInput(session, events, cfg.digestLookback);
         const args = { system: PREPARE_SYSTEM, messages: [this.adapter.message(JSON.stringify(inputs), 'prepare-input')], tools: [PREPARE_TOOL],
           ...(cfg.digestMaxTokens > 0 ? { maxTokens: cfg.digestMaxTokens } : {}) };
@@ -94,14 +107,21 @@ export class ContextPipeline {
         // Other maintenance may have replaced this source while the model ran.
         if (!liveSpan(session, record)) { this.store.notice(s, '预处理完成时原区间已变化，未发布过期记录'); break; }
         s.records.push(record); s.review.newRecords++; s.review.needed = true;
-        s.eventsSincePrepare = Math.max(0, (s.eventsSincePrepare || 0) - events.length);
-        delete s.failures.prepare; this.store.save(s);
+        s.eventsSincePrepare = Math.max(0, (s.eventsSincePrepare || 0) - seenEvents);
+        delete s.failures.prepare; delete s.prepareRetryAt;
+        clearTimeout(this.timers.get(session.id + ':prepare')); this.timers.delete(session.id + ':prepare');
+        this.store.save(s);
         this.hub.action(session, 'preparedSegments', 1, { id: record.id, from: events[0].seq, to: events.at(-1).seq, chars: record.summary.length + record.documents.reduce((n, d) => n + d.text.length, 0) });
         void this.coordinate(agent, false);
-        if (!force && s.eventsSincePrepare < cfg.digestEvery) break;
+        if (s.eventsSincePrepare < cfg.digestEvery) break;
       } while (!this.closed && !controller.signal.aborted);
     })().catch(e => {
-      if (!controller.signal.aborted) { this.reportError(agent, 'prepare', e); this.arm(agent, Math.min(60000, 1000 * 2 ** Math.min(6, this.state(session).failures.prepare?.count || 1))); }
+      if (!controller.signal.aborted) {
+        this.reportError(agent, 'prepare', e);
+        const delay = Math.min(60000, 1000 * 2 ** Math.min(6, s.failures.prepare?.count || 1));
+        s.prepareRetryAt = Date.now() + delay; this.store.save(s);
+        this.arm(agent, delay, 'prepare');
+      }
     }).finally(() => { this.jobs.delete(key); this.controllers.delete(key); });
     this.jobs.set(key, job); return job;
   }
@@ -111,7 +131,7 @@ export class ContextPipeline {
     if (this.jobs.has(key)) { s.review.needed = true; return this.jobs.get(key); }
     if (s.transaction || (!force && s.review.newRecords < cfg.coordinatorEvery)) return;
     const elapsed = Date.now() - s.review.lastAt;
-    if (elapsed < cfg.coordinatorMinGapMs) { this.arm(agent, cfg.coordinatorMinGapMs - elapsed); return; }
+    if (elapsed < cfg.coordinatorMinGapMs) { this.arm(agent, cfg.coordinatorMinGapMs - elapsed, 'coordinate'); return; }
     const input = coordinatorInput(session, s, { ...cfg, pressureRatio: this.adapter.pressure?.(session) ?? null });
     if (!input.records.length) return;
     const keyHash = hash(input);
@@ -134,8 +154,8 @@ export class ContextPipeline {
       delete s.failures.coordinate; this.store.save(s);
       this.hub.action(session, 'contextDecisions', 1, { choices: choices.map(c => ({ action: c.action, ids: c.ids })) });
     })().catch(e => {
-      if (!controller.signal.aborted) { this.reportError(agent, 'coordinate', e); s.review.needed = true; this.arm(agent, Math.max(1000, cfg.coordinatorMinGapMs)); }
-    }).finally(() => { this.jobs.delete(key); this.controllers.delete(key); if (s.review.needed) this.arm(agent, Math.max(1000, cfg.coordinatorMinGapMs)); });
+      if (!controller.signal.aborted) { this.reportError(agent, 'coordinate', e); s.review.needed = true; this.arm(agent, Math.max(1000, cfg.coordinatorMinGapMs), 'coordinate'); }
+    }).finally(() => { this.jobs.delete(key); this.controllers.delete(key); if (s.review.needed) this.arm(agent, Math.max(1000, cfg.coordinatorMinGapMs), 'coordinate'); });
     this.jobs.set(key, job); return job;
   }
   async applyReady(agent, { manual = false, ids, mode = 'detail', ignoreCooldown = false, sourceCommandId } = {}) {
@@ -249,7 +269,7 @@ export class ContextPipeline {
   dispose(id) {
     if (!id) this.closed = true;
     for (const [key, c] of this.controllers) if (!id || key.startsWith(id + ':')) c.abort();
-    for (const [key, timer] of this.timers) if (!id || key === id) { clearTimeout(timer); this.timers.delete(key); }
+    for (const [key, timer] of this.timers) if (!id || key.startsWith(id + ':')) { clearTimeout(timer); this.timers.delete(key); }
     if (id) this.agents.delete(id); else this.agents.clear();
   }
 }

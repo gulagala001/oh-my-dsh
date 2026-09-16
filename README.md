@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.3.0-alpha.2"><img src="https://img.shields.io/badge/version-1.3.0--alpha.2-3478F6?style=flat-square" alt="Version 1.3.0-alpha.2" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.3.0-alpha.3"><img src="https://img.shields.io/badge/version-1.3.0--alpha.3-3478F6?style=flat-square" alt="Version 1.3.0-alpha.3" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.6--alpha.1-475569?style=flat-square" alt="DSH 0.1.6-alpha.1" /></a>
   <a href="#support"><img src="https://img.shields.io/badge/status-early_access-64748B?style=flat-square" alt="Early access" /></a>
 </p>
@@ -24,7 +24,7 @@
   <a href="#features">功能亮点</a> ·
   <a href="#computer-use">Computer Use</a> ·
   <a href="docs/usage.md">使用指南</a> ·
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.3.0-alpha.2">版本说明</a> ·
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.3.0-alpha.3">版本说明</a> ·
   <a href="https://github.com/gulagala001/oh-my-dsh/issues">反馈问题</a>
 </p>
 
@@ -40,12 +40,12 @@ Oh My DSH 把任务、上下文、摘要、电脑和监控放进同一个工作�
 
 ## 快速开始
 
-当前 **1.3.0-alpha.2** 为预发布版，使用 **DSH 0.1.6-alpha.1**。下面的安装命令固定到该版本；使用旧版 DSH 0.1.5-rc.1 时，请保留 [v1.1.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1)。升级宿主请沿用原来的安装方式、profile 和 `DSH_HOME`。
+当前 **1.3.0-alpha.3** 为预发布版，使用 **DSH 0.1.6-alpha.1**。下面的安装命令固定到该版本；使用旧版 DSH 0.1.5-rc.1 时，请保留 [v1.1.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1)。升级宿主请沿用原来的安装方式、profile 和 `DSH_HOME`。
 
 Oh My DSH 通过 **DSH 的插件管理器**安装。已有 **DSH 0.1.6-alpha.1 Web** 时，先停止服务，然后在终端或 PowerShell 中运行：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.3.0-alpha.2
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.3.0-alpha.3
 ```
 
 按原来的方式启动：
@@ -67,13 +67,15 @@ dsh web
 <details>
 <summary>源码下载与独立开发</summary>
 
-[1.3.0-alpha.2 源码 ZIP](https://github.com/gulagala001/oh-my-dsh/releases/download/v1.3.0-alpha.2/oh-my-dsh-v1.3.0-alpha.2.zip) 用于保存源码、手动部署或二次开发，包含已构建的界面。普通插件安装直接使用上面的命令即可。
+[1.3.0-alpha.3 源码 ZIP](https://github.com/gulagala001/oh-my-dsh/releases/download/v1.3.0-alpha.3/oh-my-dsh-v1.3.0-alpha.3.zip) 用于保存源码、手动部署或二次开发，包含已构建的界面。普通插件安装直接使用上面的命令即可。
 
-[从源码试用](docs/usage.md#本地开发或独立试用) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.3.0-alpha.2)
+[从源码试用](docs/usage.md#本地开发或独立试用) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.3.0-alpha.3)
 
 </details>
 
-## 1.3.0-alpha.2 更新
+## 1.3.0-alpha.3 更新
+
+修复预处理频率计数与中枢重试串扰，避免因历史积压连续调用；同时修复 Windows 上下文档案刷盘失败。已有会话保留原文和档案，旧频率计数会一次性校正。
 
 - **上下文档案**：后台生成事实摘要与详细文档，中枢选择保留、详细替换、简要替换或合并；请求边界应用已完成结果，原始事件仍可回查。
 - **私有与项目共享**：会话隔离仅查看自己的档案；项目共享按会话和事件时间展示摘要。全局背景由用户手填，旧自动记忆与状态提炼停止运行，旧数据保留。
@@ -82,7 +84,7 @@ dsh web
 
 升级前备份原 DSH 数据目录。上下文后台调用仍会产生用量，摘要不保证无损；请保留原始事件与必要的外部验证。
 
-[完整版本说明与下载](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.3.0-alpha.2) · [身份设置说明](docs/usage.md#自定义身份认知)
+[完整版本说明与下载](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.3.0-alpha.3) · [身份设置说明](docs/usage.md#自定义身份认知)
 
 <a id="features"></a>
 
@@ -175,7 +177,7 @@ Computer Use 由 [OpenCU](https://github.com/gulagala001/opencu) 提供，安装
 
 ## 平台与运行环境
 
-当前预发布版本为 **1.3.0-alpha.2**，适配 **DSH 0.1.6-alpha.1**。
+当前预发布版本为 **1.3.0-alpha.3**，适配 **DSH 0.1.6-alpha.1**。
 
 | 功能 | 当前支持 |
 | --- | --- |

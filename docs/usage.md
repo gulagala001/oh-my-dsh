@@ -2,7 +2,7 @@
 
 [返回项目首页](../README.md) · [安装](#安装到现有-dsh推荐) · [日常使用](#日常使用) · [Computer Use](#computer-use预览版) · [开发与验证](#开发与验证)
 
-当前预发布版本 **1.3.0-alpha.2**，适配 **DSH 0.1.6-alpha.1**，内置 **OpenCU 1.0.2**。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
+当前预发布版本 **1.3.0-alpha.3**，适配 **DSH 0.1.6-alpha.1**，内置 **OpenCU 1.0.2**。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
 ## 安装到现有 DSH（推荐）
 
@@ -11,7 +11,7 @@
 先停止当前 DSH Web，在终端或 PowerShell 中安装：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.3.0-alpha.2
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.3.0-alpha.3
 ```
 
 然后按原来的方式重新启动 DSH，例如：
@@ -29,7 +29,7 @@ dsh web
 <details>
 <summary>更新与卸载</summary>
 
-停止服务后，使用目标版本的 tag 安装，再按原来的方式启动。以上命令固定安装 1.3.0-alpha.2；如需跟随主分支，可去掉 `#v1.3.0-alpha.2`。从 1.1.1 升级时，先备份数据目录，并按原安装方式将宿主更新至 DSH 0.1.6-alpha.1；插件安装不会自动升级全局 DSH。
+停止服务后，使用目标版本的 tag 安装，再按原来的方式启动。以上命令固定安装 1.3.0-alpha.3；如需跟随主分支，可去掉 `#v1.3.0-alpha.3`。从 1.1.1 升级时，先备份数据目录，并按原安装方式将宿主更新至 DSH 0.1.6-alpha.1；插件安装不会自动升级全局 DSH。
 
 卸载：
 
@@ -154,6 +154,8 @@ node scripts/launch-macos.mjs
 | 频繁 | 16 | 16 | 1 | 15 秒 | 10 |
 | 适中 | 32 | 32 | 2 | 30 秒 | 20 |
 | 较少 | 48 | 48 | 3 | 60 秒 | 30 |
+
+频率按自上次成功触发以来的新事件累计，与待处理积压量分开。调用期间新到的事件留待下一次触发；空闲或手动触发也不会一次连续清空积压。中枢延迟重试不会启动预处理。
 
 不匹配这五项预设的现有配置显示为自定义；档位不修改模型、会话范围或 Trace。高级设置保留窗口、输出上限、空闲冲刷与电脑连接选项。
 
