@@ -1,9 +1,8 @@
 import { installPromptAdapter } from './cc-adaptation/adapter.mjs';
-import { MAIN_PERSONA, NOTE_GUIDE } from './prompts.mjs';
+import { MAIN_PERSONA } from './prompts.mjs';
 import { ReplacementCanvas as Canvas } from './context/host.mjs';
 import { registerContextRecall } from './context/recall.mjs';
 import { NOTE_DESCRIPTION } from './context/prompts.mjs';
-import { eventText, sessionEvents, substantive } from './hub.mjs';
 import { registerTasks } from './tasks.mjs';
 
 export const inject = ['trisoulX', 'systemPrompt', 'tools', 'llm', 'tokenMeter', 'sessions', 'sessionProjections'];
