@@ -143,7 +143,7 @@ Computer Use 由 [OpenCU](https://github.com/gulagala001/opencu) 提供，安装
 
 助手选择目标后，对话页内自动出现实时预览。拖动顶部标题栏可移动预览，点击卡片只放大查看，不改变操控目标或暂停助手。多个网页或应用以卡片堆叠；需要手动操作时，可单独停止助手，操作后再恢复控制。
 
-![对话页内的双窗口堆叠预览与右侧实时画面](docs/images/native-preview-stack.png)
+![对话页内的双窗口堆叠预览与右侧实时画面](vendor/opencu/docs/images/native-preview-stack.png)
 
 - **实时观察**：画面与助手光标同步显示；停止后仍可看图，也可选择独立弹出预览。
 - **浏览器协作**：紧凑地址栏与标签页、页面查找、历史记录、下载面板和外部浏览器打开；内置页面随侧栏实际重新排版。
@@ -164,7 +164,7 @@ Computer Use 由 [OpenCU](https://github.com/gulagala001/opencu) 提供，安装
 <summary>查看页面批注与样式预览</summary>
 
 <p align="center">
-  <img src="docs/images/page-annotation-style.png" width="760" alt="选择页面元素、调整样式并将真实预览加入草稿" />
+  <img src="vendor/opencu/docs/images/page-annotation-style.png" width="760" alt="选择页面元素、调整样式并将真实预览加入草稿" />
 </p>
 
 截图、元素上下文与说明加入现有草稿，由你检查后发送。临时样式预览本身不会修改源码。

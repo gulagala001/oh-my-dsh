@@ -1,7 +1,5 @@
-import { DEFAULT_IDENTITY } from '../cc-adaptation/identity.mjs';
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Menu } from '@deepseek-ai/dsh-client-ui-primitives';
-import { FREQUENCY_PRESETS as presets } from '../frequency.mjs';
 import { frameTokens, contextHistoryLayout } from './context-history.mjs';
 import css from './style.css';
 import shellCss from './shell.css';
@@ -9,6 +7,10 @@ import { ComputerIcon } from '#opencu/src/client/computer-icons.jsx';
 import { applyComputerUseClient, ComputerPane } from '#opencu/client-source';
 import { BrandMark } from './brand.jsx';
 import { whaleCss, whaleSvg } from './brand.mjs';
+import { createContextUI } from './context-client.mjs';
+
+export { CONTEXT_UI_VERSION as contextUIVersion } from './context-client.mjs';
+const { ContextSettings, ScopeChip, wrapWorkbench, applyStyle } = createContextUI(React);
 
 const api = async (path, value) => {
   const response = await fetch(`/trisoul-x/api${path}`, value === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
@@ -19,22 +21,6 @@ const api = async (path, value) => {
 const suffix = id => `?${id ? `session=${encodeURIComponent(id)}` : ''}`;
 const fmt = n => Number(n || 0).toLocaleString();
 const kindName = { prepare: '上下文预处理', coordinate: '替换中枢', main: '主执行', subagent: '子代理', background: '记忆消化', recall: '记忆检索', state: '状态提炼', curation: '记忆整理', surgeon: '上下文整理', probeAsk: '探针出题', probeAnswer: '探针作答' };
-const scopeName = { global: '全局', cross: '跨项目', project: '本项目' };
-const projectLabel = p => p?.startsWith('session:') ? `会话 ${p.slice(-8)}` : p;
-
-function MemoryScopeChip({ sessionId, useSessions }) {
-  const [state, setState] = useState(null), [open, setOpen] = useState(false), [error, setError] = useState('');
-  const current = useSessions(s => s.byId[sessionId]);
-  const load = useCallback(async () => { try { setState(await api('/scope' + suffix(sessionId))); setError(''); } catch (e) { setError(e.message); } }, [sessionId]);
-  useEffect(() => { void load(); setOpen(false); }, [load, current?.blank, current?.running]);
-  const labels = { full: '完全版', project: '项目级', session: '会话级' };
-  const pick = async scope => { setOpen(false); try { setState(await api('/scope' + suffix(sessionId), { scope })); setError(''); } catch (e) { setError(e.message); await load(); } };
-  if (!state) return null;
-  const locked = state.locked || current?.blank === false;
-  const chip = <button type="button" className="tx-scope-chip" title={error || (locked ? '本会话已绑定记忆范围' : '选择新会话的记忆范围')} aria-label={'记忆范围：' + labels[state.scope]} aria-haspopup={locked ? undefined : 'menu'} aria-expanded={locked ? undefined : open} onClick={() => { if (!locked) { void load(); setOpen(!open); } }}><Icon name="memory" size={13}/><strong>{labels[state.scope]}</strong>{!locked && <span>▾</span>}</button>;
-  return locked ? chip : <Menu open={open} anchor={chip} compact portal side="top" selectedId={state.scope} items={Object.entries(labels).map(([id, label]) => ({ id, label }))} onSelect={pick} onClose={() => setOpen(false)}/>;
-}
-
 function BetterTodoChip({ sessionId, useSessions }) {
   const [state, setState] = useState(null), [open, setOpen] = useState(false), [saving, setSaving] = useState(false), [error, setError] = useState('');
   const [notice, setNotice] = useState(false), dialog = useRef(null), noticeId = useId();
@@ -127,72 +113,6 @@ function Alert({ children, error }) { return children ? <div className={cx('tx-a
 function Fold({ title, subtitle, children, count, open = false }) {
   return <details className="tx-fold" open={open || undefined}><summary><div><strong>{title}</strong>{subtitle && <small>{subtitle}</small>}</div>{count != null && <Badge>{count}</Badge>}<Icon name="chevron"/></summary><div className="tx-fold-body">{children}</div></details>;
 }
-function Toggle({ label, hint, checked, onChange }) {
-  return <label className="tx-toggle-row"><span><strong>{label}</strong>{hint && <small>{hint}</small>}</span><input type="checkbox" role="switch" checked={checked} onChange={e => onChange(e.target.checked)}/></label>;
-}
-function Numbers({ fields, config, onChange }) {
-  return <div className="tx-form-grid">{fields.map(([key, label, min = 0, step = 1, max]) => <label className="tx-field" key={key}><span>{label}</span><input type="number" min={min} step={step} max={max} value={config[key] ?? 0} onChange={e => onChange(key, Number(e.target.value))}/></label>)}</div>;
-}
-function RouteFields({ route, directory, onChange }) {
-  const list = React.useId();
-  return <div className="tx-form-grid"><label className="tx-field"><span>提供方</span><select value={route.provider} onChange={e => onChange({ ...route, provider: e.target.value, model: '' })}><option value="">跟随主模型</option>{directory.map(p => <option key={p.id} value={p.id}>{p.name || p.id}</option>)}</select></label>
-    <label className="tx-field"><span>模型</span><input list={list} value={route.model} placeholder="跟随主模型" onChange={e => onChange({ ...route, model: e.target.value })}/><datalist id={list}>{(directory.find(p => p.id === route.provider)?.models || []).map(m => <option key={m.id} value={m.id}/>)}</datalist></label>
-    <label className="tx-field"><span>推理强度</span><select value={route.effort || 'off'} onChange={e => onChange({ ...route, effort: e.target.value })}><option value="off">关闭（模型支持时）</option><option value="inherit">提供方默认</option></select></label>
-    <label className="tx-field"><span>温度</span><input type="number" min="0" max="2" step="0.1" value={route.temperature} onChange={e => onChange({ ...route, temperature: Number(e.target.value) })}/></label>
-  </div>;
-}
-const routeModeOf = c => (c.backgroundMode === 'unified' ? [c.unifiedBackground] : [c.background, c.canvas, c.surgeon]).every(r => !r?.provider && !r?.model && (!r?.effort || r.effort === 'off') && (r?.temperature ?? 0.7) === 0.7) ? 'follow' : c.backgroundMode;
-const advancedGroups = [
-  ['记忆消化与整理', '何时提取记忆、整理重复内容', [['digestEvery', '每批消化事件数', 1], ['flushIdleMs', '空闲间隔 · 毫秒（0 关闭）'], ['curateMinGapMs', '整理最短间隔 · 毫秒'], ['curateEvery', '每几批整理一次（0 自动）']], [['digestBatchMax', '批次事件上限'], ['digestEventChars', '单事件字符上限'], ['digestMaxTokens', '消化输出 Token 上限'], ['catchupMax', '恢复时补消化事件上限'], ['contextMemories', '记忆表条目上限'], ['recallMaxTokens', '检索输出 Token 上限'], ['curateLimit', '整理每轮条目上限'], ['curateOpsMax', '每轮操作数上限'], ['curateMaxTokens', '整理输出 Token 上限']]],
-  ['任务记忆', '补注数量、文档更新方式与频率', [['injectLimit', '开场条目数（0 不限）'], ['injectBatch', '每次补注条目数', 1], ['injectMaxPerSession', '每会话注入次数'], ['injectPickTimeoutMs', '首次检索等待 · 毫秒'], ['supplementMinSteps', '文档更新最短步数']]],
-  ['工作状态', '状态提炼的重试与资源上限', [['stateFailCooldownSteps', '失败后间隔步数'], ['stateFailLimit', '连续失败暂停压缩（0 关闭）']], [['stateBatchMax', '批次事件上限'], ['statePinnedMax', '固定约束条目上限'], ['stateEventChars', '单事件字符上限'], ['stateMaxTokens', '输出 Token 上限']]],
-  ['上下文整理', '保留范围、压缩条件与失败重试', [['keepTailEvents', '保留最近事件数', 2], ['minRegionEvents', '区间最少事件数', 1], ['surgeryFailCooldownSteps', '失败后间隔步数'], ['shadowStale', '旧快照清理数量（0 关闭）'], ['thresholdRatio', '窗口压力比例', 0.1, 0.05, 0.95]], [['thresholdChars', '固定字符阈值（0 使用比例）'], ['thresholdFallbackChars', '窗口未知时的字符阈值'], ['surgeonMaxTokens', '输出 Token 上限']]],
-  ['压缩检查', '遗漏事实的检查与补记方式', [], [['probeSourceChars', '参考材料字符上限'], ['probeMaxTokens', '输出 Token 上限'], ['probePatchChars', '材料补记字符上限']]],
-];
-function Settings() {
-  const [config, setConfig] = useState(null), [directory, setDirectory] = useState([]), [status, setStatus] = useState(''), [failed, setFailed] = useState(false);
-  const [page, setPage] = useState('basic'), [routing, setRouting] = useState('follow'), [custom, setCustom] = useState(false), [saving, setSaving] = useState(false);
-  const saved = useRef(null);
-  useEffect(() => { api('/state').then(s => { saved.current = s.config; setConfig(s.config); setRouting(routeModeOf(s.config)); setDirectory(s.directory); }).catch(e => { setStatus(e.message); setFailed(true); }); }, []);
-  const field = (key, value) => { setConfig(c => ({ ...c, [key]: value })); setStatus(''); };
-  if (!config) return <div className="tx-app"><Header icon="settings" title="偏好设置"/><Empty title={failed ? '暂时无法读取设置' : '正在读取设置'}>{status}</Empty></div>;
-  const dirty = JSON.stringify(config) !== JSON.stringify(saved.current);
-  const selectedPreset = Object.entries(presets).find(([, values]) => Object.entries(values).every(([key, value]) => config[key] === value))?.[0];
-  const save = async e => {
-    e.preventDefault(); setSaving(true); setFailed(false);
-    try { const patch = Object.fromEntries(Object.entries(config).filter(([key, value]) => key !== 'dataDir' && JSON.stringify(value) !== JSON.stringify(saved.current[key]))); const next = await api('/settings', patch); saved.current = next; setConfig(next); setStatus('设置已保存'); }
-    catch (e) { setFailed(true); setStatus(e.message); } finally { setSaving(false); }
-  };
-  const selectRoute = mode => { setRouting(mode); if (mode === 'follow') { field('backgroundMode', 'unified'); field('unifiedBackground', { provider: '', model: '', temperature: 0.7, effort: 'off' }); } else field('backgroundMode', mode); };
-  return <form className="tx-app tx-settings" onSubmit={save}>
-    <Header icon="settings" title="偏好设置" subtitle="模型、记忆与上下文"/>
-    <Tabs label="设置分类" value={page} onChange={setPage} items={[[ 'basic', '常用' ], [ 'advanced', '高级' ]]}/>
-    <div className="tx-body">{page === 'basic' ? <>
-      <section className="tx-section"><div className="tx-section-heading"><h3>身份认知</h3><Action quiet disabled={saving || config.identityPrompt === DEFAULT_IDENTITY} onClick={() => field('identityPrompt', DEFAULT_IDENTITY)}>恢复默认身份</Action></div>
-        <label className="tx-field"><span>身份提示词</span><textarea aria-label="身份提示词" rows="6" value={config.identityPrompt ?? DEFAULT_IDENTITY} onChange={e => field('identityPrompt', e.target.value)} placeholder="描述助手是谁，以及它主要帮助你做什么"/></label>
-        <p className="tx-help">应用于所有 Oh My DSH 主对话，保存后从下一次模型请求生效。留空可移除身份描述。</p>
-      </section>
-      <section className="tx-section"><div className="tx-section-heading"><h3>后台模型</h3><span className="tx-muted">主模型在 DSH 中设置</span></div>
-        <Segments label="后台模型配置方式" value={routing} onChange={selectRoute} items={[[ 'follow', '跟随主模型' ], [ 'unified', '统一配置' ], [ 'separate', '分别配置' ]]}/>
-        {routing === 'follow' ? <div className="tx-inline-note"><Icon name="layers"/>记忆、状态与整理使用当前对话的模型。</div> : routing === 'unified' ? <div className="tx-route-fields"><RouteFields route={config.unifiedBackground} directory={directory} onChange={r => field('unifiedBackground', r)}/></div> : <div className="tx-route-list">{[['background', '记忆'], ['canvas', '状态与检查'], ['surgeon', '上下文整理']].map(([key, label]) => <Fold key={key} title={label} subtitle={config[key].model || '跟随主模型'}><RouteFields route={config[key]} directory={directory} onChange={r => field(key, r)}/></Fold>)}</div>}
-      </section>
-      <section className="tx-section"><div className="tx-section-heading"><h3>默认记忆范围</h3><Badge>新会话</Badge></div><div className="tx-choice-grid" role="group" aria-label="默认记忆范围">{[['full', '完全版', '全局与项目记忆'], ['project', '项目级', '仅使用本项目记忆'], ['session', '会话级', '仅在当前会话中使用']].map(([id, title, hint]) => <button type="button" key={id} aria-pressed={config.memoryScope === id} onClick={() => field('memoryScope', id)}><span className="tx-choice-mark">{config.memoryScope === id ? <Icon name="check" size={13}/> : null}</span><strong>{title}</strong><small>{hint}</small></button>)}</div><p className="tx-help">也可在输入区选择，开始对话后绑定到该会话。</p></section>
-      <section className="tx-section"><div className="tx-section-heading"><h3>状态、记忆与整理频率</h3></div><Segments label="更新频率" value={custom || !selectedPreset ? 'custom' : selectedPreset} onChange={id => { setCustom(id === 'custom'); if (presets[id]) { setConfig(c => ({ ...c, ...presets[id] })); setStatus(''); } }} items={[[ 'always', '频繁' ], [ 'medium', '适中' ], [ 'slow', '较少' ], [ 'custom', '自定义' ]]}/>
-        {custom || !selectedPreset ? <Numbers config={config} onChange={field} fields={[[ 'stateEvery', '状态提炼 · 事件数', 1 ], [ 'digestEvery', '记忆消化 · 事件数', 1 ], [ 'supplementMinSteps', '记忆文档 · 最短步数' ], [ 'surgeryCooldownSteps', '上下文整理 · 间隔步数' ], [ 'minRegionTokens', '最小整理区间 · Token', 1 ]]}/> : <p className="tx-help">状态每 {config.stateEvery} 条事件提炼，记忆文档至少间隔 {config.supplementMinSteps} 步更新。{({ always: '更及时地跟进进展。', medium: '积累一段进展后再更新。', slow: '减少后台调用与文档更新。' })[selectedPreset]}</p>}
-        <p className="tx-help">一条用户消息、模型回复或工具结果各算一条事件；一步指一次主模型调用。档位同时调整记忆消化、状态提炼、文档更新和上下文整理。</p>
-      </section>
-      <section className="tx-section tx-switches"><Toggle label="持续更新工作状态" hint="记录用户约束与当前任务进展" checked={config.stateEnabled} onChange={v => field('stateEnabled', v)}/><Toggle label="检查压缩后的事实" hint="发现遗漏时保留补记，供后续整理使用" checked={config.probeEnabled} onChange={v => field('probeEnabled', v)}/></section>
-    </> : <><p className="tx-help tx-advanced-intro">通常保留默认值即可。展开某一项，再调整对应参数。</p>{advancedGroups.map(([title, hint, fields, limits]) => <Fold key={title} title={title} subtitle={hint}>
-      {title === '任务记忆' && <label className="tx-field"><span>文档更新方式</span><select value={config.supplementMode} onChange={e => field('supplementMode', e.target.value)}><option value="renew">按版本追加</option><option value="rewrite">原位更新</option><option value="append">逐批追加</option></select></label>}
-      {title === '压缩检查' && <label className="tx-field"><span>遗漏事实如何补记</span><select value={config.probePatch} onChange={e => field('probePatch', e.target.value)}><option value="ride">随下次整理写入</option><option value="qa">立即补入问答</option><option value="material">立即补入参考材料</option></select></label>}
-      <Numbers fields={fields} config={config} onChange={field}/>
-      {title === '上下文整理' && <div className="tx-switches">{[['semanticCompaction', '按消化结果选择区间'], ['mergeCheckpoints', '合并较早工作纪要'], ['requireShorter', '整理后应短于原材料'], ['userRetirement', '允许压缩较早用户消息']].map(([key, label]) => <Toggle key={key} label={label} checked={config[key]} onChange={v => field(key, v)}/>)}</div>}
-      {limits && <details className="tx-subfold"><summary>可选资源上限</summary><p className="tx-help">长度、条目和输出上限为 0 时不限制。</p><Numbers fields={limits} config={config} onChange={field}/></details>}
-    </Fold>)}<Fold title="后台作业超时" subtitle="控制单次后台调用的最长等待时间"><Numbers fields={[[ 'jobTimeoutMs', '超时 · 毫秒（0 不限制）' ]]} config={config} onChange={field}/></Fold></>}
-    </div><footer className="tx-savebar"><span className={failed ? 'tx-error' : 'tx-muted'} role="status">{status || (dirty ? '有未保存的更改' : '更改后保存即可生效')}</span><div className="tx-actions"><Action quiet disabled={!dirty || saving} onClick={() => { setConfig(saved.current); setRouting(routeModeOf(saved.current)); setStatus(''); }}>撤销</Action><Action type="submit" primary disabled={!dirty || saving} icon={saving ? 'clock' : 'check'}>{saving ? '保存中' : '保存设置'}</Action></div></footer>
-  </form>;
-}
-
 function Evidence({ link }) {
   const verdict = link.kind === 'test' ? link.lastRun ? link.lastRun.timedOut ? '超时' : link.lastRun.pass ? '通过' : '未通过' : '未运行' : '文字证据';
   return <div className="tx-evidence"><div className="tx-row-between"><strong>{link.path || (link.kind === 'test' ? '测试验证' : '文字记录')}</strong><Badge tone={link.lastRun?.pass ? 'good' : link.lastRun ? 'warn' : undefined}>{verdict}</Badge></div>
@@ -229,42 +149,6 @@ function ContextPanel({ sessionId, useTabInfo }) {
         {context?.probeNotes?.length > 0 && <Fold title="待写入纪要的补记" count={context.probeNotes.length}>{context.probeNotes.map((line, i) => <div className="tx-note-line" key={i}>{line}</div>)}</Fold>}
       </>}
     </div>
-  </div>;
-}
-
-const actionNames = { injections: '记忆注入', recalls: '记忆召回', rawRecalls: '原文回捞', digests: '记忆消化', digestErrors: '消化失败', digestDeferred: '失败批次暂存', curations: '记忆整理', curationErrors: '整理失败', workdocVersions: '文档更新', states: '状态更新', stateErrors: '状态失败', surgeries: '上下文整理', surgeryErrors: '压缩失败', retrievalFallbacks: '检索回退', injectionErrors: '补注失败', probePassed: '事实检查通过', probeFailed: '事实待补记', probeErrors: '检查调用失败', staleVersions: '旧快照清理', digestFallbacks: '采用消化底稿' };
-function MemoryPanel({ sessionId, useTabInfo }) {
-  const { tab } = useTabInfo();
-  const [data, setData] = useState({ items: [], projects: [], trace: [] }), [edit, setEdit] = useState(null), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
-  const [view, setView] = useState('session'), [query, setQuery] = useState(''), [scope, setScope] = useState('all'), [project, setProject] = useState('');
-  const [filters, setFilters] = useState(false), [history, setHistory] = useState(false), [touched, setTouched] = useState(false), [selecting, setSelecting] = useState(false), [selected, setSelected] = useState([]), [expanded, setExpanded] = useState([]);
-  const key = `${sessionId}:${view}`, current = useRef(key); current.current = key;
-  const load = useCallback(async () => { try { const d = await api('/memories' + suffix(sessionId) + '&view=' + view); if (current.current === key) { setData(d); setError(''); } } catch (e) { if (current.current === key) setError(e.message); } }, [sessionId, view, key]);
-  useEffect(() => { setEdit(null); setSelected([]); setSelecting(false); setProject(''); }, [sessionId]);
-  useEffect(() => { if (!tab.visible) return; let active = true, timer; const tick = async () => { await load(); if (active) timer = setTimeout(tick, 2500); }; void tick(); return () => { active = false; clearTimeout(timer); }; }, [load, tab.visible]);
-  const save = async e => { e.preventDefault(); setBusy(true); try { await api('/memories' + suffix(sessionId), { ...edit, key: edit.key.trim() || edit.text.trim().replace(/\s+/g, ' ').slice(0, 40), op: edit.id ? 'update' : 'add', target: edit.id || '', project: edit.project || data.scope.project }); setEdit(null); await load(); setNotice('记忆已保存'); } catch (e) { setError(e.message); } finally { setBusy(false); } };
-  const change = async (op, ids) => { setBusy(true); try { for (const id of ids) await api('/memories' + suffix(sessionId), { op, target: id, text: '用户在记忆面板移入历史' }); setSelected([]); await load(); setNotice(op === 'restore' ? '已恢复所选记忆' : op === 'delete' ? '已永久删除所选版本' : '已移入历史，可随时恢复'); } catch (e) { setError(e.message); } finally { setBusy(false); } };
-  const curate = async () => { setBusy(true); try { const r = await api('/curate' + suffix(sessionId), {}); setNotice(r.queued ? '整理已安排，结果会自动更新' : '当前没有待整理的记忆'); await load(); } catch (e) { setError(e.message); } finally { setBusy(false); } };
-  const visible = data.items.filter(m => (history || (!m.retired && !m.supersededBy)) && (!touched || m.touched) && (scope === 'all' || m.scope === scope) && (!project || m.project === project) && (!query || [m.text, m.key, m.project].join(' ').toLowerCase().includes(query.toLowerCase())));
-  const active = data.items.filter(m => !m.retired && !m.supersededBy), filterCount = Number(history) + Number(touched) + Number(scope !== 'all') + Number(Boolean(project));
-  return <div className="tx-app"><Header icon="memory" title="记忆" subtitle="保留值得带到下一次工作的内容" actions={<Action primary icon="plus" disabled={!data.scope} onClick={() => { setError(''); setEdit({ scope: 'project', project: data.scope.project, key: '', text: '' }); }}>新增</Action>}/>
-    <div className="tx-memory-tools"><div className="tx-search"><Icon name="search"/><input aria-label="搜索记忆" placeholder="搜索记忆…" value={query} onChange={e => setQuery(e.target.value)}/>{query && <Action quiet icon="close" aria-label="清除搜索" onClick={() => setQuery('')}/>}</div>
-      <div className="tx-row-between"><Segments label="记忆查看范围" value={view} onChange={v => { setView(v); setSelected([]); setProject(''); }} items={[[ 'session', '当前范围' ], [ 'all', '整个记忆库' ]]}/><Action quiet icon="filter" aria-expanded={filters} onClick={() => setFilters(!filters)}>筛选{filterCount ? ` ${filterCount}` : ''}</Action></div>
-      {filters && <div className="tx-filter-box"><div className="tx-form-grid"><label className="tx-field"><span>层级</span><select value={scope} onChange={e => setScope(e.target.value)}><option value="all">全部层级</option>{Object.entries(scopeName).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>{view === 'all' && <label className="tx-field"><span>所属项目</span><select value={project} onChange={e => setProject(e.target.value)}><option value="">全部项目</option>{data.projects.map(p => <option key={p} value={p}>{projectLabel(p)}</option>)}</select></label>}</div><label className="tx-check"><input type="checkbox" checked={history} onChange={e => setHistory(e.target.checked)}/>包含历史版本</label><label className="tx-check"><input type="checkbox" checked={touched} onChange={e => setTouched(e.target.checked)}/>仅本会话使用过</label></div>}
-      <div className="tx-list-toolbar"><span>{query || filterCount ? `${visible.length} 条匹配` : `${active.length} 条有效记忆`}</span><div className="tx-actions"><Action quiet onClick={() => { setSelecting(!selecting); setSelected([]); }}>{selecting ? '取消选择' : '选择'}</Action><Action quiet icon="refresh" aria-label="刷新记忆" onClick={load}/><Action quiet disabled={!sessionId || data.scope?.mode === 'session' || busy} onClick={curate}>整理</Action></div></div>
-    </div>
-    <div className="tx-body tx-memory-body"><Alert error>{error}</Alert><Alert>{notice}</Alert>{!visible.length && <Empty icon="memory" title={query || filterCount ? '没有找到匹配的记忆' : '从一条值得记住的事开始'}>{query || filterCount ? '试试其他关键词，或调整筛选条件。' : '工作中形成的稳定事实会逐渐出现在这里，也可以手动添加。'}</Empty>}
-      {visible.map(m => { const archived = m.retired || m.supersededBy, open = expanded.includes(m.id); return <article className={cx('tx-memory-item', archived && 'tx-archived', selected.includes(m.id) && 'tx-selected-item')} key={m.id}>
-        <div className="tx-memory-meta"><div className="tx-actions">{selecting && <input type="checkbox" aria-label={'选择 ' + m.key} checked={selected.includes(m.id)} onChange={e => setSelected(e.target.checked ? [...selected, m.id] : selected.filter(id => id !== m.id))}/>}<Badge tone={archived ? undefined : 'soft'}>{m.project?.startsWith('session:') ? '会话' : scopeName[m.scope]}</Badge><span className="tx-memory-key" title={m.key}>{m.key}</span></div>{archived && <Badge>{m.retired ? '已退役' : '旧版本'}</Badge>}</div>
-        <p className={cx('tx-memory-text', m.text.length > 240 && !open && 'tx-clamped')}>{m.text}</p>{m.text.length > 240 && <button type="button" className="tx-text-button" onClick={() => setExpanded(open ? expanded.filter(id => id !== m.id) : [...expanded, m.id])}>{open ? '收起' : '展开全文'}</button>}
-        <div className="tx-memory-bottom"><span>{m.source === 'user' ? '手动记录' : m.source === 'curate' ? '整理更新' : '自动记忆'} · {shortDate(m.at)}</span><div className="tx-actions">{!archived ? <><Action quiet aria-label={'编辑 ' + m.key} icon="edit" onClick={() => { setError(''); setEdit(m); }}/><Action quiet disabled={busy} onClick={() => change('retire', [m.id])}>移入历史</Action></> : <Action quiet disabled={busy} onClick={() => change('restore', [m.id])}>恢复</Action>}</div></div>
-        <details className="tx-memory-details"><summary>使用与版本</summary><div className="tx-detail-grid"><span>注入 / 召回</span><strong>{m.usage?.injected || 0} / {m.usage?.recalled || 0}</strong><span>当前范围可见</span><strong>{m.visible ? '是' : '否'}</strong></div>{m.project && <p className="tx-path tx-help">{projectLabel(m.project)}</p>}{m.previous && <p className="tx-help">包含上一版本记录，可在历史版本中查看。</p>}{archived && <Action quiet className="tx-danger" disabled={busy} onClick={() => change('delete', [m.id])}>永久删除此版本</Action>}</details>
-      </article>; })}
-      <div className="tx-memory-footer"><Fold title="记忆库详情" subtitle="使用情况与分片整理记录">{data.health && <><div className="tx-detail-grid"><span>有效 / 已退役</span><strong>{data.health.active} / {data.health.retired}</strong><span>历史版本</span><strong>{data.health.versions}</strong><span>尚未使用</span><strong>{data.health.unused}</strong><span>当前可见字符</span><strong>{fmt(data.health.chars)}</strong><span>跨项目候选组</span><strong>{data.health.promotionGroups}</strong></div>{Object.entries(data.health.shards.lastAt).map(([shard, at]) => <div className="tx-shard" key={shard}><strong>{shard.startsWith('project:') ? projectLabel(shard.slice(8)) : scopeName[shard]}</strong><span>{shortDate(at)} · 游标 {data.health.shards.cursors[shard] || 0}</span></div>)}</>}</Fold>
-      <Fold title="本会话的记忆活动" count={data.trace.length}>{data.trace.slice().reverse().map((e, i) => <div className="tx-trace-row" key={i}><div><strong>{actionNames[e.name] || e.name}</strong><span>{shortDate(e.at)}{e.items != null ? ` · ${e.items} 条` : ''}</span></div>{e.query && <p>{e.query}</p>}{e.error && <p className="tx-error">{e.error}</p>}</div>)}</Fold></div>
-    </div>
-    {selecting && selected.length > 0 && <footer className="tx-batchbar"><strong>已选 {selected.length} 条</strong><div className="tx-actions"><Action quiet disabled={busy} onClick={() => change('restore', selected)}>恢复</Action><Action disabled={busy} onClick={() => change('retire', selected)}>移入历史</Action></div></footer>}
-    {edit && <form className="tx-editor" onSubmit={save}><Header icon="memory" title={edit.id ? '编辑记忆' : '新增记忆'} subtitle="记录清楚、稳定、可复用的事实" actions={<Action quiet icon="close" aria-label="关闭记忆编辑" disabled={busy} onClick={() => setEdit(null)}/>}/><div className="tx-body"><Alert error>{error}</Alert><label className="tx-field"><span>记忆内容</span><textarea rows="8" required autoFocus placeholder="需要记住什么？" value={edit.text} onChange={e => setEdit({ ...edit, text: e.target.value })}/></label><label className="tx-field"><span>记忆范围</span><select value={edit.scope} onChange={e => setEdit({ ...edit, scope: e.target.value })}>{Object.entries(scopeName).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label><Fold title="更多属性" subtitle="名称与所属项目"><label className="tx-field"><span>名称（可选）</span><input value={edit.key} placeholder="默认使用内容开头" onChange={e => setEdit({ ...edit, key: e.target.value })}/></label>{edit.scope === 'project' && (edit.project?.startsWith('session:') ? <p className="tx-help">所属：{projectLabel(edit.project)}</p> : <label className="tx-field"><span>所属项目</span><input required value={edit.project || ''} onChange={e => setEdit({ ...edit, project: e.target.value })}/></label>)}</Fold></div><footer className="tx-savebar"><span className="tx-muted">保存后即可用于后续工作</span><div className="tx-actions"><Action quiet disabled={busy} onClick={() => setEdit(null)}>取消</Action><Action primary type="submit" disabled={busy} icon="check">{busy ? '保存中' : '保存记忆'}</Action></div></footer></form>}
   </div>;
 }
 
@@ -329,11 +213,10 @@ export function apply(ctx) {
   const openPanel = section => ctx.sidebarRight.openTab('trisoul-x-workbench', { params: { section } });
   const sections = [
     ['tasks', '任务', 'context', ContextPanel],
-    ['memory', '记忆', 'memory', MemoryPanel],
     ['computer', '电脑', 'computer', ComputerPane],
     ['monitor', '监控', 'monitor', Monitor],
   ];
-  function Workbench({ initialSection = 'tasks', ...props }) {
+  function BaseWorkbench({ initialSection = 'tasks', ...props }) {
     const { tab } = props.useTabInfo();
     const section = sections.some(([id]) => id === tab.navigation?.params?.section) ? tab.navigation.params.section : initialSection;
     return <div className="tx-workbench">
@@ -344,6 +227,13 @@ export function apply(ctx) {
         <Component {...props} useTabInfo={() => { const info = props.useTabInfo(); return { ...info, tab: { ...info.tab, visible: info.tab.visible && section === id } }; }} conversation={ctx.get('conversation')}/>
       </section>)}
     </div>;
+  }
+  // Compose the active panels directly; no registration proxy or patched bundle.
+  const workbenches = Object.fromEntries(['tasks', 'memory', 'computer', 'monitor'].map(initial =>
+    [initial, wrapWorkbench(BaseWorkbench, initial)]));
+  function Workbench({ initialSection = 'tasks', ...props }) {
+    const Component = workbenches[initialSection] || workbenches.tasks;
+    return <Component {...props}/>;
   }
   const { ComputerEntry } = applyComputerUseClient(ctx, { integrated: true, openPanel, renderPane: props => <Workbench {...props} initialSection="computer"/> });
   function ComposerDock(props) {
@@ -382,9 +272,9 @@ export function apply(ctx) {
     return () => { titleObserver.disconnect(); if (document.title === brandedTitle) document.title = hostTitle; icon.remove(); tag.remove(); document.documentElement.classList.remove('trisoul-shell'); };
   });
   for (const [seat, Component] of [['sidebar.brand.mark', BrandMark], ['sidebar.brand.name', () => <strong className="tx-wordmark">Oh My <span>DSH</span></strong>], ['conversation.hero.brand.mark', () => <BrandMark size={64}/>]]) ctx.slots.inject(seat, () => ctx.slots.register({ name: seat }, Component));
-  ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'trisoul-x', order: 16, label: () => 'Oh My DSH' }, Settings));
+  ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'trisoul-x', order: 16, label: () => 'Oh My DSH' }, ContextSettings));
   ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register({ name: 'conversation.composer.dock', id: 'trisoul-x-tools', order: 25 }, ComposerDock));
-  ctx.slots.inject('conversation.input.left', () => ctx.slots.register({ name: 'conversation.input.left', id: 'trisoul-memory-scope', order: 50 }, MemoryScopeChip));
+  ctx.slots.inject('conversation.input.left', () => ctx.slots.register({ name: 'conversation.input.left', id: 'trisoul-memory-scope', order: 50 }, ScopeChip));
   ctx.slots.inject('conversation.input.right', () => ctx.slots.register({ name: 'conversation.input.right', id: 'trisoul-better-todo', order: 100 }, BetterTodoChip));
   const workbenchId = 'trisoul_x/trisoul-x-workbench';
   ctx.effect(() => ctx.sidebarRightTabs.register({ id: workbenchId, kind: 'trisoul-x-workbench', title: () => '工作台', guide: [{ order: 5, title: () => '工作台', description: () => '任务、记忆、电脑与运行监控', icon: props => <Icon name="context" {...props}/> }] }));
@@ -399,4 +289,5 @@ export function apply(ctx) {
     ctx.effect(() => ctx.sidebarRightTabs.register({ id, kind, title: () => title, guide: [] }));
     ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({ name: 'sidebar.right.pane.tab', key: id }, props => <Workbench {...props} initialSection={initialSection}/>));
   }
+  applyStyle(ctx);
 }

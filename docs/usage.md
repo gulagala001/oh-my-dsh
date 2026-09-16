@@ -177,7 +177,7 @@ Computer Use 的实现与平台测试位于 [OpenCU](https://github.com/gulagala
 | 页面与素材导出 | 保存当前页 MHTML 快照及已加载的图片、字体、样式和视频资源，结果作为持久会话附件。 |
 | WebMCP | 在兼容的 Chromium 153+ 中，发现并调用网页公开的工具；没有页面工具时仍可正常操控网页。 |
 
-![Computer Use：对话页内双窗口堆叠预览与右侧实时画面](images/native-preview-stack.png)
+![Computer Use：对话页内双窗口堆叠预览与右侧实时画面](../vendor/opencu/docs/images/native-preview-stack.png)
 
 *多个目标可同时保留实时预览；点击后层卡片可将其置前，停止助手后仍可观察。*
 
@@ -253,7 +253,7 @@ Computer Use 截图与「读取图片」的缩略图在当前页面打开大图�
 <details>
 <summary>窗口分享、页面批注与样式预览</summary>
 
-![页面批注：选择元素、填写样式并将真实预览加入草稿](images/page-annotation-style.png)
+![页面批注：选择元素、填写样式并将真实预览加入草稿](../vendor/opencu/docs/images/page-annotation-style.png)
 
 输入区的 **分享窗口** 图标可以把所选 Windows／Mac 窗口的截图和可访问性文字加入当前草稿，再由你检查并发送。截图和文字复用 DSH 的附件保存、删除和会话管理；分享不取得输入控制权，不改变助手当前目标或已有草稿。窗口重启、关闭和取消会准确返回失败。请通过输入区的手动选择入口指定要分享的窗口。
 

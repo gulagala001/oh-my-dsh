@@ -32,3 +32,7 @@ data/
 /vendor/opencu/native/computer-use/windows/desktop/obj/
 
 /.trisoulx-migration/
+
+# Local upgrade snapshots; never distribute user sessions or machine settings.
+/.context-upgrade/
+/.context-ui-upgrade/

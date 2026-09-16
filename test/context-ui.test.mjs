@@ -1,8 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CONTEXT_FREQUENCY_PRESETS, contextFrequencyOf, contextFrequencyPatch, contextSettingsPatch, contextRouteMode, CONTEXT_CSS } from '../src/client/context-client.mjs';
+import { CONTEXT_FREQUENCY_PRESETS, contextFrequencyOf, contextFrequencyPatch, contextSettingsPatch, contextRouteMode, CONTEXT_CSS, createContextUI } from '../src/client/context-client.mjs';
 import { contextConfig } from '../src/context/pipeline.mjs';
-import { updateContextClientBundle } from '../scripts/context-client-bundle.mjs';
 
 test('three presets have only live settings and each passes runtime configuration validation', () => {
   const keys = ['digestEvery', 'digestWindow', 'coordinatorEvery', 'coordinatorMinGapMs', 'surgeryCooldownSteps'];
@@ -38,19 +37,10 @@ test('route detection keeps customized efforts and providers rather than display
   assert.equal(contextRouteMode({ backgroundMode: 'unified', unifiedBackground: { effort: 'high' } }), 'unified');
   assert.equal(contextRouteMode({ backgroundMode: 'unified', unifiedBackground: { effort: 'off', temperature: .7 } }), 'follow');
 });
-test('bundle update replaces one old adapter and is byte-idempotent', () => {
-  const original = 'window.__ModuleLoader__.load({factory:(require)=>{var module={exports:{}};return module.exports;}});';
-  const first = updateContextClientBundle(original, 'export const VALUE=1;\nexport function wrapContextClient(x){return x;}');
-  const source = 'export const VALUE=2;\nexport function wrapContextClient(x){return x;}';
-  const next = updateContextClientBundle(first, source);
-  assert.match(next, /const VALUE=2/); assert.doesNotMatch(next, /const VALUE=1/);
-  assert.equal(next.split('/* context-v1 client adapter */').length, 2);
-  assert.equal(updateContextClientBundle(next, source), next);
-  assert.ok(next.startsWith(original.slice(0, original.indexOf('return module.exports;'))));
-});
-test('bundle refresh rejects unknown wrappers and duplicate markers', () => {
-  assert.throws(() => updateContextClientBundle('unknown bundle', ''), /未知/);
-  assert.throws(() => updateContextClientBundle('/* context-v1 client adapter *//* context-v1 client adapter */return wrapContextClient(module.exports,require);}});', ''), /边界/);
+test('active context components are ordinary module exports, not injected source', () => {
+  const ui = createContextUI({ Component: class {}, createElement() {} });
+  assert.deepEqual(Object.keys(ui).sort(), ['ContextSettings', 'ScopeChip', 'applyStyle', 'wrapWorkbench'].sort());
+  for (const value of Object.values(ui)) assert.equal(typeof value, 'function');
 });
 test('new panels inherit host themes and use container width instead of browser width', () => {
   assert.match(CONTEXT_CSS, /--dsw-alias-bg-base/); assert.match(CONTEXT_CSS, /--dsw-alias-label-primary/);

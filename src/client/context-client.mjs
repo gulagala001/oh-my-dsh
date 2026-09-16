@@ -1,3 +1,5 @@
+import { DEFAULT_IDENTITY } from '../cc-adaptation/identity.mjs';
+
 /* Keep the original workbench and host theme. These panels replace only the
  * context/summary settings and slots whose semantics changed in Context v1. */
 export const CONTEXT_UI_VERSION = '1.1.0';
@@ -22,9 +24,8 @@ export function contextRouteMode(config = {}) {
   return !route.provider && !route.model && (!route.effort || route.effort === 'off') && (route.temperature == null || route.temperature === 0.7) ? 'follow' : 'unified';
 }
 
-export function wrapContextClient(legacy, require) {
-  const React = require('react'), h = React.createElement;
-  const DEFAULT_IDENTITY = "You are an interactive zcode agent that helps users with software engineering tasks.";
+export function createContextUI(React) {
+  const h = React.createElement;
   const api = async (path, body) => {
     const response = await fetch('/trisoul-x/api' + path, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await response.json(); if (!response.ok) throw Error(data.error || 'HTTP ' + response.status); return data;
@@ -305,22 +306,13 @@ export function wrapContextClient(legacy, require) {
       h('div', { hidden: active !== 'memory' }, h(SummarySlot, { ...props, useTabInfo: () => { const v = props.useTabInfo(); return { ...v, tab: { ...v.tab, visible: v.tab.visible && active === 'memory' } }; } })),
       h('div', { className: 'cx-legacy', hidden: ['context', 'memory'].includes(active) }, h(Original, { ...props, useTabInfo: () => { const v = props.useTabInfo(); return { ...v, tab: { ...v.tab, visible: v.tab.visible && !['context', 'memory'].includes(active), navigation: { ...v.tab.navigation, params: { ...v.tab.navigation?.params, section: ['context', 'memory'].includes(active) ? 'tasks' : active } } } }; } })));
   };
-  return { ...legacy, contextUIVersion: CONTEXT_UI_VERSION, ...(legacy.__esModule ? { __esModule: true } : {}), apply(ctx) {
-    const slots = new Proxy(ctx.slots, { get(target, key) {
-      if (key === 'register') return (spec, Component, ...args) => {
-        let C = Component;
-        if (spec.name === 'settings.section' && spec.id === 'trisoul-x') C = ContextSettings;
-        if (spec.name === 'conversation.input.left' && spec.id === 'trisoul-memory-scope') C = ScopeChip;
-        if (spec.name === 'sidebar.right.pane.tab' && String(spec.key).startsWith('trisoul_x/')) {
-          const initial = String(spec.key).endsWith('memory') ? 'memory' : String(spec.key).endsWith('monitor') ? 'monitor' : 'tasks'; C = wrapWorkbench(Component, initial);
-        }
-        return target.register(spec, C, ...args);
-      };
-      const value = Reflect.get(target, key, target); return typeof value === 'function' ? value.bind(target) : value;
-    } });
-    const proxy = new Proxy(ctx, { get(target, key) { if (key === 'slots') return slots; const value = Reflect.get(target, key, target); return typeof value === 'function' ? value.bind(target) : value; } });
-    legacy.apply(proxy);
-    ctx.effect(() => { const style = document.createElement('style'); style.dataset.plugin = 'trisoul-context-v1'; style.dataset.version = CONTEXT_UI_VERSION; style.textContent = CONTEXT_CSS; document.head.appendChild(style); return () => style.remove(); });
+  return { ContextSettings, ScopeChip, wrapWorkbench, applyStyle(ctx) {
+    ctx.effect(() => {
+      const style = document.createElement('style');
+      style.dataset.plugin = 'trisoul-context-v1'; style.dataset.version = CONTEXT_UI_VERSION;
+      style.textContent = CONTEXT_CSS; document.head.appendChild(style);
+      return () => style.remove();
+    });
   } };
 }
 

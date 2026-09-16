@@ -1,7 +1,7 @@
 import { Config } from './config.mjs';
 import { neutralizeHostEnvironment } from './cc-adaptation/environment.mjs';
 import { Hub, NS } from './hub.mjs';
-import { eventText, sessionEvents } from './hub.mjs';
+import { eventText } from './hub.mjs';
 import { CONTEXT_WINDOW_EXCEEDED_CODE } from '@deepseek-ai/dsh-llm';
 import { currentTasks, restoreTaskProjection } from './tasks.mjs';
 import { ensureSystemHead } from './system-head.mjs';
