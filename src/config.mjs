@@ -28,7 +28,7 @@ export const Config = z.object({
   background: route.default({}),
   canvas: route.default({}),
   surgeon: route.default({}),
-  jobTimeoutMs: z.number().step(1).min(0).default(120000),
+  jobTimeoutMs: z.number().step(1).min(0).default(600000),
   digestEvery: z.number().step(1).min(1).default(cadence.digestEvery),
   digestBatchMax: z.number().step(1).min(0).default(0),
   digestEventChars: z.number().step(1).min(0).default(0),

@@ -66,6 +66,9 @@ export function apply(ctx, config) {
     return next();
   }, { global: true });
   ctx.on('agent/turn-stopping', ({ agent, turn, signal }) => { if (isX(agent.session)) hub.finishTasks(agent, turn, signal); }, { global: true });
+  ctx.on('agent/status', ({ agent }) => {
+    if (isX(agent.session)) hub.context.arm(agent);
+  }, { global: true });
   ctx.on('agent/disposed', ({ agent }) => {
     if (!isX(agent.session)) return;
     hub.context.dispose(agent.session.id); hub.taskReviews.delete(agent.session.id); hub.agents.delete(agent.session.id);

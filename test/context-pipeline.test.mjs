@@ -14,7 +14,7 @@ function setup(t, config = {}) {
   const cfg = contextConfig({ keepTailEvents: 0, digestEvery: 2, digestWindow: 2, flushIdleMs: 0, coordinatorMinGapMs: 0, ...config });
   const hub = { store: { dir }, config: () => cfg, scope: session => ({ mode: session.header.memoryScope || 'session', project: '/project' }), ctx: { logger: { warn() {} } }, action() {}, async call() { throw Error('unexpected model call'); } };
   const pipeline = new ContextPipeline(hub, adapter); t.after(() => pipeline.dispose());
-  const state = pipeline.state(s), agent = { session: s, options: {} };
+  const state = pipeline.state(s), agent = { session: s, options: {}, status: 'idle' };
   return { s, cfg, state, pipeline, hub, dir, agent, store: pipeline.store };
 }
 const prepared = (name = 'One') => ({ summary: name + ' executed.', documents: [{ title: 'Layout', text: 'asset_id is TEXT; exact value 9007199254740993.' }] });
@@ -286,4 +286,216 @@ test('legacy reminder summary does not block trace and valid replacements in a n
   assert.equal(f.pipeline.view(f.s).records.find(r => r.id === bad.id).live, false);
   const replay = new FixtureSession(f.s.id, f.s.snapshotEvents(), f.s.surface.nodes, f.s.header);
   assert.deepEqual(replay.deriveMessages(), f.s.deriveMessages());
+});
+
+
+// Virtual time reproduces long model/tool execution without waiting or calling a provider.
+function idleFixture(t) {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1000000 });
+  const f = setup(t, { digestEvery: 32, coordinatorEvery: 999, flushIdleMs: 90000 });
+  exchange(f.s);
+  f.calls = [];
+  f.hub.call = async (_agent, kind) => {
+    f.calls.push(kind);
+    return { blocks: [{ type: 'tool-call', name: kind === 'prepare' ? 'prepare_segment' : 'submit_context_choices',
+      arguments: kind === 'prepare' ? prepared() : { choices: [] } }] };
+  };
+  return f;
+}
+async function finishJobs(f) {
+  // A preparation can enqueue coordination before its own promise settles.
+  do { await Promise.all([...f.pipeline.jobs.values()]); } while (f.pipeline.jobs.size);
+}
+
+test('long running steps never count as idle, including reconfiguration', async t => {
+  const f = idleFixture(t); f.agent.status = 'running';
+  f.pipeline.start(f.agent);
+  t.mock.timers.tick(180000); await finishJobs(f);
+  f.pipeline.reconfigure();
+  t.mock.timers.tick(180000); await finishJobs(f);
+  assert.deepEqual(f.calls, []);
+  assert.equal(f.pipeline.timers.has(f.s.id + ':idle'), false);
+});
+
+test('idle flush waits a full interval after running ends, not after the last message', async t => {
+  const f = idleFixture(t); f.pipeline.start(f.agent);
+  t.mock.timers.tick(60000);
+  f.agent.status = 'running'; f.pipeline.arm(f.agent);
+  t.mock.timers.tick(180000); await finishJobs(f);
+  assert.deepEqual(f.calls, []);
+  f.agent.status = 'idle'; f.pipeline.arm(f.agent);
+  t.mock.timers.tick(89999); await finishJobs(f);
+  assert.deepEqual(f.calls, []);
+  t.mock.timers.tick(1); await finishJobs(f);
+  assert.deepEqual(f.calls, ['prepare', 'coordinate']);
+});
+
+test('idle timer rechecks live status even when the status notification was missed', async t => {
+  const f = idleFixture(t); f.pipeline.start(f.agent);
+  f.agent.status = 'running'; // Deliberately do not notify arm().
+  t.mock.timers.tick(90000); await finishJobs(f);
+  assert.deepEqual(f.calls, []);
+});
+
+test('resuming during an idle preparation does not force idle coordination', async t => {
+  const f = idleFixture(t); let release;
+  f.hub.call = async (_agent, kind) => {
+    f.calls.push(kind);
+    if (kind === 'prepare') return new Promise(resolve => { release = resolve; });
+    return { blocks: [{ type: 'tool-call', name: 'submit_context_choices', arguments: { choices: [] } }] };
+  };
+  f.pipeline.start(f.agent); t.mock.timers.tick(90000);
+  assert.deepEqual(f.calls, ['prepare']);
+  f.agent.status = 'running'; f.pipeline.arm(f.agent);
+  release({ blocks: [{ type: 'tool-call', name: 'prepare_segment', arguments: prepared() }] });
+  await finishJobs(f);
+  assert.deepEqual(f.calls, ['prepare']);
+  assert.equal(f.state.records.length, 1, 'already started preparation still finishes normally');
+});
+
+test('event-threshold preparation still runs in parallel with a running main model', async t => {
+  const f = idleFixture(t); f.cfg.digestEvery = 4; f.agent.status = 'running';
+  f.pipeline.start(f.agent); await finishJobs(f);
+  assert.deepEqual(f.calls, []);
+  for (const e of exchange(f.s)) f.pipeline.observe(f.s, e);
+  await finishJobs(f);
+  assert.deepEqual(f.calls, ['prepare']);
+  assert.equal(f.state.records.length, 1);
+  assert.equal(f.pipeline.timers.has(f.s.id + ':idle'), false);
+});
+
+test('preparation failure retry still runs while the main model is running', async t => {
+  const f = idleFixture(t); f.agent.status = 'running'; f.pipeline.start(f.agent);
+  const success = f.hub.call; let attempts = 0;
+  f.hub.call = async (...args) => { if (++attempts === 1) throw Error('transient'); return success(...args); };
+  await f.pipeline.prepare(f.agent, true);
+  assert.equal(attempts, 1); assert.ok(f.state.failures.prepare);
+  t.mock.timers.tick(1999); await finishJobs(f); assert.equal(attempts, 1);
+  t.mock.timers.tick(1); await finishJobs(f);
+  assert.equal(attempts, 2); assert.equal(f.state.failures.prepare, undefined);
+  assert.equal(f.state.records.length, 1);
+});
+
+test('coordinator failure keeps the existing 30-second retry while main runs', async t => {
+  const f = idleFixture(t); f.agent.status = 'running'; f.cfg.coordinatorMinGapMs = 30000;
+  add(f); f.pipeline.agents.set(f.s.id, f.agent);
+  const success = f.hub.call; let attempts = 0;
+  f.hub.call = async (...args) => { if (++attempts === 1) throw Error('invalid record ID'); return success(...args); };
+  await f.pipeline.coordinate(f.agent, true);
+  t.mock.timers.tick(29999); await finishJobs(f); assert.equal(attempts, 1);
+  t.mock.timers.tick(1); await finishJobs(f);
+  assert.equal(attempts, 2); assert.equal(f.state.failures.coordinate, undefined);
+  assert.deepEqual(f.calls, ['coordinate']);
+});
+
+test('disposing the session cancels the pending idle flush', async t => {
+  const f = idleFixture(t); f.pipeline.start(f.agent); f.pipeline.dispose(f.s.id);
+  t.mock.timers.tick(180000); await finishJobs(f);
+  assert.deepEqual(f.calls, []); assert.equal(f.pipeline.timers.size, 0);
+});
+
+
+test('settings and reattachment never restart completed idle work on historical backlog', async t => {
+  const f = idleFixture(t); exchange(f.s); system(f.s); exchange(f.s);
+  f.pipeline.start(f.agent); t.mock.timers.tick(90000); await finishJobs(f);
+  assert.deepEqual(f.calls, ['prepare', 'coordinate']);
+  assert.ok(prepareCandidate(f.s, f.state, f.cfg, pairing), 'unprocessed history remains');
+  for (let i = 0; i < 3; i++) {
+    f.cfg.jobTimeoutMs = 600000 + i;
+    f.pipeline.reconfigure(); f.pipeline.start(f.agent);
+    t.mock.timers.tick(90000); await finishJobs(f);
+  }
+  assert.deepEqual(f.calls, ['prepare', 'coordinate'], 'settings and reattachment are not new conversation activity');
+});
+
+test('unrelated settings and duplicate callbacks preserve the existing idle deadline', async t => {
+  const f = idleFixture(t); f.pipeline.start(f.agent);
+  t.mock.timers.tick(60000); f.cfg.jobTimeoutMs = 600000;
+  f.pipeline.reconfigure(); f.pipeline.reconfigure();
+  t.mock.timers.tick(29999); await finishJobs(f); assert.deepEqual(f.calls, []);
+  t.mock.timers.tick(1); await finishJobs(f);
+  assert.deepEqual(f.calls, ['prepare', 'coordinate']);
+});
+
+test('changing the idle delay adjusts pending work from the original idle start', async t => {
+  const f = idleFixture(t); f.pipeline.start(f.agent);
+  t.mock.timers.tick(60000); f.cfg.flushIdleMs = 120000; f.pipeline.reconfigure();
+  t.mock.timers.tick(59999); await finishJobs(f); assert.deepEqual(f.calls, []);
+  t.mock.timers.tick(1); await finishJobs(f);
+  assert.deepEqual(f.calls, ['prepare', 'coordinate']);
+});
+
+test('disabling idle flush cancels work; re-enabling alone does not wake history', async t => {
+  const f = idleFixture(t); f.pipeline.start(f.agent);
+  f.cfg.flushIdleMs = 0; f.pipeline.reconfigure();
+  t.mock.timers.tick(90000); await finishJobs(f); assert.deepEqual(f.calls, []);
+  f.cfg.flushIdleMs = 90000; f.pipeline.reconfigure();
+  t.mock.timers.tick(90000); await finishJobs(f); assert.deepEqual(f.calls, []);
+  for (const e of exchange(f.s)) f.pipeline.observe(f.s, e);
+  t.mock.timers.tick(90000); await finishJobs(f);
+  assert.deepEqual(f.calls, ['prepare', 'coordinate'], 'genuine new events still arm idle work');
+});
+
+test('settings do not wake multiple loaded idle sessions with no new activity', async t => {
+  const f = idleFixture(t);
+  for (const id of ['old-a', 'old-b', 'old-c']) {
+    const session = new FixtureSession(id); system(session); user(session, 'Historical task'); exchange(session);
+    const state = f.pipeline.state(session); state.initialized = true; state.eventsSincePrepare = 0;
+    const agent = { session, status: 'idle', options: {} };
+    f.pipeline.start(agent);
+  }
+  f.cfg.jobTimeoutMs = 600000; f.pipeline.reconfigure();
+  t.mock.timers.tick(180000); await finishJobs(f);
+  assert.deepEqual(f.calls, []); assert.equal(f.pipeline.timers.size, 0);
+});
+
+test('idle review of a prepared record does not prepare additional historical backlog', async t => {
+  const f = idleFixture(t); add(f); exchange(f.s);
+  f.state.initialized = true; f.state.eventsSincePrepare = 0; f.state.review.newRecords = 1;
+  f.pipeline.start(f.agent); t.mock.timers.tick(90000); await finishJobs(f);
+  assert.deepEqual(f.calls, ['coordinate']);
+});
+
+test('idle and batch coordination of the same input do not schedule a duplicate review', async t => {
+  const f = idleFixture(t); f.cfg.coordinatorEvery = 2; f.cfg.coordinatorMinGapMs = 30000;
+  f.state.review.newRecords = 1; add(f); let release;
+  const original = f.hub.call;
+  f.hub.call = async (...args) => args[1] === 'coordinate'
+    ? (f.calls.push('coordinate'), new Promise(resolve => { release = resolve; })) : original(...args);
+  f.pipeline.start(f.agent); t.mock.timers.tick(90000);
+  await f.pipeline.jobs.get(f.s.id + ':prepare');
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(f.state.review.needed, false, 'joining the same review is not new work');
+  release({ blocks: [{ type: 'tool-call', name: 'submit_context_choices', arguments: { choices: [] } }] });
+  await finishJobs(f); t.mock.timers.tick(90000); await finishJobs(f);
+  assert.deepEqual(f.calls, ['prepare', 'coordinate']);
+});
+
+
+test('real new records arriving during coordination still schedule the required follow-up', async t => {
+  const f = idleFixture(t); f.agent.status = 'running'; f.cfg.flushIdleMs = 0; f.cfg.coordinatorMinGapMs = 30000;
+  add(f); f.state.review.newRecords = 1; f.pipeline.agents.set(f.s.id, f.agent);
+  let release, reviews = 0; const original = f.hub.call;
+  f.hub.call = async (...args) => args[1] === 'coordinate' && ++reviews === 1
+    ? (f.calls.push('coordinate'), new Promise(resolve => { release = resolve; })) : original(...args);
+  const review = f.pipeline.coordinate(f.agent, true);
+  await f.pipeline.prepare(f.agent, true);
+  assert.equal(f.state.review.needed, true);
+  release({ blocks: [{ type: 'tool-call', name: 'submit_context_choices', arguments: { choices: [] } }] });
+  await review; t.mock.timers.tick(30000); await finishJobs(f);
+  assert.deepEqual(f.calls, ['coordinate', 'prepare', 'coordinate']);
+  assert.equal(f.state.review.newRecords, 0);
+});
+
+test('disposing during idle preparation never launches a coordinator afterwards', async t => {
+  const f = idleFixture(t); add(f); f.state.review.newRecords = 1; let release;
+  const original = f.hub.call;
+  f.hub.call = async (...args) => args[1] === 'prepare'
+    ? (f.calls.push('prepare'), new Promise(resolve => { release = resolve; })) : original(...args);
+  f.pipeline.start(f.agent); t.mock.timers.tick(90000);
+  assert.deepEqual(f.calls, ['prepare']);
+  f.pipeline.dispose(f.s.id);
+  release({ blocks: [{ type: 'tool-call', name: 'prepare_segment', arguments: prepared() }] });
+  await finishJobs(f); await Promise.resolve();
+  assert.deepEqual(f.calls, ['prepare']); assert.equal(f.pipeline.timers.size, 0);
 });
