@@ -76,3 +76,30 @@ for (const [path, operation] of [['/compact-p', 'processed'], ['/compact-f', 'fu
     assert.deepEqual(f.calls, [operation, operation]);
   });
 }
+
+test('whole-window and cost controls persist without waking sessions', async () => {
+  const f = setup(); const patch = { preprocessBoundaries: false, prepareBatchWindows: 3, prepareInputTokens: 64000, summaryTargetChars: 900, backgroundConcurrency: 2, backgroundMaxRetries: 1 };
+  const result = await f.call('/settings', 'POST', patch);
+  for (const [key,value] of Object.entries(patch)) assert.equal(result.data[key], value);
+  assert.deepEqual(f.calls, []);
+  await assert.rejects(f.call('/settings', 'POST', { preprocessBoundaries: 'false' }), /布尔/);
+});
+
+test('attachment endpoint checks the record scope before serving verified image or file bytes', async () => {
+  const { Writable } = await import('node:stream'); const session = { id: 'private-session' }; let opened = 0;
+  const items = [{ block: { type: 'image', attachment: { mediaType: 'image/png' } } }, { block: { type: 'file', attachment: { name: '原始资料.txt' } } }];
+  const hub = { context: { recallAssets(s, args) { assert.equal(s, session); if (args.id !== 'allowed') throw Error('记录不属于本会话'); return items; } } };
+  const store = { async readImage() { opened++; return { data: Buffer.from('image-fixture') }; }, async *readFileStream() { opened++; yield Buffer.from('exact file bytes'); } };
+  const run = async (id, asset) => {
+    const chunks = [], headers = {}; const res = new Writable({ write(chunk, encoding, done) { chunks.push(Buffer.from(chunk)); done(); } });
+    res.setHeader = (key,value) => { headers[key] = value; };
+    try { await handleContextApi({ hub, ctx: { get: () => store }, req: { method: 'GET' }, res, session, id: session.id,
+      url: new URL(`http://localhost/trisoul-x/api/context/asset?id=${id}&asset=${asset}`), send() { throw Error('unexpected JSON response'); } });
+      return { headers, bytes: Buffer.concat(chunks).toString() };
+    } finally { res.destroy(); }
+  };
+  await assert.rejects(run('forbidden', 1), /不属于/); assert.equal(opened, 0);
+  const image = await run('allowed', 1); assert.equal(image.bytes, 'image-fixture'); assert.equal(image.headers['Content-Type'], 'image/png');
+  const file = await run('allowed', 2); assert.equal(file.bytes, 'exact file bytes'); assert.match(file.headers['Content-Disposition'], /attachment;/);
+  assert.equal(file.headers['X-Content-Type-Options'], 'nosniff');
+});

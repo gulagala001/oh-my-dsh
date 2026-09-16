@@ -1,3 +1,5 @@
+import { Readable } from 'node:stream';
+import { pipeline as streamPipeline } from 'node:stream/promises';
 import { compactionMessage } from './commands.mjs';
 import { contextConfig } from './pipeline.mjs';
 import { userMessages } from './core.mjs';
@@ -23,13 +25,34 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
   if (path === '/context/catalog') {
     const s = needSession(); hub.context.state(s);
     const history = url.searchParams.get('history') === 'true';
-    const entries = hub.context.store.visible(s.id, { includeHistory: history }).map(({ sourceSeqs, sourceHash, documents, ...r }) => ({ ...r, documentCount: documents.length }));
+    const entries = hub.context.store.visible(s.id, { includeHistory: history }).map(({ sourceSeqs, sourceHash, documents, assets = [], userOriginals, originalSeqs, ...r }) => ({ ...r, documentCount: documents.length, assetCount: assets.length }));
     send(res, 200, { scope: hub.context.state(s).binding, entries }); return true;
+  }
+  if (path === '/context/asset') {
+    if (req.method !== 'GET') { send(res, 405, { error: '请使用 GET' }); return true; }
+    const s = needSession(), asset = Number(url.searchParams.get('asset'));
+    if (!Number.isSafeInteger(asset) || asset < 1) throw Error('附件编号从 1 开始');
+    const item = hub.context.recallAssets(s, { id: url.searchParams.get('id') })[asset - 1];
+    if (!item?.block?.attachment) throw Error('附件没有可读取的原始引用');
+    const store = ctx.get?.('attachments') || ctx.attachments, ref = item.block.attachment;
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    if (item.block.type === 'image') {
+      if (!store?.readImage) throw Error('图片读取服务不可用');
+      const image = await store.readImage(ref);
+      res.setHeader('Content-Type', ref.mediaType || 'application/octet-stream');
+      res.end(image.data); return true;
+    }
+    if (!store?.readFileStream) throw Error('附件读取服务不可用');
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', "attachment; filename*=UTF-8''" + encodeURIComponent(ref.name || 'attachment'));
+    await streamPipeline(Readable.from(store.readFileStream(ref)), res); return true;
   }
   if (path === '/context/document') {
     const s = needSession(); hub.context.state(s);
     const record = hub.context.store.get(s.id, url.searchParams.get('id'));
-    send(res, 200, record); return true;
+    send(res, 200, { ...record, requestSessionId: s.id }); return true;
   }
   if (path === '/context/review') {
     const state = hub.context.state(needSession());

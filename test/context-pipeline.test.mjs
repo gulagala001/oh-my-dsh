@@ -11,7 +11,8 @@ import { FixtureSession, user, plugin, system, exchange, adapter, pairing } from
 function setup(t, config = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'context-tests-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
   const s = new FixtureSession(); system(s); user(s, 'Preserve ID 9007199254740993 exactly.');
-  const cfg = contextConfig({ keepTailEvents: 0, digestEvery: 2, digestWindow: 2, flushIdleMs: 0, coordinatorMinGapMs: 0, ...config });
+  // This suite also covers the explicitly selectable compatibility-boundary mode.
+  const cfg = contextConfig({ preprocessBoundaries: true, prepareBatchWindows: 1, keepTailEvents: 0, digestEvery: 2, digestWindow: 2, flushIdleMs: 0, coordinatorMinGapMs: 0, ...config });
   const hub = { store: { dir }, config: () => cfg, scope: session => ({ mode: session.header.memoryScope || 'session', project: '/project' }), ctx: { logger: { warn() {} } }, action() {}, async call() { throw Error('unexpected model call'); } };
   const pipeline = new ContextPipeline(hub, adapter); t.after(() => pipeline.dispose());
   const state = pipeline.state(s), agent = { session: s, options: {}, status: 'idle' };

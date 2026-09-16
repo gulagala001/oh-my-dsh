@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { attachmentsOf, combineAssets, combineUsers, userDocument, describeAsset, materialText, contentChars, messageTokens, assetBlocks, messageOf } from './materials.mjs';
 
 export const hash = value => createHash('sha256').update(typeof value === 'string' ? value : JSON.stringify(value)).digest('hex');
 export const textBlocks = blocks => (blocks || []).flatMap(b => {
@@ -48,19 +49,76 @@ export function recordText(record, mode = 'detail') {
   const when = record.timeStart == null ? '时间未记录' : new Date(record.timeStart).toISOString() + (record.timeEnd && record.timeEnd !== record.timeStart ? ' — ' + new Date(record.timeEnd).toISOString() : '');
   return `[Context record ${record.id} · ${when} · events ${ranges}]\n${record.summary}`
     + (mode === 'detail' && record.documents.length ? '\n\n' + record.documents.map(d => `## ${d.title}\n${d.text}`).join('\n\n') : '')
+    + ((record.assets || []).length ? `\n[${record.assets.length} saved attachments; recall with id and asset (1-based) to reopen one.]` : '')
     + `\n[${record.documents.length ? "Saved documents" : "Archived record"}: recall({"id":"${record.id}"})]`;
 }
 export function activeRecords(state) { return state.records.filter(r => !r.mergedInto); }
+export function protectedEvent(session, e) {
+  if (!e) return true;
+  const source = eventSource(e), message = session.deriveEventMessage(e);
+  return (e.type === 'system/message' && source !== 'trisoul-x:shadow')
+    || (message?.role === 'system' && source !== 'trisoul-x:shadow')
+    || source === '@deepseek-ai/dsh-system-prompt' || source === 'trisoul-x:trace' || source === 'trisoul-x:manual-global';
+}
+export function preparationStop(session, cfg) {
+  const nodes = session.surface.nodes, live = nodes.flatMap((seq, i) => session.deriveEventMessage(session.eventAt(seq)) ? [i] : []);
+  const tail = cfg.keepTailEvents ?? 30, nominal = tail ? (live[Math.max(0, live.length - tail)] ?? 0) : nodes.length;
+  const pending = new Set(); let balanced = 0;
+  for (let i = 0; i < nominal; i++) {
+    const blocks = session.deriveEventMessage(session.eventAt(nodes[i]))?.content || [];
+    for (const block of blocks) {
+      if (block.type === 'tool-call') pending.add(block.id);
+      else if (block.type === 'tool-result') pending.delete(block.toolCallId);
+    }
+    if (!pending.size) balanced = i + 1;
+  }
+  return balanced;
+}
+export function carrierBarrier(session, state, cfg) {
+  const nodes = session.surface.nodes;
+  const saved = state.traceSlot && nodes.includes(state.traceSlot.carrierSeq) ? state.traceSlot.carrierSeq : undefined;
+  const trace = saved ?? nodes.find(seq => eventSource(session.eventAt(seq)) === 'trisoul-x:trace');
+  const anchor = trace ?? (cfg.traceEnabled && !state.fullCompaction ? nodes.find(seq => actualUser(session.eventAt(seq))) : undefined);
+  return nodes.indexOf(anchor);
+}
+const windowText = (session, event, retained) => retained && !actualUser(event)
+  ? '[Protected host context is retained in place and is not a summary source.]'
+  : materialText(session.deriveEventMessage(event)?.content, event.seq);
+export function protectedSeqs(session, state, cfg) {
+  const keep = new Set(session.surface.nodes.filter(seq => protectedEvent(session, session.eventAt(seq))));
+  // The established Trace slot carries the first request. Keep that anchor in
+  // place, but read across it; it is never a segmentation boundary.
+  if (cfg.traceEnabled && !state.traceSlot && !state.fullCompaction) {
+    const anchor = session.surface.nodes.find(seq => actualUser(session.eventAt(seq)));
+    if (anchor !== undefined) keep.add(anchor);
+  }
+  return keep;
+}
+export function splitGroups(nodes, seqs) {
+  const selected = new Set(seqs), groups = []; let run = [];
+  for (const seq of nodes) {
+    if (selected.has(seq)) run.push(seq);
+    else if (run.length) { groups.push(run); run = []; }
+  }
+  if (run.length) groups.push(run);
+  return groups;
+}
 export function liveSpan(session, record) {
-  // Older archives may include a host reminder before the first real request.
-  // Keep those archives readable, but never replace their control messages.
-  if (!(record.kind === 'full' && record.mode !== 'raw') && record.sourceSeqs.some(seq => protectedSource(session.eventAt(seq)))) return null;
+  if (!(record.kind === 'window' || (record.kind === 'full' && record.mode !== 'raw'))
+    && record.sourceSeqs.some(seq => protectedSource(session.eventAt(seq)))) return null;
   const seqs = record.mode === 'raw' ? record.sourceSeqs : [record.carrierSeq];
   if (!seqs?.length || seqs.some(s => !Number.isSafeInteger(s))) return null;
-  const nodes = session.surface.nodes, start = nodes.indexOf(seqs[0]);
-  if (start < 0 || seqs.some((seq, i) => nodes[start + i] !== seq)) return null;
-  if (record.mode === 'raw' && sourceHash(session, seqs) !== record.sourceHash) return null;
-  return { seqs: [...seqs], start, end: start + seqs.length - 1 };
+  const nodes = session.surface.nodes, positions = seqs.map(seq => nodes.indexOf(seq));
+  if (positions.some((p, i) => p < 0 || (i && p <= positions[i - 1]))) return null;
+  const start = positions[0], end = positions.at(-1), groups = splitGroups(nodes, seqs);
+  if (record.mode === 'raw') {
+    if (record.kind !== 'window' && groups.length !== 1) return null;
+    const selected = new Set(seqs), retained = new Set(record.retainedSeqs || []);
+    if (nodes.slice(start, end + 1).some(seq => !selected.has(seq) && !retained.has(seq))) return null;
+    if (record.kind === 'window' && seqs.some(seq => protectedEvent(session, session.eventAt(seq)))) return null;
+    if (sourceHash(session, seqs) !== record.sourceHash) return null;
+  }
+  return { seqs: [...seqs], groups, start, end };
 }
 
 export function normalizeChoices(value, state, session, allowedIds) {
@@ -80,7 +138,9 @@ export function normalizeChoices(value, state, session, allowedIds) {
     let prepared = { summary: '', documents: [] };
     if (choice.action === 'merge') prepared = validatePrepared(choice);
     else if ((choice.summary ?? '') !== '' || (choice.documents ?? []).length) throw new Error('仅合并选项可以生成正文');
-    return { action: choice.action, ids: selected.map(r => r.id), observed: selected, ...prepared };
+    const mode = choice.mode || 'brief';
+    if (!['brief', 'detail'].includes(mode)) throw new Error('合并表示只能是 brief 或 detail');
+    return { action: choice.action, mode, ids: selected.map(r => r.id), observed: selected, ...prepared };
   });
 }
 
@@ -95,7 +155,7 @@ export function exposedTrace(session, { maxChars = 0, afterSeq = -1 } = {}) {
   return null;
 }
 
-export function prepareCandidate(session, state, cfg, pairing) {
+function legacyPrepareCandidate(session, state, cfg, pairing) {
   const nodes = session.surface.nodes;
   const events = nodes.map(seq => session.eventAt(seq));
   const reserved = new Set(activeRecords(state).flatMap(r => r.mode === 'raw' ? r.sourceSeqs : [r.carrierSeq]));
@@ -104,7 +164,7 @@ export function prepareCandidate(session, state, cfg, pairing) {
     const src = eventSource(e);
     if (['trisoul-x:state', 'trisoul-x:tasks'].includes(src)) latest.set(src, e.seq);
   }
-  const stop = Math.max(0, nodes.length - cfg.keepTailEvents);
+  const stop = preparationStop(session, cfg);
   const boundary = e => {
     if (protectedSource(e) || reserved.has(e.seq)) return true;
     if (hasOpaqueContent(session.deriveEventMessage(e)?.content)) return true;
@@ -137,21 +197,87 @@ export function prepareCandidate(session, state, cfg, pairing) {
   return take();
 }
 
+export function prepareCandidate(session, state, cfg, pairing) {
+  if (cfg.preprocessBoundaries === true) return legacyPrepareCandidate(session, state, cfg, pairing);
+  const nodes = session.surface.nodes, stop = preparationStop(session, cfg);
+  const keep = protectedSeqs(session, state, cfg), owners = new Map(), spans = new Map();
+  for (const record of activeRecords(state)) {
+    const span = liveSpan(session, record); if (!span) continue;
+    spans.set(record.id, span);
+    for (const seq of span.seqs) owners.set(seq, record);
+  }
+  const meaningful = seq => !keep.has(seq) && Boolean(session.deriveEventMessage(session.eventAt(seq)));
+  let first = -1;
+  for (let i = 0; i < stop; i++) {
+    if (!meaningful(nodes[i]) || owners.has(nodes[i])) continue;
+    if (pairing.before(session, nodes[i])) { first = i; break; }
+  }
+  if (first < 0) return null;
+  let end = first, lastSafe = -1, chars = 0, members = 0;
+  const maxChars = (cfg.prepareInputTokens || 48000) * 4;
+  for (; end < stop; end++) {
+    const seq = nodes[end], e = session.eventAt(seq);
+    if (session.deriveEventMessage(e)) { chars += JSON.stringify(windowText(session, e, keep.has(seq))).length + 80; if (!keep.has(seq)) members++; }
+    const splitRecord = [...spans.values()].some(span => span.start <= end && span.end > end);
+    if (!splitRecord && pairing.after(session, seq)) {
+      if (chars > maxChars) {
+        if (lastSafe < first) throw Error('一个完整工具往返超过预处理输入预算；原文保留，请提高输入预算。');
+        end = lastSafe; break;
+      }
+      lastSafe = end;
+      if (members >= cfg.digestWindow) break;
+    }
+  }
+  if (end >= stop) end = lastSafe;
+  if (end < first || lastSafe < first) return null;
+  const windowSeqs = nodes.slice(first, end + 1), selected = windowSeqs.filter(seq => !keep.has(seq));
+  if (!selected.some(seq => nodes.indexOf(seq) > carrierBarrier(session, state, cfg) && session.deriveEventMessage(session.eventAt(seq)))) return null;
+  const selectedSet = new Set(selected);
+  // A previously prepared range is indivisible even when it lies inside this window.
+  const parents = activeRecords(state).filter(r => {
+    const span = spans.get(r.id); return span && span.seqs.some(seq => selectedSet.has(seq));
+  });
+  if (parents.some(r => !spans.get(r.id).seqs.every(seq => selectedSet.has(seq)))) return null;
+  const events = selected.map(seq => session.eventAt(seq));
+  if (!events.some(e => session.deriveEventMessage(e))) return null;
+  Object.assign(events, { windowSeqs, retainedSeqs: windowSeqs.filter(seq => keep.has(seq)), parents: parents.map(r => r.id), wholeWindow: true });
+  return events;
+}
+export function backlogView(session, state, cfg) {
+  const keep = protectedSeqs(session, state, cfg), reserved = new Set();
+  for (const r of activeRecords(state)) for (const seq of liveSpan(session, r)?.seqs || []) reserved.add(seq);
+  const nodes = session.surface.nodes, stop = preparationStop(session, cfg);
+  let events = 0, tokens = 0, recentEvents = 0;
+  for (let i = 0; i < nodes.length; i++) {
+    const seq = nodes[i], m = session.deriveEventMessage(session.eventAt(seq));
+    if (keep.has(seq) || reserved.has(seq) || !m) continue;
+    if (i >= stop) { recentEvents++; continue; }
+    events++; tokens += messageTokens(m);
+  }
+  return { events, estimatedTokens: tokens, recentEvents, protectedEvents: keep.size };
+}
 export function candidateInput(session, events, lookback) {
   const all = session.snapshotEvents(), start = all.findIndex(e => e.seq === events[0].seq);
   const prior = lookback > 0 ? all.slice(0, start).filter(e => actualUser(e) || e.type === 'assistant/message' || e.type === 'tool/result').slice(-lookback) : [];
+  const segment = (events.windowSeqs || events.map(e => e.seq)).map(seq => session.eventAt(seq));
   return { reference: prior.map(e => ({ seq: e.seq, type: e.type, text: rawText(session, e) })),
-    segment: events.map(e => ({ seq: e.seq, at: eventTime(e), type: e.type, text: rawText(session, e) })) };
+    user_messages: userMessages(session).filter(u => u.seq <= Math.max(...segment.map(e => e.seq))).slice(-8),
+    segment: segment.filter(e => session.deriveEventMessage(e)).map(e => ({ seq: e.seq, at: eventTime(e), type: e.type,
+      protected: (events.retainedSeqs || []).includes(e.seq), text: windowText(session, e, (events.retainedSeqs || []).includes(e.seq)) })) };
 }
 export function coordinatorInput(session, state, cfg) {
   return {
     user_messages: userMessages(session).filter(e => e.seq > (state.fullCompaction?.throughSeq ?? -1)),
     ...(state.fullCompaction ? { compacted_conversation: state.records.find(r => r.id === state.fullCompaction.recordId)?.summary } : {}),
-    context: { entries: session.surface.nodes.map((seq, position) => ({ seq, position })), pressureRatio: cfg.pressureRatio ?? null },
+    context: { entries: session.surface.nodes.map((seq, position) => ({ seq, position })), pressureRatio: cfg.pressureRatio ?? null,
+      backlog: backlogView(session, state, cfg), last_rejection: state.review?.lastRejection || null, summary_target_characters: cfg.summaryTargetChars || 1200 },
     records: activeRecords(state).flatMap(r => {
       const span = liveSpan(session, r);
       return span ? [{ id: r.id, version: r.version, position: span.start, representation: r.mode, ranges: r.ranges,
         timeStart: r.timeStart, timeEnd: r.timeEnd, summary: r.summary, documents: r.documents,
+        attachments: (r.assets || []).map(describeAsset),
+        currentTokens: span.seqs.reduce((n, seq) => n + messageTokens(session.deriveEventMessage(session.eventAt(seq))), 0),
+        detailTokens: messageTokens({ role: 'user', content: recordBlocks(r, 'detail') }), briefTokens: messageTokens({ role: 'user', content: recordBlocks(r, 'brief') }),
         originalChars: r.originalChars, detailedChars: recordText(r).length, briefChars: recordText(r, 'brief').length }] : [];
     }),
     recent_events: (cfg.coordinatorRecentEvents ? session.surface.nodes.slice(-cfg.coordinatorRecentEvents) : []).map(seq => {
@@ -160,11 +286,22 @@ export function coordinatorInput(session, state, cfg) {
   };
 }
 
-export function newRecord(session, events, prepared, binding) {
+export function newRecord(session, events, prepared, binding, { state, wholeWindow = events.wholeWindow || false } = {}) {
   const times = events.map(eventTime).filter(Number.isFinite), seqs = events.map(e => e.seq);
-  return { id: randomUUID(), version: 1, mode: 'raw', sourceSeqs: seqs, sourceHash: sourceHash(session, seqs),
-    ranges: [{ sessionId: session.id, from: Math.min(...seqs), to: Math.max(...seqs) }],
+  const parents = (state?.records || []).filter(r => events.parents?.includes(r.id));
+  const userOriginals = combineUsers(...parents.map(r => r.userOriginals || []), events.filter(actualUser).map(e => ({
+    sessionId: session.id, seq: e.seq, at: eventTime(e), content: structuredClone(e.data.content),
+  })));
+  const assets = combineAssets(...parents.map(r => r.assets || []), ...events.map(e => attachmentsOf(session.deriveEventMessage(e)?.content, session.id, e.seq)));
+  const originalSeqs = [...new Set([...seqs.filter(seq => session.deriveEventMessage(session.eventAt(seq)) && !parents.some(r => r.carrierSeq === seq)), ...parents.flatMap(r => r.originalSeqs || r.sourceSeqs)])].sort((a,b) => a-b);
+  return { id: randomUUID(), version: 1, mode: 'raw', ...(wholeWindow ? { kind: 'window', retainedSeqs: events.retainedSeqs || [] } : {}),
+    sourceSeqs: seqs, sourceHash: sourceHash(session, seqs), originalSeqs,
+    ranges: [{ sessionId: session.id, from: Math.min(...originalSeqs), to: Math.max(...originalSeqs) }],
     timeStart: times.length ? Math.min(...times) : null, timeEnd: times.length ? Math.max(...times) : null,
-    originalChars: events.reduce((n, e) => n + rawText(session, e).length, 0),
-    ...prepared, sessionId: session.id, project: binding.project, scope: binding.scope, createdAt: Date.now(), parents: [] };
+    originalChars: events.reduce((n, e) => n + contentChars(session.deriveEventMessage(e)?.content), 0),
+    ...prepared, documents: [...prepared.documents.filter(d => d.kind !== 'user-original'), ...userDocument(userOriginals)], assets, userOriginals,
+    sessionId: session.id, project: binding.project, scope: binding.scope, createdAt: Date.now(), parents: parents.map(r => r.id) };
+}
+export function recordBlocks(record, mode = 'detail') {
+  return [{ type: 'text', text: recordText(record, mode) }, ...(mode === 'detail' ? assetBlocks(record) : [])];
 }

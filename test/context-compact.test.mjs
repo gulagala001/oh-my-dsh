@@ -59,7 +59,7 @@ test('compact-f needs no prepared records, covers users/tools/catalog/trace and 
   assert.ok(f.session.surface.nodes.includes(fixed.seq));
   assert.equal(f.session.deriveMessages().filter(m => m.role === 'system').length, 2);
   assert.doesNotMatch(text(f), /OLD_EXPOSED_REASONING|OLD_PROJECT_CATALOG|Original source material/);
-  assert.equal(f.state.traceSlot, null); assert.equal(f.state.records[0].kind, 'full'); assert.deepEqual(f.state.records[0].documents, []);
+  assert.equal(f.state.traceSlot, null); assert.equal(f.state.records[0].kind, 'full'); assert.ok(f.state.records[0].documents.every(d => d.kind === 'user-original')); assert.match(f.state.records[0].documents[0].text, /Latest correction/); assert.doesNotMatch(text(f), /User messages — verbatim/);
   assert.ok(liveSpan(f.session, f.state.records[0]));
   assert.ok(nodes.every(seq => f.session.eventAt(seq)), 'the archive is never deleted');
   assert.match(f.pipeline.recall(f.session, { from: original[1].seq, to: original[1].seq }), /Original source material/);

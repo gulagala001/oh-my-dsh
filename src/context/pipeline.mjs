@@ -1,18 +1,20 @@
 import { randomUUID } from 'node:crypto';
 import { compactFull } from './full-compaction.mjs';
 import { ContextStore } from './store.mjs';
-import { hash, userRevision, userMessages, rawText, actualUser, prepareCandidate, candidateInput, coordinatorInput, newRecord, activeRecords, liveSpan, validatePrepared, normalizeChoices, decodeResult, recordText } from './core.mjs';
+import { hash, userRevision, userMessages, rawText, actualUser, prepareCandidate, candidateInput, coordinatorInput, newRecord, activeRecords, liveSpan, validatePrepared, normalizeChoices, decodeResult, recordText, backlogView } from './core.mjs';
+import { attachmentsOf, combineAssets, describeAsset, messageOf } from './materials.mjs';
 import { createTransaction, applyTransaction } from './transactions.mjs';
 import { PREPARE_SYSTEM, PREPARE_TOOL, COORDINATE_SYSTEM, COORDINATE_TOOL } from './prompts.mjs';
 
 export const DEFAULTS = Object.freeze({ contextEnabled: true, digestEvery: 32, digestWindow: 32, digestLookback: 8,
+  preprocessBoundaries: false, prepareBatchWindows: 2, prepareInputTokens: 48000, summaryTargetChars: 1200, backgroundConcurrency: 2, backgroundMaxRetries: 2,
   idlePreprocessEnabled: false, flushIdleMs: 90000, coordinatorEvery: 2, coordinatorMinGapMs: 30000, coordinatorRecentEvents: 12,
   automaticReplace: true, surgeryCooldownSteps: 20, keepTailEvents: 30, traceEnabled: true, traceMaxChars: 0, requireShorter: true });
 export function contextConfig(raw = {}) {
   const cfg = { ...DEFAULTS, ...raw };
-  for (const key of ['contextEnabled', 'idlePreprocessEnabled', 'automaticReplace', 'traceEnabled', 'requireShorter']) if (typeof cfg[key] !== 'boolean') throw new Error(`${key} 必须为布尔值`);
-  for (const key of ['digestEvery', 'digestWindow', 'coordinatorEvery']) if (!Number.isInteger(cfg[key]) || cfg[key] < 1) throw new Error(`${key} 必须为正整数`);
-  for (const key of ['digestLookback', 'flushIdleMs', 'coordinatorMinGapMs', 'coordinatorRecentEvents', 'surgeryCooldownSteps', 'keepTailEvents', 'traceMaxChars']) if (!Number.isInteger(cfg[key]) || cfg[key] < 0) throw new Error(`${key} 必须为非负整数`);
+  for (const key of ['contextEnabled', 'preprocessBoundaries', 'idlePreprocessEnabled', 'automaticReplace', 'traceEnabled', 'requireShorter']) if (typeof cfg[key] !== 'boolean') throw new Error(`${key} 必须为布尔值`);
+  for (const key of ['digestEvery', 'digestWindow', 'coordinatorEvery', 'prepareBatchWindows', 'prepareInputTokens', 'summaryTargetChars', 'backgroundConcurrency']) if (!Number.isInteger(cfg[key]) || cfg[key] < 1) throw new Error(`${key} 必须为正整数`);
+  for (const key of ['backgroundMaxRetries', 'digestLookback', 'flushIdleMs', 'coordinatorMinGapMs', 'coordinatorRecentEvents', 'surgeryCooldownSteps', 'keepTailEvents', 'traceMaxChars']) if (!Number.isInteger(cfg[key]) || cfg[key] < 0) throw new Error(`${key} 必须为非负整数`);
   return cfg;
 }
 const delegated = s => s.header?.origin === 'subagent' || Number(s.header?.delegationDepth) > 0;
@@ -20,10 +22,31 @@ const iso = n => n == null ? '时间未记录' : new Date(n).toISOString();
 
 export class ContextPipeline {
   constructor(hub, adapter) {
-    this.hub = hub; this.adapter = adapter; this.manualSessions = new Map(); this.store = new ContextStore(hub.store.dir);
+    this.hub = hub; this.adapter = adapter; this.activeCalls = 0; this.callWaiters = []; this.manualSessions = new Map(); this.store = new ContextStore(hub.store.dir);
     this.agents = new Map(); this.jobs = new Map(); this.timers = new Map(); this.idleSince = new Map(); this.controllers = new Map(); this.closed = false;
   }
   config() { return contextConfig(this.hub.config()); }
+  async call(agent, kind, request, signal) {
+    signal?.throwIfAborted();
+    if (this.activeCalls >= this.config().backgroundConcurrency) {
+      await new Promise((resolve, reject) => {
+        const item = { grant: () => { signal?.removeEventListener('abort', abort); this.activeCalls++; resolve(); } };
+        const abort = () => {
+          const index = this.callWaiters.indexOf(item);
+          if (index >= 0) this.callWaiters.splice(index, 1);
+          reject(signal.reason || Error('后台排队已取消'));
+        };
+        this.callWaiters.push(item); signal?.addEventListener('abort', abort, { once: true });
+        if (signal?.aborted) abort();
+      });
+    } else this.activeCalls++;
+    try { signal?.throwIfAborted(); return await this.hub.call(agent, kind, request, signal); }
+    finally {
+      this.activeCalls--;
+      while (this.callWaiters.length && this.activeCalls < this.config().backgroundConcurrency) this.callWaiters.shift().grant();
+    }
+  }
+
   state(session) {
     const scope = this.hub.scope(session);
     const binding = { scope: scope.mode === 'session' ? 'session' : 'project', project: scope.project, title: session.header?.title || session.id };
@@ -59,7 +82,7 @@ export class ContextPipeline {
     if (!agent) return;
     const s = this.state(session);
     s.eventsSincePrepare = (s.eventsSincePrepare || 0) + 1;
-    if (actualUser(event)) { s.pending = null; s.review.needed = true; }
+    if (actualUser(event)) { s.pending = null; s.review.needed = true; s.review.rejectedPlans = []; s.review.replanAttempts = 0; delete s.failures.coordinate; delete s.failures.prepare; delete s.prepareRetryAt; }
     this.store.save(s); this.arm(agent);
     if (s.eventsSincePrepare >= this.config().digestEvery) void this.prepare(agent, false);
     if (actualUser(event)) void this.coordinate(agent, true);
@@ -80,8 +103,8 @@ export class ContextPipeline {
     const timer = setTimeout(() => {
       this.timers.delete(key);
       if (kind === 'idle') this.idleSince.delete(id);
-      const work = kind === 'coordinate' ? this.coordinate(agent, true)
-        : kind === 'prepare' ? this.prepare(agent, true) : this.flushIdle(agent);
+      const work = kind === 'coordinate' ? this.coordinate(agent, true, { retry: true })
+        : kind === 'prepare' ? this.prepare(agent, true, { retry: true }) : this.flushIdle(agent);
       void work.catch(e => this.reportError(agent, kind, e));
     }, kind === 'idle' ? Math.max(1, since + delay - Date.now()) : delay);
     timer.unref?.(); this.timers.set(key, timer);
@@ -90,9 +113,9 @@ export class ContextPipeline {
     if (this.closed || !this.agents.has(agent.session.id) || agent.status !== 'idle' || !this.config().contextEnabled || !this.config().idlePreprocessEnabled) return;
     const s = this.state(agent.session);
     // Reviewing a prepared record must not drain unrelated historical backlog.
-    if (s.eventsSincePrepare > 0) await this.prepare(agent, true);
+    if (s.eventsSincePrepare > 0) await this.prepare(agent, true, { retry: true });
     if (!this.closed && this.agents.get(agent.session.id) === agent && agent.status === 'idle'
-      && this.config().idlePreprocessEnabled && (s.review.newRecords > 0 || s.review.needed)) await this.coordinate(agent, true);
+      && this.config().idlePreprocessEnabled && (s.review.newRecords > 0 || s.review.needed)) await this.coordinate(agent, true, { retry: true });
   }
   reportError(agent, kind, error) {
     const s = this.state(agent.session);
@@ -101,53 +124,71 @@ export class ContextPipeline {
     this.hub.action(agent.session, `context${kind}Errors`, 1, { error: error.message });
     this.hub.ctx.logger?.warn?.(`上下文${kind}：${error.message}`);
   }
-  async prepare(agent, force = false) {
+  async prepare(agent, force = false, { retry = false } = {}) {
     if (this.closed || delegated(agent.session) || this.manualSessions.has(agent.session.id) || !this.config().contextEnabled) return;
     const session = agent.session, key = session.id + ':prepare';
     if (this.jobs.has(key)) return this.jobs.get(key);
     const s = this.state(session);
+    if (force && !retry) { delete s.failures.prepare; delete s.prepareRetryAt; }
+    if ((s.failures.prepare?.count || 0) > this.config().backgroundMaxRetries) return;
     if (Date.now() < (s.prepareRetryAt || 0)) return;
     if (!force && (s.eventsSincePrepare || 0) < this.config().digestEvery) return;
     const controller = new AbortController(); this.controllers.set(key, controller);
     const job = (async () => {
+      let completed = 0, seenEvents = s.eventsSincePrepare || 0;
       do {
         const cfg = this.config(), events = prepareCandidate(session, s, cfg, this.adapter.pairing);
         if (!events) break;
-        const seenEvents = s.eventsSincePrepare || 0;
         const inputs = candidateInput(session, events, cfg.digestLookback);
+        inputs.target_characters = cfg.summaryTargetChars;
+        if (s.failures.prepare) inputs.previous_rejection = s.failures.prepare.message;
+        while (JSON.stringify(inputs).length > cfg.prepareInputTokens * 4 && inputs.reference.length) inputs.reference.shift();
+        if (JSON.stringify(inputs).length > cfg.prepareInputTokens * 4) throw Error('整窗输入超过预算，原文保留；请调大预处理输入预算或缩小窗口');
         const args = { system: PREPARE_SYSTEM, messages: [this.adapter.message(JSON.stringify(inputs), 'prepare-input')], tools: [PREPARE_TOOL],
           ...(cfg.digestMaxTokens > 0 ? { maxTokens: cfg.digestMaxTokens } : {}) };
-        const result = await this.hub.call(agent, 'prepare', args, controller.signal);
+        const result = await this.call(agent, 'prepare', args, controller.signal);
         controller.signal.throwIfAborted();
-        const record = newRecord(session, events, validatePrepared(decodeResult(result, PREPARE_TOOL.name)), s.binding);
+        const prepared = validatePrepared(decodeResult(result, PREPARE_TOOL.name));
+        if (prepared.summary.length > cfg.summaryTargetChars * 2) throw Error('基础摘要超过目标长度两倍；原文保留，重试时请缩短摘要而非截断');
+        const record = newRecord(session, events, prepared, s.binding, { state: s });
+        record.summaryFormatVersion = 2;
         // A write-ahead replacement owns the session records until its disk flush completes.
         if (s.transaction) { this.store.notice(s, '预处理完成时替换事务尚未提交，原文保留并等待下一批'); break; }
         // Other maintenance may have replaced this source while the model ran.
         if (!liveSpan(session, record)) { this.store.notice(s, '预处理完成时原区间已变化，未发布过期记录'); break; }
+        for (const parent of s.records) if (record.parents.includes(parent.id)) parent.mergedInto = record.id;
+        if (record.parents.length) s.pending = null;
         s.records.push(record); s.review.newRecords++; s.review.needed = true;
+        s.review.rejectedPlans = []; s.review.replanAttempts = 0;
+        delete s.failures.coordinate;
         s.eventsSincePrepare = Math.max(0, (s.eventsSincePrepare || 0) - seenEvents);
+        seenEvents = 0; completed++;
+        s.prepareBacklog = backlogView(session, s, cfg);
         delete s.failures.prepare; delete s.prepareRetryAt;
         clearTimeout(this.timers.get(session.id + ':prepare')); this.timers.delete(session.id + ':prepare');
         this.store.save(s);
         this.hub.action(session, 'preparedSegments', 1, { id: record.id, from: events[0].seq, to: events.at(-1).seq, chars: record.summary.length + record.documents.reduce((n, d) => n + d.text.length, 0) });
         void this.coordinate(agent, false);
-        if (s.eventsSincePrepare < cfg.digestEvery) break;
+        if (completed >= cfg.prepareBatchWindows || !s.prepareBacklog.events) break;
       } while (!this.closed && !controller.signal.aborted);
     })().catch(e => {
       if (!controller.signal.aborted) {
         this.reportError(agent, 'prepare', e);
         const delay = Math.min(60000, 1000 * 2 ** Math.min(6, s.failures.prepare?.count || 1));
         s.prepareRetryAt = Date.now() + delay; this.store.save(s);
-        this.arm(agent, delay, 'prepare');
+        if (s.failures.prepare.count <= this.config().backgroundMaxRetries) this.arm(agent, delay, 'prepare');
+        else this.store.notice(s, '预处理已达到自动重试上限；原文保留，可手动重新准备。');
       }
     }).finally(() => { this.jobs.delete(key); this.controllers.delete(key); });
     this.jobs.set(key, job); return job;
   }
-  async coordinate(agent, force = false) {
+  async coordinate(agent, force = false, { retry = false } = {}) {
     if (this.closed || delegated(agent.session) || this.manualSessions.has(agent.session.id) || !this.config().contextEnabled) return;
     const session = agent.session, key = session.id + ':coordinate', s = this.state(session), cfg = this.config();
-    // observe()/prepare() mark real changes; joining a call is not a new review.
+    // Joining an existing call is not another request for a review.
     if (this.jobs.has(key)) return this.jobs.get(key);
+    if (force && !retry) { delete s.failures.coordinate; s.review.rejectedPlans = []; s.review.replanAttempts = 0; s.review.needed = true; }
+    if ((s.failures.coordinate?.count || 0) > cfg.backgroundMaxRetries) return;
     if (s.transaction || (!force && s.review.newRecords < cfg.coordinatorEvery)) return;
     const elapsed = Date.now() - s.review.lastAt;
     if (elapsed < cfg.coordinatorMinGapMs) { this.arm(agent, cfg.coordinatorMinGapMs - elapsed, 'coordinate'); return; }
@@ -160,20 +201,23 @@ export class ContextPipeline {
     const controller = new AbortController(); this.controllers.set(key, controller);
     const job = (async () => {
       s.review.lastAt = Date.now(); s.review.needed = false; this.store.save(s);
-      const result = await this.hub.call(agent, 'coordinate', { system: COORDINATE_SYSTEM,
+      const result = await this.call(agent, 'coordinate', { system: COORDINATE_SYSTEM,
         messages: [this.adapter.message(JSON.stringify(input), 'coordinate-input')], tools: [COORDINATE_TOOL],
         ...(cfg.surgeonMaxTokens > 0 ? { maxTokens: cfg.surgeonMaxTokens } : {}) }, controller.signal);
       controller.signal.throwIfAborted();
       if (seenRevision !== userRevision(session)) { s.review.needed = true; this.store.notice(s, '中枢运行期间用户消息变化，旧决定未应用'); return; }
       if (s.transaction) { s.review.needed = true; this.store.save(s); return; }
       const choices = normalizeChoices(decodeResult(result, COORDINATE_TOOL.name), s, session, seenInputIds);
+      for (const c of choices) if (c.action === 'merge' && c.summary.length > cfg.summaryTargetChars * 2) throw Error('合并摘要超过目标长度两倍，请减少重复细节');
+      const signature = hash(choices.map(({ observed, ...c }) => c));
+      if (s.review.rejectedPlans?.includes(signature)) { s.review.needed = false; this.store.notice(s, '相同替换方案已被拒绝，不再重复执行'); return; }
       s.pending = { id: randomUUID(), createdAt: Date.now(), userRevision: seenRevision, choices, source: 'coordinator' };
       s.review.lastKey = keyHash; s.review.newRecords = Math.max(0, s.review.newRecords - seenNewRecords);
       s.review.lastInput = input; s.review.lastChoices = choices;
       delete s.failures.coordinate; this.store.save(s);
       this.hub.action(session, 'contextDecisions', 1, { choices: choices.map(c => ({ action: c.action, ids: c.ids })) });
     })().catch(e => {
-      if (!controller.signal.aborted) { this.reportError(agent, 'coordinate', e); s.review.needed = true; this.arm(agent, Math.max(1000, cfg.coordinatorMinGapMs), 'coordinate'); }
+      if (!controller.signal.aborted) { this.reportError(agent, 'coordinate', e); s.review.needed = s.failures.coordinate.count <= cfg.backgroundMaxRetries; this.store.save(s); }
     }).finally(() => { this.jobs.delete(key); this.controllers.delete(key); if (s.review.needed) this.arm(agent, Math.max(1000, cfg.coordinatorMinGapMs), 'coordinate'); });
     this.jobs.set(key, job); return job;
   }
@@ -192,8 +236,15 @@ export class ContextPipeline {
     if (!plan) return null;
     if (sourceCommandId || source) plan = { ...plan, ...(sourceCommandId ? { sourceCommandId } : {}), ...(source ? { source } : {}) };
     let tx;
-    try { tx = createTransaction(session, s, plan, retainTrace ? cfg : { ...cfg, traceEnabled: false }, this.adapter.pairing); }
-    catch (error) { s.pending = null; s.review.needed = true; this.store.notice(s, error.message); if (manual) throw error; return null; }
+    try { tx = createTransaction(session, s, plan, retainTrace ? cfg : { ...cfg, traceEnabled: false }, this.adapter.pairing, this.adapter.pricing?.(session)); }
+    catch (error) {
+      s.pending = null; s.review.lastRejection = { message: error.message, ...error.cost };
+      s.review.rejectedPlans = [...(s.review.rejectedPlans || []), hash(plan.choices.map(({ observed, ...c }) => c))].slice(-8);
+      s.review.replanAttempts = (s.review.replanAttempts || 0) + 1;
+      s.review.needed = s.review.replanAttempts <= cfg.backgroundMaxRetries; this.store.notice(s, error.message);
+      if (s.review.needed) this.arm(agent, Math.max(1000, cfg.coordinatorMinGapMs), 'coordinate');
+      if (manual) throw error; return null;
+    }
     if (!tx) { s.pending = null; this.store.save(s); return null; }
     const outcome = await applyTransaction(session, s, tx, this.store, this.adapter);
     this.hub.action(session, 'contextReplacements', 1, outcome);
@@ -326,22 +377,42 @@ export class ContextPipeline {
     if (args.id) {
       const r = this.store.get(session.id, args.id);
       this.hub.action(session, 'documentRecalls', 1, { id: r.id, session: r.sessionId });
-      return recordText(r) + (r.mergedInto ? `\nHistorical record; combined into ${r.mergedInto}.` : '')
+      return recordText(r) + ((r.assets || []).length ? '\n\n' + r.assets.map(describeAsset).join('\n') : '') + (r.mergedInto ? `\nHistorical record; combined into ${r.mergedInto}.` : '')
         + (r.parents.length ? `\nOriginal documents remain available under IDs: ${r.parents.join(', ')}.` : '');
     }
     const query = typeof args.query === 'string' ? args.query.toLowerCase() : '';
     const entries = this.store.visible(session.id).filter(r => !query || `${r.summary} ${r.id} ${r.sessionTitle}`.toLowerCase().includes(query));
     return entries.map(r => `[${r.id} | session ${r.sessionTitle} | ${iso(r.timeStart)}]\n${r.summary}`).join('\n\n') || 'No matching saved summaries.';
   }
+  recallAssets(session, args = {}) {
+    this.state(session);
+    if (args.id) return this.store.get(session.id, args.id).assets || [];
+    if (!Number.isSafeInteger(args.from) || !Number.isSafeInteger(args.to)) throw Error('读取附件需要记录编号或完整原文范围');
+    const lo = Math.min(args.from, args.to), hi = Math.max(args.from, args.to);
+    return combineAssets(...session.snapshotEvents().filter(e => e.seq >= lo && e.seq <= hi)
+      .map(e => attachmentsOf(messageOf(e)?.content, session.id, e.seq)));
+  }
+  recallContent(session, args = {}) {
+    if (args.asset === undefined) return [{ type: 'text', text: this.recall(session, args) }];
+    if (!Number.isSafeInteger(args.asset) || args.asset < 1) throw Error('附件编号从 1 开始');
+    const assets = this.recallAssets(session, args), asset = assets[args.asset - 1];
+    if (!asset) throw Error('该记录没有这个附件编号');
+    const block = structuredClone(asset.block);
+    if (block.type === 'image') delete block.offloaded;
+    this.hub.action(session, 'attachmentRecalls', 1, { id: args.id, asset: args.asset });
+    return [{ type: 'text', text: describeAsset(asset, args.asset - 1) }, block];
+  }
   view(session) {
     const s = this.state(session);
     return { schema: 1, scope: s.binding, steps: s.steps, pending: s.pending, lastReplacement: s.lastReplacement || null,
-      records: s.records.map(({ documents, sourceSeqs, sourceHash, ...r }) => ({ ...r, documentCount: documents.length, live: Boolean(liveSpan(session, { ...r, documents, sourceSeqs, sourceHash })) })),
+      records: s.records.map(({ documents, assets = [], userOriginals, originalSeqs, sourceSeqs, sourceHash, ...r }) => ({ ...r, documentCount: documents.length, assetCount: assets.length, originalEventCount: (originalSeqs || sourceSeqs).length, live: Boolean(liveSpan(session, { ...r, documents, sourceSeqs, sourceHash })) })),
+      backlog: backlogView(session, s, this.config()), eventsSincePrepare: s.eventsSincePrepare || 0,
+      limits: { batchWindows: this.config().prepareBatchWindows, concurrency: this.config().backgroundConcurrency },
       failures: s.failures, notices: s.notices, trace: s.traceSlot ? { sourceSeq: s.traceSlot.sourceSeq, sourceAt: s.traceSlot.sourceAt, truncated: s.traceSlot.truncated } : null,
       preparing: this.jobs.has(session.id + ':prepare'), coordinating: this.jobs.has(session.id + ':coordinate'), transactionPending: Boolean(s.transaction),
       manualQueued: s.manualQueue.length, manualOperation: this.manualSessions.get(session.id) || null,
       queuedOperations: s.manualQueue.map(q => q.operation || 'ready'),
-      review: { lastAt: s.review.lastAt, choices: s.review.lastChoices || [] } };
+      review: { lastAt: s.review.lastAt, choices: s.review.lastChoices || [], lastRejection: s.review.lastRejection || null } };
   }
   dispose(id) {
     if (!id) this.closed = true;

@@ -34,3 +34,27 @@ test('native DSH 0.1.6: prepared replacement, exposed trace, tool pairing and re
   assert.match(pipeline.recall(session, { id: state.records[1].id }), /9007199254740993/);
   pipeline.dispose();
 });
+
+test('native whole-window detail carries real image block shapes; brief removes them and replay remains valid', { skip: missing ? missing : false }, async t => {
+  const { Session, createMessage, createUserMessage, createSystemMessage, createToolResultMessage, createHostAdapter } = deps;
+  const dir = mkdtempSync(join(tmpdir(), 'native-materials-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const session = Session.create('native-materials', undefined, { version: 3, id: 'native-materials', createdAt: Date.now(), cwd: dir, isSeeded: false, agentPreset: 'trisoul-x' });
+  session.append('system/message', { turn: 1, step: 1, message: createSystemMessage('Protected system', 'test') }, { surfaceOp: 'append' });
+  session.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'Exact requirement 用户原话' }], source: { kind: 'user' } }), { surfaceOp: 'append' });
+  session.append('assistant/message', { turn: 1, step: 1, stream: [], message: createMessage({ role: 'assistant', source: { kind: 'model', provider: 'test', model: 'test' }, content: [{ type: 'tool-call', id: 'image-call', name: 'read', arguments: '{}' }] }) }, { surfaceOp: 'append' });
+  const image = { type: 'image', attachment: { attachmentId: 'sha256:' + 'a'.repeat(64), mediaType: 'image/png', bytes: 100, width: 10, height: 10, name: 'fixture.png' } };
+  session.append('tool/result', { turn: 1, step: 1, message: createToolResultMessage({ callId: 'image-call', content: [{ type: 'text', text: 'Observed result. '.repeat(1000) }, image], isError: false }) }, { surfaceOp: 'append' });
+  const hub = { store: { dir }, config: () => ({ flushIdleMs: 0, keepTailEvents: 0, traceEnabled: false, coordinatorEvery: 999 }), scope: () => ({ mode: 'session', project: dir }), action() {},
+    async call() { return { blocks: [{ type: 'tool-call', name: 'prepare_segment', arguments: { summary: 'Requirement 用户原话 retained; read completed.', documents: [] } }] }; },
+    ctx: { sessions: { async flush() {} }, tokenMeter: { measure(s) { return { nodes: s.surface.nodes.map(seq => ({ seq, heuristicTokens: 100 })) }; } } } };
+  const pipeline = new ContextPipeline(hub, createHostAdapter(hub)); t.after(() => pipeline.dispose());
+  const agent = { session, status: 'idle' }; await pipeline.prepare(agent, true);
+  const state = pipeline.state(session), id = state.records[0].id;
+  await pipeline.applyReady(agent, { manual: true, ids: [id], mode: 'detail' });
+  assert.ok(session.deriveMessages().some(m => m.content.some(b => b.type === 'image')));
+  await pipeline.applyReady(agent, { manual: true, ids: [id], mode: 'brief' });
+  assert.ok(!session.deriveMessages().some(m => m.content.some(b => b.type === 'image')));
+  assert.deepEqual(pipeline.recallContent(session, { id, asset: 1 })[1].attachment, image.attachment);
+  const replay = Session.create(session.id, JSON.parse(JSON.stringify(session.snapshotEvents())), session.header);
+  assert.deepEqual(replay.deriveMessages(), session.deriveMessages());
+});

@@ -4,6 +4,12 @@ import { createUserMessage, createSystemMessage } from '@deepseek-ai/dsh-llm';
 export function createHostAdapter(hub) {
   const message = (text, kind) => createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'plugin', plugin: 'trisoul-x:' + kind } });
   return {
+    pricing(session) {
+      const config = session.requestHeader?.()?.config;
+      const llm = hub.ctx.get?.('llm') || hub.ctx.llm;
+      return { imagePricing: config && llm?.imageRequestPricing?.(config.provider, config.model),
+        fileText: llm?.fileRequestText ? ref => llm.fileRequestText(ref) : undefined };
+    },
     pairing: { before: toolPairingBalancedBefore, after: toolPairingBalancedAfter },
     message,
     pressure(session) { const capacity = session.requestContext?.()?.contextWindow; return capacity ? hub.ctx.tokenMeter.measure(session).totalTokens / capacity : null; },
@@ -20,21 +26,22 @@ export function createHostAdapter(hub) {
       }, { surfaceOp, sourceEventSeqs });
       // Native lifecycle events keep host history and token-meter accounting coherent.
       const compactionId = op.id;
-      const summary = [{ type: 'text', text: op.text }];
+      const summary = op.content || [{ type: 'text', text: op.text }];
+      const accountingSeqs = op.accountingSeqs || sourceEventSeqs;
       const meter = hub.ctx.tokenMeter?.measure(session);
-      const shadowedTokenCount = (meter?.nodes || []).filter(n => sourceEventSeqs.includes(n.seq)).reduce((n, node) => n + (node.heuristicTokens ?? node.tokens ?? 0), 0);
+      const shadowedTokenCount = (meter?.nodes || []).filter(n => accountingSeqs.includes(n.seq)).reduce((n, node) => n + (node.tokens ?? node.heuristicTokens ?? 0), 0);
       const lifecycle = { compactionId, turn: null, ...(op.sourceCommandId ? { sourceCommandId: op.sourceCommandId } : {}) };
       const start = session.append('compaction/start', lifecycle);
       let closed = false;
       try {
         const record = session.append('compaction/summary', { compactionId, ...(op.sourceCommandId ? { sourceCommandId: op.sourceCommandId } : {}), summary,
-          shadowedRange: { start: surfaceOp.startSeq, end: surfaceOp.endSeq }, shadowedSeqs: sourceEventSeqs,
+          shadowedRange: { start: surfaceOp.startSeq, end: surfaceOp.endSeq }, shadowedSeqs: accountingSeqs,
           shadowedTokenCount, llmStreamCall: false });
         const checkpoint = session.append('user/message', {
           ...createUserMessage({ content: summary, source: compactCheckpointSource(compactionId, op.sourceCommandId) }), id: op.id,
         }, { surfaceOp, sourceEventSeqs: [start.seq, record.seq, ...sourceEventSeqs] });
         const end = session.append('compaction/end', lifecycle); closed = true;
-        op.native = { compactionId, startSeq: start.seq, summarySeq: record.seq, endSeq: end.seq, summary, shadowedRange: { start: surfaceOp.startSeq, end: surfaceOp.endSeq }, shadowedSeqs: sourceEventSeqs, shadowedTokenCount };
+        op.native = { compactionId, startSeq: start.seq, summarySeq: record.seq, endSeq: end.seq, summary, shadowedRange: { start: surfaceOp.startSeq, end: surfaceOp.endSeq }, shadowedSeqs: accountingSeqs, shadowedTokenCount };
         return checkpoint;
       } catch (error) {
         if (!closed) session.append('compaction/end', { ...lifecycle, error: error.message });
