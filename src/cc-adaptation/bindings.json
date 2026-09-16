@@ -171,8 +171,8 @@
   "recall": {
     "file": "tools/recall.md",
     "fields": [
+      "id",
       "query",
-      "scope",
       "from",
       "to"
     ],

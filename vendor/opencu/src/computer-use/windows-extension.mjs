@@ -50,7 +50,7 @@ export class WindowsExtensionRuntime {
     const marker = join(this.directory, 'owner.json');
     if (!existsSync(marker) && (await readdir(this.directory)).length) throw new Error('Windows 连接程序目录已有其他内容，未覆盖');
     try { await writeFile(marker, JSON.stringify({ owner: 'trisoul-x-browser-bridge' }) + '\n', { flag: 'wx' }); }
-    catch (error) { if (error.code !== 'EEXIST' || JSON.parse(await readFile(marker, 'utf8')).owner !== 'trisoul-x-browser-bridge') throw new Error('Windows 连接程序目录不属于 Oh My DSH'); }
+    catch (error) { if (error.code !== 'EEXIST' || JSON.parse(await readFile(marker, 'utf8')).owner !== 'trisoul-x-browser-bridge') throw new Error('Windows 连接程序目录不属于当前应用'); }
     // Build in the eventual generation directory, but keep it undiscoverable
     // until verification publishes current.json. Windows can retain executable
     // directory handles after the probe exits; moving that directory can fail.

@@ -92,7 +92,7 @@ function browserTarget(info){
   const viewport=Object.freeze({set:size=>rpc('browserViewport',[info.id,size]),reset:()=>rpc('browserViewport',[info.id,null])});
   const visibility=Object.freeze({set:visible=>rpc('browserVisibility',[info.id,visible])});
   return Object.freeze({...info,browserId:info.id,documentation:async()=>BROWSER_DOCUMENTATION,
-    capabilities:Object.freeze({list:async()=>[{id:'viewport',description:'Temporary viewport sizes for this task’s controlled tabs.'},{id:'visibility',description:'Show or hide the selected tab preview in the active DSH conversation.'}],get:async id=>{if(id==='visibility')return visibility;if(id!=='viewport')throw new Error('Browser capability is not available: '+id);return viewport;}}),
+    capabilities:Object.freeze({list:async()=>[{id:'viewport',description:'Temporary viewport sizes for this task’s controlled tabs.'},{id:'visibility',description:'Show or hide the selected tab preview in the current conversation.'}],get:async id=>{if(id==='visibility')return visibility;if(id!=='viewport')throw new Error('Browser capability is not available: '+id);return viewport;}}),
     tabs:{list:()=>rpc('listTabs',[{browser:info.id}]),get:id=>bind('getTab',[id,{browser:info.id}]),new:()=>bind('createBrowserTab',[info.id,'about:blank'])}});
 }
 globalThis.cua=Object.freeze({

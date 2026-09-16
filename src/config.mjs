@@ -6,6 +6,16 @@ const route = z.object({ provider: z.string().default(''), model: z.string().def
 const cadence = FREQUENCY_PRESETS.always;
 export const Config = z.object({
   dataDir: z.string(),
+  // Context v1: old fields below remain readable for upgrades; only the new pipeline runs.
+  contextEnabled: z.boolean().default(true),
+  automaticReplace: z.boolean().default(true),
+  digestWindow: z.number().step(1).min(1).default(32),
+  digestLookback: z.number().step(1).min(0).default(8),
+  coordinatorEvery: z.number().step(1).min(1).default(2),
+  coordinatorMinGapMs: z.number().step(1).min(0).default(30000),
+  coordinatorRecentEvents: z.number().step(1).min(0).default(12),
+  traceEnabled: z.boolean().default(true),
+  traceMaxChars: z.number().step(1).min(0).default(0),
   identityPrompt: z.string().default(DEFAULT_IDENTITY),
   computerUseEnabled: z.boolean().default(true),
   computerUseBrowserExecutable: z.string().default(''),

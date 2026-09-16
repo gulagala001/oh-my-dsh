@@ -1,9 +1,9 @@
 {
   "name": "trisoul_x",
-  "version": "1.2.0-alpha.1",
+  "version": "1.3.0-alpha.2",
   "private": true,
   "type": "module",
-  "description": "DSH Agent 工作台：集成分层记忆、上下文整理、任务验证、网页与 Windows/macOS 应用操控、实时预览、页面批注、素材导出和运行监控。",
+  "description": "DSH 工作台：后台分段预处理、四选一替换中枢、项目摘要时间轴、任务验收与电脑操控。",
   "packageManager": "pnpm@11.23.0",
   "repository": {
     "type": "git",
@@ -25,7 +25,8 @@
     "build": "node scripts/build.mjs",
     "start": "node scripts/start.mjs",
     "dev": "node scripts/build.mjs && node scripts/start.mjs",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "test:context": "node --test test/context-*.test.mjs"
   },
   "dependencies": {
     "diff": "9.0.0",

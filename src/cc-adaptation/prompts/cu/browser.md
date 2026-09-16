@@ -113,9 +113,9 @@ returns them to native browser sizing. tab.viewport changes a single tab.
 Temporary sizes reset when control stops or the turn ends.
 
 After selecting a tab, await (await browser.capabilities.get('visibility')).set(true)
-shows that tab in the active conversation's DSH preview. set(false) hides its
-docked preview while browser work continues. This controls DSH's preview, not the user's native Chrome windows.
-The call succeeds only after an active DSH page acknowledges the visible state;
+shows that tab in the current conversation's browser preview. set(false) hides its
+docked preview while browser work continues. This controls the embedded preview, not the user's native Chrome windows.
+The call succeeds only after an active conversation client acknowledges the visible state;
 without that client it reports a timeout.
 
 Created temporary tabs are closed by automatic end-of-turn cleanup.
@@ -154,12 +154,12 @@ password/one-time-code autocomplete fields are not copied into the snapshot. It 
 not a backup of script execution or browser session state.
 Exported files remain after tab cleanup.
 Page exports, successful bundled files and the manifest are automatically saved
-as DSH file attachments in the collapsed tool result; no duplicate file-delivery
+as file attachments in the collapsed tool result; no duplicate file-delivery
 call is needed. Inventory text is displayed only when you print it. Google
 Workspace format conversion and YouTube transcript export are not implemented.
 Download management above describes the managed browser; its full
 external-Chrome support remains incomplete. Clipboard formats and other optional
-Codex capabilities remain incomplete in the project baseline.
+features remain incomplete in the project baseline.
 
 If tab.capabilities.list() includes webmcp, use const webmcp = await
 tab.capabilities.get('webmcp'); const tools = await webmcp.fetchTools(); then

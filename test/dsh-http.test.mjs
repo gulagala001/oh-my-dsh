@@ -13,7 +13,7 @@ async function until(fn, timeout = 30000) {
   throw Error('Timed out waiting for integration result');
 }
 
-test('official DSH profile → plugin → native tools → memory → V3 canvas → raw recall', { timeout: 120000 }, async t => {
+test('official DSH profile → plugin → native tools → context records → replacement → raw recall', { timeout: 120000 }, async t => {
   const root = mkdtempSync(join(tmpdir(), 'trisoul-x-dsh-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   mkdirSync(home); mkdirSync(workspace); mkdirSync(join(workspace, '.agents', 'skills', 'test-skill'), { recursive: true });
   mkdirSync(join(home, 'trisoul-x'));
@@ -25,24 +25,18 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   writeFileSync(join(workspace, 'verify.mjs'), 'import {readFileSync} from "node:fs";import assert from "node:assert/strict";assert.ok(readFileSync("fixture.txt","utf8").startsWith("ORIGINAL_FIXTURE_42"));console.log("VERIFIED_LEDGER_FIXTURE")');
   writeFileSync(join(workspace, 'AGENTS.md'), 'Project instruction marker: PROJECT_FIXTURE.\n');
   const payloads = [], content = 'ORIGINAL_FIXTURE_42\n' + 'source material '.repeat(600);
-  let calls = 0, recallRange, recallReply, curationSignalled = false;
+  let calls = 0, recallRange, recallReply;
   const provider = createServer(async (req, res) => {
     let body = ''; for await (const part of req) body += part;
     const p = JSON.parse(body); payloads.push(p);
     res.writeHead(200, { 'Content-Type': 'text/event-stream' });
     const chunk = (delta, finish = null) => res.write(`data: ${JSON.stringify({ id: 'fixture', object: 'chat.completion.chunk', model: 'fixture', created: 1, choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`);
     const tool = (name, args) => chunk({ role: 'assistant', tool_calls: [{ index: 0, id: 'call-' + payloads.length, type: 'function', function: { name, arguments: JSON.stringify(args) } }] }, 'tool_calls');
-    if (p.tools?.some(t => t.function.name === 'save_context')) {
-      tool('save_context', { digest: 'Read the fixture. Fixture result is 42.', workdoc: JSON.stringify(p.messages).includes('Current task memo document') ? 'Fixture result is 42.' : '', phaseClosed: false, compactable: true, nowCompactable: [], signals: { overlap: !curationSignalled, conflict: false }, ops: [{ op: 'add', scope: 'project', key: 'fixture.result', text: 'Fixture result is 42.', target: '' }] });
-      curationSignalled = true;
-    } else if (p.tools?.some(t => t.function.name === 'save_state')) {
-      tool('save_state', { pin: ['Keep the source fixture intact.'], status: 'Native tools completed.' });
-    } else if (p.tools?.some(t => t.function.name === 'select_memories')) { tool('select_memories', { indexes: [0] });
-    } else if (p.tools?.some(t => t.function.name === 'record_probe')) { tool('record_probe', { question: 'What is the fixture result?', expected: '42' });
-    } else if (p.messages?.some(m => m.role === 'system' && m.content?.includes('You are the answerer'))) { chunk({ role: 'assistant', content: '42' }, 'stop');
-    } else if (p.tools?.some(t => t.function.name === 'memory_curate')) {
-      tool('memory_curate', { ops: [{ op: 'retire', scope: 'project', key: 'fixture.duplicate', target: 'fixture-memory-duplicate', text: 'Duplicate of fixture.result.' }] });
-    } else if (!p.tools?.length) { chunk({ role: 'assistant', content: 'Done: inspected the fixture. Not yet done: report the result.' }, 'stop'); }
+    if (p.tools?.some(t => t.function.name === 'prepare_segment')) {
+      tool('prepare_segment', { summary: 'Read the fixture. Result is 42.', documents: [{ title: 'Fixture', text: 'ORIGINAL_FIXTURE_42; source fixture remains intact.' }] });
+    } else if (p.tools?.some(t => t.function.name === 'submit_context_choices')) {
+      tool('submit_context_choices', { choices: [] });
+    } else if (!p.tools?.length) { chunk({ role: 'assistant', content: 'Done: inspected the fixture.' }, 'stop'); }
     else if (recallRange) {
       tool('recall', { query: 'original fixture', from: recallRange.from, to: recallRange.to }); recallRange = null; recallReply = true;
     } else if (recallReply) { chunk({ role: 'assistant', content: 'Original record retrieved.' }, 'stop'); }
@@ -109,23 +103,23 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   assert.equal((await api('/scope' + q)).locked, false);
   await api('/scope' + q, { scope: 'project' });
   // This finite fixture uses short batches to exercise background work within its scripted turn.
-  const updated = await api('/settings', { digestEvery: 8, stateEvery: 6, injectLimit: 1, supplementMinSteps: 1, shadowStale: 0, backgroundMode: 'unified', unifiedBackground: { provider: 'fixture', model: 'fixture', temperature: 0.2 } });
-  assert.equal(updated.injectLimit, 1); assert.equal(updated.unifiedBackground.temperature, 0.2);
+  const updated = await api('/settings', { digestEvery: 8, digestWindow: 8, keepTailEvents: 2, automaticReplace: false, backgroundMode: 'unified', unifiedBackground: { provider: 'fixture', model: 'fixture', temperature: 0.2 } });
+  assert.equal(updated.digestEvery, 8); assert.equal(updated.unifiedBackground.temperature, 0.2);
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: id, mode: 'queue', content: [{ type: 'text', text: 'Run native fixture tools.' }], clientTimeZone: 'Asia/Shanghai' });
-  const reviewed = await until(async () => { const s = await api('/state' + q); return s.running === 'idle' && s.context?.digestCount && !s.live && s.metrics.main?.calls >= 13 && s.actions.curations && s; });
-  assert.equal(reviewed.metrics.curation.calls, 1);
-  assert.ok(reviewed.metrics.state.calls); assert.ok(reviewed.metrics.recall.calls);
-  assert.match(reviewed.context.workdoc, /42/); assert.ok(reviewed.context.workdocVersion > 0);
+  const reviewed = await until(async () => { const s = await api('/state' + q); return s.running === 'idle' && s.actions.preparedSegments && !s.live && s.metrics.main?.calls >= 13 && s; });
+  assert.ok(reviewed.metrics.prepare.calls);
+  assert.ok(reviewed.contextPipeline.records.length > 0);
   assert.ok(reviewed.contextHistory.length > 0);
   const firstFrame = reviewed.contextHistory[0];
   assert.ok(firstFrame.nodes.some(n => n.kind === '@deepseek-ai/dsh-system-prompt' && n.tokens > 0), 'request snapshot includes the committed system prompt');
   assert.ok(firstFrame.nodes.some(n => n.kind === 'user'), 'request snapshot includes the admitted user message');
   assert.equal(reviewed.contextHistory.length, payloads.filter(p => p.tools?.some(t => t.function.name === 'todo_write')).length, 'one snapshot per main request, excluding background calls');
   assert.equal(firstFrame.inputTokens, 200, 'reported input excludes response tokens');
-  assert.ok(payloads.some(p => p.tools?.some(t => t.function.name === 'save_state') && p.temperature === 0.2));
+  assert.ok(payloads.some(p => p.tools?.some(t => t.function.name === 'prepare_segment') && p.temperature === 0.2));
   const memoryFile = JSON.parse(readFileSync(join(home, 'trisoul-x', 'memory.json'), 'utf8'));
-  assert.equal(memoryFile.find(m => m.id === 'fixture-memory-duplicate').retiredReason, 'Duplicate of fixture.result.');
-  assert.ok(payloads.some(p => p.tools?.some(t => t.function.name === 'memory_curate') && JSON.stringify(p.messages).includes('fixture-memory-duplicate')));
+  assert.equal(memoryFile.length, 2);
+  assert.ok(memoryFile.every(m => !m.retiredReason), 'legacy memory remains unchanged');
+  assert.ok(!payloads.some(p => p.tools?.some(t => ['save_state', 'save_context', 'memory_curate', 'record_probe'].includes(t.function.name))));
   assert.equal(reviewed.tasks[0].links[0].asked, true);
   assert.equal(reviewed.frame.filter(n => n.kind === 'trisoul-x:task-review').length, 1);
   const firstTurn = JSON.stringify(payloads.filter(p => p.tools?.some(t => t.function.name === 'verify_link')).map(p => p.messages));
@@ -136,8 +130,8 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   assert.equal(readFileSync(join(workspace, 'fixture.txt'), 'utf8'), content);
   assert.equal((await api('/scope' + q)).scope, 'project'); assert.equal((await api('/scope' + q)).locked, true);
   const locked = await fetch(base + '/trisoul-x/api/scope' + q, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ scope: 'full' }) }); assert.equal(locked.status, 409);
-  await api('/settings', { memoryScope: 'full' }); assert.equal((await api('/scope' + q)).scope, 'project');
-  assert.ok(state.actions.injections); assert.ok(state.metrics.background.calls);
+  await assert.rejects(api('/settings', { memoryScope: 'full' }), /full/); assert.equal((await api('/scope' + q)).scope, 'project');
+  assert.ok(state.actions.preparedSegments); assert.ok(state.metrics.prepare.calls);
   assert.equal(state.tasks.length, 1); assert.equal(state.tasks[0].status, 'completed');
   const testLink = state.tasks[0].links.find(l => l.kind === 'test');
   assert.equal(testLink.lastRun.pass, true); assert.match(testLink.lastRun.tail, /VERIFIED_LEDGER_FIXTURE/);
@@ -148,8 +142,8 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   const systemText = mainRequests[0].messages[0].content;
   assert.ok(systemText.startsWith('You are ZCode.'));
   assert.ok(systemText.includes('The host application source checkout is at '));
-  assert.ok(systemText.includes("through the current application's Web GUI"));
-  assert.ok(systemText.includes('only dsh web injects window.__DSH_BOOT__'));
+  assert.ok(systemText.includes("through the current web interface"));
+  assert.ok(systemText.includes('boot data supplied by the existing host process'));
   assert.ok(!systemText.includes('DeepSeek Harness'));
   const requestText = JSON.stringify(mainRequests[0].messages);
   assert.ok(requestText.includes('Current file policy:'));
@@ -171,14 +165,18 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   assert.ok(JSON.stringify(payloads).includes('PROJECT_FIXTURE')); assert.ok(JSON.stringify(payloads).includes('test-skill'));
   const memories = await api('/memories' + q); assert.ok(memories.items.some(m => m.key === 'fixture.result'));
   const compact = await api('/compact' + q, {}); assert.equal(compact.changed, true);
-  const after = await until(async () => { const s = await api('/state' + q); return s.context?.probe && !s.live && s; });
-  assert.equal(after.context.probe.ok, true, JSON.stringify(after.context.probe)); assert.equal(after.actions.probePassed, 1); assert.ok(after.frame.some(n => n.checkpoint));
-  assert.ok(after.actions.surgeries); assert.ok(after.frame.filter(n => n.kind === 'user').length >= 1);
-  recallRange = after.context.checkpoint;
+  const after = await api('/state' + q);
+  assert.equal(after.context.probe, null);
+  assert.ok(after.actions.contextReplacements);
+  assert.ok(after.frame.some(n => n.checkpoint));
+  assert.ok(after.frame.some(n => n.kind === 'user'));
+  const records = (await api('/context' + q)).records;
+  const ranges = records.flatMap(r => r.ranges);
+  recallRange = { from: Math.min(...ranges.map(r => r.from)), to: Math.max(...ranges.map(r => r.to)) };
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: id, mode: 'queue', content: [{ type: 'text', text: 'Retrieve the original fixture.' }], clientTimeZone: 'Asia/Shanghai' });
-  await until(async () => { const s = await api('/state' + q); return s.running === 'idle' && s.actions.rawRecalls && !s.live; });
-  assert.ok(payloads.some(p => p.messages.some(m => m.role === 'tool' && typeof m.content === 'string' && m.content.includes('ORIGINAL_FIXTURE_42'))));
-  assert.ok(payloads.some(p => JSON.stringify(p.messages).includes('Working state')));
+  await until(async () => { const s = await api('/state' + q); return s.running === 'idle' && recallReply && !s.live; });
+  assert.ok(payloads.some(p => p.messages.some(m => m.role === 'tool' && typeof m.content === 'string' && m.content.includes('[event ') && m.content.includes('ORIGINAL_FIXTURE_42'))), 'recall returns original event text');
+  assert.ok((await api('/context/catalog' + q)).entries.length > 0);
   const continued = await api('/state' + q); assert.equal(continued.tasks[0].status, 'completed');
   for (const p of payloads.filter(p => p.tools?.some(t => t.function.name === 'todo_write'))) {
     assert.equal(p.messages[0].role, 'system', 'compaction keeps the system role');
@@ -186,11 +184,9 @@ test('official DSH profile → plugin → native tools → memory → V3 canvas 
   }
   const continuedTest = continued.tasks[0].links.find(l => l.kind === 'test');
   assert.equal(continued.taskRelease.tested, 1);
-  await api('/memories' + q, { op: 'add', scope: 'project', key: 'manual.test', text: 'User-created fact.' });
-  let manual = (await api('/memories' + q)).items.find(m => m.key === 'manual.test');
-  await api('/memories' + q, { op: 'update', target: manual.id, text: 'Edited fact.' });
-  await api('/memories' + q, { op: 'delete', target: manual.id });
-  const managed = await api('/memories' + q); assert.ok(!managed.items.some(m => m.id === manual.id)); assert.ok(managed.health.active > 0);
+  const retired = await fetch(base + '/trisoul-x/api/memories' + q, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ op: 'add', text: 'Do not write' }) });
+  assert.equal(retired.status, 410);
+  assert.equal((await api('/memories' + q)).readOnly, true);
   assert.equal(continuedTest.lastRun.pass, true); assert.match(continuedTest.lastRun.tail, /VERIFIED_LEDGER_FIXTURE/);
   assert.ok(!log.includes('cannot get property'), log.replace(/token=\S+/g, 'token=[redacted]'));
   const customIdentity = '你是身份设置验收助手。\n\nLiteral {{cwd}} stays literal.';

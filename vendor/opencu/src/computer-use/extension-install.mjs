@@ -106,7 +106,7 @@ export class ExtensionInstaller {
     const bundle = await this.bundle();
     await access(this.nodePath, constants.X_OK);
     const oldReceipt = await read(this.receipt); let receipt;
-    if (oldReceipt) { try { receipt = JSON.parse(oldReceipt); } catch {} if (receipt?.owner !== OWNER) throw new Error('已有安装记录不属于 Oh My DSH Computer Use'); }
+    if (oldReceipt) { try { receipt = JSON.parse(oldReceipt); } catch {} if (receipt?.owner !== OWNER) throw new Error('已有安装记录不属于当前应用的电脑控制组件'); }
     const registryBefore = this.windows ? await this.windows.read(this.hostName) : null;
     if (registryBefore && (await Promise.all(registryBefore.map(async entry => !entry.hasValue || await this.matchesWindowsRegistration(entry.value)))).some(matches => !matches)) throw new Error('这个 Chrome 已连接其他实例。本次没有替换注册表中的连接程序。');
     const registration = await read(this.registration);
@@ -116,7 +116,7 @@ export class ExtensionInstaller {
     }
     if (!receipt) {
       const existing = await readdir(this.directory).catch(error => { if (error.code === 'ENOENT') return []; throw error; });
-      if (existing.length) throw new Error('安装目录已有其他内容，请选择独立的 Oh My DSH 数据目录');
+      if (existing.length) throw new Error('安装目录已有其他内容，请选择独立的应用数据目录');
       // Retain ownership after an interrupted first install. A retry can
       // repair our partial files without treating them as somebody else's.
       await atomicWrite(this.receipt, Buffer.from(JSON.stringify({ owner: OWNER, files: [], ...(registryBefore ? { registryBefore } : {}) }) + '\n'));
@@ -159,7 +159,7 @@ export class ExtensionInstaller {
     await this.preparing;
     const data = await read(this.receipt); if (!data) return;
     const receipt = JSON.parse(data);
-    if (receipt.owner !== OWNER) throw new Error('该连接程序不属于 Oh My DSH，未移除');
+    if (receipt.owner !== OWNER) throw new Error('该连接程序不属于当前应用，未移除');
     const unlock = this.windows ? await this.windows.lock(this.hostName) : null;
     try {
       if (this.windows) {
