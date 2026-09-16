@@ -258,7 +258,9 @@ chrome.tabs.onUpdated.addListener((tabId,change,tab)=>{const control=controls.ge
 chrome.tabs.onCreated.addListener(tab => { void groupWarning(null, sessionGroups.inherit(tab)); });
 chrome.tabs.onAttached.addListener(tabId => { void groupWarning(controls.get(tabId), sessionGroups.moved(tabId)); });
 chrome.tabs.onRemoved.addListener(tabId => { void groupWarning(null, sessionGroups.removed(tabId)); });
-chrome.tabGroups.onRemoved.addListener(group => { void sessionGroups.enqueue(async () => { sessionGroups.removeGroup(group.id); await sessionGroups.save(); }).catch(cause => { detail = cause.message; }); });
+// A worker can restart with updated files before Chrome reloads manifest permissions.
+// Grouping errors remain visible through groupWarning; keep the connection alive.
+chrome.tabGroups?.onRemoved?.addListener(group => { void sessionGroups.enqueue(async () => { sessionGroups.removeGroup(group.id); await sessionGroups.save(); }).catch(cause => { detail = cause.message; }); });
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (sender.id !== chrome.runtime.id || sender.url !== chrome.runtime.getURL('popup.html')) return;
   const run = async () => {
