@@ -9,6 +9,12 @@ export const Config = z.object({
   // Context v1: old fields below remain readable for upgrades; only the new pipeline runs.
   contextEnabled: z.boolean().default(true),
   automaticReplace: z.boolean().default(true),
+  preprocessBoundaries: z.boolean().default(false),
+  prepareBatchWindows: z.number().step(1).min(1).default(2),
+  prepareInputTokens: z.number().step(1).min(1).default(48000),
+  summaryTargetChars: z.number().step(1).min(1).default(1200),
+  backgroundConcurrency: z.number().step(1).min(1).default(2),
+  backgroundMaxRetries: z.number().step(1).min(0).default(2),
   digestWindow: z.number().step(1).min(1).default(32),
   digestLookback: z.number().step(1).min(0).default(8),
   coordinatorEvery: z.number().step(1).min(1).default(2),

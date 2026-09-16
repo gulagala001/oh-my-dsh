@@ -2,7 +2,7 @@ import { DEFAULT_IDENTITY } from '../cc-adaptation/identity.mjs';
 
 /* Keep the original workbench and host theme. These panels replace only the
  * context/summary settings and slots whose semantics changed in Context v1. */
-export const CONTEXT_UI_VERSION = '1.2.0';
+export const CONTEXT_UI_VERSION = '1.3.0';
 export const CONTEXT_FREQUENCY_PRESETS = Object.freeze({
   always: Object.freeze({ digestEvery: 16, digestWindow: 16, coordinatorEvery: 1, coordinatorMinGapMs: 15000, surgeryCooldownSteps: 10 }),
   medium: Object.freeze({ digestEvery: 32, digestWindow: 32, coordinatorEvery: 2, coordinatorMinGapMs: 30000, surgeryCooldownSteps: 20 }),
@@ -34,7 +34,7 @@ export function createContextUI(React) {
   const fmt = value => Number(value || 0).toLocaleString();
   const date = value => value == null ? '时间未记录' : new Date(value).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
   const time = value => value == null ? '—' : new Date(value).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
-  const names = { raw: '原文', keep: '保留原文', detail: '摘要＋文档', brief: '仅基础摘要', merge: '合并替换', session: '会话隔离', project: '项目共享' };
+  const names = { raw: '原文', keep: '保留原文', detail: '摘要＋详细资料', brief: '仅基础摘要', merge: '合并替换', session: '会话隔离', project: '项目共享' };
   const frequencyNames = { always: '频繁', medium: '适中', slow: '较少', custom: '自定义' };
   const paths = {
     settings: 'M4 7h16M4 17h16M8 4v6M16 14v6', clock: 'M12 8v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
@@ -60,6 +60,8 @@ export function createContextUI(React) {
   const pageTabs = (value, options, change) => h('nav', { className: 'cx-tabs', 'aria-label': '设置分类' }, ...options.map(([id, text]) => h('button', { key: id, type: 'button', 'aria-current': id === value ? 'page' : undefined, onClick: () => change(id) }, text)));
   const duration = ms => Number(ms) >= 60000 ? Number(ms) / 60000 + ' 分钟' : Number(ms || 0) / 1000 + ' 秒';
   const rangeLabel = ranges => (ranges || []).map(x => `#${x.from}–${x.to}`).join(' · ');
+  const summaryPreview = text => h(React.Fragment, null, h('p', { className: 'cx-prose' }, text.length > 240 ? text.slice(0, 240) + '…' : text), text.length > 240 && fold('展开完整摘要', text.length + ' 字符', h('p', { className: 'cx-prose' }, text)));
+  const assetUrl = (r, i) => '/trisoul-x/api/context/asset' + suffix(r.requestSessionId || r.sessionId) + '&id=' + encodeURIComponent(r.id) + '&asset=' + (i + 1);
 
   // Document detail is a reader, not an ever-growing section under the list.
   class DocumentReader extends React.Component {
@@ -67,7 +69,7 @@ export function createContextUI(React) {
     componentWillUnmount() { this.previousFocus?.isConnected && this.previousFocus.focus?.(); }
     render() {
       const r = this.props.record;
-      return h('section', { className: 'cx-reader', ref: el => { this.root = el; }, tabIndex: -1, role: 'dialog', 'aria-modal': true, 'aria-label': '详细文档', onKeyDown: e => {
+      return h('section', { className: 'cx-reader', ref: el => { this.root = el; }, tabIndex: -1, role: 'dialog', 'aria-modal': true, 'aria-label': '详细资料', onKeyDown: e => {
           if (e.key === 'Escape') this.props.onClose();
           if (e.key === 'Tab') {
             const items = [...this.root.querySelectorAll('button:not(:disabled),a[href],input:not(:disabled),summary,[tabindex="0"]')].filter(el => el.getClientRects().length);
@@ -76,10 +78,11 @@ export function createContextUI(React) {
             else if (!e.shiftKey && (document.activeElement === last || document.activeElement === this.root)) { e.preventDefault(); first?.focus(); }
           }
         } },
-        h('header', { className: 'cx-reader-head' }, button('返回', this.props.onClose, { icon: 'arrow', quiet: true }), h('strong', null, '摘要与详细文档'), badge((r.documents || []).length + ' 份')),
+        h('header', { className: 'cx-reader-head' }, button('返回', this.props.onClose, { icon: 'arrow', quiet: true }), h('strong', null, '摘要与详细资料'), badge((r.documents || []).length + ' 份')),
         h('div', { className: 'cx-body', 'data-testid': 'record-documents' }, h('div', { className: 'cx-record-meta' }, h('code', null, r.id), h('small', null, date(r.timeStart) + ' — ' + time(r.timeEnd))),
           section('基础摘要', null, h('p', { className: 'cx-prose' }, r.summary)),
           ...(r.documents || []).map((d, i) => h('article', { className: 'cx-document', key: i }, h('div', { className: 'cx-section-head' }, h('h3', null, d.title), badge(String(i + 1).padStart(2, '0'))), h('pre', null, d.text))),
+          ...(r.assets || []).map((asset, i) => fold((asset.block.attachment?.name || asset.block.type) + ' · 附件 ' + (i + 1), (asset.sources || []).map(x => x.sessionId + '#' + x.seq).join('、'), h('div', null, asset.block.type === 'image' && h('img', { src: assetUrl(r, i), alt: '原始图片 ' + (i + 1), loading: 'lazy', style: { maxWidth: '100%', height: 'auto' } }), h('a', { href: assetUrl(r, i), target: '_blank', rel: 'noopener noreferrer' }, '打开原件')))),
           !(r.documents || []).length && empty('这份摘要没有附加文档', '基础摘要和来源仍可查看。', 'context'),
           fold('来源与版本', rangeLabel(r.ranges), h('div', { className: 'cx-prose' }, h('p', null, '原始区间：' + rangeLabel(r.ranges)), h('p', null, '摘要编号：' + r.id), (r.parents || []).length > 0 && h('p', null, '合并来源：' + r.parents.join('、'))))));
     }
@@ -138,18 +141,20 @@ export function createContextUI(React) {
           !this.props.sessionId ? empty('先选择一个会话', '这里会显示本会话的分段摘要与替换状态。') : !d ? empty('正在读取上下文', '正在连接当前会话的预处理记录。') : h(React.Fragment, null,
             h('section', { className: 'cx-pipeline-card' }, h('div', { className: 'cx-row' }, h('span', { className: 'cx-eyebrow' }, '处理状态'), badge(names[d.scope?.scope] || '会话', d.scope?.scope === 'session' ? '' : 'blue')),
               h('div', { className: 'cx-stages' }, step('预处理', d.preparing ? '正在生成摘要' : '等待新事件', d.preparing), icon('chevron', 12), step('中枢', d.coordinating ? '正在判断范围' : d.pending ? '结果已准备' : '等待新摘要', d.coordinating), icon('chevron', 12), step('应用', d.transactionPending ? '事务恢复中' : '请求边界替换', d.transactionPending)),
-              h('div', { className: 'cx-metrics' }, h('div', null, h('strong', null, fmt(records.length)), h('span', null, '分段摘要')), h('div', null, h('strong', null, fmt(ready)), h('span', null, '原文待替换')), h('div', null, h('strong', null, fmt(records.reduce((n, r) => n + (r.documentCount || 0), 0))), h('span', null, '文档存档'))),
+              h('div', { className: 'cx-metrics' }, h('div', null, h('strong', null, fmt(records.length)), h('span', null, '分段摘要')), h('div', null, h('strong', null, fmt(ready)), h('span', null, '原文待替换')), h('div', null, h('strong', null, fmt(records.reduce((n, r) => n + (r.documentCount || 0) + (r.assetCount || 0), 0))), h('span', null, '详细资料存档'))),
               h('div', { className: 'cx-row cx-pipeline-action' }, h('small', null, '只应用已有结果，不现场等待 AI。'), button('应用已准备结果', () => this.run('/compact', {}, r => r.queued ? '已排队，将在下一次请求边界应用。' : r.changed ? '替换已应用，原文仍在日志中。' : '没有可应用的结果，原文保持不变。'), { disabled: locked, primary: true, icon: 'layers' }))),
-            section('手动压缩', '压缩只改变当前上下文，原始日志和文档存档保留。', h(React.Fragment, null,
+            section('未处理原文', '与已准备、待替换的摘要分开统计。', h('p', { className: 'cx-prose' }, '待预处理 ' + fmt(d.backlog?.events) + ' 条 · 估算 ' + fmt(d.backlog?.estimatedTokens) + ' tokens；近期暂留 ' + fmt(d.backlog?.recentEvents) + ' 条。')),
+            d.lastReplacement?.stats && section('最近一次替换', '以下为同口径估算，不是提供方实际输入账单。', h('p', { className: 'cx-prose' }, '处理 ' + fmt(d.lastReplacement.stats.selectedRecords) + ' 段 → ' + fmt(d.lastReplacement.stats.resultRecords) + ' 段；替换 ' + fmt(d.lastReplacement.stats.currentMessages) + ' 条当前消息，覆盖 ' + fmt(d.lastReplacement.stats.originalEvents) + ' 条原始事件；估算节省 ' + fmt(d.lastReplacement.stats.estimatedSavedTokens) + ' tokens。')),
+            section('手动压缩', '压缩只改变当前上下文，原始日志和详细资料存档保留。', h(React.Fragment, null,
               fullRunning && h('div', { className: 'cx-info', role: 'status' }, icon('clock'), h('p', null, '正在生成全量摘要…摘要生成成功后才替换原文。')),
               d.manualQueued > 0 && h('p', { className: 'cx-hint', role: 'status' }, '有 ' + d.manualQueued + ' 项压缩操作等待下一次请求边界。'),
-              h('div', { className: 'cx-compact-choice' }, h('div', { className: 'cx-row' }, h('code', null, '/compact-p'), button('已处理片段仅摘要', () => this.run('/compact-p', {}, r => r.message), { disabled: locked || !records.some(r => r.live && r.mode !== 'brief'), icon: 'layers' })), h('p', { className: 'cx-hint' }, '全部已准备片段只保留摘要，不携带详细文档；未处理内容不变，不调用 AI。')),
-              h('div', { className: 'cx-compact-choice' }, h('div', { className: 'cx-row' }, h('code', null, '/compact-f'), button(fullRunning ? '全量压缩中…' : '全量压缩', () => this.run('/compact-f', {}, r => r.message), { disabled: locked, icon: fullRunning ? 'clock' : 'spark' })), h('p', { className: 'cx-hint' }, '调用 AI 将全部对话重新汇总为一份摘要，包含用户消息、工具结果、旧摘要和 Trace；保留系统提示词、工具定义与用户手写全局背景。可能损失细节。')))),
+              h('div', { className: 'cx-compact-choice' }, h('div', { className: 'cx-row' }, h('code', null, '/compact-p'), button('已处理片段仅摘要', () => this.run('/compact-p', {}, r => r.message), { disabled: locked || !records.some(r => r.live && r.mode !== 'brief'), icon: 'layers' })), h('p', { className: 'cx-hint' }, '全部已准备片段只保留摘要，不携带文档、图片、附件；未处理内容不变，不调用 AI。')),
+              h('div', { className: 'cx-compact-choice' }, h('div', { className: 'cx-row' }, h('code', null, '/compact-f'), button(fullRunning ? '全量压缩中…' : '全量压缩', () => this.run('/compact-f', {}, r => r.message), { disabled: locked, icon: fullRunning ? 'clock' : 'spark' })), h('p', { className: 'cx-hint' }, '调用 AI 将全部对话重新汇总为一份摘要，包含用户消息、工具结果、旧摘要及历史思考；保留前置 CoT、系统提示词、工具定义与用户手写全局背景。可能损失细节。')))),
             fold('后台操作', '手动触发预处理或中枢判断', h('div', { className: 'cx-actions' }, button('准备摘要', () => this.run('/context/prepare', {}), { disabled: locked || d.preparing, icon: 'context' }), button('运行中枢', () => this.run('/context/coordinate', {}), { disabled: locked || d.coordinating, icon: 'spark' }))),
             h('div', { className: 'cx-list-head' }, h('h3', null, '分段摘要'), segments('筛选分段', filter, [['all', '全部'], ['raw', '原文'], ['applied', '已替换']], value => this.setState({ filter: value }))),
             !shown.length ? empty(records.length ? '当前筛选没有内容' : '还没有分段摘要', records.length ? '切换“全部”查看其他记录。' : '达到预处理频率后，这里会自动出现基础摘要和文档。') : h('div', { className: 'cx-list' }, ...shown.map((r, i) => h('article', { className: 'cx-card cx-record ' + (selected.includes(r.id) ? 'cx-selected' : ''), key: r.id },
               h('div', { className: 'cx-row' }, h('label', { className: 'cx-record-check' }, h('input', { type: 'checkbox', checked: selected.includes(r.id), disabled: !r.live || locked, onChange: e => this.select(r.id, e.target.checked), 'aria-label': '选择 ' + r.id }), h('span', { className: 'cx-record-number' }, String(i + 1).padStart(2, '0')), h('time', null, date(r.timeStart) + ' — ' + time(r.timeEnd))), badge(r.live ? (r.kind === 'full' ? '全量摘要' : names[r.mode] || r.mode) : '历史存档', r.mode === 'raw' ? '' : 'blue')),
-              h('p', { className: 'cx-prose' }, r.summary), h('div', { className: 'cx-record-footer' }, h('small', { title: r.id }, h('code', null, r.id.slice(0, 8)), ' · ', rangeLabel(r.ranges)), button(`${r.documentCount || 0} 份文档`, () => this.document(r.id), { icon: 'context', quiet: true }))))),
+              summaryPreview(r.summary), h('div', { className: 'cx-record-footer' }, h('small', { title: r.id }, h('code', null, r.id.slice(0, 8)), ' · ', rangeLabel(r.ranges)), button(`${r.documentCount || 0} 文档 · ${r.assetCount || 0} 附件`, () => this.document(r.id), { icon: 'context', quiet: true }))))),
             fold('中枢最近的选择', d.review?.choices?.length ? `${d.review.choices.length} 项决定` : '还没有完成的判断', h('div', null,
               ...(d.review?.choices || []).map((c, i) => h('div', { className: 'cx-decision', key: i }, badge(names[c.action] || c.action, 'blue'), h('code', null, c.ids?.map(id => id.slice(0, 8)).join('、')), c.reason && h('p', null, c.reason))),
               button('查看中枢完整输入', this.readReview, { quiet: true, icon: 'context' }), this.state.review && h('pre', null, JSON.stringify(this.state.review.input, null, 2)))),
@@ -157,7 +162,7 @@ export function createContextUI(React) {
               h('p', { className: 'cx-hint' }, d.trace ? '来源事件 #' + d.trace.sourceSeq + (d.trace.truncated ? ' · 按设置截取' : ' · 原文本') : '没有已前置的推理文本；不会生成替代推理。'), d.lastReplacement && h('pre', null, JSON.stringify(d.lastReplacement, null, 2)),
               ...(d.notices || []).slice().reverse().map((n, i) => h('p', { className: 'cx-log-line', key: i }, h('time', null, date(n.at)), ' ', n.text))))),
           h('div', { className: 'cx-footnote' }, icon('info', 13), '退出当前上下文，不等于删除原始记录。')),
-        selected.length > 0 && h('footer', { className: 'cx-savebar cx-selection' }, h('span', null, '已选 ', h('strong', null, selected.length), ' 段'), h('div', { className: 'cx-actions' }, button('取消', () => this.setState({ selected: [] }), { quiet: true }), button('摘要＋文档', () => this.run('/compact', { ids: selected, mode: 'detail' }), { disabled: locked }), button('仅摘要', () => this.run('/compact', { ids: selected, mode: 'brief' }), { disabled: locked, primary: true }))), this.reader());
+        selected.length > 0 && h('footer', { className: 'cx-savebar cx-selection' }, h('span', null, '已选 ', h('strong', null, selected.length), ' 段'), h('div', { className: 'cx-actions' }, button('取消', () => this.setState({ selected: [] }), { quiet: true }), button('摘要＋详细资料', () => this.run('/compact', { ids: selected, mode: 'detail' }), { disabled: locked }), button('仅摘要', () => this.run('/compact', { ids: selected, mode: 'brief' }), { disabled: locked, primary: true }))), this.reader());
     }
   }
   class SummaryPanel extends PollPanel {
@@ -173,7 +178,7 @@ export function createContextUI(React) {
           h('div', { className: 'cx-catalog-banner' }, icon(privateSession ? 'lock' : 'layers', 19), h('div', null, h('strong', null, privateSession ? '仅当前会话可见' : '项目共享档案'), h('small', null, !d ? '正在读取…' : `${groups.size} 个会话 · ${entries.length} 段摘要 · 文档按需读取`))),
           h('label', { className: 'cx-search' }, icon('search'), h('input', { value: search, onChange: e => this.setState({ search: e.target.value }), placeholder: '搜索摘要、会话或编号', 'aria-label': '搜索摘要' })),
           ...[...groups].map(([sid, list]) => h('section', { className: 'cx-session', key: sid }, h('header', { className: 'cx-session-head' }, h('span', { className: 'cx-session-icon' }, icon('context', 15)), h('div', null, h('h3', null, list[0].sessionTitle || sid), h('small', { title: sid }, sid.length > 28 ? sid.slice(0, 28) + '…' : sid)), badge(list.length + ' 段')),
-            h('div', { className: 'cx-timeline' }, ...list.map(r => h('article', { className: 'cx-timeline-record', key: r.id }, h('span', { className: 'cx-timeline-dot' }), h('time', null, date(r.timeStart), ' — ', time(r.timeEnd)), h('p', { className: 'cx-prose' }, r.summary), h('div', { className: 'cx-record-footer' }, h('code', { title: r.id }, r.id.slice(0, 8)), button(`读取 ${r.documentCount || 0} 份文档`, () => this.document(r.id), { quiet: true, icon: 'context' }))))))),
+            h('div', { className: 'cx-timeline' }, ...list.map(r => h('article', { className: 'cx-timeline-record', key: r.id }, h('span', { className: 'cx-timeline-dot' }), h('time', null, date(r.timeStart), ' — ', time(r.timeEnd)), summaryPreview(r.summary), h('div', { className: 'cx-record-footer' }, h('code', { title: r.id }, r.id.slice(0, 8)), button(`读取 ${r.documentCount || 0} 文档 · ${r.assetCount || 0} 附件`, () => this.document(r.id), { quiet: true, icon: 'context' }))))))),
           d && !entries.length && empty('没有匹配的摘要', search ? '试试其他关键词，或清空筛选。' : privateSession ? '本会话完成预处理后，摘要会显示在这里。' : '项目级会话完成预处理后，摘要会按会话归档。'),
           !privateSession && d && fold('旧自动记忆', '只读保留，不自动重新注入', h('div', null, button('读取本项目旧条目', async () => { const sid = this.props.sessionId; try { const r = await api('/memories' + suffix(sid)); if (this.alive && sid === this.props.sessionId) this.setState({ legacy: r.items }); } catch (e) { if (this.alive && sid === this.props.sessionId) this.setState({ error: e.message }); } }, { icon: 'memory', quiet: true }), this.state.legacy && h('pre', null, JSON.stringify(this.state.legacy, null, 2))))), this.reader());
     }
@@ -248,7 +253,8 @@ export function createContextUI(React) {
     renderBasic() {
       const c = this.state.config;
       return h(React.Fragment, null, this.frequency(),
-        section('自动运行', null, h('div', { className: 'cx-switches' }, this.toggle('contextEnabled', '后台预处理与中枢', '提前生成基础摘要和详细文档，再判断如何替换。'), this.toggle('automaticReplace', '自动应用已完成决定', '在请求边界应用；关闭后仍可手动替换。'))),
+        section('预处理范围', '默认整窗处理，受保护内容保留，但不阻断范围。', this.toggle('preprocessBoundaries', '按消息边界分段', '默认关闭；开启恢复兼容分段。系统提示词、前置 CoT、近期保留区和完整工具往返始终受保护。')),
+        section('自动运行', null, h('div', { className: 'cx-switches' }, this.toggle('contextEnabled', '后台预处理与中枢', '提前生成基础摘要和详细资料，再判断如何替换。'), this.toggle('automaticReplace', '自动应用已完成决定', '在请求边界应用；关闭后仍可手动替换。'))),
         section('空闲预处理', '默认关闭；不影响按新事件数量触发的正常预处理，也不影响手动操作。', h(React.Fragment, null,
           this.toggle('idlePreprocessEnabled', '空闲时自动预处理', '仅在会话真正空闲且有待处理内容时触发；模型或工具运行中不计时。'),
           this.number('flushIdleMs', '空闲等待时间 · 秒', 0, '默认 90 秒；关闭开关会取消等待中的任务。已开始的任务正常结束，0 秒也表示禁用。', 1000, !c.idlePreprocessEnabled))),
@@ -259,7 +265,8 @@ export function createContextUI(React) {
       const c = this.state.config;
       return h(React.Fragment, null, h('div', { className: 'cx-info' }, icon('info'), h('p', null, '频率档位可以直接使用。需要精调时再展开；这些选项均对应仍在运行的功能。')),
         fold('预处理窗口', '分段与参考前文；空闲开关见基础设置', h('div', { className: 'cx-grid' }, this.number('digestEvery', '预处理频率 · 新事件数', 1), this.number('digestWindow', '目标分段窗口 · 事件数', 1, '保留完整工具往返，实际段长可能超过窗口。'), this.number('digestLookback', '参考前文 · 事件数', 0))),
-        fold('中枢与请求替换', '判断频率、近期原文和自动应用间隔', h(React.Fragment, null, h('div', { className: 'cx-grid' }, this.number('coordinatorEvery', '中枢频率 · 新摘要数', 1), this.number('coordinatorMinGapMs', '中枢最短间隔 · 秒', 0, undefined, 1000), this.number('coordinatorRecentEvents', '中枢近期原文窗口', 0), this.number('surgeryCooldownSteps', '自动替换最短步数', 0), this.number('keepTailEvents', '暂留近期事件数', 0)), this.toggle('requireShorter', '替换后的总量应更小', '将摘要、详细文档和前置 Trace 一起计算。'))),
+        fold('整窗预算与后台额度', '一次触发可以处理多窗；剩余积压单独记录，不无限补历史。', h('div', { className: 'cx-grid' }, this.number('prepareBatchWindows', '每次触发最多处理窗口数', 1), this.number('prepareInputTokens', '单窗输入预算 · 估算 tokens', 1), this.number('summaryTargetChars', '基础摘要目标 · 字符', 1, '超过目标两倍时重试，不直接截断原文。'), this.number('backgroundConcurrency', '后台最大并发调用', 1), this.number('backgroundMaxRetries', '自动重试次数', 0))),
+        fold('中枢与请求替换', '判断频率、近期原文和自动应用间隔', h(React.Fragment, null, h('div', { className: 'cx-grid' }, this.number('coordinatorEvery', '中枢频率 · 新摘要数', 1), this.number('coordinatorMinGapMs', '中枢最短间隔 · 秒', 0, undefined, 1000), this.number('coordinatorRecentEvents', '中枢近期原文窗口', 0), this.number('surgeryCooldownSteps', '自动替换最短步数', 0), this.number('keepTailEvents', '暂留近期事件数', 0)), this.toggle('requireShorter', '替换后的总量应更小', '将摘要、详细资料和前置 Trace 一起计算。'))),
         fold('Trace 与资源上限', '0 使用原有默认语义，不自动裁切内容', h('div', { className: 'cx-grid' }, this.number('traceMaxChars', '推理文本字符上限', 0, '0 保留所选推理全文；正数保留尾部并标注截取。'), this.number('digestMaxTokens', '预处理输出 Token 上限', 0, '0 使用提供方默认。'), this.number('surgeonMaxTokens', '中枢输出 Token 上限', 0), this.number('jobTimeoutMs', '后台超时 · 秒', 0, '默认 600 秒（10 分钟）；0 不设置插件超时。', 1000))),
         fold('电脑操控', '沿用原有浏览器与桌面连接设置', h(React.Fragment, null, this.toggle('computerUseEnabled', '启用电脑操控', '任务和电脑面板仍使用原有功能。'), ...[['computerUseBrowserExecutable', '浏览器程序路径'], ['computerUseChromeUserDataDir', '浏览器用户数据目录'], ['computerUseNativeBinary', '桌面控制程序路径'], ['computerUseNativeSocket', '桌面连接 Socket']].map(([key, label]) => field(label, h('input', { value: c[key] || '', placeholder: '自动检测 / 原有默认', onChange: e => this.set(key, e.target.value) }))))),
         h('p', { className: 'cx-footnote' }, '旧探针、自动全局记忆和旧状态提炼参数仅保留兼容读取，不再显示为可运行功能。'));

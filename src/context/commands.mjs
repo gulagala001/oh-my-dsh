@@ -2,9 +2,11 @@ export function compactionMessage(operation, outcome) {
   const label = operation === 'full' ? '全量压缩' : '已处理片段仅摘要';
   if (outcome.queued) return label + '已排队，将在下一次请求边界执行。';
   if (!outcome.changed) return operation === 'full' ? '没有可压缩的对话内容，原文保持不变。' : '没有需要切换的已处理片段，现有摘要和未处理原文保持不变。';
-  if (operation === 'full') return '已全量压缩为一份摘要；系统提示词、工具定义和用户手写全局背景保留。原始日志仍可回查。';
+  if (operation === 'full') return '已全量压缩为一份摘要；系统提示词、前置 CoT、工具定义和用户手写全局背景保留。原始日志仍可回查。';
+  const stats = outcome.result?.stats;
   const count = outcome.result?.operations?.filter(o => o.kind === 'record').length || 0;
-  return `已将 ${count} 段已处理内容切换为仅摘要；详细文档退出当前上下文，存档保留。`;
+  const coverage = stats ? `替换 ${stats.currentMessages} 条当前消息，覆盖 ${stats.originalEvents} 条原始事件，估算节省 ${stats.estimatedSavedTokens} tokens。` : '';
+  return coverage + `已将 ${count} 段已处理内容切换为仅摘要；详细资料（文档、图片、附件）退出当前上下文，存档保留。`;
 }
 
 export function registerContextCommands(ctx, hub) {

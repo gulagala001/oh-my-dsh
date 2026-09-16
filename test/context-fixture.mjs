@@ -56,6 +56,6 @@ export const adapter = {
   append(s, op, surfaceOp, sourceEventSeqs) {
     if (op.kind === 'delete') return s.append('system/message', { turn: 1, step: 1, message: { id: op.id, role: 'system', content: [{ type: 'text', text: '' }], source: { plugin: 'trisoul-x:shadow' } } }, { surfaceOp, sourceEventSeqs });
     return s.append('user/message', { ...adapter.message(op.text, op.kind === 'trace' ? 'trace' : 'context-record'), id: op.id,
-      content: [{ type: 'text', text: op.text }, ...(op.kind === 'trace' ? op.original.content : [])] }, { surfaceOp, sourceEventSeqs });
+      content: op.content || [{ type: 'text', text: op.text }, ...(op.kind === 'trace' ? op.original.content : [])] }, { surfaceOp, sourceEventSeqs });
   },
 };

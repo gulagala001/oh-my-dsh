@@ -67,3 +67,15 @@ test('idle settings are visible by default, off, preserve their delay and do not
     assert.equal(next.idlePreprocessEnabled, true); assert.equal(next.flushIdleMs, 45000);
   }
 });
+
+test('whole-window mode defaults on and all material/batch budget settings are exposed', async () => {
+  const React = await import('react'), { renderToStaticMarkup } = await import('react-dom/server');
+  const { Config } = await import('../src/config.mjs'); const config = Config({});
+  assert.equal(config.preprocessBoundaries, false); assert.equal(config.prepareBatchWindows, 2);
+  assert.equal(config.backgroundConcurrency, 2); assert.equal(config.backgroundMaxRetries, 2);
+  const { ContextSettings } = createContextUI(React), panel = new ContextSettings({}); panel.state = { ...panel.state, config };
+  const basic = renderToStaticMarkup(panel.renderBasic());
+  assert.match(basic, /按消息边界分段/); assert.doesNotMatch(basic, /aria-label="按消息边界分段"[^>]*checked/);
+  const advanced = renderToStaticMarkup(panel.renderAdvanced());
+  for (const label of ['每次触发最多处理窗口数', '单窗输入预算', '基础摘要目标', '后台最大并发调用', '自动重试次数']) assert.ok(advanced.includes(label));
+});

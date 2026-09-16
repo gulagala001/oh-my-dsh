@@ -24,7 +24,7 @@ test('native slash commands and sidebar execute both compression modes without l
     if (queuedReadPending) { queuedReadPending = false; return tool('read', { file_path: 'missing-compact-fixture.txt' }); }
     return { delta: { role: 'assistant', content: 'NEXT_MAIN_AFTER_COMPACTION\n' + '新的工作记录。'.repeat(150) }, finish_reason: 'stop' };
   });
-  await api('/settings', { keepTailEvents: 2, automaticReplace: false, digestEvery: 9999, traceEnabled: false });
+  await api('/settings', { preprocessBoundaries: true, prepareBatchWindows: 1, keepTailEvents: 2, automaticReplace: false, digestEvery: 9999, traceEnabled: false });
   await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '继续记录进展，保留上下文测试材料。' }] });
   await until(async () => (await api('/state' + q)).running === 'idle');
   await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '再记录一轮详细进展用于压缩。' }] });
@@ -52,7 +52,7 @@ test('native slash commands and sidebar execute both compression modes without l
   await panel.getByRole('button', { name: '全量压缩', exact: true }).click();
   await panel.getByText(/已全量压缩为一份摘要/).waitFor();
   const state = await api('/context' + q), active = state.records.filter(r => !r.mergedInto);
-  assert.equal(active.length, 1); assert.equal(active[0].kind, 'full'); assert.equal(active[0].documentCount, 0);
+  assert.equal(active.length, 1); assert.equal(active[0].kind, 'full'); assert.ok(active[0].documentCount > 0, 'verbatim user text is archived, not injected');
   assert.equal(state.trace, null); assert.equal(state.manualOperation, null);
   const count = calls.length;
   await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '压缩后继续执行。' }] });
