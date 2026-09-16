@@ -18,12 +18,18 @@ export function acquireComputerUse(ctx, options = {}) {
     const initial = { ...legacy, ...options.config, ...options.getConfig?.(), ...ctx.settings.section('opencu') };
     const explicitDirectory = ctx.settings.section('opencu')?.dataDir;
     const directory = explicitDirectory ? join(explicitDirectory, 'computer-use') : options.dataDir ?? join(initial.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'trisoul-x'), 'computer-use');
-    shared = { owners: new Map(), config: () => shared.getConfig(), computerImages: new ImageCoordinates() };
+    shared = { owners: new Map(), sessionTitles: new WeakMap(), config: () => shared.getConfig(), computerImages: new ImageCoordinates() };
     // Explicit OpenCU settings win; otherwise keep the integration's existing
     // configuration, including saved legacy browser/native paths.
     shared.getConfig = () => ({ ...legacy, ...[...shared.owners.values()].find(o => o.config)?.config, ...[...shared.owners.values()].find(o => o.getConfig)?.getConfig(), ...ctx.settings.section('opencu') });
     shared.refresh = () => shared.computerUse.setEnabled(shared.config().computerUseEnabled !== false);
     shared.computerUse = new ComputerUseManager(directory, {
+      getSessionTitle: id => {
+        const session = root.sessions?.get?.(id);
+        if (!session) return '';
+        if (!shared.sessionTitles.has(session)) shared.sessionTitles.set(session, root.sessionTitle?.get?.(session)?.title || session.header?.title || '');
+        return shared.sessionTitles.get(session);
+      },
       enabled: initial.computerUseEnabled !== false,
       browser: { executablePath: initial.computerUseBrowserExecutable || undefined },
       extension: { chromeUserDataDir: initial.computerUseChromeUserDataDir || undefined },
@@ -53,6 +59,10 @@ export function acquireComputerUse(ctx, options = {}) {
       }, { global: true });
       scope.on('session/event', (session, event) => {
         if (event.type === 'turn/end') void shared.computerUse.endTurn(session.id);
+        if (event.type === 'session/title' && typeof event.data?.title === 'string') {
+          shared.sessionTitles.set(session, event.data.title);
+          for (const browser of shared.computerUse.extensionBrowsers.values()) void browser.renameSessionGroup(session.id, event.data.title).catch(error => root.logger.warn(error.message));
+        }
       }, { global: true });
       scope.effect(() => () => shared.computerUse.close());
     } });

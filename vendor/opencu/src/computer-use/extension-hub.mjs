@@ -51,7 +51,7 @@ export class ExtensionHub extends EventEmitter {
         const id = 'chrome:' + message.instanceId;
         if (this.connections.has(id)) throw new Error('This browser profile is already connected');
         connection.info = { id, type: 'extension', name: String(message.name || 'Chrome').slice(0, 120), userAgent: String(message.userAgent??'').slice(0,512), epoch: connection.epoch, version: typeof message.version === 'string' ? message.version.slice(0, 32) : null, build: /^[a-f0-9]{64}$/.test(message.build ?? '') ? message.build : null };
-        connection.info.capabilities = Array.isArray(message.capabilities) ? message.capabilities.filter(value => value === 'cursor-overlay') : [];
+        connection.info.capabilities = Array.isArray(message.capabilities) ? message.capabilities.filter(value => ['cursor-overlay', 'session-tab-groups'].includes(value)) : [];
         this.connections.set(id, connection); clearTimeout(timer);
         socket.write(encodeNativeMessage({ type: 'ready', protocol: 2, epoch: connection.epoch }));
         this.emit('connected', connection.info); return;

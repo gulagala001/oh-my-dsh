@@ -23,7 +23,7 @@ export class ComputerUseManager {
     mkdirSync(directory, { recursive: true, mode: 0o700 }); this.directory = directory;
     this.openExternal=options.openExternal??openExternalUrl;
     this.browsingHistory=new BrowserHistory(join(directory,'browser-history.json'));
-    const callbacks = { onVisit:visit=>this.browsingHistory.remember(visit), wantsPointer: (id, tabId) => !!this.pointerActive(id, tabId), onPointer: event => this.pointer(event), onTabClosed: tabId => {
+    const callbacks = { getSessionTitle: options.getSessionTitle, onVisit:visit=>this.browsingHistory.remember(visit), wantsPointer: (id, tabId) => !!this.pointerActive(id, tabId), onPointer: event => this.pointer(event), onTabClosed: tabId => {
       for (const state of this.sessions.values()) { state.previewTargets?.delete(tabId); if (state.target?.kind === 'tab' && state.target.id === tabId) {
         this.setTarget(state, null); this.preview.delete(state.id);
       }}

@@ -41,6 +41,9 @@ export class ExtensionCdp extends EventEmitter {
     if (this.closed) return Promise.resolve();
     return this.hub.call(this.browserId, 'cursor', { tabId: Number(this.tab.id), leaseId: this.leaseId, actorId, pointer }, { timeoutMs: 2000 });
   }
+  setSession(actorId, conversation) {
+    return this.hub.call(this.browserId, 'tabs.setSession', { tabId: Number(this.tab.id), leaseId: this.leaseId, actorId, conversation });
+  }
   send(client,message){if(!client.closed&&client.ws.readyState===1)client.ws.send(JSON.stringify(message));}
   accept(ws,id){
     const client={ws,id,controller:new AbortController(),sessions:new Map(),detachedSessions:new Set(),closed:false,scripts:[]};this.clients.add(client);

@@ -20,6 +20,8 @@ export class ExtensionBrowser extends BrowserActions {
     this.windowCursor = info.capabilities?.includes('cursor-overlay') === true;
     this.tabs = new Map(); this.entries = new Map(); this.disconnecting = new Map(); this.pendingCreations = new Map();
     this.onControlLost = options.onControlLost;
+    this.getSessionTitle = options.getSessionTitle ?? (() => '');
+    this.sessionTabGroups = info.capabilities?.includes('session-tab-groups') === true;
     this.onDisconnect = browser => { if (browser.id === this.id && browser.epoch === this.info.epoch) this.invalidate(); };
     hub.on('disconnected', this.onDisconnect);
   }
@@ -99,11 +101,27 @@ export class ExtensionBrowser extends BrowserActions {
       })();
       void link.ready.catch(() => {});
     }
-    try { const record = await link.ready; signal?.throwIfAborted(); this.checkConnection(connection); return record; }
+    try {
+      const record = await link.ready; signal?.throwIfAborted(); this.checkConnection(connection);
+      if (claim) await this.groupSession(sessionId, link);
+      signal?.throwIfAborted(); this.checkConnection(connection); return record;
+    }
     catch (error) {
       if (claim && !owned && this.owners.get(id)?.sessionId === sessionId) this.owners.delete(id);
       await this.closeLink(connection, link).catch(() => {}); throw error;
     }
+  }
+  async groupSession(sessionId, link, title = this.getSessionTitle(sessionId) || '') {
+    if (!this.sessionTabGroups || link.closing) return;
+    if (link.groupTitle === title) return;
+    const result = await link.entry.gateway.setSession(link.clientId, { id: sessionId, title });
+    if (result.grouped) link.groupTitle = title;
+  }
+  async renameSessionGroup(sessionId, title) {
+    if (!this.sessionTabGroups || this.run.lost || this.closing) return;
+    await this.hub.call(this.id, 'groups.rename', { conversation: { id: sessionId, title } });
+    const connection = await this.connections.get(sessionId);
+    for (const link of connection?.links.values() ?? []) if (link.groupTitle !== undefined) link.groupTitle = title;
   }
   async create(sessionId, url = 'about:blank', signal) {
     signal?.throwIfAborted(); this.checkConnection();
