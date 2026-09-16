@@ -1,5 +1,7 @@
 const HOST = 'ai.trisoul.computer_use';
 const controls = new Map(); let port, connecting, ready = false, error = '', detail = '', enabled = true;
+const sessionGroups = new SessionTabGroups(chrome, controls, cause => { error = '会话标签分组暂不可用，网页操作仍可继续。'; detail = cause.message; });
+const groupWarning = (control, promise) => promise.then(result => { if (control) control.groupError = null; return result; }, cause => { if (control) control.groupError = cause.message; else { error = '会话标签分组暂不可用，网页操作仍可继续。'; detail = cause.message; } return { grouped: false, error: cause.message }; });
 const send = message => { try { port?.postMessage(message); } catch {} };
 const failed = (message, code = 'EXTENSION_OPERATION_FAILED') => Object.assign(new Error(message), { code });
 const describe = tab => ({ id: String(tab.id), title: tab.title ?? '', url: tab.url ?? '', windowId: tab.windowId });
@@ -26,9 +28,11 @@ async function stopActor(control, actorId) {
   if(typeof actorId!=='string'||!actorId)throw failed('Invalid protocol actor');
   if(control.actorStops.has(actorId))return control.actorStops.get(actorId);
   control.stoppedActors.add(actorId);
+  const grouping = groupWarning(control, sessionGroups.release(control, actorId));
   void control.cursor?.stop(actorId);
   const stopping=(async()=>{
     const errors=await releaseInput(control,actorId);
+    await grouping;
     if(errors.length){control.actorErrors.set(actorId,errors.join('; '));throw failed('Input release was not confirmed: '+errors.join('; '),'INPUT_RELEASE_FAILED');}
     control.actorErrors.delete(actorId);return{released:true};
   })();
@@ -37,6 +41,7 @@ async function stopActor(control, actorId) {
 }
 function lostControl(control, reason) {
   control.isAttached = false;
+  void groupWarning(control, sessionGroups.release(control));
   if (control.stopped) return;
   control.stopped = true;
   void control.cursor?.stop();
@@ -49,6 +54,7 @@ function lostControl(control, reason) {
 async function stop(control, reason = 'released') {
   if (control.stopping) return control.stopping;
   control.stopped = true;
+  const grouping = groupWarning(control, sessionGroups.release(control));
   void control.cursor?.stop();
   const stopping = (async () => {
     await control.attached.catch(() => {});
@@ -65,6 +71,7 @@ async function stop(control, reason = 'released') {
       if (controls.get(control.tabId) === control) controls.delete(control.tabId);
       control.transport.ended.set(control.leaseId, {tabId:control.tabId,released:errors.length===0});
     }
+    await grouping;
     control.stopError = errors.length ? errors.join('; ') : null;
     send({ event: 'stopped', params: { tabId: control.tabId, leaseId: control.leaseId, reason, released: errors.length === 0, errors } });
     if (errors.length) throw failed('Input release was not confirmed: ' + errors.join('; '), 'INPUT_RELEASE_FAILED');
@@ -104,12 +111,13 @@ async function connect() {
       void stopAll('connection-lost');
       for (const creation of transport.creations.values()) void cancelCreation(creation).catch(cause => { error = '取消新标签页失败'; detail = cause.message; });
     });
-    current.postMessage({ type: 'hello', protocol: 2, instanceId, name: 'Chrome', userAgent: navigator.userAgent, capabilities: ['cursor-overlay'], version: chrome.runtime.getManifest().version, build: typeof TRISOUL_BUNDLE_ID === 'string' ? TRISOUL_BUNDLE_ID : null });
+    current.postMessage({ type: 'hello', protocol: 2, instanceId, name: 'Chrome', userAgent: navigator.userAgent, capabilities: ['cursor-overlay', 'session-tab-groups'], version: chrome.runtime.getManifest().version, build: typeof TRISOUL_BUNDLE_ID === 'string' ? TRISOUL_BUNDLE_ID : null });
   })().finally(() => { connecting = null; });
   return connecting;
 }
 
 async function dispatch(method, params, transport) {
+  if (method === 'groups.rename') return groupWarning(null, sessionGroups.rename(params.conversation));
   if (method === 'tabs.list') return (await chrome.tabs.query({})).filter(tab => !tab.url?.startsWith('chrome-extension://')).map(describe);
   if (['tabs.create', 'tabs.cancelCreate', 'tabs.commitCreate'].includes(method)) {
     if (typeof params.creationId !== 'string' || !/^[a-z0-9-]{1,100}$/i.test(params.creationId)) throw failed('Invalid tab creation ID');
@@ -171,6 +179,10 @@ async function dispatch(method, params, transport) {
     }
   }
   if (!belongs || control.stopped) throw failed('This tab lease has ended; explicitly select it again', 'CONTROL_STOPPED');
+  if (method === 'tabs.setSession') {
+    if (typeof params.actorId !== 'string' || control.stoppedActors.has(params.actorId)) throw failed('Control stopped', 'CONTROL_STOPPED');
+    return groupWarning(control, sessionGroups.claim(control, params.actorId, params.conversation));
+  }
   if (method === 'cursor') {
     if (typeof params.actorId !== 'string' || control.stoppedActors.has(params.actorId)) return { queued: false };
     const p = params.pointer;
@@ -242,7 +254,11 @@ chrome.debugger.onDetach.addListener((source, reason) => {
   const control = controls.get(source.tabId); if (!control) return;
   lostControl(control, reason);
 });
-chrome.tabs.onUpdated.addListener((tabId,change,tab)=>{const control=controls.get(tabId);if(control&&!control.stopped&&(change.url!==undefined||change.title!==undefined))send({event:'tab-updated',params:{...describe(tab),tabId,leaseId:control.leaseId}});});
+chrome.tabs.onUpdated.addListener((tabId,change,tab)=>{const control=controls.get(tabId);if(change.groupId!==undefined||change.pinned===false)void groupWarning(control,sessionGroups.moved(tabId));if(control&&!control.stopped&&(change.url!==undefined||change.title!==undefined))send({event:'tab-updated',params:{...describe(tab),tabId,leaseId:control.leaseId}});});
+chrome.tabs.onCreated.addListener(tab => { void groupWarning(null, sessionGroups.inherit(tab)); });
+chrome.tabs.onAttached.addListener(tabId => { void groupWarning(controls.get(tabId), sessionGroups.moved(tabId)); });
+chrome.tabs.onRemoved.addListener(tabId => { void groupWarning(null, sessionGroups.removed(tabId)); });
+chrome.tabGroups.onRemoved.addListener(group => { void sessionGroups.enqueue(async () => { sessionGroups.removeGroup(group.id); await sessionGroups.save(); }).catch(cause => { detail = cause.message; }); });
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (sender.id !== chrome.runtime.id || sender.url !== chrome.runtime.getURL('popup.html')) return;
   const run = async () => {
@@ -252,8 +268,9 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       const control = controls.get(message.tabId); if (control) await stop(control, 'user-stopped');
     }
     const releaseErrors = [...controls.values()].flatMap(control=>[control.stopError,...control.actorErrors.values()]).filter(Boolean);
+    const groupErrors = [...controls.values()].filter(control => control.groupError).map(control => control.groupError);
     const cursorErrors = [...controls.values()].filter(control=>!control.stopped&&control.cursorError).map(control=>control.cursorError);
-    return { connected: ready, connecting: !!port && !ready, error: error || (releaseErrors.length ? '部分按键尚未确认释放，请重试停止。' : cursorErrors.length ? '小鼠标显示暂不可用，网页操作仍可继续。' : ''), detail: detail || [...releaseErrors,...cursorErrors].join('\n'), controls: await Promise.all([...controls.values()].map(async control => ({...describe(await chrome.tabs.get(control.tabId)),stopped:control.stopped,stopping:!!control.stopping||control.actorStops.size>0,stopError:control.stopError||[...control.actorErrors.values()][0],cursorError:control.cursorError??null}))) };
+    return { connected: ready, connecting: !!port && !ready, error: error || (releaseErrors.length ? '部分按键尚未确认释放，请重试停止。' : cursorErrors.length ? '小鼠标显示暂不可用，网页操作仍可继续。' : groupErrors.length ? '会话标签分组暂不可用，网页操作仍可继续。' : ''), detail: detail || [...releaseErrors,...cursorErrors,...groupErrors].join('\n'), controls: await Promise.all([...controls.values()].map(async control => ({...describe(await chrome.tabs.get(control.tabId)),stopped:control.stopped,stopping:!!control.stopping||control.actorStops.size>0,stopError:control.stopError||[...control.actorErrors.values()][0],cursorError:control.cursorError??null}))) };
   };
   void run().then(respond, cause => respond({error:cause.message,connected:ready,controls:[]})); return true;
 });
@@ -261,3 +278,5 @@ chrome.runtime.onStartup.addListener(() => { void connect(); });
 chrome.runtime.onInstalled.addListener(() => { void connect(); });
 void connect();
 import { CursorOverlay } from './cursor.js';
+
+import { SessionTabGroups } from './session-groups.js';
