@@ -20,3 +20,6 @@ await build({
     b.onLoad({ filter: /\.css$/ }, async args => ({ contents: `export default ${JSON.stringify(await readFile(args.path, 'utf8'))}`, loader: 'js' }));
   } }],
 });
+
+// Reapply the context UI adapter after rebuilding the preserved host workbench.
+await import('./build-context-client.mjs');

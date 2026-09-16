@@ -137,7 +137,7 @@ export class ComputerUseManager {
     return this.extensionViews.get(browser);
   }
   browserInfo(browser) {
-    return browser === this.browser ? { id: 'browser', name: 'Oh My DSH Browser', type: 'managed', profile: 'Computer Use' } : { ...browser.info };
+    return browser === this.browser ? { id: 'browser', name: 'Managed Browser', type: 'managed', profile: 'Computer Use' } : { ...browser.info };
   }
   setTarget(state, target) {
     const previous = state.target; state.target = target;
@@ -289,7 +289,7 @@ export class ComputerUseManager {
   async presentBrowser(id, browserId, visible, signal) {
     if (typeof visible !== 'boolean') throw new TypeError('visibility.set requires a boolean.');
     const state = this.session(id), browser = this.browserFor(browserId), target = state.target;
-    if (target?.kind !== 'tab' || this.browserForTab(target.id, target.browserId) !== browser) throw new Error('Select a tab in this browser before changing its DSH preview visibility.');
+    if (target?.kind !== 'tab' || this.browserForTab(target.id, target.browserId) !== browser) throw new Error('Select a tab in this browser before changing its preview visibility.');
     if (state.presentationPending) throw new Error('A browser presentation request is already pending.');
     if (visible) { state.viewTarget = target; state.viewRevision = (state.viewRevision ?? 0) + 1; }
     const request = { id: randomUUID(), sessionId: id, visible, tabId: target.id, browserId: browser.id, expiresAt: Date.now() + 5000 };
@@ -297,7 +297,7 @@ export class ComputerUseManager {
     try {
       return await new Promise((resolve, reject) => {
         const cancel = () => reject(signal.reason ?? new Error('Browser presentation cancelled.'));
-        const timer = setTimeout(() => reject(state.presentationPending?.error ?? new Error('No active DSH page confirmed browser visibility. Open this conversation in DSH and try again.')), 5000);
+        const timer = setTimeout(() => reject(state.presentationPending?.error ?? new Error('No active conversation client confirmed browser visibility. Open this conversation in the application and try again.')), 5000);
         state.presentationPending = { request, resolve, reject, cleanup: () => { clearTimeout(timer); signal?.removeEventListener('abort', cancel); } };
         signal?.addEventListener('abort', cancel, { once: true });
         if (signal?.aborted) cancel();
@@ -790,7 +790,7 @@ export class ComputerUseManager {
   async installExtension() {
     return this.configureExtension('install', async () => {
     await this.extensionInstaller.prepare();
-    if (this.closed) throw new Error('Oh My DSH 已关闭，请重新启动后连接 Chrome');
+    if (this.closed) throw new Error('当前应用已关闭，请重新启动后连接 Chrome');
     const command = this.extensionInstaller.windows ? (await this.extensionInstaller.windows.command()).command : null;
     if (this.ownsExtensionHub && (!this.extensionHub.server || this.extensionHub.server.failure || (command && command !== this.extensionHub.server.command))) {
       await this.extensionHub.close();
@@ -813,7 +813,7 @@ export class ComputerUseManager {
     });
   }
   async configureExtension(action, work) {
-    if (this.closed) throw new Error('Oh My DSH 已关闭');
+    if (this.closed) throw new Error('当前应用已关闭');
     if (this.extensionSetup) {
       if (this.extensionSetup.action !== action) throw new Error('Chrome 连接正在配置，请等待当前操作完成');
       return this.extensionSetup.promise;

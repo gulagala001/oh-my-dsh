@@ -35,7 +35,7 @@ export class WindowsNativeRuntime {
     const pointer = this.pointer(), binary = pointer ? join(this.directory, pointer.directory, 'OhMyDsh.Desktop.exe') : null;
     if (!binary || !existsSync(binary)) return null;
     const record = JSON.parse(await readFile(join(this.directory, pointer.directory, 'build.json'), 'utf8'));
-    if (record.owner !== owner || record.protocol !== 1) throw new Error('桌面控制安装记录不属于匹配的 Oh My DSH 运行时');
+    if (record.owner !== owner || record.protocol !== 1) throw new Error('桌面控制安装记录不属于匹配的应用运行时');
     const file = await stat(binary), identity = [binary, file.dev, file.ino, file.size, file.mtimeMs, file.ctimeMs].join(':');
     if (this.verified?.identity !== identity || this.verified.sha256 !== record.sha256 || this.verified.build !== record.build) {
       if (createHash('sha256').update(await readFile(binary)).digest('hex') !== record.sha256) throw new Error('Windows 桌面运行时文件已变化，请更新并修复安装');
@@ -58,7 +58,7 @@ export class WindowsNativeRuntime {
     const marker = join(this.directory, 'owner.json');
     if (!existsSync(marker) && (await readdir(this.directory)).length) throw new Error('Windows 桌面运行时目录已有其他内容，未覆盖');
     try { await writeFile(marker, JSON.stringify({ owner }) + '\n', { flag: 'wx' }); }
-    catch (error) { if (error.code !== 'EEXIST' || JSON.parse(await readFile(marker, 'utf8')).owner !== owner) throw new Error('Windows 桌面运行时目录不属于 Oh My DSH'); }
+    catch (error) { if (error.code !== 'EEXIST' || JSON.parse(await readFile(marker, 'utf8')).owner !== owner) throw new Error('Windows 桌面运行时目录不属于当前应用'); }
     const epoch = (await this.ownerRecord()).epoch ?? null;
     // Only publish the pointer after validation. In particular the lock helper
     // runs from this generation: Windows cannot rename its executable directory
@@ -100,7 +100,7 @@ export class WindowsNativeRuntime {
     const file = await lstat(marker);
     if (!file.isFile() || file.isSymbolicLink()) throw new Error('Windows 桌面运行时归属记录不是普通文件，未修改');
     const record = JSON.parse(await readFile(marker, 'utf8'));
-    if (record.owner !== owner) throw new Error('Windows 桌面运行时目录不属于 Oh My DSH');
+    if (record.owner !== owner) throw new Error('Windows 桌面运行时目录不属于当前应用');
     return record;
   }
   async uninstall({ beforeRemove } = {}) {

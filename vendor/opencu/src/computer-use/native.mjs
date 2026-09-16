@@ -56,7 +56,7 @@ export class NativeHost {
     const app=binary.slice(0,-bundleSuffix.length);
     const {stdout}=await runFile('plutil',['-convert','json','-o','-',join(app,'Contents/Info.plist')],{maxBuffer:65536});
     const info=JSON.parse(stdout);
-    if(info.CFBundleIdentifier!=='ai.trisoul.computer-use')throw new Error('该应用不是 Oh My DSH Computer Use，不能覆盖');
+    if(info.CFBundleIdentifier!=='ai.trisoul.computer-use')throw new Error('该应用不是匹配的桌面控制运行时，不能覆盖');
     const file=await stat(binary);
     return {displayName:info.CFBundleDisplayName??info.CFBundleName??'Oh My DSH Computer Use',version:info.CFBundleShortVersionString??'unknown',build:info.TrisoulBuildID??null,protocol:info.TrisoulProtocol??0,identity:`${file.dev}:${file.ino}:${file.mtimeMs}:${file.size}`};
   }
@@ -126,7 +126,7 @@ export class NativeHost {
     return this.launch();
   }
   async launch(){
-    if(!this.available())throw new Error('Native Computer Use runtime is not installed. Install Oh My DSH Computer Use.app in ~/Applications before controlling desktop apps.');
+    if(!this.available())throw new Error('The configured desktop control runtime is not installed. Install it through the application settings before controlling desktop apps.');
     if(this.starting)return this.starting;
     this.starting=(async()=>{
       if(await this.probe())return;
@@ -164,7 +164,7 @@ export class NativeHost {
         const client=new McpClient(this.binary,['mcp','--socket',this.socket]);
         try{
           const info=await client.initialize();
-          if(info.serverInfo?.name!=='trisoul-computer-use'||(info._meta?.trisoul?.protocol!==NATIVE_PROTOCOL&&info.serverInfo?.version!=='0.1.0'))throw new Error(`Unsupported native runtime: ${info.serverInfo?.name} ${info.serverInfo?.version}. Install the matching Oh My DSH Computer Use application.`);
+          if(info.serverInfo?.name!=='trisoul-computer-use'||(info._meta?.trisoul?.protocol!==NATIVE_PROTOCOL&&info.serverInfo?.version!=='0.1.0'))throw new Error(`Unsupported native runtime: ${info.serverInfo?.name} ${info.serverInfo?.version}. Install the matching desktop control runtime.`);
           const label='trisoul-'+randomUUID();await client.call('start_session',{session:label});
           return{client,label,info};
         }catch(error){await client.close();throw error;}

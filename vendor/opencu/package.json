@@ -1,6 +1,5 @@
 {
   "type": "module",
-  "packageManager": "pnpm@11.23.0",
   "engines": {
     "node": ">=22.19"
   },
@@ -40,7 +39,7 @@
     }
   },
   "name": "opencu",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Computer Use for DSH: browsers, desktop apps, live previews, annotations and file exports.",
   "repository": {
     "type": "git",
@@ -60,11 +59,6 @@
     "./package.json": "./package.json",
     "./scripts/*": "./scripts/*",
     "./native/*": "./native/*"
-  },
-  "scripts": {
-    "build": "node scripts/build.mjs",
-    "start": "node scripts/start.mjs",
-    "test": "node --test --test-concurrency=1 test/*.test.mjs"
   },
   "files": [
     "src",
@@ -89,5 +83,10 @@
         "@deepseek-ai/dsh-client-ui-sidebar"
       ]
     }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node scripts/start.mjs",
+    "test": "node --test --test-concurrency=1 test/*.test.mjs"
   }
 }

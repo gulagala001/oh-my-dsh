@@ -1,1 +1,1 @@
-Save a useful fact, decision, or unfinished plan for later work. Keep the note specific and attributable to this session. This records a note; it does not directly edit or confirm a long-term memory entry.
+Save an observed fact or a decision in this session's log. This does not write global or cross-session memory.

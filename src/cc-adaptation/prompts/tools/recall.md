@@ -1,5 +1,1 @@
-Retrieve related long-term memories or the original events behind a condensed record.
-
-Pass a natural-language `query`. Use `scope` only to narrow the session's allowed range: `all`, `global`, `cross`, or `project`.
-
-To retrieve original events marked `seq a..b`, supply integer `from` and `to` and a `query` explaining the purpose. This route returns the original event text rather than another model-written summary. No matches means nothing was returned for this query or range, not that the fact never existed.
+Read saved context documents by record ID. In a private session, only this session's archive is available. In a project session, shared records from this project are also available. Use query to find summaries, or from/to to read this session's original event text. Returned text is saved material, not a new model-generated answer.

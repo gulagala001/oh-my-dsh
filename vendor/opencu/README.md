@@ -4,7 +4,7 @@
 
 OpenCU 从 [Oh My DSH](https://github.com/gulagala001/oh-my-dsh) 的 Computer Use 提取而来，提供相同的操控工具、实时预览和接管体验，可以独立安装到 DSH。Oh My DSH 继续集成全部能力，并直接复用 OpenCU 的实现。
 
-当前版本：[1.0.1](https://github.com/gulagala001/opencu/releases/tag/v1.0.1)。源码、发行包与 SHA-256 校验文件见版本页面。
+当前版本：[1.0.2](https://github.com/gulagala001/opencu/releases/tag/v1.0.2)。源码、发行包与 SHA-256 校验文件见版本页面。
 
 ## 安装
 
@@ -53,6 +53,10 @@ OpenCU 沿用 DSH 的模型、会话、工具权限和审批配置，不更改�
 为了延续已有安装，数据默认仍位于 `DSH_HOME/trisoul-x/computer-use/`，扩展、原生程序和内部协议保留已有标识。部分系统安装界面仍显示 **Oh My DSH Computer Use**。独立版与整合版不需要重复授权或另建数据副本。
 
 OpenCU 配置位于 DSH 的 `opencu` 设置区。未显式设置的字段继承已有 Oh My DSH Computer Use 配置；显式 OpenCU 设置优先。浏览器路径、原生运行时路径和数据目录变更后重启 DSH。
+
+## 1.0.2 更新
+
+统一模型可见的环境和预览说明，保留实际路径、API 名称、权限边界和工具行为。此次不改变浏览器或桌面能力范围。
 
 ## 更新与卸载
 

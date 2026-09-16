@@ -9,12 +9,12 @@
 </p>
 
 <p align="center">
-  分层记忆 · 上下文整理 · 任务验证 · Computer Use<br />
+  项目摘要 · 上下文替换 · 任务验证 · Computer Use<br />
   为 DeepSeek Harness 打造的单主模型插件
 </p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.2.0-alpha.1"><img src="https://img.shields.io/badge/version-1.2.0--alpha.1-3478F6?style=flat-square" alt="Version 1.2.0-alpha.1" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.3.0-alpha.2"><img src="https://img.shields.io/badge/version-1.3.0--alpha.2-3478F6?style=flat-square" alt="Version 1.3.0-alpha.2" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.6--alpha.1-475569?style=flat-square" alt="DSH 0.1.6-alpha.1" /></a>
   <a href="#support"><img src="https://img.shields.io/badge/status-early_access-64748B?style=flat-square" alt="Early access" /></a>
 </p>
@@ -24,15 +24,15 @@
   <a href="#features">功能亮点</a> ·
   <a href="#computer-use">Computer Use</a> ·
   <a href="docs/usage.md">使用指南</a> ·
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.2.0-alpha.1">版本说明</a> ·
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.3.0-alpha.2">版本说明</a> ·
   <a href="https://github.com/gulagala001/oh-my-dsh/issues">反馈问题</a>
 </p>
 
 <p align="center">
-  <img src="docs/images/workbench-memory.png" width="100%" alt="Oh My DSH：在对话旁的统一工作台中查看和维护项目记忆" />
+  <img src="docs/images/context-records.png" width="100%" alt="Oh My DSH：在对话旁查看上下文分段与项目摘要" />
 </p>
 
-Oh My DSH 把任务、记忆、电脑和监控放进同一个工作台。助手可以保存项目约定，整理长对话，关联任务与验证结果，也能打开网页或操作 Windows、Mac 应用。你可以随时查看它记住了什么、做到了哪一步，以及正在操作的画面。
+Oh My DSH 把任务、上下文、摘要、电脑和监控放进同一个工作台。后台归档对话片段，在后续请求中使用已准备好的摘要或详细文档；你可以回查原文、关联任务与验证结果，也能操作网页和 Windows、Mac 应用。
 
 作为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 插件运行，沿用已有的模型配置、会话、文件、工具与技能。
 
@@ -40,12 +40,12 @@ Oh My DSH 把任务、记忆、电脑和监控放进同一个工作台。助手�
 
 ## 快速开始
 
-当前 **1.2.0-alpha.1** 为预发布版，使用 **DSH 0.1.6-alpha.1**。下面的安装命令固定到该版本；使用旧版 DSH 0.1.5-rc.1 时，请保留 [v1.1.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1)。升级宿主请沿用原来的安装方式、profile 和 `DSH_HOME`。
+当前 **1.3.0-alpha.2** 为预发布版，使用 **DSH 0.1.6-alpha.1**。下面的安装命令固定到该版本；使用旧版 DSH 0.1.5-rc.1 时，请保留 [v1.1.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1)。升级宿主请沿用原来的安装方式、profile 和 `DSH_HOME`。
 
 Oh My DSH 通过 **DSH 的插件管理器**安装。已有 **DSH 0.1.6-alpha.1 Web** 时，先停止服务，然后在终端或 PowerShell 中运行：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.2.0-alpha.1
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.3.0-alpha.2
 ```
 
 按原来的方式启动：
@@ -67,19 +67,22 @@ dsh web
 <details>
 <summary>源码下载与独立开发</summary>
 
-[1.2.0-alpha.1 源码 ZIP](https://github.com/gulagala001/oh-my-dsh/releases/download/v1.2.0-alpha.1/oh-my-dsh-v1.2.0-alpha.1.zip) 用于保存源码、手动部署或二次开发，包含已构建的界面。普通插件安装直接使用上面的命令即可。
+[1.3.0-alpha.2 源码 ZIP](https://github.com/gulagala001/oh-my-dsh/releases/download/v1.3.0-alpha.2/oh-my-dsh-v1.3.0-alpha.2.zip) 用于保存源码、手动部署或二次开发，包含已构建的界面。普通插件安装直接使用上面的命令即可。
 
-[从源码试用](docs/usage.md#本地开发或独立试用) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.2.0-alpha.1)
+[从源码试用](docs/usage.md#本地开发或独立试用) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.3.0-alpha.2)
 
 </details>
 
-## 1.2.0-alpha.1 更新
+## 1.3.0-alpha.2 更新
 
-- **自定义身份认知**：在 **设置 → Oh My DSH → 常用 → 身份认知** 中编辑助手名称、角色和职责。保存后从下一次主模型请求生效；支持留空和恢复默认，其他行为规则保持原样。
-- **DSH 0.1.6 适配**：更新会话生命周期与 Workflow 接口，支持原生工具和 TypeScript PTC 的当前工具契约。
-- **模块化主提示词**：接入 CC 风格主提示词与工具说明，保留宿主提示词顺序、工具参数和后台记忆／整理机制。
+- **上下文档案**：后台生成事实摘要与详细文档，中枢选择保留、详细替换、简要替换或合并；请求边界应用已完成结果，原始事件仍可回查。
+- **私有与项目共享**：会话隔离仅查看自己的档案；项目共享按会话和事件时间展示摘要。全局背景由用户手填，旧自动记忆与状态提炼停止运行，旧数据保留。
+- **新版设置与侧栏**：频繁、适中、较少、自定义四档；支持摘要筛选、文档阅读、后台路由、身份恢复，以及浅深色与窄栏布局。
+- **环境说明中性化**：统一主模型与 Computer Use 的环境措辞，保留真实路径、工具契约和用户内容。内置 OpenCU 1.0.2。
 
-[完整版本说明与下载](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.2.0-alpha.1) · [身份设置说明](docs/usage.md#自定义身份认知)
+升级前备份原 DSH 数据目录。上下文后台调用仍会产生用量，摘要不保证无损；请保留原始事件与必要的外部验证。
+
+[完整版本说明与下载](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.3.0-alpha.2) · [身份设置说明](docs/usage.md#自定义身份认知)
 
 <a id="features"></a>
 
@@ -89,11 +92,11 @@ dsh web
   <tr>
     <td width="50%" valign="top">
       <h3>记住项目约定</h3>
-      <p>全局、跨项目、项目与会话分层记忆。自动消化、检索与整理，也可以手动编辑、追溯版本和恢复。</p>
+      <p>会话私有档案与同项目共享摘要，按时间归档。详细文档按编号回查，全局固定背景由用户手动维护。</p>
     </td>
     <td width="50%" valign="top">
       <h3>让长对话继续工作</h3>
-      <p>保留近期事件与关键工作信息，将可整理区间收纳为检查点；需要细节时，仍能回捞原文。</p>
+      <p>后台准备摘要与事实文档，再应用已完成的替换决定；需要细节时，可取回详细文档或原始事件。</p>
     </td>
   </tr>
   <tr>
@@ -113,14 +116,14 @@ dsh web
     </td>
     <td width="50%" valign="top">
       <h3>看清每一步的开销</h3>
-      <p>集中查看主模型与后台调用的 Token 用量、缓存和耗时，追踪上下文变化以及记忆召回、注入记录。</p>
+      <p>集中查看主模型与后台调用的 Token 用量、缓存和耗时，追踪上下文变化、摘要准备与替换记录。</p>
     </td>
   </tr>
 </table>
 
-### 一个工作台，四个入口
+### 一个工作台，五个入口
 
-**任务 · 记忆 · 电脑 · 监控** 复用同一个右侧标签，切换时保留未保存的编辑。界面采用 DSH 与 Codex 的融合风格，统一浅色／深色主题与窄窗布局。
+**任务 · 上下文 · 摘要 · 电脑 · 监控** 复用同一个右侧标签，切换时保留未保存的编辑。界面采用 DSH 与 Codex 的融合风格，统一浅色／深色主题与窄窗布局。
 
 操作记录按 **总摘要 → 操作列表 → 单项结果／缩略图 → 大图** 逐层展开。思考、上下文注入和压缩记录统一收纳，收起再打开时保留各项展开选择；对话正文与交付结果始终是阅读重点。
 
@@ -172,7 +175,7 @@ Computer Use 由 [OpenCU](https://github.com/gulagala001/opencu) 提供，安装
 
 ## 平台与运行环境
 
-当前预发布版本为 **1.2.0-alpha.1**，适配 **DSH 0.1.6-alpha.1**。
+当前预发布版本为 **1.3.0-alpha.2**，适配 **DSH 0.1.6-alpha.1**。
 
 | 功能 | 当前支持 |
 | --- | --- |

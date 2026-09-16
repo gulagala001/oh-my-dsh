@@ -7,6 +7,8 @@ import { HubStore, projectOf, memoryLineage, matchesProject } from './hub-store.
 import { MEMORY_CONSTITUTION, OPS_DESC, DIGEST_DESC, CURATE_RULES } from './prompts.mjs';
 import { MemoryContext } from './memory-context.mjs';
 import { StateZone } from './state-zone.mjs';
+import { ContextPipeline } from './context/pipeline.mjs';
+import { createHostAdapter } from './context/host.mjs';
 import { createEffortResolver } from './effort.mjs';
 import { TODO_NUDGE, TODO_EMPTY_NUDGE } from './todolist.mjs';
 
@@ -63,6 +65,7 @@ export class Hub extends Service {
     this.store = new HubStore(config.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), NS));
     this.presetRoot = fileURLToPath(new URL('../presets/', import.meta.url));
     this.memoryContext = new MemoryContext(this); this.stateZone = new StateZone(this);
+    this.context = new ContextPipeline(this, createHostAdapter(this));
     this.efforts = new Map(); this.idleTimers = new Map(); this.agents = new Map(); this.disposedAgents = new Set();
     this.digestQueue = new Map(); this.digesting = false;
     this.jobs = new Map(); this.controllers = new Map();
@@ -70,7 +73,7 @@ export class Hub extends Service {
     this.curations = new Map(); this.curationTail = Promise.resolve(); this.curationClosed = false;
     ctx.effect(() => () => {
       for (const c of this.controllers.values()) c.abort();
-      this.disposeCuration(); this.memoryContext.dispose(); this.stateZone.dispose();
+      this.disposeCuration(); this.memoryContext.dispose(); this.stateZone.dispose(); this.context.dispose();
       for (const timer of this.idleTimers.values()) clearTimeout(timer);
     });
   }
@@ -103,7 +106,7 @@ export class Hub extends Service {
   }
   route(agent, kind) {
     const main = agent.session.requestHeader()?.config ?? agent.options;
-    const custom = this.config().backgroundMode === 'unified' ? this.config().unifiedBackground : this.config()[kind === 'surgeon' ? 'surgeon' : ['state', 'probeAsk', 'probeAnswer'].includes(kind) ? 'canvas' : 'background'] ?? {};
+    const custom = this.config().backgroundMode === 'unified' ? this.config().unifiedBackground : this.config()[['surgeon', 'coordinate'].includes(kind) ? 'surgeon' : ['state', 'probeAsk', 'probeAnswer'].includes(kind) ? 'canvas' : 'background'] ?? {};
     return { provider: custom.provider || main.provider, model: custom.model || main.model, temperature: custom.temperature, effort: custom.effort ?? 'off' };
   }
   captureFrame(agent, turn, step) {
