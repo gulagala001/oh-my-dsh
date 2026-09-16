@@ -82,14 +82,16 @@
     "esbuild": "0.25.12",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "@deepseek-ai/dsh-tools": "0.1.6-alpha.1"
+    "@deepseek-ai/dsh-tools": "0.1.6-alpha.1",
+    "@deepseek-ai/dsh-attachment": "0.1.6-alpha.1"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.2",
     "@deepseek-ai/dsh-compaction": "0.1.6-alpha.1",
     "@deepseek-ai/dsh-llm": "0.1.6-alpha.1",
     "@deepseek-ai/schemastery": "3.18.2",
-    "@deepseek-ai/dsh-tools": "0.1.6-alpha.1"
+    "@deepseek-ai/dsh-tools": "0.1.6-alpha.1",
+    "@deepseek-ai/dsh-attachment": "0.1.6-alpha.1"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {
@@ -105,6 +107,9 @@
       "optional": true
     },
     "@deepseek-ai/dsh-tools": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-attachment": {
       "optional": true
     }
   },

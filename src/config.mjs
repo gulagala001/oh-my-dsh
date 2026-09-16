@@ -35,6 +35,7 @@ export const Config = z.object({
   digestMaxTokens: z.number().step(1).min(0).default(0),
   catchupMax: z.number().step(1).min(0).default(0),
   contextMemories: z.number().step(1).min(0).default(0),
+  idlePreprocessEnabled: z.boolean().default(false),
   flushIdleMs: z.number().step(1).min(0).default(90000),
   injectLimit: z.number().step(1).min(0).default(0),
   injectBatch: z.number().step(1).min(1).default(8),
