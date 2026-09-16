@@ -157,7 +157,7 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await settings.getByRole('button', { name: '模型与身份', exact: true }).click();
   const identity = settings.getByLabel('身份提示词', { exact: true });
   const defaultIdentity = await identity.inputValue();
-  assert.match(defaultIdentity, /^You are ZCode\./);
+  assert.equal(defaultIdentity, 'You are an interactive zcode agent that helps users with software engineering tasks.');
   await identity.fill('你是我的研究助手。\n帮助我整理资料。');
   await settings.getByRole('button', { name: '保存设置', exact: true }).click();
   await until(async () => !(await settings.getByRole('button', { name: '保存设置', exact: true }).isEnabled()));

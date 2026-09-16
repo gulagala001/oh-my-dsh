@@ -140,7 +140,7 @@ test('official DSH profile → plugin → native tools → context records → r
   const mainRequests = payloads.filter(p => p.tools?.some(t => t.function.name === 'todo_write'));
   assert.equal(mainRequests[0].messages[0].role, 'system', 'startup injections must follow the system prompt');
   const systemText = mainRequests[0].messages[0].content;
-  assert.ok(systemText.startsWith('You are ZCode.'));
+  assert.ok(systemText.startsWith('You are an interactive zcode agent that helps users with software engineering tasks.'));
   assert.ok(systemText.includes('The host application source checkout is at '));
   assert.ok(systemText.includes("through the current web interface"));
   assert.ok(systemText.includes('boot data supplied by the existing host process'));

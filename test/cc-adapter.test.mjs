@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { transformAssembly, mainPrompt, inspectCommittedRequest } from '../src/cc-adaptation/adapter.mjs';
-import { buildMainPrompt, promptText } from '../src/cc-adaptation/texts.mjs';
+import { buildMainPrompt, promptText, MAIN_FILES } from '../src/cc-adaptation/texts.mjs';
 
 const context={agent:{session:{header:{origin:'user'}}}};
 const schema=(name,fields=[])=>({name,description:'native '+name,parameters:{type:'object',properties:Object.fromEntries(fields.map(x=>[x,{type:'string',description:'native field '+x}]))}});
@@ -11,7 +11,7 @@ function frozen(v) {if(v&&typeof v==='object'){Object.values(v).forEach(frozen);
 test('non-agent requests remain byte-equivalent',()=>{const a=assembly(); assert.equal(transformAssembly(a,{}).assembly,a);});
 test('child requests stay outside transformation',()=>{const a=assembly();assert.equal(transformAssembly(a,{agent:{session:{header:{origin:'subagent'}}}}).assembly,a);});
 test('other presets stay outside transformation',()=>{const a={...assembly(),sections:[]};assert.equal(transformAssembly(a,context).assembly,a);});
-test('main persona replaced once, duplicated identity removed',()=>{const {assembly:r}=transformAssembly(assembly(),context);assert.equal(r.sections.filter(x=>x.name==='trisoul-x:persona').length,1);assert(!r.sections.some(x=>x.name==='harness:identity'));assert(r.sections[0].text.startsWith('You are ZCode.'));});
+test('main persona replaced once, duplicated identity removed',()=>{const {assembly:r}=transformAssembly(assembly(),context);assert.equal(r.sections.filter(x=>x.name==='trisoul-x:persona').length,1);assert(!r.sections.some(x=>x.name==='harness:identity'));assert(r.sections[0].text.startsWith('You are an interactive zcode agent that helps users with software engineering tasks.'));});
 test('missing CU removes unconditional CU instruction',()=>{const {assembly:r}=transformAssembly(assembly(),context);assert(!r.sections[0].text.includes('Use the available computer-use tools'));});
 test('native CU interface retained and instruction enabled',()=>{const a=assembly([schema('computer_use',['code','title'])]);const {assembly:r}=transformAssembly(a,context);assert(r.sections[0].text.includes('Use the available computer-use tools'));assert.deepEqual(r.tools[0].parameters,a.tools[0].parameters);assert.equal(r.tools[0].description,promptText('tools/computer-use.md'));});
 test('unmapped upstream tool is kept and reported, never invented',()=>{const a=assembly([schema('new_upstream_tool')]);const r=transformAssembly(a,context);assert.equal(r.assembly.tools[0],a.tools[0]);assert.equal(r.audit.retained[0].reason,'unmapped-native-tool');});
@@ -44,8 +44,7 @@ test('real DSH sections without order metadata retain the host sequence', () => 
 
 
 test('editable identity preserves all other prompt text and permits an empty identity', () => {
-  const original = mainPrompt.split('\n\n').slice(0, 2).join('\n\n');
-  const body = mainPrompt.slice(original.length + 2);
+  const body = MAIN_FILES.map(promptText).join('\n\n');
   const custom = '你是研究助手。\n\n保留字面量 {{cwd}} 和 ${name}。';
   assert.equal(buildMainPrompt(custom), custom + '\n\n' + body);
   assert.equal(buildMainPrompt(''), body);

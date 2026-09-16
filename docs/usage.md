@@ -125,7 +125,7 @@ node scripts/launch-macos.mjs
 
 ### 自定义身份认知
 
-默认身份为 **ZCode**，角色说明为帮助用户完成软件工程任务的交互式助手。
+默认身份为：`You are an interactive zcode agent that helps users with software engineering tasks.`
 
 在 **设置 → Oh My DSH → 模型与身份 → 身份认知** 中编辑助手的名称、角色和职责，然后点击 **保存设置**。更改从下一次主模型请求生效，适用于已有和新建的 Oh My DSH 主对话；其他行为规则保持原样。留空移除身份描述，点击 **恢复默认** 后保存可恢复默认文字。
 

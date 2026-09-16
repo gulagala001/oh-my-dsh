@@ -24,7 +24,7 @@ export function contextRouteMode(config = {}) {
 
 export function wrapContextClient(legacy, require) {
   const React = require('react'), h = React.createElement;
-  const DEFAULT_IDENTITY = "You are ZCode.\n\nYou are an interactive agent that helps users with software engineering tasks.";
+  const DEFAULT_IDENTITY = "You are an interactive zcode agent that helps users with software engineering tasks.";
   const api = async (path, body) => {
     const response = await fetch('/trisoul-x/api' + path, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await response.json(); if (!response.ok) throw Error(data.error || 'HTTP ' + response.status); return data;
