@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Oh My DSH Computer Use",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "minimum_chrome_version": "125",
   "description": "连接 Oh My DSH，查看和操作当前浏览器中选中的标签页。",
   "permissions": [
