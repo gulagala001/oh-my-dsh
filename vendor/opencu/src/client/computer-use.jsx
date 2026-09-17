@@ -1,4 +1,6 @@
-import React, { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
+import { createComputerStatePool } from './state-pool.mjs';
+import { HOST_BROWSER_ID, hostPreviewUrl, openHostBrowserPreview } from './host-browser.mjs';
+import React, { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import css from './computer-use.css';
 import { BrowserPreview } from './browser-preview.jsx';
 import { NativePreview } from './native-preview.jsx';
@@ -15,10 +17,16 @@ import {SavedImage} from './tool-image.jsx';
 const base='/trisoul-x/computer-use/';
 const url=(op,id)=>base+op+'?session='+encodeURIComponent(id);
 async function api(op,id,value,signal){const r=await fetch(url(op,id),value===undefined?{signal}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value),signal});const body=await r.json();if(!r.ok)throw Object.assign(new Error(body.error??'Computer Use 请求失败'),{code:body.code});if(value!==undefined&&body.status)window.dispatchEvent(new CustomEvent('trisoul-cu-state',{detail:{id,state:body}}));return body;}
-function useStateView(id,visible=true){
-  const[state,setState]=useState(null),[error,setError]=useState(''),[connectionError,setConnectionError]=useState('');
-  useEffect(()=>{setState(null);setError('');if(!id||!visible)return;let live=true,timer,revision=0;const update=next=>setState(previous=>previous&&((next.controlEpoch??0)<(previous.controlEpoch??0)||(next.navigationRevision??0)<(previous.navigationRevision??0)||(next.viewRevision??0)<(previous.viewRevision??0))?previous:next);const changed=e=>{if(e.detail.id===id){revision++;update(e.detail.state);setError('');}};window.addEventListener('trisoul-cu-state',changed);const tick=async()=>{const before=revision;try{const s=await api('state',id);if(live&&revision===before){update(s);setConnectionError('');}}catch(e){if(live)setConnectionError(e.message);}if(live)timer=setTimeout(tick,800);};void tick();return()=>{live=false;clearTimeout(timer);window.removeEventListener('trisoul-cu-state',changed);};},[id,visible]);
-  return{state,error:error||connectionError,setState,setError};
+const statePoolKey = Symbol.for('opencu.state-pool.v1');
+const statePool = globalThis[statePoolKey] ||= createComputerStatePool({ read: (id, signal) => api('state', id, undefined, signal) });
+function useStateView(id, visible = true) {
+  const subscribe = useCallback(listener => id && visible ? statePool.subscribe(id, listener) : () => {}, [id, visible]);
+  const snapshot = useCallback(() => statePool.snapshot(visible ? id : null), [id, visible]);
+  const { state, error: connectionError, eventRevision } = useSyncExternalStore(subscribe, snapshot);
+  const [error, setError] = useState('');
+  const setState = useCallback(value => { statePool.publish(id, value); setError(''); }, [id]);
+  useEffect(() => { setError(''); }, [id, visible, eventRevision]);
+  return { state, error: error || connectionError, setState, setError };
 }
 const ScreenIcon=()=> <ComputerIcon name="screen" size={17}/>;
 const names={running:'正在操作',idle:'就绪',stopped:'已停止',stopping:'正在停止',error:'需要处理'};
@@ -44,14 +52,16 @@ function ComputerChip({sessionId,onOpen,onPresentation,inputActions,conversation
     {state?.status==='stopped'&&!state.transitioning&&<button type="button" className="tx-cu-chip-resume" onClick={()=>api('resume',sessionId,{}).then(setState).catch(e=>setError(e.message))}><ComputerIcon name="play" size={12}/>恢复控制</button>}
   </div>;
 }
-export function ComputerPane({sessionId,useTabInfo,inputActions,conversation}){
+export function ComputerPane({sessionId,useTabInfo,inputActions,conversation,hostBrowserAvailable=false}){
   const{tab}=useTabInfo();const{state,error,setState,setError}=useStateView(sessionId,tab.visible);
   const target=state?.viewTarget??state?.target;
   const[busy,setBusy]=useState(false),[navigation,setNavigation]=useState(null),[frame,setFrame]=useState(null),controls=useRef(null);
   const[previewScale,setPreviewScale]=useState('1'),[deviceMode,setDeviceMode]=useState(false);
   useEffect(()=>{setNavigation(null);},[target?.id]);
   const act=async(op,value={})=>{setBusy(true);try{setState(await api(op,sessionId,value));setError('');}catch(e){setError(e.message);}finally{setBusy(false);}};
+  const previewUrl = hostPreviewUrl(target, navigation);
   const browserActions=target?.kind==='tab'?<>
+    {hostBrowserAvailable && previewUrl && <button type="button" aria-label="在官方浏览器中预览" title="用官方浏览器打开独立预览；不会改变助手控制的网页" onClick={() => { try { openHostBrowserPreview(tab.actions, previewUrl); } catch (error) { setError(error.message); } }}><ComputerIcon name="browser" size={15}/></button>}
     <PageAnnotation compact sessionId={sessionId} frame={state.enabled?frame:null} target={target} inputActions={inputActions} conversation={conversation} api={api}/>
     {state?.target&&target.id!==state.target.id&&<button type="button" aria-label="查看助手当前画面" title="查看助手当前画面" onClick={()=>act('view-tab',{current:true})}><ComputerIcon name="return" size={15}/></button>}
     {state?.status==='stopped'&&!state?.transitioning?<button type="button" className="is-resume" aria-label="恢复助手控制" title="恢复助手控制" disabled={busy} onClick={()=>act('resume')}><ComputerIcon name="play" size={14}/></button>:<button type="button" aria-label="停止并接管" title="停止并接管" disabled={busy||state?.status==='stopping'} onClick={()=>act('stop')}><ComputerIcon name="stop" size={14}/></button>}
@@ -125,7 +135,13 @@ function installComputerUseClient(ctx, shared){
   ctx.slots.inject('conversation.composer.dock',()=>ctx.slots.register({name:'conversation.composer.dock',id:'trisoul-computer-use',order:25},StandaloneEntry));
   const id='trisoul_x/trisoul-x-computer-use';
   ctx.effect(()=>ctx.sidebarRightTabs.register({id,kind:'trisoul-x-computer-use',title:()=>'Computer Use',guide:[{order:6,title:()=>'Computer Use',description:()=>'查看画面、停止操作与接管控制',icon:ScreenIcon}]}));
-  function Pane(props){const {renderPane}=useOptions();return renderPane?renderPane(props):<ComputerPane {...props} conversation={ctx.get('conversation')}/>;}
+  const browserSubscribe = listener => ctx.sidebarRightTabs.subscribe(listener);
+  const browserSnapshot = () => ctx.sidebarRightTabs.get('browser')?.id === HOST_BROWSER_ID;
+  function HostComputerPane(props) {
+    const available = useSyncExternalStore(browserSubscribe, browserSnapshot);
+    return <ComputerPane {...props} conversation={ctx.get('conversation')} hostBrowserAvailable={available}/>;
+  }
+  function Pane(props){const {renderPane}=useOptions();return renderPane?renderPane(props):<HostComputerPane {...props}/>;}
   ctx.slots.inject('sidebar.right.pane.tab',()=>ctx.slots.register({name:'sidebar.right.pane.tab',key:id},Pane));
   for(const key of ['computer_use','computer_use_reset'])ctx.slots.inject('tool.call.toolview',()=>ctx.slots.register({name:'tool.call.toolview',key},ComputerCard));
   ctx.inject(['inputTriggers'],scope=>{
@@ -145,7 +161,7 @@ function installComputerUseClient(ctx, shared){
       codec:{clipboardText:ref=>'@'+JSON.parse(ref).id,serialize:async ref=>'<computer-use-target>'+JSON.stringify(JSON.parse(ref)).replaceAll('<','\\u003c')+'</computer-use-target>'},
     }));
   });
-  return { ComputerEntry };
+  return { ComputerEntry, ComputerPane: HostComputerPane };
 }
 
 // One UI registration set per DSH client, regardless of package load order.
@@ -160,7 +176,8 @@ export function applyComputerUseClient(ctx, options = {}) {
       changed: () => { for (const listener of listeners) listener(); } };
     root[sharedKey] = shared;
     shared.fiber = root.plugin({ name: 'opencu-ui', inject: ['slots', 'sidebarRightTabs', 'sidebarRight'], apply(scope) {
-      shared.entry = installComputerUseClient(scope, shared).ComputerEntry;
+      const installed = installComputerUseClient(scope, shared);
+      shared.entry = installed.ComputerEntry; shared.pane = installed.ComputerPane;
       shared.changed();
     } });
   }
@@ -176,5 +193,16 @@ export function applyComputerUseClient(ctx, options = {}) {
     const Entry = shared.entry;
     return Entry ? <Entry {...props}/> : null;
   }
-  return { ComputerEntry };
+  const fallbackSubscribe = listener => ctx.sidebarRightTabs.subscribe(listener);
+  const fallbackSnapshot = () => ctx.sidebarRightTabs.get('browser')?.id === HOST_BROWSER_ID;
+  function FallbackPane(props) {
+    const available = useSyncExternalStore(fallbackSubscribe, fallbackSnapshot);
+    return <ComputerPane {...props} conversation={ctx.get('conversation')} hostBrowserAvailable={available}/>;
+  }
+  function PaneEntry(props) {
+    useSyncExternalStore(shared.subscribe, () => shared.pane);
+    const Pane = shared.pane || FallbackPane;
+    return <Pane {...props}/>;
+  }
+  return { ComputerEntry, ComputerPane: PaneEntry };
 }

@@ -1,6 +1,7 @@
+import { decorateSlot } from './slot-decoration.mjs';
 import {ComputerIcon} from './computer-icons.jsx';
 import React, { useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { computerGroups,operationSummary,operationIcon,operationState,operationRowLocale,finalAnswerPresentation,processContextKinds } from './computer-groups.mjs';
+import { computerGroups,processSummaries,operationSummary,operationIcon,operationState,operationRowLocale,finalAnswerPresentation,processContextKinds } from './computer-groups.mjs';
 import {SavedImage} from './tool-image.jsx';
 
 export function computerGroupPresentation(ctx) {
@@ -10,14 +11,10 @@ export function computerGroupPresentation(ctx) {
     if (!cache.has(snapshot)) cache.set(snapshot, computerGroups(snapshot.order.map(key => snapshot.nodes.get(key)).filter(Boolean)));
     return cache.get(snapshot);
   };
-  const process=(snapshot,turn)=>{
-    if(!processCache.has(snapshot))processCache.set(snapshot,new Map());
-    const turns=processCache.get(snapshot);
-    if(!turns.has(turn)){
-      const calls=snapshot.order.map(key=>snapshot.nodes.get(key)).filter(node=>node?.kind==='tool-call'&&node.location?.turn?.turn===turn).map(node=>node.data.root),names=calls.map(call=>call.call?.name??call.name??'');
-      turns.set(turn,{label:operationSummary(names),icon:operationIcon(names),failures:calls.filter(call=>operationState(call)==='error').length,stopped:calls.filter(call=>operationState(call)==='stopped').length});
-    }
-    return turns.get(turn);
+  const emptyProcess = { label: operationSummary([]), icon: operationIcon([]), failures: 0, stopped: 0 };
+  const process = (snapshot, turn) => {
+    if (!processCache.has(snapshot)) processCache.set(snapshot, processSummaries(snapshot));
+    return processCache.get(snapshot).get(turn) || emptyProcess;
   };
   function Group({ sessionId, useChat, nodeKey, callId, turnProcess, completedContext=false, children }) {
     const group = useChat(snapshot => groups(snapshot).get(nodeKey ?? `call:${callId}`));
@@ -51,12 +48,8 @@ export function computerGroupPresentation(ctx) {
     </div>;
   }
   ctx.slots.inject('conversation.chat.node', () => {
-    const disposers=[],installed=new Set();
-    const install = () => {
-      for(const key of ['assistant-step','turn-process',...processContextKinds]){
-        if(installed.has(key))continue;
-        const original = ctx.slots.entriesOfSlot('conversation.chat.node').find(entry => entry.options.key === key);
-        if(!original)continue;installed.add(key);
+    const dispose = decorateSlot(ctx.slots, 'conversation.chat.node', key => ['assistant-step', 'turn-process', ...processContextKinds].includes(key), original => {
+        const key = original.options.key;
         const Original=original.component;
         function GroupedAssistant(props){
           const node=useMemo(()=>finalAnswerPresentation(props.node,props.turnProcess),[props.node,props.turnProcess?.foldable,props.turnProcess?.spec.answerStep,props.turnProcess?.spec.inlineReasoning]);
@@ -77,16 +70,11 @@ export function computerGroupPresentation(ctx) {
           return <Group {...props} nodeKey={node.key} completedContext={completedContext}><Original {...props}/></Group>;
         }
         const GroupedNode=key==='turn-process'?GroupedProcess:key==='assistant-step'?GroupedAssistant:GroupedContext;
-        disposers.push(ctx.slots.register({name:'conversation.chat.node',key,locale:'chat',priority:(original.options.priority??0)-1},GroupedNode));
-      }
-    };
-    const unsubscribe = ctx.slots.subscribe('conversation.chat.node', install); install();
-    return () => { unsubscribe(); for(const dispose of disposers.reverse())dispose();open.clear();listeners.clear(); };
+        return { options: {name:'conversation.chat.node',key,locale:'chat',priority:(original.options.priority??0)-1}, component: GroupedNode };
+    });
+    return () => { dispose(); open.clear(); listeners.clear(); };
   });
-  ctx.slots.inject('tool.call.toolview',()=>{
-    const installed=new Set(),disposers=[];
-    const install=()=>{for(const original of ctx.slots.entriesOfSlot('tool.call.toolview')){
-      const key=original.options.key;if(installed.has(key))continue;installed.add(key);
+  ctx.slots.inject('tool.call.toolview', () => decorateSlot(ctx.slots, 'tool.call.toolview', () => true, original => {
       const Original=original.component;
       function GroupedTool(props){
         // read_image owns a private child gallery. Reuse its row and provide
@@ -95,10 +83,7 @@ export function computerGroupPresentation(ctx) {
         return <Group {...props}><Original {...props} {...(props.t?{t:operationRowLocale(props.t,props.toolName,props.block)}:{})} {...(original.children?.['tool.call.images']?{renderSlot:images}:{})}/></Group>;
       }
       const{children,...options}=original.options;
-      disposers.push(ctx.slots.register({...options,name:'tool.call.toolview',locale:original.locale,inject:original.inject,children:undefined,priority:(options.priority??0)-1},GroupedTool));
-    }};
-    const unsubscribe=ctx.slots.subscribe('tool.call.toolview',install);install();
-    return()=>{unsubscribe();for(const dispose of disposers.reverse())dispose();};
-  });
+      return { options: {...options,name:'tool.call.toolview',locale:original.locale,inject:original.inject,children:undefined,priority:(options.priority??0)-1}, component: GroupedTool };
+  }));
   return Group;
 }

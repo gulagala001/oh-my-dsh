@@ -92,3 +92,21 @@ test('published manifest matches the installed package and retains the major-fix
   assert.ok(pkg.files.includes('release-manifest.json'));
   assert.equal(feed.releases.find(r => r.version === '1.3.0-alpha.4').severity, 'required');
 });
+
+
+test('DSH-aligned numbering migrates the archived OMD series without reversing SemVer', () => {
+  const feed = validateManifest({ schema: 1, versionPolicy: 'dsh-aligned', releases: [
+    release('1.3.0-alpha.9', 'required'), release('0.1.6-alpha.2.1', 'required'), release('1.3.0-alpha.4', 'required'),
+  ] });
+  assert.equal(compareVersions('1.3.0-alpha.9', '0.1.6-alpha.2.1'), 1);
+  assert.equal(feed.releases[0].version, '0.1.6-alpha.2.1');
+  assert.equal(versionStatus('1.3.0-alpha.9', feed).status, 'update');
+  assert.equal(versionStatus('1.3.0-alpha.9', feed).severity, 'required');
+  assert.equal(versionStatus('0.1.6-alpha.2.1', feed).status, 'current');
+  assert.deepEqual(versionStatus('0.1.6-alpha.2.1', feed).releases, []);
+  assert.equal(versionStatus('0.1.6-alpha.2.2', feed).status, 'ahead');
+  const next = validateManifest({ ...feed, releases: [...feed.releases, release('0.1.6-alpha.3.1')] });
+  assert.equal(versionStatus('0.1.6-alpha.2.1', next).latestVersion, '0.1.6-alpha.3.1');
+  assert.equal(versionStatus('0.1.6-alpha.2.1', next).severity, 'normal');
+  assert.throws(() => validateManifest({ ...feed, versionPolicy: 'arbitrary' }));
+});

@@ -1,4 +1,4 @@
-/* DSH 0.1.5-rc.1 shell. Use public data attributes first; the few module
+/* DSH 0.1.6-alpha.2 shell. Use public data attributes first; the few module
    selectors below match the installed host and are covered by frontend UI QA. */
 .trisoul-shell {
   --tx-shell-text: var(--dsw-alias-label-primary, CanvasText);
@@ -79,10 +79,10 @@
 .trisoul-shell .tx-composer-dock { display: contents; }
 .trisoul-shell .tx-composer-tools { order: 0; flex: 1 1 auto; }
 .trisoul-shell .tx-usage-toggle { order: 1; }
-.trisoul-shell [data-composer-stats] { display: none; order: 2; flex: 1 1 calc(100% - 130px); width: auto; max-width: none; margin: 0; padding: 4px 2px; gap: 8px; opacity: 1; }
+.trisoul-shell :is([data-composer-stats], .bOPqQW_root) { display: none; order: 2; flex: 1 1 calc(100% - 130px); width: auto; max-width: none; margin: 0; padding: 4px 2px; gap: 8px; opacity: 1; }
 .trisoul-shell .tx-stats-line { display: none; order: 3; }
-.trisoul-shell[data-omd-usage-expanded] [data-composer-stats] { display: flex; }
-.trisoul-shell[data-omd-usage-expanded] .tx-stats-line { display: inline-flex; }
+.trisoul-shell [data-slot='conversation.composer.dock']:has(.tx-composer-dock[data-omd-usage-expanded]) :is([data-composer-stats], .bOPqQW_root) { display: flex; }
+.trisoul-shell .tx-composer-dock[data-omd-usage-expanded] .tx-stats-line { display: inline-flex; }
 .trisoul-shell .bOPqQW_pill { padding: 2px 4px; font-size: 11px; gap: 5px; }
 .trisoul-shell .bOPqQW_pill svg { width: 13px; height: 13px; }
 /* Process details read as a disclosure, with the response itself in focus. */

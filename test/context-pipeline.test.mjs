@@ -547,3 +547,28 @@ test('disabling while idle preparation runs keeps the result but skips the force
   release({ blocks: [{ type: 'tool-call', name: 'prepare_segment', arguments: prepared() }] });
   await finishJobs(f); assert.equal(f.state.records.length, 1); assert.deepEqual(f.calls, ['prepare']);
 });
+
+
+test('explicit manual compaction is not vetoed by an earlier automatic keep decision', async t => {
+  const f = setup(t, { automaticReplace: false }); const r = add(f);
+  f.state.pending = plan(f, [['keep', r]]); f.store.save(f.state);
+  const before = JSON.stringify(f.s.snapshotEvents());
+  assert.equal(await f.pipeline.applyReady(f.agent), null);
+  assert.equal(JSON.stringify(f.s.snapshotEvents()), before);
+  const result = await f.pipeline.applyReady(f.agent, { manual: true });
+  assert.ok(result); assert.equal(f.state.records[0].mode, 'detail');
+  assert.match(f.pipeline.recall(f.s, { id: r.id }), /9007199254740993/);
+});
+
+test('unchanged project publication causes no filesystem writes or context injection', t => {
+  const f = setup(t); f.state.binding = { scope: 'project', project: '/project', title: f.s.id };
+  f.s.header.memoryScope = 'project'; f.store.save(f.state);
+  f.pipeline.publishMemory(f.s);
+  const before = JSON.stringify(f.s.snapshotEvents());
+  const original = f.store.save.bind(f.store); let writes = 0;
+  f.store.save = (...args) => { writes++; return original(...args); };
+  f.pipeline.publishMemory(f.s); f.pipeline.publishMemory(f.s);
+  assert.equal(writes, 0); assert.equal(JSON.stringify(f.s.snapshotEvents()), before);
+  f.store.setGlobal('A user update', 0); f.pipeline.publishMemory(f.s);
+  assert.equal(writes, 1); assert.match(JSON.stringify(f.s.snapshotEvents()), /A user update/);
+});

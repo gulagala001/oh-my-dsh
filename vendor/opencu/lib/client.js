@@ -35,6 +35,144 @@ __export(index_exports, {
 });
 module.exports = __toCommonJS(index_exports);
 
+// src/client/polling.mjs
+function createPoller({
+  read,
+  onData,
+  onError = () => {
+  },
+  interval = 2500,
+  visibility = globalThis.document,
+  timeout = 3e4
+}) {
+  let active = false, generation = 0, timer, controller;
+  const visible = () => visibility?.visibilityState !== "hidden";
+  const cancel = () => {
+    generation++;
+    clearTimeout(timer);
+    timer = void 0;
+    controller?.abort();
+    controller = void 0;
+  };
+  async function refresh() {
+    cancel();
+    if (!active || !visible()) return;
+    const ticket = generation, own = controller = new AbortController();
+    const deadline = setTimeout(() => own.abort(new Error("\u8BFB\u53D6\u8D85\u65F6\uFF0C\u8BF7\u91CD\u8BD5")), timeout);
+    let onAbort;
+    const aborted = new Promise((_, reject) => {
+      onAbort = () => reject(own.signal.reason);
+      own.signal.addEventListener("abort", onAbort, { once: true });
+    });
+    try {
+      const data = await Promise.race([read(own.signal), aborted]);
+      if (active && ticket === generation && !own.signal.aborted) onData(data);
+    } catch (error) {
+      if (active && ticket === generation) onError(own.signal.aborted ? own.signal.reason : error);
+    } finally {
+      clearTimeout(deadline);
+      own.signal.removeEventListener("abort", onAbort);
+      if (ticket === generation) {
+        controller = void 0;
+        if (active && visible()) timer = setTimeout(refresh, interval);
+      }
+    }
+  }
+  const onVisibility = () => {
+    if (visible()) void refresh();
+    else cancel();
+  };
+  return {
+    start() {
+      if (active) return;
+      active = true;
+      visibility?.addEventListener("visibilitychange", onVisibility);
+      void refresh();
+    },
+    stop() {
+      active = false;
+      cancel();
+      visibility?.removeEventListener("visibilitychange", onVisibility);
+    },
+    refresh
+  };
+}
+
+// src/client/state-pool.mjs
+var EMPTY = Object.freeze({ state: null, error: "", eventRevision: 0 });
+function createComputerStatePool({ read, events = globalThis.window, visibility = globalThis.document, interval = 800 }) {
+  const entries = /* @__PURE__ */ new Map();
+  const notify = (entry) => {
+    for (const listener of entry.listeners) listener();
+  };
+  function publish(id, value, fromPoll = false) {
+    const entry = entries.get(id);
+    if (!entry) return;
+    const previous = entry.snapshot.state, next = typeof value === "function" ? value(previous) : value;
+    if (!next || previous && ((next.controlEpoch ?? 0) < (previous.controlEpoch ?? 0) || (next.navigationRevision ?? 0) < (previous.navigationRevision ?? 0) || (next.viewRevision ?? 0) < (previous.viewRevision ?? 0))) return;
+    entry.revision++;
+    entry.snapshot = { state: next, error: "", eventRevision: entry.snapshot.eventRevision + (fromPoll ? 0 : 1) };
+    notify(entry);
+  }
+  const changed = (event) => publish(event.detail?.id, event.detail?.state);
+  return {
+    snapshot: (id) => entries.get(id)?.snapshot || EMPTY,
+    publish,
+    subscribe(id, listener) {
+      if (!id) return () => {
+      };
+      let entry = entries.get(id);
+      if (!entry) {
+        entry = { snapshot: EMPTY, revision: 0, listeners: /* @__PURE__ */ new Set() };
+        entries.set(id, entry);
+        if (entries.size === 1) events?.addEventListener("trisoul-cu-state", changed);
+        entry.poller = createPoller({
+          visibility,
+          interval,
+          read: async (signal) => {
+            const revision = entry.revision;
+            return { revision, data: await read(id, signal) };
+          },
+          onData: ({ revision, data }) => {
+            if (entry.revision === revision) publish(id, data, true);
+          },
+          onError: (error) => {
+            entry.snapshot = { ...entry.snapshot, error: error.message };
+            notify(entry);
+          }
+        });
+      }
+      entry.listeners.add(listener);
+      entry.poller.start();
+      return () => {
+        entry.listeners.delete(listener);
+        if (entry.listeners.size) return;
+        entry.poller.stop();
+        if (entries.get(id) === entry) entries.delete(id);
+        if (!entries.size) events?.removeEventListener("trisoul-cu-state", changed);
+      };
+    }
+  };
+}
+
+// src/client/host-browser.mjs
+var HOST_BROWSER_ID = "@deepseek-ai/dsh-client-ui-sidebar-browser";
+function hostPreviewUrl(target, navigation) {
+  if (target?.kind !== "tab") return null;
+  const value = navigation && navigation.tabId === target.id ? navigation.url : target.url;
+  try {
+    const parsed = new URL(value);
+    return ["http:", "https:"].includes(parsed.protocol) ? parsed.href : null;
+  } catch {
+    return null;
+  }
+}
+function openHostBrowserPreview(actions, url2) {
+  if (!hostPreviewUrl({ kind: "tab", url: url2 }) || typeof actions?.openTab !== "function") return false;
+  actions.openTab("browser", { params: { url: url2 } });
+  return true;
+}
+
 // src/client/computer-use.jsx
 var import_react17 = __toESM(require("react"), 1);
 
@@ -1336,6 +1474,53 @@ var BrowserControls = (0, import_react10.forwardRef)(function BrowserControls2({
   }, onOpen: (entry) => act("tabs", { action: "new", browserId: entry.browserId, url: entry.url }) }), (navigation?.loading || state?.transitioning) && /* @__PURE__ */ import_react10.default.createElement("div", { className: "tx-cu-loading", role: "status", "aria-label": state?.resuming ? "\u6B63\u5728\u6062\u590D\u52A9\u624B\u63A7\u5236\u2026" : "\u6B63\u5728\u8F7D\u5165\u9875\u9762\u2026" }, /* @__PURE__ */ import_react10.default.createElement("span", { className: "tx-cu-visually-hidden" }, state?.resuming ? "\u6B63\u5728\u6062\u590D\u52A9\u624B\u63A7\u5236\u2026" : "\u6B63\u5728\u8F7D\u5165\u9875\u9762\u2026")));
 });
 
+// src/client/slot-decoration.mjs
+var decoration = Symbol.for("opencu.slot-decoration.v1");
+function decorateSlot(slots, name, accepts, decorate) {
+  const layer = Symbol(), installed = /* @__PURE__ */ new Map();
+  let reconciling = false, dirty = false, stopped = false;
+  function reconcile() {
+    if (stopped) return;
+    if (reconciling) {
+      dirty = true;
+      return;
+    }
+    reconciling = true;
+    try {
+      do {
+        dirty = false;
+        const entries = slots.entriesOfSlot(name), live = new Set(entries), originals = /* @__PURE__ */ new Map();
+        for (const entry of entries) {
+          const meta = entry.component[decoration], key = entry.options.key;
+          if (!accepts(key) || meta && (meta.layers.includes(layer) || !live.has(meta.root))) continue;
+          if (!originals.has(key)) originals.set(key, entry);
+        }
+        for (const [key, current] of installed) if (originals.get(key) !== current.original) {
+          installed.delete(key);
+          current.dispose();
+        }
+        for (const [key, original] of originals) if (!installed.has(key)) {
+          const { options, component } = decorate(original);
+          const meta = original.component[decoration];
+          component[decoration] = { root: meta?.root || original, layers: [...meta?.layers || [], layer] };
+          const dispose = slots.register(options, component);
+          installed.set(key, { original, dispose });
+        }
+      } while (dirty && !stopped);
+    } finally {
+      reconciling = false;
+    }
+  }
+  const unsubscribe = slots.subscribe(name, reconcile);
+  reconcile();
+  return () => {
+    stopped = true;
+    unsubscribe();
+    for (const value of [...installed.values()].reverse()) value.dispose();
+    installed.clear();
+  };
+}
+
 // src/client/computer-reference.jsx
 var import_react11 = __toESM(require("react"), 1);
 var import_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-primitives");
@@ -1374,30 +1559,15 @@ function ReferenceMessage({ parts, node, renderMessageImages, t }) {
   } }, copied ? "\u5DF2\u590D\u5236" : "\u590D\u5236"), data.time && /* @__PURE__ */ import_react11.default.createElement("time", { dateTime: new Date(data.time).toISOString() }, new Date(data.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))), error && /* @__PURE__ */ import_react11.default.createElement("span", { className: "tx-cu-error", role: "alert" }, error));
 }
 function installComputerReferenceMessages(ctx) {
-  ctx.slots.inject("conversation.chat.node", () => {
-    const installed = /* @__PURE__ */ new Set(), disposers = [];
-    const install = () => {
-      for (const key of ["user", "steering"]) {
-        let WithComputerReferences = function(props) {
-          const text = (props.node.data.content ?? []).filter((b) => b.type === "text" && typeof b.text === "string").map((b) => b.text).join("");
-          const parts = segments(text);
-          return parts.some((p) => p.reference) ? /* @__PURE__ */ import_react11.default.createElement(ReferenceMessage, { ...props, parts }) : /* @__PURE__ */ import_react11.default.createElement(Original, { ...props });
-        };
-        if (installed.has(key)) continue;
-        const original = ctx.slots.entriesOfSlot("conversation.chat.node").find((entry) => entry.options.key === key);
-        if (!original) continue;
-        installed.add(key);
-        const Original = original.component;
-        disposers.push(ctx.slots.register({ name: "conversation.chat.node", key, locale: "chat", priority: (original.options.priority ?? 0) - 1 }, WithComputerReferences));
-      }
-    };
-    const unsubscribe = ctx.slots.subscribe("conversation.chat.node", install);
-    install();
-    return () => {
-      unsubscribe();
-      for (const dispose of disposers.reverse()) dispose();
-    };
-  });
+  ctx.slots.inject("conversation.chat.node", () => decorateSlot(ctx.slots, "conversation.chat.node", (key) => ["user", "steering"].includes(key), (original) => {
+    const Original = original.component;
+    function WithComputerReferences(props) {
+      const text = (props.node.data.content ?? []).filter((b) => b.type === "text" && typeof b.text === "string").map((b) => b.text).join("");
+      const parts = segments(text);
+      return parts.some((p) => p.reference) ? /* @__PURE__ */ import_react11.default.createElement(ReferenceMessage, { ...props, parts }) : /* @__PURE__ */ import_react11.default.createElement(Original, { ...props });
+    }
+    return { options: { name: "conversation.chat.node", key: original.options.key, locale: "chat", priority: (original.options.priority ?? 0) - 1 }, component: WithComputerReferences };
+  }));
 }
 
 // src/client/computer-groups.jsx
@@ -1483,6 +1653,26 @@ function computerGroups(nodes) {
   }
   return result;
 }
+function processSummaries(snapshot) {
+  const summaries = /* @__PURE__ */ new Map();
+  for (const key of snapshot.order) {
+    const node = snapshot.nodes.get(key);
+    if (node?.kind !== "tool-call") continue;
+    const turn = node.location?.turn?.turn, call = node.data.root;
+    const summary = summaries.get(turn) || { names: [], failures: 0, stopped: 0 };
+    summary.names.push(call.call?.name ?? call.name ?? "");
+    const state = operationState(call);
+    if (state === "error") summary.failures++;
+    if (state === "stopped") summary.stopped++;
+    summaries.set(turn, summary);
+  }
+  return new Map([...summaries].map(([turn, value]) => [turn, {
+    label: operationSummary(value.names),
+    icon: operationIcon(value.names),
+    failures: value.failures,
+    stopped: value.stopped
+  }]));
+}
 
 // src/client/computer-groups.jsx
 function computerGroupPresentation(ctx) {
@@ -1495,14 +1685,10 @@ function computerGroupPresentation(ctx) {
     if (!cache.has(snapshot)) cache.set(snapshot, computerGroups(snapshot.order.map((key) => snapshot.nodes.get(key)).filter(Boolean)));
     return cache.get(snapshot);
   };
+  const emptyProcess = { label: operationSummary([]), icon: operationIcon([]), failures: 0, stopped: 0 };
   const process = (snapshot, turn) => {
-    if (!processCache.has(snapshot)) processCache.set(snapshot, /* @__PURE__ */ new Map());
-    const turns = processCache.get(snapshot);
-    if (!turns.has(turn)) {
-      const calls = snapshot.order.map((key) => snapshot.nodes.get(key)).filter((node) => node?.kind === "tool-call" && node.location?.turn?.turn === turn).map((node) => node.data.root), names2 = calls.map((call) => call.call?.name ?? call.name ?? "");
-      turns.set(turn, { label: operationSummary(names2), icon: operationIcon(names2), failures: calls.filter((call) => operationState(call) === "error").length, stopped: calls.filter((call) => operationState(call) === "stopped").length });
-    }
-    return turns.get(turn);
+    if (!processCache.has(snapshot)) processCache.set(snapshot, processSummaries(snapshot));
+    return processCache.get(snapshot).get(turn) || emptyProcess;
   };
   function Group({ sessionId, useChat, nodeKey, callId, turnProcess, completedContext = false, children }) {
     const group = useChat((snapshot) => groups(snapshot).get(nodeKey ?? `call:${callId}`));
@@ -1536,66 +1722,45 @@ function computerGroupPresentation(ctx) {
     return /* @__PURE__ */ import_react12.default.createElement("div", { ref: seat, className: standalone ? void 0 : "tx-cu-group", style: standalone ? { display: "contents" } : void 0, "data-cu-group": !standalone && first ? group.id : void 0, "data-cu-group-hidden": hidden || void 0, "data-cu-process-context": completedContext || void 0 }, !standalone && first && /* @__PURE__ */ import_react12.default.createElement("button", { key: "summary", type: "button", className: "tx-cu-group-toggle", "aria-expanded": expanded, title: group.title || void 0, onClick: toggle }, /* @__PURE__ */ import_react12.default.createElement(ComputerIcon, { name: group.calls.length ? operationIcon(group.names) : "book", size: 16 }), /* @__PURE__ */ import_react12.default.createElement("strong", null, group.calls.length ? operationSummary(group.names, group.running) : group.contexts ? "\u4E0A\u4E0B\u6587\u8BB0\u5F55" : "\u601D\u8003\u8FC7\u7A0B"), group.calls.length > 0 && /* @__PURE__ */ import_react12.default.createElement("span", null, group.calls.length, " \u6B21\u64CD\u4F5C"), group.failures > 0 && /* @__PURE__ */ import_react12.default.createElement("span", { className: "tx-cu-error" }, group.failures, " \u6B21\u5931\u8D25"), group.stopped > 0 && /* @__PURE__ */ import_react12.default.createElement("span", null, "\u5DF2\u505C\u6B62"), /* @__PURE__ */ import_react12.default.createElement(ComputerIcon, { className: "tx-cu-disclosure", name: "chevron", size: 12 })), /* @__PURE__ */ import_react12.default.createElement("div", { key: "content", style: { display: standalone || expanded ? "contents" : "none" } }, (standalone || expanded || visited) && children));
   }
   ctx.slots.inject("conversation.chat.node", () => {
-    const disposers = [], installed = /* @__PURE__ */ new Set();
-    const install = () => {
-      for (const key of ["assistant-step", "turn-process", ...processContextKinds]) {
-        let GroupedAssistant = function(props) {
-          const node = (0, import_react12.useMemo)(() => finalAnswerPresentation(props.node, props.turnProcess), [props.node, props.turnProcess?.foldable, props.turnProcess?.spec.answerStep, props.turnProcess?.spec.inlineReasoning]);
-          const inline = props.turnProcess?.foldable && props.turnProcess.spec.inlineReasoning && props.turnProcess.spec.answerStep === node.data.step;
-          return /* @__PURE__ */ import_react12.default.createElement(Group, { ...props, nodeKey: props.node.key }, /* @__PURE__ */ import_react12.default.createElement("div", { className: inline ? "tx-cu-process-answer" : void 0, "data-process-open": inline && props.turnProcess.open || void 0, style: { display: "contents" } }, /* @__PURE__ */ import_react12.default.createElement(Original, { ...props, node })));
-        }, GroupedProcess = function(props) {
-          const { label, icon, failures, stopped } = props.useChat((snapshot) => process(snapshot, props.node.data.turn));
-          if (!props.turnProcess?.foldable || !props.node.data.toolCallCount) return /* @__PURE__ */ import_react12.default.createElement(Original, { ...props });
-          return /* @__PURE__ */ import_react12.default.createElement("button", { type: "button", className: "tx-cu-group-toggle", "data-turn-process": props.node.data.turn, "data-turn-process-tool-calls": props.node.data.toolCallCount, "aria-expanded": props.turnProcess.open, title: props.node.data.toolCallCount + " \u6B21\u5DE5\u5177\u8C03\u7528", onClick: () => props.turnProcess.setOpen(!props.turnProcess.open) }, /* @__PURE__ */ import_react12.default.createElement(ComputerIcon, { name: icon, size: 16 }), /* @__PURE__ */ import_react12.default.createElement("strong", null, label), failures > 0 && /* @__PURE__ */ import_react12.default.createElement("span", { className: "tx-cu-error" }, failures, " \u9879\u5931\u8D25"), stopped > 0 && /* @__PURE__ */ import_react12.default.createElement("span", null, stopped, " \u9879\u5DF2\u505C\u6B62"), /* @__PURE__ */ import_react12.default.createElement(ComputerIcon, { className: "tx-cu-disclosure", name: "chevron", size: 12 }));
-        }, GroupedContext = function(props) {
-          const spec = props.turnProcess?.spec, node = props.node;
-          const completedContext = key === "system-prompt" && node.location?.turn?.status === "closed" && spec?.answerAnchorSeq != null && node.anchorSeq >= spec.processStartSeq && node.anchorSeq < spec.answerAnchorSeq;
-          return /* @__PURE__ */ import_react12.default.createElement(Group, { ...props, nodeKey: node.key, completedContext }, /* @__PURE__ */ import_react12.default.createElement(Original, { ...props }));
-        };
-        if (installed.has(key)) continue;
-        const original = ctx.slots.entriesOfSlot("conversation.chat.node").find((entry) => entry.options.key === key);
-        if (!original) continue;
-        installed.add(key);
-        const Original = original.component;
-        const GroupedNode = key === "turn-process" ? GroupedProcess : key === "assistant-step" ? GroupedAssistant : GroupedContext;
-        disposers.push(ctx.slots.register({ name: "conversation.chat.node", key, locale: "chat", priority: (original.options.priority ?? 0) - 1 }, GroupedNode));
+    const dispose = decorateSlot(ctx.slots, "conversation.chat.node", (key) => ["assistant-step", "turn-process", ...processContextKinds].includes(key), (original) => {
+      const key = original.options.key;
+      const Original = original.component;
+      function GroupedAssistant(props) {
+        const node = (0, import_react12.useMemo)(() => finalAnswerPresentation(props.node, props.turnProcess), [props.node, props.turnProcess?.foldable, props.turnProcess?.spec.answerStep, props.turnProcess?.spec.inlineReasoning]);
+        const inline = props.turnProcess?.foldable && props.turnProcess.spec.inlineReasoning && props.turnProcess.spec.answerStep === node.data.step;
+        return /* @__PURE__ */ import_react12.default.createElement(Group, { ...props, nodeKey: props.node.key }, /* @__PURE__ */ import_react12.default.createElement("div", { className: inline ? "tx-cu-process-answer" : void 0, "data-process-open": inline && props.turnProcess.open || void 0, style: { display: "contents" } }, /* @__PURE__ */ import_react12.default.createElement(Original, { ...props, node })));
       }
-    };
-    const unsubscribe = ctx.slots.subscribe("conversation.chat.node", install);
-    install();
+      function GroupedProcess(props) {
+        const { label, icon, failures, stopped } = props.useChat((snapshot) => process(snapshot, props.node.data.turn));
+        if (!props.turnProcess?.foldable || !props.node.data.toolCallCount) return /* @__PURE__ */ import_react12.default.createElement(Original, { ...props });
+        return /* @__PURE__ */ import_react12.default.createElement("button", { type: "button", className: "tx-cu-group-toggle", "data-turn-process": props.node.data.turn, "data-turn-process-tool-calls": props.node.data.toolCallCount, "aria-expanded": props.turnProcess.open, title: props.node.data.toolCallCount + " \u6B21\u5DE5\u5177\u8C03\u7528", onClick: () => props.turnProcess.setOpen(!props.turnProcess.open) }, /* @__PURE__ */ import_react12.default.createElement(ComputerIcon, { name: icon, size: 16 }), /* @__PURE__ */ import_react12.default.createElement("strong", null, label), failures > 0 && /* @__PURE__ */ import_react12.default.createElement("span", { className: "tx-cu-error" }, failures, " \u9879\u5931\u8D25"), stopped > 0 && /* @__PURE__ */ import_react12.default.createElement("span", null, stopped, " \u9879\u5DF2\u505C\u6B62"), /* @__PURE__ */ import_react12.default.createElement(ComputerIcon, { className: "tx-cu-disclosure", name: "chevron", size: 12 }));
+      }
+      function GroupedContext(props) {
+        const spec = props.turnProcess?.spec, node = props.node;
+        const completedContext = key === "system-prompt" && node.location?.turn?.status === "closed" && spec?.answerAnchorSeq != null && node.anchorSeq >= spec.processStartSeq && node.anchorSeq < spec.answerAnchorSeq;
+        return /* @__PURE__ */ import_react12.default.createElement(Group, { ...props, nodeKey: node.key, completedContext }, /* @__PURE__ */ import_react12.default.createElement(Original, { ...props }));
+      }
+      const GroupedNode = key === "turn-process" ? GroupedProcess : key === "assistant-step" ? GroupedAssistant : GroupedContext;
+      return { options: { name: "conversation.chat.node", key, locale: "chat", priority: (original.options.priority ?? 0) - 1 }, component: GroupedNode };
+    });
     return () => {
-      unsubscribe();
-      for (const dispose of disposers.reverse()) dispose();
+      dispose();
       open.clear();
       listeners.clear();
     };
   });
-  ctx.slots.inject("tool.call.toolview", () => {
-    const installed = /* @__PURE__ */ new Set(), disposers = [];
-    const install = () => {
-      for (const original of ctx.slots.entriesOfSlot("tool.call.toolview")) {
-        let GroupedTool = function(props) {
-          const images = (name, owner) => {
-            if (name !== "tool.call.images") throw new Error("Unsupported tool image slot: " + name);
-            return /* @__PURE__ */ import_react12.default.createElement("div", { className: "tx-cu-result-images" }, owner.images.map((image, index) => image.attachment ? /* @__PURE__ */ import_react12.default.createElement(SavedImage, { key: index, attachment: image.attachment, loadImage: owner.loadImage }) : null));
-          };
-          return /* @__PURE__ */ import_react12.default.createElement(Group, { ...props }, /* @__PURE__ */ import_react12.default.createElement(Original, { ...props, ...props.t ? { t: operationRowLocale(props.t, props.toolName, props.block) } : {}, ...original.children?.["tool.call.images"] ? { renderSlot: images } : {} }));
-        };
-        const key = original.options.key;
-        if (installed.has(key)) continue;
-        installed.add(key);
-        const Original = original.component;
-        const { children, ...options } = original.options;
-        disposers.push(ctx.slots.register({ ...options, name: "tool.call.toolview", locale: original.locale, inject: original.inject, children: void 0, priority: (options.priority ?? 0) - 1 }, GroupedTool));
-      }
-    };
-    const unsubscribe = ctx.slots.subscribe("tool.call.toolview", install);
-    install();
-    return () => {
-      unsubscribe();
-      for (const dispose of disposers.reverse()) dispose();
-    };
-  });
+  ctx.slots.inject("tool.call.toolview", () => decorateSlot(ctx.slots, "tool.call.toolview", () => true, (original) => {
+    const Original = original.component;
+    function GroupedTool(props) {
+      const images = (name, owner) => {
+        if (name !== "tool.call.images") throw new Error("Unsupported tool image slot: " + name);
+        return /* @__PURE__ */ import_react12.default.createElement("div", { className: "tx-cu-result-images" }, owner.images.map((image, index) => image.attachment ? /* @__PURE__ */ import_react12.default.createElement(SavedImage, { key: index, attachment: image.attachment, loadImage: owner.loadImage }) : null));
+      };
+      return /* @__PURE__ */ import_react12.default.createElement(Group, { ...props }, /* @__PURE__ */ import_react12.default.createElement(Original, { ...props, ...props.t ? { t: operationRowLocale(props.t, props.toolName, props.block) } : {}, ...original.children?.["tool.call.images"] ? { renderSlot: images } : {} }));
+    }
+    const { children, ...options } = original.options;
+    return { options: { ...options, name: "tool.call.toolview", locale: original.locale, inject: original.inject, children: void 0, priority: (options.priority ?? 0) - 1 }, component: GroupedTool };
+  }));
   return Group;
 }
 
@@ -2269,42 +2434,21 @@ async function api(op, id, value, signal) {
   if (value !== void 0 && body.status) window.dispatchEvent(new CustomEvent("trisoul-cu-state", { detail: { id, state: body } }));
   return body;
 }
+var statePoolKey = Symbol.for("opencu.state-pool.v1");
+var statePool = globalThis[statePoolKey] ||= createComputerStatePool({ read: (id, signal) => api("state", id, void 0, signal) });
 function useStateView(id, visible = true) {
-  const [state, setState] = (0, import_react17.useState)(null), [error, setError] = (0, import_react17.useState)(""), [connectionError, setConnectionError] = (0, import_react17.useState)("");
-  (0, import_react17.useEffect)(() => {
-    setState(null);
-    setError("");
-    if (!id || !visible) return;
-    let live = true, timer, revision = 0;
-    const update = (next) => setState((previous) => previous && ((next.controlEpoch ?? 0) < (previous.controlEpoch ?? 0) || (next.navigationRevision ?? 0) < (previous.navigationRevision ?? 0) || (next.viewRevision ?? 0) < (previous.viewRevision ?? 0)) ? previous : next);
-    const changed = (e) => {
-      if (e.detail.id === id) {
-        revision++;
-        update(e.detail.state);
-        setError("");
-      }
-    };
-    window.addEventListener("trisoul-cu-state", changed);
-    const tick = async () => {
-      const before = revision;
-      try {
-        const s = await api("state", id);
-        if (live && revision === before) {
-          update(s);
-          setConnectionError("");
-        }
-      } catch (e) {
-        if (live) setConnectionError(e.message);
-      }
-      if (live) timer = setTimeout(tick, 800);
-    };
-    void tick();
-    return () => {
-      live = false;
-      clearTimeout(timer);
-      window.removeEventListener("trisoul-cu-state", changed);
-    };
+  const subscribe = (0, import_react17.useCallback)((listener) => id && visible ? statePool.subscribe(id, listener) : () => {
   }, [id, visible]);
+  const snapshot = (0, import_react17.useCallback)(() => statePool.snapshot(visible ? id : null), [id, visible]);
+  const { state, error: connectionError, eventRevision } = (0, import_react17.useSyncExternalStore)(subscribe, snapshot);
+  const [error, setError] = (0, import_react17.useState)("");
+  const setState = (0, import_react17.useCallback)((value) => {
+    statePool.publish(id, value);
+    setError("");
+  }, [id]);
+  (0, import_react17.useEffect)(() => {
+    setError("");
+  }, [id, visible, eventRevision]);
   return { state, error: error || connectionError, setState, setError };
 }
 var ScreenIcon = () => /* @__PURE__ */ import_react17.default.createElement(ComputerIcon, { name: "screen", size: 17 });
@@ -2331,7 +2475,7 @@ function ComputerChip({ sessionId, onOpen, onPresentation, inputActions, convers
   const active = !!state?.target && (state.status === "running" || state.status === "stopping" || state.status === "error" || state.transitioning);
   return /* @__PURE__ */ import_react17.default.createElement("div", { ref: previewAnchor, "data-cu-session": sessionId, className: "tx-cu-chip", title: error || void 0 }, /* @__PURE__ */ import_react17.default.createElement("button", { type: "button", className: "tx-cu-entry", "aria-label": "\u6253\u5F00 Computer Use", title: "\u67E5\u770B\u548C\u64CD\u4F5C\u5E94\u7528\u3001\u7F51\u9875", onClick: onOpen }, /* @__PURE__ */ import_react17.default.createElement(ScreenIcon, null), /* @__PURE__ */ import_react17.default.createElement("span", null, "\u7535\u8111")), /* @__PURE__ */ import_react17.default.createElement(FloatingPreview, { sessionId, state, url, api, onState: setState, onError: setError, anchor: previewAnchor, onOpen }), /* @__PURE__ */ import_react17.default.createElement(WindowShare, { sessionId, inputActions, conversation }), state?.vision?.input === "text" && /* @__PURE__ */ import_react17.default.createElement("span", { className: "tx-cu-vision-warning", title: "\u5F53\u524D\u6A21\u578B\u4EC5\u63A5\u6536\u6587\u5B57\uFF0C\u622A\u56FE\u4E0D\u4F1A\u9001\u5165\u6A21\u578B\u3002" }, "\u4EC5\u6587\u672C\u6A21\u578B"), state?.target && /* @__PURE__ */ import_react17.default.createElement("span", { className: "tx-cu-chip-status" }, state.resuming ? "\u6B63\u5728\u6062\u590D" : state.transitioning ? "\u6B63\u5728\u8F7D\u5165" : names[state.status]), active && /* @__PURE__ */ import_react17.default.createElement("button", { type: "button", title: "\u505C\u6B62\u64CD\u4F5C", "aria-label": "\u505C\u6B62\u64CD\u4F5C", disabled: state.status === "stopping", onClick: () => api("stop", sessionId, {}).then(setState).catch((e) => setError(e.message)) }, /* @__PURE__ */ import_react17.default.createElement(ComputerIcon, { name: "stop", size: 13 })), state?.status === "stopped" && !state.transitioning && /* @__PURE__ */ import_react17.default.createElement("button", { type: "button", className: "tx-cu-chip-resume", onClick: () => api("resume", sessionId, {}).then(setState).catch((e) => setError(e.message)) }, /* @__PURE__ */ import_react17.default.createElement(ComputerIcon, { name: "play", size: 12 }), "\u6062\u590D\u63A7\u5236"));
 }
-function ComputerPane({ sessionId, useTabInfo, inputActions, conversation }) {
+function ComputerPane({ sessionId, useTabInfo, inputActions, conversation, hostBrowserAvailable = false }) {
   const { tab } = useTabInfo();
   const { state, error, setState, setError } = useStateView(sessionId, tab.visible);
   const target = state?.viewTarget ?? state?.target;
@@ -2351,7 +2495,14 @@ function ComputerPane({ sessionId, useTabInfo, inputActions, conversation }) {
       setBusy(false);
     }
   };
-  const browserActions = target?.kind === "tab" ? /* @__PURE__ */ import_react17.default.createElement(import_react17.default.Fragment, null, /* @__PURE__ */ import_react17.default.createElement(PageAnnotation, { compact: true, sessionId, frame: state.enabled ? frame : null, target, inputActions, conversation, api }), state?.target && target.id !== state.target.id && /* @__PURE__ */ import_react17.default.createElement("button", { type: "button", "aria-label": "\u67E5\u770B\u52A9\u624B\u5F53\u524D\u753B\u9762", title: "\u67E5\u770B\u52A9\u624B\u5F53\u524D\u753B\u9762", onClick: () => act("view-tab", { current: true }) }, /* @__PURE__ */ import_react17.default.createElement(ComputerIcon, { name: "return", size: 15 })), state?.status === "stopped" && !state?.transitioning ? /* @__PURE__ */ import_react17.default.createElement("button", { type: "button", className: "is-resume", "aria-label": "\u6062\u590D\u52A9\u624B\u63A7\u5236", title: "\u6062\u590D\u52A9\u624B\u63A7\u5236", disabled: busy, onClick: () => act("resume") }, /* @__PURE__ */ import_react17.default.createElement(ComputerIcon, { name: "play", size: 14 })) : /* @__PURE__ */ import_react17.default.createElement("button", { type: "button", "aria-label": "\u505C\u6B62\u5E76\u63A5\u7BA1", title: "\u505C\u6B62\u5E76\u63A5\u7BA1", disabled: busy || state?.status === "stopping", onClick: () => act("stop") }, /* @__PURE__ */ import_react17.default.createElement(ComputerIcon, { name: "stop", size: 14 }))) : null;
+  const previewUrl = hostPreviewUrl(target, navigation);
+  const browserActions = target?.kind === "tab" ? /* @__PURE__ */ import_react17.default.createElement(import_react17.default.Fragment, null, hostBrowserAvailable && previewUrl && /* @__PURE__ */ import_react17.default.createElement("button", { type: "button", "aria-label": "\u5728\u5B98\u65B9\u6D4F\u89C8\u5668\u4E2D\u9884\u89C8", title: "\u7528\u5B98\u65B9\u6D4F\u89C8\u5668\u6253\u5F00\u72EC\u7ACB\u9884\u89C8\uFF1B\u4E0D\u4F1A\u6539\u53D8\u52A9\u624B\u63A7\u5236\u7684\u7F51\u9875", onClick: () => {
+    try {
+      openHostBrowserPreview(tab.actions, previewUrl);
+    } catch (error2) {
+      setError(error2.message);
+    }
+  } }, /* @__PURE__ */ import_react17.default.createElement(ComputerIcon, { name: "browser", size: 15 })), /* @__PURE__ */ import_react17.default.createElement(PageAnnotation, { compact: true, sessionId, frame: state.enabled ? frame : null, target, inputActions, conversation, api }), state?.target && target.id !== state.target.id && /* @__PURE__ */ import_react17.default.createElement("button", { type: "button", "aria-label": "\u67E5\u770B\u52A9\u624B\u5F53\u524D\u753B\u9762", title: "\u67E5\u770B\u52A9\u624B\u5F53\u524D\u753B\u9762", onClick: () => act("view-tab", { current: true }) }, /* @__PURE__ */ import_react17.default.createElement(ComputerIcon, { name: "return", size: 15 })), state?.status === "stopped" && !state?.transitioning ? /* @__PURE__ */ import_react17.default.createElement("button", { type: "button", className: "is-resume", "aria-label": "\u6062\u590D\u52A9\u624B\u63A7\u5236", title: "\u6062\u590D\u52A9\u624B\u63A7\u5236", disabled: busy, onClick: () => act("resume") }, /* @__PURE__ */ import_react17.default.createElement(ComputerIcon, { name: "play", size: 14 })) : /* @__PURE__ */ import_react17.default.createElement("button", { type: "button", "aria-label": "\u505C\u6B62\u5E76\u63A5\u7BA1", title: "\u505C\u6B62\u5E76\u63A5\u7BA1", disabled: busy || state?.status === "stopping", onClick: () => act("stop") }, /* @__PURE__ */ import_react17.default.createElement(ComputerIcon, { name: "stop", size: 14 }))) : null;
   return /* @__PURE__ */ import_react17.default.createElement("div", { "data-cu-session": sessionId, "data-cu-target": target?.id, className: "tx-cu-pane" + (target?.kind === "tab" ? " tx-cu-pane-browser" : "") }, target?.kind !== "tab" && /* @__PURE__ */ import_react17.default.createElement("header", null, /* @__PURE__ */ import_react17.default.createElement("div", { className: "tx-cu-pane-heading" }, /* @__PURE__ */ import_react17.default.createElement(ScreenIcon, null), /* @__PURE__ */ import_react17.default.createElement("div", null, /* @__PURE__ */ import_react17.default.createElement("strong", null, "Computer Use"), /* @__PURE__ */ import_react17.default.createElement("span", { className: "tx-cu-status " + (state?.status === "running" ? "is-running" : "") }, state?.resuming ? "\u6B63\u5728\u6062\u590D" : state?.transitioning ? "\u6B63\u5728\u8F7D\u5165" : names[state?.status] ?? "\u8FDE\u63A5\u4E2D"))), state?.target && target?.id !== state.target.id && /* @__PURE__ */ import_react17.default.createElement("button", { type: "button", onClick: () => act("view-tab", { current: true }) }, "\u67E5\u770B\u52A9\u624B\u5F53\u524D\u753B\u9762"), /* @__PURE__ */ import_react17.default.createElement("div", { className: "tx-cu-toolbar" }, target?.kind === "tab" && /* @__PURE__ */ import_react17.default.createElement(PageAnnotation, { sessionId, frame: state.enabled ? frame : null, target, inputActions, conversation, api }), " ", state?.status === "stopped" && !state?.transitioning ? /* @__PURE__ */ import_react17.default.createElement("button", { className: "tx-cu-primary", onClick: () => act("resume") }, /* @__PURE__ */ import_react17.default.createElement(ComputerIcon, { name: "play", size: 12 }), "\u6062\u590D\u52A9\u624B\u63A7\u5236") : target && /* @__PURE__ */ import_react17.default.createElement("button", { className: "tx-cu-stop", disabled: busy, onClick: () => act("stop") }, /* @__PURE__ */ import_react17.default.createElement(ComputerIcon, { name: "stop", size: 12 }), "\u505C\u6B62\u5E76\u63A5\u7BA1"))), state?.vision?.input === "text" && /* @__PURE__ */ import_react17.default.createElement("p", { className: "tx-cu-vision-warning", role: "status" }, state.vision.name, " \u5F53\u524D\u4EC5\u63A5\u6536\u6587\u5B57\uFF0C\u622A\u56FE\u4E0D\u4F1A\u9001\u5165\u6A21\u578B\u3002\u9700\u8981\u770B\u56FE\u65F6\uFF0C\u8BF7\u5728\u8F93\u5165\u533A\u5207\u6362\u652F\u6301\u56FE\u7247\u7684\u6A21\u578B\uFF1B\u5E94\u7528\u63A7\u4EF6\u6587\u5B57\u4ECD\u53EF\u8BFB\u53D6\u3002"), !target && /* @__PURE__ */ import_react17.default.createElement("div", { className: "tx-cu-empty" }, /* @__PURE__ */ import_react17.default.createElement(ScreenIcon, null), /* @__PURE__ */ import_react17.default.createElement("h3", null, "\u8BA9\u52A9\u624B\u64CD\u4F5C\u5E94\u7528\u548C\u7F51\u9875"), /* @__PURE__ */ import_react17.default.createElement("p", null, "\u5728\u5BF9\u8BDD\u4E2D\u7528 @ \u9009\u62E9\u5E94\u7528\u6216\u7F51\u9875\uFF0C", /* @__PURE__ */ import_react17.default.createElement("br", null), "\u4E5F\u53EF\u4EE5\u6253\u5F00\u6D4F\u89C8\u5668\u5F00\u59CB\u5DE5\u4F5C\u3002")), /* @__PURE__ */ import_react17.default.createElement(BrowserControls, { ref: controls, sessionId, state, visible: tab.visible, navigation, frame, api, onState: setState, onError: setError, previewScale, onPreviewScale: setPreviewScale, onDeviceModeChange: setDeviceMode, actions: browserActions }), target && target.kind !== "tab" && /* @__PURE__ */ import_react17.default.createElement("p", { className: "tx-cu-target" }, /* @__PURE__ */ import_react17.default.createElement(ComputerIcon, null), target.name ?? "\u5F53\u524D\u5E94\u7528"), (error || state?.lastError) && /* @__PURE__ */ import_react17.default.createElement("p", { className: "tx-cu-error", role: "alert" }, error || state.lastError.message), target?.kind === "tab" ? /* @__PURE__ */ import_react17.default.createElement(BrowserPreview, { key: target.id, sessionId, tabId: target.id, pageUrl: navigation?.tabId === target.id ? navigation.url : target.url, visible: tab.visible, state, api, url, onState: setState, onError: setError, onNavigation: setNavigation, onFrame: setFrame, onBrowserShortcut: (action) => controls.current?.shortcut(action), onViewportResize: (size) => controls.current?.resizeViewport(size), deviceMode, previewScale }) : target?.kind === "app" ? /* @__PURE__ */ import_react17.default.createElement(NativePreview, { key: target.viewId, sessionId, targetId: target.viewId, visible: tab.visible, state, url, onError: setError }) : null, /* @__PURE__ */ import_react17.default.createElement("div", { className: "tx-cu-pane-support" }, /* @__PURE__ */ import_react17.default.createElement(ComputerSetup, { sessionId, visible: tab.visible, api }), !!state?.history?.length && /* @__PURE__ */ import_react17.default.createElement("details", { className: "tx-cu-history" }, /* @__PURE__ */ import_react17.default.createElement("summary", null, "\u6700\u8FD1\u64CD\u4F5C \xB7 ", state.history.length), state.history.slice().reverse().map((h, i) => /* @__PURE__ */ import_react17.default.createElement("div", { key: i }, /* @__PURE__ */ import_react17.default.createElement("span", { className: h.ok || h.cancelled ? "" : "tx-cu-error" }, h.operation, h.cancelled ? " \xB7 \u5DF2\u53D6\u6D88" : ""), /* @__PURE__ */ import_react17.default.createElement("span", null, h.elapsedMs, " ms"), h.error && /* @__PURE__ */ import_react17.default.createElement("small", null, h.error))))));
 }
 function ComputerCard({ block, loadImage, toolName, openFile }) {
@@ -2404,9 +2555,15 @@ function installComputerUseClient(ctx, shared) {
   ctx.slots.inject("conversation.composer.dock", () => ctx.slots.register({ name: "conversation.composer.dock", id: "trisoul-computer-use", order: 25 }, StandaloneEntry));
   const id = "trisoul_x/trisoul-x-computer-use";
   ctx.effect(() => ctx.sidebarRightTabs.register({ id, kind: "trisoul-x-computer-use", title: () => "Computer Use", guide: [{ order: 6, title: () => "Computer Use", description: () => "\u67E5\u770B\u753B\u9762\u3001\u505C\u6B62\u64CD\u4F5C\u4E0E\u63A5\u7BA1\u63A7\u5236", icon: ScreenIcon }] }));
+  const browserSubscribe = (listener) => ctx.sidebarRightTabs.subscribe(listener);
+  const browserSnapshot = () => ctx.sidebarRightTabs.get("browser")?.id === HOST_BROWSER_ID;
+  function HostComputerPane(props) {
+    const available = (0, import_react17.useSyncExternalStore)(browserSubscribe, browserSnapshot);
+    return /* @__PURE__ */ import_react17.default.createElement(ComputerPane, { ...props, conversation: ctx.get("conversation"), hostBrowserAvailable: available });
+  }
   function Pane(props) {
     const { renderPane } = useOptions();
-    return renderPane ? renderPane(props) : /* @__PURE__ */ import_react17.default.createElement(ComputerPane, { ...props, conversation: ctx.get("conversation") });
+    return renderPane ? renderPane(props) : /* @__PURE__ */ import_react17.default.createElement(HostComputerPane, { ...props });
   }
   ctx.slots.inject("sidebar.right.pane.tab", () => ctx.slots.register({ name: "sidebar.right.pane.tab", key: id }, Pane));
   for (const key of ["computer_use", "computer_use_reset"]) ctx.slots.inject("tool.call.toolview", () => ctx.slots.register({ name: "tool.call.toolview", key }, ComputerCard));
@@ -2437,7 +2594,7 @@ function installComputerUseClient(ctx, shared) {
       codec: { clipboardText: (ref) => "@" + JSON.parse(ref).id, serialize: async (ref) => "<computer-use-target>" + JSON.stringify(JSON.parse(ref)).replaceAll("<", "\\u003c") + "</computer-use-target>" }
     }));
   });
-  return { ComputerEntry };
+  return { ComputerEntry, ComputerPane: HostComputerPane };
 }
 var sharedKey = Symbol.for("opencu.client.v1");
 function applyComputerUseClient(ctx, options = {}) {
@@ -2458,7 +2615,9 @@ function applyComputerUseClient(ctx, options = {}) {
     };
     root[sharedKey] = shared;
     shared.fiber = root.plugin({ name: "opencu-ui", inject: ["slots", "sidebarRightTabs", "sidebarRight"], apply(scope) {
-      shared.entry = installComputerUseClient(scope, shared).ComputerEntry;
+      const installed = installComputerUseClient(scope, shared);
+      shared.entry = installed.ComputerEntry;
+      shared.pane = installed.ComputerPane;
       shared.changed();
     } });
   }
@@ -2477,7 +2636,18 @@ function applyComputerUseClient(ctx, options = {}) {
     const Entry = shared.entry;
     return Entry ? /* @__PURE__ */ import_react17.default.createElement(Entry, { ...props }) : null;
   }
-  return { ComputerEntry };
+  const fallbackSubscribe = (listener) => ctx.sidebarRightTabs.subscribe(listener);
+  const fallbackSnapshot = () => ctx.sidebarRightTabs.get("browser")?.id === HOST_BROWSER_ID;
+  function FallbackPane(props) {
+    const available = (0, import_react17.useSyncExternalStore)(fallbackSubscribe, fallbackSnapshot);
+    return /* @__PURE__ */ import_react17.default.createElement(ComputerPane, { ...props, conversation: ctx.get("conversation"), hostBrowserAvailable: available });
+  }
+  function PaneEntry(props) {
+    (0, import_react17.useSyncExternalStore)(shared.subscribe, () => shared.pane);
+    const Pane = shared.pane || FallbackPane;
+    return /* @__PURE__ */ import_react17.default.createElement(Pane, { ...props });
+  }
+  return { ComputerEntry, ComputerPane: PaneEntry };
 }
 
 // src/client/index.jsx

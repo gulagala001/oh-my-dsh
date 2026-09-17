@@ -1,5 +1,6 @@
 import { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
 export { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
+import { createPoller } from './polling.mjs';
 import { DEFAULT_IDENTITY } from '../cc-adaptation/identity.mjs';
 
 /* Keep the original workbench and host theme. These panels replace only the
@@ -23,8 +24,8 @@ export function contextRouteMode(config = {}) {
 
 export function createContextUI(React) {
   const h = React.createElement;
-  const api = async (path, body) => {
-    const response = await fetch('/trisoul-x/api' + path, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const api = async (path, body, signal) => {
+    const response = await fetch('/trisoul-x/api' + path, body === undefined ? { signal } : { signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await response.json(); if (!response.ok) throw Error(data.error || 'HTTP ' + response.status); return data;
   };
   const suffix = id => '?session=' + encodeURIComponent(id || '');
@@ -86,22 +87,27 @@ export function createContextUI(React) {
   }
   class PollPanel extends React.Component {
     constructor(props) { super(props); this.state = { data: null, error: '', notice: '', busy: false, detail: null }; this.epoch = 0; this.cycle = 0; this.documentTicket = 0; this.reviewTicket = 0; }
-    componentDidMount() { this.alive = true; this.tick(); }
-    componentWillUnmount() { this.alive = false; this.epoch++; this.cycle++; this.documentTicket++; this.reviewTicket++; clearTimeout(this.timer); }
+    componentDidMount() { this.alive = true; this.observe(); }
+    componentWillUnmount() { this.alive = false; this.documentTicket++; this.reviewTicket++; this.poller?.stop(); }
     componentDidUpdate(prev) {
       if (prev.sessionId !== this.props.sessionId) {
-        this.epoch++; this.cycle++; this.documentTicket++; this.reviewTicket++;
-        this.setState({ data: null, detail: null, selected: [], review: null, legacy: null, error: '', notice: '', busy: false, activeAction: null }); clearTimeout(this.timer); this.tick();
-      } else if (!prev.visible && this.props.visible) { this.cycle++; clearTimeout(this.timer); this.tick(); }
+        this.documentTicket++; this.reviewTicket++;
+        this.setState({ data: null, detail: null, selected: [], review: null, legacy: null, error: '', notice: '', busy: false, activeAction: null });
+        this.observe();
+      } else if (prev.visible !== this.props.visible) this.observe();
     }
-    tick = async () => { if (!this.alive) return; const cycle = this.cycle; if (this.props.visible !== false && this.props.sessionId) await this.load(); if (this.alive && cycle === this.cycle) this.timer = setTimeout(this.tick, 2500); };
-    load = async () => {
-      const token = ++this.epoch;
-      try {
-        const data = await api(this.path() + suffix(this.props.sessionId));
-        if (this.alive && token === this.epoch) this.setState(s => ({ data, error: '', ...(s.selected ? { selected: s.selected.filter(id => data.records?.some(r => r.id === id && r.live && !r.mergedInto)) } : {}) }));
-      } catch (e) { if (this.alive && token === this.epoch) this.setState({ error: e.message }); }
-    };
+    observe() {
+      this.poller?.stop();
+      const id = this.props.sessionId;
+      if (this.props.visible === false || !id) { this.poller = null; return; }
+      this.poller = createPoller({
+        read: signal => api(this.path() + suffix(id), undefined, signal),
+        onData: data => this.setState(s => ({ data, error: '', ...(s.selected ? { selected: s.selected.filter(key => data.records?.some(r => r.id === key && r.live && !r.mergedInto)) } : {}) })),
+        onError: error => this.setState({ error: error.message }),
+      });
+      this.poller.start();
+    }
+    load = () => this.poller?.refresh();
     run = async (path, body, success) => {
       if (this.state.busy) return;
       this.setState({ busy: true, activeAction: path, error: '', notice: '' }); const id = this.props.sessionId;
@@ -311,7 +317,7 @@ export function createContextUI(React) {
         h('select', { 'aria-label': '会话范围', disabled: !d || d.locked || this.props.locked || this.state.busy, value: d?.scope || 'session', onChange: async e => { const id = this.props.sessionId, scope = e.target.value; this.setState({ busy: true }); try { const data = await api('/scope' + suffix(id), { scope }); if (this.alive && id === this.props.sessionId) this.setState({ data, error: '' }); } catch (e) { if (this.alive && id === this.props.sessionId) this.setState({ error: e.message }); await this.load(); } finally { if (this.alive) this.setState({ busy: false }); } } }, h('option', { value: 'session' }, '会话隔离'), h('option', { value: 'project' }, '项目共享')));
     }
   }
-  const ScopeChip = props => { const current = props.useSessions(s => s.byId[props.sessionId]); return h(ScopeControl, { ...props, locked: current?.blank === false }); };
+  const ScopeChip = props => { const locked = props.useSessions(s => s.byId[props.sessionId]?.blank === false); return h(ScopeControl, { ...props, locked }); };
   const PipelineSlot = props => { const { tab } = props.useTabInfo(); return h(PipelinePanel, { ...props, visible: tab.visible }); };
   const SummarySlot = props => { const { tab } = props.useTabInfo(); return h(SummaryPanel, { ...props, visible: tab.visible }); };
   const tabs = [['tasks', '任务', 'task'], ['context', '上下文', 'context'], ['memory', '摘要', 'memory'], ['computer', '电脑', 'computer'], ['monitor', '监控', 'monitor']];

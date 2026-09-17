@@ -28,7 +28,7 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   assert.ok(tabsBox.x-headerBox.x<=24,'conversation and trace controls stay on the left side of the header');
   assert.ok((await composer.boundingBox()).height < 160, 'empty composer stays compact');
   const usageToggle = page.getByRole('button', { name: '用量详情', exact: true });
-  const hostStats = page.locator('[data-composer-stats]');
+  const hostStats = page.locator('[data-slot="conversation.composer.dock"] .bOPqQW_root');
   assert.equal(await hostStats.isVisible(), false, 'usage details do not crowd the default composer');
   await usageToggle.click();
   assert.equal(await usageToggle.getAttribute('aria-expanded'), 'true');
@@ -201,14 +201,14 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   const release = f.holdNextReply();
   try {
     await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: f.sessionId, mode: 'queue', content: [{ type: 'text', text: '检查运行图标' }] });
-    await page.locator('html[data-omd-running]').waitFor();
+    await page.locator('.tx-composer-dock[data-omd-running]').waitFor();
     const rotor = page.locator('.tx-brand-mark .omd-whale-rotor').first();
     const transform = await rotor.evaluate(el => getComputedStyle(el).transform);
     await until(async () => await rotor.evaluate(el => getComputedStyle(el).transform) !== transform);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await until(async () => await rotor.evaluate(el => getComputedStyle(el).animationName) === 'none');
   } finally { release(); }
-  await until(async () => !(await page.locator('html').getAttribute('data-omd-running')) && !(await page.locator('html').evaluate(el => el.hasAttribute('data-omd-running'))));
+  await until(async () => !(await page.locator('.tx-composer-dock').getAttribute('data-omd-running')) && !(await page.locator('.tx-composer-dock').evaluate(el => el.hasAttribute('data-omd-running'))));
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   if (process.env.TRISOUL_UI_ARTIFACTS) await writeFile(join(root, 'visible-elements.json'), JSON.stringify(await page.locator('[data-chat-flow-key]').evaluateAll(els => els.map(el => ({ attrs: [...el.attributes].map(a => [a.name, a.value]), html: el.innerHTML.slice(-14000) }))), null, 2));
   assert.deepEqual(errors, []);

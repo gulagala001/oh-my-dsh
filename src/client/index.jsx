@@ -1,10 +1,11 @@
+import { createPoller } from './polling.mjs';
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Menu } from '@deepseek-ai/dsh-client-ui-primitives';
 import { frameTokens, contextHistoryLayout } from './context-history.mjs';
 import css from './style.css';
 import shellCss from './shell.css';
 import { ComputerIcon } from '#opencu/src/client/computer-icons.jsx';
-import { applyComputerUseClient, ComputerPane } from '#opencu/client-source';
+import { applyComputerUseClient } from '#opencu/client-source';
 import { BrandMark } from './brand.jsx';
 import { BrandNameWithVersion } from './version-info.jsx';
 import versionCss from './version-info.css';
@@ -14,8 +15,8 @@ import { createContextUI } from './context-client.mjs';
 export { CONTEXT_UI_VERSION as contextUIVersion } from './context-client.mjs';
 const { ContextSettings, ScopeChip, wrapWorkbench, applyStyle } = createContextUI(React);
 
-const api = async (path, value) => {
-  const response = await fetch(`/trisoul-x/api${path}`, value === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
+const api = async (path, value, signal) => {
+  const response = await fetch(`/trisoul-x/api${path}`, value === undefined ? { signal } : { signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
   return data;
@@ -23,10 +24,10 @@ const api = async (path, value) => {
 const suffix = id => `?${id ? `session=${encodeURIComponent(id)}` : ''}`;
 const fmt = n => Number(n || 0).toLocaleString();
 const kindName = { compactFull: '全量压缩', prepare: '上下文预处理', coordinate: '替换中枢', main: '主执行', subagent: '子代理', background: '记忆消化', recall: '记忆检索', state: '状态提炼', curation: '记忆整理', surgeon: '上下文整理', probeAsk: '探针出题', probeAnswer: '探针作答' };
-function BetterTodoChip({ sessionId, useSessions }) {
+function BetterTodoChip({ sessionId, useSessionStatus }) {
   const [state, setState] = useState(null), [open, setOpen] = useState(false), [saving, setSaving] = useState(false), [error, setError] = useState('');
   const [notice, setNotice] = useState(false), dialog = useRef(null), noticeId = useId();
-  const current = useSessions(s => s.byId[sessionId]), active = useRef(sessionId), revision = useRef(0), writing = useRef(null); active.current = sessionId;
+  const running = useSessionStatus(s => s.get(sessionId)?.running), active = useRef(sessionId), revision = useRef(0), writing = useRef(null); active.current = sessionId;
   const load = useCallback(async () => {
     if (writing.current?.sessionId === sessionId) return;
     const ticket = ++revision.current;
@@ -35,7 +36,7 @@ function BetterTodoChip({ sessionId, useSessions }) {
   }, [sessionId]);
   useEffect(() => { setOpen(false); setSaving(false); setError(''); setNotice(false); }, [sessionId]);
   useEffect(() => { if (notice && !dialog.current?.open) dialog.current?.showModal(); else if (!notice) dialog.current?.close(); }, [notice]);
-  useEffect(() => { void load(); }, [load, current?.running]);
+  useEffect(() => { void load(); }, [load, running]);
   const ready = state?.sessionId === sessionId;
   const toggle = async key => {
     if (!ready || saving) return;
@@ -62,20 +63,21 @@ function BetterTodoChip({ sessionId, useSessions }) {
     </dialog></>;
 }
 
-function useSnapshot(id, visible = true, range = 'session') {
-  const [data, setData] = useState(null), [error, setError] = useState('');
-  const key = `${id}:${range}`, current = useRef(key); current.current = key;
-  const reload = useCallback(async () => {
-    try { const next = await api(`/state${suffix(id)}&range=${range}`); if (current.current === key) { setData(next); setError(''); } }
-    catch (e) { if (current.current === key) setError(e.message); }
-  }, [id, range, key]);
+function useSnapshot(id, visible = true, range = 'session', view = 'full') {
+  const [snapshot, setSnapshot] = useState(null), poller = useRef(null);
+  const key = `${id}:${range}:${view}`;
   useEffect(() => {
     if (!visible) return;
-    let active = true, timer;
-    const tick = async () => { await reload(); if (active) timer = setTimeout(tick, 2500); };
-    void tick(); return () => { active = false; clearTimeout(timer); };
-  }, [reload, visible]);
-  return { data, error, reload };
+    const observer = createPoller({
+      read: signal => api(`/state${suffix(id)}&range=${range}&view=${view}`, undefined, signal),
+      onData: data => setSnapshot({ key, data, error: '' }),
+      onError: error => setSnapshot(old => ({ key, data: old?.key === key ? old.data : null, error: error.message })),
+    });
+    poller.current = observer; observer.start();
+    return () => { observer.stop(); if (poller.current === observer) poller.current = null; };
+  }, [id, visible, range, view, key]);
+  const reload = useCallback(() => poller.current?.refresh(), []);
+  return { data: snapshot?.key === key ? snapshot.data : null, error: snapshot?.key === key ? snapshot.error : '', reload };
 }
 
 
@@ -205,7 +207,7 @@ function Monitor({ sessionId, useTabInfo }) {
   </div>;
 }
 function StatsLine({ sessionId, onOpen }) {
-  const { data } = useSnapshot(sessionId, Boolean(sessionId));
+  const { data } = useSnapshot(sessionId, Boolean(sessionId), 'session', 'summary');
   if (!data?.metrics?.main?.calls) return null;
   const m = data.metrics.main, total = inputTokens(m);
   return <button type="button" className="tx-stats-line" aria-label="查看运行统计" title={`上下文 ${fmt(data.meter?.totalTokens)} tokens · 缓存命中 ${total ? Math.round((m.cacheReadTokens || 0) / total * 100) : 0}% · 已替换 ${fmt(data.actions?.contextReplacements)} 次`} onClick={onOpen}><Icon name="layers" size={12}/><span>{compactNumber(data.meter?.totalTokens)} 上下文</span>{data.liveCalls?.length > 0 && <i className="tx-stats-running" aria-label="后台运行中"/>}</button>;
@@ -215,7 +217,7 @@ export function apply(ctx) {
   const openPanel = section => ctx.sidebarRight.openTab('trisoul-x-workbench', { params: { section } });
   const sections = [
     ['tasks', '任务', 'context', ContextPanel],
-    ['computer', '电脑', 'computer', ComputerPane],
+    ['computer', '电脑', 'computer', props => <ComputerPane {...props}/>],
     ['monitor', '监控', 'monitor', Monitor],
   ];
   function BaseWorkbench({ initialSection = 'tasks', ...props }) {
@@ -237,20 +239,12 @@ export function apply(ctx) {
     const Component = workbenches[initialSection] || workbenches.tasks;
     return <Component {...props}/>;
   }
-  const { ComputerEntry } = applyComputerUseClient(ctx, { integrated: true, openPanel, renderPane: props => <Workbench {...props} initialSection="computer"/> });
+  const { ComputerEntry, ComputerPane } = applyComputerUseClient(ctx, { integrated: true, openPanel, renderPane: props => <Workbench {...props} initialSection="computer"/> });
   function ComposerDock(props) {
-    const running = props.useSessions(s => Boolean(s.byId[props.sessionId]?.running));
+    const running = props.useSessionStatus(s => Boolean(s.get(props.sessionId)?.running));
     const [usageOpen, setUsageOpen] = useState(false);
     useEffect(() => { setUsageOpen(false); }, [props.sessionId]);
-    useEffect(() => {
-      document.documentElement.toggleAttribute('data-omd-usage-expanded', usageOpen);
-      return () => document.documentElement.removeAttribute('data-omd-usage-expanded');
-    }, [usageOpen]);
-    useEffect(() => {
-      document.documentElement.toggleAttribute('data-omd-running', running);
-      return () => document.documentElement.removeAttribute('data-omd-running');
-    }, [running]);
-    return <div className="tx-composer-dock"><div className="tx-composer-tools"><button type="button" className="tx-workbench-entry" aria-label="打开工作台" onClick={() => openPanel('tasks')}><Icon name="context" size={15}/><span>工作台</span></button><ComputerEntry {...props}/></div><button type="button" className="tx-usage-toggle" aria-label="用量详情" aria-expanded={usageOpen} onClick={() => setUsageOpen(value => !value)}><Icon name="monitor" size={14}/><span>用量</span><Icon name="chevron" size={12}/></button><StatsLine {...props} onOpen={() => openPanel('monitor')}/></div>;
+    return <div className="tx-composer-dock" data-session-id={props.sessionId} data-omd-running={running ? '' : undefined} data-omd-usage-expanded={usageOpen ? '' : undefined}><div className="tx-composer-tools"><button type="button" className="tx-workbench-entry" aria-label="打开工作台" onClick={() => openPanel('tasks')}><Icon name="context" size={15}/><span>工作台</span></button><ComputerEntry {...props}/></div><button type="button" className="tx-usage-toggle" aria-label="用量详情" aria-expanded={usageOpen} onClick={() => setUsageOpen(value => !value)}><Icon name="monitor" size={14}/><span>用量</span><Icon name="chevron" size={12}/></button><StatsLine {...props} onOpen={() => openPanel('monitor')}/></div>;
   }
   ctx.effect(() => {
     const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css + '\n' + shellCss + '\n' + whaleCss + '\n' + versionCss; document.head.appendChild(tag);

@@ -83,6 +83,11 @@ export async function applyTransaction(session, state, tx, store, adapter) {
   state.transaction = tx; store.save(state);
   try {
     let enteredTodoPhase = false;
+    const existingById = new Map();
+    for (const event of session.snapshotEvents()) {
+      const id = eventMessageId(event);
+      if (id && !existingById.has(id)) existingById.set(id, event);
+    }
     for (const op of tx.operations) {
       if (!enteredTodoPhase && (op.kind.startsWith('todo-') || op.todoCleanup)) {
         await adapter.flush(session); enteredTodoPhase = true;
@@ -90,7 +95,7 @@ export async function applyTransaction(session, state, tx, store, adapter) {
       const refs = op.seqs.map(seq => typeof seq === 'number' ? seq : tx.applied[seq]);
       if (refs.some(seq => !Number.isSafeInteger(seq))) throw Error('todo 刷新事务的承载消息尚未提交');
       op.resolvedSeqs = refs;
-      const existing = session.snapshotEvents().find(e => eventMessageId(e) === op.id);
+      const existing = existingById.get(op.id);
       if (existing) { tx.applied[op.id] = existing.seq; continue; }
       const nodes = session.surface.nodes, index = nodes.indexOf(refs[0]);
       if (index < 0 || refs.some((seq, i) => nodes[index + i] !== seq)) throw new Error('未完成事务的来源区间发生变化；已保留日志，停止发送以免扩大损失');
@@ -101,7 +106,7 @@ export async function applyTransaction(session, state, tx, store, adapter) {
         store.save(state);
       }
       const event = adapter.append(session, op, { op: 'replace', startSeq: refs[0], endSeq: refs.at(-1) }, refs);
-      tx.applied[op.id] = event.seq;
+      tx.applied[op.id] = event.seq; existingById.set(op.id, event);
       store.save(state);
     }
     await adapter.flush(session);

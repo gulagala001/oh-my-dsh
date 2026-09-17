@@ -92,7 +92,11 @@ export class Hub extends Service {
   scope(session) {
     const state = this.store.state(session.id);
     let root = state, parentId = session.header.parentSession;
-    while (parentId) { root = this.store.state(parentId); parentId = root.parentSession; }
+    const ancestors = new Set([session.id]);
+    while (parentId) {
+      if (ancestors.has(parentId)) throw Error('会话继承关系形成循环，未扩大记忆范围');
+      ancestors.add(parentId); root = this.store.state(parentId); parentId = root.parentSession;
+    }
     const mode = state.memoryScope ?? root.memoryScope ?? this.config().memoryScope;
     return { mode, project: mode === 'session' ? `session:${root.id}` : projectOf(session.header.cwd || process.cwd()) };
   }
@@ -133,7 +137,7 @@ export class Hub extends Service {
       state.contextHistory ??= []; state.contextHistory.push({ ...frame, inputTokens, cacheReadTokens: entry.usage?.cacheReadTokens || 0 });
       state.contextHistory = state.contextHistory.slice(-80); delete state.pendingFrame;
     }
-    const completed = session.snapshotEvents().findLast(e => e.type === 'step/end');
+    const completed = frame ? null : session.snapshotEvents().findLast(e => e.type === 'step/end');
     state.activity.push({ at: Date.now(), turn: frame?.turn ?? completed?.data.turn, step: frame?.step ?? completed?.data.step, sessionId: session.id, kind, ...entry, usage: entry.usage ?? null, effort: entry.effort ?? (['main', 'subagent'].includes(kind) ? recent?.reasoningEffort ?? null : null) });
     state.activity = state.activity.slice(-60);
     this.store.save(state);
