@@ -1,14 +1,13 @@
 import { withoutTodo, isTaskInjection, TODO_META } from '../task-context.mjs';
 import { attachTodoRefresh, requireSavings } from './todo-refresh.mjs';
 import { randomUUID } from 'node:crypto';
-import { hash, liveSpan, recordText, recordBlocks, userRevision, exposedTrace, actualUser, carrierBarrier, recordSnapshot, sourceHash, splitGroups } from './core.mjs';
+import { hash, liveSpan, recordText, recordBlocks, exposedTrace, actualUser, carrierBarrier, recordSnapshot, sourceHash, splitGroups } from './core.mjs';
 import { combineAssets, attachmentsOf, contentChars, messageTokens } from './materials.mjs';
 import { TRACE_HEAD } from './prompts.mjs';
 
 export function createTransaction(session, state, plan, cfg, pairing, pricing = {}) {
   if (state.transaction) return state.transaction;
   if (plan.choices.some(c => c.action === 'merge')) throw new Error('中枢合并已关闭');
-  if (plan.userRevision !== userRevision(session)) throw new Error('用户消息已变化，本轮替换计划作废');
   const working = structuredClone(state.records), map = new Map(working.map(r => [r.id, r]));
   const operations = [], chosen = new Set(), changedSources = new Set(), origins = new Set();
   let inputChars = 0, outputChars = 0, inputTokens = 0, outputTokens = 0, selectedRecords = 0;

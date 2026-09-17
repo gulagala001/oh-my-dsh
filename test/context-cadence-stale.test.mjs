@@ -140,16 +140,27 @@ test('a stale already-queued plan is discarded without spending the failure/repl
   assert.equal(f.state.review.lastRejection, undefined); assert.equal(f.state.review.replanAttempts, undefined);
 });
 
-test('new user instructions still get one fresh review after cooldown, without failure accounting', async t => {
-  const f = setup(t); f.add(); let release, calls = 0;
-  f.hub.call = async () => { calls++; return calls === 1 ? new Promise(resolve => { release = resolve; }) : reply('submit_context_choices', { choices: [] }); };
+test('a new message does not discard an in-flight review or schedule another call', async t => {
+  const f = setup(t), a = f.add(); let release, calls = 0;
+  f.hub.call = async () => { calls++; return new Promise(resolve => { release = resolve; }); };
   const work = f.pipeline.coordinate(f.agent, true);
-  f.pipeline.observe(f.session, user(f.session, 'A real changed instruction.'));
-  release(reply('submit_context_choices', { choices: [] })); await work;
-  assert.equal(f.state.review.lastDiscard.reason, 'user-changed'); assert.equal(f.state.failures.coordinate, undefined);
-  t.mock.timers.tick(29999); await finish(f); assert.equal(calls, 1);
-  t.mock.timers.tick(1); await finish(f); assert.equal(calls, 2);
-  t.mock.timers.tick(30000); await finish(f); assert.equal(calls, 2);
+  const latest = user(f.session, 'Continue.'); f.pipeline.observe(f.session, latest);
+  release(reply('submit_context_choices', { choices: [choice('brief', [a.id])] })); await work;
+  assert.equal(f.state.review.lastDiscard, undefined); assert.ok(f.state.pending);
+  await f.pipeline.applyReady(f.agent);
+  assert.equal(f.state.records[0].mode, 'brief'); assert.ok(f.session.surface.nodes.includes(latest.seq));
+  t.mock.timers.tick(3600000); await finish(f); assert.equal(calls, 1);
+});
+
+test('speaking below the preparation threshold neither wakes review nor clears a ready plan', async t => {
+  const f = setup(t), a = f.add();
+  const ready = plan(f, [choice('brief', [a.id])]); f.state.pending = ready;
+  const review = JSON.stringify(f.state.review);
+  for (let i = 0; i < 3; i++) f.pipeline.observe(f.session, user(f.session, 'Continue ' + i));
+  t.mock.timers.tick(3600000); await finish(f);
+  assert.equal(f.calls.length, 0); assert.equal(f.state.pending, ready);
+  assert.equal(JSON.stringify(f.state.review), review);
+  await f.pipeline.applyReady(f.agent); assert.equal(f.state.records[0].mode, 'brief');
 });
 
 test('a delayed normal-cadence call rechecks the threshold rather than becoming forced', async t => {
@@ -183,7 +194,7 @@ test('a rejected duplicate is consumed, not scheduled again on the same old reco
   t.mock.timers.tick(3600000); await finish(f); assert.equal(f.calls.length, calls);
 });
 
-test('normal scheduling cannot downgrade an already queued user-triggered review', async t => {
+test('normal scheduling cannot downgrade an already queued manual review', async t => {
   const f = setup(t); f.add(); f.state.review.lastAt = Date.now();
   await f.pipeline.coordinate(f.agent, true);
   t.mock.timers.tick(10000); f.state.review.newRecords = 2;
@@ -221,4 +232,25 @@ test('disabled merge replies never publish a plan or change existing records', a
   await f.pipeline.coordinate(f.agent, true);
   assert.equal(f.state.pending, null); assert.equal(f.state.failures.coordinate.count, 1);
   assert.equal(JSON.stringify(f.state.records), records); assert.deepEqual(f.session.surface.nodes, nodes);
+});
+
+test('one user message waits for the active preparation batch and reviews its records once', async t => {
+  const f = setup(t, { digestEvery: 4, digestWindow: 2, prepareBatchWindows: 2 });
+  f.add(); f.state.review.newRecords = 1;
+  exchange(f.session); exchange(f.session); f.state.eventsSincePrepare = 3;
+  let releasePrepare; const calls = [];
+  f.hub.call = async (_agent, kind, request) => {
+    calls.push({ kind, request });
+    if (kind === 'prepare' && calls.filter(c => c.kind === 'prepare').length === 1) {
+      return new Promise(resolve => { releasePrepare = () => resolve(reply('prepare_segment', prepared)); });
+    }
+    return kind === 'prepare' ? reply('prepare_segment', prepared) : reply('submit_context_choices', { choices: [] });
+  };
+  f.pipeline.observe(f.session, user(f.session, 'Continue the task.'));
+  assert.deepEqual(calls.map(c => c.kind), ['prepare'], 'do not review old records while this same trigger is preparing new ones');
+  releasePrepare(); await finish(f);
+  assert.deepEqual(calls.map(c => c.kind), ['prepare', 'prepare', 'coordinate']);
+  assert.equal(JSON.parse(calls.at(-1).request.messages[0].content[0].text).records.length, 3);
+  t.mock.timers.tick(3600000); await finish(f);
+  assert.equal(calls.filter(c => c.kind === 'coordinate').length, 1);
 });
