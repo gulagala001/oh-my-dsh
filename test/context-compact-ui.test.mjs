@@ -20,6 +20,7 @@ test('native slash commands and sidebar execute both compression modes without l
   f.replyWith(payload => {
     calls.push(payload);
     if (payload.tools.some(t => t.function.name === 'prepare_segment')) return tool('prepare_segment', { summary: '已整理工作台。', documents: [{ title: '实现细节', text: 'ARCHIVED_DETAIL_ONLY_123' }] });
+    if (payload.tools.some(t => t.function.name === 'submit_context_choices')) return tool('submit_context_choices', { choices: [] });
     if (payload.tools.some(t => t.function.name === 'compact_conversation')) return tool('compact_conversation', { summary: '用户要求整理工作台和对话界面；已梳理任务与侧栏，后续完善电脑操控预览。' });
     if (queuedReadPending) { queuedReadPending = false; return tool('read', { file_path: 'missing-compact-fixture.txt' }); }
     return { delta: { role: 'assistant', content: 'NEXT_MAIN_AFTER_COMPACTION\n' + '新的工作记录。'.repeat(150) }, finish_reason: 'stop' };
@@ -32,7 +33,8 @@ test('native slash commands and sidebar execute both compression modes without l
   await api('/context/prepare' + q, {});
   await until(async () => (await api('/context' + q)).records.length > 0 && !(await api('/context' + q)).preparing);
   await api('/context/prepare' + q, {});
-  await until(async () => (await api('/context' + q)).records.length > 1);
+  // Let the automatic review finish before measuring the command's own calls.
+  await until(async () => { const s = await api('/context' + q); return s.records.length > 1 && !s.preparing && !s.coordinating && Boolean(s.review.lastAt) && !s.failures.coordinate; });
   const before = calls.length;
   const p = await command('/compact-p');
   assert.match(JSON.stringify(p), /success/); assert.match(JSON.stringify(p), /仅摘要/);

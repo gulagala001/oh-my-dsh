@@ -78,7 +78,7 @@ for (const [path, operation] of [['/compact-p', 'processed'], ['/compact-f', 'fu
 }
 
 test('whole-window and cost controls persist without waking sessions', async () => {
-  const f = setup(); const patch = { preprocessBoundaries: false, prepareBatchWindows: 3, prepareInputTokens: 64000, summaryTargetChars: 900, backgroundConcurrency: 2, backgroundMaxRetries: 1 };
+  const f = setup(); const patch = { preprocessBoundaries: false, prepareBatchWindows: 3, prepareContinueTokens: 10000, prepareInputTokens: 64000, summaryTargetChars: 900, backgroundConcurrency: 2, backgroundMaxRetries: 1 };
   const result = await f.call('/settings', 'POST', patch);
   for (const [key,value] of Object.entries(patch)) assert.equal(result.data[key], value);
   assert.deepEqual(f.calls, []);

@@ -473,8 +473,8 @@ test('idle and batch coordination of the same input do not schedule a duplicate 
 });
 
 
-test('real new records arriving during coordination still schedule the required follow-up', async t => {
-  const f = idleFixture(t); f.agent.status = 'running'; f.cfg.flushIdleMs = 0; f.cfg.coordinatorMinGapMs = 30000;
+test('new records reaching the configured cadence during coordination schedule one follow-up', async t => {
+  const f = idleFixture(t, { coordinatorEvery: 1 }); f.agent.status = 'running'; f.cfg.flushIdleMs = 0; f.cfg.coordinatorMinGapMs = 30000;
   add(f); f.state.review.newRecords = 1; f.pipeline.agents.set(f.s.id, f.agent);
   let release, reviews = 0; const original = f.hub.call;
   f.hub.call = async (...args) => args[1] === 'coordinate' && ++reviews === 1

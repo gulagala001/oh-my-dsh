@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { hash, liveSpan, recordText, recordBlocks, userRevision, exposedTrace, actualUser, carrierBarrier } from './core.mjs';
+import { hash, liveSpan, recordText, recordBlocks, userRevision, exposedTrace, actualUser, carrierBarrier, recordSnapshot } from './core.mjs';
 import { combineAssets, combineUsers, userDocument, attachmentsOf, contentChars, messageTokens } from './materials.mjs';
 import { TRACE_HEAD, SUMMARY_PROMPT_VERSION } from './prompts.mjs';
 
@@ -15,7 +15,7 @@ export function createTransaction(session, state, plan, cfg, pairing, pricing = 
     if (choice.action === 'keep') continue;
     const picked = choice.ids.map((id, i) => {
       const r = map.get(id), observed = choice.observed[i];
-      if (!r || r.mergedInto || chosen.has(id) || !observed || observed.version !== r.version || observed.mode !== r.mode || observed.carrierSeq !== (r.carrierSeq ?? null) || observed.sourceHash !== r.sourceHash) throw new Error('记录版本已变化，本轮替换计划作废');
+      if (!r || r.mergedInto || chosen.has(id) || !observed || observed.version !== r.version || observed.mode !== r.mode || observed.carrierSeq !== (r.carrierSeq ?? null) || observed.sourceHash !== r.sourceHash || (observed.snapshot && observed.snapshot !== recordSnapshot(session, r))) throw new Error('记录版本已变化，本轮替换计划作废');
       chosen.add(id);
       const span = liveSpan(session, r);
       if (!span || !pairing.before(session, span.seqs[0]) || !pairing.after(session, span.seqs.at(-1))) throw new Error('替换范围已变化或工具往返不完整');

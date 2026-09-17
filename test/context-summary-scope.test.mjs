@@ -60,3 +60,18 @@ test('policy upgrade invalidates only pending generated merges, preserving archi
   state.summaryPromptVersion = 2; state.pending = { id: 'existing-brief', choices: [{ action: 'brief' }] };
   pipeline.state(session); assert.equal(state.pending.id, 'existing-brief');
 });
+
+test('new in-range user instructions are archived, not treated as summary actions', () => {
+  const session = new FixtureSession(); system(session); user(session, 'Original project request.');
+  const work = exchange(session, 'Created styles.css.');
+  const correction = user(session, '不要穿模');
+  const events = [...work, correction], input = candidateInput(session, events, 8);
+  assert.deepEqual(input.summary_scope.event_seqs, work.map(e => e.seq));
+  const reference = input.segment.find(e => e.seq === correction.seq);
+  assert.equal(reference.reference_only, true); assert.doesNotMatch(reference.text, /不要穿模/);
+  assert.ok(input.user_messages.some(e => e.text === '不要穿模'));
+  const record = newRecord(session, events, { summary: 'Created styles.css.', documents: [] }, { scope: 'session', project: 'test' });
+  assert.deepEqual(record.userOriginals[0].content, correction.data.content);
+  assert.match(record.documents.find(d => d.kind === 'user-original').text, /不要穿模/);
+  assert.match(FACT_SUMMARY_RULES, /including new instructions inside the range/);
+});
