@@ -49,3 +49,15 @@ test('scheduler errors pass through once with their original error identity', as
   await assert.rejects(service[TOOL_RUNTIME_SCHEDULER].prepare({}), error => error === failure);
   assert.equal(calls, 1); dispose();
 });
+
+
+test('overlapping compatibility owners release only their last alias and dispose idempotently', () => {
+  const value = scheduler(), foreign = Symbol(TOOL_RUNTIME_SCHEDULER.description);
+  const service = { [foreign]: value };
+  const first = bindToolScheduler(service), second = bindToolScheduler(service);
+  first(); first();
+  assert.equal(service[TOOL_RUNTIME_SCHEDULER], value, 'the second owner still needs the scheduler');
+  second(); second();
+  assert.equal(service[TOOL_RUNTIME_SCHEDULER], undefined);
+  assert.equal(service[foreign], value, 'the host scheduler is never removed');
+});

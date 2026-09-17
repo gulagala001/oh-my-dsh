@@ -1,5 +1,6 @@
 import { createServer } from 'node:http';
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { mkdtemp, mkdir, writeFile, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -13,7 +14,7 @@ export async function until(fn, timeout = 20000) {
   throw new Error('Frontend fixture timed out');
 }
 
-export async function frontendFixture(t, { imageBudget, versionResponse, headless = false } = {}) {
+export async function frontendFixture(t, { imageBudget, versionResponse, headless = false, lifecycleTrace = false } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'trisoul-frontend-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   await mkdir(home); await mkdir(workspace);
   let nextReply, releaseReply, replyFactory;
@@ -32,6 +33,13 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
     'trisoul-x': { stateEnabled: false, probeEnabled: false, digestEvery: 1000, flushIdleMs: 3600000, computerUseNativeBinary: join(root, 'missing-native') },
   }));
   await writeFile(join(home, '.credentials.yaml'), JSON.stringify({ version: 1, refs: { FRONTEND_FIXTURE: 'local-test-only' } }), { mode: 0o600 });
+  const lifecycleFile = join(root, 'lifecycle.jsonl');
+  if (lifecycleTrace) {
+    execFileSync(process.execPath, [fileURLToPath(new URL('../../node_modules/@deepseek-ai/dsh/lib/bin.js', import.meta.url)), '--profile', 'trisoul-x', '--from-default-profile', 'web', '--dump-config'], { cwd: new URL('../../', import.meta.url), env: { ...process.env, DSH_HOME: home }, stdio: ['ignore', 'ignore', 'pipe'] });
+    const directory = join(home, 'profiles', 'trisoul-x');
+    await writeFile(lifecycleFile, '');
+    await writeFile(join(directory, 'cordis.patch.yml'), JSON.stringify([{ insert: [{ id: 'omd-test-lifecycle', name: new URL('./lifecycle-trace.mjs', import.meta.url).href, config: { file: lifecycleFile } }] }]));
+  }
   const child = spawn(process.execPath, ['scripts/start.mjs'], { cwd: new URL('../../', import.meta.url), env: { ...process.env, DSH_HOME: home, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
   let log = '', browser, page; const errors = [];
   child.stdout.on('data', data => { log = (log + data).slice(-15000); });
@@ -56,7 +64,7 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
   const registered = await rpc('workspace/create', { path: workspace });
   const { sessionId } = await rpc('session/create', { workspaceId: registered.workspace.workspaceId, agentPreset: 'trisoul-x' });
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '整理工作台和对话界面' }] });
-  if (headless) return { root, home, origin, rpc, sessionId, errors, log: () => log.replace(/token=\S+/g, 'token=[redacted]'),
+  if (headless) return { root, home, origin, rpc, sessionId, errors, lifecycle: () => readFile(lifecycleFile, 'utf8'), log: () => log.replace(/token=\S+/g, 'token=[redacted]'),
     async call(method, args) {
       const response = await fetch(origin + '/api/' + method, {
         method: 'POST', headers: { 'Content-Type': 'application/json', cookie },
@@ -78,7 +86,7 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
   await page.goto(origin); await page.getByRole('button', { name: '继续', exact: true }).click();
   await page.getByText('整理工作台和对话界面', { exact: true }).first().click();
   await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
-  return { root, home, page, context, rpc, sessionId, errors, log: () => log.replace(/token=\S+/g, 'token=[redacted]'), replyWith(factory){replyFactory=factory;}, holdNextReply() {
+  return { root, home, page, context, rpc, sessionId, errors, lifecycle: () => readFile(lifecycleFile, 'utf8'), log: () => log.replace(/token=\S+/g, 'token=[redacted]'), replyWith(factory){replyFactory=factory;}, holdNextReply() {
     nextReply = new Promise(resolve => { releaseReply = resolve; });
     return () => releaseReply?.();
   } };

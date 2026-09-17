@@ -5,13 +5,14 @@ import { join } from 'node:path';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 
 test('headless DSH host removes and reinstates the plugin bundle without a browser', { timeout: 90000 }, async t => {
-  const f = await frontendFixture(t, { headless: true });
+  const f = await frontendFixture(t, { headless: true, lifecycleTrace: true });
   await until(async () => (await (await fetch(f.origin + '/trisoul-x/api/state?session=' + f.sessionId)).json()).running === 'idle');
   for (const enabled of [false, true, false, true]) {
     const response = await f.call('pluginManager/setBundleEnabled', { name: 'trisoul_x', enabled });
     if (response.result?.value?.application !== 'applied') {
       const inventory = await f.call('pluginManager/listPlugins', {});
       const bundles = await f.call('pluginManager/listBundles', {});
+      console.error('Lifecycle trace', await f.lifecycle());
       console.error('Host lifecycle diagnostic', JSON.stringify({ response, plugins: inventory.result?.value?.filter(row => row.moduleName?.includes('trisoul')), bundles: bundles.result?.value?.filter(row => row.name === 'trisoul_x') }), f.log());
       const profile = join(f.home, 'profiles', 'trisoul-x');
       console.error('Profile entries', await readdir(profile));
