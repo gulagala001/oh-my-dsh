@@ -94,17 +94,6 @@ export class HubStore {
     if (preferred && (mode === 'full' || preferred === `project:${project}`) && dirty(preferred)) return preferred;
     return shards.filter(dirty).sort((a, b) => (state.lastAt[a] || 0) - (state.lastAt[b] || 0))[0];
   }
-  deleteMemory(id) {
-    const all = this.allMemories(); if (!all.some(m => m.id === id)) throw new Error('找不到这条记忆');
-    for (const m of all) { if (m.previous === id) delete m.previous; if (m.supersededBy === id) m.retired ??= Date.now(); }
-    this.write('memory.json', all.filter(m => m.id !== id));
-  }
-  health(project, mode = 'full') {
-    const all = this.allMemories(), visible = this.memories(project, mode), history = new Map(all.map(m => [m.id, m]));
-    const unused = visible.filter(m => !(m.usage?.injected || m.usage?.recalled)).length;
-    const oldestAt = visible.length ? Math.min(...visible.map(m => memoryLineage(m, history).at)) : null;
-    return { total: all.length, active: all.filter(activeMemory).length, visible: visible.length, retired: all.filter(m => m.retired).length, versions: all.filter(m => m.supersededBy).length, unused, oldestAt, chars: visible.reduce((n, m) => n + m.text.length, 0), shards: this.curationState(), promotionGroups: mode === 'full' ? this.crossCandidates().length : 0 };
-  }
   touch(ids, kind, sessionId) {
     if (!ids.length) return;
     const all = this.allMemories();

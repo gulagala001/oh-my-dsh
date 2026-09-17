@@ -1,6 +1,6 @@
 import { isTaskInjection, summaryMessageReader, withoutTodo, TODO_META } from '../task-context.mjs';
 import { createHash, randomUUID } from 'node:crypto';
-import { attachmentsOf, combineAssets, combineUsers, userDocument, describeAsset, materialText, contentChars, messageTokens, assetBlocks, messageOf } from './materials.mjs';
+import { attachmentsOf, combineAssets, combineUsers, userDocument, describeAsset, materialText, contentChars, messageTokens, assetBlocks } from './materials.mjs';
 
 export const hash = value => createHash('sha256').update(typeof value === 'string' ? value : JSON.stringify(value)).digest('hex');
 export const textBlocks = blocks => (blocks || []).flatMap(b => {
@@ -33,7 +33,6 @@ export const sourceHash = (session, seqs) => hash(seqs.map(seq => {
 }));
 export const estimate = text => Math.ceil(String(text).length / 4);
 export const hasOpaqueContent = blocks => (blocks || []).some(b => !['text', 'reasoning', 'tool-call', 'tool-result'].includes(b.type) || (b.type === 'tool-result' && hasOpaqueContent(b.content)));
-export const entryCost = entry => estimate(entry.summary + '\n' + entry.documents.map(d => `${d.title}\n${d.text}`).join('\n'));
 
 export function validatePrepared(value) {
   if (!value || typeof value.summary !== 'string' || !value.summary.trim() || !Array.isArray(value.documents)) throw new Error('预处理没有提交完整摘要与文档');
