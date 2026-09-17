@@ -45,7 +45,7 @@ export const whaleCss = `
 .omd-whale-rotor { transform-origin: 11.7px 8.5px; }
 .tx-brand-mark:is(:hover,[data-omd-state="hover"],[data-omd-state="running"]) .omd-whale-body,
 button:is(:hover,:focus-visible) .tx-brand-mark .omd-whale-body { filter: drop-shadow(0 .35px .55px #397fff80) drop-shadow(0 0 .45px #6edbff55); }
-.trisoul-shell[data-omd-running] .tx-brand-mark .omd-whale-orbit,
+.trisoul-shell:has(.tx-composer-dock[data-omd-running]) .tx-brand-mark .omd-whale-orbit,
 .tx-brand-mark[data-omd-state="running"] .omd-whale-orbit { opacity: 1; }
 @media (prefers-color-scheme: dark) {
   .omd-whale-body { filter: drop-shadow(0 .4px .65px #206cff88); }
@@ -55,7 +55,7 @@ button:is(:hover,:focus-visible) .tx-brand-mark .omd-whale-body { filter: drop-s
   button:is(:hover,:focus-visible) .tx-brand-mark .omd-whale-contour { animation: omd-whale-tail 1.65s ease-in-out infinite; }
   .tx-brand-mark:is(:hover,[data-omd-state="hover"]) .omd-whale-body,
   button:is(:hover,:focus-visible) .tx-brand-mark .omd-whale-body { animation: omd-whale-swim 1.65s ease-in-out infinite; }
-  .trisoul-shell[data-omd-running] .tx-brand-mark .omd-whale-rotor,
+  .trisoul-shell:has(.tx-composer-dock[data-omd-running]) .tx-brand-mark .omd-whale-rotor,
   .tx-brand-mark[data-omd-state="running"] .omd-whale-rotor { animation: omd-whale-orbit 2.6s linear infinite; }
 }
 @keyframes omd-whale-tail { 0%,100% { d: path("${DOWN}"); } 45% { d: path("${UP}"); } }

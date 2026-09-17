@@ -29,23 +29,34 @@ export function compareVersions(a, b) {
   }
   return 0;
 }
+// OMD's historical 1.3.0-alpha.N series predates the DSH-aligned release
+// numbering. Reserve that archived series only; general SemVer stays unchanged.
+const legacyPreview = version => /^v?1\.3\.0-alpha\.\d+(?:\+[^ ]+)?$/.test(version);
+function releaseCompare(a, b, policy) {
+  if (policy === 'dsh-aligned' && legacyPreview(a) !== legacyPreview(b)) return legacyPreview(a) ? -1 : 1;
+  return compareVersions(a, b);
+}
+
 export function validateManifest(value) {
   if (value?.schema !== 1 || !Array.isArray(value.releases) || !value.releases.length || value.releases.length > 500) throw Error('Invalid release manifest');
+  if (value.versionPolicy !== undefined && value.versionPolicy !== 'dsh-aligned') throw Error('Invalid version policy');
+  const policy = value.versionPolicy;
   const releases = value.releases.map(r => {
     parseVersion(r.version);
     if (!['normal', 'required'].includes(r.severity) || typeof r.title !== 'string' || !r.title.trim() || r.title.length > 200
       || !Array.isArray(r.notes) || r.notes.length > 20 || r.notes.some(n => typeof n !== 'string' || n.length > 2000)) throw Error('Invalid release entry');
     return { version: r.version, severity: r.severity, title: r.title, notes: [...r.notes] };
-  }).sort((a, b) => compareVersions(b.version, a.version));
+  }).sort((a, b) => releaseCompare(b.version, a.version, policy));
   if (releases.some((r, i) => i && compareVersions(releases[i - 1].version, r.version) === 0)) throw Error('Duplicate release version');
-  return { schema: 1, releases };
+  return { schema: 1, ...(policy ? { versionPolicy: policy } : {}), releases };
 }
 export function versionStatus(currentVersion, manifest) {
   const preview = parseVersion(currentVersion).pre.length > 0;
+  const compare = (a, b) => releaseCompare(a, b, manifest.versionPolicy);
   const eligible = manifest.releases.filter(r => preview || !parseVersion(r.version).pre.length);
-  const updates = eligible.filter(r => compareVersions(r.version, currentVersion) > 0);
+  const updates = eligible.filter(r => compare(r.version, currentVersion) > 0);
   return { currentVersion, latestVersion: eligible[0]?.version || null,
-    status: updates.length ? 'update' : !eligible.length ? 'unknown' : compareVersions(currentVersion, eligible[0].version) > 0 ? 'ahead' : 'current',
+    status: updates.length ? 'update' : !eligible.length ? 'unknown' : compare(currentVersion, eligible[0].version) > 0 ? 'ahead' : 'current',
     severity: updates.some(r => r.severity === 'required') ? 'required' : updates.length ? 'normal' : 'none',
     releases: updates, currentRelease: manifest.releases.find(r => compareVersions(r.version, currentVersion) === 0) || null };
 }

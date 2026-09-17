@@ -1,4 +1,4 @@
-import { mkdirSync, existsSync, readFileSync, writeFileSync, renameSync, readdirSync } from 'node:fs';
+import { mkdirSync, existsSync, readFileSync, writeFileSync, renameSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { projectKeyOf, sameProject } from './project.mjs';
@@ -31,26 +31,54 @@ export function textSimilarity(a, b) {
   return inter / (A.size + B.size - inter);
 }
 
+export function validateSessionId(id) {
+  if (typeof id !== 'string' || !id || id === '.' || id === '..' || /[\\/\0]/.test(id)) throw Error('会话编号无效');
+  return id;
+}
+
 export class HubStore {
   constructor(dir) {
     this.dir = resolve(dir);
-    this.states = new Map();
+    this.states = new Map(); this.monitorCache = new Map();
     mkdirSync(join(this.dir, 'sessions'), { recursive: true });
   }
   write(name, value) {
     const file = join(this.dir, name);
-    writeFileSync(`${file}.tmp`, JSON.stringify(value, null, 2) + '\n', { mode: 0o600 });
+    writeFileSync(`${file}.tmp`, JSON.stringify(value, null, name.startsWith('sessions/') ? undefined : 2) + '\n', { mode: 0o600 });
     renameSync(`${file}.tmp`, file);
   }
   state(id) {
+    validateSessionId(id);
     if (!this.states.has(id)) this.states.set(id, read(join(this.dir, 'sessions', `${id}.json`), {
       id, cursor: -1, pins: [], status: '', digests: [], notes: [], metrics: {}, activity: [], actions: {}, memoryTrace: [],
     }));
     return this.states.get(id);
   }
-  save(state) { this.write(`sessions/${state.id}.json`, state); }
+  save(state) { validateSessionId(state.id); this.write(`sessions/${state.id}.json`, state); }
   allStates() {
     return readdirSync(join(this.dir, 'sessions')).filter(n => n.endsWith('.json')).map(n => this.state(n.slice(0, -5)));
+  }
+  // Statistics do not need to retain every archived conversation body in RAM.
+  // Active mutable states still take precedence, exactly as allStates() does.
+  monitorStates() {
+    const project = value => ({ id: value.id, parentSession: value.parentSession,
+      metrics: value.metrics || {}, actions: value.actions || {}, activity: value.activity || [] });
+    const files = readdirSync(join(this.dir, 'sessions')).filter(n => n.endsWith('.json'));
+    const present = new Set(files);
+    for (const name of this.monitorCache.keys()) if (!present.has(name)) this.monitorCache.delete(name);
+    return files.map(name => {
+      const id = validateSessionId(name.slice(0, -5));
+      if (this.states.has(id)) return project(this.states.get(id));
+      const file = join(this.dir, 'sessions', name), stat = statSync(file, { bigint: true });
+      const signature = `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
+      let cached = this.monitorCache.get(name);
+      if (cached?.signature !== signature) {
+        const value = read(file);
+        if (value?.id !== id) throw Error('会话存档身份不匹配');
+        cached = { signature, value: project(value) }; this.monitorCache.set(name, cached);
+      }
+      return cached.value;
+    });
   }
   memories(project, mode = 'full', history = false) {
     return read(join(this.dir, 'memory.json'), []).filter(m => (history || (!m.retired && !m.supersededBy))

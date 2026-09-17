@@ -74,3 +74,22 @@ export function computerGroups(nodes) {
   }
   return result;
 }
+
+
+export function processSummaries(snapshot) {
+  const summaries = new Map();
+  for (const key of snapshot.order) {
+    const node = snapshot.nodes.get(key);
+    if (node?.kind !== 'tool-call') continue;
+    const turn = node.location?.turn?.turn, call = node.data.root;
+    const summary = summaries.get(turn) || { names: [], failures: 0, stopped: 0 };
+    summary.names.push(call.call?.name ?? call.name ?? '');
+    const state = operationState(call);
+    if (state === 'error') summary.failures++;
+    if (state === 'stopped') summary.stopped++;
+    summaries.set(turn, summary);
+  }
+  return new Map([...summaries].map(([turn, value]) => [turn, {
+    label: operationSummary(value.names), icon: operationIcon(value.names), failures: value.failures, stopped: value.stopped,
+  }]));
+}

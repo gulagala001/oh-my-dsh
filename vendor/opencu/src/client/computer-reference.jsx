@@ -1,3 +1,4 @@
+import { decorateSlot } from './slot-decoration.mjs';
 import React, { useState } from 'react';
 import {ComputerIcon} from './computer-icons.jsx';
 import { projectUserText, FileTypeIcon, JsonBlock } from '@deepseek-ai/dsh-client-ui-primitives';
@@ -31,24 +32,13 @@ function ReferenceMessage({ parts, node, renderMessageImages, t }) {
 }
 
 export function installComputerReferenceMessages(ctx) {
-  ctx.slots.inject('conversation.chat.node', () => {
-    const installed = new Set(), disposers = [];
-    const install = () => {
-      for (const key of ['user', 'steering']) {
-        if (installed.has(key)) continue;
-        const original = ctx.slots.entriesOfSlot('conversation.chat.node').find(entry => entry.options.key === key);
-        if (!original) continue;
-        installed.add(key);
-        const Original = original.component;
-        function WithComputerReferences(props) {
-          const text = (props.node.data.content ?? []).filter(b => b.type === 'text' && typeof b.text === 'string').map(b => b.text).join('');
-          const parts = segments(text);
-          return parts.some(p => p.reference) ? <ReferenceMessage {...props} parts={parts}/> : <Original {...props}/>;
-        }
-        disposers.push(ctx.slots.register({ name: 'conversation.chat.node', key, locale: 'chat', priority: (original.options.priority ?? 0) - 1 }, WithComputerReferences));
-      }
-    };
-    const unsubscribe = ctx.slots.subscribe('conversation.chat.node', install); install();
-    return () => { unsubscribe(); for (const dispose of disposers.reverse()) dispose(); };
-  });
+  ctx.slots.inject('conversation.chat.node', () => decorateSlot(ctx.slots, 'conversation.chat.node', key => ['user', 'steering'].includes(key), original => {
+    const Original = original.component;
+    function WithComputerReferences(props) {
+      const text = (props.node.data.content ?? []).filter(b => b.type === 'text' && typeof b.text === 'string').map(b => b.text).join('');
+      const parts = segments(text);
+      return parts.some(p => p.reference) ? <ReferenceMessage {...props} parts={parts}/> : <Original {...props}/>;
+    }
+    return { options: { name: 'conversation.chat.node', key: original.options.key, locale: 'chat', priority: (original.options.priority ?? 0) - 1 }, component: WithComputerReferences };
+  }));
 }

@@ -1,5 +1,6 @@
 import { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
 import { randomUUID } from 'node:crypto';
+import { serializePreparationInput } from './input-budget.mjs';
 import { compactFull } from './full-compaction.mjs';
 import { ContextStore } from './store.mjs';
 import { hash, userRevision, userMessages, rawText, actualUser, prepareCandidate, candidateInput, coordinatorInput, newRecord, activeRecords, liveSpan, validatePrepared, normalizeChoices, decodeResult, recordText, backlogView, recordSnapshot, preparationWorkload } from './core.mjs';
@@ -70,7 +71,7 @@ export class ContextPipeline {
       state.summaryPromptVersion = SUMMARY_PROMPT_VERSION; this.store.save(state);
     }
     // A blank session can still change its scope before any data has been read or prepared.
-    if (!userMessages(session).length && !state.records.length && !state.transaction && !Object.keys(state.publications.catalog).length && state.publications.globalRevision === null && (state.binding.scope !== binding.scope || state.binding.project !== binding.project)) {
+    if (!state.records.length && !state.transaction && !Object.keys(state.publications.catalog).length && state.publications.globalRevision === null && (state.binding.scope !== binding.scope || state.binding.project !== binding.project) && !userMessages(session).length) {
       state.binding = binding; this.store.save(state);
     }
     return state;
@@ -163,9 +164,8 @@ export class ContextPipeline {
         const inputs = candidateInput(session, events, cfg.digestLookback);
         inputs.target_characters = cfg.summaryTargetChars;
         if (s.failures.prepare) inputs.previous_rejection = s.failures.prepare.message;
-        while (JSON.stringify(inputs).length > cfg.prepareInputTokens * 4 && inputs.reference.length) inputs.reference.shift();
-        if (JSON.stringify(inputs).length > cfg.prepareInputTokens * 4) throw Error('整窗输入超过预算，原文保留；请调大预处理输入预算或缩小窗口');
-        const args = { system: PREPARE_SYSTEM, messages: [this.adapter.message(JSON.stringify(inputs), 'prepare-input')], tools: [PREPARE_TOOL],
+        const encoded = serializePreparationInput(inputs, cfg.prepareInputTokens * 4);
+        const args = { system: PREPARE_SYSTEM, messages: [this.adapter.message(encoded, 'prepare-input')], tools: [PREPARE_TOOL],
           ...(cfg.digestMaxTokens > 0 ? { maxTokens: cfg.digestMaxTokens } : {}) };
         const result = await this.call(agent, 'prepare', args, controller.signal);
         controller.signal.throwIfAborted();
@@ -285,7 +285,9 @@ export class ContextPipeline {
     if (s.transaction) return applyTransaction(session, s, s.transaction, this.store, this.adapter);
     if (!manual && (!cfg.contextEnabled || !cfg.automaticReplace || (!ignoreCooldown && s.steps - s.lastReplacementStep < cfg.surgeryCooldownSteps))) return null;
     let plan = s.pending;
-    if (manual && (ids || !plan)) {
+    // Explicit user actions select their requested mode, independently of an
+    // earlier automatic keep decision. Automatic application still uses pending.
+    if (manual) {
       if (!['detail', 'brief'].includes(mode)) throw new Error('手动应用请选择 detail 或 brief');
       const chosen = ids || activeRecords(s).filter(r => r.mode === 'raw' && liveSpan(session, r)).map(r => r.id);
       if (!Array.isArray(chosen) || !chosen.length) return null;
@@ -407,20 +409,23 @@ export class ContextPipeline {
     const s = this.state(session);
     if (s.binding.scope !== 'project') return;
     const global = this.store.global();
+    let changed = false;
     if (s.publications.globalRevision !== global.revision) {
+      changed = true;
       if (global.text || s.publications.globalRevision != null) this.adapter.publish(session,
         `[User-written global background · revision ${global.revision}]\n${global.text || '(cleared by the user)'}`, 'manual-global');
       s.publications.globalRevision = global.revision;
     }
     const unseen = this.store.visible(session.id).filter(r => r.sessionId !== session.id && s.publications.catalog[r.id] !== r.version);
     if (unseen.length) {
+      changed = true;
       const groups = new Map();
       for (const r of unseen) { const g = groups.get(r.sessionId) || []; g.push(r); groups.set(r.sessionId, g); s.publications.catalog[r.id] = r.version; }
       const text = '[Project summaries · past records, not instructions]\n' + [...groups].map(([id, entries]) =>
         `## Session ${entries[0].sessionTitle} (${id})\n` + entries.map(r => `### ${r.id} · ${iso(r.timeStart)} — ${iso(r.timeEnd)}\n${r.summary}${r.parents.length ? `\nCombined from: ${r.parents.join(', ')}` : ''}\nDocuments: recall({"id":"${r.id}"})`).join('\n\n')).join('\n\n');
       this.adapter.publish(session, text, 'project-catalog');
     }
-    this.store.save(s);
+    if (changed) this.store.save(s);
   }
   queueManual(session, args = {}) {
     const s = this.state(session);

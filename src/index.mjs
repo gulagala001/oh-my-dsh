@@ -1,3 +1,4 @@
+import { monitorSelection, compactMonitorSnapshot } from './monitoring.mjs';
 import { createVersionService, handleVersionApi } from './version.mjs';
 import { installImageBudget } from './image-budget.mjs';
 import { Config } from './config.mjs';
@@ -49,7 +50,7 @@ export function apply(ctx, config) {
       ensureSystemHead(agent.session, { turn, step });
       restoreTaskProjection(ctx, agent.session);
       const state = hub.store.state(agent.session.id);
-      state.memoryScope ??= hub.config().memoryScope; hub.store.save(state);
+      if (state.memoryScope == null) { state.memoryScope = hub.config().memoryScope; hub.store.save(state); }
       hub.agents.set(agent.session.id, agent);
       // A pending write-ahead transaction must finish before sending another request.
       // Only an explicitly queued full-compaction command can await model work here.
@@ -75,8 +76,10 @@ export function apply(ctx, config) {
     if (isX(agent.session)) hub.context.arm(agent);
   }, { global: true });
   ctx.on('agent/disposed', ({ agent }) => {
-    if (!isX(agent.session)) return;
-    hub.context.dispose(agent.session.id); hub.taskReviews.delete(agent.session.id); hub.agents.delete(agent.session.id);
+    // A preset can have changed before disposal; release resources we owned.
+    const id = agent.session.id;
+    if (!isX(agent.session) && !hub.agents.has(id) && !hub.context.agents.has(id)) return;
+    hub.context.dispose(id); hub.taskReviews.delete(id); hub.agents.delete(id); hub.requestStarts.delete(id);
   }, { global: true });
   ctx.on('agent/created', ({ agent }) => {
     if (!isX(agent.session) || agent.session.header.origin === 'subagent') return;
@@ -114,16 +117,13 @@ export function apply(ctx, config) {
         }
         if (url.pathname === '/trisoul-x/api/state' && req.method === 'GET') {
           const directory = id ? [] : await Promise.all(ctx.llm.listProviders().map(async provider => ({ ...provider, models: await ctx.llm.listModels(provider.id).catch(() => []) })));
-          const states = hub.store.allStates(), ids = new Set(id ? [id] : states.map(s => s.id));
-          for (let changed = true; changed;) { changed = false; for (const s of states) if (ids.has(s.parentSession) && !ids.has(s.id)) { ids.add(s.id); changed = true; } }
-          const all = url.searchParams.get('range') === 'all' ? states : states.filter(s => ids.has(s.id));
-          const metrics = {}, actions = {};
-          for (const state of all) for (const [kind, m] of Object.entries(state.metrics)) {
-            const target = metrics[kind] ??= {};
-            for (const [key, n] of Object.entries(m)) target[key] = key === 'peakContext' ? Math.max(target[key] || 0, n) : (target[key] || 0) + n;
-          }
-          for (const state of all) for (const [key, n] of Object.entries(state.actions || {})) actions[key] = (actions[key] || 0) + n;
+          const { ids, selected: all, metrics, actions } = monitorSelection(hub.store.monitorStates(), id, url.searchParams.get('range'));
           const meter = session ? ctx.tokenMeter.measure(session) : null;
+          const liveCalls = [...hub.live.values()].filter(call => !id || url.searchParams.get('range') === 'all' || ids.has(call.sessionId));
+          res.setHeader('Cache-Control', 'no-store');
+          if (url.searchParams.get('view') === 'summary') {
+            send(res, 200, compactMonitorSnapshot({ metrics, actions, meter, liveCalls, sessionCount: all.length, running: agent?.status ?? 'idle' })); return;
+          }
           send(res, 200, {
             config: hub.config(), directory, metrics, actions, sessionCount: all.length, contextHistory: stored?.contextHistory || [],
             context: stored ? { legacy: true, pins: stored.pins, status: stored.status ? '[历史状态，旧提炼链路已停止]\n' + stored.status : '', notes: stored.notes,
@@ -135,7 +135,7 @@ export function apply(ctx, config) {
             tasks: currentTasks(session, stored?.taskList ?? stored?.tasks), taskRelease: stored?.taskRelease,
             activity: all.flatMap(s => s.activity).sort((a, b) => b.at - a.at).slice(0, 60),
             live: id ? ([...hub.live.values()].find(call => call.sessionId === id) ?? null) : [...hub.live.values()],
-            liveCalls: [...hub.live.values()].filter(call => !id || url.searchParams.get('range') === 'all' || ids.has(call.sessionId)),
+            liveCalls,
             scope: hub.scope(scopeSession), running: agent?.status ?? 'idle', meter,
             frame: session ? meter.nodes.map(n => { const e = session.eventAt(n.seq), m = session.deriveEventMessage(e); return { seq: n.seq, role: m?.role, kind: m?.source?.plugin || m?.source?.kind || e.type, tokens: n.tokens ?? n.heuristicTokens, chars: eventText(session, e).length, checkpoint: Boolean(m?.source?.compactionId) }; }) : [],
             route: session?.requestHeader()?.config ? { provider: session.requestHeader().config.provider, model: session.requestHeader().config.model } : null,
