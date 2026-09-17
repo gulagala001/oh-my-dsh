@@ -12,7 +12,7 @@ import { FixtureSession, user, plugin, system, exchange, adapter, pairing } from
 
 function setup(t, config = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'context-window-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
-  const session = new FixtureSession(); system(session); if (config.preface) plugin(session, 'Keep task status current.', 'tasks'); user(session, 'Preserve exact requirement 9007199254740993.');
+  const session = new FixtureSession(); system(session); if (config.preface) plugin(session, 'Keep task status current.', 'task-reminder'); user(session, 'Preserve exact requirement 9007199254740993.');
   const cfg = contextConfig({ keepTailEvents: 0, digestEvery: 32, digestWindow: 64, flushIdleMs: 0, coordinatorEvery: 999, traceEnabled: false, ...config });
   const calls = [], hub = { store: { dir }, config: () => cfg, scope: () => ({ mode: 'session', project: '/p' }), ctx: {}, action() {},
     async call(_agent, kind, request) { calls.push({ kind, request }); return { blocks: [{ type: 'tool-call', name: 'prepare_segment', arguments: { summary: 'Requirement 9007199254740993 retained. Work completed.', documents: [{ title: 'Facts', text: 'Detailed observed facts.' }] } }] }; } };
@@ -38,7 +38,7 @@ test('default whole window crosses users, reminders, images and protected system
   assert.deepEqual(r.userOriginals.find(u => u.seq === correction.seq).content, correction.data.content);
   assert.match(r.documents.find(d => d.kind === 'user-original').text, /  修正：ID 必须是字符串。\n保留空格  /);
   const result = await apply(f, [['brief', [r.id]]]); assert.ok(f.session.surface.nodes.includes(fixed.seq));
-  assert.equal(result.stats.currentMessages, r.sourceSeqs.length); assert.equal(result.stats.resultRecords, 1);
+  assert.equal(result.stats.currentMessages, r.sourceSeqs.filter(seq => f.session.eventAt(seq).data?.source?.plugin !== 'trisoul-x:tasks').length); assert.equal(result.stats.resultRecords, 1);
   assert.ok(before.every(e => f.session.eventAt(e.seq)), 'original events survive');
 });
 

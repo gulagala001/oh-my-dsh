@@ -1,3 +1,4 @@
+import { isTaskInjection, summaryMessageReader, withoutTodo, TODO_META } from '../task-context.mjs';
 import { createHash, randomUUID } from 'node:crypto';
 import { attachmentsOf, combineAssets, combineUsers, userDocument, describeAsset, materialText, contentChars, messageTokens, assetBlocks, messageOf } from './materials.mjs';
 
@@ -58,7 +59,7 @@ export function protectedEvent(session, e) {
   const source = eventSource(e), message = session.deriveEventMessage(e);
   return (e.type === 'system/message' && source !== 'trisoul-x:shadow')
     || (message?.role === 'system' && source !== 'trisoul-x:shadow')
-    || source === '@deepseek-ai/dsh-system-prompt' || source === 'trisoul-x:trace' || source === 'trisoul-x:manual-global';
+    || source === 'trisoul-x:todo-prefix' || source === '@deepseek-ai/dsh-system-prompt' || source === 'trisoul-x:trace' || source === 'trisoul-x:manual-global';
 }
 export function preparationStop(session, cfg) {
   const nodes = session.surface.nodes, live = nodes.flatMap((seq, i) => session.deriveEventMessage(session.eventAt(seq)) ? [i] : []);
@@ -78,7 +79,7 @@ export function carrierBarrier(session, state, cfg) {
   const nodes = session.surface.nodes;
   const saved = state.traceSlot && nodes.includes(state.traceSlot.carrierSeq) ? state.traceSlot.carrierSeq : undefined;
   const trace = saved ?? nodes.find(seq => eventSource(session.eventAt(seq)) === 'trisoul-x:trace');
-  const anchor = trace ?? (cfg.traceEnabled && !state.fullCompaction ? nodes.find(seq => actualUser(session.eventAt(seq))) : undefined);
+  const anchor = trace ?? (cfg.traceEnabled && !state.fullCompaction ? nodes.find(seq => actualUser(session.eventAt(seq)) || eventSource(session.eventAt(seq)) === 'trisoul-x:todo-prefix') : undefined);
   return nodes.indexOf(anchor);
 }
 const windowText = (session, event, retained) => retained && !actualUser(event)
@@ -89,7 +90,7 @@ export function protectedSeqs(session, state, cfg) {
   // The established Trace slot carries the first request. Keep that anchor in
   // place, but read across it; it is never a segmentation boundary.
   if (cfg.traceEnabled && !state.traceSlot && !state.fullCompaction) {
-    const anchor = session.surface.nodes.find(seq => actualUser(session.eventAt(seq)));
+    const anchor = session.surface.nodes.find(seq => actualUser(session.eventAt(seq)) || eventSource(session.eventAt(seq)) === 'trisoul-x:todo-prefix');
     if (anchor !== undefined) keep.add(anchor);
   }
   return keep;
@@ -186,6 +187,7 @@ function legacyPrepareCandidate(session, state, cfg, pairing) {
   }
   const stop = preparationStop(session, cfg);
   const boundary = e => {
+    if (isTaskInjection(e)) return false;
     if (protectedSource(e) || reserved.has(e.seq)) return true;
     if (hasOpaqueContent(session.deriveEventMessage(e)?.content)) return true;
     if (e.data?.source?.form === 'snapshot') return true;
@@ -197,7 +199,7 @@ function legacyPrepareCandidate(session, state, cfg, pairing) {
   let run = [];
   const take = () => {
     while (run.length && !pairing.before(session, run[0].seq)) run.shift();
-    if (!run.length) return null;
+    if (!run.length || run.every(isTaskInjection)) return null;
     // The window is a preferred size; a tool round-trip is never split.
     let end = Math.min(run.length, cfg.digestWindow);
     while (end < run.length && !pairing.after(session, run[end - 1].seq)) end++;
@@ -218,7 +220,11 @@ function legacyPrepareCandidate(session, state, cfg, pairing) {
 }
 
 export function prepareCandidate(session, state, cfg, pairing) {
-  if (cfg.preprocessBoundaries === true) return legacyPrepareCandidate(session, state, cfg, pairing);
+  if (cfg.preprocessBoundaries === true) {
+    const events = legacyPrepareCandidate(session, state, cfg, pairing);
+    if (events?.some(isTaskInjection)) Object.assign(events, { wholeWindow: true, windowSeqs: events.map(e => e.seq), retainedSeqs: [] });
+    return events;
+  }
   const nodes = session.surface.nodes, stop = preparationStop(session, cfg);
   const keep = protectedSeqs(session, state, cfg), owners = new Map(), spans = new Map();
   for (const record of activeRecords(state)) {
@@ -226,7 +232,8 @@ export function prepareCandidate(session, state, cfg, pairing) {
     spans.set(record.id, span);
     for (const seq of span.seqs) owners.set(seq, record);
   }
-  const meaningful = seq => !keep.has(seq) && Boolean(session.deriveEventMessage(session.eventAt(seq)));
+  const summaryRead = summaryMessageReader(session);
+  const meaningful = seq => !keep.has(seq) && !isTaskInjection(session.eventAt(seq)) && Boolean(session.deriveEventMessage(session.eventAt(seq)));
   let first = -1;
   for (let i = 0; i < stop; i++) {
     if (!meaningful(nodes[i]) || owners.has(nodes[i])) continue;
@@ -237,7 +244,7 @@ export function prepareCandidate(session, state, cfg, pairing) {
   const maxChars = (cfg.prepareInputTokens || 48000) * 4;
   for (; end < stop; end++) {
     const seq = nodes[end], e = session.eventAt(seq);
-    if (session.deriveEventMessage(e)) { chars += JSON.stringify(windowText(session, e, keep.has(seq))).length + 80; if (!keep.has(seq)) members++; }
+    if (summaryRead(e)) { chars += JSON.stringify(keep.has(seq) ? '[Protected host context retained in place.]' : materialText(summaryRead(e).content, seq)).length + 80; if (!keep.has(seq)) members++; }
     const splitRecord = [...spans.values()].some(span => span.start <= end && span.end > end);
     if (!splitRecord && pairing.after(session, seq)) {
       if (chars > maxChars) {
@@ -270,24 +277,26 @@ export function backlogView(session, state, cfg) {
   let events = 0, tokens = 0, recentEvents = 0;
   for (let i = 0; i < nodes.length; i++) {
     const seq = nodes[i], m = session.deriveEventMessage(session.eventAt(seq));
-    if (keep.has(seq) || reserved.has(seq) || !m) continue;
+    if (keep.has(seq) || reserved.has(seq) || !m || isTaskInjection(session.eventAt(seq))) continue;
     if (i >= stop) { recentEvents++; continue; }
     events++; tokens += messageTokens(m);
   }
   return { events, estimatedTokens: tokens, recentEvents, protectedEvents: keep.size };
 }
 export function candidateInput(session, events, lookback) {
+  const read = summaryMessageReader(session);
   const all = session.snapshotEvents(), start = all.findIndex(e => e.seq === events[0].seq);
   const prior = lookback > 0 ? all.slice(0, start).filter(e => actualUser(e) || e.type === 'assistant/message' || e.type === 'tool/result').slice(-lookback) : [];
   const segment = (events.windowSeqs || events.map(e => e.seq)).map(seq => session.eventAt(seq));
-  return { summary_scope: { source: 'segment', event_seqs: events.filter(e => !actualUser(e) && !(events.retainedSeqs || []).includes(e.seq) && session.deriveEventMessage(e)).map(e => e.seq), reference_only_fields: ['reference', 'user_messages'] },
-    reference: prior.map(e => ({ seq: e.seq, type: e.type, text: rawText(session, e) })),
+  return { summary_scope: { source: 'segment', event_seqs: events.filter(e => !actualUser(e) && !(events.retainedSeqs || []).includes(e.seq) && read(e)).map(e => e.seq), reference_only_fields: ['reference', 'user_messages'] },
+    reference: prior.filter(e => read(e)).map(e => ({ seq: e.seq, type: e.type, text: materialText(read(e).content, e.seq) })),
     user_messages: userMessages(session).filter(u => u.seq <= Math.max(...segment.map(e => e.seq))).slice(-8),
-    segment: segment.filter(e => session.deriveEventMessage(e)).map(e => ({ seq: e.seq, at: eventTime(e), type: e.type,
+    segment: segment.filter(e => read(e)).map(e => ({ seq: e.seq, at: eventTime(e), type: e.type,
       protected: (events.retainedSeqs || []).includes(e.seq), reference_only: actualUser(e),
-      text: actualUser(e) ? '[User message archived verbatim; see user_messages for reference only.]' : windowText(session, e, (events.retainedSeqs || []).includes(e.seq)) })) };
+      text: actualUser(e) ? '[User message archived verbatim; see user_messages for reference only.]' : ((events.retainedSeqs || []).includes(e.seq) ? '[Protected host context retained in place.]' : materialText(read(e).content, e.seq)) })) };
 }
 export function coordinatorInput(session, state, cfg) {
+  const read = summaryMessageReader(session);
   return {
     summary_scope: { source: 'selected records only', reference_only_fields: ['user_messages', 'recent_events', 'compacted_conversation', 'context'] },
     user_messages: userMessages(session).filter(e => e.seq > (state.fullCompaction?.throughSeq ?? -1)),
@@ -304,7 +313,7 @@ export function coordinatorInput(session, state, cfg) {
         originalChars: r.originalChars, detailedChars: recordText(r).length, briefChars: recordText(r, 'brief').length }] : [];
     }),
     recent_events: (cfg.coordinatorRecentEvents ? session.surface.nodes.slice(-cfg.coordinatorRecentEvents) : []).map(seq => {
-      const e = session.eventAt(seq); return { seq, type: e.type, text: rawText(session, e) };
+      const e = session.eventAt(seq); return { seq, type: e.type, text: read(e) ? materialText(read(e).content, seq) : '[Task state omitted from summary input.]' };
     }),
   };
 }
@@ -312,11 +321,18 @@ export function coordinatorInput(session, state, cfg) {
 export function newRecord(session, events, prepared, binding, { state, wholeWindow = events.wholeWindow || false } = {}) {
   const times = events.map(eventTime).filter(Number.isFinite), seqs = events.map(e => e.seq);
   const parents = (state?.records || []).filter(r => events.parents?.includes(r.id));
-  const userOriginals = combineUsers(...parents.map(r => r.userOriginals || []), events.filter(actualUser).map(e => ({
+  const originals = events.flatMap(e => {
+    if (actualUser(e)) return [e];
+    const m = session.deriveEventMessage(e), base = withoutTodo(m);
+    if (base?.source?.kind !== 'user' && m?.source?.plugin !== 'trisoul-x:todo-prefix') return [];
+    const origin = session.snapshotEvents().find(x => actualUser(x) && (x.seq === m?.[TODO_META]?.originalSeq || x.data.id === base.id));
+    return origin ? [origin] : [];
+  });
+  const userOriginals = combineUsers(...parents.map(r => r.userOriginals || []), originals.map(e => ({
     sessionId: session.id, seq: e.seq, at: eventTime(e), content: structuredClone(e.data.content),
   })));
   const assets = combineAssets(...parents.map(r => r.assets || []), ...events.map(e => attachmentsOf(session.deriveEventMessage(e)?.content, session.id, e.seq)));
-  const originalSeqs = [...new Set([...seqs.filter(seq => session.deriveEventMessage(session.eventAt(seq)) && !parents.some(r => r.carrierSeq === seq)), ...parents.flatMap(r => r.originalSeqs || r.sourceSeqs)])].sort((a,b) => a-b);
+  const originalSeqs = [...new Set([...seqs.filter(seq => session.deriveEventMessage(session.eventAt(seq)) && !parents.some(r => r.carrierSeq === seq)), ...parents.flatMap(r => r.originalSeqs || r.sourceSeqs), ...originals.map(e => e.seq)])].sort((a,b) => a-b);
   return { id: randomUUID(), version: 1, mode: 'raw', ...(wholeWindow ? { kind: 'window', retainedSeqs: events.retainedSeqs || [] } : {}),
     sourceSeqs: seqs, sourceHash: sourceHash(session, seqs), originalSeqs,
     ranges: [{ sessionId: session.id, from: Math.min(...originalSeqs), to: Math.max(...originalSeqs) }],

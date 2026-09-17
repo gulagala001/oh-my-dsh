@@ -1,5 +1,7 @@
+import { withoutTodo, isTaskInjection, TODO_META } from '../task-context.mjs';
+import { attachTodoRefresh, requireSavings } from './todo-refresh.mjs';
 import { randomUUID } from 'node:crypto';
-import { hash, liveSpan, recordText, recordBlocks, userRevision, exposedTrace, actualUser, carrierBarrier, recordSnapshot } from './core.mjs';
+import { hash, liveSpan, recordText, recordBlocks, userRevision, exposedTrace, actualUser, carrierBarrier, recordSnapshot, sourceHash, splitGroups } from './core.mjs';
 import { combineAssets, combineUsers, userDocument, attachmentsOf, contentChars, messageTokens } from './materials.mjs';
 import { TRACE_HEAD, SUMMARY_PROMPT_VERSION } from './prompts.mjs';
 
@@ -38,14 +40,15 @@ export function createTransaction(session, state, plan, cfg, pairing, pricing = 
       for (const { r } of picked) r.mergedInto = output.id;
       working.push(output); map.set(output.id, output);
     } else { output = picked[0].r; output.mode = choice.action; }
-    const selectedSeqs = picked.flatMap(p => p.span.seqs);
+    const selectedSeqs = picked.flatMap(p => p.span.seqs).filter(seq => !isTaskInjection(session.eventAt(seq)));
+    if (!selectedSeqs.length) continue;
     if (selectedSeqs.some(seq => changedSources.has(seq))) throw Error('替换计划包含重叠来源，原文保留');
     for (const seq of selectedSeqs) changedSources.add(seq);
     for (const seq of output.originalSeqs || output.sourceSeqs) origins.add(seq);
     selectedRecords += picked.length;
     output.assets = combineAssets(output.assets || [], ...selectedSeqs.map(seq => attachmentsOf(sourceMessage(seq)?.content, session.id, seq)));
     const content = recordBlocks(output, output.mode), text = recordText(output, output.mode);
-    const groups = picked.flatMap(p => p.span.groups || [p.span.seqs]);
+    const groups = picked.flatMap(p => splitGroups(session.surface.nodes, p.span.seqs.filter(seq => !isTaskInjection(session.eventAt(seq)))));
     const carrierIndex = groups.findIndex(group => session.surface.nodes.indexOf(group[0]) > barrier);
     if (carrierIndex < 0) throw Error('摘要需要放在前置 CoT 或首条请求之后，请扩大处理窗口；原文保留');
     const orderedGroups = [groups[carrierIndex], ...groups.filter((_, i) => i !== carrierIndex)];
@@ -64,27 +67,27 @@ export function createTransaction(session, state, plan, cfg, pairing, pricing = 
     const slotLive = traceSlot && session.surface.nodes.includes(traceSlot.carrierSeq);
     const firstChanged = Math.min(...operations.filter(o => o.kind === 'record').map(o => o.position));
     const covered = new Set(operations.flatMap(o => o.seqs));
-    const anchor = slotLive ? session.eventAt(traceSlot.carrierSeq) : session.surface.nodes.slice(0, firstChanged).map(seq => session.eventAt(seq)).find(e => actualUser(e) && !covered.has(e.seq));
+    const anchor = slotLive ? session.eventAt(traceSlot.carrierSeq) : session.surface.nodes.slice(0, firstChanged).map(seq => session.eventAt(seq)).find(e => (actualUser(e) || e.data?.source?.plugin === 'trisoul-x:todo-prefix') && !covered.has(e.seq));
     if (!anchor && !state.fullCompaction) throw new Error('所选摘要之前没有安全的推理承载位置；原文保留。');
     if (anchor && (!slotLive || traceSlot.traceHash !== hash(trace))) {
-      const original = slotLive ? traceSlot.original : structuredClone(anchor.data);
+      const original = slotLive ? traceSlot.original : structuredClone(withoutTodo(anchor.data));
       const text = `[${TRACE_HEAD} · source event ${trace.sourceSeq}${trace.truncated ? ' · excerpt' : ''}]\n${trace.text}\n[End previous analysis]\n`;
       const content = [{ type: 'text', text }, ...(original.content || [])];
+      const previous = sourceMessage(anchor.seq), savedTodo = previous?.[TODO_META];
+      if (savedTodo) content.splice(1, 0, previous.content[savedTodo.index]);
+      const traceId = randomUUID(), todoMeta = savedTodo ? { ...savedTodo, index: 1, baseId: traceId, baseSource: { kind: 'plugin', plugin: 'trisoul-x:trace' } } : null;
       inputChars += contentChars(sourceMessage(anchor.seq)?.content); outputChars += contentChars(content);
       inputTokens += messageTokens(sourceMessage(anchor.seq), pricing); outputTokens += messageTokens({ role: 'user', content }, pricing);
-      operations.unshift({ id: randomUUID(), kind: 'trace', seqs: [anchor.seq], text, original, position: session.surface.nodes.indexOf(anchor.seq) });
+      operations.unshift({ id: traceId, kind: 'trace', seqs: [anchor.seq], text, original, content, ...(todoMeta ? { todoMeta } : {}), position: session.surface.nodes.indexOf(anchor.seq) });
       traceSlot = { original, traceHash: hash(trace), sourceSeq: trace.sourceSeq, sourceAt: trace.at, truncated: trace.truncated };
     }
   }
-  if (cfg.requireShorter !== false && outputTokens >= inputTokens) {
-    const error = new Error(`摘要、详细资料与推理前置合计没有缩短上下文（估算 ${inputTokens} → ${outputTokens} tokens），保留原文`);
-    error.cost = { inputTokens, outputTokens, inputChars, outputChars }; throw error;
-  }
   for (const op of operations) if (plan.sourceCommandId) op.sourceCommandId = plan.sourceCommandId;
-  return { id: randomUUID(), planId: plan.id, operations, records: working, traceSlot, inputChars, outputChars, inputTokens, outputTokens,
+  const tx = { id: randomUUID(), planId: plan.id, operations, records: working, traceSlot, inputChars, outputChars, inputTokens, outputTokens,
     stats: { selectedRecords, currentMessages: [...changedSources].filter(seq => sourceMessage(seq)).length, currentNodes: changedSources.size, originalEvents: origins.size, resultRecords: operations.filter(o => o.kind === 'record').length,
       estimatedSavedTokens: inputTokens - outputTokens, costBasis: pricing.imagePricing || pricing.fileText ? 'route-estimate' : 'host-estimate' },
     createdAt: Date.now(), applied: {}, source: plan.source || 'coordinator', userRevision: plan.userRevision };
+  return requireSavings(attachTodoRefresh(session, tx, pricing), cfg.requireShorter !== false);
 }
 
 function eventMessageId(e) { return e.type === 'user/message' ? e.data?.id : e.data?.message?.id; }
@@ -94,13 +97,25 @@ export async function applyTransaction(session, state, tx, store, adapter) {
   if (!tx) return null;
   state.transaction = tx; store.save(state);
   try {
+    let enteredTodoPhase = false;
     for (const op of tx.operations) {
+      if (!enteredTodoPhase && (op.kind.startsWith('todo-') || op.todoCleanup)) {
+        await adapter.flush(session); enteredTodoPhase = true;
+      }
+      const refs = op.seqs.map(seq => typeof seq === 'number' ? seq : tx.applied[seq]);
+      if (refs.some(seq => !Number.isSafeInteger(seq))) throw Error('todo 刷新事务的承载消息尚未提交');
+      op.resolvedSeqs = refs;
       const existing = session.snapshotEvents().find(e => eventMessageId(e) === op.id);
       if (existing) { tx.applied[op.id] = existing.seq; continue; }
-      const nodes = session.surface.nodes, index = nodes.indexOf(op.seqs[0]);
-      if (index < 0 || op.seqs.some((seq, i) => nodes[index + i] !== seq)) throw new Error('未完成事务的来源区间发生变化；已保留日志，停止发送以免扩大损失');
-      const refs = [...op.seqs];
-      const event = adapter.append(session, op, { op: 'replace', startSeq: op.seqs[0], endSeq: op.seqs.at(-1) }, refs);
+      const nodes = session.surface.nodes, index = nodes.indexOf(refs[0]);
+      if (index < 0 || refs.some((seq, i) => nodes[index + i] !== seq)) throw new Error('未完成事务的来源区间发生变化；已保留日志，停止发送以免扩大损失');
+      if (op.kind === 'todo-refresh') {
+        const base = withoutTodo(session.deriveEventMessage(session.eventAt(refs[0])));
+        op.message = { ...base, ...op.message, source: base.source?.kind === 'user' ? { kind: 'plugin', plugin: 'trisoul-x:todo-prefix' } : base.source,
+          [TODO_META]: { ...op.message[TODO_META], baseId: base.id, baseSource: base.source } };
+        store.save(state);
+      }
+      const event = adapter.append(session, op, { op: 'replace', startSeq: refs[0], endSeq: refs.at(-1) }, refs);
       tx.applied[op.id] = event.seq;
       store.save(state);
     }
@@ -108,8 +123,22 @@ export async function applyTransaction(session, state, tx, store, adapter) {
     for (const op of tx.operations) {
       if (op.kind === 'record') tx.records.find(r => r.id === op.recordId).carrierSeq = tx.applied[op.id];
       if (op.kind === 'trace') tx.traceSlot.carrierSeq = tx.applied[op.id];
+      if (op.kind === 'todo-refresh' || op.kind === 'todo-restore' || op.todoCleanup) {
+        const before = op.resolvedSeqs[0], after = tx.applied[op.id];
+        if (tx.traceSlot?.carrierSeq === before) tx.traceSlot.carrierSeq = after;
+        for (const r of tx.records.filter(r => !r.mergedInto)) {
+          if (r.carrierSeq === before) { r.carrierSeq = after; r.version++; }
+          if (r.mode === 'raw' && r.sourceSeqs.includes(before)) {
+            r.originalSeqs ||= [...r.sourceSeqs];
+            r.sourceSeqs = r.sourceSeqs.map(seq => seq === before ? after : seq);
+            r.sourceHash = sourceHash(session, r.sourceSeqs); r.version++;
+          }
+          if (r.retainedSeqs) r.retainedSeqs = r.retainedSeqs.map(seq => seq === before ? after : seq);
+        }
+      }
     }
     state.records = tx.records; state.traceSlot = tx.traceSlot;
+    if (tx.todoRefresh) state.todoRefresh = { ...tx.todoRefresh, carrierSeq: tx.applied[tx.todoRefresh.operationId], at: Date.now() };
     if (tx.statePatch) Object.assign(state, tx.statePatch);
     state.pending = null; state.transaction = null;
     state.lastReplacementStep = state.steps;
@@ -119,7 +148,7 @@ export async function applyTransaction(session, state, tx, store, adapter) {
       shadowedTokenCount: native.reduce((n, o) => n + (o.native.shadowedTokenCount || 0), 0),
       id: tx.id, source: tx.source, at: Date.now(), inputChars: tx.inputChars, outputChars: tx.outputChars,
       inputTokens: tx.inputTokens, outputTokens: tx.outputTokens, stats: tx.stats || null,
-      operations: tx.operations.map(o => ({ kind: o.kind, seqs: o.seqs, resultSeq: tx.applied[o.id], recordId: o.recordId })) };
+      operations: tx.operations.map(o => ({ kind: o.kind, seqs: o.resolvedSeqs || o.seqs, resultSeq: tx.applied[o.id], recordId: o.recordId })) };
     store.save(state);
     return state.lastReplacement;
   } catch (error) {

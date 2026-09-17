@@ -1,3 +1,4 @@
+import { renderTodoInjection, TODO_META } from './task-context.mjs';
 import { promptText } from './cc-adaptation/texts.mjs';
 // Task ledger adapted from trisoul 4189f90: preserve excerpts, anchors, item operations and evidence.
 // DSH V3 events and a unified model-facing tool are wired in tasks.mjs.
@@ -133,11 +134,7 @@ function renderVerifyView(rec) {
   return lines.join('\n')
 }
 /** I2 裸版注入正文：[todo list] 标签 + 逐行 [ ]/[x]（无任何框架语；仅任务树+完成态） */
-function renderInjection(rec) {
-  // 08-30 P14：删空后的一版要把画布钉着的旧清单换掉，正文明说已清空（画布按 [todo list] 前缀认最新一版）
-  if (!rec.tasks.length) return '[todo list]\n(empty — all tasks were removed)'
-  return ['[todo list]', ...rec.tasks.map(t => `${t.done ? '[x]' : '[ ]'} ${t.id} ${t.title}`)].join('\n')
-}
+const renderInjection = renderTodoInjection
 
 // Original task-completion reminders; shared by the single-model stopping hook.
 const qualified = (l) => l.kind === 'text' || l.lastRun?.pass === true
@@ -261,7 +258,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     for (const e of session.snapshotEvents()) {
       // quiet 快照（I6 问过标记）= 模型面无变化：不涨 rev、不算变更位点（否则 resume 后白注一版清单）
       if (isTodoSnapshot(e) || (e.type === TODOLIST_EVENT && Array.isArray(e.data?.todos))) { last = e; if (!e.data.quiet) { r.rev++; lastSnapSeq = e.seq } }
-      else if (e.type === 'user/message' && e.data?.source?.plugin === 'trisoul-x:tasks') {
+      else if (e.type === 'user/message' && (e.data?.source?.plugin === 'trisoul-x:tasks' || e.data?.[TODO_META])) {
         r.lastInjSeq = Math.max(r.lastInjSeq, e.seq)
         const m = e.data.id.match(/-(\d+)$/)
         if (m) r.injCounter = Math.max(r.injCounter, Number(m[1]))
@@ -631,13 +628,18 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
   /** I2 换代注入（pre-step 边界调用，机制同画布状态区 P2-2）：变更后 / 状态区更新后 append 一版新清单 */
   const maintainInjection = (session) => {
     const rec = getRec(session)
+    const live = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && (e.data?.source?.plugin === 'trisoul-x:tasks' || e.data?.[TODO_META]));
+    const refreshed = live.findLast(e => e.data?.[TODO_META]);
+    if (refreshed && refreshed.seq > rec.lastInjSeq && refreshed.data.content[refreshed.data[TODO_META].index]?.text === renderInjection(rec)) {
+      rec.lastInjSeq = refreshed.seq; rec.injectedRev = rec.rev;
+    }
     // 08-30 P14：从未注入过的空清单无事可钉；被删空的清单要再发一版「已清空」换掉画布钉着的旧版——只发一次（版本没变不重发），不跟画布换代
     if (!rec.tasks.length && (rec.lastInjSeq < 0 || rec.injectedRev === rec.rev)) return undefined
     let canvasSeq = -1
     for (const e of session.snapshotEvents()) {
       if (e.type === 'user/message' && e.data?.source?.kind === 'plugin' && e.data.source.plugin === 'trisoul-x:state' && e.seq > canvasSeq) canvasSeq = e.seq
     }
-    const stale = rec.injectedRev !== rec.rev || rec.lastInjSeq < 0 || (rec.tasks.length > 0 && canvasSeq > rec.lastInjSeq)
+    const stale = rec.injectedRev !== rec.rev || !live.some(e => e.seq === rec.lastInjSeq) || rec.lastInjSeq < 0 || (rec.tasks.length > 0 && canvasSeq > rec.lastInjSeq)
     if (!stale) return undefined
     const msg = createUserMessage({ content: [{ type: 'text', text: renderInjection(rec) }], source: { kind: 'plugin', plugin: 'trisoul-x:tasks' } })
     const ev = session.append('user/message', msg, { surfaceOp: 'append' })
