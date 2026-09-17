@@ -158,7 +158,7 @@ export class BrowserViews {
         // instead of labelling a queued pre-resize JPEG with newer dimensions.
         const previous = view.latest?.geometry ?? view.initialGeometry;
         const changed=['zoom','layoutWidth','layoutHeight'].some(key=>previous?.[key]!==geometry[key]);
-        const resized=captureOnly&&Object.keys(geometry).some(key=>previous?.[key]!==geometry[key]);
+        const resized=captureOnly&&(Boolean(view.latest && view.latest.loaderId !== loaderId)||Object.keys(geometry).some(key=>previous?.[key]!==geometry[key]));
         if(!event&&!changed&&!resized)continue;
         let width,height,data,mediaType;
         if (changed||resized) {
@@ -185,7 +185,14 @@ export class BrowserViews {
         view.publish('frame', frame);
         retryAt = 0;
       } catch (error) {
-        if (!view.closed && ['VIEW_NAVIGATED', 'STALE_SCREENSHOT'].includes(error.code)) continue;
+        if (!view.closed && error.code === 'VIEW_NAVIGATED') {
+          // A navigation can abort the only pending resize capture after its
+          // newest JPEG was fenced out. Refresh the new document, not the old
+          // request, so a still page does not remain frozen indefinitely.
+          view.pending ??= { loaderId: view.loaderId, captureOnly: true };
+          continue;
+        }
+        if (!view.closed && error.code === 'STALE_SCREENSHOT') continue;
         if (!view.closed && /Not attached to an active page/.test(error.message)) {
           retryAt ||= Date.now();
           if (Date.now() - retryAt < this.observationTimeoutMs) { view.pending ??= { event, loaderId, captureOnly }; await new Promise(resolve => setTimeout(resolve, 50)); continue; }
