@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 
 test('DSH alpha.2 live unload/reload releases UI and restores one instance without losing settings or history', { timeout: 90000 }, async t => {
-  const f=await frontendFixture(t), {page}=f, base=new URL(page.url()).origin;
+  const f=await frontendFixture(t, { lifecycleTrace: true }), {page}=f, base=new URL(page.url()).origin;
   const credentials=await readFile(join(f.home,'.credentials.yaml'),'utf8');
   const settings=await readFile(join(f.home,'settings.yaml'),'utf8');
   const readState=async()=>{const response=await page.request.get(base+'/trisoul-x/api/state?session='+f.sessionId);assert.ok(response.ok());return response.json();};
@@ -13,7 +13,7 @@ test('DSH alpha.2 live unload/reload releases UI and restores one instance witho
   const change=async(name,enabled)=>{
     const method='pluginManager/setBundleEnabled';
     const response=await page.request.post(base+'/api/'+method,{data:{type:'client-request',rpcId:crypto.randomUUID(),method,payload:{args:{name,enabled}}}});
-    const value=await response.json(); if (value.result?.value?.application !== 'applied') console.error('Live reload diagnostics', f.log()); assert.equal(value.result?.ok,true,JSON.stringify(value));assert.equal(value.result.value.application,'applied',JSON.stringify(value));
+    const value=await response.json(); if (value.result?.value?.application !== 'applied') console.error('Live reload diagnostics', f.log(), await f.lifecycle()); assert.equal(value.result?.ok,true,JSON.stringify(value));assert.equal(value.result.value.application,'applied',JSON.stringify(value));
   };
   for(let cycle=0;cycle<2;cycle++) {
     await change('trisoul_x',false);
