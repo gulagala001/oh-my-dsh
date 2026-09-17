@@ -12,7 +12,7 @@ export const Config = z.object({
   preprocessBoundaries: z.boolean().default(false),
   prepareBatchWindows: z.number().step(1).min(1).default(2),
   prepareContinueTokens: z.number().step(1).min(1).default(8000),
-  prepareInputTokens: z.number().step(1).min(1).default(48000),
+  prepareInputTokens: z.number().step(1).min(1).default(300000),
   summaryTargetChars: z.number().step(1).min(1).default(1200),
   backgroundConcurrency: z.number().step(1).min(1).default(2),
   backgroundMaxRetries: z.number().step(1).min(0).default(2),
