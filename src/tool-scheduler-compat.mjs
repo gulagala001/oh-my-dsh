@@ -1,3 +1,4 @@
+import { symbols } from '@deepseek-ai/cordis';
 import { TOOL_RUNTIME_SCHEDULER } from '@deepseek-ai/dsh-tools';
 
 const aliases = new WeakMap();
@@ -6,6 +7,7 @@ const aliases = new WeakMap();
 // module-private symbols differ even though the scheduler contract is identical.
 // Reuse the existing scheduler; never rerun, substitute or approve a tool call.
 export function bindToolScheduler(service, key = TOOL_RUNTIME_SCHEDULER) {
+  service = service?.[symbols.original] || service;
   const owned = aliases.get(service)?.get(key);
   if (owned && Object.getOwnPropertyDescriptor(service, key)?.value === owned.scheduler) {
     owned.owners++;
