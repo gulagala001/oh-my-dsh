@@ -215,7 +215,7 @@ test('forced idle preparation does not drain every remaining segment', async t =
 });
 
 test('coordinator cooldown never triggers preparation or replaces the idle timer', async t => {
-  const f = setup(t, { coordinatorMinGapMs: 20, flushIdleMs: 10000 });
+  const f = setup(t, { coordinatorEvery: 2, coordinatorMinGapMs: 20, flushIdleMs: 10000 });
   add(f); exchange(f.s); f.pipeline.agents.set(f.s.id, f.agent);
   f.state.review.lastAt = Date.now(); f.state.review.newRecords = 2;
   const kinds = [];

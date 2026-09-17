@@ -25,7 +25,8 @@ test('native slash commands and sidebar execute both compression modes without l
     if (queuedReadPending) { queuedReadPending = false; return tool('read', { file_path: 'missing-compact-fixture.txt' }); }
     return { delta: { role: 'assistant', content: 'NEXT_MAIN_AFTER_COMPACTION\n' + '新的工作记录。'.repeat(150) }, finish_reason: 'stop' };
   });
-  await api('/settings', { preprocessBoundaries: true, prepareBatchWindows: 1, keepTailEvents: 2, automaticReplace: false, digestEvery: 9999, traceEnabled: false });
+  // This scenario prepares two records before checking automatic review.
+  await api('/settings', { coordinatorEvery: 2, preprocessBoundaries: true, prepareBatchWindows: 1, keepTailEvents: 2, automaticReplace: false, digestEvery: 9999, traceEnabled: false });
   await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '继续记录进展，保留上下文测试材料。' }] });
   await until(async () => (await api('/state' + q)).running === 'idle');
   await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '再记录一轮详细进展用于压缩。' }] });

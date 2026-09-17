@@ -12,7 +12,7 @@ function setup(t, config = {}) {
   t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1000000 });
   const dir = mkdtempSync(join(tmpdir(), 'cadence-stale-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
   const session = new FixtureSession(); system(session); user(session, 'Test task.');
-  const cfg = contextConfig({ keepTailEvents: 0, traceEnabled: true, coordinatorMinGapMs: 30000, coordinatorEvery: 2, ...config });
+  const cfg = contextConfig({ digestEvery: 32, digestWindow: 32, keepTailEvents: 0, traceEnabled: true, coordinatorMinGapMs: 30000, coordinatorEvery: 2, ...config });
   const calls = [], actions = [], hub = { store: { dir }, config: () => cfg, scope: () => ({ mode: 'session', project: 'test' }), ctx: {},
     action(_s, name, _n, detail) { actions.push({ name, detail }); },
     async call(_a, kind, request) { calls.push({ kind, request }); return kind === 'prepare' ? reply('prepare_segment', prepared) : reply('submit_context_choices', { choices: [] }); } };

@@ -1,3 +1,4 @@
+import { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
 import { randomUUID } from 'node:crypto';
 import { compactFull } from './full-compaction.mjs';
 import { ContextStore } from './store.mjs';
@@ -6,10 +7,10 @@ import { attachmentsOf, combineAssets, describeAsset, messageOf } from './materi
 import { createTransaction, applyTransaction } from './transactions.mjs';
 import { SUMMARY_PROMPT_VERSION, PREPARE_SYSTEM, PREPARE_TOOL, COORDINATE_SYSTEM, COORDINATE_TOOL } from './prompts.mjs';
 
-export const DEFAULTS = Object.freeze({ contextEnabled: true, digestEvery: 32, digestWindow: 32, digestLookback: 8,
+export const DEFAULTS = Object.freeze({ contextEnabled: true, ...CONTEXT_FREQUENCY_PRESETS.medium, digestLookback: 8,
   preprocessBoundaries: false, prepareBatchWindows: 2, prepareContinueTokens: 8000, prepareInputTokens: 300000, summaryTargetChars: 1200, backgroundConcurrency: 2, backgroundMaxRetries: 2,
-  idlePreprocessEnabled: false, flushIdleMs: 90000, coordinatorEvery: 2, coordinatorMinGapMs: 30000, coordinatorRecentEvents: 12,
-  automaticReplace: true, surgeryCooldownSteps: 20, keepTailEvents: 30, traceEnabled: true, traceMaxChars: 0, requireShorter: true });
+  idlePreprocessEnabled: false, flushIdleMs: 90000, coordinatorRecentEvents: 12,
+  automaticReplace: true, keepTailEvents: 30, traceEnabled: true, traceMaxChars: 0, requireShorter: true });
 export function contextConfig(raw = {}) {
   const cfg = { ...DEFAULTS, ...raw };
   for (const key of ['contextEnabled', 'preprocessBoundaries', 'idlePreprocessEnabled', 'automaticReplace', 'traceEnabled', 'requireShorter']) if (typeof cfg[key] !== 'boolean') throw new Error(`${key} 必须为布尔值`);

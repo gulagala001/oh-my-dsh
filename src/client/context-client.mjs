@@ -1,13 +1,10 @@
+import { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
+export { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
 import { DEFAULT_IDENTITY } from '../cc-adaptation/identity.mjs';
 
 /* Keep the original workbench and host theme. These panels replace only the
  * context/summary settings and slots whose semantics changed in Context v1. */
 export const CONTEXT_UI_VERSION = '1.3.0';
-export const CONTEXT_FREQUENCY_PRESETS = Object.freeze({
-  always: Object.freeze({ digestEvery: 16, digestWindow: 16, coordinatorEvery: 1, coordinatorMinGapMs: 15000, surgeryCooldownSteps: 10 }),
-  medium: Object.freeze({ digestEvery: 32, digestWindow: 32, coordinatorEvery: 2, coordinatorMinGapMs: 30000, surgeryCooldownSteps: 20 }),
-  slow: Object.freeze({ digestEvery: 48, digestWindow: 48, coordinatorEvery: 3, coordinatorMinGapMs: 60000, surgeryCooldownSteps: 30 }),
-});
 export function contextFrequencyOf(config = {}) {
   return Object.entries(CONTEXT_FREQUENCY_PRESETS).find(([, values]) => Object.entries(values).every(([key, value]) => config[key] === value))?.[0] || 'custom';
 }
@@ -245,8 +242,8 @@ export function createContextUI(React) {
     }
     frequency() {
       const c = this.state.config, value = this.state.custom ? 'custom' : contextFrequencyOf(c);
-      const desc = { always: '更及时地整理，后台调用相对更多。', medium: '积累一段工作后再整理。', slow: '合并更多事件再处理，更新也会更晚。', custom: '保留你的参数，按实际工作节奏调整。' }[value];
-      return section('处理频率', '保留原有四档操作，参数对应新的处理链路。', h(React.Fragment, null,
+      const desc = { always: '更及时地整理，后台调用相对更多。', medium: '默认档位，积累一段工作后再整理。', slow: '合并更多事件再处理，更新也会更晚。', custom: '保留你的参数，按实际工作节奏调整。' }[value];
+      return section('处理频率', '默认使用适中档，可按工作节奏调整。', h(React.Fragment, null,
         segments('更新频率', value, Object.entries(frequencyNames), this.pickPreset),
         h('div', { className: 'cx-frequency-preview' }, h('div', null, h('span', null, '预处理'), h('strong', null, c.digestEvery), h('small', null, '条新事件')), h('div', null, h('span', null, '中枢'), h('strong', null, c.coordinatorEvery), h('small', null, '段新摘要')), h('div', null, h('span', null, '替换间隔'), h('strong', null, c.surgeryCooldownSteps), h('small', null, '步以上'))),
         h('p', { className: 'cx-hint cx-frequency-caption' }, desc, ' 分段窗口 ', String(c.digestWindow), ' 条；中枢最短间隔 ', duration(c.coordinatorMinGapMs), '。'),
