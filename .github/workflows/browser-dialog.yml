@@ -1,0 +1,23 @@
+name: Browser dialog regression
+on:
+  workflow_dispatch:
+  push:
+    branches: ['main']
+    paths: ['test/computer-use-ui.test.mjs', '.github/workflows/browser-dialog.yml']
+permissions:
+  contents: read
+jobs:
+  browser-dialog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.19.0'
+      - uses: pnpm/action-setup@v6
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm build
+      - run: node --test --test-name-pattern='DSH extension' test/computer-use-ui.test.mjs
+      - run: node --test --test-name-pattern='DSH extension' test/computer-use-ui.test.mjs

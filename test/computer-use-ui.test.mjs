@@ -687,8 +687,29 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   assert.ok(await page.evaluate(() => (window.__cuDelayedNavigations ?? []).length), 'the fixture must really retain an old navigation observation');
   await page.evaluate(async () => { for (const deliver of window.__cuDelayedNavigations) deliver(); delete window.__cuDelayedNavigationUrl; delete window.__cuDelayedNavigations; await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); });
   assert.equal(await address.inputValue(), fixture.url + '/mousedown-dialog', 'the old completed response cannot overwrite the later address');
+  const dialogInputs = [], nativeDialogs = [];
+  const observeInput = async response => {
+    if (new URL(response.url()).pathname !== '/trisoul-x/computer-use/input') return;
+    const request = response.request().postDataJSON();
+    const result = await response.json().catch(() => ({}));
+    dialogInputs.push({ type: request.type, x: request.x, y: request.y, frameId: request.frameId, controlEpoch: request.controlEpoch, status: response.status(), error: result.error });
+  };
+  page.on('response', observeInput);
+  second.on('dialog', value => nativeDialogs.push(value.message()));
+  await page.evaluate(() => {
+    window.__dialogInputTrace = [];
+    document.addEventListener('pointerdown', event => {
+      const live = document.querySelector('.tx-cu-pane .tx-cu-live');
+      window.__dialogInputTrace.push({ target: event.target.className, x: event.clientX, y: event.clientY, connection: live?.dataset.connection, resizing: live?.dataset.layoutBusy });
+    }, { capture: true, once: true });
+  });
   await click(second.getByRole('button', { name: '打开对话框', exact: true }));
-  await page.getByText('On down', { exact: true }).waitFor();
+  try { await page.getByText('On down', { exact: true }).waitFor(); }
+  catch (error) {
+    console.log('Dialog delivery diagnostics', JSON.stringify({ inputs: dialogInputs, nativeDialogs, ui: await page.evaluate(() => window.__dialogInputTrace), pageEvents: await Promise.race([second.evaluate(() => ({ events: fixtureEvents, clicks: window.geometryFixture?.clicks, active: document.activeElement?.outerHTML?.slice(0,300) })), delay(1000).then(() => 'dialog blocks page evaluation')]) }));
+    throw error;
+  }
+  page.off('response', observeInput);
   await page.getByLabel('网页提示输入').fill('鼠标已释放');
   await page.locator('.tx-cu-dialog').getByRole('button', { name: '确定', exact: true }).click();
   await second.waitForFunction(() => fixtureEvents.at(-1)?.value === '鼠标已释放');
