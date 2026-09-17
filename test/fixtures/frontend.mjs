@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { spawn, execFileSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { mkdtemp, mkdir, writeFile, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -38,7 +38,9 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
     execFileSync(process.execPath, [fileURLToPath(new URL('../../node_modules/@deepseek-ai/dsh/lib/bin.js', import.meta.url)), '--profile', 'trisoul-x', '--from-default-profile', 'web', '--dump-config'], { cwd: new URL('../../', import.meta.url), env: { ...process.env, DSH_HOME: home }, stdio: ['ignore', 'ignore', 'pipe'] });
     const directory = join(home, 'profiles', 'trisoul-x');
     await writeFile(lifecycleFile, '');
-    await writeFile(join(directory, 'cordis.patch.yml'), JSON.stringify([{ insert: [{ id: 'omd-test-lifecycle', name: new URL('./lifecycle-trace.mjs', import.meta.url).href, config: { file: lifecycleFile } }] }]));
+    const traceModule = join(root, 'lifecycle-trace.mjs');
+    await writeFile(traceModule, await readFile(new URL('./lifecycle-trace.mjs', import.meta.url), 'utf8'));
+    await writeFile(join(directory, 'cordis.patch.yml'), JSON.stringify([{ insert: [{ id: 'omd-test-lifecycle', name: pathToFileURL(traceModule).href, config: { file: lifecycleFile } }] }]));
   }
   const child = spawn(process.execPath, ['scripts/start.mjs'], { cwd: new URL('../../', import.meta.url), env: { ...process.env, DSH_HOME: home, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
   let log = '', browser, page; const errors = [];
