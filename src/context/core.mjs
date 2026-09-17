@@ -241,7 +241,7 @@ export function prepareCandidate(session, state, cfg, pairing) {
   }
   if (first < 0) return null;
   let end = first, lastSafe = -1, chars = 0, members = 0;
-  const maxChars = (cfg.prepareInputTokens || 48000) * 4;
+  const maxChars = (cfg.prepareInputTokens || 300000) * 4;
   for (; end < stop; end++) {
     const seq = nodes[end], e = session.eventAt(seq);
     if (summaryRead(e)) { chars += JSON.stringify(keep.has(seq) ? '[Protected host context retained in place.]' : materialText(summaryRead(e).content, seq)).length + 80; if (!keep.has(seq)) members++; }
