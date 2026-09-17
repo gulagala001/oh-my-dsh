@@ -13,7 +13,7 @@ export async function until(fn, timeout = 20000) {
   throw new Error('Frontend fixture timed out');
 }
 
-export async function frontendFixture(t, { imageBudget, versionResponse } = {}) {
+export async function frontendFixture(t, { imageBudget, versionResponse, headless = false } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'trisoul-frontend-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   await mkdir(home); await mkdir(workspace);
   let nextReply, releaseReply, replyFactory;
@@ -56,6 +56,15 @@ export async function frontendFixture(t, { imageBudget, versionResponse } = {}) 
   const registered = await rpc('workspace/create', { path: workspace });
   const { sessionId } = await rpc('session/create', { workspaceId: registered.workspace.workspaceId, agentPreset: 'trisoul-x' });
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '整理工作台和对话界面' }] });
+  if (headless) return { root, home, origin, rpc, sessionId, errors, log: () => log.replace(/token=\S+/g, 'token=[redacted]'),
+    async call(method, args) {
+      const response = await fetch(origin + '/api/' + method, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', cookie },
+        body: JSON.stringify({ type: 'client-request', rpcId: crypto.randomUUID(), method, payload: { args } }),
+      });
+      return response.json();
+    },
+  };
   browser = await chromium.launch({ headless: true, executablePath: chromium.executablePath() });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: 'light', locale: 'zh-CN' });
   await context.addCookies(cookie.split('; ').map(value => { const index = value.indexOf('='); return { name: value.slice(0, index), value: value.slice(index + 1), url: origin }; }));
