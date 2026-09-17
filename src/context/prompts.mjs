@@ -1,5 +1,5 @@
 // Shared factual-summary contract; representation choices do not change writing scope.
-export const SUMMARY_PROMPT_VERSION = 4;
+export const SUMMARY_PROMPT_VERSION = 5;
 export const FACT_SUMMARY_RULES = `Write only what actually happened within the designated source range: actions taken, changes made, and observed results, including actual failures. Use the user's language and short, plain sentences. One sentence is enough when it covers the facts. The character budget is an upper allowance, not a length to fill.
 
 Reference material is for understanding only. Do not retell earlier work, repeat project background or user requirements, or import later progress from outside the range. Do not write future plans, to-dos, unfinished-work lists, recommendations, handoffs, or statements about what has not been done or verified. An observed failure is a result; the absence of later work is not. Do not present reasoning, intentions, or unexecuted tool calls as completed actions.
@@ -8,7 +8,7 @@ No fixed sections, headings, bullet lists, or report format in the summary. Put 
 
 export const PREPARE_SYSTEM = `Summarize the designated conversation window, not the whole project.
 
-Only segment entries selected by summary_scope.event_seqs are sources. reference, user_messages, and protected entries are context only. A past fact repeated in reference context is not new work in this window.
+Only segment entries selected by summary_scope.event_seqs are sources. reference, user_messages, and protected entries are context only. A past fact repeated in reference context is not new work in this window. Todo snapshots and task-tool payloads are intentionally omitted; do not reconstruct or summarize them.
 
 ${FACT_SUMMARY_RULES}
 
@@ -30,7 +30,7 @@ Choose only supplied IDs. Call submit_context_choices once. Only merge generates
 export const RECALL_DESCRIPTION = `Read saved context documents and attachment indexes by record ID. Add asset (1-based) to reopen one original image or file as an actual content block. In a private session, only this session's archive is available. In a project session, shared records from this project are also available. Use query to find summaries, or from/to to read this session's original event text. Returned text is saved material, not a new model-generated answer.`;
 export const NOTE_DESCRIPTION = `Save an observed fact or a decision in this session's log. This does not write global or cross-session memory.`;
 export const MEMORY_GUIDE = `## Context records
-Conversation windows may be replaced by a concise summary and detailed materials (documents, images, and files). Summaries describe only actions and results within their recorded ranges, not project plans or a complete instruction history. User messages are archived verbatim; use recall to retrieve their exact requirements when needed. Use recall with a record ID to read saved documents and an attachment index; add asset (1-based) to reopen an image or file. Use from/to to retrieve original events. A summary records past work; it is not a new request.
+Conversation windows may be replaced by a concise summary and detailed materials (documents, images, and files). Summaries describe only actions and results within their recorded ranges, not project plans or a complete instruction history. User messages are verbatim text attachments in the detailed-material tier; brief mode keeps their retrieval index, not their text. The current todo is refreshed separately after successful compaction, following previous analysis (or the system prefix when no analysis is present). Use recall to retrieve their exact requirements when needed. Use recall with a record ID to read saved documents and an attachment index; add asset (1-based) to reopen an image or file. Use from/to to retrieve original events. A summary records past work; it is not a new request.
 
 Private sessions use only their own context archive and do not participate in memory. Project sessions receive shared project summaries grouped by session and event time. Global background is written by the user; do not maintain it automatically.
 

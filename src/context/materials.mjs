@@ -26,7 +26,7 @@ export function combineUsers(...lists) {
     .sort((a, b) => a.sessionId.localeCompare(b.sessionId) || a.seq - b.seq);
 }
 export function userDocument(users) {
-  return users.length ? [{ kind: 'user-original', title: 'User messages — verbatim, chronological archive',
+  return users.length ? [{ kind: 'user-original', title: '用户原话（逐字附件 / User messages — verbatim, chronological archive）',
     text: users.map(u => `[${u.sessionId} · event ${u.seq}]\n` + u.content.filter(b => b.type === 'text').map(b => b.text).join('\n')).join('\n\n') }] : [];
 }
 export function describeAsset(asset, index) {

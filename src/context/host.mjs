@@ -1,3 +1,4 @@
+import { TODO_META } from '../task-context.mjs';
 import { CompactionEngine, compactCheckpointSource, toolPairingBalancedBefore, toolPairingBalancedAfter } from '@deepseek-ai/dsh-compaction';
 import { createUserMessage, createSystemMessage } from '@deepseek-ai/dsh-llm';
 
@@ -20,9 +21,11 @@ export function createHostAdapter(hub) {
       const turn = last?.data.turn || 1, step = last?.data.step || 1;
       if (op.kind === 'delete') return session.append('system/message', { turn, step,
         message: { ...createSystemMessage('', 'trisoul-x:shadow'), id: op.id } }, { surfaceOp, sourceEventSeqs });
+      if (op.kind === 'todo-refresh' || op.kind === 'todo-restore') return session.append('user/message', op.message, { surfaceOp, sourceEventSeqs });
       if (op.kind === 'trace') return session.append('user/message', {
         ...message('', 'trace'), id: op.id,
-        content: [{ type: 'text', text: op.text }, ...(op.original.content || [])],
+        content: op.content || [{ type: 'text', text: op.text }, ...(op.original.content || [])],
+        ...(op.todoMeta ? { [TODO_META]: op.todoMeta } : {}),
       }, { surfaceOp, sourceEventSeqs });
       // Native lifecycle events keep host history and token-meter accounting coherent.
       const compactionId = op.id;

@@ -160,6 +160,7 @@ export function createContextUI(React) {
               ...(d.review?.choices || []).map((c, i) => h('div', { className: 'cx-decision', key: i }, badge(names[c.action] || c.action, 'blue'), h('code', null, c.ids?.map(id => id.slice(0, 8)).join('、')), c.reason && h('p', null, c.reason))),
               d.review?.lastDiscard && h('p', { className: 'cx-hint' }, '资料更新后，过期决定已作废；不计为模型失败，也不触发强制重试。'),
               button('查看中枢完整输入', this.readReview, { quiet: true, icon: 'context' }), this.state.review && h('pre', null, JSON.stringify(this.state.review.input, null, 2)))),
+            d.todoRefresh && h('p', { className: 'cx-hint' }, '上次压缩后已注入最新版 todo，并清理旧快照；预处理不读取 todo。用户原话与图片、文档同属详细资料。'),
             fold('Trace 与替换记录', d.trace ? '已前置提供方暴露的推理文本' : '尚无前置推理', h('div', null,
               h('p', { className: 'cx-hint' }, d.trace ? '来源事件 #' + d.trace.sourceSeq + (d.trace.truncated ? ' · 按设置截取' : ' · 原文本') : '没有已前置的推理文本；不会生成替代推理。'), d.lastReplacement && h('pre', null, JSON.stringify(d.lastReplacement, null, 2)),
               ...(d.notices || []).slice().reverse().map((n, i) => h('p', { className: 'cx-log-line', key: i }, h('time', null, date(n.at)), ' ', n.text))))),
