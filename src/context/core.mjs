@@ -260,13 +260,15 @@ export function candidateInput(session, events, lookback) {
   const all = session.snapshotEvents(), start = all.findIndex(e => e.seq === events[0].seq);
   const prior = lookback > 0 ? all.slice(0, start).filter(e => actualUser(e) || e.type === 'assistant/message' || e.type === 'tool/result').slice(-lookback) : [];
   const segment = (events.windowSeqs || events.map(e => e.seq)).map(seq => session.eventAt(seq));
-  return { reference: prior.map(e => ({ seq: e.seq, type: e.type, text: rawText(session, e) })),
+  return { summary_scope: { source: 'segment', event_seqs: events.filter(e => !(events.retainedSeqs || []).includes(e.seq) && session.deriveEventMessage(e)).map(e => e.seq), reference_only_fields: ['reference', 'user_messages'] },
+    reference: prior.map(e => ({ seq: e.seq, type: e.type, text: rawText(session, e) })),
     user_messages: userMessages(session).filter(u => u.seq <= Math.max(...segment.map(e => e.seq))).slice(-8),
     segment: segment.filter(e => session.deriveEventMessage(e)).map(e => ({ seq: e.seq, at: eventTime(e), type: e.type,
       protected: (events.retainedSeqs || []).includes(e.seq), text: windowText(session, e, (events.retainedSeqs || []).includes(e.seq)) })) };
 }
 export function coordinatorInput(session, state, cfg) {
   return {
+    summary_scope: { source: 'selected records only', reference_only_fields: ['user_messages', 'recent_events', 'compacted_conversation', 'context'] },
     user_messages: userMessages(session).filter(e => e.seq > (state.fullCompaction?.throughSeq ?? -1)),
     ...(state.fullCompaction ? { compacted_conversation: state.records.find(r => r.id === state.fullCompaction.recordId)?.summary } : {}),
     context: { entries: session.surface.nodes.map((seq, position) => ({ seq, position })), pressureRatio: cfg.pressureRatio ?? null,
