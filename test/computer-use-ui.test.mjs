@@ -23,7 +23,7 @@ async function until(fn, timeout = 30000) {
   throw new Error('Timed out waiting for the Computer Use UI');
 }
 
-for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browser UI: takeover, navigation, tabs, references and themes', { timeout: 180000, skip: backend === 'extension' && process.platform === 'win32' }, async t => {
+for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browser UI: takeover, navigation, tabs, references and themes', { timeout: process.platform === 'win32' ? 360000 : 180000, skip: backend === 'extension' && process.platform === 'win32' }, async t => {
   const began = performance.now(); let stage = 'prepare';
   const markStage = value => { stage = value; console.log('Computer Use UI stage:', backend, stage, Math.round(performance.now() - began) + 'ms'); };
   const root = await mkdtemp(join(tmpdir(), 'trisoul-cu-ui-')), home = join(root, 'home'), workspace = join(root, 'workspace');
@@ -297,7 +297,9 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
     await page.getByLabel('视口尺寸预设').selectOption('phone');await until(()=>target.evaluate(()=>innerWidth===390&&innerHeight===844));
     if(process.env.TRISOUL_CU_UI_ARTIFACTS)await page.screenshot({path:join(root,'browser-device-toolbar.png')});
     const scale=page.getByLabel('设备预览缩放'),surface=page.getByLabel('浏览器实时画面').locator('.tx-cu-live-surface');
+    const resumed = page.waitForResponse(response => new URL(response.url()).pathname === '/trisoul-x/computer-use/resume' && response.request().method() === 'POST');
     await page.getByRole('button',{name:'恢复助手控制',exact:true}).click();
+    const resumedResponse = await resumed; assert.equal(resumedResponse.status(), 200); assert.equal((await resumedResponse.json()).status, 'idle');
     const scaleBefore=await(await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json();
     const scaleWrites=[],recordScale=request=>{if(request.method()==='POST'&&new URL(request.url()).pathname.startsWith('/trisoul-x/computer-use/'))scaleWrites.push(request.url());};page.on('request',recordScale);
     await scale.selectOption('0.5');await until(()=>surface.boundingBox().then(box=>Math.abs(box.width-195)<1&&Math.abs(box.height-422)<1));
@@ -318,7 +320,9 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'100% overflow stays in the preview, not the app');
     await page.getByRole('button',{name:'关闭设备工具栏',exact:true}).click();
     await until(()=>target.evaluate(size=>innerWidth===size.width&&innerHeight===size.height,original));
+    const beforeFindResume = page.waitForResponse(response => new URL(response.url()).pathname === '/trisoul-x/computer-use/resume' && response.request().method() === 'POST');
     await page.getByRole('button',{name:'恢复助手控制',exact:true}).click();
+    assert.equal((await beforeFindResume).status(), 200);
     await page.getByRole('textbox',{name:'浏览器地址',exact:true}).press('Control+f');
     const findInput=page.getByRole('searchbox',{name:'查找文字',exact:true});await findInput.waitFor();assert.equal(await findInput.evaluate(el=>el===document.activeElement),true);
     const beforeFind=await(await fetch(origin+'/trisoul-x/computer-use/state?session='+sessionId,{headers:{cookie}})).json();assert.equal(beforeFind.status,'idle','opening find does not take control');
@@ -770,9 +774,9 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
     await page.getByRole('button', { name: '检查并修复连接程序', exact: true }).click();
     await page.getByRole('button', { name: '检查并修复连接程序', exact: true }).waitFor();
   } else {
-    const installationResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/trisoul-x/computer-use/setup' && response.request().method() === 'POST' && response.request().postDataJSON()?.action === 'install-extension');
+    const installationResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/trisoul-x/computer-use/setup' && response.request().method() === 'POST' && response.request().postDataJSON()?.action === 'install-extension', { timeout: process.platform === 'win32' ? 195000 : 30000 });
     await page.getByRole('button', { name: '准备 Chrome 连接', exact: true }).click();
-    const installResult = await installationResponse; console.log('Chrome installation diagnostic', installResult.status(), await installResult.text());
+    const installResult = await installationResponse; assert.equal(installResult.status(), 200, await installResult.text());
     await page.getByText('连接程序已就绪', { exact: true }).waitFor();
     await page.getByRole('button', { name: '复制扩展目录', exact: true }).waitFor();
     const prepared = await (await fetch(origin + '/trisoul-x/computer-use/setup?session=' + sessionId, { headers: { cookie } })).json();

@@ -147,11 +147,17 @@ export class BrowserViews {
   async flush(view) {
     let retryAt = 0;
     while (view.pending && !view.closed && !view.resizing) {
-      const { event, loaderId, captureOnly } = view.pending; view.pending = null;
+      let { event, loaderId, captureOnly } = view.pending; view.pending = null;
       try {
         if (!captureOnly&&event?.metadata.timestamp && event.metadata.timestamp < (view.screencastAfter ?? 0)) continue;
         const metrics = await this.read(view, view.cdp.send('Page.getLayoutMetrics'));
         if (view.closed || loaderId !== view.loaderId) continue;
+        // The fence can advance during the metrics query. A merged resize
+        // request may still need a fresh capture, but never its stale JPEG.
+        if (event?.metadata.timestamp && event.metadata.timestamp < (view.screencastAfter ?? 0)) {
+          if (!captureOnly) continue;
+          event = undefined;
+        }
         let geometry = viewportGeometry(metrics);
         // Frame metadata has no browser-zoom or emulated-layout identity.
         // Establish a fresh screenshot baseline when those values change,
