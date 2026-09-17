@@ -1,3 +1,4 @@
+import { createVersionService, handleVersionApi } from './version.mjs';
 import { installImageBudget } from './image-budget.mjs';
 import { Config } from './config.mjs';
 import { neutralizeHostEnvironment } from './cc-adaptation/environment.mjs';
@@ -20,6 +21,8 @@ async function readBody(req) { let body = ''; for await (const part of req) body
 
 export function apply(ctx, config) {
   const hub = new Hub(ctx, config);
+  const versionService = createVersionService();
+  ctx.effect(() => () => versionService.dispose());
   ctx.settings.installSection(ctx, NS, Config, config, { setSource: source => { hub.getConfig = source; }, onChange() {
     if (hub.computerUse) void hub.computerRefresh().catch(error => ctx.logger.warn(error.message));
     hub.context.reconfigure();
@@ -91,6 +94,7 @@ export function apply(ctx, config) {
     web.effect(() => web.webServer.register({ kind: 'prefix', path: '/trisoul-x/api', async handler(req, res) {
       try {
         const url = new URL(req.url, 'http://localhost'), id = url.searchParams.get('session');
+        if (await handleVersionApi({ req, res, url, service: versionService, send })) return;
         const agent = id ? ctx.agents.get(id) : undefined;
         const session = agent?.session ?? (id ? ctx.sessions.get(id) : undefined);
         const stored = id ? hub.store.state(id) : undefined;

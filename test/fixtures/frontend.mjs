@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -13,7 +13,7 @@ export async function until(fn, timeout = 20000) {
   throw new Error('Frontend fixture timed out');
 }
 
-export async function frontendFixture(t, { imageBudget } = {}) {
+export async function frontendFixture(t, { imageBudget, versionResponse } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'trisoul-frontend-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   await mkdir(home); await mkdir(workspace);
   let nextReply, releaseReply, replyFactory;
@@ -60,6 +60,12 @@ export async function frontendFixture(t, { imageBudget } = {}) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: 'light', locale: 'zh-CN' });
   await context.addCookies(cookie.split('; ').map(value => { const index = value.indexOf('='); return { name: value.slice(0, index), value: value.slice(index + 1), url: origin }; }));
   page = await context.newPage(); page.on('pageerror', error => errors.push(error.message));
+  // Version-indicator fixtures never depend on public GitHub/network availability.
+  const version = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8')).version;
+  await page.route('**/trisoul-x/api/version*', async route => {
+    const value = typeof versionResponse === 'function' ? await versionResponse() : versionResponse || { currentVersion: version, latestVersion: version, status: 'current', severity: 'none', releases: [], checkedAt: Date.now() };
+    await route.fulfill({ json: value });
+  });
   await page.goto(origin); await page.getByRole('button', { name: '继续', exact: true }).click();
   await page.getByText('整理工作台和对话界面', { exact: true }).first().click();
   await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
