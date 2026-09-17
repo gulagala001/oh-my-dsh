@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, { forwardRef, useEffect, useLayoutEffect, useImperativeHandle, useRef, useState } from 'react';
 import {BrowserTools} from './browser-tools.jsx';
 import {ComputerIcon} from './computer-icons.jsx';
 import {BrowserDownloads} from './browser-downloads.jsx';
@@ -11,7 +11,7 @@ export const BrowserControls = forwardRef(function BrowserControls({ sessionId, 
   const [tabSnapshot, setTabSnapshot] = useState({ sessionId: null, tabs: [] }), [address, setAddress] = useState(''), [busy, setBusy] = useState(false);
   const editing = useRef(false), addressInput = useRef(null), pending = useRef(null), keyboardTarget=useRef(null);
   const navigationClient = useRef(crypto.randomUUID()), sequence = useRef(0);
-  const addressObservation = useRef(0);
+  const addressObservation = useRef(0), pendingFocus = useRef(null);
   const[panel,setPanel]=useState(null);
   useEffect(()=>{setPanel(null);},[sessionId]);
   useEffect(()=>{if(!visible||state?.enabled===false)setPanel(null);},[visible,state?.enabled]);
@@ -20,12 +20,21 @@ export const BrowserControls = forwardRef(function BrowserControls({ sessionId, 
   const tabList=useRef(null),tools=useRef(null);
   useEffect(()=>{tabList.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({block:'nearest',inline:'nearest'});},[target?.id,tabs.length]);
   const latest = useRef({ state, target, onState, onError }); latest.current = { state, target, onState, onError };
-  useEffect(() => {
+  useLayoutEffect(() => {
     addressObservation.current = 0;
     editing.current = false; setAddress(target?.url === 'about:blank' ? '' : target?.url ?? '');
-    if(keyboardTarget.current===target?.id){tabList.current?.querySelector('[aria-selected="true"]')?.focus();keyboardTarget.current=null;}
-    else if (target?.url === 'about:blank') addressInput.current?.focus();
-  }, [target?.id]);
+    const keyboard = target && keyboardTarget.current === target.id;
+    pendingFocus.current = target && (keyboard || target.url === 'about:blank') ? { id: target.id, keyboard } : null;
+    if (keyboard) keyboardTarget.current = null;
+  }, [sessionId, target?.id]);
+  useLayoutEffect(() => {
+    // Shared state can commit before the initiating action clears its busy
+    // flag. A disabled input cannot be focused; retain intent until enabled.
+    const focus = pendingFocus.current;
+    if (!focus || focus.id !== target?.id || !visible || busy || state?.transitioning || state?.resuming || state?.enabled === false) return;
+    const element = focus.keyboard ? tabList.current?.querySelector('[aria-selected="true"]') : addressInput.current;
+    if (element && !element.disabled) { element.focus(); pendingFocus.current = null; }
+  }, [target?.id, visible, busy, state?.transitioning, state?.resuming, state?.enabled, tabs.length]);
   useEffect(() => {
     if (!editing.current && !pending.current && navigation && target && navigation.tabId === target.id && (navigation.observedAt ?? 0) >= addressObservation.current) {
       addressObservation.current = navigation.observedAt ?? 0;

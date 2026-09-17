@@ -166,6 +166,13 @@ test('official DSH profile → plugin → native tools → context records → r
   const memories = await api('/memories' + q); assert.ok(memories.items.some(m => m.key === 'fixture.result'));
   const compact = await api('/compact' + q, {}); assert.equal(compact.changed, true);
   const after = await api('/state' + q);
+  const summary = await api('/state' + q + '&view=summary');
+  assert.deepEqual(summary.metrics.main, after.metrics.main);
+  assert.equal(summary.actions.contextReplacements, after.actions.contextReplacements);
+  assert.equal(summary.meter.totalTokens, after.meter.totalTokens);
+  for (const key of ['frame', 'contextHistory', 'tasks', 'records', 'activity']) assert.equal(Object.hasOwn(summary, key), false);
+  assert.ok(JSON.stringify(summary).length < JSON.stringify(after).length / 4, 'the composer does not download the full workbench');
+
   assert.equal(after.context.probe, null);
   assert.ok(after.actions.contextReplacements);
   assert.ok(after.frame.some(n => n.checkpoint));

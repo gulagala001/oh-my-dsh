@@ -16,3 +16,7 @@ minimumReleaseAgeExclude:
   - node-addon-require-builtin-win32-ia32-msvc@0.1.6
   - node-addon-require-builtin-win32-x64-msvc@0.1.6
   - node-addon-require-builtin@0.1.6
+
+# DSH office preview transitively pins a vulnerable ZIP parser.
+overrides:
+  'fflate@<0.8.3': 0.8.3

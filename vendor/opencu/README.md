@@ -4,11 +4,11 @@
 
 OpenCU 从 [Oh My DSH](https://github.com/gulagala001/oh-my-dsh) 的 Computer Use 提取而来，提供相同的操控工具、实时预览和接管体验，可以独立安装到 DSH。Oh My DSH 继续集成全部能力，并直接复用 OpenCU 的实现。
 
-当前版本：[1.0.2](https://github.com/gulagala001/opencu/releases/tag/v1.0.2)。源码、发行包与 SHA-256 校验文件见版本页面。
+当前版本：[1.0.3](https://github.com/gulagala001/opencu/releases/tag/v1.0.3)。源码、发行包与 SHA-256 校验文件见版本页面。
 
 ## 安装
 
-需要 **DSH 0.1.5-rc.1 Web、Node.js ≥22.19、pnpm 11.23.0 和 Git**。先停止 DSH 服务，再运行：
+需要 **DSH 0.1.6-alpha.2 Web、Node.js ≥22.19、pnpm 11.23.0 和 Git**。先停止 DSH 服务，再运行：
 
 ```sh
 dsh plugin --profile web add github:gulagala001/opencu
@@ -54,9 +54,13 @@ OpenCU 沿用 DSH 的模型、会话、工具权限和审批配置，不更改�
 
 OpenCU 配置位于 DSH 的 `opencu` 设置区。未显式设置的字段继承已有 Oh My DSH Computer Use 配置；显式 OpenCU 设置优先。浏览器路径、原生运行时路径和数据目录变更后重启 DSH。
 
-## main 分支更新
+## 1.0.3 更新
 
-已连接 Chrome 的受控标签现在按会话自动分组，显示 **OMD · 会话名称**、区分颜色，并在停止后保留标记。需要扩展 **0.1.4**；更新连接文件后重新加载扩展。该功能已在 main 源码中，未包含于上方旧的 1.0.2 发行包，详见使用指南。
+适配新版会话状态与插件生命周期，合并顶栏和侧栏的重复状态读取，优化长会话操作分组。网页工具栏可在同一会话的官方浏览器中打开独立预览；原操控目标、接管、恢复和独立窗口不变。官方预览受网站嵌入限制，不保证与 CU 共享登录状态。
+
+### Chrome 标签分组
+
+已连接 Chrome 的受控标签现在按会话自动分组，显示 **OMD · 会话名称**、区分颜色，并在停止后保留标记。需要扩展 **0.1.4**；更新连接文件后重新加载扩展。本版已包含该能力，详见使用指南。
 
 ## 1.0.2 更新
 
