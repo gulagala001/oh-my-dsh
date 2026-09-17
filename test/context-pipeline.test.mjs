@@ -62,10 +62,13 @@ test('merge is rejected by normalization and by direct transaction creation with
   assert.throws(() => createTransaction(f.s, f.state, { userRevision: userRevision(f.s), choices: [{ action: 'merge', ids: [a.id, b.id] }] }, f.cfg, pairing), /合并已关闭/);
   assert.equal(JSON.stringify(f.s.snapshotEvents()), before); assert.equal(JSON.stringify(f.state.records), records);
 });
-test('new user instruction invalidates completed plans without removing any original', t => {
-  const f = setup(t); const r = add(f); const p = plan(f, [['brief', r]]); user(f.s, 'Change the requirement');
-  assert.throws(() => createTransaction(f.s, f.state, p, f.cfg, pairing), /用户消息已变化/);
-  assert.ok(f.s.surface.nodes.includes(r.sourceSeqs[0]));
+test('new user messages do not invalidate a prepared replacement', async t => {
+  const f = setup(t); const r = add(f); const p = plan(f, [['brief', r]]);
+  const latest = user(f.s, 'Continue');
+  const tx = createTransaction(f.s, f.state, p, f.cfg, pairing);
+  await applyTransaction(f.s, f.state, tx, f.store, adapter);
+  assert.equal(f.state.records[0].mode, 'brief'); assert.ok(f.s.surface.nodes.includes(latest.seq));
+  assert.ok(f.s.eventAt(r.sourceSeqs[0]));
 });
 test('stale or unknown IDs, duplicate selections, and fabricated output on non-merge are rejected', t => {
   const f = setup(t); const r = add(f);
@@ -163,9 +166,9 @@ test('coordinator four-choice output prepares a plan; main boundary applies it w
   await f.pipeline.coordinate(f.agent, true); assert.ok(f.state.pending);
   await f.pipeline.applyReady(f.agent); assert.deepEqual(calls, ['coordinate']); assert.equal(f.state.records[0].mode, 'brief');
 });
-test('invalid or stale coordinator responses leave original surface unchanged', async t => {
+test('record changes during coordination leave original surface unchanged', async t => {
   const f = setup(t); add(f); let resolve; f.hub.call = () => new Promise(r => { resolve = r; });
-  const job = f.pipeline.coordinate(f.agent, true); user(f.s, 'new instruction');
+  const job = f.pipeline.coordinate(f.agent, true); f.state.records[0].version++;
   resolve({ blocks: [{ type: 'tool-call', name: 'submit_context_choices', arguments: { choices: [] } }] });
   await job; assert.equal(f.state.pending, null); assert.equal(f.state.records[0].mode, 'raw');
 });

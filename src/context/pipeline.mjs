@@ -92,10 +92,8 @@ export class ContextPipeline {
     if (!agent) return;
     const s = this.state(session);
     s.eventsSincePrepare = (s.eventsSincePrepare || 0) + 1;
-    if (actualUser(event)) { s.pending = null; s.review.needed = true; s.review.rejectedPlans = []; s.review.replanAttempts = 0; delete s.failures.coordinate; delete s.failures.prepare; delete s.prepareRetryAt; }
     this.store.save(s); this.arm(agent);
     if (s.eventsSincePrepare >= this.config().digestEvery) void this.prepare(agent, false);
-    if (actualUser(event)) void this.coordinate(agent, true);
   }
   arm(agent, delay = this.config().flushIdleMs, kind = 'idle', since = Date.now(), options = {}) {
     const id = agent.session.id, key = id + ':' + kind;
@@ -213,6 +211,13 @@ export class ContextPipeline {
   }
   async coordinate(agent, force = false, { retry = false } = {}) {
     if (this.closed || delegated(agent.session) || this.manualSessions.has(agent.session.id) || !this.config().contextEnabled) return;
+    // Review a completed preparation batch once instead of reviewing
+    // intermediate records after each window.
+    const preparing = this.jobs.get(agent.session.id + ':prepare');
+    if (preparing) {
+      await preparing;
+      return this.coordinate(agent, force, { retry });
+    }
     const session = agent.session, key = session.id + ':coordinate', s = this.state(session), cfg = this.config();
     // Joining an existing call is not another request for a review.
     if (this.jobs.has(key)) return this.jobs.get(key);
@@ -238,11 +243,10 @@ export class ContextPipeline {
         ...(cfg.surgeonMaxTokens > 0 ? { maxTokens: cfg.surgeonMaxTokens } : {}) }, controller.signal);
       controller.signal.throwIfAborted();
       const changedIds = [...seenRecords].filter(([id, signature]) => signature !== recordSnapshot(session, s.records.find(r => r.id === id))).map(([id]) => id);
-      const userChanged = seenRevision !== userRevision(session);
       const newerPending = s.pending && s.pending.id !== seenPendingId;
-      if (userChanged || s.transaction || changedIds.length || newerPending) {
-        stale = true; s.review.needed = userChanged || s.review.newRecords > 0;
-        this.discardCoordinator(session, s, userChanged ? 'user-changed' : s.transaction ? 'transaction-in-progress' : changedIds.length ? 'records-changed' : 'newer-plan', changedIds);
+      if (s.transaction || changedIds.length || newerPending) {
+        stale = true; s.review.needed = s.review.newRecords > 0;
+        this.discardCoordinator(session, s, s.transaction ? 'transaction-in-progress' : changedIds.length ? 'records-changed' : 'newer-plan', changedIds);
         return; // Preserve any newer pending plan. Never retry obsolete input.
       }
       const choices = normalizeChoices(decodeResult(result, COORDINATE_TOOL.name), s, session, seenInputIds);
@@ -266,12 +270,11 @@ export class ContextPipeline {
     }).finally(() => {
       this.jobs.delete(key); this.controllers.delete(key);
       if (this.closed || controller.signal.aborted) return;
-      const userChanged = seenRevision !== userRevision(session);
       const normalDue = s.review.newRecords >= this.config().coordinatorEvery;
       // Staleness alone is not a trigger. Check real work at the usual cadence.
-      if (retryFailure || (userChanged && !s.pending) || (normalDue && (!stale || !s.pending))) {
+      if (retryFailure || (normalDue && (!stale || !s.pending))) {
         this.arm(agent, Math.max(1000, this.config().coordinatorMinGapMs), 'coordinate', Date.now(),
-          { force: retryFailure || userChanged });
+          { force: retryFailure });
       }
     });
     this.jobs.set(key, job); return job;
@@ -296,7 +299,7 @@ export class ContextPipeline {
           || observed.mode !== r.mode || observed.carrierSeq !== (r.carrierSeq ?? null) || observed.sourceHash !== r.sourceHash
           || (observed.snapshot && observed.snapshot !== recordSnapshot(session, r));
       }));
-      if (plan.userRevision !== userRevision(session) || changedIds.length) {
+      if (changedIds.length) {
         s.pending = null; s.review.needed = s.review.newRecords > 0;
         this.discardCoordinator(session, s, 'pending-plan-stale', changedIds);
         if (s.review.newRecords >= cfg.coordinatorEvery) this.arm(agent, Math.max(1000, cfg.coordinatorMinGapMs), 'coordinate', Date.now(), { force: false });
