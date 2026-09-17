@@ -252,6 +252,9 @@ export class BrowserHost extends BrowserActions {
       // Finish the new target's initial document before starting its first
       // requested navigation; a late blank-page load can otherwise abort it.
       await page.waitForLoadState('domcontentloaded');
+      // Confirm a live initial document instead of relying only on a cached
+      // lifecycle event. The requested navigation is still sent exactly once.
+      await (await page.waitForFunction(() => document.readyState !== 'loading')).dispose();
       signal?.throwIfAborted(); record.navigating = true;
       try { await page.goto(url, { waitUntil: 'domcontentloaded' }); } finally { record.navigating = false; }
       signal?.throwIfAborted();
