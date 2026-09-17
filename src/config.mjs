@@ -1,9 +1,10 @@
 import z from '@deepseek-ai/schemastery';
 import { DEFAULT_IDENTITY } from './cc-adaptation/identity.mjs';
-import { FREQUENCY_PRESETS } from './frequency.mjs';
+import { FREQUENCY_PRESETS, CONTEXT_FREQUENCY_PRESETS } from './frequency.mjs';
 
 const route = z.object({ provider: z.string().default(''), model: z.string().default(''), temperature: z.number().default(0.7), effort: z.string().default('off') });
 const cadence = FREQUENCY_PRESETS.always;
+const contextCadence = CONTEXT_FREQUENCY_PRESETS.medium;
 export const Config = z.object({
   dataDir: z.string(),
   // Context v1: old fields below remain readable for upgrades; only the new pipeline runs.
@@ -16,10 +17,10 @@ export const Config = z.object({
   summaryTargetChars: z.number().step(1).min(1).default(1200),
   backgroundConcurrency: z.number().step(1).min(1).default(2),
   backgroundMaxRetries: z.number().step(1).min(0).default(2),
-  digestWindow: z.number().step(1).min(1).default(32),
+  digestWindow: z.number().step(1).min(1).default(contextCadence.digestWindow),
   digestLookback: z.number().step(1).min(0).default(8),
-  coordinatorEvery: z.number().step(1).min(1).default(2),
-  coordinatorMinGapMs: z.number().step(1).min(0).default(30000),
+  coordinatorEvery: z.number().step(1).min(1).default(contextCadence.coordinatorEvery),
+  coordinatorMinGapMs: z.number().step(1).min(0).default(contextCadence.coordinatorMinGapMs),
   coordinatorRecentEvents: z.number().step(1).min(0).default(12),
   traceEnabled: z.boolean().default(true),
   traceMaxChars: z.number().step(1).min(0).default(0),
@@ -36,7 +37,7 @@ export const Config = z.object({
   canvas: route.default({}),
   surgeon: route.default({}),
   jobTimeoutMs: z.number().step(1).min(0).default(600000),
-  digestEvery: z.number().step(1).min(1).default(cadence.digestEvery),
+  digestEvery: z.number().step(1).min(1).default(contextCadence.digestEvery),
   digestBatchMax: z.number().step(1).min(0).default(0),
   digestEventChars: z.number().step(1).min(0).default(0),
   digestMaxTokens: z.number().step(1).min(0).default(0),
@@ -78,7 +79,7 @@ export const Config = z.object({
   minRegionEvents: z.number().step(1).min(1).default(3),
   minRegionTokens: z.number().step(1).min(1).default(cadence.minRegionTokens),
   keepTailEvents: z.number().step(1).min(2).default(30),
-  surgeryCooldownSteps: z.number().step(1).min(0).default(cadence.surgeryCooldownSteps),
+  surgeryCooldownSteps: z.number().step(1).min(0).default(contextCadence.surgeryCooldownSteps),
   surgeryFailCooldownSteps: z.number().step(1).min(0).default(3),
   thresholdChars: z.number().step(1).min(0).default(0),
   thresholdFallbackChars: z.number().step(1).min(0).default(1000000),

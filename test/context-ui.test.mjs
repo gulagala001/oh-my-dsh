@@ -12,11 +12,29 @@ test('three presets have only live settings and each passes runtime configuratio
   }
   assert.equal(contextFrequencyOf(contextConfig()), 'medium');
 });
+test('host and pipeline defaults both use the calibrated medium cadence without overwriting saved values', async () => {
+  const { Config } = await import('../src/config.mjs');
+  const expected = { digestEvery: 48, digestWindow: 48, coordinatorEvery: 3, coordinatorMinGapMs: 60000, surgeryCooldownSteps: 30 };
+  for (const config of [Config({}), contextConfig(), contextConfig(Config({}))]) {
+    assert.equal(contextFrequencyOf(config), 'medium');
+    for (const [key, value] of Object.entries(expected)) assert.equal(config[key], value);
+  }
+  const saved = { digestEvery: 16, digestWindow: 16, coordinatorEvery: 1, coordinatorMinGapMs: 15000, surgeryCooldownSteps: 10 };
+  for (const config of [Config(saved), contextConfig(saved)]) {
+    for (const [key, value] of Object.entries(saved)) assert.equal(config[key], value);
+    assert.equal(contextFrequencyOf(config), 'custom');
+  }
+  const names = ['always', 'medium', 'slow'];
+  for (const key of Object.keys(expected)) {
+    assert.ok(CONTEXT_FREQUENCY_PRESETS[names[0]][key] < CONTEXT_FREQUENCY_PRESETS[names[1]][key]);
+    assert.ok(CONTEXT_FREQUENCY_PRESETS[names[1]][key] < CONTEXT_FREQUENCY_PRESETS[names[2]][key]);
+  }
+});
 test('preset selection leaves scope, model, Trace, idle, retirement and old state settings untouched', () => {
   const config = contextConfig({ memoryScope: 'session', traceEnabled: false, flushIdleMs: 45000, stateEnabled: true, unifiedBackground: { model: 'custom' } });
   const next = { ...config, ...contextFrequencyPatch('always') };
   for (const key of ['memoryScope', 'traceEnabled', 'flushIdleMs', 'stateEnabled', 'unifiedBackground']) assert.deepEqual(next[key], config[key]);
-  assert.equal(next.digestEvery, 16); assert.equal(next.surgeryCooldownSteps, 10);
+  assert.equal(next.digestEvery, 32); assert.equal(next.surgeryCooldownSteps, 20);
 });
 test('custom values survive detection without normalization; presets can be restored', () => {
   const cfg = contextConfig({ digestEvery: 37, digestWindow: 64 }); const before = JSON.stringify(cfg);
