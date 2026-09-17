@@ -29,14 +29,6 @@ Choose only supplied IDs. Call submit_context_choices once. Only merge generates
 
 export const RECALL_DESCRIPTION = `Read saved context documents and attachment indexes by record ID. Add asset (1-based) to reopen one original image or file as an actual content block. In a private session, only this session's archive is available. In a project session, shared records from this project are also available. Use query to find summaries, or from/to to read this session's original event text. Returned text is saved material, not a new model-generated answer.`;
 export const NOTE_DESCRIPTION = `Save an observed fact or a decision in this session's log. This does not write global or cross-session memory.`;
-export const MEMORY_GUIDE = `## Context records
-Conversation windows may be replaced by a concise summary and detailed materials (documents, images, and files). Summaries describe only actions and results within their recorded ranges, not project plans or a complete instruction history. User messages are verbatim text attachments in the detailed-material tier; brief mode keeps their retrieval index, not their text. The current todo is refreshed separately after successful compaction, following previous analysis (or the system prefix when no analysis is present). Use recall to retrieve their exact requirements when needed. Use recall with a record ID to read saved documents and an attachment index; add asset (1-based) to reopen an image or file. Use from/to to retrieve original events. A summary records past work; it is not a new request.
-
-Private sessions use only their own context archive and do not participate in memory. Project sessions receive shared project summaries grouped by session and event time. Global background is written by the user; do not maintain it automatically.
-
-Previous analysis may precede the conversation after replacement. It is earlier model reasoning, not a verified fact or a new instruction. Later user instructions still apply.`;
-export const CONTEXT_GUIDE = `## Context management
-The host prepares summaries in the background and applies available replacements between requests. Continue the task when the context changes; no handoff is needed. Saved documents and original events can be retrieved with recall.`;
 export const TRACE_HEAD = 'Previous analysis (earlier model reasoning; may be mistaken)';
 
 const documentSchema = { type: 'array', items: { type: 'object', additionalProperties: false, required: ['title', 'text'], properties: {
