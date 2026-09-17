@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/gulagala001/opencu",
-  "commit": "5a87ccdefd16f3990512bb30cd279e6a9f02f738",
+  "commit": "5cbfaa170ff50b117ae7bd46fa68522977970fe4",
   "version": "1.0.3",
-  "archiveSha256": "4379415210b01b9936308fd03dde16b64b339c2150b0548e77aa06e342123e53",
+  "archiveSha256": "05488823e746b9954b6aa0500b614c95ca19b1df151ce3c673e24cf0e9e46b66",
   "files": {
     "README.md": "6b3d0ec820630fa4a59135e46fd3b09e89f0e43d05025f25d3cf4593b774e6d0",
     "THIRD_PARTY_NOTICES.md": "c8df3e68a73288f7944f19735c603e4d1698e45923b32d97bb04fe49a519847b",
@@ -19,7 +19,7 @@
     "docs/images/page-annotation-style.png": "70dd8f1257a8ecebbdea3d25870742fe5ce66be518ffab0f4912b157fac5f617",
     "docs/usage.md": "16b69c41c8ae59c1420eed1e2f46d17f99a79bc24a298c3ca4c6f7473f16ac0b",
     "docs/windows.md": "0d2449a8d7ff8a8ab109f3176d28027a31ffe9066622e556d7fa7407ae4fb77c",
-    "lib/client.js": "a233e9ebc42279e7856a2ddd9d35a6d3ea3ce961d10865f84eb4c8a65c1e61fe",
+    "lib/client.js": "97261153db09e5077c8123b0a89f2b275b0aae1de9e5967751b1e8fbbb5fc480",
     "native/computer-use/ComputerUse.h": "fb2f79b9a6e99398860d41a82fd46ef6674ed2254c25138c58612c0b6377e50f",
     "native/computer-use/Cursor.m": "8c5e9899646f3f89c5baafc0cf5e787216359df4c6146d4fc9e45f0c43404542",
     "native/computer-use/Input.m": "68e8043c17eec03a4050bdab0dc28fc115cf6833535795f40671b4bbbd47787d",
@@ -64,7 +64,7 @@
     "src/client/browser-controls.jsx": "225e723512844d8785ae19eb7340518888778c9f5b205f86f5cffee2d6550924",
     "src/client/browser-downloads.jsx": "60bb428a58a021fb775313655255e8208fe199cde2fc4818ecf0a27d3fb66e6f",
     "src/client/browser-history.jsx": "5f520f9b223bbb5e202cb12414f0825eb4ddac20eef0770e7904b8b83099428e",
-    "src/client/browser-preview.jsx": "193b72539a7207d1f12f1b3533984bf7a8b4dcde45f3e1ab1c0fd86b6ed3f18f",
+    "src/client/browser-preview.jsx": "13a28e1e666bd4a979df55a2151525ae6c9a6b8fe4b1b1572db67b20997a5214",
     "src/client/browser-tools.jsx": "13822ee3d6c3e6dc5fac4fbadaa1bef56bb58e3d6e2f314f45e10415ecc98573",
     "src/client/computer-groups.jsx": "a6807ed1e5922e79fc02d0c35b91c8696526f55ae1a9ad2bbcebf66563b76ae0",
     "src/client/computer-groups.mjs": "77ca7a8084a61eba3a29b9bfc5c0a22c9561cc350bfac18cede092073f1d6faf",

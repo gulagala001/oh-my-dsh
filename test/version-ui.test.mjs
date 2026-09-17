@@ -28,6 +28,8 @@ test('brand i opens version details; green/red indicators, offline state, keyboa
   await page.keyboard.press('Escape'); await until(async () => !await dialog.isVisible());
   assert.equal(await trigger.evaluate(el => el === document.activeElement), true);
   await page.keyboard.press('Enter'); await dialog.waitFor();
+  await dialog.evaluate(element => element.dispatchEvent(new Event('close')));
+  assert.equal(await dialog.isVisible(), true, 'a queued close event cannot dismiss a newly reopened modal');
   response = status([release(nextVersion), release(version)]);
   await dialog.getByRole('button', { name: '检查更新', exact: true }).click();
   await until(async () => await trigger.getAttribute('data-update-level') === 'normal');

@@ -338,6 +338,11 @@ function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api: api2, 
   const activeStream = (0, import_react4.useRef)(null);
   const stage = (0, import_react4.useRef)(null), meta = (0, import_react4.useRef)(null), [space, setSpace] = (0, import_react4.useState)({ width: 0, height: 0 });
   const [layoutSize, setLayoutSize] = (0, import_react4.useState)(null), layoutResizing = (0, import_react4.useRef)(false);
+  const [layoutBusy, setLayoutBusy] = (0, import_react4.useState)(false);
+  const setLayoutResizing = (value) => {
+    layoutResizing.current = value;
+    setLayoutBusy(value);
+  };
   const isDevice = deviceMode || !!state?.viewViewport?.overridden;
   (0, import_react4.useLayoutEffect)(() => {
     if (!visible || isDevice || !state?.viewViewport?.layoutSupported) return;
@@ -358,14 +363,14 @@ function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api: api2, 
     let active = true, timer;
     const controller = new AbortController();
     const resize = async () => {
-      layoutResizing.current = true;
+      setLayoutResizing(true);
       try {
         const result = await api2("view-layout", sessionId, { actor: frame.actor, tabId, controlEpoch: state.controlEpoch, size: layoutSize }, controller.signal);
-        if (active && result.layout !== "applied") layoutResizing.current = false;
+        if (active && result.layout !== "applied") setLayoutResizing(false);
         if (active && result.layout === "deferred") timer = setTimeout(resize, 500);
       } catch (error) {
         if (active) {
-          layoutResizing.current = false;
+          setLayoutResizing(false);
           if (!controller.signal.aborted) callbacks.current.onError(error.message);
         }
       }
@@ -373,7 +378,7 @@ function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api: api2, 
     timer = setTimeout(resize, 200);
     return () => {
       active = false;
-      layoutResizing.current = false;
+      setLayoutResizing(false);
       clearTimeout(timer);
       controller.abort();
     };
@@ -630,7 +635,7 @@ function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api: api2, 
   };
   const blank = pageUrl === "about:blank" && state?.enabled !== false && !["closed", "error"].includes(connection);
   const placeholder = state?.enabled === false ? "Computer Use \u5DF2\u505C\u7528" : connection === "closed" ? "\u9875\u9762\u5DF2\u65AD\u5F00" : connection === "error" ? "\u65E0\u6CD5\u83B7\u53D6\u9875\u9762\u753B\u9762" : "\u6B63\u5728\u83B7\u53D6\u9875\u9762\u2026";
-  return /* @__PURE__ */ import_react4.default.createElement("div", { className: "tx-cu-live" + (isDevice ? " is-device" : "") + (blank ? " is-blank" : ""), "data-connection": connection, style: isDevice ? { "--cu-device-width": frameWidth * scale + "px", "--cu-preview-height": space.height ? space.height + "px" : void 0 } : void 0, "aria-label": "\u6D4F\u89C8\u5668\u5B9E\u65F6\u753B\u9762" }, /* @__PURE__ */ import_react4.default.createElement("div", { className: "tx-cu-live-meta", ref: meta }, /* @__PURE__ */ import_react4.default.createElement("span", { className: connection === "live" ? "tx-cu-live-dot" : "" }, connection === "live" ? state?.resuming ? "\u6B63\u5728\u6062\u590D" : state?.status === "running" ? "\u52A9\u624B\u6B63\u5728\u64CD\u4F5C" : state?.status === "stopped" ? "\u4F60\u6B63\u5728\u63A7\u5236" : "\u5C31\u7EEA" : connection === "connecting" ? "\u6B63\u5728\u8FDE\u63A5\u753B\u9762\u2026" : "\u753B\u9762\u5DF2\u65AD\u5F00"), /* @__PURE__ */ import_react4.default.createElement("span", null, state?.status === "stopped" ? "\u53EF\u5728\u5DE5\u5177\u680F\u6062\u590D\u52A9\u624B" : "\u70B9\u51FB\u753B\u9762\u63A5\u7BA1")), /* @__PURE__ */ import_react4.default.createElement("div", { className: "tx-cu-preview-stage", ref: stage }, /* @__PURE__ */ import_react4.default.createElement(DeviceFrame, { enabled: isDevice, interactive: visible && state?.enabled !== false && !state?.transitioning && !state?.resuming && connection === "live" && !dialog && !!onViewportResize, width: frameWidth, height: frameHeight, scale, onResize: onViewportResize, onError }, /* @__PURE__ */ import_react4.default.createElement(
+  return /* @__PURE__ */ import_react4.default.createElement("div", { className: "tx-cu-live" + (isDevice ? " is-device" : "") + (blank ? " is-blank" : ""), "data-connection": connection, "data-layout-busy": layoutBusy ? "true" : "false", style: isDevice ? { "--cu-device-width": frameWidth * scale + "px", "--cu-preview-height": space.height ? space.height + "px" : void 0 } : void 0, "aria-label": "\u6D4F\u89C8\u5668\u5B9E\u65F6\u753B\u9762" }, /* @__PURE__ */ import_react4.default.createElement("div", { className: "tx-cu-live-meta", ref: meta }, /* @__PURE__ */ import_react4.default.createElement("span", { className: connection === "live" ? "tx-cu-live-dot" : "" }, connection === "live" ? state?.resuming ? "\u6B63\u5728\u6062\u590D" : state?.status === "running" ? "\u52A9\u624B\u6B63\u5728\u64CD\u4F5C" : state?.status === "stopped" ? "\u4F60\u6B63\u5728\u63A7\u5236" : "\u5C31\u7EEA" : connection === "connecting" ? "\u6B63\u5728\u8FDE\u63A5\u753B\u9762\u2026" : "\u753B\u9762\u5DF2\u65AD\u5F00"), /* @__PURE__ */ import_react4.default.createElement("span", null, state?.status === "stopped" ? "\u53EF\u5728\u5DE5\u5177\u680F\u6062\u590D\u52A9\u624B" : "\u70B9\u51FB\u753B\u9762\u63A5\u7BA1")), /* @__PURE__ */ import_react4.default.createElement("div", { className: "tx-cu-preview-stage", ref: stage }, /* @__PURE__ */ import_react4.default.createElement(DeviceFrame, { enabled: isDevice, interactive: visible && state?.enabled !== false && !state?.transitioning && !state?.resuming && connection === "live" && !dialog && !!onViewportResize, width: frameWidth, height: frameHeight, scale, onResize: onViewportResize, onError }, /* @__PURE__ */ import_react4.default.createElement(
     "div",
     {
       className: "tx-cu-live-surface",

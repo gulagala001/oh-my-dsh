@@ -532,7 +532,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
         const frame = window.__cuDisplayedFrames?.get(element.src.split(',')[1]);
         return frame ? { frame, box: element.getBoundingClientRect().toJSON() } : null;
       });
-      if (!displayed) return false;
+      if (!displayed || await page.getByLabel('浏览器实时画面').getAttribute('data-layout-busy') === 'true') return false;
       const { frameTree } = await cdp.send('Page.getFrameTree');
       if (displayed.frame.loaderId !== frameTree.frame.loaderId) return false;
       const before = viewportGeometry(await cdp.send('Page.getLayoutMetrics'));
@@ -749,7 +749,9 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
     await page.getByRole('button', { name: '检查并修复连接程序', exact: true }).click();
     await page.getByRole('button', { name: '检查并修复连接程序', exact: true }).waitFor();
   } else {
+    const installationResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/trisoul-x/computer-use/setup' && response.request().method() === 'POST' && response.request().postDataJSON()?.action === 'install-extension');
     await page.getByRole('button', { name: '准备 Chrome 连接', exact: true }).click();
+    const installResult = await installationResponse; console.log('Chrome installation diagnostic', installResult.status(), await installResult.text());
     await page.getByText('连接程序已就绪', { exact: true }).waitFor();
     await page.getByRole('button', { name: '复制扩展目录', exact: true }).waitFor();
     const prepared = await (await fetch(origin + '/trisoul-x/computer-use/setup?session=' + sessionId, { headers: { cookie } })).json();
