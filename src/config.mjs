@@ -11,6 +11,7 @@ export const Config = z.object({
   automaticReplace: z.boolean().default(true),
   preprocessBoundaries: z.boolean().default(false),
   prepareBatchWindows: z.number().step(1).min(1).default(2),
+  prepareContinueTokens: z.number().step(1).min(1).default(8000),
   prepareInputTokens: z.number().step(1).min(1).default(48000),
   summaryTargetChars: z.number().step(1).min(1).default(1200),
   backgroundConcurrency: z.number().step(1).min(1).default(2),

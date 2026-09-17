@@ -121,6 +121,26 @@ export function liveSpan(session, record) {
   return { seqs: [...seqs], groups, start, end };
 }
 
+// Compare the records actually supplied to the coordinator, not a growing
+// conversation-wide hash: unrelated new steps must not invalidate good work.
+export function recordSnapshot(session, record) {
+  if (!record || record.mergedInto) return null;
+  const span = liveSpan(session, record); if (!span) return null;
+  return hash([record.version, record.mode, record.carrierSeq ?? null, record.sourceHash,
+    record.summary, record.documents, record.assets || [], span.seqs,
+    span.seqs.map(seq => session.deriveEventMessage(session.eventAt(seq)))]);
+}
+
+// Continuation considers fresh work only, never lookback, protected messages,
+// old checkpoints, or binary attachment bytes already stored by the host.
+export function preparationWorkload(session, state, events) {
+  const covered = new Set(activeRecords(state).flatMap(r => liveSpan(session, r)?.seqs || []));
+  const fresh = events.filter(e => !covered.has(e.seq) && (actualUser(e)
+    || (['assistant/message', 'tool/result'].includes(e.type) && !eventSource(e))));
+  return { events: fresh.length, estimatedTokens: Math.ceil(fresh.reduce((n, e) =>
+    n + contentChars(session.deriveEventMessage(e)?.content), 0) / 4) };
+}
+
 export function normalizeChoices(value, state, session, allowedIds) {
   if (!Array.isArray(value?.choices)) throw new Error('中枢未提交 choices');
   const records = new Map(activeRecords(state).map(r => [r.id, r])), used = new Set();
@@ -133,7 +153,7 @@ export function normalizeChoices(value, state, session, allowedIds) {
       used.add(id);
       const r = records.get(id), span = liveSpan(session, r);
       if (!span) throw new Error(`记录已不在当前上下文：${id}`);
-      return { id, version: r.version, carrierSeq: r.carrierSeq ?? null, mode: r.mode, start: span.start, sourceHash: r.sourceHash };
+      return { id, version: r.version, carrierSeq: r.carrierSeq ?? null, mode: r.mode, start: span.start, sourceHash: r.sourceHash, snapshot: recordSnapshot(session, r) };
     }).sort((a, b) => a.start - b.start);
     let prepared = { summary: '', documents: [] };
     if (choice.action === 'merge') prepared = validatePrepared(choice);
@@ -260,11 +280,12 @@ export function candidateInput(session, events, lookback) {
   const all = session.snapshotEvents(), start = all.findIndex(e => e.seq === events[0].seq);
   const prior = lookback > 0 ? all.slice(0, start).filter(e => actualUser(e) || e.type === 'assistant/message' || e.type === 'tool/result').slice(-lookback) : [];
   const segment = (events.windowSeqs || events.map(e => e.seq)).map(seq => session.eventAt(seq));
-  return { summary_scope: { source: 'segment', event_seqs: events.filter(e => !(events.retainedSeqs || []).includes(e.seq) && session.deriveEventMessage(e)).map(e => e.seq), reference_only_fields: ['reference', 'user_messages'] },
+  return { summary_scope: { source: 'segment', event_seqs: events.filter(e => !actualUser(e) && !(events.retainedSeqs || []).includes(e.seq) && session.deriveEventMessage(e)).map(e => e.seq), reference_only_fields: ['reference', 'user_messages'] },
     reference: prior.map(e => ({ seq: e.seq, type: e.type, text: rawText(session, e) })),
     user_messages: userMessages(session).filter(u => u.seq <= Math.max(...segment.map(e => e.seq))).slice(-8),
     segment: segment.filter(e => session.deriveEventMessage(e)).map(e => ({ seq: e.seq, at: eventTime(e), type: e.type,
-      protected: (events.retainedSeqs || []).includes(e.seq), text: windowText(session, e, (events.retainedSeqs || []).includes(e.seq)) })) };
+      protected: (events.retainedSeqs || []).includes(e.seq), reference_only: actualUser(e),
+      text: actualUser(e) ? '[User message archived verbatim; see user_messages for reference only.]' : windowText(session, e, (events.retainedSeqs || []).includes(e.seq)) })) };
 }
 export function coordinatorInput(session, state, cfg) {
   return {

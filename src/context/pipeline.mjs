@@ -1,19 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import { compactFull } from './full-compaction.mjs';
 import { ContextStore } from './store.mjs';
-import { hash, userRevision, userMessages, rawText, actualUser, prepareCandidate, candidateInput, coordinatorInput, newRecord, activeRecords, liveSpan, validatePrepared, normalizeChoices, decodeResult, recordText, backlogView } from './core.mjs';
+import { hash, userRevision, userMessages, rawText, actualUser, prepareCandidate, candidateInput, coordinatorInput, newRecord, activeRecords, liveSpan, validatePrepared, normalizeChoices, decodeResult, recordText, backlogView, recordSnapshot, preparationWorkload } from './core.mjs';
 import { attachmentsOf, combineAssets, describeAsset, messageOf } from './materials.mjs';
 import { createTransaction, applyTransaction } from './transactions.mjs';
 import { SUMMARY_PROMPT_VERSION, PREPARE_SYSTEM, PREPARE_TOOL, COORDINATE_SYSTEM, COORDINATE_TOOL } from './prompts.mjs';
 
 export const DEFAULTS = Object.freeze({ contextEnabled: true, digestEvery: 32, digestWindow: 32, digestLookback: 8,
-  preprocessBoundaries: false, prepareBatchWindows: 2, prepareInputTokens: 48000, summaryTargetChars: 1200, backgroundConcurrency: 2, backgroundMaxRetries: 2,
+  preprocessBoundaries: false, prepareBatchWindows: 2, prepareContinueTokens: 8000, prepareInputTokens: 48000, summaryTargetChars: 1200, backgroundConcurrency: 2, backgroundMaxRetries: 2,
   idlePreprocessEnabled: false, flushIdleMs: 90000, coordinatorEvery: 2, coordinatorMinGapMs: 30000, coordinatorRecentEvents: 12,
   automaticReplace: true, surgeryCooldownSteps: 20, keepTailEvents: 30, traceEnabled: true, traceMaxChars: 0, requireShorter: true });
 export function contextConfig(raw = {}) {
   const cfg = { ...DEFAULTS, ...raw };
   for (const key of ['contextEnabled', 'preprocessBoundaries', 'idlePreprocessEnabled', 'automaticReplace', 'traceEnabled', 'requireShorter']) if (typeof cfg[key] !== 'boolean') throw new Error(`${key} 必须为布尔值`);
-  for (const key of ['digestEvery', 'digestWindow', 'coordinatorEvery', 'prepareBatchWindows', 'prepareInputTokens', 'summaryTargetChars', 'backgroundConcurrency']) if (!Number.isInteger(cfg[key]) || cfg[key] < 1) throw new Error(`${key} 必须为正整数`);
+  for (const key of ['digestEvery', 'digestWindow', 'coordinatorEvery', 'prepareBatchWindows', 'prepareContinueTokens', 'prepareInputTokens', 'summaryTargetChars', 'backgroundConcurrency']) if (!Number.isInteger(cfg[key]) || cfg[key] < 1) throw new Error(`${key} 必须为正整数`);
   for (const key of ['backgroundMaxRetries', 'digestLookback', 'flushIdleMs', 'coordinatorMinGapMs', 'coordinatorRecentEvents', 'surgeryCooldownSteps', 'keepTailEvents', 'traceMaxChars']) if (!Number.isInteger(cfg[key]) || cfg[key] < 0) throw new Error(`${key} 必须为非负整数`);
   return cfg;
 }
@@ -23,7 +23,7 @@ const iso = n => n == null ? '时间未记录' : new Date(n).toISOString();
 export class ContextPipeline {
   constructor(hub, adapter) {
     this.hub = hub; this.adapter = adapter; this.activeCalls = 0; this.callWaiters = []; this.manualSessions = new Map(); this.store = new ContextStore(hub.store.dir);
-    this.agents = new Map(); this.jobs = new Map(); this.timers = new Map(); this.idleSince = new Map(); this.controllers = new Map(); this.closed = false;
+    this.agents = new Map(); this.jobs = new Map(); this.timers = new Map(); this.reviewTimers = new Map(); this.idleSince = new Map(); this.controllers = new Map(); this.closed = false;
   }
   config() { return contextConfig(this.hub.config()); }
   async call(agent, kind, request, signal) {
@@ -96,9 +96,13 @@ export class ContextPipeline {
     if (s.eventsSincePrepare >= this.config().digestEvery) void this.prepare(agent, false);
     if (actualUser(event)) void this.coordinate(agent, true);
   }
-  arm(agent, delay = this.config().flushIdleMs, kind = 'idle', since = Date.now()) {
+  arm(agent, delay = this.config().flushIdleMs, kind = 'idle', since = Date.now(), options = {}) {
     const id = agent.session.id, key = id + ':' + kind;
+    const previous = kind === 'coordinate' ? this.reviewTimers.get(key) : null;
+    const forceReview = (options.force ?? true) || Boolean(previous?.force);
+    if (previous) delay = Math.min(delay, Math.max(1, previous.dueAt - Date.now()));
     clearTimeout(this.timers.get(key)); this.timers.delete(key);
+    this.reviewTimers.delete(key);
     if (kind === 'idle') this.idleSince.delete(id);
     if (!delay || this.closed || !this.agents.has(id) || this.manualSessions.has(id)) return;
     // Only pending work in a genuinely idle session gets an idle deadline.
@@ -110,13 +114,14 @@ export class ContextPipeline {
       this.idleSince.set(id, since);
     }
     const timer = setTimeout(() => {
-      this.timers.delete(key);
+      this.timers.delete(key); this.reviewTimers.delete(key);
       if (kind === 'idle') this.idleSince.delete(id);
-      const work = kind === 'coordinate' ? this.coordinate(agent, true, { retry: true })
+      const work = kind === 'coordinate' ? this.coordinate(agent, forceReview, { retry: true })
         : kind === 'prepare' ? this.prepare(agent, true, { retry: true }) : this.flushIdle(agent);
       void work.catch(e => this.reportError(agent, kind, e));
     }, kind === 'idle' ? Math.max(1, since + delay - Date.now()) : delay);
     timer.unref?.(); this.timers.set(key, timer);
+    if (kind === 'coordinate') this.reviewTimers.set(key, { force: forceReview, dueAt: Date.now() + delay });
   }
   async flushIdle(agent) {
     if (this.closed || !this.agents.has(agent.session.id) || agent.status !== 'idle' || !this.config().contextEnabled || !this.config().idlePreprocessEnabled) return;
@@ -145,9 +150,16 @@ export class ContextPipeline {
     const controller = new AbortController(); this.controllers.set(key, controller);
     const job = (async () => {
       let completed = 0, seenEvents = s.eventsSincePrepare || 0;
+      const batchLimit = retry ? 1 : this.config().prepareBatchWindows;
       do {
         const cfg = this.config(), events = prepareCandidate(session, s, cfg, this.adapter.pairing);
         if (!events) break;
+        const workload = preparationWorkload(session, s, events);
+        if (completed > 0 && workload.events < cfg.digestWindow && workload.estimatedTokens < cfg.prepareContinueTokens) {
+          s.prepareDeferred = { ...workload, reason: 'small-tail', at: Date.now() };
+          s.prepareBacklog = backlogView(session, s, cfg); this.store.save(s); break;
+        }
+        delete s.prepareDeferred;
         const inputs = candidateInput(session, events, cfg.digestLookback);
         inputs.target_characters = cfg.summaryTargetChars;
         if (s.failures.prepare) inputs.previous_rejection = s.failures.prepare.message;
@@ -176,9 +188,9 @@ export class ContextPipeline {
         delete s.failures.prepare; delete s.prepareRetryAt;
         clearTimeout(this.timers.get(session.id + ':prepare')); this.timers.delete(session.id + ':prepare');
         this.store.save(s);
-        this.hub.action(session, 'preparedSegments', 1, { id: record.id, from: events[0].seq, to: events.at(-1).seq, chars: record.summary.length + record.documents.reduce((n, d) => n + d.text.length, 0) });
+        this.hub.action(session, 'preparedSegments', 1, { id: record.id, from: events[0].seq, to: events.at(-1).seq, batchIndex: completed, freshEvents: workload.events, estimatedTokens: workload.estimatedTokens, chars: record.summary.length + record.documents.reduce((n, d) => n + d.text.length, 0) });
         void this.coordinate(agent, false);
-        if (completed >= cfg.prepareBatchWindows || !s.prepareBacklog.events) break;
+        if (completed >= batchLimit || !s.prepareBacklog.events) break;
       } while (!this.closed && !controller.signal.aborted);
     })().catch(e => {
       if (!controller.signal.aborted) {
@@ -191,6 +203,13 @@ export class ContextPipeline {
     }).finally(() => { this.jobs.delete(key); this.controllers.delete(key); });
     this.jobs.set(key, job); return job;
   }
+  discardCoordinator(session, state, reason, ids = []) {
+    state.review.lastDiscard = { at: Date.now(), reason, ids };
+    state.review.discarded = (state.review.discarded || 0) + 1;
+    // Obsolete work is not a provider failure or a rejected plan.
+    this.store.save(state);
+    this.hub.action(session, 'contextDecisionsDiscarded', 1, { reason, ids });
+  }
   async coordinate(agent, force = false, { retry = false } = {}) {
     if (this.closed || delegated(agent.session) || this.manualSessions.has(agent.session.id) || !this.config().contextEnabled) return;
     const session = agent.session, key = session.id + ':coordinate', s = this.state(session), cfg = this.config();
@@ -200,13 +219,16 @@ export class ContextPipeline {
     if ((s.failures.coordinate?.count || 0) > cfg.backgroundMaxRetries) return;
     if (s.transaction || (!force && s.review.newRecords < cfg.coordinatorEvery)) return;
     const elapsed = Date.now() - s.review.lastAt;
-    if (elapsed < cfg.coordinatorMinGapMs) { this.arm(agent, cfg.coordinatorMinGapMs - elapsed, 'coordinate'); return; }
+    if (elapsed < cfg.coordinatorMinGapMs) { this.arm(agent, cfg.coordinatorMinGapMs - elapsed, 'coordinate', Date.now(), { force }); return; }
     const input = coordinatorInput(session, s, { ...cfg, pressureRatio: this.adapter.pressure?.(session) ?? null });
     if (!input.records.length) return;
     const keyHash = hash(input);
     if (keyHash === s.review.lastKey && !s.review.needed) return;
-    const seenRevision = userRevision(session), seenNewRecords = s.review.newRecords;
+    const seenRevision = userRevision(session), seenNewRecords = s.review.newRecords, seenPendingId = s.pending?.id;
     const seenInputIds = new Set(input.records.map(r => r.id));
+    const seenRecords = new Map(s.records.filter(r => seenInputIds.has(r.id)).map(r => [r.id, recordSnapshot(session, r)]));
+    clearTimeout(this.timers.get(key)); this.timers.delete(key); this.reviewTimers.delete(key);
+    let stale = false, retryFailure = false;
     const controller = new AbortController(); this.controllers.set(key, controller);
     const job = (async () => {
       s.review.lastAt = Date.now(); s.review.needed = false; this.store.save(s);
@@ -214,20 +236,44 @@ export class ContextPipeline {
         messages: [this.adapter.message(JSON.stringify(input), 'coordinate-input')], tools: [COORDINATE_TOOL],
         ...(cfg.surgeonMaxTokens > 0 ? { maxTokens: cfg.surgeonMaxTokens } : {}) }, controller.signal);
       controller.signal.throwIfAborted();
-      if (seenRevision !== userRevision(session)) { s.review.needed = true; this.store.notice(s, '中枢运行期间用户消息变化，旧决定未应用'); return; }
-      if (s.transaction) { s.review.needed = true; this.store.save(s); return; }
+      const changedIds = [...seenRecords].filter(([id, signature]) => signature !== recordSnapshot(session, s.records.find(r => r.id === id))).map(([id]) => id);
+      const userChanged = seenRevision !== userRevision(session);
+      const newerPending = s.pending && s.pending.id !== seenPendingId;
+      if (userChanged || s.transaction || changedIds.length || newerPending) {
+        stale = true; s.review.needed = userChanged || s.review.newRecords > 0;
+        this.discardCoordinator(session, s, userChanged ? 'user-changed' : s.transaction ? 'transaction-in-progress' : changedIds.length ? 'records-changed' : 'newer-plan', changedIds);
+        return; // Preserve any newer pending plan. Never retry obsolete input.
+      }
       const choices = normalizeChoices(decodeResult(result, COORDINATE_TOOL.name), s, session, seenInputIds);
       for (const c of choices) if (c.action === 'merge' && c.summary.length > cfg.summaryTargetChars * 2) throw Error('合并摘要超过目标长度两倍，请减少重复细节');
       const signature = hash(choices.map(({ observed, ...c }) => c));
-      if (s.review.rejectedPlans?.includes(signature)) { s.review.needed = false; this.store.notice(s, '相同替换方案已被拒绝，不再重复执行'); return; }
+      if (s.review.rejectedPlans?.includes(signature)) {
+        s.review.lastKey = keyHash; s.review.newRecords = Math.max(0, s.review.newRecords - seenNewRecords);
+        s.review.needed = s.review.newRecords > 0;
+        this.store.notice(s, '相同替换方案已被拒绝，不再重复执行'); return;
+      }
       s.pending = { id: randomUUID(), createdAt: Date.now(), userRevision: seenRevision, choices, source: 'coordinator', summaryPromptVersion: SUMMARY_PROMPT_VERSION };
       s.review.lastKey = keyHash; s.review.newRecords = Math.max(0, s.review.newRecords - seenNewRecords);
       s.review.lastInput = input; s.review.lastChoices = choices;
       delete s.failures.coordinate; this.store.save(s);
       this.hub.action(session, 'contextDecisions', 1, { choices: choices.map(c => ({ action: c.action, ids: c.ids })) });
     })().catch(e => {
-      if (!controller.signal.aborted) { this.reportError(agent, 'coordinate', e); s.review.needed = s.failures.coordinate.count <= cfg.backgroundMaxRetries; this.store.save(s); }
-    }).finally(() => { this.jobs.delete(key); this.controllers.delete(key); if (s.review.needed) this.arm(agent, Math.max(1000, cfg.coordinatorMinGapMs), 'coordinate'); });
+      if (!controller.signal.aborted) {
+        this.reportError(agent, 'coordinate', e);
+        retryFailure = s.failures.coordinate.count <= cfg.backgroundMaxRetries;
+        s.review.needed = retryFailure; this.store.save(s);
+      }
+    }).finally(() => {
+      this.jobs.delete(key); this.controllers.delete(key);
+      if (this.closed || controller.signal.aborted) return;
+      const userChanged = seenRevision !== userRevision(session);
+      const normalDue = s.review.newRecords >= this.config().coordinatorEvery;
+      // Staleness alone is not a trigger. Check real work at the usual cadence.
+      if (retryFailure || (userChanged && !s.pending) || (normalDue && (!stale || !s.pending))) {
+        this.arm(agent, Math.max(1000, this.config().coordinatorMinGapMs), 'coordinate', Date.now(),
+          { force: retryFailure || userChanged });
+      }
+    });
     this.jobs.set(key, job); return job;
   }
   async applyReady(agent, { manual = false, ids, mode = 'detail', ignoreCooldown = false, sourceCommandId, source, retainTrace = true } = {}) {
@@ -243,6 +289,21 @@ export class ContextPipeline {
         choices: normalizeChoices({ choices: chosen.map(id => ({ action: mode, ids: [id], summary: '', documents: [] })) }, s, session) };
     }
     if (!plan) return null;
+    if (!manual) {
+      const changedIds = plan.choices.filter(c => c.action !== 'keep').flatMap(c => c.ids.filter((id, i) => {
+        const r = s.records.find(r => r.id === id), observed = c.observed?.[i];
+        return !r || r.mergedInto || !observed || !liveSpan(session, r) || observed.version !== r.version
+          || observed.mode !== r.mode || observed.carrierSeq !== (r.carrierSeq ?? null) || observed.sourceHash !== r.sourceHash
+          || (observed.snapshot && observed.snapshot !== recordSnapshot(session, r));
+      }));
+      if (plan.userRevision !== userRevision(session) || changedIds.length) {
+        s.pending = null; s.review.needed = s.review.newRecords > 0;
+        this.discardCoordinator(session, s, 'pending-plan-stale', changedIds);
+        if (s.review.newRecords >= cfg.coordinatorEvery) this.arm(agent, Math.max(1000, cfg.coordinatorMinGapMs), 'coordinate', Date.now(), { force: false });
+        return null;
+      }
+    }
+
     if (sourceCommandId || source) plan = { ...plan, ...(sourceCommandId ? { sourceCommandId } : {}), ...(source ? { source } : {}) };
     let tx;
     try { tx = createTransaction(session, s, plan, retainTrace ? cfg : { ...cfg, traceEnabled: false }, this.adapter.pairing, this.adapter.pricing?.(session)); }
@@ -282,7 +343,7 @@ export class ContextPipeline {
       // Superseded background replies cannot republish an old detailed/merge choice.
       for (const kind of ['prepare', 'coordinate']) this.controllers.get(id + ':' + kind)?.abort();
       for (const [timerKey, timer] of this.timers) if (timerKey.startsWith(id + ':')) { clearTimeout(timer); this.timers.delete(timerKey); }
-      this.idleSince.delete(id);
+      this.idleSince.delete(id); this.reviewTimers.delete(id + ':coordinate');
       s.pending = null; s.review.needed = false; this.store.save(s);
       if (s.transaction) {
         const recovered = await applyTransaction(session, s, s.transaction, this.store, this.adapter);
@@ -415,18 +476,19 @@ export class ContextPipeline {
     const s = this.state(session);
     return { schema: 1, scope: s.binding, steps: s.steps, pending: s.pending, lastReplacement: s.lastReplacement || null,
       records: s.records.map(({ documents, assets = [], userOriginals, originalSeqs, sourceSeqs, sourceHash, ...r }) => ({ ...r, documentCount: documents.length, assetCount: assets.length, originalEventCount: (originalSeqs || sourceSeqs).length, live: Boolean(liveSpan(session, { ...r, documents, sourceSeqs, sourceHash })) })),
-      backlog: backlogView(session, s, this.config()), eventsSincePrepare: s.eventsSincePrepare || 0,
-      limits: { batchWindows: this.config().prepareBatchWindows, concurrency: this.config().backgroundConcurrency },
+      backlog: backlogView(session, s, this.config()), eventsSincePrepare: s.eventsSincePrepare || 0, prepareDeferred: s.prepareDeferred || null,
+      limits: { batchWindows: this.config().prepareBatchWindows, concurrency: this.config().backgroundConcurrency, continueTokens: this.config().prepareContinueTokens },
       failures: s.failures, notices: s.notices, trace: s.traceSlot ? { sourceSeq: s.traceSlot.sourceSeq, sourceAt: s.traceSlot.sourceAt, truncated: s.traceSlot.truncated } : null,
       preparing: this.jobs.has(session.id + ':prepare'), coordinating: this.jobs.has(session.id + ':coordinate'), transactionPending: Boolean(s.transaction),
       manualQueued: s.manualQueue.length, manualOperation: this.manualSessions.get(session.id) || null,
       queuedOperations: s.manualQueue.map(q => q.operation || 'ready'),
-      review: { lastAt: s.review.lastAt, choices: s.review.lastChoices || [], lastRejection: s.review.lastRejection || null } };
+      review: { lastAt: s.review.lastAt, choices: s.review.lastChoices || [], lastRejection: s.review.lastRejection || null, lastDiscard: s.review.lastDiscard || null, discarded: s.review.discarded || 0 } };
   }
   dispose(id) {
     if (!id) this.closed = true;
     for (const [key, c] of this.controllers) if (!id || key.startsWith(id + ':')) c.abort();
     for (const [key, timer] of this.timers) if (!id || key.startsWith(id + ':')) { clearTimeout(timer); this.timers.delete(key); }
+    for (const key of this.reviewTimers.keys()) if (!id || key.startsWith(id + ':')) this.reviewTimers.delete(key);
     if (id) { this.agents.delete(id); this.idleSince.delete(id); }
     else { this.agents.clear(); this.idleSince.clear(); }
   }
