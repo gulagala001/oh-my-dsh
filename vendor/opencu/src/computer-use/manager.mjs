@@ -1,7 +1,7 @@
 import { mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { BrowserHost, browserExecutablePath } from './browser.mjs';
+import { BrowserHost, browserExecutablePath, BROWSER_STARTUP_TIMEOUT_MS } from './browser.mjs';
 import { NativeHost } from './native.mjs';
 import { WindowsNativeHost } from './windows-native.mjs';
 import { NativeViews } from './native-view.mjs';
@@ -563,7 +563,7 @@ export class ComputerUseManager {
     });
     return this.status(id);
   }
-  async userBrowserAction(id, input, action, navigation) {
+  async userBrowserAction(id, input, action, navigation, timeoutMs = 15000) {
     if (!this.enabled) throw new Error('Computer Use 已关闭');
     const state = this.session(id);
     if (state.uiAction || state.resuming) throw new Error('控制权正在切换，请稍后重试');
@@ -576,7 +576,7 @@ export class ComputerUseManager {
       const viewed=this.viewerTarget(state,input);if(viewed)await this.viewsFor(viewed).views.get(viewed.id)?.layoutPending?.catch(()=>{});
       await this.stop(id, controller); controller.signal.throwIfAborted();
       if (!this.enabled) throw new Error('Computer Use 已关闭');
-      return action(AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]));
+      return action(AbortSignal.any([controller.signal, AbortSignal.timeout(timeoutMs)]));
     })();
     state.uiActionPending = pending;
     try { return await pending; }
@@ -648,6 +648,11 @@ export class ComputerUseManager {
   async changeUserTab(id, input) {
     if (!['new', 'select', 'close'].includes(input.action)) throw new Error('未知标签页操作');
     const destination = input.action === 'new' ? addressToUrl(input.url ?? '') : null;
+    const browserId = input.browserId ?? this.sessions.get(id)?.target?.browserId ?? 'browser';
+    // Launch already has its own bounded budget; do not cancel a cold start
+    // before that deadline. Warm navigation keeps the original 15 seconds.
+    const cold = input.action === 'new' && browserId === 'browser' && (!this.browser.run?.ready || this.browser.run?.lost);
+    const timeoutMs = 15000 + (cold ? BROWSER_STARTUP_TIMEOUT_MS : 0);
     await this.userBrowserAction(id, input, async signal => {
       const state = this.session(id);
       if (input.action === 'new') {
@@ -677,7 +682,7 @@ export class ComputerUseManager {
           if (result === 'closed') { state.closingTabs.delete(target.id); this.setTarget(state, null); await this.selectPreviousUserTab(id, signal); }
         } finally { record.page.off('close', closed); record.page.off('dialog', dialog); }
       }
-    });
+    }, undefined, timeoutMs);
   }
   viewTarget(state){
     return state?.viewTarget&&state.previewTargets.has(state.viewTarget.id)?state.viewTarget:state?.target??null;

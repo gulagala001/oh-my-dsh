@@ -68,6 +68,8 @@ function browserProcessId(endpoint, timeoutMs = 2000) {
   });
 }
 
+export const BROWSER_STARTUP_TIMEOUT_MS = process.platform === 'win32' ? 30000 : 15000;
+
 export class BrowserHost extends BrowserActions {
   constructor(directory, { executablePath, headless = true, onTabClosed, onBrowserLost, onPointer, wantsPointer, onVisit } = {}) {
     super({ onTabClosed, onBrowserLost, onPointer, wantsPointer, onVisit });
@@ -131,7 +133,7 @@ export class BrowserHost extends BrowserActions {
     child.stderr.on('data', data => { run.stderr = (run.stderr + data.toString()).slice(-8192); });
     // A cold Windows profile can still be initializing after 15 seconds.
     // Bound the entire launch, including debugger connection retries.
-    const deadline = Date.now() + (process.platform === 'win32' ? 30000 : 15000);
+    const deadline = Date.now() + BROWSER_STARTUP_TIMEOUT_MS;
     try {
       while (Date.now() < deadline) {
         if (this.closing) throw new Error('Computer Use browser is shutting down');
