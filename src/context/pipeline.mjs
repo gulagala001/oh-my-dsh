@@ -4,7 +4,7 @@ import { ContextStore } from './store.mjs';
 import { hash, userRevision, userMessages, rawText, actualUser, prepareCandidate, candidateInput, coordinatorInput, newRecord, activeRecords, liveSpan, validatePrepared, normalizeChoices, decodeResult, recordText, backlogView } from './core.mjs';
 import { attachmentsOf, combineAssets, describeAsset, messageOf } from './materials.mjs';
 import { createTransaction, applyTransaction } from './transactions.mjs';
-import { PREPARE_SYSTEM, PREPARE_TOOL, COORDINATE_SYSTEM, COORDINATE_TOOL } from './prompts.mjs';
+import { SUMMARY_PROMPT_VERSION, PREPARE_SYSTEM, PREPARE_TOOL, COORDINATE_SYSTEM, COORDINATE_TOOL } from './prompts.mjs';
 
 export const DEFAULTS = Object.freeze({ contextEnabled: true, digestEvery: 32, digestWindow: 32, digestLookback: 8,
   preprocessBoundaries: false, prepareBatchWindows: 2, prepareInputTokens: 48000, summaryTargetChars: 1200, backgroundConcurrency: 2, backgroundMaxRetries: 2,
@@ -57,6 +57,15 @@ export class ContextPipeline {
       if (state.initialized) state.eventsSincePrepare = 0;
       state.prepareCadenceVersion = 1;
       this.store.save(state);
+    }
+    if (state.summaryPromptVersion !== SUMMARY_PROMPT_VERSION) {
+      // Discard only uncommitted generated merge text from the superseded policy.
+      // Existing archives and write-ahead transactions must remain intact.
+      if (state.pending?.choices?.some(c => c.action === 'merge')) {
+        state.pending = null; state.review.needed = true;
+        this.store.notice(state, '摘要规则已更新；旧提示词生成但尚未应用的合并结果已作废，原文与档案保留。');
+      }
+      state.summaryPromptVersion = SUMMARY_PROMPT_VERSION; this.store.save(state);
     }
     // A blank session can still change its scope before any data has been read or prepared.
     if (!userMessages(session).length && !state.records.length && !state.transaction && !Object.keys(state.publications.catalog).length && state.publications.globalRevision === null && (state.binding.scope !== binding.scope || state.binding.project !== binding.project)) {
@@ -151,7 +160,7 @@ export class ContextPipeline {
         const prepared = validatePrepared(decodeResult(result, PREPARE_TOOL.name));
         if (prepared.summary.length > cfg.summaryTargetChars * 2) throw Error('基础摘要超过目标长度两倍；原文保留，重试时请缩短摘要而非截断');
         const record = newRecord(session, events, prepared, s.binding, { state: s });
-        record.summaryFormatVersion = 2;
+        record.summaryFormatVersion = 2; record.summaryPromptVersion = SUMMARY_PROMPT_VERSION;
         // A write-ahead replacement owns the session records until its disk flush completes.
         if (s.transaction) { this.store.notice(s, '预处理完成时替换事务尚未提交，原文保留并等待下一批'); break; }
         // Other maintenance may have replaced this source while the model ran.
@@ -211,7 +220,7 @@ export class ContextPipeline {
       for (const c of choices) if (c.action === 'merge' && c.summary.length > cfg.summaryTargetChars * 2) throw Error('合并摘要超过目标长度两倍，请减少重复细节');
       const signature = hash(choices.map(({ observed, ...c }) => c));
       if (s.review.rejectedPlans?.includes(signature)) { s.review.needed = false; this.store.notice(s, '相同替换方案已被拒绝，不再重复执行'); return; }
-      s.pending = { id: randomUUID(), createdAt: Date.now(), userRevision: seenRevision, choices, source: 'coordinator' };
+      s.pending = { id: randomUUID(), createdAt: Date.now(), userRevision: seenRevision, choices, source: 'coordinator', summaryPromptVersion: SUMMARY_PROMPT_VERSION };
       s.review.lastKey = keyHash; s.review.newRecords = Math.max(0, s.review.newRecords - seenNewRecords);
       s.review.lastInput = input; s.review.lastChoices = choices;
       delete s.failures.coordinate; this.store.save(s);

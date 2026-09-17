@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { activeRecords, decodeResult, eventSource, hash, liveSpan, newRecord, recordText, sourceHash, userRevision, carrierBarrier } from './core.mjs';
 import { messageTokens } from './materials.mjs';
-import { FULL_COMPACT_SYSTEM, FULL_COMPACT_TOOL } from './prompts.mjs';
+import { SUMMARY_PROMPT_VERSION, FULL_COMPACT_SYSTEM, FULL_COMPACT_TOOL } from './prompts.mjs';
 
 // Full compaction retains actual prompts, not every plugin-generated record.
 export function fullSnapshot(session) {
@@ -78,7 +78,7 @@ export async function compactFull(pipeline, agent, signal, sourceCommandId) {
   const events = seqs.map(seq => session.eventAt(seq));
   events.parents = parents.map(r => r.id);
   const record = { ...newRecord(session, events, { summary, documents: [] }, s.binding, { state: s }),
-    kind: 'full', mode: 'brief', summaryFormatVersion: 2, parents: parents.map(r => r.id) };
+    kind: 'full', mode: 'brief', summaryFormatVersion: 2, summaryPromptVersion: SUMMARY_PROMPT_VERSION, parents: parents.map(r => r.id) };
   for (const r of records) if (record.parents.includes(r.id)) r.mergedInto = record.id;
   records.push(record);
   const text = recordText(record, 'brief');

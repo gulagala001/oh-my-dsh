@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { hash, liveSpan, recordText, recordBlocks, userRevision, exposedTrace, actualUser, carrierBarrier } from './core.mjs';
 import { combineAssets, combineUsers, userDocument, attachmentsOf, contentChars, messageTokens } from './materials.mjs';
-import { TRACE_HEAD } from './prompts.mjs';
+import { TRACE_HEAD, SUMMARY_PROMPT_VERSION } from './prompts.mjs';
 
 export function createTransaction(session, state, plan, cfg, pairing, pricing = {}) {
   if (state.transaction) return state.transaction;
@@ -28,7 +28,7 @@ export function createTransaction(session, state, plan, cfg, pairing, pricing = 
       const users = combineUsers(...originals.map(r => r.userOriginals || []));
       output = { id: randomUUID(), version: 1, mode: choice.mode || 'brief', kind: originals.some(r => r.kind === 'full') ? 'full' : 'window',
         summary: choice.summary, documents: [...structuredClone(choice.documents), ...userDocument(users)], userOriginals: users,
-        assets: combineAssets(...originals.map(r => r.assets || [])), summaryFormatVersion: 2,
+        assets: combineAssets(...originals.map(r => r.assets || [])), summaryFormatVersion: 2, summaryPromptVersion: SUMMARY_PROMPT_VERSION,
         sessionId: session.id, scope: state.binding.scope, project: state.binding.project, createdAt: Date.now(),
         parents: originals.map(r => r.id), sourceSeqs: [...new Set(originals.flatMap(r => r.sourceSeqs))],
         originalSeqs: [...new Set(originals.flatMap(r => r.originalSeqs || r.sourceSeqs))].sort((a,b) => a-b),
