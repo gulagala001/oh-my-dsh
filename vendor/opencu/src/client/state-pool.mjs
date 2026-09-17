@@ -1,7 +1,9 @@
 import { createPoller } from './polling.mjs';
 
+// CU status must stay fresh for detached previews when the main page is hidden.
+// Ordinary dashboards may sleep; live control ownership must not.
 const EMPTY = Object.freeze({ state: null, error: '', eventRevision: 0 });
-export function createComputerStatePool({ read, events = globalThis.window, visibility = globalThis.document, interval = 800 }) {
+export function createComputerStatePool({ read, events = globalThis.window, visibility = null, interval = 800 }) {
   const entries = new Map();
   const notify = entry => { for (const listener of entry.listeners) listener(); };
   function publish(id, value, fromPoll = false) {

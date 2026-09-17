@@ -11,7 +11,9 @@ export function decorateSlot(slots, name, accepts, decorate) {
     try {
       do {
         dirty = false;
-        const entries = slots.entriesOfSlot(name), live = new Set(entries), originals = new Map();
+        // Inspect the full ledger, not just shadowing winners: our own
+        // renderer winning must not look like its host was unregistered.
+        const entries = slots.entries(name), live = new Set(entries), originals = new Map();
         for (const entry of entries) {
           const meta = entry.component[decoration], key = entry.options.key;
           if (!accepts(key) || meta && (meta.layers.includes(layer) || !live.has(meta.root))) continue;

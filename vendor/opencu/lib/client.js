@@ -100,7 +100,7 @@ function createPoller({
 
 // src/client/state-pool.mjs
 var EMPTY = Object.freeze({ state: null, error: "", eventRevision: 0 });
-function createComputerStatePool({ read, events = globalThis.window, visibility = globalThis.document, interval = 800 }) {
+function createComputerStatePool({ read, events = globalThis.window, visibility = null, interval = 800 }) {
   const entries = /* @__PURE__ */ new Map();
   const notify = (entry) => {
     for (const listener of entry.listeners) listener();
@@ -1307,7 +1307,7 @@ var BrowserControls = (0, import_react10.forwardRef)(function BrowserControls2({
   const [tabSnapshot, setTabSnapshot] = (0, import_react10.useState)({ sessionId: null, tabs: [] }), [address, setAddress] = (0, import_react10.useState)(""), [busy, setBusy] = (0, import_react10.useState)(false);
   const editing = (0, import_react10.useRef)(false), addressInput = (0, import_react10.useRef)(null), pending = (0, import_react10.useRef)(null), keyboardTarget = (0, import_react10.useRef)(null);
   const navigationClient = (0, import_react10.useRef)(crypto.randomUUID()), sequence = (0, import_react10.useRef)(0);
-  const addressObservation = (0, import_react10.useRef)(0);
+  const addressObservation = (0, import_react10.useRef)(0), pendingFocus = (0, import_react10.useRef)(null);
   const [panel, setPanel] = (0, import_react10.useState)(null);
   (0, import_react10.useEffect)(() => {
     setPanel(null);
@@ -1323,15 +1323,23 @@ var BrowserControls = (0, import_react10.forwardRef)(function BrowserControls2({
   }, [target?.id, tabs.length]);
   const latest = (0, import_react10.useRef)({ state, target, onState, onError });
   latest.current = { state, target, onState, onError };
-  (0, import_react10.useEffect)(() => {
+  (0, import_react10.useLayoutEffect)(() => {
     addressObservation.current = 0;
     editing.current = false;
     setAddress(target?.url === "about:blank" ? "" : target?.url ?? "");
-    if (keyboardTarget.current === target?.id) {
-      tabList.current?.querySelector('[aria-selected="true"]')?.focus();
-      keyboardTarget.current = null;
-    } else if (target?.url === "about:blank") addressInput.current?.focus();
-  }, [target?.id]);
+    const keyboard = target && keyboardTarget.current === target.id;
+    pendingFocus.current = target && (keyboard || target.url === "about:blank") ? { id: target.id, keyboard } : null;
+    if (keyboard) keyboardTarget.current = null;
+  }, [sessionId, target?.id]);
+  (0, import_react10.useLayoutEffect)(() => {
+    const focus = pendingFocus.current;
+    if (!focus || focus.id !== target?.id || !visible || busy || state?.transitioning || state?.resuming || state?.enabled === false) return;
+    const element = focus.keyboard ? tabList.current?.querySelector('[aria-selected="true"]') : addressInput.current;
+    if (element && !element.disabled) {
+      element.focus();
+      pendingFocus.current = null;
+    }
+  }, [target?.id, visible, busy, state?.transitioning, state?.resuming, state?.enabled, tabs.length]);
   (0, import_react10.useEffect)(() => {
     if (!editing.current && !pending.current && navigation && target && navigation.tabId === target.id && (navigation.observedAt ?? 0) >= addressObservation.current) {
       addressObservation.current = navigation.observedAt ?? 0;
@@ -1489,7 +1497,7 @@ function decorateSlot(slots, name, accepts, decorate) {
     try {
       do {
         dirty = false;
-        const entries = slots.entriesOfSlot(name), live = new Set(entries), originals = /* @__PURE__ */ new Map();
+        const entries = slots.entries(name), live = new Set(entries), originals = /* @__PURE__ */ new Map();
         for (const entry of entries) {
           const meta = entry.component[decoration], key = entry.options.key;
           if (!accepts(key) || meta && (meta.layers.includes(layer) || !live.has(meta.root))) continue;

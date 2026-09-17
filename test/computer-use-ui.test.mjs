@@ -234,6 +234,15 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
 
   await entry.click();
   const image = page.getByLabel('浏览器实时画面').locator('img'); await image.waitFor();
+  const beforeHostPreview = await (await fetch(origin + '/trisoul-x/computer-use/state?session=' + sessionId, { headers: { cookie } })).json();
+  await page.getByRole('button', { name: '在官方浏览器中预览', exact: true }).click();
+  await page.locator('iframe[data-sidebar-browser-frame]').waitFor();
+  assert.equal(new URL(await page.locator('iframe[data-sidebar-browser-frame]').getAttribute('src')).origin, new URL(fixture.url).origin);
+  const afterHostPreview = await (await fetch(origin + '/trisoul-x/computer-use/state?session=' + sessionId, { headers: { cookie } })).json();
+  for (const key of ['controlEpoch', 'status']) assert.equal(afterHostPreview[key], beforeHostPreview[key], 'official preview is not a control operation: ' + key);
+  assert.equal(afterHostPreview.target.id, beforeHostPreview.target.id);
+  await entry.click(); await image.waitFor();
+
   const layoutMatches=async()=>{const size=await page.locator('.tx-cu-pane .tx-cu-preview-stage').evaluate(el=>({width:el.clientWidth,height:el.clientHeight})),actual=await target.evaluate(()=>({width:innerWidth,height:innerHeight})),rendered=await image.boundingBox();return Math.abs(size.width-actual.width)<2&&Math.abs(size.height-actual.height)<2&&rendered&&Math.abs(rendered.height-size.height)<2;};
   if(backend==='managed'){
     await until(layoutMatches);
