@@ -1,0 +1,37 @@
+.trisoul-shell .omd-brand-with-version { flex: 0 1 auto; }
+.omd-version-anchor { display: inline-flex; flex: 0 0 auto; align-items: center; margin-right: auto; }
+.omd-version { display: inline-flex; align-items: center; color: var(--tx-shell-muted, GrayText); font: inherit; }
+.omd-version-trigger { display: inline-flex; align-items: center; justify-content: center; position: relative; flex: none; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
+.omd-version-trigger:hover { color: var(--tx-shell-text, CanvasText); background: var(--tx-shell-hover, ButtonFace); }
+.omd-version-trigger:focus-visible, .omd-version-dialog :is(button, a):focus-visible { outline: 2px solid var(--dsw-alias-label-primary, Highlight); outline-offset: 2px; }
+.omd-update-dot { position: absolute; top: 1px; right: 1px; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--dsw-specific-sidebar-fill, Canvas); pointer-events: none; }
+.omd-update-normal { background: #22c55e; }
+.omd-update-required { background: #ef4444; }
+.omd-version-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.omd-version-dialog { position: fixed; inset: auto; margin: 0; box-sizing: border-box; width: min(380px, calc(100vw - 24px)); max-height: calc(100dvh - 96px); padding: 18px; overflow: auto; background: var(--dsw-alias-bg-base, Canvas); color: var(--dsw-alias-label-primary, CanvasText); font-family: inherit; font-size: 13px; line-height: 1.6; text-align: left; border: 1px solid var(--tx-shell-line, ButtonBorder); border-radius: 16px; box-shadow: 0 12px 48px #00000026; }
+.omd-version-dialog::backdrop { background: #00000012; }
+.omd-version-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.omd-version-dialog h2 { font-size: 15px; line-height: 24px; font-weight: 600; margin: 0; }
+.omd-version-close { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px; color: var(--dsw-alias-label-secondary, GrayText); background: transparent; font-size: 22px; line-height: 24px; cursor: pointer; }
+.omd-version-close:hover { background: var(--tx-shell-hover, ButtonFace); }
+.omd-version-dialog dl { margin: 0 0 10px; }
+.omd-version-dialog dl > div { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 5px 0; }
+.omd-version-dialog dt { color: var(--dsw-alias-label-secondary, GrayText); flex: 0 0 auto; }
+.omd-version-dialog dd { margin: 0; overflow-wrap: anywhere; font-family: var(--ds-font-family-code, monospace); font-size: 12px; }
+.omd-version-status { font-weight: 500; margin: 12px 0; padding: 8px 10px; border-radius: 8px; background: var(--tx-shell-hover, ButtonFace); }
+.omd-version-status.omd-level-normal { color: light-dark(#15803d, #86efac); background: light-dark(#f0fdf4, #163322); }
+.omd-version-status.omd-level-required { color: light-dark(#b91c1c, #fca5a5); background: light-dark(#fff1f2, #3b2026); }
+.omd-version-releases section { padding: 10px 0; border-top: 1px solid var(--tx-shell-line, ButtonBorder); }
+.omd-version-releases h3 { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; margin: 0 0 4px; }
+.omd-version-releases em { font-style: normal; font-size: 11px; border-radius: 5px; padding: 0 6px; color: light-dark(#15803d, #86efac); background: light-dark(#f0fdf4, #163322); }
+.omd-version-releases em[data-severity=required] { color: light-dark(#b91c1c, #fca5a5); background: light-dark(#fff1f2, #3b2026); }
+.omd-version-releases strong { font-size: 13px; font-weight: 500; }
+.omd-version-releases ul { margin: 5px 0 0; padding-left: 17px; color: var(--dsw-alias-label-secondary, GrayText); }
+.omd-version-releases li { margin: 3px 0; overflow-wrap: anywhere; }
+.omd-version-meta { font-size: 11px; color: var(--dsw-alias-label-secondary, GrayText); margin: 8px 0 0; }
+.omd-version-error { font-size: 12px; color: var(--dsw-alias-label-secondary, GrayText); margin: 8px 0; }
+.omd-version-dialog footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 14px; }
+.omd-version-check { cursor: pointer; border: 1px solid var(--tx-shell-line, ButtonBorder); border-radius: 8px; background: var(--tx-shell-hover, ButtonFace); color: inherit; padding: 6px 12px; font: inherit; }
+.omd-version-check:disabled { opacity: .55; cursor: default; }
+.omd-version-dialog a { color: var(--dsw-alias-label-link, #3877e8); text-decoration: none; font-size: 12px; }
+.omd-version-dialog a:hover { text-decoration: underline; }

@@ -1,6 +1,6 @@
 {
   "name": "trisoul_x",
-  "version": "1.3.0-alpha.4",
+  "version": "1.3.0-alpha.5",
   "private": true,
   "type": "module",
   "description": "DSH 工作台：整窗预处理、摘要与详细资料分层、项目摘要时间轴、任务验收与电脑操控。",
@@ -70,7 +70,9 @@
     "scripts",
     "THIRD_PARTY_NOTICES.md",
     "docs",
-    "vendor"
+    "vendor",
+    "release-manifest.json",
+    "CHANGELOG.md"
   ],
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.2",

@@ -6,6 +6,8 @@ import shellCss from './shell.css';
 import { ComputerIcon } from '#opencu/src/client/computer-icons.jsx';
 import { applyComputerUseClient, ComputerPane } from '#opencu/client-source';
 import { BrandMark } from './brand.jsx';
+import { BrandNameWithVersion } from './version-info.jsx';
+import versionCss from './version-info.css';
 import { whaleCss, whaleSvg } from './brand.mjs';
 import { createContextUI } from './context-client.mjs';
 
@@ -251,7 +253,7 @@ export function apply(ctx) {
     return <div className="tx-composer-dock"><div className="tx-composer-tools"><button type="button" className="tx-workbench-entry" aria-label="打开工作台" onClick={() => openPanel('tasks')}><Icon name="context" size={15}/><span>工作台</span></button><ComputerEntry {...props}/></div><button type="button" className="tx-usage-toggle" aria-label="用量详情" aria-expanded={usageOpen} onClick={() => setUsageOpen(value => !value)}><Icon name="monitor" size={14}/><span>用量</span><Icon name="chevron" size={12}/></button><StatsLine {...props} onOpen={() => openPanel('monitor')}/></div>;
   }
   ctx.effect(() => {
-    const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css + '\n' + shellCss + '\n' + whaleCss; document.head.appendChild(tag);
+    const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css + '\n' + shellCss + '\n' + whaleCss + '\n' + versionCss; document.head.appendChild(tag);
     document.documentElement.classList.add('trisoul-shell');
     // DSH owns the session title; only replace its fixed product suffix.
     let hostTitle = document.title, brandedTitle;
@@ -271,7 +273,7 @@ export function apply(ctx) {
     document.head.append(icon);
     return () => { titleObserver.disconnect(); if (document.title === brandedTitle) document.title = hostTitle; icon.remove(); tag.remove(); document.documentElement.classList.remove('trisoul-shell'); };
   });
-  for (const [seat, Component] of [['sidebar.brand.mark', BrandMark], ['sidebar.brand.name', () => <strong className="tx-wordmark">Oh My <span>DSH</span></strong>], ['conversation.hero.brand.mark', () => <BrandMark size={64}/>]]) ctx.slots.inject(seat, () => ctx.slots.register({ name: seat }, Component));
+  for (const [seat, Component] of [['sidebar.brand.mark', BrandMark], ['sidebar.brand.name', BrandNameWithVersion], ['conversation.hero.brand.mark', () => <BrandMark size={64}/>]]) ctx.slots.inject(seat, () => ctx.slots.register({ name: seat }, Component));
   ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'trisoul-x', order: 16, label: () => 'Oh My DSH' }, ContextSettings));
   ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register({ name: 'conversation.composer.dock', id: 'trisoul-x-tools', order: 25 }, ComposerDock));
   ctx.slots.inject('conversation.input.left', () => ctx.slots.register({ name: 'conversation.input.left', id: 'trisoul-memory-scope', order: 50 }, ScopeChip));
