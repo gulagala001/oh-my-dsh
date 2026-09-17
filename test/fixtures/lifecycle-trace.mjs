@@ -26,6 +26,16 @@ export function apply(ctx, config) {
       restored.push(() => { if (prototype[name] === wrapped) prototype[name] = original; });
     }
   };
+  const loader = ctx.loader;
+  const iterator = loader.entries;
+  function* entries(...args) {
+    for (const entry of iterator.apply(this, args)) {
+      if (relevant(entry) && !entry.fiber) appendFileSync(config.file, JSON.stringify({ at: Date.now(), event: 'iterator:missing-fiber', entry: row(entry), registered: entry.parent.tree.store[entry.options.id] === entry, stack: new Error().stack }) + '\n');
+      yield entry;
+    }
+  }
+  Object.defineProperty(loader, 'entries', { value: entries, configurable: true, writable: true });
+  restored.push(() => { if (Object.getOwnPropertyDescriptor(loader, 'entries')?.value === entries) delete loader.entries; });
   for (const entry of ctx.loader.entries()) patch(entry);
   ctx.on('loader/entry-init', patch, { global: true });
   ctx.on('loader/partial-dispose', entry => { if (relevant(entry)) log('partial-dispose', entry); }, { global: true });
