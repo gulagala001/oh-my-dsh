@@ -40,3 +40,39 @@ test('host-lifetime installation is idempotent and releases the original method'
   installLoaderLifecycleCompatibility(ctx); assert.equal(f.loader.entries, wrapped);
   assert.equal(effects.length, 1); effects[0](); assert.equal(f.loader.entries, original);
 });
+
+
+test('an explicitly removing row is not reported as a failed import while its disposer is pending', async () => {
+  const f = fixture(), value = f.entry('plugin'); let finish;
+  value.parent.remove = async function (id) { value.fiber = undefined; await new Promise(resolve => { finish = resolve; }); delete this.tree.store[id]; };
+  value.fiber = { state: 2 };
+  const dispose = bindLiveLoaderEntries(f.loader), removing = value.parent.remove('plugin');
+  assert.equal(f.tree.store.plugin, value, 'reproduce the host retaining the row during disposal');
+  assert.deepEqual([...f.loader.entries()], []);
+  finish(); await removing; assert.deepEqual([...f.loader.entries()], []); dispose();
+});
+
+test('failed removal rejects with its original error and keeps the retained row diagnosable', async () => {
+  const f = fixture(), value = f.entry('plugin'), failure = new Error('cleanup failed');
+  value.parent.remove = async () => { throw failure; };
+  const original = value.parent.remove, dispose = bindLiveLoaderEntries(f.loader);
+  await assert.rejects(value.parent.remove('plugin'), error => error === failure);
+  assert.deepEqual([...f.loader.entries()], [value]); dispose();
+  assert.equal(value.parent.remove, original);
+});
+
+
+test('loader settlement waits for removal completion rather than only the disposed fiber', async () => {
+  const f = fixture(), value = f.entry('plugin'); let finish, settled = false;
+  f.loader.await = async () => 'settled';
+  value.parent.remove = async function (id) {
+    value.fiber = undefined; await new Promise(resolve => { finish = resolve; });
+    delete this.tree.store[id];
+  };
+  const originalAwait = f.loader.await, dispose = bindLiveLoaderEntries(f.loader);
+  const removal = value.parent.remove('plugin');
+  const waiting = f.loader.await().then(value => { settled = true; return value; });
+  await Promise.resolve(); await Promise.resolve(); assert.equal(settled, false);
+  finish(); await removal; assert.equal(await waiting, 'settled');
+  dispose(); assert.equal(f.loader.await, originalAwait);
+});
