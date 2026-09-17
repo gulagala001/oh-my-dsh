@@ -549,13 +549,13 @@ test('disabling while idle preparation runs keeps the result but skips the force
 });
 
 
-test('explicit manual compaction is not vetoed by an earlier automatic keep decision', async t => {
+test('an explicit manual selection overrides an earlier automatic keep decision', async t => {
   const f = setup(t, { automaticReplace: false }); const r = add(f);
   f.state.pending = plan(f, [['keep', r]]); f.store.save(f.state);
   const before = JSON.stringify(f.s.snapshotEvents());
   assert.equal(await f.pipeline.applyReady(f.agent), null);
   assert.equal(JSON.stringify(f.s.snapshotEvents()), before);
-  const result = await f.pipeline.applyReady(f.agent, { manual: true });
+  const result = await f.pipeline.applyReady(f.agent, { manual: true, ids: [r.id], mode: 'detail' });
   assert.ok(result); assert.equal(f.state.records[0].mode, 'detail');
   assert.match(f.pipeline.recall(f.s, { id: r.id }), /9007199254740993/);
 });
@@ -571,4 +571,23 @@ test('unchanged project publication causes no filesystem writes or context injec
   assert.equal(writes, 0); assert.equal(JSON.stringify(f.s.snapshotEvents()), before);
   f.store.setGlobal('A user update', 0); f.pipeline.publishMemory(f.s);
   assert.equal(writes, 1); assert.match(JSON.stringify(f.s.snapshotEvents()), /A user update/);
+});
+
+
+test('applying a prepared keep plan without an explicit selection leaves every source event unchanged', async t => {
+  const f = setup(t), record = add(f);
+  f.state.pending = plan(f, [['keep', record]]); f.store.save(f.state);
+  const before = JSON.stringify(f.s.snapshotEvents());
+  assert.equal(await f.pipeline.applyReady(f.agent, { manual: true }), null);
+  assert.equal(JSON.stringify(f.s.snapshotEvents()), before);
+  assert.equal(f.state.records[0].mode, 'raw');
+});
+
+test('one-click manual application keeps the prepared mix of brief and keep decisions', async t => {
+  const f = setup(t), brief = add(f, 'First'), kept = add(f, 'Second');
+  f.state.pending = plan(f, [['brief', brief], ['keep', kept]]); f.store.save(f.state);
+  assert.ok(await f.pipeline.applyReady(f.agent, { manual: true }));
+  assert.equal(f.state.records.find(r => r.id === brief.id).mode, 'brief');
+  assert.equal(f.state.records.find(r => r.id === kept.id).mode, 'raw');
+  assert.ok(kept.sourceSeqs.every(seq => f.s.surface.nodes.includes(seq)));
 });
