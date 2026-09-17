@@ -13,7 +13,7 @@ test('DSH alpha.2 live unload/reload releases UI and restores one instance witho
   const change=async(name,enabled)=>{
     const method='pluginManager/setBundleEnabled';
     const response=await page.request.post(base+'/api/'+method,{data:{type:'client-request',rpcId:crypto.randomUUID(),method,payload:{args:{name,enabled}}}});
-    const value=await response.json();assert.equal(value.result?.ok,true,JSON.stringify(value));assert.equal(value.result.value.application,'applied',JSON.stringify(value));
+    const value=await response.json(); if (value.result?.value?.application !== 'applied') console.error('Live reload diagnostics', f.log()); assert.equal(value.result?.ok,true,JSON.stringify(value));assert.equal(value.result.value.application,'applied',JSON.stringify(value));
   };
   for(let cycle=0;cycle<2;cycle++) {
     await change('trisoul_x',false);

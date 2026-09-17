@@ -19,6 +19,8 @@ export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api,
   const activeStream=useRef(null);
   const stage=useRef(null),meta=useRef(null),[space,setSpace]=useState({width:0,height:0});
   const [layoutSize,setLayoutSize]=useState(null),layoutResizing=useRef(false);
+  const [layoutBusy, setLayoutBusy] = useState(false);
+  const setLayoutResizing = value => { layoutResizing.current = value; setLayoutBusy(value); };
   const isDevice=deviceMode||!!state?.viewViewport?.overridden;
   useLayoutEffect(()=>{
     if(!visible||isDevice||!state?.viewViewport?.layoutSupported)return;
@@ -31,11 +33,11 @@ export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api,
     if(frame.width===layoutSize.width&&frame.height===layoutSize.height)return;
     let active=true,timer;const controller=new AbortController();
     const resize=async()=>{
-      layoutResizing.current=true;
-      try{const result=await api('view-layout',sessionId,{actor:frame.actor,tabId,controlEpoch:state.controlEpoch,size:layoutSize},controller.signal);if(active&&result.layout!=='applied')layoutResizing.current=false;if(active&&result.layout==='deferred')timer=setTimeout(resize,500);}
-      catch(error){if(active){layoutResizing.current=false;if(!controller.signal.aborted)callbacks.current.onError(error.message);}}
+      setLayoutResizing(true);
+      try{const result=await api('view-layout',sessionId,{actor:frame.actor,tabId,controlEpoch:state.controlEpoch,size:layoutSize},controller.signal);if(active&&result.layout!=='applied')setLayoutResizing(false);if(active&&result.layout==='deferred')timer=setTimeout(resize,500);}
+      catch(error){if(active){setLayoutResizing(false);if(!controller.signal.aborted)callbacks.current.onError(error.message);}}
     };
-    timer=setTimeout(resize,200);return()=>{active=false;layoutResizing.current=false;clearTimeout(timer);controller.abort();};
+    timer=setTimeout(resize,200);return()=>{active=false;setLayoutResizing(false);clearTimeout(timer);controller.abort();};
   },[sessionId,tabId,visible,isDevice,state?.enabled,state?.transitioning,state?.controlEpoch,state?.viewViewport?.layoutSupported,layoutSize?.width,layoutSize?.height,frame?.actor,frame?.width,frame?.height,connection]);
   useLayoutEffect(()=>{
     if(!isDevice||!visible)return;
@@ -197,7 +199,7 @@ export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api,
   const blank=pageUrl==='about:blank'&&state?.enabled!==false&&!['closed','error'].includes(connection);
   const placeholder=state?.enabled===false?'Computer Use 已停用':connection==='closed'?'页面已断开':connection==='error'?'无法获取页面画面':'正在获取页面…';
 
-  return <div className={'tx-cu-live'+(isDevice?' is-device':'')+(blank?' is-blank':'')} data-connection={connection} style={isDevice?{'--cu-device-width':frameWidth*scale+'px','--cu-preview-height':space.height?space.height+'px':undefined}:undefined} aria-label="浏览器实时画面">
+  return <div className={'tx-cu-live'+(isDevice?' is-device':'')+(blank?' is-blank':'')} data-connection={connection} data-layout-busy={layoutBusy ? 'true' : 'false'} style={isDevice?{'--cu-device-width':frameWidth*scale+'px','--cu-preview-height':space.height?space.height+'px':undefined}:undefined} aria-label="浏览器实时画面">
     <div className="tx-cu-live-meta" ref={meta}><span className={connection === 'live' ? 'tx-cu-live-dot' : ''}>{connection === 'live' ? state?.resuming?'正在恢复':state?.status==='running'?'助手正在操作':state?.status==='stopped'?'你正在控制':'就绪' : connection === 'connecting' ? '正在连接画面…' : '画面已断开'}</span><span>{state?.status === 'stopped' ? '可在工具栏恢复助手' : '点击画面接管'}</span></div>
     <div className="tx-cu-preview-stage" ref={stage}>
     <DeviceFrame enabled={isDevice} interactive={visible&&state?.enabled!==false&&!state?.transitioning&&!state?.resuming&&connection==='live'&&!dialog&&!!onViewportResize} width={frameWidth} height={frameHeight} scale={scale} onResize={onViewportResize} onError={onError}>

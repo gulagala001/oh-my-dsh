@@ -58,7 +58,7 @@ export function VersionInfo() {
       {severity !== 'none' && <span className={'omd-update-dot omd-update-' + severity} aria-hidden="true"/>}
     </button>
     <span id={titleId + '-hint'} className="omd-version-sr">{statusText(data)}{data.stale ? '，上次检查结果' : ''}</span>
-    <dialog ref={dialog} className="omd-version-dialog" aria-labelledby={titleId} onCancel={() => setOpen(false)} onClose={() => setOpen(false)}
+    <dialog ref={dialog} className="omd-version-dialog" aria-labelledby={titleId} onCancel={event => { event.preventDefault(); setOpen(false); }} onClose={event => { if (!event.currentTarget.open) setOpen(false); }}
       onClick={event => { if (event.target === event.currentTarget) { const r = event.currentTarget.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) setOpen(false); } }}>
       {open && <><header><h2 id={titleId}>关于 Oh My DSH</h2><button type="button" className="omd-version-close" aria-label="关闭版本信息" onClick={() => setOpen(false)}>×</button></header>
       <dl><div><dt>当前版本</dt><dd data-testid="omd-current-version">{data.currentVersion}</dd></div><div><dt>最新版本</dt><dd>{data.latestVersion || '尚未确认'}</dd></div></dl>

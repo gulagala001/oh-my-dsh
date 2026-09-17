@@ -1,3 +1,4 @@
+import { installToolSchedulerCompatibility } from './tool-scheduler-compat.mjs';
 import { monitorSelection, compactMonitorSnapshot } from './monitoring.mjs';
 import { createVersionService, handleVersionApi } from './version.mjs';
 import { installImageBudget } from './image-budget.mjs';
@@ -16,11 +17,12 @@ import { acquireComputerUse } from '#opencu/integration';
 
 export { Config };
 export const name = 'trisoul-x';
-export const inject = ['llm', 'agents', 'sessions', 'settings', 'tokenMeter', 'sessionProjections'];
+export const inject = ['tools', 'llm', 'agents', 'sessions', 'settings', 'tokenMeter', 'sessionProjections'];
 const send = (res, status, value) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(value)); };
 async function readBody(req) { let body = ''; for await (const part of req) body += part; return body.trim() ? JSON.parse(body) : {}; }
 
 export function apply(ctx, config) {
+  installToolSchedulerCompatibility(ctx);
   const hub = new Hub(ctx, config);
   const versionService = createVersionService();
   ctx.effect(() => () => versionService.dispose());

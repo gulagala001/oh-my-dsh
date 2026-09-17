@@ -69,7 +69,7 @@ export async function frontendFixture(t, { imageBudget, versionResponse } = {}) 
   await page.goto(origin); await page.getByRole('button', { name: '继续', exact: true }).click();
   await page.getByText('整理工作台和对话界面', { exact: true }).first().click();
   await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
-  return { root, home, page, context, rpc, sessionId, errors, replyWith(factory){replyFactory=factory;}, holdNextReply() {
+  return { root, home, page, context, rpc, sessionId, errors, log: () => log.replace(/token=\S+/g, 'token=[redacted]'), replyWith(factory){replyFactory=factory;}, holdNextReply() {
     nextReply = new Promise(resolve => { releaseReply = resolve; });
     return () => releaseReply?.();
   } };
