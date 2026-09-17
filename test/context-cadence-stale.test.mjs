@@ -68,9 +68,9 @@ test('a failed second window retries only that window, not another entire batch'
   t.mock.timers.tick(3600000); await finish(f); assert.equal(calls, 3);
 });
 
-test('an earlier merge applied during generation discards obsolete IDs without error or forced retry', async t => {
+test('an earlier representation change applied during generation discards obsolete snapshots without error or forced retry', async t => {
   const f = setup(t), a = f.add(), b = f.add(); let release;
-  f.state.pending = plan(f, [choice('merge', [a.id, b.id], prepared)]);
+  f.state.pending = plan(f, [choice('brief', [a.id]), choice('brief', [b.id])]);
   f.hub.call = () => new Promise(resolve => { release = resolve; });
   const job = f.pipeline.coordinate(f.agent, true);
   await f.pipeline.applyReady(f.agent);
@@ -97,11 +97,11 @@ test('same ID with a changed representation is stale and cannot overwrite a newe
 
 test('stale results with enough new work schedule one fresh review at the normal cadence', async t => {
   const f = setup(t), a = f.add(), b = f.add(); let release, count = 0;
-  f.state.pending = plan(f, [choice('merge', [a.id,b.id], prepared)]); f.state.review.newRecords = 2;
+  f.state.pending = plan(f, [choice('brief', [a.id]), choice('brief', [b.id])]); f.state.review.newRecords = 2;
   f.hub.call = async (_a, _kind, request) => {
     count++; if (count === 1) return new Promise(resolve => { release = resolve; });
     const input = JSON.parse(request.messages[0].content[0].text);
-    assert.ok(!input.records.some(r => r.id === a.id || r.id === b.id));
+    assert.ok(input.records.filter(r => r.id === a.id || r.id === b.id).every(r => r.representation === 'brief'));
     return reply('submit_context_choices', { choices: [] });
   };
   const job = f.pipeline.coordinate(f.agent); await f.pipeline.applyReady(f.agent);
@@ -212,4 +212,13 @@ test('manual compaction clears queued forced review state before later ordinary 
   f.state.review.newRecords = 2; await f.pipeline.coordinate(f.agent);
   f.state.review.newRecords = 0;
   t.mock.timers.tick(30000); await finish(f); assert.equal(f.calls.length, 0);
+});
+
+test('disabled merge replies never publish a plan or change existing records', async t => {
+  const f = setup(t), a = f.add(), b = f.add();
+  const records = JSON.stringify(f.state.records), nodes = [...f.session.surface.nodes];
+  f.hub.call = async () => reply('submit_context_choices', { choices: [choice('merge', [a.id, b.id], prepared)] });
+  await f.pipeline.coordinate(f.agent, true);
+  assert.equal(f.state.pending, null); assert.equal(f.state.failures.coordinate.count, 1);
+  assert.equal(JSON.stringify(f.state.records), records); assert.deepEqual(f.session.surface.nodes, nodes);
 });

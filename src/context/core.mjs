@@ -145,9 +145,10 @@ export function normalizeChoices(value, state, session, allowedIds) {
   if (!Array.isArray(value?.choices)) throw new Error('中枢未提交 choices');
   const records = new Map(activeRecords(state).map(r => [r.id, r])), used = new Set();
   return value.choices.map(choice => {
-    if (!['keep', 'detail', 'brief', 'merge'].includes(choice?.action) || !Array.isArray(choice.ids)) throw new Error('中枢选项无效');
+    if (choice?.action === 'merge') throw new Error('中枢合并已关闭');
+    if (!['keep', 'detail', 'brief'].includes(choice?.action) || !Array.isArray(choice.ids)) throw new Error('中枢选项无效');
     const ids = choice.ids;
-    if (!ids.length || (choice.action !== 'merge' && ids.length !== 1) || (choice.action === 'merge' && ids.length < 2)) throw new Error('单项选择必须一个 ID，合并至少两个');
+    if (ids.length !== 1) throw new Error('单项选择必须一个 ID');
     const selected = ids.map(id => {
       if (typeof id !== 'string' || !records.has(id) || used.has(id) || (allowedIds && !allowedIds.has(id))) throw new Error(`记录不存在、已合并或重复选择：${id}`);
       used.add(id);
@@ -155,12 +156,8 @@ export function normalizeChoices(value, state, session, allowedIds) {
       if (!span) throw new Error(`记录已不在当前上下文：${id}`);
       return { id, version: r.version, carrierSeq: r.carrierSeq ?? null, mode: r.mode, start: span.start, sourceHash: r.sourceHash, snapshot: recordSnapshot(session, r) };
     }).sort((a, b) => a.start - b.start);
-    let prepared = { summary: '', documents: [] };
-    if (choice.action === 'merge') prepared = validatePrepared(choice);
-    else if ((choice.summary ?? '') !== '' || (choice.documents ?? []).length) throw new Error('仅合并选项可以生成正文');
-    const mode = choice.mode || 'brief';
-    if (!['brief', 'detail'].includes(mode)) throw new Error('合并表示只能是 brief 或 detail');
-    return { action: choice.action, mode, ids: selected.map(r => r.id), observed: selected, ...prepared };
+    if ((choice.summary ?? '') !== '' || (choice.documents ?? []).length) throw new Error('中枢选择不能生成正文');
+    return { action: choice.action, ids: selected.map(r => r.id), observed: selected, summary: '', documents: [] };
   });
 }
 

@@ -19,13 +19,10 @@ export const COORDINATE_SYSTEM = `Choose the smallest sufficient representation 
 - keep: leave its current representation unchanged.
 - detail: include its summary and detailed materials: documents, images, and files.
 - brief: include only its summary and retrieval index; all detailed materials stay saved.
-- merge: combine selected records and remove duplication. Prefer mode brief unless details are needed now. Original user messages, attachments and parent archives remain saved.
 
-Use user_messages, recent_events, compacted_conversation and context only to choose records and representation. They are not sources for merged text. When merging, use only facts within the selected records' ranges. Do not update an old record with later work, or copy inherited project introductions, requirements and plans into the new summary. Preserve necessary exact identifiers and the chronology of actual changes. Use the supplied costs and rejection feedback; do not discard information solely because it is old.
+Use user_messages, recent_events, compacted_conversation and context only to choose records and representation. Use the supplied costs and rejection feedback; do not discard information solely because it is old.
 
-${FACT_SUMMARY_RULES}
-
-Choose only supplied IDs. Call submit_context_choices once. Only merge generates new text; keep, detail and brief use existing content.`;
+Choose only supplied IDs, one ID per choice. Call submit_context_choices once. All choices use existing content; do not combine records or generate new text.`;
 
 export const RECALL_DESCRIPTION = `Read saved context documents and attachment indexes by record ID. Add asset (1-based) to reopen one original image or file as an actual content block. In a private session, only this session's archive is available. In a project session, shared records from this project are also available. Use query to find summaries, or from/to to read this session's original event text. Returned text is saved material, not a new model-generated answer.`;
 export const NOTE_DESCRIPTION = `Save an observed fact or a decision in this session's log. This does not write global or cross-session memory.`;
@@ -43,12 +40,9 @@ export const PREPARE_TOOL = { name: 'prepare_segment', description: 'Save the fa
 } };
 export const COORDINATE_TOOL = { name: 'submit_context_choices', description: 'Choose representations for prepared context records.', parameters: {
   type: 'object', additionalProperties: false, required: ['choices'], properties: {
-    choices: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['action', 'ids', 'summary', 'documents', 'mode'], properties: {
-      action: { type: 'string', enum: ['keep', 'detail', 'brief', 'merge'] },
-      mode: { type: 'string', enum: ['brief', 'detail'], description: 'Representation after merge; prefer brief. Ignored for other actions.' },
-      ids: { type: 'array', minItems: 1, items: { type: 'string' }, description: 'One ID, or at least two IDs for merge.' },
-      summary: { type: 'string', description: 'For merge only: deduplicated actions and results within the selected records. No outside-range progress, requirement recap, future plans or unfinished-work lists. Empty for other actions.' },
-      documents: { ...documentSchema, description: 'In-range factual details from selected records for merge, without repeating the summary. No facts from recent_events or other reference-only fields. Empty for other actions.' },
+    choices: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['action', 'ids'], properties: {
+      action: { type: 'string', enum: ['keep', 'detail', 'brief'] },
+      ids: { type: 'array', minItems: 1, maxItems: 1, items: { type: 'string' }, description: 'Exactly one supplied record ID.' },
     } } },
   },
 } };
