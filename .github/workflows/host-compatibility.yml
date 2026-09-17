@@ -1,0 +1,26 @@
+name: Host compatibility
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: host-compat-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  windows-host:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v6
+      - run: pnpm install --frozen-lockfile
+      - run: node --test test/host-lifecycle.test.mjs

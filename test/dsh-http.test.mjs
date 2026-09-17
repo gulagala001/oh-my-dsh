@@ -17,6 +17,11 @@ test('official DSH profile → plugin → native tools → context records → r
   const root = mkdtempSync(join(tmpdir(), 'trisoul-x-dsh-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   mkdirSync(home); mkdirSync(workspace); mkdirSync(join(workspace, '.agents', 'skills', 'test-skill'), { recursive: true });
   mkdirSync(join(home, 'trisoul-x'));
+  const sentinel = join(root, 'unrelated-project');
+  mkdirSync(sentinel); mkdirSync(join(sentinel, 'nested'));
+  const sentinelBytes = Buffer.from('UNRELATED_DIRECTORY_MUST_REMAIN\n\u0000fixture');
+  writeFileSync(join(sentinel, 'nested', 'keep.bin'), sentinelBytes);
+  writeFileSync(join(workspace, 'preexisting.txt'), 'PRESERVE_EXISTING_PROJECT_FILE');
   writeFileSync(join(home, 'trisoul-x', 'memory.json'), JSON.stringify([
     { id: 'fixture-memory-kept', scope: 'project', project: workspace, key: 'fixture.result', text: 'Fixture result is 42.', source: 'scribe', at: 1 },
     { id: 'fixture-memory-duplicate', scope: 'project', project: workspace, key: 'fixture.duplicate', text: 'The fixture result equals 42.', source: 'scribe', at: 1 },
@@ -208,5 +213,8 @@ test('official DSH profile → plugin → native tools → context records → r
   assert.equal(updatedSystem, systemText.replace(beforeIdentity, customIdentity));
   assert.deepEqual(identityRequest.tools, mainRequests[0].tools, 'identity changes preserve every tool contract');
   await api('/settings', { identityPrompt: beforeIdentity });
+  assert.deepEqual(readFileSync(join(sentinel, 'nested', 'keep.bin')), sentinelBytes, 'tool execution and compaction preserve unrelated directories');
+  assert.equal(readFileSync(join(workspace, 'preexisting.txt'), 'utf8'), 'PRESERVE_EXISTING_PROJECT_FILE');
+  assert.equal(readFileSync(join(workspace, 'fixture.txt'), 'utf8'), content);
   complete = true;
 });
