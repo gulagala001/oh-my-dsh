@@ -285,9 +285,9 @@ export class ContextPipeline {
     if (s.transaction) return applyTransaction(session, s, s.transaction, this.store, this.adapter);
     if (!manual && (!cfg.contextEnabled || !cfg.automaticReplace || (!ignoreCooldown && s.steps - s.lastReplacementStep < cfg.surgeryCooldownSteps))) return null;
     let plan = s.pending;
-    // Explicit user actions select their requested mode, independently of an
-    // earlier automatic keep decision. Automatic application still uses pending.
-    if (manual) {
+    // Applying a prepared plan preserves the coordinator's keep/brief/detail
+    // choices. An explicit selection is the user's override of that plan.
+    if (manual && (ids || !plan)) {
       if (!['detail', 'brief'].includes(mode)) throw new Error('手动应用请选择 detail 或 brief');
       const chosen = ids || activeRecords(s).filter(r => r.mode === 'raw' && liveSpan(session, r)).map(r => r.id);
       if (!Array.isArray(chosen) || !chosen.length) return null;

@@ -169,7 +169,11 @@ test('official DSH profile → plugin → native tools → context records → r
   assert.ok(JSON.stringify(payloads).includes('a passing check that cannot expose the relevant failure is not evidence of that requirement.'));
   assert.ok(JSON.stringify(payloads).includes('PROJECT_FIXTURE')); assert.ok(JSON.stringify(payloads).includes('test-skill'));
   const memories = await api('/memories' + q); assert.ok(memories.items.some(m => m.key === 'fixture.result'));
-  const compact = await api('/compact' + q, {}); assert.equal(compact.changed, true);
+  // This provider deliberately returns only keep decisions. The user's
+  // explicit selection, not 'apply prepared plan', requests detailed replacement.
+  const selectedRecords = (await api('/context' + q)).records.filter(r => r.live && !r.mergedInto && r.mode === 'raw').map(r => r.id);
+  assert.ok(selectedRecords.length > 0);
+  const compact = await api('/compact' + q, { ids: selectedRecords, mode: 'detail' }); assert.equal(compact.changed, true);
   const after = await api('/state' + q);
   const summary = await api('/state' + q + '&view=summary');
   assert.deepEqual(summary.metrics.main, after.metrics.main);
