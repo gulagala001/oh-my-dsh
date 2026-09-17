@@ -251,7 +251,10 @@ export class BrowserHost extends BrowserActions {
       if (preset) { await this.setViewport(record, preset.size); record.viewportPreset = preset.id; }
       // Finish the new target's initial document before starting its first
       // requested navigation; a late blank-page load can otherwise abort it.
-      await page.waitForLoadState('domcontentloaded');
+      // Windows Chromium can abort the first URL while its blank target is
+      // still settling. Wait for the native initial-document idle barrier,
+      // never for network idle on the user's destination and never retry it.
+      await page.waitForLoadState(process.platform === 'win32' ? 'networkidle' : 'domcontentloaded');
       // Confirm a live initial document instead of relying only on a cached
       // lifecycle event. The requested navigation is still sent exactly once.
       await (await page.waitForFunction(() => document.readyState !== 'loading')).dispose();
