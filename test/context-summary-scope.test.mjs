@@ -9,19 +9,22 @@ import { ContextPipeline, contextConfig } from '../src/context/pipeline.mjs';
 import { FixtureSession, system, user, exchange, adapter } from './context-fixture.mjs';
 
 test('every summary writer uses the same plain in-range factual contract', () => {
-  for (const prompt of [PREPARE_SYSTEM, COORDINATE_SYSTEM, FULL_COMPACT_SYSTEM]) {
+  for (const prompt of [PREPARE_SYSTEM, FULL_COMPACT_SYSTEM]) {
     assert.ok(prompt.includes(FACT_SUMMARY_RULES));
     assert.match(prompt, /actions taken, changes made, and observed results, including actual failures/);
     assert.match(prompt, /Do not write future plans, to-dos, unfinished-work lists/);
     assert.match(prompt, /No fixed sections, headings, bullet lists/);
     assert.doesNotMatch(prompt, /Carry existing unresolved requirements|Keep the user's effective requirements|next concrete work that remains/);
   }
-  for (const description of [PREPARE_TOOL.parameters.properties.summary.description, COORDINATE_TOOL.parameters.properties.choices.items.properties.summary.description, FULL_COMPACT_TOOL.parameters.properties.summary.description]) {
+  for (const description of [PREPARE_TOOL.parameters.properties.summary.description, FULL_COMPACT_TOOL.parameters.properties.summary.description]) {
     assert.match(description, /No .*future plans/);
     assert.match(description, /unfinished-work lists/);
   }
-  assert.match(COORDINATE_SYSTEM, /They are not sources for merged text/);
-  assert.match(COORDINATE_SYSTEM, /Do not update an old record with later work/);
+  assert.match(COORDINATE_SYSTEM, /do not combine records or generate new text/);
+  const choice = COORDINATE_TOOL.parameters.properties.choices.items;
+  assert.deepEqual(choice.properties.action.enum, ['keep', 'detail', 'brief']);
+  assert.deepEqual(Object.keys(choice.properties), ['action', 'ids']);
+  assert.equal(choice.properties.ids.maxItems, 1);
 });
 
 test('preparation identifies selected events, not reference history, as summary sources', () => {
@@ -50,7 +53,7 @@ test('policy upgrade invalidates only pending generated merges, preserving archi
   const pipeline = new ContextPipeline(hub, adapter); t.after(() => pipeline.dispose());
   const state = pipeline.state(session);
   state.records.push(newRecord(session, exchange(session), { summary: 'An existing archived record.', documents: [] }, state.binding));
-  state.summaryPromptVersion = 2; state.pending = { id: 'old-plan', choices: [{ action: 'merge', summary: 'Old future plan.' }] };
+  state.summaryPromptVersion = SUMMARY_PROMPT_VERSION; state.pending = { id: 'old-plan', choices: [{ action: 'merge', summary: 'Old future plan.' }] };
   const transaction = { id: 'durable-in-flight', operations: [] }; state.transaction = transaction;
   const before = JSON.stringify(state.records), log = JSON.stringify(session.snapshotEvents());
   pipeline.state(session);

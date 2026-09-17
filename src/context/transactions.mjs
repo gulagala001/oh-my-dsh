@@ -2,11 +2,12 @@ import { withoutTodo, isTaskInjection, TODO_META } from '../task-context.mjs';
 import { attachTodoRefresh, requireSavings } from './todo-refresh.mjs';
 import { randomUUID } from 'node:crypto';
 import { hash, liveSpan, recordText, recordBlocks, userRevision, exposedTrace, actualUser, carrierBarrier, recordSnapshot, sourceHash, splitGroups } from './core.mjs';
-import { combineAssets, combineUsers, userDocument, attachmentsOf, contentChars, messageTokens } from './materials.mjs';
-import { TRACE_HEAD, SUMMARY_PROMPT_VERSION } from './prompts.mjs';
+import { combineAssets, attachmentsOf, contentChars, messageTokens } from './materials.mjs';
+import { TRACE_HEAD } from './prompts.mjs';
 
 export function createTransaction(session, state, plan, cfg, pairing, pricing = {}) {
   if (state.transaction) return state.transaction;
+  if (plan.choices.some(c => c.action === 'merge')) throw new Error('中枢合并已关闭');
   if (plan.userRevision !== userRevision(session)) throw new Error('用户消息已变化，本轮替换计划作废');
   const working = structuredClone(state.records), map = new Map(working.map(r => [r.id, r]));
   const operations = [], chosen = new Set(), changedSources = new Set(), origins = new Set();
@@ -23,23 +24,8 @@ export function createTransaction(session, state, plan, cfg, pairing, pricing = 
       if (!span || !pairing.before(session, span.seqs[0]) || !pairing.after(session, span.seqs.at(-1))) throw new Error('替换范围已变化或工具往返不完整');
       return { r, span };
     }).sort((a, b) => a.span.start - b.span.start);
-    if (choice.action !== 'merge' && picked[0].r.mode === choice.action) continue;
-    let output;
-    if (choice.action === 'merge') {
-      const originals = picked.map(p => p.r), times = originals.flatMap(r => [r.timeStart, r.timeEnd]).filter(Number.isFinite);
-      const users = combineUsers(...originals.map(r => r.userOriginals || []));
-      output = { id: randomUUID(), version: 1, mode: choice.mode || 'brief', kind: originals.some(r => r.kind === 'full') ? 'full' : 'window',
-        summary: choice.summary, documents: [...structuredClone(choice.documents), ...userDocument(users)], userOriginals: users,
-        assets: combineAssets(...originals.map(r => r.assets || [])), summaryFormatVersion: 2, summaryPromptVersion: SUMMARY_PROMPT_VERSION,
-        sessionId: session.id, scope: state.binding.scope, project: state.binding.project, createdAt: Date.now(),
-        parents: originals.map(r => r.id), sourceSeqs: [...new Set(originals.flatMap(r => r.sourceSeqs))],
-        originalSeqs: [...new Set(originals.flatMap(r => r.originalSeqs || r.sourceSeqs))].sort((a,b) => a-b),
-        ranges: originals.flatMap(r => r.ranges), sourceHash: hash(originals.map(r => r.sourceHash)),
-        timeStart: times.length ? Math.min(...times) : null, timeEnd: times.length ? Math.max(...times) : null,
-        originalChars: originals.reduce((n, r) => n + r.originalChars, 0) };
-      for (const { r } of picked) r.mergedInto = output.id;
-      working.push(output); map.set(output.id, output);
-    } else { output = picked[0].r; output.mode = choice.action; }
+    if (picked[0].r.mode === choice.action) continue;
+    const output = picked[0].r; output.mode = choice.action;
     const selectedSeqs = picked.flatMap(p => p.span.seqs).filter(seq => !isTaskInjection(session.eventAt(seq)));
     if (!selectedSeqs.length) continue;
     if (selectedSeqs.some(seq => changedSources.has(seq))) throw Error('替换计划包含重叠来源，原文保留');

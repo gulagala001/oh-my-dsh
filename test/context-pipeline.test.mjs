@@ -55,15 +55,12 @@ test('detail then brief replaces carriers but recall retains full exact document
   await apply(f, [['brief', current]]); current = f.state.records[0]; assert.equal(current.mode, 'brief');
   assert.doesNotMatch(JSON.stringify(f.s.deriveMessages()), /asset_id is TEXT/); assert.match(f.pipeline.recall(f.s, { id: current.id }), /asset_id is TEXT/);
 });
-test('noncontiguous merge replaces earliest selected surface position, not an entire span', async t => {
-  const f = setup(t); const a = add(f, 'A'); const middle = plugin(f.s, 'DO NOT MOVE OR REMOVE'); const b = add(f, 'B'); const c = add(f, 'C');
-  await apply(f, [['detail', a]]); const A = f.state.records.find(r => r.id === a.id);
-  const before = f.s.surface.nodes.indexOf(A.carrierSeq); assert.ok(A.carrierSeq > c.sourceSeqs[0]);
-  await apply(f, [['merge', [c.id, A.id], prepared('Merged A C')]]);
-  const merged = f.state.records.find(r => r.parents.length === 2);
-  assert.equal(f.s.surface.nodes.indexOf(merged.carrierSeq), before);
-  assert.ok(f.s.surface.nodes.includes(middle.seq)); assert.ok(f.s.surface.nodes.includes(b.sourceSeqs[0]));
-  assert.match(f.pipeline.recall(f.s, { id: A.id }), /Historical record/); assert.match(f.pipeline.recall(f.s, { id: c.id }), /C executed/);
+test('merge is rejected by normalization and by direct transaction creation without writes', t => {
+  const f = setup(t), a = add(f, 'A'), b = add(f, 'B');
+  const before = JSON.stringify(f.s.snapshotEvents()), records = JSON.stringify(f.state.records);
+  assert.throws(() => choices(f, [['merge', [a.id, b.id], prepared('Both')]]), /合并已关闭/);
+  assert.throws(() => createTransaction(f.s, f.state, { userRevision: userRevision(f.s), choices: [{ action: 'merge', ids: [a.id, b.id] }] }, f.cfg, pairing), /合并已关闭/);
+  assert.equal(JSON.stringify(f.s.snapshotEvents()), before); assert.equal(JSON.stringify(f.state.records), records);
 });
 test('new user instruction invalidates completed plans without removing any original', t => {
   const f = setup(t); const r = add(f); const p = plan(f, [['brief', r]]); user(f.s, 'Change the requirement');
@@ -95,7 +92,7 @@ test('no fabricated trace when provider exposes no reasoning; configurable exact
 });
 test('partial transaction recovery is idempotent and preserves originals', async t => {
   const f = setup(t); const a = add(f, 'A'), b = add(f, 'B');
-  const tx = createTransaction(f.s, f.state, plan(f, [['merge', [a.id, b.id], prepared('Both')]]), f.cfg, pairing);
+  const tx = createTransaction(f.s, f.state, plan(f, [['brief', a], ['brief', b]]), f.cfg, pairing);
   let count = 0; const broken = { ...adapter, append(...args) { if (++count === 2) throw Error('crash'); return adapter.append(...args); } };
   await assert.rejects(applyTransaction(f.s, f.state, tx, f.store, broken), /crash/);
   assert.ok(f.state.transaction); const reloaded = new ContextStore(f.dir); const state = reloaded.state(f.s.id);

@@ -71,13 +71,14 @@ test('long reasoning participates in the shrink check rather than counting as te
   assert.ok(tx.inputTokens > 20000); assert.ok(tx.outputTokens < 1000); assert.ok(tx.stats.estimatedSavedTokens > 19000);
 });
 
-test('merge defaults to brief, preserves archival assets and exact user originals', async t => {
+test('separate brief records preserve archival assets and exact user originals', async t => {
   const f = setup(t, { digestWindow: 4, prepareBatchWindows: 2 });
   const first = exchange(f.session); first[1].data.message.content[0].content.push(structuredClone(image));
   user(f.session, 'Correction: preserve UTF-8 用户原话'); exchange(f.session); exchange(f.session);
   await f.pipeline.prepare(f.agent, true); assert.equal(f.state.records.length, 2);
   const ids = f.state.records.map(r => r.id);
-  await apply(f, [['merge', ids, { summary: 'Preserve UTF-8 用户原话 and exact ID. Work completed.', documents: [] }]]);
+  await apply(f, ids.map(id => ['brief', [id]]));
+  assert.equal(f.state.records.length, 2); assert.ok(f.state.records.every(r => !r.mergedInto));
   const merged = f.state.records.find(r => !r.mergedInto); assert.equal(merged.mode, 'brief'); assert.ok(merged.assets.length);
   assert.ok(merged.userOriginals.some(u => u.content.some(b => b.text?.includes('用户原话'))));
   assert.equal(recordBlocks(merged, 'brief').some(b => b.type === 'image'), false);

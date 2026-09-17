@@ -58,13 +58,14 @@ export class ContextPipeline {
       state.prepareCadenceVersion = 1;
       this.store.save(state);
     }
+    // Drop queued merges even when saved under the current summary policy.
+    // Durable transactions still finish recovery; their writes may already exist.
+    if (state.pending?.choices?.some(c => c.action === 'merge')) {
+      state.pending = null; state.review.needed = true;
+      this.store.notice(state, '中枢合并已关闭；待执行的合并方案已取消，原文与档案保留。');
+      this.store.save(state);
+    }
     if (state.summaryPromptVersion !== SUMMARY_PROMPT_VERSION) {
-      // Discard only uncommitted generated merge text from the superseded policy.
-      // Existing archives and write-ahead transactions must remain intact.
-      if (state.pending?.choices?.some(c => c.action === 'merge')) {
-        state.pending = null; state.review.needed = true;
-        this.store.notice(state, '摘要规则已更新；旧提示词生成但尚未应用的合并结果已作废，原文与档案保留。');
-      }
       state.summaryPromptVersion = SUMMARY_PROMPT_VERSION; this.store.save(state);
     }
     // A blank session can still change its scope before any data has been read or prepared.
@@ -245,7 +246,6 @@ export class ContextPipeline {
         return; // Preserve any newer pending plan. Never retry obsolete input.
       }
       const choices = normalizeChoices(decodeResult(result, COORDINATE_TOOL.name), s, session, seenInputIds);
-      for (const c of choices) if (c.action === 'merge' && c.summary.length > cfg.summaryTargetChars * 2) throw Error('合并摘要超过目标长度两倍，请减少重复细节');
       const signature = hash(choices.map(({ observed, ...c }) => c));
       if (s.review.rejectedPlans?.includes(signature)) {
         s.review.lastKey = keyHash; s.review.newRecords = Math.max(0, s.review.newRecords - seenNewRecords);
@@ -282,7 +282,7 @@ export class ContextPipeline {
     if (!manual && (!cfg.contextEnabled || !cfg.automaticReplace || (!ignoreCooldown && s.steps - s.lastReplacementStep < cfg.surgeryCooldownSteps))) return null;
     let plan = s.pending;
     if (manual && (ids || !plan)) {
-      if (!['detail', 'brief'].includes(mode)) throw new Error('手动应用请选择 detail 或 brief；合并由后台中枢准备');
+      if (!['detail', 'brief'].includes(mode)) throw new Error('手动应用请选择 detail 或 brief');
       const chosen = ids || activeRecords(s).filter(r => r.mode === 'raw' && liveSpan(session, r)).map(r => r.id);
       if (!Array.isArray(chosen) || !chosen.length) return null;
       plan = { id: randomUUID(), createdAt: Date.now(), userRevision: userRevision(session), source: 'manual',
