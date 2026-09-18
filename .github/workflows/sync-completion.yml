@@ -1,0 +1,55 @@
+name: Synchronize final package receipt
+on:
+  push:
+    branches: ['completion/alpha2']
+    paths: ['.github/workflows/sync-completion.yml']
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: omd
+      - uses: actions/checkout@v7
+        with:
+          repository: gulagala001/opencu
+          ref: a10466a9ccd3afed57eba47d1770d101fe43a8ed
+          path: cu
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Prove packaged runtime is unchanged and record its accepted source
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,os,subprocess,tarfile
+          root=Path.cwd(); omd=root/'omd'; cu=root/'cu'; output=Path(os.environ['RUNNER_TEMP'])/'verified-pack'
+          output.mkdir(exist_ok=True)
+          receipt=json.loads((omd/'vendor/opencu.json').read_text())
+          commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=cu,text=True).strip()
+          assert commit=='a10466a9ccd3afed57eba47d1770d101fe43a8ed'
+          packed=json.loads(subprocess.check_output(['npm','pack','--ignore-scripts','--json','--pack-destination',str(output)],cwd=cu,text=True))[0]
+          archive=output/packed['filename']; files={}
+          with tarfile.open(archive) as tar:
+              for member in tar:
+                  parts=Path(member.name).parts
+                  assert parts[0]=='package' and '..' not in parts and (member.isfile() or member.isdir())
+                  if member.isfile(): files[str(Path(*parts[1:]))]=hashlib.sha256(tar.extractfile(member).read()).hexdigest()
+          assert files==receipt['files'], 'Acceptance-only update must not change a packaged runtime file'
+          for name,digest in files.items(): assert hashlib.sha256((omd/'vendor/opencu'/name).read_bytes()).hexdigest()==digest
+          receipt.update(commit=commit,archiveSha256=hashlib.sha256(archive.read_bytes()).hexdigest())
+          (omd/'vendor/opencu.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2)+'\n')
+          (omd/'.github/workflows/sync-completion.yml').unlink()
+          print('All packaged runtime files equal:',len(files))
+          PY
+      - name: Validate package receipt and commit
+        working-directory: omd
+        run: |
+          node --test test/opencu-distribution.test.mjs
+          git diff --check
+          git add vendor/opencu.json .github/workflows/sync-completion.yml
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'build: record the exact OpenCU source used for final platform acceptance'
+          git push origin HEAD:completion/alpha2
