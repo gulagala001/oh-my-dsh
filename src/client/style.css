@@ -218,8 +218,8 @@
 .tx-workbench-entry { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 7px; padding: 5px 7px; background: transparent; color: var(--tx-muted); font: 12px/18px -apple-system, BlinkMacSystemFont, sans-serif; cursor: pointer; }
 .tx-usage-toggle { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; border: 0; border-radius: 7px; padding: 5px 7px; background: transparent; color: var(--tx-muted); font: 12px/18px -apple-system, BlinkMacSystemFont, sans-serif; cursor: pointer; }
 .tx-usage-toggle:hover, .tx-usage-toggle[aria-expanded=true] { background: var(--tx-hover); color: var(--tx-text); }
-.tx-usage-toggle > svg:last-child { transform: rotate(-90deg); }
-.tx-usage-toggle[aria-expanded=true] > svg:last-child { transform: rotate(90deg); }
+.tx-usage-toggle > svg:last-child { transform: rotate(90deg); }
+.tx-usage-toggle[aria-expanded=true] > svg:last-child { transform: rotate(-90deg); }
 .tx-workbench-entry:hover { background: var(--tx-hover); color: var(--tx-text); }
 .tx-workbench { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; color: var(--tx-text); background: var(--tx-bg); font: 13px/1.5 -apple-system, BlinkMacSystemFont, sans-serif; }
 .tx-workbench-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 10px 12px; border-bottom: 1px solid var(--tx-line); flex-shrink: 0; }
