@@ -150,6 +150,7 @@ export class BrowserViews {
       let { event, loaderId, captureOnly } = view.pending; view.pending = null;
       try {
         if (!captureOnly&&event?.metadata.timestamp && event.metadata.timestamp < (view.screencastAfter ?? 0)) continue;
+        const observedAt = performance.now();
         const metrics = await this.read(view, view.cdp.send('Page.getLayoutMetrics'));
         if (view.closed || loaderId !== view.loaderId) continue;
         // The fence can advance during the metrics query. A merged resize
@@ -185,7 +186,7 @@ export class BrowserViews {
           const scale=metadata.pageScaleFactor*geometry.zoom;
           width=metadata.deviceWidth/scale;height=metadata.deviceHeight/scale;data=event.data;mediaType='image/jpeg';
         }
-        const frame = { id: randomUUID(), tabId: view.tabId, loaderId, width, height, geometry, browserCursor: this.browser.windowCursor === true && mediaType === 'image/jpeg', scrollX: geometry.pageX, scrollY: geometry.pageY, data, mediaType, at: Date.now(), url: view.record.page.url() };
+        const frame = { id: randomUUID(), tabId: view.tabId, loaderId, observedAt, width, height, geometry, browserCursor: this.browser.windowCursor === true && mediaType === 'image/jpeg', scrollX: geometry.pageX, scrollY: geometry.pageY, data, mediaType, at: Date.now(), url: view.record.page.url() };
         view.latest = frame; view.frames.push(frame.id); this.frames.set(frame.id, frame);
         while (view.frames.length > 24) this.frames.delete(view.frames.shift());
         view.publish('frame', frame);
