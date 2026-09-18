@@ -267,6 +267,12 @@ export class BrowserHost extends BrowserActions {
         if (page.url() !== 'about:blank') throw new Error('The new browser target changed before its first navigation.');
         await record.cdp.send('Page.stopLoading');
         signal?.throwIfAborted();
+        if (url !== 'about:blank') {
+          // The first empty target can still be provisional in Chromium.
+          // Commit only that empty document before dispatching the user URL.
+          await page.goto('about:blank', { waitUntil: 'load' });
+          signal?.throwIfAborted();
+        }
       }
       record.navigating = true;
       try { await page.goto(url, { waitUntil: 'domcontentloaded' }); } finally { record.navigating = false; }
