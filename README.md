@@ -40,6 +40,8 @@ Oh My DSH 把任务、上下文、摘要、电脑和监控放进同一个工作�
 
 ## 快速开始
 
+本版已公开发布；[最终验证状态与已知限制](docs/release-0.1.6-alpha.2.1.md#发布状态与已知限制)包含 OpenCU 的 Windows 单项测试超时说明。
+
 当前 **0.1.6-alpha.2.1** 为预发布版，使用 **DSH 0.1.6-alpha.2**。下面的安装命令固定到该版本；使用旧版 DSH 0.1.5-rc.1 时，请保留 [v1.1.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1)。升级宿主请沿用原来的安装方式、profile 和 `DSH_HOME`。
 
 Oh My DSH 通过 **DSH 的插件管理器**安装。已有 **DSH 0.1.6-alpha.2 Web** 时，先停止服务，然后在终端或 PowerShell 中运行：
