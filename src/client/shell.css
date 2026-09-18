@@ -39,7 +39,7 @@
 .trisoul-shell .uV2eYG_add { background: transparent; width: 28px; height: 28px; color: var(--tx-shell-muted); }
 .trisoul-shell .uV2eYG_add:hover:not(:disabled) { background: var(--tx-shell-hover); }
 .trisoul-shell .uV2eYG_primary { width: 30px; height: 30px; transform: none; }
-.trisoul-shell [data-slot='conversation.composer.dock'] { display: flex !important; width: min(var(--dsh-composer-card-max-width), calc(100% - 32px)); max-width: none; padding: 2px 4px 8px; box-sizing: border-box; }
+.trisoul-shell [data-slot='conversation.composer.dock'] { display: grid !important; grid-template-columns: minmax(0, 1fr) auto; flex: 1; min-width: 0; width: auto; max-width: none; padding: 2px 4px 8px; box-sizing: border-box; }
 .trisoul-shell .pXSMma_headline { font-size: 27px; font-weight: 500; letter-spacing: -.6px; gap: 12px; margin-bottom: 20px; }
 .trisoul-shell .pXSMma_previewBadge { font-size: 11px; line-height: 18px; font-weight: 400; color: var(--tx-shell-muted); background: var(--tx-shell-hover); border: 0; }
 .trisoul-shell .pXSMma_workspace { color: var(--tx-shell-muted); font-size: 12px; }
@@ -75,12 +75,14 @@
   .trisoul-shell .wSkVaW_tabs { margin-left: 0; }
 }
 /* Reveal the original host statistics on demand; keep their live popovers. */
-.trisoul-shell [data-slot='conversation.composer.dock'] { align-items: center; flex-wrap: wrap; gap: 3px 10px; }
+.trisoul-shell :has(> [data-slot='conversation.composer.dock']) { display: flex; align-items: flex-start; gap: 8px; }
+.trisoul-shell [data-slot='conversation.composer.dock'] { align-items: center; gap: 3px 10px; }
+.trisoul-shell [data-slot='conversation.composer.dock'] + .JObwrW_root { padding-top: 6px; }
 .trisoul-shell .tx-composer-dock { display: contents; }
-.trisoul-shell .tx-composer-tools { order: 0; flex: 1 1 auto; }
-.trisoul-shell .tx-usage-toggle { order: 1; }
-.trisoul-shell :is([data-composer-stats], .bOPqQW_root) { display: none; order: 2; flex: 1 1 calc(100% - 130px); width: auto; max-width: none; margin: 0; padding: 4px 2px; gap: 8px; opacity: 1; }
-.trisoul-shell .tx-stats-line { display: none; order: 3; }
+.trisoul-shell .tx-composer-tools { grid-column: 1; grid-row: 1; }
+.trisoul-shell .tx-usage-toggle { grid-column: 2; grid-row: 1; }
+.trisoul-shell :is([data-composer-stats], .bOPqQW_root) { display: none; grid-column: 1 / -1; grid-row: 2; flex-wrap: wrap; justify-content: flex-start; width: auto; max-width: none; margin: 0; padding: 4px 2px; gap: 8px; opacity: 1; }
+.trisoul-shell .tx-stats-line { display: none; grid-column: 1 / -1; grid-row: 3; justify-self: start; }
 .trisoul-shell [data-slot='conversation.composer.dock']:has(.tx-composer-dock[data-omd-usage-expanded]) :is([data-composer-stats], .bOPqQW_root) { display: flex; }
 .trisoul-shell .tx-composer-dock[data-omd-usage-expanded] .tx-stats-line { display: inline-flex; }
 .trisoul-shell .bOPqQW_pill { padding: 2px 4px; font-size: 11px; gap: 5px; }

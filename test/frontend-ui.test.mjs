@@ -30,7 +30,13 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   const usageToggle = page.getByRole('button', { name: '用量详情', exact: true });
   const hostStats = page.locator('[data-slot="conversation.composer.dock"] .bOPqQW_root');
   assert.equal(await hostStats.isVisible(), false, 'usage details do not crowd the default composer');
+  const closedUsageBox = await usageToggle.boundingBox();
   await usageToggle.click();
+  assert.equal((await usageToggle.boundingBox()).x, closedUsageBox.x, 'expanding usage keeps the toolbar horizontal position');
+  const expandedUsageBox = await usageToggle.boundingBox(), expandedStatsBox = await hostStats.boundingBox();
+  assert.ok(expandedStatsBox.y >= expandedUsageBox.y + expandedUsageBox.height, 'usage details always occupy their own row');
+  const meterBox = await page.locator('.JObwrW_root').boundingBox();
+  if (meterBox) assert.ok(Math.abs(meterBox.y - expandedUsageBox.y) < 8, 'context meter stays aligned with the toolbar');
   assert.equal(await usageToggle.getAttribute('aria-expanded'), 'true');
   assert.equal(await hostStats.isVisible(), true);
   const originalUsage = hostStats.getByRole('button').first();
@@ -69,6 +75,11 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
     assert.equal(await page.getByRole('tab').count(), name === '任务' || name === '监控' ? tabCount : tabCount - 3, 'no new dock tab is created');
     await screenshot('workbench-' + name);
   }
+  await nav.getByRole('button', { name: '监控', exact: true }).click();
+  await page.getByRole('tab', { name: '调用记录', exact: true }).click();
+  const componentFilter = page.getByRole('combobox', { name: '调用组件' });
+  await until(async () => (await componentFilter.locator('option').allTextContents()).includes('主执行'));
+  assert.deepEqual(await componentFilter.locator('option').allTextContents(), ['全部组件', '主执行'], 'unused legacy components are not offered as current filters');
   await nav.getByRole('button', { name: '摘要', exact: true }).click();
   await page.getByRole('heading', { name: /^(会话摘要|项目摘要)$/ }).waitFor();
   await nav.getByRole('button', { name: '上下文', exact: true }).click();
