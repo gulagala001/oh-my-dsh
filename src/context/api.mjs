@@ -97,6 +97,7 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
   if (path === '/settings' && req.method === 'POST') {
     const patch = await readBody(req);
     if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Error('设置必须是对象');
+    if (Object.hasOwn(patch, 'todoConstraintFirst') && typeof patch.todoConstraintFirst !== 'boolean') throw new Error('todoConstraintFirst 必须为布尔值');
     contextConfig({ ...hub.config(), ...patch });
     if (patch.memoryScope !== undefined && !['session', 'project'].includes(patch.memoryScope)) throw new Error('旧 full 档不再参与跨项目记忆');
     const retired = ['probeEnabled', 'probePatch', 'probeMaxTokens', 'probeSourceChars', 'probePatchChars', 'curateEvery', 'curateMinGapMs', 'curateLimit', 'curateMaxTokens', 'curateOpsMax', 'contextMemories', 'injectLimit', 'injectBatch', 'injectMaxPerSession', 'supplementMinSteps', 'supplementMode', 'shadowStale', 'semanticCompaction', 'stateEnabled'];

@@ -51,6 +51,15 @@ test('new settings validate values and reject obsolete probe switches', async ()
   await assert.rejects(f.call('/settings', 'POST', { digestWindow: 0 }));
   const r = await f.call('/settings', 'POST', { digestWindow: 64, traceEnabled: false }); assert.equal(r.data.digestWindow, 64); assert.equal(r.data.traceEnabled, false);
 });
+test('CFR settings save and reject non-boolean values without starting model work', async () => {
+  const f = setup();
+  for (const enabled of [true, false]) {
+    const r = await f.call('/settings', 'POST', { todoConstraintFirst: enabled });
+    assert.equal(r.status, 200); assert.equal(r.data.todoConstraintFirst, enabled);
+  }
+  for (const value of ['true', 'false', 1, null]) await assert.rejects(f.call('/settings', 'POST', { todoConstraintFirst: value }), /布尔/);
+  assert.equal(f.cfg.todoConstraintFirst, false); assert.deepEqual(f.calls, []);
+});
 test('document endpoint uses record ACL rather than trusting the requested ID', async () => {
   const f = setup(); await assert.rejects(f.call('/context/document?id=forbidden'), /范围/); assert.equal((await f.call('/context/document?id=allowed')).data.id, 'allowed');
 });

@@ -97,3 +97,21 @@ test('whole-window mode defaults on and all material/batch budget settings are e
   const advanced = renderToStaticMarkup(panel.renderAdvanced());
   for (const label of ['每次触发最多处理窗口数', '续跑最低文本量', '单窗输入预算', '基础摘要目标', '后台最大并发调用', '自动重试次数']) assert.ok(advanced.includes(label));
 });
+
+test('experimental settings group CFR and CoT without changing their defaults or coupling saves', async () => {
+  const React = await import('react'), { renderToStaticMarkup } = await import('react-dom/server');
+  const { Config } = await import('../src/config.mjs');
+  const config = Config({}); assert.equal(config.todoConstraintFirst, false);
+  const { ContextSettings } = createContextUI(React), panel = new ContextSettings({});
+  panel.state = { ...panel.state, config };
+  const html = renderToStaticMarkup(panel.renderExperimental());
+  assert.match(html, /启用 CoT 前置/); assert.match(html, /推理文本字符上限/);
+  assert.equal(config.traceEnabled, true); assert.equal(config.traceMaxChars, 0);
+  assert.doesNotMatch(renderToStaticMarkup(panel.renderBasic()), /role="switch"[^>]*aria-label="(?:启用 CoT 前置|任务约束前置（CFR）)"/);
+  assert.doesNotMatch(renderToStaticMarkup(panel.renderAdvanced()), /推理文本字符上限/);
+  assert.match(html, /任务约束前置（CFR）/); assert.match(html, /下一次模型请求生效/);
+  assert.doesNotMatch(html, /aria-label="任务约束前置（CFR）"[^>]*checked/);
+  const enabled = { ...config, todoConstraintFirst: true };
+  assert.deepEqual(contextSettingsPatch(config, enabled), { todoConstraintFirst: true });
+  assert.deepEqual(contextSettingsPatch(enabled, config), { todoConstraintFirst: false });
+});

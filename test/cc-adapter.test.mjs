@@ -1,11 +1,58 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { transformAssembly, mainPrompt, inspectCommittedRequest } from '../src/cc-adaptation/adapter.mjs';
+import { transformAssembly, mainPrompt, inspectCommittedRequest, installPromptAdapter } from '../src/cc-adaptation/adapter.mjs';
 import { buildMainPrompt, promptText, MAIN_FILES } from '../src/cc-adaptation/texts.mjs';
 
 const context={agent:{session:{header:{origin:'user'}}}};
 const schema=(name,fields=[])=>({name,description:'native '+name,parameters:{type:'object',properties:Object.fromEntries(fields.map(x=>[x,{type:'string',description:'native field '+x}]))}});
 const assembly=(tools=[])=>({sections:[{name:'harness:identity',order:-1000,text:'Native identity'}, {name:'trisoul-x:persona',order:0,text:'old'},{name:'harness:source',order:10000,text:'native source'}],tools,contexts:[{name:'sandbox:policy',text:'native permissions'}],variables:{cwd:'/fictional-fixture'}});
+
+test('todo constraint guidance is opt-in, idempotent and also reaches the generated SDK', () => {
+  const todo = schema('todo_write', ['op', 'tasks', 'updates']);
+  const base = promptText('tools/todo-write.md'), extra = promptText('tools/todo-constraints.md');
+  const initial = assembly([todo]);
+  const disabled = transformAssembly(initial, context).assembly;
+  assert.equal(disabled.tools[0].description, base);
+  assert.ok(!disabled.sections[0].text.includes(extra));
+  const enabled = transformAssembly(initial, context, { todoConstraintFirst: true }).assembly;
+  assert.equal(enabled.tools[0].description, base + '\n\n' + extra);
+  assert.equal(enabled.sections[0].text, disabled.sections[0].text + '\n\n## Constraint-first reasoning\n' + extra);
+  assert.equal(transformAssembly(enabled, context, { todoConstraintFirst: true }).assembly.sections[0].text, enabled.sections[0].text);
+  assert.equal(transformAssembly(enabled, context, { todoConstraintFirst: false }).assembly.sections[0].text, disabled.sections[0].text);
+  assert.equal(enabled.tools[0].parameters, todo.parameters);
+  assert.equal(transformAssembly(enabled, context, { todoConstraintFirst: true }).assembly.tools[0].description, enabled.tools[0].description);
+  assert.equal(transformAssembly(enabled, context, { todoConstraintFirst: false }).assembly.tools[0].description, base);
+  const sdk = assembly([schema('run_code', ['code'])]);
+  sdk.sections.push({ name: 'tools:sdk', text: 'old sdk' });
+  const result = transformAssembly(sdk, context, { todoConstraintFirst: true, schemas: [todo, ...sdk.tools],
+    definition: () => ({ output: { schema: { type: 'string' } } }), renderSdk: tools => JSON.stringify(tools) }).assembly;
+  assert.ok(result.sections.find(s => s.name === 'tools:sdk').text.includes(extra));
+  for (const ctx of [{}, { agent: { session: { header: { origin: 'subagent' } } } }]) {
+    assert.equal(transformAssembly(initial, ctx, { todoConstraintFirst: true }).assembly, initial);
+  }
+  const stock = { ...initial, sections: [] };
+  assert.equal(transformAssembly(stock, context, { todoConstraintFirst: true }).assembly, stock);
+});
+
+test('a running adapter uses current CFR settings on each request without binding them to a session', async () => {
+  let handler;
+  const config = {}, tools = [schema('todo_write', ['op', 'tasks', 'updates'])];
+  installPromptAdapter({ on(name, fn) { assert.equal(name, 'system-prompt/assemble'); handler = fn; },
+    trisoulX: { config: () => config }, tools: { schemas: () => tools } });
+  const request = () => handler(null, context, async () => assembly(tools));
+  const base = promptText('tools/todo-write.md'), extra = promptText('tools/todo-constraints.md');
+  const disabled = await request();
+  assert.equal(disabled.tools[0].description, base);
+  assert.ok(!disabled.sections[0].text.includes(extra));
+  config.todoConstraintFirst = true;
+  const enabled = await request();
+  assert.equal(enabled.tools[0].description, base + '\n\n' + extra);
+  assert.equal(enabled.sections[0].text, disabled.sections[0].text + '\n\n## Constraint-first reasoning\n' + extra);
+  config.todoConstraintFirst = false;
+  const cleared = await request();
+  assert.equal(cleared.tools[0].description, base);
+  assert.equal(cleared.sections[0].text, disabled.sections[0].text);
+});
 function frozen(v) {if(v&&typeof v==='object'){Object.values(v).forEach(frozen);Object.freeze(v);}return v;}
 
 test('non-agent requests remain byte-equivalent',()=>{const a=assembly(); assert.equal(transformAssembly(a,{}).assembly,a);});

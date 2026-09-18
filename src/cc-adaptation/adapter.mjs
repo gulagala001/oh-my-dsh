@@ -15,6 +15,7 @@ export function transformAssembly(assembly, context, options = {}) {
     return { assembly, audit: { applied: false, reason: 'outside-main-agent-scope' } };
   }
   const load = options.read ?? read;
+  const constraintGuidance = options.todoConstraintFirst === true ? load('tools/todo-constraints.md') : '';
   const map = options.bindings ?? bindings;
   const known = new Map((options.schemas ?? assembly.tools ?? []).map(tool => [tool.name, tool]));
   const applied = new Set(), retained = [], missing = [], changedSchemas = new Map();
@@ -29,6 +30,9 @@ export function transformAssembly(assembly, context, options = {}) {
     const absent = binding.fields.filter(name => !Object.hasOwn(fields, name));
     if (absent.length) { missing.push({ name: tool.name, fields: absent }); continue; }
     let description = load(binding.file);
+    if (tool.name === 'todo_write' && constraintGuidance) {
+      description += '\n\n' + constraintGuidance;
+    }
     // Do not tell the model to use optional companion tools it cannot see.
     if (tool.name === 'bash' && !Object.hasOwn(fields, 'run_in_background')) {
       description = description.split('\n').filter(line => !line.includes('`run_in_background`')).join('\n');
@@ -47,6 +51,7 @@ export function transformAssembly(assembly, context, options = {}) {
   }
   let persona = options.main ?? mainPrompt;
   if (!known.has('computer_use')) persona = persona.replace('Use the available computer-use tools for tasks involving browsers and desktop applications. ', '');
+  if (constraintGuidance) persona += '\n\n## Constraint-first reasoning\n' + constraintGuidance;
   const suppressed = new Set();
   for (const name of applied) for (const section of map[name].sections ?? []) suppressed.add(section);
   let sdkRegenerated = false;
@@ -99,8 +104,9 @@ export function installPromptAdapter(ctx) {
       renderSdk = language === 'typescript' ? renderToolsSdk : language === 'python' ? renderToolsSdkPy : undefined;
       if (!renderSdk) throw new Error(`Unsupported PTC SDK language: ${language}`);
     }
+    const config = ctx.trisoulX.config();
     const result = transformAssembly(assembly, context, {
-      main: buildMainPrompt(ctx.trisoulX.config().identityPrompt),
+      main: buildMainPrompt(config.identityPrompt), todoConstraintFirst: config.todoConstraintFirst,
       schemas, renderSdk, definition: name => ctx.tools.get(name, context.scope ?? context.agent),
     });
     const key = sha(result.audit);
