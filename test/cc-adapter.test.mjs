@@ -2,10 +2,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { transformAssembly, mainPrompt, inspectCommittedRequest, installPromptAdapter } from '../src/cc-adaptation/adapter.mjs';
 import { buildMainPrompt, promptText, MAIN_FILES } from '../src/cc-adaptation/texts.mjs';
+import { renderToolsSdk, renderToolsSdkPy } from '@deepseek-ai/dsh-tools';
+import { readFileSync } from 'node:fs';
 
 const context={agent:{session:{header:{origin:'user'}}}};
 const schema=(name,fields=[])=>({name,description:'native '+name,parameters:{type:'object',properties:Object.fromEntries(fields.map(x=>[x,{type:'string',description:'native field '+x}]))}});
 const assembly=(tools=[])=>({sections:[{name:'harness:identity',order:-1000,text:'Native identity'}, {name:'trisoul-x:persona',order:0,text:'old'},{name:'harness:source',order:10000,text:'native source'}],tools,contexts:[{name:'sandbox:policy',text:'native permissions'}],variables:{cwd:'/fictional-fixture'}});
+
+test('omd-ptc retains the entire OMD composition and only selects PTC presentation', () => {
+  const original = readFileSync(new URL('../presets/trisoul-x/agent.cordis.yml', import.meta.url), 'utf8');
+  const ptc = readFileSync(new URL('../presets/omd-ptc/agent.cordis.yml', import.meta.url), 'utf8');
+  const [shared, presentation] = ptc.split('# Same OMD composition as trisoul-x; only the tool presentation differs.');
+  assert.equal(shared.trim(), original.trim(), 'keep both preset capability lists and prompt configuration synchronized');
+  assert.equal(presentation.trim(), "- id: tool-presentation\n  name: '@deepseek-ai/dsh-agent-tool-presentation'\n  config:\n    mode: ptc");
+  assert.match(readFileSync(new URL('../presets/omd-ptc/preset.yml', import.meta.url), 'utf8'), /^name: omd-ptc$/m);
+});
 
 test('todo constraint guidance is opt-in, idempotent and also reaches the generated SDK', () => {
   const todo = schema('todo_write', ['op', 'tasks', 'updates']);
@@ -55,6 +66,36 @@ test('a running adapter uses current CFR settings on each request without bindin
 });
 function frozen(v) {if(v&&typeof v==='object'){Object.values(v).forEach(frozen);Object.freeze(v);}return v;}
 
+for (const mode of ['ptc', 'both']) for (const language of ['typescript', 'python']) {
+  test(`${mode}/${language}: main guidance, SDK output semantics and plan review match the calling surface`, () => {
+    const tools = [schema('run_code', ['code', 'description']), schema('bash', ['command', 'workdir', 'timeoutMs', 'run_in_background', 'sandbox_permissions']),
+      schema('job_output', ['job_id']), schema('computer_use', ['code', 'title'])];
+    const a = assembly(mode === 'ptc' ? [tools[0]] : tools);
+    if (mode === 'ptc') a.sections.push({ name: 'tools:ptc-only', text: 'run_code is the only direct tool' });
+    a.sections.push({ name: 'tools:sdk', text: 'old SDK' }, { name: 'plan:policy', text: 'When ready, make `exit_plan_mode` the only and final tool call in that response, passing the complete plan Markdown with a `#` title. On approval, implement in a later step.' });
+    const output = { type: 'object', properties: { exitCode: { type: 'integer' }, job: { type: 'object', properties: { status: { type: 'string' } } } } };
+    const options = { schemas: tools, definition: () => ({ output: { schema: output } }),
+      renderSdk: language === 'python' ? renderToolsSdkPy : renderToolsSdk };
+    const r = transformAssembly(frozen(a), context, options).assembly;
+    const persona = r.sections.find(s => s.name === 'trisoul-x:persona').text;
+    assert.match(persona, /## Programmatic tool use/);
+    if (mode === 'ptc') assert.doesNotMatch(persona, /Independent tool calls can run in parallel in one response/);
+    const sdk = r.sections.find(s => s.name === 'tools:sdk').text;
+    assert.match(sdk, language === 'python' ? /async Python function/ : /async TypeScript function/);
+    assert.doesNotMatch(sdk, /Non-zero exits are reported as `\[exit code: N\]`|Inspect the `\[status: \.\.\.\]` line/);
+    assert.match(sdk, /exitCode/);
+    assert.match(sdk, /job\.status/);
+    assert.match(persona, /separate from the outer `run_code` program/);
+    const plan = r.sections.find(s => s.name === 'plan:policy').text;
+    if (mode === 'ptc') assert.match(plan, /tools\.exit_plan_mode.*run_code/);
+    else assert.equal(plan, a.sections.at(-1).text);
+    assert.match(plan, /On approval, implement in a later step/);
+    if (mode === 'both') assert.equal(r.tools.find(t => t.name === 'bash').description, promptText('tools/bash.md'));
+    assert.equal(r.tools[0], tools[0]);
+    assert.deepEqual(transformAssembly(r, context, options).assembly, r);
+  });
+}
+
 test('non-agent requests remain byte-equivalent',()=>{const a=assembly(); assert.equal(transformAssembly(a,{}).assembly,a);});
 test('child requests stay outside transformation',()=>{const a=assembly();assert.equal(transformAssembly(a,{agent:{session:{header:{origin:'subagent'}}}}).assembly,a);});
 test('other presets stay outside transformation',()=>{const a={...assembly(),sections:[]};assert.equal(transformAssembly(a,context).assembly,a);});
@@ -69,7 +110,7 @@ test('known native schema parameters including descriptions untouched',()=>{cons
 test('suppression only for an actually substituted owned section',()=>{const a=assembly([schema('read',['file_path','offset','limit'])]);a.sections.push({name:'tool:read',order:100,text:'duplicate'},{name:'other:read',order:101,text:'leave alone'});const r=transformAssembly(a,context).assembly;assert(!r.sections.some(x=>x.name==='tool:read'));assert(r.sections.some(x=>x.name==='other:read'));});
 test('runtime contexts, permission data and variables remain exact',()=>{const a=assembly([schema('read',['file_path','offset','limit'])]);const r=transformAssembly(a,context).assembly;assert.equal(r.contexts,a.contexts);assert.equal(r.variables,a.variables);});
 test('memory instructions are conditional and registered once',()=>{const a=assembly([schema('note',['text']),schema('recall',['query','scope','from','to'])]);const one=transformAssembly(a,context).assembly;const two=transformAssembly(one,context).assembly;assert.equal(two.sections.filter(x=>x.name==='trisoul-x:cc-memory').length,1);assert(one.sections.findIndex(x=>x.name==='trisoul-x:cc-memory') < one.sections.findIndex(x=>x.name==='harness:source'));});
-test('SDK uses changed descriptions and actual live output contracts',()=>{const visible=[schema('read',['file_path','offset','limit']),schema('run_code',['code'])];const a=assembly([visible[1]]);a.sections.push({name:'tools:sdk',order:5000,text:'old sdk'});let captured;const result=transformAssembly(a,context,{schemas:visible,definition:()=>({output:{schema:{type:'object',properties:{value:{type:'integer'}}}}}),renderSdk:s=>{captured=s;return 'CURRENT SDK '+JSON.stringify(s);}});assert.equal(captured.length,1);assert.equal(captured[0].description,promptText('tools/read.md'));assert.equal(captured[0].output.properties.value.type,'integer');assert.equal(result.assembly.tools[0],visible[1]);assert(result.audit.sdkRegenerated);assert.equal(result.assembly.sections.find(x=>x.name==='tools:sdk').interpolate,false);});
+test('SDK uses changed descriptions and actual live output contracts',()=>{const visible=[schema('read',['file_path','offset','limit']),schema('run_code',['code'])];const a=assembly([visible[1]]);a.sections.push({name:'tools:sdk',order:5000,text:'old sdk'});let captured;const result=transformAssembly(a,context,{schemas:visible,definition:()=>({output:{schema:{type:'object',properties:{value:{type:'integer'}}}}}),renderSdk:s=>{captured=s;return 'CURRENT SDK '+JSON.stringify(s);}});assert.equal(captured.length,1);assert.match(captured[0].description,/return structured line records/);assert.ok(captured[0].description.endsWith(promptText('tools/read.md').split('\n').slice(1).join('\n')));assert.equal(captured[0].output.properties.value.type,'integer');assert.equal(result.assembly.tools[0],visible[1]);assert(result.audit.sdkRegenerated);assert.equal(result.assembly.sections.find(x=>x.name==='tools:sdk').interpolate,false);});
 test('active SDK without current public renderer fails visibly',()=>{const a=assembly();a.sections.push({name:'tools:sdk',order:5000,text:'old sdk'});assert.throws(()=>transformAssembly(a,context),/current runtime SDK renderer/);});
 test('missing output contract fails SDK regeneration visibly',()=>{const a=assembly([schema('read',['file_path','offset','limit'])]);a.sections.push({name:'tools:sdk',order:5000,text:'old sdk'});assert.throws(()=>transformAssembly(a,context,{renderSdk:()=>'',definition:()=>null}),/Missing live output contract/);});
 test('optional background and escalation commands not advertised when absent',()=>{const r=transformAssembly(assembly([schema('bash',['command','workdir','timeoutMs'])]),context).assembly;assert(!r.tools[0].description.includes('`run_in_background`'));assert(!r.tools[0].description.includes('`sandbox_permissions`'));assert(!r.tools[0].description.includes('`job_output`'));});

@@ -30,10 +30,14 @@ test('install into stock web, coexist with stock presets, switch both ways and r
     let body = ''; for await (const part of req) body += part;
     const p = JSON.parse(body); payloads.push(p);
     const todo = p.tools?.find(t => t.function.name === 'todo_write')?.function;
-    const x = Boolean(todo?.parameters.properties.op);
-    const tool = (name, args) => ({ tool_calls: [{ index: 0, id: 'call-' + payloads.length, type: 'function', function: { name, arguments: JSON.stringify(args) } }] });
+    const ptc = p.tools?.length === 1 && p.tools[0].function.name === 'run_code';
+    const x = Boolean(todo?.parameters.properties.op) || ptc && p.messages.some(m => m.role === 'system' && m.content.includes('Read saved context documents by record ID.'));
+    const tool = (name, args) => {
+      if (ptc) { args = { code: `return await tools[${JSON.stringify(name)}](${JSON.stringify(args)})`, description: 'Verify OMD PTC task persistence' }; name = 'run_code'; }
+      return { tool_calls: [{ index: 0, id: 'call-' + payloads.length, type: 'function', function: { name, arguments: JSON.stringify(args) } }] };
+    };
     const last = p.messages.at(-1);
-    const delta = !todo || last.role === 'tool' ? { content: 'Fixture complete.' }
+    const delta = (!todo && !x) || last.role === 'tool' ? { content: 'Fixture complete.' }
       : x && JSON.stringify(last).includes('Check bundled CodeGraph') ? tool('mcp__codegraph__codegraph_explore', { query: 'fixture' })
       : x ? tool('todo_write', JSON.stringify(last).includes('Inspect retained tasks') ? { op: 'view' } : { op: 'excerpt', from: 'Keep the original requirement.', to: 'Keep the original requirement.', tasks: [{ title: 'Keep the original requirement.', anchor: { from: 'Keep the original requirement.', to: 'Keep the original requirement.' } }] })
       : tool('todo_write', { todos: [{ content: 'Stock fixture task', status: 'completed' }] });
@@ -111,7 +115,7 @@ test('install into stock web, coexist with stock presets, switch both ways and r
   await boot();
   await create('standard', old.sessionId); // Existing stock sessions mount first.
   const blank = await create('standard');
-  for (const preset of ['trisoul-x', 'ptc', 'trisoul-x', 'cordis', 'trisoul-x', 'standard', 'trisoul-x']) assert.equal(await select(blank.sessionId, preset), preset);
+  for (const preset of ['trisoul-x', 'omd-ptc', 'ptc', 'omd-ptc', 'trisoul-x', 'cordis', 'trisoul-x', 'standard', 'trisoul-x']) assert.equal(await select(blank.sessionId, preset), preset);
   await api('/better-todo?session=' + blank.sessionId, { todo: false, verification: false });
   let xSnapshot = await prompt(blank.sessionId, 'Keep the original requirement.', 1);
   assert.equal(xSnapshot.projections.values.agentPreset, 'trisoul-x');
@@ -121,6 +125,25 @@ test('install into stock web, coexist with stock presets, switch both ways and r
   assert.ok(state.contextHistory.length, 'X monitoring follows the selected preset, not the original header');
   xSnapshot = await prompt(blank.sessionId, 'Inspect retained tasks.', 2);
   assert.equal(xSnapshot.projections.values.todos[0].content, 'Keep the original requirement.', 'task dock survives the next turn');
+  const ptcSession = await create('standard');
+  await select(ptcSession.sessionId, 'omd-ptc');
+  await api('/better-todo?session=' + ptcSession.sessionId, { todo: false, verification: false });
+  const ptcSnapshot = await prompt(ptcSession.sessionId, 'Keep the original requirement.', 1);
+  assert.equal(ptcSnapshot.projections.values.agentPreset, 'omd-ptc');
+  assert.equal(ptcSnapshot.projections.values.todos[0].content, 'Keep the original requirement.');
+  const ptcState = await api('/state?session=' + ptcSession.sessionId);
+  assert.equal(ptcState.tasks[0].source, 'Keep the original requirement');
+  assert.ok(ptcState.contextHistory.length, 'OMD PTC runs the same monitoring/context hooks after a preset switch');
+  const ptcRequest = payloads.findLast(p => p.tools?.length === 1 && p.tools[0].function.name === 'run_code');
+  assert.match(ptcRequest.messages[0].content, /## Programmatic tool use/);
+  for (const name of ['todo_write', 'verify_link', 'recall', 'note', 'computer_use', 'codegraph_index', 'workflow', 'subagent']) {
+    assert.ok(ptcRequest.messages[0].content.includes(name), 'OMD PTC SDK retains ' + name);
+  }
+  const stockPtc = await create('ptc');
+  await prompt(stockPtc.sessionId, 'Inspect stock PTC.', 1);
+  const stockPtcRequest = payloads.findLast(p => p.tools?.length === 1 && p.tools[0].function.name === 'run_code');
+  assert.doesNotMatch(stockPtcRequest.messages[0].content, /## Programmatic tool use|Read saved context documents by record ID/);
+  assert.equal((await api('/state?session=' + stockPtc.sessionId)).contextHistory.length, 0);
   const returned = await create('trisoul-x');
   await select(returned.sessionId, 'standard');
   await prompt(returned.sessionId, 'Run the stock todo fixture after switching back.', 1);
@@ -141,9 +164,13 @@ test('install into stock web, coexist with stock presets, switch both ways and r
   assert.deepEqual(legacy.projections.values.todos, oldSnapshot.projections.values.todos);
 
   await stop(); await boot();
+  await create('omd-ptc', ptcSession.sessionId); // PTC mounts before OMD/stock on restart.
+  const resumedPtc = await prompt(ptcSession.sessionId, 'Inspect retained tasks.', 2);
+  assert.equal(resumedPtc.projections.values.agentPreset, 'omd-ptc');
+  assert.equal(resumedPtc.projections.values.todos[0].content, 'Keep the original requirement.');
   await create('trisoul-x', blank.sessionId); // Reverse the standing-mount order after restart.
   const reverse = await create('trisoul-x');
-  for (const preset of ['standard', 'trisoul-x', 'cordis', 'ptc', 'trisoul-x']) assert.equal(await select(reverse.sessionId, preset), preset);
+  for (const preset of ['standard', 'omd-ptc', 'trisoul-x', 'cordis', 'ptc', 'omd-ptc', 'trisoul-x']) assert.equal(await select(reverse.sessionId, preset), preset);
   state = await api('/state?session=' + blank.sessionId);
   assert.equal(state.tasks[0].source, 'Keep the original requirement');
   assert.ok(!log.includes('refusing to share'), log.replace(/token=\S+/g, 'token=[redacted]'));

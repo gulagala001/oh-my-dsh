@@ -38,7 +38,7 @@ export function apply(ctx, config) {
   } });
   const computer = acquireComputerUse(ctx, { getConfig: () => hub.config(), dataDir: join(hub.store.dir, 'computer-use') });
   hub.computerUse = computer.computerUse; hub.computerRefresh = computer.refresh; hub.computerImages = computer.computerImages;
-  const isX = session => (ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset) === 'trisoul-x';
+  const isX = session => ['trisoul-x', 'omd-ptc'].includes(ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset);
   installImageBudget(ctx, isX);
   installTraceCleanup(ctx, isX, hub.context);
   ctx.on('system-prompt/assemble', async (_assembly, context, next) => {

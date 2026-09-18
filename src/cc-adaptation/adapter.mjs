@@ -7,6 +7,19 @@ const bindings = JSON.parse(readFileSync(new URL('./bindings.json', import.meta.
 export { mainPrompt };
 const sha = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
+// These rendered-text conventions apply to native results, not SDK return values.
+function sdkDescription(name, description) {
+  if (name === 'bash') return description.replace('Non-zero exits are reported as `[exit code: N]`.',
+    'For foreground results, inspect `exitCode`, `signal`, `timedOut`, and `aborted`; read `stdout.text` and `stderr.text`, including their truncation and spill-path fields. A non-zero process exit is a command outcome, not necessarily a ToolCallError.');
+  if (name === 'pwsh') return description.replace('A nonzero exit is reported as `[exit code: N]`.',
+    'Inspect the returned process status and output fields in the current SDK return type.');
+  if (name === 'job_output') return description.replace('Inspect the `[status: ...]` line.',
+    'Inspect `job.status` and read `text` from the returned object.');
+  if (name === 'read') return description.replace('Read a UTF-8 text file and return line-numbered content.',
+    'Read a UTF-8 text file and return structured line records with their numbers and text, plus range metadata.');
+  return description;
+}
+
 /** Pure prompt transformation: never changes execution functions or input/output schemas. */
 export function transformAssembly(assembly, context, options = {}) {
   const { agent } = context ?? {};
@@ -15,6 +28,8 @@ export function transformAssembly(assembly, context, options = {}) {
     return { assembly, audit: { applied: false, reason: 'outside-main-agent-scope' } };
   }
   const load = options.read ?? read;
+  const activeSdk = assembly.sections.some(section => section.name === 'tools:sdk' && section.text);
+  const toolMode = !activeSdk ? 'native' : assembly.sections.some(section => section.name === 'tools:ptc-only' && section.text) ? 'ptc' : 'both';
   const constraintGuidance = options.todoConstraintFirst === true ? load('tools/todo-constraints.md') : '';
   const map = options.bindings ?? bindings;
   const known = new Map((options.schemas ?? assembly.tools ?? []).map(tool => [tool.name, tool]));
@@ -49,7 +64,7 @@ export function transformAssembly(assembly, context, options = {}) {
     changedSchemas.set(tool.name, { ...tool, description });
     applied.add(tool.name);
   }
-  let persona = options.main ?? mainPrompt;
+  let persona = options.main ?? buildMainPrompt(options.identityPrompt, { toolMode });
   if (!known.has('computer_use')) persona = persona.replace('Use the available computer-use tools for tasks involving browsers and desktop applications. ', '');
   if (constraintGuidance) persona += '\n\n## Constraint-first reasoning\n' + constraintGuidance;
   const suppressed = new Set();
@@ -58,6 +73,12 @@ export function transformAssembly(assembly, context, options = {}) {
   const sections = assembly.sections.flatMap(section => {
     if (section.name === 'trisoul-x:persona') return [{ ...section, text: persona, interpolate: false }];
     if (section.name === 'harness:identity') return [];
+    if (section.name === 'plan:policy' && toolMode === 'ptc') {
+      return [{ ...section, text: section.text.replace(
+        'make `exit_plan_mode` the only and final tool call in that response',
+        'invoke `tools.exit_plan_mode` alone inside `run_code`, return its result, and end that response',
+      ) }];
+    }
     // Generated SDK needs live descriptions AND live return contracts, not copied old stubs.
     if (section.name === 'tools:sdk' && section.text) {
       if (typeof options.renderSdk !== 'function' || typeof options.definition !== 'function') {
@@ -66,7 +87,8 @@ export function transformAssembly(assembly, context, options = {}) {
       const sdk = [...known.values()].filter(tool => tool.name !== 'run_code').map(tool => {
         const definition = options.definition(tool.name);
         if (!definition?.output?.schema) throw new Error(`Missing live output contract: ${tool.name}`);
-        return { ...(changedSchemas.get(tool.name) ?? tool), output: definition.output.schema };
+        const adapted = changedSchemas.get(tool.name);
+        return { ...(adapted ?? tool), ...(adapted ? { description: sdkDescription(tool.name, adapted.description) } : {}), output: definition.output.schema };
       });
       sdkRegenerated = true;
       return [{ ...section, text: options.renderSdk(sdk), interpolate: false }];
@@ -106,7 +128,7 @@ export function installPromptAdapter(ctx) {
     }
     const config = ctx.trisoulX.config();
     const result = transformAssembly(assembly, context, {
-      main: buildMainPrompt(config.identityPrompt), todoConstraintFirst: config.todoConstraintFirst,
+      identityPrompt: config.identityPrompt, todoConstraintFirst: config.todoConstraintFirst,
       schemas, renderSdk, definition: name => ctx.tools.get(name, context.scope ?? context.agent),
     });
     const key = sha(result.audit);

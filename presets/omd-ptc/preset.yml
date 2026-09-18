@@ -1,0 +1,3 @@
+name: omd-ptc
+description: 完整 OMD 提示词、分层记忆、上下文整理、任务验证与电脑操控；通过 PTC 的 run_code 调用工具。
+order: 1

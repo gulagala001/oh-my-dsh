@@ -13,7 +13,8 @@ async function until(fn, timeout = 30000) {
   throw Error('Timed out waiting for integration result');
 }
 
-test('official DSH profile → plugin → native tools → context records → replacement → raw recall', { timeout: 120000 }, async t => {
+for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${preset} → tools → context records → replacement → raw recall`, { timeout: 120000 }, async t => {
+  const isMain = p => p.tools?.some(t => ['todo_write', 'run_code'].includes(t.function.name));
   const root = mkdtempSync(join(tmpdir(), 'trisoul-x-dsh-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   mkdirSync(home); mkdirSync(workspace); mkdirSync(join(workspace, '.agents', 'skills', 'test-skill'), { recursive: true });
   mkdirSync(join(home, 'trisoul-x'));
@@ -36,7 +37,13 @@ test('official DSH profile → plugin → native tools → context records → r
     const p = JSON.parse(body); payloads.push(p);
     res.writeHead(200, { 'Content-Type': 'text/event-stream' });
     const chunk = (delta, finish = null) => res.write(`data: ${JSON.stringify({ id: 'fixture', object: 'chat.completion.chunk', model: 'fixture', created: 1, choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`);
-    const tool = (name, args) => chunk({ role: 'assistant', tool_calls: [{ index: 0, id: 'call-' + payloads.length, type: 'function', function: { name, arguments: JSON.stringify(args) } }] }, 'tool_calls');
+    const tool = (name, args) => {
+      if (p.tools?.length === 1 && p.tools[0].function.name === 'run_code') {
+        args = { code: `return await tools[${JSON.stringify(name)}](${JSON.stringify(args)})`, description: `Run fixture ${name}` };
+        name = 'run_code';
+      }
+      chunk({ role: 'assistant', tool_calls: [{ index: 0, id: 'call-' + payloads.length, type: 'function', function: { name, arguments: JSON.stringify(args) } }] }, 'tool_calls');
+    };
     if (p.tools?.some(t => t.function.name === 'prepare_segment')) {
       tool('prepare_segment', { summary: 'Read the fixture. Result is 42.', documents: [{ title: 'Fixture', text: 'ORIGINAL_FIXTURE_42; source fixture remains intact.' }] });
     } else if (p.tools?.some(t => t.function.name === 'submit_context_choices')) {
@@ -86,7 +93,7 @@ test('official DSH profile → plugin → native tools → context records → r
     const body = await response.json(); assert.equal(body.result?.ok, true, JSON.stringify(body)); return body.result.value;
   };
   const api = async (path, body) => { const r = await fetch(base + '/trisoul-x/api' + path, body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); const value = await r.json(); assert.ok(r.ok, JSON.stringify(value)); return value; };
-  const created = await rpc('session/create', { cwd: workspace, agentPreset: 'trisoul-x' }), id = created.sessionId, q = '?session=' + id;
+  const created = await rpc('session/create', { cwd: workspace, agentPreset: preset }), id = created.sessionId, q = '?session=' + id;
   const computerState = await fetch(base + '/trisoul-x/computer-use/state' + q, { headers: { cookie } });
   const computerBody = await computerState.text();
   assert.equal(computerState.status, 200, 'Computer Use routes reuse the host authenticated session: ' + computerBody);
@@ -102,7 +109,7 @@ test('official DSH profile → plugin → native tools → context records → r
   assert.equal(draftState.status, 200, 'the pane can initialize before the first prompt');
   assert.deepEqual(await api('/better-todo' + q), { todo: true, verification: false });
   assert.deepEqual(await api('/better-todo' + q, { verification: true }), { todo: true, verification: true });
-  const other = await rpc('session/create', { cwd: workspace, agentPreset: 'trisoul-x' });
+  const other = await rpc('session/create', { cwd: workspace, agentPreset: preset });
   assert.deepEqual(await api('/better-todo?session=' + other.sessionId), { todo: true, verification: false });
   assert.equal(JSON.parse(readFileSync(join(home, 'trisoul-x', 'sessions', id + '.json'), 'utf8')).betterTodo.verification, true);
   assert.equal((await api('/scope' + q)).locked, false);
@@ -118,7 +125,7 @@ test('official DSH profile → plugin → native tools → context records → r
   const firstFrame = reviewed.contextHistory[0];
   assert.ok(firstFrame.nodes.some(n => n.kind === '@deepseek-ai/dsh-system-prompt' && n.tokens > 0), 'request snapshot includes the committed system prompt');
   assert.ok(firstFrame.nodes.some(n => n.kind === 'user'), 'request snapshot includes the admitted user message');
-  assert.equal(reviewed.contextHistory.length, payloads.filter(p => p.tools?.some(t => t.function.name === 'todo_write')).length, 'one snapshot per main request, excluding background calls');
+  assert.equal(reviewed.contextHistory.length, payloads.filter(isMain).length, 'one snapshot per main request, excluding background calls');
   assert.equal(firstFrame.inputTokens, 200, 'reported input excludes response tokens');
   assert.ok(payloads.some(p => p.tools?.some(t => t.function.name === 'prepare_segment') && p.temperature === 0.2));
   const memoryFile = JSON.parse(readFileSync(join(home, 'trisoul-x', 'memory.json'), 'utf8'));
@@ -127,7 +134,7 @@ test('official DSH profile → plugin → native tools → context records → r
   assert.ok(!payloads.some(p => p.tools?.some(t => ['save_state', 'save_context', 'memory_curate', 'record_probe'].includes(t.function.name))));
   assert.equal(reviewed.tasks[0].links[0].asked, true);
   assert.equal(reviewed.frame.filter(n => n.kind === 'trisoul-x:task-review').length, 1);
-  const firstTurn = JSON.stringify(payloads.filter(p => p.tools?.some(t => t.function.name === 'verify_link')).map(p => p.messages));
+  const firstTurn = JSON.stringify(payloads.filter(isMain).map(p => p.messages));
   for (const reminder of ['[todo list] Unresolved tasks remain:', '[todo list] Every task is checked off, but these lack qualifying evidence:', '[todo list] Tasks whose only evidence is a text record:', 'Re-check each stated limitation against the tools and environment actually available.']) assert.ok(firstTurn.includes(reminder), reminder);
   assert.deepEqual(await api('/better-todo' + q, { verification: false }), { todo: true, verification: false });
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: id, mode: 'queue', content: [{ type: 'text', text: 'Run the real verification command now.' }], clientTimeZone: 'Asia/Shanghai' });
@@ -141,10 +148,16 @@ test('official DSH profile → plugin → native tools → context records → r
   const testLink = state.tasks[0].links.find(l => l.kind === 'test');
   assert.equal(testLink.lastRun.pass, true); assert.match(testLink.lastRun.tail, /VERIFIED_LEDGER_FIXTURE/);
   assert.equal(state.tasks[0].id, 'T1'); assert.equal(state.tasks[0].source, 'Run native fixture tools');
-  const names = payloads.find(p => p.tools?.some(t => t.function.name === 'read')).tools.map(t => t.function.name);
-  const mainRequests = payloads.filter(p => p.tools?.some(t => t.function.name === 'todo_write'));
+  const mainRequests = payloads.filter(isMain);
   assert.equal(mainRequests[0].messages[0].role, 'system', 'startup injections must follow the system prompt');
   const systemText = mainRequests[0].messages[0].content;
+  const names = preset === 'omd-ptc'
+    ? [...systemText.split('interface ToolArgsMap {')[1].split('interface ToolOutputMap')[0].matchAll(/^  (\w+):/gm)].map(m => m[1])
+    : mainRequests[0].tools.map(t => t.function.name);
+  if (preset === 'omd-ptc') {
+    assert.deepEqual(mainRequests[0].tools.map(t => t.function.name), ['run_code']);
+    assert.match(systemText, /## Programmatic tool use/);
+  }
   assert.ok(systemText.startsWith('You are an interactive zcode agent that helps users with software engineering tasks.'));
   assert.ok(systemText.includes('The host application source checkout is at '));
   assert.ok(systemText.includes("through the current web interface"));
@@ -160,7 +173,8 @@ test('official DSH profile → plugin → native tools → context records → r
     assert.deepEqual(mainRequests[i].messages.slice(0, mainRequests[i - 1].messages.length), mainRequests[i - 1].messages, 'normal steps preserve the previous request prefix');
   }
   for (const name of ['read', 'write', 'edit', 'glob', 'grep', process.platform === 'win32' ? 'pwsh' : 'bash', 'skill', 'subagent', 'note', 'recall', 'todo_write', 'verify_link', 'web_fetch', 'present']) assert.ok(names.includes(name), 'missing tool ' + name);
-  assert.ok(payloads.some(p => p.messages.some(m => m.role === 'tool' && typeof m.content === 'string' && m.content.includes('Presented fixture.txt'))));
+  assert.ok(payloads.some(p => p.messages.some(m => m.role === 'tool' && typeof m.content === 'string'
+    && (preset === 'omd-ptc' ? m.content.includes('"path": "fixture.txt"') : m.content.includes('Presented fixture.txt')))));
   assert.ok(names.some(n => n.startsWith('job_'))); assert.ok(!names.some(n => /vote|submit_draft/.test(n)));
   assert.deepEqual(names.filter(n => ['todo_write', 'task_map', 'todo', 'verify_link', 'tasks'].includes(n)).sort(), ['todo_write', 'verify_link']);
   assert.ok(payloads.every(p => p.response_format === undefined));
@@ -194,7 +208,7 @@ test('official DSH profile → plugin → native tools → context records → r
   assert.ok(payloads.some(p => p.messages.some(m => m.role === 'tool' && typeof m.content === 'string' && m.content.includes('[event ') && m.content.includes('ORIGINAL_FIXTURE_42'))), 'recall returns original event text');
   assert.ok((await api('/context/catalog' + q)).entries.length > 0);
   const continued = await api('/state' + q); assert.equal(continued.tasks[0].status, 'completed');
-  for (const p of payloads.filter(p => p.tools?.some(t => t.function.name === 'todo_write'))) {
+  for (const p of payloads.filter(isMain)) {
     assert.equal(p.messages[0].role, 'system', 'compaction keeps the system role');
     assert.equal(p.messages[0].content, mainRequests[0].messages[0].content, 'compaction does not rewrite the system text');
   }
@@ -212,7 +226,7 @@ test('official DSH profile → plugin → native tools → context records → r
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: id, mode: 'queue', content: [{ type: 'text', text: 'Check the updated identity.' }] });
   await until(() => payloads.some(p => p.messages.some(m => m.role === 'system' && m.content.startsWith(customIdentity))));
   await until(async () => (await api('/state' + q)).running === 'idle');
-  const identityRequest = payloads.findLast(p => p.tools?.some(t => t.function.name === 'todo_write'));
+  const identityRequest = payloads.findLast(isMain);
   const updatedSystem = identityRequest.messages.findLast(m => m.role === 'system').content;
   assert.equal(updatedSystem, systemText.replace(beforeIdentity, customIdentity));
   assert.deepEqual(identityRequest.tools, mainRequests[0].tools, 'identity changes preserve every tool contract');

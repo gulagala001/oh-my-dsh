@@ -36,6 +36,8 @@ Oh My DSH 把任务、上下文、摘要、电脑和监控放进同一个工作�
 
 作为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 插件运行，沿用已有的模型配置、会话、文件、工具与技能。
 
+源码开发版还提供独立的 **`omd-ptc`** 预设：保留完整 OMD 机制，通过 `run_code` 组合工具调用。原 Oh My DSH 与宿主 PTC 预设保留。该预设尚未包含在下方固定版本中，详见[使用指南](docs/usage.md#本地开发或独立试用)。
+
 ### 内置 CodeGraph（主分支，尚未发布）
 
 集成 [colbymchenry/codegraph](https://github.com/colbymchenry/codegraph) 1.6.0，通过 MCP 查询代码符号、源码、调用关系和变更影响。运行时随插件依赖安装，无需全局安装 CodeGraph 或运行 `codegraph install`。
