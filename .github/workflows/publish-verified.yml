@@ -5,7 +5,7 @@ on:
     paths: ['.github/workflows/publish-verified.yml']
 permissions:
   contents: write
-  actions: read
+  actions: write
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -19,7 +19,7 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@v7
         with:
-          ref: 4534a0a2af3da8f8b21d444ffdcb325c4227830a
+          ref: 9134af4d988ed0b0a75b01a429fcdfd886abe062
           path: source
           fetch-depth: 0
           persist-credentials: false
@@ -29,14 +29,28 @@ jobs:
       - uses: pnpm/action-setup@v6
         with:
           package_json_file: source/package.json
-      - name: Validate completed platform checks, install the actual package and publish
+      - name: Retire only a superseded incomplete OMD check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json,subprocess
+          repo='gulagala001/oh-my-dsh';expected='9134af4d988ed0b0a75b01a429fcdfd886abe062';old='4534a0a2af3da8f8b21d444ffdcb325c4227830a'
+          def get(path):return json.loads(subprocess.check_output(['gh','api','repos/'+repo+'/'+path],text=True))
+          assert get('branches/main')['commit']['sha']==expected
+          for run in get('actions/runs?head_sha='+old+'&per_page=100')['workflow_runs']:
+              if run['head_sha']==old and run['head_branch']=='main' and run['name']=='CI' and run['event']=='push' and run['status'] in ['queued','pending','in_progress']:
+                  subprocess.run(['gh','api','--method','POST','repos/'+repo+'/actions/runs/'+str(run['id'])+'/cancel'],check=True)
+                  print('Superseded incomplete check cancelled:',run['id'])
+          PY
+      - name: Validate all final checks, install the actual package and publish
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_DIR: ${{ github.workspace }}/source
           SOURCE_REPOSITORY: gulagala001/oh-my-dsh
-          SOURCE_SHA: 4534a0a2af3da8f8b21d444ffdcb325c4227830a
+          SOURCE_SHA: 9134af4d988ed0b0a75b01a429fcdfd886abe062
           RELEASE_TAG: v0.1.6-alpha.2.1
-          REQUIRED_CHECKS: '[{"repo":"gulagala001/oh-my-dsh","sha":"4534a0a2af3da8f8b21d444ffdcb325c4227830a","workflow":"CI"},{"repo":"gulagala001/oh-my-dsh","sha":"4534a0a2af3da8f8b21d444ffdcb325c4227830a","workflow":"Host compatibility"},{"repo":"gulagala001/opencu","sha":"a10466a9ccd3afed57eba47d1770d101fe43a8ed","workflow":"CI"},{"repo":"gulagala001/opencu","sha":"a10466a9ccd3afed57eba47d1770d101fe43a8ed","workflow":"Windows Computer Use"}]'
+          REQUIRED_CHECKS: '[{"repo":"gulagala001/oh-my-dsh","sha":"9134af4d988ed0b0a75b01a429fcdfd886abe062","workflow":"CI"},{"repo":"gulagala001/oh-my-dsh","sha":"9134af4d988ed0b0a75b01a429fcdfd886abe062","workflow":"Host compatibility"},{"repo":"gulagala001/opencu","sha":"13813e9269e3b7c87778fd1aa937fc47ff0e2349","workflow":"CI"},{"repo":"gulagala001/opencu","sha":"13813e9269e3b7c87778fd1aa937fc47ff0e2349","workflow":"Windows Computer Use"},{"repo":"gulagala001/opencu","sha":"13813e9269e3b7c87778fd1aa937fc47ff0e2349","workflow":"Browser compatibility"}]'
         run: python control/.github/release/publish_verified.py
       - uses: actions/upload-artifact@v7
         if: always()
