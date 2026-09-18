@@ -8,16 +8,28 @@ permissions:
   contents: read
 jobs:
   browser-dialog:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            pattern: 'DSH extension'
+          - os: windows-latest
+            pattern: 'DSH managed'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: '22.19.0'
+          node-version: '24'
       - uses: pnpm/action-setup@v6
+      - uses: actions/setup-dotnet@v6
+        if: runner.os == 'Windows'
+        with:
+          dotnet-version: '10.0.x'
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright install chromium
       - run: pnpm build
-      - run: node --test --test-name-pattern='DSH extension' test/computer-use-ui.test.mjs
-      - run: node --test --test-name-pattern='DSH extension' test/computer-use-ui.test.mjs
+      - run: node --test --test-name-pattern='${{ matrix.pattern }}' test/computer-use-ui.test.mjs
+      - run: node --test --test-name-pattern='${{ matrix.pattern }}' test/computer-use-ui.test.mjs

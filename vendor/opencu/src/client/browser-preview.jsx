@@ -114,6 +114,12 @@ export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api,
       if (!active) return;
       const value = JSON.parse(event.data);
       if ((value.observedAt ?? 0) < navigationObservedAt) return;
+      // Compare two reads on the server clock, not browser wall time. The
+      // frame may already describe a newer document than delayed history.
+      const observedFrame = receivedFrame.current ?? current.current;
+      if (observedFrame?.loaderId && observedFrame.loaderId !== value.loaderId
+        && Number.isFinite(observedFrame.observedAt) && Number.isFinite(value.observedAt)
+        && value.observedAt < observedFrame.observedAt) return;
       navigationObservedAt = value.observedAt ?? 0;
       setCursor(null);
       // Frame delivery can precede navigation history and img.load. Compare

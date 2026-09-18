@@ -536,7 +536,13 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
         const frame = window.__cuDisplayedFrames?.get(element.src.split(',')[1]);
         return frame ? { frame, box: element.getBoundingClientRect().toJSON() } : null;
       });
-      if (!displayed || await page.getByLabel('浏览器实时画面').getAttribute('data-layout-busy') === 'true') return false;
+      if (!displayed) return false;
+      const live = page.getByLabel('浏览器实时画面');
+      if (await live.getAttribute('data-connection') !== 'live' || await live.getAttribute('data-layout-busy') === 'true') return false;
+      if (backend === 'managed') {
+        const size = await live.locator('.tx-cu-preview-stage').evaluate(element => ({ width: element.clientWidth, height: element.clientHeight }));
+        if (Math.abs(size.width - displayed.frame.width) > 2 || Math.abs(size.height - displayed.frame.height) > 2) return false;
+      }
       const { frameTree } = await cdp.send('Page.getFrameTree');
       if (displayed.frame.loaderId !== frameTree.frame.loaderId) return false;
       const before = viewportGeometry(await cdp.send('Page.getLayoutMetrics'));
@@ -557,9 +563,16 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
       await page.mouse.wheel(0, rect.y + rect.height / 2 - visibleHeight() / 2);
       await until(async () => await readDisplayed() && rect.y >= 0 && rect.y + rect.height <= visibleHeight());
     }
-    return { x: box.x + (rect.x + rect.width / 2) * box.width / frame.width, y: box.y + (rect.y + rect.height / 2) * box.height / frame.height };
+    const position = { x: (rect.x + rect.width / 2) * box.width / frame.width, y: (rect.y + rect.height / 2) * box.height / frame.height };
+    return { x: box.x + position.x, y: box.y + position.y, position };
   };
-  const click = async locator => { const p = await point(locator); await page.mouse.click(p.x, p.y); };
+  const click = async locator => {
+    const p = await point(locator);
+    // Use the actual image hit target: raw screen coordinates can point
+    // outside it if the host finishes a sidebar layout between measurement
+    // and pointer dispatch. Actionability waits before sending one click.
+    await image.click({ position: p.position });
+  };
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '助手光标验收' }] });
   const assistantCursor = page.locator('.tx-cu-pane .tx-cu-assistant-cursor');
   if (backend === 'managed') {

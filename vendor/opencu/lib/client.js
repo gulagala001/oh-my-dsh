@@ -498,6 +498,8 @@ function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api: api2, 
       if (!active) return;
       const value = JSON.parse(event.data);
       if ((value.observedAt ?? 0) < navigationObservedAt) return;
+      const observedFrame = receivedFrame.current ?? current.current;
+      if (observedFrame?.loaderId && observedFrame.loaderId !== value.loaderId && Number.isFinite(observedFrame.observedAt) && Number.isFinite(value.observedAt) && value.observedAt < observedFrame.observedAt) return;
       navigationObservedAt = value.observedAt ?? 0;
       setCursor(null);
       const loaderId = receivedFrame.current?.loaderId ?? current.current?.loaderId;
