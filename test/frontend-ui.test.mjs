@@ -29,7 +29,10 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   assert.ok((await composer.boundingBox()).height < 160, 'empty composer stays compact');
   const usageToggle = page.getByRole('button', { name: '用量详情', exact: true });
   const hostStats = page.locator('[data-slot="conversation.composer.dock"] .bOPqQW_root');
-  assert.equal(await hostStats.isVisible(), false, 'usage details do not crowd the default composer');
+  assert.equal(await hostStats.isVisible(), true, 'usage details are expanded by default');
+  assert.equal(await usageToggle.getAttribute('aria-expanded'), 'true');
+  await usageToggle.click();
+  assert.equal(await hostStats.isVisible(), false, 'usage details can still be collapsed');
   const closedUsageBox = await usageToggle.boundingBox();
   await usageToggle.click();
   assert.equal((await usageToggle.boundingBox()).x, closedUsageBox.x, 'expanding usage keeps the toolbar horizontal position');
