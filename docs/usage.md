@@ -1,6 +1,6 @@
 # Oh My DSH 使用与开发指南
 
-[返回项目首页](../README.md) · [安装](#安装到现有-dsh推荐) · [日常使用](#日常使用) · [Computer Use](#computer-use预览版) · [开发与验证](#开发与验证)
+[返回项目首页](../README.md) · [安装](#安装到现有-dsh推荐) · [日常使用](#日常使用) · [CodeGraph](#codegraph) · [Computer Use](#computer-use) · [开发与验证](#开发与验证)
 
 当前预发布版本 **0.1.6-alpha.2.1**，适配 **DSH 0.1.6-alpha.2**，内置 **OpenCU 1.0.3**。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
@@ -166,6 +166,33 @@ node scripts/launch-macos.mjs
 升级保留已有参数，不自动改写已保存的设置。原“较少”参数现在显示为“适中”；不匹配这五项预设的现有配置显示为自定义；档位不修改模型、会话范围或 Trace。高级设置保留窗口、输出上限、空闲冲刷与电脑连接选项。
 
 替换时可前置最近一次提供方已公开的推理文本；没有该文本时不会生成。它可能有误，也可能影响前缀缓存。后台仍有输入输出成本；如果窗口耗尽且没有可用摘要，系统不会凭空续接或静默删去原文。
+
+## CodeGraph
+
+主分支内置 [colbymchenry/codegraph](https://github.com/colbymchenry/codegraph) **1.6.0**；已发布的 **0.1.6-alpha.2.1 不包含此功能**。体验主分支时，停止服务，使用同一个 profile 和 `DSH_HOME` 安装，再按原来的方式启动：
+
+```sh
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#main
+dsh web
+```
+
+CodeGraph 运行时随依赖安装，不需要全局安装 CLI、运行 `codegraph install` 或配置其他 Agent。平台包覆盖 macOS、Linux、Windows 的 x64/arm64；安装时须保留 optional dependencies，平台运行时缺失时应重新安装完整依赖。
+
+### 建立索引与查询
+
+1. 打开 **Oh My DSH** 会话，选择要分析的项目工作目录。
+2. 输入“为当前项目建立 CodeGraph 索引”。助手调用 `codegraph_index`，在该目录创建 `.codegraph/` 并建立索引；已有索引会增量同步。
+3. 直接询问，例如“登录请求经过哪些函数？”或“修改这个函数会影响哪些调用方？”。助手可通过 `mcp__codegraph__codegraph_explore` 获取相关源码、调用关系及影响范围。
+
+查询默认使用会话工作目录，并向上查找最近的 `.codegraph/`；初始化则针对指定目录本身。要分析其他仓库，可在对话中给出其目录，助手通过 `projectPath` 指定；相对路径按会话工作目录解析。尚未建立索引时，查询不会自动初始化项目，仍可使用普通文件和搜索工具。工具只加入 Oh My DSH preset，不改变其他 preset 的工具集。
+
+### 同步、停止与维护
+
+每个项目复用独立的 MCP 连接，连接存续期间监听源文件变化。同步有短暂延迟；如果结果提示索引未更新或监听不可用，应以实际文件内容为准。连接空闲一分钟后释放，下次查询重新连接并补齐变更。也可以说“更新当前项目的 CodeGraph 索引”，再次调用 `codegraph_index` 增量同步。
+
+索引期间可以使用宿主停止操作；再次请求索引可继续初始化或同步已存在的索引。连接崩溃后，失败会显示在工具结果中，后续查询重新连接。关闭或卸载插件会关闭其拥有的进程，但保留项目 `.codegraph/`；不再需要索引时，可在停止服务后自行删除该目录。索引位于项目内，不在 `DSH_HOME` 的会话备份中，通常不需要提交到版本库。
+
+内置实例关闭 CodeGraph 遥测。索引与查询在本机运行；查询返回的源码会作为工具结果进入对话，并发送给会话所配置的模型。CodeGraph 提供结构信息，不能替代编译、测试或运行验证。
 
 ## Computer Use
 
@@ -336,6 +363,7 @@ DSH CLI 仅作为本地开发依赖；宿主 SDK 声明为由 DSH 提供的 peer
 | --- | --- |
 | `cordis.patch.yml` / `presets/` | 宿主安装补丁与 Agent 组合 |
 | `src/index.mjs` / `src/dsh-agent.mjs` | 插件接入、事件与扩展工具 |
+| `src/codegraph.mjs` / `src/codegraph-agent.mjs` | 内置 CodeGraph 运行时、项目连接、索引与 MCP 工具桥接 |
 | `src/tasks.mjs` / `src/todolist.mjs` | 需求锚点、任务与验证记录 |
 | `src/prompts.mjs` | 主模型与后台任务的提示词 |
 | `src/hub.mjs` / `src/hub-store.mjs` | 记忆调度、存储、版本与监控 |

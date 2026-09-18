@@ -16,6 +16,7 @@ import { TODO_NUDGE, TODO_EMPTY_NUDGE } from './todolist.mjs';
 import { message } from './hub.mjs';
 import { join } from 'node:path';
 import { acquireComputerUse } from '#opencu/integration';
+import { CodegraphRuntime } from './codegraph.mjs';
 
 export { Config };
 export const name = 'trisoul-x';
@@ -27,6 +28,8 @@ export function apply(ctx, config) {
   installLoaderLifecycleCompatibility(ctx);
   installToolSchedulerCompatibility(ctx);
   const hub = new Hub(ctx, config);
+  hub.codegraph = new CodegraphRuntime();
+  ctx.effect(() => () => hub.codegraph.dispose());
   const versionService = createVersionService();
   ctx.effect(() => () => versionService.dispose());
   ctx.settings.installSection(ctx, NS, Config, config, { setSource: source => { hub.getConfig = source; }, onChange() {

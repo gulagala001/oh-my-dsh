@@ -34,6 +34,7 @@ test('install into stock web, coexist with stock presets, switch both ways and r
     const tool = (name, args) => ({ tool_calls: [{ index: 0, id: 'call-' + payloads.length, type: 'function', function: { name, arguments: JSON.stringify(args) } }] });
     const last = p.messages.at(-1);
     const delta = !todo || last.role === 'tool' ? { content: 'Fixture complete.' }
+      : x && JSON.stringify(last).includes('Check bundled CodeGraph') ? tool('mcp__codegraph__codegraph_explore', { query: 'fixture' })
       : x ? tool('todo_write', JSON.stringify(last).includes('Inspect retained tasks') ? { op: 'view' } : { op: 'excerpt', from: 'Keep the original requirement.', to: 'Keep the original requirement.', tasks: [{ title: 'Keep the original requirement.', anchor: { from: 'Keep the original requirement.', to: 'Keep the original requirement.' } }] })
       : tool('todo_write', { todos: [{ content: 'Stock fixture task', status: 'completed' }] });
     res.writeHead(200, { 'Content-Type': 'text/event-stream' });
@@ -128,6 +129,13 @@ test('install into stock web, coexist with stock presets, switch both ways and r
   const stockRequest = payloads.findLast(p => p.tools?.find(t => t.function.name === 'todo_write')?.function.parameters.properties.todos);
   assert.ok(stockRequest);
   assert.ok(!JSON.stringify(stockRequest.messages).includes('[todo list]'), 'X adds no task reminder to the stock session');
+  assert.ok(!stockRequest.tools.some(tool => tool.function.name.includes('codegraph')), 'CodeGraph is scoped to the X preset');
+  const graphRequest = payloads.find(p => p.tools?.some(tool => tool.function.name === 'mcp__codegraph__codegraph_explore'));
+  assert.ok(graphRequest, 'installed package exposes the real MCP catalog');
+  assert.ok(graphRequest.tools.some(tool => tool.function.name === 'codegraph_index'));
+  await prompt(blank.sessionId, 'Check bundled CodeGraph.', 3);
+  const graphResult = payloads.findLast(p => p.messages.at(-1)?.role === 'tool' && /CodeGraph|codegraph/.test(p.messages.at(-1).content));
+  assert.ok(graphResult, 'DSH executes the bundled MCP tool and renders its unindexed-project response');
   assert.ok(payloads.some(p => p.tools?.find(t => t.function.name === 'todo_write')?.function.parameters.properties.op));
   const legacy = await snapshot(old.sessionId);
   assert.deepEqual(legacy.projections.values.todos, oldSnapshot.projections.values.todos);

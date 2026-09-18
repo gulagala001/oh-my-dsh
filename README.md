@@ -36,6 +36,16 @@ Oh My DSH 把任务、上下文、摘要、电脑和监控放进同一个工作�
 
 作为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 插件运行，沿用已有的模型配置、会话、文件、工具与技能。
 
+### 内置 CodeGraph（主分支，尚未发布）
+
+集成 [colbymchenry/codegraph](https://github.com/colbymchenry/codegraph) 1.6.0，通过 MCP 查询代码符号、源码、调用关系和变更影响。运行时随插件依赖安装，无需全局安装 CodeGraph 或运行 `codegraph install`。
+
+在 Oh My DSH 会话中说“为当前项目建立 CodeGraph 索引”，Agent 会调用 `codegraph_index`，在项目内生成 `.codegraph/`；之后可直接询问代码结构。查询默认使用会话工作目录，也可以指定其他项目。未索引的项目仍可使用普通文件与搜索工具。
+
+按上游默认公开 `mcp__codegraph__codegraph_explore`。不同项目分别维护连接与文件监听；连接空闲一分钟后释放，下次查询重新连接并补齐变更。停止或卸载插件会关闭其进程，项目索引保留。内置实例关闭上游遥测。
+
+支持上游发行运行时覆盖的 macOS、Linux、Windows x64/arm64；安装时须保留 optional dependencies。以上内容不包含在下方已发布的 0.1.6-alpha.2.1 中。[主分支安装与 CodeGraph 使用指南](docs/usage.md#codegraph)。
+
 <a id="quickstart"></a>
 
 ## 快速开始
