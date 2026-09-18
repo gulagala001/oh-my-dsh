@@ -1,5 +1,13 @@
 # 0.1.6-alpha.2.1 适配与优化说明
 
+## 发布状态与已知限制
+
+v0.1.6-alpha.2.1 与 OpenCU v1.0.3 已公开发布为预发布版，不再是草稿。固定标签和已发布程序包保持不变；主分支的后续说明更新不改变发行代码。
+
+**已知验证限制（2026-09-18）：** OpenCU 最终源码的 Windows 完整复验中，迟到截图隔离测试在 45 秒内未完成，根因尚未确认；这是测试超时，不是已观察到截图覆盖错误。不能据此宣称所有 Windows 测试通过。
+
+[OMD 最终完整 CI：通过](https://github.com/gulagala001/oh-my-dsh/actions/runs/35307223287) · [OpenCU 最终完整 CI：Windows 一项超时](https://github.com/gulagala001/opencu/actions/runs/35307219471)。早先相同运行代码的通过记录不替代这次失败；完整说明见两仓 Release 页的“发布后的验证状态补充”。
+
 ## 范围与不变项
 
 宿主固定为 DSH 0.1.6-alpha.2；继续使用编译后的 CLI。插件、Agent preset、数据目录和原有会话标识不变。主提示词、后台摘要提示词、任务工具规则、原话附件、前置 Trace、压缩策略和配置默认值保留。与升级前 alpha.10 对比，`src/config.mjs`、`src/frequency.mjs`、`src/prompts.mjs`、`src/context/prompts.mjs`、`src/cc-adaptation/` 和 `presets/` 没有改动。

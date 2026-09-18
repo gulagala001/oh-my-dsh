@@ -4,6 +4,8 @@
 
 当前预发布版本 **0.1.6-alpha.2.1**，适配 **DSH 0.1.6-alpha.2**，内置 **OpenCU 1.0.3**。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
+本版已公开发布。[当前验证状态与已知限制](release-0.1.6-alpha.2.1.md#发布状态与已知限制)请在升级前一并阅读。
+
 ## 安装到现有 DSH（推荐）
 
 适用 **DSH 0.1.6-alpha.2**，需要 Node.js ≥22.19、pnpm 11.23.0 和 Git。**Windows 使用 PowerShell 7（`pwsh`）**，无需 WSL；Python 验证文件需要另有 Python，`.sh` 文件需要 Bash。
