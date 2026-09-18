@@ -12,5 +12,11 @@ export function promptText(path) {
 }
 export const MAIN_FILES = Object.freeze(["main/01-identity.md", "main/02-harness.md", "main/03-code-style.md", "main/04-actions-and-results.md", "main/05-context-management.md", "main/06-delivering-work.md", "main/07-corrections.md", "main/08-verification.md"]);
 const mainBody = MAIN_FILES.map(promptText).join('\n\n');
-export const buildMainPrompt = (identity = DEFAULT_IDENTITY) => [identity.trim(), mainBody].filter(Boolean).join('\n\n');
+export function buildMainPrompt(identity = DEFAULT_IDENTITY, { toolMode = 'native' } = {}) {
+  const body = toolMode === 'ptc' ? mainBody.replace(
+    'Independent tool calls can run in parallel in one response.',
+    'Independent read-only tool calls may run concurrently inside a `run_code` program; await dependent work in order.',
+  ) : mainBody;
+  return [identity.trim(), body, toolMode !== 'native' ? promptText('runtime/ptc-guidance.md') : ''].filter(Boolean).join('\n\n');
+}
 export const mainPrompt = buildMainPrompt();

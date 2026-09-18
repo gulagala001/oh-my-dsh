@@ -13,11 +13,13 @@ async function until(fn, timeout = 45000) {
   throw Error('Timed out waiting for neutral environment fixture');
 }
 const forbidden = /powered by DeepSeek Harness|through the DeepSeek Harness Web GUI|The DeepSeek Harness implementation checkout|Current DSH file policy:|[Tt]he DSH file sandbox|TriSoulX conversation interface|only dsh web injects window\.__DSH_BOOT__/;
-for (const mode of ['native', 'ptc']) test(`actual provider payloads: neutral environment in ${mode} mode`, { timeout: 180000 }, async t => {
+for (const mode of ['native', 'ptc', 'both']) test(`actual provider payloads: neutral environment in ${mode} mode`, { timeout: 180000 }, async t => {
   const root = mkdtempSync(join(tmpdir(), 'neutral-env-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   mkdirSync(home); mkdirSync(workspace);
   writeFileSync(join(workspace, 'AGENTS.md'), 'PROJECT_LITERAL: Keep the text DeepSeek Harness and DSH unchanged.\n');
+  writeFileSync(join(workspace, 'ptc-input.txt'), 'PTC_TYPED_READ\n');
   const payloads = [], delegated = new Set(); let child, log = '', complete = false;
+  let ptcIssued = false, bothNativeIssued = false;
   const provider = createServer(async (req, res) => {
     let body = ''; for await (const part of req) body += part;
     const p = JSON.parse(body); payloads.push(p);
@@ -26,6 +28,20 @@ for (const mode of ['native', 'ptc']) test(`actual provider payloads: neutral en
     const marker = user.includes('NEUTRAL_FORK_MAIN') ? 'fork' : user.includes('NEUTRAL_SPAWN_MAIN') ? 'spawn' : null;
     const name = marker === 'fork' ? 'subagent_fork' : 'subagent';
     let delta = { role: 'assistant', content: 'Fixture finished.' }, finish = 'stop';
+    if (mode !== 'native' && p.tools?.length && user.includes('NEUTRAL_MAIN') && !ptcIssued) {
+      ptcIssued = true; finish = 'tool_calls';
+      const code = `const file = await tools.read({ file_path: ${JSON.stringify(join(workspace, 'ptc-input.txt'))} });
+        const command = await tools.bash({ command: 'printf PTC_EXECUTED; exit 7', description: 'Check structured process outcome', workdir: ${JSON.stringify(workspace)} });
+        let missingToolName;
+        try { await tools.read({ file_path: ${JSON.stringify(join(workspace, 'missing.txt'))} }); }
+        catch (error) { if (!(error instanceof ToolCallError)) throw error; missingToolName = error.toolName; }
+        return { text: file.lines.map(line => line.text).join(''), exitCode: command.exitCode,
+          stdout: command.stdout.text, missingToolName };`;
+      delta = { role: 'assistant', tool_calls: [{ index: 0, id: 'ptc-fixture', type: 'function', function: { name: 'run_code', arguments: JSON.stringify({ code, description: 'Verify PTC calls and canonical results' }) } }] };
+    } else if (mode === 'both' && p.tools?.length && user.includes('NEUTRAL_MAIN') && !bothNativeIssued) {
+      bothNativeIssued = true; finish = 'tool_calls';
+      delta = { role: 'assistant', tool_calls: [{ index: 0, id: 'native-fixture', type: 'function', function: { name: 'read', arguments: JSON.stringify({ file_path: join(workspace, 'ptc-input.txt') }) } }] };
+    }
     if (mode === 'native' && p.tools?.length && marker && !childCall && !delegated.has(marker)) {
       assert.ok(p.tools.some(t => t.function.name === name), 'delegation tool missing');
       delegated.add(marker); finish = 'tool_calls';
@@ -98,10 +114,22 @@ for (const mode of ['native', 'ptc']) test(`actual provider payloads: neutral en
   assert.match(JSON.stringify(first.messages), /PROJECT_LITERAL.*DeepSeek Harness/);
   assert.match(JSON.stringify(first.messages), /USER_LITERAL DeepSeek Harness/);
   for (const p of main) assert.doesNotMatch(JSON.stringify(p.messages), forbidden);
-  assert.equal(first.tools.some(t => t.function.name === 'run_code'), mode === 'ptc');
-  if (mode === 'ptc') {
+  assert.equal(first.tools.some(t => t.function.name === 'run_code'), mode !== 'native');
+  if (mode !== 'native') {
     assert.match(first.messages[0].content, /tools\./);
     assert.match(first.messages[0].content, /Read saved context documents/);
+    assert.match(first.messages[0].content, /## Programmatic tool use/);
+    const sdk = first.messages[0].content.split('## Writing code for run_code')[1];
+    assert.ok(sdk.includes('For foreground results, inspect `exitCode`'));
+    assert.ok(sdk.includes('Inspect `job.status`'));
+    if (mode === 'ptc') {
+      assert.deepEqual(first.tools.map(t => t.function.name), ['run_code']);
+      assert.doesNotMatch(first.messages[0].content, /Independent tool calls can run in parallel in one response/);
+    } else assert.ok(first.tools.some(t => t.function.name === 'read'));
+    const ptcResult = main.flatMap(p => p.messages).find(m => m.role === 'tool' && m.tool_call_id === 'ptc-fixture');
+    assert.ok(ptcResult, 'actual PTC execution must return a result to the model');
+    assert.deepEqual(JSON.parse(ptcResult.content), { text: 'PTC_TYPED_READ', exitCode: 7, stdout: 'PTC_EXECUTED', missingToolName: 'read' });
+    if (mode === 'both') assert.ok(main.some(p => p.messages.some(m => m.role === 'tool' && m.tool_call_id === 'native-fixture' && m.content.includes('PTC_TYPED_READ'))));
   } else {
     for (const marker of ['NEUTRAL_SPAWN_MAIN', 'NEUTRAL_FORK_MAIN']) {
       const requests = await run('trisoul-x', marker + ': delegate the isolated test.');
