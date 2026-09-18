@@ -264,8 +264,14 @@ export function createContextUI(React) {
         section('空闲预处理', '默认关闭；不影响按新事件数量触发的正常预处理，也不影响手动操作。', h(React.Fragment, null,
           this.toggle('idlePreprocessEnabled', '空闲时自动预处理', '仅在会话真正空闲且有待处理内容时触发；模型或工具运行中不计时。'),
           this.number('flushIdleMs', '空闲等待时间 · 秒', 0, '默认 90 秒；关闭开关会取消等待中的任务。已开始的任务正常结束，0 秒也表示禁用。', 1000, !c.idlePreprocessEnabled))),
-        section('默认会话范围', '只影响新会话，已开始的会话保持原有绑定。', h('div', { className: 'cx-choice-grid' }, ...[['session', 'lock', '会话隔离', '仅本会话历史，不读取或写入共享记忆。'], ['project', 'layers', '项目共享', '读取同项目摘要，按会话与时间归档。']].map(([id, name, text, sub]) => h('button', { type: 'button', key: id, className: 'cx-choice', 'aria-pressed': (c.memoryScope === 'session' ? 'session' : 'project') === id, onClick: () => this.set('memoryScope', id) }, h('div', { className: 'cx-row' }, icon(name, 18), h('span', { className: 'cx-radio' }, icon('check', 11))), h('strong', null, text), h('small', null, sub))))),
-        section('推理文本前置', null, this.toggle('traceEnabled', '替换时保留 Trace', '使用提供方已经暴露的推理文本，不另行生成；可能扩大缓存失效范围。')));
+        section('默认会话范围', '只影响新会话，已开始的会话保持原有绑定。', h('div', { className: 'cx-choice-grid' }, ...[['session', 'lock', '会话隔离', '仅本会话历史，不读取或写入共享记忆。'], ['project', 'layers', '项目共享', '读取同项目摘要，按会话与时间归档。']].map(([id, name, text, sub]) => h('button', { type: 'button', key: id, className: 'cx-choice', 'aria-pressed': (c.memoryScope === 'session' ? 'session' : 'project') === id, onClick: () => this.set('memoryScope', id) }, h('div', { className: 'cx-row' }, icon(name, 18), h('span', { className: 'cx-radio' }, icon('check', 11))), h('strong', null, text), h('small', null, sub))))));
+    }
+    renderExperimental() {
+      return h(React.Fragment, null,
+        section('CoT 前置', null, h(React.Fragment, null,
+          this.toggle('traceEnabled', '启用 CoT 前置', '上下文替换时保留提供方已公开的推理文本，不另行生成；可能扩大缓存失效范围。'),
+          this.number('traceMaxChars', '推理文本字符上限', 0, '0 保留所选推理全文；正数保留尾部并标注截取。'))),
+        section('任务约束', null, this.toggle('todoConstraintFirst', '任务约束前置（CFR）', '在系统和待办工具提示词中加入约束提取、推导与核对规则。默认关闭，保存后从下一次模型请求生效。')));
     }
     renderAdvanced() {
       const c = this.state.config;
@@ -273,7 +279,7 @@ export function createContextUI(React) {
         fold('预处理窗口', '分段与参考前文；空闲开关见基础设置', h('div', { className: 'cx-grid' }, this.number('digestEvery', '预处理频率 · 新事件数', 1), this.number('digestWindow', '目标分段窗口 · 事件数', 1, '保留完整工具往返，实际段长可能超过窗口。'), this.number('digestLookback', '参考前文 · 事件数', 0))),
         fold('整窗预算与后台额度', '一次触发可以处理多窗；剩余积压单独记录，不无限补历史。', h('div', { className: 'cx-grid' }, this.number('prepareBatchWindows', '每次触发最多处理窗口数', 1), this.number('prepareContinueTokens', '续跑最低文本量 · 估算 tokens', 1, '后续窗口需装满新的实际消息，或达到该文本量；零碎尾巴留到下次，不含参考前文与旧摘要。'), this.number('prepareInputTokens', '单窗输入预算 · 估算 tokens', 1), this.number('summaryTargetChars', '基础摘要目标 · 字符', 1, '超过目标两倍时重试，不直接截断原文。'), this.number('backgroundConcurrency', '后台最大并发调用', 1), this.number('backgroundMaxRetries', '自动重试次数', 0))),
         fold('中枢与请求替换', '判断频率、近期原文和自动应用间隔', h(React.Fragment, null, h('div', { className: 'cx-grid' }, this.number('coordinatorEvery', '中枢频率 · 新摘要数', 1), this.number('coordinatorMinGapMs', '中枢最短间隔 · 秒', 0, undefined, 1000), this.number('coordinatorRecentEvents', '中枢近期原文窗口', 0), this.number('surgeryCooldownSteps', '自动替换最短步数', 0), this.number('keepTailEvents', '暂留近期事件数', 0)), this.toggle('requireShorter', '替换后的总量应更小', '将摘要、详细资料和前置 Trace 一起计算。'))),
-        fold('Trace 与资源上限', '0 使用原有默认语义，不自动裁切内容', h('div', { className: 'cx-grid' }, this.number('traceMaxChars', '推理文本字符上限', 0, '0 保留所选推理全文；正数保留尾部并标注截取。'), this.number('digestMaxTokens', '预处理输出 Token 上限', 0, '0 使用提供方默认。'), this.number('surgeonMaxTokens', '中枢输出 Token 上限', 0), this.number('jobTimeoutMs', '后台超时 · 秒', 0, '默认 600 秒（10 分钟）；0 不设置插件超时。', 1000))),
+        fold('资源上限', '0 使用原有默认语义', h('div', { className: 'cx-grid' }, this.number('digestMaxTokens', '预处理输出 Token 上限', 0, '0 使用提供方默认。'), this.number('surgeonMaxTokens', '中枢输出 Token 上限', 0), this.number('jobTimeoutMs', '后台超时 · 秒', 0, '默认 600 秒（10 分钟）；0 不设置插件超时。', 1000))),
         fold('电脑操控', '沿用原有浏览器与桌面连接设置', h(React.Fragment, null, this.toggle('computerUseEnabled', '启用电脑操控', '任务和电脑面板仍使用原有功能。'), ...[['computerUseBrowserExecutable', '浏览器程序路径'], ['computerUseChromeUserDataDir', '浏览器用户数据目录'], ['computerUseNativeBinary', '桌面控制程序路径'], ['computerUseNativeSocket', '桌面连接 Socket']].map(([key, label]) => field(label, h('input', { value: c[key] || '', placeholder: '自动检测 / 原有默认', onChange: e => this.set(key, e.target.value) }))))),
         h('p', { className: 'cx-footnote' }, '旧探针、自动全局记忆和旧状态提炼参数仅保留兼容读取，不再显示为可运行功能。'));
     }
@@ -297,9 +303,9 @@ export function createContextUI(React) {
       const isGlobal = page === 'global', globalDirty = this.state.globalText !== this.state.globalSaved;
       const footStatus = isGlobal ? this.state.globalStatus || (globalDirty ? '有未保存的更改' : '仅用户手动维护') : status || (dirty ? '有未保存的更改' : '已与当前设置同步');
       return h('div', { className: 'cx-panel cx-settings', 'data-context-ui': CONTEXT_UI_VERSION }, heading('偏好设置', '模型、上下文与项目摘要', 'settings'),
-        pageTabs(page, [['basic', '常用'], ['models', '模型与身份'], ['advanced', '高级'], ['global', '全局背景']], value => this.setState({ page: value })),
+        pageTabs(page, [['basic', '常用'], ['models', '模型与身份'], ['experimental', '实验性功能'], ['advanced', '高级'], ['global', '全局背景']], value => this.setState({ page: value })),
         !c ? h('div', { className: 'cx-body' }, alert(error, true), empty('正在读取设置', '保留已保存的参数，不自动套用任何档位。'), error && button('重试', this.loadSettings, { icon: 'refresh' })) : h('form', { className: 'cx-settings-form', onSubmit: isGlobal ? e => { e.preventDefault(); this.saveGlobal(); } : this.save },
-          h('div', { className: 'cx-body' }, alert(error, true), h('fieldset', { className: 'cx-fields', disabled: busy }, page === 'basic' ? this.renderBasic() : page === 'models' ? this.renderModels() : page === 'advanced' ? this.renderAdvanced() : this.renderGlobal())),
+          h('div', { className: 'cx-body' }, alert(error, true), h('fieldset', { className: 'cx-fields', disabled: busy }, page === 'basic' ? this.renderBasic() : page === 'models' ? this.renderModels() : page === 'experimental' ? this.renderExperimental() : page === 'advanced' ? this.renderAdvanced() : this.renderGlobal())),
           h('footer', { className: 'cx-savebar' }, h('span', { className: 'cx-save-status', role: 'status' }, icon(status || this.state.globalStatus ? 'check' : 'info', 13), footStatus), h('div', { className: 'cx-actions' },
             button('撤销', isGlobal ? () => this.setState({ globalText: this.state.globalSaved, globalStatus: '' }) : this.undo, { quiet: true, disabled: busy || !(isGlobal ? globalDirty : dirty) }),
             h('button', { type: 'submit', className: 'cx-btn cx-primary', disabled: busy || !(isGlobal ? globalDirty && this.state.globalLoaded : dirty) }, icon(busy ? 'clock' : 'check'), busy ? '保存中…' : isGlobal ? '保存全局背景' : '保存设置')))));

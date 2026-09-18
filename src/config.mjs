@@ -25,6 +25,7 @@ export const Config = z.object({
   traceEnabled: z.boolean().default(true),
   traceMaxChars: z.number().step(1).min(0).default(0),
   identityPrompt: z.string().default(DEFAULT_IDENTITY),
+  todoConstraintFirst: z.boolean().default(false),
   computerUseEnabled: z.boolean().default(true),
   computerUseBrowserExecutable: z.string().default(''),
   computerUseChromeUserDataDir: z.string().default(''),

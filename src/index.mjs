@@ -11,6 +11,7 @@ import { CONTEXT_WINDOW_EXCEEDED_CODE } from '@deepseek-ai/dsh-llm';
 import { currentTasks, restoreTaskProjection } from './tasks.mjs';
 import { ensureSystemHead } from './system-head.mjs';
 import { handleContextApi } from './context/api.mjs';
+import { installTraceCleanup } from './context/trace.mjs';
 import { TODO_NUDGE, TODO_EMPTY_NUDGE } from './todolist.mjs';
 import { message } from './hub.mjs';
 import { join } from 'node:path';
@@ -36,6 +37,7 @@ export function apply(ctx, config) {
   hub.computerUse = computer.computerUse; hub.computerRefresh = computer.refresh; hub.computerImages = computer.computerImages;
   const isX = session => (ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset) === 'trisoul-x';
   installImageBudget(ctx, isX);
+  installTraceCleanup(ctx, isX, hub.context);
   ctx.on('system-prompt/assemble', async (_assembly, context, next) => {
     const assembly = await next();
     // Children inherit the preset; stock sessions and non-agent calls stay exact.

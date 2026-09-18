@@ -1,0 +1,1 @@
+First extract the task's applicable constraints (domain, range, integrality, units, structure, and answer format) and derive the restrictions they jointly imply without solving the task; then record both the constraints and their implications in the relevant task titles, check each major execution step against them, and confirm they are satisfied before marking tasks done.

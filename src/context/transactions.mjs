@@ -64,7 +64,9 @@ export function createTransaction(session, state, plan, cfg, pairing, pricing = 
       inputChars += contentChars(sourceMessage(anchor.seq)?.content); outputChars += contentChars(content);
       inputTokens += messageTokens(sourceMessage(anchor.seq), pricing); outputTokens += messageTokens({ role: 'user', content }, pricing);
       operations.unshift({ id: traceId, kind: 'trace', seqs: [anchor.seq], text, original, content, ...(todoMeta ? { todoMeta } : {}), position: session.surface.nodes.indexOf(anchor.seq) });
-      traceSlot = { original, traceHash: hash(trace), sourceSeq: trace.sourceSeq, sourceAt: trace.at, truncated: trace.truncated };
+      const movedSourceSeqs = [...new Set([...(traceSlot?.movedSourceSeqs || (traceSlot ? [traceSlot.sourceSeq] : [])), trace.sourceSeq])]
+        .filter(seq => session.surface.nodes.includes(seq) && !covered.has(seq));
+      traceSlot = { original, traceHash: hash(trace), sourceSeq: trace.sourceSeq, sourceAt: trace.at, truncated: trace.truncated, movedSourceSeqs };
     }
   }
   for (const op of operations) if (plan.sourceCommandId) op.sourceCommandId = plan.sourceCommandId;
