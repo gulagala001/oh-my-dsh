@@ -1,0 +1,59 @@
+--- a/README.md
++++ b/README.md
+@@ -40,4 +40,6 @@
+ 
+ ## 快速开始
++
++本版已公开发布；[最终验证状态与已知限制](docs/release-0.1.6-alpha.2.1.md#发布状态与已知限制)包含 OpenCU 的 Windows 单项测试超时说明。
+ 
+ 当前 **0.1.6-alpha.2.1** 为预发布版，使用 **DSH 0.1.6-alpha.2**。下面的安装命令固定到该版本；使用旧版 DSH 0.1.5-rc.1 时，请保留 [v1.1.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1)。升级宿主请沿用原来的安装方式、profile 和 `DSH_HOME`。
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -2,4 +2,6 @@
+ 
+ ## 0.1.6-alpha.2.1 — 2026-09-18
++
++已公开发布为 alpha 预发布版。后续验证仍有一项 OpenCU Windows 测试超时，详见[已知限制](docs/release-0.1.6-alpha.2.1.md#发布状态与已知限制)；不将其记为全部通过。
+ 
+ - 修复 DSH 工具调度模块身份冲突和热卸载审核竞争；工具执行、失败语义和权限不变，不重复执行操作。
+--- a/docs/release-0.1.6-alpha.2.1.md
++++ b/docs/release-0.1.6-alpha.2.1.md
+@@ -1,3 +1,11 @@
+ # 0.1.6-alpha.2.1 适配与优化说明
++
++## 发布状态与已知限制
++
++v0.1.6-alpha.2.1 与 OpenCU v1.0.3 已公开发布为预发布版，不再是草稿。固定标签和已发布程序包保持不变；主分支的后续说明更新不改变发行代码。
++
++**已知验证限制（2026-09-18）：** OpenCU 最终源码的 Windows 完整复验中，迟到截图隔离测试在 45 秒内未完成，根因尚未确认；这是测试超时，不是已观察到截图覆盖错误。不能据此宣称所有 Windows 测试通过。
++
++[OMD 最终完整 CI：通过](https://github.com/gulagala001/oh-my-dsh/actions/runs/35307223287) · [OpenCU 最终完整 CI：Windows 一项超时](https://github.com/gulagala001/opencu/actions/runs/35307219471)。早先相同运行代码的通过记录不替代这次失败；完整说明见两仓 Release 页的“发布后的验证状态补充”。
+ 
+ ## 范围与不变项
+--- a/docs/usage.md
++++ b/docs/usage.md
+@@ -4,4 +4,6 @@
+ 
+ 当前预发布版本 **0.1.6-alpha.2.1**，适配 **DSH 0.1.6-alpha.2**，内置 **OpenCU 1.0.3**。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
++
++本版已公开发布。[当前验证状态与已知限制](release-0.1.6-alpha.2.1.md#发布状态与已知限制)请在升级前一并阅读。
+ 
+ ## 安装到现有 DSH（推荐）
+--- a/docs/windows.md
++++ b/docs/windows.md
+@@ -7,5 +7,5 @@
+ ## 安装与试用
+ 
+-当前预发布版需要 **DSH 0.1.6-alpha.2 Web** 时，先停止服务，在 PowerShell 7 中安装插件：
++当前预发布版需要 **DSH 0.1.6-alpha.2 Web**。先阅读[当前验证限制](release-0.1.6-alpha.2.1.md#发布状态与已知限制)，再停止服务，在 PowerShell 7 中安装插件：
+ 
+ ```powershell
+--- a/release-manifest.json
++++ b/release-manifest.json
+@@ -13,4 +13,5 @@
+         "版本编号改为跟随 DSH；旧 1.3.0-alpha 系列属于历史版本，首次切换请使用本次发行包。",
+-        "修复重复工具模块的调度器身份、插件热卸载审核和 Windows 浏览器首次导航竞争；不重放工具或网址。"
++        "修复重复工具模块的调度器身份、插件热卸载审核和 Windows 浏览器首次导航竞争；不重放工具或网址。",
++        "已公开发布；OpenCU 最终 Windows 复验仍有一项迟到截图测试超时，根因未确认，详见发行说明，不记为全部测试通过。"
+       ]
+     },

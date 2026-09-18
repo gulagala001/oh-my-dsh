@@ -1,0 +1,37 @@
+name: Synchronize published release documentation
+on:
+  push:
+    branches: ['sync/release-docs-20260918']
+permissions:
+  contents: write
+jobs:
+  synchronize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - name: Apply only reviewed documentation changes
+        env:
+          PATCH_COMMIT: ${{ github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = '6fd7aacd60aaae20e871928d19021be17d7e818a'
+          git fetch origin "$PATCH_COMMIT"
+          git show "$PATCH_COMMIT:release-doc-sync.patch" > "$RUNNER_TEMP/release-doc-sync.patch"
+          git apply --check "$RUNNER_TEMP/release-doc-sync.patch"
+          git apply "$RUNNER_TEMP/release-doc-sync.patch"
+          git diff --check
+          python3 - <<'PY'
+          import json, subprocess
+          expected={'README.md','CHANGELOG.md','docs/release-0.1.6-alpha.2.1.md','docs/usage.md','docs/windows.md','release-manifest.json'}
+          assert set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())==expected
+          with open('release-manifest.json') as f: value=json.load(f)
+          assert value['versionPolicy']=='dsh-aligned'
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md CHANGELOG.md docs/release-0.1.6-alpha.2.1.md docs/usage.md docs/windows.md release-manifest.json
+          git commit -m 'docs: synchronize published release status and installation guidance [skip ci]'
+          git push origin HEAD:main
+          git rev-parse HEAD
