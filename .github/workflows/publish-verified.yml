@@ -1,0 +1,46 @@
+name: Publish verified OMD release
+on:
+  push:
+    branches: ['release/alpha2-verified']
+    paths: ['.github/workflows/publish-verified.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: gulagala001/opencu
+          ref: 93a8a2e95d2b3874ef393f634fb17aae9e5ab57f
+          path: control
+          persist-credentials: false
+      - uses: actions/checkout@v7
+        with:
+          ref: 4534a0a2af3da8f8b21d444ffdcb325c4227830a
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: source/package.json
+      - name: Validate completed platform checks, install the actual package and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_DIR: ${{ github.workspace }}/source
+          SOURCE_REPOSITORY: gulagala001/oh-my-dsh
+          SOURCE_SHA: 4534a0a2af3da8f8b21d444ffdcb325c4227830a
+          RELEASE_TAG: v0.1.6-alpha.2.1
+          REQUIRED_CHECKS: '[{"repo":"gulagala001/oh-my-dsh","sha":"4534a0a2af3da8f8b21d444ffdcb325c4227830a","workflow":"CI"},{"repo":"gulagala001/oh-my-dsh","sha":"4534a0a2af3da8f8b21d444ffdcb325c4227830a","workflow":"Host compatibility"},{"repo":"gulagala001/opencu","sha":"a10466a9ccd3afed57eba47d1770d101fe43a8ed","workflow":"CI"},{"repo":"gulagala001/opencu","sha":"a10466a9ccd3afed57eba47d1770d101fe43a8ed","workflow":"Windows Computer Use"}]'
+        run: python control/.github/release/publish_verified.py
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: oh-my-dsh-v0.1.6-alpha.2.1-release
+          path: release-assets/
+          retention-days: 14
