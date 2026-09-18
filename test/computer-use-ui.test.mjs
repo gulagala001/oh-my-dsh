@@ -853,5 +853,12 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   markStage('final reload closes preview');
   await page.reload();await until(()=>stopPip.isClosed());
   assert.deepEqual(errors,[]);
+  // A second isolated run in the same Windows job must not inherit this
+  // fixture's HKCU native-host registration after its profile is removed.
+  const unregister = await fetch(origin + '/trisoul-x/computer-use/setup?session=' + sessionId, {
+    method: 'POST', headers: { 'content-type': 'application/json', cookie },
+    body: JSON.stringify({ action: 'remove-extension' }),
+  });
+  assert.equal(unregister.status, 200, await unregister.text());
   complete = true;
 });
