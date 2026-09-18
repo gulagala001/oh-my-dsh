@@ -77,4 +77,15 @@ sharp 0.35.4 is used for screenshot pixel normalization under the Apache License
 
 Source: https://github.com/lovell/sharp
 
+# CodeGraph
+
+@colbymchenry/codegraph 1.6.0 and its matching platform runtime are runtime dependencies under the MIT License. Oh My DSH launches the unmodified upstream bundled runtime and discovers its MCP tool definitions. The platform packages include CodeGraph's own runtime dependencies and notices.
+
+Source: https://github.com/colbymchenry/codegraph
+License: https://github.com/colbymchenry/codegraph/blob/v1.6.0/LICENSE
+
+@modelcontextprotocol/client 2.0.0 provides the MCP transport under the MIT License. @deepseek-ai/dsh-mcp-client 0.1.6-alpha.2 provides the host tool/result adapter under the MIT License.
+
+Sources: https://github.com/modelcontextprotocol/typescript-sdk and https://github.com/deepseek-ai/deepseek-harness
+
 The modular main-agent prompt adaptation in `src/cc-adaptation` comes from the user-supplied TriSoulX DSH 0.1.6 CC migration candidate 0.4.0. Its fixed comparison source is [the CC prompt snapshot](https://github.com/asgeirtj/system_prompts_leaks/blob/8eb1be156b850d09c2bd05df7ea32b0f06c9887d/Anthropic/claude-code/claude-code-opus-5.md). DSH integration targets 0.1.6-alpha.1; this attribution does not grant additional rights to third-party prompt text.

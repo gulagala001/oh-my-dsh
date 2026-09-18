@@ -20,6 +20,9 @@
   config:
     sampleOverCapGlobResults: false
 
+- id: codegraph
+  name: 'trisoul_x/codegraph'
+
 - id: tool-jobs
   name: '@deepseek-ai/dsh-tool-jobs'
 

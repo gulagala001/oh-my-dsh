@@ -29,6 +29,9 @@
     "test:context": "node --test test/context-*.test.mjs"
   },
   "dependencies": {
+    "@colbymchenry/codegraph": "1.6.0",
+    "@deepseek-ai/dsh-mcp-client": "0.1.6-alpha.2",
+    "@modelcontextprotocol/client": "2.0.0",
     "diff": "9.0.0",
     "html-to-text": "10.0.1",
     "htmlparser2": "10.1.0",
@@ -45,6 +48,7 @@
   "exports": {
     ".": "./src/index.mjs",
     "./agent": "./src/dsh-agent.mjs",
+    "./codegraph": "./src/codegraph-agent.mjs",
     "./client": "./lib/client.js",
     "./package.json": "./package.json"
   },

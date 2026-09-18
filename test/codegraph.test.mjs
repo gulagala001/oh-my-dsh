@@ -1,0 +1,106 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, writeFile, rm, access, realpath } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { CodegraphRuntime, codegraphCommand, projectDirectory } from '../src/codegraph.mjs';
+import { apply } from '../src/codegraph-agent.mjs';
+
+const text = result => result.content.filter(item => item.type === 'text').map(item => item.text).join('\n');
+const alive = pid => { try { process.kill(pid, 0); return true; } catch { return false; } };
+async function until(fn, timeout = 20_000, interval = 150) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) { if (await fn()) return; await new Promise(resolve => setTimeout(resolve, interval)); }
+  throw new Error('CodeGraph condition did not settle');
+}
+
+test('bundled CodeGraph: native catalog, project isolation, indexing, live sync, crash recovery and disposal', { timeout: 120_000 }, async t => {
+  const root = await mkdtemp(join(tmpdir(), 'oh my dsh codegraph '));
+  const runtime = new CodegraphRuntime();
+  t.after(async () => { await runtime.dispose(); await rm(root, { recursive: true, force: true }); });
+  const a = join(root, 'project a'), b = join(root, '项目 b');
+  await mkdir(a); await mkdir(b);
+  await writeFile(join(a, 'entry.ts'), 'export function uniqueAlpha() { return "ALPHA_ONLY"; }\nexport function entry() { return uniqueAlpha(); }\n');
+  await writeFile(join(b, 'entry.ts'), 'export function uniqueBeta() { return "BETA_ONLY"; }\n');
+  await access(codegraphCommand().command);
+
+  const catalog = await runtime.catalog();
+  assert.ok(catalog.tools.some(tool => tool.name === 'codegraph_explore'));
+  assert.equal(runtime.processes.size, 0, 'catalog probe exits');
+  const definitions = [], sections = [];
+  await apply({ trisoulX: { codegraph: runtime }, tools: { register: definition => definitions.push(definition) }, systemPrompt: { section: section => sections.push(section) } });
+  const explore = definitions.find(tool => tool.name === 'mcp__codegraph__codegraph_explore');
+  assert.ok(explore);
+  assert.ok(!explore.parameters.required.includes('projectPath'));
+  assert.ok(sections.every(section => section.interpolate === false));
+
+  const missing = await runtime.call('codegraph_explore', { query: 'uniqueAlpha' }, { cwd: a });
+  assert.match(text(missing), /not initialized|not indexed|no.*index|no.*codegraph|init/i);
+  await assert.rejects(access(join(a, '.codegraph')), 'query does not implicitly index');
+  await definitions.find(tool => tool.name === 'codegraph_index').execute({}, { agent: { session: { header: { cwd: a } } } });
+  await runtime.index({}, { cwd: b });
+  await writeFile(join(b, 'sync.ts'), 'export function manualSyncSymbol() { return "MANUAL_SYNC"; }\n');
+  await runtime.index({}, { cwd: b });
+  await access(join(a, '.codegraph'));
+  await access(join(b, '.codegraph'));
+
+  const [alpha, beta] = await Promise.all([
+    runtime.call('codegraph_explore', { query: 'uniqueAlpha' }, { cwd: a }),
+    runtime.call('codegraph_explore', { query: 'uniqueBeta', projectPath: '../项目 b' }, { cwd: a }),
+  ]);
+  assert.ok(!alpha.isError, text(alpha)); assert.match(text(alpha), /ALPHA_ONLY/); assert.doesNotMatch(text(alpha), /BETA_ONLY/);
+  assert.ok(!beta.isError, text(beta)); assert.match(text(beta), /BETA_ONLY/); assert.doesNotMatch(text(beta), /ALPHA_ONLY/);
+  assert.equal(runtime.connections.size, 2);
+  assert.match(text(await runtime.call('codegraph_explore', { query: 'manualSyncSymbol' }, { cwd: b })), /MANUAL_SYNC/);
+
+  await mkdir(join(a, 'nested'));
+  await runtime.call('codegraph_explore', { query: 'uniqueAlpha' }, { cwd: join(a, 'nested') });
+  assert.equal(runtime.connections.size, 2, 'subdirectory uses nearest indexed project');
+  await writeFile(join(a, 'added.ts'), 'export function newlyWatchedSymbol() { return "WATCHED_NEW_FILE"; }\n');
+  await until(async () => text(await runtime.call('codegraph_explore', { query: 'newlyWatchedSymbol' }, { cwd: a })).includes('WATCHED_NEW_FILE'));
+
+  const controller = new AbortController(); controller.abort(new Error('cancelled fixture'));
+  await assert.rejects(runtime.call('codegraph_explore', { query: 'entry' }, { cwd: a, signal: controller.signal }), /cancelled fixture/);
+  await assert.rejects(runtime.index({}, { cwd: a, signal: controller.signal }), /cancelled fixture/);
+  assert.equal(runtime.connections.size, 2);
+
+  const connection = await runtime.connections.get(await realpath(a)).ready;
+  await connection.transport.close();
+  await assert.rejects(runtime.call('codegraph_explore', { query: 'uniqueAlpha' }, { cwd: a }), /关闭|closed/i);
+  const recovered = await runtime.call('codegraph_explore', { query: 'uniqueAlpha' }, { cwd: a });
+  assert.match(text(recovered), /ALPHA_ONLY/);
+  const pids = [...runtime.processes].map(connection => connection.transport.pid);
+  await runtime.dispose();
+  await until(() => pids.every(pid => !alive(pid)));
+  assert.equal(runtime.connections.size, 0); assert.equal(runtime.processes.size, 0);
+  await assert.rejects(runtime.call('codegraph_explore', { query: 'entry' }, { cwd: a }), /已停止/);
+});
+
+test('cancelling a running index reaps its process and permits retry', { timeout: 40_000 }, async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'codegraph-cancel-'));
+  const runtime = new CodegraphRuntime();
+  t.after(async () => { await runtime.dispose(); await rm(directory, { recursive: true, force: true }); });
+  await writeFile(join(directory, 'file.ts'), 'export function retrySymbol() { return "RETRIED_INDEX"; }');
+  const controller = new AbortController();
+  const indexing = runtime.index({}, { cwd: directory, signal: controller.signal });
+  const cancelled = assert.rejects(indexing, /cancel index/);
+  await until(() => [...runtime.processes].some(job => job.child), 20_000, 5);
+  const pid = [...runtime.processes].find(job => job.child).child.pid;
+  controller.abort(new Error('cancel index'));
+  await cancelled;
+  await until(() => !alive(pid));
+  await runtime.index({}, { cwd: directory });
+  assert.match(text(await runtime.call('codegraph_explore', { query: 'retrySymbol' }, { cwd: directory })), /RETRIED_INDEX/);
+});
+
+test('CodeGraph path validation and idle release', { timeout: 40_000 }, async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'codegraph-idle-'));
+  const runtime = new CodegraphRuntime({ idleMs: 50 });
+  t.after(async () => { await runtime.dispose(); await rm(directory, { recursive: true, force: true }); });
+  await writeFile(join(directory, 'file.ts'), 'export const x = 1;');
+  await assert.rejects(projectDirectory('', '.'), /工作目录/);
+  await assert.rejects(projectDirectory(directory, 'file.ts'), /不是目录/);
+  await runtime.call('codegraph_explore', { query: 'x' }, { cwd: directory });
+  const pid = [...runtime.processes][0].transport.pid;
+  await until(() => runtime.connections.size === 0 && runtime.processes.size === 0 && !alive(pid));
+});
