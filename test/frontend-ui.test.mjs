@@ -38,6 +38,8 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   assert.equal((await usageToggle.boundingBox()).x, closedUsageBox.x, 'expanding usage keeps the toolbar horizontal position');
   const expandedUsageBox = await usageToggle.boundingBox(), expandedStatsBox = await hostStats.boundingBox();
   assert.ok(expandedStatsBox.y >= expandedUsageBox.y + expandedUsageBox.height, 'usage details always occupy their own row');
+  const contextStatsBox = await page.locator('.tx-stats-line').boundingBox();
+  assert.ok(Math.abs(contextStatsBox.y + contextStatsBox.height / 2 - expandedStatsBox.y - expandedStatsBox.height / 2) < 2, 'context and host usage share one row');
   const meterBox = await page.locator('.JObwrW_root').boundingBox();
   if (meterBox) assert.ok(Math.abs(meterBox.y - expandedUsageBox.y) < 8, 'context meter stays aligned with the toolbar');
   assert.equal(await usageToggle.getAttribute('aria-expanded'), 'true');
