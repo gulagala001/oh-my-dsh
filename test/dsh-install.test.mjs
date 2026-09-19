@@ -48,7 +48,8 @@ test('install into stock web, coexist with stock presets, switch both ways and r
     res.end('data: [DONE]\n\n');
   });
   await new Promise(r => provider.listen(0, '127.0.0.1', r));
-  const settings = JSON.stringify({ 'trisoul-x': { componentAutoSetup: false }, 'agent-default-model': { provider: 'fixture', model: 'fixture' }, 'llm-pi-ai': { providers: { fixture: { api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'FIXTURE_KEY', models: [{ id: 'fixture', name: 'fixture', contextWindow: 1000000, maxTokens: 1024, input: ['text'] }] } } } });
+  // Keep this baseline PTC fixture independent of experimental default changes.
+  const settings = JSON.stringify({ 'trisoul-x': { componentAutoSetup: false, backgroundTasksEnabled: false }, 'agent-default-model': { provider: 'fixture', model: 'fixture' }, 'llm-pi-ai': { providers: { fixture: { api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'FIXTURE_KEY', models: [{ id: 'fixture', name: 'fixture', contextWindow: 1000000, maxTokens: 1024, input: ['text'] }] } } } });
   const credentials = JSON.stringify({ version: 1, refs: { FIXTURE_KEY: 'fixture-only' } });
   writeFileSync(join(home, 'settings.yaml'), settings);
   writeFileSync(join(home, '.credentials.yaml'), credentials, { mode: 0o600 });
