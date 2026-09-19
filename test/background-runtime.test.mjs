@@ -50,6 +50,11 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`background ${preset}: one e
   assert.equal(await readFile(join(f.workspace, 'runs.txt'), 'utf8'), 'once\n');
   const first = requests[0];
   assert.match(flatten(first), /runtime state · as of/);
+  for (const request of requests) {
+    const text = flatten(request), expected = text.includes('STEER_THE_WAIT') ? 2 : 1;
+    assert.equal((text.match(/runtime state · as of/g) || []).length, expected,
+      'only actual user input appends state; job registration, completion and follow-up steps do not');
+  }
   assert.match(flatten(first), /## Runtime state/);
   assert.ok(first.tools.some(t => t.function.name === 'runtime_status'));
   if (preset === 'omd-ptc') {

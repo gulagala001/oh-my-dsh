@@ -676,8 +676,8 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     if (!desired) return undefined;
     const last = live.at(-1), meta = taskContextMeta(last?.data);
     const text = last?.data.content[last.data[TODO_META]?.index ?? 0]?.text;
-    // Runtime observations accompany Todo delivery, never trigger it.
-    const same = meta ? meta.todoText === desired.meta.todoText : text === desired.meta.todoText;
+    // The runtime key tracks real input only; sampled facts do not cause reposts.
+    const same = meta ? meta.todoText === desired.meta.todoText && (meta.runtime?.key ?? null) === (desired.meta.runtime?.key ?? null) : text === desired.text;
     if (same) { rec.lastInjSeq = last.seq; rec.injectedRev = rec.rev; }
     let canvasSeq = -1;
     for (const e of session.snapshotEvents()) {

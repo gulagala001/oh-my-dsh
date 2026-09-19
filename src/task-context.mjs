@@ -10,7 +10,6 @@ export function renderTaskContext({ todo, runtime }) {
 }
 export function latestTaskContext(session, runtime = runtimeProviders.get(session)?.() ?? null) {
   const todo = latestTodo(session);
-  if (!todo) return null;
   const text = renderTaskContext({ todo, runtime });
   return text ? { text, snapshotSeq: todo?.snapshotSeq ?? -1, count: todo?.count ?? 0,
     meta: { todoText: todo?.text ?? null, runtime: runtime ? { ...runtime } : null } } : null;

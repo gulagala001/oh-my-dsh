@@ -25,12 +25,12 @@ test('state sampling distinguishes estimates and job delivery from actual result
   assert.equal(runtimeStateKey(withRequest(1)), runtimeStateKey({ ...withRequest(2), context: { ...withRequest(2).context, lastRequest: { provider: 'fixture', model: 'changed', window: 128000, seq: 2 } } }));
   assert.ok(Buffer.byteLength(renderRuntimeState({ ...fresh, jobs: Array.from({ length: 30 }, (_, i) => ({ ...fresh.jobs[0], id: '汉字'.repeat(1000) + i })) })) <= 2048);
 });
-test('without Todo, runtime observations never inject a standalone carrier', () => {
+test('without Todo, state injects once without creating tasks and disabling clears only its own carrier', () => {
   const f = fixture();
   setRuntimeContext(f.session, () => runtimeContext(f.agent, f.hub));
   const original = createUserMessage({ content: [{ type: 'text', text: 'REAL_USER_TEXT' }], source: { kind: 'user' } });
   f.session.append('user/message', original, { surfaceOp: 'append' });
-  assert.equal(f.store.maintainInjection(f.session), undefined);
+  assert.ok(f.store.maintainInjection(f.session));
   assert.equal(f.store.maintainInjection(f.session), undefined);
   assert.equal(latestTodo(f.session), null); assert.equal(f.store.takeEmptyNudge(f.session), false);
   assert.equal(f.session.snapshotEvents().filter(e => e.type === 'todo/write').length, 0);
@@ -39,6 +39,51 @@ test('without Todo, runtime observations never inject a standalone carrier', () 
   f.config.stateHintsEnabled = false;
   f.store.maintainInjection(f.session);
   assert.deepEqual(f.session.deriveMessages().filter(m => m.content.length), [original]);
+  assert.equal(f.store.maintainInjection(f.session), undefined);
+});
+test('only actual new input changes the runtime delivery key', () => {
+  const f = fixture();
+  const initial = collectRuntimeStatus(f.agent, f.hub);
+  const changed = { ...initial, jobsAvailable: false, jobs: [{ id: 'new', status: 'completed', detail: 'changed', resultDelivery: 'full' }],
+    context: { ...initial.context, automaticReplace: false, records: { raw: 5, detail: 3, brief: 1 } },
+    changeKey: { ...initial.changeKey, turn: 44, preset: 'trisoul-x-ptc', records: [['record', 7, 'brief', 99]] } };
+  assert.equal(runtimeStateKey(initial), runtimeStateKey(changed));
+  const input = createUserMessage({ content: [{ type: 'text', text: 'Continue.' }], source: { kind: 'user' } });
+  const pending = collectRuntimeStatus(f.agent, f.hub, { messages: [input] });
+  assert.notEqual(runtimeStateKey(initial), runtimeStateKey(pending));
+  const original = f.session.append('user/message', input, { surfaceOp: 'append' });
+  assert.equal(runtimeStateKey(pending), runtimeStateKey(collectRuntimeStatus(f.agent, f.hub)));
+  f.session.append('user/message', { ...input, id: 'rewritten' }, { surfaceOp: { op: 'replace', startSeq: original.seq, endSeq: original.seq }, sourceEventSeqs: [original.seq] });
+  assert.equal(runtimeStateKey(pending), runtimeStateKey(collectRuntimeStatus(f.agent, f.hub)));
+});
+test('enabling, new input and a missing carrier refresh once; turns, jobs and replay do not', () => {
+  const f = fixture(); let messages = [];
+  setRuntimeContext(f.session, () => runtimeContext(f.agent, f.hub, { messages }));
+  f.config.stateHintsEnabled = false;
+  assert.equal(f.store.maintainInjection(f.session), undefined);
+  f.config.stateHintsEnabled = true;
+  assert.ok(f.store.maintainInjection(f.session));
+  assert.equal(f.store.maintainInjection(f.session), undefined);
+  f.session.append('turn/start', { turn: 2 });
+  f.jobs.push({ id: 'job', status: 'running', kind: 'bash', startedAt: 1 });
+  assert.equal(f.store.maintainInjection(f.session), undefined);
+  f.jobs[0].status = 'completed'; f.jobs[0].resultDelivery = 'full'; f.jobs[0].detail = 'new output';
+  assert.equal(f.store.maintainInjection(f.session), undefined);
+  f.jobs.length = 0;
+  assert.equal(f.store.maintainInjection(f.session), undefined);
+  messages = [createUserMessage({ content: [{ type: 'text', text: 'A new request.' }], source: { kind: 'user' } })];
+  const update = f.store.maintainInjection(f.session); assert.ok(update);
+  assert.equal(f.store.maintainInjection(f.session), undefined);
+  f.session.append('user/message', messages[0], { surfaceOp: 'append' }); messages = [];
+  assert.equal(f.store.maintainInjection(f.session), undefined);
+  const replay = Session.create(f.session.id, structuredClone(f.session.snapshotEvents()), f.session.header);
+  setRuntimeContext(replay, () => runtimeContext({ session: replay }, f.hub));
+  assert.equal(createTodoStore().maintainInjection(replay), undefined);
+  for (const e of f.session.snapshotEvents().filter(e => e.data?.source?.plugin === 'trisoul-x:tasks')) {
+    f.session.append('user/message', createUserMessage({ content: [], source: { kind: 'plugin', plugin: 'fixture:removed' } }),
+      { surfaceOp: { op: 'replace', startSeq: e.seq, endSeq: e.seq }, sourceEventSeqs: [e.seq] });
+  }
+  assert.ok(f.store.maintainInjection(f.session));
   assert.equal(f.store.maintainInjection(f.session), undefined);
 });
 test('state changes do not repost Todo, preserve pause, and survive restart', () => {

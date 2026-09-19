@@ -27,17 +27,14 @@ export function collectRuntimeStatus(agent, hub, { now = Date.now(), messages = 
     jobs: jobs ? jobs.list(agent).map(j => ({ id: j.id, runId: j.runId ?? null, kind: j.kind, label: j.label,
       status: j.status, startedAt: j.startedAt, ...(j.finishedAt != null ? { finishedAt: j.finishedAt } : {}),
       ...(j.detail ? { detail: j.detail } : {}), resultDelivery: j.resultDelivery ?? 'unknown' })) : [],
-    changeKey: { input, turn: start?.seq ?? null,
-      preset: hub.ctx.sessionProjections?.stateOf(session, 'agentPreset') ?? session.header.agentPreset,
-      records: records.map(r => [r.id, r.version, r.mode, r.carrierSeq ?? null]) },
+    changeKey: { input },
   };
 }
 
 export function runtimeStateKey(status) {
-  const { sampledAt, asOfSeq, turnWallElapsedMs, context, ...stable } = status;
-  const { retainedTokensEstimate, lastRequest, ...stableContext } = context;
-  // Request metadata accompanies the next state update; learning it does not trigger one.
-  return createHash('sha256').update(JSON.stringify({ ...stable, context: stableContext })).digest('hex');
+  // Only real user input triggers a runtime refresh. Jobs, automatic turns and
+  // context bookkeeping are sampled when Todo delivery or compaction needs them.
+  return createHash('sha256').update(JSON.stringify({ input: status.changeKey?.input ?? null })).digest('hex');
 }
 
 export function renderRuntimeState(status) {
