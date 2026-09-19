@@ -5,11 +5,11 @@
     maxBytes: 65536
 
 - id: tool-bash
-  name: '@deepseek-ai/dsh-tool-bash'
+  name: 'trisoul_x/host/tool-bash'
   disabled: !!js process.platform === 'win32'
 
 - id: tool-pwsh
-  name: '@deepseek-ai/dsh-tool-pwsh'
+  name: 'trisoul_x/host/tool-pwsh'
   disabled: !!js process.platform !== 'win32'
 
 - id: tool-fs
@@ -24,7 +24,7 @@
   name: 'trisoul_x/codegraph'
 
 - id: tool-jobs
-  name: '@deepseek-ai/dsh-tool-jobs'
+  name: 'trisoul_x/host/tool-jobs'
 
 - id: skill-filesystem
   name: '@deepseek-ai/dsh-skill-filesystem'

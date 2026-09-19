@@ -50,7 +50,7 @@ export function ComputerSetup({ sessionId, visible, api }) {
       {(error || loadError) && <p className="tx-cu-error" role="alert">{error || loadError}</p>}
       {!setup ? <p className="tx-cu-muted" role="status">正在检查运行环境…</p> : <>
         <div className="tx-cu-setup-row"><div><strong>内置浏览器</strong><p>{setup.browser.name} · 独立工作配置</p></div><span className={setup.browser.installed ? 'is-ready' : 'is-needed'}>{setup.browser.installed ? '已安装' : '待安装'}</span></div>
-        {!setup.browser.installed && <p>请安装 Chrome，或在插件目录运行 <code>pnpm exec playwright install chromium</code>，然后重新打开浏览器。</p>}
+        {!setup.browser.installed && <div className="tx-cu-setup-install"><p>自动下载配套浏览器，无需运行命令。</p><button type="button" disabled={!!busy} onClick={() => act('install-browser')}>{busy === 'install-browser' ? '正在安装浏览器…' : '安装浏览器'}</button></div>}
         <details className="tx-cu-setup-advanced"><summary>浏览器详情</summary><p>网页登录保存在独立配置中。{setup.extension?.installation?.platform==='darwin'&&'首次使用可能需要在 macOS 系统提示中允许浏览器访问钥匙串。'}</p><code>{setup.browser.path}</code></details>
         <ChromeSetup extension={setup.extension} busy={busy} act={act} onError={setError}/>
         {!native.supported ? <p className="tx-cu-muted">此系统版本尚不支持原生应用控制。浏览器功能可单独使用。</p> : !native.installed ? <div className="tx-cu-setup-install"><strong>安装桌面控制</strong><p>{native.platform==='win32'?'Windows 开发版采用前台操控，安装时会在本机编译，需要 .NET 10 SDK。请保持桌面解锁；鼠标或键盘介入会停止助手。':'安装 Oh My DSH Computer Use 后，可选择并操作 Mac 应用。当前开发版会在本机编译，需要 Apple Command Line Tools；发行版安装包尚未提供。'}</p><button type="button" disabled={!!busy || native.installing} onClick={() => act('install-native')}>{busy === 'install-native' || native.installing ? '正在编译并安装…' : '安装桌面控制'}</button></div> : <>

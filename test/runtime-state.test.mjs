@@ -1,0 +1,60 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { Session } from '@deepseek-ai/dsh-session';
+import { createUserMessage } from '@deepseek-ai/dsh-llm';
+import { collectRuntimeStatus, runtimeContext, runtimeStateKey, renderRuntimeState } from '../src/runtime-state.mjs';
+import { createTodoStore } from '../src/todolist.mjs';
+import { setRuntimeContext, latestTodo, summaryMessageReader } from '../src/task-context.mjs';
+function fixture() {
+  const session = Session.create('runtime', undefined, { version: 3, id: 'runtime', createdAt: 1, cwd: '/tmp', isSeeded: false, agentPreset: 'trisoul-x' });
+  const config = { stateHintsEnabled: true }; const jobs = [];
+  const agent = { session }, hub = { config: () => config, context: { state: () => ({ records: [] }) }, ctx: { get: () => ({ list: () => jobs }), tokenMeter: { measure: () => ({ totalTokens: 123 }) } } };
+  return { session, config, jobs, agent, hub, store: createTodoStore() };
+}
+test('state sampling distinguishes estimates and job delivery from actual results', () => {
+  const f = fixture(), start = f.session.append('turn/start', { turn: 1 });
+  const status = collectRuntimeStatus(f.agent, f.hub, { now: start.time + 42000 });
+  assert.equal(status.turnWallElapsedMs, 42000); assert.equal(status.context.retainedTokensEstimate, 123);
+  assert.equal(status.context.lastRequest, null); assert.equal(status.jobsAvailable, true);
+  f.jobs.push({ id: 'old', kind: 'bash', label: 'probe', status: 'completed', reported: true, startedAt: 1 });
+  const fresh = collectRuntimeStatus(f.agent, f.hub);
+  assert.equal(fresh.jobs[0].resultDelivery, 'unknown');
+  assert.equal(runtimeStateKey(fresh), runtimeStateKey({ ...fresh, sampledAt: 'later', asOfSeq: 999, turnWallElapsedMs: 9999, context: { ...fresh.context, retainedTokensEstimate: 567 } }));
+  const withRequest = seq => ({ ...fresh, context: { ...fresh.context, lastRequest: { provider: 'fixture', model: 'fixture', window: 128000, seq } } });
+  assert.equal(runtimeStateKey(withRequest(1)), runtimeStateKey(withRequest(2)), 'an unchanged route does not repost state each model step');
+  assert.notEqual(runtimeStateKey(withRequest(1)), runtimeStateKey({ ...withRequest(2), context: { ...withRequest(2).context, lastRequest: { provider: 'fixture', model: 'changed', window: 128000, seq: 2 } } }));
+  assert.ok(Buffer.byteLength(renderRuntimeState({ ...fresh, jobs: Array.from({ length: 30 }, (_, i) => ({ ...fresh.jobs[0], id: '汉字'.repeat(1000) + i })) })) <= 2048);
+});
+test('state-only injection is stable, does not create todos, and disabling clears only its own carrier', () => {
+  const f = fixture();
+  setRuntimeContext(f.session, () => runtimeContext(f.agent, f.hub));
+  const original = createUserMessage({ content: [{ type: 'text', text: 'REAL_USER_TEXT' }], source: { kind: 'user' } });
+  f.session.append('user/message', original, { surfaceOp: 'append' });
+  assert.ok(f.store.maintainInjection(f.session));
+  assert.equal(f.store.maintainInjection(f.session), undefined);
+  assert.equal(latestTodo(f.session), null); assert.equal(f.store.takeEmptyNudge(f.session), false);
+  assert.equal(f.session.snapshotEvents().filter(e => e.type === 'todo/write').length, 0);
+  const reader = summaryMessageReader(f.session);
+  assert.equal(f.session.surface.nodes.map(s => reader(f.session.eventAt(s))).filter(Boolean).length, 1);
+  f.config.stateHintsEnabled = false;
+  f.store.maintainInjection(f.session);
+  assert.deepEqual(f.session.deriveMessages().filter(m => m.content.length), [original]);
+  assert.equal(f.store.maintainInjection(f.session), undefined);
+});
+test('state changes append once, preserve the task ledger and pause, and reset after restart', () => {
+  const f = fixture(); f.session.append('turn/start', { turn: 1 });
+  f.session.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'Build the widget.' }], source: { kind: 'user' } }), { surfaceOp: 'append' });
+  assert.ok(!f.store.execTaskMap(f.session, { op: 'excerpt', from: 'Build the widget', to: 'Build the widget', tasks: [{ title: 'Implement', anchor: { from: 'Build the widget', to: 'Build the widget' } }] }).isError);
+  setRuntimeContext(f.session, () => runtimeContext(f.agent, f.hub)); f.store.maintainInjection(f.session);
+  f.store.execTaskMap(f.session, { op: 'pause_turn', reason: 'Server unavailable; start server.' });
+  const revision = f.store.revOf(f.session), saved = f.store.snapshot(f.session);
+  f.jobs.push({ id: 'j1', kind: 'bash', label: 'test', status: 'running', startedAt: 1 });
+  assert.ok(f.store.maintainInjection(f.session)); assert.equal(f.store.maintainInjection(f.session), undefined);
+  assert.deepEqual(f.store.snapshot(f.session), saved); assert.equal(f.store.revOf(f.session), revision); assert.equal(f.store.turnControl(f.session).paused, true);
+  f.config.stateHintsEnabled = false; f.store.maintainInjection(f.session);
+  assert.doesNotMatch(JSON.stringify(f.session.deriveMessages()), /runtime state/);
+  assert.match(JSON.stringify(f.session.deriveMessages()), /\[ \] T1 Implement/);
+  const replay = Session.create('runtime', structuredClone(f.session.snapshotEvents()), f.session.header);
+  const revived = createTodoStore(); assert.equal(revived.maintainInjection(replay), undefined);
+  assert.deepEqual(replay.deriveMessages(), f.session.deriveMessages());
+});

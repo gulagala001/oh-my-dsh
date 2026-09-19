@@ -1,9 +1,9 @@
-import { renderTodoInjection, TODO_META } from './task-context.mjs';
+import { renderTodoInjection, TODO_META, TASK_CONTEXT_META, taskContextMeta, latestTaskContext, withoutTodo } from './task-context.mjs';
 import { promptText } from './cc-adaptation/texts.mjs';
 // Task ledger adapted from trisoul 4189f90: preserve excerpts, anchors, item operations and evidence.
 // DSH V3 events and a unified model-facing tool are wired in tasks.mjs.
 import { execFile } from 'node:child_process'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
+import { createUserMessage, createSystemMessage } from '@deepseek-ai/dsh-llm'
 import { accessSync, constants, realpathSync } from 'node:fs'
 import { resolve as resolvePath, extname } from 'node:path'
 
@@ -243,6 +243,22 @@ async function runTestLink(link, real, cwd, signal, timeoutMs) {
 export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
   /** sessionId → 记录（内存态权威副本；快照事件是持久层与投影源） */
   const sessions = new Map()
+  // Continuation control belongs to one running turn, never to task completion.
+  // A restart starts a new turn; the successful tool result retains the reason.
+  const turnControls = new WeakMap()
+  const turnControl = (session, turn) => {
+    const events = session.snapshotEvents()
+    const start = events.findLast(e => e.type === 'turn/start')
+    // Positional context rewrites can restore an old user message with a new seq.
+    const input = events.findLast(e => e.type === 'user/message' && e.surfaceOp === 'append' && e.data?.source?.kind === 'user')
+    const scope = { turn: turn ?? start?.data.turn, start: start?.seq ?? -1, input: input?.seq ?? -1 }
+    let control = turnControls.get(session)
+    if (!control || Object.keys(scope).some(key => control[key] !== scope[key])) {
+      control = { ...scope, paused: false, reminders: new Set() }
+      turnControls.set(session, control)
+    }
+    return control
+  }
   const recordOf = (sid) => {
     let r = sessions.get(sid)
     if (!r) {
@@ -355,6 +371,13 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     const op = args?.op
     if (op === 'transcript') return { text: transcriptText(session) }
     if (op === 'view') return { text: renderTree(rec) }
+    if (op === 'pause_turn') {
+      if (typeof args.reason !== 'string' || !args.reason.trim()) return err('Rejected: op:pause_turn requires a reason stating the blocker and what is needed to continue.')
+      const events = session.snapshotEvents(), start = events.findLast(e => e.type === 'turn/start')
+      if (!start || events.some(e => e.seq > start.seq && e.type === 'turn/end')) return err('Rejected: op:pause_turn requires an active turn.')
+      turnControl(session).paused = true
+      return { text: `Todo and verification continuation reminders are paused for this turn. Tasks, evidence, and BT settings are unchanged.\nReason: ${args.reason.trim()}\nExplain what remains incomplete and what is needed to continue, then end your response. New user input or the next turn restores the checks. This does not stop background jobs or pause an active goal.` }
+    }
     if (op === 'excerpt') {
       const msgs = userMessages(session)
       if (typeof args.from !== 'string' || !args.from || typeof args.to !== 'string' || !args.to) {
@@ -626,28 +649,46 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     return true
   }
   /** I2 换代注入（pre-step 边界调用，机制同画布状态区 P2-2）：变更后 / 状态区更新后 append 一版新清单 */
-  const maintainInjection = (session) => {
+  const maintainInjection = (session, options = {}) => {
     const rec = getRec(session)
-    const live = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && (e.data?.source?.plugin === 'trisoul-x:tasks' || e.data?.[TODO_META]));
-    const refreshed = live.findLast(e => e.data?.[TODO_META]);
-    if (refreshed && refreshed.seq > rec.lastInjSeq && refreshed.data.content[refreshed.data[TODO_META].index]?.text === renderInjection(rec)) {
-      rec.lastInjSeq = refreshed.seq; rec.injectedRev = rec.rev;
+    let live = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && (e.data?.source?.plugin === 'trisoul-x:tasks' || e.data?.[TODO_META]));
+    const desired = latestTaskContext(session, options.runtime);
+    // Disabling removes only our state section, including compressed carriers.
+    if (!desired?.meta.runtime) {
+      for (const e of live.filter(e => taskContextMeta(e.data)?.runtime)) {
+        const meta = taskContextMeta(e.data), prefix = e.data[TODO_META];
+        const content = [...e.data.content];
+        if (meta.todoText) {
+          content[prefix?.index ?? 0] = { type: 'text', text: meta.todoText };
+          const changed = { ...e.data, id: crypto.randomUUID(), content,
+            ...(prefix ? { [TODO_META]: { ...prefix, context: { ...meta, runtime: null } } } : { [TASK_CONTEXT_META]: { ...meta, runtime: null } }) };
+          session.append('user/message', changed, { surfaceOp: { op: 'replace', startSeq: e.seq, endSeq: e.seq }, sourceEventSeqs: [e.seq] });
+        } else if (prefix) {
+          const base = withoutTodo(e.data);
+          session.append('user/message', { ...base, id: crypto.randomUUID(), source: base.source?.kind === 'user' ? e.data.source : base.source }, { surfaceOp: { op: 'replace', startSeq: e.seq, endSeq: e.seq }, sourceEventSeqs: [e.seq] });
+        } else {
+          const start = session.snapshotEvents().findLast(e => e.type === 'turn/start');
+          session.append('system/message', { turn: start?.data.turn ?? 1, step: 1, message: createSystemMessage('', 'trisoul-x:shadow') }, { surfaceOp: { op: 'replace', startSeq: e.seq, endSeq: e.seq }, sourceEventSeqs: [e.seq] });
+        }
+      }
+      live = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && (e.data?.source?.plugin === 'trisoul-x:tasks' || e.data?.[TODO_META]));
     }
-    // 08-30 P14：从未注入过的空清单无事可钉；被删空的清单要再发一版「已清空」换掉画布钉着的旧版——只发一次（版本没变不重发），不跟画布换代
-    if (!rec.tasks.length && (rec.lastInjSeq < 0 || rec.injectedRev === rec.rev)) return undefined
-    let canvasSeq = -1
+    if (!desired) return undefined;
+    const last = live.at(-1), meta = taskContextMeta(last?.data);
+    const text = last?.data.content[last.data[TODO_META]?.index ?? 0]?.text;
+    const same = meta ? meta.todoText === desired.meta.todoText && (meta.runtime?.key ?? null) === (desired.meta.runtime?.key ?? null) : text === desired.text;
+    if (same) { rec.lastInjSeq = last.seq; rec.injectedRev = rec.rev; }
+    let canvasSeq = -1;
     for (const e of session.snapshotEvents()) {
-      if (e.type === 'user/message' && e.data?.source?.kind === 'plugin' && e.data.source.plugin === 'trisoul-x:state' && e.seq > canvasSeq) canvasSeq = e.seq
+      if (e.type === 'user/message' && e.data?.source?.kind === 'plugin' && e.data.source.plugin === 'trisoul-x:state') canvasSeq = e.seq;
     }
-    const stale = rec.injectedRev !== rec.rev || !live.some(e => e.seq === rec.lastInjSeq) || rec.lastInjSeq < 0 || (rec.tasks.length > 0 && canvasSeq > rec.lastInjSeq)
-    if (!stale) return undefined
-    const msg = createUserMessage({ content: [{ type: 'text', text: renderInjection(rec) }], source: { kind: 'plugin', plugin: 'trisoul-x:tasks' } })
-    const ev = session.append('user/message', msg, { surfaceOp: 'append' })
-    rec.injectedRev = rec.rev
-    rec.lastInjSeq = ev.seq
-    return ev
+    if (same && !(rec.tasks.length && canvasSeq > rec.lastInjSeq)) return undefined;
+    const msg = { ...createUserMessage({ content: [{ type: 'text', text: desired.text }], source: { kind: 'plugin', plugin: 'trisoul-x:tasks' } }), [TASK_CONTEXT_META]: desired.meta };
+    const ev = session.append('user/message', msg, { surfaceOp: 'append' });
+    rec.injectedRev = rec.rev; rec.lastInjSeq = ev.seq;
+    return ev;
   }
   const revOf = (session) => getRec(session).rev
 
-  return { execTaskMap, execCheck, execVerifyLink, releaseSummary, gateState, unresolvedText, unqualifiedText, textReviewText, textReviewLinkIds, markTextReviewed, takeNudge, takeEmptyNudge, maintainInjection, revOf, snapshot: session => clone(getRec(session)) }
+  return { execTaskMap, execCheck, execVerifyLink, releaseSummary, gateState, unresolvedText, unqualifiedText, textReviewText, textReviewLinkIds, markTextReviewed, takeNudge, takeEmptyNudge, maintainInjection, revOf, turnControl, resetTurnControl: session => turnControls.delete(session), snapshot: session => clone(getRec(session)) }
 }

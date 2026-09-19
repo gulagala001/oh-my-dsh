@@ -76,3 +76,49 @@ test('loader settlement waits for removal completion rather than only the dispos
   finish(); await removal; assert.equal(await waiting, 'settled');
   dispose(); assert.equal(f.loader.await, originalAwait);
 });
+
+test('profile handoff retires OMD services before originals activate and keeps rollback data', async () => {
+  const f = fixture(), old = { id: 'omd-tools', name: 'trisoul_x/host/tools' };
+  const events = [], group = { tree: f.tree, data: [old],
+    async remove(id, keep) { events.push(['remove', id, keep]); delete this.tree.store[id]; },
+    async update(config) {
+      assert.equal(this.tree.store['omd-tools'], undefined, 'exclusive provider is released before the replacement starts');
+      assert.deepEqual(this.data, [old], 'host rollback still sees the old configuration');
+      events.push(['apply', config]); this.data = config;
+    },
+  };
+  f.tree.root = group; f.tree.filename = '/fixture/cordis.yml';
+  f.tree.store[old.id] = { options: old, parent: group };
+  f.loader.await = async () => {};
+  const original = group.update, dispose = bindLiveLoaderEntries(f.loader);
+  const config = [{ id: 'tools', name: '@deepseek-ai/dsh-tools' }];
+  const update = group.update(config); await f.loader.await(); await update;
+  assert.deepEqual(events, [['remove', old.id, true], ['apply', config]]);
+  dispose(); assert.equal(group.update, original);
+});
+
+test('failed provider retirement restores the prior configuration and rejects', async () => {
+  const f = fixture(), old = { id: 'omd-tools', name: 'trisoul_x/host/tools' }, failure = new Error('release failed');
+  let restored;
+  const group = { tree: f.tree, data: [old], remove() { throw failure; }, update(config) { restored = config; } };
+  f.tree.root = group; f.tree.filename = '/fixture/cordis.yml';
+  f.tree.store[old.id] = { options: old, parent: group };
+  const dispose = bindLiveLoaderEntries(f.loader);
+  await assert.rejects(group.update([]), error => error === failure);
+  assert.deepEqual(restored, [old]); dispose();
+});
+
+test('client graph changes publish only after all provider rows finish updating', async () => {
+  const f = fixture(), row = { id: 'existing', name: 'fixture' }, published = [];
+  const modules = { flush(value) { published.push(value); } };
+  f.loader.ctx = { get: name => name === 'clientModules' ? modules : undefined };
+  const originalFlush = modules.flush;
+  const group = { tree: f.tree, data: [row], remove() {}, async update() {
+    modules.flush('intermediate'); await Promise.resolve(); modules.flush('complete');
+    assert.deepEqual(published, []);
+  } };
+  f.tree.root = group; f.tree.filename = '/fixture/cordis.yml';
+  f.tree.store[row.id] = { options: row, parent: group };
+  const dispose = bindLiveLoaderEntries(f.loader); await group.update([row]);
+  assert.deepEqual(published, ['complete']); assert.equal(modules.flush, originalFlush); dispose();
+});

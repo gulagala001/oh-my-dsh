@@ -7,6 +7,7 @@ import { hash, userRevision, userMessages, rawText, actualUser, prepareCandidate
 import { attachmentsOf, combineAssets, describeAsset, messageOf } from './materials.mjs';
 import { createTransaction, applyTransaction } from './transactions.mjs';
 import { SUMMARY_PROMPT_VERSION, PREPARE_SYSTEM, PREPARE_TOOL, COORDINATE_SYSTEM, COORDINATE_TOOL } from './prompts.mjs';
+import { TODO_META, TASK_CONTEXT_META, taskContextMeta, withoutTodo } from '../task-context.mjs';
 
 export const DEFAULTS = Object.freeze({ contextEnabled: true, ...CONTEXT_FREQUENCY_PRESETS.medium, digestLookback: 8,
   preprocessBoundaries: false, prepareBatchWindows: 2, prepareContinueTokens: 8000, prepareInputTokens: 300000, summaryTargetChars: 1200, backgroundConcurrency: 2, backgroundMaxRetries: 2,
@@ -380,6 +381,7 @@ export class ContextPipeline {
     const s = this.state(agent.session); s.steps++; this.store.save(s);
     // Ordinary replacement never waits for a model; an explicitly queued /compact-f does.
     const recovered = s.transaction ? await this.applyReady(agent) : null;
+    if (!this.hub.config().stateHintsEnabled) await this.stripRuntime(agent.session);
     await this.retireLegacyInjections(agent.session);
     const manual = s.manualQueue[0];
     let result;
@@ -390,6 +392,37 @@ export class ContextPipeline {
     this.publishMemory(agent.session);
     this.start(agent);
     return result;
+  }
+  stripRuntime(session) {
+    this.runtimeRetirements ||= new Map();
+    if (this.runtimeRetirements.has(session.id)) return this.runtimeRetirements.get(session.id);
+    const job = Promise.resolve().then(() => this.applyRuntimeRemoval(session)).finally(() => this.runtimeRetirements.delete(session.id));
+    this.runtimeRetirements.set(session.id, job); return job;
+  }
+  async applyRuntimeRemoval(session) {
+    if (!session.deriveMessages().some(m => taskContextMeta(m)?.runtime)) return null;
+    const s = this.state(session);
+    if (s.transaction) await applyTransaction(session, s, s.transaction, this.store, this.adapter);
+    const operations = session.surface.nodes.flatMap(seq => {
+      const m = session.deriveEventMessage(session.eventAt(seq)), meta = taskContextMeta(m);
+      if (!meta?.runtime) return [];
+      const id = randomUUID(), prefix = m[TODO_META];
+      if (!meta.todoText && !prefix) return [{ id, kind: 'delete', seqs: [seq], text: '', todoCleanup: true }];
+      let message;
+      if (meta.todoText) {
+        const content = [...m.content]; content[prefix?.index ?? 0] = { type: 'text', text: meta.todoText };
+        message = { ...m, id, content, ...(prefix ? { [TODO_META]: { ...prefix, context: { ...meta, runtime: null } } } : { [TASK_CONTEXT_META]: { ...meta, runtime: null } }) };
+      } else {
+        const base = withoutTodo(m);
+        message = { ...base, id, source: base.source?.kind === 'user' ? m.source : base.source };
+      }
+      return [{ id, kind: 'todo-restore', seqs: [seq], message, text: '' }];
+    });
+    if (!operations.length) return null;
+    const tx = { id: randomUUID(), planId: 'runtime-disable', source: 'runtime-disable', createdAt: Date.now(), operations,
+      records: structuredClone(s.records), traceSlot: structuredClone(s.traceSlot), applied: {},
+      inputChars: 0, outputChars: 0, userRevision: userRevision(session) };
+    return applyTransaction(session, s, tx, this.store, this.adapter);
   }
   async retireLegacyInjections(session) {
     const s = this.state(session);

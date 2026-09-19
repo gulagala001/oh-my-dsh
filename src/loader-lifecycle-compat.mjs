@@ -2,6 +2,20 @@ import { symbols } from '@deepseek-ai/cordis';
 const untrace = value => value?.[symbols.original] || value;
 const installed = Symbol.for('omd.loader-live-entries.alpha2');
 
+function holdClientGraph(loader) {
+  const modules = untrace(loader.ctx?.get?.('clientModules'));
+  if (!modules || typeof modules.flush !== 'function') return () => {};
+  const flush = modules.flush, descriptor = Object.getOwnPropertyDescriptor(modules, 'flush');
+  let pending;
+  const held = (...args) => { pending = args; };
+  Object.defineProperty(modules, 'flush', { value: held, configurable: true, writable: true });
+  return () => {
+    if (Object.getOwnPropertyDescriptor(modules, 'flush')?.value !== held) return;
+    if (descriptor) Object.defineProperty(modules, 'flush', descriptor); else delete modules.flush;
+    if (pending) flush.apply(modules, pending);
+  };
+}
+
 export function entryIsRegistered(entry) {
   const seen = new Set();
   for (let current = untrace(entry); current; current = untrace(current.parent?.tree?.ctx?.fiber?.entry)) {
@@ -34,7 +48,42 @@ export function bindLiveLoaderEntries(loader) {
       return task;
     }
     Object.defineProperty(group, 'remove', { value: remove, configurable: true, writable: true });
-    groups.set(group, () => { if (Object.getOwnPropertyDescriptor(group, 'remove')?.value !== remove) return; if (own) Object.defineProperty(group, 'remove', own); else delete group.remove; });
+    const originalUpdate = group.update, updateOwn = Object.getOwnPropertyDescriptor(group, 'update');
+    let tail = Promise.resolve();
+    const serialized = untrace(group.tree?.root) === group && group.tree?.filename && typeof originalUpdate === 'function';
+    function update(config, ...args) {
+      const task = tail.then(async () => {
+        // Publish one complete client graph per profile transaction. Per-row
+        // intermediate graphs can retire a bundle URL while the browser is
+        // still loading it, leaving a partially restored conversation.
+        const publish = holdClientGraph(loader);
+        try {
+          const oldConfig = [...group.data], targetIds = new Set(config.map(row => row.id));
+          const retiring = oldConfig.filter(row => !targetIds.has(row.id) &&
+            (row.name === 'trisoul_x' || row.name?.startsWith('trisoul_x/host/') || row.name === '@oh-my-dsh/ui-conversation'));
+          // Loader 1.0.3 starts incoming services before removing outgoing rows.
+          // OMD replaces several exclusive host services: retire our removed
+          // rows first so the original services can activate. Keep oldConfig
+          // intact for Loader's existing rollback, including preparation failure.
+          try {
+            for (const row of retiring) await group.remove(row.id, true);
+          } catch (error) {
+            try { await originalUpdate.call(group, oldConfig); }
+            catch (rollbackError) { throw new AggregateError([error, rollbackError], 'OMD provider retirement rollback failed'); }
+            throw error;
+          }
+          return await originalUpdate.call(group, config, ...args);
+        } finally { publish(); }
+      });
+      tail = task.catch(() => {});
+      tasks.add(task); task.then(() => tasks.delete(task), () => tasks.delete(task));
+      return task;
+    }
+    if (serialized) Object.defineProperty(group, 'update', { value: update, configurable: true, writable: true });
+    groups.set(group, () => {
+      if (Object.getOwnPropertyDescriptor(group, 'remove')?.value === remove) { if (own) Object.defineProperty(group, 'remove', own); else delete group.remove; }
+      if (serialized && Object.getOwnPropertyDescriptor(group, 'update')?.value === update) { if (updateOwn) Object.defineProperty(group, 'update', updateOwn); else delete group.update; }
+    });
   }
   function* entries(...args) {
     for (const entry of original.apply(this, args)) {

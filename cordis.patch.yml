@@ -28,3 +28,31 @@
 
 - id: ui-brand-official
   disabled: true
+
+# DSH alpha.2 providers with opt-in OMD extensions. Original rows remain
+# intact and become active again when this bundle is removed.
+- id: tools
+  disabled: true
+- id: jobs
+  disabled: true
+- id: bash-sandbox
+  disabled: true
+- id: pwsh-sandbox
+  disabled: true
+- insert:
+    - id: omd-tools
+      name: trisoul_x/host/tools
+    - id: omd-jobs
+      name: trisoul_x/host/jobs-local
+    - id: omd-bash-sandbox
+      name: trisoul_x/host/bash-sandbox
+      disabled: !!js process.platform === 'win32'
+    - id: omd-pwsh-sandbox
+      name: trisoul_x/host/pwsh-sandbox
+      disabled: !!js process.platform !== 'win32'
+
+- id: ui-conversation
+  disabled: true
+- insert:
+    - id: omd-ui-conversation
+      name: '@oh-my-dsh/ui-conversation'

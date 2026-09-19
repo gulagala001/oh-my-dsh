@@ -1,6 +1,19 @@
 // Shared, pure helpers for the task ledger and context-compaction layer.
 export const TASK_SOURCE = 'trisoul-x:tasks';
 export const TODO_META = 'omdTodo';
+export const TASK_CONTEXT_META = 'omdTaskContext';
+const runtimeProviders = new WeakMap();
+export function setRuntimeContext(session, provider) { runtimeProviders.set(session, provider); }
+export function taskContextMeta(message) { return message?.[TASK_CONTEXT_META] ?? message?.[TODO_META]?.context; }
+export function renderTaskContext({ todo, runtime }) {
+  return [todo?.text, runtime?.text].filter(Boolean).join('\n\n');
+}
+export function latestTaskContext(session, runtime = runtimeProviders.get(session)?.() ?? null) {
+  const todo = latestTodo(session);
+  const text = renderTaskContext({ todo, runtime });
+  return text ? { text, snapshotSeq: todo?.snapshotSeq ?? -1, count: todo?.count ?? 0,
+    meta: { todoText: todo?.text ?? null, runtime: runtime ? { ...runtime } : null } } : null;
+}
 const messageOf = e => e?.type === 'user/message' ? e.data : e?.data?.message;
 export const isTaskInjection = e => e?.type === 'user/message' && e.data?.source?.plugin === TASK_SOURCE;
 export function renderTodoInjection(rec) {
@@ -20,8 +33,8 @@ export function latestTodo(session) {
     const tasks = snapshot.data.tasks || snapshot.data.todos.map((t, i) => ({ id: `T${i + 1}`, title: t.content, done: t.status === 'completed' }));
     return { snapshotSeq: snapshot.seq, text: renderTodoInjection({ tasks }), count: tasks.length };
   }
-  const old = events.findLast(isTaskInjection);
-  return old ? { snapshotSeq: -1, text: old.data.content.filter(b => b.type === 'text').map(b => b.text).join('\n'), count: null } : null;
+  const old = events.findLast(e => isTaskInjection(e) && (!taskContextMeta(e.data) || taskContextMeta(e.data).todoText));
+  return old ? { snapshotSeq: -1, text: taskContextMeta(old.data)?.todoText ?? old.data.content.filter(b => b.type === 'text').map(b => b.text).join('\n'), count: null } : null;
 }
 
 // Task tool calls/results are also excluded, not just the rendered task snapshot.
@@ -29,7 +42,7 @@ export function latestTodo(session) {
 export function summaryMessageReader(session) {
   const taskCalls = new Set();
   for (const e of session.snapshotEvents()) for (const b of messageOf(e)?.content || []) {
-    if (b.type === 'tool-call' && ['todo_write', 'task_map'].includes(b.name)) taskCalls.add(b.id);
+    if (b.type === 'tool-call' && ['todo_write', 'task_map', 'runtime_status'].includes(b.name)) taskCalls.add(b.id);
   }
   const filter = blocks => (blocks || []).flatMap(b => {
     if (b.type === 'tool-call' && taskCalls.has(b.id)) return [];

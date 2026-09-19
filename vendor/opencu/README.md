@@ -4,14 +4,20 @@
 
 OpenCU 从 [Oh My DSH](https://github.com/gulagala001/oh-my-dsh) 的 Computer Use 提取而来，提供相同的操控工具、实时预览和接管体验，可以独立安装到 DSH。Oh My DSH 继续集成全部能力，并直接复用 OpenCU 的实现。
 
-当前版本：[1.0.3](https://github.com/gulagala001/opencu/releases/tag/v1.0.3)。源码、发行包与 SHA-256 校验文件见版本页面。
+当前版本：[1.0.4](https://github.com/gulagala001/opencu/releases/tag/v1.0.4)。源码、发行包与 SHA-256 校验文件见版本页面。
+
+## 本版更新
+
+浏览器未准备时，可以在运行环境页面直接安装，无需手动运行命令。与 Oh My DSH 0.1.6-alpha.2.2 集成时，由统一基础组件页面自动准备；独立版保留原有设置入口。
+
+[版本说明与验证范围](docs/release-1.0.4.md)。
 
 ## 安装
 
 需要 **DSH 0.1.6-alpha.2 Web、Node.js ≥22.19、pnpm 11.23.0 和 Git**。先停止 DSH 服务，再运行：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/opencu
+dsh plugin --profile web add github:gulagala001/opencu#v1.0.4
 dsh web
 ```
 
@@ -47,14 +53,14 @@ OpenCU 沿用 DSH 的模型、会话、工具权限和审批配置，不更改�
 ## 与 Oh My DSH 一起使用
 
 - **只装 OpenCU**：获得 Computer Use，保留 DSH 原有工作方式。
-- **只装 Oh My DSH 1.1+**：自动带入 OpenCU，仍是完整整合版。
-- **两个都装（Oh My DSH 1.1+）**：共用一套运行时、工具和预览；电脑功能进入 Oh My 工作台。卸载其中一个后，另一个仍可使用。
+- **只装 Oh My DSH 集成版（包括新编号 0.1.6-alpha.2.2）**：自动带入 OpenCU，仍是完整整合版。
+- **两个都装（与上述 Oh My DSH 集成版配合）**：共用一套运行时、工具和预览；电脑功能进入 Oh My 工作台。卸载其中一个后，另一个仍可使用。
 
 为了延续已有安装，数据默认仍位于 `DSH_HOME/trisoul-x/computer-use/`，扩展、原生程序和内部协议保留已有标识。部分系统安装界面仍显示 **Oh My DSH Computer Use**。独立版与整合版不需要重复授权或另建数据副本。
 
 OpenCU 配置位于 DSH 的 `opencu` 设置区。未显式设置的字段继承已有 Oh My DSH Computer Use 配置；显式 OpenCU 设置优先。浏览器路径、原生运行时路径和数据目录变更后重启 DSH。
 
-## 1.0.3 更新
+## 1.0.4 更新
 
 适配新版会话状态与插件生命周期，合并顶栏和侧栏的重复状态读取，优化长会话操作分组。网页工具栏可在同一会话的官方浏览器中打开独立预览；原操控目标、接管、恢复和独立窗口不变。官方预览受网站嵌入限制，不保证与 CU 共享登录状态。
 

@@ -58,7 +58,8 @@ export function mountComputerUseHttp(ctx,hub){
         if(req.method!=='POST'){send(res,405,{error:'Method not allowed'});return;}
         if(op==='setup'){
           const request=await body(req);
-          if(request.action==='install-native')await manager.installNative();
+          if(request.action==='install-browser')await manager.installBrowser();
+          else if(request.action==='install-native')await manager.installNative();
           else if(request.action==='remove-native')await manager.removeNative();
           else if(request.action==='install-extension')await manager.installExtension();
           else if(request.action==='remove-extension')await manager.removeExtension();

@@ -9,6 +9,7 @@ import { HubStore } from '../src/hub-store.mjs';
 import { Hub } from '../src/hub.mjs';
 import { createTodoStore } from '../src/todolist.mjs';
 import { registerTasks, currentTasks, restoreTaskProjection } from '../src/tasks.mjs';
+import { promptText } from '../src/cc-adaptation/texts.mjs';
 
 function setup(t) {
   const dir = mkdtempSync(join(tmpdir(), 'trisoul-x-ledger-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
@@ -271,13 +272,13 @@ test('stopping reminders restore unfinished tasks, missing evidence and one-time
   stop(); assert.match(notices.at(-1).content[0].text, /^\[todo list\] Unresolved tasks remain:\nT1 \[    \].*\nT2/);
   await call({ op: 'check', updates: [{ id: 'T1', done: true }, { id: 'T2', done: true }] });
   stop(); assert.match(notices.at(-1).content[0].text, /^\[todo list\] Every task is checked off, but these lack qualifying evidence:/);
-  assert.ok(notices.at(-1).content[0].text.endsWith('Link real evidence, or uncheck what is not actually done.'));
+  assert.ok(notices.at(-1).content[0].text.endsWith('Link real evidence, or uncheck what is not actually done.\n' + promptText('runtime/task-pause.md')));
   await verify({ op: 'link', links: ['T1', 'T2'].map(task => ({ task, kind: 'text', note: 'Inspected fixture source.', reason: 'No runnable target in this fixture.' })) });
   stop();
   const review = notices.at(-1), text = review.content[0].text;
   assert.match(text, /^\[todo list\] Tasks whose only evidence is a text record:/);
   assert.ok(text.includes('your reason no higher rung was runnable: "No runnable target in this fixture."'));
-  assert.ok(text.endsWith('Re-check each stated limitation against the tools and environment actually available. If a stronger check can run, perform it and link the result. Otherwise keep the limitation explicit; do not relabel it as verified.'));
+  assert.ok(text.endsWith('Re-check each stated limitation against the tools and environment actually available. If a stronger check can run, perform it and link the result. Otherwise keep the limitation explicit; do not relabel it as verified.\n' + promptText('runtime/task-pause.md')));
   assert.equal(store.snapshot(session).tasks[0].links[0].asked, false);
   session.append('user/message', review, { surfaceOp: 'append' });
   session.append('assistant/message', { turn: 1, step: 1, stream: [], message: createAssistantMessage({ content: [{ type: 'text', text: 'Rechecked both reasons.' }], source: { provider: 'fixture', model: 'fixture' } }) }, { surfaceOp: 'append' });
@@ -374,4 +375,87 @@ test('BT choices persist per session and a failed save keeps the previous choice
   assert.throws(() => hub.setTaskReminders(session, { todo: true, verification: false }), /save failed/);
   assert.deepEqual(hub.taskReminders(session), { todo: false, verification: true });
   hub.store.save = saved;
+});
+
+test('unchanged stopping reminders cannot repeatedly restart the same turn', async t => {
+  const { session, store, call, user } = setup(t), notices = [];
+  const hub = Object.assign(Object.create(Hub.prototype), { todoStore: store, taskReviews: new Map(), store: new HubStore(session.header.cwd) });
+  const agent = { session, steer: m => notices.push(m) }, signal = new AbortController().signal;
+  user(quote); await call(excerpt);
+  for (let i = 0; i < 8; i++) hub.finishTasks(agent, 1, signal);
+  assert.equal(notices.length, 1, 'an unchanged ledger must not produce an unbounded continuation loop');
+  await call({ op: 'check', updates: [{ id: 'T1', done: true }] });
+  hub.finishTasks(agent, 1, signal);
+  assert.equal(notices.length, 2, 'a different unresolved set still receives a reminder');
+  await call({ op: 'check', updates: [{ id: 'T1', done: false }] });
+  hub.finishTasks(agent, 1, signal);
+  assert.equal(notices.length, 2, 'returning to an already reminded state cannot restart the loop');
+  session.append('turn/end', { turn: 1 }); session.append('turn/start', { turn: 2 });
+  hub.finishTasks(agent, 2, signal);
+  assert.equal(notices.length, 3, 'a new turn checks the unfinished work again');
+  user('补充信息后继续。'); hub.finishTasks(agent, 2, signal);
+  assert.equal(notices.length, 4, 'new user input within a turn restores the check');
+});
+
+test('pause_turn preserves the ledger and BT settings, allows a final response and expires on new input', async t => {
+  const { session, store, call, user } = setup(t), notices = [];
+  const hub = Object.assign(Object.create(Hub.prototype), { todoStore: store, taskReviews: new Map(), store: new HubStore(session.header.cwd) });
+  hub.setTaskReminders(session, { todo: true, verification: true });
+  const agent = { session, steer: m => notices.push(m) }, signal = new AbortController().signal;
+  user(quote); await call(excerpt);
+  const before = store.snapshot(session), events = session.snapshotEvents().length;
+  for (const reason of [undefined, '', '  ', 42]) await assert.rejects(call({ op: 'pause_turn', reason }), /reason/);
+  assert.match(await call({ op: 'pause_turn', reason: 'Waiting for the user to provide test credentials.' }), /paused for this turn/);
+  assert.deepEqual(store.snapshot(session), before);
+  assert.equal(session.snapshotEvents().length, events, 'pause does not write a task snapshot or a fake completed task');
+  for (let i = 0; i < 4; i++) hub.finishTasks(agent, 1, signal);
+  assert.equal(notices.length, 0);
+  assert.equal(hub.store.state(session.id).taskRelease, undefined, 'a pause is not a successful release');
+  assert.deepEqual(hub.taskReminders(session), { todo: true, verification: true });
+  user('测试凭证已经补好，请继续。'); hub.finishTasks(agent, 1, signal);
+  assert.equal(notices.length, 1);
+  await call({ op: 'pause_turn', reason: 'The test service is unavailable; retry when it is restored.' });
+  session.append('turn/end', { turn: 1 }); session.append('turn/start', { turn: 2 });
+  hub.finishTasks(agent, 2, signal); assert.equal(notices.length, 2);
+  session.append('turn/end', { turn: 2 });
+  await assert.rejects(call({ op: 'pause_turn', reason: 'There is no active turn.' }), /active turn/);
+});
+
+test('pausing verification does not acknowledge text evidence or bypass later review', async t => {
+  const { session, store, call, verify, user } = setup(t), notices = [];
+  const hub = Object.assign(Object.create(Hub.prototype), { todoStore: store, taskReviews: new Map(), store: new HubStore(session.header.cwd) });
+  hub.setTaskReminders(session, { todo: true, verification: true });
+  const agent = { session, steer: m => notices.push(m) }, signal = new AbortController().signal;
+  user(quote); await call({ ...excerpt, tasks: [excerpt.tasks[0]] });
+  await call({ op: 'check', updates: [{ id: 'T1', done: true }] });
+  await verify({ op: 'link', links: [{ task: 'T1', kind: 'text', note: 'Observed the source.', reason: 'No test service in this fixture.' }] });
+  hub.finishTasks(agent, 1, signal);
+  session.append('user/message', notices.at(-1), { surfaceOp: 'append' });
+  await call({ op: 'pause_turn', reason: 'Review requires a service the user must start.' });
+  session.append('assistant/message', { turn: 1, step: 1, stream: [], message: createAssistantMessage({ content: [{ type: 'text', text: 'Waiting for the test service; verification is incomplete.' }], source: { provider: 'fixture', model: 'fixture' } }) }, { surfaceOp: 'append' });
+  hub.finishTasks(agent, 1, signal);
+  assert.equal(notices.length, 1);
+  assert.equal(store.snapshot(session).tasks[0].links[0].asked, false);
+  assert.equal(hub.taskReviews.has(session.id), false);
+  session.append('turn/end', { turn: 1 }); session.append('turn/start', { turn: 2 });
+  hub.finishTasks(agent, 2, signal);
+  assert.equal(notices.length, 2);
+  assert.match(notices.at(-1).content[0].text, /Tasks whose only evidence is a text record/);
+});
+
+test('context replacement of an older user message does not reset turn continuation control', async t => {
+  const { session, store, call, user } = setup(t), notices = [];
+  const hub = Object.assign(Object.create(Hub.prototype), { todoStore: store, taskReviews: new Map(), store: new HubStore(session.header.cwd) });
+  const agent = { session, steer: m => notices.push(m) }, signal = new AbortController().signal;
+  user(quote); const firstUser = session.snapshotEvents().at(-1);
+  await call(excerpt); user('保留未完成项，等服务恢复。');
+  await call({ op: 'pause_turn', reason: 'Waiting for the unavailable service to be restored.' });
+  const rewrite = session.append('user/message', structuredClone(firstUser.data), { surfaceOp: { op: 'replace', startSeq: firstUser.seq, endSeq: firstUser.seq }, sourceEventSeqs: [firstUser.seq] });
+  hub.finishTasks(agent, 1, signal);
+  assert.equal(notices.length, 0, 'rewriting an old message is not new user input');
+  user('服务恢复，继续。'); hub.finishTasks(agent, 1, signal);
+  assert.equal(notices.length, 1);
+  session.append('user/message', structuredClone(firstUser.data), { surfaceOp: { op: 'replace', startSeq: rewrite.seq, endSeq: rewrite.seq }, sourceEventSeqs: [rewrite.seq] });
+  hub.finishTasks(agent, 1, signal);
+  assert.equal(notices.length, 1, 'compression also preserves reminder deduplication');
 });

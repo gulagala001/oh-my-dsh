@@ -147,3 +147,35 @@ test('full compression without Trace archives original user text while preservin
   assert.equal(userRevision(f.session),revision); assert.equal(liveTodos(f).length,1);
   assert.equal(liveTodos(f)[0].data[TODO_META].index,0); assert.equal(f.todoStore.maintainInjection(f.session),undefined);
 });
+
+test('runtime state shares task compression, survives replay and clears without breaking Trace or future compression', async t => {
+  const f = setup(t);
+  const { setRuntimeContext } = await import('../src/task-context.mjs');
+  let runtime = { key: 'first', sampledAt: 'fixture', text: '[runtime state · as of fixture]\nSTATE_PAYLOAD_ONLY' };
+  setRuntimeContext(f.session, () => runtime);
+  f.todoStore.maintainInjection(f.session); exchange(f);
+  await compact(f); const carrier = liveTodos(f)[0];
+  assert.equal(liveTodos(f).length, 1); assert.match(carrier.data.content[1].text, /TASK_PAYLOAD_ONLY_42[\s\S]*STATE_PAYLOAD_ONLY/);
+  assert.equal(f.todoStore.maintainInjection(f.session), undefined);
+  assert.deepEqual(replay(f).deriveMessages(), f.session.deriveMessages());
+  assert.doesNotMatch(JSON.stringify(f.calls), /STATE_PAYLOAD_ONLY/);
+  const before = f.todoStore.snapshot(f.session), revision = userRevision(f.session);
+  const record = f.state.records.find(r => !r.mergedInto);
+  f.state.pending = { id: 'prepared-before-disable', choices: normalizeChoices({ choices: [{ action: 'keep', ids: [record.id] }] }, f.state, f.session) };
+  const replacement = structuredClone(f.state.lastReplacement), cadence = f.state.lastReplacementStep;
+  runtime = null;
+  const stripping = f.pipeline.stripRuntime(f.session);
+  assert.equal(f.pipeline.stripRuntime(f.session), stripping, 'concurrent cleanup shares one transaction');
+  await stripping;
+  const fresh = liveTodos(f)[0];
+  assert.equal(f.state.traceSlot.carrierSeq, fresh.seq);
+  assert.doesNotMatch(JSON.stringify(f.session.deriveMessages()), /STATE_PAYLOAD_ONLY/);
+  assert.match(fresh.data.content[1].text, /TASK_PAYLOAD_ONLY_42/);
+  assert.deepEqual(f.todoStore.snapshot(f.session), before); assert.equal(userRevision(f.session), revision);
+  assert.equal(f.state.pending.id, 'prepared-before-disable');
+  assert.equal(f.state.pending.choices[0].observed[0].version, f.state.records.find(r => r.id === record.id).version);
+  assert.deepEqual(f.state.lastReplacement, replacement); assert.equal(f.state.lastReplacementStep, cadence);
+  assert.equal(f.todoStore.maintainInjection(f.session), undefined);
+  exchange(f); await compact(f); assert.equal(liveTodos(f).length, 1);
+  assert.deepEqual(replay(f).deriveMessages(), f.session.deriveMessages());
+});

@@ -1,0 +1,1077 @@
+diff --git a/packages/client/tsdown.client.ts b/packages/client/tsdown.client.ts
+index 3820fba..c881170 100644
+--- a/packages/client/tsdown.client.ts
++++ b/packages/client/tsdown.client.ts
+@@ -558,7 +558,10 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
+         this.addWatchFile(fileId)
+         const source = await readFile(fileId)
+         const { code, exports: cssExports } = transform({
+-          filename: fileId,
++          // Keep the pinned release's CSS Modules names used by OMD's existing theme.
++          filename: id === '@oh-my-dsh/ui-conversation'
++            ? '/home/runner/work/deepseek-harness/deepseek-harness/' + relative(REPOSITORY_ROOT, fileId).split(sep).join('/')
++            : fileId,
+           code: source,
+           cssModules: { pattern: '[hash]_[local]' },
+           minify: true,
+diff --git a/packages/client/ui-conversation/package.json b/packages/client/ui-conversation/package.json
+index 8a92b63..c2b1a31 100644
+--- a/packages/client/ui-conversation/package.json
++++ b/packages/client/ui-conversation/package.json
+@@ -1,5 +1,5 @@
+ {
+-  "name": "@deepseek-ai/dsh-client-ui-conversation",
++  "name": "@oh-my-dsh/ui-conversation",
+   "description": "Target-neutral Conversation assembly, shell, composer, queue, and view navigation",
+   "version": "0.1.6-alpha.2",
+   "publishConfig": {
+diff --git a/packages/client/ui-conversation/src/client/apply.ts b/packages/client/ui-conversation/src/client/apply.ts
+index 79ffd97..8290258 100644
+--- a/packages/client/ui-conversation/src/client/apply.ts
++++ b/packages/client/ui-conversation/src/client/apply.ts
+@@ -37,6 +37,7 @@ import { todoDockEntry } from './skeleton/TodoPanel.tsx'
+ import { resolveActiveView } from './view-selection.ts'
+ import { en, NS, zh, type ConversationKey } from './locales.ts'
+ import { CONVERSATION_SETTINGS_NAMESPACE, type ConversationSettings } from '../submission-settings.ts'
++import { reloadOnProviderChange } from './conversation-reload.ts'
+ 
+ declare module '@deepseek-ai/dsh-client-ui-slots' {
+   interface LocaleNamespaceMap {
+@@ -128,6 +129,7 @@ function concreteConversation(ctx: Context): ConversationController {
+  * @param ctx - Client root context.
+  */
+ export function apply(ctx: Context, config: Config = Config({})): void {
++  if (reloadOnProviderChange(ctx)) return
+   const sessions = ctx.sessions
+   const slots = ctx.slots
+   // Schemastery's field default is materialized before Cordis calls apply.
+diff --git a/packages/client/ui-conversation/src/client/conversation-reload.ts b/packages/client/ui-conversation/src/client/conversation-reload.ts
+new file mode 100644
+index 0000000..a8baa6c
+--- /dev/null
++++ b/packages/client/ui-conversation/src/client/conversation-reload.ts
+@@ -0,0 +1,24 @@
++import type { Context } from '@deepseek-ai/cordis'
++
++/** Switching the entire Conversation provider requires a fresh page assembly.
++ * Session history and the original persisted text-draft store survive reload.
++ * Ordinary OMD feature settings do not change this provider or reload the page.
++ */
++export function reloadOnProviderChange(ctx: Context): boolean {
++  if (typeof window === 'undefined') return false
++  const boot = (window as unknown as { __DSH_BOOT__?: { entries?: { id: string }[] } }).__DSH_BOOT__
++  if (!boot?.entries) return false
++  let leaving = false
++  const reload = () => { if (!leaving) { leaving = true; window.location.reload() } }
++  if (!boot.entries.some(row => row.id === '@oh-my-dsh/ui-conversation')) {
++    reload()
++    return true
++  }
++  const onPageHide = () => { leaving = true }
++  window.addEventListener('pagehide', onPageHide)
++  ctx.effect(() => () => {
++    window.removeEventListener('pagehide', onPageHide)
++    reload()
++  }, 'conversation provider change')
++  return false
++}
+diff --git a/packages/client/ui-conversation/src/client/locales.ts b/packages/client/ui-conversation/src/client/locales.ts
+index d61f52e..dabbb31 100644
+--- a/packages/client/ui-conversation/src/client/locales.ts
++++ b/packages/client/ui-conversation/src/client/locales.ts
+@@ -24,6 +24,7 @@ export const zh = {
+   'input.stop': '停止生成',
+   'input.send': '发送消息',
+   'input.send.queue': '排队发送',
++  'input.send.now': '现在发送',
+   'input.send.steer': '插话发送',
+   'attachment.pending': '待发送附件',
+   'attachment.scrollLeft': '向左滚动附件',
+@@ -186,6 +187,7 @@ export const en = {
+   'input.stop': 'Stop generating',
+   'input.send': 'Send message',
+   'input.send.queue': 'Queue message',
++  'input.send.now': 'Send now',
+   'input.send.steer': 'Steer message',
+   'attachment.pending': 'Pending attachments',
+   'attachment.scrollLeft': 'Scroll attachments left',
+diff --git a/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx b/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
+index 319628d..8822a50 100644
+--- a/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
++++ b/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
+@@ -38,6 +38,7 @@ import { resolveSubmitMode } from '../input/submission-policy.ts'
+ import { attachmentErrorText, imageSizeText } from '../image-labels.ts'
+ import { ContextMeter } from './ContextMeter.tsx'
+ import css from './InputBar.module.css'
++import { useBackgroundWait } from './background-wait.ts'
+ 
+ export type InputBarProps = ComposerBarProps
+ 
+@@ -52,11 +53,13 @@ export const InputBar = memo(function InputBar({
+ }: InputBarProps) {
+   const input = useInput(s => s)
+   const notice = useNotices(s => s)
+-  const busyEnter = useBusyEnter(s => s)
++  const preferredBusyEnter = useBusyEnter(s => s)
+   void useLexicon // hook seat stays bound by the inject compartment; text-ref decoration rides the shell's editor transforms
+   const commandMenuOpen = useMenuLauncher(source => source === 'command')
+   const promptError = useSession(s => s.promptError) ?? null
+   const running = useSession(s => s.running) ?? false
++  const eventWaiting = useBackgroundWait(sessionId, running)
++  const busyEnter = eventWaiting ? 'steer' : preferredBusyEnter
+   const subagent = useSession(s => s.subagent) ?? null
+   const removed = useSession(s => s.removed) ?? false
+   // Plan mode swaps the composer placeholder (the projection is the folded
+@@ -299,7 +302,7 @@ export const InputBar = memo(function InputBar({
+   const primaryLabel = primaryStops
+     ? t('input.stop')
+     : running && steeringAvailable && !disabled && !uploadsPending && plainMessageDraft
+-      ? t(primarySubmitMode === 'steer' ? 'input.send.steer' : 'input.send.queue')
++      ? t(eventWaiting ? 'input.send.now' : primarySubmitMode === 'steer' ? 'input.send.steer' : 'input.send.queue')
+       : t('input.send')
+   const onPrimary = (): void => {
+     if (primaryStops) {
+diff --git a/packages/client/ui-conversation/src/client/skeleton/background-wait.ts b/packages/client/ui-conversation/src/client/skeleton/background-wait.ts
+new file mode 100644
+index 0000000..860565f
+--- /dev/null
++++ b/packages/client/ui-conversation/src/client/skeleton/background-wait.ts
+@@ -0,0 +1,36 @@
++/** Observe the active top-level wait; never reinterpret an explicitly queued message. */
++import { useEffect, useState } from 'react'
++export function useBackgroundWait(sessionId: string | undefined, running: boolean): boolean {
++  const [observed, setObserved] = useState<{ id: string; waiting: boolean } | null>(null)
++  useEffect(() => {
++    setObserved(null)
++    if (!sessionId || !running) return
++    const id = sessionId
++    let active = true, generation = 0
++    let timer: ReturnType<typeof setTimeout> | undefined
++    let controller: AbortController | undefined
++    const visible = (): boolean => document.visibilityState !== 'hidden'
++    const poll = async (): Promise<void> => {
++      if (!active || !visible()) return
++      const ticket = ++generation, own = controller = new AbortController()
++      const timeout = setTimeout(() => own.abort(), 5000)
++      try {
++        const response = await fetch(`/trisoul-x/api/background-wait?session=${encodeURIComponent(id)}`, { signal: own.signal })
++        if (!response.ok) throw new Error(`HTTP ${response.status}`)
++        const value: unknown = await response.json()
++        if (active && ticket === generation) setObserved({ id, waiting: typeof value === 'object' && value !== null && 'waiting' in value && value.waiting === true })
++      } catch (error) {
++        // Missing/disconnected OMD never changes the host's saved input preference.
++        if (active && ticket === generation) setObserved(null)
++      } finally {
++        clearTimeout(timeout)
++        if (active && ticket === generation && visible()) timer = setTimeout(() => { void poll() }, 500)
++      }
++    }
++    const visibility = (): void => { generation++; clearTimeout(timer); controller?.abort(); if (visible()) void poll() }
++    document.addEventListener('visibilitychange', visibility)
++    void poll()
++    return () => { active = false; generation++; clearTimeout(timer); controller?.abort(); document.removeEventListener('visibilitychange', visibility) }
++  }, [sessionId, running])
++  return running && observed?.id === sessionId && observed?.waiting === true
++}
+diff --git a/packages/client/ui-conversation/tsdown.config.ts b/packages/client/ui-conversation/tsdown.config.ts
+index 6ccfee9..fa1dc59 100644
+--- a/packages/client/ui-conversation/tsdown.config.ts
++++ b/packages/client/ui-conversation/tsdown.config.ts
+@@ -1,3 +1,3 @@
+ import { clientBundle } from '../tsdown.client.ts'
+ 
+-export default clientBundle('@deepseek-ai/dsh-client-ui-conversation', ['lib/types/index.js'])
++export default clientBundle('@oh-my-dsh/ui-conversation', ['lib/types/index.js'])
+diff --git a/packages/core/tools/src/index.ts b/packages/core/tools/src/index.ts
+index 6be7be6..5e75bfb 100644
+--- a/packages/core/tools/src/index.ts
++++ b/packages/core/tools/src/index.ts
+@@ -723,6 +723,7 @@ class ToolLayer implements ScopeLayer {
+    * "which form does the model see" is a contradiction, not a merge.
+    */
+   mode: ToolPresentationMode | undefined
++  directTools: readonly string[] | ((scope?: ScopeKey) => readonly string[]) | undefined
+ 
+   constructor(scope: ScopeKey | undefined) {
+     this.tools = new NamedEntries(name => new Error(scope === undefined
+@@ -815,6 +816,7 @@ export class ToolRuntime extends Service {
+     () => { this.ctx.emit('tools/change') },
+   )
+   /** Presentation for scopes that declare none; {@link presentAs} shadows it per scope. */
++  private readonly directSnapshots = new WeakMap<object, readonly string[]>()
+   private readonly defaultMode: ToolPresentationMode
+   private readonly maxParallelSubCalls: number
+   /**
+@@ -859,7 +861,9 @@ export class ToolRuntime extends Service {
+       order: this.ctx.systemPrompt.getSectionOrder('PTC_ONLY'),
+       // The SAME predicate the executor denies by, so the prompt cannot state
+       // a rule the registry does not enforce (see `collapses`).
+-      text: context => this.modeFor(context.scope) === 'ptc' ? PTC_ONLY_INSTRUCTION : '',
++      text: context => this.modeFor(context.scope) === 'ptc'
++        ? this.directFor(context.scope).length ? `Use run_code and the tools SDK for business operations. These control tools are also callable directly: ${this.directFor(context.scope).join(', ')}. All other tools require run_code.` : PTC_ONLY_INSTRUCTION
++        : '',
+     }
+   }
+ 
+@@ -951,7 +955,7 @@ export class ToolRuntime extends Service {
+    * @param mode - the presentation the covered agents' models see.
+    * @returns the exact disposer that restores the deployment default.
+    */
+-  presentAs(mode: ToolPresentationMode): () => void {
++  presentAs(mode: ToolPresentationMode, options: { directTools?: readonly string[] | ((scope?: ScopeKey) => readonly string[]) } = {}): () => void {
+     const ctx = this.ctx
+     if (scopeOf(ctx) === undefined) {
+       throw new Error('tools.presentAs() requires a scoped context (agent.ctx): a context-global presentation is the `mode` config field on the tools row')
+@@ -964,7 +968,8 @@ export class ToolRuntime extends Service {
+             throw new Error(`tools.presentAs("${mode}") conflicts with "${layer.mode}" already declared for this scope; one composition selects one presentation`)
+           }
+           layer.mode = mode
+-          return () => { layer.mode = undefined }
++          layer.directTools = options.directTools
++          return () => { layer.mode = undefined; layer.directTools = undefined }
+         },
+         { label: 'tools.presentAs()' },
+       )
+@@ -981,6 +986,21 @@ export class ToolRuntime extends Service {
+     return dispose
+   }
+ 
++  /** Read the request-sampled allowlist; the execution path still enforces live visibility. */
++  private directFor(scope?: ScopeKey, refresh = false): readonly string[] {
++    if (!scope) return []
++    if (!refresh) {
++      const snapshot = this.directSnapshots.get(scope)
++      if (snapshot) return snapshot
++    }
++    const layer = this.layers.chainLayers(scope).findLast(layer => layer.mode !== undefined)
++    const names = typeof layer?.directTools === 'function' ? layer.directTools(scope) : layer?.directTools ?? []
++    const visible = this.view(scope).visible
++    const snapshot = [...new Set(names)].filter(name => visible.has(name) && name !== RUN_CODE_NAME)
++    this.directSnapshots.set(scope, snapshot)
++    return snapshot
++  }
++
+   /**
+    * Build one scope's wire schemas and names for prompt-order validation.
+    * Restrictions do not make known tools invalid, but a mode collapse does.
+@@ -988,6 +1008,7 @@ export class ToolRuntime extends Service {
+   private wireSchemas(scope?: ScopeKey): ToolProviderResult {
+     const view = this.view(scope)
+     const mode = this.modeFor(scope)
++    const direct = this.directFor(scope, true)
+     if (mode === 'native') {
+       const schemas = [...view.visible.values()].map(definition => this.schemaOf(definition, false))
+       return { schemas, knownNames: [...view.knownNames] }
+@@ -1001,8 +1022,8 @@ export class ToolRuntime extends Service {
+     const schemas = [...view.visible.values()].map(definition => this.schemaOf(definition, false))
+     if (mode === 'ptc') {
+       return {
+-        schemas: schemas.filter(schema => schema.name === RUN_CODE_NAME),
+-        knownNames: [RUN_CODE_NAME],
++        schemas: schemas.filter(schema => schema.name === RUN_CODE_NAME || direct.includes(schema.name)),
++        knownNames: [RUN_CODE_NAME, ...direct],
+       }
+     }
+     return { schemas, knownNames: [...view.knownNames, RUN_CODE_NAME] }
+@@ -1328,7 +1349,7 @@ export class ToolRuntime extends Service {
+    * @param nested - whether the call is a transport sub-dispatch, not a model-direct call.
+    */
+   private collapses(name: string, scope: ScopeKey | undefined, nested: boolean): boolean {
+-    return !nested && this.modeFor(scope) === 'ptc' && name !== RUN_CODE_NAME
++    return !nested && this.modeFor(scope) === 'ptc' && name !== RUN_CODE_NAME && !this.directFor(scope).includes(name)
+   }
+ 
+   /**
+diff --git a/packages/jobs/jobs-local/src/index.ts b/packages/jobs/jobs-local/src/index.ts
+index 0e0f161..cf60891 100644
+--- a/packages/jobs/jobs-local/src/index.ts
++++ b/packages/jobs/jobs-local/src/index.ts
+@@ -9,6 +9,7 @@
+  * @module @deepseek-ai/dsh-jobs-local
+  */
+ 
++import { randomUUID } from 'node:crypto'
+ import { Context } from '@deepseek-ai/cordis'
+ import z from '@deepseek-ai/schemastery'
+ import type { Agent } from '@deepseek-ai/dsh-agent'
+@@ -18,7 +19,7 @@ import { deadline, timeoutOf } from '@deepseek-ai/dsh-timeout'
+ import { JobRegistry, JobId } from '@deepseek-ai/dsh-jobs'
+ import type {
+   JobDoneListener, JobKind, JobOutcome, JobRead, JobSnapshot, JobStart, JobStatus,
+-  JobsChangedListener,
++  JobsChangedListener, JobOwnerOptions, JobPreview,
+ } from '@deepseek-ai/dsh-jobs'
+ 
+ /** Timeout code that distinguishes a bounded wait from caller cancellation. */
+@@ -46,6 +47,10 @@ interface TrackedJob {
+   owner: Agent | undefined
+   cancel: (reason?: string) => void
+   readOutput: (() => string) | undefined
++  peekOutput: (() => string) | undefined
++  published: boolean
++  enhanced: boolean
++  resultDelivery: 'unknown' | 'none' | 'notice' | 'preview' | 'full'
+   status: JobStatus
+   detail: string | undefined
+   output: string | undefined
+@@ -100,6 +105,8 @@ export class LocalJobRegistry extends JobRegistry {
+   /** Schemastery-defaulted active-job limit. */
+   private readonly maxConcurrentJobsPerOwner: number
+   private store = new Map<JobId, TrackedJob>()
++  private readonly epoch = randomUUID()
++  private readonly options = new WeakMap<Agent, () => JobOwnerOptions>()
+   private counters = new Map<string, number>()
+   /**
+    * Surfaces and listeners layered by the scope that registered them, in the
+@@ -128,6 +135,50 @@ export class LocalJobRegistry extends JobRegistry {
+     ctx.effect(() => () => this.disposeAll(), 'jobs teardown')
+   }
+ 
++  override setOwnerOptions(owner: Agent, read: () => JobOwnerOptions): () => void {
++    this.options.set(owner, read)
++    return () => { if (this.options.get(owner) === read) this.options.delete(owner) }
++  }
++
++  override ownerOptions(owner?: Agent): JobOwnerOptions {
++    return owner ? this.options.get(owner)?.() ?? {} : {}
++  }
++
++  override publish(id: JobId, caller?: Agent): void {
++    const job = this.expect(id)
++    this.assertAccess(job, caller)
++    if (job.published) return
++    job.published = true
++    this.notifyChanged(job.owner)
++    if (isTerminal(job.status)) this.announce(job)
++  }
++
++  override releaseCompleted(id: JobId, caller?: Agent): void {
++    const job = this.expect(id)
++    this.assertAccess(job, caller)
++    if (job.published || !isTerminal(job.status)) throw new Error('only settled unpublished jobs can be released')
++    this.store.delete(id)
++  }
++
++  override peekOutput(id: JobId, maxBytes: number, caller?: Agent): JobPreview {
++    const job = this.expect(id)
++    this.assertAccess(job, caller)
++    if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) throw new Error('invalid preview byte limit')
++    const available = job.peekOutput !== undefined || (job.readOutput === undefined && isTerminal(job.status))
++    const text = job.peekOutput?.() ?? (job.readOutput === undefined ? job.output ?? '' : '')
++    const bytes = new TextEncoder().encode(text)
++    return { available, text: new TextDecoder().decode(bytes.subarray(0, maxBytes), { stream: bytes.length > maxBytes }), truncated: bytes.length > maxBytes }
++  }
++
++  override markDelivered(id: JobId, kind: 'notice' | 'preview' | 'full', caller?: Agent): void {
++    const job = this.expect(id)
++    this.assertAccess(job, caller)
++    const levels = ['none', 'unknown', 'notice', 'preview', 'full']
++    if (levels.indexOf(kind) <= levels.indexOf(job.resultDelivery)) return
++    job.resultDelivery = kind
++    this.notifyChanged(job.owner)
++  }
++
+   start(spec: JobStart): JobId {
+     if (!this.servesOwner(spec.owner)) {
+       throw new Error('background jobs unavailable: no job controller serves this agent (load @deepseek-ai/dsh-tool-jobs in its composition)')
+@@ -150,7 +201,7 @@ export class LocalJobRegistry extends JobRegistry {
+     const hooks = spec.run()
+     const count = (this.counters.get(spec.kind) ?? 0) + 1
+     this.counters.set(spec.kind, count)
+-    const id = JobId(`${spec.kind}-${count}`)
++    const id = JobId(this.ownerOptions(spec.owner).interruptibleWait ? `${spec.kind}-${this.epoch}-${count}` : `${spec.kind}-${count}`)
+ 
+     let markSettled!: () => void
+     const settled = new Promise<void>((resolve) => { markSettled = resolve })
+@@ -162,6 +213,10 @@ export class LocalJobRegistry extends JobRegistry {
+       owner: spec.owner,
+       cancel: hooks.cancel.bind(hooks),
+       readOutput: hooks.readOutput?.bind(hooks),
++      peekOutput: hooks.peekOutput?.bind(hooks),
++      published: spec.publication !== 'deferred',
++      enhanced: this.ownerOptions(spec.owner).interruptibleWait === true,
++      resultDelivery: 'none',
+       status: 'running',
+       detail: undefined,
+       output: undefined,
+@@ -185,14 +240,14 @@ export class LocalJobRegistry extends JobRegistry {
+     )
+     // Registration is complete and cannot fail from here, so the visible set
+     // has genuinely changed.
+-    this.notifyChanged(job.owner)
++    if (job.published) this.notifyChanged(job.owner)
+     return id
+   }
+ 
+   list(caller?: Agent): JobSnapshot[] {
+     const session = caller?.id
+     return [...this.store.values()]
+-      .filter(job => job.owner === undefined || job.owner.id === session)
++      .filter(job => job.published && (job.owner === undefined || job.owner.id === session))
+       .map(job => this.snapshot(job))
+   }
+ 
+@@ -209,6 +264,7 @@ export class LocalJobRegistry extends JobRegistry {
+       ? job.readOutput()
+       : isTerminal(job.status) ? job.output ?? '' : ''
+     if (isTerminal(job.status)) job.reported = true
++    if (job.resultDelivery === 'none') job.resultDelivery = 'unknown'
+     return { text, snapshot: this.snapshot(job) }
+   }
+ 
+@@ -364,6 +420,7 @@ export class LocalJobRegistry extends JobRegistry {
+     const ownerSession = job.owner?.id
+     return {
+       id: job.id,
++      ...(job.enhanced ? { runId: `${this.epoch}:${job.id}`, resultDelivery: job.resultDelivery } : {}),
+       kind: job.kind,
+       label: job.label,
+       ...job.outputLimitBytes !== undefined ? { outputLimitBytes: job.outputLimitBytes } : {},
+@@ -420,13 +477,16 @@ export class LocalJobRegistry extends JobRegistry {
+     job.output = outcome.output
+     job.finishedAt = Date.now()
+     if (job.waiters > 0) job.reported = true
+-    const snapshot = this.snapshot(job)
+     const waitResolvers = [...job.waitResolvers]
+     job.waitResolvers.clear()
+     for (const resolveWait of waitResolvers) resolveWait()
+     job.markSettled()
+-    this.notifyChanged(job.owner)
++    if (job.published) { this.notifyChanged(job.owner); this.announce(job) }
++  }
++
++  private announce(job: TrackedJob): void {
+     if (this.listenersClosed) return
++    const snapshot = this.snapshot(job)
+     for (const listener of this.listenersFor(job.owner)) {
+       try {
+         const returned = listener(snapshot, job.owner)
+diff --git a/packages/jobs/jobs/src/index.ts b/packages/jobs/jobs/src/index.ts
+index 7d46dfa..885096b 100644
+--- a/packages/jobs/jobs/src/index.ts
++++ b/packages/jobs/jobs/src/index.ts
+@@ -9,11 +9,13 @@
+ import { Context, Service } from '@deepseek-ai/cordis'
+ import type { Agent } from '@deepseek-ai/dsh-agent'
+ import type {
+-  JobDoneListener, JobId, JobRead, JobSnapshot, JobStart, JobsChangedListener,
++  JobDoneListener, JobId, JobRead, JobSnapshot, JobStart, JobsChangedListener, JobOwnerOptions, JobPreview,
+ } from './types.ts'
+ 
+ export { JobId } from './types.ts'
+ export type {
++  JobOwnerOptions,
++  JobPreview,
+   JobDoneListener,
+   JobHooks,
+   JobKind,
+@@ -70,6 +72,19 @@ export abstract class JobRegistry extends Service {
+     super(ctx, 'jobs')
+   }
+ 
++  /** Bind request-sampled options to one live owner; disposal removes only this binding. */
++  setOwnerOptions(_owner: Agent, _read: () => JobOwnerOptions): () => void { throw new Error('job provider does not support request options') }
++  /** Read the owner's current options; no binding means original behavior. */
++  ownerOptions(_owner?: Agent): JobOwnerOptions { return {} }
++  /** Publish a deferred registration once, including a completion raced with publication. */
++  publish(_id: JobId, _caller?: Agent): void { throw new Error('job provider does not support deferred publication') }
++  /** Drop a completed, unpublished registration after its foreground result is collected. */
++  releaseCompleted(_id: JobId, _caller?: Agent): void { throw new Error('job provider does not support deferred publication') }
++  /** Inspect output without affecting the consuming cursor or completion notifications. */
++  peekOutput(_id: JobId, _maxBytes: number, _caller?: Agent): JobPreview { return { available: false, text: '', truncated: false } }
++  /** Record content actually admitted to a request, separately from enqueue/read state. */
++  markDelivered(_id: JobId, _kind: 'notice' | 'preview' | 'full', _caller?: Agent): void { throw new Error('job provider does not support delivery receipts') }
++
+   /**
+    * Preflight access, validation, owner cleanup, and implementation-owned
+    * admission before starting and atomically registering work. Any preflight
+diff --git a/packages/jobs/jobs/src/types.ts b/packages/jobs/jobs/src/types.ts
+index 2842f6a..76bcbff 100644
+--- a/packages/jobs/jobs/src/types.ts
++++ b/packages/jobs/jobs/src/types.ts
+@@ -44,6 +44,9 @@ export interface JobOutcome {
+  * execution resources while the runtime owns identity and lifecycle state.
+  */
+ export interface JobStart {
++  /** Deferred jobs are admitted but hidden until publish(). */
++  publication?: 'deferred'
++
+   /** Producer kind — also the id prefix (`bash`, `subagent`, …). */
+   kind: JobKind
+   /** One-line model-facing label (the command; the delegation description). */
+@@ -88,6 +91,8 @@ export interface JobHooks {
+    * job has one consuming cursor.
+    */
+   readOutput?(): string
++  /** Inspect retained output without advancing its consuming cursor. */
++  peekOutput?(): string
+ }
+ 
+ /**
+@@ -95,6 +100,11 @@ export interface JobHooks {
+  * a fresh object per call, never live registry state.
+  */
+ export interface JobSnapshot {
++  /** Process-unique execution identity, never reused after restart. */
++  runId?: string
++  /** Content included in an admitted request, independent of reported. */
++  resultDelivery?: 'unknown' | 'none' | 'notice' | 'preview' | 'full'
++
+   /** The registry-issued id (`<kind>-N`). */
+   id: JobId
+   /** The producer kind the job was registered with. */
+@@ -158,3 +168,17 @@ export type JobDoneListener = (
+  * set changed with it.
+  */
+ export type JobsChangedListener = (owner: Agent | undefined) => void
++
++/** Opt-in behavior sampled for each owner's next model request. */
++export interface JobOwnerOptions {
++  softYieldMs?: number
++  interruptibleWait?: boolean
++  completionPreviewBytes?: number
++  completionBatchBytes?: number
++}
++/** Non-consuming retained output; unavailable producers still expose their locator. */
++export interface JobPreview {
++  text: string
++  available: boolean
++  truncated: boolean
++}
+diff --git a/packages/jobs/tool-jobs/src/index.ts b/packages/jobs/tool-jobs/src/index.ts
+index 277d718..fb4e089 100644
+--- a/packages/jobs/tool-jobs/src/index.ts
++++ b/packages/jobs/tool-jobs/src/index.ts
+@@ -53,6 +53,7 @@ export const Config: z<Config> = z.object({
+ 
+ /** Task state safe for model-authored programs; ownership/bookkeeping fields are omitted. */
+ export interface PublicJobSnapshot {
++  runId?: string
+   id: string
+   kind: string
+   label: string
+@@ -68,6 +69,7 @@ const PUBLIC_JOB_SCHEMA = {
+   additionalProperties: false,
+   properties: {
+     id: { type: 'string', required: true },
++    runId: { type: 'string' },
+     kind: { type: 'string', required: true },
+     label: { type: 'string', required: true },
+     status: {
+@@ -85,6 +87,7 @@ const PUBLIC_JOB_SCHEMA = {
+ function publicJob(snapshot: JobSnapshot): PublicJobSnapshot {
+   return {
+     id: snapshot.id,
++    ...(snapshot.runId ? { runId: snapshot.runId } : {}),
+     kind: snapshot.kind,
+     label: snapshot.label,
+     status: snapshot.status,
+@@ -201,6 +204,49 @@ function presentJobCall(title: string, kind: 'read' | 'execute', rawInput?: stri
+   return { card: 'generic', title, kind, ...rawInput !== undefined ? { rawInput } : {} }
+ }
+ 
++type WakeReason = 'completed' | 'user_input' | 'other_completion' | 'timeout'
++type Receipt = { id: string; runId: string; delivery: 'notice' | 'preview' | 'full' }
++type NoticeMessage = ReturnType<typeof createUserMessage> & { jobReceipt?: Receipt }
++
++/** Wait for actionable events without reading output or suppressing notices. */
++async function waitForEvent(ctx: Context, exec: ToolExecution, id: ReturnType<typeof JobId>, timeout?: number): Promise<WakeReason> {
++  const owner = exec.agent
++  const terminal = (): boolean => !['running', 'stopping'].includes(ctx.jobs.get(id, owner).status)
++  if (terminal()) return 'completed'
++  exec.signal.throwIfAborted()
++  return new Promise((resolve, reject) => {
++    let timer: ReturnType<typeof setTimeout> | undefined
++    const cleanup: (() => void)[] = []
++    let finished = false
++    const finish = (reason: WakeReason): void => {
++      if (finished) return
++      finished = true
++      cleanup.forEach(dispose => dispose()); clearTimeout(timer)
++      resolve(reason)
++    }
++    const abort = (): void => {
++      if (finished) return
++      finished = true
++      cleanup.forEach(dispose => dispose()); clearTimeout(timer)
++      reject(exec.signal.reason ?? new Error('wait aborted'))
++    }
++    cleanup.push(ctx.jobs.onJobDone((job, agent) => {
++      if (agent !== owner && agent !== undefined) return
++      finish(job.id === id ? 'completed' : 'other_completion')
++    }))
++    cleanup.push(ctx.on('agent/inbox/inserted', ({ agent, message }) => {
++      if (agent === owner && message.source.kind === 'user' && agent.inbox.nextStep.some(m => m.id === message.id)) finish('user_input')
++    }))
++    exec.signal.addEventListener('abort', abort, { once: true })
++    cleanup.push(() => exec.signal.removeEventListener('abort', abort))
++    if (timeout !== undefined) timer = setTimeout(() => finish('timeout'), timeout)
++    // Subscribe first, then recheck so no completion or admitted steering can be lost.
++    if (exec.signal.aborted) abort()
++    else if (terminal()) finish('completed')
++    else if (owner?.inbox.nextStep.some(m => m.source.kind === 'user')) finish('user_input')
++  })
++}
++
+ export function apply(ctx: Context, config: Config): void {
+   const waitDefault = config.waitTimeoutMs ?? 30_000
+   const waitCap = config.maxWaitTimeoutMs ?? 600_000
+@@ -211,6 +257,8 @@ export function apply(ctx: Context, config: Config): void {
+   // human input. Keyed by the exact Agent, so a same-session replacement
+   // starts with a full budget.
+   const spentWakes = new WeakMap<Agent, number>()
++  const lastWake = new WeakMap<Agent, number>()
++  const notified = new WeakMap<Agent, Set<string>>()
+   if (waitDefault > waitCap) {
+     throw new Error(`tool-jobs: waitTimeoutMs (${waitDefault}) exceeds maxWaitTimeoutMs (${waitCap})`)
+   }
+@@ -228,6 +276,37 @@ export function apply(ctx: Context, config: Config): void {
+     })
+   }
+ 
++  ctx.on('agent/pre-step', async ({ agent }, next) => {
++    const decision = await next()
++    const cap = ctx.jobs.ownerOptions(agent).completionBatchBytes
++    if (!cap || decision.kind !== 'enter') return decision
++    let bytes = 0
++    const messages = decision.messages.filter(message => {
++      if (!(message as NoticeMessage).jobReceipt) return true
++      const size = encoder.encode(message.content.filter(b => b.type === 'text').map(b => b.text).join('\n')).length
++      if (bytes && bytes + size > cap) { agent.inject(message); return false }
++      bytes += size
++      return true
++    })
++    return { ...decision, messages }
++  })
++  // This event follows request admission and durable commit, unlike inbox insertion.
++  const admittedThrough = new WeakMap<Agent, number>()
++  ctx.on('agent/assistant-stream', ({ agent, frame }) => {
++    if (frame.type !== 'start') return
++    const events = agent.session.snapshotEvents(), after = admittedThrough.get(agent) ?? -1
++    const current = new Map(ctx.jobs.list(agent).map(job => [job.id as string, job]))
++    for (const event of events) {
++      if (event.seq <= after) continue
++      const receipt = event.type === 'user/message' ? (event.data as NoticeMessage).jobReceipt
++        : event.type === 'tool/result' ? (event.data.meta as { jobReceipt?: Receipt } | undefined)?.jobReceipt : undefined
++      if (!receipt) continue
++      const job = current.get(receipt.id)
++      if (job?.runId === receipt.runId) ctx.jobs.markDelivered(job.id, receipt.delivery, agent)
++    }
++    admittedThrough.set(agent, events.at(-1)?.seq ?? -1)
++  })
++
+   const outputLimits = new WeakMap<ToolExecution, number>()
+   ctx.on('tools/pre-execute', (exec, next) => {
+     const maxBytes = visibleOutputLimit(ctx, exec)
+@@ -277,25 +356,43 @@ export function apply(ctx: Context, config: Config): void {
+   // agents; this listener owns delivery, not the choice of whom to deliver to.
+   ctx.jobs.onJobDone((snapshot, owner) => {
+     if (snapshot.reported || owner === undefined) return
+-    const message = createUserMessage({
+-      content: [{
+-        type: 'text',
+-        text: fitCompletionNotice(snapshot),
+-      }],
+-      source: {
+-        kind: 'plugin',
+-        plugin: 'tool-jobs',
+-        form: 'notice',
+-        summary: completionSummary(snapshot),
+-      },
++    const options = ctx.jobs.ownerOptions(owner)
++    const runId = snapshot.runId ?? snapshot.id
++    let seen = notified.get(owner)
++    if (!seen) { seen = new Set(); notified.set(owner, seen) }
++    if (seen.has(runId)) return
++    let text = fitCompletionNotice(snapshot)
++    let supplied: Receipt['delivery'] = 'notice'
++    if (options.completionPreviewBytes) {
++      const maxBytes = Math.min(options.completionPreviewBytes, snapshot.outputLimitBytes ?? Infinity)
++      const locator = `background job ${snapshot.id} ${statusLine(snapshot)}\nRead job_output({"job_id":${JSON.stringify(snapshot.id)}}) for remaining output.`
++      const prefix = `${locator}\n[Retained output preview; may be truncated]\n`
++      const room = maxBytes - encoder.encode(prefix).length
++      if (room > 0) {
++        const preview = ctx.jobs.peekOutput(snapshot.id, room, owner)
++        text = preview.available ? prefix + preview.text : locator
++        if (preview.available) supplied = !preview.truncated && !/truncat|spill|saved to/i.test(preview.text) ? 'full' : 'preview'
++      } else {
++        // Producer caps still apply; no receipt claims a dropped locator or output.
++        text = fitCompletionNotice(snapshot)
++      }
++    }
++    const message: NoticeMessage = createUserMessage({
++      content: [{ type: 'text', text }],
++      source: { kind: 'plugin', plugin: 'tool-jobs', form: 'notice', summary: completionSummary(snapshot) },
++      ...(options.completionPreviewBytes ? { jobReceipt: { id: snapshot.id, runId, delivery: supplied } } : {}),
+     })
+     const spent = spentWakes.get(owner) ?? 0
+-    if (delivery === 'wakeup' && owner.status === 'idle' && spent < wakeBudget) {
+-      spentWakes.set(owner, spent + 1)
++    // Independent work started before an earlier wake is not a new self-exciting generation.
++    const existingBatch = options.completionPreviewBytes && snapshot.startedAt <= (lastWake.get(owner) ?? -1)
++    if (delivery === 'wakeup' && owner.status === 'idle' && (spent < wakeBudget || existingBatch)) {
+       owner.followup(message)
++      seen.add(runId)
++      if (!existingBatch) { spentWakes.set(owner, spent + 1); lastWake.set(owner, Date.now()) }
+       return
+     }
+     owner.inject(message)
++    seen.add(runId)
+   })
+ 
+   ctx.tools.register(defineTool({
+@@ -308,7 +405,7 @@ export function apply(ctx: Context, config: Config): void {
+     parameters: {
+       job_id: { type: 'string', required: true, description: 'Job id returned by the tool that started the background work.' },
+       wait: { type: 'boolean', description: 'Block until the job reaches a terminal status or the timeout expires. A timed-out wait returns [status: running] and leaves the job alive.' },
+-      timeout_ms: { type: 'number', description: 'Max wait in milliseconds (only meaningful with wait: true). Defaults to the configured wait timeout; capped by the configured maximum.' },
++      timeout_ms: { type: 'number', description: 'Max wait in milliseconds (only meaningful with wait: true). For enabled top-level event waits, omission waits for completion or an actionable event. Ordinary and nested SDK waits default to the configured finite timeout; explicit values are capped.' },
+     },
+     finalizeContent: finalizeJobContent,
+     output: {
+@@ -318,22 +415,33 @@ export function apply(ctx: Context, config: Config): void {
+         properties: {
+           text: { type: 'string', required: true },
+           job: { ...PUBLIC_JOB_SCHEMA, required: true },
++          wakeReason: { type: 'string', enum: ['completed', 'user_input', 'other_completion', 'timeout'] },
+         },
+       },
++      presentationMeta: (_args, value) => value.job.runId
++        ? { jobReceipt: { id: value.job.id, runId: value.job.runId, delivery: value.text ? 'preview' : 'notice' } } : {},
+       render: (_args, value) => {
+         const body = value.text.length > 0 ? value.text : '(no new output)'
+         const separator = body.endsWith('\n') ? '' : '\n'
+-        return [{ type: 'text', text: `${body}${separator}${statusLine(value.job)}` }]
++        return [{ type: 'text', text: `${body}${separator}${statusLine(value.job)}${value.wakeReason ? `\n[wakeReason: ${value.wakeReason}]` : ''}` }]
+       },
+     },
+     async execute(args, exec) {
+       const id = validateJobId(args.job_id)
++      let wakeReason: WakeReason | undefined
++      if (args.timeout_ms !== undefined && (!Number.isFinite(args.timeout_ms) || args.timeout_ms <= 0)) throw new Error('timeout_ms must be positive')
+       if (args.wait === true) {
+-        const timeout = Math.min(args.timeout_ms ?? waitDefault, waitCap)
+-        await ctx.jobs.wait(id, timeout, exec.agent, exec.signal)
++        if (!exec.parent && ctx.jobs.ownerOptions(exec.agent).interruptibleWait) {
++          wakeReason = await waitForEvent(ctx, exec, id, args.timeout_ms === undefined ? undefined : Math.min(args.timeout_ms, waitCap))
++          if (wakeReason !== 'completed') return { text: '', job: publicJob(ctx.jobs.get(id, exec.agent)), wakeReason }
++        } else {
++          const timeout = Math.min(args.timeout_ms ?? waitDefault, waitCap)
++          await ctx.jobs.wait(id, timeout, exec.agent, exec.signal)
++        }
+       }
+       const read = ctx.jobs.read(id, exec.agent)
+-      return { text: read.text, job: publicJob(read.snapshot) }
++      return { text: read.text, job: publicJob(read.snapshot), ...(wakeReason ? { wakeReason } : {}) }
++
+     },
+     presentCall: args => presentJobCall(`Read output from background job ${args.job_id}`, 'read', args.job_id),
+   }))
+diff --git a/packages/shell/bash-local/src/index.ts b/packages/shell/bash-local/src/index.ts
+index c455eeb..dc6cd9e 100644
+--- a/packages/shell/bash-local/src/index.ts
++++ b/packages/shell/bash-local/src/index.ts
+@@ -322,6 +322,14 @@ export class LocalBashExecutor extends ShellExecutor {
+         providerFailureNote = `subprocess failed before reporting an outcome: ${detail}`
+         this.onProcessDone(proc, providerFailureNote, true, error)
+       }),
++      peekOutput: (): ShellProcessRead => {
++        const out = collected.stdout.readFrom(0)
++        const err = collected.stderr.readFrom(0)
++        const note = providerFailureNote ?? ''
++        return { delta: out.text + (err.text || note ? `\n[stderr]\n${err.text}${note}` : ''), lossy: out.lossy || err.lossy,
++          ...out.spillPath !== undefined ? { stdoutSpillPath: out.spillPath } : {},
++          ...err.spillPath !== undefined ? { stderrSpillPath: err.spillPath } : {} }
++      },
+       readOutput: (): ShellProcessRead => {
+         const out = collected.stdout.readFrom(stdoutOffset)
+         const err = collected.stderr.readFrom(stderrOffset)
+diff --git a/packages/shell/pwsh-local/src/index.ts b/packages/shell/pwsh-local/src/index.ts
+index bf1dd1c..e6fe75b 100644
+--- a/packages/shell/pwsh-local/src/index.ts
++++ b/packages/shell/pwsh-local/src/index.ts
+@@ -356,6 +356,14 @@ export class PwshLocalExecutor extends ShellExecutor {
+         providerFailureNote = `subprocess failed before reporting an outcome: ${detail}`
+         this.onProcessDone(proc, providerFailureNote, true, error)
+       }),
++      peekOutput: (): ShellProcessRead => {
++        const out = collected.stdout.readFrom(0)
++        const err = collected.stderr.readFrom(0)
++        const note = providerFailureNote ?? ''
++        return { delta: out.text + (err.text || note ? `\n[stderr]\n${err.text}${note}` : ''), lossy: out.lossy || err.lossy,
++          ...out.spillPath !== undefined ? { stdoutSpillPath: out.spillPath } : {},
++          ...err.spillPath !== undefined ? { stderrSpillPath: err.spillPath } : {} }
++      },
+       readOutput: (): ShellProcessRead => {
+         const out = collected.stdout.readFrom(stdoutOffset)
+         const err = collected.stderr.readFrom(stderrOffset)
+diff --git a/packages/shell/shell/src/types.ts b/packages/shell/shell/src/types.ts
+index 8964d76..a7748cb 100644
+--- a/packages/shell/shell/src/types.ts
++++ b/packages/shell/shell/src/types.ts
+@@ -178,6 +178,8 @@ export interface ShellProcess {
+    * full-stream spill files when available.
+    */
+   readOutput(): ShellProcessRead
++  /** Inspect retained output from the beginning without consuming the read cursor. */
++  peekOutput?(): ShellProcessRead
+   /**
+    * Terminate the provider-managed range. Returns false when it had already finished
+    * (no-op); idempotent.
+diff --git a/packages/shell/tool-bash/src/background.ts b/packages/shell/tool-bash/src/background.ts
+index c2087f3..d262e46 100644
+--- a/packages/shell/tool-bash/src/background.ts
++++ b/packages/shell/tool-bash/src/background.ts
+@@ -5,7 +5,7 @@
+  */
+ 
+ import type { ShellProcess } from '@deepseek-ai/dsh-shell'
+-import type { JobHooks, JobOutcome } from '@deepseek-ai/dsh-jobs'
++import type { JobRegistry, JobId, JobHooks, JobOutcome } from '@deepseek-ai/dsh-jobs'
+ 
+ /**
+  * Map a settled background process onto the generic task-outcome vocabulary:
+@@ -36,6 +36,7 @@ export function processOutcome(proc: ShellProcess): { status: 'completed' | 'kil
+ export function processJob(
+   start: (signal: AbortSignal) => Promise<ShellProcess>,
+   renderOutput: (process: ShellProcess) => string,
++  previewOutput?: (process: ShellProcess) => string,
+ ): JobHooks {
+   const controller = new AbortController()
+   let process: ShellProcess | undefined
+@@ -63,5 +64,45 @@ export function processJob(
+     },
+     done,
+     readOutput: () => process === undefined ? '' : renderOutput(process),
++    ...(previewOutput ? { peekOutput: () => process === undefined ? '' : previewOutput(process) } : {}),
++  }
++}
++
++/** Run once with job-owned cancellation, publishing only when the initial wait expires. */
++export async function foregroundOrJob<T>(
++  jobs: JobRegistry, owner: import('@deepseek-ai/dsh-agent').Agent,
++  kind: import('@deepseek-ai/dsh-jobs').JobKind, label: string,
++  signal: AbortSignal, yieldMs: number,
++  run: (signal: AbortSignal) => Promise<T>, outcome: (value: T) => JobOutcome,
++): Promise<{ kind: 'foreground'; value: T } | { kind: 'background'; jobId: JobId }> {
++  signal.throwIfAborted()
++  const controller = new AbortController()
++  let result!: Promise<T>
++  let settled!: Promise<JobOutcome>
++  const id = jobs.start({ kind, label, owner, publication: 'deferred', run() {
++    result = Promise.resolve().then(() => run(controller.signal))
++    settled = result.then(outcome, error => ({ status: controller.signal.aborted ? 'killed' as const : 'failed' as const, detail: String(error) }))
++    return { cancel: reason => controller.abort(reason), done: settled }
++  } })
++  const abort = (): void => { controller.abort(signal.reason) }
++  signal.addEventListener('abort', abort, { once: true })
++  let timer: ReturnType<typeof setTimeout> | undefined
++  try {
++    const done = await Promise.race([
++      result.then(value => ({ kind: 'foreground' as const, value })),
++      new Promise<{ kind: 'background'; jobId: JobId }>(resolve => { timer = setTimeout(() => resolve({ kind: 'background', jobId: id }), yieldMs) }),
++    ])
++    signal.throwIfAborted()
++    if (done.kind === 'background') jobs.publish(id, owner)
++    else { await settled; jobs.releaseCompleted(id, owner) }
++    return done
++  } catch (error) {
++    controller.abort(error)
++    await settled
++    jobs.releaseCompleted(id, owner)
++    throw error
++  } finally {
++    clearTimeout(timer)
++    signal.removeEventListener('abort', abort)
+   }
+ }
+diff --git a/packages/shell/tool-bash/src/index.ts b/packages/shell/tool-bash/src/index.ts
+index a539ca7..fd07ae1 100644
+--- a/packages/shell/tool-bash/src/index.ts
++++ b/packages/shell/tool-bash/src/index.ts
+@@ -23,7 +23,7 @@ import { ESCALATION_TARGETS, approveEscalation, validateEscalationArgs } from '@
+ import type { SandboxPolicyService } from '@deepseek-ai/dsh-sandbox-policy'
+ import { DSH_ENV_PREFIX } from '@deepseek-ai/dsh-shell'
+ import type { ShellRunResult } from '@deepseek-ai/dsh-shell'
+-import { processJob } from './background.ts'
++import { processJob, foregroundOrJob } from './background.ts'
+ import { parseExitStatus, renderProcessRead, renderResult } from './render.ts'
+ 
+ export const name = 'tool-bash'
+@@ -45,6 +45,7 @@ interface BashToolArgs {
+   command: string
+   description: string
+   timeoutMs?: number
++  yieldMs?: number
+   workdir?: string
+   run_in_background?: boolean
+   sandbox_permissions?: string
+@@ -250,6 +251,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+           + '5-10 words (shown in the UI). Examples: "ls" → "List files in current directory"; '
+           + '"git status" → "Show working tree status"; "npm install" → "Install package dependencies".',
+       },
++      ...backgroundEnabled ? { yieldMs: { type: 'number', description: 'Initial wait in milliseconds (250–30000) for enabled automatic background mode on top-level calls only. Explicit foreground and SDK calls keep their final-result semantics.' }, } : {},
+       timeoutMs: { type: 'number', description: 'Timeout in milliseconds. The executor applies its configured default and cap, and kills the command on expiry.' },
+       workdir: { type: 'string', description: 'Working directory for this command. Defaults to the session workspace; a relative path is resolved against it.' },
+       ...backgroundEnabled ? {
+@@ -328,6 +330,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+     },
+     async execute(args: BashToolArgs, exec) {
+       validateBashArgs(args)
++      if (args.yieldMs !== undefined && (!Number.isInteger(args.yieldMs) || args.yieldMs < 250 || args.yieldMs > 30000)) throw new Error('yieldMs must be an integer from 250 to 30000')
+       // Description is display metadata; workdir defaults to the caller's session.
+       const standingPolicy = resolveSandboxPolicy(exec)
+       const approvedMode = args.sandbox_permissions !== undefined && args.justification !== undefined
+@@ -368,10 +371,23 @@ export function apply(ctx: Context, config: Config = {}): void {
+           run: () => processJob(
+             signal => ctx.shell.start(ctx.shell.resolve({ ...request, signal })),
+             proc => renderProcessRead(proc.readOutput(), proc.sandbox, escalationModes),
++            proc => proc.peekOutput ? renderProcessRead(proc.peekOutput(), proc.sandbox, escalationModes) : '[Output preview unavailable; use job_output.]',
+           ),
+         })
+         return { kind: 'background' as const, jobId: id }
+       }
++      const jobs = ctx.get('jobs')
++      const softYield = jobs?.ownerOptions(exec.agent).softYieldMs
++      if (backgroundEnabled && exec.agent && !exec.parent && args.run_in_background === undefined && softYield !== undefined) {
++        const result = await foregroundOrJob(jobs!, exec.agent, 'bash', args.command, exec.signal, args.yieldMs ?? softYield,
++          signal => ctx.shell.run(ctx.shell.resolve({ ...request, signal })),
++          value => ({ status: value.aborted ? 'killed' : value.timedOut ? 'failed' : 'completed',
++            detail: `exit code: ${value.exitCode}${value.timedOut ? '; timed out' : ''}${value.signal ? '; signal: ' + value.signal : ''}`,
++            output: renderResult(value, escalationModes) }))
++        if (result.kind === 'background') return result
++        if (result.value.aborted) throw new HarnessError('tool call aborted', TOOL_ABORTED)
++        return { kind: 'foreground' as const, ...canonicalBashResult(result.value) }
++      }
+       const result = await ctx.shell.run(ctx.shell.resolve({
+         ...request,
+         signal: exec.signal,
+diff --git a/packages/shell/tool-pwsh/src/background.ts b/packages/shell/tool-pwsh/src/background.ts
+index ce506a5..0f1b151 100644
+--- a/packages/shell/tool-pwsh/src/background.ts
++++ b/packages/shell/tool-pwsh/src/background.ts
+@@ -6,7 +6,7 @@
+  */
+ 
+ import type { ShellProcess } from '@deepseek-ai/dsh-shell'
+-import type { JobHooks, JobOutcome } from '@deepseek-ai/dsh-jobs'
++import type { JobRegistry, JobId, JobHooks, JobOutcome } from '@deepseek-ai/dsh-jobs'
+ 
+ /* jscpd:ignore-start -- deliberate twin of dsh-tool-bash/background.ts (Agent Note). */
+ 
+@@ -39,6 +39,7 @@ export function processOutcome(proc: ShellProcess): { status: 'completed' | 'kil
+ export function processJob(
+   start: (signal: AbortSignal) => Promise<ShellProcess>,
+   renderOutput: (process: ShellProcess) => string,
++  previewOutput?: (process: ShellProcess) => string,
+ ): JobHooks {
+   const controller = new AbortController()
+   let process: ShellProcess | undefined
+@@ -66,6 +67,46 @@ export function processJob(
+     },
+     done,
+     readOutput: () => process === undefined ? '' : renderOutput(process),
++    ...(previewOutput ? { peekOutput: () => process === undefined ? '' : previewOutput(process) } : {}),
+   }
+ }
+ /* jscpd:ignore-end */
++
++/** Run once with job-owned cancellation, publishing only when the initial wait expires. */
++export async function foregroundOrJob<T>(
++  jobs: JobRegistry, owner: import('@deepseek-ai/dsh-agent').Agent,
++  kind: import('@deepseek-ai/dsh-jobs').JobKind, label: string,
++  signal: AbortSignal, yieldMs: number,
++  run: (signal: AbortSignal) => Promise<T>, outcome: (value: T) => JobOutcome,
++): Promise<{ kind: 'foreground'; value: T } | { kind: 'background'; jobId: JobId }> {
++  signal.throwIfAborted()
++  const controller = new AbortController()
++  let result!: Promise<T>
++  let settled!: Promise<JobOutcome>
++  const id = jobs.start({ kind, label, owner, publication: 'deferred', run() {
++    result = Promise.resolve().then(() => run(controller.signal))
++    settled = result.then(outcome, error => ({ status: controller.signal.aborted ? 'killed' as const : 'failed' as const, detail: String(error) }))
++    return { cancel: reason => controller.abort(reason), done: settled }
++  } })
++  const abort = (): void => { controller.abort(signal.reason) }
++  signal.addEventListener('abort', abort, { once: true })
++  let timer: ReturnType<typeof setTimeout> | undefined
++  try {
++    const done = await Promise.race([
++      result.then(value => ({ kind: 'foreground' as const, value })),
++      new Promise<{ kind: 'background'; jobId: JobId }>(resolve => { timer = setTimeout(() => resolve({ kind: 'background', jobId: id }), yieldMs) }),
++    ])
++    signal.throwIfAborted()
++    if (done.kind === 'background') jobs.publish(id, owner)
++    else { await settled; jobs.releaseCompleted(id, owner) }
++    return done
++  } catch (error) {
++    controller.abort(error)
++    await settled
++    jobs.releaseCompleted(id, owner)
++    throw error
++  } finally {
++    clearTimeout(timer)
++    signal.removeEventListener('abort', abort)
++  }
++}
+diff --git a/packages/shell/tool-pwsh/src/index.ts b/packages/shell/tool-pwsh/src/index.ts
+index 76e4340..be1d864 100644
+--- a/packages/shell/tool-pwsh/src/index.ts
++++ b/packages/shell/tool-pwsh/src/index.ts
+@@ -34,7 +34,7 @@ import { ESCALATION_TARGETS, approveEscalation, validateEscalationArgs } from '@
+ import type { SandboxPolicyService } from '@deepseek-ai/dsh-sandbox-policy'
+ import type { ShellRunResult } from '@deepseek-ai/dsh-shell'
+ import { parseExitStatus } from '@deepseek-ai/dsh-shell'
+-import { processJob } from './background.ts'
++import { processJob, foregroundOrJob } from './background.ts'
+ import { renderPwshProcessRead, renderPwshResult } from './render.ts'
+ import type { RenderablePwshResult } from './render.ts'
+ 
+@@ -63,6 +63,7 @@ interface PwshToolArgs {
+   command: string
+   description: string
+   timeoutMs?: number
++  yieldMs?: number
+   workdir?: string
+   run_in_background?: boolean
+   sandbox_permissions?: string
+@@ -260,6 +261,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+           + '5-10 words (shown in the UI). Examples: "ls" → "List files in current directory"; '
+           + '"git status" → "Show working tree status"; "Get-Process" → "List running processes".',
+       },
++      ...backgroundEnabled ? { yieldMs: { type: 'number', description: 'Initial wait in milliseconds (250–30000) for enabled automatic background mode on top-level calls only. Explicit foreground and SDK calls keep final-result semantics.' }, } : {},
+       timeoutMs: { type: 'number', description: 'Timeout in milliseconds. The executor applies its configured default and cap, and kills the command on expiry.' },
+       workdir: { type: 'string', description: 'Working directory for this command. Defaults to the session workspace; a relative path is resolved against it.' },
+       ...backgroundEnabled ? {
+@@ -345,6 +347,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+     /* jscpd:ignore-start -- the execute path mirrors dsh-tool-bash's by design (see the pwsh-tool-and-executor Agent Note). */
+     async execute(args: PwshToolArgs, exec) {
+       validatePwshArgs(args)
++      if (args.yieldMs !== undefined && (!Number.isInteger(args.yieldMs) || args.yieldMs < 250 || args.yieldMs > 30000)) throw new Error('yieldMs must be an integer from 250 to 30000')
+       // Description is display metadata; workdir defaults to the caller's session.
+       const standingPolicy = resolveSandboxPolicy(exec)
+       const approvedMode = args.sandbox_permissions !== undefined && args.justification !== undefined
+@@ -384,10 +387,23 @@ export function apply(ctx: Context, config: Config = {}): void {
+           run: () => processJob(
+             signal => ctx.shell.start(ctx.shell.resolve({ ...request, signal })),
+             proc => renderPwshProcessRead(proc.readOutput(), proc.sandbox, escalationModes),
++            proc => proc.peekOutput ? renderPwshProcessRead(proc.peekOutput(), proc.sandbox, escalationModes) : '[Output preview unavailable; use job_output.]',
+           ),
+         })
+         return { kind: 'background' as const, jobId: id }
+       }
++      const jobs = ctx.get('jobs')
++      const softYield = jobs?.ownerOptions(exec.agent).softYieldMs
++      if (backgroundEnabled && exec.agent && !exec.parent && args.run_in_background === undefined && softYield !== undefined) {
++        const result = await foregroundOrJob(jobs!, exec.agent, 'pwsh', args.command, exec.signal, args.yieldMs ?? softYield,
++          signal => ctx.shell.run(ctx.shell.resolve({ ...request, signal })),
++          value => ({ status: value.aborted ? 'killed' : value.timedOut ? 'failed' : 'completed',
++            detail: `exit code: ${value.exitCode}${value.timedOut ? '; timed out' : ''}${value.signal ? '; signal: ' + value.signal : ''}`,
++            output: renderPwshResult(value, escalationModes) }))
++        if (result.kind === 'background') return result
++        if (result.value.aborted) throw new HarnessError('tool call aborted', TOOL_ABORTED)
++        return canonicalPwshResult(result.value)
++      }
+       const result = await ctx.shell.run(ctx.shell.resolve({
+         ...request,
+         signal: exec.signal,

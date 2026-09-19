@@ -21,6 +21,7 @@ test('install into stock web, coexist with stock presets, switch both ways and r
   const root = mkdtempSync(join(tmpdir(), 'trisoul x stock-')), home = join(root, 'home'), cwd = join(root, 'workspace');
   const pkg = mkdtempSync(join(tmpdir(), 'trisoul-x-package-'));
   for (const path of [home, cwd]) mkdirSync(path);
+  writeFileSync(join(cwd, 'codegraph-fixture.ts'), 'export function fixture() { return "INSTALLED_AUTOMATIC_INDEX"; }\n');
   const manifest = JSON.parse(readFileSync(join(repo, 'package.json'), 'utf8'));
   for (const file of ['package.json', ...manifest.files]) cpSync(join(repo, file), join(pkg, file), { recursive: true });
   const env = { ...process.env, DSH_HOME: home }; delete env.DSH_PERMISSION_MODE;
@@ -47,7 +48,7 @@ test('install into stock web, coexist with stock presets, switch both ways and r
     res.end('data: [DONE]\n\n');
   });
   await new Promise(r => provider.listen(0, '127.0.0.1', r));
-  const settings = JSON.stringify({ 'agent-default-model': { provider: 'fixture', model: 'fixture' }, 'llm-pi-ai': { providers: { fixture: { api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'FIXTURE_KEY', models: [{ id: 'fixture', name: 'fixture', contextWindow: 1000000, maxTokens: 1024, input: ['text'] }] } } } });
+  const settings = JSON.stringify({ 'trisoul-x': { componentAutoSetup: false }, 'agent-default-model': { provider: 'fixture', model: 'fixture' }, 'llm-pi-ai': { providers: { fixture: { api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'FIXTURE_KEY', models: [{ id: 'fixture', name: 'fixture', contextWindow: 1000000, maxTokens: 1024, input: ['text'] }] } } } });
   const credentials = JSON.stringify({ version: 1, refs: { FIXTURE_KEY: 'fixture-only' } });
   writeFileSync(join(home, 'settings.yaml'), settings);
   writeFileSync(join(home, '.credentials.yaml'), credentials, { mode: 0o600 });
@@ -157,8 +158,8 @@ test('install into stock web, coexist with stock presets, switch both ways and r
   assert.ok(graphRequest, 'installed package exposes the real MCP catalog');
   assert.ok(graphRequest.tools.some(tool => tool.function.name === 'codegraph_index'));
   await prompt(blank.sessionId, 'Check bundled CodeGraph.', 3);
-  const graphResult = payloads.findLast(p => p.messages.at(-1)?.role === 'tool' && /CodeGraph|codegraph/.test(p.messages.at(-1).content));
-  assert.ok(graphResult, 'DSH executes the bundled MCP tool and renders its unindexed-project response');
+  const graphResult = payloads.flatMap(p => p.messages).findLast(m => m.role === 'tool' && typeof m.content === 'string' && m.content.includes('INSTALLED_AUTOMATIC_INDEX'));
+  assert.ok(graphResult, 'DSH automatically indexes the installed project and returns its actual source through MCP');
   assert.ok(payloads.some(p => p.tools?.find(t => t.function.name === 'todo_write')?.function.parameters.properties.op));
   const legacy = await snapshot(old.sessionId);
   assert.deepEqual(legacy.projections.values.todos, oldSnapshot.projections.values.todos);

@@ -47,7 +47,7 @@ export function decodeResult(result, toolName) {
 export function recordText(record, mode = 'detail') {
   const ranges = (record.ranges || []).map(r => `${r.from}..${r.to}`).join(', ');
   const when = record.timeStart == null ? '时间未记录' : new Date(record.timeStart).toISOString() + (record.timeEnd && record.timeEnd !== record.timeStart ? ' — ' + new Date(record.timeEnd).toISOString() : '');
-  return `[Context record ${record.id} · ${when} · events ${ranges}]\n${record.summary}`
+  return `[Context record ${record.id} · ${when} · events ${ranges} · view=${mode}]\n${record.summary}`
     + (mode === 'detail' && record.documents.length ? '\n\n' + record.documents.map(d => `## ${d.title}\n${d.text}`).join('\n\n') : '')
     + ((record.assets || []).length ? `\n[${record.assets.length} saved attachments; recall with id and asset (1-based) to reopen one.]` : '')
     + `\n[${record.documents.length ? "Saved documents" : "Archived record"}: recall({"id":"${record.id}"})]`;
