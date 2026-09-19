@@ -44,17 +44,24 @@ export function operationRowLocale(t,name,block){
 }
 
 // Context maintenance and thinking belong to the same process as tool calls.
-// Only visible prose, human input and turn boundaries split the live group.
+// Generic host cards bypass our toolview wrapper. Keep them independent so
+// an unwrapped first tool cannot hide the rest of a group without a toggle.
 export const processContextKinds=new Set(['context','system-prompt','compaction']);
-export function computerGroups(nodes) {
+export function computerGroups(nodes, toolviewNames) {
+  const groupable = node => {
+    const root=node.data.root,name=root.call?.name??root.name??'';
+    const genericDenial=root.isError&&root.error?.name==='AutoReviewDeniedError'&&root.error.code==='AUTO_REVIEW_DENIED';
+    return !genericDenial&&(!toolviewNames||toolviewNames.has(name));
+  };
   const steps = new Map(), result = new Map();
-  for (const node of nodes) if (node.kind === 'tool-call') {
+  for (const node of nodes) if (node.kind === 'tool-call'&&groupable(node)) {
     const key = stepKey(node); if (!key) continue;
     steps.set(key,true);
   }
   let group;
   for (const node of nodes) {
     if(node.kind==='turn-process')continue;
+    if(node.kind==='tool-call'&&!groupable(node)){group=undefined;continue;}
     const step = steps.get(stepKey(node));
     const tool = node.kind === 'tool-call';
     const blocks=node.data.blocks??[],assistant = node.kind === 'assistant-step' && (step||blocks.some(block=>block.kind==='reasoning')) && !blocks.some(block=>!['reasoning','tool-call'].includes(block.kind)&&(block.kind!=='text'||block.text?.trim()));

@@ -7,9 +7,15 @@ import {SavedImage} from './tool-image.jsx';
 export function computerGroupPresentation(ctx) {
   const cache = new WeakMap(), processCache=new WeakMap(), open = new Set(), listeners = new Set();
   const subscribe = listener => { listeners.add(listener); return () => listeners.delete(listener); };
-  const groups = snapshot => {
-    if (!cache.has(snapshot)) cache.set(snapshot, computerGroups(snapshot.order.map(key => snapshot.nodes.get(key)).filter(Boolean)));
-    return cache.get(snapshot);
+  const subscribeToolviews = listener => ctx.slots.subscribe('tool.call.toolview', listener);
+  const readToolviews = () => ctx.slots.entries('tool.call.toolview');
+  const groups = (snapshot, toolviews) => {
+    let cached=cache.get(snapshot);
+    if (!cached||cached.toolviews!==toolviews) {
+      cached={toolviews,groups:computerGroups(snapshot.order.map(key => snapshot.nodes.get(key)).filter(Boolean),new Set(toolviews.map(entry=>entry.options.key)))};
+      cache.set(snapshot,cached);
+    }
+    return cached.groups;
   };
   const emptyProcess = { label: operationSummary([]), icon: operationIcon([]), failures: 0, stopped: 0 };
   const process = (snapshot, turn) => {
@@ -17,7 +23,10 @@ export function computerGroupPresentation(ctx) {
     return processCache.get(snapshot).get(turn) || emptyProcess;
   };
   function Group({ sessionId, useChat, nodeKey, callId, turnProcess, completedContext=false, children }) {
-    const group = useChat(snapshot => groups(snapshot).get(nodeKey ?? `call:${callId}`));
+    // Registration changes can turn a specialized tool into a generic card
+    // even when the conversation snapshot itself has not changed.
+    const toolviews=useSyncExternalStore(subscribeToolviews,readToolviews);
+    const group = useChat(snapshot => groups(snapshot,toolviews).get(nodeKey ?? `call:${callId}`));
     const identity = `${sessionId}:${group?.id}`;
     const expanded = useSyncExternalStore(subscribe, () => open.has(identity));
     const seat=useRef(null),wasFoldable=useRef(false),[hostGrouped,setHostGrouped]=useState(false),[visited,setVisited]=useState(false);
