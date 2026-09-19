@@ -17,7 +17,7 @@ export function collectRuntimeStatus(agent, hub, { now = Date.now(), messages = 
     sampledAt: new Date(now).toISOString(), asOfSeq: events.at(-1)?.seq ?? -1,
     turnWallElapsedMs: start && !ended ? Math.max(0, now - start.time) : null,
     context: {
-      retainedTokensEstimate: Number.isFinite(meter.totalTokens) ? meter.totalTokens : null,
+      retainedTokensEstimate: Number.isFinite(meter.totalTokens) && (request || meter.totalTokens > 0) ? meter.totalTokens : null,
       estimateBasis: 'retained-session-before-next-request',
       lastRequest: request && header ? { provider: request.data.provider, model: request.data.model, window: request.data.contextWindow ?? null, seq: request.seq } : null,
       automaticReplace: hub.config().contextEnabled !== false && hub.config().automaticReplace !== false,
@@ -36,8 +36,8 @@ export function collectRuntimeStatus(agent, hub, { now = Date.now(), messages = 
 export function runtimeStateKey(status) {
   const { sampledAt, asOfSeq, turnWallElapsedMs, context, ...stable } = status;
   const { retainedTokensEstimate, lastRequest, ...stableContext } = context;
-  const route = lastRequest && { provider: lastRequest.provider, model: lastRequest.model, window: lastRequest.window };
-  return createHash('sha256').update(JSON.stringify({ ...stable, context: { ...stableContext, lastRequest: route } })).digest('hex');
+  // Request metadata accompanies the next state update; learning it does not trigger one.
+  return createHash('sha256').update(JSON.stringify({ ...stable, context: stableContext })).digest('hex');
 }
 
 export function renderRuntimeState(status) {
@@ -45,7 +45,7 @@ export function renderRuntimeState(status) {
   const lines = [`[runtime state · as of ${status.sampledAt} · event ${status.asOfSeq}]`,
     'Latest snapshot supersedes earlier runtime snapshots; it is not a task budget.',
     ...(status.turnWallElapsedMs == null ? [] : [`Turn wall time: ${Math.floor(status.turnWallElapsedMs / 1000)}s (includes tools and waiting).`]),
-    `Retained context estimate: ${c.retainedTokensEstimate ?? 'unknown'} tokens; excludes pending input and new prompt assembly.`,
+    `Retained context estimate: ${c.retainedTokensEstimate == null ? 'not yet measured' : `${c.retainedTokensEstimate} tokens`}; excludes pending input and new prompt assembly.`,
     ...(last ? [`Last confirmed request: ${last.provider}/${last.model}; window ${last.window ?? 'unknown'} (not remaining capacity).`] : []),
     `Context records: raw ${c.records.raw}, detail ${c.records.detail}, brief ${c.records.brief}; automatic replacement ${c.automaticReplace ? 'on' : 'off'}.`,
     `Jobs: ${status.jobsAvailable ? status.jobs.length : 'service unavailable'}. Delivery describes supplied content, not verification or success.`];
