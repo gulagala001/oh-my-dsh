@@ -6,6 +6,7 @@ import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'nod
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { once } from 'node:events';
+import { promptText } from '../src/cc-adaptation/texts.mjs';
 
 async function until(fn, timeout = 30000) {
   const end = Date.now() + timeout;
@@ -31,6 +32,7 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${
   writeFileSync(join(workspace, 'verify.mjs'), 'import {readFileSync} from "node:fs";import assert from "node:assert/strict";assert.ok(readFileSync("fixture.txt","utf8").startsWith("ORIGINAL_FIXTURE_42"));console.log("VERIFIED_LEDGER_FIXTURE")');
   writeFileSync(join(workspace, 'AGENTS.md'), 'Project instruction marker: PROJECT_FIXTURE.\n');
   const payloads = [], content = 'ORIGINAL_FIXTURE_42\n' + 'source material '.repeat(600);
+  const stopCases = new Map();
   let calls = 0, recallRange, recallReply;
   const provider = createServer(async (req, res) => {
     let body = ''; for await (const part of req) body += part;
@@ -44,7 +46,14 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${
       }
       chunk({ role: 'assistant', tool_calls: [{ index: 0, id: 'call-' + payloads.length, type: 'function', function: { name, arguments: JSON.stringify(args) } }] }, 'tool_calls');
     };
-    if (p.tools?.some(t => t.function.name === 'prepare_segment')) {
+    const stopKind = isMain(p) && p.messages.flatMap(m => m.role === 'user' && typeof m.content === 'string' ? [m.content] : []).join('\n').match(/TODO_STOP_(pause|unchanged)/)?.[1];
+    if (stopKind) {
+      const state = stopCases.get(stopKind); state.requests.push(p);
+      const count = state.requests.length;
+      if (count === 1) tool('todo_write', { op: 'excerpt', from: 'Run blocked fixture', to: 'Run blocked fixture', tasks: [{ title: 'Run blocked fixture', anchor: { from: 'Run blocked fixture', to: 'Run blocked fixture' } }] });
+      else if (count === 2 && stopKind === 'pause') tool('todo_write', { op: 'pause_turn', reason: 'The fixture service is unavailable; the user must start it before this task can run.' });
+      else chunk({ role: 'assistant', content: 'The fixture task is incomplete; waiting for the user to start the service.' }, 'stop');
+    } else if (p.tools?.some(t => t.function.name === 'prepare_segment')) {
       tool('prepare_segment', { summary: 'Read the fixture. Result is 42.', documents: [{ title: 'Fixture', text: 'ORIGINAL_FIXTURE_42; source fixture remains intact.' }] });
     } else if (p.tools?.some(t => t.function.name === 'submit_context_choices')) {
       tool('submit_context_choices', { choices: [] });
@@ -67,7 +76,7 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${
     res.end('data: [DONE]\n\n');
   });
   await new Promise(done => provider.listen(0, '127.0.0.1', done));
-  const settings = { 'llm-pi-ai': { providers: { fixture: { api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'TRISOUL_X_FIXTURE_KEY', models: [{ id: 'fixture', name: 'fixture', contextWindow: 1000000, maxTokens: 16384, input: ['text'] }] } } }, 'agent-default-model': { provider: 'fixture', model: 'fixture' } };
+  const settings = { 'trisoul-x': { componentAutoSetup: false }, 'llm-pi-ai': { providers: { fixture: { api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'TRISOUL_X_FIXTURE_KEY', models: [{ id: 'fixture', name: 'fixture', contextWindow: 1000000, maxTokens: 16384, input: ['text'] }] } } }, 'agent-default-model': { provider: 'fixture', model: 'fixture' } };
   writeFileSync(join(home, 'settings.yaml'), JSON.stringify(settings));
   writeFileSync(join(home, '.credentials.yaml'), JSON.stringify({ version: 1, refs: { TRISOUL_X_FIXTURE_KEY: 'fixture-key' } }), { mode: 0o600 });
   const child = spawn(process.execPath, ['scripts/start.mjs'], { cwd: new URL('../', import.meta.url), env: { ...process.env, DSH_HOME: home, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -151,6 +160,8 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${
   const mainRequests = payloads.filter(isMain);
   assert.equal(mainRequests[0].messages[0].role, 'system', 'startup injections must follow the system prompt');
   const systemText = mainRequests[0].messages[0].content;
+  assert.equal(systemText.split(promptText('runtime/job-collection.md')).length, 2, 'the adapted jobs guidance reaches the provider exactly once');
+  assert.doesNotMatch(systemText, /## Runtime state/, 'automatic state guidance remains off by default');
   const names = preset === 'omd-ptc'
     ? [...systemText.split('interface ToolArgsMap {')[1].split('interface ToolOutputMap')[0].matchAll(/^  (\w+):/gm)].map(m => m[1])
     : mainRequests[0].tools.map(t => t.function.name);
@@ -231,6 +242,32 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${
   assert.equal(updatedSystem, systemText.replace(beforeIdentity, customIdentity));
   assert.deepEqual(identityRequest.tools, mainRequests[0].tools, 'identity changes preserve every tool contract');
   await api('/settings', { identityPrompt: beforeIdentity });
+  for (const kind of ['pause', 'unchanged']) {
+    const fixture = { requests: [] }; stopCases.set(kind, fixture);
+    const stopped = await rpc('session/create', { cwd: workspace, agentPreset: preset });
+    const suffix = '?session=' + stopped.sessionId;
+    await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: stopped.sessionId, mode: 'queue', content: [{ type: 'text', text: `TODO_STOP_${kind}: Run blocked fixture.` }] });
+    const idle = await until(async () => {
+      assert.ok(fixture.requests.length <= 3, 'unchanged Todo state must not trigger an unbounded retry loop');
+      const state = await api('/state' + suffix);
+      return fixture.requests.length === 3 && state.running === 'idle' && state;
+    });
+    assert.equal(idle.tasks.length, 1); assert.equal(idle.tasks[0].done, false);
+    assert.deepEqual(await api('/better-todo' + suffix), { todo: true, verification: false });
+    const last = fixture.requests.at(-1);
+    if (kind === 'pause') assert.ok(last.messages.some(m => m.role === 'tool' && typeof m.content === 'string' && m.content.includes('paused for this turn')), 'pause executes through the real native/PTC tool path');
+    const requestTodo = preset === 'omd-ptc' ? last.messages.find(m => m.role === 'system').content : last.tools.find(t => t.function.name === 'todo_write').function.description;
+    assert.match(requestTodo, /pause_turn/);
+    await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: stopped.sessionId, mode: 'queue', content: [{ type: 'text', text: 'Continue after checking the fixture service.' }] });
+    await until(async () => {
+      assert.ok(fixture.requests.length <= 5, 'the next turn also remains bounded');
+      return fixture.requests.length === 5 && (await api('/state' + suffix)).running === 'idle';
+    });
+    const messages = fixture.requests.at(-1).messages;
+    const resumed = messages.findLastIndex(m => m.role === 'user' && m.content === 'Continue after checking the fixture service.');
+    assert.ok(resumed >= 0);
+    assert.ok(messages.slice(resumed + 1).some(m => m.role === 'user' && typeof m.content === 'string' && m.content.includes('[todo list] Unresolved tasks remain:')), 'a new turn restores reminders without changing the task');
+  }
   assert.deepEqual(readFileSync(join(sentinel, 'nested', 'keep.bin')), sentinelBytes, 'tool execution and compaction preserve unrelated directories');
   assert.equal(readFileSync(join(workspace, 'preexisting.txt'), 'utf8'), 'PRESERVE_EXISTING_PROJECT_FILE');
   assert.equal(readFileSync(join(workspace, 'fixture.txt'), 'utf8'), content);

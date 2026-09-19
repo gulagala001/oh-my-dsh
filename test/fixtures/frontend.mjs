@@ -14,10 +14,10 @@ export async function until(fn, timeout = 20000) {
   throw new Error('Frontend fixture timed out');
 }
 
-export async function frontendFixture(t, { imageBudget, versionResponse, headless = false, lifecycleTrace = false } = {}) {
+export async function frontendFixture(t, { imageBudget, versionResponse, headless = false, lifecycleTrace = false, componentAutoSetup = false, omdConfig = {}, reply } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'trisoul-frontend-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   await mkdir(home); await mkdir(workspace);
-  let nextReply, releaseReply, replyFactory;
+  let nextReply, releaseReply, replyFactory = reply;
   const provider = createServer(async (req, res) => {
     let request = ''; for await (const chunk of req) request += chunk; const payload = JSON.parse(request);
     if (payload.tools?.length && nextReply) { const waiting = nextReply; nextReply = null; await waiting; }
@@ -30,7 +30,7 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
   await writeFile(join(home, 'settings.yaml'), JSON.stringify({
     'llm-pi-ai': { providers: { fixture: { ...(imageBudget ? { maxRequestImageBytes: imageBudget } : {}), api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'FRONTEND_FIXTURE', models: [{ id: 'fixture', name: '界面预览模型', contextWindow: 1000000, maxTokens: 8192, input: ['text', 'image'] }] } } },
     'agent-default-model': { provider: 'fixture', model: 'fixture' },
-    'trisoul-x': { stateEnabled: false, probeEnabled: false, digestEvery: 1000, flushIdleMs: 3600000, computerUseNativeBinary: join(root, 'missing-native') },
+    'trisoul-x': { componentAutoSetup, stateEnabled: false, probeEnabled: false, digestEvery: 1000, flushIdleMs: 3600000, computerUseNativeBinary: join(root, 'missing-native'), computerUseChromeUserDataDir: join(root, 'chrome-profile'), ...omdConfig },
   }));
   await writeFile(join(home, '.credentials.yaml'), JSON.stringify({ version: 1, refs: { FRONTEND_FIXTURE: 'local-test-only' } }), { mode: 0o600 });
   const lifecycleFile = join(root, 'lifecycle.jsonl');
@@ -66,7 +66,8 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
   const registered = await rpc('workspace/create', { path: workspace });
   const { sessionId } = await rpc('session/create', { workspaceId: registered.workspace.workspaceId, agentPreset: 'trisoul-x' });
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '整理工作台和对话界面' }] });
-  if (headless) return { root, home, origin, rpc, sessionId, errors, lifecycle: () => readFile(lifecycleFile, 'utf8'), log: () => log.replace(/token=\S+/g, 'token=[redacted]'),
+  if (headless) return { root, home, workspace, origin, rpc, sessionId, errors, replyWith(factory) { replyFactory = factory; },
+    async api(path, body) { const r = await fetch(origin + '/trisoul-x/api' + path, { headers: { cookie, 'content-type': 'application/json' }, ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }) }); if (!r.ok) throw Error(await r.text()); return r.json(); }, lifecycle: () => readFile(lifecycleFile, 'utf8'), log: () => log.replace(/token=\S+/g, 'token=[redacted]'),
     async call(method, args) {
       const response = await fetch(origin + '/api/' + method, {
         method: 'POST', headers: { 'Content-Type': 'application/json', cookie },

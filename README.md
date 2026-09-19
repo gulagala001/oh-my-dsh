@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.1"><img src="https://img.shields.io/badge/version-0.1.6--alpha.2.1-3478F6?style=flat-square" alt="Version 0.1.6-alpha.2.1" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.2"><img src="https://img.shields.io/badge/version-0.1.6--alpha.2.2-3478F6?style=flat-square" alt="Version 0.1.6-alpha.2.2" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.6--alpha.2-475569?style=flat-square" alt="DSH 0.1.6-alpha.2" /></a>
   <a href="#support"><img src="https://img.shields.io/badge/status-early_access-64748B?style=flat-square" alt="Early access" /></a>
 </p>
@@ -24,7 +24,7 @@
   <a href="#features">功能亮点</a> ·
   <a href="#computer-use">Computer Use</a> ·
   <a href="docs/usage.md">使用指南</a> ·
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.1">版本说明</a> ·
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.2">版本说明</a> ·
   <a href="https://github.com/gulagala001/oh-my-dsh/issues">反馈问题</a>
 </p>
 
@@ -36,30 +36,32 @@ Oh My DSH 把任务、上下文、摘要、电脑和监控放进同一个工作�
 
 作为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 插件运行，沿用已有的模型配置、会话、文件、工具与技能。
 
-源码开发版还提供独立的 **`omd-ptc`** 预设：保留完整 OMD 机制，通过 `run_code` 组合工具调用。原 Oh My DSH 与宿主 PTC 预设保留。该预设尚未包含在下方固定版本中，详见[使用指南](docs/usage.md#本地开发或独立试用)。
+提供独立的 **`omd-ptc`** 预设：保留完整 OMD 机制，通过 `run_code` 组合工具调用。原 Oh My DSH 与宿主 PTC 预设保留，详见[使用指南](docs/usage.md#本地开发或独立试用)。
 
-### 内置 CodeGraph（主分支，尚未发布）
+### 内置 CodeGraph
 
 集成 [colbymchenry/codegraph](https://github.com/colbymchenry/codegraph) 1.6.0，通过 MCP 查询代码符号、源码、调用关系和变更影响。运行时随插件依赖安装，无需全局安装 CodeGraph 或运行 `codegraph install`。
 
-在 Oh My DSH 会话中说“为当前项目建立 CodeGraph 索引”，Agent 会调用 `codegraph_index`，在项目内生成 `.codegraph/`；之后可直接询问代码结构。查询默认使用会话工作目录，也可以指定其他项目。未索引的项目仍可使用普通文件与搜索工具。
+CodeGraph 默认启用，打开项目会话后自动在后台建立 `.codegraph/` 索引；可以直接询问代码结构。查询默认使用会话工作目录，也可以指定其他项目。需要手动刷新时，助手仍可调用 `codegraph_index`。
 
 按上游默认公开 `mcp__codegraph__codegraph_explore`。不同项目分别维护连接与文件监听；连接空闲一分钟后释放，下次查询重新连接并补齐变更。停止或卸载插件会关闭其进程，项目索引保留。内置实例关闭上游遥测。
 
-支持上游发行运行时覆盖的 macOS、Linux、Windows x64/arm64；安装时须保留 optional dependencies。以上内容不包含在下方已发布的 0.1.6-alpha.2.1 中。[主分支安装与 CodeGraph 使用指南](docs/usage.md#codegraph)。
+支持上游发行运行时覆盖的 macOS、Linux、Windows x64/arm64。平台运行时未随依赖安装时，会自动下载匹配版本到应用数据目录。[CodeGraph 使用指南](docs/usage.md#codegraph)。
+
+**设置 → Oh My DSH → 基础组件** 统一管理 CodeGraph、Computer Use、内置浏览器、桌面控制和 Chrome 连接。默认启用并自动准备，开关立即保存；路径等选项放在高级配置。系统权限、首次扩展加载，以及缺少系统编译工具时的处理步骤会在页面中提示。
 
 <a id="quickstart"></a>
 
 ## 快速开始
 
-本版已公开发布；[最终验证状态与已知限制](docs/release-0.1.6-alpha.2.1.md#发布状态与已知限制)包含 OpenCU 的 Windows 单项测试超时说明。
+[本版功能、验证范围与限制](docs/release-0.1.6-alpha.2.2.md)。
 
-当前 **0.1.6-alpha.2.1** 为预发布版，使用 **DSH 0.1.6-alpha.2**。下面的安装命令固定到该版本；使用旧版 DSH 0.1.5-rc.1 时，请保留 [v1.1.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1)。升级宿主请沿用原来的安装方式、profile 和 `DSH_HOME`。
+当前 **0.1.6-alpha.2.2** 为预发布版，使用 **DSH 0.1.6-alpha.2**。下面的安装命令固定到该版本；使用旧版 DSH 0.1.5-rc.1 时，请保留 [v1.1.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1)。升级宿主请沿用原来的安装方式、profile 和 `DSH_HOME`。
 
 Oh My DSH 通过 **DSH 的插件管理器**安装。已有 **DSH 0.1.6-alpha.2 Web** 时，先停止服务，然后在终端或 PowerShell 中运行：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.6-alpha.2.1
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.6-alpha.2.2
 ```
 
 按原来的方式启动：
@@ -81,24 +83,24 @@ dsh web
 <details>
 <summary>源码下载与独立开发</summary>
 
-[0.1.6-alpha.2.1 源码 ZIP](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.1.6-alpha.2.1/oh-my-dsh-v0.1.6-alpha.2.1.zip) 用于保存源码、手动部署或二次开发，包含已构建的界面。普通插件安装直接使用上面的命令即可。
+[0.1.6-alpha.2.2 源码 ZIP](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.1.6-alpha.2.2/oh-my-dsh-v0.1.6-alpha.2.2.zip) 用于保存源码、手动部署或二次开发，包含已构建的界面。普通插件安装直接使用上面的命令即可。
 
-[从源码试用](docs/usage.md#本地开发或独立试用) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.1)
+[从源码试用](docs/usage.md#本地开发或独立试用) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.2)
 
 </details>
 
-## 0.1.6-alpha.2.1 更新
+## 0.1.6-alpha.2.2 更新
 
-[适配、优化、验证与风险说明](docs/release-0.1.6-alpha.2.1.md)
+[适配、优化、验证与风险说明](docs/release-0.1.6-alpha.2.2.md)
 
-适配 DSH 0.1.6-alpha.2 的客户端和插件生命周期，优化长会话摘要索引、存档读取、统计传输及重复轮询；保留现有功能、提示词、原文、Todo、Trace 与后台频率。
+新增运行状态、后台任务优化和 Todo 暂停提醒；CodeGraph、Computer Use 在基础组件页面统一管理并自动准备。[状态与后台任务使用说明](docs/runtime-state-background.md)。
 
-[本版更新与升级说明](CHANGELOG.md#016-alpha21--2026-09-18)。本版开始使用 DSH 对齐编号，历史 `1.3.0-alpha.*` 属于旧版本；旧客户端首次可能不提示，请按上方固定版本安装。
+[本版更新与升级说明](CHANGELOG.md#016-alpha22--2026-09-19)。版本使用 DSH 对齐编号，历史 `1.3.0-alpha.*` 属于旧版本；旧客户端首次可能不提示，请按上方固定版本安装。
 
 - **上下文档案**：后台生成事实摘要与详细文档，中枢选择保留、详细替换或简要替换；请求边界应用已完成结果，原始事件仍可回查。
 - **私有与项目共享**：会话隔离仅查看自己的档案；项目共享按会话和事件时间展示摘要。全局背景由用户手填，旧自动记忆与状态提炼停止运行，旧数据保留。
 - **新版设置与侧栏**：频繁、适中、较少、自定义四档；支持摘要筛选、文档阅读、后台路由、身份恢复，以及浅深色与窄栏布局。
-- **环境说明中性化**：统一主模型与 Computer Use 的环境措辞，保留真实路径、工具契约和用户内容。内置 OpenCU 1.0.3。
+- **环境说明中性化**：统一主模型与 Computer Use 的环境措辞，保留真实路径、工具契约和用户内容。内置 OpenCU 1.0.4。
 
 当前版本：默认整窗预处理。用户消息、提醒、旧摘要和附件不会切断窗口；系统提示词及前置 CoT 原位保留，工具往返与近期保留区仍受保护。
 
@@ -144,7 +146,7 @@ todo 不参与预处理摘要，也不形成分段边界。成功应用压缩后
 
 升级前备份原 DSH 数据目录。上下文后台调用仍会产生用量，摘要不保证无损；请保留原始事件与必要的外部验证。
 
-[完整版本说明与下载](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.1) · [身份设置说明](docs/usage.md#自定义身份认知)
+[完整版本说明与下载](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.2) · [身份设置说明](docs/usage.md#自定义身份认知)
 
 <a id="features"></a>
 
@@ -239,7 +241,7 @@ Computer Use 由 [OpenCU](https://github.com/gulagala001/opencu) 提供，安装
 
 ## 平台与运行环境
 
-当前预发布版本为 **0.1.6-alpha.2.1**，适配 **DSH 0.1.6-alpha.2**。
+当前预发布版本为 **0.1.6-alpha.2.2**，适配 **DSH 0.1.6-alpha.2**。
 
 | 功能 | 当前支持 |
 | --- | --- |

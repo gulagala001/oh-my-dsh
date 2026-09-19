@@ -6,10 +6,10 @@ Windows 上使用同一套 OpenCU 工具和实时预览。内置浏览器使用�
 
 ## 安装与试用
 
-已有 **DSH 0.1.5-rc.1 Web** 时，先停止服务，在 PowerShell 7 中安装插件：
+OpenCU 1.0.4 需要 **DSH 0.1.6-alpha.2 Web**。先阅读[验证范围与限制](release-1.0.4.md)，再停止服务，在 PowerShell 7 中安装插件：
 
 ```powershell
-dsh plugin --profile web add github:gulagala001/opencu
+dsh plugin --profile web add github:gulagala001/opencu#v1.0.4
 if ($LASTEXITCODE -ne 0) { throw '插件安装失败' }
 dsh web
 ```
@@ -18,7 +18,7 @@ dsh web
 
 ### 从源码独立试用（可选）
 
-在 PowerShell 7 中进入完整源码目录。DSH 0.1.5-rc.1 的本地 `link:` 转发尚有路径含空格的限制，源码可放在 `C:\src\opencu`。
+在 PowerShell 7 中进入完整源码目录。本地 `link:` 开发建议使用不含空格的源码路径，例如 `C:\src\opencu`。
 
 ```powershell
 pnpm install --frozen-lockfile

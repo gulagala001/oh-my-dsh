@@ -92,7 +92,7 @@ export class BrowserHost extends BrowserActions {
     // keychain flags to a profile that holds the user's website logins.
     const executable = browserExecutablePath(this.executablePath);
     this.runtimePath = executable;
-    if (!existsSync(executable)) throw new Error('Browser runtime is missing. Install Chromium with: pnpm exec playwright install chromium');
+    if (!existsSync(executable)) throw new Error('Browser runtime is missing. Install the browser through the application setup controls, then try again.');
     const portFile = join(this.directory, 'DevToolsActivePort');
     let previousAddress;
     try { previousAddress = await readFile(portFile, 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; }

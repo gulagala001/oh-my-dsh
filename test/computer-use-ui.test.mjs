@@ -58,7 +58,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   await writeFile(join(home, 'settings.yaml'), JSON.stringify({
     'llm-pi-ai': { providers: { fixture: { api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'CU_UI_FIXTURE', models: [{ id: 'fixture', name: 'fixture', contextWindow: 1000000, maxTokens: 8192, input: ['text', 'image'] }, { id: 'text-fixture', name: '仅文本验收模型', contextWindow: 1000000, maxTokens: 8192, input: ['text'] }] } } },
     'agent-default-model': { provider: 'fixture', model: 'fixture' },
-    'trisoul-x': { computerUseBrowserExecutable: testBrowser, stateEnabled: false, probeEnabled: false, digestEvery: 1000, flushIdleMs: 3600000, computerUseChromeUserDataDir: join(root, 'external-profile'),computerUseNativeBinary:nativeBinary },
+    'trisoul-x': { componentAutoSetup: false, computerUseBrowserExecutable: testBrowser, stateEnabled: false, probeEnabled: false, digestEvery: 1000, flushIdleMs: 3600000, computerUseChromeUserDataDir: join(root, 'external-profile'),computerUseNativeBinary:nativeBinary },
   }));
   await writeFile(join(home, '.credentials.yaml'), JSON.stringify({ version: 1, refs: { CU_UI_FIXTURE: 'local-test-only' } }), { mode: 0o600 });
   const child = spawn(process.execPath, ['scripts/start.mjs'], { cwd: new URL('../', import.meta.url), env: { ...process.env, DSH_HOME: home, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });

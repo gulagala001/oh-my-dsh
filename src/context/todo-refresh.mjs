@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { latestTodo, isTaskInjection, withoutTodo, TODO_META } from '../task-context.mjs';
+import { latestTaskContext, isTaskInjection, withoutTodo, TODO_META } from '../task-context.mjs';
 import { contentChars, messageTokens } from './materials.mjs';
 
 function operationMessage(op) {
@@ -13,7 +13,7 @@ function operationMessage(op) {
 export function attachTodoRefresh(session, tx, pricing) {
   if (!tx || tx.todoRefreshVersion) return tx;
   tx.todoRefreshVersion = 1;
-  const todo = latestTodo(session);
+  const todo = latestTaskContext(session);
   if (!todo) return tx;
   const nodes = session.surface.nodes.map(seq => ({ key: seq, message: session.deriveEventMessage(session.eventAt(seq)), event: session.eventAt(seq) }));
   const originalTodos = nodes.filter(n => isTaskInjection(n.event) || n.message?.[TODO_META]);
@@ -28,7 +28,7 @@ export function attachTodoRefresh(session, tx, pricing) {
   const base = withoutTodo(target.message), index = base.source?.plugin === 'trisoul-x:trace' ? 1 : 0;
   const id = randomUUID(), content = [...base.content]; content.splice(index, 0, { type: 'text', text: todo.text });
   const fresh = { ...base, id, content, source: base.source?.kind === 'user' ? { kind: 'plugin', plugin: 'trisoul-x:todo-prefix' } : base.source,
-    [TODO_META]: { baseId: base.id, baseSource: base.source, index, snapshotSeq: todo.snapshotSeq,
+    [TODO_META]: { baseId: base.id, baseSource: base.source, index, snapshotSeq: todo.snapshotSeq, context: todo.meta,
       originalSeq: target.message[TODO_META]?.originalSeq ?? (typeof target.key === 'number' ? target.key : null) } };
   const account = (node, after) => {
     if (typeof node.key === 'number') {

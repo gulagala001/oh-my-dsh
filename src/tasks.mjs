@@ -24,7 +24,8 @@ const VERIFICATION_LINK_SCHEMA = { type: 'object', required: ['task', 'kind'], p
 export const TASK_DESCRIPTION = promptText('tools/todo-write.md');
 export const TASK_PARAMETERS = {
   type: 'object', required: ['op'], properties: {
-    op: {"type":"string","enum":["excerpt","add","edit","remove","check","view","transcript"],"description":"Operation kind"},
+    op: {"type":"string","enum":["excerpt","add","edit","remove","check","view","transcript","pause_turn"],"description":"Operation kind"},
+    reason: { type: 'string', description: 'Required for pause_turn: the concrete blocker or user stop request, and what is needed to continue. Tasks and evidence remain unchanged.' },
     from: {"type":"string","description":"Required for excerpt: opening words of the block, verbatim, unique within its message"},
     to: {"type":"string","description":"Required for excerpt: closing words of the block, verbatim, unique within its message"},
     msg: {"type":"integer","description":"Only for excerpt when the quote appears in more than one user message: which message, using the [n] numbering from op:transcript"},
@@ -40,6 +41,7 @@ export const TASK_PARAMETERS = {
     { properties: { op: { const: 'edit' }, tasks: { items: { required: ['id'] } } }, required: ['tasks'] },
     { properties: { op: { const: 'remove' } }, required: ['ids'] },
     { properties: { op: { const: 'check' } }, required: ['updates'] },
+    { properties: { op: { const: 'pause_turn' } }, required: ['reason'] },
     { properties: { op: { enum: ['view', 'transcript'] } } },
   ],
 };

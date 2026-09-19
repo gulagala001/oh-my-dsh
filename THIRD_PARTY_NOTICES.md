@@ -8,6 +8,8 @@ The whale contours in `src/client/brand.mjs` are adapted from the animated whale
 
 Source: https://github.com/deepseek-ai/deepseek-harness
 
+The component sources under `vendor/dsh` and generated host/browser artifacts are based on DSH 0.1.6-alpha.2, commit `ddefc45fbc7f8e46dd73185e68295696d1297887`. OMD adds optional background job controls and a wait-aware composer. The source changes, license and checksum manifest are included with the distribution; see `vendor/dsh/README.md`.
+
 MIT License
 
 Copyright (c) 2026 DeepSeek

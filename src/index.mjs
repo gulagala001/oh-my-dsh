@@ -17,6 +17,10 @@ import { message } from './hub.mjs';
 import { join } from 'node:path';
 import { acquireComputerUse } from '#opencu/integration';
 import { CodegraphRuntime } from './codegraph.mjs';
+import { Components, mountComponents } from './components.mjs';
+import { runtimeContext } from './runtime-state.mjs';
+import { setRuntimeContext } from './task-context.mjs';
+import { installBackground } from './background.mjs';
 
 export { Config };
 export const name = 'trisoul-x';
@@ -28,20 +32,26 @@ export function apply(ctx, config) {
   installLoaderLifecycleCompatibility(ctx);
   installToolSchedulerCompatibility(ctx);
   const hub = new Hub(ctx, config);
-  hub.codegraph = new CodegraphRuntime();
+  hub.codegraph = new CodegraphRuntime({ cacheDir: join(hub.store.dir, 'components', 'codegraph'), enabled: config.codegraphEnabled !== false, autoInstall: config.componentAutoSetup !== false });
   ctx.effect(() => () => hub.codegraph.dispose());
   const versionService = createVersionService();
   ctx.effect(() => () => versionService.dispose());
   ctx.settings.installSection(ctx, NS, Config, config, { setSource: source => { hub.getConfig = source; }, onChange() {
     if (hub.computerUse) void hub.computerRefresh().catch(error => ctx.logger.warn(error.message));
+    if (hub.components) void hub.components.reconfigure().catch(error => ctx.logger.warn(error.message));
     hub.context.reconfigure();
   } });
   const computer = acquireComputerUse(ctx, { getConfig: () => hub.config(), dataDir: join(hub.store.dir, 'computer-use') });
   hub.computerUse = computer.computerUse; hub.computerRefresh = computer.refresh; hub.computerImages = computer.computerImages;
+  hub.components = new Components(ctx, hub, computer);
+  mountComponents(ctx, hub.components);
+  ctx.effect(() => { hub.components.start(); return () => hub.components.close(); });
   const isX = session => ['trisoul-x', 'omd-ptc'].includes(ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset);
+  installBackground(ctx, hub, isX);
   installImageBudget(ctx, isX);
   installTraceCleanup(ctx, isX, hub.context);
   ctx.on('system-prompt/assemble', async (_assembly, context, next) => {
+    if (context?.agent) hub.prepareBackground(context.agent);
     const assembly = await next();
     // Children inherit the preset; stock sessions and non-agent calls stay exact.
     if (!context?.agent || !isX(context.agent.session)) return assembly;
@@ -55,14 +65,20 @@ export function apply(ctx, config) {
   ctx.on('agent/request', async ({ agent }, next) => { if (isX(agent.session)) hub.requestStarts.set(agent.session.id, Date.now()); return next(); }, { global: true });
   ctx.on('agent/assistant-stream', ({ agent, frame }) => { if (frame.type === 'start' && isX(agent.session)) hub.captureFrame(agent, frame.turn, frame.step); }, { global: true });
   ctx.on('agent/pre-step', async ({ agent, messages, signal, turn, step }, next) => {
+    if (!isX(agent.session) && !signal.aborted && hub.agents.has(agent.session.id)) {
+      setRuntimeContext(agent.session, () => null);
+      await hub.context.stripRuntime(agent.session);
+    }
     if (isX(agent.session) && !signal.aborted && agent.session.header.origin !== 'subagent') {
       ensureSystemHead(agent.session, { turn, step });
       restoreTaskProjection(ctx, agent.session);
       const state = hub.store.state(agent.session.id);
       if (state.memoryScope == null) { state.memoryScope = hub.config().memoryScope; hub.store.save(state); }
       hub.agents.set(agent.session.id, agent);
+      hub.components.project(agent.session.header.cwd);
       // A pending write-ahead transaction must finish before sending another request.
       // Only an explicitly queued full-compaction command can await model work here.
+      setRuntimeContext(agent.session, () => runtimeContext(agent, hub, { messages }));
       await hub.context.preStep(agent, signal);
       if (hub.todoStore) {
         hub.todoStore.maintainInjection(agent.session);
@@ -96,6 +112,7 @@ export function apply(ctx, config) {
     state.memoryScope ??= hub.config().memoryScope;
     state.cwd = agent.session.header.cwd; state.parentSession = agent.session.header.parentSession;
     hub.store.save(state); hub.agents.set(agent.session.id, agent); hub.context.start(agent);
+    hub.components.project(agent.session.header.cwd);
   }, { global: true });
   ctx.on('session/event', (session, event) => {
     if (!isX(session)) return;
@@ -111,6 +128,12 @@ export function apply(ctx, config) {
         const session = agent?.session ?? (id ? ctx.sessions.get(id) : undefined);
         const stored = id ? hub.store.state(id) : undefined;
         const scopeSession = session ?? { id: id || 'settings', header: { cwd: stored?.cwd || process.cwd() } };
+        if (url.pathname === '/trisoul-x/api/background-wait' && req.method === 'GET') {
+          const denied = ctx.get('connection')?.requestRejection(req);
+          if (denied !== undefined) { res.writeHead(denied); res.end(); return; }
+          res.setHeader('Cache-Control', 'no-store');
+          send(res, 200, { waiting: hub.backgroundWaiting(agent) }); return;
+        }
         if (await handleContextApi({ hub, ctx, req, res, url, session, agent, id, send, readBody })) return;
         if (url.pathname === '/trisoul-x/api/better-todo') {
           if (!id) { send(res, 400, { error: '请选择一个会话' }); return; }

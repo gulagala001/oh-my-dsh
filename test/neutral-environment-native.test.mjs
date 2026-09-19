@@ -58,7 +58,7 @@ for (const mode of ['native', 'ptc', 'both']) test(`actual provider payloads: ne
   });
   await new Promise(r => provider.listen(0, '127.0.0.1', r));
   const identity = 'You are zcode\n\nYou are an interactive agent that helps users with software engineering tasks.';
-  const settings = { 'llm-pi-ai': { providers: { fixture: { api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'NEUTRAL_FIXTURE_KEY', models: [{ id: 'fixture', name: 'fixture', contextWindow: 1000000, maxTokens: 4096, input: ['text'] }] } } }, 'agent-default-model': { provider: 'fixture', model: 'fixture' }, 'trisoul-x': { identityPrompt: identity, contextEnabled: false, computerUseEnabled: false } };
+  const settings = { 'llm-pi-ai': { providers: { fixture: { api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'NEUTRAL_FIXTURE_KEY', models: [{ id: 'fixture', name: 'fixture', contextWindow: 1000000, maxTokens: 4096, input: ['text'] }] } } }, 'agent-default-model': { provider: 'fixture', model: 'fixture' }, 'trisoul-x': { componentAutoSetup: false, identityPrompt: identity, contextEnabled: false, computerUseEnabled: false } };
   writeFileSync(join(home, 'settings.yaml'), JSON.stringify(settings));
   writeFileSync(join(home, '.credentials.yaml'), JSON.stringify({ version: 1, refs: { NEUTRAL_FIXTURE_KEY: 'test-only' } }), { mode: 0o600 });
   t.after(async () => {

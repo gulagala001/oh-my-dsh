@@ -11,7 +11,7 @@ test('UI builds from a checkout whose path contains spaces', t => {
   const dir = mkdtempSync(join(tmpdir(), 'trisoul x build-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   mkdirSync(join(dir, 'scripts'));
-  cpSync(join(root, 'scripts', 'build.mjs'), join(dir, 'scripts', 'build.mjs'));
+  for (const script of ['build.mjs', 'build-host.mjs']) cpSync(join(root, 'scripts', script), join(dir, 'scripts', script));
   cpSync(join(root, 'src', 'client'), join(dir, 'src', 'client'), { recursive: true });
   cpSync(join(root, 'src', 'cc-adaptation'), join(dir, 'src', 'cc-adaptation'), { recursive: true });
   cpSync(join(root, 'src', 'frequency.mjs'), join(dir, 'src', 'frequency.mjs'));

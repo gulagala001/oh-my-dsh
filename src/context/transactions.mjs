@@ -132,6 +132,17 @@ export async function applyTransaction(session, state, tx, store, adapter) {
     state.records = tx.records; state.traceSlot = tx.traceSlot;
     if (tx.todoRefresh) state.todoRefresh = { ...tx.todoRefresh, carrierSeq: tx.applied[tx.todoRefresh.operationId], at: Date.now() };
     if (tx.statePatch) Object.assign(state, tx.statePatch);
+    if (tx.source === 'runtime-disable') {
+      // Only our control text changed. Preserve prepared decisions and cadence,
+      // rebasing their observations over the equivalent retained material.
+      for (const choice of state.pending?.choices || []) choice.observed = choice.ids.map(id => {
+        const r = state.records.find(r => r.id === id), span = r && liveSpan(session, r);
+        return span ? { id, version: r.version, carrierSeq: r.carrierSeq ?? null, mode: r.mode, start: span.start,
+          sourceHash: r.sourceHash, snapshot: recordSnapshot(session, r) } : null;
+      });
+      state.transaction = null; store.save(state);
+      return { id: tx.id, source: tx.source, changed: true };
+    }
     state.pending = null; state.transaction = null;
     state.lastReplacementStep = state.steps;
     const native = tx.operations.filter(o => o.native);

@@ -190,6 +190,73 @@ export function createContextUI(React) {
     }
   }
 
+  class ComponentsPanel extends React.Component {
+    state = { data: null, error: '', loadError: '', busy: false, paths: null, saved: '' };
+    componentDidMount() { this.alive = true; this.poll(); }
+    componentWillUnmount() { this.alive = false; clearTimeout(this.timer); this.request?.abort(); }
+    call = async body => {
+      const response = await fetch('/trisoul-x/components', body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { signal: this.request?.signal });
+      const value = await response.json(); if (!response.ok) throw Error(value.error || '读取组件状态失败'); return value;
+    };
+    poll = async () => {
+      const epoch = this.epoch || 0;
+      this.request = new AbortController();
+      try { const data = await this.call(); if (this.alive && !this.state.busy && epoch === (this.epoch || 0)) this.setState({ data, loadError: '' }); }
+      catch (error) { if (this.alive && epoch === (this.epoch || 0)) this.setState({ loadError: error.message }); }
+      if (this.alive) this.timer = setTimeout(this.poll, document.hidden ? 15000 : 2500);
+    };
+    act = async body => {
+      if (this.state.busy) return;
+      this.epoch = (this.epoch || 0) + 1;
+      const patch = body.patch || {}, previous = this.state.data;
+      const data = { ...previous, ...(typeof patch.componentAutoSetup === 'boolean' ? { automatic: patch.componentAutoSetup } : {}),
+        codegraph: { ...previous.codegraph, ...(typeof patch.codegraphEnabled === 'boolean' ? { enabled: patch.codegraphEnabled } : {}) },
+        computerUse: { ...previous.computerUse, ...(typeof patch.computerUseEnabled === 'boolean' ? { enabled: patch.computerUseEnabled } : {}) } };
+      this.setState({ data, busy: true, error: '', saved: '' });
+      try { const data = await this.call(body); if (this.alive) this.setState({ data, ...(body.patch && Object.keys(body.patch).some(k => k !== 'computerUseEnabled' && k.startsWith('computerUse')) ? { paths: null, saved: '路径已保存，重启服务后生效。' } : { saved: body.action === 'settings' ? '已保存' : '' }) }); }
+      catch (error) { let actual = previous; try { actual = await this.call(); } catch {} if (this.alive) this.setState({ data: actual, error: error.message }); }
+      finally { if (this.alive) this.setState({ busy: false }); }
+    };
+    toggle = (key, label, value, hint) => h('label', { className: 'cx-toggle' }, h('span', null, h('strong', null, label), h('small', null, hint)), h('input', { type: 'checkbox', role: 'switch', 'aria-label': label, checked: value, disabled: this.state.busy, onChange: e => this.act({ action: 'settings', patch: { [key]: e.target.checked } }) }));
+    prepare = component => this.act({ action: 'prepare', component });
+    copy = async text => { try { await navigator.clipboard.writeText(text); this.setState({ saved: '已复制' }); } catch (error) { this.setState({ error: error.message }); } };
+    row(title, ready, operation, hint, action) {
+      const preparing = operation?.status === 'preparing', error = operation?.error;
+      return h('div', { className: 'cx-component-row' }, h('div', { className: 'cx-row' }, h('strong', null, title), badge(preparing ? '正在准备' : error ? '需要处理' : ready ? '已就绪' : '待准备', ready && !error ? 'blue' : undefined)), h('p', { className: 'cx-hint' }, error || hint), !preparing && action);
+    }
+    render() {
+      const { data: d, error, loadError, busy, saved } = this.state;
+      if (!d) return h('div', { className: 'cx-body' }, alert(error, true), empty('正在检查基础组件', '安装、启动与权限集中在这里。', 'settings'));
+      const cg = d.codegraph, cu = d.computerUse, setup = cu.setup, native = setup?.native, extension = setup?.extension, install = extension?.installation;
+      const paths = this.state.paths || cu.paths;
+      const retry = (component, label = '重新准备') => button(label, () => this.prepare(component), { disabled: busy, quiet: true, icon: 'refresh' });
+      const nativeReady = native?.installed && !native.error && (native.platform === 'win32' ? native.interactive && native.captureSupported : native.accessibility && native.screenRecording);
+      return h('div', { className: 'cx-body cx-components' }, alert(error || loadError || cu.error || cg.error, true),
+        h('p', { className: 'cx-hint' }, d.automatic ? '组件默认启用，运行依赖自动准备。开关立即保存；需要系统授权时会在下面提示。' : '启动时自动准备依赖已关闭，可在下方手动准备。开关立即保存。'),
+        section('代码理解', '自动为当前项目建立索引，后续修改自动同步。', h(React.Fragment, null,
+          this.toggle('codegraphEnabled', 'CodeGraph', cg.enabled, '无需全局安装或配置 MCP。索引保存在项目的 .codegraph 目录。'),
+          cg.enabled && this.row('运行环境', cg.installed, cg.operation, cg.installed ? '已自动准备' : '正在准备适合本机的运行环境', !cg.installed || cg.operation?.error || cg.error ? retry('codegraph') : null),
+          cg.enabled && !cg.projects.length && h('p', { className: 'cx-hint' }, '打开项目会话后自动开始准备。'),
+          cg.enabled && cg.projects.map(p => h('div', { className: 'cx-component-project', key: p.path }, h('div', { className: 'cx-row' }, h('code', { className: 'cx-component-path' }, p.path), badge(p.status === 'ready' ? '索引就绪' : p.status === 'error' ? '准备失败' : '正在建索引')), p.error && h('p', { className: 'cx-hint' }, p.error), p.status === 'error' && button('重试索引', () => this.act({ action: 'index', path: p.path }), { disabled: busy, quiet: true }))))),
+        section('电脑操控', '浏览器、桌面控制和日常 Chrome 连接。', h(React.Fragment, null,
+          this.toggle('computerUseEnabled', 'Computer Use', cu.enabled, '准备完成后即可在对话中使用。'),
+          cu.enabled && this.row('内置浏览器', setup?.browser.installed, cu.operations.browser, '使用独立的浏览器配置，首次打开时启动。', !setup?.browser.installed || cu.operations.browser?.error ? retry('browser', '安装浏览器') : null),
+          cu.enabled && (native?.supported ? this.row('桌面控制', nativeReady, cu.operations.native,
+            native?.error || (!native?.installed ? native?.platform === 'win32' ? '自动编译桌面控制；本机需要 .NET 10 SDK。' : '自动安装桌面控制；本机需要 Apple Command Line Tools。' : nativeReady ? '可操作所选应用' : native.platform === 'win32' ? '请保持桌面已登录并解锁。' : '请为 Oh My DSH Computer Use 开启辅助功能和屏幕录制权限。'),
+            h('div', { className: 'cx-actions' }, (!native.installed || native.updateAvailable || native.repairRequired || cu.operations.native?.error) && retry('native', native.installed ? '更新或修复' : '安装桌面控制'), native.installed && native.platform !== 'win32' && !nativeReady && button('打开系统权限设置', () => this.act({ action: 'permissions' }), { disabled: busy, icon: 'settings' }))) : h('p', { className: 'cx-hint' }, '此平台可使用浏览器；原生桌面控制暂不支持。')),
+          cu.enabled && this.row('日常 Chrome', !!extension?.browsers?.length && !install?.reloadRequired, cu.operations.extension,
+            install?.reloadRequired ? '扩展已更新，请在 Chrome 扩展页重新加载。' : extension?.browsers?.length ? '已连接，可使用已有网页和登录状态。' : install?.prepared ? '连接程序已准备好。首次在 Chrome 的 chrome://extensions 开启开发者模式，再加载下方目录。' : '自动准备连接程序；也可直接使用内置浏览器。',
+            install?.supported && (!install.prepared || cu.operations.extension?.error) ? retry('extension', '准备 Chrome 连接') : null),
+          cu.enabled && install?.prepared && (!extension?.browsers?.length || install.reloadRequired) && h('div', { className: 'cx-component-project' }, h('code', { className: 'cx-component-path' }, install.extensionPath), h('div', { className: 'cx-actions' }, button('复制扩展目录', () => this.copy(install.extensionPath), { quiet: true }), button('复制扩展页地址', () => this.copy('chrome://extensions'), { quiet: true }))))),
+        fold('高级配置', '通常无需修改；自定义路径重启后生效。', h(React.Fragment, null,
+          this.toggle('componentAutoSetup', '启动时自动准备依赖', d.automatic, '关闭后仍可使用上面的准备按钮。'),
+          ...[['computerUseBrowserExecutable', '浏览器程序路径'], ['computerUseChromeUserDataDir', 'Chrome 用户数据目录'], ['computerUseNativeBinary', '桌面控制程序路径'], ['computerUseNativeSocket', '桌面连接 Socket']].map(([key, label]) => field(label, h('input', { value: paths[key] || '', placeholder: '自动检测', onChange: e => this.setState({ paths: { ...paths, [key]: e.target.value } }) }))),
+          button('保存自定义路径', () => this.act({ action: 'settings', patch: this.state.paths }), { disabled: busy || !this.state.paths }),
+          button('检查并准备所有组件', () => this.prepare(), { disabled: busy, quiet: true, icon: 'refresh' }))),
+        saved && h('p', { className: 'cx-save-status', role: 'status' }, saved));
+    }
+  }
+
   class ContextSettings extends React.Component {
     state = { config: null, directory: [], page: 'basic', custom: false, routing: 'follow', error: '', status: '', busy: false, globalText: '', globalSaved: '', globalRevision: 0, globalLoaded: false, globalError: '', globalStatus: '' };
     componentDidMount() { this.alive = true; this.loadSettings(); this.loadGlobal(); }
@@ -271,6 +338,8 @@ export function createContextUI(React) {
         section('CoT 前置', null, h(React.Fragment, null,
           this.toggle('traceEnabled', '启用 CoT 前置', '上下文替换时保留提供方已公开的推理文本，不另行生成；可能扩大缓存失效范围。'),
           this.number('traceMaxChars', '推理文本字符上限', 0, '0 保留所选推理全文；正数保留尾部并标注截取。'))),
+        section('运行状态', null, this.toggle('stateHintsEnabled', '向模型提供运行状态', '与待办一起投递时间、上下文与后台任务状态。默认关闭，保存后从下一次请求生效。')),
+        section('后台任务', null, this.toggle('backgroundTasksEnabled', '优化后台任务与等待', '长命令自动让出、完成结果预览和可中断等待；需要本版配套 DSH 运行时。默认关闭。')),
         section('任务约束', null, this.toggle('todoConstraintFirst', '任务约束前置（CFR）', '在系统和待办工具提示词中加入约束提取、推导与核对规则。默认关闭，保存后从下一次模型请求生效。')));
     }
     renderAdvanced() {
@@ -280,7 +349,6 @@ export function createContextUI(React) {
         fold('整窗预算与后台额度', '一次触发可以处理多窗；剩余积压单独记录，不无限补历史。', h('div', { className: 'cx-grid' }, this.number('prepareBatchWindows', '每次触发最多处理窗口数', 1), this.number('prepareContinueTokens', '续跑最低文本量 · 估算 tokens', 1, '后续窗口需装满新的实际消息，或达到该文本量；零碎尾巴留到下次，不含参考前文与旧摘要。'), this.number('prepareInputTokens', '单窗输入预算 · 估算 tokens', 1), this.number('summaryTargetChars', '基础摘要目标 · 字符', 1, '超过目标两倍时重试，不直接截断原文。'), this.number('backgroundConcurrency', '后台最大并发调用', 1), this.number('backgroundMaxRetries', '自动重试次数', 0))),
         fold('中枢与请求替换', '判断频率、近期原文和自动应用间隔', h(React.Fragment, null, h('div', { className: 'cx-grid' }, this.number('coordinatorEvery', '中枢频率 · 新摘要数', 1), this.number('coordinatorMinGapMs', '中枢最短间隔 · 秒', 0, undefined, 1000), this.number('coordinatorRecentEvents', '中枢近期原文窗口', 0), this.number('surgeryCooldownSteps', '自动替换最短步数', 0), this.number('keepTailEvents', '暂留近期事件数', 0)), this.toggle('requireShorter', '替换后的总量应更小', '将摘要、详细资料和前置 Trace 一起计算。'))),
         fold('资源上限', '0 使用原有默认语义', h('div', { className: 'cx-grid' }, this.number('digestMaxTokens', '预处理输出 Token 上限', 0, '0 使用提供方默认。'), this.number('surgeonMaxTokens', '中枢输出 Token 上限', 0), this.number('jobTimeoutMs', '后台超时 · 秒', 0, '默认 600 秒（10 分钟）；0 不设置插件超时。', 1000))),
-        fold('电脑操控', '沿用原有浏览器与桌面连接设置', h(React.Fragment, null, this.toggle('computerUseEnabled', '启用电脑操控', '任务和电脑面板仍使用原有功能。'), ...[['computerUseBrowserExecutable', '浏览器程序路径'], ['computerUseChromeUserDataDir', '浏览器用户数据目录'], ['computerUseNativeBinary', '桌面控制程序路径'], ['computerUseNativeSocket', '桌面连接 Socket']].map(([key, label]) => field(label, h('input', { value: c[key] || '', placeholder: '自动检测 / 原有默认', onChange: e => this.set(key, e.target.value) }))))),
         h('p', { className: 'cx-footnote' }, '旧探针、自动全局记忆和旧状态提炼参数仅保留兼容读取，不再显示为可运行功能。'));
     }
     renderModels() {
@@ -303,8 +371,8 @@ export function createContextUI(React) {
       const isGlobal = page === 'global', globalDirty = this.state.globalText !== this.state.globalSaved;
       const footStatus = isGlobal ? this.state.globalStatus || (globalDirty ? '有未保存的更改' : '仅用户手动维护') : status || (dirty ? '有未保存的更改' : '已与当前设置同步');
       return h('div', { className: 'cx-panel cx-settings', 'data-context-ui': CONTEXT_UI_VERSION }, heading('偏好设置', '模型、上下文与项目摘要', 'settings'),
-        pageTabs(page, [['basic', '常用'], ['models', '模型与身份'], ['experimental', '实验性功能'], ['advanced', '高级'], ['global', '全局背景']], value => this.setState({ page: value })),
-        !c ? h('div', { className: 'cx-body' }, alert(error, true), empty('正在读取设置', '保留已保存的参数，不自动套用任何档位。'), error && button('重试', this.loadSettings, { icon: 'refresh' })) : h('form', { className: 'cx-settings-form', onSubmit: isGlobal ? e => { e.preventDefault(); this.saveGlobal(); } : this.save },
+        pageTabs(page, [['basic', '常用'], ['components', '基础组件'], ['models', '模型与身份'], ['experimental', '实验性功能'], ['advanced', '高级'], ['global', '全局背景']], value => this.setState({ page: value })),
+        page === 'components' ? h(ComponentsPanel) : !c ? h('div', { className: 'cx-body' }, alert(error, true), empty('正在读取设置', '保留已保存的参数，不自动套用任何档位。'), error && button('重试', this.loadSettings, { icon: 'refresh' })) : h('form', { className: 'cx-settings-form', onSubmit: isGlobal ? e => { e.preventDefault(); this.saveGlobal(); } : this.save },
           h('div', { className: 'cx-body' }, alert(error, true), h('fieldset', { className: 'cx-fields', disabled: busy }, page === 'basic' ? this.renderBasic() : page === 'models' ? this.renderModels() : page === 'experimental' ? this.renderExperimental() : page === 'advanced' ? this.renderAdvanced() : this.renderGlobal())),
           h('footer', { className: 'cx-savebar' }, h('span', { className: 'cx-save-status', role: 'status' }, icon(status || this.state.globalStatus ? 'check' : 'info', 13), footStatus), h('div', { className: 'cx-actions' },
             button('撤销', isGlobal ? () => this.setState({ globalText: this.state.globalSaved, globalStatus: '' }) : this.undo, { quiet: true, disabled: busy || !(isGlobal ? globalDirty : dirty) }),
@@ -397,6 +465,7 @@ export const CONTEXT_CSS = `
 .cx-radio{display:grid;place-items:center;width:14px;height:14px;border:1px solid var(--cx-line);border-radius:50%}.cx-radio svg{visibility:hidden}.cx-choice[aria-pressed=true] .cx-radio{color:#fff;background:#2864d7;border-color:#2864d7}.cx-choice[aria-pressed=true] .cx-radio svg{visibility:visible}
 .cx-route{margin-top:15px;border:1px solid var(--cx-line);border-radius:11px;padding:14px}.cx-route-label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;margin-bottom:7px;color:var(--cx-muted)}
 .cx-fold{margin:12px 0;border:1px solid var(--cx-line);border-radius:11px;overflow:hidden}.cx-fold>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px;cursor:pointer;list-style:none}.cx-fold>summary::-webkit-details-marker{display:none}.cx-fold>summary strong{display:block;font-size:12px;font-weight:550}.cx-fold>summary small{display:block;font-size:10px;color:var(--cx-muted);margin-top:4px}.cx-fold>summary>svg{color:var(--cx-muted);transition:transform .14s}.cx-fold[open]>summary>svg{transform:rotate(90deg)}.cx-fold[open]>summary{border-bottom:1px solid var(--cx-line);background:var(--cx-soft)}.cx-fold-body{padding:11px 15px 16px}
+.cx-component-row{padding:14px 0;border-top:1px solid var(--cx-line)}.cx-component-row>.cx-row{justify-content:space-between}.cx-component-project{padding:10px 12px;margin:8px 0;background:var(--cx-soft);border-radius:8px}.cx-component-path{display:block;min-width:0;overflow-wrap:anywhere;font-size:11px}.cx-component-project>.cx-row{align-items:flex-start;justify-content:space-between;gap:12px}.cx-components>.cx-hint{margin-bottom:20px}
 .cx-info{display:flex;align-items:flex-start;gap:10px;margin:16px 0;padding:12px 14px;border-radius:9px;background:var(--cx-soft);color:var(--cx-muted);font-size:11px;line-height:1.8}.cx-info svg{margin-top:2px;color:var(--cx-blue)}
 .cx-pill{display:inline-flex;align-items:center;white-space:nowrap;font-size:10px;line-height:1.6;font-weight:500;padding:3px 8px;border:1px solid var(--cx-line);border-radius:6px;background:var(--cx-soft);color:var(--cx-muted)}.cx-tone-blue{color:var(--cx-blue);border-color:color-mix(in srgb,var(--cx-blue) 18%,var(--cx-bg));background:var(--cx-tint)}
 .cx-savebar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0;padding:12px 20px;border-top:1px solid var(--cx-line);background:var(--cx-bg);box-shadow:0 -6px 18px color-mix(in srgb,var(--cx-bg) 85%,transparent)}.cx-save-status{display:flex;align-items:center;gap:6px;min-width:0;color:var(--cx-muted);font-size:10px}.cx-actions{display:flex;align-items:center;gap:7px;flex-shrink:0;flex-wrap:wrap}.cx-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}

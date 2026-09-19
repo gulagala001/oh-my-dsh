@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, rm, access, realpath } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm, access, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { CodegraphRuntime, codegraphCommand, projectDirectory } from '../src/codegraph.mjs';
-import { apply } from '../src/codegraph-agent.mjs';
+import { apply, CODEGRAPH_GUIDE, CODEGRAPH_DISABLED_GUIDE } from '../src/codegraph-agent.mjs';
 
 const text = result => result.content.filter(item => item.type === 'text').map(item => item.text).join('\n');
 const alive = pid => { try { process.kill(pid, 0); return true; } catch { return false; } };
@@ -21,6 +21,7 @@ test('bundled CodeGraph: native catalog, project isolation, indexing, live sync,
   const a = join(root, 'project a'), b = join(root, '项目 b');
   await mkdir(a); await mkdir(b);
   await writeFile(join(a, 'entry.ts'), 'export function uniqueAlpha() { return "ALPHA_ONLY"; }\nexport function entry() { return uniqueAlpha(); }\n');
+  await writeFile(join(a, 'AGENTS.md'), 'Keep this project instruction intact.\n');
   await writeFile(join(b, 'entry.ts'), 'export function uniqueBeta() { return "BETA_ONLY"; }\n');
   await access(codegraphCommand().command);
 
@@ -34,9 +35,10 @@ test('bundled CodeGraph: native catalog, project isolation, indexing, live sync,
   assert.ok(!explore.parameters.required.includes('projectPath'));
   assert.ok(sections.every(section => section.interpolate === false));
 
-  const missing = await runtime.call('codegraph_explore', { query: 'uniqueAlpha' }, { cwd: a });
-  assert.match(text(missing), /not initialized|not indexed|no.*index|no.*codegraph|init/i);
-  await assert.rejects(access(join(a, '.codegraph')), 'query does not implicitly index');
+  const initial = await runtime.call('codegraph_explore', { query: 'uniqueAlpha' }, { cwd: a });
+  assert.match(text(initial), /ALPHA_ONLY/);
+  await access(join(a, '.codegraph'));
+  assert.equal(await readFile(join(a, 'AGENTS.md'), 'utf8'), 'Keep this project instruction intact.\n');
   await definitions.find(tool => tool.name === 'codegraph_index').execute({}, { agent: { session: { header: { cwd: a } } } });
   await runtime.index({}, { cwd: b });
   await writeFile(join(b, 'sync.ts'), 'export function manualSyncSymbol() { return "MANUAL_SYNC"; }\n');
@@ -103,4 +105,74 @@ test('CodeGraph path validation and idle release', { timeout: 40_000 }, async t 
   await runtime.call('codegraph_explore', { query: 'x' }, { cwd: directory });
   const pid = [...runtime.processes][0].transport.pid;
   await until(() => runtime.connections.size === 0 && runtime.processes.size === 0 && !alive(pid));
+});
+
+test('automatic project preparation is shared and component toggles can restart it', { timeout: 40000 }, async t => {
+  const root = await mkdtemp(join(tmpdir(), 'codegraph-auto-')), runtime = new CodegraphRuntime();
+  t.after(async () => { await runtime.dispose(); await rm(root, { recursive: true, force: true }); });
+  await writeFile(join(root, 'source.ts'), 'export const automaticallyIndexed = 73;');
+  let builds = 0; const build = runtime.buildIndex.bind(runtime);
+  runtime.buildIndex = (...args) => { builds++; return build(...args); };
+  await Promise.all([runtime.ensureProject(root), runtime.ensureProject(root), runtime.ensureProject(root)]);
+  assert.equal(builds, 1); assert.equal(runtime.status().projects[0].status, 'ready');
+  assert.match(text(await runtime.call('codegraph_explore', { query: 'automaticallyIndexed' }, { cwd: root })), /73/);
+  await runtime.setEnabled(false);
+  await assert.rejects(runtime.call('codegraph_explore', { query: 'automaticallyIndexed' }, { cwd: root }), /已关闭/);
+  assert.ok((await runtime.catalog()).tools.length, 'disabling execution does not break preset catalog registration');
+  await runtime.setEnabled(true); await runtime.ensureProject(root);
+  assert.equal(runtime.status().projects[0].status, 'ready');
+});
+
+test('missing platform bundles use the pinned installer only when automatic or explicit preparation permits it', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'codegraph-prepare-'));
+  let available = false, installs = 0;
+  const runtime = new CodegraphRuntime({ cacheDir: root, autoInstall: false, resolveCommand: () => {
+    if (!available) throw Error('missing platform bundle');
+    return { command: 'prepared-node', args: ['entry.js'] };
+  } });
+  t.after(async () => { await runtime.dispose(); await rm(root, { recursive: true, force: true }); });
+  runtime.run = async (command, args, options) => {
+    installs++; assert.equal(command, process.execPath); assert.ok(args[0].endsWith('npm-shim.js'));
+    assert.deepEqual(args.slice(1), ['--version']); assert.equal(options.env.CODEGRAPH_INSTALL_DIR, root);
+    assert.equal(options.env.CODEGRAPH_NO_DOWNLOAD, undefined);
+    await new Promise(resolve => setTimeout(resolve, 10)); available = true;
+  };
+  await assert.rejects(runtime.prepare(), /自动准备已关闭/); assert.equal(installs, 0);
+  const prepared = await Promise.all([runtime.prepare({ allowDownload: true }), runtime.prepare({ allowDownload: true })]);
+  assert.equal(installs, 1); assert.equal(prepared[0].command, 'prepared-node');
+  assert.equal((await runtime.prepare()).command, 'prepared-node'); assert.equal(installs, 1);
+});
+
+test('catalog failure leaves ordinary tools usable and an explicit retry registers the repaired catalog', async () => {
+  const definitions = [], sections = []; let hook, assemble, reads = 0;
+  const runtime = { catalogRevision: 0, status: () => ({ installed: true }), catalog: async () => { reads++; throw Error('catalog unavailable'); } };
+  await apply({ trisoulX: { codegraph: runtime }, tools: { register: value => definitions.push(value) }, systemPrompt: { section: value => sections.push(value) }, on: (name, value) => { if (name === 'agent/pre-step') hook = value; else assemble = value; } });
+  assert.deepEqual(definitions.map(x => x.name), ['codegraph_index']);
+  assert.equal(await hook({}, async () => 'normal request'), 'normal request'); assert.equal(reads, 1);
+  runtime.catalogRevision++;
+  runtime.catalog = async () => ({ tools: [{ name: 'codegraph_explore', description: 'fixture', inputSchema: { type: 'object', properties: {} } }] });
+  await hook({}, async () => {});
+  assert.ok(definitions.some(x => x.name === 'mcp__codegraph__codegraph_explore'));
+  assert.equal(sections.length, 1);
+  const assembly = { sections: [{ name: 'trisoul-x:codegraph', text: CODEGRAPH_GUIDE }, { name: 'other', text: 'preserve' }] };
+  runtime.enabled = false;
+  const disabled = await assemble(null, {}, async () => assembly);
+  assert.equal(disabled.sections[0].text, CODEGRAPH_DISABLED_GUIDE);
+  assert.equal(disabled.sections[1], assembly.sections[1]);
+  runtime.enabled = true;
+  assert.equal(await assemble(null, {}, async () => assembly), assembly);
+});
+
+test('manual indexing clears an earlier automatic preparation failure', { timeout: 40000 }, async t => {
+  const root = await mkdtemp(join(tmpdir(), 'codegraph-retry-')), runtime = new CodegraphRuntime();
+  t.after(async () => { await runtime.dispose(); await rm(root, { recursive: true, force: true }); });
+  await writeFile(join(root, 'source.ts'), 'export const afterRecovery = 96;');
+  const run = runtime.run.bind(runtime);
+  runtime.run = async () => { throw Error('temporarily unavailable'); };
+  await assert.rejects(runtime.ensureProject(root), /temporarily unavailable/);
+  assert.equal(runtime.status().projects[0].status, 'error');
+  runtime.run = run;
+  await runtime.index({}, { cwd: root });
+  assert.equal(runtime.status().projects[0].status, 'ready');
+  assert.match(text(await runtime.call('codegraph_explore', { query: 'afterRecovery' }, { cwd: root })), /96/);
 });

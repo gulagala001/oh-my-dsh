@@ -45,14 +45,17 @@ export function transformAssembly(assembly, context, options = {}) {
     const absent = binding.fields.filter(name => !Object.hasOwn(fields, name));
     if (absent.length) { missing.push({ name: tool.name, fields: absent }); continue; }
     let description = load(binding.file);
+    if (tool.name === 'todo_write' && (!fields.op?.enum?.includes('pause_turn') || !Object.hasOwn(fields, 'reason'))) {
+      description = description.split('\n').filter(line => !line.includes('`pause_turn`')).join('\n');
+    }
     if (tool.name === 'todo_write' && constraintGuidance) {
       description += '\n\n' + constraintGuidance;
     }
     // Do not tell the model to use optional companion tools it cannot see.
-    if (tool.name === 'bash' && !Object.hasOwn(fields, 'run_in_background')) {
+    if (['bash', 'pwsh'].includes(tool.name) && !Object.hasOwn(fields, 'run_in_background')) {
       description = description.split('\n').filter(line => !line.includes('`run_in_background`')).join('\n');
     }
-    if (tool.name === 'bash' && !known.has('job_output')) {
+    if (['bash', 'pwsh'].includes(tool.name) && !known.has('job_output')) {
       description = description.split('\n').filter(line => !line.includes('`job_output`')).join('\n');
     }
     if (['bash', 'pwsh'].includes(tool.name) && !Object.hasOwn(fields, 'sandbox_permissions')) {
@@ -66,6 +69,12 @@ export function transformAssembly(assembly, context, options = {}) {
   }
   let persona = options.main ?? buildMainPrompt(options.identityPrompt, { toolMode });
   if (!known.has('computer_use')) persona = persona.replace('Use the available computer-use tools for tasks involving browsers and desktop applications. ', '');
+  if (options.stateHintsEnabled && known.has('runtime_status')) persona += '\n\n' + load('runtime/state-guidance.md');
+  if (options.backgroundTasksEnabled && known.has('job_output')) {
+    persona += '\n\n' + load('runtime/background-guidance.md');
+    const direct = (assembly.tools ?? []).filter(t => ['job_output', 'job_list', 'job_kill', 'runtime_status'].includes(t.name)).map(t => t.name);
+    if (activeSdk && direct.length) persona += '\n\nThe following control tools are available directly in this request: ' + direct.map(n => '`' + n + '`').join(', ') + '. Start background work in a short program, return its id, and call these controls in later steps as needed.';
+  }
   if (constraintGuidance) persona += '\n\n## Constraint-first reasoning\n' + constraintGuidance;
   const suppressed = new Set();
   for (const name of applied) for (const section of map[name].sections ?? []) suppressed.add(section);
@@ -73,6 +82,9 @@ export function transformAssembly(assembly, context, options = {}) {
   const sections = assembly.sections.flatMap(section => {
     if (section.name === 'trisoul-x:persona') return [{ ...section, text: persona, interpolate: false }];
     if (section.name === 'harness:identity') return [];
+    if (section.name === 'tool:jobs' && applied.has('job_output') && applied.has('job_kill')) {
+      return [{ ...section, text: load(options.backgroundTasksEnabled ? 'runtime/job-collection-background.md' : 'runtime/job-collection.md'), interpolate: false }];
+    }
     if (section.name === 'plan:policy' && toolMode === 'ptc') {
       return [{ ...section, text: section.text.replace(
         'make `exit_plan_mode` the only and final tool call in that response',
@@ -128,7 +140,8 @@ export function installPromptAdapter(ctx) {
     }
     const config = ctx.trisoulX.config();
     const result = transformAssembly(assembly, context, {
-      identityPrompt: config.identityPrompt, todoConstraintFirst: config.todoConstraintFirst,
+      identityPrompt: config.identityPrompt, todoConstraintFirst: config.todoConstraintFirst, stateHintsEnabled: config.stateHintsEnabled,
+      backgroundTasksEnabled: ctx.trisoulX.backgroundOptions?.(context.agent)?.interruptibleWait === true,
       schemas, renderSdk, definition: name => ctx.tools.get(name, context.scope ?? context.agent),
     });
     const key = sha(result.audit);

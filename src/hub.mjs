@@ -11,6 +11,10 @@ import { ContextPipeline } from './context/pipeline.mjs';
 import { createHostAdapter } from './context/host.mjs';
 import { createEffortResolver } from './effort.mjs';
 import { TODO_NUDGE, TODO_EMPTY_NUDGE } from './todolist.mjs';
+import { promptText } from './cc-adaptation/texts.mjs';
+import { setRuntimeContext } from './task-context.mjs';
+
+const TASK_PAUSE_GUIDANCE = promptText('runtime/task-pause.md');
 
 export const NS = 'trisoul-x';
 export const message = (text, kind = 'context') => createUserMessage({
@@ -71,10 +75,14 @@ export class Hub extends Service {
     this.jobs = new Map(); this.controllers = new Map();
     this.live = new Map(); this.requestStarts = new Map(); this.taskReviews = new Map();
     this.curations = new Map(); this.curationTail = Promise.resolve(); this.curationClosed = false;
-    ctx.effect(() => () => {
+    ctx.effect(() => async () => {
       for (const c of this.controllers.values()) c.abort();
       this.disposeCuration(); this.memoryContext.dispose(); this.stateZone.dispose(); this.context.dispose();
       for (const timer of this.idleTimers.values()) clearTimeout(timer);
+      await Promise.all([...this.agents.values()].map(agent => {
+        setRuntimeContext(agent.session, () => null);
+        return this.context.stripRuntime(agent.session);
+      }));
     });
   }
   config() { return this.getConfig(); }
@@ -83,9 +91,10 @@ export class Hub extends Service {
     return { todo: saved?.todo ?? true, verification: saved?.verification ?? false };
   }
   setTaskReminders(session, patch) {
-    const state = this.store.state(session.id), next = { ...this.taskReminders(session), ...patch };
+    const state = this.store.state(session.id), previous = this.taskReminders(session), next = { ...previous, ...patch };
     this.store.save({ ...state, betterTodo: next });
     state.betterTodo = next;
+    if (next.todo !== previous.todo || next.verification !== previous.verification) this.todoStore?.resetTurnControl(session);
     if (!next.verification) this.taskReviews.delete(session.id);
     return next;
   }
@@ -231,6 +240,8 @@ export class Hub extends Service {
     if (events.findLast(e => e.type === 'plan/mode')?.data.active) return;
     const answer = events.findLast(e => e.type === 'assistant/message' || e.type === 'assistant/attempt');
     if (answer && ['error', 'aborted', 'max-tokens'].includes(assembleAssistantStream(answer.data.stream).finish.kind)) return;
+    const control = store.turnControl(session, turn);
+    if (control.paused) { this.taskReviews.delete(session.id); return; }
     const reminders = this.taskReminders(session), pending = this.taskReviews.get(session.id);
     if (reminders.verification && pending?.turn === turn) {
       const delivered = events.find(e => e.type === 'user/message' && e.data.id === pending.messageId);
@@ -247,8 +258,11 @@ export class Hub extends Service {
       if (summary.total) { const saved = this.store.state(session.id); saved.taskRelease = { ...summary, at: Date.now(), turn }; this.store.save(saved); }
       return;
     }
+    text += '\n' + TASK_PAUSE_GUIDANCE;
+    if (control.reminders.has(text)) return;
     const notice = message(text, reviewing ? 'task-review' : 'task-reminder');
     agent.steer(notice);
+    control.reminders.add(text);
     if (reviewing) this.taskReviews.set(session.id, { turn, messageId: notice.id, ids: store.textReviewLinkIds(session) });
   }
   startDigestSession(agent) {

@@ -17,6 +17,7 @@ import { previewElementStyle, restoreStylePreview, styleChanges } from './browse
 import {findInView} from './browser-find.mjs';
 import {externalWebUrl,openExternalUrl} from './open-external.mjs';
 import {BrowserHistory} from './browser-history.mjs';
+import { installBrowser } from './browser-install.mjs';
 
 export class ComputerUseManager {
   constructor(directory, options = {}) {
@@ -803,6 +804,12 @@ export class ComputerUseManager {
     }
     });
   }
+  async installBrowser({ signal } = {}) {
+    if (this.closed) throw new Error('当前应用已关闭');
+    this.browserInstallController ??= new AbortController();
+    return this.browserInstalling ??= installBrowser({ executablePath: this.browser.executablePath, signal: signal ? AbortSignal.any([signal, this.browserInstallController.signal]) : this.browserInstallController.signal })
+      .finally(() => { this.browserInstalling = null; });
+  }
   async removeExtension() {
     return this.configureExtension('remove', async () => {
     await this.extensionReady;
@@ -851,6 +858,8 @@ export class ComputerUseManager {
   }
   async close() {
     this.closed = true;
+    this.browserInstallController?.abort(new Error('当前应用已关闭'));
+    await this.browserInstalling?.catch(() => {});
     await this.extensionSetup?.promise.catch(() => {});
     for (const state of this.sessions.values()) state.uiAction?.abort(new Error('Computer Use plugin unloaded'));
     const stopping = [this.stopSharing(), ...[...this.sessions.values()].map(async state => { await state.runtime.stop(new Error('Computer Use plugin unloaded')); await state.uiActionPending?.catch(() => {}); })];
