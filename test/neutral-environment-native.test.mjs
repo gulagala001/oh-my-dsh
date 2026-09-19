@@ -30,8 +30,10 @@ for (const mode of ['native', 'ptc', 'both']) test(`actual provider payloads: ne
     let delta = { role: 'assistant', content: 'Fixture finished.' }, finish = 'stop';
     if (mode !== 'native' && p.tools?.length && user.includes('NEUTRAL_MAIN') && !ptcIssued) {
       ptcIssued = true; finish = 'tool_calls';
+      const shell = process.platform === 'win32' ? 'pwsh' : 'bash';
+      const shellCommand = process.platform === 'win32' ? "[Console]::Out.Write('PTC_EXECUTED'); exit 7" : 'printf PTC_EXECUTED; exit 7';
       const code = `const file = await tools.read({ file_path: ${JSON.stringify(join(workspace, 'ptc-input.txt'))} });
-        const command = await tools.bash({ command: 'printf PTC_EXECUTED; exit 7', description: 'Check structured process outcome', workdir: ${JSON.stringify(workspace)} });
+        const command = await tools.${shell}({ command: ${JSON.stringify(shellCommand)}, description: 'Check structured process outcome', workdir: ${JSON.stringify(workspace)} });
         let missingToolName;
         try { await tools.read({ file_path: ${JSON.stringify(join(workspace, 'missing.txt'))} }); }
         catch (error) { if (!(error instanceof ToolCallError)) throw error; missingToolName = error.toolName; }
@@ -128,6 +130,7 @@ for (const mode of ['native', 'ptc', 'both']) test(`actual provider payloads: ne
     } else assert.ok(first.tools.some(t => t.function.name === 'read'));
     const ptcResult = main.flatMap(p => p.messages).find(m => m.role === 'tool' && m.tool_call_id === 'ptc-fixture');
     assert.ok(ptcResult, 'actual PTC execution must return a result to the model');
+    assert.doesNotMatch(ptcResult.content, /^Error:/, ptcResult.content);
     assert.deepEqual(JSON.parse(ptcResult.content), { text: 'PTC_TYPED_READ', exitCode: 7, stdout: 'PTC_EXECUTED', missingToolName: 'read' });
     if (mode === 'both') assert.ok(main.some(p => p.messages.some(m => m.role === 'tool' && m.tool_call_id === 'native-fixture' && m.content.includes('PTC_TYPED_READ'))));
   } else {
