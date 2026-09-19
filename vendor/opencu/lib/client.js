@@ -1627,9 +1627,14 @@ function operationRowLocale(t, name, block) {
   return (key, ...args) => key === "tool.title." + row[0] ? title : t(key, ...args);
 }
 var processContextKinds = /* @__PURE__ */ new Set(["context", "system-prompt", "compaction"]);
-function computerGroups(nodes) {
+function computerGroups(nodes, toolviewNames) {
+  const groupable = (node) => {
+    const root = node.data.root, name = root.call?.name ?? root.name ?? "";
+    const genericDenial = root.isError && root.error?.name === "AutoReviewDeniedError" && root.error.code === "AUTO_REVIEW_DENIED";
+    return !genericDenial && (!toolviewNames || toolviewNames.has(name));
+  };
   const steps = /* @__PURE__ */ new Map(), result = /* @__PURE__ */ new Map();
-  for (const node of nodes) if (node.kind === "tool-call") {
+  for (const node of nodes) if (node.kind === "tool-call" && groupable(node)) {
     const key = stepKey(node);
     if (!key) continue;
     steps.set(key, true);
@@ -1637,6 +1642,10 @@ function computerGroups(nodes) {
   let group;
   for (const node of nodes) {
     if (node.kind === "turn-process") continue;
+    if (node.kind === "tool-call" && !groupable(node)) {
+      group = void 0;
+      continue;
+    }
     const step = steps.get(stepKey(node));
     const tool = node.kind === "tool-call";
     const blocks = node.data.blocks ?? [], assistant = node.kind === "assistant-step" && (step || blocks.some((block) => block.kind === "reasoning")) && !blocks.some((block) => !["reasoning", "tool-call"].includes(block.kind) && (block.kind !== "text" || block.text?.trim()));
@@ -1696,9 +1705,15 @@ function computerGroupPresentation(ctx) {
     listeners.add(listener);
     return () => listeners.delete(listener);
   };
-  const groups = (snapshot) => {
-    if (!cache.has(snapshot)) cache.set(snapshot, computerGroups(snapshot.order.map((key) => snapshot.nodes.get(key)).filter(Boolean)));
-    return cache.get(snapshot);
+  const subscribeToolviews = (listener) => ctx.slots.subscribe("tool.call.toolview", listener);
+  const readToolviews = () => ctx.slots.entries("tool.call.toolview");
+  const groups = (snapshot, toolviews) => {
+    let cached = cache.get(snapshot);
+    if (!cached || cached.toolviews !== toolviews) {
+      cached = { toolviews, groups: computerGroups(snapshot.order.map((key) => snapshot.nodes.get(key)).filter(Boolean), new Set(toolviews.map((entry) => entry.options.key))) };
+      cache.set(snapshot, cached);
+    }
+    return cached.groups;
   };
   const emptyProcess = { label: operationSummary([]), icon: operationIcon([]), failures: 0, stopped: 0 };
   const process = (snapshot, turn) => {
@@ -1706,7 +1721,8 @@ function computerGroupPresentation(ctx) {
     return processCache.get(snapshot).get(turn) || emptyProcess;
   };
   function Group({ sessionId, useChat, nodeKey, callId, turnProcess, completedContext = false, children }) {
-    const group = useChat((snapshot) => groups(snapshot).get(nodeKey ?? `call:${callId}`));
+    const toolviews = (0, import_react12.useSyncExternalStore)(subscribeToolviews, readToolviews);
+    const group = useChat((snapshot) => groups(snapshot, toolviews).get(nodeKey ?? `call:${callId}`));
     const identity = `${sessionId}:${group?.id}`;
     const expanded = (0, import_react12.useSyncExternalStore)(subscribe, () => open.has(identity));
     const seat = (0, import_react12.useRef)(null), wasFoldable = (0, import_react12.useRef)(false), [hostGrouped, setHostGrouped] = (0, import_react12.useState)(false), [visited, setVisited] = (0, import_react12.useState)(false);
