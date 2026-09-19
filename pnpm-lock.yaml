@@ -20,9 +20,6 @@ importers:
       '@modelcontextprotocol/client':
         specifier: 2.0.0
         version: 2.0.0
-      '@oh-my-dsh/ui-conversation':
-        specifier: file:vendor/dsh/ui-conversation
-        version: file:vendor/dsh/ui-conversation(@deepseek-ai/cordis@4.0.2)
       diff:
         specifier: 9.0.0
         version: 9.0.0
@@ -2923,11 +2920,6 @@ packages:
   '@octokit/webhooks@14.2.0':
     resolution: {integrity: sha512-da6KbdNCV5sr1/txD896V+6W0iamFWrvVl8cHkBSPT+YlvmT3DwXa4jxZnQc+gnuTEqSWbBeoSZYTayXH9wXcw==}
     engines: {node: '>= 20'}
-
-  '@oh-my-dsh/ui-conversation@file:vendor/dsh/ui-conversation':
-    resolution: {directory: vendor/dsh/ui-conversation, type: directory}
-    peerDependencies:
-      '@deepseek-ai/cordis': 4.0.2
 
   '@opentelemetry/api-logs@0.220.0':
     resolution: {integrity: sha512-CmVa4ImJ+ynfrPMNaAXHET6Bhb44SwzmfyVJFq9ni2jgXJR/l7C6gfVFddNmHP+ZOkP9cf4f9DBe68qVLTHc9w==}
@@ -7427,11 +7419,6 @@ snapshots:
       '@octokit/openapi-webhooks-types': 12.1.0
       '@octokit/request-error': 7.1.2
       '@octokit/webhooks-methods': 6.0.0
-
-  '@oh-my-dsh/ui-conversation@file:vendor/dsh/ui-conversation(@deepseek-ai/cordis@4.0.2)':
-    dependencies:
-      '@deepseek-ai/cordis': 4.0.2(@deepseek-ai/cordis-plugin-include@1.0.7)(@deepseek-ai/cordis-plugin-loader@1.0.3)
-      '@deepseek-ai/schemastery': 3.18.2
 
   '@opentelemetry/api-logs@0.220.0':
     dependencies:

@@ -35,8 +35,7 @@ export class Components {
       if (include('browser')) tasks.push(this.run('browser', () => typeof manager.installBrowser === 'function'
         ? manager.installBrowser({ signal: this.controller.signal })
         : installBrowser({ executablePath: manager.browser.executablePath, signal: this.controller.signal })));
-      if (include('native')) tasks.push(this.run('native', async () => {
-        if (!manager.native.supported()) return;
+      if (include('native') && manager.native.supported()) tasks.push(this.run('native', async () => {
         // User-supplied runtimes belong to their owner; do not overwrite them.
         if (config.computerUseNativeBinary || config.computerUseNativeSocket) {
           if (!manager.native.available()) throw new Error('自定义桌面控制程序不可用，请检查高级设置。');

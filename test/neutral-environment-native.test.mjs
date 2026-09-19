@@ -120,7 +120,7 @@ for (const mode of ['native', 'ptc', 'both']) test(`actual provider payloads: ne
     assert.match(first.messages[0].content, /Read saved context documents/);
     assert.match(first.messages[0].content, /## Programmatic tool use/);
     const sdk = first.messages[0].content.split('## Writing code for run_code')[1];
-    assert.ok(sdk.includes('For foreground results, inspect `exitCode`'));
+    assert.ok(sdk.includes(process.platform === 'win32' ? 'Inspect the returned process status and output fields in the current SDK return type.' : 'For foreground results, inspect `exitCode`'));
     assert.ok(sdk.includes('Inspect `job.status`'));
     if (mode === 'ptc') {
       assert.deepEqual(first.tools.map(t => t.function.name), ['run_code']);

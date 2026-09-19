@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 import { CODEGRAPH_GUIDE, CODEGRAPH_DISABLED_GUIDE } from '../src/codegraph-agent.mjs';
 
@@ -16,7 +17,8 @@ test('one components page exposes live setup and saves switches without overwrit
   const graph = page.getByRole('switch', { name: 'CodeGraph', exact: true });
   await graph.waitFor(); assert.equal(await graph.isChecked(), true);
   await page.getByText('内置浏览器', { exact: true }).waitFor();
-  await page.getByText('桌面控制', { exact: true }).waitFor();
+  if (['darwin', 'win32'].includes(process.platform)) await page.getByText('桌面控制', { exact: true }).waitFor();
+  else await page.getByText('此平台可使用浏览器；原生桌面控制暂不支持。', { exact: true }).waitFor();
   await page.getByText('日常 Chrome', { exact: true }).waitFor();
   const state = async () => (await page.request.get(url)).json();
   const requests = [];
@@ -42,11 +44,11 @@ test('one components page exposes live setup and saves switches without overwrit
   assert.deepEqual((await state()).computerUse.paths, before);
   assert.equal(await page.locator('.cx-components').evaluate(el => el.scrollWidth <= el.clientWidth + 1), true);
   const output = new URL('../.context-upgrade/components-ui/', import.meta.url); await mkdir(output, { recursive: true });
-  await page.getByRole('dialog').screenshot({ path: new URL('light.png', output).pathname });
+  await page.getByRole('dialog').screenshot({ path: fileURLToPath(new URL('light.png', output)) });
   await page.emulateMedia({ colorScheme: 'dark' });
-  await page.getByRole('dialog').screenshot({ path: new URL('dark.png', output).pathname });
+  await page.getByRole('dialog').screenshot({ path: fileURLToPath(new URL('dark.png', output)) });
   await page.getByText('日常 Chrome', { exact: true }).scrollIntoViewIfNeeded();
-  await page.getByRole('dialog').screenshot({ path: new URL('details.png', output).pathname });
+  await page.getByRole('dialog').screenshot({ path: fileURLToPath(new URL('details.png', output)) });
   await page.getByText('高级配置', { exact: true }).click();
   await page.getByRole('textbox', { name: '浏览器程序路径', exact: true }).fill('/fixture/custom-browser');
   await page.getByRole('button', { name: '保存自定义路径', exact: true }).click();
@@ -69,7 +71,12 @@ test('startup prepares actual browser integration and indexing without opening a
   assert.equal(state.computerUse.setup.browser.running, false);
   assert.equal(state.computerUse.setup.extension.installation.prepared, true);
   assert.ok(state.computerUse.setup.extension.installation.registrationPath.startsWith(f.root));
-  assert.equal(state.computerUse.operations.native.status, 'error');
-  assert.match(state.computerUse.operations.native.error, /自定义/);
+  if (process.platform === 'darwin') {
+    assert.equal(state.computerUse.operations.native.status, 'error');
+    assert.match(state.computerUse.operations.native.error, /自定义/);
+  } else {
+    assert.equal(state.computerUse.setup.native.supported, false);
+    assert.equal(state.computerUse.operations.native, undefined);
+  }
   assert.deepEqual(f.errors, []);
 });

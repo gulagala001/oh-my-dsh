@@ -176,3 +176,13 @@ test('manual indexing clears an earlier automatic preparation failure', { timeou
   assert.equal(runtime.status().projects[0].status, 'ready');
   assert.match(text(await runtime.call('codegraph_explore', { query: 'afterRecovery' }, { cwd: root })), /96/);
 });
+
+test('an ancestor runtime cache is not mistaken for a project index', { timeout: 40000 }, async t => {
+  const root = await mkdtemp(join(tmpdir(), 'codegraph-cache-parent-')), directory = join(root, 'project'), runtime = new CodegraphRuntime();
+  t.after(async () => { await runtime.dispose(); await rm(root, { recursive: true, force: true }); });
+  await mkdir(join(root, '.codegraph', 'bundles'), { recursive: true }); await mkdir(directory);
+  await writeFile(join(directory, 'entry.ts'), 'export const onlyThisProject = 71;');
+  assert.equal(await runtime.ensureProject(directory), await realpath(directory));
+  await access(join(directory, '.codegraph', 'codegraph.db'));
+  await assert.rejects(access(join(root, '.codegraph', 'codegraph.db')));
+});

@@ -10,7 +10,7 @@ export function reloadOnProviderChange(ctx: Context): boolean {
   if (!boot?.entries) return false
   let leaving = false
   const reload = () => { if (!leaving) { leaving = true; window.location.reload() } }
-  if (!boot.entries.some(row => row.id === '@oh-my-dsh/ui-conversation')) {
+  if (!boot.entries.some(row => row.id === 'trisoul_x')) {
     reload()
     return true
   }

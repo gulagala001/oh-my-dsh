@@ -54,7 +54,9 @@ export async function projectDirectory(cwd, requested) {
 
 async function indexedRoot(directory) {
   for (let current = directory;; current = dirname(current)) {
-    try { if ((await stat(join(current, '.codegraph'))).isDirectory()) return current; }
+    // The upstream runtime cache also uses ~/.codegraph. Only an actual
+    // index database identifies a project, not a bundles-only cache folder.
+    try { if ((await stat(join(current, '.codegraph', 'codegraph.db'))).isFile()) return current; }
     catch (error) { if (error.code !== 'ENOENT') throw error; }
     if (dirname(current) === current) return directory;
   }
