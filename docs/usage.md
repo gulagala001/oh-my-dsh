@@ -103,6 +103,12 @@ node scripts/launch-macos.mjs
 
 采用 DSH 与 Codex 的融合风格：中性色界面、蓝色强调、紧凑工具栏，统一浅色／深色主题和窄窗布局。保留 DSH 的会话、项目、模型与文件功能，Oh My DSH 的常用入口集中在输入区下方。
 
+**设置 → 推荐插件** 展示第三方插件的用途、作者与项目链接。支持标准 DSH 插件包的项目可直接安装、更新和卸载；操作由当前 profile 的宿主插件管理器执行，页面显示版本、进度、失败原因和待重启状态。
+
+自动更新默认关闭。开启后，DSH 运行期间约每 6 小时在会话空闲时检查，只更新推荐列表中已安装且启用、支持标准安装的插件；不会自动安装其他推荐插件，也不会自行重启 DSH。关闭开关会停止后续自动检查，已经开始的包操作会继续完成。脚本授权沿用宿主管理器规则，不会自动批准。
+
+当前推荐 [dsh-status-rotator](https://github.com/01Virex/dsh-status-rotator)、[DSH × Blender](https://github.com/sixtysevenlf/dsh-blender-plugin) 与[小鲸鱼记账挂件](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget)。小鲸鱼使用 DSH Web 产品线的 npm 包 `dsh-whale-widget`。Blender 项目当前使用开发注入方式，尚未声明标准插件包安装清单，需按其项目说明配置 Blender 与连接插件；推荐页会明确标注这一限制。
+
 **鲸鱼图标**保留 DSH 的原有轮廓，加入冰蓝渐变与玻璃高光。悬停时摆尾，当前会话运行时显示旋转光轨，结束或切换到空闲会话后静止。动效复用宿主会话状态，不增加模型或后台请求；系统启用“减少动态效果”时保留静态图标与状态提示。
 
 | 入口 | 可以做什么 |

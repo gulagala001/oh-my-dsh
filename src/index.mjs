@@ -21,6 +21,7 @@ import { Components, mountComponents } from './components.mjs';
 import { runtimeContext } from './runtime-state.mjs';
 import { setRuntimeContext } from './task-context.mjs';
 import { installBackground } from './background.mjs';
+import { mountRecommendedPlugins } from './recommended-plugins.mjs';
 
 export { Config };
 export const name = 'trisoul-x';
@@ -46,6 +47,7 @@ export function apply(ctx, config) {
   hub.components = new Components(ctx, hub, computer);
   mountComponents(ctx, hub.components);
   ctx.effect(() => { hub.components.start(); return () => hub.components.close(); });
+  mountRecommendedPlugins(ctx, hub);
   const isX = session => ['trisoul-x', 'omd-ptc'].includes(ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset);
   installBackground(ctx, hub, isX);
   installImageBudget(ctx, isX);

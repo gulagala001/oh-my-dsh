@@ -167,6 +167,17 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await screenshot('conversation-narrow-dark');
   await page.getByRole('button', { name: '设置', exact: true }).click();
   const settingsDialog = page.getByRole('dialog');
+  await settingsDialog.getByRole('button', { name: '推荐插件', exact: true }).click();
+  await settingsDialog.getByRole('heading', { name: '推荐插件', exact: true }).waitFor();
+  assert.equal(await settingsDialog.getByRole('heading', { name: 'dsh-status-rotator', exact: true }).count(), 1);
+  assert.equal(await settingsDialog.getByRole('link', { name: '查看 dsh-status-rotator 项目（新窗口）' }).getAttribute('href'), 'https://github.com/01Virex/dsh-status-rotator');
+  const recommendations = settingsDialog.locator('.tx-recommended-card');
+  await until(() => recommendations.filter({ hasText: 'dsh-status-rotator' }).getByRole('button', { name: '安装', exact: true }).isEnabled());
+  const whale = recommendations.filter({ hasText: '小鲸鱼记账挂件' });
+  assert.equal(await whale.getByRole('link').getAttribute('href'), 'https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget');
+  assert.equal(await whale.getByRole('button', { name: '安装', exact: true }).isEnabled(), true);
+  assert.equal(await settingsDialog.getByRole('switch', { name: '自动更新推荐插件' }).isChecked(), false);
+  await screenshot('recommended-plugins');
   await settingsDialog.getByRole('button', { name: 'Oh My DSH', exact: true }).click();
   const settings = page.locator('.cx-settings');
   await settings.getByRole('button', { name: '保存设置', exact: true }).waitFor();

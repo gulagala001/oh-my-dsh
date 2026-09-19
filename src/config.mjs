@@ -30,6 +30,7 @@ export const Config = z.object({
   todoConstraintFirst: z.boolean().default(false),
   codegraphEnabled: z.boolean().default(true),
   componentAutoSetup: z.boolean().default(true),
+  recommendedPluginsAutoUpdate: z.boolean().default(false),
   computerUseEnabled: z.boolean().default(true),
   computerUseBrowserExecutable: z.string().default(''),
   computerUseChromeUserDataDir: z.string().default(''),
