@@ -91,6 +91,10 @@ test('published manifest matches the installed package and retains the major-fix
   assert.equal(feed.releases[0].version, pkg.version); assert.equal(INSTALLED_VERSION, pkg.version);
   assert.ok(pkg.files.includes('release-manifest.json'));
   assert.equal(feed.releases.find(r => r.version === '1.3.0-alpha.4').severity, 'required');
+  const previous = versionStatus('0.1.6-alpha.2.2', feed);
+  assert.equal(previous.status, 'update'); assert.equal(previous.latestVersion, pkg.version);
+  assert.equal(previous.severity, 'required');
+  assert.equal(versionStatus(pkg.version, feed).severity, 'none');
 });
 
 
