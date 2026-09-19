@@ -10,7 +10,7 @@ Whole-bundle enablement changes refresh the page when the Conversation provider 
 
 ## Rebuild
 
-Use a clean checkout at the pinned tag, apply `changes.patch`, install that checkout's locked dependencies, and run its host build plus the conversation TypeScript build. From the OMD repository:
+Use a clean checkout at the pinned tag and install its locked dependencies **before** applying `changes.patch`: the patch assigns the browser build a private artifact name while retaining the existing workspace links. Then apply the patch and run the host build plus the conversation TypeScript build. From the OMD repository:
 
 ```sh
 node scripts/sync-dsh.mjs /path/to/patched-dsh-checkout
