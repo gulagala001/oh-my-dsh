@@ -16730,7 +16730,7 @@ window.__ModuleLoader__.load({
 					window.location.reload();
 				}
 			};
-			if (!boot.entries.some((row) => row.id === "@oh-my-dsh/ui-conversation")) {
+			if (!boot.entries.some((row) => row.id === "trisoul_x")) {
 				reload();
 				return true;
 			}

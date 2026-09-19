@@ -1,5 +1,5 @@
 import { build } from 'esbuild';
-import { mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -18,3 +18,10 @@ for (const name of modules) {
 }
 // Retire outputs from the earlier direct-entry build, never user data.
 for (const name of ['bash-local', 'pwsh-local']) await rm(`${root}lib/host/${name}.mjs`, { force: true });
+
+// Embed the upstream-built browser factory in OMD's own client module. A
+// file: subpackage cannot be resolved from a GitHub-installed dependency.
+const client = await readFile(`${root}vendor/dsh/ui-conversation/lib/client.js`, 'utf8');
+if (!client.startsWith('window.__ModuleLoader__.load({') || !client.trimEnd().endsWith('});')) throw new Error('Unexpected DSH browser factory format');
+const registration = client.trimEnd().replace('window.__ModuleLoader__.load(', 'const registration = ').replace(/\);$/, ';');
+await writeFile(`${root}lib/host/ui-conversation.factory.mjs`, registration + '\nexport function createConversation(require) { return registration.factory(require); }\n');

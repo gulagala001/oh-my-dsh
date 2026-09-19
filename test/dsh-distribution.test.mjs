@@ -22,4 +22,9 @@ test('shipped DSH sources, browser package and patch match the pinned distributi
   const pkg = JSON.parse(await readFile(new URL('ui-conversation/package.json', root)));
   assert.equal(pkg.name, '@oh-my-dsh/ui-conversation');
   assert.match(await readFile(new URL('ui-conversation/lib/client.js', root), 'utf8'), /@oh-my-dsh\/ui-conversation/);
+  const parent = JSON.parse(await readFile(new URL('../package.json', import.meta.url)));
+  assert.equal(parent.dependencies['@oh-my-dsh/ui-conversation'], undefined, 'GitHub installs need no relative or exotic UI subdependency');
+  const embedded = await readFile(new URL('../lib/host/ui-conversation.factory.mjs', import.meta.url), 'utf8');
+  assert.match(embedded, /export function createConversation/);
+  assert.ok(!embedded.includes('window.__ModuleLoader__.load('), 'the embedded factory belongs to the OMD client module');
 });

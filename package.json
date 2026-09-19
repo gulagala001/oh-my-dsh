@@ -39,8 +39,7 @@
     "playwright": "1.63.0",
     "sharp": "0.35.4",
     "ws": "8.21.3",
-    "zod": "4.5.4",
-    "@oh-my-dsh/ui-conversation": "file:vendor/dsh/ui-conversation"
+    "zod": "4.5.4"
   },
   "engines": {
     "node": ">=22.19"
@@ -64,7 +63,14 @@
       "inject": [
         "@deepseek-ai/dsh-client-ui-settings",
         "@deepseek-ai/dsh-client-ui-sidebar-right",
-        "@deepseek-ai/dsh-client-ui-sidebar"
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-api-session-controller",
+        "@deepseek-ai/dsh-client-file-upload",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-session",
+        "@deepseek-ai/dsh-client-ui-workspace"
       ]
     }
   },

@@ -1,4 +1,5 @@
 import { createPoller } from './polling.mjs';
+import { createConversation } from '../../lib/host/ui-conversation.factory.mjs';
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Menu } from '@deepseek-ai/dsh-client-ui-primitives';
 import { frameTokens, contextHistoryLayout } from './context-history.mjs';
@@ -216,8 +217,10 @@ function StatsLine({ sessionId, onOpen }) {
   const m = data.metrics.main, total = inputTokens(m);
   return <button type="button" className="tx-stats-line" aria-label="查看运行统计" title={`上下文 ${fmt(data.meter?.totalTokens)} tokens · 缓存命中 ${total ? Math.round((m.cacheReadTokens || 0) / total * 100) : 0}% · 已替换 ${fmt(data.actions?.contextReplacements)} 次`} onClick={onOpen}><Icon name="layers" size={12}/><span>{compactNumber(data.meter?.totalTokens)} 上下文</span>{data.liveCalls?.length > 0 && <i className="tx-stats-running" aria-label="后台运行中"/>}</button>;
 }
-export const inject = ['slots', 'sidebarRightTabs', 'sidebarRight'];
-export function apply(ctx) {
+const hostConversation = createConversation(require);
+export const inject = [...new Set(['slots', 'sidebarRightTabs', 'sidebarRight', ...hostConversation.inject])];
+export async function apply(ctx) {
+  await ctx.plugin(hostConversation);
   const openPanel = section => ctx.sidebarRight.openTab('trisoul-x-workbench', { params: { section } });
   const sections = [
     ['tasks', '任务', 'context', ContextPanel],

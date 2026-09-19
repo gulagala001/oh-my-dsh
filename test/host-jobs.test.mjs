@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
 import { Context } from '@deepseek-ai/cordis';
 import { Session } from '@deepseek-ai/dsh-session';
 import { createModule } from '../lib/host/jobs-local.factory.mjs';
@@ -8,7 +9,7 @@ const requireJobs = createRequire(import.meta.resolve('@deepseek-ai/dsh-jobs'));
 const names = ['@deepseek-ai/cordis', '@deepseek-ai/schemastery', '@deepseek-ai/dsh-jobs', '@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-timeout', 'node:crypto'];
 const imports = new Map(await Promise.all(names.map(async n => [n, await import(n)])));
 const LocalJobRegistry = createModule(n => n === '@deepseek-ai/schemastery' ? imports.get(n).default : ({ ...imports.get(n), __esModule: true })).default;
-const { default: AgentRegistry } = await import(createRequire(import.meta.resolve('@deepseek-ai/dsh-jobs')).resolve('@deepseek-ai/dsh-agent'));
+const { default: AgentRegistry } = await import(pathToFileURL(requireJobs.resolve('@deepseek-ai/dsh-agent')).href);
 async function setup(t, maximum = 10) {
   const ctx = new Context(); await ctx.plugin(AgentRegistry); await ctx.plugin(LocalJobRegistry, { maxConcurrentJobsPerOwner: maximum });
   ctx.jobs.attachController('test'); t.after(() => ctx.fiber.dispose());

@@ -8,6 +8,7 @@
 - Todo 支持 `pause_turn`，保留未完成任务与证据；重复收尾提醒按回合去重。
 - 基础组件统一设置，CodeGraph 自动索引，Computer Use 自动准备。内置 OpenCU 1.0.4。
 - 配套 DSH 组件使用同一安装的宿主依赖，保留原预设及卸载恢复。
+- 输入框直接随 OMD 打包，支持 GitHub 安装；修正 Windows 路径、发行快照换行和 CodeGraph 缓存目录识别。
 
 - 新增独立 `omd-ptc` 预设：保留 OMD 的提示词、记忆、压缩、任务验证、CodeGraph、电脑操控与子代理，使用 `run_code` 调用工具；原 OMD 与宿主 PTC 预设保留。
 

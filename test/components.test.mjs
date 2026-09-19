@@ -61,3 +61,11 @@ test('automatic setup preserves custom desktop runtimes and starts installed hel
   await f.service.prepare('native'); assert.ok(f.calls.includes('native'), 'explicit repair can update the helper');
   f.service.close();
 });
+
+test('unsupported desktop platforms do not run or report a successful native installation', async () => {
+  const f = fixture(); f.manager.native.supported = () => false;
+  await f.service.prepare();
+  assert.ok(!f.calls.includes('native')); assert.equal(f.service.records.get('native'), undefined);
+  assert.ok(f.calls.includes('browser')); assert.ok(f.calls.includes('extension'));
+  f.service.close();
+});

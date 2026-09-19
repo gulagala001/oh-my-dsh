@@ -47,7 +47,7 @@ index 79ffd97..8290258 100644
    // Schemastery's field default is materialized before Cordis calls apply.
 diff --git a/packages/client/ui-conversation/src/client/conversation-reload.ts b/packages/client/ui-conversation/src/client/conversation-reload.ts
 new file mode 100644
-index 0000000..a8baa6c
+index 0000000..7d92eef
 --- /dev/null
 +++ b/packages/client/ui-conversation/src/client/conversation-reload.ts
 @@ -0,0 +1,24 @@
@@ -63,7 +63,7 @@ index 0000000..a8baa6c
 +  if (!boot?.entries) return false
 +  let leaving = false
 +  const reload = () => { if (!leaving) { leaving = true; window.location.reload() } }
-+  if (!boot.entries.some(row => row.id === '@oh-my-dsh/ui-conversation')) {
++  if (!boot.entries.some(row => row.id === 'trisoul_x')) {
 +    reload()
 +    return true
 +  }

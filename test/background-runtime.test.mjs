@@ -15,7 +15,7 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`background ${preset}: one e
   const tool = process.platform === 'win32' ? 'pwsh' : 'bash';
   const code = 'const fs=require("node:fs");fs.appendFileSync("runs.txt","once\\n");setTimeout(()=>{console.log("JOB_ACTUAL_SUCCESS 汉字");process.exit(7)},' + (process.platform === 'win32' ? 5000 : 2200) + ')';
   const script = join(f.workspace, 'scenario.cjs'); await writeFile(script, code);
-  const command = `${process.platform === 'win32' ? '& ' : ''}"${process.execPath}" "${script}"`;
+  const command = `${process.platform === 'win32' ? '& ' : ''}"${process.execPath}" "${script}"${process.platform === 'win32' ? '; exit $LASTEXITCODE' : ''}`;
   f.replyWith(payload => {
     if (!flatten(payload).includes('BACKGROUND_SCENARIO')) return;
     requests.push(payload);
