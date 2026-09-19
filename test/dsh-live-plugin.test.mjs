@@ -24,6 +24,7 @@ test('DSH alpha.2 provider changes refresh UI and restore one instance without l
     const removed=await page.request.get(base+'/trisoul-x/api/state?session='+f.sessionId);
     assert.ok(!removed.ok() || !removed.headers()['content-type']?.includes('application/json'),'removed plugin no longer owns its HTTP route');
     await page.locator('[data-composer-input]').waitFor();
+    await until(async () => await page.locator('[data-composer-input]').innerText() === draft);
     assert.equal(await page.locator('[data-composer-input]').innerText(), draft);
     await Promise.all([page.waitForEvent('load'), change('trisoul_x',true)]);
     await page.getByRole('button',{name:'打开工作台',exact:true}).waitFor();
@@ -31,6 +32,7 @@ test('DSH alpha.2 provider changes refresh UI and restore one instance without l
     assert.equal(await page.locator('style[data-plugin="trisoul-x-computer-use"]').count(),1);
     await page.getByRole('button',{name:'打开工作台',exact:true}).click();
     await page.getByRole('button',{name:'用量详情',exact:true}).waitFor();
+    await until(async () => await page.locator('[data-composer-input]').innerText() === draft);
     assert.equal(await page.locator('[data-composer-input]').innerText(), draft);
   }
   const after=await readState();
