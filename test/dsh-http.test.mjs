@@ -76,7 +76,8 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${
     res.end('data: [DONE]\n\n');
   });
   await new Promise(done => provider.listen(0, '127.0.0.1', done));
-  const settings = { 'trisoul-x': { componentAutoSetup: false }, 'llm-pi-ai': { providers: { fixture: { api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'TRISOUL_X_FIXTURE_KEY', models: [{ id: 'fixture', name: 'fixture', contextWindow: 1000000, maxTokens: 16384, input: ['text'] }] } } }, 'agent-default-model': { provider: 'fixture', model: 'fixture' } };
+  // Exercise the original native/PTC contract; background-runtime covers the enabled path.
+  const settings = { 'trisoul-x': { componentAutoSetup: false, backgroundTasksEnabled: false }, 'llm-pi-ai': { providers: { fixture: { api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'TRISOUL_X_FIXTURE_KEY', models: [{ id: 'fixture', name: 'fixture', contextWindow: 1000000, maxTokens: 16384, input: ['text'] }] } } }, 'agent-default-model': { provider: 'fixture', model: 'fixture' } };
   writeFileSync(join(home, 'settings.yaml'), JSON.stringify(settings));
   writeFileSync(join(home, '.credentials.yaml'), JSON.stringify({ version: 1, refs: { TRISOUL_X_FIXTURE_KEY: 'fixture-key' } }), { mode: 0o600 });
   const child = spawn(process.execPath, ['scripts/start.mjs'], { cwd: new URL('../', import.meta.url), env: { ...process.env, DSH_HOME: home, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });

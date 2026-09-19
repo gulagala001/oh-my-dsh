@@ -11,15 +11,19 @@ import { createHostAdapter } from '../src/context/host.mjs';
 import { newRecord, liveSpan, userRevision, normalizeChoices, candidateInput, prepareCandidate } from '../src/context/core.mjs';
 import { createTransaction, applyTransaction } from '../src/context/transactions.mjs';
 import { TODO_META, isTaskInjection, summaryMessageReader } from '../src/task-context.mjs';
+import { setRuntimeContext, taskContextMeta } from '../src/task-context.mjs';
+import { runtimeContext } from '../src/runtime-state.mjs';
 const prepared = { summary: '创建样式文件，工具确认写入成功。', documents: [] };
-function setup(t, config = {}) {
+function setup(t, config = {}, withTodo = true) {
   const dir = mkdtempSync(join(tmpdir(), 'todo-context-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
   const session = Session.create('todo-context', undefined, { version: 3, id: 'todo-context', createdAt: 1, cwd: dir, isSeeded: false, agentPreset: 'trisoul-x' });
   const sys = session.append('system/message', { turn: 1, step: 1, message: createSystemMessage('Stable system prompt.', 'test') }, { surfaceOp: 'append' });
   const user = text => session.append('user/message', createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'user' } }), { surfaceOp: 'append' });
   const first = user('实现样式。'); const todoStore = createTodoStore();
-  const added = todoStore.execTaskMap(session, { op: 'excerpt', from: '实现样式', to: '实现样式', tasks: [{ title: 'TASK_PAYLOAD_ONLY_42', anchor: { from: '实现样式', to: '实现样式' } }] });
-  assert.equal(added.isError, undefined); todoStore.maintainInjection(session);
+  if (withTodo) {
+    const added = todoStore.execTaskMap(session, { op: 'excerpt', from: '实现样式', to: '实现样式', tasks: [{ title: 'TASK_PAYLOAD_ONLY_42', anchor: { from: '实现样式', to: '实现样式' } }] });
+    assert.equal(added.isError, undefined); todoStore.maintainInjection(session);
+  }
   const calls = [], hub = { todoStore, store: { dir }, config: () => ({ keepTailEvents: 0, coordinatorEvery: 999, flushIdleMs: 0, ...config }), scope: () => ({ mode: 'session', project: dir }), action() {},
     ctx: { sessions: { async flush() {} }, tokenMeter: { measure(s) { return { nodes: s.surface.nodes.map(seq => ({ seq, heuristicTokens: 100 })) }; } } },
     async call(_agent, kind, args) { calls.push({ kind, args }); return { blocks: [{ type: 'tool-call', name: kind === 'compactFull' ? 'compact_conversation' : 'prepare_segment', arguments: kind === 'compactFull' ? { summary: prepared.summary } : prepared }] }; } };
@@ -34,6 +38,29 @@ function exchange(f, { name = 'write', value = 'Source body. '.repeat(1200), rea
 }
 function liveTodos(f) { return f.session.surface.nodes.map(seq => f.session.eventAt(seq)).filter(e => isTaskInjection(e) || e.data?.[TODO_META]); }
 function replay(f) { return Session.create(f.session.id, JSON.parse(JSON.stringify(f.session.snapshotEvents())), f.session.header); }
+for (const traceEnabled of [true, false]) for (const withTodo of [true, false]) {
+  test(`sampled runtime refresh stays single across compression and replay (Trace=${traceEnabled}, Todo=${withTodo})`, async t => {
+    const f = setup(t, { traceEnabled, stateHintsEnabled: true }, withTodo);
+    f.hub.context = f.pipeline;
+    let messages = [];
+    setRuntimeContext(f.session, () => runtimeContext(f.agent, f.hub, { messages }));
+    assert.ok(f.todoStore.maintainInjection(f.session));
+    exchange(f); await compact(f);
+    assert.equal(liveTodos(f).length, 1);
+    assert.equal(f.todoStore.maintainInjection(f.session), undefined, 'changed record versions and positions do not append another state');
+    messages = [createUserMessage({ content: [{ type: 'text', text: 'Next actual user input.' }], source: { kind: 'user' } })];
+    exchange(f); await compact(f);
+    assert.equal(liveTodos(f).length, 1);
+    assert.equal(taskContextMeta(liveTodos(f)[0].data).runtime.key, runtimeContext(f.agent, f.hub, { messages }).key);
+    assert.equal(f.todoStore.maintainInjection(f.session), undefined, 'compaction already delivered the pending input refresh');
+    f.session.append('user/message', messages[0], { surfaceOp: 'append' }); messages = [];
+    assert.equal(f.todoStore.maintainInjection(f.session), undefined, 'committing pending input is not a second input');
+    const restored = replay(f);
+    setRuntimeContext(restored, () => runtimeContext({ session: restored }, f.hub));
+    assert.equal(createTodoStore().maintainInjection(restored), undefined);
+    assert.deepEqual(restored.deriveMessages(), f.session.deriveMessages());
+  });
+}
 async function compact(f, mode = 'brief') {
   await f.pipeline.prepare(f.agent, true);
   return f.pipeline.applyReady(f.agent, { manual: true, ids: f.state.records.filter(r => !r.mergedInto && r.mode === 'raw').map(r => r.id), mode });
