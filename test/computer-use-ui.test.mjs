@@ -395,7 +395,11 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   assert.equal(popupAfter.target.id,popupBefore.target.id);assert.equal(popupAfter.status,popupBefore.status);assert.equal(popupAfter.controlEpoch,popupBefore.controlEpoch);assert.deepEqual(popupWrites,[]);
   context.off('request',recordPopupWrite);
   await pip.getByRole('button',{name:'缩小预览',exact:true}).click();
-  await pip.getByRole('button',{name:'返回对话',exact:true}).click();
+  await pip.getByRole('button',{name:'返回对话',exact:true}).click({noWaitAfter:true}).catch(error => {
+    // This action closes its own page. Chromium can tear down the click's
+    // acknowledgement first; accept only that expected terminal condition.
+    if (!pip.isClosed() || !error.message.includes('Target page, context or browser has been closed')) throw error;
+  });
   await until(()=>pip.isClosed());
   assert.equal(target.isClosed(),false,'closing a preview preserves the actual browser tab');
   await page.getByRole('button',{name:'悬浮预览',exact:true}).waitFor();
