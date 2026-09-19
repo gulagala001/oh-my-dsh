@@ -22,15 +22,15 @@ test('state sampling distinguishes estimates and job delivery from actual result
   assert.equal(runtimeStateKey(fresh), runtimeStateKey({ ...fresh, sampledAt: 'later', asOfSeq: 999, turnWallElapsedMs: 9999, context: { ...fresh.context, retainedTokensEstimate: 567 } }));
   const withRequest = seq => ({ ...fresh, context: { ...fresh.context, lastRequest: { provider: 'fixture', model: 'fixture', window: 128000, seq } } });
   assert.equal(runtimeStateKey(withRequest(1)), runtimeStateKey(withRequest(2)), 'an unchanged route does not repost state each model step');
-  assert.notEqual(runtimeStateKey(withRequest(1)), runtimeStateKey({ ...withRequest(2), context: { ...withRequest(2).context, lastRequest: { provider: 'fixture', model: 'changed', window: 128000, seq: 2 } } }));
+  assert.equal(runtimeStateKey(withRequest(1)), runtimeStateKey({ ...withRequest(2), context: { ...withRequest(2).context, lastRequest: { provider: 'fixture', model: 'changed', window: 128000, seq: 2 } } }));
   assert.ok(Buffer.byteLength(renderRuntimeState({ ...fresh, jobs: Array.from({ length: 30 }, (_, i) => ({ ...fresh.jobs[0], id: '汉字'.repeat(1000) + i })) })) <= 2048);
 });
-test('state-only injection is stable, does not create todos, and disabling clears only its own carrier', () => {
+test('without Todo, runtime observations never inject a standalone carrier', () => {
   const f = fixture();
   setRuntimeContext(f.session, () => runtimeContext(f.agent, f.hub));
   const original = createUserMessage({ content: [{ type: 'text', text: 'REAL_USER_TEXT' }], source: { kind: 'user' } });
   f.session.append('user/message', original, { surfaceOp: 'append' });
-  assert.ok(f.store.maintainInjection(f.session));
+  assert.equal(f.store.maintainInjection(f.session), undefined);
   assert.equal(f.store.maintainInjection(f.session), undefined);
   assert.equal(latestTodo(f.session), null); assert.equal(f.store.takeEmptyNudge(f.session), false);
   assert.equal(f.session.snapshotEvents().filter(e => e.type === 'todo/write').length, 0);
@@ -41,7 +41,7 @@ test('state-only injection is stable, does not create todos, and disabling clear
   assert.deepEqual(f.session.deriveMessages().filter(m => m.content.length), [original]);
   assert.equal(f.store.maintainInjection(f.session), undefined);
 });
-test('state changes append once, preserve the task ledger and pause, and reset after restart', () => {
+test('state changes do not repost Todo, preserve pause, and survive restart', () => {
   const f = fixture(); f.session.append('turn/start', { turn: 1 });
   f.session.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'Build the widget.' }], source: { kind: 'user' } }), { surfaceOp: 'append' });
   assert.ok(!f.store.execTaskMap(f.session, { op: 'excerpt', from: 'Build the widget', to: 'Build the widget', tasks: [{ title: 'Implement', anchor: { from: 'Build the widget', to: 'Build the widget' } }] }).isError);
@@ -49,8 +49,17 @@ test('state changes append once, preserve the task ledger and pause, and reset a
   f.store.execTaskMap(f.session, { op: 'pause_turn', reason: 'Server unavailable; start server.' });
   const revision = f.store.revOf(f.session), saved = f.store.snapshot(f.session);
   f.jobs.push({ id: 'j1', kind: 'bash', label: 'test', status: 'running', startedAt: 1 });
-  assert.ok(f.store.maintainInjection(f.session)); assert.equal(f.store.maintainInjection(f.session), undefined);
+  const before = f.session.snapshotEvents().length;
+  assert.equal(f.store.maintainInjection(f.session), undefined);
+  f.jobs[0].status = 'completed'; f.jobs[0].resultDelivery = 'delivered';
+  assert.equal(f.store.maintainInjection(f.session), undefined);
+  assert.equal(f.session.snapshotEvents().length, before);
   assert.deepEqual(f.store.snapshot(f.session), saved); assert.equal(f.store.revOf(f.session), revision); assert.equal(f.store.turnControl(f.session).paused, true);
+  assert.ok(!f.store.execTaskMap(f.session, { op: 'edit', tasks: [{ id: 'T1', title: 'Implement updated widget' }] }).isError);
+  const updated = f.store.maintainInjection(f.session);
+  assert.ok(updated);
+  assert.match(JSON.stringify(updated.data), /completed/);
+  assert.equal(f.store.maintainInjection(f.session), undefined);
   f.config.stateHintsEnabled = false; f.store.maintainInjection(f.session);
   assert.doesNotMatch(JSON.stringify(f.session.deriveMessages()), /runtime state/);
   assert.match(JSON.stringify(f.session.deriveMessages()), /\[ \] T1 Implement/);
