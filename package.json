@@ -1,6 +1,6 @@
 {
   "name": "trisoul_x",
-  "version": "0.1.6-alpha.2.2",
+  "version": "0.1.6-alpha.2.3",
   "private": true,
   "type": "module",
   "description": "DSH 工作台：整窗预处理、摘要与详细资料分层、项目摘要时间轴、任务验收与电脑操控。",
