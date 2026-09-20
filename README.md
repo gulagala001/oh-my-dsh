@@ -4,293 +4,179 @@
 
 <h1 align="center">Oh My DSH</h1>
 
+<p align="center"><strong>让你的 DSH，火力全开。</strong></p>
+
 <p align="center">
-  <strong>让 Agent 记住项目，跟进任务，操作网页与应用。</strong>
+  长上下文 · 任务与验证 · 提示词优化 · 代码理解 · 电脑操作 · 四套完整主题<br />
+  为 DeepSeek Harness 打造的一站式增强插件
 </p>
 
 <p align="center">
-  项目摘要 · 上下文替换 · 任务验证 · Computer Use<br />
-  为 DeepSeek Harness 打造的单主模型插件
-</p>
-
-<p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.6"><img src="https://img.shields.io/badge/version-0.1.6--alpha.2.6-3478F6?style=flat-square" alt="Version 0.1.6-alpha.2.6" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6"><img src="https://img.shields.io/badge/version-0.1.6-3478F6?style=flat-square" alt="Version 0.1.6" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.6--alpha.2-475569?style=flat-square" alt="DSH 0.1.6-alpha.2" /></a>
-  <a href="#support"><img src="https://img.shields.io/badge/status-early_access-64748B?style=flat-square" alt="Early access" /></a>
+  <a href="#themes"><img src="https://img.shields.io/badge/themes-4-222222?style=flat-square" alt="4 complete themes" /></a>
 </p>
 
 <p align="center">
-  <a href="#quickstart"><strong>安装插件</strong></a> ·
-  <a href="#features">功能亮点</a> ·
-  <a href="#computer-use">Computer Use</a> ·
+  <a href="#quickstart"><strong>立即安装</strong></a> ·
+  <a href="#features">装上之后</a> ·
+  <a href="#themes">挑选主题</a> ·
   <a href="docs/usage.md">使用指南</a> ·
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.6">版本说明</a> ·
-  <a href="https://github.com/gulagala001/oh-my-dsh/issues">反馈问题</a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6">版本说明</a>
 </p>
 
-<p align="center">
-  <img src="docs/images/context-records.png" width="100%" alt="Oh My DSH：在对话旁查看上下文分段与项目摘要" />
-</p>
+![Oh My DSH：对话、文件交付、任务与真实验证结果集中展示](docs/images/readme-overview.png)
 
-Oh My DSH 把任务、上下文、摘要、电脑和监控放进同一个工作台。后台归档对话片段，在后续请求中使用已准备好的摘要或详细文档；你可以回查原文、关联任务与验证结果，也能操作网页和 Windows、Mac 应用。
+**把长对话、任务进度、代码、电脑和交付结果，放到同一套工作流程里。**
 
-作为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 插件运行，沿用已有的模型配置、会话、文件、工具与技能。
-
-提供独立的 **`omd-ptc`** 预设：保留完整 OMD 机制，通过 `run_code` 组合工具调用。原 Oh My DSH 与宿主 PTC 预设保留，详见[使用指南](docs/usage.md#本地开发或独立试用)。
-
-### 四套完整主题，换一种工作氛围
-
-主题覆盖侧栏、对话、输入区、设置和工作台，字体、布局与明暗一起切换。
-
-| 内置主题 | 你会看到什么 |
-| --- | --- |
-| **[Codex Desktop](docs/codex-desktop.md)** | 黑白强调、冷灰侧栏、悬浮工作台与简洁的贯通顶栏 |
-| **[iOS Liquid Glass](docs/ios-liquid-glass.md)** | 通透玻璃、圆角面板、分组设置与悬浮输入区 |
-| **[Claude CLI](docs/claude-cli-terminal.md)** | 等宽文字、暖黑／纸白底色、陶土橙与终端式布局 |
-| **[Google Material](docs/google-material-expressive.md)** | Google 字体与图标、Material 配色、完整导航和设置布局 |
-
-在 **设置 → 外观** 即时切换；支持窄屏、跟随系统明暗、降低动态效果及恢复默认。[主题与导入说明](docs/skins.md)。
-
-开发版新增输入框**提示词优化**：星星默认显示，悬浮或展开抽屉可选轻润色、结构化和步骤规划，支持撤销、恢复原稿及继续修改。点亮星星后，每次发送前自动使用最低档润色，成功后自动发送；默认不开启自动润色。详见[提示词优化](docs/usage.md#提示词优化开发版)。
-
-### 内置 CodeGraph
-
-集成 [colbymchenry/codegraph](https://github.com/colbymchenry/codegraph) 1.6.0，通过 MCP 查询代码符号、源码、调用关系和变更影响。运行时随插件依赖安装，无需全局安装 CodeGraph 或运行 `codegraph install`。
-
-CodeGraph 默认启用，打开项目会话后自动在后台建立 `.codegraph/` 索引；可以直接询问代码结构。查询默认使用会话工作目录，也可以指定其他项目。需要手动刷新时，助手仍可调用 `codegraph_index`。
-
-按上游默认公开 `mcp__codegraph__codegraph_explore`。不同项目分别维护连接与文件监听；连接空闲一分钟后释放，下次查询重新连接并补齐变更。停止或卸载插件会关闭其进程，项目索引保留。内置实例关闭上游遥测。
-
-支持上游发行运行时覆盖的 macOS、Linux、Windows x64/arm64。平台运行时未随依赖安装时，会自动下载匹配版本到应用数据目录。[CodeGraph 使用指南](docs/usage.md#codegraph)。
-
-**设置 → Oh My DSH → 基础组件** 统一管理 CodeGraph、Computer Use、内置浏览器、桌面控制和 Chrome 连接。默认启用并自动准备，开关立即保存；路径等选项放在高级配置。系统权限、首次扩展加载，以及缺少系统编译工具时的处理步骤会在页面中提示。
+Oh My DSH 为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 配好上下文整理、任务提醒、结果验证、提示词优化和可视化工作台，再提供四套从布局到字体的完整主题。继续使用你已有的模型、会话、文件、工具和技能。
 
 <a id="quickstart"></a>
 
-## 快速开始
+## 装上，开始工作
 
-[本版功能、验证范围与限制](docs/release-0.1.6-alpha.2.6.md)。
-
-当前 **0.1.6-alpha.2.6** 为预发布版，使用 **DSH 0.1.6-alpha.2**。下面的安装命令固定到该版本；使用旧版 DSH 0.1.5-rc.1 时，请保留 [v1.1.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1)。升级宿主请沿用原来的安装方式、profile 和 `DSH_HOME`。
-
-Oh My DSH 通过 **DSH 的插件管理器**安装。已有 **DSH 0.1.6-alpha.2 Web** 时，先停止服务，然后在终端或 PowerShell 中运行：
+已有 **DSH 0.1.6-alpha.2 Web**？停止服务，在终端或 PowerShell 中运行：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.6-alpha.2.6
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.6
 ```
 
-按原来的方式启动：
+然后按原方式启动，例如 `dsh web`。打开启动时打印的登录链接，新建会话并选择 **Oh My DSH**。
 
-```sh
-dsh web
-```
+**从这三个入口开始：** 输入框的星星优化草稿；**工作台**查看任务、上下文和结果；**设置 → 外观**选择主题。
 
-打开启动时打印的登录链接，新建会话并选择 **Oh My DSH**。输入区下方的 **工作台** 和 **电脑** 就是主要入口。
-
-为兼容已有安装，插件 ID 与 Agent preset 继续使用 `trisoul_x` / `trisoul-x`。
-
-需要 **Node.js ≥22.19、pnpm 11.23.0 和 Git**；Windows 使用 **PowerShell 7**。模型需支持原生工具调用，理解截图还需要图像输入能力。自定义 profile 和 `DSH_HOME` 应沿用原配置。
-
-插件会设置 Oh My DSH 为默认 Agent preset，并应用完整文件／命令访问、关闭执行审批的配置；profile 自己的覆盖配置优先。
-
-[Windows 安装说明](docs/windows.md#安装与试用) · [更新与卸载](docs/usage.md#安装到现有-dsh推荐) · [模型与后台配置](docs/usage.md#日常使用)
+自定义 profile 请替换命令中的 `web`，沿用原来的 `DSH_HOME`、模型和凭据。本次为 **0.1.6 正式版**；[更新、卸载与源码试用](docs/usage.md#安装到现有-dsh推荐)。
 
 <details>
-<summary>源码下载与独立开发</summary>
+<summary>运行要求与默认配置</summary>
 
-[0.1.6-alpha.2.6 源码 ZIP](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.1.6-alpha.2.6/oh-my-dsh-v0.1.6-alpha.2.6.zip) 用于保存源码、手动部署或二次开发，包含已构建的界面。普通插件安装直接使用上面的命令即可。
+- Node.js ≥22.19、pnpm 11.23.0、Git；Windows 使用 PowerShell 7。
+- 模型需要支持原生工具调用；理解截图还需要图像输入能力。
+- 插件将 Oh My DSH 设为默认 Agent preset，并配置完整文件／命令访问、关闭执行审批。profile 中的显式覆盖配置优先。
+- 为兼容已有安装，内部插件与预设 ID 保留为 `trisoul_x` / `trisoul-x`。
+- 仍使用 DSH 0.1.5-rc.1 时，请保留 [v1.1.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1)。
 
-[从源码试用](docs/usage.md#本地开发或独立试用) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.6)
+[Windows 安装说明](docs/windows.md) · [模型与后台配置](docs/usage.md#日常使用)
 
 </details>
 
-## 0.1.6-alpha.2.6 更新
-
-新增四套从零制作的完整主题：Codex Desktop、iOS Liquid Glass、Claude CLI 和 Google Material；优化对话操作记录与历史加载，统一上下文设置校验并清理已退役的旧执行器。早期五套视觉皮肤已移除。
-
-[适配、优化、验证与风险说明](docs/release-0.1.6-alpha.2.6.md)
-
-在 **设置 → 外观** 选择皮肤，支持明暗、窄屏、导入与一键恢复默认。历史加载数量可选 50、200、500 条。[皮肤使用说明](docs/skins.md)。CodeGraph、Computer Use 仍在基础组件页面统一管理；[状态与后台任务使用说明](docs/runtime-state-background.md)。
-
-[本版更新与升级说明](CHANGELOG.md#016-alpha26--2026-09-21)。版本使用 DSH 对齐编号，历史 `1.3.0-alpha.*` 属于旧版本；旧客户端首次可能不提示，请按上方固定版本安装。
-
-- **上下文档案**：后台生成事实摘要与详细文档，中枢选择保留、详细替换或简要替换；请求边界应用已完成结果，原始事件仍可回查。
-- **私有与项目共享**：会话隔离仅查看自己的档案；项目共享按会话和事件时间展示摘要。全局背景由用户手填，旧自动记忆与状态提炼停止运行，旧数据保留。
-- **新版设置与侧栏**：频繁、适中、较少、自定义四档；支持摘要筛选、文档阅读、后台路由、身份恢复，以及浅深色与窄栏布局。
-- **环境说明中性化**：统一主模型与 Computer Use 的环境措辞，保留真实路径、工具契约和用户内容。内置 OpenCU 1.0.4。
-
-当前版本：默认整窗预处理。用户消息、提醒、旧摘要和附件不会切断窗口；系统提示词及前置 CoT 原位保留，工具往返与近期保留区仍受保护。
-
-基础摘要只写范围内实际操作、改动与观察到的结果，简短平铺直叙，不复述需求或前文，不写未来计划和未完成事项。用户原话由程序逐字、按顺序归档；文档、图片、附件统一为“详细资料”。详细模式一起携带，简要模式一起退出上下文并保留回查索引。中枢不再合并记录；`recall({id, asset: 1})` 可重新打开第一个原始附件。
-
-用户发言不直接触发中枢，也不取消已有中枢方案。自动处理按新增摘要数量和配置间隔运行；同一预处理批次完成后统一评估。手动触发、启用后的空闲处理及有限失败重试保留。
-
-设置提供“按消息边界分段”（默认关闭，开启恢复兼容行为）。默认每次触发最多处理 2 个窗口、单窗输入预算约 300,000 tokens、摘要目标 1,200 字符、后台并发最多 2 个、失败最多自动重试 2 次。积压单独记录，不因一次触发完成而丢失，也不会无限清理闲置会话。后续窗口需装满新的实际消息，或达到续跑文本门槛（默认约 8,000 tokens），不因几个零碎事件继续调用。失败重试只重试一窗，不另领整批额度。中枢回答过期会直接作废，不计失败或强制重试，新的判断仍遵守频率设置。空闲预处理仍默认关闭。频率默认使用适中档：48 条新事件、48 条窗口、每 3 段新摘要评估中枢，中枢最短间隔 60 秒、自动替换最短间隔 30 步；升级保留已保存的参数。
-
-替换前后使用同口径估算，计入历史推理、文本、工具往返与路由附件成本；这不是提供方的精确 token 账单。界面分别展示当前消息数、原始事件覆盖数、资料数量、剩余积压和估算节省量。图片接近请求上限时仍批量卸载旧图，原件保留。
-
-### 压缩后的任务与用户原话
-
-todo 不参与预处理摘要，也不形成分段边界。成功应用压缩后清理旧快照，从任务账本取最新版，放到前置 CoT 后；无 CoT 时放到系统前缀后。平时依然仅在任务变化时追加新版，下一次压缩统一清旧。用户原话属于详细资料中的逐字文本附件；仅摘要模式不携带全文，但可用 recall 回查。
-
-任务重新注入与压缩使用同一可恢复事务，并计入替换收益；不会因为生成失败先删任务。此位置会随压缩一起变化，不保证前缀缓存零影响。
-
-### 官方浏览器预览
-
-在 CU 网页工具栏点击 **在官方浏览器中预览**，在同一会话的 DSH 原生浏览器标签中打开当前网址。它是独立预览，不改变 CU 控制目标或停止状态，也不保证共享登录状态。网站的嵌入限制仍适用；实际操控、截图、批注和接管继续使用完整 CU 链路。
-
-### 版本与更新提醒
-
-左上角品牌旁的 **ⓘ** 可查看当前版本、最新版本和更新说明，并手动检查更新。**绿点**表示有普通更新，**红点**表示尚未安装的版本中包含必要修复；查看通知不会消除更新标记，安装对应修复后才会变为绿点或消失。
-
-客户端在页面可见时定期读取版本状态，服务端共享检查结果，正常情况下最多每 6 小时检查一次 GitHub。手动检查间隔至少 30 秒。网络失败会明确提示；同一服务进程中保留上次成功结果并标为过期，不把检查失败当作“已是最新版”。此功能仅检查公开发布信息，不调用模型、不发送会话内容、不自动安装或重启。
-
-发布时同步更新 `package.json` 版本和 `release-manifest.json`，在清单头部添加该版本的 `version`、`severity`、`title`、`notes`，再更新 [更新记录](CHANGELOG.md)。普通更新使用 `severity: "normal"`；必须提醒用户安装的重要修复使用 `severity: "required"`。保留历史必要更新条目，避免后续普通版本掩盖仍未安装的必要修复。分级由维护者明确标记，不靠标题关键词猜测。版本判断支持数字预发布版本；正式版安装不提示升级到预览版。
-
-### 手动压缩
-
-右侧工作台 → **上下文 → 手动压缩** 提供与输入框一致的操作：
-
-| 命令 | 范围 | 是否调用模型 |
-| --- | --- | --- |
-| `/compact` | 应用已准备的中枢方案；明确选段时按用户选择的详细或简要模式应用 | 否 |
-| `/compact-p` | 全部已准备片段（包括尚为原文或已经详细替换的片段）切换为仅摘要；未处理原文不变 | 否 |
-| `/compact-f` | 将当前完整对话、用户消息、工具结果、旧摘要和历史思考重新汇总为一份摘要；保留前置 Trace，不保留近期原文窗口 | 是，使用中枢的后台模型配置 |
-
-全量模式保留系统提示词、前置 CoT、当前工具定义和用户手写全局背景，不删除原始日志或详细资料存档。图片与文件保存原始引用并可回查，不凭空生成视觉描述。全量模式可能损失细节；失败或摘要未缩短时不替换原文，写入中断使用现有事务恢复。
-
-执行中的会话会将命令排队，在下一次请求边界执行；侧栏显示排队、生成中、失败和完成状态。手动压缩会取消本会话未完成的旧预处理/中枢请求，防止旧结果覆盖手动选择。已归档的用户原文和详细资料不会在简要模式下重新灌入；保留的前置 Trace 仍位于摘要之前。
-
-升级前备份原 DSH 数据目录。上下文后台调用仍会产生用量，摘要不保证无损；请保留原始事件与必要的外部验证。
-
-[完整版本说明与下载](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.6) · [身份设置说明](docs/usage.md#自定义身份认知)
-
 <a id="features"></a>
 
-## 为持续工作的 Agent 准备
+## 装上之后，会有什么变化？
+
+### 长对话，继续推进
+
+后台把已经发生的工作整理成摘要与详细资料，在后续请求中按需替换。用户原话、文件和图片保留回查入口；项目摘要可以共享，会话也可以独立隔离。长任务需要的线索，有地方存、有路径找。
+
+你可以在工作台检查处理记录、阅读详细资料，或手动决定压缩范围。[上下文如何工作](docs/context-workflow.md)。
+
+### 做了什么，验过什么，一眼看清
+
+任务对应原始需求，验证关联测试、命令或文字证据。进度、运行结果和交付文件集中呈现，工具细节逐层展开。
+
+**BT（Better Todo）** 提供待办完成与验证完成提醒，按会话控制。待办提醒默认开启，验证提醒默认关闭。文件可以直接打开、预览和继续处理。
+
+### 把想法整理清楚，再发送
+
+输入框星星提供 **轻润色、结构化、步骤规划** 三档优化，直接改写当前草稿。支持撤销、重做、恢复原稿，也可以补充要求继续改。
+
+![提示词优化：模式选择、草稿版本与继续优化](docs/images/readme-optimizer.png)
+
+自动轻润色默认关闭。开启后，每次发送先按最低档润色，再交给宿主发送；附件和引用继续保留。失败、取消或草稿冲突时保留输入。优化复用当前模型，每次会产生一次额外调用。[使用说明](docs/usage.md#提示词优化)。
+
+### 看清代码结构，再动手
+
+内置 **[CodeGraph](https://github.com/colbymchenry/codegraph)**，查询符号、源码、调用关系和变更影响。默认在项目会话中自动准备索引，无需另做全局安装。[CodeGraph 使用指南](docs/usage.md#codegraph)。
+
+需要组合工具调用时，可以选择 **OMD-PTC** 预设，通过 `run_code` 串联工具，继续使用完整 OMD 能力。
+
+<a id="computer-use"></a>
+
+### 从代码，走到网页与桌面
+
+内置 **[OpenCU](https://github.com/gulagala001/opencu)**。使用 `@Browser`、已连接的 `@Chrome` 或应用引用指定目标，让助手读取页面、点击、输入并检查结果。
+
+- **看得到执行过程**：实时画面、助手光标和操作记录。
+- **随时接手**：停止助手，手动操作，再恢复控制。
+- **把问题指给它看**：窗口分享、区域圈选、元素批注与样式预览。
+- **把结果留下来**：截图、网页快照与资源导出成为会话附件。
+
+浏览器、桌面控制和运行环境统一在 **设置 → Oh My DSH → 基础组件** 管理。[电脑操作指南](docs/usage.md#computer-use预览版)。
+
+<a id="themes"></a>
+
+## 四套主题，四种工作氛围
+
+**布局、字体、侧栏、输入区、设置与工作台一起设计。** 每套都支持浅色、深色和窄屏，在「设置 → 外观」即时切换。
 
 <table>
   <tr>
     <td width="50%" valign="top">
-      <h3>记住项目约定</h3>
-      <p>会话私有档案与同项目共享摘要，按时间归档。详细文档按编号回查，全局固定背景由用户手动维护。</p>
+      <a href="docs/images/readme-theme-codex.png"><img src="docs/images/readme-theme-codex.png" alt="Codex Desktop 主题：黑白强调、冷灰侧栏、系统字体" /></a>
+      <h3>Codex Desktop</h3>
+      <p>黑白强调、冷灰侧栏、贯通顶栏与悬浮工作台。克制、清晰，给内容留出空间。</p>
+      <a href="docs/codex-desktop.md">查看主题说明 →</a>
     </td>
     <td width="50%" valign="top">
-      <h3>让长对话继续工作</h3>
-      <p>后台准备摘要与事实文档，再应用已完成的替换决定；需要细节时，可取回详细文档或原始事件。</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>让任务有据可查</h3>
-      <p>任务对应需求摘录与锚点，验证关联测试或文字证据。修改任务时撤销完成状态与旧证据，进度和结果一起查看。</p>
-    </td>
-    <td width="50%" valign="top">
-      <h3>操作网页与应用</h3>
-      <p>控制内置浏览器、已连接的 Chrome 标签与 Windows／Mac 应用。读取控件、截图、点击和输入，在实时预览中查看进展。</p>
+      <a href="docs/images/readme-theme-ios.png"><img src="docs/images/readme-theme-ios.png" alt="iOS Liquid Glass 主题：通透玻璃、圆角面板与悬浮输入区" /></a>
+      <h3>iOS Liquid Glass</h3>
+      <p>通透玻璃、柔和层次、圆角面板与分组设置。让工作台轻盈起来。</p>
+      <a href="docs/ios-liquid-glass.md">查看主题说明 →</a>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <h3>用画面说明问题</h3>
-      <p>分享窗口、圈选页面、标注元素，预览宽高与颜色等样式变化；把截图和说明加入草稿，继续和助手讨论。</p>
+      <a href="docs/images/readme-theme-claude.png"><img src="docs/images/readme-theme-claude.png" alt="Claude CLI 主题：暖黑底色、陶土橙与等宽文字" /></a>
+      <h3>Claude CLI</h3>
+      <p>暖黑与纸白、陶土橙、等宽文字和终端式布局。紧凑直接，保留熟悉的代码氛围。</p>
+      <a href="docs/claude-cli-terminal.md">查看主题说明 →</a>
     </td>
     <td width="50%" valign="top">
-      <h3>看清每一步的开销</h3>
-      <p>集中查看主模型与后台调用的 Token 用量、缓存和耗时，追踪上下文变化、摘要准备与替换记录。</p>
+      <a href="docs/images/readme-theme-material.png"><img src="docs/images/readme-theme-material.png" alt="Google Material 主题：Material 配色、Google 字体与完整导航" /></a>
+      <h3>Google Material</h3>
+      <p>Material 配色、Google 字体与图标、舒展的导航和设置。桌面与窄屏保持统一。</p>
+      <a href="docs/google-material-expressive.md">查看主题说明 →</a>
     </td>
   </tr>
 </table>
 
-### 一个工作台，五个入口
-
-**任务 · 上下文 · 摘要 · 电脑 · 监控** 复用同一个右侧标签，切换时保留未保存的编辑。界面采用 DSH 与 Codex 的融合风格，统一浅色／深色主题与窄窗布局。
-
-操作记录按 **总摘要 → 操作列表 → 单项结果／缩略图 → 大图** 逐层展开。思考、上下文注入和压缩记录统一收纳，收起再打开时保留各项展开选择；对话正文与交付结果始终是阅读重点。
-
-输入区保留记忆范围和 **BT（Better Todo）**：待办完成提醒默认开启，验证完成提醒默认关闭，两个开关按会话独立保存。
-
-<a id="computer-use"></a>
-
-## 让助手操作网页与应用
-
-Computer Use 由 [OpenCU](https://github.com/gulagala001/opencu) 提供，安装 Oh My DSH 时自动包含全部能力。只需要浏览器与桌面操控时，也可以独立安装 OpenCU；同时安装共用一套工具、连接和预览。
-
-当前 main 源码支持 **Chrome 原生会话标签分组**：AI 控制的网页自动归入「OMD · 会话名称」，用颜色区分会话，停止后保留状态标记。需要将浏览器扩展更新到 0.1.4 并重新加载；只查看预览不接管标签，内置 `@Browser` 标签栏保持原样。
-
-在输入区用 **`@Browser`**、已连接的 **`@Chrome`** 或应用引用选择目标，然后描述任务：
-
-> 打开这个表单，填写我提供的内容，完成后截图并保留页面。
-
-助手选择目标后，对话页内自动出现实时预览。拖动顶部标题栏可移动预览，点击卡片只放大查看，不改变操控目标或暂停助手。多个网页或应用以卡片堆叠；需要手动操作时，可单独停止助手，操作后再恢复控制。
-
-![对话页内的双窗口堆叠预览与右侧实时画面](vendor/opencu/docs/images/native-preview-stack.png)
-
-- **实时观察**：画面与助手光标同步显示；停止后仍可看图，也可选择独立弹出预览。
-- **浏览器协作**：紧凑地址栏与标签页、页面查找、历史记录、下载面板和外部浏览器打开；内置页面随侧栏实际重新排版。
-- **设备预览**：设置页面尺寸、旋转、调整预览比例或自动适应；拖动边框调整尺寸，支持方向键微调与 Esc 取消。
-- **查看与接管**：查看其他标签时保留助手当前目标；需要手动输入时停止并接管，完成后恢复助手控制。
-- **文件交付**：导出当前页 MHTML 快照，保存已加载的图片、字体、样式与视频资源，结果成为持久会话附件。
-- **页面工具**：兼容的 Chromium 153+ 可发现并调用网页公开的 WebMCP 工具。
-
-首次使用，打开 **电脑 → 运行环境与权限** 检查连接。Mac 桌面控制需要 **macOS 14+**、辅助功能与屏幕录制权限；其他平台的支持范围见下方。
-
-### 圈出问题，再给出修改方向
-
-用 **分享窗口** 把 Windows／Mac 窗口截图与文字加入草稿；用 **批注页面** 圈选区域或点选元素，附上修改说明。元素批注支持跨源嵌套框架。
-
-选择元素后，可预览宽高、字号、颜色与间距。插件在真实网页临时应用样式，采集图片后恢复；把预览交给助手后，再继续修改项目源码。
+支持跟随系统明暗、降低透明与动态效果、导入主题和恢复默认。早期五套视觉皮肤已移除，本版只保留这四套完整主题。[主题使用与制作](docs/skins.md)。
 
 <details>
-<summary>查看页面批注与样式预览</summary>
+<summary>设置也在主题覆盖范围内</summary>
 
-<p align="center">
-  <img src="vendor/opencu/docs/images/page-annotation-style.png" width="760" alt="选择页面元素、调整样式并将真实预览加入草稿" />
-</p>
-
-截图、元素上下文与说明加入现有草稿，由你检查后发送。临时样式预览本身不会修改源码。
+![iOS Liquid Glass 的外观设置：主题、明暗、历史加载与辅助选项](docs/images/readme-appearance.png)
 
 </details>
-
-[Computer Use 使用说明](docs/usage.md#computer-use预览版) · [平台与运行条件](docs/usage.md#平台与运行条件)
 
 <a id="support"></a>
 
-## 平台与运行环境
+## 平台与使用范围
 
-当前预发布版本为 **0.1.6-alpha.2.6**，适配 **DSH 0.1.6-alpha.2**。
-
-| 功能 | 当前支持 |
+| 能力 | 支持范围 |
 | --- | --- |
-| 任务、记忆、上下文与监控 | Windows、macOS、Linux 共用插件入口，独立于桌面控制。 |
-| 内置浏览器 | 使用独立配置控制 Chrome／Chromium，提供实时预览、网页操作和文件交付；内置无头浏览器隐藏滚动条以保持截图布局稳定。 |
-| 已有 Chrome 扩展 | 提供 Windows、macOS、Linux 的本机连接与注册，连接已有标签页，见 [Windows 使用说明](docs/windows.md)。 |
-| 原生桌面与窗口分享 | macOS 14+、Windows 10 2004+。首次安装分别需要 Apple Command Line Tools 或 .NET 10 SDK；在电脑面板中完成安装、更新与连接管理。 |
-| 独立弹出预览 | 需要 Document Picture-in-Picture 支持；默认页内预览不依赖该 API。 |
+| 上下文、任务、提示词优化、主题与工作台 | Windows、macOS、Linux |
+| 内置浏览器与 Chrome 扩展连接 | Windows、macOS、Linux |
+| 原生桌面与窗口分享 | macOS 14+、Windows 10 2004+；需要系统授权与对应运行环境 |
 
-[Windows 安装与使用](docs/windows.md) · [完整使用指南](docs/usage.md) · [版本说明](https://github.com/gulagala001/oh-my-dsh/releases)
+Mac 桌面控制需要辅助功能、屏幕录制权限与 Apple Command Line Tools；Windows 原生组件需要 .NET 10 SDK。首次使用先在运行环境页面完成准备。[完整平台说明](docs/usage.md#平台与运行条件)。
 
-<details>
-<summary>1.0 正式先行版 · 2026-09-13</summary>
+上下文整理与提示词优化会调用模型，摘要也可能损失细节；原始资料回查与外部验证仍然重要。皮肤适配 DSH 的真实功能，不提供对应品牌的账号服务。
 
-- Windows 原生桌面、已有 Chrome 连接、应用发现与启动、中文输入、剪贴板和常用显示缩放。
-- 操作记录分层展开、思考与上下文收纳，大图查看、页面批注、窗口分享与可拖动悬浮预览。
-- 浏览器自适应排版、设备边框拖动、页面查找、历史记录与下载面板。
-- 统一工作台和对话工具栏，完善浅色／深色主题与窄窗布局。
-- 网页与 Windows／Mac 应用操控、多目标堆叠预览、窗口分享、批注和样式预览。
-- 接入页面／素材导出与 WebMCP。
-- 保留任务摘录、锚点和验证记录，支持原版 Agent 与 Oh My DSH 在同一宿主中切换。
+## 这次更新
 
-</details>
+**0.1.6**：四套完整主题、提示词优化、对话记录整理，以及 50／200／500 条历史加载选择；统一上下文设置校验，清理退役执行器，保留旧资料只读回查。
+
+[更新记录](CHANGELOG.md) · [本版验证与升级说明](docs/release-0.1.6.md) · [下载与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6)
 
 ## 文档与参与
 
-- [使用与开发指南](docs/usage.md)：安装、日常操作、模型与频率配置、数据备份及测试。
-- [开发与验证](docs/usage.md#开发与验证)：源码入口、运行环境与自动化测试。
-- [提交问题或建议](https://github.com/gulagala001/oh-my-dsh/issues)：请附上 DSH／Node.js 版本、复现步骤与脱敏错误。
+- [使用指南](docs/usage.md)：安装、配置、日常操作、备份与开发。
+- [上下文机制](docs/context-workflow.md)：摘要、原文回查、任务保留与手动压缩。
+- [主题说明](docs/skins.md)：四套主题、导入格式与布局适配。
+- [Windows 指南](docs/windows.md)：安装与原生环境准备。
+- [反馈问题](https://github.com/gulagala001/oh-my-dsh/issues)：请提供版本、复现步骤和脱敏错误。
 
-## 来源与许可
+核心机制与提示词源自 trisoul，宿主与基础 Agent preset 基于 DeepSeek Harness。项目代码许可暂未指定；第三方来源与许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
-核心机制与提示词源自 trisoul；宿主与基础 Agent preset 基于 DeepSeek Harness。项目代码许可暂未指定。上游许可和来源见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
-
-<sub>截图摄于 2026-09-12，来自实际 DSH 界面的隔离测试会话，网页与窗口内容均为测试示例。</sub>
+<sub>截图摄于 2026-09-21，来自真实 DSH 界面的隔离演示会话。Atlas 为虚构示例项目，文件写入与内容检查实际执行；截图不包含私人会话或凭据。</sub>
