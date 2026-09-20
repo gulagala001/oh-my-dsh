@@ -1,8 +1,17 @@
 # OMD 原生皮肤
 
-新增 **Google Material · 全新布局**（1.0.0）：从零制作的 Android / Google 设计，包含导航、完整设置与工作台，以及本地打包的 Google Sans Flex、Google Sans Code、Noto Sans SC 和 Material Symbols。详见 [Google Material](google-material-expressive.md)。
+在「设置 → 外观」选择四套从零制作的完整主题：
 
-在「设置 → 外观」选择内置皮肤：Codex、Claude Code、Claude Desktop、iOS Glass、Material，以及独立从零制作的 **iOS Liquid Glass · 全新布局**、**Codex Desktop · 全新布局** 和 **Claude CLI · 全新终端布局**。前五套版本为 1.1.0，Codex Desktop 布局版本为 1.0.1，其他新布局为 1.0.0，涵盖侧栏、对话、输入区、设置与工作台，详见 [iOS Liquid Glass](ios-liquid-glass.md)、[Codex Desktop](codex-desktop.md) 和 [Claude CLI](claude-cli-terminal.md)。也可以导入 `.omd-skin.json`。导入同一 id 会更新原有皮肤。皮肤与降低特效选项保存在当前浏览器、当前站点；明暗模式使用 DSH 的设置，可选浅色、深色、跟随系统。皮肤包不执行 JavaScript、不需要网络。
+| 主题 | 设计特点 |
+| --- | --- |
+| [Codex Desktop](codex-desktop.md) | 黑白强调、冷灰侧栏、悬浮工作台、系统字体与贯通顶栏 |
+| [iOS Liquid Glass](ios-liquid-glass.md) | 圆角玻璃面板、分组设置、悬浮输入区与窄屏导航 |
+| [Claude CLI](claude-cli-terminal.md) | 暖黑与纸白、陶土橙、等宽字体、终端式输入和目录导航 |
+| [Google Material](google-material-expressive.md) | Android / Google 风格的导航与设置，本地打包 Google Sans、Noto Sans SC 和 Material Symbols |
+
+四套主题均覆盖侧栏、对话、输入区、设置与工作台，并适配明暗和窄屏。Codex Desktop 版本为 1.0.1，其他三套为 1.0.0。早期五套视觉皮肤已移除；浏览器若仍选中已移除的内置 id，会恢复默认外观。
+
+也可以导入 `.omd-skin.json`。导入同一 id 会更新原有皮肤。皮肤与降低特效选项保存在当前浏览器、当前站点；明暗模式使用 DSH 的设置，可选浅色、深色、跟随系统。皮肤包不执行 JavaScript、不需要网络。
 
 「恢复默认皮肤」保留已导入的文件；「移除当前皮肤」删除当前皮肤并恢复默认。格式无效的导入不会替换当前皮肤；启动时损坏的记录会跳过。必要时在当前地址追加 `?omd-skin=default`（已有查询参数时追加 `&omd-skin=default`）可临时以默认外观打开设置。
 

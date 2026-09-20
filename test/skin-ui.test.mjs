@@ -143,6 +143,12 @@ test('native skin import, host mode sync, portals, persistence, replacement and 
   await page.reload(); await page.getByRole('button', { name: '设置', exact: true }).waitFor();
   assert.equal(await active(), null); await open();
   assert.match(await page.getByRole('alert').textContent(), /默认/);
+  await page.evaluate(key => localStorage.setItem(key, JSON.stringify({ skins: [], selected: 'codex' })), STORAGE_KEY);
+  await page.reload(); await page.getByRole('button', { name: '设置', exact: true }).waitFor();
+  assert.equal(await active(), null, 'a removed built-in theme safely falls back to the host appearance');
+  await open();
+  const options = await page.getByLabel('皮肤', { exact: true }).locator('option').evaluateAll(items => items.map(item => item.value));
+  assert.deepEqual(new Set(options), new Set(['default', 'codex-desktop', 'ios-liquid-glass', 'claude-cli-terminal', 'google-material-expressive']));
   assert.deepEqual(errors, []);
   if (process.env.TRISOUL_UI_ARTIFACTS) console.log('Skin UI artifacts:', root);
 });

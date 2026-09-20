@@ -38,6 +38,21 @@ Oh My DSH 把任务、上下文、摘要、电脑和监控放进同一个工作�
 
 提供独立的 **`omd-ptc`** 预设：保留完整 OMD 机制，通过 `run_code` 组合工具调用。原 Oh My DSH 与宿主 PTC 预设保留，详见[使用指南](docs/usage.md#本地开发或独立试用)。
 
+### 四套完整主题，换一种工作氛围
+
+主题覆盖侧栏、对话、输入区、设置和工作台，字体、布局与明暗一起切换。
+
+| 内置主题 | 你会看到什么 |
+| --- | --- |
+| **[Codex Desktop](docs/codex-desktop.md)** | 黑白强调、冷灰侧栏、悬浮工作台与简洁的贯通顶栏 |
+| **[iOS Liquid Glass](docs/ios-liquid-glass.md)** | 通透玻璃、圆角面板、分组设置与悬浮输入区 |
+| **[Claude CLI](docs/claude-cli-terminal.md)** | 等宽文字、暖黑／纸白底色、陶土橙与终端式布局 |
+| **[Google Material](docs/google-material-expressive.md)** | Google 字体与图标、Material 配色、完整导航和设置布局 |
+
+在 **设置 → 外观** 即时切换；支持窄屏、跟随系统明暗、降低动态效果及恢复默认。[主题与导入说明](docs/skins.md)。
+
+开发版新增输入框**提示词优化**：星星默认显示，悬浮或展开抽屉可选轻润色、结构化和步骤规划，支持撤销、恢复原稿及继续修改。点亮星星后，每次发送前自动使用最低档润色，成功后自动发送；默认不开启自动润色。详见[提示词优化](docs/usage.md#提示词优化开发版)。
+
 ### 内置 CodeGraph
 
 集成 [colbymchenry/codegraph](https://github.com/colbymchenry/codegraph) 1.6.0，通过 MCP 查询代码符号、源码、调用关系和变更影响。运行时随插件依赖安装，无需全局安装 CodeGraph 或运行 `codegraph install`。
@@ -91,7 +106,7 @@ dsh web
 
 ## 0.1.6-alpha.2.6 更新
 
-新增九套原生皮肤，包含 Codex、iOS、Claude CLI 和 Google Material 的完整布局；优化对话操作记录与历史加载，统一上下文设置校验并清理已退役的旧执行器。
+新增四套从零制作的完整主题：Codex Desktop、iOS Liquid Glass、Claude CLI 和 Google Material；优化对话操作记录与历史加载，统一上下文设置校验并清理已退役的旧执行器。早期五套视觉皮肤已移除。
 
 [适配、优化、验证与风险说明](docs/release-0.1.6-alpha.2.6.md)
 

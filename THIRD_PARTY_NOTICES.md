@@ -81,9 +81,9 @@ Sources: https://github.com/googlefonts/googlesans-flex, https://github.com/goog
 
 # Other bundled skin fonts
 
-Bundled skins also include subsets of Inter, IBM Plex, and JetBrains Mono under SIL Open Font License 1.1. Complete licenses are included in `docs/skin-font-licenses/`; the Claude CLI source assets also carry their license alongside the font files. Apple and other operating-system fonts are referenced through system font stacks and are not redistributed.
+The Claude CLI skin embeds JetBrains Mono under SIL Open Font License 1.1. Its complete license is included in `docs/skin-font-licenses/` and alongside the source font files. Apple and other operating-system fonts are referenced through system font stacks and are not redistributed.
 
-Sources: https://github.com/rsms/inter, https://github.com/IBM/plex, and https://github.com/JetBrains/JetBrainsMono
+Source: https://github.com/JetBrains/JetBrainsMono
 
 # sharp
 
@@ -103,3 +103,11 @@ License: https://github.com/colbymchenry/codegraph/blob/v1.6.0/LICENSE
 Sources: https://github.com/modelcontextprotocol/typescript-sdk and https://github.com/deepseek-ai/deepseek-harness
 
 The modular main-agent prompt adaptation in `src/cc-adaptation` comes from the user-supplied TriSoulX DSH 0.1.6 CC migration candidate 0.4.0. Its fixed comparison source is [the CC prompt snapshot](https://github.com/asgeirtj/system_prompts_leaks/blob/8eb1be156b850d09c2bd05df7ea32b0f06c9887d/Anthropic/claude-code/claude-code-opus-5.md). DSH integration targets 0.1.6-alpha.1; this attribution does not grant additional rights to third-party prompt text.
+
+# Prompt Optimizer templates
+
+The user-prompt basic, professional, planning, and iteration templates in `vendor/prompt-optimizer/` come from Prompt Optimizer commit `93c37090846dd7ba9619a0ebc152f205624df9f1` (2025-10-30), distributed at that revision under the MIT License, copyright (c) 2025 linshenkx. The complete license is included in `vendor/prompt-optimizer/LICENSE`. The original TypeScript files are unchanged; `templates.json` extracts their system/user message literals as runtime data. Source paths and SHA-256 hashes are in `vendor/prompt-optimizer/manifest.json`.
+
+Oh My DSH supplies its own model transport, input UI, draft history, cancellation and send handling. Additional integration instructions preserve the user's intent and structured references and prohibit invented requirements. These instructions are appended by `src/prompt-optimizer.mjs`; they do not modify the archived upstream files. The upstream application, UI, SDKs, history database and newer AGPL-licensed changes are not included.
+
+Source and license at the pinned revision: https://github.com/linshenkx/prompt-optimizer/tree/93c37090846dd7ba9619a0ebc152f205624df9f1

@@ -4,7 +4,7 @@
 
 ## 界面与皮肤
 
-- 设置新增外观页和九套内置皮肤：Codex、Claude Code、Claude Desktop、iOS Glass、Material，以及完整布局的 Codex Desktop、iOS Liquid Glass、Claude CLI、Google Material Expressive。
+- 设置新增外观页和四套从零制作的完整主题：Codex Desktop、iOS Liquid Glass、Claude CLI、Google Material Expressive。早期五套视觉皮肤及其专用字体资源已移除。
 - 完整布局覆盖侧栏、对话、输入区、工作台、设置、明暗与窄屏。皮肤即时切换，可导入、降低效果和恢复默认；选择保存在当前浏览器。
 - Codex Desktop 1.0.1 使用黑白强调、冷灰侧栏和悬浮工作台；顶栏贯通两列，右栏默认 360px，开关固定在窗口最右端。原生拖动保持有效，宽度偏好按皮肤保存。
 - 过程记录、工具操作和上下文记录使用独立折叠入口，保留实际结果、文件操作、错误和原始记录。
