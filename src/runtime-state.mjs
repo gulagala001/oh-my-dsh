@@ -2,9 +2,13 @@ import { createHash } from 'node:crypto';
 import { activeRecords, liveSpan } from './context/core.mjs';
 
 // A sampled observation, never a task budget or an estimate of completion.
-export function collectRuntimeStatus(agent, hub, { now = Date.now(), messages = [] } = {}) {
+export function collectRuntimeStatus(agent, hub, { now = Date.now(), messages = [], turn: currentTurn, step: currentStep } = {}) {
   const session = agent.session, events = session.snapshotEvents();
   const start = events.findLast(e => e.type === 'turn/start');
+  // pre-step runs before step/start is appended. Prefer its host coordinates;
+  // runtime_status reads the latest step in this turn directly from the log.
+  const turn = currentTurn ?? start?.data.turn ?? null;
+  const step = currentStep ?? events.findLast(e => e.type === 'step/start' && e.data.turn === turn)?.data.step ?? null;
   const ended = start && events.some(e => e.seq > start.seq && e.type === 'turn/end');
   const request = events.findLast(e => e.type === 'request/context');
   const header = session.requestHeader?.()?.config;
@@ -14,7 +18,7 @@ export function collectRuntimeStatus(agent, hub, { now = Date.now(), messages = 
   const input = messages.findLast(m => m.source?.kind === 'user')?.id
     ?? events.findLast(e => e.type === 'user/message' && e.surfaceOp === 'append' && e.data?.source?.kind === 'user')?.data.id ?? null;
   return {
-    sampledAt: new Date(now).toISOString(), asOfSeq: events.at(-1)?.seq ?? -1,
+    sampledAt: new Date(now).toISOString(), turn, step, asOfSeq: events.at(-1)?.seq ?? -1,
     turnWallElapsedMs: start && !ended ? Math.max(0, now - start.time) : null,
     context: {
       retainedTokensEstimate: Number.isFinite(meter.totalTokens) && (request || meter.totalTokens > 0) ? meter.totalTokens : null,
@@ -39,8 +43,9 @@ export function runtimeStateKey(status) {
 
 export function renderRuntimeState(status) {
   const c = status.context, last = c.lastRequest;
-  const lines = [`[runtime state · as of ${status.sampledAt} · event ${status.asOfSeq}]`,
+  const lines = [`[runtime state · as of ${status.sampledAt} · turn ${status.turn ?? 'not started'} · step ${status.step ?? 'not started'}]`,
     'Latest snapshot supersedes earlier runtime snapshots; it is not a task budget.',
+    'Turn and step are host execution positions at sampling time, not live counters.',
     ...(status.turnWallElapsedMs == null ? [] : [`Turn wall time: ${Math.floor(status.turnWallElapsedMs / 1000)}s (includes tools and waiting).`]),
     `Retained context estimate: ${c.retainedTokensEstimate == null ? 'not yet measured' : `${c.retainedTokensEstimate} tokens`}; excludes pending input and new prompt assembly.`,
     ...(last ? [`Last confirmed request: ${last.provider}/${last.model}; window ${last.window ?? 'unknown'} (not remaining capacity).`] : []),

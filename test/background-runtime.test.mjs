@@ -50,6 +50,7 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`background ${preset}: one e
   assert.equal(await readFile(join(f.workspace, 'runs.txt'), 'utf8'), 'once\n');
   const first = requests[0];
   assert.match(flatten(first), /runtime state · as of/);
+  assert.match(flatten(first), /turn 1 · step 1\]/, 'the first real model request receives host coordinates, not setup event numbers');
   for (const request of requests) {
     const text = flatten(request), expected = text.includes('STEER_THE_WAIT') ? 2 : 1;
     assert.equal((text.match(/runtime state · as of/g) || []).length, expected,

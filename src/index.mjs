@@ -81,7 +81,7 @@ export function apply(ctx, config) {
       hub.components.project(agent.session.header.cwd);
       // A pending write-ahead transaction must finish before sending another request.
       // Only an explicitly queued full-compaction command can await model work here.
-      setRuntimeContext(agent.session, () => runtimeContext(agent, hub, { messages }));
+      setRuntimeContext(agent.session, () => runtimeContext(agent, hub, { messages, turn, step }));
       await hub.context.preStep(agent, signal);
       if (hub.todoStore) {
         hub.todoStore.maintainInjection(agent.session);
