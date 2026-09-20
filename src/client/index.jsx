@@ -12,10 +12,14 @@ import { BrandNameWithVersion } from './version-info.jsx';
 import versionCss from './version-info.css';
 import { whaleCss, whaleSvg } from './brand.mjs';
 import { createContextUI } from './context-client.mjs';
+import { applyHistorySize } from './history-settings.jsx';
+import { applySkins } from './skins/settings.jsx';
+import { applyConversationRecords } from './conversation-records.jsx';
 import { RecommendedPlugins } from './recommended-plugins.jsx';
+import { applyPromptOptimizer } from './prompt-optimizer.jsx';
 
 export { CONTEXT_UI_VERSION as contextUIVersion } from './context-client.mjs';
-const { ContextSettings, ScopeChip, wrapWorkbench, applyStyle } = createContextUI(React);
+const { ContextSettings, ScopeChip, PipelinePanel, SummaryPanel, applyStyle } = createContextUI(React);
 
 const api = async (path, value, signal) => {
   const response = await fetch(`/trisoul-x/api${path}`, value === undefined ? { signal } : { signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
@@ -25,8 +29,9 @@ const api = async (path, value, signal) => {
 };
 const suffix = id => `?${id ? `session=${encodeURIComponent(id)}` : ''}`;
 const fmt = n => Number(n || 0).toLocaleString();
-const kindName = { main: '主执行', subagent: '子代理', compactFull: '全量压缩', prepare: '上下文预处理', coordinate: '上下文替换', background: '记忆消化', recall: '记忆检索', state: '状态提炼', curation: '记忆整理', surgeon: '上下文整理（历史）', probeAsk: '探针出题（历史）', probeAnswer: '探针作答（历史）' };
+const kindName = { main: '主执行', subagent: '子代理', compactFull: '全量压缩', prepare: '上下文预处理', coordinate: '上下文替换', background: '记忆消化（历史）', recall: '记忆检索（历史）', state: '状态提炼（历史）', curation: '记忆整理（历史）', surgeon: '上下文整理（历史）', probeAsk: '探针出题（历史）', probeAnswer: '探针作答（历史）' };
 const componentEntries = kinds => [...new Set(kinds)].map(kind => [kind, kindName[kind] || kind]);
+kindName.promptOptimizer = '提示词优化';
 function BetterTodoChip({ sessionId, useSessionStatus }) {
   const [state, setState] = useState(null), [open, setOpen] = useState(false), [saving, setSaving] = useState(false), [error, setError] = useState('');
   const [notice, setNotice] = useState(false), dialog = useRef(null), noticeId = useId();
@@ -67,7 +72,7 @@ function BetterTodoChip({ sessionId, useSessionStatus }) {
 }
 
 function useSnapshot(id, visible = true, range = 'session', view = 'full') {
-  const [snapshot, setSnapshot] = useState(null), poller = useRef(null);
+  const [snapshot, setSnapshot] = useState(null);
   const key = `${id}:${range}:${view}`;
   useEffect(() => {
     if (!visible) return;
@@ -76,11 +81,10 @@ function useSnapshot(id, visible = true, range = 'session', view = 'full') {
       onData: data => setSnapshot({ key, data, error: '' }),
       onError: error => setSnapshot(old => ({ key, data: old?.key === key ? old.data : null, error: error.message })),
     });
-    poller.current = observer; observer.start();
-    return () => { observer.stop(); if (poller.current === observer) poller.current = null; };
+    observer.start();
+    return () => observer.stop();
   }, [id, visible, range, view, key]);
-  const reload = useCallback(() => poller.current?.refresh(), []);
-  return { data: snapshot?.key === key ? snapshot.data : null, error: snapshot?.key === key ? snapshot.error : '', reload };
+  return { data: snapshot?.key === key ? snapshot.data : null, error: snapshot?.key === key ? snapshot.error : '' };
 }
 
 
@@ -102,17 +106,14 @@ function Icon({ name, size = 16 }) {
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] || paths.context}/></svg>;
 }
-function Action({ children, icon, primary, quiet, className, ...props }) {
-  return <button type="button" className={cx('tx-button', primary && 'tx-primary', quiet && 'tx-quiet', !children && 'tx-icon-button', className)} {...props}>{icon && <Icon name={icon}/>} {children}</button>;
-}
 function Tabs({ value, onChange, items, label }) {
   return <div className="tx-tabs" role="tablist" aria-label={label}>{items.map(([id, title, count]) => <button type="button" role="tab" aria-selected={value === id} key={id} onClick={() => onChange(id)}>{title}{count != null && <span>{count}</span>}</button>)}</div>;
 }
 function Segments({ value, onChange, items, label }) {
   return <div className="tx-segments" role="group" aria-label={label}>{items.map(([id, title]) => <button key={id} type="button" aria-pressed={value === id} onClick={() => onChange(id)}>{title}</button>)}</div>;
 }
-function Header({ icon, title, subtitle, actions }) {
-  return <header className="tx-page-head"><div className="tx-title-line"><span className="tx-page-icon"><Icon name={icon} size={20}/></span><div><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div></div>{actions && <div className="tx-head-actions">{actions}</div>}</header>;
+function Header({ icon, title, subtitle }) {
+  return <header className="tx-page-head"><div className="tx-title-line"><span className="tx-page-icon"><Icon name={icon} size={20}/></span><div><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div></div></header>;
 }
 function Empty({ icon = 'layers', title, children }) { return <div className="tx-empty"><span><Icon name={icon} size={24}/></span><h3>{title}</h3>{children && <p>{children}</p>}</div>; }
 function Badge({ children, tone }) { return <span className={cx('tx-badge', tone && 'tx-' + tone)}>{children}</span>; }
@@ -127,17 +128,14 @@ function Evidence({ link }) {
     {link.lastRun?.tail && <details className="tx-subfold"><summary>查看运行输出</summary><pre>{link.lastRun.tail}</pre></details>}
   </div>;
 }
-function ContextPanel({ sessionId, useTabInfo }) {
-  const { tab } = useTabInfo(), { data, error, reload } = useSnapshot(sessionId, tab.visible);
-  const [page, setPage] = useState('tasks'), [status, setStatus] = useState(''), [compacting, setCompacting] = useState(false), [failed, setFailed] = useState(false);
-  const context = data?.context, tasks = data?.tasks || [], done = tasks.filter(t => t.status === 'completed').length;
-  const compact = async () => { setCompacting(true); setStatus(''); setFailed(false); try { const r = await api('/compact' + suffix(sessionId), {}); setStatus(r.changed ? '已整理较早上下文，原文仍可回捞。' : '目前没有适合整理的较早内容。'); await reload(); } catch (e) { setFailed(true); setStatus(e.message); } finally { setCompacting(false); } };
-  return <div className="tx-app"><Header icon="context" title="工作上下文" subtitle="任务与验收；旧状态及旧记忆仅作历史查阅" actions={<Action quiet icon={compacting ? 'clock' : 'layers'} disabled={data?.running !== 'idle' || compacting} onClick={compact}>{compacting ? '整理中' : '整理'}</Action>}/>
+function TaskPanel({ sessionId, useTabInfo }) {
+  const { tab } = useTabInfo(), { data, error } = useSnapshot(sessionId, tab.visible);
+  const tasks = data?.tasks || [], done = tasks.filter(t => t.status === 'completed').length, history = data?.legacyContext;
+  return <div className="tx-app"><Header icon="context" title="任务与验证" subtitle="需求、进展与实际验证结果"/>
     <div className="tx-context-summary"><div><span className="tx-status-dot"/><span>{data?.running !== 'idle' && data?.running ? '正在执行' : tasks.length && done === tasks.length ? '任务已完成' : tasks.length ? '任务待继续' : '等待新任务'}</span></div>{tasks.length > 0 && <span><strong>{done}</strong> / {tasks.length} 完成</span>}</div>
     {tasks.length > 0 && <div className="tx-progress" role="progressbar" aria-label="任务完成进度" aria-valuenow={done} aria-valuemin={0} aria-valuemax={tasks.length}><i style={{ width: `${done / tasks.length * 100}%` }}/></div>}
-    <Tabs label="上下文分类" value={page} onChange={setPage} items={[[ 'tasks', '任务', tasks.length || undefined ], [ 'state', '工作状态' ], [ 'memory', '记忆文档' ]]}/>
-    <div className="tx-body"><Alert error>{error}</Alert><Alert error={failed}>{status}</Alert>
-      {page === 'tasks' && <>{tasks.length ? <div className="tx-task-list">{tasks.map((task, i) => <article className="tx-task" key={task.id || i}>
+    <div className="tx-body"><Alert error>{error}</Alert>
+      <>{tasks.length ? <div className="tx-task-list">{tasks.map((task, i) => <article className="tx-task" key={task.id || i}>
         <div className="tx-task-title"><span className={cx('tx-task-check', task.status === 'completed' && 'is-done')}>{task.status === 'completed' ? <Icon name="check" size={13}/> : <span/>}</span><strong>{task.content}</strong><span className="tx-task-id">{task.id}</span></div>
         <div className="tx-task-badges"><Badge tone={task.status === 'completed' ? 'good' : undefined}>{task.status === 'completed' ? '已完成' : '待完成'}</Badge>{task.links?.some(l => l.lastRun?.pass) ? <Badge tone="good">测试通过</Badge> : <Badge>{task.links?.length ? '已有证据' : '待验证'}</Badge>}</div>
         <details className="tx-task-detail"><summary>需求原文与验证 <Icon name="chevron" size={13}/></summary><div className="tx-quote">{task.source || '尚未绑定原文锚点'}{task.anchor && <small>消息 {task.sourceMessage} · 摘录 {task.sourceExcerpt}</small>}</div>
@@ -145,16 +143,18 @@ function ContextPanel({ sessionId, useTabInfo }) {
           {task.verification && <p className="tx-prose">{task.verification.method}<br/>{task.verification.result}</p>}
         </details>
       </article>)}</div> : <Empty icon="check" title="任务会在这里展开">多步骤工作开始后，可以查看需求、进展与验证结果。</Empty>}
-      {data?.taskRelease?.total > 0 && <div className="tx-footnote">最近收尾 · {data.taskRelease.done}/{data.taskRelease.total} 完成 · 测试型 {data.taskRelease.tested} · 文字型 {data.taskRelease.textOnly}</div>}</>}
-      {page === 'state' && <><section className="tx-section"><div className="tx-section-heading"><h3>当前状态</h3><Badge>{fmt(context?.digestCount)} 个已消化区间</Badge></div>{context?.status ? <div className="tx-prose tx-state-text">{context.status}</div> : <Empty icon="context" title="状态尚未形成">对话推进后，这里会更新计划、进度和结论。</Empty>}{context?.stateFailures > 0 && <Alert error>状态提炼连续失败 {context.stateFailures} 次。</Alert>}</section>
-        <section className="tx-section"><div className="tx-section-heading"><h3>约束与决定</h3><Badge>{context?.pins?.length || 0}</Badge></div>{context?.pins?.length ? context.pins.map((pin, i) => <div className="tx-pin" key={i}><Icon name="pin"/><span>{pin}</span></div>) : <p className="tx-help">用户确定的约束和决定会保留在这里。</p>}</section>
-        {context?.notes?.length > 0 && <Fold title="工作笔记" count={context.notes.length}>{context.notes.map((note, i) => <div className="tx-note-line" key={i}><p className="tx-prose">{note.text}</p><small>{shortDate(note.at)}</small></div>)}</Fold>}
-      </>}
-      {page === 'memory' && <><section className="tx-section"><div className="tx-section-heading"><h3>任务记忆文档</h3>{context?.workdocVersion > 0 && <Badge>v{context.workdocVersion}</Badge>}</div>{context?.workdoc ? <div className="tx-prose tx-document">{context.workdoc}</div> : <Empty icon="memory" title="还没有任务记忆">找到与当前工作相关的记忆后，会在这里汇集与更新。</Empty>}{context?.supplementPending > 0 && <p className="tx-help">另有 {context.supplementPending} 条记忆等待补入。</p>}</section>
-        {context?.checkpoint && <Fold title="较早工作的纪要" subtitle={shortDate(context.checkpoint.at)}><div className="tx-prose tx-document">{context.checkpoint.text}</div></Fold>}
-        {context?.probe && <Fold title="最近压缩检查" subtitle={context.probe.error ? '调用失败' : context.probe.ok ? '事实检查通过' : '发现遗漏，已记录补记'}><p>{context.probe.question}</p><div className="tx-detail-grid"><span>参考答案</span><strong>{context.probe.expected || '—'}</strong><span>实际回答</span><strong>{context.probe.got || '—'}</strong></div><Alert error>{context.probe.error}</Alert></Fold>}
-        {context?.probeNotes?.length > 0 && <Fold title="待写入纪要的补记" count={context.probeNotes.length}>{context.probeNotes.map((line, i) => <div className="tx-note-line" key={i}>{line}</div>)}</Fold>}
-      </>}
+      {data?.taskRelease?.total > 0 && <div className="tx-footnote">最近收尾 · {data.taskRelease.done}/{data.taskRelease.total} 完成 · 测试型 {data.taskRelease.tested} · 文字型 {data.taskRelease.textOnly}</div>}</>
+
+      {data?.notes?.length > 0 && <Fold title="工作笔记" count={data.notes.length}>{data.notes.map((note, i) => <div className="tx-note-line" key={i}><p className="tx-prose">{note.text}</p><small>{shortDate(note.at)}</small></div>)}</Fold>}
+      {history && <Fold title="历史上下文" subtitle="旧版本保存的只读资料">
+        {history.status && <section className="tx-section"><h3>状态记录</h3><p className="tx-prose">{history.status}</p></section>}
+        {history.pins?.map((pin, i) => <p className="tx-prose" key={i}>{pin}</p>)}
+        {history.workdoc && <section className="tx-section"><h3>记忆文档</h3><p className="tx-prose">{history.workdoc}</p></section>}
+        {history.checkpoint && <section className="tx-section"><h3>工作纪要</h3><p className="tx-prose">{history.checkpoint.text}</p></section>}
+        {history.digests?.map((entry, i) => <p className="tx-prose" key={i}>{entry.summary}</p>)}
+        {history.probe && <section className="tx-section"><h3>检查记录</h3><p className="tx-prose">{history.probe.question}</p><p className="tx-prose">{history.probe.expected}</p><p className="tx-prose">{history.probe.got}</p><Alert error>{history.probe.error}</Alert></section>}
+        {history.probeNotes?.map((note, i) => <p className="tx-prose" key={i}>{note}</p>)}
+      </Fold>}
     </div>
   </div>;
 }
@@ -219,33 +219,30 @@ function StatsLine({ sessionId, onOpen }) {
   return <button type="button" className="tx-stats-line" aria-label="查看运行统计" title={`上下文 ${fmt(data.meter?.totalTokens)} tokens · 缓存命中 ${total ? Math.round((m.cacheReadTokens || 0) / total * 100) : 0}% · 已替换 ${fmt(data.actions?.contextReplacements)} 次`} onClick={onOpen}><Icon name="layers" size={12}/><span>{compactNumber(data.meter?.totalTokens)} 上下文</span>{data.liveCalls?.length > 0 && <i className="tx-stats-running" aria-label="后台运行中"/>}</button>;
 }
 const hostConversation = createConversation(require);
-export const inject = [...new Set(['slots', 'sidebarRightTabs', 'sidebarRight', ...hostConversation.inject])];
+export const inject = [...new Set(['slots', 'sidebarRightTabs', 'sidebarRight', 'theme', 'layout', ...hostConversation.inject])];
 export async function apply(ctx) {
+  applyHistorySize(ctx);
   await ctx.plugin(hostConversation);
+  applyPromptOptimizer(ctx);
   const openPanel = section => ctx.sidebarRight.openTab('trisoul-x-workbench', { params: { section } });
   const sections = [
-    ['tasks', '任务', 'context', ContextPanel],
+    ['tasks', '任务', 'context', TaskPanel],
+    ['context', '上下文', 'layers', PipelinePanel],
+    ['memory', '摘要', 'memory', SummaryPanel],
     ['computer', '电脑', 'computer', props => <ComputerPane {...props}/>],
     ['monitor', '监控', 'monitor', Monitor],
   ];
-  function BaseWorkbench({ initialSection = 'tasks', ...props }) {
+  function Workbench({ initialSection = 'tasks', ...props }) {
     const { tab } = props.useTabInfo();
     const section = sections.some(([id]) => id === tab.navigation?.params?.section) ? tab.navigation.params.section : initialSection;
-    return <div className="tx-workbench">
-      <nav className="tx-workbench-nav" aria-label="工作台导航">
+    return <div className="tx-workbench cx-integrated">
+      <nav className="cx-navigation" aria-label="工作台导航">
         {sections.map(([id, label, icon]) => <button key={id} type="button" aria-current={section === id ? 'page' : undefined} onClick={() => tab.actions.openTab('trisoul-x-workbench', { params: { section: id }, replaceTab: tab.kind !== 'trisoul-x-workbench' })}>{icon === 'computer' ? <ComputerIcon size={15}/> : <Icon name={icon} size={15}/>}<span>{label}</span></button>)}
       </nav>
       {sections.map(([id, , , Component]) => <section key={id} className="tx-workbench-page" hidden={section !== id} aria-label={sections.find(([key]) => key === id)[1]}>
         <Component {...props} useTabInfo={() => { const info = props.useTabInfo(); return { ...info, tab: { ...info.tab, visible: info.tab.visible && section === id } }; }} conversation={ctx.get('conversation')}/>
       </section>)}
     </div>;
-  }
-  // Compose the active panels directly; no registration proxy or patched bundle.
-  const workbenches = Object.fromEntries(['tasks', 'memory', 'computer', 'monitor'].map(initial =>
-    [initial, wrapWorkbench(BaseWorkbench, initial)]));
-  function Workbench({ initialSection = 'tasks', ...props }) {
-    const Component = workbenches[initialSection] || workbenches.tasks;
-    return <Component {...props}/>;
   }
   const { ComputerEntry, ComputerPane } = applyComputerUseClient(ctx, { integrated: true, openPanel, renderPane: props => <Workbench {...props} initialSection="computer"/> });
   function ComposerDock(props) {
@@ -295,4 +292,6 @@ export async function apply(ctx) {
     ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({ name: 'sidebar.right.pane.tab', key: id }, props => <Workbench {...props} initialSection={initialSection}/>));
   }
   applyStyle(ctx);
+  applySkins(ctx);
+  applyConversationRecords(ctx);
 }

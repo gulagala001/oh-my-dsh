@@ -1,0 +1,54 @@
+[
+  {
+    "file": "google-sans-flex-400.woff2",
+    "source": "https://fonts.gstatic.com/s/googlesansflex/v22/t5sJIQcYNIWbFgDgAAzZ34auoVyXkJCOvp3SFWJbN5hF8Ju1x6sKCyp0l9sI40swNJwInycYAJzz0m7kJ4qFQOJBOjLvDSndo0SKMpKSTzwliVdHAy4bxTDHg_ugnAakp8ubycs.ttf",
+    "weight": 400
+  },
+  {
+    "file": "google-sans-flex-500.woff2",
+    "source": "https://fonts.gstatic.com/s/googlesansflex/v22/t5sJIQcYNIWbFgDgAAzZ34auoVyXkJCOvp3SFWJbN5hF8Ju1x6sKCyp0l9sI40swNJwInycYAJzz0m7kJ4qFQOJBOjLvDSndo0SKMpKSTzwliVdHAy4bxTDHg_ugnAakp_mbycs.ttf",
+    "weight": 500
+  },
+  {
+    "file": "google-sans-flex-600.woff2",
+    "source": "https://fonts.gstatic.com/s/googlesansflex/v22/t5sJIQcYNIWbFgDgAAzZ34auoVyXkJCOvp3SFWJbN5hF8Ju1x6sKCyp0l9sI40swNJwInycYAJzz0m7kJ4qFQOJBOjLvDSndo0SKMpKSTzwliVdHAy4bxTDHg_ugnAakpxWcycs.ttf",
+    "weight": 600
+  },
+  {
+    "file": "google-sans-flex-700.woff2",
+    "source": "https://fonts.gstatic.com/s/googlesansflex/v22/t5sJIQcYNIWbFgDgAAzZ34auoVyXkJCOvp3SFWJbN5hF8Ju1x6sKCyp0l9sI40swNJwInycYAJzz0m7kJ4qFQOJBOjLvDSndo0SKMpKSTzwliVdHAy4bxTDHg_ugnAakpyycycs.ttf",
+    "weight": 700
+  },
+  {
+    "file": "google-sans-code-400.woff2",
+    "source": "https://fonts.gstatic.com/s/googlesanscode/v20/pxihyogzv91QhV44Z_GQBHsGf5PuckJMZfIVTPZaiXEp_ht12EVEHsN1sCQNcmTVsw.ttf",
+    "weight": 400
+  },
+  {
+    "file": "google-sans-code-500.woff2",
+    "source": "https://fonts.gstatic.com/s/googlesanscode/v20/pxihyogzv91QhV44Z_GQBHsGf5PuckJMZfIVTPZaiXEp_ht12EVEHsN1sCQNQGTVsw.ttf",
+    "weight": 500
+  },
+  {
+    "file": "google-sans-code-700.woff2",
+    "source": "https://fonts.gstatic.com/s/googlesanscode/v20/pxihyogzv91QhV44Z_GQBHsGf5PuckJMZfIVTPZaiXEp_ht12EVEHsN1sCQNlWPVsw.ttf",
+    "weight": 700
+  },
+  {
+    "file": "noto-sans-sc-ui.woff2",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf",
+    "weight": "400 600",
+    "glyphs": 754
+  },
+  {
+    "file": "material-symbols.woff2",
+    "source": "https://fonts.gstatic.com/l/font?kit=syl0-zNym6YjUruM-QrEh7-nyTnjDwKNJ_190FjpZIvDmUSVOK7BDB_Qb9vUSzq3wzLK-P0J-V_Zs-QtQth3-jOcbTCVpeRL2w5rwZu2rIelXxKROccDe81u7DANSS1DH1lE6hjYcjkbXNw-GIBGcf15wz6NA2-HPIPFsxKlA18&skey=70ddea8fe54d532e&v=v374",
+    "icons": "add,arrow_back,arrow_upward,contrast,file_upload,menu,motion_photos_off,palette,settings"
+  },
+  {
+    "file": "noto-sans-sc-text.woff2",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf",
+    "weight": 400,
+    "glyphs": 3014
+  }
+]

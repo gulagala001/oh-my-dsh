@@ -1,11 +1,13 @@
 import { decorateSlot } from './slot-decoration.mjs';
 import {ComputerIcon} from './computer-icons.jsx';
-import React, { useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import { computerGroups,processSummaries,operationSummary,operationIcon,operationState,operationRowLocale,finalAnswerPresentation,processContextKinds } from './computer-groups.mjs';
 import {SavedImage} from './tool-image.jsx';
 
 export function computerGroupPresentation(ctx) {
-  const cache = new WeakMap(), processCache=new WeakMap(), open = new Set(), listeners = new Set();
+  const cache = new WeakMap(), processCache=new WeakMap(), open = new Set(), lists = new Map(), listeners = new Set();
+  const notify = () => { for (const listener of listeners) listener(); };
   const subscribe = listener => { listeners.add(listener); return () => listeners.delete(listener); };
   const subscribeToolviews = listener => ctx.slots.subscribe('tool.call.toolview', listener);
   const readToolviews = () => ctx.slots.entries('tool.call.toolview');
@@ -29,33 +31,41 @@ export function computerGroupPresentation(ctx) {
     const group = useChat(snapshot => groups(snapshot,toolviews).get(nodeKey ?? `call:${callId}`));
     const identity = `${sessionId}:${group?.id}`;
     const expanded = useSyncExternalStore(subscribe, () => open.has(identity));
-    const seat=useRef(null),wasFoldable=useRef(false),[hostGrouped,setHostGrouped]=useState(false),[visited,setVisited]=useState(false);
-    const first=!!group&&(nodeKey?nodeKey===group.id:group.headerCallId===callId),foldable=!!turnProcess?.foldable||completedContext;
-    const standalone=hostGrouped||foldable||!group;
-    useLayoutEffect(()=>{if(expanded||standalone)setVisited(true);},[expanded,standalone]);
+    const wasFoldable=useRef(false), [visited,setVisited]=useState(false), listId=useId();
+    const first=!!group&&(nodeKey?nodeKey===group.id:group.headerCallId===callId), foldable=!!turnProcess?.foldable||completedContext;
+    const target=useSyncExternalStore(subscribe,()=>lists.get(identity));
+    const listRef=useCallback(element=>{
+      if(element)lists.set(identity,element);else lists.delete(identity);
+      notify();
+    },[identity]);
+    useLayoutEffect(()=>{if(expanded)setVisited(true);},[expanded]);
     useLayoutEffect(()=>{
-      // Transfer the user's live disclosure choice once when the completed
-      // turn takes over. Subsequent manual closing must never reopen it.
+      // Completion may add an outer process disclosure. Preserve the group
+      // being read, but never let that outer disclosure open other groups.
       if(foldable&&!wasFoldable.current&&first&&expanded)turnProcess?.setOpen(true);
       wasFoldable.current=foldable;
     },[foldable,first,expanded,turnProcess?.setOpen]);
-    useLayoutEffect(()=>{
-      const flow=seat.current?.closest('[data-chat-flow-kind]');if(!flow)return;
-      const sync=()=>setHostGrouped(flow.hasAttribute('data-turn-process-member'));sync();
-      const observer=new MutationObserver(sync);observer.observe(flow,{attributes:true,attributeFilter:['data-turn-process-member']});return()=>observer.disconnect();
-    },[]);
-    const toggle = () => { if (expanded) open.delete(identity); else open.add(identity); for (const notify of listeners) notify(); };
-    const hidden=completedContext?!turnProcess.open:!standalone&&!first&&!expanded;
-    return <div ref={seat} className={standalone?undefined:'tx-cu-group'} style={standalone?{display:'contents'}:undefined} data-cu-group={!standalone&&first?group.id:undefined} data-cu-group-hidden={hidden||undefined} data-cu-process-context={completedContext||undefined}>
-      {!standalone&&first && <button key="summary" type="button" className="tx-cu-group-toggle" aria-expanded={expanded} title={group.title||undefined} onClick={toggle}>
-        <ComputerIcon name={group.calls.length?operationIcon(group.names):'book'} size={16}/><strong>{group.calls.length?operationSummary(group.names,group.running):group.contexts?'上下文记录':'思考过程'}</strong>{group.calls.length>0&&<span>{group.calls.length} 次操作</span>}
-        {group.failures>0&&<span className="tx-cu-error">{group.failures} 次失败</span>}
-        {group.stopped>0&&<span>已停止</span>}
-        <ComputerIcon className="tx-cu-disclosure" name="chevron" size={12}/>
-      </button>}
-      <div key="content" style={{display:standalone||expanded?'contents':'none'}}>{(standalone||expanded||visited)&&children}</div>
+    const toggle = () => { if (expanded) open.delete(identity); else open.add(identity); notify(); };
+    if(!group)return <div style={{display:'contents'}} data-cu-group-hidden={completedContext&&!turnProcess.open||undefined} data-cu-process-context={completedContext||undefined}>{children}</div>;
+    const order=group.keys.indexOf(nodeKey??group.callKeys.get(callId));
+    const label=group.calls.length?operationSummary(group.names,group.running):group.contexts?'上下文记录':'思考过程';
+    // Each native renderer keeps its original React owner and subscriptions.
+    // Portals collect adjacent rows into one bounded list without moving DOM
+    // owned by the host or rendering a second copy of a tool result.
+    return <div className="tx-cu-group" data-cu-group={first?group.id:undefined} data-cu-group-hidden={!first||completedContext&&!turnProcess.open||undefined}>
+      {first&&<>
+        <button type="button" className="tx-cu-group-toggle" aria-expanded={expanded} aria-controls={listId} title={group.title||undefined} onClick={toggle}>
+          <ComputerIcon name={group.calls.length?operationIcon(group.names):'book'} size={16}/><strong>{label}</strong>{group.calls.length>0&&<span>{group.calls.length} 次操作</span>}
+          {group.failures>0&&<span className="tx-cu-error">{group.failures} 次失败</span>}
+          {group.stopped>0&&<span>{group.stopped} 项已停止</span>}
+          <ComputerIcon className="tx-cu-disclosure" name="chevron" size={12}/>
+        </button>
+        <div ref={listRef} id={listId} className="tx-cu-group-list" role="region" aria-label={label+'详情'} tabIndex={0} hidden={!expanded}/>
+      </>}
+      {target&&(expanded||visited)&&createPortal(<div className="tx-cu-group-item" data-cu-operation={callId||undefined} data-chat-call-id={callId||undefined} data-cu-process-node={nodeKey||undefined} style={{order}}>{children}</div>,target)}
     </div>;
   }
+
   ctx.slots.inject('conversation.chat.node', () => {
     const dispose = decorateSlot(ctx.slots, 'conversation.chat.node', key => ['assistant-step', 'turn-process', ...processContextKinds].includes(key), original => {
         const key = original.options.key;
@@ -66,9 +76,12 @@ export function computerGroupPresentation(ctx) {
           return <Group {...props} nodeKey={props.node.key}><div className={inline?'tx-cu-process-answer':undefined} data-process-open={inline&&props.turnProcess.open||undefined} style={{display:'contents'}}><Original {...props} node={node}/></div></Group>;
         }
         function GroupedProcess(props){
-          const {label,icon,failures,stopped}=props.useChat(snapshot=>process(snapshot,props.node.data.turn));
+          const {failures,stopped}=props.useChat(snapshot=>process(snapshot,props.node.data.turn));
+          const turn=props.node.location?.turn;
+          const seconds=turn?.start&&turn?.end?Math.max(0,Math.round((turn.end.time-turn.start.time)/1000)):null;
+          const duration=seconds===null?'执行过程':`用时 ${seconds>=60?Math.floor(seconds/60)+'分':''}${seconds%60}秒`;
           if(!props.turnProcess?.foldable||!props.node.data.toolCallCount)return <Original {...props}/>;
-          return <button type="button" className="tx-cu-group-toggle" data-turn-process={props.node.data.turn} data-turn-process-tool-calls={props.node.data.toolCallCount} aria-expanded={props.turnProcess.open} title={props.node.data.toolCallCount+' 次工具调用'} onClick={()=>props.turnProcess.setOpen(!props.turnProcess.open)}><ComputerIcon name={icon} size={16}/><strong>{label}</strong>{failures>0&&<span className="tx-cu-error">{failures} 项失败</span>}{stopped>0&&<span>{stopped} 项已停止</span>}<ComputerIcon className="tx-cu-disclosure" name="chevron" size={12}/></button>;
+          return <button type="button" className="tx-cu-group-toggle tx-cu-turn-toggle" data-turn-process={props.node.data.turn} data-turn-process-tool-calls={props.node.data.toolCallCount} aria-expanded={props.turnProcess.open} title={props.node.data.toolCallCount+' 次工具调用'} onClick={()=>props.turnProcess.setOpen(!props.turnProcess.open)}><strong>{duration}</strong>{failures>0&&<span className="tx-cu-error">{failures} 项失败</span>}{stopped>0&&<span>{stopped} 项已停止</span>}<ComputerIcon className="tx-cu-disclosure" name="chevron" size={12}/></button>;
         }
         function GroupedContext(props){
           const spec=props.turnProcess?.spec,node=props.node;
@@ -81,7 +94,7 @@ export function computerGroupPresentation(ctx) {
         const GroupedNode=key==='turn-process'?GroupedProcess:key==='assistant-step'?GroupedAssistant:GroupedContext;
         return { options: {name:'conversation.chat.node',key,locale:'chat',priority:(original.options.priority??0)-1}, component: GroupedNode };
     });
-    return () => { dispose(); open.clear(); listeners.clear(); };
+    return () => { dispose(); open.clear(); lists.clear(); listeners.clear(); };
   });
   ctx.slots.inject('tool.call.toolview', () => decorateSlot(ctx.slots, 'tool.call.toolview', () => true, original => {
       const Original=original.component;

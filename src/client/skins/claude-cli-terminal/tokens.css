@@ -1,0 +1,79 @@
+@font-face {
+  font-family: "OMD Terminal Mono";
+  src: url(assets/JetBrainsMono-Regular.woff2) format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "OMD Terminal Mono";
+  src: url(assets/JetBrainsMono-SemiBold.woff2) format("woff2");
+  font-weight: 500 900;
+  font-style: normal;
+  font-display: swap;
+}
+.omd {
+  --omd-font-ui: "OMD Terminal Mono", "Noto Sans Mono CJK SC", "Sarasa Mono SC", "PingFang SC", "Microsoft YaHei", monospace;
+  --omd-font-body: "OMD Terminal Mono", "Noto Sans Mono CJK SC", "Sarasa Mono SC", "PingFang SC", "Microsoft YaHei", monospace;
+  --omd-font-mono: "OMD Terminal Mono", "Noto Sans Mono CJK SC", "Sarasa Mono SC", "PingFang SC", "Microsoft YaHei", monospace;
+  --omd-font-size: 13px;
+  --omd-line-height: 1.65;
+  --omd-gap: 6px;
+  --omd-radius-control: 2px;
+  --omd-radius-panel: 3px;
+  --omd-radius-composer: 0px;
+  --omd-shadow: none;
+  --omd-duration: 100ms;
+}
+.omd[data-appearance="dark"] {
+  --omd-bg: #1f1e1b;
+  --omd-surface: #252420;
+  --omd-surface-solid: #1f1e1b;
+  --omd-sidebar: #1b1a17;
+  --omd-text: #e8e5dc;
+  --omd-muted: #a5a197;
+  --omd-border: #4e4b43;
+  --omd-hover: #302e28;
+  --omd-selected: #3a3028;
+  --omd-accent: #e09b79;
+  --omd-on-accent: #201c17;
+  --omd-focus: #e09b79;
+  --omd-success: #a3c58c;
+  --omd-warning: #e5c07b;
+  --omd-danger: #f09595;
+  --omd-code-bg: #272621;
+  --omd-user-bg: #2b2a25;
+  --omd-button-bg: #e09b79;
+  --omd-button-fg: #201c17;
+  --omd-button-hover: #edb08e;
+  --omd-switch-on: #e09b79;
+  --omd-terminal-rule: #625447;
+  --omd-terminal-add: #263624;
+  --omd-terminal-remove: #422a28;
+}
+.omd[data-appearance="light"] {
+  --omd-bg: #faf9f5;
+  --omd-surface: #f2f0e9;
+  --omd-surface-solid: #faf9f5;
+  --omd-sidebar: #f1efe8;
+  --omd-text: #302e29;
+  --omd-muted: #716c61;
+  --omd-border: #b8b2a5;
+  --omd-hover: #eae6dc;
+  --omd-selected: #eaddcd;
+  --omd-accent: #9a492a;
+  --omd-on-accent: #ffffff;
+  --omd-focus: #9a492a;
+  --omd-success: #3a6839;
+  --omd-warning: #875a12;
+  --omd-danger: #a43838;
+  --omd-code-bg: #efede5;
+  --omd-user-bg: #eeece4;
+  --omd-button-bg: #9a492a;
+  --omd-button-fg: #ffffff;
+  --omd-button-hover: #803d24;
+  --omd-switch-on: #9a492a;
+  --omd-terminal-rule: #b79376;
+  --omd-terminal-add: #dfebd9;
+  --omd-terminal-remove: #f5dfd9;
+}

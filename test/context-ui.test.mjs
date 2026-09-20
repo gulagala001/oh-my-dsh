@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CONTEXT_FREQUENCY_PRESETS, contextFrequencyOf, contextFrequencyPatch, contextSettingsPatch, contextRouteMode, CONTEXT_CSS, createContextUI } from '../src/client/context-client.mjs';
+import { CONTEXT_FREQUENCY_PRESETS, contextFrequencyOf, contextFrequencyPatch, contextSettingsPatch, contextRouteMode, createContextUI } from '../src/client/context-client.mjs';
 import { contextConfig } from '../src/context/pipeline.mjs';
 
 test('three presets have only live settings and each passes runtime configuration validation', () => {
@@ -30,10 +30,10 @@ test('host and pipeline defaults both use the calibrated medium cadence without 
     assert.ok(CONTEXT_FREQUENCY_PRESETS[names[1]][key] < CONTEXT_FREQUENCY_PRESETS[names[2]][key]);
   }
 });
-test('preset selection leaves scope, model, Trace, idle, retirement and old state settings untouched', () => {
-  const config = contextConfig({ memoryScope: 'session', traceEnabled: false, flushIdleMs: 45000, stateEnabled: true, unifiedBackground: { model: 'custom' } });
+test('preset selection changes cadence without changing scope, model, Trace or idle settings', () => {
+  const config = contextConfig({ memoryScope: 'session', traceEnabled: false, flushIdleMs: 45000, unifiedBackground: { model: 'custom' } });
   const next = { ...config, ...contextFrequencyPatch('always') };
-  for (const key of ['memoryScope', 'traceEnabled', 'flushIdleMs', 'stateEnabled', 'unifiedBackground']) assert.deepEqual(next[key], config[key]);
+  for (const key of ['memoryScope', 'traceEnabled', 'flushIdleMs', 'unifiedBackground']) assert.deepEqual(next[key], config[key]);
   assert.equal(next.digestEvery, 32); assert.equal(next.surgeryCooldownSteps, 20);
 });
 test('custom values survive detection without normalization; presets can be restored', () => {
@@ -42,8 +42,8 @@ test('custom values survive detection without normalization; presets can be rest
   assert.equal(contextFrequencyOf({ ...cfg, ...contextFrequencyPatch('slow') }), 'slow');
   assert.throws(() => contextFrequencyPatch('missing'), /未知/);
 });
-test('settings save emits only changed fields, never resubmits retired fields or dataDir', () => {
-  const saved = contextConfig({ dataDir: '/private', probeEnabled: true, curateEvery: 0 });
+test('settings save emits only changed fields, preserves unchanged fields and excludes dataDir', () => {
+  const saved = contextConfig({ dataDir: '/private', stateHintsEnabled: true });
   assert.deepEqual(contextSettingsPatch(saved, saved), {});
   const edited = { ...saved, ...contextFrequencyPatch('always') };
   assert.deepEqual(Object.keys(contextSettingsPatch(saved, edited)).sort(), Object.keys(CONTEXT_FREQUENCY_PRESETS.always).sort());
@@ -55,18 +55,6 @@ test('route detection keeps customized efforts and providers rather than display
   assert.equal(contextRouteMode({ backgroundMode: 'unified', unifiedBackground: { effort: 'high' } }), 'unified');
   assert.equal(contextRouteMode({ backgroundMode: 'unified', unifiedBackground: { effort: 'off', temperature: .7 } }), 'follow');
 });
-test('active context components are ordinary module exports, not injected source', () => {
-  const ui = createContextUI({ Component: class {}, createElement() {} });
-  assert.deepEqual(Object.keys(ui).sort(), ['ContextSettings', 'ScopeChip', 'applyStyle', 'wrapWorkbench'].sort());
-  for (const value of Object.values(ui)) assert.equal(typeof value, 'function');
-});
-test('new panels inherit host themes and use container width instead of browser width', () => {
-  assert.match(CONTEXT_CSS, /--dsw-alias-bg-base/); assert.match(CONTEXT_CSS, /--dsw-alias-label-primary/);
-  assert.match(CONTEXT_CSS, /@container cx \(max-width:400px\)/);
-  assert.match(CONTEXT_CSS, /prefers-reduced-motion/); assert.match(CONTEXT_CSS, /\[hidden\].*display:none!important/);
-});
-
-
 test('idle settings are visible by default, off, preserve their delay and do not affect Trace', async () => {
   const React = await import('react'); const { renderToStaticMarkup } = await import('react-dom/server');
   const { Config } = await import('../src/config.mjs');

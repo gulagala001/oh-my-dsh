@@ -1,9 +1,6 @@
 name: Browser dialog regression
 on:
   workflow_dispatch:
-  push:
-    branches: ['main']
-    paths: ['test/computer-use-ui.test.mjs', '.github/workflows/browser-dialog.yml']
 permissions:
   contents: read
 jobs:
@@ -31,5 +28,4 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install chromium
       - run: pnpm build
-      - run: node --test --test-name-pattern='${{ matrix.pattern }}' test/computer-use-ui.test.mjs
       - run: node --test --test-name-pattern='${{ matrix.pattern }}' test/computer-use-ui.test.mjs

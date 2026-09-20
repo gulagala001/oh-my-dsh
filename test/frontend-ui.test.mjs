@@ -50,15 +50,18 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await page.keyboard.press('Escape');
   await usageToggle.click();
   assert.equal(await hostStats.isVisible(), false);
-  const contextRow = page.locator('[data-chat-flow-kind=context] [data-disclosure-row]').first();
+  const contextRow = page.locator('[data-disclosure-row]:has([data-context-source])').first();
   const processToggle = page.getByRole('button', { name: /^已思考/ }).first();
   await processToggle.click();
+  const contextGroup = page.getByRole('button', { name: '上下文记录', exact: true }).last();
+  await contextGroup.click();
   const source = contextRow.locator('[data-context-source]');
   assert.equal(await source.count(), 1);
   assert.equal(await source.isVisible(), false, 'technical provenance is deferred until expanded');
   await contextRow.click();
   assert.equal(await source.isVisible(), true, 'original context provenance stays accessible');
   await contextRow.click();
+  await contextGroup.click();
   await processToggle.click();
   // A hidden right pane can extend the frame beyond its visible grid. Focus
   // scrolling must not move that outer shell and crop the conversation.
@@ -71,13 +74,13 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await page.getByRole('button', { name: '打开工作台', exact: true }).click();
   const workbench = page.locator('.cx-integrated'), nav = page.locator('.cx-navigation');
   await until(async () => (await workbench.boundingBox())?.width > 300);
-  await page.getByRole('heading', { name: '工作上下文', exact: true }).waitFor();
-  const tabCount = await page.getByRole('tab').count();
+  await page.getByRole('heading', { name: '任务与验证', exact: true }).waitFor();
+  const tabCount = await page.locator('[role=tab]').count();
   for (const name of ['摘要', '上下文', '电脑', '监控', '任务']) {
     await nav.getByRole('button', { name, exact: true }).click();
     await until(async () => (await nav.getByRole('button', { name, exact: true }).getAttribute('aria-current')) === 'page');
     assert.equal(await page.locator('.tx-workbench').count(), 1, 'navigation reuses the same workbench');
-    assert.equal(await page.getByRole('tab').count(), name === '任务' || name === '监控' ? tabCount : tabCount - 3, 'no new dock tab is created');
+    assert.equal(await page.locator('[role=tab]').count(), tabCount, 'no new dock tab is created');
     await screenshot('workbench-' + name);
   }
   await nav.getByRole('button', { name: '监控', exact: true }).click();

@@ -18,17 +18,17 @@ test('all tool families share one disclosure before and after completion, with a
   await rpc('session/prompt',{requestId:crypto.randomUUID(),sessionId,mode:'queue',content:[{type:'text',text:'检查操作折叠'}]});
   const running=page.locator('.tx-cu-group-toggle').filter({hasText:'3 次操作'});await running.waitFor();
   assert.equal(await running.getAttribute('aria-expanded'),'false');await running.click();
-  await until(async()=>await page.locator('[data-chat-flow-kind="tool-call"]:visible').count()===3);
+  await until(async()=>await page.locator('[data-cu-operation]:visible').count()===3);
   release();await page.getByText('四层结构正文',{exact:true}).waitFor();
   assert.equal(await page.getByText(/Error: invalid|Unsupported or malformed/).count(),0);
   const summary=page.locator('[data-turn-process-tool-calls="3"]');await summary.waitFor();
   assert.equal(await summary.getAttribute('aria-expanded'),'true','completion preserves the process the user is already reading');
-  assert.match(await summary.innerText(),/运行命令/);assert.match(await summary.innerText(),/查看图像/);
-  await summary.click();assert.equal(await page.locator('[data-chat-flow-kind="tool-call"]:visible').count(),0);assert.equal(await page.getByText('四层结构正文',{exact:true}).isVisible(),true);
+  assert.match(await summary.innerText(),/用时/);assert.match(await running.innerText(),/运行命令/);assert.match(await running.innerText(),/查看图像/);
+  await summary.click();assert.equal(await page.locator('[data-cu-operation]:visible').count(),0);assert.equal(await page.getByText('四层结构正文',{exact:true}).isVisible(),true);
   if(process.env.TRISOUL_UI_ARTIFACTS)await page.screenshot({path:join(f.root,'operation-summary.png')});
   await summary.click();
-  assert.equal(await page.locator('.tx-cu-group-toggle:visible').count(),1);
-  const rows=page.locator('[data-chat-flow-kind="tool-call"]:visible');assert.equal(await rows.count(),3);
+  assert.equal(await running.getAttribute('aria-expanded'),'true','outer disclosure preserves the nested group');
+  const rows=page.locator('[data-cu-operation]:visible');assert.equal(await rows.count(),3);
   const geometry=await rows.evaluateAll(elements=>elements.map(el=>{
     const row=el.querySelector('.CY-8Ka_root, .tx-cu-card-heading, .o3BgMG_row'),rect=row.getBoundingClientRect();
     return {x:rect.x,y:rect.y,height:rect.height};
@@ -68,6 +68,7 @@ test('all tool families share one disclosure before and after completion, with a
   await page.getByText('失败状态示例完成',{exact:true}).waitFor();
   const failedSummary=page.locator('[data-turn-process-tool-calls="1"]');await failedSummary.waitFor();assert.match(await failedSummary.innerText(),/1 项失败/);
   if(await failedSummary.getAttribute('aria-expanded')!=='true')await failedSummary.click();
+  const failureGroup=page.locator('[data-cu-group] > button').filter({hasText:'1 次操作'});await failureGroup.click();
   await page.getByText('读取失败',{exact:true}).waitFor();
   assert.deepEqual(f.errors,[]);
 });

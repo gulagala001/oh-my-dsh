@@ -1,0 +1,63 @@
+/* Active skins only. Functional host layout rules remain in shell.css. */
+html.omd[data-omd-skin] body {
+  --dsw-specific-sidebar-fill: var(--omd-sidebar);
+  --dsw-specific-sidebar-nav-item-active: var(--omd-selected);
+  --dsw-specific-sidebar-nav-item-active-accent: var(--omd-selected);
+  --dsw-specific-sidebar-nav-item-hover: var(--omd-hover);
+  --dsw-specific-input-major: var(--omd-surface);
+  --dsw-specific-menu: var(--omd-surface-solid);
+  --dsw-specific-selector: var(--omd-surface-solid);
+  --dsw-specific-bubble: var(--omd-user-bg, var(--omd-selected));
+  font-family: var(--omd-font-ui); font-size: var(--omd-font-size);
+  --tx-shell-text: var(--omd-text); --tx-shell-muted: var(--omd-muted);
+  --tx-shell-bg: var(--omd-bg); --tx-shell-line: var(--omd-border); --tx-shell-hover: var(--omd-hover);
+}
+html.omd[data-omd-skin] :where(.tx-app,.tx-scope-chip,.tx-stats-line,.tx-bt-option,.tx-bt-notice,.tx-workbench,.tx-composer-dock,.cx-panel,.cx-settings,.cx-integrated,.cx-scope-chip) {
+  --tx-bg: var(--omd-bg); --tx-text: var(--omd-text); --tx-muted: var(--omd-muted); --tx-line: var(--omd-border); --tx-soft: var(--omd-surface); --tx-blue: var(--omd-accent); --tx-tint: var(--omd-selected); --tx-hover: var(--omd-hover); --tx-danger: var(--omd-danger);
+  --cx-bg: var(--omd-bg); --cx-text: var(--omd-text); --cx-muted: var(--omd-muted); --cx-line: var(--omd-border); --cx-soft: var(--omd-surface); --cx-blue: var(--omd-accent); --cx-tint: var(--omd-selected);
+  font-family: var(--omd-font-ui);
+}
+html.omd[data-omd-skin] :where([data-composer-card]) { border-color: var(--omd-border); border-radius: var(--omd-radius-composer); box-shadow: var(--omd-shadow); gap: var(--omd-gap); }
+html.omd[data-omd-skin] :where([data-composer-card]):focus-within { border-color: var(--omd-focus); }
+html.omd[data-omd-skin] :where([data-composer-input]) { font-family: var(--omd-font-body); line-height: var(--omd-line-height); }
+html.omd[data-omd-skin] :where(.YDXeBa_sessionRow,button:not([role=switch]),input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea) { border-radius: var(--omd-radius-control); }
+html.omd[data-omd-skin] .YDXeBa_sessionRow.YDXeBa_selected { background: var(--omd-selected); }
+html.omd[data-omd-skin] :where(.cx-card,.tx-card,[role=dialog],dialog,[role=menu]) { border-radius: var(--omd-radius-panel); }
+html.omd[data-omd-skin] :where(pre,code) { font-family: var(--omd-font-mono); }
+html.omd[data-omd-skin] :where(button,input,select,textarea):focus-visible { outline-color: var(--omd-focus); }
+html.omd[data-omd-skin] :where(.tx-button.tx-primary,.cx-btn.primary,.uV2eYG_primary) { background: var(--omd-button-bg, var(--omd-accent)); color: var(--omd-button-fg, var(--omd-on-accent)); }
+html.omd[data-omd-skin][data-omd-reduce-effects] :is([data-composer-card],.hHd-Xa_root,.wSkVaW_header,.tx-workbench,.cx-integrated,.VOzbGW_panel,[role=dialog],dialog,[role=menu]) { background: var(--omd-surface-solid) !important; }
+html.omd[data-omd-skin][data-omd-reduce-effects] *, html.omd[data-omd-skin][data-omd-reduce-effects] *::before, html.omd[data-omd-skin][data-omd-reduce-effects] *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; animation: none !important; transition: none !important; }
+html.omd[data-omd-skin] :where(button,input,select,textarea) { transition-duration: var(--omd-duration); }
+@media (prefers-reduced-motion: reduce) {
+  html.omd[data-omd-skin] *, html.omd[data-omd-skin] *::before, html.omd[data-omd-skin] *::after { animation: none !important; transition: none !important; }
+}
+
+html.omd[data-omd-skin] [data-chat-flow-kind] { font-family: var(--omd-font-body); }
+
+/* The host mounts its fixed settings overlay inside the sidebar. A backdrop
+   filter would make that narrow sidebar the overlay's containing block. */
+html.omd[data-omd-skin] .hHd-Xa_root:has([role="dialog"]) {
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+
+/* Form internals are host-owned: skins theme them without replacing semantics. */
+html.omd[data-omd-skin] { color-scheme: light; }
+html.omd[data-omd-skin][data-appearance=dark] { color-scheme: dark; }
+html.omd[data-omd-skin] :where(.VOzbGW_panel,.VOzbGW_content,.VOzbGW_options) {
+  color: var(--omd-text); background-color: var(--omd-surface-solid);
+}
+html.omd[data-omd-skin] :where(.VOzbGW_nav) { background-color: var(--omd-sidebar); }
+html.omd[data-omd-skin] :where(.VOzbGW_navCell[aria-current],.cx-tabs button[aria-current=page],.tx-tabs button[aria-selected=true],.cx-segments button[aria-pressed=true],.tx-segments button[aria-pressed=true]) {
+  background-color: var(--omd-selected); color: var(--omd-text);
+}
+html.omd[data-omd-skin] :where(input[type=checkbox],input[type=radio]) { accent-color: var(--omd-switch-on, var(--omd-accent)); }
+html.omd[data-omd-skin] :where(input[role=switch]:checked,button[role=switch][aria-checked=true]) { background: var(--omd-switch-on, var(--omd-accent)); }
+html.omd[data-omd-skin] input[type=file]::file-selector-button {
+  border: 1px solid var(--omd-border); border-radius: var(--omd-radius-control);
+  padding: 5px 10px; margin-right: 10px; background: var(--omd-surface-solid); color: var(--omd-text); font: inherit; cursor: pointer;
+}
+html.omd[data-omd-skin] input[type=file]::file-selector-button:hover { background: var(--omd-hover); }
+html.omd[data-omd-skin] :where(.tx-button.tx-primary,.cx-btn.primary,.uV2eYG_primary):hover:not(:disabled) {
+  background: var(--omd-button-hover, color-mix(in srgb, var(--omd-button-bg, var(--omd-accent)) 90%, var(--omd-text)));
+}

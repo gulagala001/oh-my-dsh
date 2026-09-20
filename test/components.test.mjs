@@ -11,10 +11,12 @@ function fixture() {
   const graph = { enabled: true, projects: new Map(), prepare: async () => { calls.push('codegraph'); },
     retryCatalog() {}, setEnabled: async value => { graph.enabled = value; },
     ensureProject: async cwd => { calls.push('project:' + cwd); }, status: () => ({ enabled: graph.enabled, installed: true, projects: [] }) };
-  const ctx = { settings: { update: async (section, patch) => Object.assign(section === 'opencu' ? cu : own, patch) } };
+  let service;
+  const ctx = { settings: { update: async (section, patch) => { Object.assign(section === 'opencu' ? cu : own, patch); if (section === 'trisoul-x') void service.reconfigure(); } } };
   const hub = { codegraph: graph, config: () => own, agents: new Map() };
   const computer = { computerUse: manager, config: () => cu, refresh: async () => {} };
-  return { service: new Components(ctx, hub, computer), own, cu, manager, graph, calls };
+  service = new Components(ctx, hub, computer);
+  return { service, own, cu, manager, graph, calls };
 }
 
 test('enabled components prepare together, share concurrent requests and retry failures independently', async () => {

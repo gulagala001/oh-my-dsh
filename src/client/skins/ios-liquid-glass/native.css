@@ -1,0 +1,61 @@
+/* Material and control layer. Layout lives in the audited host adapter. */
+.omd { background: var(--omd-bg); color: var(--omd-text); }
+.omd [data-omd-part="conversation"] { background: transparent; }
+.omd [data-omd-part="sidebar"],
+.omd [data-omd-part="composer"],
+.omd [data-omd-part="settings-shell"],
+.omd [data-omd-part="menu"] {
+  background: linear-gradient(155deg, var(--omd-glass-sheen), transparent 42%), var(--omd-surface);
+  border: 1px solid var(--omd-glass-edge);
+  box-shadow: var(--omd-glass-shadow);
+  backdrop-filter: blur(30px) saturate(1.6);
+  -webkit-backdrop-filter: blur(30px) saturate(1.6);
+}
+.omd [data-omd-part="sidebar"] { background-color: var(--omd-sidebar); border-radius: 30px; }
+.omd [data-omd-part="header"] { background: transparent; border-color: transparent; }
+.omd [data-omd-part="composer"]:focus-within {
+  border-color: color-mix(in srgb, var(--omd-focus) 35%, var(--omd-glass-edge));
+  box-shadow: var(--omd-glass-shadow), 0 0 0 3px var(--omd-selected);
+}
+.omd [data-omd-part="input"] { background: transparent; color: var(--omd-text); }
+.omd [data-omd-part="button"] { border-radius: 14px; }
+.omd [data-omd-part="button"]:focus-visible { outline: 3px solid var(--omd-focus); outline-offset: 3px; }
+.omd [data-omd-part="button-primary"], .omd [data-omd-part="send"] {
+  background: linear-gradient(175deg, #2691ff, #007aff);
+  color: #ffffff;
+  border: 1px solid #ffffff26;
+  border-radius: 999px;
+  box-shadow: inset 0 1px 0 #ffffff33, 0 4px 10px #007aff26;
+}
+.omd [data-omd-part="icon-button"] { border-radius: 999px; background: var(--omd-glass-control); }
+.omd [data-omd-part="button-quiet"] { color: var(--omd-accent); background: transparent; }
+.omd [data-omd-part="sidebar-row"] { border-radius: 14px; }
+.omd [data-omd-part="sidebar-row"]:hover { background: var(--omd-hover); }
+.omd [data-omd-part="sidebar-row"][data-omd-state="selected"] {
+  background: var(--omd-selected); color: var(--omd-accent); box-shadow: inset 0 1px 0 var(--omd-glass-sheen);
+}
+.omd [data-omd-part="message-user"] {
+  color: var(--omd-on-user); background: var(--omd-user-bg); border-radius: 23px; box-shadow: 0 4px 12px #007aff12;
+}
+.omd [data-omd-part="settings-nav"] { background: transparent; border-color: var(--omd-border); }
+.omd [data-omd-part="settings-content"] { background: transparent; }
+.omd [data-omd-part="settings-nav-item"] { border-radius: 14px; }
+.omd [data-omd-part="settings-nav-item"][data-omd-state="selected"] { background: var(--omd-selected); color: var(--omd-accent); }
+.omd [data-omd-part="settings-row"] { border-color: var(--omd-border); }
+.omd [data-omd-part="form-control"] {
+  background: var(--omd-glass-group); color: var(--omd-text); border: 1px solid var(--omd-border); border-radius: 12px;
+}
+.omd [data-omd-part="form-control"]:focus-visible { outline: 3px solid var(--omd-selected); border-color: var(--omd-focus); }
+.omd [data-omd-part="segments"], .omd [data-omd-part="settings-tabs"] { background: var(--omd-hover); border-radius: 999px; border-color: transparent; }
+.omd [data-omd-part="segment"], .omd [data-omd-part="tab"] { border-radius: 999px; color: var(--omd-muted); border-color: transparent; }
+.omd [data-omd-part="segment"][data-omd-state="selected"], .omd [data-omd-part="tab"][data-omd-state="selected"] {
+  background: var(--omd-surface-solid); color: var(--omd-text); box-shadow: 0 2px 6px #00000012, inset 0 1px 0 var(--omd-glass-sheen);
+}
+.omd [data-omd-part="workbench"] { background: transparent; border-color: transparent; }
+.omd [data-omd-part="dialog"] { background-color: var(--omd-surface-solid); border: 1px solid var(--omd-glass-edge); border-radius: 28px; box-shadow: var(--omd-glass-shadow); }
+.omd [data-omd-part="tool-group"] { border-color: var(--omd-border); background: var(--omd-glass-group); border-radius: 18px; }
+.omd [data-omd-part="process-toggle"], .omd [data-omd-part="tool-row"] { color: var(--omd-muted); border-radius: 10px; }
+.omd [data-omd-part="tool-row"]:hover { background: var(--omd-hover); }
+.omd [data-omd-part="code-block"] { background: var(--omd-code-bg); border: 1px solid var(--omd-border); border-radius: 18px; }
+.omd [data-omd-part="code-inline"] { background: var(--omd-hover); border-radius: 5px; }
+.omd [data-omd-part="statusbar"] { color: var(--omd-muted); font-variant-numeric: tabular-nums; }

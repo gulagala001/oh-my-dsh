@@ -1,3 +1,0 @@
-Node PTC runs each program in a fresh managed process under the session's file policy. No bindings persist between programs, and `process.env` is empty. Use the current tool's `timeoutMs` limits; execution time includes nested tool calls and approval waits.
-
-A requested wider sandbox mode needs the exposed approval path and a concrete justification. The grant is for that program only and does not change the standing policy or nested tools' restrictions. Before retrying a failed program, inspect its earlier effects; it is not replayed automatically. The runtime-generated tool description remains authoritative for its current parameters and limits.

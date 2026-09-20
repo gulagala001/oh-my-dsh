@@ -1,0 +1,70 @@
+/* Original palette. SF is resolved locally on Apple platforms; no font downloads. */
+.omd {
+  --omd-font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --omd-font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --omd-font-mono: "SFMono-Regular", Menlo, Consolas, monospace;
+  --omd-font-size: 14px;
+  --omd-line-height: 1.7;
+  --omd-gap: 10px;
+  --omd-radius-control: 14px;
+  --omd-radius-panel: 28px;
+  --omd-radius-composer: 30px;
+  --omd-shadow: 0 12px 44px #17345b12, 0 2px 8px #17345b08;
+  --omd-duration: 180ms;
+  --omd-switch-on: #34c759;
+  --omd-on-user: #ffffff;
+  --omd-user-bg: #007aff;
+  --omd-button-bg: #007aff;
+  --omd-button-fg: #ffffff;
+  --omd-button-hover: #0066dc;
+}
+.omd[data-appearance="light"] {
+  --omd-bg: #f2f5fb;
+  --omd-surface: #ffffffb8;
+  --omd-surface-solid: #ffffff;
+  --omd-sidebar: #f7faff99;
+  --omd-text: #1c1c1e;
+  --omd-muted: #636772;
+  --omd-border: #65758b26;
+  --omd-hover: #67789112;
+  --omd-selected: #007aff14;
+  --omd-accent: #0067db;
+  --omd-on-accent: #ffffff;
+  --omd-focus: #007aff;
+  --omd-success: #248a3d;
+  --omd-warning: #946000;
+  --omd-danger: #cf2828;
+  --omd-code-bg: #f0f2f6;
+  --omd-glass-edge: #ffffffde;
+  --omd-glass-sheen: #ffffffb3;
+  --omd-glass-shadow: 0 12px 40px #2b476018, 0 1px 4px #2b47600c, inset 0 1px 0 #ffffffed, inset 0 -1px 0 #ffffff4d;
+  --omd-glass-control: #ffffff99;
+  --omd-glass-group: #ffffffc7;
+  --omd-glass-wash: #f6f8fbd4;
+  --omd-wallpaper: radial-gradient(ellipse at 3% 5%, #9cdaf264, transparent 46%), radial-gradient(ellipse at 98% 95%, #b6b8f363, transparent 45%), radial-gradient(ellipse at 50% 115%, #ffd9bc66, transparent 40%), linear-gradient(140deg, #eef4fb, #fafbfe 48%, #edf0fa);
+}
+.omd[data-appearance="dark"] {
+  --omd-bg: #10131d;
+  --omd-surface: #282e3bd6;
+  --omd-surface-solid: #222633;
+  --omd-sidebar: #242c3ba8;
+  --omd-text: #f5f5f7;
+  --omd-muted: #a6aebf;
+  --omd-border: #bac8eb26;
+  --omd-hover: #c6d7ff12;
+  --omd-selected: #0a84ff30;
+  --omd-accent: #69adff;
+  --omd-on-accent: #ffffff;
+  --omd-focus: #69adff;
+  --omd-success: #66df85;
+  --omd-warning: #ffd166;
+  --omd-danger: #ff807b;
+  --omd-code-bg: #161b27;
+  --omd-glass-edge: #d0dcff2b;
+  --omd-glass-sheen: #cadbff10;
+  --omd-glass-shadow: 0 14px 48px #00000040, 0 2px 6px #00000026, inset 0 1px 0 #e0ebff24, inset 0 -1px 0 #e0ebff09;
+  --omd-glass-control: #56607930;
+  --omd-glass-group: #303645bb;
+  --omd-glass-wash: #171d2bd9;
+  --omd-wallpaper: radial-gradient(ellipse at 0% 0%, #254a796b, transparent 48%), radial-gradient(ellipse at 100% 100%, #504c8870, transparent 44%), radial-gradient(ellipse at 40% 100%, #144d6133, transparent 40%), linear-gradient(140deg, #121c2b, #10131d 55%, #1a2035);
+}

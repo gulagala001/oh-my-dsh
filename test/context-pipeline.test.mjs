@@ -505,7 +505,7 @@ test('disposing during idle preparation never launches a coordinator afterwards'
 test('idle preprocessing is off by default, including old configurations with a wait time', async t => {
   assert.equal(contextConfig().idlePreprocessEnabled, false);
   assert.equal(contextConfig({ flushIdleMs: 90000 }).idlePreprocessEnabled, false);
-  assert.throws(() => contextConfig({ idlePreprocessEnabled: 'false' }), /布尔/);
+  assert.throws(() => contextConfig({ idlePreprocessEnabled: 'false' }), /boolean/);
   const f = idleFixture(t, { idlePreprocessEnabled: false }); f.pipeline.start(f.agent);
   t.mock.timers.tick(900000); await finishJobs(f);
   await f.pipeline.flushIdle(f.agent);
