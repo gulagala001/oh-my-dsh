@@ -24,8 +24,15 @@ test('optimizer stays usable across four themes, light/dark modes and narrow com
     await star.click();
     assert.equal(await star.getAttribute('aria-pressed'), 'true');
     await star.click();
-    await page.getByRole('button', { name: '展开提示词优化', exact: true }).click();
     const drawer = page.getByRole('dialog', { name: '提示词优化', exact: true });
+    // A deliberate hover opens the preview before the explicit expand click.
+    // Clicking expand must pin it, including after the pointer leaves on resize.
+    await star.hover();
+    await drawer.waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: '展开提示词优化', exact: true }).click();
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(400);
+    assert.equal(await drawer.isVisible(), true, `${skin}/${mode}: expand pins an already hovered preview`);
     const action = drawer.getByRole('button', { name: '开始优化', exact: true });
     if (skin === 'codex-desktop') {
       await until(async () => await action.evaluate(el => getComputedStyle(el).backgroundColor) === (mode === 'light' ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)'));
