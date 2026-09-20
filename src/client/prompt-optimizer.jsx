@@ -67,7 +67,7 @@ export function applyPromptOptimizer(ctx) {
     const canOptimize = Boolean(input?.draft.trim()) && input.phase === 'plain' && !/^\s*\//.test(input.draft);
     return <div className="omd-opt-entry omd-opt-theme" ref={anchor} onPointerEnter={enter} onPointerLeave={leave}>
       <button type="button" className="omd-opt-star" aria-label={prefs.automatic ? '关闭自动润色' : '启用自动润色'} aria-pressed={prefs.automatic} title={prefs.automatic ? '自动轻润色已开启 · 点击关闭' : '提示词优化 · 点击开启自动轻润色'} onClick={() => set({ automatic: !prefs.automatic })} data-busy={state.busy || undefined}><Sparkle/></button>
-      <button type="button" className="omd-opt-expand" aria-label="展开提示词优化" aria-expanded={open} aria-controls={id} onClick={() => { clearTimeout(timer.current); pinned.current = !open; setOpen(!open); }}>⌃</button>
+      <button type="button" className="omd-opt-expand" aria-label="展开提示词优化" aria-expanded={open} aria-controls={id} onClick={() => { clearTimeout(timer.current); const next = !(open && pinned.current); pinned.current = next; setOpen(next); }}>⌃</button>
       {state.busy && <button type="button" className="omd-opt-stop" aria-label="停止提示词优化" onClick={() => controller.cancel()}>停止</button>}
       {open && createPortal(<section id={id} ref={panel} className="omd-opt-drawer omd-opt-theme" style={position} role="dialog" aria-label="提示词优化" onPointerEnter={() => clearTimeout(timer.current)} onPointerLeave={leave} onFocus={() => { pinned.current = true; }}>
         <header><strong><Sparkle/>提示词优化</strong><span>跟随当前模型</span><button type="button" aria-label="关闭提示词优化抽屉" onClick={close}>×</button></header>
