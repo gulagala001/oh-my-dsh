@@ -11,6 +11,26 @@ function fixture() {
   const agent = { session }, hub = { config: () => config, context: { state: () => ({ records: [] }) }, ctx: { get: () => ({ list: () => jobs }), tokenMeter: { measure: () => ({ totalTokens: 123 }) } } };
   return { session, config, jobs, agent, hub, store: createTodoStore() };
 }
+test('runtime coordinates use the host step before its start event, never the event sequence', () => {
+  const f = fixture();
+  f.session.append('turn/start', { turn: 1 });
+  for (let i = 0; i < 6; i++) f.session.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'setup' }], source: { kind: 'plugin', plugin: 'fixture' } }), { surfaceOp: 'append' });
+  const first = collectRuntimeStatus(f.agent, f.hub, { turn: 1, step: 1 });
+  assert.equal(first.asOfSeq, 6);
+  assert.match(renderRuntimeState(first), /turn 1 · step 1\]/);
+  assert.doesNotMatch(renderRuntimeState(first), /event 6/);
+  f.session.append('step/start', { turn: 1, step: 1 });
+  f.session.append('step/end', { turn: 1, step: 1 });
+  const next = collectRuntimeStatus(f.agent, f.hub, { turn: 1, step: 2 });
+  assert.equal(next.step, 2, 'pre-step must not display the previous ended step');
+  assert.equal(runtimeStateKey(first), runtimeStateKey(next), 'step changes do not increase injection frequency');
+  f.session.append('step/start', { turn: 1, step: 2 });
+  assert.equal(collectRuntimeStatus(f.agent, f.hub).step, 2, 'tool queries read the active host step');
+  f.session.append('turn/end', { turn: 1 });
+  f.session.append('turn/start', { turn: 2 });
+  assert.equal(collectRuntimeStatus(f.agent, f.hub).step, null, 'a new turn must not inherit the previous turn step');
+  assert.match(renderRuntimeState(collectRuntimeStatus(f.agent, f.hub, { turn: 2, step: 1 })), /turn 2 · step 1\]/);
+});
 test('state sampling distinguishes estimates and job delivery from actual results', () => {
   const f = fixture(), start = f.session.append('turn/start', { turn: 1 });
   const status = collectRuntimeStatus(f.agent, f.hub, { now: start.time + 42000 });
