@@ -15,7 +15,9 @@ concurrency:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    # Windows browser installation and the serial skin matrix need more time;
+    # individual test timeouts still detect a stalled fixture.
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 30 || 20 }}
     strategy:
       fail-fast: false
       matrix:
