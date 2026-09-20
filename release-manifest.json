@@ -2,6 +2,15 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.1.6-alpha.2.5",
+      "severity": "normal",
+      "title": "Jevify 可选插件",
+      "notes": [
+        "推荐插件加入独立发行的 Jevify，可按需安装、更新与卸载，不随 Oh My DSH 自动安装。",
+        "推荐插件支持从 GitHub Release 获取标准 DSH 安装包。"
+      ]
+    },
+    {
       "version": "0.1.6-alpha.2.4",
       "severity": "normal",
       "title": "Todo 创建说明与推荐插件",
