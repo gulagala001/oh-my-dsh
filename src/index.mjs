@@ -22,6 +22,7 @@ import { runtimeContext } from './runtime-state.mjs';
 import { setRuntimeContext } from './task-context.mjs';
 import { installBackground } from './background.mjs';
 import { mountRecommendedPlugins } from './recommended-plugins.mjs';
+import { createPromptOptimizer, handlePromptOptimizerApi } from './prompt-optimizer.mjs';
 
 export { Config };
 export const name = 'trisoul-x';
@@ -33,6 +34,8 @@ export function apply(ctx, config) {
   installLoaderLifecycleCompatibility(ctx);
   installToolSchedulerCompatibility(ctx);
   const hub = new Hub(ctx, config);
+  const promptOptimizer = createPromptOptimizer(ctx, hub);
+  ctx.effect(() => () => promptOptimizer.dispose());
   hub.codegraph = new CodegraphRuntime({ cacheDir: join(hub.store.dir, 'components', 'codegraph'), enabled: config.codegraphEnabled !== false, autoInstall: config.componentAutoSetup !== false });
   ctx.effect(() => () => hub.codegraph.dispose());
   const versionService = createVersionService();
@@ -124,6 +127,7 @@ export function apply(ctx, config) {
       try {
         const url = new URL(req.url, 'http://localhost'), id = url.searchParams.get('session');
         if (await handleVersionApi({ req, res, url, service: versionService, send })) return;
+        if (await handlePromptOptimizerApi({ ctx, service: promptOptimizer, req, res, url, getSession: () => id ? ctx.agents.get(id)?.session ?? ctx.sessions.get(id) : undefined, send })) return;
         const agent = id ? ctx.agents.get(id) : undefined;
         const session = agent?.session ?? (id ? ctx.sessions.get(id) : undefined);
         const stored = id ? hub.store.state(id) : undefined;

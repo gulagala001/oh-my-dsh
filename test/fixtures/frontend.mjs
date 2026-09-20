@@ -14,7 +14,7 @@ export async function until(fn, timeout = 20000) {
   throw new Error('Frontend fixture timed out');
 }
 
-export async function frontendFixture(t, { imageBudget, versionResponse, headless = false, lifecycleTrace = false, installedPackage = process.env.OMD_UI_PACKED === '1', historyMessages = 0, componentAutoSetup = false, omdConfig = {}, reply } = {}) {
+export async function frontendFixture(t, { imageBudget, versionResponse, headless = false, lifecycleTrace = false, installedPackage = process.env.OMD_UI_PACKED === '1', historyMessages = 0, componentAutoSetup = false, omdConfig = {}, reply, optimizerReply } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'trisoul-frontend-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   await mkdir(home); await mkdir(workspace);
   let nextReply, releaseReply, replyFactory = reply, child, browser, page, log = '';
@@ -22,7 +22,8 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
   const provider = createServer(async (req, res) => {
     let request = ''; for await (const chunk of req) request += chunk; const payload = JSON.parse(request);
     if (payload.tools?.length && nextReply) { const waiting = nextReply; nextReply = null; await waiting; }
-    const custom=payload.tools?.length&&await replyFactory?.(payload);
+    const optimizing = !payload.tools?.length && JSON.stringify(payload.messages).includes('你正在 Oh My DSH 中改写尚未发送的用户草稿');
+    const custom=optimizing ? await optimizerReply?.(payload) : payload.tools?.length&&await replyFactory?.(payload);
     if(custom){res.writeHead(200,{'Content-Type':'text/event-stream'});res.end('data: '+JSON.stringify({id:'ui',object:'chat.completion.chunk',model:'fixture',choices:[{index:0,...custom}]})+'\n\ndata: [DONE]\n\n');return;}
     res.writeHead(200, { 'Content-Type': 'text/event-stream' });
     res.end('data: ' + JSON.stringify({ id: 'ui', object: 'chat.completion.chunk', model: 'fixture', choices: [{ index: 0, delta: { role: 'assistant', content: !payload.tools?.length ? '整理工作台和对话界面' : '已经梳理好今天的工作。\n\n我们会先整理对话与侧栏，再完善电脑操控的实时预览。所有进展都可以在右侧工作台查看。\n\n- 任务：查看当前进展和验证结果\n- 记忆：保留项目约定与重要决定\n- 电脑：查看网页和应用的实时画面\n\n接下来可以继续处理具体页面。' }, finish_reason: 'stop' }] }) + '\n\ndata: [DONE]\n\n');

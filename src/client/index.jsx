@@ -16,6 +16,7 @@ import { applyHistorySize } from './history-settings.jsx';
 import { applySkins } from './skins/settings.jsx';
 import { applyConversationRecords } from './conversation-records.jsx';
 import { RecommendedPlugins } from './recommended-plugins.jsx';
+import { applyPromptOptimizer } from './prompt-optimizer.jsx';
 
 export { CONTEXT_UI_VERSION as contextUIVersion } from './context-client.mjs';
 const { ContextSettings, ScopeChip, PipelinePanel, SummaryPanel, applyStyle } = createContextUI(React);
@@ -30,6 +31,7 @@ const suffix = id => `?${id ? `session=${encodeURIComponent(id)}` : ''}`;
 const fmt = n => Number(n || 0).toLocaleString();
 const kindName = { main: '主执行', subagent: '子代理', compactFull: '全量压缩', prepare: '上下文预处理', coordinate: '上下文替换', background: '记忆消化（历史）', recall: '记忆检索（历史）', state: '状态提炼（历史）', curation: '记忆整理（历史）', surgeon: '上下文整理（历史）', probeAsk: '探针出题（历史）', probeAnswer: '探针作答（历史）' };
 const componentEntries = kinds => [...new Set(kinds)].map(kind => [kind, kindName[kind] || kind]);
+kindName.promptOptimizer = '提示词优化';
 function BetterTodoChip({ sessionId, useSessionStatus }) {
   const [state, setState] = useState(null), [open, setOpen] = useState(false), [saving, setSaving] = useState(false), [error, setError] = useState('');
   const [notice, setNotice] = useState(false), dialog = useRef(null), noticeId = useId();
@@ -221,6 +223,7 @@ export const inject = [...new Set(['slots', 'sidebarRightTabs', 'sidebarRight', 
 export async function apply(ctx) {
   applyHistorySize(ctx);
   await ctx.plugin(hostConversation);
+  applyPromptOptimizer(ctx);
   const openPanel = section => ctx.sidebarRight.openTab('trisoul-x-workbench', { params: { section } });
   const sections = [
     ['tasks', '任务', 'context', TaskPanel],
