@@ -58,7 +58,7 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
   await writeFile(join(home, 'settings.yaml'), JSON.stringify({
     'llm-pi-ai': { providers: { fixture: { api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'CU_UI_FIXTURE', models: [{ id: 'fixture', name: 'fixture', contextWindow: 1000000, maxTokens: 8192, input: ['text', 'image'] }, { id: 'text-fixture', name: '仅文本验收模型', contextWindow: 1000000, maxTokens: 8192, input: ['text'] }] } } },
     'agent-default-model': { provider: 'fixture', model: 'fixture' },
-    'trisoul-x': { componentAutoSetup: false, computerUseBrowserExecutable: testBrowser, stateEnabled: false, probeEnabled: false, digestEvery: 1000, flushIdleMs: 3600000, computerUseChromeUserDataDir: join(root, 'external-profile'),computerUseNativeBinary:nativeBinary },
+    'trisoul-x': { componentAutoSetup: false, computerUseBrowserExecutable: testBrowser, digestEvery: 1000, flushIdleMs: 3600000, computerUseChromeUserDataDir: join(root, 'external-profile'),computerUseNativeBinary:nativeBinary },
   }));
   await writeFile(join(home, '.credentials.yaml'), JSON.stringify({ version: 1, refs: { CU_UI_FIXTURE: 'local-test-only' } }), { mode: 0o600 });
   const child = spawn(process.execPath, ['scripts/start.mjs'], { cwd: new URL('../', import.meta.url), env: { ...process.env, DSH_HOME: home, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -184,8 +184,12 @@ for (const backend of ['managed', 'extension']) test('DSH ' + backend + ' browse
     assert.equal(await group.getAttribute('aria-expanded'), 'false');
     assert.equal(await page.locator('.tx-cu-card').isVisible(), false, 'closed operation summaries hide individual rows');
     await group.click();
+    const operations = page.locator('[data-cu-group] > button').filter({ hasText: '1 次操作' });
+    await operations.waitFor();
+    assert.equal(await operations.count(), 1, 'the process contains one operation group');
+    assert.equal(await operations.getAttribute('aria-expanded'), 'false', 'opening a completed process preserves the independently folded operation list');
+    await operations.click();
     const card = page.locator('.tx-cu-card'); await card.waitFor();
-    assert.equal(await page.locator('.tx-cu-group-toggle:visible').count(),1,'a completed turn has only one summary level, not a nested Computer Use group');
     await card.getByText('打开验收页面', { exact: true }).waitFor();
     await card.getByText('已执行', { exact: true }).waitFor();
     assert.equal(await card.locator('img').count(), 0, 'collapsed Computer Use calls must not mount screenshot images');

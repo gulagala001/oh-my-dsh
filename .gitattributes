@@ -2,6 +2,10 @@
 vendor/opencu/** -text
 vendor/dsh/** -text
 
+# Preserve upstream font binaries, provenance and licenses byte-for-byte.
+src/client/skins/*/assets/** -text -whitespace
+docs/skin-font-licenses/** -text -whitespace
+
 # Prompt modules must keep identical bytes on Windows checkouts.
 src/cc-adaptation/prompts/** text eol=lf
 presets/** text eol=lf

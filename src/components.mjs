@@ -97,8 +97,10 @@ export class Components {
       (CU_FIELDS.includes(key) ? cu : own)[key] = value;
     }
     if (Object.keys(own).length) await this.ctx.settings.update('trisoul-x', own);
-    if (Object.keys(cu).length) await this.ctx.settings.update('opencu', cu);
-    await this.reconfigure();
+    if (Object.keys(cu).length) {
+      await this.ctx.settings.update('opencu', cu);
+      await this.reconfigure();
+    } else await this.configuring;
   }
   close() { this.closed = true; this.controller.abort(new Error('组件准备已停止')); }
 }

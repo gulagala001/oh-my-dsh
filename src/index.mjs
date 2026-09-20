@@ -38,12 +38,10 @@ export function apply(ctx, config) {
   const versionService = createVersionService();
   ctx.effect(() => () => versionService.dispose());
   ctx.settings.installSection(ctx, NS, Config, config, { setSource: source => { hub.getConfig = source; }, onChange() {
-    if (hub.computerUse) void hub.computerRefresh().catch(error => ctx.logger.warn(error.message));
     if (hub.components) void hub.components.reconfigure().catch(error => ctx.logger.warn(error.message));
     hub.context.reconfigure();
   } });
   const computer = acquireComputerUse(ctx, { getConfig: () => hub.config(), dataDir: join(hub.store.dir, 'computer-use') });
-  hub.computerUse = computer.computerUse; hub.computerRefresh = computer.refresh; hub.computerImages = computer.computerImages;
   hub.components = new Components(ctx, hub, computer);
   mountComponents(ctx, hub.components);
   ctx.effect(() => { hub.components.start(); return () => hub.components.close(); });
@@ -160,11 +158,11 @@ export function apply(ctx, config) {
           }
           send(res, 200, {
             config: hub.config(), directory, metrics, actions, sessionCount: all.length, contextHistory: stored?.contextHistory || [],
-            context: stored ? { legacy: true, pins: stored.pins, status: stored.status ? '[历史状态，旧提炼链路已停止]\n' + stored.status : '', notes: stored.notes,
-              checkpoint: stored.checkpoint, cursor: stored.cursor, digestCount: stored.digests.length,
-              stateCursor: stored.stateCursor, stateFailures: stored.stateFailures || 0,
-              workdoc: stored.memoryContext?.doc ? '[历史任务文档，非当前摘要目录]\n' + stored.memoryContext.doc : '',
-              workdocVersion: stored.memoryContext?.version || 0, supplementPending: 0, probe: null, probeNotes: [], memoryTrace: stored.memoryTrace } : null,
+            notes: stored?.notes || [],
+            legacyContext: stored && (stored.status || stored.pins?.length || stored.memoryContext?.doc || stored.checkpoint || stored.digests?.length || stored.probe || stored.probeNotes?.length) ? {
+              status: stored.status, pins: stored.pins, workdoc: stored.memoryContext?.doc, checkpoint: stored.checkpoint,
+              digests: stored.digests, probe: stored.probe, probeNotes: stored.probeNotes,
+            } : null,
             contextPipeline: session && session.header.origin !== 'subagent' ? hub.context.view(session) : null,
             tasks: currentTasks(session, stored?.taskList ?? stored?.tasks), taskRelease: stored?.taskRelease,
             activity: all.flatMap(s => s.activity).sort((a, b) => b.at - a.at).slice(0, 60),

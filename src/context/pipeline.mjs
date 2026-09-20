@@ -1,4 +1,5 @@
-import { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
+import { contextConfig } from '../config.mjs';
+export { contextConfig };
 import { randomUUID } from 'node:crypto';
 import { serializePreparationInput } from './input-budget.mjs';
 import { compactFull } from './full-compaction.mjs';
@@ -9,17 +10,6 @@ import { createTransaction, applyTransaction } from './transactions.mjs';
 import { SUMMARY_PROMPT_VERSION, PREPARE_SYSTEM, PREPARE_TOOL, COORDINATE_SYSTEM, COORDINATE_TOOL } from './prompts.mjs';
 import { TODO_META, TASK_CONTEXT_META, taskContextMeta, withoutTodo } from '../task-context.mjs';
 
-export const DEFAULTS = Object.freeze({ contextEnabled: true, ...CONTEXT_FREQUENCY_PRESETS.medium, digestLookback: 8,
-  preprocessBoundaries: false, prepareBatchWindows: 2, prepareContinueTokens: 8000, prepareInputTokens: 300000, summaryTargetChars: 1200, backgroundConcurrency: 2, backgroundMaxRetries: 2,
-  idlePreprocessEnabled: false, flushIdleMs: 90000, coordinatorRecentEvents: 12,
-  automaticReplace: true, keepTailEvents: 30, traceEnabled: true, traceMaxChars: 0, requireShorter: true });
-export function contextConfig(raw = {}) {
-  const cfg = { ...DEFAULTS, ...raw };
-  for (const key of ['contextEnabled', 'preprocessBoundaries', 'idlePreprocessEnabled', 'automaticReplace', 'traceEnabled', 'requireShorter']) if (typeof cfg[key] !== 'boolean') throw new Error(`${key} 必须为布尔值`);
-  for (const key of ['digestEvery', 'digestWindow', 'coordinatorEvery', 'prepareBatchWindows', 'prepareContinueTokens', 'prepareInputTokens', 'summaryTargetChars', 'backgroundConcurrency']) if (!Number.isInteger(cfg[key]) || cfg[key] < 1) throw new Error(`${key} 必须为正整数`);
-  for (const key of ['backgroundMaxRetries', 'digestLookback', 'flushIdleMs', 'coordinatorMinGapMs', 'coordinatorRecentEvents', 'surgeryCooldownSteps', 'keepTailEvents', 'traceMaxChars']) if (!Number.isInteger(cfg[key]) || cfg[key] < 0) throw new Error(`${key} 必须为非负整数`);
-  return cfg;
-}
 const delegated = s => s.header?.origin === 'subagent' || Number(s.header?.delegationDepth) > 0;
 const iso = n => n == null ? '时间未记录' : new Date(n).toISOString();
 

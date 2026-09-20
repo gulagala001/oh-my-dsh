@@ -1,0 +1,29 @@
+.omd [data-omd-part="sidebar"] { background: var(--omd-sidebar); border-right: 1px solid var(--omd-border); }
+.omd [data-omd-part="header"], .omd [data-omd-part="conversation"], .omd [data-omd-part="workbench"], .omd [data-omd-part="settings"] { background: var(--omd-bg); color: var(--omd-text); }
+.omd [data-omd-part="composer"] { background: var(--omd-bg); border: 0; border-top: 1px solid var(--omd-border); border-bottom: 1px solid var(--omd-border); border-radius: 0; box-shadow: none; }
+.omd [data-omd-part="composer"]:focus-within { border-color: var(--omd-accent); box-shadow: none; }
+.omd [data-omd-part="input"] { background: transparent; border: 0; caret-color: var(--omd-accent); }
+.omd [data-omd-part="settings-shell"], .omd [data-omd-part="dialog"], .omd [data-omd-part="menu"] { background: var(--omd-surface-solid); color: var(--omd-text); border: 1px solid var(--omd-terminal-rule); border-radius: 3px; box-shadow: none; }
+.omd [data-omd-part="settings-nav"] { background: var(--omd-bg); border-right: 1px solid var(--omd-border); }
+.omd [data-omd-part="settings-content"] { background: var(--omd-bg); color: var(--omd-text); }
+.omd [data-omd-part="settings-nav-item"] { border-radius: 0; color: var(--omd-muted); background: transparent; }
+.omd [data-omd-part="settings-nav-item"][data-omd-state="selected"] { background: var(--omd-selected); color: var(--omd-accent); }
+.omd [data-omd-part="sidebar-row"] { border-radius: 0; }
+.omd [data-omd-part="sidebar-row"][data-omd-state="selected"] { background: var(--omd-selected); border-left: 2px solid var(--omd-accent); }
+.omd [data-omd-part="message-user"] { border-radius: 0; background: var(--omd-user-bg); color: var(--omd-text); }
+.omd [data-omd-part="tool"], .omd [data-omd-part="process-toggle"], .omd [data-omd-part="tool-group"], .omd [data-omd-part="tool-row"] { background: transparent; border-radius: 0; box-shadow: none; }
+.omd [data-omd-part="code-block"] { background: var(--omd-code-bg); border: 1px solid var(--omd-border); border-radius: 0; }
+.omd [data-omd-part="code-inline"] { background: var(--omd-code-bg); border-radius: 0; color: var(--omd-accent); }
+.omd [data-omd-part="form-control"] { background: var(--omd-surface); border: 1px solid var(--omd-border); border-radius: 2px; color: var(--omd-text); font-family: var(--omd-font-ui); caret-color: var(--omd-accent); }
+.omd [data-omd-part="form-control"]:focus-visible { outline: 2px solid var(--omd-focus); outline-offset: 2px; }
+.omd [data-omd-part="button"] { font-family: var(--omd-font-ui); border-radius: 2px; box-shadow: none; }
+.omd [data-omd-part="button"]:focus-visible { outline: 2px solid var(--omd-focus); outline-offset: 2px; }
+.omd [data-omd-part="button-primary"], .omd [data-omd-part="send"] { background: var(--omd-button-bg); color: var(--omd-button-fg); border-radius: 2px; }
+.omd [data-omd-part="button-quiet"], .omd [data-omd-part="icon-button"] { background: transparent; color: var(--omd-muted); }
+.omd [data-omd-part="button-quiet"]:hover, .omd [data-omd-part="icon-button"]:hover { background: var(--omd-hover); color: var(--omd-text); }
+.omd [data-omd-part="checkbox"], .omd [data-omd-part="switch"] { accent-color: var(--omd-accent); }
+.omd [data-omd-part="tab"] { border-radius: 0; font-weight: 400; }
+.omd [data-omd-part="segments"] { border-radius: 2px; background: var(--omd-surface); }
+.omd [data-omd-part="segment"] { border-radius: 0; }
+.omd [data-omd-part="savebar"] { background: var(--omd-bg); border-top: 1px solid var(--omd-border); border-radius: 0; }
+.omd [data-omd-part="statusbar"] { color: var(--omd-muted); font-variant-numeric: tabular-nums; }

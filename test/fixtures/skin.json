@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "id": "test-skin",
+  "name": "接口测试皮肤",
+  "version": "1.0.0",
+  "tokens": {
+    "common": {
+      "font-ui": "system-ui, -apple-system, \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+      "font-body": "system-ui, -apple-system, \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+      "font-mono": "ui-monospace, \"SFMono-Regular\", Consolas, monospace",
+      "font-size": "13px",
+      "line-height": "1.7",
+      "gap": "8px",
+      "radius-control": "7px",
+      "radius-panel": "12px",
+      "radius-composer": "25px",
+      "shadow": "0 2px 12px #00000008",
+      "duration": "140ms"
+    },
+    "light": {
+      "bg": "#fff4e8",
+      "surface": "#ffffff",
+      "surface-solid": "#ffffff",
+      "sidebar": "#f7f8fa",
+      "text": "#20242b",
+      "muted": "#66717e",
+      "border": "#e0e4ea",
+      "hover": "#f0f2f5",
+      "selected": "#edf3ff",
+      "accent": "#2864d7",
+      "on-accent": "#ffffff",
+      "focus": "#3675e7",
+      "success": "#197448",
+      "warning": "#8d5d0d",
+      "danger": "#b93645",
+      "code-bg": "#f6f8fa"
+    },
+    "dark": {
+      "bg": "#211720",
+      "surface": "#202329",
+      "surface-solid": "#202329",
+      "sidebar": "#1c1e23",
+      "text": "#eef0f4",
+      "muted": "#a6afbd",
+      "border": "#3c424b",
+      "hover": "#2b3038",
+      "selected": "#253b5d",
+      "accent": "#94baff",
+      "on-accent": "#17273f",
+      "focus": "#a5c8ff",
+      "success": "#7dd9a1",
+      "warning": "#efd28b",
+      "danger": "#ff9eac",
+      "code-bg": "#12151a"
+    }
+  },
+  "css": ".omd [data-omd-part=\"composer\"] { border-width: 2px; }"
+}

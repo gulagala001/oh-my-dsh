@@ -1,0 +1,10 @@
+import skin0 from './bundled/codex.json' with { type: 'json' };
+import skin1 from './bundled/claude-code.json' with { type: 'json' };
+import skin2 from './bundled/claude-desktop.json' with { type: 'json' };
+import skin3 from './bundled/ios-glass.json' with { type: 'json' };
+import skin4 from './bundled/material.json' with { type: 'json' };
+import liquidGlass from './bundled/ios-liquid-glass.json' with { type: 'json' };
+import codexDesktop from './bundled/codex-desktop.json' with { type: 'json' };
+import claudeTerminal from './bundled/claude-cli-terminal.json' with { type: 'json' };
+import materialExpressive from './bundled/google-material-expressive.json' with { type: 'json' };
+export const bundledSkins = [skin0, skin1, skin2, skin3, skin4, liquidGlass, codexDesktop, claudeTerminal, materialExpressive];

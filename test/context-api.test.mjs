@@ -15,7 +15,7 @@ function setup() {
     queueManual: () => ({ queued: true, changed: false }), applyReady: async () => { calls.push('apply-only'); return null; },
     prepare: async () => { calls.push('prepare'); }, coordinate: async () => { calls.push('coordinate'); }, reconfigure() {},
   } };
-  const ctx = { settings: { async update(_ns, patch) { Object.assign(cfg, patch); } } };
+  const ctx = { settings: { async update(_ns, patch) { Object.assign(cfg, contextConfig({ ...cfg, ...patch })); } } };
   async function call(path, method = 'GET', body = {}, agent) {
     let response;
     const handled = await handleContextApi({ hub, ctx, req: { method }, res: {}, url: new URL('http://localhost/trisoul-x/api' + path), session, id: session.id, agent,
@@ -46,10 +46,12 @@ test('manual global editor detects concurrent writes', async () => {
   const f = setup(); assert.equal((await f.call('/context/global', 'POST', { text: 'mine', revision: 0 })).status, 409);
   assert.equal((await f.call('/context/global', 'POST', { text: 'mine', revision: 1 })).data.revision, 2);
 });
-test('new settings validate values and reject obsolete probe switches', async () => {
-  const f = setup(); await assert.rejects(f.call('/settings', 'POST', { probeEnabled: true }), /退出现行/);
-  await assert.rejects(f.call('/settings', 'POST', { digestWindow: 0 }));
-  const r = await f.call('/settings', 'POST', { digestWindow: 64, traceEnabled: false }); assert.equal(r.data.digestWindow, 64); assert.equal(r.data.traceEnabled, false);
+test('settings validate the complete host contract and reject unknown fields', async () => {
+  const f = setup();
+  for (const key of ['probeEnabled', 'stateEvery', 'injectPickTimeoutMs', 'mergeCheckpoints', 'thresholdRatio', 'unknownOption']) await assert.rejects(f.call('/settings', 'POST', { [key]: 1 }), /未知或已退役/);
+  for (const value of [0, null, 1.5]) await assert.rejects(f.call('/settings', 'POST', { digestWindow: value }));
+  await assert.rejects(f.call('/settings', 'POST', { idlePreprocessEnabled: null }), /boolean/);
+  const r = await f.call('/settings', 'POST', { digestWindow: 64, traceEnabled: false, keepTailEvents: 0 }); assert.equal(r.data.keepTailEvents, 0); assert.equal(r.data.digestWindow, 64); assert.equal(r.data.traceEnabled, false);
 });
 test('CFR settings save and reject non-boolean values without starting model work', async () => {
   const f = setup();
@@ -57,7 +59,7 @@ test('CFR settings save and reject non-boolean values without starting model wor
     const r = await f.call('/settings', 'POST', { todoConstraintFirst: enabled });
     assert.equal(r.status, 200); assert.equal(r.data.todoConstraintFirst, enabled);
   }
-  for (const value of ['true', 'false', 1, null]) await assert.rejects(f.call('/settings', 'POST', { todoConstraintFirst: value }), /布尔/);
+  for (const value of ['true', 'false', 1, null]) await assert.rejects(f.call('/settings', 'POST', { todoConstraintFirst: value }), /boolean|布尔/);
   assert.equal(f.cfg.todoConstraintFirst, false); assert.deepEqual(f.calls, []);
 });
 test('document endpoint uses record ACL rather than trusting the requested ID', async () => {
@@ -71,8 +73,8 @@ test('idle switch and wait time persist through settings without starting a back
   assert.equal(on.status, 200); assert.equal(on.data.idlePreprocessEnabled, true); assert.equal(f.cfg.flushIdleMs, 45000);
   await f.call('/settings', 'POST', { idlePreprocessEnabled: false });
   assert.equal(f.cfg.idlePreprocessEnabled, false); assert.equal(f.cfg.flushIdleMs, 45000); assert.deepEqual(f.calls, []);
-  await assert.rejects(f.call('/settings', 'POST', { idlePreprocessEnabled: 'false' }), /布尔/);
-  await assert.rejects(f.call('/settings', 'POST', { flushIdleMs: -1 }), /非负/);
+  await assert.rejects(f.call('/settings', 'POST', { idlePreprocessEnabled: 'false' }), /boolean|布尔/);
+  await assert.rejects(f.call('/settings', 'POST', { flushIdleMs: -1 }), /number >= 0/);
 });
 
 for (const [path, operation] of [['/compact-p', 'processed'], ['/compact-f', 'full']]) {
@@ -91,7 +93,7 @@ test('whole-window and cost controls persist without waking sessions', async () 
   const result = await f.call('/settings', 'POST', patch);
   for (const [key,value] of Object.entries(patch)) assert.equal(result.data[key], value);
   assert.deepEqual(f.calls, []);
-  await assert.rejects(f.call('/settings', 'POST', { preprocessBoundaries: 'false' }), /布尔/);
+  await assert.rejects(f.call('/settings', 'POST', { preprocessBoundaries: 'false' }), /boolean|布尔/);
 });
 
 test('attachment endpoint checks the record scope before serving verified image or file bytes', async () => {

@@ -1,1 +1,0 @@
-A failed Computer Use call may have completed earlier actions. Inspect the affected target before retrying a send, save, or upload. Ordinary errors do not necessarily clear existing bindings; a stop or reset does. If the user stopped control, wait for the user to resume it.

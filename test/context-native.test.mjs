@@ -31,6 +31,9 @@ test('native DSH 0.1.6: prepared replacement, exposed trace, tool pairing and re
   assert.match(JSON.stringify(session.deriveMessages()), /Previous provider-exposed analysis/);
   const replay = Session.create(session.id, JSON.parse(JSON.stringify(session.snapshotEvents())), session.header);
   assert.deepEqual(replay.deriveMessages(), session.deriveMessages());
+  for (const e of replay.snapshotEvents().filter(e => e.type.startsWith('compaction/') || e.type === 'user/message' && e.data.source?.compactionId)) {
+    assert.equal(e.data.omdBatchId, result.id, 'one durable batch identity survives native event replay');
+  }
   assert.match(pipeline.recall(session, { id: state.records[1].id }), /9007199254740993/);
   pipeline.dispose();
 });

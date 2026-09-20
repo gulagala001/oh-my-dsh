@@ -1,0 +1,38 @@
+@font-face { font-family: "OMD Google Sans Flex"; font-style: normal; font-weight: 400; font-display: swap; src: url(assets/google-sans-flex-400.woff2) format("woff2"); }
+@font-face { font-family: "OMD Google Sans Flex"; font-style: normal; font-weight: 500; font-display: swap; src: url(assets/google-sans-flex-500.woff2) format("woff2"); }
+@font-face { font-family: "OMD Google Sans Flex"; font-style: normal; font-weight: 600; font-display: swap; src: url(assets/google-sans-flex-600.woff2) format("woff2"); }
+@font-face { font-family: "OMD Google Sans Flex"; font-style: normal; font-weight: 700; font-display: swap; src: url(assets/google-sans-flex-700.woff2) format("woff2"); }
+@font-face { font-family: "OMD Google Sans Code"; font-style: normal; font-weight: 400; font-display: swap; src: url(assets/google-sans-code-400.woff2) format("woff2"); }
+@font-face { font-family: "OMD Google Sans Code"; font-style: normal; font-weight: 500; font-display: swap; src: url(assets/google-sans-code-500.woff2) format("woff2"); }
+@font-face { font-family: "OMD Google Sans Code"; font-style: normal; font-weight: 700; font-display: swap; src: url(assets/google-sans-code-700.woff2) format("woff2"); }
+@font-face { font-family: "OMD Noto Sans SC"; font-style: normal; font-weight: 400 600; font-display: swap; src: url(assets/noto-sans-sc-ui.woff2) format("woff2"); }
+@font-face { font-family: "OMD Material Symbols"; font-style: normal; font-weight: 400; font-display: block; src: url(assets/material-symbols.woff2) format("woff2"); }
+@font-face { font-family: "OMD Noto Sans SC Text"; font-style: normal; font-weight: 400; font-display: swap; src: url(assets/noto-sans-sc-text.woff2) format("woff2"); }
+
+.omd [data-omd-part="sidebar"] { background: var(--omd-sidebar); color: var(--omd-text); }
+.omd [data-omd-part="conversation"] { background: var(--omd-bg); color: var(--omd-text); }
+.omd [data-omd-part="composer"] { background: var(--omd-surface); border: 1px solid transparent; border-radius: 28px; box-shadow: none; }
+.omd [data-omd-part="composer"]:focus-within { background: var(--omd-surface-solid); border-color: var(--omd-accent); box-shadow: var(--omd-shadow); }
+.omd [data-omd-part="input"] { background: transparent; border: 0; color: var(--omd-text); caret-color: var(--omd-accent); }
+.omd [data-omd-part="header"] { background: var(--omd-bg); border: 0; }
+.omd [data-omd-part="message-user"] { background: var(--omd-user-bg); color: var(--omd-text); border-radius: 24px; }
+.omd [data-omd-part="button"] { font-family: var(--omd-font-ui); }
+.omd [data-omd-part="button"]:focus-visible { outline: 2px solid var(--omd-focus); outline-offset: 3px; }
+.omd [data-omd-part="button-primary"], .omd [data-omd-part="send"] { background: var(--omd-button-bg); color: var(--omd-button-fg); border: 0; border-radius: 28px; }
+.omd [data-omd-part="button-primary"]:hover, .omd [data-omd-part="send"]:hover { background: var(--omd-button-hover); }
+.omd [data-omd-part="sidebar-row"][data-omd-state="selected"] { background: var(--omd-selected); color: var(--omd-on-selected); border-radius: 28px; }
+.omd [data-omd-part="settings-shell"] { background: var(--omd-surface); color: var(--omd-text); border: 1px solid var(--omd-outline-soft); border-radius: 28px; }
+.omd [data-omd-part="settings-nav"] { background: var(--omd-surface); }
+.omd [data-omd-part="settings-nav-item"] { background: transparent; color: var(--omd-muted); border-radius: 28px; }
+.omd [data-omd-part="settings-nav-item"][data-omd-state="selected"] { background: var(--omd-selected); color: var(--omd-on-selected); font-weight: 600; }
+.omd [data-omd-part="settings-content"] { background: var(--omd-bg); }
+.omd [data-omd-part="form-control"] { background: var(--omd-surface); color: var(--omd-text); border: 1px solid var(--omd-border); border-radius: 12px; font-family: var(--omd-font-ui); }
+.omd [data-omd-part="form-control"]:focus-visible { outline: 2px solid var(--omd-accent); outline-offset: 2px; }
+.omd [data-omd-part="switch"] { accent-color: var(--omd-accent); border-radius: 20px; }
+.omd [data-omd-part="segment"][data-omd-state="selected"] { background: var(--omd-selected); color: var(--omd-on-selected); }
+.omd [data-omd-part="menu"], .omd [data-omd-part="dialog"] { background: var(--omd-surface-solid); color: var(--omd-text); border: 1px solid var(--omd-outline-soft); border-radius: 20px; box-shadow: var(--omd-shadow); }
+.omd [data-omd-part="workbench"] { background: var(--omd-bg); color: var(--omd-text); }
+.omd [data-omd-part="code"] { font-family: var(--omd-font-mono); }
+.omd [data-omd-part="code-block"] { background: var(--omd-code-bg); border-radius: 16px; }
+.omd [data-omd-part="code-inline"] { background: var(--omd-code-bg); border-radius: 4px; }
+.omd [data-omd-part="statusbar"] { color: var(--omd-muted); font-variant-numeric: tabular-nums; }

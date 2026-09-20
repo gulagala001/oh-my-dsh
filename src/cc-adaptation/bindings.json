@@ -181,23 +181,9 @@
     ]
   },
   "subagent": {
-    "file": "tools/subagents.md",
-    "fields": [
-      "prompt"
-    ],
-    "sections": [
-      "tool:subagent"
-    ],
     "mode": "retain-native"
   },
   "subagent_fork": {
-    "file": "tools/subagents.md",
-    "fields": [
-      "prompt"
-    ],
-    "sections": [
-      "tool:subagent_fork"
-    ],
     "mode": "retain-native"
   },
   "send_message": {
@@ -227,14 +213,6 @@
     ]
   },
   "list_subagent_models": {
-    "file": "tools/list-subagent-models.md",
-    "fields": [
-      "provider",
-      "model"
-    ],
-    "sections": [
-      "tool:list_subagent_models"
-    ],
     "mode": "retain-native"
   },
   "job_output": {
@@ -273,38 +251,15 @@
     ]
   },
   "ralph": {
-    "file": "tools/ralph.md",
-    "fields": [],
-    "sections": [
-      "tool:ralph"
-    ],
     "mode": "retain-native"
   },
   "create_goal": {
-    "file": "tools/goals.md",
-    "fields": [],
-    "sections": [
-      "tool:create_goal"
-    ],
     "mode": "retain-native"
   },
   "get_goal": {
-    "file": "tools/goals.md",
-    "fields": [],
-    "sections": [
-      "tool:get_goal"
-    ],
     "mode": "retain-native"
   },
   "update_goal": {
-    "file": "tools/goals.md",
-    "fields": [
-      "goal_id",
-      "revision"
-    ],
-    "sections": [
-      "tool:update_goal"
-    ],
     "mode": "retain-native"
   },
   "computer_use": {

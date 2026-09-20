@@ -1,1 +1,0 @@
-Screenshot captured, but the current model accepts text only and did not receive its pixels. Do not claim to have inspected the image. Use available text observations or report that visual verification is unavailable.
