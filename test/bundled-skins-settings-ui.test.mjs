@@ -10,7 +10,10 @@ test('bundled skins cover every settings page in both modes and keep narrow cont
   const nav = page.locator('.VOzbGW_nav');
   const selectPage = async name => {
     const entry = nav.getByRole('button', { name, exact: true, includeHidden: true });
-    if (!await entry.isVisible()) await page.getByRole('button', { name: '设置分类', exact: true }).click();
+    const visibleEntry = nav.getByRole('button', { name, exact: true });
+    const categories = dialog.getByRole('button', { name: '设置分类', exact: true });
+    await visibleEntry.or(categories).first().waitFor();
+    if (!await entry.isVisible()) await categories.click();
     await entry.click();
   };
   const pages = ['通用设置', '模型', '内置插件', '外观', 'Oh My DSH', '推荐插件', 'Agent 预设', '已归档会话'];

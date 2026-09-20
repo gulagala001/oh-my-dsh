@@ -23,8 +23,14 @@ test('bundled skins work in real chat, both modes, portals, narrow settings and 
   const openSettings = async () => {
     if (!await page.getByRole('button', { name: '设置', exact: true }).isVisible()) await page.locator('.hHd-Xa_toggle').click();
     await page.getByRole('button', { name: '设置', exact: true }).click();
-    if (!await page.locator('.VOzbGW_nav').isVisible()) await page.getByRole('button', { name: '设置分类', exact: true }).click();
-    await page.getByRole('dialog').getByRole('button', { name: '外观', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    const appearance = dialog.getByRole('button', { name: '外观', exact: true });
+    const categories = dialog.getByRole('button', { name: '设置分类', exact: true });
+    // The portal mounts asynchronously. Wait for its actual navigation before
+    // deciding whether this skin uses the narrow-screen category menu.
+    await appearance.or(categories).first().waitFor();
+    if (!await appearance.isVisible()) await categories.click();
+    await appearance.click();
   };
   const capture = async name => { if (process.env.TRISOUL_UI_ARTIFACTS) await page.screenshot({ path: join(f.root, name + '.png') }); };
   const available = [];
