@@ -1,6 +1,12 @@
 // Only this curated catalog supplies package names to the installer.
 export const recommendedPlugins = [
   {
+    id: 'jevify', name: 'Jevify', packageName: 'dsh-plugin-jevify', author: 'gulagala001',
+    description: '让普通模型提供 Jev 风格的 Choice、Score、Noul 判断；支持百炼、DeepSeek 官方和 GOAT，可用官方 Jev SDK 直接调用。安装后在设置中选择渠道与模型。',
+    category: '模型能力', url: 'https://github.com/gulagala001/jevify',
+    githubRelease: 'gulagala001/jevify',
+  },
+  {
     id: 'dsh-status-rotator', name: 'dsh-status-rotator', packageName: 'dsh-status-rotator', author: '01Virex',
     description: '把“深度求索中…”替换为轮换文案，支持打字机、彩色渐变、弹幕和主题词库，可在设置中编辑。',
     category: '界面增强', url: 'https://github.com/01Virex/dsh-status-rotator',

@@ -84,3 +84,21 @@ test('manual-only recommendations are never sent to the native installer', async
   f.bundles = [{ name: 'manual-plugin', installed: true, enabled: true, version: '1.0.0' }];
   await f.service.tick(); assert.equal(f.lookups, 0); assert.equal(f.calls.length, 0);
 });
+
+test('GitHub recommendations install the versioned release asset and remain optional', async () => {
+  const { recommendedPlugins } = await import('../src/recommended-plugin-catalog.mjs');
+  const { pluginInstallSpec, latestPluginVersion } = await import('../src/recommended-plugins.mjs');
+  const plugin = recommendedPlugins.find(p => p.id === 'jevify');
+  const spec = 'https://github.com/gulagala001/jevify/releases/download/v0.1.5/dsh-plugin-jevify-0.1.5.tgz';
+  assert.equal(pluginInstallSpec(plugin, '0.1.5'), spec);
+  const f = fixture(); f.service.catalog = [plugin]; f.version = '0.1.5';
+  await f.service.tick(); assert.equal(f.calls.length, 0);
+  await f.service.start('jevify', 'install'); assert.equal(f.calls[0].spec, spec);
+  const fetchOriginal = globalThis.fetch;
+  try {
+    globalThis.fetch = async url => { assert.equal(url, 'https://api.github.com/repos/gulagala001/jevify/releases/latest'); return Response.json({tag_name:'v0.1.5',assets:[{browser_download_url:spec}]}); };
+    assert.equal(await latestPluginVersion(plugin, new AbortController().signal), '0.1.5');
+    globalThis.fetch = async () => Response.json({tag_name:'v0.1.5',assets:[{browser_download_url:'https://example.invalid/package.tgz'}]});
+    await assert.rejects(latestPluginVersion(plugin, new AbortController().signal), /缺少预期/);
+  } finally { globalThis.fetch = fetchOriginal; }
+});

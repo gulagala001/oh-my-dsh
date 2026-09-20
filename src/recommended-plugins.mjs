@@ -3,8 +3,14 @@ import { recommendedPlugins } from './recommended-plugin-catalog.mjs';
 import { compareVersions, parseVersion } from './version.mjs';
 
 export const AUTO_UPDATE_INTERVAL = 6 * 60 * 60 * 1000;
+export function pluginInstallSpec(plugin, version) {
+  parseVersion(version);
+  return plugin.githubRelease
+    ? `https://github.com/${plugin.githubRelease}/releases/download/v${version}/${plugin.packageName}-${version}.tgz`
+    : `${plugin.packageName}@${version}`;
+}
 export async function latestPluginVersion(plugin, signal) {
-  const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(plugin.packageName)}/latest`, {
+  const response = await fetch(plugin.githubRelease ? `https://api.github.com/repos/${plugin.githubRelease}/releases/latest` : `https://registry.npmjs.org/${encodeURIComponent(plugin.packageName)}/latest`, {
     signal: AbortSignal.any([signal, AbortSignal.timeout(20000)]), headers: { Accept: 'application/json' },
   });
   if (!response.ok) throw Error(`查询最新版本失败（HTTP ${response.status}）`);
@@ -13,6 +19,13 @@ export async function latestPluginVersion(plugin, signal) {
     bytes += part.length; if (bytes > 512 * 1024) throw Error('插件版本信息过大'); parts.push(part);
   }
   const manifest = JSON.parse(Buffer.concat(parts).toString('utf8'));
+  if (plugin.githubRelease) {
+    const version = manifest.tag_name?.replace(/^v/, '');
+    parseVersion(version);
+    if (manifest.draft || manifest.prerelease || !manifest.assets?.some(asset => asset.browser_download_url === pluginInstallSpec(plugin, version)))
+      throw Error('GitHub Release 缺少预期的 DSH 插件安装包');
+    return version;
+  }
   if (manifest.name !== plugin.packageName || !manifest.dsh?.bundle?.patch) throw Error('该包不是预期的 DSH 插件');
   parseVersion(manifest.version);
   return manifest.version;
@@ -71,7 +84,7 @@ export class RecommendedPluginManager {
       if (action === 'update' && bundle.version && compareVersions(version, bundle.version) <= 0) {
         this.records.set(plugin.id, { ...this.records.get(plugin.id), message: '已是最新版本', error: '' }); return;
       }
-      result = await this.manager.installBundle(`${plugin.packageName}@${version}`, { enabled: action === 'install' ? true : bundle.enabled, requestId: this.current.requestId });
+      result = await this.manager.installBundle(pluginInstallSpec(plugin, version), { enabled: action === 'install' ? true : bundle.enabled, requestId: this.current.requestId });
     }
     if (result.application === 'failed') {
       const pending = result.pendingBuilds || [];
