@@ -1,0 +1,17 @@
+{
+  "capturedAt": "2026-09-20T17:26:56.564Z",
+  "viewport": {
+    "width": 1600,
+    "height": 1000
+  },
+  "source": "Real DSH 0.1.6-alpha.2 UI with the isolated Oh My DSH 0.1.6 package; fictional Atlas demo, real file writes and verification commands. Prompt rewriting uses the demo model.",
+  "images": [
+    "overview",
+    "theme-codex",
+    "theme-ios",
+    "theme-claude",
+    "theme-material",
+    "appearance",
+    "optimizer"
+  ]
+}

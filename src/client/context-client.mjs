@@ -3,8 +3,6 @@ export { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
 import { createPoller } from './polling.mjs';
 import { DEFAULT_IDENTITY } from '../cc-adaptation/identity.mjs';
 
-/* Keep the original workbench and host theme. These panels replace only the
- * context/summary settings and slots whose semantics changed in Context v1. */
 export const CONTEXT_UI_VERSION = '1.3.0';
 export function contextFrequencyOf(config = {}) {
   return Object.entries(CONTEXT_FREQUENCY_PRESETS).find(([, values]) => Object.entries(values).every(([key, value]) => config[key] === value))?.[0] || 'custom';
@@ -349,7 +347,7 @@ export function createContextUI(React) {
         fold('整窗预算与后台额度', '一次触发可以处理多窗；剩余积压单独记录，不无限补历史。', h('div', { className: 'cx-grid' }, this.number('prepareBatchWindows', '每次触发最多处理窗口数', 1), this.number('prepareContinueTokens', '续跑最低文本量 · 估算 tokens', 1, '后续窗口需装满新的实际消息，或达到该文本量；零碎尾巴留到下次，不含参考前文与旧摘要。'), this.number('prepareInputTokens', '单窗输入预算 · 估算 tokens', 1), this.number('summaryTargetChars', '基础摘要目标 · 字符', 1, '超过目标两倍时重试，不直接截断原文。'), this.number('backgroundConcurrency', '后台最大并发调用', 1), this.number('backgroundMaxRetries', '自动重试次数', 0))),
         fold('中枢与请求替换', '判断频率、近期原文和自动应用间隔', h(React.Fragment, null, h('div', { className: 'cx-grid' }, this.number('coordinatorEvery', '中枢频率 · 新摘要数', 1), this.number('coordinatorMinGapMs', '中枢最短间隔 · 秒', 0, undefined, 1000), this.number('coordinatorRecentEvents', '中枢近期原文窗口', 0), this.number('surgeryCooldownSteps', '自动替换最短步数', 0), this.number('keepTailEvents', '暂留近期事件数', 0)), this.toggle('requireShorter', '替换后的总量应更小', '将摘要、详细资料和前置 Trace 一起计算。'))),
         fold('资源上限', '0 使用原有默认语义', h('div', { className: 'cx-grid' }, this.number('digestMaxTokens', '预处理输出 Token 上限', 0, '0 使用提供方默认。'), this.number('surgeonMaxTokens', '中枢输出 Token 上限', 0), this.number('jobTimeoutMs', '后台超时 · 秒', 0, '默认 600 秒（10 分钟）；0 不设置插件超时。', 1000))),
-        h('p', { className: 'cx-footnote' }, '旧探针、自动全局记忆和旧状态提炼参数仅保留兼容读取，不再显示为可运行功能。'));
+        h('p', { className: 'cx-footnote' }, '参数保存后用于后续处理，已归档的原文与资料保持可回查。'));
     }
     renderModels() {
       const c = this.state.config, mode = this.state.routing;
@@ -394,16 +392,7 @@ export function createContextUI(React) {
   const ScopeChip = props => { const locked = props.useSessions(s => s.byId[props.sessionId]?.blank === false); return h(ScopeControl, { ...props, locked }); };
   const PipelineSlot = props => { const { tab } = props.useTabInfo(); return h(PipelinePanel, { ...props, visible: tab.visible }); };
   const SummarySlot = props => { const { tab } = props.useTabInfo(); return h(SummaryPanel, { ...props, visible: tab.visible }); };
-  const tabs = [['tasks', '任务', 'task'], ['context', '上下文', 'context'], ['memory', '摘要', 'memory'], ['computer', '电脑', 'computer'], ['monitor', '监控', 'monitor']];
-  const wrapWorkbench = (Original, initial = 'tasks') => function ContextWorkbench(props) {
-    const info = props.useTabInfo(), section = info.tab.navigation?.params?.section || initial;
-    const active = tabs.some(([key]) => key === section) ? section : 'tasks';
-    return h('div', { className: 'cx-integrated' }, h('nav', { className: 'cx-navigation', 'aria-label': '工作台导航' }, ...tabs.map(([key, text, name]) => h('button', { key, type: 'button', 'aria-current': active === key ? 'page' : undefined, onClick: () => info.tab.actions.openTab('trisoul-x-workbench', { params: { section: key }, replaceTab: info.tab.kind !== 'trisoul-x-workbench' }) }, icon(name, 15), h('span', null, text)))),
-      h('div', { hidden: active !== 'context' }, h(PipelineSlot, { ...props, useTabInfo: () => { const v = props.useTabInfo(); return { ...v, tab: { ...v.tab, visible: v.tab.visible && active === 'context' } }; } })),
-      h('div', { hidden: active !== 'memory' }, h(SummarySlot, { ...props, useTabInfo: () => { const v = props.useTabInfo(); return { ...v, tab: { ...v.tab, visible: v.tab.visible && active === 'memory' } }; } })),
-      h('div', { className: 'cx-legacy', hidden: ['context', 'memory'].includes(active) }, h(Original, { ...props, useTabInfo: () => { const v = props.useTabInfo(); return { ...v, tab: { ...v.tab, visible: v.tab.visible && !['context', 'memory'].includes(active), navigation: { ...v.tab.navigation, params: { ...v.tab.navigation?.params, section: ['context', 'memory'].includes(active) ? 'tasks' : active } } } }; } })));
-  };
-  return { ContextSettings, ScopeChip, wrapWorkbench, applyStyle(ctx) {
+  return { ContextSettings, ScopeChip, PipelinePanel: PipelineSlot, SummaryPanel: SummarySlot, applyStyle(ctx) {
     ctx.effect(() => {
       const style = document.createElement('style');
       style.dataset.plugin = 'trisoul-context-v1'; style.dataset.version = CONTEXT_UI_VERSION;
@@ -424,7 +413,6 @@ export const CONTEXT_CSS = `
 .cx-panel,.cx-integrated,.cx-panel *,.cx-integrated *{box-sizing:border-box}
 .cx-integrated{height:100%;min-height:0;display:flex;flex-direction:column;background:var(--cx-bg);overflow:hidden}
 .cx-integrated>div:not([hidden]){flex:1;min-height:0;overflow:hidden}.cx-integrated [hidden]{display:none!important}
-.cx-legacy>.tx-workbench>.tx-workbench-nav{display:none}.cx-legacy{height:100%;min-height:0}
 .cx-panel{position:relative;isolation:isolate;container-type:inline-size;container-name:cx;height:100%;min-height:0;width:100%;display:flex;flex-direction:column;overflow:hidden;background:var(--cx-bg);font-size:13px;line-height:1.65}
 .cx-panel h2,.cx-panel h3,.cx-panel h4,.cx-panel p{margin:0}.cx-panel svg{flex-shrink:0;vertical-align:middle}
 .cx-panel h2{font-size:17px;font-weight:650;letter-spacing:-.4px;line-height:1.4}.cx-panel h3{font-size:13px;font-weight:630;line-height:1.5}
@@ -459,7 +447,7 @@ export const CONTEXT_CSS = `
 .cx-footnote{display:flex;gap:6px;font-size:10px;line-height:1.8;color:var(--cx-muted);margin-top:16px!important}.cx-footnote svg{margin-top:3px;flex-shrink:0}
 .cx-toggle{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:13px 0;cursor:pointer}.cx-toggle+.cx-toggle{border-top:1px solid var(--cx-line)}.cx-toggle>span{min-width:0}.cx-toggle strong{display:block;font-size:12px;font-weight:500}.cx-toggle small{display:block;font-size:11px;color:var(--cx-muted);margin-top:4px;line-height:1.65}
 .cx-panel .cx-toggle input{appearance:none;position:relative;width:34px;height:20px;border-radius:20px;background:color-mix(in srgb,var(--cx-text) 17%,var(--cx-bg));border:1px solid transparent;cursor:pointer;transition:background .14s}
-.cx-panel .cx-toggle input::after{content:'';position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px #0002;transition:transform .14s}.cx-panel .cx-toggle input:checked{background:#2864d7}.cx-panel .cx-toggle input:checked::after{transform:translateX(14px)}.cx-panel .cx-toggle input:focus-visible{outline:2px solid var(--cx-blue);outline-offset:3px}
+.cx-panel .cx-toggle input::after{content:'';position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px #0002;transition:transform .14s}.cx-panel .cx-toggle input:checked{background:var(--omd-switch-on,var(--cx-blue))}.cx-panel .cx-toggle input:checked::after{transform:translateX(14px)}.cx-panel .cx-toggle input:focus-visible{outline:2px solid var(--cx-blue);outline-offset:3px}
 .cx-choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.cx-choice{border:1px solid var(--cx-line);border-radius:11px;padding:14px;background:var(--cx-bg);color:var(--cx-text);font:inherit;text-align:left;cursor:pointer;min-width:0}
 .cx-choice[aria-pressed=true]{border-color:color-mix(in srgb,var(--cx-blue) 58%,var(--cx-line));background:var(--cx-tint)}.cx-choice>.cx-row{color:var(--cx-muted);margin-bottom:12px}.cx-choice[aria-pressed=true]>.cx-row{color:var(--cx-blue)}.cx-choice strong{display:block;font-size:12px;font-weight:600;margin-bottom:5px}.cx-choice small{font-size:10px;display:block;line-height:1.7}
 .cx-radio{display:grid;place-items:center;width:14px;height:14px;border:1px solid var(--cx-line);border-radius:50%}.cx-radio svg{visibility:hidden}.cx-choice[aria-pressed=true] .cx-radio{color:#fff;background:#2864d7;border-color:#2864d7}.cx-choice[aria-pressed=true] .cx-radio svg{visibility:visible}

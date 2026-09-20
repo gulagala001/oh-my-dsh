@@ -3,22 +3,12 @@ import assert from 'node:assert/strict';
 import { transformAssembly, mainPrompt, inspectCommittedRequest, installPromptAdapter } from '../src/cc-adaptation/adapter.mjs';
 import { buildMainPrompt, promptText, MAIN_FILES } from '../src/cc-adaptation/texts.mjs';
 import { renderToolsSdk, renderToolsSdkPy } from '@deepseek-ai/dsh-tools';
-import { readFileSync } from 'node:fs';
 import { TASK_PARAMETERS } from '../src/tasks.mjs';
 
 const context={agent:{session:{header:{origin:'user'}}}};
 const schema=(name,fields=[])=>({name,description:'native '+name,parameters:{type:'object',properties:Object.fromEntries(fields.map(x=>[x,{type:'string',description:'native field '+x}]))}});
 const assembly=(tools=[])=>({sections:[{name:'harness:identity',order:-1000,text:'Native identity'}, {name:'trisoul-x:persona',order:0,text:'old'},{name:'harness:source',order:10000,text:'native source'}],tools,contexts:[{name:'sandbox:policy',text:'native permissions'}],variables:{cwd:'/fictional-fixture'}});
 const taskSchema = () => ({ ...schema('todo_write'), parameters: structuredClone(TASK_PARAMETERS) });
-
-test('omd-ptc retains the entire OMD composition and only selects PTC presentation', () => {
-  const original = readFileSync(new URL('../presets/trisoul-x/agent.cordis.yml', import.meta.url), 'utf8');
-  const ptc = readFileSync(new URL('../presets/omd-ptc/agent.cordis.yml', import.meta.url), 'utf8');
-  const [shared, presentation] = ptc.split('# Same OMD composition as trisoul-x; only the tool presentation differs.');
-  assert.equal(shared.trim(), original.trim(), 'keep both preset capability lists and prompt configuration synchronized');
-  assert.equal(presentation.trim(), "- id: tool-presentation\n  name: 'trisoul_x/ptc'");
-  assert.match(readFileSync(new URL('../presets/omd-ptc/preset.yml', import.meta.url), 'utf8'), /^name: omd-ptc$/m);
-});
 
 test('todo constraint guidance is opt-in, idempotent and also reaches the generated SDK', () => {
   const todo = taskSchema();

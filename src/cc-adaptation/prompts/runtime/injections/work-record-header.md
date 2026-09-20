@@ -1,1 +1,0 @@
-[Work record · seq ${lo}..${hi}] Condensed from your own earlier work in this session — continue from the recorded progress and carry forward unfinished work. For verbatim details condensed away, call recall with {"query":"what you need","from":${lo},"to":${hi}}.

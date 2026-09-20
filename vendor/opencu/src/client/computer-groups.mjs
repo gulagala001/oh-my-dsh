@@ -68,11 +68,11 @@ export function computerGroups(nodes, toolviewNames) {
     const turn = node.location?.turn?.turn ?? node.data.turn;
     const context=processContextKinds.has(node.kind)&&turn!=null;
     if ((!tool && !assistant && !context)||turn==null) { group = undefined; continue; }
-    if (!group || group.turn !== turn) group = { id: node.key, turn, keys: [], calls: [], names: [], contexts:0, running: false, failures: 0, stopped: 0, title: '' };
+    if (!group || group.turn !== turn) group = { id: node.key, turn, keys: [], callKeys: new Map(), calls: [], names: [], contexts:0, running: false, failures: 0, stopped: 0, title: '' };
     group.keys.push(node.key); result.set(node.key, group);
     if(context)group.contexts++;
     if (tool) {
-      const root = node.data.root; if (group.keys.length === 1) group.headerCallId = root.callId; result.set(`call:${root.callId}`, group); group.calls.push(root.callId);
+      const root = node.data.root; group.callKeys.set(root.callId,node.key); if (group.keys.length === 1) group.headerCallId = root.callId; result.set(`call:${root.callId}`, group); group.calls.push(root.callId);
       group.names.push(root.call?.name??root.name??'');
       const state=operationState(root);group.running ||= state==='running';
       if (state==='stopped') group.stopped++; else if (state==='error') group.failures++;

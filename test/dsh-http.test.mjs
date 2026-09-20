@@ -141,7 +141,6 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${
   const memoryFile = JSON.parse(readFileSync(join(home, 'trisoul-x', 'memory.json'), 'utf8'));
   assert.equal(memoryFile.length, 2);
   assert.ok(memoryFile.every(m => !m.retiredReason), 'legacy memory remains unchanged');
-  assert.ok(!payloads.some(p => p.tools?.some(t => ['save_state', 'save_context', 'memory_curate', 'record_probe'].includes(t.function.name))));
   assert.equal(reviewed.tasks[0].links[0].asked, true);
   assert.equal(reviewed.frame.filter(n => n.kind === 'trisoul-x:task-review').length, 1);
   const firstTurn = JSON.stringify(payloads.filter(isMain).map(p => p.messages));
@@ -208,7 +207,6 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${
   for (const key of ['frame', 'contextHistory', 'tasks', 'records', 'activity']) assert.equal(Object.hasOwn(summary, key), false);
   assert.ok(JSON.stringify(summary).length < JSON.stringify(after).length / 4, 'the composer does not download the full workbench');
 
-  assert.equal(after.context.probe, null);
   assert.ok(after.actions.contextReplacements);
   assert.ok(after.frame.some(n => n.checkpoint));
   assert.ok(after.frame.some(n => n.kind === 'user'));

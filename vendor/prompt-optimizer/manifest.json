@@ -1,0 +1,27 @@
+{
+  "repository": "https://github.com/linshenkx/prompt-optimizer",
+  "revision": "93c37090846dd7ba9619a0ebc152f205624df9f1",
+  "license": "MIT",
+  "files": {
+    "LICENSE": {
+      "source": "LICENSE",
+      "sha256": "75038516767329b2e9e98aa574daa117bf9cb28d8b8dc68e486076a99ca71b52"
+    },
+    "templates/user-prompt-basic.ts": {
+      "source": "packages/core/src/services/template/default-templates/user-optimize/user-prompt-basic.ts",
+      "sha256": "277299830f377d709ae39cdc1c56f3e13556803cb2dc660adceb4291814e72fd"
+    },
+    "templates/user-prompt-professional.ts": {
+      "source": "packages/core/src/services/template/default-templates/user-optimize/user-prompt-professional.ts",
+      "sha256": "6d2d73a11493cdf003cd9f4775920ffef1b73e305167f103914f7c800f4be7cf"
+    },
+    "templates/user-prompt-planning.ts": {
+      "source": "packages/core/src/services/template/default-templates/user-optimize/user-prompt-planning.ts",
+      "sha256": "f73afc06eb2c7c0091ee671b4c9df9f7017fded40fd4138625149298a4935a99"
+    },
+    "templates/iterate.ts": {
+      "source": "packages/core/src/services/template/default-templates/iterate/iterate.ts",
+      "sha256": "579cd69288acded33c19fdb4cf3671cedb8b0bb682e52644f319107c418e083e"
+    }
+  }
+}

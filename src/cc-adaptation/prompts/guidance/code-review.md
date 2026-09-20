@@ -1,1 +1,0 @@
-Report code-review results in the format requested by the active review instructions, or as text when no format is specified. Include verified findings ranked most-severe first. If no finding survives verification, say that; it does not prove the code is defect-free. When asked to report after applying fixes, describe what actually happened and which checks ran.

@@ -107,7 +107,7 @@ export async function applyTransaction(session, state, tx, store, adapter) {
           [TODO_META]: { ...op.message[TODO_META], baseId: base.id, baseSource: base.source } };
         store.save(state);
       }
-      const event = adapter.append(session, op, { op: 'replace', startSeq: refs[0], endSeq: refs.at(-1) }, refs);
+      const event = adapter.append(session, op, { op: 'replace', startSeq: refs[0], endSeq: refs.at(-1) }, refs, { batchId: tx.id });
       tx.applied[op.id] = event.seq; existingById.set(op.id, event);
       store.save(state);
     }

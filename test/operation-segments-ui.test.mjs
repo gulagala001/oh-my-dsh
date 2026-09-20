@@ -1,0 +1,56 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { join } from 'node:path';
+import { frontendFixture, until } from './fixtures/frontend.mjs';
+
+test('completed process preserves prose and independent bounded operation groups', { timeout: 90000 }, async t => {
+  const f = await frontendFixture(t), { page, rpc, sessionId } = f;
+  await page.setViewportSize({ width: 1440, height: 1200 });
+  let step = 0, finish;
+  const pending = new Promise(resolve => { finish = resolve; }); t.after(finish);
+  f.replyWith(async () => {
+    step++;
+    if (step === 1) return { delta: { role: 'assistant', content: '先检查文件和运行环境。', tool_calls: Array.from({ length: 14 }, (_, index) => ({ index, id: 'segment-command-' + index, type: 'function', function: { name: 'bash', arguments: JSON.stringify({ command: `printf segment-${index}`, description: `检查第 ${index + 1} 项` }) } })) }, finish_reason: 'tool_calls' };
+    if (step === 2) return { delta: { role: 'assistant', content: '检查已完成，接着修改文件。', tool_calls: [0, 1].map(index => ({ index, id: 'segment-write-' + index, type: 'function', function: { name: 'write', arguments: JSON.stringify({ file_path: join(f.root, "workspace", `segment-${index}.txt`), content: '已验证的测试内容' }) } })) }, finish_reason: 'tool_calls' };
+    await pending;
+    return { delta: { role: 'assistant', content: '分组检查完成。' }, finish_reason: 'stop' };
+  });
+  await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '验证分段操作折叠' }] });
+  await until(() => step === 3);
+  finish(); await page.getByText('分组检查完成。', { exact: true }).waitFor();
+  const processToggle = page.locator('[data-turn-process-tool-calls="16"]'); await processToggle.waitFor();
+  assert.equal(await processToggle.getAttribute('aria-expanded'), 'false');
+  await processToggle.click();
+  for (const text of ['先检查文件和运行环境。', '检查已完成，接着修改文件。']) assert.equal(await page.getByText(text, { exact: true }).isVisible(), true);
+  const groups = page.locator('[data-cu-group] > .tx-cu-group-toggle:visible').filter({ hasText: '次操作' });
+  assert.equal(await groups.count(), 2, 'outer disclosure reveals per-segment summaries, not every operation');
+  for (const group of await groups.all()) assert.equal(await group.getAttribute('aria-expanded'), 'false');
+  await groups.first().click();
+  const list = page.locator('#' + (await groups.first().getAttribute('aria-controls')).replaceAll(':', '\\:')); await list.waitFor();
+  const metrics = await list.evaluate(el => ({ height: el.clientHeight, scroll: el.scrollHeight, overflow: getComputedStyle(el).overflowY }));
+  assert.ok(metrics.height <= 300 && metrics.scroll > metrics.height, JSON.stringify(metrics));
+  assert.equal(metrics.overflow, 'auto');
+  assert.equal(await list.locator('[data-cu-operation]').count(), 14);
+  assert.equal(await groups.last().getAttribute('aria-expanded'), 'false', 'opening one group leaves the other folded');
+  const row = list.locator('[data-cu-operation="segment-command-0"] :is([role="button"],button)').first();
+  await row.click(); assert.equal(await row.getAttribute('aria-expanded'), 'true', 'individual result is still independently expandable');
+  await groups.first().click(); await groups.first().click();
+  assert.equal(await row.getAttribute('aria-expanded'), 'true', 'closing a group preserves inspected detail');
+  await processToggle.click(); await processToggle.click();
+  assert.equal(await groups.first().getAttribute('aria-expanded'), 'true');
+  assert.equal(await groups.last().getAttribute('aria-expanded'), 'false');
+  if (process.env.TRISOUL_UI_ARTIFACTS) { await page.getByText('分组检查完成。', { exact: true }).scrollIntoViewIfNeeded(); await page.screenshot({ path: join(f.root, 'operation-segments.png') }); console.log('Segment UI artifacts:', f.root); }
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator('[data-sidebar-collapsed=true]').waitFor();
+  await until(async () => await list.evaluate(el => el.clientWidth) > 200);
+  const narrow = await list.evaluate(el => ({ width: el.clientWidth, scroll: el.scrollWidth, children: [...el.querySelectorAll('*')].filter(e => e.getBoundingClientRect().right > el.getBoundingClientRect().right + 1).slice(0, 12).map(e => ({tag:e.tagName,cls:e.className,width:e.getBoundingClientRect().width})) }));
+  assert.ok(narrow.scroll <= narrow.width + 1, JSON.stringify(narrow));
+  await groups.last().click();
+  assert.equal(await page.locator('.tx-cu-group-list:visible:has([data-cu-operation])').count(), 2);
+  await page.reload(); await processToggle.waitFor(); await processToggle.click();
+  for (const group of await groups.all()) assert.equal(await group.getAttribute('aria-expanded'), 'false');
+  await groups.first().click();
+  assert.equal(await page.locator('.tx-cu-group-list:visible [data-cu-operation]').count(), 14, 'all history remains reachable after reload');
+  assert.deepEqual(f.errors, []);
+});

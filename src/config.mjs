@@ -1,13 +1,11 @@
 import z from '@deepseek-ai/schemastery';
 import { DEFAULT_IDENTITY } from './cc-adaptation/identity.mjs';
-import { FREQUENCY_PRESETS, CONTEXT_FREQUENCY_PRESETS } from './frequency.mjs';
+import { CONTEXT_FREQUENCY_PRESETS } from './frequency.mjs';
 
 const route = z.object({ provider: z.string().default(''), model: z.string().default(''), temperature: z.number().default(0.7), effort: z.string().default('off') });
-const cadence = FREQUENCY_PRESETS.always;
 const contextCadence = CONTEXT_FREQUENCY_PRESETS.medium;
 export const Config = z.object({
   dataDir: z.string(),
-  // Context v1: old fields below remain readable for upgrades; only the new pipeline runs.
   contextEnabled: z.boolean().default(true),
   automaticReplace: z.boolean().default(true),
   preprocessBoundaries: z.boolean().default(false),
@@ -40,54 +38,24 @@ export const Config = z.object({
   backgroundMode: z.union(['unified', 'separate']).default('unified'),
   unifiedBackground: route.default({}),
   background: route.default({}),
-  canvas: route.default({}),
   surgeon: route.default({}),
   jobTimeoutMs: z.number().step(1).min(0).default(600000),
   digestEvery: z.number().step(1).min(1).default(contextCadence.digestEvery),
-  digestBatchMax: z.number().step(1).min(0).default(0),
-  digestEventChars: z.number().step(1).min(0).default(0),
   digestMaxTokens: z.number().step(1).min(0).default(0),
-  catchupMax: z.number().step(1).min(0).default(0),
-  contextMemories: z.number().step(1).min(0).default(0),
   idlePreprocessEnabled: z.boolean().default(false),
   flushIdleMs: z.number().step(1).min(0).default(90000),
-  injectLimit: z.number().step(1).min(0).default(0),
-  injectBatch: z.number().step(1).min(1).default(8),
-  injectMaxPerSession: z.number().step(1).min(0).default(4),
-  injectPickTimeoutMs: z.number().step(1).min(0).default(8000),
-  supplementMinSteps: z.number().step(1).min(0).default(cadence.supplementMinSteps),
-  supplementMode: z.union(['renew', 'rewrite', 'append']).default('renew'),
-  recallMaxTokens: z.number().step(1).min(0).default(0),
-  stateEnabled: z.boolean().default(true),
-  stateEvery: z.number().step(1).min(1).default(cadence.stateEvery),
-  stateBatchMax: z.number().step(1).min(0).default(0),
-  statePinnedMax: z.number().step(1).min(0).default(0),
-  stateEventChars: z.number().step(1).min(0).default(0),
-  stateMaxTokens: z.number().step(1).min(0).default(0),
-  stateFailCooldownSteps: z.number().step(1).min(0).default(3),
-  stateFailLimit: z.number().step(1).min(0).default(2),
-  curateMinGapMs: z.number().step(1).min(0).default(180000),
-  curateEvery: z.number().step(1).min(0).default(0),
-  curateLimit: z.number().step(1).min(0).default(0),
-  curateMaxTokens: z.number().step(1).min(0).default(0),
   surgeonMaxTokens: z.number().step(1).min(0).default(0),
-  curateOpsMax: z.number().step(1).min(0).default(0),
-  probeEnabled: z.boolean().default(true),
-  probeSourceChars: z.number().step(1).min(0).default(0),
-  probeMaxTokens: z.number().step(1).min(0).default(0),
-  probePatch: z.union(['ride', 'qa', 'material']).default('ride'),
-  probePatchChars: z.number().step(1).min(0).default(0),
-  shadowStale: z.number().step(1).min(0).default(0),
-  userRetirement: z.boolean().default(false),
   requireShorter: z.boolean().default(true),
-  mergeCheckpoints: z.boolean().default(true),
-  semanticCompaction: z.boolean().default(true),
-  minRegionEvents: z.number().step(1).min(1).default(3),
-  minRegionTokens: z.number().step(1).min(1).default(cadence.minRegionTokens),
-  keepTailEvents: z.number().step(1).min(2).default(30),
+  keepTailEvents: z.number().step(1).min(0).default(30),
   surgeryCooldownSteps: z.number().step(1).min(0).default(contextCadence.surgeryCooldownSteps),
-  surgeryFailCooldownSteps: z.number().step(1).min(0).default(3),
-  thresholdChars: z.number().step(1).min(0).default(0),
-  thresholdFallbackChars: z.number().step(1).min(0).default(1000000),
-  thresholdRatio: z.number().min(0.1).max(0.95).default(0.5),
 });
+
+// Defaults apply to omitted values. An explicit null is not a numeric or
+// boolean setting; use the same schema for API writes and pipeline options.
+export function contextConfig(raw = {}) {
+  for (const [key, value] of Object.entries(raw)) {
+    const type = Config.dict[key]?.type;
+    if (value === null && ['number', 'boolean'].includes(type)) throw new Error(key + ' expected ' + type + ', got null');
+  }
+  return Config(raw);
+}

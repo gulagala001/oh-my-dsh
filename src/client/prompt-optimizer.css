@@ -1,0 +1,21 @@
+.omd-opt-theme{--opt-bg:var(--omd-surface-solid,var(--dsw-alias-bg-base,Canvas));--opt-text:var(--dsw-alias-label-primary,CanvasText);--opt-muted:var(--dsw-alias-label-tertiary,GrayText);--opt-line:color-mix(in srgb,var(--opt-text) 13%,var(--opt-bg));--opt-blue:var(--omd-accent,var(--dsw-alias-state-business-primary,#3978e7));--opt-on-accent:var(--omd-on-accent,#fff);--opt-tint:color-mix(in srgb,var(--opt-blue) 10%,var(--opt-bg));color:var(--opt-text);font:inherit;font-family:var(--omd-font-ui,inherit)}
+.omd-opt-entry{display:inline-flex;align-items:center;gap:2px}
+.omd-opt-entry button{font:inherit;cursor:pointer;background:transparent;color:var(--opt-muted);border:0;border-radius:7px;padding:5px;display:inline-flex;align-items:center;justify-content:center;min-height:28px}
+.omd-opt-entry .omd-opt-star[aria-pressed=true]{color:var(--opt-blue);background:var(--opt-tint);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--opt-blue) 35%,transparent)}
+.omd-opt-star[data-busy]{opacity:.65}.omd-opt-expand{font-size:11px!important;padding:3px!important}.omd-opt-stop{font-size:11px!important;color:var(--opt-blue)!important}
+.omd-opt-drawer{position:fixed;z-index:1100;box-sizing:border-box;padding:15px;background:var(--opt-bg);border:1px solid var(--opt-line);border-radius:var(--omd-radius-panel,12px);box-shadow:0 8px 35px #0002;overflow:auto;font-size:12px;line-height:1.65}
+.omd-opt-drawer *,.omd-opt-settings *{box-sizing:border-box}
+.omd-opt-drawer header{display:flex;align-items:center;gap:8px;margin-bottom:12px}.omd-opt-drawer header strong{display:flex;align-items:center;gap:6px;font-weight:600}.omd-opt-drawer header span{margin-left:auto;color:var(--opt-muted);font-size:11px}.omd-opt-drawer header button{border:0;padding:0 5px;font-size:18px}
+.omd-opt-drawer button,.omd-opt-drawer select,.omd-opt-drawer input:not([type=checkbox]){font:inherit;color:inherit;border:1px solid var(--opt-line);background:var(--opt-bg);border-radius:var(--omd-radius-control,6px);padding:5px 8px}
+.omd-opt-drawer button{cursor:pointer}.omd-opt-drawer button:disabled{opacity:.45;cursor:default}
+.omd-opt-modes{display:flex;gap:5px}.omd-opt-modes button{flex:1}.omd-opt-modes button[aria-pressed=true]{color:var(--opt-blue);background:var(--opt-tint);border-color:var(--opt-blue)}
+.omd-opt-hint{color:var(--opt-muted);margin:7px 0 12px;font-size:11px}.omd-opt-drawer .omd-opt-hint:last-child{margin-bottom:0}
+.omd-opt-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}.omd-opt-toggle input{appearance:auto!important;width:16px!important;height:16px!important;accent-color:var(--opt-blue);margin:0;flex-shrink:0}
+.omd-opt-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.omd-opt-actions>span{font-size:11px;color:var(--opt-muted)}.omd-opt-actions>div{display:flex;gap:4px}.omd-opt-drawer .omd-opt-primary{background:var(--opt-blue);color:var(--opt-on-accent);border-color:var(--opt-blue)}
+.omd-opt-history,.omd-opt-candidate{border-top:1px solid var(--opt-line);padding-top:12px;margin-top:12px}
+.omd-opt-refine{display:flex;gap:6px;margin-top:12px}.omd-opt-refine input{flex:1;min-width:0}.omd-opt-refine button{flex-shrink:0}
+.omd-opt-candidate pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:200px;overflow:auto;font:inherit}.omd-opt-error{color:var(--dsw-alias-state-error-primary,#bc4b54);margin:10px 0 0;white-space:pre-wrap}
+.omd-opt-settings{padding:22px;max-width:720px;font-size:13px;line-height:1.75}.omd-opt-settings h2{margin:0 0 8px;font-size:17px}.omd-opt-settings p{color:var(--opt-muted);margin:8px 0 22px}.omd-opt-settings small{display:block;color:var(--opt-muted)}.omd-opt-settings a{color:var(--opt-blue)}
+.omd-opt-entry button:focus-visible,.omd-opt-drawer button:focus-visible,.omd-opt-drawer input:focus-visible,.omd-opt-drawer select:focus-visible{outline:2px solid var(--opt-blue);outline-offset:2px}
+@media(max-width:420px){.omd-opt-drawer{padding:12px}.omd-opt-refine{flex-wrap:wrap}.omd-opt-refine input{flex-basis:100%}}
+@media(pointer:coarse){.omd-opt-entry button{min-height:40px;min-width:30px}.omd-opt-drawer button{min-height:36px}.omd-opt-drawer input{font-size:16px!important}}
