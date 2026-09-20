@@ -15,7 +15,7 @@ test('bundled skins work in real chat, both modes, portals, narrow settings and 
       { index: 1, id: 'skin-read', type: 'function', function: { name: 'read', arguments: JSON.stringify({ file_path: join(f.root, 'missing-skin-file.txt') }) } },
     ] }, finish_reason: 'tool_calls' };
   });
-  await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: f.sessionId, mode: 'queue', content: [{ type: 'text', text: '验证五套皮肤的真实对话与操作记录' }] });
+  await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: f.sessionId, mode: 'queue', content: [{ type: 'text', text: '验证内置主题的真实对话与操作记录' }] });
   await page.getByText('皮肤验收完成。', { exact: true }).waitFor();
   const processToggle = page.locator('[data-turn-process-tool-calls="2"]'); await processToggle.click();
   const group = page.locator('[data-cu-group] > button').filter({ hasText: '2 次操作' }); await group.click();

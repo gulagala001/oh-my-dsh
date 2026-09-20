@@ -6,7 +6,7 @@
       "severity": "normal",
       "title": "原生皮肤、对话记录与上下文设置整理",
       "notes": [
-        "新增九套可选皮肤，包含独立的 Codex、iOS Liquid Glass、Claude CLI 与 Google Material 完整布局，覆盖设置、侧栏、工作台、明暗和窄屏。",
+        "新增四套从零制作的完整主题：Codex Desktop、iOS Liquid Glass、Claude CLI 与 Google Material，覆盖设置、侧栏、工作台、明暗和窄屏；移除早期五套视觉皮肤。",
         "优化操作记录分组、过程折叠与对话排版；历史加载数量可选 50、200、500 条。",
         "统一上下文设置校验和压缩记录关联，清理已退役的旧自动记忆执行器与未装配提示词；历史资料保留只读回查。",
         "Codex 顶栏贯通对话和工作台，右栏默认 360px，开关固定在最右端，拖动宽度按皮肤保存。"

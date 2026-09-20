@@ -1,6 +1,6 @@
 # iOS Liquid Glass
 
-从零制作的一套完整 DSH 外观，独立 id 为 `ios-liquid-glass`，不继承原来的 `ios-glass`。在「设置 → 外观 → 皮肤」选择 **iOS Liquid Glass · 全新布局**，刷新后仍保持选择。明暗模式继续使用 DSH 的设置。
+从零制作的一套完整 DSH 外观，独立 id 为 `ios-liquid-glass`。在「设置 → 外观 → 皮肤」选择 **iOS Liquid Glass · 全新布局**，刷新后仍保持选择。明暗模式继续使用 DSH 的设置。
 
 ## 覆盖范围
 
