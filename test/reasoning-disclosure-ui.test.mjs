@@ -65,7 +65,7 @@ test('capture the current collapsed and expanded process with illustrative reaso
   for(const thought of await thoughts.all()){
     const box=await thought.boundingBox();assert.ok(box.y+box.height<=answerBox.y,'all expanded reasoning belongs before the final answer, even when the provider returns text and reasoning in one delta');
   }
-  assert.equal(await page.locator('[data-chat-turn="'+turn+'"][data-chat-flow-kind="tool-call"]:visible').count(),2);
+  assert.equal(await turnNodes.locator('[data-cu-operation]:visible').count(),2);
   const processRows=page.locator('[data-chat-turn="'+turn+'"]:is([data-turn-process-member],:has(.tx-cu-process-answer[data-process-open]))').locator('[data-disclosure-row], .tx-cu-card-heading, .CY-8Ka_root');
   const metrics=await processRows.evaluateAll(rows=>rows.filter(el=>el.getBoundingClientRect().height>0).map(el=>{const r=el.getBoundingClientRect();return {text:el.innerText,y:r.y,height:r.height};}));
   for(let i=1;i<metrics.length;i++){
@@ -82,7 +82,9 @@ test('capture the current collapsed and expanded process with illustrative reaso
   await summary.click();assert.equal(await thoughts.count(),0);assert.equal(await answer.isVisible(),true);
   await page.reload();await answer.waitFor();
   assert.equal(await turnNodes.locator('[data-variant="think"]:visible').count(),0,'all reasoning stays inside the collapsed process after reload');
-  await summary.click();assert.equal(await thoughts.count(),3);
+  await summary.click();
+  assert.equal(await liveSummary.getAttribute('aria-expanded'),'false','replayed operation group remains independently folded');
+  await liveSummary.click();assert.equal(await thoughts.count(),3);
   assert.ok((await thoughts.last().boundingBox()).y<(await answer.boundingBox()).y,'reloading preserves render-only reasoning ordering');
   console.log('Reasoning UI artifacts:',f.root);
   assert.deepEqual(f.errors,[]);

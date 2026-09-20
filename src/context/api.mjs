@@ -1,7 +1,7 @@
 import { Readable } from 'node:stream';
 import { pipeline as streamPipeline } from 'node:stream/promises';
 import { compactionMessage } from './commands.mjs';
-import { contextConfig } from './pipeline.mjs';
+import { Config, contextConfig } from '../config.mjs';
 import { userMessages } from './core.mjs';
 
 export async function handleContextApi({ hub, ctx, req, res, url, session, agent, id, send, readBody }) {
@@ -97,13 +97,12 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
   if (path === '/settings' && req.method === 'POST') {
     const patch = await readBody(req);
     if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Error('设置必须是对象');
-    if (Object.hasOwn(patch, 'todoConstraintFirst') && typeof patch.todoConstraintFirst !== 'boolean') throw new Error('todoConstraintFirst 必须为布尔值');
+    delete patch.dataDir;
+    const unknown = Object.keys(patch).filter(key => !Object.hasOwn(Config.dict, key));
+    if (unknown.length) throw new Error('未知或已退役的设置：' + unknown.join(', '));
     contextConfig({ ...hub.config(), ...patch });
     if (patch.memoryScope !== undefined && !['session', 'project'].includes(patch.memoryScope)) throw new Error('旧 full 档不再参与跨项目记忆');
-    const retired = ['probeEnabled', 'probePatch', 'probeMaxTokens', 'probeSourceChars', 'probePatchChars', 'curateEvery', 'curateMinGapMs', 'curateLimit', 'curateMaxTokens', 'curateOpsMax', 'contextMemories', 'injectLimit', 'injectBatch', 'injectMaxPerSession', 'supplementMinSteps', 'supplementMode', 'shadowStale', 'semanticCompaction', 'stateEnabled'];
-    if (retired.some(k => Object.hasOwn(patch, k))) throw new Error('这组旧自动记忆或探针设置已退出现行链路；旧值仅保留兼容读取');
-    delete patch.dataDir;
-    await ctx.settings.update('trisoul-x', patch); hub.context.reconfigure();
+    await ctx.settings.update('trisoul-x', patch);
     send(res, 200, hub.config()); return true;
   }
   if (path === '/memories') {
@@ -113,6 +112,6 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
     const items = state.binding.scope === 'project' ? hub.store.memories(state.binding.project, 'project', true) : [];
     send(res, 200, { legacy: true, readOnly: true, items, scope: state.binding }); return true;
   }
-  if (path === '/curate') { send(res, 410, { error: '旧分片整理已由摘要预处理与中枢四选一接替，不再调用模型整理自动记忆库' }); return true; }
+  if (path === '/curate') { send(res, 410, { error: '旧分片整理已由摘要预处理与中枢表示选择接替，不再调用模型整理自动记忆库' }); return true; }
   return false;
 }

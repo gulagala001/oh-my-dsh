@@ -1,35 +1,11 @@
 import { mkdirSync, existsSync, readFileSync, writeFileSync, renameSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { randomUUID } from 'node:crypto';
 import { projectKeyOf, sameProject } from './project.mjs';
 
 const read = (path, fallback) => existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : fallback;
-export function memoryLineage(entry, history) {
-  let first = entry, depth = 1, origin = entry.origin || entry.source;
-  const seen = new Set();
-  while (first && !seen.has(first.id)) {
-    seen.add(first.id);
-    if (first.source === 'user' || first.origin === 'user') origin = 'user';
-    if (!history.has(first.previous) || seen.has(first.previous)) break;
-    first = history.get(first.previous); depth++;
-  }
-  return { at: first.at, depth, origin };
-}
 export const projectOf = cwd => projectKeyOf(cwd) ?? process.cwd();
 // Session keys are identities, not filesystem paths.
 export const matchesProject = (memory, current) => memory?.startsWith('session:') || current?.startsWith('session:') ? memory === current : sameProject(memory, current);
-
-export const activeMemory = m => !m.retired && !m.supersededBy;
-const publicProject = m => m.scope === 'project' && m.project && !m.project.startsWith('session:');
-const byAge = (a, b) => a.at - b.at || a.id.localeCompare(b.id);
-const normText = t => String(t ?? '').toLowerCase().replace(/[\s\p{P}]+/gu, '');
-const bigrams = t => { const s = new Set(); for (let i = 0; i + 1 < t.length; i++) s.add(t.slice(i, i + 2)); return s; };
-export function textSimilarity(a, b) {
-  const A = bigrams(normText(a)), B = bigrams(normText(b));
-  if (!A.size || !B.size) return 0;
-  let inter = 0; for (const g of A) if (B.has(g)) inter++;
-  return inter / (A.size + B.size - inter);
-}
 
 export function validateSessionId(id) {
   if (typeof id !== 'string' || !id || id === '.' || id === '..' || /[\\/\0]/.test(id)) throw Error('会话编号无效');
@@ -50,16 +26,13 @@ export class HubStore {
   state(id) {
     validateSessionId(id);
     if (!this.states.has(id)) this.states.set(id, read(join(this.dir, 'sessions', `${id}.json`), {
-      id, cursor: -1, pins: [], status: '', digests: [], notes: [], metrics: {}, activity: [], actions: {}, memoryTrace: [],
+      id, notes: [], metrics: {}, activity: [], actions: {},
     }));
     return this.states.get(id);
   }
   save(state) { validateSessionId(state.id); this.write(`sessions/${state.id}.json`, state); }
-  allStates() {
-    return readdirSync(join(this.dir, 'sessions')).filter(n => n.endsWith('.json')).map(n => this.state(n.slice(0, -5)));
-  }
   // Statistics do not need to retain every archived conversation body in RAM.
-  // Active mutable states still take precedence, exactly as allStates() does.
+  // Active mutable states take precedence over archived snapshots.
   monitorStates() {
     const project = value => ({ id: value.id, parentSession: value.parentSession,
       metrics: value.metrics || {}, actions: value.actions || {}, activity: value.activity || [] });
@@ -83,121 +56,5 @@ export class HubStore {
   memories(project, mode = 'full', history = false) {
     return read(join(this.dir, 'memory.json'), []).filter(m => (history || (!m.retired && !m.supersededBy))
       && (m.scope === 'project' ? matchesProject(m.project, project) : mode === 'full'));
-  }
-  allMemories() { return read(join(this.dir, 'memory.json'), []); }
-  curationState() { return read(join(this.dir, 'curation.json'), { cursors: {}, lastAt: {} }); }
-  shardEntries(shard) {
-    return this.allMemories().filter(m => activeMemory(m) && (shard.startsWith('project:') ? publicProject(m) && matchesProject(m.project, shard.slice(8)) : m.scope === shard)).sort(byAge);
-  }
-  crossCandidates() {
-    const list = this.allMemories().filter(m => activeMemory(m) && publicProject(m)).sort(byAge), used = new Set(), groups = [];
-    for (let i = 0; i < list.length; i++) {
-      const a = list[i]; if (used.has(a.id)) continue;
-      const entries = [a];
-      for (const b of list.slice(i + 1)) if (!used.has(b.id) && !sameProject(b.project, a.project) && !sameProject(a.project, b.project) && (a.key === b.key || textSimilarity(a.text, b.text) >= 0.6)) entries.push(b);
-      if (new Set(entries.map(m => m.project)).size >= 2) { for (const m of entries) used.add(m.id); groups.push({ key: a.key, entries }); }
-    }
-    return groups;
-  }
-  curateWindow(shard, limit = 0) {
-    const all = this.shardEntries(shard), total = all.length, cur = this.curationState().cursors[shard];
-    const cursor = Number.isInteger(cur) && cur > 0 && cur < total ? cur : 0;
-    const entries = all.slice(cursor, cursor + (limit || total || 1)), end = cursor + entries.length;
-    return { entries, total, cursor, next: end >= total ? 0 : end };
-  }
-  markCurated(shard, next) {
-    const s = this.curationState(); s.cursors[shard] = next; s.lastAt[shard] = Date.now(); this.write('curation.json', s);
-  }
-  pickShard(preferred, { mode = 'full', project } = {}) {
-    if (mode === 'session') return;
-    const all = this.allMemories().filter(activeMemory), cross = mode === 'full' ? this.crossCandidates() : [], state = this.curationState();
-    const projects = [...new Set(all.filter(publicProject).map(m => m.project))];
-    const roots = projects.filter(p => !projects.some(q => q !== p && sameProject(p, q))).sort();
-    const shards = mode === 'project' ? [`project:${project}`] : [...new Set([...all.filter(m => m.scope !== 'project').map(m => m.scope), ...(cross.length ? ['cross'] : []), ...roots.map(p => `project:${p}`)])];
-    const dirty = shard => {
-      const entries = this.shardEntries(shard), last = state.lastAt[shard];
-      if (shard === 'cross' && cross.length && (!Number.isFinite(last) || cross.some(g => g.entries.some(m => m.at > last)))) return true;
-      return entries.length >= 2 && (!Number.isFinite(last) || state.cursors[shard] > 0 || entries.some(m => m.at > last));
-    };
-    if (preferred && (mode === 'full' || preferred === `project:${project}`) && dirty(preferred)) return preferred;
-    return shards.filter(dirty).sort((a, b) => (state.lastAt[a] || 0) - (state.lastAt[b] || 0))[0];
-  }
-  touch(ids, kind, sessionId) {
-    if (!ids.length) return;
-    const all = this.allMemories();
-    for (const m of all) if (ids.includes(m.id)) {
-      m.usage ??= { injected: 0, recalled: 0 };
-      m.usage[kind] = (m.usage[kind] || 0) + 1;
-      m.usage[`${kind}At`] = Date.now(); m.usage.lastSessionId = sessionId;
-      m.usage.sessions = [...new Set([...(m.usage.sessions || []), sessionId])];
-    }
-    this.write('memory.json', all);
-  }
-  restore(id) {
-    const all = this.allMemories(), old = all.find(m => m.id === id);
-    if (!old) throw new Error('找不到这条记忆');
-    const active = all.find(m => m.key === old.key && m.scope === old.scope && m.project === old.project && !m.retired && !m.supersededBy);
-    if (active?.id === old.id) return;
-    if (active) return this.memoryOps(old.project, [{ op: 'update', scope: old.scope, key: old.key, text: old.text, target: active.id }], 'user');
-    delete old.retired; delete old.supersededBy; old.restoredAt = Date.now(); old.origin = 'user';
-    this.write('memory.json', all);
-  }
-  edit(id, patch) {
-    const all = this.allMemories(), old = all.find(m => m.id === id);
-    if (!old || old.retired || old.supersededBy) throw new Error('只能编辑当前有效版本');
-    const { scope = old.scope, project = old.project, key = old.key, text = old.text } = patch;
-    if (!['global', 'cross', 'project'].includes(scope) || !key.trim() || !text.trim() || (scope === 'project' && !project)) throw new Error('记忆需要正确的层级、名称、内容与所属项目');
-    if (scope === old.scope && project === old.project && key === old.key && text.trim() === old.text) return;
-    const next = { ...old, id: randomUUID(), scope, key, text: text.trim(), at: Date.now(), source: 'user', origin: 'user', previous: old.id };
-    if (scope === 'project') next.project = project; else delete next.project;
-    const existing = all.find(m => m.id !== old.id && !m.retired && !m.supersededBy && m.scope === next.scope && m.key === next.key && m.project === next.project);
-    if (existing) throw new Error('目标层级与项目已有同名记忆，请编辑该条记忆或更换名称');
-    old.supersededBy = next.id; all.push(next); this.write('memory.json', all);
-  }
-  memoryOps(project, ops, source = 'scribe', mode = 'full', observed) {
-    const all = this.allMemories(), history = new Map(all.map(m => [m.id, m])), manual = source === 'user';
-    const visible = m => m.scope === 'project' ? matchesProject(m.project, project) : mode === 'full';
-    const allowed = m => manual || (mode === 'full' ? !m.project?.startsWith('session:') : m.scope === 'project' && matchesProject(m.project, project));
-    const head = entry => { const seen = new Set(); while (entry?.supersededBy && !seen.has(entry.id) && history.has(entry.supersededBy)) { seen.add(entry.id); entry = history.get(entry.supersededBy); } return entry; };
-    const find = ref => {
-      if (!ref) return;
-      if (history.has(ref)) return head(history.get(ref));
-      const candidates = all.filter(m => m.key === ref || m.key === String(ref).toLowerCase());
-      const live = candidates.filter(activeMemory), pool = live.length ? live : candidates;
-      return head(pool.find(visible) ?? pool.at(-1));
-    };
-    for (const op of ops) {
-      if (!['add', 'update', 'retire'].includes(op.op) || (op.scope && !['global', 'cross', 'project'].includes(op.scope))) throw new Error('记忆操作或范围无效');
-      let old = op.op !== 'add' ? find(op.target || op.key) : undefined;
-      if (old && !allowed(old)) throw new Error('记忆目标不在当前范围');
-      if (source === 'curate' && old && !observed?.has(old.id)) throw new Error('整理目标已变化，本批保留原记忆等待重试');
-      if (op.op === 'retire') {
-        if (source === 'curate' && (!old || !observed?.has(old.id))) throw new Error('整理目标已变化，本批保留原记忆等待重试');
-        if (!old || !activeMemory(old)) continue;
-        if ((!manual && memoryLineage(old, history).origin === 'user') || (source === 'curate' && old.scope === 'global')) continue;
-        old.retired = Date.now(); old.retiredReason = op.text; continue;
-      }
-      const text = op.text?.trim(), key = op.key?.trim() || old?.key;
-      if (!key || !text) throw new Error('记忆需要名称和内容');
-      if (!old) {
-        if (all.some(m => activeMemory(m) && visible(m) && m.text === text)) continue;
-        old = all.find(m => activeMemory(m) && visible(m) && m.key === key);
-        if (source === 'curate' && old && !observed?.has(old.id)) throw new Error('整理目标已变化，本批保留原记忆等待重试');
-      }
-      if (old && !activeMemory(old)) old = undefined;
-      if (old && key !== old.key && all.some(m => m.id !== old.id && activeMemory(m) && visible(m) && m.key === key)) throw new Error('目标名称已有其他记忆，请合并到现有条目');
-      let scope = mode === 'full' ? (op.scope || old?.scope || 'project') : 'project';
-      const ranks = { project: 1, cross: 2, global: 3 };
-      if (!manual && old && ranks[scope] < ranks[old.scope]) scope = old.scope;
-      const targetProject = scope === 'project' ? (old?.project || project) : undefined;
-      if (scope === 'project' && !targetProject) throw new Error('项目记忆需要所属项目');
-      if (old?.text === text && old.scope === scope && old.key === key) continue;
-      const origin = old ? memoryLineage(old, history).origin : source;
-      const next = { id: randomUUID(), scope, key, text, source, origin: manual ? 'user' : origin, at: Date.now(), ...(old?.usage ? { usage: { ...old.usage } } : {}), ...(scope === 'project' ? { project: targetProject } : {}) };
-      if (old) { old.supersededBy = next.id; next.previous = old.id; }
-      all.push(next); history.set(next.id, next);
-    }
-    this.write('memory.json', all);
-    return this.memories(project, mode);
   }
 }

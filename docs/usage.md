@@ -65,6 +65,8 @@ pnpm start
 
 提供独立 **`omd-ptc`** 预设。新建会话时选择它，即可保留 OMD 的主提示词、记忆与压缩、任务验证、CodeGraph、电脑操控、技能和子代理，同时通过 `run_code` 使用工具。两个 OMD 预设共用设置，按原记忆范围规则共享项目资料；任务和会话记录仍各自独立。默认预设保持 **Oh My DSH**，宿主自带的 **PTC 模式**也保留。
 
+开发时只修改 `presets/trisoul-x/agent.cordis.yml` 的通用能力清单；`pnpm build` 会生成 `omd-ptc` 的组合文件并追加 PTC 展示插件。
+
 `omd-ptc` 的工具 SDK 跟随实际运行时生成，按声明读取结构化返回值，并显式输出下一步需要的信息；原生工具说明、计划提交与程序内调用方式分别适配。Computer Use 自己的 JavaScript 环境与外层 PTC 程序相互独立。
 
 前台启动后，按 `Ctrl+C` 停止。macOS/Linux 可通过环境变量改变端口或数据目录：

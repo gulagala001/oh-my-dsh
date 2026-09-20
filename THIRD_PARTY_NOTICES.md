@@ -73,6 +73,18 @@ ws 8.21.3 is used as a runtime dependency under the MIT License. Its license is 
 
 Source: https://github.com/websockets/ws
 
+# Google Material Expressive skin fonts and icons
+
+The Google Material Expressive skin embeds subsets of Google Sans Flex, Google Sans Code, and Noto Sans SC under SIL Open Font License 1.1, and Material Symbols Rounded under Apache License 2.0. Sources, modification notes, character coverage, and the complete licenses accompany the font files in `src/client/skins/google-material-expressive/assets/`.
+
+Sources: https://github.com/googlefonts/googlesans-flex, https://github.com/googlefonts/googlesans-code, https://github.com/google/fonts/tree/main/ofl/notosanssc, and https://github.com/google/material-design-icons
+
+# Other bundled skin fonts
+
+Bundled skins also include subsets of Inter, IBM Plex, and JetBrains Mono under SIL Open Font License 1.1. Complete licenses are included in `docs/skin-font-licenses/`; the Claude CLI source assets also carry their license alongside the font files. Apple and other operating-system fonts are referenced through system font stacks and are not redistributed.
+
+Sources: https://github.com/rsms/inter, https://github.com/IBM/plex, and https://github.com/JetBrains/JetBrainsMono
+
 # sharp
 
 sharp 0.35.4 is used for screenshot pixel normalization under the Apache License 2.0. Its license and the notices for its native dependencies are included in the installed packages.

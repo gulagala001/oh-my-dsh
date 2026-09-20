@@ -1,0 +1,72 @@
+.omd {
+  --omd-font-ui: "OMD Google Sans Flex", "OMD Noto Sans SC", "OMD Noto Sans SC Text", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --omd-font-body: "OMD Google Sans Flex", "OMD Noto Sans SC", "OMD Noto Sans SC Text", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --omd-font-mono: "OMD Google Sans Code", "OMD Noto Sans SC", "OMD Noto Sans SC Text", "Noto Sans Mono CJK SC", ui-monospace, monospace;
+  --omd-font-size: 14px;
+  --omd-line-height: 1.7;
+  --omd-gap: 8px;
+  --omd-radius-control: 20px;
+  --omd-radius-panel: 28px;
+  --omd-radius-composer: 28px;
+  --omd-shadow: 0 2px 6px #152b4910, 0 8px 24px #152b4908;
+  --omd-duration: 200ms;
+  --omd-motion: cubic-bezier(.2, .8, .2, 1);
+}
+.omd[data-appearance="light"] {
+  --omd-bg: #f8fafd;
+  --omd-surface: #edf2fa;
+  --omd-surface-solid: #ffffff;
+  --omd-sidebar: #eaf0f8;
+  --omd-text: #1f2530;
+  --omd-muted: #4e596b;
+  --omd-border: #c4ccd8;
+  --omd-hover: #e0e8f5;
+  --omd-selected: #d3e3fd;
+  --omd-accent: #0b57d0;
+  --omd-on-accent: #ffffff;
+  --omd-focus: #0b57d0;
+  --omd-success: #146c2e;
+  --omd-warning: #825500;
+  --omd-danger: #b3261e;
+  --omd-code-bg: #eaf0f8;
+  --omd-user-bg: #e8f0fe;
+  --omd-button-bg: #0b57d0;
+  --omd-button-fg: #ffffff;
+  --omd-button-hover: #0848b3;
+  --omd-switch-on: #0b57d0;
+  --omd-on-selected: #0842a0;
+  --omd-surface-high: #e3eaf6;
+  --omd-outline-soft: #e1e6ee;
+  --omd-scrim: #111c3552;
+  --omd-hero-glow: #d3e3fd;
+  --omd-error-container: #fce8e6;
+}
+.omd[data-appearance="dark"] {
+  --omd-bg: #101419;
+  --omd-surface: #1b222c;
+  --omd-surface-solid: #202833;
+  --omd-sidebar: #171e28;
+  --omd-text: #e3e8ef;
+  --omd-muted: #b3bece;
+  --omd-border: #758294;
+  --omd-hover: #2b3646;
+  --omd-selected: #244573;
+  --omd-accent: #a8c7fa;
+  --omd-on-accent: #062e6f;
+  --omd-focus: #a8c7fa;
+  --omd-success: #82db99;
+  --omd-warning: #ffdb9a;
+  --omd-danger: #f2b8b5;
+  --omd-code-bg: #1b222c;
+  --omd-user-bg: #25354c;
+  --omd-button-bg: #a8c7fa;
+  --omd-button-fg: #062e6f;
+  --omd-button-hover: #c0d7fc;
+  --omd-switch-on: #a8c7fa;
+  --omd-on-selected: #d3e3fd;
+  --omd-surface-high: #2b3543;
+  --omd-outline-soft: #35404f;
+  --omd-scrim: #00000080;
+  --omd-hero-glow: #1b3860;
+  --omd-error-container: #4a2527;
+}

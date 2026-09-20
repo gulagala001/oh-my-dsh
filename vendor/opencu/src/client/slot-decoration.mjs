@@ -5,7 +5,8 @@ export function decorateSlot(slots, name, accepts, decorate) {
   const layer = Symbol(), installed = new Map();
   let reconciling = false, dirty = false, stopped = false;
   function reconcile() {
-    if (stopped) return;
+    // Cordis deactivates the owner before its queued slot notifications drain.
+    if (stopped || slots.ctx?.fiber?.uid === null) return;
     if (reconciling) { dirty = true; return; }
     reconciling = true;
     try {

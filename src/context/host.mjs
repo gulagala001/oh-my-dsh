@@ -16,7 +16,7 @@ export function createHostAdapter(hub) {
     pressure(session) { const capacity = session.requestContext?.()?.contextWindow; return capacity ? hub.ctx.tokenMeter.measure(session).totalTokens / capacity : null; },
     publish(session, text, kind) { return session.append('user/message', message(text, kind), { surfaceOp: 'append' }); },
     flush(session) { return hub.ctx.sessions?.flush(session); },
-    append(session, op, surfaceOp, sourceEventSeqs) {
+    append(session, op, surfaceOp, sourceEventSeqs, { batchId } = {}) {
       const last = session.snapshotEvents().findLast(e => Number.isInteger(e.data?.turn) && Number.isInteger(e.data?.step));
       const turn = last?.data.turn || 1, step = last?.data.step || 1;
       if (op.kind === 'delete') return session.append('system/message', { turn, step,
@@ -33,15 +33,16 @@ export function createHostAdapter(hub) {
       const accountingSeqs = op.accountingSeqs || sourceEventSeqs;
       const meter = hub.ctx.tokenMeter?.measure(session);
       const shadowedTokenCount = (meter?.nodes || []).filter(n => accountingSeqs.includes(n.seq)).reduce((n, node) => n + (node.tokens ?? node.heuristicTokens ?? 0), 0);
-      const lifecycle = { compactionId, turn: null, ...(op.sourceCommandId ? { sourceCommandId: op.sourceCommandId } : {}) };
+      const batch = batchId ? { omdBatchId: batchId } : {};
+      const lifecycle = { compactionId, turn: null, ...batch, ...(op.sourceCommandId ? { sourceCommandId: op.sourceCommandId } : {}) };
       const start = session.append('compaction/start', lifecycle);
       let closed = false;
       try {
-        const record = session.append('compaction/summary', { compactionId, ...(op.sourceCommandId ? { sourceCommandId: op.sourceCommandId } : {}), summary,
+        const record = session.append('compaction/summary', { compactionId, ...batch, ...(op.sourceCommandId ? { sourceCommandId: op.sourceCommandId } : {}), summary,
           shadowedRange: { start: surfaceOp.startSeq, end: surfaceOp.endSeq }, shadowedSeqs: accountingSeqs,
           shadowedTokenCount, llmStreamCall: false });
         const checkpoint = session.append('user/message', {
-          ...createUserMessage({ content: summary, source: compactCheckpointSource(compactionId, op.sourceCommandId) }), id: op.id,
+          ...createUserMessage({ content: summary, source: compactCheckpointSource(compactionId, op.sourceCommandId) }), id: op.id, ...batch,
         }, { surfaceOp, sourceEventSeqs: [start.seq, record.seq, ...sourceEventSeqs] });
         const end = session.append('compaction/end', lifecycle); closed = true;
         op.native = { compactionId, startSeq: start.seq, summarySeq: record.seq, endSeq: end.seq, summary, shadowedRange: { start: surfaceOp.startSeq, end: surfaceOp.endSeq }, shadowedSeqs: accountingSeqs, shadowedTokenCount };

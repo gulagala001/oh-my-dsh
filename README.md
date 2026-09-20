@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.4"><img src="https://img.shields.io/badge/version-0.1.6--alpha.2.4-3478F6?style=flat-square" alt="Version 0.1.6-alpha.2.4" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.6"><img src="https://img.shields.io/badge/version-0.1.6--alpha.2.6-3478F6?style=flat-square" alt="Version 0.1.6-alpha.2.6" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.6--alpha.2-475569?style=flat-square" alt="DSH 0.1.6-alpha.2" /></a>
   <a href="#support"><img src="https://img.shields.io/badge/status-early_access-64748B?style=flat-square" alt="Early access" /></a>
 </p>
@@ -24,7 +24,7 @@
   <a href="#features">功能亮点</a> ·
   <a href="#computer-use">Computer Use</a> ·
   <a href="docs/usage.md">使用指南</a> ·
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.4">版本说明</a> ·
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.6">版本说明</a> ·
   <a href="https://github.com/gulagala001/oh-my-dsh/issues">反馈问题</a>
 </p>
 
@@ -54,14 +54,14 @@ CodeGraph 默认启用，打开项目会话后自动在后台建立 `.codegraph/
 
 ## 快速开始
 
-[本版功能、验证范围与限制](docs/release-0.1.6-alpha.2.4.md)。
+[本版功能、验证范围与限制](docs/release-0.1.6-alpha.2.6.md)。
 
-当前 **0.1.6-alpha.2.4** 为预发布版，使用 **DSH 0.1.6-alpha.2**。下面的安装命令固定到该版本；使用旧版 DSH 0.1.5-rc.1 时，请保留 [v1.1.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1)。升级宿主请沿用原来的安装方式、profile 和 `DSH_HOME`。
+当前 **0.1.6-alpha.2.6** 为预发布版，使用 **DSH 0.1.6-alpha.2**。下面的安装命令固定到该版本；使用旧版 DSH 0.1.5-rc.1 时，请保留 [v1.1.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.1.1)。升级宿主请沿用原来的安装方式、profile 和 `DSH_HOME`。
 
 Oh My DSH 通过 **DSH 的插件管理器**安装。已有 **DSH 0.1.6-alpha.2 Web** 时，先停止服务，然后在终端或 PowerShell 中运行：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.6-alpha.2.4
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.6-alpha.2.6
 ```
 
 按原来的方式启动：
@@ -83,21 +83,21 @@ dsh web
 <details>
 <summary>源码下载与独立开发</summary>
 
-[0.1.6-alpha.2.4 源码 ZIP](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.1.6-alpha.2.4/oh-my-dsh-v0.1.6-alpha.2.4.zip) 用于保存源码、手动部署或二次开发，包含已构建的界面。普通插件安装直接使用上面的命令即可。
+[0.1.6-alpha.2.6 源码 ZIP](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.1.6-alpha.2.6/oh-my-dsh-v0.1.6-alpha.2.6.zip) 用于保存源码、手动部署或二次开发，包含已构建的界面。普通插件安装直接使用上面的命令即可。
 
-[从源码试用](docs/usage.md#本地开发或独立试用) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.4)
+[从源码试用](docs/usage.md#本地开发或独立试用) · [版本说明与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.6)
 
 </details>
 
-## 0.1.6-alpha.2.4 必要更新
+## 0.1.6-alpha.2.6 更新
 
-修正运行状态注入频率：真实新输入与必要刷新才投递，后台任务、上下文内部变化和自动新回合不再反复触发。没有 Todo 时仍可提供状态。
+新增九套原生皮肤，包含 Codex、iOS、Claude CLI 和 Google Material 的完整布局；优化对话操作记录与历史加载，统一上下文设置校验并清理已退役的旧执行器。
 
-[适配、优化、验证与风险说明](docs/release-0.1.6-alpha.2.4.md)
+[适配、优化、验证与风险说明](docs/release-0.1.6-alpha.2.6.md)
 
-新增运行状态、后台任务优化和 Todo 暂停提醒；CodeGraph、Computer Use 在基础组件页面统一管理并自动准备。[状态与后台任务使用说明](docs/runtime-state-background.md)。
+在 **设置 → 外观** 选择皮肤，支持明暗、窄屏、导入与一键恢复默认。历史加载数量可选 50、200、500 条。[皮肤使用说明](docs/skins.md)。CodeGraph、Computer Use 仍在基础组件页面统一管理；[状态与后台任务使用说明](docs/runtime-state-background.md)。
 
-[本版更新与升级说明](CHANGELOG.md#016-alpha24--2026-09-20)。版本使用 DSH 对齐编号，历史 `1.3.0-alpha.*` 属于旧版本；旧客户端首次可能不提示，请按上方固定版本安装。
+[本版更新与升级说明](CHANGELOG.md#016-alpha26--2026-09-21)。版本使用 DSH 对齐编号，历史 `1.3.0-alpha.*` 属于旧版本；旧客户端首次可能不提示，请按上方固定版本安装。
 
 - **上下文档案**：后台生成事实摘要与详细文档，中枢选择保留、详细替换或简要替换；请求边界应用已完成结果，原始事件仍可回查。
 - **私有与项目共享**：会话隔离仅查看自己的档案；项目共享按会话和事件时间展示摘要。全局背景由用户手填，旧自动记忆与状态提炼停止运行，旧数据保留。
@@ -148,7 +148,7 @@ todo 不参与预处理摘要，也不形成分段边界。成功应用压缩后
 
 升级前备份原 DSH 数据目录。上下文后台调用仍会产生用量，摘要不保证无损；请保留原始事件与必要的外部验证。
 
-[完整版本说明与下载](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.4) · [身份设置说明](docs/usage.md#自定义身份认知)
+[完整版本说明与下载](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6-alpha.2.6) · [身份设置说明](docs/usage.md#自定义身份认知)
 
 <a id="features"></a>
 
@@ -243,7 +243,7 @@ Computer Use 由 [OpenCU](https://github.com/gulagala001/opencu) 提供，安装
 
 ## 平台与运行环境
 
-当前预发布版本为 **0.1.6-alpha.2.4**，适配 **DSH 0.1.6-alpha.2**。
+当前预发布版本为 **0.1.6-alpha.2.6**，适配 **DSH 0.1.6-alpha.2**。
 
 | 功能 | 当前支持 |
 | --- | --- |

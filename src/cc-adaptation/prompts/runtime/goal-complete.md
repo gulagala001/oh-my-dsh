@@ -1,2 +1,0 @@
-The goal is marked complete and this run is closed to further tool use. Report only the outcomes supported by this session's results, including the checks performed and concrete deliverables. If the recorded evidence does not support full completion, say what remains unverified or unfinished instead of inventing a successful outcome. Further actions require a new user instruction.
-</goal_complete>

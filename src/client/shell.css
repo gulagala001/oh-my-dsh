@@ -106,14 +106,18 @@
 /* The host fixes a collapsed Think container at 24px. Match its row so the
    next operation never overlaps its 26px hit area. Expanded text stays auto. */
 .trisoul-shell .lcKema_root:not([data-expanded]) { height: 26px; }
-.trisoul-shell [data-chat-flow-kind=tool-call] :is(.o3BgMG_row, .CY-8Ka_root) { height: 26px; min-height: 26px; }
-.trisoul-shell [data-chat-flow-kind=tool-call] :is(.o3BgMG_title, .CY-8Ka_title) { font-size: var(--dsh-content-font-size-secondary, 13px); font-weight: 400; }
-.trisoul-shell [data-chat-flow-kind=tool-call] :is(.o3BgMG_sep, .CY-8Ka_sep) { background: transparent; width: 0; margin-inline: 3px; }
-.trisoul-shell [data-chat-flow-kind=tool-call] .o3BgMG_fileLink { color: var(--dsw-alias-label-tertiary, var(--tx-shell-muted)); }
-.trisoul-shell [data-chat-flow-kind=tool-call] .o3BgMG_fileLink:hover { color: var(--tx-shell-text); }
+.trisoul-shell :is([data-chat-flow-kind=tool-call], [data-cu-operation]) :is(.o3BgMG_row, .CY-8Ka_root) { height: 26px; min-height: 26px; }
+.trisoul-shell :is([data-chat-flow-kind=tool-call], [data-cu-operation]) :is(.o3BgMG_title, .CY-8Ka_title) { font-size: var(--dsh-content-font-size-secondary, 13px); font-weight: 400; }
+.trisoul-shell :is([data-chat-flow-kind=tool-call], [data-cu-operation]) :is(.o3BgMG_sep, .CY-8Ka_sep) { background: transparent; width: 0; margin-inline: 3px; }
+.trisoul-shell :is([data-chat-flow-kind=tool-call], [data-cu-operation]) .o3BgMG_fileLink { color: var(--dsw-alias-label-tertiary, var(--tx-shell-muted)); }
+.trisoul-shell :is([data-chat-flow-kind=tool-call], [data-cu-operation]) .o3BgMG_fileLink:hover { color: var(--tx-shell-text); }
 .trisoul-shell [data-chat-flow-kind=context] [data-disclosure-row][aria-expanded=false] :is([data-context-source], .XrJvXW_sep) { display: none; }
 .trisoul-shell .hWmORq_actions { margin-top: 12px; }
 .trisoul-shell .xzv4MW_actions { gap: 5px; }
 .trisoul-shell :is(.xzv4MW_timeStart, .xzv4MW_timeEnd) { font-size: 11px; }
 .trisoul-shell .Q51KRG_trigger { font-size: 11px; gap: 4px; padding-inline: 6px; }
 .trisoul-shell .Sixlwa_bubble { border-radius: 18px; padding: 11px 16px; }
+
+/* Prose separates operation segments; only rows inside a list stay tightly spaced. */
+.trisoul-shell [data-chat-flow-kind=assistant-step][data-turn-process-member]:not(:has([data-cu-group])) { --dsh-chat-flow-gap: 16px; }
+.trisoul-shell [data-chat-flow-key]:has([data-cu-group]) { --dsh-chat-flow-gap: 8px; }

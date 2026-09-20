@@ -14,10 +14,11 @@ export async function until(fn, timeout = 20000) {
   throw new Error('Frontend fixture timed out');
 }
 
-export async function frontendFixture(t, { imageBudget, versionResponse, headless = false, lifecycleTrace = false, componentAutoSetup = false, omdConfig = {}, reply } = {}) {
+export async function frontendFixture(t, { imageBudget, versionResponse, headless = false, lifecycleTrace = false, installedPackage = process.env.OMD_UI_PACKED === '1', historyMessages = 0, componentAutoSetup = false, omdConfig = {}, reply } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'trisoul-frontend-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   await mkdir(home); await mkdir(workspace);
-  let nextReply, releaseReply, replyFactory = reply;
+  let nextReply, releaseReply, replyFactory = reply, child, browser, page, log = '';
+  const errors = [];
   const provider = createServer(async (req, res) => {
     let request = ''; for await (const chunk of req) request += chunk; const payload = JSON.parse(request);
     if (payload.tools?.length && nextReply) { const waiting = nextReply; nextReply = null; await waiting; }
@@ -27,35 +28,61 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
     res.end('data: ' + JSON.stringify({ id: 'ui', object: 'chat.completion.chunk', model: 'fixture', choices: [{ index: 0, delta: { role: 'assistant', content: !payload.tools?.length ? '整理工作台和对话界面' : '已经梳理好今天的工作。\n\n我们会先整理对话与侧栏，再完善电脑操控的实时预览。所有进展都可以在右侧工作台查看。\n\n- 任务：查看当前进展和验证结果\n- 记忆：保留项目约定与重要决定\n- 电脑：查看网页和应用的实时画面\n\n接下来可以继续处理具体页面。' }, finish_reason: 'stop' }] }) + '\n\ndata: [DONE]\n\n');
   });
   await new Promise(resolve => provider.listen(0, '127.0.0.1', resolve));
-  await writeFile(join(home, 'settings.yaml'), JSON.stringify({
-    'llm-pi-ai': { providers: { fixture: { ...(imageBudget ? { maxRequestImageBytes: imageBudget } : {}), api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'FRONTEND_FIXTURE', models: [{ id: 'fixture', name: '界面预览模型', contextWindow: 1000000, maxTokens: 8192, input: ['text', 'image'] }] } } },
-    'agent-default-model': { provider: 'fixture', model: 'fixture' },
-    'trisoul-x': { componentAutoSetup, stateEnabled: false, probeEnabled: false, digestEvery: 1000, flushIdleMs: 3600000, computerUseNativeBinary: join(root, 'missing-native'), computerUseChromeUserDataDir: join(root, 'chrome-profile'), ...omdConfig },
-  }));
-  await writeFile(join(home, '.credentials.yaml'), JSON.stringify({ version: 1, refs: { FRONTEND_FIXTURE: 'local-test-only' } }), { mode: 0o600 });
-  const lifecycleFile = join(root, 'lifecycle.jsonl');
-  if (lifecycleTrace) {
-    execFileSync(process.execPath, [fileURLToPath(new URL('../../node_modules/@deepseek-ai/dsh/lib/bin.js', import.meta.url)), '--profile', 'trisoul-x', '--from-default-profile', 'web', '--dump-config'], { cwd: new URL('../../', import.meta.url), env: { ...process.env, DSH_HOME: home }, stdio: ['ignore', 'ignore', 'pipe'] });
-    const directory = join(home, 'profiles', 'trisoul-x');
-    await writeFile(lifecycleFile, '');
-    const traceModule = join(root, 'lifecycle-trace.mjs');
-    await writeFile(traceModule, await readFile(new URL('./lifecycle-trace.mjs', import.meta.url), 'utf8'));
-    await writeFile(join(directory, 'cordis.patch.yml'), JSON.stringify([{ insert: [{ id: 'omd-test-lifecycle', name: pathToFileURL(traceModule).href, config: { file: lifecycleFile } }] }]));
-  }
-  const child = spawn(process.execPath, ['scripts/start.mjs'], { cwd: new URL('../../', import.meta.url), env: { ...process.env, DSH_HOME: home, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
-  let log = '', browser, page; const errors = [];
-  child.stdout.on('data', data => { log = (log + data).slice(-15000); });
-  child.stderr.on('data', data => { log = (log + data).slice(-15000); });
   t.after(async () => {
     releaseReply?.();
     await cleanupFixture([
       async () => { if (process.env.TRISOUL_UI_ARTIFACTS && page && !page.isClosed()) await page.screenshot({path:join(root,'final-state.png')}); },
       () => browser?.close(),
-      () => stopFixtureProcess(child),
+      () => child && stopFixtureProcess(child),
       () => closeFixtureServer(provider),
       async () => { if (!process.env.TRISOUL_UI_ARTIFACTS) await rm(root, { recursive: true, force: true }); },
     ]);
   });
+
+  await writeFile(join(home, 'settings.yaml'), JSON.stringify({
+    'llm-pi-ai': { providers: { fixture: { ...(imageBudget ? { maxRequestImageBytes: imageBudget } : {}), api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'FRONTEND_FIXTURE', models: [{ id: 'fixture', name: '界面预览模型', contextWindow: 1000000, maxTokens: 8192, input: ['text', 'image'] }] } } },
+    'agent-default-model': { provider: 'fixture', model: 'fixture' },
+    'trisoul-x': { componentAutoSetup, digestEvery: 1000, flushIdleMs: 3600000, computerUseNativeBinary: join(root, 'missing-native'), computerUseChromeUserDataDir: join(root, 'chrome-profile'), ...omdConfig },
+  }));
+  await writeFile(join(home, '.credentials.yaml'), JSON.stringify({ version: 1, refs: { FRONTEND_FIXTURE: 'local-test-only' } }), { mode: 0o600 });
+  if (installedPackage) {
+    const repo = fileURLToPath(new URL('../../', import.meta.url));
+    const [packed] = JSON.parse(execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', root], { cwd: repo, encoding: 'utf8', shell: process.platform === 'win32', maxBuffer: 16 * 1024 * 1024 }));
+    const cli = fileURLToPath(new URL('../../node_modules/@deepseek-ai/dsh/lib/bin.js', import.meta.url));
+    const options = { cwd: repo, env: { ...process.env, DSH_HOME: home }, stdio: ['ignore', 'pipe', 'pipe'], timeout: 120000 };
+    execFileSync(process.execPath, [cli, '--profile', 'trisoul-x', '--from-default-profile', 'web', '--dump-config'], options);
+    try { execFileSync(process.execPath, [cli, 'plugin', '--profile', 'trisoul-x', 'add', 'file:' + join(root, packed.filename)], options); }
+    catch (error) { throw new Error('Packed plugin installation failed: ' + String(error.stderr || error.stdout || error.message).replace(/token=\S+/g, 'token=[redacted]')); }
+  }
+  const lifecycleFile = join(root, 'lifecycle.jsonl');
+  if (lifecycleTrace || historyMessages) {
+    if (!installedPackage) execFileSync(process.execPath, [fileURLToPath(new URL('../../node_modules/@deepseek-ai/dsh/lib/bin.js', import.meta.url)), '--profile', 'trisoul-x', '--from-default-profile', 'web', '--dump-config'], { cwd: new URL('../../', import.meta.url), env: { ...process.env, DSH_HOME: home }, stdio: ['ignore', 'ignore', 'pipe'] });
+    const directory = join(home, 'profiles', 'trisoul-x');
+    await writeFile(lifecycleFile, '');
+    const traceModule = join(root, 'lifecycle-trace.mjs');
+    await writeFile(traceModule, await readFile(new URL('./lifecycle-trace.mjs', import.meta.url), 'utf8'));
+    const entries = lifecycleTrace ? [{ id: 'omd-test-lifecycle', name: pathToFileURL(traceModule).href, config: { file: lifecycleFile } }] : [];
+    if (historyMessages) {
+      const seedModule = join(root, 'history-seed.mjs');
+      await writeFile(seedModule, `import { createUserMessage, createMessage } from ${JSON.stringify(import.meta.resolve('@deepseek-ai/dsh-llm'))};
+export function apply(ctx) { let seeded = false; ctx.on('session/created', session => {
+  if (seeded) return; seeded = true;
+  for (let i = 0; i < ${Number(historyMessages)}; i++) {
+    const turn = i + 1; session.append('turn/start', { turn });
+    session.append('user/message', createUserMessage({ content: [{ type: 'text', text: '历史样本 ' + i }], source: { kind: 'user' } }), { surfaceOp: 'append' });
+    session.append('step/start', { turn, step: 1 });
+    session.append('assistant/message', { turn, step: 1, stream: [], message: createMessage({ role: 'assistant', source: { kind: 'model', provider: 'fixture', model: 'fixture' }, content: [{ type: 'text', text: '历史回答 ' + i }] }) }, { surfaceOp: 'append' });
+    session.append('step/end', { turn, step: 1 });
+    session.append('turn/end', { turn, reason: { kind: 'completed' } });
+  }
+}, { global: true }); }`);
+      entries.push({ id: 'omd-test-history', name: pathToFileURL(seedModule).href });
+    }
+    await writeFile(join(directory, 'cordis.patch.yml'), JSON.stringify([{ insert: entries }]));
+  }
+  child = spawn(process.execPath, ['scripts/start.mjs'], { cwd: new URL('../../', import.meta.url), env: { ...process.env, DSH_HOME: home, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
+  child.stdout.on('data', data => { log = (log + data).slice(-15000); });
+  child.stderr.on('data', data => { log = (log + data).slice(-15000); });
   const bootstrap = await until(() => { if (child.exitCode !== null) throw new Error(log.replace(/token=\S+/g, 'token=[redacted]')); return log.match(/http:\/\/127\.0\.0\.1:\d+\/\?token=[\w-]+/)?.[0]; }, 45000).catch(error => { throw new Error(error.message + '\n' + log.replace(/token=\S+/g, 'token=[redacted]')); });
   const origin = new URL(bootstrap).origin, login = await fetch(bootstrap, { redirect: 'manual' });
   const cookie = login.headers.getSetCookie().map(value => value.split(';')[0]).join('; ');
@@ -66,6 +93,7 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
   const registered = await rpc('workspace/create', { path: workspace });
   const { sessionId } = await rpc('session/create', { workspaceId: registered.workspace.workspaceId, agentPreset: 'trisoul-x' });
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '整理工作台和对话界面' }] });
+  if (historyMessages) await rpc('session/rename', { sessionId, title: '整理工作台和对话界面' });
   if (headless) return { root, home, workspace, origin, rpc, sessionId, errors, replyWith(factory) { replyFactory = factory; },
     async api(path, body) { const r = await fetch(origin + '/trisoul-x/api' + path, { headers: { cookie, 'content-type': 'application/json' }, ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }) }); if (!r.ok) throw Error(await r.text()); return r.json(); }, lifecycle: () => readFile(lifecycleFile, 'utf8'), log: () => log.replace(/token=\S+/g, 'token=[redacted]'),
     async call(method, args) {
@@ -79,7 +107,7 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
   browser = await chromium.launch({ headless: true, executablePath: chromium.executablePath() });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: 'light', locale: 'zh-CN' });
   await context.addCookies(cookie.split('; ').map(value => { const index = value.indexOf('='); return { name: value.slice(0, index), value: value.slice(index + 1), url: origin }; }));
-  page = await context.newPage(); page.on('pageerror', error => errors.push(error.message));
+  page = await context.newPage(); page.on('pageerror', error => errors.push(error.stack || error.message));
   // Version-indicator fixtures never depend on public GitHub/network availability.
   const version = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8')).version;
   await page.route('**/trisoul-x/api/version*', async route => {
