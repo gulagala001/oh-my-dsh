@@ -24,6 +24,7 @@ export const Config = z.object({
   traceMaxChars: z.number().step(1).min(0).default(0),
   identityPrompt: z.string().default(DEFAULT_IDENTITY),
   stateHintsEnabled: z.boolean().default(false),
+  budgetHintsEnabled: z.boolean().default(false),
   backgroundTasksEnabled: z.boolean().default(true),
   todoConstraintFirst: z.boolean().default(false),
   codegraphEnabled: z.boolean().default(true),

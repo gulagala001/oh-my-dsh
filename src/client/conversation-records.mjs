@@ -7,7 +7,7 @@ export function taskInjection(message) {
   if (!embedded && message.source.plugin !== 'trisoul-x:tasks') return null;
   const text = embedded ? message.content?.[embedded.index]?.text : textOf(message.content);
   if (!text) return null;
-  const todo = /^\[todo list\]/m.test(text), runtime = /^\[runtime state(?: ·|\])/m.test(text);
+  const todo = /^\[todo list\]/m.test(text), runtime = /^(?:\[runtime state(?: ·|\])|预算(?:：|$))/m.test(text);
   return {
     text, todo, runtime,
     title: todo && runtime ? 'Todo 与运行状态' : todo ? 'Todo' : runtime ? '运行状态' : '任务上下文',

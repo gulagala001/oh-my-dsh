@@ -97,6 +97,7 @@ export class Hub extends Service {
     const completed = frame ? null : session.snapshotEvents().findLast(e => e.type === 'step/end');
     state.activity.push({ at: Date.now(), turn: frame?.turn ?? completed?.data.turn, step: frame?.step ?? completed?.data.step, sessionId: session.id, kind, ...entry, usage: entry.usage ?? null, effort: entry.effort ?? (['main', 'subagent'].includes(kind) ? recent?.reasoningEffort ?? null : null) });
     state.activity = state.activity.slice(-60);
+    this.budgets?.record(session, kind, entry);
     this.store.save(state);
   }
   action(session, name, count = 1) {

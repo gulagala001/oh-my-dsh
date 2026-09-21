@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { activeRecords, liveSpan } from './context/core.mjs';
+import { renderBudget } from './task-budget.mjs';
 
-// A sampled observation, never a task budget or an estimate of completion.
+// Sampled facts and, when enabled, the user's session budget.
 export function collectRuntimeStatus(agent, hub, { now = Date.now(), messages = [], turn: currentTurn, step: currentStep } = {}) {
   const session = agent.session, events = session.snapshotEvents();
   const start = events.findLast(e => e.type === 'turn/start');
@@ -19,6 +20,7 @@ export function collectRuntimeStatus(agent, hub, { now = Date.now(), messages = 
     ?? events.findLast(e => e.type === 'user/message' && e.surfaceOp === 'append' && e.data?.source?.kind === 'user')?.data.id ?? null;
   return {
     sampledAt: new Date(now).toISOString(), turn, step, asOfSeq: events.at(-1)?.seq ?? -1,
+    ...(hub.config().budgetHintsEnabled ? { budget: hub.budgets.snapshot(session, now) } : {}),
     turnWallElapsedMs: start && !ended ? Math.max(0, now - start.time) : null,
     context: {
       retainedTokensEstimate: Number.isFinite(meter.totalTokens) && (request || meter.totalTokens > 0) ? meter.totalTokens : null,
@@ -36,15 +38,19 @@ export function collectRuntimeStatus(agent, hub, { now = Date.now(), messages = 
 }
 
 export function runtimeStateKey(status) {
-  // Only real user input triggers a runtime refresh. Jobs, automatic turns and
-  // context bookkeeping are sampled when Todo delivery or compaction needs them.
-  return createHash('sha256').update(JSON.stringify({ input: status.changeKey?.input ?? null })).digest('hex');
+  // Budget limits refresh at each request boundary. Ordinary state keeps its
+  // existing cadence; changing wall time alone never reposts the same step.
+  const b = status.budget, limited = b?.visible && Object.values(b.limits).some(value => value != null);
+  return createHash('sha256').update(JSON.stringify({ input: status.changeKey?.input ?? null,
+    ...(b ? { budget: { visible: b.visible, limits: b.limits, ...(limited ? { turn: status.turn, step: status.step, tokens: b.tokens, rounds: b.rounds, unmetered: b.unmetered } : {}) } } : {}),
+  })).digest('hex');
 }
 
 export function renderRuntimeState(status) {
   const c = status.context, last = c.lastRequest;
   const lines = [`[runtime state · as of ${status.sampledAt} · turn ${status.turn ?? 'not started'} · step ${status.step ?? 'not started'}]`,
-    'Latest snapshot supersedes earlier runtime snapshots; it is not a task budget.',
+    'Latest snapshot supersedes earlier runtime snapshots.',
+    ...(status.budget ? [renderBudget(status.budget)].filter(Boolean) : []),
     'Turn and step are host execution positions at sampling time, not live counters.',
     ...(status.turnWallElapsedMs == null ? [] : [`Turn wall time: ${Math.floor(status.turnWallElapsedMs / 1000)}s (includes tools and waiting).`]),
     `Retained context estimate: ${c.retainedTokensEstimate == null ? 'not yet measured' : `${c.retainedTokensEstimate} tokens`}; excludes pending input and new prompt assembly.`,
@@ -63,13 +69,15 @@ export function renderRuntimeState(status) {
 }
 
 export function runtimeContext(agent, hub, options) {
-  if (!hub.config().stateHintsEnabled) return null;
+  const config = hub.config();
+  if (!config.stateHintsEnabled && !config.budgetHintsEnabled) return null;
   const status = collectRuntimeStatus(agent, hub, options);
-  return { key: runtimeStateKey(status), sampledAt: status.sampledAt, text: renderRuntimeState(status) };
+  const text = config.stateHintsEnabled ? renderRuntimeState(status) : renderBudget(status.budget);
+  return text ? { key: `${Boolean(config.stateHintsEnabled)}:${runtimeStateKey(status)}`, sampledAt: status.sampledAt, text } : null;
 }
 
 export function registerRuntimeStatus(ctx, hub) {
-  ctx.tools.register({ name: 'runtime_status', description: 'Read a fresh snapshot of this turn, retained context estimates, and registered background jobs. This does not wait, consume job output, or establish task success.',
+  ctx.tools.register({ name: 'runtime_status', description: 'Read a fresh snapshot of this turn, retained context estimates, registered background jobs, and the session budget when enabled. This does not wait, consume job output, or establish task success.',
     parameters: { type: 'object', properties: {}, additionalProperties: false },
     output: { schema: { type: 'object', additionalProperties: true }, render: (_args, value) => [{ type: 'text', text: JSON.stringify(value) }] },
     execute(_args, { agent }) { const { changeKey, ...value } = collectRuntimeStatus(agent, hub); return value; },

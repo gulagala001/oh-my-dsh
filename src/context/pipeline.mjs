@@ -371,7 +371,7 @@ export class ContextPipeline {
     const s = this.state(agent.session); s.steps++; this.store.save(s);
     // Ordinary replacement never waits for a model; an explicitly queued /compact-f does.
     const recovered = s.transaction ? await this.applyReady(agent) : null;
-    if (!this.hub.config().stateHintsEnabled) await this.stripRuntime(agent.session);
+    if (!this.hub.config().stateHintsEnabled && !this.hub.config().budgetHintsEnabled) await this.stripRuntime(agent.session);
     await this.retireLegacyInjections(agent.session);
     const manual = s.manualQueue[0];
     let result;

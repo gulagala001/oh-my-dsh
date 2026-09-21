@@ -6,6 +6,7 @@ import { registerContextRecall } from './context/recall.mjs';
 import { NOTE_DESCRIPTION } from './context/prompts.mjs';
 import { registerTasks } from './tasks.mjs';
 import { registerRuntimeStatus } from './runtime-state.mjs';
+import { registerBudgetCommand } from './task-budget.mjs';
 
 export const inject = ['trisoulX', 'systemPrompt', 'tools', 'llm', 'tokenMeter', 'sessions', 'sessionProjections'];
 const result = { schema: { type: 'string' }, render: (_args, text) => [{ type: 'text', text }] };
@@ -23,5 +24,5 @@ export function apply(ctx) {
   });
   registerContextRecall(ctx, hub);
   registerRuntimeStatus(ctx, hub);
-  ctx.inject(['commands'], commandCtx => registerContextCommands(commandCtx, hub));
+  ctx.inject(['commands'], commandCtx => { registerContextCommands(commandCtx, hub); registerBudgetCommand(commandCtx, hub); });
 }
