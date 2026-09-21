@@ -76,7 +76,7 @@ export const parts = {
   'icon-button': '.tx-icon-button, .uV2eYG_add, .VOzbGW_close',
   send: '.uV2eYG_primary',
   'sidebar-row': '.YDXeBa_sessionRow, .hHd-Xa_newSession',
-  'message-user': '.Sixlwa_bubble',
+  'message-user': '.Sixlwa_bubble, .tx-cu-user-bubble',
   'process-toggle': '.tx-cu-group-toggle, .omd-record-toggle',
   'tool-group': '.tx-cu-group-list',
   'tool-row': '[data-disclosure-row], .tx-cu-card-heading, .CY-8Ka_root, .o3BgMG_row',

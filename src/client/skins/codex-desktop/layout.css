@@ -13,7 +13,7 @@ html.omd[data-omd-layout="codex-desktop"] {
     -webkit-font-smoothing: antialiased;
   }
   & :is(button, input, select, textarea, .wSkVaW_root, .VOzbGW_panel, .tx-workbench, .cx-integrated) { font-family: var(--omd-font-ui); }
-  & :is(.hWmORq_body, .Sixlwa_bubble, [class*="_markdown_"]) { font-family: var(--omd-font-body); }
+  & :is(.hWmORq_body, .Sixlwa_bubble, .tx-cu-user-bubble, [class*="_markdown_"]) { font-family: var(--omd-font-body); }
   & :is(pre, code, pre *, .cm-editor, .cm-content) { font-family: var(--omd-font-mono); }
   & .hHd-Xa_brandMark .tx-brand-mark { filter: grayscale(1); }
   & .tx-wordmark, & .tx-wordmark :is(span, strong) { color: var(--omd-text); }
@@ -96,8 +96,9 @@ html.omd[data-omd-layout="codex-desktop"] {
   & .wSkVaW_scrollBody { margin-right: 0; }
   & .EvIC1a_column { padding-top: 26px; padding-bottom: 22px; }
   & .Sixlwa_bubble { padding: 11px 16px; font-size: var(--dsh-content-font-size, 14px); line-height: 22px; }
-  & .Sixlwa_bubble :is(p, span, a, code) { color: inherit; }
-  & .Sixlwa_bubble code { background: color-mix(in srgb, var(--omd-user-text) 18%, transparent); }
+  & :is(.Sixlwa_bubble, .tx-cu-user-bubble) :is(p, span, a, code) { color: inherit; }
+  & :is(.Sixlwa_bubble, .tx-cu-user-bubble) code { background: color-mix(in srgb, var(--omd-user-text) 18%, transparent); }
+  & .tx-cu-user-bubble { --cu-blue: var(--omd-user-text); }
   & .hWmORq_body { font-weight: 500; }
   & .Sixlwa_userStack { max-width: 88%; }
   & .l_V-RG_root { height: 30px; gap: 8px; padding: 0; }
