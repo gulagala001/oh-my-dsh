@@ -1,6 +1,11 @@
 // Only this curated catalog supplies package names to the installer.
 export const recommendedPlugins = [
   {
+    id: 'dsh-market', name: 'dsh-market', packageName: 'dshmarket', author: 'dsh-market',
+    description: '在 DSH 内浏览、搜索和安装社区插件与主题，支持分类筛选、更新管理及配置备份。安装后在设置中打开插件市场。',
+    category: '插件管理', url: 'https://github.com/dsh-market/dsh-market',
+  },
+  {
     id: 'jevify', name: 'Jevify', packageName: 'dsh-plugin-jevify', author: 'gulagala001',
     description: '让普通模型提供 Jev 风格的 Choice、Score、Noul 判断；支持百炼、DeepSeek 官方和 GOAT，可用官方 Jev SDK 直接调用。安装后在设置中选择渠道与模型。',
     category: '模型能力', url: 'https://github.com/gulagala001/jevify',
