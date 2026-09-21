@@ -492,8 +492,9 @@
 .tx-cu-floating-inline:focus-within > header, .tx-cu-floating-inline:focus-within > footer { opacity: 1; pointer-events: auto; }
 .tx-cu-floating-inline .tx-cu-preview-card, .tx-cu-floating-inline > .tx-cu-error { pointer-events: auto; }
 .tx-cu-floating-inline > .tx-cu-error { background: var(--cu-bg); padding: 5px; border-radius: 6px; }
-.tx-cu-floating-inline > header { pointer-events: auto; cursor: grab; touch-action: none; user-select: none; }
-.tx-cu-floating-inline.is-dragging > header { cursor: grabbing; }
+.tx-cu-floating-inline { pointer-events: auto; cursor: grab; user-select: none; }
+.tx-cu-floating-inline > header, .tx-cu-floating-inline .tx-cu-preview-open { pointer-events: auto; cursor: grab; touch-action: none; }
+.tx-cu-floating-inline.is-dragging, .tx-cu-floating-inline.is-dragging * { cursor: grabbing; }
 .tx-cu-floating-inline.is-list > header, .tx-cu-floating-inline.is-list > footer { opacity: 1; pointer-events: auto; }
 .tx-cu-floating-inline > .tx-cu-preview-search { pointer-events: auto; }
 /* Keep the observer connected while host @/command menus cover the composer. */

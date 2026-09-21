@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {build} from 'esbuild';
 import {chromium} from 'playwright';
 
-test('preview keyboard cycling, search and restore remain local until explicit resume',async t=>{
+test('preview content dragging, keyboard cycling, search and restore preserve controls',async t=>{
   const{outputFiles}=await build({bundle:true,write:false,format:'iife',platform:'browser',loader:{'.css':'text'},define:{'process.env.NODE_ENV':'"production"'},stdin:{resolveDir:process.cwd(),loader:'jsx',contents:`
     import React,{useState,useRef} from 'react';import{createRoot}from'react-dom/client';import{FloatingPreview}from'#opencu/src/client/floating-preview.jsx';
     window.calls=[];window.streams=[];window.EventSource=class{constructor(url){this.url=url;this.handlers={};window.streams.push(this);}addEventListener(name,fn){this.handlers[name]=fn;}close(){}emit(name,value){this.handlers[name]?.({data:JSON.stringify(value)});}};
@@ -14,6 +14,14 @@ test('preview keyboard cycling, search and restore remain local until explicit r
   const browser=await chromium.launch();t.after(()=>browser.close());const page=await browser.newPage({viewport:{width:1000,height:900}});page.setDefaultTimeout(3000);
   await page.setContent('<div id="root"></div>');await page.addStyleTag({content:await readFile(new URL(import.meta.resolve('#opencu/src/client/computer-use.css')),'utf8')});await page.addScriptTag({content:outputFiles[0].text});
   const preview=page.getByLabel('悬浮操控预览');await preview.waitFor();await page.waitForFunction(()=>window.streams.length===3);
+  const dragFrom=async(locator,dx,dy)=>{const box=await locator.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+dx,box.y+box.height/2+dy,{steps:8});await page.mouse.up();};
+  const initial=await preview.boundingBox();
+  await dragFrom(preview.getByRole('button',{name:'打开网页：Page C'}),-70,-50);
+  let moved=await preview.boundingBox();assert.ok(Math.abs(moved.x-initial.x+70)<2);assert.ok(Math.abs(moved.y-initial.y+50)<2);assert.deepEqual(await page.evaluate(()=>window.calls),[],'dragging the image must not open the page');
+  await dragFrom(preview.locator('footer > span'),-30,-25);
+  moved=await preview.boundingBox();assert.ok(Math.abs(moved.x-initial.x+100)<2);assert.ok(Math.abs(moved.y-initial.y+75)<2);
+  await preview.getByRole('button',{name:'重置预览位置'}).click();
+  const restored=await preview.boundingBox();assert.ok(Math.abs(restored.x-initial.x)<2);assert.ok(Math.abs(restored.y-initial.y)<2);
   const front=()=>preview.locator('.tx-cu-preview-card').filter({has:page.locator('.tx-cu-preview-open')}).evaluateAll(nodes=>nodes.reduce((a,b)=>Number(a.style.zIndex)>Number(b.style.zIndex)?a:b).dataset.target);
   const card=preview.getByRole('button',{name:'打开网页：Page C'});await card.focus();await card.press('ArrowRight');assert.equal(await front(),'B');await page.keyboard.press('ArrowRight');assert.equal(await front(),'A');await page.keyboard.press('ArrowRight');assert.equal(await front(),'C');
   assert.deepEqual(await page.evaluate(()=>window.calls),[]);
@@ -21,4 +29,5 @@ test('preview keyboard cycling, search and restore remain local until explicit r
   await search.fill('missing');await preview.getByText('没有匹配的窗口或网页').waitFor();await search.press('Escape');assert.equal(await search.inputValue(),'');await search.press('Escape');await search.waitFor({state:'hidden'});
   await page.evaluate(()=>window.stopState());await preview.hover();await preview.getByRole('button',{name:'从预览恢复助手'}).click();assert.deepEqual(await page.evaluate(()=>window.calls.map(call=>call.op)),['resume']);
   await preview.getByRole('button',{name:'关闭操控预览'}).focus();await page.keyboard.press('Escape');await preview.waitFor({state:'hidden'});assert.equal(await page.getByRole('button',{name:'悬浮预览',exact:true}).getAttribute('aria-expanded'),'false');assert.equal(await page.evaluate(()=>window.error??''),'');
+  await page.getByRole('button',{name:'悬浮预览',exact:true}).click();await preview.getByRole('button',{name:'打开网页：Page C'}).click();await preview.waitFor({state:'hidden'});assert.deepEqual(await page.evaluate(()=>window.calls.map(call=>call.op)),['resume','view-tab'],'a normal image click still opens the page');
 });
