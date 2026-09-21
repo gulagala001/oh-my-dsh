@@ -11,6 +11,7 @@ import { SUMMARY_PROMPT_VERSION, PREPARE_SYSTEM, PREPARE_TOOL, COORDINATE_SYSTEM
 import { TODO_META, TASK_CONTEXT_META, taskContextMeta, withoutTodo } from '../task-context.mjs';
 
 const delegated = s => s.header?.origin === 'subagent' || Number(s.header?.delegationDepth) > 0;
+const transientFailure = error => /(?:\b(?:408|429|5\d\d)\b|rate_limit|temporarily unavailable|provider unavailable|overloaded|timeout|timed out|超时|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|fetch failed|network error|socket hang up)/i.test(String(error?.message || error));
 const iso = n => n == null ? '时间未记录' : new Date(n).toISOString();
 
 export class ContextPipeline {
@@ -123,9 +124,36 @@ export class ContextPipeline {
     if (!this.closed && this.agents.get(agent.session.id) === agent && agent.status === 'idle'
       && this.config().idlePreprocessEnabled && (s.review.newRecords > 0 || s.review.needed)) await this.coordinate(agent, true, { retry: true });
   }
-  reportError(agent, kind, error) {
+  followsMain(kind) {
+    const cfg = this.config(), route = cfg.backgroundMode === 'unified' ? cfg.unifiedBackground : cfg[kind === 'coordinate' ? 'surgeon' : 'background'];
+    return !route?.provider && !route?.model;
+  }
+  waitsForMain(s, kind) {
+    const failure = s.failures[kind];
+    return Boolean(failure && failure.count > this.config().backgroundMaxRetries && this.followsMain(kind)
+      && (failure.recoverable ?? transientFailure(failure.message)));
+  }
+  mainSucceeded(session, route) {
+    const agent = this.agents.get(session.id);
+    if (!agent || this.closed || delegated(session) || !this.config().contextEnabled || this.manualSessions.has(session.id)) return;
+    const s = this.state(session);
+    for (const kind of ['prepare', 'coordinate']) {
+      const key = session.id + ':' + kind;
+      if (!this.waitsForMain(s, kind) || this.jobs.has(key)) continue;
+      const current = this.hub.route(agent, kind);
+      if (!route?.provider || !route.model || current.provider !== route.provider || current.model !== route.model) continue;
+      if (kind === 'prepare' && Date.now() < (s.prepareRetryAt || 0)) continue;
+      clearTimeout(this.timers.get(key)); this.timers.delete(key); this.reviewTimers.delete(key);
+      // A successful main request grants one probe, not another full retry burst.
+      s.failures[kind].count = this.config().backgroundMaxRetries;
+      if (kind === 'coordinate') s.review.needed = true;
+      this.store.save(s);
+      void this[kind](agent, true, { retry: true });
+    }
+  }
+  reportError(agent, kind, error, providerFailure = false) {
     const s = this.state(agent.session);
-    s.failures[kind] = { count: (s.failures[kind]?.count || 0) + 1, at: Date.now(), message: error.message };
+    s.failures[kind] = { count: (s.failures[kind]?.count || 0) + 1, at: Date.now(), message: error.message, recoverable: providerFailure && transientFailure(error) };
     this.store.notice(s, `${kind}：${error.message}`);
     this.hub.action(agent.session, `context${kind}Errors`, 1, { error: error.message });
     this.hub.ctx.logger?.warn?.(`上下文${kind}：${error.message}`);
@@ -140,6 +168,7 @@ export class ContextPipeline {
     if (Date.now() < (s.prepareRetryAt || 0)) return;
     if (!force && (s.eventsSincePrepare || 0) < this.config().digestEvery) return;
     const controller = new AbortController(); this.controllers.set(key, controller);
+    let providerFailure = false;
     const job = (async () => {
       let completed = 0, seenEvents = s.eventsSincePrepare || 0;
       const batchLimit = retry ? 1 : this.config().prepareBatchWindows;
@@ -158,7 +187,7 @@ export class ContextPipeline {
         const encoded = serializePreparationInput(inputs, cfg.prepareInputTokens * 4);
         const args = { system: PREPARE_SYSTEM, messages: [this.adapter.message(encoded, 'prepare-input')], tools: [PREPARE_TOOL],
           ...(cfg.digestMaxTokens > 0 ? { maxTokens: cfg.digestMaxTokens } : {}) };
-        const result = await this.call(agent, 'prepare', args, controller.signal);
+        const result = await this.call(agent, 'prepare', args, controller.signal).catch(error => { providerFailure = true; throw error; });
         controller.signal.throwIfAborted();
         const prepared = validatePrepared(decodeResult(result, PREPARE_TOOL.name));
         if (prepared.summary.length > cfg.summaryTargetChars * 2) throw Error('基础摘要超过目标长度两倍；原文保留，重试时请缩短摘要而非截断');
@@ -185,11 +214,11 @@ export class ContextPipeline {
       } while (!this.closed && !controller.signal.aborted);
     })().catch(e => {
       if (!controller.signal.aborted) {
-        this.reportError(agent, 'prepare', e);
+        this.reportError(agent, 'prepare', e, providerFailure);
         const delay = Math.min(60000, 1000 * 2 ** Math.min(6, s.failures.prepare?.count || 1));
         s.prepareRetryAt = Date.now() + delay; this.store.save(s);
         if (s.failures.prepare.count <= this.config().backgroundMaxRetries) this.arm(agent, delay, 'prepare');
-        else this.store.notice(s, '预处理已达到自动重试上限；原文保留，可手动重新准备。');
+        else this.store.notice(s, this.waitsForMain(s, 'prepare') ? '预处理短重试已用尽，等待主会话请求成功后自动恢复；原文保留，也可手动重新准备。' : '预处理已达到自动重试上限；原文保留，可手动重新准备。');
       }
     }).finally(() => { this.jobs.delete(key); this.controllers.delete(key); });
     this.jobs.set(key, job); return job;
@@ -226,13 +255,13 @@ export class ContextPipeline {
     const seenInputIds = new Set(input.records.map(r => r.id));
     const seenRecords = new Map(s.records.filter(r => seenInputIds.has(r.id)).map(r => [r.id, recordSnapshot(session, r)]));
     clearTimeout(this.timers.get(key)); this.timers.delete(key); this.reviewTimers.delete(key);
-    let stale = false, retryFailure = false;
+    let stale = false, retryFailure = false, providerFailure = false;
     const controller = new AbortController(); this.controllers.set(key, controller);
     const job = (async () => {
       s.review.lastAt = Date.now(); s.review.needed = false; this.store.save(s);
       const result = await this.call(agent, 'coordinate', { system: COORDINATE_SYSTEM,
         messages: [this.adapter.message(JSON.stringify(input), 'coordinate-input')], tools: [COORDINATE_TOOL],
-        ...(cfg.surgeonMaxTokens > 0 ? { maxTokens: cfg.surgeonMaxTokens } : {}) }, controller.signal);
+        ...(cfg.surgeonMaxTokens > 0 ? { maxTokens: cfg.surgeonMaxTokens } : {}) }, controller.signal).catch(error => { providerFailure = true; throw error; });
       controller.signal.throwIfAborted();
       const changedIds = [...seenRecords].filter(([id, signature]) => signature !== recordSnapshot(session, s.records.find(r => r.id === id))).map(([id]) => id);
       const newerPending = s.pending && s.pending.id !== seenPendingId;
@@ -255,7 +284,7 @@ export class ContextPipeline {
       this.hub.action(session, 'contextDecisions', 1, { choices: choices.map(c => ({ action: c.action, ids: c.ids })) });
     })().catch(e => {
       if (!controller.signal.aborted) {
-        this.reportError(agent, 'coordinate', e);
+        this.reportError(agent, 'coordinate', e, providerFailure);
         retryFailure = s.failures.coordinate.count <= cfg.backgroundMaxRetries;
         s.review.needed = retryFailure; this.store.save(s);
       }
@@ -510,7 +539,7 @@ export class ContextPipeline {
       records: s.records.map(({ documents, assets = [], userOriginals, originalSeqs, sourceSeqs, sourceHash, ...r }) => ({ ...r, documentCount: documents.length, assetCount: assets.length, originalEventCount: (originalSeqs || sourceSeqs).length, live: Boolean(liveSpan(session, { ...r, documents, sourceSeqs, sourceHash })) })),
       backlog: backlogView(session, s, this.config()), eventsSincePrepare: s.eventsSincePrepare || 0, prepareDeferred: s.prepareDeferred || null,
       limits: { batchWindows: this.config().prepareBatchWindows, concurrency: this.config().backgroundConcurrency, continueTokens: this.config().prepareContinueTokens },
-      failures: s.failures, notices: s.notices, trace: s.traceSlot ? { sourceSeq: s.traceSlot.sourceSeq, sourceAt: s.traceSlot.sourceAt, truncated: s.traceSlot.truncated } : null,
+      failures: s.failures, retry: Object.fromEntries(['prepare', 'coordinate'].map(kind => [kind, !s.failures[kind] ? null : this.waitsForMain(s, kind) ? 'waiting-main' : s.failures[kind].count > this.config().backgroundMaxRetries ? 'manual' : 'retrying'])), notices: s.notices, trace: s.traceSlot ? { sourceSeq: s.traceSlot.sourceSeq, sourceAt: s.traceSlot.sourceAt, truncated: s.traceSlot.truncated } : null,
       preparing: this.jobs.has(session.id + ':prepare'), coordinating: this.jobs.has(session.id + ':coordinate'), transactionPending: Boolean(s.transaction),
       manualQueued: s.manualQueue.length, manualOperation: this.manualSessions.get(session.id) || null,
       queuedOperations: s.manualQueue.map(q => q.operation || 'ready'),
