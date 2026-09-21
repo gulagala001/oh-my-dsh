@@ -136,12 +136,13 @@ export function createContextUI(React) {
       const locked = busy || Boolean(d?.manualOperation);
       const fullRunning = d?.manualOperation === 'full' || this.state.activeAction === '/compact-f';
       const ready = records.filter(r => r.live && r.mode === 'raw').length;
+      const retryLabel = kind => ({ 'waiting-main': '等待主会话成功后恢复', manual: '重试已暂停，请手动重试', retrying: '等待自动重试' })[d?.retry?.[kind]];
       const step = (text, state, running) => h('div', { className: 'cx-stage' }, h('span', { className: 'cx-dot ' + (running ? 'cx-pulse' : '') }), h('div', null, h('strong', null, text), h('small', null, state)));
       return h('div', { className: 'cx-panel cx-context' }, heading('工作上下文', '预处理在后台，替换在请求边界。', 'context', button(null, this.load, { icon: 'refresh', quiet: true, label: '刷新上下文' })),
         h('div', { className: 'cx-body' }, alert(error, true), alert(notice),
           !this.props.sessionId ? empty('先选择一个会话', '这里会显示本会话的分段摘要与替换状态。') : !d ? empty('正在读取上下文', '正在连接当前会话的预处理记录。') : h(React.Fragment, null,
             h('section', { className: 'cx-pipeline-card' }, h('div', { className: 'cx-row' }, h('span', { className: 'cx-eyebrow' }, '处理状态'), badge(names[d.scope?.scope] || '会话', d.scope?.scope === 'session' ? '' : 'blue')),
-              h('div', { className: 'cx-stages' }, step('预处理', d.preparing ? '正在生成摘要' : '等待新事件', d.preparing), icon('chevron', 12), step('中枢', d.coordinating ? '正在判断范围' : d.pending ? '结果已准备' : '等待新摘要', d.coordinating), icon('chevron', 12), step('应用', d.transactionPending ? '事务恢复中' : '请求边界替换', d.transactionPending)),
+              h('div', { className: 'cx-stages' }, step('预处理', d.preparing ? '正在生成摘要' : retryLabel('prepare') || '等待新事件', d.preparing), icon('chevron', 12), step('中枢', d.coordinating ? '正在判断范围' : retryLabel('coordinate') || (d.pending ? '结果已准备' : '等待新摘要'), d.coordinating), icon('chevron', 12), step('应用', d.transactionPending ? '事务恢复中' : '请求边界替换', d.transactionPending)),
               h('div', { className: 'cx-metrics' }, h('div', null, h('strong', null, fmt(records.length)), h('span', null, '分段摘要')), h('div', null, h('strong', null, fmt(ready)), h('span', null, '原文待替换')), h('div', null, h('strong', null, fmt(records.reduce((n, r) => n + (r.documentCount || 0) + (r.assetCount || 0), 0))), h('span', null, '详细资料存档'))),
               h('div', { className: 'cx-row cx-pipeline-action' }, h('small', null, '只应用已有结果，不现场等待 AI。'), button('应用已准备结果', () => this.run('/compact', {}, r => r.queued ? '已排队，将在下一次请求边界应用。' : r.changed ? '替换已应用，原文仍在日志中。' : '没有可应用的结果，原文保持不变。'), { disabled: locked, primary: true, icon: 'layers' }))),
             d.prepareDeferred && h('p', { className: 'cx-hint' }, '本批已结束：剩余 ' + fmt(d.prepareDeferred.events) + ' 条、约 ' + fmt(d.prepareDeferred.estimatedTokens) + ' tokens，留待下次触发。'),

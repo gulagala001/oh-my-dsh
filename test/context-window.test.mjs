@@ -190,3 +190,74 @@ test('a pre-user reminder is absorbed without moving the checkpoint before front
   const current = f.state.records.find(r => !r.mergedInto);
   assert.ok(f.session.surface.nodes.indexOf(current.carrierSeq) > f.session.surface.nodes.indexOf(f.state.traceSlot.carrierSeq));
 });
+
+test('exhausted transient preparation resumes with one probe per successful main request', async t => {
+  const f = setup(t); exchange(f.session);
+  const route = { provider: 'fixture', model: 'fixture' };
+  f.hub.route = () => route; f.pipeline.agents.set(f.session.id, f.agent);
+  const success = f.hub.call; let calls = 0;
+  f.hub.call = async () => { calls++; throw Error('429: Upstream model provider is temporarily unavailable'); };
+  await f.pipeline.prepare(f.agent, true);
+  for (let i = 0; i < 2; i++) { f.state.prepareRetryAt = 0; await f.pipeline.prepare(f.agent, true, { retry: true }); }
+  assert.equal(calls, 3); assert.equal(f.pipeline.view(f.session).retry.prepare, 'waiting-main');
+  f.pipeline.mainSucceeded(f.session, route); assert.equal(calls, 3, 'main success respects the existing backoff');
+  f.state.prepareRetryAt = 0;
+  f.pipeline.mainSucceeded(f.session, route); f.pipeline.mainSucceeded(f.session, route);
+  await Promise.all([...f.pipeline.jobs.values()]);
+  assert.equal(calls, 4); assert.equal(f.state.failures.prepare.count, 3);
+  assert.equal(f.pipeline.timers.has(f.session.id + ':prepare'), false, 'a failed probe does not start a new retry burst');
+  f.state.prepareRetryAt = 0; f.hub.call = success;
+  f.pipeline.mainSucceeded(f.session, route); await Promise.all([...f.pipeline.jobs.values()]);
+  assert.equal(f.state.failures.prepare, undefined); assert.equal(f.state.records.length, 1);
+});
+
+test('legacy exhausted failure survives reload and only a matching following route can wake it', async t => {
+  const f = setup(t); exchange(f.session);
+  f.state.failures.prepare = { count: 3, at: Date.now(), message: '429: rate_limit_error' }; f.pipeline.store.save(f.state);
+  const restored = new ContextPipeline(f.hub, adapter); t.after(() => restored.dispose());
+  f.hub.route = () => ({ provider: 'fixture', model: 'fixture' }); restored.agents.set(f.session.id, f.agent);
+  f.cfg.unifiedBackground.model = 'independent';
+  restored.mainSucceeded(f.session, f.hub.route()); assert.equal(f.calls.length, 0);
+  f.cfg.unifiedBackground.model = '';
+  restored.mainSucceeded(f.session, { provider: 'other', model: 'fixture' }); assert.equal(f.calls.length, 0);
+  f.cfg.contextEnabled = false;
+  restored.mainSucceeded(f.session, f.hub.route()); assert.equal(f.calls.length, 0);
+  f.cfg.contextEnabled = true;
+  restored.mainSucceeded(f.session, f.hub.route()); await Promise.all([...restored.jobs.values()]);
+  assert.equal(f.calls.length, 1); assert.equal(restored.state(f.session).records.length, 1);
+});
+
+test('main success does not revive validation failures or disposed sessions', t => {
+  const f = setup(t); exchange(f.session); f.hub.route = () => ({ provider: 'fixture', model: 'fixture' });
+  f.pipeline.agents.set(f.session.id, f.agent);
+  for (const failure of [{ count: 3, message: 'Invalid summary 429', recoverable: false }, { count: 3, message: '401: Unauthorized' }]) {
+    f.state.failures.prepare = failure; f.pipeline.mainSucceeded(f.session, f.hub.route());
+    assert.equal(f.calls.length, 0); assert.equal(f.pipeline.view(f.session).retry.prepare, 'manual');
+  }
+  f.state.failures.prepare = { count: 3, message: '429' };
+  f.pipeline.dispose(f.session.id); f.pipeline.mainSucceeded(f.session, f.hub.route()); assert.equal(f.calls.length, 0);
+});
+
+test('exhausted coordinator resumes on main success while retaining its minimum gap', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1000000 });
+  const f = setup(t, { coordinatorMinGapMs: 1000 }); exchange(f.session); await f.pipeline.prepare(f.agent, true);
+  f.pipeline.agents.set(f.session.id, f.agent); f.hub.route = () => ({ provider: 'fixture', model: 'fixture' });
+  f.state.failures.coordinate = { count: 3, message: '503: temporarily unavailable' }; f.state.review.lastAt = Date.now();
+  f.hub.call = async (_agent, kind) => { f.calls.push({ kind }); return { blocks: [{ type: 'tool-call', name: 'submit_context_choices', arguments: { choices: [] } }] }; };
+  f.pipeline.mainSucceeded(f.session, f.hub.route());
+  assert.equal(f.calls.length, 1); t.mock.timers.tick(1000); await Promise.all([...f.pipeline.jobs.values()]);
+  assert.equal(f.calls.length, 2); assert.equal(f.state.failures.coordinate, undefined);
+});
+
+test('only successful real main responses signal recovery through the host event hook', async () => {
+  const { Hub } = await import('../src/hub.mjs');
+  const calls = [], hub = { requestStarts: new Map(), record() {}, context: { mainSucceeded: (...args) => calls.push(args) } };
+  const session = { id: 'main', header: {}, requestHeader: () => ({ config: { provider: 'other', model: 'other' } }) };
+  const event = (kind, type = 'assistant/message', source = { kind: 'model', provider: 'fixture', model: 'fixture' }) => ({ type, data: { stream: [{ type: 'chunk', chunk: { type: 'finish', reason: { kind } } }], message: { source } } });
+  for (const kind of ['error', 'aborted', 'max-tokens']) Hub.prototype.observe.call(hub, session, event(kind));
+  Hub.prototype.observe.call(hub, session, event('stop', 'assistant/attempt'));
+  Hub.prototype.observe.call(hub, session, event('stop', 'assistant/message', { kind: 'plugin', plugin: 'example' }));
+  assert.equal(calls.length, 0);
+  Hub.prototype.observe.call(hub, session, event('stop'));
+  assert.equal(calls.length, 1); assert.deepEqual(calls[0][1], { kind: 'model', provider: 'fixture', model: 'fixture' });
+});

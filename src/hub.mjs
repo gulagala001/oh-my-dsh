@@ -158,6 +158,7 @@ export class Hub extends Service {
         ...(failed ? { error: output.finish.failure?.message || output.finish.kind } : {}),
       });
       this.requestStarts.delete(session.id);
+      if (!failed && event.type === 'assistant/message' && event.data.message?.source?.kind === 'model' && event.data.stream?.length) this.context.mainSucceeded(session, event.data.message.source);
     }
   }
   finishTasks(agent, turn, signal) {
