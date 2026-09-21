@@ -1620,6 +1620,20 @@ function operationState(block) {
   if (["ABORTED", "ABORTED_BEFORE_DISPATCH", "interrupted", "COMPUTER_USE_STOPPED"].includes(block.error?.code) || operationKind(name) === "computer" && block.isError && /tool call aborted|Computer Use (?:was |is )?stopped/i.test((block.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n"))) return "stopped";
   return block.isError || block.meta?.computerUseError ? "error" : "done";
 }
+function latestOperation(block) {
+  const name = block.call?.name ?? block.name ?? "", kind = operationKind(name);
+  let args = {};
+  try {
+    args = JSON.parse(block.call?.argsRaw ?? block.argsRaw ?? "{}") ?? {};
+  } catch {
+  }
+  const text = (value) => typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
+  const first = (...values) => values.map(text).find(Boolean) || "";
+  const path = first(args.file_path, args.path, args.filename), description = first(args.description, args.title);
+  const target = kind === "read" || kind === "edit" || kind === "image" ? path : kind === "command" ? first(args.command, args.cmd) : kind === "search" ? first(args.pattern, args.query, args.q) : kind === "web" ? first(args.url) : "";
+  const label = description || (kind === "tool" ? name || "\u8C03\u7528\u5DE5\u5177" : summaryLabels[kind]) + (target ? " " + target : "");
+  return { label, state: operationState(block), icon: operationIcon([name]) };
+}
 var rowTitles = { bash: ["bash", "\u8FD0\u884C"], pwsh: ["pwsh", "\u8FD0\u884C PowerShell"], read: ["read", "\u8BFB\u53D6"], read_image: ["readImage", "\u67E5\u770B\u56FE\u50CF"], write: ["write", "\u5199\u5165"], edit: ["edit", "\u7F16\u8F91"], grep: ["grep", "\u641C\u7D22"], glob: ["glob", "\u67E5\u627E\u6587\u4EF6"], web_search: ["webSearch", "\u641C\u7D22\u7F51\u9875"], web_fetch: ["webFetch", "\u8BFB\u53D6\u7F51\u9875"], run_code: ["code", "\u8FD0\u884C\u4EE3\u7801"] };
 function operationRowLocale(t, name, block) {
   const row = rowTitles[name];
@@ -1669,6 +1683,7 @@ function computerGroups(nodes, toolviewNames) {
       group.names.push(root.call?.name ?? root.name ?? "");
       const state = operationState(root);
       group.running ||= state === "running";
+      group.latest = latestOperation(root);
       if (state === "stopped") group.stopped++;
       else if (state === "error") group.failures++;
       try {
@@ -1687,6 +1702,7 @@ function processSummaries(snapshot) {
     const turn = node.location?.turn?.turn, call = node.data.root;
     const summary = summaries.get(turn) || { names: [], failures: 0, stopped: 0 };
     summary.names.push(call.call?.name ?? call.name ?? "");
+    summary.latest = latestOperation(call);
     const state = operationState(call);
     if (state === "error") summary.failures++;
     if (state === "stopped") summary.stopped++;
@@ -1695,12 +1711,16 @@ function processSummaries(snapshot) {
   return new Map([...summaries].map(([turn, value]) => [turn, {
     label: operationSummary(value.names),
     icon: operationIcon(value.names),
+    latest: value.latest,
     failures: value.failures,
     stopped: value.stopped
   }]));
 }
 
 // src/client/computer-groups.jsx
+function LatestAction({ action }) {
+  return /* @__PURE__ */ import_react12.default.createElement(import_react12.default.Fragment, null, /* @__PURE__ */ import_react12.default.createElement("strong", { "data-cu-latest-action": true, title: action.label }, action.label), /* @__PURE__ */ import_react12.default.createElement("span", { "data-cu-action-state": action.state, className: action.state === "error" ? "tx-cu-error" : void 0 }, { running: "\u8FDB\u884C\u4E2D", done: "\u5DF2\u5B8C\u6210", error: "\u5931\u8D25", stopped: "\u5DF2\u505C\u6B62" }[action.state]));
+}
 function computerGroupPresentation(ctx) {
   const cache = /* @__PURE__ */ new WeakMap(), processCache = /* @__PURE__ */ new WeakMap(), open = /* @__PURE__ */ new Set(), lists = /* @__PURE__ */ new Map(), listeners = /* @__PURE__ */ new Set();
   const notify = () => {
@@ -1752,8 +1772,8 @@ function computerGroupPresentation(ctx) {
     };
     if (!group) return /* @__PURE__ */ import_react12.default.createElement("div", { style: { display: "contents" }, "data-cu-group-hidden": completedContext && !turnProcess.open || void 0, "data-cu-process-context": completedContext || void 0 }, children);
     const order = group.keys.indexOf(nodeKey ?? group.callKeys.get(callId));
-    const label = group.calls.length ? operationSummary(group.names, group.running) : group.contexts ? "\u4E0A\u4E0B\u6587\u8BB0\u5F55" : "\u601D\u8003\u8FC7\u7A0B";
-    return /* @__PURE__ */ import_react12.default.createElement("div", { className: "tx-cu-group", "data-cu-group": first ? group.id : void 0, "data-cu-group-hidden": !first || completedContext && !turnProcess.open || void 0 }, first && /* @__PURE__ */ import_react12.default.createElement(import_react12.default.Fragment, null, /* @__PURE__ */ import_react12.default.createElement("button", { type: "button", className: "tx-cu-group-toggle", "aria-expanded": expanded, "aria-controls": listId, title: group.title || void 0, onClick: toggle }, /* @__PURE__ */ import_react12.default.createElement(ComputerIcon, { name: group.calls.length ? operationIcon(group.names) : "book", size: 16 }), /* @__PURE__ */ import_react12.default.createElement("strong", null, label), group.calls.length > 0 && /* @__PURE__ */ import_react12.default.createElement("span", null, group.calls.length, " \u6B21\u64CD\u4F5C"), group.failures > 0 && /* @__PURE__ */ import_react12.default.createElement("span", { className: "tx-cu-error" }, group.failures, " \u6B21\u5931\u8D25"), group.stopped > 0 && /* @__PURE__ */ import_react12.default.createElement("span", null, group.stopped, " \u9879\u5DF2\u505C\u6B62"), /* @__PURE__ */ import_react12.default.createElement(ComputerIcon, { className: "tx-cu-disclosure", name: "chevron", size: 12 })), /* @__PURE__ */ import_react12.default.createElement("div", { ref: listRef, id: listId, className: "tx-cu-group-list", role: "region", "aria-label": label + "\u8BE6\u60C5", tabIndex: 0, hidden: !expanded })), target && (expanded || visited) && (0, import_react_dom2.createPortal)(/* @__PURE__ */ import_react12.default.createElement("div", { className: "tx-cu-group-item", "data-cu-operation": callId || void 0, "data-chat-call-id": callId || void 0, "data-cu-process-node": nodeKey || void 0, style: { order } }, children), target));
+    const label = group.latest?.label || (group.contexts ? "\u4E0A\u4E0B\u6587\u8BB0\u5F55" : "\u601D\u8003\u8FC7\u7A0B");
+    return /* @__PURE__ */ import_react12.default.createElement("div", { className: "tx-cu-group", "data-cu-group": first ? group.id : void 0, "data-cu-group-hidden": !first || completedContext && !turnProcess.open || void 0 }, first && /* @__PURE__ */ import_react12.default.createElement(import_react12.default.Fragment, null, /* @__PURE__ */ import_react12.default.createElement("button", { type: "button", className: "tx-cu-group-toggle", "aria-expanded": expanded, "aria-controls": listId, title: group.title || void 0, onClick: toggle }, /* @__PURE__ */ import_react12.default.createElement(ComputerIcon, { name: group.latest?.icon || "book", size: 16 }), group.latest ? /* @__PURE__ */ import_react12.default.createElement(LatestAction, { action: group.latest }) : /* @__PURE__ */ import_react12.default.createElement("strong", null, label), group.calls.length > 0 && /* @__PURE__ */ import_react12.default.createElement("span", null, group.calls.length, " \u6B21\u64CD\u4F5C"), group.failures > 0 && /* @__PURE__ */ import_react12.default.createElement("span", { className: "tx-cu-error" }, group.failures, " \u6B21\u5931\u8D25"), group.stopped > 0 && /* @__PURE__ */ import_react12.default.createElement("span", null, group.stopped, " \u9879\u5DF2\u505C\u6B62"), /* @__PURE__ */ import_react12.default.createElement(ComputerIcon, { className: "tx-cu-disclosure", name: "chevron", size: 12 })), /* @__PURE__ */ import_react12.default.createElement("div", { ref: listRef, id: listId, className: "tx-cu-group-list", role: "region", "aria-label": label + "\u8BE6\u60C5", tabIndex: 0, hidden: !expanded })), target && (expanded || visited) && (0, import_react_dom2.createPortal)(/* @__PURE__ */ import_react12.default.createElement("div", { className: "tx-cu-group-item", "data-cu-operation": callId || void 0, "data-chat-call-id": callId || void 0, "data-cu-process-node": nodeKey || void 0, style: { order } }, children), target));
   }
   ctx.slots.inject("conversation.chat.node", () => {
     const dispose = decorateSlot(ctx.slots, "conversation.chat.node", (key) => ["assistant-step", "turn-process", ...processContextKinds].includes(key), (original) => {
@@ -1765,12 +1785,12 @@ function computerGroupPresentation(ctx) {
         return /* @__PURE__ */ import_react12.default.createElement(Group, { ...props, nodeKey: props.node.key }, /* @__PURE__ */ import_react12.default.createElement("div", { className: inline ? "tx-cu-process-answer" : void 0, "data-process-open": inline && props.turnProcess.open || void 0, style: { display: "contents" } }, /* @__PURE__ */ import_react12.default.createElement(Original, { ...props, node })));
       }
       function GroupedProcess(props) {
-        const { failures, stopped } = props.useChat((snapshot) => process(snapshot, props.node.data.turn));
+        const { failures, stopped, latest } = props.useChat((snapshot) => process(snapshot, props.node.data.turn));
         const turn = props.node.location?.turn;
         const seconds = turn?.start && turn?.end ? Math.max(0, Math.round((turn.end.time - turn.start.time) / 1e3)) : null;
         const duration = seconds === null ? "\u6267\u884C\u8FC7\u7A0B" : `\u7528\u65F6 ${seconds >= 60 ? Math.floor(seconds / 60) + "\u5206" : ""}${seconds % 60}\u79D2`;
         if (!props.turnProcess?.foldable || !props.node.data.toolCallCount) return /* @__PURE__ */ import_react12.default.createElement(Original, { ...props });
-        return /* @__PURE__ */ import_react12.default.createElement("button", { type: "button", className: "tx-cu-group-toggle tx-cu-turn-toggle", "data-turn-process": props.node.data.turn, "data-turn-process-tool-calls": props.node.data.toolCallCount, "aria-expanded": props.turnProcess.open, title: props.node.data.toolCallCount + " \u6B21\u5DE5\u5177\u8C03\u7528", onClick: () => props.turnProcess.setOpen(!props.turnProcess.open) }, /* @__PURE__ */ import_react12.default.createElement("strong", null, duration), failures > 0 && /* @__PURE__ */ import_react12.default.createElement("span", { className: "tx-cu-error" }, failures, " \u9879\u5931\u8D25"), stopped > 0 && /* @__PURE__ */ import_react12.default.createElement("span", null, stopped, " \u9879\u5DF2\u505C\u6B62"), /* @__PURE__ */ import_react12.default.createElement(ComputerIcon, { className: "tx-cu-disclosure", name: "chevron", size: 12 }));
+        return /* @__PURE__ */ import_react12.default.createElement("button", { type: "button", className: "tx-cu-group-toggle tx-cu-turn-toggle", "data-turn-process": props.node.data.turn, "data-turn-process-tool-calls": props.node.data.toolCallCount, "aria-expanded": props.turnProcess.open, title: props.node.data.toolCallCount + " \u6B21\u5DE5\u5177\u8C03\u7528", onClick: () => props.turnProcess.setOpen(!props.turnProcess.open) }, latest ? /* @__PURE__ */ import_react12.default.createElement(import_react12.default.Fragment, null, /* @__PURE__ */ import_react12.default.createElement(LatestAction, { action: latest }), /* @__PURE__ */ import_react12.default.createElement("span", null, duration)) : /* @__PURE__ */ import_react12.default.createElement("strong", null, duration), failures > 0 && /* @__PURE__ */ import_react12.default.createElement("span", { className: "tx-cu-error" }, failures, " \u9879\u5931\u8D25"), stopped > 0 && /* @__PURE__ */ import_react12.default.createElement("span", null, stopped, " \u9879\u5DF2\u505C\u6B62"), /* @__PURE__ */ import_react12.default.createElement(ComputerIcon, { className: "tx-cu-disclosure", name: "chevron", size: 12 }));
       }
       function GroupedContext(props) {
         const spec = props.turnProcess?.spec, node = props.node;

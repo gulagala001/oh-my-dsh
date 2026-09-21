@@ -5,6 +5,10 @@ import { createPortal } from 'react-dom';
 import { computerGroups,processSummaries,operationSummary,operationIcon,operationState,operationRowLocale,finalAnswerPresentation,processContextKinds } from './computer-groups.mjs';
 import {SavedImage} from './tool-image.jsx';
 
+function LatestAction({action}){
+  return <><strong data-cu-latest-action title={action.label}>{action.label}</strong><span data-cu-action-state={action.state} className={action.state==='error'?'tx-cu-error':undefined}>{{running:'进行中',done:'已完成',error:'失败',stopped:'已停止'}[action.state]}</span></>;
+}
+
 export function computerGroupPresentation(ctx) {
   const cache = new WeakMap(), processCache=new WeakMap(), open = new Set(), lists = new Map(), listeners = new Set();
   const notify = () => { for (const listener of listeners) listener(); };
@@ -48,14 +52,14 @@ export function computerGroupPresentation(ctx) {
     const toggle = () => { if (expanded) open.delete(identity); else open.add(identity); notify(); };
     if(!group)return <div style={{display:'contents'}} data-cu-group-hidden={completedContext&&!turnProcess.open||undefined} data-cu-process-context={completedContext||undefined}>{children}</div>;
     const order=group.keys.indexOf(nodeKey??group.callKeys.get(callId));
-    const label=group.calls.length?operationSummary(group.names,group.running):group.contexts?'上下文记录':'思考过程';
+    const label=group.latest?.label||(group.contexts?'上下文记录':'思考过程');
     // Each native renderer keeps its original React owner and subscriptions.
     // Portals collect adjacent rows into one bounded list without moving DOM
     // owned by the host or rendering a second copy of a tool result.
     return <div className="tx-cu-group" data-cu-group={first?group.id:undefined} data-cu-group-hidden={!first||completedContext&&!turnProcess.open||undefined}>
       {first&&<>
         <button type="button" className="tx-cu-group-toggle" aria-expanded={expanded} aria-controls={listId} title={group.title||undefined} onClick={toggle}>
-          <ComputerIcon name={group.calls.length?operationIcon(group.names):'book'} size={16}/><strong>{label}</strong>{group.calls.length>0&&<span>{group.calls.length} 次操作</span>}
+          <ComputerIcon name={group.latest?.icon||'book'} size={16}/>{group.latest?<LatestAction action={group.latest}/>:<strong>{label}</strong>}{group.calls.length>0&&<span>{group.calls.length} 次操作</span>}
           {group.failures>0&&<span className="tx-cu-error">{group.failures} 次失败</span>}
           {group.stopped>0&&<span>{group.stopped} 项已停止</span>}
           <ComputerIcon className="tx-cu-disclosure" name="chevron" size={12}/>
@@ -76,12 +80,12 @@ export function computerGroupPresentation(ctx) {
           return <Group {...props} nodeKey={props.node.key}><div className={inline?'tx-cu-process-answer':undefined} data-process-open={inline&&props.turnProcess.open||undefined} style={{display:'contents'}}><Original {...props} node={node}/></div></Group>;
         }
         function GroupedProcess(props){
-          const {failures,stopped}=props.useChat(snapshot=>process(snapshot,props.node.data.turn));
+          const {failures,stopped,latest}=props.useChat(snapshot=>process(snapshot,props.node.data.turn));
           const turn=props.node.location?.turn;
           const seconds=turn?.start&&turn?.end?Math.max(0,Math.round((turn.end.time-turn.start.time)/1000)):null;
           const duration=seconds===null?'执行过程':`用时 ${seconds>=60?Math.floor(seconds/60)+'分':''}${seconds%60}秒`;
           if(!props.turnProcess?.foldable||!props.node.data.toolCallCount)return <Original {...props}/>;
-          return <button type="button" className="tx-cu-group-toggle tx-cu-turn-toggle" data-turn-process={props.node.data.turn} data-turn-process-tool-calls={props.node.data.toolCallCount} aria-expanded={props.turnProcess.open} title={props.node.data.toolCallCount+' 次工具调用'} onClick={()=>props.turnProcess.setOpen(!props.turnProcess.open)}><strong>{duration}</strong>{failures>0&&<span className="tx-cu-error">{failures} 项失败</span>}{stopped>0&&<span>{stopped} 项已停止</span>}<ComputerIcon className="tx-cu-disclosure" name="chevron" size={12}/></button>;
+          return <button type="button" className="tx-cu-group-toggle tx-cu-turn-toggle" data-turn-process={props.node.data.turn} data-turn-process-tool-calls={props.node.data.toolCallCount} aria-expanded={props.turnProcess.open} title={props.node.data.toolCallCount+' 次工具调用'} onClick={()=>props.turnProcess.setOpen(!props.turnProcess.open)}>{latest?<><LatestAction action={latest}/><span>{duration}</span></>:<strong>{duration}</strong>}{failures>0&&<span className="tx-cu-error">{failures} 项失败</span>}{stopped>0&&<span>{stopped} 项已停止</span>}<ComputerIcon className="tx-cu-disclosure" name="chevron" size={12}/></button>;
         }
         function GroupedContext(props){
           const spec=props.turnProcess?.spec,node=props.node;
