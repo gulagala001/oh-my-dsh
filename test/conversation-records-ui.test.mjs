@@ -11,7 +11,7 @@ test('delivered todo/state and grouped compaction remain expandable across repla
     assert.ok(r.ok(), await r.text()); return r.json();
   };
   await api('/better-todo' + q, { todo: false, verification: false });
-  await api('/settings', { stateHintsEnabled: true, automaticReplace: false, coordinatorEvery: 999, digestEvery: 9999, preprocessBoundaries: true, prepareBatchWindows: 1, keepTailEvents: 2, traceEnabled: false });
+  await api('/settings', { stateHintsEnabled: true, automaticReplace: false, coordinatorEvery: 999, digestEvery: 9999, preprocessBoundaries: true, prepareBatchWindows: 1, keepTailEvents: 2, traceEnabled: true });
   let wroteTodo = false, prepared = 0, calls = 0; const mainRequests = [];
   const tool = (name, args) => ({ delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'record-fixture-' + ++calls, type: 'function', function: { name, arguments: JSON.stringify(args) } }] }, finish_reason: 'tool_calls' });
   f.replyWith(payload => {
@@ -24,7 +24,7 @@ test('delivered todo/state and grouped compaction remain expandable across repla
       wroteTodo = true;
       return tool('todo_write', { op: 'excerpt', from: '整理工作台和对话界面', to: '整理工作台和对话界面', tasks: [{ title: '展示实际注入内容', anchor: { from: '整理工作台和对话界面', to: '整理工作台和对话界面' } }] });
     }
-    return { delta: { role: 'assistant', content: '记录完整实现细节。'.repeat(170) }, finish_reason: 'stop' };
+    return { delta: { role: 'assistant', reasoning_content: `第 ${mainRequests.length} 次检查记录展示。`, content: '记录完整实现细节。'.repeat(170) }, finish_reason: 'stop' };
   });
   const prompt = async text => {
     await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text }] });
@@ -45,7 +45,7 @@ test('delivered todo/state and grouped compaction remain expandable across repla
   }
   const before = (await api('/context' + q)).records.filter(r => r.live && r.mode !== 'brief').length;
   assert.ok(before >= 2, 'fixture must exercise multiple segments');
-  const compact = await api('/compact-p' + q, {}); assert.equal(compact.changed, true);
+  const compact = await api('/compact' + q, { mode: 'detail' }); assert.equal(compact.changed, true);
   const records = page.locator('[data-omd-record=compaction]');
   await until(async () => await records.count() === 1);
   const record = records.first();
@@ -70,15 +70,26 @@ test('delivered todo/state and grouped compaction remain expandable across repla
   assert.equal(await record.getByRole('button').getAttribute('aria-expanded'), 'false');
   await record.getByRole('button').click(); assert.equal(await record.locator('details').count(), before);
   await injection.getByRole('button').click(); assert.match(await injection.locator('pre').textContent(), /展示实际注入内容/);
+  await prompt('继续检查带 Todo 的前置推理替换。');
+  const injectionCount = await page.locator('[data-omd-record=injection]').count();
+  const ids = (await api('/context' + q)).records.filter(r => r.live && r.mode !== 'brief').map(r => r.id);
+  const secondCompact = await api('/compact' + q, { mode: 'brief', ids });
+  assert.equal(secondCompact.changed, true, JSON.stringify(secondCompact));
+  await until(async () => await records.count() === 2);
+  assert.equal(await page.locator('[data-omd-record=injection]').count(), injectionCount + 1, 'compaction adds one refreshed injection, not both intermediate and final carriers');
+  await injection.getByRole('button').click(); assert.match(await injection.locator('pre').textContent(), /展示实际注入内容/);
+  await page.reload(); await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
+  await until(async () => await records.count() === 2);
+  assert.equal(await page.locator('[data-omd-record=injection]').count(), injectionCount + 1, 'replay keeps the same deduplicated records');
   // A later full compaction is a new record, even without an intervening user message.
   await api('/compact-f' + q, {});
-  await until(async () => await records.count() === 2);
+  await until(async () => await records.count() === 3);
   await prompt('补充第三次压缩的原始内容。');
   const response = await page.request.post(base + '/api/commands/execute', { data: { type: 'client-request', rpcId: crypto.randomUUID(), method: 'commands/execute', payload: { args: { agentId: sessionId, line: '/compact-f', submittedAttachments: [] } } } });
   const commandResponse = await response.json();
   assert.equal(commandResponse.result?.ok, true, JSON.stringify(commandResponse));
   assert.equal(commandResponse.result.value.result.kind, 'success', JSON.stringify(commandResponse));
-  await until(async () => await records.count() === 3).catch(async error => { throw Error(error.message + '\n' + JSON.stringify({ errors: f.errors, records: await records.allTextContents(), commands: await page.locator('[data-chat-flow-kind=command]').allTextContents(), response: commandResponse })); });
+  await until(async () => await records.count() === 4).catch(async error => { throw Error(error.message + '\n' + JSON.stringify({ errors: f.errors, records: await records.allTextContents(), commands: await page.locator('[data-chat-flow-kind=command]').allTextContents(), response: commandResponse })); });
   await records.last().getByRole('button').click();
   await records.last().locator('summary').click();
   assert.match(await records.last().locator('pre').textContent(), /全量摘要/);

@@ -28,6 +28,28 @@ export const taskInjectionDefinition = {
   } : null,
 };
 
+// Compaction refreshes the current task block in a replacement message. When
+// no conversation activity separates it from the preceding injection, show
+// the refreshed record once at its new position. Keep earlier, used snapshots.
+export function supersededTaskInjections(entries) {
+  const hidden = new Set();
+  let previous = null, compacting = false;
+  for (const entry of entries) {
+    const event = entry.event || entry, data = event.data || {};
+    if (event.type === 'user/message' && taskInjection(data)) {
+      if (previous !== null && compacting && data.omdTodo && event.sourceEventSeqs?.includes(previous)) hidden.add(previous);
+      previous = event.seq; compacting = false;
+    } else if (event.type?.startsWith('compaction/') || event.type === 'user/message' && data.source?.compactionId) {
+      compacting = true;
+    } else if (event.type === 'system/message' && data.message?.source?.plugin === 'trisoul-x:shadow') {
+      // A compaction's surface cleanup is not new conversation activity.
+    } else {
+      previous = null; compacting = false;
+    }
+  }
+  return hidden;
+}
+
 // Batch ids are authoritative. For old logs, join only uninterrupted lifecycle
 // runs; input, generation, commands and the final todo refresh end a legacy run.
 export function compactionGroups(entries) {
