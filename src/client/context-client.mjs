@@ -336,7 +336,9 @@ export function createContextUI(React) {
         section('CoT 前置', null, h(React.Fragment, null,
           this.toggle('traceEnabled', '启用 CoT 前置', '上下文替换时保留提供方已公开的推理文本，不另行生成；可能扩大缓存失效范围。'),
           this.number('traceMaxChars', '推理文本字符上限', 0, '0 保留所选推理全文；正数保留尾部并标注截取。'))),
-        section('运行状态', null, this.toggle('stateHintsEnabled', '向模型提供运行状态', '与待办一起投递时间、上下文与后台任务状态。默认关闭，保存后从下一次请求生效。')),
+        section('运行状态', null, h(React.Fragment, null,
+          this.toggle('stateHintsEnabled', '向模型提供运行状态', '与待办一起投递时间、上下文与后台任务状态。默认关闭，保存后从下一次请求生效。'),
+          this.toggle('budgetHintsEnabled', '向模型提供预算', '默认关闭。用 /预算 token=100k 轮次=30 时间=20m 设置；未设置显示无限制。每次请求前更新用量占比，达到预算不强制停止。'))),
         section('后台任务', null, this.toggle('backgroundTasksEnabled', '优化后台任务与等待', '长命令自动让出、完成结果预览和可中断等待；需要本版配套 DSH 运行时。默认开启。')),
         section('任务约束', null, this.toggle('todoConstraintFirst', '任务约束前置（CFR）', '在系统和待办工具提示词中加入约束提取、推导与核对规则。默认关闭，保存后从下一次模型请求生效。')));
     }

@@ -19,7 +19,8 @@ import { acquireComputerUse } from '#opencu/integration';
 import { CodegraphRuntime } from './codegraph.mjs';
 import { Components, mountComponents } from './components.mjs';
 import { runtimeContext } from './runtime-state.mjs';
-import { setRuntimeContext } from './task-context.mjs';
+import { TaskBudgets, consumeBudgetAliases } from './task-budget.mjs';
+import { setRuntimeContext, taskContextMeta } from './task-context.mjs';
 import { installBackground } from './background.mjs';
 import { mountRecommendedPlugins } from './recommended-plugins.mjs';
 import { createPromptOptimizer, handlePromptOptimizerApi } from './prompt-optimizer.mjs';
@@ -34,6 +35,8 @@ export function apply(ctx, config) {
   installLoaderLifecycleCompatibility(ctx);
   installToolSchedulerCompatibility(ctx);
   const hub = new Hub(ctx, config);
+  hub.budgets = new TaskBudgets(hub);
+  ctx.effect(() => () => { for (const agent of hub.agents.values()) hub.budgets.dispose(agent.session); });
   const promptOptimizer = createPromptOptimizer(ctx, hub);
   ctx.effect(() => () => promptOptimizer.dispose());
   hub.codegraph = new CodegraphRuntime({ cacheDir: join(hub.store.dir, 'components', 'codegraph'), enabled: config.codegraphEnabled !== false, autoInstall: config.componentAutoSetup !== false });
@@ -68,6 +71,12 @@ export function apply(ctx, config) {
   ctx.on('agent/request', async ({ agent }, next) => { if (isX(agent.session)) hub.requestStarts.set(agent.session.id, Date.now()); return next(); }, { global: true });
   ctx.on('agent/assistant-stream', ({ agent, frame }) => { if (frame.type === 'start' && isX(agent.session)) hub.captureFrame(agent, frame.turn, frame.step); }, { global: true });
   ctx.on('agent/pre-step', async ({ agent, messages, signal, turn, step }, next) => {
+    const consumed = isX(agent.session) ? await consumeBudgetAliases(agent, messages, signal) : new Set();
+    if (consumed.size) {
+      messages = messages.filter(m => !consumed.has(m.id));
+      if (!messages.length && step === 1) return { kind: 'reject' };
+    }
+    hub.budgets.tick(agent.session, isX(agent.session) && !signal.aborted);
     if (!isX(agent.session) && !signal.aborted && hub.agents.has(agent.session.id)) {
       setRuntimeContext(agent.session, () => null);
       await hub.context.stripRuntime(agent.session);
@@ -83,13 +92,18 @@ export function apply(ctx, config) {
       // Only an explicitly queued full-compaction command can await model work here.
       setRuntimeContext(agent.session, () => runtimeContext(agent, hub, { messages, turn, step }));
       await hub.context.preStep(agent, signal);
+      if ((!hub.config().budgetHintsEnabled || hub.budgets.saved(agent.session)?.visible === false)
+        && agent.session.deriveMessages().some(m => /^预算(?:：|$)/m.test(taskContextMeta(m)?.runtime?.text ?? ''))) {
+        await hub.context.stripRuntime(agent.session);
+      }
       if (hub.todoStore) {
         hub.todoStore.maintainInjection(agent.session);
         const notice = messages.some(m => m.source?.kind === 'user') ? TODO_NUDGE : hub.todoStore.takeEmptyNudge(agent.session) ? TODO_EMPTY_NUDGE.replace('with task_map', 'with todo_write') : null;
         if (notice) agent.session.append('user/message', message(notice, 'task-reminder'), { surfaceOp: 'append' });
       }
     }
-    return next();
+    const decision = await next();
+    return consumed.size && decision.kind === 'enter' ? { ...decision, messages: decision.messages.filter(m => !consumed.has(m.id)) } : decision;
   }, { global: true });
   ctx.on('agent/request-error', async ({ agent, failure, signal }, next) => {
     if (isX(agent.session) && failure.code === CONTEXT_WINDOW_EXCEEDED_CODE && !signal.aborted) {
@@ -100,10 +114,13 @@ export function apply(ctx, config) {
     return next();
   }, { global: true });
   ctx.on('agent/turn-stopping', ({ agent, turn, signal }) => { if (isX(agent.session)) hub.finishTasks(agent, turn, signal); }, { global: true });
-  ctx.on('agent/status', ({ agent }) => {
+  ctx.on('agent/status', ({ agent, status }) => {
+    hub.budgets.tick(agent.session, isX(agent.session) && status === 'running');
     if (isX(agent.session)) hub.context.arm(agent);
   }, { global: true });
+  ctx.on('user-questions/request', ({ agent }, next) => agent && isX(agent.session) ? hub.budgets.waitForUser(agent, next) : next(), { global: true });
   ctx.on('agent/disposed', ({ agent }) => {
+    hub.budgets.dispose(agent.session);
     // A preset can have changed before disposal; release resources we owned.
     const id = agent.session.id;
     if (!isX(agent.session) && !hub.agents.has(id) && !hub.context.agents.has(id)) return;
