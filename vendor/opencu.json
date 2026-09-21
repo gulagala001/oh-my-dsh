@@ -1,7 +1,7 @@
 {
   "repository": "https://github.com/gulagala001/opencu",
-  "commit": "1c6da631df87428a4839170ac7844996982b714b",
-  "workingTree": true,
+  "commit": "d26399f0822588353a63b4d06a2cc8421448ec5a",
+  "workingTree": false,
   "version": "1.0.4",
   "archiveSha256": "4b219782e290fb37ccb4b7f820794c50b01fc12e494cfd3c56f1af0285de5f6a",
   "files": {
