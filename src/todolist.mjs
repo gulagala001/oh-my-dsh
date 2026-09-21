@@ -674,16 +674,25 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       live = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && (e.data?.source?.plugin === 'trisoul-x:tasks' || e.data?.[TODO_META]));
     }
     if (!desired) return undefined;
-    const last = live.at(-1), meta = taskContextMeta(last?.data);
+    // Budget-only updates share the existing summary exclusion and compaction
+    // cleanup, but never replace the baseline for full Todo/state delivery.
+    const last = live.findLast(e => !taskContextMeta(e.data)?.budgetOnly), meta = taskContextMeta(last?.data);
     const text = last?.data.content[last.data[TODO_META]?.index ?? 0]?.text;
-    // The provider owns cadence: normal state follows input; budgets follow requests.
+    // The full block always follows the original node-based cadence.
     const same = meta ? meta.todoText === desired.meta.todoText && (meta.runtime?.key ?? null) === (desired.meta.runtime?.key ?? null) : text === desired.text;
     if (same) { rec.lastInjSeq = last.seq; rec.injectedRev = rec.rev; }
     let canvasSeq = -1;
     for (const e of session.snapshotEvents()) {
       if (e.type === 'user/message' && e.data?.source?.kind === 'plugin' && e.data.source.plugin === 'trisoul-x:state') canvasSeq = e.seq;
     }
-    if (same && !(rec.tasks.length && canvasSeq > rec.lastInjSeq)) return undefined;
+    if (same && !(rec.tasks.length && canvasSeq > rec.lastInjSeq)) {
+      const budget = desired.meta.runtime?.budget;
+      const previous = taskContextMeta(live.findLast(e => taskContextMeta(e.data)?.runtime?.budget)?.data)?.runtime.budget;
+      if (!budget?.every || !previous || budget.rounds - previous.rounds < budget.every) return undefined;
+      const runtime = { ...desired.meta.runtime, text: budget.text };
+      return session.append('user/message', { ...createUserMessage({ content: [{ type: 'text', text: budget.text }], source: { kind: 'plugin', plugin: 'trisoul-x:tasks' } }),
+        [TASK_CONTEXT_META]: { todoText: null, runtime, budgetOnly: true } }, { surfaceOp: 'append' });
+    }
     const msg = { ...createUserMessage({ content: [{ type: 'text', text: desired.text }], source: { kind: 'plugin', plugin: 'trisoul-x:tasks' } }), [TASK_CONTEXT_META]: desired.meta };
     const ev = session.append('user/message', msg, { surfaceOp: 'append' });
     rec.injectedRev = rec.rev; rec.lastInjSeq = ev.seq;

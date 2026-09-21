@@ -65,6 +65,7 @@ export class TaskBudgets {
       if (!budget.configured || !budget.visible) budget = freshBudget();
       budget = { ...budget, configured: true, visible: true, limits: { ...budget.limits, ...action.limits } };
     }
+    budget.revision = (this.saved(session)?.revision ?? 0) + 1;
     this.save(session, budget);
     this.tick(session, agent.status === 'running');
     const text = renderBudget(budget) || '本会话预算已关闭。';

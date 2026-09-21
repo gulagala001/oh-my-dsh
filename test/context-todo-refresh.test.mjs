@@ -65,6 +65,27 @@ async function compact(f, mode = 'brief') {
   await f.pipeline.prepare(f.agent, true);
   return f.pipeline.applyReady(f.agent, { manual: true, ids: f.state.records.filter(r => !r.mergedInto && r.mode === 'raw').map(r => r.id), mode });
 }
+test('budget-only samples stay out of summaries and compact into one latest snapshot', async t => {
+  const f = setup(t, { traceEnabled: true, stateHintsEnabled: true, budgetHintsEnabled: true, budgetEveryStep: true });
+  const budget = { visible: true, limits: { tokens: 99999, rounds: 10, timeMs: null }, tokens: 12345, rounds: 0, elapsedMs: 0 };
+  f.hub.context = f.pipeline; f.hub.budgets = { snapshot: () => structuredClone(budget) };
+  setRuntimeContext(f.session, () => runtimeContext(f.agent, f.hub));
+  f.todoStore.maintainInjection(f.session);
+  for (let i = 0; i < 3; i++) { exchange(f); budget.rounds++; const e = f.todoStore.maintainInjection(f.session); assert.equal(taskContextMeta(e.data).budgetOnly, true); }
+  await compact(f);
+  assert.equal(liveTodos(f).length, 1);
+  const meta = taskContextMeta(liveTodos(f)[0].data);
+  assert.equal(meta.runtime.budget.rounds, 3);
+  assert.equal(meta.budgetOnly, undefined);
+  assert.doesNotMatch(JSON.stringify(f.calls.map(c => c.args.messages)), /预算|模型轮次|12,345/);
+  assert.equal(f.todoStore.maintainInjection(f.session), undefined);
+  exchange(f); budget.rounds++; f.todoStore.maintainInjection(f.session);
+  await f.pipeline.requestCompaction(f.session, f.agent, 'full');
+  assert.equal(liveTodos(f).length, 1);
+  assert.equal(taskContextMeta(liveTodos(f)[0].data).runtime.budget.rounds, 4);
+  assert.doesNotMatch(JSON.stringify(f.calls.map(c => c.args.messages)), /预算|模型轮次|12,345/);
+  assert.equal(f.todoStore.maintainInjection(f.session), undefined);
+});
 test('task injections and task tool payloads are absent from preparation without splitting the window', async t => {
   const f = setup(t); exchange(f); exchange(f, { name: 'todo_write', args: '{"tasks":["TASK_ARGUMENT_ONLY_77"]}', value: 'TASK_RESULT_ONLY_88', reasoning: '' }); exchange(f);
   await f.pipeline.prepare(f.agent, true); assert.equal(f.calls.length, 1);

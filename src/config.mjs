@@ -25,6 +25,8 @@ export const Config = z.object({
   identityPrompt: z.string().default(DEFAULT_IDENTITY),
   stateHintsEnabled: z.boolean().default(false),
   budgetHintsEnabled: z.boolean().default(false),
+  budgetEveryStep: z.boolean().default(false),
+  budgetInjectionEvery: z.number().step(1).min(1).default(1),
   backgroundTasksEnabled: z.boolean().default(true),
   todoConstraintFirst: z.boolean().default(false),
   codegraphEnabled: z.boolean().default(true),

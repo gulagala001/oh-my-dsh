@@ -332,13 +332,23 @@ export function createContextUI(React) {
         section('默认会话范围', '只影响新会话，已开始的会话保持原有绑定。', h('div', { className: 'cx-choice-grid' }, ...[['session', 'lock', '会话隔离', '仅本会话历史，不读取或写入共享记忆。'], ['project', 'layers', '项目共享', '读取同项目摘要，按会话与时间归档。']].map(([id, name, text, sub]) => h('button', { type: 'button', key: id, className: 'cx-choice', 'aria-pressed': (c.memoryScope === 'session' ? 'session' : 'project') === id, onClick: () => this.set('memoryScope', id) }, h('div', { className: 'cx-row' }, icon(name, 18), h('span', { className: 'cx-radio' }, icon('check', 11))), h('strong', null, text), h('small', null, sub))))));
     }
     renderExperimental() {
+      const c = this.state.config, intervals = [1, 3, 5, 10];
+      const customBudgetFrequency = this.state.customBudgetFrequency || !intervals.includes(c.budgetInjectionEvery ?? 1);
       return h(React.Fragment, null,
         section('CoT 前置', null, h(React.Fragment, null,
           this.toggle('traceEnabled', '启用 CoT 前置', '上下文替换时保留提供方已公开的推理文本，不另行生成；可能扩大缓存失效范围。'),
           this.number('traceMaxChars', '推理文本字符上限', 0, '0 保留所选推理全文；正数保留尾部并标注截取。'))),
         section('运行状态', null, h(React.Fragment, null,
           this.toggle('stateHintsEnabled', '向模型提供运行状态', '与待办一起投递时间、上下文与后台任务状态。默认关闭，保存后从下一次请求生效。'),
-          this.toggle('budgetHintsEnabled', '向模型提供预算', '默认关闭。用 /预算 token=100k 轮次=30 时间=20m 设置；未设置显示无限制。每次请求前更新用量占比，达到预算不强制停止。'))),
+          this.toggle('budgetHintsEnabled', '向模型提供预算', '默认关闭。用 /预算 token=100k 轮次=30 时间=20m 设置；未设置显示无限制。默认随原状态节点更新，达到预算不强制停止。'),
+          c.budgetHintsEnabled && h('div', { style: { paddingInlineStart: 20 } },
+            this.toggle('budgetEveryStep', '每轮注入预算', '默认关闭，沿用原状态规则。开启后按所选间隔额外注入预算，不重复投递 Todo 或完整运行状态。'),
+            c.budgetEveryStep && h('div', { className: 'cx-grid' },
+              field('预算注入频率', h('select', { 'aria-label': '预算注入频率', value: customBudgetFrequency ? 'custom' : String(c.budgetInjectionEvery ?? 1), onChange: e => {
+                const custom = e.target.value === 'custom'; this.setState({ customBudgetFrequency: custom });
+                if (!custom) this.set('budgetInjectionEvery', Number(e.target.value));
+              } }, ...intervals.map(n => h('option', { key: n, value: String(n) }, n === 1 ? '每轮' : `每 ${n} 轮`)), h('option', { value: 'custom' }, '自定义间隔')), '轮次指主执行模型调用；原有节点更新始终保留。'),
+              customBudgetFrequency && this.number('budgetInjectionEvery', '调用间隔 · 轮', 1, '每次投递最新预算后重新计数。'))))),
         section('后台任务', null, this.toggle('backgroundTasksEnabled', '优化后台任务与等待', '长命令自动让出、完成结果预览和可中断等待；需要本版配套 DSH 运行时。默认开启。')),
         section('任务约束', null, this.toggle('todoConstraintFirst', '任务约束前置（CFR）', '在系统和待办工具提示词中加入约束提取、推导与核对规则。默认关闭，保存后从下一次模型请求生效。')));
     }
