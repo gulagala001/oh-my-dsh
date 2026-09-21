@@ -511,7 +511,7 @@ body:has([role=listbox]) .tx-cu-floating-inline { visibility: hidden; pointer-ev
 /* Independent operation segments inside the turn-level process disclosure. */
 /* Native detail glyphs can be absolutely positioned. Give the drawer its own
    containing block so they cannot extend the outer transcript's scroll range. */
-.tx-cu-group-list { position: relative; display: flex; flex-direction: column; gap: 2px; max-height: min(280px, 45vh); overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; padding: 2px 4px 2px 0; min-width: 0; }
+.tx-cu-group-list { position: relative; display: flex; flex-direction: column; gap: 2px; max-height: min(280px, 45vh); overflow-y: auto; overscroll-behavior-y: auto; scrollbar-width: thin; padding: 2px 4px 2px 0; min-width: 0; }
 .tx-cu-group-list[hidden] { display: none; }
 .tx-cu-group-list:focus-visible { outline: 1px solid var(--cu-blue); outline-offset: 2px; }
 .tx-cu-group-item { flex: none; min-width: 0; }
