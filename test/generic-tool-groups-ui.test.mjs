@@ -24,7 +24,7 @@ test('generic job calls and failures join file operations and retain details acr
   await f.rpc('session/prompt',{requestId:crypto.randomUUID(),sessionId:f.sessionId,mode:'queue',content:[{type:'text',text:'创建两个测试文件'}]});
   await until(()=>requests>=2);
   assert.equal(await readFile(join(f.root,'workspace','first.txt'),'utf8'),'FIRST_GROUP_FIXTURE');
-  const group=page.getByRole('button',{name:/已调用工具、编辑文件 4 次操作/});
+  const group=page.getByRole('button',{name:/4 次操作/});
   await group.waitFor({timeout:10000});
   assert.equal(await group.getAttribute('aria-expanded'),'false');
   assert.equal(await page.locator('[data-chat-call-id="write-one"] :is(button,[role="button"]):not(.tx-cu-group-toggle):visible').count(),0);

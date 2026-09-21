@@ -82,7 +82,8 @@ export function computerGroups(nodes, toolviewNames) {
     const turn = node.location?.turn?.turn ?? node.data.turn ?? (context?group?.turn??'context:'+node.key:undefined);
     if ((!tool && !assistant && !context)||turn==null) { group = undefined; continue; }
     if(group&&typeof group.turn==='string'&&group.turn.startsWith('context:')&&turn!=null)group.turn=turn;
-    if (!group || group.turn !== turn) group = { id: node.key, turn, keys: [], callKeys: new Map(), calls: [], names: [], contexts:0, running: false, failures: 0, stopped: 0, title: '' };
+    if (!group || group.turn !== turn) group = { id: node.key, turn, keys: [], callKeys: new Map(), calls: [], names: [], contexts:0, running: false, turnActive: false, failures: 0, stopped: 0, title: '' };
+    group.turnActive ||= node.location?.turn?.status==='open';
     group.keys.push(node.key); result.set(node.key, group);
     if(context)group.contexts++;
     if (tool) {
