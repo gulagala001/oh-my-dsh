@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6"><img src="https://img.shields.io/badge/version-0.1.6-3478F6?style=flat-square" alt="Version 0.1.6" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.6.1"><img src="https://img.shields.io/badge/version-1.6.1-3478F6?style=flat-square" alt="Version 1.6.1" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.6--alpha.2-475569?style=flat-square" alt="DSH 0.1.6-alpha.2" /></a>
   <a href="#themes"><img src="https://img.shields.io/badge/themes-4-222222?style=flat-square" alt="4 complete themes" /></a>
 </p>
@@ -22,7 +22,7 @@
   <a href="#features">装上之后</a> ·
   <a href="#themes">挑选主题</a> ·
   <a href="docs/usage.md">使用指南</a> ·
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6">版本说明</a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.6.1">版本说明</a>
 </p>
 
 ![Oh My DSH：对话、文件交付、任务与真实验证结果集中展示](docs/images/readme-overview.png)
@@ -38,14 +38,14 @@ Oh My DSH 为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 已有 **DSH 0.1.6-alpha.2 Web**？停止服务，在终端或 PowerShell 中运行：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.6
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.6.1
 ```
 
 然后按原方式启动，例如 `dsh web`。打开启动时打印的登录链接，新建会话并选择 **Oh My DSH**。
 
 **从这三个入口开始：** 输入框的星星优化草稿；**工作台**查看任务、上下文和结果；**设置 → 外观**选择主题。
 
-自定义 profile 请替换命令中的 `web`，沿用原来的 `DSH_HOME`、模型和凭据。本次为 **0.1.6 正式版**；[更新、卸载与源码试用](docs/usage.md#安装到现有-dsh推荐)。
+自定义 profile 请替换命令中的 `web`，沿用原来的 `DSH_HOME`、模型和凭据。本次为 **1.6.1 正式版**；[更新、卸载与源码试用](docs/usage.md#安装到现有-dsh推荐)。
 
 <details>
 <summary>运行要求与默认配置</summary>
@@ -165,9 +165,9 @@ Mac 桌面控制需要辅助功能、屏幕录制权限与 Apple Command Line To
 
 ## 这次更新
 
-**0.1.6**：新增可选会话预算，支持 token、模型轮次和执行时间；未设置显示无限制，默认随原节点更新；可开启预算单独注入并选择频率，超额不强制停止。同步改善运行状态、操作详情与 Codex 主题消息对比度。
+**1.6.1 正式版**：执行中持续显示最新动作，整轮结束后恢复简写。Job、通用工具和普通上下文统一收进操作抽屉，压缩保持独立；保留详情、失败提示与展开状态，并改善抽屉滚动、预览拖动及上下文错误恢复。
 
-[更新记录](CHANGELOG.md) · [本版验证与升级说明](docs/release-0.1.6.md) · [下载与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.6)
+[更新记录](CHANGELOG.md) · [本版验证与升级说明](docs/release-1.6.1.md) · [下载与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.6.1)
 
 ## 文档与参与
 
