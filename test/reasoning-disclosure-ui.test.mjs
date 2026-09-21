@@ -24,8 +24,9 @@ test('capture the current collapsed and expanded process with illustrative reaso
   await page.waitForFunction(()=>[...document.querySelectorAll('.tx-cu-group-toggle')].some(el=>el.textContent.includes('2 次操作')));
   const liveGroup=page.locator('.tx-cu-group[data-cu-group]').filter({has:page.getByRole('button',{name:/2 次操作/})}),liveSummary=liveGroup.getByRole('button',{name:/2 次操作/});
   assert.equal(await liveSummary.locator('[data-cu-latest-action]').textContent(),'检查操作记录');
-  await page.waitForFunction(()=>[...document.querySelectorAll('.tx-cu-group-toggle')].some(el=>el.textContent.includes('已操作电脑、运行命令')));
-  assert.equal(await liveSummary.locator('[data-cu-latest-action]').count(),0,'finished drawer returns to its compact summary');
+  await page.waitForFunction(()=>!document.querySelector('.tx-cu-group-toggle [data-cu-action-state=running]'));
+  assert.equal(await liveSummary.locator('[data-cu-latest-action]').count(),1,'latest action remains visible between tools while the turn is still active');
+  assert.equal(await liveSummary.locator('[data-cu-action-state]').textContent(),'已完成');
   const liveTurn=await liveSummary.evaluate(el=>el.closest('[data-chat-turn]').dataset.chatTurn),liveNodes=page.locator('[data-chat-turn="'+liveTurn+'"]');
   assert.equal(await liveNodes.locator('[data-cu-group-hidden=true]').count()>0,true,'live process actually hides intermediate rows');
   assert.equal(await page.locator('[data-chat-turn="'+liveTurn+'"][data-chat-flow-kind="context"] [data-disclosure-row]:visible').count(),0,'injected context is not a separate visible row while running');
@@ -47,6 +48,7 @@ test('capture the current collapsed and expanded process with illustrative reaso
   const summary=page.locator('[data-turn-process-tool-calls="2"]');await summary.waitFor();
   assert.equal(await summary.locator('[data-cu-latest-action]').count(),0);
   assert.match(await summary.textContent(),/用时/);
+  assert.equal(await liveSummary.locator('[data-cu-latest-action]').count(),0,'only a finished turn restores the drawer summary');
   assert.equal(await summary.getAttribute('aria-expanded'),'true','completion preserves reading state even when focus moved outside the process');
   assert.equal(await contextRow.getAttribute('aria-expanded'),'true','completion retains context detail');
   assert.equal(await openThought.getAttribute('aria-expanded'),'true','completion retains thinking detail');

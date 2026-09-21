@@ -73,7 +73,7 @@ export function computerGroupPresentation(ctx) {
     const toggle = () => { if (expanded) open.delete(identity); else open.add(identity); notify(); };
     if(!group)return <div style={{display:'contents'}} data-cu-group-hidden={completedContext&&!turnProcess.open||undefined} data-cu-process-context={completedContext||undefined}>{children}</div>;
     const order=group.keys.indexOf(nodeKey??group.callKeys.get(callId));
-    const latest=group.running?group.latest:null;
+    const latest=group.running||group.turnActive?group.latest:null;
     const label=latest?.label||(group.calls.length?operationSummary(group.names):group.contexts?'上下文记录':'思考过程');
     // Each native renderer keeps its original React owner and subscriptions.
     // Portals collect adjacent rows into one bounded list without moving DOM

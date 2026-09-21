@@ -1671,7 +1671,8 @@ function computerGroups(nodes, toolviewNames) {
       continue;
     }
     if (group && typeof group.turn === "string" && group.turn.startsWith("context:") && turn != null) group.turn = turn;
-    if (!group || group.turn !== turn) group = { id: node.key, turn, keys: [], callKeys: /* @__PURE__ */ new Map(), calls: [], names: [], contexts: 0, running: false, failures: 0, stopped: 0, title: "" };
+    if (!group || group.turn !== turn) group = { id: node.key, turn, keys: [], callKeys: /* @__PURE__ */ new Map(), calls: [], names: [], contexts: 0, running: false, turnActive: false, failures: 0, stopped: 0, title: "" };
+    group.turnActive ||= node.location?.turn?.status === "open";
     group.keys.push(node.key);
     result.set(node.key, group);
     if (context) group.contexts++;
@@ -1789,7 +1790,7 @@ function computerGroupPresentation(ctx) {
     };
     if (!group) return /* @__PURE__ */ import_react12.default.createElement("div", { style: { display: "contents" }, "data-cu-group-hidden": completedContext && !turnProcess.open || void 0, "data-cu-process-context": completedContext || void 0 }, children);
     const order = group.keys.indexOf(nodeKey ?? group.callKeys.get(callId));
-    const latest = group.running ? group.latest : null;
+    const latest = group.running || group.turnActive ? group.latest : null;
     const label = latest?.label || (group.calls.length ? operationSummary(group.names) : group.contexts ? "\u4E0A\u4E0B\u6587\u8BB0\u5F55" : "\u601D\u8003\u8FC7\u7A0B");
     return /* @__PURE__ */ import_react12.default.createElement("div", { className: "tx-cu-group", "data-cu-group": first ? group.id : void 0, "data-cu-group-hidden": !first || completedContext && !turnProcess.open || void 0 }, first && /* @__PURE__ */ import_react12.default.createElement(import_react12.default.Fragment, null, /* @__PURE__ */ import_react12.default.createElement("button", { type: "button", className: "tx-cu-group-toggle", "aria-expanded": expanded, "aria-controls": listId, title: group.title || void 0, onClick: toggle }, /* @__PURE__ */ import_react12.default.createElement(ComputerIcon, { name: latest?.icon || (group.calls.length ? operationIcon(group.names) : "book"), size: 16 }), latest ? /* @__PURE__ */ import_react12.default.createElement(LatestAction, { action: latest }) : /* @__PURE__ */ import_react12.default.createElement("strong", null, label), group.calls.length > 0 && /* @__PURE__ */ import_react12.default.createElement("span", null, group.calls.length, " \u6B21\u64CD\u4F5C"), group.failures > 0 && /* @__PURE__ */ import_react12.default.createElement("span", { className: "tx-cu-error" }, group.failures, " \u6B21\u5931\u8D25"), group.stopped > 0 && /* @__PURE__ */ import_react12.default.createElement("span", null, group.stopped, " \u9879\u5DF2\u505C\u6B62"), /* @__PURE__ */ import_react12.default.createElement(ComputerIcon, { className: "tx-cu-disclosure", name: "chevron", size: 12 })), /* @__PURE__ */ import_react12.default.createElement("div", { ref: listRef, id: listId, className: "tx-cu-group-list", role: "region", "aria-label": label + "\u8BE6\u60C5", tabIndex: 0, hidden: !expanded })), target && (expanded || visited) && (0, import_react_dom2.createPortal)(/* @__PURE__ */ import_react12.default.createElement("div", { className: "tx-cu-group-item", "data-cu-operation": callId || void 0, "data-chat-call-id": callId || void 0, "data-cu-process-node": nodeKey || void 0, style: { order } }, children), target));
   }
