@@ -39,6 +39,8 @@ test('theme composers stay at the viewport floor when nested records and image p
     const bounds = await seat.boundingBox();
     const scroll = await page.locator('[data-conversation-scroll]').boundingBox();
     assert.ok(bounds && Math.abs(scroll.y + scroll.height - bounds.y - bounds.height) <= 2, label + ': ' + JSON.stringify({ bounds, scroll }));
+    const tail = await page.locator('[data-conversation-scroll]').evaluate(el => ({ top: el.scrollTop, bottom: el.querySelector('[data-chat-flow]').getBoundingClientRect().bottom }));
+    assert.ok(tail.top < 1 || tail.bottom >= bounds.y - 32, label + ': no blank scroll space after the transcript: ' + JSON.stringify({ tail, bounds }));
     assert.equal(await page.evaluate(() => document.scrollingElement.scrollTop), 0, 'the app document must not become the conversation scrollport');
   };
   for (const skin of ['codex-desktop', 'ios-liquid-glass', 'claude-cli-terminal', 'google-material-expressive']) {

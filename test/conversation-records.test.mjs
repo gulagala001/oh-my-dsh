@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { taskInjection, taskInjectionDefinition, compactionGroups } from '../src/client/conversation-records.mjs';
+import { taskInjection, taskInjectionDefinition, compactionGroups, supersededTaskInjections } from '../src/client/conversation-records.mjs';
 
 test('injection reads exact delivered text, including embedded refreshes and runtime-only snapshots', () => {
   const text = '[todo list]\n[x] T1 完成\n[ ] T2 待办\n\n[runtime state · as of yesterday · event 9]\nJobs: 2.';
@@ -24,6 +24,20 @@ function segment(events, id, batch, command) {
   add('compaction/end', data);
   return checkpoint;
 }
+
+test('compaction displays a carried task snapshot once, preserving used history and partial windows', () => {
+  const text = '[todo list]\n[ ] T1 待办';
+  const injection = seq => ({ seq, type: 'user/message', data: { source: { kind: 'plugin', plugin: 'trisoul-x:trace' }, content: [{ type: 'text', text }], omdTodo: { index: 0 } } });
+  const events = [injection(0), { seq: 1, type: 'assistant/message', data: {} }, injection(2)];
+  segment(events, 'a', 'batch'); segment(events, 'b', 'batch');
+  const fresh = { ...injection(events.length), sourceEventSeqs: [2] }; events.push(fresh);
+  const hidden = supersededTaskInjections(events.map(event => ({ type: 'event', event })));
+  assert.deepEqual([...hidden], [2], 'only the intermediate carrier that the refresh replaces is hidden');
+  assert.deepEqual([...supersededTaskInjections(events.slice(3))], [], 'missing earlier material is not guessed');
+  assert.deepEqual([...supersededTaskInjections([...events.slice(0, -1), { ...fresh, sourceEventSeqs: [0] }])], [], 'unrelated history is retained');
+  assert.deepEqual([...supersededTaskInjections([...events.slice(0, -1), { type: 'tool/result', data: {} }, fresh])], [], 'intervening work makes both records meaningful');
+  assert.deepEqual([...supersededTaskInjections(events.slice(0, -1))], [], 'an unfinished compaction retains its existing injection');
+});
 
 test('same transaction folds; distinct adjacent transactions stay separate; refreshes do not duplicate segments', () => {
   const events = [], a = segment(events, 'a', 'one'), b = segment(events, 'b', 'one'), c = segment(events, 'c', 'two');

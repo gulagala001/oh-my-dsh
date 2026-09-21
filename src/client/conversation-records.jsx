@@ -1,6 +1,6 @@
 import React, { useId, useState, useSyncExternalStore } from 'react';
 import { decorateSlot } from '#opencu/src/client/slot-decoration.mjs';
-import { compactionGroups, taskInjectionDefinition } from './conversation-records.mjs';
+import { compactionGroups, taskInjectionDefinition, supersededTaskInjections } from './conversation-records.mjs';
 import css from './conversation-records.css';
 
 function Record({ title, hint, kind, children }) {
@@ -13,11 +13,6 @@ function Record({ title, hint, kind, children }) {
     </button>
     <div id={id} className="omd-record-body" hidden={!open}>{open && children}</div>
   </div>;
-}
-
-function TaskRecord({ node }) {
-  const data = node.data;
-  return <Record title={data.title} hint={'已注入' + (data.todo ? ` · ${data.done}/${data.total} 项完成` : '')} kind="injection"><pre>{data.text}</pre></Record>;
 }
 
 function CompactionRecord({ group }) {
@@ -38,14 +33,20 @@ export function applyConversationRecords(ctx) {
   ctx.inject(['uiConversation'], scope => scope.uiConversation.events.register(taskInjectionDefinition));
   ctx.slots.inject('conversation.chat.node', () => ctx.slots.register({ name: 'conversation.chat.node', key: 'omd-task-injection' }, TaskRecord));
   const cache = new WeakMap();
-  const groupsFor = window => {
-    if (!cache.has(window)) cache.set(window, compactionGroups(window.entries));
+  const recordsFor = window => {
+    if (!cache.has(window)) cache.set(window, { groups: compactionGroups(window.entries), hiddenInjections: supersededTaskInjections(window.entries) });
     return cache.get(window);
   };
-  function useGroups(sessionId) {
+  function useRecords(sessionId) {
     const source = ctx.sessions.binding(sessionId).eventSource;
     const window = useSyncExternalStore(source.subscribe.bind(source), source.getSnapshot.bind(source));
-    return groupsFor(window);
+    return recordsFor(window);
+  }
+  function useGroups(sessionId) { return useRecords(sessionId).groups; }
+  function TaskRecord({ node, sessionId }) {
+    const { hiddenInjections } = useRecords(sessionId), data = node.data;
+    if (hiddenInjections.has(data.seq)) return <span data-omd-record-hidden hidden/>;
+    return <Record title={data.title} hint={'已注入' + (data.todo ? ` · ${data.done}/${data.total} 项完成` : '')} kind="injection"><pre>{data.text}</pre></Record>;
   }
   function CompressionCommand({ node, sessionId }) {
     const group = useGroups(sessionId).get('command:' + node.commandId);
