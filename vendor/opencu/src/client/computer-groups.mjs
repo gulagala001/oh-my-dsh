@@ -33,6 +33,19 @@ export function operationState(block){
   if(['ABORTED','ABORTED_BEFORE_DISPATCH','interrupted','COMPUTER_USE_STOPPED'].includes(block.error?.code)||operationKind(name)==='computer'&&block.isError&&/tool call aborted|Computer Use (?:was |is )?stopped/i.test((block.content??[]).filter(c=>c.type==='text').map(c=>c.text).join('\n')))return'stopped';
   return block.isError||block.meta?.computerUseError?'error':'done';
 }
+export function latestOperation(block){
+  const name=block.call?.name??block.name??'',kind=operationKind(name);
+  let args={};try{args=JSON.parse(block.call?.argsRaw??block.argsRaw??'{}')??{};}catch{}
+  const text=value=>typeof value==='string'?value.replace(/\s+/g,' ').trim():'';
+  const first=(...values)=>values.map(text).find(Boolean)||'';
+  const path=first(args.file_path,args.path,args.filename),description=first(args.description,args.title);
+  const target=kind==='read'||kind==='edit'||kind==='image'?path
+    :kind==='command'?first(args.command,args.cmd)
+    :kind==='search'?first(args.pattern,args.query,args.q)
+    :kind==='web'?first(args.url):'';
+  const label=description||((kind==='tool'?name||'调用工具':summaryLabels[kind])+(target?' '+target:''));
+  return {label,state:operationState(block),icon:operationIcon([name])};
+}
 const rowTitles={bash:['bash','运行'],pwsh:['pwsh','运行 PowerShell'],read:['read','读取'],read_image:['readImage','查看图像'],write:['write','写入'],edit:['edit','编辑'],grep:['grep','搜索'],glob:['glob','查找文件'],web_search:['webSearch','搜索网页'],web_fetch:['webFetch','读取网页'],run_code:['code','运行代码']};
 export function operationRowLocale(t,name,block){
   const row=rowTitles[name];
@@ -75,6 +88,7 @@ export function computerGroups(nodes, toolviewNames) {
       const root = node.data.root; group.callKeys.set(root.callId,node.key); if (group.keys.length === 1) group.headerCallId = root.callId; result.set(`call:${root.callId}`, group); group.calls.push(root.callId);
       group.names.push(root.call?.name??root.name??'');
       const state=operationState(root);group.running ||= state==='running';
+      group.latest=latestOperation(root);
       if (state==='stopped') group.stopped++; else if (state==='error') group.failures++;
       try { group.title = JSON.parse(root.call?.argsRaw ?? root.argsRaw ?? '{}').title || group.title; } catch {}
     }
@@ -91,12 +105,13 @@ export function processSummaries(snapshot) {
     const turn = node.location?.turn?.turn, call = node.data.root;
     const summary = summaries.get(turn) || { names: [], failures: 0, stopped: 0 };
     summary.names.push(call.call?.name ?? call.name ?? '');
+    summary.latest=latestOperation(call);
     const state = operationState(call);
     if (state === 'error') summary.failures++;
     if (state === 'stopped') summary.stopped++;
     summaries.set(turn, summary);
   }
   return new Map([...summaries].map(([turn, value]) => [turn, {
-    label: operationSummary(value.names), icon: operationIcon(value.names), failures: value.failures, stopped: value.stopped,
+    label: operationSummary(value.names), icon: operationIcon(value.names), latest: value.latest, failures: value.failures, stopped: value.stopped,
   }]));
 }
