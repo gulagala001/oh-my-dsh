@@ -59,8 +59,8 @@ export function applyConversationRecords(ctx) {
   ctx.slots.inject('conversation.chat.node', () => decorateSlot(ctx.slots, 'conversation.chat.node', key => ['context', 'compaction', 'manual-compaction'].includes(key), original => {
     const Original = original.component, key = original.options.key;
     function ContextRecord(props) {
-      // The dedicated row also covers replacement messages and stays visible
-      // when a completed tool process is folded by the host.
+      // The dedicated row also covers replacement messages; the process
+      // adapter groups it alongside ordinary context and tool records.
       return props.node.data.source?.plugin === 'trisoul-x:tasks'
         ? <span data-omd-record-hidden hidden/> : <Original {...props}/>;
     }

@@ -5,6 +5,13 @@ import { frontendFixture, until } from './fixtures/frontend.mjs';
 
 test('delivered todo/state and grouped compaction remain expandable across replay and themes', { timeout: 90000 }, async t => {
   const f = await frontendFixture(t, { omdConfig: { stateHintsEnabled: true } }), { page, sessionId } = f;
+  const openRecordGroups=async()=>{
+    for(let pass=0;pass<6;pass++){
+      const toggles=page.locator('.tx-cu-group-toggle[aria-expanded=false]:visible');
+      if(!await toggles.count())break;
+      for(const toggle of await toggles.all())if(await toggle.isVisible()&&await toggle.getAttribute('aria-expanded')==='false')await toggle.click();
+    }
+  };
   const base = new URL(page.url()).origin, q = '?session=' + sessionId;
   const api = async (path, body) => {
     const r = body === undefined ? await page.request.get(base + '/trisoul-x/api' + path) : await page.request.post(base + '/trisoul-x/api' + path, { data: body });
@@ -32,9 +39,12 @@ test('delivered todo/state and grouped compaction remain expandable across repla
   };
   await prompt('记录第一段工作。');
   await prompt('记录第二段工作。');
+  assert.equal(await page.locator('[data-omd-record=injection]:visible').count(),0,'task context starts inside a collapsed drawer');
+  await openRecordGroups();
   const injection = page.locator('[data-omd-record=injection]').last();
   await injection.getByRole('button', { name: /Todo 与运行状态/ }).waitFor();
   assert.equal(await injection.getByRole('button').getAttribute('aria-expanded'), 'false');
+  await openRecordGroups();
   await injection.getByRole('button').click();
   const delivered = await injection.locator('pre').textContent();
   assert.match(delivered, /\[todo list\]/); assert.match(delivered, /展示实际注入内容/); assert.match(delivered, /\[runtime state · as of /);
@@ -49,6 +59,7 @@ test('delivered todo/state and grouped compaction remain expandable across repla
   const records = page.locator('[data-omd-record=compaction]');
   await until(async () => await records.count() === 1);
   const record = records.first();
+  assert.equal(await record.locator('xpath=ancestor::*[@data-cu-process-node]').count(),0,'compression remains outside operation drawers');
   assert.match(await record.getByRole('button').textContent(), new RegExp(before + ' 段'));
   assert.equal(await record.getByRole('button').getAttribute('aria-expanded'), 'false');
   const box = await record.boundingBox(); assert.ok(box.height <= 32, 'folded batch is one compact row');
@@ -56,6 +67,7 @@ test('delivered todo/state and grouped compaction remain expandable across repla
   assert.equal(await record.locator('details').count(), before);
   await record.locator('summary').first().click();
   assert.match(await record.locator('pre').first().textContent(), /真实摘要/);
+  await openRecordGroups();
   await injection.getByRole('button').click();
   assert.match(await injection.locator('pre').textContent(), /展示实际注入内容/, 'replacement-carried todo is still visible');
   for (const colorScheme of ['light', 'dark']) {
@@ -69,17 +81,22 @@ test('delivered todo/state and grouped compaction remain expandable across repla
   await until(async () => await records.count() === 1);
   assert.equal(await record.getByRole('button').getAttribute('aria-expanded'), 'false');
   await record.getByRole('button').click(); assert.equal(await record.locator('details').count(), before);
+  await openRecordGroups();
   await injection.getByRole('button').click(); assert.match(await injection.locator('pre').textContent(), /展示实际注入内容/);
   await prompt('继续检查带 Todo 的前置推理替换。');
+  await openRecordGroups();
   const injectionCount = await page.locator('[data-omd-record=injection]').count();
   const ids = (await api('/context' + q)).records.filter(r => r.live && r.mode !== 'brief').map(r => r.id);
   const secondCompact = await api('/compact' + q, { mode: 'brief', ids });
   assert.equal(secondCompact.changed, true, JSON.stringify(secondCompact));
   await until(async () => await records.count() === 2);
+  await openRecordGroups();
   assert.equal(await page.locator('[data-omd-record=injection]').count(), injectionCount + 1, 'compaction adds one refreshed injection, not both intermediate and final carriers');
+  await openRecordGroups();
   await injection.getByRole('button').click(); assert.match(await injection.locator('pre').textContent(), /展示实际注入内容/);
   await page.reload(); await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
   await until(async () => await records.count() === 2);
+  await openRecordGroups();
   assert.equal(await page.locator('[data-omd-record=injection]').count(), injectionCount + 1, 'replay keeps the same deduplicated records');
   // A later full compaction is a new record, even without an intervening user message.
   await api('/compact-f' + q, {});
