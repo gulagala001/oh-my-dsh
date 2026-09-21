@@ -38,11 +38,11 @@ export function collectRuntimeStatus(agent, hub, { now = Date.now(), messages = 
 }
 
 export function runtimeStateKey(status) {
-  // Budget limits refresh at each request boundary. Ordinary state keeps its
-  // existing cadence; changing wall time alone never reposts the same step.
-  const b = status.budget, limited = b?.visible && Object.values(b.limits).some(value => value != null);
+  // Consumption never refreshes the full state/Todo block. Real input and
+  // explicit budget edits retain the ordinary node-based delivery rules.
+  const b = status.budget;
   return createHash('sha256').update(JSON.stringify({ input: status.changeKey?.input ?? null,
-    ...(b ? { budget: { visible: b.visible, limits: b.limits, ...(limited ? { turn: status.turn, step: status.step, tokens: b.tokens, rounds: b.rounds, unmetered: b.unmetered } : {}) } } : {}),
+    ...(b ? { budget: { visible: b.visible, limits: b.limits, revision: b.revision ?? 0 } } : {}),
   })).digest('hex');
 }
 
@@ -73,7 +73,12 @@ export function runtimeContext(agent, hub, options) {
   if (!config.stateHintsEnabled && !config.budgetHintsEnabled) return null;
   const status = collectRuntimeStatus(agent, hub, options);
   const text = config.stateHintsEnabled ? renderRuntimeState(status) : renderBudget(status.budget);
-  return text ? { key: `${Boolean(config.stateHintsEnabled)}:${runtimeStateKey(status)}`, sampledAt: status.sampledAt, text } : null;
+  const budgetText = renderBudget(status.budget), interval = config.budgetInjectionEvery ?? 1;
+  const limited = status.budget?.visible && Object.values(status.budget.limits).some(value => value != null);
+  return text ? { key: `${Boolean(config.stateHintsEnabled)}:${runtimeStateKey(status)}`, sampledAt: status.sampledAt, text,
+    ...(budgetText ? { budget: { text: budgetText, rounds: status.budget.rounds,
+      every: config.budgetEveryStep === true && limited && Number.isSafeInteger(interval) && interval > 0 ? interval : 0 } } : {}),
+  } : null;
 }
 
 export function registerRuntimeStatus(ctx, hub) {

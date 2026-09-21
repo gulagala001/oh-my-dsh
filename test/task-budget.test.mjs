@@ -2,12 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { TaskBudgets, parseBudgetInput, renderBudget } from '../src/task-budget.mjs';
 import { runtimeContext } from '../src/runtime-state.mjs';
+import { Session } from '@deepseek-ai/dsh-session';
+import { createUserMessage } from '@deepseek-ai/dsh-llm';
+import { createTodoStore } from '../src/todolist.mjs';
+import { setRuntimeContext, taskContextMeta, summaryMessageReader } from '../src/task-context.mjs';
 
 function fixture() {
   let now = 0; const states = new Map(), config = { budgetHintsEnabled: true };
   const hub = { config: () => config, store: { state(id) { if (!states.has(id)) states.set(id, { id }); return states.get(id); }, save() {} },
     context: { state: () => ({ records: [] }) }, ctx: { get: () => null, tokenMeter: { measure: () => ({ totalTokens: 0 }) } } };
-  const session = { id: 'main', snapshotEvents: () => [], header: {} }, agent = { session, status: 'running' };
+  const session = Session.create('main', undefined, { version: 3, id: 'main', createdAt: 0, cwd: '/tmp', isSeeded: false, agentPreset: 'trisoul-x' });
+  const agent = { session, status: 'running' };
   hub.budgets = new TaskBudgets(hub, () => now);
   return { hub, agent, session, config, states, clock: value => { now = value; }, budgets: hub.budgets };
 }
@@ -48,14 +53,52 @@ test('time excludes user waits, idle time and downtime after restart', async () 
   assert.equal(restarted.snapshot(f.session).elapsedMs, 2000);
 });
 
-test('budget switch works without general state, refreshes each step and removes its own carrier on disable', () => {
+test('default cadence ignores consumption and steps but notices explicit budget resets', () => {
   const f = fixture();
   assert.equal(runtimeContext(f.agent, f.hub).text, '预算：无限制');
   f.budgets.command(f.agent, '轮次=3');
   const first = runtimeContext(f.agent, f.hub, { turn: 1, step: 1, now: 0 });
   const next = runtimeContext(f.agent, f.hub, { turn: 1, step: 2, now: 1000 });
-  assert.notEqual(first.key, next.key);
-  assert.equal(first.key, runtimeContext(f.agent, f.hub, { turn: 1, step: 1, now: 3000 }).key);
+  assert.equal(first.key, next.key);
+  f.budgets.record(f.session, 'main', { usage: { inputTokens: 50, outputTokens: 20 } });
+  assert.equal(first.key, runtimeContext(f.agent, f.hub, { turn: 2, step: 9, now: 2000 }).key);
+  f.budgets.command(f.agent, '重置');
+  assert.notEqual(first.key, runtimeContext(f.agent, f.hub, { turn: 1, step: 1, now: 2000 }).key);
   f.config.budgetHintsEnabled = false;
   assert.equal(runtimeContext(f.agent, f.hub), null);
+});
+
+test('optional cadence emits only budget; normal nodes reset its interval and replay never reposts', () => {
+  const f = fixture(), store = createTodoStore();
+  f.config.stateHintsEnabled = true; f.config.budgetInjectionEvery = 3;
+  f.session.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'Implement the widget.' }], source: { kind: 'user' } }), { surfaceOp: 'append' });
+  assert.ok(!store.execTaskMap(f.session, { op: 'excerpt', from: 'Implement', to: 'widget.', tasks: [{ title: 'Implement widget', anchor: { from: 'Implement', to: 'widget.' } }] }).isError);
+  f.budgets.command(f.agent, '轮次=20');
+  setRuntimeContext(f.session, () => runtimeContext(f.agent, f.hub, { now: 0 }));
+  const first = store.maintainInjection(f.session);
+  assert.match(first.data.content[0].text, /todo list/); assert.match(first.data.content[0].text, /runtime state/);
+  const call = () => f.budgets.record(f.session, 'main', { usage: { inputTokens: 10, outputTokens: 5 } });
+  for (let i = 0; i < 5; i++) { call(); assert.equal(store.maintainInjection(f.session), undefined, 'stored frequency is ignored while the switch is off'); }
+  f.config.budgetEveryStep = true;
+  const periodic = store.maintainInjection(f.session);
+  assert.equal(taskContextMeta(periodic.data).budgetOnly, true);
+  assert.match(periodic.data.content[0].text, /^预算\n/);
+  assert.doesNotMatch(periodic.data.content[0].text, /todo list|runtime state|Jobs:|Retained context/);
+  assert.equal(summaryMessageReader(f.session)(periodic), null);
+  for (let i = 0; i < 2; i++) { call(); assert.equal(store.maintainInjection(f.session), undefined); }
+  call(); assert.ok(store.maintainInjection(f.session));
+  assert.equal(store.maintainInjection(f.session), undefined);
+  const replay = Session.create(f.session.id, structuredClone(f.session.snapshotEvents()), f.session.header);
+  setRuntimeContext(replay, () => runtimeContext({ session: replay }, f.hub, { now: 0 }));
+  assert.equal(createTodoStore().maintainInjection(replay), undefined);
+  store.execTaskMap(f.session, { op: 'edit', tasks: [{ id: 'T1', title: 'Updated widget' }] });
+  const normal = store.maintainInjection(f.session);
+  assert.match(normal.data.content[0].text, /Updated widget/);
+  assert.equal(taskContextMeta(normal.data).budgetOnly, undefined);
+  for (let i = 0; i < 2; i++) { call(); assert.equal(store.maintainInjection(f.session), undefined); }
+  call(); assert.ok(store.maintainInjection(f.session));
+  f.config.budgetEveryStep = false;
+  for (let i = 0; i < 5; i++) { call(); assert.equal(store.maintainInjection(f.session), undefined); }
+  f.session.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'Continue.' }], source: { kind: 'user' } }), { surfaceOp: 'append' });
+  assert.ok(store.maintainInjection(f.session), 'new user input still delivers the current full block');
 });
