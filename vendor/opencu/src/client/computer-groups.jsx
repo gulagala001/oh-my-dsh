@@ -2,7 +2,7 @@ import { decorateSlot } from './slot-decoration.mjs';
 import {ComputerIcon} from './computer-icons.jsx';
 import React, { useCallback, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { computerGroups,processSummaries,operationSummary,operationIcon,operationState,operationRowLocale,finalAnswerPresentation,processContextKinds } from './computer-groups.mjs';
+import { computerGroups,processSummaries,operationSummary,operationIcon,operationRowLocale,finalAnswerPresentation,processContextKinds, latestOperation } from './computer-groups.mjs';
 import {SavedImage} from './tool-image.jsx';
 
 function LatestAction({action}){
@@ -10,6 +10,7 @@ function LatestAction({action}){
 }
 
 export function computerGroupPresentation(ctx) {
+  const genericViews = new Map(), fallbackScans = new WeakMap();
   const cache = new WeakMap(), processCache=new WeakMap(), open = new Set(), lists = new Map(), listeners = new Set();
   const notify = () => { for (const listener of listeners) listener(); };
   const subscribe = listener => { listeners.add(listener); return () => listeners.delete(listener); };
@@ -28,11 +29,31 @@ export function computerGroupPresentation(ctx) {
     if (!processCache.has(snapshot)) processCache.set(snapshot, processSummaries(snapshot));
     return processCache.get(snapshot).get(turn) || emptyProcess;
   };
+  function GenericTool({block,toolName,inspect,loadImage}) {
+    const action=latestOperation(block),[expanded,setExpanded]=useState(false);
+    return <div className="tx-cu-card" data-cu-generic-tool={toolName}>
+      <button type="button" className="tx-cu-card-heading" aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)}><ComputerIcon name={action.icon} size={16}/><LatestAction action={action}/></button>
+      {expanded&&<div className="tx-cu-card-body"><pre>{block.call?.argsRaw??block.argsRaw}</pre>{(block.content??[]).map((item,index)=>item.type==='image'&&item.attachment?<SavedImage key={index} attachment={item.attachment} loadImage={loadImage}/>:<pre key={index}>{item.type==='text'?item.text:JSON.stringify(item,null,2)}</pre>)}{block.error&&<pre className="tx-cu-error">{block.error.reason||block.error.message||block.error.code}</pre>}<button type="button" onClick={inspect}>查看完整调用</button></div>}
+    </div>;
+  }
   function Group({ sessionId, useChat, nodeKey, callId, turnProcess, completedContext=false, children }) {
     // Registration changes can turn a specialized tool into a generic card
     // even when the conversation snapshot itself has not changed.
     const toolviews=useSyncExternalStore(subscribeToolviews,readToolviews);
-    const group = useChat(snapshot => groups(snapshot,toolviews).get(nodeKey ?? `call:${callId}`));
+    const snapshot=useChat(value=>value);
+    const group = groups(snapshot,toolviews).get(nodeKey ?? `call:${callId}`);
+    useLayoutEffect(()=>{
+      if(fallbackScans.get(snapshot)===toolviews)return;
+      fallbackScans.set(snapshot,toolviews);
+      // Low-priority fallbacks let the host retain its normal keyed dispatch,
+      // while specialized renderers can still load or unload at any time.
+      for(const node of snapshot.nodes.values())if(node.kind==='tool-call'){
+        const root=node.data.root,name=root.call?.name??root.name;
+        if(name&&!genericViews.has(name)&&!toolviews.some(entry=>entry.options.key===name)){
+          genericViews.set(name,ctx.slots.register({name:'tool.call.toolview',key:name,priority:1000000},GenericTool));
+        }
+      }
+    },[snapshot,toolviews]);
     const identity = `${sessionId}:${group?.id}`;
     const expanded = useSyncExternalStore(subscribe, () => open.has(identity));
     const wasFoldable=useRef(false), [visited,setVisited]=useState(false), listId=useId();
@@ -52,14 +73,15 @@ export function computerGroupPresentation(ctx) {
     const toggle = () => { if (expanded) open.delete(identity); else open.add(identity); notify(); };
     if(!group)return <div style={{display:'contents'}} data-cu-group-hidden={completedContext&&!turnProcess.open||undefined} data-cu-process-context={completedContext||undefined}>{children}</div>;
     const order=group.keys.indexOf(nodeKey??group.callKeys.get(callId));
-    const label=group.latest?.label||(group.contexts?'上下文记录':'思考过程');
+    const latest=group.running?group.latest:null;
+    const label=latest?.label||(group.calls.length?operationSummary(group.names):group.contexts?'上下文记录':'思考过程');
     // Each native renderer keeps its original React owner and subscriptions.
     // Portals collect adjacent rows into one bounded list without moving DOM
     // owned by the host or rendering a second copy of a tool result.
     return <div className="tx-cu-group" data-cu-group={first?group.id:undefined} data-cu-group-hidden={!first||completedContext&&!turnProcess.open||undefined}>
       {first&&<>
         <button type="button" className="tx-cu-group-toggle" aria-expanded={expanded} aria-controls={listId} title={group.title||undefined} onClick={toggle}>
-          <ComputerIcon name={group.latest?.icon||'book'} size={16}/>{group.latest?<LatestAction action={group.latest}/>:<strong>{label}</strong>}{group.calls.length>0&&<span>{group.calls.length} 次操作</span>}
+          <ComputerIcon name={latest?.icon||(group.calls.length?operationIcon(group.names):'book')} size={16}/>{latest?<LatestAction action={latest}/>:<strong>{label}</strong>}{group.calls.length>0&&<span>{group.calls.length} 次操作</span>}
           {group.failures>0&&<span className="tx-cu-error">{group.failures} 次失败</span>}
           {group.stopped>0&&<span>{group.stopped} 项已停止</span>}
           <ComputerIcon className="tx-cu-disclosure" name="chevron" size={12}/>
@@ -80,12 +102,12 @@ export function computerGroupPresentation(ctx) {
           return <Group {...props} nodeKey={props.node.key}><div className={inline?'tx-cu-process-answer':undefined} data-process-open={inline&&props.turnProcess.open||undefined} style={{display:'contents'}}><Original {...props} node={node}/></div></Group>;
         }
         function GroupedProcess(props){
-          const {failures,stopped,latest}=props.useChat(snapshot=>process(snapshot,props.node.data.turn));
+          const {failures,stopped}=props.useChat(snapshot=>process(snapshot,props.node.data.turn));
           const turn=props.node.location?.turn;
           const seconds=turn?.start&&turn?.end?Math.max(0,Math.round((turn.end.time-turn.start.time)/1000)):null;
           const duration=seconds===null?'执行过程':`用时 ${seconds>=60?Math.floor(seconds/60)+'分':''}${seconds%60}秒`;
           if(!props.turnProcess?.foldable||!props.node.data.toolCallCount)return <Original {...props}/>;
-          return <button type="button" className="tx-cu-group-toggle tx-cu-turn-toggle" data-turn-process={props.node.data.turn} data-turn-process-tool-calls={props.node.data.toolCallCount} aria-expanded={props.turnProcess.open} title={props.node.data.toolCallCount+' 次工具调用'} onClick={()=>props.turnProcess.setOpen(!props.turnProcess.open)}>{latest?<><LatestAction action={latest}/><span>{duration}</span></>:<strong>{duration}</strong>}{failures>0&&<span className="tx-cu-error">{failures} 项失败</span>}{stopped>0&&<span>{stopped} 项已停止</span>}<ComputerIcon className="tx-cu-disclosure" name="chevron" size={12}/></button>;
+          return <button type="button" className="tx-cu-group-toggle tx-cu-turn-toggle" data-turn-process={props.node.data.turn} data-turn-process-tool-calls={props.node.data.toolCallCount} aria-expanded={props.turnProcess.open} title={props.node.data.toolCallCount+' 次工具调用'} onClick={()=>props.turnProcess.setOpen(!props.turnProcess.open)}><strong>{duration}</strong>{failures>0&&<span className="tx-cu-error">{failures} 项失败</span>}{stopped>0&&<span>{stopped} 项已停止</span>}<ComputerIcon className="tx-cu-disclosure" name="chevron" size={12}/></button>;
         }
         function GroupedContext(props){
           const spec=props.turnProcess?.spec,node=props.node;
@@ -98,7 +120,7 @@ export function computerGroupPresentation(ctx) {
         const GroupedNode=key==='turn-process'?GroupedProcess:key==='assistant-step'?GroupedAssistant:GroupedContext;
         return { options: {name:'conversation.chat.node',key,locale:'chat',priority:(original.options.priority??0)-1}, component: GroupedNode };
     });
-    return () => { dispose(); open.clear(); lists.clear(); listeners.clear(); };
+    return () => { dispose(); for(const disposeView of genericViews.values())disposeView(); genericViews.clear(); open.clear(); lists.clear(); listeners.clear(); };
   });
   ctx.slots.inject('tool.call.toolview', () => decorateSlot(ctx.slots, 'tool.call.toolview', () => true, original => {
       const Original=original.component;

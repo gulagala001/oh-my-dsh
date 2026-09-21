@@ -59,7 +59,7 @@ export function operationRowLocale(t,name,block){
 // Context maintenance and thinking belong to the same process as tool calls.
 // Generic host cards bypass our toolview wrapper. Keep them independent so
 // an unwrapped first tool cannot hide the rest of a group without a toggle.
-export const processContextKinds=new Set(['context','system-prompt','compaction']);
+export const processContextKinds=new Set(['context','system-prompt','omd-task-injection']);
 export function computerGroups(nodes, toolviewNames) {
   const groupable = node => {
     const root=node.data.root,name=root.call?.name??root.name??'';
@@ -78,9 +78,10 @@ export function computerGroups(nodes, toolviewNames) {
     const step = steps.get(stepKey(node));
     const tool = node.kind === 'tool-call';
     const blocks=node.data.blocks??[],assistant = node.kind === 'assistant-step' && (step||blocks.some(block=>block.kind==='reasoning')) && !blocks.some(block=>!['reasoning','tool-call'].includes(block.kind)&&(block.kind!=='text'||block.text?.trim()));
-    const turn = node.location?.turn?.turn ?? node.data.turn;
-    const context=processContextKinds.has(node.kind)&&turn!=null;
+    const context=processContextKinds.has(node.kind)&&!(node.kind==='system-prompt'&&node.location?.kind==='unresolved');
+    const turn = node.location?.turn?.turn ?? node.data.turn ?? (context?group?.turn??'context:'+node.key:undefined);
     if ((!tool && !assistant && !context)||turn==null) { group = undefined; continue; }
+    if(group&&typeof group.turn==='string'&&group.turn.startsWith('context:')&&turn!=null)group.turn=turn;
     if (!group || group.turn !== turn) group = { id: node.key, turn, keys: [], callKeys: new Map(), calls: [], names: [], contexts:0, running: false, failures: 0, stopped: 0, title: '' };
     group.keys.push(node.key); result.set(node.key, group);
     if(context)group.contexts++;

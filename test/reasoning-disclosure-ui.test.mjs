@@ -14,17 +14,18 @@ test('capture the current collapsed and expanded process with illustrative reaso
     const reasoning_content=thoughts[Math.min(step-1,2)];
     if(step>=3){await finalReply;return {delta:{role:'assistant',reasoning_content,content:'演示完成：思考和操作记录保留在过程里，这段最终回复显示在外面。'},finish_reason:'stop'};}
     if(step===2)await nextActionReady;
-    const name=step===1?'computer_use_reset':'bash',args=step===1?{}:{command:'printf demo-complete',description:'检查操作记录'};
+    const name=step===1?'computer_use_reset':'bash',args=step===1?{}:{command:'sleep 1; printf demo-complete',description:'检查操作记录'};
     return {delta:{role:'assistant',reasoning_content,tool_calls:[{index:0,id:'reasoning-demo-'+step,type:'function',function:{name,arguments:JSON.stringify(args)}}]},finish_reason:'tool_calls'};
   });
   await rpc('session/prompt',{requestId:crypto.randomUUID(),sessionId,mode:'queue',content:[{type:'text',text:'演示：思考与操作的闭合和展开效果'}]});
   await page.locator('.tx-cu-group-toggle').filter({hasText:'1 次操作'}).waitFor();
-  assert.equal(await page.locator('[data-cu-latest-action]:visible').first().textContent(),'操作电脑');
+  assert.match(await page.locator('.tx-cu-group-toggle').filter({hasText:'1 次操作'}).textContent(),/操作电脑/);
   nextAction();
   await page.waitForFunction(()=>[...document.querySelectorAll('.tx-cu-group-toggle')].some(el=>el.textContent.includes('2 次操作')));
   const liveGroup=page.locator('.tx-cu-group[data-cu-group]').filter({has:page.getByRole('button',{name:/2 次操作/})}),liveSummary=liveGroup.getByRole('button',{name:/2 次操作/});
   assert.equal(await liveSummary.locator('[data-cu-latest-action]').textContent(),'检查操作记录');
-  await liveSummary.locator('[data-cu-action-state=done]').waitFor();
+  await page.waitForFunction(()=>[...document.querySelectorAll('.tx-cu-group-toggle')].some(el=>el.textContent.includes('已操作电脑、运行命令')));
+  assert.equal(await liveSummary.locator('[data-cu-latest-action]').count(),0,'finished drawer returns to its compact summary');
   const liveTurn=await liveSummary.evaluate(el=>el.closest('[data-chat-turn]').dataset.chatTurn),liveNodes=page.locator('[data-chat-turn="'+liveTurn+'"]');
   assert.equal(await liveNodes.locator('[data-cu-group-hidden=true]').count()>0,true,'live process actually hides intermediate rows');
   assert.equal(await page.locator('[data-chat-turn="'+liveTurn+'"][data-chat-flow-kind="context"] [data-disclosure-row]:visible').count(),0,'injected context is not a separate visible row while running');
@@ -44,8 +45,8 @@ test('capture the current collapsed and expanded process with illustrative reaso
   finish();
   await page.getByText('演示完成：思考和操作记录保留在过程里，这段最终回复显示在外面。',{exact:true}).waitFor();
   const summary=page.locator('[data-turn-process-tool-calls="2"]');await summary.waitFor();
-  assert.equal(await summary.locator('[data-cu-latest-action]').textContent(),'检查操作记录');
-  assert.equal(await summary.locator('[data-cu-action-state]').getAttribute('data-cu-action-state'),'done');
+  assert.equal(await summary.locator('[data-cu-latest-action]').count(),0);
+  assert.match(await summary.textContent(),/用时/);
   assert.equal(await summary.getAttribute('aria-expanded'),'true','completion preserves reading state even when focus moved outside the process');
   assert.equal(await contextRow.getAttribute('aria-expanded'),'true','completion retains context detail');
   assert.equal(await openThought.getAttribute('aria-expanded'),'true','completion retains thinking detail');
@@ -90,7 +91,7 @@ test('capture the current collapsed and expanded process with illustrative reaso
   assert.ok((await thoughts.last().boundingBox()).y+(await thoughts.last().boundingBox()).height<(await answer.boundingBox()).y,'expanding final reasoning keeps the reply below it');
   await summary.click();assert.equal(await thoughts.count(),0);assert.equal(await answer.isVisible(),true);
   await page.reload();await answer.waitFor();
-  assert.equal(await summary.locator('[data-cu-latest-action]').textContent(),'检查操作记录');
+  assert.equal(await summary.locator('[data-cu-latest-action]').count(),0);
   assert.equal(await turnNodes.locator('[data-variant="think"]:visible').count(),0,'all reasoning stays inside the collapsed process after reload');
   await summary.click();
   assert.equal(await liveSummary.getAttribute('aria-expanded'),'false','replayed operation group remains independently folded');

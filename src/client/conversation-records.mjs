@@ -24,7 +24,7 @@ export const taskInjectionDefinition = {
   update: context => context.state,
   buildViewNode: context => context.state ? {
     key: context.key, id: context.id, kind: 'omd-task-injection', target: 'chat',
-    anchorSeq: context.state.seq, location: { kind: 'session' }, visibility: 'visible', data: context.state,
+    anchorSeq: context.state.seq, location: context.start?.location ?? { kind: 'session' }, visibility: 'visible', data: context.state,
   } : null,
 };
 
