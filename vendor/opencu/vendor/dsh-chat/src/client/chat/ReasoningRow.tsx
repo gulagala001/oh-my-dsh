@@ -32,7 +32,7 @@ function latestCompletedParagraphFirstLine(text: string): string {
 }
 
 /**
- * Render one assistant reasoning block collapsed until the reader opens it. The
+ * Render one consecutive run of assistant reasoning collapsed until the reader opens it. The
  * collapsed summary omits double-asterisk markers; expanded content renders
  * the complete Markdown with secondary typography. A streaming preview advances
  * when a paragraph's first line completes. Mode changes toggle CSS display without unmounting

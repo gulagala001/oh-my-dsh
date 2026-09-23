@@ -25,7 +25,7 @@ export function localPathMediaUrl(base: string, value: string): string | undefin
 export interface AssistantMarkdownProps {
   /** Render only the requested business portion, preserving original block indexes. */
   groupPart?: string | undefined
-  /** Stable Hook forwarded to each independently expandable reasoning block. */
+  /** Stable Hook forwarded to each independently expandable run of reasoning blocks. */
   useDisclosure: UseDisclosure
   blocks: readonly AssistantBlock[]
   streaming: boolean
@@ -45,7 +45,7 @@ export interface AssistantMarkdownProps {
   t: ChatViewSlotProps['t']
 }
 
-/** Reasoning block as the Think variant summary row (figma 39:28304). */
+/** Adjacent reasoning blocks in one Assistant share a Think disclosure. */
 export const AssistantMarkdown = memo(function AssistantMarkdown({
   blocks, streaming, interrupted, renderMessageImages, groupPart, useDisclosure,
   reasoningHidden = false, usePresentation, revealProcess, mentions, t,
@@ -84,18 +84,27 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
           />,
         )
         break
-      case 'reasoning':
+      case 'reasoning': {
+        const start = i
+        const parts = [block.text]
+        while (i + 1 < blocks.length) {
+          const next = blocks[i + 1]
+          if (next?.kind !== 'reasoning') break
+          parts.push(next.text)
+          i += 1
+        }
         rendered.push(
           <ProcessReasoning
-            key={i}
+            key={start}
             hidden={reasoningHidden}
             reveal={revealProcess}
           >
-            <ReasoningRow text={block.text} running={streaming && i === last} usePresentation={usePresentation}
+            <ReasoningRow text={parts.join('\n\n')} running={streaming && i === last} usePresentation={usePresentation}
               useDisclosure={useDisclosure} t={t} />
           </ProcessReasoning>,
         )
         break
+      }
       case 'image': {
         // Consecutive image blocks share one gallery so several images tile
         // into rows instead of each opening a one-image group of its own.
