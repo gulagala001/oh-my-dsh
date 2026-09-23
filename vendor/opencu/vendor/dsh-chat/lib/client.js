@@ -5596,7 +5596,7 @@ window.__ModuleLoader__.load({
 			}
 		}
 		/**
-		* Render one assistant reasoning block collapsed until the reader opens it. The
+		* Render one consecutive run of assistant reasoning collapsed until the reader opens it. The
 		* collapsed summary omits double-asterisk markers; expanded content renders
 		* the complete Markdown with secondary typography. A streaming preview advances
 		* when a paragraph's first line completes. Mode changes toggle CSS display without unmounting
@@ -5695,7 +5695,7 @@ window.__ModuleLoader__.load({
 			if (!base.startsWith("http:") && !base.startsWith("https:")) return void 0;
 			return new URL(`api/file?path=${encodeURIComponent(value)}`, base).href;
 		}
-		/** Reasoning block as the Think variant summary row (figma 39:28304). */
+		/** Adjacent reasoning blocks in one Assistant share a Think disclosure. */
 		const AssistantMarkdown = (0, react.memo)(function AssistantMarkdown({ blocks, streaming, interrupted, renderMessageImages, groupPart, useDisclosure, reasoningHidden = false, usePresentation, revealProcess, mentions, t }) {
 			const labels = (0, react.useMemo)(() => markdownLabels(t), [t]);
 			const pathImages = (0, react.useMemo)(() => {
@@ -5719,19 +5719,28 @@ window.__ModuleLoader__.load({
 							pathImages
 						}, i));
 						break;
-					case "reasoning":
+					case "reasoning": {
+						const start = i;
+						const parts = [block.text];
+						while (i + 1 < blocks.length) {
+							const next = blocks[i + 1];
+							if (next?.kind !== "reasoning") break;
+							parts.push(next.text);
+							i += 1;
+						}
 						rendered.push(/* @__PURE__ */ (0, react_jsx_runtime.jsx)(ProcessReasoning, {
 							hidden: reasoningHidden,
 							reveal: revealProcess,
 							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ReasoningRow, {
-								text: block.text,
+								text: parts.join("\n\n"),
 								running: streaming && i === last,
 								usePresentation,
 								useDisclosure,
 								t
 							})
-						}, i));
+						}, start));
 						break;
+					}
 					case "image": {
 						const start = i;
 						const group = [block];

@@ -56,6 +56,59 @@ index 69885d3e..129c8874 100644
    const linkOpening = createSnapshotStore(chatSettings.getSnapshot().value?.linkOpening ?? DEFAULT_LINK_OPENING)
    ctx.effect(() => chatSettings.subscribe(() => {
      const accepted = chatSettings.getSnapshot().value?.linkOpening
+diff --git a/packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx b/packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx
+index 1dd235d3..7f4ec270 100644
+--- a/packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx
++++ b/packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx
+@@ -25,7 +25,7 @@ export function localPathMediaUrl(base: string, value: string): string | undefin
+ export interface AssistantMarkdownProps {
+   /** Render only the requested business portion, preserving original block indexes. */
+   groupPart?: string | undefined
+-  /** Stable Hook forwarded to each independently expandable reasoning block. */
++  /** Stable Hook forwarded to each independently expandable run of reasoning blocks. */
+   useDisclosure: UseDisclosure
+   blocks: readonly AssistantBlock[]
+   streaming: boolean
+@@ -45,7 +45,7 @@ export interface AssistantMarkdownProps {
+   t: ChatViewSlotProps['t']
+ }
+ 
+-/** Reasoning block as the Think variant summary row (figma 39:28304). */
++/** Adjacent reasoning blocks in one Assistant share a Think disclosure. */
+ export const AssistantMarkdown = memo(function AssistantMarkdown({
+   blocks, streaming, interrupted, renderMessageImages, groupPart, useDisclosure,
+   reasoningHidden = false, usePresentation, revealProcess, mentions, t,
+@@ -84,18 +84,27 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
+           />,
+         )
+         break
+-      case 'reasoning':
++      case 'reasoning': {
++        const start = i
++        const parts = [block.text]
++        while (i + 1 < blocks.length) {
++          const next = blocks[i + 1]
++          if (next?.kind !== 'reasoning') break
++          parts.push(next.text)
++          i += 1
++        }
+         rendered.push(
+           <ProcessReasoning
+-            key={i}
++            key={start}
+             hidden={reasoningHidden}
+             reveal={revealProcess}
+           >
+-            <ReasoningRow text={block.text} running={streaming && i === last} usePresentation={usePresentation}
++            <ReasoningRow text={parts.join('\n\n')} running={streaming && i === last} usePresentation={usePresentation}
+               useDisclosure={useDisclosure} t={t} />
+           </ProcessReasoning>,
+         )
+         break
++      }
+       case 'image': {
+         // Consecutive image blocks share one gallery so several images tile
+         // into rows instead of each opening a one-image group of its own.
 diff --git a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css
 index 56687cd8..d01394bb 100644
 --- a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css
@@ -192,6 +245,19 @@ index 5bb003bd..7b1b62ca 100644
    const owner = useMemo<ChatNodeOwnerProps | null>(() => node === undefined
      ? null
      : {
+diff --git a/packages/client/ui-chat/src/client/chat/ReasoningRow.tsx b/packages/client/ui-chat/src/client/chat/ReasoningRow.tsx
+index 74a801d6..95a4d1ae 100644
+--- a/packages/client/ui-chat/src/client/chat/ReasoningRow.tsx
++++ b/packages/client/ui-chat/src/client/chat/ReasoningRow.tsx
+@@ -32,7 +32,7 @@ function latestCompletedParagraphFirstLine(text: string): string {
+ }
+ 
+ /**
+- * Render one assistant reasoning block collapsed until the reader opens it. The
++ * Render one consecutive run of assistant reasoning collapsed until the reader opens it. The
+  * collapsed summary omits double-asterisk markers; expanded content renders
+  * the complete Markdown with secondary typography. A streaming preview advances
+  * when a paragraph's first line completes. Mode changes toggle CSS display without unmounting
 diff --git a/packages/client/ui-chat/src/client/contract/process-groups.ts b/packages/client/ui-chat/src/client/contract/process-groups.ts
 index 0c7bc744..0390064e 100644
 --- a/packages/client/ui-chat/src/client/contract/process-groups.ts
@@ -209,6 +275,32 @@ index 0c7bc744..0390064e 100644
    readonly counts: readonly { readonly kind: ProcessActivity; readonly count: number }[]
    readonly running: ProcessActivity | undefined
    readonly runningDetail: string
+diff --git a/packages/client/ui-chat/src/client/conversation-nodes/README.md b/packages/client/ui-chat/src/client/conversation-nodes/README.md
+index 3a166067..022dea0c 100644
+--- a/packages/client/ui-chat/src/client/conversation-nodes/README.md
++++ b/packages/client/ui-chat/src/client/conversation-nodes/README.md
+@@ -155,7 +155,7 @@ Group headers show a category icon, replace it with a down arrow on hover or key
+ 
+ An open capped group follows content growth only while its own scroll position is at the bottom. Scrolling away pauses that group's following; returning to the bottom resumes it, independently of outer transcript following. Manually opening an unclosed group starts at the bottom and follows growth; manually opening a closed group starts at the top with following disabled, even when its initial content fits without scrolling. Closing the group in the data or restoring its height cap through a mode change does not reset an already-open reader's position. Browser find retains its own reveal position.
+ 
+-Individual reasoning starts collapsed, including while streaming. All modes preview the latest paragraph whose first line ends with a newline; an unfinished single line has no preview. Later text in that paragraph does not change the preview. After settlement, the mode table applies. Expanded reasoning uses compact Markdown typography.
++Consecutive reasoning blocks within one Assistant share a single disclosure, preserving their text in order and the reader’s open state as fragments arrive. Other block kinds and Assistant steps separate disclosures. Individual reasoning starts collapsed, including while streaming. All modes preview the latest paragraph whose first line ends with a newline; an unfinished single line has no preview. Later text in that paragraph does not change the preview. After settlement, the mode table applies. Expanded reasoning uses compact Markdown typography.
+ 
+ Switching modes retains manually opened groups and inner disclosures. It changes visibility and sizing without recreating the message rows. Expanded does not mean opening every individual disclosure or unfolding the whole Turn.
+ 
+diff --git a/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md b/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md
+index 024ea0f5..61c1f09d 100644
+--- a/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md
++++ b/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md
+@@ -155,7 +155,7 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
+ 
+ 已展开的限高组仅在自己的滚动位置处于底部时跟随内容增长。滚离底部暂停该组跟随，滚回底部后恢复，与外层文本记录的跟随状态独立。手动展开未关闭的组时定位到底部并跟随增长；手动展开已关闭的组时从顶部开始且不启用跟随，即使初始内容无需滚动即可容纳。数据中的组变为已关闭，或通过模式切换恢复限高时，不重置已展开组的阅读位置。浏览器查找沿用自身的展开定位。
+ 
+-单个推理初始收起，包括流式输出期间。三档都预览最近一个首行以换行结束的段落；未完成的单行没有预览，该段落后续文本不改变预览。结算后按上表展示。展开的推理使用紧凑 Markdown 排版。
++同一 Assistant 内连续的推理块合用一个折叠行，按顺序保留全文，后续片段到达时保持用户的展开状态。其他类型的块及不同 Assistant 步骤仍分开显示。单个推理初始收起，包括流式输出期间。三档都预览最近一个首行以换行结束的段落；未完成的单行没有预览，该段落后续文本不改变预览。结算后按上表展示。展开的推理使用紧凑 Markdown 排版。
+ 
+ 切换模式保留手动展开的组和内部开合状态，只改变显隐与尺寸，不重建消息行。完全展开不表示自动打开每个内部控件，也不表示展开整轮。
+ 
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts b/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
 index d6766b19..add41fbd 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
@@ -300,3 +392,59 @@ index 9638f554..6147fd52 100644
    'message.stepProcess.done.thinking': 'Analysis completed',
    'message.stepProcess.done.read': 'Read files',
    'message.stepProcess.done.search': 'Searched code',
+diff --git a/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx b/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx
+index 0d6b505f..6241b919 100644
+--- a/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx
++++ b/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx
+@@ -19,6 +19,51 @@ afterEach(() => {
+ const t = makeTranslate(zh, commonZh)
+ const renderMessageImages: AssistantMarkdownProps['renderMessageImages'] = () => null
+ 
++describe('consecutive reasoning fragments', () => {
++  const parts = ['First fragment\n', 'Second fragment\n', 'Third fragment\n', 'Fourth fragment\n']
++  const reasoning = parts.map(text => ({ kind: 'reasoning' as const, text }))
++  const tool = { kind: 'tool-call' as const, callId: 'call-1', name: 'read', argsRaw: '{}' }
++  const props = { useDisclosure, usePresentation: useDetailedPresentation, t, renderMessageImages }
++
++  it('keeps one open disclosure while fragments stream, settle, and replay', () => {
++    const view = render(<AssistantMarkdown {...props} blocks={reasoning.slice(0, 1)} streaming />)
++    const toggle = view.getByRole('button')
++    fireEvent.click(toggle)
++    for (let count = 2; count <= reasoning.length; count++) {
++      view.rerender(<AssistantMarkdown {...props} blocks={reasoning.slice(0, count)} streaming />)
++      expect(view.getAllByText('思考')).toHaveLength(1)
++      expect(view.getByRole('button')).toBe(toggle)
++      expect(toggle.getAttribute('aria-expanded')).toBe('true')
++      expect(view.container.querySelector('[data-variant="think"]')?.getAttribute('data-state')).toBe('running')
++      expect(view.container.querySelectorAll('[data-markdown-variant="compact"] p')).toHaveLength(count)
++    }
++    view.rerender(<AssistantMarkdown {...props} blocks={[...reasoning, tool]} streaming />)
++    expect(view.queryByText('运行中')).toBeNull()
++    view.rerender(<AssistantMarkdown {...props} blocks={[...reasoning, tool]} streaming={false} />)
++    expect(view.getByRole('button')).toBe(toggle)
++    expect(toggle.getAttribute('aria-expanded')).toBe('true')
++    expect(Array.from(view.container.querySelectorAll('[data-markdown-variant="compact"] p'), p => p.textContent))
++      .toEqual(parts.map(text => text.trim()))
++    view.unmount()
++
++    const replay = render(<AssistantMarkdown {...props} blocks={[...reasoning, tool]} streaming={false} />)
++    expect(replay.getAllByText('思考')).toHaveLength(1)
++    expect(replay.getByRole('button').getAttribute('aria-expanded')).toBe('false')
++    fireEvent.click(replay.getByRole('button'))
++    expect(Array.from(replay.container.querySelectorAll('[data-markdown-variant="compact"] p'), p => p.textContent))
++      .toEqual(parts.map(text => text.trim()))
++  })
++
++  it('keeps runs separated by prose or a tool call even in the reasoning-only view', () => {
++    const view = render(<AssistantMarkdown {...props} groupPart="reasoning" streaming={false}
++      blocks={[...reasoning, { kind: 'text', text: 'Progress update' }, ...reasoning, tool, ...reasoning]} />)
++    expect(view.getAllByText('思考')).toHaveLength(3)
++    expect(view.queryByText('Progress update')).toBeNull()
++    for (const toggle of view.getAllByRole('button')) fireEvent.click(toggle)
++    expect(view.container.querySelectorAll('[data-markdown-variant="compact"] p')).toHaveLength(12)
++  })
++})
++
+ describe('ReasoningRow', () => {
+   it.each([
+     ['', ''],

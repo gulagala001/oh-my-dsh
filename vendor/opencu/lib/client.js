@@ -5190,19 +5190,28 @@ ${t("json.truncated", { total: text.length })}` : text;
               pathImages
             }, i));
             break;
-          case "reasoning":
+          case "reasoning": {
+            const start = i;
+            const parts = [block.text];
+            while (i + 1 < blocks.length) {
+              const next = blocks[i + 1];
+              if (next?.kind !== "reasoning") break;
+              parts.push(next.text);
+              i += 1;
+            }
             rendered.push(/* @__PURE__ */ (0, react_jsx_runtime.jsx)(ProcessReasoning, {
               hidden: reasoningHidden,
               reveal: revealProcess,
               children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ReasoningRow, {
-                text: block.text,
+                text: parts.join("\n\n"),
                 running: streaming && i === last,
                 usePresentation,
                 useDisclosure: useDisclosure2,
                 t
               })
-            }, i));
+            }, start));
             break;
+          }
           case "image": {
             const start = i;
             const group = [block];
