@@ -6,8 +6,8 @@ import { createHash } from 'node:crypto';
 const root = fileURLToPath(new URL('../', import.meta.url));
 if (!process.argv[2]) throw Error('Usage: node scripts/sync-dsh-chat.mjs /path/to/patched-dsh');
 const source = resolve(process.argv[2]), destination = join(root, 'vendor/dsh-chat');
-const commit = 'c36a83ff6bb95e3f82cf79f9be7c724270a8aa61';
-if (execFileSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim() !== commit) throw Error('Expected DSH 0.1.7-alpha.1');
+const commit = '00102833dfaee1da9f48a3a8eae9d34005a75218';
+if (execFileSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim() !== commit) throw Error('Expected DSH 0.1.7-alpha.2');
 await rm(destination, { recursive: true, force: true });
 await mkdir(destination, { recursive: true });
 for (const name of ['src', 'README.md', 'lib/client.js', 'lib/index.js']) {
@@ -26,4 +26,4 @@ async function walk(dir, prefix = '') {
   }
 }
 await walk(destination);
-await writeFile(join(root, 'vendor/dsh-chat.json'), JSON.stringify({ repository: 'https://github.com/deepseek-ai/deepseek-harness', tag: 'dsh-v0.1.7-alpha.1', commit, files: Object.fromEntries(Object.entries(files).sort()) }, null, 2) + '\n');
+await writeFile(join(root, 'vendor/dsh-chat.json'), JSON.stringify({ repository: 'https://github.com/deepseek-ai/deepseek-harness', tag: 'dsh-v0.1.7-alpha.2', commit, files: Object.fromEntries(Object.entries(files).sort()) }, null, 2) + '\n');

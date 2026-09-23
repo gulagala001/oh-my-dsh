@@ -1,5 +1,5 @@
 /** Stable process container; display policy changes visibility, never member parents. */
-import { memo, useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useId, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import {
   IconAgentPresetOutlineRegular, IconApiOutlineRegular, IconBrowseOutlineRegular, IconChevronDownOutlineRegular,
   IconChevronUpOutlineRegular, IconCodeOutlineRegular, IconEditOutlineRegular, IconGlobeOutlineRegular,
@@ -16,6 +16,7 @@ import { chatRenderKey } from './render-entry.ts'
 import { processTitle } from './step-process.ts'
 import { useSearchableHidden } from './searchable-hidden.ts'
 import { useDisclosure } from './use-disclosure.ts'
+import { useProcessScroll } from './use-process-scroll.ts'
 import css from './ChatGroupSeat.module.css'
 
 type SeatProps = Omit<ComponentProps<typeof ChatNodeSeat>, 'nodeKey' | 'groupPart'>
@@ -23,8 +24,6 @@ type ChatGroupSeatProps = SeatProps & {
   readonly groupKey: GroupKey
   readonly useChatGroup: ChatViewSlotProps['useChatGroup']
 }
-interface ProcessScrollEdges { readonly canScrollUp: boolean; readonly canScrollDown: boolean }
-const PROCESS_SCROLL_AT_REST: ProcessScrollEdges = { canScrollUp: false, canScrollDown: false }
 const PROCESS_TITLE_MINIMUM_MS = 150
 
 type ProcessTitleActivity = ProcessActivity | 'thinking'
@@ -49,17 +48,6 @@ const PROCESS_ICONS: Record<ProcessTitleActivity, ReactNode> = {
   plan: <IconPlanOutlineRegular />,
   questions: <IconQuestionOutlineRegular />,
   tools: <IconSparkleRegular size={14} />,
-}
-
-function processScrollEdges(element: HTMLElement): ProcessScrollEdges {
-  return {
-    canScrollUp: element.scrollTop > 1,
-    canScrollDown: element.scrollTop < element.scrollHeight - element.clientHeight - 1,
-  }
-}
-
-function sameProcessScrollEdges(left: ProcessScrollEdges, right: ProcessScrollEdges): boolean {
-  return left.canScrollUp === right.canScrollUp && left.canScrollDown === right.canScrollDown
 }
 
 function sameLiveProcessTitle(left: LiveProcessTitle, right: LiveProcessTitle): boolean {
@@ -141,8 +129,9 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
 export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGroup, ...props }: ChatGroupSeatProps) {
   const members = useChatGroup(groupKey, group => group?.members)
   const turn = useChatGroup(groupKey, group => group?.data.turn)
+  const closed = useChatGroup(groupKey, group => group?.data.closed)
   const foldCompleted = props.usePresentation(policy => policy.foldCompletedTurns)
-  const { expanded: open, setExpanded: setOpen, toggle } = useDisclosure()
+  const { expanded: open, setExpanded: setOpen } = useDisclosure()
   const firstKey = members?.[0]?.key ?? ''
   const presentation = props.useChatNodeProcess(firstKey)
   const turnLocation = props.useChatNode(firstKey, (node) => {
@@ -172,22 +161,11 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
   const bodyRef = useSearchableHidden(grouped && !open, reveal)
   const contentRef = useRef<HTMLDivElement>(null)
   const bodyId = useId()
-  const [edges, setEdges] = useState<ProcessScrollEdges>(PROCESS_SCROLL_AT_REST)
-  const sync = useCallback(() => {
-    const body = bodyRef.current
-    const next = body === null || body.closest('[hidden], [data-group-expanded-mode]') !== null
-      ? PROCESS_SCROLL_AT_REST : processScrollEdges(body)
-    setEdges(previous => sameProcessScrollEdges(previous, next) ? previous : next)
-  }, [bodyRef])
-  // The content box reports growth even when the scroll body remains height-capped.
-  useLayoutEffect(() => {
-    const body = bodyRef.current
-    if (body === null || !open || typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(sync)
-    observer.observe(body)
-    if (contentRef.current !== null) observer.observe(contentRef.current)
-    return () => { observer.disconnect() }
-  }, [bodyRef, open, sync])
+  const { edges, events, initialize } = useProcessScroll(bodyRef, contentRef, open, grouped)
+  const toggle = useCallback(() => {
+    if (!open) initialize(closed === false ? 'bottom' : 'top')
+    setOpen(!open)
+  }, [closed, initialize, open, setOpen])
   if (members === undefined) return null
   const classes = [css.body, !grouped ? css.expandedBody : '',
     grouped && edges.canScrollUp ? css.fadeTop : '', grouped && edges.canScrollDown ? css.fadeBottom : '']
@@ -202,7 +180,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
       </div>
       <div ref={bodyRef} id={bodyId} role="region" tabIndex={0} aria-labelledby={bodyId + '-title'} className={classes.join(' ')} data-step-process-body
         data-scroll-up={edges.canScrollUp || undefined} data-scroll-down={edges.canScrollDown || undefined}
-        onScroll={sync}>
+        {...events}>
         <div ref={contentRef} className={css.content} data-step-process-content data-chat-flow="">
           <GroupMembers {...props} members={members} />
         </div>

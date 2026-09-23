@@ -12,8 +12,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.7.0"><img src="https://img.shields.io/badge/version-1.7.0-3478F6?style=flat-square" alt="Version 1.7.0" /></a>
-  <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.7--alpha.1-475569?style=flat-square" alt="DSH 0.1.7-alpha.1" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.7.1"><img src="https://img.shields.io/badge/version-1.7.1-3478F6?style=flat-square" alt="Version 1.7.1" /></a>
+  <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.7--alpha.2-475569?style=flat-square" alt="DSH 0.1.7-alpha.2" /></a>
   <a href="#themes"><img src="https://img.shields.io/badge/themes-4-222222?style=flat-square" alt="4 complete themes" /></a>
 </p>
 
@@ -22,7 +22,7 @@
   <a href="#features">装上之后</a> ·
   <a href="#themes">挑选主题</a> ·
   <a href="docs/usage.md">使用指南</a> ·
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.7.0">版本说明</a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.7.1">版本说明</a>
 </p>
 
 ![Oh My DSH：对话、文件交付、任务与真实验证结果集中展示](docs/images/readme-overview.png)
@@ -31,25 +31,32 @@
 
 Oh My DSH 为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 配好上下文整理、任务提醒、结果验证、提示词优化和可视化工作台，再提供四套从布局到字体的完整主题。继续使用你已有的模型、会话、文件、工具和技能。
 
-**当前为 1.7.0 正式版，适配 DSH 0.1.7-alpha.1。** 保留 OMD 的上下文、任务验证、后台任务和四套皮肤，融合原生工作过程、设置及会话格式。工具结束后立即显示完成汇总；展开阅读状态保留。旧宿主 DSH 0.1.6-alpha.2 请继续使用 [1.6.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.6.1)。
+**当前为 1.7.1 正式版，适配 DSH 0.1.7-alpha.2。** 保留 OMD 的上下文、任务验证、后台任务和四套皮肤，融合原生工作过程、设置及会话格式。工具结束后立即显示完成汇总；展开阅读状态保留。旧宿主 DSH 0.1.6-alpha.2 请继续使用 [1.6.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.6.1)。
 
 <a id="quickstart"></a>
 
 ## 装上，开始工作
 
-从旧版 DSH 升级？先看[升级与安装教程](docs/upgrade.md)，按原数据目录和 profile 操作。
+### 自己安装
 
-已有 **DSH 0.1.7-alpha.1 Web**？停止服务，在终端或 PowerShell 中运行：
+本版配对 **DSH 0.1.7-alpha.2 + Oh My DSH 1.7.1**。已有环境先等待任务结束，停止服务并完整备份实际 `DSH_HOME`；继续使用原数据目录、profile 和端口。首次安装可直接运行：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.0
+npx --yes @deepseek-ai/dsh@0.1.7-alpha.2 plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.1
+npx --yes @deepseek-ai/dsh@0.1.7-alpha.2 --profile web
 ```
 
-然后按原方式启动，例如 `dsh web`。打开启动时打印的登录链接，新建会话并选择 **Oh My DSH**。
+自定义 profile 将 `web` 换成原名称，自定义端口继续加 `--port`。打开启动时打印的登录链接，新建会话选择 **Oh My DSH**。全局安装或源码启动用户见[手动安装与更新](docs/usage.md#安装到现有-dsh推荐)。
 
-**从这三个入口开始：** 输入框的星星优化草稿；**工作台**查看任务、上下文和结果；**设置 → 外观**选择主题。
+### 让 AI 安装
 
-自定义 profile 请替换命令中的 `web`，沿用原来的 `DSH_HOME`、模型和凭据。以上固定安装 **1.7.0 正式版**；[更新、卸载与源码试用](docs/usage.md#安装到现有-dsh推荐)。
+把下面这段话发给能操作你电脑或终端的 AI：
+
+> 请按 https://github.com/gulagala001/oh-my-dsh/blob/main/docs/upgrade.md 帮我安装或升级 Oh My DSH。先识别我的环境，备份并保留已有模型、会话、配置和皮肤，完成安装与启动后确认实际运行版本。
+
+这个链接是给 AI 执行的安装手册，包含环境识别、版本配对、备份、不同安装方式和回退步骤。
+
+**装好后从这三个入口开始：** 输入框的星星优化草稿；**工作台**查看任务、上下文和结果；**设置 → 外观**选择主题。
 
 <details>
 <summary>运行要求与默认配置</summary>
@@ -169,9 +176,9 @@ Mac 桌面控制需要辅助功能、屏幕录制权限与 Apple Command Line To
 
 ## 这次更新
 
-**1.7.0 正式版**：融合 DSH 0.1.7，完成原生分组、四套皮肤、后台执行与旧会话迁移适配，清理重复实现和失效测试。
+**1.7.1 正式版**：适配 DSH 0.1.7-alpha.2，融合滚动、代码卡片、后台唤醒和 MCP 内容处理改进；提供自己安装与 AI 安装两个入口。
 
-[更新记录](CHANGELOG.md) · [本版验证与升级说明](docs/release-1.7.0.md) · [下载与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.7.0)
+[更新记录](CHANGELOG.md) · [本版验证与升级说明](docs/release-1.7.1.md) · [下载与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.7.1)
 
 ## 文档与参与
 

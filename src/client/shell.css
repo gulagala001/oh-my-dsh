@@ -1,4 +1,4 @@
-/* DSH 0.1.7-alpha.1 shell. Use public data attributes first; the few module
+/* DSH 0.1.7-alpha.2 shell. Use public data attributes first; the few module
    selectors below match the installed host and are covered by frontend UI QA. */
 .trisoul-shell {
   --tx-shell-text: var(--dsw-alias-label-primary, CanvasText);

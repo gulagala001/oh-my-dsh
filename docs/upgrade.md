@@ -1,60 +1,62 @@
-# 从旧版 DSH 升级并安装 Oh My DSH
+# Oh My DSH：AI 安装与升级手册
 
-[返回首页](../README.md) · [使用指南](usage.md)
+这份文档供有本地终端访问能力的 AI 执行。用户把本页网址交给你并要求安装／升级时，按下列流程完成；用户只是询问文档时，不执行安装。用户的实际要求和所在环境规则优先。
 
-**先配对版本，再备份、升级宿主、安装插件，最后重启。** “检查更新”只读取发布说明，不会替你安装或重启。
+自己操作的用户请看[手动安装](usage.md#安装到现有-dsh推荐)。本页固定入口：<https://github.com/gulagala001/oh-my-dsh/blob/main/docs/upgrade.md>；无法读取 GitHub 页面时可读[原始 Markdown](https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/upgrade.md)。
 
-## 先选对版本
+## 目标版本与完成标准
 
-| 你的情况 | 做法 |
+| 组件 | 本手册目标 |
 | --- | --- |
-| DSH 0.1.6-alpha.2，准备使用 OMD 1.7.0 | 按下文将宿主升级到 0.1.7-alpha.1，再安装 OMD 1.7.0 |
-| 已使用 DSH 0.1.7-alpha.1 | 备份后安装或更新 OMD 1.7.0，重启即可 |
-| 本地 OMD 还是 1.7.0-rc.1 | 仍需安装 1.7.0 并重启；发布了正式版不等于本地已更新 |
-| 暂时保留 DSH 0.1.6-alpha.2 | 继续使用 OMD 1.6.1；不要只把插件升级到 1.7.0 |
-| 更早的 DSH、桌面版或自己改过的宿主 | 本文的命令面向 Web 版；先在数据副本上按对应宿主的升级说明确认迁移，再切换原环境 |
+| Oh My DSH | **1.7.1**，Git tag `v1.7.1` |
+| DSH Web 宿主 | **0.1.7-alpha.2** |
+| 内置 OpenCU | **1.1.1**，无需另装 |
+| 环境 | Node.js ≥22.19、Git、pnpm 11.23.0；Windows 使用 PowerShell 7 |
 
-OMD 1.7.0 当前固定适配 **DSH 0.1.7-alpha.1**，内置 **OpenCU 1.1.0**，无需另外安装 OpenCU。DSH 官方于 2026-09-22 发布了 [0.1.7-alpha.2](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.7-alpha.2)；它比本文使用的宿主更新。当前配对以 OMD 的版本说明和 `package.json` 为准，不要把命令中的固定版本直接改成 `latest`。
+以本手册与目标 tag 的 `package.json` 配对，不能仅把一个组件换成 `latest`。若仓库刚发布新版本而配对资料未同步，先核对官方发布说明和目标包，避免混装。
 
-## 1. 记住原来的启动方式
+完成意味着：**原环境已备份，新版在原数据目录、profile 和端口运行，旧模型／会话／皮肤仍可用，界面当前版本为 1.7.1。** GitHub 最新版本、下载成功或文件已改，均不能代替实际安装和重启。
 
-升级前记录四项：**启动命令、DSH_HOME、profile 名称、端口**。
+## 1. 识别真实运行环境
 
-- 通常 Web 用户使用 `web` profile，数据默认在 `~/.dsh`（Windows 为用户目录下的 `.dsh`）。
-- 自定义的 `DSH_HOME` 必须继续使用同一个目录；启动器、服务管理器可能替你设置了它，不能只看当前终端的环境变量。
-- profile 存放在 `DSH_HOME/profiles/`。原来用 `work`、`trisoul-x` 等名称，下文的 `web` 就要换成那个名称。
-- 用 OMD 源码的 `pnpm start` 启动时，默认数据在该仓库的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。它使用仓库里的 DSH，更新全局 `dsh` 不会更新这个实例。
+只读取安装与运行需要的信息，不输出密钥、登录 token 或会话正文。
 
-保留已有的自定义端口、代理、模型环境变量和其他启动参数。不要为了升级重新创建一个 profile，也不要把旧配置整份覆盖到新版默认配置上。
+- 查实际启动命令、服务管理器、运行进程和监听端口；判断 npx、npm／pnpm 全局、OMD 源码，还是定制宿主。查当前宿主和插件版本，不能只凭 PATH 中另一个 `dsh --version` 下结论。
+- 确认实际 `DSH_HOME`、profile、端口和工作目录。默认 Web 数据在 `~/.dsh`；服务管理器可能另设环境变量。OMD 源码 `pnpm start` 默认用仓库 `data/dsh/`、`trisoul-x` profile、3083 端口。
+- 记录需要沿用的启动参数、代理、环境变量、模型渠道、皮肤和 profile 自定义覆盖。已有用户不要创建一个空白 profile 来代替升级。
+- 确认任务是否还在执行。等任务结束再停机；不要未经用户授权中断活动任务。可以先下载依赖、准备隔离目录和核对升级步骤。
+- 首次安装无旧服务时采用 Web 默认环境。若是桌面版、定制启动器或有宿主源码改动，先识别其安装机制；不要拿 Web CLI 命令直接替换桌面程序。
 
-## 2. 停止服务并备份
+只在缺少决定性信息时询问。已获安装／升级授权后，备份、安装和必要检查连续完成，无需每一步重复确认。
 
-等正在执行的任务结束，停止旧 DSH；若由启动器或系统服务管理，要暂停自动重启。完整复制实际使用的 **DSH_HOME 整个目录**，包含隐藏文件、模型凭据、profiles、会话、附件和插件资料。项目工作目录通常在它外面，需要时另行备份。
+## 2. 停止并完整备份
 
-macOS / Linux，确认下方路径就是原服务的数据目录再执行：
+安全停止旧服务，必要时暂停服务管理器自动重启。将**实际 DSH_HOME 整个目录**复制到新的带时间戳目录，包含隐藏文件、凭据、profiles、会话、附件和插件资料。项目工作目录若在 DSH_HOME 外，不会随它一起备份。
+
+macOS / Linux 示例，先把第一行替换成查到的绝对路径：
 
 ```sh
-omdDataDir="${DSH_HOME:-$HOME/.dsh}"
+omdDataDir='/实际/DSH_HOME'
 omdBackupDir="${omdDataDir}.backup-$(date +%Y%m%d-%H%M%S)"
 test -d "$omdDataDir" && cp -a "$omdDataDir" "$omdBackupDir"
 ```
 
-Windows PowerShell 7：
+PowerShell 7：
 
 ```powershell
-$omdDataDir = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $HOME '.dsh' }
+$omdDataDir = 'C:\实际\DSH_HOME'
 $omdBackupDir = "$omdDataDir.backup-$(Get-Date -Format yyyyMMdd-HHmmss)"
-if (!(Test-Path -LiteralPath $omdDataDir -PathType Container)) { throw '数据目录不存在，请核对原启动配置' }
+if (!(Test-Path -LiteralPath $omdDataDir -PathType Container)) { throw '请核对原数据目录' }
 Copy-Item -LiteralPath $omdDataDir -Destination $omdBackupDir -Recurse -Force -ErrorAction Stop
 ```
 
-若原目录不是上面的默认值，先把 `omdDataDir` 改成它的实际绝对路径。复制完成后检查备份中有原有的 `profiles`、会话和附件；备份包含凭据，保存在自己的设备上。
+确认复制成功，目录和关键文件齐全后再继续；保存备份路径。备份含凭据，仅保留本机，不提交仓库或上传。首次安装尚无数据目录时跳过备份并如实说明。
 
-## 3. 使用匹配宿主安装插件
+## 3. 按原安装方式升级
 
-需要 Node.js ≥22.19、Git、pnpm；Windows 命令在 PowerShell 7 中执行。下面使用 [DSH 官方的 npx 运行方式](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.7-alpha.1/README.zh.md#通过-npm-运行)，并固定宿主和插件版本。
+在同一执行环境中绑定真实 `DSH_HOME`；下列 `web` 一律替换成原 profile，启动命令沿用原端口与参数。保持原服务启动方式，避免新旧两个实例同时写同一目录。
 
-先在同一个终端绑定刚才核对的数据目录：
+### npx 或首次安装
 
 ```sh
 # macOS / Linux
@@ -62,77 +64,69 @@ export DSH_HOME="$omdDataDir"
 ```
 
 ```powershell
-# Windows PowerShell 7
+# PowerShell 7
 $env:DSH_HOME = $omdDataDir
 ```
 
-然后执行以下两条命令；自定义 profile 请将 `web` 替换成原名称：
-
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.7-alpha.1 --version
-npx --yes @deepseek-ai/dsh@0.1.7-alpha.1 plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.0
+npx --yes @deepseek-ai/dsh@0.1.7-alpha.2 --version
+npx --yes @deepseek-ai/dsh@0.1.7-alpha.2 plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.1
+npx --yes @deepseek-ai/dsh@0.1.7-alpha.2 --profile web
 ```
 
-第一条应显示 `0.1.7-alpha.1`。第二条既适用于首次安装，也适用于更新已有 OMD。安装完后再启动：
+自定义端口启动时追加 `--port 原端口`。需要常驻时使用原服务管理方式，不把临时终端进程误报为持久部署。
+
+### npm／pnpm 全局安装
+
+用原包管理器更新原安装位置：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.7-alpha.1 --profile web
-```
+npm install -g @deepseek-ai/dsh@0.1.7-alpha.2
+# 原来通过 pnpm 全局安装时，使用 pnpm add -g @deepseek-ai/dsh@0.1.7-alpha.2
 
-原来使用自定义端口，例如 `3083`，启动时继续加上 `--port 3083`。打开这次启动打印的完整登录链接。
-
-<details>
-<summary>我一直用全局安装的 dsh，怎么更新？</summary>
-
-保持同一个 DSH_HOME、profile 和端口，用 npm 更新全局宿主后安装插件：
-
-```sh
-npm install -g @deepseek-ai/dsh@0.1.7-alpha.1
 dsh --version
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.0
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.1
 dsh --profile web
 ```
 
-若原来通过 pnpm 全局安装，用 `pnpm add -g @deepseek-ai/dsh@0.1.7-alpha.1` 更新同一个安装来源。不要混用两个全局安装后，只凭终端中的版本号判断服务已经升级。
+确认原服务管理器使用的可执行文件就是更新后的版本；插件安装命令不会升级全局宿主。保留原来的 DSH_HOME、profile 和端口参数。
 
-</details>
+### OMD 源码启动
 
-<details>
-<summary>我用的是 OMD 源码的 pnpm start</summary>
-
-先停止服务、备份仓库的实际 DSH_HOME，并保留自己的未提交修改。在 OMD 仓库内运行：
+读取仓库工作约定和 `git status`，保留用户修改。干净工作区可执行：
 
 ```sh
 git fetch origin --tags
-git switch --detach v1.7.0
+git switch --detach v1.7.1
 pnpm install --frozen-lockfile
 pnpm build
 pnpm start
 ```
 
-若 Git 提示本地修改会被覆盖，先保存自己的修改，不要强制切换。默认使用该仓库的 `data/dsh/`、`trisoul-x` profile 和 `3083` 端口；显式设置过 DSH_HOME 或 PORT 时继续沿用。
+存在本地修改时，在独立 checkout／worktree 准备该 tag，沿用原数据目录及启动参数，并保留旧 checkout；不要 `reset --hard`、清除文件或强制覆盖。不要一边运行原服务，一边改写它正在加载的构建产物。
 
-</details>
+## 4. 处理必要的版本差异
 
-## 4. 打开旧会话，确认本地已经更新
+- **DSH alpha.1 → alpha.2：** 会话继续采用 V4，无需重复迁移旧日志。保留 OMD 上下文、任务账本、BT、PTC、预算、皮肤及其设置。
+- **DSH 0.1.6-alpha.2 → 本版：** OMD 自动迁移支持的旧会话与关联记录；V3 原日志保留，`omd-v4-migration.json` 保存恢复信息。旧配置导入后保留为 `settings.yaml.imported`；不要重建已导入文件触发二次覆盖。
+- **更早或定制环境：** 先在数据副本上核对对应宿主迁移结果，再切换；无法确定兼容性时报告具体阻碍，不删除旧数据试错。暂留 DSH 0.1.6-alpha.2 的用户应留在 OMD 1.6.1；DSH alpha.1 对应 OMD 1.7.0。
+- **自定义 spill-policy：** alpha.2 将 `maxInlineBytes` 改为 `maxInlineTokens`，文本和图片共用 token 预算。只有实际存在旧自定义项时才处理；字节与 token 单位不同，不机械照抄数值。可用新版默认值时移除旧覆盖；用户有明确限额要求时先确认合适预算。OMD 图片请求大小、输出预览等合法字节限制不改名。
+- **后台唤醒：** alpha.2 默认不再限制连续三次完成唤醒；用户显式配置的 `maxConsecutiveWakes` 仍要保留。
+- **旧 bundle／渠道：** 仅在发现对应旧配置时修正。独立 `agent-team-web-profile` 已并入 `agent-team-profile`；旧 `.agent-presets` 应转为 preset bundle。官方 DeepSeek 渠道的旧 `protocol` 配置需按 Messages API 迁移，其他 OpenAI 兼容渠道保持各自协议。参阅 [DSH alpha.1 说明](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.7-alpha.1) 和 [alpha.2 说明](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.7-alpha.2)。
 
-首次启动可能需要迁移旧会话，等服务就绪后再刷新网页。
+安装插件会将该 profile 默认 Agent preset 设为 `trisoul-x`，并带入完整文件／命令访问、关闭执行审批的配置；用户已有显式覆盖优先，不为安装擅自移除限制。已有会话保留自己的 preset。
 
-- 左上角版本面板的**当前版本**应为 `1.7.0`；最新版本只是远端发布记录。
-- 模型、凭据和旧会话应仍在。若显示全新空白环境，先核对 DSH_HOME 和 profile，不要急着重新填写模型。
-- 新建会话选择 **Oh My DSH**；旧会话保留各自的 Agent preset，不会因安装插件全部变成 OMD 会话。
-- 打开一个旧会话查看历史，再试一次普通对话和工具调用；自定义皮肤可在“设置 → 外观”中确认。
+## 5. 少量检查并交付
 
-安装 OMD 会将该 profile 的默认 Agent preset 设为 `trisoul-x`，并带入完整文件/命令访问、关闭执行审批的配置；profile 中自己的显式覆盖优先。
+只检查这次安装的实际结果，不在用户电脑跑整个开发测试集：
 
-## 迁移和常见问题
+1. 服务从原入口正常启动，日志无阻止运行的错误；宿主实际为 0.1.7-alpha.2，插件当前版本为 1.7.1。
+2. 使用本次启动的登录链接打开页面；确认对话、工作台和原皮肤正常显示。已有用户能看到原模型配置和一个旧会话的历史，不输出其正文。
+3. 如可使用已配置模型，在新测试会话做一次短对话和无副作用的工具调用；没有可用模型或凭据时明确这一项未完成，不伪造成功。
+4. 向用户简洁报告实际版本、访问地址（不公开登录 token）、备份位置和任何未完成步骤。用户未要求时，不公开推送本机配置或数据。
 
-**配置与旧会话怎么处理？** 旧配置导入后保留为 `settings.yaml.imported`。旧 OMD 会话生成 V4 日志，V3 原文件保留；旁边的 `omd-v4-migration.json` 记录关联数据的迁移前副本。模型、附件和插件资料应成套保留，不手工删掉旧日志来“修复”迁移。
+发现空白新环境先核对 DSH_HOME 和 profile，不要求用户重新录入凭据。发现旧版本先核对仍在运行的进程和启动器，不用反复安装掩盖没重启的问题。任务未结束、权限或必需凭据阻塞时，保留当前可用服务，说明具体下一步。
 
-**报插件缺失或 preset 无效？** 先确认 OMD 安装在正在启动的同一个 profile，并查看终端第一条启动错误。旧自定义插件、手写预设也需要适配新宿主；旧 `.agent-presets` 目录已不再由新版读取，要转换成 preset bundle。新版 [Agent Team bundle](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.7-alpha.1/packages/experimental/agent-team-profile/package.json) 已包含 Web 界面；原 profile 同时列出旧 `agent-team-web-profile` 时，保留 `agent-team-profile` 并去掉已撤销的独立 Web bundle。预设与配置变更见 [DSH 0.1.7-alpha.1 发布说明](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.7-alpha.1)。
+## 回退
 
-**旧 DeepSeek 渠道报协议错误？** DSH 0.1.7 的官方 DeepSeek 适配器改用 Messages API，旧 `protocol` 配置需要移除，地址应支持 Messages。其他自定义 OpenAI 兼容渠道继续按自己的协议配置，不要一并改成 Messages。详见上面的官方发布说明。
-
-**为什么还显示 rc.1？** GitHub 发布、点击“检查更新”、更新磁盘代码，都不等于正在运行的服务已切换。完成安装后重启原服务，再刷新网页；不要只打开另一个端口的新实例。
-
-**需要退回旧版本？** 停止新宿主，使用升级前的宿主和插件版本，并将完整备份恢复到一个独立目录，以该目录作为 DSH_HOME 启动。保留升级后的目录，不让新旧宿主同时写入它。只降级程序、继续写已迁移的数据目录，不是完整回退。
+停止新版，以升级前的宿主和插件版本运行完整备份副本，使用独立 DSH_HOME。保留升级后的目录；不要让新旧宿主交替写同一目录，也不要只降级程序后继续写已迁移数据。回退后同样确认真实版本与旧会话可见。

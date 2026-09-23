@@ -157,7 +157,12 @@ var registration = {
       return {
         code: {
           copyLabel: t("copy"),
-          copiedLabel: t("copied")
+          copiedLabel: t("copied"),
+          toolbarLabels: {
+            codeLabel: t("codeBlock.title"),
+            wrapLabel: t("codeBlock.wrap"),
+            unwrapLabel: t("codeBlock.unwrap")
+          }
         },
         footnotes: t("markdown.footnotes")
       };
@@ -1263,7 +1268,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       }, [reveal]);
       return ref;
     }
-    const css$13 = ".EvIC1a_root{flex-direction:column;flex:auto;min-height:0;display:flex;position:relative}.EvIC1a_scroll{min-height:0;padding:16px calc(var(--dsh-composer-side-clearance) + 16px);flex:auto;overflow-y:auto;container-type:inline-size}.EvIC1a_root[data-chat-following-tail] .EvIC1a_scroll,[data-conversation-scroll]:has(.EvIC1a_root[data-chat-following-tail]){overflow-anchor:none}[data-conversation-scroll] .EvIC1a_root{flex:none;height:auto;min-height:auto}[data-conversation-scroll] .EvIC1a_scroll{flex:none;min-height:auto;overflow:visible}.EvIC1a_column{max-width:var(--dsh-chat-content-width);flex-direction:column;width:100%;margin:0 auto;display:flex}.EvIC1a_column>:not([hidden]):not(.EvIC1a_flowItem:empty)~:not([hidden]):not(.EvIC1a_flowItem:empty){margin-top:var(--dsh-chat-flow-gap,16px)}.EvIC1a_flowItem{min-width:0}.EvIC1a_flowItem[data-turn-process-answer]{--dsh-chat-flow-gap:8px}.EvIC1a_flowItem:empty{height:0}.EvIC1a_callRow{border-radius:6px}.EvIC1a_hint{color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px))}.EvIC1a_openError{color:var(--dsw-alias-state-error-primary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px))}.EvIC1a_older{justify-content:center;display:flex}.EvIC1a_older button{color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-interactive-bg-hover-solid);cursor:pointer;border:none;border-radius:14px;padding:4px 12px;font-size:12px}.EvIC1a_older button:disabled{cursor:default;opacity:.6}.EvIC1a_toBottomSlot{z-index:8;height:0;padding-right:max(0px, calc((100% - var(--dsh-chat-content-width)) / 2));pointer-events:none;justify-content:flex-end;display:flex;position:sticky;bottom:16px}[data-conversation-scroll] .EvIC1a_toBottomSlot{bottom:calc(var(--dsh-composer-height,152px) + 16px)}.EvIC1a_toBottom{--dsw-elevation-stroke-color:var(--dsw-alias-border-l3);corner-shape:round;width:34px;height:34px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-button-floating-fill);box-shadow:var(--dsw-elevation-panel);cursor:pointer;pointer-events:auto;border:0;border-radius:100px;justify-content:center;align-items:center;margin-top:-34px;padding:0;display:flex}.EvIC1a_toBottom:hover{background:var(--dsw-alias-button-floating-hover)}.EvIC1a_modalAction{min-width:72px}";
+    const css$13 = ".EvIC1a_frame{flex-direction:column;flex:auto;min-height:0;display:flex;position:relative;container-type:inline-size}.EvIC1a_root{flex-direction:column;flex:auto;min-height:0;display:flex;position:relative;overflow:visible clip}.EvIC1a_scroll{min-height:0;padding:16px calc(var(--dsh-composer-side-clearance) + 16px);flex:auto;overflow-y:auto;container-type:inline-size}.EvIC1a_root[data-chat-following-tail] .EvIC1a_scroll,[data-conversation-scroll]:has(.EvIC1a_root[data-chat-following-tail]){overflow-anchor:none}[data-conversation-scroll] .EvIC1a_frame,[data-conversation-scroll] .EvIC1a_root{flex:none;height:auto;min-height:auto}[data-conversation-scroll] .EvIC1a_scroll{flex:none;min-height:auto;overflow:visible}.EvIC1a_column{max-width:var(--dsh-chat-content-width);flex-direction:column;width:100%;margin:0 auto;display:flex}.EvIC1a_column>:not([hidden]):not(.EvIC1a_flowItem:empty)~:not([hidden]):not(.EvIC1a_flowItem:empty){margin-top:var(--dsh-chat-flow-gap,16px)}.EvIC1a_flowItem{min-width:0}.EvIC1a_flowItem[data-turn-process-answer]{--dsh-chat-flow-gap:8px}.EvIC1a_flowItem:empty{height:0}.EvIC1a_callRow{border-radius:6px}.EvIC1a_hint{color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px))}.EvIC1a_openError{color:var(--dsw-alias-state-error-primary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px))}.EvIC1a_older{justify-content:center;display:flex}.EvIC1a_older button{color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-interactive-bg-hover-solid);cursor:pointer;border:none;border-radius:14px;padding:4px 12px;font-size:12px}.EvIC1a_older button:disabled{cursor:default;opacity:.6}.EvIC1a_toBottomSlot{z-index:8;height:0;padding-right:max(calc(var(--dsh-composer-side-clearance) + 16px), calc((100% - var(--dsh-chat-content-width)) / 2));pointer-events:none;justify-content:flex-end;display:flex;position:absolute;bottom:16px;left:0;right:0}[data-conversation-scroll] .EvIC1a_toBottomSlot{bottom:calc(var(--dsh-composer-height,152px) + 16px);position:sticky}.EvIC1a_toBottom{--dsw-elevation-stroke-color:var(--dsw-alias-border-l3);corner-shape:round;width:34px;height:34px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-button-floating-fill);box-shadow:var(--dsw-elevation-panel);cursor:pointer;pointer-events:auto;border:0;border-radius:100px;justify-content:center;align-items:center;margin-top:-34px;padding:0;display:flex}.EvIC1a_toBottom:hover{background:var(--dsw-alias-button-floating-hover)}.EvIC1a_modalAction{min-width:72px}";
     const tagId$13 = "@deepseek-ai/dsh-client-ui-chat/ChatView.module.css";
     if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$13) + "]") === null) {
       const tag = document.createElement("style");
@@ -1276,6 +1281,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       "callRow": "EvIC1a_callRow",
       "column": "EvIC1a_column",
       "flowItem": "EvIC1a_flowItem",
+      "frame": "EvIC1a_frame",
       "hint": "EvIC1a_hint",
       "modalAction": "EvIC1a_modalAction",
       "older": "EvIC1a_older",
@@ -1452,6 +1458,267 @@ ${t("json.truncated", { total: text.length })}` : text;
         return useDisclosure((0, react.useSyncExternalStore)(subscribe, getSnapshot));
       };
     }
+    function scrollMetrics(element) {
+      const height = element.clientHeight;
+      return {
+        top: element.scrollTop,
+        height,
+        floor: Math.max(0, element.scrollHeight - height)
+      };
+    }
+    var ScrollFollow = class ScrollFollow2 {
+      following;
+      threshold;
+      static owners = /* @__PURE__ */ new WeakMap();
+      target = null;
+      sampledTop;
+      /**
+      * @param following - initial follow intent.
+      * @param threshold - accepted distance from the floor, in pixels.
+      */
+      constructor(following, threshold) {
+        this.following = following;
+        this.threshold = threshold;
+      }
+      /**
+      * Find the mounted controller for reading-position compensation.
+      * @param element - scrollport with an optional follow owner.
+      * @returns its controller, when bound.
+      */
+      static forElement(element) {
+        return this.owners.get(element);
+      }
+      /**
+      * Share this controller with reading-position compensation for the same scrollport.
+      * @param element - owned scrollport.
+      * @returns release the association on unmount or close.
+      */
+      bind(element) {
+        ScrollFollow2.owners.set(element, this);
+        return () => {
+          if (ScrollFollow2.owners.get(element) === this) ScrollFollow2.owners.delete(element);
+        };
+      }
+      /**
+      * Expose follow intent independently of the current offset.
+      * @returns whether content growth should follow the floor.
+      */
+      get active() {
+        return this.following;
+      }
+      /**
+      * Expose outstanding native motion before accepting reader input.
+      * @returns whether a native follow animation has an outstanding target.
+      */
+      get animating() {
+        return this.target !== null;
+      }
+      /**
+      * Classify bottom arrivals using this scrollport's own tolerance.
+      * @param metrics - current scroll geometry.
+      * @returns whether the position is within the follow threshold.
+      */
+      nearBottom(metrics) {
+        return metrics.floor - metrics.top <= this.threshold;
+      }
+      /**
+      * Commit caller-owned follow decisions without moving the scrollport.
+      * @param active - externally committed follow intent.
+      */
+      setFollowing(active) {
+        this.following = active;
+        if (!active) this.target = null;
+      }
+      /** Adopt the next visible layout as a fresh reader position. */
+      reset() {
+        this.setFollowing(false);
+        this.sampledTop = void 0;
+      }
+      /**
+      * Adopt delivered scrolling while retaining intent during native animation.
+      * @param metrics - current geometry.
+      * @param movedByReader - caller attribution; omitted callers compare the last sampled position.
+      * @returns updated follow intent.
+      */
+      sample(metrics, movedByReader = this.sampledTop === void 0 || Math.abs(metrics.top - this.sampledTop) > 0.5) {
+        this.sampledTop = metrics.top;
+        if (!this.animating && movedByReader) this.following = this.nearBottom(metrics);
+        return this.active;
+      }
+      /**
+      * Settle native scrolling; an off-target stop releases follow intent.
+      * @param metrics - actual geometry delivered at scrollend.
+      * @returns follow intent after completing or interrupting native motion.
+      */
+      settle(metrics) {
+        const target = this.target;
+        this.target = null;
+        return this.sample(metrics, target === null ? void 0 : Math.abs(metrics.top - Math.min(target, metrics.floor)) > this.threshold);
+      }
+      /**
+      * Position immediately and adopt the resulting follow intent.
+      * @param element - scrolling element.
+      * @param metrics - geometry before positioning.
+      * @param top - requested offset, clamped to the measured range.
+      * @returns geometry after positioning.
+      */
+      jump(element, metrics, top) {
+        const animated = this.animating;
+        this.target = null;
+        const target = Math.max(0, Math.min(metrics.floor, top));
+        if (animated) element.scrollTo({
+          top: target,
+          behavior: "instant"
+        });
+        else if (target !== metrics.top) element.scrollTop = target;
+        const landed = {
+          ...metrics,
+          top: element.scrollTop
+        };
+        this.sampledTop = landed.top;
+        this.following = this.nearBottom(landed);
+        return landed;
+      }
+      /**
+      * Follow the measured floor, respecting reduced motion for smooth requests.
+      * An outstanding smooth target finishes before another is issued.
+      * Within-tolerance positioning is immediate while no animation is outstanding.
+      * @param element - scrolling element.
+      * @param metrics - current geometry.
+      * @param behavior - native animation for growth, or immediate positioning.
+      * @returns current geometry; smooth requests retain their starting position until native scroll delivery.
+      */
+      toBottom(element, metrics, behavior) {
+        this.following = true;
+        if (behavior === "instant" || metrics.top >= metrics.floor || !this.animating && this.nearBottom(metrics)) return this.jump(element, metrics, metrics.floor);
+        if (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches) return this.jump(element, metrics, metrics.floor);
+        if (this.target === null) {
+          this.target = metrics.floor;
+          element.scrollTo({
+            top: metrics.floor,
+            behavior: "smooth"
+          });
+        }
+        return metrics;
+      }
+      /**
+      * Cancel native motion before a reader gesture; only subsequent actual movement changes follow intent.
+      * @param element - scrolling element.
+      * @param metrics - position at interruption.
+      */
+      interrupt(element, metrics) {
+        if (!this.animating) return;
+        this.target = null;
+        this.sampledTop = metrics.top;
+        element.scrollTo({
+          top: metrics.top,
+          behavior: "instant"
+        });
+      }
+    };
+    function useScrollFollow(initial, threshold) {
+      const [follow] = (0, react.useState)(() => new ScrollFollow(initial, threshold));
+      return follow;
+    }
+    const AT_REST = {
+      canScrollUp: false,
+      canScrollDown: false
+    };
+    const SCROLL_KEYS$1 = /* @__PURE__ */ new Set([
+      "ArrowUp",
+      "ArrowDown",
+      "PageUp",
+      "PageDown",
+      "Home",
+      "End",
+      " "
+    ]);
+    function useProcessScroll(bodyRef, contentRef, open, grouped) {
+      const follow = useScrollFollow(false, 1);
+      const initialPosition = (0, react.useRef)(null);
+      const [edges, setEdges] = (0, react.useState)(AT_REST);
+      const initialize = (0, react.useCallback)((position) => {
+        initialPosition.current = position;
+      }, []);
+      const sync = (0, react.useCallback)((cause) => {
+        const body = bodyRef.current;
+        let next = AT_REST;
+        if (body !== null && body.closest("[hidden], [data-group-expanded-mode]") === null) {
+          let metrics = scrollMetrics(body);
+          const initial = cause === "resize" ? initialPosition.current : null;
+          if (initial !== null) {
+            metrics = follow.jump(body, metrics, initial === "bottom" ? metrics.floor : 0);
+            if (initial === "top") follow.setFollowing(false);
+            initialPosition.current = null;
+          } else {
+            const wasAnimating = follow.animating;
+            if (cause === "scrollend") follow.settle(metrics);
+            else follow.sample(metrics);
+            if (follow.active && (cause === "resize" || cause === "scrollend" && wasAnimating)) metrics = follow.toBottom(body, metrics, "smooth");
+          }
+          next = {
+            canScrollUp: metrics.top > 1,
+            canScrollDown: metrics.top < metrics.floor - 1
+          };
+        } else follow.reset();
+        setEdges((previous) => previous.canScrollUp === next.canScrollUp && previous.canScrollDown === next.canScrollDown ? previous : next);
+      }, [bodyRef, follow]);
+      const interrupt = (0, react.useCallback)(() => {
+        const body = bodyRef.current;
+        if (body !== null && follow.animating) follow.interrupt(body, scrollMetrics(body));
+      }, [bodyRef, follow]);
+      const events = (0, react.useMemo)(() => ({
+        onScroll: () => {
+          sync("scroll");
+        },
+        onWheel: interrupt,
+        onTouchStart: interrupt,
+        onPointerDown: interrupt,
+        onKeyDown: (event) => {
+          if (!event.defaultPrevented && SCROLL_KEYS$1.has(event.key)) interrupt();
+        }
+      }), [interrupt, sync]);
+      (0, react.useLayoutEffect)(() => {
+        interrupt();
+        follow.reset();
+        if (!grouped || !open) initialPosition.current = null;
+      }, [
+        follow,
+        grouped,
+        interrupt,
+        open
+      ]);
+      (0, react.useLayoutEffect)(() => {
+        const body = bodyRef.current;
+        if (body === null || !open || typeof ResizeObserver === "undefined") return;
+        const unbind = follow.bind(body);
+        const observer = new ResizeObserver(() => {
+          sync("resize");
+        });
+        const onScrollEnd = (event) => {
+          if (event.target === body) sync("scrollend");
+        };
+        body.addEventListener("scrollend", onScrollEnd);
+        observer.observe(body);
+        if (contentRef.current !== null) observer.observe(contentRef.current);
+        return () => {
+          unbind();
+          observer.disconnect();
+          body.removeEventListener("scrollend", onScrollEnd);
+        };
+      }, [
+        bodyRef,
+        contentRef,
+        follow,
+        open,
+        sync
+      ]);
+      return {
+        edges,
+        events,
+        initialize
+      };
+    }
     const css$12 = ".O_Ebla_root{min-width:0}.O_Ebla_title{max-width:100%;color:var(--dsw-alias-label-secondary);font:inherit;font-size:var(--dsh-content-font-size,14px);text-align:left;cursor:pointer;background:0 0;border:0;align-items:center;gap:6px;padding:0;transition:color .1s;display:flex}.O_Ebla_title:hover{color:var(--dsw-alias-label-primary)}.O_Ebla_leading{width:16px;height:16px;color:var(--dsw-alias-label-tertiary);flex:none;justify-content:center;align-items:center;display:inline-flex;position:relative}.O_Ebla_activityIcon,.O_Ebla_chevron{justify-content:center;align-items:center;transition:opacity .1s;display:inline-flex;position:absolute;inset:0}.O_Ebla_activityIcon{opacity:1}.O_Ebla_chevron,.O_Ebla_title:is(:hover,:focus-visible) .O_Ebla_activityIcon{opacity:0}.O_Ebla_title:is(:hover,:focus-visible) .O_Ebla_chevron{opacity:1}.O_Ebla_title[aria-expanded=true] .O_Ebla_activityIcon{opacity:0}.O_Ebla_title[aria-expanded=true] .O_Ebla_chevron{opacity:1}.O_Ebla_title[aria-expanded=true]{padding-bottom:16px}.O_Ebla_body{--dsh-chat-flow-gap:2px;overscroll-behavior-y:auto;scrollbar-gutter:stable;max-height:min(280px,45vh);position:relative;overflow-y:auto}.O_Ebla_label{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.O_Ebla_fadeTop{mask-image:linear-gradient(#0000 0,#000 24px 100%)}.O_Ebla_fadeBottom{mask-image:linear-gradient(#000 0 calc(100% - 24px),#0000 100%)}.O_Ebla_fadeTop.O_Ebla_fadeBottom{mask-image:linear-gradient(#0000 0,#000 24px calc(100% - 24px),#0000 100%)}@media (prefers-reduced-motion:reduce){.O_Ebla_title,.O_Ebla_activityIcon,.O_Ebla_chevron{transition:none}}.O_Ebla_content{flex-direction:column;display:flex}.O_Ebla_content>*{flex-shrink:0}.O_Ebla_content>:not([hidden]):not(:empty)~:not([hidden]):not(:empty){margin-top:var(--dsh-chat-flow-gap,8px)}.O_Ebla_expandedBody{--dsh-chat-flow-gap:16px;scrollbar-gutter:auto;max-height:none;overflow:visible}.O_Ebla_count{color:var(--dsw-alias-label-tertiary);flex:none;font-size:11px}";
     const tagId$12 = "@deepseek-ai/dsh-client-ui-chat/ChatGroupSeat.module.css";
     if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$12) + "]") === null) {
@@ -1474,10 +1741,6 @@ ${t("json.truncated", { total: text.length })}` : text;
       "leading": "O_Ebla_leading",
       "root": "O_Ebla_root",
       "title": "O_Ebla_title"
-    };
-    const PROCESS_SCROLL_AT_REST = {
-      canScrollUp: false,
-      canScrollDown: false
     };
     const PROCESS_TITLE_MINIMUM_MS = 150;
     const PROCESS_ICONS = {
@@ -1516,15 +1779,6 @@ ${t("json.truncated", { total: text.length })}` : text;
       questions: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, {}),
       tools: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSparkleRegular, { size: 14 })
     };
-    function processScrollEdges(element) {
-      return {
-        canScrollUp: element.scrollTop > 1,
-        canScrollDown: element.scrollTop < element.scrollHeight - element.clientHeight - 1
-      };
-    }
-    function sameProcessScrollEdges(left, right) {
-      return left.canScrollUp === right.canScrollUp && left.canScrollDown === right.canScrollDown;
-    }
     function sameLiveProcessTitle(left, right) {
       return left.activity === right.activity && left.detail === right.detail;
     }
@@ -1629,8 +1883,9 @@ ${t("json.truncated", { total: text.length })}` : text;
     const ChatGroupSeat = (0, react.memo)(function ChatGroupSeat2({ groupKey, useChatGroup, ...props }) {
       const members = useChatGroup(groupKey, (group) => group?.members);
       const turn = useChatGroup(groupKey, (group) => group?.data.turn);
+      const closed = useChatGroup(groupKey, (group) => group?.data.closed);
       const foldCompleted = props.usePresentation((policy) => policy.foldCompletedTurns);
-      const { expanded: open, setExpanded: setOpen, toggle } = useDisclosure();
+      const { expanded: open, setExpanded: setOpen } = useDisclosure();
       const firstKey = members?.[0]?.key ?? "";
       const presentation = props.useChatNodeProcess(firstKey);
       const turnLocation2 = props.useChatNode(firstKey, (node) => {
@@ -1667,25 +1922,15 @@ ${t("json.truncated", { total: text.length })}` : text;
       const bodyRef = useSearchableHidden(grouped && !open, reveal);
       const contentRef = (0, react.useRef)(null);
       const bodyId = (0, react.useId)();
-      const [edges, setEdges] = (0, react.useState)(PROCESS_SCROLL_AT_REST);
-      const sync = (0, react.useCallback)(() => {
-        const body = bodyRef.current;
-        const next = body === null || body.closest("[hidden], [data-group-expanded-mode]") !== null ? PROCESS_SCROLL_AT_REST : processScrollEdges(body);
-        setEdges((previous) => sameProcessScrollEdges(previous, next) ? previous : next);
-      }, [bodyRef]);
-      (0, react.useLayoutEffect)(() => {
-        const body = bodyRef.current;
-        if (body === null || !open || typeof ResizeObserver === "undefined") return;
-        const observer = new ResizeObserver(sync);
-        observer.observe(body);
-        if (contentRef.current !== null) observer.observe(contentRef.current);
-        return () => {
-          observer.disconnect();
-        };
+      const { edges, events, initialize } = useProcessScroll(bodyRef, contentRef, open, grouped);
+      const toggle = (0, react.useCallback)(() => {
+        if (!open) initialize(closed === false ? "bottom" : "top");
+        setOpen(!open);
       }, [
-        bodyRef,
+        closed,
+        initialize,
         open,
-        sync
+        setOpen
       ]);
       if (members === void 0) return null;
       const classes = [
@@ -1726,7 +1971,7 @@ ${t("json.truncated", { total: text.length })}` : text;
           "data-step-process-body": true,
           "data-scroll-up": edges.canScrollUp || void 0,
           "data-scroll-down": edges.canScrollDown || void 0,
-          onScroll: sync,
+          ...events,
           children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
             ref: contentRef,
             className: ChatGroupSeat_module_css_default.content,
@@ -2911,7 +3156,7 @@ ${t("json.truncated", { total: text.length })}` : text;
         ...options
       });
     }
-    const css$11 = '.eGxaPq_slot{z-index:7;pointer-events:none;height:0;position:sticky;top:0}.eGxaPq_frame{--turn-rail-band:calc(var(--dsh-conversation-viewport-height,100dvh) - var(--dsh-composer-height,152px));--turn-preview-height:100px;top:calc(var(--turn-rail-band) / 2);right:calc(12px - (var(--dsh-composer-side-clearance) + 16px));width:28px;max-height:min(max(0px, calc(var(--turn-rail-band) - 64px)), 420px);contain:layout;cursor:pointer;pointer-events:auto;position:absolute;transform:translateY(-50%)}.eGxaPq_scroller{max-height:inherit;overscroll-behavior:contain;scrollbar-width:none;position:relative;overflow-y:auto}.eGxaPq_scroller::-webkit-scrollbar{display:none}.eGxaPq_fadeTop{mask-image:linear-gradient(#0000 0,#000 24px 100%)}.eGxaPq_fadeBottom{mask-image:linear-gradient(#000 0 calc(100% - 24px),#0000 100%)}.eGxaPq_fadeTop.eGxaPq_fadeBottom{mask-image:linear-gradient(#0000 0,#000 24px calc(100% - 24px),#0000 100%)}.eGxaPq_marks{position:relative}.eGxaPq_mark{cursor:pointer;background:0 0;border:0;border-radius:8px;height:10px;padding:0;position:absolute;top:0;left:0;right:0}.eGxaPq_mark:before{background:var(--dsw-alias-border-l4);content:"";transform-origin:100%;border-radius:2px;width:20px;height:2px;transition:transform .14s,background-color .14s;position:absolute;top:50%;right:0;transform:translateY(-50%)scaleX(.6)}.eGxaPq_markUnloaded:before{opacity:.6;transform:translateY(-50%)scaleX(.4)}.eGxaPq_markPreview:before{background:var(--dsw-alias-label-tertiary);transform:translateY(-50%)scaleX(.9)}.eGxaPq_markBusy:before{animation:1s ease-in-out infinite eGxaPq_dsh-turn-mark-busy}.eGxaPq_markActive:before{background:var(--dsw-alias-label-primary);transform:translateY(-50%)scaleX(1)}.eGxaPq_mark:focus-visible:before{background:var(--dsw-alias-state-business-primary);transform:translateY(-50%)scaleX(1)}.eGxaPq_mark:focus-visible{outline:none}.eGxaPq_mark:focus-visible:after{border-radius:inherit;outline:1px solid var(--dsw-alias-state-business-primary);outline-offset:2px;content:"";width:20px;position:absolute;inset:0 0 0 auto}.eGxaPq_preview{top:clamp(0px, calc(var(--turn-preview-center) - var(--turn-preview-height) / 2), calc(100% - var(--turn-preview-height)));box-sizing:border-box;width:min(300px,100cqw - 120px);max-height:var(--turn-preview-height);color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);box-shadow:var(--dsw-elevation-panel);pointer-events:none;border:0;border-radius:10px;padding:10px 12px;transition:top .14s cubic-bezier(.2,.8,.2,1);animation:.12s ease-out eGxaPq_dsh-turn-preview-enter;position:absolute;right:calc(100% + 10px);overflow:hidden}.eGxaPq_previewPrompt,.eGxaPq_previewResponse{-webkit-box-orient:vertical;display:-webkit-box;overflow:hidden}.eGxaPq_previewPrompt{font:var(--dsw-font-xs-strong-13);-webkit-line-clamp:1}.eGxaPq_previewResponse{color:var(--dsw-alias-label-caption);font:var(--dsw-font-xxs-12);-webkit-line-clamp:3;margin-top:4px}@keyframes eGxaPq_dsh-turn-preview-enter{0%{opacity:0;transform:translate(4px)}to{opacity:1;transform:translate(0)}}@keyframes eGxaPq_dsh-turn-mark-busy{0%,to{opacity:1}50%{opacity:.35}}@container (width<=900px){.eGxaPq_slot{display:none}}@media (prefers-reduced-motion:reduce){.eGxaPq_frame,.eGxaPq_scroller,.eGxaPq_mark:before,.eGxaPq_markBusy:before,.eGxaPq_preview{scroll-behavior:auto;transition:none;animation:none}}';
+    const css$11 = '.eGxaPq_slot{z-index:7;height:0;padding-inline:calc(var(--dsh-composer-side-clearance) + 16px);pointer-events:none;position:absolute;top:0;left:0;right:0;container-type:inline-size}[data-conversation-scroll] .eGxaPq_slot{position:sticky}.eGxaPq_frame{--turn-rail-band:calc(var(--dsh-conversation-viewport-height,100dvh) - var(--dsh-composer-height,152px));--turn-preview-height:100px;top:calc(var(--turn-rail-band) / 2);width:28px;max-height:min(max(0px, calc(var(--turn-rail-band) - 64px)), 420px);contain:layout;cursor:pointer;pointer-events:auto;position:absolute;right:12px;transform:translateY(-50%)}.eGxaPq_scroller{max-height:inherit;overscroll-behavior:contain;scrollbar-width:none;position:relative;overflow-y:auto}.eGxaPq_scroller::-webkit-scrollbar{display:none}.eGxaPq_fadeTop{mask-image:linear-gradient(#0000 0,#000 24px 100%)}.eGxaPq_fadeBottom{mask-image:linear-gradient(#000 0 calc(100% - 24px),#0000 100%)}.eGxaPq_fadeTop.eGxaPq_fadeBottom{mask-image:linear-gradient(#0000 0,#000 24px calc(100% - 24px),#0000 100%)}.eGxaPq_marks{position:relative}.eGxaPq_mark{cursor:pointer;background:0 0;border:0;border-radius:8px;height:10px;padding:0;position:absolute;top:0;left:0;right:0}.eGxaPq_mark:before{background:var(--dsw-alias-border-l4);content:"";transform-origin:100%;border-radius:2px;width:20px;height:2px;transition:transform .14s,background-color .14s;position:absolute;top:50%;right:0;transform:translateY(-50%)scaleX(.6)}.eGxaPq_markUnloaded:before{opacity:.6;transform:translateY(-50%)scaleX(.4)}.eGxaPq_markPreview:before{background:var(--dsw-alias-label-tertiary);transform:translateY(-50%)scaleX(.9)}.eGxaPq_markBusy:before{animation:1s ease-in-out infinite eGxaPq_dsh-turn-mark-busy}.eGxaPq_markActive:before{background:var(--dsw-alias-label-primary);transform:translateY(-50%)scaleX(1)}.eGxaPq_mark:focus-visible:before{background:var(--dsw-alias-state-business-primary);transform:translateY(-50%)scaleX(1)}.eGxaPq_mark:focus-visible{outline:none}.eGxaPq_mark:focus-visible:after{border-radius:inherit;outline:1px solid var(--dsw-alias-state-business-primary);outline-offset:2px;content:"";width:20px;position:absolute;inset:0 0 0 auto}.eGxaPq_preview{top:clamp(0px, calc(var(--turn-preview-center) - var(--turn-preview-height) / 2), calc(100% - var(--turn-preview-height)));box-sizing:border-box;width:min(300px,100cqw - 120px);max-height:var(--turn-preview-height);color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);box-shadow:var(--dsw-elevation-panel);pointer-events:none;border:0;border-radius:10px;padding:10px 12px;transition:top .14s cubic-bezier(.2,.8,.2,1);animation:.12s ease-out eGxaPq_dsh-turn-preview-enter;position:absolute;right:calc(100% + 10px);overflow:hidden}.eGxaPq_previewPrompt,.eGxaPq_previewResponse{-webkit-box-orient:vertical;display:-webkit-box;overflow:hidden}.eGxaPq_previewPrompt{font:var(--dsw-font-xs-strong-13);-webkit-line-clamp:1}.eGxaPq_previewResponse{color:var(--dsw-alias-label-caption);font:var(--dsw-font-xxs-12);-webkit-line-clamp:3;margin-top:4px}@keyframes eGxaPq_dsh-turn-preview-enter{0%{opacity:0;transform:translate(4px)}to{opacity:1;transform:translate(0)}}@keyframes eGxaPq_dsh-turn-mark-busy{0%,to{opacity:1}50%{opacity:.35}}@container (width<=900px){.eGxaPq_frame{display:none}}@media (prefers-reduced-motion:reduce){.eGxaPq_frame,.eGxaPq_scroller,.eGxaPq_mark:before,.eGxaPq_markBusy:before,.eGxaPq_preview{scroll-behavior:auto;transition:none;animation:none}}';
     const tagId$11 = "@deepseek-ai/dsh-client-ui-chat/TurnNavigator.module.css";
     if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$11) + "]") === null) {
       const tag = document.createElement("style");
@@ -3417,14 +3662,16 @@ ${t("json.truncated", { total: text.length })}` : text;
       store;
       state;
       onChange;
+      follow;
       sampleTimer = null;
       probeFrame = null;
       sampled = null;
-      constructor(viewport, store, state, onChange) {
+      constructor(viewport, store, state, onChange, follow) {
         this.viewport = viewport;
         this.store = store;
         this.state = state;
         this.onChange = onChange;
+        this.follow = follow;
       }
       /**
       * Expose pending reader ownership to navigation and resize handlers.
@@ -3473,7 +3720,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       }
       /** Land at the current floor and clear saved reader position. */
       followTail() {
-        const landing = this.viewport.scrollToBottom();
+        const landing = this.viewport.scrollToBottom(this.follow);
         if (landing === null) return;
         this.cancelPending();
         this.commit(landing, true, this.viewport.latestTurn);
@@ -3488,7 +3735,7 @@ ${t("json.truncated", { total: text.length })}` : text;
         const landing = this.viewport.restore(saved);
         if (landing === null) return;
         this.cancelPending();
-        const following = this.nearBottom(landing.metrics);
+        const following = this.follow.nearBottom(landing.metrics);
         this.commit(landing, following, following ? this.viewport.latestTurn : this.state.activeTurn, following);
         if (!this.state.followingTail && landing.position === null) {
           const position = this.viewport.capturePosition();
@@ -3502,7 +3749,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       */
       acceptNavigation(landing) {
         this.cancelPending();
-        const following = this.nearBottom(landing.metrics);
+        const following = this.follow.nearBottom(landing.metrics);
         this.commit(landing, following, landing.turn ?? (following ? this.viewport.latestTurn : this.state.activeTurn));
       }
       /**
@@ -3554,9 +3801,6 @@ ${t("json.truncated", { total: text.length })}` : text;
         if (typeof requestAnimationFrame !== "function") this.probe();
         else this.probeFrame = requestAnimationFrame(this.probe);
       }
-      nearBottom(metrics) {
-        return metrics.floor - metrics.top <= 25;
-      }
       commit(landing, followingTail, activeTurn, initialized = true) {
         if (followingTail) this.store.save(null);
         else if (landing.position !== null) this.store.save(landing.position);
@@ -3567,6 +3811,7 @@ ${t("json.truncated", { total: text.length })}` : text;
         });
       }
       publish(state) {
+        this.follow.setFollowing(state.followingTail);
         if (state.initialized === this.state.initialized && state.followingTail === this.state.followingTail && state.activeTurn === this.state.activeTurn) return;
         this.state = state;
         this.onChange(state);
@@ -3582,7 +3827,7 @@ ${t("json.truncated", { total: text.length })}` : text;
         if (this.pending) return;
         const scroll = this.viewport.readScroll();
         if (scroll === null) return;
-        const activeTurn = this.nearBottom(scroll.metrics) ? this.viewport.latestTurn : this.viewport.readVisibleTurn(scroll.metrics);
+        const activeTurn = this.follow.nearBottom(scroll.metrics) ? this.viewport.latestTurn : this.viewport.readVisibleTurn(scroll.metrics);
         this.publish({
           ...this.state,
           initialized: true,
@@ -3594,14 +3839,14 @@ ${t("json.truncated", { total: text.length })}` : text;
         this.cancelPending();
         const scroll = this.viewport.readScroll();
         if (scroll === null) return;
-        const followingTail = scroll.movedByReader ? this.nearBottom(scroll.metrics) : this.state.followingTail;
+        const followingTail = this.follow.sample(scroll.metrics, scroll.movedByReader);
         let position = null;
         if (!scroll.movedByReader && followingTail) this.followTail();
         else {
           position = followingTail ? null : this.viewport.capturePosition();
           this.viewport.acknowledge(scroll.metrics);
           if (followingTail || position !== null) this.store.save(position);
-          const activeTurn = this.nearBottom(scroll.metrics) ? this.viewport.latestTurn : this.viewport.readVisibleTurn(scroll.metrics);
+          const activeTurn = this.follow.nearBottom(scroll.metrics) ? this.viewport.latestTurn : this.viewport.readVisibleTurn(scroll.metrics);
           this.publish({
             initialized: true,
             followingTail,
@@ -3621,7 +3866,8 @@ ${t("json.truncated", { total: text.length })}` : text;
         followingTail: store.read() === null,
         activeTurn: initialTurn
       }));
-      const [reading] = (0, react.useState)(() => new ChatReading(viewport, store, state, setState));
+      const follow = useScrollFollow(state.followingTail, 25);
+      const [reading] = (0, react.useState)(() => new ChatReading(viewport, store, state, setState, follow));
       (0, react.useLayoutEffect)(() => {
         reading.setStore(store);
       }, [reading, store]);
@@ -3765,12 +4011,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       metrics() {
         const scroller = this.elements?.scroller;
         if (scroller === void 0) return null;
-        const height = scroller.clientHeight;
-        return {
-          top: scroller.scrollTop,
-          height,
-          floor: Math.max(0, scroller.scrollHeight - height)
-        };
+        return scrollMetrics(scroller);
       }
       anchor(key, identity = "position") {
         if (this.elements === null) return null;
@@ -3948,6 +4189,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       }
       /**
       * Compensate inner scrolling first, then the outer scrollport, within their actual scroll ranges.
+      * An inner write pauses its bound follow controller so the reading anchor takes priority.
       * @returns the actual landing, or null when no visible retained row remains.
       */
       preserve() {
@@ -3970,9 +4212,16 @@ ${t("json.truncated", { total: text.length })}` : text;
         }
         if (group !== null && group.body.contains(row)) {
           const top2 = row.getBoundingClientRect().top - group.body.getBoundingClientRect().top;
-          const floor = Math.max(0, group.body.scrollHeight - group.body.clientHeight);
-          const target2 = Math.max(0, Math.min(floor, group.body.scrollTop + top2 - group.top));
-          if (group.body.scrollTop !== target2) group.body.scrollTop = target2;
+          const metrics2 = scrollMetrics(group.body);
+          const target2 = Math.max(0, Math.min(metrics2.floor, metrics2.top + top2 - group.top));
+          if (metrics2.top !== target2) {
+            const follow = ScrollFollow.forElement(group.body);
+            if (follow === void 0) group.body.scrollTop = target2;
+            else {
+              follow.jump(group.body, metrics2, target2);
+              follow.setFollowing(false);
+            }
+          }
         }
         const metrics = this.metrics();
         if (metrics === null) return null;
@@ -3985,11 +4234,22 @@ ${t("json.truncated", { total: text.length })}` : text;
       }
       /**
       * Align the scrollport with its current floor.
+      * @param follow - independent follow intent and scrolling controller.
       * @returns the actual floor landing, or null while detached.
       */
-      scrollToBottom() {
+      scrollToBottom(follow) {
         const metrics = this.metrics();
-        return metrics === null ? null : this.write(metrics.floor, metrics, this.latestTurn);
+        if (metrics === null || this.elements === null) return null;
+        const landing = {
+          metrics: follow.toBottom(this.elements.scroller, metrics, "instant"),
+          position: null,
+          turn: this.latestTurn
+        };
+        this.observation = {
+          top: landing.metrics.top,
+          landing
+        };
+        return landing;
       }
       align(row, offset, turn) {
         const metrics = this.metrics();
@@ -4196,23 +4456,24 @@ ${t("json.truncated", { total: text.length })}` : text;
       const message = error instanceof Error ? error.message : String(error);
       return message === "" ? fallback : message;
     }
-    function observedRpcIds(order, nodes, inbox) {
+    function observedInputs(order, nodes) {
       const observed = /* @__PURE__ */ new Set();
+      let lastInputTurn;
       for (const key of order) {
         const node = nodes.get(key);
-        if (node === void 0 || node.kind !== "user" && node.kind !== "steering") continue;
+        if (node === void 0 || node.kind !== "user" && node.kind !== "steering" && node.kind !== "turn-trigger") continue;
+        if (node.location.kind === "turn" || node.location.kind === "step") lastInputTurn = node.location.turn.turn;
+        if (node.kind === "turn-trigger") continue;
         const source = node.data.source;
         if (source?.kind === "user" && typeof source.rpcId === "string") observed.add(source.rpcId);
       }
-      const pending = /* @__PURE__ */ new Set();
-      for (const { source } of [...inbox?.["next-turn"] ?? [], ...inbox?.["next-step"] ?? []]) if (source.kind === "user" && "rpcId" in source) pending.add(source.rpcId);
       return {
-        durable: observed,
-        pending
+        rpcIds: observed,
+        lastInputTurn
       };
     }
-    const ChatNodeList = (0, react.memo)(function ChatNodeList2({ entries, useChatGroup, ...seatProps }) {
-      return entries.map((entry) => {
+    const ChatNodeList = (0, react.memo)(function ChatNodeList2({ entries, useChatGroup, pendingInputs, lastInputTurn, ...seatProps }) {
+      const rows = entries.map((entry) => {
         switch (entry.kind) {
           case "node":
             return /* @__PURE__ */ (0, react.createElement)(ChatNodeSeat, {
@@ -4232,6 +4493,22 @@ ${t("json.truncated", { total: text.length })}` : text;
             return assertNever(entry);
         }
       });
+      const pendingRows = pendingInputs.map((item) => "requestId" in item ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PendingSubmissionBubble, {
+        submission: item,
+        renderMessageImages: seatProps.renderMessageImages,
+        t: seatProps.t
+      }, item.requestId) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PendingSteeringBubble, {
+        content: item.content,
+        renderMessageImages: seatProps.renderMessageImages,
+        t: seatProps.t
+      }, item.id));
+      const tail = entries.at(-1);
+      const node = tail?.kind === "node" ? seatProps.nodeStore.get(tail.key) : void 0;
+      if (node?.kind === "turn-process" && node.location.kind === "turn" && node.location.turn.status === "open" && node.location.turn.turn !== lastInputTurn) {
+        const index = pendingInputs.findIndex((item) => "requestId" in item && item.placement === "transcript");
+        if (index !== -1) rows.splice(rows.length - 1, 0, ...pendingRows.splice(index, 1));
+      }
+      return [...rows, ...pendingRows];
     });
     function ChatView({ useSession, useChat, useChatNode, useChatNodeProcess, useChatGroup, useConversation, useSessions, useStore, actions, renderSlot, sessionId, openFile, openSkill, openExternalLink, loadOlder, loadThrough, loadImage, inspectCall, chatScroll, forkAt, fileMentions, usePresentation, useProjection, t }) {
       const order = useChat((s) => s.order);
@@ -4277,27 +4554,31 @@ ${t("json.truncated", { total: text.length })}` : text;
       }, []);
       const inboxSteering = (0, react.useMemo)(() => inbox?.["next-step"].filter((message) => message.source.kind === "user") ?? [], [inbox]);
       const pendingSubmissions = useSession((s) => s.pendingSubmissions);
-      const visibleSubmissions = (0, react.useMemo)(() => {
-        if (pendingSubmissions.length === 0) return pendingSubmissions;
-        const observed = observedRpcIds(order, nodeStore, inbox);
-        return pendingSubmissions.filter((submission) => submission.placement !== "queued" && !observed.durable.has(submission.requestId) && (submission.placement === "steering" || !observed.pending.has(submission.requestId)));
+      const [visibleSubmissions, lastInputTurn] = (0, react.useMemo)(() => {
+        if (pendingSubmissions.length === 0) return [pendingSubmissions, void 0];
+        const observed = observedInputs(order, nodeStore);
+        return [pendingSubmissions.filter((submission) => submission.placement !== "queued" && !observed.rpcIds.has(submission.requestId)), observed.lastInputTurn];
       }, [
         pendingSubmissions,
         order,
-        nodeStore,
-        inbox
+        nodeStore
       ]);
       const pendingInputs = (0, react.useMemo)(() => {
         const local = new Map(visibleSubmissions.map((submission) => [submission.requestId, submission]));
-        return [...inboxSteering.map((item) => {
+        const localIds = new Set(pendingSubmissions.filter((submission) => submission.placement !== "queued").map((submission) => submission.requestId));
+        return [...inboxSteering.flatMap((item) => {
           const source = item.source;
-          if (source.kind !== "user" || !("rpcId" in source)) return item;
+          if (source.kind !== "user" || !("rpcId" in source)) return [item];
           const submission = local.get(source.rpcId);
-          if (submission === void 0) return item;
+          if (submission === void 0) return localIds.has(source.rpcId) ? [] : [item];
           local.delete(source.rpcId);
-          return submission;
+          return [submission];
         }), ...local.values()];
-      }, [inboxSteering, visibleSubmissions]);
+      }, [
+        inboxSteering,
+        pendingSubmissions,
+        visibleSubmissions
+      ]);
       const renderMessageImages = (0, react.useCallback)((owner) => renderSlot("conversation.message.images", {
         ...owner,
         loadImage
@@ -4324,99 +4605,96 @@ ${t("json.truncated", { total: text.length })}` : text;
         loadedTurns: turnNavigationItems
       });
       return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-        className: ChatView_module_css_default.root,
-        "data-chat-following-tail": scroll.followingTail ? "" : void 0,
-        children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-          ref: scroll.listRef,
-          className: ChatView_module_css_default.scroll,
-          children: [
-            scroll.initialized && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TurnNavigator, {
-              items: railItems,
-              activeTurn: scroll.activeTurn,
-              busyTurn: scroll.busyTurn,
-              onNavigate: scroll.navigateToTurn,
-              t
-            }),
-            /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-              ref: scroll.columnRef,
-              className: ChatView_module_css_default.column,
-              "data-chat-flow": "",
-              children: [
-                openState === "loading" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-                  className: ChatView_module_css_default.hint,
-                  children: t("chat.loadingHistory")
-                }),
-                openState === "error" && openError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-                  className: ChatView_module_css_default.openError,
-                  children: t("chat.loadError", {
-                    message: openError.message,
-                    code: openError.code
-                  })
-                }),
-                hasMore && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-                  className: ChatView_module_css_default.older,
-                  children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-                    type: "button",
-                    disabled: loadingOlder,
-                    onClick: scroll.loadEarlier,
-                    children: loadingOlder ? t("loading") : t("chat.loadOlder")
-                  })
-                }),
-                /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownDelegateProvider, {
-                  openExternalLink,
-                  openFile: requestOpenFile,
-                  children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChatNodeList, {
-                    entries,
-                    nodeStore,
-                    useChatGroup,
-                    useChatNode,
-                    useChatNodeProcess,
-                    usePresentation,
-                    useStore,
-                    actions,
-                    cwd,
+        className: ChatView_module_css_default.frame,
+        children: [
+          scroll.initialized && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TurnNavigator, {
+            items: railItems,
+            activeTurn: scroll.activeTurn,
+            busyTurn: scroll.busyTurn,
+            onNavigate: scroll.navigateToTurn,
+            t
+          }),
+          /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+            className: ChatView_module_css_default.root,
+            "data-chat-following-tail": scroll.followingTail ? "" : void 0,
+            children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+              ref: scroll.listRef,
+              className: ChatView_module_css_default.scroll,
+              children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+                ref: scroll.columnRef,
+                className: ChatView_module_css_default.column,
+                "data-chat-flow": "",
+                children: [
+                  openState === "loading" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+                    className: ChatView_module_css_default.hint,
+                    children: t("chat.loadingHistory")
+                  }),
+                  openState === "error" && openError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+                    className: ChatView_module_css_default.openError,
+                    children: t("chat.loadError", {
+                      message: openError.message,
+                      code: openError.code
+                    })
+                  }),
+                  hasMore && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+                    className: ChatView_module_css_default.older,
+                    children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+                      type: "button",
+                      disabled: loadingOlder,
+                      onClick: scroll.loadEarlier,
+                      children: loadingOlder ? t("loading") : t("chat.loadOlder")
+                    })
+                  }),
+                  /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownDelegateProvider, {
+                    openExternalLink,
                     openFile: requestOpenFile,
-                    openSkill,
-                    inspectCall,
-                    forkAt,
-                    loadImage,
-                    renderMessageImages,
-                    fileMentions,
-                    renderSlot,
-                    t
+                    children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChatNodeList, {
+                      entries,
+                      pendingInputs,
+                      lastInputTurn,
+                      nodeStore,
+                      useChatGroup,
+                      useChatNode,
+                      useChatNodeProcess,
+                      usePresentation,
+                      useStore,
+                      actions,
+                      cwd,
+                      openFile: requestOpenFile,
+                      openSkill,
+                      inspectCall,
+                      forkAt,
+                      loadImage,
+                      renderMessageImages,
+                      fileMentions,
+                      renderSlot,
+                      t
+                    })
                   })
-                }),
-                pendingInputs.map((item) => "requestId" in item ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PendingSubmissionBubble, {
-                  submission: item,
-                  renderMessageImages,
-                  t
-                }, item.requestId) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PendingSteeringBubble, {
-                  content: item.content,
-                  renderMessageImages,
-                  t
-                }, item.id))
-              ]
-            }),
-            !scroll.followingTail && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-              className: ChatView_module_css_default.toBottomSlot,
-              children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-                type: "button",
-                className: ChatView_module_css_default.toBottom,
-                "aria-label": t("chat.toBottom"),
-                onClick: scroll.returnToBottom,
-                children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})
+                ]
               })
             })
-          ]
-        }), fileOpenError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FileOpenErrorDialog, {
-          message: fileOpenError.message,
-          busy: fileOpenBusy,
-          onClose: closeFileOpenError,
-          onRetry: () => {
-            requestOpenFile(fileOpenError.path);
-          },
-          t
-        })]
+          }),
+          !scroll.followingTail && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+            className: ChatView_module_css_default.toBottomSlot,
+            children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+              type: "button",
+              className: ChatView_module_css_default.toBottom,
+              "aria-label": t("chat.toBottom"),
+              onClick: scroll.returnToBottom,
+              children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})
+            })
+          }),
+          fileOpenError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FileOpenErrorDialog, {
+            message: fileOpenError.message,
+            busy: fileOpenBusy,
+            onClose: closeFileOpenError,
+            onRetry: () => {
+              requestOpenFile(fileOpenError.path);
+            },
+            t
+          })
+        ]
       });
     }
     function FileOpenErrorDialog({ message, busy, onClose, onRetry, t }) {
@@ -4518,10 +4796,10 @@ ${t("json.truncated", { total: text.length })}` : text;
       "settings.performance.description": "\u9009\u62E9\u6027\u80FD\u4E0E\u7528\u91CF\u4FE1\u606F\u5C55\u793A\u7684\u8BE6\u7EC6\u7A0B\u5EA6",
       "settings.performance.compact": "\u7B80\u6D01",
       "settings.performance.detailed": "\u8BE6\u7EC6",
-      "settings.links.title": "\u804A\u5929\u94FE\u63A5\u6253\u5F00\u65B9\u5F0F",
-      "settings.links.description": "\u9009\u62E9\u804A\u5929\u4E2D HTTP(S) \u94FE\u63A5\u7684\u6253\u5F00\u4F4D\u7F6E",
-      "settings.links.sidebar": "\u5185\u7F6E\u6D4F\u89C8\u5668",
-      "settings.links.newTab": "\u6D4F\u89C8\u5668\u65B0\u6807\u7B7E\u9875",
+      "settings.links.title": "\u7F51\u9875\u94FE\u63A5\u9ED8\u8BA4\u6253\u5F00\u65B9\u5F0F",
+      "settings.links.description": "\u5BF9\u8BDD\u4E2D\u7F51\u9875\u94FE\u63A5\u7684\u6253\u5F00\u4F4D\u7F6E",
+      "settings.links.sidebar": "\u5E94\u7528\u5185\u4FA7\u8FB9\u680F",
+      "settings.links.newTab": "\u9ED8\u8BA4\u6D4F\u89C8\u5668",
       "settings.transcript.title": "\u5DE5\u4F5C\u8FC7\u7A0B\u5C55\u793A",
       "settings.transcript.description": "\u63A7\u5236\u8F6E\u6B21\u548C\u6B65\u9AA4\u7684\u9ED8\u8BA4\u5C55\u5F00\u65B9\u5F0F",
       "settings.transcript.compact": "\u7B80\u6D01",
@@ -4679,9 +4957,9 @@ ${t("json.truncated", { total: text.length })}` : text;
       "settings.performance.compact": "Compact",
       "settings.performance.detailed": "Detailed",
       "settings.links.title": "Open chat links in",
-      "settings.links.description": "Choose where HTTP(S) links in chat open",
-      "settings.links.sidebar": "Built-in browser",
-      "settings.links.newTab": "New browser tab",
+      "settings.links.description": "Choose where to open web links",
+      "settings.links.sidebar": "In-App Sidebar",
+      "settings.links.newTab": "Default Browser",
       "settings.transcript.title": "Work details",
       "settings.transcript.description": "Controls how turns and steps expand by default",
       "settings.transcript.compact": "Compact",

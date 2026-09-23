@@ -1,5 +1,5 @@
 import { symbols } from '@deepseek-ai/cordis';
-// Cordis 4.0.3 exports FiberState as a TypeScript const enum.
+// Cordis 4.0.4 exports FiberState as a TypeScript const enum.
 const UNLOADING = 5;
 const untrace = value => value?.[symbols.original] || value;
 const installed = Symbol.for('omd.loader-live-entries.alpha2');
