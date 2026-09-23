@@ -2,18 +2,18 @@
 
 [返回项目首页](../README.md) · [安装](#安装到现有-dsh推荐) · [日常使用](#日常使用) · [CodeGraph](#codegraph) · [Computer Use](#computer-use) · [开发与验证](#开发与验证)
 
-当前 **1.7.0-rc.1 预发布版** 适配 **DSH 0.1.7-alpha.1**，内置 **OpenCU 1.1.0-rc.1**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
+当前 **1.7.0 正式版** 适配 **DSH 0.1.7-alpha.1**，内置 **OpenCU 1.1.0**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
-[当前验证范围与限制](release-1.7.0-rc.1.md#验证范围与限制)请在升级前一并阅读。
+[当前安装与升级说明](release-1.7.0.md#安装与升级)请在升级前一并阅读。
 
 ## 安装到现有 DSH（推荐）
 
-本预发布版和源码运行均使用 **DSH 0.1.7-alpha.1**。需要 Node.js ≥22.19、pnpm 11.23.0 和 Git。**Windows 使用 PowerShell 7（`pwsh`）**，无需 WSL；Python 验证文件需要另有 Python，`.sh` 文件需要 Bash。
+本正式版和源码运行均使用 **DSH 0.1.7-alpha.1**。需要 Node.js ≥22.19、pnpm 11.23.0 和 Git。**Windows 使用 PowerShell 7（`pwsh`）**，无需 WSL；Python 验证文件需要另有 Python，`.sh` 文件需要 Bash。
 
 先停止当前 DSH Web，在终端或 PowerShell 中安装：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.0-rc.1
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.0
 ```
 
 然后按原来的方式重新启动 DSH，例如：
@@ -31,7 +31,7 @@ dsh web
 <details>
 <summary>更新与卸载</summary>
 
-停止服务并备份 DSH_HOME 后，将宿主更新至 DSH 0.1.7-alpha.1，再安装固定 tag `v1.7.0-rc.1`。插件安装不会自动升级全局 DSH。预发布请使用固定 tag，不使用未标记的主分支。
+停止服务并备份 DSH_HOME 后，将宿主更新至 DSH 0.1.7-alpha.1，再安装固定 tag `v1.7.0`。插件安装不会自动升级全局 DSH。固定 tag 可确保安装版本一致。
 
 卸载：
 
@@ -422,7 +422,7 @@ OMD 主会话使用 pi-ai 图片路由时，发送前按提供方的实际图片
 发布时同步更新 `package.json` 版本和 `release-manifest.json`，在清单头部添加该版本的 `version`、`severity`、`title`、`notes`，再更新 [更新记录](../CHANGELOG.md)。普通更新使用 `severity: "normal"`；必须提醒用户安装的重要修复使用 `severity: "required"`。保留历史必要更新条目，避免后续普通版本掩盖仍未安装的必要修复。分级由维护者明确标记，不靠标题关键词猜测。版本判断支持数字预发布版本；正式版安装不提示升级到预览版。
 
 
-### DSH 0.1.7 预发布版升级说明
+### DSH 0.1.7 升级说明
 
 先停止旧宿主并备份同一个 DSH_HOME，再用匹配的 DSH 0.1.7-alpha.1 启动此工作树。旧配置、皮肤选择及身份标识保留；设置改用宿主的 profile 配置表单，重复设置回调已移除。电脑工具路径修改保存后仍需重启。
 
