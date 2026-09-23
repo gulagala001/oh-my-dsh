@@ -7,15 +7,20 @@ export function historySize() {
   try { const value = Number(localStorage.getItem(HISTORY_SIZE_KEY)); if (HISTORY_SIZES.includes(value)) return value; } catch {}
   return 200;
 }
-// Adapt only the host's ordinary 50-message pages. Its explicit jump/repair
-// windows keep their own size; the original stream still owns all paging state.
+// Adapt the host's ordinary page window while leaving jump/repair requests
+// alone. RC uses a turn-aligned window capped at 500 instead of maxMessages=50.
 export function applyHistorySize(ctx) {
   ctx.effect(() => {
     const prototype = SessionEventStream.prototype;
     const restore = ['open', 'prepend'].map(name => {
       const descriptor = Object.getOwnPropertyDescriptor(prototype, name), original = prototype[name];
       function page(request, ...args) {
-        return original.call(this, request?.maxMessages === 50 ? { ...request, maxMessages: historySize() } : request, ...args);
+        const ordinary = request?.maxMessages === 50 || request?.maxMessages === 500
+          && request.turnWindow?.minMessages === 50 && request.turnWindow?.minTurns === 2;
+        const size = historySize();
+        return original.call(this, ordinary ? { ...request, maxMessages: size,
+          ...request.turnWindow ? { turnWindow: { ...request.turnWindow, minMessages: size } } : {},
+        } : request, ...args);
       }
       Object.defineProperty(prototype, name, { configurable: true, writable: true, value: page });
       return () => {

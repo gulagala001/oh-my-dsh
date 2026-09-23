@@ -105,7 +105,7 @@ export function apply(ctx) { let seeded = false; ctx.on('session/created', sessi
   await until(async () => (await rpc('llm/listProviders')).some(provider => provider.id === 'fixture'));
   const registered = await rpc('workspace/create', { path: workspace });
   const { sessionId } = await rpc('session/create', { workspaceId: registered.workspace.workspaceId, agentPreset });
-  await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '整理工作台和对话界面' }] });
+  if (!historyMessages) await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '整理工作台和对话界面' }] });
   await until(async () => (await (await fetch(origin + '/trisoul-x/api/state?session=' + sessionId, {headers:{cookie}})).json()).running === 'idle');
   if (historyMessages) await rpc('session/rename', { sessionId, title: '整理工作台和对话界面' });
   if (headless) return { root, home, workspace, origin, rpc, sessionId, errors, html: () => fetch(origin, { headers: { cookie } }).then(r => r.text()), replyWith(factory) { replyFactory = factory; },

@@ -38,7 +38,7 @@ test('installed package history honors 200/50/500, reload and plugin removal', {
     assert.equal(value.result.value.application, 'applied');
   };
   await Promise.all([page.waitForEvent('load'), setPlugin(false)]);
-  await until(async () => await count() >= 40);
+  await until(async () => await count() >= 40).catch(async error => { throw Error(error.message + ' after removal: ' + (await page.locator('body').innerText()).slice(0, 2000) + ' errors=' + JSON.stringify(errors)); });
   assert.ok(await count() <= 50, 'unloaded plugin restores the original host page size');
   await Promise.all([page.waitForEvent('load'), setPlugin(true)]);
   await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
