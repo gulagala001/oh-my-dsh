@@ -112,13 +112,13 @@ Settings → General → Work details stores `ui-chat.transcriptView` as `compac
 
 | Behavior | Compact | Detailed | Expanded |
 |---|---|---|---|
-| Process-group header | Category summary | Summary and live task detail | Hidden in running Turns; retained in historical Turns |
+| Process-group header | Summary and live task detail | Summary and live task detail | Hidden in running Turns; retained in historical Turns |
 | Process-group body | Initially collapsed | Initially collapsed | Directly visible without a group-level height cap in running Turns; manual disclosure in historical Turns |
-| Settled reasoning preview | Hidden | First line | First line |
+| Settled reasoning preview | First nonempty line | First nonempty line | First nonempty line |
 | Individual reasoning and tool bodies | Manual expansion | Manual expansion | Manual expansion |
 | Eligible completed Turn | Initially collapsed | Initially collapsed | Initially collapsed |
 
-A closed group's header names the first three categories from its ranked summary, without displaying counts. A group without categories uses the thinking label. A running header names its live tool category, otherwise thinking; Detailed appends live detail. Live titles remain visible for at least 150ms, retaining only the newest pending title.
+A closed group's header names the first three categories from its ranked summary, without displaying counts. A group without categories uses the thinking label. A running header names its live tool category, otherwise thinking; Both Compact and Detailed append live detail. Live titles remain visible for at least 150ms, retaining only the newest pending title.
 
 ### Group-title rules
 
@@ -149,13 +149,13 @@ The labels below describe recorded activity, not successful outcomes. For exampl
 | Closed, three categories | Join all three ranked labels with commas. |
 | Closed, more than three categories | Show the first three labels followed by “etc.” (`等` in Chinese). |
 
-English lowercases the initial letter of joined labels after the first. Closing a group immediately selects the completed summary; the 150ms minimum applies to running-title changes, not to delaying completion. Expanded hides group headers in running Turns, including groups ended by a reply or steering before their Turn ends.
+English lowercases the initial letter of joined labels after the first. Only closing a group selects the completed summary; completing its tools while the model continues thinking keeps the live title; the 150ms minimum applies to running-title changes, not to delaying completion. Expanded hides group headers in running Turns, including groups ended by a reply or steering before their Turn ends.
 
 Group headers show a category icon, replace it with a down arrow on hover or keyboard focus, and show an up arrow while open. Manually expanded group bodies use 8px row spacing, a `min(400px, 50vh)` height cap, and 24px directional fades. Wheel scrolling can continue into the outer transcript at an edge. Expanded mode removes the group-level cap and uses 16px row spacing only in running Turns.
 
 An open capped group follows content growth only while its own scroll position is at the bottom. Scrolling away pauses that group's following; returning to the bottom resumes it, independently of outer transcript following. Manually opening an unclosed group starts at the bottom and follows growth; manually opening a closed group starts at the top with following disabled, even when its initial content fits without scrolling. Closing the group in the data or restoring its height cap through a mode change does not reset an already-open reader's position. Browser find retains its own reveal position.
 
-Consecutive reasoning blocks within one Assistant share a single disclosure, preserving their text in order and the reader’s open state as fragments arrive. Other block kinds and Assistant steps separate disclosures. Individual reasoning starts collapsed, including while streaming. All modes preview the latest paragraph whose first line ends with a newline; an unfinished single line has no preview. Later text in that paragraph does not change the preview. After settlement, the mode table applies. Expanded reasoning uses compact Markdown typography.
+Consecutive reasoning blocks within one Assistant share a single disclosure, preserving their text in order and the reader’s open state as fragments arrive. Other block kinds and Assistant steps separate disclosures. Individual reasoning starts collapsed, including while streaming. All modes preview the latest paragraph whose first line ends with a newline, falling back to the first nonempty line before any line completes. Later text in that paragraph does not change the preview. After settlement, the mode table applies. Expanded reasoning uses compact Markdown typography.
 
 Switching modes retains manually opened groups and inner disclosures. It changes visibility and sizing without recreating the message rows. Expanded does not mean opening every individual disclosure or unfolding the whole Turn.
 

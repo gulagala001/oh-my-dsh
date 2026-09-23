@@ -29,6 +29,41 @@ index 99e647d2..d7786d87 100644
          return styleInjectionModule(id, fileId, code.toString())
        },
      }],
+diff --git a/packages/client/ui-chat/README.md b/packages/client/ui-chat/README.md
+index 1aa7d71b..49b22a7e 100644
+--- a/packages/client/ui-chat/README.md
++++ b/packages/client/ui-chat/README.md
+@@ -8,7 +8,7 @@ English | [中文](README.zh.md)
+ 
+ ## Summary
+ 
+-Use this package to render a browser chat from recorded Session conversations, including historical images, localized actions, and restored scroll position. Work-details modes control reasoning previews and fold eligible completed-turn process rows without hiding final answers. Local transcript and steering submissions appear immediately, remain in their original surface, and disappear atomically when authoritative Session records arrive, while queued submissions stay outside Chat. The package does not assemble or modify model requests.
++Use this package to render a browser chat from recorded Session conversations, including historical images, localized actions, and restored scroll position. Work-details modes control process grouping and fold eligible completed-turn process rows without hiding final answers. Collapsed reasoning retains a one-line preview in every mode. Local transcript and steering submissions appear immediately, remain in their original surface, and disappear atomically when authoritative Session records arrive, while queued submissions stay outside Chat. The package does not assemble or modify model requests.
+ 
+ File-mention providers receive the viewed Session ID with the closing-turn owner, so links into inherited history can address the fork itself.
+ 
+@@ -76,7 +76,7 @@ During uninterrupted following, local transcript and steering echoes remain moun
+ 
+ When Chat ends with an open Turn control and that Turn has no visible input, the first local transcript echo precedes the control. Other echoes remain at the flow tail. The control and echoes share one keyed list, so arrival of the control preserves the echo's mounted identity. Durable inputs replace their matching echoes in the same render.
+ 
+-Work-details modes control process-group display and reasoning previews; eligible completed Turns fold their process without hiding the final answer. The [business-rule reference](src/client/conversation-nodes/README.md#display-modes) contains the mode table, title behavior, whole-Turn eligibility, clocks, and disclosure resets.
++Work-details modes control process-group display; collapsed reasoning retains a one-line preview, and eligible completed Turns fold their process without hiding the final answer. The [business-rule reference](src/client/conversation-nodes/README.md#display-modes) contains the mode table, title behavior, whole-Turn eligibility, clocks, and disclosure resets.
+ 
+ -----
+ 
+diff --git a/packages/client/ui-chat/README.zh.md b/packages/client/ui-chat/README.zh.md
+index 22392344..5b56722f 100644
+--- a/packages/client/ui-chat/README.zh.md
++++ b/packages/client/ui-chat/README.zh.md
+@@ -8,7 +8,7 @@ kind: "package-reference"
+ 
+ ## 概述
+ 
+-使用本包可在浏览器中渲染已记录的 Session 对话，包括历史图片、本地化操作和滚动位置恢复。工作过程展示模式控制思考预览，并收起符合条件的已完成轮次过程行，不隐藏最终答案。本地 transcript（文本记录）与 steering（中途引导）提交会立即显示并保留在原区域，在权威会话记录到达时原子地消失，而排队中的提交始终不进入 Chat。本包不组装或修改模型请求。
++使用本包可在浏览器中渲染已记录的 Session 对话，包括历史图片、本地化操作和滚动位置恢复。工作过程展示模式控制过程分组，并收起符合条件的已完成轮次过程行，不隐藏最终答案。收起的思考在所有模式下均保留一行预览。本地 transcript（文本记录）与 steering（中途引导）提交会立即显示并保留在原区域，在权威会话记录到达时原子地消失，而排队中的提交始终不进入 Chat。本包不组装或修改模型请求。
+ 
+ 文件提及提供方同时接收当前查看的会话 ID 与收尾轮次的属主信息，因此继承历史中的链接可以指向 fork 自身。
+ 
 diff --git a/packages/client/ui-chat/src/client/apply.ts b/packages/client/ui-chat/src/client/apply.ts
 index 69885d3e..129c8874 100644
 --- a/packages/client/ui-chat/src/client/apply.ts
@@ -132,7 +167,7 @@ index 56687cd8..d01394bb 100644
 +
 +.count { flex: none; font-size: 11px; color: var(--dsw-alias-label-tertiary); }
 diff --git a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx
-index f2d7fa17..fef2d281 100644
+index f2d7fa17..8c1abda8 100644
 --- a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx
 +++ b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx
 @@ -1,5 +1,5 @@
@@ -156,7 +191,7 @@ index f2d7fa17..fef2d281 100644
  }) {
    const data = useChatGroup(groupKey, group => group?.data)
 -  const detailed = usePresentation(policy => data?.closed === false && policy.liveProcessDetail)
-+  const working = data !== undefined && !data.closed && (data.summary.running !== undefined || data.summary.counts.length === 0)
++  const working = data !== undefined && !data.closed
 +  const detailed = usePresentation(policy => working && policy.liveProcessDetail)
    const live = useStableLiveProcessTitle({
      activity: data?.summary.running ?? 'thinking',
@@ -246,10 +281,20 @@ index 5bb003bd..7b1b62ca 100644
      ? null
      : {
 diff --git a/packages/client/ui-chat/src/client/chat/ReasoningRow.tsx b/packages/client/ui-chat/src/client/chat/ReasoningRow.tsx
-index 74a801d6..95a4d1ae 100644
+index 74a801d6..0b6d724b 100644
 --- a/packages/client/ui-chat/src/client/chat/ReasoningRow.tsx
 +++ b/packages/client/ui-chat/src/client/chat/ReasoningRow.tsx
-@@ -32,7 +32,7 @@ function latestCompletedParagraphFirstLine(text: string): string {
+@@ -9,8 +9,7 @@ import css from './ReasoningRow.module.css'
+ const THINK_ICON = <IconThinkOutlineRegular size={14} />
+ 
+ function firstLine(text: string): string {
+-  const newline = text.indexOf('\n')
+-  return newline === -1 ? text : text.slice(0, newline)
++  return text.split(/\r?\n/).find(line => line.trim() !== '')?.trim() ?? ''
+ }
+ 
+ function latestCompletedParagraphFirstLine(text: string): string {
+@@ -32,11 +31,11 @@ function latestCompletedParagraphFirstLine(text: string): string {
  }
  
  /**
@@ -257,7 +302,22 @@ index 74a801d6..95a4d1ae 100644
 + * Render one consecutive run of assistant reasoning collapsed until the reader opens it. The
   * collapsed summary omits double-asterisk markers; expanded content renders
   * the complete Markdown with secondary typography. A streaming preview advances
-  * when a paragraph's first line completes. Mode changes toggle CSS display without unmounting
+- * when a paragraph's first line completes. Mode changes toggle CSS display without unmounting
+- * collapsed summaries.
++ * when a paragraph's first line completes, falling back to the first nonempty line
++ * before the first newline arrives. Collapsed summaries remain visible in every mode.
+  * @param props.text - complete or streaming reasoning text.
+  * @param props.running - whether this block is the streaming tail.
+  * @param props.usePresentation - live display-policy selector for this reasoning row.
+@@ -53,7 +52,7 @@ export const ReasoningRow = memo(function ReasoningRow({ text, running, usePrese
+ }) {
+   const { expanded, toggle } = useDisclosure()
+   const labels = useMemo(() => markdownLabels(t), [t])
+-  const summaryText = running ? latestCompletedParagraphFirstLine(text) : firstLine(text)
++  const summaryText = (running ? latestCompletedParagraphFirstLine(text) : '') || firstLine(text)
+   const summary = useMemo(() => summaryText.replaceAll('**', ''), [summaryText])
+   const preview = usePresentation(policy => !expanded && summary !== ''
+     && (running || policy.settledReasoningPreview))
 diff --git a/packages/client/ui-chat/src/client/contract/process-groups.ts b/packages/client/ui-chat/src/client/contract/process-groups.ts
 index 0c7bc744..0390064e 100644
 --- a/packages/client/ui-chat/src/client/contract/process-groups.ts
@@ -276,28 +336,76 @@ index 0c7bc744..0390064e 100644
    readonly running: ProcessActivity | undefined
    readonly runningDetail: string
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/README.md b/packages/client/ui-chat/src/client/conversation-nodes/README.md
-index 3a166067..022dea0c 100644
+index 3a166067..a50fc396 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/README.md
 +++ b/packages/client/ui-chat/src/client/conversation-nodes/README.md
-@@ -155,7 +155,7 @@ Group headers show a category icon, replace it with a down arrow on hover or key
+@@ -112,13 +112,13 @@ Settings → General → Work details stores `ui-chat.transcriptView` as `compac
+ 
+ | Behavior | Compact | Detailed | Expanded |
+ |---|---|---|---|
+-| Process-group header | Category summary | Summary and live task detail | Hidden in running Turns; retained in historical Turns |
++| Process-group header | Summary and live task detail | Summary and live task detail | Hidden in running Turns; retained in historical Turns |
+ | Process-group body | Initially collapsed | Initially collapsed | Directly visible without a group-level height cap in running Turns; manual disclosure in historical Turns |
+-| Settled reasoning preview | Hidden | First line | First line |
++| Settled reasoning preview | First nonempty line | First nonempty line | First nonempty line |
+ | Individual reasoning and tool bodies | Manual expansion | Manual expansion | Manual expansion |
+ | Eligible completed Turn | Initially collapsed | Initially collapsed | Initially collapsed |
+ 
+-A closed group's header names the first three categories from its ranked summary, without displaying counts. A group without categories uses the thinking label. A running header names its live tool category, otherwise thinking; Detailed appends live detail. Live titles remain visible for at least 150ms, retaining only the newest pending title.
++A closed group's header names the first three categories from its ranked summary, without displaying counts. A group without categories uses the thinking label. A running header names its live tool category, otherwise thinking; Both Compact and Detailed append live detail. Live titles remain visible for at least 150ms, retaining only the newest pending title.
+ 
+ ### Group-title rules
+ 
+@@ -149,13 +149,13 @@ The labels below describe recorded activity, not successful outcomes. For exampl
+ | Closed, three categories | Join all three ranked labels with commas. |
+ | Closed, more than three categories | Show the first three labels followed by “etc.” (`等` in Chinese). |
+ 
+-English lowercases the initial letter of joined labels after the first. Closing a group immediately selects the completed summary; the 150ms minimum applies to running-title changes, not to delaying completion. Expanded hides group headers in running Turns, including groups ended by a reply or steering before their Turn ends.
++English lowercases the initial letter of joined labels after the first. Only closing a group selects the completed summary; completing its tools while the model continues thinking keeps the live title; the 150ms minimum applies to running-title changes, not to delaying completion. Expanded hides group headers in running Turns, including groups ended by a reply or steering before their Turn ends.
+ 
+ Group headers show a category icon, replace it with a down arrow on hover or keyboard focus, and show an up arrow while open. Manually expanded group bodies use 8px row spacing, a `min(400px, 50vh)` height cap, and 24px directional fades. Wheel scrolling can continue into the outer transcript at an edge. Expanded mode removes the group-level cap and uses 16px row spacing only in running Turns.
  
  An open capped group follows content growth only while its own scroll position is at the bottom. Scrolling away pauses that group's following; returning to the bottom resumes it, independently of outer transcript following. Manually opening an unclosed group starts at the bottom and follows growth; manually opening a closed group starts at the top with following disabled, even when its initial content fits without scrolling. Closing the group in the data or restoring its height cap through a mode change does not reset an already-open reader's position. Browser find retains its own reveal position.
  
 -Individual reasoning starts collapsed, including while streaming. All modes preview the latest paragraph whose first line ends with a newline; an unfinished single line has no preview. Later text in that paragraph does not change the preview. After settlement, the mode table applies. Expanded reasoning uses compact Markdown typography.
-+Consecutive reasoning blocks within one Assistant share a single disclosure, preserving their text in order and the reader’s open state as fragments arrive. Other block kinds and Assistant steps separate disclosures. Individual reasoning starts collapsed, including while streaming. All modes preview the latest paragraph whose first line ends with a newline; an unfinished single line has no preview. Later text in that paragraph does not change the preview. After settlement, the mode table applies. Expanded reasoning uses compact Markdown typography.
++Consecutive reasoning blocks within one Assistant share a single disclosure, preserving their text in order and the reader’s open state as fragments arrive. Other block kinds and Assistant steps separate disclosures. Individual reasoning starts collapsed, including while streaming. All modes preview the latest paragraph whose first line ends with a newline, falling back to the first nonempty line before any line completes. Later text in that paragraph does not change the preview. After settlement, the mode table applies. Expanded reasoning uses compact Markdown typography.
  
  Switching modes retains manually opened groups and inner disclosures. It changes visibility and sizing without recreating the message rows. Expanded does not mean opening every individual disclosure or unfolding the whole Turn.
  
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md b/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md
-index 024ea0f5..61c1f09d 100644
+index 024ea0f5..b28be68a 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md
 +++ b/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md
-@@ -155,7 +155,7 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
+@@ -112,13 +112,13 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
+ 
+ | 行为 | 简洁 | 详细 | 完全展开 |
+ |---|---|---|---|
+-| 过程组头 | 类别摘要 | 摘要与实时任务详情 | 运行中轮次隐藏；历史轮次保留 |
++| 过程组头 | 摘要与实时任务详情 | 摘要与实时任务详情 | 运行中轮次隐藏；历史轮次保留 |
+ | 过程组正文 | 初始收起 | 初始收起 | 运行中轮次直接显示、不设组级限高；历史轮次按手动开合显示 |
+-| 已结算推理预览 | 隐藏 | 首行 | 首行 |
++| 已结算推理预览 | 首个非空行 | 首个非空行 | 首个非空行 |
+ | 单个推理与工具正文 | 手动展开 | 手动展开 | 手动展开 |
+ | 符合条件的已完成轮次 | 初始收起 | 初始收起 | 初始收起 |
+ 
+-已结束组的组头展示排序摘要的前三类，不显示次数；没有类别时使用思考标题。运行中的组头展示实时工具类别，没有运行工具时使用思考标题；详细模式附加实时详情。实时标题至少保留 150ms，只保留最新待显示标题。
++已结束组的组头展示排序摘要的前三类，不显示次数；没有类别时使用思考标题。运行中的组头展示实时工具类别，没有运行工具时使用思考标题；简洁和详细模式都附加实时详情。实时标题至少保留 150ms，只保留最新待显示标题。
+ 
+ ### 组标题规则
+ 
+@@ -149,13 +149,13 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
+ | 已结束，三个类别 | 按排名用中文逗号 `，` 连接三项文案。 |
+ | 已结束，超过三个类别 | 只显示前三项文案，末尾加「等」。 |
+ 
+-英文组合标题将第一项之后各项的首字母转为小写。组结束时立即切换完成摘要；150ms 最短保留时间针对运行中标题变化，不延迟完成状态。Expanded 隐藏运行中轮次的组头，包括被回复或 steering 截断、但所属轮次尚未结束的小组。
++英文组合标题将第一项之后各项的首字母转为小写。只有组结束时才切换完成摘要，工具结束但模型继续思考时仍显示实时标题；150ms 最短保留时间针对运行中标题变化，不延迟完成状态。Expanded 隐藏运行中轮次的组头，包括被回复或 steering 截断、但所属轮次尚未结束的小组。
+ 
+ 组头显示类别图标，悬停或键盘聚焦时替换为向下箭头，展开时显示向上箭头。手动展开的组正文使用 8px 行间距、`min(400px, 50vh)` 限高及 24px 方向渐隐；到达边缘时滚轮可以继续滚动外层文本记录。完全展开模式仅对运行中轮次取消组级限高，使用 16px 行间距。
  
  已展开的限高组仅在自己的滚动位置处于底部时跟随内容增长。滚离底部暂停该组跟随，滚回底部后恢复，与外层文本记录的跟随状态独立。手动展开未关闭的组时定位到底部并跟随增长；手动展开已关闭的组时从顶部开始且不启用跟随，即使初始内容无需滚动即可容纳。数据中的组变为已关闭，或通过模式切换恢复限高时，不重置已展开组的阅读位置。浏览器查找沿用自身的展开定位。
  
 -单个推理初始收起，包括流式输出期间。三档都预览最近一个首行以换行结束的段落；未完成的单行没有预览，该段落后续文本不改变预览。结算后按上表展示。展开的推理使用紧凑 Markdown 排版。
-+同一 Assistant 内连续的推理块合用一个折叠行，按顺序保留全文，后续片段到达时保持用户的展开状态。其他类型的块及不同 Assistant 步骤仍分开显示。单个推理初始收起，包括流式输出期间。三档都预览最近一个首行以换行结束的段落；未完成的单行没有预览，该段落后续文本不改变预览。结算后按上表展示。展开的推理使用紧凑 Markdown 排版。
++同一 Assistant 内连续的推理块合用一个折叠行，按顺序保留全文，后续片段到达时保持用户的展开状态。其他类型的块及不同 Assistant 步骤仍分开显示。单个推理初始收起，包括流式输出期间。三档都预览最近一个首行以换行结束的段落；尚无完整行时预览首个非空行，该段落后续文本不改变预览。结算后按上表展示。展开的推理使用紧凑 Markdown 排版。
  
  切换模式保留手动展开的组和内部开合状态，只改变显隐与尺寸，不重建消息行。完全展开不表示自动打开每个内部控件，也不表示展开整轮。
  
@@ -392,11 +500,92 @@ index 9638f554..6147fd52 100644
    'message.stepProcess.done.thinking': 'Analysis completed',
    'message.stepProcess.done.read': 'Read files',
    'message.stepProcess.done.search': 'Searched code',
+diff --git a/packages/client/ui-chat/src/client/presentation-policy.ts b/packages/client/ui-chat/src/client/presentation-policy.ts
+index 3b570228..e0efabda 100644
+--- a/packages/client/ui-chat/src/client/presentation-policy.ts
++++ b/packages/client/ui-chat/src/client/presentation-policy.ts
+@@ -26,8 +26,8 @@ const POLICIES: Readonly<Record<TranscriptViewMode, ChatPresentationPolicy>> = {
+     mode: 'compact',
+     foldCompletedTurns: true,
+     stepGrouping: 'collapsed',
+-    liveProcessDetail: false,
+-    settledReasoningPreview: false,
++    liveProcessDetail: true,
++    settledReasoningPreview: true,
+   },
+   detailed: {
+     mode: 'detailed',
+diff --git a/packages/client/ui-chat/tests/chat-view.client.spec.tsx b/packages/client/ui-chat/tests/chat-view.client.spec.tsx
+index dc70093f..3e547a2b 100644
+--- a/packages/client/ui-chat/tests/chat-view.client.spec.tsx
++++ b/packages/client/ui-chat/tests/chat-view.client.spec.tsx
+@@ -925,8 +925,7 @@ describe('ChatView', () => {
+       expect([...view.container.querySelectorAll('[data-process-activity]')]).toEqual(allHeaders)
+       expect(headers.map(header => header.textContent)).toEqual(titles)
+       const liveLabel = h.props.t('message.stepProcess.commands')
+-      expect(allHeaders[40]?.textContent).toBe(mode === 'compact' ? liveLabel
+-        : `${liveLabel}${h.props.t('message.turnProcess.separator')}pwd`)
++      expect(allHeaders[40]?.textContent).toBe(`${liveLabel}${h.props.t('message.turnProcess.separator')}pwd`)
+     }
+     const running = groups[40]!
+     act(() => {
+diff --git a/packages/client/ui-chat/tests/presentation-policy.client.spec.tsx b/packages/client/ui-chat/tests/presentation-policy.client.spec.tsx
+index de1319c0..60d11f7c 100644
+--- a/packages/client/ui-chat/tests/presentation-policy.client.spec.tsx
++++ b/packages/client/ui-chat/tests/presentation-policy.client.spec.tsx
+@@ -10,7 +10,7 @@ afterEach(cleanup)
+ 
+ describe('Chat presentation policy', () => {
+   it.each([
+-    ['compact', 'collapsed', false, false],
++    ['compact', 'collapsed', true, true],
+     ['detailed', 'collapsed', true, true],
+     ['expanded', 'none', true, true],
+   ] as const)('maps %s to stable presentation capabilities', (mode, stepGrouping, settledReasoningPreview, liveProcessDetail) => {
+@@ -37,28 +37,28 @@ describe('Chat presentation policy', () => {
+     const mode = createSnapshotStore<TranscriptViewMode>('compact')
+     const usePresentation = bindSnapshotSelector(derivePresentationPolicy(mode))
+     const foldRender = vi.fn()
+-    const previewRender = vi.fn()
++    const groupingRender = vi.fn()
+     function Fold() {
+       const fold = usePresentation(policy => policy.foldCompletedTurns)
+       foldRender(fold)
+       return <span>{String(fold)}</span>
+     }
+-    function Preview() {
+-      const preview = usePresentation(policy => policy.settledReasoningPreview)
+-      previewRender(preview)
+-      return <span>{String(preview)}</span>
++    function Grouping() {
++      const grouping = usePresentation(policy => policy.stepGrouping)
++      groupingRender(grouping)
++      return <span>{String(grouping)}</span>
+     }
+-    render(<><Fold /><Preview /></>)
++    render(<><Fold /><Grouping /></>)
+     expect(foldRender).toHaveBeenCalledTimes(1)
+-    expect(previewRender).toHaveBeenCalledTimes(1)
++    expect(groupingRender).toHaveBeenCalledTimes(1)
+     act(() => { mode.set('detailed') })
+     expect(foldRender).toHaveBeenCalledTimes(1)
+-    expect(previewRender).toHaveBeenCalledTimes(2)
++    expect(groupingRender).toHaveBeenCalledTimes(1)
+     act(() => { mode.set('expanded') })
+     expect(foldRender).toHaveBeenCalledTimes(1)
+-    expect(previewRender).toHaveBeenCalledTimes(2)
++    expect(groupingRender).toHaveBeenCalledTimes(2)
+     act(() => { mode.set('compact') })
+     expect(foldRender).toHaveBeenCalledTimes(1)
+-    expect(previewRender).toHaveBeenCalledTimes(3)
++    expect(groupingRender).toHaveBeenCalledTimes(3)
+   })
+ })
 diff --git a/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx b/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx
-index 0d6b505f..6241b919 100644
+index 0d6b505f..f879a9c0 100644
 --- a/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx
 +++ b/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx
-@@ -19,6 +19,51 @@ afterEach(() => {
+@@ -19,10 +19,55 @@ afterEach(() => {
  const t = makeTranslate(zh, commonZh)
  const renderMessageImages: AssistantMarkdownProps['renderMessageImages'] = () => null
  
@@ -448,3 +637,45 @@ index 0d6b505f..6241b919 100644
  describe('ReasoningRow', () => {
    it.each([
      ['', ''],
+-    ['An unfinished line', ''],
++    ['An unfinished line', 'An unfinished line'],
+     ['A completed first line\nUnfinished continuation', 'A completed first line'],
+     ['First\nSecond\nThird\n', 'First'],
+     ['First\n\nNext unfinished', 'First'],
+@@ -55,7 +100,7 @@ describe('ReasoningRow', () => {
+     for (const next of ['compact', 'detailed', 'expanded', 'compact'] as const) {
+       act(() => { mode.set(next) })
+       expect(view.getByText('First line')).toBe(summary)
+-      expect(root.hasAttribute('data-preview')).toBe(next !== 'compact')
++      expect(root.hasAttribute('data-preview')).toBe(true)
+       expect(root.querySelector('[data-markdown-variant]')).toBeNull()
+     }
+     fireEvent.click(toggle)
+@@ -72,7 +117,7 @@ describe('ReasoningRow', () => {
+     expect(view.getByRole('button')).toBe(toggle)
+   })
+ 
+-  it('keeps a running preview enabled in Compact and hides it on settlement without removing it', () => {
++  it('keeps a running preview visible in Compact after settlement', () => {
+     const mode = createSnapshotStore<TranscriptViewMode>('compact')
+     const usePresentation = bindSnapshotSelector(derivePresentationPolicy(mode))
+     const props = { text: 'First line\n', usePresentation, t }
+@@ -81,10 +126,17 @@ describe('ReasoningRow', () => {
+     const root = view.container.querySelector('[data-variant="think"]')!
+     expect(root.hasAttribute('data-preview')).toBe(true)
+     view.rerender(<ReasoningRow useDisclosure={useDisclosure} {...props} running={false} />)
+-    expect(root.hasAttribute('data-preview')).toBe(false)
++    expect(root.hasAttribute('data-preview')).toBe(true)
+     expect(view.getByText('First line')).toBe(summary)
+   })
+ 
++  it.each([false, true])('previews content after leading blank lines, running=%s', (running) => {
++    const view = render(<ReasoningRow useDisclosure={useDisclosure} usePresentation={useDetailedPresentation}
++      t={t} text={'\n  \n**Inspect the workspace**\nDetails'} running={running} />)
++    expect(view.container.querySelector('[data-variant="think"]')?.hasAttribute('data-preview')).toBe(true)
++    expect(view.container.querySelector('[class*="summaryText"]')?.textContent).toBe('Inspect the workspace')
++  })
++
+   it.each([
+     { kind: 'text' as const, text: 'Answer' },
+     { kind: 'tool-call' as const, callId: 'call-1', name: 'read', argsRaw: '{}' },

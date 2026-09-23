@@ -9,8 +9,7 @@ import css from './ReasoningRow.module.css'
 const THINK_ICON = <IconThinkOutlineRegular size={14} />
 
 function firstLine(text: string): string {
-  const newline = text.indexOf('\n')
-  return newline === -1 ? text : text.slice(0, newline)
+  return text.split(/\r?\n/).find(line => line.trim() !== '')?.trim() ?? ''
 }
 
 function latestCompletedParagraphFirstLine(text: string): string {
@@ -35,8 +34,8 @@ function latestCompletedParagraphFirstLine(text: string): string {
  * Render one consecutive run of assistant reasoning collapsed until the reader opens it. The
  * collapsed summary omits double-asterisk markers; expanded content renders
  * the complete Markdown with secondary typography. A streaming preview advances
- * when a paragraph's first line completes. Mode changes toggle CSS display without unmounting
- * collapsed summaries.
+ * when a paragraph's first line completes, falling back to the first nonempty line
+ * before the first newline arrives. Collapsed summaries remain visible in every mode.
  * @param props.text - complete or streaming reasoning text.
  * @param props.running - whether this block is the streaming tail.
  * @param props.usePresentation - live display-policy selector for this reasoning row.
@@ -53,7 +52,7 @@ export const ReasoningRow = memo(function ReasoningRow({ text, running, usePrese
 }) {
   const { expanded, toggle } = useDisclosure()
   const labels = useMemo(() => markdownLabels(t), [t])
-  const summaryText = running ? latestCompletedParagraphFirstLine(text) : firstLine(text)
+  const summaryText = (running ? latestCompletedParagraphFirstLine(text) : '') || firstLine(text)
   const summary = useMemo(() => summaryText.replaceAll('**', ''), [summaryText])
   const preview = usePresentation(policy => !expanded && summary !== ''
     && (running || policy.settledReasoningPreview))

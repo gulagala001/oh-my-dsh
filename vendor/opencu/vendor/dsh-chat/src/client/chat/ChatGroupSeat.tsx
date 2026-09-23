@@ -97,7 +97,7 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
   readonly toggle: () => void
 }) {
   const data = useChatGroup(groupKey, group => group?.data)
-  const working = data !== undefined && !data.closed && (data.summary.running !== undefined || data.summary.counts.length === 0)
+  const working = data !== undefined && !data.closed
   const detailed = usePresentation(policy => working && policy.liveProcessDetail)
   const live = useStableLiveProcessTitle({
     activity: data?.summary.running ?? 'thinking',

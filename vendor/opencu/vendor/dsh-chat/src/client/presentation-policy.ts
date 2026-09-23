@@ -26,8 +26,8 @@ const POLICIES: Readonly<Record<TranscriptViewMode, ChatPresentationPolicy>> = {
     mode: 'compact',
     foldCompletedTurns: true,
     stepGrouping: 'collapsed',
-    liveProcessDetail: false,
-    settledReasoningPreview: false,
+    liveProcessDetail: true,
+    settledReasoningPreview: true,
   },
   detailed: {
     mode: 'detailed',
