@@ -1,3 +1,4 @@
+import { sourceName } from '../message-source.mjs';
 import React, { useId, useState, useSyncExternalStore } from 'react';
 import { decorateSlot } from '#opencu/src/client/slot-decoration.mjs';
 import { compactionGroups, taskInjectionDefinition, supersededTaskInjections } from './conversation-records.mjs';
@@ -61,7 +62,7 @@ export function applyConversationRecords(ctx) {
     function ContextRecord(props) {
       // The dedicated row also covers replacement messages; the process
       // adapter groups it alongside ordinary context and tool records.
-      return props.node.data.source?.plugin === 'trisoul-x:tasks'
+      return sourceName(props.node.data.source) === 'trisoul-x:tasks'
         ? <span data-omd-record-hidden hidden/> : <Original {...props}/>;
     }
     function GroupedCompaction(props) {
@@ -73,6 +74,6 @@ export function applyConversationRecords(ctx) {
       if (key === 'compaction' && marker.seq !== group.firstSeq) return <span data-omd-record-hidden hidden/>;
       return <CompactionRecord key={group.id} group={group}/>;
     }
-    return { options: { name: 'conversation.chat.node', key, locale: 'chat', priority: (original.options.priority ?? 0) - 1 }, component: key === 'context' ? ContextRecord : GroupedCompaction };
+    return { options: { ...original.options, name: 'conversation.chat.node', key, locale: original.locale, inject: original.inject, store: original.store, children: original.children, priority: (original.options.priority ?? 0) - 1 }, component: key === 'context' ? ContextRecord : GroupedCompaction };
   }));
 }

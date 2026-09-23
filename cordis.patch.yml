@@ -2,13 +2,9 @@
     - id: trisoul-x
       name: trisoul_x
 
-- id: agent-presets
-  inject: [trisoulX]
+- id: agent-preset-registry
   config:
     default: trisoul-x
-    roots:
-      - path: !!js ctx.trisoulX.presetRoot
-        trust: system
 
 - id: system-prompt
   config:
@@ -29,7 +25,7 @@
 - id: ui-brand-official
   disabled: true
 
-# DSH alpha.2 providers with opt-in OMD extensions. Original rows remain
+# DSH 0.1.7-alpha.1 providers with opt-in OMD extensions. Original rows remain
 # intact and become active again when this bundle is removed.
 - id: tools
   disabled: true
@@ -53,3 +49,12 @@
 
 - id: ui-conversation
   disabled: true
+
+- id: ui-chat
+  disabled: true
+
+- insert:
+    - id: omd-ui-conversation
+      name: trisoul_x/host/ui-conversation
+    - id: omd-ui-chat
+      name: trisoul_x/host/ui-chat

@@ -1,3 +1,4 @@
+import { sourceName } from '../src/message-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Session } from '@deepseek-ai/dsh-session';
@@ -6,7 +7,7 @@ import { collectRuntimeStatus, runtimeContext, runtimeStateKey, renderRuntimeSta
 import { createTodoStore } from '../src/todolist.mjs';
 import { setRuntimeContext, latestTodo, summaryMessageReader } from '../src/task-context.mjs';
 function fixture() {
-  const session = Session.create('runtime', undefined, { version: 3, id: 'runtime', createdAt: 1, cwd: '/tmp', isSeeded: false, agentPreset: 'trisoul-x' });
+  const session = Session.create('runtime', undefined, { version: 4, id: 'runtime', createdAt: 1, cwd: '/tmp', isSeeded: false, agentPreset: 'trisoul-x' });
   const config = { stateHintsEnabled: true }; const jobs = [];
   const agent = { session }, hub = { config: () => config, context: { state: () => ({ records: [] }) }, ctx: { get: () => ({ list: () => jobs }), tokenMeter: { measure: () => ({ totalTokens: 123 }) } } };
   return { session, config, jobs, agent, hub, store: createTodoStore() };
@@ -52,7 +53,7 @@ test('without Todo, state injects once without creating tasks and disabling clea
   f.session.append('user/message', original, { surfaceOp: 'append' });
   assert.ok(f.store.maintainInjection(f.session));
   assert.equal(f.store.maintainInjection(f.session), undefined);
-  assert.equal(latestTodo(f.session), null); assert.equal(f.store.takeEmptyNudge(f.session), false);
+  assert.equal(latestTodo(f.session), null);
   assert.equal(f.session.snapshotEvents().filter(e => e.type === 'todo/write').length, 0);
   const reader = summaryMessageReader(f.session);
   assert.equal(f.session.surface.nodes.map(s => reader(f.session.eventAt(s))).filter(Boolean).length, 1);
@@ -99,7 +100,7 @@ test('enabling, new input and a missing carrier refresh once; turns, jobs and re
   const replay = Session.create(f.session.id, structuredClone(f.session.snapshotEvents()), f.session.header);
   setRuntimeContext(replay, () => runtimeContext({ session: replay }, f.hub));
   assert.equal(createTodoStore().maintainInjection(replay), undefined);
-  for (const e of f.session.snapshotEvents().filter(e => e.data?.source?.plugin === 'trisoul-x:tasks')) {
+  for (const e of f.session.snapshotEvents().filter(e => sourceName(e.data?.source) === 'trisoul-x:tasks')) {
     f.session.append('user/message', createUserMessage({ content: [], source: { kind: 'plugin', plugin: 'fixture:removed' } }),
       { surfaceOp: { op: 'replace', startSeq: e.seq, endSeq: e.seq }, sourceEventSeqs: [e.seq] });
   }
@@ -112,14 +113,14 @@ test('state changes do not repost Todo, preserve pause, and survive restart', ()
   assert.ok(!f.store.execTaskMap(f.session, { op: 'excerpt', from: 'Build the widget', to: 'Build the widget', tasks: [{ title: 'Implement', anchor: { from: 'Build the widget', to: 'Build the widget' } }] }).isError);
   setRuntimeContext(f.session, () => runtimeContext(f.agent, f.hub)); f.store.maintainInjection(f.session);
   f.store.execTaskMap(f.session, { op: 'pause_turn', reason: 'Server unavailable; start server.' });
-  const revision = f.store.revOf(f.session), saved = f.store.snapshot(f.session);
+  const saved = f.store.snapshot(f.session);
   f.jobs.push({ id: 'j1', kind: 'bash', label: 'test', status: 'running', startedAt: 1 });
   const before = f.session.snapshotEvents().length;
   assert.equal(f.store.maintainInjection(f.session), undefined);
   f.jobs[0].status = 'completed'; f.jobs[0].resultDelivery = 'delivered';
   assert.equal(f.store.maintainInjection(f.session), undefined);
   assert.equal(f.session.snapshotEvents().length, before);
-  assert.deepEqual(f.store.snapshot(f.session), saved); assert.equal(f.store.revOf(f.session), revision); assert.equal(f.store.turnControl(f.session).paused, true);
+  assert.deepEqual(f.store.snapshot(f.session), saved); assert.equal(f.store.turnControl(f.session).paused, true);
   assert.ok(!f.store.execTaskMap(f.session, { op: 'edit', tasks: [{ id: 'T1', title: 'Implement updated widget' }] }).isError);
   const updated = f.store.maintainInjection(f.session);
   assert.ok(updated);

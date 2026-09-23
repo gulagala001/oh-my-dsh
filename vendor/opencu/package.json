@@ -12,21 +12,22 @@
     "playwright": "1.63.0",
     "sharp": "0.35.4",
     "ws": "8.21.3",
+    "yaml": "2.8.1",
     "zod": "4.5.4"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "4.0.2",
-    "@deepseek-ai/dsh": "0.1.6-alpha.2",
-    "@deepseek-ai/dsh-llm": "0.1.6-alpha.2",
-    "@deepseek-ai/schemastery": "3.18.2",
+    "@deepseek-ai/cordis": "4.0.3",
+    "@deepseek-ai/dsh": "0.1.7-alpha.1",
+    "@deepseek-ai/dsh-llm": "0.1.7-alpha.1",
+    "@deepseek-ai/schemastery": "3.18.3",
     "esbuild": "0.25.12",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "4.0.2",
-    "@deepseek-ai/dsh-llm": "0.1.6-alpha.2",
-    "@deepseek-ai/schemastery": "3.18.2"
+    "@deepseek-ai/cordis": "4.0.3",
+    "@deepseek-ai/dsh-llm": "0.1.7-alpha.1",
+    "@deepseek-ai/schemastery": "3.18.3"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {
@@ -40,7 +41,7 @@
     }
   },
   "name": "opencu",
-  "version": "1.0.4",
+  "version": "1.1.0-rc.1",
   "description": "Computer Use for DSH: browsers, desktop apps, live previews, annotations and file exports.",
   "repository": {
     "type": "git",
@@ -59,7 +60,8 @@
     "./src/*": "./src/*",
     "./package.json": "./package.json",
     "./scripts/*": "./scripts/*",
-    "./native/*": "./native/*"
+    "./native/*": "./native/*",
+    "./host/ui-chat": "./src/host/ui-chat.mjs"
   },
   "scripts": {
     "build": "node scripts/build.mjs",
@@ -75,7 +77,8 @@
     "cordis.patch.yml",
     "README.md",
     "docs",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "vendor"
   ],
   "dsh": {
     "bundle": {
@@ -86,7 +89,16 @@
       "inject": [
         "@deepseek-ai/dsh-client-ui-settings",
         "@deepseek-ai/dsh-client-ui-sidebar-right",
-        "@deepseek-ai/dsh-client-ui-sidebar"
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-api-session-controller",
+        "@deepseek-ai/dsh-api-workspace-controller",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-input-trigger",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-session",
+        "@deepseek-ai/dsh-client-ui-workspace"
       ]
     }
   }

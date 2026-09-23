@@ -22,7 +22,7 @@ test('completed process preserves prose and independent bounded operation groups
   assert.equal(await processToggle.getAttribute('aria-expanded'), 'false');
   await processToggle.click();
   for (const text of ['先检查文件和运行环境。', '检查已完成，接着修改文件。']) assert.equal(await page.getByText(text, { exact: true }).isVisible(), true);
-  const groups = page.locator('[data-cu-group] > .tx-cu-group-toggle:visible').filter({ hasText: '次操作' });
+  const groups = page.locator('[data-cu-group] .tx-cu-group-toggle:visible').filter({ hasText: '次操作' });
   assert.equal(await groups.count(), 2, 'outer disclosure reveals per-segment summaries, not every operation');
   for (const group of await groups.all()) assert.equal(await group.getAttribute('aria-expanded'), 'false');
   await groups.first().click();
@@ -30,9 +30,9 @@ test('completed process preserves prose and independent bounded operation groups
   const metrics = await list.evaluate(el => ({ height: el.clientHeight, scroll: el.scrollHeight, overflow: getComputedStyle(el).overflowY }));
   assert.ok(metrics.height <= 300 && metrics.scroll > metrics.height, JSON.stringify(metrics));
   assert.equal(metrics.overflow, 'auto');
-  assert.equal(await list.locator('[data-cu-operation]').count(), 14);
+  assert.equal(await list.locator('[data-chat-call-id]').count(), 14);
   assert.equal(await groups.last().getAttribute('aria-expanded'), 'false', 'opening one group leaves the other folded');
-  const row = list.locator('[data-cu-operation="segment-command-0"] :is([role="button"],button)').first();
+  const row = list.locator('[data-chat-call-id="segment-command-0"] :is([role="button"],button)').first();
   await row.click(); assert.equal(await row.getAttribute('aria-expanded'), 'true', 'individual result is still independently expandable');
   await groups.first().click(); await groups.first().click();
   assert.equal(await row.getAttribute('aria-expanded'), 'true', 'closing a group preserves inspected detail');
@@ -47,10 +47,10 @@ test('completed process preserves prose and independent bounded operation groups
   const narrow = await list.evaluate(el => ({ width: el.clientWidth, scroll: el.scrollWidth, children: [...el.querySelectorAll('*')].filter(e => e.getBoundingClientRect().right > el.getBoundingClientRect().right + 1).slice(0, 12).map(e => ({tag:e.tagName,cls:e.className,width:e.getBoundingClientRect().width})) }));
   assert.ok(narrow.scroll <= narrow.width + 1, JSON.stringify(narrow));
   await groups.last().click();
-  assert.equal(await page.locator('.tx-cu-group-list:visible:has([data-cu-operation])').count(), 2);
+  assert.equal(await page.locator('[data-step-process-body]:visible:has([data-chat-call-id])').count(), 2);
   await page.reload(); await processToggle.waitFor(); await processToggle.click();
   for (const group of await groups.all()) assert.equal(await group.getAttribute('aria-expanded'), 'false');
   await groups.first().click();
-  assert.equal(await page.locator('.tx-cu-group-list:visible [data-cu-operation]').count(), 14, 'all history remains reachable after reload');
+  assert.equal(await page.locator('[data-step-process-body]:visible [data-chat-call-id]').count(), 14, 'all history remains reachable after reload');
   assert.deepEqual(f.errors, []);
 });

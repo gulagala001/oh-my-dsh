@@ -114,3 +114,14 @@ test('DSH-aligned numbering migrates the archived OMD series without reversing S
   assert.equal(versionStatus('0.1.6-alpha.2.1', next).severity, 'normal');
   assert.throws(() => validateManifest({ ...feed, versionPolicy: 'arbitrary' }));
 });
+
+ test('prerelease notes remain available when the stable feed does not list this build', async () => {
+  const currentVersion = '1.7.0-rc.1', current = release(currentVersion);
+  const service = createVersionService({ currentVersion, bundledManifest: manifest(current),
+    fetchImpl: async () => jsonResponse(manifest(release('1.6.1'))) });
+  const result = await service.check();
+  assert.equal(result.status, 'ahead');
+  assert.deepEqual(result.currentRelease, current);
+  assert.equal(result.releaseNotesUrl, 'https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.7.0-rc.1');
+  service.dispose();
+});

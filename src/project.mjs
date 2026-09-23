@@ -46,9 +46,6 @@ export function projectKeyOf(cwd) {
   return key
 }
 
-/** 供测试 / 目录结构变化后重置 */
-export function clearProjectKeyCache() { cache.clear(); gitRoots.clear() }
-
 /** a 是否在 b 之下（按路径分段：/a/b 在 /a 下，/a/bc 不在 /a 下） */
 export const isUnder = (a, b) => {
   if (typeof a !== 'string' || typeof b !== 'string') return false

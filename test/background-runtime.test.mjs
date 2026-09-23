@@ -1,3 +1,4 @@
+import { restoreFixtureLog } from './fixtures/restore-log.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
@@ -70,6 +71,10 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`background ${preset}: one e
   await until(() => requests.length > previous);
   assert.doesNotMatch(flatten(requests.at(-1)), /runtime state · as of|## Background execution|## Runtime state/);
   if (preset === 'omd-ptc') assert.deepEqual(requests.at(-1).tools.map(t => t.function.name), ['run_code']);
+  await until(async () => (await f.api(`/state?session=${sessionId}`)).running === 'idle');
+  const restored = await restoreFixtureLog(f.home, sessionId);
+  assert.ok(restored.events.some(event => event.type === 'tool/result' && event.data.message.role === 'tool'));
+
 });
 
 test('composer Enter sends immediately during an event wait and preserves ordinary queue behavior afterward', { timeout: 90000 }, async t => {
@@ -98,4 +103,47 @@ test('composer Enter sends immediately during an event wait and preserves ordina
   await until(async () => !(await (await f.page.request.get(`${origin}/trisoul-x/api/background-wait?session=${f.sessionId}`)).json()).waiting);
   assert.equal(await f.page.getByRole('button', { name: '现在发送', exact: true }).count(), 0);
   assert.deepEqual(f.errors, []);
+});
+
+test('soft yield preserves the command deadline; foreground and nested calls stay awaited', { timeout: 90000 }, async t => {
+  const f = await frontendFixture(t, { headless: true, omdConfig: { componentAutoSetup: false, backgroundTasksEnabled: true, contextEnabled: false } });
+  const { sessionId } = await f.rpc('session/create', { cwd: f.workspace, agentPreset: 'trisoul-x' });
+  await f.api(`/better-todo?session=${sessionId}`, { todo: false });
+  const shell = process.platform === 'win32' ? 'pwsh' : 'bash';
+  const script = join(f.workspace, 'deadline.cjs');
+  await writeFile(script, 'require("node:fs").appendFileSync("deadline-runs.txt","once\\n");console.log("started");setTimeout(()=>console.log("too late"),3000)');
+  const command = `${process.platform === 'win32' ? '& ' : ''}"${process.execPath}" "${script}"`;
+  let phase = 0, id, terminal;
+  f.replyWith(p => {
+    if (!flatten(p).includes('DEADLINE_CASE')) return;
+    if (phase++ === 0) return toolReply(shell, { command, description: 'Verify the original command deadline', timeoutMs: 1500, yieldMs: 250 });
+    if (!id) { id = flatten(p).match(new RegExp(shell + '-[a-z0-9-]+'))?.[0]; assert.ok(id, JSON.stringify(p.messages.filter(m => m.role === 'tool'))); return toolReply('job_output', { job_id: id, wait: true }); }
+    terminal = p; return say('Deadline observed.');
+  });
+  await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: 'DEADLINE_CASE' }] });
+  await until(() => terminal);
+  assert.match(flatten(terminal), /timed.out|timeout|deadline/i);
+  assert.doesNotMatch(JSON.stringify(terminal.messages.filter(m => m.role === 'tool')), /too late/);
+  assert.equal(await readFile(join(f.workspace, 'deadline-runs.txt'), 'utf8'), 'once\n');
+  for (const preset of ['trisoul-x', 'omd-ptc']) {
+    const { sessionId: sid } = await f.rpc('session/create', { cwd: f.workspace, agentPreset: preset });
+    await f.api(`/better-todo?session=${sid}`, { todo: false });
+    const short = join(f.workspace, 'foreground.cjs'); await writeFile(short, 'setTimeout(()=>console.log("FOREGROUND_RESULT"),600)');
+    const command = `${process.platform === 'win32' ? '& ' : ''}"${process.execPath}" "${short}"`;
+    let started, result;
+    f.replyWith(p => {
+      if (!flatten(p).includes('FOREGROUND_CASE')) return;
+      if (!started) {
+        started = Date.now();
+        const args = { command, description: 'Await the foreground command result', timeoutMs: 5000, yieldMs: 250, ...(preset === 'trisoul-x' ? { run_in_background: false } : {}) };
+        return preset === 'trisoul-x' ? toolReply(shell, args) : toolReply('run_code', { code: `return await tools.${shell}(${JSON.stringify(args)})`, description: 'Await one command' });
+      }
+      result = p; return say('Foreground result observed.');
+    });
+    await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: sid, mode: 'queue', content: [{ type: 'text', text: 'FOREGROUND_CASE' }] });
+    await until(() => result);
+    assert.ok(Date.now() - started >= 550);
+    assert.match(flatten(result), /FOREGROUND_RESULT/);
+    assert.doesNotMatch(JSON.stringify(result.messages.filter(m => m.role === 'tool')), new RegExp(shell + '-[a-z0-9-]{10,}'));
+  }
 });

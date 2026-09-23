@@ -54,7 +54,7 @@ export function decodeDraft(text, references) {
   return { draft, document: { root: { type: 'root', version: 1, direction: null, format: '', indent: 0, children } } };
 }
 export async function requestOptimization(sessionId, input, signal) {
-  const response = await fetch('/trisoul-x/api/prompt-optimizer?session=' + encodeURIComponent(sessionId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input), signal });
+  const response = await fetch('trisoul-x/api/prompt-optimizer?session=' + encodeURIComponent(sessionId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input), signal });
   const body = await response.json().catch(error => { if (signal?.aborted) throw error; return null; });
   if (response.status === 404 && (!body?.error || body.error === '接口不存在')) throw Error('提示词优化后端尚未加载，请重启当前 DSH 服务后刷新页面。草稿已保留。');
   if (!response.ok) throw Error(body?.error || `HTTP ${response.status}`);

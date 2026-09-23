@@ -3,7 +3,7 @@ import { TOOL_RUNTIME_SCHEDULER } from '@deepseek-ai/dsh-tools';
 
 const aliases = new WeakMap();
 
-// DSH alpha.2 source launches can load tools from both src and lib. Their
+// DSH source launches can load tools from both src and lib. Their
 // module-private symbols differ even though the scheduler contract is identical.
 // Reuse the existing scheduler; never rerun, substitute or approve a tool call.
 export function bindToolScheduler(service, key = TOOL_RUNTIME_SCHEDULER) {

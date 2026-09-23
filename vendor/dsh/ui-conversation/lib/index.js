@@ -10,18 +10,19 @@ const BUSY_ENTER_BEHAVIORS = ["queue", "steer"];
 /** Default preserves Enter-as-Queue for running conversations. */
 const DEFAULT_BUSY_ENTER_BEHAVIOR = "queue";
 /** Durable conversation schema; also the wire envelope the browser scope validates against. */
-const ConversationSettingsSchema = z.object({ [BUSY_ENTER_FIELD]: z.union([...BUSY_ENTER_BEHAVIORS]).default(DEFAULT_BUSY_ENTER_BEHAVIOR) });
+const ConversationSettingsFields = { [BUSY_ENTER_FIELD]: z.union([...BUSY_ENTER_BEHAVIORS]).default(DEFAULT_BUSY_ENTER_BEHAVIOR) };
+z.object(ConversationSettingsFields);
 //#endregion
 //#region lib/types/index.js
-/** Host registration for browser conversation preferences. */
-/**
-* Register the durable conversation section when a settings provider exists.
-* @param ctx - Host context whose optional settings service owns the section.
+/** Live preferences projected to the browser. */
+const Config = z.object({ [BUSY_ENTER_FIELD]: ConversationSettingsFields[BUSY_ENTER_FIELD].volatile() });
+/** Host preferences are consumed through the configuration form projection.
+* @param ctx Plugin context used for optional settings presentation.
 */
 function apply(ctx) {
-	ctx.inject(["settings"], (settingsCtx) => {
-		settingsCtx.settings.register(CONVERSATION_SETTINGS_NAMESPACE, ConversationSettingsSchema);
+	ctx.inject(["settings"], (child) => {
+		child.effect(() => child.settings.configure({ auto: false }, ctx.fiber));
 	});
 }
 //#endregion
-export { BUSY_ENTER_BEHAVIORS, BUSY_ENTER_FIELD, CONVERSATION_SETTINGS_NAMESPACE, DEFAULT_BUSY_ENTER_BEHAVIOR, apply };
+export { BUSY_ENTER_BEHAVIORS, BUSY_ENTER_FIELD, CONVERSATION_SETTINGS_NAMESPACE, Config, DEFAULT_BUSY_ENTER_BEHAVIOR, apply };

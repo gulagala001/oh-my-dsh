@@ -1,3 +1,4 @@
+import { sourceName } from '../message-source.mjs';
 import { withoutTodo, isTaskInjection, TODO_META } from '../task-context.mjs';
 import { attachTodoRefresh, requireSavings } from './todo-refresh.mjs';
 import { randomUUID } from 'node:crypto';
@@ -43,7 +44,7 @@ export function createTransaction(session, state, plan, cfg, pairing, pricing = 
     inputChars += selectedSeqs.reduce((n, seq) => n + contentChars(sourceMessage(seq)?.content), 0);
     outputChars += contentChars(content);
     orderedGroups.forEach((seqs, i) => operations.push({ id: randomUUID(), kind: i ? 'delete' : 'record',
-      ...(i ? {} : { recordId: output.id, content, accountingSeqs: selectedSeqs, originalEventCount: (output.originalSeqs || output.sourceSeqs).length,
+      ...(i ? {} : { recordId: output.id, content, originalEventCount: (output.originalSeqs || output.sourceSeqs).length,
         inputTokens: sourceTokens, outputTokens: resultTokens }), seqs, text: i ? '' : text, position: session.surface.nodes.indexOf(seqs[0]) }));
   }
   if (!operations.length) return null;
@@ -52,7 +53,7 @@ export function createTransaction(session, state, plan, cfg, pairing, pricing = 
     const slotLive = traceSlot && session.surface.nodes.includes(traceSlot.carrierSeq);
     const firstChanged = Math.min(...operations.filter(o => o.kind === 'record').map(o => o.position));
     const covered = new Set(operations.flatMap(o => o.seqs));
-    const anchor = slotLive ? session.eventAt(traceSlot.carrierSeq) : session.surface.nodes.slice(0, firstChanged).map(seq => session.eventAt(seq)).find(e => (actualUser(e) || e.data?.source?.plugin === 'trisoul-x:todo-prefix') && !covered.has(e.seq));
+    const anchor = slotLive ? session.eventAt(traceSlot.carrierSeq) : session.surface.nodes.slice(0, firstChanged).map(seq => session.eventAt(seq)).find(e => (actualUser(e) || sourceName(e.data?.source) === 'trisoul-x:todo-prefix') && !covered.has(e.seq));
     if (!anchor && !state.fullCompaction) throw new Error('所选摘要之前没有安全的推理承载位置；原文保留。');
     if (anchor && (!slotLive || traceSlot.traceHash !== hash(trace))) {
       const original = slotLive ? traceSlot.original : structuredClone(withoutTodo(anchor.data));
@@ -60,7 +61,7 @@ export function createTransaction(session, state, plan, cfg, pairing, pricing = 
       const content = [{ type: 'text', text }, ...(original.content || [])];
       const previous = sourceMessage(anchor.seq), savedTodo = previous?.[TODO_META];
       if (savedTodo) content.splice(1, 0, previous.content[savedTodo.index]);
-      const traceId = randomUUID(), todoMeta = savedTodo ? { ...savedTodo, index: 1, baseId: traceId, baseSource: { kind: 'plugin', plugin: 'trisoul-x:trace' } } : null;
+      const traceId = randomUUID(), todoMeta = savedTodo ? { ...savedTodo, index: 1, baseId: traceId, baseSource: { kind: 'plugin:trisoul-x:trace' } } : null;
       inputChars += contentChars(sourceMessage(anchor.seq)?.content); outputChars += contentChars(content);
       inputTokens += messageTokens(sourceMessage(anchor.seq), pricing); outputTokens += messageTokens({ role: 'user', content }, pricing);
       operations.unshift({ id: traceId, kind: 'trace', seqs: [anchor.seq], text, original, content, ...(todoMeta ? { todoMeta } : {}), position: session.surface.nodes.indexOf(anchor.seq) });
@@ -103,7 +104,7 @@ export async function applyTransaction(session, state, tx, store, adapter) {
       if (index < 0 || refs.some((seq, i) => nodes[index + i] !== seq)) throw new Error('未完成事务的来源区间发生变化；已保留日志，停止发送以免扩大损失');
       if (op.kind === 'todo-refresh') {
         const base = withoutTodo(session.deriveEventMessage(session.eventAt(refs[0])));
-        op.message = { ...base, ...op.message, source: base.source?.kind === 'user' ? { kind: 'plugin', plugin: 'trisoul-x:todo-prefix' } : base.source,
+        op.message = { ...base, ...op.message, source: base.source?.kind === 'user' ? { kind: 'plugin:trisoul-x:todo-prefix' } : base.source,
           [TODO_META]: { ...op.message[TODO_META], baseId: base.id, baseSource: base.source } };
         store.save(state);
       }

@@ -9,6 +9,6 @@ export function announceFreshComputerRuntime(manager,session){
   manager.runtimeContextSeen??=new Map();
   if(manager.runtimeContextSeen.get(session.id)===generation)return false;
   if(!session.snapshotEvents().some(event=>event.type==='tool/call'&&['computer_use','computer_use_reset'].includes(event.data?.name)))return false;
-  session.append('user/message',createUserMessage({content:[{type:'text',text:RUNTIME_CONTEXT_NOTICE}],source:{kind:'plugin',plugin:'trisoul-x:computer-use-runtime'}}),{surfaceOp:'append'});
+  session.append('user/message',createUserMessage({content:[{type:'text',text:RUNTIME_CONTEXT_NOTICE}],source:{kind:'plugin:trisoul-x:computer-use-runtime'}}),{surfaceOp:'append'});
   manager.runtimeContextSeen.set(session.id,generation);return true;
 }

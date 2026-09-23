@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-	id: "@oh-my-dsh/ui-conversation",
+	id: "@deepseek-ai/dsh-client-ui-conversation",
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;
@@ -34,7 +34,38 @@ window.__ModuleLoader__.load({
 		let react = require("react");
 		react = __toESM(react, 1);
 		let react_dom = require("react-dom");
-		//#region ../../../vendor/cosmokit/src/misc.ts
+		//#region src/client/conversation-reload.ts
+		/** Switching the entire Conversation provider requires a fresh page assembly.
+		* Session history and the original persisted text-draft store survive reload.
+		* Ordinary OMD feature settings do not change this provider or reload the page.
+		*/
+		function reloadOnProviderChange(ctx) {
+			if (typeof window === "undefined") return false;
+			const boot = window.__DSH_BOOT__;
+			if (!boot?.entries) return false;
+			let leaving = false;
+			const reload = () => {
+				if (!leaving) {
+					leaving = true;
+					window.location.reload();
+				}
+			};
+			if (!boot.entries.some((row) => row.id === "trisoul_x")) {
+				reload();
+				return true;
+			}
+			const onPageHide = () => {
+				leaving = true;
+			};
+			window.addEventListener("pagehide", onPageHide);
+			ctx.effect(() => () => {
+				window.removeEventListener("pagehide", onPageHide);
+				reload();
+			}, "conversation provider change");
+			return false;
+		}
+		//#endregion
+		//#region ../../../vendor/cosmokit/lib/index.js
 		/** Return true when a value is `null` or `undefined`. */
 		function isNullable(value) {
 			return value === null || value === void 0;
@@ -58,8 +89,43 @@ window.__ModuleLoader__.load({
 			for (const key of keys) if (forced || source[key] !== void 0) result[key] = source[key];
 			return result;
 		}
-		//#endregion
-		//#region ../../../vendor/cosmokit/src/types.ts
+		/** Shared config references used by schema validators and plugin runtimes. */
+		const write = Symbol.for("cosmokit.volatile.write");
+		function snapshot(value, ancestors = /* @__PURE__ */ new Set()) {
+			if (typeof value === "function") throw new TypeError("volatile config cannot contain functions");
+			if (value === null || typeof value !== "object") return value;
+			if (ancestors.has(value)) throw new TypeError("volatile config cannot contain cycles");
+			ancestors.add(value);
+			try {
+				if (Array.isArray(value)) return Object.freeze(value.map((item) => snapshot(item, ancestors)));
+				if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) throw new TypeError("volatile config objects must be plain objects or arrays");
+				return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, item]) => [key, snapshot(item, ancestors)])));
+			} finally {
+				ancestors.delete(value);
+			}
+		}
+		/**
+		* Create a detached reference containing an immutable copy of the supplied data.
+		* @param value - validated config data; class instances and functions are unsupported.
+		* @returns a reference whose value is updated only by its owning runtime.
+		*/
+		function createVolatile(value) {
+			let current = snapshot(value);
+			return Object.freeze({
+				get: () => current,
+				[write]: (value) => {
+					current = value;
+				}
+			});
+		}
+		/**
+		* Identify references across ESM/CJS copies of the shared library.
+		* @param value - a parsed config value.
+		* @returns whether the value implements the shared reference protocol.
+		*/
+		function isVolatile(value) {
+			return typeof value === "object" && value !== null && write in value;
+		}
 		/** Test values using `instanceof` with a `toStringTag` fallback. */
 		function is$1(type, value) {
 			if (arguments.length === 1) return (value) => is$1(type, value);
@@ -71,15 +137,16 @@ window.__ModuleLoader__.load({
 		function isArrayBufferSource(value) {
 			return isArrayBufferLike(value) || ArrayBuffer.isView(value);
 		}
-		let Binary;
-		(function(_Binary) {
-			_Binary.is = isArrayBufferLike;
-			_Binary.isSource = isArrayBufferSource;
+		/** Binary source detection and base64/hex conversion helpers. */
+		var Binary;
+		(function(Binary) {
+			Binary.is = isArrayBufferLike;
+			Binary.isSource = isArrayBufferSource;
 			function fromSource(source) {
 				if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
 				else return source;
 			}
-			_Binary.fromSource = fromSource;
+			Binary.fromSource = fromSource;
 			function toBase64(source) {
 				source = fromSource(source);
 				if (typeof Buffer !== "undefined") return Buffer.from(source).toString("base64");
@@ -88,18 +155,18 @@ window.__ModuleLoader__.load({
 				for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
 				return btoa(binary);
 			}
-			_Binary.toBase64 = toBase64;
+			Binary.toBase64 = toBase64;
 			function fromBase64(source) {
 				if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "base64"));
 				return Uint8Array.from(atob(source), (c) => c.charCodeAt(0));
 			}
-			_Binary.fromBase64 = fromBase64;
+			Binary.fromBase64 = fromBase64;
 			function toHex(source) {
 				source = fromSource(source);
 				if (typeof Buffer !== "undefined") return Buffer.from(source).toString("hex");
 				return Array.from(new Uint8Array(source), (byte) => byte.toString(16).padStart(2, "0")).join("");
 			}
-			_Binary.toHex = toHex;
+			Binary.toHex = toHex;
 			function fromHex(source) {
 				if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "hex"));
 				const hex = source.length % 2 === 0 ? source : source.slice(0, source.length - 1);
@@ -107,7 +174,7 @@ window.__ModuleLoader__.load({
 				for (let i = 0; i < hex.length; i += 2) buffer.push(parseInt(`${hex[i]}${hex[i + 1]}`, 16));
 				return Uint8Array.from(buffer).buffer;
 			}
-			_Binary.fromHex = fromHex;
+			Binary.fromHex = fromHex;
 		})(Binary || (Binary = {}));
 		Binary.fromBase64;
 		Binary.toBase64;
@@ -139,58 +206,78 @@ window.__ModuleLoader__.load({
 			}
 			return result;
 		}
-		/** Deeply compare arrays, dates, regexps, buffers, and plain object fields. */
+		/**
+		* Compare values recursively, treating two volatile references as equal regardless of value.
+		* Strict comparison distinguishes null/undefined, treats opaque objects by identity,
+		* compares URLs by normalized href, treats array holes as undefined, and considers distinct cyclic structures unequal.
+		* @param a - first value.
+		* @param b - second value.
+		* @param strict - whether to require strict data equality outside volatile references.
+		* @returns whether the values compare equal.
+		*/
 		function deepEqual(a, b, strict) {
-			if (a === b) return true;
-			if (!strict && isNullable(a) && isNullable(b)) return true;
-			if (typeof a !== typeof b) return false;
-			if (typeof a !== "object") return false;
-			if (!a || !b) return false;
-			function check(test, then) {
-				return test(a) ? test(b) ? then(a, b) : false : test(b) ? false : void 0;
+			const ancestors = /* @__PURE__ */ new Set();
+			function compare(a, b) {
+				if (a === b) return true;
+				if (isVolatile(a) || isVolatile(b)) return isVolatile(a) && isVolatile(b);
+				if (!strict && isNullable(a) && isNullable(b)) return true;
+				if (typeof a !== typeof b || typeof a !== "object" || !a || !b) return false;
+				if (ancestors.has(a)) return false;
+				function check(test, then) {
+					return test(a) ? test(b) ? then(a, b) : false : test(b) ? false : void 0;
+				}
+				ancestors.add(a);
+				try {
+					return check(Array.isArray, (a, b) => {
+						if (a.length !== b.length) return false;
+						for (let index = 0; index < a.length; index++) if (!compare(a[index], b[index])) return false;
+						return true;
+					}) ?? check(is$1("Date"), (a, b) => a.valueOf() === b.valueOf()) ?? check(is$1("URL"), (a, b) => a.href === b.href) ?? check(is$1("RegExp"), (a, b) => a.source === b.source && a.flags === b.flags) ?? check(isArrayBufferLike, (a, b) => {
+						if (a.byteLength !== b.byteLength) return false;
+						const viewA = new Uint8Array(a);
+						const viewB = new Uint8Array(b);
+						for (let i = 0; i < viewA.length; i++) if (viewA[i] !== viewB[i]) return false;
+						return true;
+					}) ?? ((!strict || [a, b].every((value) => Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)) && Object.keys({
+						...a,
+						...b
+					}).every((key) => compare(a[key], b[key])));
+				} finally {
+					ancestors.delete(a);
+				}
 			}
-			return check(Array.isArray, (a, b) => a.length === b.length && a.every((item, index) => deepEqual(item, b[index]))) ?? check(is$1("Date"), (a, b) => a.valueOf() === b.valueOf()) ?? check(is$1("RegExp"), (a, b) => a.source === b.source && a.flags === b.flags) ?? check(isArrayBufferLike, (a, b) => {
-				if (a.byteLength !== b.byteLength) return false;
-				const viewA = new Uint8Array(a);
-				const viewB = new Uint8Array(b);
-				for (let i = 0; i < viewA.length; i++) if (viewA[i] !== viewB[i]) return false;
-				return true;
-			}) ?? Object.keys({
-				...a,
-				...b
-			}).every((key) => deepEqual(a[key], b[key], strict));
+			return compare(a, b);
 		}
-		//#endregion
-		//#region ../../../vendor/cosmokit/src/time.ts
-		let Time;
-		(function(_Time) {
-			_Time.millisecond = 1;
-			const second = _Time.second = 1e3;
-			const minute = _Time.minute = second * 60;
-			const hour = _Time.hour = minute * 60;
-			const day = _Time.day = hour * 24;
-			const week = _Time.week = day * 7;
+		/** Time constants plus parsing and formatting helpers. */
+		var Time;
+		(function(Time) {
+			Time.millisecond = 1;
+			Time.second = 1e3;
+			Time.minute = Time.second * 60;
+			Time.hour = Time.minute * 60;
+			Time.day = Time.hour * 24;
+			Time.week = Time.day * 7;
 			let timezoneOffset = (/* @__PURE__ */ new Date()).getTimezoneOffset();
 			function setTimezoneOffset(offset) {
 				timezoneOffset = offset;
 			}
-			_Time.setTimezoneOffset = setTimezoneOffset;
+			Time.setTimezoneOffset = setTimezoneOffset;
 			function getTimezoneOffset() {
 				return timezoneOffset;
 			}
-			_Time.getTimezoneOffset = getTimezoneOffset;
+			Time.getTimezoneOffset = getTimezoneOffset;
 			function getDateNumber(date = /* @__PURE__ */ new Date(), offset) {
 				if (typeof date === "number") date = new Date(date);
 				if (offset === void 0) offset = timezoneOffset;
-				return Math.floor((date.valueOf() / minute - offset) / 1440);
+				return Math.floor((date.valueOf() / Time.minute - offset) / 1440);
 			}
-			_Time.getDateNumber = getDateNumber;
+			Time.getDateNumber = getDateNumber;
 			function fromDateNumber(value, offset) {
-				const date = new Date(value * day);
+				const date = new Date(value * Time.day);
 				if (offset === void 0) offset = timezoneOffset;
-				return new Date(+date + offset * minute);
+				return new Date(+date + offset * Time.minute);
 			}
-			_Time.fromDateNumber = fromDateNumber;
+			Time.fromDateNumber = fromDateNumber;
 			const numeric = /\d+(?:\.\d+)?/.source;
 			const timeRegExp = new RegExp(`^${[
 				"w(?:eek(?:s)?)?",
@@ -202,9 +289,9 @@ window.__ModuleLoader__.load({
 			function parseTime(source) {
 				const capture = timeRegExp.exec(source);
 				if (!capture) return 0;
-				return (parseFloat(capture[1]) * week || 0) + (parseFloat(capture[2]) * day || 0) + (parseFloat(capture[3]) * hour || 0) + (parseFloat(capture[4]) * minute || 0) + (parseFloat(capture[5]) * second || 0);
+				return (parseFloat(capture[1]) * Time.week || 0) + (parseFloat(capture[2]) * Time.day || 0) + (parseFloat(capture[3]) * Time.hour || 0) + (parseFloat(capture[4]) * Time.minute || 0) + (parseFloat(capture[5]) * Time.second || 0);
 			}
-			_Time.parseTime = parseTime;
+			Time.parseTime = parseTime;
 			function parseDate(date) {
 				const parsed = parseTime(date);
 				if (parsed) date = Date.now() + parsed;
@@ -212,24 +299,24 @@ window.__ModuleLoader__.load({
 				else if (/^\d{1,2}-\d{1,2}-\d{1,2}(:\d{1,2}){1,2}$/.test(date)) date = `${(/* @__PURE__ */ new Date()).getFullYear()}-${date}`;
 				return date ? new Date(date) : /* @__PURE__ */ new Date();
 			}
-			_Time.parseDate = parseDate;
+			Time.parseDate = parseDate;
 			function format(ms) {
 				const abs = Math.abs(ms);
-				if (abs >= day - hour / 2) return Math.round(ms / day) + "d";
-				else if (abs >= hour - minute / 2) return Math.round(ms / hour) + "h";
-				else if (abs >= minute - second / 2) return Math.round(ms / minute) + "m";
-				else if (abs >= second) return Math.round(ms / second) + "s";
+				if (abs >= Time.day - Time.hour / 2) return Math.round(ms / Time.day) + "d";
+				else if (abs >= Time.hour - Time.minute / 2) return Math.round(ms / Time.hour) + "h";
+				else if (abs >= Time.minute - Time.second / 2) return Math.round(ms / Time.minute) + "m";
+				else if (abs >= Time.second) return Math.round(ms / Time.second) + "s";
 				return ms + "ms";
 			}
-			_Time.format = format;
+			Time.format = format;
 			function toDigits(source, length = 2) {
 				return source.toString().padStart(length, "0");
 			}
-			_Time.toDigits = toDigits;
+			Time.toDigits = toDigits;
 			function template(template, time = /* @__PURE__ */ new Date()) {
 				return template.replace("yyyy", time.getFullYear().toString()).replace("yy", time.getFullYear().toString().slice(2)).replace("MM", toDigits(time.getMonth() + 1)).replace("dd", toDigits(time.getDate())).replace("hh", toDigits(time.getHours())).replace("mm", toDigits(time.getMinutes())).replace("ss", toDigits(time.getSeconds())).replace("SSS", toDigits(time.getMilliseconds(), 3));
 			}
-			_Time.template = template;
+			Time.template = template;
 		})(Time || (Time = {}));
 		//#endregion
 		//#region ../../../vendor/schemastery/src/index.ts
@@ -238,8 +325,6 @@ window.__ModuleLoader__.load({
 		globalThis.__schemastery_index__ ??= 0;
 		globalThis.__schemastery_refs__ = void 0;
 		var ValidationError = class extends TypeError {
-			options;
-			name = "ValidationError";
 			constructor(message, options) {
 				let prefix = "$";
 				for (const segment of options.path || []) if (typeof segment === "string") prefix += "." + segment;
@@ -248,6 +333,7 @@ window.__ModuleLoader__.load({
 				if (prefix.startsWith(".")) prefix = prefix.slice(1);
 				super((prefix === "$" ? "" : `${prefix} `) + message);
 				this.options = options;
+				this.name = "ValidationError";
 			}
 			static is(error) {
 				return !!error?.[kValidationError];
@@ -408,6 +494,7 @@ window.__ModuleLoader__.load({
 			return schema;
 		};
 		Schema.prototype.simplify = function simplify(value) {
+			if (isVolatile(value)) value = value.get();
 			if (deepEqual(value, this.meta.default, this.type === "dict")) return null;
 			if (isNullable(value)) return value;
 			if (this.type === "object" || this.type === "dict") {
@@ -464,12 +551,49 @@ window.__ModuleLoader__.load({
 			};
 			return schema;
 		} });
+		Schema.prototype.volatile = function volatile() {
+			if (this.meta.volatile) throw new TypeError("volatile schema is already wrapped");
+			return this.extra("volatile", true);
+		};
 		const resolvers = {};
+		const checkedVolatile = Symbol("checked-volatile-schema");
+		function validateVolatileSchema(schema, path = [], blocked = false, seen = /* @__PURE__ */ new Map()) {
+			const states = seen.get(schema) ?? /* @__PURE__ */ new Set();
+			if (states.has(blocked)) return;
+			states.add(blocked);
+			seen.set(schema, states);
+			if (schema.meta?.volatile && blocked) throw new ValidationError("volatile fields require a fixed object path without an enclosing volatile field", { path });
+			const nested = blocked || !!schema.meta?.volatile;
+			if (schema.dict) for (const [key, child] of Object.entries(schema.dict)) validateVolatileSchema(child, [...path, key], nested, seen);
+			if (schema.sKey) validateVolatileSchema(schema.sKey, [...path, "<key>"], true, seen);
+			if (schema.inner && (schema.type !== "lazy" || schema.inner[kSchema])) validateVolatileSchema(schema.inner, [...path, "*"], true, seen);
+			if (schema.list) for (let index = 0; index < schema.list.length; index++) validateVolatileSchema(schema.list[index], [...path, String(index)], true, seen);
+		}
 		Schema.extend = function extend(type, resolve) {
 			resolvers[type] = resolve;
 		};
 		Schema.resolve = function resolve(data, schema, options = {}, strict = false) {
 			if (!schema) return [data];
+			if (!options[checkedVolatile]) {
+				validateVolatileSchema(schema, options.path);
+				options = {
+					...options,
+					[checkedVolatile]: true
+				};
+			}
+			if (schema.meta?.volatile) {
+				const inner = Schema(schema);
+				inner.meta = {
+					...schema.meta,
+					volatile: false
+				};
+				const [value, adapted] = Schema.resolve(data, inner, options, strict);
+				try {
+					return [createVolatile(value), adapted];
+				} catch (error) {
+					throw new ValidationError(error instanceof Error ? error.message : String(error), options);
+				}
+			}
 			if (options.ignore?.(data, schema)) return [data];
 			if (isNullable(data) && schema.type !== "lazy") {
 				if (schema.meta.required) throw new ValidationError(`missing required value`, options);
@@ -572,6 +696,7 @@ window.__ModuleLoader__.load({
 					...schema.meta,
 					...schema.inner.meta
 				};
+				validateVolatileSchema(schema.inner, options.path, true);
 			}
 			return Schema.resolve(data, schema.inner, options, strict);
 		});
@@ -671,7 +796,7 @@ window.__ModuleLoader__.load({
 			} catch (e) {
 				if (!options?.autofix) throw e;
 				delete data[key];
-				return schema.meta.default;
+				return schema.meta.volatile ? createVolatile(schema.meta.default) : schema.meta.default;
 			}
 		}
 		Schema.extend("array", (data, { inner, meta }, options) => {
@@ -828,16 +953,27 @@ window.__ModuleLoader__.load({
 		//#endregion
 		//#region ../../util/values/src/index.ts
 		/**
+		* Mark an unreachable closed-union branch.
+		* @param value - impossible value; an unhandled typed variant fails at the call site.
+		* @param context - optional switch-site label included in the failure message.
+		* @returns never; a runtime value that escaped its type always throws.
+		*/
+		function assertNever$1(value, context) {
+			const rendered = JSON.stringify(value) ?? String(value);
+			throw new Error(`unreachable variant${context ? ` in ${context}` : ""}: ${rendered}`);
+		}
+		/**
 		* Weak-key lookup with a strongly retained iterable set of associated values.
 		*
 		* Each value must belong to only one key. The container performs no automatic
 		* cleanup; owners delete associations or clear the container at lifecycle end.
 		*/
 		var WeakMapWithValues = class {
-			keys = /* @__PURE__ */ new WeakMap();
-			valueSet = /* @__PURE__ */ new Set();
-			/** Live strongly retained values in insertion order. */
-			values = this.valueSet;
+			constructor() {
+				this.keys = /* @__PURE__ */ new WeakMap();
+				this.valueSet = /* @__PURE__ */ new Set();
+				this.values = this.valueSet;
+			}
 			/**
 			* Read the value associated with a key.
 			* @param key - weakly held lookup key.
@@ -927,6 +1063,7 @@ window.__ModuleLoader__.load({
 		/** Runtime counterpart of the message-producing event union. */
 		const SURFACE_EVENT_TYPES = new Set([
 			"system/message",
+			"developer/message",
 			"user/message",
 			"assistant/message",
 			"tool/result"
@@ -1015,6 +1152,173 @@ window.__ModuleLoader__.load({
 		function conversationContextKey(kind, id) {
 			return `${kind.length}:${kind}${id}`;
 		}
+		//#endregion
+		//#region src/client/conversation/group-store.ts
+		/** Keyed group publication and incremental validation of rendering positions. */
+		function sameNodeReference(left, right) {
+			return left.key === right.key && left.groupPart === right.groupPart;
+		}
+		function sameEntry(left, right) {
+			return left.kind === right.kind && left.key === right.key && (left.kind === "group" || right.kind === "node" && left.groupPart === right.groupPart);
+		}
+		function reuseReferences(previous, next, equal) {
+			return previous === next || previous.length === next.length && previous.every((value, index) => equal(value, next[index])) ? previous : next;
+		}
+		/** Validates a complete batch before installing its group and root-list changes. */
+		var ConversationGroupStore = class {
+			root = [];
+			rootGroups = /* @__PURE__ */ new Set();
+			groups = /* @__PURE__ */ new Map();
+			placements = /* @__PURE__ */ new Map();
+			sources = /* @__PURE__ */ new Map();
+			dirty = /* @__PURE__ */ new Set();
+			/** @returns the identity-stable ordered root references. */
+			get entries() {
+				return this.root;
+			}
+			groupSource(key) {
+				let source = this.sources.get(key);
+				if (source === void 0) {
+					const publication = (0, _deepseek_ai_dsh_client_store.createSnapshotStore)(this.groups.get(key));
+					source = {
+						publication,
+						observable: {
+							getSnapshot: () => this.groups.get(key),
+							subscribe: (listener) => publication.subscribe(listener)
+						}
+					};
+					this.sources.set(key, source);
+				}
+				return source.observable;
+			}
+			/**
+			* Install one validated update without notifying readers.
+			* @param update - root replacement and complete or incremental group records.
+			* @param readNode - synchronous reader of the current target Nodes.
+			*/
+			prepareAndInstall(update, readNode) {
+				const nextRoot = update.entries === void 0 ? this.root : reuseReferences(this.root, update.entries, sameEntry);
+				const nextRootGroups = nextRoot === this.root ? this.rootGroups : this.collectRootGroups(nextRoot);
+				const { upserts, removes } = this.collectChanges(update);
+				const replaceReferences = update.groups.kind === "replace";
+				if (this.groups.size - removes.size + [...upserts.keys()].filter((key) => !this.groups.has(key)).length !== nextRootGroups.size) throw new Error("conversation group records and root references must correspond one-to-one");
+				for (const key of removes) if (nextRootGroups.has(key)) throw new Error(`conversation group "${key}" is still referenced`);
+				for (const key of upserts.keys()) if (!nextRootGroups.has(key)) throw new Error(`conversation group "${key}" has no root reference`);
+				if (nextRootGroups !== this.rootGroups) {
+					for (const key of nextRootGroups) if (!upserts.has(key) && !this.groups.has(key)) throw new Error(`conversation root references missing group "${key}"`);
+				}
+				const affectedParts = /* @__PURE__ */ new Map();
+				const partsOf = (key) => {
+					let parts = affectedParts.get(key);
+					if (parts === void 0) {
+						parts = new Set(this.placements.get(key));
+						affectedParts.set(key, parts);
+					}
+					return parts;
+				};
+				const removeReference = (reference) => {
+					partsOf(reference.key).delete(reference.groupPart);
+				};
+				const addReference = (reference) => {
+					if (readNode(reference.key) === void 0) throw new Error(`conversation group references missing Node "${reference.key}"`);
+					const parts = partsOf(reference.key);
+					if (parts.has(reference.groupPart) || reference.groupPart === void 0 && parts.size > 0 || parts.has(void 0)) throw new Error(`conversation Node "${reference.key}" has overlapping rendering positions`);
+					parts.add(reference.groupPart);
+				};
+				if (replaceReferences || nextRoot !== this.root) {
+					for (const entry of this.root) if (entry.kind === "node") removeReference(entry);
+				}
+				for (const key of removes) for (const member of this.groups.get(key).members) removeReference(member);
+				for (const [key, next] of upserts) {
+					const previous = this.groups.get(key);
+					if (previous !== void 0 && (replaceReferences || previous.members !== next.members)) for (const member of previous.members) removeReference(member);
+				}
+				if (replaceReferences || nextRoot !== this.root) {
+					for (const entry of nextRoot) if (entry.kind === "node") addReference(entry);
+				}
+				for (const [key, next] of upserts) if (replaceReferences || this.groups.get(key)?.members !== next.members) for (const member of next.members) addReference(member);
+				for (const [key, parts] of affectedParts) if (parts.size === 0) this.placements.delete(key);
+				else this.placements.set(key, parts);
+				for (const key of removes) {
+					this.groups.delete(key);
+					this.dirty.add(key);
+				}
+				for (const [key, next] of upserts) {
+					if (this.groups.get(key) === next) continue;
+					this.groups.set(key, next);
+					this.dirty.add(key);
+				}
+				this.root = nextRoot;
+				this.rootGroups = nextRootGroups;
+			}
+			/** Publish changed group sources after all related target data has been installed. */
+			publish() {
+				const keys = [...this.dirty];
+				this.dirty.clear();
+				for (const key of keys) this.sources.get(key)?.publication.set(this.groups.get(key));
+			}
+			/** Remove grouping without deleting its source Nodes; publication remains deferred. */
+			clear() {
+				this.prepareAndInstall(
+					{
+						entries: [],
+						groups: {
+							kind: "replace",
+							snapshots: []
+						}
+					},
+					/* v8 ignore next -- an empty replacement never reads a Node reference. */
+					() => void 0
+				);
+			}
+			collectRootGroups(entries) {
+				const keys = /* @__PURE__ */ new Set();
+				for (const entry of entries) {
+					if (entry.kind !== "group") continue;
+					if (keys.has(entry.key)) throw new Error(`conversation group "${entry.key}" has duplicate root references`);
+					keys.add(entry.key);
+				}
+				return keys;
+			}
+			collectChanges(update) {
+				const upserts = /* @__PURE__ */ new Map();
+				const removes = /* @__PURE__ */ new Set();
+				const add = (snapshot) => {
+					if (upserts.has(snapshot.key)) throw new Error(`conversation group "${snapshot.key}" has duplicate upserts`);
+					const previous = this.groups.get(snapshot.key);
+					if (previous === void 0) {
+						upserts.set(snapshot.key, snapshot);
+						return;
+					}
+					const members = reuseReferences(previous.members, snapshot.members, sameNodeReference);
+					upserts.set(snapshot.key, previous.data === snapshot.data && previous.members === members ? previous : {
+						...snapshot,
+						members
+					});
+				};
+				switch (update.groups.kind) {
+					case "replace":
+						for (const snapshot of update.groups.snapshots) add(snapshot);
+						for (const key of this.groups.keys()) if (!upserts.has(key)) removes.add(key);
+						break;
+					case "apply":
+						for (const snapshot of update.groups.upserts) add(snapshot);
+						for (const key of update.groups.removes) {
+							if (removes.has(key)) throw new Error(`conversation group "${key}" has duplicate removals`);
+							if (!this.groups.has(key)) throw new Error(`conversation group "${key}" cannot be removed because it is absent`);
+							if (upserts.has(key)) throw new Error(`conversation group "${key}" cannot be upserted and removed together`);
+							removes.add(key);
+						}
+						break;
+					/* v8 ignore next 2 -- closed update union; TypeScript rejects other operation tags. */
+					default: assertNever$1(update.groups);
+				}
+				return {
+					upserts,
+					removes
+				};
+			}
+		};
 		//#endregion
 		//#region src/client/conversation/location-index.ts
 		var MutableLocationDataSource = class {
@@ -1139,6 +1443,7 @@ window.__ModuleLoader__.load({
 			turnDataStores = /* @__PURE__ */ new Map();
 			stepDataStores = /* @__PURE__ */ new Map();
 			dirtyDataStores = /* @__PURE__ */ new Set();
+			changedTurns = /* @__PURE__ */ new Set();
 			currentTurn;
 			currentStep;
 			/**
@@ -1147,6 +1452,15 @@ window.__ModuleLoader__.load({
 			*/
 			snapshot() {
 				return this.timeline;
+			}
+			/**
+			* Drain the Turn changes accumulated for one assembly flush.
+			* @returns Turn identities changed since the preceding drain.
+			*/
+			takeChangedTurns() {
+				const turns = [...this.changedTurns];
+				this.changedTurns.clear();
+				return turns;
 			}
 			/**
 			* Replace all Definition-owned Location values while preserving reader identities.
@@ -1311,6 +1625,7 @@ window.__ModuleLoader__.load({
 						break;
 					}
 				}
+				for (const turn of new Set([...previousTurns.keys(), ...nextTurns.keys()])) if (previousTurns.get(turn) !== nextTurns.get(turn)) this.changedTurns.add(turn);
 				this.timeline = sameMap && turnOrder === this.timeline.turnOrder ? this.timeline : {
 					turnOrder,
 					turns: nextTurns
@@ -1390,6 +1705,7 @@ window.__ModuleLoader__.load({
 					turnOrder,
 					turns
 				};
+				if (turn !== previousTurn) this.changedTurns.add(turnNumber);
 				const changed = /* @__PURE__ */ new Set();
 				for (const seq of this.seqsByTurn.get(turnNumber) ?? []) {
 					const previous = this.locations.get(seq);
@@ -1469,17 +1785,20 @@ window.__ModuleLoader__.load({
 				return this.mutableStepData(stepDataKey(turn, step));
 			}
 			mutableTurnData(turn) {
-				const current = this.turnDataStores.get(turn) ?? this.createDataStore();
+				const current = this.turnDataStores.get(turn) ?? this.createDataStore(turn);
 				this.turnDataStores.set(turn, current);
 				return current;
 			}
 			mutableStepData(key) {
-				const current = this.stepDataStores.get(key) ?? this.createDataStore();
+				const current = this.stepDataStores.get(key) ?? this.createDataStore(Number(key.slice(0, key.indexOf(":"))));
 				this.stepDataStores.set(key, current);
 				return current;
 			}
-			createDataStore() {
-				return new MutableLocationDataStore((store) => this.dirtyDataStores.add(store));
+			createDataStore(turn) {
+				return new MutableLocationDataStore((store) => {
+					this.dirtyDataStores.add(store);
+					this.changedTurns.add(turn);
+				});
 			}
 			storeFor(data) {
 				return data.kind === "turn" ? this.mutableTurnData(data.turn) : this.mutableStepData(stepDataKey(data.turn, requireStep(data)));
@@ -1586,6 +1905,10 @@ window.__ModuleLoader__.load({
 				location
 			};
 		}
+		const NO_GROUPS = {
+			entries: () => [],
+			forTarget: () => void 0
+		};
 		/**
 		* Session-owned incremental engine that assembles business Contexts from a
 		* contiguous Event window and materializes registered view snapshots.
@@ -1593,6 +1916,7 @@ window.__ModuleLoader__.load({
 		var ConversationNodeAssembler = class {
 			eventDefinitions;
 			viewDefinitions;
+			groupDefinitions;
 			contexts = /* @__PURE__ */ new Map();
 			contextsByKind = /* @__PURE__ */ new Map();
 			contextsBySeq = /* @__PURE__ */ new Map();
@@ -1604,6 +1928,8 @@ window.__ModuleLoader__.load({
 			revised = /* @__PURE__ */ new Set();
 			dependents = /* @__PURE__ */ new Map();
 			views = /* @__PURE__ */ new Map();
+			groups = /* @__PURE__ */ new Map();
+			pendingGroupStores = /* @__PURE__ */ new Set();
 			activeTargets = /* @__PURE__ */ new Set();
 			hasMore = false;
 			replacePending = true;
@@ -1611,10 +1937,12 @@ window.__ModuleLoader__.load({
 			/**
 			* @param eventDefinitions - live Event Definition registry.
 			* @param viewDefinitions - live view builder registry.
+			* @param groupDefinitions - optional registered grouping rules, independent of presentation modes.
 			*/
-			constructor(eventDefinitions, viewDefinitions) {
+			constructor(eventDefinitions, viewDefinitions, groupDefinitions = NO_GROUPS) {
 				this.eventDefinitions = eventDefinitions;
 				this.viewDefinitions = viewDefinitions;
+				this.groupDefinitions = groupDefinitions;
 				this.resetViewBuilders();
 			}
 			/**
@@ -1744,46 +2072,37 @@ window.__ModuleLoader__.load({
 				if (!this.replacePending && this.dirty.size === 0 && !this.timelineDirty) return false;
 				if (this.replacePending) {
 					this.replaceLocationData();
-					let published = false;
+					const updated = [];
+					const changedTurns = this.locationIndex.takeChangedTurns();
 					for (const target of this.activeTargets) {
 						const view = this.views.get(target);
 						if (view === void 0) continue;
-						const builder = view.builder ?? view.definition.create();
-						view.builder = builder;
-						view.snapshot = builder.replace({
-							nodes: this.buildTargetNodes(target, this.contextsByTarget.get(target)),
-							timeline: this.locationIndex.snapshot()
-						});
-						published = true;
+						this.updateView(view, true, this.buildTargetNodes(target, this.contextsByTarget.get(target)), changedTurns);
+						updated.push(view);
 					}
-					this.locationIndex.publishData();
 					this.replacePending = false;
 					this.dirty.clear();
 					this.dirtyByTarget.clear();
 					this.timelineDirty = false;
-					return published;
+					return this.publishViews(updated);
 				}
-				let published = false;
+				const updated = [];
 				if (this.applyDirtyLocationData()) this.timelineDirty = true;
+				const changedTurns = this.locationIndex.takeChangedTurns();
 				const timelineDirty = this.timelineDirty;
 				for (const target of this.activeTargets) {
 					const view = this.views.get(target);
 					if (view === void 0) continue;
-					const builder = view.builder;
-					if (builder === void 0) continue;
+					if (view.builder === void 0) continue;
 					const upserts = this.buildTargetUpserts(target, this.dirtyByTarget.get(target));
 					if (upserts.length === 0 && !timelineDirty) continue;
-					view.snapshot = builder.apply({
-						upserts,
-						timeline: this.locationIndex.snapshot()
-					});
-					published = true;
+					this.updateView(view, false, upserts, changedTurns);
+					updated.push(view);
 				}
-				this.locationIndex.publishData();
 				this.dirty.clear();
 				this.dirtyByTarget.clear();
 				this.timelineDirty = false;
-				return published;
+				return this.publishViews(updated);
 			}
 			/**
 			* Add one target to the monotonic active set and materialize its current snapshot.
@@ -1798,6 +2117,7 @@ window.__ModuleLoader__.load({
 				this.activeTargets.add(target);
 				if (view === void 0) return published;
 				this.replaceView(view);
+				this.publishViews([view]);
 				return true;
 			}
 			/**
@@ -1810,6 +2130,9 @@ window.__ModuleLoader__.load({
 			}
 			get(target) {
 				return this.snapshot(target);
+			}
+			grouped(target) {
+				return this.groups.get(target)?.store;
 			}
 			/**
 			* Read targets whose owners classify their latest snapshot as visible activity.
@@ -2137,12 +2460,51 @@ window.__ModuleLoader__.load({
 				return node;
 			}
 			replaceView(view) {
+				this.updateView(view, true, this.buildTargetNodes(view.target, this.contextsByTarget.get(view.target)), []);
+			}
+			updateView(view, replacing, nodes, changedTurns) {
 				const builder = view.builder ?? view.definition.create();
+				const definition = view.groupDefinition;
+				if (definition !== void 0 && builder.groupInput === void 0) throw new Error(`conversation group target "${view.target}" requires builder.groupInput()`);
 				view.builder = builder;
-				view.snapshot = builder.replace({
-					nodes: this.buildTargetNodes(view.target, this.contextsByTarget.get(view.target)),
-					timeline: this.locationIndex.snapshot()
+				const timeline = this.locationIndex.snapshot();
+				const snapshot = replacing ? builder.replace({
+					nodes,
+					timeline,
+					changedTurns
+				}) : builder.apply({
+					upserts: nodes,
+					timeline,
+					changedTurns
 				});
+				if (definition !== void 0 && builder.groupInput !== void 0) {
+					let context = this.groups.get(view.target);
+					const initial = context === void 0;
+					if (context === void 0) context = {
+						definition,
+						state: definition.create(),
+						store: new ConversationGroupStore()
+					};
+					const input = builder.groupInput();
+					context.state = definition.update(context, input);
+					const change = definition.buildGroups(context);
+					if ((initial || input.kind === "replace") && (change === null || change.entries === void 0 || change.groups.kind !== "replace")) throw new Error(`conversation group target "${view.target}" requires complete grouping for replacement input`);
+					if (change !== null) {
+						context.store.prepareAndInstall(change, input.readNode);
+						this.pendingGroupStores.add(context.store);
+					}
+					this.groups.set(view.target, context);
+				}
+				view.snapshot = snapshot;
+			}
+			publishViews(updated) {
+				const changed = updated.length > 0 || this.pendingGroupStores.size > 0;
+				const stores = [...this.pendingGroupStores];
+				this.pendingGroupStores.clear();
+				for (const view of updated) view.builder?.publish?.();
+				for (const store of stores) store.publish();
+				this.locationIndex.publishData();
+				return changed;
 			}
 			buildTargetNodes(target, contexts) {
 				const nodes = [];
@@ -2208,11 +2570,19 @@ window.__ModuleLoader__.load({
 				return changed;
 			}
 			resetViewBuilders() {
+				const definitions = this.viewDefinitions.entries();
+				const targets = new Set(definitions.map((definition) => definition.target));
+				for (const [target, group] of this.groups) if (!targets.has(target) || this.groupDefinitions.forTarget(target) !== group.definition) {
+					group.store.clear();
+					this.pendingGroupStores.add(group.store);
+					this.groups.delete(target);
+				}
 				this.views.clear();
-				for (const definition of this.viewDefinitions.entries()) {
+				for (const definition of definitions) {
 					const view = {
 						target: definition.target,
 						definition,
+						groupDefinition: this.groupDefinitions.forTarget(definition.target),
 						isActive: definition.isActive === void 0 ? void 0 : (snapshot) => definition.isActive?.(snapshot) === true,
 						builder: void 0,
 						snapshot: void 0
@@ -2522,6 +2892,37 @@ window.__ModuleLoader__.load({
 			}
 		};
 		//#endregion
+		//#region src/client/conversation/group-registry.ts
+		/** One Group Definition per target; registration never instantiates its Builder. */
+		var ConversationGroupRegistry = class extends ConversationDefinitionRegistry {
+			views;
+			/**
+			* @param ctx - owning plugin context.
+			* @param views - registered target Builder definitions.
+			*/
+			constructor(ctx, views) {
+				super(ctx);
+				this.views = views;
+			}
+			/**
+			* Register grouping rules for an existing target.
+			* @param definition - business State and grouping output for the declared target data.
+			* @returns the effect-owned, idempotent registration disposer.
+			*/
+			register(definition) {
+				if (!this.views.entries().some((view) => view.target === definition.target)) throw new Error(`conversation group target "${definition.target}" is not registered`);
+				return this.registerDefinition(definition.target, definition, `conversation group target "${definition.target}" is already registered`, `uiConversation.groups.register(${JSON.stringify(definition.target)})`);
+			}
+			/**
+			* Find the grouping rules registered for one target.
+			* @param target - View target.
+			* @returns its grouping Definition, when registered.
+			*/
+			forTarget(target) {
+				return this.definitions.get(target);
+			}
+		};
+		//#endregion
 		//#region src/client/conversation/assembly.ts
 		/** Per-Session target-neutral Conversation assembly. */
 		var BoundConversation = class {
@@ -2634,6 +3035,8 @@ window.__ModuleLoader__.load({
 			events;
 			/** Registry of target View definitions. */
 			views;
+			/** Business grouping rules over already materialized target Nodes. */
+			groups;
 			bindings = new WeakMapWithValues();
 			images;
 			/**
@@ -2645,6 +3048,7 @@ window.__ModuleLoader__.load({
 				this.sessions = sessions;
 				this.events = new ConversationEventRegistry(ctx);
 				this.views = new ConversationViewRegistry(ctx);
+				this.groups = new ConversationGroupRegistry(ctx, this.views);
 				this.images = new HistoricalImageCache(ctx, sessions);
 				const rebuild = () => {
 					for (const record of this.bindings.values) record.binding.rebuild();
@@ -2661,7 +3065,9 @@ window.__ModuleLoader__.load({
 				ctx.effect(() => {
 					const disposeEvents = this.events.subscribe(scheduleRebuild);
 					const disposeViews = this.views.subscribe(scheduleRebuild);
+					const disposeGroups = this.groups.subscribe(scheduleRebuild);
 					return () => {
+						disposeGroups();
 						disposeViews();
 						disposeEvents();
 						for (const record of [...this.bindings.values]) this.drop(record, true);
@@ -2680,7 +3086,7 @@ window.__ModuleLoader__.load({
 				if (this.sessions.binding(sessionId) !== owner) throw new Error(`uiConversation.binding: inactive session "${sessionId}"`);
 				const current = this.bindings.get(owner);
 				if (current !== void 0) return current.binding;
-				const binding = new BoundConversation(owner.eventSource, new ConversationNodeAssembler(this.events, this.views));
+				const binding = new BoundConversation(owner.eventSource, new ConversationNodeAssembler(this.events, this.views, this.groups));
 				const record = {
 					source: owner,
 					binding,
@@ -2809,6 +3215,48 @@ window.__ModuleLoader__.load({
 			} catch {
 				return null;
 			}
+		}
+		//#endregion
+		//#region ../../context/file-reference/src/grammar.ts
+		/**
+		* Format a selected path as prompt text. Whitespace uses the quoted
+		* `@"path"` grammar; a quoted directory keeps that quote open after its
+		* trailing slash so completion can descend another level.
+		* @param candidate - selected file or directory.
+		* @param preserveQuote - retain an explicitly opened quote even when unnecessary.
+		* @returns the insertion value, or `undefined` for a path the editor grammar cannot represent safely.
+		*/
+		function formatFileMention(candidate, preserveQuote) {
+			const path = candidate.kind === "directory" ? `${candidate.path}/` : candidate.path;
+			if (/[\u0000-\u001f\u007f-\u009f"]/u.test(path)) return void 0;
+			if (!(preserveQuote || /\s/u.test(path))) return `@${path}`;
+			if (candidate.kind === "directory") return `@"${path}`;
+			return `@"${path}"`;
+		}
+		//#endregion
+		//#region ../../util/workspace-path/src/index.ts
+		/**
+		* Read the final non-empty segment of a Workspace path for display.
+		* Workspace-label surfaces use this helper instead of deriving another basename.
+		* @param path - Workspace directory path using POSIX or Windows separators.
+		* @returns the final segment, or an empty string for a separator-only path.
+		*/
+		function workspaceTitleOf(path) {
+			const trimmed = path.replace(/[/\\]+$/, "");
+			const separator = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
+			return trimmed.slice(separator + 1);
+		}
+		/**
+		* Strip the workspace root from a workspace-rooted absolute path (display only).
+		* @param text - the path to shorten.
+		* @param cwd - session workspace root; absent or empty leaves the path unchanged.
+		* @returns the path relative to the workspace root, or unchanged when it is not rooted there.
+		*/
+		function relativizeToCwd(text, cwd) {
+			if (cwd === void 0 || cwd === "") return text;
+			const root = cwd.replace(/[/\\]+$/, "");
+			if (text.startsWith(`${root}/`) || text.startsWith(`${root}\\`)) return text.slice(root.length + 1);
+			return text;
 		}
 		//#endregion
 		//#region src/client/service.ts
@@ -3287,7 +3735,11 @@ window.__ModuleLoader__.load({
 				default: throw new UnsupportedImageMediaTypeError(value);
 			}
 		}
-		/** Whether a browser-declared MIME selects the image draft path (all other files upload verbatim). */
+		/**
+		* Whether a browser-declared MIME selects the image draft path (all other files upload verbatim).
+		* @param value - the browser's declared MIME type.
+		* @returns whether the file is an accepted raster image.
+		*/
 		function isImageMediaType(value) {
 			return value === "image/png" || value === "image/jpeg" || value === "image/webp" || value === "image/gif";
 		}
@@ -11871,12 +12323,12 @@ window.__ModuleLoader__.load({
 			return n;
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-source/packages/client/ui-conversation/src/client/input/editor/ReferenceChip.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-conversation/src/client/input/editor/ReferenceChip.module.css.mjs
 		const css$8 = ".yAWgPa_chip{max-width:240px;color:var(--dsw-alias-state-business-primary);user-select:none;align-items:baseline;gap:3px;display:inline-flex}.yAWgPa_marker{flex:none;font-weight:500}.yAWgPa_icon{flex:none;align-self:center}.yAWgPa_label{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.yAWgPa_invalid{color:var(--dsw-alias-state-error-primary);opacity:.7;text-decoration:line-through}";
-		const tagId$8 = "@oh-my-dsh/ui-conversation/ReferenceChip.module.css";
+		const tagId$8 = "@deepseek-ai/dsh-client-ui-conversation/ReferenceChip.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$8) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "@oh-my-dsh/ui-conversation";
+			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
 			tag.dataset.pluginCss = tagId$8;
 			tag.textContent = css$8;
 			document.head.appendChild(tag);
@@ -11889,12 +12341,12 @@ window.__ModuleLoader__.load({
 			"marker": "yAWgPa_marker"
 		};
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-source/packages/client/ui-conversation/src/client/input/editor/composer-editor.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-conversation/src/client/input/editor/composer-editor.module.css.mjs
 		const css$7 = ".q44v1G_reference{line-height:inherit;vertical-align:baseline;color:var(--dsw-alias-state-business-primary);-webkit-box-decoration-break:clone;box-decoration-break:clone;background:0 0;border-radius:6px;padding:0 4px}.q44v1G_reference:hover{background:var(--dsw-alias-state-business-tertiary)}.q44v1G_openable{cursor:pointer}.q44v1G_textRef{max-width:100%;display:inline-block}";
-		const tagId$7 = "@oh-my-dsh/ui-conversation/composer-editor.module.css";
+		const tagId$7 = "@deepseek-ai/dsh-client-ui-conversation/composer-editor.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$7) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "@oh-my-dsh/ui-conversation";
+			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
 			tag.dataset.pluginCss = tagId$7;
 			tag.textContent = css$7;
 			document.head.appendChild(tag);
@@ -11924,7 +12376,7 @@ window.__ModuleLoader__.load({
 					className: ReferenceChip_module_css_default.marker,
 					"aria-hidden": true,
 					children: "@"
-				}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.ReferenceIcon, {
+				}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.ReferenceIconRegular, {
 					kind: appearance,
 					size: 14,
 					className: ReferenceChip_module_css_default.icon
@@ -12342,8 +12794,8 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region src/client/input/editor/claim-decor.ts
-		/** Inline style carried by the claim-token node (the old backdrop's hlToken color). */
-		const TOKEN_STYLE = "color: var(--dsw-alias-state-warn-label)";
+		/** Inline style carried by the claim-token node. */
+		const TOKEN_STYLE = "color: var(--dsw-alias-state-business-primary)";
 		/** The document's first text leaf, or null (empty document / leading chip). */
 		function firstTextLeaf() {
 			const block = nl().getFirstChild();
@@ -12834,6 +13286,20 @@ window.__ModuleLoader__.load({
 				return applied;
 			}
 			/**
+			* Insert an asynchronous text result as one independent undo operation.
+			* @param span - owner-validated insertion range.
+			* @param text - text sanitized with the same rules as paste.
+			* @returns whether the range mapped and the edit applied.
+			*/
+			insertAsyncText(span, text) {
+				let applied = false;
+				const clean = text.replace(REFERENCE_PLACEHOLDER_RE, "");
+				this.applyEdit(() => {
+					applied = $replaceDetectSpanWithText(span, clean);
+				}, Co);
+				return applied;
+			}
+			/**
 			* Insert a reference chip with the existing trailing-space rule.
 			* @param span - detect-coordinate range.
 			* @param ref - reference fields.
@@ -12845,6 +13311,27 @@ window.__ModuleLoader__.load({
 				this.applyEdit(() => {
 					applied = $replaceDetectSpanWithNodes(span, tail === " " ? [$createReferenceChipNode(ref)] : [$createReferenceChipNode(ref), Go(" ")]);
 				});
+				return applied;
+			}
+			/**
+			* Insert an ordered file-reference batch after the live selection without deleting it.
+			* @param references - validated references in source order.
+			* @returns whether the live insertion position accepted the batch.
+			*/
+			insertFileReferences(references) {
+				if (references.length === 0) return true;
+				let applied = false;
+				this.applyEdit(() => {
+					const projection = $projectComposer((key) => this.occurrenceIdOf(key));
+					const at = projection.selection?.end ?? projection.detectText.length;
+					const before = projection.detectText.slice(0, at);
+					const nodes = references.flatMap((ref) => [$createReferenceChipNode(ref), Go(" ")]);
+					if (before !== "" && !/\s$/u.test(before)) nodes.unshift(Go(" "));
+					applied = $replaceDetectSpanWithNodes({
+						start: at,
+						end: at
+					}, nodes);
+				}, Co);
 				return applied;
 			}
 			/** Refresh claim-token decoration after the model's claim changes. */
@@ -12959,6 +13446,15 @@ window.__ModuleLoader__.load({
 			}
 			/** The public provide-channel action face (one stable identity per session). */
 			actions = {
+				captureInsertion: () => ({
+					...this.caretSpan(),
+					draftRev: this.rev
+				}),
+				insertText: (text, span) => {
+					if (this.snapshot.phase === "adjudicating" || this.snapshot.phase === "submitting" || this.disposed) return false;
+					if (span.draftRev !== this.rev) return false;
+					return this.draftEditor.insertAsyncText(span, text);
+				},
 				setDraft: (text) => {
 					this.setDraft(text);
 				},
@@ -13045,6 +13541,19 @@ window.__ModuleLoader__.load({
 			addAttachments(ids) {
 				if (this.snapshot.phase === "adjudicating" || this.snapshot.phase === "submitting") return false;
 				if (ids.length === 0) return true;
+				this.attachmentIds = [...this.attachmentIds, ...ids];
+				this.publish();
+				return true;
+			}
+			/**
+			* Add validated file references and attachment ids while admission is editable.
+			* @param references - reference chips in source order.
+			* @param ids - newly allocated attachment ids.
+			* @returns false when admission is locked or the editor refuses the insertion.
+			*/
+			addFiles(references, ids) {
+				if (this.snapshot.phase === "adjudicating" || this.snapshot.phase === "submitting") return false;
+				if (!this.draftEditor.insertFileReferences(references)) return false;
 				this.attachmentIds = [...this.attachmentIds, ...ids];
 				this.publish();
 				return true;
@@ -13800,7 +14309,9 @@ window.__ModuleLoader__.load({
 		const BUSY_ENTER_BEHAVIORS = ["queue", "steer"];
 		/** Default preserves Enter-as-Queue for running conversations. */
 		const DEFAULT_BUSY_ENTER_BEHAVIOR = "queue";
-		Schema.object({ [BUSY_ENTER_FIELD]: Schema.union([...BUSY_ENTER_BEHAVIORS]).default(DEFAULT_BUSY_ENTER_BEHAVIOR) });
+		/** Durable conversation schema; also the wire envelope the browser scope validates against. */
+		const ConversationSettingsFields = { [BUSY_ENTER_FIELD]: Schema.union([...BUSY_ENTER_BEHAVIORS]).default(DEFAULT_BUSY_ENTER_BEHAVIOR) };
+		Schema.object(ConversationSettingsFields);
 		//#endregion
 		//#region src/client/input/submission-policy.ts
 		/**
@@ -13833,21 +14344,23 @@ window.__ModuleLoader__.load({
 		var ComposerSubmissionPolicy = class {
 			/** Reactive preference source for the composer bar and the Settings row. */
 			busyEnter = (0, _deepseek_ai_dsh_client_store.createSnapshotStore)(DEFAULT_BUSY_ENTER_BEHAVIOR);
+			unsubscribe;
 			host;
 			/**
-			* @param host - durable preference scope owned by the providing plugin;
-			* absent compositions stay process-local. The adoption subscription shares
-			* the scope's plugin lifetime — a disposed scope never publishes again, so
-			* the policy needs no release hook.
+			* @param host Shared configuration form; omitted keeps the browser-local default.
 			*/
 			constructor(host) {
 				this.host = host;
 				if (host !== void 0) {
-					host.subscribe(() => {
+					this.unsubscribe = host.subscribe(() => {
 						this.adopt(host);
 					});
 					this.adopt(host);
 				}
+			}
+			/** Release the preference subscription. */
+			dispose() {
+				this.unsubscribe?.();
 			}
 			/**
 			* Change the busy-state submission behavior; the live value publishes
@@ -13901,6 +14414,9 @@ window.__ModuleLoader__.load({
 			"attachment.dropTitle": "文件或图片拖动到此处即可添加",
 			"attachment.dropDesc": "图片限制：最多 {count} 张，每张 {size}",
 			"attachment.dropBlocked": "当前无法添加文件或图片",
+			"attachment.directoryDesktopOnly": "只有桌面端支持添加文件夹，浏览器里请添加单个文件",
+			"attachment.pathUnavailable": "无法获取文件夹路径，请重新拖入",
+			"attachment.pathUnsupported": "路径含有无法引用的字符，请改名后再试",
 			"image.pending": "待发送图片",
 			"image.openOriginal": "查看原图",
 			"image.openOriginalLabel": "{label}，点击查看原图",
@@ -13945,7 +14461,196 @@ window.__ModuleLoader__.load({
 			"todo.progress.done": "{done} 已完成",
 			"todo.progress.active": "{active} 进行中",
 			"todo.progress.pending": "{pending} 待处理",
+			"todo.status.completed": "已完成",
+			"todo.status.inProgress": "进行中",
+			"todo.status.pending": "待处理",
 			"todo.rowTitle": "更新任务清单",
+			"tool.title.createGoal": "创建目标",
+			"tool.title.getGoal": "查看目标",
+			"tool.title.updateGoal": "更新目标",
+			"tool.title.createSchedule": "创建定时任务",
+			"tool.title.listSchedules": "查看定时任务",
+			"tool.title.deleteSchedule": "删除定时任务",
+			"detail.state": "状态",
+			"detail.todo.completed": "已完成",
+			"detail.todo.in_progress": "进行中",
+			"detail.todo.pending": "待处理",
+			"detail.todo.empty": "任务清单为空",
+			"todo.diff.initial": "首次记录",
+			"todo.diff.compare": "与上次清单相比",
+			"todo.diff.unavailable": "旧清单不可用",
+			"todo.diff.noChanges": "清单没有变化",
+			"todo.diff.added": "新增 {count}",
+			"todo.diff.updated": "更新 {count}",
+			"todo.diff.removed": "移除 {count}",
+			"todo.diff.unchanged": "{count} 项未变化",
+			"todo.diff.addedItem": "新增",
+			"todo.diff.updatedItem": "状态变化",
+			"todo.diff.movedItem": "顺序调整",
+			"todo.diff.removedItem": "移除",
+			"detail.goal.empty": "没有目标",
+			"detail.goal.active": "进行中",
+			"detail.goal.disarmed": "等待继续",
+			"detail.goal.paused": "已暂停",
+			"detail.goal.blocked": "受阻",
+			"detail.goal.complete": "已完成",
+			"detail.goal.rounds": "执行轮次",
+			"detail.goal.reason": "受阻原因",
+			"detail.days": "{count} 天",
+			"detail.hours": "{count} 小时",
+			"detail.minutes": "{count} 分钟",
+			"detail.seconds": "{count} 秒",
+			"detail.schedule.once": "单次",
+			"detail.schedule.every": "每 {interval}",
+			"detail.schedule.when": "计划时间",
+			"detail.schedule.frequency": "重复",
+			"detail.schedule.scheduled": "等待触发",
+			"detail.schedule.overdue": "已到期，等待会话恢复",
+			"detail.schedule.empty": "没有定时任务",
+			"detail.schedule.deleted": "已删除",
+			"detail.schedule.count": "{count} 个定时任务",
+			"tool.title.inspectProviders": "检查提供方",
+			"tool.title.queryRuntime": "查询运行时",
+			"tool.title.inspectPlugins": "检查动态插件",
+			"tool.title.workflow": "运行工作流",
+			"tool.title.ralph": "运行 Ralph",
+			"tool.title.readEvent": "读取事件",
+			"tool.title.searchEvents": "搜索事件",
+			"tool.title.traceEvent": "追踪事件",
+			"tool.title.searchSessions": "搜索会话",
+			"tool.title.traceSession": "追踪会话",
+			"tool.title.listModels": "查看可用模型",
+			"tool.title.subagent": "委派任务",
+			"tool.title.listAgents": "查看代理",
+			"tool.title.sendMessage": "发送消息",
+			"tool.title.interruptAgent": "中断代理",
+			"tool.title.listJobs": "查看后台任务",
+			"tool.title.readJob": "读取任务输出",
+			"tool.title.killJob": "取消后台任务",
+			"tool.title.openTerminal": "创建终端",
+			"tool.title.readTerminal": "读取终端",
+			"tool.title.listTerminals": "查看终端",
+			"tool.title.signalTerminal": "发送终端信号",
+			"tool.title.closeTerminal": "关闭终端",
+			"tool.title.lsp": "查询代码符号",
+			"tool.title.findDefinition": "查找定义",
+			"tool.title.findReferences": "查找引用",
+			"tool.title.findImplementation": "查找实现",
+			"tool.title.hoverSymbol": "查看符号信息",
+			"tool.title.spawnTeammate": "创建队友",
+			"tool.title.createTeamTask": "创建团队任务",
+			"tool.title.getTeamTask": "读取团队任务",
+			"tool.title.updateTeamTask": "更新团队任务",
+			"tool.title.listTeamTasks": "查看团队任务",
+			"tool.title.waitAgent": "等待队友",
+			"detail.recordedResult": "调用结果",
+			"detail.empty": "暂无结果",
+			"detail.none": "无",
+			"detail.yes": "是",
+			"detail.no": "否",
+			"detail.moreInInspect": "另有 {count} 项，可在「查看」中读取",
+			"detail.status.running": "运行中",
+			"detail.status.idle": "空闲",
+			"detail.status.ready": "就绪",
+			"detail.status.inactive": "未运行",
+			"detail.status.provisioning": "准备中",
+			"detail.status.failed": "失败",
+			"detail.status.completed": "已完成",
+			"detail.status.deleted": "已删除",
+			"detail.status.killed": "已取消",
+			"detail.status.accepted": "已接收",
+			"detail.status.queued": "已入队",
+			"detail.status.exited": "已退出",
+			"detail.field.id": "ID",
+			"detail.field.revision": "版本",
+			"detail.field.platform": "平台",
+			"detail.field.provider": "提供方",
+			"detail.field.model": "模型",
+			"detail.field.role": "角色",
+			"detail.field.context": "上下文",
+			"detail.field.owner": "负责人",
+			"detail.field.ready": "可开始",
+			"detail.field.dependencies": "前置任务",
+			"detail.field.writeScopes": "文件范围",
+			"detail.field.warnings": "提示",
+			"detail.field.diagnostics": "诊断",
+			"detail.field.methods": "方法",
+			"detail.field.inputSchema": "输入 Schema",
+			"detail.field.outputSchema": "输出 Schema",
+			"detail.field.currentPackage": "当前包",
+			"detail.field.nextPackage": "待运行的包",
+			"detail.field.latestRun": "最近运行",
+			"detail.field.packages": "版本包",
+			"detail.field.registrations": "注册项",
+			"detail.field.props": "属性",
+			"detail.field.data": "数据",
+			"detail.field.source": "来源",
+			"detail.field.content": "内容",
+			"detail.field.message": "消息",
+			"detail.field.messageId": "消息 ID",
+			"detail.field.root": "根节点",
+			"detail.field.pid": "进程 ID",
+			"detail.field.type": "类型",
+			"detail.field.time": "时间",
+			"detail.field.seq": "事件序号",
+			"detail.field.turn": "轮次",
+			"detail.field.step": "步骤",
+			"detail.field.callId": "调用 ID",
+			"detail.field.agents": "启动代理数",
+			"detail.field.result": "结果",
+			"detail.field.parent": "父级",
+			"detail.field.depth": "层级",
+			"detail.field.exitCode": "退出码",
+			"detail.field.signal": "信号",
+			"detail.field.previousStatus": "中断前状态",
+			"detail.field.agent": "代理 ID",
+			"detail.field.job": "任务 ID",
+			"detail.field.task": "任务内容",
+			"detail.field.processGroup": "进程组",
+			"detail.field.availability": "可用状态",
+			"detail.field.bestMatch": "最相关事件",
+			"detail.field.target": "目标事件",
+			"detail.field.surface": "记录状态",
+			"detail.agents.count": "{count} 个代理",
+			"detail.jobs.count": "{count} 个后台任务",
+			"detail.terminals.count": "{count} 个终端",
+			"detail.tasks.count": "{count} 个团队任务",
+			"detail.tasks.nextPage": "后面还有任务；下一页位置为 {cursor}",
+			"detail.locations.count": "{count} 个位置",
+			"detail.location": "第 {line} 行，第 {column} 列",
+			"detail.receipt.delivered": "消息已送达",
+			"detail.receipt.interrupt": "已请求中断",
+			"detail.receipt.started": "已启动",
+			"detail.receipt.cancel": "已请求取消",
+			"detail.receipt.alreadyFinished": "任务已结束",
+			"detail.receipt.signal": "信号已发送",
+			"detail.receipt.closed": "已关闭",
+			"detail.receipt.closing": "关闭中",
+			"detail.wait.noProgress": "没有正在运行的队友",
+			"detail.wait.title": "队友状态",
+			"detail.wait.timeout": "等待超时",
+			"detail.wait.changed": "检测到变化",
+			"detail.agent.reply": "代理回复",
+			"detail.models.title": "可用模型",
+			"detail.output.lines": "第 {begin}–{end} 行，共 {total} 行",
+			"detail.output.truncated": "输出已截断",
+			"detail.providers.count": "{count} 个检查提供方",
+			"detail.plugins.count": "{count} 个动态插件",
+			"detail.workflow.script": "工作流脚本",
+			"detail.ralph.reportedComplete": "代理报告完成",
+			"detail.ralph.reportedBlocker": "代理报告受阻",
+			"detail.ralph.limit": "已达到轮次上限",
+			"detail.report.nextSteps": "待完成事项",
+			"detail.trace.replacedBy": "被替换为",
+			"detail.trace.replacementChain": "替换链",
+			"detail.trace.replaces": "替换的事件",
+			"detail.trace.sources": "引用来源",
+			"detail.trace.derived": "派生事件",
+			"detail.trace.ancestors": "祖先会话",
+			"detail.trace.descendants": "后代会话",
+			"detail.matches.count": "{count} 条匹配",
+			"detail.matches.capped": "已达到结果上限，可缩小搜索范围",
+			"detail.event.neighbors": "前后事件",
 			"todo.completed": "{done}/{total} 已完成",
 			"command.attachmentsUnsupported": "/{command} 不接受附件，请先移除附件",
 			"ask.rowTitle": "提问",
@@ -13967,7 +14672,7 @@ window.__ModuleLoader__.load({
 			"row.inspect": "查看",
 			"tool.title.search": "搜索",
 			"tool.title.read": "读取",
-			"tool.title.bash": "Bash",
+			"tool.title.bash": "运行命令",
 			"tool.title.write": "写入",
 			"tool.title.edit": "编辑",
 			"tool.title.code": "代码",
@@ -13976,10 +14681,10 @@ window.__ModuleLoader__.load({
 			"tool.title.runCordis": "运行 Cordis 插件",
 			"tool.title.stopCordis": "停止 Cordis 插件",
 			"tool.title.removeCordis": "移除 Cordis 插件",
-			"tool.title.pwsh": "Pwsh",
+			"tool.title.pwsh": "运行命令",
 			"tool.title.readImage": "读取图片",
-			"tool.title.grep": "Grep",
-			"tool.title.glob": "Glob",
+			"tool.title.grep": "搜索文件内容",
+			"tool.title.glob": "查找文件",
 			"tool.title.webSearch": "网页搜索",
 			"tool.title.webFetch": "网页获取",
 			"tool.autoReviewRejected": "Auto review 已拒绝",
@@ -14060,6 +14765,9 @@ window.__ModuleLoader__.load({
 			"attachment.dropTitle": "Drag files or images here to add them",
 			"attachment.dropDesc": "Image limit: up to {count} images, {size} each",
 			"attachment.dropBlocked": "Files and images cannot be added right now",
+			"attachment.directoryDesktopOnly": "Folders can only be added in the desktop app; add individual files in the browser",
+			"attachment.pathUnavailable": "Could not obtain the folder path; drag it in again",
+			"attachment.pathUnsupported": "The path contains characters a reference cannot carry; rename it and try again",
 			"image.pending": "Pending images",
 			"image.openOriginal": "View original",
 			"image.openOriginalLabel": "{label}, click to view original",
@@ -14104,7 +14812,196 @@ window.__ModuleLoader__.load({
 			"todo.progress.done": "{done} completed",
 			"todo.progress.active": "{active} in progress",
 			"todo.progress.pending": "{pending} pending",
+			"todo.status.completed": "Completed",
+			"todo.status.inProgress": "In progress",
+			"todo.status.pending": "Pending",
 			"todo.rowTitle": "Update to-do list",
+			"tool.title.createGoal": "Create goal",
+			"tool.title.getGoal": "View goal",
+			"tool.title.updateGoal": "Update goal",
+			"tool.title.createSchedule": "Create reminder",
+			"tool.title.listSchedules": "List reminders",
+			"tool.title.deleteSchedule": "Delete reminder",
+			"detail.state": "Status",
+			"detail.todo.completed": "Completed",
+			"detail.todo.in_progress": "In progress",
+			"detail.todo.pending": "Pending",
+			"detail.todo.empty": "The to-do list is empty",
+			"todo.diff.initial": "Initial list",
+			"todo.diff.compare": "Changes since the previous list",
+			"todo.diff.unavailable": "Previous list unavailable",
+			"todo.diff.noChanges": "No changes to the list",
+			"todo.diff.added": "{count} added",
+			"todo.diff.updated": "{count} updated",
+			"todo.diff.removed": "{count} removed",
+			"todo.diff.unchanged": "{count} unchanged",
+			"todo.diff.addedItem": "Added",
+			"todo.diff.updatedItem": "Status changed",
+			"todo.diff.movedItem": "Reordered",
+			"todo.diff.removedItem": "Removed",
+			"detail.goal.empty": "No goal",
+			"detail.goal.active": "Active",
+			"detail.goal.disarmed": "Awaiting continuation",
+			"detail.goal.paused": "Paused",
+			"detail.goal.blocked": "Blocked",
+			"detail.goal.complete": "Completed",
+			"detail.goal.rounds": "Rounds",
+			"detail.goal.reason": "Blocker",
+			"detail.days": "{count} d",
+			"detail.hours": "{count} h",
+			"detail.minutes": "{count} min",
+			"detail.seconds": "{count} s",
+			"detail.schedule.once": "Once",
+			"detail.schedule.every": "Every {interval}",
+			"detail.schedule.when": "Scheduled for",
+			"detail.schedule.frequency": "Repeat",
+			"detail.schedule.scheduled": "Scheduled",
+			"detail.schedule.overdue": "Overdue, awaiting session resume",
+			"detail.schedule.empty": "No reminders",
+			"detail.schedule.deleted": "Deleted",
+			"detail.schedule.count": "{count} reminders",
+			"tool.title.inspectProviders": "Inspect providers",
+			"tool.title.queryRuntime": "Query runtime",
+			"tool.title.inspectPlugins": "Inspect plugins",
+			"tool.title.workflow": "Run workflow",
+			"tool.title.ralph": "Run Ralph",
+			"tool.title.readEvent": "Read event",
+			"tool.title.searchEvents": "Search events",
+			"tool.title.traceEvent": "Trace event",
+			"tool.title.searchSessions": "Search sessions",
+			"tool.title.traceSession": "Trace session",
+			"tool.title.listModels": "List models",
+			"tool.title.subagent": "Delegate task",
+			"tool.title.listAgents": "List agents",
+			"tool.title.sendMessage": "Send message",
+			"tool.title.interruptAgent": "Interrupt agent",
+			"tool.title.listJobs": "List background jobs",
+			"tool.title.readJob": "Read job output",
+			"tool.title.killJob": "Cancel background job",
+			"tool.title.openTerminal": "Open terminal",
+			"tool.title.readTerminal": "Read terminal",
+			"tool.title.listTerminals": "List terminals",
+			"tool.title.signalTerminal": "Signal terminal",
+			"tool.title.closeTerminal": "Close terminal",
+			"tool.title.lsp": "Query code symbols",
+			"tool.title.findDefinition": "Find definition",
+			"tool.title.findReferences": "Find references",
+			"tool.title.findImplementation": "Find implementation",
+			"tool.title.hoverSymbol": "Inspect symbol",
+			"tool.title.spawnTeammate": "Create teammate",
+			"tool.title.createTeamTask": "Create team task",
+			"tool.title.getTeamTask": "Read team task",
+			"tool.title.updateTeamTask": "Update team task",
+			"tool.title.listTeamTasks": "List team tasks",
+			"tool.title.waitAgent": "Wait for teammates",
+			"detail.recordedResult": "Recorded result",
+			"detail.empty": "No results",
+			"detail.none": "None",
+			"detail.yes": "Yes",
+			"detail.no": "No",
+			"detail.moreInInspect": "{count} more items available in Inspect",
+			"detail.status.running": "Running",
+			"detail.status.idle": "Idle",
+			"detail.status.ready": "Ready",
+			"detail.status.inactive": "Inactive",
+			"detail.status.provisioning": "Provisioning",
+			"detail.status.failed": "Failed",
+			"detail.status.completed": "Completed",
+			"detail.status.deleted": "Deleted",
+			"detail.status.killed": "Cancelled",
+			"detail.status.accepted": "Accepted",
+			"detail.status.queued": "Queued",
+			"detail.status.exited": "Exited",
+			"detail.field.id": "ID",
+			"detail.field.revision": "Revision",
+			"detail.field.platform": "Platform",
+			"detail.field.provider": "Provider",
+			"detail.field.model": "Model",
+			"detail.field.role": "Role",
+			"detail.field.context": "Context",
+			"detail.field.owner": "Owner",
+			"detail.field.ready": "Ready",
+			"detail.field.dependencies": "Dependencies",
+			"detail.field.writeScopes": "Write scopes",
+			"detail.field.warnings": "Warnings",
+			"detail.field.diagnostics": "Diagnostics",
+			"detail.field.methods": "Methods",
+			"detail.field.inputSchema": "Input schema",
+			"detail.field.outputSchema": "Output schema",
+			"detail.field.currentPackage": "Current package",
+			"detail.field.nextPackage": "Next package",
+			"detail.field.latestRun": "Latest run",
+			"detail.field.packages": "Packages",
+			"detail.field.registrations": "Registrations",
+			"detail.field.props": "Props",
+			"detail.field.data": "Data",
+			"detail.field.source": "Source",
+			"detail.field.content": "Content",
+			"detail.field.message": "Message",
+			"detail.field.messageId": "Message ID",
+			"detail.field.root": "Root",
+			"detail.field.pid": "Process ID",
+			"detail.field.type": "Type",
+			"detail.field.time": "Time",
+			"detail.field.seq": "Event sequence",
+			"detail.field.turn": "Turn",
+			"detail.field.step": "Step",
+			"detail.field.callId": "Call ID",
+			"detail.field.agents": "Agents started",
+			"detail.field.result": "Result",
+			"detail.field.parent": "Parent",
+			"detail.field.depth": "Depth",
+			"detail.field.exitCode": "Exit code",
+			"detail.field.signal": "Signal",
+			"detail.field.previousStatus": "Previous status",
+			"detail.field.agent": "Agent ID",
+			"detail.field.job": "Job ID",
+			"detail.field.task": "Task",
+			"detail.field.processGroup": "Process group",
+			"detail.field.availability": "Availability",
+			"detail.field.bestMatch": "Best match",
+			"detail.field.target": "Target event",
+			"detail.field.surface": "Record status",
+			"detail.agents.count": "{count} agents",
+			"detail.jobs.count": "{count} background jobs",
+			"detail.terminals.count": "{count} terminals",
+			"detail.tasks.count": "{count} team tasks",
+			"detail.tasks.nextPage": "More tasks available; next cursor is {cursor}",
+			"detail.locations.count": "{count} locations",
+			"detail.location": "Line {line}, column {column}",
+			"detail.receipt.delivered": "Message delivered",
+			"detail.receipt.interrupt": "Interrupt requested",
+			"detail.receipt.started": "Started",
+			"detail.receipt.cancel": "Cancellation requested",
+			"detail.receipt.alreadyFinished": "Already finished",
+			"detail.receipt.signal": "Signal delivered",
+			"detail.receipt.closed": "Closed",
+			"detail.receipt.closing": "Closing",
+			"detail.wait.noProgress": "No active teammates",
+			"detail.wait.title": "Teammate activity",
+			"detail.wait.timeout": "Wait timed out",
+			"detail.wait.changed": "Change detected",
+			"detail.agent.reply": "Agent response",
+			"detail.models.title": "Available models",
+			"detail.output.lines": "Lines {begin}–{end} of {total}",
+			"detail.output.truncated": "Output truncated",
+			"detail.providers.count": "{count} inspect providers",
+			"detail.plugins.count": "{count} dynamic plugins",
+			"detail.workflow.script": "Workflow script",
+			"detail.ralph.reportedComplete": "Worker reported completion",
+			"detail.ralph.reportedBlocker": "Worker reported a blocker",
+			"detail.ralph.limit": "Round limit reached",
+			"detail.report.nextSteps": "Remaining work",
+			"detail.trace.replacedBy": "Replaced by",
+			"detail.trace.replacementChain": "Replacement chain",
+			"detail.trace.replaces": "Replaced events",
+			"detail.trace.sources": "Source events",
+			"detail.trace.derived": "Derived events",
+			"detail.trace.ancestors": "Ancestor sessions",
+			"detail.trace.descendants": "Descendant sessions",
+			"detail.matches.count": "{count} matches",
+			"detail.matches.capped": "Result limit reached; narrow the search for more",
+			"detail.event.neighbors": "Surrounding events",
 			"todo.completed": "{done}/{total} completed",
 			"command.attachmentsUnsupported": "/{command} does not accept attachments; remove them first",
 			"ask.rowTitle": "Ask question",
@@ -14195,12 +15092,12 @@ window.__ModuleLoader__.load({
 			"terminal.session": "Terminal {sessionId}"
 		};
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-source/packages/client/ui-conversation/src/client/queue/QueueDock.module.css.mjs
-		const css$6 = "._7yHdaG_dock{box-sizing:border-box;width:calc(100% - var(--dsh-composer-side-clearance) - var(--dsh-composer-side-clearance) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset));max-width:calc(var(--dsh-composer-card-max-width) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset));margin:0 auto calc(0px - var(--dsh-composer-stack-gap) - 3px);padding:0 var(--dsh-composer-dock-inset);flex:none}._7yHdaG_panel{background:var(--dsw-specific-tip);--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);border-radius:12px 12px 0 0;width:100%;padding:2px 0;position:relative;overflow:hidden}._7yHdaG_panel:after{border:.5px solid var(--dsw-alias-border-l1);border-radius:inherit;content:\"\";pointer-events:none;border-bottom:none;position:absolute;inset:0}._7yHdaG_header{box-sizing:border-box;width:100%;height:36px;color:var(--dsw-alias-label-primary);text-align:left;cursor:pointer;background:0 0;border:none;border-radius:8px;align-items:center;gap:10px;padding:4px 12px;display:flex}._7yHdaG_header:focus-visible{outline:2px solid var(--dsw-alias-label-tertiary);outline-offset:-2px}._7yHdaG_header:disabled{cursor:default}._7yHdaG_lead{color:var(--dsw-alias-label-tertiary);flex:none;place-items:center;display:grid}._7yHdaG_count{min-width:0;font-family:Inter, var(--dsw-font-family);flex:auto;font-size:13px;font-weight:500;line-height:24px}._7yHdaG_chevron{width:14px;height:14px;color:var(--dsw-alias-label-tertiary);flex:none;place-items:center;display:grid}._7yHdaG_list{max-height:180px;margin:0;padding:0;list-style:none;overflow-y:auto}._7yHdaG_row{box-sizing:border-box;border-radius:8px;align-items:center;gap:10px;width:100%;height:36px;padding:4px 5px 4px 12px;display:flex}._7yHdaG_row+._7yHdaG_row{box-shadow:inset 0 1px 0 var(--dsw-alias-border-l1)}._7yHdaG_attachments{flex:none;gap:4px;min-width:0;max-width:55%;display:flex;overflow:hidden}._7yHdaG_pendingRow ._7yHdaG_attachments{flex-shrink:1}._7yHdaG_file{border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-base);box-sizing:border-box;border-radius:6px;flex:0 180px;align-items:center;gap:4px;min-width:74px;height:24px;padding:0 6px;display:inline-flex;overflow:hidden}._7yHdaG_fileIcon{flex:none;width:16px;height:16px;display:inline-flex}._7yHdaG_fileName{min-width:0;color:var(--dsw-alias-label-primary-dimmed);font:var(--dsw-font-xs-13);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}._7yHdaG_fileSize{color:var(--dsw-alias-label-tertiary);white-space:nowrap;flex:none;font-size:10px}._7yHdaG_thumb{border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-base);object-fit:cover;border-radius:4px;width:24px;height:24px}._7yHdaG_preview,._7yHdaG_editor{min-width:0;font:var(--dsw-font-xs-13);font-family:Inter, var(--dsw-font-family);flex:auto}._7yHdaG_preview{color:var(--dsw-alias-label-primary-dimmed);text-overflow:ellipsis;white-space:nowrap;word-break:break-word;overflow:hidden}._7yHdaG_editor{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l4);background:var(--dsw-alias-bg-base);height:28px;color:var(--dsw-alias-label-primary);border-radius:6px;outline:none;padding:0 8px}._7yHdaG_editor:focus{border-color:var(--dsw-alias-state-business-primary)}._7yHdaG_actions{flex:none;align-items:center;gap:10px;display:flex}._7yHdaG_status{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xs-13);white-space:nowrap;flex:none}._7yHdaG_action{corner-shape:round;width:28px;height:28px;color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;border-radius:999px;flex:none;place-items:center;padding:0;display:grid}._7yHdaG_action:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}._7yHdaG_action:focus-visible{outline:2px solid var(--dsw-alias-label-tertiary);outline-offset:-2px}._7yHdaG_action:disabled{cursor:default;opacity:.45}";
-		const tagId$6 = "@oh-my-dsh/ui-conversation/QueueDock.module.css";
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-conversation/src/client/queue/QueueDock.module.css.mjs
+		const css$6 = "._7yHdaG_dock{box-sizing:border-box;width:calc(100% - var(--dsh-composer-side-clearance) - var(--dsh-composer-side-clearance) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset));max-width:calc(var(--dsh-composer-card-max-width) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset));margin:0 auto calc(0px - var(--dsh-composer-stack-gap) - 3px);padding:0 var(--dsh-composer-dock-inset);flex:none}._7yHdaG_panel{isolation:isolate;--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);border-radius:12px 12px 0 0;width:100%;padding:2px 0;position:relative;overflow:hidden}._7yHdaG_panel:before{z-index:-1;border-radius:inherit;background:var(--dsw-specific-menu);backdrop-filter:var(--dsw-menu-backdrop-filter);content:\"\";pointer-events:none;position:absolute;inset:0}._7yHdaG_panel:after{border:.5px solid var(--dsw-alias-border-l1);border-radius:inherit;content:\"\";pointer-events:none;border-bottom:none;position:absolute;inset:0}._7yHdaG_header{box-sizing:border-box;width:100%;height:36px;color:var(--dsw-alias-label-primary);text-align:left;cursor:pointer;background:0 0;border:none;border-radius:8px;align-items:center;gap:10px;padding:4px 12px;display:flex}._7yHdaG_header:focus-visible{outline:2px solid var(--dsw-alias-label-tertiary);outline-offset:-2px}._7yHdaG_header:disabled{cursor:default}._7yHdaG_lead{color:var(--dsw-alias-label-tertiary);flex:none;place-items:center;display:grid}._7yHdaG_count{min-width:0;font-family:Inter, var(--dsw-font-family);flex:auto;font-size:13px;font-weight:500;line-height:24px}._7yHdaG_chevron{width:14px;height:14px;color:var(--dsw-alias-label-tertiary);flex:none;place-items:center;display:grid}._7yHdaG_list{max-height:180px;margin:0;padding:0;list-style:none;overflow-y:auto}._7yHdaG_row{box-sizing:border-box;border-radius:8px;align-items:center;gap:10px;width:100%;height:36px;padding:4px 5px 4px 12px;display:flex}._7yHdaG_row+._7yHdaG_row{box-shadow:inset 0 1px 0 var(--dsw-alias-border-l1)}._7yHdaG_attachments{flex:none;gap:4px;min-width:0;max-width:55%;display:flex;overflow:hidden}._7yHdaG_pendingRow ._7yHdaG_attachments{flex-shrink:1}._7yHdaG_file{border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-base);box-sizing:border-box;border-radius:6px;flex:0 180px;align-items:center;gap:4px;min-width:74px;height:24px;padding:0 6px;display:inline-flex;overflow:hidden}._7yHdaG_fileIcon{flex:none;width:16px;height:16px;display:inline-flex}._7yHdaG_fileName{min-width:0;color:var(--dsw-alias-label-primary-dimmed);font:var(--dsw-font-xs-13);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}._7yHdaG_fileSize{color:var(--dsw-alias-label-tertiary);white-space:nowrap;flex:none;font-size:10px}._7yHdaG_thumb{border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-base);object-fit:cover;border-radius:4px;width:24px;height:24px}._7yHdaG_preview,._7yHdaG_editor{min-width:0;font:var(--dsw-font-xs-13);font-family:Inter, var(--dsw-font-family);flex:auto}._7yHdaG_preview{color:var(--dsw-alias-label-primary-dimmed);text-overflow:ellipsis;white-space:nowrap;word-break:break-word;overflow:hidden}._7yHdaG_editor{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l4);background:var(--dsw-alias-bg-base);height:28px;color:var(--dsw-alias-label-primary);border-radius:6px;outline:none;padding:0 8px}._7yHdaG_editor:focus{border-color:var(--dsw-alias-state-business-primary)}._7yHdaG_actions{flex:none;align-items:center;gap:10px;display:flex}._7yHdaG_status{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xs-13);white-space:nowrap;flex:none}._7yHdaG_action{corner-shape:round;width:28px;height:28px;color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;border-radius:999px;flex:none;place-items:center;padding:0;display:grid}._7yHdaG_action:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}._7yHdaG_action:focus-visible{outline:2px solid var(--dsw-alias-label-tertiary);outline-offset:-2px}._7yHdaG_action:disabled{cursor:default;opacity:.45}";
+		const tagId$6 = "@deepseek-ai/dsh-client-ui-conversation/QueueDock.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$6) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "@oh-my-dsh/ui-conversation";
+			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
 			tag.dataset.pluginCss = tagId$6;
 			tag.textContent = css$6;
 			document.head.appendChild(tag);
@@ -14387,7 +15284,7 @@ window.__ModuleLoader__.load({
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: QueueDock_module_css_default.lead,
 								"aria-hidden": true,
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconQueueOutline14, {})
+								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconQueueOutlineRegular, {})
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: QueueDock_module_css_default.count,
@@ -14401,7 +15298,7 @@ window.__ModuleLoader__.load({
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: QueueDock_module_css_default.chevron,
 								"aria-hidden": true,
-								children: expanded ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, {}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutline14, {})
+								children: expanded ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, {})
 							})
 						]
 					}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("ul", {
@@ -14417,7 +15314,7 @@ window.__ModuleLoader__.load({
 									rowCount === 1 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: QueueDock_module_css_default.lead,
 										"aria-hidden": true,
-										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconQueueOutline14, {})
+										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconQueueOutlineRegular, {})
 									}),
 									editing?.id === row.id ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
 										autoFocus: true,
@@ -14468,7 +15365,7 @@ window.__ModuleLoader__.load({
 												onClick: () => {
 													saveEdit();
 												},
-												children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutline16, { size: 14 })
+												children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, { size: 14 })
 											})
 										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 											label: t("queue.cancelEdit"),
@@ -14482,7 +15379,7 @@ window.__ModuleLoader__.load({
 												onClick: () => {
 													setEditing(null);
 												},
-												children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutline16, { size: 14 })
+												children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 })
 											})
 										})] }) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
 											/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
@@ -14502,7 +15399,7 @@ window.__ModuleLoader__.load({
 															text
 														});
 													},
-													children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutline16, { size: 14 })
+													children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 })
 												})
 											}),
 											/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
@@ -14517,7 +15414,7 @@ window.__ModuleLoader__.load({
 													onClick: () => {
 														applyAction(row.id, { kind: "remove" }, t("queue.removeFailed"));
 													},
-													children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconTrashOutline16, { size: 14 })
+													children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconTrashOutlineRegular, { size: 14 })
 												})
 											}),
 											/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
@@ -14534,7 +15431,7 @@ window.__ModuleLoader__.load({
 													onClick: () => {
 														applyAction(row.id, { kind: "steer" }, t("queue.steerFailed"));
 													},
-													children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSendOutline14, {})
+													children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSendOutlineRegular, {})
 												})
 											})
 										] })
@@ -14549,7 +15446,7 @@ window.__ModuleLoader__.load({
 									rowCount === 1 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: QueueDock_module_css_default.lead,
 										"aria-hidden": true,
-										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconQueueOutline14, {})
+										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconQueueOutlineRegular, {})
 									}),
 									submission.attachments.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: QueueDock_module_css_default.attachments,
@@ -14580,7 +15477,7 @@ window.__ModuleLoader__.load({
 												"aria-label": t("queue.edit"),
 												title: t("queue.sending"),
 												disabled: true,
-												children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutline16, { size: 14 })
+												children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 })
 											}),
 											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 												type: "button",
@@ -14588,7 +15485,7 @@ window.__ModuleLoader__.load({
 												"aria-label": t("queue.remove"),
 												title: t("queue.sending"),
 												disabled: true,
-												children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconTrashOutline16, { size: 14 })
+												children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconTrashOutlineRegular, { size: 14 })
 											}),
 											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 												type: "button",
@@ -14596,7 +15493,7 @@ window.__ModuleLoader__.load({
 												"aria-label": t("queue.steer"),
 												title: t("queue.sending"),
 												disabled: true,
-												children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSendOutline14, {})
+												children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSendOutlineRegular, {})
 											})
 										]
 									})
@@ -14639,12 +15536,12 @@ window.__ModuleLoader__.load({
 			}
 		};
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-source/packages/client/ui-conversation/src/client/settings/EnterBehaviorRow.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-conversation/src/client/settings/EnterBehaviorRow.module.css.mjs
 		const css$5 = ".T1PP_q_row{border-bottom:.5px solid var(--dsw-alias-border-l2);align-items:center;gap:8px;padding:16px 0;display:flex}.T1PP_q_rowText{flex-direction:column;flex:1;gap:4px;min-width:0;padding-right:48px;display:flex}.T1PP_q_title{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:400;line-height:22px}.T1PP_q_desc{color:var(--dsw-alias-label-tertiary);font-size:12px;font-weight:400;line-height:18px}.T1PP_q_selector{background:var(--dsw-alias-bg-module-platform);height:36px;font:inherit;color:var(--dsw-alias-label-primary);cursor:pointer;border:none;border-radius:18px;align-items:center;gap:12px;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}.T1PP_q_selector:hover{background:var(--dsw-alias-interactive-bg-hover)}.T1PP_q_chevron{flex:none}";
-		const tagId$5 = "@oh-my-dsh/ui-conversation/EnterBehaviorRow.module.css";
+		const tagId$5 = "@deepseek-ai/dsh-client-ui-conversation/EnterBehaviorRow.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$5) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "@oh-my-dsh/ui-conversation";
+			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
 			tag.dataset.pluginCss = tagId$5;
 			tag.textContent = css$5;
 			document.head.appendChild(tag);
@@ -14711,7 +15608,7 @@ window.__ModuleLoader__.load({
 						onClick: () => {
 							setOpen((value) => !value);
 						},
-						children: [t(selectedLabel), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: EnterBehaviorRow_module_css_default.chevron })]
+						children: [t(selectedLabel), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { className: EnterBehaviorRow_module_css_default.chevron })]
 					})
 				})]
 			});
@@ -14720,7 +15617,10 @@ window.__ModuleLoader__.load({
 		//#region src/client/contract/snapshot.ts
 		/** Empty Conversation value used before a Session binding is available. */
 		const EMPTY_CONVERSATION_SNAPSHOT = {
-			views: { get: () => void 0 },
+			views: {
+				get: () => void 0,
+				grouped: () => void 0
+			},
 			activeTargets: /* @__PURE__ */ new Set()
 		};
 		/**
@@ -14733,12 +15633,12 @@ window.__ModuleLoader__.load({
 			return conversation.activeTargets.size > 0 || !session.blank && !session.awaitingFirstTurn || session.running ? "active" : session.promptAttempted ? "engaging" : "blank";
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-source/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css.mjs
-		const css$4 = ".wSkVaW_root{background:var(--dsw-alias-bg-base);flex-direction:column;min-width:0;height:100%;display:flex;position:relative}.wSkVaW_header{box-sizing:border-box;border-bottom:.5px solid var(--dsw-alias-border-l3);flex:none;min-height:76px;padding:10px 28px 0 20px}.wSkVaW_headerBlank{border-bottom:none;min-height:0}.wSkVaW_headerBlank .wSkVaW_headerCorner{margin-left:auto}[data-platform=darwin] .wSkVaW_titleRow{-webkit-app-region:drag}[data-platform=darwin] .wSkVaW_titleRow button,[data-platform=darwin] .wSkVaW_titleRow a,[data-platform=darwin] .wSkVaW_headerLeading,[data-platform=darwin] .wSkVaW_headerActions,[data-platform=darwin] .wSkVaW_headerUtilities,[data-platform=darwin] .wSkVaW_headerCorner{-webkit-app-region:no-drag}.wSkVaW_titleRow{align-items:center;gap:0;min-height:30px;display:flex}.wSkVaW_titleCluster{flex:1;align-items:center;gap:10px;min-width:0;display:flex}.wSkVaW_headerLeading{flex:none;align-items:center;gap:8px;display:flex}.wSkVaW_headerLeading:empty{display:none}.wSkVaW_crumbs{white-space:nowrap;align-items:center;gap:4px;min-width:0;display:flex;overflow:hidden}.wSkVaW_crumbSeg{align-items:center;gap:4px;min-width:0;display:inline-flex}.wSkVaW_crumbSep{color:var(--dsw-alias-label-caption);font-size:14px;line-height:20px}.wSkVaW_crumb{max-width:220px;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:12px;padding:4px 8px;font-size:14px;line-height:20px;overflow:hidden}.wSkVaW_crumbSubagent{font-size:12px;line-height:18px}.wSkVaW_crumb:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.wSkVaW_crumbCurrent{color:var(--dsw-alias-label-primary);cursor:default;font-weight:500}.wSkVaW_headerActions{flex:none;align-items:center;gap:8px;display:flex}.wSkVaW_headerUtilities{flex:none;align-items:center;gap:8px;margin-left:20px;display:flex}.wSkVaW_headerUtilities:empty{display:none}.wSkVaW_headerCorner{flex:none;align-items:center;margin-left:8px;margin-right:-16px;display:flex}.wSkVaW_headerCorner:empty{display:none}.wSkVaW_tabs{z-index:1;gap:36px;margin-top:10px;padding-left:8px;display:flex;position:relative}.wSkVaW_tab{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;padding:0 0 9px;font-size:13px;font-weight:500;line-height:16px;position:relative}.wSkVaW_tab:after{content:\"\";background:0 0;border-radius:2px;height:2px;position:absolute;bottom:-1px;left:0;right:0}.wSkVaW_tabActive{color:var(--dsw-alias-state-business-primary)}.wSkVaW_tabActive:after{background:var(--dsw-alias-state-business-primary)}.wSkVaW_viewArea{flex-direction:column;flex:1;min-height:0;display:flex}.wSkVaW_widthHandle{z-index:0;width:min(10px, calc((100% - var(--dsh-chat-content-width)) / 2 - 24px - 24px));cursor:col-resize;position:absolute;top:0;bottom:0}.wSkVaW_widthHandle[data-side=left]{right:calc(50% + var(--dsh-chat-content-width) / 2 + 24px)}.wSkVaW_widthHandle[data-side=right]{left:calc(50% + var(--dsh-chat-content-width) / 2 + 24px)}.wSkVaW_widthHandle:after{content:\"\";background:linear-gradient(to bottom, transparent calc(var(--dsh-width-handle-pointer-y,50%) - 36px), var(--dsw-alias-scrollbar-bg-l1) calc(var(--dsh-width-handle-pointer-y,50%) - 8px), var(--dsw-alias-scrollbar-bg-l1) calc(var(--dsh-width-handle-pointer-y,50%) + 8px), transparent calc(var(--dsh-width-handle-pointer-y,50%) + 36px));opacity:0;pointer-events:none;border-radius:2px;width:2px;position:absolute;top:0;bottom:0}.wSkVaW_widthHandle[data-side=left]:after{right:4px}.wSkVaW_widthHandle[data-side=right]:after{left:4px}.wSkVaW_widthHandle:hover:after,.wSkVaW_widthHandle[data-dragging]:after{opacity:1}.wSkVaW_widthHandle[data-dragging]{z-index:8}.wSkVaW_root:has([data-conversation-composer-overlay]) .wSkVaW_widthHandle{display:none}.wSkVaW_composerStack{--dsh-composer-stack-gap:6px;gap:var(--dsh-composer-stack-gap);flex-direction:column;display:flex}.wSkVaW_composerSeat{--dsh-composer-text-max-height:336px;flex-direction:column;flex:none;display:flex}.wSkVaW_root[data-phase=active]{overflow:hidden}.wSkVaW_root[data-phase=active] .wSkVaW_header{flex:none}.wSkVaW_body{--dsh-chat-content-width:var(--dsh-chat-user-width,clamp(680px, calc(var(--dsh-conversation-column-width,0px) * .64), 920px));--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:16px;--dsh-composer-dock-inset:8px;flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.wSkVaW_embeddedBody{--dsh-chat-content-width:min(calc(100% - 32px), 920px);--dsh-composer-card-max-width:min(calc(100% - 16px), 952px);--dsh-composer-side-clearance:8px;--dsh-composer-dock-inset:8px;overflow:hidden}.wSkVaW_scrollBody{scrollbar-gutter:stable;flex-direction:column;flex:1;min-height:0;margin-right:2px;display:flex;overflow-y:auto}.wSkVaW_scrollBody::-webkit-scrollbar-track{margin:2px}.wSkVaW_root[data-phase=active] .wSkVaW_viewArea,.wSkVaW_embeddedBody[data-content-phase=active] .wSkVaW_viewArea{flex:1 0 auto;min-height:auto}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat,.wSkVaW_embeddedBody[data-content-phase=active] .wSkVaW_composerSeat{z-index:7;background:linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px, var(--dsw-alias-bg-base) 36px);position:sticky;bottom:0}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat:has([data-trigger-menu]){z-index:9}.wSkVaW_scrollBody:has([data-conversation-composer-overlay]){scrollbar-gutter:auto;position:relative;overflow:hidden auto}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>[data-slot=conversation\\.session]>.wSkVaW_viewArea{flex:1 1 0;min-height:0;overflow:hidden}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>.wSkVaW_composerSeat{right:var(--dsh-scrollbar-width);position:absolute;bottom:0;left:0}.wSkVaW_composerHero{width:min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)), 100%);z-index:1;align-self:center;gap:8px;padding-bottom:32px}.wSkVaW_heroWorkspaceRow{align-items:center;gap:2px;min-width:0;margin-top:4px;padding:0 16px 0 20px;display:flex}.wSkVaW_root[data-phase=hero] .wSkVaW_scrollBody,.wSkVaW_embeddedBody[data-content-phase=hero] .wSkVaW_scrollBody{justify-content:center;overflow-y:auto}.wSkVaW_root[data-phase=settling] .wSkVaW_composerSeat,.wSkVaW_embeddedBody[data-content-phase=settling] .wSkVaW_composerSeat{visibility:hidden}";
-		const tagId$4 = "@oh-my-dsh/ui-conversation/ConversationRoot.module.css";
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css.mjs
+		const css$4 = ".wSkVaW_root{background:var(--dsw-alias-bg-base);flex-direction:column;min-width:0;height:100%;display:flex;position:relative}.wSkVaW_header{box-sizing:border-box;border-bottom:.5px solid var(--dsw-alias-border-l3);flex:none;grid-template-columns:auto minmax(0,1fr);min-height:76px;padding:10px 28px 0 20px;display:grid}.wSkVaW_header:where(:not(:has(.wSkVaW_tabs))){min-height:0;padding-bottom:10px}.wSkVaW_headerBlank{border-bottom:none;min-height:0;padding-bottom:0}.wSkVaW_headerBlank .wSkVaW_headerCorner{margin-left:auto}html:not([data-platform=darwin]) .wSkVaW_headerSessionless{padding-top:0}html:not([data-platform=darwin]) .wSkVaW_headerSessionless .wSkVaW_titleRow{min-height:0}[data-platform=darwin] .wSkVaW_headerLeading,[data-platform=darwin] .wSkVaW_headerActions,[data-platform=darwin] .wSkVaW_headerUtilities,[data-platform=darwin] .wSkVaW_headerCorner{-webkit-app-region:no-drag}.wSkVaW_titleRow{min-height:30px;grid-column:2;align-items:center;gap:0;padding-inline-start:max(0px, calc(var(--dsh-frame-leading-clearance,0px) - 20px));display:flex}.wSkVaW_titleCluster{flex:1;align-items:center;gap:10px;min-width:0;display:flex}.wSkVaW_headerLeading{flex:none;grid-area:1/1;align-items:center;gap:8px;display:flex}.wSkVaW_crumbs{white-space:nowrap;align-items:center;gap:4px;min-width:0;display:flex;overflow:hidden}.wSkVaW_crumbSeg{align-items:center;gap:4px;min-width:0;display:inline-flex}.wSkVaW_crumbSep{color:var(--dsw-alias-label-caption);font-size:14px;line-height:20px}.wSkVaW_crumb{max-width:220px;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:12px;padding:4px 8px;font-size:14px;line-height:20px;display:inline-block;overflow:hidden}.wSkVaW_crumbSubagent{font-size:12px;line-height:18px}button.wSkVaW_crumb:hover{background:var(--dsw-alias-interactive-bg-hover)}.wSkVaW_crumbCurrent{color:var(--dsw-alias-label-primary);cursor:default;font-weight:500}.wSkVaW_headerActions{flex:none;align-items:center;gap:8px;display:flex}.wSkVaW_headerUtilities{flex:none;align-items:center;gap:8px;margin-left:20px;display:flex}.wSkVaW_headerUtilities:empty{display:none}.wSkVaW_headerCorner{flex:none;align-items:center;margin-left:8px;margin-right:-16px;display:flex}.wSkVaW_headerCorner:empty{display:none}.wSkVaW_tabs{z-index:1;grid-column:1/-1;gap:36px;margin-top:10px;padding-left:8px;display:flex;position:relative}.wSkVaW_tab{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;padding:0 0 9px;font-size:13px;font-weight:500;line-height:16px;position:relative}.wSkVaW_tab:after{content:\"\";background:0 0;border-radius:2px;height:2px;position:absolute;bottom:-1px;left:0;right:0}.wSkVaW_tabActive{color:var(--dsw-alias-state-business-primary)}.wSkVaW_tabActive:after{background:var(--dsw-alias-state-business-primary)}.wSkVaW_viewArea{flex-direction:column;flex:1;min-height:0;display:flex}.wSkVaW_widthHandle{z-index:0;width:min(10px, calc((100% - var(--dsh-chat-content-width)) / 2 - 24px - 24px));cursor:col-resize;position:absolute;top:0;bottom:0}.wSkVaW_widthHandle[data-side=left]{right:calc(50% + var(--dsh-chat-content-width) / 2 + 24px)}.wSkVaW_widthHandle[data-side=right]{left:calc(50% + var(--dsh-chat-content-width) / 2 + 24px)}.wSkVaW_widthHandle:after{content:\"\";background:linear-gradient(to bottom, transparent calc(var(--dsh-width-handle-pointer-y,50%) - 36px), var(--dsw-alias-scrollbar-bg-l1) calc(var(--dsh-width-handle-pointer-y,50%) - 8px), var(--dsw-alias-scrollbar-bg-l1) calc(var(--dsh-width-handle-pointer-y,50%) + 8px), transparent calc(var(--dsh-width-handle-pointer-y,50%) + 36px));opacity:0;pointer-events:none;border-radius:2px;width:2px;position:absolute;top:0;bottom:0}.wSkVaW_widthHandle[data-side=left]:after{right:4px}.wSkVaW_widthHandle[data-side=right]:after{left:4px}.wSkVaW_widthHandle:hover:after,.wSkVaW_widthHandle[data-dragging]:after{opacity:1}.wSkVaW_widthHandle[data-dragging]{z-index:8}.wSkVaW_root:has([data-conversation-composer-overlay]) .wSkVaW_widthHandle{display:none}.wSkVaW_composerStack{--dsh-composer-stack-gap:6px;gap:var(--dsh-composer-stack-gap);flex-direction:column;display:flex}.wSkVaW_composerSeat{--dsh-composer-text-max-height:336px;flex-direction:column;flex:none;display:flex}.wSkVaW_root[data-phase=active]{overflow:hidden}.wSkVaW_root[data-phase=active] .wSkVaW_header{flex:none}.wSkVaW_body{--dsh-chat-content-width:var(--dsh-chat-user-width,clamp(680px, calc(var(--dsh-conversation-column-width,0px) * .64), 920px));--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:16px;--dsh-composer-dock-inset:8px;flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.wSkVaW_embeddedBody{--dsh-chat-content-width:min(calc(100% - 32px), 920px);--dsh-composer-card-max-width:min(calc(100% - 16px), 952px);--dsh-composer-side-clearance:8px;--dsh-composer-dock-inset:8px;overflow:hidden}.wSkVaW_scrollBody{scrollbar-gutter:stable;flex-direction:column;flex:1;min-height:0;margin-right:2px;display:flex;overflow-y:auto}.wSkVaW_scrollBody::-webkit-scrollbar-track{margin:2px}.wSkVaW_root[data-phase=active] .wSkVaW_viewArea,.wSkVaW_embeddedBody[data-content-phase=active] .wSkVaW_viewArea{flex:1 0 auto;min-height:auto}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat,.wSkVaW_embeddedBody[data-content-phase=active] .wSkVaW_composerSeat{z-index:7;background:linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px, var(--dsw-alias-bg-base) 36px);position:sticky;bottom:0}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat:has([data-trigger-menu]){z-index:9}.wSkVaW_scrollBody:has([data-conversation-composer-overlay]){scrollbar-gutter:auto;position:relative;overflow:hidden auto}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>[data-slot=conversation\\.session]>.wSkVaW_viewArea{flex:1 1 0;min-height:0;overflow:hidden}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>.wSkVaW_composerSeat{right:var(--dsh-scrollbar-width);position:absolute;bottom:0;left:0}.wSkVaW_composerHero{width:min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)), 100%);z-index:1;align-self:center;gap:8px;padding-bottom:32px}.wSkVaW_heroWorkspaceRow{align-items:center;gap:2px;min-width:0;margin-top:4px;padding:0 16px 0 20px;display:flex}.wSkVaW_root[data-phase=hero] .wSkVaW_scrollBody,.wSkVaW_embeddedBody[data-content-phase=hero] .wSkVaW_scrollBody{justify-content:center;overflow-y:auto}.wSkVaW_root[data-phase=settling] .wSkVaW_composerSeat,.wSkVaW_embeddedBody[data-content-phase=settling] .wSkVaW_composerSeat{visibility:hidden}";
+		const tagId$4 = "@deepseek-ai/dsh-client-ui-conversation/ConversationRoot.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$4) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "@oh-my-dsh/ui-conversation";
+			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
 			tag.dataset.pluginCss = tagId$4;
 			tag.textContent = css$4;
 			document.head.appendChild(tag);
@@ -14760,6 +15660,7 @@ window.__ModuleLoader__.load({
 			"headerBlank": "wSkVaW_headerBlank",
 			"headerCorner": "wSkVaW_headerCorner",
 			"headerLeading": "wSkVaW_headerLeading",
+			"headerSessionless": "wSkVaW_headerSessionless",
 			"headerUtilities": "wSkVaW_headerUtilities",
 			"heroWorkspaceRow": "wSkVaW_heroWorkspaceRow",
 			"root": "wSkVaW_root",
@@ -14807,7 +15708,7 @@ window.__ModuleLoader__.load({
 		}
 		/** One pointer-captured transcript width handle. */
 		function WidthHandle(props) {
-			const [dragging, setDragging] = (0, react.useState)(false);
+			const dragging = (0, react.useRef)(false);
 			const base = (0, react.useRef)(0);
 			const origin = (0, react.useRef)(0);
 			const latest = (0, react.useRef)(0);
@@ -14832,12 +15733,14 @@ window.__ModuleLoader__.load({
 				origin.current = event.clientX;
 				latest.current = event.clientX;
 				base.current = callbacks.current.onStart();
-				setDragging(true);
+				dragging.current = true;
+				event.currentTarget.toggleAttribute("data-dragging", true);
 			}, []);
 			const onPointerMove = (0, react.useCallback)((event) => {
+				if (!dragging.current) return;
+				if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
 				const box = event.currentTarget.getBoundingClientRect();
 				event.currentTarget.style.setProperty("--dsh-width-handle-pointer-y", `${event.clientY - box.top}px`);
-				if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
 				latest.current = event.clientX;
 				frame.current ??= requestAnimationFrame(() => {
 					frame.current = null;
@@ -14845,17 +15748,21 @@ window.__ModuleLoader__.load({
 				});
 			}, []);
 			const onPointerUp = (0, react.useCallback)((event) => {
+				if (!dragging.current) return;
 				if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+				dragging.current = false;
+				event.currentTarget.toggleAttribute("data-dragging", false);
 				event.currentTarget.releasePointerCapture(event.pointerId);
 				cancelFrame();
 				latest.current = event.clientX;
 				if (latest.current !== origin.current) callbacks.current.onCommit(outwardWidth());
-				setDragging(false);
 				callbacks.current.onEnd();
 			}, []);
-			const onPointerCancel = (0, react.useCallback)(() => {
+			const onPointerCancel = (0, react.useCallback)((event) => {
+				if (!dragging.current) return;
+				dragging.current = false;
+				event.currentTarget.toggleAttribute("data-dragging", false);
 				cancelFrame();
-				setDragging(false);
 				callbacks.current.onEnd();
 			}, []);
 			const onWheel = (0, react.useCallback)((event) => {
@@ -14872,7 +15779,6 @@ window.__ModuleLoader__.load({
 				className: ConversationRoot_module_css_default.widthHandle,
 				"data-side": props.side,
 				"data-width-handle": props.side,
-				"data-dragging": dragging || void 0,
 				onPointerDown,
 				onPointerMove,
 				onPointerUp,
@@ -14951,7 +15857,7 @@ window.__ModuleLoader__.load({
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: ConversationRoot_module_css_default.root,
 				"data-phase": phase,
-				children: [sessionId === void 0 ? null : renderSlot("conversation.session.header", {}), renderFactorySlot("conversation.content", {
+				children: [renderSlot("conversation.header", {}), renderFactorySlot("conversation.content", {
 					variant: "main",
 					phase,
 					hero
@@ -14964,25 +15870,12 @@ window.__ModuleLoader__.load({
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ConversationMainPanel, { ...props });
 		}
 		//#endregion
-		//#region ../../util/workspace-path/src/index.ts
-		/**
-		* Read the final non-empty segment of a Workspace path for display.
-		* Workspace-label surfaces use this helper instead of deriving another basename.
-		* @param path - Workspace directory path using POSIX or Windows separators.
-		* @returns the final segment, or an empty string for a separator-only path.
-		*/
-		function workspaceTitleOf(path) {
-			const trimmed = path.replace(/[/\\]+$/, "");
-			const separator = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
-			return trimmed.slice(separator + 1);
-		}
-		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-source/packages/client/ui-conversation/src/client/skeleton/HeroShell.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-conversation/src/client/skeleton/HeroShell.module.css.mjs
 		const css$3 = ".pXSMma_root{justify-content:center;align-items:center;min-width:0;height:100%;padding:0 24px;display:flex}.pXSMma_stack{width:100%;max-width:var(--dsh-composer-card-max-width);flex-direction:column;align-items:stretch;gap:12px;display:flex;overflow:visible}.pXSMma_headline{color:var(--dsw-alias-label-primary);flex-wrap:wrap;justify-content:center;align-items:center;gap:12px 10px;font-size:26px;font-weight:500;line-height:32px;display:flex}.pXSMma_titleGroup{flex-wrap:wrap;justify-content:center;align-items:center;gap:4px 7px;min-width:0;display:flex}.pXSMma_previewBadge{border:.5px solid var(--dsw-alias-interactive-bg-hover);background:var(--dsw-alias-state-business-tertiary);color:var(--dsw-alias-label-primary-bluish);font-family:var(--ds-font-family-code);white-space:nowrap;border-radius:24px;align-self:flex-start;margin-top:2px;padding:1px 7px 0;font-size:12px;font-weight:500;line-height:18px}.pXSMma_fishHitbox{flex:none;justify-content:center;align-items:center;display:inline-flex}.pXSMma_fish{transform-origin:50% 60%;color:var(--dsw-alias-label-primary);display:block;overflow:visible}@keyframes pXSMma_hero-fish-swim{0%,to{transform:none}35%{transform:rotate(-4deg)translate(-.4px,-.9px)}70%{transform:rotate(1.6deg)translate(.3px,.2px)}}@media (hover:hover) and (prefers-reduced-motion:no-preference){.pXSMma_fishHitbox:hover .pXSMma_fish{animation:1.6s ease-in-out infinite pXSMma_hero-fish-swim}}.pXSMma_body{flex-direction:column;gap:12px;min-width:0;display:flex;position:relative;overflow:visible}.pXSMma_body>*{z-index:1;position:relative}.pXSMma_body>.pXSMma_workspaceRow{z-index:10;align-items:center;min-width:0;padding-left:8px;display:flex}.pXSMma_workspace{max-width:min(100%,360px);min-height:28px;color:var(--dsw-alias-label-primary);cursor:pointer;background:0 0;border:none;border-radius:16px;align-items:center;gap:4px;padding:0 8px;font-size:13px;font-weight:500;line-height:20px;display:inline-flex}.pXSMma_workspace:not(:disabled):hover,.pXSMma_workspace[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover)}.pXSMma_workspace:disabled{cursor:default}.pXSMma_folder{color:var(--dsw-alias-label-primary);flex:none}.pXSMma_workspaceLabel{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.pXSMma_chevron{color:var(--dsw-alias-label-caption);flex:none}.pXSMma_modalInput{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l4);width:100%;height:44px;color:var(--dsw-alias-label-primary);background:0 0;border-radius:22px;outline:none;padding:7px 14px;font-size:14px;font-weight:400;line-height:22px}.pXSMma_modalInput::placeholder{color:var(--dsw-alias-label-caption)}.pXSMma_modalInput:disabled{color:var(--dsw-alias-label-dimmed)}.pXSMma_modalAction{min-width:72px}.pXSMma_modalError{color:var(--dsw-alias-state-error-primary);margin-top:8px;font-size:12px;line-height:18px}";
-		const tagId$3 = "@oh-my-dsh/ui-conversation/HeroShell.module.css";
+		const tagId$3 = "@deepseek-ai/dsh-client-ui-conversation/HeroShell.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$3) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "@oh-my-dsh/ui-conversation";
+			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
 			tag.dataset.pluginCss = tagId$3;
 			tag.textContent = css$3;
 			document.head.appendChild(tag);
@@ -15039,10 +15932,10 @@ window.__ModuleLoader__.load({
 				"aria-expanded": menuOpen,
 				onClick,
 				children: [
-					label === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderClose16, {
+					label === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, {
 						className: HeroShell_module_css_default.folder,
 						size: 16
-					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpen16, {
+					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenRegular, {
 						className: HeroShell_module_css_default.folder,
 						size: 16
 					}),
@@ -15050,7 +15943,7 @@ window.__ModuleLoader__.load({
 						className: HeroShell_module_css_default.workspaceLabel,
 						children: label ?? t("hero.chooseWorkspace")
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, {
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {
 						className: HeroShell_module_css_default.chevron,
 						size: 12
 					})
@@ -15283,8 +16176,26 @@ window.__ModuleLoader__.load({
 			return renderSlot("main.conversation", {});
 		}
 		//#endregion
-		//#region src/client/view-selection.ts
-		const DEFAULT_VIEW_ID = "chat";
+		//#region src/client/skeleton/ConversationHeader.tsx
+		/** Resident conversation navigation and Session-specific header content. */
+		/**
+		* Keeps global navigation available before a Session exists.
+		* @param props - Optional Session sources and authorized header slots.
+		* @returns The persistent header with any selected Session's title and views.
+		*/
+		function ConversationHeader({ sessionId, useSession, useConversation, renderSlot }) {
+			const session = useSession((s) => s);
+			const conversation = useConversation((s) => s);
+			const blank = session === void 0 || conversation === void 0 || session.blank && conversationPhase(session, conversation) === "blank";
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("header", {
+				className: clsx(ConversationRoot_module_css_default.header, blank && ConversationRoot_module_css_default.headerBlank, sessionId === void 0 && ConversationRoot_module_css_default.headerSessionless),
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: ConversationRoot_module_css_default.headerLeading,
+					"data-conversation-header-leading": "",
+					children: renderSlot("conversation.header.leading", {})
+				}), sessionId === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", { className: ConversationRoot_module_css_default.titleRow }) : renderSlot("conversation.session.header", { hideChrome: blank })]
+			});
+		}
 		/**
 		* Resolve a preferred registered View, then Chat, without choosing another View.
 		* @param tabs - currently registered Views.
@@ -15292,7 +16203,7 @@ window.__ModuleLoader__.load({
 		* @returns the selected View, Chat fallback, or undefined when neither is registered.
 		*/
 		function resolveActiveView(tabs, selectedId) {
-			return (selectedId === null ? void 0 : tabs.find((view) => view.id === selectedId)) ?? tabs.find((view) => view.id === DEFAULT_VIEW_ID);
+			return (selectedId === null ? void 0 : tabs.find((view) => view.id === selectedId)) ?? tabs.find((view) => view.id === "chat");
 		}
 		//#endregion
 		//#region src/client/skeleton/DefaultConversationViews.tsx
@@ -15302,8 +16213,10 @@ window.__ModuleLoader__.load({
 		* @param props - Strict Session input/store, view ledger, and render shares.
 		* @returns the active view area, or null while the Session remains blank.
 		*/
-		function DefaultConversationViews({ view, useSession, useConversation, useConversationViews, useInput, inputActions, useStore, actions, renderSlot, bindDraftMirror, openView }) {
-			const active = resolveActiveView(useConversationViews((value) => value), useStore((s) => s.view));
+		function DefaultConversationViews({ view, useSession, useConversation, useConversationViews, useInput, inputActions, useStore, actions, renderSlot, bindDraftMirror, openView, useInspectCall }) {
+			const tabs = useConversationViews((value) => value);
+			const inspectCall = useInspectCall((value) => value);
+			const active = resolveActiveView(tabs, useStore((s) => s.view));
 			const session = useSession((s) => s);
 			const conversation = useConversation((s) => s);
 			const inputState = useInput((s) => s);
@@ -15321,6 +16234,7 @@ window.__ModuleLoader__.load({
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: ConversationRoot_module_css_default.viewArea,
 				children: viewId !== void 0 && renderSlot("conversation.view", {
+					inspectCall,
 					viewRequest,
 					openView,
 					completeViewRequest: actions.completeViewRequest
@@ -15360,87 +16274,77 @@ window.__ModuleLoader__.load({
 		* @param props - Strict Session store, view ledger, navigation, render, and locale shares.
 		* @returns Session navigation controls, with title and tabs after conversation starts.
 		*/
-		function ConversationSessionHeader({ sessionId, useSession, useSessions, useConversation, useConversationViews, useStore, renderSlot, open, selectView, t }) {
+		function ConversationSessionHeader({ sessionId, hideChrome, useSessions, useConversationViews, useStore, renderSlot, open, selectView, t }) {
 			const tabs = useConversationViews((value) => value);
 			const active = resolveActiveView(tabs, useStore((s) => s.view));
 			const ancestry = useSessions((s) => deriveAncestry(s, sessionId), equalBreadcrumbs);
-			const session = useSession((s) => s);
-			const conversation = useConversation((s) => s);
-			const hideChrome = session.blank && conversationPhase(session, conversation) === "blank";
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("header", {
-				className: clsx(ConversationRoot_module_css_default.header, hideChrome && ConversationRoot_module_css_default.headerBlank),
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: ConversationRoot_module_css_default.titleRow,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: ConversationRoot_module_css_default.headerLeading,
-							"data-conversation-header-leading": "",
-							children: renderSlot("conversation.session.header.leading", {})
-						}),
-						!hideChrome && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: ConversationRoot_module_css_default.titleCluster,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("nav", {
-								className: ConversationRoot_module_css_default.crumbs,
-								"aria-label": t("session.hierarchy"),
-								children: [ancestry.map((summary, index) => {
-									const last = index === ancestry.length - 1;
-									const title = /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										type: "button",
-										className: clsx(ConversationRoot_module_css_default.crumb, summary.subagent && ConversationRoot_module_css_default.crumbSubagent, last && ConversationRoot_module_css_default.crumbCurrent),
-										disabled: last,
-										onClick: () => {
-											open(summary.id);
-										},
-										children: summary.displayTitle
-									});
-									const lineage = last || summary.subagent;
-									const lineageOwner = {
-										lineageSessionId: summary.id,
-										displayTitle: summary.displayTitle,
-										...last ? {} : { openTitle: () => {
-											open(summary.id);
-										} }
-									};
-									return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-										className: ConversationRoot_module_css_default.crumbSeg,
-										children: [index > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: ConversationRoot_module_css_default.crumbSep,
-											children: "/"
-										}), lineage ? summary.subagent ? renderSlot("conversation.session.header.lineage", lineageOwner, { fallback: title }) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [title, renderSlot("conversation.session.header.lineage", lineageOwner, { fallback: null })] }) : title]
-									}, summary.id);
-								}), ancestry.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: ConversationRoot_module_css_default.crumbCurrent,
-									children: sessionId
-								})]
-							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: ConversationRoot_module_css_default.headerActions,
-								children: renderSlot("conversation.session.header.actions", {})
-							})]
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: ConversationRoot_module_css_default.headerUtilities,
-							children: renderSlot("conversation.session.header.utilities", {})
-						})] }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: ConversationRoot_module_css_default.headerCorner,
-							"data-conversation-header-corner": "",
-							children: renderSlot("conversation.session.header.corner", {})
-						})
-					]
-				}), !hideChrome && tabs.length > 1 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: ConversationRoot_module_css_default.tabs,
-					role: "tablist",
-					children: tabs.map((viewTab) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-						type: "button",
-						role: "tab",
-						"aria-selected": viewTab.id === active?.id,
-						className: clsx(ConversationRoot_module_css_default.tab, viewTab.id === active?.id && ConversationRoot_module_css_default.tabActive),
-						onClick: () => {
-							selectView(viewTab.id);
-						},
-						children: viewTab.label
-					}, viewTab.id))
+			const showTabs = !hideChrome && tabs.length > 1;
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: ConversationRoot_module_css_default.titleRow,
+				children: [!hideChrome && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: ConversationRoot_module_css_default.titleCluster,
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("nav", {
+						className: ConversationRoot_module_css_default.crumbs,
+						"aria-label": t("session.hierarchy"),
+						children: [ancestry.map((summary, index) => {
+							const last = index === ancestry.length - 1;
+							const title = last ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: clsx(ConversationRoot_module_css_default.crumb, summary.subagent && ConversationRoot_module_css_default.crumbSubagent, ConversationRoot_module_css_default.crumbCurrent),
+								children: summary.displayTitle
+							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: clsx(ConversationRoot_module_css_default.crumb, summary.subagent && ConversationRoot_module_css_default.crumbSubagent),
+								onClick: () => {
+									open(summary.id);
+								},
+								children: summary.displayTitle
+							});
+							const lineage = last || summary.subagent;
+							const lineageOwner = {
+								lineageSessionId: summary.id,
+								displayTitle: summary.displayTitle,
+								...last ? {} : { openTitle: () => {
+									open(summary.id);
+								} }
+							};
+							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								className: ConversationRoot_module_css_default.crumbSeg,
+								children: [index > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: ConversationRoot_module_css_default.crumbSep,
+									children: "/"
+								}), lineage ? summary.subagent ? renderSlot("conversation.session.header.lineage", lineageOwner, { fallback: title }) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [title, renderSlot("conversation.session.header.lineage", lineageOwner, { fallback: null })] }) : title]
+							}, summary.id);
+						}), ancestry.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: ConversationRoot_module_css_default.crumbCurrent,
+							children: sessionId
+						})]
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: ConversationRoot_module_css_default.headerActions,
+						children: renderSlot("conversation.session.header.actions", {})
+					})]
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: ConversationRoot_module_css_default.headerUtilities,
+					children: renderSlot("conversation.session.header.utilities", {})
+				})] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: ConversationRoot_module_css_default.headerCorner,
+					"data-conversation-header-corner": "",
+					children: renderSlot("conversation.session.header.corner", {})
 				})]
-			});
+			}), showTabs && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: ConversationRoot_module_css_default.tabs,
+				role: "tablist",
+				"data-conversation-tabs": "",
+				children: tabs.map((viewTab) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+					type: "button",
+					role: "tab",
+					"aria-selected": viewTab.id === active?.id,
+					className: clsx(ConversationRoot_module_css_default.tab, viewTab.id === active?.id && ConversationRoot_module_css_default.tabActive),
+					onClick: () => {
+						selectView(viewTab.id);
+					},
+					children: viewTab.label
+				}, viewTab.id))
+			})] });
 		}
 		/**
 		* Renders the active Session view inside the resident scrollport and keeps
@@ -15633,8 +16537,16 @@ window.__ModuleLoader__.load({
 			}, 4), editor.registerCommand(Je$2, (event) => {
 				const clipboardData = event.clipboardData ?? null;
 				if (clipboardData === null) return false;
-				const files = Array.from(clipboardData.items).filter((item) => item.kind === "file").map((item) => item.getAsFile()).filter((file) => file !== null);
-				if (files.length > 0) handlers.intakeFiles(files);
+				const files = [];
+				const directories = /* @__PURE__ */ new Set();
+				for (const item of clipboardData.items) {
+					if (item.kind !== "file") continue;
+					const file = item.getAsFile();
+					if (file === null) continue;
+					files.push(file);
+					if (typeof item.webkitGetAsEntry === "function" && item.webkitGetAsEntry()?.isDirectory === true) directories.add(file);
+				}
+				if (files.length > 0) handlers.intakeFiles(files, directories.size === 0 ? void 0 : directories);
 				const text = clipboardData.getData("text/plain");
 				if (text === "") {
 					if (files.length === 0) return false;
@@ -15746,8 +16658,8 @@ window.__ModuleLoader__.load({
 					}
 					keyboard.submit(resolveSubmitMode(g.busyEnter, g.running, accelerated ? "accelerated" : "enter", g.steeringAvailable));
 				},
-				intakeFiles: (files) => {
-					gate.current.intakeFiles(files);
+				intakeFiles: (files, directories) => {
+					gate.current.intakeFiles(files, directories);
 				},
 				pasteText: (text) => {
 					if (gate.current.machineBusy || gate.current.locked) return;
@@ -15826,12 +16738,12 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-source/packages/client/ui-conversation/src/client/skeleton/ContextMeter.module.css.mjs
-		const css$2 = ".JObwrW_root{flex:none;display:inline-flex}.JObwrW_trigger{color:var(--dsw-alias-label-tertiary);font-family:inherit;font-size:var(--dsh-content-font-size-secondary,13px);font-variant-numeric:tabular-nums;line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:24px;flex:none;align-items:center;gap:6px;padding:1px 8px;display:inline-flex}.JObwrW_trigger:hover,.JObwrW_trigger[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}.JObwrW_track{fill:none;stroke:var(--dsw-alias-border-l3);stroke-width:2px}.JObwrW_fill{fill:none;stroke:var(--dsw-alias-label-tertiary);stroke-width:2px;stroke-linecap:round}.JObwrW_panel{z-index:1100;box-sizing:border-box;background:var(--dsw-specific-menu);--dsw-elevation-stroke-color:var(--dsw-alias-border-l1);width:min(264px,100vw - 24px);box-shadow:var(--dsw-elevation-prominent);color:var(--dsw-alias-label-secondary);cursor:default;border:0;border-radius:12px;padding:12px;font-size:12px;line-height:20px;position:fixed}.JObwrW_header{align-items:center;gap:6px;display:flex}.JObwrW_figures{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary);margin-left:auto;font-weight:500}.JObwrW_percent{color:var(--dsw-alias-label-primary);font-weight:500}.JObwrW_headline{color:var(--dsw-alias-label-tertiary)}.JObwrW_headline:empty{display:none}.JObwrW_bar{corner-shape:round;background:var(--dsw-alias-interactive-bg-hover);border-radius:999px;gap:1px;height:4px;margin:10px 0 12px;display:flex;overflow:hidden}.JObwrW_segment{background:var(--meter-tint,var(--dsw-alias-label-tertiary));border-radius:1px;flex:none;min-width:2px;height:100%}.JObwrW_swatch{background:var(--meter-tint);vertical-align:baseline;border-radius:2px;width:8px;height:8px;margin-right:6px;display:inline-block}.JObwrW_colorSystem{--meter-tint:var(--dsw-static-neutral-bluish-400)}.JObwrW_colorTools{--meter-tint:#a78bfa}.JObwrW_colorMessages{--meter-tint:var(--dsw-static-blue-450)}.JObwrW_rows{margin:6px 0 0}.JObwrW_row{justify-content:space-between;align-items:center;gap:12px;padding:2px 0;display:flex}.JObwrW_row dt{color:var(--dsw-alias-label-secondary)}.JObwrW_row dd{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary);margin:0}";
-		const tagId$2 = "@oh-my-dsh/ui-conversation/ContextMeter.module.css";
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-conversation/src/client/skeleton/ContextMeter.module.css.mjs
+		const css$2 = ".JObwrW_root{flex:none;display:inline-flex}.JObwrW_trigger{color:var(--dsw-alias-label-tertiary);font-family:inherit;font-size:var(--dsh-content-font-size-secondary,13px);font-variant-numeric:tabular-nums;line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:24px;flex:none;align-items:center;gap:6px;padding:1px 8px;display:inline-flex}.JObwrW_trigger:hover,.JObwrW_trigger[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}.JObwrW_track{fill:none;stroke:var(--dsw-alias-border-l3);stroke-width:2px}.JObwrW_fill{fill:none;stroke:var(--dsw-alias-label-tertiary);stroke-width:2px;stroke-linecap:round}.JObwrW_panel{z-index:1100;box-sizing:border-box;background:var(--dsw-specific-menu);width:min(264px,100vw - 24px);backdrop-filter:var(--dsw-menu-backdrop-filter);--dsw-elevation-stroke-color:var(--dsw-alias-border-l1);box-shadow:var(--dsw-elevation-prominent);color:var(--dsw-alias-label-secondary);cursor:default;border:0;border-radius:12px;padding:12px;font-size:12px;line-height:20px;position:fixed}.JObwrW_header{align-items:center;gap:6px;display:flex}.JObwrW_figures{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary);margin-left:auto;font-weight:500}.JObwrW_percent{color:var(--dsw-alias-label-primary);font-weight:500}.JObwrW_headline{color:var(--dsw-alias-label-tertiary)}.JObwrW_headline:empty{display:none}.JObwrW_bar{corner-shape:round;background:var(--dsw-alias-interactive-bg-hover);border-radius:999px;gap:1px;height:4px;margin:10px 0 12px;display:flex;overflow:hidden}.JObwrW_segment{background:var(--meter-tint,var(--dsw-alias-label-tertiary));border-radius:1px;flex:none;min-width:2px;height:100%}.JObwrW_swatch{background:var(--meter-tint);vertical-align:baseline;border-radius:2px;width:8px;height:8px;margin-right:6px;display:inline-block}.JObwrW_colorSystem{--meter-tint:var(--dsw-static-neutral-bluish-400)}.JObwrW_colorTools{--meter-tint:#a78bfa}.JObwrW_colorMessages{--meter-tint:var(--dsw-static-blue-450)}.JObwrW_rows{margin:6px 0 0}.JObwrW_row{justify-content:space-between;align-items:center;gap:12px;padding:2px 0;display:flex}.JObwrW_row dt{color:var(--dsw-alias-label-secondary)}.JObwrW_row dd{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary);margin:0}";
+		const tagId$2 = "@deepseek-ai/dsh-client-ui-conversation/ContextMeter.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "@oh-my-dsh/ui-conversation";
+			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
 			tag.dataset.pluginCss = tagId$2;
 			tag.textContent = css$2;
 			document.head.appendChild(tag);
@@ -16036,18 +16948,59 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-source/packages/client/ui-conversation/src/client/skeleton/InputBar.module.css.mjs
-		const css$1 = ".uV2eYG_root{padding:0 var(--dsh-composer-side-clearance) 4px;flex-direction:column;align-items:center;display:flex}.uV2eYG_dock{justify-content:center;align-items:center;gap:12px;max-width:100%;padding-top:4px;display:flex}.uV2eYG_hero .uV2eYG_dock:empty{display:none}.uV2eYG_hero{padding:0 var(--dsh-composer-side-clearance)}.uV2eYG_notice{width:100%;max-width:var(--dsh-composer-card-max-width);background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);border-radius:8px;margin-bottom:6px;padding:4px 8px;font-size:12px;line-height:18px}.uV2eYG_card{box-sizing:border-box;width:100%;max-width:var(--dsh-composer-card-max-width);--dsw-elevation-stroke-color:var(--dsw-alias-border-l2);background:var(--dsw-specific-input-major);box-shadow:var(--dsw-elevation-soft);font-size:var(--dsh-content-font-size,14px);line-height:calc(24px + var(--dsh-content-font-delta,0px));--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);border:0;border-radius:22px;flex-direction:column;gap:12px;padding-top:8px;display:flex;position:relative}.uV2eYG_cardWorkspaceTrigger{--dsw-elevation-stroke-color:transparent;cursor:pointer}.uV2eYG_cardWorkspaceTrigger:after{content:\"\";background:var(--dsw-alias-border-l4);pointer-events:none;border-radius:22px;transition:background-color .1s;position:absolute;inset:-1px;-webkit-mask:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' fill='none' rx='22' ry='22' stroke='black' stroke-width='2' stroke-dasharray='4 4'/%3E%3C/svg%3E\");mask:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' fill='none' rx='22' ry='22' stroke='black' stroke-width='2' stroke-dasharray='4 4'/%3E%3C/svg%3E\")}.uV2eYG_cardWorkspaceTrigger :disabled{pointer-events:none}.uV2eYG_cardWorkspaceTrigger:hover:after{background:var(--dsw-alias-state-business-primary)}.uV2eYG_accessory{align-items:center;gap:8px;padding:10px 12px 0;display:flex}.uV2eYG_overlayAnchor{height:0;position:absolute;inset:0 0 auto}.uV2eYG_scroll{max-height:var(--dsh-composer-text-max-height);margin-right:4px;overflow-y:auto}.uV2eYG_scroll::-webkit-scrollbar-track{margin-top:8px}.uV2eYG_grow{position:relative}.uV2eYG_pending{corner-shape:round;background:var(--dsw-alias-state-business-primary);border-radius:50%;width:8px;height:8px;animation:1s ease-in-out infinite alternate uV2eYG_input-pending}@keyframes uV2eYG_input-pending{0%{opacity:.35}to{opacity:1}}.uV2eYG_input{box-sizing:border-box;min-height:36px;font-family:var(--dsw-font-family);font-size:inherit;line-height:inherit;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;color:var(--dsw-alias-label-primary);caret-color:var(--dsw-alias-state-business-primary);outline:none;padding:4px 8px 0 14px}.uV2eYG_input p{margin:0}.uV2eYG_input p:last-child:after{content:var(--dsh-composer-hint);color:var(--dsw-alias-label-caption)}.uV2eYG_input[data-composer-composing] p:last-child:after{content:none}.uV2eYG_input[data-composer-composing]+.uV2eYG_placeholder{visibility:hidden}.uV2eYG_placeholder{color:var(--dsw-alias-label-caption);white-space:nowrap;text-overflow:ellipsis;pointer-events:none;user-select:none;position:absolute;inset:4px 8px auto 14px;overflow:hidden}.uV2eYG_inputDisabled{color:var(--dsw-alias-label-tertiary);cursor:not-allowed}.uV2eYG_input[aria-haspopup=menu]{cursor:pointer}.uV2eYG_hero .uV2eYG_input{min-height:52px}.uV2eYG_hero .uV2eYG_placeholder{white-space:normal;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;display:-webkit-box}.uV2eYG_row{flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;min-width:0;padding:2px 8px 6px;display:flex;container-type:inline-size}.uV2eYG_tools,.uV2eYG_modes,.uV2eYG_trailing{align-items:center;min-width:0;display:flex}.uV2eYG_tools,.uV2eYG_modes{gap:12px}.uV2eYG_trailing{flex:none;gap:12px;margin-left:auto}.uV2eYG_add{corner-shape:round;background:var(--dsw-specific-selector);width:28px;height:28px;color:var(--dsw-alias-label-primary);cursor:pointer;border:none;border-radius:999px;flex:none;place-items:center;display:grid}.uV2eYG_add:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover-solid)}.uV2eYG_add:disabled{opacity:.5;cursor:default}.uV2eYG_select{max-width:220px;height:28px;color:var(--dsw-alias-label-secondary);white-space:nowrap;cursor:pointer;appearance:none;background-color:#0000;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%2381858C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\");background-position:right 4px center;background-repeat:no-repeat;background-size:12px 12px;border:none;border-radius:8px;outline:none;padding:0 20px 0 8px;font-size:13px;font-weight:500;line-height:20px}.uV2eYG_select:hover:not(:disabled){background-color:var(--dsw-alias-interactive-bg-hover)}.uV2eYG_select:disabled{opacity:.5;cursor:default}.uV2eYG_primary{corner-shape:round;background:var(--dsw-alias-button-info-fill);color:#fff;cursor:pointer;border:none;border-radius:999px;flex:none;place-items:center;width:34px;height:34px;transition:background-color .1s;display:grid;transform:translateY(-2px)}.uV2eYG_primary:hover:not(:disabled){background:var(--dsw-alias-button-info-hover)}.uV2eYG_primary:disabled{opacity:.4;cursor:default}.uV2eYG_retry{color:inherit;cursor:pointer;background:0 0;border:1px solid;border-radius:4px;margin-left:8px;padding:1px 8px;font-size:12px}";
-		const tagId$1 = "@oh-my-dsh/ui-conversation/InputBar.module.css";
+		//#region src/client/skeleton/control-row-layout.ts
+		/** Content-sized model collapse for the composer's two control groups. */
+		/**
+		* Collapse the model text only when the expanded controls cannot share a line.
+		* The model seat consumes the row's inherited display variables; wrapping remains
+		* available when even the icon cannot fit. Each notification is measured synchronously.
+		* @param row - Composer control row with its leading and trailing groups.
+		* @returns Disconnect the layout observers and font listener.
+		*/
+		function observeControlRow(row) {
+			const measure = () => {
+				row.removeAttribute("data-model-compact");
+				const style = getComputedStyle(row);
+				const available = row.getBoundingClientRect().width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+				const widths = Array.from(row.children, (child) => child.getBoundingClientRect().width).filter((width) => width > 0);
+				const needed = widths.reduce((sum, width) => sum + width, 0) + Math.max(0, widths.length - 1) * parseFloat(style.columnGap);
+				row.toggleAttribute("data-model-compact", needed > available);
+			};
+			const resize = new ResizeObserver(measure);
+			resize.observe(row);
+			for (const child of row.children) resize.observe(child);
+			const mutation = new MutationObserver(measure);
+			mutation.observe(row, {
+				subtree: true,
+				childList: true,
+				characterData: true,
+				attributes: true,
+				attributeFilter: ["hidden"]
+			});
+			const fonts = document.fonts;
+			fonts.addEventListener("loadingdone", measure);
+			measure();
+			return () => {
+				resize.disconnect();
+				mutation.disconnect();
+				fonts.removeEventListener("loadingdone", measure);
+			};
+		}
+		//#endregion
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-conversation/src/client/skeleton/InputBar.module.css.mjs
+		const css$1 = ".uV2eYG_root{padding:0 var(--dsh-composer-side-clearance) 4px;flex-direction:column;align-items:center;display:flex}.uV2eYG_dock{justify-content:center;align-items:center;gap:12px;max-width:100%;padding-top:4px;display:flex}.uV2eYG_hero .uV2eYG_dock:empty{display:none}.uV2eYG_hero{padding:0 var(--dsh-composer-side-clearance)}.uV2eYG_notice{width:100%;max-width:var(--dsh-composer-card-max-width);background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);border-radius:8px;margin-bottom:6px;padding:4px 8px;font-size:12px;line-height:18px}.uV2eYG_card{box-sizing:border-box;width:100%;max-width:var(--dsh-composer-card-max-width);--dsw-elevation-stroke-color:var(--dsw-alias-border-l2);background:var(--dsw-specific-input-major);box-shadow:var(--dsw-elevation-soft);font-size:var(--dsh-content-font-size,14px);line-height:calc(24px + var(--dsh-content-font-delta,0px));--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);border:0;border-radius:22px;flex-direction:column;gap:12px;padding-top:8px;display:flex;position:relative}.uV2eYG_cardWorkspaceTrigger{--dsw-elevation-stroke-color:transparent;cursor:pointer}.uV2eYG_cardWorkspaceTrigger:after{content:\"\";box-sizing:border-box;color:var(--dsw-alias-border-l4);pointer-events:none;border:1px dashed;border-radius:22px;transition:color .1s;position:absolute;inset:0}.uV2eYG_cardWorkspaceTrigger :disabled{pointer-events:none}.uV2eYG_cardWorkspaceTrigger:hover:after{color:var(--dsw-alias-state-business-primary)}.uV2eYG_accessory{align-items:center;gap:8px;padding:10px 12px 0;display:flex}.uV2eYG_overlayAnchor{height:0;position:absolute;inset:0 0 auto}.uV2eYG_scroll{max-height:var(--dsh-composer-text-max-height);margin-right:4px;overflow-y:auto}.uV2eYG_scroll::-webkit-scrollbar-track{margin-top:8px}.uV2eYG_grow{position:relative}.uV2eYG_pending{corner-shape:round;background:var(--dsw-alias-state-business-primary);border-radius:50%;width:8px;height:8px;animation:1s ease-in-out infinite alternate uV2eYG_input-pending}@keyframes uV2eYG_input-pending{0%{opacity:.35}to{opacity:1}}.uV2eYG_input{box-sizing:border-box;min-height:36px;font-family:var(--dsw-font-family);font-size:inherit;line-height:inherit;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;color:var(--dsw-alias-label-primary);caret-color:var(--dsw-alias-state-business-primary);outline:none;padding:4px 8px 0 14px}.uV2eYG_input p{margin:0}.uV2eYG_input p:last-child:after{content:var(--dsh-composer-hint);color:var(--dsw-alias-label-caption)}.uV2eYG_input[data-composer-composing] p:last-child:after{content:none}.uV2eYG_input[data-composer-composing]+.uV2eYG_placeholder{visibility:hidden}.uV2eYG_placeholder{color:var(--dsw-alias-label-caption);white-space:nowrap;text-overflow:ellipsis;pointer-events:none;user-select:none;position:absolute;inset:4px 8px auto 14px;overflow:hidden}.uV2eYG_inputDisabled{color:var(--dsw-alias-label-tertiary);cursor:not-allowed}.uV2eYG_input[aria-haspopup=menu]{cursor:pointer}.uV2eYG_hero .uV2eYG_input{min-height:52px}.uV2eYG_hero .uV2eYG_placeholder{white-space:normal;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;display:-webkit-box}.uV2eYG_row{flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;min-width:0;padding:2px 8px 6px;display:flex;container-type:inline-size}.uV2eYG_row[data-model-compact]{--dsh-composer-model-text-display:none;--dsh-composer-model-icon-display:block}.uV2eYG_tools,.uV2eYG_modes,.uV2eYG_trailing{align-items:center;min-width:0;display:flex}.uV2eYG_tools,.uV2eYG_modes{gap:12px}.uV2eYG_trailing{flex:none;gap:12px;margin-left:auto}@container (width<=560px){.uV2eYG_tools,.uV2eYG_modes,.uV2eYG_trailing{gap:8px}}.uV2eYG_add{corner-shape:round;background:var(--dsw-specific-selector);width:28px;height:28px;color:var(--dsw-alias-label-primary);cursor:pointer;border:none;border-radius:999px;flex:none;place-items:center;display:grid}.uV2eYG_add:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover-solid)}.uV2eYG_add:disabled{opacity:.5;cursor:default}.uV2eYG_select{max-width:220px;height:28px;color:var(--dsw-alias-label-secondary);white-space:nowrap;cursor:pointer;appearance:none;background-color:#0000;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%2381858C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\");background-position:right 4px center;background-repeat:no-repeat;background-size:12px 12px;border:none;border-radius:8px;outline:none;padding:0 20px 0 8px;font-size:13px;font-weight:500;line-height:20px}.uV2eYG_select:hover:not(:disabled){background-color:var(--dsw-alias-interactive-bg-hover)}.uV2eYG_select:disabled{opacity:.5;cursor:default}.uV2eYG_primary{corner-shape:round;background:var(--dsw-alias-button-info-fill);color:#fff;cursor:pointer;border:none;border-radius:999px;flex:none;place-items:center;width:34px;height:34px;transition:background-color .1s;display:grid;transform:translateY(-2px)}.uV2eYG_primary:hover:not(:disabled){background:var(--dsw-alias-button-info-hover)}.uV2eYG_primary:disabled{opacity:.4;cursor:default}.uV2eYG_retry{color:inherit;cursor:pointer;background:0 0;border:1px solid;border-radius:4px;margin-left:8px;padding:1px 8px;font-size:12px}.uV2eYG_standardControls{align-items:center;gap:12px;min-width:0;display:flex}.uV2eYG_tools[hidden],.uV2eYG_standardControls[hidden]{display:none}.uV2eYG_trailingActive{flex:1;margin-left:0}.uV2eYG_activity{flex:none;align-items:center;display:flex}.uV2eYG_activity:empty{display:none}.uV2eYG_activityExpanded{flex:1;min-width:0}";
+		const tagId$1 = "@deepseek-ai/dsh-client-ui-conversation/InputBar.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "@oh-my-dsh/ui-conversation";
+			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
 			tag.dataset.pluginCss = tagId$1;
 			tag.textContent = css$1;
 			document.head.appendChild(tag);
 		}
 		var InputBar_module_css_default = {
 			"accessory": "uV2eYG_accessory",
+			"activity": "uV2eYG_activity",
+			"activityExpanded": "uV2eYG_activityExpanded",
 			"add": "uV2eYG_add",
 			"card": "uV2eYG_card",
 			"cardWorkspaceTrigger": "uV2eYG_cardWorkspaceTrigger",
@@ -16068,8 +17021,10 @@ window.__ModuleLoader__.load({
 			"row": "uV2eYG_row",
 			"scroll": "uV2eYG_scroll",
 			"select": "uV2eYG_select",
+			"standardControls": "uV2eYG_standardControls",
 			"tools": "uV2eYG_tools",
-			"trailing": "uV2eYG_trailing"
+			"trailing": "uV2eYG_trailing",
+			"trailingActive": "uV2eYG_trailingActive"
 		};
 		//#endregion
 		//#region src/client/skeleton/background-wait.ts
@@ -16089,7 +17044,7 @@ window.__ModuleLoader__.load({
 					const ticket = ++generation, own = controller = new AbortController();
 					const timeout = setTimeout(() => own.abort(), 5e3);
 					try {
-						const response = await fetch(`/trisoul-x/api/background-wait?session=${encodeURIComponent(id)}`, { signal: own.signal });
+						const response = await fetch(new URL(`trisoul-x/api/background-wait?session=${encodeURIComponent(id)}`, document.baseURI), { signal: own.signal });
 						if (!response.ok) throw new Error(`HTTP ${response.status}`);
 						const value = await response.json();
 						if (active && ticket === generation) setObserved({
@@ -16144,6 +17099,10 @@ window.__ModuleLoader__.load({
 			const notice = useNotices((s) => s);
 			const preferredBusyEnter = useBusyEnter((s) => s);
 			const commandMenuOpen = useMenuLauncher((source) => source === "command");
+			const [activity, setActivity] = (0, react.useState)(false);
+			(0, react.useEffect)(() => {
+				setActivity(false);
+			}, [sessionId]);
 			const promptError = useSession((s) => s.promptError) ?? null;
 			const running = useSession((s) => s.running) ?? false;
 			const eventWaiting = useBackgroundWait(sessionId, running);
@@ -16189,6 +17148,12 @@ window.__ModuleLoader__.load({
 			(0, react.useEffect)(() => {
 				if (notice?.level === "error") showToast(notice.text);
 			}, [notice, showToast]);
+			const rowRef = (0, react.useRef)(null);
+			(0, react.useLayoutEffect)(() => {
+				const row = rowRef.current;
+				if (row === null) return;
+				return observeControlRow(row);
+			}, []);
 			const cardRef = (0, react.useRef)(null);
 			const scrollRef = (0, react.useRef)(null);
 			const continuable = subagent?.address.mode === "continuable";
@@ -16228,7 +17193,7 @@ window.__ModuleLoader__.load({
 			(0, react.useEffect)(() => {
 				return installDraftWheel(scrollRef);
 			}, []);
-			const intakeFiles = (0, react.useCallback)((files) => {
+			const intakeFiles = (0, react.useCallback)((files, directories) => {
 				if (subagent !== null || addFiles === void 0 || files.length === 0) return;
 				const rejected = (() => {
 					if (imageLimits !== void 0) {
@@ -16239,7 +17204,7 @@ window.__ModuleLoader__.load({
 						if (images.some((file) => file.size > imageLimits.maxImageBytes)) return t("image.fileTooLarge", { size: imageSizeText(imageLimits.maxImageBytes) });
 						if (imageAttachments.reduce((sum, attachment) => sum + attachment.file.size, 0) + images.reduce((sum, file) => sum + file.size, 0) > imageLimits.maxMessageImageBytes) return t("image.totalTooLarge", { size: imageSizeText(imageLimits.maxMessageImageBytes) });
 					}
-					return addFiles(files);
+					return addFiles(files, directories);
 				})();
 				if (rejected !== null) showToast(rejected);
 			}, [
@@ -16336,7 +17301,7 @@ window.__ModuleLoader__.load({
 				children: [
 					toast !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Toast, {
 						text: toast.text,
-						icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconWarningOutline16, {}),
+						icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconWarningOutlineRegular, {}),
 						anchor: cardRef.current,
 						onDone: dismissToast
 					}, toast.seq),
@@ -16394,9 +17359,11 @@ window.__ModuleLoader__.load({
 								showPlaceholder: draft === "" && attachments.length === 0 && !claimActive
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								ref: rowRef,
 								className: InputBar_module_css_default.row,
 								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 									className: InputBar_module_css_default.tools,
+									hidden: activity,
 									children: [
 										/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 											label: t("input.commands"),
@@ -16411,7 +17378,7 @@ window.__ModuleLoader__.load({
 												disabled: locked || toggleCommandMenu === void 0,
 												onMouseDown: keepFocus,
 												onClick: onToggleCommandMenu,
-												children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 14 })
+												children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutlineMedium, { size: 14 })
 											})
 										}),
 										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
@@ -16429,10 +17396,20 @@ window.__ModuleLoader__.load({
 										input === void 0 || sessionId === void 0 ? null : renderSlot("conversation.input.left", {})
 									]
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: InputBar_module_css_default.trailing,
+									className: clsx(InputBar_module_css_default.trailing, activity && InputBar_module_css_default.trailingActive),
 									children: [
-										input === void 0 || sessionId === void 0 ? null : renderSlot("conversation.input.right", {}),
-										sessionId === void 0 ? null : renderSlot("conversation.input.model", { locked: modelSeatLocked }),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+											className: InputBar_module_css_default.standardControls,
+											hidden: activity,
+											children: [input === void 0 || sessionId === void 0 ? null : renderSlot("conversation.input.right", {}), sessionId === void 0 ? null : renderSlot("conversation.input.model", { locked: modelSeatLocked })]
+										}),
+										input === void 0 || sessionId === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+											className: activity ? InputBar_module_css_default.activityExpanded : InputBar_module_css_default.activity,
+											children: renderSlot("conversation.input.activity", {
+												locked,
+												onActiveChange: setActivity
+											})
+										}),
 										interruptible && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 											label: t("input.stop"),
 											side: "top",
@@ -16505,7 +17482,7 @@ window.__ModuleLoader__.load({
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: InputBar_module_css_default.dock,
-						children: [variant === "composer" && input !== void 0 && sessionId !== void 0 ? renderSlot("conversation.composer.dock", {}) : null, /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ContextMeter, {
+						children: [variant === "composer" && input !== void 0 && sessionId !== void 0 ? renderSlot("conversation.composer.dock", {}) : null, activity ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ContextMeter, {
 							useProjection,
 							t
 						})]
@@ -16514,12 +17491,12 @@ window.__ModuleLoader__.load({
 			});
 		});
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-source/packages/client/ui-conversation/src/client/skeleton/TodoPanel.module.css.mjs
-		const css = ".lXshSW_root{box-sizing:border-box;width:calc(100% - var(--dsh-composer-side-clearance) - var(--dsh-composer-side-clearance) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset));max-width:calc(var(--dsh-composer-card-max-width) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset));border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-specific-tip);--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);border-radius:12px;flex:none;margin:0 auto;overflow:hidden}.lXshSW_body{flex-direction:column;gap:8px;padding:6px 12px;display:flex}.lXshSW_header{text-align:left;cursor:pointer;background:0 0;border:none;align-items:center;gap:10px;width:100%;padding:0;display:flex}.lXshSW_lead{color:var(--dsw-alias-label-tertiary);flex:none;place-items:center;display:grid}.lXshSW_title{color:var(--dsw-alias-label-primary);flex:none;font-size:13px;font-weight:500;line-height:24px}.lXshSW_progress{min-width:0;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;flex:auto;font-size:13px;font-weight:400;line-height:20px;overflow:hidden}.lXshSW_chevron{color:var(--dsw-alias-label-tertiary);flex:none;place-items:center;display:grid}.lXshSW_list{flex-direction:column;gap:8px;max-height:180px;margin:0;padding:0;list-style:none;display:flex;overflow-y:auto}.lXshSW_item{min-width:0;color:var(--dsw-alias-label-secondary);align-items:center;gap:10px;font-size:13px;line-height:20px;display:flex}.lXshSW_glyph{flex:none;place-items:center;width:16px;height:16px;display:grid}.lXshSW_glyphCompleted{color:var(--dsw-alias-state-success-primary)}.lXshSW_glyphPending{color:var(--dsw-alias-label-caption)}.lXshSW_glyphProgress{color:var(--dsw-alias-state-business-primary);animation:1s linear infinite lXshSW_todo-progress-spin}@keyframes lXshSW_todo-progress-spin{to{transform:rotate(360deg)}}.lXshSW_content{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}";
-		const tagId = "@oh-my-dsh/ui-conversation/TodoPanel.module.css";
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-conversation/src/client/skeleton/TodoPanel.module.css.mjs
+		const css = ".lXshSW_root{box-sizing:border-box;width:calc(100% - var(--dsh-composer-side-clearance) - var(--dsh-composer-side-clearance) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset));max-width:calc(var(--dsh-composer-card-max-width) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset));--dsw-elevation-stroke-color:var(--dsw-alias-border-l1);background:var(--dsw-specific-menu);backdrop-filter:var(--dsw-menu-backdrop-filter);box-shadow:var(--dsw-elevation-panel);--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);border:0;border-radius:12px;flex:none;margin:0 auto;overflow:hidden}.lXshSW_body{flex-direction:column;gap:8px;padding:6px 12px;display:flex}.lXshSW_header{text-align:left;cursor:pointer;background:0 0;border:none;align-items:center;gap:10px;width:100%;padding:0;display:flex}.lXshSW_lead{color:var(--dsw-alias-label-tertiary);flex:none;place-items:center;display:grid}.lXshSW_title{color:var(--dsw-alias-label-primary);flex:none;font-size:13px;font-weight:500;line-height:24px}.lXshSW_progress{min-width:0;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;flex:auto;font-size:13px;font-weight:400;line-height:20px;overflow:hidden}.lXshSW_chevron{color:var(--dsw-alias-label-tertiary);flex:none;place-items:center;display:grid}.lXshSW_list{flex-direction:column;gap:8px;max-height:180px;margin:0;padding:0;list-style:none;display:flex;overflow-y:auto}.lXshSW_item{min-width:0;color:var(--dsw-alias-label-secondary);align-items:center;gap:10px;font-size:13px;line-height:20px;display:flex}.lXshSW_glyph{flex:none;place-items:center;width:16px;height:16px;display:grid}.lXshSW_content{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}";
+		const tagId = "@deepseek-ai/dsh-client-ui-conversation/TodoPanel.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "@oh-my-dsh/ui-conversation";
+			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
 			tag.dataset.pluginCss = tagId;
 			tag.textContent = css;
 			document.head.appendChild(tag);
@@ -16529,17 +17506,13 @@ window.__ModuleLoader__.load({
 			"chevron": "lXshSW_chevron",
 			"content": "lXshSW_content",
 			"glyph": "lXshSW_glyph",
-			"glyphCompleted": "lXshSW_glyphCompleted",
-			"glyphPending": "lXshSW_glyphPending",
-			"glyphProgress": "lXshSW_glyphProgress",
 			"header": "lXshSW_header",
 			"item": "lXshSW_item",
 			"lead": "lXshSW_lead",
 			"list": "lXshSW_list",
 			"progress": "lXshSW_progress",
 			"root": "lXshSW_root",
-			"title": "lXshSW_title",
-			"todo-progress-spin": "lXshSW_todo-progress-spin"
+			"title": "lXshSW_title"
 		};
 		//#endregion
 		//#region src/client/skeleton/TodoPanel.tsx
@@ -16548,82 +17521,22 @@ window.__ModuleLoader__.load({
 		function assertNever(value) {
 			throw new Error(`unreachable todo status: ${String(value)}`);
 		}
-		/** Status glyphs share the figma 14×14 artboard; the 16×16 `.glyph` cell centers them. */
-		function CompletedGlyph() {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
-				width: 14,
-				height: 14,
-				viewBox: "0 0 14 14",
-				fill: "none",
-				"aria-hidden": "true",
-				className: TodoPanel_module_css_default.glyphCompleted,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("circle", {
-					cx: "7",
-					cy: "7",
-					r: "6.4",
-					stroke: "currentColor",
-					strokeWidth: "1.2"
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", {
-					d: "M10.9631 5.71411L7.70154 8.97571C7.48011 9.19714 7.27736 9.40099 7.09229 9.54993C6.89742 9.70669 6.66314 9.85279 6.3634 9.90027C6.2049 9.92534 6.04339 9.92534 5.88489 9.90027C5.58515 9.85279 5.35087 9.70669 5.15601 9.54993C4.97093 9.40099 4.76818 9.19714 4.54675 8.97571L3.03516 7.46411L3.96313 6.53613L5.47473 8.04773C5.7169 8.28989 5.86196 8.43389 5.97888 8.52795C6.08597 8.61409 6.10875 8.60701 6.08997 8.604C6.11259 8.60758 6.13571 8.60758 6.15833 8.604C6.13954 8.60701 6.16232 8.61409 6.26941 8.52795C6.38633 8.43389 6.53139 8.28989 6.77356 8.04773L10.0352 4.78613L10.9631 5.71411Z",
-					fill: "currentColor"
-				})]
-			});
-		}
-		/** In-progress: business-blue ring fading out; CSS spins the svg. */
-		function ProgressGlyph() {
-			const gradientId = (0, react.useId)();
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
-				width: 14,
-				height: 14,
-				viewBox: "0 0 14 14",
-				fill: "none",
-				"aria-hidden": "true",
-				className: TodoPanel_module_css_default.glyphProgress,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("defs", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("linearGradient", {
-					id: gradientId,
-					x1: "2.5",
-					y1: "12",
-					x2: "10.5",
-					y2: "3.5",
-					gradientUnits: "userSpaceOnUse",
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("stop", { stopColor: "currentColor" }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("stop", {
-						offset: "1",
-						stopColor: "currentColor",
-						stopOpacity: "0"
-					})]
-				}) }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("circle", {
-					cx: "7",
-					cy: "7",
-					r: "6.4",
-					stroke: `url(#${gradientId})`,
-					strokeWidth: "1.2"
-				})]
-			});
-		}
-		/** Pending: dashed unstarted ring (figma dash 2.4 2.4). */
-		function PendingGlyph() {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("svg", {
-				width: 14,
-				height: 14,
-				viewBox: "0 0 14 14",
-				fill: "none",
-				"aria-hidden": "true",
-				className: TodoPanel_module_css_default.glyphPending,
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("circle", {
-					cx: "7",
-					cy: "7",
-					r: "6.4",
-					stroke: "currentColor",
-					strokeWidth: "1.2",
-					strokeDasharray: "2.4 2.4"
-				})
-			});
-		}
-		function StatusGlyph({ status }) {
+		/** Map Todo lifecycle state onto the shared compact status language. */
+		function statusDotState(status) {
 			switch (status) {
-				case "completed": return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CompletedGlyph, {});
-				case "in_progress": return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ProgressGlyph, {});
-				case "pending": return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PendingGlyph, {});
+				case "completed": return "done";
+				case "in_progress": return "ongoing";
+				case "pending": return "idle";
+				/* v8 ignore next -- closed TodoItem status union */
+				default: return assertNever(status);
+			}
+		}
+		/** Return the localized status announced beside one decorative marker. */
+		function statusLabel(status, t) {
+			switch (status) {
+				case "completed": return t("todo.status.completed");
+				case "in_progress": return t("todo.status.inProgress");
+				case "pending": return t("todo.status.pending");
 				/* v8 ignore next -- closed TodoItem status union */
 				default: return assertNever(status);
 			}
@@ -16659,7 +17572,7 @@ window.__ModuleLoader__.load({
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: TodoPanel_module_css_default.lead,
 								"aria-hidden": true,
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChecklistOutline14, {})
+								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChecklistOutlineRegular, {})
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: TodoPanel_module_css_default.title,
@@ -16672,7 +17585,7 @@ window.__ModuleLoader__.load({
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: TodoPanel_module_css_default.chevron,
 								"aria-hidden": true,
-								children: collapsed ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutline14, {}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, {})
+								children: collapsed ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, {}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})
 							})
 						]
 					}), !collapsed && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
@@ -16682,8 +17595,9 @@ window.__ModuleLoader__.load({
 							"data-status": item.status,
 							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: TodoPanel_module_css_default.glyph,
-								"aria-hidden": true,
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(StatusGlyph, { status: item.status })
+								role: "img",
+								"aria-label": statusLabel(item.status, t),
+								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, { state: statusDotState(item.status) })
 							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: TodoPanel_module_css_default.content,
 								children: item.content
@@ -16714,37 +17628,6 @@ window.__ModuleLoader__.load({
 			}
 		};
 		//#endregion
-		//#region src/client/conversation-reload.ts
-		/** Switching the entire Conversation provider requires a fresh page assembly.
-		* Session history and the original persisted text-draft store survive reload.
-		* Ordinary OMD feature settings do not change this provider or reload the page.
-		*/
-		function reloadOnProviderChange(ctx) {
-			if (typeof window === "undefined") return false;
-			const boot = window.__DSH_BOOT__;
-			if (!boot?.entries) return false;
-			let leaving = false;
-			const reload = () => {
-				if (!leaving) {
-					leaving = true;
-					window.location.reload();
-				}
-			};
-			if (!boot.entries.some((row) => row.id === "trisoul_x")) {
-				reload();
-				return true;
-			}
-			const onPageHide = () => {
-				leaving = true;
-			};
-			window.addEventListener("pagehide", onPageHide);
-			ctx.effect(() => () => {
-				window.removeEventListener("pagehide", onPageHide);
-				reload();
-			}, "conversation provider change");
-			return false;
-		}
-		//#endregion
 		//#region src/client/apply.ts
 		/** Services required by the Conversation plugin. */
 		const inject = [
@@ -16754,10 +17637,13 @@ window.__ModuleLoader__.load({
 			"uiSession",
 			"uiWorkspace",
 			"locale",
-			"settingsScope"
+			"configForms"
 		];
 		/** Validated Conversation runtime configuration. */
-		const Config = Schema.object({ maxConcurrentFileUploads: Schema.natural().min(1).default(2) });
+		const Config = Schema.object({
+			settingsNamespace: Schema.string().default(CONVERSATION_SETTINGS_NAMESPACE),
+			maxConcurrentFileUploads: Schema.natural().min(1).default(2)
+		});
 		const ABSENT_NOTICES = {
 			getSnapshot: () => null,
 			subscribe: () => () => {}
@@ -16780,6 +17666,10 @@ window.__ModuleLoader__.load({
 			getSnapshot: () => EMPTY_FILE_UPLOADS,
 			subscribe: () => () => {}
 		};
+		/** The shell-installed bridge, when this document runs inside the Desktop application. */
+		function hostPathBridge() {
+			return globalThis.__DSH_HOST_PATHS__;
+		}
 		/** Resolve the session-scoped Conversation action face, failing loud. */
 		function scopedConversation(sessions, id) {
 			const scoped = sessions.scope(id);
@@ -16811,7 +17701,10 @@ window.__ModuleLoader__.load({
 			}), "ui-conversation: dictionaries");
 			const t = ctx.locale.bind(NS);
 			const conversationStore = createConversationStore();
-			const submissionPolicy = new ComposerSubmissionPolicy(ctx.settingsScope.bind({ namespace: CONVERSATION_SETTINGS_NAMESPACE }));
+			const submissionPolicy = new ComposerSubmissionPolicy(ctx.configForms.get(config.settingsNamespace ?? "ui-conversation"));
+			ctx.effect(() => () => {
+				submissionPolicy.dispose();
+			});
 			ctx.slots.inject("settings.general.item", () => ctx.slots.register({
 				name: "settings.general.item",
 				id: "composer-enter",
@@ -16829,6 +17722,7 @@ window.__ModuleLoader__.load({
 				for (const entry of slots.entries("conversation.view")) {
 					/* v8 ignore next -- list registration validates id at load. */
 					if (entry.options.id === void 0) continue;
+					if (!ctx.configForms.developerTools.enabled.getSnapshot() && entry.options.id === "trajectory") continue;
 					tabs.push({
 						id: entry.options.id,
 						label: (0, _deepseek_ai_dsh_client_ui_slots.resolveSlotLabel)(entry.options.label) ?? entry.options.id
@@ -16866,7 +17760,9 @@ window.__ModuleLoader__.load({
 			ctx.effect(() => {
 				const disposeViews = slots.subscribe("conversation.view", refreshViews);
 				const disposeLocale = ctx.locale.subscribe(refreshViews);
+				const disposeDeveloperTools = ctx.configForms.developerTools.enabled.subscribe(refreshViews);
 				return () => {
+					disposeDeveloperTools();
 					disposeLocale();
 					disposeViews();
 				};
@@ -16878,7 +17774,7 @@ window.__ModuleLoader__.load({
 				scope.effect(() => commands.register({
 					name: "file",
 					label: () => t("input.file"),
-					icon: _deepseek_ai_dsh_client_ui_primitives.IconPaperclipOutline16,
+					icon: _deepseek_ai_dsh_client_ui_primitives.IconPaperclipOutlineRegular,
 					available: (session) => inputHub.canPickFiles(session.sessionId),
 					ui: {
 						kind: "action",
@@ -16907,9 +17803,9 @@ window.__ModuleLoader__.load({
 			});
 			const registerConversationRoot = () => slots.register({
 				name: "main.conversation",
-				children: { "conversation.session.header": {
+				children: { "conversation.header": {
 					kind: "single",
-					scope: "session"
+					scope: "session-maybe"
 				} }
 			}, ConversationRoot);
 			const registerConversationContent = () => slots.registerFactory({
@@ -16978,24 +17874,55 @@ window.__ModuleLoader__.load({
 					scope: "session"
 				} },
 				store: conversationStore,
-				inject: (sessionId, actions) => ({
-					hooks: { conversationViews },
-					bindDraftMirror: (write) => inputHub.shell(sessionId).bindMirror(write),
-					openView: (view, focus) => {
+				inject: (sessionId, actions) => {
+					const openView = (view, focus) => {
+						if (!viewTabs().some((tab) => tab.id === view)) return;
 						activateView(sessionId, view);
 						actions.openView(view, focus);
-					}
-				})
+					};
+					const inspectionTarget = () => uiConversation.views.entries().find((definition) => definition.toolCallFocus !== void 0 && conversationViews.getSnapshot().some((view) => view.id === definition.target));
+					const inspectCall = (callId) => {
+						const target = inspectionTarget();
+						if (target?.toolCallFocus !== void 0) openView(target.target, target.toolCallFocus(callId));
+					};
+					return {
+						hooks: {
+							conversationViews,
+							inspectCall: {
+								getSnapshot: () => inspectionTarget() === void 0 ? void 0 : inspectCall,
+								subscribe: (listener) => {
+									const disposeViews = conversationViews.subscribe(listener);
+									const disposeDefinitions = uiConversation.views.subscribe(listener);
+									return () => {
+										disposeViews();
+										disposeDefinitions();
+									};
+								}
+							}
+						},
+						bindDraftMirror: (write) => inputHub.shell(sessionId).bindMirror(write),
+						openView
+					};
+				}
 			}, ConversationSession);
-			const registerConversationHeader = () => slots.register({
+			const registerHeader = () => slots.register({
+				name: "conversation.header",
+				children: {
+					"conversation.header.leading": {
+						kind: "single",
+						scope: "root"
+					},
+					"conversation.session.header": {
+						kind: "single",
+						scope: "session"
+					}
+				}
+			}, ConversationHeader);
+			const registerSessionHeader = () => slots.register({
 				name: "conversation.session.header",
 				locale: NS,
 				children: {
 					"conversation.session.header.lineage": {
-						kind: "single",
-						scope: "session"
-					},
-					"conversation.session.header.leading": {
 						kind: "single",
 						scope: "session"
 					},
@@ -17056,6 +17983,10 @@ window.__ModuleLoader__.load({
 						kind: "single",
 						scope: "session"
 					},
+					"conversation.input.activity": {
+						kind: "single",
+						scope: "session"
+					},
 					"conversation.composer.dock": {
 						kind: "list",
 						scope: "session"
@@ -17081,13 +18012,45 @@ window.__ModuleLoader__.load({
 					const conversation = concreteConversation(ctx);
 					const shell = inputHub.shell(sessionId);
 					const inputTriggers = inputHub.inputTriggers(sessionId);
+					const bridge = hostPathBridge();
 					return {
 						keyboard: shell,
-						addFiles: (files) => {
+						addFiles: (files, directories = /* @__PURE__ */ new Set()) => {
 							if (sessions.binding(sessionId) === void 0) return t("file.sessionUnavailable");
+							if (shell.snapshot.phase === "adjudicating" || shell.snapshot.phase === "submitting") return t("attachment.dropBlocked");
+							const uploads = [];
+							const references = [];
+							const cwd = sessions.list.getSnapshot().byId[sessionId]?.cwd;
+							for (const file of files) {
+								const directory = directories.has(file);
+								if (bridge === void 0 && directory) return t("attachment.directoryDesktopOnly");
+								const path = bridge?.pathFor(file) ?? "";
+								if (directory && path === "") return t("attachment.pathUnavailable");
+								if (path === "" || !directory && isImageMediaType(file.type)) {
+									uploads.push(file);
+									continue;
+								}
+								const relative = relativizeToCwd(path, cwd);
+								const mention = formatFileMention({
+									path: directory ? `${relative}/` : relative,
+									kind: "file"
+								}, false);
+								if (mention === void 0) return t("attachment.pathUnsupported");
+								const label = workspaceTitleOf(path) || file.name;
+								references.push({
+									source: "reference",
+									ref: mention,
+									label: directory ? `${label}/` : label,
+									appearance: directory ? "folder" : "file",
+									clipboardText: mention
+								});
+							}
 							try {
-								const drafts = conversation.createDrafts(sessionId, files);
-								if (!shell.addAttachments(drafts.map((draft) => draft.id))) conversation.releaseDraftAttachments(drafts);
+								const drafts = conversation.createDrafts(sessionId, uploads);
+								if (!shell.addFiles(references, drafts.map((draft) => draft.id))) {
+									conversation.releaseDraftAttachments(drafts);
+									return t("attachment.dropBlocked");
+								}
 								return null;
 							} catch (error) {
 								if (error instanceof UnsupportedImageMediaTypeError) return t("image.unsupportedType");
@@ -17140,7 +18103,8 @@ window.__ModuleLoader__.load({
 				yield registerConversationRoot();
 				yield registerConversationContent();
 				yield registerConversationSession();
-				yield registerConversationHeader();
+				yield registerHeader();
+				yield registerSessionHeader();
 				yield registerComposerBar();
 			});
 			ctx.plugin(ConversationController, {

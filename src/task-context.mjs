@@ -1,3 +1,4 @@
+import { sourceName } from './message-source.mjs';
 // Shared, pure helpers for the task ledger and context-compaction layer.
 export const TASK_SOURCE = 'trisoul-x:tasks';
 export const TODO_META = 'omdTodo';
@@ -15,7 +16,7 @@ export function latestTaskContext(session, runtime = runtimeProviders.get(sessio
     meta: { todoText: todo?.text ?? null, runtime: runtime ? { ...runtime } : null } } : null;
 }
 const messageOf = e => e?.type === 'user/message' ? e.data : e?.data?.message;
-export const isTaskInjection = e => e?.type === 'user/message' && e.data?.source?.plugin === TASK_SOURCE;
+export const isTaskInjection = e => e?.type === 'user/message' && sourceName(e.data?.source) === TASK_SOURCE;
 export function renderTodoInjection(rec) {
   if (!rec.tasks.length) return '[todo list]\n(empty — all tasks were removed)';
   return ['[todo list]', ...rec.tasks.map(t => `${t.done ? '[x]' : '[ ]'} ${t.id} ${t.title}`)].join('\n');
@@ -56,6 +57,7 @@ export function summaryMessageReader(session) {
     if (isTaskInjection(e)) return null;
     const m = withoutTodo(session.deriveEventMessage(e));
     if (!m) return null;
+    if (m.role === 'tool' && taskCalls.has(m.toolCallId)) return null;
     const content = filter(m.content);
     return content.length ? { ...m, content } : null;
   };

@@ -84,7 +84,7 @@ test('window and tail keep complete tool pairs; preparation reference is not cov
   assert.equal(prepareCandidate(f.s, f.state, { ...f.cfg, keepTailEvents: 4 }, pairing), null);
 });
 test('opaque image/tool material is kept, not silently discarded by text-only preparation', t => {
-  const f = setup(t); const events = exchange(f.s); events[1].data.message.content[0].content.push({ type: 'image', data: 'opaque' });
+  const f = setup(t); const events = exchange(f.s); events[1].data.message.content.push({ type: 'image', data: 'opaque' });
   assert.equal(prepareCandidate(f.s, f.state, f.cfg, pairing), null);
 });
 test('no fabricated trace when provider exposes no reasoning; configurable exact trace provenance', t => {
@@ -101,7 +101,7 @@ test('partial transaction recovery is idempotent and preserves originals', async
   assert.ok(f.state.transaction); const reloaded = new ContextStore(f.dir); const state = reloaded.state(f.s.id);
   await applyTransaction(f.s, state, state.transaction, reloaded, adapter);
   assert.equal(f.s.snapshotEvents().filter(e => e.data?.id === tx.operations[0].id).length, 1);
-  assert.equal(state.transaction, null); assert.match(f.s.eventAt(a.sourceSeqs[1]).data.message.content[0].content[0].text, /Original/);
+  assert.equal(state.transaction, null); assert.match(f.s.eventAt(a.sourceSeqs[1]).data.message.content[0].text, /Original/);
 });
 test('failed disk flush is recovered without duplicate replacement records', async t => {
   const f = setup(t); const a = add(f); const tx = createTransaction(f.s, f.state, plan(f, [['detail', a]]), f.cfg, pairing);

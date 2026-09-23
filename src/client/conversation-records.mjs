@@ -1,10 +1,11 @@
+import { sourceName } from '../message-source.mjs';
 const textOf = content => (content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
 
 // Read the delivered block, never regenerate it from today's task ledger/state.
 export function taskInjection(message) {
-  if (!message || message.source?.kind !== 'plugin') return null;
+  if (!message || !sourceName(message.source)) return null;
   const embedded = message.omdTodo;
-  if (!embedded && message.source.plugin !== 'trisoul-x:tasks') return null;
+  if (!embedded && sourceName(message.source) !== 'trisoul-x:tasks') return null;
   const text = embedded ? message.content?.[embedded.index]?.text : textOf(message.content);
   if (!text) return null;
   const todo = /^\[todo list\]/m.test(text), runtime = /^(?:\[runtime state(?: ·|\])|预算(?:：|$))/m.test(text);
@@ -41,7 +42,7 @@ export function supersededTaskInjections(entries) {
       previous = event.seq; compacting = false;
     } else if (event.type?.startsWith('compaction/') || event.type === 'user/message' && data.source?.compactionId) {
       compacting = true;
-    } else if (event.type === 'system/message' && data.message?.source?.plugin === 'trisoul-x:shadow') {
+    } else if (sourceName((event.type === 'user/message' ? data : data.message)?.source) === 'trisoul-x:shadow') {
       // A compaction's surface cleanup is not new conversation activity.
     } else {
       previous = null; compacting = false;
@@ -60,7 +61,7 @@ export function compactionGroups(entries) {
     const checkpoint = event.type === 'user/message' && data.source?.compactionId;
     const lifecycle = ['compaction/start', 'compaction/summary', 'compaction/end'].includes(event.type);
     if (!checkpoint && !lifecycle) {
-      if (!(event.type === 'system/message' && data.message?.source?.plugin === 'trisoul-x:shadow')) legacyRun = null;
+      if (!(sourceName((event.type === 'user/message' ? data : data.message)?.source) === 'trisoul-x:shadow')) legacyRun = null;
       continue;
     }
     const id = checkpoint || data.compactionId;

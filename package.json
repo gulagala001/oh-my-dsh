@@ -1,6 +1,6 @@
 {
   "name": "trisoul_x",
-  "version": "1.6.1",
+  "version": "1.7.0-rc.1",
   "private": true,
   "type": "module",
   "description": "DSH 增强插件：长上下文、任务验证、提示词优化、代码理解、电脑操作与四套完整主题。",
@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "@colbymchenry/codegraph": "1.6.0",
-    "@deepseek-ai/dsh-mcp-client": "0.1.6-alpha.2",
+    "@deepseek-ai/dsh-mcp-client": "0.1.7-alpha.1",
     "@modelcontextprotocol/client": "2.0.0",
     "diff": "9.0.0",
     "html-to-text": "10.0.1",
@@ -39,7 +39,8 @@
     "playwright": "1.63.0",
     "sharp": "0.35.4",
     "ws": "8.21.3",
-    "zod": "4.5.4"
+    "zod": "4.5.4",
+    "yaml": "2.8.1"
   },
   "engines": {
     "node": ">=22.19"
@@ -52,11 +53,15 @@
     "./client": "./lib/client.js",
     "./package.json": "./package.json",
     "./ptc": "./src/ptc.mjs",
-    "./host/*": "./lib/host/*.mjs"
+    "./host/*": "./lib/host/*.mjs",
+    "./host/ui-chat": "./vendor/opencu/src/host/ui-chat.mjs"
   },
   "dsh": {
     "bundle": {
-      "patch": "./cordis.patch.yml"
+      "patch": [
+        "./cordis.patch.yml",
+        "./presets/cordis.patch.yml"
+      ]
     },
     "client": {
       "platform": "web",
@@ -71,7 +76,10 @@
         "@deepseek-ai/dsh-client-ui-layout",
         "@deepseek-ai/dsh-client-ui-renderer",
         "@deepseek-ai/dsh-client-ui-session",
-        "@deepseek-ai/dsh-client-ui-workspace"
+        "@deepseek-ai/dsh-client-ui-workspace",
+        "@deepseek-ai/dsh-api-workspace-controller",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-input-trigger"
       ]
     }
   },
@@ -89,33 +97,33 @@
     "CHANGELOG.md"
   ],
   "devDependencies": {
-    "@deepseek-ai/cordis": "4.0.2",
-    "@deepseek-ai/dsh": "0.1.6-alpha.2",
-    "@deepseek-ai/dsh-compaction": "0.1.6-alpha.2",
-    "@deepseek-ai/dsh-llm": "0.1.6-alpha.2",
-    "@deepseek-ai/dsh-session": "0.1.6-alpha.2",
-    "@deepseek-ai/schemastery": "3.18.2",
+    "@deepseek-ai/cordis": "4.0.3",
+    "@deepseek-ai/dsh": "0.1.7-alpha.1",
+    "@deepseek-ai/dsh-compaction": "0.1.7-alpha.1",
+    "@deepseek-ai/dsh-llm": "0.1.7-alpha.1",
+    "@deepseek-ai/dsh-session": "0.1.7-alpha.1",
+    "@deepseek-ai/schemastery": "3.18.3",
     "esbuild": "0.25.12",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "@deepseek-ai/dsh-tools": "0.1.6-alpha.2",
-    "@deepseek-ai/dsh-attachment": "0.1.6-alpha.2",
-    "@deepseek-ai/dsh-jobs": "0.1.6-alpha.2",
-    "@deepseek-ai/dsh-scope": "0.1.6-alpha.2",
-    "@deepseek-ai/dsh-timeout": "0.1.6-alpha.2",
-    "@deepseek-ai/dsh-shell": "0.1.6-alpha.2",
-    "@deepseek-ai/dsh-sandbox": "0.1.6-alpha.2",
-    "@deepseek-ai/dsh-output-retention": "0.1.6-alpha.2",
-    "@deepseek-ai/dsh-brand": "0.1.6-alpha.2",
-    "@deepseek-ai/dsh-util-values": "0.1.6-alpha.2"
+    "@deepseek-ai/dsh-tools": "0.1.7-alpha.1",
+    "@deepseek-ai/dsh-attachment": "0.1.7-alpha.1",
+    "@deepseek-ai/dsh-jobs": "0.1.7-alpha.1",
+    "@deepseek-ai/dsh-scope": "0.1.7-alpha.1",
+    "@deepseek-ai/dsh-timeout": "0.1.7-alpha.1",
+    "@deepseek-ai/dsh-shell": "0.1.7-alpha.1",
+    "@deepseek-ai/dsh-sandbox": "0.1.7-alpha.1",
+    "@deepseek-ai/dsh-output-retention": "0.1.7-alpha.1",
+    "@deepseek-ai/dsh-brand": "0.1.7-alpha.1",
+    "@deepseek-ai/dsh-util-values": "0.1.7-alpha.1"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "4.0.2",
-    "@deepseek-ai/dsh-compaction": "0.1.6-alpha.2",
-    "@deepseek-ai/dsh-llm": "0.1.6-alpha.2",
-    "@deepseek-ai/schemastery": "3.18.2",
-    "@deepseek-ai/dsh-tools": "0.1.6-alpha.2",
-    "@deepseek-ai/dsh-attachment": "0.1.6-alpha.2"
+    "@deepseek-ai/cordis": "4.0.3",
+    "@deepseek-ai/dsh-compaction": "0.1.7-alpha.1",
+    "@deepseek-ai/dsh-llm": "0.1.7-alpha.1",
+    "@deepseek-ai/schemastery": "3.18.3",
+    "@deepseek-ai/dsh-tools": "0.1.7-alpha.1",
+    "@deepseek-ai/dsh-attachment": "0.1.7-alpha.1"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {

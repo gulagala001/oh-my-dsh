@@ -15,7 +15,7 @@ export function useBackgroundWait(sessionId: string | undefined, running: boolea
       const ticket = ++generation, own = controller = new AbortController()
       const timeout = setTimeout(() => own.abort(), 5000)
       try {
-        const response = await fetch(`/trisoul-x/api/background-wait?session=${encodeURIComponent(id)}`, { signal: own.signal })
+        const response = await fetch(new URL(`trisoul-x/api/background-wait?session=${encodeURIComponent(id)}`, document.baseURI), { signal: own.signal })
         if (!response.ok) throw new Error(`HTTP ${response.status}`)
         const value: unknown = await response.json()
         if (active && ticket === generation) setObserved({ id, waiting: typeof value === 'object' && value !== null && 'waiting' in value && value.waiting === true })

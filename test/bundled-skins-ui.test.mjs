@@ -18,7 +18,7 @@ test('bundled skins work in real chat, both modes, portals, narrow settings and 
   await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: f.sessionId, mode: 'queue', content: [{ type: 'text', text: '验证内置主题的真实对话与操作记录' }] });
   await page.getByText('皮肤验收完成。', { exact: true }).waitFor();
   const processToggle = page.locator('[data-turn-process-tool-calls="2"]'); await processToggle.click();
-  const group = page.locator('[data-cu-group] > button').filter({ hasText: '2 次操作' }); await group.click();
+  const group = page.locator('[data-cu-group] .tx-cu-group-toggle').filter({ hasText: '2 次操作' }); await group.click();
   await page.getByText('读取失败', { exact: true }).waitFor();
   const openSettings = async () => {
     if (!await page.getByRole('button', { name: '设置', exact: true }).isVisible()) await page.locator('.hHd-Xa_toggle').click();
@@ -32,7 +32,7 @@ test('bundled skins work in real chat, both modes, portals, narrow settings and 
     if (!await appearance.isVisible()) await categories.click();
     await appearance.click();
   };
-  const capture = async name => { if (process.env.TRISOUL_UI_ARTIFACTS) await page.screenshot({ path: join(f.root, name + '.png') }); };
+  const capture = async name => { if (process.env.TRISOUL_UI_ARTIFACTS) await page.screenshot({ path: join(f.root, name + '.png'), animations: 'disabled' }); };
   const available = [];
   for (const skin of bundledSkins) {
     await page.setViewportSize({ width: 1440, height: 1100 });
@@ -68,6 +68,7 @@ test('bundled skins work in real chat, both modes, portals, narrow settings and 
     await page.getByLabel('降低透明与动态效果').uncheck();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.locator('[data-sidebar-collapsed=true]').waitFor();
+    await until(async () => await page.locator('.hHd-Xa_root').evaluate(el => !el.classList.contains('hHd-Xa_fading')));
     await until(async () => await page.locator('.omd-appearance').evaluate(el => el.clientWidth) > 270);
     const dialog = page.getByRole('dialog');
     await until(async () => await dialog.evaluate(el => {const r=el.getBoundingClientRect();return [r.left+12, r.right-12].every(x => el.contains(document.elementFromPoint(x, r.top+r.height/2)));})).catch(async e => {throw Error(skin.id + ' covered dialog: ' + await dialog.evaluate(el => {let a=el,out=[];while(a&&out.length<7){const s=getComputedStyle(a),r=a.getBoundingClientRect();out.push({cls:a.className,filter:s.backdropFilter,z:s.zIndex,pos:s.position,width:r.width});a=a.parentElement;}return JSON.stringify(out); }));});

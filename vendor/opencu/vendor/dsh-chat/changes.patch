@@ -1,0 +1,295 @@
+diff --git a/packages/client/tsdown.client.ts b/packages/client/tsdown.client.ts
+index 99e647d..d7786d8 100644
+--- a/packages/client/tsdown.client.ts
++++ b/packages/client/tsdown.client.ts
+@@ -558,7 +558,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
+         this.addWatchFile(fileId)
+         const source = await readFile(fileId)
+         const { code, exports: cssExports } = transform({
+-          filename: fileId,
++          filename: "/home/runner/work/deepseek-harness/deepseek-harness/" + relative(REPOSITORY_ROOT, fileId).split(sep).join("/"),
+           code: source,
+           cssModules: { pattern: '[hash]_[local]' },
+           minify: true,
+@@ -582,7 +582,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
+         const fileId = virtualId.slice(INLINE_CSS_VIRTUAL_PREFIX.length, -CSS_VIRTUAL_SUFFIX.length)
+         this.addWatchFile(fileId)
+         const source = await readFile(fileId)
+-        const { code } = transform({ filename: fileId, code: source, minify: true })
++        const { code } = transform({ filename: "/home/runner/work/deepseek-harness/deepseek-harness/" + relative(REPOSITORY_ROOT, fileId).split(sep).join("/"), code: source, minify: true })
+         return `export default ${JSON.stringify(code.toString())};`
+       },
+     }, {
+@@ -597,7 +597,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
+         const fileId = virtualId.slice(GLOBAL_CSS_VIRTUAL_PREFIX.length, -CSS_VIRTUAL_SUFFIX.length)
+         this.addWatchFile(fileId)
+         const source = await readFile(fileId)
+-        const { code } = transform({ filename: fileId, code: source, minify: true })
++        const { code } = transform({ filename: "/home/runner/work/deepseek-harness/deepseek-harness/" + relative(REPOSITORY_ROOT, fileId).split(sep).join("/"), code: source, minify: true })
+         return styleInjectionModule(id, fileId, code.toString())
+       },
+     }],
+diff --git a/packages/client/ui-chat/src/client/apply.ts b/packages/client/ui-chat/src/client/apply.ts
+index 69885d3..129c887 100644
+--- a/packages/client/ui-chat/src/client/apply.ts
++++ b/packages/client/ui-chat/src/client/apply.ts
+@@ -1,3 +1,4 @@
++import type { ConfigForm } from '@deepseek-ai/dsh-client-ui-settings/client'
+ /** Register the Chat Conversation target, renderers, stats, and details surface. */
+ import type { Context } from '@deepseek-ai/cordis'
+ import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
+@@ -62,7 +63,7 @@ export const inject = [
+  * Mount all Chat-owned contributions.
+  * @param ctx - Client root context.
+  */
+-export function apply(ctx: Context): void {
++export function apply(ctx: Context, options: { settings?: ConfigForm<ChatSettings> } = {}): void {
+   const chatSources = new WeakMap<SessionBinding, ObservableSnapshot<ChatSnapshot>>()
+   const chatSource = (binding: SessionBinding): ObservableSnapshot<ChatSnapshot> => {
+     let source = chatSources.get(binding)
+@@ -86,7 +87,7 @@ export function apply(ctx: Context): void {
+   const t = ctx.locale.bind(NS)
+   const chatStore = createChatStore()
+   const chatScrollPositions = new Map<SessionId, ChatScrollPosition>()
+-  const chatSettings = ctx.configForms.get<ChatSettings>(CHAT_SETTINGS_NAMESPACE)
++  const chatSettings = options.settings ?? ctx.configForms.get<ChatSettings>(CHAT_SETTINGS_NAMESPACE)
+   const linkOpening = createSnapshotStore(chatSettings.getSnapshot().value?.linkOpening ?? DEFAULT_LINK_OPENING)
+   ctx.effect(() => chatSettings.subscribe(() => {
+     const accepted = chatSettings.getSnapshot().value?.linkOpening
+diff --git a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css
+index 56687cd..d01394b 100644
+--- a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css
++++ b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css
+@@ -72,8 +72,9 @@
+ }
+ 
+ .body {
+-  --dsh-chat-flow-gap: 8px;
+-  max-height: min(400px, 50vh);
++  --dsh-chat-flow-gap: 2px;
++  position: relative;
++  max-height: min(280px, 45vh);
+   overflow-y: auto;
+   overscroll-behavior-y: auto;
+   scrollbar-gutter: stable;
+@@ -126,3 +127,5 @@
+   overflow: visible;
+   scrollbar-gutter: auto;
+ }
++
++.count { flex: none; font-size: 11px; color: var(--dsw-alias-label-tertiary); }
+diff --git a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx
+index d56d652..35ec35f 100644
+--- a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx
++++ b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx
+@@ -35,6 +35,8 @@ interface LiveProcessTitle {
+ }
+ 
+ const PROCESS_ICONS: Record<ProcessTitleActivity, ReactNode> = {
++  images: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 3h18v18H3zM3 17l6-7 5 5 3-3 4 5"/><circle cx="16" cy="7" r="1"/></svg>,
++  computer: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 4h18v13H3zM8 21h8M12 17v4" /></svg>,
+   thinking: <IconThinkOutlineRegular />,
+   read: <IconBrowseOutlineRegular size={14} />,
+   search: <IconSearchOutlineRegular size={14} />,
+@@ -107,18 +109,19 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
+   readonly toggle: () => void
+ }) {
+   const data = useChatGroup(groupKey, group => group?.data)
+-  const detailed = usePresentation(policy => data?.closed === false && policy.liveProcessDetail)
++  const working = data !== undefined && !data.closed && (data.summary.running !== undefined || data.summary.counts.length === 0)
++  const detailed = usePresentation(policy => working && policy.liveProcessDetail)
+   const live = useStableLiveProcessTitle({
+     activity: data?.summary.running ?? 'thinking',
+     detail: data?.summary.runningDetail ?? '',
+-  }, data !== undefined && !data.closed)
++  }, working)
+   if (data === undefined) return null
+-  const label = data.closed ? processTitle(data.summary, t) : t(`message.stepProcess.${live.activity}`)
+-  const detail = detailed && !data.closed ? live.detail : ''
++  const label = working ? t(`message.stepProcess.${live.activity}`) : processTitle(data.summary, t)
++  const detail = detailed && working ? live.detail : ''
+   const title = detail === '' ? label : `${label}${t('message.turnProcess.separator')}${detail}`
+-  const activity = data.closed ? data.summary.counts[0]?.kind ?? 'thinking' : live.activity
++  const activity = working ? live.activity : data.summary.counts[0]?.kind ?? 'thinking'
+   return (
+-    <button type="button" className={css.title} aria-expanded={open} aria-controls={bodyId}
++    <button type="button" id={bodyId + '-title'} className={`${css.title} tx-cu-group-toggle`} aria-expanded={open} aria-controls={bodyId}
+       data-process-activity={activity} onClick={(event) => { event.currentTarget.focus(); toggle() }}>
+       <span className={css.leading} aria-hidden="true">
+         <span className={css.activityIcon} data-step-process-icon>{PROCESS_ICONS[activity]}</span>
+@@ -126,7 +129,10 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
+           {open ? <IconChevronUpOutlineRegular /> : <IconChevronDownOutlineRegular />}
+         </span>
+       </span>
+-      <TextShimmer active={!data.closed} className={css.label}>{title}</TextShimmer>
++      <TextShimmer active={working} className={css.label}>{title}</TextShimmer>
++      {data.summary.counts.length > 0 && <span className={css.count} data-process-count>{t('message.stepProcess.count', { count: data.summary.counts.reduce((total, item) => total + item.count, 0) })}</span>}
++      {(data.summary.failures ?? 0) > 0 && <span className="tx-cu-error" data-process-failures>{t('message.stepProcess.failures', { count: data.summary.failures ?? 0 })}</span>}
++      {(data.summary.stopped ?? 0) > 0 && <span data-process-stopped>{t('message.stepProcess.stopped', { count: data.summary.stopped ?? 0 })}</span>}
+     </button>
+   )
+ })
+@@ -157,9 +163,11 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
+     if (spec !== undefined && !alwaysOpen) props.actions.setTurnProcessOpen(spec.turn, spec.answerStep ?? 0, true)
+   }, [props.actions, spec, alwaysOpen])
+   const rootRef = useSearchableHidden(outerHidden, revealOuter)
+-  useEffect(() => {
+-    if (outerHidden && rootRef.current?.hasAttribute('hidden')) setOpen(false)
+-  }, [outerHidden, rootRef, setOpen])
++  const wasClosed = useRef(presentation?.turnClosed)
++  useLayoutEffect(() => {
++    if (presentation?.turnClosed && !wasClosed.current && open) revealOuter()
++    wasClosed.current = presentation?.turnClosed
++  }, [presentation?.turnClosed, open, revealOuter])
+   const reveal = useCallback(() => { setOpen(true) }, [setOpen])
+   const bodyRef = useSearchableHidden(grouped && !open, reveal)
+   const contentRef = useRef<HTMLDivElement>(null)
+@@ -184,7 +192,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
+   const classes = [css.body, !grouped ? css.expandedBody : '',
+     grouped && edges.canScrollUp ? css.fadeTop : '', grouped && edges.canScrollDown ? css.fadeBottom : '']
+   return (
+-    <div ref={rootRef} className={css.root} data-chat-group-key={groupKey}
++    <div ref={rootRef} className={`${css.root} tx-cu-group`} data-chat-group-key={groupKey} data-cu-group={groupKey}
+       data-chat-flow-key={groupKey} data-chat-anchor-key={`group:${groupKey}`} data-chat-turn={turn}
+       data-chat-paging-anchor={grouped && !open || undefined}
+       data-step-process data-group-expanded-mode={!grouped || undefined}>
+@@ -192,7 +200,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
+         <ProcessGroupHeader groupKey={groupKey} useChatGroup={useChatGroup}
+           usePresentation={props.usePresentation} t={props.t} open={open} bodyId={bodyId} toggle={toggle} />
+       </div>
+-      <div ref={bodyRef} id={bodyId} className={classes.join(' ')} data-step-process-body
++      <div ref={bodyRef} id={bodyId} role="region" tabIndex={0} aria-labelledby={bodyId + '-title'} className={classes.join(' ')} data-step-process-body
+         data-scroll-up={edges.canScrollUp || undefined} data-scroll-down={edges.canScrollDown || undefined}
+         onScroll={sync}>
+         <div ref={contentRef} className={css.content} data-step-process-content data-chat-flow="">
+diff --git a/packages/client/ui-chat/src/client/chat/ChatNodeSeat.tsx b/packages/client/ui-chat/src/client/chat/ChatNodeSeat.tsx
+index 5bb003b..7b1b62c 100644
+--- a/packages/client/ui-chat/src/client/chat/ChatNodeSeat.tsx
++++ b/packages/client/ui-chat/src/client/chat/ChatNodeSeat.tsx
+@@ -1,4 +1,4 @@
+-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
++import { memo, useCallback, useMemo, useState } from 'react'
+ import { JsonBlock } from '@deepseek-ai/dsh-client-ui-primitives'
+ import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
+ import type { ConversationLocationDataStore, ConversationTurnDataMap } from '@deepseek-ai/dsh-client-ui-conversation/client'
+@@ -115,11 +115,7 @@ export const ChatNodeSeat = memo(function ChatNodeSeat({
+   const [disclosureReset] = useState(() => createSnapshotStore(0))
+   const turnData = turnDataOf(routedNode)
+   const hookContext = useMemo<ChatNodeHookContext>(() => ({ turnData, disclosureReset }), [turnData, disclosureReset])
+-  useEffect(() => {
+-    if (processMember && processHidden && wrapperRef.current?.hasAttribute('hidden')) {
+-      disclosureReset.set(disclosureReset.getSnapshot() + 1)
+-    }
+-  }, [processMember, processHidden, wrapperRef, disclosureReset])
++  // Parent folds change visibility only; preserve each detail's reading state.
+   const owner = useMemo<ChatNodeOwnerProps | null>(() => node === undefined
+     ? null
+     : {
+diff --git a/packages/client/ui-chat/src/client/contract/process-groups.ts b/packages/client/ui-chat/src/client/contract/process-groups.ts
+index 0c7bc74..0390064 100644
+--- a/packages/client/ui-chat/src/client/contract/process-groups.ts
++++ b/packages/client/ui-chat/src/client/contract/process-groups.ts
+@@ -1,9 +1,11 @@
+ /** Business data for Chat process groups; source Nodes remain in the Chat store. */
+ export type ProcessActivity = 'read' | 'search' | 'edit' | 'commands' | 'code'
+-  | 'webSearch' | 'webFetch' | 'subagents' | 'plan' | 'questions' | 'tools'
++  | 'webSearch' | 'webFetch' | 'subagents' | 'plan' | 'questions' | 'tools' | 'computer' | 'images'
+ 
+ /** Distinct-call category ranking and the current live task detail. */
+ export interface ProcessActivitySummary {
++  readonly failures?: number
++  readonly stopped?: number
+   readonly counts: readonly { readonly kind: ProcessActivity; readonly count: number }[]
+   readonly running: ProcessActivity | undefined
+   readonly runningDetail: string
+diff --git a/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts b/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
+index d6766b1..add41fb 100644
+--- a/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
++++ b/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
+@@ -5,7 +5,9 @@ import { isRunningTool } from '../contract/chat-nodes.ts'
+ import type { ToolCallBlock } from '../contract/snapshot.ts'
+ 
+ function activity(name: string): ProcessActivity {
+-  if (['read', 'read_image', 'list_mcp_resources', 'list_mcp_resource_templates', 'read_mcp_resource'].includes(name)) return 'read'
++  if (/^computer_use(?:_|$)/.test(name.split(/[./]/).at(-1) ?? '')) return 'computer'
++  if (name === 'read_image') return 'images'
++  if (['read', 'list_mcp_resources', 'list_mcp_resource_templates', 'read_mcp_resource'].includes(name)) return 'read'
+   if (name === 'grep' || name === 'glob' || name.endsWith('_inspect')) return 'search'
+   if (['write', 'edit', 'apply_patch'].includes(name)) return 'edit'
+   if (['bash', 'pwsh', 'exec_command', 'write_stdin'].includes(name) || name.startsWith('terminal_')) return 'commands'
+@@ -95,9 +97,16 @@ export function processActivity(nodes: readonly ChatNode[]): ProcessActivitySumm
+   let running: ProcessActivity | undefined
+   let runningDetail = ''
+   let runningTime = -Infinity
++  let failures = 0, stopped = 0
+   const visit = (tool: ToolCallBlock): void => {
+     if (seen.has(tool.callId)) return
+     seen.add(tool.callId)
++    if (!isRunningTool(tool)) {
++      const name = tool.call?.name ?? ''
++      const stoppedComputer = activity(name) === 'computer' && tool.isError && /tool call aborted|Computer Use (?:was |is )?stopped/i.test(tool.content.filter(block => block.type === 'text').map(block => block.text).join('\n'))
++      if (stoppedComputer || ['ABORTED', 'ABORTED_BEFORE_DISPATCH', 'interrupted', 'COMPUTER_USE_STOPPED'].includes(tool.error?.code ?? '')) stopped++
++      else if (tool.isError || tool.meta && Reflect.get(tool.meta, 'computerUseError')) failures++
++    }
+     const call = isRunningTool(tool) ? tool : tool.call
+     if (call !== null) {
+       const kind = activity(call.name)
+@@ -115,6 +124,8 @@ export function processActivity(nodes: readonly ChatNode[]): ProcessActivitySumm
+   }
+   if (running === undefined) runningDetail = liveReasoningDetail(nodes)
+   return {
++    ...(failures > 0 ? { failures } : {}),
++    ...(stopped > 0 ? { stopped } : {}),
+     counts: [...counts].map(([kind, count]) => ({ kind, count })).sort((a, b) => b.count - a.count),
+     running,
+     runningDetail,
+diff --git a/packages/client/ui-chat/src/client/conversation-nodes/process-groups.ts b/packages/client/ui-chat/src/client/conversation-nodes/process-groups.ts
+index bff0c53..160edaf 100644
+--- a/packages/client/ui-chat/src/client/conversation-nodes/process-groups.ts
++++ b/packages/client/ui-chat/src/client/conversation-nodes/process-groups.ts
+@@ -29,6 +29,7 @@ function reply(node: ChatNode): boolean {
+ 
+ function sameSummary(left: ProcessActivitySummary, right: ProcessActivitySummary): boolean {
+   return left.running === right.running && left.runningDetail === right.runningDetail
++    && left.failures === right.failures && left.stopped === right.stopped
+     && left.counts.length === right.counts.length && left.counts.every((value, index) =>
+     value.kind === right.counts[index]?.kind && value.count === right.counts[index].count)
+ }
+diff --git a/packages/client/ui-chat/src/client/locale.ts b/packages/client/ui-chat/src/client/locale.ts
+index f246af9..4475bee 100644
+--- a/packages/client/ui-chat/src/client/locale.ts
++++ b/packages/client/ui-chat/src/client/locale.ts
+@@ -17,11 +17,18 @@ export const zh = {
+   'message.stepProcess.plan': '正在更新计划',
+   'message.stepProcess.questions': '等待你的操作',
+   'message.stepProcess.tools': '正在调用工具',
++  'message.stepProcess.computer': '正在操作电脑',
++  'message.stepProcess.done.computer': '已操作电脑',
++  'message.stepProcess.images': '正在查看图像',
++  'message.stepProcess.done.images': '已查看图像',
++  'message.stepProcess.count': '{count} 次操作',
++  'message.stepProcess.failures': '{count} 项失败',
++  'message.stepProcess.stopped': '{count} 项已停止',
+   'message.stepProcess.done.thinking': '已完成分析',
+   'message.stepProcess.done.read': '已读取文件',
+   'message.stepProcess.done.search': '已搜索代码',
+   'message.stepProcess.done.edit': '修改了文件',
+-  'message.stepProcess.done.commands': '执行了命令',
++  'message.stepProcess.done.commands': '已运行命令',
+   'message.stepProcess.done.code': '运行了代码',
+   'message.stepProcess.done.webSearch': '已搜索网页',
+   'message.stepProcess.done.webFetch': '已访问网页',
+@@ -175,6 +182,13 @@ export const en = {
+   'message.stepProcess.plan': 'Updating the plan',
+   'message.stepProcess.questions': 'Waiting for your action',
+   'message.stepProcess.tools': 'Calling tools',
++  'message.stepProcess.computer': 'Operating computer',
++  'message.stepProcess.done.computer': 'Operated computer',
++  'message.stepProcess.images': 'Viewing images',
++  'message.stepProcess.done.images': 'Viewed images',
++  'message.stepProcess.count': '{count} operations',
++  'message.stepProcess.failures': '{count} failed',
++  'message.stepProcess.stopped': '{count} stopped',
+   'message.stepProcess.done.thinking': 'Analysis completed',
+   'message.stepProcess.done.read': 'Read files',
+   'message.stepProcess.done.search': 'Searched code',

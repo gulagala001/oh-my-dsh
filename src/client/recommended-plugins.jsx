@@ -3,7 +3,7 @@ import { recommendedPlugins } from './recommended-plugins.mjs';
 import { createPoller } from './polling.mjs';
 
 async function pluginApi(input, signal) {
-  const response = await fetch('/trisoul-x/recommended-plugins', input === undefined ? { signal } : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
+  const response = await fetch('trisoul-x/recommended-plugins', input === undefined ? { signal } : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
   if (response.status === 404) throw Error('插件管理尚未加载，请重启 DSH 后重试');
   const data = await response.json();
   if (!response.ok) throw Error(data.error || `HTTP ${response.status}`);

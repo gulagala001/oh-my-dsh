@@ -1,9 +1,10 @@
-import { renderTodoInjection, TODO_META, TASK_CONTEXT_META, taskContextMeta, latestTaskContext, withoutTodo } from './task-context.mjs';
+import { sourceName } from './message-source.mjs';
+import { TODO_META, TASK_CONTEXT_META, taskContextMeta, latestTaskContext, withoutTodo } from './task-context.mjs';
 import { promptText } from './cc-adaptation/texts.mjs';
 // Task ledger adapted from trisoul 4189f90: preserve excerpts, anchors, item operations and evidence.
 // DSH V3 events and a unified model-facing tool are wired in tasks.mjs.
 import { execFile } from 'node:child_process'
-import { createUserMessage, createSystemMessage } from '@deepseek-ai/dsh-llm'
+import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import { accessSync, constants, realpathSync } from 'node:fs'
 import { resolve as resolvePath, extname } from 'node:path'
 
@@ -21,12 +22,8 @@ export const textOnly = (t) => !passedTest(t) && (t.links ?? []).some(l => l.kin
 /** 原装 wire 形：title→content、done→completed|pending（两态，不加 in_progress——用户拍板）；
  *  只靠文字过关的条目 content 尾加 ⚠ text-only（I7 放行可见，同 wire 格式 UI 零改，08-29(3) 拍板） */
 export const todosOf = (tasks) => (Array.isArray(tasks) ? tasks : []).map(t => ({ content: textOnly(t) ? `${t.title} ⚠ text-only` : t.title, status: t.done ? 'completed' : 'pending' }))
-/** I1：用户发言时随 A 请求注入的提醒（spec I1 逐字） */
+/** 新用户输入时投递的任务提醒。 */
 export const TODO_NUDGE = promptText('runtime/task-nudge.md')
-/** I5 空清单提醒文案（拍板 08-29）：事实—弱建议同 I1 家族，多一个豁免句（此条是「我们猜你忘了」，须给台阶） */
-export const TODO_EMPTY_NUDGE = promptText('runtime/task-empty.md')
-/** I2 换代注入消息的 id 前缀（canvas 遮蔽/钉最新按 [todo list] 文本头识别，id 前缀供本插件回收计数） */
-export const TODO_INJECTION_ID_PREFIX = 'trisoul-todolist-'
 /** run 失败输出尾巴长度（回执 output tail 的截取；「tail」语义是拍板文案自带的，非预算限制） */
 const RUN_TAIL_CHARS = 2000
 /** 单个测试文件的执行上限（对齐本仓 run_verify 前例 tsc 300s；防挂死拖住取证轮） */
@@ -133,9 +130,6 @@ function renderVerifyView(rec) {
   }
   return lines.join('\n')
 }
-/** I2 裸版注入正文：[todo list] 标签 + 逐行 [ ]/[x]（无任何框架语；仅任务树+完成态） */
-const renderInjection = renderTodoInjection
-
 // Original task-completion reminders; shared by the single-model stopping hook.
 const qualified = (l) => l.kind === 'text' || l.lastRun?.pass === true
 const deficitClause = (l) => l.kind === 'text'
@@ -262,24 +256,15 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
   const recordOf = (sid) => {
     let r = sessions.get(sid)
     if (!r) {
-      r = { excerpts: [], tasks: [], nextE: 1, nextT: 1, nextL: 1, rev: 0, injectedRev: -1, lastInjSeq: -1, injCounter: 0, nudgedSeq: -1, emptyNudgedSeq: -1, adopted: false }
+      r = { excerpts: [], tasks: [], nextE: 1, nextT: 1, nextL: 1, adopted: false }
       sessions.set(sid, r)
     }
     return r
   }
-  /** 会话 resume（新进程内存态已丢）：从事件日志恢复最新快照 + 注入位点 */
+  // Restore the complete ledger, including quiet evidence-review snapshots.
   const adopt = (session, r) => {
     r.adopted = true
-    let last, lastSnapSeq = -1
-    for (const e of session.snapshotEvents()) {
-      // quiet 快照（I6 问过标记）= 模型面无变化：不涨 rev、不算变更位点（否则 resume 后白注一版清单）
-      if (isTodoSnapshot(e) || (e.type === TODOLIST_EVENT && Array.isArray(e.data?.todos))) { last = e; if (!e.data.quiet) { r.rev++; lastSnapSeq = e.seq } }
-      else if (e.type === 'user/message' && (e.data?.source?.plugin === 'trisoul-x:tasks' || e.data?.[TODO_META])) {
-        r.lastInjSeq = Math.max(r.lastInjSeq, e.seq)
-        const m = e.data.id.match(/-(\d+)$/)
-        if (m) r.injCounter = Math.max(r.injCounter, Number(m[1]))
-      }
-    }
+    const last = session.snapshotEvents().findLast(e => isTodoSnapshot(e) || (e.type === TODOLIST_EVENT && Array.isArray(e.data?.todos)))
     if (last?.data) {
       const d = last.data
       r.excerpts = structuredClone(d.excerpts ?? [])
@@ -288,8 +273,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       r.nextT = d.nextT ?? r.tasks.length + 1
       r.nextL = d.nextL ?? 1
     }
-    // 注入位点：最后一版注入晚于最后一次变更 → 视为同步；否则欠一版（下个 pre-step 补注）
-    r.injectedRev = r.lastInjSeq > lastSnapSeq ? r.rev : (r.lastInjSeq >= 0 ? r.rev - 1 : -1)
+
   }
   const getRec = (session) => {
     const r = recordOf(session.id)
@@ -301,7 +285,6 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     session.append(TODOLIST_EVENT, { todos: todosOf(next.tasks), excerpts: next.excerpts, tasks: next.tasks, nextE: next.nextE, nextT: next.nextT, nextL: next.nextL, ...(quiet ? { quiet: true } : {}) })
     r.excerpts = next.excerpts; r.tasks = next.tasks
     r.nextE = next.nextE; r.nextT = next.nextT; r.nextL = next.nextL
-    if (!quiet) r.rev++
   }
   const clone = (r) => structuredClone({ excerpts: r.excerpts, tasks: r.tasks, nextE: r.nextE, nextT: r.nextT, nextL: r.nextL })
   const err = (text) => ({ text, isError: true })
@@ -409,7 +392,6 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
         }
       }
       // 查重（2026-08-29 补拍板）：同 (msg,from,to) 三元组已入账 = 同一节选，整调用拒——
-      // 被拒 rev 不涨，同参重发才落得回取证循环 seenEvidence 防抖网（evKey 带 ledgerRev）
       const dupEx = rec.excerpts.find(x => x.msg === m.n && x.from === args.from && x.to === args.to)
       if (dupEx) return err(`Rejected: this excerpt is already recorded as ${dupEx.id} — the todo list already covers it. Use op:add/edit/remove to change tasks, or op:view to see it.`)
       if (!loc) {
@@ -624,34 +606,9 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     return n
   }
 
-  /** I1 领取：本会话出现更新的用户消息 → 发一次提醒（随 A 的请求注入，阅后即焚） */
-  const takeNudge = (session) => {
-    const rec = getRec(session)
-    const items = userMessages(session)
-    const seq = items.length ? items.at(-1).seq : -1
-    if (seq <= rec.nudgedSeq) return false
-    rec.nudgedSeq = seq
-    return true
-  }
-  /** I5 领取：状态区已换代（canvas 注入出现过 = 任务已复杂到有状态可记）而清单仍空 → 提醒 A 一次。
-   * 08-29(4)：随状态区每次换代再提一次（同一代只提一次，按最新画布注入 seq 记账）——DeepSWE adaptix 病例：
-   * 终身一次的提醒落在 STEP 5 一份 0 票落选的 A 稿里，此后 24 步无人再提；建过单即闭嘴（nextT>1，建后清空不再提）；
-   * 与 I1 的撞车让路在调用侧（同步命中只发 I1，本条留待后续步）。 */
-  const takeEmptyNudge = (session) => {
-    const rec = getRec(session)
-    if (rec.tasks.length || rec.nextT > 1) return false
-    let latest = -1
-    for (const e of session.snapshotEvents()) {
-      if (e.type === 'user/message' && e.data?.source?.kind === 'plugin' && e.data.source.plugin === 'trisoul-x:state') latest = Math.max(latest, e.seq ?? -1)
-    }
-    if (latest < 0 || latest <= rec.emptyNudgedSeq) return false
-    rec.emptyNudgedSeq = latest
-    return true
-  }
-  /** I2 换代注入（pre-step 边界调用，机制同画布状态区 P2-2）：变更后 / 状态区更新后 append 一版新清单 */
+  // Compare the live Todo/runtime block with the current ledger at request boundaries.
   const maintainInjection = (session, options = {}) => {
-    const rec = getRec(session)
-    let live = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && (e.data?.source?.plugin === 'trisoul-x:tasks' || e.data?.[TODO_META]));
+    let live = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && (sourceName(e.data?.source) === 'trisoul-x:tasks' || e.data?.[TODO_META]));
     const desired = latestTaskContext(session, options.runtime);
     // Disabling removes only our state section, including compressed carriers.
     if (!desired?.meta.runtime) {
@@ -667,11 +624,10 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
           const base = withoutTodo(e.data);
           session.append('user/message', { ...base, id: crypto.randomUUID(), source: base.source?.kind === 'user' ? e.data.source : base.source }, { surfaceOp: { op: 'replace', startSeq: e.seq, endSeq: e.seq }, sourceEventSeqs: [e.seq] });
         } else {
-          const start = session.snapshotEvents().findLast(e => e.type === 'turn/start');
-          session.append('system/message', { turn: start?.data.turn ?? 1, step: 1, message: createSystemMessage('', 'trisoul-x:shadow') }, { surfaceOp: { op: 'replace', startSeq: e.seq, endSeq: e.seq }, sourceEventSeqs: [e.seq] });
+          session.append('user/message', createUserMessage({ content: [], source: { kind: 'plugin:trisoul-x:shadow' } }), { surfaceOp: { op: 'replace', startSeq: e.seq, endSeq: e.seq }, sourceEventSeqs: [e.seq] });
         }
       }
-      live = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && (e.data?.source?.plugin === 'trisoul-x:tasks' || e.data?.[TODO_META]));
+      live = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && (sourceName(e.data?.source) === 'trisoul-x:tasks' || e.data?.[TODO_META]));
     }
     if (!desired) return undefined;
     // Budget-only updates share the existing summary exclusion and compaction
@@ -680,25 +636,17 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     const text = last?.data.content[last.data[TODO_META]?.index ?? 0]?.text;
     // The full block always follows the original node-based cadence.
     const same = meta ? meta.todoText === desired.meta.todoText && (meta.runtime?.key ?? null) === (desired.meta.runtime?.key ?? null) : text === desired.text;
-    if (same) { rec.lastInjSeq = last.seq; rec.injectedRev = rec.rev; }
-    let canvasSeq = -1;
-    for (const e of session.snapshotEvents()) {
-      if (e.type === 'user/message' && e.data?.source?.kind === 'plugin' && e.data.source.plugin === 'trisoul-x:state') canvasSeq = e.seq;
-    }
-    if (same && !(rec.tasks.length && canvasSeq > rec.lastInjSeq)) {
+    if (same) {
       const budget = desired.meta.runtime?.budget;
       const previous = taskContextMeta(live.findLast(e => taskContextMeta(e.data)?.runtime?.budget)?.data)?.runtime.budget;
       if (!budget?.every || !previous || budget.rounds - previous.rounds < budget.every) return undefined;
       const runtime = { ...desired.meta.runtime, text: budget.text };
-      return session.append('user/message', { ...createUserMessage({ content: [{ type: 'text', text: budget.text }], source: { kind: 'plugin', plugin: 'trisoul-x:tasks' } }),
+      return session.append('user/message', { ...createUserMessage({ content: [{ type: 'text', text: budget.text }], source: { kind: 'plugin:trisoul-x:tasks' } }),
         [TASK_CONTEXT_META]: { todoText: null, runtime, budgetOnly: true } }, { surfaceOp: 'append' });
     }
-    const msg = { ...createUserMessage({ content: [{ type: 'text', text: desired.text }], source: { kind: 'plugin', plugin: 'trisoul-x:tasks' } }), [TASK_CONTEXT_META]: desired.meta };
-    const ev = session.append('user/message', msg, { surfaceOp: 'append' });
-    rec.injectedRev = rec.rev; rec.lastInjSeq = ev.seq;
-    return ev;
+    const msg = { ...createUserMessage({ content: [{ type: 'text', text: desired.text }], source: { kind: 'plugin:trisoul-x:tasks' } }), [TASK_CONTEXT_META]: desired.meta };
+    return session.append('user/message', msg, { surfaceOp: 'append' });
   }
-  const revOf = (session) => getRec(session).rev
 
-  return { execTaskMap, execCheck, execVerifyLink, releaseSummary, gateState, unresolvedText, unqualifiedText, textReviewText, textReviewLinkIds, markTextReviewed, takeNudge, takeEmptyNudge, maintainInjection, revOf, turnControl, resetTurnControl: session => turnControls.delete(session), snapshot: session => clone(getRec(session)) }
+  return { execTaskMap, execCheck, execVerifyLink, releaseSummary, gateState, unresolvedText, unqualifiedText, textReviewText, textReviewLinkIds, markTextReviewed, maintainInjection, turnControl, resetTurnControl: session => turnControls.delete(session), snapshot: session => clone(getRec(session)) }
 }

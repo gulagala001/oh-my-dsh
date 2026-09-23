@@ -1,3 +1,4 @@
+import { sourceName } from '../message-source.mjs';
 import { contextConfig } from '../config.mjs';
 export { contextConfig };
 import { randomUUID } from 'node:crypto';
@@ -73,7 +74,7 @@ export class ContextPipeline {
     this.agents.set(agent.session.id, agent); const s = this.state(agent.session);
     if (!s.initialized) {
       const covered = new Set(s.records.flatMap(r => r.sourceSeqs));
-      s.eventsSincePrepare = agent.session.surface.nodes.filter(seq => { const e = agent.session.eventAt(seq); return !covered.has(seq) && (actualUser(e) || (['assistant/message', 'tool/result'].includes(e.type) && !e.data?.message?.source?.plugin)); }).length;
+      s.eventsSincePrepare = agent.session.surface.nodes.filter(seq => { const e = agent.session.eventAt(seq); return !covered.has(seq) && (actualUser(e) || (['assistant/message', 'tool/result'].includes(e.type) && !sourceName(e.data?.message?.source))); }).length;
       s.initialized = true; this.store.save(s);
     }
     void this.prepare(agent, false); this.arm(agent);
@@ -81,7 +82,7 @@ export class ContextPipeline {
   }
   observe(session, event) {
     if (delegated(session) || this.closed || !this.config().contextEnabled) return;
-    if (!actualUser(event) && (!['assistant/message', 'tool/result'].includes(event.type) || event.data?.message?.source?.plugin)) return;
+    if (!actualUser(event) && (!['assistant/message', 'tool/result'].includes(event.type) || sourceName(event.data?.message?.source))) return;
     const agent = this.agents.get(session.id);
     if (!agent) return;
     const s = this.state(session);
@@ -446,7 +447,7 @@ export class ContextPipeline {
   async retireLegacyInjections(session) {
     const s = this.state(session);
     if (s.migrationVersion === 1) return;
-    const old = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && ['trisoul-x:memory', 'trisoul-x:task-memory'].includes(e.data?.source?.plugin));
+    const old = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && ['trisoul-x:memory', 'trisoul-x:task-memory'].includes(sourceName(e.data?.source)));
     if (old.length) {
       const tx = { id: randomUUID(), planId: 'legacy-memory-retirement', source: 'migration', createdAt: Date.now(),
         operations: old.map(e => ({ id: randomUUID(), kind: 'delete', seqs: [e.seq], text: '', position: session.surface.nodes.indexOf(e.seq) })),

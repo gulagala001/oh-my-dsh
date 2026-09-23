@@ -4,20 +4,20 @@
 
 OpenCU 从 [Oh My DSH](https://github.com/gulagala001/oh-my-dsh) 的 Computer Use 提取而来，提供相同的操控工具、实时预览和接管体验，可以独立安装到 DSH。Oh My DSH 继续集成全部能力，并直接复用 OpenCU 的实现。
 
-当前版本：[1.0.4](https://github.com/gulagala001/opencu/releases/tag/v1.0.4)。源码、发行包与 SHA-256 校验文件见版本页面。
+当前预发布版本：[1.1.0-rc.1](https://github.com/gulagala001/opencu/releases/tag/v1.1.0-rc.1)。源码、发行包与 SHA-256 校验文件见版本页面。
 
 ## 本版更新
 
-浏览器未准备时，可以在运行环境页面直接安装，无需手动运行命令。与 Oh My DSH 0.1.6-alpha.2.2 集成时，由统一基础组件页面自动准备；独立版保留原有设置入口。
+适配 DSH 0.1.7-alpha.1 的原生消息分组、设置和会话接口；合并重复的分组实现，修复独立版与 Oh My DSH 的挂载顺序及配置归属。浏览器、桌面操作、实时预览和接管能力完整保留。
 
-[版本说明与验证范围](docs/release-1.0.4.md)。
+[版本说明与验证范围](docs/release-1.1.0-rc.1.md)。
 
 ## 安装
 
-需要 **DSH 0.1.6-alpha.2 Web、Node.js ≥22.19、pnpm 11.23.0 和 Git**。先停止 DSH 服务，再运行：
+当前预发布版 **1.1.0-rc.1** 适配 **DSH 0.1.7-alpha.1 Web、Node.js ≥22.19、pnpm 11.23.0 和 Git**。先停止 DSH 服务，再运行：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/opencu#v1.0.4
+dsh plugin --profile web add github:gulagala001/opencu#v1.1.0-rc.1
 dsh web
 ```
 
@@ -53,14 +53,14 @@ OpenCU 沿用 DSH 的模型、会话、工具权限和审批配置，不更改�
 ## 与 Oh My DSH 一起使用
 
 - **只装 OpenCU**：获得 Computer Use，保留 DSH 原有工作方式。
-- **只装 Oh My DSH 集成版（包括新编号 0.1.6-alpha.2.2）**：自动带入 OpenCU，仍是完整整合版。
+- **只装 Oh My DSH 集成版**：自动带入 OpenCU，仍是完整整合版。
 - **两个都装（与上述 Oh My DSH 集成版配合）**：共用一套运行时、工具和预览；电脑功能进入 Oh My 工作台。卸载其中一个后，另一个仍可使用。
 
 为了延续已有安装，数据默认仍位于 `DSH_HOME/trisoul-x/computer-use/`，扩展、原生程序和内部协议保留已有标识。部分系统安装界面仍显示 **Oh My DSH Computer Use**。独立版与整合版不需要重复授权或另建数据副本。
 
 OpenCU 配置位于 DSH 的 `opencu` 设置区。未显式设置的字段继承已有 Oh My DSH Computer Use 配置；显式 OpenCU 设置优先。浏览器路径、原生运行时路径和数据目录变更后重启 DSH。
 
-## 1.0.4 更新
+## 已有能力
 
 适配新版会话状态与插件生命周期，合并顶栏和侧栏的重复状态读取，优化长会话操作分组。网页工具栏可在同一会话的官方浏览器中打开独立预览；原操控目标、接管、恢复和独立窗口不变。官方预览受网站嵌入限制，不保证与 CU 共享登录状态。
 
@@ -68,16 +68,12 @@ OpenCU 配置位于 DSH 的 `opencu` 设置区。未显式设置的字段继承�
 
 已连接 Chrome 的受控标签现在按会话自动分组，显示 **OMD · 会话名称**、区分颜色，并在停止后保留标记。需要扩展 **0.1.4**；更新连接文件后重新加载扩展。本版已包含该能力，详见使用指南。
 
-## 1.0.2 更新
-
-统一模型可见的环境和预览说明，保留实际路径、API 名称、权限边界和工具行为。此次不改变浏览器或桌面能力范围。
-
 ## 更新与卸载
 
 先停止服务，再运行对应命令，然后重新启动 `dsh web`：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/opencu
+dsh plugin --profile web add github:gulagala001/opencu#v1.1.0-rc.1
 dsh plugin --profile web remove opencu
 ```
 
@@ -98,5 +94,7 @@ pnpm start
 `pnpm start` 默认使用仓库下 `data/dsh/` 的独立 DSH 配置，也可设置 `DSH_HOME`。测试使用独立浏览器配置；原生桌面专项按平台与环境条件运行。Windows 自动化配置见 `.github/workflows/windows-computer-use.yml`。
 
 `src/integration.mjs` 与 `src/client/computer-use.jsx` 提供整合入口；浏览器、原生服务、扩展和平台测试都在此仓库维护。Oh My DSH 同步完整发行快照，并校验其中每个文件，不单独修改通用实现。
+
+浏览器和原生桌面的完整界面场景分别在 `test/computer-use-ui.test.mjs`、`test/computer-use-native-ui.test.mjs` 维护；Oh My DSH 只保留宿主预设、工具传输、组件设置与真实画面接入检查。对话框场景已独立为 `test/browser-dialog-ui.test.mjs`，运行 `node --test test/browser-dialog-ui.test.mjs` 或手动触发 Browser dialog regression，不需要先执行预览拖动、缩放及桌面安装流程。
 
 第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

@@ -1,4 +1,4 @@
-/* Original Google / Android composition for the DSH alpha.2 host.
+/* Original Google / Android composition for the DSH 0.1.7-alpha.1 host.
    All geometry is scoped to this shipped layout; imported CSS stays visual. */
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] body {
   --dsw-font-family: var(--omd-font-ui);
@@ -97,10 +97,10 @@ html.omd[data-omd-layout="google-material-expressive"][data-appearance] .VOzbGW_
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] .VOzbGW_close { width: 40px; height: 40px; background: var(--omd-surface); border-radius: 50%; }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] .VOzbGW_options { padding: 4px 32px 32px; background: var(--omd-bg); overscroll-behavior: contain; }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] .VOzbGW_options > * { max-width: 800px; margin-inline: auto; }
-html.omd[data-omd-layout="google-material-expressive"][data-appearance] .VOzbGW_options :is(.zGbnIq_rowCard,.zGbnIq_addCard,.zGbnIq_setupCard,.qSYn7G_card,.n0cM8a_row) { background: var(--omd-surface); border: 0; box-shadow: none; border-radius: 20px; padding: 18px 20px; }
+html.omd[data-omd-layout="google-material-expressive"][data-appearance] .VOzbGW_options :is(.zGbnIq_rowCard,.zGbnIq_addCard,.zGbnIq_setupCard,.qSYn7G_card) { background: var(--omd-surface); border: 0; box-shadow: none; border-radius: 20px; padding: 18px 20px; }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] .VOzbGW_options :is(h1,h2,.zGbnIq_title,.jLrgrW_title) { font-family: var(--omd-font-ui); font-weight: 500; letter-spacing: -.4px; }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] .VOzbGW_options :is(.zGbnIq_title,.jLrgrW_title) { font-size: 26px; line-height: 36px; margin-bottom: 12px; }
-html.omd[data-omd-layout="google-material-expressive"][data-appearance] :is(.oY77xG_row,.bVCLcG_row,.hVGvvW_row,.lats3W_row,.T1PP_q_row,._8HJdBW_group) { padding: 18px 20px; min-height: 68px; box-sizing: border-box; background: var(--omd-surface); border: 0; border-radius: 8px; margin-bottom: 3px; }
+html.omd[data-omd-layout="google-material-expressive"][data-appearance] :is(.oY77xG_row,.bVCLcG_row,.hVGvvW_row,._2XZxNq_row,.T1PP_q_row,._8HJdBW_group) { padding: 18px 20px; min-height: 68px; box-sizing: border-box; background: var(--omd-surface); border: 0; border-radius: 8px; margin-bottom: 3px; }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] ._8HJdBW_themeCube { background: var(--omd-bg); border-color: var(--omd-border); border-radius: 18px; }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] ._8HJdBW_themeCube[aria-pressed=true] { background: var(--omd-selected); color: var(--omd-on-selected); border: 2px solid var(--omd-accent); }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] ._WvWnq_section > :first-child { border-radius: 20px 20px 8px 8px; }

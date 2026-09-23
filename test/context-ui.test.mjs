@@ -1,3 +1,4 @@
+import { configSnapshot } from '../src/config.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONTEXT_FREQUENCY_PRESETS, contextFrequencyOf, contextFrequencyPatch, contextSettingsPatch, contextRouteMode, createContextUI } from '../src/client/context-client.mjs';
@@ -15,12 +16,12 @@ test('three presets have only live settings and each passes runtime configuratio
 test('host and pipeline defaults both use the calibrated medium cadence without overwriting saved values', async () => {
   const { Config } = await import('../src/config.mjs');
   const expected = { digestEvery: 48, digestWindow: 48, coordinatorEvery: 3, coordinatorMinGapMs: 60000, surgeryCooldownSteps: 30 };
-  for (const config of [Config({}), contextConfig(), contextConfig(Config({}))]) {
+  for (const config of [configSnapshot(Config({})), contextConfig(), contextConfig(configSnapshot(Config({})))]) {
     assert.equal(contextFrequencyOf(config), 'medium');
     for (const [key, value] of Object.entries(expected)) assert.equal(config[key], value);
   }
   const saved = { digestEvery: 16, digestWindow: 16, coordinatorEvery: 1, coordinatorMinGapMs: 15000, surgeryCooldownSteps: 10 };
-  for (const config of [Config(saved), contextConfig(saved)]) {
+  for (const config of [configSnapshot(Config(saved)), contextConfig(saved)]) {
     for (const [key, value] of Object.entries(saved)) assert.equal(config[key], value);
     assert.equal(contextFrequencyOf(config), 'custom');
   }
@@ -58,7 +59,7 @@ test('route detection keeps customized efforts and providers rather than display
 test('idle settings are visible by default, off, preserve their delay and do not affect Trace', async () => {
   const React = await import('react'); const { renderToStaticMarkup } = await import('react-dom/server');
   const { Config } = await import('../src/config.mjs');
-  const config = Config({}); assert.equal(config.idlePreprocessEnabled, false); assert.equal(config.flushIdleMs, 90000);
+  const config = configSnapshot(Config({})); assert.equal(config.idlePreprocessEnabled, false); assert.equal(config.flushIdleMs, 90000);
   const { ContextSettings } = createContextUI(React); const panel = new ContextSettings({});
   panel.state = { ...panel.state, config };
   const html = renderToStaticMarkup(panel.renderBasic());
@@ -76,7 +77,7 @@ test('idle settings are visible by default, off, preserve their delay and do not
 
 test('whole-window mode defaults on and all material/batch budget settings are exposed', async () => {
   const React = await import('react'), { renderToStaticMarkup } = await import('react-dom/server');
-  const { Config } = await import('../src/config.mjs'); const config = Config({});
+  const { Config } = await import('../src/config.mjs'); const config = configSnapshot(Config({}));
   assert.equal(config.preprocessBoundaries, false); assert.equal(config.prepareBatchWindows, 2);
   assert.equal(config.backgroundConcurrency, 2); assert.equal(config.backgroundMaxRetries, 2);
   const { ContextSettings } = createContextUI(React), panel = new ContextSettings({}); panel.state = { ...panel.state, config };
@@ -89,7 +90,7 @@ test('whole-window mode defaults on and all material/batch budget settings are e
 test('experimental settings group CFR and CoT without changing their defaults or coupling saves', async () => {
   const React = await import('react'), { renderToStaticMarkup } = await import('react-dom/server');
   const { Config } = await import('../src/config.mjs');
-  const config = Config({}); assert.equal(config.todoConstraintFirst, false);
+  const config = configSnapshot(Config({})); assert.equal(config.todoConstraintFirst, false);
   const { ContextSettings } = createContextUI(React), panel = new ContextSettings({});
   panel.state = { ...panel.state, config };
   const html = renderToStaticMarkup(panel.renderExperimental());

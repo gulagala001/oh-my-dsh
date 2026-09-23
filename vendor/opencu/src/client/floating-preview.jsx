@@ -67,7 +67,7 @@ export function FloatingPreview({sessionId,state,url,api,onState,onError,anchor,
     const control=event.target.closest('button,a,input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="button"]');
     if(popup||event.button!==0||event.isPrimary===false||(control&&!control.matches('.tx-cu-preview-open:not(:disabled)')))return;
     const box=floating.current?.getBoundingClientRect();if(!box)return;
-    const element=control??event.currentTarget;
+    const element=control??event.target.closest('header')??event.currentTarget;
     if(!control)event.preventDefault();element.setPointerCapture(event.pointerId);
     drag.current={id:event.pointerId,element,x:event.clientX,y:event.clientY,left:box.left,top:box.top};
   };

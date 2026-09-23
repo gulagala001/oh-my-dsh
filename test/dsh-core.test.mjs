@@ -9,7 +9,7 @@ import { createUserMessage, createSystemMessage } from '@deepseek-ai/dsh-llm';
 import { Hub, message } from '../src/hub.mjs';
 import { HubStore, projectOf } from '../src/hub-store.mjs';
 import { ensureSystemHead } from '../src/system-head.mjs';
-import { Config } from '../src/config.mjs';
+import { contextConfig as Config } from '../src/config.mjs';
 import { TASK_DESCRIPTION, VERIFICATION_DESCRIPTION } from '../src/tasks.mjs';
 import { MAIN_PERSONA } from '../src/prompts.mjs';
 
@@ -18,7 +18,7 @@ function setup(t) {
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const store = new HubStore(dir), config = Config({});
   const hub = Object.assign(Object.create(Hub.prototype), { store, getConfig: () => config });
-  const session = Session.create('test', undefined, { version: 3, id: 'test', createdAt: 1, cwd: dir, isSeeded: false, agentPreset: 'trisoul-x' });
+  const session = Session.create('test', undefined, { version: 4, id: 'test', createdAt: 1, cwd: dir, isSeeded: false, agentPreset: 'trisoul-x' });
   return { store, hub, session, config, dir };
 }
 

@@ -6,10 +6,10 @@ Windows 上使用同一套 Oh My DSH 插件、任务、记忆和工作台。内�
 
 ## 安装与试用
 
-当前预发布版需要 **DSH 0.1.6-alpha.2 Web**。先阅读[当前验证限制](release-0.1.6-alpha.2.3.md#验证范围与限制)，再停止服务，在 PowerShell 7 中安装插件：
+当前 Oh My DSH 1.7.0-rc.1 为预发布版，需要 **DSH 0.1.7-alpha.1 Web**；本轮尚未进行 Windows 真机复验。先阅读[本版验证与升级说明](release-1.7.0-rc.1.md)，停止服务并备份 DSH_HOME 后，在 PowerShell 7 中安装：
 
 ```powershell
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.6-alpha.2.3
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.0-rc.1
 if ($LASTEXITCODE -ne 0) { throw '插件安装失败' }
 dsh web
 ```

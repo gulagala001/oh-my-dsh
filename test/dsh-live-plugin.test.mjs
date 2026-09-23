@@ -4,10 +4,10 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 
-test('DSH alpha.2 provider changes refresh UI and restore one instance without losing drafts, settings or history', { timeout: 90000 }, async t => {
+test('DSH provider changes update the client graph and restore one instance without losing drafts, settings or history', { timeout: 90000 }, async t => {
   const f=await frontendFixture(t, { lifecycleTrace: true }), {page}=f, base=new URL(page.url()).origin;
   const credentials=await readFile(join(f.home,'.credentials.yaml'),'utf8');
-  const settings=await readFile(join(f.home,'settings.yaml'),'utf8');
+  const settings=await readFile(join(f.home,'settings.yaml.imported'),'utf8');
   const readState=async()=>{const response=await page.request.get(base+'/trisoul-x/api/state?session='+f.sessionId);assert.ok(response.ok());return response.json();};
   const before=await readState();
   const change=async(name,enabled)=>{
@@ -38,7 +38,7 @@ test('DSH alpha.2 provider changes refresh UI and restore one instance without l
   const after=await readState();
   assert.deepEqual(after.tasks,before.tasks);assert.deepEqual(after.metrics,before.metrics);
   assert.equal(await readFile(join(f.home,'.credentials.yaml'),'utf8'),credentials);
-  assert.equal(await readFile(join(f.home,'settings.yaml'),'utf8'),settings);
+  assert.equal(await readFile(join(f.home,'settings.yaml.imported'),'utf8'),settings);
   const responses = await page.getByText('已经梳理好今天的工作。', {exact:true}).count();
   await page.locator('[data-composer-input]').press('Enter');
   await until(async () => await page.getByText('已经梳理好今天的工作。', {exact:true}).count() > responses);

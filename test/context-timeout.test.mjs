@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Config } from '../src/config.mjs';
+import { contextConfig as Config } from '../src/config.mjs';
 import { Hub } from '../src/hub.mjs';
 
 test('background timeout defaults to ten minutes; explicit values keep their meaning', () => {

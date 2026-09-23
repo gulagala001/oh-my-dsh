@@ -66,7 +66,7 @@ test('Codex desktop layout: native navigation, every settings page, workbench an
     }
     await page.getByRole('button', { name: '收起右侧边栏', exact: true }).click();
     await openSettings();
-    for (const name of ['通用设置', '模型', '内置插件', '外观', 'Oh My DSH', '推荐插件', 'Agent 预设', '已归档会话']) {
+    for (const name of ['通用设置', '模型', '内置插件', '外观', 'Oh My DSH', '推荐插件', 'Agent 预设']) {
       await nav.getByRole('button', { name, exact: true }).click();
       await capture('settings-' + mode + '-' + name);
       assert.equal(await hit(page.locator('.VOzbGW_close')), true, name + ' close accessible');
@@ -92,7 +92,7 @@ test('Codex desktop layout: native navigation, every settings page, workbench an
   await openSettings();
   for (const width of [768, 390]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    for (const name of ['通用设置', '模型', '内置插件', '外观', 'Oh My DSH', '推荐插件', 'Agent 预设', '已归档会话']) {
+    for (const name of ['通用设置', '模型', '内置插件', '外观', 'Oh My DSH', '推荐插件', 'Agent 预设']) {
       await nav.getByRole('button', { name, exact: true }).click();
       const box = await page.getByRole('dialog').boundingBox();
       assert.ok(box.x >= 0 && box.x + box.width <= width + 1, name + ' dialog fits');
@@ -198,7 +198,7 @@ test('Codex desktop keeps real tool failures, readable code, monochrome controls
   await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: f.sessionId, mode: 'queue', content: [{ type: 'text', text: '检查 Codex Desktop 字体与代码' }] });
   await page.getByText('Codex Desktop 字体与操作记录检查完成。', { exact: true }).waitFor();
   await page.locator('[data-turn-process-tool-calls="2"]').click();
-  const group = page.locator('[data-cu-group] > button').filter({ hasText: '2 次操作' }); await group.click();
+  const group = page.locator('[data-cu-group] .tx-cu-group-toggle').filter({ hasText: '2 次操作' }); await group.click();
   await page.getByText('读取失败', { exact: true }).waitFor();
   const openSettings = async () => {
     await page.getByRole('button', { name: '设置', exact: true }).click();

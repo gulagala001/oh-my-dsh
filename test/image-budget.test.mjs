@@ -14,7 +14,7 @@ function fixture({ profile = {}, managed = true, vision = true, failure = false 
   const ctx = {
     on(name, fn) { assert.equal(name, 'llm/stream'); listener = fn; },
     sessions: { get: id => id === session.id ? session : undefined },
-    settings: { section: () => ({ providers: { fixture: { maxRequestImageBytes: 1000, ...profile } } }) },
+    settings: { describe: () => [{ ns: 'llm-pi-ai', value: { providers: { fixture: { maxRequestImageBytes: 1000, ...profile } } } }] },
     get: () => attachments, llm: { resolveModelInfo: async () => ({ inputModalities: vision ? ['text', 'image'] : ['text'] }) },
     logger: { warn() {} },
   };
@@ -38,8 +38,8 @@ test('newest screenshot batch and at least two newest images survive the soft bu
   assert.equal(imageOffloadPlan([user([image('one'), image('two')]), assistant()], () => 600, 1000).count, 0);
 });
 
-test('occurrences count independently, including nested tool results; existing offloads do not count', () => {
-  const messages = [user([{ type: 'tool-result', content: Array.from({ length: 10 }, () => image('same')) }]), assistant(), user([image('a'), image('b'), { ...image('old'), offloaded: true }])];
+test('occurrences count independently in tool results; existing offloads do not count', () => {
+  const messages = [{ role: 'tool', toolCallId: 'screenshots', content: Array.from({ length: 10 }, () => image('same')) }, assistant(), user([image('a'), image('b'), { ...image('old'), offloaded: true }])];
   assert.equal(imageOffloadPlan(messages, () => 60, 1000).count, 5);
   assert.equal(imageOffloadPlan([{ role: 'system', content: [image('unsupported')] }], () => 60, 1).count, 0);
 });

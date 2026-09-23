@@ -1,3 +1,4 @@
+import { subpathProxy } from './subpath-proxy.mjs';
 import { createServer } from 'node:http';
 import { spawn, execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -14,11 +15,11 @@ export async function until(fn, timeout = 20000) {
   throw new Error('Frontend fixture timed out');
 }
 
-export async function frontendFixture(t, { imageBudget, versionResponse, headless = false, lifecycleTrace = false, installedPackage = process.env.OMD_UI_PACKED === '1', historyMessages = 0, componentAutoSetup = false, omdConfig = {}, reply, optimizerReply } = {}) {
+export async function frontendFixture(t, { imageBudget, versionResponse, headless = false, lifecycleTrace = false, installedPackage = process.env.OMD_UI_PACKED === '1', historyMessages = 0, componentAutoSetup = false, omdConfig = {}, chatConfig = {}, basePath = '/', agentPreset = 'trisoul-x', reply, optimizerReply } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'trisoul-frontend-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   await mkdir(home); await mkdir(workspace);
   let nextReply, releaseReply, replyFactory = reply, child, browser, page, log = '';
-  const errors = [];
+  const errors = [], browserDiagnostics = [];
   const provider = createServer(async (req, res) => {
     let request = ''; for await (const chunk of req) request += chunk; const payload = JSON.parse(request);
     if (payload.tools?.length && nextReply) { const waiting = nextReply; nextReply = null; await waiting; }
@@ -43,6 +44,7 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
   await writeFile(join(home, 'settings.yaml'), JSON.stringify({
     'llm-pi-ai': { providers: { fixture: { ...(imageBudget ? { maxRequestImageBytes: imageBudget } : {}), api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'FRONTEND_FIXTURE', models: [{ id: 'fixture', name: '界面预览模型', contextWindow: 1000000, maxTokens: 8192, input: ['text', 'image'] }] } } },
     'agent-default-model': { provider: 'fixture', model: 'fixture' },
+    'omd-ui-chat': chatConfig,
     'trisoul-x': { componentAutoSetup, digestEvery: 1000, flushIdleMs: 3600000, computerUseNativeBinary: join(root, 'missing-native'), computerUseChromeUserDataDir: join(root, 'chrome-profile'), ...omdConfig },
   }));
   await writeFile(join(home, '.credentials.yaml'), JSON.stringify({ version: 1, refs: { FRONTEND_FIXTURE: 'local-test-only' } }), { mode: 0o600 });
@@ -88,14 +90,16 @@ export function apply(ctx) { let seeded = false; ctx.on('session/created', sessi
   const origin = new URL(bootstrap).origin, login = await fetch(bootstrap, { redirect: 'manual' });
   const cookie = login.headers.getSetCookie().map(value => value.split(';')[0]).join('; ');
   const rpc = async (method, request) => {
-    const response = await fetch(origin + '/api/' + method, { method: 'POST', headers: { 'Content-Type': 'application/json', cookie }, body: JSON.stringify({ type: 'client-request', rpcId: crypto.randomUUID(), method, payload: { args: { request } } }) });
-    const value = await response.json(); if (!value.result?.ok) throw new Error(JSON.stringify(value)); return value.result.value;
+    const response = await fetch(origin + '/api/' + method, { method: 'POST', headers: { 'Content-Type': 'application/json', cookie }, body: JSON.stringify({ type: 'client-request', rpcId: crypto.randomUUID(), method, payload: { args: request === undefined ? {} : { request } } }) });
+    const value = await response.json(); if (!value.result?.ok) throw new Error(JSON.stringify(value) + '\n' + log.replace(/token=\S+/g, 'token=[redacted]')); return value.result.value;
   };
+  await until(async () => (await rpc('llm/listProviders')).some(provider => provider.id === 'fixture'));
   const registered = await rpc('workspace/create', { path: workspace });
-  const { sessionId } = await rpc('session/create', { workspaceId: registered.workspace.workspaceId, agentPreset: 'trisoul-x' });
+  const { sessionId } = await rpc('session/create', { workspaceId: registered.workspace.workspaceId, agentPreset });
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '整理工作台和对话界面' }] });
+  await until(async () => (await (await fetch(origin + '/trisoul-x/api/state?session=' + sessionId, {headers:{cookie}})).json()).running === 'idle');
   if (historyMessages) await rpc('session/rename', { sessionId, title: '整理工作台和对话界面' });
-  if (headless) return { root, home, workspace, origin, rpc, sessionId, errors, replyWith(factory) { replyFactory = factory; },
+  if (headless) return { root, home, workspace, origin, rpc, sessionId, errors, html: () => fetch(origin, { headers: { cookie } }).then(r => r.text()), replyWith(factory) { replyFactory = factory; },
     async api(path, body) { const r = await fetch(origin + '/trisoul-x/api' + path, { headers: { cookie, 'content-type': 'application/json' }, ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }) }); if (!r.ok) throw Error(await r.text()); return r.json(); }, lifecycle: () => readFile(lifecycleFile, 'utf8'), log: () => log.replace(/token=\S+/g, 'token=[redacted]'),
     async call(method, args) {
       const response = await fetch(origin + '/api/' + method, {
@@ -105,20 +109,28 @@ export function apply(ctx) { let seeded = false; ctx.on('session/created', sessi
       return response.json();
     },
   };
+  const proxy = basePath === '/' ? {url: origin+'/', escaped: []} : await subpathProxy(t, origin, basePath);
+  const browserOrigin = new URL(proxy.url).origin;
   browser = await chromium.launch({ headless: true, executablePath: chromium.executablePath() });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: 'light', locale: 'zh-CN' });
-  await context.addCookies(cookie.split('; ').map(value => { const index = value.indexOf('='); return { name: value.slice(0, index), value: value.slice(index + 1), url: origin }; }));
-  page = await context.newPage(); page.on('pageerror', error => errors.push(error.stack || error.message));
+  await context.addCookies(cookie.split('; ').map(value => { const index = value.indexOf('='); return { name: value.slice(0, index), value: value.slice(index + 1), url: browserOrigin }; }));
+  page = await context.newPage(); page.setDefaultTimeout(10000); page.on('pageerror', error => errors.push(error.stack || error.message));
+  page.on('console', message => { if (['error', 'warning'].includes(message.type())) browserDiagnostics.push(message.text()); });
   // Version-indicator fixtures never depend on public GitHub/network availability.
   const version = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8')).version;
   await page.route('**/trisoul-x/api/version*', async route => {
     const value = typeof versionResponse === 'function' ? await versionResponse() : versionResponse || { currentVersion: version, latestVersion: version, status: 'current', severity: 'none', releases: [], checkedAt: Date.now() };
     await route.fulfill({ json: value });
   });
-  await page.goto(origin); await page.getByRole('button', { name: '继续', exact: true }).click();
+  await page.goto(proxy.url);
+  const welcome = page.getByRole('button', { name: '继续', exact: true });
+  const failedBoot = page.getByText('Failed to load plugins', { exact: true });
+  await welcome.or(failedBoot).waitFor();
+  if (await failedBoot.isVisible()) throw Error('Browser boot failed: ' + [...errors, ...browserDiagnostics].join('\n').replace(/https?:\/\/[^\s)]+/g, '[bundle]') + '\n' + log.replace(/token=\S+/g, 'token=[redacted]'));
+  await welcome.click();
   await page.getByText('整理工作台和对话界面', { exact: true }).first().click();
   await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
-  return { root, home, page, context, rpc, sessionId, errors, lifecycle: () => readFile(lifecycleFile, 'utf8'), log: () => log.replace(/token=\S+/g, 'token=[redacted]'), replyWith(factory){replyFactory=factory;}, holdNextReply() {
+  return { root, home, page, context, rpc, sessionId, errors, escapedPaths: proxy.escaped, diagnostics: () => browserDiagnostics, lifecycle: () => readFile(lifecycleFile, 'utf8'), log: () => log.replace(/token=\S+/g, 'token=[redacted]'), replyWith(factory){replyFactory=factory;}, holdNextReply() {
     nextReply = new Promise(resolve => { releaseReply = resolve; });
     return () => releaseReply?.();
   } };

@@ -9,6 +9,14 @@ export class Components {
     this.operations = new Map(); this.records = new Map(); this.controller = new AbortController();
     this.automatic = hub.config().componentAutoSetup !== false;
     this.computerEnabled = computer.config().computerUseEnabled !== false;
+    const configuration = () => JSON.stringify([hub.config().codegraphEnabled, hub.config().componentAutoSetup, computer.config().computerUseEnabled]);
+    let previous = configuration();
+    ctx.on('app-boot/config-reload', () => {
+      const next = configuration();
+      if (next === previous) return;
+      previous = next;
+      return this.reconfigure().catch(error => ctx.logger.warn(error.message));
+    }, { global: true });
   }
   async run(id, action) {
     if (this.operations.has(id)) return this.operations.get(id);
@@ -56,6 +64,7 @@ export class Components {
     void this.hub.codegraph.ensureProject(cwd, { retry }).catch(() => {}); // The components page retains the actionable failure.
   }
   reconfigure() {
+    if (this.writingSettings) return Promise.resolve();
     return this.configuring = (this.configuring || Promise.resolve()).catch(() => {}).then(async () => {
       if (this.closed) return;
       const automatic = this.hub.config().componentAutoSetup !== false;
@@ -69,7 +78,7 @@ export class Components {
       this.automatic = automatic; this.computerEnabled = computerEnabled;
       this.hub.codegraph.autoInstall = this.hub.config().componentAutoSetup !== false;
       await this.hub.codegraph.setEnabled(this.hub.config().codegraphEnabled !== false);
-      await this.computer.refresh();
+      await this.computer.configuring;
       this.start();
       if (this.hub.config().codegraphEnabled !== false) for (const agent of this.hub.agents.values()) {
         const preset = this.ctx.sessionProjections?.stateOf(agent.session, 'agentPreset') ?? agent.session.header.agentPreset;
@@ -96,11 +105,19 @@ export class Components {
       } else if (!CU_FIELDS.includes(key) || typeof value !== 'string') throw new Error('未知的组件设置');
       (CU_FIELDS.includes(key) ? cu : own)[key] = value;
     }
-    if (Object.keys(own).length) await this.ctx.settings.update('trisoul-x', own);
-    if (Object.keys(cu).length) {
-      await this.ctx.settings.update('opencu', cu);
-      await this.reconfigure();
-    } else await this.configuring;
+    if (!Object.keys(own).length && !Object.keys(cu).length) return this.configuring;
+    return this.saving = (this.saving || Promise.resolve()).catch(() => {}).then(async () => {
+      this.writingSettings = true;
+      try {
+        const standalone = this.ctx.settings.describe().some(entry => entry.ns === 'opencu');
+        if (!standalone) Object.assign(own, cu);
+        if (Object.keys(own).length) await this.ctx.settings.update('trisoul-x', own);
+        if (standalone && Object.keys(cu).length) await this.ctx.settings.update('opencu', cu);
+      } finally {
+        this.writingSettings = false;
+        await this.reconfigure();
+      }
+    });
   }
   close() { this.closed = true; this.controller.abort(new Error('组件准备已停止')); }
 }

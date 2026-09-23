@@ -9,6 +9,11 @@ for (const destination of ['../browser-extension/logo.svg']) {
   await mkdir(new URL('./', url), { recursive: true });
   await writeFile(url, whaleSvg('omd-logo').replace('aria-hidden="true"', 'role="img" aria-label="Oh My DSH"'));
 }
+const nativeChat = await readFile(new URL('../vendor/dsh-chat/lib/client.js', import.meta.url), 'utf8');
+if (!nativeChat.startsWith('window.__ModuleLoader__.load({') || !nativeChat.replace(/^\/\/# sourceMappingURL=.*$/gm, '').trimEnd().endsWith('});')) throw Error('Unexpected native Chat factory');
+const registration = nativeChat.replace(/^\/\/# sourceMappingURL=.*$/gm, '').trimEnd().replace('window.__ModuleLoader__.load(', 'const registration = ').replace(/\);$/, ';');
+await writeFile(new URL('../lib/chat.factory.mjs', import.meta.url), registration + '\nexport const createChat = require => registration.factory(require);\n');
+
 await build({
   entryPoints: [fileURLToPath(new URL('../src/client/index.jsx', import.meta.url))],
   outfile: fileURLToPath(new URL('../lib/client.js', import.meta.url)),

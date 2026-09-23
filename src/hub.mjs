@@ -1,10 +1,10 @@
+import { sourceName } from './message-source.mjs';
 import { Service } from '@deepseek-ai/cordis';
 import { BlockAssembler, assembleAssistantStream, createUserMessage } from '@deepseek-ai/dsh-llm';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import { fileURLToPath } from 'node:url';
 import { HubStore, projectOf } from './hub-store.mjs';
-import { Config } from './config.mjs';
+import { Config, configSnapshot } from './config.mjs';
 import { ContextPipeline } from './context/pipeline.mjs';
 import { createHostAdapter } from './context/host.mjs';
 import { createEffortResolver } from './effort.mjs';
@@ -15,7 +15,7 @@ const TASK_PAUSE_GUIDANCE = promptText('runtime/task-pause.md');
 
 export const NS = 'trisoul-x';
 export const message = (text, kind = 'context') => createUserMessage({
-  content: [{ type: 'text', text }], source: { kind: 'plugin', plugin: `${NS}:${kind}` },
+  content: [{ type: 'text', text }], source: { kind: `plugin:${NS}:${kind}` },
 });
 export const contentText = (blocks = []) => blocks.flatMap(b => {
   if (b.type === 'text') return [b.text];
@@ -27,9 +27,8 @@ export const eventText = (session, e) => contentText(session.deriveEventMessage(
 export class Hub extends Service {
   constructor(ctx, config) {
     super(ctx, 'trisoulX');
-    this.getConfig = () => config;
+    this.getConfig = () => configSnapshot(config);
     this.store = new HubStore(config.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), NS));
-    this.presetRoot = fileURLToPath(new URL('../presets/', import.meta.url));
     this.context = new ContextPipeline(this, createHostAdapter(this));
     this.efforts = new Map(); this.agents = new Map();
     this.live = new Map(); this.requestStarts = new Map(); this.taskReviews = new Map();
@@ -74,7 +73,7 @@ export class Hub extends Service {
     const session = agent.session, state = this.store.state(session.id), meter = this.ctx.tokenMeter.measure(session);
     state.pendingFrame = { at: Date.now(), turn, step, totalTokens: meter.totalTokens, nodes: meter.nodes.map(n => {
       const e = session.eventAt(n.seq), msg = session.deriveEventMessage(e);
-      return { seq: n.seq, kind: msg?.source?.compactionId ? 'checkpoint' : msg?.source?.plugin || msg?.source?.kind || e.type, tokens: n.tokens ?? n.heuristicTokens ?? 0 };
+      return { seq: n.seq, kind: msg?.source?.compactionId ? 'checkpoint' : sourceName(msg?.source) || msg?.source?.kind || e.type, tokens: n.tokens ?? n.heuristicTokens ?? 0 };
     }) };
   }
   record(session, kind, entry) {
@@ -148,7 +147,7 @@ export class Hub extends Service {
       state.cwd = session.header.cwd; state.parentSession = session.header.parentSession;
       state.started = true; this.store.save(state);
     }
-    if ((event.type === 'assistant/message' || event.type === 'assistant/attempt') && event.data.message?.source?.plugin !== NS + ':shadow') {
+    if ((event.type === 'assistant/message' || event.type === 'assistant/attempt') && sourceName(event.data.message?.source) !== NS + ':shadow') {
       const output = assembleAssistantStream(event.data.stream);
       const route = session.requestHeader()?.config ?? {};
       const failed = ['error', 'aborted', 'max-tokens'].includes(output.finish.kind);

@@ -30,7 +30,7 @@ export function collectRuntimeStatus(agent, hub, { now = Date.now(), messages = 
       records: Object.fromEntries(['raw', 'detail', 'brief'].map(mode => [mode, records.filter(r => r.mode === mode).length])),
     },
     jobsAvailable: Boolean(jobs),
-    jobs: jobs ? jobs.list(agent).map(j => ({ id: j.id, runId: j.runId ?? null, kind: j.kind, label: j.label,
+    jobs: jobs ? jobs.list(agent.id).map(j => ({ id: j.id, runId: j.runId ?? null, kind: j.kind, label: j.label,
       status: j.status, startedAt: j.startedAt, ...(j.finishedAt != null ? { finishedAt: j.finishedAt } : {}),
       ...(j.detail ? { detail: j.detail } : {}), resultDelivery: j.resultDelivery ?? 'unknown' })) : [],
     changeKey: { input },

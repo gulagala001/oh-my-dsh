@@ -1,4 +1,4 @@
-/* DSH 0.1.6-alpha.2 shell. Use public data attributes first; the few module
+/* DSH 0.1.7-alpha.1 shell. Use public data attributes first; the few module
    selectors below match the installed host and are covered by frontend UI QA. */
 .trisoul-shell {
   --tx-shell-text: var(--dsw-alias-label-primary, CanvasText);
@@ -104,19 +104,16 @@
 .trisoul-shell [data-chat-flow-key]:has(.tx-cu-group, [data-cu-process-context]) { --dsh-chat-flow-gap: 2px; }
 .trisoul-shell .tx-cu-group [data-disclosure-row] { height: 26px; min-height: 26px; }
 .trisoul-shell [data-chat-flow-kind=assistant-step]:has(.tx-cu-group) { --dsh-chat-flow-gap: 2px; }
-.trisoul-shell [data-chat-flow-kind=assistant-step]:has(.tx-cu-process-answer[data-process-open]) { --dsh-chat-flow-gap: 2px; }
-.trisoul-shell .tx-cu-process-answer[data-process-open] .hWmORq_body { gap: 2px; }
-.trisoul-shell .tx-cu-process-answer[data-process-open] .hWmORq_body > :not(:has(> [data-variant=think])) { margin-top: 14px; }
 .trisoul-shell [data-turn-process-member][data-chat-flow-kind=context] [data-disclosure-row],
 .trisoul-shell [data-variant=think] [data-disclosure-row] { height: 26px; min-height: 26px; }
 /* The host fixes a collapsed Think container at 24px. Match its row so the
    next operation never overlaps its 26px hit area. Expanded text stays auto. */
 .trisoul-shell .lcKema_root:not([data-expanded]) { height: 26px; }
-.trisoul-shell :is([data-chat-flow-kind=tool-call], [data-cu-operation]) :is(.o3BgMG_row, .CY-8Ka_root) { height: 26px; min-height: 26px; }
-.trisoul-shell :is([data-chat-flow-kind=tool-call], [data-cu-operation]) :is(.o3BgMG_title, .CY-8Ka_title) { font-size: var(--dsh-content-font-size-secondary, 13px); font-weight: 400; }
-.trisoul-shell :is([data-chat-flow-kind=tool-call], [data-cu-operation]) :is(.o3BgMG_sep, .CY-8Ka_sep) { background: transparent; width: 0; margin-inline: 3px; }
-.trisoul-shell :is([data-chat-flow-kind=tool-call], [data-cu-operation]) .o3BgMG_fileLink { color: var(--dsw-alias-label-tertiary, var(--tx-shell-muted)); }
-.trisoul-shell :is([data-chat-flow-kind=tool-call], [data-cu-operation]) .o3BgMG_fileLink:hover { color: var(--tx-shell-text); }
+.trisoul-shell [data-chat-flow-kind=tool-call] :is(.o3BgMG_row, .CY-8Ka_root) { height: 26px; min-height: 26px; }
+.trisoul-shell [data-chat-flow-kind=tool-call] :is(.o3BgMG_title, .CY-8Ka_title) { font-size: var(--dsh-content-font-size-secondary, 13px); font-weight: 400; }
+.trisoul-shell [data-chat-flow-kind=tool-call] :is(.o3BgMG_sep, .CY-8Ka_sep) { background: transparent; width: 0; margin-inline: 3px; }
+.trisoul-shell [data-chat-flow-kind=tool-call] .o3BgMG_fileLink { color: var(--dsw-alias-label-tertiary, var(--tx-shell-muted)); }
+.trisoul-shell [data-chat-flow-kind=tool-call] .o3BgMG_fileLink:hover { color: var(--tx-shell-text); }
 .trisoul-shell [data-chat-flow-kind=context] [data-disclosure-row][aria-expanded=false] :is([data-context-source], .XrJvXW_sep) { display: none; }
 .trisoul-shell .hWmORq_actions { margin-top: 12px; }
 .trisoul-shell .xzv4MW_actions { gap: 5px; }

@@ -81,10 +81,16 @@ export function createVersionService({ currentVersion = INSTALLED_VERSION, bundl
   parseVersion(currentVersion);
   let cached = null, checkedAt = null, lastAttemptAt = null, nextCheckAt = 0, error = null, pending = null;
   const shutdown = new AbortController();
-  const snapshot = () => ({ ...(cached ? versionStatus(currentVersion, cached) : {
-    currentVersion, latestVersion: null, status: 'unknown', severity: 'none', releases: [],
-    currentRelease: bundledManifest.releases.find(r => compareVersions(r.version, currentVersion) === 0) || null,
-  }), checkedAt, lastAttemptAt, nextCheckAt, stale: Boolean(error && cached), error, releaseNotesUrl: RELEASE_NOTES_URL });
+  const bundledRelease = bundledManifest.releases.find(r => compareVersions(r.version, currentVersion) === 0) || null;
+  const snapshot = () => {
+    const status = cached ? versionStatus(currentVersion, cached) : {
+      currentVersion, latestVersion: null, status: 'unknown', severity: 'none', releases: [],
+    };
+    return { ...status, currentRelease: status.currentRelease ?? bundledRelease,
+      checkedAt, lastAttemptAt, nextCheckAt, stale: Boolean(error && cached), error,
+      releaseNotesUrl: parseVersion(currentVersion).pre.length
+        ? 'https://github.com/gulagala001/oh-my-dsh/releases/tag/v' + currentVersion : RELEASE_NOTES_URL };
+  };
   function check(force = false) {
     if (pending) return pending;
     const at = now();

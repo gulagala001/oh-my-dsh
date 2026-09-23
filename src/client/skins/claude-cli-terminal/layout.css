@@ -1,4 +1,4 @@
-/* Independent terminal layout, verified against DSH 0.1.6-alpha.2.
+/* Independent terminal layout, verified against DSH 0.1.7-alpha.1.
    Host DOM remains in its owning React tree; every rule is layout-scoped. */
 html.omd[data-omd-layout="claude-cli-terminal"] body {
   --ds-font-family: var(--omd-font-ui);
@@ -65,7 +65,7 @@ html.omd[data-omd-layout="claude-cli-terminal"] :is(.hWmORq_actions,.xzv4MW_acti
 html.omd[data-omd-layout="claude-cli-terminal"] :is(.hWmORq_actions,.xzv4MW_actions):hover { opacity: 1; }
 html.omd[data-omd-layout="claude-cli-terminal"] :is(.tx-cu-group,.omd-context-record) { border-radius: 0; background: transparent; }
 html.omd[data-omd-layout="claude-cli-terminal"] :is(.tx-cu-group-toggle,.omd-record-toggle) { font-family: var(--omd-font-ui); min-height: 28px; padding: 3px 0; }
-html.omd[data-omd-layout="claude-cli-terminal"] :is(.tx-cu-group-list,.omd-record-body) { margin-left: 7px; padding-left: 14px; border: 0; border-left: 1px solid var(--omd-border); border-radius: 0; }
+html.omd[data-omd-layout="claude-cli-terminal"] :is([data-step-process-body],.omd-record-body) { margin-left: 7px; padding-left: 14px; border: 0; border-left: 1px solid var(--omd-border); border-radius: 0; }
 html.omd[data-omd-layout="claude-cli-terminal"] :is([data-disclosure-row],.o3BgMG_title,.CY-8Ka_title) { font-family: var(--omd-font-ui); font-size: 12px; }
 html.omd[data-omd-layout="claude-cli-terminal"] :is(pre,code,[data-diff],[data-diff]>div,[data-composer-input]) { font-family: var(--omd-font-mono); font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
 html.omd[data-omd-layout="claude-cli-terminal"] .md-code-block { --dsl-code-block-border-radius: 0px; }
@@ -158,8 +158,8 @@ html.omd[data-omd-layout="claude-cli-terminal"] :is(.cx-section,.tx-section) { p
 html.omd[data-omd-layout="claude-cli-terminal"] :is(.cx-section h3,.tx-section h3) { font-size: 12px; color: var(--omd-accent); }
 html.omd[data-omd-layout="claude-cli-terminal"] :is(.cx-choice,.cx-frequency-preview,.cx-catalog-banner,.cx-info,.tx-info,.cx-stage,.tx-fold,.tx-task-card) { border-radius: 0; box-shadow: none; }
 html.omd[data-omd-layout="claude-cli-terminal"] .cx-settings .cx-savebar { padding: 12px 0; margin-top: 12px; border-radius: 0; gap: 8px; }
-html.omd[data-omd-layout="claude-cli-terminal"] :is(.oY77xG_row,.hVGvvW_row,._8HJdBW_group,.bVCLcG_row,.lats3W_row,.T1PP_q_row) { padding: 14px 12px; border-color: var(--omd-border); }
-html.omd[data-omd-layout="claude-cli-terminal"] :is(.oY77xG_selector,.hVGvvW_selector,.lats3W_selector,.T1PP_q_selector,.bVCLcG_stepper) { border: 1px solid var(--omd-border); border-radius: 2px; background: var(--omd-surface); color: var(--omd-text); }
+html.omd[data-omd-layout="claude-cli-terminal"] :is(.oY77xG_row,.hVGvvW_row,._8HJdBW_group,.bVCLcG_row,._2XZxNq_row,.T1PP_q_row) { padding: 14px 12px; border-color: var(--omd-border); }
+html.omd[data-omd-layout="claude-cli-terminal"] :is(.oY77xG_selector,.hVGvvW_selector,._2XZxNq_selector,.T1PP_q_selector,.bVCLcG_stepper) { border: 1px solid var(--omd-border); border-radius: 2px; background: var(--omd-surface); color: var(--omd-text); }
 html.omd[data-omd-layout="claude-cli-terminal"] ._8HJdBW_cubeRow { gap: 6px; }
 html.omd[data-omd-layout="claude-cli-terminal"] ._8HJdBW_themeCube { border-radius: 2px; background: var(--omd-surface); min-height: 36px; padding: 6px 12px; flex-direction: row; gap: 8px; }
 html.omd[data-omd-layout="claude-cli-terminal"] ._8HJdBW_themeCube._8HJdBW_selected { border-color: var(--omd-accent); color: var(--omd-accent); }

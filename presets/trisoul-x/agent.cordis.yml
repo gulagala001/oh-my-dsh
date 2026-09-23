@@ -7,10 +7,14 @@
 - id: tool-bash
   name: 'trisoul_x/host/tool-bash'
   disabled: !!js process.platform === 'win32'
+  config:
+    promoteOnTimeout: false
 
 - id: tool-pwsh
   name: 'trisoul_x/host/tool-pwsh'
   disabled: !!js process.platform !== 'win32'
+  config:
+    promoteOnTimeout: false
 
 - id: tool-fs
   name: '@deepseek-ai/dsh-tool-fs'

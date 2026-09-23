@@ -78,7 +78,7 @@ export const parts = {
   'sidebar-row': '.YDXeBa_sessionRow, .hHd-Xa_newSession',
   'message-user': '.Sixlwa_bubble, .tx-cu-user-bubble',
   'process-toggle': '.tx-cu-group-toggle, .omd-record-toggle',
-  'tool-group': '.tx-cu-group-list',
+  'tool-group': '[data-step-process-body]',
   'tool-row': '[data-disclosure-row], .tx-cu-card-heading, .CY-8Ka_root, .o3BgMG_row',
   'code-block': 'pre', 'code-inline': 'code:not(pre code)',
   statusbar: '.tx-stats-line, [data-composer-stats], .bOPqQW_root',

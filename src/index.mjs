@@ -1,3 +1,8 @@
+import { installFileUploadCompatibility } from './file-upload-compat.mjs';
+import { legacySettings } from '#opencu/src/legacy-settings.mjs';
+import { homedir } from 'node:os';
+import { migrateSessionStorage } from './session-migration.mjs';
+import { sourceName } from './message-source.mjs';
 import { installLoaderLifecycleCompatibility } from './loader-lifecycle-compat.mjs';
 import { installToolSchedulerCompatibility } from './tool-scheduler-compat.mjs';
 import { monitorSelection, compactMonitorSnapshot } from './monitoring.mjs';
@@ -12,7 +17,7 @@ import { currentTasks, restoreTaskProjection } from './tasks.mjs';
 import { ensureSystemHead } from './system-head.mjs';
 import { handleContextApi } from './context/api.mjs';
 import { installTraceCleanup } from './context/trace.mjs';
-import { TODO_NUDGE, TODO_EMPTY_NUDGE } from './todolist.mjs';
+import { TODO_NUDGE } from './todolist.mjs';
 import { message } from './hub.mjs';
 import { join } from 'node:path';
 import { acquireComputerUse } from '#opencu/integration';
@@ -27,27 +32,39 @@ import { createPromptOptimizer, handlePromptOptimizerApi } from './prompt-optimi
 
 export { Config };
 export const name = 'trisoul-x';
-export const inject = ['loader', 'tools', 'llm', 'agents', 'sessions', 'settings', 'tokenMeter', 'sessionProjections'];
+export const inject = ['loader', 'tools', 'llm', 'agents', 'sessions', 'settings', 'tokenMeter', 'sessionProjections', 'sessionPersistence'];
 const send = (res, status, value) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(value)); };
 async function readBody(req) { let body = ''; for await (const part of req) body += part; return body.trim() ? JSON.parse(body) : {}; }
 
-export function apply(ctx, config) {
+export async function apply(ctx, config) {
+  const legacy = await legacySettings(ctx, 'trisoul-x', Config, ['opencu']);
+  const directory = legacy.value.dataDir || config.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'trisoul-x');
+  await migrateSessionStorage(ctx, directory);
   installLoaderLifecycleCompatibility(ctx);
+  installFileUploadCompatibility(ctx);
   installToolSchedulerCompatibility(ctx);
-  const hub = new Hub(ctx, config);
+  const hub = new Hub(ctx, { ...config, dataDir: directory });
+  const liveConfig = hub.getConfig;
+  let overlay = legacy.value;
+  hub.getConfig = () => ({ ...liveConfig(), ...overlay });
+  legacy.persist(() => { overlay = {}; });
   hub.budgets = new TaskBudgets(hub);
   ctx.effect(() => () => { for (const agent of hub.agents.values()) hub.budgets.dispose(agent.session); });
   const promptOptimizer = createPromptOptimizer(ctx, hub);
   ctx.effect(() => () => promptOptimizer.dispose());
-  hub.codegraph = new CodegraphRuntime({ cacheDir: join(hub.store.dir, 'components', 'codegraph'), enabled: config.codegraphEnabled !== false, autoInstall: config.componentAutoSetup !== false });
+  hub.codegraph = new CodegraphRuntime({ cacheDir: join(hub.store.dir, 'components', 'codegraph'), enabled: hub.config().codegraphEnabled !== false, autoInstall: hub.config().componentAutoSetup !== false });
   ctx.effect(() => () => hub.codegraph.dispose());
   const versionService = createVersionService();
   ctx.effect(() => () => versionService.dispose());
-  ctx.settings.installSection(ctx, NS, Config, config, { setSource: source => { hub.getConfig = source; }, onChange() {
-    if (hub.components) void hub.components.reconfigure().catch(error => ctx.logger.warn(error.message));
+  ctx.effect(() => ctx.settings.configure({ auto: false }));
+  let currentConfig = JSON.stringify(hub.config());
+  ctx.on('app-boot/config-reload', () => {
+    const next = JSON.stringify(hub.config());
+    if (next === currentConfig) return;
+    currentConfig = next;
     hub.context.reconfigure();
-  } });
-  const computer = acquireComputerUse(ctx, { getConfig: () => hub.config(), dataDir: join(hub.store.dir, 'computer-use') });
+  });
+  const computer = await acquireComputerUse(ctx, { namespace: 'trisoul-x', getConfig: () => hub.config(), dataDir: join(hub.store.dir, 'computer-use') });
   hub.components = new Components(ctx, hub, computer);
   mountComponents(ctx, hub.components);
   ctx.effect(() => { hub.components.start(); return () => hub.components.close(); });
@@ -68,14 +85,24 @@ export function apply(ctx, config) {
       return text === s.text ? s : { ...s, text };
     }) };
   }, { global: true });
-  ctx.on('agent/request', async ({ agent }, next) => { if (isX(agent.session)) hub.requestStarts.set(agent.session.id, Date.now()); return next(); }, { global: true });
+  const pendingSteps = new WeakMap();
   ctx.on('agent/assistant-stream', ({ agent, frame }) => { if (frame.type === 'start' && isX(agent.session)) hub.captureFrame(agent, frame.turn, frame.step); }, { global: true });
   ctx.on('agent/pre-step', async ({ agent, messages, signal, turn, step }, next) => {
     const consumed = isX(agent.session) ? await consumeBudgetAliases(agent, messages, signal) : new Set();
-    if (consumed.size) {
-      messages = messages.filter(m => !consumed.has(m.id));
-      if (!messages.length && step === 1) return { kind: 'reject' };
-    }
+    if (consumed.size && !messages.some(m => !consumed.has(m.id)) && step === 1) return { kind: 'reject' };
+    const decision = await next();
+    if (decision.kind !== 'enter') return decision;
+    const accepted = consumed.size ? decision.messages.filter(m => !consumed.has(m.id)) : decision.messages;
+    pendingSteps.set(agent, { turn, step, messages: accepted });
+    return { ...decision, messages: accepted };
+  }, { global: true });
+  ctx.on('agent/request', async ({ agent, signal, turn, step }, next) => {
+    const route = await next();
+    if (isX(agent.session)) await hub.context.adapter.prepareRoute?.(agent.session, route, signal);
+    const pending = pendingSteps.get(agent);
+    if (pending?.turn === turn && pending.step === step) {
+      pendingSteps.delete(agent);
+      const messages = pending.messages;
     hub.budgets.tick(agent.session, isX(agent.session) && !signal.aborted);
     if (!isX(agent.session) && !signal.aborted && hub.agents.has(agent.session.id)) {
       setRuntimeContext(agent.session, () => null);
@@ -98,12 +125,12 @@ export function apply(ctx, config) {
       }
       if (hub.todoStore) {
         hub.todoStore.maintainInjection(agent.session);
-        const notice = messages.some(m => m.source?.kind === 'user') ? TODO_NUDGE : hub.todoStore.takeEmptyNudge(agent.session) ? TODO_EMPTY_NUDGE.replace('with task_map', 'with todo_write') : null;
-        if (notice) agent.session.append('user/message', message(notice, 'task-reminder'), { surfaceOp: 'append' });
+        if (messages.some(m => m.source?.kind === 'user')) agent.session.append('user/message', message(TODO_NUDGE, 'task-reminder'), { surfaceOp: 'append' });
       }
     }
-    const decision = await next();
-    return consumed.size && decision.kind === 'enter' ? { ...decision, messages: decision.messages.filter(m => !consumed.has(m.id)) } : decision;
+    }
+    if (isX(agent.session)) hub.requestStarts.set(agent.session.id, Date.now());
+    return route;
   }, { global: true });
   ctx.on('agent/request-error', async ({ agent, failure, signal }, next) => {
     if (isX(agent.session) && failure.code === CONTEXT_WINDOW_EXCEEDED_CODE && !signal.aborted) {
@@ -190,7 +217,7 @@ export function apply(ctx, config) {
             live: id ? ([...hub.live.values()].find(call => call.sessionId === id) ?? null) : [...hub.live.values()],
             liveCalls,
             scope: hub.scope(scopeSession), running: agent?.status ?? 'idle', meter,
-            frame: session ? meter.nodes.map(n => { const e = session.eventAt(n.seq), m = session.deriveEventMessage(e); return { seq: n.seq, role: m?.role, kind: m?.source?.plugin || m?.source?.kind || e.type, tokens: n.tokens ?? n.heuristicTokens, chars: eventText(session, e).length, checkpoint: Boolean(m?.source?.compactionId) }; }) : [],
+            frame: session ? meter.nodes.map(n => { const e = session.eventAt(n.seq), m = session.deriveEventMessage(e); return { seq: n.seq, role: m?.role, kind: sourceName(m?.source) || m?.source?.kind || e.type, tokens: n.tokens ?? n.heuristicTokens, chars: eventText(session, e).length, checkpoint: Boolean(m?.source?.compactionId) }; }) : [],
             route: session?.requestHeader()?.config ? { provider: session.requestHeader().config.provider, model: session.requestHeader().config.model } : null,
           }); return;
         }

@@ -23,7 +23,7 @@ export function contextRouteMode(config = {}) {
 export function createContextUI(React) {
   const h = React.createElement;
   const api = async (path, body, signal) => {
-    const response = await fetch('/trisoul-x/api' + path, body === undefined ? { signal } : { signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const response = await fetch('trisoul-x/api' + path, body === undefined ? { signal } : { signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await response.json(); if (!response.ok) throw Error(data.error || 'HTTP ' + response.status); return data;
   };
   const suffix = id => '?session=' + encodeURIComponent(id || '');
@@ -57,7 +57,7 @@ export function createContextUI(React) {
   const duration = ms => Number(ms) >= 60000 ? Number(ms) / 60000 + ' 分钟' : Number(ms || 0) / 1000 + ' 秒';
   const rangeLabel = ranges => (ranges || []).map(x => `#${x.from}–${x.to}`).join(' · ');
   const summaryPreview = text => h(React.Fragment, null, h('p', { className: 'cx-prose' }, text.length > 240 ? text.slice(0, 240) + '…' : text), text.length > 240 && fold('展开完整摘要', text.length + ' 字符', h('p', { className: 'cx-prose' }, text)));
-  const assetUrl = (r, i) => '/trisoul-x/api/context/asset' + suffix(r.requestSessionId || r.sessionId) + '&id=' + encodeURIComponent(r.id) + '&asset=' + (i + 1);
+  const assetUrl = (r, i) => 'trisoul-x/api/context/asset' + suffix(r.requestSessionId || r.sessionId) + '&id=' + encodeURIComponent(r.id) + '&asset=' + (i + 1);
 
   // Document detail is a reader, not an ever-growing section under the list.
   class DocumentReader extends React.Component {
@@ -194,7 +194,7 @@ export function createContextUI(React) {
     componentDidMount() { this.alive = true; this.poll(); }
     componentWillUnmount() { this.alive = false; clearTimeout(this.timer); this.request?.abort(); }
     call = async body => {
-      const response = await fetch('/trisoul-x/components', body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { signal: this.request?.signal });
+      const response = await fetch('trisoul-x/components', body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { signal: this.request?.signal });
       const value = await response.json(); if (!response.ok) throw Error(value.error || '读取组件状态失败'); return value;
     };
     poll = async () => {

@@ -8,7 +8,7 @@ export function WindowShare({ sessionId, inputActions, conversation }) {
   useEffect(()=>{setOpen(false);setBusy(false);setWindows([]);setError('');return()=>request.current?.abort();},[sessionId]);
   useEffect(()=>{if(open){dialog.current?.showModal();search.current?.focus();}else dialog.current?.close();},[open]);
   const post=async(op,value,signal)=>{
-    const r=await fetch('/trisoul-x/computer-use/'+op+'?session='+encodeURIComponent(sessionId),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value),signal});
+    const r=await fetch('trisoul-x/computer-use/'+op+'?session='+encodeURIComponent(sessionId),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value),signal});
     const result=await r.json();if(!r.ok)throw new Error(result.error||'窗口分享失败');return result;
   };
   const list=async(refresh=false)=>{
