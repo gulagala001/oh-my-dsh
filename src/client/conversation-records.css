@@ -13,8 +13,6 @@
 .omd-record-part + .omd-record-part { border-top: 1px solid var(--dsw-alias-border-l2); }
 .omd-record-part > summary { padding: 7px 0; cursor: pointer; }
 .omd-record-part > summary span { margin-left: 12px; color: var(--dsw-alias-label-caption); font-size: 12px; }
-/* Operation groups portal their records into the first flow row. A duplicate
-   marker hides its own item, never the flow row hosting the group's toggle. */
-.trisoul-shell [data-chat-flow-key]:has([data-omd-record-hidden]):not(:has([data-cu-group])),
-.trisoul-shell .tx-cu-group-item:has([data-omd-record-hidden]) { display: none; }
+/* Groups also carry a flow key; hide only the duplicate record's node seat. */
+.trisoul-shell [data-chat-node-key]:has([data-omd-record-hidden]) { display: none; }
 .trisoul-shell [data-chat-flow-key]:has(.omd-context-record) { --dsh-chat-flow-gap: 3px; }

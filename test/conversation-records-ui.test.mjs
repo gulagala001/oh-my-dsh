@@ -7,7 +7,7 @@ test('delivered todo/state and grouped compaction remain expandable across repla
   const f = await frontendFixture(t, { omdConfig: { stateHintsEnabled: true } }), { page, sessionId } = f;
   const openRecordGroups=async()=>{
     for(let pass=0;pass<6;pass++){
-      const toggles=page.locator('.tx-cu-group-toggle[aria-expanded=false]:visible');
+      const toggles=page.locator(':is([data-turn-process], .tx-cu-group-toggle)[aria-expanded=false]:visible');
       if(!await toggles.count())break;
       for(const toggle of await toggles.all())if(await toggle.isVisible()&&await toggle.getAttribute('aria-expanded')==='false')await toggle.click();
     }
