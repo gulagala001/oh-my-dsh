@@ -1822,7 +1822,7 @@ ${t("json.truncated", { total: text.length })}` : text;
     });
     const ProcessGroupHeader = (0, react.memo)(function ProcessGroupHeader2({ groupKey, useChatGroup, usePresentation, t, open, bodyId, toggle }) {
       const data = useChatGroup(groupKey, (group) => group?.data);
-      const working = data !== void 0 && !data.closed && (data.summary.running !== void 0 || data.summary.counts.length === 0);
+      const working = data !== void 0 && !data.closed;
       const detailed = usePresentation((policy) => working && policy.liveProcessDetail);
       const live = useStableLiveProcessTitle({
         activity: data?.summary.running ?? "thinking",
@@ -5072,8 +5072,7 @@ ${t("json.truncated", { total: text.length })}` : text;
     };
     const THINK_ICON = /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular, { size: 14 });
     function firstLine(text) {
-      const newline = text.indexOf("\n");
-      return newline === -1 ? text : text.slice(0, newline);
+      return text.split(/\r?\n/).find((line) => line.trim() !== "")?.trim() ?? "";
     }
     function latestCompletedParagraphFirstLine(text) {
       let summary = "";
@@ -5094,7 +5093,7 @@ ${t("json.truncated", { total: text.length })}` : text;
     const ReasoningRow = (0, react.memo)(function ReasoningRow2({ text, running, usePresentation, useDisclosure: useDisclosure2, t }) {
       const { expanded, toggle } = useDisclosure2();
       const labels = (0, react.useMemo)(() => markdownLabels(t), [t]);
-      const summaryText = running ? latestCompletedParagraphFirstLine(text) : firstLine(text);
+      const summaryText = (running ? latestCompletedParagraphFirstLine(text) : "") || firstLine(text);
       const summary = (0, react.useMemo)(() => summaryText.replaceAll("**", ""), [summaryText]);
       const preview2 = usePresentation((policy) => !expanded && summary !== "" && (running || policy.settledReasoningPreview));
       const collapsedContent = (0, react.useMemo)(() => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
@@ -10710,8 +10709,8 @@ ${t("json.truncated", { total: text.length })}` : text;
         mode: "compact",
         foldCompletedTurns: true,
         stepGrouping: "collapsed",
-        liveProcessDetail: false,
-        settledReasoningPreview: false
+        liveProcessDetail: true,
+        settledReasoningPreview: true
       },
       detailed: {
         mode: "detailed",

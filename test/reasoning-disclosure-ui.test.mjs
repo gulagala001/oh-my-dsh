@@ -2,16 +2,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {frontendFixture,until} from './fixtures/frontend.mjs';
 
-test('completed tools stop showing live actions before the model reply; nested reading state survives completion and reload',{timeout:90000},async t=>{
-  const f=await frontendFixture(t,{chatConfig:{transcriptView:'detailed'}}),{page,rpc,sessionId}=f;
+for(const transcriptView of ['compact','detailed'])test(`${transcriptView}: process stays live through reasoning; historical previews survive completion and reload`,{timeout:90000},async t=>{
+  const f=await frontendFixture(t,{chatConfig:{transcriptView}}),{page,rpc,sessionId}=f;
   await page.setViewportSize({width:1440,height:1600});
   let nextAction,finish,step=0;
   const nextActionReady=new Promise(resolve=>{nextAction=resolve;});
   const finalReply=new Promise(resolve=>{finish=resolve;});
   f.replyWith(async()=>{
     step++;
-    const reasoning_content=['先确认电脑工具是否就绪。','接着检查操作记录的展示。','检查结束，整理回复。'][Math.min(step-1,2)];
-    if(step>=3){await finalReply;return {delta:{role:'assistant',reasoning_content,content:'思考和操作保留在过程里，最终回复显示在外面。'},finish_reason:'stop'};}
+    const reasoning_content=['先确认电脑工具是否就绪。'.repeat(30)+'\n完整思考正文。','接着检查操作记录的展示。','检查结束，整理回复。'][Math.min(step-1,2)];
+    if(step>=3)return (async function*(){
+      yield {delta:{role:'assistant',reasoning_content},finish_reason:null};
+      await finalReply;
+      yield {delta:{content:'思考和操作保留在过程里，最终回复显示在外面。'},finish_reason:'stop'};
+    })();
     if(step===2)await nextActionReady;
     const name=step===1?'computer_use_reset':'bash',args=step===1?{}:{command:'sleep 2; printf demo-complete',description:'检查操作记录'};
     return {delta:{role:'assistant',reasoning_content,tool_calls:[{index:0,id:'reasoning-demo-'+step,type:'function',function:{name,arguments:JSON.stringify(args)}}]},finish_reason:'tool_calls'};
@@ -25,7 +29,8 @@ test('completed tools stop showing live actions before the model reply; nested r
     await until(async()=>/检查操作记录/.test(await title.textContent()));
     await until(()=>step>=3);
     await until(async()=>!/检查操作记录/.test(await title.textContent()));
-    assert.match(await title.textContent(),/已操作电脑并运行命令/);
+    await until(async()=>/正在分析请求.*检查结束，整理回复。/.test(await title.textContent()));
+    assert.doesNotMatch(await title.textContent(),/已操作电脑并运行命令/,'the group is still working after its tools settle');
     assert.equal(await group.locator('[data-step-process-body]').isVisible(),false);
     await title.click();
     const thought=group.locator('[data-variant="think"] [data-disclosure-row]').first();
@@ -39,17 +44,28 @@ test('completed tools stop showing live actions before the model reply; nested r
     const answer=page.getByText('思考和操作保留在过程里，最终回复显示在外面。',{exact:true});await answer.waitFor();
     const summary=page.locator('[data-turn-process-tool-calls="2"]');await summary.waitFor();
     assert.equal(await summary.getAttribute('aria-expanded'),'true','completion preserves the process the user is reading');
+    assert.match(await title.textContent(),/已操作电脑并运行命令/,'only a closed group restores its completed summary');
     assert.doesNotMatch(await title.textContent(),/检查操作记录/);
     assert.equal(await thought.getAttribute('aria-expanded'),'true');
     assert.equal(await detail.getAttribute('aria-expanded'),'true');
     assert.equal(await group.locator('[data-variant="think"]').count(),3,'all original reasoning is retained');
-    const answerBox=await answer.boundingBox();
-    for(const node of await group.locator('[data-variant="think"]').all())assert.ok((await node.boundingBox()).y<answerBox.y,'reasoning stays before the final answer');
+    const answerElement=await answer.elementHandle();
+    for(const node of await group.locator('[data-variant="think"]').all())assert.ok(await node.evaluate((element,answer)=>Boolean(element.compareDocumentPosition(answer)&Node.DOCUMENT_POSITION_FOLLOWING),answerElement),'reasoning stays before the final answer even when its scrollable body is clipped');
     await summary.click();assert.equal(await group.isVisible(),false);assert.equal(await answer.isVisible(),true);
     await page.reload();await answer.waitFor();
     await summary.click();assert.equal(await title.getAttribute('aria-expanded'),'false');
     assert.doesNotMatch(await title.textContent(),/检查操作记录/);
     await title.click();assert.equal(await group.locator('[data-variant="think"]:visible').count(),3);
+    const previews=group.locator('[data-variant="think"][data-preview] [class*="summaryText"]');
+    assert.equal(await previews.count(),3,'every historical thought retains its one-line preview');
+    for(const preview of await previews.all())assert.equal(await preview.isVisible(),true);
+    await page.setViewportSize({width:430,height:900});
+    const layout=await previews.first().evaluate(node=>({height:node.getBoundingClientRect().height,lineHeight:parseFloat(getComputedStyle(node).lineHeight),width:node.clientWidth,contentWidth:node.scrollWidth,overflow:getComputedStyle(node).textOverflow}));
+    assert.ok(layout.height<=layout.lineHeight+1,'historical preview occupies one line');
+    assert.ok(layout.contentWidth>layout.width,'long historical preview is clipped');
+    assert.equal(layout.overflow,'ellipsis');
+    await group.locator('[data-variant="think"] [data-disclosure-row]').first().click();
+    assert.equal(await group.getByText('完整思考正文。',{exact:false}).isVisible(),true,'full reasoning remains expandable');
     assert.deepEqual(f.errors,[]);
   } finally {nextAction();finish();}
 });

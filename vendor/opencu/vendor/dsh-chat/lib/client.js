@@ -2206,7 +2206,7 @@ window.__ModuleLoader__.load({
 		});
 		const ProcessGroupHeader = (0, react.memo)(function ProcessGroupHeader({ groupKey, useChatGroup, usePresentation, t, open, bodyId, toggle }) {
 			const data = useChatGroup(groupKey, (group) => group?.data);
-			const working = data !== void 0 && !data.closed && (data.summary.running !== void 0 || data.summary.counts.length === 0);
+			const working = data !== void 0 && !data.closed;
 			const detailed = usePresentation((policy) => working && policy.liveProcessDetail);
 			const live = useStableLiveProcessTitle({
 				activity: data?.summary.running ?? "thinking",
@@ -5576,8 +5576,7 @@ window.__ModuleLoader__.load({
 		/** Assistant reasoning disclosure, independent of Tool-call presentation. */
 		const THINK_ICON = /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular, { size: 14 });
 		function firstLine(text) {
-			const newline = text.indexOf("\n");
-			return newline === -1 ? text : text.slice(0, newline);
+			return text.split(/\r?\n/).find((line) => line.trim() !== "")?.trim() ?? "";
 		}
 		function latestCompletedParagraphFirstLine(text) {
 			let summary = "";
@@ -5599,8 +5598,8 @@ window.__ModuleLoader__.load({
 		* Render one consecutive run of assistant reasoning collapsed until the reader opens it. The
 		* collapsed summary omits double-asterisk markers; expanded content renders
 		* the complete Markdown with secondary typography. A streaming preview advances
-		* when a paragraph's first line completes. Mode changes toggle CSS display without unmounting
-		* collapsed summaries.
+		* when a paragraph's first line completes, falling back to the first nonempty line
+		* before the first newline arrives. Collapsed summaries remain visible in every mode.
 		* @param props.text - complete or streaming reasoning text.
 		* @param props.running - whether this block is the streaming tail.
 		* @param props.usePresentation - live display-policy selector for this reasoning row.
@@ -5611,7 +5610,7 @@ window.__ModuleLoader__.load({
 		const ReasoningRow = (0, react.memo)(function ReasoningRow({ text, running, usePresentation, useDisclosure, t }) {
 			const { expanded, toggle } = useDisclosure();
 			const labels = (0, react.useMemo)(() => markdownLabels(t), [t]);
-			const summaryText = running ? latestCompletedParagraphFirstLine(text) : firstLine(text);
+			const summaryText = (running ? latestCompletedParagraphFirstLine(text) : "") || firstLine(text);
 			const summary = (0, react.useMemo)(() => summaryText.replaceAll("**", ""), [summaryText]);
 			const preview = usePresentation((policy) => !expanded && summary !== "" && (running || policy.settledReasoningPreview));
 			const collapsedContent = (0, react.useMemo)(() => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
@@ -11821,8 +11820,8 @@ window.__ModuleLoader__.load({
 				mode: "compact",
 				foldCompletedTurns: true,
 				stepGrouping: "collapsed",
-				liveProcessDetail: false,
-				settledReasoningPreview: false
+				liveProcessDetail: true,
+				settledReasoningPreview: true
 			},
 			detailed: {
 				mode: "detailed",
