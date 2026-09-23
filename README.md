@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.7.0-rc.1"><img src="https://img.shields.io/badge/version-1.7.0--rc.1-3478F6?style=flat-square" alt="Version 1.7.0-rc.1" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.7.0"><img src="https://img.shields.io/badge/version-1.7.0-3478F6?style=flat-square" alt="Version 1.7.0" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.7--alpha.1-475569?style=flat-square" alt="DSH 0.1.7-alpha.1" /></a>
   <a href="#themes"><img src="https://img.shields.io/badge/themes-4-222222?style=flat-square" alt="4 complete themes" /></a>
 </p>
@@ -22,7 +22,7 @@
   <a href="#features">装上之后</a> ·
   <a href="#themes">挑选主题</a> ·
   <a href="docs/usage.md">使用指南</a> ·
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.7.0-rc.1">版本说明</a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.7.0">版本说明</a>
 </p>
 
 ![Oh My DSH：对话、文件交付、任务与真实验证结果集中展示](docs/images/readme-overview.png)
@@ -31,7 +31,7 @@
 
 Oh My DSH 为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 配好上下文整理、任务提醒、结果验证、提示词优化和可视化工作台，再提供四套从布局到字体的完整主题。继续使用你已有的模型、会话、文件、工具和技能。
 
-**当前为 1.7.0-rc.1 预发布版，适配 DSH 0.1.7-alpha.1。** 保留 OMD 的上下文、任务验证、后台任务和四套皮肤，融合原生工作过程、设置及会话格式。工具结束后立即显示完成汇总；展开阅读状态保留。Windows 真机本轮未复验。旧宿主 DSH 0.1.6-alpha.2 请继续使用 [1.6.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.6.1)。
+**当前为 1.7.0 正式版，适配 DSH 0.1.7-alpha.1。** 保留 OMD 的上下文、任务验证、后台任务和四套皮肤，融合原生工作过程、设置及会话格式。工具结束后立即显示完成汇总；展开阅读状态保留。旧宿主 DSH 0.1.6-alpha.2 请继续使用 [1.6.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.6.1)。
 
 <a id="quickstart"></a>
 
@@ -40,14 +40,14 @@ Oh My DSH 为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 已有 **DSH 0.1.7-alpha.1 Web**？停止服务，在终端或 PowerShell 中运行：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.0-rc.1
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.0
 ```
 
 然后按原方式启动，例如 `dsh web`。打开启动时打印的登录链接，新建会话并选择 **Oh My DSH**。
 
 **从这三个入口开始：** 输入框的星星优化草稿；**工作台**查看任务、上下文和结果；**设置 → 外观**选择主题。
 
-自定义 profile 请替换命令中的 `web`，沿用原来的 `DSH_HOME`、模型和凭据。以上固定安装 **1.7.0-rc.1 预发布版**；[更新、卸载与源码试用](docs/usage.md#安装到现有-dsh推荐)。
+自定义 profile 请替换命令中的 `web`，沿用原来的 `DSH_HOME`、模型和凭据。以上固定安装 **1.7.0 正式版**；[更新、卸载与源码试用](docs/usage.md#安装到现有-dsh推荐)。
 
 <details>
 <summary>运行要求与默认配置</summary>
@@ -167,9 +167,9 @@ Mac 桌面控制需要辅助功能、屏幕录制权限与 Apple Command Line To
 
 ## 这次更新
 
-**1.7.0-rc.1 预发布版**：融合 DSH 0.1.7，完成原生分组、四套皮肤、后台执行与旧会话迁移适配，清理重复实现和失效测试。
+**1.7.0 正式版**：融合 DSH 0.1.7，完成原生分组、四套皮肤、后台执行与旧会话迁移适配，清理重复实现和失效测试。
 
-[更新记录](CHANGELOG.md) · [本版验证与升级说明](docs/release-1.7.0-rc.1.md) · [下载与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.7.0-rc.1)
+[更新记录](CHANGELOG.md) · [本版验证与升级说明](docs/release-1.7.0.md) · [下载与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.7.0)
 
 ## 文档与参与
 
