@@ -153,6 +153,8 @@ English lowercases the initial letter of joined labels after the first. Closing 
 
 Group headers show a category icon, replace it with a down arrow on hover or keyboard focus, and show an up arrow while open. Manually expanded group bodies use 8px row spacing, a `min(400px, 50vh)` height cap, and 24px directional fades. Wheel scrolling can continue into the outer transcript at an edge. Expanded mode removes the group-level cap and uses 16px row spacing only in running Turns.
 
+An open capped group follows content growth only while its own scroll position is at the bottom. Scrolling away pauses that group's following; returning to the bottom resumes it, independently of outer transcript following. Manually opening an unclosed group starts at the bottom and follows growth; manually opening a closed group starts at the top with following disabled, even when its initial content fits without scrolling. Closing the group in the data or restoring its height cap through a mode change does not reset an already-open reader's position. Browser find retains its own reveal position.
+
 Individual reasoning starts collapsed, including while streaming. All modes preview the latest paragraph whose first line ends with a newline; an unfinished single line has no preview. Later text in that paragraph does not change the preview. After settlement, the mode table applies. Expanded reasoning uses compact Markdown typography.
 
 Switching modes retains manually opened groups and inner disclosures. It changes visibility and sizing without recreating the message rows. Expanded does not mean opening every individual disclosure or unfolding the whole Turn.

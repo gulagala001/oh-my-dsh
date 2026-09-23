@@ -1,5 +1,5 @@
 diff --git a/packages/client/tsdown.client.ts b/packages/client/tsdown.client.ts
-index 99e647d..d7786d8 100644
+index 99e647d2..d7786d87 100644
 --- a/packages/client/tsdown.client.ts
 +++ b/packages/client/tsdown.client.ts
 @@ -558,7 +558,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
@@ -30,7 +30,7 @@ index 99e647d..d7786d8 100644
        },
      }],
 diff --git a/packages/client/ui-conversation/src/client/apply.ts b/packages/client/ui-conversation/src/client/apply.ts
-index f4a5ff4..79e3dd4 100644
+index f4a5ff47..79e3dd4c 100644
 --- a/packages/client/ui-conversation/src/client/apply.ts
 +++ b/packages/client/ui-conversation/src/client/apply.ts
 @@ -1,3 +1,4 @@
@@ -72,7 +72,7 @@ index f4a5ff4..79e3dd4 100644
    ctx.effect(() => () => { submissionPolicy.dispose() })
 diff --git a/packages/client/ui-conversation/src/client/conversation-reload.ts b/packages/client/ui-conversation/src/client/conversation-reload.ts
 new file mode 100644
-index 0000000..7d92eef
+index 00000000..7d92eef5
 --- /dev/null
 +++ b/packages/client/ui-conversation/src/client/conversation-reload.ts
 @@ -0,0 +1,24 @@
@@ -101,7 +101,7 @@ index 0000000..7d92eef
 +  return false
 +}
 diff --git a/packages/client/ui-conversation/src/client/locales.ts b/packages/client/ui-conversation/src/client/locales.ts
-index 8ddad82..b8002e1 100644
+index aab47353..e771b253 100644
 --- a/packages/client/ui-conversation/src/client/locales.ts
 +++ b/packages/client/ui-conversation/src/client/locales.ts
 @@ -24,6 +24,7 @@ export const zh = {
@@ -112,7 +112,7 @@ index 8ddad82..b8002e1 100644
    'input.send.steer': '插话发送',
    'attachment.pending': '待发送附件',
    'attachment.scrollLeft': '向左滚动附件',
-@@ -378,6 +379,7 @@ export const en = {
+@@ -376,6 +377,7 @@ export const en = {
    'input.stop': 'Stop generating',
    'input.send': 'Send message',
    'input.send.queue': 'Queue message',
@@ -121,7 +121,7 @@ index 8ddad82..b8002e1 100644
    'attachment.pending': 'Pending attachments',
    'attachment.scrollLeft': 'Scroll attachments left',
 diff --git a/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx b/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
-index dea8a86..1305803 100644
+index dea8a869..1305803b 100644
 --- a/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
 +++ b/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
 @@ -39,6 +39,7 @@ import { attachmentErrorText, imageSizeText } from '../image-labels.ts'
@@ -160,7 +160,7 @@ index dea8a86..1305803 100644
      if (primaryStops) {
 diff --git a/packages/client/ui-conversation/src/client/skeleton/background-wait.ts b/packages/client/ui-conversation/src/client/skeleton/background-wait.ts
 new file mode 100644
-index 0000000..3595692
+index 00000000..35956926
 --- /dev/null
 +++ b/packages/client/ui-conversation/src/client/skeleton/background-wait.ts
 @@ -0,0 +1,36 @@
@@ -201,10 +201,10 @@ index 0000000..3595692
 +  return running && observed?.id === sessionId && observed?.waiting === true
 +}
 diff --git a/packages/core/tools/src/index.ts b/packages/core/tools/src/index.ts
-index 87275e8..3faf8f3 100644
+index baca4ec5..26e500c8 100644
 --- a/packages/core/tools/src/index.ts
 +++ b/packages/core/tools/src/index.ts
-@@ -730,6 +730,7 @@ class ToolLayer implements ScopeLayer {
+@@ -740,6 +740,7 @@ class ToolLayer implements ScopeLayer {
     * "which form does the model see" is a contradiction, not a merge.
     */
    mode: ToolPresentationMode | undefined
@@ -212,7 +212,7 @@ index 87275e8..3faf8f3 100644
  
    constructor(scope: ScopeKey | undefined) {
      this.tools = new NamedEntries(name => new Error(scope === undefined
-@@ -822,6 +823,7 @@ export class ToolRuntime extends Service {
+@@ -834,6 +835,7 @@ export class ToolRuntime extends Service {
      () => { this.ctx.emit('tools/change') },
    )
    /** Presentation for scopes that declare none; {@link presentAs} shadows it per scope. */
@@ -220,7 +220,7 @@ index 87275e8..3faf8f3 100644
    private readonly defaultMode: ToolPresentationMode
    private readonly maxParallelSubCalls: number
    /**
-@@ -866,7 +868,9 @@ export class ToolRuntime extends Service {
+@@ -878,7 +880,9 @@ export class ToolRuntime extends Service {
        order: this.ctx.systemPrompt.getSectionOrder('PTC_ONLY'),
        // The SAME predicate the executor denies by, so the prompt cannot state
        // a rule the registry does not enforce (see `collapses`).
@@ -231,7 +231,7 @@ index 87275e8..3faf8f3 100644
      }
    }
  
-@@ -958,7 +962,7 @@ export class ToolRuntime extends Service {
+@@ -970,7 +974,7 @@ export class ToolRuntime extends Service {
     * @param mode - the presentation the covered agents' models see.
     * @returns the exact disposer that restores the deployment default.
     */
@@ -240,7 +240,7 @@ index 87275e8..3faf8f3 100644
      const ctx = this.ctx
      if (scopeOf(ctx) === undefined) {
        throw new Error('tools.presentAs() requires a scoped context (agent.ctx): a context-global presentation is the `mode` config field on the tools row')
-@@ -971,7 +975,8 @@ export class ToolRuntime extends Service {
+@@ -983,7 +987,8 @@ export class ToolRuntime extends Service {
              throw new Error(`tools.presentAs("${mode}") conflicts with "${layer.mode}" already declared for this scope; one composition selects one presentation`)
            }
            layer.mode = mode
@@ -250,7 +250,7 @@ index 87275e8..3faf8f3 100644
          },
          { label: 'tools.presentAs()' },
        )
-@@ -988,6 +993,21 @@ export class ToolRuntime extends Service {
+@@ -1000,6 +1005,21 @@ export class ToolRuntime extends Service {
      return dispose
    }
  
@@ -272,7 +272,7 @@ index 87275e8..3faf8f3 100644
    /**
     * Build one scope's wire schemas and names for prompt-order validation.
     * Restrictions do not make known tools invalid, but a mode collapse does.
-@@ -995,6 +1015,7 @@ export class ToolRuntime extends Service {
+@@ -1007,6 +1027,7 @@ export class ToolRuntime extends Service {
    private wireSchemas(scope?: ScopeKey): ToolProviderResult {
      const view = this.view(scope)
      const mode = this.modeFor(scope)
@@ -280,7 +280,7 @@ index 87275e8..3faf8f3 100644
      if (mode === 'native') {
        const schemas = [...view.visible.values()].map(definition => this.schemaOf(definition, false))
        return { schemas, knownNames: [...view.knownNames] }
-@@ -1008,8 +1029,8 @@ export class ToolRuntime extends Service {
+@@ -1020,8 +1041,8 @@ export class ToolRuntime extends Service {
      const schemas = [...view.visible.values()].map(definition => this.schemaOf(definition, false))
      if (mode === 'ptc') {
        return {
@@ -291,7 +291,7 @@ index 87275e8..3faf8f3 100644
        }
      }
      return { schemas, knownNames: [...view.knownNames, RUN_CODE_NAME] }
-@@ -1336,7 +1357,7 @@ export class ToolRuntime extends Service {
+@@ -1348,7 +1369,7 @@ export class ToolRuntime extends Service {
     * @param nested - whether the call is a transport sub-dispatch, not a model-direct call.
     */
    private collapses(name: string, scope: ScopeKey | undefined, nested: boolean): boolean {
@@ -301,7 +301,7 @@ index 87275e8..3faf8f3 100644
  
    /**
 diff --git a/packages/jobs/jobs-local/src/index.ts b/packages/jobs/jobs-local/src/index.ts
-index ea68015..cb8a803 100644
+index ea680151..cb8a8033 100644
 --- a/packages/jobs/jobs-local/src/index.ts
 +++ b/packages/jobs/jobs-local/src/index.ts
 @@ -11,6 +11,7 @@
@@ -397,7 +397,7 @@ index ea68015..cb8a803 100644
  
    /**
 diff --git a/packages/jobs/jobs/src/index.ts b/packages/jobs/jobs/src/index.ts
-index dcfd95b..6f44764 100644
+index dcfd95b7..6f447649 100644
 --- a/packages/jobs/jobs/src/index.ts
 +++ b/packages/jobs/jobs/src/index.ts
 @@ -11,11 +11,14 @@
@@ -433,7 +433,7 @@ index dcfd95b..6f44764 100644
     * Preflight access, validation, owner cleanup, and implementation-owned
     * admission before starting and atomically registering work. Any preflight
 diff --git a/packages/jobs/jobs/src/types.ts b/packages/jobs/jobs/src/types.ts
-index 3858cf5..fa50863 100644
+index 3858cf50..fa508634 100644
 --- a/packages/jobs/jobs/src/types.ts
 +++ b/packages/jobs/jobs/src/types.ts
 @@ -12,6 +12,21 @@ import type { JobChannel, JobChunk, JobKind, JobView } from './view.ts'
@@ -459,7 +459,7 @@ index 3858cf5..fa50863 100644
  export interface JobOutcome {
    /** How the job ended: finished (`completed`), cancelled (`killed`), or broke (`failed`). */
 diff --git a/packages/jobs/jobs/src/view.ts b/packages/jobs/jobs/src/view.ts
-index ed3af9c..3d15f47 100644
+index ed3af9c0..3d15f470 100644
 --- a/packages/jobs/jobs/src/view.ts
 +++ b/packages/jobs/jobs/src/view.ts
 @@ -63,6 +63,10 @@ export interface JobChunk {
@@ -474,10 +474,10 @@ index ed3af9c..3d15f47 100644
    readonly id: JobId
    /**
 diff --git a/packages/jobs/tool-jobs/src/index.ts b/packages/jobs/tool-jobs/src/index.ts
-index e9acc4c..d34c71f 100644
+index 6551b5a6..1092487f 100644
 --- a/packages/jobs/tool-jobs/src/index.ts
 +++ b/packages/jobs/tool-jobs/src/index.ts
-@@ -66,6 +66,7 @@ const PUBLIC_JOB_SCHEMA = {
+@@ -68,6 +68,7 @@ const PUBLIC_JOB_SCHEMA = {
    type: 'object',
    additionalProperties: false,
    properties: {
@@ -485,7 +485,7 @@ index e9acc4c..d34c71f 100644
      id: { type: 'string', required: true },
      kind: { type: 'string', required: true },
      label: { type: 'string', required: true },
-@@ -186,6 +187,48 @@ function readBody(read: JobRead): { text: string; job: PublicJobSnapshot } {
+@@ -188,6 +189,48 @@ function readBody(read: JobRead): { text: string; job: PublicJobSnapshot } {
    return { text, job: publicJob(read.job) }
  }
  
@@ -534,15 +534,7 @@ index e9acc4c..d34c71f 100644
  export function apply(ctx: Context, config: Config): void {
    const waitDefault = config.waitTimeoutMs ?? 30_000
    const waitCap = config.maxWaitTimeoutMs ?? 600_000
-@@ -196,6 +239,7 @@ export function apply(ctx: Context, config: Config): void {
-   // human input. Keyed by the exact Agent, so a same-session replacement
-   // starts with a full budget.
-   const spentWakes = new WeakMap<Agent, number>()
-+  const lastWake = new WeakMap<Agent, number>()
-   if (waitDefault > waitCap) {
-     throw new Error(`tool-jobs: waitTimeoutMs (${waitDefault}) exceeds maxWaitTimeoutMs (${waitCap})`)
-   }
-@@ -213,6 +257,37 @@ export function apply(ctx: Context, config: Config): void {
+@@ -216,6 +259,37 @@ export function apply(ctx: Context, config: Config): void {
      })
    }
  
@@ -580,7 +572,7 @@ index e9acc4c..d34c71f 100644
    const outputLimits = new WeakMap<ToolExecution, number>()
    ctx.on('tools/pre-execute', (exec, next) => {
      const maxBytes = visibleOutputLimit(ctx, exec)
-@@ -278,21 +353,36 @@ export function apply(ctx: Context, config: Config): void {
+@@ -281,16 +355,29 @@ export function apply(ctx: Context, config: Config): void {
      // absent here when it left before settlement — and then no inbox is left.
      const owner = ctx.get('agents')?.get(event.job.owner)
      if (owner === undefined) return
@@ -618,18 +610,9 @@ index e9acc4c..d34c71f 100644
 +      source: { kind: 'tool-jobs', form: 'notice', summary: completionSummary(snapshot) },
 +      ...(options.completionPreviewBytes ? { jobReceipt: { id: snapshot.id, runId, delivery: supplied } } : {}),
      })
-     const spent = spentWakes.get(owner) ?? 0
--    if (delivery === 'wakeup' && owner.status === 'idle' && spent < wakeBudget) {
--      spentWakes.set(owner, spent + 1)
-+    // Independent work started before an earlier wake is not a new self-exciting generation.
-+    const existingBatch = options.completionPreviewBytes && snapshot.startedAt <= (lastWake.get(owner) ?? -1)
-+    if (delivery === 'wakeup' && owner.status === 'idle' && (spent < wakeBudget || existingBatch)) {
-       owner.followup(message)
-+      if (!existingBatch) { spentWakes.set(owner, spent + 1); lastWake.set(owner, Date.now()) }
-       return
-     }
-     owner.inject(message)
-@@ -308,7 +398,7 @@ export function apply(ctx: Context, config: Config): void {
+     if (delivery === 'wakeup' && owner.status === 'idle') {
+       if (wakeBudget === undefined) {
+@@ -317,7 +404,7 @@ export function apply(ctx: Context, config: Config): void {
      parameters: {
        job_id: { type: 'string', required: true, description: 'Job id returned by the tool that started the background work.' },
        wait: { type: 'boolean', description: 'Block until the job reaches a terminal status or the timeout expires. A timed-out wait returns [status: running] and leaves the job alive.' },
@@ -638,7 +621,7 @@ index e9acc4c..d34c71f 100644
      },
      finalizeContent: finalizeJobContent,
      output: {
-@@ -318,25 +408,33 @@ export function apply(ctx: Context, config: Config): void {
+@@ -327,25 +414,33 @@ export function apply(ctx: Context, config: Config): void {
          properties: {
            text: { type: 'string', required: true },
            job: { ...PUBLIC_JOB_SCHEMA, required: true },
@@ -681,7 +664,7 @@ index e9acc4c..d34c71f 100644
      presentCall: args => presentJobCall(`Read output from background job ${args.job_id}`, 'read', args.job_id),
    }))
 diff --git a/packages/jobs/tool-jobs/src/render.ts b/packages/jobs/tool-jobs/src/render.ts
-index b95eb43..bdd7349 100644
+index b95eb439..bdd73497 100644
 --- a/packages/jobs/tool-jobs/src/render.ts
 +++ b/packages/jobs/tool-jobs/src/render.ts
 @@ -11,6 +11,7 @@ import type { JobChunk, JobView } from '@deepseek-ai/dsh-jobs/view'
@@ -701,7 +684,7 @@ index b95eb43..bdd7349 100644
      label: job.label,
      status: job.status,
 diff --git a/packages/shell/tool-bash/src/index.ts b/packages/shell/tool-bash/src/index.ts
-index c74b051..d124149 100644
+index c74b0513..d124149b 100644
 --- a/packages/shell/tool-bash/src/index.ts
 +++ b/packages/shell/tool-bash/src/index.ts
 @@ -63,6 +63,7 @@ interface BashToolArgs {
@@ -770,7 +753,7 @@ index c74b051..d124149 100644
            let attached: StartedJob | undefined
            try {
 diff --git a/packages/shell/tool-pwsh/src/index.ts b/packages/shell/tool-pwsh/src/index.ts
-index 8fdfddd..0df20f7 100644
+index 8fdfddd6..0df20f72 100644
 --- a/packages/shell/tool-pwsh/src/index.ts
 +++ b/packages/shell/tool-pwsh/src/index.ts
 @@ -81,6 +81,7 @@ interface PwshToolArgs {

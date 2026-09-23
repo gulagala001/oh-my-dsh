@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 const root = new URL('../vendor/dsh/', import.meta.url);
 test('shipped DSH sources, browser package and patch match the pinned distribution manifest', async () => {
   const manifest = JSON.parse(await readFile(new URL('../vendor/dsh.json', import.meta.url)));
-  assert.equal(manifest.commit, 'c36a83ff6bb95e3f82cf79f9be7c724270a8aa61');
+  assert.equal(manifest.commit, '00102833dfaee1da9f48a3a8eae9d34005a75218');
   const files = {};
   async function walk(directory, prefix = '') {
     for (const entry of await readdir(directory, { withFileTypes: true })) {

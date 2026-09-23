@@ -1,5 +1,5 @@
 diff --git a/packages/client/tsdown.client.ts b/packages/client/tsdown.client.ts
-index 99e647d..d7786d8 100644
+index 99e647d2..d7786d87 100644
 --- a/packages/client/tsdown.client.ts
 +++ b/packages/client/tsdown.client.ts
 @@ -558,7 +558,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
@@ -30,7 +30,7 @@ index 99e647d..d7786d8 100644
        },
      }],
 diff --git a/packages/client/ui-chat/src/client/apply.ts b/packages/client/ui-chat/src/client/apply.ts
-index 69885d3..129c887 100644
+index 69885d3e..129c8874 100644
 --- a/packages/client/ui-chat/src/client/apply.ts
 +++ b/packages/client/ui-chat/src/client/apply.ts
 @@ -1,3 +1,4 @@
@@ -57,7 +57,7 @@ index 69885d3..129c887 100644
    ctx.effect(() => chatSettings.subscribe(() => {
      const accepted = chatSettings.getSnapshot().value?.linkOpening
 diff --git a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css
-index 56687cd..d01394b 100644
+index 56687cd8..d01394bb 100644
 --- a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css
 +++ b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css
 @@ -72,8 +72,9 @@
@@ -79,10 +79,17 @@ index 56687cd..d01394b 100644
 +
 +.count { flex: none; font-size: 11px; color: var(--dsw-alias-label-tertiary); }
 diff --git a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx
-index d56d652..35ec35f 100644
+index f2d7fa17..fef2d281 100644
 --- a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx
 +++ b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx
-@@ -35,6 +35,8 @@ interface LiveProcessTitle {
+@@ -1,5 +1,5 @@
+ /** Stable process container; display policy changes visibility, never member parents. */
+-import { memo, useCallback, useEffect, useId, useRef, useState, type ComponentProps, type ReactNode } from 'react'
++import { memo, useCallback, useEffect, useLayoutEffect, useId, useRef, useState, type ComponentProps, type ReactNode } from 'react'
+ import {
+   IconAgentPresetOutlineRegular, IconApiOutlineRegular, IconBrowseOutlineRegular, IconChevronDownOutlineRegular,
+   IconChevronUpOutlineRegular, IconCodeOutlineRegular, IconEditOutlineRegular, IconGlobeOutlineRegular,
+@@ -34,6 +34,8 @@ interface LiveProcessTitle {
  }
  
  const PROCESS_ICONS: Record<ProcessTitleActivity, ReactNode> = {
@@ -91,7 +98,7 @@ index d56d652..35ec35f 100644
    thinking: <IconThinkOutlineRegular />,
    read: <IconBrowseOutlineRegular size={14} />,
    search: <IconSearchOutlineRegular size={14} />,
-@@ -107,18 +109,19 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
+@@ -95,18 +97,19 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
    readonly toggle: () => void
  }) {
    const data = useChatGroup(groupKey, group => group?.data)
@@ -117,7 +124,7 @@ index d56d652..35ec35f 100644
        data-process-activity={activity} onClick={(event) => { event.currentTarget.focus(); toggle() }}>
        <span className={css.leading} aria-hidden="true">
          <span className={css.activityIcon} data-step-process-icon>{PROCESS_ICONS[activity]}</span>
-@@ -126,7 +129,10 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
+@@ -114,7 +117,10 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
            {open ? <IconChevronUpOutlineRegular /> : <IconChevronDownOutlineRegular />}
          </span>
        </span>
@@ -129,7 +136,7 @@ index d56d652..35ec35f 100644
      </button>
    )
  })
-@@ -157,9 +163,11 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
+@@ -146,9 +152,11 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
      if (spec !== undefined && !alwaysOpen) props.actions.setTurnProcessOpen(spec.turn, spec.answerStep ?? 0, true)
    }, [props.actions, spec, alwaysOpen])
    const rootRef = useSearchableHidden(outerHidden, revealOuter)
@@ -144,7 +151,7 @@ index d56d652..35ec35f 100644
    const reveal = useCallback(() => { setOpen(true) }, [setOpen])
    const bodyRef = useSearchableHidden(grouped && !open, reveal)
    const contentRef = useRef<HTMLDivElement>(null)
-@@ -184,7 +192,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
+@@ -162,7 +170,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
    const classes = [css.body, !grouped ? css.expandedBody : '',
      grouped && edges.canScrollUp ? css.fadeTop : '', grouped && edges.canScrollDown ? css.fadeBottom : '']
    return (
@@ -153,17 +160,17 @@ index d56d652..35ec35f 100644
        data-chat-flow-key={groupKey} data-chat-anchor-key={`group:${groupKey}`} data-chat-turn={turn}
        data-chat-paging-anchor={grouped && !open || undefined}
        data-step-process data-group-expanded-mode={!grouped || undefined}>
-@@ -192,7 +200,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
+@@ -170,7 +178,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
          <ProcessGroupHeader groupKey={groupKey} useChatGroup={useChatGroup}
            usePresentation={props.usePresentation} t={props.t} open={open} bodyId={bodyId} toggle={toggle} />
        </div>
 -      <div ref={bodyRef} id={bodyId} className={classes.join(' ')} data-step-process-body
 +      <div ref={bodyRef} id={bodyId} role="region" tabIndex={0} aria-labelledby={bodyId + '-title'} className={classes.join(' ')} data-step-process-body
          data-scroll-up={edges.canScrollUp || undefined} data-scroll-down={edges.canScrollDown || undefined}
-         onScroll={sync}>
+         {...events}>
          <div ref={contentRef} className={css.content} data-step-process-content data-chat-flow="">
 diff --git a/packages/client/ui-chat/src/client/chat/ChatNodeSeat.tsx b/packages/client/ui-chat/src/client/chat/ChatNodeSeat.tsx
-index 5bb003b..7b1b62c 100644
+index 5bb003bd..7b1b62ca 100644
 --- a/packages/client/ui-chat/src/client/chat/ChatNodeSeat.tsx
 +++ b/packages/client/ui-chat/src/client/chat/ChatNodeSeat.tsx
 @@ -1,4 +1,4 @@
@@ -186,7 +193,7 @@ index 5bb003b..7b1b62c 100644
      ? null
      : {
 diff --git a/packages/client/ui-chat/src/client/contract/process-groups.ts b/packages/client/ui-chat/src/client/contract/process-groups.ts
-index 0c7bc74..0390064 100644
+index 0c7bc744..0390064e 100644
 --- a/packages/client/ui-chat/src/client/contract/process-groups.ts
 +++ b/packages/client/ui-chat/src/client/contract/process-groups.ts
 @@ -1,9 +1,11 @@
@@ -203,7 +210,7 @@ index 0c7bc74..0390064 100644
    readonly running: ProcessActivity | undefined
    readonly runningDetail: string
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts b/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
-index d6766b1..add41fb 100644
+index d6766b19..add41fbd 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
 +++ b/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
 @@ -5,7 +5,9 @@ import { isRunningTool } from '../contract/chat-nodes.ts'
@@ -244,7 +251,7 @@ index d6766b1..add41fb 100644
      running,
      runningDetail,
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/process-groups.ts b/packages/client/ui-chat/src/client/conversation-nodes/process-groups.ts
-index bff0c53..160edaf 100644
+index bff0c532..160edaff 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/process-groups.ts
 +++ b/packages/client/ui-chat/src/client/conversation-nodes/process-groups.ts
 @@ -29,6 +29,7 @@ function reply(node: ChatNode): boolean {
@@ -256,7 +263,7 @@ index bff0c53..160edaf 100644
      value.kind === right.counts[index]?.kind && value.count === right.counts[index].count)
  }
 diff --git a/packages/client/ui-chat/src/client/locale.ts b/packages/client/ui-chat/src/client/locale.ts
-index f246af9..4475bee 100644
+index 9638f554..6147fd52 100644
 --- a/packages/client/ui-chat/src/client/locale.ts
 +++ b/packages/client/ui-chat/src/client/locale.ts
 @@ -17,11 +17,18 @@ export const zh = {

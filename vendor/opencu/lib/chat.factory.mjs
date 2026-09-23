@@ -172,13 +172,18 @@ const registration = {
 			return {
 				code: {
 					copyLabel: t("copy"),
-					copiedLabel: t("copied")
+					copiedLabel: t("copied"),
+					toolbarLabels: {
+						codeLabel: t("codeBlock.title"),
+						wrapLabel: t("codeBlock.wrap"),
+						unwrapLabel: t("codeBlock.unwrap")
+					}
 				},
 				footnotes: t("markdown.footnotes")
 			};
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-chat/src/client/chat/MessageItem.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-alpha2-source/packages/client/ui-chat/src/client/chat/MessageItem.module.css.mjs
 		const css$17 = ".Sixlwa_userRow{flex-direction:column;align-items:flex-end;gap:6px;display:flex}.Sixlwa_userStack{min-width:0;max-width:min(calc(var(--dsh-chat-content-width,748px) * .702), 82%);flex-direction:column;align-items:flex-end;gap:8px;display:flex}.Sixlwa_bubble{background:var(--dsw-specific-bubble);max-width:100%;font-size:var(--dsh-content-font-size,14px);line-height:calc(22px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-primary);white-space:pre-wrap;word-break:break-word;border-radius:22px;padding:10px 16px}.Sixlwa_referenceSummary{color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px))}.Sixlwa_contextRow{padding:2px 0}.Sixlwa_compactionRow{--dsh-compaction-header-height:calc(24px + var(--dsh-content-font-delta,0px));padding:2px 0}.Sixlwa_compactionButton{width:100%;height:var(--dsh-compaction-header-height);min-width:0;color:inherit;font:inherit;text-align:left;background:0 0;border:none;border-radius:6px;align-items:center;padding:0;display:flex}.Sixlwa_compactionRow:has(.Sixlwa_compactionBody) .Sixlwa_compactionButton{z-index:7;background:var(--dsw-alias-bg-base);border-radius:0;position:sticky;top:0}.Sixlwa_compactionBody :has(>[data-code-block-banner]){top:var(--dsh-compaction-header-height)}.Sixlwa_compactionRow:has(.Sixlwa_compactionBody) .Sixlwa_compactionButton:hover{background:var(--dsw-alias-interactive-bg-hover-solid)}.Sixlwa_compactionButton:not(:disabled){cursor:pointer}.Sixlwa_compactionButton:not(:disabled):hover{background:var(--dsw-alias-interactive-bg-hover)}.Sixlwa_compactionLeading{width:calc(16px + var(--dsh-content-font-delta,0px));height:calc(16px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-secondary);flex:none;place-items:center;margin-right:6px;display:inline-grid}.Sixlwa_compactionLeading svg{width:calc(14px + var(--dsh-content-font-delta,0px));height:calc(14px + var(--dsh-content-font-delta,0px))}.Sixlwa_compactionContextIcon,.Sixlwa_compactionDisclosureIcon{grid-area:1/1;justify-content:center;align-items:center;display:inline-flex}.Sixlwa_compactionDisclosureIcon,.Sixlwa_compactionButton:not(:disabled):hover .Sixlwa_compactionContextIcon,.Sixlwa_compactionButton:not(:disabled):focus-visible .Sixlwa_compactionContextIcon{opacity:0}.Sixlwa_compactionButton:not(:disabled):hover .Sixlwa_compactionDisclosureIcon,.Sixlwa_compactionButton:not(:disabled):focus-visible .Sixlwa_compactionDisclosureIcon{opacity:1}.Sixlwa_compactionTitle{font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-primary-dimmed);flex:none}.Sixlwa_compactionSep{background:var(--dsw-alias-label-caption);border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px}.Sixlwa_compactionSummary{min-width:0;color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;flex:auto;overflow:hidden}.Sixlwa_compactionBody{padding:4px 0 4px calc(22px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px))}.Sixlwa_retryRow{color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px))}.Sixlwa_retrySummary{width:fit-content;color:inherit;cursor:pointer;user-select:none;border-radius:3px;align-items:center;gap:7px;padding:2px 0;list-style:none;display:inline-flex}.Sixlwa_retrySummary::-webkit-details-marker{display:none}.Sixlwa_retrySummary:after{content:\"\";opacity:.8;border-bottom:1.5px solid;border-right:1.5px solid;width:6px;height:6px;transition:transform .12s;transform:rotate(-45deg)}.Sixlwa_retrySummary:hover{color:var(--dsw-alias-label-secondary)}.Sixlwa_retrySummary:focus-visible{outline:1.5px solid var(--dsw-alias-button-info-fill);outline-offset:2px}.Sixlwa_retryText{color:inherit}.Sixlwa_retryRow[data-active] .Sixlwa_retryText{background:linear-gradient(90deg, var(--dsw-alias-label-tertiary) 0%, var(--dsw-alias-label-tertiary) 40%, var(--dsw-alias-label-secondary) 50%, var(--dsw-alias-label-tertiary) 60%, var(--dsw-alias-label-tertiary) 100%);color:#0000;background-position:100%;background-size:200% 100%;background-clip:text;animation:1.6s ease-in-out infinite Sixlwa_retry-shimmer}.Sixlwa_retryRow[open] .Sixlwa_retrySummary:after{transform:rotate(45deg)}.Sixlwa_retryDetails{overflow-wrap:anywhere;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px));gap:2px;margin-top:3px;padding-left:14px;display:grid}.Sixlwa_retryDetailLabel{color:var(--dsw-alias-label-secondary)}.Sixlwa_turnErrorRow{font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));grid-template-columns:10px minmax(0,1fr) auto;align-items:start;gap:8px;padding:2px 0;display:grid}.Sixlwa_turnErrorDot{margin-top:5px}.Sixlwa_turnErrorCopy{overflow-wrap:anywhere;min-width:0}.Sixlwa_turnErrorTitle{color:var(--dsw-alias-state-error-primary);margin-right:6px;font-weight:600}.Sixlwa_turnErrorMessage{color:var(--dsw-alias-label-secondary)}.Sixlwa_turnErrorCode{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-markdown-code-block-small)}.Sixlwa_maxTokensTitle{color:var(--dsw-alias-state-warn-primary);margin-right:6px;font-weight:600}@keyframes Sixlwa_retry-shimmer{0%{background-position:100%}to{background-position:0}}@media (prefers-reduced-motion:reduce){.Sixlwa_retryRow[data-active] .Sixlwa_retryText{color:inherit;background:0 0;animation:none}}.Sixlwa_attachmentRow{flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:100%;display:flex}.Sixlwa_fileCard{border:.5px solid var(--dsw-alias-border-l2,#0000001f);background:var(--dsw-specific-input-major,transparent);box-sizing:border-box;border-radius:16px;flex:0 0 240px;align-items:center;gap:10px;width:240px;min-height:64px;padding:8px 12px;display:inline-flex}.Sixlwa_fileIcon{flex:none;width:28px;height:28px}.Sixlwa_fileContent{flex-direction:column;flex:1;min-width:0;display:flex}.Sixlwa_fileName{white-space:nowrap;text-overflow:ellipsis;color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px;overflow:hidden}.Sixlwa_fileMeta{white-space:nowrap;text-overflow:ellipsis;color:var(--dsw-alias-label-tertiary,#00000073);font-size:12px;line-height:15px;overflow:hidden}";
 		const tagId$17 = "@deepseek-ai/dsh-client-ui-chat/MessageItem.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$17) + "]") === null) {
@@ -286,7 +291,7 @@ const registration = {
 			});
 		});
 		//#endregion
-		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-chat/src/client/chat/ContextBody.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-alpha2-source/packages/client/ui-chat/src/client/chat/ContextBody.module.css.mjs
 		const css$16 = ".ZkiH0q_text{color:var(--dsw-alias-label-secondary);font:inherit;white-space:pre-wrap;overflow-wrap:anywhere;margin:0}.ZkiH0q_fields{border-top:.5px solid var(--dsw-alias-border-l2);flex-direction:column;gap:2px;margin:8px 0 0;padding-top:8px;display:flex}.ZkiH0q_field{gap:8px;min-width:0;display:flex}.ZkiH0q_fieldKey{min-width:96px;color:var(--dsw-alias-label-caption);flex:none}.ZkiH0q_fieldValue{min-width:0;color:var(--dsw-alias-label-tertiary);overflow-wrap:anywhere;flex:auto;margin:0}.ZkiH0q_files{flex-wrap:wrap;gap:4px 12px;margin:0 0 8px;padding:0;list-style:none;display:flex}.ZkiH0q_file{align-items:baseline;gap:6px;min-width:0;display:flex}.ZkiH0q_filePath{color:var(--dsw-alias-label-secondary);overflow-wrap:anywhere}.ZkiH0q_fileAction{color:var(--dsw-alias-label-caption)}.ZkiH0q_catalogNotice{color:var(--dsw-alias-label-caption);margin:0 0 6px}.ZkiH0q_entries{flex-direction:column;gap:4px;margin:0;padding:0;list-style:none;display:flex}.ZkiH0q_entry{gap:8px;min-width:0;display:flex}.ZkiH0q_entryName{color:var(--dsw-alias-label-secondary);flex:none}.ZkiH0q_entryDescription{min-width:0;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;flex:auto;overflow:hidden}.ZkiH0q_sections{flex-direction:column;gap:8px;margin:0;display:flex}.ZkiH0q_section{flex-direction:column;gap:2px;min-width:0;display:flex}.ZkiH0q_sectionName{color:var(--dsw-alias-label-caption)}.ZkiH0q_sectionText{color:var(--dsw-alias-label-secondary);white-space:pre-wrap;overflow-wrap:anywhere;margin:0}.ZkiH0q_relaySender{color:var(--dsw-alias-label-caption);overflow-wrap:anywhere;margin:0 0 6px}.ZkiH0q_recalls{flex-direction:column;gap:2px;margin:0 0 8px;padding:0;list-style:none;display:flex}.ZkiH0q_recall{gap:8px;min-width:0;display:flex}.ZkiH0q_recallLabel{color:var(--dsw-alias-label-secondary);overflow-wrap:anywhere}.ZkiH0q_recallCounts{color:var(--dsw-alias-label-caption);flex:none}";
 		const tagId$16 = "@deepseek-ai/dsh-client-ui-chat/ContextBody.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$16) + "]") === null) {
@@ -843,7 +848,7 @@ const registration = {
 			}
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-chat/src/client/chat/ContextInjectionRow.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-alpha2-source/packages/client/ui-chat/src/client/chat/ContextInjectionRow.module.css.mjs
 		const css$15 = ".XrJvXW_root{min-width:0}.XrJvXW_root[data-open]{padding-bottom:4px}.XrJvXW_chevron{color:var(--dsw-alias-label-secondary)}.XrJvXW_sep{background:var(--dsw-alias-label-caption);border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px}.XrJvXW_source{min-width:0;color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;flex:none;overflow:hidden}.XrJvXW_summary{min-width:0;color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;flex:auto;overflow:hidden}.XrJvXW_body{box-sizing:border-box;width:calc(100% - 22px - var(--dsh-content-font-delta,0px));max-height:141px;margin:4px 0 0 calc(22px + var(--dsh-content-font-delta,0px));background:var(--dsw-alias-markdown-code-block);color:var(--dsw-alias-label-tertiary);font:400 11px/16px var(--ds-font-family-code);border:none;border-radius:8px;padding:10px 16px 12px 12px;overflow:auto}";
 		const tagId$15 = "@deepseek-ai/dsh-client-ui-chat/ContextInjectionRow.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$15) + "]") === null) {
@@ -1049,7 +1054,7 @@ const registration = {
 			return day;
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-chat/src/client/chat/MessageIconActions.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-alpha2-source/packages/client/ui-chat/src/client/chat/MessageIconActions.module.css.mjs
 		const css$14 = ".xzv4MW_actions{height:calc(28px + var(--dsh-content-font-delta,0px));align-items:center;gap:8px;display:flex}.xzv4MW_timeStart{font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-tertiary);white-space:nowrap;padding-right:12px}.xzv4MW_timeEnd{font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:inherit;white-space:nowrap}.xzv4MW_endInfo{min-width:0;color:var(--dsw-alias-label-tertiary);align-items:center;gap:8px;margin-left:8px;display:inline-flex}@media (hover:hover){[data-actions-reveal=hover] .xzv4MW_actions,:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering]):has(~:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering])) .xzv4MW_actions{opacity:0;transition:opacity 80ms}[data-actions-reveal=hover]:hover .xzv4MW_actions,[data-actions-reveal=hover]:focus-within .xzv4MW_actions,:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering]):has(~:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering])):hover .xzv4MW_actions,:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering]):has(~:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering])):focus-within .xzv4MW_actions{opacity:1}}.xzv4MW_action{width:calc(28px + var(--dsh-content-font-delta,0px));height:calc(28px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;border-radius:28px;justify-content:center;align-items:center;padding:6px;display:inline-flex}.xzv4MW_action svg{width:calc(15px + var(--dsh-content-font-delta,0px));height:calc(15px + var(--dsh-content-font-delta,0px))}.xzv4MW_actions[data-clock=end] .xzv4MW_action svg{width:calc(17px + var(--dsh-content-font-delta,0px));height:calc(17px + var(--dsh-content-font-delta,0px))}.xzv4MW_action:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}.xzv4MW_action[data-unavailable]{cursor:default;opacity:.4}.xzv4MW_action[data-unavailable]:hover{color:var(--dsw-alias-label-tertiary);background:0 0}.xzv4MW_visuallyHidden{clip:rect(0 0 0 0);white-space:nowrap;width:1px;height:1px;position:absolute;overflow:hidden}";
 		const tagId$14 = "@deepseek-ai/dsh-client-ui-chat/MessageIconActions.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$14) + "]") === null) {
@@ -1573,8 +1578,8 @@ const registration = {
 			return ref;
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-chat/src/client/chat/ChatView.module.css.mjs
-		const css$13 = ".EvIC1a_root{flex-direction:column;flex:auto;min-height:0;display:flex;position:relative}.EvIC1a_scroll{min-height:0;padding:16px calc(var(--dsh-composer-side-clearance) + 16px);flex:auto;overflow-y:auto;container-type:inline-size}.EvIC1a_root[data-chat-following-tail] .EvIC1a_scroll,[data-conversation-scroll]:has(.EvIC1a_root[data-chat-following-tail]){overflow-anchor:none}[data-conversation-scroll] .EvIC1a_root{flex:none;height:auto;min-height:auto}[data-conversation-scroll] .EvIC1a_scroll{flex:none;min-height:auto;overflow:visible}.EvIC1a_column{max-width:var(--dsh-chat-content-width);flex-direction:column;width:100%;margin:0 auto;display:flex}.EvIC1a_column>:not([hidden]):not(.EvIC1a_flowItem:empty)~:not([hidden]):not(.EvIC1a_flowItem:empty){margin-top:var(--dsh-chat-flow-gap,16px)}.EvIC1a_flowItem{min-width:0}.EvIC1a_flowItem[data-turn-process-answer]{--dsh-chat-flow-gap:8px}.EvIC1a_flowItem:empty{height:0}.EvIC1a_callRow{border-radius:6px}.EvIC1a_hint{color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px))}.EvIC1a_openError{color:var(--dsw-alias-state-error-primary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px))}.EvIC1a_older{justify-content:center;display:flex}.EvIC1a_older button{color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-interactive-bg-hover-solid);cursor:pointer;border:none;border-radius:14px;padding:4px 12px;font-size:12px}.EvIC1a_older button:disabled{cursor:default;opacity:.6}.EvIC1a_toBottomSlot{z-index:8;height:0;padding-right:max(0px, calc((100% - var(--dsh-chat-content-width)) / 2));pointer-events:none;justify-content:flex-end;display:flex;position:sticky;bottom:16px}[data-conversation-scroll] .EvIC1a_toBottomSlot{bottom:calc(var(--dsh-composer-height,152px) + 16px)}.EvIC1a_toBottom{--dsw-elevation-stroke-color:var(--dsw-alias-border-l3);corner-shape:round;width:34px;height:34px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-button-floating-fill);box-shadow:var(--dsw-elevation-panel);cursor:pointer;pointer-events:auto;border:0;border-radius:100px;justify-content:center;align-items:center;margin-top:-34px;padding:0;display:flex}.EvIC1a_toBottom:hover{background:var(--dsw-alias-button-floating-hover)}.EvIC1a_modalAction{min-width:72px}";
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-alpha2-source/packages/client/ui-chat/src/client/chat/ChatView.module.css.mjs
+		const css$13 = ".EvIC1a_frame{flex-direction:column;flex:auto;min-height:0;display:flex;position:relative;container-type:inline-size}.EvIC1a_root{flex-direction:column;flex:auto;min-height:0;display:flex;position:relative;overflow:visible clip}.EvIC1a_scroll{min-height:0;padding:16px calc(var(--dsh-composer-side-clearance) + 16px);flex:auto;overflow-y:auto;container-type:inline-size}.EvIC1a_root[data-chat-following-tail] .EvIC1a_scroll,[data-conversation-scroll]:has(.EvIC1a_root[data-chat-following-tail]){overflow-anchor:none}[data-conversation-scroll] .EvIC1a_frame,[data-conversation-scroll] .EvIC1a_root{flex:none;height:auto;min-height:auto}[data-conversation-scroll] .EvIC1a_scroll{flex:none;min-height:auto;overflow:visible}.EvIC1a_column{max-width:var(--dsh-chat-content-width);flex-direction:column;width:100%;margin:0 auto;display:flex}.EvIC1a_column>:not([hidden]):not(.EvIC1a_flowItem:empty)~:not([hidden]):not(.EvIC1a_flowItem:empty){margin-top:var(--dsh-chat-flow-gap,16px)}.EvIC1a_flowItem{min-width:0}.EvIC1a_flowItem[data-turn-process-answer]{--dsh-chat-flow-gap:8px}.EvIC1a_flowItem:empty{height:0}.EvIC1a_callRow{border-radius:6px}.EvIC1a_hint{color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px))}.EvIC1a_openError{color:var(--dsw-alias-state-error-primary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px))}.EvIC1a_older{justify-content:center;display:flex}.EvIC1a_older button{color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-interactive-bg-hover-solid);cursor:pointer;border:none;border-radius:14px;padding:4px 12px;font-size:12px}.EvIC1a_older button:disabled{cursor:default;opacity:.6}.EvIC1a_toBottomSlot{z-index:8;height:0;padding-right:max(calc(var(--dsh-composer-side-clearance) + 16px), calc((100% - var(--dsh-chat-content-width)) / 2));pointer-events:none;justify-content:flex-end;display:flex;position:absolute;bottom:16px;left:0;right:0}[data-conversation-scroll] .EvIC1a_toBottomSlot{bottom:calc(var(--dsh-composer-height,152px) + 16px);position:sticky}.EvIC1a_toBottom{--dsw-elevation-stroke-color:var(--dsw-alias-border-l3);corner-shape:round;width:34px;height:34px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-button-floating-fill);box-shadow:var(--dsw-elevation-panel);cursor:pointer;pointer-events:auto;border:0;border-radius:100px;justify-content:center;align-items:center;margin-top:-34px;padding:0;display:flex}.EvIC1a_toBottom:hover{background:var(--dsw-alias-button-floating-hover)}.EvIC1a_modalAction{min-width:72px}";
 		const tagId$13 = "@deepseek-ai/dsh-client-ui-chat/ChatView.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$13) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1587,6 +1592,7 @@ const registration = {
 			"callRow": "EvIC1a_callRow",
 			"column": "EvIC1a_column",
 			"flowItem": "EvIC1a_flowItem",
+			"frame": "EvIC1a_frame",
 			"hint": "EvIC1a_hint",
 			"modalAction": "EvIC1a_modalAction",
 			"older": "EvIC1a_older",
@@ -1804,7 +1810,296 @@ const registration = {
 			};
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css.mjs
+		//#region src/client/chat/use-scroll-follow.ts
+		/** Independent bottom-follow intent and native scrolling, without paging or DOM observers. */
+		/**
+		* Read one scrollport without measuring its children.
+		* @param element - scrolling element.
+		* @returns current position and range.
+		*/
+		function scrollMetrics(element) {
+			const height = element.clientHeight;
+			return {
+				top: element.scrollTop,
+				height,
+				floor: Math.max(0, element.scrollHeight - height)
+			};
+		}
+		/** One scrollport's follow intent; native animation progress does not count as reader movement. */
+		var ScrollFollow = class ScrollFollow {
+			following;
+			threshold;
+			static owners = /* @__PURE__ */ new WeakMap();
+			target = null;
+			sampledTop;
+			/**
+			* @param following - initial follow intent.
+			* @param threshold - accepted distance from the floor, in pixels.
+			*/
+			constructor(following, threshold) {
+				this.following = following;
+				this.threshold = threshold;
+			}
+			/**
+			* Find the mounted controller for reading-position compensation.
+			* @param element - scrollport with an optional follow owner.
+			* @returns its controller, when bound.
+			*/
+			static forElement(element) {
+				return this.owners.get(element);
+			}
+			/**
+			* Share this controller with reading-position compensation for the same scrollport.
+			* @param element - owned scrollport.
+			* @returns release the association on unmount or close.
+			*/
+			bind(element) {
+				ScrollFollow.owners.set(element, this);
+				return () => {
+					if (ScrollFollow.owners.get(element) === this) ScrollFollow.owners.delete(element);
+				};
+			}
+			/**
+			* Expose follow intent independently of the current offset.
+			* @returns whether content growth should follow the floor.
+			*/
+			get active() {
+				return this.following;
+			}
+			/**
+			* Expose outstanding native motion before accepting reader input.
+			* @returns whether a native follow animation has an outstanding target.
+			*/
+			get animating() {
+				return this.target !== null;
+			}
+			/**
+			* Classify bottom arrivals using this scrollport's own tolerance.
+			* @param metrics - current scroll geometry.
+			* @returns whether the position is within the follow threshold.
+			*/
+			nearBottom(metrics) {
+				return metrics.floor - metrics.top <= this.threshold;
+			}
+			/**
+			* Commit caller-owned follow decisions without moving the scrollport.
+			* @param active - externally committed follow intent.
+			*/
+			setFollowing(active) {
+				this.following = active;
+				if (!active) this.target = null;
+			}
+			/** Adopt the next visible layout as a fresh reader position. */
+			reset() {
+				this.setFollowing(false);
+				this.sampledTop = void 0;
+			}
+			/**
+			* Adopt delivered scrolling while retaining intent during native animation.
+			* @param metrics - current geometry.
+			* @param movedByReader - caller attribution; omitted callers compare the last sampled position.
+			* @returns updated follow intent.
+			*/
+			sample(metrics, movedByReader = this.sampledTop === void 0 || Math.abs(metrics.top - this.sampledTop) > .5) {
+				this.sampledTop = metrics.top;
+				if (!this.animating && movedByReader) this.following = this.nearBottom(metrics);
+				return this.active;
+			}
+			/**
+			* Settle native scrolling; an off-target stop releases follow intent.
+			* @param metrics - actual geometry delivered at scrollend.
+			* @returns follow intent after completing or interrupting native motion.
+			*/
+			settle(metrics) {
+				const target = this.target;
+				this.target = null;
+				return this.sample(metrics, target === null ? void 0 : Math.abs(metrics.top - Math.min(target, metrics.floor)) > this.threshold);
+			}
+			/**
+			* Position immediately and adopt the resulting follow intent.
+			* @param element - scrolling element.
+			* @param metrics - geometry before positioning.
+			* @param top - requested offset, clamped to the measured range.
+			* @returns geometry after positioning.
+			*/
+			jump(element, metrics, top) {
+				const animated = this.animating;
+				this.target = null;
+				const target = Math.max(0, Math.min(metrics.floor, top));
+				if (animated) element.scrollTo({
+					top: target,
+					behavior: "instant"
+				});
+				else if (target !== metrics.top) element.scrollTop = target;
+				const landed = {
+					...metrics,
+					top: element.scrollTop
+				};
+				this.sampledTop = landed.top;
+				this.following = this.nearBottom(landed);
+				return landed;
+			}
+			/**
+			* Follow the measured floor, respecting reduced motion for smooth requests.
+			* An outstanding smooth target finishes before another is issued.
+			* Within-tolerance positioning is immediate while no animation is outstanding.
+			* @param element - scrolling element.
+			* @param metrics - current geometry.
+			* @param behavior - native animation for growth, or immediate positioning.
+			* @returns current geometry; smooth requests retain their starting position until native scroll delivery.
+			*/
+			toBottom(element, metrics, behavior) {
+				this.following = true;
+				if (behavior === "instant" || metrics.top >= metrics.floor || !this.animating && this.nearBottom(metrics)) return this.jump(element, metrics, metrics.floor);
+				if (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches) return this.jump(element, metrics, metrics.floor);
+				if (this.target === null) {
+					this.target = metrics.floor;
+					element.scrollTo({
+						top: metrics.floor,
+						behavior: "smooth"
+					});
+				}
+				return metrics;
+			}
+			/**
+			* Cancel native motion before a reader gesture; only subsequent actual movement changes follow intent.
+			* @param element - scrolling element.
+			* @param metrics - position at interruption.
+			*/
+			interrupt(element, metrics) {
+				if (!this.animating) return;
+				this.target = null;
+				this.sampledTop = metrics.top;
+				element.scrollTo({
+					top: metrics.top,
+					behavior: "instant"
+				});
+			}
+		};
+		/**
+		* Retain one independent follow controller without React updates for scroll samples.
+		* @param initial - initial follow intent.
+		* @param threshold - accepted distance from the floor, in pixels.
+		* @returns the stable controller shared by the caller's scroll and resize handlers.
+		*/
+		function useScrollFollow(initial, threshold) {
+			const [follow] = (0, react.useState)(() => new ScrollFollow(initial, threshold));
+			return follow;
+		}
+		//#endregion
+		//#region src/client/chat/use-process-scroll.ts
+		/** Capped process-group scrolling and fades over the shared follow controller. */
+		const AT_REST = {
+			canScrollUp: false,
+			canScrollDown: false
+		};
+		const SCROLL_KEYS$1 = new Set([
+			"ArrowUp",
+			"ArrowDown",
+			"PageUp",
+			"PageDown",
+			"Home",
+			"End",
+			" "
+		]);
+		/**
+		* Observe one group's body and content without coupling its follow intent to the outer transcript.
+		* Wheel, touchstart, any pointerdown, and unprevented scroll keys interrupt active animations,
+		* including events from editable controls; subsequent position sampling determines follow intent.
+		* @param bodyRef - capped scrolling body.
+		* @param contentRef - uncapped content whose size reports growth.
+		* @param open - local disclosure state.
+		* @param grouped - whether the display mode retains the group's height cap.
+		* @returns edge fades, DOM event bindings, and one-shot positioning for manual opening.
+		*/
+		function useProcessScroll(bodyRef, contentRef, open, grouped) {
+			const follow = useScrollFollow(false, 1);
+			const initialPosition = (0, react.useRef)(null);
+			const [edges, setEdges] = (0, react.useState)(AT_REST);
+			const initialize = (0, react.useCallback)((position) => {
+				initialPosition.current = position;
+			}, []);
+			const sync = (0, react.useCallback)((cause) => {
+				const body = bodyRef.current;
+				let next = AT_REST;
+				if (body !== null && body.closest("[hidden], [data-group-expanded-mode]") === null) {
+					let metrics = scrollMetrics(body);
+					const initial = cause === "resize" ? initialPosition.current : null;
+					if (initial !== null) {
+						metrics = follow.jump(body, metrics, initial === "bottom" ? metrics.floor : 0);
+						if (initial === "top") follow.setFollowing(false);
+						initialPosition.current = null;
+					} else {
+						const wasAnimating = follow.animating;
+						if (cause === "scrollend") follow.settle(metrics);
+						else follow.sample(metrics);
+						if (follow.active && (cause === "resize" || cause === "scrollend" && wasAnimating)) metrics = follow.toBottom(body, metrics, "smooth");
+					}
+					next = {
+						canScrollUp: metrics.top > 1,
+						canScrollDown: metrics.top < metrics.floor - 1
+					};
+				} else follow.reset();
+				setEdges((previous) => previous.canScrollUp === next.canScrollUp && previous.canScrollDown === next.canScrollDown ? previous : next);
+			}, [bodyRef, follow]);
+			const interrupt = (0, react.useCallback)(() => {
+				const body = bodyRef.current;
+				if (body !== null && follow.animating) follow.interrupt(body, scrollMetrics(body));
+			}, [bodyRef, follow]);
+			const events = (0, react.useMemo)(() => ({
+				onScroll: () => {
+					sync("scroll");
+				},
+				onWheel: interrupt,
+				onTouchStart: interrupt,
+				onPointerDown: interrupt,
+				onKeyDown: (event) => {
+					if (!event.defaultPrevented && SCROLL_KEYS$1.has(event.key)) interrupt();
+				}
+			}), [interrupt, sync]);
+			(0, react.useLayoutEffect)(() => {
+				interrupt();
+				follow.reset();
+				if (!grouped || !open) initialPosition.current = null;
+			}, [
+				follow,
+				grouped,
+				interrupt,
+				open
+			]);
+			(0, react.useLayoutEffect)(() => {
+				const body = bodyRef.current;
+				if (body === null || !open || typeof ResizeObserver === "undefined") return;
+				const unbind = follow.bind(body);
+				const observer = new ResizeObserver(() => {
+					sync("resize");
+				});
+				const onScrollEnd = (event) => {
+					if (event.target === body) sync("scrollend");
+				};
+				body.addEventListener("scrollend", onScrollEnd);
+				observer.observe(body);
+				if (contentRef.current !== null) observer.observe(contentRef.current);
+				return () => {
+					unbind();
+					observer.disconnect();
+					body.removeEventListener("scrollend", onScrollEnd);
+				};
+			}, [
+				bodyRef,
+				contentRef,
+				follow,
+				open,
+				sync
+			]);
+			return {
+				edges,
+				events,
+				initialize
+			};
+		}
+		//#endregion
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-alpha2-source/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css.mjs
 		const css$12 = ".O_Ebla_root{min-width:0}.O_Ebla_title{max-width:100%;color:var(--dsw-alias-label-secondary);font:inherit;font-size:var(--dsh-content-font-size,14px);text-align:left;cursor:pointer;background:0 0;border:0;align-items:center;gap:6px;padding:0;transition:color .1s;display:flex}.O_Ebla_title:hover{color:var(--dsw-alias-label-primary)}.O_Ebla_leading{width:16px;height:16px;color:var(--dsw-alias-label-tertiary);flex:none;justify-content:center;align-items:center;display:inline-flex;position:relative}.O_Ebla_activityIcon,.O_Ebla_chevron{justify-content:center;align-items:center;transition:opacity .1s;display:inline-flex;position:absolute;inset:0}.O_Ebla_activityIcon{opacity:1}.O_Ebla_chevron,.O_Ebla_title:is(:hover,:focus-visible) .O_Ebla_activityIcon{opacity:0}.O_Ebla_title:is(:hover,:focus-visible) .O_Ebla_chevron{opacity:1}.O_Ebla_title[aria-expanded=true] .O_Ebla_activityIcon{opacity:0}.O_Ebla_title[aria-expanded=true] .O_Ebla_chevron{opacity:1}.O_Ebla_title[aria-expanded=true]{padding-bottom:16px}.O_Ebla_body{--dsh-chat-flow-gap:2px;overscroll-behavior-y:auto;scrollbar-gutter:stable;max-height:min(280px,45vh);position:relative;overflow-y:auto}.O_Ebla_label{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.O_Ebla_fadeTop{mask-image:linear-gradient(#0000 0,#000 24px 100%)}.O_Ebla_fadeBottom{mask-image:linear-gradient(#000 0 calc(100% - 24px),#0000 100%)}.O_Ebla_fadeTop.O_Ebla_fadeBottom{mask-image:linear-gradient(#0000 0,#000 24px calc(100% - 24px),#0000 100%)}@media (prefers-reduced-motion:reduce){.O_Ebla_title,.O_Ebla_activityIcon,.O_Ebla_chevron{transition:none}}.O_Ebla_content{flex-direction:column;display:flex}.O_Ebla_content>*{flex-shrink:0}.O_Ebla_content>:not([hidden]):not(:empty)~:not([hidden]):not(:empty){margin-top:var(--dsh-chat-flow-gap,8px)}.O_Ebla_expandedBody{--dsh-chat-flow-gap:16px;scrollbar-gutter:auto;max-height:none;overflow:visible}.O_Ebla_count{color:var(--dsw-alias-label-tertiary);flex:none;font-size:11px}";
 		const tagId$12 = "@deepseek-ai/dsh-client-ui-chat/ChatGroupSeat.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$12) + "]") === null) {
@@ -1831,10 +2126,6 @@ const registration = {
 		//#endregion
 		//#region src/client/chat/ChatGroupSeat.tsx
 		/** Stable process container; display policy changes visibility, never member parents. */
-		const PROCESS_SCROLL_AT_REST = {
-			canScrollUp: false,
-			canScrollDown: false
-		};
 		const PROCESS_TITLE_MINIMUM_MS = 150;
 		const PROCESS_ICONS = {
 			images: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
@@ -1872,15 +2163,6 @@ const registration = {
 			questions: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, {}),
 			tools: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSparkleRegular, { size: 14 })
 		};
-		function processScrollEdges(element) {
-			return {
-				canScrollUp: element.scrollTop > 1,
-				canScrollDown: element.scrollTop < element.scrollHeight - element.clientHeight - 1
-			};
-		}
-		function sameProcessScrollEdges(left, right) {
-			return left.canScrollUp === right.canScrollUp && left.canScrollDown === right.canScrollDown;
-		}
 		function sameLiveProcessTitle(left, right) {
 			return left.activity === right.activity && left.detail === right.detail;
 		}
@@ -1986,8 +2268,9 @@ const registration = {
 		const ChatGroupSeat = (0, react.memo)(function ChatGroupSeat({ groupKey, useChatGroup, ...props }) {
 			const members = useChatGroup(groupKey, (group) => group?.members);
 			const turn = useChatGroup(groupKey, (group) => group?.data.turn);
+			const closed = useChatGroup(groupKey, (group) => group?.data.closed);
 			const foldCompleted = props.usePresentation((policy) => policy.foldCompletedTurns);
-			const { expanded: open, setExpanded: setOpen, toggle } = useDisclosure();
+			const { expanded: open, setExpanded: setOpen } = useDisclosure();
 			const firstKey = members?.[0]?.key ?? "";
 			const presentation = props.useChatNodeProcess(firstKey);
 			const turnLocation = props.useChatNode(firstKey, (node) => {
@@ -2024,25 +2307,15 @@ const registration = {
 			const bodyRef = useSearchableHidden(grouped && !open, reveal);
 			const contentRef = (0, react.useRef)(null);
 			const bodyId = (0, react.useId)();
-			const [edges, setEdges] = (0, react.useState)(PROCESS_SCROLL_AT_REST);
-			const sync = (0, react.useCallback)(() => {
-				const body = bodyRef.current;
-				const next = body === null || body.closest("[hidden], [data-group-expanded-mode]") !== null ? PROCESS_SCROLL_AT_REST : processScrollEdges(body);
-				setEdges((previous) => sameProcessScrollEdges(previous, next) ? previous : next);
-			}, [bodyRef]);
-			(0, react.useLayoutEffect)(() => {
-				const body = bodyRef.current;
-				if (body === null || !open || typeof ResizeObserver === "undefined") return;
-				const observer = new ResizeObserver(sync);
-				observer.observe(body);
-				if (contentRef.current !== null) observer.observe(contentRef.current);
-				return () => {
-					observer.disconnect();
-				};
+			const { edges, events, initialize } = useProcessScroll(bodyRef, contentRef, open, grouped);
+			const toggle = (0, react.useCallback)(() => {
+				if (!open) initialize(closed === false ? "bottom" : "top");
+				setOpen(!open);
 			}, [
-				bodyRef,
+				closed,
+				initialize,
 				open,
-				sync
+				setOpen
 			]);
 			if (members === void 0) return null;
 			const classes = [
@@ -2083,7 +2356,7 @@ const registration = {
 					"data-step-process-body": true,
 					"data-scroll-up": edges.canScrollUp || void 0,
 					"data-scroll-down": edges.canScrollDown || void 0,
-					onScroll: sync,
+					...events,
 					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						ref: contentRef,
 						className: ChatGroupSeat_module_css_default.content,
@@ -3275,8 +3548,8 @@ const registration = {
 			});
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-chat/src/client/chat/TurnNavigator.module.css.mjs
-		const css$11 = ".eGxaPq_slot{z-index:7;pointer-events:none;height:0;position:sticky;top:0}.eGxaPq_frame{--turn-rail-band:calc(var(--dsh-conversation-viewport-height,100dvh) - var(--dsh-composer-height,152px));--turn-preview-height:100px;top:calc(var(--turn-rail-band) / 2);right:calc(12px - (var(--dsh-composer-side-clearance) + 16px));width:28px;max-height:min(max(0px, calc(var(--turn-rail-band) - 64px)), 420px);contain:layout;cursor:pointer;pointer-events:auto;position:absolute;transform:translateY(-50%)}.eGxaPq_scroller{max-height:inherit;overscroll-behavior:contain;scrollbar-width:none;position:relative;overflow-y:auto}.eGxaPq_scroller::-webkit-scrollbar{display:none}.eGxaPq_fadeTop{mask-image:linear-gradient(#0000 0,#000 24px 100%)}.eGxaPq_fadeBottom{mask-image:linear-gradient(#000 0 calc(100% - 24px),#0000 100%)}.eGxaPq_fadeTop.eGxaPq_fadeBottom{mask-image:linear-gradient(#0000 0,#000 24px calc(100% - 24px),#0000 100%)}.eGxaPq_marks{position:relative}.eGxaPq_mark{cursor:pointer;background:0 0;border:0;border-radius:8px;height:10px;padding:0;position:absolute;top:0;left:0;right:0}.eGxaPq_mark:before{background:var(--dsw-alias-border-l4);content:\"\";transform-origin:100%;border-radius:2px;width:20px;height:2px;transition:transform .14s,background-color .14s;position:absolute;top:50%;right:0;transform:translateY(-50%)scaleX(.6)}.eGxaPq_markUnloaded:before{opacity:.6;transform:translateY(-50%)scaleX(.4)}.eGxaPq_markPreview:before{background:var(--dsw-alias-label-tertiary);transform:translateY(-50%)scaleX(.9)}.eGxaPq_markBusy:before{animation:1s ease-in-out infinite eGxaPq_dsh-turn-mark-busy}.eGxaPq_markActive:before{background:var(--dsw-alias-label-primary);transform:translateY(-50%)scaleX(1)}.eGxaPq_mark:focus-visible:before{background:var(--dsw-alias-state-business-primary);transform:translateY(-50%)scaleX(1)}.eGxaPq_mark:focus-visible{outline:none}.eGxaPq_mark:focus-visible:after{border-radius:inherit;outline:1px solid var(--dsw-alias-state-business-primary);outline-offset:2px;content:\"\";width:20px;position:absolute;inset:0 0 0 auto}.eGxaPq_preview{top:clamp(0px, calc(var(--turn-preview-center) - var(--turn-preview-height) / 2), calc(100% - var(--turn-preview-height)));box-sizing:border-box;width:min(300px,100cqw - 120px);max-height:var(--turn-preview-height);color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);box-shadow:var(--dsw-elevation-panel);pointer-events:none;border:0;border-radius:10px;padding:10px 12px;transition:top .14s cubic-bezier(.2,.8,.2,1);animation:.12s ease-out eGxaPq_dsh-turn-preview-enter;position:absolute;right:calc(100% + 10px);overflow:hidden}.eGxaPq_previewPrompt,.eGxaPq_previewResponse{-webkit-box-orient:vertical;display:-webkit-box;overflow:hidden}.eGxaPq_previewPrompt{font:var(--dsw-font-xs-strong-13);-webkit-line-clamp:1}.eGxaPq_previewResponse{color:var(--dsw-alias-label-caption);font:var(--dsw-font-xxs-12);-webkit-line-clamp:3;margin-top:4px}@keyframes eGxaPq_dsh-turn-preview-enter{0%{opacity:0;transform:translate(4px)}to{opacity:1;transform:translate(0)}}@keyframes eGxaPq_dsh-turn-mark-busy{0%,to{opacity:1}50%{opacity:.35}}@container (width<=900px){.eGxaPq_slot{display:none}}@media (prefers-reduced-motion:reduce){.eGxaPq_frame,.eGxaPq_scroller,.eGxaPq_mark:before,.eGxaPq_markBusy:before,.eGxaPq_preview{scroll-behavior:auto;transition:none;animation:none}}";
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-alpha2-source/packages/client/ui-chat/src/client/chat/TurnNavigator.module.css.mjs
+		const css$11 = ".eGxaPq_slot{z-index:7;height:0;padding-inline:calc(var(--dsh-composer-side-clearance) + 16px);pointer-events:none;position:absolute;top:0;left:0;right:0;container-type:inline-size}[data-conversation-scroll] .eGxaPq_slot{position:sticky}.eGxaPq_frame{--turn-rail-band:calc(var(--dsh-conversation-viewport-height,100dvh) - var(--dsh-composer-height,152px));--turn-preview-height:100px;top:calc(var(--turn-rail-band) / 2);width:28px;max-height:min(max(0px, calc(var(--turn-rail-band) - 64px)), 420px);contain:layout;cursor:pointer;pointer-events:auto;position:absolute;right:12px;transform:translateY(-50%)}.eGxaPq_scroller{max-height:inherit;overscroll-behavior:contain;scrollbar-width:none;position:relative;overflow-y:auto}.eGxaPq_scroller::-webkit-scrollbar{display:none}.eGxaPq_fadeTop{mask-image:linear-gradient(#0000 0,#000 24px 100%)}.eGxaPq_fadeBottom{mask-image:linear-gradient(#000 0 calc(100% - 24px),#0000 100%)}.eGxaPq_fadeTop.eGxaPq_fadeBottom{mask-image:linear-gradient(#0000 0,#000 24px calc(100% - 24px),#0000 100%)}.eGxaPq_marks{position:relative}.eGxaPq_mark{cursor:pointer;background:0 0;border:0;border-radius:8px;height:10px;padding:0;position:absolute;top:0;left:0;right:0}.eGxaPq_mark:before{background:var(--dsw-alias-border-l4);content:\"\";transform-origin:100%;border-radius:2px;width:20px;height:2px;transition:transform .14s,background-color .14s;position:absolute;top:50%;right:0;transform:translateY(-50%)scaleX(.6)}.eGxaPq_markUnloaded:before{opacity:.6;transform:translateY(-50%)scaleX(.4)}.eGxaPq_markPreview:before{background:var(--dsw-alias-label-tertiary);transform:translateY(-50%)scaleX(.9)}.eGxaPq_markBusy:before{animation:1s ease-in-out infinite eGxaPq_dsh-turn-mark-busy}.eGxaPq_markActive:before{background:var(--dsw-alias-label-primary);transform:translateY(-50%)scaleX(1)}.eGxaPq_mark:focus-visible:before{background:var(--dsw-alias-state-business-primary);transform:translateY(-50%)scaleX(1)}.eGxaPq_mark:focus-visible{outline:none}.eGxaPq_mark:focus-visible:after{border-radius:inherit;outline:1px solid var(--dsw-alias-state-business-primary);outline-offset:2px;content:\"\";width:20px;position:absolute;inset:0 0 0 auto}.eGxaPq_preview{top:clamp(0px, calc(var(--turn-preview-center) - var(--turn-preview-height) / 2), calc(100% - var(--turn-preview-height)));box-sizing:border-box;width:min(300px,100cqw - 120px);max-height:var(--turn-preview-height);color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);box-shadow:var(--dsw-elevation-panel);pointer-events:none;border:0;border-radius:10px;padding:10px 12px;transition:top .14s cubic-bezier(.2,.8,.2,1);animation:.12s ease-out eGxaPq_dsh-turn-preview-enter;position:absolute;right:calc(100% + 10px);overflow:hidden}.eGxaPq_previewPrompt,.eGxaPq_previewResponse{-webkit-box-orient:vertical;display:-webkit-box;overflow:hidden}.eGxaPq_previewPrompt{font:var(--dsw-font-xs-strong-13);-webkit-line-clamp:1}.eGxaPq_previewResponse{color:var(--dsw-alias-label-caption);font:var(--dsw-font-xxs-12);-webkit-line-clamp:3;margin-top:4px}@keyframes eGxaPq_dsh-turn-preview-enter{0%{opacity:0;transform:translate(4px)}to{opacity:1;transform:translate(0)}}@keyframes eGxaPq_dsh-turn-mark-busy{0%,to{opacity:1}50%{opacity:.35}}@container (width<=900px){.eGxaPq_frame{display:none}}@media (prefers-reduced-motion:reduce){.eGxaPq_frame,.eGxaPq_scroller,.eGxaPq_mark:before,.eGxaPq_markBusy:before,.eGxaPq_preview{scroll-behavior:auto;transition:none;animation:none}}";
 		const tagId$11 = "@deepseek-ai/dsh-client-ui-chat/TurnNavigator.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$11) + "]") === null) {
 			const tag = document.createElement("style");
@@ -3846,14 +4119,16 @@ const registration = {
 			store;
 			state;
 			onChange;
+			follow;
 			sampleTimer = null;
 			probeFrame = null;
 			sampled = null;
-			constructor(viewport, store, state, onChange) {
+			constructor(viewport, store, state, onChange, follow) {
 				this.viewport = viewport;
 				this.store = store;
 				this.state = state;
 				this.onChange = onChange;
+				this.follow = follow;
 			}
 			/**
 			* Expose pending reader ownership to navigation and resize handlers.
@@ -3902,7 +4177,7 @@ const registration = {
 			}
 			/** Land at the current floor and clear saved reader position. */
 			followTail() {
-				const landing = this.viewport.scrollToBottom();
+				const landing = this.viewport.scrollToBottom(this.follow);
 				if (landing === null) return;
 				this.cancelPending();
 				this.commit(landing, true, this.viewport.latestTurn);
@@ -3917,7 +4192,7 @@ const registration = {
 				const landing = this.viewport.restore(saved);
 				if (landing === null) return;
 				this.cancelPending();
-				const following = this.nearBottom(landing.metrics);
+				const following = this.follow.nearBottom(landing.metrics);
 				this.commit(landing, following, following ? this.viewport.latestTurn : this.state.activeTurn, following);
 				if (!this.state.followingTail && landing.position === null) {
 					const position = this.viewport.capturePosition();
@@ -3931,7 +4206,7 @@ const registration = {
 			*/
 			acceptNavigation(landing) {
 				this.cancelPending();
-				const following = this.nearBottom(landing.metrics);
+				const following = this.follow.nearBottom(landing.metrics);
 				this.commit(landing, following, landing.turn ?? (following ? this.viewport.latestTurn : this.state.activeTurn));
 			}
 			/**
@@ -3983,9 +4258,6 @@ const registration = {
 				if (typeof requestAnimationFrame !== "function") this.probe();
 				else this.probeFrame = requestAnimationFrame(this.probe);
 			}
-			nearBottom(metrics) {
-				return metrics.floor - metrics.top <= 25;
-			}
 			commit(landing, followingTail, activeTurn, initialized = true) {
 				if (followingTail) this.store.save(null);
 				else if (landing.position !== null) this.store.save(landing.position);
@@ -3996,6 +4268,7 @@ const registration = {
 				});
 			}
 			publish(state) {
+				this.follow.setFollowing(state.followingTail);
 				if (state.initialized === this.state.initialized && state.followingTail === this.state.followingTail && state.activeTurn === this.state.activeTurn) return;
 				this.state = state;
 				this.onChange(state);
@@ -4011,7 +4284,7 @@ const registration = {
 				if (this.pending) return;
 				const scroll = this.viewport.readScroll();
 				if (scroll === null) return;
-				const activeTurn = this.nearBottom(scroll.metrics) ? this.viewport.latestTurn : this.viewport.readVisibleTurn(scroll.metrics);
+				const activeTurn = this.follow.nearBottom(scroll.metrics) ? this.viewport.latestTurn : this.viewport.readVisibleTurn(scroll.metrics);
 				this.publish({
 					...this.state,
 					initialized: true,
@@ -4023,14 +4296,14 @@ const registration = {
 				this.cancelPending();
 				const scroll = this.viewport.readScroll();
 				if (scroll === null) return;
-				const followingTail = scroll.movedByReader ? this.nearBottom(scroll.metrics) : this.state.followingTail;
+				const followingTail = this.follow.sample(scroll.metrics, scroll.movedByReader);
 				let position = null;
 				if (!scroll.movedByReader && followingTail) this.followTail();
 				else {
 					position = followingTail ? null : this.viewport.capturePosition();
 					this.viewport.acknowledge(scroll.metrics);
 					if (followingTail || position !== null) this.store.save(position);
-					const activeTurn = this.nearBottom(scroll.metrics) ? this.viewport.latestTurn : this.viewport.readVisibleTurn(scroll.metrics);
+					const activeTurn = this.follow.nearBottom(scroll.metrics) ? this.viewport.latestTurn : this.viewport.readVisibleTurn(scroll.metrics);
 					this.publish({
 						initialized: true,
 						followingTail,
@@ -4057,7 +4330,8 @@ const registration = {
 				followingTail: store.read() === null,
 				activeTurn: initialTurn
 			}));
-			const [reading] = (0, react.useState)(() => new ChatReading(viewport, store, state, setState));
+			const follow = useScrollFollow(state.followingTail, 25);
+			const [reading] = (0, react.useState)(() => new ChatReading(viewport, store, state, setState, follow));
 			(0, react.useLayoutEffect)(() => {
 				reading.setStore(store);
 			}, [reading, store]);
@@ -4205,12 +4479,7 @@ const registration = {
 			metrics() {
 				const scroller = this.elements?.scroller;
 				if (scroller === void 0) return null;
-				const height = scroller.clientHeight;
-				return {
-					top: scroller.scrollTop,
-					height,
-					floor: Math.max(0, scroller.scrollHeight - height)
-				};
+				return scrollMetrics(scroller);
 			}
 			anchor(key, identity = "position") {
 				if (this.elements === null) return null;
@@ -4388,6 +4657,7 @@ const registration = {
 			}
 			/**
 			* Compensate inner scrolling first, then the outer scrollport, within their actual scroll ranges.
+			* An inner write pauses its bound follow controller so the reading anchor takes priority.
 			* @returns the actual landing, or null when no visible retained row remains.
 			*/
 			preserve() {
@@ -4410,9 +4680,16 @@ const registration = {
 				}
 				if (group !== null && group.body.contains(row)) {
 					const top = row.getBoundingClientRect().top - group.body.getBoundingClientRect().top;
-					const floor = Math.max(0, group.body.scrollHeight - group.body.clientHeight);
-					const target = Math.max(0, Math.min(floor, group.body.scrollTop + top - group.top));
-					if (group.body.scrollTop !== target) group.body.scrollTop = target;
+					const metrics = scrollMetrics(group.body);
+					const target = Math.max(0, Math.min(metrics.floor, metrics.top + top - group.top));
+					if (metrics.top !== target) {
+						const follow = ScrollFollow.forElement(group.body);
+						if (follow === void 0) group.body.scrollTop = target;
+						else {
+							follow.jump(group.body, metrics, target);
+							follow.setFollowing(false);
+						}
+					}
 				}
 				const metrics = this.metrics();
 				if (metrics === null) return null;
@@ -4425,11 +4702,22 @@ const registration = {
 			}
 			/**
 			* Align the scrollport with its current floor.
+			* @param follow - independent follow intent and scrolling controller.
 			* @returns the actual floor landing, or null while detached.
 			*/
-			scrollToBottom() {
+			scrollToBottom(follow) {
 				const metrics = this.metrics();
-				return metrics === null ? null : this.write(metrics.floor, metrics, this.latestTurn);
+				if (metrics === null || this.elements === null) return null;
+				const landing = {
+					metrics: follow.toBottom(this.elements.scroller, metrics, "instant"),
+					position: null,
+					turn: this.latestTurn
+				};
+				this.observation = {
+					top: landing.metrics.top,
+					landing
+				};
+				return landing;
 			}
 			align(row, offset, turn) {
 				const metrics = this.metrics();
@@ -4653,29 +4941,28 @@ const registration = {
 			return message === "" ? fallback : message;
 		}
 		/**
-		* Prompt-RPC identities already rendered by durable material: user/steering
-		* node sources plus queue occurrences. A submission echo whose identity
-		* appears here is hidden in the same render, so the echo→durable swap is
-		* atomic — no duplicate, no gap — regardless of when the echo leaves the
-		* session snapshot.
+		* Durable input identities suppress matching echoes in the same render.
+		* The last input's Turn also distinguishes an empty opening control from
+		* one whose human input or trigger notice is already present.
 		*/
-		function observedRpcIds(order, nodes, inbox) {
+		function observedInputs(order, nodes) {
 			const observed = /* @__PURE__ */ new Set();
+			let lastInputTurn;
 			for (const key of order) {
 				const node = nodes.get(key);
-				if (node === void 0 || node.kind !== "user" && node.kind !== "steering") continue;
+				if (node === void 0 || node.kind !== "user" && node.kind !== "steering" && node.kind !== "turn-trigger") continue;
+				if (node.location.kind === "turn" || node.location.kind === "step") lastInputTurn = node.location.turn.turn;
+				if (node.kind === "turn-trigger") continue;
 				const source = node.data.source;
 				if (source?.kind === "user" && typeof source.rpcId === "string") observed.add(source.rpcId);
 			}
-			const pending = /* @__PURE__ */ new Set();
-			for (const { source } of [...inbox?.["next-turn"] ?? [], ...inbox?.["next-step"] ?? []]) if (source.kind === "user" && "rpcId" in source) pending.add(source.rpcId);
 			return {
-				durable: observed,
-				pending
+				rpcIds: observed,
+				lastInputTurn
 			};
 		}
-		const ChatNodeList = (0, react.memo)(function ChatNodeList({ entries, useChatGroup, ...seatProps }) {
-			return entries.map((entry) => {
+		const ChatNodeList = (0, react.memo)(function ChatNodeList({ entries, useChatGroup, pendingInputs, lastInputTurn, ...seatProps }) {
+			const rows = entries.map((entry) => {
 				switch (entry.kind) {
 					case "node": return /* @__PURE__ */ (0, react.createElement)(ChatNodeSeat, {
 						...seatProps,
@@ -4692,6 +4979,22 @@ const registration = {
 					default: return assertNever(entry);
 				}
 			});
+			const pendingRows = pendingInputs.map((item) => "requestId" in item ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PendingSubmissionBubble, {
+				submission: item,
+				renderMessageImages: seatProps.renderMessageImages,
+				t: seatProps.t
+			}, item.requestId) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PendingSteeringBubble, {
+				content: item.content,
+				renderMessageImages: seatProps.renderMessageImages,
+				t: seatProps.t
+			}, item.id));
+			const tail = entries.at(-1);
+			const node = tail?.kind === "node" ? seatProps.nodeStore.get(tail.key) : void 0;
+			if (node?.kind === "turn-process" && node.location.kind === "turn" && node.location.turn.status === "open" && node.location.turn.turn !== lastInputTurn) {
+				const index = pendingInputs.findIndex((item) => "requestId" in item && item.placement === "transcript");
+				if (index !== -1) rows.splice(rows.length - 1, 0, ...pendingRows.splice(index, 1));
+			}
+			return [...rows, ...pendingRows];
 		});
 		/**
 		* The chat view slot entry: pure component over the composed props; each
@@ -4741,27 +5044,31 @@ const registration = {
 			}, []);
 			const inboxSteering = (0, react.useMemo)(() => inbox?.["next-step"].filter((message) => message.source.kind === "user") ?? [], [inbox]);
 			const pendingSubmissions = useSession((s) => s.pendingSubmissions);
-			const visibleSubmissions = (0, react.useMemo)(() => {
-				if (pendingSubmissions.length === 0) return pendingSubmissions;
-				const observed = observedRpcIds(order, nodeStore, inbox);
-				return pendingSubmissions.filter((submission) => submission.placement !== "queued" && !observed.durable.has(submission.requestId) && (submission.placement === "steering" || !observed.pending.has(submission.requestId)));
+			const [visibleSubmissions, lastInputTurn] = (0, react.useMemo)(() => {
+				if (pendingSubmissions.length === 0) return [pendingSubmissions, void 0];
+				const observed = observedInputs(order, nodeStore);
+				return [pendingSubmissions.filter((submission) => submission.placement !== "queued" && !observed.rpcIds.has(submission.requestId)), observed.lastInputTurn];
 			}, [
 				pendingSubmissions,
 				order,
-				nodeStore,
-				inbox
+				nodeStore
 			]);
 			const pendingInputs = (0, react.useMemo)(() => {
 				const local = new Map(visibleSubmissions.map((submission) => [submission.requestId, submission]));
-				return [...inboxSteering.map((item) => {
+				const localIds = new Set(pendingSubmissions.filter((submission) => submission.placement !== "queued").map((submission) => submission.requestId));
+				return [...inboxSteering.flatMap((item) => {
 					const source = item.source;
-					if (source.kind !== "user" || !("rpcId" in source)) return item;
+					if (source.kind !== "user" || !("rpcId" in source)) return [item];
 					const submission = local.get(source.rpcId);
-					if (submission === void 0) return item;
+					if (submission === void 0) return localIds.has(source.rpcId) ? [] : [item];
 					local.delete(source.rpcId);
-					return submission;
+					return [submission];
 				}), ...local.values()];
-			}, [inboxSteering, visibleSubmissions]);
+			}, [
+				inboxSteering,
+				pendingSubmissions,
+				visibleSubmissions
+			]);
 			const renderMessageImages = (0, react.useCallback)((owner) => renderSlot("conversation.message.images", {
 				...owner,
 				loadImage
@@ -4788,99 +5095,96 @@ const registration = {
 				loadedTurns: turnNavigationItems
 			});
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: ChatView_module_css_default.root,
-				"data-chat-following-tail": scroll.followingTail ? "" : void 0,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					ref: scroll.listRef,
-					className: ChatView_module_css_default.scroll,
-					children: [
-						scroll.initialized && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TurnNavigator, {
-							items: railItems,
-							activeTurn: scroll.activeTurn,
-							busyTurn: scroll.busyTurn,
-							onNavigate: scroll.navigateToTurn,
-							t
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							ref: scroll.columnRef,
-							className: ChatView_module_css_default.column,
-							"data-chat-flow": "",
-							children: [
-								openState === "loading" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									className: ChatView_module_css_default.hint,
-									children: t("chat.loadingHistory")
-								}),
-								openState === "error" && openError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									className: ChatView_module_css_default.openError,
-									children: t("chat.loadError", {
-										message: openError.message,
-										code: openError.code
-									})
-								}),
-								hasMore && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									className: ChatView_module_css_default.older,
-									children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										type: "button",
-										disabled: loadingOlder,
-										onClick: scroll.loadEarlier,
-										children: loadingOlder ? t("loading") : t("chat.loadOlder")
-									})
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownDelegateProvider, {
-									openExternalLink,
-									openFile: requestOpenFile,
-									children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChatNodeList, {
-										entries,
-										nodeStore,
-										useChatGroup,
-										useChatNode,
-										useChatNodeProcess,
-										usePresentation,
-										useStore,
-										actions,
-										cwd,
+				className: ChatView_module_css_default.frame,
+				children: [
+					scroll.initialized && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TurnNavigator, {
+						items: railItems,
+						activeTurn: scroll.activeTurn,
+						busyTurn: scroll.busyTurn,
+						onNavigate: scroll.navigateToTurn,
+						t
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: ChatView_module_css_default.root,
+						"data-chat-following-tail": scroll.followingTail ? "" : void 0,
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							ref: scroll.listRef,
+							className: ChatView_module_css_default.scroll,
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								ref: scroll.columnRef,
+								className: ChatView_module_css_default.column,
+								"data-chat-flow": "",
+								children: [
+									openState === "loading" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+										className: ChatView_module_css_default.hint,
+										children: t("chat.loadingHistory")
+									}),
+									openState === "error" && openError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+										className: ChatView_module_css_default.openError,
+										children: t("chat.loadError", {
+											message: openError.message,
+											code: openError.code
+										})
+									}),
+									hasMore && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+										className: ChatView_module_css_default.older,
+										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+											type: "button",
+											disabled: loadingOlder,
+											onClick: scroll.loadEarlier,
+											children: loadingOlder ? t("loading") : t("chat.loadOlder")
+										})
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownDelegateProvider, {
+										openExternalLink,
 										openFile: requestOpenFile,
-										openSkill,
-										inspectCall,
-										forkAt,
-										loadImage,
-										renderMessageImages,
-										fileMentions,
-										renderSlot,
-										t
+										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChatNodeList, {
+											entries,
+											pendingInputs,
+											lastInputTurn,
+											nodeStore,
+											useChatGroup,
+											useChatNode,
+											useChatNodeProcess,
+											usePresentation,
+											useStore,
+											actions,
+											cwd,
+											openFile: requestOpenFile,
+											openSkill,
+											inspectCall,
+											forkAt,
+											loadImage,
+											renderMessageImages,
+											fileMentions,
+											renderSlot,
+											t
+										})
 									})
-								}),
-								pendingInputs.map((item) => "requestId" in item ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PendingSubmissionBubble, {
-									submission: item,
-									renderMessageImages,
-									t
-								}, item.requestId) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PendingSteeringBubble, {
-									content: item.content,
-									renderMessageImages,
-									t
-								}, item.id))
-							]
-						}),
-						!scroll.followingTail && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: ChatView_module_css_default.toBottomSlot,
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								type: "button",
-								className: ChatView_module_css_default.toBottom,
-								"aria-label": t("chat.toBottom"),
-								onClick: scroll.returnToBottom,
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})
+								]
 							})
 						})
-					]
-				}), fileOpenError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FileOpenErrorDialog, {
-					message: fileOpenError.message,
-					busy: fileOpenBusy,
-					onClose: closeFileOpenError,
-					onRetry: () => {
-						requestOpenFile(fileOpenError.path);
-					},
-					t
-				})]
+					}),
+					!scroll.followingTail && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: ChatView_module_css_default.toBottomSlot,
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: ChatView_module_css_default.toBottom,
+							"aria-label": t("chat.toBottom"),
+							onClick: scroll.returnToBottom,
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})
+						})
+					}),
+					fileOpenError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FileOpenErrorDialog, {
+						message: fileOpenError.message,
+						busy: fileOpenBusy,
+						onClose: closeFileOpenError,
+						onRetry: () => {
+							requestOpenFile(fileOpenError.path);
+						},
+						t
+					})
+				]
 			});
 		}
 		/** In-page Host open-path refusal: the wire reason plus a retry of the same path. */
@@ -4988,10 +5292,10 @@ const registration = {
 			"settings.performance.description": "选择性能与用量信息展示的详细程度",
 			"settings.performance.compact": "简洁",
 			"settings.performance.detailed": "详细",
-			"settings.links.title": "聊天链接打开方式",
-			"settings.links.description": "选择聊天中 HTTP(S) 链接的打开位置",
-			"settings.links.sidebar": "内置浏览器",
-			"settings.links.newTab": "浏览器新标签页",
+			"settings.links.title": "网页链接默认打开方式",
+			"settings.links.description": "对话中网页链接的打开位置",
+			"settings.links.sidebar": "应用内侧边栏",
+			"settings.links.newTab": "默认浏览器",
 			"settings.transcript.title": "工作过程展示",
 			"settings.transcript.description": "控制轮次和步骤的默认展开方式",
 			"settings.transcript.compact": "简洁",
@@ -5150,9 +5454,9 @@ const registration = {
 			"settings.performance.compact": "Compact",
 			"settings.performance.detailed": "Detailed",
 			"settings.links.title": "Open chat links in",
-			"settings.links.description": "Choose where HTTP(S) links in chat open",
-			"settings.links.sidebar": "Built-in browser",
-			"settings.links.newTab": "New browser tab",
+			"settings.links.description": "Choose where to open web links",
+			"settings.links.sidebar": "In-App Sidebar",
+			"settings.links.newTab": "Default Browser",
 			"settings.transcript.title": "Work details",
 			"settings.transcript.description": "Controls how turns and steps expand by default",
 			"settings.transcript.compact": "Compact",
@@ -5233,7 +5537,7 @@ const registration = {
 			"clock.ymd": "{y}-{m}-{d}"
 		};
 		//#endregion
-		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-chat/src/client/chat/accessibility.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-alpha2-source/packages/client/ui-chat/src/client/chat/accessibility.module.css.mjs
 		const css$10 = ".TTCZqG_visuallyHidden{clip:rect(0 0 0 0);white-space:nowrap;width:1px;height:1px;position:absolute;overflow:hidden}";
 		const tagId$10 = "@deepseek-ai/dsh-client-ui-chat/accessibility.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$10) + "]") === null) {
@@ -5245,7 +5549,7 @@ const registration = {
 		}
 		var accessibility_module_css_default = { "visuallyHidden": "TTCZqG_visuallyHidden" };
 		//#endregion
-		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-chat/src/client/chat/ReasoningRow.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-alpha2-source/packages/client/ui-chat/src/client/chat/ReasoningRow.module.css.mjs
 		const css$9 = ".lcKema_root{flex-direction:column;display:flex}.lcKema_root:not([data-expanded]){contain:size layout;height:calc(24px + var(--dsh-content-font-delta,0px))}.lcKema_row{position:relative;overflow:hidden}.lcKema_root[data-expanded] [data-open] [data-disclosure-row]{z-index:1;background:var(--dsw-alias-bg-base);position:sticky;top:0}.lcKema_root[data-state=running] .lcKema_row:after{content:\"\";inset-block:0;background:linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--dsw-alias-bg-base) 60%, transparent) 55%, transparent 100%);pointer-events:none;width:300px;animation:2.6s ease-out infinite lcKema_dsh-reasoning-row-sweep;position:absolute;left:0}@keyframes lcKema_dsh-reasoning-row-sweep{0%{left:-300px}90%,to{left:100%}}.lcKema_leading{flex-shrink:0}.lcKema_chevron{color:var(--dsw-alias-label-secondary)}.lcKema_title{font-weight:400}.lcKema_separator{background:var(--dsw-alias-label-caption);border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px}.lcKema_summary{min-width:0;color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));white-space:nowrap;flex:auto;overflow:hidden}.lcKema_summaryText{text-overflow:ellipsis;display:block;overflow:hidden}.lcKema_summary[data-streaming]{mask-image:linear-gradient(90deg,#000 calc(100% - 48px),#0000)}.lcKema_summary[data-streaming] .lcKema_summaryText{text-overflow:clip;overflow:visible}.lcKema_root:not([data-preview]) .lcKema_separator,.lcKema_root:not([data-preview]) .lcKema_summary{display:none}.lcKema_thinkBody{padding:4px 0 4px calc(22px + var(--dsh-content-font-delta,0px));min-width:0}@media (prefers-reduced-motion:reduce){.lcKema_root[data-state=running] .lcKema_row:after{animation:none}}";
 		const tagId$9 = "@deepseek-ai/dsh-client-ui-chat/ReasoningRow.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$9) + "]") === null) {
@@ -5361,7 +5665,7 @@ const registration = {
 			});
 		});
 		//#endregion
-		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-chat/src/client/chat/AssistantMarkdown.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-alpha2-source/packages/client/ui-chat/src/client/chat/AssistantMarkdown.module.css.mjs
 		const css$8 = ".hWmORq_root{font-size:var(--dsh-content-font-size,14px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-primary);flex-direction:column;display:flex}.hWmORq_body{flex-direction:column;gap:16px;display:flex}.hWmORq_body .md-table-wide{--dsh-table-spare:max(0px, calc((100cqw - var(--dsh-chat-content-width)) / 2));--dsh-table-lead:calc(var(--dsh-table-spare) + min(var(--dsh-chat-content-width), 100cqw) - 100%);box-sizing:border-box;width:calc(100% + var(--dsh-table-lead) + var(--dsh-table-spare));max-width:none;margin-left:calc(-1 * var(--dsh-table-lead));padding-left:var(--dsh-table-lead)}.hWmORq_body .md-table-wide>table{z-index:1;position:relative}.hWmORq_body>[data-turn-process-inline][hidden]{margin-bottom:-16px}.hWmORq_stopped{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-tertiary);border-radius:6px;align-self:flex-start;padding:0 6px;font-size:11px;line-height:18px}.hWmORq_actions{margin-top:16px;margin-left:-6px}";
 		const tagId$8 = "@deepseek-ai/dsh-client-ui-chat/AssistantMarkdown.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$8) + "]") === null) {
@@ -5512,7 +5816,7 @@ const registration = {
 			});
 		});
 		//#endregion
-		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-chat/src/client/chat/GenericCommandCard.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-alpha2-source/packages/client/ui-chat/src/client/chat/GenericCommandCard.module.css.mjs
 		const css$7 = "._5OnbHa_root{flex-direction:column;display:flex}._5OnbHa_leading{flex-shrink:0}._5OnbHa_chevron{color:var(--dsw-alias-label-secondary)}._5OnbHa_title{font-weight:400;transition:color .1s}._5OnbHa_separator{background:var(--dsw-alias-label-caption);border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px}._5OnbHa_summary{min-width:0;color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;flex:auto;transition:color .1s;overflow:hidden}._5OnbHa_row:hover ._5OnbHa_title,._5OnbHa_row:hover ._5OnbHa_summary:not([data-error]){color:var(--dsw-alias-label-primary)}._5OnbHa_summary[data-error],._5OnbHa_body[data-error]{color:var(--dsw-alias-state-error-primary)}._5OnbHa_body{border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-markdown-code-block);max-height:260px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-markdown-code-block-small);white-space:pre-wrap;border-radius:12px;margin:4px 0 4px 4px;padding:12px 16px;overflow:auto}";
 		const tagId$7 = "@deepseek-ai/dsh-client-ui-chat/GenericCommandCard.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$7) + "]") === null) {
@@ -5708,7 +6012,7 @@ const registration = {
 			});
 		});
 		//#endregion
-		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-chat/src/client/chat/TurnProcessNodeView.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-alpha2-source/packages/client/ui-chat/src/client/chat/TurnProcessNodeView.module.css.mjs
 		const css$6 = ".l_V-RG_root{box-sizing:border-box;width:100%;min-width:0;height:calc(33px + var(--dsh-content-font-delta,0px));border:none;border-bottom:.5px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-tertiary);cursor:pointer;text-align:left;background:0 0;align-items:center;padding:0 0 8px;transition:color .1s;display:flex}.l_V-RG_root:disabled{cursor:default}.l_V-RG_root:not(:disabled):hover{color:var(--dsw-alias-label-primary)}.l_V-RG_root:not([data-open]){margin-bottom:8px}.l_V-RG_chevron{width:14px;height:14px;color:var(--dsw-alias-label-caption);flex:none;margin-left:4px;transition:transform .1s}.l_V-RG_root[data-open] .l_V-RG_chevron{transform:rotate(180deg)}.l_V-RG_label{min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;overflow:hidden}@media (prefers-reduced-motion:reduce){.l_V-RG_root,.l_V-RG_chevron{transition:none}}";
 		const tagId$6 = "@deepseek-ai/dsh-client-ui-chat/TurnProcessNodeView.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$6) + "]") === null) {
@@ -5912,7 +6216,7 @@ const registration = {
 			};
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-chat/src/client/chat/TurnUsagePanel.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-alpha2-source/packages/client/ui-chat/src/client/chat/TurnUsagePanel.module.css.mjs
 		const css$5 = ".Q51KRG_root{min-width:0;display:inline-flex}.Q51KRG_root+.Q51KRG_root{margin-left:-6px}.Q51KRG_trigger{min-width:0;height:calc(28px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-tertiary);font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);font-variant-numeric:tabular-nums;line-height:calc(24px + var(--dsh-content-font-delta,0px));white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:28px;align-items:center;gap:4px;padding:6px 8px;display:inline-flex}.Q51KRG_label{text-overflow:ellipsis;min-width:0;overflow:hidden}.Q51KRG_trigger svg{width:calc(15px + var(--dsh-content-font-delta,0px));height:calc(15px + var(--dsh-content-font-delta,0px));flex:none}.Q51KRG_trigger:hover,.Q51KRG_trigger[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-tertiary)}@media (width<=480px){.Q51KRG_trigger{width:calc(28px + var(--dsh-content-font-delta,0px));justify-content:center;padding:6px}.Q51KRG_trigger .Q51KRG_label{display:none}.Q51KRG_root+.Q51KRG_root{margin-left:0}}";
 		const tagId$5 = "@deepseek-ai/dsh-client-ui-chat/TurnUsagePanel.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$5) + "]") === null) {
@@ -5928,7 +6232,7 @@ const registration = {
 			"trigger": "Q51KRG_trigger"
 		};
 		//#endregion
-		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-chat/src/client/chat/stat-dialog.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-alpha2-source/packages/client/ui-chat/src/client/chat/stat-dialog.module.css.mjs
 		const css$4 = ".bRhRbq_panel{z-index:1100;box-sizing:border-box;background:var(--dsw-specific-menu);width:max-content;min-width:min(300px,100vw - 24px);max-width:min(440px,100vw - 24px);backdrop-filter:var(--dsw-menu-backdrop-filter);--dsw-elevation-stroke-color:var(--dsw-alias-border-l1);box-shadow:var(--dsw-elevation-prominent);color:var(--dsw-alias-label-secondary);cursor:default;border:0;border-radius:12px;padding:16px;font-size:12px;line-height:18px;position:fixed}.bRhRbq_title{color:var(--dsw-alias-label-primary);justify-content:space-between;gap:16px;margin-bottom:8px;font-weight:500;display:flex}.bRhRbq_titleRule{border-top:.5px solid var(--dsw-alias-border-l2);margin-bottom:10px}.bRhRbq_titleValue{font-variant-numeric:tabular-nums}.bRhRbq_titleLabel{align-items:center;gap:6px;min-width:0;display:inline-flex}.bRhRbq_titleLabel svg{flex:none;width:14px;height:14px}.bRhRbq_details{color:var(--dsw-alias-label-tertiary);grid-template-columns:minmax(76px,auto) minmax(0,1fr);gap:6px 16px;margin:0;display:grid}.bRhRbq_details dt,.bRhRbq_details dd{min-width:0;margin:0}.bRhRbq_details dd{color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums;text-align:right}.bRhRbq_details .bRhRbq_route{overflow-wrap:anywhere}.bRhRbq_reasoning{color:var(--dsw-alias-label-tertiary);white-space:nowrap}";
 		const tagId$4 = "@deepseek-ai/dsh-client-ui-chat/stat-dialog.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$4) + "]") === null) {
@@ -6053,7 +6357,7 @@ const registration = {
 			});
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-chat/src/client/chat/TurnTailNodeView.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-alpha2-source/packages/client/ui-chat/src/client/chat/TurnTailNodeView.module.css.mjs
 		const css$3 = ".TS9iAW_root{flex-direction:column;gap:16px;display:flex}.TS9iAW_actions{margin-top:4px;margin-left:-6px}";
 		const tagId$3 = "@deepseek-ai/dsh-client-ui-chat/TurnTailNodeView.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$3) + "]") === null) {
@@ -6186,7 +6490,7 @@ const registration = {
 			};
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-chat/src/client/chat/TurnTriggerNodeView.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-alpha2-source/packages/client/ui-chat/src/client/chat/TurnTriggerNodeView.module.css.mjs
 		const css$2 = ".oz9t_a_root{border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-markdown-code-block);border-radius:16px;min-width:0;transition:background-color .1s}.oz9t_a_root:hover{background:var(--dsw-alias-interactive-bg-hover)}.oz9t_a_header{width:100%;color:var(--dsw-alias-label-primary);font:inherit;text-align:left;cursor:pointer;background:0 0;border:0;align-items:center;gap:10px;padding:12px 16px;display:flex}.oz9t_a_icon{color:var(--dsw-alias-label-tertiary);flex:none;display:inline-flex}.oz9t_a_title{font:var(--dsw-font-xs-13);flex:none}.oz9t_a_time{color:var(--dsw-alias-label-caption);font:var(--dsw-font-xxs-12);flex:none;margin-left:auto}.oz9t_a_chevron,.oz9t_a_openChevron{color:var(--dsw-alias-label-tertiary);flex:none}.oz9t_a_openChevron{transform:rotate(180deg)}.oz9t_a_body{padding:0 16px 12px 40px}.oz9t_a_explanation{color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12);margin:8px 0}.oz9t_a_content{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;font:var(--dsw-font-xxs-12);overflow:auto}@media (prefers-reduced-motion:reduce){.oz9t_a_root{transition:none}}";
 		const tagId$2 = "@deepseek-ai/dsh-client-ui-chat/TurnTriggerNodeView.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
@@ -6403,7 +6707,7 @@ const registration = {
 			};
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-chat/src/client/chat/StatsPills.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-alpha2-source/packages/client/ui-chat/src/client/chat/StatsPills.module.css.mjs
 		const css$1 = ".bOPqQW_root{box-sizing:border-box;min-width:0;max-width:100%;font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));justify-content:center;gap:12px;display:flex}.bOPqQW_anchor{min-width:0;display:inline-flex}.bOPqQW_pill{box-sizing:border-box;max-width:100%;color:var(--dsw-alias-label-tertiary);font:inherit;font-variant-numeric:tabular-nums;line-height:inherit;white-space:nowrap;background:0 0;border:none;border-radius:24px;align-items:center;gap:6px;padding:1px 8px;display:inline-flex}.bOPqQW_pill svg{flex:none;width:14px;height:14px}button.bOPqQW_pill{cursor:pointer}button.bOPqQW_pill:hover,button.bOPqQW_pill[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}.bOPqQW_label{text-overflow:ellipsis;min-width:0;overflow:hidden}.bOPqQW_sep{color:var(--dsw-alias-separator-primary);margin:0 6px}";
 		const tagId$1 = "@deepseek-ai/dsh-client-ui-chat/StatsPills.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
@@ -11362,7 +11666,7 @@ const registration = {
 		};
 		Schema.object(ChatSettingsFields);
 		//#endregion
-		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-017-fusion/dsh-source/packages/client/ui-chat/src/client/settings/PreferenceRow.module.css.mjs
+		//#region \0dsh-css:/Users/mac/.codex/worktrees/dsh-alpha2-source/packages/client/ui-chat/src/client/settings/PreferenceRow.module.css.mjs
 		const css = "._2XZxNq_row{border-bottom:.5px solid var(--dsw-alias-border-l2);align-items:center;gap:8px;padding:16px 0;display:flex}._2XZxNq_rowText{flex-direction:column;flex:1;gap:4px;min-width:0;padding-right:48px;display:flex}._2XZxNq_title{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:400;line-height:22px}._2XZxNq_desc{color:var(--dsw-alias-label-tertiary);font-size:12px;font-weight:400;line-height:18px}._2XZxNq_selector{background:var(--dsw-alias-bg-module-platform);height:36px;font:inherit;color:var(--dsw-alias-label-primary);cursor:pointer;border:none;border-radius:18px;align-items:center;gap:12px;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}._2XZxNq_selector:hover{background:var(--dsw-alias-interactive-bg-hover)}._2XZxNq_chevron{flex:none}";
 		const tagId = "@deepseek-ai/dsh-client-ui-chat/PreferenceRow.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {

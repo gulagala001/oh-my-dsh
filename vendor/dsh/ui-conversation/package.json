@@ -1,7 +1,7 @@
 {
   "name": "@oh-my-dsh/ui-conversation",
   "description": "Target-neutral Conversation assembly, shell, composer, queue, and view navigation",
-  "version": "0.1.7-alpha.1-omd.1",
+  "version": "0.1.7-alpha.2-omd.1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
@@ -31,10 +31,10 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/schemastery": "3.18.3"
+    "@deepseek-ai/schemastery": "3.18.4"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "4.0.3"
+    "@deepseek-ai/cordis": "4.0.4"
   },
   "files": [
     "src",

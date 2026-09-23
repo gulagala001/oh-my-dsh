@@ -2,24 +2,24 @@
 
 [返回项目首页](../README.md) · [安装](#安装到现有-dsh推荐) · [日常使用](#日常使用) · [CodeGraph](#codegraph) · [Computer Use](#computer-use) · [开发与验证](#开发与验证)
 
-当前 **1.7.0 正式版** 适配 **DSH 0.1.7-alpha.1**，内置 **OpenCU 1.1.0**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
+当前 **1.7.1 正式版** 适配 **DSH 0.1.7-alpha.2**，内置 **OpenCU 1.1.1**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
-从旧宿主升级请先阅读[升级与安装教程](upgrade.md)，其中包含版本配对、备份、不同安装方式和回退步骤。
+安装有两个入口：[自己安装](#安装到现有-dsh推荐)，或将 [AI 安装手册的网址](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/upgrade.md) 发给能操作终端的 AI，并让它按手册完成安装／升级。
 
 ## 安装到现有 DSH（推荐）
 
-本正式版和源码运行均使用 **DSH 0.1.7-alpha.1**。需要 Node.js ≥22.19、pnpm 11.23.0 和 Git。**Windows 使用 PowerShell 7（`pwsh`）**，无需 WSL；Python 验证文件需要另有 Python，`.sh` 文件需要 Bash。
+本正式版和源码运行均使用 **DSH 0.1.7-alpha.2**。需要 Node.js ≥22.19、pnpm 11.23.0 和 Git。**Windows 使用 PowerShell 7（`pwsh`）**，无需 WSL；Python 验证文件需要另有 Python，`.sh` 文件需要 Bash。
 
-先停止当前 DSH Web，在终端或 PowerShell 中安装：
+已有环境先等待任务结束，停止当前 DSH Web 并完整备份实际 DSH_HOME。确认继续使用原数据目录、profile 和端口，再运行：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.0
+npx --yes @deepseek-ai/dsh@0.1.7-alpha.2 plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.1
 ```
 
 然后按原来的方式重新启动 DSH，例如：
 
 ```sh
-dsh web
+npx --yes @deepseek-ai/dsh@0.1.7-alpha.2 --profile web
 ```
 
 打开这次启动打印的登录链接，继续使用原来的 **3080**（或自己配置的端口）。输入区会出现 **工作台** 和 **电脑** 入口，右侧工作台集中显示任务、上下文、摘要、电脑与监控；新建会话选择 **Oh My DSH**（Agent preset ID：`trisoul-x`）。已有模型和凭据沿用宿主配置，已有会话保持各自的 Agent preset。
@@ -31,7 +31,11 @@ dsh web
 <details>
 <summary>更新与卸载</summary>
 
-停止服务并备份 DSH_HOME 后，将宿主更新至 DSH 0.1.7-alpha.1，再安装固定 tag `v1.7.0`。插件安装不会自动升级全局 DSH。固定 tag 可确保安装版本一致。
+更新时保持原安装方式、DSH_HOME、profile 和端口；先停止服务并备份数据。使用 npx 的用户重复上面的固定版本命令即可。全局 npm 安装用户执行 `npm install -g @deepseek-ai/dsh@0.1.7-alpha.2`，确认 `dsh --version`，再执行 `dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.1`，按原方式启动；pnpm 全局安装则用 `pnpm add -g`。插件安装不会替你更新全局宿主。
+
+源码用户先保留本地修改，再执行 `git fetch origin --tags`、`git switch --detach v1.7.1`、`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`。若切换会覆盖本地修改，先保存自己的改动，不强制覆盖。默认数据在仓库的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
+
+重启后，版本面板的**当前版本**应是 `1.7.1`，原模型和旧会话仍在；最新版本只代表远端发布记录。旧 V3 会话迁移会保留原日志，alpha.1 升至 alpha.2 继续使用 V4。回退时停止新服务，以原宿主、插件和完整备份在独立数据目录启动。
 
 卸载：
 
