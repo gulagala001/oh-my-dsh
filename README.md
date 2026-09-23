@@ -37,6 +37,8 @@ Oh My DSH 为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 
 ## 装上，开始工作
 
+从旧版 DSH 升级？先看[升级与安装教程](docs/upgrade.md)，按原数据目录和 profile 操作。
+
 已有 **DSH 0.1.7-alpha.1 Web**？停止服务，在终端或 PowerShell 中运行：
 
 ```sh

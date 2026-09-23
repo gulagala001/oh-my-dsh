@@ -13,6 +13,8 @@
 
 ## 安装与升级
 
+从旧版宿主升级请先阅读[完整升级教程](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/upgrade.md)。
+
 先停止旧宿主并完整备份 DSH_HOME，将宿主更新至 DSH 0.1.7-alpha.1，再安装：
 
 ```sh
