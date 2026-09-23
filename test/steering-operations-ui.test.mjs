@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 
 test('steering and in-turn compaction keep subsequent operations visible', { timeout: 90000 }, async t => {
-  const f = await frontendFixture(t, { chatConfig: { transcriptView: 'detailed' }, omdConfig: { stateHintsEnabled: true } });
+  const f = await frontendFixture(t, { chatConfig: { transcriptView: 'standard' }, omdConfig: { stateHintsEnabled: true } });
   const { page, rpc, sessionId } = f;
   const base = new URL(page.url()).origin, q = '?session=' + sessionId;
   const api = async (path, body) => {
@@ -69,6 +69,9 @@ test('steering and in-turn compaction keep subsequent operations visible', { tim
   const after = page.locator('[data-cu-group]').filter({ has: page.locator('[data-chat-call-id="steering-operation-3"]') });
   assert.ok(await after.locator('[data-omd-record-hidden]').count() > 0, 'the operation group contains duplicate compaction placeholders');
   assert.equal(await after.isVisible(), true, 'hiding duplicate records must not hide the operation group after steering');
+  // RC exposes the row while arguments are still preparing. Its dispatched
+  // description follows, with the same call identity and process group.
+  await until(async () => /上下文整理后的最新操作/.test(await after.locator('.tx-cu-group-toggle').textContent()));
   assert.match(await after.locator('.tx-cu-group-toggle').textContent(), /上下文整理后的最新操作/);
   assert.equal(await newest.isVisible(), true);
   assert.equal(await after.locator('[data-chat-node-key]:has([data-omd-record-hidden]):visible').count(), 0, 'duplicate record rows remain hidden');

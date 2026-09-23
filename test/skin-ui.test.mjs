@@ -6,6 +6,15 @@ import { frontendFixture, until } from './fixtures/frontend.mjs';
 import sample from './fixtures/skin.json' with { type: 'json' };
 import { STORAGE_KEY } from '../src/client/skins/runtime.mjs';
 
+async function chooseAppearance(page, value) {
+  const select = page.getByLabel('明暗模式', { exact: true });
+  if (await select.inputValue() === value) return;
+  const saved = page.waitForResponse(response => response.url().includes('/api/settings/mutate'));
+  await select.selectOption(value);
+  const result = await (await saved).json();
+  assert.equal(result.result?.ok, true, JSON.stringify(result));
+}
+
 test('native variable shorthands preserve appearance, overrides and offline validation', { timeout: 90000 }, async t => {
   const { page, errors } = await frontendFixture(t);
   const skin = structuredClone(sample);
@@ -17,7 +26,7 @@ test('native variable shorthands preserve appearance, overrides and offline vali
   await upload(skin);
   await until(async () => await page.locator('html').getAttribute('data-omd-skin') === skin.id);
   for (const appearance of ['light', 'dark']) {
-    await page.getByLabel('明暗模式', { exact: true }).selectOption(appearance);
+    await chooseAppearance(page, appearance);
     await until(async () => await page.locator('html').getAttribute('data-appearance') === appearance);
     const actual = await page.locator('[data-composer-card]').evaluate(el => {
       const s = getComputedStyle(el);
@@ -76,14 +85,14 @@ test('native skin import, host mode sync, portals, persistence, replacement and 
   assert.equal(await page.locator('[data-composer-card]').evaluate(el => getComputedStyle(el).borderRadius), '25px');
   assert.equal(await page.locator('[data-composer-card]').evaluate(el => getComputedStyle(el).borderTopWidth), '2px');
   assert.equal(await page.getByRole('dialog').evaluate(el => getComputedStyle(el).getPropertyValue('--dsw-alias-bg-base').trim()), '#fff4e8', 'portal inherits host alias');
-  await page.getByLabel('明暗模式', { exact: true }).selectOption('dark');
+  await chooseAppearance(page, 'dark');
   await until(async () => await bg() === 'rgb(33, 23, 32)');
   await until(async () => await page.locator('body').getAttribute('data-ds-dark-theme') !== null);
   await page.reload(); await page.getByRole('button', { name: '设置', exact: true }).waitFor();
   await until(async () => await active() === sample.id && await bg() === 'rgb(33, 23, 32)');
   await open();
   assert.equal(await page.getByLabel('明暗模式', { exact: true }).inputValue(), 'dark');
-  await page.getByLabel('明暗模式', { exact: true }).selectOption('system');
+  await chooseAppearance(page, 'system');
   await page.emulateMedia({ colorScheme: 'light' }); await until(async () => await bg() === 'rgb(255, 244, 232)');
   await page.emulateMedia({ colorScheme: 'dark' }); await until(async () => await bg() === 'rgb(33, 23, 32)');
   await page.getByLabel('降低透明与动态效果').check();
@@ -102,7 +111,7 @@ test('native skin import, host mode sync, portals, persistence, replacement and 
   assert.equal(await page.getByLabel('皮肤', { exact: true }).locator('option[value="test-skin"]').count(), 1, 'same-id updates do not duplicate entries');
   await page.getByRole('button', { name: '恢复默认皮肤', exact: true }).click();
   assert.equal(await active(), null); assert.equal(await page.locator('style[data-omd-skin-style]').count(), 0);
-  await page.getByLabel('明暗模式', { exact: true }).selectOption('light');
+  await chooseAppearance(page, 'light');
   await until(async () => await bg() === originalBg);
   await page.getByLabel('皮肤', { exact: true }).selectOption(sample.id);
   await page.getByRole('button', { name: '移除当前皮肤', exact: true }).click();

@@ -6,9 +6,9 @@ import { parse } from 'yaml';
 // our schema's fields from the retained file; explicit profile edits win.
 export async function legacySettings(ctx, namespace, schema, aliases = []) {
   const profile = ctx.get('profileContext');
-  if (!profile) return { value: {}, persist() {} };
+  if (!profile) return { value: {}, persist(done = () => {}) { return done(); } };
   const marker = join(profile.dir, `.${namespace}-settings-v4.json`);
-  try { await readFile(marker); return { value: {}, persist() {} }; } catch (e) { if (e.code !== 'ENOENT') throw e; }
+  try { await readFile(marker); return { value: {}, persist(done = () => {}) { return done(); } }; } catch (e) { if (e.code !== 'ENOENT') throw e; }
   let legacy;
   for (const file of ['settings.yaml', 'settings.yaml.imported']) {
     try { legacy = parse(await readFile(join(profile.home, file), 'utf8')); break; } catch (e) { if (e.code !== 'ENOENT') throw e; }
@@ -38,7 +38,7 @@ export async function legacySettings(ctx, namespace, schema, aliases = []) {
       await mkdir(profile.dir, { recursive: true });
       await writeFile(marker + '.tmp', JSON.stringify({ imported: Object.keys(patch) }) + '\n', { mode: 0o600 });
       await rename(marker + '.tmp', marker);
-      done();
+      await done();
     }).catch(error => ctx.logger.error('Legacy settings import failed: %s', error.message));
   } };
 }

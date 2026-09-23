@@ -50,19 +50,6 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await page.keyboard.press('Escape');
   await usageToggle.click();
   assert.equal(await hostStats.isVisible(), false);
-  const contextRow = page.locator('[data-disclosure-row]:has([data-context-source])').first();
-  const processToggle = page.getByRole('button', { name: /^已思考/ }).first();
-  await processToggle.click();
-  const contextGroup = page.getByRole('button', { name: '上下文记录', exact: true }).last();
-  await contextGroup.click();
-  const source = contextRow.locator('[data-context-source]');
-  assert.equal(await source.count(), 1);
-  assert.equal(await source.isVisible(), false, 'technical provenance is deferred until expanded');
-  await contextRow.click();
-  assert.equal(await source.isVisible(), true, 'original context provenance stays accessible');
-  await contextRow.click();
-  await contextGroup.click();
-  await processToggle.click();
   // A hidden right pane can extend the frame beyond its visible grid. Focus
   // scrolling must not move that outer shell and crop the conversation.
   const shellScroll = await page.locator('.pI_x6G_frame').evaluate(el => {

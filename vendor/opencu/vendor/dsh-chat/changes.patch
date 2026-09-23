@@ -29,41 +29,6 @@ index 99e647d2..d7786d87 100644
          return styleInjectionModule(id, fileId, code.toString())
        },
      }],
-diff --git a/packages/client/ui-chat/README.md b/packages/client/ui-chat/README.md
-index 1aa7d71b..49b22a7e 100644
---- a/packages/client/ui-chat/README.md
-+++ b/packages/client/ui-chat/README.md
-@@ -8,7 +8,7 @@ English | [中文](README.zh.md)
- 
- ## Summary
- 
--Use this package to render a browser chat from recorded Session conversations, including historical images, localized actions, and restored scroll position. Work-details modes control reasoning previews and fold eligible completed-turn process rows without hiding final answers. Local transcript and steering submissions appear immediately, remain in their original surface, and disappear atomically when authoritative Session records arrive, while queued submissions stay outside Chat. The package does not assemble or modify model requests.
-+Use this package to render a browser chat from recorded Session conversations, including historical images, localized actions, and restored scroll position. Work-details modes control process grouping and fold eligible completed-turn process rows without hiding final answers. Collapsed reasoning retains a one-line preview in every mode. Local transcript and steering submissions appear immediately, remain in their original surface, and disappear atomically when authoritative Session records arrive, while queued submissions stay outside Chat. The package does not assemble or modify model requests.
- 
- File-mention providers receive the viewed Session ID with the closing-turn owner, so links into inherited history can address the fork itself.
- 
-@@ -76,7 +76,7 @@ During uninterrupted following, local transcript and steering echoes remain moun
- 
- When Chat ends with an open Turn control and that Turn has no visible input, the first local transcript echo precedes the control. Other echoes remain at the flow tail. The control and echoes share one keyed list, so arrival of the control preserves the echo's mounted identity. Durable inputs replace their matching echoes in the same render.
- 
--Work-details modes control process-group display and reasoning previews; eligible completed Turns fold their process without hiding the final answer. The [business-rule reference](src/client/conversation-nodes/README.md#display-modes) contains the mode table, title behavior, whole-Turn eligibility, clocks, and disclosure resets.
-+Work-details modes control process-group display; collapsed reasoning retains a one-line preview, and eligible completed Turns fold their process without hiding the final answer. The [business-rule reference](src/client/conversation-nodes/README.md#display-modes) contains the mode table, title behavior, whole-Turn eligibility, clocks, and disclosure resets.
- 
- -----
- 
-diff --git a/packages/client/ui-chat/README.zh.md b/packages/client/ui-chat/README.zh.md
-index 22392344..5b56722f 100644
---- a/packages/client/ui-chat/README.zh.md
-+++ b/packages/client/ui-chat/README.zh.md
-@@ -8,7 +8,7 @@ kind: "package-reference"
- 
- ## 概述
- 
--使用本包可在浏览器中渲染已记录的 Session 对话，包括历史图片、本地化操作和滚动位置恢复。工作过程展示模式控制思考预览，并收起符合条件的已完成轮次过程行，不隐藏最终答案。本地 transcript（文本记录）与 steering（中途引导）提交会立即显示并保留在原区域，在权威会话记录到达时原子地消失，而排队中的提交始终不进入 Chat。本包不组装或修改模型请求。
-+使用本包可在浏览器中渲染已记录的 Session 对话，包括历史图片、本地化操作和滚动位置恢复。工作过程展示模式控制过程分组，并收起符合条件的已完成轮次过程行，不隐藏最终答案。收起的思考在所有模式下均保留一行预览。本地 transcript（文本记录）与 steering（中途引导）提交会立即显示并保留在原区域，在权威会话记录到达时原子地消失，而排队中的提交始终不进入 Chat。本包不组装或修改模型请求。
- 
- 文件提及提供方同时接收当前查看的会话 ID 与收尾轮次的属主信息，因此继承历史中的链接可以指向 fork 自身。
- 
 diff --git a/packages/client/ui-chat/src/client/apply.ts b/packages/client/ui-chat/src/client/apply.ts
 index 69885d3e..129c8874 100644
 --- a/packages/client/ui-chat/src/client/apply.ts
@@ -92,10 +57,10 @@ index 69885d3e..129c8874 100644
    ctx.effect(() => chatSettings.subscribe(() => {
      const accepted = chatSettings.getSnapshot().value?.linkOpening
 diff --git a/packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx b/packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx
-index 1dd235d3..7f4ec270 100644
+index d6d7c0d3..30a39a28 100644
 --- a/packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx
 +++ b/packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx
-@@ -25,7 +25,7 @@ export function localPathMediaUrl(base: string, value: string): string | undefin
+@@ -30,7 +30,7 @@ export function localPathMediaUrl(base: string, value: string): string | undefin
  export interface AssistantMarkdownProps {
    /** Render only the requested business portion, preserving original block indexes. */
    groupPart?: string | undefined
@@ -104,7 +69,7 @@ index 1dd235d3..7f4ec270 100644
    useDisclosure: UseDisclosure
    blocks: readonly AssistantBlock[]
    streaming: boolean
-@@ -45,7 +45,7 @@ export interface AssistantMarkdownProps {
+@@ -50,7 +50,7 @@ export interface AssistantMarkdownProps {
    t: ChatViewSlotProps['t']
  }
  
@@ -113,7 +78,7 @@ index 1dd235d3..7f4ec270 100644
  export const AssistantMarkdown = memo(function AssistantMarkdown({
    blocks, streaming, interrupted, renderMessageImages, groupPart, useDisclosure,
    reasoningHidden = false, usePresentation, revealProcess, mentions, t,
-@@ -84,18 +84,27 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
+@@ -89,18 +89,27 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
            />,
          )
          break
@@ -167,7 +132,7 @@ index 56687cd8..d01394bb 100644
 +
 +.count { flex: none; font-size: 11px; color: var(--dsw-alias-label-tertiary); }
 diff --git a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx
-index f2d7fa17..8c1abda8 100644
+index e09a0d95..e7ba68bd 100644
 --- a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx
 +++ b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx
 @@ -1,5 +1,5 @@
@@ -177,16 +142,15 @@ index f2d7fa17..8c1abda8 100644
  import {
    IconAgentPresetOutlineRegular, IconApiOutlineRegular, IconBrowseOutlineRegular, IconChevronDownOutlineRegular,
    IconChevronUpOutlineRegular, IconCodeOutlineRegular, IconEditOutlineRegular, IconGlobeOutlineRegular,
-@@ -34,6 +34,8 @@ interface LiveProcessTitle {
+@@ -35,6 +35,7 @@ interface LiveProcessTitle {
  }
  
  const PROCESS_ICONS: Record<ProcessTitleActivity, ReactNode> = {
-+  images: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 3h18v18H3zM3 17l6-7 5 5 3-3 4 5"/><circle cx="16" cy="7" r="1"/></svg>,
 +  computer: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 4h18v13H3zM8 21h8M12 17v4" /></svg>,
    thinking: <IconThinkOutlineRegular />,
    read: <IconBrowseOutlineRegular size={14} />,
-   search: <IconSearchOutlineRegular size={14} />,
-@@ -95,18 +97,19 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
+   readImage: <IconBrowseOutlineRegular size={14} />,
+@@ -98,7 +99,8 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
    readonly toggle: () => void
  }) {
    const data = useChatGroup(groupKey, group => group?.data)
@@ -196,13 +160,9 @@ index f2d7fa17..8c1abda8 100644
    const live = useStableLiveProcessTitle({
      activity: data?.summary.running ?? 'thinking',
      detail: data?.summary.runningDetail ?? '',
--  }, data !== undefined && !data.closed)
-+  }, working)
-   if (data === undefined) return null
--  const label = data.closed ? processTitle(data.summary, t) : t(`message.stepProcess.${live.activity}`)
--  const detail = detailed && !data.closed ? live.detail : ''
-+  const label = working ? t(`message.stepProcess.${live.activity}`) : processTitle(data.summary, t)
-+  const detail = detailed && working ? live.detail : ''
+@@ -110,9 +112,9 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
+       : t(`message.stepProcess.${live.activity}`)
+   const detail = detailed && !data.closed ? live.detail : ''
    const title = detail === '' ? label : `${label}${t('message.turnProcess.separator')}${detail}`
 -  const activity = data.closed ? data.summary.counts[0]?.kind ?? 'thinking' : live.activity
 +  const activity = working ? live.activity : data.summary.counts[0]?.kind ?? 'thinking'
@@ -212,7 +172,7 @@ index f2d7fa17..8c1abda8 100644
        data-process-activity={activity} onClick={(event) => { event.currentTarget.focus(); toggle() }}>
        <span className={css.leading} aria-hidden="true">
          <span className={css.activityIcon} data-step-process-icon>{PROCESS_ICONS[activity]}</span>
-@@ -114,7 +117,10 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
+@@ -120,7 +122,10 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
            {open ? <IconChevronUpOutlineRegular /> : <IconChevronDownOutlineRegular />}
          </span>
        </span>
@@ -224,7 +184,7 @@ index f2d7fa17..8c1abda8 100644
      </button>
    )
  })
-@@ -146,9 +152,11 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
+@@ -153,9 +158,11 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
      if (spec !== undefined && !alwaysOpen) props.actions.setTurnProcessOpen(spec.turn, spec.answerStep ?? 0, true)
    }, [props.actions, spec, alwaysOpen])
    const rootRef = useSearchableHidden(outerHidden, revealOuter)
@@ -239,7 +199,7 @@ index f2d7fa17..8c1abda8 100644
    const reveal = useCallback(() => { setOpen(true) }, [setOpen])
    const bodyRef = useSearchableHidden(grouped && !open, reveal)
    const contentRef = useRef<HTMLDivElement>(null)
-@@ -162,7 +170,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
+@@ -169,7 +176,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
    const classes = [css.body, !grouped ? css.expandedBody : '',
      grouped && edges.canScrollUp ? css.fadeTop : '', grouped && edges.canScrollDown ? css.fadeBottom : '']
    return (
@@ -248,7 +208,7 @@ index f2d7fa17..8c1abda8 100644
        data-chat-flow-key={groupKey} data-chat-anchor-key={`group:${groupKey}`} data-chat-turn={turn}
        data-chat-paging-anchor={grouped && !open || undefined}
        data-step-process data-group-expanded-mode={!grouped || undefined}>
-@@ -170,7 +178,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
+@@ -177,7 +184,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
          <ProcessGroupHeader groupKey={groupKey} useChatGroup={useChatGroup}
            usePresentation={props.usePresentation} t={props.t} open={open} bodyId={bodyId} toggle={toggle} />
        </div>
@@ -258,7 +218,7 @@ index f2d7fa17..8c1abda8 100644
          {...events}>
          <div ref={contentRef} className={css.content} data-step-process-content data-chat-flow="">
 diff --git a/packages/client/ui-chat/src/client/chat/ChatNodeSeat.tsx b/packages/client/ui-chat/src/client/chat/ChatNodeSeat.tsx
-index 5bb003bd..7b1b62ca 100644
+index f2269daf..cdddb88d 100644
 --- a/packages/client/ui-chat/src/client/chat/ChatNodeSeat.tsx
 +++ b/packages/client/ui-chat/src/client/chat/ChatNodeSeat.tsx
 @@ -1,4 +1,4 @@
@@ -319,14 +279,14 @@ index 74a801d6..0b6d724b 100644
    const preview = usePresentation(policy => !expanded && summary !== ''
      && (running || policy.settledReasoningPreview))
 diff --git a/packages/client/ui-chat/src/client/contract/process-groups.ts b/packages/client/ui-chat/src/client/contract/process-groups.ts
-index 0c7bc744..0390064e 100644
+index 1c2cddb6..ae21c47e 100644
 --- a/packages/client/ui-chat/src/client/contract/process-groups.ts
 +++ b/packages/client/ui-chat/src/client/contract/process-groups.ts
 @@ -1,9 +1,11 @@
  /** Business data for Chat process groups; source Nodes remain in the Chat store. */
- export type ProcessActivity = 'read' | 'search' | 'edit' | 'commands' | 'code'
+ export type ProcessActivity = 'read' | 'readImage' | 'search' | 'write' | 'edit' | 'commands' | 'code'
 -  | 'webSearch' | 'webFetch' | 'subagents' | 'plan' | 'questions' | 'tools'
-+  | 'webSearch' | 'webFetch' | 'subagents' | 'plan' | 'questions' | 'tools' | 'computer' | 'images'
++  | 'webSearch' | 'webFetch' | 'subagents' | 'plan' | 'questions' | 'tools' | 'computer'
  
  /** Distinct-call category ranking and the current live task detail. */
  export interface ProcessActivitySummary {
@@ -336,98 +296,77 @@ index 0c7bc744..0390064e 100644
    readonly running: ProcessActivity | undefined
    readonly runningDetail: string
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/README.md b/packages/client/ui-chat/src/client/conversation-nodes/README.md
-index 3a166067..a50fc396 100644
+index 12c63b54..f2e3f91a 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/README.md
 +++ b/packages/client/ui-chat/src/client/conversation-nodes/README.md
-@@ -112,13 +112,13 @@ Settings → General → Work details stores `ui-chat.transcriptView` as `compac
+@@ -118,7 +118,7 @@ Settings → General → Work details offers `compact`, `standard` (default), `d
+ | Individual reasoning and tool bodies | Manual expansion | Manual expansion | Manual expansion | Manual expansion |
+ | Eligible completed Turn | Initially collapsed | Initially collapsed | Initially collapsed | Always open; duration/status header cannot collapse it |
  
- | Behavior | Compact | Detailed | Expanded |
- |---|---|---|---|
--| Process-group header | Category summary | Summary and live task detail | Hidden in running Turns; retained in historical Turns |
-+| Process-group header | Summary and live task detail | Summary and live task detail | Hidden in running Turns; retained in historical Turns |
- | Process-group body | Initially collapsed | Initially collapsed | Directly visible without a group-level height cap in running Turns; manual disclosure in historical Turns |
--| Settled reasoning preview | Hidden | First line | First line |
-+| Settled reasoning preview | First nonempty line | First nonempty line | First nonempty line |
- | Individual reasoning and tool bodies | Manual expansion | Manual expansion | Manual expansion |
- | Eligible completed Turn | Initially collapsed | Initially collapsed | Initially collapsed |
- 
--A closed group's header names the first three categories from its ranked summary, without displaying counts. A group without categories uses the thinking label. A running header names its live tool category, otherwise thinking; Detailed appends live detail. Live titles remain visible for at least 150ms, retaining only the newest pending title.
-+A closed group's header names the first three categories from its ranked summary, without displaying counts. A group without categories uses the thinking label. A running header names its live tool category, otherwise thinking; Both Compact and Detailed append live detail. Live titles remain visible for at least 150ms, retaining only the newest pending title.
+-A closed group's header names the first three categories from its ranked summary, without displaying counts. A group without categories uses the thinking label. A running header names its live tool category, otherwise thinking; Standard appends live detail. Live titles remain visible for at least 150ms, retaining only the newest pending title.
++A closed group's header names the first three categories from its ranked summary, with a separate operation count and failure/stopped badges. A group without categories uses the thinking label. A running header names its live tool category, otherwise thinking; Standard appends live detail. Live titles remain visible for at least 150ms, retaining only the newest pending title.
  
  ### Group-title rules
  
-@@ -149,13 +149,13 @@ The labels below describe recorded activity, not successful outcomes. For exampl
- | Closed, three categories | Join all three ranked labels with commas. |
- | Closed, more than three categories | Show the first three labels followed by “etc.” (`等` in Chinese). |
- 
--English lowercases the initial letter of joined labels after the first. Closing a group immediately selects the completed summary; the 150ms minimum applies to running-title changes, not to delaying completion. Expanded hides group headers in running Turns, including groups ended by a reply or steering before their Turn ends.
-+English lowercases the initial letter of joined labels after the first. Only closing a group selects the completed summary; completing its tools while the model continues thinking keeps the live title; the 150ms minimum applies to running-title changes, not to delaying completion. Expanded hides group headers in running Turns, including groups ended by a reply or steering before their Turn ends.
- 
- Group headers show a category icon, replace it with a down arrow on hover or keyboard focus, and show an up arrow while open. Manually expanded group bodies use 8px row spacing, a `min(400px, 50vh)` height cap, and 24px directional fades. Wheel scrolling can continue into the outer transcript at an edge. Expanded mode removes the group-level cap and uses 16px row spacing only in running Turns.
+@@ -159,7 +159,7 @@ Group headers show a category icon, replace it with a down arrow on hover or key
  
  An open capped group follows content growth only while its own scroll position is at the bottom. Scrolling away pauses that group's following; returning to the bottom resumes it, independently of outer transcript following. Manually opening an unclosed group starts at the bottom and follows growth; manually opening a closed group starts at the top with following disabled, even when its initial content fits without scrolling. Closing the group in the data or restoring its height cap through a mode change does not reset an already-open reader's position. Browser find retains its own reveal position.
  
 -Individual reasoning starts collapsed, including while streaming. All modes preview the latest paragraph whose first line ends with a newline; an unfinished single line has no preview. Later text in that paragraph does not change the preview. After settlement, the mode table applies. Expanded reasoning uses compact Markdown typography.
-+Consecutive reasoning blocks within one Assistant share a single disclosure, preserving their text in order and the reader’s open state as fragments arrive. Other block kinds and Assistant steps separate disclosures. Individual reasoning starts collapsed, including while streaming. All modes preview the latest paragraph whose first line ends with a newline, falling back to the first nonempty line before any line completes. Later text in that paragraph does not change the preview. After settlement, the mode table applies. Expanded reasoning uses compact Markdown typography.
++Adjacent reasoning blocks in one Assistant share a disclosure while preserving their full text. Individual reasoning starts collapsed, including while streaming. All modes preview the latest paragraph whose first line ends with a newline; an unfinished single line previews its first nonempty line. Later text in that paragraph does not change the preview. After settlement, the mode table applies. Expanded reasoning uses compact Markdown typography.
  
- Switching modes retains manually opened groups and inner disclosures. It changes visibility and sizing without recreating the message rows. Expanded does not mean opening every individual disclosure or unfolding the whole Turn.
+ Switching modes retains manually opened groups and inner disclosures. It changes visibility and sizing without recreating the message rows. Detailed and Verbose do not open every individual disclosure. Only Verbose keeps the whole Turn open.
  
+@@ -298,3 +298,5 @@ The priority list is shared by every tool, not specialized per category. For exa
+ | Partial JSON, a JSON scalar, a mixed-type array, or only unsupported fields | Use the tool name if no other usable field exists. No partial-argument guessing. |
+ 
+ All live detail collapses whitespace, trims its ends, and is limited to 160 grapheme clusters, including a final `…` when truncated. A closed group's published summary clears its live category and detail while retaining category counts.
++
++OpenCU keeps inner disclosure choices when a parent is folded and preserves an open process at completion. Its bounded process drawer uses a 2px gap and `min(280px, 45vh)` height cap; Computer Use activities have their own category.
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md b/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md
-index 024ea0f5..b28be68a 100644
+index 341c2826..07b54aa4 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md
 +++ b/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md
-@@ -112,13 +112,13 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
+@@ -118,7 +118,7 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
+ | 单个推理与工具正文 | 手动展开 | 手动展开 | 手动展开 | 手动展开 |
+ | 符合条件的已完成轮次 | 初始收起 | 初始收起 | 初始收起 | 始终展开；时长或状态抬头不能收起它 |
  
- | 行为 | 简洁 | 详细 | 完全展开 |
- |---|---|---|---|
--| 过程组头 | 类别摘要 | 摘要与实时任务详情 | 运行中轮次隐藏；历史轮次保留 |
-+| 过程组头 | 摘要与实时任务详情 | 摘要与实时任务详情 | 运行中轮次隐藏；历史轮次保留 |
- | 过程组正文 | 初始收起 | 初始收起 | 运行中轮次直接显示、不设组级限高；历史轮次按手动开合显示 |
--| 已结算推理预览 | 隐藏 | 首行 | 首行 |
-+| 已结算推理预览 | 首个非空行 | 首个非空行 | 首个非空行 |
- | 单个推理与工具正文 | 手动展开 | 手动展开 | 手动展开 |
- | 符合条件的已完成轮次 | 初始收起 | 初始收起 | 初始收起 |
- 
--已结束组的组头展示排序摘要的前三类，不显示次数；没有类别时使用思考标题。运行中的组头展示实时工具类别，没有运行工具时使用思考标题；详细模式附加实时详情。实时标题至少保留 150ms，只保留最新待显示标题。
-+已结束组的组头展示排序摘要的前三类，不显示次数；没有类别时使用思考标题。运行中的组头展示实时工具类别，没有运行工具时使用思考标题；简洁和详细模式都附加实时详情。实时标题至少保留 150ms，只保留最新待显示标题。
+-已结束组的组头展示排序摘要的前三类，不显示次数；没有类别时使用思考标题。运行中的组头展示实时工具类别，没有运行工具时使用思考标题；标准模式附加实时详情。实时标题至少保留 150ms，只保留最新待显示标题。
++已结束组的组头展示排序摘要的前三类，另列操作次数与失败／停止标记；没有类别时使用思考标题。运行中的组头展示实时工具类别，没有运行工具时使用思考标题；标准模式附加实时详情。实时标题至少保留 150ms，只保留最新待显示标题。
  
  ### 组标题规则
  
-@@ -149,13 +149,13 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
- | 已结束，三个类别 | 按排名用中文逗号 `，` 连接三项文案。 |
- | 已结束，超过三个类别 | 只显示前三项文案，末尾加「等」。 |
- 
--英文组合标题将第一项之后各项的首字母转为小写。组结束时立即切换完成摘要；150ms 最短保留时间针对运行中标题变化，不延迟完成状态。Expanded 隐藏运行中轮次的组头，包括被回复或 steering 截断、但所属轮次尚未结束的小组。
-+英文组合标题将第一项之后各项的首字母转为小写。只有组结束时才切换完成摘要，工具结束但模型继续思考时仍显示实时标题；150ms 最短保留时间针对运行中标题变化，不延迟完成状态。Expanded 隐藏运行中轮次的组头，包括被回复或 steering 截断、但所属轮次尚未结束的小组。
- 
- 组头显示类别图标，悬停或键盘聚焦时替换为向下箭头，展开时显示向上箭头。手动展开的组正文使用 8px 行间距、`min(400px, 50vh)` 限高及 24px 方向渐隐；到达边缘时滚轮可以继续滚动外层文本记录。完全展开模式仅对运行中轮次取消组级限高，使用 16px 行间距。
+@@ -159,7 +159,7 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
  
  已展开的限高组仅在自己的滚动位置处于底部时跟随内容增长。滚离底部暂停该组跟随，滚回底部后恢复，与外层文本记录的跟随状态独立。手动展开未关闭的组时定位到底部并跟随增长；手动展开已关闭的组时从顶部开始且不启用跟随，即使初始内容无需滚动即可容纳。数据中的组变为已关闭，或通过模式切换恢复限高时，不重置已展开组的阅读位置。浏览器查找沿用自身的展开定位。
  
--单个推理初始收起，包括流式输出期间。三档都预览最近一个首行以换行结束的段落；未完成的单行没有预览，该段落后续文本不改变预览。结算后按上表展示。展开的推理使用紧凑 Markdown 排版。
-+同一 Assistant 内连续的推理块合用一个折叠行，按顺序保留全文，后续片段到达时保持用户的展开状态。其他类型的块及不同 Assistant 步骤仍分开显示。单个推理初始收起，包括流式输出期间。三档都预览最近一个首行以换行结束的段落；尚无完整行时预览首个非空行，该段落后续文本不改变预览。结算后按上表展示。展开的推理使用紧凑 Markdown 排版。
+-单个推理初始收起，包括流式输出期间。四档都预览最近一个首行以换行结束的段落；未完成的单行没有预览，该段落后续文本不改变预览。结算后按上表展示。展开的推理使用紧凑 Markdown 排版。
++同一 Assistant 中相邻的推理块合用一个折叠行，保留全文。单个推理初始收起，包括流式输出期间。四档都预览最近一个首行以换行结束的段落；尚无完整行时预览首个非空行，该段落后续文本不改变预览。结算后按上表展示。展开的推理使用紧凑 Markdown 排版。
  
- 切换模式保留手动展开的组和内部开合状态，只改变显隐与尺寸，不重建消息行。完全展开不表示自动打开每个内部控件，也不表示展开整轮。
+ 切换模式保留手动展开的组和内部开合状态，只改变显隐与尺寸，不重建消息行。详细和完全展开都不表示自动打开每个内部控件；只有完全展开模式始终展开整轮。
  
+@@ -298,3 +298,5 @@ Subagent 工具遵循普通分组边界，不会仅因委派任务就单独成
+ | 不完整 JSON、JSON 标量、混合类型数组，或仅有不支持的字段 | 没有其他可用字段时使用工具名，不猜测不完整参数。 |
+ 
+ 所有实时详情都合并空白、去除首尾空白，并限制为 160 个字素簇；截断时末尾的 `…` 计入上限。已结束组发布的摘要清空实时类别和详情，保留类别次数。
++
++OpenCU 在父级收起时保留内部展开选择，完成时保留用户正在展开阅读的过程。限高抽屉采用 2px 间距与 `min(280px, 45vh)` 高度；电脑操作使用独立活动类别。
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts b/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
-index d6766b19..add41fbd 100644
+index b072b29d..11812625 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
 +++ b/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
-@@ -5,7 +5,9 @@ import { isRunningTool } from '../contract/chat-nodes.ts'
+@@ -5,6 +5,7 @@ import { isRunningTool } from '../contract/chat-nodes.ts'
  import type { ToolCallBlock } from '../contract/snapshot.ts'
  
  function activity(name: string): ProcessActivity {
--  if (['read', 'read_image', 'list_mcp_resources', 'list_mcp_resource_templates', 'read_mcp_resource'].includes(name)) return 'read'
 +  if (/^computer_use(?:_|$)/.test(name.split(/[./]/).at(-1) ?? '')) return 'computer'
-+  if (name === 'read_image') return 'images'
-+  if (['read', 'list_mcp_resources', 'list_mcp_resource_templates', 'read_mcp_resource'].includes(name)) return 'read'
+   if (name === 'read') return 'read'
+   if (name === 'read_image') return 'readImage'
    if (name === 'grep' || name === 'glob' || name.endsWith('_inspect')) return 'search'
-   if (['write', 'edit', 'apply_patch'].includes(name)) return 'edit'
-   if (['bash', 'pwsh', 'exec_command', 'write_stdin'].includes(name) || name.startsWith('terminal_')) return 'commands'
-@@ -95,9 +97,16 @@ export function processActivity(nodes: readonly ChatNode[]): ProcessActivitySumm
-   let running: ProcessActivity | undefined
+@@ -98,9 +99,16 @@ export function processActivity(nodes: readonly ChatNode[]): ProcessActivitySumm
    let runningDetail = ''
    let runningTime = -Infinity
+   let preparing: boolean | undefined
 +  let failures = 0, stopped = 0
    const visit = (tool: ToolCallBlock): void => {
      if (seen.has(tool.callId)) return
@@ -441,7 +380,7 @@ index d6766b19..add41fbd 100644
      const call = isRunningTool(tool) ? tool : tool.call
      if (call !== null) {
        const kind = activity(call.name)
-@@ -115,6 +124,8 @@ export function processActivity(nodes: readonly ChatNode[]): ProcessActivitySumm
+@@ -121,6 +129,8 @@ export function processActivity(nodes: readonly ChatNode[]): ProcessActivitySumm
    }
    if (running === undefined) runningDetail = liveReasoningDetail(nodes)
    return {
@@ -451,34 +390,35 @@ index d6766b19..add41fbd 100644
      running,
      runningDetail,
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/process-groups.ts b/packages/client/ui-chat/src/client/conversation-nodes/process-groups.ts
-index bff0c532..160edaff 100644
+index 36cb552d..5d152372 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/process-groups.ts
 +++ b/packages/client/ui-chat/src/client/conversation-nodes/process-groups.ts
-@@ -29,6 +29,7 @@ function reply(node: ChatNode): boolean {
- 
+@@ -30,6 +30,7 @@ function reply(node: ChatNode): boolean {
  function sameSummary(left: ProcessActivitySummary, right: ProcessActivitySummary): boolean {
    return left.running === right.running && left.runningDetail === right.runningDetail
+     && left.preparing === right.preparing
 +    && left.failures === right.failures && left.stopped === right.stopped
      && left.counts.length === right.counts.length && left.counts.every((value, index) =>
      value.kind === right.counts[index]?.kind && value.count === right.counts[index].count)
  }
 diff --git a/packages/client/ui-chat/src/client/locale.ts b/packages/client/ui-chat/src/client/locale.ts
-index 9638f554..6147fd52 100644
+index ce0ca17b..af45f896 100644
 --- a/packages/client/ui-chat/src/client/locale.ts
 +++ b/packages/client/ui-chat/src/client/locale.ts
-@@ -17,11 +17,18 @@ export const zh = {
-   'message.stepProcess.plan': '正在更新计划',
-   'message.stepProcess.questions': '等待你的操作',
-   'message.stepProcess.tools': '正在调用工具',
+@@ -32,13 +32,19 @@ export const zh = {
+   'message.stepProcess.prepare.plan': '准备更新计划',
+   'message.stepProcess.prepare.questions': '准备提问',
+   'message.stepProcess.prepare.tools': '准备调用工具',
++  'message.stepProcess.prepare.computer': '准备操作电脑',
 +  'message.stepProcess.computer': '正在操作电脑',
 +  'message.stepProcess.done.computer': '已操作电脑',
-+  'message.stepProcess.images': '正在查看图像',
-+  'message.stepProcess.done.images': '已查看图像',
 +  'message.stepProcess.count': '{count} 次操作',
 +  'message.stepProcess.failures': '{count} 项失败',
 +  'message.stepProcess.stopped': '{count} 项已停止',
    'message.stepProcess.done.thinking': '已完成分析',
    'message.stepProcess.done.read': '已读取文件',
+   'message.stepProcess.done.readImage': '已读取图片',
+   'message.stepProcess.done.write': '已写入文件',
    'message.stepProcess.done.search': '已搜索代码',
    'message.stepProcess.done.edit': '修改了文件',
 -  'message.stepProcess.done.commands': '执行了命令',
@@ -486,103 +426,21 @@ index 9638f554..6147fd52 100644
    'message.stepProcess.done.code': '运行了代码',
    'message.stepProcess.done.webSearch': '已搜索网页',
    'message.stepProcess.done.webFetch': '已访问网页',
-@@ -175,6 +182,13 @@ export const en = {
-   'message.stepProcess.plan': 'Updating the plan',
-   'message.stepProcess.questions': 'Waiting for your action',
-   'message.stepProcess.tools': 'Calling tools',
+@@ -213,6 +219,12 @@ export const en = {
+   'message.stepProcess.prepare.plan': 'Preparing to update the plan',
+   'message.stepProcess.prepare.questions': 'Preparing questions',
+   'message.stepProcess.prepare.tools': 'Preparing tool calls',
++  'message.stepProcess.prepare.computer': 'Preparing to operate computer',
 +  'message.stepProcess.computer': 'Operating computer',
 +  'message.stepProcess.done.computer': 'Operated computer',
-+  'message.stepProcess.images': 'Viewing images',
-+  'message.stepProcess.done.images': 'Viewed images',
 +  'message.stepProcess.count': '{count} operations',
 +  'message.stepProcess.failures': '{count} failed',
 +  'message.stepProcess.stopped': '{count} stopped',
    'message.stepProcess.done.thinking': 'Analysis completed',
    'message.stepProcess.done.read': 'Read files',
-   'message.stepProcess.done.search': 'Searched code',
-diff --git a/packages/client/ui-chat/src/client/presentation-policy.ts b/packages/client/ui-chat/src/client/presentation-policy.ts
-index 3b570228..e0efabda 100644
---- a/packages/client/ui-chat/src/client/presentation-policy.ts
-+++ b/packages/client/ui-chat/src/client/presentation-policy.ts
-@@ -26,8 +26,8 @@ const POLICIES: Readonly<Record<TranscriptViewMode, ChatPresentationPolicy>> = {
-     mode: 'compact',
-     foldCompletedTurns: true,
-     stepGrouping: 'collapsed',
--    liveProcessDetail: false,
--    settledReasoningPreview: false,
-+    liveProcessDetail: true,
-+    settledReasoningPreview: true,
-   },
-   detailed: {
-     mode: 'detailed',
-diff --git a/packages/client/ui-chat/tests/chat-view.client.spec.tsx b/packages/client/ui-chat/tests/chat-view.client.spec.tsx
-index dc70093f..3e547a2b 100644
---- a/packages/client/ui-chat/tests/chat-view.client.spec.tsx
-+++ b/packages/client/ui-chat/tests/chat-view.client.spec.tsx
-@@ -925,8 +925,7 @@ describe('ChatView', () => {
-       expect([...view.container.querySelectorAll('[data-process-activity]')]).toEqual(allHeaders)
-       expect(headers.map(header => header.textContent)).toEqual(titles)
-       const liveLabel = h.props.t('message.stepProcess.commands')
--      expect(allHeaders[40]?.textContent).toBe(mode === 'compact' ? liveLabel
--        : `${liveLabel}${h.props.t('message.turnProcess.separator')}pwd`)
-+      expect(allHeaders[40]?.textContent).toBe(`${liveLabel}${h.props.t('message.turnProcess.separator')}pwd`)
-     }
-     const running = groups[40]!
-     act(() => {
-diff --git a/packages/client/ui-chat/tests/presentation-policy.client.spec.tsx b/packages/client/ui-chat/tests/presentation-policy.client.spec.tsx
-index de1319c0..60d11f7c 100644
---- a/packages/client/ui-chat/tests/presentation-policy.client.spec.tsx
-+++ b/packages/client/ui-chat/tests/presentation-policy.client.spec.tsx
-@@ -10,7 +10,7 @@ afterEach(cleanup)
- 
- describe('Chat presentation policy', () => {
-   it.each([
--    ['compact', 'collapsed', false, false],
-+    ['compact', 'collapsed', true, true],
-     ['detailed', 'collapsed', true, true],
-     ['expanded', 'none', true, true],
-   ] as const)('maps %s to stable presentation capabilities', (mode, stepGrouping, settledReasoningPreview, liveProcessDetail) => {
-@@ -37,28 +37,28 @@ describe('Chat presentation policy', () => {
-     const mode = createSnapshotStore<TranscriptViewMode>('compact')
-     const usePresentation = bindSnapshotSelector(derivePresentationPolicy(mode))
-     const foldRender = vi.fn()
--    const previewRender = vi.fn()
-+    const groupingRender = vi.fn()
-     function Fold() {
-       const fold = usePresentation(policy => policy.foldCompletedTurns)
-       foldRender(fold)
-       return <span>{String(fold)}</span>
-     }
--    function Preview() {
--      const preview = usePresentation(policy => policy.settledReasoningPreview)
--      previewRender(preview)
--      return <span>{String(preview)}</span>
-+    function Grouping() {
-+      const grouping = usePresentation(policy => policy.stepGrouping)
-+      groupingRender(grouping)
-+      return <span>{String(grouping)}</span>
-     }
--    render(<><Fold /><Preview /></>)
-+    render(<><Fold /><Grouping /></>)
-     expect(foldRender).toHaveBeenCalledTimes(1)
--    expect(previewRender).toHaveBeenCalledTimes(1)
-+    expect(groupingRender).toHaveBeenCalledTimes(1)
-     act(() => { mode.set('detailed') })
-     expect(foldRender).toHaveBeenCalledTimes(1)
--    expect(previewRender).toHaveBeenCalledTimes(2)
-+    expect(groupingRender).toHaveBeenCalledTimes(1)
-     act(() => { mode.set('expanded') })
-     expect(foldRender).toHaveBeenCalledTimes(1)
--    expect(previewRender).toHaveBeenCalledTimes(2)
-+    expect(groupingRender).toHaveBeenCalledTimes(2)
-     act(() => { mode.set('compact') })
-     expect(foldRender).toHaveBeenCalledTimes(1)
--    expect(previewRender).toHaveBeenCalledTimes(3)
-+    expect(groupingRender).toHaveBeenCalledTimes(3)
-   })
- })
+   'message.stepProcess.done.readImage': 'Read images',
 diff --git a/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx b/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx
-index 0d6b505f..f879a9c0 100644
+index 5a875f31..9532e7ae 100644
 --- a/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx
 +++ b/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx
 @@ -19,10 +19,55 @@ afterEach(() => {
@@ -642,30 +500,16 @@ index 0d6b505f..f879a9c0 100644
      ['A completed first line\nUnfinished continuation', 'A completed first line'],
      ['First\nSecond\nThird\n', 'First'],
      ['First\n\nNext unfinished', 'First'],
-@@ -55,7 +100,7 @@ describe('ReasoningRow', () => {
-     for (const next of ['compact', 'detailed', 'expanded', 'compact'] as const) {
-       act(() => { mode.set(next) })
-       expect(view.getByText('First line')).toBe(summary)
--      expect(root.hasAttribute('data-preview')).toBe(next !== 'compact')
-+      expect(root.hasAttribute('data-preview')).toBe(true)
-       expect(root.querySelector('[data-markdown-variant]')).toBeNull()
-     }
-     fireEvent.click(toggle)
 @@ -72,7 +117,7 @@ describe('ReasoningRow', () => {
      expect(view.getByRole('button')).toBe(toggle)
    })
  
 -  it('keeps a running preview enabled in Compact and hides it on settlement without removing it', () => {
-+  it('keeps a running preview visible in Compact after settlement', () => {
++  it('hides the settled preview in Compact without discarding its text', () => {
      const mode = createSnapshotStore<TranscriptViewMode>('compact')
      const usePresentation = bindSnapshotSelector(derivePresentationPolicy(mode))
      const props = { text: 'First line\n', usePresentation, t }
-@@ -81,10 +126,17 @@ describe('ReasoningRow', () => {
-     const root = view.container.querySelector('[data-variant="think"]')!
-     expect(root.hasAttribute('data-preview')).toBe(true)
-     view.rerender(<ReasoningRow useDisclosure={useDisclosure} {...props} running={false} />)
--    expect(root.hasAttribute('data-preview')).toBe(false)
-+    expect(root.hasAttribute('data-preview')).toBe(true)
+@@ -85,6 +130,13 @@ describe('ReasoningRow', () => {
      expect(view.getByText('First line')).toBe(summary)
    })
  
