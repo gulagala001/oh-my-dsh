@@ -85,6 +85,12 @@ var registration = {
     function isAbsoluteWorkspacePath(path) {
       return path.startsWith("/") || isWindowsStylePath(path);
     }
+    function resolveWorkspacePath(cwd, path) {
+      if (isAbsoluteWorkspacePath(path)) return path;
+      if (cwd === void 0 || cwd === "") return path;
+      const separator = isWindowsStylePath(cwd) && cwd.includes("\\") ? "\\" : "/";
+      return `${cwd.replace(/[/\\]+$/, "")}${separator}${path.replace(/^[/\\]+/, "")}`;
+    }
     function fileAddressFor(sessionId, cwd, path) {
       const normalized = path.replace(/\\/g, "/");
       if (!isAbsoluteWorkspacePath(normalized)) return sessionFileAddress(sessionId, normalized);
@@ -92,6 +98,10 @@ var registration = {
       if (root !== "" && normalized === root) return sessionFileAddress(sessionId, "");
       if (root !== "" && normalized.startsWith(`${root}/`)) return sessionFileAddress(sessionId, normalized.slice(root.length + 1));
       return sessionFileAddress(sessionId, normalized);
+    }
+    function fileMediaUrl(base2, path) {
+      if (!/^https?:/u.test(base2) || !isAbsoluteWorkspacePath(path) || /^[/\\]{2}/u.test(path) || /[\u0000-\u001f\u007f]/u.test(path)) return void 0;
+      return new URL(`api/file?path=${encodeURIComponent(path)}`, base2).href;
     }
     const EMPTY_LIST$1 = [];
     const EMPTY_TIMELINE = {
@@ -149,7 +159,7 @@ var registration = {
       return useChat((snapshot2) => {
         for (const node of snapshot2.nodes.values()) {
           const root = node.kind === "tool-call" ? node.data.root : void 0;
-          if (root !== void 0 && root.callId === callId && !("kind" in root)) return commandOf(root);
+          if (root !== void 0 && root.callId === callId && !("kind" in root) && root.phase === "start") return commandOf(root);
         }
       }) ?? null;
     }
@@ -1338,7 +1348,7 @@ ${t("json.truncated", { total: text.length })}` : text;
         processPresentation?.hasExternalProcess,
         setOpen
       ]);
-      const controllerInactive = routedNode?.kind === "turn-process" && !foldable;
+      const controllerInactive = routedNode?.kind === "turn-process" && foldCompleted && !foldable;
       const compactAnswer = processAnswer && foldable && processPresentation.compactAnswer && !processOpen;
       const processHidden = controllerInactive || foldable && processMember && !processOpen;
       const wrapperRef = useSearchableHidden(processHidden, (0, react.useCallback)(() => {
@@ -1744,19 +1754,6 @@ ${t("json.truncated", { total: text.length })}` : text;
     };
     const PROCESS_TITLE_MINIMUM_MS = 150;
     const PROCESS_ICONS = {
-      images: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
-        width: "16",
-        height: "16",
-        viewBox: "0 0 24 24",
-        fill: "none",
-        stroke: "currentColor",
-        strokeWidth: "1.6",
-        children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "M3 3h18v18H3zM3 17l6-7 5 5 3-3 4 5" }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("circle", {
-          cx: "16",
-          cy: "7",
-          r: "1"
-        })]
-      }),
       computer: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("svg", {
         width: "16",
         height: "16",
@@ -1768,8 +1765,10 @@ ${t("json.truncated", { total: text.length })}` : text;
       }),
       thinking: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular, {}),
       read: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
+      readImage: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
       search: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 }),
       edit: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
+      write: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
       commands: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular, {}),
       code: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular, { size: 14 }),
       webSearch: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconGlobeOutlineRegular, {}),
@@ -1780,7 +1779,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       tools: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSparkleRegular, { size: 14 })
     };
     function sameLiveProcessTitle(left, right) {
-      return left.activity === right.activity && left.detail === right.detail;
+      return left.activity === right.activity && left.detail === right.detail && left.preparing === right.preparing;
     }
     function useStableLiveProcessTitle(desired, active) {
       const [displayed, setDisplayed] = (0, react.useState)(desired);
@@ -1808,7 +1807,8 @@ ${t("json.truncated", { total: text.length })}` : text;
       }, [
         active,
         desired.activity,
-        desired.detail
+        desired.detail,
+        desired.preparing
       ]);
       return active ? displayed : desired;
     }
@@ -1826,11 +1826,12 @@ ${t("json.truncated", { total: text.length })}` : text;
       const detailed = usePresentation((policy) => working && policy.liveProcessDetail);
       const live = useStableLiveProcessTitle({
         activity: data?.summary.running ?? "thinking",
-        detail: data?.summary.runningDetail ?? ""
-      }, working);
+        detail: data?.summary.runningDetail ?? "",
+        preparing: data?.summary.preparing === true
+      }, data !== void 0 && !data.closed);
       if (data === void 0) return null;
-      const label = working ? t(`message.stepProcess.${live.activity}`) : processTitle(data.summary, t);
-      const detail = detailed && working ? live.detail : "";
+      const label = data.closed ? processTitle(data.summary, t) : live.preparing ? t(`message.stepProcess.prepare.${live.activity === "thinking" ? "tools" : live.activity}`) : t(`message.stepProcess.${live.activity}`);
+      const detail = detailed && !data.closed ? live.detail : "";
       const title = detail === "" ? label : `${label}${t("message.turnProcess.separator")}${detail}`;
       const activity2 = working ? live.activity : data.summary.counts[0]?.kind ?? "thinking";
       return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
@@ -1892,7 +1893,7 @@ ${t("json.truncated", { total: text.length })}` : text;
         const location = node?.location;
         return location?.kind === "turn" || location?.kind === "step" ? location.turn : void 0;
       });
-      const grouped = props.usePresentation((policy) => turnLocation2?.status !== "open" || policy.stepGrouping !== "none");
+      const grouped = props.usePresentation((policy) => policy.stepGrouping === "collapsed" || policy.stepGrouping === "history" && turnLocation2?.status !== "open");
       const reason = turnLocation2?.end?.data.reason.kind;
       const alwaysOpen = presentation?.turnClosed === false || presentation?.hasInterleavedInput === true || reason === "aborted" || reason === "error";
       const spec = presentation?.spec;
@@ -4523,6 +4524,16 @@ ${t("json.truncated", { total: text.length })}` : text;
       const railItems = (0, react.useMemo)(() => mergeTurnRailItems(turnNavigationItems, turnOutline), [turnNavigationItems, turnOutline]);
       const inbox = useProjection("inbox");
       const cwd = useSessions((s) => s.byId[sessionId]?.cwd);
+      const fileImages = (0, react.useMemo)(() => ({
+        resolve: (path) => fileMediaUrl(document.baseURI, resolveWorkspacePath(cwd, path)),
+        labels: {
+          open: t("image.open"),
+          loading: t("image.loading"),
+          failed: t("image.failed"),
+          dialog: t("image.dialog"),
+          close: t("image.close")
+        }
+      }), [cwd, t]);
       const running = useSession((s) => s.running);
       const openState = useSession((s) => s.openState);
       const openError = useSession((s) => s.openError);
@@ -4648,6 +4659,7 @@ ${t("json.truncated", { total: text.length })}` : text;
                   /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownDelegateProvider, {
                     openExternalLink,
                     openFile: requestOpenFile,
+                    fileImages,
                     children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChatNodeList, {
                       entries,
                       pendingInputs,
@@ -4722,32 +4734,48 @@ ${t("json.truncated", { total: text.length })}` : text;
     const zh = {
       "message.stepProcess.thinking": "\u6B63\u5728\u5206\u6790\u8BF7\u6C42",
       "message.stepProcess.read": "\u6B63\u5728\u8BFB\u53D6\u6587\u4EF6",
+      "message.stepProcess.readImage": "\u6B63\u5728\u8BFB\u53D6\u56FE\u7247",
+      "message.stepProcess.write": "\u6B63\u5728\u5199\u5165\u6587\u4EF6",
       "message.stepProcess.search": "\u6B63\u5728\u641C\u7D22\u4EE3\u7801",
       "message.stepProcess.edit": "\u6B63\u5728\u7F16\u8F91\u6587\u4EF6",
       "message.stepProcess.commands": "\u6B63\u5728\u8FD0\u884C\u547D\u4EE4",
       "message.stepProcess.code": "\u6B63\u5728\u8FD0\u884C\u4EE3\u7801",
       "message.stepProcess.webSearch": "\u6B63\u5728\u641C\u7D22\u7F51\u9875",
       "message.stepProcess.webFetch": "\u6B63\u5728\u8BBF\u95EE\u7F51\u9875",
-      "message.stepProcess.subagents": "\u6B63\u5728\u534F\u8C03\u5B50\u4EFB\u52A1",
+      "message.stepProcess.subagents": "\u6B63\u5728\u534F\u8C03\u5B50\u667A\u80FD\u4F53",
       "message.stepProcess.plan": "\u6B63\u5728\u66F4\u65B0\u8BA1\u5212",
       "message.stepProcess.questions": "\u7B49\u5F85\u4F60\u7684\u64CD\u4F5C",
       "message.stepProcess.tools": "\u6B63\u5728\u8C03\u7528\u5DE5\u5177",
+      "message.stepProcess.prepare.read": "\u51C6\u5907\u8BFB\u53D6\u6587\u4EF6",
+      "message.stepProcess.prepare.readImage": "\u51C6\u5907\u8BFB\u53D6\u56FE\u7247",
+      "message.stepProcess.prepare.write": "\u51C6\u5907\u5199\u5165\u6587\u4EF6",
+      "message.stepProcess.prepare.search": "\u51C6\u5907\u641C\u7D22\u4EE3\u7801",
+      "message.stepProcess.prepare.edit": "\u51C6\u5907\u7F16\u8F91\u6587\u4EF6",
+      "message.stepProcess.prepare.commands": "\u51C6\u5907\u8FD0\u884C\u547D\u4EE4",
+      "message.stepProcess.prepare.code": "\u51C6\u5907\u8FD0\u884C\u4EE3\u7801",
+      "message.stepProcess.prepare.webSearch": "\u51C6\u5907\u641C\u7D22\u7F51\u9875",
+      "message.stepProcess.prepare.webFetch": "\u51C6\u5907\u8BBF\u95EE\u7F51\u9875",
+      "message.stepProcess.prepare.subagents": "\u51C6\u5907\u534F\u8C03\u5B50\u667A\u80FD\u4F53",
+      "message.stepProcess.prepare.plan": "\u51C6\u5907\u66F4\u65B0\u8BA1\u5212",
+      "message.stepProcess.prepare.questions": "\u51C6\u5907\u63D0\u95EE",
+      "message.stepProcess.prepare.tools": "\u51C6\u5907\u8C03\u7528\u5DE5\u5177",
+      "message.stepProcess.prepare.computer": "\u51C6\u5907\u64CD\u4F5C\u7535\u8111",
       "message.stepProcess.computer": "\u6B63\u5728\u64CD\u4F5C\u7535\u8111",
       "message.stepProcess.done.computer": "\u5DF2\u64CD\u4F5C\u7535\u8111",
-      "message.stepProcess.images": "\u6B63\u5728\u67E5\u770B\u56FE\u50CF",
-      "message.stepProcess.done.images": "\u5DF2\u67E5\u770B\u56FE\u50CF",
       "message.stepProcess.count": "{count} \u6B21\u64CD\u4F5C",
       "message.stepProcess.failures": "{count} \u9879\u5931\u8D25",
       "message.stepProcess.stopped": "{count} \u9879\u5DF2\u505C\u6B62",
       "message.stepProcess.done.thinking": "\u5DF2\u5B8C\u6210\u5206\u6790",
       "message.stepProcess.done.read": "\u5DF2\u8BFB\u53D6\u6587\u4EF6",
+      "message.stepProcess.done.readImage": "\u5DF2\u8BFB\u53D6\u56FE\u7247",
+      "message.stepProcess.done.write": "\u5DF2\u5199\u5165\u6587\u4EF6",
       "message.stepProcess.done.search": "\u5DF2\u641C\u7D22\u4EE3\u7801",
       "message.stepProcess.done.edit": "\u4FEE\u6539\u4E86\u6587\u4EF6",
       "message.stepProcess.done.commands": "\u5DF2\u8FD0\u884C\u547D\u4EE4",
       "message.stepProcess.done.code": "\u8FD0\u884C\u4E86\u4EE3\u7801",
       "message.stepProcess.done.webSearch": "\u5DF2\u641C\u7D22\u7F51\u9875",
       "message.stepProcess.done.webFetch": "\u5DF2\u8BBF\u95EE\u7F51\u9875",
-      "message.stepProcess.done.subagents": "\u5DF2\u534F\u8C03\u5B50\u4EFB\u52A1",
+      "message.stepProcess.done.subagents": "\u5DF2\u534F\u8C03\u5B50\u667A\u80FD\u4F53",
       "message.stepProcess.done.plan": "\u66F4\u65B0\u4E86\u8BA1\u5212",
       "message.stepProcess.done.questions": "\u5411\u7528\u6237\u63D0\u51FA\u4E86\u95EE\u9898",
       "message.stepProcess.done.tools": "\u5DF2\u8C03\u7528\u5DE5\u5177",
@@ -4771,6 +4799,11 @@ ${t("json.truncated", { total: text.length })}` : text;
       "message.turnProcess.took": "\u7528\u65F6 {duration}",
       "message.turnProcess.failed": "\u5904\u7406\u5931\u8D25",
       "view.chat": "\u5BF9\u8BDD",
+      "image.open": "\u67E5\u770B\u5927\u56FE",
+      "image.loading": "\u52A0\u8F7D\u56FE\u7247\u2026",
+      "image.failed": "\u56FE\u7247\u65E0\u6CD5\u9884\u89C8",
+      "image.dialog": "\u56FE\u7247\u9884\u89C8",
+      "image.close": "\u5173\u95ED\u56FE\u7247\u9884\u89C8",
       "number.groupSeparator": ",",
       "duration.compactSeconds": "{seconds}\u79D2",
       "duration.compactMinutes": "{minutes}\u5206{seconds}\u79D2",
@@ -4800,11 +4833,12 @@ ${t("json.truncated", { total: text.length })}` : text;
       "settings.links.description": "\u5BF9\u8BDD\u4E2D\u7F51\u9875\u94FE\u63A5\u7684\u6253\u5F00\u4F4D\u7F6E",
       "settings.links.sidebar": "\u5E94\u7528\u5185\u4FA7\u8FB9\u680F",
       "settings.links.newTab": "\u9ED8\u8BA4\u6D4F\u89C8\u5668",
-      "settings.transcript.title": "\u5DE5\u4F5C\u8FC7\u7A0B\u5C55\u793A",
-      "settings.transcript.description": "\u63A7\u5236\u8F6E\u6B21\u548C\u6B65\u9AA4\u7684\u9ED8\u8BA4\u5C55\u5F00\u65B9\u5F0F",
+      "settings.transcript.title": "\u5DE5\u4F5C\u6B65\u9AA4\u5C55\u793A",
+      "settings.transcript.description": "\u9009\u62E9\u5E0C\u671B\u770B\u5230\u591A\u5C11\u5DE5\u5177\u8C03\u7528\u7EC6\u8282",
       "settings.transcript.compact": "\u7B80\u6D01",
+      "settings.transcript.standard": "\u6807\u51C6",
       "settings.transcript.detailed": "\u8BE6\u7EC6",
-      "settings.transcript.expanded": "\u5B8C\u5168\u5C55\u5F00",
+      "settings.transcript.verbose": "\u5B8C\u5168\u5C55\u5F00",
       "fileOpen.title": "\u65E0\u6CD5\u6253\u5F00\u6587\u4EF6",
       "fileOpen.unknown": "\u65E0\u6CD5\u6253\u5F00\u6B64\u6587\u4EF6",
       "message.extraBlock": "\u9644\u52A0\u5185\u5BB9\u5757",
@@ -4882,6 +4916,8 @@ ${t("json.truncated", { total: text.length })}` : text;
     const en = {
       "message.stepProcess.thinking": "Analyzing the request",
       "message.stepProcess.read": "Reading files",
+      "message.stepProcess.readImage": "Reading images",
+      "message.stepProcess.write": "Writing files",
       "message.stepProcess.search": "Searching code",
       "message.stepProcess.edit": "Editing files",
       "message.stepProcess.commands": "Running commands",
@@ -4892,15 +4928,29 @@ ${t("json.truncated", { total: text.length })}` : text;
       "message.stepProcess.plan": "Updating the plan",
       "message.stepProcess.questions": "Waiting for your action",
       "message.stepProcess.tools": "Calling tools",
+      "message.stepProcess.prepare.read": "Preparing to read files",
+      "message.stepProcess.prepare.readImage": "Preparing to read images",
+      "message.stepProcess.prepare.write": "Preparing to write files",
+      "message.stepProcess.prepare.search": "Preparing to search code",
+      "message.stepProcess.prepare.edit": "Preparing to edit files",
+      "message.stepProcess.prepare.commands": "Preparing to run commands",
+      "message.stepProcess.prepare.code": "Preparing to run code",
+      "message.stepProcess.prepare.webSearch": "Preparing to search the web",
+      "message.stepProcess.prepare.webFetch": "Preparing to visit web pages",
+      "message.stepProcess.prepare.subagents": "Preparing to coordinate subagents",
+      "message.stepProcess.prepare.plan": "Preparing to update the plan",
+      "message.stepProcess.prepare.questions": "Preparing questions",
+      "message.stepProcess.prepare.tools": "Preparing tool calls",
+      "message.stepProcess.prepare.computer": "Preparing to operate computer",
       "message.stepProcess.computer": "Operating computer",
       "message.stepProcess.done.computer": "Operated computer",
-      "message.stepProcess.images": "Viewing images",
-      "message.stepProcess.done.images": "Viewed images",
       "message.stepProcess.count": "{count} operations",
       "message.stepProcess.failures": "{count} failed",
       "message.stepProcess.stopped": "{count} stopped",
       "message.stepProcess.done.thinking": "Analysis completed",
       "message.stepProcess.done.read": "Read files",
+      "message.stepProcess.done.readImage": "Read images",
+      "message.stepProcess.done.write": "Wrote files",
       "message.stepProcess.done.search": "Searched code",
       "message.stepProcess.done.edit": "Edited files",
       "message.stepProcess.done.commands": "Ran commands",
@@ -4931,6 +4981,11 @@ ${t("json.truncated", { total: text.length })}` : text;
       "message.turnProcess.took": "Took {duration}",
       "message.turnProcess.failed": "Failed",
       "view.chat": "Chat",
+      "image.open": "View full image",
+      "image.loading": "Loading image\u2026",
+      "image.failed": "Image preview unavailable",
+      "image.dialog": "Image preview",
+      "image.close": "Close image preview",
       "number.groupSeparator": ",",
       "duration.compactSeconds": "{seconds}s",
       "duration.compactMinutes": "{minutes}m{seconds}s",
@@ -4961,10 +5016,11 @@ ${t("json.truncated", { total: text.length })}` : text;
       "settings.links.sidebar": "In-App Sidebar",
       "settings.links.newTab": "Default Browser",
       "settings.transcript.title": "Work details",
-      "settings.transcript.description": "Controls how turns and steps expand by default",
+      "settings.transcript.description": "Choose how much detail to show for tool calls",
       "settings.transcript.compact": "Compact",
+      "settings.transcript.standard": "Standard",
       "settings.transcript.detailed": "Detailed",
-      "settings.transcript.expanded": "Expanded",
+      "settings.transcript.verbose": "Verbose",
       "fileOpen.title": "Couldn\u2019t open file",
       "fileOpen.unknown": "Couldn\u2019t open this file",
       "message.extraBlock": "Extra content block",
@@ -5162,9 +5218,13 @@ ${t("json.truncated", { total: text.length })}` : text;
       "stopped": "hWmORq_stopped"
     };
     function localPathMediaUrl(base2, value) {
-      if (!value.startsWith("/") || value.startsWith("//")) return void 0;
-      if (!base2.startsWith("http:") && !base2.startsWith("https:")) return void 0;
-      return new URL(`api/file?path=${encodeURIComponent(value)}`, base2).href;
+      let path;
+      try {
+        path = decodeURIComponent(value.split(/[?#]/u)[0] ?? "");
+      } catch {
+        return;
+      }
+      return fileMediaUrl(base2, path);
     }
     const AssistantMarkdown = (0, react.memo)(function AssistantMarkdown2({ blocks, streaming, interrupted, renderMessageImages, groupPart, useDisclosure: useDisclosure2, reasoningHidden = false, usePresentation, revealProcess, mentions, t }) {
       const labels = (0, react.useMemo)(() => markdownLabels(t), [t]);
@@ -5478,10 +5538,10 @@ ${t("json.truncated", { total: text.length })}` : text;
     };
     const TurnProcessNodeView = (0, react.memo)(function TurnProcessNodeView2({ node, turnProcess, t }) {
       if (turnProcess === void 0) throw new Error("turn-process node requires Turn process owner state");
-      const open = turnProcess.open;
+      const open = !turnProcess.foldable || turnProcess.open;
       const turn = node.location.kind === "turn" || node.location.kind === "step" ? node.location.turn : void 0;
       const [now, setNow] = (0, react.useState)(Date.now);
-      const ticking = turnProcess.foldable && turn?.status === "open";
+      const ticking = turn?.status === "open" && turn.start !== void 0;
       (0, react.useEffect)(() => {
         if (!ticking) return;
         setNow(Date.now());
@@ -5492,11 +5552,11 @@ ${t("json.truncated", { total: text.length })}` : text;
           clearInterval(timer);
         };
       }, [ticking]);
-      if (!turnProcess.foldable) return null;
-      const canCollapse = turnProcess.hasContent && !turnProcessAlwaysOpen(node);
-      const running = turn?.status === "open";
-      const reason = turn?.end?.data.reason.kind;
-      const elapsedMs = turn?.start === void 0 ? void 0 : Math.max(1e3, (turn.end?.time ?? now) - turn.start.time);
+      if (turn?.start === void 0 && turn?.status !== "closed") return null;
+      const canCollapse = turnProcess.foldable && turnProcess.hasContent && !turnProcessAlwaysOpen(node);
+      const running = turn.status === "open";
+      const reason = turn.end?.data.reason.kind;
+      const elapsedMs = turn.start === void 0 ? void 0 : Math.max(1e3, (turn.end?.time ?? now) - turn.start.time);
       const duration = elapsedMs === void 0 ? void 0 : running ? formatLiveRunDuration(elapsedMs, t) : formatRunDuration(elapsedMs, t);
       const label = running ? duration === void 0 ? t("chat.deepDiving") : t("message.turnProcess.deepDivingFor", { duration }) : reason === "aborted" ? t("message.stopped") : reason === "error" ? t("message.turnProcess.failed") : duration === void 0 ? t("message.turnProcess.worked") : t("message.turnProcess.took", { duration });
       const announcement = running ? t("chat.deepDiving") : reason === "aborted" ? t("message.stopped") : reason === "error" ? t("message.turnProcess.failed") : t("message.turnProcess.worked");
@@ -6678,7 +6738,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       const blocks = settled?.blocks ?? compactBlocks(state.blocks);
       const visible = settled === void 0 ? state.visibleBlocks > 0 : hasVisibleContent(blocks);
       const status = settled?.interrupted === true ? "interrupted" : settled === void 0 ? "running" : "settled";
-      const anchorSeq = settled?.seq ?? state.firstVisibleSeq ?? context.matches[0]?.event.seq ?? 0;
+      const anchorSeq = (settled?.interrupted === true ? settled.seq : state.firstVisibleSeq ?? settled?.seq) ?? context.matches[0]?.event.seq ?? 0;
       const time = settled?.time ?? state.firstVisibleTime ?? context.matches[0]?.event.time ?? 0;
       return {
         anchorSeq,
@@ -6756,7 +6816,7 @@ ${t("json.truncated", { total: text.length })}` : text;
         const settled = data.finalNode;
         const visible = settled === void 0 ? state.visibleBlocks > 0 : hasVisibleContent(data.blocks);
         if (settled === void 0 && !visible && current == null) return null;
-        return chatNode(context, "assistant-step", settled?.seq ?? state.firstVisibleSeq ?? context.matches[0]?.event.seq ?? 0, data, { visibility: settled?.interrupted === true || visible ? "visible" : "hidden" });
+        return chatNode(context, "assistant-step", (settled?.interrupted === true ? settled.seq : state.firstVisibleSeq ?? settled?.seq) ?? context.matches[0]?.event.seq ?? 0, data, { visibility: settled?.interrupted === true || visible ? "visible" : "hidden" });
       }
     };
     function registerAssistantConversationNode(ctx) {
@@ -8223,6 +8283,7 @@ ${t("json.truncated", { total: text.length })}` : text;
           role: "start"
         } : null,
         start: (_context, match, reader) => {
+          if (match.event.type === "assistant/live-chunk") throw new Error("system-message requires a durable event");
           return inspect(reader.previous("system-message")?.state, match.event);
         },
         update: (context) => context.state,
@@ -8366,8 +8427,23 @@ ${t("json.truncated", { total: text.length })}` : text;
       return JSON.stringify(value);
     }
     function rootCall(match) {
+      const event = match.event;
+      if (event.type === "assistant/live-chunk") {
+        const chunk = event.data.chunk;
+        if (chunk.type !== "tool-call-delta" || !chunk.name) throw new Error("tool preparation requires a named call delta");
+        return {
+          phase: "preparing",
+          callId: String(chunk.id),
+          name: chunk.name,
+          turn: event.data.turn,
+          step: event.data.step,
+          time: event.time,
+          subCalls: []
+        };
+      }
       if (match.event.type !== "tool/call") throw new Error("tool-call start requires tool/call");
       return {
+        phase: "start",
         callId: String(match.event.data.callId),
         name: match.event.data.name,
         argsRaw: match.event.data.arguments,
@@ -8399,6 +8475,7 @@ ${t("json.truncated", { total: text.length })}` : text;
     }
     function childCall(match, data) {
       return {
+        phase: "start",
         callId: data.subCallId,
         parentCallId: data.parentCallId,
         name: data.name,
@@ -8494,6 +8571,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       };
     }
     function projectBlock(block, state, interruptedAt, visited = /* @__PURE__ */ new Set(), depth = 1) {
+      if (!("kind" in block) && block.phase === "preparing") return block;
       if (visited.has(block.callId) || depth > MAX_DEPTH) return {
         ...block,
         subCalls: []
@@ -8559,6 +8637,13 @@ ${t("json.truncated", { total: text.length })}` : text;
       kind: "tool-call",
       target: "chat",
       match: (event) => {
+        if (event.type === "assistant/live-chunk") {
+          const chunk = event.data.chunk;
+          return chunk.type === "tool-call-delta" && chunk.name ? {
+            id: String(chunk.id),
+            role: "start"
+          } : null;
+        }
         if (event.type === "tool/call") return {
           id: String(event.data.callId),
           role: "start"
@@ -8582,8 +8667,13 @@ ${t("json.truncated", { total: text.length })}` : text;
         parents: /* @__PURE__ */ new Map()
       }),
       update: (context, match) => {
+        if (match.event.type === "tool/call") return {
+          ...context.state,
+          root: rootCall(match)
+        };
         if (match.event.type === "tool/result") {
-          const result = rootResult(match, "kind" in context.state.root ? void 0 : context.state.root);
+          const root = context.state.root;
+          const result = rootResult(match, !("kind" in root) && root.phase === "start" ? root : void 0);
           return result === void 0 ? context.state : {
             ...context.state,
             root: result
@@ -8591,11 +8681,25 @@ ${t("json.truncated", { total: text.length })}` : text;
         }
         return updateDispatch(context.state, match);
       },
+      publication: (match) => match.event.type === "assistant/live-chunk" ? "animation-frame" : "immediate",
       buildViewNode: (context) => {
+        const current = context.current.get("chat");
         const state = context.state ?? fallbackState$2(context);
-        if (state === void 0) return null;
-        const projected = projectBlock(state.root, state, interruption(context));
-        return chatNode(context, "tool-call", context.start?.event.seq ?? ("kind" in state.root ? state.root.seq : context.matches[0]?.event.seq ?? 0), { root: projected });
+        if (state === void 0) return current == null ? null : current.visibility === "hidden" ? current : {
+          ...current,
+          visibility: "hidden"
+        };
+        const interruptedAt = interruption(context);
+        const projected = projectBlock(state.root, state, interruptedAt);
+        const anchor = context.start?.event.seq ?? ("kind" in state.root ? state.root.seq : context.matches[0]?.event.seq ?? 0);
+        const visibility = !("kind" in projected) && projected.phase === "preparing" && interruptedAt !== void 0 ? "hidden" : "visible";
+        const location = contextLocation(context);
+        const data = current?.data.root === projected ? current.data : { root: projected };
+        if (current?.data === data && current.anchorSeq === anchor && current.visibility === visibility && current.location === location) return current;
+        return chatNode(context, "tool-call", anchor, data, {
+          visibility,
+          location
+        });
       }
     };
     function registerToolConversationNode(ctx) {
@@ -9224,19 +9328,11 @@ ${t("json.truncated", { total: text.length })}` : text;
     }
     function activity(name) {
       if (/^computer_use(?:_|$)/.test(name.split(/[./]/).at(-1) ?? "")) return "computer";
-      if (name === "read_image") return "images";
-      if ([
-        "read",
-        "list_mcp_resources",
-        "list_mcp_resource_templates",
-        "read_mcp_resource"
-      ].includes(name)) return "read";
+      if (name === "read") return "read";
+      if (name === "read_image") return "readImage";
       if (name === "grep" || name === "glob" || name.endsWith("_inspect")) return "search";
-      if ([
-        "write",
-        "edit",
-        "apply_patch"
-      ].includes(name)) return "edit";
+      if (name === "write") return "write";
+      if (name === "edit" || name === "apply_patch") return "edit";
       if ([
         "bash",
         "pwsh",
@@ -9333,6 +9429,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       let running;
       let runningDetail = "";
       let runningTime = -Infinity;
+      let preparing;
       let failures = 0, stopped = 0;
       const visit = (tool) => {
         if (seen.has(tool.callId)) return;
@@ -9351,7 +9448,8 @@ ${t("json.truncated", { total: text.length })}` : text;
           const kind = activity(call.name);
           if (isRunningTool(tool) && tool.time >= runningTime) {
             running = kind;
-            runningDetail = liveToolDetail(tool.name, tool.argsRaw);
+            preparing = tool.phase === "preparing";
+            runningDetail = tool.phase === "preparing" ? kind === "tools" ? tool.name : "" : liveToolDetail(tool.name, tool.argsRaw);
             runningTime = tool.time;
           }
           counts.set(kind, (counts.get(kind) ?? 0) + 1);
@@ -9368,7 +9466,8 @@ ${t("json.truncated", { total: text.length })}` : text;
           count
         })).sort((a, b) => b.count - a.count),
         running,
-        runningDetail
+        runningDetail,
+        ...preparing ? { preparing: true } : {}
       };
     }
     const INDEPENDENT = /* @__PURE__ */ new Set([
@@ -9391,7 +9490,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       return node.kind === "assistant-step" && hasAssistantReplyContent(node.data.blocks);
     }
     function sameSummary(left, right) {
-      return left.running === right.running && left.runningDetail === right.runningDetail && left.failures === right.failures && left.stopped === right.stopped && left.counts.length === right.counts.length && left.counts.every((value, index) => value.kind === right.counts[index]?.kind && value.count === right.counts[index].count);
+      return left.running === right.running && left.runningDetail === right.runningDetail && left.preparing === right.preparing && left.failures === right.failures && left.stopped === right.stopped && left.counts.length === right.counts.length && left.counts.every((value, index) => value.kind === right.counts[index]?.kind && value.count === right.counts[index].count);
     }
     function sameMembers(left, right) {
       return left.length === right.length && left.every((value, index) => value.key === right[index]?.key && value.groupPart === right[index].groupPart);
@@ -9435,7 +9534,7 @@ ${t("json.truncated", { total: text.length })}` : text;
         const previous = this.snapshot.data;
         const activity2 = unchanged && previous.closed === closed ? previous.summary : processActivity(nodes);
         const summary = closed ? {
-          ...activity2,
+          counts: activity2.counts,
           running: void 0,
           runningDetail: ""
         } : activity2;
@@ -10571,18 +10670,24 @@ ${t("json.truncated", { total: text.length })}` : text;
     const TRANSCRIPT_VIEW_FIELD = "transcriptView";
     const TRANSCRIPT_VIEW_MODES = [
       "compact",
+      "standard",
       "detailed",
-      "expanded"
+      "verbose"
     ];
     const LEGACY_TRANSCRIPT_VIEW_MODE = "normal";
-    const TRANSCRIPT_VIEW_SETTING_VALUES = [...TRANSCRIPT_VIEW_MODES, LEGACY_TRANSCRIPT_VIEW_MODE];
-    const DEFAULT_TRANSCRIPT_VIEW_MODE = "compact";
+    const LEGACY_EXPANDED_TRANSCRIPT_VIEW_MODE = "expanded";
+    const TRANSCRIPT_VIEW_SETTING_VALUES = [
+      ...TRANSCRIPT_VIEW_MODES,
+      LEGACY_TRANSCRIPT_VIEW_MODE,
+      LEGACY_EXPANDED_TRANSCRIPT_VIEW_MODE
+    ];
+    const DEFAULT_TRANSCRIPT_VIEW_MODE = "standard";
     const PERFORMANCE_USAGE_MODES = ["compact", "detailed"];
     const DEFAULT_PERFORMANCE_USAGE = "detailed";
     const ChatSettingsFields = {
       linkOpening: Schema.union(["sidebar", "new-tab"]).default("sidebar"),
       performanceUsage: Schema.union([...PERFORMANCE_USAGE_MODES]).default(DEFAULT_PERFORMANCE_USAGE),
-      [TRANSCRIPT_VIEW_FIELD]: Schema.union([...TRANSCRIPT_VIEW_SETTING_VALUES]).default(DEFAULT_TRANSCRIPT_VIEW_MODE)
+      [TRANSCRIPT_VIEW_FIELD]: Schema.union([...TRANSCRIPT_VIEW_SETTING_VALUES]).default(DEFAULT_TRANSCRIPT_VIEW_MODE).loose()
     };
     Schema.object(ChatSettingsFields);
     const css = "._2XZxNq_row{border-bottom:.5px solid var(--dsw-alias-border-l2);align-items:center;gap:8px;padding:16px 0;display:flex}._2XZxNq_rowText{flex-direction:column;flex:1;gap:4px;min-width:0;padding-right:48px;display:flex}._2XZxNq_title{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:400;line-height:22px}._2XZxNq_desc{color:var(--dsw-alias-label-tertiary);font-size:12px;font-weight:400;line-height:18px}._2XZxNq_selector{background:var(--dsw-alias-bg-module-platform);height:36px;font:inherit;color:var(--dsw-alias-label-primary);cursor:pointer;border:none;border-radius:18px;align-items:center;gap:12px;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}._2XZxNq_selector:hover{background:var(--dsw-alias-interactive-bg-hover)}._2XZxNq_chevron{flex:none}";
@@ -10649,8 +10754,9 @@ ${t("json.truncated", { total: text.length })}` : text;
     }
     const LABELS = {
       compact: "settings.transcript.compact",
+      standard: "settings.transcript.standard",
       detailed: "settings.transcript.detailed",
-      expanded: "settings.transcript.expanded"
+      verbose: "settings.transcript.verbose"
     };
     function TranscriptViewRow({ useTranscriptView, setTranscriptView, t }) {
       const mode = useTranscriptView((value) => value);
@@ -10671,7 +10777,7 @@ ${t("json.truncated", { total: text.length })}` : text;
     var TranscriptViewPolicy = class {
       host;
       unsubscribe;
-      /** Reactive current mode; defaults to Compact before Host settings arrive. */
+      /** Reactive current mode; defaults to Standard before Host settings arrive. */
       mode = (0, _deepseek_ai_dsh_client_store.createSnapshotStore)(DEFAULT_TRANSCRIPT_VIEW_MODE);
       /**
       * @param host - durable Chat settings scope.
@@ -10689,7 +10795,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       }
       /**
       * Publish and persist one explicit user choice.
-      * @param mode - Compact, Detailed, or Expanded work details.
+      * @param mode - Compact, Standard, Detailed, or Verbose work details.
       */
       setMode(mode) {
         if (this.mode.getSnapshot() === mode) return;
@@ -10700,7 +10806,8 @@ ${t("json.truncated", { total: text.length })}` : text;
       adopt() {
         const section = this.host.getSnapshot().value;
         if (section === void 0) return;
-        const mode = section.transcriptView === "normal" ? "detailed" : section.transcriptView;
+        const saved = section.transcriptView;
+        const mode = saved === "normal" ? "standard" : saved === "expanded" ? "detailed" : saved;
         if (this.mode.getSnapshot() !== mode) this.mode.set(mode);
       }
     };
@@ -10709,21 +10816,28 @@ ${t("json.truncated", { total: text.length })}` : text;
         mode: "compact",
         foldCompletedTurns: true,
         stepGrouping: "collapsed",
+        liveProcessDetail: false,
+        settledReasoningPreview: false
+      },
+      standard: {
+        mode: "standard",
+        foldCompletedTurns: true,
+        stepGrouping: "collapsed",
         liveProcessDetail: true,
         settledReasoningPreview: true
       },
       detailed: {
         mode: "detailed",
         foldCompletedTurns: true,
-        stepGrouping: "collapsed",
+        stepGrouping: "history",
         liveProcessDetail: true,
         settledReasoningPreview: true
       },
-      expanded: {
-        mode: "expanded",
-        foldCompletedTurns: true,
+      verbose: {
+        mode: "verbose",
+        foldCompletedTurns: false,
         stepGrouping: "none",
-        liveProcessDetail: true,
+        liveProcessDetail: false,
         settledReasoningPreview: true
       }
     };
@@ -12582,6 +12696,7 @@ function operationKind(name = "") {
   return "tool";
 }
 function operationState(block) {
+  if (block.phase === "preparing") return "preparing";
   if (block.kind !== "tool-result") return "running";
   const name = block.call?.name ?? block.name ?? "";
   if (["ABORTED", "ABORTED_BEFORE_DISPATCH", "interrupted", "COMPUTER_USE_STOPPED"].includes(block.error?.code) || operationKind(name) === "computer" && block.isError && /tool call aborted|Computer Use (?:was |is )?stopped/i.test((block.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n"))) return "stopped";
@@ -12591,7 +12706,7 @@ var rowTitles = { bash: ["bash", "\u8FD0\u884C"], pwsh: ["pwsh", "\u8FD0\u884C P
 function operationRowLocale(t, name, block) {
   const row = rowTitles[name];
   if (!row || !t || !/[\u3400-\u9fff]/.test(t("row.failed"))) return t;
-  const state = operationState(block), title = state === "running" ? "\u6B63\u5728" + row[1] : state === "stopped" ? "\u5DF2\u505C\u6B62" : state === "error" ? row[1] + "\u5931\u8D25" : "\u5DF2" + row[1];
+  const state = operationState(block), title = state === "preparing" ? "\u51C6\u5907" + row[1] : state === "running" ? "\u6B63\u5728" + row[1] : state === "stopped" ? "\u5DF2\u505C\u6B62" : state === "error" ? row[1] + "\u5931\u8D25" : "\u5DF2" + row[1];
   return (key, ...args) => key === "tool.title." + row[0] ? title : t(key, ...args);
 }
 function summarizeToolOutcomes(data) {
@@ -13389,6 +13504,7 @@ function ComputerPane({ sessionId, useTabInfo, inputActions, conversation, hostB
 }
 function ComputerCard({ block, loadImage, toolName, openFile }) {
   const [open, setOpen] = (0, import_react17.useState)(false), bodyId = (0, import_react17.useId)();
+  const preparing = block.phase === "preparing";
   let args = {};
   try {
     args = JSON.parse(block.call?.argsRaw ?? block.argsRaw ?? "{}");
@@ -13399,8 +13515,8 @@ function ComputerCard({ block, loadImage, toolName, openFile }) {
   const images = content.filter((c) => c.type === "image");
   const files = block.meta?.computerUseFiles ?? [];
   const stopped = failure && /tool call aborted|COMPUTER_USE_STOPPED|Computer Use (?:was |is )?stopped|execution (?:was )?cancelled/i.test(message);
-  const status = !settled ? "\u6267\u884C\u4E2D" : stopped ? "\u5DF2\u505C\u6B62" : failure ? "\u6267\u884C\u5931\u8D25" : "\u5DF2\u6267\u884C";
-  return /* @__PURE__ */ import_react17.default.createElement("div", { className: "tx-cu-card", "data-state": !settled ? "running" : stopped ? "stopped" : failure ? "error" : "idle" }, /* @__PURE__ */ import_react17.default.createElement("button", { type: "button", className: "tx-cu-card-heading", "aria-expanded": open, "aria-controls": bodyId, onClick: () => setOpen((value) => !value) }, /* @__PURE__ */ import_react17.default.createElement("span", { className: "tx-cu-card-leading" }, /* @__PURE__ */ import_react17.default.createElement(ComputerIcon, { name: "screen", size: 16 }), /* @__PURE__ */ import_react17.default.createElement(ComputerIcon, { className: "tx-cu-card-chevron", name: "chevron", size: 14 })), /* @__PURE__ */ import_react17.default.createElement("span", { className: "tx-cu-card-title" }, args.title ?? (toolName === "computer_use_reset" ? "\u91CD\u7F6E Computer Use" : "Computer Use")), !!images.length && /* @__PURE__ */ import_react17.default.createElement("span", { className: "tx-cu-card-count" }, images.length, " \u5F20\u622A\u56FE"), !!files.length && /* @__PURE__ */ import_react17.default.createElement("span", { className: "tx-cu-card-count" }, files.length, " \u4E2A\u6587\u4EF6"), /* @__PURE__ */ import_react17.default.createElement("small", { className: failure && !stopped ? "tx-cu-error" : settled && !stopped ? "tx-cu-visually-hidden" : "" }, status)), open && /* @__PURE__ */ import_react17.default.createElement("div", { className: "tx-cu-card-body", id: bodyId }, !!images.length && /* @__PURE__ */ import_react17.default.createElement("div", { className: "tx-cu-result-images" }, images.map((c, i) => /* @__PURE__ */ import_react17.default.createElement(SavedImage, { key: i, attachment: c.attachment, loadImage }))), !!files.length && /* @__PURE__ */ import_react17.default.createElement("div", { className: "tx-cu-export-files" }, files.map((file, i) => /* @__PURE__ */ import_react17.default.createElement("button", { key: i, type: "button", onClick: () => openFile?.(file.path), disabled: !openFile, title: file.path }, file.name, /* @__PURE__ */ import_react17.default.createElement("small", null, Math.ceil(file.bytes / 1024), " KB")))), failure && /* @__PURE__ */ import_react17.default.createElement("p", { className: "tx-cu-error" }, message.split("\n").find((line) => line.trim()) || String(block.meta?.computerUseError || status)), !images.length && message && /* @__PURE__ */ import_react17.default.createElement("pre", null, message), /* @__PURE__ */ import_react17.default.createElement("details", null, /* @__PURE__ */ import_react17.default.createElement("summary", null, "\u67E5\u770B\u64CD\u4F5C\u4E0E\u7ED3\u679C"), args.code && /* @__PURE__ */ import_react17.default.createElement("pre", null, args.code), message && /* @__PURE__ */ import_react17.default.createElement("pre", null, message))));
+  const status = preparing ? "\u51C6\u5907\u8C03\u7528" : !settled ? "\u6267\u884C\u4E2D" : stopped ? "\u5DF2\u505C\u6B62" : failure ? "\u6267\u884C\u5931\u8D25" : "\u5DF2\u6267\u884C";
+  return /* @__PURE__ */ import_react17.default.createElement("div", { className: "tx-cu-card", "data-state": preparing ? "preparing" : !settled ? "running" : stopped ? "stopped" : failure ? "error" : "idle" }, /* @__PURE__ */ import_react17.default.createElement("button", { type: "button", className: "tx-cu-card-heading", disabled: preparing, "aria-expanded": preparing ? void 0 : open, "aria-controls": preparing ? void 0 : bodyId, onClick: () => setOpen((value) => !value) }, /* @__PURE__ */ import_react17.default.createElement("span", { className: "tx-cu-card-leading" }, /* @__PURE__ */ import_react17.default.createElement(ComputerIcon, { name: "screen", size: 16 }), /* @__PURE__ */ import_react17.default.createElement(ComputerIcon, { className: "tx-cu-card-chevron", name: "chevron", size: 14 })), /* @__PURE__ */ import_react17.default.createElement("span", { className: "tx-cu-card-title" }, args.title ?? (toolName === "computer_use_reset" ? "\u91CD\u7F6E Computer Use" : "Computer Use")), !!images.length && /* @__PURE__ */ import_react17.default.createElement("span", { className: "tx-cu-card-count" }, images.length, " \u5F20\u622A\u56FE"), !!files.length && /* @__PURE__ */ import_react17.default.createElement("span", { className: "tx-cu-card-count" }, files.length, " \u4E2A\u6587\u4EF6"), /* @__PURE__ */ import_react17.default.createElement("small", { className: failure && !stopped ? "tx-cu-error" : settled && !stopped ? "tx-cu-visually-hidden" : "" }, status)), open && !preparing && /* @__PURE__ */ import_react17.default.createElement("div", { className: "tx-cu-card-body", id: bodyId }, !!images.length && /* @__PURE__ */ import_react17.default.createElement("div", { className: "tx-cu-result-images" }, images.map((c, i) => /* @__PURE__ */ import_react17.default.createElement(SavedImage, { key: i, attachment: c.attachment, loadImage }))), !!files.length && /* @__PURE__ */ import_react17.default.createElement("div", { className: "tx-cu-export-files" }, files.map((file, i) => /* @__PURE__ */ import_react17.default.createElement("button", { key: i, type: "button", onClick: () => openFile?.(file.path), disabled: !openFile, title: file.path }, file.name, /* @__PURE__ */ import_react17.default.createElement("small", null, Math.ceil(file.bytes / 1024), " KB")))), failure && /* @__PURE__ */ import_react17.default.createElement("p", { className: "tx-cu-error" }, message.split("\n").find((line) => line.trim()) || String(block.meta?.computerUseError || status)), !images.length && message && /* @__PURE__ */ import_react17.default.createElement("pre", null, message), /* @__PURE__ */ import_react17.default.createElement("details", null, /* @__PURE__ */ import_react17.default.createElement("summary", null, "\u67E5\u770B\u64CD\u4F5C\u4E0E\u7ED3\u679C"), args.code && /* @__PURE__ */ import_react17.default.createElement("pre", null, args.code), message && /* @__PURE__ */ import_react17.default.createElement("pre", null, message))));
 }
 function installComputerUseClient(ctx, shared) {
   const useOptions = () => (0, import_react17.useSyncExternalStore)(shared.subscribe, shared.current);

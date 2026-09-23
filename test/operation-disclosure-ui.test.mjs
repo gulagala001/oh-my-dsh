@@ -24,7 +24,7 @@ test('all tool families share one disclosure before and after completion, with a
   assert.equal(await page.getByText(/Error: invalid|Unsupported or malformed/).count(),0);
   const summary=page.locator('[data-turn-process-tool-calls="3"]');await summary.waitFor();
   assert.equal(await summary.getAttribute('aria-expanded'),'true','completion preserves the process the user is already reading');
-  assert.match(await summary.innerText(),/用时/);assert.match(await running.innerText(),/运行命令/);assert.match(await running.innerText(),/查看图像/);
+  assert.match(await summary.innerText(),/用时/);assert.match(await running.innerText(),/运行命令/);assert.match(await running.innerText(),/读取图片/);
   await summary.click();assert.equal(await page.locator('[data-chat-call-id]:visible').count(),0);assert.equal(await page.getByText('四层结构正文',{exact:true}).isVisible(),true);
   if(process.env.TRISOUL_UI_ARTIFACTS)await page.screenshot({path:join(f.root,'operation-summary.png')});
   await summary.click();

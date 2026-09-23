@@ -51,6 +51,23 @@ test('operation failures are visible without fake success or implicit script app
   await f.service.start('sample', 'uninstall'); assert.match((await f.service.status()).plugins[0].error, /无法卸载/);
 });
 
+test('version refusals remain visible after restart and automatic updates never grant exemptions', async () => {
+  const f = fixture(), error = { code: 'incompatible-version', incompatible: [
+    { name: 'sample-plugin', version: '1.0.0', runtimeVersion: '0.1.7-rc.1', peers: { '@deepseek-ai/dsh': '0.1.7-alpha.2' } },
+  ] };
+  f.failure = { application: 'failed', error };
+  await f.service.start('sample', 'install');
+  assert.match((await f.service.status()).plugins[0].error, /sample-plugin 1\.0\.0 不兼容 DSH 0\.1\.7-rc\.1/);
+  assert.equal((await f.service.status()).plugins[0].installed, false);
+  f.bundles = [{ name: 'sample-plugin', installed: true, enabled: true, version: '0.9.0', error }];
+  f.service.records.clear();
+  assert.match((await f.service.status()).plugins[0].error, /宿主“插件”页面/);
+  await f.service.settings(true); await f.service.tick();
+  assert.equal(f.calls.length, 2);
+  assert.deepEqual(Object.keys(f.calls[1].options).sort(), ['enabled', 'requestId']);
+  assert.match((await f.service.status()).plugins[0].error, /不兼容/);
+});
+
 test('automatic updates are opt-in, idle-only and limited to installed enabled recommendations at six-hour intervals', async () => {
   const f = fixture(); await f.service.tick(); assert.equal(f.lookups, 0);
   await f.service.settings(true); assert.deepEqual(f.writes, [{ recommendedPluginsAutoUpdate: true }]);

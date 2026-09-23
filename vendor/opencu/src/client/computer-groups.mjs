@@ -11,6 +11,7 @@ export function operationKind(name=''){
 }
 export const operationIcon=names=>({image:'image',read:'book',command:'terminal',search:'search',web:'browser',computer:'screen',edit:'annotate',tool:'stack'})[operationKind(names[0])];
 export function operationState(block){
+  if(block.phase==='preparing')return'preparing';
   if(block.kind!=='tool-result')return'running';
   const name=block.call?.name??block.name??'';
   if(['ABORTED','ABORTED_BEFORE_DISPATCH','interrupted','COMPUTER_USE_STOPPED'].includes(block.error?.code)||operationKind(name)==='computer'&&block.isError&&/tool call aborted|Computer Use (?:was |is )?stopped/i.test((block.content??[]).filter(c=>c.type==='text').map(c=>c.text).join('\n')))return'stopped';
@@ -22,7 +23,7 @@ export function operationRowLocale(t,name,block){
   // Override only the host's Chinese title, never its result labels, actions,
   // tool identity or another plugin's locale / rendering contract.
   if(!row||!t||!/[\u3400-\u9fff]/.test(t('row.failed')))return t;
-  const state=operationState(block),title=state==='running'?'正在'+row[1]:state==='stopped'?'已停止':state==='error'?row[1]+'失败':'已'+row[1];
+  const state=operationState(block),title=state==='preparing'?'准备'+row[1]:state==='running'?'正在'+row[1]:state==='stopped'?'已停止':state==='error'?row[1]+'失败':'已'+row[1];
   return(key,...args)=>key==='tool.title.'+row[0]?title:t(key,...args);
 }
 

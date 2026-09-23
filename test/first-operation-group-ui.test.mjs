@@ -29,8 +29,8 @@ test('first operation group after user input stays visible with an injected runt
   });
   await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '读取参考文件和图片，然后检查第二组操作。' }] });
   await until(() => step === 3);
-  const first = page.locator('[data-cu-group] .tx-cu-group-toggle').filter({ hasText: '已读取' });
-  const later = page.locator('[data-cu-group] .tx-cu-group-toggle').filter({ hasText: '已运行命令' });
+  const groupFor = id => page.locator(`[data-cu-group]:has([data-chat-call-id="${id}"]) .tx-cu-group-toggle`);
+  const first = groupFor('first-operation-0'), later = groupFor('later-operation');
   await first.waitFor();
   await later.waitFor();
   assert.equal(await page.locator('[data-omd-record=injection]:visible').count(), 0, 'runtime records stay inside collapsed groups');
