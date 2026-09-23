@@ -232,7 +232,7 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${
   const customIdentity = '你是身份设置验收助手。\n\nLiteral {{cwd}} stays literal.';
   const beforeIdentity = (await api('/state' + q)).config.identityPrompt;
   assert.equal((await api('/settings', { identityPrompt: customIdentity })).identityPrompt, customIdentity);
-  assert.ok(readFileSync(join(home, 'settings.yaml'), 'utf8').includes('身份设置验收助手'));
+  assert.ok(readFileSync(join(home, 'profiles', 'trisoul-x', 'cordis.patch.yml'), 'utf8').includes('身份设置验收助手'));
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: id, mode: 'queue', content: [{ type: 'text', text: 'Check the updated identity.' }] });
   await until(() => payloads.some(p => p.messages.some(m => m.role === 'system' && m.content.startsWith(customIdentity))));
   await until(async () => (await api('/state' + q)).running === 'idle');
