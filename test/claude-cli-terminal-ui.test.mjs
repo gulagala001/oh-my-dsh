@@ -38,7 +38,7 @@ test('terminal skin covers the real shell, fonts, all settings, navigation and r
   for (const el of [page.locator('body'), page.locator('[data-composer-input]'), page.getByLabel('皮肤', { exact: true }), nav.getByRole('button', { name: '通用设置', exact: true })]) {
     assert.match(await style(el, 'fontFamily'), /OMD Terminal Mono/);
   }
-  const pages = ['通用设置', '模型', '内置插件', '外观', 'Oh My DSH', '推荐插件', 'Agent 预设', '已归档会话'];
+  const pages = ['通用设置', '模型', '内置插件', '外观', 'Oh My DSH', '推荐插件', 'Agent 预设'];
   for (const mode of ['dark', 'light']) {
     await nav.getByRole('button', { name: '外观', exact: true }).click();
     await page.getByLabel('明暗模式', { exact: true }).selectOption(mode);

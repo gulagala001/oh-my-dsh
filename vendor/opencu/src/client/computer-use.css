@@ -313,12 +313,7 @@
 .tx-cu-card-body summary { cursor: pointer; padding: 6px 0; }
 .tx-cu-card-image { display: block; max-width: 100%; max-height: 340px; border: 1px solid var(--cu-line); border-radius: 9px; margin: 10px 0; }
 .tx-cu-card pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.6 ui-monospace, monospace; max-height: 300px; overflow: auto; }
-[data-chat-flow-key]:has([data-cu-group-hidden=true]) { display: none; }
-.tx-cu-group-toggle { display: flex; align-items: center; gap: 6px; width: fit-content; max-width: 100%; min-height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--dsw-alias-label-secondary, var(--cu-muted)); font: var(--dsh-content-font-size-secondary, 13px)/26px -apple-system, BlinkMacSystemFont, sans-serif; text-align: left; cursor: pointer; }
-.tx-cu-group-toggle:hover { color: var(--cu-text); }
-.tx-cu-group-toggle strong { font-weight: 400; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tx-cu-group-toggle > span, .tx-cu-group-toggle > svg { flex-shrink: 0; }
-.tx-cu-group-toggle > span { font-size: 10px; }
+.tx-cu-group-toggle { min-height: 26px; font-size: var(--dsh-content-font-size-secondary, 13px); }
 .tx-cu-export-files { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .tx-cu-export-files button { display: flex; align-items: center; gap: 12px; max-width: 100%; padding: 7px 10px; border: 1px solid var(--cu-line); border-radius: 8px; background: var(--cu-soft); color: inherit; cursor: pointer; overflow-wrap: anywhere; }
 .tx-cu-export-files small { color: var(--cu-muted); font-size: 10px; white-space: nowrap; }
@@ -508,12 +503,5 @@ body:has([role=listbox]) .tx-cu-floating-inline { visibility: hidden; pointer-ev
   .tx-cu-cursor-pulse { animation: none; opacity: .6; }
 }
 
-/* Independent operation segments inside the turn-level process disclosure. */
-/* Native detail glyphs can be absolutely positioned. Give the drawer its own
-   containing block so they cannot extend the outer transcript's scroll range. */
-.tx-cu-group-list { position: relative; display: flex; flex-direction: column; gap: 2px; max-height: min(280px, 45vh); overflow-y: auto; overscroll-behavior-y: auto; scrollbar-width: thin; padding: 2px 4px 2px 0; min-width: 0; }
-.tx-cu-group-list[hidden] { display: none; }
-.tx-cu-group-list:focus-visible { outline: 1px solid var(--cu-blue); outline-offset: 2px; }
-.tx-cu-group-item { flex: none; min-width: 0; }
-.tx-cu-group-toggle[aria-expanded=true] > .tx-cu-disclosure { transform: rotate(90deg); }
-.tx-cu-turn-toggle { width: 100%; padding-bottom: 6px; border-bottom: 1px solid var(--cu-line); margin-bottom: 10px; }
+.tx-cu-turn-outcomes { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dsw-alias-label-secondary); }
+.tx-cu-turn-outcomes > span { flex: none; white-space: nowrap; }

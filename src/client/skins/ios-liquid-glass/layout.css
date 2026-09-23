@@ -1,4 +1,4 @@
-/* iOS Liquid Glass, designed independently for the DSH 0.1.6-alpha.2 shell.
+/* iOS Liquid Glass, designed independently for the DSH 0.1.7-alpha.1 shell.
    Only installed while this layout is selected. No DOM moves or duplicate controls. */
 html.omd[data-omd-layout="ios-liquid"] body { -webkit-font-smoothing: antialiased; }
 html.omd[data-omd-layout="ios-liquid"] .pI_x6G_frame {
@@ -72,7 +72,7 @@ html.omd[data-omd-layout="ios-liquid"] .Sixlwa_bubble code { background: #ffffff
 html.omd[data-omd-layout="ios-liquid"] [data-chat-flow-kind] { line-height: var(--omd-line-height); }
 html.omd[data-omd-layout="ios-liquid"] :is(.xzv4MW_actions,.l_V-RG_label) { color: var(--omd-muted); }
 html.omd[data-omd-layout="ios-liquid"] :is(.tx-cu-group-toggle,.omd-record-toggle) { padding: 5px 10px; min-height: 32px; }
-html.omd[data-omd-layout="ios-liquid"] .tx-cu-group-list { padding: 6px; margin-block: 4px 10px; }
+html.omd[data-omd-layout="ios-liquid"] [data-step-process-body] { padding: 6px; margin-block: 4px 10px; }
 
 /* The composer floats above the content; controls keep their original actions. */
 html.omd[data-omd-layout="ios-liquid"] .wSkVaW_composerSeat { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
@@ -140,9 +140,9 @@ html.omd[data-omd-layout="ios-liquid"] .cx-settings .cx-head { padding: 8px 0 16
 html.omd[data-omd-layout="ios-liquid"] .cx-settings .cx-body { padding: 16px; border-radius: 20px; background: var(--omd-glass-group); }
 html.omd[data-omd-layout="ios-liquid"] .cx-settings .cx-savebar { background: var(--omd-glass-wash); border-radius: 16px; padding: 12px; margin-top: 12px; }
 html.omd[data-omd-layout="ios-liquid"] ._WvWnq_section { padding: 0; border: 0; background: var(--omd-glass-group); border-radius: 22px; }
-html.omd[data-omd-layout="ios-liquid"] :is(.oY77xG_row,.hVGvvW_row,._8HJdBW_group,.bVCLcG_row,.lats3W_row,.T1PP_q_row) { padding: 17px 18px; margin: 0; border-color: var(--omd-border); }
+html.omd[data-omd-layout="ios-liquid"] :is(.oY77xG_row,.hVGvvW_row,._8HJdBW_group,.bVCLcG_row,._2XZxNq_row,.T1PP_q_row) { padding: 17px 18px; margin: 0; border-color: var(--omd-border); }
 html.omd[data-omd-layout="ios-liquid"] .T1PP_q_row { border-bottom: 0; }
-html.omd[data-omd-layout="ios-liquid"] :is(.oY77xG_selector,.hVGvvW_selector,.lats3W_selector,.T1PP_q_selector,.bVCLcG_stepper) { background: var(--omd-hover); color: var(--omd-accent); border-radius: 12px; min-height: 34px; }
+html.omd[data-omd-layout="ios-liquid"] :is(.oY77xG_selector,.hVGvvW_selector,._2XZxNq_selector,.T1PP_q_selector,.bVCLcG_stepper) { background: var(--omd-hover); color: var(--omd-accent); border-radius: 12px; min-height: 34px; }
 html.omd[data-omd-layout="ios-liquid"] ._8HJdBW_cubeRow { border-radius: 16px; padding: 4px; background: var(--omd-hover); gap: 4px; }
 html.omd[data-omd-layout="ios-liquid"] ._8HJdBW_themeCube { border: 0; border-radius: 12px; background: transparent; min-height: 60px; }
 html.omd[data-omd-layout="ios-liquid"] ._8HJdBW_themeCube._8HJdBW_selected { background: var(--omd-surface-solid); color: var(--omd-accent); box-shadow: 0 2px 5px #00000012; }

@@ -51,7 +51,7 @@ test('a full second window and a short but large second window may continue', as
 test('old records, reminders and attachment bytes cannot inflate continuation work', t => {
   const f = setup(t); const old = f.add(), fresh = exchange(f.session, 'ok');
   const reminder = plugin(f.session, 'Old status. '.repeat(5000), 'tasks');
-  fresh[1].data.message.content[0].content.push({ type: 'image', data: 'x'.repeat(100000) });
+  fresh[1].data.message.content.push({ type: 'image', data: 'x'.repeat(100000) });
   const workload = preparationWorkload(f.session, f.state, [...old.sourceSeqs.map(seq => f.session.eventAt(seq)), ...fresh, reminder]);
   assert.equal(workload.events, 2); assert.ok(workload.estimatedTokens < 100);
 });

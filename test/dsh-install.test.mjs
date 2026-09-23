@@ -76,6 +76,7 @@ test('install into stock web, coexist with stock presets, switch both ways and r
     }, process.platform === 'win32' ? 60000 : 30000);
     base = new URL(url).origin;
     const login = await fetch(url, { redirect: 'manual' }); cookie = login.headers.getSetCookie().map(c => c.split(';')[0]).join('; ');
+    await until(async () => { const response = await request('llm/listProviders', {}); const value = await response.json(); return value.result?.value?.some(p => p.id === 'fixture'); });
   };
   const request = (method, args, signal) => fetch(`${base}/api/${method}`, { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ type: 'client-request', rpcId: crypto.randomUUID(), method, payload: { args } }), signal });
   const rpc = async (method, args) => { const body = await (await request(method, args)).json(); assert.equal(body.result?.ok, true, JSON.stringify(body)); return body.result.value; };
@@ -103,7 +104,7 @@ test('install into stock web, coexist with stock presets, switch both ways and r
   const oldSnapshot = await prompt(old.sessionId, 'Run the stock todo fixture.', 1);
   assert.equal(oldSnapshot.projections.values.todos[0].status, 'completed');
   await stop();
-  const settingsBefore = readFileSync(join(home, 'settings.yaml'), 'utf8'), credentialsBefore = readFileSync(join(home, '.credentials.yaml'), 'utf8');
+  const settingsBefore = readFileSync(join(home, 'settings.yaml.imported'), 'utf8'), credentialsBefore = readFileSync(join(home, '.credentials.yaml'), 'utf8');
   // CI exercises the public GitHub installation command at the exact tested
   // commit; local runs install the uncommitted package contents. Keep the local
   // source path space-free for DSH's Windows pnpm forwarder, while the profile
@@ -111,7 +112,7 @@ test('install into stock web, coexist with stock presets, switch both ways and r
   const source = process.env.GITHUB_REPOSITORY && process.env.GITHUB_SHA
     ? `github:${process.env.GITHUB_REPOSITORY}#${process.env.GITHUB_SHA}` : `file:${pkg}`;
   runCli(['plugin', '--profile', 'web', 'add', source]);
-  assert.ok(readFileSync(join(home, 'settings.yaml'), 'utf8') === settingsBefore, 'installation preserves model settings');
+  assert.ok(readFileSync(join(home, 'settings.yaml.imported'), 'utf8') === settingsBefore, 'installation preserves model settings');
   assert.ok(readFileSync(join(home, '.credentials.yaml'), 'utf8') === credentialsBefore, 'installation preserves credentials');
 
   await boot();

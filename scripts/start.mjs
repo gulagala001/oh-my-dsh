@@ -13,7 +13,7 @@ mkdirSync(dshHome, { recursive: true });
 
 // Adopt the prototype's user-supplied route once; DSH owns subsequent edits.
 const legacyFile = join(root, 'data', 'settings.json');
-if (!existsSync(join(dshHome, 'settings.yaml')) && existsSync(legacyFile)) {
+if (!existsSync(join(dshHome, 'settings.yaml')) && !existsSync(join(dshHome, 'settings.yaml.imported')) && existsSync(legacyFile)) {
   const legacy = JSON.parse(readFileSync(legacyFile, 'utf8'));
   const main = legacy.main;
   if (main?.model && main.baseUrl) {

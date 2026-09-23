@@ -61,7 +61,7 @@ function styleInjectionModule(
  * Everything else under @deepseek-ai/* is either a module-table entry
  * (external) or a leak the purity gate rejects.
  */
-export const INLINE_SAFE = /^(?:@deepseek-ai\/dsh-(?:file-reference|session|llm|tools|brand|deque|output-retention|typert-protocol|util-crypto|util-values|util-workspace-path)(?:\/|$)|@deepseek-ai\/dsh-token-meter\/client$|@deepseek-ai\/dsh-host-open-in-app\/shared$|@deepseek-ai\/dsh-agent-presets\/display$|@deepseek-ai\/dsh-spill-policy\/notice$)/
+export const INLINE_SAFE = /^(?:@deepseek-ai\/dsh-(?:file-reference|session|llm|tools|brand|deque|output-retention|typert-protocol|util-crypto|util-values|util-workspace-path)(?:\/|$)|@deepseek-ai\/dsh-token-meter\/client$|@deepseek-ai\/dsh-native-command\/types$|@deepseek-ai\/dsh-host-open-in-app\/shared$|@deepseek-ai\/dsh-plugin-manager\/registry$|@deepseek-ai\/dsh-agent-preset-registry\/display$|@deepseek-ai\/dsh-spill-policy\/notice$)/
 
 /**
  * Vendored framework libraries: rescoped into @deepseek-ai, so the gate below
@@ -558,10 +558,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
         this.addWatchFile(fileId)
         const source = await readFile(fileId)
         const { code, exports: cssExports } = transform({
-          // Keep the pinned release's CSS Modules names used by OMD's existing theme.
-          filename: id === '@oh-my-dsh/ui-conversation'
-            ? '/home/runner/work/deepseek-harness/deepseek-harness/' + relative(REPOSITORY_ROOT, fileId).split(sep).join('/')
-            : fileId,
+          filename: "/home/runner/work/deepseek-harness/deepseek-harness/" + relative(REPOSITORY_ROOT, fileId).split(sep).join("/"),
           code: source,
           cssModules: { pattern: '[hash]_[local]' },
           minify: true,
@@ -585,7 +582,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
         const fileId = virtualId.slice(INLINE_CSS_VIRTUAL_PREFIX.length, -CSS_VIRTUAL_SUFFIX.length)
         this.addWatchFile(fileId)
         const source = await readFile(fileId)
-        const { code } = transform({ filename: fileId, code: source, minify: true })
+        const { code } = transform({ filename: "/home/runner/work/deepseek-harness/deepseek-harness/" + relative(REPOSITORY_ROOT, fileId).split(sep).join("/"), code: source, minify: true })
         return `export default ${JSON.stringify(code.toString())};`
       },
     }, {
@@ -600,7 +597,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
         const fileId = virtualId.slice(GLOBAL_CSS_VIRTUAL_PREFIX.length, -CSS_VIRTUAL_SUFFIX.length)
         this.addWatchFile(fileId)
         const source = await readFile(fileId)
-        const { code } = transform({ filename: fileId, code: source, minify: true })
+        const { code } = transform({ filename: "/home/runner/work/deepseek-harness/deepseek-harness/" + relative(REPOSITORY_ROOT, fileId).split(sep).join("/"), code: source, minify: true })
         return styleInjectionModule(id, fileId, code.toString())
       },
     }],

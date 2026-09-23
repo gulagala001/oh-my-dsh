@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { transformAssembly, mainPrompt, inspectCommittedRequest, installPromptAdapter } from '../src/cc-adaptation/adapter.mjs';
+import { transformAssembly, mainPrompt, installPromptAdapter } from '../src/cc-adaptation/adapter.mjs';
 import { buildMainPrompt, promptText, MAIN_FILES } from '../src/cc-adaptation/texts.mjs';
 import { renderToolsSdk, renderToolsSdkPy } from '@deepseek-ai/dsh-tools';
 import { TASK_PARAMETERS } from '../src/tasks.mjs';
@@ -150,7 +150,6 @@ for (const name of ['bash', 'pwsh']) {
   test(`${name}: missing job collector never leaves background references`,()=>{const r=transformAssembly(assembly([schema(name,['command','workdir','timeoutMs','run_in_background'])]),context).assembly;assert(!r.tools[0].description.includes('`job_output`'));assert(!r.tools[0].description.includes('`run_in_background`'));});
 }
 test('memory loader rejects traversal and unexpected paths',()=>{for(const p of ['../escape.md','/absolute.md','https://remote.md','main\\one.md'])assert.throws(()=>promptText(p),/Invalid prompt/);});
-test('inspection does not disclose user content or tool arguments',()=>{const agent={session:{deriveMessages:()=>[{role:'system',content:[{type:'text',text:mainPrompt}]},{role:'user',source:{kind:'user'},content:[{type:'text',text:'SECRET_USER_CONTENT [Working state'}]}],requestHeader:()=>({tools:[schema('read',['file_path'])]})}};const r=inspectCommittedRequest(agent);assert(r.latestHasDefaultIdentity);assert(!JSON.stringify(r).includes('SECRET_USER_CONTENT'));assert.deepEqual(r.observations[0].headers,['[Working state']);});
 
 
 test('real DSH sections without order metadata retain the host sequence', () => {

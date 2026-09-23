@@ -11,7 +11,7 @@ function fixture() {
   let now = 0; const states = new Map(), config = { budgetHintsEnabled: true };
   const hub = { config: () => config, store: { state(id) { if (!states.has(id)) states.set(id, { id }); return states.get(id); }, save() {} },
     context: { state: () => ({ records: [] }) }, ctx: { get: () => null, tokenMeter: { measure: () => ({ totalTokens: 0 }) } } };
-  const session = Session.create('main', undefined, { version: 3, id: 'main', createdAt: 0, cwd: '/tmp', isSeeded: false, agentPreset: 'trisoul-x' });
+  const session = Session.create('main', undefined, { version: 4, id: 'main', createdAt: 0, cwd: '/tmp', isSeeded: false, agentPreset: 'trisoul-x' });
   const agent = { session, status: 'running' };
   hub.budgets = new TaskBudgets(hub, () => now);
   return { hub, agent, session, config, states, clock: value => { now = value; }, budgets: hub.budgets };

@@ -13,7 +13,7 @@ import { promptText } from '../src/cc-adaptation/texts.mjs';
 
 function setup(t) {
   const dir = mkdtempSync(join(tmpdir(), 'trisoul-x-ledger-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
-  const session = Session.create('ledger', undefined, { id: 'ledger', version: 3, createdAt: 1, cwd: dir, isSeeded: false });
+  const session = Session.create('ledger', undefined, { id: 'ledger', version: 4, createdAt: 1, cwd: dir, isSeeded: false });
   session.append('turn/start', { turn: 1 });
   const tools = new Map(); let projection;
   const store = registerTasks({ tools: { register(t) { tools.set(t.name, t); } }, sessionProjections: { register(p) { projection = p; } } });
@@ -177,7 +177,7 @@ test('legacy X records remain visible without fabricating anchors or passed test
   item = currentTasks(session)[0]; assert.equal(item.source, '注册功能'); assert.equal(item.status, 'pending'); assert.equal(item.verification, undefined);
 });
 
-test('failed V3 snapshot writes do not advance the task ledger', t => {
+test('failed snapshot writes do not advance the task ledger', t => {
   const { session, user } = setup(t); user(quote);
   const store = createTodoStore();
   const failing = { id: session.id, snapshotEvents: () => session.snapshotEvents(), append() { throw Error('write failed'); } };
@@ -282,8 +282,8 @@ test('stopping reminders restore unfinished tasks, missing evidence and one-time
   assert.equal(store.snapshot(session).tasks[0].links[0].asked, false);
   session.append('user/message', review, { surfaceOp: 'append' });
   session.append('assistant/message', { turn: 1, step: 1, stream: [], message: createAssistantMessage({ content: [{ type: 'text', text: 'Rechecked both reasons.' }], source: { provider: 'fixture', model: 'fixture' } }) }, { surfaceOp: 'append' });
-  const before = notices.length, revision = store.revOf(session);
-  stop(); assert.equal(notices.length, before); assert.equal(store.revOf(session), revision);
+  const before = notices.length, snapshots = () => session.snapshotEvents().filter(e => e.type === 'todo/write' && !e.data.quiet).length, count = snapshots();
+  stop(); assert.equal(notices.length, before); assert.equal(snapshots(), count);
   assert.ok(store.snapshot(session).tasks.every(t => t.links[0].asked));
   assert.equal(session.snapshotEvents().at(-1).data.quiet, true);
   const restored = createTodoStore(); assert.equal(restored.textReviewText(session), undefined);

@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
-import { IconPanelLeftOutline16 } from '@deepseek-ai/dsh-client-ui-primitives';
+import { IconPanelLeftOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
 import { decorateSlot } from '#opencu/src/client/slot-decoration.mjs';
 
 const WIDTH_KEY = 'omd.codexDesktop.rightWidth.v1';
@@ -19,7 +19,7 @@ function Geometry({ ctx }) {
     if (right) observer.observe(right);
     sync();
 
-    // DSH 0.1.6-alpha.2 registers a shared root store factory (create returns
+    // DSH 0.1.7-alpha.1 registers a shared root store factory (create returns
     // its existing instance). Use its declared geometry actions, so the frame,
     // right pane and native drag handle all agree on the same width.
     const entry = ctx.slots.entries('root').find(item => item.store?.create);
@@ -69,7 +69,7 @@ export function applyCodexIntegration(ctx, getRuntime) {
       if (!isCodex(state)) return <Original {...props}/>;
       const label = props.t(expanded ? 'chrome.collapseAria' : 'chrome.expandAria');
       return <button type="button" className="codex-panel-toggle" aria-label={label} title={label} aria-expanded={expanded}
-        onClick={() => props.actions.toggleExpanded(props.sessionId)}><IconPanelLeftOutline16/></button>;
+        onClick={() => props.actions.toggleExpanded(props.sessionId)}><IconPanelLeftOutlineRegular/></button>;
     }
     return { options: { ...original.options, name, store: original.store, locale: original.locale,
       inject: original.inject, children: original.children,

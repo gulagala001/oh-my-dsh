@@ -51,8 +51,9 @@ test('optimizer stays usable across four themes, light/dark modes and narrow com
 
 test('native optimizer: default entry, real provider, manual revisions, settings persistence and automatic sends', { timeout: 180000 }, async t => {
   const requests = [], main = []; let reply = async () => '优化后的提示词', release;
-  const f = await frontendFixture(t, { optimizerReply: async payload => { requests.push(payload); return response(await reply(payload)); } });
+  const f = await frontendFixture(t, { basePath: '/dsh/', optimizerReply: async payload => { requests.push(payload); return response(await reply(payload)); } });
   const { page, errors, root } = f;
+  t.after(()=>assert.deepEqual(f.escapedPaths, [], 'all browser routes stay inside the deployment prefix'));
   t.after(() => { release?.(); if (process.env.TRISOUL_UI_ARTIFACTS) console.log('Optimizer UI artifacts:', root); });
   f.replyWith(payload => { main.push(payload); return response('已收到优化后的要求。'); });
   const editor = page.locator('[contenteditable="true"][role="textbox"]').first();

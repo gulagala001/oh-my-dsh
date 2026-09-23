@@ -28,13 +28,12 @@ test('generic job calls and failures join file operations and retain details acr
   await group.waitFor({timeout:10000});
   assert.equal(await group.getAttribute('aria-expanded'),'false');
   assert.equal(await page.locator('[data-chat-call-id="write-one"] :is(button,[role="button"]):not(.tx-cu-group-toggle):visible').count(),0);
-  assert.equal(await page.locator('[data-cu-generic-tool]:visible').count(),0);
   assert.equal(await page.locator('.tx-cu-group[data-cu-group]:visible').filter({has:page.getByRole('button',{name:/次操作/})}).count(),1,'generic jobs do not split the drawer');
   await group.click();
-  await page.locator('[data-cu-generic-tool=job_list]').waitFor();
-  const jobOutput=page.locator('[data-cu-generic-tool=job_output]');await jobOutput.waitFor();
-  await jobOutput.locator('.tx-cu-card-heading').click();
-  assert.match(await jobOutput.locator('.tx-cu-card-body').textContent(),/missing-fixture-job/);
+  await page.locator('[data-chat-call-id=generic]').waitFor();
+  const jobOutput=page.locator('[data-chat-call-id=job-error]');await jobOutput.waitFor();
+  await jobOutput.getByRole('button').first().click();
+  assert.match(await jobOutput.textContent(),/missing-fixture-job/);
   await page.locator('[data-chat-call-id="write-one"] :is(button,[role="button"]):not(.tx-cu-group-toggle)').first().waitFor();
   await page.locator('[data-chat-call-id="write-two"] :is(button,[role="button"]):not(.tx-cu-group-toggle)').first().waitFor();
   await group.click();assert.equal(await page.locator('[data-chat-call-id="write-one"] :is(button,[role="button"]):not(.tx-cu-group-toggle):visible').count(),0);
@@ -46,7 +45,7 @@ test('generic job calls and failures join file operations and retain details acr
   for(const id of ['generic','write-one','write-two'])await page.locator(`[data-chat-call-id="${id}"] :is(button,[role="button"])`).first().waitFor();
   assert.equal(await group.getAttribute('aria-expanded'),'true','completed process preserves the independent file group');
   await group.click();
-  assert.equal(await page.locator('[data-cu-operation=write-one]:visible').count(),0);
+  assert.equal(await page.locator('[data-chat-call-id=write-one]:visible').count(),0);
   assert.equal(await completed.getAttribute('aria-expanded'),'true','closing the file group leaves the outer process open');
   assert.deepEqual(f.errors,[]);
 });

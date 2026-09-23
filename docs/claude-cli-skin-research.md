@@ -112,7 +112,7 @@ Agent view 图片的直接访问被浏览器站点安全策略阻止，未绕过
 
 ## DSH 接入结论
 
-当前宿主依赖为 `@deepseek-ai/dsh 0.1.6-alpha.2`，以本次读取的 `package.json` 为准。
+首次调研时宿主依赖为 `@deepseek-ai/dsh 0.1.6-alpha.2`；本段保留当时的观察背景，当前适配版本以 `package.json` 为准。
 
 已核对通用接口：[皮肤文档](skins.md)、`src/client/skins/format.mjs`、`runtime.mjs`、`settings.jsx`、`src/client/index.jsx` 与设置页覆盖测试。
 

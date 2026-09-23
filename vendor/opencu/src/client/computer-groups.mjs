@@ -1,15 +1,3 @@
-const stepKey = node => node.location?.kind === 'step' ? `${node.location.turn.turn}:${node.location.step.step}` : node.kind === 'assistant-step' ? `${node.data.turn}:${node.data.step}` : null;
-
-// A completed answer's reasoning belongs to its process disclosure, even if
-// the provider delivered text first in a combined delta. This is a render-only
-// projection: retain every block and preserve order within each kind of content.
-export function finalAnswerPresentation(node,process){
-  if(!process?.foldable||!process.spec.inlineReasoning||process.spec.answerStep!==node.data.step)return node;
-  const blocks=node.data.blocks??[],firstAnswer=blocks.findIndex(block=>block.kind!=='reasoning');
-  if(firstAnswer<0||!blocks.slice(firstAnswer+1).some(block=>block.kind==='reasoning'))return node;
-  return {...node,data:{...node.data,blocks:[...blocks.filter(block=>block.kind==='reasoning'),...blocks.filter(block=>block.kind!=='reasoning')]}};
-}
-
 export function operationKind(name=''){
   const key=name.split(/[./]/).at(-1);
   if(key==='read_image')return'image';
@@ -21,30 +9,12 @@ export function operationKind(name=''){
   if(['write','write_file','edit','edit_file','apply_patch'].includes(key))return'edit';
   return'tool';
 }
-const summaryLabels={image:'查看图像',read:'读取文件',command:'运行命令',search:'搜索',web:'读取网页',computer:'操作电脑',edit:'编辑文件',tool:'调用工具'};
 export const operationIcon=names=>({image:'image',read:'book',command:'terminal',search:'search',web:'browser',computer:'screen',edit:'annotate',tool:'stack'})[operationKind(names[0])];
-export function operationSummary(names,running=false){
-  const labels=[...new Set(names.map(name=>summaryLabels[operationKind(name)]))];
-  return (running?'正在':'已')+(labels.join('、')||'执行操作');
-}
 export function operationState(block){
   if(block.kind!=='tool-result')return'running';
   const name=block.call?.name??block.name??'';
   if(['ABORTED','ABORTED_BEFORE_DISPATCH','interrupted','COMPUTER_USE_STOPPED'].includes(block.error?.code)||operationKind(name)==='computer'&&block.isError&&/tool call aborted|Computer Use (?:was |is )?stopped/i.test((block.content??[]).filter(c=>c.type==='text').map(c=>c.text).join('\n')))return'stopped';
   return block.isError||block.meta?.computerUseError?'error':'done';
-}
-export function latestOperation(block){
-  const name=block.call?.name??block.name??'',kind=operationKind(name);
-  let args={};try{args=JSON.parse(block.call?.argsRaw??block.argsRaw??'{}')??{};}catch{}
-  const text=value=>typeof value==='string'?value.replace(/\s+/g,' ').trim():'';
-  const first=(...values)=>values.map(text).find(Boolean)||'';
-  const path=first(args.file_path,args.path,args.filename),description=first(args.description,args.title);
-  const target=kind==='read'||kind==='edit'||kind==='image'?path
-    :kind==='command'?first(args.command,args.cmd)
-    :kind==='search'?first(args.pattern,args.query,args.q)
-    :kind==='web'?first(args.url):'';
-  const label=description||((kind==='tool'?name||'调用工具':summaryLabels[kind])+(target?' '+target:''));
-  return {label,state:operationState(block),icon:operationIcon([name])};
 }
 const rowTitles={bash:['bash','运行'],pwsh:['pwsh','运行 PowerShell'],read:['read','读取'],read_image:['readImage','查看图像'],write:['write','写入'],edit:['edit','编辑'],grep:['grep','搜索'],glob:['glob','查找文件'],web_search:['webSearch','搜索网页'],web_fetch:['webFetch','读取网页'],run_code:['code','运行代码']};
 export function operationRowLocale(t,name,block){
@@ -56,64 +26,17 @@ export function operationRowLocale(t,name,block){
   return(key,...args)=>key==='tool.title.'+row[0]?title:t(key,...args);
 }
 
-// Context maintenance and thinking belong to the same process as tool calls.
-// Generic host cards bypass our toolview wrapper. Keep them independent so
-// an unwrapped first tool cannot hide the rest of a group without a toggle.
-export const processContextKinds=new Set(['context','system-prompt','omd-task-injection']);
-export function computerGroups(nodes, toolviewNames) {
-  const groupable = node => {
-    const root=node.data.root,name=root.call?.name??root.name??'';
-    const genericDenial=root.isError&&root.error?.name==='AutoReviewDeniedError'&&root.error.code==='AUTO_REVIEW_DENIED';
-    return !genericDenial&&(!toolviewNames||toolviewNames.has(name));
-  };
-  const steps = new Map(), result = new Map();
-  for (const node of nodes) if (node.kind === 'tool-call'&&groupable(node)) {
-    const key = stepKey(node); if (!key) continue;
-    steps.set(key,true);
+export function summarizeToolOutcomes(data) {
+  const seen = new Set();
+  let failures = 0, stopped = 0;
+  function visit(block) {
+    if (!block || seen.has(block.callId)) return;
+    seen.add(block.callId);
+    const state = operationState(block);
+    if (state === 'error') failures++;
+    if (state === 'stopped') stopped++;
+    for (const child of block.subCalls ?? []) visit(child);
   }
-  let group;
-  for (const node of nodes) {
-    if(node.kind==='turn-process')continue;
-    if(node.kind==='tool-call'&&!groupable(node)){group=undefined;continue;}
-    const step = steps.get(stepKey(node));
-    const tool = node.kind === 'tool-call';
-    const blocks=node.data.blocks??[],assistant = node.kind === 'assistant-step' && (step||blocks.some(block=>block.kind==='reasoning')) && !blocks.some(block=>!['reasoning','tool-call'].includes(block.kind)&&(block.kind!=='text'||block.text?.trim()));
-    const context=processContextKinds.has(node.kind)&&!(node.kind==='system-prompt'&&node.location?.kind==='unresolved');
-    const turn = node.location?.turn?.turn ?? node.data.turn ?? (context?group?.turn??'context:'+node.key:undefined);
-    if ((!tool && !assistant && !context)||turn==null) { group = undefined; continue; }
-    if(group&&typeof group.turn==='string'&&group.turn.startsWith('context:')&&turn!=null)group.turn=turn;
-    if (!group || group.turn !== turn) group = { id: node.key, turn, keys: [], callKeys: new Map(), calls: [], names: [], contexts:0, running: false, turnActive: false, failures: 0, stopped: 0, title: '' };
-    group.turnActive ||= node.location?.turn?.status==='open';
-    group.keys.push(node.key); result.set(node.key, group);
-    if(context)group.contexts++;
-    if (tool) {
-      const root = node.data.root; group.callKeys.set(root.callId,node.key); if (group.keys.length === 1) group.headerCallId = root.callId; result.set(`call:${root.callId}`, group); group.calls.push(root.callId);
-      group.names.push(root.call?.name??root.name??'');
-      const state=operationState(root);group.running ||= state==='running';
-      group.latest=latestOperation(root);
-      if (state==='stopped') group.stopped++; else if (state==='error') group.failures++;
-      try { group.title = JSON.parse(root.call?.argsRaw ?? root.argsRaw ?? '{}').title || group.title; } catch {}
-    }
-  }
-  return result;
-}
-
-
-export function processSummaries(snapshot) {
-  const summaries = new Map();
-  for (const key of snapshot.order) {
-    const node = snapshot.nodes.get(key);
-    if (node?.kind !== 'tool-call') continue;
-    const turn = node.location?.turn?.turn, call = node.data.root;
-    const summary = summaries.get(turn) || { names: [], failures: 0, stopped: 0 };
-    summary.names.push(call.call?.name ?? call.name ?? '');
-    summary.latest=latestOperation(call);
-    const state = operationState(call);
-    if (state === 'error') summary.failures++;
-    if (state === 'stopped') summary.stopped++;
-    summaries.set(turn, summary);
-  }
-  return new Map([...summaries].map(([turn, value]) => [turn, {
-    label: operationSummary(value.names), icon: operationIcon(value.names), latest: value.latest, failures: value.failures, stopped: value.stopped,
-  }]));
+  for (const item of data) visit(item.root);
+  return { failures, stopped };
 }

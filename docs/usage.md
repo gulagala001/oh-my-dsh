@@ -2,18 +2,18 @@
 
 [返回项目首页](../README.md) · [安装](#安装到现有-dsh推荐) · [日常使用](#日常使用) · [CodeGraph](#codegraph) · [Computer Use](#computer-use) · [开发与验证](#开发与验证)
 
-当前正式版本 **1.6.1**，适配 **DSH 0.1.6-alpha.2**，内置 **OpenCU 1.0.4**。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
+当前 **1.7.0-rc.1 预发布版** 适配 **DSH 0.1.7-alpha.1**，内置 **OpenCU 1.1.0-rc.1**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
-[当前验证范围与限制](release-1.6.1.md#验证范围与限制)请在升级前一并阅读。
+[当前验证范围与限制](release-1.7.0-rc.1.md#验证范围与限制)请在升级前一并阅读。
 
 ## 安装到现有 DSH（推荐）
 
-适用 **DSH 0.1.6-alpha.2**，需要 Node.js ≥22.19、pnpm 11.23.0 和 Git。**Windows 使用 PowerShell 7（`pwsh`）**，无需 WSL；Python 验证文件需要另有 Python，`.sh` 文件需要 Bash。
+本预发布版和源码运行均使用 **DSH 0.1.7-alpha.1**。需要 Node.js ≥22.19、pnpm 11.23.0 和 Git。**Windows 使用 PowerShell 7（`pwsh`）**，无需 WSL；Python 验证文件需要另有 Python，`.sh` 文件需要 Bash。
 
 先停止当前 DSH Web，在终端或 PowerShell 中安装：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.6.1
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.0-rc.1
 ```
 
 然后按原来的方式重新启动 DSH，例如：
@@ -31,7 +31,7 @@ dsh web
 <details>
 <summary>更新与卸载</summary>
 
-停止服务后，使用目标版本的 tag 安装，再按原来的方式启动。以上命令固定安装 1.6.1；如需跟随主分支，可去掉 `#v1.6.1`。从 1.1.1 升级时，先备份数据目录，并按原安装方式将宿主更新至 DSH 0.1.6-alpha.2；插件安装不会自动升级全局 DSH。
+停止服务并备份 DSH_HOME 后，将宿主更新至 DSH 0.1.7-alpha.1，再安装固定 tag `v1.7.0-rc.1`。插件安装不会自动升级全局 DSH。预发布请使用固定 tag，不使用未标记的主分支。
 
 卸载：
 
@@ -161,7 +161,7 @@ node scripts/launch-macos.mjs
 
 **会话范围**在首次发消息前选择。会话隔离只读取本会话档案；项目共享读取同项目摘要和用户手填的全局背景。开始后不能扩大范围。旧 full 配置按项目共享处理，不再跨项目自动注入记忆。
 
-**工作上下文**先在后台按事件窗口生成摘要和详细文档。中枢读取用户消息和档案，选择保留、详细替换、简要替换或合并。下一请求只应用已完成决定；手动操作也不现场等待摘要生成。原文保留在会话日志中，通过 `recall` 按编号读文档或按事件区间回查。
+**工作上下文**先在后台按事件窗口生成摘要和详细文档。中枢读取用户消息和档案，选择保留、详细替换或简要替换。下一请求只应用已完成决定；手动操作也不现场等待摘要生成。原文保留在会话日志中，通过 `recall` 按编号读文档或按事件区间回查。
 
 **任务**保留摘录、锚点和验证证据；`todo_write` 管理需求与完成状态，`verify_link` 负责证据关联、执行和撤销。
 
@@ -266,7 +266,9 @@ Computer Use 的实现与平台测试位于 [OpenCU](https://github.com/gulagala
 <details>
 <summary>操作记录、实时预览与手动接管</summary>
 
-在对话里输入 `@Browser`、选择已连接的 `@Chrome` 或应用，让助手操作网页和 Windows／Mac 窗口。工具过程采用四层查看方式：**操作摘要 → 单列操作列表 → 单项结果或缩略图 → 大图弹窗**。读取文件、运行命令、搜索和 Computer Use 共用摘要；完整轮次复用宿主过程折叠，不再额外套一个 Computer Use 分组。进行中按连续操作分组，用户消息和正文说明保持边界，最终回复位于过程摘要之外。失败与停止状态保留，结果原文仍可通过单项详情或宿主「查看」入口检查。
+在对话里输入 `@Browser`、选择已连接的 `@Chrome` 或应用，让助手操作网页和 Windows／Mac 窗口。读取文件、运行命令、搜索、Job 和 Computer Use 按连续操作分组；整轮结束后，宿主过程折叠保留各组独立的展开状态。用户消息和正文说明保持边界，最终回复位于过程摘要之外。展开操作组后可逐项查看结果或缩略图，再打开大图弹窗。失败与停止状态保留，结果原文仍可通过单项详情或宿主「查看」入口检查。
+
+设置 → 通用的「工作过程展示」沿用宿主的简洁、详细、完全展开三种选择；默认简洁。「详细」下执行中的操作组显示最新动作及状态，优先使用调用说明，否则显示文件路径、命令或搜索词。组内操作全部结束后，标题立即恢复操作汇总，不等待模型回复或整轮结束；已结束回合也始终显示汇总。
 
 思考内容也跟随过程摘要收起；展开后可逐项查看。最终回复附带的思考统一显示在回复前，与前面的操作列表衔接，不散落在回复下面。这只调整已完成回复的展示，原始消息、思考文字和流式输出不变。
 
@@ -357,7 +359,7 @@ Windows 原生操控需要解锁的交互桌面；提升权限窗口不在普通
 
 | 路径（相对于数据目录） | 内容 |
 | --- | --- |
-| `settings.yaml` / `.credentials.yaml` | DSH 设置与本机凭据 |
+| `profiles/<profile>/cordis.patch.yml` / `.credentials.yaml` | DSH 0.1.7 的配置与本机凭据；旧 `settings.yaml` 导入后保留为 `.imported` |
 | `profiles/<profile>/` | 当前 profile 与插件安装信息，通常是 `web` |
 | `sessions/` | DSH 会话事件 |
 | `trisoul-x/memory.json` | 旧自动记忆，只读保留 |
@@ -390,15 +392,16 @@ DSH CLI 仅作为本地开发依赖；宿主 SDK 声明为由 DSH 提供的 peer
 | `src/index.mjs` / `src/dsh-agent.mjs` | 插件接入、事件与扩展工具 |
 | `src/codegraph.mjs` / `src/codegraph-agent.mjs` | 内置 CodeGraph 运行时、项目连接、索引与 MCP 工具桥接 |
 | `src/tasks.mjs` / `src/todolist.mjs` | 需求锚点、任务与验证记录 |
-| `src/prompts.mjs` | 主模型与后台任务的提示词 |
-| `src/hub.mjs` / `src/hub-store.mjs` | 记忆调度、存储、版本与监控 |
+| `src/cc-adaptation/prompts/` / `src/context/prompts.mjs` | 主模型、任务工具与上下文后台提示词；`src/prompts.mjs` 转出主提示词 |
+| `src/hub.mjs` / `src/hub-store.mjs` | 后台调用、会话状态、历史数据读取与监控 |
 | `src/context/` | 当前档案、后台预处理、中枢、替换事务与回查 |
-| `src/memory-context.mjs` / `src/state-zone.mjs` / `src/canvas.mjs` / `src/probe.mjs` | 保留的旧机制代码，当前入口不启动 |
 | OpenCU 的 `src/computer-use/` | 操控运行时、浏览器连接、原生通信、截图、批注与导出 |
 | OpenCU 的 `native/computer-use/` | macOS／Windows 原生窗口观察、输入、预览与服务 |
 | OpenCU 的 `browser-extension/` | 已有 Chrome 的扩展连接与助手光标 |
 | `src/client/` | 工作台、设置、对话工具栏、批注与实时预览 |
 | `scripts/` / `test/` | 构建、启动与测试 |
+
+Computer Use 的完整浏览器、原生桌面及对话框专项测试在 OpenCU 源仓维护。本仓 `test/computer-use-ui.test.mjs` 验证 OMD／OMD-PTC 的工具传输、浏览器画面和设置接入；`test/computer-use-native-ui.test.mjs` 验证真实原生目标与工作台、停止后的观察链路。安装、预设切换、重启及卸载仍由宿主集成测试覆盖。
 
 报告问题时，请提供 Node.js/DSH 版本、复现步骤和脱敏后的错误信息。
 
@@ -416,6 +419,13 @@ OMD 主会话使用 pi-ai 图片路由时，发送前按提供方的实际图片
 
 客户端在页面可见时定期读取版本状态，服务端共享检查结果，正常情况下最多每 6 小时检查一次 GitHub。手动检查间隔至少 30 秒。网络失败会明确提示；同一服务进程中保留上次成功结果并标为过期，不把检查失败当作“已是最新版”。此功能仅检查公开发布信息，不调用模型、不发送会话内容、不自动安装或重启。
 
-发布时同步更新 `package.json` 版本和 `release-manifest.json`，在清单头部添加该版本的 `version`、`severity`、`title`、`notes`，再更新 [更新记录](CHANGELOG.md)。普通更新使用 `severity: "normal"`；必须提醒用户安装的重要修复使用 `severity: "required"`。保留历史必要更新条目，避免后续普通版本掩盖仍未安装的必要修复。分级由维护者明确标记，不靠标题关键词猜测。版本判断支持数字预发布版本；正式版安装不提示升级到预览版。
+发布时同步更新 `package.json` 版本和 `release-manifest.json`，在清单头部添加该版本的 `version`、`severity`、`title`、`notes`，再更新 [更新记录](../CHANGELOG.md)。普通更新使用 `severity: "normal"`；必须提醒用户安装的重要修复使用 `severity: "required"`。保留历史必要更新条目，避免后续普通版本掩盖仍未安装的必要修复。分级由维护者明确标记，不靠标题关键词猜测。版本判断支持数字预发布版本；正式版安装不提示升级到预览版。
 
-收起执行过程时，摘要随最新工具动作更新：优先显示调用中的简短说明，否则显示工具动作与文件路径、命令或搜索词；执行中显示最新动作和状态，整轮执行结束后恢复简写汇总；工具已返回、模型仍在继续时保留最新动作。Job 等通用工具调用、普通上下文和 Todo／运行状态记录也收进抽屉；上下文压缩保持独立。展开仍可查看原记录、参数、结果与失败详情。
+
+### DSH 0.1.7 预发布版升级说明
+
+先停止旧宿主并备份同一个 DSH_HOME，再用匹配的 DSH 0.1.7-alpha.1 启动此工作树。旧配置、皮肤选择及身份标识保留；设置改用宿主的 profile 配置表单，重复设置回调已移除。电脑工具路径修改保存后仍需重启。
+
+旧 OMD 会话在启动时生成 V4 日志并重映射上下文、附件和任务引用，V3 原文件保持不变。日志旁的 `omd-v4-migration.json` 留存关联记录的迁移前副本，支持中断续迁；检测到同时写入或不一致时停止迁移，避免覆盖。回退前须停止新宿主并恢复成套备份，不能只把宿主降级后继续写同一目录。
+
+整个插件启用或停用时浏览器会刷新一次，已保存的文字草稿和会话保留，尚未发送的附件需重新添加；普通功能开关不刷新页面。归档入口沿用新版宿主侧栏。

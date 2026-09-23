@@ -36,7 +36,7 @@ export function BrowserDownloads({sessionId,visible,api,active,onActiveChange}){
         <ComputerIcon name="download"/><div><strong title={item.filename}>{item.filename}</strong><small>{item.state==='completed'?'已完成':item.state==='canceled'?'已取消或中断':item.state==='unobserved'?'连接已断开，状态待确认':'下载中'} · {bytes(item.receivedBytes)}{item.totalBytes>0&&item.state==='inProgress'?' / '+bytes(item.totalBytes):''}</small>
           {item.state==='inProgress'&&<progress aria-label={item.filename+' 下载进度'} value={item.totalBytes>0?item.receivedBytes:undefined} max={item.totalBytes||1}/>}
           {item.source&&<small>{item.source}</small>}
-          {item.canDownload?<a href={'/trisoul-x/computer-use/download-file?session='+encodeURIComponent(sessionId)+'&id='+encodeURIComponent(item.id)} download={item.filename}>保存文件</a>:item.state==='completed'&&<small>{item.browserId==='browser'?'文件暂不可读取':'文件保存在原浏览器的下载位置'}</small>}
+          {item.canDownload?<a href={'trisoul-x/computer-use/download-file?session='+encodeURIComponent(sessionId)+'&id='+encodeURIComponent(item.id)} download={item.filename}>保存文件</a>:item.state==='completed'&&<small>{item.browserId==='browser'?'文件暂不可读取':'文件保存在原浏览器的下载位置'}</small>}
         </div>
       </li>)}</ul>}
       <footer><span>仅显示当前会话接入后捕获的下载</span><div><button type="button" onClick={()=>setReload(value=>value+1)}>刷新</button><button type="button" title="移除已完成或取消的记录，不删除文件" disabled={clearing||!items?.some(item=>['completed','canceled'].includes(item.state))} onClick={()=>void clear()}>{clearing?'正在清除…':'清除已结束记录'}</button></div></footer>

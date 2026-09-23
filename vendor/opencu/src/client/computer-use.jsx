@@ -1,3 +1,4 @@
+import { createChat } from '../../lib/chat.factory.mjs';
 import { createComputerStatePool } from './state-pool.mjs';
 import { HOST_BROWSER_ID, hostPreviewUrl, openHostBrowserPreview } from './host-browser.mjs';
 import React, { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
@@ -14,7 +15,7 @@ import { PageAnnotation } from './page-annotation.jsx';
 import { ComputerIcon } from './computer-icons.jsx';
 import {SavedImage} from './tool-image.jsx';
 
-const base='/trisoul-x/computer-use/';
+const base='trisoul-x/computer-use/';
 const url=(op,id)=>base+op+'?session='+encodeURIComponent(id);
 async function api(op,id,value,signal){const r=await fetch(url(op,id),value===undefined?{signal}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value),signal});const body=await r.json();if(!r.ok)throw Object.assign(new Error(body.error??'Computer Use 请求失败'),{code:body.code});if(value!==undefined&&body.status)window.dispatchEvent(new CustomEvent('trisoul-cu-state',{detail:{id,state:body}}));return body;}
 const statePoolKey = Symbol.for('opencu.state-pool.v1');
@@ -166,6 +167,7 @@ function installComputerUseClient(ctx, shared){
 
 // One UI registration set per DSH client, regardless of package load order.
 const sharedKey = Symbol.for('opencu.client.v1');
+const nativeChat = createChat(require);
 export function applyComputerUseClient(ctx, options = {}) {
   const root = ctx.root;
   let shared = root[sharedKey];
@@ -175,7 +177,24 @@ export function applyComputerUseClient(ctx, options = {}) {
       current: () => [...owners.values()].find(value => value.integrated) ?? owners.values().next().value ?? empty,
       changed: () => { for (const listener of listeners) listener(); } };
     root[sharedKey] = shared;
-    shared.fiber = root.plugin({ name: 'opencu-ui', inject: ['slots', 'sidebarRightTabs', 'sidebarRight'], apply(scope) {
+    shared.fiber = root.plugin({ name: 'opencu-ui', inject: ['slots', 'sidebarRightTabs', 'sidebarRight', ...nativeChat.inject], async apply(scope) {
+      const currentForm = () => scope.configForms.get(shared.current().integrated ? 'omd-ui-chat' : 'opencu-ui-chat');
+      // The native Chat keeps one store; only its preference owner changes
+      // when the standalone and integrated packages are loaded together.
+      const settings = {
+        getSnapshot: () => currentForm().getSnapshot(),
+        set: (...args) => currentForm().set(...args),
+        subscribe(listener) {
+          let form = currentForm(), unsubscribe = form.subscribe(listener);
+          const stop = shared.subscribe(() => {
+            const next = currentForm();
+            if (next === form) return;
+            unsubscribe(); form = next; unsubscribe = form.subscribe(listener); listener();
+          });
+          return () => { stop(); unsubscribe(); };
+        },
+      };
+      await scope.plugin(nativeChat, { settings });
       const installed = installComputerUseClient(scope, shared);
       shared.entry = installed.ComputerEntry; shared.pane = installed.ComputerPane;
       shared.changed();

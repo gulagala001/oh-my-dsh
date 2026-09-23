@@ -1,1 +1,0 @@
-The task has progressed but the task list is still empty. If the remaining work has several steps, record it with `todo_write` using the user's actual requirements. Skip this for a single straightforward action or ordinary conversation.

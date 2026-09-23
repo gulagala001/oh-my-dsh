@@ -18,7 +18,7 @@ export function imageOffloadPlan(messages, versionBytes, limit, policy = IMAGE_B
   for (const message of messages) {
     if (message.role === 'assistant') latestBatch.length = 0;
     const found = images(message.content);
-    if (message.role !== 'user' && found.length) return { count: 0 };
+    if (!['user', 'tool'].includes(message.role) && found.length) return { count: 0 };
     retained.push(...found); latestBatch.push(...found);
   }
   const lengths = retained.map(block => 4 * Math.ceil(versionBytes(block) / 3));
@@ -38,7 +38,7 @@ export function installImageBudget(ctx, isManagedSession) {
   const caches = new WeakMap();
   ctx.on('llm/stream', async function* (options, next) {
     const session = options.sessionId && ctx.sessions.get(options.sessionId);
-    const profile = ctx.settings.section('llm-pi-ai')?.providers?.[options.provider];
+    const profile = ctx.settings.describe().find(entry => entry.ns === 'llm-pi-ai')?.value?.providers?.[options.provider];
     const attachments = ctx.get('attachments');
     if (!isAgentLoopRequest(options) || !session || !isManagedSession(session)
       || session.header?.origin === 'subagent' || !profile || !attachments?.readImageRequest) {

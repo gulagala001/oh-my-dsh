@@ -86,7 +86,7 @@ for (const mode of ['native', 'ptc', 'both']) test(`actual provider payloads: ne
   const base = new URL(bootstrap).origin, login = await fetch(bootstrap, { redirect: 'manual' });
   const cookie = login.headers.getSetCookie().map(c => c.split(';')[0]).join('; ');
   const rpc = async (method, request) => {
-    const r = await fetch(`${base}/api/${method}`, { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ type: 'client-request', rpcId: crypto.randomUUID(), method, payload: { args: { request } } }) });
+    const r = await fetch(`${base}/api/${method}`, { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ type: 'client-request', rpcId: crypto.randomUUID(), method, payload: { args: request === undefined ? {} : { request } } }) });
     const result = await r.json(); assert.equal(result.result?.ok, true, JSON.stringify(result)); return result.result.value;
   };
   const state = async id => (await fetch(base + '/trisoul-x/api/state?session=' + id)).json();
@@ -103,6 +103,7 @@ for (const mode of ['native', 'ptc', 'both']) test(`actual provider payloads: ne
     });
     return payloads.slice(start).filter(p => p.tools?.length);
   };
+  await until(async () => (await rpc('llm/listProviders')).some(p => p.id === 'fixture'));
   const stock = await run('standard', 'NEUTRAL_STOCK: read the supplied context.');
   const stockText = JSON.stringify(stock[0].messages);
   assert.match(stock[0].messages[0].content, /^You are a coding agent powered by the fixture model\./);

@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import { Config } from './config.mjs';
+import { legacySettings } from './legacy-settings.mjs';
+import { Config, configSnapshot } from './config.mjs';
 import { ComputerUseManager } from './computer-use/manager.mjs';
 import { mountComputerUseHttp } from './computer-use/http.mjs';
 import { ImageCoordinates, mountImageCoordinates } from './computer-use/image-coordinates.mjs';
@@ -10,19 +11,48 @@ import { announceFreshComputerRuntime } from './computer-use/runtime-context.mjs
 // Shared even when the host loads two physical copies of the package. The root
 // owns registrations; disposing one consumer must not tear down another's tools.
 const sharedKey = Symbol.for('opencu.runtime.v1');
-export function acquireComputerUse(ctx, options = {}) {
+const defined = value => Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined));
+async function startupConfig(ctx, options) {
+  const entries = ctx.get('configEditor')?.configuration() ?? [];
+  const layers = [];
+  for (const namespace of ['trisoul-x', 'opencu']) {
+    const row = entries.find(row => row.entry.options.id === namespace && !row.entry.disabled);
+    if (!row && namespace !== options.namespace) continue;
+    const legacy = await legacySettings(ctx, namespace, Config);
+    const live = configSnapshot(row?.entry.fiber?.config ?? row?.entry.options.config);
+    const own = namespace === options.namespace ? { ...configSnapshot(options.config), ...options.getConfig?.() } : {};
+    layers.push(Object.fromEntries(Object.entries({ ...legacy.value, ...defined(live), ...defined(own) }).filter(([key, value]) => key in Config.dict && value !== undefined)));
+  }
+  return Object.assign({}, ...layers);
+}
+
+export async function acquireComputerUse(ctx, options = {}) {
   const root = ctx.root;
+  // Resolve both declared owners before allocating paths, regardless of their
+  // mount order. Recheck the root after I/O so concurrent owners still share one.
+  const initial = root[sharedKey] ? null : await startupConfig(ctx, options);
   let shared = root[sharedKey];
   if (!shared) {
-    const legacy = ctx.settings.section('trisoul-x') ?? {};
-    const initial = { ...legacy, ...options.config, ...options.getConfig?.(), ...ctx.settings.section('opencu') };
-    const explicitDirectory = ctx.settings.section('opencu')?.dataDir;
+    const explicitDirectory = initial.dataDir;
     const directory = explicitDirectory ? join(explicitDirectory, 'computer-use') : options.dataDir ?? join(initial.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'trisoul-x'), 'computer-use');
     shared = { owners: new Map(), sessionTitles: new WeakMap(), config: () => shared.getConfig(), computerImages: new ImageCoordinates() };
-    // Explicit OpenCU settings win; otherwise keep the integration's existing
-    // configuration, including saved legacy browser/native paths.
-    shared.getConfig = () => ({ ...legacy, ...[...shared.owners.values()].find(o => o.config)?.config, ...[...shared.owners.values()].find(o => o.getConfig)?.getConfig(), ...ctx.settings.section('opencu') });
-    shared.refresh = () => shared.computerUse.setEnabled(shared.config().computerUseEnabled !== false);
+    // The standalone plugin's explicit values win when it shares a runtime
+    // with OMD. Each owner reads its own live Profile configuration.
+    shared.getConfig = () => {
+      const owners = [...shared.owners.values()].sort((a, b) => Number(a.namespace === 'opencu') - Number(b.namespace === 'opencu'));
+      return Object.assign({}, initial, ...owners.map(owner => Object.fromEntries(Object.entries({
+        ...configSnapshot(owner.config), ...owner.getConfig?.(),
+      }).filter(([, value]) => value !== undefined))));
+    };
+    let appliedEnabled = initial.computerUseEnabled !== false;
+    shared.refresh = () => {
+      const enabled = shared.config().computerUseEnabled !== false;
+      return shared.configuring = (shared.configuring || Promise.resolve()).catch(() => {}).then(async () => {
+        if (enabled === appliedEnabled) return;
+        await shared.computerUse.setEnabled(enabled);
+        appliedEnabled = enabled;
+      });
+    };
     shared.computerUse = new ComputerUseManager(directory, {
       getSessionTitle: id => {
         const session = root.sessions?.get?.(id);
@@ -37,12 +67,7 @@ export function acquireComputerUse(ctx, options = {}) {
     });
     root[sharedKey] = shared;
     shared.fiber = root.plugin({ name: 'opencu-runtime', inject: ['tools', 'settings', 'llm', 'agents', 'sessions', 'sessionProjections'], apply(scope) {
-      // Keep absent fields absent, so Oh My's existing settings stay effective.
-      const base = { ...legacy, ...options.config };
-      scope.settings.installSection(scope, 'opencu', Config, base, {
-        setSource: () => {},
-        onChange: () => shared.refresh(),
-      });
+      scope.on('app-boot/config-reload', () => shared.refresh(), { global: true });
       mountImageCoordinates(scope, shared.computerImages);
       mountComputerUseHttp(scope, shared);
       registerComputerTools(scope, shared);

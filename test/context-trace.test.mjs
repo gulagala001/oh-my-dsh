@@ -1,3 +1,4 @@
+import { sourceName } from '../src/message-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -14,7 +15,7 @@ import { withoutMovedReasoning, installTraceCleanup } from '../src/context/trace
 function setup(t, config = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'trace-context-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
-  const session = Session.create('trace-test', undefined, { version: 3, id: 'trace-test', createdAt: 1, cwd: dir, isSeeded: false, agentPreset: 'trisoul-x' });
+  const session = Session.create('trace-test', undefined, { version: 4, id: 'trace-test', createdAt: 1, cwd: dir, isSeeded: false, agentPreset: 'trisoul-x' });
   session.append('system/message', { turn: 1, step: 1, message: createSystemMessage('System', 'test') }, { surfaceOp: 'append' });
   session.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'Complete the task.' }], source: { kind: 'user' } }), { surfaceOp: 'append' });
   const hub = { store: { dir }, config: () => ({ flushIdleMs: 0, ...config }), scope: () => ({ mode: 'session', project: dir }), action() {},
@@ -73,7 +74,7 @@ test('no removal without the actual prefix; disabled Trace and already compresse
   assert.deepEqual(f.wire().find(m => m.id === source.data.message.id), source.data.message);
   const g = setup(t), gRecord = g.record();
   g.assistant([{ type: 'reasoning', text: 'Move me.' }, { type: 'text', text: 'Answer' }]); await g.apply(gRecord);
-  const withoutPrefix = g.session.deriveMessages().filter(m => m.source?.plugin !== 'trisoul-x:trace');
+  const withoutPrefix = g.session.deriveMessages().filter(m => sourceName(m.source) !== 'trisoul-x:trace');
   assert.equal(withoutMovedReasoning(withoutPrefix, g.session, g.state.traceSlot), withoutPrefix);
   const h = setup(t), event = h.assistant([{ type: 'reasoning', text: 'Covered trace.' }, { type: 'text', text: 'Data '.repeat(3000) }]);
   const covered = newRecord(h.session, [event], { summary: 'Done.', documents: [] }, h.state.binding); h.state.records.push(covered);

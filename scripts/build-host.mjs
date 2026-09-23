@@ -25,3 +25,21 @@ const client = await readFile(`${root}vendor/dsh/ui-conversation/lib/client.js`,
 if (!client.startsWith('window.__ModuleLoader__.load({') || !client.trimEnd().endsWith('});')) throw new Error('Unexpected DSH browser factory format');
 const registration = client.trimEnd().replace('window.__ModuleLoader__.load(', 'const registration = ').replace(/\);$/, ';');
 await writeFile(`${root}lib/host/ui-conversation.factory.mjs`, registration + '\nexport function createConversation(require) { return registration.factory(require); }\n');
+
+const support = await build({ entryPoints: [`${root}src/session-migration-support.ts`], outfile: `${root}lib/host/session-migration.factory.mjs`,
+  platform: 'node', target: 'node22', format: 'cjs', bundle: true, packages: 'external', metafile: true,
+  banner: { js: 'export function createModule(require) { const module = { exports: {} }; const exports = module.exports;' },
+  footer: { js: 'return module.exports; }' }, sourcemap: false, legalComments: 'eof' });
+const supportDependencies = [...new Set(Object.values(support.metafile.outputs).flatMap(o => o.imports.filter(i => i.external).map(i => i.path)))];
+await writeFile(`${root}lib/host/session-migration.mjs`, `import { createModule } from './session-migration.factory.mjs';\nimport { loadHostModule } from '../../src/host-component.mjs';\nexport const loadMigrationSupport = ctx => loadHostModule(ctx, 'session-persistence-jsonl', createModule, ${JSON.stringify(supportDependencies)});\n`);
+
+await writeFile(`${root}lib/host/ui-conversation.mjs`, `import { Config, apply as nativeApply } from '../../vendor/dsh/ui-conversation/lib/index.js';
+import { legacySettings } from '#opencu/src/legacy-settings.mjs';
+export { Config };
+export const inject = ['settings'];
+export async function apply(ctx) {
+  nativeApply(ctx);
+  const legacy = await legacySettings(ctx, 'omd-ui-conversation', Config, ['ui-conversation']);
+  legacy.persist();
+}
+`);

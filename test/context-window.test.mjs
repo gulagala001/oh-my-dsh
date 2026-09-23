@@ -1,3 +1,4 @@
+import { sourceName } from '../src/message-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -27,7 +28,7 @@ const image = { type: 'image', attachment: { attachmentId: 'fixture-image', name
 test('default whole window crosses users, reminders, images and protected system holes', async t => {
   const f = setup(t); exchange(f.session); const reminder = plugin(f.session, 'Task status', 'tasks');
   const correction = user(f.session, '  修正：ID 必须是字符串。\n保留空格  '); const fixed = system(f.session);
-  const roundtrip = exchange(f.session); roundtrip[1].data.message.content[0].content.push(structuredClone(image));
+  const roundtrip = exchange(f.session); roundtrip[1].data.message.content.push(structuredClone(image));
   exchange(f.session); const before = f.session.snapshotEvents();
   const candidate = prepareCandidate(f.session, f.state, f.cfg, pairing);
   assert.ok(candidate.some(e => e.seq === correction.seq)); assert.ok(candidate.some(e => e.seq === reminder.seq));
@@ -38,13 +39,13 @@ test('default whole window crosses users, reminders, images and protected system
   assert.deepEqual(r.userOriginals.find(u => u.seq === correction.seq).content, correction.data.content);
   assert.match(r.documents.find(d => d.kind === 'user-original').text, /  修正：ID 必须是字符串。\n保留空格  /);
   const result = await apply(f, [['brief', [r.id]]]); assert.ok(f.session.surface.nodes.includes(fixed.seq));
-  assert.equal(result.stats.currentMessages, r.sourceSeqs.filter(seq => f.session.eventAt(seq).data?.source?.plugin !== 'trisoul-x:tasks').length); assert.equal(result.stats.resultRecords, 1);
+  assert.equal(result.stats.currentMessages, r.sourceSeqs.filter(seq => sourceName(f.session.eventAt(seq).data?.source) !== 'trisoul-x:tasks').length); assert.equal(result.stats.resultRecords, 1);
   assert.ok(before.every(e => f.session.eventAt(e.seq)), 'original events survive');
 });
 
 test('documents and native image/file blocks move together; brief recall reopens originals', async t => {
   const f = setup(t); const pair = exchange(f.session);
-  pair[1].data.message.content[0].content.push({ ...structuredClone(image), offloaded: true }, { type: 'file', attachment: { attachmentId: 'fixture-file', name: 'source.txt', bytes: 8 } });
+  pair[1].data.message.content.push({ ...structuredClone(image), offloaded: true }, { type: 'file', attachment: { attachmentId: 'fixture-file', name: 'source.txt', bytes: 8 } });
   await f.pipeline.prepare(f.agent, true); const id = f.state.records[0].id;
   await apply(f, [['detail', [id]]]); assert.equal(f.session.deriveMessages().flatMap(m => m.content).filter(b => ['image', 'file'].includes(b.type)).length, 2);
   await apply(f, [['brief', [id]]]); assert.equal(f.session.deriveMessages().flatMap(m => m.content).filter(b => ['image', 'file'].includes(b.type)).length, 0);
@@ -73,7 +74,7 @@ test('long reasoning participates in the shrink check rather than counting as te
 
 test('separate brief records preserve archival assets and exact user originals', async t => {
   const f = setup(t, { digestWindow: 4, prepareBatchWindows: 2 });
-  const first = exchange(f.session); first[1].data.message.content[0].content.push(structuredClone(image));
+  const first = exchange(f.session); first[1].data.message.content.push(structuredClone(image));
   user(f.session, 'Correction: preserve UTF-8 用户原话'); exchange(f.session); exchange(f.session);
   await f.pipeline.prepare(f.agent, true); assert.equal(f.state.records.length, 2);
   const ids = f.state.records.map(r => r.id);
@@ -139,7 +140,7 @@ test('image/file request prices are applied on both sides and offload remains ro
 });
 
 test('recall tool renders native media and cannot cross private session archives', async t => {
-  const f = setup(t); const pair = exchange(f.session); pair[1].data.message.content[0].content.push(image);
+  const f = setup(t); const pair = exchange(f.session); pair[1].data.message.content.push(image);
   await f.pipeline.prepare(f.agent, true); let tool; registerContextRecall({ tools: { register(value) { tool = value; } } }, { context: f.pipeline });
   const args = { id: f.state.records[0].id, asset: 1 }, output = tool.execute(args, { agent: f.agent });
   assert.equal(tool.output.render(args, output)[1].type, 'image');

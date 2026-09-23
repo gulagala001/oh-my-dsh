@@ -16,7 +16,7 @@ import { runtimeContext } from '../src/runtime-state.mjs';
 const prepared = { summary: '创建样式文件，工具确认写入成功。', documents: [] };
 function setup(t, config = {}, withTodo = true) {
   const dir = mkdtempSync(join(tmpdir(), 'todo-context-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
-  const session = Session.create('todo-context', undefined, { version: 3, id: 'todo-context', createdAt: 1, cwd: dir, isSeeded: false, agentPreset: 'trisoul-x' });
+  const session = Session.create('todo-context', undefined, { version: 4, id: 'todo-context', createdAt: 1, cwd: dir, isSeeded: false, agentPreset: 'trisoul-x' });
   const sys = session.append('system/message', { turn: 1, step: 1, message: createSystemMessage('Stable system prompt.', 'test') }, { surfaceOp: 'append' });
   const user = text => session.append('user/message', createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'user' } }), { surfaceOp: 'append' });
   const first = user('实现样式。'); const todoStore = createTodoStore();

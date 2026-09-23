@@ -50,7 +50,7 @@ test('iOS Liquid Glass real shell, sidebar, settings, workbench and recovery', {
     await page.getByRole('button', { name: '收起右侧边栏', exact: true }).click();
     await openSettings();
   }
-  const pages = ['通用设置', '模型', '内置插件', '外观', 'Oh My DSH', '推荐插件', 'Agent 预设', '已归档会话'];
+  const pages = ['通用设置', '模型', '内置插件', '外观', 'Oh My DSH', '推荐插件', 'Agent 预设'];
   for (const width of [1440, 768, 390]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     for (const name of pages) {

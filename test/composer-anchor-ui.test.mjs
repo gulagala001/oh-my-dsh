@@ -32,8 +32,10 @@ test('theme composers stay at the viewport floor when nested records and image p
   await page.getByText('任务缩略记录已就绪。', { exact: true }).waitFor();
   const seat = page.locator('[data-composer-seat]').last();
   const summary = page.locator('[data-turn-process-tool-calls="3"]');
-  const group = page.locator('[data-cu-group] > button').filter({ hasText: '3 次操作' });
-  const imageRow = page.locator('[data-cu-operation]').getByText('已查看图像', { exact: true }).first();
+  const group = page.locator('[data-cu-group] .tx-cu-group-toggle').filter({ hasText: '3 次操作' });
+  const imageRow = page.locator('[data-chat-call-id]').getByText('已查看图像', { exact: true }).first();
+  const taskSummary = page.locator('[data-turn-process-tool-calls="2"]');
+  const taskGroup = page.locator('[data-cu-group] .tx-cu-group-toggle').filter({ hasText: '2 次操作' });
   const floor = async label => {
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const bounds = await seat.boundingBox();
@@ -64,9 +66,12 @@ test('theme composers stay at the viewport floor when nested records and image p
       await floor(skin + '/' + width + ' history scrolled');
       await imageRow.click(); await group.click(); await summary.click();
       await floor(skin + '/' + width + ' collapsed again');
-      const record = page.locator('.omd-record-toggle').last();
+      await taskSummary.click(); await taskGroup.click();
+      await floor(skin + '/' + width + ' task process expanded');
+      const record = page.locator('[data-step-process-body] .omd-record-toggle:visible').last();
       await record.click(); await floor(skin + '/' + width + ' task summary expanded');
       await record.click(); await floor(skin + '/' + width + ' task summary collapsed');
+      await taskGroup.click(); await taskSummary.click();
     }
   }
   assert.deepEqual(f.errors, []);

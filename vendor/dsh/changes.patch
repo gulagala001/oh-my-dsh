@@ -1,43 +1,59 @@
 diff --git a/packages/client/tsdown.client.ts b/packages/client/tsdown.client.ts
-index 3820fba..c881170 100644
+index 99e647d..d7786d8 100644
 --- a/packages/client/tsdown.client.ts
 +++ b/packages/client/tsdown.client.ts
-@@ -558,7 +558,10 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
+@@ -558,7 +558,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
          this.addWatchFile(fileId)
          const source = await readFile(fileId)
          const { code, exports: cssExports } = transform({
 -          filename: fileId,
-+          // Keep the pinned release's CSS Modules names used by OMD's existing theme.
-+          filename: id === '@oh-my-dsh/ui-conversation'
-+            ? '/home/runner/work/deepseek-harness/deepseek-harness/' + relative(REPOSITORY_ROOT, fileId).split(sep).join('/')
-+            : fileId,
++          filename: "/home/runner/work/deepseek-harness/deepseek-harness/" + relative(REPOSITORY_ROOT, fileId).split(sep).join("/"),
            code: source,
            cssModules: { pattern: '[hash]_[local]' },
            minify: true,
-diff --git a/packages/client/ui-conversation/package.json b/packages/client/ui-conversation/package.json
-index 8a92b63..c2b1a31 100644
---- a/packages/client/ui-conversation/package.json
-+++ b/packages/client/ui-conversation/package.json
-@@ -1,5 +1,5 @@
- {
--  "name": "@deepseek-ai/dsh-client-ui-conversation",
-+  "name": "@oh-my-dsh/ui-conversation",
-   "description": "Target-neutral Conversation assembly, shell, composer, queue, and view navigation",
-   "version": "0.1.6-alpha.2",
-   "publishConfig": {
+@@ -582,7 +582,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
+         const fileId = virtualId.slice(INLINE_CSS_VIRTUAL_PREFIX.length, -CSS_VIRTUAL_SUFFIX.length)
+         this.addWatchFile(fileId)
+         const source = await readFile(fileId)
+-        const { code } = transform({ filename: fileId, code: source, minify: true })
++        const { code } = transform({ filename: "/home/runner/work/deepseek-harness/deepseek-harness/" + relative(REPOSITORY_ROOT, fileId).split(sep).join("/"), code: source, minify: true })
+         return `export default ${JSON.stringify(code.toString())};`
+       },
+     }, {
+@@ -597,7 +597,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
+         const fileId = virtualId.slice(GLOBAL_CSS_VIRTUAL_PREFIX.length, -CSS_VIRTUAL_SUFFIX.length)
+         this.addWatchFile(fileId)
+         const source = await readFile(fileId)
+-        const { code } = transform({ filename: fileId, code: source, minify: true })
++        const { code } = transform({ filename: "/home/runner/work/deepseek-harness/deepseek-harness/" + relative(REPOSITORY_ROOT, fileId).split(sep).join("/"), code: source, minify: true })
+         return styleInjectionModule(id, fileId, code.toString())
+       },
+     }],
 diff --git a/packages/client/ui-conversation/src/client/apply.ts b/packages/client/ui-conversation/src/client/apply.ts
-index 79ffd97..8290258 100644
+index f4a5ff4..79e3dd4 100644
 --- a/packages/client/ui-conversation/src/client/apply.ts
 +++ b/packages/client/ui-conversation/src/client/apply.ts
-@@ -37,6 +37,7 @@ import { todoDockEntry } from './skeleton/TodoPanel.tsx'
- import { resolveActiveView } from './view-selection.ts'
- import { en, NS, zh, type ConversationKey } from './locales.ts'
- import { CONVERSATION_SETTINGS_NAMESPACE, type ConversationSettings } from '../submission-settings.ts'
+@@ -1,3 +1,4 @@
 +import { reloadOnProviderChange } from './conversation-reload.ts'
+ /** Registers the target-neutral Conversation assembly, shell, input, and docks. */
+ import type { Context } from '@deepseek-ai/cordis'
+ import z from '@deepseek-ai/schemastery'
+@@ -56,12 +57,14 @@ export const inject = [
  
- declare module '@deepseek-ai/dsh-client-ui-slots' {
-   interface LocaleNamespaceMap {
-@@ -128,6 +129,7 @@ function concreteConversation(ctx: Context): ConversationController {
+ /** Conversation runtime configuration. */
+ export interface Config {
++  settingsNamespace?: string
+   /** Maximum generic-file uploads allowed to run concurrently in browser Workers. */
+   maxConcurrentFileUploads?: number
+ }
+ 
+ /** Validated Conversation runtime configuration. */
+ export const Config: z<Config> = z.object({
++  settingsNamespace: z.string().default(CONVERSATION_SETTINGS_NAMESPACE),
+   maxConcurrentFileUploads: z.natural().min(1).default(2),
+ })
+ 
+@@ -147,6 +150,7 @@ function concreteConversation(ctx: Context): ConversationController {
   * @param ctx - Client root context.
   */
  export function apply(ctx: Context, config: Config = Config({})): void {
@@ -45,6 +61,15 @@ index 79ffd97..8290258 100644
    const sessions = ctx.sessions
    const slots = ctx.slots
    // Schemastery's field default is materialized before Cordis calls apply.
+@@ -158,7 +162,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
+   const t = ctx.locale.bind(NS)
+   const conversationStore = createConversationStore()
+   const submissionPolicy = new ComposerSubmissionPolicy(
+-    ctx.configForms.get<ConversationSettings>(CONVERSATION_SETTINGS_NAMESPACE),
++    ctx.configForms.get<ConversationSettings>(config.settingsNamespace ?? CONVERSATION_SETTINGS_NAMESPACE),
+   )
+ 
+   ctx.effect(() => () => { submissionPolicy.dispose() })
 diff --git a/packages/client/ui-conversation/src/client/conversation-reload.ts b/packages/client/ui-conversation/src/client/conversation-reload.ts
 new file mode 100644
 index 0000000..7d92eef
@@ -76,7 +101,7 @@ index 0000000..7d92eef
 +  return false
 +}
 diff --git a/packages/client/ui-conversation/src/client/locales.ts b/packages/client/ui-conversation/src/client/locales.ts
-index d61f52e..dabbb31 100644
+index 8ddad82..b8002e1 100644
 --- a/packages/client/ui-conversation/src/client/locales.ts
 +++ b/packages/client/ui-conversation/src/client/locales.ts
 @@ -24,6 +24,7 @@ export const zh = {
@@ -87,7 +112,7 @@ index d61f52e..dabbb31 100644
    'input.send.steer': '插话发送',
    'attachment.pending': '待发送附件',
    'attachment.scrollLeft': '向左滚动附件',
-@@ -186,6 +187,7 @@ export const en = {
+@@ -378,6 +379,7 @@ export const en = {
    'input.stop': 'Stop generating',
    'input.send': 'Send message',
    'input.send.queue': 'Queue message',
@@ -96,18 +121,18 @@ index d61f52e..dabbb31 100644
    'attachment.pending': 'Pending attachments',
    'attachment.scrollLeft': 'Scroll attachments left',
 diff --git a/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx b/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
-index 319628d..8822a50 100644
+index dea8a86..1305803 100644
 --- a/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
 +++ b/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
-@@ -38,6 +38,7 @@ import { resolveSubmitMode } from '../input/submission-policy.ts'
- import { attachmentErrorText, imageSizeText } from '../image-labels.ts'
+@@ -39,6 +39,7 @@ import { attachmentErrorText, imageSizeText } from '../image-labels.ts'
  import { ContextMeter } from './ContextMeter.tsx'
+ import { observeControlRow } from './control-row-layout.ts'
  import css from './InputBar.module.css'
 +import { useBackgroundWait } from './background-wait.ts'
  
  export type InputBarProps = ComposerBarProps
  
-@@ -52,11 +53,13 @@ export const InputBar = memo(function InputBar({
+@@ -53,13 +54,15 @@ export const InputBar = memo(function InputBar({
  }: InputBarProps) {
    const input = useInput(s => s)
    const notice = useNotices(s => s)
@@ -115,6 +140,8 @@ index 319628d..8822a50 100644
 +  const preferredBusyEnter = useBusyEnter(s => s)
    void useLexicon // hook seat stays bound by the inject compartment; text-ref decoration rides the shell's editor transforms
    const commandMenuOpen = useMenuLauncher(source => source === 'command')
+   const [activity, setActivity] = useState(false)
+   useEffect(() => { setActivity(false) }, [sessionId])
    const promptError = useSession(s => s.promptError) ?? null
    const running = useSession(s => s.running) ?? false
 +  const eventWaiting = useBackgroundWait(sessionId, running)
@@ -122,7 +149,7 @@ index 319628d..8822a50 100644
    const subagent = useSession(s => s.subagent) ?? null
    const removed = useSession(s => s.removed) ?? false
    // Plan mode swaps the composer placeholder (the projection is the folded
-@@ -299,7 +302,7 @@ export const InputBar = memo(function InputBar({
+@@ -308,7 +311,7 @@ export const InputBar = memo(function InputBar({
    const primaryLabel = primaryStops
      ? t('input.stop')
      : running && steeringAvailable && !disabled && !uploadsPending && plainMessageDraft
@@ -133,7 +160,7 @@ index 319628d..8822a50 100644
      if (primaryStops) {
 diff --git a/packages/client/ui-conversation/src/client/skeleton/background-wait.ts b/packages/client/ui-conversation/src/client/skeleton/background-wait.ts
 new file mode 100644
-index 0000000..860565f
+index 0000000..3595692
 --- /dev/null
 +++ b/packages/client/ui-conversation/src/client/skeleton/background-wait.ts
 @@ -0,0 +1,36 @@
@@ -154,7 +181,7 @@ index 0000000..860565f
 +      const ticket = ++generation, own = controller = new AbortController()
 +      const timeout = setTimeout(() => own.abort(), 5000)
 +      try {
-+        const response = await fetch(`/trisoul-x/api/background-wait?session=${encodeURIComponent(id)}`, { signal: own.signal })
++        const response = await fetch(new URL(`trisoul-x/api/background-wait?session=${encodeURIComponent(id)}`, document.baseURI), { signal: own.signal })
 +        if (!response.ok) throw new Error(`HTTP ${response.status}`)
 +        const value: unknown = await response.json()
 +        if (active && ticket === generation) setObserved({ id, waiting: typeof value === 'object' && value !== null && 'waiting' in value && value.waiting === true })
@@ -173,20 +200,11 @@ index 0000000..860565f
 +  }, [sessionId, running])
 +  return running && observed?.id === sessionId && observed?.waiting === true
 +}
-diff --git a/packages/client/ui-conversation/tsdown.config.ts b/packages/client/ui-conversation/tsdown.config.ts
-index 6ccfee9..fa1dc59 100644
---- a/packages/client/ui-conversation/tsdown.config.ts
-+++ b/packages/client/ui-conversation/tsdown.config.ts
-@@ -1,3 +1,3 @@
- import { clientBundle } from '../tsdown.client.ts'
- 
--export default clientBundle('@deepseek-ai/dsh-client-ui-conversation', ['lib/types/index.js'])
-+export default clientBundle('@oh-my-dsh/ui-conversation', ['lib/types/index.js'])
 diff --git a/packages/core/tools/src/index.ts b/packages/core/tools/src/index.ts
-index 6be7be6..5e75bfb 100644
+index 87275e8..3faf8f3 100644
 --- a/packages/core/tools/src/index.ts
 +++ b/packages/core/tools/src/index.ts
-@@ -723,6 +723,7 @@ class ToolLayer implements ScopeLayer {
+@@ -730,6 +730,7 @@ class ToolLayer implements ScopeLayer {
     * "which form does the model see" is a contradiction, not a merge.
     */
    mode: ToolPresentationMode | undefined
@@ -194,7 +212,7 @@ index 6be7be6..5e75bfb 100644
  
    constructor(scope: ScopeKey | undefined) {
      this.tools = new NamedEntries(name => new Error(scope === undefined
-@@ -815,6 +816,7 @@ export class ToolRuntime extends Service {
+@@ -822,6 +823,7 @@ export class ToolRuntime extends Service {
      () => { this.ctx.emit('tools/change') },
    )
    /** Presentation for scopes that declare none; {@link presentAs} shadows it per scope. */
@@ -202,7 +220,7 @@ index 6be7be6..5e75bfb 100644
    private readonly defaultMode: ToolPresentationMode
    private readonly maxParallelSubCalls: number
    /**
-@@ -859,7 +861,9 @@ export class ToolRuntime extends Service {
+@@ -866,7 +868,9 @@ export class ToolRuntime extends Service {
        order: this.ctx.systemPrompt.getSectionOrder('PTC_ONLY'),
        // The SAME predicate the executor denies by, so the prompt cannot state
        // a rule the registry does not enforce (see `collapses`).
@@ -213,7 +231,7 @@ index 6be7be6..5e75bfb 100644
      }
    }
  
-@@ -951,7 +955,7 @@ export class ToolRuntime extends Service {
+@@ -958,7 +962,7 @@ export class ToolRuntime extends Service {
     * @param mode - the presentation the covered agents' models see.
     * @returns the exact disposer that restores the deployment default.
     */
@@ -222,7 +240,7 @@ index 6be7be6..5e75bfb 100644
      const ctx = this.ctx
      if (scopeOf(ctx) === undefined) {
        throw new Error('tools.presentAs() requires a scoped context (agent.ctx): a context-global presentation is the `mode` config field on the tools row')
-@@ -964,7 +968,8 @@ export class ToolRuntime extends Service {
+@@ -971,7 +975,8 @@ export class ToolRuntime extends Service {
              throw new Error(`tools.presentAs("${mode}") conflicts with "${layer.mode}" already declared for this scope; one composition selects one presentation`)
            }
            layer.mode = mode
@@ -232,7 +250,7 @@ index 6be7be6..5e75bfb 100644
          },
          { label: 'tools.presentAs()' },
        )
-@@ -981,6 +986,21 @@ export class ToolRuntime extends Service {
+@@ -988,6 +993,21 @@ export class ToolRuntime extends Service {
      return dispose
    }
  
@@ -254,7 +272,7 @@ index 6be7be6..5e75bfb 100644
    /**
     * Build one scope's wire schemas and names for prompt-order validation.
     * Restrictions do not make known tools invalid, but a mode collapse does.
-@@ -988,6 +1008,7 @@ export class ToolRuntime extends Service {
+@@ -995,6 +1015,7 @@ export class ToolRuntime extends Service {
    private wireSchemas(scope?: ScopeKey): ToolProviderResult {
      const view = this.view(scope)
      const mode = this.modeFor(scope)
@@ -262,7 +280,7 @@ index 6be7be6..5e75bfb 100644
      if (mode === 'native') {
        const schemas = [...view.visible.values()].map(definition => this.schemaOf(definition, false))
        return { schemas, knownNames: [...view.knownNames] }
-@@ -1001,8 +1022,8 @@ export class ToolRuntime extends Service {
+@@ -1008,8 +1029,8 @@ export class ToolRuntime extends Service {
      const schemas = [...view.visible.values()].map(definition => this.schemaOf(definition, false))
      if (mode === 'ptc') {
        return {
@@ -273,7 +291,7 @@ index 6be7be6..5e75bfb 100644
        }
      }
      return { schemas, knownNames: [...view.knownNames, RUN_CODE_NAME] }
-@@ -1328,7 +1349,7 @@ export class ToolRuntime extends Service {
+@@ -1336,7 +1357,7 @@ export class ToolRuntime extends Service {
     * @param nested - whether the call is a transport sub-dispatch, not a model-direct call.
     */
    private collapses(name: string, scope: ScopeKey | undefined, nested: boolean): boolean {
@@ -283,47 +301,36 @@ index 6be7be6..5e75bfb 100644
  
    /**
 diff --git a/packages/jobs/jobs-local/src/index.ts b/packages/jobs/jobs-local/src/index.ts
-index 0e0f161..cf60891 100644
+index ea68015..cb8a803 100644
 --- a/packages/jobs/jobs-local/src/index.ts
 +++ b/packages/jobs/jobs-local/src/index.ts
-@@ -9,6 +9,7 @@
-  * @module @deepseek-ai/dsh-jobs-local
+@@ -11,6 +11,7 @@
   */
  
-+import { randomUUID } from 'node:crypto'
  import { Context } from '@deepseek-ai/cordis'
++import { randomUUID } from 'node:crypto'
  import z from '@deepseek-ai/schemastery'
  import type { Agent } from '@deepseek-ai/dsh-agent'
-@@ -18,7 +19,7 @@ import { deadline, timeoutOf } from '@deepseek-ai/dsh-timeout'
- import { JobRegistry, JobId } from '@deepseek-ai/dsh-jobs'
+ import { ScopedLayers, scopeOf } from '@deepseek-ai/dsh-scope'
+@@ -20,6 +21,7 @@ import { JobRegistry, JobId } from '@deepseek-ai/dsh-jobs'
  import type {
-   JobDoneListener, JobKind, JobOutcome, JobRead, JobSnapshot, JobStart, JobStatus,
--  JobsChangedListener,
-+  JobsChangedListener, JobOwnerOptions, JobPreview,
+   JobAppendOptions, JobEvent, JobEvents, JobHandle, JobKind, JobOutcome, JobOutputRead, JobOutputSource,
+   JobRead, JobSettleCause, JobSpec, JobStatus, JobView,
++  JobOwnerOptions, JobPreview,
  } from '@deepseek-ai/dsh-jobs'
- 
- /** Timeout code that distinguishes a bounded wait from caller cancellation. */
-@@ -46,6 +47,10 @@ interface TrackedJob {
-   owner: Agent | undefined
-   cancel: (reason?: string) => void
-   readOutput: (() => string) | undefined
-+  peekOutput: (() => string) | undefined
-+  published: boolean
-+  enhanced: boolean
-+  resultDelivery: 'unknown' | 'none' | 'notice' | 'preview' | 'full'
-   status: JobStatus
-   detail: string | undefined
-   output: string | undefined
-@@ -100,6 +105,8 @@ export class LocalJobRegistry extends JobRegistry {
-   /** Schemastery-defaulted active-job limit. */
-   private readonly maxConcurrentJobsPerOwner: number
+ import { JobEventHub, JobLayer } from './events.ts'
+ import { startPump } from './pump.ts'
+@@ -159,6 +161,9 @@ export class LocalJobRegistry extends JobRegistry {
+   private readonly pumpPollMs: number
    private store = new Map<JobId, TrackedJob>()
+   private counters = new Map<string, number>()
 +  private readonly epoch = randomUUID()
 +  private readonly options = new WeakMap<Agent, () => JobOwnerOptions>()
-   private counters = new Map<string, number>()
++  private readonly deliveries = new Map<JobId, 'notice' | 'preview' | 'full'>()
    /**
-    * Surfaces and listeners layered by the scope that registered them, in the
-@@ -128,6 +135,50 @@ export class LocalJobRegistry extends JobRegistry {
+    * Controllers and scoped subscriptions layered by the scope that registered
+    * them, in the tools-registry shape: a contribution files into its
+@@ -192,6 +197,40 @@ export class LocalJobRegistry extends JobRegistry {
      ctx.effect(() => () => this.disposeAll(), 'jobs teardown')
    }
  
@@ -333,241 +340,153 @@ index 0e0f161..cf60891 100644
 +  }
 +
 +  override ownerOptions(owner?: Agent): JobOwnerOptions {
-+    return owner ? this.options.get(owner)?.() ?? {} : {}
++    return owner === undefined ? {} : this.options.get(owner)?.() ?? {}
 +  }
 +
-+  override publish(id: JobId, caller?: Agent): void {
-+    const job = this.expect(id)
-+    this.assertAccess(job, caller)
-+    if (job.published) return
-+    job.published = true
-+    this.notifyChanged(job.owner)
-+    if (isTerminal(job.status)) this.announce(job)
++  override peekOutput(id: JobId, maxBytes: number, caller?: SessionId): JobPreview {
++    if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) throw new Error('preview byte limit must be a non-negative integer')
++    const job = this.expect(id, caller)
++    const read = job.ring.readFrom(0)
++    const stream = read.chunks.map(chunk => chunk.text).join('')
++    const text = stream + (stream && job.result ? '\n' : '') + (job.result ?? '')
++    const tail: string[] = []
++    let bytes = 0
++    for (const point of [...text].reverse()) {
++      const size = Buffer.byteLength(point)
++      if (bytes + size > maxBytes) break
++      bytes += size
++      tail.push(point)
++    }
++    const retained = tail.reverse().join('')
++    return { text: retained, available: Boolean(text), truncated: read.lossy || read.chunks.some(chunk => chunk.gapBefore) || retained !== text }
 +  }
 +
-+  override releaseCompleted(id: JobId, caller?: Agent): void {
-+    const job = this.expect(id)
-+    this.assertAccess(job, caller)
-+    if (job.published || !isTerminal(job.status)) throw new Error('only settled unpublished jobs can be released')
-+    this.store.delete(id)
++  override markDelivered(id: JobId, kind: 'notice' | 'preview' | 'full', caller?: SessionId): void {
++    this.expect(id, caller)
++    const rank = { notice: 0, preview: 1, full: 2 }
++    const previous = this.deliveries.get(id)
++    if (previous === undefined || rank[kind] > rank[previous]) this.deliveries.set(id, kind)
 +  }
 +
-+  override peekOutput(id: JobId, maxBytes: number, caller?: Agent): JobPreview {
-+    const job = this.expect(id)
-+    this.assertAccess(job, caller)
-+    if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) throw new Error('invalid preview byte limit')
-+    const available = job.peekOutput !== undefined || (job.readOutput === undefined && isTerminal(job.status))
-+    const text = job.peekOutput?.() ?? (job.readOutput === undefined ? job.output ?? '' : '')
-+    const bytes = new TextEncoder().encode(text)
-+    return { available, text: new TextDecoder().decode(bytes.subarray(0, maxBytes), { stream: bytes.length > maxBytes }), truncated: bytes.length > maxBytes }
-+  }
-+
-+  override markDelivered(id: JobId, kind: 'notice' | 'preview' | 'full', caller?: Agent): void {
-+    const job = this.expect(id)
-+    this.assertAccess(job, caller)
-+    const levels = ['none', 'unknown', 'notice', 'preview', 'full']
-+    if (levels.indexOf(kind) <= levels.indexOf(job.resultDelivery)) return
-+    job.resultDelivery = kind
-+    this.notifyChanged(job.owner)
-+  }
-+
-   start(spec: JobStart): JobId {
-     if (!this.servesOwner(spec.owner)) {
-       throw new Error('background jobs unavailable: no job controller serves this agent (load @deepseek-ai/dsh-tool-jobs in its composition)')
-@@ -150,7 +201,7 @@ export class LocalJobRegistry extends JobRegistry {
-     const hooks = spec.run()
+   /**
+    * The event stream bound to the accessing context: a subscription is an
+    * effect of that context, and `{ owners: 'scope' }` names its scope.
+@@ -228,7 +267,7 @@ export class LocalJobRegistry extends JobRegistry {
+     // simply skipped.
      const count = (this.counters.get(spec.kind) ?? 0) + 1
      this.counters.set(spec.kind, count)
 -    const id = JobId(`${spec.kind}-${count}`)
-+    const id = JobId(this.ownerOptions(spec.owner).interruptibleWait ? `${spec.kind}-${this.epoch}-${count}` : `${spec.kind}-${count}`)
- 
-     let markSettled!: () => void
-     const settled = new Promise<void>((resolve) => { markSettled = resolve })
-@@ -162,6 +213,10 @@ export class LocalJobRegistry extends JobRegistry {
-       owner: spec.owner,
-       cancel: hooks.cancel.bind(hooks),
-       readOutput: hooks.readOutput?.bind(hooks),
-+      peekOutput: hooks.peekOutput?.bind(hooks),
-+      published: spec.publication !== 'deferred',
-+      enhanced: this.ownerOptions(spec.owner).interruptibleWait === true,
-+      resultDelivery: 'none',
-       status: 'running',
-       detail: undefined,
-       output: undefined,
-@@ -185,14 +240,14 @@ export class LocalJobRegistry extends JobRegistry {
-     )
-     // Registration is complete and cannot fail from here, so the visible set
-     // has genuinely changed.
--    this.notifyChanged(job.owner)
-+    if (job.published) this.notifyChanged(job.owner)
-     return id
-   }
- 
-   list(caller?: Agent): JobSnapshot[] {
-     const session = caller?.id
-     return [...this.store.values()]
--      .filter(job => job.owner === undefined || job.owner.id === session)
-+      .filter(job => job.published && (job.owner === undefined || job.owner.id === session))
-       .map(job => this.snapshot(job))
-   }
- 
-@@ -209,6 +264,7 @@ export class LocalJobRegistry extends JobRegistry {
-       ? job.readOutput()
-       : isTerminal(job.status) ? job.output ?? '' : ''
-     if (isTerminal(job.status)) job.reported = true
-+    if (job.resultDelivery === 'none') job.resultDelivery = 'unknown'
-     return { text, snapshot: this.snapshot(job) }
-   }
- 
-@@ -364,6 +420,7 @@ export class LocalJobRegistry extends JobRegistry {
-     const ownerSession = job.owner?.id
++    const id = JobId(this.ownerOptions(owner).interruptibleWait ? `${spec.kind}-${this.epoch}-${count}` : `${spec.kind}-${count}`)
+     const ring = new OutputRing()
+     const state: ProducerState = { progress: undefined, job: undefined }
+     const handle: JobHandle = {
+@@ -415,6 +454,7 @@ export class LocalJobRegistry extends JobRegistry {
+     const spillPaths = [...new Set(job.spillPaths.filter((path): path is string => path !== undefined))]
      return {
        id: job.id,
-+      ...(job.enhanced ? { runId: `${this.epoch}:${job.id}`, resultDelivery: job.resultDelivery } : {}),
++      ...this.ownerOptions(job.owner).interruptibleWait ? { runId: job.id, resultDelivery: this.deliveries.get(job.id) ?? 'none' } : {},
        kind: job.kind,
        label: job.label,
-       ...job.outputLimitBytes !== undefined ? { outputLimitBytes: job.outputLimitBytes } : {},
-@@ -420,13 +477,16 @@ export class LocalJobRegistry extends JobRegistry {
-     job.output = outcome.output
-     job.finishedAt = Date.now()
-     if (job.waiters > 0) job.reported = true
--    const snapshot = this.snapshot(job)
-     const waitResolvers = [...job.waitResolvers]
-     job.waitResolvers.clear()
-     for (const resolveWait of waitResolvers) resolveWait()
-     job.markSettled()
--    this.notifyChanged(job.owner)
-+    if (job.published) { this.notifyChanged(job.owner); this.announce(job) }
-+  }
-+
-+  private announce(job: TrackedJob): void {
-     if (this.listenersClosed) return
-+    const snapshot = this.snapshot(job)
-     for (const listener of this.listenersFor(job.owner)) {
-       try {
-         const returned = listener(snapshot, job.owner)
+       ...owner !== undefined ? { owner } : {},
+@@ -434,6 +474,7 @@ export class LocalJobRegistry extends JobRegistry {
+ 
+   private emit(event: JobEvent, owner: Agent | undefined): void {
+     this.hub.emit(event, owner)
++    if (event.type === 'removed') this.deliveries.delete(event.job.id)
+   }
+ 
+   /**
 diff --git a/packages/jobs/jobs/src/index.ts b/packages/jobs/jobs/src/index.ts
-index 7d46dfa..885096b 100644
+index dcfd95b..6f44764 100644
 --- a/packages/jobs/jobs/src/index.ts
 +++ b/packages/jobs/jobs/src/index.ts
-@@ -9,11 +9,13 @@
+@@ -11,11 +11,14 @@
+ 
  import { Context, Service } from '@deepseek-ai/cordis'
- import type { Agent } from '@deepseek-ai/dsh-agent'
- import type {
--  JobDoneListener, JobId, JobRead, JobSnapshot, JobStart, JobsChangedListener,
-+  JobDoneListener, JobId, JobRead, JobSnapshot, JobStart, JobsChangedListener, JobOwnerOptions, JobPreview,
- } from './types.ts'
+ import type { SessionId } from '@deepseek-ai/dsh-session'
++import type { Agent } from '@deepseek-ai/dsh-agent'
+ import { installJobArchiveAdmission } from './archive-admission.ts'
+-import type { JobEvents, JobId, JobOutputRead, JobRead, JobSpec, JobView } from './types.ts'
++import type { JobEvents, JobId, JobOutputRead, JobRead, JobSpec, JobView, JobOwnerOptions, JobPreview } from './types.ts'
  
  export { JobId } from './types.ts'
  export type {
 +  JobOwnerOptions,
 +  JobPreview,
-   JobDoneListener,
-   JobHooks,
-   JobKind,
-@@ -70,6 +72,19 @@ export abstract class JobRegistry extends Service {
-     super(ctx, 'jobs')
-   }
+   JobAppendOptions,
+   JobChannel,
+   JobChunk,
+@@ -99,6 +102,15 @@ export abstract class JobRegistry extends Service {
+   /** Lifecycle and output events, filtered per subscription. */
+   abstract readonly events: JobEvents
  
-+  /** Bind request-sampled options to one live owner; disposal removes only this binding. */
++  /** Bind sampled behavior to a live owner; release only this registration. */
 +  setOwnerOptions(_owner: Agent, _read: () => JobOwnerOptions): () => void { throw new Error('job provider does not support request options') }
-+  /** Read the owner's current options; no binding means original behavior. */
++  /** Read the owner's selected behavior; other compositions retain defaults. */
 +  ownerOptions(_owner?: Agent): JobOwnerOptions { return {} }
-+  /** Publish a deferred registration once, including a completion raced with publication. */
-+  publish(_id: JobId, _caller?: Agent): void { throw new Error('job provider does not support deferred publication') }
-+  /** Drop a completed, unpublished registration after its foreground result is collected. */
-+  releaseCompleted(_id: JobId, _caller?: Agent): void { throw new Error('job provider does not support deferred publication') }
-+  /** Inspect output without affecting the consuming cursor or completion notifications. */
-+  peekOutput(_id: JobId, _maxBytes: number, _caller?: Agent): JobPreview { return { available: false, text: '', truncated: false } }
-+  /** Record content actually admitted to a request, separately from enqueue/read state. */
-+  markDelivered(_id: JobId, _kind: 'notice' | 'preview' | 'full', _caller?: Agent): void { throw new Error('job provider does not support delivery receipts') }
++  /** Observe retained output without moving the model's consuming cursor. */
++  peekOutput(_id: JobId, _maxBytes: number, _caller?: SessionId): JobPreview { return { available: false, text: '', truncated: false } }
++  /** Record content admitted to a model request, separately from reads or queueing. */
++  markDelivered(_id: JobId, _kind: 'notice' | 'preview' | 'full', _caller?: SessionId): void { throw new Error('job provider does not support delivery receipts') }
 +
    /**
     * Preflight access, validation, owner cleanup, and implementation-owned
     * admission before starting and atomically registering work. Any preflight
 diff --git a/packages/jobs/jobs/src/types.ts b/packages/jobs/jobs/src/types.ts
-index 2842f6a..76bcbff 100644
+index 3858cf5..fa50863 100644
 --- a/packages/jobs/jobs/src/types.ts
 +++ b/packages/jobs/jobs/src/types.ts
-@@ -44,6 +44,9 @@ export interface JobOutcome {
-  * execution resources while the runtime owns identity and lifecycle state.
-  */
- export interface JobStart {
-+  /** Deferred jobs are admitted but hidden until publish(). */
-+  publication?: 'deferred'
-+
-   /** Producer kind — also the id prefix (`bash`, `subagent`, …). */
-   kind: JobKind
-   /** One-line model-facing label (the command; the delegation description). */
-@@ -88,6 +91,8 @@ export interface JobHooks {
-    * job has one consuming cursor.
-    */
-   readOutput?(): string
-+  /** Inspect retained output without advancing its consuming cursor. */
-+  peekOutput?(): string
- }
+@@ -12,6 +12,21 @@ import type { JobChannel, JobChunk, JobKind, JobView } from './view.ts'
+ export { JobId } from './brand.ts'
+ export type { JobChannel, JobChunk, JobKind, JobKindMap, JobStatus, JobView } from './view.ts'
  
- /**
-@@ -95,6 +100,11 @@ export interface JobHooks {
-  * a fresh object per call, never live registry state.
-  */
- export interface JobSnapshot {
-+  /** Process-unique execution identity, never reused after restart. */
-+  runId?: string
-+  /** Content included in an admitted request, independent of reported. */
-+  resultDelivery?: 'unknown' | 'none' | 'notice' | 'preview' | 'full'
-+
-   /** The registry-issued id (`<kind>-N`). */
-   id: JobId
-   /** The producer kind the job was registered with. */
-@@ -158,3 +168,17 @@ export type JobDoneListener = (
-  * set changed with it.
-  */
- export type JobsChangedListener = (owner: Agent | undefined) => void
-+
-+/** Opt-in behavior sampled for each owner's next model request. */
++/** Per-request behavior explicitly selected by the owning Agent composition. */
 +export interface JobOwnerOptions {
 +  softYieldMs?: number
 +  interruptibleWait?: boolean
 +  completionPreviewBytes?: number
 +  completionBatchBytes?: number
 +}
-+/** Non-consuming retained output; unavailable producers still expose their locator. */
++
++/** Bounded, non-consuming view of retained stream bytes and the terminal result. */
 +export interface JobPreview {
 +  text: string
 +  available: boolean
 +  truncated: boolean
 +}
++
+ /** Terminal result supplied by a producer through {@link JobHooks.done}. */
+ export interface JobOutcome {
+   /** How the job ended: finished (`completed`), cancelled (`killed`), or broke (`failed`). */
+diff --git a/packages/jobs/jobs/src/view.ts b/packages/jobs/jobs/src/view.ts
+index ed3af9c..3d15f47 100644
+--- a/packages/jobs/jobs/src/view.ts
++++ b/packages/jobs/jobs/src/view.ts
+@@ -63,6 +63,10 @@ export interface JobChunk {
+  * stream all consume this one shape.
+  */
+ export interface JobView {
++  /** Process-generation identity when the owning composition requests durable locators. */
++  readonly runId?: string
++  /** Content actually admitted to a model request; not an execution-success claim. */
++  readonly resultDelivery?: 'none' | 'notice' | 'preview' | 'full'
+   /** The registry-issued id (`<kind>-N`). */
+   readonly id: JobId
+   /**
 diff --git a/packages/jobs/tool-jobs/src/index.ts b/packages/jobs/tool-jobs/src/index.ts
-index 277d718..fb4e089 100644
+index e9acc4c..d34c71f 100644
 --- a/packages/jobs/tool-jobs/src/index.ts
 +++ b/packages/jobs/tool-jobs/src/index.ts
-@@ -53,6 +53,7 @@ export const Config: z<Config> = z.object({
- 
- /** Task state safe for model-authored programs; ownership/bookkeeping fields are omitted. */
- export interface PublicJobSnapshot {
-+  runId?: string
-   id: string
-   kind: string
-   label: string
-@@ -68,6 +69,7 @@ const PUBLIC_JOB_SCHEMA = {
+@@ -66,6 +66,7 @@ const PUBLIC_JOB_SCHEMA = {
+   type: 'object',
    additionalProperties: false,
    properties: {
-     id: { type: 'string', required: true },
 +    runId: { type: 'string' },
+     id: { type: 'string', required: true },
      kind: { type: 'string', required: true },
      label: { type: 'string', required: true },
-     status: {
-@@ -85,6 +87,7 @@ const PUBLIC_JOB_SCHEMA = {
- function publicJob(snapshot: JobSnapshot): PublicJobSnapshot {
-   return {
-     id: snapshot.id,
-+    ...(snapshot.runId ? { runId: snapshot.runId } : {}),
-     kind: snapshot.kind,
-     label: snapshot.label,
-     status: snapshot.status,
-@@ -201,6 +204,49 @@ function presentJobCall(title: string, kind: 'read' | 'execute', rawInput?: stri
-   return { card: 'generic', title, kind, ...rawInput !== undefined ? { rawInput } : {} }
+@@ -186,6 +187,48 @@ function readBody(read: JobRead): { text: string; job: PublicJobSnapshot } {
+   return { text, job: publicJob(read.job) }
  }
  
 +type WakeReason = 'completed' | 'user_input' | 'other_completion' | 'timeout'
@@ -577,7 +496,7 @@ index 277d718..fb4e089 100644
 +/** Wait for actionable events without reading output or suppressing notices. */
 +async function waitForEvent(ctx: Context, exec: ToolExecution, id: ReturnType<typeof JobId>, timeout?: number): Promise<WakeReason> {
 +  const owner = exec.agent
-+  const terminal = (): boolean => !['running', 'stopping'].includes(ctx.jobs.get(id, owner).status)
++  const terminal = (): boolean => !['running', 'stopping'].includes(ctx.jobs.get(id, owner?.id).status)
 +  if (terminal()) return 'completed'
 +  exec.signal.throwIfAborted()
 +  return new Promise((resolve, reject) => {
@@ -596,9 +515,8 @@ index 277d718..fb4e089 100644
 +      cleanup.forEach(dispose => dispose()); clearTimeout(timer)
 +      reject(exec.signal.reason ?? new Error('wait aborted'))
 +    }
-+    cleanup.push(ctx.jobs.onJobDone((job, agent) => {
-+      if (agent !== owner && agent !== undefined) return
-+      finish(job.id === id ? 'completed' : 'other_completion')
++    cleanup.push(ctx.jobs.events.subscribe(owner ? { owner: owner.id } : { owners: 'scope' }, event => {
++      if (event.type === 'settled') finish(event.job.id === id ? 'completed' : 'other_completion')
 +    }))
 +    cleanup.push(ctx.on('agent/inbox/inserted', ({ agent, message }) => {
 +      if (agent === owner && message.source.kind === 'user' && agent.inbox.nextStep.some(m => m.id === message.id)) finish('user_input')
@@ -616,16 +534,15 @@ index 277d718..fb4e089 100644
  export function apply(ctx: Context, config: Config): void {
    const waitDefault = config.waitTimeoutMs ?? 30_000
    const waitCap = config.maxWaitTimeoutMs ?? 600_000
-@@ -211,6 +257,8 @@ export function apply(ctx: Context, config: Config): void {
+@@ -196,6 +239,7 @@ export function apply(ctx: Context, config: Config): void {
    // human input. Keyed by the exact Agent, so a same-session replacement
    // starts with a full budget.
    const spentWakes = new WeakMap<Agent, number>()
 +  const lastWake = new WeakMap<Agent, number>()
-+  const notified = new WeakMap<Agent, Set<string>>()
    if (waitDefault > waitCap) {
      throw new Error(`tool-jobs: waitTimeoutMs (${waitDefault}) exceeds maxWaitTimeoutMs (${waitCap})`)
    }
-@@ -228,6 +276,37 @@ export function apply(ctx: Context, config: Config): void {
+@@ -213,6 +257,37 @@ export function apply(ctx: Context, config: Config): void {
      })
    }
  
@@ -648,14 +565,14 @@ index 277d718..fb4e089 100644
 +  ctx.on('agent/assistant-stream', ({ agent, frame }) => {
 +    if (frame.type !== 'start') return
 +    const events = agent.session.snapshotEvents(), after = admittedThrough.get(agent) ?? -1
-+    const current = new Map(ctx.jobs.list(agent).map(job => [job.id as string, job]))
++    const current = new Map(ctx.jobs.list(agent.id).map(job => [job.id as string, job]))
 +    for (const event of events) {
 +      if (event.seq <= after) continue
 +      const receipt = event.type === 'user/message' ? (event.data as NoticeMessage).jobReceipt
 +        : event.type === 'tool/result' ? (event.data.meta as { jobReceipt?: Receipt } | undefined)?.jobReceipt : undefined
 +      if (!receipt) continue
 +      const job = current.get(receipt.id)
-+      if (job?.runId === receipt.runId) ctx.jobs.markDelivered(job.id, receipt.delivery, agent)
++      if (job?.runId === receipt.runId) ctx.jobs.markDelivered(job.id, receipt.delivery, agent.id)
 +    }
 +    admittedThrough.set(agent, events.at(-1)?.seq ?? -1)
 +  })
@@ -663,45 +580,42 @@ index 277d718..fb4e089 100644
    const outputLimits = new WeakMap<ToolExecution, number>()
    ctx.on('tools/pre-execute', (exec, next) => {
      const maxBytes = visibleOutputLimit(ctx, exec)
-@@ -277,25 +356,43 @@ export function apply(ctx: Context, config: Config): void {
-   // agents; this listener owns delivery, not the choice of whom to deliver to.
-   ctx.jobs.onJobDone((snapshot, owner) => {
-     if (snapshot.reported || owner === undefined) return
+@@ -278,21 +353,36 @@ export function apply(ctx: Context, config: Config): void {
+     // absent here when it left before settlement — and then no inbox is left.
+     const owner = ctx.get('agents')?.get(event.job.owner)
+     if (owner === undefined) return
 -    const message = createUserMessage({
 -      content: [{
 -        type: 'text',
--        text: fitCompletionNotice(snapshot),
+-        text: fitCompletionNotice(event.job),
 -      }],
 -      source: {
--        kind: 'plugin',
--        plugin: 'tool-jobs',
+-        kind: 'tool-jobs',
 -        form: 'notice',
--        summary: completionSummary(snapshot),
+-        summary: completionSummary(event.job),
 -      },
++    const snapshot = event.job
 +    const options = ctx.jobs.ownerOptions(owner)
 +    const runId = snapshot.runId ?? snapshot.id
-+    let seen = notified.get(owner)
-+    if (!seen) { seen = new Set(); notified.set(owner, seen) }
-+    if (seen.has(runId)) return
 +    let text = fitCompletionNotice(snapshot)
 +    let supplied: Receipt['delivery'] = 'notice'
 +    if (options.completionPreviewBytes) {
 +      const maxBytes = Math.min(options.completionPreviewBytes, snapshot.outputLimitBytes ?? Infinity)
-+      const locator = `background job ${snapshot.id} ${statusLine(snapshot)}\nRead job_output({"job_id":${JSON.stringify(snapshot.id)}}) for remaining output.`
++      const locator = `background job ${snapshot.id} ${statusLine(publicJob(snapshot))}\nRead job_output({"job_id":${JSON.stringify(snapshot.id)}}) for remaining output.`
 +      const prefix = `${locator}\n[Retained output preview; may be truncated]\n`
 +      const room = maxBytes - encoder.encode(prefix).length
 +      if (room > 0) {
-+        const preview = ctx.jobs.peekOutput(snapshot.id, room, owner)
++        const preview = ctx.jobs.peekOutput(snapshot.id, room, owner.id)
 +        text = preview.available ? prefix + preview.text : locator
 +        if (preview.available) supplied = !preview.truncated && !/truncat|spill|saved to/i.test(preview.text) ? 'full' : 'preview'
 +      } else {
 +        // Producer caps still apply; no receipt claims a dropped locator or output.
-+        text = fitCompletionNotice(snapshot)
++        text = retainHead(fitCompletionNotice(snapshot), maxBytes)
 +      }
 +    }
 +    const message: NoticeMessage = createUserMessage({
 +      content: [{ type: 'text', text }],
-+      source: { kind: 'plugin', plugin: 'tool-jobs', form: 'notice', summary: completionSummary(snapshot) },
++      source: { kind: 'tool-jobs', form: 'notice', summary: completionSummary(snapshot) },
 +      ...(options.completionPreviewBytes ? { jobReceipt: { id: snapshot.id, runId, delivery: supplied } } : {}),
      })
      const spent = spentWakes.get(owner) ?? 0
@@ -711,25 +625,20 @@ index 277d718..fb4e089 100644
 +    const existingBatch = options.completionPreviewBytes && snapshot.startedAt <= (lastWake.get(owner) ?? -1)
 +    if (delivery === 'wakeup' && owner.status === 'idle' && (spent < wakeBudget || existingBatch)) {
        owner.followup(message)
-+      seen.add(runId)
 +      if (!existingBatch) { spentWakes.set(owner, spent + 1); lastWake.set(owner, Date.now()) }
        return
      }
      owner.inject(message)
-+    seen.add(runId)
-   })
- 
-   ctx.tools.register(defineTool({
-@@ -308,7 +405,7 @@ export function apply(ctx: Context, config: Config): void {
+@@ -308,7 +398,7 @@ export function apply(ctx: Context, config: Config): void {
      parameters: {
        job_id: { type: 'string', required: true, description: 'Job id returned by the tool that started the background work.' },
        wait: { type: 'boolean', description: 'Block until the job reaches a terminal status or the timeout expires. A timed-out wait returns [status: running] and leaves the job alive.' },
 -      timeout_ms: { type: 'number', description: 'Max wait in milliseconds (only meaningful with wait: true). Defaults to the configured wait timeout; capped by the configured maximum.' },
-+      timeout_ms: { type: 'number', description: 'Max wait in milliseconds (only meaningful with wait: true). For enabled top-level event waits, omission waits for completion or an actionable event. Ordinary and nested SDK waits default to the configured finite timeout; explicit values are capped.' },
++      timeout_ms: { type: 'number', description: 'Max wait in milliseconds (only meaningful with wait: true). For enabled top-level event waits, omission waits for completion or an actionable event. Other waits use the configured finite timeout; explicit values are capped.' },
      },
      finalizeContent: finalizeJobContent,
      output: {
-@@ -318,22 +415,33 @@ export function apply(ctx: Context, config: Config): void {
+@@ -318,25 +408,33 @@ export function apply(ctx: Context, config: Config): void {
          properties: {
            text: { type: 'string', required: true },
            job: { ...PUBLIC_JOB_SCHEMA, required: true },
@@ -747,158 +656,55 @@ index 277d718..fb4e089 100644
      },
      async execute(args, exec) {
        const id = validateJobId(args.job_id)
+-      const jobs = ctx.jobs
 +      let wakeReason: WakeReason | undefined
 +      if (args.timeout_ms !== undefined && (!Number.isFinite(args.timeout_ms) || args.timeout_ms <= 0)) throw new Error('timeout_ms must be positive')
        if (args.wait === true) {
--        const timeout = Math.min(args.timeout_ms ?? waitDefault, waitCap)
--        await ctx.jobs.wait(id, timeout, exec.agent, exec.signal)
+-        // A settlement that releases this wait is reported `awaited`, so the
+-        // notice listener above skips it: this result carries the terminal
+-        // state. A timed-out or aborted wait has left the registry's waiter
+-        // set before any later settlement, which then notifies as usual.
+-        await jobs.wait(id, Math.min(args.timeout_ms ?? waitDefault, waitCap), exec.agent?.id, exec.signal)
 +        if (!exec.parent && ctx.jobs.ownerOptions(exec.agent).interruptibleWait) {
 +          wakeReason = await waitForEvent(ctx, exec, id, args.timeout_ms === undefined ? undefined : Math.min(args.timeout_ms, waitCap))
-+          if (wakeReason !== 'completed') return { text: '', job: publicJob(ctx.jobs.get(id, exec.agent)), wakeReason }
++          if (wakeReason !== 'completed') return { text: '', job: publicJob(ctx.jobs.get(id, exec.agent?.id)), wakeReason }
 +        } else {
 +          const timeout = Math.min(args.timeout_ms ?? waitDefault, waitCap)
-+          await ctx.jobs.wait(id, timeout, exec.agent, exec.signal)
++          await ctx.jobs.wait(id, timeout, exec.agent?.id, exec.signal)
 +        }
        }
-       const read = ctx.jobs.read(id, exec.agent)
--      return { text: read.text, job: publicJob(read.snapshot) }
-+      return { text: read.text, job: publicJob(read.snapshot), ...(wakeReason ? { wakeReason } : {}) }
+-      return readBody(jobs.read(id, exec.agent?.id))
++      const read = ctx.jobs.read(id, exec.agent?.id)
++      return { ...readBody(read), ...(wakeReason ? { wakeReason } : {}) }
 +
      },
      presentCall: args => presentJobCall(`Read output from background job ${args.job_id}`, 'read', args.job_id),
    }))
-diff --git a/packages/shell/bash-local/src/index.ts b/packages/shell/bash-local/src/index.ts
-index c455eeb..dc6cd9e 100644
---- a/packages/shell/bash-local/src/index.ts
-+++ b/packages/shell/bash-local/src/index.ts
-@@ -322,6 +322,14 @@ export class LocalBashExecutor extends ShellExecutor {
-         providerFailureNote = `subprocess failed before reporting an outcome: ${detail}`
-         this.onProcessDone(proc, providerFailureNote, true, error)
-       }),
-+      peekOutput: (): ShellProcessRead => {
-+        const out = collected.stdout.readFrom(0)
-+        const err = collected.stderr.readFrom(0)
-+        const note = providerFailureNote ?? ''
-+        return { delta: out.text + (err.text || note ? `\n[stderr]\n${err.text}${note}` : ''), lossy: out.lossy || err.lossy,
-+          ...out.spillPath !== undefined ? { stdoutSpillPath: out.spillPath } : {},
-+          ...err.spillPath !== undefined ? { stderrSpillPath: err.spillPath } : {} }
-+      },
-       readOutput: (): ShellProcessRead => {
-         const out = collected.stdout.readFrom(stdoutOffset)
-         const err = collected.stderr.readFrom(stderrOffset)
-diff --git a/packages/shell/pwsh-local/src/index.ts b/packages/shell/pwsh-local/src/index.ts
-index bf1dd1c..e6fe75b 100644
---- a/packages/shell/pwsh-local/src/index.ts
-+++ b/packages/shell/pwsh-local/src/index.ts
-@@ -356,6 +356,14 @@ export class PwshLocalExecutor extends ShellExecutor {
-         providerFailureNote = `subprocess failed before reporting an outcome: ${detail}`
-         this.onProcessDone(proc, providerFailureNote, true, error)
-       }),
-+      peekOutput: (): ShellProcessRead => {
-+        const out = collected.stdout.readFrom(0)
-+        const err = collected.stderr.readFrom(0)
-+        const note = providerFailureNote ?? ''
-+        return { delta: out.text + (err.text || note ? `\n[stderr]\n${err.text}${note}` : ''), lossy: out.lossy || err.lossy,
-+          ...out.spillPath !== undefined ? { stdoutSpillPath: out.spillPath } : {},
-+          ...err.spillPath !== undefined ? { stderrSpillPath: err.spillPath } : {} }
-+      },
-       readOutput: (): ShellProcessRead => {
-         const out = collected.stdout.readFrom(stdoutOffset)
-         const err = collected.stderr.readFrom(stderrOffset)
-diff --git a/packages/shell/shell/src/types.ts b/packages/shell/shell/src/types.ts
-index 8964d76..a7748cb 100644
---- a/packages/shell/shell/src/types.ts
-+++ b/packages/shell/shell/src/types.ts
-@@ -178,6 +178,8 @@ export interface ShellProcess {
-    * full-stream spill files when available.
-    */
-   readOutput(): ShellProcessRead
-+  /** Inspect retained output from the beginning without consuming the read cursor. */
-+  peekOutput?(): ShellProcessRead
-   /**
-    * Terminate the provider-managed range. Returns false when it had already finished
-    * (no-op); idempotent.
-diff --git a/packages/shell/tool-bash/src/background.ts b/packages/shell/tool-bash/src/background.ts
-index c2087f3..d262e46 100644
---- a/packages/shell/tool-bash/src/background.ts
-+++ b/packages/shell/tool-bash/src/background.ts
-@@ -5,7 +5,7 @@
-  */
- 
- import type { ShellProcess } from '@deepseek-ai/dsh-shell'
--import type { JobHooks, JobOutcome } from '@deepseek-ai/dsh-jobs'
-+import type { JobRegistry, JobId, JobHooks, JobOutcome } from '@deepseek-ai/dsh-jobs'
- 
- /**
-  * Map a settled background process onto the generic task-outcome vocabulary:
-@@ -36,6 +36,7 @@ export function processOutcome(proc: ShellProcess): { status: 'completed' | 'kil
- export function processJob(
-   start: (signal: AbortSignal) => Promise<ShellProcess>,
-   renderOutput: (process: ShellProcess) => string,
-+  previewOutput?: (process: ShellProcess) => string,
- ): JobHooks {
-   const controller = new AbortController()
-   let process: ShellProcess | undefined
-@@ -63,5 +64,45 @@ export function processJob(
-     },
-     done,
-     readOutput: () => process === undefined ? '' : renderOutput(process),
-+    ...(previewOutput ? { peekOutput: () => process === undefined ? '' : previewOutput(process) } : {}),
-+  }
-+}
-+
-+/** Run once with job-owned cancellation, publishing only when the initial wait expires. */
-+export async function foregroundOrJob<T>(
-+  jobs: JobRegistry, owner: import('@deepseek-ai/dsh-agent').Agent,
-+  kind: import('@deepseek-ai/dsh-jobs').JobKind, label: string,
-+  signal: AbortSignal, yieldMs: number,
-+  run: (signal: AbortSignal) => Promise<T>, outcome: (value: T) => JobOutcome,
-+): Promise<{ kind: 'foreground'; value: T } | { kind: 'background'; jobId: JobId }> {
-+  signal.throwIfAborted()
-+  const controller = new AbortController()
-+  let result!: Promise<T>
-+  let settled!: Promise<JobOutcome>
-+  const id = jobs.start({ kind, label, owner, publication: 'deferred', run() {
-+    result = Promise.resolve().then(() => run(controller.signal))
-+    settled = result.then(outcome, error => ({ status: controller.signal.aborted ? 'killed' as const : 'failed' as const, detail: String(error) }))
-+    return { cancel: reason => controller.abort(reason), done: settled }
-+  } })
-+  const abort = (): void => { controller.abort(signal.reason) }
-+  signal.addEventListener('abort', abort, { once: true })
-+  let timer: ReturnType<typeof setTimeout> | undefined
-+  try {
-+    const done = await Promise.race([
-+      result.then(value => ({ kind: 'foreground' as const, value })),
-+      new Promise<{ kind: 'background'; jobId: JobId }>(resolve => { timer = setTimeout(() => resolve({ kind: 'background', jobId: id }), yieldMs) }),
-+    ])
-+    signal.throwIfAborted()
-+    if (done.kind === 'background') jobs.publish(id, owner)
-+    else { await settled; jobs.releaseCompleted(id, owner) }
-+    return done
-+  } catch (error) {
-+    controller.abort(error)
-+    await settled
-+    jobs.releaseCompleted(id, owner)
-+    throw error
-+  } finally {
-+    clearTimeout(timer)
-+    signal.removeEventListener('abort', abort)
-   }
- }
+diff --git a/packages/jobs/tool-jobs/src/render.ts b/packages/jobs/tool-jobs/src/render.ts
+index b95eb43..bdd7349 100644
+--- a/packages/jobs/tool-jobs/src/render.ts
++++ b/packages/jobs/tool-jobs/src/render.ts
+@@ -11,6 +11,7 @@ import type { JobChunk, JobView } from '@deepseek-ai/dsh-jobs/view'
+ /** Job state safe for model-authored programs; ownership and offsets are omitted. */
+ export interface PublicJobSnapshot {
+   id: string
++  runId?: string
+   kind: string
+   label: string
+   status: JobView['status']
+@@ -39,6 +40,7 @@ export function publicJob(job: JobView): PublicJobSnapshot {
+   const detail = jobDetail(job)
+   return {
+     id: job.id,
++    ...job.runId === undefined ? {} : { runId: job.runId },
+     kind: job.kind,
+     label: job.label,
+     status: job.status,
 diff --git a/packages/shell/tool-bash/src/index.ts b/packages/shell/tool-bash/src/index.ts
-index a539ca7..fd07ae1 100644
+index c74b051..d124149 100644
 --- a/packages/shell/tool-bash/src/index.ts
 +++ b/packages/shell/tool-bash/src/index.ts
-@@ -23,7 +23,7 @@ import { ESCALATION_TARGETS, approveEscalation, validateEscalationArgs } from '@
- import type { SandboxPolicyService } from '@deepseek-ai/dsh-sandbox-policy'
- import { DSH_ENV_PREFIX } from '@deepseek-ai/dsh-shell'
- import type { ShellRunResult } from '@deepseek-ai/dsh-shell'
--import { processJob } from './background.ts'
-+import { processJob, foregroundOrJob } from './background.ts'
- import { parseExitStatus, renderProcessRead, renderResult } from './render.ts'
- 
- export const name = 'tool-bash'
-@@ -45,6 +45,7 @@ interface BashToolArgs {
+@@ -63,6 +63,7 @@ interface BashToolArgs {
    command: string
    description: string
    timeoutMs?: number
@@ -906,128 +712,68 @@ index a539ca7..fd07ae1 100644
    workdir?: string
    run_in_background?: boolean
    sandbox_permissions?: string
-@@ -250,6 +251,7 @@ export function apply(ctx: Context, config: Config = {}): void {
-           + '5-10 words (shown in the UI). Examples: "ls" → "List files in current directory"; '
-           + '"git status" → "Show working tree status"; "npm install" → "Install package dependencies".',
-       },
-+      ...backgroundEnabled ? { yieldMs: { type: 'number', description: 'Initial wait in milliseconds (250–30000) for enabled automatic background mode on top-level calls only. Explicit foreground and SDK calls keep their final-result semantics.' }, } : {},
-       timeoutMs: { type: 'number', description: 'Timeout in milliseconds. The executor applies its configured default and cap, and kills the command on expiry.' },
-       workdir: { type: 'string', description: 'Working directory for this command. Defaults to the session workspace; a relative path is resolved against it.' },
-       ...backgroundEnabled ? {
-@@ -328,6 +330,7 @@ export function apply(ctx: Context, config: Config = {}): void {
-     },
-     async execute(args: BashToolArgs, exec) {
-       validateBashArgs(args)
-+      if (args.yieldMs !== undefined && (!Number.isInteger(args.yieldMs) || args.yieldMs < 250 || args.yieldMs > 30000)) throw new Error('yieldMs must be an integer from 250 to 30000')
-       // Description is display metadata; workdir defaults to the caller's session.
-       const standingPolicy = resolveSandboxPolicy(exec)
-       const approvedMode = args.sandbox_permissions !== undefined && args.justification !== undefined
-@@ -368,10 +371,23 @@ export function apply(ctx: Context, config: Config = {}): void {
-           run: () => processJob(
-             signal => ctx.shell.start(ctx.shell.resolve({ ...request, signal })),
-             proc => renderProcessRead(proc.readOutput(), proc.sandbox, escalationModes),
-+            proc => proc.peekOutput ? renderProcessRead(proc.peekOutput(), proc.sandbox, escalationModes) : '[Output preview unavailable; use job_output.]',
-           ),
-         })
-         return { kind: 'background' as const, jobId: id }
+@@ -323,9 +324,9 @@ export function apply(ctx: Context, config: Config = {}): void {
+       return { id, process: () => proc, stopped: () => stopped }
+     }
+     /** Wait on a registered foreground command until it settles or the timeout passes. */
+-    const waitOnJob = async (registry: JobRegistry, attached: StartedJob, exec: ToolExecution, spec: ShellExecSpec) => {
++    const waitOnJob = async (registry: JobRegistry, attached: StartedJob, exec: ToolExecution, spec: ShellExecSpec, waitMs = spec.timeoutMs, softYield = false) => {
+       const owner = exec.agent?.id
+-      const timeoutMs = spec.timeoutMs
++      const timeoutMs = waitMs
+       /**
+        * Stop the job on this call's own account and stay on it until it
+        * settles, so the settlement is `awaited` and no completion notice
+@@ -348,7 +349,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+         await stop('tool call aborted')
+         throw toolAborted()
        }
-+      const jobs = ctx.get('jobs')
-+      const softYield = jobs?.ownerOptions(exec.agent).softYieldMs
-+      if (backgroundEnabled && exec.agent && !exec.parent && args.run_in_background === undefined && softYield !== undefined) {
-+        const result = await foregroundOrJob(jobs!, exec.agent, 'bash', args.command, exec.signal, args.yieldMs ?? softYield,
-+          signal => ctx.shell.run(ctx.shell.resolve({ ...request, signal })),
-+          value => ({ status: value.aborted ? 'killed' : value.timedOut ? 'failed' : 'completed',
-+            detail: `exit code: ${value.exitCode}${value.timedOut ? '; timed out' : ''}${value.signal ? '; signal: ' + value.signal : ''}`,
-+            output: renderResult(value, escalationModes) }))
-+        if (result.kind === 'background') return result
-+        if (result.value.aborted) throw new HarnessError('tool call aborted', TOOL_ABORTED)
-+        return { kind: 'foreground' as const, ...canonicalBashResult(result.value) }
-+      }
-       const result = await ctx.shell.run(ctx.shell.resolve({
-         ...request,
-         signal: exec.signal,
-diff --git a/packages/shell/tool-pwsh/src/background.ts b/packages/shell/tool-pwsh/src/background.ts
-index ce506a5..0f1b151 100644
---- a/packages/shell/tool-pwsh/src/background.ts
-+++ b/packages/shell/tool-pwsh/src/background.ts
-@@ -6,7 +6,7 @@
-  */
- 
- import type { ShellProcess } from '@deepseek-ai/dsh-shell'
--import type { JobHooks, JobOutcome } from '@deepseek-ai/dsh-jobs'
-+import type { JobRegistry, JobId, JobHooks, JobOutcome } from '@deepseek-ai/dsh-jobs'
- 
- /* jscpd:ignore-start -- deliberate twin of dsh-tool-bash/background.ts (Agent Note). */
- 
-@@ -39,6 +39,7 @@ export function processOutcome(proc: ShellProcess): { status: 'completed' | 'kil
- export function processJob(
-   start: (signal: AbortSignal) => Promise<ShellProcess>,
-   renderOutput: (process: ShellProcess) => string,
-+  previewOutput?: (process: ShellProcess) => string,
- ): JobHooks {
-   const controller = new AbortController()
-   let process: ShellProcess | undefined
-@@ -66,6 +67,46 @@ export function processJob(
-     },
-     done,
-     readOutput: () => process === undefined ? '' : renderOutput(process),
-+    ...(previewOutput ? { peekOutput: () => process === undefined ? '' : previewOutput(process) } : {}),
-   }
- }
- /* jscpd:ignore-end */
-+
-+/** Run once with job-owned cancellation, publishing only when the initial wait expires. */
-+export async function foregroundOrJob<T>(
-+  jobs: JobRegistry, owner: import('@deepseek-ai/dsh-agent').Agent,
-+  kind: import('@deepseek-ai/dsh-jobs').JobKind, label: string,
-+  signal: AbortSignal, yieldMs: number,
-+  run: (signal: AbortSignal) => Promise<T>, outcome: (value: T) => JobOutcome,
-+): Promise<{ kind: 'foreground'; value: T } | { kind: 'background'; jobId: JobId }> {
-+  signal.throwIfAborted()
-+  const controller = new AbortController()
-+  let result!: Promise<T>
-+  let settled!: Promise<JobOutcome>
-+  const id = jobs.start({ kind, label, owner, publication: 'deferred', run() {
-+    result = Promise.resolve().then(() => run(controller.signal))
-+    settled = result.then(outcome, error => ({ status: controller.signal.aborted ? 'killed' as const : 'failed' as const, detail: String(error) }))
-+    return { cancel: reason => controller.abort(reason), done: settled }
-+  } })
-+  const abort = (): void => { controller.abort(signal.reason) }
-+  signal.addEventListener('abort', abort, { once: true })
-+  let timer: ReturnType<typeof setTimeout> | undefined
-+  try {
-+    const done = await Promise.race([
-+      result.then(value => ({ kind: 'foreground' as const, value })),
-+      new Promise<{ kind: 'background'; jobId: JobId }>(resolve => { timer = setTimeout(() => resolve({ kind: 'background', jobId: id }), yieldMs) }),
-+    ])
-+    signal.throwIfAborted()
-+    if (done.kind === 'background') jobs.publish(id, owner)
-+    else { await settled; jobs.releaseCompleted(id, owner) }
-+    return done
-+  } catch (error) {
-+    controller.abort(error)
-+    await settled
-+    jobs.releaseCompleted(id, owner)
-+    throw error
-+  } finally {
-+    clearTimeout(timer)
-+    signal.removeEventListener('abort', abort)
-+  }
-+}
+-      if ((view.status === 'running' || view.status === 'stopping') && attached.process() === undefined) {
++      if ((view.status === 'running' || view.status === 'stopping') && attached.process() === undefined && !softYield) {
+         // The wait expired while preparation still ran: nothing is running
+         // to keep, so this is the deadline's preparation timeout, with the
+         // settled empty result the executor's own deadline would have given.
+@@ -410,6 +411,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+             ? 'Timeout in milliseconds. The executor applies its configured default and cap; on expiry the command moves to the background as a job instead of being killed.'
+             : 'Timeout in milliseconds. The executor applies its configured default and cap, and kills the command on expiry.',
+         },
++        ...background ? { yieldMs: { type: 'number' as const, description: 'Initial wait in milliseconds (250–30000) for enabled automatic background mode on top-level calls. The command keeps its original deadline; explicit foreground and nested calls wait for the final result.' } } : {},
+         workdir: { type: 'string', description: 'Working directory for this command. Defaults to the session workspace; a relative path is resolved against it.' },
+         ...background ? {
+           run_in_background: { type: 'boolean' as const, description: 'Run in the background and return a job id immediately (collect with job_output, stop with job_kill). No timeout applies.' },
+@@ -502,6 +504,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+         // Description is display metadata; workdir defaults to the caller's session.
+         const standingPolicy = resolveSandboxPolicy(exec)
+         validateBashArgs(args, standingPolicy?.mode)
++        if (args.yieldMs !== undefined && (!Number.isInteger(args.yieldMs) || args.yieldMs < 250 || args.yieldMs > 30000)) throw new Error('yieldMs must be an integer from 250 to 30000')
+         const approvedMode = args.sandbox_permissions !== undefined && args.justification !== undefined
+           ? await approveBashEscalation(args.sandbox_permissions, args.justification, exec, standingPolicy)
+           : undefined
+@@ -529,12 +532,18 @@ export function apply(ctx: Context, config: Config = {}): void {
+           if (exec.signal.aborted) throw toolAborted()
+           return { kind: 'background' as const, jobId: startJob(jobs, args, exec, ctx.shell.resolve({ ...request, onExpiry: 'none' })).id }
+         }
++        const softYield = jobs?.ownerOptions(exec.agent).softYieldMs
++        if (jobs !== undefined && softYield !== undefined && !exec.parent && args.run_in_background === undefined) {
++          const spec = ctx.shell.resolve({ ...request, onExpiry: 'kill' })
++          const attached = startJob(jobs, args, exec, spec)
++          return waitOnJob(jobs, attached, exec, spec, args.yieldMs ?? softYield, true)
++        }
+         // A foreground call is a job the tool waits on, so the command is
+         // visible and killable from the moment it starts and outlives the wait
+         // when the timeout passes. Admission refused at the start (the owner's
+         // job limit, no controller) runs the command under the deadline kill
+         // instead, exactly as a composition without a registry does.
+-        if (jobs !== undefined && promote) {
++        if (jobs !== undefined && promote && softYield === undefined) {
+           const spec = ctx.shell.resolve({ ...request, onExpiry: 'none' })
+           let attached: StartedJob | undefined
+           try {
 diff --git a/packages/shell/tool-pwsh/src/index.ts b/packages/shell/tool-pwsh/src/index.ts
-index 76e4340..be1d864 100644
+index 8fdfddd..0df20f7 100644
 --- a/packages/shell/tool-pwsh/src/index.ts
 +++ b/packages/shell/tool-pwsh/src/index.ts
-@@ -34,7 +34,7 @@ import { ESCALATION_TARGETS, approveEscalation, validateEscalationArgs } from '@
- import type { SandboxPolicyService } from '@deepseek-ai/dsh-sandbox-policy'
- import type { ShellRunResult } from '@deepseek-ai/dsh-shell'
- import { parseExitStatus } from '@deepseek-ai/dsh-shell'
--import { processJob } from './background.ts'
-+import { processJob, foregroundOrJob } from './background.ts'
- import { renderPwshProcessRead, renderPwshResult } from './render.ts'
- import type { RenderablePwshResult } from './render.ts'
- 
-@@ -63,6 +63,7 @@ interface PwshToolArgs {
+@@ -81,6 +81,7 @@ interface PwshToolArgs {
    command: string
    description: string
    timeoutMs?: number
@@ -1035,43 +781,60 @@ index 76e4340..be1d864 100644
    workdir?: string
    run_in_background?: boolean
    sandbox_permissions?: string
-@@ -260,6 +261,7 @@ export function apply(ctx: Context, config: Config = {}): void {
-           + '5-10 words (shown in the UI). Examples: "ls" → "List files in current directory"; '
-           + '"git status" → "Show working tree status"; "Get-Process" → "List running processes".',
-       },
-+      ...backgroundEnabled ? { yieldMs: { type: 'number', description: 'Initial wait in milliseconds (250–30000) for enabled automatic background mode on top-level calls only. Explicit foreground and SDK calls keep final-result semantics.' }, } : {},
-       timeoutMs: { type: 'number', description: 'Timeout in milliseconds. The executor applies its configured default and cap, and kills the command on expiry.' },
-       workdir: { type: 'string', description: 'Working directory for this command. Defaults to the session workspace; a relative path is resolved against it.' },
-       ...backgroundEnabled ? {
-@@ -345,6 +347,7 @@ export function apply(ctx: Context, config: Config = {}): void {
-     /* jscpd:ignore-start -- the execute path mirrors dsh-tool-bash's by design (see the pwsh-tool-and-executor Agent Note). */
-     async execute(args: PwshToolArgs, exec) {
-       validatePwshArgs(args)
-+      if (args.yieldMs !== undefined && (!Number.isInteger(args.yieldMs) || args.yieldMs < 250 || args.yieldMs > 30000)) throw new Error('yieldMs must be an integer from 250 to 30000')
-       // Description is display metadata; workdir defaults to the caller's session.
-       const standingPolicy = resolveSandboxPolicy(exec)
-       const approvedMode = args.sandbox_permissions !== undefined && args.justification !== undefined
-@@ -384,10 +387,23 @@ export function apply(ctx: Context, config: Config = {}): void {
-           run: () => processJob(
-             signal => ctx.shell.start(ctx.shell.resolve({ ...request, signal })),
-             proc => renderPwshProcessRead(proc.readOutput(), proc.sandbox, escalationModes),
-+            proc => proc.peekOutput ? renderPwshProcessRead(proc.peekOutput(), proc.sandbox, escalationModes) : '[Output preview unavailable; use job_output.]',
-           ),
-         })
-         return { kind: 'background' as const, jobId: id }
+@@ -331,9 +332,9 @@ export function apply(ctx: Context, config: Config = {}): void {
+       return { id, process: () => proc, stopped: () => stopped }
+     }
+     /** Wait on a registered foreground command until it settles or the timeout passes. */
+-    const waitOnJob = async (registry: JobRegistry, attached: StartedJob, exec: ToolExecution, spec: ShellExecSpec) => {
++    const waitOnJob = async (registry: JobRegistry, attached: StartedJob, exec: ToolExecution, spec: ShellExecSpec, waitMs = spec.timeoutMs, softYield = false) => {
+       const owner = exec.agent?.id
+-      const timeoutMs = spec.timeoutMs
++      const timeoutMs = waitMs
+       /**
+        * Stop the job on this call's own account and stay on it until it
+        * settles, so the settlement is `awaited` and no completion notice
+@@ -356,7 +357,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+         await stop('tool call aborted')
+         throw toolAborted()
        }
-+      const jobs = ctx.get('jobs')
-+      const softYield = jobs?.ownerOptions(exec.agent).softYieldMs
-+      if (backgroundEnabled && exec.agent && !exec.parent && args.run_in_background === undefined && softYield !== undefined) {
-+        const result = await foregroundOrJob(jobs!, exec.agent, 'pwsh', args.command, exec.signal, args.yieldMs ?? softYield,
-+          signal => ctx.shell.run(ctx.shell.resolve({ ...request, signal })),
-+          value => ({ status: value.aborted ? 'killed' : value.timedOut ? 'failed' : 'completed',
-+            detail: `exit code: ${value.exitCode}${value.timedOut ? '; timed out' : ''}${value.signal ? '; signal: ' + value.signal : ''}`,
-+            output: renderPwshResult(value, escalationModes) }))
-+        if (result.kind === 'background') return result
-+        if (result.value.aborted) throw new HarnessError('tool call aborted', TOOL_ABORTED)
-+        return canonicalPwshResult(result.value)
-+      }
-       const result = await ctx.shell.run(ctx.shell.resolve({
-         ...request,
-         signal: exec.signal,
+-      if ((view.status === 'running' || view.status === 'stopping') && attached.process() === undefined) {
++      if ((view.status === 'running' || view.status === 'stopping') && attached.process() === undefined && !softYield) {
+         // The wait expired while preparation still ran: nothing is running
+         // to keep, so this is the deadline's preparation timeout, with the
+         // settled empty result the executor's own deadline would have given.
+@@ -420,6 +421,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+             ? 'Timeout in milliseconds. The executor applies its configured default and cap; on expiry the command moves to the background as a job instead of being killed.'
+             : 'Timeout in milliseconds. The executor applies its configured default and cap, and kills the command on expiry.',
+         },
++        ...background ? { yieldMs: { type: 'number' as const, description: 'Initial wait in milliseconds (250–30000) for enabled automatic background mode on top-level calls. The command keeps its original deadline; explicit foreground and nested calls wait for the final result.' } } : {},
+         workdir: { type: 'string', description: 'Working directory for this command. Defaults to the session workspace; a relative path is resolved against it.' },
+         ...background ? {
+           run_in_background: { type: 'boolean' as const, description: 'Run in the background and return a job id immediately (collect with job_output, stop with job_kill). No timeout applies.' },
+@@ -517,6 +519,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+       /* jscpd:ignore-start -- the execute path mirrors dsh-tool-bash's by design (see the pwsh-tool-and-executor Agent Note). */
+       async execute(args: PwshToolArgs, exec) {
+         validatePwshArgs(args)
++        if (args.yieldMs !== undefined && (!Number.isInteger(args.yieldMs) || args.yieldMs < 250 || args.yieldMs > 30000)) throw new Error('yieldMs must be an integer from 250 to 30000')
+         // Description is display metadata; workdir defaults to the caller's session.
+         const standingPolicy = resolveSandboxPolicy(exec)
+         const approvedMode = args.sandbox_permissions !== undefined && args.justification !== undefined
+@@ -545,12 +548,18 @@ export function apply(ctx: Context, config: Config = {}): void {
+           if (exec.signal.aborted) throw toolAborted()
+           return { kind: 'background' as const, jobId: startJob(jobs, args, exec, ctx.shell.resolve({ ...request, onExpiry: 'none' })).id }
+         }
++        const softYield = jobs?.ownerOptions(exec.agent).softYieldMs
++        if (jobs !== undefined && softYield !== undefined && !exec.parent && args.run_in_background === undefined) {
++          const spec = ctx.shell.resolve({ ...request, onExpiry: 'kill' })
++          const attached = startJob(jobs, args, exec, spec)
++          return waitOnJob(jobs, attached, exec, spec, args.yieldMs ?? softYield, true)
++        }
+         // A foreground call is a job the tool waits on, so the command is
+         // visible and killable from the moment it starts and outlives the wait
+         // when the timeout passes. Admission refused at the start (the owner's
+         // job limit, no controller) runs the command under the deadline kill
+         // instead, exactly as a composition without a registry does.
+-        if (jobs !== undefined && promote) {
++        if (jobs !== undefined && promote && softYield === undefined) {
+           const spec = ctx.shell.resolve({ ...request, onExpiry: 'none' })
+           let attached: StartedJob | undefined
+           try {

@@ -1,3 +1,4 @@
+import { sourceName } from '../message-source.mjs';
 import { symbols } from '@deepseek-ai/cordis';
 import { freezeMessage, isAgentLoopRequest, markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 
@@ -6,7 +7,7 @@ import { freezeMessage, isAgentLoopRequest, markAgentLoopRequest } from '@deepse
 export function withoutMovedReasoning(messages, session, traceSlot) {
   if (!traceSlot) return messages;
   const carrier = session.deriveEventMessage(session.eventAt(traceSlot.carrierSeq));
-  if (!carrier || !messages.some(m => m.id === carrier.id && m.source?.plugin === 'trisoul-x:trace')) return messages;
+  if (!carrier || !messages.some(m => m.id === carrier.id && sourceName(m.source) === 'trisoul-x:trace')) return messages;
   const ids = new Set((traceSlot.movedSourceSeqs || [traceSlot.sourceSeq])
     .map(seq => session.eventAt(seq)?.data?.message?.id).filter(Boolean));
   let changed = false;

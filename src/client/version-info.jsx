@@ -16,7 +16,7 @@ export function VersionInfo() {
     setBusy(true);
     pending.current = (async () => {
       try {
-        const response = await fetch('/trisoul-x/api/version' + (refresh ? '?refresh=1' : ''), { signal: controller.signal, cache: 'no-store' });
+        const response = await fetch('trisoul-x/api/version' + (refresh ? '?refresh=1' : ''), { signal: controller.signal, cache: 'no-store' });
         if (!response.ok) throw Error('Version check failed');
         const result = await response.json();
         if (typeof result.currentVersion !== 'string' || !['unknown', 'current', 'ahead', 'update'].includes(result.status)) throw Error('Invalid version response');
@@ -72,7 +72,7 @@ export function VersionInfo() {
       <p className="omd-version-meta">仅读取官方仓库的公开发布信息，不自动安装，不上传会话内容。</p>
       {data.currentVersion !== CLIENT_VERSION && <p className="omd-version-error">服务已更新，当前界面仍为 {CLIENT_VERSION}。<button type="button" onClick={() => window.location.reload()}>刷新界面</button></p>}
       <footer><button type="button" className="omd-version-check" disabled={busy} onClick={() => void load(true)}>{busy ? '正在检查…' : '检查更新'}</button>
-        <a href="https://github.com/gulagala001/oh-my-dsh/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">查看发布记录 ↗</a></footer></>}
+        <a href={'https://github.com/gulagala001/oh-my-dsh/releases/tag/v' + CLIENT_VERSION} target="_blank" rel="noopener noreferrer">查看发布记录 ↗</a></footer></>}
     </dialog>
   </span>;
 }

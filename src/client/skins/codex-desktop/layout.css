@@ -1,4 +1,4 @@
-/* Codex desktop adapter for DSH 0.1.6-alpha.2. Primary visual reference:
+/* Codex desktop adapter for DSH 0.1.7-alpha.1. Primary visual reference:
    the user's September 20 desktop capture. Keep native nodes and events. */
 html.omd[data-omd-layout="codex-desktop"] {
   & body, & body > * {
@@ -105,7 +105,7 @@ html.omd[data-omd-layout="codex-desktop"] {
   & .l_V-RG_root::after { content: ""; flex: 1; height: 1px; background: var(--omd-pane-line); }
   & .l_V-RG_label { font-size: 12px; }
   & :is(.tx-cu-group-toggle, .omd-record-toggle) { min-height: 28px; font-size: 12px; }
-  & :is(.tx-cu-group-list, .omd-record-body) { border-radius: 8px; }
+  & :is([data-step-process-body], .omd-record-body) { border-radius: 8px; }
   & [data-disclosure-row] { font-size: 13px; }
   & [data-chat-flow-kind] :is(p, li) { line-height: 1.65; }
   & [data-chat-flow-kind] a { text-decoration: underline; text-underline-offset: 3px; }
@@ -165,13 +165,13 @@ html.omd[data-omd-layout="codex-desktop"] {
   & .VOzbGW_options > * { max-width: 680px; margin-left: auto; margin-right: auto; }
   & .VOzbGW_options :is(h1, h2) { font-size: 20px; font-weight: 600; line-height: 28px; letter-spacing: -.3px; }
   & .VOzbGW_options :is(h3, h4) { font-size: 13px; font-weight: 600; }
-  & :is(.oY77xG_row, .hVGvvW_row, .bVCLcG_row, .lats3W_row, .T1PP_q_row) { min-height: 48px; padding-block: 10px; border-bottom: 1px solid var(--omd-pane-line); }
+  & :is(.oY77xG_row, .hVGvvW_row, .bVCLcG_row, ._2XZxNq_row, .T1PP_q_row) { min-height: 48px; padding-block: 10px; border-bottom: 1px solid var(--omd-pane-line); }
   & ._8HJdBW_group { flex-direction: row; align-items: center; justify-content: space-between; padding: 12px 0; border-color: var(--omd-pane-line); gap: 12px; }
   & ._8HJdBW_cubeRow { gap: 2px; padding: 2px; background: var(--omd-subtle); border-radius: 99px; flex-wrap: nowrap; }
   & ._8HJdBW_themeCube { flex: 0 1 auto; flex-direction: row; gap: 5px; padding: 5px 9px; border: 0; border-radius: 99px; font-size: 12px; line-height: 18px; white-space: nowrap; }
   & ._8HJdBW_themeCube svg { width: 13px; height: 13px; }
   & ._8HJdBW_selected { background: var(--omd-selected); box-shadow: 0 1px 3px #0000000d; }
-  & :is(.oY77xG_selector, .hVGvvW_selector, .lats3W_selector, .T1PP_q_selector, .bVCLcG_stepper) { min-height: 30px; height: 30px; padding-block: 4px; border-radius: 8px; font-size: 13px; background: var(--omd-subtle); }
+  & :is(.oY77xG_selector, .hVGvvW_selector, ._2XZxNq_selector, .T1PP_q_selector, .bVCLcG_stepper) { min-height: 30px; height: 30px; padding-block: 4px; border-radius: 8px; font-size: 13px; background: var(--omd-subtle); }
   & :is(.cx-field, .tx-field) { gap: 6px; margin-block: 10px; }
   & :is(.cx-field, .tx-field, .cx-toggle) { font-size: 13px; }
   & :is(.cx-toggle, .tx-toggle) { min-height: 38px; padding-block: 7px; }

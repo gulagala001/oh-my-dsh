@@ -1,4 +1,6 @@
 import { symbols } from '@deepseek-ai/cordis';
+// Cordis 4.0.3 exports FiberState as a TypeScript const enum.
+const UNLOADING = 5;
 const untrace = value => value?.[symbols.original] || value;
 const installed = Symbol.for('omd.loader-live-entries.alpha2');
 
@@ -41,9 +43,10 @@ export function bindLiveLoaderEntries(loader) {
     function remove(id, ...args) {
       const entry = untrace(this.tree?.store?.[id]);
       if (entry) removing.set(entry, (removing.get(entry) || 0) + 1);
+      const fiber = entry?.fiber;
       let task;
       const cleanup = () => { tasks.delete(task); if (entry) { const n = removing.get(entry) - 1; if (n) removing.set(entry, n); else removing.delete(entry); } };
-      try { task = Promise.resolve(originalRemove.call(this, id, ...args)); } catch (error) { cleanup(); throw error; }
+      try { task = Promise.resolve(originalRemove.call(this, id, ...args)).then(() => fiber?.dispose?.()); } catch (error) { cleanup(); throw error; }
       tasks.add(task); task.then(cleanup, cleanup);
       return task;
     }
@@ -61,12 +64,19 @@ export function bindLiveLoaderEntries(loader) {
           const oldConfig = [...group.data], targetIds = new Set(config.map(row => row.id));
           const retiring = oldConfig.filter(row => !targetIds.has(row.id) &&
             (row.name === 'trisoul_x' || row.name?.startsWith('trisoul_x/host/') || row.name === '@oh-my-dsh/ui-conversation'));
-          // Loader 1.0.3 starts incoming services before removing outgoing rows.
+          // Loader 1.0.4 starts incoming services before removing outgoing rows.
           // OMD replaces several exclusive host services: retire our removed
           // rows first so the original services can activate. Keep oldConfig
           // intact for Loader's existing rollback, including preparation failure.
           try {
             for (const row of retiring) await group.remove(row.id, true);
+            // Service dependents may still be releasing exclusive registrations.
+            // Drain their existing unloads before replacement providers activate.
+            for (;;) {
+              const pending = [...original.call(loader)].map(e => e.fiber).filter(f => f?.state === UNLOADING && f.inertia).map(f => f.inertia);
+              if (!pending.length) break;
+              await Promise.all(pending);
+            }
           } catch (error) {
             try { await originalUpdate.call(group, oldConfig); }
             catch (rollbackError) { throw new AggregateError([error, rollbackError], 'OMD provider retirement rollback failed'); }
@@ -118,5 +128,5 @@ export function installLoaderLifecycleCompatibility(ctx) {
     const dispose = bindLiveLoaderEntries(loader);
     root[installed] = dispose;
     return () => { dispose(); if (root[installed] === dispose) delete root[installed]; };
-  }, 'OMD alpha.2 live loader iteration');
+  }, 'OMD live loader iteration');
 }

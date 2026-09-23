@@ -1,11 +1,12 @@
+import { sourceName } from '../message-source.mjs';
 import { randomUUID } from 'node:crypto';
 import { latestTaskContext, isTaskInjection, withoutTodo, TODO_META } from '../task-context.mjs';
 import { contentChars, messageTokens } from './materials.mjs';
 
 function operationMessage(op) {
   if (op.kind === 'delete') return null;
-  if (op.kind === 'trace') return { id: op.id, role: 'user', source: { kind: 'plugin', plugin: 'trisoul-x:trace' }, content: op.content || [{ type: 'text', text: op.text }, ...(op.original.content || [])], ...(op.todoMeta ? { [TODO_META]: op.todoMeta } : {}) };
-  return { id: op.id, role: 'user', source: { kind: 'plugin', plugin: 'trisoul-x:context-record' }, content: op.content || [{ type: 'text', text: op.text }] };
+  if (op.kind === 'trace') return { id: op.id, role: 'user', source: { kind: 'plugin:trisoul-x:trace' }, content: op.content || [{ type: 'text', text: op.text }, ...(op.original.content || [])], ...(op.todoMeta ? { [TODO_META]: op.todoMeta } : {}) };
+  return { id: op.id, role: 'user', source: { kind: 'plugin:trisoul-x:context-record' }, content: op.content || [{ type: 'text', text: op.text }] };
 }
 // Native surfaces support append/replace, not insertion. The task text occupies
 // a tagged text block immediately after Trace, or before the first user-role
@@ -22,12 +23,12 @@ export function attachTodoRefresh(session, tx, pricing) {
     if (at < 0 || end < at) throw Error('无法规划 todo 刷新：压缩范围已变化');
     nodes.splice(at, end - at + 1, { key: op.id, message: operationMessage(op) });
   }
-  let target = nodes.find(n => n.message?.source?.plugin === 'trisoul-x:trace');
+  let target = nodes.find(n => sourceName(n.message?.source) === 'trisoul-x:trace');
   target ||= nodes.find(n => n.message?.role === 'user' && !isTaskInjection(n.event) && !n.message.content.some(b => b.type === 'tool-result'));
   if (!target) throw Error('没有安全的 todo 承载位置，原文保留');
-  const base = withoutTodo(target.message), index = base.source?.plugin === 'trisoul-x:trace' ? 1 : 0;
+  const base = withoutTodo(target.message), index = sourceName(base.source) === 'trisoul-x:trace' ? 1 : 0;
   const id = randomUUID(), content = [...base.content]; content.splice(index, 0, { type: 'text', text: todo.text });
-  const fresh = { ...base, id, content, source: base.source?.kind === 'user' ? { kind: 'plugin', plugin: 'trisoul-x:todo-prefix' } : base.source,
+  const fresh = { ...base, id, content, source: base.source?.kind === 'user' ? { kind: 'plugin:trisoul-x:todo-prefix' } : base.source,
     [TODO_META]: { baseId: base.id, baseSource: base.source, index, snapshotSeq: todo.snapshotSeq, context: todo.meta,
       originalSeq: target.message[TODO_META]?.originalSeq ?? (typeof target.key === 'number' ? target.key : null) } };
   const account = (node, after) => {

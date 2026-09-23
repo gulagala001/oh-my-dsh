@@ -130,10 +130,10 @@ test('full result survives a flush failure and can resume without another model 
 
 test('opaque attachments are identified, not invented or sent as base64 text', async t => {
   const f = setup(t); const events = exchange(f.session);
-  events[1].data.message.content[0].content.push({ type: 'image', data: 'DO_NOT_SERIALIZE_BASE64' });
+  events[1].data.message.content.push({ type: 'image', data: 'DO_NOT_SERIALIZE_BASE64' });
   await f.run('full'); const request = JSON.stringify(f.calls[0].request);
   assert.match(request, /content not supplied/); assert.doesNotMatch(request, /DO_NOT_SERIALIZE_BASE64/);
-  assert.equal(events[1].data.message.content[0].content.at(-1).data, 'DO_NOT_SERIALIZE_BASE64');
+  assert.equal(events[1].data.message.content.at(-1).data, 'DO_NOT_SERIALIZE_BASE64');
 });
 
 test('slash registrations validate input and never forward command text to a model', async t => {

@@ -1,3 +1,4 @@
+import { sourceName } from '../message-source.mjs';
 import { isTaskInjection, summaryMessageReader, withoutTodo, TODO_META } from '../task-context.mjs';
 import { createHash, randomUUID } from 'node:crypto';
 import { attachmentsOf, combineAssets, combineUsers, userDocument, describeAsset, materialText, contentChars, messageTokens, assetBlocks } from './materials.mjs';
@@ -21,7 +22,7 @@ export const eventTime = e => {
   if (typeof v === 'string' && Number.isFinite(Date.parse(v))) return Date.parse(v);
   return null;
 };
-export const eventSource = e => e.type === 'user/message' ? e.data?.source?.plugin : e.data?.message?.source?.plugin;
+export const eventSource = e => e.type === 'user/message' ? sourceName(e.data?.source) : sourceName(e.data?.message?.source);
 // User requests and host control/context messages are not conversation material
 // that the summarizer may replace, regardless of their surface role.
 const protectedSource = e => !e || e.type === 'user/message' || e.type === 'system/message' || Boolean(eventSource(e));
@@ -65,7 +66,9 @@ export function preparationStop(session, cfg) {
   const tail = cfg.keepTailEvents ?? 30, nominal = tail ? (live[Math.max(0, live.length - tail)] ?? 0) : nodes.length;
   const pending = new Set(); let balanced = 0;
   for (let i = 0; i < nominal; i++) {
-    const blocks = session.deriveEventMessage(session.eventAt(nodes[i]))?.content || [];
+    const message = session.deriveEventMessage(session.eventAt(nodes[i]));
+    if (message?.role === 'tool') pending.delete(message.toolCallId);
+    const blocks = message?.content || [];
     for (const block of blocks) {
       if (block.type === 'tool-call') pending.add(block.id);
       else if (block.type === 'tool-result') pending.delete(block.toolCallId);
@@ -163,7 +166,7 @@ export function normalizeChoices(value, state, session, allowedIds) {
 
 export function exposedTrace(session, { maxChars = 0, afterSeq = -1 } = {}) {
   for (const e of session.snapshotEvents().slice().reverse()) {
-    if (e.seq <= afterSeq || e.type !== 'assistant/message' || e.data?.message?.source?.plugin) continue;
+    if (e.seq <= afterSeq || e.type !== 'assistant/message' || sourceName(e.data?.message?.source)) continue;
     const blocks = e.data?.message?.content;
     if (!Array.isArray(blocks)) continue;
     const text = blocks.filter(b => b.type === 'reasoning' && typeof b.text === 'string').map(b => b.text).join('\n').trim();
@@ -320,7 +323,7 @@ export function newRecord(session, events, prepared, binding, { state, wholeWind
   const originals = events.flatMap(e => {
     if (actualUser(e)) return [e];
     const m = session.deriveEventMessage(e), base = withoutTodo(m);
-    if (base?.source?.kind !== 'user' && m?.source?.plugin !== 'trisoul-x:todo-prefix') return [];
+    if (base?.source?.kind !== 'user' && sourceName(m?.source) !== 'trisoul-x:todo-prefix') return [];
     const origin = session.snapshotEvents().find(x => actualUser(x) && (x.seq === m?.[TODO_META]?.originalSeq || x.data.id === base.id));
     return origin ? [origin] : [];
   });

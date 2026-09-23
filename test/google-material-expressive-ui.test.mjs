@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 
 const id = 'google-material-expressive';
-const settingsPages = ['通用设置', '模型', '内置插件', '外观', 'Oh My DSH', '推荐插件', 'Agent 预设', '已归档会话'];
+const settingsPages = ['通用设置', '模型', '内置插件', '外观', 'Oh My DSH', '推荐插件', 'Agent 预设'];
 const subpages = ['常用', '基础组件', '模型与身份', '实验性功能', '高级', '全局背景'];
 test('Google Material: real layout, all settings, fonts, mobile navigation, workbench and recovery', { timeout: 240000 }, async t => {
   const f = await frontendFixture(t, { installedPackage: true, reply: () => ({ delta: { role: 'assistant', content: '界面与字体已经准备好了。\n\n这套工作台使用清晰的分组、熟悉的导航和协调的浅深主题。\n\n```javascript\nconst message = "Hello, 世界";\nconsole.log(message);\n```\n\n| 项目 | 状态 |\n| --- | --- |\n| 对话与侧栏 | 就绪 |\n| 设置与工作台 | 就绪 |' }, finish_reason: 'stop' }) });

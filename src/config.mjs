@@ -4,6 +4,10 @@ import { CONTEXT_FREQUENCY_PRESETS } from './frequency.mjs';
 
 const route = z.object({ provider: z.string().default(''), model: z.string().default(''), temperature: z.number().default(0.7), effort: z.string().default('off') });
 const contextCadence = CONTEXT_FREQUENCY_PRESETS.medium;
+export function configSnapshot(config = {}) {
+  return Object.fromEntries(Object.entries(config).map(([key, value]) => [key,
+    value && typeof value.get === 'function' ? value.get() : value]));
+}
 export const Config = z.object({
   dataDir: z.string(),
   contextEnabled: z.boolean().default(true),
@@ -53,6 +57,8 @@ export const Config = z.object({
   surgeryCooldownSteps: z.number().step(1).min(0).default(contextCadence.surgeryCooldownSteps),
 });
 
+for (const [key, field] of Object.entries(Config.dict)) if (key !== 'dataDir') Config.dict[key] = field.volatile();
+
 // Defaults apply to omitted values. An explicit null is not a numeric or
 // boolean setting; use the same schema for API writes and pipeline options.
 export function contextConfig(raw = {}) {
@@ -60,5 +66,5 @@ export function contextConfig(raw = {}) {
     const type = Config.dict[key]?.type;
     if (value === null && ['number', 'boolean'].includes(type)) throw new Error(key + ' expected ' + type + ', got null');
   }
-  return Config(raw);
+  return structuredClone(configSnapshot(Config(raw)));
 }

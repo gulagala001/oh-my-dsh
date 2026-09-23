@@ -22,7 +22,7 @@ export { CONTEXT_UI_VERSION as contextUIVersion } from './context-client.mjs';
 const { ContextSettings, ScopeChip, PipelinePanel, SummaryPanel, applyStyle } = createContextUI(React);
 
 const api = async (path, value, signal) => {
-  const response = await fetch(`/trisoul-x/api${path}`, value === undefined ? { signal } : { signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
+  const response = await fetch(`trisoul-x/api${path}`, value === undefined ? { signal } : { signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
   return data;
@@ -222,7 +222,7 @@ const hostConversation = createConversation(require);
 export const inject = [...new Set(['slots', 'sidebarRightTabs', 'sidebarRight', 'theme', 'layout', ...hostConversation.inject])];
 export async function apply(ctx) {
   applyHistorySize(ctx);
-  await ctx.plugin(hostConversation);
+  await ctx.plugin(hostConversation, { settingsNamespace: 'omd-ui-conversation' });
   applyPromptOptimizer(ctx);
   const openPanel = section => ctx.sidebarRight.openTab('trisoul-x-workbench', { params: { section } });
   const sections = [
