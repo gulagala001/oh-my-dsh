@@ -103,6 +103,7 @@
 .trisoul-shell [data-turn-process-member] { --dsh-chat-flow-gap: 2px; }
 .trisoul-shell [data-chat-flow-key]:has(.tx-cu-group, [data-cu-process-context]) { --dsh-chat-flow-gap: 2px; }
 .trisoul-shell .tx-cu-group [data-disclosure-row] { height: 26px; min-height: 26px; }
+.trisoul-shell .tx-cu-group-toggle[aria-expanded=true] { padding-bottom: 6px; }
 .trisoul-shell [data-chat-flow-kind=assistant-step]:has(.tx-cu-group) { --dsh-chat-flow-gap: 2px; }
 .trisoul-shell [data-turn-process-member][data-chat-flow-kind=context] [data-disclosure-row],
 .trisoul-shell [data-variant=think] [data-disclosure-row] { height: 26px; min-height: 26px; }
@@ -122,5 +123,5 @@
 .trisoul-shell .Sixlwa_bubble { border-radius: 18px; padding: 11px 16px; }
 
 /* Prose separates operation segments; only rows inside a list stay tightly spaced. */
-.trisoul-shell [data-chat-flow-kind=assistant-step][data-turn-process-member]:not(:has([data-cu-group])) { --dsh-chat-flow-gap: 16px; }
+.trisoul-shell [data-chat-flow-kind=assistant-step][data-chat-group-part=response][data-turn-process-member] { --dsh-chat-flow-gap: 16px; }
 .trisoul-shell [data-chat-flow-key]:has([data-cu-group]) { --dsh-chat-flow-gap: 8px; }
