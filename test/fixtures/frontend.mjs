@@ -15,7 +15,7 @@ export async function until(fn, timeout = 20000) {
   throw new Error('Frontend fixture timed out');
 }
 
-export async function frontendFixture(t, { imageBudget, versionResponse, headless = false, lifecycleTrace = false, installedPackage = process.env.OMD_UI_PACKED === '1', historyMessages = 0, componentAutoSetup = false, omdConfig = {}, chatConfig = {}, basePath = '/', agentPreset = 'trisoul-x', reply, optimizerReply } = {}) {
+export async function frontendFixture(t, { imageBudget, versionResponse, headless = false, lifecycleTrace = false, installedPackage = process.env.OMD_UI_PACKED === '1', historyMessages = 0, componentAutoSetup = false, omdConfig = {}, chatConfig = {}, legacyChatConfig, basePath = '/', agentPreset = 'trisoul-x', reply, optimizerReply } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'trisoul-frontend-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   await mkdir(home); await mkdir(workspace);
   let nextReply, releaseReply, replyFactory = reply, child, browser, page, log = '';
@@ -63,7 +63,7 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
     catch (error) { throw new Error('Packed plugin installation failed: ' + String(error.stderr || error.stdout || error.message).replace(/token=\S+/g, 'token=[redacted]')); }
   }
   const lifecycleFile = join(root, 'lifecycle.jsonl');
-  if (lifecycleTrace || historyMessages) {
+  if (lifecycleTrace || historyMessages || legacyChatConfig) {
     if (!installedPackage) execFileSync(process.execPath, [fileURLToPath(new URL('../../node_modules/@deepseek-ai/dsh/lib/bin.js', import.meta.url)), '--profile', 'trisoul-x', '--from-default-profile', 'web', '--dump-config'], { cwd: new URL('../../', import.meta.url), env: { ...process.env, DSH_HOME: home }, stdio: ['ignore', 'ignore', 'pipe'] });
     const directory = join(home, 'profiles', 'trisoul-x');
     await writeFile(lifecycleFile, '');
@@ -86,7 +86,11 @@ export function apply(ctx) { let seeded = false; ctx.on('session/created', sessi
 }, { global: true }); }`);
       entries.push({ id: 'omd-test-history', name: pathToFileURL(seedModule).href });
     }
-    await writeFile(join(directory, 'cordis.patch.yml'), JSON.stringify([{ insert: entries }]));
+    await writeFile(join(directory, 'cordis.patch.yml'), JSON.stringify([
+      ...entries.length ? [{ insert: entries }] : [],
+      ...legacyChatConfig ? [{ id: 'omd-ui-chat', config: legacyChatConfig }] : [],
+    ]));
+    if (legacyChatConfig) await writeFile(join(directory, '.omd-ui-chat-settings-v4.json'), JSON.stringify({ imported: Object.keys(legacyChatConfig) }));
   }
   child = spawn(process.execPath, ['scripts/start.mjs'], { cwd: new URL('../../', import.meta.url), env: { ...process.env, DSH_HOME: home, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
   child.stdout.on('data', data => { log = (log + data).slice(-15000); });
@@ -135,7 +139,7 @@ export function apply(ctx) { let seeded = false; ctx.on('session/created', sessi
   await welcome.click();
   await page.getByText('整理工作台和对话界面', { exact: true }).first().click();
   await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
-  return { root, home, page, context, rpc, sessionId, errors, escapedPaths: proxy.escaped, diagnostics: () => browserDiagnostics, lifecycle: () => readFile(lifecycleFile, 'utf8'), log: () => log.replace(/token=\S+/g, 'token=[redacted]'), replyWith(factory){replyFactory=factory;}, holdNextReply() {
+  return { root, home, workspace, page, context, rpc, sessionId, errors, escapedPaths: proxy.escaped, diagnostics: () => browserDiagnostics, lifecycle: () => readFile(lifecycleFile, 'utf8'), log: () => log.replace(/token=\S+/g, 'token=[redacted]'), replyWith(factory){replyFactory=factory;}, holdNextReply() {
     nextReply = new Promise(resolve => { releaseReply = resolve; });
     return () => releaseReply?.();
   } };

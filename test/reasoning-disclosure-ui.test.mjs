@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {frontendFixture,until} from './fixtures/frontend.mjs';
 
-for(const transcriptView of ['compact','detailed'])test(`${transcriptView}: process stays live through reasoning; historical previews survive completion and reload`,{timeout:90000},async t=>{
+for(const transcriptView of ['standard'])test(`${transcriptView}: process stays live through reasoning; historical previews survive completion and reload`,{timeout:90000},async t=>{
   const f=await frontendFixture(t,{chatConfig:{transcriptView}}),{page,rpc,sessionId}=f;
   await page.setViewportSize({width:1440,height:1600});
   let nextAction,finish,step=0;

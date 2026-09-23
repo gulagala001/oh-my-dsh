@@ -12,9 +12,7 @@ test('UI builds from a checkout whose path contains spaces', t => {
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   mkdirSync(join(dir, 'scripts'));
   for (const script of ['build.mjs', 'build-host.mjs', 'pack-skin.mjs']) cpSync(join(root, 'scripts', script), join(dir, 'scripts', script));
-  cpSync(join(root, 'src', 'client'), join(dir, 'src', 'client'), { recursive: true });
-  cpSync(join(root, 'src', 'cc-adaptation'), join(dir, 'src', 'cc-adaptation'), { recursive: true });
-  for (const file of ['frequency.mjs', 'recommended-plugin-catalog.mjs']) cpSync(join(root, 'src', file), join(dir, 'src', file));
+  cpSync(join(root, 'src'), join(dir, 'src'), { recursive: true });
   cpSync(join(root, 'package.json'), join(dir, 'package.json'));
   cpSync(join(root, 'presets'), join(dir, 'presets'), { recursive: true });
   cpSync(join(root, 'vendor'), join(dir, 'vendor'), { recursive: true });

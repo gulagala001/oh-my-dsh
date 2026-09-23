@@ -31,15 +31,17 @@ type ProcessTitleActivity = ProcessActivity | 'thinking'
 interface LiveProcessTitle {
   readonly activity: ProcessTitleActivity
   readonly detail: string
+  readonly preparing: boolean
 }
 
 const PROCESS_ICONS: Record<ProcessTitleActivity, ReactNode> = {
-  images: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 3h18v18H3zM3 17l6-7 5 5 3-3 4 5"/><circle cx="16" cy="7" r="1"/></svg>,
   computer: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 4h18v13H3zM8 21h8M12 17v4" /></svg>,
   thinking: <IconThinkOutlineRegular />,
   read: <IconBrowseOutlineRegular size={14} />,
+  readImage: <IconBrowseOutlineRegular size={14} />,
   search: <IconSearchOutlineRegular size={14} />,
   edit: <IconEditOutlineRegular size={14} />,
+  write: <IconEditOutlineRegular size={14} />,
   commands: <IconApiOutlineRegular />,
   code: <IconCodeOutlineRegular size={14} />,
   webSearch: <IconGlobeOutlineRegular />,
@@ -51,7 +53,7 @@ const PROCESS_ICONS: Record<ProcessTitleActivity, ReactNode> = {
 }
 
 function sameLiveProcessTitle(left: LiveProcessTitle, right: LiveProcessTitle): boolean {
-  return left.activity === right.activity && left.detail === right.detail
+  return left.activity === right.activity && left.detail === right.detail && left.preparing === right.preparing
 }
 
 function useStableLiveProcessTitle(desired: LiveProcessTitle, active: boolean): LiveProcessTitle {
@@ -75,7 +77,7 @@ function useStableLiveProcessTitle(desired: LiveProcessTitle, active: boolean): 
     }
     const timer = setTimeout(commit, remaining)
     return () => { clearTimeout(timer) }
-  }, [active, desired.activity, desired.detail])
+  }, [active, desired.activity, desired.detail, desired.preparing])
   return active ? displayed : desired
 }
 
@@ -102,10 +104,13 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
   const live = useStableLiveProcessTitle({
     activity: data?.summary.running ?? 'thinking',
     detail: data?.summary.runningDetail ?? '',
-  }, working)
+    preparing: data?.summary.preparing === true,
+  }, data !== undefined && !data.closed)
   if (data === undefined) return null
-  const label = working ? t(`message.stepProcess.${live.activity}`) : processTitle(data.summary, t)
-  const detail = detailed && working ? live.detail : ''
+  const label = data.closed ? processTitle(data.summary, t)
+    : live.preparing ? t(`message.stepProcess.prepare.${live.activity === 'thinking' ? 'tools' : live.activity}`)
+      : t(`message.stepProcess.${live.activity}`)
+  const detail = detailed && !data.closed ? live.detail : ''
   const title = detail === '' ? label : `${label}${t('message.turnProcess.separator')}${detail}`
   const activity = working ? live.activity : data.summary.counts[0]?.kind ?? 'thinking'
   return (
@@ -138,7 +143,8 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
     const location = node?.location
     return location?.kind === 'turn' || location?.kind === 'step' ? location.turn : undefined
   })
-  const grouped = props.usePresentation(policy => turnLocation?.status !== 'open' || policy.stepGrouping !== 'none')
+  const grouped = props.usePresentation(policy => policy.stepGrouping === 'collapsed'
+    || (policy.stepGrouping === 'history' && turnLocation?.status !== 'open'))
   const reason = turnLocation?.end?.data.reason.kind
   const alwaysOpen = presentation?.turnClosed === false || presentation?.hasInterleavedInput === true
     || reason === 'aborted' || reason === 'error'

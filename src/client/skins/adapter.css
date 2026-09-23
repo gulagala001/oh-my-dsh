@@ -61,3 +61,24 @@ html.omd[data-omd-skin] input[type=file]::file-selector-button:hover { backgroun
 html.omd[data-omd-skin] :where(.tx-button.tx-primary,.cx-btn.primary,.uV2eYG_primary):hover:not(:disabled) {
   background: var(--omd-button-hover, color-mix(in srgb, var(--omd-button-bg, var(--omd-accent)) 90%, var(--omd-text)));
 }
+
+/* Collapsed rails share one center axis even when a skin changes their width
+   or control sizes. Mobile overlays keep their own fixed toggle placement. */
+@media (min-width: 761px) {
+  html.omd[data-omd-layout][data-appearance] .hHd-Xa_root.hHd-Xa_collapsed {
+    align-items: center;
+    & :is(.hHd-Xa_logoRow,.hHd-Xa_panelList,.hHd-Xa_regionArea,.hHd-Xa_footArea) {
+      box-sizing: border-box; width: 100%; margin-inline: 0; padding-inline: 0;
+    }
+    & .hHd-Xa_logoRow { justify-content: center; }
+    & :is(.hHd-Xa_panelList,.hHd-Xa_footArea,.bhn1Oq_root) { align-items: center; }
+    & .bhn1Oq_root { width: 100%; }
+    & .bhn1Oq_sectionHeader { width: 100%; box-sizing: border-box; justify-content: center; padding-inline: 0; }
+    & :is(.bhn1Oq_headerActions,.bhn1Oq_searchSlot,.bhn1Oq_search) { margin-inline: auto; }
+    & .bhn1Oq_search { justify-content: center; }
+    & :is(.hHd-Xa_toggle,.hHd-Xa_newSession,.hHd-Xa_panelRow,.VOzbGW_trigger) {
+      margin-inline: auto; max-width: 100%; flex-shrink: 0;
+    }
+    & .VOzbGW_triggerRow { margin-inline: 0; padding-inline: 0; }
+  }
+}

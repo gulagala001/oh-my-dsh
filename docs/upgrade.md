@@ -8,14 +8,14 @@
 
 | 组件 | 本手册目标 |
 | --- | --- |
-| Oh My DSH | **1.7.1**，Git tag `v1.7.1` |
-| DSH Web 宿主 | **0.1.7-alpha.2** |
-| 内置 OpenCU | **1.1.1**，无需另装 |
+| Oh My DSH | **1.7.2**，Git tag `v1.7.2` |
+| DSH Web 宿主 | **0.1.7-rc.1** |
+| 内置 OpenCU | **1.1.2**，无需另装 |
 | 环境 | Node.js ≥22.19、Git、pnpm 11.23.0；Windows 使用 PowerShell 7 |
 
 以本手册与目标 tag 的 `package.json` 配对，不能仅把一个组件换成 `latest`。若仓库刚发布新版本而配对资料未同步，先核对官方发布说明和目标包，避免混装。
 
-完成意味着：**原环境已备份，新版在原数据目录、profile 和端口运行，旧模型／会话／皮肤仍可用，界面当前版本为 1.7.1。** GitHub 最新版本、下载成功或文件已改，均不能代替实际安装和重启。
+完成意味着：**原环境已备份，新版在原数据目录、profile 和端口运行，旧模型／会话／皮肤仍可用，界面当前版本为 1.7.2。** GitHub 最新版本、下载成功或文件已改，均不能代替实际安装和重启。
 
 ## 1. 识别真实运行环境
 
@@ -69,9 +69,9 @@ $env:DSH_HOME = $omdDataDir
 ```
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.7-alpha.2 --version
-npx --yes @deepseek-ai/dsh@0.1.7-alpha.2 plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.1
-npx --yes @deepseek-ai/dsh@0.1.7-alpha.2 --profile web
+npx --yes @deepseek-ai/dsh@0.1.7-rc.1 --version
+npx --yes @deepseek-ai/dsh@0.1.7-rc.1 plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.2
+npx --yes @deepseek-ai/dsh@0.1.7-rc.1 --profile web
 ```
 
 自定义端口启动时追加 `--port 原端口`。需要常驻时使用原服务管理方式，不把临时终端进程误报为持久部署。
@@ -81,11 +81,11 @@ npx --yes @deepseek-ai/dsh@0.1.7-alpha.2 --profile web
 用原包管理器更新原安装位置：
 
 ```sh
-npm install -g @deepseek-ai/dsh@0.1.7-alpha.2
-# 原来通过 pnpm 全局安装时，使用 pnpm add -g @deepseek-ai/dsh@0.1.7-alpha.2
+npm install -g @deepseek-ai/dsh@0.1.7-rc.1
+# 原来通过 pnpm 全局安装时，使用 pnpm add -g @deepseek-ai/dsh@0.1.7-rc.1
 
 dsh --version
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.1
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.2
 dsh --profile web
 ```
 
@@ -97,7 +97,7 @@ dsh --profile web
 
 ```sh
 git fetch origin --tags
-git switch --detach v1.7.1
+git switch --detach v1.7.2
 pnpm install --frozen-lockfile
 pnpm build
 pnpm start
@@ -107,9 +107,9 @@ pnpm start
 
 ## 4. 处理必要的版本差异
 
-- **DSH alpha.1 → alpha.2：** 会话继续采用 V4，无需重复迁移旧日志。保留 OMD 上下文、任务账本、BT、PTC、预算、皮肤及其设置。
+- **DSH 0.1.7-alpha.1 / alpha.2 → rc.1：** 会话继续采用 V4，无需重复迁移旧日志。OMD 旧“简洁／详细”映射为新版“标准”，旧“完全展开”映射为新版“详细”，保留实际显示习惯；之后的主动选择不再迁移。保留 OMD 上下文、任务账本、BT、PTC、预算、皮肤及其设置。
 - **DSH 0.1.6-alpha.2 → 本版：** OMD 自动迁移支持的旧会话与关联记录；V3 原日志保留，`omd-v4-migration.json` 保存恢复信息。旧配置导入后保留为 `settings.yaml.imported`；不要重建已导入文件触发二次覆盖。
-- **更早或定制环境：** 先在数据副本上核对对应宿主迁移结果，再切换；无法确定兼容性时报告具体阻碍，不删除旧数据试错。暂留 DSH 0.1.6-alpha.2 的用户应留在 OMD 1.6.1；DSH alpha.1 对应 OMD 1.7.0。
+- **更早或定制环境：** 先在数据副本上核对对应宿主迁移结果，再切换；无法确定兼容性时报告具体阻碍，不删除旧数据试错。暂留 DSH 0.1.6-alpha.2 的用户应留在 OMD 1.6.1；DSH alpha.1 对应 OMD 1.7.0，alpha.2 对应 OMD 1.7.1。
 - **自定义 spill-policy：** alpha.2 将 `maxInlineBytes` 改为 `maxInlineTokens`，文本和图片共用 token 预算。只有实际存在旧自定义项时才处理；字节与 token 单位不同，不机械照抄数值。可用新版默认值时移除旧覆盖；用户有明确限额要求时先确认合适预算。OMD 图片请求大小、输出预览等合法字节限制不改名。
 - **后台唤醒：** alpha.2 默认不再限制连续三次完成唤醒；用户显式配置的 `maxConsecutiveWakes` 仍要保留。
 - **旧 bundle／渠道：** 仅在发现对应旧配置时修正。独立 `agent-team-web-profile` 已并入 `agent-team-profile`；旧 `.agent-presets` 应转为 preset bundle。官方 DeepSeek 渠道的旧 `protocol` 配置需按 Messages API 迁移，其他 OpenAI 兼容渠道保持各自协议。参阅 [DSH alpha.1 说明](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.7-alpha.1) 和 [alpha.2 说明](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.7-alpha.2)。
@@ -120,7 +120,7 @@ pnpm start
 
 只检查这次安装的实际结果，不在用户电脑跑整个开发测试集：
 
-1. 服务从原入口正常启动，日志无阻止运行的错误；宿主实际为 0.1.7-alpha.2，插件当前版本为 1.7.1。
+1. 服务从原入口正常启动，日志无阻止运行的错误；宿主实际为 0.1.7-rc.1，插件当前版本为 1.7.2。
 2. 使用本次启动的登录链接打开页面；确认对话、工作台和原皮肤正常显示。已有用户能看到原模型配置和一个旧会话的历史，不输出其正文。
 3. 如可使用已配置模型，在新测试会话做一次短对话和无副作用的工具调用；没有可用模型或凭据时明确这一项未完成，不伪造成功。
 4. 向用户简洁报告实际版本、访问地址（不公开登录 token）、备份位置和任何未完成步骤。用户未要求时，不公开推送本机配置或数据。

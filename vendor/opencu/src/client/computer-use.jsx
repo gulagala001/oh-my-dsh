@@ -86,22 +86,23 @@ export function ComputerPane({sessionId,useTabInfo,inputActions,conversation,hos
 }
 function ComputerCard({block,loadImage,toolName,openFile}){
   const [open,setOpen]=useState(false),bodyId=useId();
+  const preparing=block.phase==='preparing';
   let args={};try{args=JSON.parse(block.call?.argsRaw??block.argsRaw??'{}');}catch{}
   const settled=block.kind==='tool-result',failure=block.isError||block.meta?.computerUseError;
   const content=block.content??[],message=content.filter(c=>c.type==='text').map(c=>c.text).join('\n');
   const images=content.filter(c=>c.type==='image');
   const files=block.meta?.computerUseFiles??[];
   const stopped=failure&&/tool call aborted|COMPUTER_USE_STOPPED|Computer Use (?:was |is )?stopped|execution (?:was )?cancelled/i.test(message);
-  const status=!settled?'执行中':stopped?'已停止':failure?'执行失败':'已执行';
-  return <div className="tx-cu-card" data-state={!settled?'running':stopped?'stopped':failure?'error':'idle'}>
-    <button type="button" className="tx-cu-card-heading" aria-expanded={open} aria-controls={bodyId} onClick={()=>setOpen(value=>!value)}>
+  const status=preparing?'准备调用':!settled?'执行中':stopped?'已停止':failure?'执行失败':'已执行';
+  return <div className="tx-cu-card" data-state={preparing?'preparing':!settled?'running':stopped?'stopped':failure?'error':'idle'}>
+    <button type="button" className="tx-cu-card-heading" disabled={preparing} aria-expanded={preparing?undefined:open} aria-controls={preparing?undefined:bodyId} onClick={()=>setOpen(value=>!value)}>
       <span className="tx-cu-card-leading"><ComputerIcon name="screen" size={16}/><ComputerIcon className="tx-cu-card-chevron" name="chevron" size={14}/></span>
       <span className="tx-cu-card-title">{args.title??(toolName==='computer_use_reset'?'重置 Computer Use':'Computer Use')}</span>
       {!!images.length&&<span className="tx-cu-card-count">{images.length} 张截图</span>}
       {!!files.length&&<span className="tx-cu-card-count">{files.length} 个文件</span>}
       <small className={failure&&!stopped?'tx-cu-error':settled&&!stopped?'tx-cu-visually-hidden':''}>{status}</small>
     </button>
-    {open&&<div className="tx-cu-card-body" id={bodyId}>
+    {open&&!preparing&&<div className="tx-cu-card-body" id={bodyId}>
       {!!images.length&&<div className="tx-cu-result-images">{images.map((c,i)=><SavedImage key={i} attachment={c.attachment} loadImage={loadImage}/>)}</div>}
       {!!files.length&&<div className="tx-cu-export-files">{files.map((file,i)=><button key={i} type="button" onClick={()=>openFile?.(file.path)} disabled={!openFile} title={file.path}>{file.name}<small>{Math.ceil(file.bytes/1024)} KB</small></button>)}</div>}
       {failure&&<p className="tx-cu-error">{message.split('\n').find(line=>line.trim())||String(block.meta?.computerUseError||status)}</p>}
