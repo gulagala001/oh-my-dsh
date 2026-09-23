@@ -4,21 +4,21 @@
 
 OpenCU 从 [Oh My DSH](https://github.com/gulagala001/oh-my-dsh) 的 Computer Use 提取而来，提供相同的操控工具、实时预览和接管体验，可以独立安装到 DSH。Oh My DSH 继续集成全部能力，并直接复用 OpenCU 的实现。
 
-当前正式版本：[1.1.1](https://github.com/gulagala001/opencu/releases/tag/v1.1.1)。源码、发行包与 SHA-256 校验文件见版本页面。
+当前正式版本：[1.1.2](https://github.com/gulagala001/opencu/releases/tag/v1.1.2)。源码、发行包与 SHA-256 校验文件见版本页面。
 
 ## 本版更新
 
-适配 DSH 0.1.7-alpha.2 的原生消息分组、设置和会话接口；合并重复的分组实现，修复独立版与 Oh My DSH 的挂载顺序及配置归属。浏览器、桌面操作、实时预览和接管能力完整保留。
+适配 DSH 0.1.7-rc.1 的四档过程展示、工具准备状态和本地图片预览；保留操作计数、失败提示、相邻思考合并和展开阅读状态。旧显示设置按实际体验迁移。浏览器、桌面操作、实时预览和接管能力完整保留。
 
-[版本说明与验证范围](docs/release-1.1.1.md)。
+[版本说明与验证范围](docs/release-1.1.2.md)。
 
 ## 安装
 
-当前正式版 **1.1.1** 适配 **DSH 0.1.7-alpha.2 Web、Node.js ≥22.19、pnpm 11.23.0 和 Git**。先停止 DSH 服务，再运行：
+当前正式版 **1.1.2** 适配 **DSH 0.1.7-rc.1 Web、Node.js ≥22.19、pnpm 11.23.0 和 Git**。先停止 DSH 服务，再运行：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/opencu#v1.1.1
-dsh web
+npx --yes @deepseek-ai/dsh@0.1.7-rc.1 plugin --profile web add github:gulagala001/opencu#v1.1.2
+npx --yes @deepseek-ai/dsh@0.1.7-rc.1 --profile web
 ```
 
 打开启动时的登录链接，继续使用已有 Agent preset。在输入区点击 **电脑**，或通过 `@Browser`、`@Chrome` 和应用引用选择目标：
@@ -73,7 +73,7 @@ OpenCU 配置位于 DSH 的 `opencu` 设置区。未显式设置的字段继承�
 先停止服务，再运行对应命令，然后重新启动 `dsh web`：
 
 ```sh
-dsh plugin --profile web add github:gulagala001/opencu#v1.1.1
+npx --yes @deepseek-ai/dsh@0.1.7-rc.1 plugin --profile web add github:gulagala001/opencu#v1.1.2
 dsh plugin --profile web remove opencu
 ```
 
