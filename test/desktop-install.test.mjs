@@ -30,7 +30,7 @@ test('packaged Desktop installs OMD, preserves conversations across restart and 
       if (toolSent) reply.delta.content = '桌面电脑验证完成。';
       else {
         toolSent = true;
-        reply = { delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'desktop-cu', type: 'function', function: { name: 'computer_use', arguments: JSON.stringify({ title: '读取桌面测试页面', code: `var tab = await cua.createBrowserTab('browser', ${JSON.stringify(fixture.url)}); await tab.markDeliverable(); await tab.getAXStateAndScreenshot();` }) } }] }, finish_reason: 'tool_calls' };
+        reply = { delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'desktop-cu', type: 'function', function: { name: 'computer_use', arguments: JSON.stringify({ title: '读取桌面测试页面', code: `var tab = await cua.createBrowserTab('browser', ${JSON.stringify(fixture.url)}); nodeRepl.write('desktop-test: tab created'); await tab.markDeliverable(); nodeRepl.write('desktop-test: deliverable marked'); await tab.getAXStateAndScreenshot();` }) } }] }, finish_reason: 'tool_calls' };
       }
     }
     res.end('data: ' + JSON.stringify({ id: 'desktop', choices: [{ index: 0, ...reply }] }) + '\n\ndata: [DONE]\n\n');

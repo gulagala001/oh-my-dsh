@@ -112,7 +112,10 @@ export class BrowserHost extends BrowserActions {
     // CfT/Chromium ship a developer field-trial configuration that branded
     // Chrome does not use. Follow Playwright's production automation default
     // without disabling our explicit capabilities, extensions or BFCache.
-    const args = [executable, `--user-data-dir=${this.directory}`, '--disable-field-trial-config', '--remote-debugging-port=0', '--remote-debugging-address=127.0.0.1', '--no-first-run', '--no-default-browser-check', '--no-startup-window', '--disable-background-networking', '--enable-blink-features=WebMCP', ...(this.headless ? ['--headless=new', '--hide-scrollbars'] : [])];
+    // connectOverCDP enables focus emulation. Chromium's old surface path can
+    // hang screenshots of background tabs in that mode, especially on Windows.
+    // Match Playwright's capture surface: microsoft/playwright#33330 / #36092.
+    const args = [executable, `--user-data-dir=${this.directory}`, '--disable-field-trial-config', '--enable-features=CDPScreenshotNewSurface', '--remote-debugging-port=0', '--remote-debugging-address=127.0.0.1', '--no-first-run', '--no-default-browser-check', '--no-startup-window', '--disable-background-networking', '--enable-blink-features=WebMCP', ...(this.headless ? ['--headless=new', '--hide-scrollbars'] : [])];
     if (process.env.TRISOUL_CU_BROWSER_DIAGNOSTICS === '1') args.push('--enable-logging', '--log-file=' + join(this.directory, 'startup.log'));
     const child = fork(new URL('./browser-process.mjs', import.meta.url), args, { execArgv: [], stdio: ['ignore', 'ignore', 'pipe', 'ipc'], windowsHide: true, detached: process.platform !== 'win32' });
     run.child = child; this.child = child; this.browserPid = null;
