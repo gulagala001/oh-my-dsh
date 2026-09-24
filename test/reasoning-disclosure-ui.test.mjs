@@ -17,7 +17,8 @@ for(const transcriptView of ['standard'])test(`${transcriptView}: process stays 
       yield {delta:{content:'思考和操作保留在过程里，最终回复显示在外面。'},finish_reason:'stop'};
     })();
     if(step===2)await nextActionReady;
-    const name=step===1?'computer_use_reset':'bash',args=step===1?{}:{command:'sleep 2; printf demo-complete',description:'检查操作记录'};
+    const name=step===1?'computer_use_reset':process.platform==='win32'?'pwsh':'bash';
+    const args=step===1?{}:{command:process.platform==='win32'?"Start-Sleep -Seconds 2; [Console]::Out.Write('demo-complete')":'sleep 2; printf demo-complete',description:'检查操作记录'};
     return {delta:{role:'assistant',reasoning_content,tool_calls:[{index:0,id:'reasoning-demo-'+step,type:'function',function:{name,arguments:JSON.stringify(args)}}]},finish_reason:'tool_calls'};
   });
   try {
