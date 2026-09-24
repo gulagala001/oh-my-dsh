@@ -11,7 +11,7 @@ export function fullSnapshot(session) {
   const globalSeq = nodes.findLast(seq => eventSource(session.eventAt(seq)) === 'trisoul-x:manual-global');
   const retained = new Set(nodes.filter(seq => {
     const e = session.eventAt(seq), m = session.deriveEventMessage(e);
-    return isTaskInjection(e) || (m?.role === 'system' && eventSource(e) !== 'trisoul-x:shadow') || eventSource(e) === '@deepseek-ai/dsh-system-prompt' || eventSource(e) === 'trisoul-x:trace' || seq === globalSeq;
+    return e.type === 'developer/message' || isTaskInjection(e) || (m?.role === 'system' && eventSource(e) !== 'trisoul-x:shadow') || eventSource(e) === '@deepseek-ai/dsh-system-prompt' || eventSource(e) === 'trisoul-x:trace' || seq === globalSeq;
   }));
   const groups = []; let run = [];
   for (const seq of nodes) {

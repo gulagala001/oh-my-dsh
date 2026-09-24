@@ -168,17 +168,20 @@ function installComputerUseClient(ctx, shared){
 
 // One UI registration set per DSH client, regardless of package load order.
 const sharedKey = Symbol.for('opencu.client.v1');
-const nativeChat = createChat(require);
 export function applyComputerUseClient(ctx, options = {}) {
   const root = ctx.root;
   let shared = root[sharedKey];
   if (!shared) {
+    // The shared Chat lifetime owns its styles across both OMD and OpenCU.
+    // Native module removal must not remove this replacement's styles.
+    const nativeChat = createChat(require);
     const owners = new Map(), listeners = new Set(), empty = {};
     shared = { owners, subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener); },
       current: () => [...owners.values()].find(value => value.integrated) ?? owners.values().next().value ?? empty,
       changed: () => { for (const listener of listeners) listener(); } };
     root[sharedKey] = shared;
     shared.fiber = root.plugin({ name: 'opencu-ui', inject: ['slots', 'sidebarRightTabs', 'sidebarRight', ...nativeChat.inject], async apply(scope) {
+      scope.effect(() => () => document.querySelectorAll('style[data-plugin="opencu-shared-chat"]').forEach(tag => tag.remove()));
       const currentForm = () => scope.configForms.get(shared.current().integrated ? 'omd-ui-chat' : 'opencu-ui-chat');
       // The native Chat keeps one store; only its preference owner changes
       // when the standalone and integrated packages are loaded together.

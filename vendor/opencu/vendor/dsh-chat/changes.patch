@@ -1,5 +1,5 @@
 diff --git a/packages/client/tsdown.client.ts b/packages/client/tsdown.client.ts
-index 99e647d2..d7786d87 100644
+index 215001db..a5eece97 100644
 --- a/packages/client/tsdown.client.ts
 +++ b/packages/client/tsdown.client.ts
 @@ -558,7 +558,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
@@ -30,7 +30,7 @@ index 99e647d2..d7786d87 100644
        },
      }],
 diff --git a/packages/client/ui-chat/src/client/apply.ts b/packages/client/ui-chat/src/client/apply.ts
-index 69885d3e..129c8874 100644
+index 8c86d6e9..23d779f3 100644
 --- a/packages/client/ui-chat/src/client/apply.ts
 +++ b/packages/client/ui-chat/src/client/apply.ts
 @@ -1,3 +1,4 @@
@@ -44,10 +44,10 @@ index 69885d3e..129c8874 100644
   */
 -export function apply(ctx: Context): void {
 +export function apply(ctx: Context, options: { settings?: ConfigForm<ChatSettings> } = {}): void {
-   const chatSources = new WeakMap<SessionBinding, ObservableSnapshot<ChatSnapshot>>()
-   const chatSource = (binding: SessionBinding): ObservableSnapshot<ChatSnapshot> => {
-     let source = chatSources.get(binding)
-@@ -86,7 +87,7 @@ export function apply(ctx: Context): void {
+   const quotaNotice = createSnapshotStore<QuotaNoticeState | null>(null)
+   let quotaNoticeSeq = 0
+   // Each hold is its own token, so a release can only drop the hold it was
+@@ -117,7 +118,7 @@ export function apply(ctx: Context): void {
    const t = ctx.locale.bind(NS)
    const chatStore = createChatStore()
    const chatScrollPositions = new Map<SessionId, ChatScrollPosition>()
@@ -57,7 +57,7 @@ index 69885d3e..129c8874 100644
    ctx.effect(() => chatSettings.subscribe(() => {
      const accepted = chatSettings.getSnapshot().value?.linkOpening
 diff --git a/packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx b/packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx
-index d6d7c0d3..30a39a28 100644
+index 5d97a698..5ea6a44b 100644
 --- a/packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx
 +++ b/packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx
 @@ -30,7 +30,7 @@ export function localPathMediaUrl(base: string, value: string): string | undefin
@@ -402,7 +402,7 @@ index 36cb552d..5d152372 100644
      value.kind === right.counts[index]?.kind && value.count === right.counts[index].count)
  }
 diff --git a/packages/client/ui-chat/src/client/locale.ts b/packages/client/ui-chat/src/client/locale.ts
-index ce0ca17b..af45f896 100644
+index 53a4999b..3002fc9e 100644
 --- a/packages/client/ui-chat/src/client/locale.ts
 +++ b/packages/client/ui-chat/src/client/locale.ts
 @@ -32,13 +32,19 @@ export const zh = {
@@ -426,7 +426,7 @@ index ce0ca17b..af45f896 100644
    'message.stepProcess.done.code': '运行了代码',
    'message.stepProcess.done.webSearch': '已搜索网页',
    'message.stepProcess.done.webFetch': '已访问网页',
-@@ -213,6 +219,12 @@ export const en = {
+@@ -225,6 +231,12 @@ export const en = {
    'message.stepProcess.prepare.plan': 'Preparing to update the plan',
    'message.stepProcess.prepare.questions': 'Preparing questions',
    'message.stepProcess.prepare.tools': 'Preparing tool calls',

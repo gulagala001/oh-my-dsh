@@ -5,7 +5,7 @@ export const MATERIAL_LAYOUT = 'google-material-expressive';
 const isMaterial = state => state.skins.find(s => s.id === state.selected)?.layout === MATERIAL_LAYOUT;
 const focusables = root => [...root.querySelectorAll('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]')].filter(el => el.getClientRects().length && getComputedStyle(el).visibility === 'visible' && !el.closest('[inert]'));
 function containTab(event, root) {
-  if (event.key !== 'Tab') return;
+  if (event.key !== 'Tab' || event.defaultPrevented) return;
   const items = focusables(root), first = items[0], last = items.at(-1);
   if (!first) return;
   if (event.shiftKey && (document.activeElement === first || !root.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
@@ -35,8 +35,8 @@ function Navigation({ ctx }) {
         const elements = [...frame.querySelectorAll(':scope > .pI_x6G_centerCol, :scope > .pI_x6G_rightbarCol')].map(el => [el, el.inert]);
         elements.forEach(([el]) => { el.inert = true; });
         restoreInert = () => elements.forEach(([el, value]) => { el.inert = value; });
-        queueMicrotask(() => { if (modal && !sidebar?.querySelector('[role="dialog"]')) sidebar?.querySelector('.hHd-Xa_toggle')?.focus(); });
-      } else if (previousFocus?.isConnected) previousFocus.focus();
+        queueMicrotask(() => { if (modal && !document.querySelector('[role="dialog"]')) sidebar?.querySelector('.hHd-Xa_toggle')?.focus(); });
+      } else if (previousFocus?.isConnected && !document.querySelector('[role="dialog"]')) previousFocus.focus();
     };
     const onClick = event => {
       const target = event.target instanceof Element ? event.target : null;
@@ -44,7 +44,7 @@ function Navigation({ ctx }) {
       if (target.closest('.YDXeBa_sessionRow, .hHd-Xa_newSession, .hHd-Xa_panelRow, .hHd-Xa_brand')) queueMicrotask(() => { if (modal && frame.isConnected) close(); });
     };
     const onKey = event => {
-      if (!modal || sidebar?.querySelector('[role="dialog"]') || document.querySelector('[role="menu"]')) return;
+      if (event.defaultPrevented || !modal || document.querySelector('[role="dialog"], [role="menu"]')) return;
       if (event.key === 'Escape') { event.preventDefault(); close(); }
       else if (sidebar) containTab(event, sidebar);
     };

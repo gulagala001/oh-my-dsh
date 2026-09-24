@@ -6,6 +6,9 @@ import type { Context } from '@deepseek-ai/cordis'
  */
 export function reloadOnProviderChange(ctx: Context): boolean {
   if (typeof window === 'undefined') return false
+  // Desktop keeps boot injections for the Host lifetime; reloading would use
+  // the pre-install graph. Its native module updates own provider replacement.
+  if (window.location.protocol === 'dsh-app:') return false
   const boot = (window as unknown as { __DSH_BOOT__?: { entries?: { id: string }[] } }).__DSH_BOOT__
   if (!boot?.entries) return false
   let leaving = false

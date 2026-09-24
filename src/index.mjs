@@ -37,11 +37,11 @@ const send = (res, status, value) => { res.writeHead(status, { 'Content-Type': '
 async function readBody(req) { let body = ''; for await (const part of req) body += part; return body.trim() ? JSON.parse(body) : {}; }
 
 export async function apply(ctx, config) {
+  installLoaderLifecycleCompatibility(ctx);
+  installFileUploadCompatibility(ctx);
   const legacy = await legacySettings(ctx, 'trisoul-x', Config, ['opencu']);
   const directory = legacy.value.dataDir || config.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'trisoul-x');
   await migrateSessionStorage(ctx, directory);
-  installLoaderLifecycleCompatibility(ctx);
-  installFileUploadCompatibility(ctx);
   installToolSchedulerCompatibility(ctx);
   const hub = new Hub(ctx, { ...config, dataDir: directory });
   const liveConfig = hub.getConfig;

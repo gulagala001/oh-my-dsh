@@ -9,7 +9,7 @@ export function installFileUploadCompatibility(ctx) {
   const root = ctx.root;
   if (root[installed]) return;
   root[installed] = true;
-  root.inject(['fileUploads'], scope => {
+  root.inject(['fileUploads'], async scope => {
     const uploads = original(scope.fileUploads), register = uploads.registerAgentResolver;
     const initial = uploads.agentResolver;
     const controller = [...ctx.loader.entries()].find(entry => entry.options.name === '@deepseek-ai/dsh-api-session-controller')?.fiber;
@@ -25,6 +25,18 @@ export function installFileUploadCompatibility(ctx) {
       if (descriptor) Object.defineProperty(uploads, 'registerAgentResolver', descriptor);
       else delete uploads.registerAgentResolver;
     });
+    // During the first live installation, replacement services can invalidate
+    // SessionController before this compatibility plugin becomes active. Recover
+    // only its known stale-registration failure, never an unrelated startup error.
+    if (initial && controller?.state === 3) {
+      let failure;
+      try { await controller.await(); } catch (error) { failure = error; }
+      if (failure?.message === 'file-upload: Agent resolver is already registered'
+        && uploads.agentResolver === initial) {
+        uploads.agentResolver = undefined;
+        await controller.restart();
+      }
+    }
   });
   root.effect(() => () => { delete root[installed]; });
 }
