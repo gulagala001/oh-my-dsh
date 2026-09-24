@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, writeFile, readFile, rm, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { _electron } from 'playwright';
 import { until } from './fixtures/frontend.mjs';
 import { cleanupFixture, closeFixtureServer } from './fixtures/process.mjs';
@@ -40,13 +41,32 @@ test('packaged Desktop installs OMD, preserves conversations across restart and 
       if (process.env.TRISOUL_UI_ARTIFACTS) {
         await mkdir(process.env.TRISOUL_UI_ARTIFACTS, { recursive: true });
         await writeFile(join(process.env.TRISOUL_UI_ARTIFACTS, 'desktop-log.txt'), log.replace(/token=[\w-]+/g, 'token=[redacted]'));
+        if (origin && cookie) {
+          const diagnostic = await fetch(origin + '/omd-desktop-test/diagnostics', { headers: { cookie }, signal: AbortSignal.timeout(2000) }).then(r => r.json()).catch(error => ({ error: error.message }));
+          await writeFile(join(process.env.TRISOUL_UI_ARTIFACTS, 'desktop-runtime.json'), JSON.stringify(diagnostic, null, 2));
+        }
         if (page && !page.isClosed()) await page.screenshot({ path: join(process.env.TRISOUL_UI_ARTIFACTS, 'desktop-final.png') });
       }
     },
     () => app?.close(), () => closeFixtureServer(provider), () => fixture.close(),
     () => process.env.TRISOUL_UI_ARTIFACTS ? undefined : rm(root, { recursive: true, force: true }),
   ]));
-  await writeFile(join(home, 'cordis.patch.yml'), JSON.stringify([{ id: 'webserver', config: { host: '127.0.0.1', port: 0 } }]));
+  const probe = join(root, 'desktop-probe.mjs');
+  await writeFile(probe, `export const inject = ['webServer'];
+export function apply(ctx) {
+  ctx.effect(() => ctx.webServer.register({ kind: 'prefix', path: '/omd-desktop-test/diagnostics', handler(_req, res) {
+    const browser = ctx.root[Symbol.for('opencu.runtime.v1')]?.computerUse?.browser, run = browser?.run;
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ executable: process.execPath, electron: process.versions.electron, browserExecutable: browser?.runtimePath,
+      phase: run?.phase, portFile: run?.portFileState, browserPid: run?.browserPid, jobPid: run?.jobPid,
+      stderr: run?.stderr, verification: run?.verificationError, launchError: run?.launchError?.message, cleanupError: run?.cleanupError?.message }));
+  } }));
+}`);
+  await writeFile(join(home, 'cordis.patch.yml'), JSON.stringify([
+    { id: 'webserver', config: { host: '127.0.0.1', port: 0 } },
+    { id: 'workspace-controller', config: { documentsDirectory: join(root, 'documents') } },
+    { insert: [{ id: 'omd-desktop-test-probe', name: pathToFileURL(probe).href }] },
+  ]));
   await writeFile(join(home, 'settings.yaml'), JSON.stringify({
     locale: { preference: 'zh' },
     'llm-pi-ai': { providers: { fixture: { api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'FIXTURE', models: [{ id: 'fixture', name: '桌面测试模型', contextWindow: 1000000, maxTokens: 4096, input: ['text', 'image'] }] } } },
