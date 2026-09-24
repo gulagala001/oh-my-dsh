@@ -1,9 +1,9 @@
 {
   "repository": "https://github.com/gulagala001/opencu",
-  "commit": "1fd61a8d258452fd4fbc45bf37e43d065b102a4a",
+  "commit": "4dc2d274a6a1c21f2cc9ba87b674d731576e2b7e",
   "workingTree": false,
   "version": "1.1.3",
-  "archiveSha256": "59a8d648a87aed9d5242257ea552cdbcefd70551c667582dc40966ed8872bffe",
+  "archiveSha256": "98fdc82c600ec82b3e70728c3d68ede49d03e948e618c72f44740b5ce1e76940",
   "files": {
     "README.md": "ada3a3ceed33464a9c2a3e74a935900aceae3394d820e5e7b90a00ae88323948",
     "THIRD_PARTY_NOTICES.md": "6e0ff3559f3f40e74108b119489505d56188c051ba3474ae7f31ec7a74357bef",
@@ -12,7 +12,7 @@
     "browser-extension/manifest.json": "f0e12626a0f58fd98d7b9a7569f5ffbf8a1c319b83d19c3143d946d6e01f29f4",
     "browser-extension/popup.css": "0a5be1b21a2a781efa2f341f642ef5342a92a827ce17f202044164c6be055f73",
     "browser-extension/popup.html": "002526dc0b93a13f24e56b00713588b00ca53045b30f9e819c151014a510fd75",
-    "browser-extension/popup.js": "6578f5fcdce3bd97b35852b236886a02108c8a8e163ea4997701ef93b4ac46d2",
+    "browser-extension/popup.js": "15dfa0a5e6a2dff34d077a45a149f3632a6914b10df0945914512e729aed3ffc",
     "browser-extension/session-groups.js": "bbc53339c6ed5a0c89e43e6087d969d6051b8cfe44aabd2f2f27443a4bc2b60d",
     "browser-extension/worker.js": "2b93523761de8821b4ba6773abbbebf89e22e7906aec47d77dac020d8df43fee",
     "cordis.patch.yml": "b1d5171a549f17e67e1b387b59ef60f11b90d8a0bfb4ba863186394502e2723f",
