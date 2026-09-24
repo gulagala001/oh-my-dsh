@@ -25,7 +25,7 @@
 - id: ui-brand-official
   disabled: true
 
-# DSH 0.1.7-rc.1 providers with opt-in OMD extensions. Original rows remain
+# DSH 0.1.7-rc.2 providers with opt-in OMD extensions. Original rows remain
 # intact and become active again when this bundle is removed.
 - id: tools
   disabled: true

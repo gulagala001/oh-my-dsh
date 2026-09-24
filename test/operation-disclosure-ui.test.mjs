@@ -14,7 +14,9 @@ test('all tool families share one disclosure before and after completion, with a
     sent=true;release=f.holdNextReply();
     const read=payload.tools.find(tool=>tool.function.name==='read_image');assert.ok(read);
     const fields=read.function.parameters.properties,key=['path','file_path','image_path'].find(key=>key in fields);assert.ok(key,JSON.stringify(fields));
-    return {delta:{role:'assistant',tool_calls:[['bash',{command:'printf operation-fixture',description:'检查操作列表'}],['computer_use_reset',{}],['read_image',{[key]:path}]].map(([name,args],index)=>({index,id:'operation-'+index,type:'function',function:{name,arguments:JSON.stringify(args)}}))},finish_reason:'tool_calls'};
+    const shell=process.platform==='win32'?'pwsh':'bash';
+    const command=process.platform==='win32'?"[Console]::Out.Write('operation-fixture')":'printf operation-fixture';
+    return {delta:{role:'assistant',tool_calls:[[shell,{command,description:'检查操作列表'}],['computer_use_reset',{}],['read_image',{[key]:path}]].map(([name,args],index)=>({index,id:'operation-'+index,type:'function',function:{name,arguments:JSON.stringify(args)}}))},finish_reason:'tool_calls'};
   });
   await rpc('session/prompt',{requestId:crypto.randomUUID(),sessionId,mode:'queue',content:[{type:'text',text:'检查操作折叠'}]});
   const running=page.locator('.tx-cu-group-toggle').filter({hasText:'3 次操作'});await running.waitFor();
@@ -25,6 +27,7 @@ test('all tool families share one disclosure before and after completion, with a
   const summary=page.locator('[data-turn-process-tool-calls="3"]');await summary.waitFor();
   assert.equal(await summary.getAttribute('aria-expanded'),'true','completion preserves the process the user is already reading');
   assert.match(await summary.innerText(),/用时/);assert.match(await running.innerText(),/运行命令/);assert.match(await running.innerText(),/读取图片/);
+  assert.equal(await page.locator('.tx-cu-turn-outcomes').filter({has:summary}).locator('.tx-cu-error').count(),0,'the first three tools finish without failures');
   await summary.click();assert.equal(await page.locator('[data-chat-call-id]:visible').count(),0);assert.equal(await page.getByText('四层结构正文',{exact:true}).isVisible(),true);
   if(process.env.TRISOUL_UI_ARTIFACTS)await page.screenshot({path:join(f.root,'operation-summary.png')});
   await summary.click();
@@ -67,7 +70,7 @@ test('all tool families share one disclosure before and after completion, with a
   });
   await rpc('session/prompt',{requestId:crypto.randomUUID(),sessionId,mode:'queue',content:[{type:'text',text:'检查失败记录'}]});
   await page.getByText('失败状态示例完成',{exact:true}).waitFor();
-  const failedSummary=page.locator('[data-turn-process-tool-calls="1"]');await failedSummary.waitFor();await page.locator('.tx-cu-turn-outcomes').filter({hasText:'1 项失败'}).waitFor();
+  const failedSummary=page.locator('[data-turn-process-tool-calls="1"]');await failedSummary.waitFor();await page.locator('.tx-cu-turn-outcomes').filter({has:failedSummary,hasText:'1 项失败'}).waitFor();
   if(await failedSummary.getAttribute('aria-expanded')!=='true')await failedSummary.click();
   const failureGroup=page.locator('[data-cu-group] .tx-cu-group-toggle').filter({hasText:'1 次操作'});await failureGroup.click();
   await page.getByText('读取失败',{exact:true}).waitFor();

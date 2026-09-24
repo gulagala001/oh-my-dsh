@@ -1,6 +1,8 @@
 # Keep the published OpenCU distribution byte-for-byte on every platform.
 vendor/opencu/** -text
 vendor/dsh/** -text
+vendor/dsh/changes.patch -whitespace
+vendor/opencu/vendor/dsh-chat/changes.patch -whitespace
 vendor/prompt-optimizer/** -text -whitespace
 
 # Preserve upstream font binaries, provenance and licenses byte-for-byte.

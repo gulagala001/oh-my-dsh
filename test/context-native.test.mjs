@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ContextPipeline } from '../src/context/pipeline.mjs';
-import { newRecord, userMessages } from '../src/context/core.mjs';
+import { newRecord, userMessages, prepareCandidate } from '../src/context/core.mjs';
 let deps, missing;
 try {
   const [sessions, llm, host] = await Promise.all([import('@deepseek-ai/dsh-session'), import('@deepseek-ai/dsh-llm'), import('../src/context/host.mjs')]);
@@ -91,4 +91,40 @@ test('in-turn compaction and later todo edits satisfy the released V4 lifecycle'
   for(const event of session.snapshotEvents())restore.decodeRow(catalog.encodeCurrentEvent(event));
   assert.doesNotThrow(()=>restore.finish());
   assert.equal(session.deriveMessages().at(-1).content[0].text,'Summary');
+});
+
+test('rc.2 dynamic tool declarations survive context replacement, full compaction and replay', async t => {
+  const { Session, createMessage, createUserMessage, createSystemMessage, createDeveloperMessage, createHostAdapter } = deps;
+  const dir = mkdtempSync(join(tmpdir(), 'native-tool-updates-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const session = Session.create('tool-updates', undefined, { version: 4, id: 'tool-updates', createdAt: Date.now(), cwd: dir, isSeeded: false, agentPreset: 'trisoul-x' });
+  session.append('system/message', { turn: 1, step: 1, message: createSystemMessage('Keep host instructions') }, { surfaceOp: 'append' });
+  session.append('request/header', { reason: 'initial', header: { config: { provider: 'test', model: 'test' }, tools: [{ name: 'old_tool', description: 'Old', parameters: {} }] } });
+  session.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'Keep this request' }], source: { kind: 'user' } }), { surfaceOp: 'append' });
+  const assistant = () => session.append('assistant/message', { turn: 1, step: 1, stream: [], message: createMessage({ role: 'assistant', source: { kind: 'model', provider: 'test', model: 'test' }, content: [{ type: 'text', text: 'Observed work result. '.repeat(1000) }] }) }, { surfaceOp: 'append' });
+  assistant();
+  const headerSeq = session.append('request/header', { reason: 'change', header: { config: { provider: 'test', model: 'test' }, tools: [{ name: 'new_tool', description: 'New', parameters: {} }] } }).seq;
+  const update = session.append('developer/message', { turn: 1, step: 2, headerSeq, message: createDeveloperMessage({ source: { kind: 'tool-registry' }, content: [{ type: 'tool-addition', toolName: 'new_tool' }, { type: 'tool-removal', toolName: 'old_tool' }] }) }, { surfaceOp: 'append' });
+  assistant();
+  const history = session.toolHistory();
+  const hub = { store: { dir }, config: () => ({ flushIdleMs: 0, keepTailEvents: 0, traceEnabled: false, coordinatorEvery: 999 }), scope: () => ({ mode: 'session', project: dir }), action() {},
+    async call(_agent, kind, request) {
+      assert.ok(!JSON.stringify(request.messages).includes('tool-addition'), 'tool control data is never sent to the summarizer');
+      return { blocks: [{ type: 'tool-call', name: kind === 'compactFull' ? 'compact_conversation' : 'prepare_segment', arguments: kind === 'compactFull' ? { summary: 'Request retained; observed work completed.' } : { summary: 'Work completed.', documents: [] } }] };
+    }, ctx: { sessions: { async flush() {} }, tokenMeter: { measure(s) { return { nodes: s.surface.nodes.map(seq => ({ seq, heuristicTokens: 100 })) }; } } } };
+  const pipeline = new ContextPipeline(hub, createHostAdapter(hub)); t.after(() => pipeline.dispose());
+  const agent = { session, status: 'idle' };
+  const candidate = prepareCandidate(session, pipeline.state(session), pipeline.config(), pipeline.adapter.pairing);
+  assert.ok(candidate && !candidate.some(event => event.seq === update.seq), 'tool declarations must stay outside summary candidates');
+  await pipeline.prepare(agent, true);
+  const state = pipeline.state(session);
+  assert.ok(state.records.length);
+  assert.ok(state.records.every(record => !record.sourceSeqs.includes(update.seq)), 'prepared records exclude live tool declarations');
+  await pipeline.applyReady(agent, { manual: true, ids: state.records.map(record => record.id), mode: 'brief' });
+  assistant();
+  await pipeline.requestCompaction(session, agent, 'full');
+  assert.ok(session.surface.nodes.includes(update.seq), 'tool update stays at its original surface position');
+  assert.deepEqual(session.eventAt(update.seq), update);
+  const replay = Session.create(session.id, JSON.parse(JSON.stringify(session.snapshotEvents())), session.header);
+  assert.deepEqual(replay.deriveMessages(), session.deriveMessages());
+  assert.deepEqual(replay.toolHistory(), history);
 });

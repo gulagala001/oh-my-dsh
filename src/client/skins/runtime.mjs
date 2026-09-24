@@ -88,7 +88,14 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}) {
     getSnapshot: () => state,
     subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn); },
     getAppearance: () => ctx.theme.getTheme().preference,
-    setAppearance: value => ctx.theme.setTheme(value),
+    async setAppearance(value) {
+      const form = ctx.configForms.get('ui-theme');
+      if (form.getSnapshot().mode === 'memory') return ctx.theme.setTheme(value);
+      // rc.2 re-adopts the shared settings mirror during writes. Let the
+      // native form commit before the theme adopts it, so an older snapshot
+      // cannot flash the previous palette over an optimistic selection.
+      if (!await form.set('preference', value)) throw new Error('明暗模式未保存，请重试。');
+    },
     select(id) {
       if (id !== 'default' && !prepared.has(id)) throw new Error('皮肤不存在，请重新导入');
       save({ ...state, selected: id });

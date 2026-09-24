@@ -183,7 +183,7 @@ html.omd[data-omd-layout="codex-desktop"] {
   & :is(.cx-settings, .tx-recommended) { padding: 0; }
   & :is(.cx-settings h2, .tx-recommended h2) { margin: 0 0 8px; }
   & :is(.cx-savebar, .cx-actions) { padding-block: 12px; border-color: var(--omd-pane-line); }
-  & :is(.zGbnIq_rowCard, .pbvGtq_panel, .rtSEdW_pickerPreference) { border-radius: 10px; box-shadow: none; border-color: var(--omd-border); }
+  & :is(.zGbnIq_rowCard, .pbvGtq_panel, .rtSEdW_card) { border-radius: 10px; box-shadow: none; border-color: var(--omd-border); }
   & :is(.tx-button, .cx-btn) { min-height: 30px; padding: 5px 12px; font-size: 12px; border-radius: 8px; }
   & :is(.tx-button.tx-primary, .cx-btn.primary) { border-radius: 999px; }
 

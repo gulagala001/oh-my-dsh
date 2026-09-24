@@ -128,6 +128,10 @@ test('terminal skin covers the real shell, fonts, all settings, navigation and r
   await page.getByRole('button', { name: '移除当前皮肤', exact: true }).waitFor();
   await page.reload(); await page.getByRole('button', { name: '设置', exact: true }).waitFor();
   assert.equal(await page.locator('html').getAttribute('data-omd-layout'), 'claude-cli-terminal');
+  // rc.2 resolves empty-Hero onboarding after mounting the shell. Wait for
+  // restored conversation data before testing the settings controls.
+  await page.getByText('整理工作台和对话界面', { exact: true }).first().click();
+  await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
   await open();
   await page.getByLabel('明暗模式', { exact: true }).selectOption('system');
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });

@@ -15,6 +15,43 @@ async function chooseAppearance(page, value) {
   assert.equal(result.result?.ok, true, JSON.stringify(result));
 }
 
+test('appearance commits through the native form without reverting an optimistic palette', { timeout: 60000 }, async t => {
+  const { page, errors } = await frontendFixture(t);
+  await page.getByRole('button', { name: '设置', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: '外观', exact: true }).click();
+  await page.getByLabel('皮肤', { exact: true }).selectOption('codex-desktop');
+  await chooseAppearance(page, 'light');
+  await until(async () => await page.locator('html').getAttribute('data-appearance') === 'light');
+  let release, entered;
+  const gate = new Promise(resolve => { release = resolve; }), pending = new Promise(resolve => { entered = resolve; });
+  await page.route('**/api/settings/mutate', async route => {
+    const args = route.request().postDataJSON().payload.args;
+    if (args.ns === 'ui-theme' && args.ops.some(op => op.value === 'dark')) { entered(); await gate; }
+    await route.continue();
+  });
+  await page.evaluate(() => {
+    window.appearanceChanges = [];
+    new MutationObserver(records => window.appearanceChanges.push(...records.map(record => record.oldValue), document.documentElement.dataset.appearance))
+      .observe(document.documentElement, { attributes: true, attributeFilter: ['data-appearance'], attributeOldValue: true });
+  });
+  try {
+    const saved = page.waitForResponse(response => response.url().endsWith('/api/settings/mutate') && response.request().postData().includes('"dark"'));
+    await page.getByLabel('明暗模式', { exact: true }).selectOption('dark');
+    await pending;
+    assert.equal(await page.evaluate(() => window.appearanceChanges.includes('dark')), false, 'a pending write cannot flash dark and then revert to the older mirror');
+    release();
+    const result = await (await saved).json(); assert.equal(result.result?.ok, true, JSON.stringify(result));
+    await until(async () => await page.locator('html').getAttribute('data-appearance') === 'dark');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'BT · Better Todo', exact: true }).click();
+    await page.getByRole('menu').waitFor();
+    assert.equal(await page.locator('html').getAttribute('data-appearance'), 'dark');
+    await page.reload();
+    await until(async () => await page.locator('html').getAttribute('data-appearance') === 'dark');
+    assert.deepEqual(errors, []);
+  } finally { release(); }
+});
+
 test('native variable shorthands preserve appearance, overrides and offline validation', { timeout: 90000 }, async t => {
   const { page, errors } = await frontendFixture(t);
   const skin = structuredClone(sample);

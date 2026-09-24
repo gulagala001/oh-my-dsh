@@ -11,7 +11,8 @@ for (const destination of ['../browser-extension/logo.svg']) {
 }
 const nativeChat = await readFile(new URL('../vendor/dsh-chat/lib/client.js', import.meta.url), 'utf8');
 if (!nativeChat.startsWith('window.__ModuleLoader__.load({') || !nativeChat.replace(/^\/\/# sourceMappingURL=.*$/gm, '').trimEnd().endsWith('});')) throw Error('Unexpected native Chat factory');
-const registration = nativeChat.replace(/^\/\/# sourceMappingURL=.*$/gm, '').trimEnd().replace('window.__ModuleLoader__.load(', 'const registration = ').replace(/\);$/, ';');
+const ownedChat = nativeChat.replace(/(const tagId(?:\$\d+)? = )"@deepseek-ai\/dsh-client-ui-chat\//g, '$1"opencu-shared-chat/').replaceAll('tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-chat"', 'tag.dataset.plugin = "opencu-shared-chat"');
+const registration = ownedChat.replace(/^\/\/# sourceMappingURL=.*$/gm, '').trimEnd().replace('window.__ModuleLoader__.load(', 'const registration = ').replace(/\);$/, ';');
 await writeFile(new URL('../lib/chat.factory.mjs', import.meta.url), registration + '\nexport const createChat = require => registration.factory(require);\n');
 
 await build({

@@ -8,16 +8,20 @@
 
 | 组件 | 本手册目标 |
 | --- | --- |
-| Oh My DSH | **1.7.2**，Git tag `v1.7.2` |
-| DSH Web 宿主 | **0.1.7-rc.1** |
-| 内置 OpenCU | **1.1.2**，无需另装 |
+| Oh My DSH | **1.7.3**，Git tag `v1.7.3` |
+| DSH Web／官方桌面宿主 | **0.1.7-rc.2** |
+| 内置 OpenCU | **1.1.3**，无需另装 |
 | 环境 | Node.js ≥22.19、Git、pnpm 11.23.0；Windows 使用 PowerShell 7 |
 
 以本手册与目标 tag 的 `package.json` 配对，不能仅把一个组件换成 `latest`。若仓库刚发布新版本而配对资料未同步，先核对官方发布说明和目标包，避免混装。
 
-完成意味着：**原环境已备份，新版在原数据目录、profile 和端口运行，旧模型／会话／皮肤仍可用，界面当前版本为 1.7.2。** GitHub 最新版本、下载成功或文件已改，均不能代替实际安装和重启。
+完成意味着：**原环境已备份，新版在原数据目录、profile 和端口运行，旧模型／会话／皮肤仍可用，界面当前版本为 1.7.3。** GitHub 最新版本、下载成功或文件已改，均不能代替实际安装和重启。
 
 ## 1. 识别真实运行环境
+
+若用户运行官方桌面应用，使用应用内「插件」页面安装 `github:gulagala001/oh-my-dsh#v1.7.3`，由桌面应用管理内置宿主和 `desktop` profile。不要对它执行 CLI 的 `plugin --profile desktop`、全局 npm 升级或修改签名应用内文件。先退出桌面应用并备份实际 `DSH_HOME`；同时使用 Web 时，桌面与 Web 的插件安装、启用状态分别管理。下文命令行安装流程适用于 Web。
+
+桌面安装、更新或启停插件后，等待现有任务结束，再从应用菜单选择「重启应用与 Host」，或完整退出后重新打开应用。关闭窗口会留在后台，刷新页面会复用桌面的旧启动配置，两者都不能代替完整重启。重启后检查当前版本、原会话和输入区工作台。
 
 只读取安装与运行需要的信息，不输出密钥、登录 token 或会话正文。
 
@@ -69,9 +73,9 @@ $env:DSH_HOME = $omdDataDir
 ```
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.7-rc.1 --version
-npx --yes @deepseek-ai/dsh@0.1.7-rc.1 plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.2
-npx --yes @deepseek-ai/dsh@0.1.7-rc.1 --profile web
+npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --version
+npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.3
+npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 ```
 
 自定义端口启动时追加 `--port 原端口`。需要常驻时使用原服务管理方式，不把临时终端进程误报为持久部署。
@@ -81,11 +85,11 @@ npx --yes @deepseek-ai/dsh@0.1.7-rc.1 --profile web
 用原包管理器更新原安装位置：
 
 ```sh
-npm install -g @deepseek-ai/dsh@0.1.7-rc.1
-# 原来通过 pnpm 全局安装时，使用 pnpm add -g @deepseek-ai/dsh@0.1.7-rc.1
+npm install -g @deepseek-ai/dsh@0.1.7-rc.2
+# 原来通过 pnpm 全局安装时，使用 pnpm add -g @deepseek-ai/dsh@0.1.7-rc.2
 
 dsh --version
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.2
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.3
 dsh --profile web
 ```
 
@@ -97,7 +101,7 @@ dsh --profile web
 
 ```sh
 git fetch origin --tags
-git switch --detach v1.7.2
+git switch --detach v1.7.3
 pnpm install --frozen-lockfile
 pnpm build
 pnpm start
@@ -120,7 +124,7 @@ pnpm start
 
 只检查这次安装的实际结果，不在用户电脑跑整个开发测试集：
 
-1. 服务从原入口正常启动，日志无阻止运行的错误；宿主实际为 0.1.7-rc.1，插件当前版本为 1.7.2。
+1. 服务从原入口正常启动，日志无阻止运行的错误；宿主实际为 0.1.7-rc.2，插件当前版本为 1.7.3。
 2. 使用本次启动的登录链接打开页面；确认对话、工作台和原皮肤正常显示。已有用户能看到原模型配置和一个旧会话的历史，不输出其正文。
 3. 如可使用已配置模型，在新测试会话做一次短对话和无副作用的工具调用；没有可用模型或凭据时明确这一项未完成，不伪造成功。
 4. 向用户简洁报告实际版本、访问地址（不公开登录 token）、备份位置和任何未完成步骤。用户未要求时，不公开推送本机配置或数据。

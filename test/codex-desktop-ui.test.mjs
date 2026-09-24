@@ -146,6 +146,10 @@ test('Codex desktop layout: native navigation, every settings page, workbench an
   await until(async () => await page.locator('html').getAttribute('data-appearance') === 'light');
   await page.reload(); await page.getByRole('button', { name: '设置', exact: true }).waitFor();
   assert.equal(await page.locator('html').getAttribute('data-omd-layout'), 'codex-desktop');
+  // The restored empty-Hero onboarding can close a panel during startup.
+  if (await page.locator('.pI_x6G_frame').getAttribute('data-sidebar-collapsed') === 'true') await page.locator('.hHd-Xa_toggle').click();
+  await page.getByText('整理工作台和对话界面', { exact: true }).first().click();
+  await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
   await openSettings(); await page.getByRole('button', { name: '恢复默认皮肤', exact: true }).click();
   assert.equal(await page.locator('html').getAttribute('data-omd-layout'), null);
   assert.equal(await page.locator('style[data-omd-skin-style]').count(), 0);
