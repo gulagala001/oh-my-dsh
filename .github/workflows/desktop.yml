@@ -24,9 +24,6 @@ jobs:
             target: win-x64
           - os: macos-latest
             target: mac-arm64
-    env:
-      OMD_DESKTOP_TEST_ROOT: ${{ runner.temp }}/omd-desktop-rc2
-      TRISOUL_UI_ARTIFACTS: ${{ runner.temp }}/omd-desktop-artifacts
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -41,10 +38,14 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm build
       - run: node scripts/prepare-desktop-test.mjs ${{ matrix.target }}
+        env:
+          OMD_DESKTOP_TEST_ROOT: ${{ runner.temp }}/omd-desktop-rc2
       - run: node --test test/desktop-install.test.mjs
+        env:
+          TRISOUL_UI_ARTIFACTS: ${{ runner.temp }}/omd-desktop-artifacts
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: desktop-${{ matrix.target }}
-          path: ${{ env.TRISOUL_UI_ARTIFACTS }}
+          path: ${{ runner.temp }}/omd-desktop-artifacts
           if-no-files-found: warn
