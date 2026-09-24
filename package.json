@@ -1,6 +1,6 @@
 {
   "name": "trisoul_x",
-  "version": "1.7.2",
+  "version": "1.7.3",
   "private": true,
   "type": "module",
   "description": "DSH 增强插件：长上下文、任务验证、提示词优化、代码理解、电脑操作与四套完整主题。",
@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "@colbymchenry/codegraph": "1.6.0",
-    "@deepseek-ai/dsh-mcp-client": "0.1.7-rc.1",
+    "@deepseek-ai/dsh-mcp-client": "0.1.7-rc.2",
     "@modelcontextprotocol/client": "2.0.0",
     "diff": "9.0.0",
     "html-to-text": "10.0.1",
@@ -98,32 +98,32 @@
   ],
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.4",
-    "@deepseek-ai/dsh": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-compaction": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-llm": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-session": "0.1.7-rc.1",
+    "@deepseek-ai/dsh": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-compaction": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-llm": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-session": "0.1.7-rc.2",
     "@deepseek-ai/schemastery": "3.18.4",
     "esbuild": "0.25.12",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "@deepseek-ai/dsh-tools": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-attachment": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-jobs": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-scope": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-timeout": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-shell": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-sandbox": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-output-retention": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-brand": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-util-values": "0.1.7-rc.1"
+    "@deepseek-ai/dsh-tools": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-attachment": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-jobs": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-scope": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-timeout": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-shell": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-sandbox": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-output-retention": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-brand": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-util-values": "0.1.7-rc.2"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.4",
-    "@deepseek-ai/dsh-compaction": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-llm": "0.1.7-rc.1",
+    "@deepseek-ai/dsh-compaction": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-llm": "0.1.7-rc.2",
     "@deepseek-ai/schemastery": "3.18.4",
-    "@deepseek-ai/dsh-tools": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-attachment": "0.1.7-rc.1"
+    "@deepseek-ai/dsh-tools": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-attachment": "0.1.7-rc.2"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {

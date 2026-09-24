@@ -1,0 +1,50 @@
+name: Official Desktop installation
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  packaged-desktop:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: win-x64
+          - os: macos-latest
+            target: mac-arm64
+    env:
+      OMD_DESKTOP_TEST_ROOT: ${{ runner.temp }}/omd-desktop-rc2
+      TRISOUL_UI_ARTIFACTS: ${{ runner.temp }}/omd-desktop-artifacts
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-dotnet@v6
+        if: runner.os == 'Windows'
+        with:
+          dotnet-version: '10.0.x'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm build
+      - run: node scripts/prepare-desktop-test.mjs ${{ matrix.target }}
+      - run: node --test test/desktop-install.test.mjs
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: desktop-${{ matrix.target }}
+          path: ${{ env.TRISOUL_UI_ARTIFACTS }}
+          if-no-files-found: warn

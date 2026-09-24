@@ -1,5 +1,5 @@
 diff --git a/packages/client/tsdown.client.ts b/packages/client/tsdown.client.ts
-index 99e647d2..d7786d87 100644
+index 215001db..a5eece97 100644
 --- a/packages/client/tsdown.client.ts
 +++ b/packages/client/tsdown.client.ts
 @@ -558,7 +558,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
@@ -30,7 +30,7 @@ index 99e647d2..d7786d87 100644
        },
      }],
 diff --git a/packages/client/ui-conversation/src/client/apply.ts b/packages/client/ui-conversation/src/client/apply.ts
-index f4a5ff47..79e3dd4c 100644
+index 942444d3..a4772f8e 100644
 --- a/packages/client/ui-conversation/src/client/apply.ts
 +++ b/packages/client/ui-conversation/src/client/apply.ts
 @@ -1,3 +1,4 @@
@@ -38,7 +38,7 @@ index f4a5ff47..79e3dd4c 100644
  /** Registers the target-neutral Conversation assembly, shell, input, and docks. */
  import type { Context } from '@deepseek-ai/cordis'
  import z from '@deepseek-ai/schemastery'
-@@ -56,12 +57,14 @@ export const inject = [
+@@ -58,12 +59,14 @@ export const inject = [
  
  /** Conversation runtime configuration. */
  export interface Config {
@@ -53,15 +53,17 @@ index f4a5ff47..79e3dd4c 100644
    maxConcurrentFileUploads: z.natural().min(1).default(2),
  })
  
-@@ -147,6 +150,7 @@ function concreteConversation(ctx: Context): ConversationController {
+@@ -148,7 +151,8 @@ function concreteConversation(ctx: Context): ConversationController {
+  * Mount the Conversation core and target-neutral presentation.
   * @param ctx - Client root context.
   */
- export function apply(ctx: Context, config: Config = Config({})): void {
+-export function apply(ctx: Context, config: Config = Config({})): void {
++export async function apply(ctx: Context, config: Config = Config({})): Promise<void> {
 +  if (reloadOnProviderChange(ctx)) return
    const sessions = ctx.sessions
    const slots = ctx.slots
    // Schemastery's field default is materialized before Cordis calls apply.
-@@ -158,7 +162,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
+@@ -160,7 +164,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
    const t = ctx.locale.bind(NS)
    const conversationStore = createConversationStore()
    const submissionPolicy = new ComposerSubmissionPolicy(
@@ -70,12 +72,40 @@ index f4a5ff47..79e3dd4c 100644
    )
  
    ctx.effect(() => () => { submissionPolicy.dispose() })
+@@ -267,6 +271,15 @@ export function apply(ctx: Context, config: Config = Config({})): void {
+   const inputHub = new InputHub(ctx, t)
+   const composerBlocks = new ComposerBlockRegistry()
+ 
++  // Live provider replacement exposes slots to an already mounted renderer.
++  // Activate their action service before publishing those slots.
++  await ctx.plugin(ConversationController, {
++    input: inputHub,
++    blocks: composerBlocks,
++    maxConcurrentFileUploads,
++  })
++
++
+   ctx.inject(['commandUi'], (scope) => {
+     const commands = scope.get('commandUi') as FileCommandRegistry
+     scope.effect(() => commands.register({
+@@ -542,11 +555,6 @@ export function apply(ctx: Context, config: Config = Config({})): void {
+     yield registerComposerBar()
+   })
+ 
+-  ctx.plugin(ConversationController, {
+-    input: inputHub,
+-    blocks: composerBlocks,
+-    maxConcurrentFileUploads,
+-  })
+   ctx.plugin(todoDockEntry)
+   ctx.plugin(queueDockEntry)
+ }
 diff --git a/packages/client/ui-conversation/src/client/conversation-reload.ts b/packages/client/ui-conversation/src/client/conversation-reload.ts
 new file mode 100644
-index 00000000..7d92eef5
+index 00000000..3e18942c
 --- /dev/null
 +++ b/packages/client/ui-conversation/src/client/conversation-reload.ts
-@@ -0,0 +1,24 @@
+@@ -0,0 +1,27 @@
 +import type { Context } from '@deepseek-ai/cordis'
 +
 +/** Switching the entire Conversation provider requires a fresh page assembly.
@@ -84,6 +114,9 @@ index 00000000..7d92eef5
 + */
 +export function reloadOnProviderChange(ctx: Context): boolean {
 +  if (typeof window === 'undefined') return false
++  // Desktop keeps boot injections for the Host lifetime; reloading would use
++  // the pre-install graph. Its native module updates own provider replacement.
++  if (window.location.protocol === 'dsh-app:') return false
 +  const boot = (window as unknown as { __DSH_BOOT__?: { entries?: { id: string }[] } }).__DSH_BOOT__
 +  if (!boot?.entries) return false
 +  let leaving = false
@@ -101,10 +134,10 @@ index 00000000..7d92eef5
 +  return false
 +}
 diff --git a/packages/client/ui-conversation/src/client/locales.ts b/packages/client/ui-conversation/src/client/locales.ts
-index a988d7b0..dcf585f2 100644
+index 88ae0697..153ead11 100644
 --- a/packages/client/ui-conversation/src/client/locales.ts
 +++ b/packages/client/ui-conversation/src/client/locales.ts
-@@ -24,6 +24,7 @@ export const zh = {
+@@ -28,6 +28,7 @@ export const zh = {
    'input.stop': '停止生成',
    'input.send': '发送消息',
    'input.send.queue': '排队发送',
@@ -112,7 +145,7 @@ index a988d7b0..dcf585f2 100644
    'input.send.steer': '插话发送',
    'attachment.pending': '待发送附件',
    'attachment.scrollLeft': '向左滚动附件',
-@@ -378,6 +379,7 @@ export const en = {
+@@ -398,6 +399,7 @@ export const en = {
    'input.stop': 'Stop generating',
    'input.send': 'Send message',
    'input.send.queue': 'Queue message',
@@ -121,7 +154,7 @@ index a988d7b0..dcf585f2 100644
    'attachment.pending': 'Pending attachments',
    'attachment.scrollLeft': 'Scroll attachments left',
 diff --git a/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx b/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
-index dea8a869..1305803b 100644
+index f004aba1..5dbd4bb3 100644
 --- a/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
 +++ b/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
 @@ -39,6 +39,7 @@ import { attachmentErrorText, imageSizeText } from '../image-labels.ts'
@@ -132,15 +165,16 @@ index dea8a869..1305803b 100644
  
  export type InputBarProps = ComposerBarProps
  
-@@ -53,13 +54,15 @@ export const InputBar = memo(function InputBar({
+@@ -53,7 +54,7 @@ export const InputBar = memo(function InputBar({
  }: InputBarProps) {
    const input = useInput(s => s)
    const notice = useNotices(s => s)
 -  const busyEnter = useBusyEnter(s => s)
 +  const preferredBusyEnter = useBusyEnter(s => s)
+   const stopKeys = useStopShortcut(keys => keys)
    void useLexicon // hook seat stays bound by the inject compartment; text-ref decoration rides the shell's editor transforms
    const commandMenuOpen = useMenuLauncher(source => source === 'command')
-   const [activity, setActivity] = useState(false)
+@@ -61,6 +62,8 @@ export const InputBar = memo(function InputBar({
    useEffect(() => { setActivity(false) }, [sessionId])
    const promptError = useSession(s => s.promptError) ?? null
    const running = useSession(s => s.running) ?? false
@@ -149,7 +183,7 @@ index dea8a869..1305803b 100644
    const subagent = useSession(s => s.subagent) ?? null
    const removed = useSession(s => s.removed) ?? false
    // Plan mode swaps the composer placeholder (the projection is the folded
-@@ -308,7 +311,7 @@ export const InputBar = memo(function InputBar({
+@@ -309,7 +312,7 @@ export const InputBar = memo(function InputBar({
    const primaryLabel = primaryStops
      ? t('input.stop')
      : running && steeringAvailable && !disabled && !uploadsPending && plainMessageDraft
@@ -201,10 +235,10 @@ index 00000000..35956926
 +  return running && observed?.id === sessionId && observed?.waiting === true
 +}
 diff --git a/packages/core/tools/src/index.ts b/packages/core/tools/src/index.ts
-index baca4ec5..26e500c8 100644
+index ca89f370..4a59dcfc 100644
 --- a/packages/core/tools/src/index.ts
 +++ b/packages/core/tools/src/index.ts
-@@ -740,6 +740,7 @@ class ToolLayer implements ScopeLayer {
+@@ -741,6 +741,7 @@ class ToolLayer implements ScopeLayer {
     * "which form does the model see" is a contradiction, not a merge.
     */
    mode: ToolPresentationMode | undefined
@@ -212,7 +246,7 @@ index baca4ec5..26e500c8 100644
  
    constructor(scope: ScopeKey | undefined) {
      this.tools = new NamedEntries(name => new Error(scope === undefined
-@@ -834,6 +835,7 @@ export class ToolRuntime extends Service {
+@@ -835,6 +836,7 @@ export class ToolRuntime extends Service {
      () => { this.ctx.emit('tools/change') },
    )
    /** Presentation for scopes that declare none; {@link presentAs} shadows it per scope. */
@@ -220,7 +254,7 @@ index baca4ec5..26e500c8 100644
    private readonly defaultMode: ToolPresentationMode
    private readonly maxParallelSubCalls: number
    /**
-@@ -878,7 +880,9 @@ export class ToolRuntime extends Service {
+@@ -879,7 +881,9 @@ export class ToolRuntime extends Service {
        order: this.ctx.systemPrompt.getSectionOrder('PTC_ONLY'),
        // The SAME predicate the executor denies by, so the prompt cannot state
        // a rule the registry does not enforce (see `collapses`).
@@ -231,7 +265,7 @@ index baca4ec5..26e500c8 100644
      }
    }
  
-@@ -970,7 +974,7 @@ export class ToolRuntime extends Service {
+@@ -971,7 +975,7 @@ export class ToolRuntime extends Service {
     * @param mode - the presentation the covered agents' models see.
     * @returns the exact disposer that restores the deployment default.
     */
@@ -240,7 +274,7 @@ index baca4ec5..26e500c8 100644
      const ctx = this.ctx
      if (scopeOf(ctx) === undefined) {
        throw new Error('tools.presentAs() requires a scoped context (agent.ctx): a context-global presentation is the `mode` config field on the tools row')
-@@ -983,7 +987,8 @@ export class ToolRuntime extends Service {
+@@ -984,7 +988,8 @@ export class ToolRuntime extends Service {
              throw new Error(`tools.presentAs("${mode}") conflicts with "${layer.mode}" already declared for this scope; one composition selects one presentation`)
            }
            layer.mode = mode
@@ -250,7 +284,7 @@ index baca4ec5..26e500c8 100644
          },
          { label: 'tools.presentAs()' },
        )
-@@ -1000,6 +1005,21 @@ export class ToolRuntime extends Service {
+@@ -1001,6 +1006,21 @@ export class ToolRuntime extends Service {
      return dispose
    }
  
@@ -272,7 +306,7 @@ index baca4ec5..26e500c8 100644
    /**
     * Build one scope's wire schemas and names for prompt-order validation.
     * Restrictions do not make known tools invalid, but a mode collapse does.
-@@ -1007,6 +1027,7 @@ export class ToolRuntime extends Service {
+@@ -1008,6 +1028,7 @@ export class ToolRuntime extends Service {
    private wireSchemas(scope?: ScopeKey): ToolProviderResult {
      const view = this.view(scope)
      const mode = this.modeFor(scope)
@@ -280,7 +314,7 @@ index baca4ec5..26e500c8 100644
      if (mode === 'native') {
        const schemas = [...view.visible.values()].map(definition => this.schemaOf(definition, false))
        return { schemas, knownNames: [...view.knownNames] }
-@@ -1020,8 +1041,8 @@ export class ToolRuntime extends Service {
+@@ -1021,8 +1042,8 @@ export class ToolRuntime extends Service {
      const schemas = [...view.visible.values()].map(definition => this.schemaOf(definition, false))
      if (mode === 'ptc') {
        return {
@@ -291,7 +325,7 @@ index baca4ec5..26e500c8 100644
        }
      }
      return { schemas, knownNames: [...view.knownNames, RUN_CODE_NAME] }
-@@ -1348,7 +1369,7 @@ export class ToolRuntime extends Service {
+@@ -1349,7 +1370,7 @@ export class ToolRuntime extends Service {
     * @param nested - whether the call is a transport sub-dispatch, not a model-direct call.
     */
    private collapses(name: string, scope: ScopeKey | undefined, nested: boolean): boolean {
@@ -474,7 +508,7 @@ index ed3af9c0..3d15f470 100644
    readonly id: JobId
    /**
 diff --git a/packages/jobs/tool-jobs/src/index.ts b/packages/jobs/tool-jobs/src/index.ts
-index 6551b5a6..1092487f 100644
+index e0b961e2..08a6846d 100644
 --- a/packages/jobs/tool-jobs/src/index.ts
 +++ b/packages/jobs/tool-jobs/src/index.ts
 @@ -68,6 +68,7 @@ const PUBLIC_JOB_SCHEMA = {
@@ -612,16 +646,16 @@ index 6551b5a6..1092487f 100644
      })
      if (delivery === 'wakeup' && owner.status === 'idle') {
        if (wakeBudget === undefined) {
-@@ -317,7 +404,7 @@ export function apply(ctx: Context, config: Config): void {
+@@ -315,7 +402,7 @@ export function apply(ctx: Context, config: Config): void {
      parameters: {
        job_id: { type: 'string', required: true, description: 'Job id returned by the tool that started the background work.' },
-       wait: { type: 'boolean', description: 'Block until the job reaches a terminal status or the timeout expires. A timed-out wait returns [status: running] and leaves the job alive.' },
--      timeout_ms: { type: 'number', description: 'Max wait in milliseconds (only meaningful with wait: true). Defaults to the configured wait timeout; capped by the configured maximum.' },
+       wait: { type: 'boolean', description: 'Block until the job finishes or the timeout expires; a timed-out wait leaves the job running. Defaults to false.' },
+-      timeout_ms: { type: 'number', description: 'Max wait in milliseconds with wait: true. Defaults to and is capped by configuration.' },
 +      timeout_ms: { type: 'number', description: 'Max wait in milliseconds (only meaningful with wait: true). For enabled top-level event waits, omission waits for completion or an actionable event. Other waits use the configured finite timeout; explicit values are capped.' },
      },
      finalizeContent: finalizeJobContent,
      output: {
-@@ -327,25 +414,33 @@ export function apply(ctx: Context, config: Config): void {
+@@ -325,25 +412,33 @@ export function apply(ctx: Context, config: Config): void {
          properties: {
            text: { type: 'string', required: true },
            job: { ...PUBLIC_JOB_SCHEMA, required: true },
@@ -684,7 +718,7 @@ index b95eb439..bdd73497 100644
      label: job.label,
      status: job.status,
 diff --git a/packages/shell/tool-bash/src/index.ts b/packages/shell/tool-bash/src/index.ts
-index c74b0513..d124149b 100644
+index 9501bac0..ecbb8622 100644
 --- a/packages/shell/tool-bash/src/index.ts
 +++ b/packages/shell/tool-bash/src/index.ts
 @@ -63,6 +63,7 @@ interface BashToolArgs {
@@ -695,7 +729,7 @@ index c74b0513..d124149b 100644
    workdir?: string
    run_in_background?: boolean
    sandbox_permissions?: string
-@@ -323,9 +324,9 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -299,9 +300,9 @@ export function apply(ctx: Context, config: Config = {}): void {
        return { id, process: () => proc, stopped: () => stopped }
      }
      /** Wait on a registered foreground command until it settles or the timeout passes. */
@@ -707,7 +741,7 @@ index c74b0513..d124149b 100644
        /**
         * Stop the job on this call's own account and stay on it until it
         * settles, so the settlement is `awaited` and no completion notice
-@@ -348,7 +349,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -324,7 +325,7 @@ export function apply(ctx: Context, config: Config = {}): void {
          await stop('tool call aborted')
          throw toolAborted()
        }
@@ -716,7 +750,7 @@ index c74b0513..d124149b 100644
          // The wait expired while preparation still ran: nothing is running
          // to keep, so this is the deadline's preparation timeout, with the
          // settled empty result the executor's own deadline would have given.
-@@ -410,6 +411,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -386,6 +387,7 @@ export function apply(ctx: Context, config: Config = {}): void {
              ? 'Timeout in milliseconds. The executor applies its configured default and cap; on expiry the command moves to the background as a job instead of being killed.'
              : 'Timeout in milliseconds. The executor applies its configured default and cap, and kills the command on expiry.',
          },
@@ -724,7 +758,7 @@ index c74b0513..d124149b 100644
          workdir: { type: 'string', description: 'Working directory for this command. Defaults to the session workspace; a relative path is resolved against it.' },
          ...background ? {
            run_in_background: { type: 'boolean' as const, description: 'Run in the background and return a job id immediately (collect with job_output, stop with job_kill). No timeout applies.' },
-@@ -502,6 +504,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -479,6 +481,7 @@ export function apply(ctx: Context, config: Config = {}): void {
          // Description is display metadata; workdir defaults to the caller's session.
          const standingPolicy = resolveSandboxPolicy(exec)
          validateBashArgs(args, standingPolicy?.mode)
@@ -732,7 +766,7 @@ index c74b0513..d124149b 100644
          const approvedMode = args.sandbox_permissions !== undefined && args.justification !== undefined
            ? await approveBashEscalation(args.sandbox_permissions, args.justification, exec, standingPolicy)
            : undefined
-@@ -529,12 +532,18 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -506,12 +509,18 @@ export function apply(ctx: Context, config: Config = {}): void {
            if (exec.signal.aborted) throw toolAborted()
            return { kind: 'background' as const, jobId: startJob(jobs, args, exec, ctx.shell.resolve({ ...request, onExpiry: 'none' })).id }
          }
@@ -753,7 +787,7 @@ index c74b0513..d124149b 100644
            let attached: StartedJob | undefined
            try {
 diff --git a/packages/shell/tool-pwsh/src/index.ts b/packages/shell/tool-pwsh/src/index.ts
-index 8fdfddd6..0df20f72 100644
+index 963fbeaa..229efee6 100644
 --- a/packages/shell/tool-pwsh/src/index.ts
 +++ b/packages/shell/tool-pwsh/src/index.ts
 @@ -81,6 +81,7 @@ interface PwshToolArgs {
@@ -764,7 +798,7 @@ index 8fdfddd6..0df20f72 100644
    workdir?: string
    run_in_background?: boolean
    sandbox_permissions?: string
-@@ -331,9 +332,9 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -308,9 +309,9 @@ export function apply(ctx: Context, config: Config = {}): void {
        return { id, process: () => proc, stopped: () => stopped }
      }
      /** Wait on a registered foreground command until it settles or the timeout passes. */
@@ -776,7 +810,7 @@ index 8fdfddd6..0df20f72 100644
        /**
         * Stop the job on this call's own account and stay on it until it
         * settles, so the settlement is `awaited` and no completion notice
-@@ -356,7 +357,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -333,7 +334,7 @@ export function apply(ctx: Context, config: Config = {}): void {
          await stop('tool call aborted')
          throw toolAborted()
        }
@@ -785,7 +819,7 @@ index 8fdfddd6..0df20f72 100644
          // The wait expired while preparation still ran: nothing is running
          // to keep, so this is the deadline's preparation timeout, with the
          // settled empty result the executor's own deadline would have given.
-@@ -420,6 +421,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -397,6 +398,7 @@ export function apply(ctx: Context, config: Config = {}): void {
              ? 'Timeout in milliseconds. The executor applies its configured default and cap; on expiry the command moves to the background as a job instead of being killed.'
              : 'Timeout in milliseconds. The executor applies its configured default and cap, and kills the command on expiry.',
          },
@@ -793,7 +827,7 @@ index 8fdfddd6..0df20f72 100644
          workdir: { type: 'string', description: 'Working directory for this command. Defaults to the session workspace; a relative path is resolved against it.' },
          ...background ? {
            run_in_background: { type: 'boolean' as const, description: 'Run in the background and return a job id immediately (collect with job_output, stop with job_kill). No timeout applies.' },
-@@ -517,6 +519,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -495,6 +497,7 @@ export function apply(ctx: Context, config: Config = {}): void {
        /* jscpd:ignore-start -- the execute path mirrors dsh-tool-bash's by design (see the pwsh-tool-and-executor Agent Note). */
        async execute(args: PwshToolArgs, exec) {
          validatePwshArgs(args)
@@ -801,7 +835,7 @@ index 8fdfddd6..0df20f72 100644
          // Description is display metadata; workdir defaults to the caller's session.
          const standingPolicy = resolveSandboxPolicy(exec)
          const approvedMode = args.sandbox_permissions !== undefined && args.justification !== undefined
-@@ -545,12 +548,18 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -523,12 +526,18 @@ export function apply(ctx: Context, config: Config = {}): void {
            if (exec.signal.aborted) throw toolAborted()
            return { kind: 'background' as const, jobId: startJob(jobs, args, exec, ctx.shell.resolve({ ...request, onExpiry: 'none' })).id }
          }
