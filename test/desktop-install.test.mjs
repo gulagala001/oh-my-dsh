@@ -48,7 +48,7 @@ test('packaged Desktop installs OMD, preserves conversations across restart and 
   ]));
   await writeFile(join(home, 'cordis.patch.yml'), JSON.stringify([{ id: 'webserver', config: { host: '127.0.0.1', port: 0 } }]));
   await writeFile(join(home, 'settings.yaml'), JSON.stringify({
-    locale: { preference: 'zh-CN' },
+    locale: { preference: 'zh' },
     'llm-pi-ai': { providers: { fixture: { api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'FIXTURE', models: [{ id: 'fixture', name: '桌面测试模型', contextWindow: 1000000, maxTokens: 4096, input: ['text', 'image'] }] } } },
     'agent-default-model': { provider: 'fixture', model: 'fixture' },
     'trisoul-x': { componentAutoSetup: false, backgroundTasksEnabled: false, digestEvery: 1000, codegraphEnabled: false, computerUseBrowserExecutable: browserExecutable, computerUseNativeBinary: join(root, 'missing-native'), computerUseChromeUserDataDir: join(root, 'chrome-profile') },

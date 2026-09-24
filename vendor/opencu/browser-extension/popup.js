@@ -1,7 +1,10 @@
 const $ = id => document.getElementById(id);
-let busy = false;
-async function update(action = 'status', tabId) {
-  if (busy) return; busy = true;
+let pending = Promise.resolve(), queued = 0;
+function update(action = 'status', tabId) {
+  // Polls may coalesce; user actions must wait their turn instead of vanishing.
+  if (action === 'status' && queued) return pending;
+  queued++;
+  pending = pending.then(async () => {
   try {
     const state = await chrome.runtime.sendMessage({action,tabId});
     $('status').textContent = state.connected ? '已连接 Oh My DSH' : state.connecting ? '正在连接 Oh My DSH…' : '未连接';
@@ -16,7 +19,9 @@ async function update(action = 'status', tabId) {
       stop.onclick = () => update('stop', Number(tab.id)); row.append(title, stop); $('tabs').append(row);
     }
   } catch (error) { $('error').hidden = false; $('error').textContent = error.message; }
-  finally { busy = false; }
+  finally { queued--; }
+  });
+  return pending;
 }
 $('connect').onclick = () => update('connect'); $('disconnect').onclick = () => update('disconnect');
 void update(); setInterval(() => update(), 800);
