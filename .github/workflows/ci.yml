@@ -30,6 +30,10 @@ jobs:
             node: '24'
           - os: windows-latest
             node: '24'
+            shard: '1/2'
+          - os: windows-latest
+            node: '24'
+            shard: '2/2'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -45,4 +49,4 @@ jobs:
       - run: pnpm build
       # Real browser fixtures are resource intensive and some exercise the
       # shared desktop. Keep platform results independent and run files in order.
-      - run: node --test --test-concurrency=1 test/*.test.mjs
+      - run: node --test --test-concurrency=1 --test-shard=${{ matrix.shard || '1/1' }} test/*.test.mjs
