@@ -16,7 +16,7 @@ import { HistorySizeSetting } from '../history-settings.jsx';
 function AppearanceSettings({ runtime }) {
   const state = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot);
   const [error, setError] = useState('');
-  const act = action => { try { action(); setError(''); } catch (e) { setError(e.message); } };
+  const act = async action => { try { await action(); setError(''); } catch (e) { setError(e.message); } };
   const importFile = async event => {
     const file = event.target.files?.[0]; event.target.value = '';
     if (!file) return;

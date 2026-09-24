@@ -43,6 +43,8 @@ jobs:
       - run: node --test test/desktop-install.test.mjs
         env:
           TRISOUL_UI_ARTIFACTS: ${{ runner.temp }}/omd-desktop-artifacts
+      - name: Native appearance persistence
+        run: node --test --test-concurrency=1 --test-name-pattern="appearance commits|Codex desktop layout" test/skin-ui.test.mjs test/codex-desktop-ui.test.mjs
       - uses: actions/upload-artifact@v7
         if: always()
         with:
