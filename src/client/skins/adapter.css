@@ -82,3 +82,6 @@ html.omd[data-omd-skin] :where(.tx-button.tx-primary,.cx-btn.primary,.uV2eYG_pri
     & .VOzbGW_triggerRow { margin-inline: 0; padding-inline: 0; }
   }
 }
+
+/* Keep preset action tooltips inside narrow settings panels. */
+html.omd[data-omd-skin] .rtSEdW_iconButton::after { left: auto; right: 0; transform: none; }

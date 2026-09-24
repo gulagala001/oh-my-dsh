@@ -12,13 +12,14 @@ async function until(fn, timeout = 45000) {
   while (Date.now() < end) { const result = await fn(); if (result) return result; await new Promise(r => setTimeout(r, 100)); }
   throw Error('Timed out waiting for neutral environment fixture');
 }
+const redactLog = value => value.replace(/token=\S+/g, 'token=[redacted]');
 const forbidden = /powered by DeepSeek Harness|through the DeepSeek Harness Web GUI|The DeepSeek Harness implementation checkout|Current DSH file policy:|[Tt]he DSH file sandbox|TriSoulX conversation interface|only dsh web injects window\.__DSH_BOOT__/;
 for (const mode of ['native', 'ptc', 'both']) test(`actual provider payloads: neutral environment in ${mode} mode`, { timeout: 180000 }, async t => {
   const root = mkdtempSync(join(tmpdir(), 'neutral-env-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   mkdirSync(home); mkdirSync(workspace);
   writeFileSync(join(workspace, 'AGENTS.md'), 'PROJECT_LITERAL: Keep the text DeepSeek Harness and DSH unchanged.\n');
   writeFileSync(join(workspace, 'ptc-input.txt'), 'PTC_TYPED_READ\n');
-  const payloads = [], delegated = new Set(); let child, log = '', complete = false;
+  const payloads = [], delegated = new Set(); let child, log = '', complete = false, failureDiagnostics = false;
   let ptcIssued = false, bothNativeIssued = false;
   const provider = createServer(async (req, res) => {
     let body = ''; for await (const part of req) body += part;
@@ -72,15 +73,15 @@ for (const mode of ['native', 'ptc', 'both']) test(`actual provider payloads: ne
     provider.closeAllConnections(); await new Promise(r => provider.close(r));
     if (process.env.OMD_NEUTRAL_EVIDENCE_DIR) {
       writeFileSync(join(process.env.OMD_NEUTRAL_EVIDENCE_DIR, mode + '-fixture-payloads.json'), JSON.stringify(payloads, null, 2));
-      writeFileSync(join(process.env.OMD_NEUTRAL_EVIDENCE_DIR, mode + '-fixture.log'), log.replace(/token=\S+/g, 'token=[redacted]'));
+      writeFileSync(join(process.env.OMD_NEUTRAL_EVIDENCE_DIR, mode + '-fixture.log'), redactLog(log));
     }
-    if (!complete) console.error('Neutral fixture diagnostics', { mode, payloads: payloads.length, log: log.slice(-3000).replace(/token=\S+/g, 'token=[redacted]') });
+    if (!complete && !failureDiagnostics) console.error('Neutral fixture diagnostics', { mode, payloads: payloads.length, log: redactLog(log.slice(-3000)) });
     rmSync(root, { recursive: true, force: true });
   });
   child = spawn(process.execPath, ['scripts/start.mjs'], { cwd: new URL('../', import.meta.url), env: { ...process.env, DSH_HOME: home, PORT: '0', DSH_TOOLS_MODE: mode }, stdio: ['ignore', 'pipe', 'pipe'] });
   child.stdout.on('data', d => { log += d; }); child.stderr.on('data', d => { log += d; });
   const bootstrap = await until(() => {
-    if (child.exitCode !== null) throw Error(log.replace(/token=\S+/g, 'token=[redacted]'));
+    if (child.exitCode !== null) throw Error(redactLog(log));
     return log.match(/http:\/\/127\.0\.0\.1:\d+\/\?token=[\w-]+/)?.[0];
   }, 90000);
   const base = new URL(bootstrap).origin, login = await fetch(bootstrap, { redirect: 'manual' });
@@ -90,17 +91,39 @@ for (const mode of ['native', 'ptc', 'both']) test(`actual provider payloads: ne
     const result = await r.json(); assert.equal(result.result?.ok, true, JSON.stringify(result)); return result.result.value;
   };
   const state = async id => (await fetch(base + '/trisoul-x/api/state?session=' + id)).json();
+  const sessionSummary = async id => {
+    const response = await fetch(`${base}/api/session/list`, { method: 'POST', signal: AbortSignal.timeout(3000),
+      headers: { 'content-type': 'application/json', cookie },
+      body: JSON.stringify({ type: 'client-request', rpcId: crypto.randomUUID(), method: 'session/list', payload: { args: { _request: {} } } }) });
+    const body = await response.json();
+    if (!body.result?.ok) return { error: body.result?.error ?? body };
+    const items = body.result.value?.items;
+    return { count: items?.length ?? null, summary: items?.find(item => item.sessionId === id) ?? null };
+  };
   const run = async (preset, text) => {
     const created = await rpc('session/create', { cwd: workspace, agentPreset: preset });
     const selection = await fetch(`${base}/api/agentPresets/select`, { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ type: 'client-request', rpcId: crypto.randomUUID(), method: 'agentPresets/select', payload: { args: { agentId: created.sessionId, agentPreset: preset } } }) });
     const selected = await selection.json(); assert.equal(selected.result?.ok, true, JSON.stringify(selected)); assert.equal(selected.result.value, preset);
     const start = payloads.length;
-    await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: created.sessionId, mode: 'queue', content: [{ type: 'text', text }] });
-    await until(async () => {
-      if (payloads.length <= start) return false;
-      if (preset === 'standard') return true;
-      const s = await state(created.sessionId); return s.running === 'idle' && !s.live;
-    });
+    const requestId = crypto.randomUUID(); let promptResult;
+    try {
+      promptResult = await rpc('session/prompt', { requestId, sessionId: created.sessionId, mode: 'queue', content: [{ type: 'text', text }] });
+      await until(async () => {
+        if (payloads.length <= start) return false;
+        if (preset === 'standard') return true;
+        const s = await state(created.sessionId); return s.running === 'idle' && !s.live;
+      });
+    } catch (error) {
+      let listed;
+      try { listed = await sessionSummary(created.sessionId); }
+      catch (listError) { listed = { error: String(listError) }; }
+      failureDiagnostics = true;
+      console.error('Neutral fixture diagnostics', JSON.stringify({ mode, preset, sessionId: created.sessionId, requestId,
+        promptResult: promptResult ?? null, payloads: payloads.length, sessionList: listed,
+        child: { exitCode: child?.exitCode, signalCode: child?.signalCode, killed: child?.killed },
+        log: redactLog(log.slice(-5000)), error: String(error) }));
+      throw error;
+    }
     return payloads.slice(start).filter(p => p.tools?.length);
   };
   await until(async () => (await rpc('llm/listProviders')).some(p => p.id === 'fixture'));

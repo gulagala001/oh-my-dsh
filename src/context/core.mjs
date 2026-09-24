@@ -57,7 +57,8 @@ export function activeRecords(state) { return state.records.filter(r => !r.merge
 export function protectedEvent(session, e) {
   if (!e) return true;
   const source = eventSource(e), message = session.deriveEventMessage(e);
-  return (e.type === 'system/message' && source !== 'trisoul-x:shadow')
+  return e.type === 'developer/message'
+    || (e.type === 'system/message' && source !== 'trisoul-x:shadow')
     || (message?.role === 'system' && source !== 'trisoul-x:shadow')
     || source === 'trisoul-x:todo-prefix' || source === '@deepseek-ai/dsh-system-prompt' || source === 'trisoul-x:trace' || source === 'trisoul-x:manual-global';
 }

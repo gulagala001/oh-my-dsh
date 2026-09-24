@@ -23,7 +23,8 @@ for (const name of ['bash-local', 'pwsh-local']) await rm(`${root}lib/host/${nam
 // file: subpackage cannot be resolved from a GitHub-installed dependency.
 const client = await readFile(`${root}vendor/dsh/ui-conversation/lib/client.js`, 'utf8');
 if (!client.startsWith('window.__ModuleLoader__.load({') || !client.trimEnd().endsWith('});')) throw new Error('Unexpected DSH browser factory format');
-const registration = client.trimEnd().replace('window.__ModuleLoader__.load(', 'const registration = ').replace(/\);$/, ';');
+const ownedClient = client.replace(/(const tagId(?:\$\d+)? = )"@deepseek-ai\/dsh-client-ui-conversation\//g, '$1"trisoul_x/conversation/').replaceAll('tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation"', 'tag.dataset.plugin = "trisoul_x"');
+const registration = ownedClient.trimEnd().replace('window.__ModuleLoader__.load(', 'const registration = ').replace(/\);$/, ';');
 await writeFile(`${root}lib/host/ui-conversation.factory.mjs`, registration + '\nexport function createConversation(require) { return registration.factory(require); }\n');
 
 const support = await build({ entryPoints: [`${root}src/session-migration-support.ts`], outfile: `${root}lib/host/session-migration.factory.mjs`,

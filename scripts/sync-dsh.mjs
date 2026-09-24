@@ -6,8 +6,8 @@ import { createHash } from 'node:crypto';
 const root = fileURLToPath(new URL('../', import.meta.url));
 if (!process.argv[2]) throw new Error('Usage: node scripts/sync-dsh.mjs /path/to/patched-dsh-checkout');
 const source = resolve(process.argv[2]), destination = join(root, 'vendor', 'dsh');
-const commit = '46a7f68b0922371ce7144b668b90e377d8e799f4';
-if (execFileSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim() !== commit) throw new Error('Expected the pinned DSH 0.1.7-rc.1 source checkout');
+const commit = '477b4f420553e8a52c2fbccc464d7561b239c443';
+if (execFileSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim() !== commit) throw new Error('Expected the pinned DSH 0.1.7-rc.2 source checkout');
 const modules = { 'session-persistence-jsonl': 'session/session-persistence-jsonl', jobs: 'jobs/jobs', 'jobs-local': 'jobs/jobs-local', 'tool-jobs': 'jobs/tool-jobs', shell: 'shell/shell', 'tool-bash': 'shell/tool-bash', 'tool-pwsh': 'shell/tool-pwsh', 'bash-local': 'shell/bash-local', 'pwsh-local': 'shell/pwsh-local', 'bash-sandbox': 'shell/bash-sandbox', 'pwsh-sandbox': 'shell/pwsh-sandbox', tools: 'core/tools', 'ui-conversation': 'client/ui-conversation' };
 execFileSync(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm', ['exec', 'tsdown'], { cwd: join(source, 'packages/client/ui-conversation'), stdio: 'inherit', shell: process.platform === 'win32' });
 for (const [name, path] of Object.entries(modules)) {
@@ -22,7 +22,7 @@ for (const name of ['client.js', 'index.js']) {
   await writeFile(join(ui, 'lib', name), text.replace(/^\/\/# sourceMappingURL=.*\n?/gm, ''));
 }
 const pkg = JSON.parse(await readFile(join(source, 'packages/client/ui-conversation/package.json'), 'utf8'));
-Object.assign(pkg, { name: '@oh-my-dsh/ui-conversation', version: '0.1.7-rc.1-omd.1', private: true,
+Object.assign(pkg, { name: '@oh-my-dsh/ui-conversation', version: '0.1.7-rc.2-omd.1', private: true,
   dependencies: { '@deepseek-ai/schemastery': '3.18.4' }, peerDependencies: { '@deepseek-ai/cordis': '4.0.4' },
   exports: { '.': './lib/index.js', './client': './lib/client.js', './package.json': './package.json' }, files: ['src', 'lib', 'README.md', 'LICENSE'] });
 for (const field of ['devDependencies', 'scripts', 'publishConfig', 'types']) delete pkg[field];
@@ -44,4 +44,4 @@ async function walk(directory, prefix = '') {
   }
 }
 await walk(destination);
-await writeFile(join(root, 'vendor/dsh.json'), JSON.stringify({ repository: 'https://github.com/deepseek-ai/deepseek-harness', tag: 'dsh-v0.1.7-rc.1', commit, files: Object.fromEntries(Object.entries(files).sort()) }, null, 2) + '\n');
+await writeFile(join(root, 'vendor/dsh.json'), JSON.stringify({ repository: 'https://github.com/deepseek-ai/deepseek-harness', tag: 'dsh-v0.1.7-rc.2', commit, files: Object.fromEntries(Object.entries(files).sort()) }, null, 2) + '\n');

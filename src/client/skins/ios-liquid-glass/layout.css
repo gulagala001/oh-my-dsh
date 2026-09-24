@@ -146,7 +146,7 @@ html.omd[data-omd-layout="ios-liquid"] :is(.oY77xG_selector,.hVGvvW_selector,._2
 html.omd[data-omd-layout="ios-liquid"] ._8HJdBW_cubeRow { border-radius: 16px; padding: 4px; background: var(--omd-hover); gap: 4px; }
 html.omd[data-omd-layout="ios-liquid"] ._8HJdBW_themeCube { border: 0; border-radius: 12px; background: transparent; min-height: 60px; }
 html.omd[data-omd-layout="ios-liquid"] ._8HJdBW_themeCube._8HJdBW_selected { background: var(--omd-surface-solid); color: var(--omd-accent); box-shadow: 0 2px 5px #00000012; }
-html.omd[data-omd-layout="ios-liquid"] :is(.zGbnIq_rowCard,.pbvGtq_panel,.rtSEdW_pickerPreference,.tx-recommended-card) {
+html.omd[data-omd-layout="ios-liquid"] :is(.zGbnIq_rowCard,.pbvGtq_panel,.rtSEdW_card,.tx-recommended-card) {
   border: 1px solid var(--omd-border); border-radius: 20px; padding: 18px; background: var(--omd-glass-group); box-shadow: none;
 }
 html.omd[data-omd-layout="ios-liquid"] .tx-recommended-card-head { gap: 12px; }
