@@ -38,6 +38,17 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
   t.after(async () => {
     releaseReply?.();
     await cleanupFixture([
+      async () => {
+        if (t.passed) return;
+        const ui = page && !page.isClosed() ? await page.evaluate(() => ({
+          url: location.href, appearance: document.documentElement.dataset.appearance,
+          rootInert: document.getElementById('root')?.inert,
+          dialogs: [...document.querySelectorAll('[role="dialog"]')].map(el => el.textContent?.slice(0, 1500)),
+          composer: document.querySelector('[data-composer-card]') && getComputedStyle(document.querySelector('[data-composer-card]')).backgroundColor,
+          body: document.body.innerText.slice(0, 2500),
+        })).catch(error => ({ error: error.message })) : undefined;
+        t.diagnostic(JSON.stringify({ ui, exitCode: child?.exitCode, signalCode: child?.signalCode, errors, browserDiagnostics, log: log.replace(/token=\S+/g, 'token=[redacted]') }));
+      },
       async () => { if (process.env.TRISOUL_UI_ARTIFACTS && page && !page.isClosed()) await page.screenshot({path:join(root,'final-state.png')}); },
       () => browser?.close(),
       () => child && stopFixtureProcess(child),
@@ -47,6 +58,7 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
   });
 
   await writeFile(join(home, 'settings.yaml'), JSON.stringify({
+    locale: { preference: 'zh' },
     'llm-pi-ai': { providers: { fixture: { ...(imageBudget ? { maxRequestImageBytes: imageBudget } : {}), api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'FRONTEND_FIXTURE', models: [{ id: 'fixture', name: '界面预览模型', contextWindow: 1000000, maxTokens: 8192, input: ['text', 'image'] }] } } },
     'agent-default-model': { provider: 'fixture', model: 'fixture' },
     'omd-ui-chat': chatConfig,
@@ -137,6 +149,7 @@ export function apply(ctx) { let seeded = false; ctx.on('session/created', sessi
   await welcome.or(failedBoot).waitFor();
   if (await failedBoot.isVisible()) throw Error('Browser boot failed: ' + [...errors, ...browserDiagnostics].join('\n').replace(/https?:\/\/[^\s)]+/g, '[bundle]') + '\n' + log.replace(/token=\S+/g, 'token=[redacted]'));
   await welcome.click();
+  await welcome.waitFor({ state: 'hidden' });
   await page.getByText('整理工作台和对话界面', { exact: true }).first().click();
   await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
   return { root, home, workspace, page, context, rpc, sessionId, errors, escapedPaths: proxy.escaped, diagnostics: () => browserDiagnostics, lifecycle: () => readFile(lifecycleFile, 'utf8'), log: () => log.replace(/token=\S+/g, 'token=[redacted]'), replyWith(factory){replyFactory=factory;}, holdNextReply() {
