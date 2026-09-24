@@ -101,7 +101,8 @@ test('packaged Desktop installs OMD, preserves conversations across restart and 
   await page.locator('[data-composer-input]').fill('验证桌面电脑操作');
   await page.locator('.uV2eYG_primary').click();
   await page.getByText('桌面电脑验证完成。', { exact: true }).waitFor({ timeout: 45000 });
-  assert.ok(payloads.some(payload => payload.tools?.length && /image_url/.test(JSON.stringify(payload.messages))), 'real browser screenshot reaches the model');
+  assert.ok(payloads.some(payload => payload.tools?.length && /image_url/.test(JSON.stringify(payload.messages))),
+    'real browser screenshot reaches the model; tool responses: ' + JSON.stringify(payloads.flatMap(payload => payload.messages?.filter(message => message.role === 'tool') ?? [])));
   await page.getByRole('button', { name: '打开 Computer Use', exact: true }).click();
   const preview = page.locator('.tx-cu-pane .tx-cu-live img').first();
   await preview.waitFor();
