@@ -38,21 +38,49 @@ export function mountComputerUseHttp(ctx,hub){
         }
         if(req.method==='GET'&&op==='stream'){
           if(url.searchParams.has('app')&&hub.config().computerUseEnabled===false){send(res,409,{error:'Computer Use 已关闭'});return;}
-          const controller=new AbortController();let unsubscribe,timer,pendingFrame;
-          const close=()=>{controller.abort();clearInterval(timer);void unsubscribe?.().catch(()=>{});};
-          res.once('close',close);req.once('aborted',close);
+          const controller=new AbortController();let unsubscribe,timer,pendingFrame,closed=false;
+          const release=()=>{
+            const dispose=unsubscribe;unsubscribe=undefined;
+            if(dispose)void Promise.resolve().then(dispose).catch(()=>{});
+          };
+          const close=()=>{
+            if(closed)return;closed=true;
+            clearInterval(timer);pendingFrame=null;
+            res.off('drain',drain);req.off('aborted',close);
+            controller.abort();release();
+          };
+          const fail=()=>{close();if(!res.destroyed)res.destroy();};
+          const writable=()=>{
+            if(closed)return false;
+            if(res.destroyed||res.writableEnded){close();return false;}
+            return true;
+          };
+          const write=chunk=>{
+            if(!writable())return false;
+            try{res.write(chunk);return true;}catch{fail();return false;}
+          };
+          const end=()=>{
+            // end() may precede finish/close while output is still flushing.
+            close();
+            if(!res.destroyed&&!res.writableEnded){try{res.end();}catch{fail();}}
+          };
           const emit=(event,value)=>{
-            if(res.destroyed||res.writableEnded)return;
+            if(!writable())return;
             if(event==='frame'&&res.writableLength>524288){pendingFrame=value;return;}
             if(event==='frame'||event==='closed'||event==='failure'||event==='capture'&&value.status!=='live')pendingFrame=null;
-            res.write(`event: ${event}\ndata: ${JSON.stringify(value)}\n\n`);
-            if(event==='closed')res.end();
+            if(write(`event: ${event}\ndata: ${JSON.stringify(value)}\n\n`)&&event==='closed')end();
           };
-          res.on('drain',()=>{if(pendingFrame)emit('frame',pendingFrame);});
-          res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-store','Connection':'keep-alive','X-Accel-Buffering':'no'});res.flushHeaders();
-          timer=setInterval(()=>{if(!res.destroyed)res.write(': keepalive\n\n');},15000);timer.unref();
-          try{unsubscribe=url.searchParams.has('app')?await manager.watchNative(id,url.searchParams.get('app'),emit,controller.signal,url.searchParams.get('stack')==='1'):await manager.watchBrowser(id,url.searchParams.get('tab'),emit,controller.signal,url.searchParams.get('stack')==='1',url.searchParams.get('view')==='1');if(controller.signal.aborted)await unsubscribe();}
-          catch(error){emit('failure',{message:error.message});res.end();close();}
+          const drain=()=>{if(pendingFrame)emit('frame',pendingFrame);};
+          res.on('drain',drain);res.once('finish',close);res.once('close',close);
+          // write errors can arrive asynchronously, including after end().
+          res.on('error',fail);req.once('aborted',close);
+          try{
+            if(!writable())return;
+            res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-store, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});res.flushHeaders();
+            timer=setInterval(()=>{if(writable()&&res.writableLength<=524288)write(': keepalive\n\n');},15000);timer.unref();
+            unsubscribe=url.searchParams.has('app')?await manager.watchNative(id,url.searchParams.get('app'),emit,controller.signal,url.searchParams.get('stack')==='1'):await manager.watchBrowser(id,url.searchParams.get('tab'),emit,controller.signal,url.searchParams.get('stack')==='1',url.searchParams.get('view')==='1');
+            if(closed)release();
+          }catch(error){emit('failure',{message:error.message});end();}
           return;
         }
         if(req.method!=='POST'){send(res,405,{error:'Method not allowed'});return;}

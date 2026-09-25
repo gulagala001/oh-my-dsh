@@ -6,10 +6,10 @@ Web／源码安装需要 Node.js 24、pnpm 11.23.0、Git 和 PowerShell 7；官�
 
 ## 安装与试用
 
-当前 Oh My DSH 0.1.7-rc.2.6 适配 **DSH 0.1.7-rc.2**。需要桌面应用时，按[桌面版完整安装教程](upgrade.md#desktop)下载 Windows x64 安装包、配置模型，再在应用内「插件」安装 `github:gulagala001/oh-my-dsh#v0.1.7-rc.2.6`；安装或启停后完整退出应用并重新打开。不要用 CLI 修改 `desktop` profile。先阅读[本版验证与升级说明](release-0.1.7-rc.2.6.md)。以下是 Web 安装：停止服务并备份 DSH_HOME 后，在 PowerShell 7 中安装：
+当前 Oh My DSH 0.1.7-rc.2.7 适配 **DSH 0.1.7-rc.2**。需要桌面应用时，按[桌面版完整安装教程](upgrade.md#desktop)下载 Windows x64 安装包、配置模型，再在应用内「插件」安装 `github:gulagala001/oh-my-dsh#v0.1.7-rc.2.7`；安装或启停后完整退出应用并重新打开。不要用 CLI 修改 `desktop` profile。先阅读[本版验证与升级说明](release-0.1.7-rc.2.7.md)。以下是 Web 安装：停止服务并备份 DSH_HOME 后，在 PowerShell 7 中安装：
 
 ```powershell
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.6
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.7
 if ($LASTEXITCODE -ne 0) { throw '插件安装失败' }
 dsh web
 ```
