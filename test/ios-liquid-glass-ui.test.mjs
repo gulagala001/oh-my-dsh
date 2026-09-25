@@ -107,7 +107,14 @@ test('iOS Liquid Glass real shell, sidebar, settings, workbench and recovery', {
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
   await until(async () => await page.locator('html').getAttribute('data-appearance') === 'light');
   assert.equal(await style(page.getByLabel('降低透明与动态效果'), 'transitionDuration'), '0s');
-  await page.reload(); await page.getByRole('button', { name: '设置', exact: true }).waitFor();
+  // Reopen a retained conversation before reload; a new blank session can still
+  // be replacing the main panel and closing transient dialogs.
+  await page.keyboard.press('Escape');
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByText('整理工作台和对话界面', { exact: true }).first().click();
+  await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
+  await page.reload();
+  await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
   assert.equal(await page.locator('html').getAttribute('data-omd-layout'), 'ios-liquid');
   await openSettings(); await page.getByRole('button', { name: '恢复默认皮肤', exact: true }).click();
   assert.equal(await page.locator('html').getAttribute('data-omd-layout'), null);

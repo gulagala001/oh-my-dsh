@@ -14,6 +14,7 @@ test('steering and in-turn compaction keep subsequent operations visible', { tim
   };
   await api('/settings', { automaticReplace: false, coordinatorEvery: 999, digestEvery: 9999,
     preprocessBoundaries: true, prepareBatchWindows: 1, keepTailEvents: 2 });
+  const shell = process.platform === 'win32' ? 'pwsh' : 'bash';
   let step = 0, prepared = 0, resume, compact, finish;
   const beforeSteering = new Promise(resolve => { resume = resolve; });
   const beforeCompaction = new Promise(resolve => { compact = resolve; });
@@ -35,8 +36,10 @@ test('steering and in-turn compaction keep subsequent operations visible', { tim
     }
     if (step === 3) assert.ok(JSON.stringify(payload.messages).includes('请继续检查最新操作'), 'the model receives steering');
     return { delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'steering-operation-' + step,
-      type: 'function', function: { name: 'bash', arguments: JSON.stringify({
-        command: [3, 6].includes(step) ? 'sleep 3; printf after-steering' : 'printf steering-check',
+      type: 'function', function: { name: shell, arguments: JSON.stringify({
+        command: process.platform === 'win32'
+          ? ([3, 6].includes(step) ? "Start-Sleep -Seconds 3; [Console]::Out.Write('after-steering')" : "[Console]::Out.Write('steering-check')")
+          : ([3, 6].includes(step) ? 'sleep 3; printf after-steering' : 'printf steering-check'),
         description: step === 6 ? '上下文整理后的最新操作' : step === 3 ? '插话后的最新操作' : '检查操作记录',
       }) } }] }, finish_reason: 'tool_calls' };
   });

@@ -28,6 +28,8 @@ const registration = ownedClient.trimEnd().replace('window.__ModuleLoader__.load
 await writeFile(`${root}lib/host/ui-conversation.factory.mjs`, registration + '\nexport function createConversation(require) { return registration.factory(require); }\n');
 
 const support = await build({ entryPoints: [`${root}src/session-migration-support.ts`], outfile: `${root}lib/host/session-migration.factory.mjs`,
+  // Dynamic native dependencies must use the same host resolver as static ones.
+  supported: { 'dynamic-import': false },
   platform: 'node', target: 'node22', format: 'cjs', bundle: true, packages: 'external', metafile: true,
   banner: { js: 'export function createModule(require) { const module = { exports: {} }; const exports = module.exports;' },
   footer: { js: 'return module.exports; }' }, sourcemap: false, legalComments: 'eof' });
