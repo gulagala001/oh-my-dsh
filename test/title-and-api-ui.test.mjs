@@ -6,7 +6,7 @@ import { frontendFixture, until } from './fixtures/frontend.mjs';
 test('Web title stays branded during thinking and authenticated APIs reject unknown or untrusted callers', { timeout: 120000 }, async t => {
   const f = await frontendFixture(t), { page, sessionId } = f;
   const origin = new URL(page.url()).origin;
-  for (const path of ['/state', '/scope', '/context', '/context/catalog', '/context/global', '/better-todo']) {
+  for (const path of ['/state', '/scope', '/context', '/context/catalog', '/context/global', '/better-todo', '/version-update']) {
     const response = await fetch(origin + '/trisoul-x/api' + path + '?session=' + sessionId);
     assert.equal(response.status, 401, path); await response.body?.cancel();
   }
@@ -21,6 +21,12 @@ test('Web title stays branded during thinking and authenticated APIs reject unkn
     method: 'POST', headers: { cookie, Origin: 'https://untrusted.invalid', 'Content-Type': 'application/json' }, body: '{"traceEnabled":false}',
   });
   assert.equal(denied.status, 403); await denied.body?.cancel();
+  for (const headers of [{}, { cookie, Origin: 'https://untrusted.invalid' }]) {
+    const rejected = await fetch(origin + '/trisoul-x/api/version-update', {
+      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: '{"version":"0.1.7-rc.2.5"}',
+    });
+    assert.equal(rejected.status, headers.cookie ? 403 : 401); await rejected.body?.cancel();
+  }
   await until(async () => (await page.title()).endsWith('Oh My DSH'));
   await page.evaluate(() => {
     window.omdTitleSamples = [document.title];
