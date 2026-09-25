@@ -62,36 +62,61 @@ test('version refusals remain visible after restart and automatic updates never 
   f.bundles = [{ name: 'sample-plugin', installed: true, enabled: true, version: '0.9.0', error }];
   f.service.records.clear();
   assert.match((await f.service.status()).plugins[0].error, /宿主“插件”页面/);
+  f.service.catalog[0].review = { version: '1.0.0' };
   await f.service.settings(true); await f.service.tick();
   assert.equal(f.calls.length, 2);
   assert.deepEqual(Object.keys(f.calls[1].options).sort(), ['enabled', 'requestId']);
   assert.match((await f.service.status()).plugins[0].error, /不兼容/);
 });
 
-test('automatic updates are opt-in, idle-only and limited to installed enabled recommendations at six-hour intervals', async () => {
-  const f = fixture(); await f.service.tick(); assert.equal(f.lookups, 0);
-  await f.service.settings(true); assert.deepEqual(f.writes, [{ recommendedPluginsAutoUpdate: true }]);
-  f.bundles = [{ name: 'sample-plugin', installed: true, enabled: true, version: '0.9.0' }, { name: 'unrelated-plugin', installed: true, enabled: true, version: '0.1.0' }];
-  f.running = true; await f.service.tick(); assert.equal(f.lookups, 0);
-  f.running = false; await f.service.tick(); assert.equal(f.lookups, 1); assert.equal(f.calls.length, 1);
-  assert.equal(f.calls[0].spec, 'sample-plugin@1.0.0'); await f.service.tick(); assert.equal(f.lookups, 1);
-  f.time = 1 + AUTO_UPDATE_INTERVAL; f.bundles[0].enabled = false;
-  await f.service.tick(); assert.equal(f.lookups, 1, 'disabled plugins are not automatically updated');
-  await f.service.settings(false); f.time += AUTO_UPDATE_INTERVAL; await f.service.tick(); assert.equal(f.lookups, 1);
+test('automatic updates require review, opt-in, idle and enabled installation at six-hour intervals', async () => {
+  const f = fixture();
+  f.bundles = [{ name: 'sample-plugin', installed: true, enabled: true, version: '0.9.0' }];
+  await f.service.tick(); assert.equal(f.calls.length, 0);
+  await f.service.settings(true); await f.service.tick(); assert.equal(f.calls.length, 0, 'unreviewed entries are manual-only');
+  f.service.catalog[0].review = { version: '1.0.0' }; f.time += AUTO_UPDATE_INTERVAL;
+  f.running = true; await f.service.tick(); assert.equal(f.calls.length, 0);
+  f.running = false; await f.service.tick(); assert.equal(f.calls.length, 1);
+  assert.equal(f.calls[0].spec, 'sample-plugin@1.0.0'); assert.equal(f.lookups, 0, 'reviewed versions never query latest');
+  await f.service.tick(); assert.equal(f.calls.length, 1);
+  f.time += AUTO_UPDATE_INTERVAL; f.bundles[0].enabled = false;
+  await f.service.tick(); assert.equal(f.calls.length, 1);
+  await f.service.settings(false); f.time += AUTO_UPDATE_INTERVAL; await f.service.tick(); assert.equal(f.calls.length, 1);
   await assert.rejects(f.service.settings('yes'), /必须/);
 });
 
-test('concurrent operations and disabling auto-update during lookup cannot launch a second installation', async () => {
+test('concurrent manual operations are rejected and closing cancels installation', async () => {
   const f = fixture(); let resolve;
   f.lookup = () => new Promise(r => { resolve = r; });
   const job = f.service.start('sample', 'install');
   assert.throws(() => f.service.start('sample', 'install'), /正在进行/);
   await new Promise(r => setImmediate(r)); resolve('1.0.0'); await job;
-  await f.service.settings(true); f.version = '2.0.0';
-  const automatic = f.service.tick(); await new Promise(r => setImmediate(r));
-  await f.service.settings(false); resolve('2.0.0'); await automatic;
-  assert.equal(f.calls.length, 1);
-  f.service.close(); assert.throws(() => f.service.start('sample', 'update'), /已停止/);
+  const pending = f.service.start('sample', 'update');
+  await new Promise(r => setImmediate(r)); f.service.close(); resolve('2.0.0'); await pending;
+  assert.equal(f.calls.filter(c => c.spec).length, 1);
+  assert.ok(f.calls.some(c => c.cancel));
+  assert.throws(() => f.service.start('sample', 'update'), /已停止/);
+});
+
+test('reviewed installation pins its tested version and never downgrades a newer installation', async () => {
+  const f = fixture(); f.service.catalog[0].review = { version: '1.0.0' };
+  f.version = '9.0.0'; await f.service.start('sample', 'install');
+  assert.equal(f.calls[0].spec, 'sample-plugin@1.0.0'); assert.equal(f.lookups, 0);
+  await f.service.start('sample', 'update'); assert.equal(f.calls.length, 1);
+  assert.match((await f.service.status()).plugins[0].message, /未降级/);
+  f.bundles[0].version = '1.0.0'; await f.service.start('sample', 'update');
+  assert.equal((await f.service.status()).plugins[0].message, '已是核验版本');
+});
+
+test('disabling automatic updates during inventory lookup prevents a reviewed installation', async () => {
+  const f = fixture(); f.service.catalog[0].review = { version: '1.0.0' };
+  f.bundles = [{ name: 'sample-plugin', installed: true, enabled: true, version: '0.9.0' }];
+  await f.service.settings(true);
+  const list = f.service.manager.listBundles; let resume, reads = 0;
+  f.service.manager.listBundles = async () => { if (++reads === 3) await new Promise(r => { resume = r; }); return list(); };
+  const job = f.service.tick(); await new Promise(r => setImmediate(r));
+  assert.equal(typeof resume, 'function'); await f.service.settings(false); resume(); await job;
+  assert.equal(f.calls.length, 0);
 });
 
 test('manual-only recommendations are never sent to the native installer', async () => {
