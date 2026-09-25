@@ -9,6 +9,7 @@ import { ContextStore } from './store.mjs';
 import { createSurfaceIndex, hash, userRevision, userMessages, rawText, actualUser, prepareCandidate, candidateInput, coordinatorInput, newRecord, activeRecords, liveSpan, validatePrepared, normalizeChoices, decodeResult, recordText, backlogView, recordSnapshot, preparationWorkload } from './core.mjs';
 import { attachmentsOf, combineAssets, describeAsset, messageOf } from './materials.mjs';
 import { createTransaction, applyTransaction } from './transactions.mjs';
+import { repairShadows } from './shadow.mjs';
 import { SUMMARY_PROMPT_VERSION, PREPARE_SYSTEM, PREPARE_TOOL, COORDINATE_SYSTEM, COORDINATE_TOOL } from './prompts.mjs';
 import { TODO_META, TASK_CONTEXT_META, taskContextMeta, withoutTodo } from '../task-context.mjs';
 
@@ -414,6 +415,7 @@ export class ContextPipeline {
       try { result = recovered && manual.operation && recovered.source === (manual.operation === 'full' ? 'compact-f' : 'compact-p') ? recovered : manual.operation ? await this.runManual(agent, manual, signal) : await this.applyReady(agent, { ...manual, manual: true }); s.manualQueue.shift(); this.store.save(s); }
       catch (error) { if (s.transaction) throw error; s.manualQueue.shift(); this.store.notice(s, error.message); }
     } else result = await this.applyReady(agent);
+    if (repairShadows(agent.session)) await this.adapter.flush(agent.session);
     this.publishMemory(agent.session);
     this.start(agent);
     return result;

@@ -1,4 +1,5 @@
 import { sourceName } from './message-source.mjs';
+import { appendShadow } from './context/shadow.mjs';
 import { TODO_META, TASK_CONTEXT_META, taskContextMeta, latestTaskContext, withoutTodo } from './task-context.mjs';
 import { promptText } from './cc-adaptation/texts.mjs';
 // Task ledger adapted from trisoul 4189f90: preserve excerpts, anchors, item operations and evidence.
@@ -624,7 +625,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
           const base = withoutTodo(e.data);
           session.append('user/message', { ...base, id: crypto.randomUUID(), source: base.source?.kind === 'user' ? e.data.source : base.source }, { surfaceOp: { op: 'replace', startSeq: e.seq, endSeq: e.seq }, sourceEventSeqs: [e.seq] });
         } else {
-          session.append('user/message', createUserMessage({ content: [], source: { kind: 'plugin:trisoul-x:shadow' } }), { surfaceOp: { op: 'replace', startSeq: e.seq, endSeq: e.seq }, sourceEventSeqs: [e.seq] });
+          appendShadow(session, [e.seq]);
         }
       }
       live = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && (sourceName(e.data?.source) === 'trisoul-x:tasks' || e.data?.[TODO_META]));

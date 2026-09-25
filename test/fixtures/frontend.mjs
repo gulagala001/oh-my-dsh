@@ -15,7 +15,7 @@ export async function until(fn, timeout = 20000) {
   throw new Error('Frontend fixture timed out');
 }
 
-export async function frontendFixture(t, { imageBudget, versionResponse, headless = false, lifecycleTrace = false, installedPackage = process.env.OMD_UI_PACKED === '1', historyMessages = 0, componentAutoSetup = false, omdConfig = {}, chatConfig = {}, legacyChatConfig, basePath = '/', agentPreset = 'trisoul-x', reply, optimizerReply } = {}) {
+export async function frontendFixture(t, { imageBudget, versionResponse, headless = false, lifecycleTrace = false, installedPackage = process.env.OMD_UI_PACKED === '1', historyMessages = 0, legacyShadows = false, componentAutoSetup = false, omdConfig = {}, chatConfig = {}, legacyChatConfig, basePath = '/', agentPreset = 'trisoul-x', reply, optimizerReply } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'trisoul-frontend-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   await mkdir(home); await mkdir(workspace);
   let nextReply, releaseReply, replyFactory = reply, child, browser, page, log = '';
@@ -76,16 +76,17 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
     catch (error) { throw new Error('Packed plugin installation failed: ' + String(error.stderr || error.stdout || error.message).replace(/token=\S+/g, 'token=[redacted]')); }
   }
   const lifecycleFile = join(root, 'lifecycle.jsonl');
-  if (lifecycleTrace || historyMessages || legacyChatConfig) {
+  if (lifecycleTrace || historyMessages || legacyShadows || legacyChatConfig) {
     if (!installedPackage) execFileSync(process.execPath, [fileURLToPath(new URL('../../node_modules/@deepseek-ai/dsh/lib/bin.js', import.meta.url)), '--profile', 'trisoul-x', '--from-default-profile', 'web', '--dump-config'], { cwd: new URL('../../', import.meta.url), env: { ...process.env, DSH_HOME: home }, stdio: ['ignore', 'ignore', 'pipe'] });
     const directory = join(home, 'profiles', 'trisoul-x');
     await writeFile(lifecycleFile, '');
     const traceModule = join(root, 'lifecycle-trace.mjs');
     await writeFile(traceModule, await readFile(new URL('./lifecycle-trace.mjs', import.meta.url), 'utf8'));
     const entries = lifecycleTrace ? [{ id: 'omd-test-lifecycle', name: pathToFileURL(traceModule).href, config: { file: lifecycleFile } }] : [];
-    if (historyMessages) {
+    if (historyMessages || legacyShadows) {
       const seedModule = join(root, 'history-seed.mjs');
       await writeFile(seedModule, `import { createUserMessage, createMessage } from ${JSON.stringify(import.meta.resolve('@deepseek-ai/dsh-llm'))};
+export const inject = ['sessions'];
 export function apply(ctx) { let seeded = false; ctx.on('session/created', session => {
   if (seeded) return; seeded = true;
   for (let i = 0; i < ${Number(historyMessages)}; i++) {
@@ -96,7 +97,18 @@ export function apply(ctx) { let seeded = false; ctx.on('session/created', sessi
     session.append('step/end', { turn, step: 1 });
     session.append('turn/end', { turn, reason: { kind: 'completed' } });
   }
-}, { global: true }); }`);
+}, { global: true });
+  let shadowed = false;
+  if (${Boolean(legacyShadows)}) ctx.on('agent/status', async ({ agent, status }) => {
+    if (status !== 'idle' || shadowed || !agent.session.snapshotEvents().some(e => e.type === 'turn/end')) return;
+    shadowed = true;
+    for (const content of [[], [{ type: 'text', text: '' }]]) {
+      agent.session.append('user/message', createUserMessage({ content, source: { kind: 'plugin:trisoul-x:shadow' } }), { surfaceOp: 'append' });
+    }
+    agent.session.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'SHADOW_FIXTURE_ORIGINAL' }], source: { kind: 'user' } }), { surfaceOp: 'append' });
+    await ctx.sessions.flush(agent.session);
+  }, { global: true });
+}`);
       entries.push({ id: 'omd-test-history', name: pathToFileURL(seedModule).href });
     }
     await writeFile(join(directory, 'cordis.patch.yml'), JSON.stringify([

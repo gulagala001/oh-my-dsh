@@ -1,6 +1,7 @@
 import { TODO_META } from '../task-context.mjs';
 import { CompactionEngine, compactCheckpointSource, toolPairingBalancedBefore, toolPairingBalancedAfter } from '@deepseek-ai/dsh-compaction';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
+import { appendShadow } from './shadow.mjs';
 
 export function createHostAdapter(hub) {
   const routes = new WeakMap();
@@ -41,7 +42,7 @@ export function createHostAdapter(hub) {
     publish(session, text, kind) { return session.append('user/message', message(text, kind), { surfaceOp: 'append' }); },
     flush(session) { return hub.ctx.sessions?.flush(session); },
     append(session, op, surfaceOp, sourceEventSeqs, { batchId } = {}) {
-      if (op.kind === 'delete') return session.append('user/message', { ...message('', 'shadow'), id: op.id }, { surfaceOp, sourceEventSeqs });
+      if (op.kind === 'delete') return appendShadow(session, sourceEventSeqs, op.id);
       if (op.kind === 'todo-refresh' || op.kind === 'todo-restore') {
         // Editing a prior checkpoint is an OMD context update, not another
         // native checkpoint in an already-closed compaction lifecycle.
