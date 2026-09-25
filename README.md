@@ -52,6 +52,8 @@ npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 
 桌面版由 **DSH 官方桌面应用 + Oh My DSH 插件** 组成。按下面三步安装，或查看[桌面版完整安装教程](docs/upgrade.md#desktop)：
 
+已有旧版 DSH Web、准备转桌面并保留数据的用户，先看[旧版 Web 转桌面迁移步骤](docs/upgrade.md#web-to-desktop)。OMD 只自动处理支持的旧会话与关联记录，不会自动搬迁自定义数据目录或整套 Web profile 配置。
+
 1. 下载并安装 DSH **0.1.7-rc.2**：[Windows x64 安装包](https://download.deepseek.com/dsh-desk/bin/win-x64/deepseek-harness-0.1.7-rc.2-win-x64.exe)／[Mac Apple 芯片版](https://download.deepseek.com/dsh-desk/bin/mac-arm64/deepseek-harness-0.1.7-rc.2-mac-arm64.zip)。Windows 运行安装程序；Mac 解压后将应用移入「应用程序」。
 2. 打开应用，按引导配置模型，在「插件」页面安装 `github:gulagala001/oh-my-dsh#v1.7.3` 并确认启用。
 3. 使用应用菜单的 **「重启应用与 Host」**，再新建会话选择 **Oh My DSH**，检查插件「当前版本」为 **1.7.3**。

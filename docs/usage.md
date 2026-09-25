@@ -6,6 +6,8 @@
 
 自己安装可选[官方桌面版：下载与完整安装步骤](upgrade.md#desktop)或[Web 安装](#安装到现有-dsh推荐)。也可将 [AI 安装手册的网址](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/upgrade.md) 发给能操作电脑或终端的 AI，说明要安装桌面版还是 Web 版，让它按手册完成安装／升级。
 
+从旧版 DSH Web 切换到桌面并保留数据时，按[迁移专节](upgrade.md#web-to-desktop)接入实际数据目录、安装插件并核对 profile 配置；安装 OMD 不会自动完成整套环境搬迁。
+
 ## 安装到现有 DSH（推荐）
 
 **首次安装桌面应用请先看[桌面版完整教程](upgrade.md#desktop)，其中包含 Windows／Mac 下载、首次启动、模型配置和插件安装。** 官方桌面版使用 DSH 0.1.7-rc.2，在应用内「插件」页面安装 `github:gulagala001/oh-my-dsh#v1.7.3`。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；Web 安装不会自动启用桌面插件。CLI 不能管理桌面保留的 `desktop` profile。以下命令适用于 Web，桌面实测范围见[本版说明](release-1.7.3.md)。
