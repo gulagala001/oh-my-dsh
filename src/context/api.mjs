@@ -1,3 +1,4 @@
+import { catalogPage } from './catalog.mjs';
 import { Readable } from 'node:stream';
 import { pipeline as streamPipeline } from 'node:stream/promises';
 import { compactionMessage } from './commands.mjs';
@@ -26,7 +27,8 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
     const s = needSession(); hub.context.state(s);
     const history = url.searchParams.get('history') === 'true';
     const entries = hub.context.store.visible(s.id, { includeHistory: history }).map(({ sourceSeqs, sourceHash, documents, assets = [], userOriginals, originalSeqs, ...r }) => ({ ...r, documentCount: documents.length, assetCount: assets.length }));
-    send(res, 200, { scope: hub.context.state(s).binding, entries }); return true;
+    const page = catalogPage(entries, { query: url.searchParams.get('query') || '', cursor: url.searchParams.get('cursor') });
+    send(res, 200, { scope: hub.context.state(s).binding, ...page, unreadableArchives: hub.context.store.readErrors?.size || 0 }); return true;
   }
   if (path === '/context/asset') {
     if (req.method !== 'GET') { send(res, 405, { error: '请使用 GET' }); return true; }

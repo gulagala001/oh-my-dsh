@@ -15,7 +15,7 @@ export function validateSessionId(id) {
 export class HubStore {
   constructor(dir) {
     this.dir = resolve(dir);
-    this.states = new Map(); this.monitorCache = new Map();
+    this.states = new Map(); this.monitorCache = new Map(); this.monitorErrors = new Map();
     mkdirSync(join(this.dir, 'sessions'), { recursive: true });
   }
   write(name, value) {
@@ -23,6 +23,13 @@ export class HubStore {
     writeFileSync(`${file}.tmp`, JSON.stringify(value, null, name.startsWith('sessions/') ? undefined : 2) + '\n', { mode: 0o600 });
     renameSync(`${file}.tmp`, file);
   }
+  peek(id) {
+    validateSessionId(id);
+    const value = this.states.get(id) ?? read(join(this.dir, 'sessions', `${id}.json`));
+    if (value && value.id !== id) throw Error('会话存档身份不匹配');
+    return value;
+  }
+  release(id) { this.states.delete(id); }
   state(id) {
     validateSessionId(id);
     if (!this.states.has(id)) this.states.set(id, read(join(this.dir, 'sessions', `${id}.json`), {
@@ -37,11 +44,12 @@ export class HubStore {
     const project = value => ({ id: value.id, parentSession: value.parentSession,
       metrics: value.metrics || {}, actions: value.actions || {}, activity: value.activity || [] });
     const files = readdirSync(join(this.dir, 'sessions')).filter(n => n.endsWith('.json'));
-    const present = new Set(files);
+    const present = new Set(files); this.monitorErrors.clear();
     for (const name of this.monitorCache.keys()) if (!present.has(name)) this.monitorCache.delete(name);
-    return files.map(name => {
+    return files.flatMap(name => {
+      try {
       const id = validateSessionId(name.slice(0, -5));
-      if (this.states.has(id)) return project(this.states.get(id));
+      if (this.states.has(id)) return [project(this.states.get(id))];
       const file = join(this.dir, 'sessions', name), stat = statSync(file, { bigint: true });
       const signature = `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
       let cached = this.monitorCache.get(name);
@@ -50,7 +58,11 @@ export class HubStore {
         if (value?.id !== id) throw Error('会话存档身份不匹配');
         cached = { signature, value: project(value) }; this.monitorCache.set(name, cached);
       }
-      return cached.value;
+      return [cached.value];
+      } catch (error) {
+        this.monitorCache.delete(name); this.monitorErrors.set(name, error.message);
+        return [];
+      }
     });
   }
   memories(project, mode = 'full', history = false) {

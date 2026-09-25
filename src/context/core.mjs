@@ -98,23 +98,28 @@ export function protectedSeqs(session, state, cfg) {
   }
   return keep;
 }
-export function splitGroups(nodes, seqs) {
-  const selected = new Set(seqs), groups = []; let run = [];
-  for (const seq of nodes) {
-    if (selected.has(seq)) run.push(seq);
-    else if (run.length) { groups.push(run); run = []; }
+// One synchronous snapshot per bulk check; never cache it across an await.
+export function createSurfaceIndex(session) {
+  const nodes = session.surface.nodes;
+  return { nodes, positions: new Map(nodes.map((seq, i) => [seq, i])) };
+}
+export function splitGroups(nodes, seqs, index = createSurfaceIndex({ surface: { nodes } })) {
+  const positions = [...new Set(seqs)].map(seq => index.positions.get(seq)).filter(p => p !== undefined).sort((a, b) => a - b);
+  const groups = []; let previous = -2;
+  for (const p of positions) {
+    if (p !== previous + 1) groups.push([]);
+    groups.at(-1).push(nodes[p]); previous = p;
   }
-  if (run.length) groups.push(run);
   return groups;
 }
-export function liveSpan(session, record) {
+export function liveSpan(session, record, index = createSurfaceIndex(session)) {
   if (!(record.kind === 'window' || (record.kind === 'full' && record.mode !== 'raw'))
     && record.sourceSeqs.some(seq => protectedSource(session.eventAt(seq)))) return null;
   const seqs = record.mode === 'raw' ? record.sourceSeqs : [record.carrierSeq];
   if (!seqs?.length || seqs.some(s => !Number.isSafeInteger(s))) return null;
-  const nodes = session.surface.nodes, positions = seqs.map(seq => nodes.indexOf(seq));
+  const { nodes } = index, positions = seqs.map(seq => index.positions.get(seq) ?? -1);
   if (positions.some((p, i) => p < 0 || (i && p <= positions[i - 1]))) return null;
-  const start = positions[0], end = positions.at(-1), groups = splitGroups(nodes, seqs);
+  const start = positions[0], end = positions.at(-1), groups = splitGroups(nodes, seqs, index);
   if (record.mode === 'raw') {
     if (record.kind !== 'window' && groups.length !== 1) return null;
     const selected = new Set(seqs), retained = new Set(record.retainedSeqs || []);
@@ -127,9 +132,9 @@ export function liveSpan(session, record) {
 
 // Compare the records actually supplied to the coordinator, not a growing
 // conversation-wide hash: unrelated new steps must not invalidate good work.
-export function recordSnapshot(session, record) {
+export function recordSnapshot(session, record, index = createSurfaceIndex(session)) {
   if (!record || record.mergedInto) return null;
-  const span = liveSpan(session, record); if (!span) return null;
+  const span = liveSpan(session, record, index); if (!span) return null;
   return hash([record.version, record.mode, record.carrierSeq ?? null, record.sourceHash,
     record.summary, record.documents, record.assets || [], span.seqs,
     span.seqs.map(seq => session.deriveEventMessage(session.eventAt(seq)))]);
@@ -138,7 +143,8 @@ export function recordSnapshot(session, record) {
 // Continuation considers fresh work only, never lookback, protected messages,
 // old checkpoints, or binary attachment bytes already stored by the host.
 export function preparationWorkload(session, state, events) {
-  const covered = new Set(activeRecords(state).flatMap(r => liveSpan(session, r)?.seqs || []));
+  const index = createSurfaceIndex(session);
+  const covered = new Set(activeRecords(state).flatMap(r => liveSpan(session, r, index)?.seqs || []));
   const fresh = events.filter(e => !covered.has(e.seq) && (actualUser(e)
     || (['assistant/message', 'tool/result'].includes(e.type) && !eventSource(e))));
   return { events: fresh.length, estimatedTokens: Math.ceil(fresh.reduce((n, e) =>
@@ -146,6 +152,7 @@ export function preparationWorkload(session, state, events) {
 }
 
 export function normalizeChoices(value, state, session, allowedIds) {
+  const index = createSurfaceIndex(session);
   if (!Array.isArray(value?.choices)) throw new Error('中枢未提交 choices');
   const records = new Map(activeRecords(state).map(r => [r.id, r])), used = new Set();
   return value.choices.map(choice => {
@@ -156,9 +163,9 @@ export function normalizeChoices(value, state, session, allowedIds) {
     const selected = ids.map(id => {
       if (typeof id !== 'string' || !records.has(id) || used.has(id) || (allowedIds && !allowedIds.has(id))) throw new Error(`记录不存在、已合并或重复选择：${id}`);
       used.add(id);
-      const r = records.get(id), span = liveSpan(session, r);
+      const r = records.get(id), span = liveSpan(session, r, index);
       if (!span) throw new Error(`记录已不在当前上下文：${id}`);
-      return { id, version: r.version, carrierSeq: r.carrierSeq ?? null, mode: r.mode, start: span.start, sourceHash: r.sourceHash, snapshot: recordSnapshot(session, r) };
+      return { id, version: r.version, carrierSeq: r.carrierSeq ?? null, mode: r.mode, start: span.start, sourceHash: r.sourceHash, snapshot: recordSnapshot(session, r, index) };
     }).sort((a, b) => a.start - b.start);
     if ((choice.summary ?? '') !== '' || (choice.documents ?? []).length) throw new Error('中枢选择不能生成正文');
     return { action: choice.action, ids: selected.map(r => r.id), observed: selected, summary: '', documents: [] };
@@ -220,6 +227,7 @@ function legacyPrepareCandidate(session, state, cfg, pairing) {
 }
 
 export function prepareCandidate(session, state, cfg, pairing) {
+  const index = createSurfaceIndex(session);
   if (cfg.preprocessBoundaries === true) {
     const events = legacyPrepareCandidate(session, state, cfg, pairing);
     if (events?.some(isTaskInjection)) Object.assign(events, { wholeWindow: true, windowSeqs: events.map(e => e.seq), retainedSeqs: [] });
@@ -228,7 +236,7 @@ export function prepareCandidate(session, state, cfg, pairing) {
   const nodes = session.surface.nodes, stop = preparationStop(session, cfg);
   const keep = protectedSeqs(session, state, cfg), owners = new Map(), spans = new Map();
   for (const record of activeRecords(state)) {
-    const span = liveSpan(session, record); if (!span) continue;
+    const span = liveSpan(session, record, index); if (!span) continue;
     spans.set(record.id, span);
     for (const seq of span.seqs) owners.set(seq, record);
   }
@@ -271,8 +279,9 @@ export function prepareCandidate(session, state, cfg, pairing) {
   return events;
 }
 export function backlogView(session, state, cfg) {
+  const index = createSurfaceIndex(session);
   const keep = protectedSeqs(session, state, cfg), reserved = new Set();
-  for (const r of activeRecords(state)) for (const seq of liveSpan(session, r)?.seqs || []) reserved.add(seq);
+  for (const r of activeRecords(state)) for (const seq of liveSpan(session, r, index)?.seqs || []) reserved.add(seq);
   const nodes = session.surface.nodes, stop = preparationStop(session, cfg);
   let events = 0, tokens = 0, recentEvents = 0;
   for (let i = 0; i < nodes.length; i++) {
@@ -296,6 +305,7 @@ export function candidateInput(session, events, lookback) {
       text: actualUser(e) ? '[User message archived verbatim; see user_messages for reference only.]' : ((events.retainedSeqs || []).includes(e.seq) ? '[Protected host context retained in place.]' : materialText(read(e).content, e.seq)) })) };
 }
 export function coordinatorInput(session, state, cfg) {
+  const index = createSurfaceIndex(session);
   const read = summaryMessageReader(session);
   return {
     summary_scope: { source: 'selected records only', reference_only_fields: ['user_messages', 'recent_events', 'compacted_conversation', 'context'] },
@@ -304,7 +314,7 @@ export function coordinatorInput(session, state, cfg) {
     context: { entries: session.surface.nodes.map((seq, position) => ({ seq, position })), pressureRatio: cfg.pressureRatio ?? null,
       backlog: backlogView(session, state, cfg), last_rejection: state.review?.lastRejection || null, summary_target_characters: cfg.summaryTargetChars || 1200 },
     records: activeRecords(state).flatMap(r => {
-      const span = liveSpan(session, r);
+      const span = liveSpan(session, r, index);
       return span ? [{ id: r.id, version: r.version, position: span.start, representation: r.mode, ranges: r.ranges,
         timeStart: r.timeStart, timeEnd: r.timeEnd, summary: r.summary, documents: r.documents,
         attachments: (r.assets || []).map(describeAsset),

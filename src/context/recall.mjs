@@ -5,6 +5,7 @@ export function registerContextRecall(ctx, hub) {
       id: { type: 'string', description: 'Saved summary ID. Returns its detailed documents verbatim.' },
       asset: { type: 'integer', minimum: 1, description: 'Reopen one saved image or file, indexed from 1 in the record attachment list. Requires id or from/to.' },
       query: { type: 'string', description: 'Optional text filter over the visible summary catalog.' },
+      cursor: { type: 'string', description: 'Continue a catalog listing from its returned cursor, retaining the same query. Not used with id or from/to.' },
       from: { type: 'integer', description: 'First event sequence in this session for original-text retrieval.' },
       to: { type: 'integer', description: 'Last event sequence in this session for original-text retrieval.' },
     }, oneOf: [

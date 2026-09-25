@@ -42,7 +42,7 @@ export class Hub extends Service {
   }
   config() { const value = this.getConfig(); return Object.fromEntries(Object.keys(Config.dict).filter(key => Object.hasOwn(value, key)).map(key => [key, value[key]])); }
   taskReminders(session) {
-    const saved = this.store.state(session.id).betterTodo;
+    const saved = (this.store.peek ? this.store.peek(session.id) : this.store.state(session.id))?.betterTodo;
     return { todo: saved?.todo ?? true, verification: saved?.verification ?? false };
   }
   setTaskReminders(session, patch) {
@@ -54,12 +54,12 @@ export class Hub extends Service {
     return next;
   }
   scope(session) {
-    const state = this.store.state(session.id);
+    const state = this.store.peek ? this.store.peek(session.id) ?? { id: session.id } : this.store.state(session.id);
     let root = state, parentId = session.header.parentSession;
     const ancestors = new Set([session.id]);
     while (parentId) {
       if (ancestors.has(parentId)) throw Error('会话继承关系形成循环，未扩大记忆范围');
-      ancestors.add(parentId); root = this.store.state(parentId); parentId = root.parentSession;
+      ancestors.add(parentId); root = this.store.peek ? this.store.peek(parentId) ?? { id: parentId } : this.store.state(parentId); parentId = root.parentSession;
     }
     const mode = state.memoryScope ?? root.memoryScope ?? this.config().memoryScope;
     return { mode, project: mode === 'session' ? `session:${root.id}` : projectOf(session.header.cwd || process.cwd()) };

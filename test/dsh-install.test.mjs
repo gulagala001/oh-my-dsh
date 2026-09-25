@@ -97,7 +97,7 @@ test('install into stock web, coexist with stock presets, switch both ways and r
     await rpc('session/prompt', { request: { sessionId: id, requestId: crypto.randomUUID(), mode: 'queue', content: [{ type: 'text', text }] } });
     return until(async () => { const s = await snapshot(id); return s.records.some(r => r.event?.type === 'turn/end' && r.event.data.turn === turn) && s; });
   };
-  const api = async (path, value) => (await fetch(base + '/trisoul-x/api' + path, value === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(value) })).json();
+  const api = async (path, value) => (await fetch(base + '/trisoul-x/api' + path, value === undefined ? { headers: { cookie } } : { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify(value) })).json();
 
   await boot();
   const old = await create('standard');

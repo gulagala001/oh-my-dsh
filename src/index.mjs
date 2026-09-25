@@ -1,3 +1,4 @@
+import { readJsonBody as readBody, rejectUntrusted } from './http.mjs';
 import { installFileUploadCompatibility } from './file-upload-compat.mjs';
 import { legacySettings } from '#opencu/src/legacy-settings.mjs';
 import { homedir } from 'node:os';
@@ -33,8 +34,7 @@ import { createPromptOptimizer, handlePromptOptimizerApi } from './prompt-optimi
 export { Config };
 export const name = 'trisoul-x';
 export const inject = ['loader', 'tools', 'llm', 'agents', 'sessions', 'settings', 'tokenMeter', 'sessionProjections', 'sessionPersistence'];
-const send = (res, status, value) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(value)); };
-async function readBody(req) { let body = ''; for await (const part of req) body += part; return body.trim() ? JSON.parse(body) : {}; }
+const send = (res, status, value) => { if (res.destroyed || res.writableEnded) return; if (res.headersSent) { res.destroy(); return; } res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...(status === 413 || status === 408 ? { Connection: 'close' } : {}) }); res.end(JSON.stringify(value)); };
 
 export async function apply(ctx, config) {
   installLoaderLifecycleCompatibility(ctx);
@@ -151,7 +151,12 @@ export async function apply(ctx, config) {
     // A preset can have changed before disposal; release resources we owned.
     const id = agent.session.id;
     if (!isX(agent.session) && !hub.agents.has(id) && !hub.context.agents.has(id)) return;
-    hub.context.dispose(id); hub.taskReviews.delete(id); hub.agents.delete(id); hub.requestStarts.delete(id);
+    const disposed = hub.context.dispose(id); hub.taskReviews.delete(id); hub.agents.delete(id); hub.requestStarts.delete(id);
+    return disposed;
+  }, { global: true });
+  ctx.on('session/disposed', session => {
+    // Read-only historical sessions may never have created an agent.
+    if (!hub.agents.has(session.id)) return hub.context.dispose(session.id);
   }, { global: true });
   ctx.on('agent/created', ({ agent }) => {
     if (!isX(agent.session) || agent.session.header.origin === 'subagent') return;
@@ -171,10 +176,12 @@ export async function apply(ctx, config) {
       try {
         const url = new URL(req.url, 'http://localhost'), id = url.searchParams.get('session');
         if (await handleVersionApi({ req, res, url, service: versionService, send })) return;
+        if (rejectUntrusted(ctx, req, res)) return;
         if (await handlePromptOptimizerApi({ ctx, service: promptOptimizer, req, res, url, getSession: () => id ? ctx.agents.get(id)?.session ?? ctx.sessions.get(id) : undefined, send })) return;
         const agent = id ? ctx.agents.get(id) : undefined;
         const session = agent?.session ?? (id ? ctx.sessions.get(id) : undefined);
-        const stored = id ? hub.store.state(id) : undefined;
+        const stored = id ? hub.store.peek(id) : undefined;
+        if (id && !session && !stored) { send(res, 404, { error: '会话不存在' }); return; }
         const scopeSession = session ?? { id: id || 'settings', header: { cwd: stored?.cwd || process.cwd() } };
         if (url.pathname === '/trisoul-x/api/background-wait' && req.method === 'GET') {
           const denied = ctx.get('connection')?.requestRejection(req);
@@ -185,6 +192,7 @@ export async function apply(ctx, config) {
         if (await handleContextApi({ hub, ctx, req, res, url, session, agent, id, send, readBody })) return;
         if (url.pathname === '/trisoul-x/api/better-todo') {
           if (!id) { send(res, 400, { error: '请选择一个会话' }); return; }
+          if (!['GET', 'POST'].includes(req.method)) { send(res, 405, { error: 'Method not allowed' }); return; }
           if (req.method === 'POST') {
             const input = await readBody(req), patch = {};
             for (const key of ['todo', 'verification']) if (Object.hasOwn(input, key)) {
@@ -198,14 +206,15 @@ export async function apply(ctx, config) {
         if (url.pathname === '/trisoul-x/api/state' && req.method === 'GET') {
           const directory = id ? [] : await Promise.all(ctx.llm.listProviders().map(async provider => ({ ...provider, models: await ctx.llm.listModels(provider.id).catch(() => []) })));
           const { ids, selected: all, metrics, actions } = monitorSelection(hub.store.monitorStates(), id, url.searchParams.get('range'));
+          const unreadableArchives = hub.store.monitorErrors.size;
           const meter = session ? ctx.tokenMeter.measure(session) : null;
           const liveCalls = [...hub.live.values()].filter(call => !id || url.searchParams.get('range') === 'all' || ids.has(call.sessionId));
           res.setHeader('Cache-Control', 'no-store');
           if (url.searchParams.get('view') === 'summary') {
-            send(res, 200, compactMonitorSnapshot({ metrics, actions, meter, liveCalls, sessionCount: all.length, running: agent?.status ?? 'idle' })); return;
+            send(res, 200, { ...compactMonitorSnapshot({ metrics, actions, meter, liveCalls, sessionCount: all.length, running: agent?.status ?? 'idle' }), unreadableArchives }); return;
           }
           send(res, 200, {
-            config: hub.config(), directory, metrics, actions, sessionCount: all.length, contextHistory: stored?.contextHistory || [],
+            config: hub.config(), directory, metrics, actions, unreadableArchives, sessionCount: all.length, contextHistory: stored?.contextHistory || [],
             notes: stored?.notes || [],
             legacyContext: stored && (stored.status || stored.pins?.length || stored.memoryContext?.doc || stored.checkpoint || stored.digests?.length || stored.probe || stored.probeNotes?.length) ? {
               status: stored.status, pins: stored.pins, workdoc: stored.memoryContext?.doc, checkpoint: stored.checkpoint,
@@ -222,7 +231,7 @@ export async function apply(ctx, config) {
           }); return;
         }
         send(res, 404, { error: '接口不存在' });
-      } catch (error) { send(res, 400, { error: error.message }); }
+      } catch (error) { send(res, error.statusCode || 400, { error: error.message }); }
     } }));
   });
 }

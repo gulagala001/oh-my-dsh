@@ -119,3 +119,20 @@ test('GitHub recommendations install the versioned release asset and remain opti
     await assert.rejects(latestPluginVersion(plugin, new AbortController().signal), /缺少预期/);
   } finally { globalThis.fetch = fetchOriginal; }
 });
+
+test('in-flight inventory warnings never masquerade as a completed uninstall failure', async () => {
+  const f = fixture(); await f.service.start('sample', 'install');
+  let finish;
+  f.service.manager.removeBundle = () => new Promise(resolve => { finish = resolve; });
+  const job = f.service.start('sample', 'uninstall'); await Promise.resolve();
+  f.bundles = [{ name: 'sample-plugin', installed: true, removable: true,
+    error: { diagnostic: 'bundle temporarily unavailable' } }];
+  const busy = await f.service.status();
+  assert.equal(busy.busy.action, 'uninstall');
+  assert.equal(busy.plugins[0].error, '');
+  assert.equal(busy.plugins[0].inventoryWarning, 'bundle temporarily unavailable');
+  f.bundles = []; finish({ application: 'applied' }); await job;
+  const done = await f.service.status(); assert.equal(done.busy, null);
+  assert.equal(done.plugins[0].installed, false); assert.equal(done.plugins[0].error, '');
+  assert.equal(done.plugins[0].inventoryWarning, undefined);
+});

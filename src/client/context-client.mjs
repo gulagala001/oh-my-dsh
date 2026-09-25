@@ -90,16 +90,16 @@ export function createContextUI(React) {
     componentDidUpdate(prev) {
       if (prev.sessionId !== this.props.sessionId) {
         this.documentTicket++; this.reviewTicket++;
-        this.setState({ data: null, detail: null, selected: [], review: null, legacy: null, error: '', notice: '', busy: false, activeAction: null });
-        this.observe();
+        this.setState({ data: null, detail: null, selected: [], review: null, legacy: null, error: '', notice: '', busy: false, activeAction: null, cursor: null }, () => this.observe());
       } else if (prev.visible !== this.props.visible) this.observe();
     }
+    requestPath(id) { return this.path() + suffix(id); }
     observe() {
       this.poller?.stop();
       const id = this.props.sessionId;
       if (this.props.visible === false || !id) { this.poller = null; return; }
       this.poller = createPoller({
-        read: signal => api(this.path() + suffix(id), undefined, signal),
+        read: signal => api(this.requestPath(id), undefined, signal),
         onData: data => this.setState(s => ({ data, error: '', ...(s.selected ? { selected: s.selected.filter(key => data.records?.some(r => r.id === key && r.live && !r.mergedInto)) } : {}) })),
         onError: error => this.setState({ error: error.message }),
       });
@@ -171,19 +171,24 @@ export function createContextUI(React) {
     }
   }
   class SummaryPanel extends PollPanel {
-    constructor(props) { super(props); this.state.search = ''; this.state.legacy = null; }
+    constructor(props) { super(props); this.state.search = ''; this.state.legacy = null; this.state.cursor = null; }
     path() { return '/context/catalog'; }
+    requestPath(id) { return this.path() + suffix(id) + '&query=' + encodeURIComponent(this.state.search) + (this.state.cursor ? '&cursor=' + encodeURIComponent(this.state.cursor) : ''); }
+    page = cursor => this.setState({ cursor, data: null, detail: null, error: '' }, () => this.observe());
     render() {
       const { data: d, search, error, notice } = this.state;
       const entries = (d?.entries || []).filter(r => [r.summary, r.sessionTitle, r.id].join(' ').toLowerCase().includes(search.toLowerCase()));
       const groups = new Map(); for (const r of entries) { const list = groups.get(r.sessionId) || []; list.push(r); groups.set(r.sessionId, list); }
       const privateSession = d?.scope?.scope === 'session';
+      const archiveWarning = d?.unreadableArchives ? `有 ${d.unreadableArchives} 份历史档案无法读取，以下结果不完整；原文件已保留。` : '';
       return h('div', { className: 'cx-panel' }, heading(privateSession ? '会话摘要' : '项目摘要', privateSession ? '本会话私有历史，不参与共享记忆。' : '按会话整理，按原始事件时间回看。', 'memory', button(null, this.load, { quiet: true, icon: 'refresh', label: '刷新摘要' })),
         h('div', { className: 'cx-body' }, alert(error, true), alert(notice),
-          h('div', { className: 'cx-catalog-banner' }, icon(privateSession ? 'lock' : 'layers', 19), h('div', null, h('strong', null, privateSession ? '仅当前会话可见' : '项目共享档案'), h('small', null, !d ? '正在读取…' : `${groups.size} 个会话 · ${entries.length} 段摘要 · 文档按需读取`))),
-          h('label', { className: 'cx-search' }, icon('search'), h('input', { value: search, onChange: e => this.setState({ search: e.target.value }), placeholder: '搜索摘要、会话或编号', 'aria-label': '搜索摘要' })),
+          alert(archiveWarning, true),
+          h('div', { className: 'cx-catalog-banner' }, icon(privateSession ? 'lock' : 'layers', 19), h('div', null, h('strong', null, privateSession ? '仅当前会话可见' : '项目共享档案'), h('small', null, !d ? '正在读取…' : `${d.total ?? entries.length} 段匹配摘要 · 本页 ${entries.length} 段 · 文档按需读取`))),
+          h('label', { className: 'cx-search' }, icon('search'), h('input', { value: search, onChange: e => this.setState({ search: e.target.value, cursor: null, data: null }, () => this.observe()), placeholder: '搜索摘要、会话或编号', 'aria-label': '搜索摘要' })),
           ...[...groups].map(([sid, list]) => h('section', { className: 'cx-session', key: sid }, h('header', { className: 'cx-session-head' }, h('span', { className: 'cx-session-icon' }, icon('context', 15)), h('div', null, h('h3', null, list[0].sessionTitle || sid), h('small', { title: sid }, sid.length > 28 ? sid.slice(0, 28) + '…' : sid)), badge(list.length + ' 段')),
             h('div', { className: 'cx-timeline' }, ...list.map(r => h('article', { className: 'cx-timeline-record', key: r.id }, h('span', { className: 'cx-timeline-dot' }), h('time', null, date(r.timeStart), ' — ', time(r.timeEnd)), summaryPreview(r.summary), h('div', { className: 'cx-record-footer' }, h('code', { title: r.id }, r.id.slice(0, 8)), button(`读取 ${r.documentCount || 0} 文档 · ${r.assetCount || 0} 附件`, () => this.document(r.id), { quiet: true, icon: 'context' }))))))),
+          h('div', { className: 'cx-actions' }, this.state.cursor && button('第一页', () => this.page(null), { quiet: true }), d?.nextCursor && button('下一页', () => this.page(d.nextCursor))),
           d && !entries.length && empty('没有匹配的摘要', search ? '试试其他关键词，或清空筛选。' : privateSession ? '本会话完成预处理后，摘要会显示在这里。' : '项目级会话完成预处理后，摘要会按会话归档。'),
           !privateSession && d && fold('旧自动记忆', '只读保留，不自动重新注入', h('div', null, button('读取本项目旧条目', async () => { const sid = this.props.sessionId; try { const r = await api('/memories' + suffix(sid)); if (this.alive && sid === this.props.sessionId) this.setState({ legacy: r.items }); } catch (e) { if (this.alive && sid === this.props.sessionId) this.setState({ error: e.message }); } }, { icon: 'memory', quiet: true }), this.state.legacy && h('pre', null, JSON.stringify(this.state.legacy, null, 2))))), this.reader());
     }
@@ -191,18 +196,19 @@ export function createContextUI(React) {
 
   class ComponentsPanel extends React.Component {
     state = { data: null, error: '', loadError: '', busy: false, paths: null, saved: '' };
-    componentDidMount() { this.alive = true; this.poll(); }
-    componentWillUnmount() { this.alive = false; clearTimeout(this.timer); this.request?.abort(); }
-    call = async body => {
-      const response = await fetch('trisoul-x/components', body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { signal: this.request?.signal });
+    componentDidMount() {
+      this.alive = true;
+      this.poller = createPoller({
+        read: async signal => { const epoch = this.epoch || 0; return { data: await this.call(undefined, signal), epoch }; },
+        onData: ({ data, epoch }) => { if (!this.state.busy && epoch === (this.epoch || 0)) this.setState({ data, loadError: '' }); },
+        onError: error => this.setState({ loadError: error.message }),
+      });
+      this.poller.start();
+    }
+    componentWillUnmount() { this.alive = false; this.poller?.stop(); }
+    call = async (body, signal) => {
+      const response = await fetch('trisoul-x/components', body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { signal });
       const value = await response.json(); if (!response.ok) throw Error(value.error || '读取组件状态失败'); return value;
-    };
-    poll = async () => {
-      const epoch = this.epoch || 0;
-      this.request = new AbortController();
-      try { const data = await this.call(); if (this.alive && !this.state.busy && epoch === (this.epoch || 0)) this.setState({ data, loadError: '' }); }
-      catch (error) { if (this.alive && epoch === (this.epoch || 0)) this.setState({ loadError: error.message }); }
-      if (this.alive) this.timer = setTimeout(this.poll, document.hidden ? 15000 : 2500);
     };
     act = async body => {
       if (this.state.busy) return;
@@ -225,7 +231,7 @@ export function createContextUI(React) {
     }
     render() {
       const { data: d, error, loadError, busy, saved } = this.state;
-      if (!d) return h('div', { className: 'cx-body' }, alert(error, true), empty('正在检查基础组件', '安装、启动与权限集中在这里。', 'settings'));
+      if (!d) return h('div', { className: 'cx-body' }, alert(error || loadError, true), empty(loadError ? '组件状态读取失败' : '正在检查基础组件', '安装、启动与权限集中在这里。', 'settings'), loadError && button('重试', () => this.poller?.refresh()));
       const cg = d.codegraph, cu = d.computerUse, setup = cu.setup, native = setup?.native, extension = setup?.extension, install = extension?.installation;
       const paths = this.state.paths || cu.paths;
       const retry = (component, label = '重新准备') => button(label, () => this.prepare(component), { disabled: busy, quiet: true, icon: 'refresh' });

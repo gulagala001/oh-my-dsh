@@ -1,3 +1,4 @@
+import { readJsonBody } from './http.mjs';
 import { randomUUID } from 'node:crypto';
 import { recommendedPlugins } from './recommended-plugin-catalog.mjs';
 import { compareVersions, parseVersion } from './version.mjs';
@@ -51,7 +52,9 @@ export class RecommendedPluginManager {
         const bundle = bundles.find(item => item.name === plugin.packageName);
         return { id: plugin.id, installed: !!bundle?.installed, enabled: !!bundle?.enabled, removable: !!bundle?.removable && !bundle?.readOnlyReason,
           version: bundle?.version || null, ...this.records.get(plugin.id),
-          ...(bundle?.error ? { error: pluginManagementError(bundle.error) } : {}) };
+          ...(bundle?.error ? this.current?.id === plugin.id
+            ? { inventoryWarning: pluginManagementError(bundle.error) }
+            : { error: this.records.get(plugin.id)?.error || pluginManagementError(bundle.error) } : {}) };
       }) };
   }
   async settings(value) {
@@ -140,17 +143,16 @@ export function mountRecommendedPlugins(ctx, hub) {
     scope.effect(() => scope.webServer.register({ kind: 'prefix', path: '/trisoul-x/recommended-plugins', async handler(req, res) {
       const denied = scope.connection.requestRejection(req);
       if (denied !== undefined) { res.writeHead(denied); res.end(); return; }
-      const send = (status, data) => { if (res.destroyed || res.writableEnded) return; res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(data)); };
+      const send = (status, data) => { if (res.destroyed || res.writableEnded) return; res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...(status === 413 || status === 408 ? { Connection: 'close' } : {}) }); res.end(JSON.stringify(data)); };
       if (new URL(req.url, 'http://localhost').pathname !== '/trisoul-x/recommended-plugins') { send(404, { error: 'Not found' }); return; }
       try {
         if (req.method === 'POST') {
-          let raw = ''; for await (const part of req) { raw += part; if (Buffer.byteLength(raw) > 8192) throw Error('请求过大'); }
-          const input = JSON.parse(raw || '{}');
+          const input = await readJsonBody(req, { maxBytes: 8192 });
           if (input.action === 'settings') await service.settings(input.autoUpdate);
           else void service.start(input.id, input.action);
         } else if (req.method !== 'GET') { send(405, { error: 'Method not allowed' }); return; }
         send(200, await service.status());
-      } catch (error) { send(400, { error: error.message }); }
+      } catch (error) { send(error.statusCode || 400, { error: error.message }); }
     } }));
   });
 }
