@@ -1,11 +1,11 @@
 import { mkdirSync, readFileSync, writeFileSync, renameSync, readdirSync, existsSync, openSync, fsyncSync, closeSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, resolve, basename } from 'node:path';
 import { hash } from './core.mjs';
 
 export class ContextStore {
   constructor(directory, { maxDiskCacheBytes = 16 * 1024 * 1024 } = {}) {
     this.dir = resolve(directory, 'context-v1');
-    this.cache = new Map(); this.diskCache = new Map(); this.diskCacheBytes = 0;
+    this.cache = new Map(); this.diskCache = new Map(); this.diskCacheBytes = 0; this.readErrors = new Map(); this.writes = new Map();
     this.maxDiskCacheBytes = Math.max(0, maxDiskCacheBytes);
     mkdirSync(join(this.dir, 'sessions'), { recursive: true, mode: 0o700 });
   }
@@ -14,16 +14,23 @@ export class ContextStore {
     try { return JSON.parse(readFileSync(path, 'utf8')); }
     catch (error) { throw new Error(`上下文存档无法读取，原文件未更改：${path}: ${error.message}`); }
   }
+  identity(path) {
+    try { const s = statSync(path, { bigint: true }); return `${s.dev}:${s.ino}:${s.size}:${s.mtimeNs}:${s.ctimeNs}`; }
+    catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+  }
   write(path, value) {
+    const content = JSON.stringify(value) + '\n', digest = hash(content), previous = this.writes.get(path);
+    if (previous?.digest === digest && previous.identity === this.identity(path)) return false;
     const tmp = `${path}.tmp`;
     // Flush the same writable handle on every platform (Windows rejects
     // FlushFileBuffers/fsync on a read-only handle).
     const fd = openSync(tmp, 'w', 0o600);
     try {
-      writeFileSync(fd, JSON.stringify(value) + '\n');
+      writeFileSync(fd, content);
       fsyncSync(fd);
     } finally { closeSync(fd); }
     renameSync(tmp, path);
+    this.writes.set(path, { digest, identity: this.identity(path) }); return true;
   }
   path(id) { return join(this.dir, 'sessions', hash(id) + '.json'); }
   state(id, binding) {
@@ -39,11 +46,16 @@ export class ContextStore {
     return s;
   }
   save(s) { this.write(this.path(s.id), s); this.cache.set(s.id, s); }
-  all() {
+  release(id) {
+    this.cache.delete(id); this.writes.delete(this.path(id));
+    this.dropDiskCache(basename(this.path(id)));
+  }
+  all({ tolerateInvalid = false, requiredId } = {}) {
     const files = readdirSync(join(this.dir, 'sessions')).filter(f => f.endsWith('.json'));
-    const present = new Set(files);
+    const present = new Set(files); this.readErrors.clear();
     for (const key of this.diskCache.keys()) if (!present.has(key)) this.dropDiskCache(key);
-    return files.map(file => {
+    return files.flatMap(file => {
+      try {
       const path = join(this.dir, 'sessions', file), stat = statSync(path, { bigint: true });
       const signature = `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
       let cached = this.diskCache.get(file);
@@ -59,7 +71,13 @@ export class ContextStore {
       }
       // The running transaction owns its mutable state. Disk validation above
       // still detects changed/corrupt archives and externally added records.
-      return this.cache.get(cached.value.id) || cached.value;
+      return [this.cache.get(cached.value.id) || cached.value];
+      } catch (error) {
+        this.dropDiskCache(file);
+        if (!tolerateInvalid || (requiredId !== undefined && file === basename(this.path(requiredId)))) throw error;
+        this.readErrors.set(file, error.message);
+        return [];
+      }
     });
   }
   dropDiskCache(file) {
@@ -68,9 +86,9 @@ export class ContextStore {
     this.diskCache.delete(file);
   }
   visible(requester, { includeHistory = false } = {}) {
-    const own = this.state(requester);
+    const own = this.state(requester); this.readErrors.clear();
     const states = own.binding?.scope === 'project'
-      ? this.all().filter(s => s.id === requester || (s.binding?.scope === 'project' && s.binding.project === own.binding.project))
+      ? this.all({ tolerateInvalid: true, requiredId: requester }).filter(s => s.id === requester || (s.binding?.scope === 'project' && s.binding.project === own.binding.project))
       : [own];
     return states.flatMap(s => s.records.filter(r => includeHistory || !r.mergedInto).map(r => ({ ...r, sessionTitle: s.binding?.title || s.id })))
       .sort((a, b) => (a.timeStart ?? a.createdAt) - (b.timeStart ?? b.createdAt) || a.id.localeCompare(b.id));

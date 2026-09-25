@@ -102,7 +102,7 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${
     const response = await fetch(`${base}/api/${method}`, { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ type: 'client-request', rpcId: crypto.randomUUID(), method, payload: { args: { request } } }) });
     const body = await response.json(); assert.equal(body.result?.ok, true, JSON.stringify(body)); return body.result.value;
   };
-  const api = async (path, body) => { const r = await fetch(base + '/trisoul-x/api' + path, body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); const value = await r.json(); assert.ok(r.ok, JSON.stringify(value)); return value; };
+  const api = async (path, body) => { const r = await fetch(base + '/trisoul-x/api' + path, body === undefined ? { headers: { cookie } } : { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify(body) }); const value = await r.json(); assert.ok(r.ok, JSON.stringify(value)); return value; };
   const created = await rpc('session/create', { cwd: workspace, agentPreset: preset }), id = created.sessionId, q = '?session=' + id;
   const computerState = await fetch(base + '/trisoul-x/computer-use/state' + q, { headers: { cookie } });
   const computerBody = await computerState.text();
@@ -150,7 +150,7 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${
   const state = await until(async () => { const s = await api('/state' + q); return s.running === 'idle' && !s.live && s.tasks[0]?.links.some(l => l.kind === 'test' && l.lastRun?.pass) && s; });
   assert.equal(readFileSync(join(workspace, 'fixture.txt'), 'utf8'), content);
   assert.equal((await api('/scope' + q)).scope, 'project'); assert.equal((await api('/scope' + q)).locked, true);
-  const locked = await fetch(base + '/trisoul-x/api/scope' + q, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ scope: 'full' }) }); assert.equal(locked.status, 409);
+  const locked = await fetch(base + '/trisoul-x/api/scope' + q, { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ scope: 'full' }) }); assert.equal(locked.status, 409);
   await assert.rejects(api('/settings', { memoryScope: 'full' }), /full/); assert.equal((await api('/scope' + q)).scope, 'project');
   assert.ok(state.actions.preparedSegments); assert.ok(state.metrics.prepare.calls);
   assert.equal(state.tasks.length, 1); assert.equal(state.tasks[0].status, 'completed');
@@ -224,7 +224,7 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${
   }
   const continuedTest = continued.tasks[0].links.find(l => l.kind === 'test');
   assert.equal(continued.taskRelease.tested, 1);
-  const retired = await fetch(base + '/trisoul-x/api/memories' + q, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ op: 'add', text: 'Do not write' }) });
+  const retired = await fetch(base + '/trisoul-x/api/memories' + q, { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ op: 'add', text: 'Do not write' }) });
   assert.equal(retired.status, 410);
   assert.equal((await api('/memories' + q)).readOnly, true);
   assert.equal(continuedTest.lastRun.pass, true); assert.match(continuedTest.lastRun.tail, /VERIFIED_LEDGER_FIXTURE/);

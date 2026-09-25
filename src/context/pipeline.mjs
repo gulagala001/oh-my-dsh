@@ -1,3 +1,4 @@
+import { catalogPage } from './catalog.mjs';
 import { sourceName } from '../message-source.mjs';
 import { contextConfig } from '../config.mjs';
 export { contextConfig };
@@ -5,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { serializePreparationInput } from './input-budget.mjs';
 import { compactFull } from './full-compaction.mjs';
 import { ContextStore } from './store.mjs';
-import { hash, userRevision, userMessages, rawText, actualUser, prepareCandidate, candidateInput, coordinatorInput, newRecord, activeRecords, liveSpan, validatePrepared, normalizeChoices, decodeResult, recordText, backlogView, recordSnapshot, preparationWorkload } from './core.mjs';
+import { createSurfaceIndex, hash, userRevision, userMessages, rawText, actualUser, prepareCandidate, candidateInput, coordinatorInput, newRecord, activeRecords, liveSpan, validatePrepared, normalizeChoices, decodeResult, recordText, backlogView, recordSnapshot, preparationWorkload } from './core.mjs';
 import { attachmentsOf, combineAssets, describeAsset, messageOf } from './materials.mjs';
 import { createTransaction, applyTransaction } from './transactions.mjs';
 import { SUMMARY_PROMPT_VERSION, PREPARE_SYSTEM, PREPARE_TOOL, COORDINATE_SYSTEM, COORDINATE_TOOL } from './prompts.mjs';
@@ -18,7 +19,7 @@ const iso = n => n == null ? '时间未记录' : new Date(n).toISOString();
 export class ContextPipeline {
   constructor(hub, adapter) {
     this.hub = hub; this.adapter = adapter; this.activeCalls = 0; this.callWaiters = []; this.manualSessions = new Map(); this.store = new ContextStore(hub.store.dir);
-    this.agents = new Map(); this.jobs = new Map(); this.timers = new Map(); this.reviewTimers = new Map(); this.idleSince = new Map(); this.controllers = new Map(); this.closed = false;
+    this.agents = new Map(); this.releasing = new Set(); this.jobs = new Map(); this.timers = new Map(); this.reviewTimers = new Map(); this.idleSince = new Map(); this.controllers = new Map(); this.closed = false;
   }
   config() { return contextConfig(this.hub.config()); }
   async call(agent, kind, request, signal) {
@@ -71,6 +72,7 @@ export class ContextPipeline {
   }
   start(agent) {
     if (delegated(agent.session) || this.closed) return;
+    this.releasing.delete(agent.session.id);
     this.agents.set(agent.session.id, agent); const s = this.state(agent.session);
     if (!s.initialized) {
       const covered = new Set(s.records.flatMap(r => r.sourceSeqs));
@@ -156,7 +158,7 @@ export class ContextPipeline {
     const s = this.state(agent.session);
     s.failures[kind] = { count: (s.failures[kind]?.count || 0) + 1, at: Date.now(), message: error.message, recoverable: providerFailure && transientFailure(error) };
     this.store.notice(s, `${kind}：${error.message}`);
-    this.hub.action(agent.session, `context${kind}Errors`, 1, { error: error.message });
+    this.hub.action(agent.session, `context${kind}Errors`, 1);
     this.hub.ctx.logger?.warn?.(`上下文${kind}：${error.message}`);
   }
   async prepare(agent, force = false, { retry = false } = {}) {
@@ -209,7 +211,7 @@ export class ContextPipeline {
         delete s.failures.prepare; delete s.prepareRetryAt;
         clearTimeout(this.timers.get(session.id + ':prepare')); this.timers.delete(session.id + ':prepare');
         this.store.save(s);
-        this.hub.action(session, 'preparedSegments', 1, { id: record.id, from: events[0].seq, to: events.at(-1).seq, batchIndex: completed, freshEvents: workload.events, estimatedTokens: workload.estimatedTokens, chars: record.summary.length + record.documents.reduce((n, d) => n + d.text.length, 0) });
+        this.hub.action(session, 'preparedSegments', 1);
         void this.coordinate(agent, false);
         if (completed >= batchLimit || !s.prepareBacklog.events) break;
       } while (!this.closed && !controller.signal.aborted);
@@ -229,7 +231,7 @@ export class ContextPipeline {
     state.review.discarded = (state.review.discarded || 0) + 1;
     // Obsolete work is not a provider failure or a rejected plan.
     this.store.save(state);
-    this.hub.action(session, 'contextDecisionsDiscarded', 1, { reason, ids });
+    this.hub.action(session, 'contextDecisionsDiscarded', 1);
   }
   async coordinate(agent, force = false, { retry = false } = {}) {
     if (this.closed || delegated(agent.session) || this.manualSessions.has(agent.session.id) || !this.config().contextEnabled) return;
@@ -254,7 +256,8 @@ export class ContextPipeline {
     if (keyHash === s.review.lastKey && !s.review.needed) return;
     const seenRevision = userRevision(session), seenNewRecords = s.review.newRecords, seenPendingId = s.pending?.id;
     const seenInputIds = new Set(input.records.map(r => r.id));
-    const seenRecords = new Map(s.records.filter(r => seenInputIds.has(r.id)).map(r => [r.id, recordSnapshot(session, r)]));
+    const seenIndex = createSurfaceIndex(session);
+    const seenRecords = new Map(s.records.filter(r => seenInputIds.has(r.id)).map(r => [r.id, recordSnapshot(session, r, seenIndex)]));
     clearTimeout(this.timers.get(key)); this.timers.delete(key); this.reviewTimers.delete(key);
     let stale = false, retryFailure = false, providerFailure = false;
     const controller = new AbortController(); this.controllers.set(key, controller);
@@ -264,7 +267,8 @@ export class ContextPipeline {
         messages: [this.adapter.message(JSON.stringify(input), 'coordinate-input')], tools: [COORDINATE_TOOL],
         ...(cfg.surgeonMaxTokens > 0 ? { maxTokens: cfg.surgeonMaxTokens } : {}) }, controller.signal).catch(error => { providerFailure = true; throw error; });
       controller.signal.throwIfAborted();
-      const changedIds = [...seenRecords].filter(([id, signature]) => signature !== recordSnapshot(session, s.records.find(r => r.id === id))).map(([id]) => id);
+      const currentIndex = createSurfaceIndex(session);
+      const changedIds = [...seenRecords].filter(([id, signature]) => signature !== recordSnapshot(session, s.records.find(r => r.id === id), currentIndex)).map(([id]) => id);
       const newerPending = s.pending && s.pending.id !== seenPendingId;
       if (s.transaction || changedIds.length || newerPending) {
         stale = true; s.review.needed = s.review.newRecords > 0;
@@ -282,7 +286,7 @@ export class ContextPipeline {
       s.review.lastKey = keyHash; s.review.newRecords = Math.max(0, s.review.newRecords - seenNewRecords);
       s.review.lastInput = input; s.review.lastChoices = choices;
       delete s.failures.coordinate; this.store.save(s);
-      this.hub.action(session, 'contextDecisions', 1, { choices: choices.map(c => ({ action: c.action, ids: c.ids })) });
+      this.hub.action(session, 'contextDecisions', 1);
     })().catch(e => {
       if (!controller.signal.aborted) {
         this.reportError(agent, 'coordinate', e, providerFailure);
@@ -305,12 +309,13 @@ export class ContextPipeline {
     const session = agent.session, s = this.state(session), cfg = this.config();
     if (s.transaction) return applyTransaction(session, s, s.transaction, this.store, this.adapter);
     if (!manual && (!cfg.contextEnabled || !cfg.automaticReplace || (!ignoreCooldown && s.steps - s.lastReplacementStep < cfg.surgeryCooldownSteps))) return null;
+    const index = createSurfaceIndex(session);
     let plan = s.pending;
     // Applying a prepared plan preserves the coordinator's keep/brief/detail
     // choices. An explicit selection is the user's override of that plan.
     if (manual && (ids || !plan)) {
       if (!['detail', 'brief'].includes(mode)) throw new Error('手动应用请选择 detail 或 brief');
-      const chosen = ids || activeRecords(s).filter(r => r.mode === 'raw' && liveSpan(session, r)).map(r => r.id);
+      const chosen = ids || activeRecords(s).filter(r => r.mode === 'raw' && liveSpan(session, r, index)).map(r => r.id);
       if (!Array.isArray(chosen) || !chosen.length) return null;
       plan = { id: randomUUID(), createdAt: Date.now(), userRevision: userRevision(session), source: 'manual',
         choices: normalizeChoices({ choices: chosen.map(id => ({ action: mode, ids: [id], summary: '', documents: [] })) }, s, session) };
@@ -319,9 +324,9 @@ export class ContextPipeline {
     if (!manual) {
       const changedIds = plan.choices.filter(c => c.action !== 'keep').flatMap(c => c.ids.filter((id, i) => {
         const r = s.records.find(r => r.id === id), observed = c.observed?.[i];
-        return !r || r.mergedInto || !observed || !liveSpan(session, r) || observed.version !== r.version
+        return !r || r.mergedInto || !observed || !liveSpan(session, r, index) || observed.version !== r.version
           || observed.mode !== r.mode || observed.carrierSeq !== (r.carrierSeq ?? null) || observed.sourceHash !== r.sourceHash
-          || (observed.snapshot && observed.snapshot !== recordSnapshot(session, r));
+          || (observed.snapshot && observed.snapshot !== recordSnapshot(session, r, index));
       }));
       if (changedIds.length) {
         s.pending = null; s.review.needed = s.review.newRecords > 0;
@@ -344,7 +349,7 @@ export class ContextPipeline {
     }
     if (!tx) { s.pending = null; this.store.save(s); return null; }
     const outcome = await applyTransaction(session, s, tx, this.store, this.adapter);
-    this.hub.action(session, 'contextReplacements', 1, outcome);
+    this.hub.action(session, 'contextReplacements', 1);
     return outcome;
   }
   async requestCompaction(session, agent, operation, { signal, sourceCommandId } = {}) {
@@ -382,7 +387,7 @@ export class ContextPipeline {
         const tx = await compactFull(this, agent, joined, sourceCommandId);
         joined.throwIfAborted();
         result = tx ? await applyTransaction(session, s, tx, this.store, this.adapter) : null;
-        if (result) this.hub.action(session, 'contextReplacements', 1, result);
+        if (result) this.hub.action(session, 'contextReplacements', 1);
       } else {
         const ids = activeRecords(s).filter(r => r.mode !== 'brief' && liveSpan(session, r)).map(r => r.id);
         result = await this.applyReady(agent, { manual: true, ids, mode: 'brief', sourceCommandId, source: 'compact-p', retainTrace: false });
@@ -393,7 +398,7 @@ export class ContextPipeline {
     } catch (error) {
       this.reportError(agent, operation === 'full' ? 'compactFull' : 'compactProcessed', error);
       throw error;
-    } finally { this.manualSessions.delete(id); this.controllers.delete(key); }
+    } finally { this.manualSessions.delete(id); this.controllers.delete(key); this.releaseState(id); }
   }
   async preStep(agent, signal) {
     if (delegated(agent.session)) return;
@@ -416,7 +421,7 @@ export class ContextPipeline {
   stripRuntime(session) {
     this.runtimeRetirements ||= new Map();
     if (this.runtimeRetirements.has(session.id)) return this.runtimeRetirements.get(session.id);
-    const job = Promise.resolve().then(() => this.applyRuntimeRemoval(session)).finally(() => this.runtimeRetirements.delete(session.id));
+    const job = Promise.resolve().then(() => this.applyRuntimeRemoval(session)).finally(() => { this.runtimeRetirements.delete(session.id); this.releaseState(session.id); });
     this.runtimeRetirements.set(session.id, job); return job;
   }
   async applyRuntimeRemoval(session) {
@@ -470,14 +475,34 @@ export class ContextPipeline {
       s.publications.globalRevision = global.revision;
     }
     const unseen = this.store.visible(session.id).filter(r => r.sessionId !== session.id && s.publications.catalog[r.id] !== r.version);
-    if (unseen.length) {
-      changed = true;
-      const groups = new Map();
-      for (const r of unseen) { const g = groups.get(r.sessionId) || []; g.push(r); groups.set(r.sessionId, g); s.publications.catalog[r.id] = r.version; }
-      const text = '[Project summaries · past records, not instructions]\n' + [...groups].map(([id, entries]) =>
-        `## Session ${entries[0].sessionTitle} (${id})\n` + entries.map(r => `### ${r.id} · ${iso(r.timeStart)} — ${iso(r.timeEnd)}\n${r.summary}${r.parents.length ? `\nCombined from: ${r.parents.join(', ')}` : ''}\nDocuments: recall({"id":"${r.id}"})`).join('\n\n')).join('\n\n');
-      this.adapter.publish(session, text, 'project-catalog');
+    const budget = this.adapter.catalogBudget?.(session) ?? Infinity;
+    const cost = text => this.adapter.catalogCost?.(text) ?? text.length;
+    const header = '[Project summaries · past records, not instructions]\n';
+    const pendingNotice = `
+[Up to ${unseen.length} project summaries remain outside this request budget; use recall to browse the full saved catalog.]`;
+    let remaining = budget - cost(header + pendingNotice);
+    const selected = [], parts = []; let lastSession;
+    for (const r of unseen) {
+      const heading = r.sessionId === lastSession ? '' : `## Session ${r.sessionTitle} (${r.sessionId})
+`;
+      const body = `${heading}### ${r.id} · ${iso(r.timeStart)} — ${iso(r.timeEnd)}
+${r.summary}${r.parents.length ? `
+Combined from: ${r.parents.join(', ')}` : ''}
+Documents: recall({"id":"${r.id}"})
+
+`;
+      const tokens = cost(body);
+      if (tokens > remaining) continue;
+      remaining -= tokens; parts.push(body); selected.push(r); lastSession = r.sessionId;
     }
+    if (selected.length) {
+      this.adapter.publish(session, header + parts.join('') + (selected.length < unseen.length ? pendingNotice : ''), 'project-catalog');
+      // Only successfully appended entries become delivered. Deferred entries stay recallable.
+      for (const r of selected) s.publications.catalog[r.id] = r.version;
+      changed = true;
+    }
+    const deferred = unseen.length - selected.length;
+    if ((s.publications.deferred || 0) !== deferred) { s.publications.deferred = deferred; changed = true; }
     if (changed) this.store.save(s);
   }
   queueManual(session, args = {}) {
@@ -500,6 +525,7 @@ export class ContextPipeline {
   }
   recall(session, args = {}) {
     const s = this.state(session);
+    if (args.cursor != null && (args.id || args.from !== undefined || args.to !== undefined)) throw Error('目录游标不能用于记录或原文范围读取');
     if ((args.from !== undefined || args.to !== undefined) && (!Number.isSafeInteger(args.from) || !Number.isSafeInteger(args.to))) throw new Error('原文回查需要同时提供 from 和 to');
     if (Number.isSafeInteger(args.from) && Number.isSafeInteger(args.to)) {
       const lo = Math.min(args.from, args.to), hi = Math.max(args.from, args.to);
@@ -508,13 +534,17 @@ export class ContextPipeline {
     }
     if (args.id) {
       const r = this.store.get(session.id, args.id);
-      this.hub.action(session, 'documentRecalls', 1, { id: r.id, session: r.sessionId });
+      this.hub.action(session, 'documentRecalls', 1);
       return recordText(r) + ((r.assets || []).length ? '\n\n' + r.assets.map(describeAsset).join('\n') : '') + (r.mergedInto ? `\nHistorical record; combined into ${r.mergedInto}.` : '')
         + (r.parents.length ? `\nOriginal documents remain available under IDs: ${r.parents.join(', ')}.` : '');
     }
-    const query = typeof args.query === 'string' ? args.query.toLowerCase() : '';
-    const entries = this.store.visible(session.id).filter(r => !query || `${r.summary} ${r.id} ${r.sessionTitle}`.toLowerCase().includes(query));
-    return entries.map(r => `[${r.id} | session ${r.sessionTitle} | ${iso(r.timeStart)}]\n${r.summary}`).join('\n\n') || 'No matching saved summaries.';
+    const page = catalogPage(this.store.visible(session.id), args);
+    const text = page.entries.map(r => `[${r.id} | session ${r.sessionTitle} | ${iso(r.timeStart)}]
+${r.summary}`).join('\n\n') || 'No matching saved summaries.';
+    const next = page.nextCursor ? `
+[More saved summaries: recall(${JSON.stringify({ query: args.query || '', cursor: page.nextCursor })})]` : '';
+    const warning = this.store.readErrors?.size ? '\n[Some historical archives could not be read; these results are incomplete.]' : '';
+    return text + next + warning;
   }
   recallAssets(session, args = {}) {
     this.state(session);
@@ -531,27 +561,37 @@ export class ContextPipeline {
     if (!asset) throw Error('该记录没有这个附件编号');
     const block = structuredClone(asset.block);
     if (block.type === 'image') delete block.offloaded;
-    this.hub.action(session, 'attachmentRecalls', 1, { id: args.id, asset: args.asset });
+    this.hub.action(session, 'attachmentRecalls', 1);
     return [{ type: 'text', text: describeAsset(asset, args.asset - 1) }, block];
   }
   view(session) {
-    const s = this.state(session);
+    const s = this.state(session), index = createSurfaceIndex(session);
     return { schema: 1, scope: s.binding, steps: s.steps, pending: s.pending, lastReplacement: s.lastReplacement || null, todoRefresh: s.todoRefresh || null,
-      records: s.records.map(({ documents, assets = [], userOriginals, originalSeqs, sourceSeqs, sourceHash, ...r }) => ({ ...r, documentCount: documents.length, assetCount: assets.length, originalEventCount: (originalSeqs || sourceSeqs).length, live: Boolean(liveSpan(session, { ...r, documents, sourceSeqs, sourceHash })) })),
+      records: s.records.map(({ documents, assets = [], userOriginals, originalSeqs, sourceSeqs, sourceHash, ...r }) => ({ ...r, documentCount: documents.length, assetCount: assets.length, originalEventCount: (originalSeqs || sourceSeqs).length, live: Boolean(liveSpan(session, { ...r, documents, sourceSeqs, sourceHash }, index)) })),
       backlog: backlogView(session, s, this.config()), eventsSincePrepare: s.eventsSincePrepare || 0, prepareDeferred: s.prepareDeferred || null,
       limits: { batchWindows: this.config().prepareBatchWindows, concurrency: this.config().backgroundConcurrency, continueTokens: this.config().prepareContinueTokens },
       failures: s.failures, retry: Object.fromEntries(['prepare', 'coordinate'].map(kind => [kind, !s.failures[kind] ? null : this.waitsForMain(s, kind) ? 'waiting-main' : s.failures[kind].count > this.config().backgroundMaxRetries ? 'manual' : 'retrying'])), notices: s.notices, trace: s.traceSlot ? { sourceSeq: s.traceSlot.sourceSeq, sourceAt: s.traceSlot.sourceAt, truncated: s.traceSlot.truncated } : null,
       preparing: this.jobs.has(session.id + ':prepare'), coordinating: this.jobs.has(session.id + ':coordinate'), transactionPending: Boolean(s.transaction),
-      manualQueued: s.manualQueue.length, manualOperation: this.manualSessions.get(session.id) || null,
+      projectCatalogDeferred: s.publications.deferred || 0, manualQueued: s.manualQueue.length, manualOperation: this.manualSessions.get(session.id) || null,
       queuedOperations: s.manualQueue.map(q => q.operation || 'ready'),
       review: { lastAt: s.review.lastAt, choices: s.review.lastChoices || [], lastRejection: s.review.lastRejection || null, lastDiscard: s.review.lastDiscard || null, discarded: s.review.discarded || 0 } };
   }
+  releaseState(id) {
+    if (!this.releasing.has(id) || this.agents.has(id) || this.manualSessions.has(id) || this.runtimeRetirements?.has(id)
+      || [...(this.hub.live?.values() || [])].some(call => call.sessionId === id)
+      || [...this.jobs.keys()].some(key => key.startsWith(id + ':'))) return;
+    this.store.release(id); this.hub.store.release?.(id); this.releasing.delete(id);
+  }
   dispose(id) {
+    const ids = id ? [id] : [...this.agents.keys()];
+    for (const key of ids) this.releasing.add(key);
     if (!id) this.closed = true;
     for (const [key, c] of this.controllers) if (!id || key.startsWith(id + ':')) c.abort();
     for (const [key, timer] of this.timers) if (!id || key.startsWith(id + ':')) { clearTimeout(timer); this.timers.delete(key); }
     for (const key of this.reviewTimers.keys()) if (!id || key.startsWith(id + ':')) this.reviewTimers.delete(key);
     if (id) { this.agents.delete(id); this.idleSince.delete(id); }
     else { this.agents.clear(); this.idleSince.clear(); }
+    const pending = [...this.jobs].filter(([key]) => !id || key.startsWith(id + ':')).map(([, job]) => job);
+    return Promise.allSettled(pending).then(() => { for (const key of ids) this.releaseState(key); });
   }
 }

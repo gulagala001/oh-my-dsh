@@ -6,7 +6,7 @@ import { frontendFixture, until } from './fixtures/frontend.mjs';
 
 test('headless DSH host removes and reinstates the plugin bundle without a browser', { timeout: 90000 }, async t => {
   const f = await frontendFixture(t, { headless: true, lifecycleTrace: true });
-  await until(async () => (await (await fetch(f.origin + '/trisoul-x/api/state?session=' + f.sessionId)).json()).running === 'idle');
+  await until(async () => (await f.api('/state?session=' + f.sessionId)).running === 'idle');
   for (const enabled of [false, true, false, true]) {
     const response = await f.call('pluginManager/setBundleEnabled', { name: 'trisoul_x', enabled });
     if (response.result?.value?.application !== 'applied') {

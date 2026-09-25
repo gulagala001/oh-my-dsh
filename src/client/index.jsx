@@ -1,3 +1,4 @@
+import { brandDocumentTitle } from './document-title.mjs';
 import { createPoller } from './polling.mjs';
 import { createConversation } from '../../lib/host/ui-conversation.factory.mjs';
 import { installDesktopLifecycle } from './desktop-lifecycle.mjs';
@@ -79,7 +80,7 @@ function useSnapshot(id, visible = true, range = 'session', view = 'full') {
     if (!visible) return;
     const observer = createPoller({
       read: signal => api(`/state${suffix(id)}&range=${range}&view=${view}`, undefined, signal),
-      onData: data => setSnapshot({ key, data, error: '' }),
+      onData: data => setSnapshot({ key, data, error: data.unreadableArchives ? `有 ${data.unreadableArchives} 份统计档案无法读取，结果不完整；原文件已保留。` : '' }),
       onError: error => setSnapshot(old => ({ key, data: old?.key === key ? old.data : null, error: error.message })),
     });
     observer.start();
@@ -256,23 +257,11 @@ export async function apply(ctx) {
   ctx.effect(() => {
     const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css + '\n' + shellCss + '\n' + whaleCss + '\n' + versionCss; document.head.appendChild(tag);
     document.documentElement.classList.add('trisoul-shell');
-    // DSH owns the session title; only replace its fixed product suffix.
-    let hostTitle = document.title, brandedTitle;
-    const updateTitle = () => {
-      const title = document.title;
-      if (title === 'DeepSeek Harness' || title.endsWith(' — DeepSeek Harness')) {
-        hostTitle = title;
-        brandedTitle = title.replace(/DeepSeek Harness$/, 'Oh My DSH');
-        document.title = brandedTitle;
-      }
-    };
-    const titleObserver = new MutationObserver(updateTitle);
-    titleObserver.observe(document.querySelector('title'), { childList: true, subtree: true, characterData: true });
-    updateTitle();
+    const restoreTitle = brandDocumentTitle(document);
     const icon = document.createElement('link'); icon.rel = 'icon'; icon.type = 'image/svg+xml';
     icon.href = 'data:image/svg+xml,' + encodeURIComponent(whaleSvg('omd-favicon'));
     document.head.append(icon);
-    return () => { titleObserver.disconnect(); if (document.title === brandedTitle) document.title = hostTitle; icon.remove(); tag.remove(); document.documentElement.classList.remove('trisoul-shell'); };
+    return () => { restoreTitle(); icon.remove(); tag.remove(); document.documentElement.classList.remove('trisoul-shell'); };
   });
   for (const [seat, Component] of [['sidebar.brand.mark', BrandMark], ['sidebar.brand.name', BrandNameWithVersion], ['conversation.hero.brand.mark', () => <BrandMark size={64}/>]]) ctx.slots.inject(seat, () => ctx.slots.register({ name: seat }, Component));
   ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'trisoul-x', order: 16, label: () => 'Oh My DSH' }, ContextSettings));

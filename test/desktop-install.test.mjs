@@ -95,7 +95,8 @@ export function apply(ctx) {
     const result = await r.json(); assert.equal(result.result?.ok, true, JSON.stringify(result)); return result.result.value;
   };
   await launch();
-  const [packed] = JSON.parse(execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', root], { cwd: new URL('../', import.meta.url), encoding: 'utf8', shell: process.platform === 'win32' }));
+  const packResult = JSON.parse(execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', root], { cwd: new URL('../', import.meta.url), encoding: 'utf8', shell: process.platform === 'win32' }));
+  const [packed] = Array.isArray(packResult) ? packResult : Object.values(packResult);
   const installed = await rpc('pluginManager/installBundle', { spec: 'file:' + join(root, packed.filename) });
   assert.equal(installed.application, 'applied', JSON.stringify(installed));
   await page.locator('[data-omd-desktop-restart]').waitFor();

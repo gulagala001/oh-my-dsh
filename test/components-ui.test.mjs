@@ -11,9 +11,13 @@ test('one components page exposes live setup and saves switches without overwrit
   assert.equal((await fetch(url)).status, 401);
   assert.equal((await page.request.post(url, { headers: { origin: 'https://unrelated.example' }, data: { action: 'prepare' } })).status(), 403);
   assert.equal((await page.request.post(url, { data: { action: 'settings', patch: { codegraphEnabled: 'no' } } })).status(), 400);
+  await page.route('**/trisoul-x/components', route => route.fulfill({ status: 500, json: { error: 'fixture component status unavailable' } }));
   await page.getByRole('button', { name: '设置', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Oh My DSH', exact: true }).click();
   await page.getByRole('button', { name: '基础组件', exact: true }).click();
+  await page.getByText('fixture component status unavailable', { exact: true }).waitFor();
+  await page.unroute('**/trisoul-x/components');
+  await page.getByRole('button', { name: '重试', exact: true }).click();
   const graph = page.getByRole('switch', { name: 'CodeGraph', exact: true });
   await graph.waitFor(); assert.equal(await graph.isChecked(), true);
   await page.getByText('内置浏览器', { exact: true }).waitFor();

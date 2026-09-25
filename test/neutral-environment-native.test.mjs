@@ -90,7 +90,7 @@ for (const mode of ['native', 'ptc', 'both']) test(`actual provider payloads: ne
     const r = await fetch(`${base}/api/${method}`, { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ type: 'client-request', rpcId: crypto.randomUUID(), method, payload: { args: request === undefined ? {} : { request } } }) });
     const result = await r.json(); assert.equal(result.result?.ok, true, JSON.stringify(result)); return result.result.value;
   };
-  const state = async id => (await fetch(base + '/trisoul-x/api/state?session=' + id)).json();
+  const state = async id => (await fetch(base + '/trisoul-x/api/state?session=' + id, { headers: { cookie } })).json();
   const sessionSummary = async id => {
     const response = await fetch(`${base}/api/session/list`, { method: 'POST', signal: AbortSignal.timeout(3000),
       headers: { 'content-type': 'application/json', cookie },

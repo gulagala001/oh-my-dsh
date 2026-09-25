@@ -4,6 +4,7 @@ import { join, dirname } from 'node:path';
 import { sourceHash, hash } from './context/core.mjs';
 import { userDocument } from './context/materials.mjs';
 import { loadMigrationSupport } from '../lib/host/session-migration.mjs';
+import { normalizeLegacyV0Row } from './session-legacy-v0.mjs';
 
 const optionalJson = async path => { try { return JSON.parse(await readFile(path, 'utf8')); } catch (e) { if (e.code === 'ENOENT') return null; throw e; } };
 async function durableJson(path, value) {
@@ -146,18 +147,19 @@ function normalizeLegacyBoundaries(input, inheritedEventCount) {
 // Historical OMD used the first compaction summary to account for every
 // selected range, then removed the other ranges with shadow replacements.
 // V4 requires the summary's references to name its actual contiguous span.
-function normalizeCompactionSpans(events) {
+function normalizeCompactionSpans(events, legacyV0 = false) {
   const surface = [];
   let turn = null, compaction = null;
   for (const event of events) {
+    const repair = !legacyV0 || event.data.compactionId?.startsWith('trisoul-');
     if (event.type === 'turn/start') turn = event.data.turn;
     if (event.type === 'turn/end') turn = null;
     if (event.type === 'compaction/start') {
-      event.data.turn = turn;
+      if (repair) event.data.turn = turn;
       compaction = event.data;
     }
     if (event.type === 'compaction/end') {
-      event.data.turn = turn;
+      if (repair) event.data.turn = turn;
       compaction = null;
     }
     // Legacy manual compaction omitted its command id from the checkpoint.
@@ -165,8 +167,8 @@ function normalizeCompactionSpans(events) {
     if (source?.kind === 'plugin' && source.plugin === 'compact' && compaction?.compactionId === source.compactionId
       && source.sourceCommandId === undefined && compaction.sourceCommandId !== undefined) source.sourceCommandId = compaction.sourceCommandId;
     if (source?.kind === 'plugin' && source.plugin === 'compact' && compaction?.compactionId !== source.compactionId
-      && event.data.omdBatchId) source.plugin = 'trisoul-x:context-record';
-    if (event.type === 'compaction/summary') {
+      && (event.data.omdBatchId || legacyV0 && source.compactionId?.startsWith('trisoul-'))) source.plugin = 'trisoul-x:context-record';
+    if (event.type === 'compaction/summary' && repair) {
       const {start,end} = event.data.shadowedRange;
       const first = surface.indexOf(start), last = surface.indexOf(end);
       if (first < 0 || last < first) throw Error('旧压缩记录的来源区间已不存在');
@@ -179,6 +181,16 @@ function normalizeCompactionSpans(events) {
       surface.splice(first,last-first+1,event.seq);
     }
   }
+}
+
+export function createHistoricalRestore(support, header) {
+  if (header.version !== 0) return support.historicalSessionFormatCatalog.createRestore(header, { recovery: 'strict', validation: 'transformed' });
+  const catalog = support.createLegacySessionCatalog(artifact => {
+    normalizeCompactionSpans(artifact.events, true);
+    return artifact;
+  });
+  const restore = catalog.createRestore(header, { recovery: 'strict', validation: 'transformed' });
+  return { decodeRow: row => restore.decodeRow(normalizeLegacyV0Row(row)), finish: () => restore.finish() };
 }
 
 export function migrateArtifact(support, historical, children) {
@@ -300,9 +312,12 @@ export async function migrateSessionStorage(ctx, dataDir, providedSupport) {
     const owned = ['trisoul-x', 'omd-ptc'].includes(item.header.agentPreset)
       || await optionalJson(join(dataDir, 'context-v1/sessions', hash(item.header.id) + '.json'))
       || await optionalJson(join(dataDir, 'sessions', item.header.id + '.json'));
-    if (!owned && !journal) continue;
-    const lease = await support.SessionWriteLease.acquire(item.dir, item.header.id);
+    // Desktop and Web share the old archive. V0 predates OMD's preset names,
+    // so limiting migration to the new presets leaves those sessions unreadable.
+    if (!owned && !journal && item.version !== 0) continue;
+    let lease;
     try {
+      lease = await support.SessionWriteLease.acquire(item.dir, item.header.id);
       journal = await optionalJson(journalPath);
       const target = join(item.dir, support.generationLogFilename(4, compression));
       let targetExists = await stat(target).then(() => true, e => { if (e.code === 'ENOENT') return false; throw e; });
@@ -319,9 +334,18 @@ export async function migrateSessionStorage(ctx, dataDir, providedSupport) {
       if (targetExists) throw Error('旧会话已被其他宿主升级，请先恢复 OMD 关联记录：' + item.header.id);
       const children = [], witnesses = [];
       for (const child of corpus.filter(c => c.header.parentSession === item.header.id && c.header.origin === 'subagent')) {
-        const catalog = child.version < 4 ? support.historicalSessionFormatCatalog : support.sessionFormatCatalog;
-        const read = await support.readDecodedJsonlSource(child.path, child.version, compression, { createRestore: h => catalog.createRestore(h, { recovery: 'strict', validation: child.version < 4 ? 'transformed' : 'current' }) });
-        children.push(support.historicalChildCatalogSource(read.artifact)); witnesses.push({ path: child.path, identity: signature(read.identity) });
+        const before = signature(await stat(child.path, { bigint: true }));
+        try {
+          const read = await support.readDecodedJsonlSource(child.path, child.version, compression, { createRestore: h => child.version < 4
+            ? createHistoricalRestore(support, h) : support.sessionFormatCatalog.createRestore(h, { recovery: 'strict', validation: 'current' }) });
+          children.push(support.historicalChildCatalogSource(read.artifact));
+        } catch (error) {
+          if (error.name !== 'SessionFormatError' && error.name !== 'SessionFormatUnsupportedMigrationError') throw error;
+          children.push({ childId: child.header.id, childCreatedAt: child.header.createdAt, descriptorCount: 0, descriptor: null });
+          ctx.logger.warn?.('子会话 %s 的格式暂不支持；保留成员关系与原始日志：%s', child.header.id, error.message);
+        }
+        if (signature(await stat(child.path, { bigint: true })) !== before) throw Error('子会话在迁移期间发生变化');
+        witnesses.push({ path: child.path, identity: before });
       }
       let old, mapping;
       const prepared = await support.prepareJsonlMigration({ sourcePath: item.path, sourceVersion: item.version, currentPath: target, compression,
@@ -330,7 +354,7 @@ export async function migrateSessionStorage(ctx, dataDir, providedSupport) {
         validateRelatedSources: async () => { for (const witness of witnesses) if (signature(await stat(witness.path, { bigint: true })) !== witness.identity) throw Error('子会话在迁移期间发生变化'); },
         format: { currentVersion: 4, encodeHeader: support.sessionFormatCatalog.encodeCurrentHeader, encodeEvent: support.sessionFormatCatalog.encodeCurrentEvent,
           createRestore(header) {
-            const read = support.historicalSessionFormatCatalog.createRestore(header, { recovery: 'strict', validation: 'transformed' });
+            const read = createHistoricalRestore(support, header);
             return { decodeRow: row => read.decodeRow(row), finish() { old = read.finish(); const migrated = migrateArtifact(support, old, children); mapping = migrated.mapping; return migrated.artifact; } };
           } },
       });
@@ -346,6 +370,11 @@ export async function migrateSessionStorage(ctx, dataDir, providedSupport) {
       await applySidecars(updates);
       await durableJson(journalPath, { ...journal, complete: true });
       ctx.logger.info('OMD 已迁移旧会话 %s；原始日志和关联记录备份已保留。', item.header.id);
-    } finally { await lease.release(); }
+    } catch (error) {
+      // An unrelated damaged archive must not disable the entire OMD plugin.
+      // Owned state and interrupted journals retain their strict recovery path.
+      if (owned || journal) throw error;
+      ctx.logger.warn?.('旧会话 %s 未迁移，原始日志保留：%s', item.header.id, error.message);
+    } finally { await lease?.release(); }
   }
 }

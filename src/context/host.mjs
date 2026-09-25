@@ -26,6 +26,18 @@ export function createHostAdapter(hub) {
       const headroom = Math.min(65536, Math.floor(Math.max(0, available) * 0.1));
       return hub.ctx.tokenMeter.measure(session).totalTokens / Math.max(1, available - headroom);
     },
+    catalogBudget(session) {
+      const { route, info } = routes.get(session) ?? { route: session.requestHeader?.()?.config };
+      const capacity = info?.contextWindow ?? session.requestContext?.()?.contextWindow;
+      if (!capacity) return 0;
+      const available = capacity - (route?.maxTokens ?? info?.defaultMaxTokens ?? 0);
+      const headroom = Math.min(65536, Math.floor(Math.max(0, available) * 0.1));
+      return Math.max(0, available - headroom - hub.ctx.tokenMeter.measure(session).totalTokens);
+    },
+    catalogCost(text) {
+      // The native heuristic underprices CJK. A byte floor keeps publication conservative.
+      return Math.max(hub.ctx.tokenMeter.estimateMessage(message(text, 'project-catalog')), Buffer.byteLength(text));
+    },
     publish(session, text, kind) { return session.append('user/message', message(text, kind), { surfaceOp: 'append' }); },
     flush(session) { return hub.ctx.sessions?.flush(session); },
     append(session, op, surfaceOp, sourceEventSeqs, { batchId } = {}) {

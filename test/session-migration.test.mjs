@@ -6,7 +6,8 @@ import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { loadMigrationSupport } from '../lib/host/session-migration.mjs';
-import { migrateSessionStorage, migrateArtifact, migrateContextState, remapOwned } from '../src/session-migration.mjs';
+import { migrateSessionStorage, migrateArtifact, migrateContextState, remapOwned, createHistoricalRestore } from '../src/session-migration.mjs';
+import { normalizeLegacyV0Row } from '../src/session-legacy-v0.mjs';
 import { hash, sourceHash } from '../src/context/core.mjs';
 const tree = { ctx: { baseUrl: pathToFileURL(dirname(import.meta.resolve('@deepseek-ai/dsh/package.json').replace('file://','')) + '/').href } };
 const hostRequire = createRequire(import.meta.resolve('@deepseek-ai/dsh/package.json'));
@@ -26,6 +27,71 @@ const events = [
  { type: 'user/message', data: { ...user, id: 'user-2' }, surfaceOp: 'append' },
  { type: 'turn/end', data: { turn: 2, reason: { kind: 'completed' } } },
 ].map((event, seq) => ({ ...event, seq, time: 101 + seq }));
+
+test('Desktop V0 permissions and retired ledger extensions migrate without owning the new preset', async t => {
+ const root = await mkdtemp(join(tmpdir(), 'omd-v0-')); t.after(() => rm(root, { recursive: true, force: true }));
+ const dir = join(root, 'logs/project/legacy'); await mkdir(dir, { recursive: true });
+ const physical = { type: 'session', ...header, id: 'legacy', version: 0, agentPreset: 'anchored-standard' };
+ delete physical.isSeeded;
+ const rows = [physical,
+  { type: 'permission/preset', seq: 0, time: 101, data: { preset: 'workspace-write', origin: 'default' } },
+  { type: 'todo/write', seq: 1, time: 102, data: { todos: [{ content: 'Keep original task', status: 'pending' }], excerpts: [], tasks: [], nextE: 1, nextT: 1, nextL: 1, quiet: true } },
+ ];
+ const replayState = { kind: 'pi-ai', version: 1, api: 'openai-completions', provider: 'fixture', model: 'fixture', blocks: [{ type: 'reasoning' }, { type: 'tool-call' }] };
+ const reasoning = { type: 'reasoning', text: 'Preserved findings', trisoul: 'distilled', raw: 'Preserved in V0 archive', note: 'Old UI note' };
+ const chunk = chunk => ({ type: 'assistant/chunk', data: { turn: 1, step: 1, chunk } });
+ for (const event of [
+  { type: 'turn/start', data: { turn: 1 } },
+  { type: 'step/start', data: { turn: 1, step: 1 } },
+  { type: 'user/message', data: user, surfaceOp: 'append' },
+  chunk({ type: 'block-end', index: 0, block: reasoning }),
+  chunk({ type: 'block-end', index: 1, block: { type: 'tool-call', id: 'not-dispatched', name: 'read', arguments: '{}' } }),
+  chunk({ type: 'finish', reason: { kind: 'max-tokens' }, replayState }),
+  { type: 'assistant/message', data: { turn: 1, step: 1, message: { id: 'answer', role: 'assistant', source: { kind: 'model', provider: 'fixture', model: 'fixture', replayState }, content: [reasoning] } }, surfaceOp: 'append', sourceEventSeqs: [5, 6, 7] },
+  { type: 'step/end', data: { turn: 1, step: 1 } },
+  { type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } },
+ ]) rows.push({ ...event, seq: rows.length - 1, time: 100 + rows.length });
+ const bytes = Buffer.from(rows.map(r => JSON.stringify(r) + '\n').join(''));
+ const path = join(dir, 'session.jsonl'); await writeFile(path, bytes);
+ const damagedDir = join(root, 'logs/project/damaged'); await mkdir(damagedDir);
+ const damagedBytes = Buffer.from([ { ...physical, id: 'damaged', parentSession: 'legacy', origin: 'subagent', delegationDepth: 1 }, rows[1], rows[1] ].map(r => JSON.stringify(r) + '\n').join(''));
+ await writeFile(join(damagedDir, 'session.jsonl'), damagedBytes);
+ const warnings = [];
+ const ctx = { get: () => ({ config: { root: join(root, 'logs'), compression: 'none' } }), logger: { info() {}, warn(message, id, error) { warnings.push({ id, error }); } } };
+ await migrateSessionStorage(ctx, join(root, 'data'), support);
+ assert.deepEqual(await readFile(path), bytes);
+ const migrated = await support.readDecodedJsonlSource(join(dir, 'session.v4.jsonl'), 4, 'none', { createRestore: h => support.sessionFormatCatalog.createRestore(h, { recovery: 'strict', validation: 'current' }) });
+ assert.equal(migrated.artifact.events.find(e => e.type === 'permission/preset').data.preset, 'workspace-write', 'permissions are not broadened');
+ assert.deepEqual(migrated.artifact.events.find(e => e.type === 'todo/write').data.todos, rows[2].data.todos);
+ assert.ok(warnings.length && warnings.every(w => w.id === 'damaged' && /seq gap/.test(w.error)));
+ assert.deepEqual(await readFile(join(damagedDir, 'session.jsonl')), damagedBytes);
+ const child = migrated.artifact.events.find(e => e.type === 'subagent/catalog');
+ assert.equal(child.data.childId, 'damaged');
+ assert.equal(child.data.mode, 'unknown', 'a damaged child remains discoverable without blocking its parent');
+ const answer = migrated.artifact.events.find(e => e.type === 'assistant/message');
+ assert.deepEqual(answer.data.message.content, [{ type: 'reasoning', text: reasoning.text }]);
+ assert.equal(answer.data.message.source.replayState, undefined);
+ await support.verifyJsonlCurrentGeneration(join(dir, 'session.v4.jsonl'), 'none', 'legacy', migrated.artifact.events.length);
+ await migrateSessionStorage(ctx, join(root, 'data'), support);
+});
+
+test('legacy normalization preserves text and opaque arguments, rejects unknown extensions and sequence collisions', () => {
+ const row = { type: 'assistant/message', seq: 0, data: { message: { content: [
+  { type: 'reasoning', text: 'Exact distilled findings', trisoul: 'distilled', raw: 'archived raw', note: 'archived note' },
+  { type: 'tool-call', arguments: { type: 'reasoning', trisoul: 'distilled', raw: 'user data' } },
+ ] } } };
+ const result = normalizeLegacyV0Row(row);
+ assert.deepEqual(result.data.message.content[0], { type: 'reasoning', text: 'Exact distilled findings' });
+ assert.deepEqual(result.data.message.content[1], row.data.message.content[1]);
+ assert.equal(row.data.message.content[0].raw, 'archived raw', 'parsed source is immutable');
+ const physical = { type: 'session', ...header, version: 0 }; delete physical.isSeeded;
+ const unknown = createHistoricalRestore(support, physical);
+ assert.throws(() => unknown.decodeRow({ type: 'permission/preset', seq: 0, time: 101, data: { preset: 'workspace-write', origin: 'unknown' } }), /origin/);
+ const collided = createHistoricalRestore(support, physical);
+ const event = { type: 'permission/preset', seq: 0, time: 101, data: { preset: 'workspace-write', origin: 'default' } };
+ collided.decodeRow(event);
+ assert.throws(() => collided.decodeRow(event), /seq gap/);
+});
 for (const compression of ['none', 'zstd']) test(`old OMD sessions and context references migrate atomically (${compression})`, async t => {
  const root = await mkdtemp(join(tmpdir(), 'omd-v4-')); t.after(() => rm(root, { recursive: true, force: true }));
  const sessions = join(root, 'logs'), dir = join(sessions, 'project', header.id), data = join(root, 'omd');

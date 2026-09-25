@@ -1,3 +1,4 @@
+import { readJsonBody, rejectUntrusted } from './http.mjs';
 import { BlockAssembler, createUserMessage } from '@deepseek-ai/dsh-llm';
 import templates from '../vendor/prompt-optimizer/templates.json' with { type: 'json' };
 import { createEffortResolver } from './effort.mjs';
@@ -64,7 +65,7 @@ export function createPromptOptimizer(ctx, hub, { timeoutMs = 120000 } = {}) {
       hub.record(session, 'promptOptimizer', { ...route, durationMs: Date.now() - startedAt, usage: assembler.usage, error: error.message });
       throw error;
     } finally {
-      clearTimeout(timer); combined.removeEventListener('abort', onAbort); active.delete(session.id); hub.live.delete(key);
+      clearTimeout(timer); combined.removeEventListener('abort', onAbort); active.delete(session.id); hub.live.delete(key); hub.context?.releaseState?.(session.id);
       if (!completed) { try { void iterator?.return?.()?.catch?.(() => {}); } catch {} }
     }
   }
@@ -73,8 +74,7 @@ export function createPromptOptimizer(ctx, hub, { timeoutMs = 120000 } = {}) {
 
 export async function handlePromptOptimizerApi({ ctx, service, req, res, url, getSession, send }) {
   if (url.pathname !== '/trisoul-x/api/prompt-optimizer') return false;
-  const rejection = ctx.get('connection')?.requestRejection(req);
-  if (rejection !== undefined) { res.writeHead(rejection); res.end(); return true; }
+  if (rejectUntrusted(ctx, req, res)) return true;
   if (req.method !== 'POST') { send(res, 405, { error: '请使用 POST' }); return true; }
   let session;
   try { session = getSession(); } catch { /* A missing or unreadable session has the same public outcome. */ }
@@ -82,12 +82,11 @@ export async function handlePromptOptimizerApi({ ctx, service, req, res, url, ge
   const abort = new AbortController(), close = () => { if (!res.writableEnded) abort.abort(Error('优化已取消')); };
   res.on('close', close); req.on('aborted', close);
   try {
-    let length = 0; const chunks = [];
-    for await (const chunk of req) { length += chunk.length; if (length > 768000) throw Error('优化请求过大'); chunks.push(chunk); }
-    const value = await service.optimize(session, JSON.parse(Buffer.concat(chunks).toString('utf8')), abort.signal);
+    const input = await readJsonBody(req);
+    const value = await service.optimize(session, input, abort.signal);
     if (!abort.signal.aborted) { res.setHeader('Cache-Control', 'no-store'); send(res, 200, value); }
   } catch (error) {
-    if (!abort.signal.aborted && !res.destroyed) send(res, 400, { error: error.message });
+    if (!abort.signal.aborted && !res.destroyed) send(res, error.statusCode || 400, { error: error.message });
   } finally { res.off('close', close); req.off('aborted', close); }
   return true;
 }

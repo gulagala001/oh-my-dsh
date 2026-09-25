@@ -5,7 +5,7 @@ import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 
-test('recommended plugin installs, checks updates and uninstalls through the host in an isolated profile', { timeout: 180000 }, async t => {
+test('recommended plugin installs, checks updates and uninstalls through the host in an isolated profile', { timeout: 180000, skip: process.env.OMD_LIVE_PLUGIN_TESTS !== '1' ? 'Online third-party smoke; set OMD_LIVE_PLUGIN_TESTS=1' : false }, async t => {
   const f = await frontendFixture(t), { page } = f;
   const status = () => page.evaluate(async () => {
     const response = await fetch('/trisoul-x/recommended-plugins');

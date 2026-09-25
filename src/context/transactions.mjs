@@ -2,7 +2,7 @@ import { sourceName } from '../message-source.mjs';
 import { withoutTodo, isTaskInjection, TODO_META } from '../task-context.mjs';
 import { attachTodoRefresh, requireSavings } from './todo-refresh.mjs';
 import { randomUUID } from 'node:crypto';
-import { hash, liveSpan, recordText, recordBlocks, exposedTrace, actualUser, carrierBarrier, recordSnapshot, sourceHash, splitGroups } from './core.mjs';
+import { createSurfaceIndex, hash, liveSpan, recordText, recordBlocks, exposedTrace, actualUser, carrierBarrier, recordSnapshot, sourceHash, splitGroups } from './core.mjs';
 import { combineAssets, attachmentsOf, contentChars, messageTokens } from './materials.mjs';
 import { TRACE_HEAD } from './prompts.mjs';
 
@@ -10,6 +10,7 @@ export function createTransaction(session, state, plan, cfg, pairing, pricing = 
   if (state.transaction) return state.transaction;
   if (plan.choices.some(c => c.action === 'merge')) throw new Error('中枢合并已关闭');
   const working = structuredClone(state.records), map = new Map(working.map(r => [r.id, r]));
+  const index = createSurfaceIndex(session);
   const operations = [], chosen = new Set(), changedSources = new Set(), origins = new Set();
   let inputChars = 0, outputChars = 0, inputTokens = 0, outputTokens = 0, selectedRecords = 0;
   const barrier = carrierBarrier(session, state, cfg);
@@ -18,9 +19,9 @@ export function createTransaction(session, state, plan, cfg, pairing, pricing = 
     if (choice.action === 'keep') continue;
     const picked = choice.ids.map((id, i) => {
       const r = map.get(id), observed = choice.observed[i];
-      if (!r || r.mergedInto || chosen.has(id) || !observed || observed.version !== r.version || observed.mode !== r.mode || observed.carrierSeq !== (r.carrierSeq ?? null) || observed.sourceHash !== r.sourceHash || (observed.snapshot && observed.snapshot !== recordSnapshot(session, r))) throw new Error('记录版本已变化，本轮替换计划作废');
+      if (!r || r.mergedInto || chosen.has(id) || !observed || observed.version !== r.version || observed.mode !== r.mode || observed.carrierSeq !== (r.carrierSeq ?? null) || observed.sourceHash !== r.sourceHash || (observed.snapshot && observed.snapshot !== recordSnapshot(session, r, index))) throw new Error('记录版本已变化，本轮替换计划作废');
       chosen.add(id);
-      const span = liveSpan(session, r);
+      const span = liveSpan(session, r, index);
       if (!span || !pairing.before(session, span.seqs[0]) || !pairing.after(session, span.seqs.at(-1))) throw new Error('替换范围已变化或工具往返不完整');
       return { r, span };
     }).sort((a, b) => a.span.start - b.span.start);
@@ -34,7 +35,7 @@ export function createTransaction(session, state, plan, cfg, pairing, pricing = 
     selectedRecords += picked.length;
     output.assets = combineAssets(output.assets || [], ...selectedSeqs.map(seq => attachmentsOf(sourceMessage(seq)?.content, session.id, seq)));
     const content = recordBlocks(output, output.mode), text = recordText(output, output.mode);
-    const groups = picked.flatMap(p => splitGroups(session.surface.nodes, p.span.seqs.filter(seq => !isTaskInjection(session.eventAt(seq)))));
+    const groups = picked.flatMap(p => splitGroups(index.nodes, p.span.seqs.filter(seq => !isTaskInjection(session.eventAt(seq))), index));
     const carrierIndex = groups.findIndex(group => session.surface.nodes.indexOf(group[0]) > barrier);
     if (carrierIndex < 0) throw Error('摘要需要放在前置 CoT 或首条请求之后，请扩大处理窗口；原文保留');
     const orderedGroups = [groups[carrierIndex], ...groups.filter((_, i) => i !== carrierIndex)];
