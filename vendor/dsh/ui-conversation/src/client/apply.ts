@@ -271,15 +271,6 @@ export async function apply(ctx: Context, config: Config = Config({})): Promise<
   const inputHub = new InputHub(ctx, t)
   const composerBlocks = new ComposerBlockRegistry()
 
-  // Live provider replacement exposes slots to an already mounted renderer.
-  // Activate their action service before publishing those slots.
-  await ctx.plugin(ConversationController, {
-    input: inputHub,
-    blocks: composerBlocks,
-    maxConcurrentFileUploads,
-  })
-
-
   ctx.inject(['commandUi'], (scope) => {
     const commands = scope.get('commandUi') as FileCommandRegistry
     scope.effect(() => commands.register({
@@ -553,6 +544,14 @@ export async function apply(ctx: Context, config: Config = Config({})): Promise<
     yield registerHeader()
     yield registerSessionHeader()
     yield registerComposerBar()
+  })
+
+  // Native consumers use `conversation` readiness to register into these slots.
+  // Publish it only after the Session hooks and complete slot tree are installed.
+  await ctx.plugin(ConversationController, {
+    input: inputHub,
+    blocks: composerBlocks,
+    maxConcurrentFileUploads,
   })
 
   ctx.plugin(todoDockEntry)

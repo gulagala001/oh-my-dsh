@@ -18103,11 +18103,6 @@ window.__ModuleLoader__.load({
 			});
 			const inputHub = new InputHub(ctx, t);
 			const composerBlocks = new ComposerBlockRegistry();
-			await ctx.plugin(ConversationController, {
-				input: inputHub,
-				blocks: composerBlocks,
-				maxConcurrentFileUploads
-			});
 			ctx.inject(["commandUi"], (scope) => {
 				const commands = scope.get("commandUi");
 				scope.effect(() => commands.register({
@@ -18447,6 +18442,11 @@ window.__ModuleLoader__.load({
 				yield registerHeader();
 				yield registerSessionHeader();
 				yield registerComposerBar();
+			});
+			await ctx.plugin(ConversationController, {
+				input: inputHub,
+				blocks: composerBlocks,
+				maxConcurrentFileUploads
 			});
 			ctx.plugin(todoDockEntry);
 			ctx.plugin(queueDockEntry);
