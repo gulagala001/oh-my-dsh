@@ -142,6 +142,6 @@ test('host-bound patch numbering succeeds the retired 1.x series and orders host
   const result = await service.check();
   assert.equal(result.status, 'ahead');
   assert.deepEqual(result.currentRelease, current);
-  assert.equal(result.releaseNotesUrl, 'https://github.com/gulagala001/oh-my-dsh/releases/tag/v1.7.0-rc.1');
+  assert.equal(result.releaseNotesUrl, 'https://github.com/gulagala001/oh-my-dsh/releases');
   service.dispose();
 });

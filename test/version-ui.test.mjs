@@ -22,6 +22,8 @@ test('update stays inside the version panel, survives reopening, retries failure
   const trigger = page.getByRole('button', { name: '关于 Oh My DSH', exact: true });
   await trigger.click();
   const dialog = page.getByRole('dialog', { name: '关于 Oh My DSH' });
+  const history = dialog.getByRole('link', { name: '查看发布记录 ↗', exact: true });
+  assert.equal(await history.getAttribute('href'), 'https://github.com/gulagala001/oh-my-dsh/releases');
   assert.equal(await dialog.getByRole('button', { name: '更新', exact: true }).count(), 0);
   response = status([release(nextVersion), release(version)]);
   await dialog.getByRole('button', { name: '检查更新', exact: true }).click();
@@ -29,6 +31,7 @@ test('update stays inside the version panel, survives reopening, retries failure
   await until(() => install.isEnabled());
   assert.equal(await page.locator('.omd-version > button').count(), 1, 'the original info icon is retained');
   assert.equal(await dialog.getByRole('link', { name: '查看新版说明 ↗' }).getAttribute('href'), 'https://github.com/gulagala001/oh-my-dsh/releases/tag/v' + nextVersion);
+  assert.equal(await history.getAttribute('href'), 'https://github.com/gulagala001/oh-my-dsh/releases', 'history remains available when a newer release exists');
   await install.click();
   await until(() => dialog.getByRole('button', { name: '更新中…', exact: true }).isDisabled());
   assert.equal(posts, 1);
@@ -131,6 +134,7 @@ test('brand i opens version details; green/red indicators, offline state, keyboa
   response = { currentVersion: version, latestVersion: null, status: 'unknown', severity: 'none', releases: [], checkedAt: null, error: '暂时无法检查更新，请检查网络后重试。' };
   await trigger.click(); await dialog.waitFor(); await dialog.getByRole('button', { name: '检查更新', exact: true }).click();
   await until(async () => (await dialog.innerText()).includes('尚未确认最新版本'));
+  assert.equal(await dialog.getByRole('link', { name: '查看发布记录 ↗' }).getAttribute('href'), 'https://github.com/gulagala001/oh-my-dsh/releases', 'offline checks never bind history to the installed tag');
   assert.equal(await trigger.locator('.omd-update-dot').count(), 0);
   const bounds = await dialog.boundingBox(); assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= screen.width);
   await page.keyboard.press('Escape'); await until(async () => !await dialog.isVisible());

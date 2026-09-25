@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-export const RELEASE_NOTES_URL = 'https://github.com/gulagala001/oh-my-dsh/blob/main/CHANGELOG.md';
+export const RELEASE_NOTES_URL = 'https://github.com/gulagala001/oh-my-dsh/releases';
 export const UPDATE_SOURCES = Object.freeze([
   'https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/release-manifest.json',
   'https://api.github.com/repos/gulagala001/oh-my-dsh/contents/release-manifest.json?ref=main',
@@ -97,8 +97,7 @@ export function createVersionService({ currentVersion = INSTALLED_VERSION, bundl
     };
     return { ...status, currentRelease: status.currentRelease ?? bundledRelease,
       checkedAt, lastAttemptAt, nextCheckAt, stale: Boolean(error && cached), error,
-      releaseNotesUrl: parseVersion(currentVersion).pre.length
-        ? 'https://github.com/gulagala001/oh-my-dsh/releases/tag/v' + currentVersion : RELEASE_NOTES_URL };
+      releaseNotesUrl: RELEASE_NOTES_URL };
   };
   function check(force = false) {
     if (pending) return pending;

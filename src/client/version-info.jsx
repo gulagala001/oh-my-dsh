@@ -74,7 +74,10 @@ export function VersionInfo() {
       <p className="omd-version-meta">检查公开发布信息，不上传会话内容。点击“更新”才会安装。</p>
       {data.currentVersion !== CLIENT_VERSION && <p className="omd-version-error">服务已更新，当前界面仍为 {CLIENT_VERSION}。<button type="button" onClick={() => window.location.reload()}>刷新界面</button></p>}
       <footer><button type="button" className="omd-version-check" disabled={busy} onClick={() => void load(true)}>{busy ? '正在检查…' : '检查更新'}</button>
-        <a href={'https://github.com/gulagala001/oh-my-dsh/releases/tag/v' + encodeURIComponent(((data.status === 'update' && data.latestVersion) || data.currentVersion).replace(/^v/, ''))} target="_blank" rel="noopener noreferrer">{data.status === 'update' ? '查看新版说明 ↗' : '查看发布记录 ↗'}</a></footer></>}
+        <span className="omd-version-links">
+          {data.status === 'update' && data.latestVersion && <a href={'https://github.com/gulagala001/oh-my-dsh/releases/tag/v' + encodeURIComponent(data.latestVersion.replace(/^v/, ''))} target="_blank" rel="noopener noreferrer">查看新版说明 ↗</a>}
+          <a href="https://github.com/gulagala001/oh-my-dsh/releases" target="_blank" rel="noopener noreferrer">查看发布记录 ↗</a>
+        </span></footer></>}
     </dialog>
   </span>;
 }
