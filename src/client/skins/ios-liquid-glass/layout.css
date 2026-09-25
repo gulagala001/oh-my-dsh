@@ -172,9 +172,12 @@ html.omd[data-omd-layout="ios-liquid"] :is(input,button):disabled { opacity: .48
 
 /* Workbench / previews retain real content and host resize/fullscreen behavior. */
 html.omd[data-omd-layout="ios-liquid"] .P3OORG_panel {
-  top: 14px; bottom: 14px; height: calc(100% - 28px); border: 1px solid var(--omd-glass-edge);
-  border-radius: 28px 0 0 28px; background: var(--omd-glass-wash); box-shadow: var(--omd-glass-shadow);
-  overflow: hidden; backdrop-filter: blur(28px) saturate(1.4);
+  top: 14px; bottom: 14px; height: calc(100% - 28px); border-radius: 28px 0 0 28px; overflow: hidden;
+}
+/* The host keeps the closed container's width and hides only its children. */
+html.omd[data-omd-layout="ios-liquid"] .P3OORG_panel[data-sidebar-right-open] {
+  border: 1px solid var(--omd-glass-edge); background: var(--omd-glass-wash);
+  box-shadow: var(--omd-glass-shadow); backdrop-filter: blur(28px) saturate(1.4);
 }
 html.omd[data-omd-layout="ios-liquid"] :is(.P3OORG_panelBody,._surface_eq9i1_125,._pane_eq9i1_133) { background: transparent; }
 html.omd[data-omd-layout="ios-liquid"] ._tabStrip_eq9i1_156 { min-height: 48px; padding: 6px 12px; background: var(--omd-glass-control); border-bottom: 1px solid var(--omd-border); }
@@ -274,12 +277,12 @@ html.omd[data-omd-layout="ios-liquid"] :is([role=tooltip],.tx-cu-live-banner) { 
 
 /* Real content never receives an optical filter. Reduced effects are opaque. */
 html.omd[data-omd-layout="ios-liquid"][data-omd-reduce-effects] .pI_x6G_frame { background: var(--omd-bg); }
-html.omd[data-omd-layout="ios-liquid"][data-omd-reduce-effects] :is(.P3OORG_panel,.wSkVaW_tabs,.VOzbGW_panel) { background: var(--omd-surface-solid); }
+html.omd[data-omd-layout="ios-liquid"][data-omd-reduce-effects] :is(.P3OORG_panel[data-sidebar-right-open],.wSkVaW_tabs,.VOzbGW_panel) { background: var(--omd-surface-solid); }
 @media (prefers-reduced-transparency: reduce) {
-  html.omd[data-omd-layout="ios-liquid"] :is(.hHd-Xa_root,[data-composer-card],.VOzbGW_panel,.P3OORG_panel,[role=menu],.wSkVaW_tabs) {
+  html.omd[data-omd-layout="ios-liquid"] :is(.hHd-Xa_root,[data-composer-card],.VOzbGW_panel,.P3OORG_panel[data-sidebar-right-open],[role=menu],.wSkVaW_tabs) {
     backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--omd-surface-solid);
   }
 }
 @media (prefers-contrast: more) {
-  html.omd[data-omd-layout="ios-liquid"] :is(.hHd-Xa_root,[data-composer-card],.VOzbGW_panel,[role=menu],.P3OORG_panel) { border-color: var(--omd-muted); background: var(--omd-surface-solid); }
+  html.omd[data-omd-layout="ios-liquid"] :is(.hHd-Xa_root,[data-composer-card],.VOzbGW_panel,[role=menu],.P3OORG_panel[data-sidebar-right-open]) { border-color: var(--omd-muted); background: var(--omd-surface-solid); }
 }

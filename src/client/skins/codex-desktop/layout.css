@@ -132,12 +132,15 @@ html.omd[data-omd-layout="codex-desktop"] {
   /* Floating information surface; the host retains sizing and resize actions. */
   & .P3OORG_panel:not([data-sidebar-right-panel="fullscreen"]) {
     top: 58px; bottom: 12px; right: 12px; max-width: calc(100% - 24px);
-    border: 1px solid var(--omd-border); border-radius: 22px;
-    box-shadow: 0 2px 12px #0000000a; background: var(--omd-bg); overflow: hidden;
+    border-radius: 22px; overflow: hidden;
+  }
+  /* The host keeps the closed container's width and hides only its children. */
+  & .P3OORG_panel[data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"]) {
+    border: 1px solid var(--omd-border); box-shadow: 0 2px 12px #0000000a; background: var(--omd-bg);
   }
   & .P3OORG_panel:not([data-sidebar-right-panel="fullscreen"]):has(.tx-workbench) { bottom: auto; height: min(620px, calc(100% - 76px)); }
   & .P3OORG_panel:not([data-sidebar-right-panel="push"]):not([data-sidebar-right-panel="fullscreen"]) { max-width: calc(100vw - 24px); }
-  & .P3OORG_panel[data-sidebar-right-panel="fullscreen"] { border-radius: 0; border: 0; box-shadow: none; background: var(--omd-bg); }
+  & .P3OORG_panel[data-sidebar-right-panel="fullscreen"][data-sidebar-right-open] { border-radius: 0; border: 0; box-shadow: none; background: var(--omd-bg); }
   & .P3OORG_panelBody { padding: 0; }
   & ._tabStrip_eq9i1_156 { padding: 10px 12px 6px; }
   & :is(.tx-workbench, .cx-integrated) { border: 0; }

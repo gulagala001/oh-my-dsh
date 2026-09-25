@@ -793,9 +793,9 @@ export class ComputerUseManager {
     const browsers = this.extensionHub.list();
     return { browser: { installed: existsSync(executable), name: executable.includes('ms-playwright') ? 'Chromium · Playwright 固定版本' : 'Chrome / Chromium', path: executable, running: !!this.browser.endpoint && !this.browser.closing }, extension: { ready: !!this.extensionHub.server && !this.extensionHub.server.failure, browsers, error: this.extensionError ?? this.extensionHub.server?.failure?.message ?? null, installation: await this.extensionInstaller.status(browsers) }, native };
   }
-  async installExtension() {
+  async installExtension({ takeover = true } = {}) {
     return this.configureExtension('install', async () => {
-    await this.extensionInstaller.prepare();
+    await this.extensionInstaller.prepare({ takeover });
     if (this.closed) throw new Error('当前应用已关闭，请重新启动后连接 Chrome');
     const command = this.extensionInstaller.windows ? (await this.extensionInstaller.windows.command()).command : null;
     if (this.ownsExtensionHub && (!this.extensionHub.server || this.extensionHub.server.failure || (command && command !== this.extensionHub.server.command))) {

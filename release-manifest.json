@@ -2,6 +2,17 @@
   "schema": 1,
   "releases": [
     {
+      "version": "1.7.4",
+      "severity": "normal",
+      "title": "1.7.4：Chrome 连接迁移与右栏修复",
+      "notes": [
+        "内置 OpenCU 1.1.4：自动迁移本产品的旧 Chrome 连接，保留扩展目录，避免多实例启动时反复抢占。",
+        "修复桌面 Electron 本机连接程序启动失败；扩展 0.1.6 支持迁移后自动重连，主动断开保持生效。",
+        "修复 iOS、Codex 和 Claude 皮肤关闭右栏后残留背景、模糊、阴影和边框（#8）。",
+        "兼容 npm 11/12 的打包输出格式，合并社区 PR #10。"
+      ]
+    },
+    {
       "version": "1.7.3",
       "severity": "normal",
       "title": "1.7.3：适配 DSH rc.2 与官方桌面版",

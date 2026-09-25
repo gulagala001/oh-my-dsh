@@ -1,4 +1,4 @@
-import { access, chmod, mkdir, readFile, readdir, realpath, rename, rm, writeFile } from 'node:fs/promises';
+import { access, chmod, mkdir, readFile, readdir, realpath, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
@@ -10,6 +10,27 @@ const HOST = 'ai.trisoul.computer_use', OWNER = 'trisoul-x-computer-use';
 const digest = data => createHash('sha256').update(data).digest('hex');
 const quote = value => "'" + value.replaceAll("'", "'\\''") + "'";
 const read = async path => { try { return await readFile(path); } catch (error) { if (error.code === 'ENOENT') return null; throw error; } };
+const parse = data => { try { return JSON.parse(data); } catch { return null; } };
+async function registrationLock(path) {
+  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+  const lock = path + '.lock';
+  for (let attempt = 0; attempt < 100; attempt++) {
+    try {
+      await mkdir(lock, { mode: 0o700 });
+      await writeFile(join(lock, 'pid'), String(process.pid));
+      return () => rm(lock, { recursive: true, force: true });
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      const pid = Number(await read(join(lock, 'pid')));
+      let stale = false;
+      if (pid > 0) { try { process.kill(pid, 0); } catch (e) { stale = e.code === 'ESRCH'; } }
+      else { try { stale = Date.now() - (await stat(lock)).mtimeMs > 30000; } catch {} }
+      if (stale) await rm(lock, { recursive: true, force: true });
+      else await new Promise(resolve => setTimeout(resolve, 50));
+    }
+  }
+  throw new Error('另一实例正在准备 Chrome 连接，请稍后重试。');
+}
 async function atomicWrite(path, data, mode = 0o600) {
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
   const temporary = path + '.tmp-' + randomUUID();
@@ -64,15 +85,17 @@ export class ExtensionInstaller {
     const hostPath = join(this.directory, 'native-host.mjs'), origin = 'chrome-extension://' + extensionId + '/';
     const runtime = this.windows ? await this.windows.location() : null;
     if (runtime) this.launcher = runtime.binary;
-    const launcher = Buffer.from('#!/bin/sh\nexec ' + [this.nodePath, hostPath, '--socket', this.socketPath, '--extension-origin', origin].map(quote).join(' ') + ' "$@"\n');
+    // Chrome does not inherit the desktop host's Electron-as-Node environment.
+    const launcher = Buffer.from('#!/bin/sh\nexport ELECTRON_RUN_AS_NODE=1\nexec ' + [this.nodePath, hostPath, '--socket', this.socketPath, '--extension-origin', origin].map(quote).join(' ') + ' "$@"\n');
     const registration = Buffer.from(JSON.stringify({ name: this.hostName, description: 'Oh My DSH Computer Use browser connection', path: this.launcher, type: 'stdio', allowed_origins: [origin] }, null, 2) + '\n');
-    const windowsConfig = runtime ? { path: join(runtime.directory, 'bridge.json'), data: Buffer.from(JSON.stringify({ pipe: this.socketPath, origin }) + '\n') } : null;
+    const windowsConfig = runtime ? { path: join(runtime.directory, 'bridge.json'), data: Buffer.from(JSON.stringify({ pipe: this.socketPath, origin, receipt: this.receipt }) + '\n') } : null;
     return { files, manifest, extensionId, build, host, launcher, registration, runtime, windowsConfig };
   }
   async status(browsers = []) {
     const bundle = await this.bundle(), record = await read(this.receipt);
     let receipt;
     try { receipt = record && JSON.parse(record); } catch {}
+    if (receipt?.owner === OWNER && receipt.extensionPath) this.extensionPath = receipt.extensionPath;
     let prepared = receipt?.owner === OWNER && !receipt.removed && receipt.build === bundle.build && receipt.nodePath === this.nodePath && receipt.socketPath === this.socketPath;
     if (prepared && this.windows) {
       prepared = receipt.runtimeBuild === bundle.runtime.build && receipt.launcher === this.launcher && await this.windows.valid();
@@ -86,34 +109,60 @@ export class ExtensionInstaller {
       for (const [path, expected] of files) { const actual = await read(path); if (!actual?.equals(expected)) { prepared = false; break; } }
       try { await access(this.nodePath, constants.X_OK); await access(this.launcher, constants.X_OK); } catch { prepared = false; }
     }
-    return { supported: this.supported(), platform: this.platform, preparing: !!this.preparing, prepared, version: bundle.manifest.version, build: bundle.build, extensionId: bundle.extensionId, extensionPath: this.extensionPath, browserProfile: this.profile, registrationPath: this.registration, updateAvailable: !!receipt && !receipt.removed && !prepared, reloadRequired: prepared && browsers.some(browser => browser.build !== bundle.build), installedVersion: receipt?.version ?? null };
+    return { supported: this.supported(), platform: this.platform, preparing: !!this.preparing, prepared, superseded: !!receipt?.supersededBy, migrated: !!receipt?.migration, version: bundle.manifest.version, build: bundle.build, extensionId: bundle.extensionId, extensionPath: this.extensionPath, browserProfile: this.profile, registrationPath: this.registration, updateAvailable: !!receipt && !receipt.removed && !prepared, reloadRequired: prepared && browsers.some(browser => browser.build !== bundle.build), installedVersion: receipt?.version ?? null };
   }
-  async prepare() {
+  async prepare({ takeover = false } = {}) {
     if (!this.supported()) throw new Error('This platform does not support browser connection installation');
     if (!this.preparing) {
-      const pending = this.install().finally(() => { if (this.preparing === pending) this.preparing = null; }); this.preparing = pending;
+      const pending = this.install({ takeover }).finally(() => { if (this.preparing === pending) this.preparing = null; }); this.preparing = pending;
     }
     await this.preparing;
     return this.status();
   }
-  async install() {
-    if (!this.windows) return this.installFiles();
-    await this.windows.ensure();
-    const unlock = await this.windows.lock(this.hostName);
-    try { return await this.installFiles(); } finally { await unlock(); }
+  async install(options) {
+    if (this.windows) await this.windows.ensure();
+    const unlock = this.windows ? await this.windows.lock(this.hostName) : await registrationLock(this.registration);
+    try { return await this.installFiles(options); } finally { await unlock(); }
   }
-  async installFiles() {
+  async previousInstallation(path, registration, bundle) {
+    const previous = parse(registration);
+    if (previous?.name !== this.hostName || previous.type !== 'stdio' || !isAbsolute(previous.path ?? '') ||
+      JSON.stringify(previous.allowed_origins) !== JSON.stringify(parse(bundle.registration).allowed_origins)) return null;
+    const directory = this.windows ? dirname(path) : dirname(previous.path), receiptPath = join(directory, 'installation.json');
+    const data = await read(receiptPath), receipt = parse(data);
+    if (receipt?.owner !== OWNER || receipt.removed || receipt.extensionId !== bundle.extensionId || !receipt.build ||
+      previous.path !== (this.windows ? receipt.launcher : join(directory, 'native-host')) ||
+      (this.windows && (path !== join(directory, this.hostName + '.json') || !Array.isArray(receipt.registryBefore)))) return null;
+    const extensionPath = receipt.extensionPath || join(directory, 'extension');
+    if (!isAbsolute(extensionPath) || parse(await read(join(extensionPath, 'manifest.json')))?.key !== bundle.manifest.key) return null;
+    return { directory, receiptPath, data, receipt, extensionPath, registration: previous };
+  }
+  async installFiles({ takeover = false } = {}) {
     const bundle = await this.bundle();
     await access(this.nodePath, constants.X_OK);
     const oldReceipt = await read(this.receipt); let receipt;
     if (oldReceipt) { try { receipt = JSON.parse(oldReceipt); } catch {} if (receipt?.owner !== OWNER) throw new Error('已有安装记录不属于当前应用的电脑控制组件'); }
+    if (receipt?.supersededBy && !takeover) throw new Error('Chrome 连接已迁移到另一套 Oh My DSH；需要切回时，点击“切换 Chrome 到当前实例”。');
+    if (receipt?.extensionPath) this.extensionPath = receipt.extensionPath;
     const registryBefore = this.windows ? await this.windows.read(this.hostName) : null;
-    if (registryBefore && (await Promise.all(registryBefore.map(async entry => !entry.hasValue || await this.matchesWindowsRegistration(entry.value)))).some(matches => !matches)) throw new Error('这个 Chrome 已连接其他实例。本次没有替换注册表中的连接程序。');
+    let migration;
+    if (registryBefore) for (const entry of registryBefore) {
+      if (!entry.hasValue || await this.matchesWindowsRegistration(entry.value)) continue;
+      const candidate = await this.previousInstallation(entry.value, await read(entry.value), bundle);
+      if (!candidate || (migration && migration.receiptPath !== candidate.receiptPath)) throw new Error('这个 Chrome 已连接其他实例。本次没有替换注册表中的连接程序。');
+      migration = candidate;
+    }
     const registration = await read(this.registration);
     if (registration && !registration.equals(bundle.registration)) {
       let previous; try { previous = JSON.parse(registration); } catch {}
-      if ((previous?.path !== this.launcher && !(this.windows && receipt?.launcher === previous?.path)) || previous?.name !== this.hostName) throw new Error('这个 Chrome 已连接其他实例。本次没有替换现有连接程序：' + this.registration);
+      if ((previous?.path !== this.launcher && !(this.windows && receipt?.launcher === previous?.path)) || previous?.name !== this.hostName) {
+        const candidate = !this.windows && await this.previousInstallation(this.registration, registration, bundle);
+        if (!candidate) throw new Error('这个 Chrome 已连接其他实例。本次没有替换现有连接程序：' + this.registration);
+        migration = candidate;
+      }
     }
+    if (migration && receipt?.build && !takeover) throw new Error('Chrome 已连接另一套 Oh My DSH；点击“切换 Chrome 到当前实例”即可迁移，无需删除文件。');
+    if (migration) this.extensionPath = migration.extensionPath;
     if (!receipt) {
       const existing = await readdir(this.directory).catch(error => { if (error.code === 'ENOENT') return []; throw error; });
       if (existing.length) throw new Error('安装目录已有其他内容，请选择独立的应用数据目录');
@@ -128,8 +177,9 @@ export class ExtensionInstaller {
       operations.set(this.launcher, { data: bundle.launcher, mode: 0o700 });
     }
     operations.set(this.registration, { data: bundle.registration, mode: 0o600 });
-    const nextReceipt = { owner: OWNER, version: bundle.manifest.version, build: bundle.build, nodePath: this.nodePath, socketPath: this.socketPath, extensionId: bundle.extensionId, files: [...bundle.files].map(([name, data]) => ({ name, hash: digest(data) })) };
-    if (this.windows) Object.assign(nextReceipt, { runtimeBuild: bundle.runtime.build, launcher: this.launcher, registryBefore: receipt?.registryBefore ?? registryBefore });
+    const nextReceipt = { owner: OWNER, version: bundle.manifest.version, build: bundle.build, nodePath: this.nodePath, socketPath: this.socketPath, extensionId: bundle.extensionId, extensionPath: this.extensionPath, ...(migration ? { migration: migration.receiptPath } : receipt?.migration ? { migration: receipt.migration } : {}), files: [...bundle.files].map(([name, data]) => ({ name, hash: digest(data) })) };
+    if (this.windows) Object.assign(nextReceipt, { runtimeBuild: bundle.runtime.build, launcher: this.launcher, registryBefore: migration ? migration.receipt.registryBefore : receipt?.registryBefore ?? registryBefore });
+    if (migration) operations.set(join(this.directory, 'connection-backup.json'), { data: Buffer.from(JSON.stringify({ registration: migration.registration, receipt: migration.receipt, registryBefore }, null, 2) + '\n'), mode: 0o600 });
     const changed = [];
     let registryChanged = false;
     try {
@@ -142,6 +192,11 @@ export class ExtensionInstaller {
       if (this.windows) { registryChanged = true; await this.windows.set(this.hostName, this.registration); }
       const before = await read(this.receipt); changed.push({ path: this.receipt, before, mode: 0o600 });
       await atomicWrite(this.receipt, Buffer.from(JSON.stringify(nextReceipt, null, 2) + '\n'));
+      // Publish last: updated native bridges watch this marker and disconnect.
+      if (migration) {
+        changed.push({ path: migration.receiptPath, before: migration.data, mode: 0o600 });
+        await atomicWrite(migration.receiptPath, Buffer.from(JSON.stringify({ ...migration.receipt, supersededBy: this.launcher }, null, 2) + '\n'));
+      }
     } catch (error) {
       // Restore the external registration before removing the files it names.
       // If another owner changed it, retain our files for explicit recovery.
@@ -160,7 +215,7 @@ export class ExtensionInstaller {
     const data = await read(this.receipt); if (!data) return;
     const receipt = JSON.parse(data);
     if (receipt.owner !== OWNER) throw new Error('该连接程序不属于当前应用，未移除');
-    const unlock = this.windows ? await this.windows.lock(this.hostName) : null;
+    const unlock = this.windows ? await this.windows.lock(this.hostName) : await registrationLock(this.registration);
     try {
       if (this.windows) {
         if (!Array.isArray(receipt.registryBefore)) throw new Error('安装记录缺少原注册状态，未移除注册');

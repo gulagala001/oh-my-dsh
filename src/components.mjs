@@ -54,7 +54,7 @@ export class Components {
       }));
       if (include('extension')) tasks.push(this.run('extension', async () => {
         const current = await manager.extensionInstaller.status(manager.extensionHub.list());
-        if (current.supported && !current.prepared) await manager.installExtension();
+        if (current.supported && !current.prepared) await manager.installExtension({ takeover: !automatic });
       }));
     }
     await Promise.all(tasks);

@@ -1,5 +1,6 @@
 const HOST = 'ai.trisoul.computer_use';
 const controls = new Map(); let port, connecting, ready = false, error = '', detail = '', enabled = true;
+let reconnectTimer, reconnectAttempts = 0;
 const sessionGroups = new SessionTabGroups(chrome, controls, cause => { error = '会话标签分组暂不可用，网页操作仍可继续。'; detail = cause.message; });
 const groupWarning = (control, promise) => promise.then(result => { if (control) control.groupError = null; return result; }, cause => { if (control) control.groupError = cause.message; else { error = '会话标签分组暂不可用，网页操作仍可继续。'; detail = cause.message; } return { grouped: false, error: cause.message }; });
 const send = message => { try { port?.postMessage(message); } catch {} };
@@ -98,7 +99,7 @@ async function connect() {
     const current = chrome.runtime.connectNative(HOST), transport = { ended: new Map(), creations: new Map() }; port = current;
     current.onMessage.addListener(message => {
       if (port !== current) return;
-      if (!ready && message?.type === 'ready' && message.protocol === 2) { ready = true; return; }
+      if (!ready && message?.type === 'ready' && message.protocol === 2) { ready = true; reconnectAttempts = 0; return; }
       if (!ready || !Number.isSafeInteger(message?.id) || typeof message.method !== 'string') { current.disconnect(); return; }
       void dispatch(message.method, message.params ?? {}, transport).then(result => {
         if (port === current) send({ id: message.id, result });
@@ -108,8 +109,17 @@ async function connect() {
       if (port !== current) return;
       detail = chrome.runtime.lastError?.message ?? ''; error = enabled ? '与 Oh My DSH 的连接已断开。启动连接服务后可重新连接。' : '';
       ready = false; port = null;
-      void stopAll('connection-lost');
-      for (const creation of transport.creations.values()) void cancelCreation(creation).catch(cause => { error = '取消新标签页失败'; detail = cause.message; });
+      void (async () => {
+        const released = await stopAll('connection-lost');
+        const cancelled = await Promise.allSettled([...transport.creations.values()].map(cancelCreation));
+        if (cancelled.some(result => result.status === 'rejected')) { error = '取消新标签页失败'; return; }
+        // A migrated installation closes its old host. Reconnect only after
+        // releasing old input, and never override an explicit Disconnect.
+        if (released && enabled && !port && reconnectAttempts < 5) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = setTimeout(() => { if (enabled && !port) void connect().catch(cause => { error = '重新连接失败，请点击连接重试。'; detail = cause.message; }); }, 250 * 2 ** reconnectAttempts++);
+        }
+      })();
     });
     current.postMessage({ type: 'hello', protocol: 2, instanceId, name: 'Chrome', userAgent: navigator.userAgent, capabilities: ['cursor-overlay', 'session-tab-groups'], version: chrome.runtime.getManifest().version, build: typeof TRISOUL_BUNDLE_ID === 'string' ? TRISOUL_BUNDLE_ID : null });
   })().finally(() => { connecting = null; });
@@ -264,8 +274,8 @@ chrome.tabGroups?.onRemoved?.addListener(group => { void sessionGroups.enqueue(a
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (sender.id !== chrome.runtime.id || sender.url !== chrome.runtime.getURL('popup.html')) return;
   const run = async () => {
-    if (message.action === 'connect') { enabled = true; await chrome.storage.local.set({enabled}); await connect(); }
-    if (message.action === 'disconnect') { enabled = false; await chrome.storage.local.set({enabled}); const released = await stopAll('user-disconnected'); port?.disconnect(); port = null; ready = false; if (released) { error = ''; detail = ''; } }
+    if (message.action === 'connect') { enabled = true; reconnectAttempts = 0; clearTimeout(reconnectTimer); await chrome.storage.local.set({enabled}); await connect(); }
+    if (message.action === 'disconnect') { enabled = false; clearTimeout(reconnectTimer); await chrome.storage.local.set({enabled}); const released = await stopAll('user-disconnected'); port?.disconnect(); port = null; ready = false; if (released) { error = ''; detail = ''; } }
     if (message.action === 'stop') {
       const control = controls.get(message.tabId); if (control) await stop(control, 'user-stopped');
     }
