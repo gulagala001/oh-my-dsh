@@ -36,7 +36,8 @@ test('iOS Liquid Glass real shell, sidebar, settings, workbench and recovery', {
     await page.keyboard.press('Escape');
     await capture('chat-' + mode);
     assert.equal(await style(page.locator('.hHd-Xa_root'), 'borderRadius'), '30px');
-    assert.notEqual(await style(page.locator('[data-composer-card]'), 'backdropFilter'), 'none');
+    const reduceTransparency = await page.evaluate(() => matchMedia('(prefers-reduced-transparency: reduce)').matches);
+    await until(async () => (await style(page.locator('[data-composer-card]'), 'backdropFilter') === 'none') === reduceTransparency);
     assert.equal(await visibleHit(page.locator('.hHd-Xa_newSession')), true);
     await page.getByRole('button', { name: 'BT · Better Todo', exact: true }).click();
     await page.getByRole('menu').waitFor(); await capture('menu-' + mode);
