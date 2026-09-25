@@ -8,6 +8,8 @@ OMD includes the complete matching Tools, Jobs, Bash/PowerShell, conversation, a
 
 The native Chat factory and its Computer Use presentation additions are owned by OpenCU; its source, patch and manifest ship in `../opencu/vendor/`. OMD uses the same factory rather than a second grouping executor.
 
+The Conversation provider installs Session hooks and its complete slot tree before publishing the action service, preserving the native Agent preset picker and header label.
+
 Whole-bundle enablement changes refresh the page when the Conversation provider changes. The original persisted text-draft store and session history survive; unsubmitted attachments must be added again. Ordinary feature settings do not replace the provider. OMD's Loader compatibility retires outgoing exclusive providers before activating originals, preserves rollback, and publishes the completed client graph together.
 
 ## Rebuild
