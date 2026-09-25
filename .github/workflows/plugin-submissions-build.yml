@@ -1,0 +1,63 @@
+name: Plugin submission validation
+
+on:
+  push:
+    branches: ['codex/plugin-submissions-20260925']
+    paths: ['scripts/_prepare-plugin-submissions.py', '.github/workflows/plugin-submissions-build.yml']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: plugin-submission-validation
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v6
+      - name: Prepare implementation
+        run: python3 scripts/_prepare-plugin-submissions.py
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm build
+      - name: Test submission, installation, title and release contracts
+        run: |
+          set -o pipefail
+          node --test --test-concurrency=1 test/plugin-submissions.test.mjs test/recommended-plugin-manager.test.mjs test/recommended-plugins.test.mjs test/recommended-plugin-native.test.mjs test/document-title.test.mjs test/title-and-api-ui.test.mjs test/version.test.mjs test/version-ui.test.mjs test/build.test.mjs test/dsh-distribution.test.mjs | tee "$RUNNER_TEMP/omd-plugin-unit-tests.log"
+      - name: Verify published rotator compatibility
+        env:
+          OMD_LIVE_PLUGIN_TESTS: '1'
+        run: |
+          set -o pipefail
+          node --test test/recommended-plugin-install.test.mjs | tee "$RUNNER_TEMP/omd-plugin-live-tests.log"
+      - name: Prepare clean reviewed commit and draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm scripts/_prepare-plugin-submissions.py .github/workflows/plugin-submissions-build.yml
+          git add -u
+          git add .github/ISSUE_TEMPLATE/plugin-submission.yml scripts/plugin-submissions.mjs docs/plugin-submissions.md docs/release-0.1.7-rc.2.4.md test/plugin-submissions.test.mjs
+          git diff --cached --check
+          tree=$(git write-tree)
+          commit=$(printf '%s\n' 'feat: add lightweight plugin submissions and verified rotator support' | git commit-tree "$tree" -p a2ffc9ad5c2edc31f2711318d97ef29bb9b24582)
+          git -c credential.helper='!gh auth git-credential' push origin "$commit:refs/heads/codex/plugin-submissions-ready-20260925"
+          echo "CLEAN_COMMIT=$commit" | tee -a "$GITHUB_STEP_SUMMARY"
+          mkdir -p "$RUNNER_TEMP/omd-release"
+          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/omd-release"
+          git archive --format=zip --output="$RUNNER_TEMP/omd-release/oh-my-dsh-0.1.7-rc.2.4.zip" "$commit"
+          cp "$RUNNER_TEMP/omd-plugin-unit-tests.log" "$RUNNER_TEMP/omd-plugin-live-tests.log" "$RUNNER_TEMP/omd-release/"
+          (cd "$RUNNER_TEMP/omd-release" && sha256sum *.tgz *.zip > SHA256SUMS.txt)
+          gh release create v0.1.7-rc.2.4 --repo gulagala001/oh-my-dsh --draft --target "$commit" --title '0.1.7-rc.2.4：精简插件投稿与兼容版本' --notes-file docs/release-0.1.7-rc.2.4.md "$RUNNER_TEMP/omd-release/"*
