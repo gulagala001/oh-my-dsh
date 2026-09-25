@@ -10,7 +10,8 @@ const temporary = await mkdtemp(join(tmpdir(), 'omd-opencu-pack-'));
 const run = (command, args) => execFileSync(command, args, { cwd: source, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
 try {
   run(process.execPath, ['scripts/build.mjs']);
-  const [packed] = JSON.parse(run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', temporary]));
+  const packedResult = JSON.parse(run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', temporary]));
+  const [packed] = Array.isArray(packedResult) ? packedResult : Object.values(packedResult);
   const archive = join(temporary, packed.filename), destination = join(root, 'vendor/opencu');
   await rm(destination, { recursive: true, force: true }); await mkdir(destination, { recursive: true });
   execFileSync('tar', ['-xzf', archive, '--strip-components=1', '-C', destination]);

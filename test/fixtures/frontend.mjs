@@ -67,7 +67,8 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
   await writeFile(join(home, '.credentials.yaml'), JSON.stringify({ version: 1, refs: { FRONTEND_FIXTURE: 'local-test-only' } }), { mode: 0o600 });
   if (installedPackage) {
     const repo = fileURLToPath(new URL('../../', import.meta.url));
-    const [packed] = JSON.parse(execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', root], { cwd: repo, encoding: 'utf8', shell: process.platform === 'win32', maxBuffer: 16 * 1024 * 1024 }));
+    const packedResult = JSON.parse(execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', root], { cwd: repo, encoding: 'utf8', shell: process.platform === 'win32', maxBuffer: 16 * 1024 * 1024 }));
+    const [packed] = Array.isArray(packedResult) ? packedResult : Object.values(packedResult);
     const cli = fileURLToPath(new URL('../../node_modules/@deepseek-ai/dsh/lib/bin.js', import.meta.url));
     const options = { cwd: repo, env: { ...process.env, DSH_HOME: home }, stdio: ['ignore', 'pipe', 'pipe'], timeout: 120000 };
     execFileSync(process.execPath, [cli, '--profile', 'trisoul-x', '--from-default-profile', 'web', '--dump-config'], options);
