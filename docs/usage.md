@@ -4,15 +4,15 @@
 
 当前 **1.7.3 正式版** 适配 **DSH 0.1.7-rc.2**，内置 **OpenCU 1.1.3**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
-安装有两个入口：[自己安装](#安装到现有-dsh推荐)，或将 [AI 安装手册的网址](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/upgrade.md) 发给能操作终端的 AI，并让它按手册完成安装／升级。
+自己安装可选[官方桌面版：下载与完整安装步骤](upgrade.md#desktop)或[Web 安装](#安装到现有-dsh推荐)。也可将 [AI 安装手册的网址](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/upgrade.md) 发给能操作电脑或终端的 AI，说明要安装桌面版还是 Web 版，让它按手册完成安装／升级。
 
 ## 安装到现有 DSH（推荐）
 
-官方桌面版使用 DSH 0.1.7-rc.2，在应用内「插件」页面安装 `github:gulagala001/oh-my-dsh#v1.7.3`。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；Web 安装不会自动启用桌面插件。CLI 不能管理桌面保留的 `desktop` profile。以下命令适用于 Web，桌面实测范围见[本版说明](release-1.7.3.md)。
+**首次安装桌面应用请先看[桌面版完整教程](upgrade.md#desktop)，其中包含 Windows／Mac 下载、首次启动、模型配置和插件安装。** 官方桌面版使用 DSH 0.1.7-rc.2，在应用内「插件」页面安装 `github:gulagala001/oh-my-dsh#v1.7.3`。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；Web 安装不会自动启用桌面插件。CLI 不能管理桌面保留的 `desktop` profile。以下命令适用于 Web，桌面实测范围见[本版说明](release-1.7.3.md)。
 
 桌面安装、更新、启用或停用后，先等任务结束，再使用应用菜单的「重启应用与 Host」。仅关闭窗口会留在后台，仅刷新页面不能完成切换。
 
-本正式版和源码运行均使用 **DSH 0.1.7-rc.2**。需要 Node.js ≥22.19、pnpm 11.23.0 和 Git。**Windows 使用 PowerShell 7（`pwsh`）**，无需 WSL；Python 验证文件需要另有 Python，`.sh` 文件需要 Bash。
+本正式版和源码运行均使用 **DSH 0.1.7-rc.2**。以下 Web／源码安装需要 Node.js ≥22.19、pnpm 11.23.0 和 Git。**Windows 使用 PowerShell 7（`pwsh`）**，无需 WSL；Python 验证文件需要另有 Python，`.sh` 文件需要 Bash。
 
 已有环境先等待任务结束，停止当前 DSH Web 并完整备份实际 DSH_HOME。确认继续使用原数据目录、profile 和端口，再运行：
 
