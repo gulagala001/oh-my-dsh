@@ -2,6 +2,15 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.1.7-rc.2.3",
+      "severity": "required",
+      "title": "0.1.7-rc.2.3：Windows 旧会话迁移补丁",
+      "notes": [
+        "修复 Windows 旧会话迁移时原生依赖默认导出被包装导致失败；继续复用宿主依赖，不增加第二套迁移器。",
+        "完整包含 0.1.7-rc.2.2 的标题闪烁、接口安全、长会话、空消息和原生预设修复；宽范围 V0 迁移保持不变。"
+      ]
+    },
+    {
       "version": "0.1.7-rc.2.2",
       "severity": "required",
       "title": "0.1.7-rc.2.2：Web 标题、安全与长会话修复",
