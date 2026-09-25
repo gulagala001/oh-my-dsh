@@ -22,6 +22,11 @@ test('recommendations search, categories and project links work in both themes a
   await page.setContent('<html style="color-scheme:light dark"><body><main id="root"></main></body></html>');
   await page.addStyleTag({ content: await readFile(new URL('../src/client/style.css', import.meta.url), 'utf8') });
   await page.addScriptTag({ content: bundle.outputFiles[0].text });
+  const submission = page.getByRole('link', { name: '提交插件 / 申请适配' });
+  await submission.waitFor();
+  assert.equal(await submission.getAttribute('href'), 'https://github.com/gulagala001/oh-my-dsh/issues/new?template=plugin-submission.yml');
+  assert.equal(await submission.getAttribute('target'), '_blank');
+  assert.match(await submission.getAttribute('rel'), /noopener/);
   const cards = page.locator('.tx-recommended-card'), search = page.getByRole('searchbox', { name: '搜索推荐插件' });
   await cards.first().waitFor(); assert.equal(await cards.count(), 2);
   await search.fill('示例作者 B'); await page.getByRole('status').filter({ hasText: '1 个插件' }).waitFor();

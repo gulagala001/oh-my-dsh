@@ -1,0 +1,24 @@
+name: 提交插件 / 申请适配
+description: 自己的插件或别人开源的插件均可，只需仓库地址和一句用途。
+title: "[插件投稿] 推荐或申请适配"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        欢迎作者投稿，也欢迎推荐别人的开源插件。无需填写兼容报告。
+        投稿由维护者按需交给 AI 批量检查和适配，确认后收录；提交不代表已通过或自动安装。
+        请勿提交密钥、私人会话或其他敏感信息。
+  - type: input
+    id: repository
+    attributes:
+      label: 仓库地址
+      placeholder: https://github.com/作者/插件
+    validations:
+      required: true
+  - type: textarea
+    id: purpose
+    attributes:
+      label: 一句用途
+      placeholder: 这个插件做什么；有已知兼容问题也可以顺便写在这里。
+    validations:
+      required: true

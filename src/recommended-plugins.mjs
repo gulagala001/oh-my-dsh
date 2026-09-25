@@ -84,16 +84,18 @@ export class RecommendedPluginManager {
       if (!bundle.removable) throw Error('此插件无法卸载');
       result = await this.manager.removeBundle(plugin.packageName);
     } else {
-      const version = await this.latest(plugin, this.abort.signal);
+      // An approved catalog entry is a tested version, not permission to follow latest.
+      const version = plugin.review?.version ?? await this.latest(plugin, this.abort.signal);
+      parseVersion(version);
       this.records.set(plugin.id, { ...this.records.get(plugin.id), latestVersion: version, checkedAt: this.now() });
       // Re-read after the lookup: the user or another manager may have changed
       // the installation or disabled automatic updates while it was pending.
       bundle = (await this.manager.listBundles()).find(item => item.name === plugin.packageName);
       this.abort.signal.throwIfAborted();
-      if (automatic && (!this.getConfig().recommendedPluginsAutoUpdate || this.isRunning() || !bundle?.installed || !bundle.enabled)) return;
+      if (automatic && (!plugin.review?.version || !this.getConfig().recommendedPluginsAutoUpdate || this.isRunning() || !bundle?.installed || !bundle.enabled)) return;
       if (action === 'update' && !bundle?.installed) throw Error('插件已被卸载');
       if (action === 'update' && bundle.version && compareVersions(version, bundle.version) <= 0) {
-        this.records.set(plugin.id, { ...this.records.get(plugin.id), message: '已是最新版本', error: '' }); return;
+        this.records.set(plugin.id, { ...this.records.get(plugin.id), message: plugin.review ? (bundle.version === version ? '已是核验版本' : '当前版本高于核验版本，未降级') : '已是最新版本', error: '' }); return;
       }
       result = await this.manager.installBundle(pluginInstallSpec(plugin, version), { enabled: action === 'install' ? true : bundle.enabled, requestId: this.current.requestId });
     }
@@ -120,7 +122,7 @@ export class RecommendedPluginManager {
       for (const plugin of this.catalog) {
         if (this.closed || this.job || !this.getConfig().recommendedPluginsAutoUpdate || this.isRunning()) return;
         const bundle = bundles.find(item => item.name === plugin.packageName);
-        if (!plugin.manualInstall && bundle?.installed && bundle.enabled && !bundle.readOnlyReason) await this.start(plugin.id, 'update', true);
+        if (plugin.review?.version && !plugin.manualInstall && bundle?.installed && bundle.enabled && !bundle.readOnlyReason) await this.start(plugin.id, 'update', true);
       }
       if (!this.closed && this.getConfig().recommendedPluginsAutoUpdate && !this.isRunning()) this.checkedAt = this.now();
     } finally { this.checking = false; }

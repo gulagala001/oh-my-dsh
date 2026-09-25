@@ -15,6 +15,8 @@ export const recommendedPlugins = [
     id: 'dsh-status-rotator', name: 'dsh-status-rotator', packageName: 'dsh-status-rotator', author: '01Virex',
     description: '把“深度求索中…”替换为轮换文案，支持打字机、彩色渐变、弹幕和主题词库，可在设置中编辑。',
     category: '界面增强', url: 'https://github.com/01Virex/dsh-status-rotator',
+    review: { version: '0.27.0', dsh: '0.1.7-rc.2', omd: '0.1.7-rc.2.4', platforms: ['Web'],
+      note: '复用上游标题冲突修复；桌面端尚未实测。旧版请更新到核验版本。' },
   },
   {
     id: 'dsh-blender-plugin', name: 'DSH × Blender', packageName: '@dsh-external/dsh-blender-plugin', author: 'sixtysevenlf',
