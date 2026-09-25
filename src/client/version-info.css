@@ -35,6 +35,9 @@
 .omd-version-check:disabled { opacity: .55; cursor: default; }
 .omd-version-dialog a { color: var(--dsw-alias-label-link, #3877e8); text-decoration: none; font-size: 12px; }
 .omd-version-dialog a:hover { text-decoration: underline; }
+.omd-version-links { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 12px; }
+.omd-version-links a { white-space: nowrap; }
+.omd-version-check { flex: none; }
 .omd-version-update { margin: 12px 0; }
 .omd-version-install { border: 0; border-radius: 8px; padding: 7px 18px; background: var(--dsw-alias-label-link, #3877e8); color: #fff; font: inherit; font-weight: 500; cursor: pointer; }
 .omd-version-install:disabled { opacity: .55; cursor: default; }
