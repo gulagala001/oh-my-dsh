@@ -196,7 +196,7 @@ export class BrowserViews {
           // A navigation can abort the only pending resize capture after its
           // newest JPEG was fenced out. Refresh the new document, not the old
           // request, so a still page does not remain frozen indefinitely.
-          view.pending ??= { loaderId: view.loaderId, captureOnly: true };
+          view.pending = { loaderId: view.loaderId, captureOnly: true };
           continue;
         }
         if (!view.closed && error.code === 'STALE_SCREENSHOT') continue;
