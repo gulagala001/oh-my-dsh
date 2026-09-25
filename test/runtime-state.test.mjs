@@ -5,6 +5,7 @@ import { Session } from '@deepseek-ai/dsh-session';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { collectRuntimeStatus, runtimeContext, runtimeStateKey, renderRuntimeState } from '../src/runtime-state.mjs';
 import { createTodoStore } from '../src/todolist.mjs';
+import { repairShadows } from '../src/context/shadow.mjs';
 import { setRuntimeContext, latestTodo, summaryMessageReader } from '../src/task-context.mjs';
 function fixture() {
   const session = Session.create('runtime', undefined, { version: 4, id: 'runtime', createdAt: 1, cwd: '/tmp', isSeeded: false, agentPreset: 'trisoul-x' });
@@ -59,7 +60,12 @@ test('without Todo, state injects once without creating tasks and disabling clea
   assert.equal(f.session.surface.nodes.map(s => reader(f.session.eventAt(s))).filter(Boolean).length, 1);
   f.config.stateHintsEnabled = false;
   f.store.maintainInjection(f.session);
-  assert.deepEqual(f.session.deriveMessages().filter(m => m.content.length), [original]);
+  assert.deepEqual(f.session.deriveMessages().filter(m => sourceName(m.source) !== 'trisoul-x:shadow'), [original]);
+  assert.ok(f.session.deriveMessages().every(m => m.content.some(b => b.text?.trim())), 'idle cleanup never leaves an empty user message');
+  f.session.append('turn/start', { turn: 1 });
+  f.session.append('step/start', { turn: 1, step: 1 });
+  assert.equal(repairShadows(f.session), 1);
+  assert.deepEqual(f.session.deriveMessages(), [original]);
   assert.equal(f.store.maintainInjection(f.session), undefined);
 });
 test('only actual new input changes the runtime delivery key', () => {

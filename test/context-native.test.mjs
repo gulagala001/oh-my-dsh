@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ContextPipeline } from '../src/context/pipeline.mjs';
 import { newRecord, userMessages, prepareCandidate } from '../src/context/core.mjs';
+import { repairShadows } from '../src/context/shadow.mjs';
 let deps, missing;
 try {
   const [sessions, llm, host] = await Promise.all([import('@deepseek-ai/dsh-session'), import('@deepseek-ai/dsh-llm'), import('../src/context/host.mjs')]);
@@ -36,6 +37,67 @@ test('native DSH V4: prepared replacement, exposed trace, tool pairing and repla
   }
   assert.match(pipeline.recall(session, { id: state.records[1].id }), /9007199254740993/);
   pipeline.dispose();
+});
+
+test('native empty user shadows are repaired and new deletions stay out of model input', { skip: missing ? missing : false }, async t => {
+  const { Session, createUserMessage, createSystemMessage, createHostAdapter } = deps;
+  const session = Session.create('empty-shadow', undefined, { version: 4, id: 'empty-shadow', delegationDepth: 0, createdAt: Date.now(), cwd: '/fixture', isSeeded: false, agentPreset: 'trisoul-x' });
+  session.append('turn/start', { turn: 1 }); session.append('step/start', { turn: 1, step: 1 });
+  session.append('system/message', { turn: 1, step: 1, message: createSystemMessage('System') }, { surfaceOp: 'append' });
+  const first = session.append('user/message', createUserMessage({ content: [], source: { kind: 'plugin:trisoul-x:shadow' } }), { surfaceOp: 'append' });
+  const second = session.append('user/message', createUserMessage({ content: [{ type: 'text', text: '' }], source: { kind: 'plugin:trisoul-x:shadow' } }), { surfaceOp: 'append' });
+  const material = session.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'Keep this text' }], source: { kind: 'user' } }), { surfaceOp: 'append' });
+  assert.equal(session.deriveMessages().filter(m => m.role === 'user').length, 3, 'old shadows reach the provider');
+  const dir = mkdtempSync(join(tmpdir(), 'shadow-repair-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const hub = { store: { dir }, config: () => ({ contextEnabled: false, flushIdleMs: 0 }), scope: () => ({ mode: 'session', project: dir }), action() {},
+    call() { throw Error('No model call expected'); }, ctx: { sessions: { async flush() {} }, logger: { warn() {} } } };
+  const pipeline = new ContextPipeline(hub, createHostAdapter(hub)); t.after(() => pipeline.dispose());
+  await pipeline.preStep({ session, status: 'running' });
+  assert.equal(repairShadows(session), 0);
+  assert.deepEqual(session.deriveMessages().filter(m => m.role === 'user').map(m => m.content[0].text), ['Keep this text']);
+  const adapter = createHostAdapter({ ctx: {} });
+  adapter.append(session, { id: 'delete-material', kind: 'delete' }, null, [material.seq]);
+  assert.equal(session.deriveMessages().filter(m => m.role === 'user').length, 0);
+  assert.equal(session.eventAt(first.seq).data.content.length, 0, 'old event remains available in the archive');
+  assert.equal(session.eventAt(second.seq).data.content[0].text, '');
+  session.append('step/end', { turn: 1, step: 1 });
+  session.append('turn/end', { turn: 1, reason: { kind: 'completed' } });
+  const idleMaterial = session.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'Old plugin context' }], source: { kind: 'plugin:trisoul-x:memory' } }), { surfaceOp: 'append' });
+  adapter.append(session, { id: 'idle-delete', kind: 'delete' }, null, [idleMaterial.seq]);
+  assert.equal(session.deriveMessages().at(-1).content[0].text, '[Archived context segment]', 'idle cleanup remains valid provider content');
+  session.append('turn/start', { turn: 2 }); session.append('step/start', { turn: 2, step: 1 });
+  await pipeline.preStep({ session, status: 'running' });
+  assert.equal(session.deriveMessages().filter(m => m.source?.kind === 'plugin:trisoul-x:shadow').length, 0);
+  session.append('step/end', { turn: 2, step: 1 }); session.append('turn/end', { turn: 2, reason: { kind: 'completed' } });
+  const replay = Session.create(session.id, JSON.parse(JSON.stringify(session.snapshotEvents())), session.header);
+  assert.deepEqual(replay.deriveMessages(), session.deriveMessages());
+  const { createRequire } = await import('node:module');
+  const { pathToFileURL } = await import('node:url');
+  const hostRequire = createRequire(import.meta.resolve('@deepseek-ai/dsh/package.json'));
+  const { sessionFormatCatalog } = await import(pathToFileURL(hostRequire.resolve('@deepseek-ai/dsh-session-format-catalog')).href);
+  const restore = sessionFormatCatalog.createRestore(sessionFormatCatalog.encodeCurrentHeader(session.header, 0), { recovery: 'strict', validation: 'current' });
+  for (const event of session.snapshotEvents()) restore.decodeRow(sessionFormatCatalog.encodeCurrentEvent(event));
+  assert.doesNotThrow(() => restore.finish());
+});
+
+test('shadow repair preserves user messages, nonempty plugin material and attachments', { skip: missing ? missing : false }, () => {
+  const { Session, createUserMessage, createSystemMessage } = deps;
+  const session = Session.create('shadow-ownership', undefined, { version: 4, id: 'shadow-ownership', createdAt: 1, cwd: '/fixture', isSeeded: false });
+  session.append('turn/start', { turn: 1 }); session.append('step/start', { turn: 1, step: 1 });
+  session.append('system/message', { turn: 1, step: 1, message: createSystemMessage('System') }, { surfaceOp: 'append' });
+  const values = [
+    { content: [], source: { kind: 'user' } },
+    { content: [{ type: 'text', text: '[Archived context segment]' }], source: { kind: 'user' } },
+    { content: [], source: { kind: 'plugin:another-plugin' } },
+    { content: [{ type: 'text', text: 'Retained material' }], source: { kind: 'plugin:trisoul-x:shadow' } },
+    { content: [{ type: 'image', attachment: { attachmentId: 'sha256:' + 'a'.repeat(64), mediaType: 'image/png', bytes: 100, width: 10, height: 10 } }], source: { kind: 'plugin:trisoul-x:shadow' } },
+  ];
+  for (const value of values) session.append('user/message', createUserMessage(value), { surfaceOp: 'append' });
+  const original = session.deriveMessages();
+  session.append('user/message', createUserMessage({ content: [{ type: 'text', text: ' \n\t' }], source: { kind: 'plugin:trisoul-x:shadow' } }), { surfaceOp: 'append' });
+  assert.equal(repairShadows(session), 1);
+  assert.deepEqual(session.deriveMessages(), original);
+  assert.equal(repairShadows(session), 0);
 });
 
 test('native whole-window detail carries real image block shapes; brief removes them and replay remains valid', { skip: missing ? missing : false }, async t => {

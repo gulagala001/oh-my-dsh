@@ -18,6 +18,7 @@ import { currentTasks, restoreTaskProjection } from './tasks.mjs';
 import { ensureSystemHead } from './system-head.mjs';
 import { handleContextApi } from './context/api.mjs';
 import { installTraceCleanup } from './context/trace.mjs';
+import { repairShadows } from './context/shadow.mjs';
 import { TODO_NUDGE } from './todolist.mjs';
 import { message } from './hub.mjs';
 import { join } from 'node:path';
@@ -129,6 +130,10 @@ export async function apply(ctx, config) {
       }
     }
     }
+    // Old OMD placeholders can survive a preset switch or be inherited by a child.
+    // Only repair our own shadows; ordinary user content remains untouched.
+    if (!signal.aborted && (!isX(agent.session) || agent.session.header.origin === 'subagent' || Number(agent.session.header.delegationDepth) > 0)
+      && repairShadows(agent.session)) await hub.context.adapter.flush(agent.session);
     if (isX(agent.session)) hub.requestStarts.set(agent.session.id, Date.now());
     return route;
   }, { global: true });
