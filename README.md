@@ -37,7 +37,7 @@ Oh My DSH 为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 
 ## 装上，开始工作
 
-### 自己安装
+### 自己安装 Web 版
 
 本版配对 **DSH 0.1.7-rc.2 + Oh My DSH 1.7.3**。已有环境先等待任务结束，停止服务并完整备份实际 `DSH_HOME`；继续使用原数据目录、profile 和端口。首次安装可直接运行：
 
@@ -50,24 +50,30 @@ npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 
 ### 官方桌面版
 
-先安装 DSH **0.1.7-rc.2** 桌面版，在应用内的「插件」页面安装 `github:gulagala001/oh-my-dsh#v1.7.3`。桌面版使用独立的 `desktop` profile；Web 已安装的插件需要在桌面端再安装一次。不要使用 CLI 管理 `desktop` profile。[桌面安装与验证范围](docs/release-1.7.3.md)。
+桌面版由 **DSH 官方桌面应用 + Oh My DSH 插件** 组成。按下面三步安装，或查看[桌面版完整安装教程](docs/upgrade.md#desktop)：
+
+1. 下载并安装 DSH **0.1.7-rc.2**：[Windows x64 安装包](https://download.deepseek.com/dsh-desk/bin/win-x64/deepseek-harness-0.1.7-rc.2-win-x64.exe)／[Mac Apple 芯片版](https://download.deepseek.com/dsh-desk/bin/mac-arm64/deepseek-harness-0.1.7-rc.2-mac-arm64.zip)。Windows 运行安装程序；Mac 解压后将应用移入「应用程序」。
+2. 打开应用，按引导配置模型，在「插件」页面安装 `github:gulagala001/oh-my-dsh#v1.7.3` 并确认启用。
+3. 使用应用菜单的 **「重启应用与 Host」**，再新建会话选择 **Oh My DSH**，检查插件「当前版本」为 **1.7.3**。
+
+桌面版使用独立的 `desktop` profile；Web 已安装的插件需要在桌面端再安装一次。不要使用 CLI 管理 `desktop` profile。已有环境升级前先等任务结束、完整退出并备份实际 `DSH_HOME`。[桌面验证范围](docs/release-1.7.3.md#验证范围)。
 
 **安装、更新或启停后，使用应用菜单的「重启应用与 Host」完成切换。** 仅关闭窗口会留在后台，仅刷新页面也不能完成切换；操作前先等正在执行的任务结束。
 
 ### 让 AI 安装
 
-把下面这段话发给能操作你电脑或终端的 AI：
+把下面这段话发给能操作你电脑或终端的 AI，并写明选择「桌面版」还是「Web 版」；已有环境说明原来的安装方式：
 
-> 请按 https://github.com/gulagala001/oh-my-dsh/blob/main/docs/upgrade.md 帮我安装或升级 Oh My DSH。先识别我的环境，备份并保留已有模型、会话、配置和皮肤，完成安装与启动后确认实际运行版本。
+> 请按 https://github.com/gulagala001/oh-my-dsh/blob/main/docs/upgrade.md 帮我安装或升级 DSH 桌面版及配套的 Oh My DSH 插件。先识别我的环境，备份并保留已有模型、会话、配置和皮肤，完成安装与完整重启后确认实际运行版本。
 
-这个链接是给 AI 执行的安装手册，包含环境识别、版本配对、备份、不同安装方式和回退步骤。
+上面以桌面版为例；需要 Web 时将「DSH 桌面版」改为「DSH Web 版」。手册包含桌面下载与安装、环境识别、版本配对、备份、Web 安装和回退步骤。
 
 **装好后从这三个入口开始：** 输入框的星星优化草稿；**工作台**查看任务、上下文和结果；**设置 → 外观**选择主题。
 
 <details>
 <summary>运行要求与默认配置</summary>
 
-- Node.js ≥22.19、pnpm 11.23.0、Git；Windows 使用 PowerShell 7。
+- Web／源码安装需要 Node.js ≥22.19、pnpm 11.23.0、Git；Windows 使用 PowerShell 7。桌面版按上方专用流程安装，内置宿主由应用管理。
 - 模型需要支持原生工具调用；理解截图还需要图像输入能力。
 - 插件将 Oh My DSH 设为默认 Agent preset，并配置完整文件／命令访问、关闭执行审批。profile 中的显式覆盖配置优先。
 - 为兼容已有安装，内部插件与预设 ID 保留为 `trisoul_x` / `trisoul-x`。

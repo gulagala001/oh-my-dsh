@@ -2,11 +2,11 @@
 
 Windows 上使用同一套 Oh My DSH 插件、任务、记忆和工作台。内置浏览器使用独立配置；已有 Chrome 扩展和原生桌面提供开发适配。桌面部分使用 Windows 前台输入、UI Automation 和窗口捕获，不同应用的兼容性需要在目标设备上验证。
 
-需要 Node.js 24、pnpm 11.23.0、Git 和 PowerShell 7。首次准备 Windows Chrome 连接或安装桌面控制还需要 **.NET 10 SDK** 和可访问 NuGet 的网络；编译后的程序自带运行时，不要求每次运行都启动 SDK。
+Web／源码安装需要 Node.js 24、pnpm 11.23.0、Git 和 PowerShell 7；官方桌面应用按下方专用教程安装。首次准备 Windows Chrome 连接或安装桌面控制还需要 **.NET 10 SDK** 和可访问 NuGet 的网络；编译后的程序自带运行时，不要求每次运行都启动 SDK。
 
 ## 安装与试用
 
-当前 Oh My DSH 1.7.3 适配 **DSH 0.1.7-rc.2**。官方桌面版在应用内「插件」安装 `github:gulagala001/oh-my-dsh#v1.7.3`，安装或启停后完整重启应用；不要用 CLI 修改 `desktop` profile。先阅读[本版验证与升级说明](release-1.7.3.md)。以下是 Web 安装：停止服务并备份 DSH_HOME 后，在 PowerShell 7 中安装：
+当前 Oh My DSH 1.7.3 适配 **DSH 0.1.7-rc.2**。需要桌面应用时，按[桌面版完整安装教程](upgrade.md#desktop)下载 Windows x64 安装包、配置模型，再在应用内「插件」安装 `github:gulagala001/oh-my-dsh#v1.7.3`；安装或启停后使用「重启应用与 Host」。不要用 CLI 修改 `desktop` profile。先阅读[本版验证与升级说明](release-1.7.3.md)。以下是 Web 安装：停止服务并备份 DSH_HOME 后，在 PowerShell 7 中安装：
 
 ```powershell
 dsh plugin --profile web add github:gulagala001/oh-my-dsh#v1.7.3
