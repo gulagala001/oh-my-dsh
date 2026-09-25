@@ -11,3 +11,16 @@ test('host factories retain the active Loader dependency identity even when ordi
  assert.equal(typeof result.fs,'function');
  assert.deepEqual(imports,['@deepseek-ai/dsh-scope']);
 });
+
+test('host migration keeps the CommonJS native addon value through dynamic-import interop', async () => {
+ const native = { load() { return 'native-library'; } };
+ const tree = { import: async specifier => { assert.equal(specifier, 'koffi'); return { default: native }; } };
+ const ctx = { loader: { entries: () => [{ options: { name: '@deepseek-ai/dsh-session-persistence-jsonl' }, parent: { tree } }] } };
+ const result = await loadHostModule(ctx, 'session-persistence-jsonl', require => {
+   // The generated CommonJS factory wraps dynamic imports with a default value.
+   const namespace = { default: require('koffi') };
+   return namespace.default;
+ }, ['koffi']);
+ assert.equal(result, native);
+ assert.equal(result.load(), 'native-library');
+});
