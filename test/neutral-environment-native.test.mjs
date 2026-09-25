@@ -104,6 +104,8 @@ for (const mode of ['native', 'ptc', 'both']) test(`actual provider payloads: ne
     const created = await rpc('session/create', { cwd: workspace, agentPreset: preset });
     const selection = await fetch(`${base}/api/agentPresets/select`, { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ type: 'client-request', rpcId: crypto.randomUUID(), method: 'agentPresets/select', payload: { args: { agentId: created.sessionId, agentPreset: preset } } }) });
     const selected = await selection.json(); assert.equal(selected.result?.ok, true, JSON.stringify(selected)); assert.equal(selected.result.value, preset);
+    const model = await rpc('session/selectModel', { sessionId: created.sessionId, provider: 'fixture', model: 'fixture' });
+    assert.equal(model.selected.provider, 'fixture');
     const start = payloads.length;
     const requestId = crypto.randomUUID(); let promptResult;
     try {

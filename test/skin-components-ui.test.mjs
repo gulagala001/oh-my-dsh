@@ -33,7 +33,7 @@ test('native skins reach real settings controls, selected states and button role
     assert.equal(await style(page.getByLabel('皮肤', { exact: true }), 'borderRadius'), '9px', 'skin role overrides the host shared control radius');
     await until(async () => await style(dialog.getByRole('button', { name: '外观', exact: true }), 'backgroundColor') === 'rgb(99, 55, 88)');
     assert.notEqual(await style(dialog.getByRole('button', { name: '通用设置', exact: true }), 'backgroundColor'), 'rgb(99, 55, 88)');
-    assert.equal(await style(page.getByLabel('降低透明与动态效果'), 'accentColor'), 'rgb(160, 37, 146)');
+    await until(async () => await style(page.getByLabel('降低透明与动态效果'), 'accentColor') === 'rgb(160, 37, 146)');
     const file = page.getByLabel('导入皮肤', { exact: true });
     const expected = mode === 'dark' ? 'rgb(32, 35, 41)' : 'rgb(255, 255, 255)';
     await until(async () => await style(file, 'backgroundColor', '::file-selector-button') === expected);
