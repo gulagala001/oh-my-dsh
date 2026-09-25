@@ -23,6 +23,7 @@ data/
 /COMPUTER_USE_BASELINE.md
 /COMPUTER_USE_ASSESSMENT.md
 /PROMPT_CHANGES.md
+/PROMPT_MAINTENANCE.md
 /WINDOWS_HANDOFF.md
 
 # Native build caches produced while testing the embedded distribution.
@@ -36,3 +37,6 @@ data/
 # Local upgrade snapshots; never distribute user sessions or machine settings.
 /.context-upgrade/
 /.context-ui-upgrade/
+
+# Machine-local CodeGraph indexes and runtime state.
+/.codegraph/
