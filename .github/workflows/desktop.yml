@@ -37,6 +37,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm build
+      - name: Migration and runtime regression checks
+        run: node --test --test-concurrency=1 test/session-migration.test.mjs test/neutral-environment-native.test.mjs test/steering-operations-ui.test.mjs test/skin-components-ui.test.mjs test/ios-liquid-glass-ui.test.mjs
       - run: node scripts/prepare-desktop-test.mjs ${{ matrix.target }}
         env:
           OMD_DESKTOP_TEST_ROOT: ${{ runner.temp }}/omd-desktop-rc2
