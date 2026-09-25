@@ -152,7 +152,7 @@ export function apply(ctx) { let seeded = false; ctx.on('session/created', sessi
   page.on('console', message => { if (['error', 'warning'].includes(message.type())) browserDiagnostics.push(message.text()); });
   // Version-indicator fixtures never depend on public GitHub/network availability.
   const version = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8')).version;
-  await page.route('**/trisoul-x/api/version*', async route => {
+  await page.route(/\/trisoul-x\/api\/version(?:\?.*)?$/, async route => {
     const value = typeof versionResponse === 'function' ? await versionResponse() : versionResponse || { currentVersion: version, latestVersion: version, status: 'current', severity: 'none', releases: [], checkedAt: Date.now() };
     await route.fulfill({ json: value });
   });

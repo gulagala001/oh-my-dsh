@@ -9,6 +9,48 @@ const nextVersion = `${parseVersion(version).core[0] + 1n}.0.0`, laterVersion = 
 const release = (v, severity = 'normal') => ({ version: v, severity, title: severity === 'required' ? '重要缺陷修复' : '常规功能更新', notes: ['更新说明仅为文本。'] });
 const status = rows => ({ ...versionStatus(version, validateManifest({ schema: 1, releases: rows })), checkedAt: Date.now(), error: null, stale: false });
 
+test('update stays inside the version panel, survives reopening, retries failures and reports restart', { timeout: 90000 }, async t => {
+  let response = status([release(version)]), state = { phase: 'idle', available: true }, posts = 0;
+  const f = await frontendFixture(t, { basePath: '/omd/', versionResponse: () => response }), { page } = f;
+  await page.route('**/trisoul-x/api/version-update', async route => {
+    if (route.request().method() === 'POST') {
+      posts++; assert.deepEqual(route.request().postDataJSON(), { version: nextVersion });
+      state = { phase: 'installing', available: false, targetVersion: nextVersion };
+    }
+    await route.fulfill({ json: state });
+  });
+  const trigger = page.getByRole('button', { name: '关于 Oh My DSH', exact: true });
+  await trigger.click();
+  const dialog = page.getByRole('dialog', { name: '关于 Oh My DSH' });
+  assert.equal(await dialog.getByRole('button', { name: '更新', exact: true }).count(), 0);
+  response = status([release(nextVersion), release(version)]);
+  await dialog.getByRole('button', { name: '检查更新', exact: true }).click();
+  const install = dialog.getByRole('button', { name: '更新', exact: true });
+  await until(() => install.isEnabled());
+  assert.equal(await page.locator('.omd-version > button').count(), 1, 'the original info icon is retained');
+  assert.equal(await dialog.getByRole('link', { name: '查看新版说明 ↗' }).getAttribute('href'), 'https://github.com/gulagala001/oh-my-dsh/releases/tag/v' + nextVersion);
+  await install.click();
+  await until(() => dialog.getByRole('button', { name: '更新中…', exact: true }).isDisabled());
+  assert.equal(posts, 1);
+  await page.keyboard.press('Escape'); await trigger.click();
+  await dialog.getByText('正在下载并安装更新…', { exact: true }).waitFor();
+  assert.equal(posts, 1, 'reopening observes the existing job');
+  state = { phase: 'failed', available: true, targetVersion: nextVersion, error: '下载失败，请重试。' };
+  await dialog.getByRole('alert').filter({ hasText: '下载失败' }).waitFor();
+  await dialog.getByRole('button', { name: '重试更新', exact: true }).click();
+  await until(async () => posts === 2);
+  state = { phase: 'restart-required', available: false, targetVersion: nextVersion };
+  await dialog.getByText('更新已安装 · 待重启', { exact: true }).waitFor();
+  assert.equal(await dialog.getByTestId('omd-current-version').innerText(), version, 'installation does not pretend the running version changed');
+  assert.ok((await dialog.innerText()).includes('重启 DSH 服务'));
+  assert.equal(await dialog.locator('.omd-version-install').count(), 0);
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  const bounds = await dialog.boundingBox(); assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= 390);
+  if (process.env.TRISOUL_UI_ARTIFACTS) await page.screenshot({ path: join(f.root, 'version-update-restart.png') });
+  assert.deepEqual(f.errors, []); assert.deepEqual(f.escapedPaths, []);
+});
+
 test('macOS desktop brand span keeps version details accessible across sidebar remounts', { timeout: 60000 }, async t => {
   const { page, errors } = await frontendFixture(t);
   // Exercise the host's macOS brand markup without requiring Electron's keyboard bridge.

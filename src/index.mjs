@@ -8,6 +8,7 @@ import { installLoaderLifecycleCompatibility } from './loader-lifecycle-compat.m
 import { installToolSchedulerCompatibility } from './tool-scheduler-compat.mjs';
 import { monitorSelection, compactMonitorSnapshot } from './monitoring.mjs';
 import { createVersionService, handleVersionApi } from './version.mjs';
+import { VersionUpdater, handleVersionUpdateApi } from './version-update.mjs';
 import { installImageBudget } from './image-budget.mjs';
 import { Config } from './config.mjs';
 import { neutralizeHostEnvironment } from './cc-adaptation/environment.mjs';
@@ -57,6 +58,10 @@ export async function apply(ctx, config) {
   ctx.effect(() => () => hub.codegraph.dispose());
   const versionService = createVersionService();
   ctx.effect(() => () => versionService.dispose());
+  const versionUpdater = new VersionUpdater({ versions: versionService, getManager: () => ctx.get('pluginManager'),
+    isRunning: () => ctx.agents.list().some(agent => agent.status === 'running') });
+  ctx.effect(() => () => versionUpdater.close());
+  ctx.on('plugin-manager/install-state', progress => versionUpdater.progress(progress), { global: true });
   ctx.effect(() => ctx.settings.configure({ auto: false }));
   let currentConfig = JSON.stringify(hub.config());
   ctx.on('app-boot/config-reload', () => {
@@ -182,6 +187,7 @@ export async function apply(ctx, config) {
         const url = new URL(req.url, 'http://localhost'), id = url.searchParams.get('session');
         if (await handleVersionApi({ req, res, url, service: versionService, send })) return;
         if (rejectUntrusted(ctx, req, res)) return;
+        if (await handleVersionUpdateApi({ req, res, url, service: versionUpdater, send })) return;
         if (await handlePromptOptimizerApi({ ctx, service: promptOptimizer, req, res, url, getSession: () => id ? ctx.agents.get(id)?.session ?? ctx.sessions.get(id) : undefined, send })) return;
         const agent = id ? ctx.agents.get(id) : undefined;
         const session = agent?.session ?? (id ? ctx.sessions.get(id) : undefined);

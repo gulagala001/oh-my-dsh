@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { version as CLIENT_VERSION } from '../../package.json';
+import { VersionUpdate } from './version-update.jsx';
 
 const statusText = data => data.status === 'update' ? data.severity === 'required' ? '有必要更新 · 包含重要修复' : '有新版本可更新'
   : data.status === 'current' ? '已是最新版' : data.status === 'ahead' ? '当前版本高于发布记录' : '尚未确认最新版本';
@@ -64,15 +65,16 @@ export function VersionInfo() {
       <dl><div><dt>当前版本</dt><dd data-testid="omd-current-version">{data.currentVersion}</dd></div><div><dt>最新版本</dt><dd>{data.latestVersion || '尚未确认'}</dd></div></dl>
       <p className={'omd-version-status omd-level-' + severity} role="status">{statusText(data)}{data.stale ? '（上次检查结果）' : ''}</p>
       {data.error && <p className="omd-version-error" role="alert">{data.error}</p>}
+      <VersionUpdate version={data.status === 'update' ? data.latestVersion : null} stale={!!data.stale || !!data.error}/>
       <div className="omd-version-releases">{(updates.length ? updates : data.currentRelease ? [data.currentRelease] : []).map(release => <section key={release.version}>
         <h3><span>{release.version}</span>{updates.length > 0 && <em data-severity={release.severity}>{release.severity === 'required' ? '必要更新' : '普通更新'}</em>}</h3>
         <strong>{release.title}</strong><ul>{release.notes?.map((note, i) => <li key={i}>{note}</li>)}</ul>
       </section>)}</div>
       <p className="omd-version-meta">上次成功检查：{timeText(data.checkedAt)}</p>
-      <p className="omd-version-meta">仅读取官方仓库的公开发布信息，不自动安装，不上传会话内容。</p>
+      <p className="omd-version-meta">检查公开发布信息，不上传会话内容。点击“更新”才会安装。</p>
       {data.currentVersion !== CLIENT_VERSION && <p className="omd-version-error">服务已更新，当前界面仍为 {CLIENT_VERSION}。<button type="button" onClick={() => window.location.reload()}>刷新界面</button></p>}
       <footer><button type="button" className="omd-version-check" disabled={busy} onClick={() => void load(true)}>{busy ? '正在检查…' : '检查更新'}</button>
-        <a href={'https://github.com/gulagala001/oh-my-dsh/releases/tag/v' + CLIENT_VERSION} target="_blank" rel="noopener noreferrer">查看发布记录 ↗</a></footer></>}
+        <a href={'https://github.com/gulagala001/oh-my-dsh/releases/tag/v' + encodeURIComponent(((data.status === 'update' && data.latestVersion) || data.currentVersion).replace(/^v/, ''))} target="_blank" rel="noopener noreferrer">{data.status === 'update' ? '查看新版说明 ↗' : '查看发布记录 ↗'}</a></footer></>}
     </dialog>
   </span>;
 }
