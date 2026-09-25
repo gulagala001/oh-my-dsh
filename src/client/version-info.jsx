@@ -80,9 +80,10 @@ export function VersionInfo() {
 export function BrandNameWithVersion() {
   const name = useRef(null), [mount, setMount] = useState(null);
   useLayoutEffect(() => {
-    // The host wraps the brand slot in a home-navigation button. Render a sibling
-    // portal instead of nesting another button or replacing the host behavior.
-    const brand = name.current?.closest('button'); if (!brand?.parentElement) return;
+    // macOS Desktop uses a span; Web and Windows use a home-navigation button.
+    // Keep the portal beside either wrapper, outside the aria-hidden identity.
+    const brand = name.current?.closest('button') ?? name.current?.closest('[aria-hidden="true"]')?.parentElement;
+    if (!brand?.parentElement) return;
     const anchor = document.createElement('span'); anchor.className = 'omd-version-anchor';
     brand.classList.add('omd-brand-with-version'); brand.after(anchor); setMount(anchor);
     return () => { brand.classList.remove('omd-brand-with-version'); anchor.remove(); };

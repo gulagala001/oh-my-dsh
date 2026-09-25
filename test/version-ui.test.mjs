@@ -9,6 +9,37 @@ const nextVersion = `${parseVersion(version).core[0] + 1n}.0.0`, laterVersion = 
 const release = (v, severity = 'normal') => ({ version: v, severity, title: severity === 'required' ? '重要缺陷修复' : '常规功能更新', notes: ['更新说明仅为文本。'] });
 const status = rows => ({ ...versionStatus(version, validateManifest({ schema: 1, releases: rows })), checkedAt: Date.now(), error: null, stale: false });
 
+test('macOS desktop brand span keeps version details accessible across sidebar remounts', { timeout: 60000 }, async t => {
+  const { page, errors } = await frontendFixture(t);
+  // Exercise the host's macOS brand markup without requiring Electron's keyboard bridge.
+  // Toggle programmatically because the Web fixture lacks the native titlebar layout.
+  await page.evaluate(() => { document.documentElement.dataset.platform = 'darwin'; });
+  await page.locator('.hHd-Xa_toggle').evaluate(el => el.click());
+  await until(async () => await page.locator('.tx-wordmark').count() === 0);
+  await page.locator('.hHd-Xa_toggle').evaluate(el => el.click());
+  await page.locator('span.hHd-Xa_brand .tx-wordmark').waitFor();
+  const trigger = page.getByRole('button', { name: '关于 Oh My DSH', exact: true });
+  await trigger.waitFor();
+  assert.equal(await trigger.evaluate(el => el.parentElement.closest('button, [aria-hidden="true"]')), null);
+  assert.equal(await page.locator('.omd-version-anchor').count(), 1);
+  const word = await page.locator('.tx-wordmark').boundingBox(), hit = await trigger.boundingBox();
+  assert.ok(hit.x >= word.x + word.width - 1 && hit.x - word.x - word.width < 25);
+  await trigger.click();
+  const dialog = page.getByRole('dialog', { name: '关于 Oh My DSH' });
+  await dialog.waitFor();
+  assert.equal(await dialog.getByTestId('omd-current-version').innerText(), version);
+  await page.keyboard.press('Escape');
+  await until(async () => !await dialog.isVisible());
+  assert.equal(await trigger.evaluate(el => el === document.activeElement), true);
+  await page.locator('.hHd-Xa_toggle').evaluate(el => el.click());
+  await until(async () => await page.locator('.omd-version-anchor').count() === 0);
+  await page.locator('.hHd-Xa_toggle').evaluate(el => el.click());
+  await trigger.waitFor();
+  assert.equal(await page.locator('.omd-version-anchor').count(), 1);
+  await trigger.click(); await dialog.waitFor();
+  assert.deepEqual(errors, []);
+});
+
 test('brand i opens version details; green/red indicators, offline state, keyboard and collapse all work', { timeout: 90000 }, async t => {
   let response = status([release(version)]), calls = 0;
   const f = await frontendFixture(t, { versionResponse: () => { calls++; return response; } }), { page } = f;
