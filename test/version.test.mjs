@@ -115,6 +115,26 @@ test('DSH-aligned numbering migrates the archived OMD series without reversing S
   assert.throws(() => validateManifest({ ...feed, versionPolicy: 'arbitrary' }));
 });
 
+test('host-bound patch numbering succeeds the retired 1.x series and orders host upgrades', () => {
+  const feed = validateManifest({ schema: 1, versionPolicy: 'dsh-aligned', releases: [
+    release('1.7.4'), release('0.1.7-rc.2.1'), release('1.6.1'),
+  ] });
+  assert.equal(compareVersions('1.7.4', '0.1.7-rc.2.1'), 1, 'general SemVer is unchanged');
+  assert.equal(feed.releases[0].version, '0.1.7-rc.2.1');
+  assert.equal(versionStatus('1.7.4', feed).latestVersion, '0.1.7-rc.2.1');
+  assert.equal(versionStatus('1.7.4', feed).status, 'update');
+  assert.equal(versionStatus('0.1.7-rc.2.1', feed).status, 'current');
+  assert.equal(versionStatus('0.1.7-rc.2.1', feed).severity, 'none');
+  assert.equal(versionStatus('0.1.7-rc.2.2', feed).status, 'ahead');
+  const next = validateManifest({ ...feed, releases: [...feed.releases,
+    release('0.1.7-rc.2.2', 'required'), release('0.1.7-rc.2.10'), release('0.1.7-rc.3.1'),
+  ] });
+  assert.deepEqual(next.releases.slice(0, 4).map(r => r.version), ['0.1.7-rc.3.1', '0.1.7-rc.2.10', '0.1.7-rc.2.2', '0.1.7-rc.2.1']);
+  assert.equal(versionStatus('0.1.7-rc.2.1', next).severity, 'required');
+  assert.equal(versionStatus('0.1.7-rc.2.2', next).severity, 'normal');
+  assert.equal(versionStatus('0.1.7', next).status, 'ahead');
+});
+
  test('prerelease notes remain available when the stable feed does not list this build', async () => {
   const currentVersion = '1.7.0-rc.1', current = release(currentVersion);
   const service = createVersionService({ currentVersion, bundledManifest: manifest(current),

@@ -32,8 +32,16 @@ export function compareVersions(a, b) {
 // OMD's historical 1.3.0-alpha.N series predates the DSH-aligned release
 // numbering. Reserve that archived series only; general SemVer stays unchanged.
 const legacyPreview = version => /^v?1\.3\.0-alpha\.\d+(?:\+[^ ]+)?$/.test(version);
+// After 1.7.4, OMD follows the full host version plus a patch suffix, starting
+// at 0.1.7-rc.2.1. Only release-feed ordering crosses this numbering boundary.
+const legacyIndependent = version => parseVersion(version).core[0] === 1n && compareVersions(version, '1.7.4') <= 0;
+const hostBound = version => parseVersion(version).core[0] === 0n && compareVersions(version, '0.1.7-rc.2.1') >= 0;
 function releaseCompare(a, b, policy) {
   if (policy === 'dsh-aligned' && legacyPreview(a) !== legacyPreview(b)) return legacyPreview(a) ? -1 : 1;
+  if (policy === 'dsh-aligned') {
+    if (hostBound(a) && legacyIndependent(b)) return 1;
+    if (legacyIndependent(a) && hostBound(b)) return -1;
+  }
   return compareVersions(a, b);
 }
 
@@ -53,7 +61,8 @@ export function validateManifest(value) {
 export function versionStatus(currentVersion, manifest) {
   const preview = parseVersion(currentVersion).pre.length > 0;
   const compare = (a, b) => releaseCompare(a, b, manifest.versionPolicy);
-  const eligible = manifest.releases.filter(r => preview || !parseVersion(r.version).pre.length);
+  const migrate = manifest.versionPolicy === 'dsh-aligned' && legacyIndependent(currentVersion);
+  const eligible = manifest.releases.filter(r => preview || !parseVersion(r.version).pre.length || migrate && hostBound(r.version));
   const updates = eligible.filter(r => compare(r.version, currentVersion) > 0);
   return { currentVersion, latestVersion: eligible[0]?.version || null,
     status: updates.length ? 'update' : !eligible.length ? 'unknown' : compare(currentVersion, eligible[0].version) > 0 ? 'ahead' : 'current',
