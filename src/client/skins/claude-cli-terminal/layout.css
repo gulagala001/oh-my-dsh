@@ -174,7 +174,7 @@ html.omd[data-omd-layout="claude-cli-terminal"] :is(button,input,select,textarea
 html.omd[data-omd-layout="claude-cli-terminal"] :is(button,input,select,textarea):disabled { opacity: .5; }
 
 /* Workbench, menus, file previews: chrome only; never filter real media. */
-html.omd[data-omd-layout="claude-cli-terminal"] .P3OORG_panel { border-left: 1px solid var(--omd-border); border-radius: 0; box-shadow: none; background: var(--omd-bg); }
+html.omd[data-omd-layout="claude-cli-terminal"] .P3OORG_panel[data-sidebar-right-open] { border-left: 1px solid var(--omd-border); border-radius: 0; box-shadow: none; background: var(--omd-bg); }
 html.omd[data-omd-layout="claude-cli-terminal"] :is(.P3OORG_panelBody,._surface_eq9i1_125,._pane_eq9i1_133) { background: var(--omd-bg); }
 html.omd[data-omd-layout="claude-cli-terminal"] ._tabStrip_eq9i1_156 { min-height: 38px; border-bottom: 1px dashed var(--omd-border); background: var(--omd-bg); }
 html.omd[data-omd-layout="claude-cli-terminal"] :is(.tx-workbench,.cx-integrated) { padding: 12px; }

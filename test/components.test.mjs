@@ -61,6 +61,15 @@ test('settings retain explicit opt-outs and use the shared OpenCU configuration'
   f.service.close();
 });
 
+test('automatic setup does not reclaim a migrated Chrome connection, while explicit preparation can switch it back', async () => {
+  const f = fixture(), options = [];
+  f.manager.installExtension = async value => { options.push(value); };
+  await f.service.prepare('extension', { automatic: true });
+  await f.service.prepare('extension');
+  assert.deepEqual(options, [{ takeover: false }, { takeover: true }]);
+  f.service.close();
+});
+
 test('settings wait for runtime cleanup, recover from failure, and observe external changes', async () => {
   const f = fixture(); f.own.componentAutoSetup = false;
   let release, entered; const waiting = new Promise(resolve => { entered = resolve; });

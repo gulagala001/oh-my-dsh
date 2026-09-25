@@ -71,12 +71,31 @@ internal static class Program
         await pipe.ConnectAsync(5000, cancelled.Token);
         var upstream = Input.CopyToAsync(pipe, cancelled.Token);
         var downstream = pipe.CopyToAsync(Output, cancelled.Token);
-        var first = await Task.WhenAny(upstream, downstream);
+        var migration = WatchMigration(config.Receipt, cancelled.Token);
+        var first = await Task.WhenAny(upstream, downstream, migration);
         // Either EOF is terminal: Chrome's port or the DSH owner has gone away.
         // Cancellation plus process exit closes any pending pipe/stdio reads.
         try { await first; } finally { cancelled.Cancel(); pipe.Dispose(); }
     }
-    private sealed record BridgeConfig(string Pipe, string Origin);
+    private static async Task WatchMigration(string? receipt, CancellationToken token)
+    {
+        while (true)
+        {
+            if (!string.IsNullOrEmpty(receipt))
+            {
+                try
+                {
+                    using var record = JsonDocument.Parse(await File.ReadAllTextAsync(receipt, token));
+                    if (record.RootElement.TryGetProperty("owner", out var owner) && owner.GetString() == "trisoul-x-computer-use" &&
+                        record.RootElement.TryGetProperty("supersededBy", out var target) && target.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(target.GetString())) return;
+                }
+                catch (IOException) { }
+                catch (JsonException) { }
+            }
+            await Task.Delay(250, token);
+        }
+    }
+    private sealed record BridgeConfig(string Pipe, string Origin, string? Receipt = null);
 
     // Multiplex only the byte streams, never the browser protocol. Node keeps
     // its existing lease, epoch, framing and stop acknowledgement logic.
