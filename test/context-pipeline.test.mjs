@@ -34,7 +34,9 @@ test('private records remain local; project records are grouped and isolated fro
   qs.binding.project = '/another'; f.store.save(qs); assert.throws(() => f.store.get(q.id, pr.id));
 });
 test('manual global text uses optimistic concurrency; private sessions never inject it', t => {
-  const f = setup(t); f.store.setGlobal('Manually supplied', 0); assert.throws(() => f.store.setGlobal('Stale', 0), /刷新/);
+  const f = setup(t); const saved = f.store.setGlobal('Manually supplied', 0);
+  assert.throws(() => f.store.setGlobal('Stale', 0), /已被其他窗口更新/);
+  assert.deepEqual(f.store.global(), saved, 'a rejected stale save preserves the latest text and revision');
   const before = f.s.deriveMessages(); f.pipeline.publishMemory(f.s); assert.deepEqual(f.s.deriveMessages(), before);
 });
 test('all actual user messages survive replacement; plugin messages never become requirements', async t => {
