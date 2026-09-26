@@ -34,6 +34,10 @@ export async function mountHostComponent(ctx, name, createModule, dependencies, 
   await fiber;
   if (name === 'tools') {
     const { TOOL_RUNTIME_SCHEDULER } = await tree.import('@deepseek-ai/dsh-tools');
-    ctx.effect(() => bindToolScheduler(ctx.get('tools'), TOOL_RUNTIME_SCHEDULER));
+    // A settled Fiber may still be waiting for systemPrompt during a profile
+    // reload. Bind only while tools is available, and rebind its replacement.
+    await ctx.inject(['tools'], child => {
+      child.effect(() => bindToolScheduler(child.tools, TOOL_RUNTIME_SCHEDULER));
+    });
   }
 }
