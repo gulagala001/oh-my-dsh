@@ -76,6 +76,7 @@ export class RecommendedPluginManager {
   }
   async run(plugin, action, automatic) {
     let bundle = (await this.manager.listBundles()).find(item => item.name === plugin.packageName);
+    this.abort.signal.throwIfAborted();
     if (action === 'install' && bundle?.installed) throw Error('插件已经安装，请使用更新');
     if (action !== 'install' && !bundle?.installed) throw Error('插件尚未安装');
     if (bundle?.readOnlyReason) throw Error('此插件由宿主管理，无法在这里修改');
@@ -93,6 +94,8 @@ export class RecommendedPluginManager {
       bundle = (await this.manager.listBundles()).find(item => item.name === plugin.packageName);
       this.abort.signal.throwIfAborted();
       if (automatic && (!plugin.review?.version || !this.getConfig().recommendedPluginsAutoUpdate || this.isRunning() || !bundle?.installed || !bundle.enabled)) return;
+      if (action === 'install' && bundle?.installed) throw Error('插件已经安装，请使用更新');
+      if (bundle?.readOnlyReason) throw Error('此插件由宿主管理，无法在这里修改');
       if (action === 'update' && !bundle?.installed) throw Error('插件已被卸载');
       if (action === 'update' && bundle.version && compareVersions(version, bundle.version) <= 0) {
         this.records.set(plugin.id, { ...this.records.get(plugin.id), message: plugin.review ? (bundle.version === version ? '已是核验版本' : '当前版本高于核验版本，未降级') : '已是最新版本', error: '' }); return;
@@ -108,6 +111,7 @@ export class RecommendedPluginManager {
     }
     if (result.application === 'cancelled') throw Error('操作已取消');
     if (result.application === 'overridden') throw Error('插件配置被其他配置覆盖，请到宿主“插件”页面检查');
+    if (!['applied', 'restart-required'].includes(result.application)) throw Error('未能确认插件操作结果，请到宿主“插件”页面检查');
     const restartRequired = result.application === 'restart-required';
     this.records.set(plugin.id, { ...this.records.get(plugin.id), restartRequired, error: '',
       message: (action === 'uninstall' ? '已卸载' : action === 'update' ? '更新已完成' : '安装已完成') + (restartRequired ? '，重启 DSH 后生效' : ''),

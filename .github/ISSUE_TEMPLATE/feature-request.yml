@@ -1,0 +1,28 @@
+name: 功能与易用性建议
+description: 描述使用中不顺手的地方，或希望改进的能力
+title: "[建议] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        欢迎提出流程、交互和文档改进建议。可先[搜索已有建议](https://github.com/gulagala001/oh-my-dsh/issues)。
+        如果是安装失败或功能报错，请改用 Bug 模板；无需为提建议先设计完整方案。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你遇到了什么问题？
+      description: 在什么任务或操作中遇到，现有流程哪里不顺手？
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: 你希望怎样改进？
+      description: 描述希望达到的结果；有示例、截图或参考项目也可以附上。
+    validations:
+      required: true
+  - type: textarea
+    id: workaround
+    attributes:
+      label: 目前的替代方法（可选）
+      description: 你现在怎样绕过这个问题，或者有哪些不适合的方案？

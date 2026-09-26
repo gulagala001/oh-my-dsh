@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, realpathSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync, spawn } from 'node:child_process';
 
@@ -40,7 +40,15 @@ if (!existsSync(memory) && existsSync(join(root, 'data', 'memory.json'))) {
 const profileManifest = join(dshHome, 'profiles', profile, 'package.json');
 if (!existsSync(profileManifest)) run(['--profile', profile, '--from-default-profile', 'web', '--dump-config']);
 const installed = JSON.parse(readFileSync(profileManifest, 'utf8'));
-if (!installed.dependencies?.trisoul_x) run(['plugin', '--profile', profile, 'add', `link:${root}`]);
+const installedSpec = installed.dependencies?.trisoul_x;
+let movedSource = false;
+if (installedSpec?.startsWith('link:')) {
+  // pnpm may store links relative to the profile. Follow filesystem aliases so
+  // restarting through a symlink does not reinstall the same checkout.
+  try { movedSource = realpathSync(resolve(dirname(profileManifest), installedSpec.slice(5))) !== realpathSync(root); }
+  catch { movedSource = true; }
+}
+if (!installedSpec || movedSource) run(['plugin', '--profile', profile, 'add', `link:${root}`]);
 
 const child = spawn(process.execPath, [cli, '--profile', profile, '--no-open', '--port', process.env.PORT || '3083'], { cwd: root, env, stdio: 'inherit' });
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill(signal));

@@ -139,6 +139,12 @@ test('brand i opens version details; green/red indicators, offline state, keyboa
   const bounds = await dialog.boundingBox(); assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= screen.width);
   await page.keyboard.press('Escape'); await until(async () => !await dialog.isVisible());
   assert.equal(await page.locator('.omd-version-dialog [role=alert]').count(), 0, 'closed information must not publish hidden global error alerts');
+  response = { ...response, currentVersion: '99.0.0' };
+  await trigger.click();
+  await until(async () => (await dialog.getByTestId('omd-current-version').innerText()) === '99.0.0');
+  await dialog.getByRole('button', { name: '刷新界面', exact: true }).waitFor();
+  await Promise.all([page.waitForEvent('domcontentloaded'), dialog.getByRole('button', { name: '刷新界面', exact: true }).click()]);
+  await trigger.waitFor();
   assert.deepEqual(f.errors, []);
   if (process.env.TRISOUL_UI_ARTIFACTS) console.log('Version UI artifacts:', f.root);
 });
