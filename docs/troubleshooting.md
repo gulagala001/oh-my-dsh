@@ -36,6 +36,14 @@
 | 推荐插件操作报错 | 保留具体错误，在宿主「插件」页核对当前状态。安装脚本、兼容性和网络错误应分别处理；重试前确认是否已经安装，避免覆盖另一处刚完成的操作。 |
 | 电脑操作的某个组件报错 | 在「设置 → Oh My DSH → 基础组件」查看对应组件的错误并按需准备；其他组件正常不代表该组件正常，单项失败也不代表整个插件不可用。[平台要求](usage.md#平台与运行条件)。 |
 
+## 需求理解插件安装报 `ERR_PNPM_MISSING_TARBALL_INTEGRITY`
+
+这表示包管理器缺少远程压缩包的完整性记录。OMD 0.1.7-rc.2.16 已将该插件改为先按固定 SHA-256 校验发行包，再通过原生插件管理器安装本地包；安装包保留在 OMD 数据目录的 `recommended-packages/`，供后续重装使用，备份数据时一并保留。
+
+仍使用旧版时，可从[插件 Release](https://github.com/gulagala001/omd-prompt-optimizer/releases/tag/v0.1.0)下载 `omd-prompt-optimizer-0.1.0.tgz`，对照同页的校验文件核对后，放在固定目录，通过当前 profile 的原生插件管理器安装本地包。不要关闭完整性校验或删除整个 profile。若错误指向其他已安装依赖，需单独核对该依赖的锁文件与来源。
+
+该插件原作者为[啃轮胎的西狐（WestFox-AwA）](https://github.com/WestFox-AwA/dsh-prompt-optimizer)，gulagala001 负责 OMD 适配；保留 BSD-3-Clause 许可与署名，非上游官方发行版。
+
 ## 无法启动、白屏或大量 `waiting for service`
 
 “等待服务”通常是后续症状。优先找第一个 `failed to import` 或启动异常，保留异常类型、`cause`、包路径和堆栈，而不仅是弹窗最后几行。
