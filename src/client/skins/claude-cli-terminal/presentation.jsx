@@ -10,7 +10,7 @@ export function applyTerminalPresentation(ctx, getRuntime) {
       function TerminalMark(props) {
         const runtime = getRuntime();
         const state = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot);
-        const active = state.skins.find(s => s.id === state.selected)?.layout === 'claude-cli-terminal';
+        const active = state.advanced.brand.logo === 'theme' && state.skins.find(s => s.id === state.selected)?.layout === 'claude-cli-terminal';
         if (!active) return <Original {...props}/>;
         return name === 'sidebar.brand.mark'
           ? <span className="omd-cli-mark" aria-hidden="true">✳</span>

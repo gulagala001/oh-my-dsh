@@ -54,4 +54,5 @@ export function applySkins(ctx) {
   applyCodexIntegration(ctx, () => runtime);
   applyTerminalPresentation(ctx, () => runtime);
   ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'omd-appearance', order: 15, label: () => '外观' }, () => <AppearanceSettings runtime={runtime}/>));
+  return () => runtime;
 }

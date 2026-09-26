@@ -5,7 +5,12 @@ import sharp from 'sharp';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 import { bundledSkins } from '../src/client/skins/bundled.mjs';
 import { paletteCatalog } from '../src/client/skins/palette.mjs';
-import { BACKGROUND_DB } from '../src/client/skins/background.mjs';
+import { BACKGROUND_DB, normalizeBackground } from '../src/client/skins/background.mjs';
+
+test('legacy and invalid background regions preserve the whole-window default', () => {
+  assert.equal(normalizeBackground({ opacity: 65 }).scope, 'all');
+  assert.equal(normalizeBackground({ scope: 'invalid' }).scope, 'all');
+});
 
 async function openSettings(page) {
   const dialog = page.getByRole('dialog');
@@ -76,6 +81,7 @@ test('background stays local, persists, synchronizes and preserves readable cont
   const upload = value => page.getByLabel('背景图片', { exact: true }).setInputFiles(value);
   await upload({ name: 'wallpaper.png', mimeType: 'image/png', buffer });
   await page.locator('html[data-omd-background]').waitFor();
+  await page.getByLabel('背景显示区域', { exact: true }).selectOption('conversation');
   await until(() => page.locator('[data-omd-background-layer] img').evaluate(img => img.complete && img.naturalWidth === 2560));
   assert.equal(await page.locator('[data-composer-input]').evaluate(el => getComputedStyle(el).opacity), '1');
   assert.equal(await page.getByRole('dialog').evaluate(el => getComputedStyle(el).opacity), '1');
@@ -99,6 +105,7 @@ test('background stays local, persists, synchronizes and preserves readable cont
   await page.locator('html[data-omd-background]').waitFor();
   assert.equal(await page.getByLabel('背景明暗', { exact: true }).inputValue(), '-25');
   assert.equal(await page.getByLabel('面板不透明度', { exact: true }).inputValue(), '65');
+  assert.equal(await page.getByLabel('背景显示区域', { exact: true }).inputValue(), 'conversation');
   assert.equal(await page.getByLabel('配色', { exact: true }).inputValue(), 'palette:mint');
   const saved = await page.evaluate(async name => {
     const request = indexedDB.open(name, 1);
@@ -121,10 +128,70 @@ test('background stays local, persists, synchronizes and preserves readable cont
   if (process.env.TRISOUL_UI_ARTIFACTS) await page.screenshot({ path: join(root, 'appearance-background-chat.png') });
   const other = await context.newPage(); await other.goto(page.url()); await openSettings(other);
   await other.locator('html[data-omd-background]').waitFor();
+  assert.equal(await other.getByLabel('背景显示区域', { exact: true }).inputValue(), 'conversation');
+  await other.getByLabel('背景显示区域', { exact: true }).selectOption('sidebar');
+  await page.locator('html[data-omd-background="sidebar"]').waitFor();
   await other.getByRole('button', { name: '恢复默认背景', exact: true }).click();
   await until(async () => await page.locator('html').getAttribute('data-omd-background') === null);
   await other.close();
   assert.equal(await page.locator('html').getAttribute('data-omd-palette'), 'palette:mint');
   assert.deepEqual(errors, []);
   if (process.env.TRISOUL_UI_ARTIFACTS) console.log('Appearance artifacts:', root);
+});
+
+test('wallpaper paints the selected region across layouts, modes and sidebar resize', { timeout: 120000 }, async t => {
+  const { page, errors, root } = await frontendFixture(t);
+  await openSettings(page);
+  const buffer = await sharp({ create: { width: 800, height: 800, channels: 3, background: '#dc6218' } }).png().toBuffer();
+  await page.getByLabel('背景图片', { exact: true }).setInputFiles({ name: 'region.png', mimeType: 'image/png', buffer });
+  await page.locator('html[data-omd-background]').waitFor();
+  await page.getByLabel('面板不透明度', { exact: true }).fill('50');
+  const layer = page.locator('[data-omd-background-layer]');
+  const samples = async () => {
+    const points = await page.evaluate(() => ['.hHd-Xa_root', '.pI_x6G_centerCol'].map(selector => {
+      const r = document.querySelector(selector).getBoundingClientRect();
+      return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height * 0.65) };
+    }));
+    const { data, info } = await sharp(await page.screenshot({ animations: 'disabled' })).raw().toBuffer({ resolveWithObject: true });
+    return points.map(({ x, y }) => [...data.subarray((y * info.width + x) * info.channels, (y * info.width + x) * info.channels + 3)]);
+  };
+  for (const theme of ['default', ...bundledSkins.map(s => s.id)]) {
+    await page.getByLabel('主题', { exact: true }).selectOption(theme);
+    await page.getByLabel('配色', { exact: true }).selectOption('palette:lavender');
+    for (const appearance of ['light', 'dark']) {
+      await mode(page, appearance);
+      for (const scope of ['all', 'conversation', 'sidebar']) {
+        await page.getByLabel('背景显示区域', { exact: true }).selectOption(scope);
+        await page.locator(`html[data-omd-background="${scope}"]`).waitFor();
+        await page.keyboard.press('Escape');
+        const visible = await samples();
+        await layer.evaluate(el => el.hidden = true);
+        const hidden = await samples();
+        await layer.evaluate(el => el.hidden = false);
+        for (const [index, region] of ['sidebar', 'conversation'].entries()) {
+          const difference = Math.max(...visible[index].map((channel, i) => Math.abs(channel - hidden[index][i])));
+          assert.ok(scope === 'all' || scope === region ? difference > 20 : difference <= 2,
+            `${theme}/${appearance}/${scope}: ${region} pixel change ${difference}`);
+        }
+        if (scope !== 'sidebar') assert.equal(await page.locator('[data-composer-seat]').evaluate(el => getComputedStyle(el).backgroundImage), 'none');
+        if (process.env.TRISOUL_UI_ARTIFACTS && appearance === 'light' && scope === 'conversation') await page.screenshot({ path: join(root, `wallpaper-${theme}.png`) });
+        await openSettings(page);
+      }
+    }
+  }
+  await page.getByLabel('背景显示区域', { exact: true }).selectOption('conversation');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: '打开工作台', exact: true }).click();
+  await page.locator('[data-sidebar-right-panel][data-sidebar-right-open]').waitFor();
+  await page.getByRole('button', { name: '收起右侧边栏', exact: true }).click();
+  await page.locator('.hHd-Xa_toggle').click();
+  await until(async () => {
+    const a = await layer.boundingBox(), b = await page.locator('.pI_x6G_centerCol').boundingBox();
+    return a && b && Math.abs(a.x - b.x) < 2 && Math.abs(a.width - b.width) < 2;
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.equal(await page.locator('body').evaluate(el => el.scrollWidth <= innerWidth), true);
+  await page.locator('[data-composer-input]').fill('壁纸不会阻挡输入');
+  assert.equal(await page.locator('[data-composer-input]').innerText(), '壁纸不会阻挡输入');
+  assert.deepEqual(errors, []);
 });

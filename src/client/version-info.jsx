@@ -82,7 +82,7 @@ export function VersionInfo() {
   </span>;
 }
 
-export function BrandNameWithVersion() {
+export function BrandNameWithVersion({ name: customName = '' }) {
   const name = useRef(null), [mount, setMount] = useState(null);
   useLayoutEffect(() => {
     // macOS Desktop uses a span; Web and Windows use a home-navigation button.
@@ -93,5 +93,5 @@ export function BrandNameWithVersion() {
     brand.classList.add('omd-brand-with-version'); brand.after(anchor); setMount(anchor);
     return () => { brand.classList.remove('omd-brand-with-version'); anchor.remove(); };
   }, []);
-  return <><strong ref={name} className="tx-wordmark">Oh My <span>DSH</span></strong>{mount && createPortal(<VersionInfo/>, mount)}</>;
+  return <><strong ref={name} className="tx-wordmark">{customName || <>Oh My <span>DSH</span></>}</strong>{mount && createPortal(<VersionInfo/>, mount)}</>;
 }

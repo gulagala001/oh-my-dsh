@@ -21,15 +21,64 @@
 [data-omd-background-layer] { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
 [data-omd-background-layer][hidden] { display: none; }
 [data-omd-background-layer] > img { position: absolute; inset: calc(-2 * var(--omd-wallpaper-blur)); width: calc(100% + 4 * var(--omd-wallpaper-blur)); height: calc(100% + 4 * var(--omd-wallpaper-blur)); max-width: none; filter: blur(var(--omd-wallpaper-blur)); }
-[data-omd-background-layer]::after { content: ''; position: absolute; inset: 0; background: var(--omd-wallpaper-shade); }
-html[data-omd-background] body { isolation: isolate; }
-html[data-omd-background] :is(body, #root, .pI_x6G_frame, .pI_x6G_sidebarCol, .pI_x6G_rightbarCol, .wSkVaW_root, .wSkVaW_body, .wSkVaW_header, .tx-workbench, .cx-integrated, .P3OORG_panelBody) { background: transparent !important; }
-html[data-omd-background] :is(.pI_x6G_centerCol, .hHd-Xa_root, .P3OORG_panel[data-sidebar-right-open], [data-composer-card]) {
-  background: color-mix(in srgb, var(--omd-surface-solid, var(--dsw-alias-bg-layer-2)) var(--omd-panel-opacity), transparent) !important;
+[data-omd-background-layer]::after { content: ''; position: absolute; inset: 0; background: linear-gradient(var(--omd-wallpaper-tint, transparent), var(--omd-wallpaper-tint, transparent)), var(--omd-wallpaper-shade); }
+html[data-omd-background] { --omd-background-panel: color-mix(in srgb, var(--omd-surface-solid, var(--dsw-alias-bg-layer-2)) var(--omd-panel-opacity), transparent); }
+html[data-omd-background="all"] body { isolation: isolate; }
+html[data-omd-background="all"] :is(body, #root, .pI_x6G_frame, .pI_x6G_sidebarCol, .pI_x6G_rightbarCol, .tx-workbench, .cx-integrated, .P3OORG_panelBody) { background: transparent !important; }
+html[data-omd-background="all"] :is(.pI_x6G_centerCol, .hHd-Xa_root, .P3OORG_panel[data-sidebar-right-open]),
+html[data-omd-background]:not([data-omd-background="sidebar"]) [data-composer-card] { background: var(--omd-background-panel) !important; }
+/* Give the selected column its own background stacking context. The image is
+   sized to that region, and stays behind the host's text and controls. */
+html[data-omd-background="conversation"] .pI_x6G_centerCol,
+html[data-omd-background="sidebar"] .pI_x6G_sidebarCol { position: relative; isolation: isolate; }
+html[data-omd-background]:not([data-omd-background="all"]) [data-omd-background-layer] {
+  position: absolute; border-radius: inherit; --omd-wallpaper-tint: var(--omd-background-panel);
 }
+html[data-omd-background="sidebar"] .hHd-Xa_root,
+html[data-omd-background]:not([data-omd-background="sidebar"]) :is(.wSkVaW_root, .wSkVaW_body, .wSkVaW_header, [data-composer-seat]) { background: transparent !important; }
+/* A collapsed workbench can retain its last width; its empty body must not
+   paint over the conversation's new stacking context. */
+html[data-omd-background] .P3OORG_panel:not([data-sidebar-right-open]) .P3OORG_panelBody { background: transparent !important; }
 /* Menus and modal content keep solid surfaces over any photograph. */
 html[data-omd-background] :is([role=menu], .VOzbGW_panel, dialog, [role=dialog]) { background-color: var(--omd-surface-solid, var(--dsw-alias-bg-layer-2)) !important; }
 @media (prefers-reduced-transparency: reduce) {
   html[data-omd-background] [data-omd-background-layer] { display: none; }
-  html[data-omd-background] :is(body, .pI_x6G_centerCol, .hHd-Xa_root, .P3OORG_panel[data-sidebar-right-open], [data-composer-card]) { background: var(--omd-surface-solid, var(--dsw-alias-bg-base)) !important; }
+  html[data-omd-background] :is(body, .pI_x6G_centerCol, .hHd-Xa_root, .P3OORG_panel[data-sidebar-right-open]),
+  html[data-omd-background]:not([data-omd-background="sidebar"]) [data-composer-card] { background: var(--omd-surface-solid, var(--dsw-alias-bg-base)) !important; }
+}
+
+.omd-advanced { border: 1px solid var(--dsw-alias-border-l1); border-radius: 12px; margin-top: 24px; }
+.omd-advanced > summary { padding: 15px; cursor: pointer; font-weight: 600; }
+.omd-advanced > summary span { font-weight: 400; font-size: 12px; color: var(--dsw-alias-label-secondary); margin-left: 8px; }
+.omd-advanced-body { padding: 0 16px 16px; }
+.omd-advanced .omd-appearance-row input:not([type=checkbox]):not([type=file]) { width: min(52%, 260px); min-width: 0; }
+.omd-custom-group { border-top: 1px solid var(--dsw-alias-border-l1); margin-block: 14px; padding-top: 12px; }
+.omd-custom-group > summary { cursor: pointer; font-weight: 600; padding-block: 4px 10px; }
+.omd-custom-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 235px), 1fr)); gap: 8px 24px; }
+.omd-custom-row { display: flex; align-items: center; gap: 8px; min-width: 0; padding-block: 6px; }
+.omd-custom-row > label { display: flex; flex: 1; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; }
+.omd-custom-row input[type=color] { width: 34px; height: 28px; padding: 2px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 6px; cursor: pointer; flex-shrink: 0; }
+.omd-custom-row input[data-inherited] { opacity: .35; }
+.omd-custom-reset { font: inherit; font-size: 11px; background: transparent; color: var(--dsw-alias-brand-text); border: 0; cursor: pointer; padding: 4px; white-space: nowrap; }
+.omd-custom-reset:disabled { color: var(--dsw-alias-label-secondary); cursor: default; }
+.omd-custom-number { display: inline-flex; align-items: center; gap: 3px; }
+.omd-custom-number input { box-sizing: border-box; width: 64px; padding: 4px; }
+.omd-custom-number small { margin: 0; }
+.omd-custom-logo-preview { display: flex; gap: 12px; align-items: center; }
+.omd-custom-logo-preview img { width: 48px; height: 48px; object-fit: contain; }
+.omd-custom-brand-image { display: inline-block; object-fit: contain; flex-shrink: 0; }
+html[data-omd-custom][data-omd-reduce-effects] [data-composer-card] { backdrop-filter: none !important; }
+@media (prefers-reduced-transparency: reduce) {
+  html[data-omd-custom] [data-composer-card] { backdrop-filter: none !important; }
+}
+@media (max-width: 600px) {
+  .omd-advanced-body { padding-inline: 10px; }
+  .omd-advanced > summary span { display: block; margin: 5px 0 0 15px; }
+}
+/* Narrow settings must not squeeze descriptions into a one-character column. */
+@media (max-width: 600px) {
+  .omd-appearance .omd-personalization .omd-appearance-row { flex-direction: column !important; align-items: stretch !important; gap: 8px; }
+  .omd-appearance .omd-personalization .omd-appearance-row > span { flex: none; width: 100%; }
+  .omd-appearance .omd-personalization .omd-appearance-row :is(select,input[type=file],input[type=text],input:not([type])) { width: 100% !important; max-width: 100%; box-sizing: border-box; }
+  .omd-appearance .omd-personalization .omd-appearance-row > input[type=checkbox] { align-self: flex-start; }
 }

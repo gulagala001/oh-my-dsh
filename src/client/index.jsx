@@ -1,4 +1,4 @@
-import { brandDocumentTitle } from './document-title.mjs';
+import { applyAppearanceBrand } from './appearance-brand.jsx';
 import { createPoller } from './polling.mjs';
 import { createConversation } from '../../lib/host/ui-conversation.factory.mjs';
 import { installDesktopLifecycle } from './desktop-lifecycle.mjs';
@@ -9,10 +9,8 @@ import css from './style.css';
 import shellCss from './shell.css';
 import { ComputerIcon } from '#opencu/src/client/computer-icons.jsx';
 import { applyComputerUseClient } from '#opencu/client-source';
-import { BrandMark } from './brand.jsx';
-import { BrandNameWithVersion } from './version-info.jsx';
 import versionCss from './version-info.css';
-import { whaleCss, whaleSvg } from './brand.mjs';
+import { whaleCss } from './brand.mjs';
 import { createContextUI } from './context-client.mjs';
 import { applyHistorySize } from './history-settings.jsx';
 import { applySkins } from './skins/settings.jsx';
@@ -257,13 +255,10 @@ export async function apply(ctx) {
   ctx.effect(() => {
     const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css + '\n' + shellCss + '\n' + whaleCss + '\n' + versionCss; document.head.appendChild(tag);
     document.documentElement.classList.add('trisoul-shell');
-    const restoreTitle = brandDocumentTitle(document);
-    const icon = document.createElement('link'); icon.rel = 'icon'; icon.type = 'image/svg+xml';
-    icon.href = 'data:image/svg+xml,' + encodeURIComponent(whaleSvg('omd-favicon'));
-    document.head.append(icon);
-    return () => { restoreTitle(); icon.remove(); tag.remove(); document.documentElement.classList.remove('trisoul-shell'); };
+    return () => { tag.remove(); document.documentElement.classList.remove('trisoul-shell'); };
   });
-  for (const [seat, Component] of [['sidebar.brand.mark', BrandMark], ['sidebar.brand.name', BrandNameWithVersion], ['conversation.hero.brand.mark', () => <BrandMark size={64}/>]]) ctx.slots.inject(seat, () => ctx.slots.register({ name: seat }, Component));
+  const getAppearanceRuntime = applySkins(ctx);
+  applyAppearanceBrand(ctx, getAppearanceRuntime);
   ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'trisoul-x', order: 16, label: () => 'Oh My DSH' }, ContextSettings));
   applyRecommendedPlugins(ctx);
   ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register({ name: 'conversation.composer.dock', id: 'trisoul-x-tools', order: 25 }, ComposerDock));
@@ -283,6 +278,5 @@ export async function apply(ctx) {
     ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({ name: 'sidebar.right.pane.tab', key: id }, props => <Workbench {...props} initialSection={initialSection}/>));
   }
   applyStyle(ctx);
-  applySkins(ctx);
   applyConversationRecords(ctx);
 }
