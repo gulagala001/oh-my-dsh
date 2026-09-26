@@ -19,7 +19,7 @@ test('appearance commits through the native form without reverting an optimistic
   const { page, errors } = await frontendFixture(t);
   await page.getByRole('button', { name: '设置', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: '外观', exact: true }).click();
-  await page.getByLabel('皮肤', { exact: true }).selectOption('codex-desktop');
+  await page.getByLabel('主题', { exact: true }).selectOption('codex-desktop');
   await chooseAppearance(page, 'light');
   await until(async () => await page.locator('html').getAttribute('data-appearance') === 'light');
   let release, entered;
@@ -59,7 +59,7 @@ test('native variable shorthands preserve appearance, overrides and offline vali
   skin.css = '.omd [data-omd-part="composer"] { background: var(--omd-surface-solid); border: 3px solid var(--omd-danger); border-left-width: 7px; border-radius: var(--omd-radius-panel); border-bottom-right-radius: 5px; outline: 2px solid var(--omd-focus); }';
   await page.getByRole('button', { name: '设置', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: '外观', exact: true }).click();
-  const upload = value => page.getByLabel('导入皮肤', { exact: true }).setInputFiles({ name: 'shorthand.omd-skin.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(value)) });
+  const upload = value => page.getByLabel('导入主题', { exact: true }).setInputFiles({ name: 'shorthand.omd-skin.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(value)) });
   await upload(skin);
   await until(async () => await page.locator('html').getAttribute('data-omd-skin') === skin.id);
   for (const appearance of ['light', 'dark']) {
@@ -95,7 +95,7 @@ test('native skin import, host mode sync, portals, persistence, replacement and 
     await page.getByRole('dialog').getByRole('button', { name: '外观', exact: true }).click();
     await page.locator('.omd-appearance').waitFor();
   };
-  const upload = async value => page.getByLabel('导入皮肤', { exact: true }).setInputFiles({ name: 'test.omd-skin.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(value)) });
+  const upload = async value => page.getByLabel('导入主题', { exact: true }).setInputFiles({ name: 'test.omd-skin.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(value)) });
   const active = () => page.locator('html').getAttribute('data-omd-skin');
   const bg = () => page.locator('body').evaluate(el => getComputedStyle(el).backgroundColor);
   const originalBg = await bg();
@@ -113,7 +113,7 @@ test('native skin import, host mode sync, portals, persistence, replacement and 
         return [...document.fonts].filter(face => face.status === 'error').map(face => face.family);
       });
       assert.deepEqual(fonts, [], file + ' embedded fonts load');
-      await page.getByRole('button', { name: '移除当前皮肤', exact: true }).click();
+      await page.getByRole('button', { name: '移除当前主题', exact: true }).click();
     }
   }
   await upload(sample);
@@ -145,13 +145,13 @@ test('native skin import, host mode sync, portals, persistence, replacement and 
   }
   const replacement = structuredClone(sample); replacement.tokens.dark.bg = '#203040';
   await upload(replacement); await until(async () => await bg() === 'rgb(32, 48, 64)');
-  assert.equal(await page.getByLabel('皮肤', { exact: true }).locator('option[value="test-skin"]').count(), 1, 'same-id updates do not duplicate entries');
-  await page.getByRole('button', { name: '恢复默认皮肤', exact: true }).click();
+  assert.equal(await page.getByLabel('主题', { exact: true }).locator('option[value="test-skin"]').count(), 1, 'same-id updates do not duplicate entries');
+  await page.getByRole('button', { name: '恢复默认主题', exact: true }).click();
   assert.equal(await active(), null); assert.equal(await page.locator('style[data-omd-skin-style]').count(), 0);
   await chooseAppearance(page, 'light');
   await until(async () => await bg() === originalBg);
-  await page.getByLabel('皮肤', { exact: true }).selectOption(sample.id);
-  await page.getByRole('button', { name: '移除当前皮肤', exact: true }).click();
+  await page.getByLabel('主题', { exact: true }).selectOption(sample.id);
+  await page.getByRole('button', { name: '移除当前主题', exact: true }).click();
   assert.equal(await active(), null);
   await upload(sample); await until(async () => await active() === sample.id);
   await page.keyboard.press('Escape');
@@ -169,7 +169,7 @@ test('native skin import, host mode sync, portals, persistence, replacement and 
   await upload(replacement);
   await until(async () => (await page.getByRole('alert').textContent())?.includes('存储'));
   assert.equal(await bg(), 'rgb(255, 244, 232)');
-  await page.getByRole('button', { name: '恢复默认皮肤', exact: true }).click();
+  await page.getByRole('button', { name: '恢复默认主题', exact: true }).click();
   assert.equal(await active(), null, 'recovery still works when storage is unavailable');
   await page.evaluate(() => { Storage.prototype.setItem = window.originalSkinSetItem; delete window.originalSkinSetItem; });
   await upload(sample); await until(async () => await active() === sample.id);
@@ -193,7 +193,7 @@ test('native skin import, host mode sync, portals, persistence, replacement and 
   await page.reload(); await page.getByRole('button', { name: '设置', exact: true }).waitFor();
   assert.equal(await active(), null, 'a removed built-in theme safely falls back to the host appearance');
   await open();
-  const options = await page.getByLabel('皮肤', { exact: true }).locator('option').evaluateAll(items => items.map(item => item.value));
+  const options = await page.getByLabel('主题', { exact: true }).locator('option').evaluateAll(items => items.map(item => item.value));
   assert.deepEqual(new Set(options), new Set(['default', 'codex-desktop', 'ios-liquid-glass', 'claude-cli-terminal', 'google-material-expressive']));
   assert.deepEqual(errors, []);
   if (process.env.TRISOUL_UI_ARTIFACTS) console.log('Skin UI artifacts:', root);

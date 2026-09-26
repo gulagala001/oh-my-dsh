@@ -26,9 +26,9 @@ test('Codex desktop layout: native navigation, every settings page, workbench an
     await page.getByRole('button', { name: '设置', exact: true }).click(); await appearance();
   };
   await openSettings();
-  await page.getByLabel('皮肤', { exact: true }).selectOption('codex-desktop');
+  await page.getByLabel('主题', { exact: true }).selectOption('codex-desktop');
   await page.locator('html[data-omd-layout="codex-desktop"]').waitFor();
-  assert.equal(await hit(page.getByLabel('皮肤', { exact: true })), true, 'settings is not clipped by sidebar');
+  assert.equal(await hit(page.getByLabel('主题', { exact: true })), true, 'settings is not clipped by sidebar');
   for (const mode of ['light', 'dark']) {
     await page.getByLabel('明暗模式', { exact: true }).selectOption(mode);
     await until(async () => await page.locator('html').getAttribute('data-appearance') === mode);
@@ -150,7 +150,7 @@ test('Codex desktop layout: native navigation, every settings page, workbench an
   if (await page.locator('.pI_x6G_frame').getAttribute('data-sidebar-collapsed') === 'true') await page.locator('.hHd-Xa_toggle').click();
   await page.getByText('整理工作台和对话界面', { exact: true }).first().click();
   await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
-  await openSettings(); await page.getByRole('button', { name: '恢复默认皮肤', exact: true }).click();
+  await openSettings(); await page.getByRole('button', { name: '恢复默认主题', exact: true }).click();
   assert.equal(await page.locator('html').getAttribute('data-omd-layout'), null);
   assert.equal(await page.locator('style[data-omd-skin-style]').count(), 0);
   if (process.env.TRISOUL_UI_ARTIFACTS) await writeFile(new URL('errors.json', directory), JSON.stringify(f.errors, null, 2));
@@ -164,7 +164,7 @@ test('Codex geometry defaults, far-right toggle, resizing, reload and skin exit 
     await page.getByRole('button', { name: '设置', exact: true }).click();
     await page.locator('.VOzbGW_nav').getByRole('button', { name: '外观', exact: true }).click();
   };
-  await settings(); await page.getByLabel('皮肤', { exact: true }).selectOption('codex-desktop');
+  await settings(); await page.getByLabel('主题', { exact: true }).selectOption('codex-desktop');
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '打开工作台', exact: true }).click();
   const frame = page.locator('.pI_x6G_frame'), right = page.locator('.pI_x6G_rightbarCol'), corner = page.locator('.codex-panel-toggle');
@@ -180,7 +180,7 @@ test('Codex geometry defaults, far-right toggle, resizing, reload and skin exit 
   await page.reload(); await corner.waitFor();
   await page.getByRole('button', { name: '打开工作台', exact: true }).click();
   await until(async () => Math.abs((await right.boundingBox()).width - 500) < 1);
-  await settings(); await page.getByRole('button', { name: '恢复默认皮肤', exact: true }).click();
+  await settings(); await page.getByRole('button', { name: '恢复默认主题', exact: true }).click();
   await page.keyboard.press('Escape');
   await until(async () => !await frame.evaluate(el => el.style.getPropertyValue('--codex-right-width')));
   await until(async () => Math.abs((await right.boundingBox()).width - Math.round(1597 * .45)) < 1);
@@ -209,7 +209,7 @@ test('Codex desktop keeps real tool failures, readable code, monochrome controls
     await page.locator('.VOzbGW_nav').getByRole('button', { name: '外观', exact: true }).click();
   };
   const directory = new URL('../data/codex-desktop-qa/', import.meta.url);
-  await openSettings(); await page.getByLabel('皮肤', { exact: true }).selectOption('codex-desktop');
+  await openSettings(); await page.getByLabel('主题', { exact: true }).selectOption('codex-desktop');
   for (const mode of ['light', 'dark']) {
     await page.getByLabel('明暗模式', { exact: true }).selectOption(mode);
     await until(async () => await page.locator('html').getAttribute('data-appearance') === mode);

@@ -39,7 +39,7 @@ test('Google Material: real layout, all settings, fonts, mobile navigation, work
     await page.locator('.VOzbGW_close').click();
     if (page.viewportSize().width < 840 && await page.locator('.pI_x6G_frame').getAttribute('data-sidebar-collapsed') !== 'true') { await page.locator('.hHd-Xa_toggle').click(); await settleSidebar(); }
   };
-  await openSettings(); await page.getByLabel('皮肤', { exact: true }).selectOption(id);
+  await openSettings(); await page.getByLabel('主题', { exact: true }).selectOption(id);
   await until(async () => await html.getAttribute('data-omd-layout') === id);
   // Exercise actual embedded font decoders, all advertised families and weights.
   const fontResults = await page.evaluate(async () => {
@@ -130,7 +130,7 @@ test('Google Material: real layout, all settings, fonts, mobile navigation, work
   await page.reload(); await page.locator('.gm-shell').waitFor({ state: 'attached' });
   assert.equal(await html.getAttribute('data-omd-layout'), id, 'refresh retains the selected skin');
   await openSettings();
-  await page.getByRole('button', { name: '恢复默认皮肤', exact: true }).click();
+  await page.getByRole('button', { name: '恢复默认主题', exact: true }).click();
   assert.equal(await html.getAttribute('data-omd-layout'), null);
   assert.equal(await page.locator('.gm-shell,.gm-settings-toggle').count(), 0);
   assert.equal(await page.locator('.pI_x6G_centerCol').evaluate(el => el.inert), false);
@@ -146,7 +146,7 @@ test('Google Material keeps real font glyphs, native resize, focus and plugin re
   const { page } = f;
   await page.getByRole('button', { name: '设置', exact: true }).click();
   await page.locator('.VOzbGW_nav').getByRole('button', { name: '外观', exact: true }).click();
-  await page.getByLabel('皮肤', { exact: true }).selectOption(id);
+  await page.getByLabel('主题', { exact: true }).selectOption(id);
   await page.locator('.VOzbGW_nav').getByRole('button', { name: '通用设置', exact: true }).click();
   await page.getByRole('button', { name: '增大字号', exact: true }).click();
   await page.locator('.VOzbGW_close').click();
@@ -220,9 +220,9 @@ test('Google Material welcome screen and portable skin import preserve native se
   const pack = await readFile(new URL('../src/client/skins/bundled/google-material-expressive.json', import.meta.url));
   await page.getByRole('button', { name: '设置', exact: true }).click();
   await page.locator('.VOzbGW_nav').getByRole('button', { name: '外观', exact: true }).click();
-  await page.getByLabel('导入皮肤', { exact: true }).setInputFiles({ name: id + '.omd-skin.json', mimeType: 'application/json', buffer: pack });
+  await page.getByLabel('导入主题', { exact: true }).setInputFiles({ name: id + '.omd-skin.json', mimeType: 'application/json', buffer: pack });
   await page.locator('html[data-omd-layout="google-material-expressive"]').waitFor();
-  assert.equal(await page.getByRole('button', { name: '移除当前皮肤', exact: true }).count(), 1);
+  assert.equal(await page.getByRole('button', { name: '移除当前主题', exact: true }).count(), 1);
   for (const mode of ['light', 'dark']) {
     await page.getByLabel('明暗模式', { exact: true }).selectOption(mode);
     await page.locator('.VOzbGW_close').click();
@@ -239,8 +239,8 @@ test('Google Material welcome screen and portable skin import preserve native se
     await page.getByRole('button', { name: '设置', exact: true }).click();
     await page.locator('.VOzbGW_nav').getByRole('button', { name: '外观', exact: true }).click();
   }
-  await page.getByRole('button', { name: '移除当前皮肤', exact: true }).click();
+  await page.getByRole('button', { name: '移除当前主题', exact: true }).click();
   assert.equal(await page.locator('html').getAttribute('data-omd-layout'), null);
-  assert.equal(await page.getByLabel('皮肤', { exact: true }).locator(`option[value="${id}"]`).count(), 1, 'removing imported override retains the builtin');
+  assert.equal(await page.getByLabel('主题', { exact: true }).locator(`option[value="${id}"]`).count(), 1, 'removing imported override retains the builtin');
   assert.deepEqual(errors, []);
 });

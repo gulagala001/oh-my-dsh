@@ -1,9 +1,12 @@
 import { bundledSkins } from './bundled.mjs';
 import { validateSkin, compileSkinCss } from './format.mjs';
 import { hostTokens, tokenCss } from './mapping.mjs';
+import { composePalette } from './palette.mjs';
+import { createBackgroundRuntime, backgroundDefaults } from './background.mjs';
 export const STORAGE_KEY = 'omd.skins.v1';
-export function createSkinRuntime(ctx, adapterCss, layouts = {}) {
-  let state = { skins: [], selected: 'default', reduceEffects: false, error: '' };
+export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss = '') {
+  const recovery = new URLSearchParams(location.search).get('omd-skin') === 'default';
+  let state = { skins: [], selected: 'default', palette: 'theme', reduceEffects: false, background: { ...backgroundDefaults, name: '', url: '', loading: false, error: '' }, error: '' };
   let disposeTokens, style, disposed = false;
   const listeners = new Set();
   const prepare = value => {
@@ -14,7 +17,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}) {
   let prepared = new Map();
   const emit = () => { state = { ...state }; for (const fn of listeners) fn(); };
   const read = () => {
-    const next = { skins: [], selected: 'default', reduceEffects: false, error: '' };
+    const next = { ...state, skins: [], selected: 'default', palette: 'theme', reduceEffects: false, error: '' };
     const ready = new Map(bundled), savedIds = new Set();
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
@@ -27,37 +30,44 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}) {
         } catch { next.error = '部分皮肤数据无效，已跳过；可重新导入。'; }
       }
       if (ready.has(saved.selected)) next.selected = saved.selected;
+      if (ready.has(saved.palette)) next.palette = saved.palette;
       next.reduceEffects = saved.reduceEffects === true;
     } catch { next.error = '无法读取皮肤记录，已使用默认外观。'; }
-    if (new URLSearchParams(location.search).get('omd-skin') === 'default') next.selected = 'default';
+    if (recovery) { next.selected = 'default'; next.palette = 'theme'; }
     next.skins = [...ready.values()].map(item => item.skin);
     state = next; prepared = ready;
   };
   const syncMode = snapshot => {
-    if (state.selected !== 'default') document.documentElement.dataset.appearance = snapshot.active.colorScheme;
+    if (state.selected !== 'default' || state.palette !== 'theme') document.documentElement.dataset.appearance = snapshot.active.colorScheme;
     emit();
   };
+  const background = createBackgroundRuntime(appearanceCss, value => { state = { ...state, background: value }; emit(); }, { recovery });
   const apply = () => {
     const root = document.documentElement;
     const active = prepared.get(state.selected);
+    const source = state.palette === 'theme' ? undefined : prepared.get(state.palette)?.skin;
+    const composed = composePalette(active?.skin, source);
+    background.reduceEffects(state.reduceEffects);
     // Remove the previous layer before installing the next; all values were parsed first.
     disposeTokens?.(); disposeTokens = undefined;
     style?.remove(); style = undefined;
     root.classList.remove('omd');
-    for (const name of ['omdSkin', 'omdLayout', 'appearance', 'omdReduceEffects']) delete root.dataset[name];
-    if (!active) return;
-    root.classList.add('omd'); root.dataset.omdSkin = active.skin.id;
-    if (active.skin.layout) root.dataset.omdLayout = active.skin.layout;
+    for (const name of ['omdSkin', 'omdLayout', 'omdPalette', 'omdColors', 'appearance', 'omdReduceEffects']) delete root.dataset[name];
+    if (!composed) return;
+    root.dataset.omdColors = '';
+    if (source) root.dataset.omdPalette = source.id;
+    if (active) { root.classList.add('omd'); root.dataset.omdSkin = active.skin.id; }
+    if (active?.skin.layout) root.dataset.omdLayout = active.skin.layout;
     root.dataset.appearance = ctx.theme.getTheme().active.colorScheme;
     if (state.reduceEffects) root.dataset.omdReduceEffects = '';
-    style = document.createElement('style'); style.dataset.omdSkinStyle = active.skin.id;
-    style.textContent = tokenCss(active.skin) + '\n' + adapterCss + '\n' + active.css
-      + (active.skin.layout ? '\n' + (layouts[active.skin.layout] || '') : '');
+    style = document.createElement('style'); style.dataset.omdSkinStyle = active?.skin.id || 'default';
+    style.textContent = tokenCss(composed, 'html[data-omd-colors]') + '\n' + adapterCss + '\n' + (active?.css || '')
+      + (active?.skin.layout ? '\n' + (layouts[active.skin.layout] || '') : '');
     document.head.append(style);
-    disposeTokens = ctx.theme.overrideTokens('trisoul_x/skin', hostTokens(active.skin));
+    disposeTokens = ctx.theme.overrideTokens('trisoul_x/skin', hostTokens(composed));
   };
   const save = next => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ skins: next.skins.filter(skin => !skin.builtin), selected: next.selected, reduceEffects: next.reduceEffects })); }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ skins: next.skins.filter(skin => !skin.builtin), selected: next.selected, palette: next.palette, reduceEffects: next.reduceEffects })); }
     catch { throw new Error('浏览器存储不可用或空间不足，未更改皮肤。请移除不用的皮肤后重试。'); }
     state = { ...next, error: '' }; apply(); emit();
   };
@@ -86,6 +96,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}) {
   document.addEventListener('click', onNavigation, true);
   return {
     getSnapshot: () => state,
+    background,
     subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn); },
     getAppearance: () => ctx.theme.getTheme().preference,
     async setAppearance(value) {
@@ -100,6 +111,10 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}) {
       if (id !== 'default' && !prepared.has(id)) throw new Error('皮肤不存在，请重新导入');
       save({ ...state, selected: id });
     },
+    selectPalette(id) {
+      if (id !== 'theme' && !prepared.has(id)) throw new Error('配色不存在，请重新选择');
+      save({ ...state, palette: id });
+    },
     import(value) {
       const item = prepare(value);
       const previous = prepared.get(item.skin.id);
@@ -110,8 +125,10 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}) {
     remove(id) {
       if (prepared.get(id)?.skin.builtin) return;
       const baseline = bundled.get(id);
-      save({ ...state, skins: [...state.skins.filter(s => s.id !== id), ...(baseline ? [baseline.skin] : [])], selected: state.selected === id ? 'default' : state.selected });
+      const previous = prepared.get(id);
       if (baseline) prepared.set(id, baseline); else prepared.delete(id);
+      try { save({ ...state, skins: [...state.skins.filter(s => s.id !== id), ...(baseline ? [baseline.skin] : [])], selected: state.selected === id ? 'default' : state.selected, palette: state.palette === id && !baseline ? 'theme' : state.palette }); }
+      catch (error) { if (previous) prepared.set(id, previous); throw error; }
     },
     reduceEffects: value => save({ ...state, reduceEffects: value }),
     reset() {
@@ -122,7 +139,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}) {
     dispose() {
       if (disposed) return; disposed = true;
       offTheme(); window.removeEventListener('storage', onStorage); document.removeEventListener('click', onNavigation, true);
-      state = { ...state, selected: 'default' }; apply(); listeners.clear();
+      state = { ...state, selected: 'default', palette: 'theme' }; apply(); background.dispose(); listeners.clear();
     },
   };
 }

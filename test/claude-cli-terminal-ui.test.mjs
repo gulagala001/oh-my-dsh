@@ -25,7 +25,7 @@ test('terminal skin covers the real shell, fonts, all settings, navigation and r
   });
   const style = (el, name) => el.evaluate((node, key) => getComputedStyle(node)[key], name);
   await open();
-  await page.getByLabel('皮肤', { exact: true }).selectOption('claude-cli-terminal');
+  await page.getByLabel('主题', { exact: true }).selectOption('claude-cli-terminal');
   await until(async () => await page.locator('html').getAttribute('data-omd-layout') === 'claude-cli-terminal');
   const font = await page.evaluate(async () => {
     await document.fonts.load('13px "OMD Terminal Mono"');
@@ -35,7 +35,7 @@ test('terminal skin covers the real shell, fonts, all settings, navigation and r
   });
   assert.deepEqual(font.faces, ['loaded', 'loaded']);
   assert.ok(font.widths.every(w => Math.abs(w - font.widths[0]) < .1), 'embedded Latin font is monospaced');
-  for (const el of [page.locator('body'), page.locator('[data-composer-input]'), page.getByLabel('皮肤', { exact: true }), nav.getByRole('button', { name: '通用设置', exact: true })]) {
+  for (const el of [page.locator('body'), page.locator('[data-composer-input]'), page.getByLabel('主题', { exact: true }), nav.getByRole('button', { name: '通用设置', exact: true })]) {
     assert.match(await style(el, 'fontFamily'), /OMD Terminal Mono/);
   }
   const pages = ['通用设置', '模型', '内置插件', '外观', 'Oh My DSH', '推荐插件', 'Agent 预设'];
@@ -124,8 +124,8 @@ test('terminal skin covers the real shell, fonts, all settings, navigation and r
   await page.locator('.omd-cli-welcome').waitFor(); await shot('dark-welcome');
   await open();
   const skin = JSON.parse(await readFile(new URL('../src/client/skins/bundled/claude-cli-terminal.json', import.meta.url), 'utf8'));
-  await page.getByLabel('导入皮肤', { exact: true }).setInputFiles({ name: 'terminal.omd-skin.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(skin)) });
-  await page.getByRole('button', { name: '移除当前皮肤', exact: true }).waitFor();
+  await page.getByLabel('导入主题', { exact: true }).setInputFiles({ name: 'terminal.omd-skin.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(skin)) });
+  await page.getByRole('button', { name: '移除当前主题', exact: true }).waitFor();
   await page.reload(); await page.getByRole('button', { name: '设置', exact: true }).waitFor();
   assert.equal(await page.locator('html').getAttribute('data-omd-layout'), 'claude-cli-terminal');
   // rc.2 resolves empty-Hero onboarding after mounting the shell. Wait for
@@ -136,13 +136,13 @@ test('terminal skin covers the real shell, fonts, all settings, navigation and r
   await page.getByLabel('明暗模式', { exact: true }).selectOption('system');
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
   await until(async () => await page.locator('html').getAttribute('data-appearance') === 'light');
-  await page.getByRole('button', { name: '移除当前皮肤', exact: true }).click();
+  await page.getByRole('button', { name: '移除当前主题', exact: true }).click();
   assert.equal(await page.locator('html').getAttribute('data-omd-layout'), null);
-  await page.getByLabel('皮肤', { exact: true }).selectOption('claude-cli-terminal');
-  await page.getByLabel('皮肤', { exact: true }).selectOption('codex-desktop');
+  await page.getByLabel('主题', { exact: true }).selectOption('claude-cli-terminal');
+  await page.getByLabel('主题', { exact: true }).selectOption('codex-desktop');
   assert.equal(await page.locator('html').getAttribute('data-omd-layout'), 'codex-desktop');
   assert.equal(await page.locator('.omd-cli-mark').count(), 0);
-  await page.getByRole('button', { name: '恢复默认皮肤', exact: true }).click();
+  await page.getByRole('button', { name: '恢复默认主题', exact: true }).click();
   assert.equal(await page.locator('style[data-omd-skin-style]').count(), 0);
   assert.deepEqual(f.errors, []);
 });

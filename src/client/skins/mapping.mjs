@@ -21,8 +21,7 @@ export function hostTokens(skin) {
   const light = palette('light'), dark = palette('dark');
   return Object.fromEntries(Object.entries(aliases).map(([alias, key]) => [`--dsw-alias-${alias}`, { light: light[key], dark: dark[key] }]));
 }
-export function tokenCss(skin) {
-  const scope = `html.omd[data-omd-skin="${skin.id}"]`;
+export function tokenCss(skin, scope = `html.omd[data-omd-skin="${skin.id}"]`) {
   const defaults = { 'button-bg': 'var(--omd-accent)', 'button-fg': 'var(--omd-on-accent)', 'button-hover': 'color-mix(in srgb, var(--omd-button-bg) 90%, var(--omd-text))' };
   return ['common', 'light', 'dark'].map(mode => `${scope}${mode === 'common' ? '' : `[data-appearance="${mode}"]`}{${Object.entries(mode === 'common' ? { ...defaults, ...skin.tokens.common } : skin.tokens[mode]).map(([key, value]) => `--omd-${key}:${value}`).join(';')}}`).join('\n');
 }

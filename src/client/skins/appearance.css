@@ -1,0 +1,35 @@
+/* Shared appearance controls are available in every layout. */
+.omd-personalization { min-width: 0; margin-block: 18px; }
+.omd-personalization h3 { margin: 18px 0 10px; font-size: 15px; }
+.omd-personalization .omd-appearance-row { gap: 12px; }
+.omd-personalization .omd-appearance-row > span { flex: 1; min-width: 0; }
+.omd-personalization small { display: block; color: var(--omd-muted, var(--dsw-alias-label-secondary)); font-size: 12px; margin-top: 4px; }
+.omd-personalization :is(select, input[type=file]) { min-width: 0; max-width: 58%; }
+.omd-background-preview { display: block; width: 100%; height: 120px; object-fit: cover; border-radius: 10px; margin-block: 10px; }
+.omd-background-name { overflow-wrap: anywhere; }
+.omd-background-control { display: flex; align-items: center; gap: 8px; width: min(52%, 240px); }
+.omd-background-control input { min-width: 0; width: 100%; accent-color: var(--omd-accent, var(--dsw-alias-brand-primary)); }
+.omd-background-control output { min-width: 3.5em; text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; }
+.omd-palette-swatches { display: flex; gap: 7px; margin-block: 10px; }
+.omd-palette-swatches span { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--dsw-alias-border-l1); }
+@media (max-width: 600px) {
+  .omd-personalization .omd-appearance-row { flex-wrap: wrap; }
+  .omd-personalization :is(select, input[type=file]) { max-width: 100%; }
+  .omd-background-control { width: min(56%, 240px); }
+}
+/* Paint only the image: the application and its text retain full opacity. */
+[data-omd-background-layer] { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+[data-omd-background-layer][hidden] { display: none; }
+[data-omd-background-layer] > img { position: absolute; inset: calc(-2 * var(--omd-wallpaper-blur)); width: calc(100% + 4 * var(--omd-wallpaper-blur)); height: calc(100% + 4 * var(--omd-wallpaper-blur)); max-width: none; filter: blur(var(--omd-wallpaper-blur)); }
+[data-omd-background-layer]::after { content: ''; position: absolute; inset: 0; background: var(--omd-wallpaper-shade); }
+html[data-omd-background] body { isolation: isolate; }
+html[data-omd-background] :is(body, #root, .pI_x6G_frame, .pI_x6G_sidebarCol, .pI_x6G_rightbarCol, .wSkVaW_root, .wSkVaW_body, .wSkVaW_header, .tx-workbench, .cx-integrated, .P3OORG_panelBody) { background: transparent !important; }
+html[data-omd-background] :is(.pI_x6G_centerCol, .hHd-Xa_root, .P3OORG_panel[data-sidebar-right-open], [data-composer-card]) {
+  background: color-mix(in srgb, var(--omd-surface-solid, var(--dsw-alias-bg-layer-2)) var(--omd-panel-opacity), transparent) !important;
+}
+/* Menus and modal content keep solid surfaces over any photograph. */
+html[data-omd-background] :is([role=menu], .VOzbGW_panel, dialog, [role=dialog]) { background-color: var(--omd-surface-solid, var(--dsw-alias-bg-layer-2)) !important; }
+@media (prefers-reduced-transparency: reduce) {
+  html[data-omd-background] [data-omd-background-layer] { display: none; }
+  html[data-omd-background] :is(body, .pI_x6G_centerCol, .hHd-Xa_root, .P3OORG_panel[data-sidebar-right-open], [data-composer-card]) { background: var(--omd-surface-solid, var(--dsw-alias-bg-base)) !important; }
+}

@@ -21,7 +21,7 @@
 .omd [data-omd-part="button"] { border-radius: 14px; }
 .omd [data-omd-part="button"]:focus-visible { outline: 3px solid var(--omd-focus); outline-offset: 3px; }
 .omd [data-omd-part="button-primary"], .omd [data-omd-part="send"] {
-  background: linear-gradient(175deg, #2691ff, #007aff);
+  background: linear-gradient(175deg, var(--omd-button-top), var(--omd-button-bg));
   color: #ffffff;
   border: 1px solid #ffffff26;
   border-radius: 999px;
