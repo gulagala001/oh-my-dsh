@@ -2,7 +2,7 @@
 
 [文档目录](README.md) · [首次使用](getting-started.md) · [安装](#安装到现有-dsh推荐) · [更新与卸载](#update-uninstall) · [设置](#settings) · [排障](troubleshooting.md) · [开发与验证](#开发与验证)
 
-当前 **0.1.7-rc.2.17 发布候选** 适配 **DSH 0.1.7-rc.2**，内置 **OpenCU 1.1.7**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
+当前 **0.1.7-rc.2.17** 适配 **DSH 0.1.7-rc.2**，内置 **OpenCU 1.1.7**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
 本项目通过 `gulagala001/oh-my-dsh` 的 GitHub 来源或发行包安装。[安装来源核对](troubleshooting.md#package-source)。
 

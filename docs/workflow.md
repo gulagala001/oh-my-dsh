@@ -2,7 +2,7 @@
 
 [文档目录](README.md) · [后台任务](runtime-state-background.md)
 
-本页描述 OMD 0.1.7-rc.2.17 的 Ultracode 与 Workflow 扩展；当前为发布候选，正式安装以对应 Release 为准。
+本页描述 OMD 0.1.7-rc.2.17 的 Ultracode 与 Workflow 扩展。正式安装以对应 Release 为准。
 
 Workflow 复用 DSH 原生子代理、工具循环、会话和 Jobs。可以让代理用脚本组织读取、实现、验证等阶段，子代理能够直接修改代码。普通模式下需要用户授权工作流或多代理协作。
 
