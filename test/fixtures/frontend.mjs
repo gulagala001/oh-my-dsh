@@ -15,7 +15,7 @@ export async function until(fn, timeout = 20000) {
   throw new Error('Frontend fixture timed out');
 }
 
-export async function frontendFixture(t, { imageBudget, versionResponse, headless = false, lifecycleTrace = false, installedPackage = process.env.OMD_UI_PACKED === '1', historyMessages = 0, legacyShadows = false, componentAutoSetup = false, omdConfig = {}, chatConfig = {}, legacyChatConfig, basePath = '/', agentPreset = 'trisoul-x', reply, optimizerReply } = {}) {
+export async function frontendFixture(t, { imageBudget, versionResponse, headless = false, lifecycleTrace = false, installedPackage = process.env.OMD_UI_PACKED === '1', historyMessages = 0, legacyShadows = false, componentAutoSetup = false, omdConfig = {}, chatConfig = {}, legacyChatConfig, basePath = '/', agentPreset = 'trisoul-x', reply, optimizerReply, plugins = [], modelReply } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'trisoul-frontend-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   await mkdir(home); await mkdir(workspace);
   let nextReply, releaseReply, replyFactory = reply, child, browser, page, log = '';
@@ -24,7 +24,7 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
     let request = ''; for await (const chunk of req) request += chunk; const payload = JSON.parse(request);
     if (payload.tools?.length && nextReply) { const waiting = nextReply; nextReply = null; await waiting; }
     const optimizing = !payload.tools?.length && JSON.stringify(payload.messages).includes('你正在 Oh My DSH 中改写尚未发送的用户草稿');
-    const custom=optimizing ? await optimizerReply?.(payload) : payload.tools?.length&&await replyFactory?.(payload);
+    const custom=(await modelReply?.(payload)) ?? (optimizing ? await optimizerReply?.(payload) : payload.tools?.length&&await replyFactory?.(payload));
     if(custom){
       res.writeHead(200,{'Content-Type':'text/event-stream'});
       const choices=custom[Symbol.asyncIterator]?custom:[custom];
@@ -74,6 +74,12 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
     execFileSync(process.execPath, [cli, '--profile', 'trisoul-x', '--from-default-profile', 'web', '--dump-config'], options);
     try { execFileSync(process.execPath, [cli, 'plugin', '--profile', 'trisoul-x', 'add', 'file:' + join(root, packed.filename)], options); }
     catch (error) { throw new Error('Packed plugin installation failed: ' + String(error.stderr || error.stdout || error.message).replace(/token=\S+/g, 'token=[redacted]')); }
+  }
+  if (plugins.length) {
+    const cli = fileURLToPath(new URL('../../node_modules/@deepseek-ai/dsh/lib/bin.js', import.meta.url));
+    const options = { cwd: new URL('../../', import.meta.url), env: { ...process.env, DSH_HOME: home }, stdio: ['ignore', 'pipe', 'pipe'], timeout: 120000 };
+    if (!installedPackage) execFileSync(process.execPath, [cli, '--profile', 'trisoul-x', '--from-default-profile', 'web', '--dump-config'], options);
+    for (const spec of plugins) execFileSync(process.execPath, [cli, 'plugin', '--profile', 'trisoul-x', 'add', spec], options);
   }
   const lifecycleFile = join(root, 'lifecycle.jsonl');
   if (lifecycleTrace || historyMessages || legacyShadows || legacyChatConfig) {
