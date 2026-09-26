@@ -2,6 +2,16 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.1.7-rc.2.13",
+      "severity": "normal",
+      "title": "0.1.7-rc.2.13：WSL Windows 桌面桥接",
+      "notes": [
+        "内置 OpenCU 1.1.7，WSL 可通过指定 Windows 桌面程序路径启用原生桌面后端。",
+        "补齐平台状态、程序与连接校验，以及 Windows 专用操作说明。",
+        "提供配置、构建与只读自检步骤；外部程序由用户手动管理，WSL 真机操控尚待验收。"
+      ]
+    },
+    {
       "version": "0.1.7-rc.2.12",
       "severity": "normal",
       "title": "0.1.7-rc.2.12：修复桌面会话区壁纸遮挡",

@@ -7,27 +7,40 @@ import { McpClient } from './mcp-client.mjs';
 import { windowsNativeBuild } from './windows-native-build.mjs';
 import { WindowsNativeRuntime } from './windows-native-runtime.mjs';
 
+export function windowsBridgeActive({ platform = process.platform, osRelease = release() } = {}) {
+  return platform === 'linux' && /microsoft/i.test(osRelease);
+}
+
 // Windows sessions use dedicated child transports. The native input lease is
 // an OS mutex shared across those processes; preview/share clients are read-only.
 export class WindowsNativeHost extends NativeHost {
   constructor(directory, options = {}) {
     super(directory, options);
     this.platform = 'win32'; this.externalBinary = options.binary;
+    this.bridge = !!this.externalBinary && windowsBridgeActive(options);
     this.runtime = options.runtime ?? new WindowsNativeRuntime(directory);
     this.client = options.client ?? ((binary, args, settings) => new McpClient(binary, args, settings));
     this.pointers = new Map(); this.previewDescriptors = new Map();
-    this.osPlatform = options.platform ?? process.platform; this.osRelease = options.osRelease ?? release();
+    this.osPlatform = this.bridge ? 'win32' : options.platform ?? process.platform; this.osRelease = options.osRelease ?? release();
     this.binary = this.externalBinary ?? this.runtime.binary() ?? ''; this.ownsDaemon = false;
   }
-  supported() { return this.osPlatform === 'win32' && ['x64', 'arm64'].includes(process.arch) && Number(this.osRelease.split('.')[2]) >= 19041; }
+  // WSL reports a Linux kernel version. The Windows executable checks the
+  // actual Windows version and desktop capabilities when starting MCP.
+  supported() { return this.osPlatform === 'win32' && ['x64', 'arm64'].includes(process.arch) && (this.bridge || Number(this.osRelease.split('.')[2]) >= 19041); }
   available() { this.binary = this.externalBinary ?? this.runtime.binary() ?? ''; return this.supported() && !!this.binary && existsSync(this.binary); }
-  expectedBuild() { return windowsNativeBuild(); }
+  async expectedBuild() {
+    if (!this.bridge) return windowsNativeBuild();
+    // This binary is managed outside WSL. Keep disk/live identity checks,
+    // without treating the Linux plugin's source hash as its build receipt.
+    const installed = await this.installedInfo();
+    return { build: installed?.build ?? null, version: installed?.version ?? '0.1.1', protocol: 1 };
+  }
   async installedInfo() {
     if (!this.externalBinary) return this.runtime.installedInfo();
     if (!existsSync(this.externalBinary)) return null;
     const info = await this.runtime.inspect(this.externalBinary), file = await stat(this.externalBinary);
-    if (info.name !== 'oh-my-dsh-windows-desktop' || info.protocol !== 1) throw new Error('指定文件不是匹配的 Windows 桌面控制程序');
-    return { ...info, version: '0.1.1', binary: this.externalBinary, displayName: 'Oh My DSH Computer Use', identity: `${file.dev}:${file.ino}:${file.size}:${file.mtimeMs}` };
+    if (info.name !== 'oh-my-dsh-windows-desktop' || info.protocol !== 1 || (this.bridge && !/^[a-f0-9]{64}$/.test(info.build ?? ''))) throw new Error('指定文件不是匹配的 Windows 桌面控制程序，请使用配套构建脚本重新编译');
+    return { ...info, version: info.version ?? '0.1.1', binary: this.externalBinary, displayName: 'Oh My DSH Computer Use', identity: `${file.dev}:${file.ino}:${file.size}:${file.mtimeMs}:${file.ctimeMs}` };
   }
   async probeInfo() {
     const clients = await Promise.all([...this.connections.values()].map(pending => pending.catch(() => null)));
@@ -35,7 +48,7 @@ export class WindowsNativeHost extends NativeHost {
   }
   async launch() {
     if (this.closed) throw new Error('Windows 桌面控制已关闭');
-    if (!this.available()) throw new Error('请先在电脑面板的运行环境中安装 Windows 桌面控制');
+    if (!this.available()) throw new Error(this.externalBinary ? '指定的 Windows 桌面控制程序不可用，请检查程序路径和运行环境' : '请先在电脑面板的运行环境中安装 Windows 桌面控制');
     await this.installedInfo();
   }
   async install({ beforeReplace } = {}) {
@@ -93,6 +106,7 @@ export class WindowsNativeHost extends NativeHost {
         try {
           const info = await client.initialize();
           if (info.serverInfo?.name !== 'trisoul-computer-use' || info._meta?.trisoul?.protocol !== 1) throw new Error('Windows 桌面控制协议不匹配，请更新运行时');
+          if (this.bridge && (info._meta?.trisoul?.platform !== 'win32' || info._meta?.trisoul?.build !== (await this.expectedBuild()).build)) throw new Error('Windows 桌面控制运行时需要更新或重启，运行中的程序与指定文件不匹配');
           await client.call('start_session', { session: label, read_only: readOnly });
           return { client, label, info, readOnly };
         } catch (error) { await client.close(); throw error; }

@@ -41,7 +41,7 @@
     }
   },
   "name": "opencu",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "Computer Use for DSH: browsers, desktop apps, live previews, annotations and file exports.",
   "repository": {
     "type": "git",

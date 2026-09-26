@@ -6,10 +6,10 @@ Web／源码安装需要 Node.js 24、pnpm 11.23.0、Git 和 PowerShell 7；官�
 
 ## 安装与试用
 
-当前 Oh My DSH 0.1.7-rc.2.7 适配 **DSH 0.1.7-rc.2**。需要桌面应用时，按[桌面版完整安装教程](upgrade.md#desktop)下载 Windows x64 安装包、配置模型，再在应用内「插件」安装 `github:gulagala001/oh-my-dsh#v0.1.7-rc.2.7`；安装或启停后完整退出应用并重新打开。不要用 CLI 修改 `desktop` profile。先阅读[本版验证与升级说明](release-0.1.7-rc.2.7.md)。以下是 Web 安装：停止服务并备份 DSH_HOME 后，在 PowerShell 7 中安装：
+当前 Oh My DSH 0.1.7-rc.2.13 适配 **DSH 0.1.7-rc.2**。需要桌面应用时，按[桌面版完整安装教程](upgrade.md#desktop)下载 Windows x64 安装包、配置模型，再在应用内「插件」安装 `github:gulagala001/oh-my-dsh#v0.1.7-rc.2.13`；安装或启停后完整退出应用并重新打开。不要用 CLI 修改 `desktop` profile。先阅读[本版验证与升级说明](release-0.1.7-rc.2.13.md)。以下是 Web 安装：停止服务并备份 DSH_HOME 后，在 PowerShell 7 中安装：
 
 ```powershell
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.7
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.13
 if ($LASTEXITCODE -ne 0) { throw '插件安装失败' }
 dsh web
 ```
@@ -59,6 +59,40 @@ Windows 使用前台操控；保持桌面解锁，鼠标或键盘介入会停止
 在 **桌面控制版本 → 移除桌面控制** 中卸载运行时。移除会停止原生操控与预览，保留应用窗口、用户文件和浏览器连接；之后可以重新安装。程序损坏时会用 .NET 10 SDK 重建独立卸载程序；若停止或文件删除尚未确认，会保留相应安装信息供重试。额外文件和无法确认归属的目录会保留。
 
 停止操控不会关闭启动的应用。锁屏、提升权限窗口和应用兼容性不能据基础自检结果推定可用。
+
+## WSL 控制 Windows 桌面
+
+WSL 中运行的 DSH 可以通过手动指定的 `OhMyDsh.Desktop.exe` 使用 Windows 原生桌面后端。仅在 Linux 内核版本标识包含 Microsoft 且配置了 `computerUseNativeBinary` 时启用；普通 Linux 和未配置该路径的 WSL 保持原有行为。Windows 仍需满足上面的系统版本要求、保持桌面解锁，并允许 WSL 启动 Windows 程序。
+
+1. 在 Windows 上准备 Node.js 和 .NET 10 SDK，进入与当前插件配套的 OpenCU 目录（Oh My DSH 安装包内为 `vendor/opencu`），用已有构建脚本生成自包含程序。在 PowerShell 中运行：
+
+   ```powershell
+   $env:TRISOUL_CU_WINDOWS_NATIVE_OUTPUT = 'C:\DSH-WinDesktop'
+   node scripts/build-computer-use-windows-native.mjs
+   if ($LASTEXITCODE -ne 0) { throw '桌面程序构建失败' }
+   ```
+
+   输出目录可自行选择。目标架构默认跟随 Windows Node.js；需要时通过 `TRISOUL_CU_WINDOWS_ARCH` 指定 `x64` 或 `arm64`。请使用该脚本保留构建身份，不直接使用标记为 `development` 的程序。
+
+2. 在 WSL 的当前 DSH profile 中，给 **Oh My DSH（`trisoul-x`）** 的配置填入 WSL 可访问的路径：
+
+   ```yaml
+   computerUseNativeBinary: /mnt/c/DSH-WinDesktop/OhMyDsh.Desktop.exe
+   ```
+
+   这是插件配置项，不是新增一个顶层插件。自定义盘符和挂载点按实际路径填写；修改后重启相应 DSH 服务。在 Oh My DSH 的设置界面中也可填写「桌面控制程序路径」。
+
+3. 在 WSL 中进入上述 OpenCU 目录，执行只读自检：
+
+   ```bash
+   node scripts/check-wsl-desktop.mjs /mnt/c/DSH-WinDesktop/OhMyDsh.Desktop.exe
+   ```
+
+   自检验证程序身份、MCP 连接、交互桌面和捕获能力，并列出应用数量；不会点击、输入或启动目标应用。成功后在电脑面板确认显示 Windows 桌面和窗口捕获状态，再选择应用。
+
+程序由用户手动管理，面板不提供安装、更新或移除按钮。更新时先停止桌面操作及 DSH 服务，再替换程序并重启服务。连接校验协议、平台及磁盘与运行中程序的构建身份；桥接模式不要求外部程序的构建哈希等于 WSL 内插件源码的哈希，因此插件升级后应使用配套源码重新构建 Windows 程序。
+
+此桥接只接通原生桌面后端；内置浏览器和 Chrome 扩展的运行位置、安装方式保持原有行为。跨平台自动回归覆盖后端选择、身份校验、设置界面和文档装配；WSL 真机的截图、输入、停止及进程清理仍需在目标设备验收，只读自检不能代替完整操控验证。
 
 ## 在本机运行自检
 
