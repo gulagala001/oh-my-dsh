@@ -13,6 +13,7 @@ async function fixture(t) {
   const root = await mkdtemp(join(tmpdir(), 'omd-worktree-')), repo = join(root, 'repo'), storage = join(root, 'worktrees');
   await mkdir(repo); t.after(() => rm(root, { recursive: true, force: true }));
   await git(repo, 'init', '-q'); await git(repo, 'config', 'user.name', 'Workflow Fixture'); await git(repo, 'config', 'user.email', 'workflow@example.invalid');
+  await git(repo, 'config', 'core.autocrlf', 'false');
   await writeFile(join(repo, 'file.txt'), 'baseline\n'); await writeFile(join(repo, '.gitignore'), 'ignored.txt\n');
   await git(repo, 'add', '.'); await git(repo, 'commit', '-qm', 'baseline');
   const policy = { mode: 'danger-full-access', workspaceRoot: repo };
@@ -21,12 +22,15 @@ async function fixture(t) {
 
 test('isolated checkout starts at HEAD, leaves parent edits intact, and removes only unchanged checkout', async t => {
   const fx = await fixture(t); await writeFile(join(fx.repo, 'file.txt'), 'parent dirty\n');
-  const worktree = await fx.create();
-  assert.equal(await readFile(join(worktree.artifact.path, 'file.txt'), 'utf8'), 'baseline\n');
-  assert.equal(await readFile(join(fx.repo, 'file.txt'), 'utf8'), 'parent dirty\n');
-  assert.equal((await worktree.settle()).retained, false);
-  await assert.rejects(stat(worktree.artifact.path), /ENOENT/);
-  assert.equal(await readFile(join(fx.repo, 'file.txt'), 'utf8'), 'parent dirty\n');
+  for (const autocrlf of ['false', 'true']) {
+    await git(fx.repo, 'config', 'core.autocrlf', autocrlf);
+    const worktree = await fx.create();
+    assert.equal(await readFile(join(worktree.artifact.path, 'file.txt'), 'utf8'), autocrlf === 'true' ? 'baseline\r\n' : 'baseline\n');
+    assert.equal(await readFile(join(fx.repo, 'file.txt'), 'utf8'), 'parent dirty\n');
+    assert.equal((await worktree.settle()).retained, false);
+    await assert.rejects(stat(worktree.artifact.path), /ENOENT/);
+    assert.equal(await readFile(join(fx.repo, 'file.txt'), 'utf8'), 'parent dirty\n');
+  }
 });
 
 test('changed, untracked, ignored, and committed workflow worktrees survive cleanup', async t => {
