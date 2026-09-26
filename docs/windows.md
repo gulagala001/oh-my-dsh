@@ -8,12 +8,12 @@ Web／源码建议使用 Node.js 24（插件声明最低 22.19），并准备 pn
 
 ## 安装与试用
 
-当前 Oh My DSH **0.1.7-rc.2.16** 适配 **DSH 0.1.7-rc.2**。需要桌面应用时，按[桌面版完整安装教程](upgrade.md#desktop)下载 Windows x64 安装包、配置模型，再在应用内「插件」安装 `github:gulagala001/oh-my-dsh#v0.1.7-rc.2.16`；安装或启停后完整退出应用并重新打开。不要用 CLI 修改 `desktop` profile。[本版验证与升级说明](release-0.1.7-rc.2.16.md)。
+当前 Oh My DSH **0.1.7-rc.2.17** 适配 **DSH 0.1.7-rc.2**。需要桌面应用时，按[桌面版完整安装教程](upgrade.md#desktop)下载 Windows x64 安装包、配置模型，再在应用内「插件」安装 `github:gulagala001/oh-my-dsh#v0.1.7-rc.2.17`；安装或启停后完整退出应用并重新打开。不要用 CLI 修改 `desktop` profile。[本版验证与升级说明](release-0.1.7-rc.2.17.md)。
 
 以下是 Web 安装。已有环境先停止服务并备份实际 `DSH_HOME`，沿用原 profile 和端口；首次安装可使用默认 `web`。在 PowerShell 7 中运行，无需先全局安装 `dsh`：
 
 ```powershell
-npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.16
+npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.17
 if ($LASTEXITCODE -ne 0) { throw '插件安装失败' }
 npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 ```

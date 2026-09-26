@@ -37,6 +37,8 @@
       name: trisoul_x/host/tools
     - id: omd-jobs
       name: trisoul_x/host/jobs-local
+    - id: omd-workflow-spawn
+      name: trisoul_x/host/workflow-spawn
     - id: omd-bash-sandbox
       name: trisoul_x/host/bash-sandbox
       disabled: !!js process.platform === 'win32'

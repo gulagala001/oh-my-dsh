@@ -109,13 +109,19 @@
                   toolName: subagent_fork
                   backgroundMode: continuable
           
-              - id: workflow-ptc
+              - id: workflow-ptc-original
                 name: '@deepseek-ai/dsh-workflow-ptc'
+                disabled: true
+              - id: workflow-ptc
+                name: 'trisoul_x/host/workflow-ptc'
                 config:
-                  provider: spawn
+                  provider: omd-workflow
           
-              - id: tool-workflow
+              - id: tool-workflow-original
                 name: '@deepseek-ai/dsh-tool-workflow'
+                disabled: true
+              - id: tool-workflow
+                name: 'trisoul_x/host/tool-workflow'
           
               - id: tool-ralph
                 name: '@deepseek-ai/dsh-tool-ralph'
@@ -243,13 +249,19 @@
                   toolName: subagent_fork
                   backgroundMode: continuable
           
-              - id: workflow-ptc
+              - id: workflow-ptc-original
                 name: '@deepseek-ai/dsh-workflow-ptc'
+                disabled: true
+              - id: workflow-ptc
+                name: 'trisoul_x/host/workflow-ptc'
                 config:
-                  provider: spawn
+                  provider: omd-workflow
           
-              - id: tool-workflow
+              - id: tool-workflow-original
                 name: '@deepseek-ai/dsh-tool-workflow'
+                disabled: true
+              - id: tool-workflow
+                name: 'trisoul_x/host/tool-workflow'
           
               - id: tool-ralph
                 name: '@deepseek-ai/dsh-tool-ralph'
