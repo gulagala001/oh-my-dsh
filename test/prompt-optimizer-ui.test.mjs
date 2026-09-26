@@ -14,7 +14,7 @@ test('optimizer stays usable across four themes, light/dark modes and narrow com
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.getByRole('button', { name: '设置', exact: true }).click();
     await page.getByRole('dialog').getByRole('button', { name: '外观', exact: true }).click();
-    await page.getByLabel('皮肤', { exact: true }).selectOption(skin);
+    await page.getByLabel('主题', { exact: true }).selectOption(skin);
     await page.getByLabel('明暗模式', { exact: true }).selectOption(mode);
     await until(async () => await page.locator('html').getAttribute('data-appearance') === mode);
     await page.keyboard.press('Escape');

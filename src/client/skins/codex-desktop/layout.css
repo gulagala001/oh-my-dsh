@@ -190,7 +190,7 @@ html.omd[data-omd-layout="codex-desktop"] {
   & :is(.tx-button, .cx-btn) { min-height: 30px; padding: 5px 12px; font-size: 12px; border-radius: 8px; }
   & :is(.tx-button.tx-primary, .cx-btn.primary) { border-radius: 999px; }
 
-  & .codex-appearance { padding: 0; font-size: 13px; }
+  & .codex-appearance { height: auto; overflow: visible; padding: 0; font-size: 13px; }
   & .codex-appearance h2 { margin: 0 0 24px; }
   & .codex-appearance h3 { margin: 24px 0 10px; }
   & .codex-setting-group { border: 1px solid var(--omd-border); border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
@@ -277,5 +277,5 @@ html.omd[data-omd-layout="codex-desktop"] {
   }
 }
 html.omd[data-omd-layout="codex-desktop"][data-appearance="light"] .hHd-Xa_root {
-  background: linear-gradient(#f7f8fa 0, #eceef1 160px);
+  background: linear-gradient(var(--omd-sidebar-top) 0, var(--omd-sidebar) 160px);
 }

@@ -19,7 +19,7 @@ test('bundled skins cover every settings page in both modes and keep narrow cont
   const pages = ['通用设置', '模型', '内置插件', '外观', 'Oh My DSH', '推荐插件', 'Agent 预设'];
   for (const skin of bundledSkins) {
     await selectPage('外观');
-    await page.getByLabel('皮肤', { exact: true }).selectOption(skin.id);
+    await page.getByLabel('主题', { exact: true }).selectOption(skin.id);
     for (const mode of ['light', 'dark']) {
       await selectPage('外观');
       await page.getByLabel('明暗模式', { exact: true }).selectOption(mode);

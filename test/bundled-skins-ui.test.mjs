@@ -37,10 +37,10 @@ test('bundled skins work in real chat, both modes, portals, narrow settings and 
   for (const skin of bundledSkins) {
     await page.setViewportSize({ width: 1440, height: 1100 });
     await openSettings();
-    const select = page.getByLabel('皮肤', { exact: true });
+    const select = page.getByLabel('主题', { exact: true });
     assert.equal(await select.locator(`option[value="${skin.id}"]`).count(), 1);
     await select.selectOption(skin.id); available.push(skin.id);
-    assert.equal(await page.getByRole('button', { name: '移除当前皮肤', exact: true }).count(), 0, 'bundled skins cannot be accidentally removed');
+    assert.equal(await page.getByRole('button', { name: '移除当前主题', exact: true }).count(), 0, 'bundled skins cannot be accidentally removed');
     for (const mode of ['light', 'dark']) {
       await page.getByLabel('明暗模式', { exact: true }).selectOption(mode);
       await until(async () => await page.locator('html').getAttribute('data-appearance') === mode);
@@ -81,9 +81,9 @@ test('bundled skins work in real chat, both modes, portals, narrow settings and 
     await processToggle.click(); await group.click();
   }
   assert.equal(available.length, bundledSkins.length);
-  await openSettings(); await page.getByRole('button', { name: '恢复默认皮肤', exact: true }).click();
+  await openSettings(); await page.getByRole('button', { name: '恢复默认主题', exact: true }).click();
   assert.equal(await page.locator('html').getAttribute('data-omd-skin'), null);
-  assert.equal(await page.getByLabel('皮肤', { exact: true }).locator('option').count(), bundledSkins.length + 1);
+  assert.equal(await page.getByLabel('主题', { exact: true }).locator('option').count(), bundledSkins.length + 1);
   assert.deepEqual(f.errors, []);
   if (process.env.TRISOUL_UI_ARTIFACTS) console.log('Bundled skin UI artifacts:', f.root);
 });

@@ -31,7 +31,7 @@ test('skin right panels paint only while open, including accessibility modes and
           { name: 'prefers-reduced-transparency', value: effect === 'transparency' ? 'reduce' : 'no-preference' },
         ] });
         await settings();
-        await page.getByLabel('皮肤', { exact: true }).selectOption(skin);
+        await page.getByLabel('主题', { exact: true }).selectOption(skin);
         await page.getByLabel('明暗模式', { exact: true }).selectOption(mode);
         await page.getByLabel('降低透明与动态效果').setChecked(effect === 'reduce-effects');
         await page.keyboard.press('Escape');

@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { _electron } from 'playwright';
+import sharp from 'sharp';
 import { until } from './fixtures/frontend.mjs';
 import { cleanupFixture, closeFixtureServer } from './fixtures/process.mjs';
 import { startFixture } from './fixtures/computer-use/server.mjs';
@@ -116,6 +117,17 @@ export function apply(ctx) {
   await page.getByText('桌面适配验证完成。', { exact: true }).waitFor();
   await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
   assert.equal(await page.locator('.tx-cu-chip').count(), 1);
+  await page.getByText('更多', { exact: true }).click();
+  await page.getByText('设置', { exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: '外观', exact: true }).click();
+  await page.getByLabel('主题', { exact: true }).selectOption('codex-desktop');
+  await page.getByLabel('配色', { exact: true }).selectOption('claude-cli-terminal');
+  const wallpaper = await sharp({ create: { width: 32, height: 32, channels: 3, background: '#416975' } }).png().toBuffer();
+  await page.getByLabel('背景图片', { exact: true }).setInputFiles({ name: 'desktop-wallpaper.png', mimeType: 'image/png', buffer: wallpaper });
+  await page.locator('html[data-omd-background]').waitFor();
+  await until(() => page.locator('[data-omd-background-layer] img').evaluate(img => img.complete && img.naturalWidth === 32));
+  await page.keyboard.press('Escape');
+
   const response = await page.evaluate(async id => { const r = await fetch('trisoul-x/api/state?session=' + id); return { ok: r.ok, body: await r.json() }; }, sessionId);
   assert.equal(response.ok, true, 'custom-protocol fetch reaches the authenticated host');
   exerciseComputer = true;
@@ -139,7 +151,7 @@ export function apply(ctx) {
   }, { op, sessionId, body });
   assert.equal((await computer('stop', {})).status, 'stopped');
   assert.equal((await computer('resume', {})).status, 'idle');
-  await page.getByRole('button', { name: '收起右侧边栏', exact: true }).click();
+  await page.locator('.codex-panel-toggle').click();
   await page.locator('[data-composer-input]').fill('保留桌面草稿');
   if (process.env.TRISOUL_UI_ARTIFACTS) { await mkdir(process.env.TRISOUL_UI_ARTIFACTS, { recursive: true }); await page.screenshot({ path: join(process.env.TRISOUL_UI_ARTIFACTS, 'desktop-installed.png') }); }
   await app.close(); app = undefined;
@@ -147,6 +159,11 @@ export function apply(ctx) {
   await page.getByText('验证桌面插件', { exact: true }).first().click();
   await page.getByText('桌面适配验证完成。', { exact: true }).waitFor();
   await until(async () => (await page.locator('[data-composer-input]').innerText()) === '保留桌面草稿');
+  assert.equal(await page.locator('html').getAttribute('data-omd-skin'), 'codex-desktop');
+  assert.equal(await page.locator('html').getAttribute('data-omd-palette'), 'claude-cli-terminal');
+  await page.locator('html[data-omd-background]').waitFor();
+  await until(() => page.locator('[data-omd-background-layer] img').evaluate(img => img.complete && img.naturalWidth === 32));
+
   const removed = await rpc('pluginManager/setBundleEnabled', { name: 'trisoul_x', enabled: false });
   assert.equal(removed.application, 'applied');
   await page.locator('[data-omd-desktop-restart]').waitFor();
@@ -154,6 +171,7 @@ export function apply(ctx) {
   await launch();
   await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor({ state: 'hidden' });
   assert.equal(await page.locator('.tx-cu-chip').count(), 0);
+  assert.equal(await page.locator('[data-omd-background-layer], style[data-omd-background-style]').count(), 0);
   await page.getByText('桌面适配验证完成。', { exact: true }).waitFor();
   assert.deepEqual(errors, []);
 });

@@ -12,7 +12,7 @@ test('collapsed theme rails align every navigation control and retain clickable 
     if (await page.locator('.hHd-Xa_collapsed').count()) await page.locator('.hHd-Xa_toggle').click();
     await page.getByRole('button', { name: '设置', exact: true }).click();
     await page.getByRole('dialog').getByRole('button', { name: '外观', exact: true }).click();
-    await page.getByLabel('皮肤', { exact: true }).selectOption(skin.id);
+    await page.getByLabel('主题', { exact: true }).selectOption(skin.id);
     await page.getByLabel('明暗模式', { exact: true }).selectOption(mode);
     await page.keyboard.press('Escape');
     await page.locator('.hHd-Xa_toggle').click();

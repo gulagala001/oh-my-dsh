@@ -1,5 +1,5 @@
-/* Active skins only. Functional host layout rules remain in shell.css. */
-html.omd[data-omd-skin] body {
+/* Colors can also decorate the host layout; geometry remains theme-scoped. */
+html[data-omd-colors] body {
   --dsw-specific-sidebar-fill: var(--omd-sidebar);
   --dsw-specific-sidebar-nav-item-active: var(--omd-selected);
   --dsw-specific-sidebar-nav-item-active-accent: var(--omd-selected);
@@ -8,15 +8,15 @@ html.omd[data-omd-skin] body {
   --dsw-specific-menu: var(--omd-surface-solid);
   --dsw-specific-selector: var(--omd-surface-solid);
   --dsw-specific-bubble: var(--omd-user-bg, var(--omd-selected));
-  font-family: var(--omd-font-ui); font-size: var(--omd-font-size);
   --tx-shell-text: var(--omd-text); --tx-shell-muted: var(--omd-muted);
   --tx-shell-bg: var(--omd-bg); --tx-shell-line: var(--omd-border); --tx-shell-hover: var(--omd-hover);
 }
-html.omd[data-omd-skin] :where(.tx-app,.tx-scope-chip,.tx-stats-line,.tx-bt-option,.tx-bt-notice,.tx-workbench,.tx-composer-dock,.cx-panel,.cx-settings,.cx-integrated,.cx-scope-chip) {
+html[data-omd-colors] :where(.tx-app,.tx-scope-chip,.tx-stats-line,.tx-bt-option,.tx-bt-notice,.tx-workbench,.tx-composer-dock,.cx-panel,.cx-settings,.cx-integrated,.cx-scope-chip) {
   --tx-bg: var(--omd-bg); --tx-text: var(--omd-text); --tx-muted: var(--omd-muted); --tx-line: var(--omd-border); --tx-soft: var(--omd-surface); --tx-blue: var(--omd-accent); --tx-tint: var(--omd-selected); --tx-hover: var(--omd-hover); --tx-danger: var(--omd-danger);
   --cx-bg: var(--omd-bg); --cx-text: var(--omd-text); --cx-muted: var(--omd-muted); --cx-line: var(--omd-border); --cx-soft: var(--omd-surface); --cx-blue: var(--omd-accent); --cx-tint: var(--omd-selected);
-  font-family: var(--omd-font-ui);
 }
+html.omd[data-omd-skin] body { font-family: var(--omd-font-ui); font-size: var(--omd-font-size); }
+html.omd[data-omd-skin] :where(.tx-app,.tx-scope-chip,.tx-stats-line,.tx-bt-option,.tx-bt-notice,.tx-workbench,.tx-composer-dock,.cx-panel,.cx-settings,.cx-integrated,.cx-scope-chip) { font-family: var(--omd-font-ui); }
 html.omd[data-omd-skin] :where([data-composer-card]) { border-color: var(--omd-border); border-radius: var(--omd-radius-composer); box-shadow: var(--omd-shadow); gap: var(--omd-gap); }
 html.omd[data-omd-skin] :where([data-composer-card]):focus-within { border-color: var(--omd-focus); }
 html.omd[data-omd-skin] :where([data-composer-input]) { font-family: var(--omd-font-body); line-height: var(--omd-line-height); }

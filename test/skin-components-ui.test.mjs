@@ -24,20 +24,20 @@ test('native skins reach real settings controls, selected states and button role
   await page.getByRole('button', { name: '设置', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('button', { name: '外观', exact: true }).click();
-  await page.getByLabel('导入皮肤', { exact: true }).setInputFiles({ name: 'roles.omd-skin.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(skin)) });
+  await page.getByLabel('导入主题', { exact: true }).setInputFiles({ name: 'roles.omd-skin.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(skin)) });
   await until(async () => await page.locator('html').getAttribute('data-omd-skin') === skin.id);
   const style = (locator, property, pseudo) => locator.evaluate((el, { property, pseudo }) => getComputedStyle(el, pseudo)[property], { property, pseudo });
   for (const mode of ['light', 'dark']) {
     await page.getByLabel('明暗模式', { exact: true }).selectOption(mode);
     await until(async () => await page.locator('html').getAttribute('data-appearance') === mode);
-    assert.equal(await style(page.getByLabel('皮肤', { exact: true }), 'borderRadius'), '9px', 'skin role overrides the host shared control radius');
+    assert.equal(await style(page.getByLabel('主题', { exact: true }), 'borderRadius'), '9px', 'skin role overrides the host shared control radius');
     await until(async () => await style(dialog.getByRole('button', { name: '外观', exact: true }), 'backgroundColor') === 'rgb(99, 55, 88)');
     assert.notEqual(await style(dialog.getByRole('button', { name: '通用设置', exact: true }), 'backgroundColor'), 'rgb(99, 55, 88)');
     await until(async () => await style(page.getByLabel('降低透明与动态效果'), 'accentColor') === 'rgb(160, 37, 146)');
-    const file = page.getByLabel('导入皮肤', { exact: true });
+    const file = page.getByLabel('导入主题', { exact: true });
     const expected = mode === 'dark' ? 'rgb(32, 35, 41)' : 'rgb(255, 255, 255)';
     await until(async () => await style(file, 'backgroundColor', '::file-selector-button') === expected);
-    assert.equal(await style(dialog.getByRole('button', { name: '恢复默认皮肤', exact: true }), 'borderRadius'), '21px');
+    assert.equal(await style(dialog.getByRole('button', { name: '恢复默认主题', exact: true }), 'borderRadius'), '21px');
     await dialog.getByRole('button', { name: 'Oh My DSH', exact: true }).click();
     const basic = page.locator('.cx-tabs').getByRole('button', { name: '常用', exact: true });
     await basic.waitFor();
@@ -66,9 +66,9 @@ test('native skins reach real settings controls, selected states and button role
     '.omd [data-omd-part="button"][aria-hidden="true"] { color: red; }',
     '.omd [data-omd-part="settings-content"] { display: none; }',
   ]) {
-    await page.getByLabel('导入皮肤', { exact: true }).setInputFiles({ name: 'invalid.omd-skin.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ ...skin, css })) });
+    await page.getByLabel('导入主题', { exact: true }).setInputFiles({ name: 'invalid.omd-skin.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ ...skin, css })) });
     await page.getByRole('alert').waitFor();
-    assert.equal(await style(page.getByLabel('皮肤', { exact: true }), 'borderRadius'), '9px', 'rejected selectors cannot replace the current skin');
+    assert.equal(await style(page.getByLabel('主题', { exact: true }), 'borderRadius'), '9px', 'rejected selectors cannot replace the current skin');
   }
   assert.deepEqual(errors, []);
 });

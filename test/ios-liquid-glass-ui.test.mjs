@@ -26,13 +26,13 @@ test('iOS Liquid Glass real shell, sidebar, settings, workbench and recovery', {
     return r.width > 0 && r.height > 0 && el.contains(hit);
   });
   await openSettings();
-  await page.getByLabel('皮肤', { exact: true }).selectOption('ios-liquid-glass');
+  await page.getByLabel('主题', { exact: true }).selectOption('ios-liquid-glass');
   await until(async () => await page.locator('html').getAttribute('data-omd-layout') === 'ios-liquid');
   for (const mode of ['light', 'dark']) {
     await page.getByLabel('明暗模式', { exact: true }).selectOption(mode);
     await until(async () => await page.locator('html').getAttribute('data-appearance') === mode);
     await capture('settings-' + mode);
-    assert.equal(await visibleHit(page.getByLabel('皮肤', { exact: true })), true, 'settings escape sidebar backdrop containing block');
+    assert.equal(await visibleHit(page.getByLabel('主题', { exact: true })), true, 'settings escape sidebar backdrop containing block');
     await page.keyboard.press('Escape');
     await capture('chat-' + mode);
     assert.equal(await style(page.locator('.hHd-Xa_root'), 'borderRadius'), '30px');
@@ -117,7 +117,7 @@ test('iOS Liquid Glass real shell, sidebar, settings, workbench and recovery', {
   await page.reload();
   await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
   assert.equal(await page.locator('html').getAttribute('data-omd-layout'), 'ios-liquid');
-  await openSettings(); await page.getByRole('button', { name: '恢复默认皮肤', exact: true }).click();
+  await openSettings(); await page.getByRole('button', { name: '恢复默认主题', exact: true }).click();
   assert.equal(await page.locator('html').getAttribute('data-omd-layout'), null);
   assert.equal(await page.locator('style[data-omd-skin-style]').count(), 0);
   assert.deepEqual(f.errors, []);

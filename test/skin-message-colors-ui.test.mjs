@@ -25,7 +25,7 @@ test('Codex user messages keep contrasting colors for plain text and computer re
       }
     }
   };
-  await settings(); await page.getByLabel('皮肤', { exact: true }).selectOption('codex-desktop');
+  await settings(); await page.getByLabel('主题', { exact: true }).selectOption('codex-desktop');
   for (const mode of ['light', 'dark']) {
     await page.getByLabel('明暗模式', { exact: true }).selectOption(mode);
     await until(async () => await page.locator('html').getAttribute('data-appearance') === mode);
@@ -36,7 +36,7 @@ test('Codex user messages keep contrasting colors for plain text and computer re
   await page.keyboard.press('Escape');
   await page.reload(); await page.locator('.tx-cu-user-bubble').waitFor();
   await checkColors('dark');
-  await settings(); await page.getByRole('button', { name: '恢复默认皮肤', exact: true }).click();
+  await settings(); await page.getByRole('button', { name: '恢复默认主题', exact: true }).click();
   await page.keyboard.press('Escape');
   const restored = await page.locator('.tx-cu-user-bubble').evaluate(el => ({ foreground: getComputedStyle(el).color, primary: getComputedStyle(el).getPropertyValue('--dsw-alias-label-primary').trim() }));
   assert.equal(await page.locator('html').getAttribute('data-omd-skin'), null);
