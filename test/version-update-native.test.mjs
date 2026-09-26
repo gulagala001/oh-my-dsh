@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, readFile, writeFile, realpath } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { frontendFixture } from './fixtures/frontend.mjs';
@@ -42,7 +42,9 @@ test('OMD itself updates through the native manager while its running server ret
   const pending = await f.api('/version-update');
   assert.equal(pending.phase, 'restart-required'); assert.equal(pending.targetVersion, latestVersion);
   const disk = JSON.parse(await readFile(join(f.home, 'profiles/trisoul-x/package.json'), 'utf8'));
-  assert.ok(disk.dependencies.trisoul_x.includes(artifact));
+  const installedSpec = disk.dependencies.trisoul_x;
+  assert.match(installedSpec, /^file:/);
+  assert.equal(await realpath(resolve(f.home, 'profiles/trisoul-x', installedSpec.slice(5))), await realpath(artifact), 'the installed file spec resolves to the exact update artifact, including Windows path separators');
   const { stdout } = await run(process.execPath, ['--input-type=module', '-e',
     "import { INSTALLED_VERSION } from './node_modules/trisoul_x/src/version.mjs'; process.stdout.write(INSTALLED_VERSION);"],
     { cwd: join(f.home, 'profiles/trisoul-x') });
