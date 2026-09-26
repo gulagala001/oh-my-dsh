@@ -72,3 +72,28 @@ export function RecommendedPlugins({ plugins = recommendedPlugins }) {
     </> : <div className="tx-recommended-empty"><span className="tx-recommended-empty-icon"><PluginIcon size={28}/></span><h4>推荐清单正在整理</h4><p>这里将展示精选的第三方插件。<br/>你可以在这里了解插件用途、作者，并前往项目页面。</p><span className="tx-recommended-coming">敬请期待</span></div>}
   </section>;
 }
+
+export function applyRecommendedPlugins(ctx) {
+  ctx.slots.inject('settings.section', () => {
+    let remove, alive = true, revision = 0;
+    const controller = new AbortController();
+    const update = config => {
+      if (!alive) return;
+      if (config.recommendedPluginsPageEnabled !== false) {
+        remove ??= ctx.slots.register({ name: 'settings.section', id: 'trisoul-x-recommended', order: 17, label: () => '推荐插件' }, RecommendedPlugins);
+      } else { remove?.(); remove = undefined; }
+    };
+    const saved = event => { revision++; update(event.detail); };
+    window.addEventListener('omd:settings-saved', saved);
+    const ticket = revision;
+    void fetch('trisoul-x/api/settings', { signal: controller.signal }).then(async response => {
+      if (!response.ok) throw Error(`HTTP ${response.status}`);
+      const config = await response.json();
+      if (revision === ticket) update(config);
+    }).catch(() => { if (revision === ticket) update({}); });
+    return () => {
+      alive = false; controller.abort();
+      window.removeEventListener('omd:settings-saved', saved); remove?.();
+    };
+  });
+}
