@@ -1,5 +1,6 @@
+import { runFile } from './run-file.mjs';
 import { chromium } from 'playwright';
-import { fork, execFile } from 'node:child_process';
+import { fork } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -7,11 +8,9 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { BrowserActions } from './browser-actions.mjs';
 export { browserKey } from './browser-actions.mjs';
-import { promisify } from 'node:util';
 import WebSocket from 'ws';
 import { BrowserTransport } from './browser-transport.mjs';
 
-const runFile = promisify(execFile);
 export function browserExecutablePath(requested) {
   if (requested) return requested;
   const installed = process.platform === 'darwin' ? ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'] : process.platform === 'win32' ? [process.env.PROGRAMFILES, process.env['PROGRAMFILES(X86)'], process.env.LOCALAPPDATA].filter(Boolean).map(base => join(base, 'Google/Chrome/Application/chrome.exe')) : ['/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'];

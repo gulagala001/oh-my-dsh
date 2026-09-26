@@ -1,7 +1,5 @@
-import {execFile} from 'node:child_process';
-import {promisify} from 'node:util';
+import { runFile as execute } from './run-file.mjs';
 
-const execute=promisify(execFile);
 export function externalWebUrl(value){
   if(typeof value!=='string')throw new Error('当前网页地址无效');
   let url;try{url=new URL(value);}catch{throw new Error('当前网页地址无效');}

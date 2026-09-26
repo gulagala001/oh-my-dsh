@@ -1,16 +1,15 @@
+import { runFile as run } from './run-file.mjs';
 import { existsSync, readFileSync } from 'node:fs';
 import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, rmdir, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { createHash, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { windowsNativeBuild } from './windows-native-build.mjs';
 import { nativeLock } from './native-lock.mjs';
 import { McpClient } from './mcp-client.mjs';
 
-const run = promisify(execFile), owner = 'trisoul-x-windows-desktop';
+const owner = 'trisoul-x-windows-desktop';
 const generation = /^[a-f0-9]{64}-[a-f0-9-]{36}$/;
 
 export class WindowsNativeRuntime {

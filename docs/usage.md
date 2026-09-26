@@ -2,7 +2,7 @@
 
 [返回项目首页](../README.md) · [安装](#安装到现有-dsh推荐) · [日常使用](#日常使用) · [CodeGraph](#codegraph) · [Computer Use](#computer-use) · [开发与验证](#开发与验证)
 
-当前 **0.1.7-rc.2.8 正式版** 适配 **DSH 0.1.7-rc.2**，内置 **OpenCU 1.1.5**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
+当前 **0.1.7-rc.2.9 正式版** 适配 **DSH 0.1.7-rc.2**，内置 **OpenCU 1.1.6**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
 自己安装可选[官方桌面版：下载与完整安装步骤](upgrade.md#desktop)或[Web 安装](#安装到现有-dsh推荐)。也可将 [AI 安装手册的网址](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/upgrade.md) 发给能操作电脑或终端的 AI，说明要安装桌面版还是 Web 版，让它按手册完成安装／升级。
 
@@ -10,7 +10,7 @@
 
 ## 安装到现有 DSH（推荐）
 
-**首次安装桌面应用请先看[桌面版完整教程](upgrade.md#desktop)，其中包含 Windows／Mac 下载、首次启动、模型配置和插件安装。** 官方桌面版使用 DSH 0.1.7-rc.2，在应用内「插件」页面安装 `github:gulagala001/oh-my-dsh#v0.1.7-rc.2.8`。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；Web 安装不会自动启用桌面插件。CLI 不能管理桌面保留的 `desktop` profile。以下命令适用于 Web，桌面实测范围见[本版说明](release-0.1.7-rc.2.8.md)。
+**首次安装桌面应用请先看[桌面版完整教程](upgrade.md#desktop)，其中包含 Windows／Mac 下载、首次启动、模型配置和插件安装。** 官方桌面版使用 DSH 0.1.7-rc.2，在应用内「插件」页面安装 `github:gulagala001/oh-my-dsh#v0.1.7-rc.2.9`。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；Web 安装不会自动启用桌面插件。CLI 不能管理桌面保留的 `desktop` profile。以下命令适用于 Web，桌面实测范围见[本版说明](release-0.1.7-rc.2.9.md)。
 
 桌面安装、更新、启用或停用后，先等任务结束，再使用应用菜单的「重启应用与 Host」。仅关闭窗口会留在后台，仅刷新页面不能完成切换。
 
@@ -19,7 +19,7 @@
 已有环境先等待任务结束，停止当前 DSH Web 并完整备份实际 DSH_HOME。确认继续使用原数据目录、profile 和端口，再运行：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.8
+npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.9
 ```
 
 然后按原来的方式重新启动 DSH，例如：
@@ -39,11 +39,11 @@ npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 
 从 0.1.7-rc.2.5 起，检查到新版后可在左上角版本图标打开的面板内点击“更新”。安装后仍需完整重启。更早版本首次升级到本版时使用下方原安装方式。
 
-更新时保持原安装方式、DSH_HOME、profile 和端口；先停止服务并备份数据。使用 npx 的用户重复上面的固定版本命令即可。全局 npm 安装用户执行 `npm install -g @deepseek-ai/dsh@0.1.7-rc.2`，确认 `dsh --version`，再执行 `dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.8`，按原方式启动；pnpm 全局安装则用 `pnpm add -g`。插件安装不会替你更新全局宿主。
+更新时保持原安装方式、DSH_HOME、profile 和端口；先停止服务并备份数据。使用 npx 的用户重复上面的固定版本命令即可。全局 npm 安装用户执行 `npm install -g @deepseek-ai/dsh@0.1.7-rc.2`，确认 `dsh --version`，再执行 `dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.9`，按原方式启动；pnpm 全局安装则用 `pnpm add -g`。插件安装不会替你更新全局宿主。
 
-源码用户先保留本地修改，再执行 `git fetch origin --tags`、`git switch --detach v0.1.7-rc.2.8`、`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`。若切换会覆盖本地修改，先保存自己的改动，不强制覆盖。默认数据在仓库的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
+源码用户先保留本地修改，再执行 `git fetch origin --tags`、`git switch --detach v0.1.7-rc.2.9`、`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`。若切换会覆盖本地修改，先保存自己的改动，不强制覆盖。默认数据在仓库的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
 
-重启后，版本面板的**当前版本**应是 `0.1.7-rc.2.8`，原模型和旧会话仍在；最新版本只代表远端发布记录。旧 V3 会话迁移会保留原日志，alpha.1 升至 alpha.2 继续使用 V4。回退时停止新服务，以原宿主、插件和完整备份在独立数据目录启动。
+重启后，版本面板的**当前版本**应是 `0.1.7-rc.2.9`，原模型和旧会话仍在；最新版本只代表远端发布记录。旧 V3 会话迁移会保留原日志，alpha.1 升至 alpha.2 继续使用 V4。回退时停止新服务，以原宿主、插件和完整备份在独立数据目录启动。
 
 卸载：
 
@@ -445,3 +445,7 @@ OMD 主会话使用 pi-ai 图片路由时，发送前按提供方的实际图片
 完整步骤统一维护在[升级与安装教程](upgrade.md)，包括 V4 会话迁移、自定义 profile、旧预设与插件处理，以及“远端最新版本”和“本地当前版本”的区别。
 
 整个插件启用或停用时浏览器会刷新一次，已保存的文字草稿和会话保留，尚未发送的附件需重新添加；普通功能开关不刷新页面。电脑工具路径修改保存后仍需重启。
+
+## 推荐插件页面显示
+
+在“设置 → Oh My DSH → 常用”调整“显示推荐插件页面”，点击“保存设置”后立即生效。默认开启；关闭仅隐藏该页面，不卸载已有插件，也不改变单独的自动更新设置。再次打开同一开关即可恢复入口。
