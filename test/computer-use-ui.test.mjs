@@ -42,7 +42,9 @@ for (const [backend, preset] of [['managed', 'trisoul-x'], ['managed', 'omd-ptc'
         arguments: JSON.stringify(preset === 'omd-ptc' ? { code: `return await tools.computer_use(${JSON.stringify(args)})`, description: args.title } : args) } }] }, finish_reason: 'tool_calls' };
     });
     await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '验证电脑工具的真实宿主接入' }] });
-    await page.getByText('OMD 电脑接入验证完成。', { exact: true }).waitFor();
+    // The first managed-browser launch may prepare its Windows runtime. Keep
+    // the same bounded tool-result wait used by the packaged desktop fixture.
+    await page.getByText('OMD 电脑接入验证完成。', { exact: true }).waitFor({ timeout: 45000 });
     assert.ok((await state()).target, JSON.stringify(await state()));
     const ready = await until(async () => { const value = await state(); return value.previewAt && value.target?.kind === 'tab' && value; });
     assert.ok(requests.length >= 2);

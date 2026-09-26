@@ -162,7 +162,7 @@ export function apply(ctx) { let seeded = false; ctx.on('session/created', sessi
   await welcome.or(failedBoot).waitFor();
   if (await failedBoot.isVisible()) throw Error('Browser boot failed: ' + [...errors, ...browserDiagnostics].join('\n').replace(/https?:\/\/[^\s)]+/g, '[bundle]') + '\n' + log.replace(/token=\S+/g, 'token=[redacted]'));
   await welcome.click();
-  await welcome.waitFor({ state: 'hidden' });
+  await welcome.waitFor({ state: 'hidden', timeout: process.platform === 'win32' ? 30000 : 10000 });
   await page.getByText('整理工作台和对话界面', { exact: true }).first().click();
   await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
   return { root, home, workspace, page, context, rpc, sessionId, errors, escapedPaths: proxy.escaped, diagnostics: () => browserDiagnostics, lifecycle: () => readFile(lifecycleFile, 'utf8'), log: () => log.replace(/token=\S+/g, 'token=[redacted]'), replyWith(factory){replyFactory=factory;}, holdNextReply() {

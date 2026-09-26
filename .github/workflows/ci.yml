@@ -17,9 +17,9 @@ concurrency:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
-    # Node 22's serial browser suite takes longer than Node 24's; Windows also
-    # needs more time for browser installation. Individual test timeouts remain.
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 30 || matrix.node == '22.19.0' && 25 || 20 }}
+    # The full serial browser suite exceeds 20 minutes on hosted Linux runners;
+    # Node 22 needs additional headroom. Per-test deadlines still catch hangs.
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 30 || matrix.node == '22.19.0' && 40 || 35 }}
     strategy:
       fail-fast: false
       matrix:
