@@ -12,7 +12,9 @@ test('model panel saves real effort and independent mode, supports native select
   await trigger.click();
   const panel = page.getByRole('dialog',{name:'模型与思考强度',exact:true}), slider = panel.getByRole('slider',{name:'思考强度'});
   await until(async () => await slider.isEnabled());
+  await until(async () => await panel.evaluate(el=>el.getAnimations().every(animation=>animation.playState==='finished')));
   const max = Number(await slider.getAttribute('max'));
+  const tickCenters=await panel.locator('.omd-effort-ticks i').evaluateAll(items=>items.map(el=>{const r=el.getBoundingClientRect();return r.x+r.width/2;}));
   await slider.press('End');
   await until(async () => (await mode()).enabled);
   assert.equal((await mode()).selected.reasoningEffort,'xhigh');
@@ -21,8 +23,10 @@ test('model panel saves real effort and independent mode, supports native select
   assert.equal(await panel.locator('.omd-effort-particle').count(),14);
   assert.equal(await panel.locator('.omd-effort-glow').evaluate(el=>getComputedStyle(el).animationName),'omd-ultra-glow');
   assert.equal(await panel.locator('.omd-effort-thumb').evaluate(el=>getComputedStyle(el).borderRadius),'50%');
-  await until(async()=>await panel.locator('.omd-effort-ticks').evaluate(el=>getComputedStyle(el).opacity==='0'));
-  assert.match(await panel.locator('.omd-effort-ticks').evaluate(el=>getComputedStyle(el).transform),/0\.75/);
+  await until(async()=>await panel.locator('.omd-effort-ticks i').first().evaluate(el=>getComputedStyle(el).opacity==='0'));
+  const fadedCenters=await panel.locator('.omd-effort-ticks i').evaluateAll(items=>items.map(el=>{const r=el.getBoundingClientRect();return r.x+r.width/2;}));
+  assert.ok(fadedCenters.every((center,i)=>Math.abs(center-tickCenters[i])<1),'ticks shrink in place without moving along the slider');
+  assert.match(await panel.locator('.omd-effort-ticks i').first().evaluate(el=>getComputedStyle(el).transform),/0\.75/);
   if (process.env.TRISOUL_UI_ARTIFACTS) await page.screenshot({path:join(fx.root,'model-ultracode-light.png')});
   await slider.press('ArrowLeft');
   await until(async () => !(await mode()).enabled);
