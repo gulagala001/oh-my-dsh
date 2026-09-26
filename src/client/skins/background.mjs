@@ -1,9 +1,9 @@
 export const BACKGROUND_DB = 'omd.appearance.background.v1';
 export const MAX_BACKGROUND_BYTES = 15 * 1024 * 1024;
-export const backgroundDefaults = Object.freeze({ blur: 0, shade: 0, opacity: 85, fit: 'cover' });
+export const backgroundDefaults = Object.freeze({ blur: 0, shade: 0, opacity: 85, fit: 'cover', scope: 'all' });
 export function normalizeBackground(value = {}) {
   const number = (key, min, max) => Number.isFinite(value[key]) ? Math.max(min, Math.min(max, value[key])) : backgroundDefaults[key];
-  return { blur: number('blur', 0, 30), shade: number('shade', -80, 80), opacity: number('opacity', 20, 100), fit: ['cover', 'contain'].includes(value.fit) ? value.fit : 'cover' };
+  return { blur: number('blur', 0, 30), shade: number('shade', -80, 80), opacity: number('opacity', 20, 100), fit: ['cover', 'contain'].includes(value.fit) ? value.fit : 'cover', scope: ['all', 'conversation', 'sidebar'].includes(value.scope) ? value.scope : 'all' };
 }
 async function prepareImage(file) {
   if (!file || !['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw Error('请选择 PNG、JPEG 或 WebP 图片');
@@ -34,11 +34,24 @@ export function createBackgroundRuntime(css, changed, { recovery = false } = {})
   let channel;
   try { channel = new BroadcastChannel(BACKGROUND_DB); } catch { /* Local persistence still works without cross-tab messaging. */ }
   const emit = () => { if (!disposed) changed({ ...state }); };
+  // Only move our own layer. The host owns its columns and may remount them;
+  // absolute positioning follows their size without viewport polling.
+  const mount = () => {
+    if (disposed) return;
+    const target = state.scope === 'all' ? document.body
+      : document.querySelector(state.scope === 'conversation' ? '.pI_x6G_centerCol' : '.pI_x6G_sidebarCol');
+    const parent = target || document.body;
+    if (layer.parentElement !== parent) parent.prepend(layer);
+    layer.hidden = !objectUrl || recovery || reduced || !target;
+  };
+  const observer = new MutationObserver(mount);
+  observer.observe(document.body, { childList: true, subtree: true });
   const render = () => {
     if (disposed) return;
     const active = Boolean(objectUrl) && !recovery && !reduced;
-    document.documentElement.toggleAttribute('data-omd-background', active);
-    layer.hidden = !active;
+    if (active) document.documentElement.setAttribute('data-omd-background', state.scope);
+    else document.documentElement.removeAttribute('data-omd-background');
+    mount();
     layer.style.setProperty('--omd-wallpaper-blur', `${state.blur}px`);
     layer.style.setProperty('--omd-wallpaper-shade', state.shade < 0 ? `rgb(0 0 0 / ${-state.shade / 100})` : `rgb(255 255 255 / ${state.shade / 100})`);
     image.style.objectFit = state.fit;
@@ -117,7 +130,7 @@ export function createBackgroundRuntime(css, changed, { recovery = false } = {})
     async clear() { ++uploadSequence; await mutate(() => undefined); },
     reduceEffects(value) { reduced = value; render(); },
     dispose() {
-      disposed = true; ++sequence; ++uploadSequence; channel?.close(); db?.close();
+      disposed = true; ++sequence; ++uploadSequence; observer.disconnect(); channel?.close(); db?.close();
       image.onerror = null; if (objectUrl) URL.revokeObjectURL(objectUrl);
       layer.remove(); style.remove(); document.documentElement.removeAttribute('data-omd-background');
       document.documentElement.style.removeProperty('--omd-panel-opacity');

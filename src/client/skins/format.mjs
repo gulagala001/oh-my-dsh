@@ -65,9 +65,10 @@ export const parts = {
   tab: '.cx-tabs > button, .tx-tabs > button, .wSkVaW_tab',
   segments: '.cx-segments, .tx-segments',
   segment: '.cx-segments > button, .tx-segments > button',
-  'form-control': 'select, input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([data-composer-input]), textarea:not([data-composer-input])',
+  // The scope chip owns its border and focus ring; its select is an unboxed label.
+  'form-control': 'select:not(.cx-scope-chip select), input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([data-composer-input]), textarea:not([data-composer-input])',
   'field-input': 'input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), textarea:not([data-composer-input])',
-  select: 'select', checkbox: 'input[type="checkbox"]:not([role="switch"])',
+  select: 'select:not(.cx-scope-chip select)', checkbox: 'input[type="checkbox"]:not([role="switch"])',
   switch: 'input[role="switch"], button[role="switch"]',
   'file-input': 'input[type="file"]',
   savebar: '.cx-savebar, .cx-actions, .omd-appearance-actions',

@@ -1,4 +1,5 @@
 import React from 'react';
+import { AdvancedAppearance } from './advanced.jsx';
 
 export function Personalization({ runtime, state, act }) {
   const bg = state.background;
@@ -28,14 +29,16 @@ export function Personalization({ runtime, state, act }) {
     {bg.url && <>
       <img className="omd-background-preview" src={bg.url} alt="自定义背景预览"/>
       <p className="omd-appearance-help omd-background-name">{bg.name}</p>
+      <label className="omd-appearance-row"><span>背景显示区域</span><select aria-label="背景显示区域" value={bg.scope} onChange={e => act(() => runtime.background.update({ scope: e.target.value }))}><option value="all">整个界面</option><option value="conversation">仅会话区</option><option value="sidebar">仅左侧栏</option></select></label>
       <label className="omd-appearance-row"><span>图片显示</span><select aria-label="图片显示" value={bg.fit} onChange={e => act(() => runtime.background.update({ fit: e.target.value }))}><option value="cover">填满背景</option><option value="contain">完整显示</option></select></label>
       {range('blur', '背景模糊', 0, 30, 'px')}
       {range('shade', '背景明暗', -80, 80, '%', '负值压暗，正值提亮')}
-      {range('opacity', '面板不透明度', 20, 100, '%', '只调整面板底色，不改变文字透明度')}
+      {range('opacity', '面板不透明度', 20, 100, '%', '越低壁纸越明显；100% 时面板遮住壁纸，文字不受影响')}
       <button type="button" className="tx-button" onClick={() => act(() => runtime.background.clear())}>恢复默认背景</button>
       {state.reduceEffects && <p className="omd-appearance-help">已开启“降低透明与动态效果”，背景暂不显示，图片与设置仍保留。</p>}
     </>}
     <p className="omd-appearance-help">图片仅保存在当前浏览器，不上传、不发送给模型；切换主题不会清除配色或背景。</p>
     {bg.error && <p role="alert">{bg.error}</p>}
+    <AdvancedAppearance {...{ runtime, state, act }}/>
   </div>;
 }

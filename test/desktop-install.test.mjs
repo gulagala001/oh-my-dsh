@@ -126,6 +126,15 @@ export function apply(ctx) {
   const wallpaper = await sharp({ create: { width: 32, height: 32, channels: 3, background: '#416975' } }).png().toBuffer();
   await page.getByLabel('背景图片', { exact: true }).setInputFiles({ name: 'desktop-wallpaper.png', mimeType: 'image/png', buffer: wallpaper });
   await page.locator('html[data-omd-background]').waitFor();
+  await page.getByLabel('背景显示区域', { exact: true }).selectOption('conversation');
+  await page.locator('.omd-advanced > summary').click();
+  await page.getByLabel('Logo 与名称', { exact: true }).selectOption('native');
+  await page.getByLabel('浏览器标题', { exact: true }).selectOption('custom');
+  await page.getByLabel('标题名称', { exact: true }).fill('桌面定制');
+  await page.getByLabel('标题名称', { exact: true }).press('Enter');
+  await page.getByLabel('启用高级外观定制', { exact: true }).check();
+  await page.getByLabel('对话字号', { exact: true }).fill('17');
+  await page.getByLabel('对话字号', { exact: true }).press('Enter');
   await until(() => page.locator('[data-omd-background-layer] img').evaluate(img => img.complete && img.naturalWidth === 32));
   await page.keyboard.press('Escape');
 
@@ -162,7 +171,11 @@ export function apply(ctx) {
   await until(async () => (await page.locator('[data-composer-input]').innerText()) === '保留桌面草稿');
   assert.equal(await page.locator('html').getAttribute('data-omd-skin'), 'codex-desktop');
   assert.equal(await page.locator('html').getAttribute('data-omd-palette'), 'palette:lavender');
-  await page.locator('html[data-omd-background]').waitFor();
+  await page.locator('html[data-omd-background="conversation"]').waitFor();
+  assert.equal(await page.locator('html').getAttribute('data-omd-custom'), '');
+  assert.equal(await page.locator('.hHd-Xa_logoRow .tx-brand-mark').count(), 0);
+  assert.match(await page.title(), /桌面定制$/);
+  assert.equal(await page.locator('[data-composer-input]').evaluate(el => getComputedStyle(el).fontSize), '17px');
   await until(() => page.locator('[data-omd-background-layer] img').evaluate(img => img.complete && img.naturalWidth === 32));
 
   const removed = await rpc('pluginManager/setBundleEnabled', { name: 'trisoul_x', enabled: false });
@@ -172,7 +185,8 @@ export function apply(ctx) {
   await launch();
   await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor({ state: 'hidden' });
   assert.equal(await page.locator('.tx-cu-chip').count(), 0);
-  assert.equal(await page.locator('[data-omd-background-layer], style[data-omd-background-style]').count(), 0);
+  assert.equal(await page.locator('[data-omd-background-layer], style[data-omd-background-style], style[data-omd-custom-style], link[data-omd-favicon]').count(), 0);
+  assert.match(await page.title(), /DeepSeek Harness$/);
   await page.getByText('桌面适配验证完成。', { exact: true }).waitFor();
   assert.deepEqual(errors, []);
 });
