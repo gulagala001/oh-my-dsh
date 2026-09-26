@@ -1,12 +1,13 @@
 import { bundledSkins } from './bundled.mjs';
 import { validateSkin, compileSkinCss } from './format.mjs';
 import { hostTokens, tokenCss } from './mapping.mjs';
-import { composePalette } from './palette.mjs';
+import { composePalette, paletteCatalog } from './palette.mjs';
+import { extraPalettes } from './palettes.mjs';
 import { createBackgroundRuntime, backgroundDefaults } from './background.mjs';
 export const STORAGE_KEY = 'omd.skins.v1';
 export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss = '') {
   const recovery = new URLSearchParams(location.search).get('omd-skin') === 'default';
-  let state = { skins: [], selected: 'default', palette: 'theme', reduceEffects: false, background: { ...backgroundDefaults, name: '', url: '', loading: false, error: '' }, error: '' };
+  let state = { skins: [], palettes: paletteCatalog([]), selected: 'default', palette: 'theme', reduceEffects: false, background: { ...backgroundDefaults, name: '', url: '', loading: false, error: '' }, error: '' };
   let disposeTokens, style, disposed = false;
   const listeners = new Set();
   const prepare = value => {
@@ -30,11 +31,12 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
         } catch { next.error = '部分皮肤数据无效，已跳过；可重新导入。'; }
       }
       if (ready.has(saved.selected)) next.selected = saved.selected;
-      if (ready.has(saved.palette)) next.palette = saved.palette;
+      if (ready.has(saved.palette) || extraPalettes.some(p => p.id === saved.palette)) next.palette = saved.palette;
       next.reduceEffects = saved.reduceEffects === true;
     } catch { next.error = '无法读取皮肤记录，已使用默认外观。'; }
     if (recovery) { next.selected = 'default'; next.palette = 'theme'; }
     next.skins = [...ready.values()].map(item => item.skin);
+    next.palettes = paletteCatalog(next.skins);
     state = next; prepared = ready;
   };
   const syncMode = snapshot => {
@@ -45,7 +47,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
   const apply = () => {
     const root = document.documentElement;
     const active = prepared.get(state.selected);
-    const source = state.palette === 'theme' ? undefined : prepared.get(state.palette)?.skin;
+    const source = state.palettes.find(p => p.id === state.palette);
     const composed = composePalette(active?.skin, source);
     background.reduceEffects(state.reduceEffects);
     // Remove the previous layer before installing the next; all values were parsed first.
@@ -69,7 +71,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
   const save = next => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ skins: next.skins.filter(skin => !skin.builtin), selected: next.selected, palette: next.palette, reduceEffects: next.reduceEffects })); }
     catch { throw new Error('浏览器存储不可用或空间不足，未更改皮肤。请移除不用的皮肤后重试。'); }
-    state = { ...next, error: '' }; apply(); emit();
+    state = { ...next, palettes: paletteCatalog(next.skins), error: '' }; apply(); emit();
   };
   read();
   const offTheme = ctx.on('theme/change', syncMode);
@@ -112,7 +114,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
       save({ ...state, selected: id });
     },
     selectPalette(id) {
-      if (id !== 'theme' && !prepared.has(id)) throw new Error('配色不存在，请重新选择');
+      if (id !== 'theme' && !state.palettes.some(p => p.id === id)) throw new Error('配色不存在，请重新选择');
       save({ ...state, palette: id });
     },
     import(value) {

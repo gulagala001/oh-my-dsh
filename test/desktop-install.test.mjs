@@ -121,7 +121,8 @@ export function apply(ctx) {
   await page.getByText('设置', { exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: '外观', exact: true }).click();
   await page.getByLabel('主题', { exact: true }).selectOption('codex-desktop');
-  await page.getByLabel('配色', { exact: true }).selectOption('claude-cli-terminal');
+  assert.equal(await page.getByLabel('配色', { exact: true }).locator('option').count(), 29);
+  await page.getByLabel('配色', { exact: true }).selectOption('palette:lavender');
   const wallpaper = await sharp({ create: { width: 32, height: 32, channels: 3, background: '#416975' } }).png().toBuffer();
   await page.getByLabel('背景图片', { exact: true }).setInputFiles({ name: 'desktop-wallpaper.png', mimeType: 'image/png', buffer: wallpaper });
   await page.locator('html[data-omd-background]').waitFor();
@@ -160,7 +161,7 @@ export function apply(ctx) {
   await page.getByText('桌面适配验证完成。', { exact: true }).waitFor();
   await until(async () => (await page.locator('[data-composer-input]').innerText()) === '保留桌面草稿');
   assert.equal(await page.locator('html').getAttribute('data-omd-skin'), 'codex-desktop');
-  assert.equal(await page.locator('html').getAttribute('data-omd-palette'), 'claude-cli-terminal');
+  assert.equal(await page.locator('html').getAttribute('data-omd-palette'), 'palette:lavender');
   await page.locator('html[data-omd-background]').waitFor();
   await until(() => page.locator('[data-omd-background-layer] img').evaluate(img => img.complete && img.naturalWidth === 32));
 
