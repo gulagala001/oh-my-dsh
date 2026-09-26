@@ -1,12 +1,10 @@
+import { runFile } from './run-file.mjs';
 import { createRequire } from 'node:module';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { browserExecutablePath } from './browser.mjs';
 
 const require = createRequire(import.meta.url);
-const runFile = promisify(execFile);
 
 /** Prepare the bundled browser without opening a browser or a user profile. */
 export async function installBrowser({ executablePath, signal, resolveExecutable = browserExecutablePath, run = runFile } = {}) {

@@ -1,3 +1,4 @@
+import { runFile } from './run-file.mjs';
 import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, rename, rm, stat } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
@@ -7,7 +8,6 @@ import { spawn, execFile } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { McpClient } from './mcp-client.mjs';
 import { point } from './coordinates.mjs';
-import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { nativeBuildInfo, NATIVE_PROTOCOL } from './native-build.mjs';
 import { nativeLock } from './native-lock.mjs';
@@ -15,7 +15,6 @@ import { nativePastePayload } from './paste.mjs';
 import { nativeObservation, nativeState } from './native-state.mjs';
 import { nativeKeyChord, nativeClickOptions } from './native-keys.mjs';
 
-const runFile = promisify(execFile);
 const bundleSuffix = '/Contents/MacOS/trisoul-computer-use';
 
 export function defaultNativeBinary(applications = join(homedir(), 'Applications')) {

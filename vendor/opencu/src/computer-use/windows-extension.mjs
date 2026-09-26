@@ -1,5 +1,4 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
+import { runFile as run } from './run-file.mjs';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -8,7 +7,6 @@ import { createHash, randomUUID } from 'node:crypto';
 import { windowsBridgeBuild } from './windows-build.mjs';
 import { nativeLock } from './native-lock.mjs';
 
-const run = promisify(execFile);
 
 export class WindowsExtensionRuntime {
   constructor(directory) { this.directory = join(directory, 'windows-browser-bridge'); }

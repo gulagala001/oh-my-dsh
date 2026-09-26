@@ -784,14 +784,32 @@ export class ComputerUseManager {
   }
   async setupStatus() {
     await this.extensionReady;
-    const executable = this.browser.runtimePath ?? browserExecutablePath(this.browser.executablePath);
-    const native = { platform: process.platform, supported: this.native.supported(), installed: this.native.available(), installing: !!this.native.installing, removing: !!this.native.removing, removable: typeof this.native.uninstall === 'function' && !this.native.externalBinary, accessibility: null, screenRecording: null };
-    if (native.installed) {
-      try { Object.assign(native,await this.native.installationStatus());const permissions = await this.native.permissions('ui-permissions'); if (permissions.platform === 'win32') { native.interactive = permissions.interactive; native.captureSupported = permissions.capture_supported; } else { native.accessibility = permissions.accessibility; native.screenRecording = permissions.screen_recording; } }
-      catch (error) { native.error = error.message; if (native.platform === 'win32') native.repairRequired = true; }
-    }
+    const browser = { installed: null, name: 'Chrome / Chromium', path: null, running: !!this.browser.endpoint && !this.browser.closing };
+    try {
+      const executable = this.browser.runtimePath ?? browserExecutablePath(this.browser.executablePath);
+      Object.assign(browser, { installed: existsSync(executable), name: executable.includes('ms-playwright') ? 'Chromium · Playwright 固定版本' : 'Chrome / Chromium', path: executable });
+    } catch (error) { browser.error = error.message; }
+    const native = { platform: process.platform, supported: this.native.supported(), installed: null, installing: !!this.native.installing, removing: !!this.native.removing, removable: typeof this.native.uninstall === 'function' && !this.native.externalBinary, accessibility: null, screenRecording: null };
+    try {
+      native.installed = this.native.available();
+      if (native.installed) {
+        Object.assign(native, await this.native.installationStatus());
+        const permissions = await this.native.permissions('ui-permissions');
+        if (permissions.platform === 'win32') { native.interactive = permissions.interactive; native.captureSupported = permissions.capture_supported; }
+        else { native.accessibility = permissions.accessibility; native.screenRecording = permissions.screen_recording; }
+      }
+    } catch (error) { native.error = error.message; if (native.platform === 'win32') native.repairRequired = true; }
     const browsers = this.extensionHub.list();
-    return { browser: { installed: existsSync(executable), name: executable.includes('ms-playwright') ? 'Chromium · Playwright 固定版本' : 'Chrome / Chromium', path: executable, running: !!this.browser.endpoint && !this.browser.closing }, extension: { ready: !!this.extensionHub.server && !this.extensionHub.server.failure, browsers, error: this.extensionError ?? this.extensionHub.server?.failure?.message ?? null, installation: await this.extensionInstaller.status(browsers) }, native };
+    let installation;
+    try { installation = await this.extensionInstaller.status(browsers); }
+    catch (error) {
+      // Unknown is not uninstalled. Retain successful checks and live connections.
+      installation = { supported: this.extensionInstaller.supported(), platform: this.extensionInstaller.platform,
+        preparing: !!this.extensionInstaller.preparing, prepared: null, error: error.message,
+        extensionPath: this.extensionInstaller.extensionPath, browserProfile: this.extensionInstaller.profile };
+    }
+    return { browser, extension: { ready: !!this.extensionHub.server && !this.extensionHub.server.failure, browsers,
+      error: [this.extensionError ?? this.extensionHub.server?.failure?.message, installation.error].filter(Boolean).join('；') || null, installation }, native };
   }
   async installExtension({ takeover = true } = {}) {
     return this.configureExtension('install', async () => {
