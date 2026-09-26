@@ -843,3 +843,1485 @@ index 963fbeaa..229efee6 100644
            const spec = ctx.shell.resolve({ ...request, onExpiry: 'none' })
            let attached: StartedJob | undefined
            try {
+diff --git a/packages/workflow/workflow-ptc/src/guest-types.ts b/packages/workflow/workflow-ptc/src/guest-types.ts
+--- a/packages/workflow/workflow-ptc/src/guest-types.ts
++++ b/packages/workflow/workflow-ptc/src/guest-types.ts
+@@ -56,4 +56,5 @@
+    * @returns Null after the host accepts every event.
+    */
+   progress(events: WorkflowProgress[]): Promise<null>
++  loadWorkflow(reference: string | { scriptPath: string }): Promise<{ meta: import('@deepseek-ai/dsh-workflow').WorkflowMeta; body: string }>
+ }
+diff --git a/packages/workflow/workflow-ptc/src/guest.ts b/packages/workflow/workflow-ptc/src/guest.ts
+--- a/packages/workflow/workflow-ptc/src/guest.ts
++++ b/packages/workflow/workflow-ptc/src/guest.ts
+@@ -47,6 +47,7 @@
+     agentEnd: (info) => { send({ type: 'agent-end', info }) },
+   }
+   const children: ChildPort = {
++    loadWorkflow: reference => host.loadWorkflow(reference),
+     async startAgent(request) {
+       const { callId, childId } = await host.startChild(request)
+       const result = host.childResult({ callId })
+@@ -63,7 +64,8 @@
+       }
+     },
+   }
+-  const execution = new WorkflowExecution(init.meta, init.body, init.args, init.limits, observer, children)
++  const execution = new WorkflowExecution(init.meta, init.body, init.args, init.limits, observer, children,
++    { started: 0, activeSlots: 0, slotWaiters: [], budget: init.budget ?? { total: null, spent: 0 } })
+   const result = await execution.drive()
+   await drain()
+   return progressError === undefined ? result : {
+diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/workflow-ptc/src/host.ts
+--- a/packages/workflow/workflow-ptc/src/host.ts
++++ b/packages/workflow/workflow-ptc/src/host.ts
+@@ -1,5 +1,6 @@
+ /** Workflow child ownership and progress over the shared sandboxed PTC executor. */
+ import type { Context } from '@deepseek-ai/cordis'
++import { existsSync } from 'node:fs'
+ import type { Agent } from '@deepseek-ai/dsh-agent'
+ import type { PtcBindingFunction, PtcJsonValue, PtcRuntime } from '@deepseek-ai/dsh-ptc-runtime'
+ import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
+@@ -15,11 +16,32 @@
+ import { renderThrown } from './realm.ts'
+ import type { ExecutionObserver } from './runtime.ts'
+ import type { ChildStartRequest, WorkerInit } from './types.ts'
++import type { ChildResult } from './types.ts'
++import { WorkflowJournal, workflowPaths } from './journal.ts'
++import { serializeWorkflowSource } from './source.ts'
++import type { WorktreeArtifact } from './worktree.ts'
++import type { WorkflowSpawnOptions } from './spawn.ts'
++
++export interface WorkflowSupport {
++  root: string
++  resumeFromRunId?: string
++  budget?(): { total: number | null; spent: number; unmetered?: number }
++  budgetOwner?: { sessionId: string; poolId: string }
++  loadWorkflow(reference: string | { scriptPath: string }, signal: AbortSignal): Promise<{ meta: WorkflowMeta; body: string }>
++  childType?(id?: string): Promise<{ id?: string; fingerprint?: string }>
++}
++
++// A failed native disposal cannot prove quiescence. Keep its kernel leases until
++// process exit rather than allowing a second run to race possibly live children.
++const unquiescedJournals = new Set<WorkflowJournal>()
+ 
+ interface ChildRecord {
+   readonly callId: number
+   readonly run: SubagentRun
+   disposal?: Promise<void>
++  result?: ChildResult
++  cached?: boolean
++  resultPromise?: Promise<PtcJsonValue>
+ }
+ 
+ const GUEST_URL = `data:text/javascript,${encodeURIComponent(WORKFLOW_GUEST_SOURCE)}`
+@@ -46,6 +68,16 @@
+   const prompt = text(request.prompt, 'prompt')
+   const provider = request.provider === undefined ? undefined : text(request.provider, 'provider')
+   const model = request.model === undefined ? undefined : text(request.model, 'model')
++  if (!Number.isSafeInteger(request.seq) || (request.seq as number) < 1) throw new Error('workflow child sequence must be a positive integer')
++  const extras: Partial<ChildStartRequest> = {}
++  for (const key of ['provider', 'model', 'effort', 'agentType'] as const) {
++    if (request[key] !== undefined) {
++      const value = text(request[key], key)
++      if (!value.trim() || value !== value.trim()) throw new Error(`workflow ${key} must be non-empty and normalized`)
++      extras[key] = value
++    }
++  }
++  if (request.isolation !== undefined && request.isolation !== 'worktree') throw new Error('workflow isolation must be worktree')
+   let schema: ObjectJsonSchema | undefined
+   if (request.schema !== undefined) {
+     const candidate = object(request.schema)
+@@ -53,10 +85,13 @@
+     schema = candidate
+   }
+   return {
++    seq: request.seq as number,
+     prompt,
+     ...provider === undefined ? {} : { provider },
+     ...model === undefined ? {} : { model },
+     ...schema === undefined ? {} : { schema },
++    ...extras,
++    ...request.isolation === undefined ? {} : { isolation: 'worktree' },
+   }
+ }
+ 
+@@ -111,6 +146,8 @@
+  */
+ export class PtcWorkflowRun implements WorkflowRun {
+   readonly result: Promise<WorkflowResult>
++  private readonly readiness = Promise.withResolvers<void>()
++  readonly ready = this.readiness.promise
+   private readonly controller = new AbortController()
+   private readonly children = new Map<number, ChildRecord>()
+   private readonly pending = new Set<Promise<unknown>>()
+@@ -120,6 +157,13 @@
+   private cancelReason: string | undefined
+   private disposed: Promise<void> | undefined
+   private readonly externalAbort: () => void
++  private journal?: WorkflowJournal
++  private cleanupError?: unknown
++  readonly scriptPath?: string
++  readonly transcriptDir?: string
++  private admission: Promise<unknown> = Promise.resolve()
++  private readonly artifacts = new Map<number, WorktreeArtifact>()
++  get worktrees(): WorktreeArtifact[] { return [...this.artifacts.values()].map(value => ({ ...value })) }
+ 
+   constructor(
+     private readonly ctx: Context,
+@@ -133,7 +177,10 @@
+     private readonly policy: SandboxExecutionPolicy,
+     private readonly observer: ExecutionObserver,
+     private readonly signal?: AbortSignal,
++    private readonly support?: WorkflowSupport,
+   ) {
++    void this.ready.catch(() => {})
++    if (support) Object.assign(this, workflowPaths(support.root, parent.session.id, id))
+     this.externalAbort = () => { this.cancel('workflow signal aborted') }
+     if (signal?.aborted) this.externalAbort()
+     else signal?.addEventListener('abort', this.externalAbort, { once: true })
+@@ -175,6 +222,12 @@
+   private bindings(): Record<string, PtcBindingFunction> {
+     return {
+       begin: () => { this.requireActive(); return Promise.resolve(json(this.init)) },
++      loadWorkflow: value => this.track((async () => {
++        this.requireActive()
++        if (!this.support) throw new Error('Saved workflows unavailable')
++        if (typeof value !== 'string' && !(value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 1 && typeof value.scriptPath === 'string')) throw new Error('Invalid workflow reference')
++        return json(await this.support.loadWorkflow(value as string | { scriptPath: string }, this.controller.signal))
++      })()),
+       startChild: value => this.track(this.startChild(childRequest(value))),
+       childResult: value => this.track(this.childResult(this.child(value))),
+       disposeChild: async (value) => { await this.disposeChild(this.child(value)); return null },
+@@ -196,16 +249,50 @@
+ 
+   private async startChild(request: ChildStartRequest): Promise<PtcJsonValue> {
+     this.requireActive()
++    if (request.seq !== this.started + 1 || this.started >= this.init.limits.maxTotalAgents) throw new Error('Invalid workflow child order or total-agent cap exceeded')
+     const callId = ++this.started
++    // Reserve before asynchronous publication; completion order cannot reorder cache keys.
++    const admission = this.admission.then(async () => {
++      this.requireActive()
++      const type = await this.support?.childType?.(request.agentType)
++      const identity = { ...request, parentOptions: this.parent.session.requestHeader()?.config ?? this.parent.options, policy: this.policy, presetFingerprint: type?.fingerprint }
++      const cached = await this.journal?.start(callId, identity, value => !value.worktree?.retained || existsSync(value.worktree.path))
++      return { type, cached }
++    })
++    this.admission = admission.catch(() => {})
++    const { type, cached } = await admission
++    this.requireActive()
++    const budget = this.support?.budget?.()
++    if (!cached && budget?.total != null && budget.unmetered) throw new Error('Workflow token target cannot be enforced because a model call did not report output usage; no new agents can start')
++    if (!cached && budget?.total !== null && budget?.total !== undefined && budget.spent >= budget.total) throw new Error('Workflow token target reached; no new agents can start')
++    if (cached) {
++      if (cached.worktree) this.artifacts.set(callId, cached.worktree)
++      const run = { id: SessionId(cached.childId ?? `cached-${this.id}-${callId}`), result: Promise.resolve(cached), dispose: async () => {} } as SubagentRun
++      this.children.set(callId, { callId, run, cached: true })
++      return { callId, childId: run.id }
++    }
++    if ((request.isolation || request.agentType) && this.provider !== 'omd-workflow') throw new Error('Workflow worktree/agentType options require the omd-workflow subagent provider')
++    const workflow: WorkflowSpawnOptions = {
++      isolation: request.isolation,
++      agentType: request.agentType,
++      presetFingerprint: type?.fingerprint,
++      budgetOwner: this.support?.budgetOwner,
++      onWorktree: artifact => {
++        this.artifacts.set(callId, artifact)
++        if (artifact.retained && artifact.reason !== 'running') this.observer.log(`Worktree retained at ${artifact.path}: ${artifact.reason}`)
++      },
++    }
+     const run = await this.subagents.start(this.provider, {
++      ...this.provider === 'omd-workflow' ? { workflow } : {},
+       prompt: [{ type: 'text', text: request.prompt }],
+       parent: this.parent,
+       signal: this.controller.signal,
+       ...request.schema === undefined ? {} : { outputSchema: request.schema },
+-      ...request.provider === undefined && request.model === undefined ? {} : {
++      ...request.provider === undefined && request.model === undefined && request.effort === undefined ? {} : {
+         agentOptions: {
+           ...request.provider === undefined ? {} : { provider: request.provider },
+           ...request.model === undefined ? {} : { model: request.model },
++          ...request.effort === undefined ? {} : { reasoningEffort: request.effort },
+         },
+       },
+     })
+@@ -219,7 +306,12 @@
+     return { callId, childId: run.id }
+   }
+ 
+-  private async childResult(record: ChildRecord): Promise<PtcJsonValue> {
++  private childResult(record: ChildRecord): Promise<PtcJsonValue> {
++    record.resultPromise ??= this.readChildResult(record)
++    return record.resultPromise
++  }
++
++  private async readChildResult(record: ChildRecord): Promise<PtcJsonValue> {
+     const signal = this.controller.signal
+     signal.throwIfAborted()
+     const aborted = Promise.withResolvers<never>()
+@@ -227,18 +319,27 @@
+     signal.addEventListener('abort', onAbort, { once: true })
+     try {
+       const result = await Promise.race([record.run.result, aborted.promise])
+-      return json({
+-        output: result.output,
++      record.result = {
++        childId: record.run.id,
++        output: [...result.output],
+         stopReason: result.stopReason,
+         ...result.structured === undefined ? {} : { structured: result.structured },
+-      })
++      }
++      const budget = this.support?.budget?.()
++      return json({ ...record.result, budgetSpent: budget?.spent ?? 0, budgetTotal: budget?.total ?? null })
+     } finally {
+       signal.removeEventListener('abort', onAbort)
+     }
+   }
+ 
+   private disposeChild(record: ChildRecord): Promise<void> {
+-    record.disposal ??= Promise.resolve().then(() => record.run.dispose()).catch((error: unknown) => {
++    record.disposal ??= Promise.resolve().then(async () => {
++      await record.run.dispose()
++      const worktree = this.artifacts.get(record.callId)
++      if (record.result && worktree) record.result.worktree = { ...worktree }
++      if (record.result && !record.cached) await this.journal?.complete(record.callId, record.result)
++    }).catch((error: unknown) => {
++      this.cleanupError ??= error
+       this.ctx.logger.warn(`workflow-ptc: child dispose failed: ${renderThrown(error)}`)
+     }).finally(() => {
+       this.children.delete(record.callId)
+@@ -273,6 +374,16 @@
+   private async drive(): Promise<WorkflowResult> {
+     let result: WorkflowResult
+     try {
++      this.requireActive()
++      if (this.support) {
++        this.journal = await WorkflowJournal.create(this.support.root, this.parent.session.id, this.id, {
++          script: serializeWorkflowSource(this.meta, this.init.body), meta: this.meta, args: this.init.args,
++          resumeFromRunId: this.support.resumeFromRunId,
++        })
++        this.init.budget = this.support.budget?.() ?? { total: null, spent: 0 }
++      }
++      this.requireActive()
++      this.readiness.resolve()
+       const outcome = await this.runtime.run(this.runtime.resolve({
+         program: PROGRAM,
+         bindings: [{ global: 'workflowHost', functions: this.bindings() }],
+@@ -286,6 +397,7 @@
+       else if (outcome.error !== undefined) result = { value: null, stopReason: 'error', error: `workflow execution failed (${outcome.error.kind}): ${outcome.error.message}`, agentsStarted: this.started }
+       else result = workflowResult(outcome.value)
+     } catch (error: unknown) {
++      this.readiness.reject(error)
+       this.terminal = true
+       result = this.cancelReason === undefined
+         ? { value: null, stopReason: 'error', error: renderThrown(error), agentsStarted: this.started }
+@@ -301,6 +413,12 @@
+       this.children.clear()
+       for (const info of this.liveAgents.values()) this.endAgent({ ...info, outcome: 'cancelled' })
+     }
++    if (this.cleanupError !== undefined) {
++      if (this.journal) unquiescedJournals.add(this.journal)
++      return { value: null, stopReason: 'error', agentsStarted: this.started, error: `Workflow cleanup failed; resume is locked until process exit: ${renderThrown(this.cleanupError)}` }
++    }
++    try { await this.journal?.close(result.stopReason) }
++    catch (error) { return { value: null, stopReason: 'error', agentsStarted: this.started, error: `Workflow journal could not settle: ${renderThrown(error)}` } }
+     return result
+   }
+ }
+diff --git a/packages/workflow/workflow-ptc/src/index.ts b/packages/workflow/workflow-ptc/src/index.ts
+--- a/packages/workflow/workflow-ptc/src/index.ts
++++ b/packages/workflow/workflow-ptc/src/index.ts
+@@ -5,19 +5,28 @@
+  */
+ 
+ import { randomUUID } from 'node:crypto'
+-import { availableParallelism } from 'node:os'
++import { availableParallelism, homedir } from 'node:os'
++import { join } from 'node:path'
+ import * as vm from 'node:vm'
+ import type { Context } from '@deepseek-ai/cordis'
+ import type {} from '@deepseek-ai/dsh-ptc-runtime'
+ import type {} from '@deepseek-ai/dsh-sandbox-policy'
+ import z from '@deepseek-ai/schemastery'
+-import WorkflowEngine, { WorkflowError, WorkflowRunId } from '@deepseek-ai/dsh-workflow'
++import { WorkflowEngine, WorkflowError, WorkflowRunId } from '@deepseek-ai/dsh-workflow'
+ import type { WorkflowRun, WorkflowRunInfo, WorkflowStartRequest } from '@deepseek-ai/dsh-workflow'
+ import { PtcWorkflowRun } from './host.ts'
+ import { validateMeta } from './meta.ts'
+ import type { WorkerInit, WorkerLimits } from './types.ts'
++import { parseWorkflowSource } from './source.ts'
++import { workflowAgentType } from './spawn.ts'
+ 
+ export { validateMeta } from './meta.ts'
++export { WorkflowJournal, readJournal, requestKey } from './journal.ts'
++export { WorkflowExecution } from './runtime.ts'
++export { runWorkflowGuest } from './guest.ts'
++export { PtcWorkflowRun } from './host.ts'
++export { parseWorkflowSource, serializeWorkflowSource } from './source.ts'
++export { WorkflowWorktree } from './worktree.ts'
+ export { materializeFromRealm, MaterializeError } from './realm.ts'
+ export type {
+   ChildHandle,
+@@ -30,6 +39,7 @@
+ 
+ /** Plugin config (all optional — `static Config` supplies the defaults). */
+ export interface Config {
++  stateDirectory?: string
+   /** The `ctx.subagents` provider children run on (default `spawn`). */
+   provider?: string
+   /** Concurrent `agent()` ceiling; `0` (the default) auto-resolves to `min(16, max(1, cores - 2))`. */
+@@ -103,6 +113,7 @@
+   static inject = ['subagents', 'ptcRuntime', 'sandboxPolicy']
+ 
+   static Config: z<Config> = z.object({
++    stateDirectory: z.string(),
+     provider: z.string().default('spawn'),
+     maxConcurrentAgents: z.natural().default(0),
+     maxTotalAgents: z.natural().min(1).default(1000),
+@@ -118,6 +129,30 @@
+     // schemastery (static Config) has already filled the defaulted fields;
+     // the assertion records that resolution, not a hidden fallback.
+     this.config = config as ResolvedConfig
++  }
++
++  /** Resolve saved scripts through the calling world's native filesystem. */
++  async prepare(input: { script?: string; meta?: unknown; name?: string; scriptPath?: string }, parent: import('@deepseek-ai/dsh-agent').Agent, signal?: AbortSignal): Promise<{ script: string; meta: import('@deepseek-ai/dsh-workflow').WorkflowMeta }> {
++    if (['script', 'name', 'scriptPath'].filter(key => (input as any)[key] !== undefined).length !== 1) throw new Error('Supply exactly one of script, name, or scriptPath')
++    if (input.script !== undefined) {
++      const parsed = parseWorkflowSource(input.script, input.meta)
++      return { script: parsed.body, meta: parsed.meta }
++    }
++    const source = await this.loadSource(input.name ?? { scriptPath: input.scriptPath! }, parent, signal)
++    if (input.meta !== undefined) throw new Error('Saved workflow metadata belongs in its script file')
++    return { script: source.body, meta: source.meta }
++  }
++
++  private async loadSource(reference: string | { scriptPath: string }, parent: import('@deepseek-ai/dsh-agent').Agent, signal?: AbortSignal): Promise<{ meta: import('@deepseek-ai/dsh-workflow').WorkflowMeta; body: string }> {
++    const fs = (this.ctx as any).get('fs')
++    if (!fs) throw new Error('Saved workflows require the native filesystem service')
++    let path: string
++    if (typeof reference === 'string') {
++      if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$/.test(reference)) throw new Error('Invalid saved workflow name')
++      path = join('.omd', 'workflows', reference + '.js')
++    } else path = reference.scriptPath
++    const target = await fs.resolve(path, { cwd: parent.session.header.cwd, signal })
++    return parseWorkflowSource(await fs.readText(target, signal))
+   }
+ 
+   /**
+@@ -131,8 +166,9 @@
+    * @returns the live run (its `result` resolves when the script settles).
+    */
+   start(request: WorkflowStartRequest): WorkflowRun {
+-    const meta = validateMeta(request.meta)
+-    assertBodyParses(request.script, meta.name)
++    const source = parseWorkflowSource(request.script, request.meta)
++    const meta = source.meta
++    assertBodyParses(source.body, meta.name)
+     const subagentProvider = resolveSubagentProvider(this.ctx, this.config.provider, request.subagentProvider)
+     const maxTotalAgents = resolveMaxTotalAgents(request.maxTotalAgents, this.config.maxTotalAgents)
+     const id = WorkflowRunId(randomUUID())
+@@ -147,13 +183,14 @@
+     }
+     const init: WorkerInit = {
+       meta,
+-      body: request.script,
++      body: source.body,
+       ...request.args !== undefined ? { args: structuredClone(request.args) } : {},
+       limits,
+     }
+     // Captured service handles keep a holder-owned run usable after engine unload.
+     const runCtx = this.ctx
+     const subagents = runCtx.subagents
++    const budget = (runCtx as any).get('trisoulX')?.workflowBudget?.capture(request.parent.session)
+     const run = new PtcWorkflowRun(
+       runCtx,
+       subagents,
+@@ -171,6 +208,14 @@
+         agentEnd: (agent) => { this.emitWorkflowEvent('workflow/agent-end', info, agent) },
+       },
+       request.signal,
++      {
++        root: this.config.stateDirectory ?? join((this.ctx as any).get('trisoulX')?.store.dir ?? join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'trisoul-x'), 'workflows'),
++        resumeFromRunId: (request as any).resumeFromRunId,
++        budget: budget?.snapshot ?? (() => ({ total: null, spent: 0 })),
++        budgetOwner: budget?.owner,
++        loadWorkflow: (reference, signal) => this.loadSource(reference, request.parent, signal),
++        childType: type => workflowAgentType(this.ctx, type),
++      },
+     )
+ 
+     this.emitWorkflowEvent('workflow/start', info)
+diff --git a/packages/workflow/workflow-ptc/src/journal.ts b/packages/workflow/workflow-ptc/src/journal.ts
+new file mode 100644
+--- /dev/null
++++ b/packages/workflow/workflow-ptc/src/journal.ts
+@@ -0,0 +1,146 @@
++/** Durable, start-ordered child results. A resume reuses only an unchanged prefix. */
++import { createHash } from 'node:crypto'
++import { mkdir, open, readFile, realpath } from 'node:fs/promises'
++import type { FileHandle } from 'node:fs/promises'
++import { join, resolve } from 'node:path'
++import type { SessionId } from '@deepseek-ai/dsh-session'
++import { SessionWriteLease } from '../../../session/session-persistence-jsonl/src/lease.ts'
++import type { ChildResult } from './types.ts'
++
++interface Call {
++  key: string
++  result?: ChildResult
++}
++
++function runId(value: string): string {
++  if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value)) throw new Error('Invalid workflow run id')
++  return value
++}
++
++/** Sort object keys without changing arrays, so equivalent option bags have one identity. */
++export function requestKey(value: unknown): string {
++  const canonical = (item: any): any => Array.isArray(item) ? item.map(canonical)
++    : item && typeof item === 'object' ? Object.fromEntries(Object.keys(item).sort().map(key => [key, canonical(item[key])])) : item
++  return createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex')
++}
++
++export function workflowPaths(root: string, sessionId: string, id: string): { directory: string; scriptPath: string; transcriptDir: string } {
++  const directory = resolve(root, createHash('sha256').update(sessionId).digest('hex'), runId(id))
++  return { directory, scriptPath: join(directory, 'script.js'), transcriptDir: directory }
++}
++
++/** Ignore only a torn final append; corruption of a committed line fails closed. */
++export function readJournal(text: string): Map<number, Call> {
++  const lines = text.split('\n')
++  if (lines.at(-1) !== '') lines.pop()
++  const calls = new Map<number, Call>()
++  for (const line of lines) {
++    if (!line) continue
++    const event = JSON.parse(line)
++    if (event.type === 'start') {
++      if (!Number.isSafeInteger(event.seq) || event.seq < 1 || calls.has(event.seq) || typeof event.key !== 'string') throw new Error('Invalid workflow journal start')
++      calls.set(event.seq, { key: event.key })
++    } else if (event.type === 'result') {
++      const call = calls.get(event.seq)
++      if (!call || call.result || !event.result || typeof event.result.stopReason !== 'string' || !Array.isArray(event.result.output)) throw new Error('Invalid workflow journal result')
++      call.result = event.result
++    } else if (event.type !== 'run' && event.type !== 'end') throw new Error('Unknown workflow journal event')
++  }
++  return calls
++}
++
++export class WorkflowJournal {
++  private chain: Promise<void> = Promise.resolve()
++  private next = 1
++  private prefix = true
++  private closed = false
++  private closing?: Promise<void>
++  private readonly calls = new Set<number>()
++  private readonly results = new Set<number>()
++  private constructor(
++    readonly directory: string,
++    private readonly file: FileHandle,
++    private readonly lease: SessionWriteLease,
++    private readonly sourceLease: SessionWriteLease | undefined,
++    private readonly cached: Map<number, Call>,
++  ) {}
++
++  static async create(root: string, sessionId: string, id: string, input: { script: string; meta: unknown; args?: unknown; resumeFromRunId?: string }): Promise<WorkflowJournal> {
++    const scope = join(root, createHash('sha256').update(sessionId).digest('hex'))
++    await mkdir(scope, { recursive: true, mode: 0o700 })
++    // Canonicalize before using the same path as a kernel-lock identity on Windows.
++    const canonical = await realpath(scope)
++    let sourceLease: SessionWriteLease | undefined
++    let lease: SessionWriteLease | undefined
++    let file: FileHandle | undefined
++    try {
++      let cached = new Map<number, Call>()
++      if (input.resumeFromRunId !== undefined) {
++        if (input.resumeFromRunId === id) throw new Error('A workflow cannot resume itself')
++        const source = join(canonical, runId(input.resumeFromRunId))
++        // Do not create a phantom source directory when a run belongs to another session.
++        await readFile(join(source, 'run.json'), 'utf8')
++        sourceLease = await SessionWriteLease.acquire(source, sessionId as SessionId)
++        cached = readJournal(await readFile(join(source, 'journal.jsonl'), 'utf8'))
++      }
++      const directory = join(canonical, runId(id))
++      await mkdir(directory, { mode: 0o700 })
++      lease = await SessionWriteLease.acquire(directory, sessionId as SessionId)
++      for (const [name, contents] of [['script.js', input.script], ['run.json', JSON.stringify({ version: 1, id, sessionId, ...input }) + '\n']]) {
++        const handle = await open(join(directory, name), 'wx', 0o600)
++        try { await handle.writeFile(contents); await handle.sync() } finally { await handle.close() }
++      }
++      file = await open(join(directory, 'journal.jsonl'), 'ax', 0o600)
++      const journal = new WorkflowJournal(directory, file, lease, sourceLease, cached)
++      await journal.append({ type: 'run', version: 1, id, sessionId })
++      return journal
++    } catch (error) {
++      await file?.close()
++      await lease?.release()
++      await sourceLease?.release()
++      throw error
++    }
++  }
++
++  private append(event: unknown): Promise<void> {
++    if (this.closed) return Promise.reject(new Error('Workflow journal is closed'))
++    const text = JSON.stringify(event) + '\n'
++    this.chain = this.chain.then(async () => { await this.file.writeFile(text); await this.file.sync() })
++    return this.chain
++  }
++
++  async start(seq: number, identity: unknown, valid: (result: ChildResult) => boolean = () => true): Promise<ChildResult | undefined> {
++    if (seq !== this.next) throw new Error('Workflow calls must be journaled in start order')
++    this.next++
++    this.calls.add(seq)
++    const key = requestKey(identity)
++    const old = this.cached.get(seq)
++    const hit = this.prefix && old?.key === key && old.result?.stopReason === 'completed' && valid(old.result)
++    if (!hit) this.prefix = false
++    await this.append({ type: 'start', seq, key, cached: hit })
++    if (!hit) return undefined
++    // A resumed run is itself a complete source for a later resume.
++    const result = structuredClone(old!.result!)
++    await this.complete(seq, result)
++    return result
++  }
++
++  async complete(seq: number, result: ChildResult): Promise<void> {
++    if (!this.calls.has(seq) || this.results.has(seq)) throw new Error('Workflow result has no unique start')
++    this.results.add(seq)
++    await this.append({ type: 'result', seq, result })
++  }
++
++  /** Call only after every child and pending startup has reached quiescence. */
++  async close(outcome: unknown): Promise<void> {
++    this.closing ??= (async () => {
++      try { await this.append({ type: 'end', outcome }) }
++      finally {
++        this.closed = true
++        try { await this.file.close() }
++        finally { try { await this.lease.release() } finally { await this.sourceLease?.release() } }
++      }
++    })()
++    return this.closing
++  }
++}
+diff --git a/packages/workflow/workflow-ptc/src/realm.ts b/packages/workflow/workflow-ptc/src/realm.ts
+--- a/packages/workflow/workflow-ptc/src/realm.ts
++++ b/packages/workflow/workflow-ptc/src/realm.ts
+@@ -13,6 +13,15 @@
+   }
+ }
+ 
++function compactGuestLocations(text: string): string {
++  // Encoded JavaScript still contains literal parentheses. Stop at whitespace,
++  // not the first closing parenthesis inside the data URL's module source.
++  return text.replace(/data:(?:text|application)\/(?:javascript|ecmascript)[^\s]+/g, location => {
++    const tail = /(:\d+:\d+)(\)?)$/.exec(location)
++    return `workflow-guest${tail ? tail[1] + tail[2] : ''}`
++  })
++}
++
+ /**
+  * Render a thrown value to failure text without ever throwing: prefer the
+  * `stack` (host or realm — a realm error's `stack` is a plain string read),
+@@ -24,10 +33,14 @@
+ export function renderThrown(error: unknown): string {
+   try {
+     const stack = (error as { stack?: unknown } | null | undefined)?.stack
+-    if (typeof stack === 'string' && stack.length > 0) return stack
++    if (typeof stack === 'string' && stack.length > 0) {
++      // Node embeds the complete encoded guest module in data-URL stack
++      // frames. Keep the location without sending that source back to the model.
++      return compactGuestLocations(stack)
++    }
+     const message = (error as { message?: unknown } | null | undefined)?.message
+-    if (typeof message === 'string' && message.length > 0) return message
+-    return String(error)
++    if (typeof message === 'string' && message.length > 0) return compactGuestLocations(message)
++    return compactGuestLocations(String(error))
+   } catch {
+     // A throwing accessor/toString on the thrown value — rendering must be
+     // total (drive()'s never-reject contract), so fall back to a fixed label.
+diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/workflow-ptc/src/runtime.ts
+--- a/packages/workflow/workflow-ptc/src/runtime.ts
++++ b/packages/workflow/workflow-ptc/src/runtime.ts
+@@ -30,9 +30,14 @@
+ }
+ 
+ /** The `agent()` options the script may pass; everything else rejects loud. */
+-const SUPPORTED_AGENT_OPTIONS = new Set(['label', 'phase', 'schema', 'provider', 'model'])
+-/** Deferred Claude Code options we name explicitly in the rejection message. */
+-const DEFERRED_AGENT_OPTIONS = new Set(['effort', 'isolation', 'agentType'])
++const SUPPORTED_AGENT_OPTIONS = new Set(['label', 'phase', 'schema', 'provider', 'model', 'effort', 'isolation', 'agentType'])
++
++interface ExecutionState {
++  started: number
++  activeSlots: number
++  slotWaiters: (() => void)[]
++  budget: { total: number | null; spent: number }
++}
+ 
+ /** Flatten a child's final output blocks to text (the non-schema `agent()` result). */
+ function outputText(blocks: ContentBlock[]): string {
+@@ -55,9 +60,6 @@
+  */
+ export class WorkflowExecution {
+   /** 1-based count of `agent()` calls started (the `agentsStarted` result field). */
+-  private started = 0
+-  private activeSlots = 0
+-  private readonly slotWaiters: (() => void)[] = []
+   private currentPhase: string | undefined
+   private readonly context: vm.Context
+   private readonly compiled: vm.Script
+@@ -69,6 +71,8 @@
+     private readonly limits: WorkerLimits,
+     private readonly observer: ExecutionObserver,
+     private readonly children: ChildPort,
++    private readonly shared: ExecutionState = { started: 0, activeSlots: 0, slotWaiters: [], budget: { total: null, spent: 0 } },
++    private readonly depth = 0,
+   ) {
+     // The host parses this same wrapper before publishing a run.
+     try {
+@@ -81,6 +85,7 @@
+     }
+ 
+     this.context = vm.createContext({}, { name: `workflow:${meta.name}` })
++    const sharedBudget = this.shared.budget
+ 
+     const globals: Record<string, unknown> = {
+       agent: (prompt: unknown, opts?: unknown) => this.contain(this.agent(prompt, opts)),
+@@ -88,6 +93,12 @@
+       pipeline: (items: unknown, ...stages: unknown[]) => this.contain(this.pipeline(items, stages)),
+       phase: (title: unknown) => { this.phase(title) },
+       log: (message: unknown) => { this.log(message) },
++      workflow: (reference: unknown, input?: unknown) => this.contain(this.workflow(reference, input)),
++      budget: Object.freeze({
++        get total() { return sharedBudget.total },
++        spent: () => this.shared.budget.spent,
++        remaining: () => this.shared.budget.total === null ? Infinity : Math.max(0, this.shared.budget.total - this.shared.budget.spent),
++      }),
+       // PTC has already copied these inputs through its JSON channel.
+       args,
+     }
+@@ -96,6 +107,20 @@
+       // a script overwriting its own hooks only sabotages itself.
+       ;(this.context as Record<string, unknown>)[key] = typeof value === 'function' ? Object.freeze(value) : value
+     }
++    // Install inside the guest realm: explicit dates remain usable without exposing
++    // a host constructor whose prototype could bypass this deterministic contract.
++    new vm.Script(`{
++      const NativeDate = Date;
++      const fail = () => { throw new Error('Workflow scripts must be deterministic; pass time or randomness through args'); };
++      const GuardedDate = new Proxy(NativeDate, {
++        apply: fail,
++        construct(target, input, receiver) { if (!input.length) return fail(); return Reflect.construct(target, input, receiver); }
++      });
++      Object.defineProperty(NativeDate, 'now', { value: fail, writable: false, configurable: false });
++      Object.defineProperty(NativeDate.prototype, 'constructor', { value: GuardedDate, writable: false, configurable: false });
++      Object.defineProperty(Math, 'random', { value: fail, writable: false, configurable: false });
++      globalThis.Date = GuardedDate;
++    }`).runInContext(this.context, { timeout: limits.syncTimeoutMs })
+   }
+ 
+   /**
+@@ -107,9 +132,9 @@
+       const scriptPromise = this.compiled.runInContext(this.context, { timeout: this.limits.syncTimeoutMs }) as Promise<unknown>
+       const raw: unknown = await this.contain(Promise.resolve(scriptPromise))
+       const value = raw === undefined ? null : this.materializeResult(raw)
+-      return { value, stopReason: 'completed', agentsStarted: this.started }
++      return { value, stopReason: 'completed', agentsStarted: this.shared.started }
+     } catch (error: unknown) {
+-      return { value: null, stopReason: 'error', error: renderThrown(error), agentsStarted: this.started }
++      return { value: null, stopReason: 'error', error: renderThrown(error), agentsStarted: this.shared.started }
+     }
+   }
+ 
+@@ -141,21 +166,21 @@
+ 
+   /** Acquire one concurrency slot in FIFO order. */
+   private acquireSlot(): Promise<void> {
+-    if (this.activeSlots < this.limits.maxConcurrentAgents) {
+-      this.activeSlots += 1
++    if (this.shared.activeSlots < this.limits.maxConcurrentAgents) {
++      this.shared.activeSlots += 1
+       return Promise.resolve()
+     }
+     return new Promise<void>((resolve) => {
+-      this.slotWaiters.push(() => {
+-        this.activeSlots += 1
++      this.shared.slotWaiters.push(() => {
++        this.shared.activeSlots += 1
+         resolve()
+       })
+     })
+   }
+ 
+   private releaseSlot(): void {
+-    this.activeSlots -= 1
+-    const next = this.slotWaiters.shift()
++    this.shared.activeSlots -= 1
++    const next = this.shared.slotWaiters.shift()
+     if (next) next()
+   }
+ 
+@@ -165,14 +190,14 @@
+       throw new WorkflowError('agent() requires a non-empty prompt string', 'INVALID_ARGUMENT')
+     }
+     const opts = this.readAgentOptions(rawOpts)
+-    if (this.started >= this.limits.maxTotalAgents) {
++    if (this.shared.started >= this.limits.maxTotalAgents) {
+       throw new WorkflowError(
+         `this run reached its total agent cap (${this.limits.maxTotalAgents}) — a runaway-loop backstop; raise the applicable maxTotalAgents limit if the scale is intentional`,
+         'AGENT_CAP',
+       )
+     }
+-    this.started += 1
+-    const seq = this.started
++    this.shared.started += 1
++    const seq = this.shared.started
+     const label = opts.label ?? defaultLabel(rawPrompt)
+     const phase = opts.phase ?? this.currentPhase
+ 
+@@ -181,10 +206,14 @@
+       let run: ChildHandle
+       try {
+         run = await this.children.startAgent({
++          seq,
+           prompt: rawPrompt,
+           ...opts.schema !== undefined ? { schema: opts.schema } : {},
+           ...opts.provider !== undefined ? { provider: opts.provider } : {},
+           ...opts.model !== undefined ? { model: opts.model } : {},
++          ...opts.effort !== undefined ? { effort: opts.effort } : {},
++          ...opts.isolation !== undefined ? { isolation: opts.isolation } : {},
++          ...opts.agentType !== undefined ? { agentType: opts.agentType } : {},
+         })
+       } catch (error: unknown) {
+         throw new WorkflowError(`agent() could not start a child: ${renderThrown(error)}`, 'AGENT_START', { cause: error })
+@@ -195,6 +224,8 @@
+         let result
+         try {
+           result = await run.result
++          if (result.budgetSpent !== undefined) this.shared.budget.spent = Math.max(this.shared.budget.spent, result.budgetSpent)
++          if (result.budgetTotal !== undefined) this.shared.budget.total = result.budgetTotal
+         } catch (error: unknown) {
+           // A rejected child result is an INFRASTRUCTURE fault relayed by the
+           // host — distinct from a child that failed and resolved. Pair the
+@@ -234,6 +265,9 @@
+     phase?: string
+     provider?: string
+     model?: string
++    effort?: string
++    isolation?: 'worktree'
++    agentType?: string
+     schema?: ObjectJsonSchema
+   } {
+     if (rawOpts === undefined) return {}
+@@ -251,16 +285,17 @@
+     const record = opts as Record<string, unknown>
+     for (const key of Object.keys(record)) {
+       if (SUPPORTED_AGENT_OPTIONS.has(key)) continue
+-      if (DEFERRED_AGENT_OPTIONS.has(key)) {
+-        throw new WorkflowError(`agent() option "${key}" is deferred and not supported by this engine (supported: label, phase, schema, provider, model)`, 'UNSUPPORTED_OPTION')
+-      }
+-      throw new WorkflowError(`agent() option "${key}" is not recognized (supported: label, phase, schema, provider, model)`, 'UNSUPPORTED_OPTION')
+-    }
+-    for (const key of ['label', 'phase', 'provider', 'model'] as const) {
++      throw new WorkflowError(`agent() option "${key}" is not recognized (supported: ${[...SUPPORTED_AGENT_OPTIONS].join(', ')})`, 'UNSUPPORTED_OPTION')
++    }
++    for (const key of ['label', 'phase', 'provider', 'model', 'effort', 'agentType'] as const) {
+       if (record[key] !== undefined && typeof record[key] !== 'string') {
+         throw new WorkflowError(`agent() option "${key}" must be a string`, 'INVALID_ARGUMENT')
+       }
+     }
++    for (const key of ['provider', 'model', 'effort', 'agentType'] as const) {
++      if (record[key] !== undefined && (!(record[key] as string).trim() || record[key] !== (record[key] as string).trim())) throw new WorkflowError(`agent() option "${key}" must be non-empty and normalized`, 'INVALID_ARGUMENT')
++    }
++    if (record.isolation !== undefined && record.isolation !== 'worktree') throw new WorkflowError('agent() isolation must be "worktree"', 'INVALID_ARGUMENT')
+     let schema: ObjectJsonSchema | undefined
+     if (record.schema !== undefined) {
+       try {
+@@ -277,8 +312,29 @@
+       ...record.phase !== undefined ? { phase: record.phase as string } : {},
+       ...record.provider !== undefined ? { provider: record.provider as string } : {},
+       ...record.model !== undefined ? { model: record.model as string } : {},
++      ...record.effort !== undefined ? { effort: record.effort as string } : {},
++      ...record.isolation !== undefined ? { isolation: 'worktree' as const } : {},
++      ...record.agentType !== undefined ? { agentType: record.agentType as string } : {},
+       ...schema !== undefined ? { schema } : {},
+     }
++  }
++
++  private async workflow(rawReference: unknown, rawArgs: unknown): Promise<unknown> {
++    if (this.depth !== 0) throw new WorkflowError('workflow() nesting is limited to one level', 'INVALID_ARGUMENT')
++    const ref = materializeFromRealm(rawReference, 'workflow reference')
++    if (!(typeof ref === 'string' && ref.length > 0) && !(ref && typeof ref === 'object' && !Array.isArray(ref) && Object.keys(ref).length === 1 && typeof (ref as any).scriptPath === 'string' && (ref as any).scriptPath.length > 0)) throw new WorkflowError('workflow() requires a saved name or {scriptPath}', 'INVALID_ARGUMENT')
++    if (!this.children.loadWorkflow) throw new WorkflowError('Saved workflows are unavailable', 'INVALID_ARGUMENT')
++    const input = rawArgs === undefined ? undefined : materializeFromRealm(rawArgs, 'workflow args')
++    const source = await this.children.loadWorkflow(ref as string | { scriptPath: string })
++    const prefix = `▸ ${source.meta.name}`
++    const observer: ExecutionObserver = { ...this.observer,
++      phase: title => this.observer.phase(`${prefix}: ${title}`),
++      agentStart: info => this.observer.agentStart({ ...info, phase: info.phase ? `${prefix}: ${info.phase}` : prefix }),
++      agentEnd: info => this.observer.agentEnd({ ...info, phase: info.phase ? `${prefix}: ${info.phase}` : prefix }),
++    }
++    const result = await new WorkflowExecution(source.meta, source.body, input, this.limits, observer, this.children, this.shared, 1).drive()
++    if (result.stopReason !== 'completed') throw new WorkflowError(result.error ?? 'Nested workflow failed', 'AGENT_RESULT')
++    return result.value
+   }
+ 
+   /** The `parallel(thunks)` hook: each thunk caught → `null`; fatal errors propagate. */
+diff --git a/packages/workflow/workflow-ptc/src/source.ts b/packages/workflow/workflow-ptc/src/source.ts
+new file mode 100644
+--- /dev/null
++++ b/packages/workflow/workflow-ptc/src/source.ts
+@@ -0,0 +1,39 @@
++/** Parse metadata as syntax, never by evaluating user-authored JavaScript. */
++import { parse } from 'acorn'
++import { validateMeta } from './meta.ts'
++import type { WorkflowMeta } from '@deepseek-ai/dsh-workflow'
++
++function literal(node: any): unknown {
++  if (node?.type === 'Literal' && !node.regex && !node.bigint && (node.value === null || ['string', 'boolean', 'number'].includes(typeof node.value))) return node.value
++  if (node?.type === 'UnaryExpression' && node.operator === '-' && node.argument.type === 'Literal' && typeof node.argument.value === 'number') return -node.argument.value
++  if (node?.type === 'ArrayExpression' && node.elements.every(Boolean)) return node.elements.map(literal)
++  if (node?.type === 'ObjectExpression') {
++    const value = Object.create(null)
++    for (const property of node.properties) {
++      if (property.type !== 'Property' || property.computed || property.method || property.shorthand || property.kind !== 'init') throw new Error('Workflow meta must be a pure literal')
++      const key = property.key.type === 'Identifier' ? property.key.name : literal(property.key)
++      if (typeof key !== 'string' || Object.hasOwn(value, key)) throw new Error('Workflow meta keys must be unique strings')
++      value[key] = literal(property.value)
++    }
++    return value
++  }
++  throw new Error('Workflow meta must be a pure literal: no calls, variables, spreads, or interpolation')
++}
++
++export function parseWorkflowSource(script: string, suppliedMeta?: unknown): { meta: WorkflowMeta; body: string } {
++  const tree = parse(script, { ecmaVersion: 'latest', sourceType: 'module', allowAwaitOutsideFunction: true, allowReturnOutsideFunction: true })
++  const first: any = tree.body[0]
++  if (first?.type !== 'ExportNamedDeclaration') {
++    if (suppliedMeta === undefined) throw new Error('Workflow script must begin with export const meta = {...}, or supply the meta field')
++    return { meta: validateMeta(suppliedMeta), body: script }
++  }
++  const declaration = first.declaration
++  if (declaration?.type !== 'VariableDeclaration' || declaration.kind !== 'const' || declaration.declarations.length !== 1 || declaration.declarations[0].id.type !== 'Identifier' || declaration.declarations[0].id.name !== 'meta') throw new Error('Workflow script must begin with export const meta = {...}')
++  const meta = validateMeta(literal(declaration.declarations[0].init))
++  if (suppliedMeta !== undefined && JSON.stringify(meta) !== JSON.stringify(validateMeta(suppliedMeta))) throw new Error('Workflow inline meta and meta field disagree')
++  return { meta, body: script.slice(0, first.start) + script.slice(first.start, first.end).replace(/[^\n\r]/g, ' ') + script.slice(first.end) }
++}
++
++export function serializeWorkflowSource(meta: WorkflowMeta, body: string): string {
++  return `export const meta = ${JSON.stringify(meta, null, 2)};\n${body}`
++}
+diff --git a/packages/workflow/workflow-ptc/src/spawn.ts b/packages/workflow/workflow-ptc/src/spawn.ts
+new file mode 100644
+--- /dev/null
++++ b/packages/workflow/workflow-ptc/src/spawn.ts
+@@ -0,0 +1,114 @@
++/** Workflow options over the native one-shot subagent driver and preset registry. */
++import type { Context } from '@deepseek-ai/cordis'
++import { mkdir, realpath, writeFile } from 'node:fs/promises'
++import { join, relative, isAbsolute, sep } from 'node:path'
++import { startInProcessRun } from '../../../subagent/subagent-in-process-driver/src/index.ts'
++import { captureDelegatedPolicyOverrides } from '@deepseek-ai/dsh-subagent'
++import type { ResolvedSubagentStartRequest, SubagentRun } from '@deepseek-ai/dsh-subagent'
++import { WorkflowWorktree } from './worktree.ts'
++import type { WorktreeArtifact } from './worktree.ts'
++import { requestKey } from './journal.ts'
++
++export const name = 'omd-workflow-spawn'
++export const inject = ['subagents', 'sandboxPolicy', 'fs']
++export const WORKFLOW_PROVIDER = 'omd-workflow'
++
++export interface WorkflowSpawnOptions {
++  isolation?: 'worktree'
++  agentType?: string
++  presetFingerprint?: string
++  budgetOwner?: { sessionId: string; poolId: string }
++  onWorktree?(artifact: WorktreeArtifact): void
++}
++
++type Request = ResolvedSubagentStartRequest & { workflow?: WorkflowSpawnOptions }
++
++function inside(root: string, candidate: string): boolean {
++  const rel = relative(root, candidate)
++  return rel !== '..' && !rel.startsWith('..' + sep) && !isAbsolute(rel)
++}
++
++/** Resolve a native preset before creating a child or mutating a checkout. */
++export async function workflowAgentType(ctx: Context, id?: string): Promise<{ id?: string; fingerprint?: string }> {
++  if (id === undefined || id === 'general-purpose') return {}
++  const presets = ctx.get('agentPresets')
++  if (!presets) throw new Error('Custom workflow agents require the native agent preset registry')
++  const preset = await presets.resolve(id)
++  if (preset.broken) throw new Error(`Workflow agent type ${id} is unavailable: ${preset.broken}`)
++  return { id, fingerprint: requestKey(await presets.readDocument(id)) }
++}
++
++async function start(ctx: Context, request: Request): Promise<SubagentRun> {
++  const options = request.workflow ?? {}
++  if (options.isolation !== undefined && options.isolation !== 'worktree') throw new Error('Unsupported workflow isolation')
++  const inherited = captureDelegatedPolicyOverrides(request.parent)
++  const policy = ctx.sandboxPolicy.resolve({ session: request.parent.session })
++  const type = await workflowAgentType(ctx, options.agentType)
++  if (options.presetFingerprint !== undefined && options.presetFingerprint !== type.fingerprint) throw new Error('Workflow agent preset changed during startup; retry the call')
++  request.signal.throwIfAborted()
++  let worktree: WorkflowWorktree | undefined
++  const report = (artifact: WorktreeArtifact): void => { options.onWorktree?.({ ...artifact }) }
++  try {
++    if (options.isolation === 'worktree') {
++      if (policy.mode === 'read-only') throw new Error('Worktree isolation requires a writable workspace')
++      const fs = ctx.fs
++      const cwd = request.parent.session.header.cwd ?? policy.workspaceRoot
++      const target = await fs.resolve(cwd, { signal: request.signal })
++      if (fs.processPathFromHostPath(cwd) === undefined) throw new Error('Worktree isolation requires a local filesystem')
++      const localCwd = await realpath(fs.processPath(target))
++      const root = await fs.resolve(policy.workspaceRoot, { signal: request.signal })
++      const stateTarget = await fs.resolve(join(localCwd, '.omd', 'worktrees'), { signal: request.signal })
++      if (!fs.contains(target, stateTarget) || (policy.mode === 'workspace-write' && !fs.contains(root, stateTarget))) throw new Error('Worktree storage must stay inside the writable workspace')
++      const state = fs.processPath(stateTarget)
++      await mkdir(state, { recursive: true, mode: 0o700 })
++      if (!inside(localCwd, await realpath(state))) throw new Error('Worktree storage changed outside the workspace')
++      await writeFile(join(state, '.gitignore'), '*\n', { flag: 'wx', mode: 0o600 }).catch(error => { if (error.code !== 'EEXIST') throw error })
++      const sandbox = ctx.get('sandbox')
++      worktree = await WorkflowWorktree.create(localCwd, state, policy, request.signal,
++        sandbox ? (argv, policy, signal) => sandbox.confine(argv, policy, signal) : undefined)
++      report(worktree.artifact)
++    }
++    const hub = (ctx as any).get('trisoulX')
++    const budget = hub?.workflowBudget
++    const run = await startInProcessRun(request, { cwd: worktree?.artifact.cwd, agentPreset: type.id, delegatedPolicy: inherited,
++      setupChild: child => {
++        budget?.attach(child.session, options.budgetOwner)
++        if (hub) {
++          const state = hub.store.state(child.session.id)
++          state.parentSession = request.parent.session.id
++          if (worktree) {
++            const scope = hub.scope(request.parent.session)
++            if (scope.mode !== 'session') state.workflowProject = scope.project
++          }
++          hub.store.save(state)
++        }
++        child.ctx.systemPrompt.context({ name: 'omd:workflow-return', order: child.ctx.systemPrompt.getContextOrder('SUBAGENT_DELEGATION') + 1,
++          text: 'Your final text is the return value of a workflow agent() call, not a human-facing message. Return the requested data directly. When a structured-output tool is provided, use it to return the required value.' })
++      },
++    })
++    let disposal: Promise<void> | undefined
++    return { id: run.id, localAgent: run.localAgent, result: run.result,
++      dispose() {
++        disposal ??= (async () => {
++          // Never inspect or remove the checkout while the native child can still write.
++          await run.dispose()
++          if (worktree) report(await worktree.settle())
++        })()
++        return disposal
++      },
++    }
++  } catch (error) {
++    // A rejected native start has completed its unpublished rollback.
++    if (worktree) report(await worktree.settle())
++    throw error
++  }
++}
++
++export function apply(ctx: Context): void {
++  ctx.subagents.registerProvider({
++    name: WORKFLOW_PROVIDER,
++    capabilities: { agentOptions: true, outputSchema: true, depthLimit: true, toolFilter: true, persona: true },
++    inheritsParentContext: false,
++    start: request => start(ctx, request),
++  })
++}
+diff --git a/packages/workflow/workflow-ptc/src/types.ts b/packages/workflow/workflow-ptc/src/types.ts
+--- a/packages/workflow/workflow-ptc/src/types.ts
++++ b/packages/workflow/workflow-ptc/src/types.ts
+@@ -32,10 +32,13 @@
+   args?: unknown
+   /** The guest helper limits. */
+   limits: WorkerLimits
++  budget?: { total: number | null; spent: number }
+ }
+ 
+ /** One `agent()` child request after the guest validates script options. */
+ export interface ChildStartRequest {
++  /** Invocation order, assigned before acquiring a concurrency slot. */
++  seq: number
+   /** The child's prompt text. */
+   prompt: string
+   /** The structured-output schema, if the call passed one (already subset-checked). */
+@@ -44,6 +47,9 @@
+   provider?: string
+   /** The per-child model override, if the call passed one. */
+   model?: string
++  effort?: string
++  isolation?: 'worktree'
++  agentType?: string
+ }
+ 
+ /**
+@@ -58,6 +64,11 @@
+   structured?: unknown
+   /** Why the child run ended (`'completed'` is the only value the runtime branches on). */
+   stopReason: string
++  budgetSpent?: number
++  budgetTotal?: number | null
++  /** Original durable child identity, retained when a cached call is replayed. */
++  childId?: string
++  worktree?: import('./worktree.ts').WorktreeArtifact
+ }
+ 
+ /**
+@@ -87,4 +98,5 @@
+    *   provider's asynchronous start fails.
+    */
+   startAgent(request: ChildStartRequest): Promise<ChildHandle>
++  loadWorkflow?(reference: string | { scriptPath: string }): Promise<{ meta: WorkflowMeta; body: string }>
+ }
+diff --git a/packages/workflow/workflow-ptc/src/worktree.ts b/packages/workflow/workflow-ptc/src/worktree.ts
+new file mode 100644
+--- /dev/null
++++ b/packages/workflow/workflow-ptc/src/worktree.ts
+@@ -0,0 +1,106 @@
++/** Git owns registration/removal; changed, committed, or uncertain checkouts are retained. */
++import { execFile } from 'node:child_process'
++import { mkdir, realpath, writeFile } from 'node:fs/promises'
++import { randomUUID } from 'node:crypto'
++import { join, relative, resolve, sep, isAbsolute } from 'node:path'
++import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
++import type { ConfinedArgv, SandboxPolicy } from '@deepseek-ai/dsh-sandbox'
++
++type Confine = (argv: readonly string[], policy: SandboxPolicy, signal?: AbortSignal) => Promise<ConfinedArgv>
++type Git = (cwd: string, args: string[], signal?: AbortSignal) => Promise<string>
++
++async function git(cwd: string, args: string[], policy: SandboxExecutionPolicy, confine: Confine | undefined, overrides: string[], signal?: AbortSignal): Promise<string> {
++  const original = ['git', '-c', 'core.hooksPath=', '-c', 'core.fsmonitor=false', ...overrides, ...args]
++  if (policy.mode !== 'danger-full-access' && !confine) throw new Error('Worktree operations require the native sandbox provider in confined mode')
++  const argv = policy.mode === 'danger-full-access' ? original : (await confine!(original, { ...policy, mode: policy.mode }, signal)).argv
++  signal?.throwIfAborted()
++  return new Promise((accept, reject) => {
++    // Worktree setup must not execute repository hooks as a side effect.
++    execFile(argv[0], argv.slice(1), {
++      cwd, signal, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, timeout: 120_000,
++      windowsHide: true,
++      // Inherited GIT_DIR/INDEX_FILE/config injections must not redirect an
++      // operation away from the caller's validated checkout.
++      env: { ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.toUpperCase().startsWith('GIT_'))), GIT_TERMINAL_PROMPT: '0' },
++    }, (error, stdout, stderr) => error ? reject(new Error(`git ${args[0]} failed: ${stderr.trim() || error.message}`, { cause: error })) : accept(stdout.replace(/\r?\n$/, '')))
++  })
++}
++
++export interface WorktreeArtifact {
++  path: string
++  cwd: string
++  repository: string
++  base: string
++  head?: string
++  retained: boolean
++  reason?: string
++}
++
++export class WorkflowWorktree {
++  private settlement?: Promise<WorktreeArtifact>
++  private constructor(readonly artifact: WorktreeArtifact, private readonly receiptPath: string, private readonly git: Git) {}
++
++  static async create(cwd: string, stateDirectory: string, policy: SandboxExecutionPolicy, signal?: AbortSignal, confine?: Confine): Promise<WorkflowWorktree> {
++    signal?.throwIfAborted()
++    if (policy.mode === 'read-only') throw new Error('Worktree isolation requires a writable workspace')
++    const overrides: string[] = []
++    const runGit: Git = (cwd, args, signal) => git(cwd, args, policy, confine, overrides, signal)
++    const repository = await realpath(await runGit(cwd, ['rev-parse', '--show-toplevel'], signal))
++    // A checkout may otherwise execute a configured smudge/process filter.
++    let filterKeys = ''
++    try { filterKeys = await runGit(cwd, ['config', '--null', '--name-only', '--get-regexp', '^filter\\..*\\.(smudge|process|required)$'], signal) }
++    catch (error) { if ((error as any).cause?.code !== 1) throw error }
++    for (const key of filterKeys.split('\0').filter(Boolean)) overrides.push('-c', key + (key.endsWith('.required') ? '=false' : '='))
++    const sourceCwd = await realpath(cwd)
++    const subdirectory = relative(repository, sourceCwd)
++    if (subdirectory === '..' || subdirectory.startsWith('..' + sep) || isAbsolute(subdirectory) || resolve(repository, subdirectory) !== sourceCwd) throw new Error('Workflow cwd is not inside the repository')
++    const base = await runGit(repository, ['rev-parse', '--verify', 'HEAD^{commit}'], signal)
++    await mkdir(stateDirectory, { recursive: true, mode: 0o700 })
++    const canonicalState = await realpath(stateDirectory)
++    const id = randomUUID(), path = join(canonicalState, id), receiptPath = join(canonicalState, id + '.json')
++    const artifact: WorktreeArtifact = { path, cwd: join(path, subdirectory), repository, base, retained: true, reason: 'starting' }
++    await writeFile(receiptPath, JSON.stringify(artifact) + '\n', { flag: 'wx', mode: 0o600 })
++    const worktree = new WorkflowWorktree(artifact, receiptPath, runGit)
++    try {
++      await runGit(repository, ['worktree', 'add', '--detach', '--', path, base], signal)
++      signal?.throwIfAborted()
++      artifact.reason = 'running'
++      await worktree.save()
++      return worktree
++    } catch (error) {
++      // No recursive delete on a failed add: Git may have published a checkout
++      // while cancellation was racing it. Its receipt remains discoverable.
++      artifact.reason = `setup failed: ${String(error)}`
++      await worktree.save()
++      throw new Error(`Worktree setup failed; inspect ${path}: ${String(error)}`, { cause: error })
++    }
++  }
++
++  private async save(): Promise<void> {
++    await writeFile(this.receiptPath, JSON.stringify(this.artifact) + '\n', { mode: 0o600 })
++  }
++
++  /** Only the holder calls this, after native child disposal has completed. */
++  settle(): Promise<WorktreeArtifact> {
++    this.settlement ??= (async () => {
++      try {
++        const head = await this.git(this.artifact.path, ['rev-parse', '--verify', 'HEAD^{commit}'])
++        this.artifact.head = head
++        const status = await this.git(this.artifact.path, ['status', '--porcelain=v1', '--untracked-files=all', '--ignored', '--ignore-submodules=none'])
++        if (head !== this.artifact.base) this.artifact.reason = 'contains new commits'
++        else if (status) this.artifact.reason = 'contains changed, untracked, or ignored files'
++        else {
++          // Without --force, Git provides a final dirty/locked checkout check.
++          await this.git(this.artifact.repository, ['worktree', 'remove', '--', this.artifact.path])
++          this.artifact.retained = false
++          this.artifact.reason = 'unchanged'
++        }
++      } catch (error) {
++        this.artifact.reason = `cleanup could not prove the checkout unchanged: ${String(error)}`
++      }
++      await this.save()
++      return { ...this.artifact }
++    })()
++    return this.settlement
++  }
++}
+diff --git a/packages/workflow/tool-workflow/src/index.ts b/packages/workflow/tool-workflow/src/index.ts
+--- a/packages/workflow/tool-workflow/src/index.ts
++++ b/packages/workflow/tool-workflow/src/index.ts
+@@ -25,6 +25,8 @@
+   WorkflowResult, WorkflowRun, WorkflowRunId, WorkflowStopReason,
+ } from '@deepseek-ai/dsh-workflow'
+ import { createWorkflowRecordMirror } from './record.ts'
++import type { PtcWorkflowRun } from '../../workflow-ptc/src/host.ts'
++import type PtcWorkflowEngine from '../../workflow-ptc/src/index.ts'
+ import type { WorkflowRecordMirror } from './record.ts'
+ import type {
+   ToolWorkflowAgentEndData, ToolWorkflowAgentStartData,
+@@ -155,15 +157,26 @@
+  * their exact semantics, and the supported schema subset. Parameter-level
+  * rules live in the parameter descriptions.
+  */
+-const DESCRIPTION = `Run a JavaScript workflow script that orchestrates subagents at scale. Use this for work that fans out across many independent pieces — an audit over many files, a migration, multi-angle research, adversarial verification of findings — where you write the orchestration as a script instead of delegating turn by turn.
+-
+-Script-body hooks:
+-- \`agent(prompt, opts?): Promise<any>\` — run one subagent to completion. Without \`opts.schema\` it resolves to the child's final text; with \`opts.schema\` (an object-rooted JSON Schema using ONLY type/properties/required/additionalProperties/items/enum/const/oneOf) it resolves to the validated object. Resolves \`null\` when the child fails (filter with \`.filter(Boolean)\`). Other opts: \`label\` (display), \`phase\` (progress group), and independent \`provider\`/\`model\` LLM target overrides.
+-- \`pipeline(items, ...stages): Promise<any[]>\` — run each item through the stages independently with NO barrier between stages (prefer this for multi-stage work). Each stage receives \`(prev, item, index)\`. A stage throw drops that ITEM to \`null\` and skips its remaining stages.
+-- \`parallel(thunks): Promise<any[]>\` — run zero-argument functions concurrently and await ALL of them (a barrier; use only when a stage genuinely needs every prior result together). A throwing thunk resolves to \`null\`.
+-- \`phase(title)\` — start a progress phase; \`log(message)\` — narrate progress; \`args\` — the tool call's \`args\` input, verbatim.
+-
+-Misused hooks (bad arguments, unknown options, unsupported schemas, tripped caps) end the whole script instead of producing \`null\`. The script has no filesystem, network, timer, or Node.js APIs; the agents do the work.`
++export const DESCRIPTION = `Run a JavaScript workflow that coordinates subagents when the user has authorized multi-agent orchestration. An active Ultracode reminder supplies standing authorization for substantive tasks; when Ultracode is off, the ordinary opt-in rule applies.
++
++Pass an inline plain JavaScript script beginning with \`export const meta = {...}\`. The metadata must be a pure literal with \`name\` and \`description\`, plus optional \`whenToUse\` and \`phases\`; no calls, variables, spreads, or interpolation. A separate \`meta\` object with a script body is also accepted. Top-level \`await\` is supported; finish with a JSON-serializable \`return\` value. Pass \`args\` as actual JSON values, including arrays, rather than JSON-encoded strings.
++
++Each invocation saves its script and returns \`runId\`, \`scriptPath\`, and \`transcriptDir\`. Edit that script and invoke with \`scriptPath\`, or use \`name\` to load \`.omd/workflows/<name>.js\` in the workspace. Supply exactly one of \`script\`, \`scriptPath\`, or \`name\`. Foreground calls return when the workflow finishes. With \`run_in_background: true\`, the tool returns a native job id; collect the result with \`job_output\` and cancel with \`job_kill\`.
++
++- \`agent(prompt, opts?)\`: run a child to completion. Without \`schema\`, returns final text; with a supported object-root schema, returns the validated object. A child failure returns \`null\`. Other options are \`label\`, \`phase\`, \`provider\`, \`model\`, \`effort\`, \`isolation\`, and \`agentType\`. Here \`provider\` and \`model\` are independent overrides; either may be supplied alone. Omit model and effort overrides to inherit the parent route; a changed model resolves its own default effort unless one is supplied. Effort values must be supported by the selected model. \`agentType\` selects a registered native agent preset id; \`general-purpose\` inherits the parent's preset. \`isolation: 'worktree'\` creates a separate Git checkout at HEAD. Use it when concurrent agents would otherwise conflict while editing files. Parent uncommitted changes are not copied. Unchanged checkouts are removed after the child stops; changes, new files, and commits are retained and their paths reported in \`worktrees\`. Confined modes keep their filesystem restrictions.
++- \`pipeline(items, ...stages)\`: process each item across stages without a cross-item barrier. Each stage receives \`(prev, item, index)\`. An ordinary stage exception drops that item to \`null\` and skips its remaining stages.
++- \`parallel(thunks)\`: wait for all independent functions at a barrier. A throwing function returns \`null\`.
++- \`phase(title)\` and \`log(message)\`: report progress. \`args\` holds the tool's input value.
++- \`workflow(nameOrRef, args?)\`: run a saved workflow by name or \`{scriptPath}\` as a sub-step. The child shares concurrency, total-agent limits, cancellation, and the token pool. Nesting is limited to one level.
++- \`budget.total\`, \`budget.spent()\`, and \`budget.remaining()\`: the initiating turn's shared output-token target and reported usage across the main loop and delegated work. A human message ending with \`+500k\` sets a 500,000-output-token target; without a target, \`total\` is null and \`remaining()\` is Infinity. Once the target is reached, no further live agents start. Already-running calls may finish above the target. If a model call does not report usable usage, a set target blocks further dispatch instead of treating that call as free. Background workflows retain their initiating pool when a new human turn begins.
++
++Only the documented JSON Schema subset is supported: type, properties, required, additionalProperties, items, enum, const, and oneOf. Invalid hooks, schemas, or caps fail the script rather than becoming per-item null results. Concurrency and agent-count limits still apply.
++
++This engine runs the orchestration program in a fresh Node PTC process under the calling session's file policy. Its documented API is the helper set above; it is not a security boundary. The program-visible environment is empty, and the file policy does not restrict network access. The engine has no overall elapsed deadline, but its initial synchronous slice, process limits, caller cancellation, and enclosing tool deadlines still apply.
++
++Use the helpers to coordinate work performed by agents. Do not infer arbitrary Node API support from the underlying process. Scripts must be deterministic: \`Date.now()\`, \`Math.random()\`, and argumentless \`new Date()\` are unavailable; pass time or randomness through \`args\`.
++
++To resume after cancellation, failure, or script edits, pass \`resumeFromRunId\` with the saved script path. Only the longest unchanged completed prefix of agent calls, in their start order, returns cached results; the first changed, new, failed, or unfinished call and everything after it run live. A run cannot be resumed while it or another resume still owns its children. Read \`journal.jsonl\` under \`transcriptDir\` to inspect actual results, including empty strings and nulls. Inspect failures and coverage before reporting a complete result.`
+ 
+ type WorkflowCallArgs = {
+   script: string
+@@ -173,21 +186,37 @@
+     whenToUse?: string
+     phases?: { title: string; detail?: string; provider?: string; model?: string }[]
+   }
+-  args?: Record<string, unknown>
++  args?: JsonValue
++  name?: string
++  scriptPath?: string
++  resumeFromRunId?: string
+   run_in_background?: boolean
+ }
+ 
++type WorkflowInput = Omit<WorkflowCallArgs, 'script' | 'meta'> & Partial<Pick<WorkflowCallArgs, 'script' | 'meta'>>
++
++function details(run: WorkflowRun) {
++  const extended = run as PtcWorkflowRun
++  return { name: run.meta.name, runId: run.id, scriptPath: extended.scriptPath!, transcriptDir: extended.transcriptDir!, worktrees: extended.worktrees }
++}
++
++function locationText(run: WorkflowRun): string {
++  const value = details(run)
++  return `Run ID: ${value.runId}\nScript: ${value.scriptPath}\nJournal: ${value.transcriptDir}/journal.jsonl`
++    + (value.worktrees.length ? `\nWorktrees: ${JSON.stringify(value.worktrees)}` : '')
++}
++
+ /** The pending-state card: a generic card titled by the workflow's meta name. */
+-function presentWorkflowCall(args: WorkflowCallArgs): ToolCallView {
++function presentWorkflowCall(args: WorkflowInput): ToolCallView {
+   return {
+     card: 'generic',
+-    title: `workflow: ${args.meta.name}`,
+-    rawInput: args.script,
++    title: `workflow: ${args.meta?.name ?? args.name ?? args.scriptPath ?? 'script'}`,
++    rawInput: args.script ?? args.scriptPath ?? args.name ?? '',
+   }
+ }
+ 
+ /** The completed-state card: keep the pending title; render the result content as-is. */
+-function presentWorkflowResult(args: WorkflowCallArgs, result: { content: ContentBlock[]; isError: boolean }): ToolResultView {
++function presentWorkflowResult(args: WorkflowInput, result: { content: ContentBlock[]; isError: boolean }): ToolResultView {
+   void args
+   void result
+   return { card: 'generic' }
+@@ -216,18 +245,18 @@
+  * cancel reason it forwarded is the same string); an errored run fails with
+  * the script's failure message.
+  */
+-function jobOutcomeOf(result: WorkflowResult, name: string, maxChars: number): JobOutcome {
++function jobOutcomeOf(result: WorkflowResult, run: WorkflowRun, maxChars: number): JobOutcome {
+   switch (result.stopReason) {
+     case 'completed':
+       return {
+         status: 'completed',
+         detail: `${result.agentsStarted} agent${result.agentsStarted === 1 ? '' : 's'}`,
+-        result: renderResult(name, result.agentsStarted, result.value as JsonValue, maxChars),
++        result: renderResult(run.meta.name, result.agentsStarted, result.value as JsonValue, maxChars) + '\n' + locationText(run),
+       }
+     case 'cancelled':
+-      return { status: 'killed' }
++      return { status: 'killed', detail: locationText(run) }
+     case 'error':
+-      return { status: 'failed', detail: result.error ?? 'unknown error' }
++      return { status: 'failed', detail: (result.error ?? 'unknown error') + '\n' + locationText(run) }
+     /* v8 ignore start -- defensive: WorkflowStopReason is a closed union, exhaustive by construction; a future variant fails here loudly */
+     default:
+       return { status: 'failed', detail: `workflow run ended abnormally (${String(result.stopReason satisfies never)})` }
+@@ -259,13 +288,13 @@
+  * @param deps - the tool's recorder/mirror taps and the render cap.
+  * @returns the background result for the tool's output schema.
+  */
+-function startBackgroundRun(
++async function startBackgroundRun(
+   ctx: Context,
+   args: WorkflowCallArgs,
+   parent: Agent,
+   recordsRun: boolean,
+   deps: { recorder: WorkflowRecorder; mirror: WorkflowRecordMirror; maxResultChars: number },
+-): { kind: 'background'; jobId: JobId; runId: WorkflowRunId } {
++): Promise<{ kind: 'background'; jobId: JobId } & ReturnType<typeof details>> {
+   const jobs = ctx.get('jobs')
+   if (jobs === undefined) {
+     throw new Error('background jobs unavailable: load @deepseek-ai/dsh-jobs and @deepseek-ai/dsh-tool-jobs')
+@@ -283,6 +312,7 @@
+         script: args.script,
+         meta: args.meta,
+         ...args.args !== undefined ? { args: args.args } : {},
++        ...args.resumeFromRunId !== undefined ? { resumeFromRunId: args.resumeFromRunId } : {},
+         parent,
+       })
+       deps.mirror.start(run.id, job)
+@@ -301,7 +331,7 @@
+           deps.recorder.finish(run.id, result.stopReason)
+           deps.recorder.abandon(run.id)
+         }
+-        return jobOutcomeOf(result, args.meta.name, deps.maxResultChars)
++        return jobOutcomeOf(result, run, deps.maxResultChars)
+       })
+       return {
+         cancel: (reason?: string) => { run.cancel(reason ?? 'background workflow job killed') },
+@@ -309,7 +339,9 @@
+       }
+     },
+   })
+-  return { kind: 'background' as const, jobId, runId: run.id }
++  try { await (run as PtcWorkflowRun).ready }
++  catch (error) { throw new Error(`${String(error)}\n${locationText(run)}`, { cause: error }) }
++  return { kind: 'background' as const, jobId, ...details(run) }
+ }
+ 
+ export function apply(ctx: Context, config: Config): void {
+@@ -327,19 +359,17 @@
+   })
+   ctx.tools.register(defineTool({
+     name: toolName,
+-    description: DESCRIPTION,
++    description: enableRunInBackground ? DESCRIPTION : DESCRIPTION.replace(/ With `run_in_background: true`,[^\n]*?`job_kill`\./, ''),
+     parameters: {
+       script: {
+         type: 'string',
+-        required: true,
+-        description: 'The plain JavaScript body, not TypeScript and without an `export const meta` statement; top-level await is allowed. '
++        description: 'An inline plain JavaScript workflow beginning with `export const meta = {...}`; top-level await is allowed. Alternatively pass a body with the separate meta field. '
+           + 'End with `return <value>`; the JSON-serializable value is this tool\'s result.',
+       },
+       meta: {
+         type: 'object',
+         additionalProperties: true,
+-        required: true,
+-        description: 'The workflow identity as plain JSON, not code.',
++        description: 'Optional workflow identity for a script body without an inline meta declaration.',
+         properties: {
+           name: { type: 'string', required: true, description: 'Short kebab-case workflow name.' },
+           description: { type: 'string', required: true, description: 'One-line description of what the workflow does.' },
+@@ -361,10 +391,12 @@
+         },
+       },
+       args: {
+-        type: 'object',
+-        additionalProperties: true,
+-        description: 'Optional JSON input exposed to the script as the `args` global (wrap a bare list as a field, e.g. {"files": [...]}).',
++        type: 'json',
++        description: 'Optional JSON input exposed verbatim as args. Pass arrays and objects as JSON values, not JSON-encoded strings.',
+       },
++      name: { type: 'string', description: 'Saved workflow name from .omd/workflows/<name>.js. Supply exactly one of name, script, or scriptPath.' },
++      scriptPath: { type: 'string', description: 'Path to a saved workflow script, including inline meta. Use the returned path to edit and rerun a workflow.' },
++      resumeFromRunId: { type: 'string', description: 'Resume a previous run in this session: reuse its longest unchanged completed prefix, then run the remaining calls live.' },
+       ...enableRunInBackground ? {
+         run_in_background: {
+           type: 'boolean' as const,
+@@ -382,6 +414,10 @@
+               kind: { type: 'string', required: true, const: 'background' },
+               jobId: { type: 'string', required: true },
+               runId: { type: 'string', required: true },
++              name: { type: 'string', required: true },
++              scriptPath: { type: 'string', required: true },
++              transcriptDir: { type: 'string', required: true },
++              worktrees: { type: 'json', required: true },
+             },
+           },
+           {
+@@ -390,6 +426,10 @@
+             properties: {
+               kind: { type: 'string', required: true, const: 'foreground' },
+               runId: { type: 'string', required: true },
++              name: { type: 'string', required: true },
++              scriptPath: { type: 'string', required: true },
++              transcriptDir: { type: 'string', required: true },
++              worktrees: { type: 'json', required: true },
+               agentsStarted: { type: 'integer', required: true },
+               result: { type: 'json', required: true },
+             },
+@@ -398,12 +438,14 @@
+       },
+       render: (args, value) => [{
+         type: 'text',
+-        text: value.kind === 'background'
+-          ? `workflow "${args.meta.name}" started in the background as job ${value.jobId}. Its return value arrives with the completion notice; check on it with job_output, stop it with job_kill.`
+-          : renderResult(args.meta.name, value.agentsStarted, value.result, maxResultChars),
++        text: (value.kind === 'background'
++          ? `workflow "${value.name}" started in the background as job ${value.jobId}. Its return value arrives with the completion notice; check on it with job_output, stop it with job_kill.`
++          : renderResult(value.name, value.agentsStarted, value.result, maxResultChars))
++          + `\nRun ID: ${value.runId}\nScript: ${value.scriptPath}\nJournal: ${value.transcriptDir}/journal.jsonl`
++          + (Array.isArray(value.worktrees) && value.worktrees.length ? `\nWorktrees: ${JSON.stringify(value.worktrees)}` : ''),
+       }],
+     },
+-    async execute(args, exec) {
++    async execute(input, exec) {
+       const parent = exec.agent
+       if (!parent) {
+         // The loop sets `exec.agent` for every model-driven call; its absence
+@@ -411,15 +453,15 @@
+         // parent to attribute the children to. Fail loud rather than guess.
+         throw new Error('workflow tool requires a calling agent (exec.agent was undefined)')
+       }
++      const prepared = await (ctx.workflowEngine as PtcWorkflowEngine).prepare(input, parent, exec.signal)
++      exec.signal.throwIfAborted()
++      const args = { ...input, ...prepared }
+       if (args.run_in_background === true) {
+         if (!enableRunInBackground) {
+           throw new Error('run_in_background is disabled for this tool')
+         }
+-        // No pre-abort check here, unlike bash/pwsh: ToolRuntime re-reads the
+-        // caller signal right before execute(), and this branch reaches
+-        // jobs.start synchronously from there. The shell tools await a
+-        // sandbox escalation approval before registering, which is the window
+-        // their check covers.
++        // Preparation may read a saved file; the abort check above precedes
++        // synchronous job registration and transfer to the job's ownership.
+         return startBackgroundRun(ctx, args, parent, exec.parent === undefined, {
+           recorder,
+           mirror,
+@@ -434,6 +476,7 @@
+         script: args.script,
+         meta: args.meta,
+         ...args.args !== undefined ? { args: args.args } : {},
++        ...args.resumeFromRunId !== undefined ? { resumeFromRunId: args.resumeFromRunId } : {},
+         parent,
+         signal: exec.signal,
+       })
+@@ -454,11 +497,11 @@
+         if (error !== undefined) {
+           // Map a non-clean finish to an isError result (the registry turns a
+           // throw into an isError). Report the reason, not partial output.
+-          throw new Error(error)
++          throw new Error(error + '\n' + locationText(run))
+         }
+         return {
+           kind: 'foreground' as const,
+-          runId: run.id,
++          ...details(run),
+           agentsStarted: result.agentsStarted,
+           result: result.value as JsonValue,
+         }
+diff --git a/packages/subagent/subagent-in-process-driver/src/index.ts b/packages/subagent/subagent-in-process-driver/src/index.ts
+--- a/packages/subagent/subagent-in-process-driver/src/index.ts
++++ b/packages/subagent/subagent-in-process-driver/src/index.ts
+@@ -70,6 +70,14 @@
+ export interface InProcessRunOptions {
+   /** Completed-turn seed for fork, or undefined for a fresh spawn. */
+   readonly seed?: readonly SessionEvent[]
++  /** Host-created isolated checkout; never a model-supplied arbitrary directory. */
++  readonly cwd?: string
++  /** A validated native agent preset id for this child's composition. */
++  readonly agentPreset?: string
++  /** Policy captured by a provider before asynchronous workspace preparation. */
++  readonly delegatedPolicy?: ReturnType<typeof captureDelegatedPolicyOverrides>
++  /** Attach caller-owned accounting before the child is published or starts work. */
++  readonly setupChild?: (child: Agent) => void
+ }
+ 
+ /** Error used when cancellation wins before the child publication boundary. */
+@@ -116,15 +124,21 @@
+ 
+   // Capture before the first await: a later parent switch belongs to the
+   // parent's future.
+-  const inherited = captureDelegatedPolicyOverrides(parent)
++  const inherited = options.delegatedPolicy ?? captureDelegatedPolicyOverrides(parent)
+ 
+   let structured: StructuredAttachment | undefined
+-  const setup = (childCtx: Context, child: Agent): void => {
++  const setup = async (childCtx: Context, child: Agent): Promise<void> => {
++    options.setupChild?.(child)
+     appendDelegatedPolicyOverrides(child.session, inherited)
+     applyChildComposition(childCtx, parent, {
+       persona: request.persona,
+       toolFilter: request.toolFilter,
+     })
++    if (options.agentPreset !== undefined) {
++      const presets = childCtx.get('agentPresets')
++      if (presets === undefined) throw new Error('Custom workflow agents require the native preset registry')
++      await presets.recompose(childCtx, options.agentPreset)
++    }
+     if (request.outputSchema !== undefined) {
+       structured = attachStructuredRuntime(childCtx, request.outputSchema)
+     }
+@@ -134,7 +148,11 @@
+   const handle = await parent.ctx.agents.create({
+     sessionId: childId,
+     parentAgent: parent,
+-    meta: childSessionMeta(parent, childDepth, seed !== undefined),
++    meta: {
++      ...childSessionMeta(parent, childDepth, seed !== undefined),
++      ...options.cwd === undefined ? {} : { cwd: options.cwd },
++      ...options.agentPreset === undefined ? {} : { agentPreset: options.agentPreset },
++    },
+     ...seed !== undefined ? { seed } : {},
+     ...seed === undefined ? {} : { inheritedEventCount: activationBoundary },
+     agentOptions: resolveChildAgentOptions(parent, request.agentOptions, childDepth),

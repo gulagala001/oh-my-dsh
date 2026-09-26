@@ -85,3 +85,15 @@ test('historical project memories remain readable without crossing project or pr
   assert.deepEqual(store.memories('session:other', 'session', true), []);
   assert.equal(readFileSync(file, 'utf8'), bytes);
 });
+
+test('workflow isolation retains the originating project context while session isolation stays private', t => {
+  const {hub,store,session,dir}=setup(t);
+  store.state(session.id).cwd=dir;
+  const child={id:'worktree-child',header:{parentSession:session.id,cwd:'/isolated-checkout'}};
+  store.state(child.id).workflowProject=projectOf(dir);
+  store.state(child.id).parentSession=session.id;
+  assert.equal(hub.scope(child).project,projectOf(dir));
+  assert.equal(hub.scope({id:'nested-child',header:{parentSession:child.id,cwd:'/isolated-checkout'}}).project,projectOf(dir));
+  store.state(session.id).memoryScope='session';
+  assert.equal(hub.scope(child).project,'session:test');
+});
