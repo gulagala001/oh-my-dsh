@@ -123,9 +123,45 @@ export function apply(ctx) {
   await page.getByLabel('主题', { exact: true }).selectOption('codex-desktop');
   assert.equal(await page.getByLabel('配色', { exact: true }).locator('option').count(), 29);
   await page.getByLabel('配色', { exact: true }).selectOption('palette:lavender');
-  const wallpaper = await sharp({ create: { width: 32, height: 32, channels: 3, background: '#416975' } }).png().toBuffer();
+  const wallpaper = await sharp({ create: { width: 32, height: 32, channels: 3, background: '#111111' } }).png().toBuffer();
   await page.getByLabel('背景图片', { exact: true }).setInputFiles({ name: 'desktop-wallpaper.png', mimeType: 'image/png', buffer: wallpaper });
   await page.locator('html[data-omd-background]').waitFor();
+  // The official desktop build hashes its shell classes differently from npm.
+  // Verify painted pixels, not only the saved scope or successful image decode.
+  const wallpaperImage = page.locator('[data-omd-background-layer] img');
+  await until(() => wallpaperImage.evaluate(img => img.complete && img.naturalWidth === 32));
+  const regionPixels = async () => {
+    const points = await page.locator('[data-rightbar-col]').evaluate(right => {
+      const center = right.previousElementSibling, sidebar = center.previousElementSibling;
+      return [sidebar, center].map(el => { const r = el.getBoundingClientRect(); return { x: Math.floor(r.x + r.width / 2), y: Math.floor(r.y + r.height * .65) }; });
+    });
+    const { data, info } = await sharp(await page.screenshot({ animations: 'disabled', scale: 'css' })).raw().toBuffer({ resolveWithObject: true });
+    return points.map(({ x, y }) => [...data.subarray((y * info.width + x) * info.channels, (y * info.width + x) * info.channels + 3)]);
+  };
+  await page.getByLabel('主题', { exact: true }).selectOption('claude-cli-terminal');
+  await page.getByLabel('配色', { exact: true }).selectOption('palette:sakura');
+  for (const appearance of ['light', 'dark']) {
+    await page.getByLabel('明暗模式', { exact: true }).selectOption(appearance);
+    await until(async () => await page.locator('html').getAttribute('data-appearance') === appearance);
+    for (const scope of ['all', 'conversation', 'sidebar']) {
+      await page.getByLabel('背景显示区域', { exact: true }).selectOption(scope);
+      await page.keyboard.press('Escape');
+      const before = await regionPixels();
+      await wallpaperImage.evaluate(img => img.style.filter = 'invert(1)');
+      const after = await regionPixels();
+      await wallpaperImage.evaluate(img => img.style.removeProperty('filter'));
+      for (const [i, region] of ['sidebar', 'conversation'].entries()) {
+        const difference = Math.max(...before[i].map((v, channel) => Math.abs(v - after[i][channel])));
+        assert.ok(scope === 'all' || scope === region ? difference >= 20 : difference <= 2, `${appearance}/${scope}/${region}: wallpaper pixel difference ${difference}`);
+      }
+      if (process.env.TRISOUL_UI_ARTIFACTS) await page.screenshot({ path: join(process.env.TRISOUL_UI_ARTIFACTS, `wallpaper-${appearance}-${scope}.png`) });
+      await page.getByText('更多', { exact: true }).click();
+      await page.getByText('设置', { exact: true }).click();
+      await page.getByRole('dialog').getByRole('button', { name: '外观', exact: true }).click();
+    }
+  }
+  await page.getByLabel('主题', { exact: true }).selectOption('codex-desktop');
+  await page.getByLabel('配色', { exact: true }).selectOption('palette:lavender');
   await page.getByLabel('背景显示区域', { exact: true }).selectOption('conversation');
   await page.locator('.omd-advanced > summary').click();
   await page.getByLabel('Logo 与名称', { exact: true }).selectOption('native');
@@ -185,7 +221,7 @@ export function apply(ctx) {
   await launch();
   await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor({ state: 'hidden' });
   assert.equal(await page.locator('.tx-cu-chip').count(), 0);
-  assert.equal(await page.locator('[data-omd-background-layer], style[data-omd-background-style], style[data-omd-custom-style], link[data-omd-favicon]').count(), 0);
+  assert.equal(await page.locator('[data-omd-background-layer], style[data-omd-background-style], style[data-omd-custom-style], link[data-omd-favicon], [data-omd-surface]').count(), 0);
   assert.match(await page.title(), /DeepSeek Harness$/);
   await page.getByText('桌面适配验证完成。', { exact: true }).waitFor();
   assert.deepEqual(errors, []);

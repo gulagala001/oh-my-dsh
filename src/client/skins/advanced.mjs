@@ -76,20 +76,20 @@ export function advancedCss(settings) {
       'font-ui': ['body, button, input, select, textarea, .tx-app, .cx-settings, .tx-wordmark, .YDXeBa_title', 'font-family'],
       'font-body': ['[data-chat-flow-kind], .hWmORq_body, .Sixlwa_bubble, .tx-cu-user-bubble, [data-composer-input]', 'font-family'],
       'font-mono': ['pre, code, pre code', 'font-family'],
-      'font-size': ['.hHd-Xa_root, .YDXeBa_title, .VOzbGW_panel, .omd-appearance-row, .tx-app, .cx-settings, .tx-workbench', 'font-size'],
+      'font-size': ['[data-omd-surface="sidebar"], .YDXeBa_title, .VOzbGW_panel, .omd-appearance-row, .tx-app, .cx-settings, .tx-workbench', 'font-size'],
       'body-size': ['[data-chat-flow-kind], .hWmORq_body, .Sixlwa_bubble, .tx-cu-user-bubble, [data-composer-input]', 'font-size'],
       'code-size': ['pre, code, pre code', 'font-size'],
       'line-height': ['[data-chat-flow-kind], .hWmORq_body, .Sixlwa_bubble, [data-composer-input]', 'line-height'],
       'radius-control': ['button:not([role=switch]), select:not(.cx-scope-chip select), input:not([type=checkbox]):not([type=radio]):not([type=range]):not([data-composer-input]), .YDXeBa_sessionRow', 'border-radius'],
-      'radius-panel': ['.VOzbGW_panel, [role=menu], dialog, .tx-card, .cx-card, .P3OORG_panel[data-sidebar-right-open]', 'border-radius'],
+      'radius-panel': ['.VOzbGW_panel, [role=menu], dialog, .tx-card, .cx-card, [data-sidebar-right-panel][data-sidebar-right-open]', 'border-radius'],
       'radius-composer': ['[data-composer-card]', 'border-radius'],
       'radius-message': ['.Sixlwa_bubble, .tx-cu-user-bubble', 'border-radius'],
       'border-width': ['[data-composer-card], .VOzbGW_panel, .tx-card, .cx-card, pre', 'border-width'],
-      shadow: ['[data-composer-card], .VOzbGW_panel, [role=menu], .P3OORG_panel[data-sidebar-right-open]', 'box-shadow'],
+      shadow: ['[data-composer-card], .VOzbGW_panel, [role=menu], [data-sidebar-right-panel][data-sidebar-right-open]', 'box-shadow'],
     }[key];
     if (targets) css += paint(...targets, value);
     if (key === 'body-size') css += rule('.wSkVaW_root', `--dsh-content-font-size:${value};--dsh-content-font-size-secondary:calc(${value} - 2px);`);
-    if (key === 'panel-blur') css += paint('[data-composer-card], .P3OORG_panel[data-sidebar-right-open]', 'backdrop-filter', `blur(${value})`, `${scope}:not([data-omd-reduce-effects])`);
+    if (key === 'panel-blur') css += paint('[data-composer-card], [data-sidebar-right-panel][data-sidebar-right-open]', 'backdrop-filter', `blur(${value})`, `${scope}:not([data-omd-reduce-effects])`);
   }
   for (const mode of ['light', 'dark']) {
     const p = settings[mode], prefix = `${scope}[data-appearance="${mode}"]`;
@@ -98,18 +98,18 @@ export function advancedCss(settings) {
       // Wallpaper remains behind the chosen region; custom region colors tint it.
       css += paint(selectors, 'background', p[key], `${prefix}:not([data-omd-background])`);
       css += paint(selectors, 'background', p[key], `${prefix}[data-omd-background="${wallpaperScope === 'sidebar' ? 'conversation' : 'sidebar'}"]`);
-      if (key === 'sidebar' || key === 'conversation') css += rule(key === 'sidebar' ? '.pI_x6G_sidebarCol' : '.pI_x6G_centerCol', `--omd-background-panel:color-mix(in srgb, ${p[key]} var(--omd-panel-opacity), transparent);`, prefix);
+      if (key === 'sidebar' || key === 'conversation') css += rule(key === 'sidebar' ? '[data-omd-surface="sidebar-column"]' : '[data-omd-surface="conversation"]', `--omd-background-panel:color-mix(in srgb, ${p[key]} var(--omd-panel-opacity), transparent);`, prefix);
     };
     if (p.selected) css += paint('.YDXeBa_sessionRow.YDXeBa_selected, .VOzbGW_navCell[aria-current], .cx-tabs button[aria-current=page], .tx-tabs button[aria-selected=true]', 'background', p.selected, prefix);
     if (p.hover) css += paint('.YDXeBa_sessionRow:not(.YDXeBa_selected):hover, .hHd-Xa_newSession:hover, .hHd-Xa_panelRow:hover', 'background', p.hover, prefix);
-    if (p.bg) css += paint('body, .pI_x6G_frame', 'background', p.bg, `${prefix}:not([data-omd-background])`);
-    region('sidebar', '.hHd-Xa_root', 'sidebar');
-    region('conversation', '.pI_x6G_centerCol, .wSkVaW_root, .wSkVaW_body', 'conversation');
+    if (p.bg) css += paint('body, [data-omd-surface="frame"]', 'background', p.bg, `${prefix}:not([data-omd-background])`);
+    region('sidebar', '[data-omd-surface="sidebar"]', 'sidebar');
+    region('conversation', '[data-omd-surface="conversation"], .wSkVaW_root, .wSkVaW_body', 'conversation');
     region('header', '.wSkVaW_header', 'conversation');
     region('composer', '[data-composer-card]', 'conversation');
     if (p.composer) css += paint('[data-composer-card]', 'background', `color-mix(in srgb, ${p.composer} var(--omd-panel-opacity), transparent)`, `${prefix}[data-omd-background]:not([data-omd-background="sidebar"])`);
     for (const [key, selectors, property = 'background'] of [
-      ['workbench', '.tx-workbench, .cx-integrated, .P3OORG_panel[data-sidebar-right-open], .P3OORG_panel[data-sidebar-right-open] .P3OORG_panelBody'],
+      ['workbench', '.tx-workbench, .cx-integrated, [data-sidebar-right-panel][data-sidebar-right-open], [data-sidebar-right-panel][data-sidebar-right-open] [data-omd-surface="workbench-body"]'],
       ['surface-solid', '.VOzbGW_panel, .VOzbGW_content, .VOzbGW_options, [role=menu], dialog'],
       ['code-bg', 'pre, code:not(pre code)'], ['user-bg', '.Sixlwa_bubble, .tx-cu-user-bubble'],
       ['user-text', '.Sixlwa_bubble, .tx-cu-user-bubble', 'color'], ['tool-bg', '[data-disclosure-row], .tx-cu-card-heading'],

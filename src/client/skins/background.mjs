@@ -1,3 +1,4 @@
+import { createSurfaceMarkers } from './surfaces.mjs';
 export const BACKGROUND_DB = 'omd.appearance.background.v1';
 export const MAX_BACKGROUND_BYTES = 15 * 1024 * 1024;
 export const backgroundDefaults = Object.freeze({ blur: 0, shade: 0, opacity: 85, fit: 'cover', scope: 'all' });
@@ -36,10 +37,11 @@ export function createBackgroundRuntime(css, changed, { recovery = false } = {})
   const emit = () => { if (!disposed) changed({ ...state }); };
   // Only move our own layer. The host owns its columns and may remount them;
   // absolute positioning follows their size without viewport polling.
+  const surfaces = createSurfaceMarkers();
   const mount = () => {
     if (disposed) return;
-    const target = state.scope === 'all' ? document.body
-      : document.querySelector(state.scope === 'conversation' ? '.pI_x6G_centerCol' : '.pI_x6G_sidebarCol');
+    const regions = surfaces.refresh();
+    const target = state.scope === 'all' ? document.body : regions[state.scope];
     const parent = target || document.body;
     if (layer.parentElement !== parent) parent.prepend(layer);
     layer.hidden = !objectUrl || recovery || reduced || !target;
@@ -132,7 +134,7 @@ export function createBackgroundRuntime(css, changed, { recovery = false } = {})
     dispose() {
       disposed = true; ++sequence; ++uploadSequence; observer.disconnect(); channel?.close(); db?.close();
       image.onerror = null; if (objectUrl) URL.revokeObjectURL(objectUrl);
-      layer.remove(); style.remove(); document.documentElement.removeAttribute('data-omd-background');
+      layer.remove(); style.remove(); surfaces.dispose(); document.documentElement.removeAttribute('data-omd-background');
       document.documentElement.style.removeProperty('--omd-panel-opacity');
     },
   };
