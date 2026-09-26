@@ -179,6 +179,14 @@ test('wallpaper paints the selected region across layouts, modes and sidebar res
       }
     }
   }
+  // Without an OMD palette the host color aliases live on body, not html.
+  await page.getByLabel('主题', { exact: true }).selectOption('default');
+  await page.getByLabel('配色', { exact: true }).selectOption('theme');
+  await page.getByLabel('背景显示区域', { exact: true }).selectOption('all');
+  await page.getByLabel('面板不透明度', { exact: true }).fill('85');
+  for (const selector of ['.hHd-Xa_root', '.pI_x6G_centerCol']) {
+    assert.match(await page.locator(selector).evaluate(el => getComputedStyle(el).backgroundColor), /0\.85/, `${selector} respects opacity without a palette`);
+  }
   await page.getByLabel('背景显示区域', { exact: true }).selectOption('conversation');
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '打开工作台', exact: true }).click();

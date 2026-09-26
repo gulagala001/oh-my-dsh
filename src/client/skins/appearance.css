@@ -22,28 +22,28 @@
 [data-omd-background-layer][hidden] { display: none; }
 [data-omd-background-layer] > img { position: absolute; inset: calc(-2 * var(--omd-wallpaper-blur)); width: calc(100% + 4 * var(--omd-wallpaper-blur)); height: calc(100% + 4 * var(--omd-wallpaper-blur)); max-width: none; filter: blur(var(--omd-wallpaper-blur)); }
 [data-omd-background-layer]::after { content: ''; position: absolute; inset: 0; background: linear-gradient(var(--omd-wallpaper-tint, transparent), var(--omd-wallpaper-tint, transparent)), var(--omd-wallpaper-shade); }
-html[data-omd-background] { --omd-background-panel: color-mix(in srgb, var(--omd-surface-solid, var(--dsw-alias-bg-layer-2)) var(--omd-panel-opacity), transparent); }
+html[data-omd-background] body { --omd-background-panel: color-mix(in srgb, var(--omd-surface-solid, var(--dsw-alias-bg-layer-2)) var(--omd-panel-opacity), transparent); }
 html[data-omd-background="all"] body { isolation: isolate; }
-html[data-omd-background="all"] :is(body, #root, .pI_x6G_frame, .pI_x6G_sidebarCol, .pI_x6G_rightbarCol, .tx-workbench, .cx-integrated, .P3OORG_panelBody) { background: transparent !important; }
-html[data-omd-background="all"] :is(.pI_x6G_centerCol, .hHd-Xa_root, .P3OORG_panel[data-sidebar-right-open]),
+html[data-omd-background="all"] :is(body, #root, [data-omd-surface="frame"], [data-omd-surface="sidebar-column"], [data-omd-surface="workbench-column"], .tx-workbench, .cx-integrated, [data-omd-surface="workbench-body"]) { background: transparent !important; }
+html[data-omd-background="all"] :is([data-omd-surface="conversation"], [data-omd-surface="sidebar"], [data-sidebar-right-panel][data-sidebar-right-open]),
 html[data-omd-background]:not([data-omd-background="sidebar"]) [data-composer-card] { background: var(--omd-background-panel) !important; }
 /* Give the selected column its own background stacking context. The image is
    sized to that region, and stays behind the host's text and controls. */
-html[data-omd-background="conversation"] .pI_x6G_centerCol,
-html[data-omd-background="sidebar"] .pI_x6G_sidebarCol { position: relative; isolation: isolate; }
+html[data-omd-background="conversation"] [data-omd-surface="conversation"],
+html[data-omd-background="sidebar"] [data-omd-surface="sidebar-column"] { position: relative; isolation: isolate; }
 html[data-omd-background]:not([data-omd-background="all"]) [data-omd-background-layer] {
   position: absolute; border-radius: inherit; --omd-wallpaper-tint: var(--omd-background-panel);
 }
-html[data-omd-background="sidebar"] .hHd-Xa_root,
+html[data-omd-background="sidebar"] [data-omd-surface="sidebar"],
 html[data-omd-background]:not([data-omd-background="sidebar"]) :is(.wSkVaW_root, .wSkVaW_body, .wSkVaW_header, [data-composer-seat]) { background: transparent !important; }
 /* A collapsed workbench can retain its last width; its empty body must not
    paint over the conversation's new stacking context. */
-html[data-omd-background] .P3OORG_panel:not([data-sidebar-right-open]) .P3OORG_panelBody { background: transparent !important; }
+html[data-omd-background] [data-sidebar-right-panel]:not([data-sidebar-right-open]) [data-omd-surface="workbench-body"] { background: transparent !important; }
 /* Menus and modal content keep solid surfaces over any photograph. */
 html[data-omd-background] :is([role=menu], .VOzbGW_panel, dialog, [role=dialog]) { background-color: var(--omd-surface-solid, var(--dsw-alias-bg-layer-2)) !important; }
 @media (prefers-reduced-transparency: reduce) {
   html[data-omd-background] [data-omd-background-layer] { display: none; }
-  html[data-omd-background] :is(body, .pI_x6G_centerCol, .hHd-Xa_root, .P3OORG_panel[data-sidebar-right-open]),
+  html[data-omd-background] :is(body, [data-omd-surface="conversation"], [data-omd-surface="sidebar"], [data-sidebar-right-panel][data-sidebar-right-open]),
   html[data-omd-background]:not([data-omd-background="sidebar"]) [data-composer-card] { background: var(--omd-surface-solid, var(--dsw-alias-bg-base)) !important; }
 }
 
