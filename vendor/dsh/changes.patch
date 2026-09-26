@@ -1405,6 +1405,43 @@ new file mode 100644
 +    return this.closing
 +  }
 +}
+diff --git a/packages/workflow/workflow-ptc/src/realm.ts b/packages/workflow/workflow-ptc/src/realm.ts
+--- a/packages/workflow/workflow-ptc/src/realm.ts
++++ b/packages/workflow/workflow-ptc/src/realm.ts
+@@ -13,6 +13,15 @@
+   }
+ }
+ 
++function compactGuestLocations(text: string): string {
++  // Encoded JavaScript still contains literal parentheses. Stop at whitespace,
++  // not the first closing parenthesis inside the data URL's module source.
++  return text.replace(/data:(?:text|application)\/(?:javascript|ecmascript)[^\s]+/g, location => {
++    const tail = /(:\d+:\d+)(\)?)$/.exec(location)
++    return `workflow-guest${tail ? tail[1] + tail[2] : ''}`
++  })
++}
++
+ /**
+  * Render a thrown value to failure text without ever throwing: prefer the
+  * `stack` (host or realm — a realm error's `stack` is a plain string read),
+@@ -24,10 +33,14 @@
+ export function renderThrown(error: unknown): string {
+   try {
+     const stack = (error as { stack?: unknown } | null | undefined)?.stack
+-    if (typeof stack === 'string' && stack.length > 0) return stack
++    if (typeof stack === 'string' && stack.length > 0) {
++      // Node embeds the complete encoded guest module in data-URL stack
++      // frames. Keep the location without sending that source back to the model.
++      return compactGuestLocations(stack)
++    }
+     const message = (error as { message?: unknown } | null | undefined)?.message
+-    if (typeof message === 'string' && message.length > 0) return message
+-    return String(error)
++    if (typeof message === 'string' && message.length > 0) return compactGuestLocations(message)
++    return compactGuestLocations(String(error))
+   } catch {
+     // A throwing accessor/toString on the thrown value — rendering must be
+     // total (drive()'s never-reject contract), so fall back to a fixed label.
 diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/workflow-ptc/src/runtime.ts
 --- a/packages/workflow/workflow-ptc/src/runtime.ts
 +++ b/packages/workflow/workflow-ptc/src/runtime.ts

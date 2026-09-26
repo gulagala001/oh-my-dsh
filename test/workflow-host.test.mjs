@@ -36,6 +36,18 @@ async function fixture(t, start) {
   return { root, parent, requests, warnings, signals, run };
 }
 
+test('guest schema errors retain actionable locations without dumping the encoded runtime source', async t => {
+  const fx = await fixture(t);
+  const run = fx.run(`return await agent('review', {schema:{type:'object',properties:{status:{enum:['pass','fail']}}}})`);
+  const result = await run.result;
+  assert.equal(result.stopReason,'error');
+  assert.match(result.error,/schema\.properties\.status\.enum requires type or oneOf/);
+  assert.match(result.error,/workflow-guest:\d+:\d+/);
+  assert.doesNotMatch(result.error,/data:text\/javascript|%2F%2F%20vendor/);
+  assert.ok(result.error.length<4000,`error has ${result.error.length} characters`);
+  assert.equal(fx.requests.length,0);
+});
+
 test('bundled guest and host forward effort, persist results after disposal, and resume without spawning', async t => {
   let disposals = 0;
   const fx = await fixture(t, request => ({ id: randomUUID(), result: Promise.resolve(success(request.prompt[0].text)), dispose: async () => { disposals++; } }));
