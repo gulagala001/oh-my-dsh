@@ -4,20 +4,20 @@
 
 OpenCU 从 [Oh My DSH](https://github.com/gulagala001/oh-my-dsh) 的 Computer Use 提取而来，提供相同的操控工具、实时预览和接管体验，可以独立安装到 DSH。Oh My DSH 继续集成全部能力，并直接复用 OpenCU 的实现。
 
-当前正式版本：[1.1.6](https://github.com/gulagala001/opencu/releases/tag/v1.1.6)。源码、发行包与 SHA-256 校验文件见版本页面。
+当前正式版本：[1.1.7](https://github.com/gulagala001/opencu/releases/tag/v1.1.7)。源码、发行包与 SHA-256 校验文件见版本页面。
 
 ## 本版更新
 
-修复浏览器／桌面实时画面结束后，保活定时器仍写入 HTTP 响应而触发 `ERR_STREAM_WRITE_AFTER_END`、导致 DSH Host 退出的问题。
+新增 WSL 调用手动指定的 Windows 桌面程序，补齐平台状态、程序身份校验与 Windows 操作说明。配置步骤见 [WSL 使用指南](docs/windows.md#wsl-控制-windows-桌面)；WSL 真机操控仍待验收。
 
-[版本说明与验证范围](docs/release-1.1.6.md)。
+[版本说明与验证范围](docs/release-1.1.7.md)。
 
 ## 安装
 
-当前正式版 **1.1.6** 适配 **DSH 0.1.7-rc.2 Web、Node.js ≥22.19、pnpm 11.23.0 和 Git**。先停止 DSH 服务，再运行：
+当前正式版 **1.1.7** 适配 **DSH 0.1.7-rc.2 Web、Node.js ≥22.19、pnpm 11.23.0 和 Git**。先停止 DSH 服务，再运行：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/opencu#v1.1.6
+npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/opencu#v1.1.7
 npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 ```
 
@@ -73,7 +73,7 @@ OpenCU 配置位于 DSH 的 `opencu` 设置区。未显式设置的字段继承�
 先停止服务，再运行对应命令，然后重新启动 `dsh web`：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/opencu#v1.1.6
+npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/opencu#v1.1.7
 dsh plugin --profile web remove opencu
 ```
 

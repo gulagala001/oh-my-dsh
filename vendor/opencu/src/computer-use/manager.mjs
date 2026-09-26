@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { BrowserHost, browserExecutablePath, BROWSER_STARTUP_TIMEOUT_MS } from './browser.mjs';
 import { NativeHost } from './native.mjs';
-import { WindowsNativeHost } from './windows-native.mjs';
+import { WindowsNativeHost, windowsBridgeActive } from './windows-native.mjs';
 import { NativeViews } from './native-view.mjs';
 import { ComputerRuntime } from './runtime.mjs';
 import { BrowserViews } from './browser-view.mjs';
@@ -51,7 +51,8 @@ export class ComputerUseManager {
     } };
     this.browser = new BrowserHost(join(directory, 'browser-profile'), { ...options.browser, ...callbacks });
     this.browserViews = new BrowserViews(this.browser);
-    this.native = process.platform === 'win32' ? new WindowsNativeHost(directory, options.native) : new NativeHost(directory, options.native);
+    const windowsBridge = !!options.native?.binary && windowsBridgeActive(options.native);
+    this.native = (options.native?.platform ?? process.platform) === 'win32' || windowsBridge ? new WindowsNativeHost(directory, options.native) : new NativeHost(directory, options.native);
     this.nativeViews = new NativeViews(this.native);
     this.sessions = new Map(); this.preview = new Map(); this.sharing = new Map(); this.closed = false; this.enabled = options.enabled !== false;
     this.extensionBrowsers = new Map(); this.extensionViews = new Map(); this.retiredExtensions = new Set();
@@ -89,6 +90,7 @@ export class ComputerUseManager {
       const state = { id, status: 'idle', target: null, previewTargets: new Map(), history: [], stopped: false, queues: new Map(), viewers: new Map(), userTabs: new Set(), closingTabs: new Map(), controlEpoch: 0, navigationRevision: 0, navigationIntents: new Map() };
       state.operationStats = { total: 0, succeeded: 0, failed: 0, cancelled: 0, methods: Object.create(null) };
       state.runtime = new ComputerRuntime((method, args, signal, frames) => this.dispatch(id, method, args, signal, frames), {
+        nativePlatform: this.native.platform ?? process.platform,
         onStop: async () => {
           const results = await Promise.allSettled([...this.browsers().map(browser => browser.disconnect(id)), this.native.release(id)]);
           const failures = results.filter(r => r.status === 'rejected').map(r => r.reason);
@@ -789,7 +791,7 @@ export class ComputerUseManager {
       const executable = this.browser.runtimePath ?? browserExecutablePath(this.browser.executablePath);
       Object.assign(browser, { installed: existsSync(executable), name: executable.includes('ms-playwright') ? 'Chromium · Playwright 固定版本' : 'Chrome / Chromium', path: executable });
     } catch (error) { browser.error = error.message; }
-    const native = { platform: process.platform, supported: this.native.supported(), installed: null, installing: !!this.native.installing, removing: !!this.native.removing, removable: typeof this.native.uninstall === 'function' && !this.native.externalBinary, accessibility: null, screenRecording: null };
+    const native = { platform: this.native.platform ?? process.platform, bridge: !!this.native.bridge, external: !!this.native.externalBinary, supported: this.native.supported(), installed: null, installing: !!this.native.installing, removing: !!this.native.removing, removable: typeof this.native.uninstall === 'function' && !this.native.externalBinary, accessibility: null, screenRecording: null };
     try {
       native.installed = this.native.available();
       if (native.installed) {

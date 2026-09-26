@@ -18,7 +18,8 @@ function appendOutput(c, block) {
 }
 
 export class ComputerRuntime {
-  constructor(dispatch, { onStop = async()=>{}, timeoutMs=30000 }={}) {
+  constructor(dispatch, { onStop = async()=>{}, timeoutMs=30000, nativePlatform=process.platform }={}) {
+    this.nativePlatform=nativePlatform;
     this.dispatch=dispatch;this.onStop=onStop;this.timeoutMs=timeoutMs;this.current=null;this.generation=0;
   }
   async start() {
@@ -76,7 +77,7 @@ export class ComputerRuntime {
       const timer=setTimeout(()=>{void this.stop(new Error(`Computer Use exceeded ${timeoutMs} ms; the runtime was reset.`)).catch(()=>{});},timeoutMs);
       this.current={execution,controller,coordinateFrames,resolve,reject,blocks:[],textBytes:0,imageBytes:0,pending:new Set(),cleanup:()=>{clearTimeout(timer);signal?.removeEventListener('abort',abort);}};
       signal?.addEventListener('abort',abort,{once:true});
-      this.worker.send({type:'execute',execution,code});
+      this.worker.send({type:'execute',execution,code,nativePlatform:this.nativePlatform});
     });
   }
   finish(execution,error,afterStop=false) {

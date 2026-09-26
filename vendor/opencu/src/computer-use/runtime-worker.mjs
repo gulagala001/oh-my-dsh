@@ -19,9 +19,10 @@ const rpc = (method, args = []) => {
 const emit = (type, value) => send({ type:'output', execution:scope.getStore(), block:{type,...value} });
 const display = value => emit('text',{text:typeof value==='string'?value:inspect(value,{depth:8,maxArrayLength:100,maxStringLength:24000,breakLength:100})});
 const shownDocumentation=new Set();
+let nativePlatform=process.platform;
 function documentation(kind){
   for(const name of ['core',kind].filter(Boolean))if(!shownDocumentation.has(name)){
-    display(name==='core'?CORE_DOCUMENTATION:name==='browser'?BROWSER_DOCUMENTATION:appDocumentation());
+    display(name==='core'?CORE_DOCUMENTATION:name==='browser'?BROWSER_DOCUMENTATION:appDocumentation(nativePlatform));
     shownDocumentation.add(name);
   }
 }
@@ -96,7 +97,7 @@ function browserTarget(info){
     tabs:{list:()=>rpc('listTabs',[{browser:info.id}]),get:id=>bind('getTab',[id,{browser:info.id}]),new:()=>bind('createBrowserTab',[info.id,'about:blank'])}});
 }
 globalThis.cua=Object.freeze({
-  documentation:async topic=>documentationTopic(topic),
+  documentation:async topic=>documentationTopic(topic,nativePlatform),
   getState:async(options={})=>{const state=await rpc('getState');documentation();if(options.emit!==false)display(state);return state;},
   listApps:async(options={})=>{const apps=await rpc('listApps');documentation();if(options.emit!==false)display(apps);return apps;},
   listTabs:async(options={})=>{const tabs=await rpc('listTabs',[options]);documentation();if(options.emit!==false)display(tabs);return tabs;},
@@ -120,6 +121,7 @@ process.on('message',message=>{
   if(message.type==='execute') {
     if(busy){send({type:'done',execution:message.execution,error:{message:'The previous call is still running.'}});return;}
     busy=true;
+    nativePlatform=message.nativePlatform??process.platform;
     scope.run(message.execution,async()=>{
       try{
         const result=await post('Runtime.evaluate',{expression:message.code,replMode:true,awaitPromise:true,returnByValue:false,objectGroup:message.execution});
