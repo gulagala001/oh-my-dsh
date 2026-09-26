@@ -96,6 +96,7 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
     }
     return true;
   }
+  if (path === '/settings' && req.method === 'GET') { send(res, 200, hub.config()); return true; }
   if (path === '/settings' && req.method === 'POST') {
     const patch = await readBody(req);
     if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Error('设置必须是对象');

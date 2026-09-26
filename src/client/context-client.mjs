@@ -245,13 +245,13 @@ export function createContextUI(React) {
           cg.enabled && cg.projects.map(p => h('div', { className: 'cx-component-project', key: p.path }, h('div', { className: 'cx-row' }, h('code', { className: 'cx-component-path' }, p.path), badge(p.status === 'ready' ? '索引就绪' : p.status === 'error' ? '准备失败' : '正在建索引')), p.error && h('p', { className: 'cx-hint' }, p.error), p.status === 'error' && button('重试索引', () => this.act({ action: 'index', path: p.path }), { disabled: busy, quiet: true }))))),
         section('电脑操控', '浏览器、桌面控制和日常 Chrome 连接。', h(React.Fragment, null,
           this.toggle('computerUseEnabled', 'Computer Use', cu.enabled, '准备完成后即可在对话中使用。'),
-          cu.enabled && this.row('内置浏览器', setup?.browser.installed, cu.operations.browser, '使用独立的浏览器配置，首次打开时启动。', !setup?.browser.installed || cu.operations.browser?.error ? retry('browser', '安装浏览器') : null),
-          cu.enabled && (native?.supported ? this.row('桌面控制', nativeReady, cu.operations.native,
+          cu.enabled && this.row('内置浏览器', setup?.browser?.installed, { ...cu.operations.browser, error: cu.operations.browser?.error || setup?.browser?.error }, '使用独立的浏览器配置，首次打开时启动。', !setup?.browser?.installed || setup?.browser?.error || cu.operations.browser?.error ? retry('browser', '安装浏览器') : null),
+          cu.enabled && (native?.supported ? this.row('桌面控制', nativeReady, { ...cu.operations.native, error: cu.operations.native?.error || native?.error },
             native?.error || (!native?.installed ? native?.platform === 'win32' ? '自动编译桌面控制；本机需要 .NET 10 SDK。' : '自动安装桌面控制；本机需要 Apple Command Line Tools。' : nativeReady ? '可操作所选应用' : native.platform === 'win32' ? '请保持桌面已登录并解锁。' : '请为 Oh My DSH Computer Use 开启辅助功能和屏幕录制权限。'),
             h('div', { className: 'cx-actions' }, (!native.installed || native.updateAvailable || native.repairRequired || cu.operations.native?.error) && retry('native', native.installed ? '更新或修复' : '安装桌面控制'), native.installed && native.platform !== 'win32' && !nativeReady && button('打开系统权限设置', () => this.act({ action: 'permissions' }), { disabled: busy, icon: 'settings' }))) : h('p', { className: 'cx-hint' }, '此平台可使用浏览器；原生桌面控制暂不支持。')),
-          cu.enabled && this.row('日常 Chrome', !!extension?.browsers?.length && !install?.reloadRequired, cu.operations.extension,
+          cu.enabled && this.row('日常 Chrome', !!extension?.browsers?.length && !install?.reloadRequired, { ...cu.operations.extension, error: cu.operations.extension?.error || extension?.error || install?.error },
             install?.reloadRequired ? '扩展已更新，请在 Chrome 扩展页重新加载。' : extension?.browsers?.length ? '已连接，可使用已有网页和登录状态。' : install?.prepared && install.migrated ? '旧版连接已迁移，扩展目录已保留。如果尚未连上，请在 Chrome 扩展页重新加载一次 Oh My DSH。' : install?.prepared ? '连接程序已准备好。首次在 Chrome 的 chrome://extensions 开启开发者模式，再加载下方目录。' : '自动准备连接程序；也可直接使用内置浏览器。',
-            install?.supported && (!install.prepared || cu.operations.extension?.error) ? retry('extension', install.superseded ? '切换 Chrome 到当前实例' : '准备 Chrome 连接') : null),
+            install?.supported && (!install.prepared || extension?.error || cu.operations.extension?.error) ? retry('extension', install.superseded ? '切换 Chrome 到当前实例' : '准备 Chrome 连接') : null),
           cu.enabled && install?.prepared && (!extension?.browsers?.length || install.reloadRequired) && h('div', { className: 'cx-component-project' }, h('code', { className: 'cx-component-path' }, install.extensionPath), h('div', { className: 'cx-actions' }, button('复制扩展目录', () => this.copy(install.extensionPath), { quiet: true }), button('复制扩展页地址', () => this.copy('chrome://extensions'), { quiet: true }))))),
         fold('高级配置', '通常无需修改；自定义路径重启后生效。', h(React.Fragment, null,
           this.toggle('componentAutoSetup', '启动时自动准备依赖', d.automatic, '关闭后仍可使用上面的准备按钮。'),
@@ -283,7 +283,7 @@ export function createContextUI(React) {
       e?.preventDefault(); if (this.state.busy || !this.state.config) return;
       const patch = contextSettingsPatch(this.saved, this.state.config); if (!Object.keys(patch).length) return;
       this.setState({ busy: true, error: '', status: '' });
-      try { const next = await api('/settings', patch); if (this.alive) { this.saved = next; this.setState({ config: { ...next }, routing: contextRouteMode(next), custom: false, status: '设置已保存' }); } }
+      try { const next = await api('/settings', patch); window.dispatchEvent(new CustomEvent('omd:settings-saved', { detail: next })); if (this.alive) { this.saved = next; this.setState({ config: { ...next }, routing: contextRouteMode(next), custom: false, status: '设置已保存' }); } }
       catch (e) { if (this.alive) this.setState({ error: e.message }); }
       finally { if (this.alive) this.setState({ busy: false }); }
     };
@@ -330,7 +330,9 @@ export function createContextUI(React) {
     }
     renderBasic() {
       const c = this.state.config;
-      return h(React.Fragment, null, this.frequency(),
+      return h(React.Fragment, null,
+        section('界面', null, this.toggle('recommendedPluginsPageEnabled', '显示推荐插件页面', '默认开启。关闭仅隐藏设置中的推荐插件页面，不卸载插件，也不改变自动更新设置。保存后立即生效。')),
+        this.frequency(),
         section('预处理范围', '默认整窗处理，受保护内容保留，但不阻断范围。', this.toggle('preprocessBoundaries', '按消息边界分段', '默认关闭；开启恢复兼容分段。系统提示词、前置 CoT、近期保留区和完整工具往返始终受保护。')),
         section('自动运行', null, h('div', { className: 'cx-switches' }, this.toggle('contextEnabled', '后台预处理与中枢', '提前生成基础摘要和详细资料，再判断如何替换。'), this.toggle('automaticReplace', '自动应用已完成决定', '在请求边界应用；关闭后仍可手动替换。'))),
         section('空闲预处理', '默认关闭；不影响按新事件数量触发的正常预处理，也不影响手动操作。', h(React.Fragment, null,

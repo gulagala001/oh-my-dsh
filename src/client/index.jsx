@@ -17,7 +17,7 @@ import { createContextUI } from './context-client.mjs';
 import { applyHistorySize } from './history-settings.jsx';
 import { applySkins } from './skins/settings.jsx';
 import { applyConversationRecords } from './conversation-records.jsx';
-import { RecommendedPlugins } from './recommended-plugins.jsx';
+import { applyRecommendedPlugins } from './recommended-plugins.jsx';
 import { applyPromptOptimizer } from './prompt-optimizer.jsx';
 
 export { CONTEXT_UI_VERSION as contextUIVersion } from './context-client.mjs';
@@ -265,7 +265,7 @@ export async function apply(ctx) {
   });
   for (const [seat, Component] of [['sidebar.brand.mark', BrandMark], ['sidebar.brand.name', BrandNameWithVersion], ['conversation.hero.brand.mark', () => <BrandMark size={64}/>]]) ctx.slots.inject(seat, () => ctx.slots.register({ name: seat }, Component));
   ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'trisoul-x', order: 16, label: () => 'Oh My DSH' }, ContextSettings));
-  ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'trisoul-x-recommended', order: 17, label: () => '推荐插件' }, RecommendedPlugins));
+  applyRecommendedPlugins(ctx);
   ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register({ name: 'conversation.composer.dock', id: 'trisoul-x-tools', order: 25 }, ComposerDock));
   ctx.slots.inject('conversation.input.left', () => ctx.slots.register({ name: 'conversation.input.left', id: 'trisoul-memory-scope', order: 50 }, ScopeChip));
   ctx.slots.inject('conversation.input.right', () => ctx.slots.register({ name: 'conversation.input.right', id: 'trisoul-better-todo', order: 100 }, BetterTodoChip));
