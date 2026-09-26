@@ -44,7 +44,7 @@ Script body hooks:
 - workflow(nameOrRef: string | {scriptPath: string}, args?: any): Promise<any> — run another workflow inline as a sub-step and return whatever it returns. Pass a name to invoke a saved workflow (same registry as {name: "..."}), or {scriptPath} to run a script file you wrote earlier. The child shares this run's concurrency cap, agent counter, abort signal, and token budget — its agents appear under a "▸ name" group in workflow progress and its tokens count toward budget.spent(). The args param becomes the child's `args` global. Nesting is one level only: workflow() inside a child throws. Throws on unknown name / unreadable scriptPath / child syntax error; catch to handle gracefully.
 
 Subagents are told their final text IS the return value (not a human-facing message), so they return raw data. For structured output, use the schema option — validation happens at the tool-call layer so the model retries on mismatch.
-The supported schema keywords are type, properties, required, additionalProperties, items, enum, const, and oneOf. Schemas need {type: 'object', properties: {...}} at root and required ⊆ properties; unsatisfiable ones throw at agent().
+The supported schema keywords are type, properties, required, additionalProperties, items, enum, const, and oneOf. An enum or const also needs type or oneOf; for example, {type: 'string', enum: ['pass', 'fail']}. Schemas need {type: 'object', properties: {...}} at root and required ⊆ properties; unsatisfiable ones throw at agent().
 
 Workflow agents inherit the connected tools their selected preset exposes. Tool availability and authentication depend on that preset and the current environment.
 
