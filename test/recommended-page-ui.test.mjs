@@ -41,3 +41,30 @@ test('recommended page defaults on, hides only after a successful save and persi
   assert.equal((await readConfig()).recommendedPluginsPageEnabled, true);
   assert.deepEqual(f.errors, []);
 });
+
+test('failed recommendation settings stay visible across polling and can be retried', { timeout: 60000 }, async t => {
+  const f = await frontendFixture(t), { page } = f;
+  let fail = true, reads = 0;
+  await page.route('**/trisoul-x/recommended-plugins', route => {
+    if (route.request().method() === 'POST' && fail) return route.fulfill({ status: 500, json: { error: '无法保存自动更新设置，请重试' } });
+    if (route.request().method() === 'GET') reads++;
+    return route.continue();
+  });
+  await page.getByRole('button', { name: '设置', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: '设置' });
+  await dialog.getByRole('button', { name: '推荐插件', exact: true }).click();
+  const toggle = dialog.getByRole('switch', { name: '自动更新推荐插件' });
+  await until(() => toggle.isEnabled());
+  await toggle.click();
+  const error = dialog.getByRole('alert').filter({ hasText: '无法保存自动更新设置' });
+  const previousReads = reads;
+  await until(() => reads >= previousReads + 2);
+  assert.equal(await error.isVisible(), true, 'successful status reads do not erase a failed write');
+  assert.equal(await toggle.isChecked(), false);
+  assert.equal(await toggle.isEnabled(), true, 'a failed write must allow retry');
+  fail = false;
+  await toggle.click();
+  await until(() => toggle.isChecked());
+  assert.equal(await error.count(), 0);
+  assert.deepEqual(f.errors, []);
+});

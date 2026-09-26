@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.13"><img src="https://img.shields.io/badge/version-0.1.7--rc.2.13-3478F6?style=flat-square" alt="Version 0.1.7-rc.2.13" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.14"><img src="https://img.shields.io/badge/version-0.1.7--rc.2.14-3478F6?style=flat-square" alt="Version 0.1.7-rc.2.14" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.7--rc.2-475569?style=flat-square" alt="DSH 0.1.7-rc.2" /></a>
   <a href="#themes"><img src="https://img.shields.io/badge/themes-4-222222?style=flat-square" alt="4 complete themes" /></a>
 </p>
@@ -21,8 +21,10 @@
   <a href="#quickstart"><strong>立即安装</strong></a> ·
   <a href="#features">装上之后</a> ·
   <a href="#themes">挑选主题</a> ·
-  <a href="docs/usage.md">使用指南</a> ·
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.13">版本说明</a>
+  <a href="docs/getting-started.md">首次使用</a> ·
+  <a href="docs/README.md">文档目录</a> ·
+  <a href="docs/troubleshooting.md">遇到问题</a> ·
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.14">版本说明</a>
 </p>
 
 ![Oh My DSH：对话、文件交付、任务与真实验证结果集中展示](docs/images/readme-overview.png)
@@ -31,24 +33,39 @@
 
 Oh My DSH 为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 配好上下文整理、任务提醒、结果验证、提示词优化和可视化工作台，再提供四套从布局到字体的完整主题。继续使用你已有的模型、会话、文件、工具和技能。
 
-**0.1.7-rc.2.13 正式版，适配 DSH 0.1.7-rc.2 Web 与官方桌面版，内置 OpenCU 1.1.7。**
+**0.1.7-rc.2.14 正式版，适配 DSH 0.1.7-rc.2 Web 与官方桌面版，内置 OpenCU 1.1.7。**
 
 <a id="quickstart"></a>
 
 ## 装上，开始工作
 
-版本规则：`DSH 完整版本.插件补丁号`，例如 `0.1.7-rc.2.1` → `0.1.7-rc.2.13`。旧 1.x 检查器不能自动识别这次编号切换，请按下方新 tag 手动更新一次；历史 tag 保留。
+版本规则：`DSH 完整版本.插件补丁号`，例如 `0.1.7-rc.2.1` → `0.1.7-rc.2.14`。旧 1.x 检查器不能自动识别这次编号切换，请按下方新 tag 手动更新一次；历史 tag 保留。
+
+安装来源为 **`gulagala001/oh-my-dsh`**，插件包名为 **`trisoul_x`**。请复制下方完整来源。[如何核对](docs/troubleshooting.md#package-source)。
+
+| 你的环境 | 从这里开始 |
+| --- | --- |
+| 已使用 DSH Web | 按下方命令安装到原 profile，保留原数据目录和启动方式。 |
+| 想使用桌面应用 | 按[官方桌面版步骤](#desktop)在应用内安装插件。 |
+| 从旧 Web 转到桌面 | 先看[迁移步骤](docs/upgrade.md#web-to-desktop)，再安装。 |
+| 修改源码或独立试用 | 看[本地开发](docs/usage.md#本地开发或独立试用)。 |
+
+安装卡住、装好却没变化或出现报错时，按[排障指南](docs/troubleshooting.md)定位；离线搬运依赖见[离线安装边界](docs/troubleshooting.md#offline)。
 
 ### 自己安装 Web 版
 
-本版配对 **DSH 0.1.7-rc.2 + Oh My DSH 0.1.7-rc.2.13**。已有环境先等待任务结束，停止服务并完整备份实际 `DSH_HOME`；继续使用原数据目录、profile 和端口。首次安装可直接运行：
+需要 **Node.js ≥22.19、pnpm 11.23.0 和 Git**；Windows 使用 PowerShell 7。尚未配置这些工具时，先看[环境准备](docs/usage.md#本地开发或独立试用)。桌面应用使用下方专用安装流程。
+
+本版配对 **DSH 0.1.7-rc.2 + Oh My DSH 0.1.7-rc.2.14**。已有环境先等待任务结束，停止服务并完整备份实际 `DSH_HOME`；继续使用原数据目录、profile 和端口。首次安装运行：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.13
+npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.14
 npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 ```
 
 自定义 profile 将 `web` 换成原名称，自定义端口继续加 `--port`。打开启动时打印的登录链接，新建会话选择 **Oh My DSH**。全局安装或源码启动用户见[手动安装与更新](docs/usage.md#安装到现有-dsh推荐)。
+
+<a id="desktop"></a>
 
 ### 官方桌面版
 
@@ -57,10 +74,10 @@ npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 已有旧版 DSH Web、准备转桌面并保留数据的用户，先看[旧版 Web 转桌面迁移步骤](docs/upgrade.md#web-to-desktop)。OMD 只自动处理支持的旧会话与关联记录，不会自动搬迁自定义数据目录或整套 Web profile 配置。
 
 1. 下载并安装 DSH **0.1.7-rc.2**：[Windows x64 安装包](https://download.deepseek.com/dsh-desk/bin/win-x64/deepseek-harness-0.1.7-rc.2-win-x64.exe)／[Mac Apple 芯片版](https://download.deepseek.com/dsh-desk/bin/mac-arm64/deepseek-harness-0.1.7-rc.2-mac-arm64.zip)。Windows 运行安装程序；Mac 解压后将应用移入「应用程序」。
-2. 打开应用，按引导配置模型，在「插件」页面安装 `github:gulagala001/oh-my-dsh#v0.1.7-rc.2.13` 并确认启用。
-3. 完整退出应用后重新打开，再新建会话选择 **Oh My DSH**，检查插件「当前版本」为 **0.1.7-rc.2.13**。
+2. 打开应用，按引导配置模型，在「插件」页面安装 `github:gulagala001/oh-my-dsh#v0.1.7-rc.2.14` 并确认启用。
+3. 完整退出应用后重新打开，再新建会话选择 **Oh My DSH**，检查插件「当前版本」为 **0.1.7-rc.2.14**。
 
-桌面版使用独立的 `desktop` profile；Web 已安装的插件需要在桌面端再安装一次。不要使用 CLI 管理 `desktop` profile。已有环境升级前先等任务结束、完整退出并备份实际 `DSH_HOME`。[桌面验证范围](docs/release-0.1.7-rc.2.13.md#验证)。
+桌面版使用独立的 `desktop` profile；Web 已安装的插件需要在桌面端再安装一次。不要使用 CLI 管理 `desktop` profile。已有环境升级前先等任务结束、完整退出并备份实际 `DSH_HOME`。[桌面验证范围](docs/release-0.1.7-rc.2.14.md#验证)。
 
 **安装、更新或启停后，完整退出应用再打开；提供「重启应用与 Host」菜单的版本也可使用该入口。** 仅关闭窗口会留在后台，仅刷新页面也不能完成切换；操作前先等正在执行的任务结束。
 
@@ -72,12 +89,18 @@ npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 
 上面以桌面版为例；需要 Web 时将「DSH 桌面版」改为「DSH Web 版」。手册包含桌面下载与安装、环境识别、版本配对、备份、Web 安装和回退步骤。
 
-**装好后从这三个入口开始：** 输入框的星星优化草稿；**工作台**查看任务、上下文和结果；**设置 → 外观**选择主题。
+### 装好后，确认能开始工作
+
+1. 版本面板的“当前版本”为 **0.1.7-rc.2.14**，新建会话可选择 **Oh My DSH**。
+2. 选好模型与工作目录，发一条简短消息，再尝试读取项目里的测试文件。
+3. 升级用户检查原模型、一个旧会话和主题是否保留。
+
+接着使用输入框星星优化草稿，打开**工作台**查看任务和上下文，或到**设置 → 外观**挑选主题。[第一次使用的完整步骤](docs/getting-started.md)。
 
 <details>
 <summary>运行要求与默认配置</summary>
 
-- Web／源码安装需要 Node.js ≥22.19、pnpm 11.23.0、Git；Windows 使用 PowerShell 7。桌面版按上方专用流程安装，内置宿主由应用管理。
+- 桌面版内置宿主与包管理器由应用管理；Web／源码的环境要求见上方安装步骤。
 - 模型需要支持原生工具调用；理解截图还需要图像输入能力。
 - 插件将 Oh My DSH 设为默认 Agent preset，并配置完整文件／命令访问、关闭执行审批。profile 中的显式覆盖配置优先。
 - 为兼容已有安装，内部插件与预设 ID 保留为 `trisoul_x` / `trisoul-x`。
@@ -128,7 +151,7 @@ npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 - **把问题指给它看**：窗口分享、区域圈选、元素批注与样式预览。
 - **把结果留下来**：截图、网页快照与资源导出成为会话附件。
 
-浏览器、桌面控制和运行环境统一在 **设置 → Oh My DSH → 基础组件** 管理。[电脑操作指南](docs/usage.md#computer-use预览版)。
+浏览器、桌面控制和运行环境统一在 **设置 → Oh My DSH → 基础组件** 管理。[电脑操作指南](docs/usage.md#computer-use)。
 
 <a id="themes"></a>
 
@@ -192,18 +215,23 @@ Mac 桌面控制需要辅助功能、屏幕录制权限与 Apple Command Line To
 
 ## 这次更新
 
-**0.1.7-rc.2.13**：内置 OpenCU 1.1.7，支持 WSL 调用指定的 Windows 桌面程序，补齐状态显示、程序校验和 Windows 操作说明。[配置与自检](docs/windows.md#wsl-控制-windows-桌面)；WSL 真机操控尚待验收。
+**0.1.7-rc.2.14**：内置 OpenCU 1.1.7，支持 WSL 调用指定的 Windows 桌面程序，补齐状态显示、程序校验和 Windows 操作说明。[配置与自检](docs/windows.md#wsl-控制-windows-桌面)；WSL 真机操控尚待验收。
 
-[更新记录](CHANGELOG.md) · [本版验证与升级说明](docs/release-0.1.7-rc.2.13.md) · [下载与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.13)
+[更新记录](CHANGELOG.md) · [本版验证与升级说明](docs/release-0.1.7-rc.2.14.md) · [下载与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.14)
 
 ## 文档与参与
 
+- [文档目录](docs/README.md)：按安装、日常操作、更新和维护查找入口。
+- [首次使用](docs/getting-started.md)：确认安装、选择模型与会话范围，完成第一个任务。
 - [使用指南](docs/usage.md)：安装、配置、日常操作、备份与开发。
 - [上下文机制](docs/context-workflow.md)：摘要、原文回查、任务保留与手动压缩。
 - [主题说明](docs/skins.md)：四套主题、导入格式与布局适配。
 - [Windows 指南](docs/windows.md)：安装与原生环境准备。
 - [提交插件 / 申请适配](https://github.com/gulagala001/oh-my-dsh/issues/new?template=plugin-submission.yml)：只填仓库地址和一句用途。[批量处理说明](docs/plugin-submissions.md)。
-- [反馈问题](https://github.com/gulagala001/oh-my-dsh/issues)：请提供版本、复现步骤和脱敏错误。
+- [排障指南](docs/troubleshooting.md)：安装、更新、界面异常与恢复步骤。
+- [反馈 Bug](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml)：提供运行环境、版本、复现步骤和脱敏错误。
+- [功能与易用性建议](https://github.com/gulagala001/oh-my-dsh/issues/new?template=feature-request.yml)：描述实际使用中的问题和期望结果。
+- [参与改进](CONTRIBUTING.md)：复现、修复、验证与文档维护流程。
 
 核心机制与提示词源自 trisoul，宿主与基础 Agent preset 基于 DeepSeek Harness。项目代码许可暂未指定；第三方来源与许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 

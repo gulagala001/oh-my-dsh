@@ -1,8 +1,10 @@
 # Oh My DSH 使用与开发指南
 
-[返回项目首页](../README.md) · [安装](#安装到现有-dsh推荐) · [日常使用](#日常使用) · [CodeGraph](#codegraph) · [Computer Use](#computer-use) · [开发与验证](#开发与验证)
+[文档目录](README.md) · [首次使用](getting-started.md) · [安装](#安装到现有-dsh推荐) · [更新与卸载](#update-uninstall) · [设置](#settings) · [排障](troubleshooting.md) · [开发与验证](#开发与验证)
 
-当前 **0.1.7-rc.2.13 正式版** 适配 **DSH 0.1.7-rc.2**，内置 **OpenCU 1.1.7**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
+当前 **0.1.7-rc.2.14 正式版** 适配 **DSH 0.1.7-rc.2**，内置 **OpenCU 1.1.7**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
+
+本项目通过 `gulagala001/oh-my-dsh` 的 GitHub 来源或发行包安装。[安装来源核对](troubleshooting.md#package-source)。
 
 自己安装可选[官方桌面版：下载与完整安装步骤](upgrade.md#desktop)或[Web 安装](#安装到现有-dsh推荐)。也可将 [AI 安装手册的网址](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/upgrade.md) 发给能操作电脑或终端的 AI，说明要安装桌面版还是 Web 版，让它按手册完成安装／升级。
 
@@ -10,16 +12,16 @@
 
 ## 安装到现有 DSH（推荐）
 
-**首次安装桌面应用请先看[桌面版完整教程](upgrade.md#desktop)，其中包含 Windows／Mac 下载、首次启动、模型配置和插件安装。** 官方桌面版使用 DSH 0.1.7-rc.2，在应用内「插件」页面安装 `github:gulagala001/oh-my-dsh#v0.1.7-rc.2.13`。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；Web 安装不会自动启用桌面插件。CLI 不能管理桌面保留的 `desktop` profile。以下命令适用于 Web，桌面实测范围见[本版说明](release-0.1.7-rc.2.13.md)。
+**首次安装桌面应用请先看[桌面版完整教程](upgrade.md#desktop)，其中包含 Windows／Mac 下载、首次启动、模型配置和插件安装。** 官方桌面版使用 DSH 0.1.7-rc.2，在应用内「插件」页面安装 `github:gulagala001/oh-my-dsh#v0.1.7-rc.2.14`。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；Web 安装不会自动启用桌面插件。CLI 不能管理桌面保留的 `desktop` profile。以下命令适用于 Web，桌面实测范围见[本版说明](release-0.1.7-rc.2.14.md)。
 
-桌面安装、更新、启用或停用后，先等任务结束，再使用应用菜单的「重启应用与 Host」。仅关闭窗口会留在后台，仅刷新页面不能完成切换。
+桌面安装、更新、启用或停用后，先等任务结束，再完整退出应用并重新打开；有「重启应用与 Host」菜单时也可使用。仅关闭窗口会留在后台，仅刷新页面不能完成切换。
 
 本正式版和源码运行均使用 **DSH 0.1.7-rc.2**。以下 Web／源码安装需要 Node.js ≥22.19、pnpm 11.23.0 和 Git。**Windows 使用 PowerShell 7（`pwsh`）**，无需 WSL；Python 验证文件需要另有 Python，`.sh` 文件需要 Bash。
 
 已有环境先等待任务结束，停止当前 DSH Web 并完整备份实际 DSH_HOME。确认继续使用原数据目录、profile 和端口，再运行：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.13
+npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.14
 ```
 
 然后按原来的方式重新启动 DSH，例如：
@@ -34,24 +36,26 @@ npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 
 插件会将该 profile 的默认 Agent preset 设为 `trisoul-x`，并应用完整文件/命令访问、关闭执行审批的运行配置；profile 自己的覆盖配置优先于插件。
 
+<a id="update-uninstall"></a>
+
 <details>
 <summary>更新与卸载</summary>
 
 从 0.1.7-rc.2.5 起，检查到新版后可在左上角版本图标打开的面板内点击“更新”。安装后仍需完整重启。更早版本首次升级到本版时使用下方原安装方式。
 
-更新时保持原安装方式、DSH_HOME、profile 和端口；先停止服务并备份数据。使用 npx 的用户重复上面的固定版本命令即可。全局 npm 安装用户执行 `npm install -g @deepseek-ai/dsh@0.1.7-rc.2`，确认 `dsh --version`，再执行 `dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.13`，按原方式启动；pnpm 全局安装则用 `pnpm add -g`。插件安装不会替你更新全局宿主。
+更新时保持原安装方式、DSH_HOME、profile 和端口；先停止服务并备份数据。使用 npx 的用户重复上面的固定版本命令即可。全局 npm 安装用户执行 `npm install -g @deepseek-ai/dsh@0.1.7-rc.2`，确认 `dsh --version`，再执行 `dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.14`，按原方式启动；pnpm 全局安装则用 `pnpm add -g`。插件安装不会替你更新全局宿主。
 
-源码用户先保留本地修改，再执行 `git fetch origin --tags`、`git switch --detach v0.1.7-rc.2.13`、`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`。若切换会覆盖本地修改，先保存自己的改动，不强制覆盖。默认数据在仓库的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
+源码用户先保留本地修改，再执行 `git fetch origin --tags`、`git switch --detach v0.1.7-rc.2.14`、`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`。若切换会覆盖本地修改，先保存自己的改动，不强制覆盖。默认数据在仓库的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
 
-重启后，版本面板的**当前版本**应是 `0.1.7-rc.2.13`，原模型和旧会话仍在；最新版本只代表远端发布记录。旧 V3 会话迁移会保留原日志，alpha.1 升至 alpha.2 继续使用 V4。回退时停止新服务，以原宿主、插件和完整备份在独立数据目录启动。
+重启后，版本面板的**当前版本**应是 `0.1.7-rc.2.14`，原模型和旧会话仍在；最新版本只代表远端发布记录。旧 V3 会话迁移会保留原日志，alpha.1 升至 alpha.2 继续使用 V4。回退时停止新服务，以原宿主、插件和完整备份在独立数据目录启动。
 
-卸载：
+卸载也沿用原启动方式。npx Web 用户执行以下命令；自定义 profile 将 `web` 换成原名称，并沿用实际 `DSH_HOME`：
 
 ```sh
-dsh plugin --profile web remove trisoul_x
+npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web remove trisoul_x
 ```
 
-重启后恢复宿主配置。卸载不删除模型配置、凭据、会话或插件的记忆文件；使用 `trisoul-x` preset 的旧会话需要重新安装插件后才能继续运行。
+全局安装用户可将命令前缀换成 `dsh`；桌面用户在应用内「插件」页面停用或卸载，随后完整退出并重新打开。重启后恢复宿主配置。卸载不删除模型配置、凭据、会话或插件的记忆文件；使用 `trisoul-x` preset 的旧会话需要重新安装插件后才能继续运行。
 
 </details>
 
@@ -197,7 +201,15 @@ node scripts/launch-macos.mjs
 
 **外观页面**提供主题、配色和本地壁纸；高级设置可定制分区颜色、字体字号、圆角、边框与材质，并分别选择保留 DSH 原生 Logo／标题或自定义标识。详见[高级外观设置](skins.md#高级外观设置)。
 
+<a id="settings"></a>
+
+### 设置与保存
+
 **设置页面**提供常用、基础组件、模型与身份、实验性功能、高级和全局背景。后台模型可跟随主模型、统一或分别配置。打开设置不改变现有参数；保存仅提交改动字段。基础组件页的开关立即保存。
+
+全局背景由你手动维护，多窗口同时保存时会检查版本，避免覆盖另一窗口的修改。冲突时点击“读取最新版本”查看另一窗口的内容，再选择“保留草稿，继续编辑”进行合并，或“使用最新内容”。读取最新内容本身不会覆盖草稿；合并后仍需点击“保存全局背景”。如果其他窗口再次修改，保存时会重新提示冲突。
+
+基础组件路径只提交编辑过的字段，并保留保存期间的新输入。这些后续修改仍需再次保存；离开页面前确认没有未保存提示。
 
 | 档位 | 新事件阈值 | 分段窗口 | 中枢新摘要阈值 | 中枢最短间隔 | 替换最短步数 |
 | --- | ---: | ---: | ---: | ---: | ---: |

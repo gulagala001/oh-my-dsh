@@ -1,0 +1,22 @@
+name: Documentation
+
+on:
+  push:
+    branches: ['main']
+    paths: ['README.md', 'CONTRIBUTING.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md', 'docs/**', 'package.json', 'vendor/opencu.json', 'test/documentation.test.mjs', '.github/ISSUE_TEMPLATE/**', '.github/PULL_REQUEST_TEMPLATE.md', '.github/workflows/docs.yml']
+  pull_request:
+    paths: ['README.md', 'CONTRIBUTING.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md', 'docs/**', 'package.json', 'vendor/opencu.json', 'test/documentation.test.mjs', '.github/ISSUE_TEMPLATE/**', '.github/PULL_REQUEST_TEMPLATE.md', '.github/workflows/docs.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  documentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - run: node --test test/documentation.test.mjs

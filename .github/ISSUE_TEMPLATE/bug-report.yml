@@ -1,0 +1,57 @@
+name: Bug 反馈
+description: 安装、兼容性、交互或运行异常
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先查看[排障指南](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/troubleshooting.md)。
+        无法取得的信息写“未知”。日志请脱敏，不要上传密钥、登录 token、凭据文件或整份会话数据。
+  - type: dropdown
+    id: environment
+    attributes:
+      label: 运行方式
+      options:
+        - 官方桌面版
+        - DSH Web（npx / 全局安装）
+        - OMD 源码启动
+        - 定制宿主或其他方式
+        - 未知
+    validations:
+      required: true
+  - type: textarea
+    id: versions
+    attributes:
+      label: 系统、版本与安装来源
+      description: 宿主版本和 OMD 当前版本分别填写；最新版本不代表当前运行版本。
+      value: |
+        系统 / 架构：
+        DSH 版本：
+        OMD 当前版本：
+        安装来源或命令：
+        profile（如 web / desktop / trisoul-x）：
+        是否自定义 DSH_HOME：
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤与结果
+      value: |
+        操作步骤：
+        1.
+
+        预期结果：
+        实际结果：
+        是否每次发生 / 从哪个版本开始：
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: 错误、日志或截图
+      description: 优先提供第一处完整错误、cause 与堆栈；仅有 waiting for service 的末尾列表通常不足以定位。
+  - type: textarea
+    id: recovery
+    attributes:
+      label: 已尝试的方法与相关插件
+      description: 如完整重启、停用某个插件后的结果；未尝试可留空。

@@ -1,5 +1,7 @@
 # 插件投稿与兼容
 
+[文档目录](README.md) · [推荐插件页面](usage.md#推荐插件页面显示) · [贡献说明](../CONTRIBUTING.md)
+
 [提交插件 / 申请适配](https://github.com/gulagala001/oh-my-dsh/issues/new?template=plugin-submission.yml)。只填仓库地址和一句用途；作者投稿或推荐别人的开源插件都可以，不需要兼容报告。推荐他人项目不代表原作者参与合作。
 
 ## 维护者只需一句话

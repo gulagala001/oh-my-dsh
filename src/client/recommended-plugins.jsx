@@ -21,7 +21,7 @@ function PluginIcon({ kind = 'plugin', size = 20 }) {
 
 export function RecommendedPlugins({ plugins = recommendedPlugins }) {
   const [query, setQuery] = useState(''), [category, setCategory] = useState('');
-  const [state, setState] = useState(null), [error, setError] = useState(''), [pending, setPending] = useState(false);
+  const [state, setState] = useState(null), [error, setError] = useState(''), [requestError, setRequestError] = useState(''), [pending, setPending] = useState(false);
   const poller = useRef(null), alive = useRef(false), writing = useRef(false);
   useEffect(() => {
     alive.current = true;
@@ -31,9 +31,9 @@ export function RecommendedPlugins({ plugins = recommendedPlugins }) {
   }, []);
   const act = async input => {
     if (writing.current) return;
-    writing.current = true; setPending(true); setError(''); poller.current.stop();
+    writing.current = true; setPending(true); setRequestError(''); poller.current.stop();
     try { const data = await pluginApi(input); if (alive.current) setState(data); }
-    catch (e) { if (alive.current) setError(e.message); }
+    catch (e) { if (alive.current) setRequestError(e.message); }
     finally { writing.current = false; if (alive.current) { setPending(false); poller.current.start(); } }
   };
   const headingId = useId();
@@ -52,6 +52,7 @@ export function RecommendedPlugins({ plugins = recommendedPlugins }) {
     <p className="tx-recommended-submit-hint">只需仓库地址和一句用途，自己的插件或推荐他人的开源插件都可以。AI 按需批量检查，维护者确认后收录。</p>
     <div className="tx-recommended-auto"><div><strong>自动更新推荐插件</strong><p>默认关闭。开启后，DSH 运行期间每 6 小时在会话空闲时检查，只更新已安装、启用且已核验的推荐插件，固定到核验版本。需要重启时会提示。</p>{state?.checkedAt && <small>上次自动检查：{new Date(state.checkedAt).toLocaleString()}</small>}</div><input type="checkbox" role="switch" aria-label="自动更新推荐插件" checked={state?.autoUpdate === true} disabled={!state || pending || !!error} onChange={event => void act({ action: 'settings', autoUpdate: event.target.checked })}/></div>
     {error && <div className="tx-alert tx-alert-error" role="alert">{error}<button type="button" className="tx-button tx-quiet" disabled={pending} onClick={() => void poller.current.refresh()}>重新读取</button></div>}
+    {requestError && <div className="tx-alert tx-alert-error" role="alert">{requestError}</div>}
     {plugins.length > 0 ? <>
       <div className="tx-recommended-toolbar">
         <label className="tx-recommended-search"><PluginIcon kind="search" size={16}/><input type="search" aria-label="搜索推荐插件" placeholder="搜索插件、作者或功能" value={query} onChange={event => setQuery(event.target.value)}/></label>

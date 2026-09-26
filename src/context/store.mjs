@@ -102,7 +102,7 @@ export class ContextStore {
   setGlobal(text, expectedRevision) {
     if (typeof text !== 'string') throw new Error('全局背景必须是文本');
     const before = this.global();
-    if (expectedRevision !== before.revision) throw new Error('全局背景已被其他窗口更新，请刷新后再保存');
+    if (expectedRevision !== before.revision) throw new Error('全局背景已被其他窗口更新，请读取最新版本后再保存');
     const next = { revision: before.revision + 1, text, updatedAt: Date.now() };
     this.write(join(this.dir, 'manual-global.json'), next);
     return next;

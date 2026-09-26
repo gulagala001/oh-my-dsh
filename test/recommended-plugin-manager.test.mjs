@@ -127,6 +127,37 @@ test('manual-only recommendations are never sent to the native installer', async
   await f.service.tick(); assert.equal(f.lookups, 0); assert.equal(f.calls.length, 0);
 });
 
+test('closing during inventory lookup prevents a pending uninstall', async () => {
+  const f = fixture();
+  f.bundles = [{ name: 'sample-plugin', installed: true, removable: true, enabled: true, version: '1.0.0' }];
+  const list = f.service.manager.listBundles; let resume;
+  f.service.manager.listBundles = async () => { await new Promise(resolve => { resume = resolve; }); return list(); };
+  const job = f.service.start('sample', 'uninstall');
+  f.service.close(); resume(); await job;
+  assert.equal(f.calls.length, 0, 'unloaded plugin must not remove a bundle later');
+});
+
+test('installation rechecks concurrent installs and management restrictions after version lookup', async () => {
+  for (const action of ['install', 'update']) {
+    const f = fixture(); let resume;
+    if (action === 'update') f.bundles = [{ name: 'sample-plugin', installed: true, enabled: true, version: '0.9.0' }];
+    f.lookup = () => new Promise(resolve => { resume = resolve; });
+    const job = f.service.start('sample', action);
+    await new Promise(resolve => setImmediate(resolve));
+    f.bundles = [{ name: 'sample-plugin', installed: true, enabled: false, version: '0.9.0', ...(action === 'update' ? { readOnlyReason: 'managed' } : {}) }];
+    resume('1.0.0'); await job;
+    assert.equal(f.calls.length, 0, action + ': changed inventory must not be overwritten');
+    assert.match((await f.service.status()).plugins[0].error, action === 'install' ? /已经安装/ : /宿主管理/);
+  }
+});
+
+test('unrecognized host outcomes do not claim an installation succeeded', async () => {
+  const f = fixture(); f.failure = { application: 'unknown' };
+  await f.service.start('sample', 'install');
+  const plugin = (await f.service.status()).plugins[0];
+  assert.equal(plugin.message, ''); assert.match(plugin.error, /未能确认/);
+});
+
 test('GitHub recommendations install the versioned release asset and remain optional', async () => {
   const { recommendedPlugins } = await import('../src/recommended-plugin-catalog.mjs');
   const { pluginInstallSpec, latestPluginVersion } = await import('../src/recommended-plugins.mjs');

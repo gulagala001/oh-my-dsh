@@ -24,7 +24,7 @@ export function createContextUI(React) {
   const h = React.createElement;
   const api = async (path, body, signal) => {
     const response = await fetch('trisoul-x/api' + path, body === undefined ? { signal } : { signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const data = await response.json(); if (!response.ok) throw Error(data.error || 'HTTP ' + response.status); return data;
+    const data = await response.json(); if (!response.ok) throw Object.assign(Error(data.error || 'HTTP ' + response.status), { statusCode: response.status }); return data;
   };
   const suffix = id => '?session=' + encodeURIComponent(id || '');
   const fmt = value => Number(value || 0).toLocaleString();
@@ -84,13 +84,13 @@ export function createContextUI(React) {
     }
   }
   class PollPanel extends React.Component {
-    constructor(props) { super(props); this.state = { data: null, error: '', notice: '', busy: false, detail: null }; this.epoch = 0; this.cycle = 0; this.documentTicket = 0; this.reviewTicket = 0; }
+    constructor(props) { super(props); this.state = { data: null, error: '', loadError: '', notice: '', busy: false, detail: null }; this.epoch = 0; this.documentTicket = 0; this.reviewTicket = 0; }
     componentDidMount() { this.alive = true; this.observe(); }
     componentWillUnmount() { this.alive = false; this.documentTicket++; this.reviewTicket++; this.poller?.stop(); }
     componentDidUpdate(prev) {
       if (prev.sessionId !== this.props.sessionId) {
-        this.documentTicket++; this.reviewTicket++;
-        this.setState({ data: null, detail: null, selected: [], review: null, legacy: null, error: '', notice: '', busy: false, activeAction: null, cursor: null }, () => this.observe());
+        this.epoch++; this.documentTicket++; this.reviewTicket++;
+        this.setState({ data: null, detail: null, selected: [], review: null, legacy: null, error: '', loadError: '', notice: '', busy: false, activeAction: null, cursor: null }, () => this.observe());
       } else if (prev.visible !== this.props.visible) this.observe();
     }
     requestPath(id) { return this.path() + suffix(id); }
@@ -100,28 +100,31 @@ export function createContextUI(React) {
       if (this.props.visible === false || !id) { this.poller = null; return; }
       this.poller = createPoller({
         read: signal => api(this.requestPath(id), undefined, signal),
-        onData: data => this.setState(s => ({ data, error: '', ...(s.selected ? { selected: s.selected.filter(key => data.records?.some(r => r.id === key && r.live && !r.mergedInto)) } : {}) })),
-        onError: error => this.setState({ error: error.message }),
+        onData: data => this.setState(s => ({ data, loadError: '', ...(s.selected ? { selected: s.selected.filter(key => data.records?.some(r => r.id === key && r.live && !r.mergedInto)) } : {}) })),
+        onError: error => this.setState({ loadError: error.message }),
       });
       this.poller.start();
     }
     load = () => this.poller?.refresh();
     run = async (path, body, success) => {
       if (this.state.busy) return;
-      this.setState({ busy: true, activeAction: path, error: '', notice: '' }); const id = this.props.sessionId;
-      try { const result = await api(path + suffix(id), body); if (this.alive && this.props.sessionId === id) { this.setState({ notice: success ? success(result) : result.queued ? '已加入后台队列。' : '已保存', ...(['/compact', '/compact-p', '/compact-f'].includes(path) ? { selected: [] } : {}) }); await this.load(); } }
-      catch (e) { if (this.alive && this.props.sessionId === id) this.setState({ error: e.message }); }
-      finally { if (this.alive && this.props.sessionId === id) this.setState({ busy: false, activeAction: null }); }
+      this.setState({ busy: true, activeAction: path, error: '', notice: '' }); const id = this.props.sessionId, epoch = this.epoch;
+      const active = () => this.alive && this.props.sessionId === id && this.epoch === epoch;
+      try { const result = await api(path + suffix(id), body); if (active()) { this.setState({ notice: success ? success(result) : result.queued ? '已加入后台队列。' : '已保存', ...(['/compact', '/compact-p', '/compact-f'].includes(path) ? { selected: [] } : {}) }); await this.load(); } }
+      catch (e) { if (active()) this.setState({ error: e.message }); }
+      finally { if (active()) this.setState({ busy: false, activeAction: null }); }
     };
     document = async id => {
+      this.setState({ error: '' });
       const sid = this.props.sessionId, ticket = ++this.documentTicket;
       try { const detail = await api('/context/document' + suffix(sid) + '&id=' + encodeURIComponent(id)); if (this.alive && this.props.sessionId === sid && ticket === this.documentTicket) this.setState({ detail }); }
       catch (e) { if (this.alive && this.props.sessionId === sid && ticket === this.documentTicket) this.setState({ error: e.message }); }
     };
     readReview = async () => {
+      this.setState({ error: '' });
       const sid = this.props.sessionId, ticket = ++this.reviewTicket;
       try { const review = await api('/context/review' + suffix(sid)); if (this.alive && sid === this.props.sessionId && ticket === this.reviewTicket) this.setState({ review }); }
-      catch (e) { if (this.alive && sid === this.props.sessionId) this.setState({ error: e.message }); }
+      catch (e) { if (this.alive && sid === this.props.sessionId && ticket === this.reviewTicket) this.setState({ error: e.message }); }
     };
     reader() { return this.state.detail && h(DocumentReader, { record: this.state.detail, onClose: () => { this.documentTicket++; this.setState({ detail: null }); } }); }
   }
@@ -139,7 +142,7 @@ export function createContextUI(React) {
       const retryLabel = kind => ({ 'waiting-main': '等待主会话成功后恢复', manual: '重试已暂停，请手动重试', retrying: '等待自动重试' })[d?.retry?.[kind]];
       const step = (text, state, running) => h('div', { className: 'cx-stage' }, h('span', { className: 'cx-dot ' + (running ? 'cx-pulse' : '') }), h('div', null, h('strong', null, text), h('small', null, state)));
       return h('div', { className: 'cx-panel cx-context' }, heading('工作上下文', '预处理在后台，替换在请求边界。', 'context', button(null, this.load, { icon: 'refresh', quiet: true, label: '刷新上下文' })),
-        h('div', { className: 'cx-body' }, alert(error, true), alert(notice),
+        h('div', { className: 'cx-body' }, alert(error || this.state.loadError, true), alert(notice),
           !this.props.sessionId ? empty('先选择一个会话', '这里会显示本会话的分段摘要与替换状态。') : !d ? empty('正在读取上下文', '正在连接当前会话的预处理记录。') : h(React.Fragment, null,
             h('section', { className: 'cx-pipeline-card' }, h('div', { className: 'cx-row' }, h('span', { className: 'cx-eyebrow' }, '处理状态'), badge(names[d.scope?.scope] || '会话', d.scope?.scope === 'session' ? '' : 'blue')),
               h('div', { className: 'cx-stages' }, step('预处理', d.preparing ? '正在生成摘要' : retryLabel('prepare') || '等待新事件', d.preparing), icon('chevron', 12), step('中枢', d.coordinating ? '正在判断范围' : retryLabel('coordinate') || (d.pending ? '结果已准备' : '等待新摘要'), d.coordinating), icon('chevron', 12), step('应用', d.transactionPending ? '事务恢复中' : '请求边界替换', d.transactionPending)),
@@ -182,7 +185,7 @@ export function createContextUI(React) {
       const privateSession = d?.scope?.scope === 'session';
       const archiveWarning = d?.unreadableArchives ? `有 ${d.unreadableArchives} 份历史档案无法读取，以下结果不完整；原文件已保留。` : '';
       return h('div', { className: 'cx-panel' }, heading(privateSession ? '会话摘要' : '项目摘要', privateSession ? '本会话私有历史，不参与共享记忆。' : '按会话整理，按原始事件时间回看。', 'memory', button(null, this.load, { quiet: true, icon: 'refresh', label: '刷新摘要' })),
-        h('div', { className: 'cx-body' }, alert(error, true), alert(notice),
+        h('div', { className: 'cx-body' }, alert(error || this.state.loadError, true), alert(notice),
           alert(archiveWarning, true),
           h('div', { className: 'cx-catalog-banner' }, icon(privateSession ? 'lock' : 'layers', 19), h('div', null, h('strong', null, privateSession ? '仅当前会话可见' : '项目共享档案'), h('small', null, !d ? '正在读取…' : `${d.total ?? entries.length} 段匹配摘要 · 本页 ${entries.length} 段 · 文档按需读取`))),
           h('label', { className: 'cx-search' }, icon('search'), h('input', { value: search, onChange: e => this.setState({ search: e.target.value, cursor: null, data: null }, () => this.observe()), placeholder: '搜索摘要、会话或编号', 'aria-label': '搜索摘要' })),
@@ -190,7 +193,7 @@ export function createContextUI(React) {
             h('div', { className: 'cx-timeline' }, ...list.map(r => h('article', { className: 'cx-timeline-record', key: r.id }, h('span', { className: 'cx-timeline-dot' }), h('time', null, date(r.timeStart), ' — ', time(r.timeEnd)), summaryPreview(r.summary), h('div', { className: 'cx-record-footer' }, h('code', { title: r.id }, r.id.slice(0, 8)), button(`读取 ${r.documentCount || 0} 文档 · ${r.assetCount || 0} 附件`, () => this.document(r.id), { quiet: true, icon: 'context' }))))))),
           h('div', { className: 'cx-actions' }, this.state.cursor && button('第一页', () => this.page(null), { quiet: true }), d?.nextCursor && button('下一页', () => this.page(d.nextCursor))),
           d && !entries.length && empty('没有匹配的摘要', search ? '试试其他关键词，或清空筛选。' : privateSession ? '本会话完成预处理后，摘要会显示在这里。' : '项目级会话完成预处理后，摘要会按会话归档。'),
-          !privateSession && d && fold('旧自动记忆', '只读保留，不自动重新注入', h('div', null, button('读取本项目旧条目', async () => { const sid = this.props.sessionId; try { const r = await api('/memories' + suffix(sid)); if (this.alive && sid === this.props.sessionId) this.setState({ legacy: r.items }); } catch (e) { if (this.alive && sid === this.props.sessionId) this.setState({ error: e.message }); } }, { icon: 'memory', quiet: true }), this.state.legacy && h('pre', null, JSON.stringify(this.state.legacy, null, 2))))), this.reader());
+          !privateSession && d && fold('旧自动记忆', '只读保留，不自动重新注入', h('div', null, button('读取本项目旧条目', async () => { const sid = this.props.sessionId; try { const r = await api('/memories' + suffix(sid)); if (this.alive && sid === this.props.sessionId) this.setState({ legacy: r.items, error: '' }); } catch (e) { if (this.alive && sid === this.props.sessionId) this.setState({ error: e.message }); } }, { icon: 'memory', quiet: true }), this.state.legacy && h('pre', null, JSON.stringify(this.state.legacy, null, 2))))), this.reader());
     }
   }
 
@@ -218,7 +221,17 @@ export function createContextUI(React) {
         codegraph: { ...previous.codegraph, ...(typeof patch.codegraphEnabled === 'boolean' ? { enabled: patch.codegraphEnabled } : {}) },
         computerUse: { ...previous.computerUse, ...(typeof patch.computerUseEnabled === 'boolean' ? { enabled: patch.computerUseEnabled } : {}) } };
       this.setState({ data, busy: true, error: '', saved: '' });
-      try { const data = await this.call(body); if (this.alive) this.setState({ data, ...(body.patch && Object.keys(body.patch).some(k => k !== 'computerUseEnabled' && k.startsWith('computerUse')) ? { paths: null, saved: '路径已保存，重启服务后生效。' } : { saved: body.action === 'settings' ? '已保存' : '' }) }); }
+      try {
+        const data = await this.call(body);
+        if (this.alive) this.setState(state => {
+          if (!body.patch || !Object.keys(body.patch).some(k => k !== 'computerUseEnabled' && k.startsWith('computerUse'))) return { data, saved: body.action === 'settings' ? '已保存' : '' };
+          // A response only commits the submitted draft. Preserve later typing
+          // and unrelated fields edited while the request was in flight.
+          const paths = Object.fromEntries(Object.entries(state.paths || {}).filter(([key, value]) => !Object.hasOwn(body.patch, key) || body.patch[key] !== value));
+          const dirty = Object.keys(paths).length > 0;
+          return { data, paths: dirty ? paths : null, saved: '路径已保存，重启服务后生效。' + (dirty ? '还有未保存的修改。' : '') };
+        });
+      }
       catch (error) { let actual = previous; try { actual = await this.call(); } catch {} if (this.alive) this.setState({ data: actual, error: error.message }); }
       finally { if (this.alive) this.setState({ busy: false }); }
     };
@@ -233,7 +246,7 @@ export function createContextUI(React) {
       const { data: d, error, loadError, busy, saved } = this.state;
       if (!d) return h('div', { className: 'cx-body' }, alert(error || loadError, true), empty(loadError ? '组件状态读取失败' : '正在检查基础组件', '安装、启动与权限集中在这里。', 'settings'), loadError && button('重试', () => this.poller?.refresh()));
       const cg = d.codegraph, cu = d.computerUse, setup = cu.setup, native = setup?.native, extension = setup?.extension, install = extension?.installation;
-      const paths = this.state.paths || cu.paths;
+      const paths = { ...cu.paths, ...this.state.paths };
       const retry = (component, label = '重新准备') => button(label, () => this.prepare(component), { disabled: busy, quiet: true, icon: 'refresh' });
       const nativeReady = native?.installed && !native.error && (native.platform === 'win32' ? native.interactive && native.captureSupported : native.accessibility && native.screenRecording);
       return h('div', { className: 'cx-body cx-components' }, alert(error || loadError || cu.error || cg.error, true),
@@ -255,7 +268,7 @@ export function createContextUI(React) {
           cu.enabled && install?.prepared && (!extension?.browsers?.length || install.reloadRequired) && h('div', { className: 'cx-component-project' }, h('code', { className: 'cx-component-path' }, install.extensionPath), h('div', { className: 'cx-actions' }, button('复制扩展目录', () => this.copy(install.extensionPath), { quiet: true }), button('复制扩展页地址', () => this.copy('chrome://extensions'), { quiet: true }))))),
         fold('高级配置', '通常无需修改；自定义路径重启后生效。', h(React.Fragment, null,
           this.toggle('componentAutoSetup', '启动时自动准备依赖', d.automatic, '关闭后仍可使用上面的准备按钮。'),
-          ...[['computerUseBrowserExecutable', '浏览器程序路径'], ['computerUseChromeUserDataDir', 'Chrome 用户数据目录'], ['computerUseNativeBinary', '桌面控制程序路径'], ['computerUseNativeSocket', '桌面连接 Socket']].map(([key, label]) => field(label, h('input', { value: paths[key] || '', placeholder: '自动检测', onChange: e => this.setState({ paths: { ...paths, [key]: e.target.value } }) }))),
+          ...[['computerUseBrowserExecutable', '浏览器程序路径'], ['computerUseChromeUserDataDir', 'Chrome 用户数据目录'], ['computerUseNativeBinary', '桌面控制程序路径'], ['computerUseNativeSocket', '桌面连接 Socket']].map(([key, label]) => field(label, h('input', { value: paths[key] || '', placeholder: '自动检测', onChange: e => { const value = e.target.value; this.setState(s => ({ paths: { ...s.paths, [key]: value }, saved: '' })); } }))),
           button('保存自定义路径', () => this.act({ action: 'settings', patch: this.state.paths }), { disabled: busy || !this.state.paths }),
           button('检查并准备所有组件', () => this.prepare(), { disabled: busy, quiet: true, icon: 'refresh' }))),
         saved && h('p', { className: 'cx-save-status', role: 'status' }, saved));
@@ -263,7 +276,7 @@ export function createContextUI(React) {
   }
 
   class ContextSettings extends React.Component {
-    state = { config: null, directory: [], page: 'basic', custom: false, routing: 'follow', error: '', status: '', busy: false, globalText: '', globalSaved: '', globalRevision: 0, globalLoaded: false, globalError: '', globalStatus: '' };
+    state = { config: null, directory: [], page: 'basic', custom: false, routing: 'follow', error: '', status: '', busy: false, globalText: '', globalSaved: '', globalRevision: 0, globalLoaded: false, globalError: '', globalStatus: '', globalLoading: false, globalConflict: false, globalLatest: null };
     componentDidMount() { this.alive = true; this.loadSettings(); this.loadGlobal(); }
     componentWillUnmount() { this.alive = false; }
     loadSettings = async () => {
@@ -271,8 +284,23 @@ export function createContextUI(React) {
       catch (e) { if (this.alive) this.setState({ error: e.message }); }
     };
     loadGlobal = async () => {
-      try { const g = await api('/context/global'); if (this.alive) this.setState({ globalText: g.text, globalSaved: g.text, globalRevision: g.revision, globalLoaded: true, globalError: '' }); }
+      if (this.loadingGlobal) return;
+      this.loadingGlobal = true;
+      const preserveDraft = this.state.globalLoaded;
+      this.setState({ globalLoading: true });
+      try {
+        const g = await api('/context/global');
+        if (this.alive) this.setState(preserveDraft ? { globalLatest: g, globalError: '' }
+          : { globalText: g.text, globalSaved: g.text, globalRevision: g.revision, globalLoaded: true, globalError: '' });
+      }
       catch (e) { if (this.alive) this.setState({ globalError: e.message }); }
+      finally { this.loadingGlobal = false; if (this.alive) this.setState({ globalLoading: false }); }
+    };
+    adoptGlobal = preserveDraft => {
+      const latest = this.state.globalLatest;
+      if (!latest || this.state.globalLoading || this.state.busy) return;
+      this.setState({ globalSaved: latest.text, globalRevision: latest.revision, globalConflict: false, globalError: '', globalStatus: '',
+        ...(preserveDraft ? {} : { globalText: latest.text, globalLatest: null }) });
     };
     set = (key, value) => this.setState(s => ({ config: { ...s.config, [key]: value }, status: '', ...(Object.hasOwn(CONTEXT_FREQUENCY_PRESETS.medium, key) ? { custom: true } : {}) }));
     pickPreset = name => {
@@ -288,10 +316,10 @@ export function createContextUI(React) {
       finally { if (this.alive) this.setState({ busy: false }); }
     };
     saveGlobal = async () => {
-      if (this.state.busy || !this.state.globalLoaded) return;
+      if (this.state.busy || !this.state.globalLoaded || this.state.globalConflict || this.state.globalLoading) return;
       this.setState({ busy: true, globalError: '', globalStatus: '' });
-      try { const g = await api('/context/global', { text: this.state.globalText, revision: this.state.globalRevision }); if (this.alive) this.setState({ globalText: g.text, globalSaved: g.text, globalRevision: g.revision, globalStatus: '全局背景已保存' }); }
-      catch (e) { if (this.alive) this.setState({ globalError: e.message }); }
+      try { const g = await api('/context/global', { text: this.state.globalText, revision: this.state.globalRevision }); if (this.alive) this.setState({ globalText: g.text, globalSaved: g.text, globalRevision: g.revision, globalStatus: '全局背景已保存', globalConflict: false, globalLatest: null }); }
+      catch (e) { if (this.alive) this.setState({ globalError: e.message, ...(e.statusCode === 409 ? { globalConflict: true, globalLatest: null } : {}) }); }
       finally { if (this.alive) this.setState({ busy: false }); }
     };
     undo = () => this.setState({ config: { ...this.saved }, routing: contextRouteMode(this.saved), custom: false, error: '', status: '' });
@@ -381,7 +409,14 @@ export function createContextUI(React) {
       return h(React.Fragment, null, alert(this.state.globalError, true),
         h('div', { className: 'cx-catalog-banner' }, icon('globe', 20), h('div', null, h('strong', null, '只由你维护的全局背景'), h('small', null, '项目会话可读取；私有会话不读取。'))),
         section('固定背景', '后台 AI 不自动新增、补充或改写这段内容。', field('全局固定背景', h('textarea', { className: 'cx-global-editor', rows: 14, value: this.state.globalText, disabled: !this.state.globalLoaded, onChange: e => this.setState({ globalText: e.target.value, globalStatus: '' }), placeholder: '写下适用于项目会话的固定背景，例如工作习惯、环境约定。' })), badge(fmt(this.state.globalText.length) + ' 字符')),
-        !this.state.globalLoaded && button('重新读取全局背景', this.loadGlobal, { icon: 'refresh' }),
+        !this.state.globalLoaded && button('重新读取全局背景', this.loadGlobal, { icon: 'refresh', disabled: this.state.globalLoading }),
+        this.state.globalConflict && h('div', { className: 'cx-info' }, icon('info'), h('div', null,
+          h('p', null, '草稿已保留。读取最新版本后，可合并两份内容再保存，或直接使用最新内容。'),
+          button('读取最新版本', this.loadGlobal, { icon: 'refresh', disabled: this.state.globalLoading }))),
+        this.state.globalLatest && section('比较最新版本', '下方为其他窗口已保存的内容；上方仍是你的草稿。', h(React.Fragment, null,
+          field('其他窗口保存的内容', h('textarea', { rows: 5, readOnly: true, value: this.state.globalLatest.text })),
+          h('div', { className: 'cx-actions' }, button('保留草稿，继续编辑', () => this.adoptGlobal(true), { disabled: !this.state.globalConflict || this.state.globalLoading }),
+            button('使用最新内容', () => this.adoptGlobal(false), { disabled: this.state.globalLoading })))),
         h('div', { className: 'cx-info' }, icon('lock'), h('p', null, '其他窗口已修改这段文字时，保存会提示冲突，不会覆盖对方内容。')));
     }
     render() {
@@ -395,19 +430,46 @@ export function createContextUI(React) {
           h('div', { className: 'cx-body' }, alert(error, true), h('fieldset', { className: 'cx-fields', disabled: busy }, page === 'basic' ? this.renderBasic() : page === 'models' ? this.renderModels() : page === 'experimental' ? this.renderExperimental() : page === 'advanced' ? this.renderAdvanced() : this.renderGlobal())),
           h('footer', { className: 'cx-savebar' }, h('span', { className: 'cx-save-status', role: 'status' }, icon(status || this.state.globalStatus ? 'check' : 'info', 13), footStatus), h('div', { className: 'cx-actions' },
             button('撤销', isGlobal ? () => this.setState({ globalText: this.state.globalSaved, globalStatus: '' }) : this.undo, { quiet: true, disabled: busy || !(isGlobal ? globalDirty : dirty) }),
-            h('button', { type: 'submit', className: 'cx-btn cx-primary', disabled: busy || !(isGlobal ? globalDirty && this.state.globalLoaded : dirty) }, icon(busy ? 'clock' : 'check'), busy ? '保存中…' : isGlobal ? '保存全局背景' : '保存设置')))));
+            h('button', { type: 'submit', className: 'cx-btn cx-primary', disabled: busy || !(isGlobal ? globalDirty && this.state.globalLoaded && !this.state.globalConflict && !this.state.globalLoading : dirty) }, icon(busy ? 'clock' : 'check'), busy ? '保存中…' : isGlobal ? '保存全局背景' : '保存设置')))));
     }
   }
   class ScopeControl extends React.Component {
     state = { data: null, error: '', busy: false };
+    revision = 0;
     componentDidMount() { this.alive = true; this.load(); }
-    componentDidUpdate(prev) { if (prev.sessionId !== this.props.sessionId || prev.locked !== this.props.locked) { if (prev.sessionId !== this.props.sessionId) this.setState({ data: null, error: '' }); this.load(); } }
-    componentWillUnmount() { this.alive = false; }
-    load = async () => { const id = this.props.sessionId; try { const data = await api('/scope' + suffix(id)); if (this.alive && id === this.props.sessionId) this.setState({ data, error: '' }); } catch (e) { if (this.alive && id === this.props.sessionId) this.setState({ error: e.message }); } };
+    componentDidUpdate(prev) {
+      if (prev.sessionId !== this.props.sessionId) {
+        ++this.revision; this.writing = null;
+        this.setState({ data: null, error: '', busy: false }, this.load);
+      } else if (prev.locked !== this.props.locked) this.load();
+    }
+    componentWillUnmount() { this.alive = false; ++this.revision; this.writing = null; }
+    load = async () => {
+      if (this.writing) return;
+      const id = this.props.sessionId, ticket = ++this.revision;
+      const active = () => this.alive && id === this.props.sessionId && ticket === this.revision;
+      try { const data = await api('/scope' + suffix(id)); if (active()) this.setState({ data, error: '' }); }
+      catch (e) { if (active()) this.setState({ error: e.message }); }
+    };
+    change = async scope => {
+      if (this.writing) return;
+      const id = this.props.sessionId, write = {};
+      this.writing = write; ++this.revision;
+      const active = () => this.alive && id === this.props.sessionId && this.writing === write;
+      this.setState({ busy: true, error: '' });
+      try { const data = await api('/scope' + suffix(id), { scope }); if (active()) this.setState({ data }); }
+      catch (e) {
+        if (active()) {
+          this.setState({ error: e.message });
+          // Recover the actual selection without erasing the failed write.
+          try { const data = await api('/scope' + suffix(id)); if (active()) this.setState({ data }); } catch {}
+        }
+      } finally { if (active()) { this.writing = null; this.setState({ busy: false }); } }
+    };
     render() {
       const d = this.state.data;
       return h('label', { className: 'cx-scope-chip', title: this.state.error || (d?.locked || this.props.locked ? '本会话已绑定范围' : '新会话的摘要共享范围') }, icon(d?.scope === 'project' ? 'layers' : 'lock', 13),
-        h('select', { 'aria-label': '会话范围', disabled: !d || d.locked || this.props.locked || this.state.busy, value: d?.scope || 'session', onChange: async e => { const id = this.props.sessionId, scope = e.target.value; this.setState({ busy: true }); try { const data = await api('/scope' + suffix(id), { scope }); if (this.alive && id === this.props.sessionId) this.setState({ data, error: '' }); } catch (e) { if (this.alive && id === this.props.sessionId) this.setState({ error: e.message }); await this.load(); } finally { if (this.alive) this.setState({ busy: false }); } } }, h('option', { value: 'session' }, '会话隔离'), h('option', { value: 'project' }, '项目共享')));
+        h('select', { 'aria-label': '会话范围', disabled: !d || d.locked || this.props.locked || this.state.busy, value: d?.scope || 'session', onChange: e => this.change(e.target.value) }, h('option', { value: 'session' }, '会话隔离'), h('option', { value: 'project' }, '项目共享')));
     }
   }
   const ScopeChip = props => { const locked = props.useSessions(s => s.byId[props.sessionId]?.blank === false); return h(ScopeControl, { ...props, locked }); };

@@ -1,5 +1,7 @@
 # OMD 主题、配色与背景
 
+[文档目录](README.md) · [首次使用](getting-started.md) · [排障](troubleshooting.md)
+
 在「设置 → 外观」选择四套从零制作的完整主题：
 
 | 主题 | 设计特点 |

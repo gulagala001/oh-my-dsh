@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 文档与首次使用
+    url: https://github.com/gulagala001/oh-my-dsh/blob/main/docs/README.md
+    about: 按安装、日常操作、设置和更新找到对应说明。
+  - name: 安装与运行排障
+    url: https://github.com/gulagala001/oh-my-dsh/blob/main/docs/troubleshooting.md
+    about: 查找常见症状、恢复步骤和日志位置。

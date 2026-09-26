@@ -104,3 +104,39 @@ test('experimental settings group CFR and CoT without changing their defaults or
   assert.deepEqual(contextSettingsPatch(config, enabled), { todoConstraintFirst: true });
   assert.deepEqual(contextSettingsPatch(enabled, config), { todoConstraintFirst: false });
 });
+
+test('returning to a session cannot let an older context action finish the current one', async t => {
+  const React = await import('react');
+  const { PipelinePanel } = createContextUI(React);
+  const Inner = PipelinePanel({ useTabInfo: () => ({ tab: { visible: false } }) }).type;
+  const panel = new Inner({ sessionId: 'a', visible: false });
+  panel.alive = true;
+  panel.setState = (update, callback) => { panel.state = { ...panel.state, ...(typeof update === 'function' ? update(panel.state) : update) }; callback?.(); };
+  const fetch = globalThis.fetch, responses = [];
+  t.after(() => { globalThis.fetch = fetch; });
+  globalThis.fetch = () => new Promise(resolve => responses.push(value => resolve(Response.json(value))));
+  const first = panel.run('/compact', {}, () => 'old response');
+  for (const sessionId of ['b', 'a']) {
+    const previous = panel.props; panel.props = { ...previous, sessionId }; panel.componentDidUpdate(previous);
+  }
+  const current = panel.run('/compact', {}, () => 'current response');
+  responses[0]({}); await first;
+  assert.equal(panel.state.busy, true); assert.equal(panel.state.notice, '');
+  responses[1]({}); await current;
+  assert.equal(panel.state.busy, false); assert.equal(panel.state.notice, 'current response');
+});
+
+test('an older failed review read cannot replace the latest successful review', async t => {
+  const React = await import('react');
+  const { PipelinePanel } = createContextUI(React);
+  const Inner = PipelinePanel({ useTabInfo: () => ({ tab: { visible: false } }) }).type;
+  const panel = new Inner({ sessionId: 'a' }); panel.alive = true;
+  panel.setState = update => { panel.state = { ...panel.state, ...update }; };
+  const fetch = globalThis.fetch, pending = [];
+  t.after(() => { globalThis.fetch = fetch; });
+  globalThis.fetch = () => new Promise((resolve, reject) => pending.push({ resolve, reject }));
+  const old = panel.readReview(), current = panel.readReview();
+  pending[1].resolve(Response.json({ input: 'latest review' })); await current;
+  pending[0].reject(Error('older request failed')); await old;
+  assert.deepEqual(panel.state.review, { input: 'latest review' }); assert.equal(panel.state.error, '');
+});

@@ -117,6 +117,26 @@ export function apply(ctx) {
   await page.getByText('桌面适配验证完成。', { exact: true }).waitFor();
   await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
   assert.equal(await page.locator('.tx-cu-chip').count(), 1);
+  // Desktop retains its boot graph across reloads: a mismatched client must
+  // ask for an app/Host restart instead of offering a broken page refresh.
+  await page.evaluate(() => {
+    window.omdFixtureFetch = window.fetch;
+    window.fetch = (input, options) => String(input).startsWith('trisoul-x/api/version') && !String(input).includes('version-update')
+      ? Promise.resolve(Response.json({ currentVersion: '99.0.0', status: 'current', releases: [] }))
+      : window.omdFixtureFetch(input, options);
+  });
+  const versionTrigger = page.getByRole('button', { name: '关于 Oh My DSH', exact: true });
+  await versionTrigger.click();
+  const versionDialog = page.getByRole('dialog', { name: '关于 Oh My DSH' });
+  await until(async () => (await versionDialog.getByTestId('omd-current-version').innerText()) === '99.0.0');
+  assert.equal(await versionDialog.getByRole('button', { name: '刷新界面' }).count(), 0);
+  assert.match(await versionDialog.innerText(), /完整退出应用后重新打开/);
+  if (process.env.TRISOUL_UI_ARTIFACTS) {
+    await mkdir(process.env.TRISOUL_UI_ARTIFACTS, { recursive: true });
+    await page.screenshot({ path: join(process.env.TRISOUL_UI_ARTIFACTS, 'desktop-version-mismatch.png') });
+  }
+  await versionDialog.getByRole('button', { name: '关闭版本信息' }).click();
+  await page.evaluate(() => { window.fetch = window.omdFixtureFetch; delete window.omdFixtureFetch; });
   await page.getByText('更多', { exact: true }).click();
   await page.getByText('设置', { exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: '外观', exact: true }).click();
