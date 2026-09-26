@@ -1,6 +1,8 @@
 import { readJsonBody } from './http.mjs';
 import { randomUUID } from 'node:crypto';
+import { resolve } from 'node:path';
 import { recommendedPlugins } from './recommended-plugin-catalog.mjs';
+import { prepareReviewedPackage } from './recommended-plugin-package.mjs';
 import { compareVersions, parseVersion } from './version.mjs';
 
 export const AUTO_UPDATE_INTERVAL = 6 * 60 * 60 * 1000;
@@ -40,8 +42,8 @@ export async function latestPluginVersion(plugin, signal) {
 }
 
 export class RecommendedPluginManager {
-  constructor({ manager, getConfig, saveConfig, isRunning = () => false, catalog = recommendedPlugins, latest = latestPluginVersion, now = Date.now }) {
-    Object.assign(this, { manager, getConfig, saveConfig, isRunning, catalog, latest, now });
+  constructor({ manager, getConfig, saveConfig, packageDirectory, preparePackage = prepareReviewedPackage, isRunning = () => false, catalog = recommendedPlugins, latest = latestPluginVersion, now = Date.now }) {
+    Object.assign(this, { manager, getConfig, saveConfig, packageDirectory, preparePackage, isRunning, catalog, latest, now });
     this.records = new Map(); this.job = null; this.current = null; this.checkedAt = null; this.closed = false;
     this.abort = new AbortController();
   }
@@ -89,7 +91,11 @@ export class RecommendedPluginManager {
       const version = plugin.review?.version ?? await this.latest(plugin, this.abort.signal);
       parseVersion(version);
       this.records.set(plugin.id, { ...this.records.get(plugin.id), latestVersion: version, checkedAt: this.now() });
-      // Re-read after the lookup: the user or another manager may have changed
+      let spec = pluginInstallSpec(plugin, version);
+      if (plugin.review?.sha256) {
+        spec = await this.preparePackage(spec, plugin.review.sha256, this.packageDirectory, this.abort.signal);
+      }
+      // Re-read after lookup/download: another manager may have changed
       // the installation or disabled automatic updates while it was pending.
       bundle = (await this.manager.listBundles()).find(item => item.name === plugin.packageName);
       this.abort.signal.throwIfAborted();
@@ -100,7 +106,7 @@ export class RecommendedPluginManager {
       if (action === 'update' && bundle.version && compareVersions(version, bundle.version) <= 0) {
         this.records.set(plugin.id, { ...this.records.get(plugin.id), message: plugin.review ? (bundle.version === version ? '已是核验版本' : '当前版本高于核验版本，未降级') : '已是最新版本', error: '' }); return;
       }
-      result = await this.manager.installBundle(pluginInstallSpec(plugin, version), { enabled: action === 'install' ? true : bundle.enabled, requestId: this.current.requestId });
+      result = await this.manager.installBundle(spec, { enabled: action === 'install' ? true : bundle.enabled, requestId: this.current.requestId });
     }
     if (result.application === 'failed') {
       const pending = result.pendingBuilds || [];
@@ -140,6 +146,7 @@ export class RecommendedPluginManager {
 export function mountRecommendedPlugins(ctx, hub) {
   ctx.inject(['pluginManager', 'webServer', 'connection'], scope => {
     const service = new RecommendedPluginManager({ manager: scope.pluginManager, getConfig: () => hub.config(),
+      packageDirectory: resolve(hub.store.dir, 'recommended-packages'),
       saveConfig: patch => scope.settings.update('trisoul-x', patch), isRunning: () => scope.agents.list().some(agent => agent.status === 'running') });
     scope.effect(() => {
       const tick = () => { void service.tick().catch(error => scope.logger.warn(error.message)); };

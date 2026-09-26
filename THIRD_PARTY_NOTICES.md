@@ -1,3 +1,12 @@
+# Optional recommendation: OMD Prompt Optimizer
+
+“需求理解 · OMD UI 增强版” is an optional, separately installed derivative of
+[dsh-prompt-optimizer](https://github.com/WestFox-AwA/dsh-prompt-optimizer) 0.7.4,
+originally authored by **啃轮胎的西狐（WestFox-AwA）**. **gulagala001** maintains the
+OMD adaptation. It is not an official upstream release. The separate plugin
+preserves the upstream BSD-3-Clause license, attribution and source provenance;
+its code is not bundled with Oh My DSH.
+
 # DSH
 
 The Agent preset was originally adapted from DeepSeek Harness 0.1.5-alpha.1, commit `5dda764ed3aa172535a7967b06ff95d9cbfe536a`, and updated against 0.1.5-rc.1, commit `183f08e9c6dde7e36cd2318eaee70b0da08fb35e`.

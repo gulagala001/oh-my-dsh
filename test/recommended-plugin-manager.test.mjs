@@ -5,7 +5,7 @@ import { RecommendedPluginManager, AUTO_UPDATE_INTERVAL } from '../src/recommend
 const catalog = [{ id: 'sample', packageName: 'sample-plugin' }, { id: 'absent', packageName: 'absent-plugin' }];
 function fixture() {
   let config = {}, bundles = [], time = 1, running = false, version = '1.0.0', failure;
-  const calls = [], writes = [];
+  const calls = [], writes = [], packages = [];
   const manager = {
     listBundles: async () => structuredClone(bundles),
     installBundle: async (spec, options) => {
@@ -19,8 +19,9 @@ function fixture() {
   };
   let lookups = 0, lookup;
   const service = new RecommendedPluginManager({ manager, catalog: structuredClone(catalog), getConfig: () => config, saveConfig: async patch => { writes.push(patch); config = { ...config, ...patch }; },
+    preparePackage: async (url, sha256) => { packages.push({ url, sha256 }); return 'file:/verified/package.tgz'; },
     latest: async () => { lookups++; return lookup ? lookup() : version; }, now: () => time, isRunning: () => running });
-  return { service, calls, writes, get lookups() { return lookups; }, get config() { return config; }, set version(v) { version = v; }, set time(v) { time = v; }, set running(v) { running = v; }, set failure(v) { failure = v; }, set lookup(v) { lookup = v; },
+  return { service, calls, writes, packages, get lookups() { return lookups; }, get config() { return config; }, set version(v) { version = v; }, set time(v) { time = v; }, set running(v) { running = v; }, set failure(v) { failure = v; }, set lookup(v) { lookup = v; },
     set bundles(v) { bundles = v; }, get bundles() { return bundles; } };
 }
 
@@ -205,5 +206,25 @@ test('intent assistant is release-pinned and never installed by opt-in auto upda
   const f = fixture(); f.service.catalog = [plugin]; await f.service.settings(true);
   await f.service.tick(); assert.equal(f.calls.length, 0); assert.equal(f.lookups, 0);
   await f.service.start(plugin.id, 'install'); assert.equal(f.calls.length, 1);
-  assert.equal(f.calls[0].spec, pluginInstallSpec(plugin, plugin.review.version));
+  assert.equal(f.calls[0].spec, 'file:/verified/package.tgz');
+  assert.deepEqual(f.packages, [{ url: pluginInstallSpec(plugin, plugin.review.version), sha256: plugin.review.sha256 }]);
+});
+
+test('verified package preparation failures and late cancellation never reach the installer', async () => {
+  for (const scenario of ['checksum', 'closed', 'installed', 'disabled-auto']) {
+    const f = fixture(); f.service.catalog[0].review = { version: '1.0.0', sha256: 'a'.repeat(64) };
+    if (scenario === 'disabled-auto') {
+      f.bundles = [{ name: 'sample-plugin', installed: true, enabled: true, version: '0.9.0' }];
+      await f.service.settings(true);
+    }
+    f.service.preparePackage = async () => {
+      if (scenario === 'checksum') throw Error('SHA-256 不一致');
+      if (scenario === 'closed') f.service.close();
+      if (scenario === 'installed') f.bundles = [{ name: 'sample-plugin', installed: true }];
+      if (scenario === 'disabled-auto') await f.service.settings(false);
+      return 'file:/verified/package.tgz';
+    };
+    await f.service.start('sample', scenario === 'disabled-auto' ? 'update' : 'install', scenario === 'disabled-auto');
+    assert.equal(f.calls.filter(c => c.spec).length, 0, scenario);
+  }
 });
