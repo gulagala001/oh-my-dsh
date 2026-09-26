@@ -192,3 +192,18 @@ test('in-flight inventory warnings never masquerade as a completed uninstall fai
   assert.equal(done.plugins[0].installed, false); assert.equal(done.plugins[0].error, '');
   assert.equal(done.plugins[0].inventoryWarning, undefined);
 });
+
+test('intent assistant is release-pinned and never installed by opt-in auto updates', async () => {
+  const { recommendedPlugins } = await import('../src/recommended-plugin-catalog.mjs');
+  const { pluginInstallSpec } = await import('../src/recommended-plugins.mjs');
+  const { readFile } = await import('node:fs/promises');
+  const plugin = recommendedPlugins.find(p => p.id === 'omd-intent-assistant');
+  assert.equal(plugin.review.version, '0.1.0');
+  assert.equal(pluginInstallSpec(plugin, plugin.review.version), 'https://github.com/gulagala001/omd-prompt-optimizer/releases/download/v0.1.0/omd-prompt-optimizer-0.1.0.tgz');
+  const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  for (const field of ['dependencies', 'devDependencies', 'optionalDependencies']) assert.equal(pkg[field]?.[plugin.packageName], undefined);
+  const f = fixture(); f.service.catalog = [plugin]; await f.service.settings(true);
+  await f.service.tick(); assert.equal(f.calls.length, 0); assert.equal(f.lookups, 0);
+  await f.service.start(plugin.id, 'install'); assert.equal(f.calls.length, 1);
+  assert.equal(f.calls[0].spec, pluginInstallSpec(plugin, plugin.review.version));
+});
