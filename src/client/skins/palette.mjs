@@ -1,10 +1,15 @@
 import { colors } from './format.mjs';
+import { extraPalettes } from './palettes.mjs';
 
-// A palette is a view of an existing theme's colors, not another copy of its CSS.
+// Existing theme colors stay available alongside the color-only catalog.
 export const paletteNames = {
   'codex-desktop': '黑白灰', 'claude-cli-terminal': '暖砂',
   'ios-liquid-glass': '冰蓝', 'google-material-expressive': '晴空蓝',
 };
+export function paletteCatalog(skins) {
+  return [...skins.map(({ id, name, tokens }) => ({ id, name: paletteNames[id] || name,
+    group: paletteNames[id] ? '经典' : '导入主题', tokens })), ...extraPalettes];
+}
 const alphaCache = new Map();
 export function colorAlpha(value = '') {
   if (alphaCache.has(value)) return alphaCache.get(value);

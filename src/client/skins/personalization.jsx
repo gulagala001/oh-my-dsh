@@ -1,9 +1,9 @@
 import React from 'react';
-import { paletteNames } from './palette.mjs';
 
 export function Personalization({ runtime, state, act }) {
   const bg = state.background;
-  const source = state.skins.find(s => s.id === (state.palette === 'theme' ? state.selected : state.palette));
+  const source = state.palettes.find(p => p.id === (state.palette === 'theme' ? state.selected : state.palette));
+  const groups = [...new Set(state.palettes.map(p => p.group))];
   const mode = document.documentElement.dataset.appearance || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   const palette = source?.tokens[mode];
   const upload = event => {
@@ -15,10 +15,10 @@ export function Personalization({ runtime, state, act }) {
     <span className="omd-background-control"><input type="range" aria-label={label} min={min} max={max} step="1" value={bg[key]} onChange={e => act(() => runtime.background.update({ [key]: Number(e.target.value) }))}/><output>{bg[key]}{unit}</output></span>
   </label>;
   return <div className="omd-personalization">
-    <label className="omd-appearance-row"><span>配色<small>只改变颜色，保留主题布局与材质</small></span>
+    <label className="omd-appearance-row"><span>配色<small>{state.palettes.length} 套配色，保留主题布局与材质</small></span>
       <select aria-label="配色" value={state.palette} onChange={e => act(() => runtime.selectPalette(e.target.value))}>
         <option value="theme">主题默认配色</option>
-        {state.skins.map(s => <option key={s.id} value={s.id}>{paletteNames[s.id] || s.name}</option>)}
+        {groups.map(group => <optgroup key={group} label={group}>{state.palettes.filter(p => p.group === group).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</optgroup>)}
       </select>
     </label>
     {palette && <div className="omd-palette-swatches" aria-label="配色预览">{['bg', 'surface-solid', 'text', 'accent', 'selected'].map(key => <span key={key} style={{ backgroundColor: palette[key] }}/>)}</div>}

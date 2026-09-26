@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.9"><img src="https://img.shields.io/badge/version-0.1.7--rc.2.9-3478F6?style=flat-square" alt="Version 0.1.7-rc.2.9" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.10"><img src="https://img.shields.io/badge/version-0.1.7--rc.2.10-3478F6?style=flat-square" alt="Version 0.1.7-rc.2.10" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.7--rc.2-475569?style=flat-square" alt="DSH 0.1.7-rc.2" /></a>
   <a href="#themes"><img src="https://img.shields.io/badge/themes-4-222222?style=flat-square" alt="4 complete themes" /></a>
 </p>
@@ -22,7 +22,7 @@
   <a href="#features">装上之后</a> ·
   <a href="#themes">挑选主题</a> ·
   <a href="docs/usage.md">使用指南</a> ·
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.9">版本说明</a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.10">版本说明</a>
 </p>
 
 ![Oh My DSH：对话、文件交付、任务与真实验证结果集中展示](docs/images/readme-overview.png)
@@ -31,20 +31,20 @@
 
 Oh My DSH 为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 配好上下文整理、任务提醒、结果验证、提示词优化和可视化工作台，再提供四套从布局到字体的完整主题。继续使用你已有的模型、会话、文件、工具和技能。
 
-**0.1.7-rc.2.9 正式版，适配 DSH 0.1.7-rc.2 Web 与官方桌面版，内置 OpenCU 1.1.6。**
+**0.1.7-rc.2.10 正式版，适配 DSH 0.1.7-rc.2 Web 与官方桌面版，内置 OpenCU 1.1.6。**
 
 <a id="quickstart"></a>
 
 ## 装上，开始工作
 
-版本规则：`DSH 完整版本.插件补丁号`，例如 `0.1.7-rc.2.1` → `0.1.7-rc.2.9`。旧 1.x 检查器不能自动识别这次编号切换，请按下方新 tag 手动更新一次；历史 tag 保留。
+版本规则：`DSH 完整版本.插件补丁号`，例如 `0.1.7-rc.2.1` → `0.1.7-rc.2.10`。旧 1.x 检查器不能自动识别这次编号切换，请按下方新 tag 手动更新一次；历史 tag 保留。
 
 ### 自己安装 Web 版
 
-本版配对 **DSH 0.1.7-rc.2 + Oh My DSH 0.1.7-rc.2.9**。已有环境先等待任务结束，停止服务并完整备份实际 `DSH_HOME`；继续使用原数据目录、profile 和端口。首次安装可直接运行：
+本版配对 **DSH 0.1.7-rc.2 + Oh My DSH 0.1.7-rc.2.10**。已有环境先等待任务结束，停止服务并完整备份实际 `DSH_HOME`；继续使用原数据目录、profile 和端口。首次安装可直接运行：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.9
+npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.10
 npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 ```
 
@@ -57,10 +57,10 @@ npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 已有旧版 DSH Web、准备转桌面并保留数据的用户，先看[旧版 Web 转桌面迁移步骤](docs/upgrade.md#web-to-desktop)。OMD 只自动处理支持的旧会话与关联记录，不会自动搬迁自定义数据目录或整套 Web profile 配置。
 
 1. 下载并安装 DSH **0.1.7-rc.2**：[Windows x64 安装包](https://download.deepseek.com/dsh-desk/bin/win-x64/deepseek-harness-0.1.7-rc.2-win-x64.exe)／[Mac Apple 芯片版](https://download.deepseek.com/dsh-desk/bin/mac-arm64/deepseek-harness-0.1.7-rc.2-mac-arm64.zip)。Windows 运行安装程序；Mac 解压后将应用移入「应用程序」。
-2. 打开应用，按引导配置模型，在「插件」页面安装 `github:gulagala001/oh-my-dsh#v0.1.7-rc.2.9` 并确认启用。
-3. 完整退出应用后重新打开，再新建会话选择 **Oh My DSH**，检查插件「当前版本」为 **0.1.7-rc.2.9**。
+2. 打开应用，按引导配置模型，在「插件」页面安装 `github:gulagala001/oh-my-dsh#v0.1.7-rc.2.10` 并确认启用。
+3. 完整退出应用后重新打开，再新建会话选择 **Oh My DSH**，检查插件「当前版本」为 **0.1.7-rc.2.10**。
 
-桌面版使用独立的 `desktop` profile；Web 已安装的插件需要在桌面端再安装一次。不要使用 CLI 管理 `desktop` profile。已有环境升级前先等任务结束、完整退出并备份实际 `DSH_HOME`。[桌面验证范围](docs/release-0.1.7-rc.2.9.md#验证范围)。
+桌面版使用独立的 `desktop` profile；Web 已安装的插件需要在桌面端再安装一次。不要使用 CLI 管理 `desktop` profile。已有环境升级前先等任务结束、完整退出并备份实际 `DSH_HOME`。[桌面验证范围](docs/release-0.1.7-rc.2.10.md#验证范围)。
 
 **安装、更新或启停后，完整退出应用再打开；提供「重启应用与 Host」菜单的版本也可使用该入口。** 仅关闭窗口会留在后台，仅刷新页面也不能完成切换；操作前先等正在执行的任务结束。
 
@@ -167,7 +167,7 @@ npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
   </tr>
 </table>
 
-主题、配色和背景独立选择：保留四套完整布局，复用黑白灰、冰蓝、暖砂、晴空蓝配色，并支持本地背景图片、模糊、明暗和面板不透明度。支持跟随系统明暗、降低透明与动态效果、导入主题和分别恢复默认。[主题使用与制作](docs/skins.md)。
+主题、配色和背景独立选择：保留四套完整布局，提供 28 套浅深色配色，按自然绿、青蓝、紫粉、暖色等色系分组，并支持本地背景图片、模糊、明暗和面板不透明度。支持跟随系统明暗、降低透明与动态效果、导入主题和分别恢复默认。[主题使用与制作](docs/skins.md)。
 
 <details>
 <summary>设置也在主题覆盖范围内</summary>
@@ -192,9 +192,9 @@ Mac 桌面控制需要辅助功能、屏幕录制权限与 Apple Command Line To
 
 ## 这次更新
 
-**0.1.7-rc.2.9**：修复 Windows 控制台隐藏补丁兼容和组件状态连带失败；推荐插件页面默认开启，可在 OMD 设置中关闭。保留上一版的独立主题、配色和本地背景。
+**0.1.7-rc.2.10**：新增 24 套独立配色，总计 28 套，每套支持浅色与深色；按色系分组选择，保留主题布局、材质和已有背景。继续包含上一版 Windows 兼容和推荐页面开关修复。
 
-[更新记录](CHANGELOG.md) · [本版验证与升级说明](docs/release-0.1.7-rc.2.9.md) · [下载与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.9)
+[更新记录](CHANGELOG.md) · [本版验证与升级说明](docs/release-0.1.7-rc.2.10.md) · [下载与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.10)
 
 ## 文档与参与
 
