@@ -1,6 +1,6 @@
 # OMD 0.1.7-rc.2.17
 
-发布候选，尚未发布。配套 DSH 0.1.7-rc.2，继续内置 OpenCU 1.1.7。
+本版配套 DSH 0.1.7-rc.2，继续内置 OpenCU 1.1.7。
 
 本版新增 Codex 风格的模型与推理面板，以及基于原生 Workflow 的 Ultracode。输入框可搜索模型、拖动思考档位或恢复默认；Ultracode 是最后一档，模式与实际推理参数分别保存。没有 Fast。
 
@@ -26,4 +26,4 @@ DSH 没有 `/clear` 命令，使用既有上下文压缩与会话管理。停用
 - 实际打包安装的浏览器测试覆盖两个模型不同推理能力、滑杆与重置、原生入口同步、触屏取消、并发变更保护、刷新、反向代理路径、明暗与窄屏。
 - 实际 DSH Web / PTC / 子代理进程覆盖工作流保存、嵌套、续跑、预算、后台 Jobs、独立推理、worktree 写入与保留；模式经过真实压缩、进程重启、预设切换、停用和重新启用。
 - 自动化模型回复来自本地测试服务。另以当前配置的 DeepSeek V4.1 Flash / max 完成隔离实模验收：模型运行 Workflow，独立审查者发现并复现敌意输入导致错误类型泄漏的缺陷，主代理修复后 9 项产物测试及独立边界检查通过；此结论仅覆盖该模型和该任务。
-- Windows x64 与 macOS ARM64 官方桌面安装、生命周期及外观持久化 CI 已在首个候选提交通过；实模发现的错误堆栈膨胀已修复，正在验证最终提交。Linux／Windows 全量 CI 与最终部署仍在进行，发布前更新本节及 `verification.log`。
+- 自动化平台矩阵覆盖 Linux（Node 22.19 / 24）、Windows（Node 24，两个分片），以及 Windows x64 / macOS ARM64 官方桌面安装、生命周期和外观持久化。最终提交的检查结果见 [GitHub Actions](https://github.com/gulagala001/oh-my-dsh/actions) 与随包 `verification.log`。

@@ -33,7 +33,7 @@
 
 Oh My DSH 为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 配好上下文整理、任务提醒、结果验证、提示词优化和可视化工作台，再提供四套从布局到字体的完整主题。继续使用你已有的模型、会话、文件、工具和技能。
 
-**0.1.7-rc.2.17 发布候选，适配 DSH 0.1.7-rc.2 Web 与官方桌面版，内置 OpenCU 1.1.7。**
+**0.1.7-rc.2.17，适配 DSH 0.1.7-rc.2 Web 与官方桌面版，内置 OpenCU 1.1.7。**
 
 <a id="quickstart"></a>
 
