@@ -18,7 +18,7 @@ const executablePath = process.env.OMD_DESKTOP_EXECUTABLE;
 test('packaged Desktop installs OMD, preserves conversations across restart and restores stock UI on removal', { skip: !executablePath && 'Set OMD_DESKTOP_EXECUTABLE to an official rc.2 desktop executable', timeout: 300000 }, async t => {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'omd-desktop-'))), home = join(root, 'home'), workspace = join(root, 'workspace');
   for (const dir of [home, workspace]) await mkdir(dir);
-  let app, page, log = '', origin, cookie, exerciseComputer = false, toolSent = false;
+  let app, page, desktopMedia, log = '', origin, cookie, exerciseComputer = false, toolSent = false;
   const errors = [], payloads = [];
   const browserExecutable = await testBrowserExecutable(root, browserExecutablePath());
   const fixture = await startFixture();
@@ -81,6 +81,12 @@ export function apply(ctx) {
     for (const stream of [app.process().stdout, app.process().stderr]) stream.on('data', chunk => { log += chunk; });
     await app.evaluate(({ app, dialog }) => { dialog.showMessageBox = async (...args) => { console.error('Desktop dialog', JSON.stringify(args.at(-1))); app.exit(1); return { response: 0, checkboxChecked: false }; }; });
     page = await app.firstWindow(); page.setDefaultTimeout(15000);
+    console.log('Desktop reduced-transparency preference:', await page.evaluate(() => matchMedia('(prefers-reduced-transparency: reduce)').matches));
+    desktopMedia = await app.context().newCDPSession(page);
+    // Wallpaper intentionally hides when the OS requests reduced transparency.
+    // Exercise that branch explicitly below, then compare painted regions with
+    // a fixed media preference instead of inheriting the runner's desktop setting.
+    await desktopMedia.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-transparency', value: 'no-preference' }] });
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => { if (message.type() === 'error') log += '\nRenderer: ' + message.text(); });
     origin = await until(() => log.match(/dsh web: (http:\/\/127\.0\.0\.1:\d+)/)?.[1], 45000);
@@ -150,6 +156,10 @@ export function apply(ctx) {
   // Verify painted pixels, not only the saved scope or successful image decode.
   const wallpaperImage = page.locator('[data-omd-background-layer] img');
   await until(() => wallpaperImage.evaluate(img => img.complete && img.naturalWidth === 32));
+  await desktopMedia.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }] });
+  assert.equal(await wallpaperImage.evaluate(img => getComputedStyle(img.parentElement).display), 'none', 'OS reduced transparency hides wallpaper');
+  await desktopMedia.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-transparency', value: 'no-preference' }] });
+  assert.notEqual(await wallpaperImage.evaluate(img => getComputedStyle(img.parentElement).display), 'none', 'wallpaper returns when transparency is allowed');
   const regionPixels = async () => {
     const points = await page.locator('[data-rightbar-col]').evaluate(right => {
       const center = right.previousElementSibling, sidebar = center.previousElementSibling;
