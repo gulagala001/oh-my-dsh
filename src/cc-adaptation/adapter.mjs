@@ -63,6 +63,9 @@ export function transformAssembly(assembly, context, options = {}) {
     if (tool.name === 'web_search' && !known.has('web_fetch')) {
       description = description.replace(/Open relevant result URLs with `web_fetch`[^.]*\./g, 'Use returned source snippets when full-page retrieval is unavailable.');
     }
+    if (tool.name === 'workflow' && (!Object.hasOwn(fields, 'run_in_background') || !known.has('job_output') || !known.has('job_kill'))) {
+      description = description.replace(/ With `run_in_background: true`,[^\n]*?`job_kill`\./, '');
+    }
     changedSchemas.set(tool.name, { ...tool, description });
     applied.add(tool.name);
   }
