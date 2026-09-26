@@ -130,6 +130,11 @@ test('install into stock web, coexist with stock presets, switch both ways and r
   assert.equal(xSnapshot.projections.values.todos[0].content, 'Keep the original requirement.', 'task dock survives the next turn');
   const ptcSession = await create('standard');
   await select(ptcSession.sessionId, 'omd-ptc');
+  assert.equal((await api('/model-mode?session='+ptcSession.sessionId,{provider:'fixture',model:'fixture',ultracode:true})).enabled,true);
+  await select(ptcSession.sessionId,'standard');
+  assert.equal((await api('/model-mode?session='+ptcSession.sessionId)).enabled,false);
+  await select(ptcSession.sessionId,'omd-ptc');
+  assert.equal((await api('/model-mode?session='+ptcSession.sessionId)).enabled,true);
   await api('/better-todo?session=' + ptcSession.sessionId, { todo: false, verification: false });
   const ptcSnapshot = await prompt(ptcSession.sessionId, 'Keep the original requirement.', 1);
   assert.equal(ptcSnapshot.projections.values.agentPreset, 'omd-ptc');
@@ -139,6 +144,7 @@ test('install into stock web, coexist with stock presets, switch both ways and r
   assert.ok(ptcState.contextHistory.length, 'OMD PTC runs the same monitoring/context hooks after a preset switch');
   const ptcRequest = payloads.findLast(p => p.tools?.length === 1 && p.tools[0].function.name === 'run_code');
   assert.match(ptcRequest.messages[0].content, /## Programmatic tool use/);
+  assert.match(ptcRequest.messages[0].content, /Ultracode is on/);
   for (const name of ['todo_write', 'verify_link', 'recall', 'note', 'computer_use', 'codegraph_index', 'workflow', 'subagent']) {
     assert.ok(ptcRequest.messages[0].content.includes(name), 'OMD PTC SDK retains ' + name);
   }
@@ -146,6 +152,7 @@ test('install into stock web, coexist with stock presets, switch both ways and r
   await prompt(stockPtc.sessionId, 'Inspect stock PTC.', 1);
   const stockPtcRequest = payloads.findLast(p => p.tools?.length === 1 && p.tools[0].function.name === 'run_code');
   assert.doesNotMatch(stockPtcRequest.messages[0].content, /## Programmatic tool use|Read saved context documents by record ID/);
+  assert.doesNotMatch(stockPtcRequest.messages[0].content, /Ultracode is on|Workflow authoring reference/);
   assert.equal((await api('/state?session=' + stockPtc.sessionId)).contextHistory.length, 0);
   const returned = await create('trisoul-x');
   await select(returned.sessionId, 'standard');
@@ -168,6 +175,7 @@ test('install into stock web, coexist with stock presets, switch both ways and r
 
   await stop(); await boot();
   await create('omd-ptc', ptcSession.sessionId); // PTC mounts before OMD/stock on restart.
+  assert.equal((await api('/model-mode?session='+ptcSession.sessionId)).enabled,true,'mode survives a real process restart');
   const resumedPtc = await prompt(ptcSession.sessionId, 'Inspect retained tasks.', 2);
   assert.equal(resumedPtc.projections.values.agentPreset, 'omd-ptc');
   assert.equal(resumedPtc.projections.values.todos[0].content, 'Keep the original requirement.');

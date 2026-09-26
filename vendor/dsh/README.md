@@ -14,6 +14,8 @@ Whole-bundle enablement changes refresh the page when the Conversation provider 
 
 ## Rebuild
 
+The snapshot also includes the native Workflow engine/tool, one-shot child driver, and the pure LLM error helper used to build the workflow guest. The extension adds start-ordered durable result journals with native cross-process leases, literal-only metadata parsing, per-child effort transport, shared nested-workflow limits, and conservative worktree retention. These sources are built into separate host factories; the OMD preset must explicitly select them. The guest is rebuilt from typed sources during the OMD build; it never loads host package barrels from its data URL.
+
 Use a clean checkout at the pinned tag and install its locked dependencies before applying `changes.patch`. The browser artifact retains its upstream module id; OMD extracts its factory and mounts it through the integrated client. The snapshot package metadata uses a private name and is not a separately installed client provider. Then apply the patch and run the host build plus the conversation TypeScript build. From the OMD repository:
 
 ```sh

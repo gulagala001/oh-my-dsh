@@ -29,13 +29,14 @@
 | 代码索引、符号与调用关系 | [CodeGraph](usage.md#codegraph) |
 | 浏览器、桌面操作、接管与恢复 | [Computer Use](usage.md#computer-use) |
 | 运行状态、预算、后台任务与阻塞 | [详细说明](runtime-state-background.md) |
+| Ultracode、Workflow 隔离、保存与续跑 | [Workflow 指南](workflow.md) |
 | 显示或隐藏推荐插件入口 | [推荐页面设置](usage.md#推荐插件页面显示) |
 
 ## 版本与文档范围
 
-当前已发布版本为 **OMD 0.1.7-rc.2.16 / DSH 0.1.7-rc.2**，内置 **OpenCU 1.1.7**。[本版说明](release-0.1.7-rc.2.16.md) · [发布记录与下载](https://github.com/gulagala001/oh-my-dsh/releases) · [全部更新记录](../CHANGELOG.md)。
+本版文档对应 **OMD 0.1.7-rc.2.17 / DSH 0.1.7-rc.2**，内置 **OpenCU 1.1.7**。[本版说明](release-0.1.7-rc.2.17.md) · [发布记录与下载](https://github.com/gulagala001/oh-my-dsh/releases) · [全部更新记录](../CHANGELOG.md)。
 
-`main` 分支文档可能包含下一版改动，以“开发分支／未发布”标注；安装固定 tag 时，以[该 tag 的文档](https://github.com/gulagala001/oh-my-dsh/tree/v0.1.7-rc.2.16/docs)和对应版本说明为准。历史 `release-*.md` 记录的是当时的功能与验证范围，当前安装命令见上述安装入口。
+`main` 分支文档可能包含下一版改动，以“开发分支／未发布”标注；安装固定 tag 时，以[该 tag 的文档](https://github.com/gulagala001/oh-my-dsh/tree/v0.1.7-rc.2.17/docs)和对应版本说明为准。历史 `release-*.md` 记录的是当时的功能与验证范围，当前安装命令见上述安装入口。
 
 ## 反馈与参与
 

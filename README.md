@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.16"><img src="https://img.shields.io/badge/version-0.1.7--rc.2.16-3478F6?style=flat-square" alt="Version 0.1.7-rc.2.16" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.17"><img src="https://img.shields.io/badge/version-0.1.7--rc.2.17-3478F6?style=flat-square" alt="Version 0.1.7-rc.2.17" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.7--rc.2-475569?style=flat-square" alt="DSH 0.1.7-rc.2" /></a>
   <a href="#themes"><img src="https://img.shields.io/badge/themes-4-222222?style=flat-square" alt="4 complete themes" /></a>
 </p>
@@ -24,7 +24,7 @@
   <a href="docs/getting-started.md">首次使用</a> ·
   <a href="docs/README.md">文档目录</a> ·
   <a href="docs/troubleshooting.md">遇到问题</a> ·
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.16">版本说明</a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.17">版本说明</a>
 </p>
 
 ![Oh My DSH：对话、文件交付、任务与真实验证结果集中展示](docs/images/readme-overview.png)
@@ -33,13 +33,13 @@
 
 Oh My DSH 为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 配好上下文整理、任务提醒、结果验证、提示词优化和可视化工作台，再提供四套从布局到字体的完整主题。继续使用你已有的模型、会话、文件、工具和技能。
 
-**0.1.7-rc.2.16 正式版，适配 DSH 0.1.7-rc.2 Web 与官方桌面版，内置 OpenCU 1.1.7。**
+**0.1.7-rc.2.17，适配 DSH 0.1.7-rc.2 Web 与官方桌面版，内置 OpenCU 1.1.7。**
 
 <a id="quickstart"></a>
 
 ## 装上，开始工作
 
-版本规则：`DSH 完整版本.插件补丁号`，例如 `0.1.7-rc.2.1` → `0.1.7-rc.2.16`。旧 1.x 检查器不能自动识别这次编号切换，请按下方新 tag 手动更新一次；历史 tag 保留。
+版本规则：`DSH 完整版本.插件补丁号`，例如 `0.1.7-rc.2.1` → `0.1.7-rc.2.17`。旧 1.x 检查器不能自动识别这次编号切换，请按下方新 tag 手动更新一次；历史 tag 保留。
 
 安装来源为 **`gulagala001/oh-my-dsh`**，插件包名为 **`trisoul_x`**。请复制下方完整来源。[如何核对](docs/troubleshooting.md#package-source)。
 
@@ -56,10 +56,10 @@ Oh My DSH 为 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 
 需要 **Node.js ≥22.19、pnpm 11.23.0 和 Git**；Windows 使用 PowerShell 7。尚未配置这些工具时，先看[环境准备](docs/usage.md#本地开发或独立试用)。桌面应用使用下方专用安装流程。
 
-本版配对 **DSH 0.1.7-rc.2 + Oh My DSH 0.1.7-rc.2.16**。已有环境先等待任务结束，停止服务并完整备份实际 `DSH_HOME`；继续使用原数据目录、profile 和端口。首次安装运行：
+本版配对 **DSH 0.1.7-rc.2 + Oh My DSH 0.1.7-rc.2.17**。已有环境先等待任务结束，停止服务并完整备份实际 `DSH_HOME`；继续使用原数据目录、profile 和端口。首次安装运行：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.16
+npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.17
 npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 ```
 
@@ -74,10 +74,10 @@ npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 已有旧版 DSH Web、准备转桌面并保留数据的用户，先看[旧版 Web 转桌面迁移步骤](docs/upgrade.md#web-to-desktop)。OMD 只自动处理支持的旧会话与关联记录，不会自动搬迁自定义数据目录或整套 Web profile 配置。
 
 1. 下载并安装 DSH **0.1.7-rc.2**：[Windows x64 安装包](https://download.deepseek.com/dsh-desk/bin/win-x64/deepseek-harness-0.1.7-rc.2-win-x64.exe)／[Mac Apple 芯片版](https://download.deepseek.com/dsh-desk/bin/mac-arm64/deepseek-harness-0.1.7-rc.2-mac-arm64.zip)。Windows 运行安装程序；Mac 解压后将应用移入「应用程序」。
-2. 打开应用，按引导配置模型，在「插件」页面安装 `github:gulagala001/oh-my-dsh#v0.1.7-rc.2.16` 并确认启用。
-3. 完整退出应用后重新打开，再新建会话选择 **Oh My DSH**，检查插件「当前版本」为 **0.1.7-rc.2.16**。
+2. 打开应用，按引导配置模型，在「插件」页面安装 `github:gulagala001/oh-my-dsh#v0.1.7-rc.2.17` 并确认启用。
+3. 完整退出应用后重新打开，再新建会话选择 **Oh My DSH**，检查插件「当前版本」为 **0.1.7-rc.2.17**。
 
-桌面版使用独立的 `desktop` profile；Web 已安装的插件需要在桌面端再安装一次。不要使用 CLI 管理 `desktop` profile。已有环境升级前先等任务结束、完整退出并备份实际 `DSH_HOME`。[桌面验证范围](docs/release-0.1.7-rc.2.16.md#验证)。
+桌面版使用独立的 `desktop` profile；Web 已安装的插件需要在桌面端再安装一次。不要使用 CLI 管理 `desktop` profile。已有环境升级前先等任务结束、完整退出并备份实际 `DSH_HOME`。[桌面验证范围](docs/release-0.1.7-rc.2.17.md#验证)。
 
 **安装、更新或启停后，完整退出应用再打开；提供「重启应用与 Host」菜单的版本也可使用该入口。** 仅关闭窗口会留在后台，仅刷新页面也不能完成切换；操作前先等正在执行的任务结束。
 
@@ -91,7 +91,7 @@ npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 
 ### 装好后，确认能开始工作
 
-1. 版本面板的“当前版本”为 **0.1.7-rc.2.16**，新建会话可选择 **Oh My DSH**。
+1. 版本面板的“当前版本”为 **0.1.7-rc.2.17**，新建会话可选择 **Oh My DSH**。
 2. 选好模型与工作目录，发一条简短消息，再尝试读取项目里的测试文件。
 3. 升级用户检查原模型、一个旧会话和主题是否保留。
 
@@ -215,9 +215,9 @@ Mac 桌面控制需要辅助功能、屏幕录制权限与 Apple Command Line To
 
 ## 这次更新
 
-**0.1.7-rc.2.16**：修复“需求理解 · OMD UI 增强版”在部分 pnpm 环境中缺少 integrity 的安装错误，先校验固定 SHA-256，再通过原生插件管理器安装本地包。推荐卡片明确标注原作者啃轮胎的西狐（WestFox-AwA）、OMD 适配作者 gulagala001，并提供原作链接。继续内置 OpenCU 1.1.7。
+**0.1.7-rc.2.17**：修复“需求理解 · OMD UI 增强版”在部分 pnpm 环境中缺少 integrity 的安装错误，先校验固定 SHA-256，再通过原生插件管理器安装本地包。推荐卡片明确标注原作者啃轮胎的西狐（WestFox-AwA）、OMD 适配作者 gulagala001，并提供原作链接。继续内置 OpenCU 1.1.7。
 
-[更新记录](CHANGELOG.md) · [本版验证与升级说明](docs/release-0.1.7-rc.2.16.md) · [下载与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.16)
+[更新记录](CHANGELOG.md) · [本版验证与升级说明](docs/release-0.1.7-rc.2.17.md) · [下载与校验文件](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.17)
 
 ## 文档与参与
 

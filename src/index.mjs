@@ -28,6 +28,8 @@ import { CodegraphRuntime } from './codegraph.mjs';
 import { Components, mountComponents } from './components.mjs';
 import { runtimeContext } from './runtime-state.mjs';
 import { TaskBudgets, consumeBudgetAliases } from './task-budget.mjs';
+import { WorkflowBudget } from './workflow-budget.mjs';
+import { UltracodeControl, installUltracodeProjection } from './ultracode.mjs';
 import { setRuntimeContext, taskContextMeta } from './task-context.mjs';
 import { installBackground } from './background.mjs';
 import { mountRecommendedPlugins } from './recommended-plugins.mjs';
@@ -51,6 +53,7 @@ export async function apply(ctx, config) {
   hub.getConfig = () => ({ ...liveConfig(), ...overlay });
   legacy.persist(() => { overlay = {}; });
   hub.budgets = new TaskBudgets(hub);
+  hub.workflowBudget = new WorkflowBudget(hub.store);
   ctx.effect(() => () => { for (const agent of hub.agents.values()) hub.budgets.dispose(agent.session); });
   const promptOptimizer = createPromptOptimizer(ctx, hub);
   ctx.effect(() => () => promptOptimizer.dispose());
@@ -76,6 +79,11 @@ export async function apply(ctx, config) {
   ctx.effect(() => { hub.components.start(); return () => hub.components.close(); });
   mountRecommendedPlugins(ctx, hub);
   const isX = session => ['trisoul-x', 'omd-ptc'].includes(ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset);
+  hub.ultracode = new UltracodeControl(ctx, isX, hub.store);
+  installUltracodeProjection(ctx);
+  ctx.on('agent/inbox/claimed', ({ agent, message }) => hub.ultracode.claimed(agent, message), { global: true });
+  ctx.on('system-prompt/assemble', (_assembly, context, next) => context?.agent
+    ? hub.ultracode.assemble(context.agent, next) : next(), { global: true, prepend: true });
   installBackground(ctx, hub, isX);
   installImageBudget(ctx, isX);
   installTraceCleanup(ctx, isX, hub.context);
@@ -99,6 +107,7 @@ export async function apply(ctx, config) {
     const decision = await next();
     if (decision.kind !== 'enter') return decision;
     const accepted = consumed.size ? decision.messages.filter(m => !consumed.has(m.id)) : decision.messages;
+    hub.workflowBudget.admit(agent.session, { turn, step, messages: accepted, enabled: isX(agent.session) });
     pendingSteps.set(agent, { turn, step, messages: accepted });
     return { ...decision, messages: accepted };
   }, { global: true });
@@ -168,7 +177,9 @@ export async function apply(ctx, config) {
     // Read-only historical sessions may never have created an agent.
     if (!hub.agents.has(session.id)) return hub.context.dispose(session.id);
   }, { global: true });
-  ctx.on('agent/created', ({ agent }) => {
+  ctx.on('agent/created', ({ agent, source }) => {
+    hub.ultracode.lifecycle(agent, source);
+    hub.workflowBudget.attach(agent.session);
     if (!isX(agent.session) || agent.session.header.origin === 'subagent') return;
     const state = hub.store.state(agent.session.id);
     state.memoryScope ??= hub.config().memoryScope;
@@ -177,6 +188,8 @@ export async function apply(ctx, config) {
     hub.components.project(agent.session.header.cwd);
   }, { global: true });
   ctx.on('session/event', (session, event) => {
+    hub.ultracode.committed(session, event);
+    hub.workflowBudget.observe(session, event);
     if (!isX(session)) return;
     hub.observe(session, event);
     hub.context.observe(session, event);
@@ -187,6 +200,12 @@ export async function apply(ctx, config) {
         const url = new URL(req.url, 'http://localhost'), id = url.searchParams.get('session');
         if (await handleVersionApi({ req, res, url, service: versionService, send })) return;
         if (rejectUntrusted(ctx, req, res)) return;
+        if (url.pathname === '/trisoul-x/api/model-mode') {
+          if (!id) { send(res, 400, { error: '缺少会话编号' }); return; }
+          if (req.method === 'POST') { send(res, 200, await hub.ultracode.select(id, await readBody(req))); return; }
+          if (req.method === 'GET') { send(res, 200, await hub.ultracode.inspect(id)); return; }
+          send(res, 405, { error: '不支持此方法' }); return;
+        }
         if (await handleVersionUpdateApi({ req, res, url, service: versionUpdater, send })) return;
         if (await handlePromptOptimizerApi({ ctx, service: promptOptimizer, req, res, url, getSession: () => id ? ctx.agents.get(id)?.session ?? ctx.sessions.get(id) : undefined, send })) return;
         const agent = id ? ctx.agents.get(id) : undefined;
