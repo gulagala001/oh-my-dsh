@@ -4,11 +4,24 @@ import { transformAssembly, mainPrompt, installPromptAdapter } from '../src/cc-a
 import { buildMainPrompt, promptText, MAIN_FILES } from '../src/cc-adaptation/texts.mjs';
 import { renderToolsSdk, renderToolsSdkPy } from '@deepseek-ai/dsh-tools';
 import { TASK_PARAMETERS } from '../src/tasks.mjs';
+import { loadWorkflowFactory } from './fixtures/workflow.mjs';
 
 const context={agent:{session:{header:{origin:'user'}}}};
 const schema=(name,fields=[])=>({name,description:'native '+name,parameters:{type:'object',properties:Object.fromEntries(fields.map(x=>[x,{type:'string',description:'native field '+x}]))}});
 const assembly=(tools=[])=>({sections:[{name:'harness:identity',order:-1000,text:'Native identity'}, {name:'trisoul-x:persona',order:0,text:'old'},{name:'harness:source',order:10000,text:'native source'}],tools,contexts:[{name:'sandbox:policy',text:'native permissions'}],variables:{cwd:'/fictional-fixture'}});
 const taskSchema = () => ({ ...schema('todo_write'), parameters: structuredClone(TASK_PARAMETERS) });
+
+test('workflow guidance matches native children, requires the enhanced schema, and respects available controls', async () => {
+  const native = await loadWorkflowFactory('tool-workflow');
+  assert.equal(native.DESCRIPTION, promptText('tools/workflow.md'));
+  const old = schema('workflow', ['script','meta']);
+  assert.equal(transformAssembly(assembly([old]), context).assembly.tools[0], old);
+  const current = schema('workflow', ['script','meta','scriptPath','name','resumeFromRunId','run_in_background']);
+  const all = [current, schema('job_output', ['job_id']), schema('job_kill', ['job_id'])];
+  const result = transformAssembly(assembly(all), context).assembly.tools[0];
+  assert.equal(result.parameters, current.parameters); assert.match(result.description, /cached results/); assert.match(result.description, /run_in_background/);
+  assert.doesNotMatch(transformAssembly(assembly([current]), context).assembly.tools[0].description, /run_in_background/);
+});
 
 test('todo constraint guidance is opt-in, idempotent and also reaches the generated SDK', () => {
   const todo = taskSchema();

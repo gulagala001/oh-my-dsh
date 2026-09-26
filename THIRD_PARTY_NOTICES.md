@@ -69,6 +69,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+# Acorn
+
+Acorn 8.18.0 parses workflow metadata without evaluating it and is bundled into the workflow host factories. Its copyright notice and MIT license are included in `vendor/licenses/acorn-LICENSE`.
+
+Source: https://github.com/acornjs/acorn
+
 # Playwright
 
 Playwright 1.63.0 is used as a runtime dependency under the Apache License 2.0. Its license and notices are included in the installed Playwright package.

@@ -55,14 +55,15 @@ export class Hub extends Service {
   }
   scope(session) {
     const state = this.store.peek ? this.store.peek(session.id) ?? { id: session.id } : this.store.state(session.id);
-    let root = state, parentId = session.header.parentSession;
+    let root = state, parentId = session.header.parentSession, workflowProject = state.workflowProject;
     const ancestors = new Set([session.id]);
     while (parentId) {
       if (ancestors.has(parentId)) throw Error('会话继承关系形成循环，未扩大记忆范围');
       ancestors.add(parentId); root = this.store.peek ? this.store.peek(parentId) ?? { id: parentId } : this.store.state(parentId); parentId = root.parentSession;
+      workflowProject ??= root.workflowProject;
     }
     const mode = state.memoryScope ?? root.memoryScope ?? this.config().memoryScope;
-    return { mode, project: mode === 'session' ? `session:${root.id}` : projectOf(session.header.cwd || process.cwd()) };
+    return { mode, project: mode === 'session' ? `session:${root.id}` : workflowProject ?? projectOf(session.header.cwd || process.cwd()) };
   }
   route(agent, kind) {
     const main = agent.session.requestHeader()?.config ?? agent.options;

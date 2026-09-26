@@ -15,7 +15,7 @@ export async function until(fn, timeout = 20000) {
   throw new Error('Frontend fixture timed out');
 }
 
-export async function frontendFixture(t, { imageBudget, versionResponse, headless = false, lifecycleTrace = false, installedPackage = process.env.OMD_UI_PACKED === '1', historyMessages = 0, legacyShadows = false, componentAutoSetup = false, omdConfig = {}, chatConfig = {}, legacyChatConfig, basePath = '/', agentPreset = 'trisoul-x', reply, optimizerReply, plugins = [], modelReply } = {}) {
+export async function frontendFixture(t, { imageBudget, versionResponse, headless = false, lifecycleTrace = false, installedPackage = process.env.OMD_UI_PACKED === '1', historyMessages = 0, legacyShadows = false, componentAutoSetup = false, omdConfig = {}, chatConfig = {}, legacyChatConfig, basePath = '/', agentPreset = 'trisoul-x', reply, optimizerReply, plugins = [], modelReply, setupWorkspace, initialPrompt = '整理工作台和对话界面', modelProfile = {}, additionalModels = [] } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'trisoul-frontend-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   await mkdir(home); await mkdir(workspace);
   let nextReply, releaseReply, replyFactory = reply, child, browser, page, log = '';
@@ -28,7 +28,7 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
     if(custom){
       res.writeHead(200,{'Content-Type':'text/event-stream'});
       const choices=custom[Symbol.asyncIterator]?custom:[custom];
-      for await(const choice of choices)res.write('data: '+JSON.stringify({id:'ui',object:'chat.completion.chunk',model:'fixture',choices:[{index:0,...choice}]})+'\n\n');
+      for await(const entry of choices){const {usage,...choice}=entry;res.write('data: '+JSON.stringify({id:'ui',object:'chat.completion.chunk',model:'fixture',choices:[{index:0,...choice}],...(usage?{usage}:{})})+'\n\n');}
       res.end('data: [DONE]\n\n');return;
     }
     res.writeHead(200, { 'Content-Type': 'text/event-stream' });
@@ -57,9 +57,10 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
     ]);
   });
 
+  await setupWorkspace?.({ root, home, workspace });
   await writeFile(join(home, 'settings.yaml'), JSON.stringify({
     locale: { preference: 'zh' },
-    'llm-pi-ai': { providers: { fixture: { ...(imageBudget ? { maxRequestImageBytes: imageBudget } : {}), api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'FRONTEND_FIXTURE', models: [{ id: 'fixture', name: '界面预览模型', contextWindow: 1000000, maxTokens: 8192, input: ['text', 'image'] }] } } },
+    'llm-pi-ai': { providers: { fixture: { ...(imageBudget ? { maxRequestImageBytes: imageBudget } : {}), api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'FRONTEND_FIXTURE', models: [{ id: 'fixture', name: '界面预览模型', contextWindow: 1000000, maxTokens: 8192, input: ['text', 'image'], ...modelProfile }, ...additionalModels.map(model => ({contextWindow:1000000,maxTokens:8192,input:['text'],...model}))] } } },
     'agent-default-model': { provider: 'fixture', model: 'fixture' },
     'omd-ui-chat': chatConfig,
     'trisoul-x': { componentAutoSetup, digestEvery: 1000, flushIdleMs: 3600000, computerUseNativeBinary: join(root, 'missing-native'), computerUseChromeUserDataDir: join(root, 'chrome-profile'), ...omdConfig },
@@ -136,7 +137,7 @@ export function apply(ctx) { let seeded = false; ctx.on('session/created', sessi
   await until(async () => (await rpc('llm/listProviders')).some(provider => provider.id === 'fixture'));
   const registered = await rpc('workspace/create', { path: workspace });
   const { sessionId } = await rpc('session/create', { workspaceId: registered.workspace.workspaceId, agentPreset });
-  if (!historyMessages) await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '整理工作台和对话界面' }] });
+  if (!historyMessages) await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: initialPrompt }] });
   await until(async () => (await (await fetch(origin + '/trisoul-x/api/state?session=' + sessionId, {headers:{cookie}})).json()).running === 'idle');
   if (historyMessages) await rpc('session/rename', { sessionId, title: '整理工作台和对话界面' });
   if (headless) return { root, home, workspace, origin, rpc, sessionId, errors, html: () => fetch(origin, { headers: { cookie } }).then(r => r.text()), replyWith(factory) { replyFactory = factory; },

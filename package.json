@@ -1,6 +1,6 @@
 {
   "name": "trisoul_x",
-  "version": "0.1.7-rc.2.16",
+  "version": "0.1.7-rc.2.17",
   "private": true,
   "type": "module",
   "description": "DSH 增强插件：长上下文、任务验证、提示词优化、代码理解、电脑操作与独立主题、配色和背景。",
@@ -41,7 +41,8 @@
     "sharp": "0.35.4",
     "ws": "8.21.3",
     "zod": "4.5.4",
-    "yaml": "2.8.1"
+    "yaml": "2.8.1",
+    "acorn": "8.18.0"
   },
   "engines": {
     "node": ">=22.19"
@@ -117,7 +118,10 @@
     "@deepseek-ai/dsh-sandbox": "0.1.7-rc.2",
     "@deepseek-ai/dsh-output-retention": "0.1.7-rc.2",
     "@deepseek-ai/dsh-brand": "0.1.7-rc.2",
-    "@deepseek-ai/dsh-util-values": "0.1.7-rc.2"
+    "@deepseek-ai/dsh-util-values": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-session-persistence-jsonl": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-subagent": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-workflow": "0.1.7-rc.2"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.4",
