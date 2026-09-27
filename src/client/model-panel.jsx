@@ -22,7 +22,7 @@ async function modeApi(sessionId, body, signal) {
   return value;
 }
 function Chevron({ back = false }) { return <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d={back ? 'm12 5-5 5 5 5' : 'm7 5 5 5-5 5'}/></svg>; }
-function Reset() { return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 9V4m0 5h5M4.7 8a8 8 0 1 1-.5 6"/></svg>; }
+function Reset() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 9V4m0 5h5M4.7 8a8 8 0 1 1-.5 6"/></svg>; }
 
 function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
   const state = useStore(directory);
@@ -129,7 +129,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
       onClick={() => { if (open) close(); else { setPane(selected ? 'effort' : 'model'); setQuery(''); setOpen(true); load(); void refresh(); } }}>
       <span>{modelName}</span><span className="omd-model-caption">{savedLabel}</span><span aria-hidden="true">⌃</span>
     </button>
-    {open && createPortal(<section ref={panel} id={id} className="omd-model-panel" style={position} role="dialog" aria-label="模型与思考强度" aria-busy={busy} onKeyDown={keyDown}>
+    {open && createPortal(<section ref={panel} id={id} className="omd-model-panel" data-pane={pane} style={position} role="dialog" aria-label="模型与思考强度" aria-busy={busy} onKeyDown={keyDown}>
       {pane === 'effort' ? <>
         <header className="omd-effort-heading">
           <h2 key={label} className={level.ultracode ? 'omd-effort-ultra' : ''}>{label}</h2>
