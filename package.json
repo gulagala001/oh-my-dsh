@@ -1,6 +1,6 @@
 {
   "name": "trisoul_x",
-  "version": "0.1.7-rc.2.17",
+  "version": "0.1.7-rc.2.18",
   "private": true,
   "type": "module",
   "description": "DSH 增强插件：长上下文、任务验证、提示词优化、代码理解、电脑操作与独立主题、配色和背景。",
@@ -73,6 +73,7 @@
         "@deepseek-ai/dsh-client-ui-sidebar-right",
         "@deepseek-ai/dsh-client-ui-sidebar",
         "@deepseek-ai/dsh-api-session-controller",
+        "@deepseek-ai/dsh-api-job-controller",
         "@deepseek-ai/dsh-client-file-upload",
         "@deepseek-ai/dsh-client-locale",
         "@deepseek-ai/dsh-client-ui-layout",
