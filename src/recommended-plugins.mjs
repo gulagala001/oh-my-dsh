@@ -15,6 +15,13 @@ export function pluginManagementError(error) {
 }
 export function pluginInstallSpec(plugin, version) {
   parseVersion(version);
+  const source = plugin.review?.source;
+  if (source) {
+    if (version !== plugin.review.version || !/^[\w.-]+\/[\w.-]+$/.test(source.repository)
+      || !/^[a-f0-9]{40}$/.test(source.commit) || !/^[a-f0-9]{64}$/.test(plugin.review.sha256))
+      throw Error('已核验源码快照需要固定提交、对应版本及 SHA-256');
+    return `https://codeload.github.com/${source.repository}/tar.gz/${source.commit}`;
+  }
   return plugin.githubRelease
     ? `https://github.com/${plugin.githubRelease}/releases/download/v${version}/${plugin.packageName}-${version}.tgz`
     : `${plugin.packageName}@${version}`;
@@ -95,15 +102,19 @@ export class RecommendedPluginManager {
       if (plugin.review?.sha256) {
         spec = await this.preparePackage(spec, plugin.review.sha256, this.packageDirectory, this.abort.signal);
       }
+      // The host identifies an unchanged local dependency only from a named
+      // spec. Source revisions can change without an upstream version bump.
+      if (plugin.review?.source) spec = `${plugin.packageName}@${spec}`;
       // Re-read after lookup/download: another manager may have changed
       // the installation or disabled automatic updates while it was pending.
       bundle = (await this.manager.listBundles()).find(item => item.name === plugin.packageName);
       this.abort.signal.throwIfAborted();
-      if (automatic && (!plugin.review?.version || !this.getConfig().recommendedPluginsAutoUpdate || this.isRunning() || !bundle?.installed || !bundle.enabled)) return;
+      if (automatic && (!plugin.review?.version || plugin.review.source || !this.getConfig().recommendedPluginsAutoUpdate || this.isRunning() || !bundle?.installed || !bundle.enabled)) return;
       if (action === 'install' && bundle?.installed) throw Error('插件已经安装，请使用更新');
       if (bundle?.readOnlyReason) throw Error('此插件由宿主管理，无法在这里修改');
       if (action === 'update' && !bundle?.installed) throw Error('插件已被卸载');
-      if (action === 'update' && bundle.version && compareVersions(version, bundle.version) <= 0) {
+      const comparison = action === 'update' && bundle?.version ? compareVersions(version, bundle.version) : null;
+      if (action === 'update' && comparison !== null && (comparison < 0 || (comparison === 0 && !plugin.review?.source))) {
         this.records.set(plugin.id, { ...this.records.get(plugin.id), message: plugin.review ? (bundle.version === version ? '已是核验版本' : '当前版本高于核验版本，未降级') : '已是最新版本', error: '' }); return;
       }
       result = await this.manager.installBundle(spec, { enabled: action === 'install' ? true : bundle.enabled, requestId: this.current.requestId });
@@ -132,7 +143,7 @@ export class RecommendedPluginManager {
       for (const plugin of this.catalog) {
         if (this.closed || this.job || !this.getConfig().recommendedPluginsAutoUpdate || this.isRunning()) return;
         const bundle = bundles.find(item => item.name === plugin.packageName);
-        if (plugin.review?.version && !plugin.manualInstall && bundle?.installed && bundle.enabled && !bundle.readOnlyReason) await this.start(plugin.id, 'update', true);
+        if (plugin.review?.version && !plugin.review.source && !plugin.manualInstall && bundle?.installed && bundle.enabled && !bundle.readOnlyReason) await this.start(plugin.id, 'update', true);
       }
       if (!this.closed && this.getConfig().recommendedPluginsAutoUpdate && !this.isRunning()) this.checkedAt = this.now();
     } finally { this.checking = false; }

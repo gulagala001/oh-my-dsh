@@ -210,6 +210,36 @@ test('intent assistant is release-pinned and never installed by opt-in auto upda
   assert.deepEqual(f.packages, [{ url: pluginInstallSpec(plugin, plugin.review.version), sha256: plugin.review.sha256 }]);
 });
 
+test('source-only recommendations pin a checked commit and never follow tags or latest', async () => {
+  const { recommendedPlugins } = await import('../src/recommended-plugin-catalog.mjs');
+  const { pluginInstallSpec } = await import('../src/recommended-plugins.mjs');
+  const { readFile } = await import('node:fs/promises');
+  const plugin = recommendedPlugins.find(p => p.id === 'dsh-infinite-gen-4');
+  assert.equal(plugin.review.version, '0.4.0');
+  assert.equal(plugin.review.source.commit, '5e377394fe9d6aeab6380e2a5a5f959bc1384426');
+  const spec = 'https://codeload.github.com/Minglink/dsh-infinite-gen-4/tar.gz/' + plugin.review.source.commit;
+  assert.equal(pluginInstallSpec(plugin, '0.4.0'), spec);
+  assert.throws(() => pluginInstallSpec(plugin, '1.0.0'), /源码快照/);
+  assert.throws(() => pluginInstallSpec({ ...plugin, review: { ...plugin.review, source: { ...plugin.review.source, commit: 'master' } } }, '0.4.0'), /源码快照/);
+  assert.throws(() => pluginInstallSpec({ ...plugin, review: { ...plugin.review, sha256: undefined } }, '0.4.0'), /源码快照/);
+  const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  for (const field of ['dependencies', 'devDependencies', 'optionalDependencies']) assert.equal(pkg[field]?.[plugin.packageName], undefined);
+  const f = fixture(); f.service.catalog = [plugin]; await f.service.settings(true);
+  await f.service.tick(); assert.equal(f.calls.length, 0); assert.equal(f.lookups, 0);
+  await f.service.start(plugin.id, 'install');
+  assert.equal(f.calls[0].spec, plugin.packageName + '@file:/verified/package.tgz');
+  assert.deepEqual(f.packages, [{ url: spec, sha256: plugin.review.sha256 }]);
+  f.bundles = [{ name: plugin.packageName, version: plugin.review.version, enabled: true, installed: true, removable: true }];
+  f.time = AUTO_UPDATE_INTERVAL + 2;
+  await f.service.tick(); assert.equal(f.calls.length, 1, 'installed source snapshots never auto-update'); assert.equal(f.packages.length, 1);
+  await f.service.start(plugin.id, 'update');
+  assert.equal(f.calls.length, 2, 'a manual update reapplies the checked archive even if upstream kept its version'); assert.equal(f.lookups, 0);
+  f.bundles = [{ name: plugin.packageName, version: plugin.review.version, enabled: false, installed: true, removable: true }];
+  await f.service.start(plugin.id, 'update'); assert.equal(f.calls.length, 3); assert.equal(f.calls[2].options.enabled, false);
+  f.bundles = [{ name: plugin.packageName, version: '0.5.0', enabled: false, installed: true, removable: true }];
+  await f.service.start(plugin.id, 'update'); assert.equal(f.calls.length, 3, 'a newer user installation is not downgraded');
+});
+
 test('verified package preparation failures and late cancellation never reach the installer', async () => {
   for (const scenario of ['checksum', 'closed', 'installed', 'disabled-auto']) {
     const f = fixture(); f.service.catalog[0].review = { version: '1.0.0', sha256: 'a'.repeat(64) };

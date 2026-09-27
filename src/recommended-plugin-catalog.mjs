@@ -16,6 +16,15 @@ export const recommendedPlugins = [
     category: '插件管理', url: 'https://github.com/dsh-market/dsh-market',
   },
   {
+    id: 'dsh-infinite-gen-4', name: '无限四代', packageName: 'dsh-infinite-gen-4', author: 'Minglink',
+    description: '用于提示词对抗研究和回复状态展示。默认不安装；启用后向所有会话注入两段内容生成提示词，会影响 OMD 的实际执行约定，建议仅在独立测试 profile 使用。',
+    category: '红队研究', url: 'https://github.com/Minglink/dsh-infinite-gen-4',
+    review: { version: '0.4.0', dsh: '0.1.7-rc.2', omd: '0.1.7-rc.2.19', platforms: ['Web'],
+      source: { repository: 'Minglink/dsh-infinite-gen-4', commit: '5e377394fe9d6aeab6380e2a5a5f959bc1384426' },
+      sha256: 'c781d7d93e32913007bbe93d7286e1474a5af1ffd49e2b2425f1ceb7d1b20a11',
+      note: '核验的是固定源码快照，0.4.0 为上游源码标注版本，非正式发行包；现有标签指向三代。源码快照仅手动更新。保留上游提示词与 MIT 许可；不宣称真实模型效果，桌面及 Windows 未实测。' },
+  },
+  {
     id: 'jevify', name: 'Jevify', packageName: 'dsh-plugin-jevify', author: 'gulagala001',
     description: '让普通模型提供 Jev 风格的 Choice、Score、Noul 判断；支持百炼、DeepSeek 官方和 GOAT，可用官方 Jev SDK 直接调用。安装后在设置中选择渠道与模型。',
     category: '模型能力', url: 'https://github.com/gulagala001/jevify',
