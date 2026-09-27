@@ -14,6 +14,26 @@ async function request(fx, captured, text) {
   return captured.at(-1);
 }
 
+test('native fork can switch model independently and use it on its next request', { timeout: 180000 }, async t => {
+  const captured = [];
+  const fx = await frontendFixture(t, { headless: true,
+    additionalModels: [{ id: 'second-model', name: 'Second model' }],
+    modelReply(payload) { if (payload.tools?.length) captured.push(payload); },
+  });
+  const parentPath = '/model-mode?session=' + fx.sessionId;
+  const parent = await fx.api(parentPath);
+  const fork = await fx.rpc('session/fork', { sessionId: fx.sessionId });
+  const path = '/model-mode?session=' + fork.sessionId;
+  const initial = await fx.api(path);
+  assert.equal(initial.eligible, true);
+  const selected = await fx.api(path, { provider: 'fixture', model: 'second-model', ultracode: false, expectedRevision: initial.revision });
+  assert.equal(selected.selected.model, 'second-model');
+  assert.deepEqual(await fx.api(parentPath), parent, 'fork selection must not change its parent');
+  const value = await request({ ...fx, sessionId: fork.sessionId }, captured, 'Continue in the fork');
+  assert.equal(value.model, 'second-model');
+  assert.equal((await fx.api(path, { provider: 'fixture', model: 'second-model', ultracode: true })).enabled, true);
+});
+
 test('native mode selection sends actual effort, injects the full reference, and returns to regular highest effort', { timeout: 180000 }, async t => {
   const captured = []; let held;
   const fx = await frontendFixture(t, { headless: true, modelProfile: { reasoningEfforts: {off:null,low:'low',xhigh:'xhigh'}, compat: {supportsReasoningEffort:true} },

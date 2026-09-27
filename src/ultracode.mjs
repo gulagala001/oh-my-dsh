@@ -55,7 +55,7 @@ export class UltracodeControl {
     state.ultracode = next;
   }
   eligible(agent) {
-    if (!agent || agent.session.header.parentSession || agent.session.header.origin === 'subagent' || !this.isOmd(agent.session)) return false;
+    if (!agent || agent.session.header.origin === 'subagent' || !this.isOmd(agent.session)) return false;
     return Boolean(agent.ctx.get('tools')?.schemas(agent).find(tool => tool.name === 'workflow')?.parameters?.properties?.resumeFromRunId);
   }
   view(session, agent = this.ctx.agents.get(session.id)) {
@@ -77,7 +77,8 @@ export class UltracodeControl {
       agent = resolved.agent;
     }
     if (!agent) throw new Error('会话尚未恢复，请重试');
-    if (agent.session.header.parentSession || agent.session.header.origin === 'subagent') throw new Error('不能通过模型面板接管子代理会话');
+    // Ordinary user forks also have parentSession; only origin identifies a subagent.
+    if (agent.session.header.origin === 'subagent') throw new Error('不能通过模型面板接管子代理会话');
     return agent;
   }
   async inspect(sessionId) {

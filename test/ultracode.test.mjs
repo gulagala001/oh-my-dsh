@@ -36,6 +36,26 @@ function fixture() {
   return { ctx, events, messages, session, agent, control, store, deliveries, request, eligible(value) { eligible=value; }, fail(value) { fail=value; } };
 }
 
+test('ordinary forks can inspect and change models and enable Ultracode', async () => {
+  const f = fixture();
+  f.session.header = { parentSession: 'source', isSeeded: true };
+  assert.equal((await f.control.inspect('root')).eligible, true);
+  const selected = await f.control.select('root', { provider: 'fixture', model: 'second', ultracode: false });
+  assert.equal(selected.selected.model, 'second');
+  assert.equal((await f.control.select('root', { provider: 'fixture', model: 'second', ultracode: true })).enabled, true);
+});
+
+test('subagents remain protected with or without inherited history', async () => {
+  for (const isSeeded of [false, true]) {
+    const f = fixture();
+    f.session.header = { parentSession: 'source', origin: 'subagent', isSeeded };
+    assert.equal(f.control.eligible(f.agent), false);
+    await assert.rejects(f.control.inspect('root'), /不能通过模型面板接管子代理会话/);
+    await assert.rejects(f.control.select('root', { provider: 'fixture', model: 'second', ultracode: false }), /不能通过模型面板接管子代理会话/);
+    assert.equal(f.events.length, 0);
+  }
+});
+
 test('Ultracode persists separately from native effort and a regular highest selection clears it', async () => {
   const f = fixture();
   const on = await f.control.select('root', {provider:'fixture',model:'model',ultracode:true});
