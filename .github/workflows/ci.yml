@@ -18,8 +18,9 @@ jobs:
   test:
     runs-on: ${{ matrix.os }}
     # The full serial browser suite exceeds 20 minutes on hosted Linux runners;
-    # Node 22 needs additional headroom. Per-test deadlines still catch hangs.
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 30 || matrix.node == '22.19.0' && 40 || 35 }}
+    # Windows and Node 22 need headroom (Windows reached 28m52s before the
+    # additional workflow UI cases). Per-test deadlines still catch hangs.
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 40 || matrix.node == '22.19.0' && 40 || 35 }}
     strategy:
       fail-fast: false
       matrix:

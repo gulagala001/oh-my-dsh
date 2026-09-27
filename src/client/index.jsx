@@ -18,6 +18,7 @@ import { applyConversationRecords } from './conversation-records.jsx';
 import { applyRecommendedPlugins } from './recommended-plugins.jsx';
 import { applyPromptOptimizer } from './prompt-optimizer.jsx';
 import { applyModelPanel } from './model-panel.jsx';
+import { applyWorkflowStatus } from './workflow-status.jsx';
 
 export { CONTEXT_UI_VERSION as contextUIVersion } from './context-client.mjs';
 const { ContextSettings, ScopeChip, PipelinePanel, SummaryPanel, applyStyle } = createContextUI(React);
@@ -227,6 +228,7 @@ export async function apply(ctx) {
   await ctx.plugin(hostConversation, { settingsNamespace: 'omd-ui-conversation' });
   applyPromptOptimizer(ctx);
   applyModelPanel(ctx);
+  applyWorkflowStatus(ctx);
   const openPanel = section => ctx.sidebarRight.openTab('trisoul-x-workbench', { params: { section } });
   const sections = [
     ['tasks', '任务', 'context', TaskPanel],
