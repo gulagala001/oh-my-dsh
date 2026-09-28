@@ -11,7 +11,7 @@ const closedReply = ({ id, sessionId }) => ({ id, sessionId, error: { code: -320
 export class BrowserTransport {
   constructor(endpoint, onPointer, wantsPointer = () => true) {
     this.endpoint = endpoint; this.onPointer = onPointer; this.wantsPointer = wantsPointer; this.source = randomUUID();
-    this.sessions = new Map(); this.requests = new Map(); this.observations = new Map(); this.frameRestores = new Map(); this.frameAttachments = new Map();
+    this.sessions = new Map(); this.requests = new Map(); this.commands = new Map(); this.observations = new Map(); this.frameRestores = new Map(); this.frameAttachments = new Map();
     this.sequence = 0; this.nextId = -1; this.queue = [];
     this.open();
   }
@@ -26,6 +26,12 @@ export class BrowserTransport {
       let message;
       try { message = JSON.parse(data.toString()); }
       catch { this.close(); return; }
+      const command = this.commands.get(message.id);
+      if (command) {
+        this.commands.delete(message.id);
+        if (message.error) command.reject(new Error(message.error.message)); else command.resolve(message.result);
+        return;
+      }
       const attachment = this.frameAttachments.get(message.id);
       if (attachment) {
         this.frameAttachments.delete(message.id);
@@ -90,6 +96,12 @@ export class BrowserTransport {
       } else if (message.method === 'Target.detachedFromTarget') {
         for (const attachment of this.frameAttachments.values()) if (attachment.message.params.sessionId === message.params.sessionId) attachment.detached = true;
         this.sessions.delete(message.params.sessionId);
+        // Playwright settles the detached session's pending commands. Native
+        // captures need not send individual replies before that notification.
+        for (const [id, request] of this.requests) if (request.sessionId === message.params.sessionId) this.requests.delete(id);
+        for (const [id, command] of this.commands) if (command.sessionId === message.params.sessionId) {
+          this.commands.delete(id); command.reject(new Error('Browser session detached before the request completed'));
+        }
       } else if (message.method === 'Page.frameNavigated') {
         const session = this.sessions.get(message.sessionId);
         if (session) {
@@ -120,6 +132,8 @@ export class BrowserTransport {
       // disposes the root connection and removes our message callback.
       const pending = [...this.requests.values()]; this.requests.clear();
       for (const request of pending) this.onmessage?.(closedReply(request));
+      for (const command of this.commands.values()) command.reject(new Error('Browser transport closed before the request completed'));
+      this.commands.clear();
       this.pointer({ hidden: true }); this.onclose?.(this.reason);
     }));
   }
@@ -150,6 +164,14 @@ export class BrowserTransport {
       }
     }
     this.write(message);
+  }
+  sendCommand(method, params, sessionId) {
+    if (this.closed) return Promise.reject(new Error('Browser transport closed'));
+    const id = this.nextId--;
+    return new Promise((resolve, reject) => {
+      this.commands.set(id, { resolve, reject, sessionId });
+      this.write({ id, method, params, sessionId });
+    });
   }
   close() {
     this.closed = true; this.queue = [];

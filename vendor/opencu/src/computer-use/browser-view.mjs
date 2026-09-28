@@ -99,6 +99,9 @@ export class BrowserViews {
       view.initialGeometry = viewportGeometry(await this.read(view, cdp.send('Page.getLayoutMetrics')));
       await this.read(view, cdp.send('Page.startScreencast', { format: 'jpeg', quality: 80, maxWidth: 1600, maxHeight: 1200, everyNthFrame: 1 }));
       await this.navigation(view);
+      // A static/background page may not emit an initial screencast frame.
+      // Establish its first image through the same bounded observation path.
+      if (!view.closed && !view.latest && !view.dialog) this.queueFrame(view, { loaderId: view.loaderId, captureOnly: true });
       record.page.once('close', () => { publish('closed', { reason: 'tab-closed', message: '标签页已关闭' }); void this.stop(view).catch(() => {}); });
     } catch (error) { if (!view.closed) throw error; }
   }
@@ -146,13 +149,26 @@ export class BrowserViews {
 
   async flush(view) {
     let retryAt = 0;
+    const retryInitialFrame = async () => {
+      if (view.closed || view.latest || view.dialog) return false;
+      retryAt ||= Date.now();
+      if (Date.now() - retryAt >= this.observationTimeoutMs) return false;
+      view.pending = { loaderId: view.loaderId, captureOnly: true };
+      await new Promise(resolve => setTimeout(resolve, 50));
+      return true;
+    };
     while (view.pending && !view.closed && !view.resizing) {
       let { event, loaderId, captureOnly } = view.pending; view.pending = null;
       try {
         if (!captureOnly&&event?.metadata.timestamp && event.metadata.timestamp < (view.screencastAfter ?? 0)) continue;
         const observedAt = performance.now();
         const metrics = await this.read(view, view.cdp.send('Page.getLayoutMetrics'));
-        if (view.closed || loaderId !== view.loaderId) continue;
+        if (view.closed) continue;
+        if (view.dialog) continue;
+        if (loaderId !== view.loaderId) {
+          if (!view.latest && !await retryInitialFrame()) throw new Error('页面持续变化，无法获取预览首帧，请重连画面');
+          continue;
+        }
         // The fence can advance during the metrics query. A merged resize
         // request may still need a fresh capture, but never its stale JPEG.
         if (event?.metadata.timestamp && event.metadata.timestamp < (view.screencastAfter ?? 0)) {
@@ -165,14 +181,14 @@ export class BrowserViews {
         // instead of labelling a queued pre-resize JPEG with newer dimensions.
         const previous = view.latest?.geometry ?? view.initialGeometry;
         const changed=['zoom','layoutWidth','layoutHeight'].some(key=>previous?.[key]!==geometry[key]);
-        const resized=captureOnly&&(Boolean(view.latest && view.latest.loaderId !== loaderId)||Object.keys(geometry).some(key=>previous?.[key]!==geometry[key]));
+        const resized=captureOnly&&(!view.latest||view.latest.loaderId !== loaderId||Object.keys(geometry).some(key=>previous?.[key]!==geometry[key]));
         if(!event&&!changed&&!resized)continue;
         let width,height,data,mediaType;
         if (changed||resized) {
           view.screencastAfter = Date.now() / 1000;
           const signal = AbortSignal.any([view.document.signal, view.lifetime.signal]);
           const captured = await this.read(view, this.browser.observeScreenshot(view.record, {}, signal), signal);
-          if (view.closed || loaderId !== view.loaderId) continue;
+          if (view.closed || view.dialog || loaderId !== view.loaderId) continue;
           const { source, generation, fullPage, ...current } = captured.screenshotFrame;
           geometry = current; data = captured.screenshot; mediaType = 'image/png';
           const png = Buffer.from(data, 'base64');
@@ -196,10 +212,12 @@ export class BrowserViews {
           // A navigation can abort the only pending resize capture after its
           // newest JPEG was fenced out. Refresh the new document, not the old
           // request, so a still page does not remain frozen indefinitely.
-          view.pending = { loaderId: view.loaderId, captureOnly: true };
-          continue;
+          if (view.latest) { view.pending = { loaderId: view.loaderId, captureOnly: true }; continue; }
+          if (view.dialog || await retryInitialFrame()) continue;
         }
-        if (!view.closed && error.code === 'STALE_SCREENSHOT') continue;
+        if (!view.closed && error.code === 'STALE_SCREENSHOT') {
+          if (view.latest || view.dialog || await retryInitialFrame()) continue;
+        }
         if (!view.closed && /Not attached to an active page/.test(error.message)) {
           retryAt ||= Date.now();
           if (Date.now() - retryAt < this.observationTimeoutMs) { view.pending ??= { event, loaderId, captureOnly }; await new Promise(resolve => setTimeout(resolve, 50)); continue; }

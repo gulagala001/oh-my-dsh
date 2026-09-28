@@ -200,7 +200,7 @@ export class BrowserHost extends BrowserActions {
         // dismiss unhandled dialogs, which would let a read-only observer
         // change another tab. Only an explicit target action may answer one.
         context.on('dialog', () => {});
-        const connection = { browser, context, pages: new Map(), run };
+        const connection = { browser, context, transport, pages: new Map(), run };
         browser.on('disconnected', () => { if (this.connections.get(sessionId) === pending) this.connections.delete(sessionId); });
         try {
           const monitor = await browser.newBrowserCDPSession();

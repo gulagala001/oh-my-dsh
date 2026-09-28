@@ -31,6 +31,7 @@ export class BrowserActions {
     const { targetInfo } = await cdp.send('Target.getTargetInfo');
     const id = this.recordId(connection, targetInfo);
     const record = { id, page, cdp, generation: 0, elements: new Map(), ids: new Map(), previous: new Map(), logs: [], downloads: new Map(), frames: new Map(), heldButtons: new Set(), heldKeys: new Set(), buttonReleases: new Map(), keyReleases: new Map(), pointer: { x: 0, y: 0 } };
+    record.transport = connection.transport;
     record.coordinateId = randomUUID();
     record.frameGenerations = new WeakMap();
     observeNetwork(record);
@@ -289,16 +290,16 @@ export class BrowserActions {
     try { const result = await Promise.race([action, dialog]); return result ?? null; }
     finally { if (record.wake === wake) record.wake = null; if (!record.dialog) record.pendingAction = null; }
   }
-  async capture(record, options = {}, geometry) {
+  async capture(record, options = {}, geometry, signal) {
     if (options.fullPage) {
       const current = geometry ?? await screenshotGeometry(record);
       if (current.scale !== 1) throw new Error('Full-page capture is unavailable while pinch zoom is active. Use a viewport screenshot.');
       return captureFullPage(record);
     }
-    return captureViewport(record, geometry ?? await screenshotGeometry(record));
+    return captureViewport(record, geometry ?? await screenshotGeometry(record), signal);
   }
   async observeScreenshot(record, options = {}, signal) {
-    return observeScreenshot(record, options, signal, (settings, geometry) => this.capture(record, settings, geometry));
+    return observeScreenshot(record, options, signal, (settings, geometry) => this.capture(record, settings, geometry, signal));
   }
   validateViewport(size){if(!size||!['width','height'].every(key=>Number.isInteger(size[key])&&size[key]>0&&size[key]<=10000000))throw new Error('Viewport width and height must be positive integers within Chromium limits.');}
   async setViewport(record,size,mode='device'){
