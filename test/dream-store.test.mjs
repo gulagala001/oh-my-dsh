@@ -6,15 +6,22 @@ import { tmpdir } from 'node:os';
 import { DreamStore } from '../src/dream/store.mjs';
 import { splitSource, summaryFingerprint, validateMemory, nodeKey } from '../src/dream/core.mjs';
 
-function setup(t){const dir=mkdtempSync(join(tmpdir(),'omd-dream-'));let now=Date.UTC(2026,8,28);const a=new DreamStore(dir,{now:()=>now});t.after(()=>{a.close();rmSync(dir,{recursive:true,force:true});});return {a,dir,advance:n=>{now+=n;},open:()=>new DreamStore(dir,{now:()=>now})};}
+function setup(t){
+  const dir=mkdtempSync(join(tmpdir(),'omd-dream-')),stores=[];let now=Date.UTC(2026,8,28);
+  const open=()=>{const store=new DreamStore(dir,{now:()=>now});stores.push(store);return store;},a=open();
+  // Node runs after hooks in registration order. Close every connection before
+  // removing their shared directory (Windows cannot unlink an open SQLite DB).
+  t.after(()=>{for(const store of stores)store.close();rmSync(dir,{recursive:true,force:true});});
+  return {a,dir,advance:n=>{now+=n;},open};
+}
 test('one persistent executor lease and fenced publication across processes',t=>{
-  const f=setup(t),b=f.open();t.after(()=>b.close());const epoch=f.a.acquire();assert.equal(b.acquire(),null);
+  const f=setup(t),b=f.open();const epoch=f.a.acquire();assert.equal(b.acquire(),null);
   f.advance(60001);const newer=b.acquire();assert(newer>epoch);
   assert.throws(()=>f.a.publish({kind:'session',target:'s',summary:'old',epoch}),/租约/);
   b.publish({kind:'session',target:'s',summary:'new',epoch:newer});assert.equal(f.a.memory('session:s').summary,'new');
 });
 test('expired ownership cannot alter job targets, progress, reservations or terminal state',t=>{
-  const f=setup(t),b=f.open();t.after(()=>b.close());const epoch=f.a.acquire();
+  const f=setup(t),b=f.open();const epoch=f.a.acquire();
   const job=f.a.enqueue('session','s'),next=f.a.enqueue('session','next');
   assert.equal(f.a.claimJob(epoch).id,job.id);
   f.a.setTargets(job.id,[{kind:'session',target:'s'}],epoch);
@@ -47,7 +54,7 @@ test('summary and raw coverage remain independent; old versions stay readable',t
   assert.equal(a.memory('session:s',1).summary,'brief');assert.equal(a.references('session:s',2).entries[0].id,before.ref);
 });
 test('quota reservations are shared, durable, and unknown failures are charged',t=>{
-  const f=setup(t),b=f.open();t.after(()=>b.close());const epoch=f.a.acquire();
+  const f=setup(t),b=f.open();const epoch=f.a.acquire();
   const id=f.a.reserve(1800,2000,{kind:'session'},epoch);assert(id);assert.equal(b.usage().used,1800);
   assert.equal(f.a.reserve(201,2000,{},epoch),null);f.a.settle(id,undefined,'cancel');assert.equal(b.usage().used,1800);
   f.a.settle(id,{inputTokens:400,cacheReadTokens:100,outputTokens:50});assert.equal(b.usage().used,550);
@@ -64,7 +71,7 @@ test('cancelled jobs reject late publication without consuming progress',t=>{
   assert.equal(a.memory('session:s'),null);assert.equal(a.consumed('session:s','s'),undefined);
 });
 test('parent publication rechecks source membership inside its transaction',t=>{
-  const f=setup(t),b=f.open();t.after(()=>b.close());const epoch=f.a.acquire();
+  const f=setup(t),b=f.open();const epoch=f.a.acquire();
   f.a.saveSession({id:'s',project:'p',shared:true,title:'s',activity:0});
   const child=f.a.publish({kind:'session',target:'s',summary:'private later',epoch});
   b.saveSession({...b.session('s'),shared:false});
@@ -73,7 +80,7 @@ test('parent publication rechecks source membership inside its transaction',t=>{
 });
 test('restart retains jobs, consumed ranges and used quota',t=>{
   const f=setup(t),epoch=f.a.acquire(),job=f.a.enqueue('global','global');f.a.updateJob(job.id,{state:'running'});f.a.reserve(1000,2000,{},epoch);f.a.release(epoch);
-  const b=f.open();t.after(()=>b.close());const next=b.acquire();b.recover(next);assert.equal(b.job(job.id).state,'queued');assert.equal(b.usage().used,1000);
+  const b=f.open();const next=b.acquire();b.recover(next);assert.equal(b.job(job.id).state,'queued');assert.equal(b.usage().used,1000);
 });
 test('catalog paging covers complete matching scope, including short Chinese',t=>{
   const {a}=setup(t);for(let i=0;i<45;i++)a.saveSession({id:String(i).padStart(2,'0'),project:'项目记忆',title:'记忆 '+i,shared:i!==44,activity:0});

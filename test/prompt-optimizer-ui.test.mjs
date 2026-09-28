@@ -270,7 +270,7 @@ test('native Lexical references survive rewrite/restore; automatic sends preserv
     const token = JSON.stringify(payload.messages).match(/OMDREF_[a-zA-Z0-9]+_0_END/)?.[0];
     return response(refMode ? '请分析 ' + token : '请分析附图');
   } });
-  const { page, errors } = f, editor = page.locator('[contenteditable="true"][role="textbox"]').first();
+  const { page, errors } = f, editor = page.locator('[data-composer-input]');
   const drawer = page.getByRole('dialog', { name: '提示词优化', exact: true });
   await editor.fill('分析 @reference');
   await page.getByRole('option', { name: /reference.md/ }).click();
@@ -289,13 +289,23 @@ test('native Lexical references survive rewrite/restore; automatic sends preserv
   await editor.click(); await editor.press('ControlOrMeta+A'); await editor.press('Backspace');
   await until(async () => await page.locator('[data-composer-chip="reference"]').count() === 0);
   await editor.fill('分析这张图'); refMode = false;
+  const readDraft = () => editor.evaluate(el => {
+    const tree = el.__lexicalEditor.getEditorState().toJSON();
+    const text = node => node.type === 'text' ? node.text : (node.children || []).map(text).join('');
+    return { dom: el.innerText, text: text(tree.root), tree };
+  });
+  // fill() dispatches the edit; wait for Lexical's actual commit before the
+  // separate attachment action causes another render or blur.
+  await until(async () => (await readDraft()).text === '分析这张图');
+  assert.equal((await readDraft()).dom, '分析这张图');
   const buffer = await sharp({ create: { width: 32, height: 32, channels: 3, background: '#3978e7' } }).png().toBuffer();
   await page.locator('[data-composer-card] input[type="file"]').setInputFiles({ name: 'optimizer-reference.png', mimeType: 'image/png', buffer });
   await until(async () => await page.locator('[data-composer-card] img').count() === 1);
+  assert.equal((await readDraft()).text, '分析这张图', JSON.stringify(await readDraft()));
   f.replyWith(payload => { main.push(payload); return response('图片和优化后的文本均已收到。'); });
   await page.getByRole('button', { name: '启用自动润色', exact: true }).click();
   assert.equal(await page.getByRole('button', { name: '关闭自动润色', exact: true }).getAttribute('aria-pressed'), 'true');
-  assert.equal(await editor.innerText(), '分析这张图');
+  assert.equal(await editor.innerText(), '分析这张图', JSON.stringify(await readDraft()));
   await editor.press('Enter');
   await until(() => main.length === 1);
   assert.equal(requests.length, 2, 'automatic send calls the optimizer after the earlier manual rewrite');

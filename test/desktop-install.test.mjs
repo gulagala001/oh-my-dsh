@@ -202,6 +202,9 @@ export function apply(ctx) {
     await until(async () => await page.locator('html').getAttribute('data-appearance') === appearance);
     for (const scope of ['all', 'conversation', 'sidebar']) {
       await page.getByLabel('背景显示区域', { exact: true }).selectOption(scope);
+      // Scope is committed after IndexedDB completes; selecting the option is
+      // not evidence that the image has moved out of the previous region yet.
+      await until(async () => await page.locator('html').getAttribute('data-omd-background') === scope);
       await page.keyboard.press('Escape');
       const before = await regionPixels();
       await wallpaperImage.evaluate(img => img.style.filter = 'invert(1)');
