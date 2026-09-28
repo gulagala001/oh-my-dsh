@@ -35,10 +35,19 @@ export const sourceHash = (session, seqs) => hash(seqs.map(seq => {
 export const estimate = text => Math.ceil(String(text).length / 4);
 export const hasOpaqueContent = blocks => (blocks || []).some(b => !['text', 'reasoning', 'tool-call', 'tool-result'].includes(b.type) || (b.type === 'tool-result' && hasOpaqueContent(b.content)));
 
-export function validatePrepared(value) {
-  if (!value || typeof value.summary !== 'string' || !value.summary.trim() || !Array.isArray(value.documents)) throw new Error('预处理没有提交完整摘要与文档');
+export function validatePrepared(value, decisionSources = []) {
+  if (!value || typeof value.summary !== 'string' || !Array.isArray(value.documents)) throw new Error('预处理没有提交完整摘要与文档');
   if (value.documents.some(d => !d || typeof d.title !== 'string' || !d.title.trim() || typeof d.text !== 'string' || !d.text.trim())) throw new Error('详细文档的标题和正文必须完整');
-  return { summary: value.summary.trim(), documents: value.documents.map(d => ({ title: d.title.trim(), text: d.text.trim() })) };
+  const decisions = value.decisions;
+  if (decisions !== undefined && (!Array.isArray(decisions) || decisions.length > 12)) throw Error('用户决定摘要格式无效');
+  const sources = new Map(decisionSources.map(s => [s.seq, s.text]));
+  for (const d of decisions || []) {
+    if (!d || typeof d.text !== 'string' || !d.text.trim() || d.text.length>1200 || !Number.isSafeInteger(d.seq) || typeof d.quote !== 'string' || !d.quote.trim() || d.quote.length>600 || !sources.get(d.seq)?.includes(d.quote)) throw Error('用户决定摘要缺少本批真实用户原话依据或超过长度限制');
+  }
+  if ((decisions || []).reduce((n, d) => n + Array.from(d.text).length, 0) > 1200) throw Error('用户决定摘要超过长度上限');
+  if (!value.summary.trim() && !decisions?.length) throw Error('预处理没有提交完整摘要与文档');
+  return { summary: value.summary.trim(), documents: value.documents.map(d => ({ title: d.title.trim(), text: d.text.trim() })),
+    ...(decisions?.length ? { decisions: decisions.map(d => ({ text: d.text.trim(), seq: d.seq, quote: d.quote })) } : {}) };
 }
 export function decodeResult(result, toolName) {
   const call = result?.blocks?.findLast(b => b.type === 'tool-call' && b.name === toolName);
@@ -49,6 +58,7 @@ export function recordText(record, mode = 'detail') {
   const ranges = (record.ranges || []).map(r => `${r.from}..${r.to}`).join(', ');
   const when = record.timeStart == null ? '时间未记录' : new Date(record.timeStart).toISOString() + (record.timeEnd && record.timeEnd !== record.timeStart ? ' — ' + new Date(record.timeEnd).toISOString() : '');
   return `[Context record ${record.id} · ${when} · events ${ranges} · view=${mode}]\n${record.summary}`
+    + ((record.decisions || []).length ? '\n[Historical user decisions]\n' + record.decisions.map(d => `[event ${d.seq}] ${d.text}`).join('\n') : '')
     + (mode === 'detail' && record.documents.length ? '\n\n' + record.documents.map(d => `## ${d.title}\n${d.text}`).join('\n\n') : '')
     + ((record.assets || []).length ? `\n[${record.assets.length} saved attachments; recall with id and asset (1-based) to reopen one.]` : '')
     + `\n[${record.documents.length ? "Saved documents" : "Archived record"}: recall({"id":"${record.id}"})]`;
@@ -60,7 +70,7 @@ export function protectedEvent(session, e) {
   return e.type === 'developer/message'
     || (e.type === 'system/message' && source !== 'trisoul-x:shadow')
     || (message?.role === 'system' && source !== 'trisoul-x:shadow')
-    || source === 'trisoul-x:todo-prefix' || source === '@deepseek-ai/dsh-system-prompt' || source === 'trisoul-x:trace' || source === 'trisoul-x:manual-global';
+    || source === 'trisoul-x:todo-prefix' || source === '@deepseek-ai/dsh-system-prompt' || source === 'trisoul-x:trace' || source === 'trisoul-x:manual-global' || source === 'trisoul-x:dream-memory' || source === 'trisoul-x:project-catalog';
 }
 export function preparationStop(session, cfg) {
   const nodes = session.surface.nodes, live = nodes.flatMap((seq, i) => session.deriveEventMessage(session.eventAt(seq)) ? [i] : []);
@@ -199,7 +209,7 @@ function legacyPrepareCandidate(session, state, cfg, pairing) {
     if (hasOpaqueContent(session.deriveEventMessage(e)?.content)) return true;
     if (e.data?.source?.form === 'snapshot') return true;
     const src = eventSource(e) || '';
-    if (src.startsWith('trisoul-x:context') || src.startsWith('trisoul-x:trace') || src === 'trisoul-x:project-catalog' || src === 'trisoul-x:manual-global') return true;
+    if (src.startsWith('trisoul-x:context') || src.startsWith('trisoul-x:trace') || src === 'trisoul-x:project-catalog' || src === 'trisoul-x:manual-global' || src === 'trisoul-x:dream-memory') return true;
     if (latest.get(src) === e.seq) return true;
     return !session.deriveEventMessage(e);
   };
@@ -297,7 +307,12 @@ export function candidateInput(session, events, lookback) {
   const all = session.snapshotEvents(), start = all.findIndex(e => e.seq === events[0].seq);
   const prior = lookback > 0 ? all.slice(0, start).filter(e => actualUser(e) || e.type === 'assistant/message' || e.type === 'tool/result').slice(-lookback) : [];
   const segment = (events.windowSeqs || events.map(e => e.seq)).map(seq => session.eventAt(seq));
+  const segmentUsers = segment.filter(actualUser);
+  const precedingUser = all.slice(0, start).findLast(actualUser);
+  const decisionSources = [...new Map([...(precedingUser ? [precedingUser] : []), ...segmentUsers].map(e => [e.seq, e])).values()]
+    .map(e => ({ seq: e.seq, text: textBlocks(e.data.content) }));
   return { summary_scope: { source: 'segment', event_seqs: events.filter(e => !actualUser(e) && !(events.retainedSeqs || []).includes(e.seq) && read(e)).map(e => e.seq), reference_only_fields: ['reference', 'user_messages'] },
+    decision_sources: decisionSources,
     reference: prior.filter(e => read(e)).map(e => ({ seq: e.seq, type: e.type, text: materialText(read(e).content, e.seq) })),
     user_messages: userMessages(session).filter(u => u.seq <= Math.max(...segment.map(e => e.seq))).slice(-8),
     segment: segment.filter(e => read(e)).map(e => ({ seq: e.seq, at: eventTime(e), type: e.type,
@@ -338,6 +353,11 @@ export function newRecord(session, events, prepared, binding, { state, wholeWind
     const origin = session.snapshotEvents().find(x => actualUser(x) && (x.seq === m?.[TODO_META]?.originalSeq || x.data.id === base.id));
     return origin ? [origin] : [];
   });
+  for (const d of prepared.decisions || []) {
+    const e = session.eventAt(d.seq);
+    if (!actualUser(e) || !textBlocks(e.data.content).includes(d.quote)) throw Error('用户决定来源已改变');
+    if (!originals.some(x => x.seq === e.seq)) originals.push(e);
+  }
   const userOriginals = combineUsers(...parents.map(r => r.userOriginals || []), originals.map(e => ({
     sessionId: session.id, seq: e.seq, at: eventTime(e), content: structuredClone(e.data.content),
   })));

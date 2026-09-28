@@ -23,22 +23,19 @@ const record = i => ({ id: `record-${String(i).padStart(5, '0')}`, version: 1, s
   summary: '准确的项目记录。'.repeat(55), documents: [{ title: 'Detail', text: '原始资料' }],
   parents: [], timeStart: i, timeEnd: i, createdAt: i });
 
-test('project publication stays within its budget and only marks actually delivered records', t => {
+test('retired project catalog stays recallable without restarting its publication executor', t => {
   const f = setup(t), history = f.store.state('history', f.state.binding);
   history.records = Array.from({ length: 125 }, (_, i) => record(i)); f.store.save(history);
-  const published = []; let fail = false;
-  f.pipeline.adapter = { ...adapter, catalogBudget: () => 4200, catalogCost: text => Buffer.byteLength(text),
-    publish(_session, text) { if (fail) throw Error('append failed'); published.push(text); } };
+  f.state.publications.catalog = { 'record-00000': 1 };
+  f.state.publications.deferred = 124; f.store.save(f.state);
+  const before = structuredClone(f.state.publications), published = [];
+  f.pipeline.adapter = { ...adapter, publish(_session, text) { published.push(text); } };
   f.pipeline.publishMemory(f.session);
-  assert.equal(published.length, 1); assert.ok(Buffer.byteLength(published[0]) <= 4200);
-  const delivered = Object.keys(f.state.publications.catalog);
-  assert.ok(delivered.length > 0 && delivered.length < 125);
-  assert.equal(f.state.publications.deferred, 125 - delivered.length);
+  assert.deepEqual(published, []);
+  assert.deepEqual(f.state.publications.catalog, before.catalog);
+  assert.equal(f.state.publications.deferred, before.deferred);
   assert.equal(f.store.visible(f.session.id).length, 125);
-  for (const id of delivered) assert.ok(published[0].includes(id));
-  const before = structuredClone(f.state.publications.catalog); fail = true;
-  assert.throws(() => f.pipeline.publishMemory(f.session), /append failed/);
-  assert.deepEqual(f.state.publications.catalog, before);
+  assert.match(f.pipeline.recall(f.session, { id: 'record-00001' }), /原始资料/);
 });
 
 test('catalog pages cover all records and surface stale cursors and oversized summaries', () => {

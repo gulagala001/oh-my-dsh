@@ -22,9 +22,8 @@
 .tx-app h3 { font-size: 13px; font-weight: 620; line-height: 1.5; }
 .tx-app svg { flex-shrink: 0; }
 .tx-page-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 20px 20px 18px; flex: 0 0 auto; }
-.tx-title-line { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.tx-title-line { min-width: 0; }
 .tx-title-line p { color: var(--tx-muted); font-size: 11px; margin-top: 4px; }
-.tx-page-icon { height: 30px; width: 30px; border-radius: 8px; display: grid; place-items: center; background: var(--tx-soft); color: var(--tx-muted); flex-shrink: 0; }
 .tx-recommended { height: auto; max-width: 760px; overflow: visible; background: transparent; padding: 8px 0 20px; }
 .tx-recommended-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
 .tx-recommended-heading-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
@@ -101,6 +100,8 @@
 .tx-tabs > button { display: flex; align-items: center; gap: 6px; color: var(--tx-muted); font: inherit; font-size: 12px; cursor: pointer; padding: 10px 0 12px; border: 0; border-bottom: 2px solid transparent; background: transparent; }
 .tx-tabs > button[aria-selected=true] { color: var(--tx-blue); border-bottom-color: var(--tx-blue); font-weight: 600; }
 .tx-tabs > button > span { background: var(--tx-hover); min-width: 17px; height: 17px; line-height: 17px; text-align: center; border-radius: 5px; font-size: 10px; }
+.tx-tabpanel[hidden] { display: none; }
+.tx-tabpanel:focus-visible { outline: 2px solid var(--tx-blue); outline-offset: -2px; border-radius: 3px; }
 .tx-segments { display: flex; padding: 3px; gap: 3px; border-radius: 9px; background: var(--tx-hover); min-width: 0; }
 .tx-segments > button { flex: 1; border: 1px solid transparent; border-radius: 6px; background: transparent; padding: 7px 10px; color: var(--tx-muted); font: inherit; font-size: 12px; line-height: 1.4; white-space: nowrap; cursor: pointer; }
 .tx-segments > button[aria-pressed=true] { color: var(--tx-blue); background: var(--tx-bg); border-color: var(--tx-line); box-shadow: 0 1px 3px #00000006; font-weight: 600; }
@@ -131,9 +132,6 @@
 .tx-row-between { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .tx-prose { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.9; }
 .tx-app pre { white-space: pre-wrap; overflow-wrap: anywhere; border-radius: 7px; padding: 11px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; line-height: 1.75; background: var(--tx-hover); margin: 9px 0; }
-.tx-context-summary { display: flex; align-items: center; justify-content: space-between; padding: 0 22px 13px; gap: 14px; font-size: 11px; color: var(--tx-muted); }
-.tx-context-summary > div { display: flex; align-items: center; gap: 7px; }
-.tx-context-summary strong { color: var(--tx-blue); font-size: 14px; }
 .tx-status-dot, .tx-component-dot { display: inline-block; width: 6px; height: 6px; background: var(--tx-blue); border-radius: 50%; flex-shrink: 0; }
 .tx-progress { height: 3px; background: var(--tx-hover); margin: 0 22px 9px; border-radius: 3px; overflow: hidden; }
 .tx-progress > i { height: 100%; display: block; background: var(--tx-blue); transition: width .3s; }
@@ -182,12 +180,15 @@
 .tx-timeline { overflow-x: auto; scrollbar-width: thin; scrollbar-color: var(--tx-line) transparent; padding: 3px 0 8px; }
 .tx-timeline-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 10px; width: max-content; min-width: 100%; }
 .tx-timeline-row > span { position: sticky; left: 0; background: var(--tx-bg); min-width: 65px; color: var(--tx-muted); z-index: 1; }
-.tx-timeline-row > div { display: flex; gap: 3px; }
-.tx-timeline-row button, .tx-timeline-row i { padding: 0; display: block; border: 0; width: 8px; height: 15px; background: var(--tx-hover); border-radius: 2px; }
+.tx-timeline-row > div { display: flex; gap: 2px; }
+.tx-timeline-row button, .tx-timeline-row i { padding: 0; display: grid; place-items: center; flex-shrink: 0; border: 0; width: 24px; height: 28px; background: transparent; border-radius: 5px; }
+.tx-timeline-row button::before, .tx-timeline-row i::before { content: ''; display: block; width: 8px; height: 15px; background: var(--tx-hover); border-radius: 2px; }
 .tx-timeline-row button { cursor: pointer; }
-.tx-timeline-row .tx-call { background: var(--tx-blue); opacity: .75; }
-.tx-timeline-row .tx-call:hover { opacity: 1; transform: scaleY(1.25); }
-.tx-timeline-row .tx-call-error { background: var(--tx-danger); }
+.tx-timeline-row button:hover { background: var(--tx-tint); }
+.tx-timeline-row button:focus-visible { outline-offset: -1px; }
+.tx-timeline-row .tx-call::before { background: var(--tx-blue); opacity: .75; }
+.tx-timeline-row .tx-call:hover::before { opacity: 1; transform: scaleY(1.25); }
+.tx-timeline-row .tx-call-error::before { background: var(--tx-danger); }
 .tx-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 7px 13px; margin-top: 12px; font-size: 10px; color: var(--tx-muted); }
 .tx-legend > span { display: flex; align-items: center; gap: 5px; }
 .tx-legend i { width: 6px; height: 6px; border-radius: 2px; }
@@ -268,7 +269,7 @@
 @container txpanel (min-width: 600px) {
   .tx-page-head { padding: 27px 30px 22px; }
   .tx-body { padding-left: 30px; padding-right: 30px; }
-  .tx-tabs, .tx-monitor-top, .tx-context-summary { padding-left: 30px; padding-right: 30px; }
+  .tx-tabs, .tx-monitor-top { padding-left: 30px; padding-right: 30px; }
   .tx-progress { margin-left: 30px; margin-right: 30px; }
   .tx-stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .tx-stat { padding: 17px; }
@@ -278,11 +279,9 @@
 @container txpanel (max-width: 330px) {
   .tx-page-head { padding: 19px 16px 16px; }
   .tx-body { padding-left: 16px; padding-right: 16px; }
-  .tx-tabs, .tx-monitor-top, .tx-context-summary { padding-left: 16px; padding-right: 16px; }
+  .tx-tabs, .tx-monitor-top { padding-left: 16px; padding-right: 16px; }
   .tx-tabs { gap: 18px; }
-  .tx-title-line { gap: 9px; }
   .tx-title-line p { font-size: 10px; }
-  .tx-page-icon { width: 32px; height: 32px; border-radius: 9px; }
   .tx-app h2 { font-size: 18px; }
 
   .tx-segments > button { padding-left: 7px; padding-right: 7px; }

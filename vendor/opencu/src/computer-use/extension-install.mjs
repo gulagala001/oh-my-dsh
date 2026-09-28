@@ -189,7 +189,7 @@ export class ExtensionInstaller {
       }
       // Even a failed set may have changed one registry view. Always attempt
       // guarded restoration before rolling back the files it could now name.
-      if (this.windows) { registryChanged = true; await this.windows.set(this.hostName, this.registration); }
+      if (this.windows) { registryChanged = true; await this.windows.set(this.hostName, this.registration, registryBefore); }
       const before = await read(this.receipt); changed.push({ path: this.receipt, before, mode: 0o600 });
       await atomicWrite(this.receipt, Buffer.from(JSON.stringify(nextReceipt, null, 2) + '\n'));
       // Publish last: updated native bridges watch this marker and disconnect.

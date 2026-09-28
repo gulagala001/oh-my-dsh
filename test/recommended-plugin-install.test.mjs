@@ -43,7 +43,7 @@ test('recommended plugin installs, checks updates and uninstalls through the hos
   await verifyRotatorTitles(f);
   // Seed an older real release in this disposable profile, then exercise an
   // actual package upgrade, not only a "latest already installed" check.
-  const cli = fileURLToPath(new URL('../node_modules/@deepseek-ai/dsh/lib/bin.js', import.meta.url));
+  const cli = process.env.OMD_DSH_CLI || fileURLToPath(new URL('../node_modules/@deepseek-ai/dsh/lib/bin.js', import.meta.url));
   await promisify(execFile)(process.execPath, [cli, 'plugin', '--profile', 'trisoul-x', 'add', 'dsh-status-rotator@0.20.0'], { env: { ...process.env, DSH_HOME: f.home }, timeout: 60000 });
   await until(async () => (await status()).plugins.find(p => p.id === 'dsh-status-rotator').version === '0.20.0');
   await until(() => card.getByRole('button', { name: '更新', exact: true }).isEnabled());

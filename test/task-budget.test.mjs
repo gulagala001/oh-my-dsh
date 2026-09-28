@@ -20,7 +20,7 @@ function fixture() {
 test('budget input supports independent limits and rejects ambiguous or invalid input', () => {
   assert.deepEqual(parseBudgetInput('token=100k 轮次=30 时间=20m').limits, { tokens: 100000, rounds: 30, timeMs: 1200000 });
   assert.deepEqual(parseBudgetInput('时间=1.5h token=无限制').limits, { timeMs: 5400000, tokens: null });
-  for (const input of ['abc', 'token=0', 'token=-1', '轮次=1.5', '时间=20', 'token=1 token=2', 'token=1e99']) assert.throws(() => parseBudgetInput(input), /用法/);
+  for (const input of ['abc', 'token=0', 'token=-1', '轮次=1.5', '时间=20', 'token=1 token=2', 'token=1e99', 'constructor=1s', '__proto__=1s']) assert.throws(() => parseBudgetInput(input), /用法/);
 });
 
 test('budget accounting includes cache and child/background tokens, never doubles reasoning or resets on edits', () => {
@@ -51,6 +51,41 @@ test('time excludes user waits, idle time and downtime after restart', async () 
   f.clock(90000); assert.equal(b.snapshot(f.session).elapsedMs, 2000);
   const restarted = new TaskBudgets(f.hub, () => 90000);
   assert.equal(restarted.snapshot(f.session).elapsedMs, 2000);
+});
+
+test('failed budget edits and elapsed-time writes preserve both the budget and its running clock', () => {
+  const f = fixture(), b = f.budgets;
+  b.command(f.agent, 'token=100 时间=1m');
+  f.clock(1000);
+  const before = b.snapshot(f.session), save = f.hub.store.save;
+  f.hub.store.save = () => { throw Error('disk full'); };
+  assert.throws(() => b.command(f.agent, 'token=200'), /disk full/);
+  assert.deepEqual(b.snapshot(f.session), before);
+  f.clock(2000); assert.equal(b.snapshot(f.session).elapsedMs, 2000);
+  assert.throws(() => b.tick(f.session, true), /disk full/);
+  assert.equal(b.snapshot(f.session).elapsedMs, 2000);
+  assert.throws(() => b.record(f.session, 'main', { usage: { inputTokens: 2, outputTokens: 3 } }), /disk full/);
+  assert.equal(b.snapshot(f.session).tokens, 0);
+  assert.equal(b.snapshot(f.session).rounds, 0);
+  f.hub.store.save = save;
+  b.tick(f.session, true); f.clock(3000);
+  assert.equal(b.snapshot(f.session).elapsedMs, 3000);
+  b.command(f.agent, 'token=200');
+  assert.equal(b.snapshot(f.session).limits.tokens, 200);
+});
+
+test('ordinary fork usage never consumes its parent budget, including nested descendants', () => {
+  const f = fixture(), fork = { id: 'fork', header: { parentSession: f.session.id, isSeeded: true } };
+  f.budgets.command(f.agent, 'token=100');
+  f.budgets.command({ session: fork, status: 'idle' }, 'token=50');
+  Object.assign(f.hub.store.state(fork.id), { parentSession: f.session.id, origin: null });
+  const child = { id: 'child', header: { parentSession: fork.id, origin: 'subagent' } };
+  Object.assign(f.hub.store.state(child.id), { parentSession: fork.id, origin: 'subagent' });
+  f.budgets.record(fork, 'main', { usage: { inputTokens: 2, outputTokens: 3 } });
+  f.budgets.record(child, 'subagent', { usage: { inputTokens: 5, outputTokens: 7 } });
+  assert.equal(f.budgets.snapshot(f.session).tokens, 0);
+  assert.equal(f.budgets.snapshot(fork).tokens, 17);
+  assert.equal(f.budgets.snapshot(fork).rounds, 1);
 });
 
 test('default cadence ignores consumption and steps but notices explicit budget resets', () => {

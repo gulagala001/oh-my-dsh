@@ -11,7 +11,8 @@ export function parseBudgetInput(input = '') {
   if (/^(无限制|unlimited)$/i.test(text)) return { op: 'set', limits: emptyLimits() };
   const limits = {};
   for (const part of text.split(/\s+/)) {
-    const match = /^([^=＝]+)[=＝](.+)$/.exec(part), key = aliases[match?.[1].toLowerCase()];
+    const match = /^([^=＝]+)[=＝](.+)$/.exec(part), name = match?.[1].toLowerCase();
+    const key = Object.hasOwn(aliases, name) ? aliases[name] : undefined;
     if (!key || Object.hasOwn(limits, key)) throw Error(usage);
     const value = match[2].toLowerCase();
     if (['无限制', 'unlimited', 'off'].includes(value)) { limits[key] = null; continue; }
@@ -42,12 +43,12 @@ export function renderBudget(budget) {
 export class TaskBudgets {
   constructor(hub, now = Date.now) { this.hub = hub; this.now = now; this.clocks = new Map(); this.waiting = new Map(); }
   saved(session) { return this.hub.store.state(session.id).budget; }
-  save(session, budget) { const state = this.hub.store.state(session.id); state.budget = budget; this.hub.store.save(state); }
+  save(session, budget) { const state = this.hub.store.state(session.id); this.hub.store.save({ ...state, budget }); state.budget = budget; }
   tick(session, running, now = this.now()) {
     const budget = this.saved(session), since = this.clocks.get(session.id);
+    if (!budget?.configured || !budget.visible) { this.clocks.delete(session.id); return; }
+    if (since != null) this.save(session, { ...budget, elapsedMs: budget.elapsedMs + Math.max(0, now - since) });
     this.clocks.delete(session.id);
-    if (!budget?.configured || !budget.visible) return;
-    if (since != null) { budget.elapsedMs += Math.max(0, now - since); this.save(session, budget); }
     if (running && !this.waiting.get(session.id)) this.clocks.set(session.id, now);
   }
   snapshot(session, now = this.now()) {
@@ -58,7 +59,6 @@ export class TaskBudgets {
     const action = parseBudgetInput(input), session = agent.session;
     if (action.op === 'show') return renderBudget(this.snapshot(session)) || '本会话预算已关闭。';
     let budget = this.snapshot(session);
-    this.clocks.delete(session.id);
     if (action.op === 'off') budget.visible = false;
     else if (action.op === 'reset') budget = { ...freshBudget(), limits: budget.limits, configured: true };
     else {
@@ -67,6 +67,7 @@ export class TaskBudgets {
     }
     budget.revision = (this.saved(session)?.revision ?? 0) + 1;
     this.save(session, budget);
+    this.clocks.delete(session.id);
     this.tick(session, agent.status === 'running');
     const text = renderBudget(budget) || '本会话预算已关闭。';
     return text + (!this.hub.config().budgetHintsEnabled ? '\n在设置 → Oh My DSH → 实验性功能中开启“向模型提供预算”后投递。' : '');
@@ -77,16 +78,18 @@ export class TaskBudgets {
     const seen = new Set(); let id = session.id;
     while (id && !seen.has(id)) {
       seen.add(id);
-      const state = this.hub.store.state(id), budget = state.budget;
+      const state = this.hub.store.state(id), budget = state.budget && { ...state.budget };
       if (budget?.configured && budget.visible) {
         if (id === session.id && kind === 'main') budget.rounds++;
         if (entry.usage) for (const key of ['inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens']) {
           const value = entry.usage[key]; if (Number.isFinite(value) && value >= 0) budget.tokens += value;
         }
         else budget.unmetered++;
-        this.hub.store.save(state);
+        this.save({ id }, budget);
       }
-      id = state.parentSession;
+      const delegated = id === session.id ? session.header?.origin === 'subagent' || kind === 'subagent'
+        : state.origin === 'subagent' || (state.origin === undefined && state.metrics?.subagent?.calls > 0);
+      id = delegated ? state.parentSession : undefined;
     }
   }
   async waitForUser(agent, next) {

@@ -2,10 +2,11 @@ import { applyAppearanceBrand } from './appearance-brand.jsx';
 import { createPoller } from './polling.mjs';
 import { createConversation } from '../../lib/host/ui-conversation.factory.mjs';
 import { installDesktopLifecycle } from './desktop-lifecycle.mjs';
-import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { Menu } from '@deepseek-ai/dsh-client-ui-primitives';
 import { frameTokens, contextHistoryLayout } from './context-history.mjs';
 import css from './style.css';
+import workbenchCss from './workbench.css';
 import shellCss from './shell.css';
 import { ComputerIcon } from '#opencu/src/client/computer-icons.jsx';
 import { applyComputerUseClient } from '#opencu/client-source';
@@ -108,14 +109,26 @@ function Icon({ name, size = 16 }) {
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] || paths.context}/></svg>;
 }
-function Tabs({ value, onChange, items, label }) {
-  return <div className="tx-tabs" role="tablist" aria-label={label}>{items.map(([id, title, count]) => <button type="button" role="tab" aria-selected={value === id} key={id} onClick={() => onChange(id)}>{title}{count != null && <span>{count}</span>}</button>)}</div>;
+function Tabs({ value, onChange, items, label, idPrefix }) {
+  const buttons = useRef([]);
+  const navigate = (event, index) => {
+    let next;
+    if (event.key === 'ArrowRight') next = (index + 1) % items.length;
+    else if (event.key === 'ArrowLeft') next = (index + items.length - 1) % items.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = items.length - 1;
+    else return;
+    event.preventDefault();
+    onChange(items[next][0]);
+    buttons.current[next]?.focus();
+  };
+  return <div className="tx-tabs" role="tablist" aria-label={label} aria-orientation="horizontal">{items.map(([id, title, count], index) => <button ref={element => { buttons.current[index] = element; }} type="button" role="tab" id={`${idPrefix}-tab-${id}`} aria-controls={`${idPrefix}-panel-${id}`} aria-selected={value === id} tabIndex={value === id ? 0 : -1} key={id} onClick={() => onChange(id)} onKeyDown={event => navigate(event, index)}>{title}{count != null && <span>{count}</span>}</button>)}</div>;
 }
 function Segments({ value, onChange, items, label }) {
   return <div className="tx-segments" role="group" aria-label={label}>{items.map(([id, title]) => <button key={id} type="button" aria-pressed={value === id} onClick={() => onChange(id)}>{title}</button>)}</div>;
 }
-function Header({ icon, title, subtitle }) {
-  return <header className="tx-page-head"><div className="tx-title-line"><span className="tx-page-icon"><Icon name={icon} size={20}/></span><div><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div></div></header>;
+function Header({ title, subtitle, action }) {
+  return <header className="tx-page-head"><div className="tx-title-line"><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div>{action}</header>;
 }
 function Empty({ icon = 'layers', title, children }) { return <div className="tx-empty"><span><Icon name={icon} size={24}/></span><h3>{title}</h3>{children && <p>{children}</p>}</div>; }
 function Badge({ children, tone }) { return <span className={cx('tx-badge', tone && 'tx-' + tone)}>{children}</span>; }
@@ -133,8 +146,8 @@ function Evidence({ link }) {
 function TaskPanel({ sessionId, useTabInfo }) {
   const { tab } = useTabInfo(), { data, error } = useSnapshot(sessionId, tab.visible);
   const tasks = data?.tasks || [], done = tasks.filter(t => t.status === 'completed').length, history = data?.legacyContext;
-  return <div className="tx-app"><Header icon="context" title="任务与验证" subtitle="需求、进展与实际验证结果"/>
-    <div className="tx-context-summary"><div><span className="tx-status-dot"/><span>{data?.running !== 'idle' && data?.running ? '正在执行' : tasks.length && done === tasks.length ? '任务已完成' : tasks.length ? '任务待继续' : '等待新任务'}</span></div>{tasks.length > 0 && <span><strong>{done}</strong> / {tasks.length} 完成</span>}</div>
+  const status = data?.running !== 'idle' && data?.running ? '正在执行' : tasks.length && done === tasks.length ? '任务已完成' : tasks.length ? '任务待继续' : '等待新任务';
+  return <div className="tx-app"><Header title="任务与验证" subtitle={status} action={tasks.length > 0 && <span className="tx-task-count"><strong>{done}</strong><span>/ {tasks.length} 完成</span></span>}/>
     {tasks.length > 0 && <div className="tx-progress" role="progressbar" aria-label="任务完成进度" aria-valuenow={done} aria-valuemin={0} aria-valuemax={tasks.length}><i style={{ width: `${done / tasks.length * 100}%` }}/></div>}
     <div className="tx-body"><Alert error>{error}</Alert>
       <>{tasks.length ? <div className="tx-task-list">{tasks.map((task, i) => <article className="tx-task" key={task.id || i}>
@@ -183,34 +196,44 @@ function Timeline({ calls, onSelect }) {
   const ordered = calls.slice().reverse();
   if (!ordered.length) return <Empty icon="monitor" title="等待第一次执行">开始对话后，各组件的调用会出现在这里。</Empty>;
   return <section className="tx-section"><div className="tx-section-heading"><h3>调用轨迹</h3><span className="tx-muted">从左到右 · 点击查看</span></div><div className="tx-timeline">
-    {componentEntries(ordered.map(call => call.kind)).map(([kind, label]) => <div key={kind} className="tx-timeline-row"><span>{label}</span><div>{ordered.map((call, i) => call.kind === kind ? <button key={i} type="button" className={call.error ? 'tx-call-error' : 'tx-call'} onClick={() => onSelect(call)} aria-label={`${label} · ${shortDate(call.at)} · ${duration(call.durationMs)}`} title={`${label} · ${call.turn ?? '—'}.${call.step ?? '—'} · ${duration(call.durationMs)}${call.error ? ' · ' + call.error : ''}`}/> : <i key={i}/>)}</div></div>)}
+    {componentEntries(ordered.map(call => call.kind)).map(([kind, label]) => <div key={kind} className="tx-timeline-row"><span>{label}</span><div>{ordered.map((call, i) => call.kind === kind ? <button key={i} type="button" className={call.error ? 'tx-call-error' : 'tx-call'} onClick={() => onSelect(call)} aria-label={`${label}${call.turn != null ? ` · 第 ${call.turn} 回合` : ''}${call.step != null ? ` · 第 ${call.step} 步` : ''} · ${shortDate(call.at)} · ${duration(call.durationMs)}${call.error ? ' · 调用失败' : ''}`} title={`${label} · ${call.turn ?? '—'}.${call.step ?? '—'} · ${duration(call.durationMs)}${call.error ? ' · ' + call.error : ''}`}/> : <i key={i}/>)}</div></div>)}
   </div><div className="tx-legend"><span><i style={{ background: 'var(--tx-blue)' }}/>完成调用</span><span><i style={{ background: 'var(--tx-danger)' }}/>调用失败</span></div></section>;
 }
 function Monitor({ sessionId, useTabInfo }) {
   const { tab } = useTabInfo(), [range, setRange] = useState('session'), [page, setPage] = useState('overview'), [stage, setStage] = useState('all'), [failures, setFailures] = useState(false), [selected, setSelected] = useState(null);
+  const monitorId = useId(), body = useRef(null), selectedSummary = useRef(null), pendingSelection = useRef(null);
   const { data, error } = useSnapshot(sessionId, tab.visible, range), actions = data?.actions || {}, live = data?.liveCalls || [], metrics = data?.metrics || {};
   const totals = Object.values(metrics).reduce((out, m) => ({ calls: out.calls + (m.calls || 0), errors: out.errors + (m.errors || 0), input: out.input + inputTokens(m), output: out.output + (m.outputTokens || 0), cache: out.cache + (m.cacheReadTokens || 0), ms: out.ms + (m.durationMs || 0) }), { calls: 0, errors: 0, input: 0, output: 0, cache: 0, ms: 0 });
   const components = componentEntries((data?.activity || []).map(call => call.kind));
   const effectiveStage = components.some(([kind]) => kind === stage) ? stage : 'all';
-  useEffect(() => { setStage('all'); setSelected(null); }, [sessionId, range]);
+  useEffect(() => { setStage('all'); setSelected(null); pendingSelection.current = null; }, [sessionId, range]);
   const activity = (data?.activity || []).filter(a => (effectiveStage === 'all' || a.kind === effectiveStage) && (!failures || a.error));
-  const choose = call => { setPage('calls'); setStage('all'); setFailures(false); setSelected(callId(call)); };
+  const choose = call => { pendingSelection.current = callId(call); setPage('calls'); setStage('all'); setFailures(false); setSelected(callId(call)); };
+  useLayoutEffect(() => {
+    if (!tab.visible || page !== 'calls' || !pendingSelection.current || pendingSelection.current !== selected) return;
+    const summary = selectedSummary.current, viewport = body.current;
+    if (!summary || !viewport) return;
+    pendingSelection.current = null;
+    summary.focus({ preventScroll: true });
+    const target = summary.getBoundingClientRect(), bounds = viewport.getBoundingClientRect();
+    viewport.scrollTop += target.top - bounds.top - viewport.clientTop - 16;
+  }, [page, selected, data, tab.visible]);
   const running = data?.running && data.running !== 'idle';
-  return <div className="tx-app"><Header icon="monitor" title="执行监控" subtitle="看清每次调用与上下文变化"/>
+  return <div className="tx-app"><Header title="执行监控" subtitle="查看执行进展与模型用量"/>
     <div className="tx-monitor-top"><Segments label="监控统计范围" value={range} onChange={setRange} items={[[ 'session', '当前会话' ], [ 'all', '全部会话' ]]}/><div className={cx('tx-running-label', (running || live.length > 0) && 'is-running')}><span className="tx-status-dot"/>{running ? '执行中' : live.length ? '后台运行中' : '空闲'}</div></div>
-    <Tabs label="监控分类" value={page} onChange={setPage} items={[[ 'overview', '概览' ], [ 'calls', '调用记录' ], [ 'context', '上下文' ]]}/>
-    <div className="tx-body"><Alert error>{error}</Alert>
-      {page === 'overview' && <><div className="tx-stats-grid">{[['总用量', compactNumber(totals.input + totals.output), 'tokens'], ['缓存命中', totals.input ? (totals.cache / totals.input * 100).toFixed(1) + '%' : '—', '输入缓存'], ['模型调用', fmt(totals.calls), `${totals.errors} 次失败`], ['累计用时', duration(totals.ms), '各组件合计']].map(([label, value, hint]) => <div className="tx-stat" key={label}><span>{label}</span><strong>{value}</strong><small>{hint}</small></div>)}</div>
+    <Tabs label="监控分类" idPrefix={monitorId} value={page} onChange={setPage} items={[[ 'overview', '概览' ], [ 'calls', '调用记录' ], [ 'context', '上下文' ]]}/>
+    <div className="tx-body" ref={body}><Alert error>{error}</Alert>
+      <div className="tx-tabpanel" role="tabpanel" id={`${monitorId}-panel-overview`} aria-labelledby={`${monitorId}-tab-overview`} hidden={page !== 'overview'} tabIndex={0}><div className="tx-stats-grid">{[['总用量', compactNumber(totals.input + totals.output), 'tokens'], ['缓存命中', totals.input ? (totals.cache / totals.input * 100).toFixed(1) + '%' : '—', '输入缓存'], ['模型调用', fmt(totals.calls), `${totals.errors} 次失败`], ['累计用时', duration(totals.ms), '各组件合计']].map(([label, value, hint]) => <div className="tx-stat" key={label}><span>{label}</span><strong>{value}</strong><small>{hint}</small></div>)}</div>
         {live.length > 0 && <div className="tx-live-list">{live.map((call, i) => <div key={i}><span className="tx-pulse"/><div><strong>{kindName[call.kind] || call.kind}</strong><small>{call.model}</small></div><span>{duration(Date.now() - call.startedAt)}</span></div>)}</div>}
         <Timeline calls={data?.activity || []} onSelect={choose}/>
         {Object.keys(metrics).length > 0 && <section className="tx-section"><div className="tx-section-heading"><h3>组件用量</h3><span className="tx-muted">调用 / Token</span></div>{componentEntries(Object.keys(metrics)).filter(([kind]) => metrics[kind]?.calls).map(([kind, label]) => { const m = metrics[kind], last = data?.activity?.find(a => a.kind === kind), total = inputTokens(m) + (m.outputTokens || 0); return <details className="tx-component" key={kind}><summary><span><i className={cx('tx-component-dot', m.errors > 0 && 'has-error')}/>{label}</span><span><strong>{fmt(m.calls)}</strong><small>{compactNumber(total)} tok</small><Icon name="chevron" size={13}/></span></summary><div className="tx-component-details"><div className="tx-detail-grid"><span>输入 / 输出</span><strong>{fmt(inputTokens(m))} / {fmt(m.outputTokens)}</strong><span>缓存命中</span><strong>{inputTokens(m) ? ((m.cacheReadTokens || 0) / inputTokens(m) * 100).toFixed(1) + '%' : '—'}</strong><span>推理 Token</span><strong>{m.reasoningTokens == null ? '—' : fmt(m.reasoningTokens)}</strong><span>峰值输入 / 累计用时</span><strong>{compactNumber(m.peakContext)} / {duration(m.durationMs)}</strong><span>失败</span><strong>{fmt(m.errors)}</strong></div>{last && <p className="tx-help tx-path">{last.provider} / {last.model}</p>}{m.unmetered > 0 && <p className="tx-help">{m.unmetered} 次调用未返回用量</p>}</div></details>; })}</section>}
         <Fold title="后台处理统计" subtitle="后台流程的累计执行结果"><div className="tx-detail-grid">{[['上下文预处理 / 失败', `${fmt(actions.preparedSegments)} / ${fmt(actions.contextprepareErrors)}`], ['上下文替换决策 / 失败', `${fmt(actions.contextDecisions)} / ${fmt(actions.contextcoordinateErrors)}`], ['记忆消化 / 失败', `${fmt(actions.digests)} / ${fmt(actions.digestErrors)}`], ['记忆整理 / 失败', `${fmt(actions.curations)} / ${fmt(actions.curationErrors)}`], ['注入 / 文档更新', `${fmt(actions.injections)} / ${fmt(actions.workdocVersions)}`], ['状态提炼 / 失败', `${fmt(actions.states)} / ${fmt(actions.stateErrors)}`], ['召回 / 命中条数', `${fmt(actions.recalls)} / ${fmt(actions.recallHits)}`], ['检索回退', fmt(actions.retrievalFallbacks)], ['压缩 / 失败', `${fmt(actions.surgeries)} / ${fmt(actions.surgeryErrors)}`], ['替换 / 决策 / 文档回查', `${fmt(actions.contextReplacements)} / ${fmt(actions.contextDecisions)} / ${fmt(actions.documentRecalls)}`], ['检查调用失败', fmt(actions.probeErrors)], ['原文回捞 / 旧快照清理', `${fmt(actions.rawRecalls)} / ${fmt(actions.staleVersions)}`], ['压缩后字符占比', actions.compactInputChars ? (actions.compactOutputChars / actions.compactInputChars * 100).toFixed(1) + '%' : '—']].filter(([label, value]) => ['上下文预处理 / 失败', '上下文替换决策 / 失败', '替换 / 决策 / 文档回查'].includes(label) || /[1-9]/.test(value)).map(([label, value]) => <React.Fragment key={label}><span>{label}</span><strong>{value}</strong></React.Fragment>)}</div></Fold>
-      </>}
-      {page === 'calls' && <><div className="tx-call-filters"><label className="tx-field"><select aria-label="调用组件" value={effectiveStage} onChange={e => setStage(e.target.value)}><option value="all">全部组件</option>{components.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label><label className="tx-check"><input type="checkbox" checked={failures} onChange={e => setFailures(e.target.checked)}/>仅失败</label></div>
-        {activity.length ? activity.map(call => <details key={callId(call)} className={cx('tx-call-row', call.error && 'tx-failed-call')} open={selected === callId(call) || undefined}><summary><span className="tx-call-icon"><Icon name={call.error ? 'close' : 'check'} size={14}/></span><div><strong>{kindName[call.kind] || call.kind}</strong><small>{shortDate(call.at)}{call.step != null ? ` · 第 ${call.step} 步` : ''}</small></div><span>{duration(call.durationMs)}</span><Icon name="chevron" size={13}/></summary><div className="tx-call-detail"><p className="tx-help tx-path">{call.provider} / {call.model}</p><div className="tx-detail-grid"><span>输入 / 输出</span><strong>{fmt(inputTokens(call.usage))} / {fmt(call.usage?.outputTokens)}</strong><span>缓存读取</span><strong>{fmt(call.usage?.cacheReadTokens)}</strong>{call.effort && <><span>推理强度</span><strong>{call.effort}</strong></>}</div><p className="tx-help tx-path">会话 {call.sessionId}</p><Alert error>{call.error}</Alert></div></details>) : <Empty icon="clock" title="这里还没有调用记录">{failures ? '当前筛选范围内没有失败调用。' : '模型调用完成后，会按时间列在这里。'}</Empty>}
+      </div>
+      <div className="tx-tabpanel" role="tabpanel" id={`${monitorId}-panel-calls`} aria-labelledby={`${monitorId}-tab-calls`} hidden={page !== 'calls'} tabIndex={0}><div className="tx-call-filters"><label className="tx-field"><select aria-label="调用组件" value={effectiveStage} onChange={e => setStage(e.target.value)}><option value="all">全部组件</option>{components.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label><label className="tx-check"><input type="checkbox" checked={failures} onChange={e => setFailures(e.target.checked)}/>仅失败</label></div>
+        {activity.length ? activity.map(call => <details key={callId(call)} className={cx('tx-call-row', call.error && 'tx-failed-call')} open={selected === callId(call) || undefined}><summary ref={selected === callId(call) ? selectedSummary : undefined}><span className="tx-call-icon"><Icon name={call.error ? 'close' : 'check'} size={14}/></span><div><strong>{kindName[call.kind] || call.kind}</strong><small>{shortDate(call.at)}{call.step != null ? ` · 第 ${call.step} 步` : ''}</small></div><span>{duration(call.durationMs)}</span><Icon name="chevron" size={13}/></summary><div className="tx-call-detail"><p className="tx-help tx-path">{call.provider} / {call.model}</p><div className="tx-detail-grid"><span>输入 / 输出</span><strong>{fmt(inputTokens(call.usage))} / {fmt(call.usage?.outputTokens)}</strong><span>缓存读取</span><strong>{fmt(call.usage?.cacheReadTokens)}</strong>{call.effort && <><span>推理强度</span><strong>{call.effort}</strong></>}</div><p className="tx-help tx-path">会话 {call.sessionId}</p><Alert error>{call.error}</Alert></div></details>) : <Empty icon="clock" title="这里还没有调用记录">{failures ? '当前筛选范围内没有失败调用。' : '模型调用完成后，会按时间列在这里。'}</Empty>}
         <p className="tx-footnote">完整消息与工具往返可在 DSH「轨迹」中查看。</p>
-      </>}
-      {page === 'context' && <>{data?.meter ? <section className="tx-section"><div className="tx-section-heading"><h3>当前会话</h3><Badge>{fmt(data.frame?.length)} 条记录</Badge></div><div className="tx-context-number">{compactNumber(data.meter.totalTokens)}<span>tokens</span></div><FrameBar nodes={(data.frame || []).map(n => ({ ...n, kind: n.checkpoint ? 'checkpoint' : n.kind }))}/><FrameLegend/><details className="tx-subfold"><summary>查看各条记录</summary>{data.frame?.map(n => <div className="tx-frame-row" key={n.seq}><span>#{n.seq} · {frameKind(n.checkpoint ? 'checkpoint' : n.kind)}</span><span>{compactNumber(n.tokens)} tok</span></div>)}</details></section> : <Empty icon="layers" title="尚无上下文读数">继续一次对话后即可查看。</Empty>}{data && <ContextHistory data={data}/>}</>}
+      </div>
+      <div className="tx-tabpanel" role="tabpanel" id={`${monitorId}-panel-context`} aria-labelledby={`${monitorId}-tab-context`} hidden={page !== 'context'} tabIndex={0}>{data?.meter ? <section className="tx-section"><div className="tx-section-heading"><h3>当前会话</h3><Badge>{fmt(data.frame?.length)} 条记录</Badge></div><div className="tx-context-number">{compactNumber(data.meter.totalTokens)}<span>tokens</span></div><FrameBar nodes={(data.frame || []).map(n => ({ ...n, kind: n.checkpoint ? 'checkpoint' : n.kind }))}/><FrameLegend/><details className="tx-subfold"><summary>查看各条记录</summary>{data.frame?.map(n => <div className="tx-frame-row" key={n.seq}><span>#{n.seq} · {frameKind(n.checkpoint ? 'checkpoint' : n.kind)}</span><span>{compactNumber(n.tokens)} tok</span></div>)}</details></section> : <Empty icon="layers" title="尚无上下文读数">继续一次对话后即可查看。</Empty>}{data && <ContextHistory data={data}/>}</div>
     </div>
   </div>;
 }
@@ -233,7 +256,7 @@ export async function apply(ctx) {
   const sections = [
     ['tasks', '任务', 'context', TaskPanel],
     ['context', '上下文', 'layers', PipelinePanel],
-    ['memory', '摘要', 'memory', SummaryPanel],
+    ['memory', '记忆', 'memory', SummaryPanel],
     ['computer', '电脑', 'computer', props => <ComputerPane {...props}/>],
     ['monitor', '监控', 'monitor', Monitor],
   ];
@@ -244,7 +267,7 @@ export async function apply(ctx) {
       <nav className="cx-navigation" aria-label="工作台导航">
         {sections.map(([id, label, icon]) => <button key={id} type="button" aria-current={section === id ? 'page' : undefined} onClick={() => tab.actions.openTab('trisoul-x-workbench', { params: { section: id }, replaceTab: tab.kind !== 'trisoul-x-workbench' })}>{icon === 'computer' ? <ComputerIcon size={15}/> : <Icon name={icon} size={15}/>}<span>{label}</span></button>)}
       </nav>
-      {sections.map(([id, , , Component]) => <section key={id} className="tx-workbench-page" hidden={section !== id} aria-label={sections.find(([key]) => key === id)[1]}>
+      {sections.map(([id, label, , Component]) => <section key={id} className="tx-workbench-page" data-section={id} hidden={section !== id} aria-label={label}>
         <Component {...props} useTabInfo={() => { const info = props.useTabInfo(); return { ...info, tab: { ...info.tab, visible: info.tab.visible && section === id } }; }} conversation={ctx.get('conversation')}/>
       </section>)}
     </div>;
@@ -257,7 +280,7 @@ export async function apply(ctx) {
     return <div className="tx-composer-dock" data-session-id={props.sessionId} data-omd-running={running ? '' : undefined} data-omd-usage-expanded={usageOpen ? '' : undefined}><div className="tx-composer-tools"><button type="button" className="tx-workbench-entry" aria-label="打开工作台" onClick={() => openPanel('tasks')}><Icon name="context" size={15}/><span>工作台</span></button><ComputerEntry {...props}/></div><button type="button" className="tx-usage-toggle" aria-label="用量详情" aria-expanded={usageOpen} onClick={() => setUsageOpen(value => !value)}><Icon name="monitor" size={14}/><span>用量</span><Icon name="chevron" size={12}/></button><StatsLine {...props} onOpen={() => openPanel('monitor')}/></div>;
   }
   ctx.effect(() => {
-    const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css + '\n' + shellCss + '\n' + whaleCss + '\n' + versionCss; document.head.appendChild(tag);
+    const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css + '\n' + shellCss + '\n' + whaleCss + '\n' + versionCss + '\n' + workbenchCss; document.head.appendChild(tag);
     document.documentElement.classList.add('trisoul-shell');
     return () => { tag.remove(); document.documentElement.classList.remove('trisoul-shell'); };
   });

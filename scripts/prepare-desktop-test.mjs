@@ -1,44 +1,47 @@
-// Prepare a pinned, official DSH Desktop release for the packaged-app test.
-// The SHA-512 values and sizes come from the rc.2 production update feeds.
+// Prepare an official DSH Desktop release using verified update-feed metadata.
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { access, appendFile, mkdir, rename, rm, stat } from 'node:fs/promises';
+import { access, appendFile, mkdir, readFile, rename, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
-const releases = {
-  'win-x64': {
-    platform: 'win32', arch: 'x64', extension: 'exe', size: 288245480,
-    sha512: 'AY7f45dYO7BFrfgaLmzXNWP0pavlxkSbsehPo/WF6PXcFdDK3fF1oHUPs/4f2bzROgQvm6wSgawZ/g7UzbPRmw==',
-  },
-  'mac-arm64': {
-    platform: 'darwin', arch: 'arm64', extension: 'zip', size: 372794444,
-    sha512: 'aOfxtRvFqTRRp3zqu6nXNgILgVdHDPyfslhUVNnU1wMYw1dY1vTelptJeAmUDt7G822SCqHzxtPwMmvCGekveA==',
-  },
-};
-
 const [target, ...options] = process.argv.slice(2);
-const release = releases[target];
-const usage = 'Usage: node scripts/prepare-desktop-test.mjs <win-x64|mac-arm64> [--archive <local file>] [--verify-only]';
-if (!release) throw new Error(usage);
-let localArchive;
+const usage = 'Usage: node scripts/prepare-desktop-test.mjs <win-x64|mac-arm64> [--version <DSH version>] [--release-manifest <JSON>] [--archive <local file>] [--verify-only]';
+if (!['win-x64', 'mac-arm64'].includes(target)) throw new Error(usage);
+let localArchive, version, releaseManifest;
 let verifyOnly = false;
 for (let index = 0; index < options.length; index++) {
   if (options[index] === '--verify-only' && !verifyOnly) verifyOnly = true;
   else if (options[index] === '--archive' && localArchive === undefined && options[index + 1] && !options[index + 1].startsWith('--')) {
     localArchive = options[++index];
+  } else if (options[index] === '--version' && version === undefined && options[index + 1] && !options[index + 1].startsWith('--')) {
+    version = options[++index];
+  } else if (options[index] === '--release-manifest' && releaseManifest === undefined && options[index + 1] && !options[index + 1].startsWith('--')) {
+    releaseManifest = options[++index];
   } else throw new Error(usage);
 }
+version ??= JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')).devDependencies['@deepseek-ai/dsh'];
+const manifest = JSON.parse(await readFile(releaseManifest ? resolve(releaseManifest) : new URL('desktop-releases.json', import.meta.url), 'utf8'));
+if (manifest.schema !== 1 || !manifest.releases || !Object.hasOwn(manifest.releases, version) || !Object.hasOwn(manifest.releases[version], target)) {
+  throw new Error(`No verified desktop release metadata for DSH ${version}/${target}. Add the official update feed's size and SHA-512 before testing this release.`);
+}
+const release = manifest.releases[version][target];
+const expected = target === 'win-x64' ? { platform: 'win32', arch: 'x64', extension: 'exe' } : { platform: 'darwin', arch: 'arm64', extension: 'zip' };
+if (!/^[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$/.test(version)
+  || Object.entries(expected).some(([key, value]) => release[key] !== value)
+  || !Number.isSafeInteger(release.size) || release.size <= 0
+  || typeof release.sha512 !== 'string' || Buffer.from(release.sha512, 'base64').length !== 64
+  || Buffer.from(release.sha512, 'base64').toString('base64') !== release.sha512) throw new Error('Invalid desktop release metadata');
 if (!verifyOnly && (process.platform !== release.platform || process.arch !== release.arch)) {
   throw new Error(`${target} requires ${release.platform}/${release.arch}; got ${process.platform}/${process.arch}`);
 }
 
-const filename = `deepseek-harness-0.1.7-rc.2-${target}.${release.extension}`;
+const filename = `deepseek-harness-${version}-${target}.${release.extension}`;
 const url = `https://download.deepseek.com/dsh-desk/bin/${target}/${filename}`;
-const root = resolve(process.env.OMD_DESKTOP_TEST_ROOT || join(tmpdir(), 'omd-desktop-rc2'));
+const root = resolve(process.env.OMD_DESKTOP_TEST_ROOT || join(tmpdir(), 'omd-desktop-' + version));
 const archive = localArchive ? resolve(localArchive) : join(root, filename);
 
 async function verify(file) {
@@ -47,7 +50,7 @@ async function verify(file) {
   const hash = createHash('sha512');
   for await (const chunk of createReadStream(file)) hash.update(chunk);
   if (hash.digest('base64') !== release.sha512) throw new Error(`${filename}: SHA-512 mismatch`);
-  console.log(`Verified official ${filename} (${size} bytes, SHA-512)`);
+  console.log(`Verified desktop ${filename} (${size} bytes, SHA-512)`);
 }
 
 async function download() {

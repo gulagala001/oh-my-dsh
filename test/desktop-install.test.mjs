@@ -15,10 +15,10 @@ import { testBrowserExecutable } from './fixtures/computer-use/test-browser.mjs'
 import { browserExecutablePath } from '#opencu/src/computer-use/browser.mjs';
 
 const executablePath = process.env.OMD_DESKTOP_EXECUTABLE;
-test('packaged Desktop installs OMD, preserves conversations across restart and restores stock UI on removal', { skip: !executablePath && 'Set OMD_DESKTOP_EXECUTABLE to an official rc.2 desktop executable', timeout: 300000 }, async t => {
+test('packaged Desktop installs OMD, preserves conversations across restart and restores stock UI on removal', { skip: !executablePath && 'Set OMD_DESKTOP_EXECUTABLE to the desktop executable under test', timeout: 300000 }, async t => {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'omd-desktop-'))), home = join(root, 'home'), workspace = join(root, 'workspace');
   for (const dir of [home, workspace]) await mkdir(dir);
-  let app, page, desktopMedia, log = '', origin, cookie, exerciseComputer = false, toolSent = false;
+  let app, page, desktopMedia, log = '', origin, cookie, exerciseComputer = false, toolSent = false, verificationStep = 0;
   const errors = [], payloads = [];
   const browserExecutable = await testBrowserExecutable(root, browserExecutablePath());
   const fixture = await startFixture();
@@ -27,7 +27,15 @@ test('packaged Desktop installs OMD, preserves conversations across restart and 
     const payload = JSON.parse(body); payloads.push(payload);
     res.writeHead(200, { 'Content-Type': 'text/event-stream' });
     let reply = { delta: { role: 'assistant', content: payload.tools?.length ? '桌面适配验证完成。' : '验证桌面插件' }, finish_reason: 'stop' };
-    if (payload.tools?.length && exerciseComputer) {
+    if (payload.tools?.length && verificationStep < 3) {
+      const calls = [
+        ['todo_write', { op: 'excerpt', from: '验证桌面插件', to: '验证桌面插件', tasks: [{ title: '验证桌面插件', anchor: { from: '验证桌面插件', to: '验证桌面插件' } }] }],
+        ['verify_link', { op: 'link', links: [{ task: 'T1', kind: 'test', path: "desktop's verification.mjs" }] }],
+        ['verify_link', { op: 'run', tasks: ['T1'] }],
+      ];
+      const [name, args] = calls[verificationStep++];
+      reply = { delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'desktop-verify-' + verificationStep, type: 'function', function: { name, arguments: JSON.stringify(args) } }] }, finish_reason: 'tool_calls' };
+    } else if (payload.tools?.length && exerciseComputer) {
       if (toolSent) reply.delta.content = '桌面电脑验证完成。';
       else {
         toolSent = true;
@@ -70,6 +78,8 @@ export function apply(ctx) {
   ]));
   await writeFile(join(home, 'settings.yaml'), JSON.stringify({
     locale: { preference: 'zh' },
+    'product-analytics': { enabled: false },
+    'session-telemetry-otel': { mode: 'DISABLED' },
     'llm-pi-ai': { providers: { fixture: { api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'FIXTURE', models: [{ id: 'fixture', name: '桌面测试模型', contextWindow: 1000000, maxTokens: 4096, input: ['text', 'image'] }] } } },
     'agent-default-model': { provider: 'fixture', model: 'fixture' },
     'trisoul-x': { componentAutoSetup: false, backgroundTasksEnabled: false, digestEvery: 1000, codegraphEnabled: false, computerUseBrowserExecutable: browserExecutable, computerUseNativeBinary: join(root, 'missing-native'), computerUseChromeUserDataDir: join(root, 'chrome-profile') },
@@ -77,7 +87,7 @@ export function apply(ctx) {
   await writeFile(join(home, '.credentials.yaml'), JSON.stringify({ version: 1, refs: { FIXTURE: 'local-test-only' } }), { mode: 0o600 });
   const launch = async () => {
     log = '';
-    app = await _electron.launch({ executablePath: resolve(executablePath), args: ['--user-data-dir=' + join(root, 'electron-data')], env: { ...process.env, DSH_HOME: home }, timeout: 60000 });
+    app = await _electron.launch({ executablePath: resolve(executablePath), args: [...process.env.OMD_DESKTOP_APP_ROOT ? [resolve(process.env.OMD_DESKTOP_APP_ROOT)] : [], '--user-data-dir=' + join(root, 'electron-data')], env: { ...process.env, DSH_HOME: home }, timeout: 60000 });
     for (const stream of [app.process().stdout, app.process().stderr]) stream.on('data', chunk => { log += chunk; });
     await app.evaluate(({ app, dialog }) => { dialog.showMessageBox = async (...args) => { console.error('Desktop dialog', JSON.stringify(args.at(-1))); app.exit(1); return { response: 0, checkboxChecked: false }; }; });
     page = await app.firstWindow(); page.setDefaultTimeout(15000);
@@ -101,10 +111,16 @@ export function apply(ctx) {
     const r = await fetch(origin + '/api/' + method, { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ type: 'client-request', rpcId: crypto.randomUUID(), method, payload: { args } }) });
     const result = await r.json(); assert.equal(result.result?.ok, true, JSON.stringify(result)); return result.result.value;
   };
+  await writeFile(join(workspace, "desktop's verification.mjs"), `import { writeFileSync } from 'node:fs'; writeFileSync('native-verification.txt', 'NATIVE_DESKTOP_VERIFIED'); console.log('NATIVE_DESKTOP_VERIFIED');`);
   await launch();
-  const packResult = JSON.parse(execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', root], { cwd: new URL('../', import.meta.url), encoding: 'utf8', shell: process.platform === 'win32' }));
-  const [packed] = Array.isArray(packResult) ? packResult : Object.values(packResult);
-  const installed = await rpc('pluginManager/installBundle', { spec: 'file:' + join(root, packed.filename) });
+  const nativeProductTitle = (await page.title()).split(' — ').at(-1);
+  let archive = process.env.OMD_PLUGIN_ARCHIVE;
+  if (!archive) {
+    const packResult = JSON.parse(execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', root], { cwd: new URL('../', import.meta.url), encoding: 'utf8', shell: process.platform === 'win32' }));
+    const [packed] = Array.isArray(packResult) ? packResult : Object.values(packResult);
+    archive = join(root, packed.filename);
+  }
+  const installed = await rpc('pluginManager/installBundle', { spec: 'file:' + resolve(archive) });
   assert.equal(installed.application, 'applied', JSON.stringify(installed));
   await page.locator('[data-omd-desktop-restart]').waitFor();
   await app.close(); app = undefined;
@@ -112,6 +128,14 @@ export function apply(ctx) {
   assert.equal(await page.locator('[data-omd-desktop-restart]').count(), 0);
   const manifest = JSON.parse(await readFile(join(home, 'profiles/desktop/package.json'), 'utf8'));
   assert.ok(manifest.dependencies.trisoul_x);
+  // A frozen archive may carry a version changed after its last frontend build.
+  // Restart must load matching client/server identities, not a permanent restart notice.
+  const installedVersion = JSON.parse(await readFile(join(home, 'profiles/desktop/node_modules/trisoul_x/package.json'), 'utf8')).version;
+  await page.getByRole('button', { name: '关于 Oh My DSH', exact: true }).click();
+  const installedVersionDialog = page.getByRole('dialog', { name: '关于 Oh My DSH' });
+  await until(async () => await installedVersionDialog.getByTestId('omd-current-version').innerText() === installedVersion);
+  assert.doesNotMatch(await installedVersionDialog.innerText(), /服务已更新，当前界面仍为/);
+  await installedVersionDialog.getByRole('button', { name: '关闭版本信息' }).click();
   const registered = await rpc('workspace/create', { request: { path: workspace } });
   const { sessionId } = await rpc('session/create', { request: { workspaceId: registered.workspace.workspaceId, agentPreset: 'trisoul-x' } });
   await rpc('session/prompt', { request: { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: '验证桌面插件' }] } });
@@ -121,6 +145,8 @@ export function apply(ctx) {
   await page.getByText('workspace', { exact: true }).first().click();
   await page.getByText('验证桌面插件', { exact: true }).first().click();
   await page.getByText('桌面适配验证完成。', { exact: true }).waitFor();
+  assert.equal(await readFile(join(workspace, 'native-verification.txt'), 'utf8'), 'NATIVE_DESKTOP_VERIFIED');
+  assert.ok(payloads.some(payload => payload.messages?.some(message => message.role === 'tool' && JSON.stringify(message.content).includes('PASS') && JSON.stringify(message.content).includes('NATIVE_DESKTOP_VERIFIED'))), 'desktop verification records the native foreground result');
   await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
   assert.equal(await page.locator('.tx-cu-chip').count(), 1);
   // Desktop retains its boot graph across reloads: a mismatched client must
@@ -252,7 +278,7 @@ export function apply(ctx) {
   await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor({ state: 'hidden' });
   assert.equal(await page.locator('.tx-cu-chip').count(), 0);
   assert.equal(await page.locator('[data-omd-background-layer], style[data-omd-background-style], style[data-omd-custom-style], link[data-omd-favicon], [data-omd-surface]').count(), 0);
-  assert.match(await page.title(), /DeepSeek Harness$/);
+  assert.ok((await page.title()).endsWith(nativeProductTitle), 'uninstall restores the actual host product title');
   await page.getByText('桌面适配验证完成。', { exact: true }).waitFor();
   assert.deepEqual(errors, []);
 });

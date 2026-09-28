@@ -16,13 +16,13 @@ import {
 import type { LexicalEditor } from 'lexical'
 import type {
   CommandClaim, ConsumeTokenRequest, DraftAttachmentId,
-  InputActions, InputEffect, InputNotice, InputState, InputTriggerController, PickOutcome,
+  InputActions, InputEffect, InputNotice, InputState, InputSubmissionEvent, InputTriggerController, PickOutcome,
   SessionInput, SubmitAttempt, SubmitAttachment, SubmitOutcome,
 } from '../contract/input.ts'
 import type {
   ArbitrateKey, ArbitrateOutcome, ComposerKeyboard, Occurrence, ReferenceInsert, TokenSpan,
 } from '../contract/draft-editor.ts'
-import type { InputSubmitMode } from '../contract/composer-submission.ts'
+import type { InputSubmitMode, MessageSubmission, MessageSubmissionState } from '../contract/composer-submission.ts'
 import { SubmitMachine } from './machine.ts'
 import { DraftEditorRuntime } from './editor/runtime.ts'
 import type { EditorProjection } from './editor/projection.ts'
@@ -41,6 +41,10 @@ export interface PopupDismissFace {
 export interface SessionInputDeps {
   /** Session-scope ctx handed to claim.submit transactions. */
   actx: Context
+  /** Snapshot the Session facts before asynchronous command arbitration. */
+  submissionState?: () => MessageSubmissionState
+  /** Notify one ordinary message attempt before reference serialization. */
+  messageSubmitted?: (submission: MessageSubmission) => void
   /** Enter adjudication face resolver; absent/undefined answer = every '/' line falls to the default sink. */
   inputTriggers?: (() => InputTriggerController | undefined) | undefined
   /** PopupSelect shell face resolver (dismissal on submit lock / escape). */
@@ -95,11 +99,13 @@ const EMPTY_QUEUE: InboxState['next-turn'] = []
 const EMPTY_LEXICON: ReadonlyMap<'/' | '@', readonly string[]> = new Map()
 
 /** Editor and attachment snapshot owned by one detached default send. */
-interface DetachedDraft {
+export interface InputDraft {
   readonly draft: string
   readonly occurrences: readonly Occurrence[]
   readonly attachmentIds: readonly DraftAttachmentId[]
 }
+
+type DetachedDraft = InputDraft
 
 /**
  * The per-session input facade: scoped-event application verbs +
@@ -141,12 +147,15 @@ export class SessionInputShell implements SessionInput {
   private lastMirroredDraft = ''
   private attachmentIds: readonly DraftAttachmentId[] = []
   private disposed = false
+  /** A command already handed to the Host is no longer an unsent draft. */
+  private commandDispatched = false
   /** Draft persistence mirror (Conversation store write; receives the clipboard projection). */
   private mirrorFn: ((text: string) => void) | undefined
   /** The mounted composer's file-picker opener (scoped pick-files event target). */
   private filePicker: Parameters<ComposerKeyboard['bindFilePicker']>[0] | undefined
   /** Default sends retained until admission settles or scope disposal releases their attachments. */
   private readonly detachedDrafts = new Map<number, DetachedDraft>()
+  private readonly submissionListeners = new Set<(event: InputSubmissionEvent) => void>()
   /** Failed default sends waiting to be restored together in submission order. */
   private readonly failedDetached = new Map<number, DetachedDraft>()
   /** Revision of the last automatic failure restoration. */
@@ -290,7 +299,16 @@ export class SessionInputShell implements SessionInput {
    * (adjudicating/submitting) force-closes the transient layers: the popup
    * dismisses and the menu tracks frozen.
    */
-  submit(mode: InputSubmitMode = 'queue'): void {
+  submit(mode: InputSubmitMode = 'queue', source?: 'click' | 'enter'): void {
+    if (this.disposed) return
+    const timestamp = Date.now()
+    let state: MessageSubmissionState | undefined
+    if (this.snapshot.phase === 'plain' && (this.snapshot.draft.trim() !== '' || this.attachmentIds.length > 0)) {
+      try { state = this.deps.submissionState?.() } catch (_error) { /* Optional Session observations cannot interrupt submission. */ }
+    }
+    const submission: MessageSubmission = Object.freeze({
+      timestamp, mode, ...source === undefined ? {} : { source }, ...state === undefined ? {} : { state },
+    })
     if (this.snapshot.draft.trim() === '' && this.attachmentIds.length > 0) {
       if (this.snapshot.phase === 'plain') {
         const attachmentIds = [...this.attachmentIds]
@@ -299,6 +317,7 @@ export class SessionInputShell implements SessionInput {
         const flight = this.attachmentFlightSeq
         this.attachmentFlights.set(flight, { controller, attachmentIds })
         this.commitSend(attachmentIds)
+        this.notifySubmission(submission)
         void this.deps.defaultSink('', attachmentIds, mode, controller.signal).then((outcome) => {
           if (this.disposed || !this.attachmentFlights.delete(flight)) return
           if (outcome.kind === 'success') return
@@ -321,11 +340,24 @@ export class SessionInputShell implements SessionInput {
       this.notify('error', this.deps.commandAttachments.unsupportedNotice(before.claim?.token ?? before.draft))
       return
     }
-    this.dispatchRun(({ type: 'enter', mode, draft: this.projection.clipboardText }))
+    this.dispatchRun({ type: 'enter', mode, draft: this.projection.clipboardText, submission })
     const phase = this.snapshot.phase
     if (phase === 'adjudicating' || phase === 'submitting') {
       this.deps.popup?.()?.dismiss()
       this.deps.inputTriggers?.()?.track(this.projection.detectText, 0, { tier: 'frozen' }, this.rev)
+    }
+  }
+
+  onSubmission(listener: (event: InputSubmissionEvent) => void): () => void {
+    if (this.disposed) return () => {}
+    this.submissionListeners.add(listener)
+    return () => { this.submissionListeners.delete(listener) }
+  }
+
+  private publishSubmission(event: InputSubmissionEvent): void {
+    const value = Object.freeze(event)
+    for (const listener of this.submissionListeners) {
+      try { listener(value) } catch (_error) { /* Observers cannot interrupt admission or draft recovery. */ }
     }
   }
 
@@ -484,6 +516,23 @@ export class SessionInputShell implements SessionInput {
 
   // ---- wiring-layer extras (not on the frozen SessionInput face) ----
 
+  /** Capture only the unsent editor and attachment rail, without retaining its Session scope. */
+  captureDraft(): InputDraft {
+    if (this.commandDispatched) return { draft: '', occurrences: [], attachmentIds: [] }
+    return {
+      draft: this.projection.clipboardText,
+      occurrences: this.projection.occurrences.map(occurrence => ({ ...occurrence })),
+      attachmentIds: [...this.attachmentIds],
+    }
+  }
+
+  /** Restore browser-owned draft data into a fresh Session scope; in-flight sends never transfer. */
+  restoreDraft(draft: InputDraft): void {
+    this.attachmentIds = [...draft.attachmentIds]
+    this.draftEditor.restoreDraft(draft.draft, draft.occurrences)
+    this.publish()
+  }
+
   /**
    * Teardown the shell and return every browser-owned attachment still retained by
    * the draft or an unsettled default send.
@@ -504,6 +553,7 @@ export class SessionInputShell implements SessionInput {
     this.unsubscribeInbox?.()
     this.unregister()
     this.detachedDrafts.clear()
+    this.submissionListeners.clear()
     this.failedDetached.clear()
     this.attachmentFlights.clear()
     return [...retained]
@@ -572,7 +622,8 @@ export class SessionInputShell implements SessionInput {
   /** Dispatch + execute, refreshing the claim decoration when the styled token flips. */
   private dispatchRun(ev: Parameters<SubmitMachine['dispatch']>[0]): void {
     const beforeToken = this.activeClaimToken()
-    this.run(this.core.dispatch(ev))
+    const effects = this.core.dispatch(ev)
+    this.run(effects)
     if (this.activeClaimToken() !== beforeToken) this.draftEditor.refreshClaimDecoration()
   }
 
@@ -633,11 +684,13 @@ export class SessionInputShell implements SessionInput {
     draft: string,
     mode: InputSubmitMode,
   ): void {
+    this.notifySubmission(attempt.submission)
     const attachmentIds = [...this.attachmentIds]
     this.attachmentIds = []
     const occurrences = this.projection.occurrences
     const record = { draft, occurrences, attachmentIds }
     this.detachedDrafts.set(attempt.seq, record)
+    this.publishSubmission({ kind: 'pending', id: attempt.seq, draft })
     if (this.failedRestoreRev === this.rev) {
       this.failedDetached.clear()
       this.failedRestoreRev = undefined
@@ -677,6 +730,11 @@ export class SessionInputShell implements SessionInput {
     )
   }
 
+  private notifySubmission(submission: MessageSubmission | undefined): void {
+    if (submission === undefined) return
+    try { this.deps.messageSubmitted?.(submission) } catch (_error) { /* Notification consumers cannot interrupt submission. */ }
+  }
+
   /** Settle one detached default send independently of other sends. */
   private settleSink(
     attempt: SubmitAttempt,
@@ -691,6 +749,7 @@ export class SessionInputShell implements SessionInput {
         }
         this.detachedDrafts.delete(attempt.seq)
         this.dispatchRun(({ type: 'sink-settled', attempt, ok: true, outcome }))
+        this.publishSubmission({ kind: 'success', id: attempt.seq })
       },
       (error: unknown) => {
         if (this.dead(attempt)) return
@@ -706,10 +765,12 @@ export class SessionInputShell implements SessionInput {
     this.detachedDrafts.delete(attempt.seq)
     this.restoreAttachments(record.attachmentIds)
     this.failedDetached.set(attempt.seq, record)
-    if (this.projection.clipboardText === '' || this.failedRestoreRev === this.rev) {
+    const restored = this.projection.clipboardText === '' || this.failedRestoreRev === this.rev
+    if (restored) {
       this.restoreFailedDrafts()
     }
     this.dispatchRun(({ type: 'sink-settled', attempt, ok: false, ...(message === undefined ? {} : { message }) }))
+    this.publishSubmission({ kind: 'error', id: attempt.seq, restored, ...(message === undefined ? {} : { text: message }) })
   }
 
   /** Rebuild all currently failed snapshots in submission order. */
@@ -783,11 +844,14 @@ export class SessionInputShell implements SessionInput {
         // Serialization may outlive the attempt (large files, session
         // teardown); a dead attempt must not reach the Host executor.
         if (this.dead(attempt)) return undefined
+        this.commandDispatched = true
+        this.publish()
         return claim.submit(args, this.deps.actx, attachments)
       })
       .then(
         (outcome) => {
           if (outcome === undefined || this.dead(attempt)) return
+          this.commandDispatched = false
           if (outcome.kind === 'success' && attachmentIds.length > 0) {
             const submitted = new Set(attachmentIds)
             this.attachmentIds = this.attachmentIds.filter(id => !submitted.has(id))
@@ -801,6 +865,7 @@ export class SessionInputShell implements SessionInput {
         },
         (error: unknown) => {
           if (this.dead(attempt)) return
+          this.commandDispatched = false
           const message = error instanceof Error ? error.message : String(error)
           this.dispatchRun(({
             type: 'submit-settled', attempt, ok: false,
@@ -831,9 +896,10 @@ export class SessionInputShell implements SessionInput {
   private publish(): void {
     const next = this.compose()
     this.state.set(next)
-    if (next.draft !== this.lastMirroredDraft) {
-      this.lastMirroredDraft = next.draft
-      this.mirrorFn?.(next.draft)
+    const unsentDraft = this.commandDispatched ? '' : next.draft
+    if (unsentDraft !== this.lastMirroredDraft) {
+      this.lastMirroredDraft = unsentDraft
+      this.mirrorFn?.(unsentDraft)
     }
   }
 }

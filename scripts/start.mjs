@@ -6,8 +6,8 @@ import { execFileSync, spawn } from 'node:child_process';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const dshHome = resolve(process.env.DSH_HOME || join(root, 'data', 'dsh'));
 const profile = 'trisoul-x';
-const env = { ...process.env, DSH_HOME: dshHome, DSH_PERMISSION_MODE: 'danger-full-access' };
-const cli = join(root, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js');
+const env = { ...process.env, DSH_HOME: dshHome, DSH_PERMISSION_MODE: process.env.DSH_PERMISSION_MODE || 'danger-full-access' };
+const cli = resolve(process.env.OMD_DSH_CLI || join(root, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js'));
 const run = args => execFileSync(process.execPath, [cli, ...args], { cwd: root, env, stdio: ['ignore', 'ignore', 'inherit'] });
 mkdirSync(dshHome, { recursive: true });
 
@@ -52,4 +52,4 @@ if (!installedSpec || movedSource) run(['plugin', '--profile', profile, 'add', `
 
 const child = spawn(process.execPath, [cli, '--profile', profile, '--no-open', '--port', process.env.PORT || '3083'], { cwd: root, env, stdio: 'inherit' });
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill(signal));
-child.on('exit', code => process.exit(code ?? 0));
+child.on('exit', code => process.exit(code ?? 1));

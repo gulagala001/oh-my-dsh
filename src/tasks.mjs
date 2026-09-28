@@ -1,5 +1,6 @@
 import { promptText } from './cc-adaptation/texts.mjs';
 import { z } from 'zod';
+import { randomUUID } from 'node:crypto';
 import { createTodoStore } from './todolist.mjs';
 
 const TASK_ENTRY_SCHEMA = { type: 'object', properties: {
@@ -79,6 +80,42 @@ export function currentTasks(session, cached) {
   });
 }
 
+export function createVerificationRunner(ctx, exec) {
+  const invoke = async (name, args, signal = exec.signal) => {
+    const result = await ctx.tools.execute({ name, arguments: args, agent: exec.agent, signal,
+      callId: randomUUID(), rootCallId: exec.rootCallId ?? exec.callId, parent: exec.token });
+    for (const context of result.additionalContexts || []) exec.deferContext?.(context);
+    return result;
+  };
+  return async (command, timeoutMs) => {
+    if (exec.signal?.aborted) return { ok: false, aborted: true, timedOut: false, out: '' };
+    const windows = process.platform === 'win32';
+    const result = await invoke(windows ? 'pwsh' : 'bash', {
+      command: windows ? `$ErrorActionPreference = 'Stop'\n& {\n${command}\n}\nif ($LASTEXITCODE -ne $null) { exit $LASTEXITCODE }` : command,
+      description: 'Run the linked task verification command', workdir: exec.agent.session.header.cwd,
+      timeoutMs, run_in_background: false,
+    });
+    if (exec.signal?.aborted || ['ABORTED', 'ABORTED_BEFORE_DISPATCH'].includes(result.error?.info?.code))
+      return { ok: false, aborted: true, timedOut: false, out: '' };
+    if (result.isError) throw new Error(result.error.message);
+    const value = result.value;
+    if (value?.kind !== 'foreground') {
+      // OMD configures foreground execution. A changed host configuration must
+      // not leave an unexpected job running or mistake its launch for a pass.
+      if (value?.jobId) {
+        const stopped = await invoke('job_kill', { job_id: value.jobId, reason: 'Verification requires a completed foreground result.' }, AbortSignal.timeout(10000));
+        if (stopped.isError) throw new Error(`Verification job ${value.jobId} could not be stopped: ${stopped.error.message}`);
+      }
+      throw new Error('Native shell returned no completed foreground result; previous verification results are unchanged.');
+    }
+    if (value.sandbox?.denied || value.sandbox?.runnerFailed)
+      throw new Error('Native sandbox blocked verification or could not start; previous verification results are unchanged.');
+    return { ok: value.exitCode === 0 && !value.signal && !value.timedOut && !value.aborted,
+      code: value.exitCode, aborted: value.aborted, timedOut: value.timedOut, timeoutMs: value.timeoutMs,
+      out: `${value.stdout?.text ?? ''}${value.stderr?.text ?? ''}`.trim() };
+  };
+}
+
 export function registerTasks(ctx, store = createTodoStore()) {
   // Shared root-realm key: match DSH's todos@2 fold, including its turn reset.
   // The full X ledger remains in todo/write data and is restored independently.
@@ -96,17 +133,17 @@ export function registerTasks(ctx, store = createTodoStore()) {
     },
     {
       name: 'verify_link', description: VERIFICATION_DESCRIPTION, parameters: VERIFICATION_PARAMETERS, title: '验证',
-      run: (args, session, signal) => store.execVerifyLink(session, args, session.header.cwd, signal),
+      run: (args, session, exec) => store.execVerifyLink(session, args, session.header.cwd, exec.signal, createVerificationRunner(ctx, exec)),
     },
   ];
   for (const { name, description, parameters, title, run } of definitions) ctx.tools.register({
     name, description, parameters,
     output: { schema: { type: 'string' }, render: (_args, text) => [{ type: 'text', text }] },
-    execute(args, { agent, signal }) {
-      const session = agent.session;
+    execute(args, exec) {
+      const { agent, signal } = exec, session = agent.session;
       const job = (pending.get(session.id) || Promise.resolve()).catch(() => {}).then(async () => {
         signal?.throwIfAborted();
-        const result = await run(args, session, signal);
+        const result = await run(args, session, exec);
         if (result.isError) throw new Error(result.text);
         return result.text;
       });

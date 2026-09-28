@@ -4,6 +4,41 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 
+test('native-preset workflow children count toward their owner budget and monitoring, while forks stay separate', { timeout: 90000 }, async t => {
+  const requests = []; let issued = false, active = false;
+  const usage = output => ({ prompt_tokens: 2, completion_tokens: output, total_tokens: output + 2 });
+  const f = await frontendFixture(t, { headless: true, omdConfig: { budgetHintsEnabled: true, contextEnabled: false, codegraphEnabled: false }, modelReply(payload) {
+    if (!payload.tools?.length) return;
+    requests.push(payload);
+    if (JSON.stringify(payload.messages.filter(m => m.role === 'user')).includes('OMD_NATIVE_ACCOUNTING_CHILD')) {
+      return { delta: { role: 'assistant', content: 'Native child complete.' }, finish_reason: 'stop', usage: usage(5) };
+    }
+    if (active && !issued) {
+      issued = true;
+      return { delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'native-budget-child', type: 'function', function: { name: 'workflow', arguments: JSON.stringify({
+        meta: { name: 'native-accounting', description: 'Verify preset-independent child accounting' },
+        script: "return await agent('OMD_NATIVE_ACCOUNTING_CHILD', {agentType:'standard'});",
+      }) } }] }, finish_reason: 'tool_calls', usage: usage(1) };
+    }
+    return { delta: { role: 'assistant', content: 'Ready.' }, finish_reason: 'stop', usage: usage(1) };
+  } });
+  const saved = () => readFile(join(f.home, 'trisoul-x', 'sessions', f.sessionId + '.json'), 'utf8').then(JSON.parse);
+  assert.equal((await f.call('commands/execute', { agentId: f.sessionId, line: '/budget token=100', submittedAttachments: [] })).result.ok, true);
+  const count = requests.length; active = true;
+  await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: f.sessionId, mode: 'queue', content: [{ type: 'text', text: 'Use a native preset child for this accounting fixture.' }] });
+  await until(async () => requests.length === count + 3 && (await f.api('/state?session=' + f.sessionId)).running === 'idle');
+  const state = await saved(), monitor = await f.api('/state?session=' + f.sessionId);
+  assert.equal(state.budget.tokens, 13, 'two main requests use 6 tokens; the native child adds 7');
+  assert.equal(state.budget.rounds, 2);
+  assert.equal(monitor.metrics.subagent.calls, 1);
+  assert.equal(monitor.metrics.subagent.outputTokens, 5);
+  const before = monitor.metrics.main.calls, fork = await f.rpc('session/fork', { sessionId: f.sessionId }), start = requests.length;
+  await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: fork.sessionId, mode: 'queue', content: [{ type: 'text', text: 'Continue independently in this fork.' }] });
+  await until(async () => requests.length > start && (await f.api('/state?session=' + fork.sessionId)).running === 'idle');
+  assert.equal((await f.api('/state?session=' + f.sessionId)).metrics.main.calls, before);
+  assert.equal((await f.api('/state?session=' + fork.sessionId)).metrics.main.calls, 1);
+});
+
 test('native host budget cadence defaults to original nodes and adds budget-only updates when enabled', { timeout: 60000 }, async t => {
   const requests = [];
   const f = await frontendFixture(t, { headless: true, omdConfig: { budgetHintsEnabled: true, contextEnabled: false }, reply: payload => {
