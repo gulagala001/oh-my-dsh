@@ -124,13 +124,25 @@ test('native whole-window detail carries real image block shapes; brief removes 
   assert.deepEqual(replay.deriveMessages(), session.deriveMessages());
 });
 
-test('pressure reserves the selected model output and scales headroom for small windows', async () => {
-  const hub = { ctx: { llm: { resolveModelInfo: async () => ({ contextWindow: 8192, defaultMaxTokens: 2048 }) }, tokenMeter: { measure: () => ({ totalTokens: 4000 }) } } };
-  const adapter = deps.createHostAdapter(hub), session = {};
+test('native route capacity budgets reserve output and ignore the previous model window', async t => {
+  const { Context } = await import('@deepseek-ai/cordis');
+  const ctx = new Context(), llm = new deps.LlmRuntime(ctx);
+  t.after(() => ctx.fiber.dispose());
+  llm.registerAdapter(['fixture'], {
+    providerInfo: id => ({ id, name: id }), providerRetryPolicy: () => undefined,
+    resolveModel: async (provider, id) => ({ provider, id, name: id, context: { contextWindow: 8192 }, defaultMaxTokens: 2048 }),
+  });
+  const hub = { ctx: { llm, tokenMeter: { measure: () => ({ totalTokens: 4000 }) } } };
+  const adapter = deps.createHostAdapter(hub), session = { requestContext: () => ({ contextWindow: 1000000 }) };
   await adapter.prepareRoute(session, { provider: 'fixture', model: 'small' });
-  assert.equal(adapter.pressure(session), 4000 / (8192 - 2048 - Math.floor((8192 - 2048) / 10)));
+  const available = 8192 - 2048, usable = available - Math.floor(available / 10);
+  assert.equal(adapter.pressure(session), 4000 / usable);
+  assert.equal(adapter.catalogBudget(session), usable - 4000);
+  assert.equal(adapter.dreamBudget(session), Math.floor(available / 10));
   await adapter.prepareRoute(session, { provider: 'fixture', model: 'small', maxTokens: 1024 });
   assert.equal(adapter.pressure(session), 4000 / (8192 - 1024 - Math.floor((8192 - 1024) / 10)));
+  const fallback = { requestContext: session.requestContext, requestHeader: () => ({ config: { maxTokens: 100000 } }) };
+  assert.equal(adapter.catalogBudget(fallback), 1000000 - 100000 - 65536 - 4000);
 });
 
 test('in-turn compaction and later todo edits satisfy the released V4 lifecycle', async () => {

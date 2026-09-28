@@ -11,6 +11,7 @@ import { computerGroupPresentation } from './computer-groups.jsx';
 import { ComputerSetup } from './computer-setup.jsx';
 import { WindowShare } from './window-share.jsx';
 import {FloatingPreview} from './floating-preview.jsx';
+import { usePreviewPaneVisible, usePreviewPanePresence } from './preview-presence.mjs';
 import { PageAnnotation } from './page-annotation.jsx';
 import { ComputerIcon } from './computer-icons.jsx';
 import {SavedImage} from './tool-image.jsx';
@@ -33,6 +34,7 @@ const ScreenIcon=()=> <ComputerIcon name="screen" size={17}/>;
 const names={running:'正在操作',idle:'就绪',stopped:'已停止',stopping:'正在停止',error:'需要处理'};
 function ComputerChip({sessionId,onOpen,onPresentation,inputActions,conversation}){
   const{state,setState,setError,error}=useStateView(sessionId);const previewAnchor=useRef(null);
+  const paneVisible=usePreviewPaneVisible(sessionId);
   const presentationHandler=useRef(onPresentation);presentationHandler.current=onPresentation;
   useEffect(()=>{
     const request=state?.presentationRequest;
@@ -45,7 +47,7 @@ function ComputerChip({sessionId,onOpen,onPresentation,inputActions,conversation
   const active=!!state?.target&&(state.status==='running'||state.status==='stopping'||state.status==='error'||state.transitioning);
   return <div ref={previewAnchor} data-cu-session={sessionId} className="tx-cu-chip" title={error||undefined}>
     <button type="button" className="tx-cu-entry" aria-label="打开 Computer Use" title="查看和操作应用、网页" onClick={onOpen}><ScreenIcon/><span>电脑</span></button>
-    <FloatingPreview sessionId={sessionId} state={state} url={url} api={api} onState={setState} onError={setError} anchor={previewAnchor} onOpen={onOpen}/>
+    <FloatingPreview sessionId={sessionId} state={state} url={url} api={api} onState={setState} onError={setError} anchor={previewAnchor} onOpen={onOpen} paneVisible={paneVisible}/>
     <WindowShare sessionId={sessionId} inputActions={inputActions} conversation={conversation}/>
     {state?.vision?.input==='text'&&<span className="tx-cu-vision-warning" title="当前模型仅接收文字，截图不会送入模型。">仅文本模型</span>}
     {state?.target&&<span className="tx-cu-chip-status">{state.resuming?'正在恢复':state.transitioning?'正在载入':names[state.status]}</span>}
@@ -55,6 +57,7 @@ function ComputerChip({sessionId,onOpen,onPresentation,inputActions,conversation
 }
 export function ComputerPane({sessionId,useTabInfo,inputActions,conversation,hostBrowserAvailable=false}){
   const{tab}=useTabInfo();const{state,error,setState,setError}=useStateView(sessionId,tab.visible);
+  usePreviewPanePresence(sessionId,tab.visible);
   const target=state?.viewTarget??state?.target;
   const[busy,setBusy]=useState(false),[navigation,setNavigation]=useState(null),[frame,setFrame]=useState(null),controls=useRef(null);
   const[previewScale,setPreviewScale]=useState('1'),[deviceMode,setDeviceMode]=useState(false);

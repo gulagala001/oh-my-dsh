@@ -66,7 +66,7 @@ test('Google Material: real layout, all settings, fonts, mobile navigation, work
     await page.getByRole('menu').waitFor(); await capture(mode + '-menu'); await page.keyboard.press('Escape');
     await page.getByRole('button', { name: '打开工作台', exact: true }).click();
     await page.locator('.tx-workbench').waitFor();
-    for (const section of ['任务', '上下文', '摘要', '电脑', '监控']) {
+    for (const section of ['任务', '上下文', '记忆', '电脑', '监控']) {
       await page.locator('.cx-navigation').getByRole('button', { name: section, exact: true }).click();
       await capture(mode + '-workbench-' + section);
     }

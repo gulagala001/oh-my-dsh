@@ -12,15 +12,15 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
     const state = id ? hub.store.state(id) : null;
     const preparedState = id ? hub.context.store.state?.(id) : null;
     const locked = Boolean(state?.started || (agent && agent.status !== 'idle') || preparedState?.records?.length || Object.keys(preparedState?.publications?.catalog || {}).length || preparedState?.publications?.globalRevision != null || (session && userMessages(session).length));
-    const scope = () => (state?.memoryScope || hub.config().memoryScope) === 'session' ? 'session' : 'project';
+    const scope = () => ['session','global'].includes(state?.memoryScope || hub.config().memoryScope) ? state?.memoryScope || hub.config().memoryScope : 'project';
     if (req.method === 'POST') {
       if (locked) { send(res, 409, { error: '会话已开始，隔离范围不能中途扩大' }); return true; }
       const input = await readBody(req);
-      if (!['session', 'project'].includes(input.scope)) throw new Error('范围只能是 session 或 project');
+      if (!['session', 'project', 'global'].includes(input.scope)) throw new Error('范围只能是 session、project 或 global');
       if (state) { state.memoryScope = input.scope; hub.store.save(state); }
       else await ctx.settings.update('trisoul-x', { memoryScope: input.scope });
     }
-    send(res, 200, { scope: scope(), locked, default: hub.config().memoryScope === 'session' ? 'session' : 'project' }); return true;
+    send(res, 200, { scope: scope(), locked, default: ['session','global'].includes(hub.config().memoryScope) ? hub.config().memoryScope : 'project' }); return true;
   }
   if (path === '/context') { send(res, 200, hub.context.view(needSession())); return true; }
   if (path === '/context/catalog') {
@@ -104,7 +104,7 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
     const unknown = Object.keys(patch).filter(key => !Object.hasOwn(Config.dict, key));
     if (unknown.length) throw new Error('未知或已退役的设置：' + unknown.join(', '));
     contextConfig({ ...hub.config(), ...patch });
-    if (patch.memoryScope !== undefined && !['session', 'project'].includes(patch.memoryScope)) throw new Error('旧 full 档不再参与跨项目记忆');
+    if (patch.memoryScope !== undefined && !['session', 'project', 'global'].includes(patch.memoryScope)) throw new Error('旧 full 档不再参与跨项目记忆；全局模式使用 global');
     await ctx.settings.update('trisoul-x', patch);
     send(res, 200, hub.config()); return true;
   }

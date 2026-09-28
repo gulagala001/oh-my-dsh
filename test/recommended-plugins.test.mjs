@@ -10,7 +10,8 @@ test('recommendations search, categories and project links work in both themes a
     import { createRoot } from 'react-dom/client';
     import { RecommendedPlugins } from './src/client/recommended-plugins.jsx';
     const plugins = [
-      { id: 'one', name: '检索示例', author: '示例作者 A', description: '检索资料与网页内容。', category: '研究', url: 'https://example.com/research' },
+      { id: 'one', name: '检索示例', author: '示例作者 A', description: '检索资料与网页内容。', category: '研究', url: 'https://example.com/research',
+        review: { version: '0.4.0', dsh: '0.1.7-rc.2', omd: '0.1.7-rc.2.19', platforms: ['Web'], source: { commit: '5e377394fe9d6aeab6380e2a5a5f959bc1384426' }, note: '固定源码快照，非正式发行包。' } },
       { id: 'two', name: '文档示例', author: '示例作者 B', description: '整理文档并导出报告。', category: '效率', url: 'https://example.com/docs' },
     ];
     createRoot(document.getElementById('root')).render(<RecommendedPlugins plugins={plugins}/>);
@@ -29,6 +30,7 @@ test('recommendations search, categories and project links work in both themes a
   assert.match(await submission.getAttribute('rel'), /noopener/);
   const cards = page.locator('.tx-recommended-card'), search = page.getByRole('searchbox', { name: '搜索推荐插件' });
   await cards.first().waitFor(); assert.equal(await cards.count(), 2);
+  assert.match(await cards.first().innerText(), /已核验源码 v0\.4\.0 · 5e37739/);
   await search.fill('示例作者 B'); await page.getByRole('status').filter({ hasText: '1 个插件' }).waitFor();
   assert.equal(await cards.count(), 1); assert.match(await cards.innerText(), /文档示例/);
   await page.getByRole('combobox', { name: '插件分类' }).selectOption('研究');

@@ -3,11 +3,18 @@ import { cp, mkdir, readFile, writeFile, readdir, rm } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { parseArgs } from 'node:util';
 const root = fileURLToPath(new URL('../', import.meta.url));
-if (!process.argv[2]) throw Error('Usage: node scripts/sync-dsh-chat.mjs /path/to/patched-dsh');
-const source = resolve(process.argv[2]), destination = join(root, 'vendor/dsh-chat');
-const commit = '477b4f420553e8a52c2fbccc464d7561b239c443';
-if (execFileSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim() !== commit) throw Error('Expected DSH 0.1.7-rc.2');
+const { values, positionals } = parseArgs({ options: { commit: { type: 'string' } }, allowPositionals: true });
+if (positionals.length !== 1) throw Error('Usage: node scripts/sync-dsh-chat.mjs /path/to/patched-dsh [--commit <full SHA>]');
+const source = resolve(positionals[0]), destination = join(root, 'vendor/dsh-chat');
+const previous = JSON.parse(await readFile(join(root, 'vendor/dsh-chat.json'), 'utf8'));
+const commit = values.commit ?? previous.commit;
+if (!/^[0-9a-f]{40}$/.test(commit)) throw Error('Expected a full DSH commit SHA');
+if (execFileSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim() !== commit) throw Error(`Expected the pinned DSH source checkout ${commit}`);
+const version = JSON.parse(await readFile(join(source, 'package.json'), 'utf8')).version;
+const officialTag = 'dsh-v' + version;
+const tag = execFileSync('git', ['tag', '--points-at', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim().split('\n').includes(officialTag) ? officialTag : null;
 await rm(destination, { recursive: true, force: true });
 await mkdir(destination, { recursive: true });
 for (const name of ['src', 'README.md', 'lib/client.js', 'lib/index.js']) {
@@ -26,4 +33,4 @@ async function walk(dir, prefix = '') {
   }
 }
 await walk(destination);
-await writeFile(join(root, 'vendor/dsh-chat.json'), JSON.stringify({ repository: 'https://github.com/deepseek-ai/deepseek-harness', tag: 'dsh-v0.1.7-rc.2', commit, files: Object.fromEntries(Object.entries(files).sort()) }, null, 2) + '\n');
+await writeFile(join(root, 'vendor/dsh-chat.json'), JSON.stringify({ repository: 'https://github.com/deepseek-ai/deepseek-harness', tag, commit, version, files: Object.fromEntries(Object.entries(files).sort()) }, null, 2) + '\n');

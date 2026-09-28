@@ -2,6 +2,7 @@ import { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
 export { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
 import { createPoller } from './polling.mjs';
 import { DEFAULT_IDENTITY } from '../cc-adaptation/identity.mjs';
+import {createDreamPanel,DREAM_CSS} from './dream-client.mjs';
 
 export const CONTEXT_UI_VERSION = '1.3.0';
 export function contextFrequencyOf(config = {}) {
@@ -47,7 +48,7 @@ export function createContextUI(React) {
   const button = (text, onClick, options = {}) => h('button', { type: 'button', onClick, disabled: options.disabled, className: 'cx-btn ' + (options.primary ? 'cx-primary ' : '') + (options.quiet ? 'cx-quiet ' : '') + (options.className || ''), title: options.title, 'aria-label': options.label || (typeof text === 'string' ? text : undefined) }, options.icon && icon(options.icon), text);
   const badge = (text, tone = '') => h('span', { className: 'cx-pill ' + (tone && 'cx-tone-' + tone) }, text);
   const alert = (text, error) => text && h('div', { className: 'cx-alert ' + (error ? 'cx-error' : ''), role: error ? 'alert' : 'status' }, icon(error ? 'info' : 'check'), h('span', null, text));
-  const heading = (text, sub, name, action) => h('header', { className: 'cx-head' }, h('div', { className: 'cx-head-title' }, h('span', { className: 'cx-head-icon' }, icon(name, 19)), h('div', null, h('h2', null, text), h('p', null, sub))), action);
+  const heading = (text, sub, name, action) => h('header', { className: 'cx-head' }, h('div', { className: 'cx-head-title' }, name && h('span', { className: 'cx-head-icon' }, icon(name, 19)), h('div', null, h('h2', null, text), h('p', null, sub))), action);
   const field = (label, input, hint) => h('label', { className: 'cx-field' }, h('span', null, label), React.cloneElement(input, { 'aria-label': input.props['aria-label'] || label }), hint && h('small', null, hint));
   const section = (text, sub, children, right) => h('section', { className: 'cx-section' }, h('div', { className: 'cx-section-head' }, h('div', null, h('h3', null, text), sub && h('p', null, sub)), right), children);
   const fold = (text, sub, children, open = false) => h('details', { className: 'cx-fold', open: open || undefined }, h('summary', null, h('span', null, h('strong', null, text), sub && h('small', null, sub)), icon('chevron', 14)), h('div', { className: 'cx-fold-body' }, children));
@@ -57,83 +58,123 @@ export function createContextUI(React) {
   const duration = ms => Number(ms) >= 60000 ? Number(ms) / 60000 + ' 分钟' : Number(ms || 0) / 1000 + ' 秒';
   const rangeLabel = ranges => (ranges || []).map(x => `#${x.from}–${x.to}`).join(' · ');
   const summaryPreview = text => h(React.Fragment, null, h('p', { className: 'cx-prose' }, text.length > 240 ? text.slice(0, 240) + '…' : text), text.length > 240 && fold('展开完整摘要', text.length + ' 字符', h('p', { className: 'cx-prose' }, text)));
-  const assetUrl = (r, i) => 'trisoul-x/api/context/asset' + suffix(r.requestSessionId || r.sessionId) + '&id=' + encodeURIComponent(r.id) + '&asset=' + (i + 1);
+  const assetUrl = (r, i) => (r.dreamTarget?'trisoul-x/api/dream/asset?sessionId='+encodeURIComponent(r.requestSessionId||r.sessionId):'trisoul-x/api/context/asset'+suffix(r.requestSessionId || r.sessionId)) + '&id=' + encodeURIComponent(r.id) + '&asset=' + (i + 1);
 
-  // Document detail is a reader, not an ever-growing section under the list.
-  class DocumentReader extends React.Component {
-    componentDidMount() { this.previousFocus = document.activeElement; this.root?.focus(); }
-    componentWillUnmount() { this.previousFocus?.isConnected && this.previousFocus.focus?.(); }
+  // Reading surfaces share focus, background isolation and return behavior.
+  const readingBackground = new WeakMap();
+  class ReadingView extends React.Component {
+    componentDidMount() { this.previousFocus = this.props.returnFocus || document.activeElement; this.background = new Set(); this.syncView(true, true); }
+    componentDidUpdate(prev) { this.syncView(prev.page !== this.props.page); }
+    capturePosition() {
+      const body = this.root?.querySelector(':scope > .cx-body');
+      return { scrollTop: body?.scrollTop || 0, focusIndex: [...(body?.querySelectorAll('button,a[href],input,select,textarea,[tabindex]') || [])].indexOf(document.activeElement) };
+    }
+    syncView(changed = false, initial = false) {
+      // Only cover earlier siblings: a later reader may be layered above us.
+      for (const el of this.root?.parentElement?.children || []) {
+        if (el === this.root) break;
+        if (this.background.has(el)) continue;
+        const state = readingBackground.get(el) || { inert: el.inert, readers: new Set() };
+        state.readers.add(this); readingBackground.set(el, state);
+        this.background.add(el); el.inert = true;
+      }
+      if (changed) this.pendingPosition = this.props.position || { scrollTop: 0 };
+      const visible = this.props.visible !== false && Boolean(this.root?.getClientRects().length) && !this.root.closest('[inert]');
+      if (visible && (!this.visible || this.pendingPosition)) {
+        const body = this.root.querySelector(':scope > .cx-body'), position = this.pendingPosition;
+        const target = position && body?.querySelectorAll('button,a[href],input,select,textarea,[tabindex]')[position.focusIndex];
+        const active = document.activeElement;
+        // A delayed response must not interrupt typing outside this reader.
+        if (!initial && !changed || active === (this.props.requestFocus || this.previousFocus) || active === document.body || this.root.contains(active)) {
+          if (position || !this.root.contains(active)) (target || this.root).focus({ preventScroll: true });
+        }
+        if (position && body) body.scrollTop = position.scrollTop;
+        this.pendingPosition = null;
+      }
+      this.visible = visible;
+    }
+    componentWillUnmount() {
+      const restore = this.root?.contains(document.activeElement) || document.activeElement === document.body;
+      for (const el of this.background) {
+        const state = readingBackground.get(el);
+        state.readers.delete(this);
+        if (!state.readers.size) { el.inert = state.inert; readingBackground.delete(el); }
+      }
+      if (restore && this.previousFocus?.isConnected && this.previousFocus.getClientRects().length && !this.previousFocus.closest('[inert]')) this.previousFocus.focus?.({ preventScroll: true });
+    }
     render() {
-      const r = this.props.record;
-      return h('section', { className: 'cx-reader', ref: el => { this.root = el; }, tabIndex: -1, role: 'dialog', 'aria-modal': true, 'aria-label': '详细资料', onKeyDown: e => {
-          if (e.key === 'Escape') this.props.onClose();
-          if (e.key === 'Tab') {
-            const items = [...this.root.querySelectorAll('button:not(:disabled),a[href],input:not(:disabled),summary,[tabindex="0"]')].filter(el => el.getClientRects().length);
-            const first = items[0], last = items.at(-1);
-            if (e.shiftKey && (document.activeElement === first || document.activeElement === this.root)) { e.preventDefault(); last?.focus(); }
-            else if (!e.shiftKey && (document.activeElement === last || document.activeElement === this.root)) { e.preventDefault(); first?.focus(); }
-          }
-        } },
-        h('header', { className: 'cx-reader-head' }, button('返回', this.props.onClose, { icon: 'arrow', quiet: true }), h('strong', null, '摘要与详细资料'), badge((r.documents || []).length + ' 份')),
+      return h('section', { className: 'cx-reader ' + (this.props.className || ''), ref: el => { this.root = el; }, tabIndex: -1, role: 'region', 'aria-label': this.props.label || '详细资料', onKeyDown: e => {
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.props.onClose(); }
+      } }, this.props.children);
+    }
+  }
+  function DocumentReader(props) {
+      const r = props.record;
+      return h(ReadingView, props,
+        h('header', { className: 'cx-reader-head' }, button('返回', props.onClose, { icon: 'arrow', quiet: true }), h('strong', null, '摘要与详细资料'), badge((r.documents || []).length + ' 份')),
         h('div', { className: 'cx-body', 'data-testid': 'record-documents' }, h('div', { className: 'cx-record-meta' }, h('code', null, r.id), h('small', null, date(r.timeStart) + ' — ' + time(r.timeEnd))),
           section('基础摘要', null, h('p', { className: 'cx-prose' }, r.summary)),
+          r.decisions?.length>0&&section('用户决定', '保留原话依据，可向下回查。', h('div',null,...r.decisions.map((d,i)=>h('p',{className:'cx-prose',key:i},d.text,h('small',null,' · #'+d.seq+'「'+d.quote+'」'))))),
           ...(r.documents || []).map((d, i) => h('article', { className: 'cx-document', key: i }, h('div', { className: 'cx-section-head' }, h('h3', null, d.title), badge(String(i + 1).padStart(2, '0'))), h('pre', null, d.text))),
           ...(r.assets || []).map((asset, i) => fold((asset.block.attachment?.name || asset.block.type) + ' · 附件 ' + (i + 1), (asset.sources || []).map(x => x.sessionId + '#' + x.seq).join('、'), h('div', null, asset.block.type === 'image' && h('img', { src: assetUrl(r, i), alt: '原始图片 ' + (i + 1), loading: 'lazy', style: { maxWidth: '100%', height: 'auto' } }), h('a', { href: assetUrl(r, i), target: '_blank', rel: 'noopener noreferrer' }, '打开原件')))),
           !(r.documents || []).length && empty('这份摘要没有附加文档', '基础摘要和来源仍可查看。', 'context'),
           fold('来源与版本', rangeLabel(r.ranges), h('div', { className: 'cx-prose' }, h('p', null, '原始区间：' + rangeLabel(r.ranges)), h('p', null, '摘要编号：' + r.id), (r.parents || []).length > 0 && h('p', null, '合并来源：' + r.parents.join('、'))))));
-    }
   }
-  class PollPanel extends React.Component {
-    constructor(props) { super(props); this.state = { data: null, error: '', loadError: '', notice: '', busy: false, detail: null }; this.epoch = 0; this.documentTicket = 0; this.reviewTicket = 0; }
+  class PipelinePanel extends React.Component {
+    constructor(props) { super(props); this.state = { data: null, error: '', loadError: '', retryAction: null, notice: '', busy: false, detail: null, selected: [], filter: 'all' }; this.epoch = 0; this.documentTicket = 0; this.reviewTicket = 0; }
     componentDidMount() { this.alive = true; this.observe(); }
     componentWillUnmount() { this.alive = false; this.documentTicket++; this.reviewTicket++; this.poller?.stop(); }
     componentDidUpdate(prev) {
       if (prev.sessionId !== this.props.sessionId) {
         this.epoch++; this.documentTicket++; this.reviewTicket++;
-        this.setState({ data: null, detail: null, selected: [], review: null, legacy: null, error: '', loadError: '', notice: '', busy: false, activeAction: null, cursor: null }, () => this.observe());
+        this.setState({ data: null, detail: null, selected: [], review: null, error: '', loadError: '', retryAction: null, notice: '', busy: false, activeAction: null }, () => this.observe());
       } else if (prev.visible !== this.props.visible) this.observe();
     }
-    requestPath(id) { return this.path() + suffix(id); }
     observe() {
       this.poller?.stop();
       const id = this.props.sessionId;
       if (this.props.visible === false || !id) { this.poller = null; return; }
       this.poller = createPoller({
-        read: signal => api(this.requestPath(id), undefined, signal),
-        onData: data => this.setState(s => ({ data, loadError: '', ...(s.selected ? { selected: s.selected.filter(key => data.records?.some(r => r.id === key && r.live && !r.mergedInto)) } : {}) })),
+        read: signal => api('/context' + suffix(id), undefined, signal),
+        onData: data => this.setState(s => ({ data, loadError: '', selected: s.selected.filter(key => data.records?.some(r => r.id === key && r.live && !r.mergedInto)) })),
         onError: error => this.setState({ loadError: error.message }),
       });
       this.poller.start();
     }
     load = () => this.poller?.refresh();
+    fail(error, retryAction) {
+      this.setState({ error: error.message, retryAction }, () => {
+        if (this.props.visible !== false && this.errorAlert?.getClientRects().length) this.errorAlert.focus({ preventScroll: true });
+      });
+    }
+    failure() {
+      const { error, loadError, retryAction, busy } = this.state;
+      return (error || loadError) && h('div', { className: 'cx-alert cx-error cx-action-error', role: 'alert', tabIndex: -1, ref: el => { this.errorAlert = el; } }, icon('info'), h('span', null, error || loadError), button('重试', error ? retryAction : this.load, { disabled: busy, quiet: true, icon: 'refresh' }));
+    }
     run = async (path, body, success) => {
       if (this.state.busy) return;
-      this.setState({ busy: true, activeAction: path, error: '', notice: '' }); const id = this.props.sessionId, epoch = this.epoch;
+      this.setState({ busy: true, activeAction: path, error: '', retryAction: null, notice: '' }); const id = this.props.sessionId, epoch = this.epoch;
       const active = () => this.alive && this.props.sessionId === id && this.epoch === epoch;
       try { const result = await api(path + suffix(id), body); if (active()) { this.setState({ notice: success ? success(result) : result.queued ? '已加入后台队列。' : '已保存', ...(['/compact', '/compact-p', '/compact-f'].includes(path) ? { selected: [] } : {}) }); await this.load(); } }
-      catch (e) { if (active()) this.setState({ error: e.message }); }
+      catch (e) { if (active()) this.fail(e, () => this.run(path, body, success)); }
       finally { if (active()) this.setState({ busy: false, activeAction: null }); }
     };
-    document = async id => {
-      this.setState({ error: '' });
+    document = async (id, returnFocus = document.activeElement) => {
+      this.setState({ error: '', retryAction: null });
       const sid = this.props.sessionId, ticket = ++this.documentTicket;
-      try { const detail = await api('/context/document' + suffix(sid) + '&id=' + encodeURIComponent(id)); if (this.alive && this.props.sessionId === sid && ticket === this.documentTicket) this.setState({ detail }); }
-      catch (e) { if (this.alive && this.props.sessionId === sid && ticket === this.documentTicket) this.setState({ error: e.message }); }
+      try { const detail = await api('/context/document' + suffix(sid) + '&id=' + encodeURIComponent(id)); if (this.alive && this.props.sessionId === sid && ticket === this.documentTicket) { this.documentFocus = returnFocus; this.setState({ detail }); } }
+      catch (e) { if (this.alive && this.props.sessionId === sid && ticket === this.documentTicket) this.fail(e, () => this.document(id, returnFocus)); }
     };
     readReview = async () => {
-      this.setState({ error: '' });
+      this.setState({ error: '', retryAction: null });
       const sid = this.props.sessionId, ticket = ++this.reviewTicket;
       try { const review = await api('/context/review' + suffix(sid)); if (this.alive && sid === this.props.sessionId && ticket === this.reviewTicket) this.setState({ review }); }
-      catch (e) { if (this.alive && sid === this.props.sessionId && ticket === this.reviewTicket) this.setState({ error: e.message }); }
+      catch (e) { if (this.alive && sid === this.props.sessionId && ticket === this.reviewTicket) this.fail(e, this.readReview); }
     };
-    reader() { return this.state.detail && h(DocumentReader, { record: this.state.detail, onClose: () => { this.documentTicket++; this.setState({ detail: null }); } }); }
-  }
-  class PipelinePanel extends PollPanel {
-    constructor(props) { super(props); this.state.selected = []; this.state.filter = 'all'; }
-    path() { return '/context'; }
+    reader() { return this.state.detail && h(DocumentReader, { record: this.state.detail, visible: this.props.visible, returnFocus: this.documentFocus, onClose: () => { this.documentTicket++; this.setState({ detail: null }); } }); }
     select(id, checked) { this.setState(s => ({ selected: checked ? [...new Set([...s.selected, id])] : s.selected.filter(x => x !== id) })); }
     render() {
-      const { data: d, error, notice, busy, selected, filter } = this.state;
+      const { data: d, notice, busy, selected, filter } = this.state;
       const records = (d?.records || []).filter(r => !r.mergedInto);
       const shown = records.filter(r => filter === 'all' || (filter === 'raw' ? r.mode === 'raw' : r.mode !== 'raw'));
       const locked = busy || Boolean(d?.manualOperation);
@@ -141,11 +182,11 @@ export function createContextUI(React) {
       const ready = records.filter(r => r.live && r.mode === 'raw').length;
       const retryLabel = kind => ({ 'waiting-main': '等待主会话成功后恢复', manual: '重试已暂停，请手动重试', retrying: '等待自动重试' })[d?.retry?.[kind]];
       const step = (text, state, running) => h('div', { className: 'cx-stage' }, h('span', { className: 'cx-dot ' + (running ? 'cx-pulse' : '') }), h('div', null, h('strong', null, text), h('small', null, state)));
-      return h('div', { className: 'cx-panel cx-context' }, heading('工作上下文', '预处理在后台，替换在请求边界。', 'context', button(null, this.load, { icon: 'refresh', quiet: true, label: '刷新上下文' })),
-        h('div', { className: 'cx-body' }, alert(error || this.state.loadError, true), alert(notice),
+      return h('div', { className: 'cx-panel cx-context' }, heading('工作上下文', '整理长对话，保留原话与资料。', null, button(null, this.load, { icon: 'refresh', quiet: true, label: '刷新上下文' })),
+        h('div', { className: 'cx-body' }, this.failure(), alert(notice),
           !this.props.sessionId ? empty('先选择一个会话', '这里会显示本会话的分段摘要与替换状态。') : !d ? empty('正在读取上下文', '正在连接当前会话的预处理记录。') : h(React.Fragment, null,
             h('section', { className: 'cx-pipeline-card' }, h('div', { className: 'cx-row' }, h('span', { className: 'cx-eyebrow' }, '处理状态'), badge(names[d.scope?.scope] || '会话', d.scope?.scope === 'session' ? '' : 'blue')),
-              h('div', { className: 'cx-stages' }, step('预处理', d.preparing ? '正在生成摘要' : retryLabel('prepare') || '等待新事件', d.preparing), icon('chevron', 12), step('中枢', d.coordinating ? '正在判断范围' : retryLabel('coordinate') || (d.pending ? '结果已准备' : '等待新摘要'), d.coordinating), icon('chevron', 12), step('应用', d.transactionPending ? '事务恢复中' : '请求边界替换', d.transactionPending)),
+              h('div', { className: 'cx-stages' }, step('整理摘要', d.preparing ? '正在整理' : retryLabel('prepare') || '等待新内容', d.preparing), icon('chevron', 12), step('准备替换', d.coordinating ? '正在判断范围' : retryLabel('coordinate') || (d.pending ? '结果已准备' : '等待新摘要'), d.coordinating), icon('chevron', 12), step('更新上下文', d.transactionPending ? '正在恢复' : '随下次请求更新', d.transactionPending)),
               h('div', { className: 'cx-metrics' }, h('div', null, h('strong', null, fmt(records.length)), h('span', null, '分段摘要')), h('div', null, h('strong', null, fmt(ready)), h('span', null, '原文待替换')), h('div', null, h('strong', null, fmt(records.reduce((n, r) => n + (r.documentCount || 0) + (r.assetCount || 0), 0))), h('span', null, '详细资料存档'))),
               h('div', { className: 'cx-row cx-pipeline-action' }, h('small', null, '只应用已有结果，不现场等待 AI。'), button('应用已准备结果', () => this.run('/compact', {}, r => r.queued ? '已排队，将在下一次请求边界应用。' : r.changed ? '替换已应用，原文仍在日志中。' : '没有可应用的结果，原文保持不变。'), { disabled: locked, primary: true, icon: 'layers' }))),
             d.prepareDeferred && h('p', { className: 'cx-hint' }, '本批已结束：剩余 ' + fmt(d.prepareDeferred.events) + ' 条、约 ' + fmt(d.prepareDeferred.estimatedTokens) + ' tokens，留待下次触发。'),
@@ -158,8 +199,8 @@ export function createContextUI(React) {
               h('div', { className: 'cx-compact-choice' }, h('div', { className: 'cx-row' }, h('code', null, '/compact-f'), button(fullRunning ? '全量压缩中…' : '全量压缩', () => this.run('/compact-f', {}, r => r.message), { disabled: locked, icon: fullRunning ? 'clock' : 'spark' })), h('p', { className: 'cx-hint' }, '调用 AI 将全部对话重新汇总为一份摘要，包含用户消息、工具结果、旧摘要及历史思考；保留前置 CoT、系统提示词、工具定义与用户手写全局背景。可能损失细节。')))),
             fold('后台操作', '手动触发预处理或中枢判断', h('div', { className: 'cx-actions' }, button('准备摘要', () => this.run('/context/prepare', {}), { disabled: locked || d.preparing, icon: 'context' }), button('运行中枢', () => this.run('/context/coordinate', {}), { disabled: locked || d.coordinating, icon: 'spark' }))),
             h('div', { className: 'cx-list-head' }, h('h3', null, '分段摘要'), segments('筛选分段', filter, [['all', '全部'], ['raw', '原文'], ['applied', '已替换']], value => this.setState({ filter: value }))),
-            !shown.length ? empty(records.length ? '当前筛选没有内容' : '还没有分段摘要', records.length ? '切换“全部”查看其他记录。' : '达到预处理频率后，这里会自动出现基础摘要和文档。') : h('div', { className: 'cx-list' }, ...shown.map((r, i) => h('article', { className: 'cx-card cx-record ' + (selected.includes(r.id) ? 'cx-selected' : ''), key: r.id },
-              h('div', { className: 'cx-row' }, h('label', { className: 'cx-record-check' }, h('input', { type: 'checkbox', checked: selected.includes(r.id), disabled: !r.live || locked, onChange: e => this.select(r.id, e.target.checked), 'aria-label': '选择 ' + r.id }), h('span', { className: 'cx-record-number' }, String(i + 1).padStart(2, '0')), h('time', null, date(r.timeStart) + ' — ' + time(r.timeEnd))), badge(r.live ? (r.kind === 'full' ? '全量摘要' : names[r.mode] || r.mode) : '历史存档', r.mode === 'raw' ? '' : 'blue')),
+            !shown.length ? empty(records.length ? '当前筛选没有内容' : '还没有分段摘要', records.length ? '切换“全部”查看其他记录。' : '达到预处理频率后，这里会自动出现基础摘要和文档。') : h('div', { className: 'cx-list' }, ...shown.map(r => h('article', { className: 'cx-card cx-record ' + (selected.includes(r.id) ? 'cx-selected' : ''), key: r.id },
+              h('div', { className: 'cx-row' }, h('label', { className: 'cx-record-check' }, h('input', { type: 'checkbox', checked: selected.includes(r.id), disabled: !r.live || locked, onChange: e => this.select(r.id, e.target.checked), 'aria-label': '选择 ' + r.id }), h('time', null, date(r.timeStart) + ' — ' + time(r.timeEnd))), badge(r.live ? (r.kind === 'full' ? '全量摘要' : names[r.mode] || r.mode) : '历史存档', r.mode === 'raw' ? '' : 'blue')),
               summaryPreview(r.summary), h('div', { className: 'cx-record-footer' }, h('small', { title: r.id }, h('code', null, r.id.slice(0, 8)), ' · ', rangeLabel(r.ranges)), button(`${r.documentCount || 0} 文档 · ${r.assetCount || 0} 附件`, () => this.document(r.id), { icon: 'context', quiet: true }))))),
             fold('中枢最近的选择', d.review?.choices?.length ? `${d.review.choices.length} 项决定` : '还没有完成的判断', h('div', null,
               ...(d.review?.choices || []).map((c, i) => h('div', { className: 'cx-decision', key: i }, badge(names[c.action] || c.action, 'blue'), h('code', null, c.ids?.map(id => id.slice(0, 8)).join('、')), c.reason && h('p', null, c.reason))),
@@ -173,30 +214,6 @@ export function createContextUI(React) {
         selected.length > 0 && h('footer', { className: 'cx-savebar cx-selection' }, h('span', null, '已选 ', h('strong', null, selected.length), ' 段'), h('div', { className: 'cx-actions' }, button('取消', () => this.setState({ selected: [] }), { quiet: true }), button('摘要＋详细资料', () => this.run('/compact', { ids: selected, mode: 'detail' }), { disabled: locked }), button('仅摘要', () => this.run('/compact', { ids: selected, mode: 'brief' }), { disabled: locked, primary: true }))), this.reader());
     }
   }
-  class SummaryPanel extends PollPanel {
-    constructor(props) { super(props); this.state.search = ''; this.state.legacy = null; this.state.cursor = null; }
-    path() { return '/context/catalog'; }
-    requestPath(id) { return this.path() + suffix(id) + '&query=' + encodeURIComponent(this.state.search) + (this.state.cursor ? '&cursor=' + encodeURIComponent(this.state.cursor) : ''); }
-    page = cursor => this.setState({ cursor, data: null, detail: null, error: '' }, () => this.observe());
-    render() {
-      const { data: d, search, error, notice } = this.state;
-      const entries = (d?.entries || []).filter(r => [r.summary, r.sessionTitle, r.id].join(' ').toLowerCase().includes(search.toLowerCase()));
-      const groups = new Map(); for (const r of entries) { const list = groups.get(r.sessionId) || []; list.push(r); groups.set(r.sessionId, list); }
-      const privateSession = d?.scope?.scope === 'session';
-      const archiveWarning = d?.unreadableArchives ? `有 ${d.unreadableArchives} 份历史档案无法读取，以下结果不完整；原文件已保留。` : '';
-      return h('div', { className: 'cx-panel' }, heading(privateSession ? '会话摘要' : '项目摘要', privateSession ? '本会话私有历史，不参与共享记忆。' : '按会话整理，按原始事件时间回看。', 'memory', button(null, this.load, { quiet: true, icon: 'refresh', label: '刷新摘要' })),
-        h('div', { className: 'cx-body' }, alert(error || this.state.loadError, true), alert(notice),
-          alert(archiveWarning, true),
-          h('div', { className: 'cx-catalog-banner' }, icon(privateSession ? 'lock' : 'layers', 19), h('div', null, h('strong', null, privateSession ? '仅当前会话可见' : '项目共享档案'), h('small', null, !d ? '正在读取…' : `${d.total ?? entries.length} 段匹配摘要 · 本页 ${entries.length} 段 · 文档按需读取`))),
-          h('label', { className: 'cx-search' }, icon('search'), h('input', { value: search, onChange: e => this.setState({ search: e.target.value, cursor: null, data: null }, () => this.observe()), placeholder: '搜索摘要、会话或编号', 'aria-label': '搜索摘要' })),
-          ...[...groups].map(([sid, list]) => h('section', { className: 'cx-session', key: sid }, h('header', { className: 'cx-session-head' }, h('span', { className: 'cx-session-icon' }, icon('context', 15)), h('div', null, h('h3', null, list[0].sessionTitle || sid), h('small', { title: sid }, sid.length > 28 ? sid.slice(0, 28) + '…' : sid)), badge(list.length + ' 段')),
-            h('div', { className: 'cx-timeline' }, ...list.map(r => h('article', { className: 'cx-timeline-record', key: r.id }, h('span', { className: 'cx-timeline-dot' }), h('time', null, date(r.timeStart), ' — ', time(r.timeEnd)), summaryPreview(r.summary), h('div', { className: 'cx-record-footer' }, h('code', { title: r.id }, r.id.slice(0, 8)), button(`读取 ${r.documentCount || 0} 文档 · ${r.assetCount || 0} 附件`, () => this.document(r.id), { quiet: true, icon: 'context' }))))))),
-          h('div', { className: 'cx-actions' }, this.state.cursor && button('第一页', () => this.page(null), { quiet: true }), d?.nextCursor && button('下一页', () => this.page(d.nextCursor))),
-          d && !entries.length && empty('没有匹配的摘要', search ? '试试其他关键词，或清空筛选。' : privateSession ? '本会话完成预处理后，摘要会显示在这里。' : '项目级会话完成预处理后，摘要会按会话归档。'),
-          !privateSession && d && fold('旧自动记忆', '只读保留，不自动重新注入', h('div', null, button('读取本项目旧条目', async () => { const sid = this.props.sessionId; try { const r = await api('/memories' + suffix(sid)); if (this.alive && sid === this.props.sessionId) this.setState({ legacy: r.items, error: '' }); } catch (e) { if (this.alive && sid === this.props.sessionId) this.setState({ error: e.message }); } }, { icon: 'memory', quiet: true }), this.state.legacy && h('pre', null, JSON.stringify(this.state.legacy, null, 2))))), this.reader());
-    }
-  }
-
   class ComponentsPanel extends React.Component {
     state = { data: null, error: '', loadError: '', busy: false, paths: null, saved: '' };
     componentDidMount() {
@@ -325,7 +342,12 @@ export function createContextUI(React) {
     undo = () => this.setState({ config: { ...this.saved }, routing: contextRouteMode(this.saved), custom: false, error: '', status: '' });
     number(key, label, min = 0, hint, scale = 1, disabled = false) {
       const value = this.state.config[key];
-      return field(label, h('input', { type: 'number', required: true, disabled, min, step: 1 / scale, value: value === '' ? '' : (value ?? 0) / scale, onChange: e => this.set(key, e.target.value === '' ? '' : Number(e.target.value) * scale) }), hint);
+      return field(label, h('input', { type: 'number', required: true, disabled, min, step: 1 / scale, value: value === '' ? '' : (value ?? 0) / scale, onChange: e => {
+        const raw = e.target.value, [coefficient, exponent = '0'] = raw.split(/e/i);
+        // Scales are powers of ten. Shift the decimal before converting to a
+        // number, so 1.001 seconds is 1001 ms without rounding invalid fractions.
+        this.set(key, raw === '' ? '' : Number(coefficient + 'e' + (Number(exponent) + Math.log10(scale))));
+      } }), hint);
     }
     toggle(key, label, hint) {
       return h('label', { className: 'cx-toggle' }, h('span', null, h('strong', null, label), hint && h('small', null, hint)), h('input', { type: 'checkbox', role: 'switch', checked: Boolean(this.state.config[key]), onChange: e => this.set(key, e.target.checked), 'aria-label': label }));
@@ -366,7 +388,7 @@ export function createContextUI(React) {
         section('空闲预处理', '默认关闭；不影响按新事件数量触发的正常预处理，也不影响手动操作。', h(React.Fragment, null,
           this.toggle('idlePreprocessEnabled', '空闲时自动预处理', '仅在会话真正空闲且有待处理内容时触发；模型或工具运行中不计时。'),
           this.number('flushIdleMs', '空闲等待时间 · 秒', 0, '默认 90 秒；关闭开关会取消等待中的任务。已开始的任务正常结束，0 秒也表示禁用。', 1000, !c.idlePreprocessEnabled))),
-        section('默认会话范围', '只影响新会话，已开始的会话保持原有绑定。', h('div', { className: 'cx-choice-grid' }, ...[['session', 'lock', '会话隔离', '仅本会话历史，不读取或写入共享记忆。'], ['project', 'layers', '项目共享', '读取同项目摘要，按会话与时间归档。']].map(([id, name, text, sub]) => h('button', { type: 'button', key: id, className: 'cx-choice', 'aria-pressed': (c.memoryScope === 'session' ? 'session' : 'project') === id, onClick: () => this.set('memoryScope', id) }, h('div', { className: 'cx-row' }, icon(name, 18), h('span', { className: 'cx-radio' }, icon('check', 11))), h('strong', null, text), h('small', null, sub))))));
+        section('默认会话范围', '只影响新会话，已开始的会话保持原有绑定。各模式均可明确回查其他会话。', h('div', { className: 'cx-choice-grid' }, ...[['session', 'lock', '会话隔离', '不自动读取共享记忆；会话 Dream 仅在本会话保存。'], ['project', 'layers', '项目共享', '自动读取本项目短记忆，需要细节时向下回查。'],['global','globe','全局记忆','自动读取精简全局记忆和分页项目目录。']].map(([id, name, text, sub]) => h('button', { type: 'button', key: id, className: 'cx-choice', 'aria-pressed': (c.memoryScope === 'full' ? 'project' : c.memoryScope) === id, onClick: () => this.set('memoryScope', id) }, h('div', { className: 'cx-row' }, icon(name, 18), h('span', { className: 'cx-radio' }, icon('check', 11))), h('strong', null, text), h('small', null, sub))))));
     }
     renderExperimental() {
       const c = this.state.config, intervals = [1, 3, 5, 10];
@@ -468,18 +490,19 @@ export function createContextUI(React) {
     };
     render() {
       const d = this.state.data;
-      return h('label', { className: 'cx-scope-chip', title: this.state.error || (d?.locked || this.props.locked ? '本会话已绑定范围' : '新会话的摘要共享范围') }, icon(d?.scope === 'project' ? 'layers' : 'lock', 13),
-        h('select', { 'aria-label': '会话范围', disabled: !d || d.locked || this.props.locked || this.state.busy, value: d?.scope || 'session', onChange: e => this.change(e.target.value) }, h('option', { value: 'session' }, '会话隔离'), h('option', { value: 'project' }, '项目共享')));
+      return h('label', { className: 'cx-scope-chip', title: this.state.error || (d?.locked || this.props.locked ? '本会话已绑定范围' : '新会话的记忆范围') }, icon(d?.scope === 'global'?'globe':d?.scope === 'project' ? 'layers' : 'lock', 13),
+        h('select', { 'aria-label': '会话范围', disabled: !d || d.locked || this.props.locked || this.state.busy, value: d?.scope || 'session', onChange: e => this.change(e.target.value) }, h('option', { value: 'session' }, '会话隔离'), h('option', { value: 'project' }, '项目共享'),h('option',{value:'global'},'全局记忆')));
     }
   }
   const ScopeChip = props => { const locked = props.useSessions(s => s.byId[props.sessionId]?.blank === false); return h(ScopeControl, { ...props, locked }); };
   const PipelineSlot = props => { const { tab } = props.useTabInfo(); return h(PipelinePanel, { ...props, visible: tab.visible }); };
-  const SummarySlot = props => { const { tab } = props.useTabInfo(); return h(SummaryPanel, { ...props, visible: tab.visible }); };
+  const DreamPanel=createDreamPanel(React,{api,suffix,heading,button,icon,field,section,alert,badge,empty,DocumentReader,ReadingView});
+  const SummarySlot = props => { const { tab } = props.useTabInfo(); return h(DreamPanel, { ...props, visible: tab.visible }); };
   return { ContextSettings, ScopeChip, PipelinePanel: PipelineSlot, SummaryPanel: SummarySlot, applyStyle(ctx) {
     ctx.effect(() => {
       const style = document.createElement('style');
       style.dataset.plugin = 'trisoul-context-v1'; style.dataset.version = CONTEXT_UI_VERSION;
-      style.textContent = CONTEXT_CSS; document.head.appendChild(style);
+      style.textContent = CONTEXT_CSS+DREAM_CSS; document.head.appendChild(style);
       return () => style.remove();
     });
   } };
@@ -541,6 +564,7 @@ export const CONTEXT_CSS = `
 .cx-pill{display:inline-flex;align-items:center;white-space:nowrap;font-size:10px;line-height:1.6;font-weight:500;padding:3px 8px;border:1px solid var(--cx-line);border-radius:6px;background:var(--cx-soft);color:var(--cx-muted)}.cx-tone-blue{color:var(--cx-blue);border-color:color-mix(in srgb,var(--cx-blue) 18%,var(--cx-bg));background:var(--cx-tint)}
 .cx-savebar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0;padding:12px 20px;border-top:1px solid var(--cx-line);background:var(--cx-bg);box-shadow:0 -6px 18px color-mix(in srgb,var(--cx-bg) 85%,transparent)}.cx-save-status{display:flex;align-items:center;gap:6px;min-width:0;color:var(--cx-muted);font-size:10px}.cx-actions{display:flex;align-items:center;gap:7px;flex-shrink:0;flex-wrap:wrap}.cx-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
 .cx-alert{display:flex;align-items:flex-start;gap:9px;font-size:12px;margin:10px 0 14px;padding:12px;border:1px solid color-mix(in srgb,var(--cx-blue) 24%,var(--cx-bg));border-radius:9px;background:var(--cx-tint);color:var(--cx-text);overflow-wrap:anywhere}.cx-alert svg{margin-top:2px;color:var(--cx-blue)}.cx-error{border-color:color-mix(in srgb,var(--cx-red) 32%,var(--cx-bg));background:color-mix(in srgb,var(--cx-red) 6%,var(--cx-bg));color:var(--cx-red)}.cx-error svg{color:var(--cx-red)}
+.cx-action-error{position:sticky;top:0;z-index:2;align-items:center;background:color-mix(in srgb,var(--cx-red) 6%,var(--cx-bg))}.cx-action-error>span{flex:1;min-width:0}.cx-action-error:focus{outline:2px solid var(--cx-blue);outline-offset:-2px}
 .cx-empty{text-align:center;padding:42px 18px;color:var(--cx-muted)}.cx-empty-icon{display:inline-grid;place-items:center;width:46px;height:46px;background:var(--cx-soft);border:1px solid var(--cx-line);border-radius:14px;margin-bottom:14px}.cx-empty h3{font-size:13px;color:var(--cx-text);margin-bottom:8px}.cx-empty p{font-size:11px;line-height:1.8;max-width:32em;margin:auto}
 .cx-pipeline-card{padding:16px;border:1px solid var(--cx-line);border-radius:13px;background:linear-gradient(155deg,var(--cx-tint),var(--cx-bg) 60%)}.cx-eyebrow{font-size:11px;font-weight:600;color:var(--cx-muted)}
 .cx-stages{display:flex;justify-content:space-between;gap:6px;align-items:center;margin:22px 0}.cx-stages>svg{color:var(--cx-muted);opacity:.6}.cx-stage{display:flex;align-items:center;gap:7px;min-width:0}.cx-stage strong{display:block;font-size:11px;font-weight:600}.cx-stage small{font-size:9px;display:block;margin-top:2px;white-space:nowrap}
@@ -548,7 +572,7 @@ export const CONTEXT_CSS = `
 .cx-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:12px;padding:15px 0;border-top:1px solid var(--cx-line);border-bottom:1px solid var(--cx-line)}.cx-metrics>div{text-align:center;border-right:1px solid var(--cx-line)}.cx-metrics>div:last-child{border:0}.cx-metrics strong{display:block;font-size:23px;font-weight:550;line-height:1.35;letter-spacing:-.7px}.cx-metrics span{display:block;font-size:10px;margin-top:4px;color:var(--cx-muted)}.cx-pipeline-action{margin-top:14px;flex-wrap:wrap;justify-content:flex-end}.cx-pipeline-action small{margin-right:auto;font-size:10px}
 .cx-compact-choice{padding:12px 0}.cx-compact-choice+.cx-compact-choice{border-top:1px solid var(--cx-line)}.cx-compact-choice>.cx-row{flex-wrap:wrap;margin-bottom:8px}.cx-compact-choice code{font-size:11px}
 .cx-list-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:23px 0 12px}.cx-list-head .cx-segments button{padding:4px 9px;font-size:10px}.cx-card{border:1px solid var(--cx-line);border-radius:11px;padding:14px;margin-bottom:10px;background:var(--cx-bg)}.cx-card.cx-selected{border-color:color-mix(in srgb,var(--cx-blue) 60%,var(--cx-line));background:var(--cx-tint)}
-.cx-record-check{display:flex;gap:7px;align-items:center;min-width:0;cursor:pointer}.cx-record-number{display:none}.cx-record-check time{font-size:10px;color:var(--cx-muted)}.cx-prose{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.85;font-size:12px}.cx-record>.cx-prose{margin:12px 0 9px}.cx-record-footer{display:flex;align-items:center;justify-content:space-between;gap:8px}.cx-record-footer>small{font-size:10px;min-width:0;overflow-wrap:anywhere}.cx-panel code{font:10px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere;color:var(--cx-muted)}.cx-record-footer .cx-btn{font-size:10px;padding:4px 6px;min-height:27px}
+.cx-record-check{display:flex;gap:7px;align-items:center;min-width:0;cursor:pointer}.cx-record-check time{font-size:10px;color:var(--cx-muted)}.cx-prose{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.85;font-size:12px}.cx-record>.cx-prose{margin:12px 0 9px}.cx-record-footer{display:flex;align-items:center;justify-content:space-between;gap:8px}.cx-record-footer>small{font-size:10px;min-width:0;overflow-wrap:anywhere}.cx-panel code{font:10px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere;color:var(--cx-muted)}.cx-record-footer .cx-btn{font-size:10px;padding:4px 6px;min-height:27px}
 .cx-decision{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0}.cx-decision p{width:100%;font-size:11px;color:var(--cx-muted)}.cx-panel pre{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;font:11px/1.8 ui-monospace,SFMono-Regular,Consolas,monospace;background:var(--cx-soft);border:1px solid var(--cx-line);border-radius:9px;padding:14px;max-height:480px;overflow:auto;margin:10px 0;color:var(--cx-text)}.cx-log-line{font-size:11px;line-height:1.8;padding:8px 0;border-top:1px solid var(--cx-line)}.cx-log-line time{color:var(--cx-muted)}
 .cx-selection{font-size:11px}.cx-selection .cx-actions{flex-wrap:nowrap}.cx-selection .cx-btn{font-size:11px;padding:6px 8px}
 .cx-catalog-banner{display:flex;align-items:center;gap:12px;padding:15px;border:1px solid var(--cx-line);border-radius:12px;background:var(--cx-soft);margin:3px 0 17px}.cx-catalog-banner>svg{color:var(--cx-blue)}.cx-catalog-banner strong{display:block;font-size:12px;font-weight:550}.cx-catalog-banner small{display:block;margin-top:4px;font-size:10px}
@@ -558,6 +582,6 @@ export const CONTEXT_CSS = `
 .cx-reader{position:absolute;inset:0;z-index:5;background:var(--cx-bg);display:flex;flex-direction:column;outline:none}.cx-reader-head{display:flex;align-items:center;gap:10px;padding:12px 17px;border-bottom:1px solid var(--cx-line);flex-shrink:0}.cx-reader-head>strong{flex:1;font-size:13px}.cx-record-meta{display:flex;flex-direction:column;gap:6px;padding:20px 0 0}.cx-record-meta code{font-size:11px}.cx-document{padding:21px 0;border-bottom:1px solid var(--cx-line)}.cx-document pre{max-height:none;margin:0}.cx-global-editor{min-height:295px!important}
 .cx-scope-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border:1px solid var(--cx-line);border-radius:7px;max-width:140px;line-height:1.4;font-size:11px;color:var(--cx-muted);background:var(--cx-bg)}.cx-scope-chip select{border:0;background:transparent;color:inherit;font:inherit;padding:0;min-width:0;outline:none;cursor:pointer}.cx-scope-chip select:disabled{opacity:1;appearance:none;cursor:default}
 @container cx (max-width:400px){.cx-head{padding:18px 16px 15px}.cx-body{padding:0 16px 20px}.cx-tabs{padding:0 16px;gap:19px}.cx-savebar{padding:11px 15px}.cx-frequency-preview>div{padding:10px}.cx-frequency-preview strong{font-size:22px}.cx-frequency-preview small{font-size:9px}.cx-grid{gap:2px 11px}.cx-choice{padding:12px}.cx-stage{gap:5px}.cx-stage small{font-size:8.5px}.cx-stage strong{font-size:10px}.cx-pipeline-card{padding:13px}.cx-pipeline-action{justify-content:flex-start}.cx-pipeline-action small{width:100%}.cx-record{padding:12px}.cx-selection{gap:6px;flex-wrap:wrap}.cx-selection .cx-actions{margin-left:auto}.cx-save-status{max-width:45%}.cx-head-title{gap:9px}}
-@container cx (max-width:320px){.cx-grid{grid-template-columns:1fr}.cx-choice-grid{grid-template-columns:1fr}.cx-tabs{gap:14px}.cx-tabs button{font-size:11px}.cx-frequency-preview{gap:5px}.cx-frequency-preview>div{padding:8px}.cx-frequency-preview small{width:100%}.cx-stage .cx-dot{display:none}.cx-save-status svg{display:none}.cx-record-check time{font-size:9px}}
+@container cx (max-width:320px){.cx-grid{grid-template-columns:1fr}.cx-choice-grid{grid-template-columns:1fr}.cx-settings .cx-segments{flex-direction:column}.cx-tabs{gap:14px}.cx-tabs button{font-size:11px}.cx-frequency-preview{gap:5px}.cx-frequency-preview>div{padding:8px}.cx-frequency-preview small{width:100%}.cx-stage .cx-dot{display:none}.cx-save-status svg{display:none}.cx-record-check time{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.cx-panel *{animation:none!important;transition:none!important}}
 `;

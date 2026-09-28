@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium } from 'playwright';
 import { stopFixtureProcess, cleanupFixture, closeFixtureServer } from './process.mjs';
+const dshCli = process.env.OMD_DSH_CLI || fileURLToPath(new URL('../../node_modules/@deepseek-ai/dsh/lib/bin.js', import.meta.url));
 
 export async function until(fn, timeout = 20000) {
   const deadline = Date.now() + timeout;
@@ -70,21 +71,21 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
     const repo = fileURLToPath(new URL('../../', import.meta.url));
     const packedResult = JSON.parse(execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', root], { cwd: repo, encoding: 'utf8', shell: process.platform === 'win32', maxBuffer: 16 * 1024 * 1024 }));
     const [packed] = Array.isArray(packedResult) ? packedResult : Object.values(packedResult);
-    const cli = fileURLToPath(new URL('../../node_modules/@deepseek-ai/dsh/lib/bin.js', import.meta.url));
+    const cli = dshCli;
     const options = { cwd: repo, env: { ...process.env, DSH_HOME: home }, stdio: ['ignore', 'pipe', 'pipe'], timeout: 120000 };
     execFileSync(process.execPath, [cli, '--profile', 'trisoul-x', '--from-default-profile', 'web', '--dump-config'], options);
     try { execFileSync(process.execPath, [cli, 'plugin', '--profile', 'trisoul-x', 'add', 'file:' + join(root, packed.filename)], options); }
     catch (error) { throw new Error('Packed plugin installation failed: ' + String(error.stderr || error.stdout || error.message).replace(/token=\S+/g, 'token=[redacted]')); }
   }
   if (plugins.length) {
-    const cli = fileURLToPath(new URL('../../node_modules/@deepseek-ai/dsh/lib/bin.js', import.meta.url));
+    const cli = dshCli;
     const options = { cwd: new URL('../../', import.meta.url), env: { ...process.env, DSH_HOME: home }, stdio: ['ignore', 'pipe', 'pipe'], timeout: 120000 };
     if (!installedPackage) execFileSync(process.execPath, [cli, '--profile', 'trisoul-x', '--from-default-profile', 'web', '--dump-config'], options);
     for (const spec of plugins) execFileSync(process.execPath, [cli, 'plugin', '--profile', 'trisoul-x', 'add', spec], options);
   }
   const lifecycleFile = join(root, 'lifecycle.jsonl');
   if (lifecycleTrace || historyMessages || legacyShadows || legacyChatConfig) {
-    if (!installedPackage) execFileSync(process.execPath, [fileURLToPath(new URL('../../node_modules/@deepseek-ai/dsh/lib/bin.js', import.meta.url)), '--profile', 'trisoul-x', '--from-default-profile', 'web', '--dump-config'], { cwd: new URL('../../', import.meta.url), env: { ...process.env, DSH_HOME: home }, stdio: ['ignore', 'ignore', 'pipe'] });
+    if (!installedPackage) execFileSync(process.execPath, [dshCli, '--profile', 'trisoul-x', '--from-default-profile', 'web', '--dump-config'], { cwd: new URL('../../', import.meta.url), env: { ...process.env, DSH_HOME: home }, stdio: ['ignore', 'ignore', 'pipe'] });
     const directory = join(home, 'profiles', 'trisoul-x');
     await writeFile(lifecycleFile, '');
     const traceModule = join(root, 'lifecycle-trace.mjs');

@@ -18,6 +18,8 @@ import { CONTEXT_WINDOW_EXCEEDED_CODE } from '@deepseek-ai/dsh-llm';
 import { currentTasks, restoreTaskProjection } from './tasks.mjs';
 import { ensureSystemHead } from './system-head.mjs';
 import { handleContextApi } from './context/api.mjs';
+import { publishDreamMemory } from './dream/publication.mjs';
+import { handleDreamApi } from './dream/api.mjs';
 import { installTraceCleanup } from './context/trace.mjs';
 import { repairShadows } from './context/shadow.mjs';
 import { TODO_NUDGE } from './todolist.mjs';
@@ -52,6 +54,7 @@ export async function apply(ctx, config) {
   let overlay = legacy.value;
   hub.getConfig = () => ({ ...liveConfig(), ...overlay });
   legacy.persist(() => { overlay = {}; });
+  ctx.effect(() => { void hub.dream.start().catch(error => hub.dream.notice(error)); });
   hub.budgets = new TaskBudgets(hub);
   hub.workflowBudget = new WorkflowBudget(hub.store);
   ctx.effect(() => () => { for (const agent of hub.agents.values()) hub.budgets.dispose(agent.session); });
@@ -80,6 +83,7 @@ export async function apply(ctx, config) {
   mountRecommendedPlugins(ctx, hub);
   const isX = session => ['trisoul-x', 'omd-ptc'].includes(ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset);
   hub.ultracode = new UltracodeControl(ctx, isX, hub.store);
+  const monitored = session => isX(session) || (session.header.origin === 'subagent' && Boolean(hub.workflowBudget.owner(session)));
   installUltracodeProjection(ctx);
   ctx.on('agent/inbox/claimed', ({ agent, message }) => hub.ultracode.claimed(agent, message), { global: true });
   ctx.on('system-prompt/assemble', (_assembly, context, next) => context?.agent
@@ -120,6 +124,7 @@ export async function apply(ctx, config) {
       const messages = pending.messages;
     hub.budgets.tick(agent.session, isX(agent.session) && !signal.aborted);
     if (!isX(agent.session) && !signal.aborted && hub.agents.has(agent.session.id)) {
+      publishDreamMemory(hub, agent.session, false);
       setRuntimeContext(agent.session, () => null);
       await hub.context.stripRuntime(agent.session);
     }
@@ -148,7 +153,7 @@ export async function apply(ctx, config) {
     // Only repair our own shadows; ordinary user content remains untouched.
     if (!signal.aborted && (!isX(agent.session) || agent.session.header.origin === 'subagent' || Number(agent.session.header.delegationDepth) > 0)
       && repairShadows(agent.session)) await hub.context.adapter.flush(agent.session);
-    if (isX(agent.session)) hub.requestStarts.set(agent.session.id, Date.now());
+    if (monitored(agent.session)) hub.requestStarts.set(agent.session.id, Date.now());
     return route;
   }, { global: true });
   ctx.on('agent/request-error', async ({ agent, failure, signal }, next) => {
@@ -169,7 +174,7 @@ export async function apply(ctx, config) {
     hub.budgets.dispose(agent.session);
     // A preset can have changed before disposal; release resources we owned.
     const id = agent.session.id;
-    if (!isX(agent.session) && !hub.agents.has(id) && !hub.context.agents.has(id)) return;
+    if (!monitored(agent.session) && !hub.agents.has(id) && !hub.context.agents.has(id)) return;
     const disposed = hub.context.dispose(id); hub.taskReviews.delete(id); hub.agents.delete(id); hub.requestStarts.delete(id);
     return disposed;
   }, { global: true });
@@ -180,19 +185,29 @@ export async function apply(ctx, config) {
   ctx.on('agent/created', ({ agent, source }) => {
     hub.ultracode.lifecycle(agent, source);
     hub.workflowBudget.attach(agent.session);
-    if (!isX(agent.session) || agent.session.header.origin === 'subagent') return;
+    if (!monitored(agent.session)) return;
     const state = hub.store.state(agent.session.id);
-    state.memoryScope ??= hub.config().memoryScope;
     state.cwd = agent.session.header.cwd; state.parentSession = agent.session.header.parentSession;
+    state.origin = agent.session.header.origin ?? null;
+    if (agent.session.header.origin === 'subagent') { hub.store.save(state); return; }
+    state.memoryScope ??= hub.scope(agent.session).mode;
     hub.store.save(state); hub.agents.set(agent.session.id, agent); hub.context.start(agent);
     hub.components.project(agent.session.header.cwd);
   }, { global: true });
+  ctx.on('session/created', session => {
+    if (!isX(session) || !session.header.parentSession || !session.header.isSeeded || session.header.origin === 'subagent') return;
+    const state = hub.store.state(session.id);
+    state.memoryScope ??= hub.scope(session).mode;
+    state.cwd = session.header.cwd; state.parentSession = session.header.parentSession; state.origin = session.header.origin ?? null;
+    hub.store.save(state); hub.context.state(session);
+  }, { global: true });
   ctx.on('session/event', (session, event) => {
+    if (!hub.dream.closed) hub.dream.sources.observe(session, event);
     hub.ultracode.committed(session, event);
     hub.workflowBudget.observe(session, event);
-    if (!isX(session)) return;
+    if (!monitored(session)) return;
     hub.observe(session, event);
-    hub.context.observe(session, event);
+    if (isX(session)) hub.context.observe(session, event);
   }, { global: true });
   ctx.inject(['webServer'], web => {
     web.effect(() => web.webServer.register({ kind: 'prefix', path: '/trisoul-x/api', async handler(req, res) {
@@ -200,6 +215,7 @@ export async function apply(ctx, config) {
         const url = new URL(req.url, 'http://localhost'), id = url.searchParams.get('session');
         if (await handleVersionApi({ req, res, url, service: versionService, send })) return;
         if (rejectUntrusted(ctx, req, res)) return;
+        if (await handleDreamApi({ hub, ctx, req, res, url, send, readBody })) return;
         if (url.pathname === '/trisoul-x/api/model-mode') {
           if (!id) { send(res, 400, { error: '缺少会话编号' }); return; }
           if (req.method === 'POST') { send(res, 200, await hub.ultracode.select(id, await readBody(req))); return; }

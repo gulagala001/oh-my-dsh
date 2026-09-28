@@ -5,7 +5,10 @@ import { createHash } from 'node:crypto';
 const root = new URL('../vendor/dsh/', import.meta.url);
 test('shipped DSH sources, browser package and patch match the pinned distribution manifest', async () => {
   const manifest = JSON.parse(await readFile(new URL('../vendor/dsh.json', import.meta.url)));
-  assert.equal(manifest.commit, '477b4f420553e8a52c2fbccc464d7561b239c443');
+  assert.equal(manifest.commit, '21638c56315ae6a2b552d6091945d3144c9af32e');
+  assert.equal(manifest.tag, null, 'the prepared master snapshot is not a published release tag');
+  const chat = JSON.parse(await readFile(new URL('../vendor/opencu/vendor/dsh-chat.json', import.meta.url)));
+  assert.equal(chat.commit, manifest.commit, 'conversation and shared Chat use one DSH source baseline');
   const files = {};
   async function walk(directory, prefix = '') {
     for (const entry of await readdir(directory, { withFileTypes: true })) {

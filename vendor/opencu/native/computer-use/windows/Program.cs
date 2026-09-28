@@ -262,10 +262,17 @@ internal static class Program
         var views = Environment.Is64BitOperatingSystem ? new[] { RegistryView.Registry32, RegistryView.Registry64 } : new[] { RegistryView.Registry32 };
         var before = views.Select(view => ReadRegistration(view, keyPath)).ToArray();
         if (args[0] == "registry-read" && args.Length == 2) { await Print(before); return; }
-        if (args[0] == "registry-set" && args.Length == 3)
+        if (args[0] == "registry-set" && (args.Length == 3 || args.Length == 4))
         {
             string path = Path.GetFullPath(args[2]);
-            if (before.Any(entry => entry.HasValue && !string.Equals(entry.Value, path, StringComparison.OrdinalIgnoreCase))) throw new IOException("这个 Chrome 已连接其他实例，未替换注册表中的连接程序");
+            if (args.Length == 4)
+            {
+                // The installer checks the old owner's receipt under its shared
+                // installation lock. Replace only that exact inspected snapshot.
+                var expected = JsonSerializer.Deserialize<Registration[]>(args[3], Json) ?? throw new InvalidDataException("Invalid registration snapshot");
+                if (!before.SequenceEqual(expected)) throw new IOException("Browser registration changed after inspection; it was not overwritten");
+            }
+            else if (before.Any(entry => entry.HasValue && !string.Equals(entry.Value, path, StringComparison.OrdinalIgnoreCase))) throw new IOException("这个 Chrome 已连接其他实例，未替换注册表中的连接程序");
             try
             {
                 foreach (var view in views) { using var hive = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, view); using var key = hive.CreateSubKey(keyPath); key.SetValue("", path, RegistryValueKind.String); }

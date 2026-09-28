@@ -70,3 +70,30 @@ test('switching out of OMD stops main accounting while existing background work 
   assert.deepEqual(old.snapshot(), { total: 1000, spent: 5, unmetered: 0 });
   assert.deepEqual(f.budget.snapshot(f.root), { total: null, spent: 0, unmetered: 0 });
 });
+
+test('ordinary forks own their target and usage while real descendants share the fork pool', async t => {
+  const f = await fixture(t), fork = { id: 'fork', header: { parentSession: 'root', isSeeded: true } };
+  f.budget.attach(fork);
+  f.budget.admit(fork, { turn: 1, step: 1, messages: [human('Independent task +20', 'fork-input')] });
+  const child = session('fork-child', fork.id); f.budget.attach(child);
+  f.budget.observe(fork, response(10, 3)); f.budget.observe(child, response(2, 5));
+  assert.deepEqual(f.budget.snapshot(f.root), { total: 1000, spent: 0, unmetered: 0 });
+  assert.deepEqual(f.budget.snapshot(fork), { total: 20, spent: 8, unmetered: 0 });
+  const restarted = new WorkflowBudget(new HubStore(f.dir));
+  assert.deepEqual(restarted.snapshot(child), restarted.snapshot(fork));
+  restarted.admit(fork, { turn: 2, step: 1, messages: [], enabled: false });
+  assert.deepEqual(restarted.snapshot(fork), { total: null, spent: 0, unmetered: 0 });
+  assert.equal(restarted.snapshot(child).spent, 8, 'old descendants retain their initiating pool');
+});
+
+test('an ordinary fork ignores and retires a legacy parent budget owner', async t => {
+  const f = await fixture(t), fork = { id: 'legacy-fork', header: { parentSession: 'root', isSeeded: true } };
+  const state = f.store.state(fork.id); state.workflowBudgetOwner = f.budget.owner(f.root); f.store.save(state);
+  f.budget.observe(fork, response(10, 7));
+  assert.equal(f.budget.snapshot(f.root).spent, 0, 'legacy ownership cannot charge a parent before repair');
+  assert.equal(f.budget.snapshot(fork).total, null);
+  f.budget.attach(fork);
+  assert.equal(f.store.peek(fork.id).workflowBudgetOwner, undefined);
+  f.budget.admit(fork, { turn: 1, step: 1, messages: [human('Fork +20', 'legacy-fork-input')] });
+  assert.equal(f.budget.snapshot(fork).total, 20);
+});

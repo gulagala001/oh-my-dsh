@@ -1,6 +1,6 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useId, useState } from 'react';
 import { recommendedPlugins } from './recommended-plugins.mjs';
-import { createPoller } from './polling.mjs';
+import { usePollingAction } from './use-polling-action.mjs';
 
 async function pluginApi(input, signal) {
   const response = await fetch('trisoul-x/recommended-plugins', input === undefined ? { signal } : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
@@ -21,21 +21,7 @@ function PluginIcon({ kind = 'plugin', size = 20 }) {
 
 export function RecommendedPlugins({ plugins = recommendedPlugins }) {
   const [query, setQuery] = useState(''), [category, setCategory] = useState('');
-  const [state, setState] = useState(null), [error, setError] = useState(''), [requestError, setRequestError] = useState(''), [pending, setPending] = useState(false);
-  const poller = useRef(null), alive = useRef(false), writing = useRef(false);
-  useEffect(() => {
-    alive.current = true;
-    const observer = createPoller({ read: signal => pluginApi(undefined, signal), onData: data => { setState(data); setError(''); }, onError: e => setError(e.message), interval: 2000 });
-    poller.current = observer; observer.start();
-    return () => { alive.current = false; observer.stop(); };
-  }, []);
-  const act = async input => {
-    if (writing.current) return;
-    writing.current = true; setPending(true); setRequestError(''); poller.current.stop();
-    try { const data = await pluginApi(input); if (alive.current) setState(data); }
-    catch (e) { if (alive.current) setRequestError(e.message); }
-    finally { writing.current = false; if (alive.current) { setPending(false); poller.current.start(); } }
-  };
+  const { state, error, requestError, pending, act, refresh } = usePollingAction(pluginApi, 2000);
   const headingId = useId();
   const categories = [...new Set(plugins.map(plugin => plugin.category).filter(Boolean))];
   const selected = categories.includes(category) ? category : '';
@@ -50,8 +36,8 @@ export function RecommendedPlugins({ plugins = recommendedPlugins }) {
       <div className="tx-recommended-heading-actions">{plugins.length > 0 && <span className="tx-badge">{plugins.length} 个推荐</span>}<a className="tx-button" href="https://github.com/gulagala001/oh-my-dsh/issues/new?template=plugin-submission.yml" target="_blank" rel="noopener noreferrer">提交插件 / 申请适配<PluginIcon kind="arrow" size={13}/></a></div>
     </header>
     <p className="tx-recommended-submit-hint">只需仓库地址和一句用途，自己的插件或推荐他人的开源插件都可以。AI 按需批量检查，维护者确认后收录。</p>
-    <div className="tx-recommended-auto"><div><strong>自动更新推荐插件</strong><p>默认关闭。开启后，DSH 运行期间每 6 小时在会话空闲时检查，只更新已安装、启用且已核验的推荐插件，固定到核验版本。需要重启时会提示。</p>{state?.checkedAt && <small>上次自动检查：{new Date(state.checkedAt).toLocaleString()}</small>}</div><input type="checkbox" role="switch" aria-label="自动更新推荐插件" checked={state?.autoUpdate === true} disabled={!state || pending || !!error} onChange={event => void act({ action: 'settings', autoUpdate: event.target.checked })}/></div>
-    {error && <div className="tx-alert tx-alert-error" role="alert">{error}<button type="button" className="tx-button tx-quiet" disabled={pending} onClick={() => void poller.current.refresh()}>重新读取</button></div>}
+    <div className="tx-recommended-auto"><div><strong>自动更新推荐插件</strong><p>默认关闭。开启后，DSH 运行期间每 6 小时在会话空闲时检查，只更新已安装、启用且已核验的发行包，固定到核验版本；源码快照需手动更新。需要重启时会提示。</p>{state?.checkedAt && <small>上次自动检查：{new Date(state.checkedAt).toLocaleString()}</small>}</div><input type="checkbox" role="switch" aria-label="自动更新推荐插件" checked={state?.autoUpdate === true} disabled={!state || pending || !!error} onChange={event => void act({ action: 'settings', autoUpdate: event.target.checked })}/></div>
+    {error && <div className="tx-alert tx-alert-error" role="alert">{error}<button type="button" className="tx-button tx-quiet" disabled={pending} onClick={() => void refresh()}>重新读取</button></div>}
     {requestError && <div className="tx-alert tx-alert-error" role="alert">{requestError}</div>}
     {plugins.length > 0 ? <>
       <div className="tx-recommended-toolbar">
@@ -63,7 +49,7 @@ export function RecommendedPlugins({ plugins = recommendedPlugins }) {
         return <article className="tx-recommended-card" key={plugin.id}>
         <div className="tx-recommended-card-head"><span className="tx-recommended-icon"><PluginIcon/></span><div><h4>{plugin.name}</h4><p>{plugin.author}</p></div></div>
         <p className="tx-recommended-description">{plugin.description}</p>
-        <p className="tx-recommended-review">{plugin.review ? `已核验 v${plugin.review.version} · ${plugin.review.platforms.join(' / ')} · DSH ${plugin.review.dsh} · OMD ${plugin.review.omd}` : '社区推荐 · 兼容性待核验'}{plugin.review?.note && <span>{plugin.review.note}</span>}</p>
+        <p className="tx-recommended-review">{plugin.review ? `${plugin.review.source ? '已核验源码' : '已核验'} v${plugin.review.version}${plugin.review.source ? ' · ' + plugin.review.source.commit.slice(0, 7) : ''} · ${plugin.review.platforms.join(' / ')} · DSH ${plugin.review.dsh} · OMD ${plugin.review.omd}` : '社区推荐 · 兼容性待核验'}{plugin.review?.note && <span>{plugin.review.note}</span>}</p>
         {plugin.review && installed?.installed && installed.version !== plugin.review.version && <p className="tx-recommended-result tx-warn">当前安装版本未在此组合核验。旧版可点“更新”；更高版本不会自动降级。</p>}
         <p className="tx-recommended-version">{plugin.manualInstall ? '需按项目说明配置' : !installed ? '正在读取安装状态…' : installed.installed ? `${installed.enabled ? '已安装' : '已安装 · 未启用'}${installed.version ? ' · v' + installed.version : ''}` : '未安装'}{installed?.restartRequired && <span className="tx-badge tx-warn">待重启</span>}</p>
         {plugin.manualInstall ? <p className="tx-recommended-result">{plugin.manualInstall}</p> : <div className="tx-recommended-actions">{installed?.installed ? <><button type="button" className="tx-button tx-primary" disabled={pending || !!state?.busy || !!error} onClick={() => void act({ id: plugin.id, action: 'update' })}>{busy?.action === 'update' ? (busy.automatic ? '自动更新中…' : '更新中…') : '更新'}</button><button type="button" className="tx-button" disabled={pending || !!state?.busy || !!error || !installed.removable} onClick={() => void act({ id: plugin.id, action: 'uninstall' })}>{busy?.action === 'uninstall' ? '卸载中…' : '卸载'}</button></> : <button type="button" className="tx-button tx-primary" disabled={!installed || pending || !!state?.busy || !!error} onClick={() => void act({ id: plugin.id, action: 'install' })}>{busy?.action === 'install' ? '安装中…' : '安装'}</button>}</div>}

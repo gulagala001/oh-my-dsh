@@ -10,7 +10,7 @@ import { once } from 'node:events';
 import WebSocket from 'ws';
 
 const repo = fileURLToPath(new URL('../', import.meta.url));
-const cli = join(repo, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js');
+const cli = process.env.OMD_DSH_CLI || join(repo, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js');
 async function until(fn, ms = 30000) {
   const end = Date.now() + ms;
   while (Date.now() < end) { const value = await fn(); if (value) return value; await new Promise(r => setTimeout(r, 100)); }
@@ -38,7 +38,7 @@ test('install into stock web, coexist with stock presets, switch both ways and r
       return { tool_calls: [{ index: 0, id: 'call-' + payloads.length, type: 'function', function: { name, arguments: JSON.stringify(args) } }] };
     };
     const last = p.messages.at(-1);
-    const delta = (!todo && !x) || last.role === 'tool' ? { content: 'Fixture complete.' }
+    const delta = (!todo && !ptc) || last.role === 'tool' ? { content: 'Fixture complete.' }
       : x && JSON.stringify(last).includes('Check bundled CodeGraph') ? tool('mcp__codegraph__codegraph_explore', { query: 'fixture' })
       : x ? tool('todo_write', JSON.stringify(last).includes('Inspect retained tasks') ? { op: 'view' } : { op: 'excerpt', from: 'Keep the original requirement.', to: 'Keep the original requirement.', tasks: [{ title: 'Keep the original requirement.', anchor: { from: 'Keep the original requirement.', to: 'Keep the original requirement.' } }] })
       : tool('todo_write', { todos: [{ content: 'Stock fixture task', status: 'completed' }] });
@@ -116,7 +116,7 @@ test('install into stock web, coexist with stock presets, switch both ways and r
   assert.ok(readFileSync(join(home, '.credentials.yaml'), 'utf8') === credentialsBefore, 'installation preserves credentials');
 
   await boot();
-  await create('standard', old.sessionId); // Existing stock sessions mount first.
+  await create('standard', old.sessionId); // Restore a stock agent before creating OMD agents.
   const blank = await create('standard');
   for (const preset of ['trisoul-x', 'omd-ptc', 'ptc', 'omd-ptc', 'trisoul-x', 'cordis', 'trisoul-x', 'standard', 'trisoul-x']) assert.equal(await select(blank.sessionId, preset), preset);
   await api('/better-todo?session=' + blank.sessionId, { todo: false, verification: false });
@@ -148,12 +148,26 @@ test('install into stock web, coexist with stock presets, switch both ways and r
   for (const name of ['todo_write', 'verify_link', 'recall', 'note', 'computer_use', 'codegraph_index', 'workflow', 'subagent']) {
     assert.ok(ptcRequest.messages[0].content.includes(name), 'OMD PTC SDK retains ' + name);
   }
-  const stockPtc = await create('ptc');
-  await prompt(stockPtc.sessionId, 'Inspect stock PTC.', 1);
-  const stockPtcRequest = payloads.findLast(p => p.tools?.length === 1 && p.tools[0].function.name === 'run_code');
-  assert.doesNotMatch(stockPtcRequest.messages[0].content, /## Programmatic tool use|Read saved context documents by record ID/);
-  assert.doesNotMatch(stockPtcRequest.messages[0].content, /Ultracode is on|Workflow authoring reference/);
-  assert.equal((await api('/state?session=' + stockPtc.sessionId)).contextHistory.length, 0);
+  for (const initialPreset of ['ptc', 'trisoul-x', 'omd-ptc']) {
+    const stockPtc = await create(initialPreset);
+    if (initialPreset !== 'ptc') {
+      await api('/model-mode?session=' + stockPtc.sessionId, { provider: 'fixture', model: 'fixture', ultracode: true });
+      await select(stockPtc.sessionId, 'ptc');
+      assert.equal((await api('/model-mode?session=' + stockPtc.sessionId)).enabled, false);
+    }
+    const before = payloads.length;
+    const stockPtcSnapshot = await prompt(stockPtc.sessionId, 'Inspect stock PTC.', 1);
+    assert.equal(stockPtcSnapshot.projections.values.agentPreset, 'ptc');
+    assert.deepEqual(stockPtcSnapshot.projections.values.todos, [{ content: 'Stock fixture task', status: 'completed' }], initialPreset + ': the native PTC todo tool actually ran');
+    const requests = payloads.slice(before).filter(p => p.tools?.length === 1 && p.tools[0].function.name === 'run_code');
+    assert.ok(requests.length >= 2, initialPreset + ': PTC sends the native tool result back to the model');
+    for (const request of requests) {
+      assert.doesNotMatch(request.messages[0].content, /## Programmatic tool use|Read saved context documents by record ID/);
+      assert.doesNotMatch(request.messages[0].content, /Ultracode is on|Workflow authoring reference/);
+      assert.ok(!JSON.stringify(request.messages).includes('[todo list]'), initialPreset + ': OMD reminders do not leak into stock PTC');
+    }
+    assert.equal((await api('/state?session=' + stockPtc.sessionId)).contextHistory.length, 0);
+  }
   const returned = await create('trisoul-x');
   await select(returned.sessionId, 'standard');
   await prompt(returned.sessionId, 'Run the stock todo fixture after switching back.', 1);
@@ -174,12 +188,12 @@ test('install into stock web, coexist with stock presets, switch both ways and r
   assert.deepEqual(legacy.projections.values.todos, oldSnapshot.projections.values.todos);
 
   await stop(); await boot();
-  await create('omd-ptc', ptcSession.sessionId); // PTC mounts before OMD/stock on restart.
+  await create('omd-ptc', ptcSession.sessionId); // Restore an OMD PTC agent first after restart.
   assert.equal((await api('/model-mode?session='+ptcSession.sessionId)).enabled,true,'mode survives a real process restart');
   const resumedPtc = await prompt(ptcSession.sessionId, 'Inspect retained tasks.', 2);
   assert.equal(resumedPtc.projections.values.agentPreset, 'omd-ptc');
   assert.equal(resumedPtc.projections.values.todos[0].content, 'Keep the original requirement.');
-  await create('trisoul-x', blank.sessionId); // Reverse the standing-mount order after restart.
+  await create('trisoul-x', blank.sessionId); // Preset definitions still use the host's eager activation order.
   const reverse = await create('trisoul-x');
   for (const preset of ['standard', 'omd-ptc', 'trisoul-x', 'cordis', 'ptc', 'omd-ptc', 'trisoul-x']) assert.equal(await select(reverse.sessionId, preset), preset);
   state = await api('/state?session=' + blank.sessionId);

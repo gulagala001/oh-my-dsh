@@ -5,7 +5,8 @@ import { join } from 'node:path';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 
 test('generic job calls and failures join file operations and retain details across reload and completion', { timeout: 90000 }, async t => {
-  const f = await frontendFixture(t), { page } = f;
+  // This regression exercises collapsed drawers; fresh Web now defaults to Detailed.
+  const f = await frontendFixture(t, { chatConfig: { transcriptView: 'standard' } }), { page } = f;
   let requests=0,release;
   const finish=new Promise(resolve=>{release=resolve;});t.after(release);
   f.replyWith(async payload=>{

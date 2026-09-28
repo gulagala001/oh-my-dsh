@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "releases": {
+    "0.1.7-rc.2": {
+      "win-x64": {
+        "platform": "win32",
+        "arch": "x64",
+        "extension": "exe",
+        "size": 288245480,
+        "sha512": "AY7f45dYO7BFrfgaLmzXNWP0pavlxkSbsehPo/WF6PXcFdDK3fF1oHUPs/4f2bzROgQvm6wSgawZ/g7UzbPRmw=="
+      },
+      "mac-arm64": {
+        "platform": "darwin",
+        "arch": "arm64",
+        "extension": "zip",
+        "size": 372794444,
+        "sha512": "aOfxtRvFqTRRp3zqu6nXNgILgVdHDPyfslhUVNnU1wMYw1dY1vTelptJeAmUDt7G822SCqHzxtPwMmvCGekveA=="
+      }
+    }
+  }
+}

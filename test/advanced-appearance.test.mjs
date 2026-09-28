@@ -23,3 +23,16 @@ test('title switches preserve dynamic host session titles and other owners', () 
   Object.defineProperty(doc, 'title', { configurable: true, get: () => 'other plugin', set: () => {} });
   release.update({ mode: 'custom', text: 'test' }); release(); assert.equal(doc.title, 'other plugin');
 });
+
+test('localized source-build titles preserve the host suffix in native mode and honor explicit branding', () => {
+  let current = '会话 — DSH 本地构建', localized = 'DSH 本地构建';
+  const proto = {}; Object.defineProperty(proto, 'title', { configurable: true, get: () => current, set: value => current = value });
+  const doc = Object.create(proto), release = brandDocumentTitle(doc, { mode: 'custom', text: '桌面定制' }, () => ['DeepSeek Harness', localized]);
+  assert.equal(doc.title, '会话 — 桌面定制');
+  release.update({ mode: 'native' }); assert.equal(doc.title, '会话 — DSH 本地构建');
+  localized = 'DSH Local Build'; doc.title = 'Other session — DSH Local Build';
+  release.update({ mode: 'omd' }); assert.equal(doc.title, 'Other session — Oh My DSH');
+  doc.title = 'Another title owner'; assert.equal(doc.title, 'Another title owner');
+  doc.title = 'Other session — DSH Local Build'; release();
+  assert.equal(doc.title, 'Other session — DSH Local Build');
+});
