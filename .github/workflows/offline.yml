@@ -1,0 +1,33 @@
+name: Offline plugin installation
+
+on:
+  pull_request:
+    paths: ['scripts/*offline.mjs', 'test/offline*.test.mjs', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.github/workflows/offline.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v6
+      - run: pnpm install --frozen-lockfile
+      - run: node --test --test-concurrency=1 test/offline.test.mjs test/offline-install.test.mjs
+        env:
+          OMD_OFFLINE_ARTIFACTS: ${{ runner.temp }}/offline-artifacts
+      - uses: actions/upload-artifact@v7
+        with:
+          name: oh-my-dsh-offline-${{ runner.os }}-${{ runner.arch }}
+          path: ${{ runner.temp }}/offline-artifacts
+          if-no-files-found: error

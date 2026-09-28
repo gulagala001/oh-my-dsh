@@ -25,6 +25,8 @@
     "build": "node scripts/build.mjs",
     "start": "node scripts/start.mjs",
     "dev": "node scripts/build.mjs && node scripts/start.mjs",
+    "offline:prepare": "node scripts/prepare-offline.mjs",
+    "offline:check": "node scripts/check-offline.mjs",
     "test": "node --test test/*.test.mjs",
     "test:context": "node --test test/context-*.test.mjs",
     "plugins:submissions": "node scripts/plugin-submissions.mjs"
