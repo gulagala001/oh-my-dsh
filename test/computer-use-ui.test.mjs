@@ -11,8 +11,8 @@ import { browserExecutablePath } from '#opencu/src/computer-use/browser.mjs';
 
 // OpenCU owns navigation, input, preview geometry and native platform scenarios.
 // These checks cover the actual OMD presets, tool transport and host UI boundary.
-for (const [backend, preset] of [['managed', 'trisoul-x'], ['managed', 'omd-ptc'], ['extension', 'trisoul-x']]) {
-  test(`OMD ${preset} integrates ${backend} Computer Use, results and settings`, {
+for (const [backend, preset, attempt] of Array.from({length:12}, (_, i) => ['managed', 'trisoul-x', i + 1])) {
+  test(`OMD ${preset} integrates ${backend} Computer Use, results and settings / diagnostic ${attempt}`, {
     timeout: 90000, skip: backend === 'extension' && process.platform === 'win32',
   }, async t => {
     const root = await mkdtemp(join(tmpdir(), 'omd-cu-integration-'));
@@ -46,7 +46,14 @@ for (const [backend, preset] of [['managed', 'trisoul-x'], ['managed', 'omd-ptc'
     // the same bounded tool-result wait used by the packaged desktop fixture.
     await page.getByText('OMD 电脑接入验证完成。', { exact: true }).waitFor({ timeout: 45000 });
     assert.ok((await state()).target, JSON.stringify(await state()));
-    const ready = await until(async () => { const value = await state(); return value.previewAt && value.target?.kind === 'tab' && value; });
+    let ready;
+    try { ready = await until(async () => { const value = await state(); return value.previewAt && value.target?.kind === 'tab' && value; }); }
+    catch(error) {
+      const toolMessages=requests.flatMap(request=>(request.messages??[]).filter(message=>message.role==='tool').map(message=>({tool_call_id:message.tool_call_id,content:typeof message.content==='string'?message.content.slice(0,12000):(message.content??[]).filter(block=>block.type==='text').map(block=>String(block.text).slice(0,12000))})));
+      t.diagnostic(JSON.stringify({readinessFailure:{attempt,state:await state(),toolMessages}}));
+      throw error;
+    }
+    t.diagnostic(JSON.stringify({readinessSuccess:{attempt,previewAt:ready.previewAt,history:ready.history}}));
     assert.ok(requests.length >= 2);
     assert.match(JSON.stringify(requests.at(-1).messages), /image_url/);
     const floating = page.getByLabel('悬浮操控预览'); await floating.waitFor();
