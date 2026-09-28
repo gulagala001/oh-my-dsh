@@ -19,7 +19,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     # Split every platform's full suite across two isolated runners. Browser
     # files stay serial within each shard; individual test deadlines still apply.
-    timeout-minutes: 40
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
