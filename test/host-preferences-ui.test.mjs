@@ -24,13 +24,14 @@ test('fresh Web uses Detailed without saving an implicit preference; an explicit
 });
 
 test('native work-details and busy-Enter preferences persist once through the replacement providers',{timeout:90000},async t=>{
- const f=await frontendFixture(t,{chatConfig:{transcriptView:'standard'}}),{page}=f;
+ const f=await frontendFixture(t),{page}=f;
  const mutations=[];page.on('response',r=>{if(r.url().includes('/api/settings/mutate'))void r.json().then(value=>mutations.push({request:r.request().postDataJSON(),response:value}));});
  t.after(()=>{if(!t.passed)console.error(JSON.stringify(mutations),f.diagnostics());});
  const open=async()=>{await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'通用设置',exact:true}).click();};
  const row=title=>page.getByRole('dialog').getByText(title,{exact:true}).locator('..').locator('..');
  await open();
- for(const label of ['详细','标准','完全展开','简洁']){
+ assert.match(await row('工作步骤展示').getByRole('button').innerText(),/详细/);
+ for(const label of ['标准','详细','完全展开','简洁']){
   await row('工作步骤展示').getByRole('button').click();
   await page.getByRole('menuitem',{name:label,exact:true}).click();
   await until(async()=>await row('工作步骤展示').getByRole('button').innerText()===label);
