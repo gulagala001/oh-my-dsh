@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdtemp, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,7 +21,12 @@ async function until(fn, timeout = 45000) {
 
 test('prepared directory relocates, installs through the native manager offline, runs tools and survives restart', { timeout: 300000 }, async t => {
   const root = await mkdtemp(join(tmpdir(), 'omd-offline-install-'));
-  const prepared = join(root, 'prepared'), moved = join(root, 'relocated'), home = join(root, 'home'), cwd = join(root, 'workspace');
+  const pkg = JSON.parse(await readFile(join(repo, 'package.json'), 'utf8'));
+  const artifacts = process.env.OMD_OFFLINE_ARTIFACTS;
+  const prepared = join(root, 'prepared'), moved = artifacts
+    ? join(artifacts, `oh-my-dsh-${pkg.version}-${process.platform}-${process.arch}`) : join(root, 'relocated');
+  const home = join(root, 'home'), cwd = join(root, 'workspace');
+  let ownsMoved = false;
   for (const path of [home, cwd]) await mkdir(path);
   let child, log = '', base, cookie;
   const registryRequests = [];
@@ -42,10 +48,17 @@ test('prepared directory relocates, installs through the native manager offline,
     if (child) await stopFixtureProcess(child);
     for (const server of [registry, provider]) { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
     if (!t.passed) t.diagnostic(log.replace(/token=\S+/g, 'token=[redacted]'));
+    if (ownsMoved && (!t.passed || !artifacts)) await rm(moved, { recursive: true, force: true });
     await rm(root, { recursive: true, force: true });
   });
   await prepareOffline(prepared);
-  await rename(prepared, moved);
+  if (artifacts) await mkdir(artifacts, { recursive: true });
+  if (existsSync(moved)) throw new Error('Refusing to overwrite an existing offline artifact: ' + moved);
+  ownsMoved = true;
+  // CI prepares on C: and retains artifacts on D: on Windows. Copy instead
+  // of rename, then remove the original before exercising the actual host.
+  await cp(prepared, moved, { recursive: true, errorOnExist: true, force: false });
+  await rm(prepared, { recursive: true, force: true });
   assert.deepEqual(checkLinks(moved, true), []);
   assert.equal(JSON.parse(await readFile(join(moved, 'offline-manifest.json'), 'utf8')).platform, process.platform);
   const env = { ...process.env, DSH_HOME: home, npm_config_offline: 'true', npm_config_fetch_retries: '0',
@@ -94,10 +107,4 @@ test('prepared directory relocates, installs through the native manager offline,
   await rpc('session/create', { request: { cwd, agentPreset: 'trisoul-x', sessionId } });
   assert.equal((await state(sessionId)).tasks[0].source, 'Keep the original requirement');
   assert.deepEqual(registryRequests, [], 'local linking and activation make no dependency registry requests');
-  if (process.env.OMD_OFFLINE_ARTIFACTS) {
-    await stopFixtureProcess(child); child = undefined;
-    await mkdir(process.env.OMD_OFFLINE_ARTIFACTS, { recursive: true });
-    const pkg = JSON.parse(await readFile(join(moved, 'package.json'), 'utf8'));
-    await rename(moved, join(process.env.OMD_OFFLINE_ARTIFACTS, `oh-my-dsh-${pkg.version}-${process.platform}-${process.arch}`));
-  }
 });
