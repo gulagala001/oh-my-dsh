@@ -27,11 +27,12 @@ test('packaged Desktop installs OMD, preserves conversations across restart and 
     const payload = JSON.parse(body); payloads.push(payload);
     res.writeHead(200, { 'Content-Type': 'text/event-stream' });
     let reply = { delta: { role: 'assistant', content: payload.tools?.length ? '桌面适配验证完成。' : '验证桌面插件' }, finish_reason: 'stop' };
-    if (payload.tools?.length && verificationStep < 3) {
+    if (payload.tools?.length && verificationStep < 4) {
       const calls = [
         ['todo_write', { op: 'excerpt', from: '验证桌面插件', to: '验证桌面插件', tasks: [{ title: '验证桌面插件', anchor: { from: '验证桌面插件', to: '验证桌面插件' } }] }],
         ['verify_link', { op: 'link', links: [{ task: 'T1', kind: 'test', path: "desktop's verification.mjs" }] }],
         ['verify_link', { op: 'run', tasks: ['T1'] }],
+        ['todo_write', { op: 'check', updates: [{ id: 'T1', done: true }] }],
       ];
       const [name, args] = calls[verificationStep++];
       reply = { delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'desktop-verify-' + verificationStep, type: 'function', function: { name, arguments: JSON.stringify(args) } }] }, finish_reason: 'tool_calls' };
