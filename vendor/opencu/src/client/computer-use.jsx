@@ -1,4 +1,5 @@
 import { createChat } from '../../lib/chat.factory.mjs';
+import { createChatSettings } from './chat-settings.mjs';
 import { createComputerStatePool } from './state-pool.mjs';
 import { HOST_BROWSER_ID, hostPreviewUrl, openHostBrowserPreview } from './host-browser.mjs';
 import React, { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
@@ -188,19 +189,8 @@ export function applyComputerUseClient(ctx, options = {}) {
       const currentForm = () => scope.configForms.get(shared.current().integrated ? 'omd-ui-chat' : 'opencu-ui-chat');
       // The native Chat keeps one store; only its preference owner changes
       // when the standalone and integrated packages are loaded together.
-      const settings = {
-        getSnapshot: () => currentForm().getSnapshot(),
-        set: (...args) => currentForm().set(...args),
-        subscribe(listener) {
-          let form = currentForm(), unsubscribe = form.subscribe(listener);
-          const stop = shared.subscribe(() => {
-            const next = currentForm();
-            if (next === form) return;
-            unsubscribe(); form = next; unsubscribe = form.subscribe(listener); listener();
-          });
-          return () => { stop(); unsubscribe(); };
-        },
-      };
+      const settings = createChatSettings(currentForm, shared.subscribe);
+      scope.effect(() => () => settings.dispose());
       await scope.plugin(nativeChat, { settings });
       const installed = installComputerUseClient(scope, shared);
       shared.entry = installed.ComputerEntry; shared.pane = installed.ComputerPane;
