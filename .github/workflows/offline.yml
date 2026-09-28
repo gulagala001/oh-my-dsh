@@ -30,4 +30,5 @@ jobs:
         with:
           name: oh-my-dsh-offline-${{ runner.os }}-${{ runner.arch }}
           path: ${{ runner.temp }}/offline-artifacts
+          include-hidden-files: true
           if-no-files-found: error
