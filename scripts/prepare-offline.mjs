@@ -68,6 +68,13 @@ export async function prepareOffline(destination, source = root) {
       schema: 1, version: pkg.version, hostVersion: pkg.devDependencies['@deepseek-ai/dsh'],
       platform: process.platform, arch: process.arch, node: process.versions.node,
     }, null, 2) + '\n');
+    // CodeGraph already carries a Node runtime. The offline Windows computer
+    // need not install a separate Node just to run the diagnostic.
+    if (process.platform === 'win32') {
+      const node = `node_modules\\@colbymchenry\\codegraph-win32-${process.arch}\\node.exe`;
+      if (!existsSync(join(staging, node))) throw new Error('离线目录缺少随包的 Windows Node 运行时');
+      await writeFile(join(staging, 'check-offline.cmd'), `@echo off\r\n"%~dp0${node}" "%~dp0scripts\\check-offline.mjs"\r\nexit /b %errorlevel%\r\n`);
+    }
     console.log('检查模块导入和本机平台包…');
     console.log(run(process.execPath, ['scripts/check-offline.mjs']).trim());
     if (existsSync(destination)) throw new Error('离线目录已被其他操作创建，请重新选择目录');

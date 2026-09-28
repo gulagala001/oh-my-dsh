@@ -66,6 +66,9 @@ test('prepared directory relocates, installs through the native manager offline,
   delete env.DSH_PERMISSION_MODE;
   const runCli = args => execFileSync(process.execPath, [cli, ...args], { cwd, env, encoding: 'utf8', timeout: 120000 });
   execFileSync(process.execPath, ['scripts/check-offline.mjs'], { cwd: moved, env, stdio: 'pipe', timeout: 30000 });
+  if (process.platform === 'win32') {
+    execFileSync('cmd.exe', ['/d', '/c', 'check-offline.cmd'], { cwd: moved, env, stdio: 'pipe', timeout: 30000 });
+  }
   await writeFile(join(home, 'settings.yaml'), JSON.stringify({
     'trisoul-x': { componentAutoSetup: false, backgroundTasksEnabled: false },
     'agent-default-model': { provider: 'fixture', model: 'fixture' },

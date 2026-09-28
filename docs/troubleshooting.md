@@ -78,7 +78,7 @@ if ($LASTEXITCODE -ne 0) { throw '离线准备失败' }
 macOS／Linux 同样运行 `node scripts/prepare-offline.mjs /绝对路径/omd-offline`。脚本只取实际发行文件，在隔离目录重新安装无符号链接的依赖布局、构建并检查 OMD 入口、Sharp 和 CodeGraph 平台包；不会搬运准备机的配置、凭据和会话，也不会改动原安装。检查失败时不产出完成目录。
 
 1. 完整压缩输出目录（包含 `node_modules`），搬到离线机并解压到固定位置，例如 `D:\omd-offline`。不要把目录中的文件拆散，也不要覆盖 DSH 自己的 `node_modules`。
-2. 离线机有 Node.js ≥22.19 时，在解压目录运行 `node scripts/check-offline.mjs`。它会报告失效链接、平台不匹配和完整导入异常；不需要在离线机重新安装依赖或构建。
+2. Windows 离线机在解压目录运行 `check-offline.cmd`（PowerShell 中为 `.\check-offline.cmd`），使用随包运行时，无需另外安装 Node。其他系统有 Node.js ≥22.19 时运行 `node scripts/check-offline.mjs`。检查会报告失效链接、平台不匹配和完整导入异常；不需要在离线机重新安装依赖或构建。
 3. 桌面版在应用内「插件 → 安装 → 本地」填写 `link:D:\omd-offline`（按实际绝对路径替换），**链接整个目录，不安装 `.tgz` 或 `file:` 包**。目录需要保留；日后移动目录后应重新安装到新位置。沿用原 `desktop` profile，不使用 CLI 修改桌面 profile。
 4. 确认 DSH 宿主与离线目录 `offline-manifest.json` 中的 `hostVersion` 配对，完整退出 DSH 后重开，验证新会话和工具调用。Web 用户沿用实际 `DSH_HOME` 与原 profile，通过宿主 CLI 添加 `link:/解压目录绝对路径`，必要时使用 `--offline`。
 
