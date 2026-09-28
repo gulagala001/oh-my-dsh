@@ -11379,6 +11379,77 @@ ${t("json.truncated", { total: text.length })}` : text;
 };
 var createChat = (require2) => registration.factory(require2);
 
+// src/client/chat-settings.mjs
+function createChatSettings(currentForm, subscribeOwner) {
+  const states = /* @__PURE__ */ new WeakMap(), listeners = /* @__PURE__ */ new Set();
+  let form = currentForm(), disposed = false;
+  const emit = () => {
+    if (disposed) return;
+    for (const listener of listeners) {
+      try {
+        listener();
+      } catch (error) {
+        console.error("Chat settings subscriber failed:", error);
+      }
+    }
+  };
+  let unsubscribe = form.subscribe(emit);
+  const stopOwner = subscribeOwner(() => {
+    const next = currentForm();
+    if (next === form) return;
+    unsubscribe();
+    form = next;
+    unsubscribe = form.subscribe(emit);
+    emit();
+  });
+  return {
+    getSnapshot() {
+      const owner = currentForm(), source = owner.getSnapshot(), state = states.get(owner);
+      if (!state?.pending || source.mode === "memory") return source;
+      if (state.source !== source || state.cachedVersion !== state.version) {
+        state.source = source;
+        state.cachedVersion = state.version;
+        state.snapshot = { ...source, value: { ...source.value, ...Object.fromEntries(state.values) } };
+      }
+      return state.snapshot;
+    },
+    async set(field, value) {
+      const owner = currentForm();
+      if (owner.getSnapshot().mode === "memory") return owner.set(field, value);
+      let state = states.get(owner);
+      if (!state) {
+        state = { pending: 0, version: 0, values: /* @__PURE__ */ new Map() };
+        states.set(owner, state);
+      }
+      const selected = structuredClone(value);
+      state.pending++;
+      state.version++;
+      state.values.set(field, selected);
+      try {
+        const writing = owner.set(field, selected);
+        emit();
+        return await writing;
+      } finally {
+        if (--state.pending === 0) {
+          state.values.clear();
+          state.version++;
+          if (!disposed && currentForm() === owner) emit();
+        }
+      }
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    dispose() {
+      disposed = true;
+      stopOwner();
+      unsubscribe();
+      listeners.clear();
+    }
+  };
+}
+
 // src/client/polling.mjs
 function createPoller({
   read,
@@ -13956,25 +14027,8 @@ function applyComputerUseClient(ctx, options = {}) {
     shared.fiber = root.plugin({ name: "opencu-ui", inject: ["slots", "sidebarRightTabs", "sidebarRight", ...nativeChat.inject], async apply(scope) {
       scope.effect(() => () => document.querySelectorAll('style[data-plugin="opencu-shared-chat"]').forEach((tag) => tag.remove()));
       const currentForm = () => scope.configForms.get(shared.current().integrated ? "omd-ui-chat" : "opencu-ui-chat");
-      const settings = {
-        getSnapshot: () => currentForm().getSnapshot(),
-        set: (...args) => currentForm().set(...args),
-        subscribe(listener) {
-          let form = currentForm(), unsubscribe = form.subscribe(listener);
-          const stop = shared.subscribe(() => {
-            const next = currentForm();
-            if (next === form) return;
-            unsubscribe();
-            form = next;
-            unsubscribe = form.subscribe(listener);
-            listener();
-          });
-          return () => {
-            stop();
-            unsubscribe();
-          };
-        }
-      };
+      const settings = createChatSettings(currentForm, shared.subscribe);
+      scope.effect(() => () => settings.dispose());
       await scope.plugin(nativeChat, { settings });
       const installed = installComputerUseClient(scope, shared);
       shared.entry = installed.ComputerEntry;

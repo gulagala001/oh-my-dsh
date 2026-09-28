@@ -288,6 +288,9 @@ test('native Lexical references survive rewrite/restore; automatic sends preserv
   await drawer.getByRole('button', { name: '关闭提示词优化抽屉', exact: true }).click();
   await editor.click(); await editor.press('ControlOrMeta+A'); await editor.press('Backspace');
   await until(async () => await page.locator('[data-composer-chip="reference"]').count() === 0);
+  // fill() sends CDP insertText without the next real keydown that normally
+  // clears Lexical's Backspace guard. Wait for its native timer, not just DOM.
+  await until(() => editor.evaluate(el => !el.__lexicalEditor._inputState.isInsertTextAfterHandledSelectionCommand));
   await editor.fill('分析这张图'); refMode = false;
   const readDraft = () => editor.evaluate(el => {
     const tree = el.__lexicalEditor.getEditorState().toJSON();
