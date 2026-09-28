@@ -36,6 +36,7 @@ export async function observeScreenshot(record, options = {}, signal, capture) {
     for (let attempt = 0; attempt < 2; attempt++) {
       signal?.throwIfAborted();
       const before = await screenshotGeometry(record);
+      signal?.throwIfAborted();
       const data = await capture(options, before);
       const { screenshot, region } = options.fullPage ? { screenshot: data, region: { x: 0, y: 0, scale: 1 } } : await cropViewport(data, before, options.clip);
       let after = await screenshotGeometry(record);
@@ -134,11 +135,37 @@ export async function captureFullPage(record){
   return meta.width===width&&meta.height===height?data:(await image.resize(width,height,{fit:'fill'}).png().toBuffer()).toString('base64');
 }
 
-export async function captureViewport(record, geometry) {
+export async function captureViewport(record, geometry, signal) {
   // clip and captureBeyondViewport can restore Chromium's cached emulation
   // over another client's settings, including the current pinch zoom. Resize
   // only the returned pixels, never the live page as part of observation.
-  const { data } = await record.cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true, captureBeyondViewport: false });
+  // A navigation can orphan a native capture reply. A fresh, non-emulated
+  // session has no viewport/preferences restoration to leave behind when it
+  // detaches. Keep the outer transaction until detach completes; full-page
+  // captures retain their original session and restoration lifecycle.
+  signal?.throwIfAborted();
+  // Only the managed browser exposes actual independent CDP sessions. The
+  // extension multiplexes virtual sessions over its shared native debugger.
+  const { sessionId } = record.transport
+    ? await record.cdp.send('Target.attachToTarget', { targetId: record.id, flatten: true }) : {};
+  let detaching, data;
+  // Detach through the parent protocol channel. Playwright's detach first
+  // executes Runtime.runIfWaitingForDebugger, which an open dialog can block.
+  const detach = () => detaching ??= sessionId ? record.cdp.send('Target.detachFromTarget', { sessionId }) : Promise.resolve();
+  const abort = () => { void detach().catch(() => {}); };
+  signal?.addEventListener('abort', abort, { once: true });
+  try {
+    signal?.throwIfAborted();
+    const params = { format: 'png', fromSurface: true, captureBeyondViewport: false };
+    ({ data } = await (sessionId
+      ? record.transport.sendCommand('Page.captureScreenshot', params, sessionId)
+      : record.cdp.send('Page.captureScreenshot', params)));
+    signal?.throwIfAborted();
+  } catch (error) { signal?.throwIfAborted(); throw error; }
+  finally {
+    signal?.removeEventListener('abort', abort);
+    await detach();
+  }
   const image = Buffer.from(data, 'base64'), metadata = await sharp(image).metadata();
   // External Chrome surfaces include device scale, while a managed CDP
   // session can retain its own raster scale despite another session's DPR

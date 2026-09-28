@@ -11786,7 +11786,7 @@ function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api: api2, 
       } catch (error) {
         if (active) {
           setLayoutResizing(false);
-          if (!controller.signal.aborted) callbacks.current.onError(error.message);
+          if (!controller.signal.aborted && error.code !== "VIEW_CHANGED") callbacks.current.onError(error.message);
         }
       }
     };
