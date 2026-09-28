@@ -190,13 +190,17 @@ export class BrowserActions {
     return bindings;
   }
   async snapshot(record, options, signal, includeScreenshot = false) {
-    const deadline = Date.now() + 2000;
+    let deadline;
     while (true) {
       signal?.throwIfAborted(); const generation = record.generation;
       try { return await this.readSnapshot(record, options, signal, includeScreenshot); }
       catch (error) {
         signal?.throwIfAborted();
-        if (record.page.isClosed() || Date.now() >= deadline || (generation === record.generation && !['STALE_ELEMENT', 'STALE_SCREENSHOT'].includes(error.code))) throw error;
+        if (record.page.isClosed() || (generation === record.generation && !['STALE_ELEMENT', 'STALE_SCREENSHOT'].includes(error.code))) throw error;
+        // A slow initial observation still gets a fresh read after navigation.
+        // Start this bounded retry window once; further changes never extend it.
+        deadline ??= Date.now() + 2000;
+        if (Date.now() >= deadline) throw error;
         // Retry observation only. An old action/element must still fail rather
         // than silently acquiring a different object after navigation.
         await delay(25, undefined, { signal });
