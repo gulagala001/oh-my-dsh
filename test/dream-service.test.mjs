@@ -26,7 +26,8 @@ function fixture(t,{generate,config={}}={}){
   const store=new DreamStore(dir,{now:()=>now}),service=hub.dream=new DreamService(hub,{store,generate:async(input,options)=>{
     calls.push(structuredClone(input));return generate?generate(input,options,{hub,service,store,logs,archives,states}):{value:{summary:input.sources.map(x=>x.text).join(' ').slice(0,150)||'none',references:input.sources.map(x=>x.id)},usage:{inputTokens:100,outputTokens:50}};
   }});
-  t.after(async()=>{await service.close();rmSync(dir,{recursive:true,force:true});});
+  const services=[service];
+  t.after(async()=>{for(const owned of [...services].reverse())await owned.close();rmSync(dir,{recursive:true,force:true});});
   const add=(id,{scope='project',summary='已完成读取。',age=1000,cwd='/projects/a',inherited=0}={})=>{
     const event=(seq,type,data)=>({seq,time:now-age,type,data});
     const events=[event(0,'user/message',{source:{kind:'user'},content:[{type:'text',text:'仅保留四个入口。'}]}),event(1,'assistant/message',{message:{source:{kind:'model'},content:[{type:'text',text:'已读取配置。'}]}}),event(2,'turn/end',{})];
@@ -35,7 +36,7 @@ function fixture(t,{generate,config={}}={}){
     archives.set(id,{binding:{scope:scope==='session'?'session':'project',project:projectOf(cwd)},records:summary?[record]:[]});return record;
   };
   const run=async(scope='global',target='global')=>{const job=await service.enqueue(scope,target);await service.draining;return store.job(job.id);};
-  return {hub,service,store,logs,archives,states,calls,cfg,add,run,advance:n=>{now+=n;},reads:()=>({reads,closes})};
+  return {hub,service,services,store,logs,archives,states,calls,cfg,add,run,advance:n=>{now+=n;},reads:()=>({reads,closes})};
 }
 
 const inputOf=payload=>JSON.parse(payload.messages.findLast(m=>m.role==='user').content);
@@ -139,7 +140,7 @@ test('native HTTP service replacement resumes durable batches and the original s
   f.logs.get('transport').events.push({seq:3,time:Date.now(),type:'user/message',data:{source:{kind:'user'},content:[{type:'text',text:'after persisted cut'}]}});f.logs.get('transport').revision++;
   f.archives.get('transport').records.push({id:'record-after-restart',sessionId:'transport',summary:'after persisted cut',originalSeqs:[3],ranges:[{from:3,to:3}],createdAt:0});
   await f.service.close();
-  const store=new DreamStore(f.hub.store.dir),replacement=new DreamService(f.hub,{store});f.hub.dream=replacement;
+  const store=new DreamStore(f.hub.store.dir),replacement=new DreamService(f.hub,{store});f.hub.dream=replacement;f.services.push(replacement);
   try {
     assert.equal(store.job(job.id).state,'queued');assert.equal(store.usage().used,held);assert.equal(store.memory('session:transport',1).ref,previous.ref);
     await replacement.start();assert.equal(store.job(job.id).state,'complete');
@@ -303,7 +304,7 @@ test('an expired executor cannot fail a job already taken over or consume the ne
   f.advance(60001);
   const store=new DreamStore(f.hub.store.dir,{now:f.store.now});
   const successor=new DreamService(f.hub,{store,generate:async input=>{if(input.target==='a'){enteredNew();await new Promise(r=>{releaseNew=r;});}return answer(input);}});
-  t.after(()=>successor.close());
+  f.services.push(successor);
   const takingOver=successor.drain();await newStarted;
   releaseOld();await f.service.draining;
   try{
