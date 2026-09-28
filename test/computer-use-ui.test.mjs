@@ -74,7 +74,21 @@ for (const [backend, preset] of [['managed', 'trisoul-x'], ['managed', 'omd-ptc'
       if (process.env.OMD_PREVIEW_ARTIFACTS) await page.screenshot({ path: join(process.env.OMD_PREVIEW_ARTIFACTS, 'floating-preview-dark.png') });
       await page.setViewportSize({ width: 560, height: 900 });
       await floating.evaluate(node => Promise.all(node.getAnimations().map(animation => animation.finished.catch(() => {}))));
-      const narrow = await floating.boundingBox(); assert.ok(narrow.x >= 11 && narrow.x + narrow.width <= 549);
+      // The viewport command and the current animation snapshot can precede
+      // the resize event/React commit. Check the actual settled layout.
+      let firstLayout, lastLayout, stableLayouts = 0;
+      const narrow = await until(async () => {
+        lastLayout = await floating.evaluate(node => {
+          const { x, width } = node.getBoundingClientRect();
+          return { x, width, viewport: innerWidth, style: node.getAttribute('style'), computedWidth: getComputedStyle(node).width,
+            animating: node.getAnimations().some(animation => animation.pending || animation.playState === 'running') };
+        });
+        firstLayout ??= lastLayout;
+        const fits = lastLayout.viewport === 560 && !lastLayout.animating && lastLayout.x >= 11 && lastLayout.x + lastLayout.width <= 549;
+        stableLayouts = fits ? stableLayouts + 1 : 0;
+        return stableLayouts >= 2 && lastLayout;
+      }, 3000).catch(error => { throw new Error('Floating preview did not fit the settled viewport: ' + JSON.stringify(lastLayout), { cause: error }); });
+      t.diagnostic(JSON.stringify({ floatingResize: { first: firstLayout, settled: narrow } }));
       if (process.env.OMD_PREVIEW_ARTIFACTS) await page.screenshot({ path: join(process.env.OMD_PREVIEW_ARTIFACTS, 'floating-preview-narrow.png') });
       await page.setViewportSize({ width: 1440, height: 1000 });
     }

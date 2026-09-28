@@ -66,6 +66,14 @@ export function FloatingPreview({sessionId,state,url,api,onState,onError,anchor,
   },[anchor,sessionId,shown,zoomed,popup,expanded,depth,targetIds,sizeKey,paneVisible]);
   useLayoutEffect(()=>{
     const before=reposition.current;reposition.current=null;const node=floating.current;
+    if(node&&!drag.current){
+      // A new clamp uses the target size, while a CSS transition can still
+      // render the old size. Finish only size transitions that leave the
+      // viewport, before paint; other preview animations remain unchanged.
+      const rect=node.getBoundingClientRect();
+      if(rect.left<12||rect.top<12||rect.right>window.innerWidth-12||rect.bottom>window.innerHeight-12)
+        for(const animation of node.getAnimations())if(['width','height'].includes(animation.transitionProperty))animation.cancel();
+    }
     if(!before||!node||drag.current||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
     const after=node.getBoundingClientRect(),x=before.left-after.left,y=before.top-after.top;
     if(Math.hypot(x,y)>1)node.animate([{transform:`translate3d(${x}px,${y}px,0)`},{transform:'translate3d(0,0,0)'}],{duration:360,easing:'cubic-bezier(.22,1,.36,1)'});
