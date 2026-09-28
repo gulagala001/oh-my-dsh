@@ -51,6 +51,9 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
         t.diagnostic(JSON.stringify({ ui, exitCode: child?.exitCode, signalCode: child?.signalCode, errors, browserDiagnostics, log: log.replace(/token=\S+/g, 'token=[redacted]') }));
       },
       async () => { if (process.env.TRISOUL_UI_ARTIFACTS && page && !page.isClosed()) await page.screenshot({path:join(root,'final-state.png')}); },
+      // Routing belongs to this fixture. Context disposal must not reject a
+      // still-running route.fetch after the test has already finished.
+      () => page?.unrouteAll({ behavior: 'ignoreErrors' }),
       () => browser?.close(),
       () => child && stopFixtureProcess(child),
       () => closeFixtureServer(provider),
@@ -129,17 +132,21 @@ export function apply(ctx) { let seeded = false; ctx.on('session/created', sessi
   child.stdout.on('data', data => { log = (log + data).slice(-15000); });
   child.stderr.on('data', data => { log = (log + data).slice(-15000); });
   const bootstrap = await until(() => { if (child.exitCode !== null) throw new Error(log.replace(/token=\S+/g, 'token=[redacted]')); return log.match(/http:\/\/127\.0\.0\.1:\d+\/\?token=[\w-]+/)?.[0]; }, 45000).catch(error => { throw new Error(error.message + '\n' + log.replace(/token=\S+/g, 'token=[redacted]')); });
-  const origin = new URL(bootstrap).origin, login = await fetch(bootstrap, { redirect: 'manual' });
+  const fixtureFetch = async (url, options) => {
+    try { return await fetch(url, options); }
+    catch (error) { throw new Error(`Fixture ${options?.method || 'GET'} ${new URL(url).pathname} failed: ${error.cause?.code || error.message}; host exit=${child.exitCode}, signal=${child.signalCode}`, { cause: error }); }
+  };
+  const origin = new URL(bootstrap).origin, login = await fixtureFetch(bootstrap, { redirect: 'manual' });
   const cookie = login.headers.getSetCookie().map(value => value.split(';')[0]).join('; ');
   const rpc = async (method, request) => {
-    const response = await fetch(origin + '/api/' + method, { method: 'POST', headers: { 'Content-Type': 'application/json', cookie }, body: JSON.stringify({ type: 'client-request', rpcId: crypto.randomUUID(), method, payload: { args: request === undefined ? {} : { request } } }) });
+    const response = await fixtureFetch(origin + '/api/' + method, { method: 'POST', headers: { 'Content-Type': 'application/json', cookie }, body: JSON.stringify({ type: 'client-request', rpcId: crypto.randomUUID(), method, payload: { args: request === undefined ? {} : { request } } }) });
     const value = await response.json(); if (!value.result?.ok) throw new Error(JSON.stringify(value) + '\n' + log.replace(/token=\S+/g, 'token=[redacted]')); return value.result.value;
   };
   await until(async () => (await rpc('llm/listProviders')).some(provider => provider.id === 'fixture'));
   const registered = await rpc('workspace/create', { path: workspace });
   const { sessionId } = await rpc('session/create', { workspaceId: registered.workspace.workspaceId, agentPreset });
   if (!historyMessages) await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId, mode: 'queue', content: [{ type: 'text', text: initialPrompt }] });
-  await until(async () => (await (await fetch(origin + '/trisoul-x/api/state?session=' + sessionId, {headers:{cookie}})).json()).running === 'idle');
+  await until(async () => (await (await fixtureFetch(origin + '/trisoul-x/api/state?session=' + sessionId, {headers:{cookie}})).json()).running === 'idle');
   if (historyMessages) await rpc('session/rename', { sessionId, title: '整理工作台和对话界面' });
   if (headless) return { root, home, workspace, origin, rpc, sessionId, errors, html: () => fetch(origin, { headers: { cookie } }).then(r => r.text()), replyWith(factory) { replyFactory = factory; },
     async api(path, body) { const r = await fetch(origin + '/trisoul-x/api' + path, { headers: { cookie, 'content-type': 'application/json' }, ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }) }); if (!r.ok) throw Error(await r.text()); return r.json(); }, lifecycle: () => readFile(lifecycleFile, 'utf8'), log: () => log.replace(/token=\S+/g, 'token=[redacted]'),

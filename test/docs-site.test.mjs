@@ -86,7 +86,7 @@ test('built documentation works on a plain static origin with desktop and mobile
     const block = page.locator('.code-block').first(), copy = block.getByRole('button', { name: '复制代码' });
     const expected = (await block.locator('code').textContent()).replace(/\n$/, '');
     await copy.click();
-    assert.equal(await page.evaluate(() => navigator.clipboard.readText()), expected);
+    assert.equal((await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n'), expected);
     assert.match(expected, /github:gulagala001\/oh-my-dsh#v/);
     assert.equal(await page.getByRole('status').textContent(), '代码已复制。');
     await page.evaluate(() => { navigator.clipboard.writeText = async () => { throw new Error('clipboard denied fixture'); }; });
@@ -157,7 +157,8 @@ test('built documentation works on a plain static origin with desktop and mobile
     const source = diagram.locator('code');
     assert.equal((await source.textContent()).replace(/\n$/, ''), definition);
     await diagram.getByRole('button', { name: '复制代码' }).click();
-    assert.equal(await page.evaluate(() => navigator.clipboard.readText()), definition);
+    // Windows clipboard text uses CRLF; all source characters remain exact.
+    assert.equal((await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n'), definition);
     for (const width of [320, 390]) {
       await page.setViewportSize({ width, height: 844 });
       await page.goto(origin + '/docs/dream-memory.html');
@@ -249,7 +250,7 @@ test('built documentation works on a plain static origin with desktop and mobile
     await screenshot(reader, 'docs-prefix-update-uninstall.png');
     const copy = reader.locator('.code-block').first();
     await copy.getByRole('button', { name: '复制代码' }).click();
-    assert.equal(await reader.evaluate(() => navigator.clipboard.readText()), (await copy.locator('code').textContent()).replace(/\n$/, ''));
+    assert.equal((await reader.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n'), (await copy.locator('code').textContent()).replace(/\n$/, ''));
     await reader.locator('.brand').click();
     assert.equal(new URL(reader.url()).pathname, '/preview/omd/docs/index.html');
     await reader.getByRole('tab', { name: 'DSH Web', exact: true }).click();
