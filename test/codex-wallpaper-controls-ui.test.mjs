@@ -6,6 +6,7 @@ import { frontendFixture, until } from './fixtures/frontend.mjs';
 
 test('Codex wallpaper leaves the spanning titlebar and the right pane independently clickable', { timeout: 90000 }, async t => {
   const f = await frontendFixture(t, { installedPackage: true }), { page } = f;
+  page.on('console', msg => { if (msg.text().startsWith('HIT_FAILURE')) t.diagnostic(msg.text()); });
   await page.setViewportSize({ width: 1280, height: 820 });
   await page.getByRole('button', { name: '设置', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: '外观', exact: true }).click();
@@ -21,7 +22,10 @@ test('Codex wallpaper leaves the spanning titlebar and the right pane independen
   const toggle = page.locator('.codex-panel-toggle');
   const hit = locator => locator.evaluate(el => {
     const r = el.getBoundingClientRect();
-    return el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+    const target = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    const ok = el.contains(target);
+    if (!ok) console.log('HIT_FAILURE', JSON.stringify({rect:r.toJSON(), viewport:innerWidth, target:target?.outerHTML.slice(0,1000), ancestry:[el,el.parentElement,el.closest('.wSkVaW_header'),el.closest('.pI_x6G_frame'),document.querySelector('[data-rightbar-col]')].filter(Boolean).map(node=>({class:node.className,rect:node.getBoundingClientRect().toJSON(),style:node.getAttribute('style'),width:getComputedStyle(node).width,pointer:getComputedStyle(node).pointerEvents,z:getComputedStyle(node).zIndex})),animations:document.getAnimations().map(a=>({target:a.effect?.target?.className,property:a.transitionProperty,state:a.playState,time:a.currentTime}))}));
+    return ok;
   });
   await until(async () => await toggle.getAttribute('aria-expanded') === 'true');
   if (process.env.TRISOUL_UI_ARTIFACTS) { await page.screenshot({ path: join(f.root, 'codex-wallpaper-controls.png') }); console.log('Codex wallpaper controls:', f.root); }
