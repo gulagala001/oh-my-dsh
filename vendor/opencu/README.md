@@ -4,21 +4,21 @@
 
 OpenCU 从 [Oh My DSH](https://github.com/gulagala001/oh-my-dsh) 的 Computer Use 提取而来，提供相同的操控工具、实时预览和接管体验，可以独立安装到 DSH。Oh My DSH 继续集成全部能力，并直接复用 OpenCU 的实现。
 
-本仓库版本：[1.1.9](https://github.com/gulagala001/opencu/releases/tag/v1.1.9)。源码、发行包与 SHA-256 校验文件见版本页面；对应 Release 发布后可按下方说明安装。
+本仓库版本：[1.2.0](https://github.com/gulagala001/opencu/releases/tag/v1.2.0)。源码、发行包与 SHA-256 校验文件见版本页面；对应 Release 发布后可按下方说明安装。
 
 ## 本版更新
 
 共用有界 UTF-8 JSON 读写与请求取消生命周期，修复中文在网络分块边界损坏的问题。电脑设置使用统一的轮询/写入所有权，安装期间暂停旧读取，防止迟到响应覆盖新状态；隐藏面板不取消已提交的操作。
 
-合并目标展示的重复逻辑，移除无人使用的图标生成代码，保留原有弹窗图标、浏览器/原生桌面能力、数据格式和兼容标识。宿主配对仍为 DSH 0.1.7-rc.2。[版本说明与验证范围](docs/release-1.1.9.md)。
+同步官方 DSH 0.2.0-rc.2 Chat 组件及分组动画，保留操作统计、紧凑布局、浏览器/原生桌面能力、数据格式和兼容标识。[版本说明与验证范围](docs/release-1.2.0.md)。
 
 ## 安装
 
-**1.1.9** 配套 **DSH 0.1.7-rc.2 Web、Node.js ≥22.19、pnpm 11.23.0 和 Git**。对应 Release 发布后，先停止 DSH 服务，再运行：
+**1.2.0** 配套 **DSH 0.2.0-rc.2 Web、Node.js ≥22.19、pnpm 11.23.0 和 Git**。对应 Release 发布后，先停止 DSH 服务，再运行：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/opencu#v1.1.9
-npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
+npx --yes @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add github:gulagala001/opencu#v1.2.0
+npx --yes @deepseek-ai/dsh@0.2.0-rc.2 --profile web
 ```
 
 打开启动时的登录链接，继续使用已有 Agent preset。在输入区点击 **电脑**，或通过 `@Browser`、`@Chrome` 和应用引用选择目标：
@@ -73,7 +73,7 @@ OpenCU 配置位于 DSH 的 `opencu` 设置区。未显式设置的字段继承�
 先停止服务，再运行对应命令，然后重新启动 `dsh web`：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/opencu#v1.1.9
+npx --yes @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add github:gulagala001/opencu#v1.2.0
 dsh plugin --profile web remove opencu
 ```
 

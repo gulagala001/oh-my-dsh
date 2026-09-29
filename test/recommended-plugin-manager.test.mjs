@@ -236,8 +236,8 @@ test('intent assistant is release-pinned and never installed by opt-in auto upda
   const { pluginInstallSpec } = await import('../src/recommended-plugins.mjs');
   const { readFile } = await import('node:fs/promises');
   const plugin = recommendedPlugins.find(p => p.id === 'omd-intent-assistant');
-  assert.equal(plugin.review.version, '0.1.0');
-  assert.equal(pluginInstallSpec(plugin, plugin.review.version), 'https://github.com/gulagala001/omd-prompt-optimizer/releases/download/v0.1.0/omd-prompt-optimizer-0.1.0.tgz');
+  assert.equal(plugin.review.version, '0.2.0');
+  assert.equal(pluginInstallSpec(plugin, plugin.review.version), 'https://github.com/gulagala001/omd-prompt-optimizer/releases/download/v0.2.0/omd-prompt-optimizer-0.2.0.tgz');
   const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
   for (const field of ['dependencies', 'devDependencies', 'optionalDependencies']) assert.equal(pkg[field]?.[plugin.packageName], undefined);
   const f = fixture(); f.service.catalog = [plugin]; await f.service.settings(true);

@@ -1,6 +1,6 @@
 # DSH components included with Oh My DSH
 
-Base: `deepseek-ai/deepseek-harness`, untagged master, declared version `0.1.7-rc.2`, commit `21638c56315ae6a2b552d6091945d3144c9af32e`, MIT license. `../dsh.json` records every included file's SHA-256. `changes.patch` contains the source changes against that exact base. Package READMEs retain the upstream baseline; the opt-in extensions are described below and in [the user guide](../../docs/runtime-state-background.md).
+Base: `deepseek-ai/deepseek-harness`, tag `dsh-v0.2.0-rc.2`, commit `639ed015397290b3745d163aafe02ffee4aa3f84`, MIT license. `../dsh.json` records every included file's SHA-256. `changes.patch` contains the source changes against that exact base. Package READMEs retain the upstream baseline; the opt-in extensions are described below and in [the user guide](../../docs/runtime-state-background.md).
 
 OMD includes the complete matching Tools, Jobs, Bash/PowerShell, conversation, and JSONL persistence component implementations. It adds soft yield with preserved hard deadlines, non-consuming previews, request-bound controls, event waits, delivery receipts, and the wait-aware composer. Source API definitions are included for rebuilding and inspection. The original DSH rows remain in the profile, disabled only while this bundle selects the matching providers; removing the bundle restores them.
 
