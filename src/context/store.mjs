@@ -33,6 +33,11 @@ export class ContextStore {
     this.writes.set(path, { digest, identity: this.identity(path) }); return true;
   }
   path(id) { return join(this.dir, 'sessions', hash(id) + '.json'); }
+  peek(id) {
+    const s = this.cache.get(id) ?? this.read(this.path(id), null);
+    if (s && (s.schema !== 1 || s.id !== id || !Array.isArray(s.records))) throw new Error('上下文存档版本或会话身份不匹配');
+    return s;
+  }
   state(id, binding) {
     if (!this.cache.has(id)) {
       const s = this.read(this.path(id), { schema: 1, id, binding: null, records: [], pending: null, transaction: null,
@@ -90,7 +95,12 @@ export class ContextStore {
     const states = own.binding?.scope === 'project'
       ? this.all({ tolerateInvalid: true, requiredId: requester }).filter(s => s.id === requester || (s.binding?.scope === 'project' && s.binding.project === own.binding.project))
       : [own];
-    return states.flatMap(s => s.records.filter(r => includeHistory || !r.mergedInto).map(r => ({ ...r, sessionTitle: s.binding?.title || s.id })))
+    // Inherited archives belong to this fork only, even if it uses project scope.
+    // Its frozen copy takes precedence over a parent's later archive metadata.
+    const records = new Map(states.flatMap(s => s.records.map(r => [r.id, { ...r, sessionTitle: s.binding?.title || s.id }])));
+    for (const r of own.inheritedRecords || []) records.set(r.id, { ...r, sessionTitle: r.sessionTitle || r.sessionId });
+    for (const r of own.records) records.set(r.id, { ...r, sessionTitle: own.binding?.title || own.id });
+    return [...records.values()].filter(r => includeHistory || !r.mergedInto)
       .sort((a, b) => (a.timeStart ?? a.createdAt) - (b.timeStart ?? b.createdAt) || a.id.localeCompare(b.id));
   }
   get(requester, id) {

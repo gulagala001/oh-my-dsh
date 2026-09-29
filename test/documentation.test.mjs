@@ -9,7 +9,7 @@ test('installation docs and release badge describe the versions actually shipped
   const readme = await read('README.md'), upgrade = await read('docs/upgrade.md');
   const badge = /https:\/\/img\.shields\.io\/badge\/version-(.*?)-3478F6\?/.exec(readme)?.[1];
   assert.equal(badge, pkg.version.replaceAll('-', '--'), 'visible version badge');
-  for (const file of ['README.md', 'docs/usage.md', 'docs/upgrade.md', 'docs/windows.md']) {
+  for (const file of ['README.md', 'docs/index.html', 'docs/usage.md', 'docs/upgrade.md', 'docs/windows.md']) {
     const text = await read(file);
     const targets = [...text.matchAll(/github:gulagala001\/oh-my-dsh#v([\w.+-]+)/g)].map(match => match[1]);
     assert.deepEqual([...new Set(targets)], [pkg.version], file + ': every installation target matches the current release');
@@ -38,6 +38,10 @@ function anchors(text) {
 
 test('current user docs link to existing local files and sections', async () => {
   const missing = [];
+  for (const file of JSON.parse(await read('screenshots.json'))) {
+    try { await access(new URL('../' + file, import.meta.url)); }
+    catch { missing.push(`screenshots.json -> ${file}`); }
+  }
   const docs = (await readdir(new URL('../docs/', import.meta.url)))
     .filter(file => file.endsWith('.md') && !file.startsWith('release-') && !file.endsWith('-research.md')).map(file => 'docs/' + file);
   for (const file of ['README.md', 'CONTRIBUTING.md', ...docs]) {

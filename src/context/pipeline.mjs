@@ -12,6 +12,8 @@ import { createTransaction, applyTransaction } from './transactions.mjs';
 import { repairShadows } from './shadow.mjs';
 import { SUMMARY_PROMPT_VERSION, PREPARE_SYSTEM, PREPARE_TOOL, COORDINATE_SYSTEM, COORDINATE_TOOL } from './prompts.mjs';
 import { TODO_META, TASK_CONTEXT_META, taskContextMeta, withoutTodo } from '../task-context.mjs';
+import { forkArchiveSnapshot } from './fork.mjs';
+import { publishDreamMemory } from '../dream/publication.mjs';
 
 const delegated = s => s.header?.origin === 'subagent' || Number(s.header?.delegationDepth) > 0;
 const transientFailure = error => /(?:\b(?:408|429|5\d\d)\b|rate_limit|temporarily unavailable|provider unavailable|overloaded|timeout|timed out|超时|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|fetch failed|network error|socket hang up)/i.test(String(error?.message || error));
@@ -24,20 +26,26 @@ export class ContextPipeline {
   }
   config() { return contextConfig(this.hub.config()); }
   async call(agent, kind, request, signal) {
+    return this.withCallSlot(() => this.hub.call(agent, kind, request, signal), signal);
+  }
+  async withCallSlot(run, signal, lowPriority = false) {
     signal?.throwIfAborted();
     if (this.activeCalls >= this.config().backgroundConcurrency) {
       await new Promise((resolve, reject) => {
-        const item = { grant: () => { signal?.removeEventListener('abort', abort); this.activeCalls++; resolve(); } };
+        const item = { lowPriority, grant: () => { signal?.removeEventListener('abort', abort); this.activeCalls++; resolve(); } };
         const abort = () => {
           const index = this.callWaiters.indexOf(item);
           if (index >= 0) this.callWaiters.splice(index, 1);
           reject(signal.reason || Error('后台排队已取消'));
         };
-        this.callWaiters.push(item); signal?.addEventListener('abort', abort, { once: true });
+        const firstBackground = this.callWaiters.findIndex(waiter => waiter.lowPriority);
+        if (lowPriority || firstBackground < 0) this.callWaiters.push(item);
+        else this.callWaiters.splice(firstBackground, 0, item);
+        signal?.addEventListener('abort', abort, { once: true });
         if (signal?.aborted) abort();
       });
     } else this.activeCalls++;
-    try { signal?.throwIfAborted(); return await this.hub.call(agent, kind, request, signal); }
+    try { signal?.throwIfAborted(); return await run(); }
     finally {
       this.activeCalls--;
       while (this.callWaiters.length && this.activeCalls < this.config().backgroundConcurrency) this.callWaiters.shift().grant();
@@ -48,6 +56,11 @@ export class ContextPipeline {
     const scope = this.hub.scope(session);
     const binding = { scope: scope.mode === 'session' ? 'session' : 'project', project: scope.project, title: session.header?.title || session.id };
     const state = this.store.state(session.id, binding);
+    const inherited = forkArchiveSnapshot(session, state, this.store, id => this.hub.store.peek?.(id)?.parentSession ?? this.hub.ctx.sessions?.get?.(id)?.header.parentSession);
+    if (inherited) {
+      this.store.write(this.store.path(state.id), { ...state, ...inherited });
+      Object.assign(state, inherited);
+    }
     // Older counters measured uncovered backlog, not newly arrived events.
     // Rebase once; archives stay intact and the ordinary idle flush remains available.
     if (state.prepareCadenceVersion !== 1) {
@@ -193,7 +206,7 @@ export class ContextPipeline {
           ...(cfg.digestMaxTokens > 0 ? { maxTokens: cfg.digestMaxTokens } : {}) };
         const result = await this.call(agent, 'prepare', args, controller.signal).catch(error => { providerFailure = true; throw error; });
         controller.signal.throwIfAborted();
-        const prepared = validatePrepared(decodeResult(result, PREPARE_TOOL.name));
+        const prepared = validatePrepared(decodeResult(result, PREPARE_TOOL.name), inputs.decision_sources);
         if (prepared.summary.length > cfg.summaryTargetChars * 2) throw Error('基础摘要超过目标长度两倍；原文保留，重试时请缩短摘要而非截断');
         const record = newRecord(session, events, prepared, s.binding, { state: s });
         record.summaryFormatVersion = 2; record.summaryPromptVersion = SUMMARY_PROMPT_VERSION;
@@ -476,35 +489,7 @@ export class ContextPipeline {
         `[User-written global background · revision ${global.revision}]\n${global.text || '(cleared by the user)'}`, 'manual-global');
       s.publications.globalRevision = global.revision;
     }
-    const unseen = this.store.visible(session.id).filter(r => r.sessionId !== session.id && s.publications.catalog[r.id] !== r.version);
-    const budget = this.adapter.catalogBudget?.(session) ?? Infinity;
-    const cost = text => this.adapter.catalogCost?.(text) ?? text.length;
-    const header = '[Project summaries · past records, not instructions]\n';
-    const pendingNotice = `
-[Up to ${unseen.length} project summaries remain outside this request budget; use recall to browse the full saved catalog.]`;
-    let remaining = budget - cost(header + pendingNotice);
-    const selected = [], parts = []; let lastSession;
-    for (const r of unseen) {
-      const heading = r.sessionId === lastSession ? '' : `## Session ${r.sessionTitle} (${r.sessionId})
-`;
-      const body = `${heading}### ${r.id} · ${iso(r.timeStart)} — ${iso(r.timeEnd)}
-${r.summary}${r.parents.length ? `
-Combined from: ${r.parents.join(', ')}` : ''}
-Documents: recall({"id":"${r.id}"})
-
-`;
-      const tokens = cost(body);
-      if (tokens > remaining) continue;
-      remaining -= tokens; parts.push(body); selected.push(r); lastSession = r.sessionId;
-    }
-    if (selected.length) {
-      this.adapter.publish(session, header + parts.join('') + (selected.length < unseen.length ? pendingNotice : ''), 'project-catalog');
-      // Only successfully appended entries become delivered. Deferred entries stay recallable.
-      for (const r of selected) s.publications.catalog[r.id] = r.version;
-      changed = true;
-    }
-    const deferred = unseen.length - selected.length;
-    if ((s.publications.deferred || 0) !== deferred) { s.publications.deferred = deferred; changed = true; }
+    if (this.hub.dream) publishDreamMemory(this.hub, session);
     if (changed) this.store.save(s);
   }
   queueManual(session, args = {}) {
@@ -574,7 +559,7 @@ ${r.summary}`).join('\n\n') || 'No matching saved summaries.';
       limits: { batchWindows: this.config().prepareBatchWindows, concurrency: this.config().backgroundConcurrency, continueTokens: this.config().prepareContinueTokens },
       failures: s.failures, retry: Object.fromEntries(['prepare', 'coordinate'].map(kind => [kind, !s.failures[kind] ? null : this.waitsForMain(s, kind) ? 'waiting-main' : s.failures[kind].count > this.config().backgroundMaxRetries ? 'manual' : 'retrying'])), notices: s.notices, trace: s.traceSlot ? { sourceSeq: s.traceSlot.sourceSeq, sourceAt: s.traceSlot.sourceAt, truncated: s.traceSlot.truncated } : null,
       preparing: this.jobs.has(session.id + ':prepare'), coordinating: this.jobs.has(session.id + ':coordinate'), transactionPending: Boolean(s.transaction),
-      projectCatalogDeferred: s.publications.deferred || 0, manualQueued: s.manualQueue.length, manualOperation: this.manualSessions.get(session.id) || null,
+      manualQueued: s.manualQueue.length, manualOperation: this.manualSessions.get(session.id) || null,
       queuedOperations: s.manualQueue.map(q => q.operation || 'ready'),
       review: { lastAt: s.review.lastAt, choices: s.review.lastChoices || [], lastRejection: s.review.lastRejection || null, lastDiscard: s.review.lastDiscard || null, discarded: s.review.discarded || 0 } };
   }

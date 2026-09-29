@@ -13,6 +13,7 @@ test('skin right panels paint only while open, including accessibility modes and
     const s = getComputedStyle(el);
     return { background: s.backgroundColor, image: s.backgroundImage, shadow: s.boxShadow,
       filter: s.backdropFilter, webkitFilter: s.webkitBackdropFilter || 'none',
+      bodyBackground: getComputedStyle(el.querySelector('.P3OORG_panelBody')).backgroundColor,
       borders: [s.borderTopWidth, s.borderRightWidth, s.borderBottomWidth, s.borderLeftWidth] };
   });
   const closed = async label => {
@@ -20,7 +21,7 @@ test('skin right panels paint only while open, including accessibility modes and
     // Codex's layout integration can reset its width after collapse; iOS retains it.
     if (label.startsWith('ios-liquid-glass/')) assert.ok((await panel.boundingBox()).width > 300, label + ': historical width remains');
     assert.deepEqual(await paint(), { background: 'rgba(0, 0, 0, 0)', image: 'none', shadow: 'none',
-      filter: 'none', webkitFilter: 'none', borders: ['0px', '0px', '0px', '0px'] }, label);
+      filter: 'none', webkitFilter: 'none', bodyBackground: 'rgba(0, 0, 0, 0)', borders: ['0px', '0px', '0px', '0px'] }, label);
   };
   const cdp = await page.context().newCDPSession(page);
   for (const skin of ['ios-liquid-glass', 'codex-desktop', 'claude-cli-terminal']) {

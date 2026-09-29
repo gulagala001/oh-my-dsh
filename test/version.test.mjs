@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { compareVersions, parseVersion, validateManifest, versionStatus, createVersionService, handleVersionApi, CHECK_INTERVAL_MS, UPDATE_SOURCES, INSTALLED_VERSION } from '../src/version.mjs';
+import { compareVersions, parseVersion, hostAlignedVersion, validateManifest, versionStatus, createVersionService, handleVersionApi, CHECK_INTERVAL_MS, UPDATE_SOURCES, INSTALLED_VERSION } from '../src/version.mjs';
 
 const release = (version, severity = 'normal') => ({ version, severity, title: 'Release ' + version, notes: ['Verified release notes.'] });
 const manifest = (...rows) => validateManifest({ schema: 1, releases: rows });
@@ -133,6 +133,32 @@ test('host-bound patch numbering succeeds the retired 1.x series and orders host
   assert.equal(versionStatus('0.1.7-rc.2.1', next).severity, 'required');
   assert.equal(versionStatus('0.1.7-rc.2.2', next).severity, 'normal');
   assert.equal(versionStatus('0.1.7', next).status, 'ahead');
+});
+
+test('stable host releases use valid plugin versions and sort above the same host previews', () => {
+  assert.throws(() => parseVersion('0.2.0.1'), /Invalid version/);
+  assert.equal(hostAlignedVersion('0.2.0'), '0.2.0-omd.1');
+  assert.equal(hostAlignedVersion('v0.2.0-rc.1', 2), '0.2.0-rc.1.omd.2');
+  assert.equal(hostAlignedVersion('0.2.0+build.1', 3), '0.2.0-omd.3+build.1');
+  for (const patch of [0, -1, 1.5, NaN, Number.MAX_SAFE_INTEGER + 1]) assert.throws(() => hostAlignedVersion('0.2.0', patch));
+  const feed = validateManifest({ schema: 1, versionPolicy: 'dsh-aligned', releases: [
+    release('0.1.7-rc.2.19'), release('0.2.0-rc.1.omd.9'), release('0.2.0-omd.1'),
+    release('0.2.0-omd.10'), release('0.2.0-omd.2'), release('0.2.1-rc.1.omd.1'),
+  ] });
+  assert.deepEqual(feed.releases.map(row => row.version), [
+    '0.2.1-rc.1.omd.1', '0.2.0-omd.10', '0.2.0-omd.2', '0.2.0-omd.1', '0.2.0-rc.1.omd.9', '0.1.7-rc.2.19',
+  ]);
+  const stable = versionStatus('0.2.0-omd.1', feed);
+  assert.equal(stable.latestVersion, '0.2.0-omd.10');
+  assert.deepEqual(stable.releases.map(row => row.version), ['0.2.0-omd.10', '0.2.0-omd.2']);
+  assert.equal(versionStatus('0.2.0-rc.1.omd.9', feed).latestVersion, '0.2.1-rc.1.omd.1');
+  assert.equal(versionStatus('0.1.7-rc.2.19', feed).latestVersion, '0.2.1-rc.1.omd.1');
+  const final = validateManifest({ schema: 1, versionPolicy: 'dsh-aligned', releases: [release('0.2.0-rc.1.omd.9'), release('0.2.0-omd.1')] });
+  assert.equal(versionStatus('0.2.0-rc.1.omd.9', final).latestVersion, '0.2.0-omd.1');
+  assert.equal(versionStatus('0.2.0-rc.1.omd.9', final).status, 'update');
+  const major = validateManifest({ schema: 1, versionPolicy: 'dsh-aligned', releases: [release('1.7.4'), release('0.2.0-omd.1'), release('1.0.0-omd.1')] });
+  assert.equal(major.releases[0].version, '1.0.0-omd.1');
+  assert.equal(versionStatus('1.7.4', major).latestVersion, '1.0.0-omd.1');
 });
 
  test('prerelease notes remain available when the stable feed does not list this build', async () => {

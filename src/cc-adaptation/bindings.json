@@ -171,6 +171,9 @@
   "recall": {
     "file": "tools/recall.md",
     "fields": [
+      "memory",
+      "sessionId",
+      "reference",
       "id",
       "query",
       "from",

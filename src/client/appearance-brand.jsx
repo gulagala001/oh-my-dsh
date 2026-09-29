@@ -28,7 +28,7 @@ export function applyAppearanceBrand(ctx, getRuntime) {
   }
   ctx.effect(() => {
     const runtime = getRuntime();
-    const title = brandDocumentTitle(document, { mode: 'native' });
+    const title = brandDocumentTitle(document, { mode: 'native' }, () => ['DeepSeek Harness', ctx.locale.bind('common')('brand.localBuild')]);
     let icon, last = '';
     const sync = () => {
       const brand = runtime.getSnapshot().advanced.brand, key = JSON.stringify(brand);

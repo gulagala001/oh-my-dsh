@@ -108,6 +108,9 @@ importers:
       '@deepseek-ai/schemastery':
         specifier: 3.18.4
         version: 3.18.4
+      '@mermaid-js/tiny':
+        specifier: 12.0.0
+        version: 12.0.0
       esbuild:
         specifier: 0.25.12
         version: 0.25.12
@@ -3102,6 +3105,10 @@ packages:
     resolution: {integrity: sha512-ZmZNiBO6bkOSh3QNzgfvb1cMY0yMobn6ZQrSMqbAce21qyYL8niIbyipz9N/PIRDciGhsV0wUxnZsxIO+yWsHQ==}
     cpu: [x64]
     os: [win32]
+
+  '@mermaid-js/tiny@12.0.0':
+    resolution: {integrity: sha512-ZW9YXy+3tSLPscBT+NnQO0K0qYH7BGES5nExl6Snoygey7xd2N0cO7Nq30N5k/u7gIeYoCrldyVy+VTCMWrNDQ==}
+    engines: {node: '>=22.12.0'}
 
   '@mixmark-io/domino@2.2.0':
     resolution: {integrity: sha512-Y28PR25bHXUg88kCV7nivXrP2Nj2RueZ3/l/jdx6J9f8J4nsEGcgX0Qe6lt7Pa+J79+kPiJU3LguR6O/6zrLOw==}
@@ -7944,6 +7951,8 @@ snapshots:
 
   '@koromix/koffi-win32-x64@3.2.1':
     optional: true
+
+  '@mermaid-js/tiny@12.0.0': {}
 
   '@mixmark-io/domino@2.2.0': {}
 

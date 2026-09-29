@@ -90,3 +90,61 @@ test('model panel saves real effort and independent mode, supports native select
   if (process.env.TRISOUL_UI_ARTIFACTS) { await page.screenshot({path:join(fx.root,'model-ultracode-mobile.png')}); console.log('Model panel artifacts:',fx.root); }
   assert.deepEqual(fx.errors,[]); assert.deepEqual(fx.escapedPaths,[]);
 });
+
+test('model panel retains keyboard control after saves and failures, including Escape during a pending save', { timeout: 90000 }, async t => {
+  const f = await frontendFixture(t, {
+    modelProfile: { reasoningEfforts: { off: null, low: 'low', medium: 'medium', high: 'high', xhigh: 'xhigh' }, compat: { supportsReasoningEffort: true } },
+    additionalModels: [{ id: 'second-model', name: '第二模型', reasoningEfforts: { low: 'low', high: 'high' }, compat: { supportsReasoningEffort: true } }],
+  });
+  const { page } = f, trigger = page.getByRole('button', { name: '模型与思考强度', exact: true });
+  const panel = page.getByRole('dialog', { name: '模型与思考强度', exact: true });
+  const slider = panel.getByRole('slider', { name: '思考强度' });
+  let requests = 0, fail = false, hold = false, pending;
+  t.after(() => pending?.abort().catch(() => {}));
+  await page.route('**/trisoul-x/api/model-mode?*', route => {
+    if (route.request().method() !== 'POST') return route.continue();
+    requests++;
+    if (hold) { pending = route; return; }
+    if (fail) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: '测试：模型设置暂不可用' }) });
+    return route.continue();
+  });
+  await until(async () => (await trigger.innerText()).includes('界面预览模型'));
+  await trigger.click(); await until(async () => await slider.isEnabled());
+  await slider.press('End');
+  await until(async () => requests === 1 && await panel.getAttribute('aria-busy') === 'false');
+  assert.equal(await slider.evaluate(el => el === document.activeElement), true, 'saving must restore the active slider');
+  await page.keyboard.press('ArrowLeft');
+  await until(async () => requests === 2 && await panel.getAttribute('aria-busy') === 'false');
+  assert.equal(await slider.evaluate(el => el === document.activeElement), true);
+  fail = true; await page.keyboard.press('ArrowLeft');
+  await panel.getByRole('alert').getByText('测试：模型设置暂不可用', { exact: true }).waitFor();
+  await until(async () => await slider.evaluate(el => el === document.activeElement));
+  await page.keyboard.press('Escape'); await panel.waitFor({ state: 'hidden' });
+  assert.equal(await trigger.evaluate(el => el === document.activeElement), true);
+  await trigger.click(); await panel.getByRole('button', { name: '界面预览模型', exact: true }).click();
+  const second = panel.getByRole('option', { name: '第二模型', exact: true });
+  await second.press('Enter');
+  await panel.getByRole('alert').getByText('测试：模型设置暂不可用', { exact: true }).waitFor();
+  await until(async () => await second.evaluate(el => el === document.activeElement));
+  await page.keyboard.press('Escape'); await until(async () => await slider.isVisible());
+  hold = true; await slider.press('Home'); await until(() => pending);
+  assert.equal(await panel.evaluate(el => el === document.activeElement), true, 'pending save keeps the popup keyboard reachable');
+  await page.keyboard.press('Escape'); await panel.waitFor({ state: 'hidden' });
+  const late = pending; pending = null;
+  await late.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: '测试：迟到错误' }) });
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  assert.equal(await panel.isVisible(), false);
+  assert.equal(await trigger.evaluate(el => el === document.activeElement), true, 'late settlement cannot reopen or steal focus');
+  hold = false; fail = false;
+  await trigger.click(); await until(async () => await slider.isEnabled());
+  await panel.getByRole('button', { name: '界面预览模型', exact: true }).click();
+  hold = true; await second.press('Enter'); await until(() => pending);
+  await page.keyboard.press('Shift+Tab'); await panel.waitFor({ state: 'hidden' });
+  assert.equal(await trigger.evaluate(el => el === document.activeElement), true);
+  const selection = pending; pending = null; await selection.continue();
+  await until(async () => (await trigger.innerText()).includes('第二模型'));
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  assert.equal(await panel.isVisible(), false);
+  assert.equal(await trigger.evaluate(el => el === document.activeElement), true, 'successful late model selection cannot steal focus after leaving');
+  assert.deepEqual(f.errors, []);
+});

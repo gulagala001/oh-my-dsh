@@ -154,11 +154,11 @@ test('no preparation is forced on every pre-step below configured event frequenc
   const f = setup(t, { digestEvery: 99 }); exchange(f.s); let n = 0; f.hub.call = async () => { n++; return { blocks: [] }; };
   await f.pipeline.preStep(f.agent); await Promise.all([...f.pipeline.jobs.values()]); assert.equal(n, 0);
 });
-test('project opening uses saved basic summaries and keeps detailed documents out of default catalog', t => {
+test('project opening does not inject the retired catalog and saved documents remain recallable', t => {
   const f = setup(t); const p = new FixtureSession('p1', [], [], { memoryScope: 'project' }); const ps = f.pipeline.state(p);
   const r = newRecord(p, exchange(p), prepared('Shared'), ps.binding); ps.records.push(r); f.store.save(ps);
   const q = new FixtureSession('p2', [], [], { memoryScope: 'project' }); f.pipeline.state(q);
-  f.pipeline.publishMemory(q); const out = JSON.stringify(q.deriveMessages()); assert.match(out, /Shared executed/); assert.doesNotMatch(out, /asset_id is TEXT/);
+  f.pipeline.publishMemory(q); const out = JSON.stringify(q.deriveMessages()); assert.doesNotMatch(out, /Shared executed|asset_id is TEXT/);
   const seq = q.seq; f.pipeline.publishMemory(q); assert.equal(q.seq, seq);
   assert.match(f.pipeline.recall(q, { id: r.id }), /asset_id is TEXT/);
 });
@@ -592,4 +592,20 @@ test('one-click manual application keeps the prepared mix of brief and keep deci
   assert.equal(f.state.records.find(r => r.id === brief.id).mode, 'brief');
   assert.equal(f.state.records.find(r => r.id === kept.id).mode, 'raw');
   assert.ok(kept.sourceSeqs.every(seq => f.s.surface.nodes.includes(seq)));
+});
+
+
+test('shared background slots preserve FIFO within each priority and remove cancelled waiters', async t => {
+  const f = setup(t, { backgroundConcurrency: 1 }), order = [];
+  let release;
+  const running = f.pipeline.withCallSlot(() => new Promise(resolve => { release = resolve; }));
+  const enqueue = (name, low = false, signal) => f.pipeline.withCallSlot(() => { order.push(name); }, signal, low);
+  const dream1 = enqueue('dream-1', true), context1 = enqueue('context-1');
+  const controller = new AbortController(), cancelled = enqueue('cancelled', false, controller.signal);
+  const rejected = assert.rejects(cancelled, /cancelled/);
+  const context2 = enqueue('context-2'), dream2 = enqueue('dream-2', true);
+  controller.abort(Error('cancelled')); release();
+  await Promise.all([running, dream1, context1, context2, dream2, rejected]);
+  assert.deepEqual(order, ['context-1', 'context-2', 'dream-1', 'dream-2']);
+  assert.equal(f.pipeline.activeCalls, 0); assert.deepEqual(f.pipeline.callWaiters, []);
 });

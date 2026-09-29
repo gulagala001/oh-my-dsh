@@ -20,6 +20,10 @@ export function captureDraft(shell) {
   return { draft: s.draft, revision: s.draftRev, attachments: [...s.attachmentIds], occurrences: s.occurrences, document: shell.editor.getEditorState().toJSON() };
 }
 function sameDraft(a, b) { return a?.draft === b?.draft && JSON.stringify(a?.document) === JSON.stringify(b?.document); }
+function sameNavigationDraft(a, b) {
+  const references = value => value.occurrences.map(({ source, ref, offset, length }) => ({ source, ref, offset, length }));
+  return a.draft === b.draft && JSON.stringify(references(a)) === JSON.stringify(references(b));
+}
 export function draftUnchanged(shell, before) {
   const next = shell.state.getSnapshot();
   return next.phase === 'plain' && next.draftRev === before.revision && next.draft === before.draft
@@ -66,32 +70,60 @@ export class DraftOptimizer {
   constructor({ shell, sessionId, preferences, request = requestOptimization }) {
     this.shell = shell; this.sessionId = sessionId; this.preferences = preferences; this.request = request;
     this.listeners = new Set(); this.history = []; this.cursor = -1; this.pending = null; this.disposed = false;
-    this.state = { busy: '', message: '', error: '', candidate: null, versions: [], cursor: -1 };
+    this.sends = new Map(); this.recoveries = new Map(); this.recoverySeq = 0;
+    this.state = { busy: '', message: '', error: '', candidate: null, instruction: '', versions: [], cursor: -1, recoveries: [] };
     this.subscribe = fn => { this.listeners.add(fn); return () => this.listeners.delete(fn); };
     this.getSnapshot = () => this.state;
+    // Admission can settle after the composer switches to another session.
+    // Keep this subscription with the session controller, not its visible view.
+    this.unsubmit = shell.onSubmission?.(event => this.submission(event));
+    this.unwatch = shell.state.subscribe(() => {
+      if (!this.writing && !shell.state.getSnapshot().draft && (this.history.length || this.state.candidate || this.state.instruction)) { this.history = []; this.cursor = -1; this.publish({ candidate: null, instruction: '' }); }
+    });
   }
   publish(patch = {}) {
-    this.state = { ...this.state, ...patch, versions: this.history.map((item, i) => i ? `版本 ${i}` : '原稿'), cursor: this.cursor };
+    this.state = { ...this.state, ...patch, versions: this.history.map((item, i) => i ? `版本 ${i}` : '原稿'), cursor: this.cursor,
+      recoveries: [...this.recoveries].map(([id, value]) => ({ id, draft: value.history[0].draft })) };
     this.listeners.forEach(fn => fn());
+  }
+  // Transfer data only. Requests, shell listeners and send attempts belong to
+  // their original scope and must never restart merely because a view returns.
+  navigationState() {
+    this.deactivate();
+    if (!this.history.length && !this.recoveries.size && !this.state.candidate && !this.state.instruction) return null;
+    return structuredClone({ snapshot: captureDraft(this.shell), history: this.history, cursor: this.cursor,
+      recoveries: [...this.recoveries], recoverySeq: this.recoverySeq, candidate: this.state.candidate,
+      instruction: this.state.instruction, error: this.state.error, message: this.state.message });
+  }
+  restoreNavigation(saved) {
+    if (!saved || this.disposed) return;
+    this.recoveries = new Map(saved.recoveries); this.recoverySeq = saved.recoverySeq;
+    const current = captureDraft(this.shell);
+    if (sameNavigationDraft(current, saved.snapshot)) {
+      this.history = saved.history; this.cursor = saved.cursor;
+      this.publish({ candidate: saved.candidate, instruction: saved.instruction, error: saved.error, message: saved.message });
+    } else {
+      if (saved.history.length) this.recoveries.set('draft-' + ++this.recoverySeq, {
+        snapshot: saved.snapshot, history: saved.history, cursor: saved.cursor, instruction: saved.instruction,
+      });
+      this.publish({ message: this.recoveries.size ? '切换前的版本已保留，当前草稿保持不变。' : '' });
+    }
   }
   activate() {
     if (this.restore || this.disposed) return;
     const shell = this.shell, original = shell.submit, descriptor = Object.getOwnPropertyDescriptor(shell, 'submit'), owner = this;
     if (typeof original !== 'function') { this.publish({ error: '当前宿主不支持草稿优化，请更新插件' }); return; }
-    function submit(mode = 'queue') {
-      if (!owner.restore || owner.disposed) return original.call(shell, mode);
+    function submit(mode = 'queue', ...args) {
+      if (!owner.restore || owner.disposed) return original.call(shell, mode, ...args);
       if (owner.pending) { owner.publish({ message: '正在优化，可先停止优化再发送' }); return; }
       const prefs = owner.preferences.getSnapshot(), input = shell.state.getSnapshot();
-      if (!prefs.enabled || !prefs.automatic || !input.draft.trim() || input.phase !== 'plain' || /^\s*\//.test(input.draft)) return original.call(shell, mode);
-      void owner.run({ automatic: true, deliveryMode: mode });
+      if (!prefs.enabled || !prefs.automatic || !input.draft.trim() || input.phase !== 'plain' || /^\s*\//.test(input.draft)) return original.call(shell, mode, ...args);
+      void owner.run({ automatic: true, deliveryMode: mode, deliveryArgs: args });
     }
-    shell.submit = submit; this.nativeSubmit = mode => original.call(shell, mode);
-    const unwatch = shell.state.subscribe(() => {
-      if (!this.writing && !shell.state.getSnapshot().draft && this.history.length) { this.history = []; this.cursor = -1; this.publish({ candidate: null }); }
-    });
+    shell.submit = submit; this.nativeSubmit = (mode, ...args) => original.call(shell, mode, ...args);
     const unpreferences = this.preferences.subscribe(() => { const p = this.preferences.getSnapshot(); if (!p.enabled || !p.automatic && this.pending?.automatic) this.cancel(); });
     this.restore = () => {
-      this.cancel(); unwatch(); unpreferences();
+      this.cancel(); unpreferences();
       if (shell.submit === submit) { if (descriptor) Object.defineProperty(shell, 'submit', descriptor); else delete shell.submit; }
       this.restore = null;
     };
@@ -101,6 +133,39 @@ export class DraftOptimizer {
     if (!this.pending) return;
     this.pending.controller.abort(); this.pending = null;
     this.publish({ busy: '', message: '已停止，草稿保留', error: '' });
+  }
+  submission(event) {
+    if (this.disposed) return;
+    if (event.kind === 'pending') {
+      if (this.history.length) {
+        const snapshot = captureDraft(this.shell);
+        this.remember(snapshot);
+        this.sends.set(event.id, { snapshot, history: this.history, cursor: this.cursor, instruction: this.state.instruction });
+      }
+      this.history = []; this.cursor = -1; this.publish({ candidate: null, instruction: '', error: '', message: '' });
+      return;
+    }
+    const saved = this.sends.get(event.id);
+    this.sends.delete(event.id);
+    if (!saved || event.kind !== 'error') return;
+    if (event.restored && sameDraft(captureDraft(this.shell), saved.snapshot) && !this.history.length) {
+      this.history = saved.history; this.cursor = saved.cursor;
+      this.state = { ...this.state, instruction: saved.instruction };
+    } else {
+      // A newer draft or several failed sends may now occupy the editor. Keep
+      // their versions separate until the user chooses to inspect them.
+      this.recoveries.set('draft-' + ++this.recoverySeq, saved);
+    }
+    this.publish({ error: '发送失败，原稿和优化版本已保留。', message: '' });
+  }
+  inspectRecovery(id) {
+    const saved = this.recoveries.get(id);
+    if (!saved || this.pending) return;
+    const current = captureDraft(this.shell);
+    if (this.history.length) this.recoveries.set('draft-' + ++this.recoverySeq, { history: this.history, cursor: this.cursor, snapshot: current, instruction: this.state.instruction });
+    this.history = saved.history; this.cursor = saved.cursor;
+    this.remember(current); this.recoveries.delete(id);
+    this.publish({ error: '', candidate: null, instruction: saved.instruction ?? '', message: '已载入保留版本，当前草稿保持不变。' });
   }
   remember(snapshot) {
     if (!this.history.length || !sameDraft(this.history[this.cursor], snapshot)) {
@@ -128,7 +193,7 @@ export class DraftOptimizer {
       this.cursor = this.history.indexOf(target); this.publish({ candidate: null, error: '', message: index ? '已恢复所选版本' : '已恢复原稿' });
     } catch (error) { this.publish({ error: error.message }); }
   }
-  async run({ instruction = '', automatic = false, deliveryMode = 'queue' } = {}) {
+  async run({ instruction = '', automatic = false, deliveryMode = 'queue', deliveryArgs = [] } = {}) {
     if (this.pending || this.disposed) return;
     const input = this.shell.state.getSnapshot();
     if (input.phase !== 'plain' || /^\s*\//.test(input.draft)) { this.publish({ error: '命令由宿主直接处理，请输入普通对话草稿' }); return; }
@@ -147,11 +212,11 @@ export class DraftOptimizer {
       this.write(candidate); this.remember(captureDraft(this.shell));
       // Call the original host entrance once, preserving queue/steer intent and attachment ownership.
       // Never recurse through our wrapper, or a successful optimization would optimize itself again.
-      if (automatic) this.nativeSubmit(deliveryMode);
+      if (automatic) this.nativeSubmit(deliveryMode, ...deliveryArgs);
       this.publish({ message: automatic ? '轻润色完成，已交给宿主发送' : '已回填草稿，可撤销或继续优化' });
     } catch (error) {
       if (this.pending === ticket && !ticket.controller.signal.aborted) this.publish({ error: error.message || '优化失败，草稿已保留', message: '' });
     } finally { if (this.pending === ticket) { this.pending = null; this.publish({ busy: '' }); } }
   }
-  dispose() { this.deactivate(); this.disposed = true; this.listeners.clear(); }
+  dispose() { this.deactivate(); this.disposed = true; this.unsubmit?.(); this.unwatch(); this.sends.clear(); this.recoveries.clear(); this.listeners.clear(); }
 }

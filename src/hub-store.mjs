@@ -41,7 +41,7 @@ export class HubStore {
   // Statistics do not need to retain every archived conversation body in RAM.
   // Active mutable states take precedence over archived snapshots.
   monitorStates() {
-    const project = value => ({ id: value.id, parentSession: value.parentSession,
+    const project = value => ({ id: value.id, parentSession: value.parentSession, ...(value.origin === undefined ? {} : { origin: value.origin }),
       metrics: value.metrics || {}, actions: value.actions || {}, activity: value.activity || [] });
     const files = readdirSync(join(this.dir, 'sessions')).filter(n => n.endsWith('.json'));
     const present = new Set(files); this.monitorErrors.clear();

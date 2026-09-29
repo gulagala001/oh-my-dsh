@@ -1,11 +1,12 @@
 name: Documentation
 
 on:
+  workflow_dispatch:
   push:
     branches: ['main']
-    paths: ['README.md', 'CONTRIBUTING.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md', 'docs/**', 'package.json', 'vendor/opencu.json', 'test/documentation.test.mjs', '.github/ISSUE_TEMPLATE/**', '.github/PULL_REQUEST_TEMPLATE.md', '.github/workflows/docs.yml']
+    paths: ['README.md', 'CONTRIBUTING.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md', 'docs/**', 'package.json', 'pnpm-lock.yaml', 'vendor/opencu.json', 'scripts/build-docs.mjs', 'test/documentation.test.mjs', 'test/docs-site.test.mjs', 'test/site-preview-ui.test.mjs', 'test/fixtures/static-site.mjs', '.github/ISSUE_TEMPLATE/**', '.github/PULL_REQUEST_TEMPLATE.md', '.github/workflows/docs.yml']
   pull_request:
-    paths: ['README.md', 'CONTRIBUTING.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md', 'docs/**', 'package.json', 'vendor/opencu.json', 'test/documentation.test.mjs', '.github/ISSUE_TEMPLATE/**', '.github/PULL_REQUEST_TEMPLATE.md', '.github/workflows/docs.yml']
+    paths: ['README.md', 'CONTRIBUTING.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md', 'docs/**', 'package.json', 'pnpm-lock.yaml', 'vendor/opencu.json', 'scripts/build-docs.mjs', 'test/documentation.test.mjs', 'test/docs-site.test.mjs', 'test/site-preview-ui.test.mjs', 'test/fixtures/static-site.mjs', '.github/ISSUE_TEMPLATE/**', '.github/PULL_REQUEST_TEMPLATE.md', '.github/workflows/docs.yml']
 
 permissions:
   contents: read
@@ -13,10 +14,37 @@ permissions:
 jobs:
   documentation:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
       - run: node --test test/documentation.test.mjs
+      - uses: pnpm/action-setup@v6
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm docs:build
+      - run: node --test --test-concurrency=1 test/docs-site.test.mjs test/site-preview-ui.test.mjs
+      - uses: actions/upload-pages-artifact@v4
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: dist/site
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment

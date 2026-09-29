@@ -40,3 +40,6 @@ data/
 
 # Machine-local CodeGraph indexes and runtime state.
 /.codegraph/
+
+# Local prototypes, upstream checkouts and verification artifacts.
+/work/

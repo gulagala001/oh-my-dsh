@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 
 test('operation details stay inside the drawer without extending the conversation scroll range', { timeout: 90000 }, async t => {
-  const f = await frontendFixture(t), { page, rpc, sessionId } = f;
+  const f = await frontendFixture(t, { chatConfig: { transcriptView: 'standard' } }), { page, rpc, sessionId } = f;
   await page.setViewportSize({ width: 1440, height: 900 });
   let step = 0, finish;
   const pending = new Promise(resolve => { finish = resolve; }); t.after(finish);

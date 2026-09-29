@@ -15,6 +15,13 @@ export function pluginManagementError(error) {
 }
 export function pluginInstallSpec(plugin, version) {
   parseVersion(version);
+  const source = plugin.review?.source;
+  if (source) {
+    if (version !== plugin.review.version || !/^[\w.-]+\/[\w.-]+$/.test(source.repository)
+      || !/^[a-f0-9]{40}$/.test(source.commit) || !/^[a-f0-9]{64}$/.test(plugin.review.sha256))
+      throw Error('已核验源码快照需要固定提交、对应版本及 SHA-256');
+    return `https://codeload.github.com/${source.repository}/tar.gz/${source.commit}`;
+  }
   return plugin.githubRelease
     ? `https://github.com/${plugin.githubRelease}/releases/download/v${version}/${plugin.packageName}-${version}.tgz`
     : `${plugin.packageName}@${version}`;
@@ -23,7 +30,10 @@ export async function latestPluginVersion(plugin, signal) {
   const response = await fetch(plugin.githubRelease ? `https://api.github.com/repos/${plugin.githubRelease}/releases/latest` : `https://registry.npmjs.org/${encodeURIComponent(plugin.packageName)}/latest`, {
     signal: AbortSignal.any([signal, AbortSignal.timeout(20000)]), headers: { Accept: 'application/json' },
   });
-  if (!response.ok) throw Error(`查询最新版本失败（HTTP ${response.status}）`);
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => {});
+    throw Error(`查询最新版本失败（HTTP ${response.status}）`);
+  }
   const parts = []; let bytes = 0;
   for await (const part of response.body) {
     bytes += part.length; if (bytes > 512 * 1024) throw Error('插件版本信息过大'); parts.push(part);
@@ -82,35 +92,48 @@ export class RecommendedPluginManager {
     if (action === 'install' && bundle?.installed) throw Error('插件已经安装，请使用更新');
     if (action !== 'install' && !bundle?.installed) throw Error('插件尚未安装');
     if (bundle?.readOnlyReason) throw Error('此插件由宿主管理，无法在这里修改');
-    let result;
+    let result, version;
     if (action === 'uninstall') {
       if (!bundle.removable) throw Error('此插件无法卸载');
       result = await this.manager.removeBundle(plugin.packageName);
     } else {
       // An approved catalog entry is a tested version, not permission to follow latest.
-      const version = plugin.review?.version ?? await this.latest(plugin, this.abort.signal);
+      version = plugin.review?.version ?? await this.latest(plugin, this.abort.signal);
       parseVersion(version);
       this.records.set(plugin.id, { ...this.records.get(plugin.id), latestVersion: version, checkedAt: this.now() });
+      // Decide before fetching an archive, then recheck after any download so
+      // concurrent host changes or opt-out cannot be overwritten by stale state.
+      const installable = current => {
+        this.abort.signal.throwIfAborted();
+        if (automatic && (!plugin.review?.version || plugin.review.source || !this.getConfig().recommendedPluginsAutoUpdate || this.isRunning() || !current?.installed || !current.enabled)) return false;
+        if (action === 'install' && current?.installed) throw Error('插件已经安装，请使用更新');
+        if (current?.readOnlyReason) throw Error('此插件由宿主管理，无法在这里修改');
+        if (action === 'update' && !current?.installed) throw Error('插件已被卸载');
+        const comparison = action === 'update' && current?.version ? compareVersions(version, current.version) : null;
+        if (comparison !== null && (comparison < 0 || (comparison === 0 && !plugin.review?.source && this.records.get(plugin.id)?.failedInstallVersion !== version))) {
+          this.records.set(plugin.id, { ...this.records.get(plugin.id), message: plugin.review ? (current.version === version ? '已是核验版本' : '当前版本高于核验版本，未降级') : '已是最新版本', error: '' });
+          return false;
+        }
+        return true;
+      };
+      bundle = (await this.manager.listBundles()).find(item => item.name === plugin.packageName);
+      if (!installable(bundle)) return;
       let spec = pluginInstallSpec(plugin, version);
       if (plugin.review?.sha256) {
         spec = await this.preparePackage(spec, plugin.review.sha256, this.packageDirectory, this.abort.signal);
-      }
-      // Re-read after lookup/download: another manager may have changed
-      // the installation or disabled automatic updates while it was pending.
-      bundle = (await this.manager.listBundles()).find(item => item.name === plugin.packageName);
-      this.abort.signal.throwIfAborted();
-      if (automatic && (!plugin.review?.version || !this.getConfig().recommendedPluginsAutoUpdate || this.isRunning() || !bundle?.installed || !bundle.enabled)) return;
-      if (action === 'install' && bundle?.installed) throw Error('插件已经安装，请使用更新');
-      if (bundle?.readOnlyReason) throw Error('此插件由宿主管理，无法在这里修改');
-      if (action === 'update' && !bundle?.installed) throw Error('插件已被卸载');
-      if (action === 'update' && bundle.version && compareVersions(version, bundle.version) <= 0) {
-        this.records.set(plugin.id, { ...this.records.get(plugin.id), message: plugin.review ? (bundle.version === version ? '已是核验版本' : '当前版本高于核验版本，未降级') : '已是最新版本', error: '' }); return;
+        bundle = (await this.manager.listBundles()).find(item => item.name === plugin.packageName);
+        if (!installable(bundle)) return;
+        // Naming the archive lets the host identify unchanged dependencies on
+        // activation retries and explicit source-snapshot reinstallation.
+        spec = `${plugin.packageName}@${spec}`;
       }
       result = await this.manager.installBundle(spec, { enabled: action === 'install' ? true : bundle.enabled, requestId: this.current.requestId });
     }
     if (result.application === 'failed') {
       const pending = result.pendingBuilds || [];
-      this.records.set(plugin.id, { ...this.records.get(plugin.id), pendingBuilds: pending });
+      this.records.set(plugin.id, { ...this.records.get(plugin.id), pendingBuilds: pending,
+        ...(action !== 'uninstall' && result.stage === 'enable' && result.bundle === plugin.packageName ? { failedInstallVersion: version } : {}),
+      });
       const message = result.error?.code === 'incompatible-version' ? pluginManagementError(result.error)
         : result.error?.diagnostic || result.packageResult?.output || result.error?.code || '插件操作失败';
       throw Error(pending.length ? `安装脚本需要授权，请到宿主“插件”页面处理：${pending.join('、')}` : message.slice(-2000));
@@ -119,7 +142,7 @@ export class RecommendedPluginManager {
     if (result.application === 'overridden') throw Error('插件配置被其他配置覆盖，请到宿主“插件”页面检查');
     if (!['applied', 'restart-required'].includes(result.application)) throw Error('未能确认插件操作结果，请到宿主“插件”页面检查');
     const restartRequired = result.application === 'restart-required';
-    this.records.set(plugin.id, { ...this.records.get(plugin.id), restartRequired, error: '',
+    this.records.set(plugin.id, { ...this.records.get(plugin.id), failedInstallVersion: undefined, restartRequired, error: '',
       message: (action === 'uninstall' ? '已卸载' : action === 'update' ? '更新已完成' : '安装已完成') + (restartRequired ? '，重启 DSH 后生效' : ''),
     });
   }
@@ -132,7 +155,7 @@ export class RecommendedPluginManager {
       for (const plugin of this.catalog) {
         if (this.closed || this.job || !this.getConfig().recommendedPluginsAutoUpdate || this.isRunning()) return;
         const bundle = bundles.find(item => item.name === plugin.packageName);
-        if (plugin.review?.version && !plugin.manualInstall && bundle?.installed && bundle.enabled && !bundle.readOnlyReason) await this.start(plugin.id, 'update', true);
+        if (plugin.review?.version && !plugin.review.source && !plugin.manualInstall && bundle?.installed && bundle.enabled && !bundle.readOnlyReason) await this.start(plugin.id, 'update', true);
       }
       if (!this.closed && this.getConfig().recommendedPluginsAutoUpdate && !this.isRunning()) this.checkedAt = this.now();
     } finally { this.checking = false; }

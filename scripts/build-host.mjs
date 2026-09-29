@@ -4,6 +4,13 @@ import { fileURLToPath } from 'node:url';
 import { createRequire, isBuiltin } from 'node:module';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
+const requireBuild = createRequire(import.meta.url);
+// A stable virtual filename keeps dependency labels independent of checkout
+// location, including builds that reuse node_modules from another directory.
+const acornDependency = { name: 'workflow-acorn', setup(b) {
+  b.onResolve({ filter: /^acorn$/ }, () => ({ path: 'acorn', namespace: 'omd-dependency' }));
+  b.onLoad({ filter: /^acorn$/, namespace: 'omd-dependency' }, async () => ({ contents: await readFile(requireBuild.resolve('acorn'), 'utf8'), loader: 'js' }));
+} };
 const modules = ['jobs-local', 'tool-jobs', 'tool-bash', 'tool-pwsh', 'bash-sandbox', 'pwsh-sandbox', 'tools', 'workflow-ptc', 'tool-workflow', 'workflow-spawn'];
 await mkdir(new URL('../lib/host/', import.meta.url), { recursive: true });
 // The workflow VM is transported as one self-contained ESM source string. Its
@@ -16,12 +23,12 @@ const guest = await build({ entryPoints: [`${root}vendor/dsh/workflow-ptc/src/gu
   plugins: [{ name: 'workflow-guest-helpers', setup(b) {
     const aliases = { '@deepseek-ai/dsh-tools': 'tools/src/json-schema.ts', '@deepseek-ai/dsh-workflow': 'workflow/src/index.ts', '@deepseek-ai/dsh-llm': 'llm/src/error.ts' };
     b.onResolve({ filter: /^@deepseek-ai\/dsh-(tools|workflow|llm)$/ }, args => ({ path: `${root}vendor/dsh/${aliases[args.path]}`, sideEffects: false }));
-  } }],
+  } }, acornDependency],
 });
 const guestImports = Object.values(guest.metafile.outputs).flatMap(output => output.imports).filter(item => item.external && !isBuiltin(item.path));
 if (guestImports.length) throw new Error(`Workflow guest has external package imports: ${guestImports.map(item => item.path).join(', ')}`);
-const guestSource = guest.outputFiles[0].text;
-const requireBuild = createRequire(import.meta.url);
+// Normalize esbuild's dependency-location comments in the transported source.
+const guestSource = guest.outputFiles[0].text.replace(/^\/\/ (?:.*\/)?node_modules\//gm, '// node_modules/');
 for (const name of modules) {
   const entry = name === 'workflow-spawn' ? 'workflow-ptc/src/spawn.ts' : `${name}/src/index.ts`;
   const reference = name === 'workflow-spawn' ? 'subagent-spawn-in-process' : name;
@@ -34,9 +41,8 @@ for (const name of modules) {
     plugins: [{ name: 'local-host', setup(b) {
       b.onResolve({ filter: /^@deepseek-ai\/dsh-(bash|pwsh)-local$/ }, args => ({ path: `${root}vendor/dsh/${args.path.split('dsh-')[1]}/src/index.ts` }));
       b.onResolve({ filter: /^\.\.\/\.\.\/\.\.\/(session|subagent)\// }, args => ({ path: `${root}vendor/dsh/${args.path.split('/').slice(4).join('/')}` }));
-      b.onResolve({ filter: /^acorn$/ }, () => ({ path: requireBuild.resolve('acorn') }));
       b.onLoad({ filter: /workflow-ptc[\\/]src[\\/]guest-source\.ts$/ }, () => ({ contents: `export const WORKFLOW_GUEST_SOURCE = ${JSON.stringify(guestSource)};`, loader: 'ts' }));
-    } }],
+    } }, acornDependency],
   });
   const dependencies = [...new Set(Object.values(result.metafile.outputs).flatMap(o => o.imports.filter(i => i.external).map(i => i.path)))];
   await writeFile(`${root}lib/host/${name}.mjs`, `import { createModule } from './${name}.factory.mjs';\nimport { mountHostComponent } from '../../src/host-component.mjs';\nexport const name = 'omd-host-${name}';\nexport const inject = ['loader'];\nexport const apply = (ctx, config) => mountHostComponent(ctx, ${JSON.stringify(reference)}, createModule, ${JSON.stringify(dependencies)}, config);\n`);

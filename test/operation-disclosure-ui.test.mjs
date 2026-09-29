@@ -5,7 +5,7 @@ import {join} from 'node:path';
 import {frontendFixture,until} from './fixtures/frontend.mjs';
 
 test('all tool families share one disclosure before and after completion, with a screenshot modal',{timeout:60000},async t=>{
-  const f=await frontendFixture(t),{page,rpc,sessionId}=f;
+  const f=await frontendFixture(t,{chatConfig:{transcriptView:'standard'}}),{page,rpc,sessionId}=f;
   t.after(()=>{if(!t.passed)console.error(f.log(),JSON.stringify([...f.errors,...f.diagnostics()]));});
   const path=join(f.root,'screenshot.png');await sharp({create:{width:1000,height:700,channels:3,background:'#e5edf9'}}).png().toFile(path);
   let sent=false,release;

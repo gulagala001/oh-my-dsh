@@ -63,7 +63,7 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await until(async () => (await workbench.boundingBox())?.width > 300);
   await page.getByRole('heading', { name: '任务与验证', exact: true }).waitFor();
   const tabCount = await page.locator('[role=tab]').count();
-  for (const name of ['摘要', '上下文', '电脑', '监控', '任务']) {
+  for (const name of ['记忆', '上下文', '电脑', '监控', '任务']) {
     await nav.getByRole('button', { name, exact: true }).click();
     await until(async () => (await nav.getByRole('button', { name, exact: true }).getAttribute('aria-current')) === 'page');
     assert.equal(await page.locator('.tx-workbench').count(), 1, 'navigation reuses the same workbench');
@@ -75,8 +75,8 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   const componentFilter = page.getByRole('combobox', { name: '调用组件' });
   await until(async () => (await componentFilter.locator('option').allTextContents()).includes('主执行'));
   assert.deepEqual(await componentFilter.locator('option').allTextContents(), ['全部组件', '主执行'], 'unused legacy components are not offered as current filters');
-  await nav.getByRole('button', { name: '摘要', exact: true }).click();
-  await page.getByRole('heading', { name: /^(会话摘要|项目摘要)$/ }).waitFor();
+  await nav.getByRole('button', { name: '记忆', exact: true }).click();
+  await page.getByRole('heading', { name: '记忆' }).waitFor();
   await nav.getByRole('button', { name: '上下文', exact: true }).click();
   await page.locator('.cx-context').getByRole('heading', { name: '工作上下文', exact: true }).waitFor();
   await screenshot('context-records');
@@ -128,7 +128,7 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await page.emulateMedia({ colorScheme: 'dark' });
   await until(async () => await page.locator('.tx-workbench').evaluate(el => getComputedStyle(el).backgroundColor) !== light);
   await screenshot('computer-dark');
-  await nav.getByRole('button', { name: '摘要', exact: true }).click();
+  await nav.getByRole('button', { name: '记忆', exact: true }).click();
   await screenshot('memory-dark');
   await page.setViewportSize({ width: 1060, height: 900 });
   await until(async () => (await composer.boundingBox())?.width >= 220);

@@ -82,7 +82,8 @@ test('native and custom branding persist, sync and recover without losing other 
   assert.equal(await page.locator('.hHd-Xa_logoRow .tx-brand-mark').count(), 0);
   assert.equal(await page.locator('.hHd-Xa_logoRow svg').count() > 0, true);
   assert.equal(await page.locator('link[data-omd-favicon]').count(), 0);
-  assert.match(await page.title(), /DeepSeek Harness$/);
+  assert.match(await page.title(), /(?:DeepSeek Harness|DSH 本地构建|DSH Local Build)$/);
+  const nativeProductTitle = (await page.title()).split(' — ').at(-1);
   await page.getByLabel('主题', { exact: true }).selectOption('claude-cli-terminal');
   assert.equal(await page.locator('.hHd-Xa_logoRow .omd-cli-mark').count(), 0);
   if (!await page.locator('.omd-advanced').evaluate(el => el.open)) await page.locator('.omd-advanced > summary').click();
@@ -101,14 +102,14 @@ test('native and custom branding persist, sync and recover without losing other 
   await other.getByLabel('Logo 与名称', { exact: true }).selectOption('native');
   await other.getByLabel('浏览器标题', { exact: true }).selectOption('native');
   await until(async () => await page.locator('.hHd-Xa_logoRow .omd-custom-brand-image').count() === 0);
-  await until(async () => /DeepSeek Harness$/.test(await page.title()));
+  await until(async () => (await page.title()).endsWith(nativeProductTitle));
   await other.close();
   if (process.env.TRISOUL_UI_ARTIFACTS) await page.screenshot({ path: join(root, 'advanced-brand-native.png') });
   const saved = await page.evaluate(() => localStorage.getItem('omd.skins.v1'));
   await page.evaluate(() => { window.originalSetItem = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) { if (key === 'omd.skins.v1') throw new DOMException('quota', 'QuotaExceededError'); return window.originalSetItem.call(this, key, value); }; });
   await page.getByLabel('浏览器标题', { exact: true }).selectOption('omd');
   await page.getByRole('alert').filter({ hasText: '浏览器存储不可用' }).waitFor();
-  assert.match(await page.title(), /DeepSeek Harness$/);
+  assert.ok((await page.title()).endsWith(nativeProductTitle));
   assert.equal(await page.getByLabel('浏览器标题', { exact: true }).inputValue(), 'native');
   await page.evaluate(() => { Storage.prototype.setItem = window.originalSetItem; });
   await page.goto(page.url() + (page.url().includes('?') ? '&' : '?') + 'omd-skin=default');

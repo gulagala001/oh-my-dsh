@@ -20,6 +20,9 @@ test('UI builds from a checkout whose path contains spaces', t => {
   execFileSync(process.execPath, ['scripts/build.mjs'], { cwd: dir, stdio: 'pipe' });
   assert.match(readFileSync(join(dir, 'lib', 'client.js'), 'utf8'), /window\.__ModuleLoader__\.load/);
   const first = readFileSync(join(dir, 'lib', 'client.js'), 'utf8');
+  for (const file of ['lib/client.js', 'lib/host/workflow-ptc.factory.mjs']) {
+    assert.equal(readFileSync(join(dir, file), 'utf8'), readFileSync(join(root, file), 'utf8'), file + ': checkout paths do not change published bytes');
+  }
   assert.match(first, /return module.exports;}}\);/);
   execFileSync(process.execPath, ['scripts/build.mjs'], { cwd: dir, stdio: 'pipe' });
   assert.equal(readFileSync(join(dir, 'lib', 'client.js'), 'utf8'), first, 'repeated builds are byte-identical');

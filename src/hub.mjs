@@ -10,6 +10,7 @@ import { createHostAdapter } from './context/host.mjs';
 import { createEffortResolver } from './effort.mjs';
 import { promptText } from './cc-adaptation/texts.mjs';
 import { setRuntimeContext } from './task-context.mjs';
+import { DreamService } from './dream/service.mjs';
 
 const TASK_PAUSE_GUIDANCE = promptText('runtime/task-pause.md');
 
@@ -32,7 +33,9 @@ export class Hub extends Service {
     this.context = new ContextPipeline(this, createHostAdapter(this));
     this.efforts = new Map(); this.agents = new Map();
     this.live = new Map(); this.requestStarts = new Map(); this.taskReviews = new Map();
+    this.dream = new DreamService(this);
     ctx.effect(() => async () => {
+      await this.dream.close();
       this.context.dispose();
       await Promise.all([...this.agents.values()].map(agent => {
         setRuntimeContext(agent.session, () => null);
@@ -81,6 +84,7 @@ export class Hub extends Service {
     const state = this.store.state(session.id);
     state.cwd = session.header.cwd;
     state.parentSession = session.header.parentSession;
+    state.origin = session.header.origin ?? null;
     const metric = state.metrics[kind] ??= { calls: 0, errors: 0, durationMs: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
     metric.calls++; metric.errors += Number(Boolean(entry.error)); metric.durationMs += entry.durationMs || 0;
     for (const field of ['inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens']) metric[field] = (metric[field] || 0) + (entry.usage?.[field] || 0);
@@ -146,6 +150,7 @@ export class Hub extends Service {
       const state = this.store.state(session.id);
       state.memoryScope ??= this.scope(session).mode;
       state.cwd = session.header.cwd; state.parentSession = session.header.parentSession;
+      state.origin = session.header.origin ?? null;
       state.started = true; this.store.save(state);
     }
     if ((event.type === 'assistant/message' || event.type === 'assistant/attempt') && sourceName(event.data.message?.source) !== NS + ':shadow') {

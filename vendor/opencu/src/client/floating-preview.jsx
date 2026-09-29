@@ -5,7 +5,7 @@ import css from './computer-use.css';
 import {ComputerIcon} from './computer-icons.jsx';
 
 // A separate read-only observer: closing the window releases only its stream.
-export function FloatingPreview({sessionId,state,url,api,onState,onError,anchor,onOpen}){
+export function FloatingPreview({sessionId,state,url,api,onState,onError,anchor,onOpen,paneVisible=false}){
   const [popup,setPopup]=useState(null),[opening,setOpening]=useState(false),[stopping,setStopping]=useState(false),[expanded,setExpanded]=useState(false),[zoomed,setZoomed]=useState(null),[localError,setLocalError]=useState('');
   const [shown,setShown]=useState(true),[position,setPosition]=useState({right:20,bottom:120});
   const [dragging,setDragging]=useState(false);
@@ -13,7 +13,7 @@ export function FloatingPreview({sessionId,state,url,api,onState,onError,anchor,
   const [front,setFront]=useState(null),[entering,setEntering]=useState(false);
   const [query,setQuery]=useState(''),[resuming,setResuming]=useState(false),[connections,setConnections]=useState({}),[targetErrors,setTargetErrors]=useState({});
   const keyboardTarget=useRef(null);
-  const owned=useRef(null),generation=useRef(0),floating=useRef(null),manual=useRef(null),drag=useRef(null),suppressClick=useRef(false),layout=useRef(null);
+  const owned=useRef(null),generation=useRef(0),floating=useRef(null),manual=useRef(null),drag=useRef(null),dragFrame=useRef(null),reposition=useRef(null),suppressClick=useRef(false),layout=useRef(null);
   const target=state?.target,key=target?.viewId??target?.id;
   const orderedTargets=(state?.previewTargets??(target?[target]:[])).slice().reverse();
   const targets=orderedTargets.slice().sort((a,b)=>Number((b.viewId??b.id)===(front??key))-Number((a.viewId??a.id)===(front??key)));
@@ -33,12 +33,15 @@ export function FloatingPreview({sessionId,state,url,api,onState,onError,anchor,
   useEffect(()=>{if(zoomed&&!targets.some(item=>(item.viewId??item.id)===zoomed))setZoomed(null);},[targetIds,zoomed]);
   const finishDrag=()=>{
     const active=drag.current;drag.current=null;setDragging(false);
+    if(dragFrame.current!==null){cancelAnimationFrame(dragFrame.current);dragFrame.current=null;}
+    if(active?.moved&&floating.current){const node=floating.current,point=manual.current;if(point){node.style.left=point.left+'px';node.style.top=point.top+'px';node.style.right='auto';node.style.bottom='auto';}node.style.removeProperty('--cu-drag-x');node.style.removeProperty('--cu-drag-y');layout.current?.();}
     if(active?.element.hasPointerCapture(active.id))active.element.releasePointerCapture(active.id);
   };
-  useEffect(()=>{finishDrag();return()=>{const active=drag.current;drag.current=null;if(active?.element.hasPointerCapture(active.id))active.element.releasePointerCapture(active.id);};},[sessionId,popup,shown]);
+  useEffect(()=>{finishDrag();return()=>{if(dragFrame.current!==null){cancelAnimationFrame(dragFrame.current);dragFrame.current=null;}const active=drag.current;drag.current=null;floating.current?.style.removeProperty('--cu-drag-x');floating.current?.style.removeProperty('--cu-drag-y');if(active?.element.hasPointerCapture(active.id))active.element.releasePointerCapture(active.id);};},[sessionId,popup,shown,paneVisible]);
   useLayoutEffect(()=>{
     let observedInput;
     const update=()=>{
+      if(drag.current?.moved)return;
       let container=anchor?.current?.parentElement;while(container&&!container.querySelector('[contenteditable="true"]'))container=container.parentElement;
       const input=container?.querySelector('[contenteditable="true"]');
       if(input!==observedInput){if(observedInput)observer.unobserve(observedInput);if(input)observer.observe(input);observedInput=input;}
@@ -60,7 +63,21 @@ export function FloatingPreview({sessionId,state,url,api,onState,onError,anchor,
     };
     const observer=new ResizeObserver(update);layout.current=update;update();if(anchor?.current)observer.observe(anchor.current);window.addEventListener('resize',update);popup?.addEventListener('resize',update);window.addEventListener('scroll',update,true);
     return()=>{layout.current=null;observer.disconnect();window.removeEventListener('resize',update);popup?.removeEventListener('resize',update);window.removeEventListener('scroll',update,true);};
-  },[anchor,sessionId,shown,zoomed,popup,expanded,depth,targetIds,sizeKey]);
+  },[anchor,sessionId,shown,zoomed,popup,expanded,depth,targetIds,sizeKey,paneVisible]);
+  useLayoutEffect(()=>{
+    const before=reposition.current;reposition.current=null;const node=floating.current;
+    if(node&&!drag.current){
+      // A new clamp uses the target size, while a CSS transition can still
+      // render the old size. Finish only size transitions that leave the
+      // viewport, before paint; other preview animations remain unchanged.
+      const rect=node.getBoundingClientRect();
+      if(rect.left<12||rect.top<12||rect.right>window.innerWidth-12||rect.bottom>window.innerHeight-12)
+        for(const animation of node.getAnimations())if(['width','height'].includes(animation.transitionProperty))animation.cancel();
+    }
+    if(!before||!node||drag.current||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    const after=node.getBoundingClientRect(),x=before.left-after.left,y=before.top-after.top;
+    if(Math.hypot(x,y)>1)node.animate([{transform:`translate3d(${x}px,${y}px,0)`},{transform:'translate3d(0,0,0)'}],{duration:360,easing:'cubic-bezier(.22,1,.36,1)'});
+  },[position]);
   const frameSize=(id,size)=>setFrameSizes(previous=>previous[id]?.width===size.width&&previous[id]?.height===size.height?previous:{...previous,[id]:size});
   const startDrag=event=>{
     suppressClick.current=false;
@@ -69,14 +86,16 @@ export function FloatingPreview({sessionId,state,url,api,onState,onError,anchor,
     const box=floating.current?.getBoundingClientRect();if(!box)return;
     const element=control??event.target.closest('header')??event.currentTarget;
     if(!control)event.preventDefault();element.setPointerCapture(event.pointerId);
-    drag.current={id:event.pointerId,element,x:event.clientX,y:event.clientY,left:box.left,top:box.top};
+    drag.current={id:event.pointerId,element,x:event.clientX,y:event.clientY,left:box.left,top:box.top,width:box.width,height:box.height,moved:false};
   };
   const moveDrag=event=>{
     const active=drag.current;if(!active||active.id!==event.pointerId)return;
     if(Math.hypot(event.clientX-active.x,event.clientY-active.y)<3&&!suppressClick.current)return;
     suppressClick.current=true;
-    manual.current={left:active.left+event.clientX-active.x,top:active.top+event.clientY-active.y};
-    setDragging(true);layout.current?.();
+    if(!active.moved){floating.current?.getAnimations().forEach(animation=>animation.cancel());active.moved=true;setDragging(true);setPosition(previous=>({...previous,left:active.left,top:active.top,right:undefined,bottom:undefined}));}
+    const clamp=(value,max)=>Math.max(12,Math.min(value,Math.max(12,max)));
+    manual.current={left:clamp(active.left+event.clientX-active.x,window.innerWidth-active.width-12),top:clamp(active.top+event.clientY-active.y,window.innerHeight-active.height-12)};
+    if(dragFrame.current===null)dragFrame.current=requestAnimationFrame(()=>{dragFrame.current=null;if(drag.current!==active||!floating.current)return;floating.current.style.setProperty('--cu-drag-x',(manual.current.left-active.left)+'px');floating.current.style.setProperty('--cu-drag-y',(manual.current.top-active.top)+'px');});
   };
   useEffect(()=>{
     if(!popup)return;
@@ -102,7 +121,7 @@ export function FloatingPreview({sessionId,state,url,api,onState,onError,anchor,
   const stop=async()=>{const revision=generation.current;setStopping(true);try{const next=await api('stop',sessionId,{});if(revision===generation.current)onState(next);}catch(error){if(revision===generation.current)setLocalError(error.message);}finally{if(revision===generation.current)setStopping(false);}};
   const resume=async()=>{const revision=generation.current;setResuming(true);setLocalError('');try{const next=await api('resume',sessionId,{});if(revision===generation.current)onState(next);}catch(error){if(revision===generation.current)setLocalError(error.message);}finally{if(revision===generation.current)setResuming(false);}};
   const close=()=>{setShown(false);owned.current?.close();};
-  const resetPosition=()=>{manual.current=null;layout.current?.();};
+  const resetPosition=()=>{reposition.current=floating.current?.getBoundingClientRect();manual.current=null;layout.current?.();};
   const previewKey=event=>{
     if(event.target.closest('input,textarea,select')||event.metaKey||event.ctrlKey||event.altKey)return;
     if(event.key==='Escape'){event.preventDefault();event.stopPropagation();if(zoomed)setZoomed(null);else if(expanded)setExpanded(false);else close();return;}
@@ -122,8 +141,8 @@ export function FloatingPreview({sessionId,state,url,api,onState,onError,anchor,
       await onOpen?.();close();
     }catch(error){if(revision===generation.current)setLocalError(error.message);}finally{if(revision===generation.current)setEntering(false);}
   };
-  return <>{!!targets.length&&<button type="button" disabled={state?.enabled===false} onClick={()=>setShown(true)} aria-label="悬浮预览" aria-expanded={shown} title="在对话中显示操控画面"><ComputerIcon name="preview" size={14}/></button>}
-    {shown&&state?.enabled!==false&&targets.length>0&&createPortal(<div ref={popup?null:floating} className={'tx-cu-floating'+(popup?'':' tx-cu-floating-inline')+(zoomed?' is-zoomed':'')+(dragging?' is-dragging':'')+(expanded&&!zoomed?' is-list':'')} style={popup?{'--cu-card-max-width':position['--cu-card-max-width'],'--cu-card-max-height':position['--cu-card-max-height']}:position} aria-label="悬浮操控预览" onKeyDown={previewKey} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={finishDrag} onPointerCancel={finishDrag} onLostPointerCapture={finishDrag} onClickCapture={event=>{if(suppressClick.current&&event.detail!==0){suppressClick.current=false;event.preventDefault();event.stopPropagation();}}}>
+  return <>{!!targets.length&&(!paneVisible||popup)&&<button type="button" disabled={state?.enabled===false} onClick={()=>setShown(true)} aria-label="悬浮预览" aria-expanded={shown} title="在对话中显示操控画面"><ComputerIcon name="preview" size={14}/></button>}
+    {shown&&(!paneVisible||popup)&&state?.enabled!==false&&targets.length>0&&createPortal(<div ref={popup?null:floating} className={'tx-cu-floating'+(popup?'':' tx-cu-floating-inline')+(zoomed?' is-zoomed':'')+(dragging?' is-dragging':'')+(expanded&&!zoomed?' is-list':'')} style={popup?{'--cu-card-max-width':position['--cu-card-max-width'],'--cu-card-max-height':position['--cu-card-max-height']}:position} aria-label="悬浮操控预览" onKeyDown={previewKey} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={finishDrag} onPointerCancel={finishDrag} onLostPointerCapture={finishDrag} onClickCapture={event=>{if(suppressClick.current&&event.detail!==0){suppressClick.current=false;event.preventDefault();event.stopPropagation();}}}>
       <header onDoubleClick={event=>{if(!popup&&!event.target.closest('button'))resetPosition();}} title={popup?undefined:'拖动移动预览，双击恢复默认位置'}><div><ComputerIcon name={leading?.kind==='app'?'screen':'browser'} size={14}/><strong title={leading?.name||leading?.title}>{leading?.name||leading?.title||'操控预览'}</strong>{targets.length>1&&<span className="tx-cu-floating-count">{targets.length}</span>}</div><div>{!popup&&manual.current&&<button type="button" aria-label="重置预览位置" title="重置位置" onClick={resetPosition}><ComputerIcon name="reset" size={13}/></button>}{zoomed&&<button type="button" aria-label="缩小预览" title="缩小预览" onClick={()=>setZoomed(null)}><ComputerIcon name="shrink" size={13}/></button>}{popup?<button type="button" aria-label="返回对话" title="返回对话" onClick={()=>{window.focus();popup.close();}}><ComputerIcon name="return" size={13}/></button>:<button type="button" aria-label="弹出预览" title="弹出为独立窗口" disabled={opening} onClick={open}><ComputerIcon name="popout" size={13}/></button>}<button type="button" aria-label="关闭操控预览" title="关闭预览" onClick={close}><ComputerIcon name="close" size={14}/></button></div></header>
       {expanded&&!zoomed&&<div className="tx-cu-preview-search"><ComputerIcon name="search" size={13}/><input type="search" aria-label="筛选预览目标" placeholder="搜索窗口或网页" value={query} onChange={event=>setQuery(event.target.value)} onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();if(query)setQuery('');else setExpanded(false);}}}/></div>}
       <div className={'tx-cu-preview-stack'+(zoomed?' is-focused':expanded?' is-expanded':'')} style={{'--preview-count':zoomed?1:Math.max(1,targets.length)}} aria-label="窗口预览堆叠">

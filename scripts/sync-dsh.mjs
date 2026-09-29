@@ -3,11 +3,18 @@ import { cp, mkdir, readFile, writeFile, readdir, rm } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { parseArgs } from 'node:util';
 const root = fileURLToPath(new URL('../', import.meta.url));
-if (!process.argv[2]) throw new Error('Usage: node scripts/sync-dsh.mjs /path/to/patched-dsh-checkout');
-const source = resolve(process.argv[2]), destination = join(root, 'vendor', 'dsh');
-const commit = '477b4f420553e8a52c2fbccc464d7561b239c443';
-if (execFileSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim() !== commit) throw new Error('Expected the pinned DSH 0.1.7-rc.2 source checkout');
+const { values, positionals } = parseArgs({ options: { commit: { type: 'string' } }, allowPositionals: true });
+if (positionals.length !== 1) throw new Error('Usage: node scripts/sync-dsh.mjs /path/to/patched-dsh-checkout [--commit <full SHA>]');
+const source = resolve(positionals[0]), destination = join(root, 'vendor', 'dsh');
+const previous = JSON.parse(await readFile(join(root, 'vendor/dsh.json'), 'utf8'));
+const commit = values.commit ?? previous.commit;
+if (!/^[0-9a-f]{40}$/.test(commit)) throw new Error('Expected a full DSH commit SHA');
+if (execFileSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim() !== commit) throw new Error(`Expected the pinned DSH source checkout ${commit}`);
+const version = JSON.parse(await readFile(join(source, 'package.json'), 'utf8')).version;
+const officialTag = 'dsh-v' + version;
+const tag = execFileSync('git', ['tag', '--points-at', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim().split('\n').includes(officialTag) ? officialTag : null;
 const modules = { 'session-persistence-jsonl': 'session/session-persistence-jsonl', jobs: 'jobs/jobs', 'jobs-local': 'jobs/jobs-local', 'tool-jobs': 'jobs/tool-jobs', shell: 'shell/shell', 'tool-bash': 'shell/tool-bash', 'tool-pwsh': 'shell/tool-pwsh', 'bash-local': 'shell/bash-local', 'pwsh-local': 'shell/pwsh-local', 'bash-sandbox': 'shell/bash-sandbox', 'pwsh-sandbox': 'shell/pwsh-sandbox', tools: 'core/tools', 'ui-conversation': 'client/ui-conversation' };
 Object.assign(modules, { workflow: 'workflow/workflow', 'workflow-ptc': 'workflow/workflow-ptc', 'tool-workflow': 'workflow/tool-workflow', 'subagent-in-process-driver': 'subagent/subagent-in-process-driver' });
 execFileSync(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm', ['exec', 'tsdown'], { cwd: join(source, 'packages/client/ui-conversation'), stdio: 'inherit', shell: process.platform === 'win32' });
@@ -26,7 +33,7 @@ for (const name of ['client.js', 'index.js']) {
   await writeFile(join(ui, 'lib', name), text.replace(/^\/\/# sourceMappingURL=.*\n?/gm, ''));
 }
 const pkg = JSON.parse(await readFile(join(source, 'packages/client/ui-conversation/package.json'), 'utf8'));
-Object.assign(pkg, { name: '@oh-my-dsh/ui-conversation', version: '0.1.7-rc.2-omd.1', private: true,
+Object.assign(pkg, { name: '@oh-my-dsh/ui-conversation', version: version + '-omd.1', private: true,
   dependencies: { '@deepseek-ai/schemastery': '3.18.4' }, peerDependencies: { '@deepseek-ai/cordis': '4.0.4' },
   exports: { '.': './lib/index.js', './client': './lib/client.js', './package.json': './package.json' }, files: ['src', 'lib', 'README.md', 'LICENSE'] });
 for (const field of ['devDependencies', 'scripts', 'publishConfig', 'types']) delete pkg[field];
@@ -41,6 +48,10 @@ execFileSync('git', ['add', '-N', 'packages/client/ui-conversation/src/client/sk
 const patch = execFileSync('git', ['diff', '--binary', 'HEAD', '--', ...paths], { cwd: source, maxBuffer: 16 * 1024 * 1024 });
 await writeFile(join(destination, 'changes.patch'), patch);
 const files = {};
+const readmePath = join(destination, 'README.md');
+const baseLabel = tag ? `tag \`${tag}\`` : `untagged master, declared version \`${version}\``;
+await writeFile(readmePath, (await readFile(readmePath, 'utf8')).replace(/^Base: .*?MIT license\./m,
+  `Base: \`deepseek-ai/deepseek-harness\`, ${baseLabel}, commit \`${commit}\`, MIT license.`));
 async function walk(directory, prefix = '') {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const path = prefix + entry.name;
@@ -49,4 +60,4 @@ async function walk(directory, prefix = '') {
   }
 }
 await walk(destination);
-await writeFile(join(root, 'vendor/dsh.json'), JSON.stringify({ repository: 'https://github.com/deepseek-ai/deepseek-harness', tag: 'dsh-v0.1.7-rc.2', commit, files: Object.fromEntries(Object.entries(files).sort()) }, null, 2) + '\n');
+await writeFile(join(root, 'vendor/dsh.json'), JSON.stringify({ repository: 'https://github.com/deepseek-ai/deepseek-harness', tag, commit, version, files: Object.fromEntries(Object.entries(files).sort()) }, null, 2) + '\n');

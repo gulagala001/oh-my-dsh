@@ -1,10 +1,133 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 import sharp from 'sharp';
 
 const response = text => ({ delta: { role: 'assistant', content: text }, finish_reason: 'stop' });
+
+test('optimizer originals and follow-up editing survive sidebar navigation without replaying a request', { timeout: 120000 }, async t => {
+  let requests = 0;
+  const f = await frontendFixture(t, {
+    setupWorkspace: ({ workspace }) => writeFile(join(workspace, 'navigation-reference.md'), '# Keep this reference\n'),
+    optimizerReply: async payload => { requests++; return response('请保留所有限制，完成指定任务。 ' + JSON.stringify(payload.messages).match(/OMDREF_[a-zA-Z0-9]+_0_END/)[0]); },
+  });
+  const { page } = f, editor = page.locator('[data-composer-input]');
+  const { workspace } = await f.rpc('workspace/create', { path: f.workspace });
+  const { sessionId: secondId } = await f.rpc('session/create', { workspaceId: workspace.workspaceId, agentPreset: 'trisoul-x' });
+  await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: secondId, mode: 'queue', content: [{ type: 'text', text: '另一个草稿会话' }] });
+  await until(async () => (await page.request.get(new URL('/trisoul-x/api/state?session=' + secondId, page.url()).href).then(r => r.json())).running === 'idle');
+  await f.rpc('session/rename', { sessionId: secondId, title: '润色草稿 B' });
+  await f.rpc('session/rename', { sessionId: f.sessionId, title: '润色草稿 A' });
+  const drawer = page.getByRole('dialog', { name: '提示词优化', exact: true });
+  const expand = async () => { if (!(await drawer.isVisible())) await page.getByRole('button', { name: '展开提示词优化', exact: true }).click(); };
+  await editor.fill('原始要求：做完任务，不能丢限制 @navigation');
+  await page.getByRole('option', { name: /navigation-reference.md/ }).click();
+  const readDraft = () => editor.evaluate(el => el.__lexicalEditor.getEditorState().toJSON().root.children.map(p => p.children.map(n => n.type === 'reference-chip' ? n.clipboardText : n.text || '').join('')).join('\n'));
+  const original = await readDraft();
+  const buffer = await sharp({ create: { width: 32, height: 32, channels: 3, background: '#3978e7' } }).png().toBuffer();
+  await page.locator('[data-composer-card] input[type="file"]').setInputFiles({ name: 'navigation.png', mimeType: 'image/png', buffer });
+  await until(async () => await page.locator('[data-composer-card] img').count() === 1);
+  await expand();
+  await drawer.getByRole('button', { name: '开始优化', exact: true }).click();
+  await until(async () => (await readDraft()).startsWith('请保留所有限制，完成指定任务。'));
+  await drawer.getByLabel('继续优化要求', { exact: true }).fill('更简短，保留限制');
+  await page.getByText('润色草稿 B', { exact: true }).first().click();
+  await until(async () => await editor.innerText() === '');
+  await editor.fill('B 的独立原始要求');
+  await page.getByText('润色草稿 A', { exact: true }).first().click();
+  await until(async () => (await readDraft()).startsWith('请保留所有限制，完成指定任务。'));
+  await expand();
+  assert.equal(await drawer.getByRole('button', { name: '恢复原稿', exact: true }).count(), 1, 'session switching must not discard the original');
+  assert.equal(await drawer.getByLabel('继续优化要求', { exact: true }).inputValue(), '更简短，保留限制');
+  assert.equal(requests, 1, 'navigation never replays optimization');
+  await drawer.getByRole('button', { name: '恢复原稿', exact: true }).click();
+  assert.equal(await readDraft(), original);
+  assert.equal(await page.locator('[data-composer-chip="reference"]').count(), 1);
+  assert.equal(await page.locator('[data-composer-card] img').count(), 1);
+  if (process.env.TRISOUL_UI_ARTIFACTS) { await mkdir(process.env.TRISOUL_UI_ARTIFACTS, { recursive: true }); await page.screenshot({ path: join(process.env.TRISOUL_UI_ARTIFACTS, 'optimizer-navigation-restored.png') }); }
+  await page.getByText('润色草稿 B', { exact: true }).first().click();
+  await until(async () => await editor.innerText() === 'B 的独立原始要求');
+  await expand();
+  assert.equal(await drawer.getByLabel('提示词版本', { exact: true }).count(), 0, 'versions belong only to their session');
+  assert.deepEqual(f.errors, []);
+});
+
+test('failed native admission keeps optimizer originals and image attachments available for recovery', { timeout: 90000 }, async t => {
+  const optimized = '请核对附件内容，保留所有限制。 @recovery.md', original = '核对附件，不删任何条件 @recovery.md';
+  const f = await frontendFixture(t, {
+    setupWorkspace: ({ workspace }) => writeFile(join(workspace, 'recovery.md'), '# Keep every requirement\n'),
+    optimizerReply: async payload => response('请核对附件内容，保留所有限制。 ' + JSON.stringify(payload.messages).match(/OMDREF_[a-zA-Z0-9]+_0_END/)[0]),
+  });
+  const { page } = f, editor = page.locator('[data-composer-input]');
+  const drawer = page.getByRole('dialog', { name: '提示词优化', exact: true });
+  await editor.fill('核对附件，不删任何条件 ');
+  await editor.evaluate(el => {
+    const lexical = el.__lexicalEditor, doc = lexical.getEditorState().toJSON();
+    doc.root.children[0].children.push({ type: 'reference-chip', version: 1, source: 'reference', ref: '@recovery.md', appearance: 'file', label: 'recovery.md', clipboardText: '@recovery.md', invalid: false });
+    lexical.setEditorState(lexical.parseEditorState(doc));
+  });
+  const readDraft = () => editor.evaluate(el => el.__lexicalEditor.getEditorState().toJSON().root.children.map(p => p.children.map(n => n.type === 'reference-chip' ? n.clipboardText : n.text || '').join('')).join('\n'));
+  const buffer = await sharp({ create: { width: 32, height: 32, channels: 3, background: '#3978e7' } }).png().toBuffer();
+  await page.locator('[data-composer-card] input[type="file"]').setInputFiles({ name: 'recovery.png', mimeType: 'image/png', buffer });
+  await until(async () => await page.locator('[data-composer-card] img').count() === 1);
+  await page.getByRole('button', { name: '启用自动润色', exact: true }).click();
+  let attempts = 0;
+  await page.route('**/api/session/prompt', route => { attempts++; return route.abort('failed'); });
+  await editor.press('Enter'); await until(() => attempts === 1);
+  await until(async () => await readDraft() === optimized && await page.locator('[data-composer-card] img').count() === 1);
+  if (!(await drawer.isVisible())) await page.getByRole('button', { name: '展开提示词优化', exact: true }).click();
+  assert.equal(await drawer.getByRole('button', { name: '恢复原稿', exact: true }).count(), 1, 'failed admission must retain the original version');
+  await drawer.getByRole('button', { name: '恢复原稿', exact: true }).click();
+  assert.equal(await readDraft(), original);
+  assert.equal(await page.locator('[data-composer-chip="reference"]').count(), 1);
+  const reference = await editor.evaluate(el => el.__lexicalEditor.getEditorState().toJSON().root.children[0].children.find(node => node.type === 'reference-chip'));
+  assert.equal(reference.ref, '@recovery.md'); assert.equal(reference.appearance, 'file');
+  assert.equal(await page.locator('[data-composer-card] img').count(), 1);
+  await page.unroute('**/api/session/prompt');
+  await drawer.getByRole('switch', { name: '每次发送前自动润色', exact: true }).uncheck();
+  await drawer.getByRole('button', { name: '关闭提示词优化抽屉', exact: true }).click();
+  await editor.press('Enter');
+  await until(async () => await editor.innerText() === '' && await page.locator('[data-composer-card] img').count() === 0);
+  await page.getByRole('button', { name: '展开提示词优化', exact: true }).click();
+  assert.equal(await drawer.getByLabel('提示词版本', { exact: true }).count(), 0, 'successful submission begins a new draft');
+  assert.deepEqual(f.errors, []);
+});
+
+test('late failed admission never replaces newer editing and exposes the earlier original separately', { timeout: 90000 }, async t => {
+  const f = await frontendFixture(t, { optimizerReply: async () => response('优化后的要求') });
+  const { page } = f, editor = page.locator('[data-composer-input]');
+  const drawer = page.getByRole('dialog', { name: '提示词优化', exact: true });
+  let pending;
+  t.after(() => pending?.abort().catch(() => {}));
+  await page.route('**/api/session/prompt', route => { pending = route; });
+  await editor.fill('发送失败前的原稿');
+  await page.getByRole('button', { name: '启用自动润色', exact: true }).click();
+  await editor.press('Enter'); await until(() => pending);
+  await until(async () => await editor.innerText() === '');
+  await editor.fill('后来输入的新要求');
+  if (!(await drawer.isVisible())) await page.getByRole('button', { name: '展开提示词优化', exact: true }).click();
+  await drawer.getByRole('button', { name: '开始优化', exact: true }).click();
+  await until(async () => await editor.innerText() === '优化后的要求');
+  const failed = pending; pending = null; await failed.abort('failed');
+  await drawer.getByText('发送失败，原稿和优化版本已保留。', { exact: true }).waitFor();
+  assert.equal(await editor.innerText(), '优化后的要求');
+  await drawer.getByRole('button', { name: '恢复原稿', exact: true }).click();
+  assert.equal(await editor.innerText(), '后来输入的新要求');
+  await drawer.getByRole('button', { name: '查看这份原稿与版本', exact: true }).click();
+  assert.equal(await editor.innerText(), '后来输入的新要求', 'inspecting the earlier versions leaves newer text untouched');
+  await drawer.getByRole('button', { name: '恢复原稿', exact: true }).click();
+  assert.equal(await editor.innerText(), '发送失败前的原稿');
+  if (process.env.TRISOUL_UI_ARTIFACTS) {
+    await mkdir(process.env.TRISOUL_UI_ARTIFACTS, { recursive: true });
+    await page.screenshot({ path: join(process.env.TRISOUL_UI_ARTIFACTS, 'optimizer-failure-recovery.png') });
+  }
+  await drawer.getByRole('button', { name: '查看这份原稿与版本', exact: true }).click();
+  await drawer.getByRole('button', { name: '恢复原稿', exact: true }).click();
+  assert.equal(await editor.innerText(), '后来输入的新要求', 'both originals remain recoverable');
+  assert.deepEqual(f.errors, []);
+});
 
 test('optimizer stays usable across four themes, light/dark modes and narrow composers', { timeout: 120000 }, async t => {
   const f = await frontendFixture(t, { installedPackage: true, optimizerReply: async () => response('请继续检查升级流程。') });
@@ -142,40 +265,56 @@ test('optimizer API: authenticated requests, first-turn default model and input 
 
 test('native Lexical references survive rewrite/restore; automatic sends preserve real image attachments', { timeout: 90000 }, async t => {
   const requests = [], main = []; let refMode = true;
-  const f = await frontendFixture(t, { optimizerReply: async payload => {
+  const f = await frontendFixture(t, { setupWorkspace: ({ workspace }) => writeFile(join(workspace, 'reference.md'), '# Reference\n'), optimizerReply: async payload => {
     requests.push(payload);
     const token = JSON.stringify(payload.messages).match(/OMDREF_[a-zA-Z0-9]+_0_END/)?.[0];
     return response(refMode ? '请分析 ' + token : '请分析附图');
   } });
-  const { page, errors } = f, editor = page.locator('[contenteditable="true"][role="textbox"]').first();
+  const { page, errors } = f, editor = page.locator('[data-composer-input]');
   const drawer = page.getByRole('dialog', { name: '提示词优化', exact: true });
-  await editor.fill('分析 ');
-  // Exercise the same serialized chip node that the native reference picker creates.
-  await editor.evaluate(el => {
-    const editor = el.__lexicalEditor, document = editor.getEditorState().toJSON();
-    document.root.children[0].children.push({ type: 'reference-chip', version: 1, source: 'file', ref: '/fixture/reference.md', label: 'reference.md', clipboardText: '@reference.md', invalid: false });
-    editor.setEditorState(editor.parseEditorState(document));
-  });
-  await page.locator('[data-composer-chip="file"]').waitFor();
+  await editor.fill('分析 @reference');
+  await page.getByRole('option', { name: /reference.md/ }).click();
+  await page.locator('[data-composer-chip="reference"]').waitFor();
+  const readRef = () => editor.evaluate(el => el.__lexicalEditor.getEditorState().toJSON().root.children[0].children.find(node => node.type === 'reference-chip').ref);
+  const originalReference = await readRef();
+  assert.equal(originalReference, '@reference.md');
   await page.getByRole('button', { name: '展开提示词优化', exact: true }).click();
   await drawer.getByRole('button', { name: '开始优化', exact: true }).click();
   await until(async () => (await editor.innerText()).startsWith('请分析'));
-  assert.equal(await page.locator('[data-composer-chip="file"]').count(), 1);
-  const readRef = () => editor.evaluate(el => el.__lexicalEditor.getEditorState().toJSON().root.children[0].children.find(node => node.type === 'reference-chip').ref);
-  assert.equal(await readRef(), '/fixture/reference.md');
+  assert.equal(await page.locator('[data-composer-chip="reference"]').count(), 1);
+  assert.equal(await readRef(), originalReference);
   await drawer.getByRole('button', { name: '恢复原稿', exact: true }).click();
-  assert.equal(await readRef(), '/fixture/reference.md');
+  assert.equal(await readRef(), originalReference);
   await drawer.getByRole('button', { name: '关闭提示词优化抽屉', exact: true }).click();
   await editor.click(); await editor.press('ControlOrMeta+A'); await editor.press('Backspace');
-  await until(async () => await page.locator('[data-composer-chip="file"]').count() === 0);
+  await until(async () => await page.locator('[data-composer-chip="reference"]').count() === 0);
+  // fill() sends CDP insertText without the next real keydown that normally
+  // clears Lexical's Backspace guard. Wait for its native timer, not just DOM.
+  await until(() => editor.evaluate(el => !el.__lexicalEditor._inputState.isInsertTextAfterHandledSelectionCommand));
   await editor.fill('分析这张图'); refMode = false;
+  const readDraft = () => editor.evaluate(el => {
+    const tree = el.__lexicalEditor.getEditorState().toJSON();
+    const text = node => node.type === 'text' ? node.text : (node.children || []).map(text).join('');
+    return { dom: el.innerText, text: text(tree.root), tree };
+  });
+  // fill() dispatches the edit; wait for Lexical's actual commit before the
+  // separate attachment action causes another render or blur.
+  await until(async () => (await readDraft()).text === '分析这张图');
+  assert.equal((await readDraft()).dom, '分析这张图');
   const buffer = await sharp({ create: { width: 32, height: 32, channels: 3, background: '#3978e7' } }).png().toBuffer();
   await page.locator('[data-composer-card] input[type="file"]').setInputFiles({ name: 'optimizer-reference.png', mimeType: 'image/png', buffer });
+  await until(async () => await page.locator('[data-composer-card] img').count() === 1);
+  assert.equal((await readDraft()).text, '分析这张图', JSON.stringify(await readDraft()));
   f.replyWith(payload => { main.push(payload); return response('图片和优化后的文本均已收到。'); });
-  await page.getByRole('button', { name: '启用自动润色', exact: true }).click(); await editor.press('Enter');
+  await page.getByRole('button', { name: '启用自动润色', exact: true }).click();
+  assert.equal(await page.getByRole('button', { name: '关闭自动润色', exact: true }).getAttribute('aria-pressed'), 'true');
+  assert.equal(await editor.innerText(), '分析这张图', JSON.stringify(await readDraft()));
+  await editor.press('Enter');
   await until(() => main.length === 1);
-  assert.match(JSON.stringify(main[0].messages), /请分析附图/);
-  assert.match(JSON.stringify(main[0].messages), /image_url/);
+  assert.equal(requests.length, 2, 'automatic send calls the optimizer after the earlier manual rewrite');
+  const sent = main[0].messages.findLast(message => message.role === 'user');
+  assert.match(JSON.stringify(sent), /请分析附图/);
+  assert.match(JSON.stringify(sent), /image_url/);
   assert.doesNotMatch(JSON.stringify(requests.at(-1).messages), /data:image/);
   assert.deepEqual(errors, []);
 });

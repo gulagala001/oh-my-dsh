@@ -1,0 +1,53 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { writeFile, mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import sharp from 'sharp';
+import { frontendFixture, until } from './fixtures/frontend.mjs';
+
+test('switching sidebar sessions retains independent unsent images and native reference chips', { timeout: 120000 }, async t => {
+  const f = await frontendFixture(t, { setupWorkspace: ({ workspace }) => writeFile(join(workspace, 'draft-reference.md'), '# Keep this reference\n') });
+  const { page } = f, editor = page.locator('[data-composer-input]');
+  const { workspace } = await f.rpc('workspace/create', { path: f.workspace });
+  const second = await f.rpc('session/create', { workspaceId: workspace.workspaceId, agentPreset: 'trisoul-x' });
+  await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: second.sessionId, mode: 'queue', content: [{ type: 'text', text: '第二个草稿会话' }] });
+  await until(async () => (await page.request.get(new URL('/trisoul-x/api/state?session=' + second.sessionId, page.url()).href).then(r => r.json())).running === 'idle');
+  await f.rpc('session/rename', { sessionId: second.sessionId, title: '草稿检查 B' });
+  await f.rpc('session/rename', { sessionId: f.sessionId, title: '草稿检查 A' });
+  await editor.fill('请对照 @draft-ref');
+  await page.getByRole('option', { name: /draft-reference.md/ }).click();
+  await until(async () => await page.locator('[data-composer-chip="reference"]').count() === 1);
+  const buffer = await sharp({ create: { width: 32, height: 32, channels: 3, background: '#3978e7' } }).png().toBuffer();
+  await page.locator('[data-composer-card] input[type="file"]').setInputFiles({ name: 'draft.png', mimeType: 'image/png', buffer });
+  await until(async () => await page.locator('[data-composer-card] img').count() === 1);
+  const draftA = await editor.innerText();
+  await page.getByText('草稿检查 B', { exact: true }).first().click();
+  await until(async () => await editor.innerText() === '');
+  await editor.fill('B 的独立草稿');
+  await page.getByText('草稿检查 A', { exact: true }).first().click();
+  await until(async () => (await editor.innerText()).includes('draft-reference.md'));
+  assert.equal(await page.locator('[data-composer-card] img').count(), 1, 'session navigation must preserve unsent images');
+  assert.equal(await page.locator('[data-composer-chip="reference"]').count(), 1, 'reference remains an actionable chip');
+  assert.equal(await editor.innerText(), draftA);
+  await page.getByText('草稿检查 B', { exact: true }).first().click();
+  await until(async () => await editor.innerText() === 'B 的独立草稿');
+  assert.equal(await page.locator('[data-composer-card] img').count(), 0);
+  await page.getByText('草稿检查 A', { exact: true }).first().click();
+  await until(async () => await page.locator('[data-composer-card] img').count() === 1);
+  if (process.env.TRISOUL_UI_ARTIFACTS) {
+    await mkdir(process.env.TRISOUL_UI_ARTIFACTS, { recursive: true });
+    await page.screenshot({ path: join(process.env.TRISOUL_UI_ARTIFACTS, 'session-draft-restored.png') });
+  }
+  let sent;
+  await page.route('**/api/session/prompt', async route => { sent = route.request().postDataJSON(); await route.continue(); });
+  await editor.press('Enter');
+  await until(() => sent);
+  await until(async () => await editor.innerText() === '' && await page.locator('[data-composer-card] img').count() === 0);
+  assert.match(JSON.stringify(sent), /draft-reference\.md/);
+  assert.match(JSON.stringify(sent), /"type":"image"/);
+  await page.getByText('草稿检查 B', { exact: true }).first().click();
+  await page.getByText('草稿检查 A', { exact: true }).first().click();
+  await until(async () => await editor.innerText() === '');
+  assert.equal(await page.locator('[data-composer-card] img').count(), 0, 'sent attachments must not reappear');
+  assert.deepEqual(f.errors, []);
+});
