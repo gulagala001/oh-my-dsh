@@ -134,7 +134,7 @@ export function apply(ctx: Context, options: { settings?: ConfigForm<ChatSetting
     scope.slots.inject('settings.general.item', () => scope.slots.register({
       name: 'settings.general.item',
       id: 'link-opening',
-      order: 14,
+      order: 17,
       locale: NS,
       inject: (): LinkOpeningRowInjected => ({
         hooks: { linkOpening, browserAvailable },
@@ -157,7 +157,7 @@ export function apply(ctx: Context, options: { settings?: ConfigForm<ChatSetting
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({
     name: 'settings.general.item',
     id: 'performance-usage',
-    order: 13,
+    order: 30,
     locale: NS,
     inject: (): PerformanceUsageRowInjected => ({
       hooks: { performanceUsage },

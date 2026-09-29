@@ -16,6 +16,22 @@
         "size": 372794444,
         "sha512": "aOfxtRvFqTRRp3zqu6nXNgILgVdHDPyfslhUVNnU1wMYw1dY1vTelptJeAmUDt7G822SCqHzxtPwMmvCGekveA=="
       }
+    },
+    "0.2.0-rc.2": {
+      "mac-arm64": {
+        "platform": "darwin",
+        "arch": "arm64",
+        "extension": "zip",
+        "size": 374053565,
+        "sha512": "BIC7PMWuEEzM7OuK8tMXQR0AdtVlYrSP1usHGWSAOhbxeXOzq2s1i71jZphMQSoQ/8tUQr55a158JW8xScseuA=="
+      },
+      "win-x64": {
+        "platform": "win32",
+        "arch": "x64",
+        "extension": "exe",
+        "size": 289313640,
+        "sha512": "raIlxMQd9ESXgktmViW7QwVLcjBR5JIsrNOu+SpelY8kskdSr2H51/f+ey1EqFI/eIIrKQCuRANMeb5SptRZcg=="
+      }
     }
   }
 }

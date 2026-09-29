@@ -434,7 +434,7 @@ index 8a908bb7b0..2ef64fcf6a 100644
      }, 'conversation.input: session shell')
      return shell
 diff --git a/packages/client/ui-conversation/src/client/locales.ts b/packages/client/ui-conversation/src/client/locales.ts
-index 455198ce82..439917ff14 100644
+index 78b26f7ab6..eca70d79f3 100644
 --- a/packages/client/ui-conversation/src/client/locales.ts
 +++ b/packages/client/ui-conversation/src/client/locales.ts
 @@ -28,6 +28,7 @@ export const zh = {
@@ -445,7 +445,7 @@ index 455198ce82..439917ff14 100644
    'input.send.steer': '插话发送',
    'attachment.pending': '待发送附件',
    'attachment.scrollLeft': '向左滚动附件',
-@@ -398,6 +399,7 @@ export const en = {
+@@ -404,6 +405,7 @@ export const en = {
    'input.stop': 'Stop generating',
    'input.send': 'Send message',
    'input.send.queue': 'Queue message',
@@ -1191,7 +1191,7 @@ index b95eb4393b..bdd73497af 100644
      label: job.label,
      status: job.status,
 diff --git a/packages/shell/tool-bash/src/index.ts b/packages/shell/tool-bash/src/index.ts
-index 9501bac003..ecbb862254 100644
+index 8226ad29ef..49cdf40f74 100644
 --- a/packages/shell/tool-bash/src/index.ts
 +++ b/packages/shell/tool-bash/src/index.ts
 @@ -63,6 +63,7 @@ interface BashToolArgs {
@@ -1202,7 +1202,7 @@ index 9501bac003..ecbb862254 100644
    workdir?: string
    run_in_background?: boolean
    sandbox_permissions?: string
-@@ -299,9 +300,9 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -301,9 +302,9 @@ export function apply(ctx: Context, config: Config = {}): void {
        return { id, process: () => proc, stopped: () => stopped }
      }
      /** Wait on a registered foreground command until it settles or the timeout passes. */
@@ -1214,7 +1214,7 @@ index 9501bac003..ecbb862254 100644
        /**
         * Stop the job on this call's own account and stay on it until it
         * settles, so the settlement is `awaited` and no completion notice
-@@ -324,7 +325,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -326,7 +327,7 @@ export function apply(ctx: Context, config: Config = {}): void {
          await stop('tool call aborted')
          throw toolAborted()
        }
@@ -1223,7 +1223,7 @@ index 9501bac003..ecbb862254 100644
          // The wait expired while preparation still ran: nothing is running
          // to keep, so this is the deadline's preparation timeout, with the
          // settled empty result the executor's own deadline would have given.
-@@ -386,6 +387,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -388,6 +389,7 @@ export function apply(ctx: Context, config: Config = {}): void {
              ? 'Timeout in milliseconds. The executor applies its configured default and cap; on expiry the command moves to the background as a job instead of being killed.'
              : 'Timeout in milliseconds. The executor applies its configured default and cap, and kills the command on expiry.',
          },
@@ -1231,7 +1231,7 @@ index 9501bac003..ecbb862254 100644
          workdir: { type: 'string', description: 'Working directory for this command. Defaults to the session workspace; a relative path is resolved against it.' },
          ...background ? {
            run_in_background: { type: 'boolean' as const, description: 'Run in the background and return a job id immediately (collect with job_output, stop with job_kill). No timeout applies.' },
-@@ -479,6 +481,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -481,6 +483,7 @@ export function apply(ctx: Context, config: Config = {}): void {
          // Description is display metadata; workdir defaults to the caller's session.
          const standingPolicy = resolveSandboxPolicy(exec)
          validateBashArgs(args, standingPolicy?.mode)
@@ -1239,7 +1239,7 @@ index 9501bac003..ecbb862254 100644
          const approvedMode = args.sandbox_permissions !== undefined && args.justification !== undefined
            ? await approveBashEscalation(args.sandbox_permissions, args.justification, exec, standingPolicy)
            : undefined
-@@ -506,12 +509,18 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -508,12 +511,18 @@ export function apply(ctx: Context, config: Config = {}): void {
            if (exec.signal.aborted) throw toolAborted()
            return { kind: 'background' as const, jobId: startJob(jobs, args, exec, ctx.shell.resolve({ ...request, onExpiry: 'none' })).id }
          }
@@ -1260,7 +1260,7 @@ index 9501bac003..ecbb862254 100644
            let attached: StartedJob | undefined
            try {
 diff --git a/packages/shell/tool-pwsh/src/index.ts b/packages/shell/tool-pwsh/src/index.ts
-index 963fbeaa2f..229efee616 100644
+index cbebd6dc2a..1c13285419 100644
 --- a/packages/shell/tool-pwsh/src/index.ts
 +++ b/packages/shell/tool-pwsh/src/index.ts
 @@ -81,6 +81,7 @@ interface PwshToolArgs {
@@ -1271,7 +1271,7 @@ index 963fbeaa2f..229efee616 100644
    workdir?: string
    run_in_background?: boolean
    sandbox_permissions?: string
-@@ -308,9 +309,9 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -310,9 +311,9 @@ export function apply(ctx: Context, config: Config = {}): void {
        return { id, process: () => proc, stopped: () => stopped }
      }
      /** Wait on a registered foreground command until it settles or the timeout passes. */
@@ -1283,7 +1283,7 @@ index 963fbeaa2f..229efee616 100644
        /**
         * Stop the job on this call's own account and stay on it until it
         * settles, so the settlement is `awaited` and no completion notice
-@@ -333,7 +334,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -335,7 +336,7 @@ export function apply(ctx: Context, config: Config = {}): void {
          await stop('tool call aborted')
          throw toolAborted()
        }
@@ -1292,7 +1292,7 @@ index 963fbeaa2f..229efee616 100644
          // The wait expired while preparation still ran: nothing is running
          // to keep, so this is the deadline's preparation timeout, with the
          // settled empty result the executor's own deadline would have given.
-@@ -397,6 +398,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -399,6 +400,7 @@ export function apply(ctx: Context, config: Config = {}): void {
              ? 'Timeout in milliseconds. The executor applies its configured default and cap; on expiry the command moves to the background as a job instead of being killed.'
              : 'Timeout in milliseconds. The executor applies its configured default and cap, and kills the command on expiry.',
          },
@@ -1300,7 +1300,7 @@ index 963fbeaa2f..229efee616 100644
          workdir: { type: 'string', description: 'Working directory for this command. Defaults to the session workspace; a relative path is resolved against it.' },
          ...background ? {
            run_in_background: { type: 'boolean' as const, description: 'Run in the background and return a job id immediately (collect with job_output, stop with job_kill). No timeout applies.' },
-@@ -495,6 +497,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -497,6 +499,7 @@ export function apply(ctx: Context, config: Config = {}): void {
        /* jscpd:ignore-start -- the execute path mirrors dsh-tool-bash's by design (see the pwsh-tool-and-executor Agent Note). */
        async execute(args: PwshToolArgs, exec) {
          validatePwshArgs(args)
@@ -1308,7 +1308,7 @@ index 963fbeaa2f..229efee616 100644
          // Description is display metadata; workdir defaults to the caller's session.
          const standingPolicy = resolveSandboxPolicy(exec)
          const approvedMode = args.sandbox_permissions !== undefined && args.justification !== undefined
-@@ -523,12 +526,18 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -525,12 +528,18 @@ export function apply(ctx: Context, config: Config = {}): void {
            if (exec.signal.aborted) throw toolAborted()
            return { kind: 'background' as const, jobId: startJob(jobs, args, exec, ctx.shell.resolve({ ...request, onExpiry: 'none' })).id }
          }
