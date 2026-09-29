@@ -89,7 +89,7 @@ function bindTreeKeyboard(root) {
       owned.delete(row);
     }
   };
-  const focus = row => { if (row) { current = row.dataset.rowKey; row.focus({ preventScroll: true }); row.scrollIntoView({ block: 'nearest', inline: 'nearest' }); sync(); } };
+  const focus = row => { if (row) { current = row.dataset.rowKey; write(row, 0); row.focus({ preventScroll: true }); row.scrollIntoView({ block: 'nearest', inline: 'nearest' }); sync(); } };
   const onFocus = event => {
     const row = event.target.closest?.(selector);
     focusedRow = row && root.contains(row) ? row : null;
@@ -140,47 +140,36 @@ function bindTreeKeyboard(root) {
       // ungrouped bucket) must never be activated by the context-menu key.
       const trigger = row.querySelector('[class*="_rowActions"] > [class*="_root_"] > button');
       if (!trigger) return;
-      const visibleMenu = menu => menu.getClientRects().length && getComputedStyle(menu).visibility !== 'hidden' && !menu.closest('[hidden],[aria-hidden="true"]');
-      const existing = new Set([...document.querySelectorAll('[role="menu"]')].filter(visibleMenu));
-      trigger?.focus(); trigger?.click();
+      const existing = new Set(document.querySelectorAll('[role="menu"]'));
       cancelAnimationFrame(menuFrame); menuObserver?.disconnect();
-      menuFrame = requestAnimationFrame(() => {
-        if (document.activeElement !== trigger || !root.contains(trigger)) return;
-        const opened = [...document.querySelectorAll('[role="menu"]')].find(menu => !existing.has(menu) && visibleMenu(menu));
+      let opened;
+      const enter = () => {
+        cancelAnimationFrame(menuFrame);
+        opened ||= [...document.querySelectorAll('[role="menu"]')].find(menu => !existing.has(menu));
         if (!opened) return;
-        // Slot-backed menu rows can mount after the portal itself. Wait for
-        // that actual row, and never reclaim focus after the user moves away.
-        const enter = () => {
-          cancelAnimationFrame(menuFrame);
-          if (!opened.isConnected) {
-            menuObserver?.disconnect();
-            // The native Menu returns to its button. A keyboard context menu
-            // started on the tree row. Pinning can also remount that row; wait
-            // for native dialog/selection focus before finding its new node.
-            menuFrame = requestAnimationFrame(() => {
-              if (document.activeElement !== trigger && document.activeElement !== document.body) return;
-              const target = row.isConnected ? row : rows().find(item => item.dataset.rowKey === row.dataset.rowKey);
-              focus(target);
-            });
-            return;
-          }
-          if (document.activeElement !== trigger) {
-            if (!opened.contains(document.activeElement)) menuObserver?.disconnect();
-            return;
-          }
-          const first = opened.querySelector('[role="menuitem"]:not(:disabled)');
-          if (first?.getClientRects().length && getComputedStyle(first).visibility !== 'hidden') first.focus();
-          // Keep observing removal while focus remains in this menu. Dialogs
-          // and outside clicks retain the focus chosen by their native owner.
-          // The host temporarily hides menu rows while placing a portal.
-          // CSS visibility can settle without a DOM mutation.
-          if (first && document.activeElement !== first) menuFrame = requestAnimationFrame(enter);
-        };
-        menuObserver = new MutationObserver(enter);
-        menuObserver.observe(opened, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'hidden'] });
-        if (opened.parentElement) menuObserver.observe(opened.parentElement, { childList: true });
-        enter();
-      });
+        if (!opened.isConnected) {
+          menuObserver.disconnect();
+          // Native dialogs and outside clicks keep their own focus. Pinning can
+          // remount the row, so resolve its identity after native cleanup settles.
+          menuFrame = requestAnimationFrame(() => {
+            if (document.activeElement !== trigger && document.activeElement !== document.body) return;
+            focus(row.isConnected ? row : rows().find(item => item.dataset.rowKey === row.dataset.rowKey));
+          });
+          return;
+        }
+        if (document.activeElement !== trigger) {
+          if (document.activeElement !== document.body && !opened.contains(document.activeElement)) menuObserver.disconnect();
+          return;
+        }
+        const first = opened.querySelector('[role="menuitem"]:not(:disabled)');
+        if (first?.getClientRects().length && getComputedStyle(first).visibility === 'visible') first.focus();
+        if (first && document.activeElement !== first) menuFrame = requestAnimationFrame(enter);
+      };
+      // Subscribe before opening: native/assistive focus can enter the menu
+      // before our first frame, but that must not skip close observation.
+      menuObserver = new MutationObserver(enter);
+      menuObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'hidden'] });
+      trigger.focus(); trigger.click(); enter();
     }
     else return;
     event.preventDefault();
