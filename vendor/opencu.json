@@ -1,12 +1,12 @@
 {
   "repository": "https://github.com/gulagala001/opencu",
-  "commit": "9006cf69c9d17b94de36fb09abe3700113de8144",
+  "commit": "d1d202b1bf0f0edf6bcb360eef4e41242eff3d06",
   "workingTree": false,
   "version": "1.2.0",
-  "archiveSha256": "a9f02f69c3bbd3980d67e36eb52b1d327bb81f2dfecb4788a2a82a09b8608413",
+  "archiveSha256": "e3e1e5eca685e4c1668fdb48d2dd7b1efb38262fd79c74164a783f3ece381066",
   "files": {
-    "README.md": "b954b24426f08f7f6cfaf6e587940cb1fdb4ac05c70494c098fc3bccfdea6f8a",
-    "THIRD_PARTY_NOTICES.md": "ed3b4ead6b56161363544c6c73479b725ad41653ea1fd85bdc725566af1959d0",
+    "README.md": "74672da11b1048759dc2bb5727fdec22f9108b9f47ed1df56a6b6c84da7ea604",
+    "THIRD_PARTY_NOTICES.md": "7e1f424a29016eabc7789e94fd309b8e4ab88b1047c9a11b8484eef36639f6ee",
     "browser-extension/cursor.js": "61977d71656c0070d22a61cf622829ed216a4357de671dbeea3ca6d431ad045b",
     "browser-extension/logo.svg": "5bfa53422dbd17884ccf8629fd7532cd711c902ccb531831efedfddb09394551",
     "browser-extension/manifest.json": "824ff53c2c31459f9b313c44b0d53351cd3ae0c2ccc85749712cb5a61c61df98",
@@ -30,9 +30,9 @@
     "docs/release-1.1.7.md": "4516131b7f199a7e57728ebf9bdeb134c55a793b720a55c987630d31abb8c9b6",
     "docs/release-1.1.8.md": "7aeed6469098774eed9d7dffe728d5b6adf5f2a46ccefd9181007d22e56a413b",
     "docs/release-1.1.9.md": "e6f8c27ed7e416664c2f07075ea44681a72313568d18f9de89d579a04dc1df26",
-    "docs/release-1.2.0.md": "138f67df791671c2ce733f66e866b3d4f32509b484ad6fe889a7b520e9581fa3",
-    "docs/usage.md": "39818d8393c11a0f421bbc69cf8310a43e125e6074135fe5f2e07d112206bfc2",
-    "docs/windows.md": "c12261fb7e1cc9955c816118b24225fec9d7234f3220827d5c05ccedf695893b",
+    "docs/release-1.2.0.md": "abcb7d1cc7a769648607cdb1bf7e9dc8e4333baeade09e3c4778489603229c40",
+    "docs/usage.md": "499a7003bd109d4180d47a5c55f0179ece7ecc5cbe5f39d943ab37da5b813122",
+    "docs/windows.md": "9957f2536219a25a98fc8832e841e54a07afa8065fd0730ab7a7a630b7e6c2ea",
     "lib/chat.factory.mjs": "0487905b615c5cf396ce34b7436cf170031331dd4d3261712ba5c23d451fdcab",
     "lib/client.js": "3807e25279bfdaef8c405ab5f99bf39820dceb05cadf237d99fd8e1dc8e36590",
     "native/computer-use/ComputerUse.h": "fb2f79b9a6e99398860d41a82fd46ef6674ed2254c25138c58612c0b6377e50f",
@@ -280,9 +280,6 @@
     "vendor/dsh-chat/src/client/stores.ts": "8d2a54863cc64f4b45f8db60e07e962dbca56929ffaed9fbc9f495eff2fcbaab",
     "vendor/dsh-chat/src/client/transcript-view.ts": "6964e6bb2e88cf979c81201b7b27bc020654419ea39285d0adfc451741c10ee1",
     "vendor/dsh-chat/src/css-modules.d.ts": "e28410d74a0d763364c04fa690c2ca2202ad3019c74f8f5205e8dc6cba69c02f",
-    "vendor/dsh-chat/src/index.ts": "f7a55281bd7ec70d4d049c22df26ea41102763adca7b43f559d10f86bcb576ce",
-    "vendor/dsh-sdk/README.md": "06c2fca463644eebf56c433bdbd6a1e6fcc9729484675c685b1f75dfa1f0fcbd",
-    "vendor/dsh-sdk/deepseek-ai-dsh-client-ui-settings-account-0.2.0-rc.2.tgz": "51785e19ce606c4666b35770e9dd72ae79420882e1acc805e0018c761f28a837",
-    "vendor/dsh-sdk/source.json": "603271a9d11f07cf4955ce6476e6a468b71f5384e7e8c1420b2a9f61acff2a8a"
+    "vendor/dsh-chat/src/index.ts": "f7a55281bd7ec70d4d049c22df26ea41102763adca7b43f559d10f86bcb576ce"
   }
 }

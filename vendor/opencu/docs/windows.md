@@ -8,13 +8,8 @@ Windows 上使用同一套 OpenCU 工具和实时预览。内置浏览器使用�
 
 OpenCU 1.2.0 配套 **DSH 0.2.0-rc.2 Web**。先阅读[安装与升级说明](release-1.2.0.md)，在对应 Release 发布后停止服务，在 PowerShell 7 中安装插件：
 
-rc.2 npm 暂缺账号设置包；本仓库按同一官方标签构建该包并锁定依赖，不混用 rc.1。以下 CLI 命令在克隆后的仓库中运行，已有环境保留原 DSH_HOME、profile 和端口。
-
 ```powershell
-git clone --branch v1.2.0 --depth 1 https://github.com/gulagala001/opencu.git
-cd opencu
-pnpm install --frozen-lockfile
-pnpm exec dsh plugin --profile web add github:gulagala001/opencu#v1.2.0
+dsh plugin --profile web add github:gulagala001/opencu#v1.2.0
 if ($LASTEXITCODE -ne 0) { throw '插件安装失败' }
 dsh web
 ```

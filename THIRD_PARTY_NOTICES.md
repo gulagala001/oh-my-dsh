@@ -19,8 +19,6 @@ Source: https://github.com/deepseek-ai/deepseek-harness
 
 The component sources under `vendor/dsh` and generated host/browser artifacts are based on the DSH 0.2.0-rc.2 tag `dsh-v0.2.0-rc.2`, commit `639ed015397290b3745d163aafe02ffee4aa3f84`. OMD adds optional background job controls and a wait-aware composer. The source changes, license and checksum manifest are included with the distribution; see `vendor/dsh/README.md`.
 
-The same-tag account-settings development archive is reused from `vendor/opencu/vendor/dsh-sdk`; its source record, SHA-256 and upstream MIT license are included. This repairs development/offline host dependency resolution, without mounting another account component.
-
 MIT License
 
 Copyright (c) 2026 DeepSeek

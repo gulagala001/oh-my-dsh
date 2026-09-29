@@ -13,10 +13,7 @@ test('installation docs and release badge describe the versions actually shipped
     const text = await read(file);
     const targets = [...text.matchAll(/github:gulagala001\/oh-my-dsh#v([\w.+-]+)/g)].map(match => match[1]);
     assert.deepEqual([...new Set(targets)], [pkg.version], file + ': every installation target matches the current release');
-    assert.ok(text.replaceAll('*', '').includes(`DSH ${pkg.devDependencies['@deepseek-ai/dsh']}`), file + ': host target');
-    assert.ok(text.includes(`git clone --branch v${pkg.version} --depth 1`), file + ': pinned source installation');
-    assert.ok(text.includes('pnpm install --frozen-lockfile'), file + ': exact host dependency closure');
-    assert.ok(text.includes('pnpm exec dsh'), file + ': repository-local host launcher');
+    assert.ok(text.includes(`@deepseek-ai/dsh@${pkg.devDependencies['@deepseek-ai/dsh']}`), file + ': host target');
   }
   assert.ok(upgrade.split('\n').some(line => line.startsWith('| 内置 OpenCU |') && line.includes(`**${opencu.version}**`)), 'bundled OpenCU in upgrade table');
   const index = await read('docs/README.md');

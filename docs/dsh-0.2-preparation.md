@@ -10,12 +10,10 @@ Chat 合并了 rc.2 的嵌套文字动画，同时保留 OMD/OpenCU 的计数、
 
 ## 安装闭包
 
-官方 npm 的 web-app 精确依赖了尚未发布的 `dsh-client-ui-settings-account@0.2.0-rc.2`。根 pnpm override 指向 OpenCU 快照内、按同一标签未修改包源码构建的归档；来源和 SHA-256 见 `vendor/opencu/vendor/dsh-sdk/source.json`。它是开发/离线宿主安装补齐，不是官方 npm 发行包，不替换官方桌面的账号组件，也不降级为 rc.1。
-
-官方桌面安装路径不依赖该开发补齐。Web 安装使用[锁定源码指南](upgrade.md)，保留原数据目录、profile 和端口。上游补发后，应同时删除补齐归档和 override、重新生成锁文件，并再次验证干净安装，避免保留失去用途的兼容残留。
+SDK 和宿主依赖使用完整的官方 rc.2 npm 发行版本。此前上游包发布未齐时用于本地验证的账号设置构建归档及 override 均已移除，不混用 rc.1，不留下失去用途的兼容路径。安装方法见[升级指南](upgrade.md)。
 
 ## 验证范围
 
-已完成官方固定源码的完整构建、适配后 Chat/Conversation 类型检查、OMD 构建、29 项真实宿主回归及官方 macOS rc.2 安装/重启/卸载恢复验证。最终各平台、源码宿主、独立 OpenCU 共存和发行包结果见[本版说明](release-0.3.0.md)与对应 Release 的验证记录。
+已完成官方固定源码的完整构建、适配后 Chat/Conversation 类型检查、OMD 构建、29 项实际宿主回归、6 项源码宿主回归及官方 macOS rc.2 安装/重启/卸载恢复验证。最终各平台、独立 OpenCU 共存和发行包结果见[本版说明](release-0.3.0.md)与对应 Release 的验证记录。
 
 Windows 桌面包的大小与 SHA-512 已从官方对应 feed 固定，实际安装/运行由独立 Windows 测试记录证明，不用下载校验替代运行验证。没有执行的模型长任务、外部桌面程序和迁移组合不列为已验收范围。
