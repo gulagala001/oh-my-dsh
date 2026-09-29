@@ -228,7 +228,11 @@ function legacyPrepareCandidate(session, state, cfg, pairing) {
     return run.slice(0, end);
   };
   for (const e of events.slice(0, stop)) {
-    if (boundary(e)) { const found = take(); if (found) return found; run = []; }
+    if (boundary(e)) {
+      const found = take();
+      if (found && preparationWorkload(session, state, found).estimatedTokens >= (cfg.prepareContinueTokens || 0)) return found;
+      run = [];
+    }
     else {
       run.push(e);
       if (run.length >= cfg.digestWindow) {
