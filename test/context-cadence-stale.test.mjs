@@ -297,3 +297,12 @@ test('cadence fix: idle and retry flags alone cannot bypass cadence or grant a c
   await f.pipeline.prepare(f.agent, true, { retry: true });
   assert.equal(f.calls.length, 1, 'a retry flag without a failure is not recovery');
 });
+
+test('cadence fix: a small legacy segment does not block a later eligible window', async t => {
+  const f = setup(t, { preprocessBoundaries: true, digestEvery: 48, digestWindow: 48, prepareContinueTokens: 8000, coordinatorEvery: 999 });
+  const small = exchange(f.session, 'ok'); system(f.session);
+  for (let i = 0; i < 24; i++) exchange(f.session, 'x'.repeat(1600));
+  f.state.eventsSincePrepare = 50; await f.pipeline.prepare(f.agent);
+  assert.equal(f.calls.length, 1);
+  assert.ok(small.every(e => !f.state.records[0].sourceSeqs.includes(e.seq)));
+});
