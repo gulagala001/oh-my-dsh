@@ -84,7 +84,7 @@ test('whole-window mode defaults on and all material/batch budget settings are e
   const basic = renderToStaticMarkup(panel.renderBasic());
   assert.match(basic, /按消息边界分段/); assert.doesNotMatch(basic, /aria-label="按消息边界分段"[^>]*checked/);
   const advanced = renderToStaticMarkup(panel.renderAdvanced());
-  for (const label of ['每次触发最多处理窗口数', '续跑最低文本量', '单窗输入预算', '基础摘要目标', '后台最大并发调用', '自动重试次数']) assert.ok(advanced.includes(label));
+  for (const label of ['失败重试最多处理窗口数', '预处理最低文本量', '单窗输入预算', '基础摘要目标', '后台最大并发调用', '自动重试次数']) assert.ok(advanced.includes(label));
 });
 
 test('experimental settings group CFR and CoT without changing their defaults or coupling saves', async () => {
