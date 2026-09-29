@@ -21,7 +21,7 @@ test('native DSH V4: prepared replacement, exposed trace, tool pairing and repla
   session.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'Exact requirement 9007199254740993' }], source: { kind: 'user' } }), { surfaceOp: 'append' });
   const a = session.append('assistant/message', { turn: 1, step: 1, stream: [], message: createMessage({ role: 'assistant', source: { kind: 'model', provider: 'test', model: 'test' }, content: [{ type: 'reasoning', text: 'Previous provider-exposed analysis.' }, { type: 'tool-call', id: 'native-call', name: 'read', arguments: '{}' }] }) }, { surfaceOp: 'append' });
   const b = session.append('tool/result', { turn: 1, step: 1, message: createToolResultMessage({ callId: 'native-call', content: [{ type: 'text', text: 'original data '.repeat(1500) }], isError: false }) }, { surfaceOp: 'append' });
-  const hub = { store: { dir }, config: () => ({ flushIdleMs: 0, keepTailEvents: 0 }), scope: () => ({ mode: 'session', project: dir }), action() {}, call() { throw Error('No model should be called'); }, ctx: { sessions: { async flush() {} }, tokenMeter: { measure(s) { return { nodes: s.surface.nodes.map(seq => ({ seq, heuristicTokens: 100 })) }; } } } };
+  const hub = { store: { dir }, config: () => ({ prepareContinueTokens: 1, flushIdleMs: 0, keepTailEvents: 0 }), scope: () => ({ mode: 'session', project: dir }), action() {}, call() { throw Error('No model should be called'); }, ctx: { sessions: { async flush() {} }, tokenMeter: { measure(s) { return { nodes: s.surface.nodes.map(seq => ({ seq, heuristicTokens: 100 })) }; } } } };
   const pipeline = new ContextPipeline(hub, createHostAdapter(hub)); const state = pipeline.state(session); const before = userMessages(session);
   state.records.push(newRecord(session, [reminder], { summary: 'Legacy host reminder', documents: [] }, state.binding));
   state.records.push(newRecord(session, [a, b], { summary: 'Read source.', documents: [{ title: 'Identifier', text: '9007199254740993 is a string.' }] }, state.binding)); pipeline.store.save(state);
@@ -49,7 +49,7 @@ test('native empty user shadows are repaired and new deletions stay out of model
   const material = session.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'Keep this text' }], source: { kind: 'user' } }), { surfaceOp: 'append' });
   assert.equal(session.deriveMessages().filter(m => m.role === 'user').length, 3, 'old shadows reach the provider');
   const dir = mkdtempSync(join(tmpdir(), 'shadow-repair-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
-  const hub = { store: { dir }, config: () => ({ contextEnabled: false, flushIdleMs: 0 }), scope: () => ({ mode: 'session', project: dir }), action() {},
+  const hub = { store: { dir }, config: () => ({ prepareContinueTokens: 1, contextEnabled: false, flushIdleMs: 0 }), scope: () => ({ mode: 'session', project: dir }), action() {},
     call() { throw Error('No model call expected'); }, ctx: { sessions: { async flush() {} }, logger: { warn() {} } } };
   const pipeline = new ContextPipeline(hub, createHostAdapter(hub)); t.after(() => pipeline.dispose());
   await pipeline.preStep({ session, status: 'running' });
@@ -109,7 +109,7 @@ test('native whole-window detail carries real image block shapes; brief removes 
   session.append('assistant/message', { turn: 1, step: 1, stream: [], message: createMessage({ role: 'assistant', source: { kind: 'model', provider: 'test', model: 'test' }, content: [{ type: 'tool-call', id: 'image-call', name: 'read', arguments: '{}' }] }) }, { surfaceOp: 'append' });
   const image = { type: 'image', attachment: { attachmentId: 'sha256:' + 'a'.repeat(64), mediaType: 'image/png', bytes: 100, width: 10, height: 10, name: 'fixture.png' } };
   session.append('tool/result', { turn: 1, step: 1, message: createToolResultMessage({ callId: 'image-call', content: [{ type: 'text', text: 'Observed result. '.repeat(1000) }, image], isError: false }) }, { surfaceOp: 'append' });
-  const hub = { store: { dir }, config: () => ({ flushIdleMs: 0, keepTailEvents: 0, traceEnabled: false, coordinatorEvery: 999 }), scope: () => ({ mode: 'session', project: dir }), action() {},
+  const hub = { store: { dir }, config: () => ({ prepareContinueTokens: 1, flushIdleMs: 0, keepTailEvents: 0, traceEnabled: false, coordinatorEvery: 999 }), scope: () => ({ mode: 'session', project: dir }), action() {},
     async call() { return { blocks: [{ type: 'tool-call', name: 'prepare_segment', arguments: { summary: 'Requirement 用户原话 retained; read completed.', documents: [] } }] }; },
     ctx: { sessions: { async flush() {} }, tokenMeter: { measure(s) { return { nodes: s.surface.nodes.map(seq => ({ seq, heuristicTokens: 100 })) }; } } } };
   const pipeline = new ContextPipeline(hub, createHostAdapter(hub)); t.after(() => pipeline.dispose());
@@ -180,7 +180,7 @@ test('rc.2 dynamic tool declarations survive context replacement, full compactio
   const update = session.append('developer/message', { turn: 1, step: 2, headerSeq, message: createDeveloperMessage({ source: { kind: 'tool-registry' }, content: [{ type: 'tool-addition', toolName: 'new_tool' }, { type: 'tool-removal', toolName: 'old_tool' }] }) }, { surfaceOp: 'append' });
   assistant();
   const history = session.toolHistory();
-  const hub = { store: { dir }, config: () => ({ flushIdleMs: 0, keepTailEvents: 0, traceEnabled: false, coordinatorEvery: 999 }), scope: () => ({ mode: 'session', project: dir }), action() {},
+  const hub = { store: { dir }, config: () => ({ prepareContinueTokens: 1, flushIdleMs: 0, keepTailEvents: 0, traceEnabled: false, coordinatorEvery: 999 }), scope: () => ({ mode: 'session', project: dir }), action() {},
     async call(_agent, kind, request) {
       assert.ok(!JSON.stringify(request.messages).includes('tool-addition'), 'tool control data is never sent to the summarizer');
       return { blocks: [{ type: 'tool-call', name: kind === 'compactFull' ? 'compact_conversation' : 'prepare_segment', arguments: kind === 'compactFull' ? { summary: 'Request retained; observed work completed.' } : { summary: 'Work completed.', documents: [] } }] };

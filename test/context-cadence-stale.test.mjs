@@ -12,7 +12,7 @@ function setup(t, config = {}) {
   t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1000000 });
   const dir = mkdtempSync(join(tmpdir(), 'cadence-stale-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
   const session = new FixtureSession(); system(session); user(session, 'Test task.');
-  const cfg = contextConfig({ digestEvery: 32, digestWindow: 32, keepTailEvents: 0, traceEnabled: true, coordinatorMinGapMs: 30000, coordinatorEvery: 2, ...config });
+  const cfg = contextConfig({ prepareContinueTokens: 1, digestEvery: 32, digestWindow: 32, keepTailEvents: 0, traceEnabled: true, coordinatorMinGapMs: 30000, coordinatorEvery: 2, ...config });
   const calls = [], actions = [], hub = { store: { dir }, config: () => cfg, scope: () => ({ mode: 'session', project: 'test' }), ctx: {},
     action(_s, name, _n, detail) { actions.push({ name, detail }); },
     async call(_a, kind, request) { calls.push({ kind, request }); return kind === 'prepare' ? reply('prepare_segment', prepared) : reply('submit_context_choices', { choices: [] }); } };
@@ -25,27 +25,16 @@ const choice = (action, ids, extra = {}) => ({ action, ids, summary: '', documen
 const plan = (f, choices) => ({ id: 'earlier-plan', userRevision: userRevision(f.session), choices: normalizeChoices({ choices }, f.state, f.session) });
 async function finish(f) { do { await Promise.all([...f.pipeline.jobs.values()]); } while (f.pipeline.jobs.size); }
 
-test('32 events then 4 small events use one call; the small tail remains pending', async t => {
+test('normal preparation leaves even a large second window pending until the next event threshold', async t => {
   const f = setup(t, { coordinatorEvery: 999 });
-  for (let i = 0; i < 18; i++) exchange(f.session, 'ok');
-  f.state.eventsSincePrepare = 32;
-  await f.pipeline.prepare(f.agent);
-  assert.equal(f.calls.length, 1); assert.equal(f.state.records[0].sourceSeqs.length, 32);
-  assert.equal(f.state.prepareDeferred.events, 4); assert.equal(f.pipeline.view(f.session).backlog.events, 4);
+  for (let i = 0; i < 32; i++) exchange(f.session);
+  f.state.eventsSincePrepare = 32; await f.pipeline.prepare(f.agent);
+  assert.equal(f.calls.length, 1); assert.equal(f.state.records.length, 1);
+  assert.equal(f.pipeline.view(f.session).backlog.events, 32);
   assert.equal(f.state.eventsSincePrepare, 0);
-  t.mock.timers.tick(3600000); await finish(f); assert.equal(f.calls.length, 1);
-  await f.pipeline.prepare(f.agent, true); assert.equal(f.calls.length, 2, 'explicit preparation can process a small remainder');
-});
-
-test('a full second window and a short but large second window may continue', async t => {
-  const f = setup(t, { coordinatorEvery: 999 });
-  for (let i = 0; i < 32; i++) exchange(f.session, 'ok');
+  await f.pipeline.prepare(f.agent); assert.equal(f.calls.length, 1);
   f.state.eventsSincePrepare = 32; await f.pipeline.prepare(f.agent);
   assert.equal(f.calls.length, 2); assert.equal(f.state.records.length, 2);
-  for (let i = 0; i < 16; i++) exchange(f.session, 'ok');
-  exchange(f.session, 'large result '.repeat(3000));
-  f.state.eventsSincePrepare = 32; await f.pipeline.prepare(f.agent);
-  assert.equal(f.calls.length, 4); assert.equal(f.state.records.at(-1).sourceSeqs.length, 2);
 });
 
 test('old records, reminders and attachment bytes cannot inflate continuation work', t => {
@@ -56,16 +45,17 @@ test('old records, reminders and attachment bytes cannot inflate continuation wo
   assert.equal(workload.events, 2); assert.ok(workload.estimatedTokens < 100);
 });
 
-test('a failed second window retries only that window, not another entire batch', async t => {
+test('repeated failures obey the retry limit while successful recovery catches up two windows', async t => {
   const f = setup(t, { coordinatorEvery: 999 });
-  for (let i = 0; i < 48; i++) exchange(f.session, 'ok');
+  for (let i = 0; i < 64; i++) exchange(f.session);
   f.state.eventsSincePrepare = 32; let calls = 0;
-  f.hub.call = async () => { calls++; if (calls === 2) throw Error('transient'); return reply('prepare_segment', prepared); };
-  await f.pipeline.prepare(f.agent); assert.equal(calls, 2); assert.equal(f.state.records.length, 1);
-  t.mock.timers.tick(2000); await finish(f);
-  assert.equal(calls, 3); assert.equal(f.state.records.length, 2);
-  assert.equal(f.pipeline.view(f.session).backlog.events, 32);
-  t.mock.timers.tick(3600000); await finish(f); assert.equal(calls, 3);
+  f.hub.call = async () => { calls++; if (calls <= 2) throw Error('503 unavailable'); return reply('prepare_segment', prepared); };
+  await f.pipeline.prepare(f.agent); assert.equal(calls, 1);
+  t.mock.timers.tick(2000); await finish(f); assert.equal(calls, 2);
+  t.mock.timers.tick(4000); await finish(f);
+  assert.equal(calls, 4); assert.equal(f.state.records.length, 2);
+  assert.equal(f.pipeline.view(f.session).backlog.events, 64);
+  t.mock.timers.tick(3600000); await finish(f); assert.equal(calls, 4);
 });
 
 test('an earlier representation change applied during generation discards obsolete snapshots without error or forced retry', async t => {
@@ -249,8 +239,70 @@ test('one user message waits for the active preparation batch and reviews its re
   f.pipeline.observe(f.session, user(f.session, 'Continue the task.'));
   assert.deepEqual(calls.map(c => c.kind), ['prepare'], 'do not review old records while this same trigger is preparing new ones');
   releasePrepare(); await finish(f);
-  assert.deepEqual(calls.map(c => c.kind), ['prepare', 'prepare', 'coordinate']);
-  assert.equal(JSON.parse(calls.at(-1).request.messages[0].content[0].text).records.length, 3);
+  assert.deepEqual(calls.map(c => c.kind), ['prepare', 'coordinate']);
+  assert.equal(JSON.parse(calls.at(-1).request.messages[0].content[0].text).records.length, 2);
   t.mock.timers.tick(3600000); await finish(f);
   assert.equal(calls.filter(c => c.kind === 'coordinate').length, 1);
+});
+
+test('cadence fix: 48 events below 8000 tokens wait without consuming the counter', async t => {
+  const f = setup(t, { digestEvery: 48, digestWindow: 48, prepareContinueTokens: 8000, coordinatorEvery: 999 });
+  for (let i = 0; i < 24; i++) exchange(f.session, 'ok');
+  f.state.eventsSincePrepare = 48;
+  await f.pipeline.prepare(f.agent);
+  assert.equal(f.calls.length, 0); assert.equal(f.state.eventsSincePrepare, 48);
+  exchange(f.session, 'x'.repeat(32000)); f.state.eventsSincePrepare += 2;
+  await f.pipeline.prepare(f.agent);
+  assert.equal(f.calls.length, 1, 'the waiting window grows to include enough new text');
+});
+
+test('cadence fix: long text cannot bypass 48 events or start a second normal window', async t => {
+  const f = setup(t, { digestEvery: 48, digestWindow: 48, prepareContinueTokens: 8000, coordinatorEvery: 999 });
+  for (let i = 0; i < 48; i++) exchange(f.session, 'x'.repeat(1600));
+  f.state.eventsSincePrepare = 47; await f.pipeline.prepare(f.agent); assert.equal(f.calls.length, 0);
+  f.state.eventsSincePrepare = 48; await f.pipeline.prepare(f.agent);
+  assert.equal(f.calls.length, 1); assert.equal(f.state.records.length, 1);
+  await f.pipeline.prepare(f.agent); assert.equal(f.calls.length, 1);
+});
+
+test('cadence fix: actual failure retries at most two windows and still enforces the token floor', async t => {
+  const f = setup(t, { digestEvery: 48, digestWindow: 48, prepareContinueTokens: 8000, coordinatorEvery: 999 });
+  for (let i = 0; i < 72; i++) exchange(f.session, 'x'.repeat(1600));
+  f.state.eventsSincePrepare = 48; let calls = 0;
+  f.hub.call = async () => { if (++calls === 1) throw Error('503 unavailable'); return reply('prepare_segment', prepared); };
+  await f.pipeline.prepare(f.agent); assert.equal(calls, 1);
+  t.mock.timers.tick(2000); await finish(f);
+  assert.equal(calls, 3); assert.equal(f.state.records.length, 2);
+  assert.equal(f.pipeline.view(f.session).backlog.events, 48);
+  t.mock.timers.tick(3600000); await finish(f); assert.equal(calls, 3);
+});
+
+test('cadence fix: retry never processes a second window below 8000 tokens', async t => {
+  const f = setup(t, { digestEvery: 48, digestWindow: 48, prepareContinueTokens: 8000, coordinatorEvery: 999 });
+  for (let i = 0; i < 24; i++) exchange(f.session, 'x'.repeat(1600));
+  for (let i = 0; i < 24; i++) exchange(f.session, 'ok');
+  f.state.eventsSincePrepare = 48; let calls = 0;
+  f.hub.call = async () => { if (++calls === 1) throw Error('503 unavailable'); return reply('prepare_segment', prepared); };
+  await f.pipeline.prepare(f.agent); t.mock.timers.tick(2000); await finish(f);
+  assert.equal(calls, 2); assert.equal(f.state.records.length, 1);
+  assert.ok(f.state.prepareDeferred.estimatedTokens < 8000);
+});
+
+test('cadence fix: idle and retry flags alone cannot bypass cadence or grant a catch-up batch', async t => {
+  const f = setup(t, { digestEvery: 48, digestWindow: 48, prepareContinueTokens: 8000, coordinatorEvery: 999, idlePreprocessEnabled: true });
+  for (let i = 0; i < 48; i++) exchange(f.session, 'x'.repeat(1600));
+  f.agent.status = 'idle'; f.state.eventsSincePrepare = 47;
+  await f.pipeline.flushIdle(f.agent); assert.equal(f.calls.length, 0);
+  f.state.eventsSincePrepare = 48;
+  await f.pipeline.prepare(f.agent, true, { retry: true });
+  assert.equal(f.calls.length, 1, 'a retry flag without a failure is not recovery');
+});
+
+test('cadence fix: a small legacy segment does not block a later eligible window', async t => {
+  const f = setup(t, { preprocessBoundaries: true, digestEvery: 48, digestWindow: 48, prepareContinueTokens: 8000, coordinatorEvery: 999 });
+  const small = exchange(f.session, 'ok'); system(f.session);
+  for (let i = 0; i < 24; i++) exchange(f.session, 'x'.repeat(1600));
+  f.state.eventsSincePrepare = 50; await f.pipeline.prepare(f.agent);
+  assert.equal(f.calls.length, 1);
+  assert.ok(small.every(e => !f.state.records[0].sourceSeqs.includes(e.seq)));
 });
