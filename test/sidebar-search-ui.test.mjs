@@ -62,6 +62,16 @@ test('sidebar keyboard context menu returns to its row so navigation can continu
   await editor.click();
   await until(async () => await page.getByRole('menu').count() === 0);
   assert.equal(await editor.evaluate(el => el === document.activeElement), true, 'outside clicks retain their new focus');
+  // A keyboard/assistive client can focus a visible menu before the adapter's
+  // deferred auto-focus runs. Closing must still restore the originating row.
+  await page.evaluate(() => {
+    const observer = new MutationObserver(() => {
+      const item = [...document.querySelectorAll('[role="menuitem"]')].find(el => el.textContent.trim() === '置顶会话');
+      if (!item?.getClientRects().length || getComputedStyle(item).visibility !== 'visible') return;
+      observer.disconnect(); item.focus();
+    });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+  });
   await row.focus(); await page.keyboard.press('Shift+F10');
   await page.getByRole('menuitem', { name: '置顶会话', exact: true }).press('Enter');
   await until(async () => await page.getByRole('menu').count() === 0);
