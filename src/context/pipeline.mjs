@@ -137,7 +137,7 @@ export class ContextPipeline {
     if (this.closed || !this.agents.has(agent.session.id) || agent.status !== 'idle' || !this.config().contextEnabled || !this.config().idlePreprocessEnabled) return;
     const s = this.state(agent.session);
     // Reviewing a prepared record must not drain unrelated historical backlog.
-    if (s.eventsSincePrepare > 0) await this.prepare(agent, true, { retry: true });
+    if (s.eventsSincePrepare > 0) await this.prepare(agent, false, { retry: true });
     if (!this.closed && this.agents.get(agent.session.id) === agent && agent.status === 'idle'
       && this.config().idlePreprocessEnabled && (s.review.newRecords > 0 || s.review.needed)) await this.coordinate(agent, true, { retry: true });
   }
@@ -180,21 +180,23 @@ export class ContextPipeline {
     const session = agent.session, key = session.id + ':prepare';
     if (this.jobs.has(key)) return this.jobs.get(key);
     const s = this.state(session);
+    const recovering = Boolean(s.failures.prepare);
     if (force && !retry) { delete s.failures.prepare; delete s.prepareRetryAt; }
     if ((s.failures.prepare?.count || 0) > this.config().backgroundMaxRetries) return;
     if (Date.now() < (s.prepareRetryAt || 0)) return;
-    if (!force && (s.eventsSincePrepare || 0) < this.config().digestEvery) return;
+    if (!force && !recovering && (s.eventsSincePrepare || 0) < this.config().digestEvery) return;
     const controller = new AbortController(); this.controllers.set(key, controller);
     let providerFailure = false;
     const job = (async () => {
       let completed = 0, seenEvents = s.eventsSincePrepare || 0;
-      const batchLimit = retry ? 1 : this.config().prepareBatchWindows;
+      // Only recovery from a recorded failure receives a catch-up batch.
+      const batchLimit = recovering ? this.config().prepareBatchWindows : 1;
       do {
         const cfg = this.config(), events = prepareCandidate(session, s, cfg, this.adapter.pairing);
         if (!events) break;
         const workload = preparationWorkload(session, s, events);
-        if (completed > 0 && workload.events < cfg.digestWindow && workload.estimatedTokens < cfg.prepareContinueTokens) {
-          s.prepareDeferred = { ...workload, reason: 'small-tail', at: Date.now() };
+        if (workload.estimatedTokens < cfg.prepareContinueTokens) {
+          s.prepareDeferred = { ...workload, reason: 'below-minimum', at: Date.now() };
           s.prepareBacklog = backlogView(session, s, cfg); this.store.save(s); break;
         }
         delete s.prepareDeferred;

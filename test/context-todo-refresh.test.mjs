@@ -24,7 +24,7 @@ function setup(t, config = {}, withTodo = true) {
     const added = todoStore.execTaskMap(session, { op: 'excerpt', from: '实现样式', to: '实现样式', tasks: [{ title: 'TASK_PAYLOAD_ONLY_42', anchor: { from: '实现样式', to: '实现样式' } }] });
     assert.equal(added.isError, undefined); todoStore.maintainInjection(session);
   }
-  const calls = [], hub = { todoStore, store: { dir }, config: () => ({ keepTailEvents: 0, coordinatorEvery: 999, flushIdleMs: 0, ...config }), scope: () => ({ mode: 'session', project: dir }), action() {},
+  const calls = [], hub = { todoStore, store: { dir }, config: () => ({ prepareContinueTokens: 1, keepTailEvents: 0, coordinatorEvery: 999, flushIdleMs: 0, ...config }), scope: () => ({ mode: 'session', project: dir }), action() {},
     ctx: { sessions: { async flush() {} }, tokenMeter: { measure(s) { return { nodes: s.surface.nodes.map(seq => ({ seq, heuristicTokens: 100 })) }; } } },
     async call(_agent, kind, args) { calls.push({ kind, args }); return { blocks: [{ type: 'tool-call', name: kind === 'compactFull' ? 'compact_conversation' : 'prepare_segment', arguments: kind === 'compactFull' ? { summary: prepared.summary } : prepared }] }; } };
   const pipeline = new ContextPipeline(hub, createHostAdapter(hub)); t.after(() => pipeline.dispose());
