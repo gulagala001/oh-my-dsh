@@ -1,4 +1,4 @@
-import { nodeKey, LIMITS, cursorFor, readCursor, splitSource, digest } from './core.mjs';
+import { nodeKey, cursorFor, readCursor, splitSource, digest } from './core.mjs';
 import { recordText } from '../context/core.mjs';
 import { describeAsset, attachmentsOf, combineAssets, messageOf } from '../context/materials.mjs';
 

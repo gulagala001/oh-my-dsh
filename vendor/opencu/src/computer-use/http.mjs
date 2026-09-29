@@ -2,8 +2,22 @@ import { computerVision } from './model-vision.mjs';
 import {createReadStream} from 'node:fs';
 import {stat} from 'node:fs/promises';
 import {pipeline} from 'node:stream/promises';
-const send = (res,status,value) => { if(res.destroyed||res.writableEnded)return;res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(value)); };
-async function body(req){let text='';for await(const chunk of req){text+=chunk;if(Buffer.byteLength(text)>65536)throw new Error('Request is too large');}return text?JSON.parse(text):{};}
+import { readJsonBody, sendJson as send } from '../http.mjs';
+const body = req => readJsonBody(req, { maxBytes: 65536 });
+
+async function requestOperation(req, res, task, run, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timer = timeoutMs ? setTimeout(() => controller.abort(new Error(task + '超时')), timeoutMs) : undefined;
+  const closed = () => { if (!res.writableEnded) controller.abort(new Error(task + '已取消')); };
+  res.once('close', closed); req.once('aborted', closed);
+  try {
+    const result = await run(controller.signal);
+    controller.signal.throwIfAborted();
+    return result;
+  } finally {
+    clearTimeout(timer); res.off('close', closed); req.off('aborted', closed);
+  }
+}
 
 export function mountComputerUseHttp(ctx,hub){
   ctx.inject(['webServer','connection'],web=>{
@@ -106,17 +120,13 @@ export function mountComputerUseHttp(ctx,hub){
         if(op==='downloads-clear'){send(res,200,manager.clearDownloads(id));return;}
         if(['annotation','annotation-style','view-screenshot','view-viewport','view-layout','view-find'].includes(op)){
           const task=op==='view-screenshot'?'截图':['view-viewport','view-layout'].includes(op)?'视口调整':op==='view-find'?'页面查找':'页面批注';
-          const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(new Error(task+'超时')),15000);
-          const closed=()=>{if(!res.writableEnded)controller.abort(new Error(task+'已取消'));};res.once('close',closed);req.once('aborted',closed);
-          try{const input=await body(req),method={'annotation':'annotationSnapshot','annotation-style':'annotationStylePreview','view-screenshot':'viewScreenshot','view-viewport':'resizeViewedTab','view-layout':'layoutViewedTab','view-find':'findViewedText'}[op],result=await manager[method](id,input,controller.signal);controller.signal.throwIfAborted();send(res,200,result);}
-          finally{clearTimeout(timeout);res.off('close',closed);req.off('aborted',closed);}
+          const method={'annotation':'annotationSnapshot','annotation-style':'annotationStylePreview','view-screenshot':'viewScreenshot','view-viewport':'resizeViewedTab','view-layout':'layoutViewedTab','view-find':'findViewedText'}[op];
+          send(res,200,await requestOperation(req,res,task,async signal=>manager[method](id,await body(req),signal)));
           return;
         }
         if(op==='share-windows'||op==='share-window'){
-          const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(new Error('窗口分享超时')),15000);
-          const closed=()=>{if(!res.writableEnded)controller.abort(new Error('窗口分享已取消'));};res.once('close',closed);req.once('aborted',closed);
-          try { const value=op==='share-windows'?{windows:await manager.readWindowShare(null,controller.signal)}:await manager.readWindowShare(await body(req),controller.signal);controller.signal.throwIfAborted();send(res,200,value); }
-          finally { clearTimeout(timeout);res.off('close',closed);req.off('aborted',closed); }
+          send(res,200,await requestOperation(req,res,'窗口分享',async signal=>op==='share-windows'
+            ? {windows:await manager.readWindowShare(null,signal)} : manager.readWindowShare(await body(req),signal)));
           return;
         }
         if(op==='reveal-preview'){send(res,200,await manager.revealPreview(id,await body(req)));return;}
@@ -127,8 +137,7 @@ export function mountComputerUseHttp(ctx,hub){
         if(op==='view-tab'){send(res,200,await manager.viewTab(id,await body(req)));return;}
         if(op==='presentation-ack'){send(res,200,manager.acknowledgePresentation(id,await body(req)));return;}
         if(op==='open-external'){
-          const controller=new AbortController();const closed=()=>{if(!res.writableEnded)controller.abort(new Error('打开外部浏览器已取消'));};res.once('close',closed);req.once('aborted',closed);
-          try{send(res,200,await manager.openViewedExternally(id,await body(req),controller.signal));}finally{res.off('close',closed);req.off('aborted',closed);}return;
+          send(res,200,await requestOperation(req,res,'打开外部浏览器',async signal=>manager.openViewedExternally(id,await body(req),signal),0));return;
         }
         if(op==='snapshot'){
           const target=manager.status(id).target;if(!target){send(res,409,{error:'尚未选择应用或标签页'});return;}
@@ -139,7 +148,7 @@ export function mountComputerUseHttp(ctx,hub){
           send(res,200,manager.status(id));return;
         }
         send(res,404,{error:'Unknown route'});
-      }catch(error){send(res,400,{error:error.message,code:error.code});}
+      }catch(error){send(res,error.statusCode||400,{error:error.message,code:error.code});}
     }}));
   });
 }

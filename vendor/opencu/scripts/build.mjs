@@ -1,14 +1,8 @@
 import { build } from 'esbuild';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { whaleSvg } from '../src/client/brand.mjs';
 
 await mkdir(new URL('../lib/', import.meta.url), { recursive: true });
-for (const destination of ['../browser-extension/logo.svg']) {
-  const url = new URL(destination, import.meta.url);
-  await mkdir(new URL('./', url), { recursive: true });
-  await writeFile(url, whaleSvg('omd-logo').replace('aria-hidden="true"', 'role="img" aria-label="Oh My DSH"'));
-}
 const nativeChat = await readFile(new URL('../vendor/dsh-chat/lib/client.js', import.meta.url), 'utf8');
 if (!nativeChat.startsWith('window.__ModuleLoader__.load({') || !nativeChat.replace(/^\/\/# sourceMappingURL=.*$/gm, '').trimEnd().endsWith('});')) throw Error('Unexpected native Chat factory');
 const ownedChat = nativeChat.replace(/(const tagId(?:\$\d+)? = )"@deepseek-ai\/dsh-client-ui-chat\//g, '$1"opencu-shared-chat/').replaceAll('tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-chat"', 'tag.dataset.plugin = "opencu-shared-chat"');

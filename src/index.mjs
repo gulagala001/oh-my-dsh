@@ -1,4 +1,4 @@
-import { readJsonBody as readBody, rejectUntrusted } from './http.mjs';
+import { readJsonBody as readBody, rejectUntrusted, sendJson as send } from './http.mjs';
 import { installFileUploadCompatibility } from './file-upload-compat.mjs';
 import { legacySettings } from '#opencu/src/legacy-settings.mjs';
 import { homedir } from 'node:os';
@@ -40,7 +40,6 @@ import { createPromptOptimizer, handlePromptOptimizerApi } from './prompt-optimi
 export { Config };
 export const name = 'trisoul-x';
 export const inject = ['loader', 'tools', 'llm', 'agents', 'sessions', 'settings', 'tokenMeter', 'sessionProjections', 'sessionPersistence'];
-const send = (res, status, value) => { if (res.destroyed || res.writableEnded) return; if (res.headersSent) { res.destroy(); return; } res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...(status === 413 || status === 408 ? { Connection: 'close' } : {}) }); res.end(JSON.stringify(value)); };
 
 export async function apply(ctx, config) {
   installLoaderLifecycleCompatibility(ctx);
