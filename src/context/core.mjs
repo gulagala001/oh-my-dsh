@@ -215,7 +215,8 @@ function legacyPrepareCandidate(session, state, cfg, pairing) {
     if (!run.length || run.every(isTaskInjection)) return null;
     // The window is a preferred size; a tool round-trip is never split.
     let end = Math.min(run.length, cfg.digestWindow);
-    while (end < run.length && !pairing.after(session, run[end - 1].seq)) end++;
+    while (end < run.length && (!pairing.after(session, run[end - 1].seq)
+      || preparationWorkload(session, state, run.slice(0, end)).estimatedTokens < (cfg.prepareContinueTokens || 0))) end++;
     if (!pairing.after(session, run[end - 1].seq)) {
       while (end > 0 && !pairing.after(session, run[end - 1].seq)) end--;
     }
@@ -223,10 +224,17 @@ function legacyPrepareCandidate(session, state, cfg, pairing) {
     return run.slice(0, end);
   };
   for (const e of events.slice(0, stop)) {
-    if (boundary(e)) { const found = take(); if (found) return found; run = []; }
+    if (boundary(e)) {
+      const found = take();
+      if (found && preparationWorkload(session, state, found).estimatedTokens >= (cfg.prepareContinueTokens || 0)) return found;
+      run = [];
+    }
     else {
       run.push(e);
-      if (run.length >= cfg.digestWindow) { const found = take(); if (found) return found; }
+      if (run.length >= cfg.digestWindow) {
+        const found = take();
+        if (found && preparationWorkload(session, state, found).estimatedTokens >= (cfg.prepareContinueTokens || 0)) return found;
+      }
     }
   }
   return take();
@@ -254,10 +262,12 @@ export function prepareCandidate(session, state, cfg, pairing) {
     if (pairing.before(session, nodes[i])) { first = i; break; }
   }
   if (first < 0) return null;
-  let end = first, lastSafe = -1, chars = 0, members = 0;
+  let end = first, lastSafe = -1, chars = 0, members = 0, freshChars = 0;
   const maxChars = (cfg.prepareInputTokens || 300000) * 4;
   for (; end < stop; end++) {
     const seq = nodes[end], e = session.eventAt(seq);
+    if (!keep.has(seq) && !owners.has(seq) && (actualUser(e)
+      || (['assistant/message', 'tool/result'].includes(e.type) && !eventSource(e)))) freshChars += contentChars(session.deriveEventMessage(e)?.content);
     if (summaryRead(e)) { chars += JSON.stringify(keep.has(seq) ? '[Protected host context retained in place.]' : materialText(summaryRead(e).content, seq)).length + 80; if (!keep.has(seq)) members++; }
     const splitRecord = [...spans.values()].some(span => span.start <= end && span.end > end);
     if (!splitRecord && pairing.after(session, seq)) {
@@ -266,7 +276,9 @@ export function prepareCandidate(session, state, cfg, pairing) {
         end = lastSafe; break;
       }
       lastSafe = end;
-      if (members >= cfg.digestWindow) break;
+      // A short first window must grow with new arrivals instead of blocking
+      // every later attempt below the minimum text threshold forever.
+      if (members >= cfg.digestWindow && Math.ceil(freshChars / 4) >= (cfg.prepareContinueTokens || 0)) break;
     }
   }
   if (end >= stop) end = lastSafe;

@@ -14,7 +14,7 @@ import { FixtureSession, user, plugin, system, exchange, adapter, pairing } from
 function setup(t, config = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'context-window-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
   const session = new FixtureSession(); system(session); if (config.preface) plugin(session, 'Keep task status current.', 'task-reminder'); user(session, 'Preserve exact requirement 9007199254740993.');
-  const cfg = contextConfig({ keepTailEvents: 0, digestEvery: 32, digestWindow: 64, flushIdleMs: 0, coordinatorEvery: 999, traceEnabled: false, ...config });
+  const cfg = contextConfig({ prepareContinueTokens: 1, keepTailEvents: 0, digestEvery: 32, digestWindow: 64, flushIdleMs: 0, coordinatorEvery: 999, traceEnabled: false, ...config });
   const calls = [], hub = { store: { dir }, config: () => cfg, scope: () => ({ mode: 'session', project: '/p' }), ctx: {}, action() {},
     async call(_agent, kind, request) { calls.push({ kind, request }); return { blocks: [{ type: 'tool-call', name: 'prepare_segment', arguments: { summary: 'Requirement 9007199254740993 retained. Work completed.', documents: [{ title: 'Facts', text: 'Detailed observed facts.' }] } }] }; } };
   const pipeline = new ContextPipeline(hub, adapter); t.after(() => pipeline.dispose());
@@ -55,13 +55,13 @@ test('documents and native image/file blocks move together; brief recall reopens
   assert.throws(() => f.pipeline.recallContent(f.session, { id, asset: 3 }), /附件编号/);
 });
 
-test('one trigger processes a bounded batch and exposes remaining backlog separately', async t => {
+test('one normal trigger processes one window and exposes remaining backlog separately', async t => {
   const f = setup(t, { digestWindow: 4, prepareBatchWindows: 2 });
   for (let i = 0; i < 12; i++) { exchange(f.session); plugin(f.session, 'Routine reminder', 'tasks'); }
   f.state.eventsSincePrepare = 32;
-  await f.pipeline.prepare(f.agent); assert.equal(f.calls.length, 2); assert.equal(f.state.eventsSincePrepare, 0);
-  assert.ok(f.pipeline.view(f.session).backlog.events > 0); assert.ok(f.state.records.reduce((n,r) => n+r.sourceSeqs.length,0) > 4);
-  await f.pipeline.prepare(f.agent); assert.equal(f.calls.length, 2, 'backlog does not independently wake an idle session');
+  await f.pipeline.prepare(f.agent); assert.equal(f.calls.length, 1); assert.equal(f.state.eventsSincePrepare, 0);
+  assert.ok(f.pipeline.view(f.session).backlog.events > 0); assert.ok(f.state.records.reduce((n,r) => n+r.sourceSeqs.length,0) >= 4);
+  await f.pipeline.prepare(f.agent); assert.equal(f.calls.length, 1, 'backlog does not independently wake an idle session');
 });
 
 test('long reasoning participates in the shrink check rather than counting as ten characters', t => {
@@ -76,7 +76,7 @@ test('separate brief records preserve archival assets and exact user originals',
   const f = setup(t, { digestWindow: 4, prepareBatchWindows: 2 });
   const first = exchange(f.session); first[1].data.message.content.push(structuredClone(image));
   user(f.session, 'Correction: preserve UTF-8 用户原话'); exchange(f.session); exchange(f.session);
-  await f.pipeline.prepare(f.agent, true); assert.equal(f.state.records.length, 2);
+  await f.pipeline.prepare(f.agent, true); await f.pipeline.prepare(f.agent, true); assert.equal(f.state.records.length, 2);
   const ids = f.state.records.map(r => r.id);
   await apply(f, ids.map(id => ['brief', [id]]));
   assert.equal(f.state.records.length, 2); assert.ok(f.state.records.every(r => !r.mergedInto));

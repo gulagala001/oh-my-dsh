@@ -67,7 +67,7 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
     'llm-pi-ai': { providers: { fixture: { ...(imageBudget ? { maxRequestImageBytes: imageBudget } : {}), api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'FRONTEND_FIXTURE', models: [{ id: 'fixture', name: '界面预览模型', contextWindow: 1000000, maxTokens: 8192, input: ['text', 'image'], ...modelProfile }, ...additionalModels.map(model => ({contextWindow:1000000,maxTokens:8192,input:['text'],...model}))] } } },
     'agent-default-model': { provider: 'fixture', model: 'fixture' },
     'omd-ui-chat': chatConfig,
-    'trisoul-x': { componentAutoSetup, digestEvery: 1000, flushIdleMs: 3600000, computerUseNativeBinary: join(root, 'missing-native'), computerUseChromeUserDataDir: join(root, 'chrome-profile'), ...omdConfig },
+    'trisoul-x': { componentAutoSetup, prepareContinueTokens: 1, digestEvery: 1000, flushIdleMs: 3600000, computerUseNativeBinary: join(root, 'missing-native'), computerUseChromeUserDataDir: join(root, 'chrome-profile'), ...omdConfig },
   }));
   await writeFile(join(home, '.credentials.yaml'), JSON.stringify({ version: 1, refs: { FRONTEND_FIXTURE: 'local-test-only' } }), { mode: 0o600 });
   if (installedPackage) {
