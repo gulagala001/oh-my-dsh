@@ -175,24 +175,28 @@ export DSH_HOME="$omdDataDir"
 $env:DSH_HOME = $omdDataDir
 ```
 
-DSH rc.2 的 npm 发布暂缺一个账号设置包。以下命令使用本仓库锁定的 rc.2 宿主及同标签构建，不混用 rc.1；需在克隆的仓库目录内运行 `pnpm exec dsh`。已有环境保留原 `DSH_HOME`、profile 和端口。
-
 ```sh
-git clone --branch v0.3.0 --depth 1 https://github.com/gulagala001/oh-my-dsh.git
-cd oh-my-dsh
-pnpm install --frozen-lockfile
-pnpm exec dsh --version
-pnpm exec dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.3.0
-pnpm exec dsh --profile web
+npx --yes @deepseek-ai/dsh@0.2.0-rc.2 --version
+npx --yes @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.3.0
+npx --yes @deepseek-ai/dsh@0.2.0-rc.2 --profile web
 ```
 
 自定义端口启动时追加 `--port 原端口`。需要常驻时使用原服务管理方式，不把临时终端进程误报为持久部署。
 
 ### npm／pnpm 全局安装
 
-上游 rc.2 缺包期间，不用一个安装失败的新全局包覆盖原入口。按上一节准备锁定源码，改为从该目录使用 `pnpm exec dsh` 管理和启动原 profile；服务管理器使用该仓库的 `node_modules/@deepseek-ai/dsh/lib/bin.js`，保留原 Node、DSH_HOME、profile、端口和其他参数。旧全局安装可保留供独立备份回退，但不要让新旧实例同时写同一数据目录。
+用原包管理器更新原安装位置：
 
-插件安装不会升级全局宿主。官方 npm 补齐对应包后，可恢复通常的全局包管理方式；切换前仍须核对实际宿主版本。
+```sh
+npm install -g @deepseek-ai/dsh@0.2.0-rc.2
+# 原来通过 pnpm 全局安装时，使用 pnpm add -g @deepseek-ai/dsh@0.2.0-rc.2
+
+dsh --version
+dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.3.0
+dsh --profile web
+```
+
+确认原服务管理器使用的可执行文件就是更新后的版本；插件安装命令不会升级全局宿主。保留原来的 DSH_HOME、profile 和端口参数。
 
 ### OMD 源码启动
 

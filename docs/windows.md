@@ -12,15 +12,10 @@ Web／源码建议使用 Node.js 24（插件声明最低 22.19），并准备 pn
 
 以下是 Web 安装。已有环境先停止服务并备份实际 `DSH_HOME`，沿用原 profile 和端口；首次安装可使用默认 `web`。在 PowerShell 7 中运行，无需先全局安装 `dsh`：
 
-DSH rc.2 的 npm 发布暂缺一个账号设置包。以下命令使用本仓库锁定的 rc.2 宿主及同标签构建，不混用 rc.1；需在克隆的仓库目录内运行 `pnpm exec dsh`。已有环境保留原 `DSH_HOME`、profile 和端口。
-
 ```powershell
-git clone --branch v0.3.0 --depth 1 https://github.com/gulagala001/oh-my-dsh.git
-cd oh-my-dsh
-pnpm install --frozen-lockfile
-pnpm exec dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.3.0
+npx --yes @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.3.0
 if ($LASTEXITCODE -ne 0) { throw '插件安装失败' }
-pnpm exec dsh --profile web
+npx --yes @deepseek-ai/dsh@0.2.0-rc.2 --profile web
 ```
 
 打开启动时打印的登录链接，新建会话并选择 **Oh My DSH**，通过输入区的 **工作台** 和 **电脑** 使用插件。已有模型、凭据和会话沿用 DSH；自定义 profile 或 `DSH_HOME` 应保持原配置。此方式无需先下载 ZIP、手动构建或另起一套服务。

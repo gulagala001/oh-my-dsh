@@ -37,7 +37,7 @@
 
 ## 版本与文档范围
 
-开发与发行维护：[DSH 0.2 适配准备](dsh-0.2-preparation.md)，包含固定源码基线、验证范围和正式发布后的收尾步骤。
+开发与发行维护：[DSH 0.2 适配与验证](dsh-0.2-preparation.md)，包含固定源码基线、验证范围和正式发布后的收尾步骤。
 
 本版文档对应 **OMD 0.3.0 / DSH 0.2.0-rc.2**，内置 **OpenCU 1.2.0**。[本版说明](release-0.3.0.md) · [发布记录与下载](https://github.com/gulagala001/oh-my-dsh/releases) · [全部更新记录](../CHANGELOG.md)。
 

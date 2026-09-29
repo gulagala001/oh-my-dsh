@@ -6,8 +6,6 @@ The whale contours in `browser-extension/logo.svg` are adapted from the animated
 
 Source: https://github.com/deepseek-ai/deepseek-harness
 
-The account-settings development archive in `vendor/dsh-sdk` is rebuilt from the same unchanged package source to repair the incomplete npm dependency set. Its source record, SHA-256, README and MIT license are retained; it is not an official npm-published artifact or an additional mounted account component.
-
 MIT License
 
 Copyright (c) 2026 DeepSeek

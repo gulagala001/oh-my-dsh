@@ -12,20 +12,13 @@ OpenCU 从 [Oh My DSH](https://github.com/gulagala001/oh-my-dsh) 的 Computer Us
 
 同步官方 DSH 0.2.0-rc.2 Chat 组件及分组动画，保留操作统计、紧凑布局、浏览器/原生桌面能力、数据格式和兼容标识。[版本说明与验证范围](docs/release-1.2.0.md)。
 
-DSH **0.1.7-rc.2** 用户继续使用 **OpenCU 1.1.9**；OMD 用户更新 OMD 即可，无需重复安装 OpenCU。
-
 ## 安装
 
 **1.2.0** 配套 **DSH 0.2.0-rc.2 Web、Node.js ≥22.19、pnpm 11.23.0 和 Git**。对应 Release 发布后，先停止 DSH 服务，再运行：
 
-rc.2 npm 暂缺账号设置包；本仓库按同一官方标签构建该包并锁定依赖，不混用 rc.1。以下 CLI 命令在克隆后的仓库中运行，已有环境保留原 DSH_HOME、profile 和端口。
-
 ```sh
-git clone --branch v1.2.0 --depth 1 https://github.com/gulagala001/opencu.git
-cd opencu
-pnpm install --frozen-lockfile
-pnpm exec dsh plugin --profile web add github:gulagala001/opencu#v1.2.0
-pnpm exec dsh --profile web
+npx --yes @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add github:gulagala001/opencu#v1.2.0
+npx --yes @deepseek-ai/dsh@0.2.0-rc.2 --profile web
 ```
 
 打开启动时的登录链接，继续使用已有 Agent preset。在输入区点击 **电脑**，或通过 `@Browser`、`@Chrome` 和应用引用选择目标：
@@ -80,7 +73,7 @@ OpenCU 配置位于 DSH 的 `opencu` 设置区。未显式设置的字段继承�
 先停止服务，再运行对应命令，然后重新启动 `dsh web`：
 
 ```sh
-pnpm exec dsh plugin --profile web add github:gulagala001/opencu#v1.2.0
+npx --yes @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add github:gulagala001/opencu#v1.2.0
 dsh plugin --profile web remove opencu
 ```
 

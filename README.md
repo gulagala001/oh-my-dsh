@@ -48,14 +48,9 @@ Oh My DSH 是 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 
 需要 **Node.js ≥22.19、pnpm 11.23.0 和 Git**；Windows 使用 PowerShell 7。首次安装：
 
-DSH rc.2 的 npm 发布暂缺一个账号设置包。以下命令使用本仓库锁定的 rc.2 宿主及同标签构建，不混用 rc.1；需在克隆的仓库目录内运行 `pnpm exec dsh`。已有环境保留原 `DSH_HOME`、profile 和端口。
-
 ```sh
-git clone --branch v0.3.0 --depth 1 https://github.com/gulagala001/oh-my-dsh.git
-cd oh-my-dsh
-pnpm install --frozen-lockfile
-pnpm exec dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.3.0
-pnpm exec dsh --profile web
+npx --yes @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.3.0
+npx --yes @deepseek-ai/dsh@0.2.0-rc.2 --profile web
 ```
 
 打开启动时打印的登录链接，新建会话选择 **Oh My DSH**。已有环境沿用原 profile、数据目录和端口；自定义 profile 将命令中的 `web` 换成原名称。[Web 安装与更新](docs/usage.md#安装到现有-dsh推荐)。

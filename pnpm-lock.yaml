@@ -6,7 +6,6 @@ settings:
 
 overrides:
   fflate@<0.8.3: 0.8.3
-  '@deepseek-ai/dsh-client-ui-settings-account@0.2.0-rc.2': file:vendor/opencu/vendor/dsh-sdk/deepseek-ai-dsh-client-ui-settings-account-0.2.0-rc.2.tgz
 
 importers:
 
@@ -758,9 +757,8 @@ packages:
     peerDependencies:
       '@deepseek-ai/cordis': ~4.0.4
 
-  '@deepseek-ai/dsh-client-ui-settings-account@file:vendor/opencu/vendor/dsh-sdk/deepseek-ai-dsh-client-ui-settings-account-0.2.0-rc.2.tgz':
-    resolution: {integrity: sha512-+UGBXSWTKZk1qdY54awg+646DaoFbpcI4nc0nAZ0RDDnTrjRFJMPKKrGDgCIUgaEkeWeytj+JYIduZwKJLX/DA==, tarball: file:vendor/opencu/vendor/dsh-sdk/deepseek-ai-dsh-client-ui-settings-account-0.2.0-rc.2.tgz}
-    version: 0.2.0-rc.2
+  '@deepseek-ai/dsh-client-ui-settings-account@0.2.0-rc.2':
+    resolution: {integrity: sha512-4Twq6woo7QJshkHu7hXzE0eyDnYCf01iuLfWZftWpLl6olaA6eQBxaRrMyW7YDubYpnTIu6m+1QRGtQ5MARYgw==}
     peerDependencies:
       '@deepseek-ai/cordis': ~4.0.4
 
@@ -5331,7 +5329,7 @@ snapshots:
     dependencies:
       '@deepseek-ai/cordis': 4.0.4(@deepseek-ai/cordis-plugin-include@1.0.9)(@deepseek-ai/cordis-plugin-loader@1.0.5)
 
-  '@deepseek-ai/dsh-client-ui-settings-account@file:vendor/opencu/vendor/dsh-sdk/deepseek-ai-dsh-client-ui-settings-account-0.2.0-rc.2.tgz(@deepseek-ai/cordis@4.0.4)':
+  '@deepseek-ai/dsh-client-ui-settings-account@0.2.0-rc.2(@deepseek-ai/cordis@4.0.4)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.4(@deepseek-ai/cordis-plugin-include@1.0.9)(@deepseek-ai/cordis-plugin-loader@1.0.5)
       '@deepseek-ai/schemastery': 3.18.4
@@ -7312,7 +7310,7 @@ snapshots:
       '@deepseek-ai/dsh-client-ui-renderer': 0.2.0-rc.2(@deepseek-ai/cordis@4.0.4)
       '@deepseek-ai/dsh-client-ui-session': 0.2.0-rc.2(@deepseek-ai/cordis@4.0.4)
       '@deepseek-ai/dsh-client-ui-settings': 0.2.0-rc.2(@deepseek-ai/cordis@4.0.4)
-      '@deepseek-ai/dsh-client-ui-settings-account': file:vendor/opencu/vendor/dsh-sdk/deepseek-ai-dsh-client-ui-settings-account-0.2.0-rc.2.tgz(@deepseek-ai/cordis@4.0.4)
+      '@deepseek-ai/dsh-client-ui-settings-account': 0.2.0-rc.2(@deepseek-ai/cordis@4.0.4)
       '@deepseek-ai/dsh-client-ui-settings-agent-loop': 0.2.0-rc.2(@deepseek-ai/cordis@4.0.4)
       '@deepseek-ai/dsh-client-ui-settings-general': 0.2.0-rc.2(@deepseek-ai/cordis@4.0.4)
       '@deepseek-ai/dsh-client-ui-settings-models': 0.2.0-rc.2(@deepseek-ai/cordis@4.0.4)
