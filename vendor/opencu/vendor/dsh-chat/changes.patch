@@ -1,5 +1,5 @@
 diff --git a/packages/client/tsdown.client.ts b/packages/client/tsdown.client.ts
-index 215001db..a5eece97 100644
+index 215001dbb9..a5eece9782 100644
 --- a/packages/client/tsdown.client.ts
 +++ b/packages/client/tsdown.client.ts
 @@ -558,7 +558,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
@@ -30,7 +30,7 @@ index 215001db..a5eece97 100644
        },
      }],
 diff --git a/packages/client/ui-chat/src/client/apply.ts b/packages/client/ui-chat/src/client/apply.ts
-index 15752f6c..226153f0 100644
+index e5807726ac..01c1bf23fe 100644
 --- a/packages/client/ui-chat/src/client/apply.ts
 +++ b/packages/client/ui-chat/src/client/apply.ts
 @@ -1,3 +1,4 @@
@@ -57,7 +57,7 @@ index 15752f6c..226153f0 100644
    ctx.effect(() => chatSettings.subscribe(() => {
      const accepted = chatSettings.getSnapshot().value?.linkOpening
 diff --git a/packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx b/packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx
-index 5d97a698..5ea6a44b 100644
+index 5d97a698f7..5ea6a44b6c 100644
 --- a/packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx
 +++ b/packages/client/ui-chat/src/client/chat/AssistantMarkdown.tsx
 @@ -30,7 +30,7 @@ export function localPathMediaUrl(base: string, value: string): string | undefin
@@ -110,14 +110,14 @@ index 5d97a698..5ea6a44b 100644
          // Consecutive image blocks share one gallery so several images tile
          // into rows instead of each opening a one-image group of its own.
 diff --git a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css
-index 56687cd8..d01394bb 100644
+index f40328906c..e0e89afa77 100644
 --- a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css
 +++ b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css
-@@ -72,8 +72,9 @@
+@@ -84,8 +84,9 @@
  }
  
  .body {
--  --dsh-chat-flow-gap: 8px;
+-  --dsh-chat-flow-gap: 6px;
 -  max-height: min(400px, 50vh);
 +  --dsh-chat-flow-gap: 2px;
 +  position: relative;
@@ -125,14 +125,14 @@ index 56687cd8..d01394bb 100644
    overflow-y: auto;
    overscroll-behavior-y: auto;
    scrollbar-gutter: stable;
-@@ -126,3 +127,5 @@
+@@ -137,3 +138,5 @@
    overflow: visible;
    scrollbar-gutter: auto;
  }
 +
 +.count { flex: none; font-size: 11px; color: var(--dsw-alias-label-tertiary); }
 diff --git a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx
-index e09a0d95..e7ba68bd 100644
+index 443cb0407a..8c619db407 100644
 --- a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx
 +++ b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx
 @@ -1,5 +1,5 @@
@@ -172,19 +172,21 @@ index e09a0d95..e7ba68bd 100644
        data-process-activity={activity} onClick={(event) => { event.currentTarget.focus(); toggle() }}>
        <span className={css.leading} aria-hidden="true">
          <span className={css.activityIcon} data-step-process-icon>{PROCESS_ICONS[activity]}</span>
-@@ -120,7 +122,10 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
+@@ -120,9 +122,12 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
            {open ? <IconChevronUpOutlineRegular /> : <IconChevronDownOutlineRegular />}
          </span>
        </span>
--      <TextShimmer active={!data.closed} className={css.label}>{title}</TextShimmer>
-+      <TextShimmer active={working} className={css.label}>{title}</TextShimmer>
+-      <TextShimmer active={!data.closed}>
++      <TextShimmer active={working}>
+         <TextShimmer className={css.label}>{title}</TextShimmer>
+       </TextShimmer>
 +      {data.summary.counts.length > 0 && <span className={css.count} data-process-count>{t('message.stepProcess.count', { count: data.summary.counts.reduce((total, item) => total + item.count, 0) })}</span>}
 +      {(data.summary.failures ?? 0) > 0 && <span className="tx-cu-error" data-process-failures>{t('message.stepProcess.failures', { count: data.summary.failures ?? 0 })}</span>}
 +      {(data.summary.stopped ?? 0) > 0 && <span data-process-stopped>{t('message.stepProcess.stopped', { count: data.summary.stopped ?? 0 })}</span>}
      </button>
    )
  })
-@@ -153,9 +158,11 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
+@@ -155,9 +160,11 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
      if (spec !== undefined && !alwaysOpen) props.actions.setTurnProcessOpen(spec.turn, spec.answerStep ?? 0, true)
    }, [props.actions, spec, alwaysOpen])
    const rootRef = useSearchableHidden(outerHidden, revealOuter)
@@ -199,7 +201,7 @@ index e09a0d95..e7ba68bd 100644
    const reveal = useCallback(() => { setOpen(true) }, [setOpen])
    const bodyRef = useSearchableHidden(grouped && !open, reveal)
    const contentRef = useRef<HTMLDivElement>(null)
-@@ -169,7 +176,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
+@@ -171,7 +178,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
    const classes = [css.body, !grouped ? css.expandedBody : '',
      grouped && edges.canScrollUp ? css.fadeTop : '', grouped && edges.canScrollDown ? css.fadeBottom : '']
    return (
@@ -208,7 +210,7 @@ index e09a0d95..e7ba68bd 100644
        data-chat-flow-key={groupKey} data-chat-anchor-key={`group:${groupKey}`} data-chat-turn={turn}
        data-chat-paging-anchor={grouped && !open || undefined}
        data-step-process data-group-expanded-mode={!grouped || undefined}>
-@@ -177,7 +184,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
+@@ -179,7 +186,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
          <ProcessGroupHeader groupKey={groupKey} useChatGroup={useChatGroup}
            usePresentation={props.usePresentation} t={props.t} open={open} bodyId={bodyId} toggle={toggle} />
        </div>
@@ -218,7 +220,7 @@ index e09a0d95..e7ba68bd 100644
          {...events}>
          <div ref={contentRef} className={css.content} data-step-process-content data-chat-flow="">
 diff --git a/packages/client/ui-chat/src/client/chat/ChatNodeSeat.tsx b/packages/client/ui-chat/src/client/chat/ChatNodeSeat.tsx
-index f2269daf..cdddb88d 100644
+index f2269daf9d..cdddb88daf 100644
 --- a/packages/client/ui-chat/src/client/chat/ChatNodeSeat.tsx
 +++ b/packages/client/ui-chat/src/client/chat/ChatNodeSeat.tsx
 @@ -1,4 +1,4 @@
@@ -241,7 +243,7 @@ index f2269daf..cdddb88d 100644
      ? null
      : {
 diff --git a/packages/client/ui-chat/src/client/chat/ReasoningRow.tsx b/packages/client/ui-chat/src/client/chat/ReasoningRow.tsx
-index 74a801d6..0b6d724b 100644
+index 301a338df4..dab573d9ee 100644
 --- a/packages/client/ui-chat/src/client/chat/ReasoningRow.tsx
 +++ b/packages/client/ui-chat/src/client/chat/ReasoningRow.tsx
 @@ -9,8 +9,7 @@ import css from './ReasoningRow.module.css'
@@ -279,7 +281,7 @@ index 74a801d6..0b6d724b 100644
    const preview = usePresentation(policy => !expanded && summary !== ''
      && (running || policy.settledReasoningPreview))
 diff --git a/packages/client/ui-chat/src/client/contract/process-groups.ts b/packages/client/ui-chat/src/client/contract/process-groups.ts
-index 1c2cddb6..ae21c47e 100644
+index 1c2cddb6fb..ae21c47e69 100644
 --- a/packages/client/ui-chat/src/client/contract/process-groups.ts
 +++ b/packages/client/ui-chat/src/client/contract/process-groups.ts
 @@ -1,9 +1,11 @@
@@ -296,10 +298,10 @@ index 1c2cddb6..ae21c47e 100644
    readonly running: ProcessActivity | undefined
    readonly runningDetail: string
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/README.md b/packages/client/ui-chat/src/client/conversation-nodes/README.md
-index da4d691a..81347461 100644
+index b23d1d47f5..96a4c1a58b 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/README.md
 +++ b/packages/client/ui-chat/src/client/conversation-nodes/README.md
-@@ -130,7 +130,7 @@ Reading a default does not automatically save configuration. When the user chang
+@@ -132,7 +132,7 @@ Reading a default does not automatically save configuration. When the user chang
  
  ### Group-title rules
  
@@ -308,7 +310,7 @@ index da4d691a..81347461 100644
  
  All three stages share the tool-name classification below. A preparing Tool node uses its category's preparation label: read files for `read`, read images for `read_image`, write files for `write`, edit files for `edit` and `apply_patch`, and update the plan for `todo_write` and goal tools. Only the generic “Preparing tool calls” category appends the wire tool name in Standard mode; other categories omit it. It contributes one call without parsing arguments and renders one non-expandable row. A named live delta can create this node; historical calls start directly from tool/call without replaying preparation.
  
-@@ -169,7 +169,7 @@ Group headers show a category icon, replace it with a down arrow on hover or key
+@@ -171,7 +171,7 @@ Group headers show a category icon, replace it with a down arrow on hover or key
  
  An open capped group follows content growth only while its own scroll position is at the bottom. Scrolling away pauses that group's following; returning to the bottom resumes it, independently of outer transcript following. Manually opening an unclosed group starts at the bottom and follows growth; manually opening a closed group starts at the top with following disabled, even when its initial content fits without scrolling. Closing the group in the data or restoring its height cap through a mode change does not reset an already-open reader's position. Browser find retains its own reveal position.
  
@@ -317,17 +319,17 @@ index da4d691a..81347461 100644
  
  Switching modes retains manually opened groups and inner disclosures. It changes visibility and sizing without recreating the message rows. Detailed and Verbose do not open every individual disclosure. Only Verbose keeps the whole Turn open.
  
-@@ -308,3 +308,5 @@ The priority list is shared by every tool, not specialized per category. For exa
+@@ -312,3 +312,5 @@ The priority list is shared by every tool, not specialized per category. For exa
  | Partial JSON, a JSON scalar, a mixed-type array, or only unsupported fields | Use the tool name if no other usable field exists. No partial-argument guessing. |
  
  All live detail collapses whitespace, trims its ends, and is limited to 160 grapheme clusters, including a final `…` when truncated. A closed group's published summary clears its live category and detail while retaining category counts.
 +
 +OpenCU keeps inner disclosure choices when a parent is folded and preserves an open process at completion. Its bounded process drawer uses a 2px gap and `min(280px, 45vh)` height cap; Computer Use activities have their own category.
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md b/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md
-index ab4b3c05..c0816e41 100644
+index ef61f0dad3..0b180d3ca7 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md
 +++ b/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md
-@@ -130,7 +130,7 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
+@@ -132,7 +132,7 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
  
  ### 组标题规则
  
@@ -336,7 +338,7 @@ index ab4b3c05..c0816e41 100644
  
  三个阶段共用下方工具名分类。准备中的 Tool 节点使用对应类别的准备文案；`read` 为「准备读取文件」，`read_image` 为「准备读取图片」，`write` 为「准备写入文件」，`edit` 和 `apply_patch` 为「准备编辑文件」，`todo_write` 及目标工具为「准备更新计划」。只有通用类别的「准备调用工具」在标准模式中追加协议工具名，其他类别不追加。它计为一次调用，不解析参数，只渲染不可展开的一行。具名实时 delta 可以创建该节点；历史调用直接从 tool/call 开始，不重现准备过程。
  
-@@ -169,7 +169,7 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
+@@ -171,7 +171,7 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
  
  已展开的限高组仅在自己的滚动位置处于底部时跟随内容增长。滚离底部暂停该组跟随，滚回底部后恢复，与外层文本记录的跟随状态独立。手动展开未关闭的组时定位到底部并跟随增长；手动展开已关闭的组时从顶部开始且不启用跟随，即使初始内容无需滚动即可容纳。数据中的组变为已关闭，或通过模式切换恢复限高时，不重置已展开组的阅读位置。浏览器查找沿用自身的展开定位。
  
@@ -345,14 +347,14 @@ index ab4b3c05..c0816e41 100644
  
  切换模式保留手动展开的组和内部开合状态，只改变显隐与尺寸，不重建消息行。详细和完全展开都不表示自动打开每个内部控件；只有完全展开模式始终展开整轮。
  
-@@ -308,3 +308,5 @@ Subagent 工具遵循普通分组边界，不会仅因委派任务就单独成
+@@ -312,3 +312,5 @@ Subagent 工具遵循普通分组边界，不会仅因委派任务就单独成
  | 不完整 JSON、JSON 标量、混合类型数组，或仅有不支持的字段 | 没有其他可用字段时使用工具名，不猜测不完整参数。 |
  
  所有实时详情都合并空白、去除首尾空白，并限制为 160 个字素簇；截断时末尾的 `…` 计入上限。已结束组发布的摘要清空实时类别和详情，保留类别次数。
 +
 +OpenCU 在父级收起时保留内部展开选择，完成时保留用户正在展开阅读的过程。限高抽屉采用 2px 间距与 `min(280px, 45vh)` 高度；电脑操作使用独立活动类别。
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts b/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
-index b072b29d..11812625 100644
+index b072b29d7e..1181262532 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
 +++ b/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
 @@ -5,6 +5,7 @@ import { isRunningTool } from '../contract/chat-nodes.ts'
@@ -390,7 +392,7 @@ index b072b29d..11812625 100644
      running,
      runningDetail,
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/process-groups.ts b/packages/client/ui-chat/src/client/conversation-nodes/process-groups.ts
-index 36cb552d..5d152372 100644
+index 09edc21006..d6c0fe3dcb 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/process-groups.ts
 +++ b/packages/client/ui-chat/src/client/conversation-nodes/process-groups.ts
 @@ -30,6 +30,7 @@ function reply(node: ChatNode): boolean {
@@ -402,7 +404,7 @@ index 36cb552d..5d152372 100644
      value.kind === right.counts[index]?.kind && value.count === right.counts[index].count)
  }
 diff --git a/packages/client/ui-chat/src/client/locale.ts b/packages/client/ui-chat/src/client/locale.ts
-index dbec1430..5837580d 100644
+index 4c4bfa7e12..366cd8475f 100644
 --- a/packages/client/ui-chat/src/client/locale.ts
 +++ b/packages/client/ui-chat/src/client/locale.ts
 @@ -32,13 +32,19 @@ export const zh = {
@@ -440,7 +442,7 @@ index dbec1430..5837580d 100644
    'message.stepProcess.done.read': 'Read files',
    'message.stepProcess.done.readImage': 'Read images',
 diff --git a/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx b/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx
-index 5a875f31..9532e7ae 100644
+index 14388245a6..8e073bd044 100644
 --- a/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx
 +++ b/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx
 @@ -19,10 +19,55 @@ afterEach(() => {
