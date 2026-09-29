@@ -8,9 +8,9 @@ import { createUserMessage, createSystemMessage, createMessage, createToolResult
 import { createTodoStore } from '../src/todolist.mjs';
 import { ContextPipeline } from '../src/context/pipeline.mjs';
 import { createHostAdapter } from '../src/context/host.mjs';
-import { newRecord, liveSpan, userRevision, normalizeChoices, candidateInput, prepareCandidate } from '../src/context/core.mjs';
-import { createTransaction, applyTransaction } from '../src/context/transactions.mjs';
-import { TODO_META, isTaskInjection, summaryMessageReader } from '../src/task-context.mjs';
+import { newRecord, liveSpan, userRevision, normalizeChoices } from "../src/context/core.mjs";
+
+import { TODO_META, isTaskInjection } from "../src/task-context.mjs";
 import { setRuntimeContext, taskContextMeta } from '../src/task-context.mjs';
 import { runtimeContext } from '../src/runtime-state.mjs';
 const prepared = { summary: '创建样式文件，工具确认写入成功。', documents: [] };

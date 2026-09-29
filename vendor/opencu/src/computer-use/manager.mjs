@@ -766,11 +766,14 @@ export class ComputerUseManager {
   }
   status(id) {
     const state = this.sessions.get(id);
-    const target = state?.target?.kind === 'tab' ? { ...state.target, ...this.browsers().find(browser => browser.records.has(state.target.id))?.records.get(state.target.id) } : state?.target ?? null;
-    const viewed=this.viewTarget(state),viewTarget=viewed?.kind==='tab'?{...viewed,...this.browsers().find(browser=>browser.records.has(viewed.id))?.records.get(viewed.id)}:viewed;
+    const browsers = this.browsers();
+    const describe = target => target?.kind === 'tab'
+      ? { ...target, ...browsers.find(browser => browser.records.has(target.id))?.records.get(target.id) } : target ?? null;
+    const target = describe(state?.target);
+    const viewed = this.viewTarget(state), viewTarget = describe(viewed);
     const view=viewed?.kind==='tab'?(this.browserViews.views.get(viewed.id)??[...this.extensionViews.values()].map(views=>views.views.get(viewed.id)).find(Boolean)):null;
     const viewViewport=view?{overridden:!!view.record?.viewportOverride&&view.record.viewportMode!=='layout',layoutSupported:this.browserViews.views.get(viewed.id)===view,width:view.latest?.width,height:view.latest?.height}:null;
-    return { presentationRequest: state?.presentationRequest ?? null, observedAt: performance.now(), enabled: !this.closed && this.enabled, nativeInstalled: this.native.available(), status: state?.browserError && !target ? 'error' : state?.status ?? 'idle', target, viewTarget, viewViewport, viewRevision:state?.viewRevision??0, previewTargets:[...(state?.previewTargets?.values()??[])].map(({target})=>target.kind==='tab'?{...target,...this.browsers().find(browser=>browser.records.has(target.id))?.records.get(target.id)}:target), controlEpoch: state?.controlEpoch ?? 0, navigationRevision: state?.navigationRevision ?? 0, transitioning: !!state?.uiAction || state?.resuming === true, resuming: state?.resuming === true, operation: state?.operation ?? null, lastError: state?.stopError ?? state?.browserError ?? state?.lastError ?? null, startedAt: state?.startedAt ?? null, previewAt: this.preview.get(id)?.at ?? null, history: state?.history ?? [], operationStats: state ? structuredClone(state.operationStats) : { total: 0, succeeded: 0, failed: 0, cancelled: 0, methods: {} } };
+    return { presentationRequest: state?.presentationRequest ?? null, observedAt: performance.now(), enabled: !this.closed && this.enabled, nativeInstalled: this.native.available(), status: state?.browserError && !target ? 'error' : state?.status ?? 'idle', target, viewTarget, viewViewport, viewRevision:state?.viewRevision??0, previewTargets:[...(state?.previewTargets?.values()??[])].map(({target})=>describe(target)), controlEpoch: state?.controlEpoch ?? 0, navigationRevision: state?.navigationRevision ?? 0, transitioning: !!state?.uiAction || state?.resuming === true, resuming: state?.resuming === true, operation: state?.operation ?? null, lastError: state?.stopError ?? state?.browserError ?? state?.lastError ?? null, startedAt: state?.startedAt ?? null, previewAt: this.preview.get(id)?.at ?? null, history: state?.history ?? [], operationStats: state ? structuredClone(state.operationStats) : { total: 0, succeeded: 0, failed: 0, cancelled: 0, methods: {} } };
   }
   async revealPreview(id,input){
     if(!this.enabled||this.closed)throw new Error('Computer Use 已关闭');

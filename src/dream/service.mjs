@@ -1,5 +1,4 @@
 import { BlockAssembler } from '@deepseek-ai/dsh-llm';
-import { createEffortResolver } from '../effort.mjs';
 import { DreamStore } from './store.mjs';
 import { DreamSources } from './sources.mjs';
 import { digest, nodeKey, LIMITS, estimateTokens, validateMemory, validateScope } from './core.mjs';
@@ -12,7 +11,6 @@ export class DreamService {
     this.hub=hub;this.store=store||new DreamStore(hub.store.dir);this.sources=sources||new DreamSources(hub,this.store);
     this.generateOverride=generate;this.closed=false;this.draining=null;this.controller=null;this.timer=null;this.epoch=null;
     this.lifecycle=new AbortController();this.ready=null;this.ticking=null;this.closing=null;
-    this.efforts=new Map();
   }
   config(){return this.hub.config();}
   route(agent) {
@@ -189,8 +187,7 @@ export class DreamService {
         if(!callId)throw new BudgetWait();
         if(this.generateOverride){const r=await Promise.race([this.generateOverride(input,{signal:joined,route,request}),aborted]);usage=r.usage;return r.value??r;}
         const {effort='off',...baseRoute}=route;
-          if(!this.efforts.has(effort))this.efforts.set(effort,createEffortResolver(this.hub.ctx,{effort}));
-          const reasoningEffort=await Promise.race([this.efforts.get(effort).resolve(route.provider,route.model),aborted]);
+          const reasoningEffort=await Promise.race([this.hub.efforts.resolve(route.provider,route.model,effort),aborted]);
           iterator=this.hub.ctx.llm.stream({...baseRoute,...request,reasoningEffort,signal:joined})[Symbol.asyncIterator]();
           for(;;){const part=await Promise.race([iterator.next(),aborted]);if(part.done)break;assembler.push(part.value);}
           usage=assembler.usage;

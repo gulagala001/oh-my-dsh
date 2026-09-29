@@ -95,9 +95,6 @@ export function carrierBarrier(session, state, cfg) {
   const anchor = trace ?? (cfg.traceEnabled && !state.fullCompaction ? nodes.find(seq => actualUser(session.eventAt(seq)) || eventSource(session.eventAt(seq)) === 'trisoul-x:todo-prefix') : undefined);
   return nodes.indexOf(anchor);
 }
-const windowText = (session, event, retained) => retained && !actualUser(event)
-  ? '[Protected host context is retained in place and is not a summary source.]'
-  : materialText(session.deriveEventMessage(event)?.content, event.seq);
 export function protectedSeqs(session, state, cfg) {
   const keep = new Set(session.surface.nodes.filter(seq => protectedEvent(session, session.eventAt(seq))));
   // The established Trace slot carries the first request. Keep that anchor in
@@ -170,15 +167,14 @@ export function normalizeChoices(value, state, session, allowedIds) {
     if (!['keep', 'detail', 'brief'].includes(choice?.action) || !Array.isArray(choice.ids)) throw new Error('中枢选项无效');
     const ids = choice.ids;
     if (ids.length !== 1) throw new Error('单项选择必须一个 ID');
-    const selected = ids.map(id => {
-      if (typeof id !== 'string' || !records.has(id) || used.has(id) || (allowedIds && !allowedIds.has(id))) throw new Error(`记录不存在、已合并或重复选择：${id}`);
-      used.add(id);
-      const r = records.get(id), span = liveSpan(session, r, index);
-      if (!span) throw new Error(`记录已不在当前上下文：${id}`);
-      return { id, version: r.version, carrierSeq: r.carrierSeq ?? null, mode: r.mode, start: span.start, sourceHash: r.sourceHash, snapshot: recordSnapshot(session, r, index) };
-    }).sort((a, b) => a.start - b.start);
+    const [id] = ids;
+    if (typeof id !== 'string' || !records.has(id) || used.has(id) || (allowedIds && !allowedIds.has(id))) throw new Error(`记录不存在、已合并或重复选择：${id}`);
+    used.add(id);
+    const r = records.get(id), span = liveSpan(session, r, index);
+    if (!span) throw new Error(`记录已不在当前上下文：${id}`);
+    const observed = { id, version: r.version, carrierSeq: r.carrierSeq ?? null, mode: r.mode, start: span.start, sourceHash: r.sourceHash, snapshot: recordSnapshot(session, r, index) };
     if ((choice.summary ?? '') !== '' || (choice.documents ?? []).length) throw new Error('中枢选择不能生成正文');
-    return { action: choice.action, ids: selected.map(r => r.id), observed: selected, summary: '', documents: [] };
+    return { action: choice.action, ids: [id], observed: [observed] };
   });
 }
 

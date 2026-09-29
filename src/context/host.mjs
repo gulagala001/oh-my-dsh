@@ -6,6 +6,14 @@ import { appendShadow } from './shadow.mjs';
 export function createHostAdapter(hub) {
   const routes = new WeakMap();
   const message = (text, kind) => createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'plugin:trisoul-x:' + kind } });
+  const requestBudget = session => {
+    const { route, info } = routes.get(session) ?? { route: session.requestHeader?.()?.config };
+    const capacity = info?.context?.contextWindow ?? session.requestContext?.()?.contextWindow;
+    if (!capacity) return null;
+    const available = capacity - (route?.maxTokens ?? info?.defaultMaxTokens ?? 0);
+    const headroom = Math.min(65536, Math.floor(Math.max(0, available) * 0.1));
+    return { available, usable: available - headroom, used: hub.ctx.tokenMeter.measure(session).totalTokens };
+  };
   return {
     pricing(session) {
       const config = session.requestHeader?.()?.config;
@@ -20,31 +28,21 @@ export function createHostAdapter(hub) {
       routes.set(session, { route, info });
     },
     pressure(session) {
-      const { route, info } = routes.get(session) ?? { route: session.requestHeader?.()?.config };
-      const capacity = info?.context?.contextWindow ?? session.requestContext?.()?.contextWindow;
-      if (!capacity) return null;
-      const available = capacity - (route?.maxTokens ?? info?.defaultMaxTokens ?? 0);
-      const headroom = Math.min(65536, Math.floor(Math.max(0, available) * 0.1));
-      return hub.ctx.tokenMeter.measure(session).totalTokens / Math.max(1, available - headroom);
+      const budget = requestBudget(session);
+      return budget ? budget.used / Math.max(1, budget.usable) : null;
     },
     catalogBudget(session) {
-      const { route, info } = routes.get(session) ?? { route: session.requestHeader?.()?.config };
-      const capacity = info?.context?.contextWindow ?? session.requestContext?.()?.contextWindow;
-      if (!capacity) return 0;
-      const available = capacity - (route?.maxTokens ?? info?.defaultMaxTokens ?? 0);
-      const headroom = Math.min(65536, Math.floor(Math.max(0, available) * 0.1));
-      return Math.max(0, available - headroom - hub.ctx.tokenMeter.measure(session).totalTokens);
+      const budget = requestBudget(session);
+      return budget ? Math.max(0, budget.usable - budget.used) : 0;
     },
     catalogCost(text) {
       // The native heuristic underprices CJK. A byte floor keeps publication conservative.
       return Math.max(hub.ctx.tokenMeter.estimateMessage(message(text, 'project-catalog')), Buffer.byteLength(text));
     },
     dreamBudget(session, credit = 0) {
-      const { route, info } = routes.get(session) ?? { route: session.requestHeader?.()?.config };
-      const capacity=info?.context?.contextWindow??session.requestContext?.()?.contextWindow;
-      if(!capacity)return 0;
-      const available=capacity-(route?.maxTokens??info?.defaultMaxTokens??0);
-      return Math.max(0,Math.min(9000,Math.floor(available*0.1),this.catalogBudget(session)+credit));
+      const budget = requestBudget(session);
+      return budget ? Math.max(0, Math.min(9000, Math.floor(budget.available * 0.1),
+        Math.max(0, budget.usable - budget.used) + credit)) : 0;
     },
     publish(session, text, kind) { return session.append('user/message', message(text, kind), { surfaceOp: 'append' }); },
     flush(session) { return hub.ctx.sessions?.flush(session); },

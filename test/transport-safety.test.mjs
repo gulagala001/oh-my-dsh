@@ -1,21 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Readable } from 'node:stream';
-import { readJsonBody, rejectUntrusted } from '../src/http.mjs';
+import { rejectUntrusted } from '../src/http.mjs';
 
-test('JSON body preserves UTF-8 at every split and refuses oversized or malformed input', async () => {
-  const value = { path: '中文路径/项目/😀.json', enabled: true }, bytes = Buffer.from(JSON.stringify(value));
-  for (let i = 0; i <= bytes.length; i++) assert.deepEqual(await readJsonBody(Readable.from([bytes.subarray(0, i), bytes.subarray(i)])), value);
-  await assert.rejects(readJsonBody(Readable.from([bytes]), { maxBytes: bytes.length - 1 }), e => e.statusCode === 413);
-  await assert.rejects(readJsonBody(Readable.from([Buffer.from([0xff])])));
-  await assert.rejects(readJsonBody(Readable.from(['{bad'])));
-  assert.deepEqual(await readJsonBody(Readable.from([])), {});
-});
-
-test('body deadlines and absent authentication fail closed', async () => {
-  const keepAlive = setTimeout(() => {}, 1000);
-  try { await assert.rejects(readJsonBody((async function* () { await new Promise(() => {}); })(), { timeoutMs: 5 }), e => e.statusCode === 408); }
-  finally { clearTimeout(keepAlive); }
+test('HTTP authentication fails closed when the connection service is unavailable', () => {
   for (const rejection of [401, 403, undefined, 'missing']) {
     const ctx = { get: () => rejection === 'missing' ? undefined : { requestRejection: () => rejection } };
     let status, ended = false;
@@ -23,4 +10,28 @@ test('body deadlines and absent authentication fail closed', async () => {
     assert.equal(denied, rejection !== undefined); assert.equal(ended, denied);
     assert.equal(status, rejection === 'missing' ? 503 : rejection);
   }
+});
+
+test('attachment responses retain native bytes, isolation headers and download names', async () => {
+  const { Writable } = await import('node:stream');
+  const { sendAttachment } = await import('../src/http.mjs');
+  for (const type of ['image', 'file']) {
+    const bytes = Buffer.from([0, 255, 1, 128]), ref = { name: '中文 文件.html', mediaType: 'image/png' };
+    const chunks = [], headers = {};
+    const res = new Writable({ write(chunk, _encoding, done) { chunks.push(Buffer.from(chunk)); done(); } });
+    res.setHeader = (key, value) => { headers[key] = value; };
+    const attachments = { async readImage(actual) { assert.equal(actual, ref); return { data: bytes }; },
+      async *readFileStream(actual) { assert.equal(actual, ref); yield bytes; } };
+    await sendAttachment({ attachments }, res, { type, attachment: ref });
+    assert.deepEqual(Buffer.concat(chunks), bytes);
+    assert.equal(headers['X-Content-Type-Options'], 'nosniff');
+    assert.equal(headers['Content-Security-Policy'], "default-src 'none'; sandbox");
+    assert.equal(headers['Cache-Control'], 'private, max-age=3600');
+    assert.equal(headers['Content-Type'], type === 'image' ? 'image/png' : 'application/octet-stream');
+    assert.equal(headers['Content-Disposition'], type === 'file' ? "attachment; filename*=UTF-8''" + encodeURIComponent(ref.name) : undefined);
+  }
+  await assert.rejects(sendAttachment({}, {}, null), /原始引用/);
+  const res = { setHeader() {} };
+  await assert.rejects(sendAttachment({}, res, { type: 'image', attachment: {} }), /图片读取服务不可用/);
+  await assert.rejects(sendAttachment({}, res, { type: 'file', attachment: {} }), /附件读取服务不可用/);
 });

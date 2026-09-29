@@ -1,4 +1,4 @@
-import { readJsonBody } from './http.mjs';
+import { readJsonBody, sendJson } from './http.mjs';
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { recommendedPlugins } from './recommended-plugin-catalog.mjs';
@@ -179,7 +179,7 @@ export function mountRecommendedPlugins(ctx, hub) {
     scope.effect(() => scope.webServer.register({ kind: 'prefix', path: '/trisoul-x/recommended-plugins', async handler(req, res) {
       const denied = scope.connection.requestRejection(req);
       if (denied !== undefined) { res.writeHead(denied); res.end(); return; }
-      const send = (status, data) => { if (res.destroyed || res.writableEnded) return; res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...(status === 413 || status === 408 ? { Connection: 'close' } : {}) }); res.end(JSON.stringify(data)); };
+      const send = (status, data) => sendJson(res, status, data);
       if (new URL(req.url, 'http://localhost').pathname !== '/trisoul-x/recommended-plugins') { send(404, { error: 'Not found' }); return; }
       try {
         if (req.method === 'POST') {

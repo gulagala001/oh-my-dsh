@@ -1,6 +1,5 @@
 import { readDream, archiveRecord, dreamAssets } from './recall.mjs';
-import { Readable } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
+import { sendAttachment } from '../http.mjs';
 import { contextConfig } from '../config.mjs';
 
 // Presentation metadata belongs to the web reader, not the model recall payload.
@@ -85,15 +84,7 @@ export async function handleDreamApi({hub,ctx,req,res,url,send,readBody}){
   if(path==='/dream/asset'){
     if(req.method!=='GET'){send(res,405,{error:'请使用 GET'});return true;}
     const item=await dreamAssets(hub,{sessionId:url.searchParams.get('sessionId'),id:url.searchParams.get('id'),asset:Number(url.searchParams.get('asset'))});
-    const attachments=ctx.get?.('attachments')||ctx.attachments,ref=item.block.attachment;
-    if(!ref)throw Error('附件没有可读取的原始引用');
-    res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Content-Security-Policy',"default-src 'none'; sandbox");res.setHeader('Cache-Control','private, max-age=3600');
-    if(item.block.type==='image'){
-      const image=await attachments.readImage(ref);res.setHeader('Content-Type',ref.mediaType||'application/octet-stream');res.end(image.data);
-    }else{
-      res.setHeader('Content-Type','application/octet-stream');res.setHeader('Content-Disposition',"attachment; filename*=UTF-8''"+encodeURIComponent(ref.name||'attachment'));
-      await pipeline(Readable.from(attachments.readFileStream(ref)),res);
-    }
+    await sendAttachment(ctx,res,item.block);
     return true;
   }
   send(res,404,{error:'Dream 接口不存在'});return true;
