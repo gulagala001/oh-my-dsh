@@ -1,5 +1,5 @@
 import React from 'react';
-import { usePollingAction } from './use-polling-action.mjs';
+import { usePollingAction } from '#opencu/src/client/use-polling-action.mjs';
 
 async function updateApi(version, signal) {
   const response = await fetch('trisoul-x/api/version-update', version === undefined ? { signal, cache: 'no-store' }

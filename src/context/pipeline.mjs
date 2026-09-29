@@ -332,7 +332,7 @@ export class ContextPipeline {
       const chosen = ids || activeRecords(s).filter(r => r.mode === 'raw' && liveSpan(session, r, index)).map(r => r.id);
       if (!Array.isArray(chosen) || !chosen.length) return null;
       plan = { id: randomUUID(), createdAt: Date.now(), userRevision: userRevision(session), source: 'manual',
-        choices: normalizeChoices({ choices: chosen.map(id => ({ action: mode, ids: [id], summary: '', documents: [] })) }, s, session) };
+        choices: normalizeChoices({ choices: chosen.map(id => ({ action: mode, ids: [id] })) }, s, session) };
     }
     if (!plan) return null;
     if (!manual) {

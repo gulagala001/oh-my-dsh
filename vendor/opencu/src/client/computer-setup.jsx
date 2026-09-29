@@ -1,5 +1,6 @@
 import {ComputerIcon} from './computer-icons.jsx';
-import React, { useEffect, useId, useState } from 'react';
+import React, { useCallback, useId, useState } from 'react';
+import { usePollingAction } from './use-polling-action.mjs';
 
 function Permission({ title, detail, value }) {
   return <div className="tx-cu-setup-row"><div><strong>{title}</strong><p>{detail}</p></div><span className={value === true ? 'is-ready' : 'is-needed'}>{value === true ? '已开启' : value === false ? '待开启' : '未检测'}</span></div>;
@@ -26,28 +27,16 @@ function ChromeSetup({ extension, busy, act, onError }) {
 
 export function ComputerSetup({ sessionId, visible, api }) {
   const panelId = useId();
-  const [open, setOpen] = useState(false), [setup, setSetup] = useState(null), [error, setError] = useState(''), [loadError, setLoadError] = useState(''), [busy, setBusy] = useState('');
-  useEffect(() => {
-    if (!open || !visible || !sessionId) return;
-    let live = true, timer;
-    const refresh = async () => {
-      try { const next = await api('setup', sessionId); if (live) { setSetup(next); setLoadError(''); } }
-      catch (e) { if (live) setLoadError(e.message); }
-      if (live) timer = setTimeout(refresh, 2500);
-    };
-    void refresh(); return () => { live = false; clearTimeout(timer); };
-  }, [open, visible, sessionId]);
-  const act = async action => {
-    setBusy(action); setError('');
-    try { setSetup(await api('setup', sessionId, { action })); }
-    catch (e) { setError(e.message); }
-    finally { setBusy(''); }
-  };
+  const [open, setOpen] = useState(false), [error, setError] = useState('');
+  const request = useCallback((input, signal) => api('setup', sessionId, input, signal), [api, sessionId]);
+  const { state: setup, error: loadError, requestError, pendingInput, act: run } = usePollingAction(request, 2500, open && visible && Boolean(sessionId));
+  const busy = pendingInput?.action || '';
+  const act = action => { setError(''); return run({ action }); };
   const native = setup?.native;
   return <section className="tx-cu-setup">
     <button className="tx-cu-setup-toggle" type="button" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen(value => !value)}><span><ComputerIcon name="settings" size={14}/>运行环境与权限</span><ComputerIcon className="tx-cu-disclosure" name="chevron" size={12}/></button>
     {open && <div id={panelId}>
-      {(error || loadError) && <p className="tx-cu-error" role="alert">{error || loadError}</p>}
+      {(error || requestError || loadError) && <p className="tx-cu-error" role="alert">{error || requestError || loadError}</p>}
       {!setup ? <p className="tx-cu-muted" role="status">正在检查运行环境…</p> : <>
         <div className="tx-cu-setup-row"><div><strong>内置浏览器</strong><p>{setup.browser.name} · 独立工作配置</p></div><span className={setup.browser.installed ? 'is-ready' : 'is-needed'}>{setup.browser.error ? '状态读取失败' : setup.browser.installed ? '已安装' : '待安装'}</span></div>
         {setup.browser.error && <p className="tx-cu-error" role="alert">{setup.browser.error}</p>}
