@@ -17,8 +17,9 @@ concurrency:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
-    # Split every platform's full suite across two isolated runners. Browser
-    # files stay serial within each shard; individual test deadlines still apply.
+    # Windows cold builds overrun a two-shard job's wall-clock budget. Four
+    # isolated shards retain the entire suite and each test's original deadline.
+    # Linux uses two shards; browser files remain serial within every runner.
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -38,10 +39,16 @@ jobs:
             shard: '2/2'
           - os: windows-latest
             node: '24'
-            shard: '1/2'
+            shard: '1/4'
           - os: windows-latest
             node: '24'
-            shard: '2/2'
+            shard: '2/4'
+          - os: windows-latest
+            node: '24'
+            shard: '3/4'
+          - os: windows-latest
+            node: '24'
+            shard: '4/4'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
