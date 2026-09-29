@@ -31,7 +31,7 @@ export class Hub extends Service {
     this.getConfig = () => configSnapshot(config);
     this.store = new HubStore(config.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), NS));
     this.context = new ContextPipeline(this, createHostAdapter(this));
-    this.efforts = new Map(); this.agents = new Map();
+    this.efforts = createEffortResolver(ctx); this.agents = new Map();
     this.live = new Map(); this.requestStarts = new Map(); this.taskReviews = new Map();
     this.dream = new DreamService(this);
     ctx.effect(() => async () => {
@@ -125,8 +125,7 @@ export class Hub extends Service {
     const key = `${agent.session.id}:${kind}:${this.callSerial = (this.callSerial || 0) + 1}`, active = { sessionId: agent.session.id, kind, startedAt: start, ...route };
     this.live.set(key, active);
     try {
-      if (!this.efforts.has(effort)) this.efforts.set(effort, createEffortResolver(this.ctx, { effort }));
-      reasoningEffort = await Promise.race([this.efforts.get(effort).resolve(route.provider, route.model), aborted]);
+      reasoningEffort = await Promise.race([this.efforts.resolve(route.provider, route.model, effort), aborted]);
       iterator = this.ctx.llm.stream({ ...route, ...(reasoningEffort !== undefined ? { reasoningEffort } : {}), ...request, sessionId: agent.session.id, signal })[Symbol.asyncIterator]();
       for (;;) { const part = await Promise.race([iterator.next(), aborted]); if (part.done) break; assembler.push(part.value); }
       complete = true;

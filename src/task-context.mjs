@@ -28,10 +28,31 @@ export function withoutTodo(message) {
   return { ...base, id: meta.baseId, source: structuredClone(meta.baseSource),
     content: message.content.filter((_, i) => i !== meta.index) };
 }
+// Remove only sampled runtime hints, retaining the Todo and original carrier.
+// Both ordinary request maintenance and durable compaction use this transform.
+export function withoutRuntime(message) {
+  const meta = taskContextMeta(message), prefix = message?.[TODO_META];
+  if (!meta?.runtime) return message;
+  if (meta.todoText) {
+    const content = [...message.content];
+    content[prefix?.index ?? 0] = { type: 'text', text: meta.todoText };
+    return { ...message, content,
+      ...(prefix ? { [TODO_META]: { ...prefix, context: { ...meta, runtime: null } } }
+        : { [TASK_CONTEXT_META]: { ...meta, runtime: null } }) };
+  }
+  if (!prefix) return null;
+  const base = withoutTodo(message);
+  return { ...base, source: base.source?.kind === 'user' ? message.source : base.source };
+}
+
+export const tasksFromLegacy = todos => todos.map((task, index) => ({ id: `T${index + 1}`,
+  title: task.content, done: task.status === 'completed', anchor: null, links: [],
+  legacySource: task.source ?? '', ...(task.verification ? { legacyVerification: task.verification } : {}) }));
+
 export function latestTodo(session) {
   const events = session.snapshotEvents(), snapshot = events.findLast(e => e.type === 'todo/write' && (Array.isArray(e.data?.tasks) || Array.isArray(e.data?.todos)));
   if (snapshot) {
-    const tasks = snapshot.data.tasks || snapshot.data.todos.map((t, i) => ({ id: `T${i + 1}`, title: t.content, done: t.status === 'completed' }));
+    const tasks = snapshot.data.tasks || tasksFromLegacy(snapshot.data.todos);
     return { snapshotSeq: snapshot.seq, text: renderTodoInjection({ tasks }), count: tasks.length };
   }
   const old = events.findLast(e => isTaskInjection(e) && (!taskContextMeta(e.data) || taskContextMeta(e.data).todoText));

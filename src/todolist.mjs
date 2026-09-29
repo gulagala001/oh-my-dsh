@@ -1,6 +1,6 @@
 import { sourceName } from './message-source.mjs';
 import { appendShadow } from './context/shadow.mjs';
-import { TODO_META, TASK_CONTEXT_META, taskContextMeta, latestTaskContext, withoutTodo } from './task-context.mjs';
+import { TODO_META, TASK_CONTEXT_META, taskContextMeta, latestTaskContext, withoutRuntime, tasksFromLegacy } from './task-context.mjs';
 import { promptText } from './cc-adaptation/texts.mjs';
 // Task ledger adapted from trisoul 4189f90: preserve excerpts, anchors, item operations and evidence.
 // DSH V3 events and a unified model-facing tool are wired in tasks.mjs.
@@ -8,19 +8,17 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import { accessSync, constants, realpathSync } from 'node:fs'
 import { resolve as resolvePath, extname } from 'node:path'
 
-/** 清单快照事件类型（持久化 + UI 投影共用一份事件源）。用原装 todo_write 的事件类型而不自造：dsh 读日志只认它
- *  生成的 KNOWN_SESSION_EVENT_TYPES 清单，未知类型须带 ignorable 标记，而 session.append 的信封没有该字段可打——
- *  自造类型写得进读不出（08-29 病例：跑过 task_map 的会话 resume 时整条日志被拒）。data 带原装形
- *  todos:[{content,status}] 兼容宿主/Web 镜像，自家字段 excerpts/tasks/next* 并列；恢复与投影按 data.tasks 认自家快照。 */
+// Persist through the host's todo/write event. The native todos projection and
+// the full excerpts/tasks ledger share that durable event, so both readers work.
 export const TODOLIST_EVENT = 'todo/write'
-/** 自家快照判别：原装 todo_write 事件只有 todos，自家快照带 tasks 数组（顶位前的旧日志里可能有原装事件，不认） */
+// Full OMD snapshots include tasks; the host-only format contains todos.
 export const isTodoSnapshot = (e) => e?.type === TODOLIST_EVENT && Array.isArray(e.data?.tasks)
 /** 任务有跑绿的 test 链接（真正靠运行过关） */
 const passedTest = (t) => (t.links ?? []).some(l => l.kind === 'test' && l.lastRun?.pass === true)
-/** 只靠文字过关：没有跑绿的 test、却挂着 text（I6 追问对象 / I7 分型计数 / UI ⚠ 后缀共用一把尺） */
+// Shared classification for evidence review, completion counts and UI labels.
 export const textOnly = (t) => !passedTest(t) && (t.links ?? []).some(l => l.kind === 'text')
-/** 原装 wire 形：title→content、done→completed|pending（两态，不加 in_progress——用户拍板）；
- *  只靠文字过关的条目 content 尾加 ⚠ text-only（I7 放行可见，同 wire 格式 UI 零改，08-29(3) 拍板） */
+// Keep the native content/status shape and the two task states. Text-only
+// completion remains visibly marked in the native projection.
 export const todosOf = (tasks) => (Array.isArray(tasks) ? tasks : []).map(t => ({ content: textOnly(t) ? `${t.title} ⚠ text-only` : t.title, status: t.done ? 'completed' : 'pending' }))
 /** 新用户输入时投递的任务提醒。 */
 export const TODO_NUDGE = promptText('runtime/task-nudge.md')
@@ -42,7 +40,7 @@ function userMessages(session) {
   return items
 }
 
-/** op:transcript 输出（spec 2.3：单一顺序号，弃用旧双编号格式） */
+// User-message numbering is independent of positional context rewrites.
 export function transcriptText(session) {
   const items = userMessages(session)
   return items.length
@@ -50,8 +48,7 @@ export function transcriptText(session) {
     : '(No user messages in this session yet)'
 }
 
-// ---------- 引文定位（M11 唯一命中；08-30 ④ 用户拍板：引文匹配忽略标点与空白，覆盖校验 M7 撤销——
-//   0829 批 kea/superjson/pwntools 病例：标点不一致、excerpt 未铺满连拒数次后弃建账本） ----------
+// ---------- Quote anchors: unique matches, ignoring punctuation and whitespace ----------
 
 /** 折叠噪音：空白、标点、符号一律去掉；返回折叠文本与「折叠位 → 原文 UTF-16 偏移」映射 */
 const NOISE = /[\s\p{P}\p{S}]/u
@@ -92,7 +89,7 @@ const locateErrText = (r, where) => r.err === 'multi'
     ? `Rejected: no match for "${r.field}" in ${where}.`
     : `Rejected: "to" ends before "from" begins in ${where}.`
 
-// ---------- 渲染（spec 2.3 / 4.3 / I2 / I4） ----------
+// ---------- Ledger and evidence rendering ----------
 
 const box4 = (done) => done ? '[done]' : '[    ]'
 /** 含节选原文的完整树（op:view 与变更回执共用） */
@@ -111,8 +108,7 @@ function renderTree(rec) {
   for (const t of rec.tasks.filter(t => !t.anchor)) appendTask(t, ' — legacy task; add its original-wording anchor with op:edit')
   return lines.join('\n')
 }
-/** 单条链接的视图行体（4.3：test 显示跑没跑/结果，text 带 ⚠ 分型标记） */
-/** test 链接的运行态三态（08-29(4)）：TIMEOUT 单列——没跑完不是没过，C 要收窄命令而不是换证据 */
+// Incomplete timed-out runs are distinct from completed failing runs.
 const runState = (l) => l.lastRun ? (l.lastRun.timedOut ? 'TIMEOUT' : l.lastRun.pass ? 'PASS' : 'FAIL') : 'not run yet'
 /** test 链接的标识：路径 +（有 cmd 时）命令原文，跑了什么留痕 */
 const testLabel = (l) => `${l.path}${l.cmd ? ` (${l.cmd})` : ''}`
@@ -218,7 +214,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     if (last?.data) {
       const d = last.data
       r.excerpts = structuredClone(d.excerpts ?? [])
-      r.tasks = structuredClone(d.tasks ?? (d.todos ?? []).map((t, i) => ({ id: `T${i + 1}`, title: t.content, done: t.status === 'completed', anchor: null, links: [], legacySource: t.source ?? '', ...(t.verification ? { legacyVerification: t.verification } : {}) })))
+      r.tasks = structuredClone(d.tasks ?? tasksFromLegacy(d.todos ?? []))
       r.nextE = d.nextE ?? r.excerpts.length + 1
       r.nextT = d.nextT ?? r.tasks.length + 1
       r.nextL = d.nextL ?? 1
@@ -291,7 +287,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       if (r.error) return r.error
       a = { excerpt: r.excerpt, from: entry.anchor.from, to: entry.anchor.to, start: r.start, end: r.end }
     }
-    // 查重（2026-08-29 补拍板，病例 session-395ba755）：同 title + 同框选区间 = 纯重复，硬拒指回已有任务
+    // The same title and anchor identify an existing task, not a second item.
     const dup = next.tasks.find(t => t.title === title && t.anchor?.excerpt === a.excerpt && t.anchor.start === a.start && t.anchor.end === a.end)
     if (dup) return `Rejected: task "${title}" with the same anchor already exists as ${dup.id}.`
     next.tasks.push({ id: `T${next.nextT++}`, title, anchor: a, done: false, links: [] })
@@ -316,8 +312,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       if (typeof args.from !== 'string' || !args.from || typeof args.to !== 'string' || !args.to) {
         return err('Rejected: op:excerpt requires from and to.')
       }
-      // 直引（08-29(2) 拍板）：msg 缺省时引文在全部用户消息里唯一命中即成——镜像 resolveAnchor 的
-      // 「引文全局唯一定位，撞车才要 id」哲学；跨消息歧义硬拒要 msg，transcript 只剩对坐标一个用途
+      // A unique quote resolves without a message ID; ambiguous matches require one.
       let m, loc
       if (args.msg !== undefined && args.msg !== null) {
         m = msgs.find(x => x.n === args.msg)
@@ -341,7 +336,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
           return err(`Rejected: the quote ("${args.from}" → "${args.to}") matches no user message.`)
         }
       }
-      // 查重（2026-08-29 补拍板）：同 (msg,from,to) 三元组已入账 = 同一节选，整调用拒——
+      // Reject an already recorded excerpt without partially changing the ledger.
       const dupEx = rec.excerpts.find(x => x.msg === m.n && x.from === args.from && x.to === args.to)
       if (dupEx) return err(`Rejected: this excerpt is already recorded as ${dupEx.id} — the todo list already covers it. Use op:add/edit/remove to change tasks, or op:view to see it.`)
       if (!loc) {
@@ -388,7 +383,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
             if (r.error) return err(r.error)
             t.anchor = { excerpt: r.excerpt, from: entry.anchor.from, to: entry.anchor.to, start: r.start, end: r.end }
           }
-          // M9 编辑即连坐：动过本体（措辞或 anchor）→ 勾选归零、链接全清（测试文件本身不动）
+          // Editing the task invalidates its completion and linked evidence, not the files.
           t.done = false
           t.links = []
           delete t.legacyVerification; delete t.legacySource
@@ -448,7 +443,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
         if (e.kind !== 'test' && e.kind !== 'text') return err('Rejected: kind must be "test" or "text".')
         if (e.kind === 'test' && (typeof e.path !== 'string' || !e.path.trim())) return err('Rejected: kind "test" requires path.')
         if (e.kind === 'text' && (typeof e.note !== 'string' || !e.note.trim())) return err('Rejected: kind "text" requires note.')
-        // 08-29(3) 拍板：text 必填 reason（为什么阶梯上更高一级在此地跑不了）——追问步（I6）原话引回，糊弄要对着自己的理由再来一次
+        // Text-only evidence retains the reason executable verification is unavailable.
         if (e.kind === 'text' && (typeof e.reason !== 'string' || !e.reason.trim())) return err('Rejected: kind "text" requires reason — why no higher rung on the evidence ladder is runnable here.')
         if (typeof e.path === 'string' && e.path.trim() && !existingPath(cwd, e.path.trim())) return err(`Rejected: no such file ${e.path.trim()}.`)
         const cmd = e.kind === 'test' && typeof e.cmd === 'string' && e.cmd.trim() ? e.cmd.trim() : null
@@ -482,7 +477,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       const results = []
       let aborted = false
       for (const { t, l } of jobs) {
-        // 08-30 P1：上游中止（用户点停止）不是测试结果——被掐断的这条和没轮到的都不改写，旧证据原样保留
+        // Cancellation is not a test result; preserve unfinished and unstarted evidence.
         if (signal?.aborted) { aborted = true; break }
         const real = existingPath(cwd, l.path)
         let r
@@ -498,8 +493,8 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
         results.push({ t, l, pass: r.ok, timedOut: l.lastRun.timedOut, timeoutMs: r.timeoutMs ?? runTimeoutMs, tail: l.lastRun.tail })
       }
       if (results.length) commit(session, rec, next)
-      // FAIL 是合法结果不是工具错误：C 要拿着尾巴修测试/修实现，isError 会让取证轮误判通道坏了
-      // 08-29(4)：PASS 也带尾巴（跑了什么留痕，cmd:"true" 与真套件的 PASS 不再同形）；TIMEOUT 单列并明说不是失败
+      // Completed failure is a valid result, not a broken tool. Always retain
+      // command/output evidence, and distinguish timeout from a completed failure.
       const ran = results.length ? `Ran ${results.length} linked test${results.length === 1 ? '' : 's'}: ${results.map(r =>
         r.timedOut ? `${testLabel(r.l)} TIMEOUT after ${Math.round(r.timeoutMs / 1000)}s (${r.t.id} — did not finish; this is not a test failure. Narrow the command to the tests that cover this task.)`
           : `${testLabel(r.l)} ${r.pass ? 'PASS' : 'FAIL'} (${r.t.id}, output tail: "${r.tail}")`).join(' · ')}` : ''
@@ -571,19 +566,10 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     // Disabling removes only our state section, including compressed carriers.
     if (!desired?.meta.runtime) {
       for (const e of live.filter(e => taskContextMeta(e.data)?.runtime)) {
-        const meta = taskContextMeta(e.data), prefix = e.data[TODO_META];
-        const content = [...e.data.content];
-        if (meta.todoText) {
-          content[prefix?.index ?? 0] = { type: 'text', text: meta.todoText };
-          const changed = { ...e.data, id: crypto.randomUUID(), content,
-            ...(prefix ? { [TODO_META]: { ...prefix, context: { ...meta, runtime: null } } } : { [TASK_CONTEXT_META]: { ...meta, runtime: null } }) };
-          session.append('user/message', changed, { surfaceOp: { op: 'replace', startSeq: e.seq, endSeq: e.seq }, sourceEventSeqs: [e.seq] });
-        } else if (prefix) {
-          const base = withoutTodo(e.data);
-          session.append('user/message', { ...base, id: crypto.randomUUID(), source: base.source?.kind === 'user' ? e.data.source : base.source }, { surfaceOp: { op: 'replace', startSeq: e.seq, endSeq: e.seq }, sourceEventSeqs: [e.seq] });
-        } else {
-          appendShadow(session, [e.seq]);
-        }
+        const restored = withoutRuntime(e.data);
+        if (restored) session.append('user/message', { ...restored, id: crypto.randomUUID() },
+          { surfaceOp: { op: 'replace', startSeq: e.seq, endSeq: e.seq }, sourceEventSeqs: [e.seq] });
+        else appendShadow(session, [e.seq]);
       }
       live = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && (sourceName(e.data?.source) === 'trisoul-x:tasks' || e.data?.[TODO_META]));
     }

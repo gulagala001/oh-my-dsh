@@ -4,6 +4,7 @@ import {mkdtempSync,rmSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {DreamService} from '../src/dream/service.mjs';
+import {createEffortResolver} from '../src/effort.mjs';
 import {DreamStore} from '../src/dream/store.mjs';
 import {readDream} from '../src/dream/recall.mjs';
 import {projectOf} from '../src/hub-store.mjs';
@@ -23,6 +24,7 @@ function fixture(t,{generate,config={}}={}){
     const log=logs.get(id);if(!log)throw Error('source missing');return {header:log.header,inheritedEventCount:log.inherited||0,read:async(offset=0,length)=>{reads++;return {events:log.events.slice(offset,length==null?undefined:offset+length)};},close:async()=>{closes++;}};
   }};
   const hub={ctx:{sessionPersistence:persistence,agents:new Map(),sessions:new Map()},store:{dir,peek:id=>states.get(id)},config:()=>cfg,scope:()=>({mode:'project',project:projectOf('/projects/a')}),context:{store:{peek:id=>archives.get(id)},adapter:{message:text=>({role:'user',content:[{type:'text',text}]})}}};
+  hub.efforts=createEffortResolver(hub.ctx);
   const store=new DreamStore(dir,{now:()=>now}),service=hub.dream=new DreamService(hub,{store,generate:async(input,options)=>{
     calls.push(structuredClone(input));return generate?generate(input,options,{hub,service,store,logs,archives,states}):{value:{summary:input.sources.map(x=>x.text).join(' ').slice(0,150)||'none',references:input.sources.map(x=>x.id)},usage:{inputTokens:100,outputTokens:50}};
   }});

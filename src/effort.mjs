@@ -1,8 +1,5 @@
-// 推理档位能力门控：记忆中枢的作业调用默认请求 reasoningEffort:'off'（0 思考，省钱提速），
-// 但只有该 provider/model 声明支持 'off'（reasoning.efforts 含 {id:'off'}）才传；否则传 undefined（提供商默认）——
-// dsh-llm 对未声明的档位会在发请求前抛 UNSUPPORTED_REASONING_EFFORT。
-// 能力查询：优先 ctx.llm.resolveModelInfo(provider, model)（rc.6 有，带 reasoning 元数据）；退化到 listModels 条目上的 reasoning。
-// 结果缓存到 provider/model 键（查询失败不缓存）；'llm/adapters-updated'（provider 增删/热更）时整表失效。
+// Cache model capabilities, not selected effort levels. Adapter changes invalidate
+// successful lookups; failed lookups remain retryable and preserve the requested effort.
 
 /**
  * @param ctx cordis 上下文（需要 ctx.llm，可选 ctx.on 订阅失效事件）
@@ -14,9 +11,7 @@ export function createEffortResolver(ctx, { effort = 'off' } = {}) {
   const invalidate = () => cache.clear()
   try { ctx.on?.('llm/adapters-updated', invalidate, { global: true }) } catch {}
 
-  // 08-30 S3（对齐 dsh-plugin/effort.mjs 的 08-27 修法）：查询**抛错** ≠ 「未声明」——启动期 NO_ADAPTER 之类的竞态
-  // 若被当成不支持并缓存，整个进程从此不传档位、吃提供商默认（ark 是 high）且零日志。抛错 → 向上抛（不缓存）；
-  // 查到了但没有 reasoning 元数据才是真「未声明」→ 空集（缓存 → 不传）。
+  // A failed lookup is not evidence that the model lacks reasoning controls.
   const lookup = async (provider, model) => {
     const llm = ctx.llm
     let failure = null
@@ -45,19 +40,19 @@ export function createEffortResolver(ctx, { effort = 'off' } = {}) {
   const supported = (provider, model) => {
     const key = `${provider}/${model}`
     let p = cache.get(key)
-    if (!p) { p = lookup(provider, model).catch(e => { cache.delete(key); throw e }); cache.set(key, p) }
+    if (!p) { p = lookup(provider, model).catch(e => { if (cache.get(key) === p) cache.delete(key); throw e }); cache.set(key, p) }
     return p
   }
 
   /** 解析实际要传的 reasoningEffort：'inherit' → undefined；声明支持才传，未声明 → undefined；查询失败 → 乐观按请求档发 + warn（不缓存）。 */
-  const resolve = async (provider, model) => {
-    if (!effort || effort === 'inherit') return undefined
+  const resolve = async (provider, model, requested = effort) => {
+    if (!requested || requested === 'inherit') return undefined
     try {
       const set = await supported(provider, model)
-      return set.has(effort) ? effort : undefined
+      return set.has(requested) ? requested : undefined
     } catch (e) {
-      ctx.logger?.warn(`trisoul-memory: 档位能力查询失败（${provider}/${model}），本次按 '${effort}' 乐观派发且不缓存: ${String(e?.message ?? e)}`)
-      return effort
+      ctx.logger?.warn(`trisoul-memory: 档位能力查询失败（${provider}/${model}），本次按 '${requested}' 乐观派发且不缓存: ${String(e?.message ?? e)}`)
+      return requested
     }
   }
 
