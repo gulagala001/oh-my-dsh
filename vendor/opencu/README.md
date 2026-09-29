@@ -4,22 +4,20 @@
 
 OpenCU 从 [Oh My DSH](https://github.com/gulagala001/oh-my-dsh) 的 Computer Use 提取而来，提供相同的操控工具、实时预览和接管体验，可以独立安装到 DSH。Oh My DSH 继续集成全部能力，并直接复用 OpenCU 的实现。
 
-本仓库版本：[1.1.8](https://github.com/gulagala001/opencu/releases/tag/v1.1.8)。源码、发行包与 SHA-256 校验文件见版本页面；对应 Release 发布后可按下方说明安装。
+本仓库版本：[1.1.9](https://github.com/gulagala001/opencu/releases/tag/v1.1.9)。源码、发行包与 SHA-256 校验文件见版本页面；对应 Release 发布后可按下方说明安装。
 
 ## 本版更新
 
-右侧打开同一会话的电脑页时，对话内小窗自动隐藏并释放重复观察连接；切换侧栏或关闭电脑页后恢复原有状态。预览采用悬停工具栏，卡片切换、放大与复位带过渡，拖动按动画帧更新；遵循减少动态效果设置。停止、接管、恢复和独立预览窗口仍沿用原有流程。
+共用有界 UTF-8 JSON 读写与请求取消生命周期，修复中文在网络分块边界损坏的问题。电脑设置使用统一的轮询/写入所有权，安装期间暂停旧读取，防止迟到响应覆盖新状态；隐藏面板不取消已提交的操作。
 
-同步固定 DSH 源码快照，保留四档工作步骤展示、原生运行计时和已有显示偏好。正式宿主配对仍为 DSH 0.1.7-rc.2，不将固定 master 验证当作其他版本或平台已通过。[版本说明与验证范围](docs/release-1.1.8.md)。
-
-修复 Windows Chrome 连接从旧安装迁移时被误拒绝的问题；替换前核对已检查的注册值，保留其他实例的连接保护和失败回滚。
+合并目标展示的重复逻辑，移除无人使用的图标生成代码，保留原有弹窗图标、浏览器/原生桌面能力、数据格式和兼容标识。宿主配对仍为 DSH 0.1.7-rc.2。[版本说明与验证范围](docs/release-1.1.9.md)。
 
 ## 安装
 
-**1.1.8** 配套 **DSH 0.1.7-rc.2 Web、Node.js ≥22.19、pnpm 11.23.0 和 Git**。对应 Release 发布后，先停止 DSH 服务，再运行：
+**1.1.9** 配套 **DSH 0.1.7-rc.2 Web、Node.js ≥22.19、pnpm 11.23.0 和 Git**。对应 Release 发布后，先停止 DSH 服务，再运行：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/opencu#v1.1.8
+npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/opencu#v1.1.9
 npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 ```
 
@@ -75,7 +73,7 @@ OpenCU 配置位于 DSH 的 `opencu` 设置区。未显式设置的字段继承�
 先停止服务，再运行对应命令，然后重新启动 `dsh web`：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/opencu#v1.1.8
+npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/opencu#v1.1.9
 dsh plugin --profile web remove opencu
 ```
 

@@ -12,7 +12,7 @@ import { VersionUpdater, handleVersionUpdateApi } from './version-update.mjs';
 import { installImageBudget } from './image-budget.mjs';
 import { Config } from './config.mjs';
 import { neutralizeHostEnvironment } from './cc-adaptation/environment.mjs';
-import { Hub, NS } from './hub.mjs';
+import { Hub } from "./hub.mjs";
 import { eventText } from './hub.mjs';
 import { CONTEXT_WINDOW_EXCEEDED_CODE } from '@deepseek-ai/dsh-llm';
 import { currentTasks, restoreTaskProjection } from './tasks.mjs';
