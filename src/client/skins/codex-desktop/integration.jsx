@@ -8,9 +8,9 @@ const isCodex = state => state.skins.find(s => s.id === state.selected)?.layout 
 function Geometry({ ctx }) {
   const ref = useRef(null);
   useLayoutEffect(() => {
-    const frame = ref.current?.closest('.pI_x6G_frame');
+    const frame = ref.current?.closest('[data-shell-overlay]')?.parentElement;
     if (!frame) return;
-    const right = frame.querySelector('.pI_x6G_rightbarCol');
+    const right = frame.querySelector('[data-rightbar-col]');
     const sync = () => {
       const width = `${right?.getBoundingClientRect().width || 0}px`;
       if (frame.style.getPropertyValue('--codex-right-width') !== width) frame.style.setProperty('--codex-right-width', width);

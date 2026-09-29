@@ -62,7 +62,7 @@ test('session IDs cannot escape the historical state directory', t => {
 
 test('compact monitoring preserves totals and excludes histories, documents and raw prompts', () => {
   const states = [
-    { id: 'grandchild', parentSession: 'child', metrics: { main: { calls: 2, peakContext: 50, inputTokens: 10 } }, actions: { contextReplacements: 1 } },
+    { id: 'grandchild', origin: 'subagent', parentSession: 'child', metrics: { main: { calls: 2, peakContext: 50, inputTokens: 10 } }, actions: { contextReplacements: 1 } },
     { id: 'unrelated', metrics: { main: { calls: 100 } }, actions: {} },
     { id: 'root', metrics: { main: { calls: 3, peakContext: 100, inputTokens: 20 } }, actions: { contextReplacements: 2 } },
     { id: 'child', parentSession: 'root', metrics: { subagent: { calls: 1 } }, actions: {} },
@@ -75,7 +75,21 @@ test('compact monitoring preserves totals and excludes histories, documents and 
   assert.equal(compact.actions.contextReplacements, 3); assert.equal(compact.meter.totalTokens, 200);
   assert.doesNotMatch(JSON.stringify(compact), /PRIVATE|nodes|request|documents|contextHistory/);
   assert.equal(monitorSelection(states, 'root', 'all').metrics.main.calls, 105);
-  assert.equal(monitorSelection([{ id: 'a', parentSession: 'b' }, { id: 'b', parentSession: 'a' }], 'a').ids.size, 2);
+  assert.equal(monitorSelection([{ id: 'a', origin: 'subagent', parentSession: 'b' }, { id: 'b', origin: 'subagent', parentSession: 'a' }], 'a').ids.size, 2);
+});
+
+test('current-session monitoring includes actual subagents but excludes ordinary fork branches', () => {
+  const states = [
+    { id: 'root', origin: null, metrics: { main: { calls: 1 } } },
+    { id: 'fork', origin: null, parentSession: 'root', metrics: { main: { calls: 9 } } },
+    { id: 'fork-child', origin: 'subagent', parentSession: 'fork', metrics: { subagent: { calls: 2 } } },
+    { id: 'child', origin: 'subagent', parentSession: 'root', metrics: { subagent: { calls: 3 } } },
+    { id: 'legacy-child', parentSession: 'child', metrics: { subagent: { calls: 4 } } },
+  ];
+  const own = monitorSelection(states, 'root');
+  assert.deepEqual([...own.ids], ['root', 'child', 'legacy-child']);
+  assert.equal(own.metrics.main.calls, 1); assert.equal(own.metrics.subagent.calls, 7);
+  assert.equal(monitorSelection(states, 'root', 'all').metrics.main.calls, 10);
 });
 
 test('polling shares no stale deliveries across refresh, visibility or disposal', async () => {

@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { createPoller } from './polling.mjs';
+import React from 'react';
+import { usePollingAction } from './use-polling-action.mjs';
 
 async function updateApi(version, signal) {
   const response = await fetch('trisoul-x/api/version-update', version === undefined ? { signal, cache: 'no-store' }
@@ -12,22 +12,7 @@ async function updateApi(version, signal) {
 }
 
 export function VersionUpdate({ version, stale }) {
-  const [state, setState] = useState(null), [error, setError] = useState(''), [requestError, setRequestError] = useState(''), [pending, setPending] = useState(false);
-  const poller = useRef(null), alive = useRef(false), writing = useRef(false);
-  useEffect(() => {
-    alive.current = true;
-    const observer = createPoller({ read: signal => updateApi(undefined, signal),
-      onData: value => { setState(value); setError(''); }, onError: e => setError(e.message), interval: 1500 });
-    poller.current = observer; observer.start();
-    return () => { alive.current = false; observer.stop(); };
-  }, []);
-  const install = async () => {
-    if (writing.current) return;
-    writing.current = true; setPending(true); setRequestError(''); poller.current.stop();
-    try { const value = await updateApi(version); if (alive.current) setState(value); }
-    catch (e) { if (alive.current) setRequestError(e.message); }
-    finally { writing.current = false; if (alive.current) { setPending(false); poller.current.start(); } }
-  };
+  const { state, error, requestError, pending, act } = usePollingAction(updateApi, 1500);
   const installing = pending || ['checking', 'installing', 'applying'].includes(state?.phase);
   const restart = state?.phase === 'restart-required';
   const progress = state?.phase === 'checking' ? '正在确认更新版本…' : state?.phase === 'applying' ? '正在保存安装配置…' : '正在下载并安装更新…';
@@ -39,7 +24,7 @@ export function VersionUpdate({ version, stale }) {
       : '请按原方式重启 DSH 服务，再刷新页面。'}重启后“当前版本”才会改变。</p>
       : <>
         {version && <button type="button" className="omd-version-install" disabled={!state?.available || !!error || stale || installing}
-          onClick={() => void install()}>{installing ? '更新中…' : state?.phase === 'failed' || requestError ? '重试更新' : '更新'}</button>}
+          onClick={() => void act(version)}>{installing ? '更新中…' : state?.phase === 'failed' || requestError ? '重试更新' : '更新'}</button>}
         <p className="omd-version-update-hint" role={installing ? 'status' : undefined}>{installing ? progress
           : stale ? '请先重新检查更新，确认最新发布信息。' : state?.blockedReason || (version ? `安装 ${version}，重启 DSH 后生效。` : '')}</p>
       </>}

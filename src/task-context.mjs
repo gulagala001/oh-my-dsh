@@ -43,7 +43,7 @@ export function latestTodo(session) {
 export function summaryMessageReader(session) {
   const taskCalls = new Set();
   for (const e of session.snapshotEvents()) for (const b of messageOf(e)?.content || []) {
-    if (b.type === 'tool-call' && ['todo_write', 'task_map', 'runtime_status'].includes(b.name)) taskCalls.add(b.id);
+    if (b.type === 'tool-call' && ['todo_write', 'task_map', 'runtime_status', 'recall', 'memory_search'].includes(b.name)) taskCalls.add(b.id);
   }
   const filter = blocks => (blocks || []).flatMap(b => {
     if (b.type === 'tool-call' && taskCalls.has(b.id)) return [];
@@ -54,7 +54,7 @@ export function summaryMessageReader(session) {
     return [b];
   });
   return e => {
-    if (isTaskInjection(e)) return null;
+    if (isTaskInjection(e)||['trisoul-x:dream-memory','trisoul-x:project-catalog','trisoul-x:manual-global'].includes(sourceName(messageOf(e)?.source))) return null;
     const m = withoutTodo(session.deriveEventMessage(e));
     if (!m) return null;
     if (m.role === 'tool' && taskCalls.has(m.toolCallId)) return null;

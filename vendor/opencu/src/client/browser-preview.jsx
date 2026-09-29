@@ -35,7 +35,7 @@ export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api,
     const resize=async()=>{
       setLayoutResizing(true);
       try{const result=await api('view-layout',sessionId,{actor:frame.actor,tabId,controlEpoch:state.controlEpoch,size:layoutSize},controller.signal);if(active&&result.layout!=='applied')setLayoutResizing(false);if(active&&result.layout==='deferred')timer=setTimeout(resize,500);}
-      catch(error){if(active){setLayoutResizing(false);if(!controller.signal.aborted)callbacks.current.onError(error.message);}}
+      catch(error){if(active){setLayoutResizing(false);if(!controller.signal.aborted&&error.code!=='VIEW_CHANGED')callbacks.current.onError(error.message);}}
     };
     timer=setTimeout(resize,200);return()=>{active=false;setLayoutResizing(false);clearTimeout(timer);controller.abort();};
   },[sessionId,tabId,visible,isDevice,state?.enabled,state?.transitioning,state?.controlEpoch,state?.viewViewport?.layoutSupported,layoutSize?.width,layoutSize?.height,frame?.actor,frame?.width,frame?.height,connection]);

@@ -6,7 +6,7 @@ import sharp from 'sharp';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 
 test('first operation group after user input stays visible with an injected runtime record', { timeout: 60000 }, async t => {
-  const f = await frontendFixture(t, { omdConfig: { stateHintsEnabled: true } });
+  const f = await frontendFixture(t, { chatConfig: { transcriptView: 'standard' }, omdConfig: { stateHintsEnabled: true } });
   const { page, sessionId } = f;
   const file = join(f.root, 'workspace', 'reference.md');
   const image = join(f.root, 'workspace', 'reference.png');

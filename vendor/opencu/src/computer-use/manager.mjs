@@ -499,7 +499,7 @@ export class ComputerUseManager {
   async layoutViewedTab(id,input,signal){
     const state=this.sessions.get(id),viewer=state?.viewers.get(input.actor),target=this.viewerTarget(state,input);
     const valid=()=>!this.closed&&this.enabled&&this.viewerTarget(state,input)&&state.viewers.get(input.actor)===viewer&&state.controlEpoch===input.controlEpoch;
-    if(!target||!valid())throw new Error('当前查看的网页已改变');
+    if(!target||!valid())throw Object.assign(new Error('当前查看的网页已改变'),{code:'VIEW_CHANGED'});
     const views=this.viewsFor(target),browser=views.browser,view=views.views.get(target.id);
     // This is the embedded browser's layout, never a resize of a user's
     // existing desktop Chrome window or a floating observer's thumbnail.
@@ -518,11 +518,11 @@ export class ComputerUseManager {
       view.resizing=true;
       try{
         await Promise.allSettled([view.flushing,...(view.readers??[])]);lifetime.throwIfAborted();
-        if(!valid())throw new Error('当前查看的网页已改变');
+        if(!valid())throw Object.assign(new Error('当前查看的网页已改变'),{code:'VIEW_CHANGED'});
         if(fixed())return{layout:'fixed'};
         if(state.uiAction||state.resuming||state.manualBusy||state.queues.has(target.id)||view.dialog||records().some(record=>record.pendingAction||record.heldButtons?.size||record.heldKeys?.size))return{layout:'deferred'};
         changed=true;await browser.setViewport(view.record,input.size,'layout');lifetime.throwIfAborted();
-        if(!valid())throw new Error('当前查看的网页已改变');
+        if(!valid())throw Object.assign(new Error('当前查看的网页已改变'),{code:'VIEW_CHANGED'});
         view.layoutSize={...input.size};return{layout:'applied'};
       }catch(error){
         if(changed&&!view.closed){if(previous)await browser.setViewport(view.record,previous,'layout');else await browser.resetViewport(view.record);}

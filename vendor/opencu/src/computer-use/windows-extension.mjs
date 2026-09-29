@@ -72,6 +72,6 @@ export class WindowsExtensionRuntime {
   async call(args) { const { command } = await this.command(); return JSON.parse((await run(command, args, { windowsHide: true, timeout: 10000, maxBuffer: 65536 })).stdout); }
   async lock(host) { const { command } = await this.command(); return nativeLock(command, 'HKCU/Chrome/NativeMessagingHosts/' + host); }
   read(host) { return this.call(['registry-read', host]); }
-  set(host, path) { return this.call(['registry-set', host, path]); }
+  set(host, path, expected) { return this.call(['registry-set', host, path, ...(expected === undefined ? [] : [JSON.stringify(expected)])]); }
   restore(host, path, records) { return this.call(['registry-restore', host, path, JSON.stringify(records)]); }
 }

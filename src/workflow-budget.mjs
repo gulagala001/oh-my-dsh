@@ -21,7 +21,7 @@ export class WorkflowBudget {
   constructor(store) { this.store = store; }
 
   admit(session, { turn, step, messages, enabled = true }) {
-    if (session.header.parentSession || session.header.origin === 'subagent') return;
+    if (session.header.origin === 'subagent') return;
     if (!enabled) {
       const state = this.store.peek(session.id);
       if (state?.workflowBudget?.active) { state.workflowBudget.active = null; this.store.save(state); }
@@ -44,12 +44,17 @@ export class WorkflowBudget {
 
   owner(session) {
     const state = this.store.peek(session.id);
-    if (state?.workflowBudgetOwner) return { ...state.workflowBudgetOwner };
+    if (session.header.origin === 'subagent' && state?.workflowBudgetOwner) return { ...state.workflowBudgetOwner };
     const id = state?.workflowBudget?.active;
     return id ? { sessionId: session.id, poolId: id } : undefined;
   }
 
   attach(session, owner) {
+    if (session.header.origin !== 'subagent') {
+      const state = this.store.peek(session.id);
+      if (state?.workflowBudgetOwner) { delete state.workflowBudgetOwner; this.store.save(state); }
+      return;
+    }
     const parent = session.header.parentSession;
     if (!parent) return;
     if (this.store.peek(session.id)?.workflowBudgetOwner && owner === undefined) return;

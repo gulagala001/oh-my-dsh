@@ -1,28 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
+import { writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
 import { Session } from '@deepseek-ai/dsh-session';
-import { createUserMessage, createAssistantMessage } from '@deepseek-ai/dsh-llm';
+import { createAssistantMessage } from '@deepseek-ai/dsh-llm';
 import { HubStore } from '../src/hub-store.mjs';
 import { Hub } from '../src/hub.mjs';
 import { createTodoStore } from '../src/todolist.mjs';
-import { registerTasks, currentTasks, restoreTaskProjection } from '../src/tasks.mjs';
+import { currentTasks, restoreTaskProjection } from '../src/tasks.mjs';
 import { promptText } from '../src/cc-adaptation/texts.mjs';
+import { verificationFixture as setup } from './fixtures/verification.mjs';
 
-function setup(t) {
-  const dir = mkdtempSync(join(tmpdir(), 'trisoul-x-ledger-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
-  const session = Session.create('ledger', undefined, { id: 'ledger', version: 4, createdAt: 1, cwd: dir, isSeeded: false });
-  session.append('turn/start', { turn: 1 });
-  const tools = new Map(); let projection;
-  const store = registerTasks({ tools: { register(t) { tools.set(t.name, t); } }, sessionProjections: { register(p) { projection = p; } } });
-  const tool = tools.get('todo_write'), verification = tools.get('verify_link');
-  const call = (args, signal = new AbortController().signal) => tool.execute(args, { agent: { session }, signal });
-  const verify = (args, signal = new AbortController().signal) => verification.execute(args, { agent: { session }, signal });
-  const user = text => session.append('user/message', createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'user' } }), { surfaceOp: 'append' });
-  return { dir, session, store, tool, verification, projection, call, verify, user };
-}
 const task = (title, from, to = from) => ({ title, anchor: { from, to } });
 const quote = '登录必须支持邮箱验证码，还要有注册功能。';
 const excerpt = { op: 'excerpt', from: '登录必须支持', to: '注册功能', tasks: [task('邮箱验证码登录', '登录必须支持', '邮箱验证码'), task('注册', '注册功能')] };
@@ -86,6 +74,40 @@ test('ambiguous quotes require message/excerpt selection; punctuation changes pr
   await call({ op: 'add', tasks: [{ title: '另一任务', anchor: { excerpt: 'E2', from: '注册功能', to: '注册功能' } }] });
   assert.match(await call({ op: 'transcript' }), /\[2\].*邮箱验证码/);
   assert.match(await call({ op: 'view' }), /E2 \[msg 1\]/);
+});
+
+test('one unique quote cannot hide another message with multiple matches', async t => {
+  const { session, call, user } = setup(t);
+  user('实现登录功能。'); user('实现登录功能，然后检查实现登录功能。');
+  const args = { op: 'excerpt', from: '实现登录功能', to: '实现登录功能', tasks: [task('登录功能', '实现登录功能')] };
+  await assert.rejects(call(args), /matches 2 places|Add "msg"/);
+  assert.equal(currentTasks(session).length, 0);
+  await call({ ...args, msg: 1 });
+  assert.equal(currentTasks(session)[0].sourceMessage, 1);
+});
+
+test('one unique anchor cannot hide an excerpt with multiple matches', async t => {
+  const { session, call, user } = setup(t);
+  user('第一段开始，实现登录功能，第一段结束。');
+  user('第二段开始，实现登录功能，然后检查实现登录功能，第二段结束。');
+  await call({ op: 'excerpt', from: '第一段开始', to: '第一段结束', tasks: [] });
+  await call({ op: 'excerpt', from: '第二段开始', to: '第二段结束', tasks: [] });
+  const args = { op: 'add', tasks: [task('登录功能', '实现登录功能')] };
+  await assert.rejects(call(args), /matches 2 places|Add "excerpt"/);
+  assert.equal(currentTasks(session).length, 0);
+  await call({ op: 'add', tasks: [{ ...args.tasks[0], anchor: { ...args.tasks[0].anchor, excerpt: 'E1' } }] });
+  assert.equal(currentTasks(session)[0].sourceExcerpt, 'E1');
+});
+
+test('repeated opening words without the closing quote do not create a competing match', async t => {
+  const { session, call, user } = setup(t);
+  user('实现登录功能，并添加回归测试。');
+  user('第二段开始，实现登录功能，然后检查实现登录功能，第二段结束。');
+  await call({ op: 'excerpt', from: '实现登录功能', to: '回归测试', tasks: [] });
+  await call({ op: 'excerpt', from: '第二段开始', to: '第二段结束', tasks: [] });
+  await call({ op: 'add', tasks: [task('登录与回归', '实现登录功能', '回归测试')] });
+  assert.equal(currentTasks(session)[0].sourceMessage, 1);
+  assert.equal(currentTasks(session)[0].sourceExcerpt, 'E1');
 });
 
 test('linked tests really run; edits clear completion and evidence; replay preserves the full ledger', async t => {
@@ -153,17 +175,17 @@ test('text evidence retains its source and reason, and can be unlinked without a
 });
 
 test('FAIL, TIMEOUT and cancellation keep distinct real execution results', async t => {
-  const { dir, session, user } = setup(t); user(quote);
-  const store = createTodoStore({ runTimeoutMs: 1000 }); store.execTaskMap(session, excerpt);
+  const { dir, session, user, store, call, verify } = setup(t, { runTimeoutMs: 5000, maxTimeoutMs: 1000 }); user(quote);
+  await call(excerpt);
   writeFileSync(join(dir, 'fail.mjs'), 'console.error("EXPECTED_FAILURE");process.exit(1)');
-  await store.execVerifyLink(session, { op: 'link', links: [{ task: 'T1', kind: 'test', path: 'fail.mjs' }] }, dir);
-  assert.match((await store.execVerifyLink(session, { op: 'run', tasks: ['T1'] }, dir)).text, /FAIL.*EXPECTED_FAILURE/);
+  await verify({ op: 'link', links: [{ task: 'T1', kind: 'test', path: 'fail.mjs' }] });
+  assert.match(await verify({ op: 'run', tasks: ['T1'] }), /FAIL.*EXPECTED_FAILURE/);
   writeFileSync(join(dir, 'wait.mjs'), 'setTimeout(()=>{},10000)');
-  await store.execVerifyLink(session, { op: 'link', links: [{ task: 'T2', kind: 'test', path: 'wait.mjs' }] }, dir);
-  assert.match((await store.execVerifyLink(session, { op: 'run', tasks: ['T2'] }, dir)).text, /TIMEOUT/);
+  await verify({ op: 'link', links: [{ task: 'T2', kind: 'test', path: 'wait.mjs' }] });
+  assert.match(await verify({ op: 'run', tasks: ['T2'] }), /TIMEOUT after 1s/);
   const prior = store.snapshot(session).tasks[1].links[0].lastRun;
   const ac = new AbortController(); ac.abort();
-  assert.match((await store.execVerifyLink(session, { op: 'run', tasks: ['T2'] }, dir, ac.signal)).text, /Run aborted/);
+  await assert.rejects(verify({ op: 'run', tasks: ['T2'] }, ac.signal), /aborted/i);
   assert.deepEqual(store.snapshot(session).tasks[1].links[0].lastRun, prior);
 });
 
@@ -186,18 +208,18 @@ test('failed snapshot writes do not advance the task ledger', t => {
 });
 
 test('cancelling a running linked test stops its process and retains earlier evidence', async t => {
-  const { dir, session, user } = setup(t); user(quote);
-  const store = createTodoStore(); store.execTaskMap(session, excerpt);
+  const { dir, session, user, store, call, verify } = setup(t); user(quote);
+  await call(excerpt);
   writeFileSync(join(dir, 'cancel.mjs'), 'console.log("PRIOR_PASS")');
-  await store.execVerifyLink(session, { op: 'link', links: [{ task: 'T1', kind: 'test', path: 'cancel.mjs' }] }, dir);
-  await store.execVerifyLink(session, { op: 'run', tasks: ['T1'] }, dir);
+  await verify({ op: 'link', links: [{ task: 'T1', kind: 'test', path: 'cancel.mjs' }] });
+  await verify({ op: 'run', tasks: ['T1'] });
   const prior = store.snapshot(session).tasks[0].links[0].lastRun;
   writeFileSync(join(dir, 'cancel.mjs'), 'import {writeFileSync} from "node:fs";writeFileSync("started", "yes");setTimeout(()=>writeFileSync("should-not-exist", "no"), 10000)');
-  const ac = new AbortController(), run = store.execVerifyLink(session, { op: 'run', tasks: ['T1'] }, dir, ac.signal);
+  const ac = new AbortController(), run = verify({ op: 'run', tasks: ['T1'] }, ac.signal);
   const end = Date.now() + 5000;
   while (!existsSync(join(dir, 'started')) && Date.now() < end) await new Promise(r => setTimeout(r, 10));
   assert.ok(existsSync(join(dir, 'started'))); ac.abort();
-  assert.match((await run).text, /Run aborted/);
+  await assert.rejects(run, /aborted/i);
   assert.deepEqual(store.snapshot(session).tasks[0].links[0].lastRun, prior);
   assert.equal(existsSync(join(dir, 'should-not-exist')), false);
 });
@@ -241,15 +263,14 @@ test('cancelling a shell verification stops its descendant process', async t => 
     assert.ok(existsSync(join(dir, 'descendant.pid')));
     pid = Number(readFileSync(join(dir, 'descendant.pid'), 'utf8'));
     ac.abort();
-    const result = await Promise.race([run, new Promise((_, reject) => { timer = setTimeout(() => reject(Error('Descendant kept the verification alive')), 5000); })]);
-    assert.match(result, /Run aborted/);
+    await assert.rejects(Promise.race([run, new Promise((_, reject) => { timer = setTimeout(() => reject(Error('Descendant kept the verification alive')), 5000); })]), /aborted/i);
     const ticks = readFileSync(join(dir, 'ticks'), 'utf8');
     await new Promise(r => setTimeout(r, 200));
     assert.equal(readFileSync(join(dir, 'ticks'), 'utf8'), ticks);
   } finally {
     clearTimeout(timer); ac.abort();
     if (pid) { try { process.kill(pid, 'SIGKILL'); } catch {} }
-    await run;
+    await run.catch(error => { if (!/aborted/i.test(error.message)) throw error; });
   }
 });
 
@@ -404,7 +425,7 @@ test('pause_turn preserves the ledger and BT settings, allows a final response a
   const agent = { session, steer: m => notices.push(m) }, signal = new AbortController().signal;
   user(quote); await call(excerpt);
   const before = store.snapshot(session), events = session.snapshotEvents().length;
-  for (const reason of [undefined, '', '  ', 42]) await assert.rejects(call({ op: 'pause_turn', reason }), /reason/);
+  for (const reason of [undefined, '', '  ', 42]) await assert.rejects(call({ op: 'pause_turn', ...(reason === undefined ? {} : { reason }) }), /reason/);
   assert.match(await call({ op: 'pause_turn', reason: 'Waiting for the user to provide test credentials.' }), /paused for this turn/);
   assert.deepEqual(store.snapshot(session), before);
   assert.equal(session.snapshotEvents().length, events, 'pause does not write a task snapshot or a fake completed task');

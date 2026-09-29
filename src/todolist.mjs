@@ -4,7 +4,6 @@ import { TODO_META, TASK_CONTEXT_META, taskContextMeta, latestTaskContext, witho
 import { promptText } from './cc-adaptation/texts.mjs';
 // Task ledger adapted from trisoul 4189f90: preserve excerpts, anchors, item operations and evidence.
 // DSH V3 events and a unified model-facing tool are wired in tasks.mjs.
-import { execFile } from 'node:child_process'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import { accessSync, constants, realpathSync } from 'node:fs'
 import { resolve as resolvePath, extname } from 'node:path'
@@ -78,9 +77,9 @@ function locate(text, from, to) {
   const nf = fold(from).out, nt = fold(to).out
   const f = nf ? findAll(h.out, nf) : []
   if (f.length === 0) return { err: 'none', field: 'from' }
-  if (f.length > 1) return { err: 'multi', field: 'from', count: f.length }
   const t = nt ? findAll(h.out, nt) : []
   if (t.length === 0) return { err: 'none', field: 'to' }
+  if (f.length > 1) return { err: 'multi', field: 'from', count: f.length }
   if (t.length > 1) return { err: 'multi', field: 'to', count: t.length }
   const start = h.map[f[0]]
   const end = h.map[t[0] + nt.length - 1] + 1
@@ -157,80 +156,30 @@ function existingPath(cwd, p) {
     return real
   } catch { return null }
 }
-/** 超时 / 上游中止 / 失败三分（08-29(4) + 08-30 P1/P15）：
- *  - 超时：自管计时器，到点杀**整个进程组**（子进程用 detached 起成组长）——bash -c 复合命令会 fork，只杀 bash 会留孤儿测试进程；
- *    SIGTERM 两秒不退再 SIGKILL。timedOut 由自己的标记判，不再靠 execFile 的 killed+SIGTERM 猜（旧 `!signal?.aborted` 守卫恒真）。
- *  - 上游中止（用户点停止）：同样杀组，但结果标 aborted——它与测试本身无关，调用方不得记成 FAIL。
- *  - 其余：exit 0 = ok。Windows 用 taskkill /T /F 停止整个进程树。 */
-const execP = (cmd, args, cwd, signal, timeoutMs) => new Promise((res) => {
-  if (signal?.aborted) return res({ ok: false, aborted: true, timedOut: false, out: '' })
-  const grouped = process.platform !== 'win32'
-  let child, timedOut = false, aborted = false, killTimer, forceTimer
-  const killGroup = (sig) => {
-    if (!child?.pid) return
-    if (grouped) { try { process.kill(-child.pid, sig); return } catch { /* 组已不在，退回单杀 */ } }
-    try { child.kill(sig) } catch { /* 已退出 */ }
-  }
-  const stop = () => {
-    if (!grouped && child?.pid) {
-      execFile('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true }, error => {
-        if (error) killGroup('SIGKILL')
-      })
-      return
-    }
-    if (child?.pid) {
-      try { process.kill(-child.pid, 'SIGTERM') } catch {
-        // Some launchers keep children in their own shared process group.
-        // Stop only this test's descendants when it has no private group.
-        execFile('ps', ['-A', '-o', 'pid=,ppid='], (error, output) => {
-          const children = new Map()
-          if (!error) for (const row of output.trim().split('\n')) {
-            const [pid, parent] = row.trim().split(/\s+/).map(Number)
-            if (pid > 0 && parent > 0) children.set(parent, [...(children.get(parent) || []), pid])
-          }
-          const kill = pid => {
-            for (const descendant of children.get(pid) || []) kill(descendant)
-            try { process.kill(pid, 'SIGKILL') } catch { /* already exited */ }
-          }
-          kill(child.pid)
-        })
-        return
-      }
-      forceTimer = setTimeout(() => killGroup('SIGKILL'), 2000)
-      return
-    }
-    killGroup('SIGTERM'); forceTimer = setTimeout(() => killGroup('SIGKILL'), 2000)
-  }
-  const onAbort = () => { aborted = true; stop() }
-  try {
-    child = execFile(cmd, args, { cwd, maxBuffer: 64 * 1024 * 1024, detached: grouped, windowsHide: true }, (err, stdout, stderr) => {
-      clearTimeout(killTimer); clearTimeout(forceTimer); signal?.removeEventListener?.('abort', onAbort)
-      res({ ok: !err && !timedOut && !aborted, code: err?.code, aborted, timedOut: timedOut && !aborted, out: `${stdout ?? ''}${stderr ?? ''}`.trim() })
-    })
-    killTimer = setTimeout(() => { timedOut = true; stop() }, timeoutMs)
-    signal?.addEventListener?.('abort', onAbort, { once: true })
-  } catch (e) { clearTimeout(killTimer); res({ ok: false, aborted: false, timedOut: false, out: String(e?.message ?? e) }) }
-})
-/** 跑一条已链接的 test：有 cmd 用当前平台的 Shell（Windows: pwsh，其余: bash）；无 cmd 按扩展名运行。exit 0 = PASS。
- *  py 先 pytest（-x -q）；pytest 缺席或收不到测试（exit 5）再裸跑 */
-async function runTestLink(link, real, cwd, signal, timeoutMs) {
-  if (link.cmd) return process.platform === 'win32'
-    ? execP('pwsh', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', `$ErrorActionPreference = 'Stop'\n& {\n${link.cmd}\n}\nif ($LASTEXITCODE -ne $null) { exit $LASTEXITCODE }`], cwd, signal, timeoutMs)
-    : execP('bash', ['-c', link.cmd], cwd, signal, timeoutMs)
-  const path = link.path
-  const kind = runnerFor(path)
-  if (kind === 'node') return execP(process.execPath, [real], cwd, signal, timeoutMs)
-  if (kind === 'bash') return execP('bash', [real], cwd, signal, timeoutMs)
-  if (kind === 'pwsh') return execP('pwsh', ['-NoLogo', '-NoProfile', '-NonInteractive', '-File', real], cwd, signal, timeoutMs)
+// The host owns process execution, sandboxing and cancellation. This layer only
+// chooses the repository's runner and interprets a completed execution.
+const quoteArg = value => process.platform === 'win32'
+  ? "'" + String(value).replaceAll("'", "''") + "'"
+  : "'" + String(value).replaceAll("'", "'\"'\"'") + "'"
+const commandFor = (command, args) => (process.platform === 'win32' ? '& ' : '') + [command, ...args].map(quoteArg).join(' ')
+async function runTestLink(link, real, execute, timeoutMs) {
+  const run = (command, args) => execute(commandFor(command, args), timeoutMs)
+  if (link.cmd) return execute(link.cmd, timeoutMs)
+  const kind = runnerFor(link.path)
+  if (kind === 'node') return run(process.execPath, [real])
+  if (kind === 'bash') return run('bash', [real])
+  if (kind === 'pwsh') return run('pwsh', ['-NoLogo', '-NoProfile', '-NonInteractive', '-File', real])
   if (kind === 'python') {
     const python = process.platform === 'win32' ? 'python' : 'python3'
-    const r = await execP(python, ['-m', 'pytest', '-x', '-q', real], cwd, signal, timeoutMs)
+    const r = await run(python, ['-m', 'pytest', '-x', '-q', real])
     if (r.ok || r.timedOut || r.aborted) return r
-    if (r.code === 5 || /No module named pytest/i.test(r.out)) return execP(python, [real], cwd, signal, timeoutMs)
+    if (r.code === 5 || /No module named pytest/i.test(r.out)) return run(python, [real])
     return r
   }
-  try { accessSync(real, constants.X_OK); return execP(real, [], cwd, signal, timeoutMs) } catch {}
-  return { ok: false, timedOut: false, out: `No runner for ${path} — give cmd (the repository's own test command for this file), or link a .js/.mjs/.cjs/.py/.sh/.ps1 file.` }
+  try { accessSync(real, constants.X_OK) } catch {
+    return { ok: false, timedOut: false, out: `No runner for ${link.path} — give cmd (the repository's own test command for this file), or link a .js/.mjs/.cjs/.py/.sh/.ps1 file.` }
+  }
+  return run(real, [])
 }
 
 // ---------- 清单存储（会话持久：每次变更 append 快照事件，重启从事件恢复） ----------
@@ -316,7 +265,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       if (r.ok) hits.push({ ex, r })
       else if (r.err === 'multi' && !multi) multi = { ex, r }
     }
-    if (hits.length === 1) return { excerpt: hits[0].ex.id, start: hits[0].r.start, end: hits[0].r.end }
+    if (hits.length === 1 && !multi) return { excerpt: hits[0].ex.id, start: hits[0].r.start, end: hits[0].r.end }
     if (hits.length > 1) {
       const ids = hits.map(h => h.ex.id)
       const listed = ids.length === 2 ? `both ${ids[0]} and ${ids[1]}` : `${ids.slice(0, -1).join(', ')} and ${ids.at(-1)}`
@@ -381,7 +330,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
           if (r.ok) hits.push({ m: x, r })
           else if (r.err === 'multi' && !multi) multi = { m: x, r }
         }
-        if (hits.length === 1) { m = hits[0].m; loc = hits[0].r }
+        if (hits.length === 1 && !multi) { m = hits[0].m; loc = hits[0].r }
         else if (hits.length > 1) {
           const ns = hits.map(h => `[${h.m.n}]`)
           const listed = ns.length === 2 ? `both ${ns[0]} and ${ns[1]}` : `${ns.slice(0, -1).join(', ')} and ${ns.at(-1)}`
@@ -483,7 +432,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
   }
 
   /** 验证证据操作：link/run/unlink/view。 */
-  const execVerifyLink = async (session, args, cwd, signal) => {
+  const execVerifyLink = async (session, args, cwd, signal, execute) => {
     const rec = getRec(session)
     const op = args?.op
     if (op === 'view') return { text: renderVerifyView(rec) }
@@ -529,22 +478,30 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       }
       const jobs = targets.flatMap(t => t.links.filter(l => l.kind === 'test').map(l => ({ t, l })))
       if (!jobs.length) return { text: 'Nothing to run: no test links on the given tasks.' }
+      if (typeof execute !== 'function') return err('Native shell execution is unavailable; previous verification results are unchanged.')
       const results = []
       let aborted = false
       for (const { t, l } of jobs) {
         // 08-30 P1：上游中止（用户点停止）不是测试结果——被掐断的这条和没轮到的都不改写，旧证据原样保留
         if (signal?.aborted) { aborted = true; break }
         const real = existingPath(cwd, l.path)
-        const r = real ? await runTestLink(l, real, cwd, signal, runTimeoutMs) : { ok: false, timedOut: false, out: `no such file ${l.path}` }
+        let r
+        try { r = real ? await runTestLink(l, real, execute, runTimeoutMs) : { ok: false, timedOut: false, out: `no such file ${l.path}` } }
+        catch (error) {
+          // A denied or unavailable execution is not a failed test. Preserve its
+          // previous evidence, but retain tests that actually finished earlier.
+          if (results.length) commit(session, rec, next)
+          throw error
+        }
         if (r.aborted) { aborted = true; break }
         l.lastRun = { pass: r.ok, timedOut: Boolean(r.timedOut), tail: (r.out ?? '').slice(-RUN_TAIL_CHARS) }
-        results.push({ t, l, pass: r.ok, timedOut: l.lastRun.timedOut, tail: l.lastRun.tail })
+        results.push({ t, l, pass: r.ok, timedOut: l.lastRun.timedOut, timeoutMs: r.timeoutMs ?? runTimeoutMs, tail: l.lastRun.tail })
       }
       if (results.length) commit(session, rec, next)
       // FAIL 是合法结果不是工具错误：C 要拿着尾巴修测试/修实现，isError 会让取证轮误判通道坏了
       // 08-29(4)：PASS 也带尾巴（跑了什么留痕，cmd:"true" 与真套件的 PASS 不再同形）；TIMEOUT 单列并明说不是失败
       const ran = results.length ? `Ran ${results.length} linked test${results.length === 1 ? '' : 's'}: ${results.map(r =>
-        r.timedOut ? `${testLabel(r.l)} TIMEOUT after ${Math.round(runTimeoutMs / 1000)}s (${r.t.id} — did not finish; this is not a test failure. Narrow the command to the tests that cover this task.)`
+        r.timedOut ? `${testLabel(r.l)} TIMEOUT after ${Math.round(r.timeoutMs / 1000)}s (${r.t.id} — did not finish; this is not a test failure. Narrow the command to the tests that cover this task.)`
           : `${testLabel(r.l)} ${r.pass ? 'PASS' : 'FAIL'} (${r.t.id}, output tail: "${r.tail}")`).join(' · ')}` : ''
       const head = !aborted ? ran
         : ran ? `${ran} · Run aborted: ${jobs.length - results.length} not finished — their previous results are unchanged.`

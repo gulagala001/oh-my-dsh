@@ -2,11 +2,15 @@
  * InputHub: the SessionInputResolver implementation (`ctx.conversation.input`) — one
  * SessionInputShell per session, created inside the uiSession provide
  * materialization (the 'input' standard-kit entry IS the
- * creation trigger) and torn down by the scope disposer (instance-and-scope
- * share one lifecycle). The hub registers the scoped input-mutation
+ * creation trigger) and torn down by the scope disposer. Only unsent draft
+ * data survives navigation in the hub; editors and Session scopes do not. The hub registers the scoped input-mutation
  * listeners on each Session context and owns the default-sink choreography: every session is a
  * real host entity, so the sink is one unconditional prompt path.
  */
+import type {} from '@deepseek-ai/dsh-client-product-analytics/client'
+import type { ModelSelectionProjection } from '@deepseek-ai/dsh-api-session-controller/types'
+import type { PlanProjection } from '@deepseek-ai/dsh-plan-mode/types'
+import type { GoalProjection } from '@deepseek-ai/dsh-goal/types'
 import type { Context } from '@deepseek-ai/cordis'
 import type {
   ISessions, SessionBinding, SessionFace,
@@ -23,6 +27,8 @@ import type { ComposerKeyboard } from '../contract/draft-editor.ts'
 import type { InputSubmitMode } from '../contract/composer-submission.ts'
 import type { PopupDismissFace } from './facade.ts'
 import { SessionInputShell } from './facade.ts'
+import type { InputDraft } from './facade.ts'
+import { reportMessageSubmission } from './submission-analytics.ts'
 
 /** Structural command face for per-session popup resolution. */
 interface CommandFace {
@@ -51,6 +57,9 @@ interface ConversationAttachmentFace {
 /** Session-addressed input facade registry (SessionInputResolver face + composer-layer extras). */
 export class InputHub implements SessionInputResolver {
   private readonly shells = new WeakMap<SessionBinding, SessionInputShell>()
+  /** Unsent data survives navigation without holding editors, scopes, or history subscriptions. */
+  private readonly drafts = new Map<SessionId, InputDraft>()
+  private closed = false
 
   /**
    * @param ctx - client root context (services resolved lazily per call — boot order stays free).
@@ -59,7 +68,31 @@ export class InputHub implements SessionInputResolver {
   constructor(
     private readonly rootCtx: Context,
     private readonly t: TranslateNS<'conversation'>,
-  ) {}
+  ) {
+    rootCtx.effect(() => {
+      const off = rootCtx.remote.$on('api-session/removed', id => {
+        // A durable child only loses its running Agent on this frame. Its
+        // transcript remains a continuable Session, as in SessionManager.
+        const sessions = this.sessions()
+        if (sessions.subagentAddress(id) !== undefined || sessions.list.getSnapshot().byId[id]?.origin === 'subagent') return
+        this.releaseDraft(id)
+      })
+      return () => {
+        this.closed = true
+        off()
+        for (const id of this.drafts.keys()) this.releaseDraft(id)
+      }
+    }, 'conversation.input: inactive drafts')
+  }
+
+  /** Release an inactive draft on Session deletion or plugin teardown. */
+  private releaseDraft(id: SessionId): void {
+    const draft = this.drafts.get(id)
+    if (draft === undefined) return
+    this.drafts.delete(id)
+    const conversation = this.rootCtx.get('conversation') as ConversationAttachmentFace | undefined
+    for (const attachmentId of draft.attachmentIds) conversation?.releaseDraftAttachment(attachmentId)
+  }
 
   /**
    * Resolve the facade for one session-scope ctx (SessionInputResolver face).
@@ -90,6 +123,23 @@ export class InputHub implements SessionInputResolver {
     const { session, ctx: actx } = binding
     const shell = new SessionInputShell({
       actx,
+      submissionState: () => {
+        const state = session.getSnapshot()
+        const model = session.projections.faceOf('modelSelection').getSnapshot() as ModelSelectionProjection | undefined
+        const plan = session.projections.faceOf('plan').getSnapshot() as PlanProjection | undefined
+        const goal = session.projections.faceOf('goal').getSnapshot() as GoalProjection | null | undefined
+        const selection = model?.next ?? model?.lastUsed
+        return Object.freeze({
+          ...state.blank ? {} : { sessionId: state.sessionId },
+          ...selection == null ? {} : { model: Object.freeze({
+            provider: selection.provider, name: selection.model,
+            ...selection.reasoningEffort === undefined ? {} : { effort: selection.reasoningEffort },
+          }) },
+          runMode: plan?.active ? 'plan' : goal?.goal.phase === 'active' ? 'goal' : 'default',
+          running: state.running,
+        })
+      },
+      messageSubmitted: (submission) => { reportMessageSubmission(this.rootCtx, submission) },
       inputTriggers: () => this.controller(actx),
       popup: () => this.popup(actx),
       inbox: session.projections.faceOf('inbox') as ObservableSnapshot<InboxState | undefined>,
@@ -114,8 +164,13 @@ export class InputHub implements SessionInputResolver {
       },
     })
     this.shells.set(binding, shell)
-    // The one teardown axis: listeners, shell, and map entries all ride the
-    // scope fiber (nothing here outlives the scope).
+    const saved = this.drafts.get(session.sessionId)
+    if (saved !== undefined) {
+      this.drafts.delete(session.sessionId)
+      shell.restoreDraft(saved)
+    }
+    // Live listeners and editors follow the scope. Transfer only unsent data
+    // to the browser lifetime before releasing the old shell's other resources.
     actx.effect(() => {
       const offs = [
         actx.on('slash/input-begin-command', req =>
@@ -129,10 +184,17 @@ export class InputHub implements SessionInputResolver {
       ]
       return () => {
         for (const off of offs) off()
+        const saved = shell.captureDraft()
+        const keep = !this.closed && !session.getSnapshot().removed
+          && (saved.draft !== '' || saved.attachmentIds.length > 0)
+        if (keep) this.drafts.set(session.sessionId, saved)
+        const retained = new Set(keep ? saved.attachmentIds : [])
         const drafts = shell.dispose()
         this.shells.delete(binding)
         const conversation = this.rootCtx.get('conversation') as ConversationAttachmentFace | undefined
-        for (const attachmentId of drafts) conversation?.releaseDraftAttachment(attachmentId)
+        for (const attachmentId of drafts) {
+          if (!retained.has(attachmentId)) conversation?.releaseDraftAttachment(attachmentId)
+        }
       }
     }, 'conversation.input: session shell')
     return shell

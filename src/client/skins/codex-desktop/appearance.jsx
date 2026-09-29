@@ -5,6 +5,7 @@ import { HistorySizeSetting } from '../../history-settings.jsx';
 export function CodexAppearance({ runtime, state, act, importFile, error }) {
   return <section className="tx-app omd-appearance codex-appearance">
     <h2>外观</h2>
+    {(error || state.error) && <p className="omd-appearance-error" role="alert">{error || state.error}</p>}
     <div className="codex-setting-group">
       <label className="omd-appearance-row"><span>明暗模式<small>选择浅色、深色或跟随系统</small></span>
         <select aria-label="明暗模式" value={runtime.getAppearance()} onChange={e => act(() => runtime.setAppearance(e.target.value))}>
@@ -18,7 +19,7 @@ export function CodexAppearance({ runtime, state, act, importFile, error }) {
       </div>
     </div>
     <div className="codex-setting-group">
-      <label className="omd-appearance-row"><span>主题</span><select aria-label="主题" value={state.selected} onChange={e => act(() => runtime.select(e.target.value))}>
+      <label className="omd-appearance-row"><span>主题</span><select aria-label="主题" value={state.selected} onChange={e => { const value = e.target.value; act(() => runtime.select(value), true); }}>
         <option value="default">OMD 默认</option>{state.skins.map(s => <option key={s.id} value={s.id}>{s.name} · {s.version}</option>)}
       </select></label>
       <label className="omd-appearance-row"><span>降低透明与动态效果<small>使用实色表面并减少动画</small></span>
@@ -32,10 +33,9 @@ export function CodexAppearance({ runtime, state, act, importFile, error }) {
     <h3>对话</h3>
     <div className="codex-setting-group"><HistorySizeSetting/></div>
     <div className="omd-appearance-actions">
-      <button type="button" className="tx-button" onClick={() => act(() => runtime.reset())}>恢复默认主题</button>
-      {!state.skins.find(s => s.id === state.selected)?.builtin && <button type="button" className="tx-button" onClick={() => act(() => runtime.remove(state.selected))}>移除当前主题</button>}
+      <button type="button" className="tx-button" onClick={() => act(() => runtime.reset(), true)}>恢复默认主题</button>
+      {!state.skins.find(s => s.id === state.selected)?.builtin && <button type="button" className="tx-button" onClick={() => act(() => runtime.remove(state.selected), true)}>移除当前主题</button>}
     </div>
-    <p className="omd-appearance-help">外观设置自动保存到当前浏览器。</p>
-    {(error || state.error) && <p role="alert">{error || state.error}</p>}
+    <p className="omd-appearance-help">外观设置自动保存到当前浏览器；名称和数值在离开输入框、按 Enter 或关闭设置时保存。</p>
   </section>;
 }

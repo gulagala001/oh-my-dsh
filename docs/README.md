@@ -1,6 +1,6 @@
 # Oh My DSH 文档
 
-[项目首页](../README.md) · [首次使用](getting-started.md) · [安装与升级](upgrade.md) · [遇到问题](troubleshooting.md)
+[项目介绍](../README.md) · [实拍案例](showcase.md) · [首次使用](getting-started.md) · [安装与升级](upgrade.md) · [遇到问题](troubleshooting.md)
 
 按你现在要做的事选择入口，无需从头读完所有文档。
 
@@ -23,20 +23,27 @@
 | --- | --- |
 | 工作台、任务、BT 与界面入口 | [使用指南](usage.md#界面与入口) |
 | 草稿润色、撤销与继续优化 | [提示词优化](usage.md#提示词优化) |
+| 系统提示词、工具说明与宿主适配 | [系统级适配](prompt-adaptation.md) |
 | 主题、配色、壁纸和 Logo | [外观指南](skins.md) |
 | 上下文摘要、原文回查与手动压缩 | [上下文机制](context-workflow.md) |
+| 会话、项目与全局短记忆，自动整理和费用限制 | [Dream 记忆](dream-memory.md) |
 | 后台模型、共享范围与全局背景 | [设置说明](usage.md#settings) |
 | 代码索引、符号与调用关系 | [CodeGraph](usage.md#codegraph) |
 | 浏览器、桌面操作、接管与恢复 | [Computer Use](usage.md#computer-use) |
 | 运行状态、预算、后台任务与阻塞 | [详细说明](runtime-state-background.md) |
 | Ultracode、Workflow 隔离、保存与续跑 | [Workflow 指南](workflow.md) |
 | 显示或隐藏推荐插件入口 | [推荐页面设置](usage.md#推荐插件页面显示) |
+| 宣传演示、原始素材与验证范围 | [素材来源](showcase.md) |
 
 ## 版本与文档范围
 
-本版文档对应 **OMD 0.1.7-rc.2.19 / DSH 0.1.7-rc.2**，内置 **OpenCU 1.1.7**。[本版说明](release-0.1.7-rc.2.19.md) · [发布记录与下载](https://github.com/gulagala001/oh-my-dsh/releases) · [全部更新记录](../CHANGELOG.md)。
+开发与发行维护：[DSH 0.2 适配准备](dsh-0.2-preparation.md)，包含固定源码基线、验证范围和正式发布后的收尾步骤。
 
-`main` 分支文档可能包含下一版改动，以“开发分支／未发布”标注；安装固定 tag 时，以[该 tag 的文档](https://github.com/gulagala001/oh-my-dsh/tree/v0.1.7-rc.2.19/docs)和对应版本说明为准。历史 `release-*.md` 记录的是当时的功能与验证范围，当前安装命令见上述安装入口。
+本版文档对应 **OMD 0.1.7-rc.2.20 / DSH 0.1.7-rc.2**，内置 **OpenCU 1.1.8**。[本版说明](release-0.1.7-rc.2.20.md) · [发布记录与下载](https://github.com/gulagala001/oh-my-dsh/releases) · [全部更新记录](../CHANGELOG.md)。
+
+`main` 分支文档可能包含下一版改动，以“开发分支／未发布”标注；安装固定 tag 时，以[该 tag 的文档](https://github.com/gulagala001/oh-my-dsh/tree/v0.1.7-rc.2.20/docs)和对应版本说明为准。历史 `release-*.md` 记录的是当时的功能与验证范围，当前安装命令见上述安装入口。
+
+Dream、工作台与恢复改进已纳入本版。DSH 0.2.0-rc.1 是另一个宿主版本，仍需独立适配与发行验收；见[适配准备](dsh-0.2-preparation.md)。
 
 ## 反馈与参与
 

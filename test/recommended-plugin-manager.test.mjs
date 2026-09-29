@@ -109,6 +109,43 @@ test('reviewed installation pins its tested version and never downgrades a newer
   assert.equal((await f.service.status()).plugins[0].message, '已是核验版本');
 });
 
+test('current or newer reviewed installations do not need an archive to check updates', async () => {
+  for (const version of ['1.0.0', '2.0.0']) {
+    for (const automatic of [false, true]) {
+      const f = fixture();
+      f.service.catalog[0].review = { version: '1.0.0', sha256: 'a'.repeat(64) };
+      f.bundles = [{ name: 'sample-plugin', version, installed: true, enabled: true }];
+      let downloads = 0;
+      f.service.preparePackage = async () => { downloads++; throw Error('offline: no archive cache'); };
+      if (automatic) { await f.service.settings(true); await f.service.tick(); }
+      else await f.service.start('sample', 'update');
+      const state = (await f.service.status()).plugins[0];
+      assert.equal(state.error, '', `${version}, automatic=${automatic}: a no-op is independent of package delivery`);
+      assert.equal(downloads, 0);
+      assert.equal(f.calls.length, 0);
+      assert.match(state.message, version === '1.0.0' ? /已是核验版本/ : /未降级/);
+    }
+  }
+});
+
+test('package preparation still rechecks version and enablement changes before installation', async () => {
+  for (const change of ['same', 'newer', 'disabled', 'running']) {
+    const f = fixture();
+    f.service.catalog[0].review = { version: '1.0.0', sha256: 'a'.repeat(64) };
+    f.bundles = [{ name: 'sample-plugin', version: '0.9.0', installed: true, enabled: true }];
+    f.service.preparePackage = async () => {
+      if (change === 'same') f.bundles[0].version = '1.0.0';
+      if (change === 'newer') f.bundles[0].version = '2.0.0';
+      if (change === 'disabled') f.bundles[0].enabled = false;
+      if (change === 'running') f.running = true;
+      return 'file:/verified/package.tgz';
+    };
+    await f.service.settings(true); await f.service.tick();
+    assert.equal(f.calls.length, 0, change + ': state changed while preparing the package');
+    assert.equal((await f.service.status()).plugins[0].error, '');
+  }
+});
+
 test('disabling automatic updates during inventory lookup prevents a reviewed installation', async () => {
   const f = fixture(); f.service.catalog[0].review = { version: '1.0.0' };
   f.bundles = [{ name: 'sample-plugin', installed: true, enabled: true, version: '0.9.0' }];
@@ -206,8 +243,38 @@ test('intent assistant is release-pinned and never installed by opt-in auto upda
   const f = fixture(); f.service.catalog = [plugin]; await f.service.settings(true);
   await f.service.tick(); assert.equal(f.calls.length, 0); assert.equal(f.lookups, 0);
   await f.service.start(plugin.id, 'install'); assert.equal(f.calls.length, 1);
-  assert.equal(f.calls[0].spec, 'file:/verified/package.tgz');
+  assert.equal(f.calls[0].spec, plugin.packageName + '@file:/verified/package.tgz');
   assert.deepEqual(f.packages, [{ url: pluginInstallSpec(plugin, plugin.review.version), sha256: plugin.review.sha256 }]);
+});
+
+test('source-only recommendations pin a checked commit and never follow tags or latest', async () => {
+  const { recommendedPlugins } = await import('../src/recommended-plugin-catalog.mjs');
+  const { pluginInstallSpec } = await import('../src/recommended-plugins.mjs');
+  const { readFile } = await import('node:fs/promises');
+  const plugin = recommendedPlugins.find(p => p.id === 'dsh-infinite-gen-4');
+  assert.equal(plugin.review.version, '0.4.0');
+  assert.equal(plugin.review.source.commit, '5e377394fe9d6aeab6380e2a5a5f959bc1384426');
+  const spec = 'https://codeload.github.com/Minglink/dsh-infinite-gen-4/tar.gz/' + plugin.review.source.commit;
+  assert.equal(pluginInstallSpec(plugin, '0.4.0'), spec);
+  assert.throws(() => pluginInstallSpec(plugin, '1.0.0'), /源码快照/);
+  assert.throws(() => pluginInstallSpec({ ...plugin, review: { ...plugin.review, source: { ...plugin.review.source, commit: 'master' } } }, '0.4.0'), /源码快照/);
+  assert.throws(() => pluginInstallSpec({ ...plugin, review: { ...plugin.review, sha256: undefined } }, '0.4.0'), /源码快照/);
+  const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  for (const field of ['dependencies', 'devDependencies', 'optionalDependencies']) assert.equal(pkg[field]?.[plugin.packageName], undefined);
+  const f = fixture(); f.service.catalog = [plugin]; await f.service.settings(true);
+  await f.service.tick(); assert.equal(f.calls.length, 0); assert.equal(f.lookups, 0);
+  await f.service.start(plugin.id, 'install');
+  assert.equal(f.calls[0].spec, plugin.packageName + '@file:/verified/package.tgz');
+  assert.deepEqual(f.packages, [{ url: spec, sha256: plugin.review.sha256 }]);
+  f.bundles = [{ name: plugin.packageName, version: plugin.review.version, enabled: true, installed: true, removable: true }];
+  f.time = AUTO_UPDATE_INTERVAL + 2;
+  await f.service.tick(); assert.equal(f.calls.length, 1, 'installed source snapshots never auto-update'); assert.equal(f.packages.length, 1);
+  await f.service.start(plugin.id, 'update');
+  assert.equal(f.calls.length, 2, 'a manual update reapplies the checked archive even if upstream kept its version'); assert.equal(f.lookups, 0);
+  f.bundles = [{ name: plugin.packageName, version: plugin.review.version, enabled: false, installed: true, removable: true }];
+  await f.service.start(plugin.id, 'update'); assert.equal(f.calls.length, 3); assert.equal(f.calls[2].options.enabled, false);
+  f.bundles = [{ name: plugin.packageName, version: '0.5.0', enabled: false, installed: true, removable: true }];
+  await f.service.start(plugin.id, 'update'); assert.equal(f.calls.length, 3, 'a newer user installation is not downgraded');
 });
 
 test('verified package preparation failures and late cancellation never reach the installer', async () => {
@@ -227,4 +294,61 @@ test('verified package preparation failures and late cancellation never reach th
     await f.service.start('sample', scenario === 'disabled-auto' ? 'update' : 'install', scenario === 'disabled-auto');
     assert.equal(f.calls.filter(c => c.spec).length, 0, scenario);
   }
+});
+
+test('an activation failure can retry the installed version without claiming it is already current', async () => {
+  const f = fixture();
+  f.service.catalog[0].review = { version: '1.0.0', sha256: 'a'.repeat(64) };
+  f.service.manager.installBundle = async (spec, options) => {
+    f.calls.push({ spec, options });
+    // The native host can finish pnpm before the enable step fails. The
+    // dependency then exists at the target version, without a usable result.
+    f.bundles = [{ name: 'sample-plugin', version: '1.0.0', installed: true, enabled: false, removable: true }];
+    return f.calls.length === 1
+      ? { application: 'failed', stage: 'enable', bundle: 'sample-plugin', changed: true, error: { diagnostic: 'activation failed once' } }
+      : { application: 'restart-required', stage: 'enable', bundle: 'sample-plugin' };
+  };
+  await f.service.start('sample', 'install');
+  assert.match((await f.service.status()).plugins[0].error, /activation failed once/);
+  await f.service.start('sample', 'update');
+  assert.equal(f.calls.length, 2, 'the failed enable step must not make update a no-op');
+  assert.equal(f.calls[1].options.enabled, false, 'retry preserves the current native enablement');
+  assert.equal(f.calls[1].spec, 'sample-plugin@file:/verified/package.tgz', 'the host can identify an unchanged local dependency');
+  const state = (await f.service.status()).plugins[0];
+  assert.equal(state.error, '');
+  assert.equal(state.restartRequired, true);
+  assert.match(state.message, /更新已完成/);
+  await f.service.start('sample', 'update');
+  assert.equal(f.calls.length, 2, 'a successful retry restores the normal same-version no-op');
+});
+
+test('inventory read failures release the operation and preserve a retryable installation', async () => {
+  const f = fixture();
+  const list = f.service.manager.listBundles;
+  f.service.manager.listBundles = async () => { throw Error('inventory unavailable'); };
+  await f.service.start('sample', 'install');
+  assert.equal(f.service.job, null); assert.equal(f.service.current, null);
+  assert.equal(f.calls.length, 0);
+  await assert.rejects(f.service.status(), /inventory unavailable/);
+  f.service.manager.listBundles = list;
+  assert.match((await f.service.status()).plugins[0].error, /inventory unavailable/);
+  await f.service.start('sample', 'install');
+  assert.equal(f.calls.length, 1);
+  assert.equal((await f.service.status()).plugins[0].error, '');
+});
+
+test('failed version lookups cancel the unused response body before retry', async () => {
+  const { latestPluginVersion } = await import('../src/recommended-plugins.mjs');
+  const original = globalThis.fetch;
+  let cancelled = false;
+  try {
+    globalThis.fetch = async () => new Response(new ReadableStream({
+      start(controller) { controller.enqueue(new TextEncoder().encode('fixture unavailable')); },
+      cancel() { cancelled = true; },
+    }), { status: 503 });
+    await assert.rejects(latestPluginVersion(catalog[0], new AbortController().signal), /HTTP 503/);
+    assert.equal(cancelled, true, 'unused error bodies must not occupy a transfer until the lookup timeout');
+    globalThis.fetch = async () => Response.json({ name: 'sample-plugin', version: '1.0.0', dsh: { bundle: { patch: './cordis.patch.yml' } } });
+    assert.equal(await latestPluginVersion(catalog[0], new AbortController().signal), '1.0.0');
+  } finally { globalThis.fetch = original; }
 });

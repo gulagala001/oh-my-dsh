@@ -1,17 +1,36 @@
 {
-  "capturedAt": "2026-09-20T17:26:56.564Z",
-  "viewport": {
-    "width": 1600,
-    "height": 1000
-  },
-  "source": "Real DSH 0.1.6-alpha.2 UI with the isolated Oh My DSH 0.1.6 package; fictional Atlas demo, real file writes and verification commands. Prompt rewriting uses the demo model.",
-  "images": [
-    "overview",
-    "theme-codex",
-    "theme-ios",
-    "theme-claude",
-    "theme-material",
-    "appearance",
-    "optimizer"
+  "schemaVersion": 3,
+  "capturedDate": "2026-09-28",
+  "source": "README and the product page share the current Launchpad screenshots. The primary manifest records their exact hashes and capture boundaries.",
+  "primaryManifest": "../site/media/manifest.json",
+  "notes": [
+    "Actual screenshots are not retouched.",
+    "The retained Forma annotation image demonstrates temporary style preview in the usage guide.",
+    "SVG files explain mechanisms and are not product screenshots."
+  ],
+  "assets": [
+    {
+      "file": "docs/images/readme-annotation.jpg",
+      "type": "native-ui-screenshot",
+      "sourceImage": "annotation-style-preview.png",
+      "width": 1280,
+      "height": 720,
+      "bytes": 65534,
+      "case": "Forma",
+      "mimeType": "image/jpeg",
+      "sha256": "48fb1acc27506c9c1cf2e3916c4ec272acea0b67c0a7bd606ac3734650dc9a1d"
+    },
+    {
+      "file": "docs/images/readme-context-flow.svg",
+      "type": "mechanism-diagram",
+      "width": 1200,
+      "height": 440
+    },
+    {
+      "file": "docs/images/readme-prompt-adaptation.svg",
+      "type": "mechanism-diagram",
+      "width": 1200,
+      "height": 420
+    }
   ]
 }

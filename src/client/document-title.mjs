@@ -1,6 +1,6 @@
 // Transform the fixed product suffix before the host writes the DOM.
 // No observer writes it back: the host remains the sole session-title owner.
-export function brandDocumentTitle(doc, options = { mode: 'omd' }) {
+export function brandDocumentTitle(doc, options = { mode: 'omd' }, nativeTitles = () => ['DeepSeek Harness']) {
   const own = Object.getOwnPropertyDescriptor(doc, 'title');
   let object = doc, descriptor = own;
   while (!descriptor && (object = Object.getPrototypeOf(object))) descriptor = Object.getOwnPropertyDescriptor(object, 'title');
@@ -10,8 +10,9 @@ export function brandDocumentTitle(doc, options = { mode: 'omd' }) {
   const set = value => {
     if (!active) { descriptor.set.call(doc, value); return; }
     raw = String(value);
-    const suffix = options.mode === 'native' ? 'DeepSeek Harness' : options.mode === 'custom' && options.text ? options.text : 'Oh My DSH';
-    branded = raw === 'DeepSeek Harness' || raw.endsWith(' — DeepSeek Harness') ? raw.replace(/DeepSeek Harness$/, () => suffix) : raw;
+    const native = nativeTitles().find(name => typeof name === 'string' && name && (raw === name || raw.endsWith(' — ' + name)));
+    const suffix = options.mode === 'custom' && options.text ? options.text : 'Oh My DSH';
+    branded = options.mode !== 'native' && native ? raw.slice(0, -native.length) + suffix : raw;
     if (get() !== branded) descriptor.set.call(doc, branded);
   };
   Object.defineProperty(doc, 'title', { configurable: true, enumerable: descriptor.enumerable, get, set });

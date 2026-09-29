@@ -1,5 +1,5 @@
 diff --git a/packages/client/tsdown.client.ts b/packages/client/tsdown.client.ts
-index 215001db..a5eece97 100644
+index 215001dbb9..a5eece9782 100644
 --- a/packages/client/tsdown.client.ts
 +++ b/packages/client/tsdown.client.ts
 @@ -558,7 +558,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
@@ -29,16 +29,32 @@ index 215001db..a5eece97 100644
          return styleInjectionModule(id, fileId, code.toString())
        },
      }],
+diff --git a/packages/client/ui-conversation/README.md b/packages/client/ui-conversation/README.md
+index 99e42d3017..fb120aa72d 100644
+--- a/packages/client/ui-conversation/README.md
++++ b/packages/client/ui-conversation/README.md
+@@ -170,3 +170,5 @@ None.
+ </details>
+ 
+ **Runtime invariant:** No companion is published. Conversation Definitions, target builders, and Views are already validated by their owning registries and the Slot ledger.
++
++Unsent composer text, reference chips, and attachment IDs survive Session navigation within the current browser document. InputHub transfers only draft data between Session scopes; editors, command claims, and pending admissions retain their original lifetime. Deleting a Session or unloading the plugin releases inactive attachments. This browser-only retention does not persist image files across a page reload.
 diff --git a/packages/client/ui-conversation/src/client/apply.ts b/packages/client/ui-conversation/src/client/apply.ts
-index 942444d3..b9bb25c6 100644
+index 0fc9b2560c..7d5d2d942f 100644
 --- a/packages/client/ui-conversation/src/client/apply.ts
 +++ b/packages/client/ui-conversation/src/client/apply.ts
 @@ -1,3 +1,4 @@
 +import { reloadOnProviderChange } from './conversation-reload.ts'
  /** Registers the target-neutral Conversation assembly, shell, input, and docks. */
+ import type {} from '@deepseek-ai/dsh-client-product-analytics/client'
  import type { Context } from '@deepseek-ai/cordis'
- import z from '@deepseek-ai/schemastery'
-@@ -58,12 +59,14 @@ export const inject = [
+@@ -54,17 +55,19 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
+ 
+ /** Services required by the Conversation plugin. */
+ export const inject = [
+-  'slots', 'sessions', 'fileUpload', 'uiSession', 'uiWorkspace', 'locale', 'configForms',
++  'slots', 'sessions', 'remote', 'fileUpload', 'uiSession', 'uiWorkspace', 'locale', 'configForms',
+ ]
  
  /** Conversation runtime configuration. */
  export interface Config {
@@ -53,7 +69,7 @@ index 942444d3..b9bb25c6 100644
    maxConcurrentFileUploads: z.natural().min(1).default(2),
  })
  
-@@ -148,7 +151,8 @@ function concreteConversation(ctx: Context): ConversationController {
+@@ -149,7 +152,8 @@ function concreteConversation(ctx: Context): ConversationController {
   * Mount the Conversation core and target-neutral presentation.
   * @param ctx - Client root context.
   */
@@ -63,7 +79,7 @@ index 942444d3..b9bb25c6 100644
    const sessions = ctx.sessions
    const slots = ctx.slots
    // Schemastery's field default is materialized before Cordis calls apply.
-@@ -160,7 +164,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
+@@ -161,7 +165,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
    const t = ctx.locale.bind(NS)
    const conversationStore = createConversationStore()
    const submissionPolicy = new ComposerSubmissionPolicy(
@@ -72,7 +88,7 @@ index 942444d3..b9bb25c6 100644
    )
  
    ctx.effect(() => () => { submissionPolicy.dispose() })
-@@ -542,11 +546,14 @@ export function apply(ctx: Context, config: Config = Config({})): void {
+@@ -543,11 +547,14 @@ export function apply(ctx: Context, config: Config = Config({})): void {
      yield registerComposerBar()
    })
  
@@ -88,9 +104,40 @@ index 942444d3..b9bb25c6 100644
    ctx.plugin(todoDockEntry)
    ctx.plugin(queueDockEntry)
  }
+diff --git a/packages/client/ui-conversation/src/client/contract/input.ts b/packages/client/ui-conversation/src/client/contract/input.ts
+index 7b792d2760..cec82f7c22 100644
+--- a/packages/client/ui-conversation/src/client/contract/input.ts
++++ b/packages/client/ui-conversation/src/client/contract/input.ts
+@@ -34,6 +34,12 @@ export interface SubmitOutcome {
+   readonly text?: string
+ }
+ 
++/** Ordinary-message admission, separate from optimistic editor clearing. */
++export type InputSubmissionEvent =
++  | { readonly kind: 'pending'; readonly id: number; readonly draft: string }
++  | { readonly kind: 'success'; readonly id: number }
++  | { readonly kind: 'error'; readonly id: number; readonly restored: boolean; readonly text?: string }
++
+ /** Command-mode credential supplied by one input-trigger source. */
+ export interface CommandClaim {
+   /** Catalog command name without the leading slash (the key of per-command composer copy such as `hint.*`). */
+@@ -187,6 +193,13 @@ export interface SessionInput extends InputTarget {
+    * @param mode - delivery intent retained through asynchronous adjudication and serialization.
+    */
+   submit(mode?: InputSubmitMode, source?: 'click' | 'enter'): void
++  /**
++   * Observe future ordinary-message attempts before optimistic clearing and
++   * their admission result after any failed-draft restoration.
++   * @param listener - receives attempt-local ids; observer errors do not affect submission.
++   * @returns unsubscribe; disposal ends delivery without replaying settlements.
++   */
++  onSubmission(listener: (event: InputSubmissionEvent) => void): () => void
+   /**
+    * Surface a notice outside the machine's own effect stream: detached
+    * command results and business notifications render through here.
 diff --git a/packages/client/ui-conversation/src/client/conversation-reload.ts b/packages/client/ui-conversation/src/client/conversation-reload.ts
 new file mode 100644
-index 00000000..3e18942c
+index 0000000000..3e18942cea
 --- /dev/null
 +++ b/packages/client/ui-conversation/src/client/conversation-reload.ts
 @@ -0,0 +1,27 @@
@@ -121,8 +168,273 @@ index 00000000..3e18942c
 +  }, 'conversation provider change')
 +  return false
 +}
+diff --git a/packages/client/ui-conversation/src/client/input/facade.ts b/packages/client/ui-conversation/src/client/input/facade.ts
+index 79aa620f34..4b87c8d9ea 100644
+--- a/packages/client/ui-conversation/src/client/input/facade.ts
++++ b/packages/client/ui-conversation/src/client/input/facade.ts
+@@ -16,7 +16,7 @@ import {
+ import type { LexicalEditor } from 'lexical'
+ import type {
+   CommandClaim, ConsumeTokenRequest, DraftAttachmentId,
+-  InputActions, InputEffect, InputNotice, InputState, InputTriggerController, PickOutcome,
++  InputActions, InputEffect, InputNotice, InputState, InputSubmissionEvent, InputTriggerController, PickOutcome,
+   SessionInput, SubmitAttempt, SubmitAttachment, SubmitOutcome,
+ } from '../contract/input.ts'
+ import type {
+@@ -99,12 +99,14 @@ const EMPTY_QUEUE: InboxState['next-turn'] = []
+ const EMPTY_LEXICON: ReadonlyMap<'/' | '@', readonly string[]> = new Map()
+ 
+ /** Editor and attachment snapshot owned by one detached default send. */
+-interface DetachedDraft {
++export interface InputDraft {
+   readonly draft: string
+   readonly occurrences: readonly Occurrence[]
+   readonly attachmentIds: readonly DraftAttachmentId[]
+ }
+ 
++type DetachedDraft = InputDraft
++
+ /**
+  * The per-session input facade: scoped-event application verbs +
+  * setDraft/submit + the published InputState store, over a shell-owned
+@@ -145,12 +147,15 @@ export class SessionInputShell implements SessionInput {
+   private lastMirroredDraft = ''
+   private attachmentIds: readonly DraftAttachmentId[] = []
+   private disposed = false
++  /** A command already handed to the Host is no longer an unsent draft. */
++  private commandDispatched = false
+   /** Draft persistence mirror (Conversation store write; receives the clipboard projection). */
+   private mirrorFn: ((text: string) => void) | undefined
+   /** The mounted composer's file-picker opener (scoped pick-files event target). */
+   private filePicker: Parameters<ComposerKeyboard['bindFilePicker']>[0] | undefined
+   /** Default sends retained until admission settles or scope disposal releases their attachments. */
+   private readonly detachedDrafts = new Map<number, DetachedDraft>()
++  private readonly submissionListeners = new Set<(event: InputSubmissionEvent) => void>()
+   /** Failed default sends waiting to be restored together in submission order. */
+   private readonly failedDetached = new Map<number, DetachedDraft>()
+   /** Revision of the last automatic failure restoration. */
+@@ -343,6 +348,19 @@ export class SessionInputShell implements SessionInput {
+     }
+   }
+ 
++  onSubmission(listener: (event: InputSubmissionEvent) => void): () => void {
++    if (this.disposed) return () => {}
++    this.submissionListeners.add(listener)
++    return () => { this.submissionListeners.delete(listener) }
++  }
++
++  private publishSubmission(event: InputSubmissionEvent): void {
++    const value = Object.freeze(event)
++    for (const listener of this.submissionListeners) {
++      try { listener(value) } catch (_error) { /* Observers cannot interrupt admission or draft recovery. */ }
++    }
++  }
++
+   /**
+    * Keyboard arbitration while the menu is open.
+    * @param key - the intercepted key.
+@@ -498,6 +516,23 @@ export class SessionInputShell implements SessionInput {
+ 
+   // ---- wiring-layer extras (not on the frozen SessionInput face) ----
+ 
++  /** Capture only the unsent editor and attachment rail, without retaining its Session scope. */
++  captureDraft(): InputDraft {
++    if (this.commandDispatched) return { draft: '', occurrences: [], attachmentIds: [] }
++    return {
++      draft: this.projection.clipboardText,
++      occurrences: this.projection.occurrences.map(occurrence => ({ ...occurrence })),
++      attachmentIds: [...this.attachmentIds],
++    }
++  }
++
++  /** Restore browser-owned draft data into a fresh Session scope; in-flight sends never transfer. */
++  restoreDraft(draft: InputDraft): void {
++    this.attachmentIds = [...draft.attachmentIds]
++    this.draftEditor.restoreDraft(draft.draft, draft.occurrences)
++    this.publish()
++  }
++
+   /**
+    * Teardown the shell and return every browser-owned attachment still retained by
+    * the draft or an unsettled default send.
+@@ -518,6 +553,7 @@ export class SessionInputShell implements SessionInput {
+     this.unsubscribeInbox?.()
+     this.unregister()
+     this.detachedDrafts.clear()
++    this.submissionListeners.clear()
+     this.failedDetached.clear()
+     this.attachmentFlights.clear()
+     return [...retained]
+@@ -654,6 +690,7 @@ export class SessionInputShell implements SessionInput {
+     const occurrences = this.projection.occurrences
+     const record = { draft, occurrences, attachmentIds }
+     this.detachedDrafts.set(attempt.seq, record)
++    this.publishSubmission({ kind: 'pending', id: attempt.seq, draft })
+     if (this.failedRestoreRev === this.rev) {
+       this.failedDetached.clear()
+       this.failedRestoreRev = undefined
+@@ -712,6 +749,7 @@ export class SessionInputShell implements SessionInput {
+         }
+         this.detachedDrafts.delete(attempt.seq)
+         this.dispatchRun(({ type: 'sink-settled', attempt, ok: true, outcome }))
++        this.publishSubmission({ kind: 'success', id: attempt.seq })
+       },
+       (error: unknown) => {
+         if (this.dead(attempt)) return
+@@ -727,10 +765,12 @@ export class SessionInputShell implements SessionInput {
+     this.detachedDrafts.delete(attempt.seq)
+     this.restoreAttachments(record.attachmentIds)
+     this.failedDetached.set(attempt.seq, record)
+-    if (this.projection.clipboardText === '' || this.failedRestoreRev === this.rev) {
++    const restored = this.projection.clipboardText === '' || this.failedRestoreRev === this.rev
++    if (restored) {
+       this.restoreFailedDrafts()
+     }
+     this.dispatchRun(({ type: 'sink-settled', attempt, ok: false, ...(message === undefined ? {} : { message }) }))
++    this.publishSubmission({ kind: 'error', id: attempt.seq, restored, ...(message === undefined ? {} : { text: message }) })
+   }
+ 
+   /** Rebuild all currently failed snapshots in submission order. */
+@@ -804,11 +844,14 @@ export class SessionInputShell implements SessionInput {
+         // Serialization may outlive the attempt (large files, session
+         // teardown); a dead attempt must not reach the Host executor.
+         if (this.dead(attempt)) return undefined
++        this.commandDispatched = true
++        this.publish()
+         return claim.submit(args, this.deps.actx, attachments)
+       })
+       .then(
+         (outcome) => {
+           if (outcome === undefined || this.dead(attempt)) return
++          this.commandDispatched = false
+           if (outcome.kind === 'success' && attachmentIds.length > 0) {
+             const submitted = new Set(attachmentIds)
+             this.attachmentIds = this.attachmentIds.filter(id => !submitted.has(id))
+@@ -822,6 +865,7 @@ export class SessionInputShell implements SessionInput {
+         },
+         (error: unknown) => {
+           if (this.dead(attempt)) return
++          this.commandDispatched = false
+           const message = error instanceof Error ? error.message : String(error)
+           this.dispatchRun(({
+             type: 'submit-settled', attempt, ok: false,
+@@ -852,9 +896,10 @@ export class SessionInputShell implements SessionInput {
+   private publish(): void {
+     const next = this.compose()
+     this.state.set(next)
+-    if (next.draft !== this.lastMirroredDraft) {
+-      this.lastMirroredDraft = next.draft
+-      this.mirrorFn?.(next.draft)
++    const unsentDraft = this.commandDispatched ? '' : next.draft
++    if (unsentDraft !== this.lastMirroredDraft) {
++      this.lastMirroredDraft = unsentDraft
++      this.mirrorFn?.(unsentDraft)
+     }
+   }
+ }
+diff --git a/packages/client/ui-conversation/src/client/input/hub.ts b/packages/client/ui-conversation/src/client/input/hub.ts
+index 8a908bb7b0..2ef64fcf6a 100644
+--- a/packages/client/ui-conversation/src/client/input/hub.ts
++++ b/packages/client/ui-conversation/src/client/input/hub.ts
+@@ -2,8 +2,8 @@
+  * InputHub: the SessionInputResolver implementation (`ctx.conversation.input`) — one
+  * SessionInputShell per session, created inside the uiSession provide
+  * materialization (the 'input' standard-kit entry IS the
+- * creation trigger) and torn down by the scope disposer (instance-and-scope
+- * share one lifecycle). The hub registers the scoped input-mutation
++ * creation trigger) and torn down by the scope disposer. Only unsent draft
++ * data survives navigation in the hub; editors and Session scopes do not. The hub registers the scoped input-mutation
+  * listeners on each Session context and owns the default-sink choreography: every session is a
+  * real host entity, so the sink is one unconditional prompt path.
+  */
+@@ -27,6 +27,7 @@ import type { ComposerKeyboard } from '../contract/draft-editor.ts'
+ import type { InputSubmitMode } from '../contract/composer-submission.ts'
+ import type { PopupDismissFace } from './facade.ts'
+ import { SessionInputShell } from './facade.ts'
++import type { InputDraft } from './facade.ts'
+ import { reportMessageSubmission } from './submission-analytics.ts'
+ 
+ /** Structural command face for per-session popup resolution. */
+@@ -56,6 +57,9 @@ interface ConversationAttachmentFace {
+ /** Session-addressed input facade registry (SessionInputResolver face + composer-layer extras). */
+ export class InputHub implements SessionInputResolver {
+   private readonly shells = new WeakMap<SessionBinding, SessionInputShell>()
++  /** Unsent data survives navigation without holding editors, scopes, or history subscriptions. */
++  private readonly drafts = new Map<SessionId, InputDraft>()
++  private closed = false
+ 
+   /**
+    * @param ctx - client root context (services resolved lazily per call — boot order stays free).
+@@ -64,7 +68,31 @@ export class InputHub implements SessionInputResolver {
+   constructor(
+     private readonly rootCtx: Context,
+     private readonly t: TranslateNS<'conversation'>,
+-  ) {}
++  ) {
++    rootCtx.effect(() => {
++      const off = rootCtx.remote.$on('api-session/removed', id => {
++        // A durable child only loses its running Agent on this frame. Its
++        // transcript remains a continuable Session, as in SessionManager.
++        const sessions = this.sessions()
++        if (sessions.subagentAddress(id) !== undefined || sessions.list.getSnapshot().byId[id]?.origin === 'subagent') return
++        this.releaseDraft(id)
++      })
++      return () => {
++        this.closed = true
++        off()
++        for (const id of this.drafts.keys()) this.releaseDraft(id)
++      }
++    }, 'conversation.input: inactive drafts')
++  }
++
++  /** Release an inactive draft on Session deletion or plugin teardown. */
++  private releaseDraft(id: SessionId): void {
++    const draft = this.drafts.get(id)
++    if (draft === undefined) return
++    this.drafts.delete(id)
++    const conversation = this.rootCtx.get('conversation') as ConversationAttachmentFace | undefined
++    for (const attachmentId of draft.attachmentIds) conversation?.releaseDraftAttachment(attachmentId)
++  }
+ 
+   /**
+    * Resolve the facade for one session-scope ctx (SessionInputResolver face).
+@@ -136,8 +164,13 @@ export class InputHub implements SessionInputResolver {
+       },
+     })
+     this.shells.set(binding, shell)
+-    // The one teardown axis: listeners, shell, and map entries all ride the
+-    // scope fiber (nothing here outlives the scope).
++    const saved = this.drafts.get(session.sessionId)
++    if (saved !== undefined) {
++      this.drafts.delete(session.sessionId)
++      shell.restoreDraft(saved)
++    }
++    // Live listeners and editors follow the scope. Transfer only unsent data
++    // to the browser lifetime before releasing the old shell's other resources.
+     actx.effect(() => {
+       const offs = [
+         actx.on('slash/input-begin-command', req =>
+@@ -151,10 +184,17 @@ export class InputHub implements SessionInputResolver {
+       ]
+       return () => {
+         for (const off of offs) off()
++        const saved = shell.captureDraft()
++        const keep = !this.closed && !session.getSnapshot().removed
++          && (saved.draft !== '' || saved.attachmentIds.length > 0)
++        if (keep) this.drafts.set(session.sessionId, saved)
++        const retained = new Set(keep ? saved.attachmentIds : [])
+         const drafts = shell.dispose()
+         this.shells.delete(binding)
+         const conversation = this.rootCtx.get('conversation') as ConversationAttachmentFace | undefined
+-        for (const attachmentId of drafts) conversation?.releaseDraftAttachment(attachmentId)
++        for (const attachmentId of drafts) {
++          if (!retained.has(attachmentId)) conversation?.releaseDraftAttachment(attachmentId)
++        }
+       }
+     }, 'conversation.input: session shell')
+     return shell
 diff --git a/packages/client/ui-conversation/src/client/locales.ts b/packages/client/ui-conversation/src/client/locales.ts
-index 88ae0697..153ead11 100644
+index 455198ce82..439917ff14 100644
 --- a/packages/client/ui-conversation/src/client/locales.ts
 +++ b/packages/client/ui-conversation/src/client/locales.ts
 @@ -28,6 +28,7 @@ export const zh = {
@@ -142,7 +454,7 @@ index 88ae0697..153ead11 100644
    'attachment.pending': 'Pending attachments',
    'attachment.scrollLeft': 'Scroll attachments left',
 diff --git a/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx b/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
-index f004aba1..5dbd4bb3 100644
+index 2361d96c99..25d8ebcb0c 100644
 --- a/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
 +++ b/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
 @@ -39,6 +39,7 @@ import { attachmentErrorText, imageSizeText } from '../image-labels.ts'
@@ -182,7 +494,7 @@ index f004aba1..5dbd4bb3 100644
      if (primaryStops) {
 diff --git a/packages/client/ui-conversation/src/client/skeleton/background-wait.ts b/packages/client/ui-conversation/src/client/skeleton/background-wait.ts
 new file mode 100644
-index 00000000..35956926
+index 0000000000..3595692681
 --- /dev/null
 +++ b/packages/client/ui-conversation/src/client/skeleton/background-wait.ts
 @@ -0,0 +1,36 @@
@@ -222,8 +534,181 @@ index 00000000..35956926
 +  }, [sessionId, running])
 +  return running && observed?.id === sessionId && observed?.waiting === true
 +}
+diff --git a/packages/client/ui-conversation/tests/input-reference-submit.client.spec.ts b/packages/client/ui-conversation/tests/input-reference-submit.client.spec.ts
+index e25e3e6754..e3d85bf13a 100644
+--- a/packages/client/ui-conversation/tests/input-reference-submit.client.spec.ts
++++ b/packages/client/ui-conversation/tests/input-reference-submit.client.spec.ts
+@@ -5,6 +5,9 @@
+  */
+ import { describe, expect, it, vi } from 'vitest'
+ import type { Context } from '@deepseek-ai/cordis'
++import type { SessionBinding } from '@deepseek-ai/dsh-api-session-controller/client'
++import type { SessionId } from '@deepseek-ai/dsh-session/types'
++import { InputHub } from '../src/client/input/hub.ts'
+ import type { InputTriggerController, SubmitOutcome, PickOutcome } from '../src/client/contract/input.ts'
+ import { SessionInputShell } from '../src/client/input/facade.ts'
+ import type { DraftAttachmentId } from '../src/client/contract/input.ts'
+@@ -33,6 +36,74 @@ function chip(shell: SessionInputShell): void {
+ }
+ 
+ describe('reference submission', () => {
++  it('does not cache or persist a command already handed to the Host, but restores an active rejection', async () => {
++    let settle!: (result: SubmitOutcome) => void
++    const submit = vi.fn(() => new Promise<SubmitOutcome>(resolve => { settle = resolve }))
++    const mirror = vi.fn()
++    const shell = new SessionInputShell({ actx: {} as Context, defaultSink: vi.fn(), commandAttachments })
++    shell.bindMirror(mirror)
++    shell.setDraft('keep')
++    shell.beginCommand({ name: 'slow', token: '/slow ', attachments: true, submit }, { start: 0, end: 0, draftRev: shell.snapshot.draftRev })
++    shell.actions.addAttachments(['command-image' as DraftAttachmentId])
++    shell.submit()
++    // Before serialization/dispatch, navigation can still retain the unsent command.
++    expect(shell.captureDraft().draft).toBe('/slow keep')
++    await vi.waitFor(() => { expect(submit).toHaveBeenCalledTimes(1) })
++    expect(shell.captureDraft()).toEqual({ draft: '', occurrences: [], attachmentIds: [] })
++    expect(mirror).toHaveBeenLastCalledWith('')
++    settle({ kind: 'error', text: 'retry' })
++    await vi.waitFor(() => { expect(shell.snapshot.phase).toBe('claimed') })
++    expect(shell.captureDraft().draft).toBe('/slow keep')
++    expect(mirror).toHaveBeenLastCalledWith('/slow keep')
++    shell.submit()
++    await vi.waitFor(() => { expect(submit).toHaveBeenCalledTimes(2) })
++    const saved = shell.captureDraft()
++    expect(shell.dispose()).toEqual(['command-image'])
++    settle({ kind: 'success' }); await Promise.resolve()
++    expect(saved).toEqual({ draft: '', occurrences: [], attachmentIds: [] })
++    expect(mirror).toHaveBeenLastCalledWith('')
++  })
++
++  it('notifies admission separately from editor clearing and contains observer failures', async () => {
++    const sink = vi.fn<() => Promise<SubmitOutcome>>()
++      .mockResolvedValueOnce({ kind: 'error', text: 'offline' })
++      .mockResolvedValue({ kind: 'success' })
++    const shell = new SessionInputShell({ actx: {} as Context, defaultSink: sink, commandAttachments })
++    const events: object[] = []
++    shell.onSubmission(() => { throw Error('observer failed') })
++    const unsubscribe = shell.onSubmission(event => { events.push({ ...event, currentDraft: shell.snapshot.draft }) })
++    shell.setDraft('retain original versions')
++    shell.submit()
++    expect(events).toEqual([{ kind: 'pending', id: 1, draft: 'retain original versions', currentDraft: 'retain original versions' }])
++    expect(shell.snapshot.draft).toBe('')
++    await vi.waitFor(() => { expect(events).toHaveLength(2) })
++    expect(events[1]).toEqual({ kind: 'error', id: 1, restored: true, text: 'offline', currentDraft: 'retain original versions' })
++    shell.submit()
++    await vi.waitFor(() => { expect(events).toHaveLength(4) })
++    expect(events[3]).toEqual({ kind: 'success', id: 2, currentDraft: '' })
++    unsubscribe()
++    shell.setDraft('not observed'); shell.submit()
++    expect(events).toHaveLength(4)
++    shell.dispose()
++  })
++
++  it('distinguishes a failed admission beside newer typing and drops late results after disposal', async () => {
++    let settle!: (outcome: SubmitOutcome) => void
++    const shell = new SessionInputShell({ actx: {} as Context,
++      defaultSink: () => new Promise<SubmitOutcome>(resolve => { settle = resolve }), commandAttachments })
++    const events: object[] = []
++    shell.onSubmission(event => { events.push(event) })
++    shell.setDraft('first'); shell.submit(); shell.setDraft('newer draft')
++    settle({ kind: 'error' })
++    await vi.waitFor(() => { expect(events).toHaveLength(2) })
++    expect(events[1]).toEqual({ kind: 'error', id: 1, restored: false })
++    expect(shell.snapshot.draft).toBe('newer draft')
++    shell.submit(); shell.dispose(); settle({ kind: 'error' })
++    await Promise.resolve()
++    expect(events).toHaveLength(3)
++    shell.onSubmission(() => { throw Error('must not register after disposal') })()
++  })
++
+   it('mirrors canonical reference text so a persisted draft remains resolvable after remount', async () => {
+     const mirror = vi.fn()
+     const first = new SessionInputShell({
+@@ -400,3 +471,83 @@ it('retains occurrence time and Session facts across arbitration and independent
+     clock.mockRestore()
+   }
+ })
++
++describe('inactive session draft ownership', () => {
++  function hubBench() {
++    const roots: Array<() => void> = []
++    const removals: Array<(id: SessionId) => void> = []
++    const release = vi.fn()
++    const children = new Set<string>()
++    const services = {
++      sessions: { sessionOf: () => undefined, subagentAddress: (id: string) => children.has(id) ? { parentSessionId: 'parent' } : undefined,
++        list: { getSnapshot: () => ({ byId: {} }) } },
++      conversation: { releaseDraftAttachment: release },
++    }
++    const root = {
++      get: (name: keyof typeof services) => services[name],
++      effect: (run: () => () => void) => { roots.push(run()) },
++      remote: { $on: (_name: string, listener: (id: SessionId) => void) => {
++        removals.push(listener)
++        return () => { removals.splice(removals.indexOf(listener), 1) }
++      } },
++    } as unknown as Context
++    const hub = new InputHub(root, (() => '') as never)
++    const mount = (id: string) => {
++      const disposers: Array<() => void> = []
++      let removed = false
++      const binding = {
++        ctx: { effect: (run: () => () => void) => { disposers.push(run()) }, on: () => () => {} },
++        session: { sessionId: id, getSnapshot: () => ({ removed }),
++          projections: { faceOf: () => ({ getSnapshot: () => undefined, subscribe: () => () => {} }) } },
++      } as unknown as SessionBinding
++      return { shell: hub.shellFor(binding), unmount: () => { for (const dispose of disposers) dispose() },
++        remove: () => { removed = true } }
++    }
++    return { mount, release, children, remove: (id: string) => { for (const listener of removals) listener(id as SessionId) },
++      close: () => { for (const dispose of roots) dispose() } }
++  }
++
++  it('transfers unsent references and images across scopes, isolates sessions, and releases parked drafts on removal', () => {
++    const b = hubBench(), imageId = 'retained-image' as DraftAttachmentId
++    const first = b.mount('A'); chip(first.shell); first.shell.actions.addAttachments([imageId])
++    const expected = first.shell.snapshot.draft
++    first.unmount()
++    expect(b.release).not.toHaveBeenCalled()
++    const other = b.mount('B'); other.shell.setDraft('independent'); other.unmount()
++    const restored = b.mount('A')
++    expect(restored.shell.snapshot.draft).toBe(expected)
++    expect(restored.shell.captureDraft().occurrences).toMatchObject([{ source: 'reference', ref: mention }])
++    expect(restored.shell.snapshot.attachmentIds).toEqual([imageId])
++    restored.unmount(); b.remove('A')
++    expect(b.release).toHaveBeenCalledExactlyOnceWith(imageId)
++    const deleted = b.mount('A')
++    expect(deleted.shell.snapshot.draft).toBe('')
++    expect(deleted.shell.snapshot.attachmentIds).toEqual([])
++    deleted.unmount()
++    const independent = b.mount('B')
++    expect(independent.shell.snapshot.draft).toBe('independent')
++    independent.unmount(); b.close()
++  })
++
++  it('releases both parked and active attachments during teardown and never saves a removed session', () => {
++    const b = hubBench()
++    const parked = b.mount('A'); parked.shell.actions.addAttachments(['parked' as DraftAttachmentId]); parked.unmount()
++    const removed = b.mount('B'); removed.shell.actions.addAttachments(['removed' as DraftAttachmentId]); removed.remove(); removed.unmount()
++    expect(b.release).toHaveBeenCalledWith('removed')
++    const active = b.mount('C'); active.shell.actions.addAttachments(['active' as DraftAttachmentId])
++    b.close(); active.unmount()
++    expect(b.release.mock.calls.map(([id]) => id).sort()).toEqual(['active', 'parked', 'removed'])
++  })
++
++  it('keeps a durable child draft when its running Agent is released', () => {
++    const b = hubBench(); b.children.add('child')
++    const child = b.mount('child'); chip(child.shell); child.shell.actions.addAttachments(['child-image' as DraftAttachmentId]); child.unmount()
++    b.remove('child')
++    expect(b.release).not.toHaveBeenCalled()
++    const restored = b.mount('child')
++    expect(restored.shell.captureDraft().occurrences).toHaveLength(1)
++    expect(restored.shell.snapshot.attachmentIds).toEqual(['child-image'])
++    restored.unmount(); b.close()
++    expect(b.release).toHaveBeenCalledExactlyOnceWith('child-image')
++  })
++})
 diff --git a/packages/core/tools/src/index.ts b/packages/core/tools/src/index.ts
-index ca89f370..4a59dcfc 100644
+index ca89f370fe..4a59dcfc37 100644
 --- a/packages/core/tools/src/index.ts
 +++ b/packages/core/tools/src/index.ts
 @@ -741,6 +741,7 @@ class ToolLayer implements ScopeLayer {
@@ -323,7 +808,7 @@ index ca89f370..4a59dcfc 100644
  
    /**
 diff --git a/packages/jobs/jobs-local/src/index.ts b/packages/jobs/jobs-local/src/index.ts
-index ea680151..cb8a8033 100644
+index ea68015158..cb8a803332 100644
 --- a/packages/jobs/jobs-local/src/index.ts
 +++ b/packages/jobs/jobs-local/src/index.ts
 @@ -11,6 +11,7 @@
@@ -419,7 +904,7 @@ index ea680151..cb8a8033 100644
  
    /**
 diff --git a/packages/jobs/jobs/src/index.ts b/packages/jobs/jobs/src/index.ts
-index dcfd95b7..6f447649 100644
+index dcfd95b737..6f447649e7 100644
 --- a/packages/jobs/jobs/src/index.ts
 +++ b/packages/jobs/jobs/src/index.ts
 @@ -11,11 +11,14 @@
@@ -455,7 +940,7 @@ index dcfd95b7..6f447649 100644
     * Preflight access, validation, owner cleanup, and implementation-owned
     * admission before starting and atomically registering work. Any preflight
 diff --git a/packages/jobs/jobs/src/types.ts b/packages/jobs/jobs/src/types.ts
-index 3858cf50..fa508634 100644
+index 3858cf5085..fa508634e2 100644
 --- a/packages/jobs/jobs/src/types.ts
 +++ b/packages/jobs/jobs/src/types.ts
 @@ -12,6 +12,21 @@ import type { JobChannel, JobChunk, JobKind, JobView } from './view.ts'
@@ -481,7 +966,7 @@ index 3858cf50..fa508634 100644
  export interface JobOutcome {
    /** How the job ended: finished (`completed`), cancelled (`killed`), or broke (`failed`). */
 diff --git a/packages/jobs/jobs/src/view.ts b/packages/jobs/jobs/src/view.ts
-index ed3af9c0..3d15f470 100644
+index ed3af9c0d5..3d15f47086 100644
 --- a/packages/jobs/jobs/src/view.ts
 +++ b/packages/jobs/jobs/src/view.ts
 @@ -63,6 +63,10 @@ export interface JobChunk {
@@ -496,7 +981,7 @@ index ed3af9c0..3d15f470 100644
    readonly id: JobId
    /**
 diff --git a/packages/jobs/tool-jobs/src/index.ts b/packages/jobs/tool-jobs/src/index.ts
-index e0b961e2..08a6846d 100644
+index e0b961e2ae..08a6846dd3 100644
 --- a/packages/jobs/tool-jobs/src/index.ts
 +++ b/packages/jobs/tool-jobs/src/index.ts
 @@ -68,6 +68,7 @@ const PUBLIC_JOB_SCHEMA = {
@@ -686,7 +1171,7 @@ index e0b961e2..08a6846d 100644
      presentCall: args => presentJobCall(`Read output from background job ${args.job_id}`, 'read', args.job_id),
    }))
 diff --git a/packages/jobs/tool-jobs/src/render.ts b/packages/jobs/tool-jobs/src/render.ts
-index b95eb439..bdd73497 100644
+index b95eb4393b..bdd73497af 100644
 --- a/packages/jobs/tool-jobs/src/render.ts
 +++ b/packages/jobs/tool-jobs/src/render.ts
 @@ -11,6 +11,7 @@ import type { JobChunk, JobView } from '@deepseek-ai/dsh-jobs/view'
@@ -706,7 +1191,7 @@ index b95eb439..bdd73497 100644
      label: job.label,
      status: job.status,
 diff --git a/packages/shell/tool-bash/src/index.ts b/packages/shell/tool-bash/src/index.ts
-index 9501bac0..ecbb8622 100644
+index 9501bac003..ecbb862254 100644
 --- a/packages/shell/tool-bash/src/index.ts
 +++ b/packages/shell/tool-bash/src/index.ts
 @@ -63,6 +63,7 @@ interface BashToolArgs {
@@ -775,7 +1260,7 @@ index 9501bac0..ecbb8622 100644
            let attached: StartedJob | undefined
            try {
 diff --git a/packages/shell/tool-pwsh/src/index.ts b/packages/shell/tool-pwsh/src/index.ts
-index 963fbeaa..229efee6 100644
+index 963fbeaa2f..229efee616 100644
 --- a/packages/shell/tool-pwsh/src/index.ts
 +++ b/packages/shell/tool-pwsh/src/index.ts
 @@ -81,6 +81,7 @@ interface PwshToolArgs {
@@ -843,19 +1328,357 @@ index 963fbeaa..229efee6 100644
            const spec = ctx.shell.resolve({ ...request, onExpiry: 'none' })
            let attached: StartedJob | undefined
            try {
+diff --git a/packages/subagent/subagent-in-process-driver/src/index.ts b/packages/subagent/subagent-in-process-driver/src/index.ts
+index dbaac326b1..06444cbddf 100644
+--- a/packages/subagent/subagent-in-process-driver/src/index.ts
++++ b/packages/subagent/subagent-in-process-driver/src/index.ts
+@@ -70,6 +70,14 @@ function toStopReason(reason: TurnEndReason | undefined): SubagentStopReason {
+ export interface InProcessRunOptions {
+   /** Completed-turn seed for fork, or undefined for a fresh spawn. */
+   readonly seed?: readonly SessionEvent[]
++  /** Host-created isolated checkout; never a model-supplied arbitrary directory. */
++  readonly cwd?: string
++  /** A validated native agent preset id for this child's composition. */
++  readonly agentPreset?: string
++  /** Policy captured by a provider before asynchronous workspace preparation. */
++  readonly delegatedPolicy?: ReturnType<typeof captureDelegatedPolicyOverrides>
++  /** Attach caller-owned accounting before the child is published or starts work. */
++  readonly setupChild?: (child: Agent) => void
+ }
+ 
+ /** Error used when cancellation wins before the child publication boundary. */
+@@ -116,15 +124,21 @@ export async function startInProcessRun(
+ 
+   // Capture before the first await: a later parent switch belongs to the
+   // parent's future.
+-  const inherited = captureDelegatedPolicyOverrides(parent)
++  const inherited = options.delegatedPolicy ?? captureDelegatedPolicyOverrides(parent)
+ 
+   let structured: StructuredAttachment | undefined
+-  const setup = (childCtx: Context, child: Agent): void => {
++  const setup = async (childCtx: Context, child: Agent): Promise<void> => {
++    options.setupChild?.(child)
+     appendDelegatedPolicyOverrides(child.session, inherited)
+     applyChildComposition(childCtx, parent, {
+       persona: request.persona,
+       toolFilter: request.toolFilter,
+     })
++    if (options.agentPreset !== undefined) {
++      const presets = childCtx.get('agentPresets')
++      if (presets === undefined) throw new Error('Custom workflow agents require the native preset registry')
++      await presets.recompose(childCtx, options.agentPreset)
++    }
+     if (request.outputSchema !== undefined) {
+       structured = attachStructuredRuntime(childCtx, request.outputSchema)
+     }
+@@ -134,7 +148,11 @@ export async function startInProcessRun(
+   const handle = await parent.ctx.agents.create({
+     sessionId: childId,
+     parentAgent: parent,
+-    meta: childSessionMeta(parent, childDepth, seed !== undefined),
++    meta: {
++      ...childSessionMeta(parent, childDepth, seed !== undefined),
++      ...options.cwd === undefined ? {} : { cwd: options.cwd },
++      ...options.agentPreset === undefined ? {} : { agentPreset: options.agentPreset },
++    },
+     ...seed !== undefined ? { seed } : {},
+     ...seed === undefined ? {} : { inheritedEventCount: activationBoundary },
+     agentOptions: resolveChildAgentOptions(parent, request.agentOptions, childDepth),
+diff --git a/packages/workflow/tool-workflow/src/index.ts b/packages/workflow/tool-workflow/src/index.ts
+index d6ca7140ec..88a2c1829b 100644
+--- a/packages/workflow/tool-workflow/src/index.ts
++++ b/packages/workflow/tool-workflow/src/index.ts
+@@ -25,6 +25,8 @@ import type {
+   WorkflowResult, WorkflowRun, WorkflowRunId, WorkflowStopReason,
+ } from '@deepseek-ai/dsh-workflow'
+ import { createWorkflowRecordMirror } from './record.ts'
++import type { PtcWorkflowRun } from '../../workflow-ptc/src/host.ts'
++import type PtcWorkflowEngine from '../../workflow-ptc/src/index.ts'
+ import type { WorkflowRecordMirror } from './record.ts'
+ import type {
+   ToolWorkflowAgentEndData, ToolWorkflowAgentStartData,
+@@ -155,15 +157,26 @@ function createWorkflowRecorder(ctx: Context): WorkflowRecorder {
+  * their exact semantics, and the supported schema subset. Parameter-level
+  * rules live in the parameter descriptions.
+  */
+-const DESCRIPTION = `Run a JavaScript workflow script that orchestrates subagents at scale. Use this for work that fans out across many independent pieces — an audit over many files, a migration, multi-angle research, adversarial verification of findings — where you write the orchestration as a script instead of delegating turn by turn.
++export const DESCRIPTION = `Run a JavaScript workflow that coordinates subagents when the user has authorized multi-agent orchestration. An active Ultracode reminder supplies standing authorization for substantive tasks; when Ultracode is off, the ordinary opt-in rule applies.
+ 
+-Script-body hooks:
+-- \`agent(prompt, opts?): Promise<any>\` — run one subagent to completion. Without \`opts.schema\` it resolves to the child's final text; with \`opts.schema\` (an object-rooted JSON Schema using ONLY type/properties/required/additionalProperties/items/enum/const/oneOf) it resolves to the validated object. Resolves \`null\` when the child fails (filter with \`.filter(Boolean)\`). Other opts: \`label\` (display), \`phase\` (progress group), and independent \`provider\`/\`model\` LLM target overrides.
+-- \`pipeline(items, ...stages): Promise<any[]>\` — run each item through the stages independently with NO barrier between stages (prefer this for multi-stage work). Each stage receives \`(prev, item, index)\`. A stage throw drops that ITEM to \`null\` and skips its remaining stages.
+-- \`parallel(thunks): Promise<any[]>\` — run zero-argument functions concurrently and await ALL of them (a barrier; use only when a stage genuinely needs every prior result together). A throwing thunk resolves to \`null\`.
+-- \`phase(title)\` — start a progress phase; \`log(message)\` — narrate progress; \`args\` — the tool call's \`args\` input, verbatim.
++Pass an inline plain JavaScript script beginning with \`export const meta = {...}\`. The metadata must be a pure literal with \`name\` and \`description\`, plus optional \`whenToUse\` and \`phases\`; no calls, variables, spreads, or interpolation. A separate \`meta\` object with a script body is also accepted. Top-level \`await\` is supported; finish with a JSON-serializable \`return\` value. Pass \`args\` as actual JSON values, including arrays, rather than JSON-encoded strings.
+ 
+-Misused hooks (bad arguments, unknown options, unsupported schemas, tripped caps) end the whole script instead of producing \`null\`. The script has no filesystem, network, timer, or Node.js APIs; the agents do the work.`
++Each invocation saves its script and returns \`runId\`, \`scriptPath\`, and \`transcriptDir\`. Edit that script and invoke with \`scriptPath\`, or use \`name\` to load \`.omd/workflows/<name>.js\` in the workspace. Supply exactly one of \`script\`, \`scriptPath\`, or \`name\`. Foreground calls return when the workflow finishes. With \`run_in_background: true\`, the tool returns a native job id; collect the result with \`job_output\` and cancel with \`job_kill\`.
++
++- \`agent(prompt, opts?)\`: run a child to completion. Without \`schema\`, returns final text; with a supported object-root schema, returns the validated object. A child failure returns \`null\`. Other options are \`label\`, \`phase\`, \`provider\`, \`model\`, \`effort\`, \`isolation\`, and \`agentType\`. Here \`provider\` and \`model\` are independent overrides; either may be supplied alone. Omit model and effort overrides to inherit the parent route; a changed model resolves its own default effort unless one is supplied. Effort values must be supported by the selected model. \`agentType\` selects a registered native agent preset id; \`general-purpose\` inherits the parent's preset. \`isolation: 'worktree'\` creates a separate Git checkout at HEAD. Use it when concurrent agents would otherwise conflict while editing files. Parent uncommitted changes are not copied. Unchanged checkouts are removed after the child stops; changes, new files, and commits are retained and their paths reported in \`worktrees\`. Confined modes keep their filesystem restrictions.
++- \`pipeline(items, ...stages)\`: process each item across stages without a cross-item barrier. Each stage receives \`(prev, item, index)\`. An ordinary stage exception drops that item to \`null\` and skips its remaining stages.
++- \`parallel(thunks)\`: wait for all independent functions at a barrier. A throwing function returns \`null\`.
++- \`phase(title)\` and \`log(message)\`: report progress. \`args\` holds the tool's input value.
++- \`workflow(nameOrRef, args?)\`: run a saved workflow by name or \`{scriptPath}\` as a sub-step. The child shares concurrency, total-agent limits, cancellation, and the token pool. Nesting is limited to one level.
++- \`budget.total\`, \`budget.spent()\`, and \`budget.remaining()\`: the initiating turn's shared output-token target and reported usage across the main loop and delegated work. A human message ending with \`+500k\` sets a 500,000-output-token target; without a target, \`total\` is null and \`remaining()\` is Infinity. Once the target is reached, no further live agents start. Already-running calls may finish above the target. If a model call does not report usable usage, a set target blocks further dispatch instead of treating that call as free. Background workflows retain their initiating pool when a new human turn begins.
++
++Only the documented JSON Schema subset is supported: type, properties, required, additionalProperties, items, enum, const, and oneOf. Invalid hooks, schemas, or caps fail the script rather than becoming per-item null results. Concurrency and agent-count limits still apply.
++
++This engine runs the orchestration program in a fresh Node PTC process under the calling session's file policy. Its documented API is the helper set above; it is not a security boundary. The program-visible environment is empty, and the file policy does not restrict network access. The engine has no overall elapsed deadline, but its initial synchronous slice, process limits, caller cancellation, and enclosing tool deadlines still apply.
++
++Use the helpers to coordinate work performed by agents. Do not infer arbitrary Node API support from the underlying process. Scripts must be deterministic: \`Date.now()\`, \`Math.random()\`, and argumentless \`new Date()\` are unavailable; pass time or randomness through \`args\`.
++
++To resume after cancellation, failure, or script edits, pass \`resumeFromRunId\` with the saved script path. Only the longest unchanged completed prefix of agent calls, in their start order, returns cached results; the first changed, new, failed, or unfinished call and everything after it run live. A run cannot be resumed while it or another resume still owns its children. Read \`journal.jsonl\` under \`transcriptDir\` to inspect actual results, including empty strings and nulls. Inspect failures and coverage before reporting a complete result.`
+ 
+ type WorkflowCallArgs = {
+   script: string
+@@ -173,21 +186,37 @@ type WorkflowCallArgs = {
+     whenToUse?: string
+     phases?: { title: string; detail?: string; provider?: string; model?: string }[]
+   }
+-  args?: Record<string, unknown>
++  args?: JsonValue
++  name?: string
++  scriptPath?: string
++  resumeFromRunId?: string
+   run_in_background?: boolean
+ }
+ 
++type WorkflowInput = Omit<WorkflowCallArgs, 'script' | 'meta'> & Partial<Pick<WorkflowCallArgs, 'script' | 'meta'>>
++
++function details(run: WorkflowRun) {
++  const extended = run as PtcWorkflowRun
++  return { name: run.meta.name, runId: run.id, scriptPath: extended.scriptPath!, transcriptDir: extended.transcriptDir!, worktrees: extended.worktrees }
++}
++
++function locationText(run: WorkflowRun): string {
++  const value = details(run)
++  return `Run ID: ${value.runId}\nScript: ${value.scriptPath}\nJournal: ${value.transcriptDir}/journal.jsonl`
++    + (value.worktrees.length ? `\nWorktrees: ${JSON.stringify(value.worktrees)}` : '')
++}
++
+ /** The pending-state card: a generic card titled by the workflow's meta name. */
+-function presentWorkflowCall(args: WorkflowCallArgs): ToolCallView {
++function presentWorkflowCall(args: WorkflowInput): ToolCallView {
+   return {
+     card: 'generic',
+-    title: `workflow: ${args.meta.name}`,
+-    rawInput: args.script,
++    title: `workflow: ${args.meta?.name ?? args.name ?? args.scriptPath ?? 'script'}`,
++    rawInput: args.script ?? args.scriptPath ?? args.name ?? '',
+   }
+ }
+ 
+ /** The completed-state card: keep the pending title; render the result content as-is. */
+-function presentWorkflowResult(args: WorkflowCallArgs, result: { content: ContentBlock[]; isError: boolean }): ToolResultView {
++function presentWorkflowResult(args: WorkflowInput, result: { content: ContentBlock[]; isError: boolean }): ToolResultView {
+   void args
+   void result
+   return { card: 'generic' }
+@@ -216,18 +245,18 @@ function stopReasonError(result: WorkflowResult): string | undefined {
+  * cancel reason it forwarded is the same string); an errored run fails with
+  * the script's failure message.
+  */
+-function jobOutcomeOf(result: WorkflowResult, name: string, maxChars: number): JobOutcome {
++function jobOutcomeOf(result: WorkflowResult, run: WorkflowRun, maxChars: number): JobOutcome {
+   switch (result.stopReason) {
+     case 'completed':
+       return {
+         status: 'completed',
+         detail: `${result.agentsStarted} agent${result.agentsStarted === 1 ? '' : 's'}`,
+-        result: renderResult(name, result.agentsStarted, result.value as JsonValue, maxChars),
++        result: renderResult(run.meta.name, result.agentsStarted, result.value as JsonValue, maxChars) + '\n' + locationText(run),
+       }
+     case 'cancelled':
+-      return { status: 'killed' }
++      return { status: 'killed', detail: locationText(run) }
+     case 'error':
+-      return { status: 'failed', detail: result.error ?? 'unknown error' }
++      return { status: 'failed', detail: (result.error ?? 'unknown error') + '\n' + locationText(run) }
+     /* v8 ignore start -- defensive: WorkflowStopReason is a closed union, exhaustive by construction; a future variant fails here loudly */
+     default:
+       return { status: 'failed', detail: `workflow run ended abnormally (${String(result.stopReason satisfies never)})` }
+@@ -259,13 +288,13 @@ function renderResult(name: string, agentsStarted: number, value: JsonValue, max
+  * @param deps - the tool's recorder/mirror taps and the render cap.
+  * @returns the background result for the tool's output schema.
+  */
+-function startBackgroundRun(
++async function startBackgroundRun(
+   ctx: Context,
+   args: WorkflowCallArgs,
+   parent: Agent,
+   recordsRun: boolean,
+   deps: { recorder: WorkflowRecorder; mirror: WorkflowRecordMirror; maxResultChars: number },
+-): { kind: 'background'; jobId: JobId; runId: WorkflowRunId } {
++): Promise<{ kind: 'background'; jobId: JobId } & ReturnType<typeof details>> {
+   const jobs = ctx.get('jobs')
+   if (jobs === undefined) {
+     throw new Error('background jobs unavailable: load @deepseek-ai/dsh-jobs and @deepseek-ai/dsh-tool-jobs')
+@@ -283,6 +312,7 @@ function startBackgroundRun(
+         script: args.script,
+         meta: args.meta,
+         ...args.args !== undefined ? { args: args.args } : {},
++        ...args.resumeFromRunId !== undefined ? { resumeFromRunId: args.resumeFromRunId } : {},
+         parent,
+       })
+       deps.mirror.start(run.id, job)
+@@ -301,7 +331,7 @@ function startBackgroundRun(
+           deps.recorder.finish(run.id, result.stopReason)
+           deps.recorder.abandon(run.id)
+         }
+-        return jobOutcomeOf(result, args.meta.name, deps.maxResultChars)
++        return jobOutcomeOf(result, run, deps.maxResultChars)
+       })
+       return {
+         cancel: (reason?: string) => { run.cancel(reason ?? 'background workflow job killed') },
+@@ -309,7 +339,9 @@ function startBackgroundRun(
+       }
+     },
+   })
+-  return { kind: 'background' as const, jobId, runId: run.id }
++  try { await (run as PtcWorkflowRun).ready }
++  catch (error) { throw new Error(`${String(error)}\n${locationText(run)}`, { cause: error }) }
++  return { kind: 'background' as const, jobId, ...details(run) }
+ }
+ 
+ export function apply(ctx: Context, config: Config): void {
+@@ -327,19 +359,17 @@ export function apply(ctx: Context, config: Config): void {
+   })
+   ctx.tools.register(defineTool({
+     name: toolName,
+-    description: DESCRIPTION,
++    description: enableRunInBackground ? DESCRIPTION : DESCRIPTION.replace(/ With `run_in_background: true`,[^\n]*?`job_kill`\./, ''),
+     parameters: {
+       script: {
+         type: 'string',
+-        required: true,
+-        description: 'The plain JavaScript body, not TypeScript and without an `export const meta` statement; top-level await is allowed. '
++        description: 'An inline plain JavaScript workflow beginning with `export const meta = {...}`; top-level await is allowed. Alternatively pass a body with the separate meta field. '
+           + 'End with `return <value>`; the JSON-serializable value is this tool\'s result.',
+       },
+       meta: {
+         type: 'object',
+         additionalProperties: true,
+-        required: true,
+-        description: 'The workflow identity as plain JSON, not code.',
++        description: 'Optional workflow identity for a script body without an inline meta declaration.',
+         properties: {
+           name: { type: 'string', required: true, description: 'Short kebab-case workflow name.' },
+           description: { type: 'string', required: true, description: 'One-line description of what the workflow does.' },
+@@ -361,10 +391,12 @@ export function apply(ctx: Context, config: Config): void {
+         },
+       },
+       args: {
+-        type: 'object',
+-        additionalProperties: true,
+-        description: 'Optional JSON input exposed to the script as the `args` global (wrap a bare list as a field, e.g. {"files": [...]}).',
++        type: 'json',
++        description: 'Optional JSON input exposed verbatim as args. Pass arrays and objects as JSON values, not JSON-encoded strings.',
+       },
++      name: { type: 'string', description: 'Saved workflow name from .omd/workflows/<name>.js. Supply exactly one of name, script, or scriptPath.' },
++      scriptPath: { type: 'string', description: 'Path to a saved workflow script, including inline meta. Use the returned path to edit and rerun a workflow.' },
++      resumeFromRunId: { type: 'string', description: 'Resume a previous run in this session: reuse its longest unchanged completed prefix, then run the remaining calls live.' },
+       ...enableRunInBackground ? {
+         run_in_background: {
+           type: 'boolean' as const,
+@@ -382,6 +414,10 @@ export function apply(ctx: Context, config: Config): void {
+               kind: { type: 'string', required: true, const: 'background' },
+               jobId: { type: 'string', required: true },
+               runId: { type: 'string', required: true },
++              name: { type: 'string', required: true },
++              scriptPath: { type: 'string', required: true },
++              transcriptDir: { type: 'string', required: true },
++              worktrees: { type: 'json', required: true },
+             },
+           },
+           {
+@@ -390,6 +426,10 @@ export function apply(ctx: Context, config: Config): void {
+             properties: {
+               kind: { type: 'string', required: true, const: 'foreground' },
+               runId: { type: 'string', required: true },
++              name: { type: 'string', required: true },
++              scriptPath: { type: 'string', required: true },
++              transcriptDir: { type: 'string', required: true },
++              worktrees: { type: 'json', required: true },
+               agentsStarted: { type: 'integer', required: true },
+               result: { type: 'json', required: true },
+             },
+@@ -398,12 +438,14 @@ export function apply(ctx: Context, config: Config): void {
+       },
+       render: (args, value) => [{
+         type: 'text',
+-        text: value.kind === 'background'
+-          ? `workflow "${args.meta.name}" started in the background as job ${value.jobId}. Its return value arrives with the completion notice; check on it with job_output, stop it with job_kill.`
+-          : renderResult(args.meta.name, value.agentsStarted, value.result, maxResultChars),
++        text: (value.kind === 'background'
++          ? `workflow "${value.name}" started in the background as job ${value.jobId}. Its return value arrives with the completion notice; check on it with job_output, stop it with job_kill.`
++          : renderResult(value.name, value.agentsStarted, value.result, maxResultChars))
++          + `\nRun ID: ${value.runId}\nScript: ${value.scriptPath}\nJournal: ${value.transcriptDir}/journal.jsonl`
++          + (Array.isArray(value.worktrees) && value.worktrees.length ? `\nWorktrees: ${JSON.stringify(value.worktrees)}` : ''),
+       }],
+     },
+-    async execute(args, exec) {
++    async execute(input, exec) {
+       const parent = exec.agent
+       if (!parent) {
+         // The loop sets `exec.agent` for every model-driven call; its absence
+@@ -411,15 +453,15 @@ export function apply(ctx: Context, config: Config): void {
+         // parent to attribute the children to. Fail loud rather than guess.
+         throw new Error('workflow tool requires a calling agent (exec.agent was undefined)')
+       }
++      const prepared = await (ctx.workflowEngine as PtcWorkflowEngine).prepare(input, parent, exec.signal)
++      exec.signal.throwIfAborted()
++      const args = { ...input, ...prepared }
+       if (args.run_in_background === true) {
+         if (!enableRunInBackground) {
+           throw new Error('run_in_background is disabled for this tool')
+         }
+-        // No pre-abort check here, unlike bash/pwsh: ToolRuntime re-reads the
+-        // caller signal right before execute(), and this branch reaches
+-        // jobs.start synchronously from there. The shell tools await a
+-        // sandbox escalation approval before registering, which is the window
+-        // their check covers.
++        // Preparation may read a saved file; the abort check above precedes
++        // synchronous job registration and transfer to the job's ownership.
+         return startBackgroundRun(ctx, args, parent, exec.parent === undefined, {
+           recorder,
+           mirror,
+@@ -434,6 +476,7 @@ export function apply(ctx: Context, config: Config): void {
+         script: args.script,
+         meta: args.meta,
+         ...args.args !== undefined ? { args: args.args } : {},
++        ...args.resumeFromRunId !== undefined ? { resumeFromRunId: args.resumeFromRunId } : {},
+         parent,
+         signal: exec.signal,
+       })
+@@ -454,11 +497,11 @@ export function apply(ctx: Context, config: Config): void {
+         if (error !== undefined) {
+           // Map a non-clean finish to an isError result (the registry turns a
+           // throw into an isError). Report the reason, not partial output.
+-          throw new Error(error)
++          throw new Error(error + '\n' + locationText(run))
+         }
+         return {
+           kind: 'foreground' as const,
+-          runId: run.id,
++          ...details(run),
+           agentsStarted: result.agentsStarted,
+           result: result.value as JsonValue,
+         }
 diff --git a/packages/workflow/workflow-ptc/src/guest-types.ts b/packages/workflow/workflow-ptc/src/guest-types.ts
+index 42769a270b..8b9d42b783 100644
 --- a/packages/workflow/workflow-ptc/src/guest-types.ts
 +++ b/packages/workflow/workflow-ptc/src/guest-types.ts
-@@ -56,4 +56,5 @@
+@@ -56,4 +56,5 @@ export interface WorkflowGuestHost {
     * @returns Null after the host accepts every event.
     */
    progress(events: WorkflowProgress[]): Promise<null>
 +  loadWorkflow(reference: string | { scriptPath: string }): Promise<{ meta: import('@deepseek-ai/dsh-workflow').WorkflowMeta; body: string }>
  }
 diff --git a/packages/workflow/workflow-ptc/src/guest.ts b/packages/workflow/workflow-ptc/src/guest.ts
+index be50e88e3b..3906ab9354 100644
 --- a/packages/workflow/workflow-ptc/src/guest.ts
 +++ b/packages/workflow/workflow-ptc/src/guest.ts
-@@ -47,6 +47,7 @@
+@@ -47,6 +47,7 @@ export async function runWorkflowGuest(host: WorkflowGuestHost): Promise<Workflo
      agentEnd: (info) => { send({ type: 'agent-end', info }) },
    }
    const children: ChildPort = {
@@ -863,7 +1686,7 @@ diff --git a/packages/workflow/workflow-ptc/src/guest.ts b/packages/workflow/wor
      async startAgent(request) {
        const { callId, childId } = await host.startChild(request)
        const result = host.childResult({ callId })
-@@ -63,7 +64,8 @@
+@@ -63,7 +64,8 @@ export async function runWorkflowGuest(host: WorkflowGuestHost): Promise<Workflo
        }
      },
    }
@@ -874,6 +1697,7 @@ diff --git a/packages/workflow/workflow-ptc/src/guest.ts b/packages/workflow/wor
    await drain()
    return progressError === undefined ? result : {
 diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/workflow-ptc/src/host.ts
+index 843d48f219..52748dbd57 100644
 --- a/packages/workflow/workflow-ptc/src/host.ts
 +++ b/packages/workflow/workflow-ptc/src/host.ts
 @@ -1,5 +1,6 @@
@@ -883,7 +1707,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
  import type { Agent } from '@deepseek-ai/dsh-agent'
  import type { PtcBindingFunction, PtcJsonValue, PtcRuntime } from '@deepseek-ai/dsh-ptc-runtime'
  import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
-@@ -15,11 +16,32 @@
+@@ -15,11 +16,32 @@ import type { WorkflowProgress } from './guest-types.ts'
  import { renderThrown } from './realm.ts'
  import type { ExecutionObserver } from './runtime.ts'
  import type { ChildStartRequest, WorkerInit } from './types.ts'
@@ -916,7 +1740,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
  }
  
  const GUEST_URL = `data:text/javascript,${encodeURIComponent(WORKFLOW_GUEST_SOURCE)}`
-@@ -46,6 +68,16 @@
+@@ -46,6 +68,16 @@ function childRequest(value: unknown): ChildStartRequest {
    const prompt = text(request.prompt, 'prompt')
    const provider = request.provider === undefined ? undefined : text(request.provider, 'provider')
    const model = request.model === undefined ? undefined : text(request.model, 'model')
@@ -933,7 +1757,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
    let schema: ObjectJsonSchema | undefined
    if (request.schema !== undefined) {
      const candidate = object(request.schema)
-@@ -53,10 +85,13 @@
+@@ -53,10 +85,13 @@ function childRequest(value: unknown): ChildStartRequest {
      schema = candidate
    }
    return {
@@ -947,7 +1771,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
    }
  }
  
-@@ -111,6 +146,8 @@
+@@ -111,6 +146,8 @@ function workflowResult(value: unknown): WorkflowResult {
   */
  export class PtcWorkflowRun implements WorkflowRun {
    readonly result: Promise<WorkflowResult>
@@ -956,7 +1780,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
    private readonly controller = new AbortController()
    private readonly children = new Map<number, ChildRecord>()
    private readonly pending = new Set<Promise<unknown>>()
-@@ -120,6 +157,13 @@
+@@ -120,6 +157,13 @@ export class PtcWorkflowRun implements WorkflowRun {
    private cancelReason: string | undefined
    private disposed: Promise<void> | undefined
    private readonly externalAbort: () => void
@@ -970,7 +1794,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
  
    constructor(
      private readonly ctx: Context,
-@@ -133,7 +177,10 @@
+@@ -133,7 +177,10 @@ export class PtcWorkflowRun implements WorkflowRun {
      private readonly policy: SandboxExecutionPolicy,
      private readonly observer: ExecutionObserver,
      private readonly signal?: AbortSignal,
@@ -981,7 +1805,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
      this.externalAbort = () => { this.cancel('workflow signal aborted') }
      if (signal?.aborted) this.externalAbort()
      else signal?.addEventListener('abort', this.externalAbort, { once: true })
-@@ -175,6 +222,12 @@
+@@ -175,6 +222,12 @@ export class PtcWorkflowRun implements WorkflowRun {
    private bindings(): Record<string, PtcBindingFunction> {
      return {
        begin: () => { this.requireActive(); return Promise.resolve(json(this.init)) },
@@ -994,7 +1818,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
        startChild: value => this.track(this.startChild(childRequest(value))),
        childResult: value => this.track(this.childResult(this.child(value))),
        disposeChild: async (value) => { await this.disposeChild(this.child(value)); return null },
-@@ -196,16 +249,50 @@
+@@ -196,16 +249,50 @@ export class PtcWorkflowRun implements WorkflowRun {
  
    private async startChild(request: ChildStartRequest): Promise<PtcJsonValue> {
      this.requireActive()
@@ -1046,7 +1870,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
          },
        },
      })
-@@ -219,7 +306,12 @@
+@@ -219,7 +306,12 @@ export class PtcWorkflowRun implements WorkflowRun {
      return { callId, childId: run.id }
    }
  
@@ -1060,7 +1884,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
      const signal = this.controller.signal
      signal.throwIfAborted()
      const aborted = Promise.withResolvers<never>()
-@@ -227,18 +319,27 @@
+@@ -227,18 +319,27 @@ export class PtcWorkflowRun implements WorkflowRun {
      signal.addEventListener('abort', onAbort, { once: true })
      try {
        const result = await Promise.race([record.run.result, aborted.promise])
@@ -1092,7 +1916,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
        this.ctx.logger.warn(`workflow-ptc: child dispose failed: ${renderThrown(error)}`)
      }).finally(() => {
        this.children.delete(record.callId)
-@@ -273,6 +374,16 @@
+@@ -273,6 +374,16 @@ export class PtcWorkflowRun implements WorkflowRun {
    private async drive(): Promise<WorkflowResult> {
      let result: WorkflowResult
      try {
@@ -1109,7 +1933,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
        const outcome = await this.runtime.run(this.runtime.resolve({
          program: PROGRAM,
          bindings: [{ global: 'workflowHost', functions: this.bindings() }],
-@@ -286,6 +397,7 @@
+@@ -286,6 +397,7 @@ export class PtcWorkflowRun implements WorkflowRun {
        else if (outcome.error !== undefined) result = { value: null, stopReason: 'error', error: `workflow execution failed (${outcome.error.kind}): ${outcome.error.message}`, agentsStarted: this.started }
        else result = workflowResult(outcome.value)
      } catch (error: unknown) {
@@ -1117,7 +1941,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
        this.terminal = true
        result = this.cancelReason === undefined
          ? { value: null, stopReason: 'error', error: renderThrown(error), agentsStarted: this.started }
-@@ -301,6 +413,12 @@
+@@ -301,6 +413,12 @@ export class PtcWorkflowRun implements WorkflowRun {
        this.children.clear()
        for (const info of this.liveAgents.values()) this.endAgent({ ...info, outcome: 'cancelled' })
      }
@@ -1131,6 +1955,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
    }
  }
 diff --git a/packages/workflow/workflow-ptc/src/index.ts b/packages/workflow/workflow-ptc/src/index.ts
+index e70eb8b0e9..f6842209bd 100644
 --- a/packages/workflow/workflow-ptc/src/index.ts
 +++ b/packages/workflow/workflow-ptc/src/index.ts
 @@ -5,19 +5,28 @@
@@ -1164,7 +1989,7 @@ diff --git a/packages/workflow/workflow-ptc/src/index.ts b/packages/workflow/wor
  export { materializeFromRealm, MaterializeError } from './realm.ts'
  export type {
    ChildHandle,
-@@ -30,6 +39,7 @@
+@@ -30,6 +39,7 @@ export type {
  
  /** Plugin config (all optional — `static Config` supplies the defaults). */
  export interface Config {
@@ -1172,7 +1997,7 @@ diff --git a/packages/workflow/workflow-ptc/src/index.ts b/packages/workflow/wor
    /** The `ctx.subagents` provider children run on (default `spawn`). */
    provider?: string
    /** Concurrent `agent()` ceiling; `0` (the default) auto-resolves to `min(16, max(1, cores - 2))`. */
-@@ -103,6 +113,7 @@
+@@ -103,6 +113,7 @@ class PtcWorkflowEngine extends WorkflowEngine {
    static inject = ['subagents', 'ptcRuntime', 'sandboxPolicy']
  
    static Config: z<Config> = z.object({
@@ -1180,12 +2005,10 @@ diff --git a/packages/workflow/workflow-ptc/src/index.ts b/packages/workflow/wor
      provider: z.string().default('spawn'),
      maxConcurrentAgents: z.natural().default(0),
      maxTotalAgents: z.natural().min(1).default(1000),
-@@ -118,6 +129,30 @@
-     // schemastery (static Config) has already filled the defaulted fields;
-     // the assertion records that resolution, not a hidden fallback.
+@@ -120,6 +131,30 @@ class PtcWorkflowEngine extends WorkflowEngine {
      this.config = config as ResolvedConfig
-+  }
-+
+   }
+ 
 +  /** Resolve saved scripts through the calling world's native filesystem. */
 +  async prepare(input: { script?: string; meta?: unknown; name?: string; scriptPath?: string }, parent: import('@deepseek-ai/dsh-agent').Agent, signal?: AbortSignal): Promise<{ script: string; meta: import('@deepseek-ai/dsh-workflow').WorkflowMeta }> {
 +    if (['script', 'name', 'scriptPath'].filter(key => (input as any)[key] !== undefined).length !== 1) throw new Error('Supply exactly one of script, name, or scriptPath')
@@ -1208,10 +2031,12 @@ diff --git a/packages/workflow/workflow-ptc/src/index.ts b/packages/workflow/wor
 +    } else path = reference.scriptPath
 +    const target = await fs.resolve(path, { cwd: parent.session.header.cwd, signal })
 +    return parseWorkflowSource(await fs.readText(target, signal))
-   }
- 
++  }
++
    /**
-@@ -131,8 +166,9 @@
+    * Validate and execute a workflow script in a sandboxed Node process. Throws
+    * {@link WorkflowError} synchronously (`META_INVALID` for a malformed meta
+@@ -131,8 +166,9 @@ class PtcWorkflowEngine extends WorkflowEngine {
     * @returns the live run (its `result` resolves when the script settles).
     */
    start(request: WorkflowStartRequest): WorkflowRun {
@@ -1223,7 +2048,7 @@ diff --git a/packages/workflow/workflow-ptc/src/index.ts b/packages/workflow/wor
      const subagentProvider = resolveSubagentProvider(this.ctx, this.config.provider, request.subagentProvider)
      const maxTotalAgents = resolveMaxTotalAgents(request.maxTotalAgents, this.config.maxTotalAgents)
      const id = WorkflowRunId(randomUUID())
-@@ -147,13 +183,14 @@
+@@ -147,13 +183,14 @@ class PtcWorkflowEngine extends WorkflowEngine {
      }
      const init: WorkerInit = {
        meta,
@@ -1239,7 +2064,7 @@ diff --git a/packages/workflow/workflow-ptc/src/index.ts b/packages/workflow/wor
      const run = new PtcWorkflowRun(
        runCtx,
        subagents,
-@@ -171,6 +208,14 @@
+@@ -171,6 +208,14 @@ class PtcWorkflowEngine extends WorkflowEngine {
          agentEnd: (agent) => { this.emitWorkflowEvent('workflow/agent-end', info, agent) },
        },
        request.signal,
@@ -1256,6 +2081,7 @@ diff --git a/packages/workflow/workflow-ptc/src/index.ts b/packages/workflow/wor
      this.emitWorkflowEvent('workflow/start', info)
 diff --git a/packages/workflow/workflow-ptc/src/journal.ts b/packages/workflow/workflow-ptc/src/journal.ts
 new file mode 100644
+index 0000000000..3dc4e4e59f
 --- /dev/null
 +++ b/packages/workflow/workflow-ptc/src/journal.ts
 @@ -0,0 +1,146 @@
@@ -1406,9 +2232,10 @@ new file mode 100644
 +  }
 +}
 diff --git a/packages/workflow/workflow-ptc/src/realm.ts b/packages/workflow/workflow-ptc/src/realm.ts
+index 68bc19fbcd..12c2ddaff8 100644
 --- a/packages/workflow/workflow-ptc/src/realm.ts
 +++ b/packages/workflow/workflow-ptc/src/realm.ts
-@@ -13,6 +13,15 @@
+@@ -13,6 +13,15 @@ export class MaterializeError extends Error {
    }
  }
  
@@ -1424,7 +2251,7 @@ diff --git a/packages/workflow/workflow-ptc/src/realm.ts b/packages/workflow/wor
  /**
   * Render a thrown value to failure text without ever throwing: prefer the
   * `stack` (host or realm — a realm error's `stack` is a plain string read),
-@@ -24,10 +33,14 @@
+@@ -24,10 +33,14 @@ export class MaterializeError extends Error {
  export function renderThrown(error: unknown): string {
    try {
      const stack = (error as { stack?: unknown } | null | undefined)?.stack
@@ -1443,9 +2270,10 @@ diff --git a/packages/workflow/workflow-ptc/src/realm.ts b/packages/workflow/wor
      // A throwing accessor/toString on the thrown value — rendering must be
      // total (drive()'s never-reject contract), so fall back to a fixed label.
 diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/workflow-ptc/src/runtime.ts
+index 71c153e586..1d2e5a4832 100644
 --- a/packages/workflow/workflow-ptc/src/runtime.ts
 +++ b/packages/workflow/workflow-ptc/src/runtime.ts
-@@ -30,9 +30,14 @@
+@@ -30,9 +30,14 @@ export interface ExecutionObserver {
  }
  
  /** The `agent()` options the script may pass; everything else rejects loud. */
@@ -1463,7 +2291,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
  
  /** Flatten a child's final output blocks to text (the non-schema `agent()` result). */
  function outputText(blocks: ContentBlock[]): string {
-@@ -55,9 +60,6 @@
+@@ -55,9 +60,6 @@ function defaultLabel(prompt: string): string {
   */
  export class WorkflowExecution {
    /** 1-based count of `agent()` calls started (the `agentsStarted` result field). */
@@ -1473,7 +2301,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
    private currentPhase: string | undefined
    private readonly context: vm.Context
    private readonly compiled: vm.Script
-@@ -69,6 +71,8 @@
+@@ -69,6 +71,8 @@ export class WorkflowExecution {
      private readonly limits: WorkerLimits,
      private readonly observer: ExecutionObserver,
      private readonly children: ChildPort,
@@ -1482,7 +2310,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
    ) {
      // The host parses this same wrapper before publishing a run.
      try {
-@@ -81,6 +85,7 @@
+@@ -81,6 +85,7 @@ export class WorkflowExecution {
      }
  
      this.context = vm.createContext({}, { name: `workflow:${meta.name}` })
@@ -1490,7 +2318,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
  
      const globals: Record<string, unknown> = {
        agent: (prompt: unknown, opts?: unknown) => this.contain(this.agent(prompt, opts)),
-@@ -88,6 +93,12 @@
+@@ -88,6 +93,12 @@ export class WorkflowExecution {
        pipeline: (items: unknown, ...stages: unknown[]) => this.contain(this.pipeline(items, stages)),
        phase: (title: unknown) => { this.phase(title) },
        log: (message: unknown) => { this.log(message) },
@@ -1503,7 +2331,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
        // PTC has already copied these inputs through its JSON channel.
        args,
      }
-@@ -96,6 +107,20 @@
+@@ -96,6 +107,20 @@ export class WorkflowExecution {
        // a script overwriting its own hooks only sabotages itself.
        ;(this.context as Record<string, unknown>)[key] = typeof value === 'function' ? Object.freeze(value) : value
      }
@@ -1524,7 +2352,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
    }
  
    /**
-@@ -107,9 +132,9 @@
+@@ -107,9 +132,9 @@ export class WorkflowExecution {
        const scriptPromise = this.compiled.runInContext(this.context, { timeout: this.limits.syncTimeoutMs }) as Promise<unknown>
        const raw: unknown = await this.contain(Promise.resolve(scriptPromise))
        const value = raw === undefined ? null : this.materializeResult(raw)
@@ -1536,7 +2364,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
      }
    }
  
-@@ -141,21 +166,21 @@
+@@ -141,21 +166,21 @@ export class WorkflowExecution {
  
    /** Acquire one concurrency slot in FIFO order. */
    private acquireSlot(): Promise<void> {
@@ -1564,7 +2392,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
      if (next) next()
    }
  
-@@ -165,14 +190,14 @@
+@@ -165,14 +190,14 @@ export class WorkflowExecution {
        throw new WorkflowError('agent() requires a non-empty prompt string', 'INVALID_ARGUMENT')
      }
      const opts = this.readAgentOptions(rawOpts)
@@ -1582,7 +2410,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
      const label = opts.label ?? defaultLabel(rawPrompt)
      const phase = opts.phase ?? this.currentPhase
  
-@@ -181,10 +206,14 @@
+@@ -181,10 +206,14 @@ export class WorkflowExecution {
        let run: ChildHandle
        try {
          run = await this.children.startAgent({
@@ -1597,7 +2425,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
          })
        } catch (error: unknown) {
          throw new WorkflowError(`agent() could not start a child: ${renderThrown(error)}`, 'AGENT_START', { cause: error })
-@@ -195,6 +224,8 @@
+@@ -195,6 +224,8 @@ export class WorkflowExecution {
          let result
          try {
            result = await run.result
@@ -1606,7 +2434,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
          } catch (error: unknown) {
            // A rejected child result is an INFRASTRUCTURE fault relayed by the
            // host — distinct from a child that failed and resolved. Pair the
-@@ -234,6 +265,9 @@
+@@ -234,6 +265,9 @@ export class WorkflowExecution {
      phase?: string
      provider?: string
      model?: string
@@ -1616,7 +2444,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
      schema?: ObjectJsonSchema
    } {
      if (rawOpts === undefined) return {}
-@@ -251,16 +285,17 @@
+@@ -251,16 +285,17 @@ export class WorkflowExecution {
      const record = opts as Record<string, unknown>
      for (const key of Object.keys(record)) {
        if (SUPPORTED_AGENT_OPTIONS.has(key)) continue
@@ -1624,10 +2452,9 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
 -        throw new WorkflowError(`agent() option "${key}" is deferred and not supported by this engine (supported: label, phase, schema, provider, model)`, 'UNSUPPORTED_OPTION')
 -      }
 -      throw new WorkflowError(`agent() option "${key}" is not recognized (supported: label, phase, schema, provider, model)`, 'UNSUPPORTED_OPTION')
--    }
--    for (const key of ['label', 'phase', 'provider', 'model'] as const) {
 +      throw new WorkflowError(`agent() option "${key}" is not recognized (supported: ${[...SUPPORTED_AGENT_OPTIONS].join(', ')})`, 'UNSUPPORTED_OPTION')
-+    }
+     }
+-    for (const key of ['label', 'phase', 'provider', 'model'] as const) {
 +    for (const key of ['label', 'phase', 'provider', 'model', 'effort', 'agentType'] as const) {
        if (record[key] !== undefined && typeof record[key] !== 'string') {
          throw new WorkflowError(`agent() option "${key}" must be a string`, 'INVALID_ARGUMENT')
@@ -1640,7 +2467,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
      let schema: ObjectJsonSchema | undefined
      if (record.schema !== undefined) {
        try {
-@@ -277,8 +312,29 @@
+@@ -277,10 +312,31 @@ export class WorkflowExecution {
        ...record.phase !== undefined ? { phase: record.phase as string } : {},
        ...record.provider !== undefined ? { provider: record.provider as string } : {},
        ...record.model !== undefined ? { model: record.model as string } : {},
@@ -1649,8 +2476,8 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
 +      ...record.agentType !== undefined ? { agentType: record.agentType as string } : {},
        ...schema !== undefined ? { schema } : {},
      }
-+  }
-+
+   }
+ 
 +  private async workflow(rawReference: unknown, rawArgs: unknown): Promise<unknown> {
 +    if (this.depth !== 0) throw new WorkflowError('workflow() nesting is limited to one level', 'INVALID_ARGUMENT')
 +    const ref = materializeFromRealm(rawReference, 'workflow reference')
@@ -1667,11 +2494,14 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
 +    const result = await new WorkflowExecution(source.meta, source.body, input, this.limits, observer, this.children, this.shared, 1).drive()
 +    if (result.stopReason !== 'completed') throw new WorkflowError(result.error ?? 'Nested workflow failed', 'AGENT_RESULT')
 +    return result.value
-   }
- 
++  }
++
    /** The `parallel(thunks)` hook: each thunk caught → `null`; fatal errors propagate. */
+   private async parallel(rawThunks: unknown): Promise<unknown[]> {
+     if (!Array.isArray(rawThunks)) {
 diff --git a/packages/workflow/workflow-ptc/src/source.ts b/packages/workflow/workflow-ptc/src/source.ts
 new file mode 100644
+index 0000000000..e5d146e7c9
 --- /dev/null
 +++ b/packages/workflow/workflow-ptc/src/source.ts
 @@ -0,0 +1,39 @@
@@ -1716,6 +2546,7 @@ new file mode 100644
 +}
 diff --git a/packages/workflow/workflow-ptc/src/spawn.ts b/packages/workflow/workflow-ptc/src/spawn.ts
 new file mode 100644
+index 0000000000..8379be558f
 --- /dev/null
 +++ b/packages/workflow/workflow-ptc/src/spawn.ts
 @@ -0,0 +1,114 @@
@@ -1834,9 +2665,10 @@ new file mode 100644
 +  })
 +}
 diff --git a/packages/workflow/workflow-ptc/src/types.ts b/packages/workflow/workflow-ptc/src/types.ts
+index c8e3e39313..b75b58f727 100644
 --- a/packages/workflow/workflow-ptc/src/types.ts
 +++ b/packages/workflow/workflow-ptc/src/types.ts
-@@ -32,10 +32,13 @@
+@@ -32,10 +32,13 @@ export interface WorkerInit {
    args?: unknown
    /** The guest helper limits. */
    limits: WorkerLimits
@@ -1850,7 +2682,7 @@ diff --git a/packages/workflow/workflow-ptc/src/types.ts b/packages/workflow/wor
    /** The child's prompt text. */
    prompt: string
    /** The structured-output schema, if the call passed one (already subset-checked). */
-@@ -44,6 +47,9 @@
+@@ -44,6 +47,9 @@ export interface ChildStartRequest {
    provider?: string
    /** The per-child model override, if the call passed one. */
    model?: string
@@ -1860,7 +2692,7 @@ diff --git a/packages/workflow/workflow-ptc/src/types.ts b/packages/workflow/wor
  }
  
  /**
-@@ -58,6 +64,11 @@
+@@ -58,6 +64,11 @@ export interface ChildResult {
    structured?: unknown
    /** Why the child run ended (`'completed'` is the only value the runtime branches on). */
    stopReason: string
@@ -1872,7 +2704,7 @@ diff --git a/packages/workflow/workflow-ptc/src/types.ts b/packages/workflow/wor
  }
  
  /**
-@@ -87,4 +98,5 @@
+@@ -87,4 +98,5 @@ export interface ChildPort {
     *   provider's asynchronous start fails.
     */
    startAgent(request: ChildStartRequest): Promise<ChildHandle>
@@ -1880,6 +2712,7 @@ diff --git a/packages/workflow/workflow-ptc/src/types.ts b/packages/workflow/wor
  }
 diff --git a/packages/workflow/workflow-ptc/src/worktree.ts b/packages/workflow/workflow-ptc/src/worktree.ts
 new file mode 100644
+index 0000000000..276104d14e
 --- /dev/null
 +++ b/packages/workflow/workflow-ptc/src/worktree.ts
 @@ -0,0 +1,106 @@
@@ -1989,339 +2822,3 @@ new file mode 100644
 +    return this.settlement
 +  }
 +}
-diff --git a/packages/workflow/tool-workflow/src/index.ts b/packages/workflow/tool-workflow/src/index.ts
---- a/packages/workflow/tool-workflow/src/index.ts
-+++ b/packages/workflow/tool-workflow/src/index.ts
-@@ -25,6 +25,8 @@
-   WorkflowResult, WorkflowRun, WorkflowRunId, WorkflowStopReason,
- } from '@deepseek-ai/dsh-workflow'
- import { createWorkflowRecordMirror } from './record.ts'
-+import type { PtcWorkflowRun } from '../../workflow-ptc/src/host.ts'
-+import type PtcWorkflowEngine from '../../workflow-ptc/src/index.ts'
- import type { WorkflowRecordMirror } from './record.ts'
- import type {
-   ToolWorkflowAgentEndData, ToolWorkflowAgentStartData,
-@@ -155,15 +157,26 @@
-  * their exact semantics, and the supported schema subset. Parameter-level
-  * rules live in the parameter descriptions.
-  */
--const DESCRIPTION = `Run a JavaScript workflow script that orchestrates subagents at scale. Use this for work that fans out across many independent pieces — an audit over many files, a migration, multi-angle research, adversarial verification of findings — where you write the orchestration as a script instead of delegating turn by turn.
--
--Script-body hooks:
--- \`agent(prompt, opts?): Promise<any>\` — run one subagent to completion. Without \`opts.schema\` it resolves to the child's final text; with \`opts.schema\` (an object-rooted JSON Schema using ONLY type/properties/required/additionalProperties/items/enum/const/oneOf) it resolves to the validated object. Resolves \`null\` when the child fails (filter with \`.filter(Boolean)\`). Other opts: \`label\` (display), \`phase\` (progress group), and independent \`provider\`/\`model\` LLM target overrides.
--- \`pipeline(items, ...stages): Promise<any[]>\` — run each item through the stages independently with NO barrier between stages (prefer this for multi-stage work). Each stage receives \`(prev, item, index)\`. A stage throw drops that ITEM to \`null\` and skips its remaining stages.
--- \`parallel(thunks): Promise<any[]>\` — run zero-argument functions concurrently and await ALL of them (a barrier; use only when a stage genuinely needs every prior result together). A throwing thunk resolves to \`null\`.
--- \`phase(title)\` — start a progress phase; \`log(message)\` — narrate progress; \`args\` — the tool call's \`args\` input, verbatim.
--
--Misused hooks (bad arguments, unknown options, unsupported schemas, tripped caps) end the whole script instead of producing \`null\`. The script has no filesystem, network, timer, or Node.js APIs; the agents do the work.`
-+export const DESCRIPTION = `Run a JavaScript workflow that coordinates subagents when the user has authorized multi-agent orchestration. An active Ultracode reminder supplies standing authorization for substantive tasks; when Ultracode is off, the ordinary opt-in rule applies.
-+
-+Pass an inline plain JavaScript script beginning with \`export const meta = {...}\`. The metadata must be a pure literal with \`name\` and \`description\`, plus optional \`whenToUse\` and \`phases\`; no calls, variables, spreads, or interpolation. A separate \`meta\` object with a script body is also accepted. Top-level \`await\` is supported; finish with a JSON-serializable \`return\` value. Pass \`args\` as actual JSON values, including arrays, rather than JSON-encoded strings.
-+
-+Each invocation saves its script and returns \`runId\`, \`scriptPath\`, and \`transcriptDir\`. Edit that script and invoke with \`scriptPath\`, or use \`name\` to load \`.omd/workflows/<name>.js\` in the workspace. Supply exactly one of \`script\`, \`scriptPath\`, or \`name\`. Foreground calls return when the workflow finishes. With \`run_in_background: true\`, the tool returns a native job id; collect the result with \`job_output\` and cancel with \`job_kill\`.
-+
-+- \`agent(prompt, opts?)\`: run a child to completion. Without \`schema\`, returns final text; with a supported object-root schema, returns the validated object. A child failure returns \`null\`. Other options are \`label\`, \`phase\`, \`provider\`, \`model\`, \`effort\`, \`isolation\`, and \`agentType\`. Here \`provider\` and \`model\` are independent overrides; either may be supplied alone. Omit model and effort overrides to inherit the parent route; a changed model resolves its own default effort unless one is supplied. Effort values must be supported by the selected model. \`agentType\` selects a registered native agent preset id; \`general-purpose\` inherits the parent's preset. \`isolation: 'worktree'\` creates a separate Git checkout at HEAD. Use it when concurrent agents would otherwise conflict while editing files. Parent uncommitted changes are not copied. Unchanged checkouts are removed after the child stops; changes, new files, and commits are retained and their paths reported in \`worktrees\`. Confined modes keep their filesystem restrictions.
-+- \`pipeline(items, ...stages)\`: process each item across stages without a cross-item barrier. Each stage receives \`(prev, item, index)\`. An ordinary stage exception drops that item to \`null\` and skips its remaining stages.
-+- \`parallel(thunks)\`: wait for all independent functions at a barrier. A throwing function returns \`null\`.
-+- \`phase(title)\` and \`log(message)\`: report progress. \`args\` holds the tool's input value.
-+- \`workflow(nameOrRef, args?)\`: run a saved workflow by name or \`{scriptPath}\` as a sub-step. The child shares concurrency, total-agent limits, cancellation, and the token pool. Nesting is limited to one level.
-+- \`budget.total\`, \`budget.spent()\`, and \`budget.remaining()\`: the initiating turn's shared output-token target and reported usage across the main loop and delegated work. A human message ending with \`+500k\` sets a 500,000-output-token target; without a target, \`total\` is null and \`remaining()\` is Infinity. Once the target is reached, no further live agents start. Already-running calls may finish above the target. If a model call does not report usable usage, a set target blocks further dispatch instead of treating that call as free. Background workflows retain their initiating pool when a new human turn begins.
-+
-+Only the documented JSON Schema subset is supported: type, properties, required, additionalProperties, items, enum, const, and oneOf. Invalid hooks, schemas, or caps fail the script rather than becoming per-item null results. Concurrency and agent-count limits still apply.
-+
-+This engine runs the orchestration program in a fresh Node PTC process under the calling session's file policy. Its documented API is the helper set above; it is not a security boundary. The program-visible environment is empty, and the file policy does not restrict network access. The engine has no overall elapsed deadline, but its initial synchronous slice, process limits, caller cancellation, and enclosing tool deadlines still apply.
-+
-+Use the helpers to coordinate work performed by agents. Do not infer arbitrary Node API support from the underlying process. Scripts must be deterministic: \`Date.now()\`, \`Math.random()\`, and argumentless \`new Date()\` are unavailable; pass time or randomness through \`args\`.
-+
-+To resume after cancellation, failure, or script edits, pass \`resumeFromRunId\` with the saved script path. Only the longest unchanged completed prefix of agent calls, in their start order, returns cached results; the first changed, new, failed, or unfinished call and everything after it run live. A run cannot be resumed while it or another resume still owns its children. Read \`journal.jsonl\` under \`transcriptDir\` to inspect actual results, including empty strings and nulls. Inspect failures and coverage before reporting a complete result.`
- 
- type WorkflowCallArgs = {
-   script: string
-@@ -173,21 +186,37 @@
-     whenToUse?: string
-     phases?: { title: string; detail?: string; provider?: string; model?: string }[]
-   }
--  args?: Record<string, unknown>
-+  args?: JsonValue
-+  name?: string
-+  scriptPath?: string
-+  resumeFromRunId?: string
-   run_in_background?: boolean
- }
- 
-+type WorkflowInput = Omit<WorkflowCallArgs, 'script' | 'meta'> & Partial<Pick<WorkflowCallArgs, 'script' | 'meta'>>
-+
-+function details(run: WorkflowRun) {
-+  const extended = run as PtcWorkflowRun
-+  return { name: run.meta.name, runId: run.id, scriptPath: extended.scriptPath!, transcriptDir: extended.transcriptDir!, worktrees: extended.worktrees }
-+}
-+
-+function locationText(run: WorkflowRun): string {
-+  const value = details(run)
-+  return `Run ID: ${value.runId}\nScript: ${value.scriptPath}\nJournal: ${value.transcriptDir}/journal.jsonl`
-+    + (value.worktrees.length ? `\nWorktrees: ${JSON.stringify(value.worktrees)}` : '')
-+}
-+
- /** The pending-state card: a generic card titled by the workflow's meta name. */
--function presentWorkflowCall(args: WorkflowCallArgs): ToolCallView {
-+function presentWorkflowCall(args: WorkflowInput): ToolCallView {
-   return {
-     card: 'generic',
--    title: `workflow: ${args.meta.name}`,
--    rawInput: args.script,
-+    title: `workflow: ${args.meta?.name ?? args.name ?? args.scriptPath ?? 'script'}`,
-+    rawInput: args.script ?? args.scriptPath ?? args.name ?? '',
-   }
- }
- 
- /** The completed-state card: keep the pending title; render the result content as-is. */
--function presentWorkflowResult(args: WorkflowCallArgs, result: { content: ContentBlock[]; isError: boolean }): ToolResultView {
-+function presentWorkflowResult(args: WorkflowInput, result: { content: ContentBlock[]; isError: boolean }): ToolResultView {
-   void args
-   void result
-   return { card: 'generic' }
-@@ -216,18 +245,18 @@
-  * cancel reason it forwarded is the same string); an errored run fails with
-  * the script's failure message.
-  */
--function jobOutcomeOf(result: WorkflowResult, name: string, maxChars: number): JobOutcome {
-+function jobOutcomeOf(result: WorkflowResult, run: WorkflowRun, maxChars: number): JobOutcome {
-   switch (result.stopReason) {
-     case 'completed':
-       return {
-         status: 'completed',
-         detail: `${result.agentsStarted} agent${result.agentsStarted === 1 ? '' : 's'}`,
--        result: renderResult(name, result.agentsStarted, result.value as JsonValue, maxChars),
-+        result: renderResult(run.meta.name, result.agentsStarted, result.value as JsonValue, maxChars) + '\n' + locationText(run),
-       }
-     case 'cancelled':
--      return { status: 'killed' }
-+      return { status: 'killed', detail: locationText(run) }
-     case 'error':
--      return { status: 'failed', detail: result.error ?? 'unknown error' }
-+      return { status: 'failed', detail: (result.error ?? 'unknown error') + '\n' + locationText(run) }
-     /* v8 ignore start -- defensive: WorkflowStopReason is a closed union, exhaustive by construction; a future variant fails here loudly */
-     default:
-       return { status: 'failed', detail: `workflow run ended abnormally (${String(result.stopReason satisfies never)})` }
-@@ -259,13 +288,13 @@
-  * @param deps - the tool's recorder/mirror taps and the render cap.
-  * @returns the background result for the tool's output schema.
-  */
--function startBackgroundRun(
-+async function startBackgroundRun(
-   ctx: Context,
-   args: WorkflowCallArgs,
-   parent: Agent,
-   recordsRun: boolean,
-   deps: { recorder: WorkflowRecorder; mirror: WorkflowRecordMirror; maxResultChars: number },
--): { kind: 'background'; jobId: JobId; runId: WorkflowRunId } {
-+): Promise<{ kind: 'background'; jobId: JobId } & ReturnType<typeof details>> {
-   const jobs = ctx.get('jobs')
-   if (jobs === undefined) {
-     throw new Error('background jobs unavailable: load @deepseek-ai/dsh-jobs and @deepseek-ai/dsh-tool-jobs')
-@@ -283,6 +312,7 @@
-         script: args.script,
-         meta: args.meta,
-         ...args.args !== undefined ? { args: args.args } : {},
-+        ...args.resumeFromRunId !== undefined ? { resumeFromRunId: args.resumeFromRunId } : {},
-         parent,
-       })
-       deps.mirror.start(run.id, job)
-@@ -301,7 +331,7 @@
-           deps.recorder.finish(run.id, result.stopReason)
-           deps.recorder.abandon(run.id)
-         }
--        return jobOutcomeOf(result, args.meta.name, deps.maxResultChars)
-+        return jobOutcomeOf(result, run, deps.maxResultChars)
-       })
-       return {
-         cancel: (reason?: string) => { run.cancel(reason ?? 'background workflow job killed') },
-@@ -309,7 +339,9 @@
-       }
-     },
-   })
--  return { kind: 'background' as const, jobId, runId: run.id }
-+  try { await (run as PtcWorkflowRun).ready }
-+  catch (error) { throw new Error(`${String(error)}\n${locationText(run)}`, { cause: error }) }
-+  return { kind: 'background' as const, jobId, ...details(run) }
- }
- 
- export function apply(ctx: Context, config: Config): void {
-@@ -327,19 +359,17 @@
-   })
-   ctx.tools.register(defineTool({
-     name: toolName,
--    description: DESCRIPTION,
-+    description: enableRunInBackground ? DESCRIPTION : DESCRIPTION.replace(/ With `run_in_background: true`,[^\n]*?`job_kill`\./, ''),
-     parameters: {
-       script: {
-         type: 'string',
--        required: true,
--        description: 'The plain JavaScript body, not TypeScript and without an `export const meta` statement; top-level await is allowed. '
-+        description: 'An inline plain JavaScript workflow beginning with `export const meta = {...}`; top-level await is allowed. Alternatively pass a body with the separate meta field. '
-           + 'End with `return <value>`; the JSON-serializable value is this tool\'s result.',
-       },
-       meta: {
-         type: 'object',
-         additionalProperties: true,
--        required: true,
--        description: 'The workflow identity as plain JSON, not code.',
-+        description: 'Optional workflow identity for a script body without an inline meta declaration.',
-         properties: {
-           name: { type: 'string', required: true, description: 'Short kebab-case workflow name.' },
-           description: { type: 'string', required: true, description: 'One-line description of what the workflow does.' },
-@@ -361,10 +391,12 @@
-         },
-       },
-       args: {
--        type: 'object',
--        additionalProperties: true,
--        description: 'Optional JSON input exposed to the script as the `args` global (wrap a bare list as a field, e.g. {"files": [...]}).',
-+        type: 'json',
-+        description: 'Optional JSON input exposed verbatim as args. Pass arrays and objects as JSON values, not JSON-encoded strings.',
-       },
-+      name: { type: 'string', description: 'Saved workflow name from .omd/workflows/<name>.js. Supply exactly one of name, script, or scriptPath.' },
-+      scriptPath: { type: 'string', description: 'Path to a saved workflow script, including inline meta. Use the returned path to edit and rerun a workflow.' },
-+      resumeFromRunId: { type: 'string', description: 'Resume a previous run in this session: reuse its longest unchanged completed prefix, then run the remaining calls live.' },
-       ...enableRunInBackground ? {
-         run_in_background: {
-           type: 'boolean' as const,
-@@ -382,6 +414,10 @@
-               kind: { type: 'string', required: true, const: 'background' },
-               jobId: { type: 'string', required: true },
-               runId: { type: 'string', required: true },
-+              name: { type: 'string', required: true },
-+              scriptPath: { type: 'string', required: true },
-+              transcriptDir: { type: 'string', required: true },
-+              worktrees: { type: 'json', required: true },
-             },
-           },
-           {
-@@ -390,6 +426,10 @@
-             properties: {
-               kind: { type: 'string', required: true, const: 'foreground' },
-               runId: { type: 'string', required: true },
-+              name: { type: 'string', required: true },
-+              scriptPath: { type: 'string', required: true },
-+              transcriptDir: { type: 'string', required: true },
-+              worktrees: { type: 'json', required: true },
-               agentsStarted: { type: 'integer', required: true },
-               result: { type: 'json', required: true },
-             },
-@@ -398,12 +438,14 @@
-       },
-       render: (args, value) => [{
-         type: 'text',
--        text: value.kind === 'background'
--          ? `workflow "${args.meta.name}" started in the background as job ${value.jobId}. Its return value arrives with the completion notice; check on it with job_output, stop it with job_kill.`
--          : renderResult(args.meta.name, value.agentsStarted, value.result, maxResultChars),
-+        text: (value.kind === 'background'
-+          ? `workflow "${value.name}" started in the background as job ${value.jobId}. Its return value arrives with the completion notice; check on it with job_output, stop it with job_kill.`
-+          : renderResult(value.name, value.agentsStarted, value.result, maxResultChars))
-+          + `\nRun ID: ${value.runId}\nScript: ${value.scriptPath}\nJournal: ${value.transcriptDir}/journal.jsonl`
-+          + (Array.isArray(value.worktrees) && value.worktrees.length ? `\nWorktrees: ${JSON.stringify(value.worktrees)}` : ''),
-       }],
-     },
--    async execute(args, exec) {
-+    async execute(input, exec) {
-       const parent = exec.agent
-       if (!parent) {
-         // The loop sets `exec.agent` for every model-driven call; its absence
-@@ -411,15 +453,15 @@
-         // parent to attribute the children to. Fail loud rather than guess.
-         throw new Error('workflow tool requires a calling agent (exec.agent was undefined)')
-       }
-+      const prepared = await (ctx.workflowEngine as PtcWorkflowEngine).prepare(input, parent, exec.signal)
-+      exec.signal.throwIfAborted()
-+      const args = { ...input, ...prepared }
-       if (args.run_in_background === true) {
-         if (!enableRunInBackground) {
-           throw new Error('run_in_background is disabled for this tool')
-         }
--        // No pre-abort check here, unlike bash/pwsh: ToolRuntime re-reads the
--        // caller signal right before execute(), and this branch reaches
--        // jobs.start synchronously from there. The shell tools await a
--        // sandbox escalation approval before registering, which is the window
--        // their check covers.
-+        // Preparation may read a saved file; the abort check above precedes
-+        // synchronous job registration and transfer to the job's ownership.
-         return startBackgroundRun(ctx, args, parent, exec.parent === undefined, {
-           recorder,
-           mirror,
-@@ -434,6 +476,7 @@
-         script: args.script,
-         meta: args.meta,
-         ...args.args !== undefined ? { args: args.args } : {},
-+        ...args.resumeFromRunId !== undefined ? { resumeFromRunId: args.resumeFromRunId } : {},
-         parent,
-         signal: exec.signal,
-       })
-@@ -454,11 +497,11 @@
-         if (error !== undefined) {
-           // Map a non-clean finish to an isError result (the registry turns a
-           // throw into an isError). Report the reason, not partial output.
--          throw new Error(error)
-+          throw new Error(error + '\n' + locationText(run))
-         }
-         return {
-           kind: 'foreground' as const,
--          runId: run.id,
-+          ...details(run),
-           agentsStarted: result.agentsStarted,
-           result: result.value as JsonValue,
-         }
-diff --git a/packages/subagent/subagent-in-process-driver/src/index.ts b/packages/subagent/subagent-in-process-driver/src/index.ts
---- a/packages/subagent/subagent-in-process-driver/src/index.ts
-+++ b/packages/subagent/subagent-in-process-driver/src/index.ts
-@@ -70,6 +70,14 @@
- export interface InProcessRunOptions {
-   /** Completed-turn seed for fork, or undefined for a fresh spawn. */
-   readonly seed?: readonly SessionEvent[]
-+  /** Host-created isolated checkout; never a model-supplied arbitrary directory. */
-+  readonly cwd?: string
-+  /** A validated native agent preset id for this child's composition. */
-+  readonly agentPreset?: string
-+  /** Policy captured by a provider before asynchronous workspace preparation. */
-+  readonly delegatedPolicy?: ReturnType<typeof captureDelegatedPolicyOverrides>
-+  /** Attach caller-owned accounting before the child is published or starts work. */
-+  readonly setupChild?: (child: Agent) => void
- }
- 
- /** Error used when cancellation wins before the child publication boundary. */
-@@ -116,15 +124,21 @@
- 
-   // Capture before the first await: a later parent switch belongs to the
-   // parent's future.
--  const inherited = captureDelegatedPolicyOverrides(parent)
-+  const inherited = options.delegatedPolicy ?? captureDelegatedPolicyOverrides(parent)
- 
-   let structured: StructuredAttachment | undefined
--  const setup = (childCtx: Context, child: Agent): void => {
-+  const setup = async (childCtx: Context, child: Agent): Promise<void> => {
-+    options.setupChild?.(child)
-     appendDelegatedPolicyOverrides(child.session, inherited)
-     applyChildComposition(childCtx, parent, {
-       persona: request.persona,
-       toolFilter: request.toolFilter,
-     })
-+    if (options.agentPreset !== undefined) {
-+      const presets = childCtx.get('agentPresets')
-+      if (presets === undefined) throw new Error('Custom workflow agents require the native preset registry')
-+      await presets.recompose(childCtx, options.agentPreset)
-+    }
-     if (request.outputSchema !== undefined) {
-       structured = attachStructuredRuntime(childCtx, request.outputSchema)
-     }
-@@ -134,7 +148,11 @@
-   const handle = await parent.ctx.agents.create({
-     sessionId: childId,
-     parentAgent: parent,
--    meta: childSessionMeta(parent, childDepth, seed !== undefined),
-+    meta: {
-+      ...childSessionMeta(parent, childDepth, seed !== undefined),
-+      ...options.cwd === undefined ? {} : { cwd: options.cwd },
-+      ...options.agentPreset === undefined ? {} : { agentPreset: options.agentPreset },
-+    },
-     ...seed !== undefined ? { seed } : {},
-     ...seed === undefined ? {} : { inheritedEventCount: activationBoundary },
-     agentOptions: resolveChildAgentOptions(parent, request.agentOptions, childDepth),

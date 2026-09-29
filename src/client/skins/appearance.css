@@ -1,4 +1,5 @@
 /* Shared appearance controls are available in every layout. */
+.omd-appearance .omd-appearance-error[role=alert] { position: sticky; top: 0; z-index: 2; flex: none; margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--omd-danger, var(--dsw-alias-state-error-primary, #be555e)); border-radius: 8px; background: var(--omd-surface-solid, var(--dsw-alias-bg-layer-2)); color: var(--omd-danger, var(--dsw-alias-state-error-primary, #be555e)); overflow-wrap: anywhere; }
 .omd-personalization { min-width: 0; margin-block: 18px; }
 .omd-personalization h3 { margin: 18px 0 10px; font-size: 15px; }
 .omd-personalization .omd-appearance-row { gap: 12px; }

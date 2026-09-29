@@ -4,6 +4,7 @@ export function monitorSelection(states, id, range = 'session') {
   if (id) {
     const children = new Map();
     for (const state of states) {
+      if (state.origin !== 'subagent' && !(state.origin === undefined && state.metrics?.subagent?.calls > 0)) continue;
       const list = children.get(state.parentSession) || [];
       list.push(state.id); children.set(state.parentSession, list);
     }

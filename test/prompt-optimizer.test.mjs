@@ -5,11 +5,12 @@ import { createHash } from 'node:crypto';
 import { optimizationRequest, optimizerRoute, createPromptOptimizer, handlePromptOptimizerApi } from '../src/prompt-optimizer.mjs';
 import { DraftOptimizer, createOptimizerPreferences, captureDraft, encodeDraft, decodeDraft, requestOptimization } from '../src/client/prompt-optimizer-state.mjs';
 
-function fixture(request = async () => ({ text: '优化后的草稿' })) {
+function fixture(request = async () => ({ text: '优化后的草稿' }), { deferSends = false } = {}) {
   const listeners = new Set(), values = new Map();
   const preferences = createOptimizerPreferences({ getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) });
   let document, state = { draft: '', draftRev: 0, phase: 'plain', attachmentIds: ['file-1'], occurrences: [] };
-  const sent = [];
+  const sent = [], submissions = new Set(), submittedDrafts = new Map();
+  const emitSubmission = event => { for (const listener of submissions) listener(event); };
   function write(next) {
     document = structuredClone(next); let draft = '', occurrences = [];
     next.root.children.forEach((paragraph, i) => { if (i) draft += '\n'; for (const child of paragraph.children) {
@@ -20,11 +21,22 @@ function fixture(request = async () => ({ text: '优化后的草稿' })) {
   }
   const shell = { state: { getSnapshot: () => state, subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); } },
     editor: { getEditorState: () => ({ toJSON: () => structuredClone(document) }), parseEditorState: value => value, setEditorState: write },
-    submit(mode = 'queue') { sent.push({ mode, ...structuredClone(state) }); state = { ...state, attachmentIds: [] }; write(decodeDraft('', []).document); },
+    onSubmission(listener) { submissions.add(listener); return () => submissions.delete(listener); },
+    submit(mode = 'queue', source) {
+      const id = sent.length + 1;
+      submittedDrafts.set(id, captureDraft(shell));
+      emitSubmission({ kind: 'pending', id, draft: state.draft });
+      sent.push({ mode, source, ...structuredClone(state) }); state = { ...state, attachmentIds: [] }; write(decodeDraft('', []).document);
+      if (!deferSends) emitSubmission({ kind: 'success', id });
+    },
   };
   const type = text => write(decodeDraft(text, []).document); type('帮我优化提示词');
   const controller = new DraftOptimizer({ shell, sessionId: 'session-1', preferences, request }); controller.activate();
-  return { controller, preferences, shell, sent, type, write, state: () => state, change(patch) { state = { ...state, ...patch }; listeners.forEach(fn => fn()); } };
+  return { controller, preferences, shell, sent, type, write, state: () => state,
+    settle(id, kind, restored = false) {
+      if (restored) { const saved = submittedDrafts.get(id); state = { ...state, attachmentIds: saved.attachments }; write(saved.document); }
+      emitSubmission({ kind, id, restored });
+    }, change(patch) { state = { ...state, ...patch }; listeners.forEach(fn => fn()); } };
 }
 function deferred() { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; }
 
@@ -61,11 +73,138 @@ test('model selection follows pending user choice, previous route, then host def
 test('automatic submission uses basic once, retaining steer intent and attachments', async () => {
   const call = deferred(); const requests = [];
   const f = fixture(async (_id, request) => { requests.push(request); return call.promise; });
-  f.preferences.set({ automatic: true, mode: 'planning' }); f.shell.submit('steer'); f.shell.submit('steer');
+  f.preferences.set({ automatic: true, mode: 'planning' }); f.shell.submit('steer', 'enter'); f.shell.submit('steer', 'click');
   assert.equal(requests.length, 1); assert.equal(requests[0].mode, 'basic'); assert.equal(f.sent.length, 0);
   call.resolve({ text: '请帮我优化提示词' }); await new Promise(resolve => setImmediate(resolve));
-  assert.equal(f.sent.length, 1); assert.equal(f.sent[0].mode, 'steer'); assert.equal(f.sent[0].draft, '请帮我优化提示词'); assert.deepEqual(f.sent[0].attachmentIds, ['file-1']);
+  assert.equal(f.sent.length, 1); assert.equal(f.sent[0].mode, 'steer'); assert.equal(f.sent[0].source, 'enter'); assert.equal(f.sent[0].draft, '请帮我优化提示词'); assert.deepEqual(f.sent[0].attachmentIds, ['file-1']);
   assert.equal(f.controller.state.busy, ''); assert.equal(f.controller.history.length, 0);
+});
+
+test('navigation transfers version data and follow-up input without retaining a live controller', async () => {
+  const first = fixture(); await first.controller.run();
+  first.controller.publish({ instruction: '保留全部限制' });
+  const saved = first.controller.navigationState(); first.controller.dispose();
+  first.controller.history[0].draft = 'old scope mutated';
+  const second = fixture(); second.write(saved.snapshot.document);
+  second.controller.restoreNavigation(saved);
+  assert.deepEqual(second.controller.state.versions, ['原稿', '版本 1']);
+  assert.equal(second.controller.state.instruction, '保留全部限制');
+  second.controller.selectVersion(0); assert.equal(second.state().draft, '帮我优化提示词');
+  assert.equal(second.sent.length, 0);
+});
+
+test('navigation aborts optimization and cannot replay automatic sends or adopt late results', async () => {
+  const pending = deferred(), first = fixture(async () => pending.promise);
+  first.preferences.set({ automatic: true }); first.shell.submit();
+  const saved = first.controller.navigationState(); first.controller.dispose();
+  const second = fixture(); second.write(saved.snapshot.document); second.controller.restoreNavigation(saved);
+  pending.resolve({ text: '迟到结果不得发送' }); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(second.state().draft, '帮我优化提示词');
+  assert.equal(second.controller.state.busy, '');
+  assert.equal(first.sent.length + second.sent.length, 0);
+});
+
+test('a changed native draft exposes prior versions separately and does not restore successful sends', async () => {
+  const first = fixture(); await first.controller.run(); const saved = first.controller.navigationState(); first.controller.dispose();
+  const second = fixture(); second.type('新的手写内容'); second.controller.restoreNavigation(saved);
+  assert.equal(second.state().draft, '新的手写内容'); assert.equal(second.controller.history.length, 0);
+  assert.equal(second.controller.state.recoveries.length, 1);
+  const recovery = second.controller.recoveries.values().next().value;
+  assert.equal('recoveries' in recovery, false, 'archives never recursively contain the entire navigation cache');
+  second.controller.inspectRecovery(second.controller.state.recoveries[0].id);
+  assert.equal(second.state().draft, '新的手写内容');
+  second.controller.selectVersion(0); assert.equal(second.state().draft, '帮我优化提示词');
+  second.controller.publish({ instruction: '不要带入下一份草稿' }); second.shell.submit();
+  assert.equal(second.controller.state.instruction, '');
+  assert.equal(second.controller.navigationState(), null);
+});
+
+test('clearing a retained session draft while its view is inactive clears its stale version chain', async () => {
+  const f = fixture(); await f.controller.run(); f.controller.publish({ instruction: '旧要求' });
+  f.controller.deactivate(); f.type('');
+  assert.equal(f.controller.history.length, 0); assert.equal(f.controller.state.instruction, '');
+  assert.equal(f.controller.navigationState(), null); f.controller.dispose();
+});
+
+test('a new shell submission id cannot overwrite a recovered failure from an earlier scope', async () => {
+  const first = fixture(undefined, { deferSends: true });
+  await first.controller.run({ automatic: true }); first.type('第二份原始要求'); first.settle(1, 'error');
+  const saved = first.controller.navigationState(); first.controller.dispose();
+  const second = fixture(undefined, { deferSends: true }); second.write(saved.snapshot.document); second.controller.restoreNavigation(saved);
+  const priorId = second.controller.state.recoveries[0].id;
+  await second.controller.run({ automatic: true }); second.type('最新的手写内容'); second.settle(1, 'error');
+  assert.deepEqual(second.controller.state.recoveries.map(r => r.draft), ['帮我优化提示词', '第二份原始要求']);
+  assert.equal(new Set(second.controller.state.recoveries.map(r => r.id)).size, 2);
+  second.controller.inspectRecovery(priorId); second.controller.selectVersion(0);
+  assert.equal(second.state().draft, '帮我优化提示词');
+});
+
+test('sending a new draft clears an older candidate even when clearing had removed its version chain', async () => {
+  const pending = deferred(), f = fixture(async () => pending.promise);
+  const running = f.controller.run(); f.type(''); f.type('新的发送内容');
+  pending.resolve({ text: '旧草稿的候选结果' }); await running;
+  assert.equal(f.controller.history.length, 0); assert.ok(f.controller.state.candidate);
+  f.shell.submit();
+  assert.equal(f.sent[0].draft, '新的发送内容'); assert.equal(f.controller.state.candidate, null);
+  assert.equal(f.controller.navigationState(), null);
+});
+
+test('failed admission restores original versions even after the optimizer view is deactivated', async () => {
+  const f = fixture(undefined, { deferSends: true });
+  f.preferences.set({ automatic: true }); await f.controller.run({ automatic: true });
+  assert.equal(f.controller.sends.size, 1, 'optimistic clearing keeps a recovery copy until admission settles');
+  assert.equal(f.controller.history.length, 0);
+  f.controller.deactivate(); f.settle(1, 'error', true);
+  assert.equal(f.controller.sends.size, 0);
+  assert.deepEqual(f.controller.state.versions, ['原稿', '版本 1']);
+  f.controller.selectVersion(0);
+  assert.equal(f.state().draft, '帮我优化提示词');
+  assert.deepEqual(f.state().attachmentIds, ['file-1']);
+});
+
+test('late admission failure preserves the new draft and keeps both sets of original versions accessible', async () => {
+  const f = fixture(undefined, { deferSends: true });
+  await f.controller.run({ automatic: true });
+  f.type('另一份新要求'); await f.controller.run();
+  f.settle(1, 'error');
+  assert.equal(f.state().draft, '优化后的草稿');
+  assert.equal(f.controller.history[0].draft, '另一份新要求');
+  assert.equal(f.controller.state.recoveries.length, 1);
+  f.controller.inspectRecovery(f.controller.state.recoveries[0].id);
+  assert.equal(f.state().draft, '优化后的草稿', 'inspecting saved versions never replaces the current draft');
+  f.controller.selectVersion(0); assert.equal(f.state().draft, '帮我优化提示词');
+  f.controller.inspectRecovery(f.controller.state.recoveries[0].id);
+  f.controller.selectVersion(0); assert.equal(f.state().draft, '另一份新要求');
+});
+
+test('successful or disposed submissions cannot revive versions or clear a newer draft history', async () => {
+  for (const dispose of [false, true]) {
+    const f = fixture(undefined, { deferSends: true });
+    await f.controller.run({ automatic: true });
+    f.type('新的原稿'); await f.controller.run();
+    const history = f.controller.history;
+    if (dispose) f.controller.dispose();
+    f.settle(1, dispose ? 'error' : 'success');
+    assert.equal(f.controller.history, history);
+    assert.equal(f.controller.state.recoveries.length, 0);
+    assert.equal(f.controller.sends.size, 0);
+  }
+});
+
+test('native submission source survives bypasses and a retained wrapper after disposal', () => {
+  const f = fixture();
+  f.shell.submit('queue', 'click');
+  assert.equal(f.sent[0].source, 'click');
+  f.preferences.set({ automatic: true });
+  f.type('/compact-p'); f.shell.submit('steer', 'enter');
+  assert.equal(f.sent[1].source, 'enter');
+  f.type(''); f.change({ attachmentIds: ['image'] }); f.shell.submit('queue', 'click');
+  assert.equal(f.sent[2].source, 'click');
+  f.preferences.set({ enabled: false }); f.type('原文'); f.shell.submit('queue', 'enter');
+  assert.equal(f.sent[3].source, 'enter');
+  const wrapped = f.shell.submit;
+  f.controller.dispose(); f.type('保留的调用入口'); wrapped('steer', 'click');
+  assert.equal(f.sent[4].source, 'click');
 });
 
 test('late results never overwrite editing, edit-and-revert, changed attachments, cancellation or switched session', async () => {

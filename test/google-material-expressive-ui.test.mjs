@@ -66,7 +66,7 @@ test('Google Material: real layout, all settings, fonts, mobile navigation, work
     await page.getByRole('menu').waitFor(); await capture(mode + '-menu'); await page.keyboard.press('Escape');
     await page.getByRole('button', { name: '打开工作台', exact: true }).click();
     await page.locator('.tx-workbench').waitFor();
-    for (const section of ['任务', '上下文', '摘要', '电脑', '监控']) {
+    for (const section of ['任务', '上下文', '记忆', '电脑', '监控']) {
       await page.locator('.cx-navigation').getByRole('button', { name: section, exact: true }).click();
       await capture(mode + '-workbench-' + section);
     }
@@ -133,8 +133,11 @@ test('Google Material: real layout, all settings, fonts, mobile navigation, work
   await page.getByRole('button', { name: '恢复默认主题', exact: true }).click();
   assert.equal(await html.getAttribute('data-omd-layout'), null);
   assert.equal(await page.locator('.gm-shell,.gm-settings-toggle').count(), 0);
-  assert.equal(await page.locator('.pI_x6G_centerCol').evaluate(el => el.inert), false);
+  assert.equal(await dialog.isVisible(), true, 'resetting the theme keeps settings open');
+  assert.equal(await page.locator('.pI_x6G_centerCol').evaluate(el => el.inert), true, 'the settings modal keeps the background inert after a theme reset');
   assert.equal(await page.locator('.pI_x6G_frame').evaluate(el => el.style.getPropertyValue('--gm-host-right-width')), '');
+  await closeSettings(); await dialog.waitFor({ state: 'hidden' });
+  assert.equal(await page.locator('.pI_x6G_centerCol').evaluate(el => el.inert), false, 'closing settings and mobile navigation restores the conversation');
   const pack = await readFile(new URL('../src/client/skins/bundled/google-material-expressive.json', import.meta.url));
   assert.ok(pack.length < 1024 * 1024, 'self-contained pack fits the import limit');
   assert.deepEqual(f.errors, []);

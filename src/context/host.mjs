@@ -21,7 +21,7 @@ export function createHostAdapter(hub) {
     },
     pressure(session) {
       const { route, info } = routes.get(session) ?? { route: session.requestHeader?.()?.config };
-      const capacity = info?.contextWindow ?? session.requestContext?.()?.contextWindow;
+      const capacity = info?.context?.contextWindow ?? session.requestContext?.()?.contextWindow;
       if (!capacity) return null;
       const available = capacity - (route?.maxTokens ?? info?.defaultMaxTokens ?? 0);
       const headroom = Math.min(65536, Math.floor(Math.max(0, available) * 0.1));
@@ -29,7 +29,7 @@ export function createHostAdapter(hub) {
     },
     catalogBudget(session) {
       const { route, info } = routes.get(session) ?? { route: session.requestHeader?.()?.config };
-      const capacity = info?.contextWindow ?? session.requestContext?.()?.contextWindow;
+      const capacity = info?.context?.contextWindow ?? session.requestContext?.()?.contextWindow;
       if (!capacity) return 0;
       const available = capacity - (route?.maxTokens ?? info?.defaultMaxTokens ?? 0);
       const headroom = Math.min(65536, Math.floor(Math.max(0, available) * 0.1));
@@ -38,6 +38,13 @@ export function createHostAdapter(hub) {
     catalogCost(text) {
       // The native heuristic underprices CJK. A byte floor keeps publication conservative.
       return Math.max(hub.ctx.tokenMeter.estimateMessage(message(text, 'project-catalog')), Buffer.byteLength(text));
+    },
+    dreamBudget(session, credit = 0) {
+      const { route, info } = routes.get(session) ?? { route: session.requestHeader?.()?.config };
+      const capacity=info?.context?.contextWindow??session.requestContext?.()?.contextWindow;
+      if(!capacity)return 0;
+      const available=capacity-(route?.maxTokens??info?.defaultMaxTokens??0);
+      return Math.max(0,Math.min(9000,Math.floor(available*0.1),this.catalogBudget(session)+credit));
     },
     publish(session, text, kind) { return session.append('user/message', message(text, kind), { surfaceOp: 'append' }); },
     flush(session) { return hub.ctx.sessions?.flush(session); },

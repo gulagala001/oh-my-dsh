@@ -15,7 +15,10 @@ export async function prepareReviewedPackage(url, sha256, directory, signal) {
   try { cached = await readFile(target); } catch (error) { if (error.code !== 'ENOENT') throw error; }
   if (cached && digest(cached) === sha256) { signal.throwIfAborted(); return 'file:' + target; }
   const response = await fetch(url, { signal: AbortSignal.any([signal, AbortSignal.timeout(60000)]) });
-  if (!response.ok) throw Error(`下载安装包失败（HTTP ${response.status}）`);
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => {});
+    throw Error(`下载安装包失败（HTTP ${response.status}）`);
+  }
   const parts = []; let size = 0;
   for await (const part of response.body) {
     size += part.length;

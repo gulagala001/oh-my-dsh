@@ -4,6 +4,58 @@ import {readFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {frontendFixture,until} from './fixtures/frontend.mjs';
 
+test('fresh Web uses Detailed without saving an implicit preference; an explicit choice survives reload', { timeout: 90000 }, async t => {
+ const f = await frontendFixture(t), { page } = f;
+ const open = async () => {
+  await page.getByRole('button', { name: '设置', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: '通用设置', exact: true }).click();
+ };
+ const row = () => page.getByRole('dialog').getByText('工作步骤展示', { exact: true }).locator('..').locator('..');
+ await open();
+ assert.match(await row().getByRole('button').innerText(), /详细/);
+ assert.doesNotMatch(await readFile(join(f.home, 'profiles/trisoul-x/cordis.patch.yml'), 'utf8'), /transcriptView:/);
+ await row().getByRole('button').click();
+ await page.getByRole('menuitem', { name: '标准', exact: true }).click();
+ await until(async () => /transcriptView: standard/.test(await readFile(join(f.home, 'profiles/trisoul-x/cordis.patch.yml'), 'utf8')));
+ await page.keyboard.press('Escape'); await page.reload();
+ await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
+ await open(); assert.match(await row().getByRole('button').innerText(), /标准/);
+ assert.deepEqual(f.errors, []);
+});
+
+test('a stale settings refresh cannot erase the latest choice while native writes are queued',{timeout:90000},async t=>{
+ const f=await frontendFixture(t),{page}=f;
+ const requests=[];let pending;
+ await page.route('**/api/settings/mutate',async route=>{
+  const args=route.request().postDataJSON().payload.args;requests.push(args);
+  if(args.ns==='omd-ui-chat'&&args.ops[0]?.value==='compact'){pending=route;return;}
+  await route.fallback();
+ });
+ const row=title=>page.getByRole('dialog').getByText(title,{exact:true}).locator('..').locator('..');
+ const choose=async(title,label)=>{await row(title).getByRole('button').click();await page.getByRole('menuitem',{name:label,exact:true}).click();};
+ await page.getByRole('button',{name:'设置',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'通用设置',exact:true}).click();
+ try{
+  await choose('工作步骤展示','简洁');await until(()=>pending);
+  const refresh=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/settings/describe'&&r.ok());
+  await choose('繁忙时的发送行为','插话发送');await(await refresh).finished();
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  assert.equal(await row('工作步骤展示').getByRole('button').innerText(),'简洁','older accepted values leave the pending choice visible');
+  await choose('工作步骤展示','详细');
+  const last=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/settings/mutate'&&r.request().postDataJSON().payload.args.ops[0]?.value==='detailed');
+  const route=pending;pending=null;await route.continue();
+  assert.equal((await last).status(),200);
+  const config=()=>readFile(join(f.home,'profiles/trisoul-x/cordis.patch.yml'),'utf8');
+  await until(async()=>/transcriptView: detailed/.test(await config()));
+  assert.deepEqual(requests.filter(x=>x.ns==='omd-ui-chat').map(x=>x.ops[0].value),['compact','detailed']);
+  await page.keyboard.press('Escape');await page.reload();await page.getByRole('button',{name:'打开工作台',exact:true}).waitFor();
+  await page.getByRole('button',{name:'设置',exact:true}).click();
+  await page.getByRole('dialog').getByRole('button',{name:'通用设置',exact:true}).click();
+  assert.equal(await row('工作步骤展示').getByRole('button').innerText(),'详细');
+  assert.deepEqual(f.errors,[]);
+ }finally{await pending?.continue().catch(()=>{});}
+});
+
 test('native work-details and busy-Enter preferences persist once through the replacement providers',{timeout:90000},async t=>{
  const f=await frontendFixture(t),{page}=f;
  const mutations=[];page.on('response',r=>{if(r.url().includes('/api/settings/mutate'))void r.json().then(value=>mutations.push({request:r.request().postDataJSON(),response:value}));});
@@ -11,7 +63,8 @@ test('native work-details and busy-Enter preferences persist once through the re
  const open=async()=>{await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'通用设置',exact:true}).click();};
  const row=title=>page.getByRole('dialog').getByText(title,{exact:true}).locator('..').locator('..');
  await open();
- for(const label of ['详细','标准','完全展开','简洁']){
+ assert.match(await row('工作步骤展示').getByRole('button').innerText(),/详细/);
+ for(const label of ['标准','详细','完全展开','简洁']){
   await row('工作步骤展示').getByRole('button').click();
   await page.getByRole('menuitem',{name:label,exact:true}).click();
   await until(async()=>await row('工作步骤展示').getByRole('button').innerText()===label);

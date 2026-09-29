@@ -2,6 +2,12 @@ name: Host compatibility
 
 on:
   workflow_dispatch:
+    inputs:
+      dsh_commit:
+        description: Full official DSH source commit SHA
+        required: true
+        default: '21638c56315ae6a2b552d6091945d3144c9af32e'
+        type: string
 
 permissions:
   contents: read
@@ -11,9 +17,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  windows-host:
-    runs-on: windows-latest
-    timeout-minutes: 10
+  host:
+    name: ${{ matrix.os }} / ${{ matrix.host }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        host: [packaged, source]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -21,4 +33,37 @@ jobs:
           node-version: '24'
       - uses: pnpm/action-setup@v6
       - run: pnpm install --frozen-lockfile
-      - run: node --test test/host-lifecycle.test.mjs
+      - uses: actions/checkout@v7
+        if: matrix.host == 'source'
+        with:
+          repository: deepseek-ai/deepseek-harness
+          ref: ${{ inputs.dsh_commit }}
+          path: .host-source
+      - name: Check source identity and normalize official CSS module filenames
+        if: matrix.host == 'source'
+        shell: bash
+        env:
+          DSH_COMMIT: ${{ inputs.dsh_commit }}
+        run: |
+          [[ "$DSH_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git -C .host-source rev-parse HEAD)" = "$DSH_COMMIT"
+          git -C .host-source apply --include=packages/client/tsdown.client.ts ../vendor/dsh/changes.patch
+      - name: Build the selected source host
+        if: matrix.host == 'source'
+        working-directory: .host-source
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+      - name: Select the built source CLI
+        if: matrix.host == 'source'
+        run: node -e "require('node:fs').appendFileSync(process.env.GITHUB_ENV, 'OMD_DSH_CLI=' + require('node:path').resolve('.host-source/apps/cli/lib/bin.js') + '\n')"
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm build
+      - name: Host lifecycle, recovery, modes, context and workflow
+        run: node --test --test-concurrency=1 test/dsh-install.test.mjs test/host-lifecycle.test.mjs test/dsh-master-recovery.test.mjs test/context-persistence.test.mjs test/task-budget-native.test.mjs test/workflow-integration.test.mjs test/agent-preset-ui.test.mjs
+      - name: Input, display preferences and themes
+        run: node --test --test-concurrency=1 test/host-preferences-ui.test.mjs test/prompt-optimizer-ui.test.mjs test/model-panel-ui.test.mjs test/codex-wallpaper-controls-ui.test.mjs test/computer-use-ui.test.mjs
+      - name: Dream persistence, isolation, costs and installed user flow
+        run: node --test --test-concurrency=1 test/dream-store.test.mjs test/dream-service.test.mjs test/dream-context.test.mjs test/dream-native.test.mjs
+        env:
+          OMD_UI_PACKED: '1'

@@ -4,7 +4,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 
 const root = new URL('../', import.meta.url);
-test('Oh My embeds an unmodified OpenCU release with every runtime dependency', async () => {
+test('Oh My embeds the complete OpenCU distribution with every runtime dependency', async () => {
   const provenance = JSON.parse(await readFile(new URL('vendor/opencu.json', root)));
   const pkg = JSON.parse(await readFile(new URL('vendor/opencu/package.json', root)));
   const own = JSON.parse(await readFile(new URL('package.json', root)));

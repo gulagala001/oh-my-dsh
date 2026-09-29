@@ -37,7 +37,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
   const [position, setPosition] = useState({ visibility: 'hidden' });
   const trigger = useRef(null), panel = useRef(null), slider = useRef(null), search = useRef(null), modelButton = useRef(null);
   const live = useRef(true), ticket = useRef(0), writing = useRef(false), draggingRef = useRef(false), draftRef = useRef(null), noticeTimer = useRef(), commitTimer = useRef();
-  const gestureRevision = useRef(null);
+  const gestureRevision = useRef(null), focusAfterSave = useRef(null);
   const id = useId();
   useEffect(() => { live.current = true; return () => { live.current = false; clearTimeout(noticeTimer.current); clearTimeout(commitTimer.current); }; }, []);
   const refresh = useCallback(async () => {
@@ -61,7 +61,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
   const savedLabel = selectedIndex < 0 ? effective ?? '默认' : choices[selectedIndex]?.label ?? '默认';
   const busy = saving || state.pending !== null, sliderDisabled = busy || !mode || !model || choices.length < 2;
 
-  const close = (focus = false) => { clearTimeout(commitTimer.current); gestureRevision.current = null; setOpen(false); setDraft(null); draftRef.current = null; setDragging(false); draggingRef.current = false; if (focus) trigger.current?.focus(); };
+  const close = (focus = false) => { clearTimeout(commitTimer.current); gestureRevision.current = null; focusAfterSave.current = null; setOpen(false); setDraft(null); draftRef.current = null; setDragging(false); draggingRef.current = false; if (focus) trigger.current?.focus(); };
   useLayoutEffect(() => {
     if (!open) return;
     const place = () => {
@@ -78,12 +78,30 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
   }, [open]);
   useEffect(() => {
     if (!open) return;
+    const active = document.activeElement;
+    if (active && active !== document.body && active !== trigger.current && !panel.current?.contains(active)) return;
     (pane === 'model' ? search.current : slider.current?.disabled ? modelButton.current : slider.current)?.focus();
   }, [open, pane]);
+  useLayoutEffect(() => {
+    const previous = focusAfterSave.current;
+    if (!previous || busy) return;
+    focusAfterSave.current = null;
+    if (!open || document.activeElement !== panel.current) return;
+    const target = previous.isConnected && !previous.disabled ? previous
+      : pane === 'model' ? search.current : sliderDisabled ? modelButton.current : slider.current;
+    target?.focus({ preventScroll: true });
+  }, [busy, open, pane, sliderDisabled]);
 
   const save = async (route, ultracode, reasoningEffort) => {
     if (!mode || writing.current || locked) return false;
-    writing.current = true; ++ticket.current; setSaving(true); setError('');
+    writing.current = true; ++ticket.current;
+    // Native disabled controls lose focus. Keep Escape/Tab available while
+    // saving, then restore only if the user has not moved to another control.
+    draftRef.current = null;
+    if (panel.current?.contains(document.activeElement)) {
+      focusAfterSave.current = document.activeElement; panel.current.focus({ preventScroll: true });
+    }
+    setSaving(true); setError('');
     try {
       const next = await modeApi(sessionId, { ...route, reasoningEffort, ultracode, expectedRevision: mode.revision });
       if (!live.current) return false;
@@ -107,7 +125,9 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
   const change = index => { gestureRevision.current ??= mode?.revision; draftRef.current = index; setDraft(index); };
   const chooseModel = async (provider, next) => {
     const effort = sameRoute(selected, {provider, model:next.id}) ? selected.reasoningEffort : next.reasoning?.defaultEffort;
-    if (await save({provider,model:next.id}, Boolean(mode?.enabled), effort)) setPane('effort');
+    const origin = document.activeElement;
+    if (await save({provider,model:next.id}, Boolean(mode?.enabled), effort)
+      && panel.current && (document.activeElement === panel.current || document.activeElement === origin)) setPane('effort');
   };
   const keyDown = event => {
     if (event.key === 'Escape') {
@@ -115,7 +135,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
       if (pane === 'model') { setPane('effort'); queueMicrotask(() => modelButton.current?.focus()); } else close(true);
     } else if (event.key === 'Tab') {
       const focusable = [...panel.current.querySelectorAll('button:not([disabled]),input:not([disabled])')];
-      if (event.shiftKey && document.activeElement === focusable[0] || !event.shiftKey && document.activeElement === focusable.at(-1)) { event.preventDefault(); close(true); }
+      if (event.shiftKey && (document.activeElement === panel.current || document.activeElement === focusable[0]) || !event.shiftKey && document.activeElement === focusable.at(-1)) { event.preventDefault(); close(true); }
     } else if (pane === 'model' && ['ArrowDown','ArrowUp'].includes(event.key)) {
       const items = [...panel.current.querySelectorAll('[role="option"]:not([disabled])')];
       if (!items.length) return;
@@ -129,7 +149,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
       onClick={() => { if (open) close(); else { setPane(selected ? 'effort' : 'model'); setQuery(''); setOpen(true); load(); void refresh(); } }}>
       <span>{modelName}</span><span className="omd-model-caption">{savedLabel}</span><span aria-hidden="true">⌃</span>
     </button>
-    {open && createPortal(<section ref={panel} id={id} className="omd-model-panel" data-pane={pane} style={position} role="dialog" aria-label="模型与思考强度" aria-busy={busy} onKeyDown={keyDown}>
+    {open && createPortal(<section ref={panel} id={id} className="omd-model-panel" data-pane={pane} style={position} role="dialog" aria-label="模型与思考强度" aria-busy={busy} tabIndex={-1} onKeyDown={keyDown}>
       {pane === 'effort' ? <>
         <header className="omd-effort-heading">
           <h2 key={label} className={level.ultracode ? 'omd-effort-ultra' : ''}>{label}</h2>

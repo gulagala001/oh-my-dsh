@@ -114,6 +114,10 @@ export function transformAssembly(assembly, context, options = {}) {
     sections.splice(sections.findIndex(section => section.name === 'trisoul-x:persona') + 1, 0,
       { name: 'trisoul-x:cc-memory', text: load('context/memory.md'), interpolate: false });
   }
+  const recallFields=known.get('recall')?.parameters?.properties;
+  if(['memory','sessionId','reference'].every(key=>recallFields?.[key])&&!sections.some(x=>x.name==='trisoul-x:cc-dream-memory')){
+    sections.push({name:'trisoul-x:cc-dream-memory',text:load('context/dream-memory.md'),interpolate:false});
+  }
   // DSH strips order metadata after assembling sections. Preserve the host's order.
   const result = { ...assembly, sections, tools: (assembly.tools ?? []).map(tool => changedSchemas.get(tool.name) ?? tool) };
   // The actual fields and their parameter descriptions remain the live owner contract.

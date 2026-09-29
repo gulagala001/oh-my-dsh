@@ -8,7 +8,8 @@ function Sparkle() { return <svg width="16" height="16" viewBox="0 0 24 24" fill
 function Toggle({ children, checked, onChange, disabled }) { return <label className="omd-opt-toggle"><span>{children}</span><input type="checkbox" role="switch" checked={checked} disabled={disabled} onChange={e => onChange(e.target.checked)}/></label>; }
 
 export function applyPromptOptimizer(ctx) {
-  const preferences = createOptimizerPreferences(), controllers = new Map();
+  const preferences = createOptimizerPreferences(), controllers = new Map(), drafts = new Map();
+  let closed = false;
   const controllerFor = sessionId => {
     const binding = ctx.sessions.binding(sessionId);
     if (!binding) return null;
@@ -16,12 +17,23 @@ export function applyPromptOptimizer(ctx) {
     if (saved) return saved;
     const shell = ctx.get('conversation').input.for(binding.ctx);
     const controller = new DraftOptimizer({ sessionId, shell, preferences }); controllers.set(binding, controller);
-    binding.ctx.effect(() => () => { controller.dispose(); controllers.delete(binding); });
+    controller.restoreNavigation(drafts.get(sessionId)); drafts.delete(sessionId);
+    binding.ctx.effect(() => () => {
+      if (!closed && !binding.session.getSnapshot().removed) {
+        const saved = controller.navigationState();
+        if (saved) drafts.set(sessionId, saved);
+      }
+      controller.dispose(); controllers.delete(binding);
+    });
     return controller;
   };
   ctx.effect(() => {
     const tag = document.createElement('style'); tag.dataset.plugin = 'omd-prompt-optimizer'; tag.textContent = css; document.head.append(tag);
-    return () => { for (const controller of controllers.values()) controller.dispose(); controllers.clear(); preferences.dispose(); tag.remove(); };
+    const off = ctx.remote.$on('api-session/removed', id => {
+      if (ctx.sessions.subagentAddress(id) !== undefined || ctx.sessions.list.getSnapshot().byId[id]?.origin === 'subagent') return;
+      drafts.delete(id);
+    });
+    return () => { closed = true; off(); for (const controller of controllers.values()) controller.dispose(); controllers.clear(); drafts.clear(); preferences.dispose(); tag.remove(); };
   });
   function Settings() {
     const prefs = useSyncExternalStore(preferences.subscribe, preferences.getSnapshot), [error, setError] = useState('');
@@ -32,7 +44,7 @@ export function applyPromptOptimizer(ctx) {
       <p>默认显示输入框星星。悬浮或展开抽屉可选择模式、回退版本并继续修改。</p>
       <Toggle checked={prefs.automatic} disabled={!prefs.enabled} onChange={automatic => set({ automatic })}>每次发送前自动润色</Toggle>
       <p>星星点亮时，每次发送先使用最低档“轻润色”，成功后自动发送。可随时点击星星关闭。润色会额外调用一次当前模型。</p>
-      <p>偏好保存在当前浏览器。版本按会话隔离，发送后开始新的草稿；刷新页面后版本记录清空，当前草稿由宿主保存。</p>
+      <p>偏好保存在当前浏览器。切换会话保留原稿、版本与继续优化要求，发送后开始新的草稿；刷新页面后版本记录清空，当前草稿由宿主保存。</p>
       {error && <p role="alert">{error}</p>}
       <small>优化模板源自 <a href="https://github.com/linshenkx/prompt-optimizer/tree/93c37090846dd7ba9619a0ebc152f205624df9f1" target="_blank" rel="noreferrer">Prompt Optimizer（MIT 版本）</a>。</small>
     </section>;
@@ -43,7 +55,8 @@ export function applyPromptOptimizer(ctx) {
   }
   function Entry({ controller, useInput }) {
     const prefs = useSyncExternalStore(preferences.subscribe, preferences.getSnapshot), state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
-    const input = useInput(s => s), [open, setOpen] = useState(false), [instruction, setInstruction] = useState(''), [localError, setLocalError] = useState('');
+    const input = useInput(s => s), [open, setOpen] = useState(false), [localError, setLocalError] = useState('');
+    const instruction = state.instruction, setInstruction = instruction => controller.publish({ instruction });
     const id = useId(), anchor = useRef(null), panel = useRef(null), timer = useRef(null), pinned = useRef(false);
     const [position, setPosition] = useState({ left: 8, bottom: 60, width: 370, maxHeight: 500 });
     useEffect(() => { controller.activate(); return () => { clearTimeout(timer.current); controller.deactivate(); }; }, [controller]);
@@ -79,6 +92,7 @@ export function applyPromptOptimizer(ctx) {
           <div className="omd-opt-refine"><input aria-label="继续优化要求" placeholder="例如：更短一点，保留限制" value={instruction} onChange={event => setInstruction(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); event.stopPropagation(); refine(); } }}/><button type="button" disabled={!!state.busy || !canOptimize} onClick={refine}>继续优化</button></div>
         </div>}
         {state.candidate && <div className="omd-opt-candidate"><strong>优化结果待应用</strong><pre>{state.candidate.draft}</pre><button type="button" disabled={!!state.busy} onClick={() => controller.applyCandidate()}>应用此结果</button></div>}
+        {state.recoveries.map(({ id, draft }) => <div className="omd-opt-candidate" key={id}><strong>保留的草稿版本</strong><pre>{draft}</pre><button type="button" disabled={!!state.busy} onClick={() => controller.inspectRecovery(id)}>查看这份原稿与版本</button></div>)}
         {(localError || state.error) && <p className="omd-opt-error" role="alert">{localError || state.error}</p>}
         {state.message && <p className="omd-opt-hint" role="status">{state.message}</p>}
       </section>, document.body)}
