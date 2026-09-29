@@ -2,6 +2,17 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.3.0",
+      "severity": "normal",
+      "title": "0.3.0：适配 DSH 0.2.0-rc.2",
+      "notes": [
+        "本版需要 DSH 0.2.0-rc.2，请先升级宿主；DSH 0.1.7-rc.2 用户继续使用 OMD 0.2.2。",
+        "SDK、原生组件、Conversation 和共享 Chat 统一到官方 rc.2 标签，保留上下文、Dream、待办验证、原话附件、PTC、模型设置和电脑操控。",
+        "内置 OpenCU 1.2.0，承接新版分组动画，保留操作统计、失败提示、紧凑布局及历史展开状态。",
+        "固定新版官方 macOS / Windows 桌面包校验，安装命令与依赖统一使用官方 rc.2 发行版本。"
+      ]
+    },
+    {
       "version": "0.2.2",
       "severity": "normal",
       "title": "0.2.2：结构简化与界面状态修复",

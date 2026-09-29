@@ -37,11 +37,11 @@
 
 ## 版本与文档范围
 
-开发与发行维护：[DSH 0.2 适配准备](dsh-0.2-preparation.md)，包含固定源码基线、验证范围和正式发布后的收尾步骤。
+开发与发行维护：[DSH 0.2 适配与验证](dsh-0.2-preparation.md)，包含固定源码基线、验证范围和正式发布后的收尾步骤。
 
-本版文档对应 **OMD 0.2.2 / DSH 0.1.7-rc.2**，内置 **OpenCU 1.1.9**。[本版说明](release-0.2.2.md) · [发布记录与下载](https://github.com/gulagala001/oh-my-dsh/releases) · [全部更新记录](../CHANGELOG.md)。
+本版文档对应 **OMD 0.3.0 / DSH 0.2.0-rc.2**，内置 **OpenCU 1.2.0**。[本版说明](release-0.3.0.md) · [发布记录与下载](https://github.com/gulagala001/oh-my-dsh/releases) · [全部更新记录](../CHANGELOG.md)。
 
-`main` 分支文档可能包含下一版改动，以“开发分支／未发布”标注；安装固定 tag 时，以[该 tag 的文档](https://github.com/gulagala001/oh-my-dsh/tree/v0.2.2/docs)和对应版本说明为准。历史 `release-*.md` 记录的是当时的功能与验证范围，当前安装命令见上述安装入口。
+`main` 分支文档可能包含下一版改动，以“开发分支／未发布”标注；安装固定 tag 时，以[该 tag 的文档](https://github.com/gulagala001/oh-my-dsh/tree/v0.3.0/docs)和对应版本说明为准。历史 `release-*.md` 记录的是当时的功能与验证范围，当前安装命令见上述安装入口。
 
 Dream、工作台与恢复改进已纳入本版。DSH 0.2.0-rc.1 是另一个宿主版本，仍需独立适配与发行验收；见[适配准备](dsh-0.2-preparation.md)。
 

@@ -5,8 +5,9 @@ import { createHash } from 'node:crypto';
 const root = new URL('../vendor/dsh/', import.meta.url);
 test('shipped DSH sources, browser package and patch match the pinned distribution manifest', async () => {
   const manifest = JSON.parse(await readFile(new URL('../vendor/dsh.json', import.meta.url)));
-  assert.equal(manifest.commit, '21638c56315ae6a2b552d6091945d3144c9af32e');
-  assert.equal(manifest.tag, null, 'the prepared master snapshot is not a published release tag');
+  assert.equal(manifest.commit, '639ed015397290b3745d163aafe02ffee4aa3f84');
+  assert.equal(manifest.tag, 'dsh-v0.2.0-rc.2', 'the snapshot uses the official release tag');
+  assert.equal(manifest.version, '0.2.0-rc.2');
   const chat = JSON.parse(await readFile(new URL('../vendor/opencu/vendor/dsh-chat.json', import.meta.url)));
   assert.equal(chat.commit, manifest.commit, 'conversation and shared Chat use one DSH source baseline');
   const files = {};

@@ -6,8 +6,8 @@ export const recommendedPlugins = [
     description: '保留原话，在发送前梳理本轮需求；支持审查、自动、模型选择与只读查证，界面跟随 OMD。默认不安装，手动安装后默认关闭；不附带 Bash，不替换原有提示词优化。',
     category: '模型能力', url: 'https://github.com/gulagala001/omd-prompt-optimizer',
     githubRelease: 'gulagala001/omd-prompt-optimizer',
-    review: { version: '0.1.0', dsh: '0.1.7-rc.2', omd: '0.1.7-rc.2.15', platforms: ['Web'],
-      sha256: '8b4513840b5a79c4d984422a5034f5ce0f7d4455aa371275177dce8965803266',
+    review: { version: '0.2.0', dsh: '0.2.0-rc.2', omd: '0.3.0', platforms: ['Web'],
+      sha256: '729eee96de7d6e88aa92f62c832fadb6ca8f867d4c60eb410fe651369b192e61',
       note: '基于原作 dsh-prompt-optimizer 0.7.4，保留 BSD-3-Clause 许可与署名，非上游官方发行版。隔离 Web 核验安装、原话发送、关闭恢复与界面。桌面端及真实模型效果未作同等实测。' },
   },
   {

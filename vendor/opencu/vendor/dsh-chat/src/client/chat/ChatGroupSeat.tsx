@@ -122,7 +122,9 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
           {open ? <IconChevronUpOutlineRegular /> : <IconChevronDownOutlineRegular />}
         </span>
       </span>
-      <TextShimmer active={working} className={css.label}>{title}</TextShimmer>
+      <TextShimmer active={working}>
+        <TextShimmer className={css.label}>{title}</TextShimmer>
+      </TextShimmer>
       {data.summary.counts.length > 0 && <span className={css.count} data-process-count>{t('message.stepProcess.count', { count: data.summary.counts.reduce((total, item) => total + item.count, 0) })}</span>}
       {(data.summary.failures ?? 0) > 0 && <span className="tx-cu-error" data-process-failures>{t('message.stepProcess.failures', { count: data.summary.failures ?? 0 })}</span>}
       {(data.summary.stopped ?? 0) > 0 && <span data-process-stopped>{t('message.stepProcess.stopped', { count: data.summary.stopped ?? 0 })}</span>}

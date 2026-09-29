@@ -15,7 +15,7 @@ test('native preset slots survive OMD mounting, selection and reload', { timeout
     await page.getByRole('button', { name: '设置', exact: true }).click();
     const settings = page.getByRole('dialog');
     await settings.getByRole('button', { name: '通用设置', exact: true }).click();
-    const toggle = settings.getByRole('switch', { name: '代码工作工具', exact: true });
+    const toggle = settings.getByRole('switch', { name: '显示代码工作视图', exact: true });
     if (await toggle.isChecked() !== enabled) await toggle.click();
     await until(async () => await toggle.isEnabled() && await toggle.isChecked() === enabled);
     await page.keyboard.press('Escape');
