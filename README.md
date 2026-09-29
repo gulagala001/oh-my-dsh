@@ -5,7 +5,7 @@
 <p align="center"><strong>长任务、电脑操作与任务验证，都在熟悉的 DSH 里。</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.20"><img src="https://img.shields.io/badge/version-0.1.7--rc.2.20-3478F6?style=flat-square" alt="Version 0.1.7-rc.2.20" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.0"><img src="https://img.shields.io/badge/version-0.2.0-3478F6?style=flat-square" alt="Version 0.2.0" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.1.7--rc.2-475569?style=flat-square" alt="DSH 0.1.7-rc.2" /></a>
 </p>
 <p align="center">
@@ -30,14 +30,14 @@ Oh My DSH 是 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 
 ## 开始使用
 
-当前安装配对：**DSH 0.1.7-rc.2 · Oh My DSH 0.1.7-rc.2.20**，内置 **OpenCU 1.1.8**。已有环境升级前，先结束任务、停止服务或完整退出应用，并备份实际 `DSH_HOME`。[安装、迁移与升级指南](docs/upgrade.md)。
+当前安装配对：**DSH 0.1.7-rc.2 · Oh My DSH 0.2.0**，内置 **OpenCU 1.1.8**。已有环境升级前，先结束任务、停止服务或完整退出应用，并备份实际 `DSH_HOME`。[安装、迁移与升级指南](docs/upgrade.md)。
 
 <a id="desktop"></a>
 
 ### 官方桌面应用
 
 1. 安装 DSH **0.1.7-rc.2**：[Windows x64](https://download.deepseek.com/dsh-desk/bin/win-x64/deepseek-harness-0.1.7-rc.2-win-x64.exe)／[Mac Apple 芯片](https://download.deepseek.com/dsh-desk/bin/mac-arm64/deepseek-harness-0.1.7-rc.2-mac-arm64.zip)。
-2. 在应用「插件」页面安装并启用 `github:gulagala001/oh-my-dsh#v0.1.7-rc.2.20`。
+2. 在应用「插件」页面安装并启用 `github:gulagala001/oh-my-dsh#v0.2.0`。
 3. **完整退出并重新打开应用**，新建会话选择 **Oh My DSH**。
 
 桌面使用独立的 `desktop` profile，Web 中的插件需在桌面再安装一次。[桌面教程](docs/upgrade.md#desktop) · [从 Web 迁移数据](docs/upgrade.md#web-to-desktop)。
@@ -47,7 +47,7 @@ Oh My DSH 是 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 需要 **Node.js ≥22.19、pnpm 11.23.0 和 Git**；Windows 使用 PowerShell 7。首次安装：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.7-rc.2.20
+npx --yes @deepseek-ai/dsh@0.1.7-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.0
 npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 ```
 
@@ -178,9 +178,9 @@ npx --yes @deepseek-ai/dsh@0.1.7-rc.2 --profile web
 
 ## 文档与参与
 
-[文档目录](docs/README.md) · [首次使用](docs/getting-started.md) · [完整指南](docs/usage.md) · [排障](docs/troubleshooting.md) · [更新记录](CHANGELOG.md) · [当前发行说明](docs/release-0.1.7-rc.2.20.md)
+[文档目录](docs/README.md) · [首次使用](docs/getting-started.md) · [完整指南](docs/usage.md) · [排障](docs/troubleshooting.md) · [更新记录](CHANGELOG.md) · [当前发行说明](docs/release-0.2.0.md)
 
-开发分支可能包含尚未发布的功能；安装固定 tag 时，以[该 tag 的文档](https://github.com/gulagala001/oh-my-dsh/tree/v0.1.7-rc.2.20/docs)为准。[DSH 0.2 适配准备](docs/dsh-0.2-preparation.md)。
+开发分支可能包含尚未发布的功能；安装固定 tag 时，以[该 tag 的文档](https://github.com/gulagala001/oh-my-dsh/tree/v0.2.0/docs)为准。[DSH 0.2 适配准备](docs/dsh-0.2-preparation.md)。
 
 [反馈 Bug](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml) · [提出建议](https://github.com/gulagala001/oh-my-dsh/issues/new?template=feature-request.yml) · [参与贡献](CONTRIBUTING.md) · [展示页构建与托管](docs/site/README.md)
 
