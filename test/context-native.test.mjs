@@ -202,3 +202,20 @@ test('rc.2 dynamic tool declarations survive context replacement, full compactio
   assert.deepEqual(replay.deriveMessages(), session.deriveMessages());
   assert.deepEqual(replay.toolHistory(), history);
 });
+
+test('request budgets retain unknown, exhausted and credited-capacity semantics', () => {
+  let used = 0, reads = 0;
+  const adapter = deps.createHostAdapter({ ctx: { tokenMeter: { measure() { reads++; return { totalTokens: used }; } } } });
+  for (const capacity of [undefined, 0, 1024, 8192, 1000000]) for (const reserve of [0, 2048, 100000]) {
+    const session = { requestContext: () => ({ contextWindow: capacity }), requestHeader: () => ({ config: { maxTokens: reserve } }) };
+    for (used of [0, 4000, 2000000]) for (const credit of [0, 2000, 50000]) {
+      const available = capacity - reserve;
+      const usable = available - Math.min(65536, Math.floor(Math.max(0, available) * 0.1));
+      assert.equal(adapter.pressure(session), capacity ? used / Math.max(1, usable) : null);
+      assert.equal(adapter.catalogBudget(session), capacity ? Math.max(0, usable - used) : 0);
+      const before = reads;
+      assert.equal(adapter.dreamBudget(session, credit), capacity ? Math.max(0, Math.min(9000, Math.floor(available * 0.1), Math.max(0, usable - used) + credit)) : 0);
+      assert.equal(reads - before, capacity ? 1 : 0, 'a budget uses one synchronous meter snapshot');
+    }
+  }
+});

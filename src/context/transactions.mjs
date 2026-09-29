@@ -17,25 +17,23 @@ export function createTransaction(session, state, plan, cfg, pairing, pricing = 
   const sourceMessage = seq => session.deriveEventMessage(session.eventAt(seq));
   for (const choice of plan.choices) {
     if (choice.action === 'keep') continue;
-    const picked = choice.ids.map((id, i) => {
-      const r = map.get(id), observed = choice.observed[i];
-      if (!r || r.mergedInto || chosen.has(id) || !observed || observed.version !== r.version || observed.mode !== r.mode || observed.carrierSeq !== (r.carrierSeq ?? null) || observed.sourceHash !== r.sourceHash || (observed.snapshot && observed.snapshot !== recordSnapshot(session, r, index))) throw new Error('记录版本已变化，本轮替换计划作废');
-      chosen.add(id);
-      const span = liveSpan(session, r, index);
-      if (!span || !pairing.before(session, span.seqs[0]) || !pairing.after(session, span.seqs.at(-1))) throw new Error('替换范围已变化或工具往返不完整');
-      return { r, span };
-    }).sort((a, b) => a.span.start - b.span.start);
-    if (picked[0].r.mode === choice.action) continue;
-    const output = picked[0].r; output.mode = choice.action;
-    const selectedSeqs = picked.flatMap(p => p.span.seqs).filter(seq => !isTaskInjection(session.eventAt(seq)));
+    if (!['detail', 'brief'].includes(choice.action) || !Array.isArray(choice.ids) || choice.ids.length !== 1) throw new Error('单项选择必须一个 ID 和有效表示');
+    const [id] = choice.ids, output = map.get(id), observed = choice.observed?.[0];
+    if (!output || output.mergedInto || chosen.has(id) || !observed || observed.version !== output.version || observed.mode !== output.mode || observed.carrierSeq !== (output.carrierSeq ?? null) || observed.sourceHash !== output.sourceHash || (observed.snapshot && observed.snapshot !== recordSnapshot(session, output, index))) throw new Error('记录版本已变化，本轮替换计划作废');
+    chosen.add(id);
+    const span = liveSpan(session, output, index);
+    if (!span || !pairing.before(session, span.seqs[0]) || !pairing.after(session, span.seqs.at(-1))) throw new Error('替换范围已变化或工具往返不完整');
+    if (output.mode === choice.action) continue;
+    output.mode = choice.action;
+    const selectedSeqs = span.seqs.filter(seq => !isTaskInjection(session.eventAt(seq)));
     if (!selectedSeqs.length) continue;
     if (selectedSeqs.some(seq => changedSources.has(seq))) throw Error('替换计划包含重叠来源，原文保留');
     for (const seq of selectedSeqs) changedSources.add(seq);
     for (const seq of output.originalSeqs || output.sourceSeqs) origins.add(seq);
-    selectedRecords += picked.length;
+    selectedRecords++;
     output.assets = combineAssets(output.assets || [], ...selectedSeqs.map(seq => attachmentsOf(sourceMessage(seq)?.content, session.id, seq)));
     const content = recordBlocks(output, output.mode), text = recordText(output, output.mode);
-    const groups = picked.flatMap(p => splitGroups(index.nodes, p.span.seqs.filter(seq => !isTaskInjection(session.eventAt(seq))), index));
+    const groups = splitGroups(index.nodes, selectedSeqs, index);
     const carrierIndex = groups.findIndex(group => session.surface.nodes.indexOf(group[0]) > barrier);
     if (carrierIndex < 0) throw Error('摘要需要放在前置 CoT 或首条请求之后，请扩大处理窗口；原文保留');
     const orderedGroups = [groups[carrierIndex], ...groups.filter((_, i) => i !== carrierIndex)];

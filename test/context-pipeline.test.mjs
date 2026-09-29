@@ -78,6 +78,13 @@ test('stale or unknown IDs, duplicate selections, and fabricated output on non-m
   assert.throws(() => choices(f, [['brief', r], ['detail', r]]));
   assert.throws(() => choices(f, [['brief', r, prepared('Forbidden')]]));
   assert.throws(() => normalizeChoices({ choices: [{ action: 'brief', ids: [r.id], summary: '', documents: [] }] }, f.state, f.s, new Set()));
+  const before = JSON.stringify({ records: f.state.records, events: f.s.snapshotEvents() });
+  for (const patch of [{ ids: [] }, { ids: [r.id, r.id] }, { action: 'invalid' }]) {
+    const pending = plan(f, [['brief', r]]);
+    Object.assign(pending.choices[0], patch);
+    assert.throws(() => createTransaction(f.s, f.state, pending, f.cfg, pairing));
+  }
+  assert.equal(JSON.stringify({ records: f.state.records, events: f.s.snapshotEvents() }), before);
 });
 test('window and tail keep complete tool pairs; preparation reference is not covered source', t => {
   const f = setup(t, { digestWindow: 1 }); exchange(f.s); exchange(f.s);

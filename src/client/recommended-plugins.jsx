@@ -1,6 +1,6 @@
 import React, { useId, useState } from 'react';
 import { recommendedPlugins } from './recommended-plugins.mjs';
-import { usePollingAction } from './use-polling-action.mjs';
+import { usePollingAction } from '#opencu/src/client/use-polling-action.mjs';
 
 async function pluginApi(input, signal) {
   const response = await fetch('trisoul-x/recommended-plugins', input === undefined ? { signal } : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
