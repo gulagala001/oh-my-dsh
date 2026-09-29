@@ -1,8 +1,8 @@
 import React from 'react';
 import { createPoller } from './polling.mjs';
 
-export function usePollingAction(request, interval) {
-  const [view, setView] = React.useState({ state: null, error: '', requestError: '', pending: false });
+export function usePollingAction(request, interval, enabled = true) {
+  const [view, setView] = React.useState({ state: null, error: '', requestError: '', operation: null });
   const current = React.useRef(null);
   React.useEffect(() => {
     const owner = { request, writing: false };
@@ -13,18 +13,23 @@ export function usePollingAction(request, interval) {
       interval,
     });
     current.current = owner;
-    setView({ state: null, error: '', requestError: '', pending: false });
-    owner.poller.start();
+    setView({ state: null, error: '', requestError: '', operation: null });
     return () => {
       if (current.current === owner) current.current = null;
       owner.poller.stop();
     };
   }, [request, interval]);
+  React.useEffect(() => {
+    const owner = current.current;
+    owner.enabled = enabled;
+    if (enabled && !owner.writing) owner.poller.start();
+    else owner.poller.stop();
+  }, [request, interval, enabled]);
   const act = async input => {
     const owner = current.current;
     if (!owner || owner.writing) return;
     owner.writing = true;
-    setView(view => ({ ...view, pending: true, requestError: '' }));
+    setView(view => ({ ...view, operation: { input }, requestError: '' }));
     owner.poller.stop();
     try {
       const state = await owner.request(input);
@@ -34,10 +39,11 @@ export function usePollingAction(request, interval) {
     } finally {
       owner.writing = false;
       if (current.current === owner) {
-        setView(view => ({ ...view, pending: false }));
-        owner.poller.start();
+        setView(view => ({ ...view, operation: null }));
+        if (owner.enabled) owner.poller.start();
       }
     }
   };
-  return { ...view, act, refresh: () => current.current?.poller.refresh() };
+  const { operation, ...snapshot } = view;
+  return { ...snapshot, pending: operation !== null, pendingInput: operation?.input, act, refresh: () => current.current?.poller.refresh() };
 }

@@ -11,7 +11,7 @@ import { attachmentsOf, combineAssets, describeAsset, messageOf } from './materi
 import { createTransaction, applyTransaction } from './transactions.mjs';
 import { repairShadows } from './shadow.mjs';
 import { SUMMARY_PROMPT_VERSION, PREPARE_SYSTEM, PREPARE_TOOL, COORDINATE_SYSTEM, COORDINATE_TOOL } from './prompts.mjs';
-import { TODO_META, TASK_CONTEXT_META, taskContextMeta, withoutTodo } from '../task-context.mjs';
+import { taskContextMeta, withoutRuntime } from '../task-context.mjs';
 import { forkArchiveSnapshot } from './fork.mjs';
 import { publishDreamMemory } from '../dream/publication.mjs';
 
@@ -334,7 +334,7 @@ export class ContextPipeline {
       const chosen = ids || activeRecords(s).filter(r => r.mode === 'raw' && liveSpan(session, r, index)).map(r => r.id);
       if (!Array.isArray(chosen) || !chosen.length) return null;
       plan = { id: randomUUID(), createdAt: Date.now(), userRevision: userRevision(session), source: 'manual',
-        choices: normalizeChoices({ choices: chosen.map(id => ({ action: mode, ids: [id], summary: '', documents: [] })) }, s, session) };
+        choices: normalizeChoices({ choices: chosen.map(id => ({ action: mode, ids: [id] })) }, s, session) };
     }
     if (!plan) return null;
     if (!manual) {
@@ -448,17 +448,9 @@ export class ContextPipeline {
     const operations = session.surface.nodes.flatMap(seq => {
       const m = session.deriveEventMessage(session.eventAt(seq)), meta = taskContextMeta(m);
       if (!meta?.runtime) return [];
-      const id = randomUUID(), prefix = m[TODO_META];
-      if (!meta.todoText && !prefix) return [{ id, kind: 'delete', seqs: [seq], text: '', todoCleanup: true }];
-      let message;
-      if (meta.todoText) {
-        const content = [...m.content]; content[prefix?.index ?? 0] = { type: 'text', text: meta.todoText };
-        message = { ...m, id, content, ...(prefix ? { [TODO_META]: { ...prefix, context: { ...meta, runtime: null } } } : { [TASK_CONTEXT_META]: { ...meta, runtime: null } }) };
-      } else {
-        const base = withoutTodo(m);
-        message = { ...base, id, source: base.source?.kind === 'user' ? m.source : base.source };
-      }
-      return [{ id, kind: 'todo-restore', seqs: [seq], message, text: '' }];
+      const id = randomUUID(), restored = withoutRuntime(m);
+      if (!restored) return [{ id, kind: 'delete', seqs: [seq], text: '', todoCleanup: true }];
+      return [{ id, kind: 'todo-restore', seqs: [seq], message: { ...restored, id }, text: '' }];
     });
     if (!operations.length) return null;
     const tx = { id: randomUUID(), planId: 'runtime-disable', source: 'runtime-disable', createdAt: Date.now(), operations,

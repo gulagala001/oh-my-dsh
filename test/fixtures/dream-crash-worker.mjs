@@ -7,6 +7,7 @@ import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DreamStore } from '../../src/dream/store.mjs';
 import { DreamService } from '../../src/dream/service.mjs';
+import { createEffortResolver } from '../../src/effort.mjs';
 import { ContextStore } from '../../src/context/store.mjs';
 import { HubStore, projectOf } from '../../src/hub-store.mjs';
 import { readDream } from '../../src/dream/recall.mjs';
@@ -28,6 +29,7 @@ await ctx.plugin(pi,{providers:{fixture:{api:'openai-completions',baseURL:endpoi
 await ctx.plugin(Persistence,{root:join(directory,'logs'),compression:'none'});
 const config={memoryScope:'project',dreamProvider:'fixture',dreamModel:'fixture',dreamDailyTokens:1000000,dreamDeepAgeMs:7*86400000,backgroundMaxRetries:0,jobTimeoutMs:120000};
 const store=new DreamStore(directory),hub={ctx,store:stateStore,config:()=>config,scope:()=>({mode:'project',project}),context:{store:archive,adapter:{message:text=>({role:'user',content:[{type:'text',text}]})}}};
+hub.efforts=createEffortResolver(ctx);
 const service=hub.dream=new DreamService(hub,{store});
 
 if(seed==='seed'){

@@ -1,4 +1,4 @@
-import { readJsonBody } from './http.mjs';
+import { readJsonBody, sendJson } from './http.mjs';
 import { installBrowser } from '#opencu/src/computer-use/browser-install.mjs';
 
 const CU_FIELDS = ['computerUseEnabled', 'computerUseBrowserExecutable', 'computerUseChromeUserDataDir', 'computerUseNativeBinary', 'computerUseNativeSocket'];
@@ -127,7 +127,7 @@ export function mountComponents(ctx, components) {
   ctx.inject(['webServer', 'connection'], scope => scope.effect(() => scope.webServer.register({ kind: 'prefix', path: '/trisoul-x/components', async handler(req, res) {
     const denied = scope.connection.requestRejection(req);
     if (denied !== undefined) { res.writeHead(denied); res.end(); return; }
-    const send = (status, body) => { if (res.destroyed || res.writableEnded) return; res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...(status === 413 || status === 408 ? { Connection: 'close' } : {}) }); res.end(JSON.stringify(body)); };
+    const send = (status, body) => sendJson(res, status, body);
     try {
       if (req.method === 'POST') {
         const input = await readJsonBody(req, { maxBytes: 65536 });

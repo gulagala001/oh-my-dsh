@@ -33,7 +33,7 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${
   writeFileSync(join(workspace, 'AGENTS.md'), 'Project instruction marker: PROJECT_FIXTURE.\n');
   const payloads = [], content = 'ORIGINAL_FIXTURE_42\n' + 'source material '.repeat(600);
   const stopCases = new Map();
-  let calls = 0, recallRange, recallReply;
+  let calls = 0, recallRange, recallReply, lastSnapshot;
   const provider = createServer(async (req, res) => {
     let body = ''; for await (const part of req) body += part;
     const p = JSON.parse(body); payloads.push(p);
@@ -84,7 +84,7 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${
   let complete = false;
   let log = ''; child.stdout.on('data', d => { log += d; }); child.stderr.on('data', d => { log += d; });
   t.after(async () => {
-    if (!complete) console.error('Integration diagnostics', { calls, payloads: payloads.length, log: log.slice(-7000).replace(/token=\S+/g, 'token=[redacted]') });
+    if (!complete) console.error('Integration diagnostics', { calls, payloads: payloads.length, state: lastSnapshot && { running: lastSnapshot.running, actions: lastSnapshot.actions, live: lastSnapshot.live, eventsSincePrepare: lastSnapshot.contextPipeline?.eventsSincePrepare, deferred: lastSnapshot.contextPipeline?.prepareDeferred, backlog: lastSnapshot.contextPipeline?.backlog, limits: lastSnapshot.contextPipeline?.limits }, log: log.slice(-7000).replace(/token=\S+/g, 'token=[redacted]') });
     if (child.exitCode === null) {
       if (process.platform === 'win32') { try { execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true }); } catch {} }
       else child.kill('SIGTERM');
@@ -102,7 +102,7 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${
     const response = await fetch(`${base}/api/${method}`, { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ type: 'client-request', rpcId: crypto.randomUUID(), method, payload: { args: { request } } }) });
     const body = await response.json(); assert.equal(body.result?.ok, true, JSON.stringify(body)); return body.result.value;
   };
-  const api = async (path, body) => { const r = await fetch(base + '/trisoul-x/api' + path, body === undefined ? { headers: { cookie } } : { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify(body) }); const value = await r.json(); assert.ok(r.ok, JSON.stringify(value)); return value; };
+  const api = async (path, body) => { const r = await fetch(base + '/trisoul-x/api' + path, body === undefined ? { headers: { cookie } } : { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify(body) }); const value = await r.json(); assert.ok(r.ok, JSON.stringify(value)); if (path.startsWith('/state?')) lastSnapshot = value; return value; };
   const created = await rpc('session/create', { cwd: workspace, agentPreset: preset }), id = created.sessionId, q = '?session=' + id;
   const computerState = await fetch(base + '/trisoul-x/computer-use/state' + q, { headers: { cookie } });
   const computerBody = await computerState.text();
@@ -124,9 +124,11 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${
   assert.equal(JSON.parse(readFileSync(join(home, 'trisoul-x', 'sessions', id + '.json'), 'utf8')).betterTodo.verification, true);
   assert.equal((await api('/scope' + q)).locked, false);
   await api('/scope' + q, { scope: 'project' });
-  // This finite fixture uses short batches to exercise background work within its scripted turn.
-  const updated = await api('/settings', { digestEvery: 8, digestWindow: 8, keepTailEvents: 2, automaticReplace: false, backgroundMode: 'unified', unifiedBackground: { provider: 'fixture', model: 'fixture', temperature: 0.2 } });
-  assert.equal(updated.digestEvery, 8); assert.equal(updated.unifiedBackground.temperature, 0.2);
+  // This finite transcript has about 5.5k eligible tokens, below the production
+  // 8k minimum. Set a fixture-sized batch and minimum; keep production defaults
+  // and all automatic scheduling, completion and exact-recall assertions intact.
+  const updated = await api('/settings', { digestEvery: 8, digestWindow: 8, prepareContinueTokens: 1000, keepTailEvents: 2, automaticReplace: false, backgroundMode: 'unified', unifiedBackground: { provider: 'fixture', model: 'fixture', temperature: 0.2 } });
+  assert.equal(updated.digestEvery, 8); assert.equal(updated.prepareContinueTokens, 1000); assert.equal(updated.unifiedBackground.temperature, 0.2);
   await rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: id, mode: 'queue', content: [{ type: 'text', text: 'Run native fixture tools.' }], clientTimeZone: 'Asia/Shanghai' });
   const reviewed = await until(async () => { const s = await api('/state' + q); return s.running === 'idle' && s.actions.preparedSegments && !s.live && s.metrics.main?.calls >= 13 && s; });
   assert.ok(reviewed.metrics.prepare.calls);

@@ -14,7 +14,7 @@ test('default background deadline does not abort at two minutes and aborts at te
   const records = []; let returned = false;
   const hub = Object.assign(Object.create(Hub.prototype), {
     config: () => Config({}), route: () => ({ provider: 'test', model: 'test', effort: 'off' }),
-    efforts: new Map([['off', { resolve: async () => undefined }]]), live: new Map(),
+    efforts: { resolve: async () => undefined }, live: new Map(),
     record(_session, kind, entry) { records.push({ kind, ...entry }); },
     ctx: { llm: { stream() { return { [Symbol.asyncIterator]() { return this; }, next: () => new Promise(() => {}), return: async () => { returned = true; return { done: true }; } }; } } },
   });

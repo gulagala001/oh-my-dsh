@@ -2,6 +2,7 @@ import { promptText } from './cc-adaptation/texts.mjs';
 import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
 import { createTodoStore } from './todolist.mjs';
+import { tasksFromLegacy } from './task-context.mjs';
 
 const TASK_ENTRY_SCHEMA = { type: 'object', properties: {
   id: { type: 'string', description: 'Required for edit: the existing task ID. Omit for excerpt/add.' },
@@ -62,11 +63,10 @@ export const VERIFICATION_PARAMETERS = {
   ],
 };
 
-const legacyTasks = todos => todos.map((t, i) => ({ id: `T${i + 1}`, title: t.content, done: t.status === 'completed', anchor: null, links: [], legacySource: t.source || '', legacyVerification: t.verification }));
 export function currentTaskSnapshot(session, cached) {
   const value = session?.snapshotEvents().findLast(e => e.type === 'todo/write')?.data ?? cached;
   if (Array.isArray(value?.tasks)) return value;
-  return { excerpts: [], tasks: legacyTasks(Array.isArray(value) ? value : value?.todos || []) };
+  return { excerpts: [], tasks: tasksFromLegacy(Array.isArray(value) ? value : value?.todos || []) };
 }
 export function currentTasks(session, cached) {
   const record = currentTaskSnapshot(session, cached);

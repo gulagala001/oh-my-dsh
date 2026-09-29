@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { ContextStore } from '../src/context/store.mjs';
+
 import { HubStore } from '../src/hub-store.mjs';
 import { ContextPipeline, contextConfig } from '../src/context/pipeline.mjs';
 import { catalogPage } from '../src/context/catalog.mjs';

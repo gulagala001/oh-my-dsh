@@ -1,6 +1,5 @@
 import { catalogPage } from './catalog.mjs';
-import { Readable } from 'node:stream';
-import { pipeline as streamPipeline } from 'node:stream/promises';
+import { sendAttachment } from '../http.mjs';
 import { compactionMessage } from './commands.mjs';
 import { Config, contextConfig } from '../config.mjs';
 import { userMessages } from './core.mjs';
@@ -35,21 +34,7 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
     const s = needSession(), asset = Number(url.searchParams.get('asset'));
     if (!Number.isSafeInteger(asset) || asset < 1) throw Error('附件编号从 1 开始');
     const item = hub.context.recallAssets(s, { id: url.searchParams.get('id') })[asset - 1];
-    if (!item?.block?.attachment) throw Error('附件没有可读取的原始引用');
-    const store = ctx.get?.('attachments') || ctx.attachments, ref = item.block.attachment;
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
-    res.setHeader('Cache-Control', 'private, max-age=3600');
-    if (item.block.type === 'image') {
-      if (!store?.readImage) throw Error('图片读取服务不可用');
-      const image = await store.readImage(ref);
-      res.setHeader('Content-Type', ref.mediaType || 'application/octet-stream');
-      res.end(image.data); return true;
-    }
-    if (!store?.readFileStream) throw Error('附件读取服务不可用');
-    res.setHeader('Content-Type', 'application/octet-stream');
-    res.setHeader('Content-Disposition', "attachment; filename*=UTF-8''" + encodeURIComponent(ref.name || 'attachment'));
-    await streamPipeline(Readable.from(store.readFileStream(ref)), res); return true;
+    await sendAttachment(ctx, res, item?.block); return true;
   }
   if (path === '/context/document') {
     const s = needSession(); hub.context.state(s);

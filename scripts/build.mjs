@@ -5,16 +5,10 @@ import { fileURLToPath } from 'node:url';
 import { whaleSvg } from '../src/client/brand.mjs';
 import { packSkin } from './pack-skin.mjs';
 
-await packSkin(fileURLToPath(new URL('../src/client/skins/google-material-expressive/', import.meta.url)),
-  fileURLToPath(new URL('../src/client/skins/bundled/google-material-expressive.json', import.meta.url)));
-
-await packSkin(fileURLToPath(new URL('../src/client/skins/ios-liquid-glass/', import.meta.url)),
-  fileURLToPath(new URL('../src/client/skins/bundled/ios-liquid-glass.json', import.meta.url)));
-await packSkin(fileURLToPath(new URL('../src/client/skins/codex-desktop/', import.meta.url)),
-  fileURLToPath(new URL('../src/client/skins/bundled/codex-desktop.json', import.meta.url)));
-
-await packSkin(fileURLToPath(new URL('../src/client/skins/claude-cli-terminal/', import.meta.url)),
-  fileURLToPath(new URL('../src/client/skins/bundled/claude-cli-terminal.json', import.meta.url)));
+for (const skin of ['google-material-expressive', 'ios-liquid-glass', 'codex-desktop', 'claude-cli-terminal']) {
+  await packSkin(fileURLToPath(new URL(`../src/client/skins/${skin}/`, import.meta.url)),
+    fileURLToPath(new URL(`../src/client/skins/bundled/${skin}.json`, import.meta.url)));
+}
 
 // The host mounts plugin-declared presets. Keep one authored composition;
 // the PTC variant only adds its tool presentation.
@@ -28,11 +22,9 @@ await writeFile(new URL('../presets/cordis.patch.yml', import.meta.url),
   presets.map(([id, name, description, plugins], order) => `    - id: preset-${id}\n      name: '@deepseek-ai/dsh-agent-preset'\n      config:\n        id: ${id}\n        name: ${JSON.stringify(name)}\n        description: ${JSON.stringify(description)}\n        order: ${order}\n        plugins:\n${plugins.trimEnd().split('\n').map(line => '          ' + line).join('\n')}\n`).join(''));
 
 await mkdir(new URL('../lib/', import.meta.url), { recursive: true });
-for (const destination of ['../docs/images/logo.svg']) {
-  const url = new URL(destination, import.meta.url);
-  await mkdir(new URL('./', url), { recursive: true });
-  await writeFile(url, whaleSvg('omd-logo').replace('aria-hidden="true"', 'role="img" aria-label="Oh My DSH"'));
-}
+const logo = new URL('../docs/images/logo.svg', import.meta.url);
+await mkdir(new URL('./', logo), { recursive: true });
+await writeFile(logo, whaleSvg('omd-logo').replace('aria-hidden="true"', 'role="img" aria-label="Oh My DSH"'));
 await build({
   entryPoints: [fileURLToPath(new URL('../src/client/index.jsx', import.meta.url))],
   outfile: fileURLToPath(new URL('../lib/client.js', import.meta.url)),
