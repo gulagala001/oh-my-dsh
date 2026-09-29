@@ -35,8 +35,8 @@
 
 ### 无限四代（投稿 #19）
 
-开发分支（未发布）：核验上游 [Minglink/dsh-infinite-gen-4 的固定提交](https://github.com/Minglink/dsh-infinite-gen-4/tree/5e377394fe9d6aeab6380e2a5a5f959bc1384426)，源码标注 0.4.0，MIT 许可。核验时上游没有对应 npm 包或 GitHub Release；既有 v1.0.0／v0.5.0 标签实际对应 `dsh-infinite-gen-3@0.5.0`，因此安装入口使用完整提交和档案 SHA-256，不使用这些标签。
+已收录到 OMD 推荐列表，[v0.3.0 发布版本的清单](https://github.com/gulagala001/oh-my-dsh/blob/v0.3.0/src/recommended-plugin-catalog.mjs)中已包含此条目。核验上游 [Minglink/dsh-infinite-gen-4 的固定提交](https://github.com/Minglink/dsh-infinite-gen-4/tree/5e377394fe9d6aeab6380e2a5a5f959bc1384426)，源码标注 0.4.0，MIT 许可。核验时上游没有对应 npm 包或 GitHub Release；既有 v1.0.0／v0.5.0 标签实际对应 `dsh-infinite-gen-3@0.5.0`，因此安装入口使用完整提交和档案 SHA-256，不使用这些标签。
 
 插件向所有会话注入两段相同的内容生成提示词，并注册元数据工具和回复评分投影；它不会移除 OMD 的原生工具。其“请求均为生成内容”等文案与实际执行、事实回查约定存在冲突。作为可选研究插件收录，默认不安装；建议在独立测试 profile 启用，不作为 OMD 日常执行预设。未改写上游提示词，也未验证真实模型的对抗效果。
 
-隔离 Web 检查安装、状态条、元数据工具、启停、原生预设的作用范围、消息回放和卸载；模型请求使用测试替身。复验入口：`OMD_LIVE_PLUGIN_TESTS=1 node --test test/infinite-gen4-install.test.mjs`。官方桌面与 Windows 尚未实测。
+已有核验组合为 DSH `0.1.7-rc.2` / OMD `0.1.7-rc.2.19` 的隔离 Web 环境，检查安装、状态条、元数据工具、启停、原生预设的作用范围、消息回放和卸载；模型请求使用测试替身。复验入口：`OMD_LIVE_PLUGIN_TESTS=1 node --test test/infinite-gen4-install.test.mjs`。新版 OMD 携带此条目不代表已在 DSH `0.2.0-rc.2` 完成同等复测；官方桌面与 Windows 尚未实测。
