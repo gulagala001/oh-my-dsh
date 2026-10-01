@@ -15,6 +15,7 @@ export function pluginManagementError(error) {
 }
 export function pluginInstallSpec(plugin, version) {
   parseVersion(version);
+  if (plugin.review?.releaseTag && version !== plugin.review.version) throw Error("桥接发行包需要固定核验版本");
   const source = plugin.review?.source;
   if (source) {
     if (version !== plugin.review.version || !/^[\w.-]+\/[\w.-]+$/.test(source.repository)
@@ -23,11 +24,11 @@ export function pluginInstallSpec(plugin, version) {
     return `https://codeload.github.com/${source.repository}/tar.gz/${source.commit}`;
   }
   return plugin.githubRelease
-    ? `https://github.com/${plugin.githubRelease}/releases/download/v${version}/${plugin.packageName}-${version}.tgz`
+    ? `https://github.com/${plugin.githubRelease}/releases/download/${plugin.review?.releaseTag || 'v' + version}/${plugin.packageName}-${version}.tgz`
     : `${plugin.packageName}@${version}`;
 }
 export async function latestPluginVersion(plugin, signal) {
-  const response = await fetch(plugin.githubRelease ? `https://api.github.com/repos/${plugin.githubRelease}/releases/latest` : `https://registry.npmjs.org/${encodeURIComponent(plugin.packageName)}/latest`, {
+  const response = await fetch(plugin.githubRelease ? `https://api.github.com/repos/${plugin.githubRelease}/releases/${plugin.review?.releaseTag ? 'tags/' + encodeURIComponent(plugin.review.releaseTag) : 'latest'}` : `https://registry.npmjs.org/${encodeURIComponent(plugin.packageName)}/latest`, {
     signal: AbortSignal.any([signal, AbortSignal.timeout(20000)]), headers: { Accept: 'application/json' },
   });
   if (!response.ok) {
@@ -40,7 +41,8 @@ export async function latestPluginVersion(plugin, signal) {
   }
   const manifest = JSON.parse(Buffer.concat(parts).toString('utf8'));
   if (plugin.githubRelease) {
-    const version = manifest.tag_name?.replace(/^v/, '');
+    const version = plugin.review?.releaseTag ? plugin.review.version : manifest.tag_name?.replace(/^v/, '');
+    if (plugin.review?.releaseTag && manifest.tag_name !== plugin.review.releaseTag) throw Error('GitHub Release 与固定桥接版本不一致');
     parseVersion(version);
     if (manifest.draft || manifest.prerelease || !manifest.assets?.some(asset => asset.browser_download_url === pluginInstallSpec(plugin, version)))
       throw Error('GitHub Release 缺少预期的 DSH 插件安装包');

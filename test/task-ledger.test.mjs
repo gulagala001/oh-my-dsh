@@ -164,6 +164,74 @@ test('task edits wait for running verification and then invalidate its evidence'
   assert.match(await verify({ op: 'view' }), /T1 .*新登录要求 — no links/);
 });
 
+test('no-op task edits preserve completion, evidence and replayed state', async t => {
+  const { dir, session, store, call, verify, user } = setup(t); user(quote); await call(excerpt);
+  writeFileSync(join(dir, 'check.mjs'), 'console.log("NO_OP_EVIDENCE_OK")');
+  await verify({ op: 'link', links: [
+    { task: 'T1', kind: 'test', path: 'check.mjs' },
+    { task: 'T2', kind: 'text', note: 'Inspected fixture requirements.', reason: 'No registration service in this fixture.' },
+  ] });
+  assert.match(await verify({ op: 'run', tasks: ['T1'] }), /PASS.*NO_OP_EVIDENCE_OK/);
+  await call({ op: 'check', updates: [{ id: 'T1', done: true }, { id: 'T2', done: true }] });
+  store.markTextReviewed(session, store.textReviewLinkIds(session));
+  const before = store.snapshot(session);
+  for (const entry of [
+    { id: 'T1', title: '邮箱验证码登录' },
+    { id: 'T1', title: '  邮箱验证码登录  ', anchor: null },
+    { id: 'T1', anchor: { excerpt: 'E1', from: '登录必须支持', to: '邮箱验证码' } },
+    { id: 'T1', title: '邮箱验证码登录', anchor: { from: '登录，必须：支持', to: '邮箱 验证码' } },
+    { id: 'T1', anchor: { from: '登录', to: '验证码' } },
+    { id: 'T2', title: '注册', anchor: { from: '注册功能', to: '注册功能' } },
+  ]) {
+    const result = await call({ op: 'edit', tasks: [entry] });
+    assert.deepEqual(store.snapshot(session), before, JSON.stringify(entry));
+    assert.match(result, new RegExp(`Task ${entry.id} unchanged`));
+    assert.doesNotMatch(result, /were cleared/);
+  }
+  const replay = Session.create(session.id, JSON.parse(JSON.stringify(session.snapshotEvents())), session.header);
+  assert.deepEqual(createTodoStore().snapshot(replay), before);
+  assert.deepEqual(currentTasks(replay), currentTasks(session));
+});
+
+test('anchor changes still invalidate evidence and mixed edit batches remain atomic', async t => {
+  const { session, store, call, verify, user } = setup(t); user(quote); await call(excerpt);
+  user(quote); await call({ ...excerpt, msg: 2, tasks: [] });
+  await verify({ op: 'link', links: ['T1', 'T2'].map(task => ({ task, kind: 'text', note: 'Inspected fixture requirements.', reason: 'No service in this fixture.' })) });
+  await call({ op: 'check', updates: [{ id: 'T1', done: true }, { id: 'T2', done: true }] });
+  const before = store.snapshot(session), revision = session.seq;
+  const edits = [
+    { id: 'T1', title: '邮箱验证码登录' },
+    { id: 'T2', anchor: { excerpt: 'E2', from: '注册功能', to: '注册功能' } },
+  ];
+  await assert.rejects(call({ op: 'edit', tasks: [...edits, { id: 'T1', anchor: { from: '不存在', to: '不存在' } }] }), /matches no excerpt/);
+  assert.deepEqual(store.snapshot(session), before);
+  assert.equal(session.seq, revision);
+  await call({ op: 'edit', tasks: edits });
+  let [unchanged, changed] = store.snapshot(session).tasks;
+  assert.deepEqual(unchanged, before.tasks[0]);
+  assert.equal(changed.anchor.excerpt, 'E2');
+  assert.equal(changed.done, false); assert.deepEqual(changed.links, []);
+  await call({ op: 'edit', tasks: [{ id: 'T1', anchor: { excerpt: 'E1', from: '登录必须支持', to: '注册功能' } }] });
+  [changed] = store.snapshot(session).tasks;
+  assert.equal(changed.title, before.tasks[0].title);
+  assert.equal(changed.anchor.start, before.tasks[0].anchor.start);
+  assert.notEqual(changed.anchor.end, before.tasks[0].anchor.end);
+  assert.equal(changed.done, false); assert.deepEqual(changed.links, []);
+
+  // Isolate start-only edits: title, excerpt and end remain unchanged.
+  await verify({ op: 'link', links: [{ task: 'T1', kind: 'text', note: 'Inspected fixture requirements.', reason: 'No service in this fixture.' }] });
+  await call({ op: 'check', updates: [{ id: 'T1', done: true }] });
+  const beforeStart = store.snapshot(session).tasks[0];
+  assert.equal(beforeStart.done, true); assert.equal(beforeStart.links.length, 1);
+  await call({ op: 'edit', tasks: [{ id: 'T1', anchor: { excerpt: 'E1', from: '必须支持', to: '注册功能' } }] });
+  [changed] = store.snapshot(session).tasks;
+  assert.equal(changed.anchor.start, beforeStart.anchor.start + 2);
+  assert.deepEqual(changed, {
+    ...beforeStart, done: false, links: [],
+    anchor: { ...beforeStart.anchor, from: '必须支持', start: beforeStart.anchor.start + 2 },
+  });
+});
+
 test('text evidence retains its source and reason, and can be unlinked without affecting other tasks', async t => {
   const { session, call, verify, user } = setup(t); user(quote); await call(excerpt);
   await assert.rejects(verify({ op: 'link', links: [{ task: 'T1', kind: 'text', note: 'looked good' }] }), /requires reason/);
@@ -194,6 +262,8 @@ test('legacy X records remain visible without fabricating anchors or passed test
   session.append('todo/write', { todos: [{ content: '旧任务', status: 'completed', source: '用户原话备注', verification: { method: 'read', result: '旧文字结果' } }] });
   assert.match(await call({ op: 'view' }), /legacy task/);
   let item = currentTasks(session)[0]; assert.equal(item.anchor, null); assert.equal(item.links.length, 0); assert.equal(item.verification.result, '旧文字结果');
+  await call({ op: 'edit', tasks: [{ id: 'T1', title: '旧任务' }] });
+  assert.deepEqual(currentTasks(session)[0], item);
   await call({ ...excerpt, tasks: [] });
   await call({ op: 'edit', tasks: [{ id: 'T1', anchor: { from: '注册功能', to: '注册功能' } }] });
   item = currentTasks(session)[0]; assert.equal(item.source, '注册功能'); assert.equal(item.status, 'pending'); assert.equal(item.verification, undefined);

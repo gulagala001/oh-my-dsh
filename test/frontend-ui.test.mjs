@@ -196,7 +196,7 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await page.getByRole('dialog').getByRole('button', { name: 'Oh My DSH', exact: true }).click();
   await settings.getByRole('button', { name: '模型与身份', exact: true }).click();
   assert.equal(await identity.inputValue(), '你是我的研究助手。\n帮助我整理资料。');
-  await settings.getByRole('button', { name: '恢复默认', exact: true }).click();
+  await settings.getByLabel('人格预设', { exact: true }).selectOption('default');
   assert.equal(await identity.inputValue(), defaultIdentity);
   await settings.getByRole('button', { name: '保存设置', exact: true }).click();
   await until(async () => !(await settings.getByRole('button', { name: '保存设置', exact: true }).isEnabled()));

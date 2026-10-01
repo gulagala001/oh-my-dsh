@@ -377,13 +377,20 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
           const hasTitle = typeof entry.title === 'string' && entry.title.trim()
           const hasAnchor = entry.anchor !== undefined && entry.anchor !== null
           if (!hasTitle && !hasAnchor) return err('Rejected: op:edit entries need title or anchor.')
-          if (hasTitle) t.title = entry.title.trim()
+          const title = hasTitle ? entry.title.trim() : t.title
+          let anchor = t.anchor
           if (hasAnchor) {
             const r = resolveAnchor(next.excerpts, entry.anchor)
             if (r.error) return err(r.error)
-            t.anchor = { excerpt: r.excerpt, from: entry.anchor.from, to: entry.anchor.to, start: r.start, end: r.end }
+            anchor = { excerpt: r.excerpt, from: entry.anchor.from, to: entry.anchor.to, start: r.start, end: r.end }
           }
-          // Editing the task invalidates its completion and linked evidence, not the files.
+          // Compare resolved ranges, not alternate quotes of the same user text.
+          if (title === t.title && anchor?.excerpt === t.anchor?.excerpt && anchor?.start === t.anchor?.start && anchor?.end === t.anchor?.end) {
+            echo.push(`Task ${t.id} unchanged — its checkmark and verification links were preserved.`)
+            continue
+          }
+          t.title = title; t.anchor = anchor
+          // Only a changed task invalidates its completion and evidence, not the files.
           t.done = false
           t.links = []
           delete t.legacyVerification; delete t.legacySource

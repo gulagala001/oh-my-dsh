@@ -18,6 +18,8 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${
   const isMain = p => p.tools?.some(t => ['todo_write', 'run_code'].includes(t.function.name));
   const root = mkdtempSync(join(tmpdir(), 'trisoul-x-dsh-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   mkdirSync(home); mkdirSync(workspace); mkdirSync(join(workspace, '.agents', 'skills', 'test-skill'), { recursive: true });
+  // Keep skill discovery inside the fixture even when an ancestor has a .git marker.
+  mkdirSync(join(workspace, '.git'));
   mkdirSync(join(home, 'trisoul-x'));
   const sentinel = join(root, 'unrelated-project');
   mkdirSync(sentinel); mkdirSync(join(sentinel, 'nested'));

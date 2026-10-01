@@ -30,15 +30,20 @@ export function compareVersions(a, b) {
   return 0;
 }
 // Stable host versions need a named suffix: a fourth numeric core is not SemVer.
-export function hostAlignedVersion(hostVersion, patch = 1) {
+export function hostAlignedVersion(hostVersion, omdVersion = '0.4.0') {
   const host = parseVersion(hostVersion);
-  if (!Number.isSafeInteger(patch) || patch < 1) throw Error('Plugin patch must be a positive safe integer');
+  if (typeof omdVersion !== 'string' || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(omdVersion)) throw Error('OMD version must contain major, feature and patch numbers');
   const [base, build] = hostVersion.replace(/^v/, '').split('+');
-  return base + (host.pre.length ? '.omd.' : '-omd.') + patch + (build ? '+' + build : '');
+  return base + (host.pre.length ? '.omd.' : '-omd.') + omdVersion + (build ? '+' + build : '');
 }
 function alignedRelease(version) {
   const parsed = parseVersion(version), parts = [...parsed.pre];
   let patch;
+  const marker = parts.lastIndexOf('omd');
+  if (marker >= 0 && parts.length - marker === 4 && parts.slice(marker + 1).every(x => /^(0|[1-9]\d*)$/.test(x))) {
+    const omd = parts.splice(marker + 1).join('.'); parts.pop();
+    return { host: parsed.core.join('.') + (parts.length ? '-' + parts.join('.') : ''), omd, patch: 0n, preview: parts.length > 0 };
+  }
   if (parts.length >= 2 && parts.at(-2) === 'omd' && /^[1-9]\d*$/.test(parts.at(-1))) {
     patch = parts.pop(); parts.pop();
   } else if (parsed.core[0] === 0n && parts.length >= 3 && /^(alpha|beta|rc)$/.test(parts[0]) && /^[1-9]\d*$/.test(parts.at(-1))) {
@@ -46,6 +51,7 @@ function alignedRelease(version) {
   } else return null;
   return { host: parsed.core.join('.') + (parts.length ? '-' + parts.join('.') : ''), patch: BigInt(patch), preview: parts.length > 0 };
 }
+const modernAligned = version => Boolean(alignedRelease(version)?.omd);
 const releaseIsPreview = (version, policy) => policy === 'dsh-aligned'
   ? (alignedRelease(version)?.preview ?? parseVersion(version).pre.length > 0)
   : parseVersion(version).pre.length > 0;
@@ -61,10 +67,11 @@ const hostBound = version => alignedRelease(version) !== null
 function releaseCompare(a, b, policy) {
   if (policy === 'dsh-aligned' && legacyPreview(a) !== legacyPreview(b)) return legacyPreview(a) ? -1 : 1;
   if (policy === 'dsh-aligned') {
+    if (modernAligned(a) !== modernAligned(b)) return modernAligned(a) ? 1 : -1;
     if (hostBound(a) && legacyIndependent(b)) return 1;
     if (legacyIndependent(a) && hostBound(b)) return -1;
     const left = alignedRelease(a), right = alignedRelease(b);
-    if (left && right) return compareVersions(left.host, right.host) || (left.patch < right.patch ? -1 : left.patch > right.patch ? 1 : 0);
+    if (left && right) return compareVersions(left.host, right.host) || (left.omd && right.omd ? compareVersions(left.omd, right.omd) : 0) || (left.patch < right.patch ? -1 : left.patch > right.patch ? 1 : 0);
   }
   return compareVersions(a, b);
 }
@@ -85,7 +92,7 @@ export function validateManifest(value) {
 export function versionStatus(currentVersion, manifest) {
   const preview = releaseIsPreview(currentVersion, manifest.versionPolicy);
   const compare = (a, b) => releaseCompare(a, b, manifest.versionPolicy);
-  const migrate = manifest.versionPolicy === 'dsh-aligned' && legacyIndependent(currentVersion);
+  const migrate = manifest.versionPolicy === 'dsh-aligned' && (legacyIndependent(currentVersion) || ['0.2.0', '0.2.1', '0.2.2', '0.3.0'].includes(currentVersion));
   const eligible = manifest.releases.filter(r => preview || !releaseIsPreview(r.version, manifest.versionPolicy) || migrate && hostBound(r.version));
   const updates = eligible.filter(r => compare(r.version, currentVersion) > 0);
   return { currentVersion, latestVersion: eligible[0]?.version || null,

@@ -352,3 +352,17 @@ test('failed version lookups cancel the unused response body before retry', asyn
     assert.equal(await latestPluginVersion(catalog[0], new AbortController().signal), '1.0.0');
   } finally { globalThis.fetch = original; }
 });
+
+
+test('OpenDesign uses its pinned bridge release instead of the unrelated OMD latest tag', async t => {
+ const { recommendedPlugins }=await import('../src/recommended-plugin-catalog.mjs');
+ const { pluginInstallSpec,latestPluginVersion }=await import('../src/recommended-plugins.mjs');
+ const p=recommendedPlugins.find(x=>x.id==='dsh-open-design');
+ const spec=pluginInstallSpec(p,p.review.version);
+ assert.equal(spec,'https://github.com/gulagala001/oh-my-dsh/releases/download/opendesign-v0.1.0-omd.1.0.0/dsh-open-design-0.1.0-omd.1.0.0.tgz');
+ const original=globalThis.fetch;t.after(()=>globalThis.fetch=original);
+ globalThis.fetch=async url=>{assert.equal(url,'https://api.github.com/repos/gulagala001/oh-my-dsh/releases/tags/opendesign-v0.1.0-omd.1.0.0');return new Response(JSON.stringify({tag_name:p.review.releaseTag,assets:[{browser_download_url:spec}]}));};
+ assert.equal(await latestPluginVersion(p,new AbortController().signal),p.review.version);
+ globalThis.fetch=async()=>new Response(JSON.stringify({tag_name:'v0.2.0-rc.2.omd.0.4.0',assets:[{browser_download_url:spec}]}));
+ await assert.rejects(latestPluginVersion(p,new AbortController().signal),/固定桥接版本/);
+});

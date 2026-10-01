@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { createOptimizerPreferences, DraftOptimizer, OPTIMIZER_MODES } from './prompt-optimizer-state.mjs';
+import { createOptimizerPreferences, DraftOptimizer, OPTIMIZER_MODES, optimizerRequirements } from './prompt-optimizer-state.mjs';
 import css from './prompt-optimizer.css';
 
 const descriptions = { basic: '只润色表达，保留原意和限制。', structured: '整理已有目标、约束与交付要求。', planning: '将现有任务组织为可执行的步骤。' };
@@ -44,7 +44,7 @@ export function applyPromptOptimizer(ctx) {
       <p>默认显示输入框星星。悬浮或展开抽屉可选择模式、回退版本并继续修改。</p>
       <Toggle checked={prefs.automatic} disabled={!prefs.enabled} onChange={automatic => set({ automatic })}>每次发送前自动润色</Toggle>
       <p>星星点亮时，每次发送先使用最低档“轻润色”，成功后自动发送。可随时点击星星关闭。润色会额外调用一次当前模型。</p>
-      <p>偏好保存在当前浏览器。切换会话保留原稿、版本与继续优化要求，发送后开始新的草稿；刷新页面后版本记录清空，当前草稿由宿主保存。</p>
+      <p>额外要求与命名预设保存在当前浏览器，刷新后仍可使用，不同会话复用。切换会话保留原稿、版本与继续优化要求，发送后开始新的草稿；刷新页面后版本记录清空，当前草稿由宿主保存。</p>
       {error && <p role="alert">{error}</p>}
       <small>优化模板源自 <a href="https://github.com/linshenkx/prompt-optimizer/tree/93c37090846dd7ba9619a0ebc152f205624df9f1" target="_blank" rel="noreferrer">Prompt Optimizer（MIT 版本）</a>。</small>
     </section>;
@@ -56,6 +56,9 @@ export function applyPromptOptimizer(ctx) {
   function Entry({ controller, useInput }) {
     const prefs = useSyncExternalStore(preferences.subscribe, preferences.getSnapshot), state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
     const input = useInput(s => s), [open, setOpen] = useState(false), [localError, setLocalError] = useState('');
+    const [presetName, setPresetName] = useState('');
+    const requirements = optimizerRequirements(prefs), selectedPreset = prefs.requirementPresets.find(p => p.id === prefs.requirementPreset);
+    useEffect(() => { setPresetName(selectedPreset?.name ?? ''); }, [prefs.requirementPreset, selectedPreset?.name]);
     const instruction = state.instruction, setInstruction = instruction => controller.publish({ instruction });
     const id = useId(), anchor = useRef(null), panel = useRef(null), timer = useRef(null), pinned = useRef(false);
     const [position, setPosition] = useState({ left: 8, bottom: 60, width: 370, maxHeight: 500 });
@@ -75,6 +78,7 @@ export function applyPromptOptimizer(ctx) {
       return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
     }, [open, prefs.enabled]);
     const set = patch => { try { preferences.set(patch); setLocalError(''); } catch { setLocalError('设置保存失败，原设置保持不变。'); setOpen(true); } };
+    const changeRequirements = action => { try { action(); setLocalError(''); } catch (error) { setLocalError(error.message || '设置保存失败，原设置保持不变。'); } };
     const refine = () => { if (!instruction.trim()) { setLocalError('请先填写继续优化的要求'); return; } setLocalError(''); void controller.run({ instruction }); };
     if (!prefs.enabled) return null;
     const canOptimize = Boolean(input?.draft.trim()) && input.phase === 'plain' && !/^\s*\//.test(input.draft);
@@ -87,6 +91,13 @@ export function applyPromptOptimizer(ctx) {
         <div className="omd-opt-modes" role="group" aria-label="优化模式">{OPTIMIZER_MODES.map(([mode, label]) => <button type="button" key={mode} disabled={!!state.busy} aria-pressed={mode === prefs.mode} onClick={() => set({ mode })}>{label}</button>)}</div>
         <p className="omd-opt-hint">{descriptions[prefs.mode]}</p>
         <Toggle checked={prefs.automatic} onChange={automatic => set({ automatic })}>每次发送前自动润色</Toggle><p className="omd-opt-hint">固定轻润色 · 成功后自动发送</p>
+        <div className="omd-opt-requirements">
+          <label className="omd-opt-actions">额外要求 <select aria-label="额外要求预设" value={prefs.requirementPreset} disabled={!!state.busy} onChange={event => changeRequirements(() => preferences.selectRequirementPreset(event.target.value))}><option value="">自定义</option>{prefs.requirementPresets.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+          <textarea aria-label="额外优化要求" rows={3} maxLength={64000} disabled={!!state.busy} placeholder="可选，例如：保留技术细节，使用简体中文" value={requirements} onChange={event => changeRequirements(() => preferences.setRequirements(event.target.value))}/>
+          <div className="omd-opt-preset-save"><input aria-label="要求预设名称" maxLength={80} disabled={!!state.busy} placeholder="预设名称" value={presetName} onChange={event => setPresetName(event.target.value)}/><button type="button" disabled={!!state.busy} onClick={() => changeRequirements(() => preferences.saveRequirementPreset(presetName))}>{selectedPreset ? '保存修改' : '保存预设'}</button></div>
+          {selectedPreset && <div className="omd-opt-actions"><span>{Object.hasOwn(prefs.requirementDrafts, selectedPreset.id) ? '要求已暂存，保存修改可更新预设' : '已选择保存的预设'}</span><div><button type="button" disabled={!!state.busy} onClick={() => changeRequirements(() => preferences.saveRequirementPreset(presetName, true))}>另存为预设</button><button type="button" disabled={!!state.busy} onClick={() => changeRequirements(() => preferences.removeRequirementPreset())}>删除预设</button></div></div>}
+          <p className="omd-opt-hint">用于首次和后续优化；留空沿用原行为。切换保留已编辑要求，刷新后仍可使用。</p>
+        </div>
         <div className="omd-opt-actions"><span>范围：当前草稿</span><button type="button" className="omd-opt-primary" disabled={!state.busy && !canOptimize} onClick={() => state.busy ? controller.cancel() : void controller.run()}>{state.busy ? '停止优化' : '开始优化'}</button></div>
         {state.versions.length > 0 && <div className="omd-opt-history"><div className="omd-opt-actions"><label>版本 <select aria-label="提示词版本" value={state.cursor} disabled={!!state.busy} onChange={event => controller.selectVersion(Number(event.target.value))}>{state.versions.map((version, i) => <option key={i} value={i}>{version}</option>)}</select></label><div><button type="button" disabled={!!state.busy || state.cursor <= 0} onClick={() => controller.selectVersion(state.cursor - 1)}>撤销</button><button type="button" disabled={!!state.busy || state.cursor >= state.versions.length - 1} onClick={() => controller.selectVersion(state.cursor + 1)}>重做</button><button type="button" disabled={!!state.busy || state.cursor === 0} onClick={() => controller.selectVersion(0)}>恢复原稿</button></div></div>
           <div className="omd-opt-refine"><input aria-label="继续优化要求" placeholder="例如：更短一点，保留限制" value={instruction} onChange={event => setInstruction(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); event.stopPropagation(); refine(); } }}/><button type="button" disabled={!!state.busy || !canOptimize} onClick={refine}>继续优化</button></div>

@@ -27,9 +27,11 @@ export async function prepareOffline(destination, source = root) {
   if (inside(source, destination) || inside(destination, source)) throw new Error('离线目录必须在源码目录外');
   if (existsSync(destination)) throw new Error('离线目录已存在，请指定一个新目录；不会覆盖已有文件');
   const pkg = JSON.parse(await readFile(join(source, 'package.json'), 'utf8'));
-  await mkdir(dirname(destination), { recursive: true });
+  const parent = dirname(destination);
+  // Windows rejects mkdir on a drive root, even with recursive: true.
+  if (parent !== dirname(parent)) await mkdir(parent, { recursive: true });
   // Stage on the destination volume: C: -> D: must not fail at the final rename.
-  const staging = await mkdtemp(join(dirname(destination), '.omd-offline-'));
+  const staging = await mkdtemp(join(parent, '.omd-offline-'));
   const env = { ...process.env, PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1' };
   const run = (command, args, cwd = staging) => execFileSync(command, args, {
     cwd, env, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024, timeout: 600000,

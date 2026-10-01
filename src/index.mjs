@@ -14,7 +14,7 @@ import { Config } from './config.mjs';
 import { neutralizeHostEnvironment } from './cc-adaptation/environment.mjs';
 import { Hub } from "./hub.mjs";
 import { eventText } from './hub.mjs';
-import { CONTEXT_WINDOW_EXCEEDED_CODE } from '@deepseek-ai/dsh-llm';
+import { installContextErrorRecovery } from './context/host.mjs';
 import { currentTasks, restoreTaskProjection } from './tasks.mjs';
 import { ensureSystemHead } from './system-head.mjs';
 import { handleContextApi } from './context/api.mjs';
@@ -155,14 +155,7 @@ export async function apply(ctx, config) {
     if (monitored(agent.session)) hub.requestStarts.set(agent.session.id, Date.now());
     return route;
   }, { global: true });
-  ctx.on('agent/request-error', async ({ agent, failure, signal }, next) => {
-    if (isX(agent.session) && failure.code === CONTEXT_WINDOW_EXCEEDED_CODE && !signal.aborted) {
-      const changed = await hub.context.applyReady(agent, { ignoreCooldown: true });
-      if (changed) return { kind: 'retry' };
-      ctx.logger.warn('上下文已达容量上限，但没有可应用的摘要。原文保留；没有现场调用摘要模型。');
-    }
-    return next();
-  }, { global: true });
+  installContextErrorRecovery(ctx, hub, isX);
   ctx.on('agent/turn-stopping', ({ agent, turn, signal }) => { if (isX(agent.session)) hub.finishTasks(agent, turn, signal); }, { global: true });
   ctx.on('agent/status', ({ agent, status }) => {
     hub.budgets.tick(agent.session, isX(agent.session) && status === 'running');

@@ -1,7 +1,7 @@
 import { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
 export { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
 import { createPoller } from './polling.mjs';
-import { DEFAULT_IDENTITY } from '../cc-adaptation/identity.mjs';
+import { PERSONALITY_PRESETS, personalityPreset, personalityText, personalityPatch } from '../cc-adaptation/personality.mjs';
 import {createDreamPanel,DREAM_CSS} from './dream-client.mjs';
 
 export const CONTEXT_UI_VERSION = '1.3.0';
@@ -320,6 +320,8 @@ export function createContextUI(React) {
         ...(preserveDraft ? {} : { globalText: latest.text, globalLatest: null }) });
     };
     set = (key, value) => this.setState(s => ({ config: { ...s.config, [key]: value }, status: '', ...(Object.hasOwn(CONTEXT_FREQUENCY_PRESETS.medium, key) ? { custom: true } : {}) }));
+    choosePersonality = preset => this.setState(s => ({ config: { ...s.config, ...personalityPatch(s.config, preset) }, status: '' }));
+    editPersonality = text => this.setState(s => ({ config: { ...s.config, identityPreset: 'custom', identityPrompt: text, identityCustomPrompt: text }, status: '' }));
     pickPreset = name => {
       if (name === 'custom') { this.setState({ custom: true }); return; }
       this.setState(s => ({ config: { ...s.config, ...contextFrequencyPatch(name) }, custom: false, status: '' }));
@@ -425,7 +427,12 @@ export function createContextUI(React) {
       return h(React.Fragment, null,
         section('后台模型', '主执行模型仍在 DSH 的模型设置中选择。', h(React.Fragment, null, segments('后台模型配置方式', mode, [['follow', '跟随主模型'], ['unified', '统一配置'], ['separate', '分别配置']], this.chooseRoute),
           mode === 'follow' ? h('div', { className: 'cx-info' }, icon('layers'), h('p', null, '预处理 AI 和中枢使用当前会话的提供方与模型。')) : mode === 'unified' ? this.route('unifiedBackground', '预处理与中枢') : h(React.Fragment, null, this.route('background', '预处理 AI'), this.route('surgeon', '中枢 AI')))),
-        section('身份认知', '保留原来的身份编辑能力。', field('身份提示词', h('textarea', { rows: 7, value: c.identityPrompt ?? DEFAULT_IDENTITY, onChange: e => this.set('identityPrompt', e.target.value), placeholder: '描述助手是谁，以及主要帮助你做什么' }), '保存后作用于后续请求；留空可移除身份描述。'), button('恢复默认', () => this.set('identityPrompt', DEFAULT_IDENTITY), { quiet: true, disabled: c.identityPrompt === DEFAULT_IDENTITY })));
+        section('人格', '选择一个搭子，或保留你自己的完整人设。保存后作用于后续请求。', h(React.Fragment, null,
+          field('人格预设', h('select', { value: personalityPreset(c), onChange: e => this.choosePersonality(e.target.value) },
+            h('option', { value: 'custom' }, '自定义'), ...Object.entries(PERSONALITY_PRESETS).map(([id, preset]) => h('option', { key: id, value: id }, preset.name)), h('option', { value: 'off' }, '关闭人格')),
+            '切换内置预设或关闭人格都会保留自定义内容；升级后沿用已有身份设置。'),
+          personalityPreset(c) === 'off' ? h('p', { className: 'cx-hint' }, '已关闭人格描述；仍保留原有工作能力和执行规则。') : field('身份提示词', h('textarea', { rows: 9, readOnly: personalityPreset(c) !== 'custom', value: personalityText(c), onChange: e => this.editPersonality(e.target.value), placeholder: '描述助手是谁，以及主要帮助你做什么' }), personalityPreset(c) === 'custom' ? '留空可移除身份描述。自定义内容随设置保存，切换预设不会丢失。' : '这是内置预设原文。可复制到自定义后修改。'),
+          Object.hasOwn(PERSONALITY_PRESETS, personalityPreset(c)) && button('复制到自定义', () => this.editPersonality(personalityText(c)), { quiet: true }))));
     }
     renderGlobal() {
       return h(React.Fragment, null, alert(this.state.globalError, true),
