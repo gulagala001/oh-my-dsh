@@ -1,9 +1,33 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {writeFile,readFile} from 'node:fs/promises';
+import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 
-test('Jevify release installs or reports its incompatibility, and remains removable', {timeout:180000}, async t => {
-  const f=await frontendFixture(t), {page}=f;
+test('pinned Jevify release installs or reports its incompatibility, and remains removable', {timeout:180000}, async t => {
+  // Pin the existing install/compatibility case. Public latest metadata is tested
+  // separately; shared CI IPs can exhaust its anonymous API quota before install.
+  const version='0.1.5', asset='https://github.com/gulagala001/jevify/releases/download/v'+version+'/dsh-plugin-jevify-'+version+'.tgz';
+  let queryTrace;
+  const f=await frontendFixture(t,{setupWorkspace:async({root,home})=>{
+    queryTrace=join(root,'metadata-queries.txt');
+    const hook=join(root,'jevify-metadata.mjs');
+    await writeFile(hook,`import {appendFileSync} from 'node:fs';
+export function apply(ctx) {ctx.effect(()=>{
+ const previous=globalThis.fetch;
+ const wrapped=(input,init)=>{
+  if ((typeof input==='string'?input:input.url||String(input))==='https://api.github.com/repos/gulagala001/jevify/releases/latest') {
+   appendFileSync(${JSON.stringify(queryTrace)},'query\\n');
+   return Promise.resolve(new Response(JSON.stringify({tag_name:'v${version}',draft:false,prerelease:false,assets:[{browser_download_url:'${asset}'}]}),{headers:{'content-type':'application/json'}}));
+  }
+  return previous(input,init);
+ };
+ globalThis.fetch=wrapped;return()=>{if(globalThis.fetch===wrapped)globalThis.fetch=previous;};
+});}
+`);
+    await writeFile(join(home,'cordis.patch.yml'),JSON.stringify([{insert:[{id:'jevify-release-metadata-fixture',name:pathToFileURL(hook).href}]}]));
+  }}), {page}=f;
   const status=async()=>(await page.request.get(new URL('/trisoul-x/recommended-plugins',page.url()).href)).json();
   let initial=await status();assert.equal(initial.plugins.find(p=>p.id==='jevify').installed,false);
   await page.getByRole('button',{name:'设置',exact:true}).click();
@@ -16,6 +40,7 @@ test('Jevify release installs or reports its incompatibility, and remains remova
     await page.getByRole('button',{name:'设置',exact:true}).click();
     await page.getByRole('dialog',{name:'设置'}).getByRole('button',{name:'推荐插件',exact:true}).click();
   }
+  assert.equal((await readFile(queryTrace,'utf8')).trim(),'query','the controlled metadata route is exercised; the actual release asset still downloads and installs');
   if (installed.error) {
     assert.match(installed.error, /incompatible|不兼容|installSection is not a function/);
     await until(async () => (await card.innerText()).includes(installed.error));
