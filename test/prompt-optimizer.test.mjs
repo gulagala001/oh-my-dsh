@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { optimizationRequest, optimizerRoute, createPromptOptimizer, handlePromptOptimizerApi } from '../src/prompt-optimizer.mjs';
-import { DraftOptimizer, createOptimizerPreferences, captureDraft, encodeDraft, decodeDraft, requestOptimization } from '../src/client/prompt-optimizer-state.mjs';
+import { DraftOptimizer, createOptimizerPreferences, captureDraft, encodeDraft, decodeDraft, requestOptimization, optimizerRequirements, optimizerPreferences, OPTIMIZER_STORAGE_KEY } from '../src/client/prompt-optimizer-state.mjs';
 
 function fixture(request = async () => ({ text: '优化后的草稿' }), { deferSends = false } = {}) {
   const listeners = new Set(), values = new Map();
@@ -42,7 +42,7 @@ function deferred() { let resolve, reject; const promise = new Promise((a, b) =>
 
  test('default entry is visible, auto is opt-in, and failed persistence preserves settings', () => {
   const p = createOptimizerPreferences({ getItem: () => null, setItem: () => { throw Error('disk full'); } });
-  assert.deepEqual(p.getSnapshot(), { enabled: true, automatic: false, mode: 'basic' });
+  assert.deepEqual(p.getSnapshot(), optimizerPreferences());
   assert.throws(() => p.set({ automatic: true }), /disk full/); assert.equal(p.getSnapshot().automatic, false);
 });
 
@@ -293,4 +293,77 @@ test('old backend 404 explains required restart while missing-session errors ret
   }
   t.mock.method(globalThis, 'fetch', async () => Response.json({ error: '会话不可用，请先选择工作目录' }, { status: 404 }));
   await assert.rejects(requestOptimization('s', { text: '草稿' }), /会话不可用/);
+});
+
+
+test('requirements migrate old preferences and persist preset edits, custom text and deletion across reload', () => {
+  const values = new Map([[OPTIMIZER_STORAGE_KEY, JSON.stringify({ enabled: false, automatic: true, mode: 'planning' })]]);
+  const storage = { getItem: key => values.get(key), setItem: (key, value) => values.set(key, value) };
+  const p = createOptimizerPreferences(storage);
+  assert.equal(p.getSnapshot().mode, 'planning'); assert.equal(p.getSnapshot().enabled, false);
+  assert.equal(optimizerRequirements(p.getSnapshot()), '');
+  p.setRequirements('自定义条件'); p.saveRequirementPreset(' 简洁 ');
+  const first = p.getSnapshot().requirementPreset;
+  p.setRequirements('简洁条件的未保存编辑');
+  p.selectRequirementPreset(''); assert.equal(optimizerRequirements(p.getSnapshot()), '自定义条件');
+  p.setRequirements('保留路径'); p.saveRequirementPreset('路径');
+  const second = p.getSnapshot().requirementPreset;
+  p.selectRequirementPreset(first); assert.equal(optimizerRequirements(p.getSnapshot()), '简洁条件的未保存编辑');
+  const reload = createOptimizerPreferences(storage);
+  assert.deepEqual(reload.getSnapshot(), p.getSnapshot());
+  reload.saveRequirementPreset('简洁改名');
+  assert.equal(reload.getSnapshot().requirementPresets[0].requirements, '简洁条件的未保存编辑');
+  assert.equal(reload.getSnapshot().requirementPresets[0].name, '简洁改名');
+  reload.setRequirements('另存条件'); reload.saveRequirementPreset('新预设', true);
+  assert.equal(reload.getSnapshot().requirementPresets.length, 3);
+  reload.selectRequirementPreset(second); reload.setRequirements('删除前编辑'); reload.removeRequirementPreset();
+  assert.equal(reload.getSnapshot().requirementPreset, ''); assert.equal(optimizerRequirements(reload.getSnapshot()), '删除前编辑');
+  assert.equal(createOptimizerPreferences(storage).getSnapshot().requirementPresets.length, 2);
+});
+
+test('empty/duplicate/invalid presets fail without mutating preferences; persistence failure is atomic', () => {
+  let fail = false, saved;
+  const p = createOptimizerPreferences({ getItem: () => null, setItem: (_key, value) => { if (fail) throw Error('storage failed'); saved = value; } });
+  assert.throws(() => p.saveRequirementPreset('empty'), /空预设/);
+  p.setRequirements('要求'); assert.throws(() => p.saveRequirementPreset('  '), /名称/);
+  p.saveRequirementPreset('Preset'); const before = p.getSnapshot();
+  assert.throws(() => p.saveRequirementPreset(' preset ', true), /同名/);
+  assert.equal(p.getSnapshot(), before);
+  fail = true; assert.throws(() => p.setRequirements('新条件'), /storage failed/);
+  assert.equal(p.getSnapshot(), before); assert.deepEqual(JSON.parse(saved), before);
+  const normalized = optimizerPreferences({ requirementPreset: 'removed', customRequirements: '保留', requirementPresets: [
+    { id: 'ok', name: 'one', requirements: '有效' }, { id: 'ok', name: 'other', requirements: '重复id' },
+    { id: 'two', name: 'ONE', requirements: '重复名称' }, { id: 'bad', name: 'empty', requirements: ' ' }, null,
+  ], requirementDrafts: { ok: '暂存', removed: '遗留' } });
+  assert.equal(normalized.requirementPreset, ''); assert.equal(normalized.requirementPresets.length, 1);
+  assert.deepEqual(normalized.requirementDrafts, { ok: '暂存' });
+});
+
+test('first-round requirements retain the selected template; whitespace preserves the exact old request', () => {
+  for (const mode of ['basic', 'structured', 'planning']) {
+    const original = optimizationRequest({ text: '草稿', mode });
+    const first = optimizationRequest({ text: '草稿', mode, requirements: '保留 {{iterateInput}} 原样' });
+    assert.equal(first.system, original.system);
+    assert.match(first.messages[0].content[0].text, /额外要求（仅用于本次草稿改写）：\n保留 \{\{iterateInput\}\} 原样/);
+    const empty = optimizationRequest({ text: '草稿', mode, requirements: ' \n ' });
+    assert.equal(empty.system, original.system); assert.deepEqual(empty.messages[0].content, original.messages[0].content);
+  }
+  const iterative = optimizationRequest({ text: '改写', original: '原稿', instruction: '更短', requirements: '保留路径' });
+  assert.match(iterative.messages[0].content[0].text, /原稿/); assert.match(iterative.messages[0].content[0].text, /更短/);
+  assert.match(iterative.messages[0].content[0].text, /保留路径/);
+  for (const requirements of [null, [], 1, 'x'.repeat(64001)]) assert.throws(() => optimizationRequest({ text: '草稿', requirements }), /额外要求/);
+});
+
+test('first optimization, refinement and automatic send share requirements without replay or cancellation overwrite', async () => {
+  const requests = []; let pending;
+  const f = fixture(async (_id, payload) => { requests.push(payload); return pending ? pending.promise : { text: '新版本' }; });
+  f.preferences.setRequirements('保留技术细节'); f.preferences.saveRequirementPreset('技术');
+  await f.controller.run(); assert.equal(requests[0].requirements, '保留技术细节'); assert.equal(requests[0].instruction, '');
+  f.type('手动编辑'); await f.controller.run({ instruction: '更短' });
+  assert.equal(requests[1].text, '手动编辑'); assert.equal(requests[1].instruction, '更短'); assert.equal(requests[1].requirements, '保留技术细节');
+  pending = deferred(); const work = f.controller.run(); void f.controller.run(); assert.equal(requests.length, 3);
+  f.controller.cancel(); f.type('取消后的用户文字'); pending.resolve({ text: '迟到结果' }); await work;
+  assert.equal(f.state().draft, '取消后的用户文字'); assert.equal(f.controller.state.busy, '');
+  pending = null; f.preferences.set({ automatic: true }); f.shell.submit();
+  await new Promise(resolve => setImmediate(resolve)); assert.equal(requests[3].requirements, '保留技术细节'); assert.equal(f.sent.length, 1);
 });

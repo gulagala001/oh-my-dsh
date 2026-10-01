@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { personalityText } from './personality.mjs';
 import { createHash } from 'node:crypto';
 
 import { promptText as read, mainPrompt, buildMainPrompt } from './texts.mjs';
@@ -146,7 +147,7 @@ export function installPromptAdapter(ctx) {
     }
     const config = ctx.trisoulX.config();
     const result = transformAssembly(assembly, context, {
-      identityPrompt: config.identityPrompt, todoConstraintFirst: config.todoConstraintFirst, stateHintsEnabled: config.stateHintsEnabled,
+      identityPrompt: personalityText(config), todoConstraintFirst: config.todoConstraintFirst, stateHintsEnabled: config.stateHintsEnabled,
       backgroundTasksEnabled: ctx.trisoulX.backgroundOptions?.(context.agent)?.interruptibleWait === true,
       schemas, renderSdk, definition: name => ctx.tools.get(name, context.scope ?? context.agent),
     });

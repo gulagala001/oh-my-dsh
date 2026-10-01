@@ -2,6 +2,17 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.0-rc.2.omd.0.4.0",
+      "severity": "normal",
+      "title": "0.2.0-rc.2.omd.0.4.0：人格与优化要求预设、恢复修复及OpenDesign桥接",
+      "notes": [
+        "适配官方DSH 0.2.0-rc.2；使用官方完整版本前缀与OMD主/功能/补丁三段编号。旧0.3.0检查器不能追溯识别新编号，首次请按新tag手动升级。",
+        "人格可选硬邦邦/软乎乎/默认/自定义/关闭，保存自定义并保留旧配置；首轮优化额外要求可保存多个命名预设。",
+        "修复明确context overflow恢复、Todo无实质编辑保留、Windows离线磁盘根目录guard；Windows原生流程未实测。",
+        "OpenDesign桥接保留52技能、固定上游与许可，发行资产校验SHA；默认不安装，不调用付费模型。"
+      ]
+    },
+    {
       "version": "0.3.0",
       "severity": "normal",
       "title": "0.3.0：适配 DSH 0.2.0-rc.2",

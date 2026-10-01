@@ -2,11 +2,11 @@ import { parseArgs } from 'node:util';
 import { readFile } from 'node:fs/promises';
 import { hostAlignedVersion, parseVersion } from '../src/version.mjs';
 
-const { values, positionals } = parseArgs({ options: { patch: { type: 'string', default: '1' } }, allowPositionals: true });
-if (positionals.length !== 1) throw Error('Usage: node scripts/dsh-release-plan.mjs <host version> [--patch <positive integer>]');
+const { values, positionals } = parseArgs({ options: { omd: { type: 'string', default: '0.4.0' } }, allowPositionals: true });
+if (positionals.length !== 1) throw Error('Usage: node scripts/dsh-release-plan.mjs <host version> [--omd <major.feature.patch>]');
 const hostVersion = positionals[0].replace(/^v/, '');
 parseVersion(hostVersion);
-const pluginVersion = hostAlignedVersion(hostVersion, Number(values.patch));
+const pluginVersion = hostAlignedVersion(hostVersion, values.omd);
 const json = path => readFile(new URL('../' + path, import.meta.url), 'utf8').then(JSON.parse);
 const [own, opencu, conversation, chat, desktop] = await Promise.all([
   json('package.json'), json('vendor/opencu/package.json'), json('vendor/dsh.json'),

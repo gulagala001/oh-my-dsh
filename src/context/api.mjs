@@ -2,6 +2,7 @@ import { catalogPage } from './catalog.mjs';
 import { sendAttachment } from '../http.mjs';
 import { compactionMessage } from './commands.mjs';
 import { Config, contextConfig } from '../config.mjs';
+import { normalizePersonalityPatch } from '../cc-adaptation/personality.mjs';
 import { userMessages } from './core.mjs';
 
 export async function handleContextApi({ hub, ctx, req, res, url, session, agent, id, send, readBody }) {
@@ -83,12 +84,13 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
   }
   if (path === '/settings' && req.method === 'GET') { send(res, 200, hub.config()); return true; }
   if (path === '/settings' && req.method === 'POST') {
-    const patch = await readBody(req);
+    let patch = await readBody(req);
     if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Error('设置必须是对象');
     delete patch.dataDir;
     const unknown = Object.keys(patch).filter(key => !Object.hasOwn(Config.dict, key));
     if (unknown.length) throw new Error('未知或已退役的设置：' + unknown.join(', '));
     contextConfig({ ...hub.config(), ...patch });
+    patch = normalizePersonalityPatch(hub.config(), patch);
     if (patch.memoryScope !== undefined && !['session', 'project', 'global'].includes(patch.memoryScope)) throw new Error('旧 full 档不再参与跨项目记忆；全局模式使用 global');
     await ctx.settings.update('trisoul-x', patch);
     send(res, 200, hub.config()); return true;

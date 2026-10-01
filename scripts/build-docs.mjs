@@ -16,7 +16,7 @@ const guides = [
   'claude-cli-terminal.md', 'google-material-expressive.md', 'context-workflow.md',
   'claude-cli-skin-research.md', 'google-material-expressive-research.md',
   'dream-memory.md', 'prompt-adaptation.md', 'runtime-state-background.md',
-  'workflow.md', 'plugin-submissions.md', 'showcase.md', 'dsh-0.2-preparation.md',
+  'workflow.md', 'open-design.md', 'plugin-submissions.md', 'showcase.md', 'dsh-0.2-preparation.md',
   'upstream-patches/README.md', 'site/README.md',
 ];
 const navigation = [

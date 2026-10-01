@@ -1,6 +1,6 @@
 import { TODO_META } from '../task-context.mjs';
 import { CompactionEngine, compactCheckpointSource, toolPairingBalancedBefore, toolPairingBalancedAfter } from '@deepseek-ai/dsh-compaction';
-import { createUserMessage } from '@deepseek-ai/dsh-llm';
+import { CONTEXT_WINDOW_EXCEEDED_CODE, createUserMessage } from '@deepseek-ai/dsh-llm';
 import { appendShadow } from './shadow.mjs';
 
 export function createHostAdapter(hub) {
@@ -103,4 +103,18 @@ export class ReplacementCanvas extends CompactionEngine {
     };
     return agent.runMaintenance ? agent.runMaintenance(run) : run(signal);
   }
+}
+
+export function installContextErrorRecovery(ctx, hub, isX) {
+  ctx.on('agent/request-error', async ({ agent, failure, signal }, next) => {
+    // pi-ai currently classifies this confirmed provider overflow wording as INVALID_REQUEST.
+    const overflow = failure.code === CONTEXT_WINDOW_EXCEEDED_CODE || (failure.code === 'INVALID_REQUEST'
+      && failure.message.includes("The input is longer than the model's context length"));
+    if (isX(agent.session) && overflow && !signal.aborted) {
+      const changed = await hub.context.applyReady(agent, { ignoreCooldown: true });
+      if (changed) return { kind: 'retry' };
+      ctx.logger.warn('上下文已达容量上限，但没有可应用的摘要。原文保留；没有现场调用摘要模型。');
+    }
+    return next();
+  }, { global: true });
 }

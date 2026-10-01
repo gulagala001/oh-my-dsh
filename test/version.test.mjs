@@ -137,9 +137,9 @@ test('host-bound patch numbering succeeds the retired 1.x series and orders host
 
 test('stable host releases use valid plugin versions and sort above the same host previews', () => {
   assert.throws(() => parseVersion('0.2.0.1'), /Invalid version/);
-  assert.equal(hostAlignedVersion('0.2.0'), '0.2.0-omd.1');
-  assert.equal(hostAlignedVersion('v0.2.0-rc.1', 2), '0.2.0-rc.1.omd.2');
-  assert.equal(hostAlignedVersion('0.2.0+build.1', 3), '0.2.0-omd.3+build.1');
+  assert.equal(hostAlignedVersion('0.2.0'), '0.2.0-omd.0.4.0');
+  assert.equal(hostAlignedVersion('v0.2.0-rc.1', '1.3.0'), '0.2.0-rc.1.omd.1.3.0');
+  assert.equal(hostAlignedVersion('0.2.0+build.1', '1.3.1'), '0.2.0-omd.1.3.1+build.1');
   for (const patch of [0, -1, 1.5, NaN, Number.MAX_SAFE_INTEGER + 1]) assert.throws(() => hostAlignedVersion('0.2.0', patch));
   const feed = validateManifest({ schema: 1, versionPolicy: 'dsh-aligned', releases: [
     release('0.1.7-rc.2.19'), release('0.2.0-rc.1.omd.9'), release('0.2.0-omd.1'),
@@ -170,4 +170,17 @@ test('stable host releases use valid plugin versions and sort above the same hos
   assert.deepEqual(result.currentRelease, current);
   assert.equal(result.releaseNotesUrl, 'https://github.com/gulagala001/oh-my-dsh/releases');
   service.dispose();
+});
+
+
+test('full OMD versions migrate independent 0.3.0 and order feature, patch and host upgrades', () => {
+ const versions=['0.2.0-rc.2.omd.0.4.0','0.2.0-rc.2.omd.0.4.1','0.2.0-rc.2.omd.0.5.0','0.2.0-omd.0.5.0'];
+ const feed=validateManifest({schema:1,versionPolicy:'dsh-aligned',releases:[release('0.3.0'),...versions.map(v=>release(v))]});
+ assert.equal(versionStatus('0.3.0',feed).status,'update');assert.equal(feed.releases[0].version,versions.at(-1));
+ assert.deepEqual(feed.releases.slice(0,4).map(r=>r.version),versions.toReversed());
+ assert.equal(versionStatus(versions[0],feed).status,'update');
+ assert.equal(versionStatus(versions.at(-1),feed).status,'current');
+ assert.equal(versionStatus('0.2.1-omd.0.1.0',feed).status,'ahead');
+ const bundled=validateManifest(JSON.parse(readFileSync(new URL('../release-manifest.json',import.meta.url))));
+ assert.equal(versionStatus('0.3.0',bundled).latestVersion,INSTALLED_VERSION);
 });

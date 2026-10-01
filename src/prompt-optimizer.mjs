@@ -14,15 +14,16 @@ export const OPTIMIZER_RULES = `你正在 Oh My DSH 中改写尚未发送的用�
 
 export function optimizationRequest(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw Error('优化请求必须是对象');
-  const { text, original, instruction, mode = 'basic' } = input;
+  const { text, original, instruction, requirements, mode = 'basic' } = input;
   if (typeof text !== 'string' || !text.trim() || text.length > OPTIMIZER_LIMIT) throw Error(`请输入 1–${OPTIMIZER_LIMIT} 字符的草稿`);
   if (!['basic', 'structured', 'planning'].includes(mode)) throw Error('未知的优化模式');
-  for (const [name, value] of [['原稿', original], ['补充要求', instruction]]) if (value !== undefined && (typeof value !== 'string' || value.length > OPTIMIZER_LIMIT)) throw Error(`${name}格式或长度无效`);
+  for (const [name, value] of [['原稿', original], ['补充要求', instruction], ['额外要求', requirements]]) if (value !== undefined && (typeof value !== 'string' || value.length > OPTIMIZER_LIMIT)) throw Error(`${name}格式或长度无效`);
   const iterative = Boolean(instruction?.trim());
   const values = { originalPrompt: text, lastOptimizedPrompt: text, iterateInput: instruction || '' };
   const rendered = templates[iterative ? 'iterate' : mode].map(part => ({ ...part, content: part.content.replace(/\{\{(originalPrompt|lastOptimizedPrompt|iterateInput)\}\}/g, (_, name) => values[name]) }));
   const system = rendered.filter(p => p.role === 'system').map(p => p.content).join('\n\n') + '\n\n' + OPTIMIZER_RULES + `\n本次改写策略：${{ basic: '轻润色', structured: '结构化', planning: '步骤规划' }[mode]}。`;
-  const user = (iterative && original ? '最初原稿（用于核对原始意图，新增修改以本次要求为准）：\n' + original + '\n\n' : '') + rendered.filter(p => p.role === 'user').map(p => p.content).join('\n\n');
+  const user = (iterative && original ? '最初原稿（用于核对原始意图，新增修改以本次要求为准）：\n' + original + '\n\n' : '') + rendered.filter(p => p.role === 'user').map(p => p.content).join('\n\n')
+    + (requirements?.trim() ? '\n\n额外要求（仅用于本次草稿改写）：\n' + requirements : '');
   return { system, messages: [createUserMessage({ content: [{ type: 'text', text: user }], source: { kind: 'plugin:trisoul-x:prompt-optimizer' } })] };
 }
 

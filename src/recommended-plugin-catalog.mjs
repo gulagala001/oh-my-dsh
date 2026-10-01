@@ -1,6 +1,15 @@
 // Only this curated catalog supplies package names to the installer.
 export const recommendedPlugins = [
   {
+    id: 'dsh-open-design', name: 'OpenDesign · DSH 技能桥接', packageName: 'dsh-open-design', author: 'omegapaopao · 技能来源：nexu-io/open-design 及各技能作者',
+    description: '将 52 个设计技能、模板和设计系统接入 DSH 原生技能工具，入口为 open-design。默认不安装；部分技能包含网络或浏览器流程，按宿主权限与实际授权使用。',
+    category: '设计创作', url: 'https://github.com/omegapaopao/dsh-open-design',
+    githubRelease: 'gulagala001/oh-my-dsh',
+    review: { version: '0.1.0-omd.1.0.0', releaseTag: 'opendesign-v0.1.0-omd.1.0.0', dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.4.0', platforms: ['Mac'],
+      sha256: '6f9f1e87b524fa412c64d890c1be55a48a94d7f0dd0ec96f82e804fec75645cc',
+      note: '固定上游 a9d4f4c 的 OMD 适配包，非上游官方发行。52技能、同名项目优先、原生安装启停卸载和checker已在隔离Mac验证；保留许可与来源。真实模型设计、联网技能和Windows尚未验收。发行包锁定此桥接版本，不跟随OMD主插件tag更新。' },
+  },
+  {
     id: 'omd-intent-assistant', name: '需求理解 · OMD UI 增强版', packageName: 'omd-prompt-optimizer', author: '原作者：啃轮胎的西狐（WestFox-AwA） · OMD 适配：gulagala001',
     upstream: { name: 'dsh-prompt-optimizer', url: 'https://github.com/WestFox-AwA/dsh-prompt-optimizer' },
     description: '保留原话，在发送前梳理本轮需求；支持审查、自动、模型选择与只读查证，界面跟随 OMD。默认不安装，手动安装后默认关闭；不附带 Bash，不替换原有提示词优化。',

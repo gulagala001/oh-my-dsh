@@ -1,18 +1,55 @@
 export const OPTIMIZER_STORAGE_KEY = 'omd.promptOptimizer.v1';
 export const OPTIMIZER_MODES = [['basic', '轻润色'], ['structured', '结构化'], ['planning', '步骤规划']];
-const defaults = { enabled: true, automatic: false, mode: 'basic' };
+const REQUIREMENT_LIMIT = 64000;
 export function optimizerPreferences(value) {
-  return { enabled: value?.enabled !== false, automatic: value?.automatic === true, mode: OPTIMIZER_MODES.some(([id]) => id === value?.mode) ? value.mode : 'basic' };
+  const requirementPresets = [], ids = new Set(), names = new Set();
+  for (const item of Array.isArray(value?.requirementPresets) ? value.requirementPresets : []) {
+    const name = typeof item?.name === 'string' ? item.name.trim() : '';
+    if (typeof item?.id !== 'string' || !item.id || ids.has(item.id) || !name || name.length > 80 || names.has(name.toLocaleLowerCase())
+      || typeof item.requirements !== 'string' || !item.requirements.trim() || item.requirements.length > REQUIREMENT_LIMIT) continue;
+    ids.add(item.id); names.add(name.toLocaleLowerCase()); requirementPresets.push({ id: item.id, name, requirements: item.requirements });
+  }
+  const requirementDrafts = Object.fromEntries(requirementPresets.filter(p => typeof value?.requirementDrafts?.[p.id] === 'string'
+    && value.requirementDrafts[p.id].length <= REQUIREMENT_LIMIT).map(p => [p.id, value.requirementDrafts[p.id]]));
+  return { enabled: value?.enabled !== false, automatic: value?.automatic === true,
+    mode: OPTIMIZER_MODES.some(([id]) => id === value?.mode) ? value.mode : 'basic',
+    requirementPresets, requirementDrafts, requirementPreset: ids.has(value?.requirementPreset) ? value.requirementPreset : '',
+    customRequirements: typeof value?.customRequirements === 'string' && value.customRequirements.length <= REQUIREMENT_LIMIT ? value.customRequirements : '' };
+}
+export function optimizerRequirements(prefs) {
+  const preset = prefs.requirementPresets?.find(p => p.id === prefs.requirementPreset);
+  return preset ? (Object.hasOwn(prefs.requirementDrafts ?? {}, preset.id) ? prefs.requirementDrafts[preset.id] : preset.requirements) : (prefs.customRequirements ?? '');
 }
 export function createOptimizerPreferences(storage, events = globalThis.window) {
   if (storage === undefined) { try { storage = globalThis.localStorage; } catch {} }
-  const read = () => { try { return optimizerPreferences(JSON.parse(storage.getItem(OPTIMIZER_STORAGE_KEY))); } catch { return { ...defaults }; } };
+  const read = () => { try { return optimizerPreferences(JSON.parse(storage.getItem(OPTIMIZER_STORAGE_KEY))); } catch { return optimizerPreferences(); } };
   let state = read(); const listeners = new Set();
   const emit = () => listeners.forEach(fn => fn());
   const sync = event => { if (event.key === null || event.key === OPTIMIZER_STORAGE_KEY) { state = read(); emit(); } };
   events?.addEventListener('storage', sync);
-  return { getSnapshot: () => state, subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn); },
-    set(patch) { const next = optimizerPreferences({ ...state, ...patch }); storage.setItem(OPTIMIZER_STORAGE_KEY, JSON.stringify(next)); state = next; emit(); },
+  const set = patch => { const next = optimizerPreferences({ ...state, ...patch }); storage.setItem(OPTIMIZER_STORAGE_KEY, JSON.stringify(next)); state = next; emit(); };
+  return { getSnapshot: () => state, subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn); }, set,
+    selectRequirementPreset(id) { set({ requirementPreset: id }); },
+    setRequirements(requirements) {
+      if (typeof requirements !== 'string' || requirements.length > REQUIREMENT_LIMIT) throw Error('额外要求不能超过 64000 字符');
+      set(state.requirementPreset ? { requirementDrafts: { ...state.requirementDrafts, [state.requirementPreset]: requirements } } : { customRequirements: requirements });
+    },
+    saveRequirementPreset(name, asNew = false) {
+      name = name.trim(); const requirements = optimizerRequirements(state), id = asNew ? '' : state.requirementPreset;
+      if (!name || name.length > 80) throw Error('请输入 1–80 字符的预设名称');
+      if (!requirements.trim()) throw Error('请先填写额外要求，不能保存空预设');
+      if (state.requirementPresets.some(p => p.id !== id && p.name.toLocaleLowerCase() === name.toLocaleLowerCase())) throw Error('已有同名预设，请换一个名称');
+      const preset = { id: id || crypto.randomUUID(), name, requirements };
+      const requirementDrafts = { ...state.requirementDrafts }; delete requirementDrafts[preset.id];
+      set({ requirementPresets: id ? state.requirementPresets.map(p => p.id === id ? preset : p) : [...state.requirementPresets, preset],
+        requirementPreset: preset.id, requirementDrafts });
+    },
+    removeRequirementPreset() {
+      const id = state.requirementPreset; if (!id) return;
+      const requirementDrafts = { ...state.requirementDrafts }; delete requirementDrafts[id];
+      set({ requirementPresets: state.requirementPresets.filter(p => p.id !== id), requirementDrafts,
+        requirementPreset: '', customRequirements: optimizerRequirements(state) });
+    },
     dispose() { events?.removeEventListener('storage', sync); listeners.clear(); } };
 }
 export function captureDraft(shell) {
@@ -202,8 +239,8 @@ export class DraftOptimizer {
     this.pending = ticket; this.remember(before);
     this.publish({ busy: automatic ? 'send' : 'manual', error: '', candidate: null, message: automatic ? '正在轻润色，完成后自动发送…' : '正在优化…' });
     try {
-      const encoded = encodeDraft(before);
-      const response = await this.request(this.sessionId, { text: encoded.text, original: this.history[0].draft, instruction, mode: automatic ? 'basic' : this.preferences.getSnapshot().mode }, ticket.controller.signal);
+      const encoded = encodeDraft(before), prefs = this.preferences.getSnapshot();
+      const response = await this.request(this.sessionId, { text: encoded.text, original: this.history[0].draft, instruction, requirements: optimizerRequirements(prefs), mode: automatic ? 'basic' : prefs.mode }, ticket.controller.signal);
       if (this.pending !== ticket || ticket.controller.signal.aborted || this.disposed) return;
       if (typeof response.text !== 'string' || !response.text.trim()) throw Error('优化结果为空，草稿未改动');
       if (/^\s*\//.test(response.text)) throw Error('优化结果变成了命令，已保留原稿并停止发送');

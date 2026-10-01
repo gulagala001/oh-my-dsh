@@ -27,6 +27,8 @@ export const Config = z.object({
   traceEnabled: z.boolean().default(true),
   traceMaxChars: z.number().step(1).min(0).default(0),
   identityPrompt: z.string().default(DEFAULT_IDENTITY),
+  identityPreset: z.union(['custom', 'default', 'hardcore', 'softie', 'off']).default('custom'),
+  identityCustomPrompt: z.string(),
   stateHintsEnabled: z.boolean().default(false),
   budgetHintsEnabled: z.boolean().default(false),
   budgetEveryStep: z.boolean().default(false),
