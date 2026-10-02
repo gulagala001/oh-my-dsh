@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 import { restoreFixtureLog } from './fixtures/restore-log.mjs';
@@ -36,7 +36,7 @@ export function apply(ctx){ctx.webServer.register({kind:'exact',path:'/api/btwTe
   catch(error){res.writeHead(500);res.end(JSON.stringify({error:error.message}));}
 }});}`);
       const cli=new URL('../node_modules/@deepseek-ai/dsh/lib/bin.js',import.meta.url);
-      execFileSync(process.execPath,[cli.pathname,'--profile','trisoul-x','--from-default-profile','web','--dump-config'],{cwd:new URL('../',import.meta.url),env:{...process.env,DSH_HOME:home},stdio:'pipe'});
+      execFileSync(process.execPath,[fileURLToPath(cli),'--profile','trisoul-x','--from-default-profile','web','--dump-config'],{cwd:new URL('../',import.meta.url),env:{...process.env,DSH_HOME:home},stdio:'pipe'});
       const directory=join(home,'profiles','trisoul-x');await mkdir(directory,{recursive:true});
       await writeFile(join(directory,'cordis.patch.yml'),JSON.stringify([{insert:[{id:'btw-test-api',name:pathToFileURL(module).href}]}]));
     }});
