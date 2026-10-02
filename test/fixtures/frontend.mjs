@@ -76,7 +76,11 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
     const [packed] = Array.isArray(packedResult) ? packedResult : Object.values(packedResult);
     const cli = dshCli;
     const options = { cwd: repo, env: { ...process.env, DSH_HOME: home }, stdio: ['ignore', 'pipe', 'pipe'], timeout: 120000 };
-    execFileSync(process.execPath, [cli, '--profile', 'trisoul-x', '--from-default-profile', 'web', '--dump-config'], options);
+    const profileCreated = await readFile(join(home, 'profiles', 'trisoul-x', 'package.json')).then(() => true, error => {
+      if (error.code !== 'ENOENT') throw error;
+      return false;
+    });
+    execFileSync(process.execPath, [cli, '--profile', 'trisoul-x', ...(profileCreated ? [] : ['--from-default-profile', 'web']), '--dump-config'], options);
     try { execFileSync(process.execPath, [cli, 'plugin', '--profile', 'trisoul-x', 'add', 'file:' + join(root, packed.filename)], options); }
     catch (error) { throw new Error('Packed plugin installation failed: ' + String(error.stderr || error.stdout || error.message).replace(/token=\S+/g, 'token=[redacted]')); }
   }
