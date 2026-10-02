@@ -2,6 +2,8 @@
 
 适配官方 DSH 0.2.0-rc.2，内置 OpenCU 1.2.0。保留已有会话、配置、人格和优化要求预设。
 
+原作者与项目：`/btw` 来自 [JasonQQ](https://github.com/JasonQQ) 的 [dsh-btw-plugin](https://github.com/JasonQQ/dsh-btw-plugin)；回合回滚来自 [Anionex](https://github.com/Anionex) 的 [dsh-turn-rewind](https://github.com/Anionex/dsh-turn-rewind)。OMD 提供兼容集成；固定来源与许可见 [统一署名文档](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md)。
+
 - `/btw <问题>` 使用主会话已完成的上下文前缀，不执行工具。`/btw cancel` 取消侧问，主会话继续运行；冷启动后先完成一轮主会话。缓存读取统计按渠道真实字段显示，缺少字段时显示未知。侧问不参与共享 Dream 整理。
 - 推荐插件新增 Turn Rewind 0.3.9 固定源码快照，默认不安装。使用上游恢复计划、救援副本与结果核验，沿用原生插件管理器。
 - Ultracode 按具体子要求委派实现与检查，由主代理承担关键决策、整合与完整交付；修复侧问在开启模式时的装配继承。
