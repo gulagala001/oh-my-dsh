@@ -4,6 +4,7 @@ import { sourceName } from '../message-source.mjs';
 import { eventTime, actualUser, textBlocks } from '../context/core.mjs';
 import { messageOf } from '../context/materials.mjs';
 import { digest, splitSource, summaryIdentity, summaryFingerprint } from './core.mjs';
+import { isBtwSession, btwDescriptor } from '../btw-policy.mjs';
 
 const ignoredTools = new Set(['recall', 'memory_search', 'todo_write', 'verify_link', 'todos']);
 // Source text is encoded in input JSON, then again inside the request message.
@@ -26,7 +27,7 @@ export class DreamSources {
     return this.closing=Promise.allSettled([...this.pending]);
   }
   persistence() { return this.ctx.get?.('sessionPersistence') || this.ctx.sessionPersistence; }
-  scope(header) {
+  scope(header, sideQuestion = false) {
     const saved=this.hub.store.peek?.(header.id), archive=this.hub.context.store.peek(header.id);
     let parent=header.parentSession, inherited=saved, seen=new Set([header.id]);
     while(parent) {
@@ -34,10 +35,11 @@ export class DreamSources {
       const p=this.hub.store.peek?.(parent);if(!p)break;
       inherited={...p,...inherited};parent=p.parentSession;
     }
-    const mode=archive?.binding?.scope==='session'?'session':saved?.memoryScope||inherited?.memoryScope||archive?.binding?.scope||this.hub.config().memoryScope||'project';
+    sideQuestion ||= isBtwSession(this.ctx.sessions?.get?.(header.id)) || this.store.session(header.id)?.sideQuestion === true;
+    const mode=sideQuestion || archive?.binding?.scope==='session'?'session':saved?.memoryScope||inherited?.memoryScope||archive?.binding?.scope||this.hub.config().memoryScope||'project';
     const cwd=header.cwd||saved?.cwd;
     const project=mode==='session'?(cwd?projectOf(cwd):'@unclassified'):archive?.binding?.project||inherited?.workflowProject||(cwd?projectOf(cwd):'@unclassified');
-    return {mode,project,shared:mode!=='session'};
+    return {mode,project,shared:mode!=='session',...(sideQuestion?{sideQuestion:true}:{})};
   }
   async headers(signal) {
     const p=this.persistence();
@@ -77,6 +79,11 @@ export class DreamSources {
   }
   observe(session,event) {
     const header=session.header;
+    if(isBtwSession(session)) {
+      const old=this.store.session(session.id);
+      this.store.saveSession({...old,id:session.id,title:old?.title||header.title||session.id,...this.scope({...header,id:session.id},true),activity:0,createdAt:header.createdAt||0,cwd:header.cwd||''});
+      this.revisions.delete(session.id);return;
+    }
     if(event.type==='session/title'&&typeof event.data?.title==='string'){
       const old=this.store.session(session.id);
       this.store.saveSession(old?{...old,title:event.data.title}:{id:session.id,title:event.data.title,...this.scope({...header,id:session.id}),activity:0,createdAt:header.createdAt||0,cwd:header.cwd||''});
@@ -108,7 +115,7 @@ export class DreamSources {
   async inspect(id,signal) {
     const snapshot=await this.read(id,signal), {header,events,inherited}=snapshot;
     this.lifecycle.signal.throwIfAborted();signal?.throwIfAborted();
-    const old=this.store.session(id), scope=this.scope({...header,id});
+    const old=this.store.session(id), sideQuestion=header.origin==='subagent'&&Boolean(btwDescriptor(events,inherited)), scope=this.scope({...header,id},sideQuestion);
     let activity=0,title=header.title||old?.title||id;
     for(const event of events) {
       if(actualUser(event)||(['assistant/message','tool/result','tool/call'].includes(event.type)&&!sourceName(messageOf(event)?.source)))activity=Math.max(activity,eventTime(event)||0);
@@ -121,6 +128,7 @@ export class DreamSources {
   }
   async manifest(id,{signal,deepAgeMs,cut,before=Infinity}) {
     const capture=await this.inspect(id,signal), {metadata,events,inherited}=capture;
+    if(metadata.sideQuestion)throw Error('/btw 侧问不参与后台记忆整理。');
     const agent=this.ctx.agents?.get?.(id),running=agent&&agent.status!=='idle';
     if(cut&&cut.generation!==metadata.generation)throw Error('会话日志已迁移；请新建 Dream 作业以重新固定来源');
     const through=Math.min(cut?.through??Infinity,running?(events.findLast(e=>e.type==='turn/end')?.seq??-1):events.length-1);

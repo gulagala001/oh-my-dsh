@@ -30,7 +30,7 @@ export function compareVersions(a, b) {
   return 0;
 }
 // Stable host versions need a named suffix: a fourth numeric core is not SemVer.
-export function hostAlignedVersion(hostVersion, omdVersion = '0.4.0') {
+export function hostAlignedVersion(hostVersion, omdVersion = alignedRelease(INSTALLED_VERSION)?.omd) {
   const host = parseVersion(hostVersion);
   if (typeof omdVersion !== 'string' || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(omdVersion)) throw Error('OMD version must contain major, feature and patch numbers');
   const [base, build] = hostVersion.replace(/^v/, '').split('+');

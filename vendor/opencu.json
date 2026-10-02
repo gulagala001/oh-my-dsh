@@ -1,9 +1,9 @@
 {
   "repository": "https://github.com/gulagala001/opencu",
-  "commit": "16ba01c7c6c01154265c4bb8db63de0e04a61d25",
-  "workingTree": false,
+  "commit": "be139bb6fb279a71076a58d0c07abc0c1a3ad7df",
+  "workingTree": true,
   "version": "1.2.0",
-  "archiveSha256": "e3e1e5eca685e4c1668fdb48d2dd7b1efb38262fd79c74164a783f3ece381066",
+  "archiveSha256": "ec078c9ad994599802d373ae057b770c567c7b49f1abc7fcd0510fd0b66b9294",
   "files": {
     "README.md": "74672da11b1048759dc2bb5727fdec22f9108b9f47ed1df56a6b6c84da7ea604",
     "THIRD_PARTY_NOTICES.md": "7e1f424a29016eabc7789e94fd309b8e4ab88b1047c9a11b8484eef36639f6ee",
@@ -143,7 +143,7 @@
     "src/computer-use/paste.mjs": "b021e8ae9b7ee8d79cc830a68e7041acb482dbd1715bfca00cbc059140296645",
     "src/computer-use/run-file.mjs": "ec97ce6b35b17ce72ec74cbed1dfadb56fb2309071517b52687aeda84014674a",
     "src/computer-use/runtime-context.mjs": "f6a9f8e6a0626250638ccb1eb9b0a978bd2c5785ed0f8f65a76da5f60dd0155f",
-    "src/computer-use/runtime-worker.mjs": "213a4fb9df8201d023e2c8e375674f7c1a0168a4ad82216de41d57e0cd600745",
+    "src/computer-use/runtime-worker.mjs": "8caadc8e4af7ee52aa948f63528e740ebcbc69e44758837de9b4c39ad8ee5070",
     "src/computer-use/runtime.mjs": "13519e7bc076c14ae0e3fe933aea82508f73bd9911278785401cc6c8ffc8b1fe",
     "src/computer-use/tools.mjs": "ab645341acb985da8cafc4e499e7f78894f07f3cc1e3ffb4e6603fa083c500b0",
     "src/computer-use/windows-build.mjs": "8e4dfd31089ce184db7f8144574f62ae6b831954be555aa29be53906476d792b",
