@@ -1,0 +1,76 @@
+{
+  "name": "@jasonqq/dsh-btw-plugin",
+  "version": "0.1.2",
+  "description": "Codex-style /btw for DeepSeek Harness: ask a side question answered by a conversation-seeded subagent, keeping the answer out of the main context",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "docs",
+    "CHANGELOG.md",
+    "SECURITY.md",
+    "README.md",
+    "README.zh.md"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JasonQQ/dsh-btw-plugin.git"
+  },
+  "homepage": "https://github.com/JasonQQ/dsh-btw-plugin#readme",
+  "bugs": {
+    "url": "https://github.com/JasonQQ/dsh-btw-plugin/issues"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-commands": "^0.1.1-rc.2 || ^0.1.5-rc.2 || ^0.2.0-rc.2",
+    "@deepseek-ai/dsh-subagent": "^0.1.1-rc.2 || ^0.1.5-rc.2 || ^0.2.0-rc.2",
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-commands": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-subagent": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "cordis",
+    "plugin",
+    "command",
+    "btw",
+    "subagent"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}

@@ -89,6 +89,7 @@ test('published manifest matches the installed package and retains the major-fix
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url)));
   const feed = validateManifest(JSON.parse(readFileSync(new URL('../release-manifest.json', import.meta.url))));
   assert.equal(feed.releases[0].version, pkg.version); assert.equal(INSTALLED_VERSION, pkg.version);
+  assert.equal(feed.versionPolicy, 'dsh-aligned');
   assert.ok(pkg.files.includes('release-manifest.json'));
   assert.equal(feed.releases.find(r => r.version === '1.3.0-alpha.4').severity, 'required');
   const previous = versionStatus('0.1.6-alpha.2.2', feed);
@@ -137,7 +138,7 @@ test('host-bound patch numbering succeeds the retired 1.x series and orders host
 
 test('stable host releases use valid plugin versions and sort above the same host previews', () => {
   assert.throws(() => parseVersion('0.2.0.1'), /Invalid version/);
-  assert.equal(hostAlignedVersion('0.2.0'), '0.2.0-omd.0.4.0');
+  assert.equal(hostAlignedVersion('0.2.0'), '0.2.0-omd.' + INSTALLED_VERSION.split('.omd.')[1]);
   assert.equal(hostAlignedVersion('v0.2.0-rc.1', '1.3.0'), '0.2.0-rc.1.omd.1.3.0');
   assert.equal(hostAlignedVersion('0.2.0+build.1', '1.3.1'), '0.2.0-omd.1.3.1+build.1');
   for (const patch of [0, -1, 1.5, NaN, Number.MAX_SAFE_INTEGER + 1]) assert.throws(() => hostAlignedVersion('0.2.0', patch));

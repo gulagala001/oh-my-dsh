@@ -54,3 +54,24 @@ test('recommendations search, categories and project links work in both themes a
   }
   assert.deepEqual(errors, []);
 });
+
+test('actual rewind recommendation stays optional and fits both themes at desktop and phone widths', {timeout:30000}, async t=>{
+  const bundle=await build({stdin:{contents:`import React from 'react';import {createRoot} from 'react-dom/client';import {RecommendedPlugins} from './src/client/recommended-plugins.jsx';import {recommendedPlugins} from './src/recommended-plugin-catalog.mjs';createRoot(document.getElementById('root')).render(<RecommendedPlugins plugins={recommendedPlugins.filter(p=>p.id==='dsh-turn-rewind')}/>);`,resolveDir:process.cwd(),loader:'jsx'},bundle:true,write:false,platform:'browser',format:'iife'});
+  const browser=await chromium.launch({args:['--use-mock-keychain','--password-store=basic']});t.after(()=>browser.close());
+  const page=await browser.newPage({viewport:{width:800,height:700}}),posts=[],errors=[];let installed=false;
+  page.on('pageerror',e=>errors.push(e.message));
+  await page.route('http://omd.fixture/**',async route=>{
+    if(route.request().url().includes('/trisoul-x/recommended-plugins')){
+      if(route.request().method()==='POST'){posts.push(route.request().postDataJSON());installed=true;}
+      return route.fulfill({json:{autoUpdate:false,plugins:[{id:'dsh-turn-rewind',installed,enabled:installed,version:installed?'0.3.9':undefined,removable:true}]}});
+    }
+    return route.fulfill({contentType:'text/html',body:'<html style="color-scheme:light dark"><body><main id="root"></main></body></html>'});
+  });
+  await page.goto('http://omd.fixture/');await page.addStyleTag({content:await readFile(new URL('../src/client/style.css',import.meta.url),'utf8')});await page.addScriptTag({content:bundle.outputFiles[0].text});
+  const card=page.locator('.tx-recommended-card');await card.getByRole('button',{name:'安装',exact:true}).waitFor();
+  assert.match(await card.innerText(),/默认不安装/);assert.match(await card.innerText(),/0\.3\.9.*9610ab9/);assert(! (await card.innerText()).includes('undefined'));
+  assert.deepEqual(posts,[]);
+  for(const colorScheme of ['light','dark'])for(const width of [800,360]){await page.emulateMedia({colorScheme});await page.setViewportSize({width,height:700});const box=await card.boundingBox();assert(box.x>=0&&box.x+box.width<=width);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);}
+  await page.emulateMedia({colorScheme:'light'});await page.setViewportSize({width:800,height:700});await page.screenshot({path:'/tmp/omd-btw-rewind-20261001/evidence/rewind-recommendation-light.png'});
+  await card.getByRole('button',{name:'安装',exact:true}).click();await card.getByRole('button',{name:'卸载',exact:true}).waitFor();assert.deepEqual(posts,[{id:'dsh-turn-rewind',action:'install'}]);assert.deepEqual(errors,[]);
+});

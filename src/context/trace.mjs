@@ -13,6 +13,10 @@ export function withoutMovedReasoning(messages, session, traceSlot) {
   let changed = false;
   const result = messages.flatMap(message => {
     if (message.role !== 'assistant' || !ids.has(message.id)) return [message];
+    // Responses reasoning is part of the tool continuation protocol. Moving a
+    // preview into Trace must not remove the original signed/native replay.
+    if (message.source?.replayState?.response?.api === 'openai-responses'
+      && message.content.some(block => block.type === 'tool-call')) return [message];
     const content = message.content.filter(block => !(block.type === 'reasoning' && typeof block.text === 'string'));
     if (content.length === message.content.length) return [message];
     changed = true;
