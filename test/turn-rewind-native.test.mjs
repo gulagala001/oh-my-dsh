@@ -24,7 +24,7 @@ test('pinned rewind installs enabled and uninstalls through the isolated native 
   // Only this fixture copy's config is changed. The upstream runtime stays intact
   // and checkpoint/rescue state is forced into the temporary fixture directory.
   await writeFile(join(installSource,'cordis.patch.yml'),JSON.stringify([{insert:[{id:'turn-rewind',name:'@anionex/dsh-turn-rewind',config:{storageDir:join(f.root,'rewind-state')}}]}]));
-  const {stdout}=await promisify(execFile)('npm',['--cache',join(f.root,'npm-cache'),'pack','--json','--ignore-scripts','--pack-destination',f.root],{cwd:installSource,timeout:30000});
+  const {stdout}=await promisify(execFile)(process.platform==='win32'?'npm.cmd':'npm',['--cache',join(f.root,'npm-cache'),'pack','--json','--ignore-scripts','--pack-destination',f.root],{cwd:installSource,timeout:30000,shell:process.platform==='win32'});
   const packed=JSON.parse(stdout)[0];assert.equal(packed.name,'@anionex/dsh-turn-rewind');assert.equal(packed.version,'0.3.9');
   const call=async(method,args)=>{const r=await f.call('pluginManager/'+method,args);assert.equal(r.result?.ok,true,JSON.stringify(r));return r.result.value;};
   const name='@anionex/dsh-turn-rewind';assert.equal((await call('listBundles',{})).some(b=>b.name===name),false);
