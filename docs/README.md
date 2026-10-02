@@ -51,6 +51,6 @@ Dream、工作台与恢复改进已纳入本版。DSH 0.2.0-rc.1 是另一个宿
 - [提出功能或易用性建议](https://github.com/gulagala001/oh-my-dsh/issues/new?template=feature-request.yml)：描述实际遇到的问题和希望得到的结果。
 - [提交第三方插件 / 申请适配](plugin-submissions.md)：仓库地址和一句用途即可。
 - [贡献代码或文档](../CONTRIBUTING.md)：开发、验证与 PR 说明。
-- [第三方来源与许可](../THIRD_PARTY_NOTICES.md)：随包组件和素材的来源。
+- [原作者、项目来源与许可](../THIRD_PARTY_NOTICES.md)：集中查阅原作者主页、原项目地址及许可说明。
 
 [OpenDesign技能桥接](open-design.md)：来源、许可、安装及验证范围。

@@ -1,6 +1,19 @@
+# 原作者与项目地址
+
+本页集中列出原作者、原项目与第三方许可；各节保留固定版本、修改范围和许可证说明。
+
+| 功能或组件 | 原作者／来源组织 | 原项目 |
+| --- | --- | --- |
+| DSH 宿主与基础组件 | [DeepSeek](https://github.com/deepseek-ai) | [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) |
+| `/btw` 侧问 | [JasonQQ](https://github.com/JasonQQ) | [dsh-btw-plugin](https://github.com/JasonQQ/dsh-btw-plugin) |
+| 回合回滚 · Turn Rewind | [Anionex](https://github.com/Anionex) | [dsh-turn-rewind](https://github.com/Anionex/dsh-turn-rewind) |
+| 可选需求理解组件 | [啃轮胎的西狐（WestFox-AwA）](https://github.com/WestFox-AwA) | [dsh-prompt-optimizer](https://github.com/WestFox-AwA/dsh-prompt-optimizer) |
+| 提示词优化模板 | [linshenkx](https://github.com/linshenkx) | [prompt-optimizer](https://github.com/linshenkx/prompt-optimizer) |
+| OpenDesign 技能桥接 | [omegapaopao](https://github.com/omegapaopao)；技能来源为 [nexu-io](https://github.com/nexu-io) 及各技能作者 | [dsh-open-design](https://github.com/omegapaopao/dsh-open-design)、[open-design](https://github.com/nexu-io/open-design)；[完整来源与许可](docs/open-design.md) |
+
 # Bundled /btw compatibility
 
-`vendor/dsh-btw/lib/index.js` is an unchanged copy of JasonQQ's
+`vendor/dsh-btw/lib/index.js` is an unchanged copy of [JasonQQ](https://github.com/JasonQQ)'s
 `@jasonqq/dsh-btw-plugin` 0.1.2 at commit
 `50c246cadcc9b3380c36b1bc301b6efbdd08584e`.
 The upstream package and README declare MIT, but this pinned source has no
@@ -8,9 +21,16 @@ independent LICENSE file. Its declarations and source attribution are retained
 in `vendor/dsh-btw`; see `PROVENANCE.md`. OMD supplies only an execution and
 lifecycle façade. This is not an official upstream release.
 
-The optional `@anionex/dsh-turn-rewind` 0.3.9 recommendation uses commit
+Source: [dsh-btw-plugin](https://github.com/JasonQQ/dsh-btw-plugin),
+[pinned revision](https://github.com/JasonQQ/dsh-btw-plugin/tree/50c246cadcc9b3380c36b1bc301b6efbdd08584e).
+
+The optional `@anionex/dsh-turn-rewind` 0.3.9 recommendation by
+[Anionex](https://github.com/Anionex) uses commit
 `9610ab93c87e2405e7512d53a099b8fb2caf6936` and its actual BSD-3-Clause license.
 Its code is not bundled with OMD and it is not installed by default.
+
+Source: [dsh-turn-rewind](https://github.com/Anionex/dsh-turn-rewind),
+[pinned revision](https://github.com/Anionex/dsh-turn-rewind/tree/9610ab93c87e2405e7512d53a099b8fb2caf6936).
 
 # Optional recommendation: OMD Prompt Optimizer
 

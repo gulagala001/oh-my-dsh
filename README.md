@@ -188,6 +188,6 @@ npx --yes @deepseek-ai/dsh@0.2.0-rc.2 --profile web
 
 [反馈 Bug](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml) · [提出建议](https://github.com/gulagala001/oh-my-dsh/issues/new?template=feature-request.yml) · [参与贡献](CONTRIBUTING.md) · [展示页构建与托管](docs/site/README.md)
 
-核心机制与提示词源自 trisoul，宿主与基础 Agent preset 基于 DeepSeek Harness。项目代码许可暂未指定；第三方来源与许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+核心机制与提示词源自 trisoul，宿主与基础 Agent preset 基于 DeepSeek Harness。项目代码许可暂未指定；原作者主页、原项目地址与第三方许可统一见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 <sub>实拍来自当前开发源码的隔离环境；案例使用本地受控演示模型，工具、回查、浏览器操作与文件核验实际执行。它展示工作流程，不代表供应商模型能力、正式发行版本或跨平台验收。[素材来源](docs/showcase.md)。</sub>

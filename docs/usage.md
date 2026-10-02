@@ -496,6 +496,8 @@ OMD 主会话使用 pi-ai 图片路由时，发送前按提供方的实际图片
 
 ## 侧问与回合回滚
 
+`/btw` 原作者为 [JasonQQ](https://github.com/JasonQQ)，原项目是 [dsh-btw-plugin](https://github.com/JasonQQ/dsh-btw-plugin)；Turn Rewind 原作者为 [Anionex](https://github.com/Anionex)，原项目是 [dsh-turn-rewind](https://github.com/Anionex/dsh-turn-rewind)。固定来源与许可集中见 [第三方来源与许可](../THIRD_PARTY_NOTICES.md)。
+
 `/btw <问题>` 默认接入 OMD，沿用原生 fork 和主会话已完成回合。
 它不执行工具；若模型尝试工具调用，宿主正常记录 Error 结果后停止侧问。
 `/btw cancel` 取消当前主会话正在运行的侧问，不停止主会话。
