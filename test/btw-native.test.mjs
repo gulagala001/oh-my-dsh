@@ -14,7 +14,7 @@ import { ULTRACODE_ON, ULTRACODE_OFF } from '../src/ultracode.mjs';
 test('native btw inherits the completed prefix and preserves actual wire schemas and history', {timeout:90000}, async t => {
   const requests=[],holds=new Map();let parentRelease,parentEntered;
   const parentReady=new Promise(resolve=>parentEntered=resolve);
-  const f=await frontendFixture(t,{headless:true,initialPrompt:'BTW_MAIN_COMPLETE',
+  const f=await frontendFixture(t,{headless:true,installedPackage:true,initialPrompt:'BTW_MAIN_COMPLETE',
     omdConfig:{computerUseEnabled:false,codegraphEnabled:false,dreamAutoEnabled:false},
     async modelReply(payload){
       requests.push(structuredClone(payload));const text=JSON.stringify(payload.messages);
@@ -35,8 +35,8 @@ export function apply(ctx){ctx.webServer.register({kind:'exact',path:'/api/btwTe
   try{const value=await ctx.commands.execute(agent,line,[],new AbortController().signal);await ctx.sessions.flush(agent.session);res.setHeader('Content-Type','application/json');res.end(JSON.stringify({result:{ok:true,value}}));}
   catch(error){res.writeHead(500);res.end(JSON.stringify({error:error.message}));}
 }});}`);
-      const cli=new URL('../node_modules/@deepseek-ai/dsh/lib/bin.js',import.meta.url);
-      execFileSync(process.execPath,[fileURLToPath(cli),'--profile','trisoul-x','--from-default-profile','web','--dump-config'],{cwd:new URL('../',import.meta.url),env:{...process.env,DSH_HOME:home},stdio:'pipe'});
+      const cli=process.env.OMD_DSH_CLI || fileURLToPath(new URL('../node_modules/@deepseek-ai/dsh/lib/bin.js',import.meta.url));
+      execFileSync(process.execPath,[cli,'--profile','trisoul-x','--from-default-profile','web','--dump-config'],{cwd:new URL('../',import.meta.url),env:{...process.env,DSH_HOME:home},stdio:'pipe'});
       const directory=join(home,'profiles','trisoul-x');await mkdir(directory,{recursive:true});
       await writeFile(join(directory,'cordis.patch.yml'),JSON.stringify([{insert:[{id:'btw-test-api',name:pathToFileURL(module).href}]}]));
     }});
