@@ -31,7 +31,13 @@ const emitImage = async data => {
   if (typeof data==='string' && data.startsWith('data:image/')) { emit('image',{data:data.split(',')[1],mediaType:data.slice(5,data.indexOf(';'))});return; }
   if (!(data instanceof Uint8Array)) throw new Error('emitImage requires image bytes or an image data URL.');
   const capture = captures.get(data);
-  emit('image',{data:Buffer.from(data).toString('base64'),mediaType:'image/png',...(capture?.digest===digest(data)?{capture:capture.info}:{})});
+  const original = capture?.digest===digest(data), execution=scope.getStore();
+  // getScreenshot already emits these exact bytes. An explicit emitImage of
+  // the same capture in this call must not attach a second copy. New captures,
+  // edited bytes and later calls keep their own observation/output semantics.
+  if(original&&capture.emittedExecution===execution)return;
+  emit('image',{data:Buffer.from(data).toString('base64'),mediaType:'image/png',...(original?{capture:capture.info}:{})});
+  if(original)capture.emittedExecution=execution;
 };
 const locatorMethods=['locator','getByRole','getByText','getByLabel','getByPlaceholder','getByTestId','getByAltText','getByTitle','frameLocator','filter','nth','first','last'];
 const locatorActions=['click','dblclick','fill','press','type','pressSequentially','check','uncheck','setChecked','selectOption','setInputFiles','hover','scrollIntoViewIfNeeded','focus','blur','count','innerText','textContent','allInnerTexts','allTextContents','inputValue','getAttribute','isVisible','isEnabled','isChecked','boundingBox','ariaSnapshot','waitFor','evaluate','evaluateAll'];

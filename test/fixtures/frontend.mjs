@@ -160,7 +160,7 @@ export function apply(ctx) { let seeded = false; ctx.on('session/created', sessi
   };
   const proxy = basePath === '/' ? {url: origin+'/', escaped: []} : await subpathProxy(t, origin, basePath);
   const browserOrigin = new URL(proxy.url).origin;
-  browser = await chromium.launch({ headless: true, executablePath: chromium.executablePath() });
+  browser = await chromium.launch({ headless: true, executablePath: chromium.executablePath(), args: ['--use-mock-keychain', '--password-store=basic'] });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: 'light', locale: 'zh-CN' });
   await context.addCookies(cookie.split('; ').map(value => { const index = value.indexOf('='); return { name: value.slice(0, index), value: value.slice(index + 1), url: browserOrigin }; }));
   page = await context.newPage(); page.setDefaultTimeout(10000); page.on('pageerror', error => errors.push(error.stack || error.message));

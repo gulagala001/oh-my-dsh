@@ -1,3 +1,17 @@
+# Bundled /btw compatibility
+
+`vendor/dsh-btw/lib/index.js` is an unchanged copy of JasonQQ's
+`@jasonqq/dsh-btw-plugin` 0.1.2 at commit
+`50c246cadcc9b3380c36b1bc301b6efbdd08584e`.
+The upstream package and README declare MIT, but this pinned source has no
+independent LICENSE file. Its declarations and source attribution are retained
+in `vendor/dsh-btw`; see `PROVENANCE.md`. OMD supplies only an execution and
+lifecycle façade. This is not an official upstream release.
+
+The optional `@anionex/dsh-turn-rewind` 0.3.9 recommendation uses commit
+`9610ab93c87e2405e7512d53a099b8fb2caf6936` and its actual BSD-3-Clause license.
+Its code is not bundled with OMD and it is not installed by default.
+
 # Optional recommendation: OMD Prompt Optimizer
 
 “需求理解 · OMD UI 增强版” is an optional, separately installed derivative of

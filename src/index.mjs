@@ -21,6 +21,10 @@ import { handleContextApi } from './context/api.mjs';
 import { publishDreamMemory } from './dream/publication.mjs';
 import { handleDreamApi } from './dream/api.mjs';
 import { installTraceCleanup } from './context/trace.mjs';
+import { installResponsesReasoningCompatibility } from './responses-reasoning-compat.mjs';
+import { installCommandCodeRetry } from './commandcode-retry.mjs';
+import { installCommandCodeChatCompatibility } from './commandcode-chat-compat.mjs';
+import { installComputerUseImageCompatibility } from './computer-use-image-compat.mjs';
 import { repairShadows } from './context/shadow.mjs';
 import { TODO_NUDGE } from './todolist.mjs';
 import { message } from './hub.mjs';
@@ -36,6 +40,8 @@ import { setRuntimeContext, taskContextMeta } from './task-context.mjs';
 import { installBackground } from './background.mjs';
 import { mountRecommendedPlugins } from './recommended-plugins.mjs';
 import { createPromptOptimizer, handlePromptOptimizerApi } from './prompt-optimizer.mjs';
+import { installBtwCompatibility } from './btw-compat.mjs';
+import { isBtwSession } from './btw-policy.mjs';
 
 export { Config };
 export const name = 'trisoul-x';
@@ -82,13 +88,17 @@ export async function apply(ctx, config) {
   mountRecommendedPlugins(ctx, hub);
   const isX = session => ['trisoul-x', 'omd-ptc'].includes(ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset);
   hub.ultracode = new UltracodeControl(ctx, isX, hub.store);
-  const monitored = session => isX(session) || (session.header.origin === 'subagent' && Boolean(hub.workflowBudget.owner(session)));
+  const monitored = session => !isBtwSession(session) && (isX(session) || (session.header.origin === 'subagent' && Boolean(hub.workflowBudget.owner(session))));
   installUltracodeProjection(ctx);
-  ctx.on('agent/inbox/claimed', ({ agent, message }) => hub.ultracode.claimed(agent, message), { global: true });
-  ctx.on('system-prompt/assemble', (_assembly, context, next) => context?.agent
+  ctx.on('agent/inbox/claimed', ({ agent, message }) => { if(!isBtwSession(agent.session))hub.ultracode.claimed(agent, message); }, { global: true });
+  ctx.on('system-prompt/assemble', (_assembly, context, next) => context?.agent && !isBtwSession(context.agent.session)
     ? hub.ultracode.assemble(context.agent, next) : next(), { global: true, prepend: true });
   installBackground(ctx, hub, isX);
   installImageBudget(ctx, isX);
+  installCommandCodeRetry(ctx);
+  installResponsesReasoningCompatibility(ctx);
+  installCommandCodeChatCompatibility(ctx);
+  installComputerUseImageCompatibility(ctx, isX);
   installTraceCleanup(ctx, isX, hub.context);
   ctx.on('system-prompt/assemble', async (_assembly, context, next) => {
     if (context?.agent) hub.prepareBackground(context.agent);
@@ -103,8 +113,9 @@ export async function apply(ctx, config) {
     }) };
   }, { global: true });
   const pendingSteps = new WeakMap();
-  ctx.on('agent/assistant-stream', ({ agent, frame }) => { if (frame.type === 'start' && isX(agent.session)) hub.captureFrame(agent, frame.turn, frame.step); }, { global: true });
+  ctx.on('agent/assistant-stream', ({ agent, frame }) => { if (frame.type === 'start' && isX(agent.session) && !isBtwSession(agent.session)) hub.captureFrame(agent, frame.turn, frame.step); }, { global: true });
   ctx.on('agent/pre-step', async ({ agent, messages, signal, turn, step }, next) => {
+    if(isBtwSession(agent.session))return next();
     const consumed = isX(agent.session) ? await consumeBudgetAliases(agent, messages, signal) : new Set();
     if (consumed.size && !messages.some(m => !consumed.has(m.id)) && step === 1) return { kind: 'reject' };
     const decision = await next();
@@ -115,6 +126,7 @@ export async function apply(ctx, config) {
     return { ...decision, messages: accepted };
   }, { global: true });
   ctx.on('agent/request', async ({ agent, signal, turn, step }, next) => {
+    if(isBtwSession(agent.session))return next();
     const route = await next();
     if (isX(agent.session)) await hub.context.adapter.prepareRoute?.(agent.session, route, signal);
     const pending = pendingSteps.get(agent);
@@ -155,9 +167,10 @@ export async function apply(ctx, config) {
     if (monitored(agent.session)) hub.requestStarts.set(agent.session.id, Date.now());
     return route;
   }, { global: true });
-  installContextErrorRecovery(ctx, hub, isX);
-  ctx.on('agent/turn-stopping', ({ agent, turn, signal }) => { if (isX(agent.session)) hub.finishTasks(agent, turn, signal); }, { global: true });
+  installContextErrorRecovery(ctx, hub, session=>isX(session)&&!isBtwSession(session));
+  ctx.on('agent/turn-stopping', ({ agent, turn, signal }) => { if (isX(agent.session)&&!isBtwSession(agent.session)) hub.finishTasks(agent, turn, signal); }, { global: true });
   ctx.on('agent/status', ({ agent, status }) => {
+    if(isBtwSession(agent.session))return;
     hub.budgets.tick(agent.session, isX(agent.session) && status === 'running');
     if (isX(agent.session)) hub.context.arm(agent);
   }, { global: true });
@@ -175,6 +188,7 @@ export async function apply(ctx, config) {
     if (!hub.agents.has(session.id)) return hub.context.dispose(session.id);
   }, { global: true });
   ctx.on('agent/created', ({ agent, source }) => {
+    if(isBtwSession(agent.session))return;
     hub.ultracode.lifecycle(agent, source);
     hub.workflowBudget.attach(agent.session);
     if (!monitored(agent.session)) return;
@@ -195,12 +209,16 @@ export async function apply(ctx, config) {
   }, { global: true });
   ctx.on('session/event', (session, event) => {
     if (!hub.dream.closed) hub.dream.sources.observe(session, event);
+    if(isBtwSession(session))return;
     hub.ultracode.committed(session, event);
     hub.workflowBudget.observe(session, event);
     if (!monitored(session)) return;
     hub.observe(session, event);
     if (isX(session)) hub.context.observe(session, event);
   }, { global: true });
+  // Capture completed assemblies after OMD's mode-specific prompt middleware
+  // has been registered, so side questions reuse the full parent assembly.
+  installBtwCompatibility(ctx);
   ctx.inject(['webServer'], web => {
     web.effect(() => web.webServer.register({ kind: 'prefix', path: '/trisoul-x/api', async handler(req, res) {
       try {

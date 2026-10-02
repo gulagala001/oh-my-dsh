@@ -115,3 +115,12 @@ test('native runtime accepts frozen requests through direct/prepared streams and
   assert.equal(runtime.stream, originalStream); assert.equal(runtime.prepareCall, originalPrepare);
   assert.deepEqual(await send(), source.data.message.content);
 });
+
+
+test('Trace keeps native Responses tool reasoning and replay signatures for continuation', async t => {
+  const f = setup(t), r = f.record();
+  const content = [{ type: 'reasoning', text: 'Exact provider reasoning.' }, { type: 'tool-call', id: 'call-r', name: 'read', arguments: '{}' }];
+  const source = f.assistant(content, { replayState: { response: { api: 'openai-responses' }, blocks: [{ type: 'reasoning', thinkingSignature: 'original' }, { type: 'tool-call' }] } });
+  await f.apply(r);
+  assert.equal(f.wire().find(m => m.id === source.data.message.id), source.data.message);
+});
