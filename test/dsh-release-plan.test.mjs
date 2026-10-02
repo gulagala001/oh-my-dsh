@@ -9,7 +9,7 @@ const plan = (...args) => JSON.parse(execFileSync(process.execPath, [script, ...
 test('release planning names every SDK section and distinguishes prepared source from an official tag', () => {
   const before = readFileSync(new URL('../package.json', import.meta.url));
   const result = plan('99.0.0');
-  assert.equal(result.pluginVersion, '99.0.0-omd.0.4.0');
+  assert.equal(result.pluginVersion, '99.0.0-omd.' + JSON.parse(before).version.split('.omd.')[1]);
   assert.ok(result.sdkChanges.some(change => change.section === 'dependencies' && change.name === '@deepseek-ai/dsh-mcp-client'));
   assert.ok(result.sdkChanges.some(change => change.section === 'peerDependencies' && change.name === '@deepseek-ai/dsh-tools'));
   assert.ok(result.sdkChanges.some(change => change.source === 'OpenCU package.json'));

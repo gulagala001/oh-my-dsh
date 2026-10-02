@@ -1,8 +1,10 @@
 import { sourceName } from '../message-source.mjs';
 import { appendShadow } from '../context/shadow.mjs';
 import { nodeKey } from './core.mjs';
+import { isBtwSession } from '../btw-policy.mjs';
 
 export function publishDreamMemory(hub,session,enabled=true){
+  if(isBtwSession(session))return;
   const owned=session.surface.nodes.map(seq=>session.eventAt(seq)).filter(e=>e.type==='user/message'&&['trisoul-x:dream-memory','trisoul-x:project-catalog'].includes(sourceName(e.data?.source)));
   const mode=hub.scope(session).mode;let text='';
   if(enabled&&mode!=='session'){

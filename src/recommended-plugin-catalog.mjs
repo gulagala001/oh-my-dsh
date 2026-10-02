@@ -1,6 +1,15 @@
 // Only this curated catalog supplies package names to the installer.
 export const recommendedPlugins = [
   {
+    id: 'dsh-turn-rewind', name: '回合回滚 · Turn Rewind', packageName: '@anionex/dsh-turn-rewind', author: 'Anionex · dsh-external',
+    description: '查看回合变更并恢复工作区；恢复前展示计划、保留救援副本并核验结果。默认不安装，点击安装后启用。',
+    category: '开发工具', url: 'https://github.com/Anionex/dsh-turn-rewind',
+    review: { version: '0.3.9', dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.5.0', platforms: ['Mac（隔离 Web 宿主）'],
+      source: { repository: 'Anionex/dsh-turn-rewind', commit: '9610ab93c87e2405e7512d53a099b8fb2caf6936' },
+      sha256: 'f4ca526ccf81d499546276cebeceb8e2cf0b9f3393bae68751c7440848ab16f2',
+      note: '固定源码快照，保留 BSD-3-Clause 许可。已在 Mac 隔离 Web 宿主核验安装、启用、卸载及临时工作区恢复。上游声明 Web；正式桌面 App 界面及 Windows 未同等实测。源码快照仅手动更新。' },
+  },
+  {
     id: 'dsh-open-design', name: 'OpenDesign · DSH 技能桥接', packageName: 'dsh-open-design', author: 'omegapaopao · 技能来源：nexu-io/open-design 及各技能作者',
     description: '将 52 个设计技能、模板和设计系统接入 DSH 原生技能工具，入口为 open-design。默认不安装；部分技能包含网络或浏览器流程，按宿主权限与实际授权使用。',
     category: '设计创作', url: 'https://github.com/omegapaopao/dsh-open-design',

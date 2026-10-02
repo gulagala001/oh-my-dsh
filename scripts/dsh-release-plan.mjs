@@ -2,7 +2,7 @@ import { parseArgs } from 'node:util';
 import { readFile } from 'node:fs/promises';
 import { hostAlignedVersion, parseVersion } from '../src/version.mjs';
 
-const { values, positionals } = parseArgs({ options: { omd: { type: 'string', default: '0.4.0' } }, allowPositionals: true });
+const { values, positionals } = parseArgs({ options: { omd: { type: 'string' } }, allowPositionals: true });
 if (positionals.length !== 1) throw Error('Usage: node scripts/dsh-release-plan.mjs <host version> [--omd <major.feature.patch>]');
 const hostVersion = positionals[0].replace(/^v/, '');
 parseVersion(hostVersion);

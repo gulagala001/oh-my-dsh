@@ -2,6 +2,17 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.0-rc.2.omd.0.5.0",
+      "severity": "normal",
+      "title": "0.2.0-rc.2.omd.0.5.0：侧问、回合回滚兼容与推理续调用修复",
+      "notes": [
+        "默认接入 /btw 侧问，沿用主会话已完成前缀，支持取消、缓存读取统计与独立记忆范围。",
+        "推荐插件新增固定版本 Turn Rewind 0.3.9，默认不安装，沿用原生安装、启停和回滚流程。",
+        "Ultracode 明确按具体要求委派实现与检查；修复开启时侧问未继承完整装配的问题。",
+        "修复 DeepSeek Responses 推理续调用、CommandCode 历史消息兼容及零输出拒绝重试；电脑操作截图去重。"
+      ]
+    },
+    {
       "version": "0.2.0-rc.2.omd.0.4.0",
       "severity": "normal",
       "title": "0.2.0-rc.2.omd.0.4.0：人格与优化要求预设、恢复修复及OpenDesign桥接",
