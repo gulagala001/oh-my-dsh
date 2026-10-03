@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 
 test('DSH frontend: one workbench, preserved edits, compact composer and both themes', { timeout: 90000 }, async t => {
-  const f = await frontendFixture(t), { page, root, errors } = f;
+  const f = await frontendFixture(t, { reply: () => ({ delta: { role: 'assistant', content: '界面适配验证完成。' }, finish_reason: 'stop', usage: { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120 } }) }), { page, root, errors } = f;
   assert.equal(await page.locator('.tx-wordmark').innerText(), 'Oh My DSH');
   await until(async () => (await page.title()).endsWith(' — Oh My DSH'));
   assert.match(await page.title(), /整理工作台和对话界面/);
@@ -28,7 +28,7 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   assert.ok(tabsBox.x-headerBox.x<=24,'conversation and trace controls stay on the left side of the header');
   assert.ok((await composer.boundingBox()).height < 160, 'empty composer stays compact');
   const usageToggle = page.getByRole('button', { name: '用量详情', exact: true });
-  const hostStats = page.locator('[data-slot="conversation.composer.dock"] .bOPqQW_root');
+  const hostStats = page.locator('[data-slot="conversation.composer.dock"] [data-composer-stat="activity"]');
   assert.equal(await hostStats.isVisible(), true, 'usage details are expanded by default');
   assert.equal(await usageToggle.getAttribute('aria-expanded'), 'true');
   await usageToggle.click();
@@ -38,6 +38,10 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   assert.equal((await usageToggle.boundingBox()).x, closedUsageBox.x, 'expanding usage keeps the toolbar horizontal position');
   const expandedUsageBox = await usageToggle.boundingBox(), expandedStatsBox = await hostStats.boundingBox();
   assert.ok(expandedStatsBox.y >= expandedUsageBox.y + expandedUsageBox.height, 'usage details always occupy their own row');
+  const tokenStats = page.locator('[data-composer-stat="usage"]');
+  assert.equal(await tokenStats.isVisible(), true, 'the separate native token pill remains available');
+  const tokenStatsBox = await tokenStats.boundingBox();
+  assert.ok(Math.abs(tokenStatsBox.y - expandedStatsBox.y) < 2);
   const contextStatsBox = await page.locator('.tx-stats-line').boundingBox();
   assert.ok(Math.abs(contextStatsBox.y + contextStatsBox.height / 2 - expandedStatsBox.y - expandedStatsBox.height / 2) < 2, 'context and host usage share one row');
   const meterBox = await page.locator('.JObwrW_root').boundingBox();
@@ -47,6 +51,9 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   const originalUsage = hostStats.getByRole('button').first();
   await originalUsage.click();
   assert.equal(await originalUsage.getAttribute('aria-expanded'), 'true', 'original host usage popup remains interactive');
+  await page.keyboard.press('Escape');
+  await tokenStats.getByRole('button').click();
+  await page.locator('[data-session-stats-usage]').waitFor();
   await page.keyboard.press('Escape');
   await usageToggle.click();
   assert.equal(await hostStats.isVisible(), false);
@@ -163,6 +170,9 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   assert.equal(await settingsDialog.getByRole('link', { name: '查看 dsh-status-rotator 项目（新窗口）' }).getAttribute('href'), 'https://github.com/01Virex/dsh-status-rotator');
   const recommendations = settingsDialog.locator('.tx-recommended-card');
   await until(() => recommendations.filter({ hasText: 'dsh-status-rotator' }).getByRole('button', { name: '安装', exact: true }).isEnabled());
+  const rewind = recommendations.filter({ hasText: '回合回滚 · Turn Rewind' });
+  assert.equal(await rewind.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
+  assert.match(await rewind.innerText(), /尚不兼容 DSH 0\.2\.1-alpha\.1/);
   const whale = recommendations.filter({ hasText: '小鲸鱼记账挂件' });
   assert.equal(await whale.getByRole('link').getAttribute('href'), 'https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget');
   assert.equal(await whale.getByRole('button', { name: '安装', exact: true }).isEnabled(), true);

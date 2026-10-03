@@ -355,9 +355,18 @@ test('first-round extra requirements and named presets persist and reach the exi
   await requirements.fill('技术预设的暂存编辑'); await presets.selectOption('');
   assert.equal(await requirements.inputValue(), '保留所有路径与技术细节');
   await requirements.fill('使用简体中文'); await name.fill('中文'); await drawer.getByRole('button', { name: '保存预设', exact: true }).click();
-  const chinese = await presets.inputValue(); await presets.selectOption(technical);
+  const chinese = await presets.inputValue();
+  await page.evaluate(id => {
+    const select = document.querySelector('select[aria-label="额外要求预设"]');
+    select.value = id;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    const field = document.querySelector('input[aria-label="要求预设名称"]');
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(field, '中文');
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+  }, technical);
   assert.equal(await requirements.inputValue(), '技术预设的暂存编辑');
-  await name.fill('中文'); await drawer.getByRole('button', { name: '保存修改', exact: true }).click();
+  assert.equal(await name.inputValue(), '中文', 'selecting a preset cannot overwrite editing started in the same browser turn');
+  await drawer.getByRole('button', { name: '保存修改', exact: true }).click();
   await drawer.getByRole('alert').filter({ hasText: '已有同名预设' }).waitFor();
   await name.fill('技术改名'); await drawer.getByRole('button', { name: '保存修改', exact: true }).click();
   await requirements.fill('刷新前的未保存要求'); await page.reload();

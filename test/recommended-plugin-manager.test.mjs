@@ -165,6 +165,18 @@ test('manual-only recommendations are never sent to the native installer', async
   await f.service.tick(); assert.equal(f.lookups, 0); assert.equal(f.calls.length, 0);
 });
 
+test('incompatible recommendations block installation and updates while retaining uninstall', async () => {
+  const f = fixture();
+  Object.assign(f.service.catalog[0], { unavailable: '尚不兼容当前 DSH', review: { version: '1.0.0' } });
+  assert.throws(() => f.service.start('sample', 'install'), /尚不兼容/);
+  f.bundles = [{ name: 'sample-plugin', installed: true, enabled: true, removable: true, version: '1.0.0' }];
+  assert.throws(() => f.service.start('sample', 'update'), /尚不兼容/);
+  await f.service.settings(true); await f.service.tick();
+  assert.equal(f.calls.length, 0); assert.equal(f.lookups, 0);
+  await f.service.start('sample', 'uninstall');
+  assert.deepEqual(f.calls, [{ remove: 'sample-plugin' }]);
+});
+
 test('closing during inventory lookup prevents a pending uninstall', async () => {
   const f = fixture();
   f.bundles = [{ name: 'sample-plugin', installed: true, removable: true, enabled: true, version: '1.0.0' }];

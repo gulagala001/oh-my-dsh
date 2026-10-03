@@ -2,7 +2,8 @@
 export const recommendedPlugins = [
   {
     id: 'dsh-turn-rewind', name: '回合回滚 · Turn Rewind', packageName: '@anionex/dsh-turn-rewind', author: 'Anionex · dsh-external',
-    description: '查看回合变更并恢复工作区；恢复前展示计划、保留救援副本并核验结果。默认不安装，点击安装后启用。',
+    description: '查看回合变更并恢复工作区；恢复前展示计划、保留救援副本并核验结果。',
+    unavailable: '固定版本 0.3.9 尚不兼容 DSH 0.2.1-alpha.1，暂不提供安装或更新。已有安装可卸载；等待上游适配。',
     category: '开发工具', url: 'https://github.com/Anionex/dsh-turn-rewind',
     review: { version: '0.3.9', dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.5.0', platforms: ['Mac（隔离 Web 宿主）'],
       source: { repository: 'Anionex/dsh-turn-rewind', commit: '9610ab93c87e2405e7512d53a099b8fb2caf6936' },
