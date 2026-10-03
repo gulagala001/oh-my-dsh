@@ -334,7 +334,7 @@ export async function apply(ctx: Context, config: Config = Config({})): Promise<
       selectWorkspace: workspaceId => workspaceNavigation.openWorkspace(workspaceId, (nextId) => {
         if (sessionId !== undefined && nextId !== sessionId) {
           const from = inputHub.shell(sessionId)
-          const draft = from.snapshot.draft
+          const draft = from.draftSnapshot
           const attachmentIds = from.snapshot.attachmentIds
           const next = inputHub.shell(nextId)
           if (attachmentIds.length === 0 || next.addAttachments(attachmentIds)) {
@@ -342,7 +342,7 @@ export async function apply(ctx: Context, config: Config = Config({})): Promise<
               throw new Error(`ui-conversation: session "${nextId}" resolved no binding`)
             }
             concreteConversation(ctx).rebindDraftFiles(nextId, attachmentIds)
-            if (draft !== '') {
+            if (draft.text !== '') {
               next.setDraft(draft)
               from.setDraft('')
             }
@@ -387,7 +387,7 @@ export async function apply(ctx: Context, config: Config = Config({})): Promise<
             },
           },
         },
-        bindDraftMirror: write => inputHub.shell(sessionId).bindMirror(write),
+        bindDraftPersistence: write => inputHub.shell(sessionId).bindDraftPersistence(write),
         openView,
       }
     },

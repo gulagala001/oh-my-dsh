@@ -27,12 +27,18 @@ window.__ModuleLoader__.load({
 		}) : target, mod));
 		//#endregion
 		let _deepseek_ai_dsh_client_store = require("@deepseek-ai/dsh-client-store");
+		let react_jsx_runtime = require("react/jsx-runtime");
 		let react = require("react");
 		react = __toESM(react, 1);
 		let _deepseek_ai_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-primitives");
-		let react_jsx_runtime = require("react/jsx-runtime");
 		let react_dom = require("react-dom");
-		//#region ../../util/workspace-path/src/file-address.ts
+		//#region ../../util/workspace-path/lib/index.js
+		/**
+		* The `dsh-resource://file/…` address grammar: how a file is named across the
+		* Sidebar and the resource model, built and parsed without touching a
+		* filesystem.
+		* @module
+		*/
 		/** The scheme and type every file address opens with. */
 		const FILE_ADDRESS_PREFIX = "dsh-resource://file/";
 		/** Component-encode one id or path segment, keeping `:` literal for drive letters. */
@@ -53,8 +59,6 @@ window.__ModuleLoader__.load({
 			const normalized = path.replace(/\\/g, "/").replace(/^(?:\.\/)+/, "");
 			return `${FILE_ADDRESS_PREFIX}session/${encodeSegment(sessionId)}/${encodePath(normalized)}`;
 		}
-		//#endregion
-		//#region ../../util/workspace-path/src/index.ts
 		/**
 		* Browser-safe Workspace path and display helpers.
 		* @module @deepseek-ai/dsh-util-workspace-path
@@ -112,7 +116,7 @@ window.__ModuleLoader__.load({
 			return new URL(`api/file?path=${encodeURIComponent(path)}`, base).href;
 		}
 		//#endregion
-		//#region src/client/contract/snapshot.ts
+		//#region lib/types/client/contract/snapshot.js
 		const EMPTY_LIST$1 = [];
 		const EMPTY_TIMELINE = {
 			turnOrder: EMPTY_LIST$1,
@@ -155,7 +159,7 @@ window.__ModuleLoader__.load({
 			}
 		};
 		//#endregion
-		//#region src/client/chat/ApprovalCommand.tsx
+		//#region lib/types/client/chat/ApprovalCommand.js
 		/**
 		* Extract a shell command from a correlated Tool call when its arguments carry one.
 		* @param call - Tool call arguments, when a correlated call exists.
@@ -184,7 +188,8 @@ window.__ModuleLoader__.load({
 			}) ?? null;
 		}
 		//#endregion
-		//#region src/client/markdown-labels.ts
+		//#region lib/types/client/markdown-labels.js
+		/** Localized copy adapters for Cordis-free Markdown primitives. */
 		/**
 		* Build the complete Markdown chrome copy for one locale revision.
 		* @param t - Chat locale seat.
@@ -205,7 +210,7 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-020rc2/packages/client/ui-chat/src/client/chat/MessageItem.module.css.mjs
+		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/work/dsh-021alpha1-20261003/dsh/packages/client/ui-chat/src/client/chat/MessageItem.module.css.mjs
 		const css$17 = ".Sixlwa_userRow{flex-direction:column;align-items:flex-end;gap:6px;display:flex}.Sixlwa_userStack{min-width:0;max-width:min(calc(var(--dsh-chat-content-width,748px) * .702), 82%);flex-direction:column;align-items:flex-end;gap:8px;display:flex}.Sixlwa_bubble{background:var(--dsw-specific-bubble);border-radius:var(--dsw-radius-xl);max-width:100%;font-size:var(--dsh-content-font-size,14px);line-height:calc(22px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-primary);white-space:pre-wrap;word-break:break-word;padding:10px 16px}.Sixlwa_referenceSummary{color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px))}.Sixlwa_contextRow{padding:2px 0}.Sixlwa_compactionRow{--dsh-compaction-header-height:calc(24px + var(--dsh-content-font-delta,0px));padding:2px 0}.Sixlwa_compactionButton{width:100%;height:var(--dsh-compaction-header-height);border-radius:var(--dsw-radius-sm);min-width:0;color:var(--dsw-alias-label-tertiary);font:inherit;text-align:left;background:0 0;border:none;align-items:center;padding:0;transition:color .1s;display:flex}.Sixlwa_compactionRow:has(.Sixlwa_compactionBody) .Sixlwa_compactionButton{z-index:7;background:var(--dsw-alias-bg-base);border-radius:0;position:sticky;top:0}.Sixlwa_compactionBody :has(>[data-code-block-banner]){top:var(--dsh-compaction-header-height)}.Sixlwa_compactionRow:has(.Sixlwa_compactionBody) .Sixlwa_compactionButton:hover{background:var(--dsw-alias-interactive-bg-hover-solid)}.Sixlwa_compactionButton:not(:disabled){cursor:pointer}.Sixlwa_compactionButton:hover{color:var(--dsw-alias-label-secondary)}.Sixlwa_compactionButton:not(:disabled):hover{background:var(--dsw-alias-interactive-bg-hover)}.Sixlwa_compactionLeading{width:calc(16px + var(--dsh-content-font-delta,0px));height:calc(16px + var(--dsh-content-font-delta,0px));color:inherit;flex:none;place-items:center;margin-right:6px;display:inline-grid}.Sixlwa_compactionLeading svg{width:calc(14px + var(--dsh-content-font-delta,0px));height:calc(14px + var(--dsh-content-font-delta,0px))}.Sixlwa_compactionContextIcon,.Sixlwa_compactionDisclosureIcon{grid-area:1/1;justify-content:center;align-items:center;display:inline-flex}.Sixlwa_compactionDisclosureIcon,.Sixlwa_compactionButton:not(:disabled):hover .Sixlwa_compactionContextIcon,.Sixlwa_compactionButton:not(:disabled):focus-visible .Sixlwa_compactionContextIcon{opacity:0}.Sixlwa_compactionButton:not(:disabled):hover .Sixlwa_compactionDisclosureIcon,.Sixlwa_compactionButton:not(:disabled):focus-visible .Sixlwa_compactionDisclosureIcon{opacity:1}.Sixlwa_compactionTitle{font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:inherit;flex:none}.Sixlwa_compactionSep{background:var(--dsw-alias-label-caption);border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px}.Sixlwa_compactionSummary{min-width:0;color:inherit;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;flex:auto;overflow:hidden}.Sixlwa_compactionBody{padding:4px 0 4px calc(22px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px))}.Sixlwa_retryRow{color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px))}.Sixlwa_retrySummary{border-radius:var(--dsw-radius-sm);width:fit-content;max-width:100%;color:inherit;cursor:pointer;user-select:none;align-items:center;gap:7px;padding:2px 0;list-style:none;display:inline-flex}.Sixlwa_retrySummary::-webkit-details-marker{display:none}.Sixlwa_retrySummary:after{content:\"\";border-bottom:1.5px solid;border-right:1.5px solid;flex:none;width:6px;height:6px;margin-right:2px;transition:transform .12s;transform:rotate(-45deg)}.Sixlwa_retrySummary:hover{color:var(--dsw-alias-label-secondary)}@media (prefers-reduced-motion:reduce){.Sixlwa_compactionButton{transition:none}}.Sixlwa_retrySummary:focus-visible{outline:1.5px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}.Sixlwa_retryText{overflow-wrap:anywhere;min-width:0}.Sixlwa_retryRow[open] .Sixlwa_retrySummary:after{transform:rotate(45deg)}.Sixlwa_retryDetails{overflow-wrap:anywhere;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px));gap:2px;margin-top:3px;padding-left:14px;display:grid}.Sixlwa_retryDetailLabel{color:var(--dsw-alias-label-secondary)}.Sixlwa_turnErrorRow{font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));grid-template-columns:10px minmax(0,1fr) auto;align-items:start;gap:8px;padding:2px 0;display:grid}.Sixlwa_turnErrorDot{margin-top:5px}.Sixlwa_turnErrorCopy{overflow-wrap:anywhere;min-width:0}.Sixlwa_turnErrorTitle{color:var(--dsw-alias-state-error-primary);margin-right:6px;font-weight:600}.Sixlwa_turnErrorMessage{color:var(--dsw-alias-label-secondary)}.Sixlwa_turnErrorCode{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-markdown-code-block-small)}.Sixlwa_maxTokensTitle{color:var(--dsw-alias-state-warn-primary);margin-right:6px;font-weight:600}.Sixlwa_attachmentRow{flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:100%;display:flex}.Sixlwa_fileCard{border:.5px solid var(--dsw-alias-border-l2,#0000001f);border-radius:var(--dsw-radius-xl);background:var(--dsw-specific-input-major,transparent);box-sizing:border-box;flex:0 0 240px;align-items:center;gap:10px;width:240px;min-height:64px;padding:8px 12px;display:inline-flex}.Sixlwa_fileIcon{flex:none;width:28px;height:28px}.Sixlwa_fileContent{flex-direction:column;flex:1;min-width:0;display:flex}.Sixlwa_fileName{white-space:nowrap;text-overflow:ellipsis;color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px;overflow:hidden}.Sixlwa_fileMeta{white-space:nowrap;text-overflow:ellipsis;color:var(--dsw-alias-label-tertiary,#00000073);font-size:12px;line-height:15px;overflow:hidden}";
 		const tagId$17 = "@deepseek-ai/dsh-client-ui-chat/MessageItem.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$17) + "]") === null) {
@@ -250,7 +255,7 @@ window.__ModuleLoader__.load({
 			"userStack": "Sixlwa_userStack"
 		};
 		//#endregion
-		//#region src/client/chat/CompactionItem.tsx
+		//#region lib/types/client/chat/CompactionItem.js
 		/**
 		* Renders the model-history compaction marker.
 		* @param props - the marker node off the snapshot cache.
@@ -265,9 +270,9 @@ window.__ModuleLoader__.load({
 				items: node.shadowedItemCount,
 				tokens: node.shadowedTokenCount
 			}) : fallbackSummary ?? (expandable ? t("message.compaction.expand") : t("message.compaction.unavailable"));
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+			return (0, react_jsx_runtime.jsxs)("div", {
 				className: MessageItem_module_css_default.compactionRow,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+				children: [(0, react_jsx_runtime.jsxs)("button", {
 					type: "button",
 					className: MessageItem_module_css_default.compactionButton,
 					disabled: !expandable,
@@ -276,35 +281,35 @@ window.__ModuleLoader__.load({
 						setExpanded((value) => !value);
 					},
 					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+						(0, react_jsx_runtime.jsxs)("span", {
 							className: MessageItem_module_css_default.compactionLeading,
 							"aria-hidden": true,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							children: [(0, react_jsx_runtime.jsx)("span", {
 								className: MessageItem_module_css_default.compactionContextIcon,
 								"data-compaction-icon": "context",
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular, {})
-							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular, {})
+							}), (0, react_jsx_runtime.jsx)("span", {
 								className: MessageItem_module_css_default.compactionDisclosureIcon,
 								"data-compaction-disclosure": open ? "expanded" : "collapsed",
-								children: open ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, {})
+								children: open ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {}) : (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, {})
 							})]
 						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						(0, react_jsx_runtime.jsx)("span", {
 							className: MessageItem_module_css_default.compactionTitle,
 							children: title ?? t("message.compaction")
 						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						(0, react_jsx_runtime.jsx)("span", {
 							className: MessageItem_module_css_default.compactionSep,
 							"aria-hidden": true
 						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						(0, react_jsx_runtime.jsx)("span", {
 							className: MessageItem_module_css_default.compactionSummary,
 							children: summary
 						})
 					]
-				}), open && node.summary !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				}), open && node.summary !== null && (0, react_jsx_runtime.jsx)("div", {
 					className: MessageItem_module_css_default.compactionBody,
-					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+					children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 						text: node.summary,
 						labels
 					})
@@ -312,7 +317,7 @@ window.__ModuleLoader__.load({
 			});
 		});
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-020rc2/packages/client/ui-chat/src/client/chat/ContextBody.module.css.mjs
+		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/work/dsh-021alpha1-20261003/dsh/packages/client/ui-chat/src/client/chat/ContextBody.module.css.mjs
 		const css$16 = ".ZkiH0q_text{color:var(--dsw-alias-label-secondary);font:inherit;white-space:pre-wrap;overflow-wrap:anywhere;margin:0}.ZkiH0q_fields{border-top:.5px solid var(--dsw-alias-border-l2);flex-direction:column;gap:2px;margin:8px 0 0;padding-top:8px;display:flex}.ZkiH0q_field{gap:8px;min-width:0;display:flex}.ZkiH0q_fieldKey{min-width:96px;color:var(--dsw-alias-label-caption);flex:none}.ZkiH0q_fieldValue{min-width:0;color:var(--dsw-alias-label-tertiary);overflow-wrap:anywhere;flex:auto;margin:0}.ZkiH0q_files{flex-wrap:wrap;gap:4px 12px;margin:0 0 8px;padding:0;list-style:none;display:flex}.ZkiH0q_file{align-items:baseline;gap:6px;min-width:0;display:flex}.ZkiH0q_filePath{color:var(--dsw-alias-label-secondary);overflow-wrap:anywhere}.ZkiH0q_fileAction{color:var(--dsw-alias-label-caption)}.ZkiH0q_catalogNotice{color:var(--dsw-alias-label-caption);margin:0 0 6px}.ZkiH0q_entries{flex-direction:column;gap:4px;margin:0;padding:0;list-style:none;display:flex}.ZkiH0q_entry{gap:8px;min-width:0;display:flex}.ZkiH0q_entryName{color:var(--dsw-alias-label-secondary);flex:none}.ZkiH0q_entryDescription{min-width:0;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;flex:auto;overflow:hidden}.ZkiH0q_sections{flex-direction:column;gap:8px;margin:0;display:flex}.ZkiH0q_section{flex-direction:column;gap:2px;min-width:0;display:flex}.ZkiH0q_sectionName{color:var(--dsw-alias-label-caption)}.ZkiH0q_sectionText{color:var(--dsw-alias-label-secondary);white-space:pre-wrap;overflow-wrap:anywhere;margin:0}.ZkiH0q_relaySender{color:var(--dsw-alias-label-caption);overflow-wrap:anywhere;margin:0 0 6px}.ZkiH0q_recalls{flex-direction:column;gap:2px;margin:0 0 8px;padding:0;list-style:none;display:flex}.ZkiH0q_recall{gap:8px;min-width:0;display:flex}.ZkiH0q_recallLabel{color:var(--dsw-alias-label-secondary);overflow-wrap:anywhere}.ZkiH0q_recallCounts{color:var(--dsw-alias-label-caption);flex:none}";
 		const tagId$16 = "@deepseek-ai/dsh-client-ui-chat/ContextBody.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$16) + "]") === null) {
@@ -348,7 +353,7 @@ window.__ModuleLoader__.load({
 			"text": "ZkiH0q_text"
 		};
 		//#endregion
-		//#region src/client/chat/ContextBody.tsx
+		//#region lib/types/client/chat/ContextBody.js
 		/** Model-facing text stays bounded at the disclosure, not at the producer. */
 		const MAX_CHARS = 2e4;
 		/** Rows a list body materializes before summarizing the remainder. */
@@ -410,15 +415,15 @@ window.__ModuleLoader__.load({
 			const hidden = formRendered ? ["kind", "form"] : ["kind"];
 			const rows = Object.entries(record).filter(([key]) => !hidden.includes(key));
 			if (rows.length === 0) return null;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dl", {
+			return (0, react_jsx_runtime.jsx)("dl", {
 				className: ContextBody_module_css_default.fields,
 				"data-context-fields": true,
-				children: rows.map(([key, value]) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				children: rows.map(([key, value]) => (0, react_jsx_runtime.jsxs)("div", {
 					className: ContextBody_module_css_default.field,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", {
+					children: [(0, react_jsx_runtime.jsx)("dt", {
 						className: ContextBody_module_css_default.fieldKey,
 						children: key
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", {
+					}), (0, react_jsx_runtime.jsx)("dd", {
 						className: ContextBody_module_css_default.fieldValue,
 						children: fieldValue(value, t)
 					})]
@@ -433,7 +438,7 @@ window.__ModuleLoader__.load({
 		* @returns One generic JSON block per unknown entry.
 		*/
 		function UnknownBlocks({ blocks, t }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: blocks.map((block, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
+			return (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: blocks.map((block, index) => (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
 				label: t("message.unknownBlock"),
 				payload: block,
 				truncatedLabel: (total) => t("json.truncated", { total })
@@ -447,11 +452,11 @@ window.__ModuleLoader__.load({
 		* @returns The content blocks as the model received them.
 		*/
 		function ModelFacingContent({ content, t }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: contentRuns(content).map((run, index) => "text" in run ? run.text !== "" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", {
+			return (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: contentRuns(content).map((run, index) => "text" in run ? run.text !== "" && (0, react_jsx_runtime.jsx)("pre", {
 				className: ContextBody_module_css_default.text,
 				"data-context-text": true,
 				children: boundedText(run.text, t)
-			}, index) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
+			}, index) : (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
 				label: t("message.unknownBlock"),
 				payload: run.block,
 				truncatedLabel: (total) => t("json.truncated", { total })
@@ -465,10 +470,10 @@ window.__ModuleLoader__.load({
 		* @returns The opaque context body.
 		*/
 		function OpaqueBody({ content, source, t }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(ModelFacingContent, {
+			return (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)(ModelFacingContent, {
 				content,
 				t
-			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SourceFields, {
+			}), (0, react_jsx_runtime.jsx)(SourceFields, {
 				source,
 				formRendered: false,
 				t
@@ -531,27 +536,27 @@ window.__ModuleLoader__.load({
 		*/
 		function InstructionsBody({ content, source, t }) {
 			const changes = instructionChanges(source);
-			if (changes === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OpaqueBody, {
+			if (changes === null) return (0, react_jsx_runtime.jsx)(OpaqueBody, {
 				content,
 				source,
 				t
 			});
 			const baseline = asRecord$1(source)?.["baseline"] === true;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
+			return (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("ul", {
 				className: ContextBody_module_css_default.files,
 				"data-context-files": true,
-				children: changes.map((change) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
+				children: changes.map((change) => (0, react_jsx_runtime.jsxs)("li", {
 					className: ContextBody_module_css_default.file,
 					title: change.digest,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					children: [(0, react_jsx_runtime.jsx)("span", {
 						className: ContextBody_module_css_default.filePath,
 						children: change.path
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					}), (0, react_jsx_runtime.jsx)("span", {
 						className: ContextBody_module_css_default.fileAction,
 						children: t(instructionAction(change.action, baseline))
 					})]
 				}, change.path))
-			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ModelFacingContent, {
+			}), (0, react_jsx_runtime.jsx)(ModelFacingContent, {
 				content,
 				t
 			})] });
@@ -592,7 +597,7 @@ window.__ModuleLoader__.load({
 		*/
 		function CatalogBody({ content, source, t }) {
 			const entries = catalogEntries(source);
-			if (entries === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OpaqueBody, {
+			if (entries === null) return (0, react_jsx_runtime.jsx)(OpaqueBody, {
 				content,
 				source,
 				t
@@ -600,32 +605,32 @@ window.__ModuleLoader__.load({
 			const update = asRecord$1(source)?.["update"] === true;
 			const shown = entries.slice(0, MAX_ENTRIES);
 			const rest = unknownBlocks(content);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-				update && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+			return (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+				update && (0, react_jsx_runtime.jsx)("p", {
 					className: ContextBody_module_css_default.catalogNotice,
 					"data-context-catalog-update": true,
 					children: t("message.context.catalog.replaced")
 				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
+				(0, react_jsx_runtime.jsx)("ul", {
 					className: ContextBody_module_css_default.entries,
 					"data-context-entries": true,
-					children: shown.map((entry, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
+					children: shown.map((entry, index) => (0, react_jsx_runtime.jsxs)("li", {
 						className: ContextBody_module_css_default.entry,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", {
+						children: [(0, react_jsx_runtime.jsx)("code", {
 							className: ContextBody_module_css_default.entryName,
 							children: entry.name
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						}), (0, react_jsx_runtime.jsx)("span", {
 							className: ContextBody_module_css_default.entryDescription,
 							children: entry.description
 						})]
 					}, index))
 				}),
-				shown.length < entries.length && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+				shown.length < entries.length && (0, react_jsx_runtime.jsx)("p", {
 					className: ContextBody_module_css_default.catalogNotice,
 					"data-context-entries-truncated": true,
 					children: t("message.context.catalog.more", { count: entries.length - shown.length })
 				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(UnknownBlocks, {
+				(0, react_jsx_runtime.jsx)(UnknownBlocks, {
 					blocks: rest,
 					t
 				})
@@ -669,24 +674,24 @@ window.__ModuleLoader__.load({
 		function SnapshotBody({ content, source, t }) {
 			const sections = snapshotSections(source);
 			/* v8 ignore next -- contextBody reads the sections before choosing this body. */
-			if (sections === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OpaqueBody, {
+			if (sections === null) return (0, react_jsx_runtime.jsx)(OpaqueBody, {
 				content,
 				source,
 				t
 			});
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+			return (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("p", {
 				className: ContextBody_module_css_default.catalogNotice,
 				"data-context-snapshot-supersedes": true,
 				children: t("message.context.snapshot.supersedes")
-			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dl", {
+			}), (0, react_jsx_runtime.jsx)("dl", {
 				className: ContextBody_module_css_default.sections,
 				"data-context-sections": true,
-				children: sections.map((section, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				children: sections.map((section, index) => (0, react_jsx_runtime.jsxs)("div", {
 					className: ContextBody_module_css_default.section,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", {
+					children: [(0, react_jsx_runtime.jsx)("dt", {
 						className: ContextBody_module_css_default.sectionName,
 						children: section.name
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", {
+					}), (0, react_jsx_runtime.jsx)("dd", {
 						className: ContextBody_module_css_default.sectionText,
 						children: boundedText(section.text, t)
 					})]
@@ -702,7 +707,7 @@ window.__ModuleLoader__.load({
 		* @returns The notice context body.
 		*/
 		function NoticeBody({ content, t }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ModelFacingContent, {
+			return (0, react_jsx_runtime.jsx)(ModelFacingContent, {
 				content,
 				t
 			});
@@ -718,16 +723,16 @@ window.__ModuleLoader__.load({
 		function RelayBody({ content, source, t }) {
 			const sender = relaySender(source);
 			/* v8 ignore next -- contextBody resolves the sender before choosing this body. */
-			if (sender === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OpaqueBody, {
+			if (sender === null) return (0, react_jsx_runtime.jsx)(OpaqueBody, {
 				content,
 				source,
 				t
 			});
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+			return (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("p", {
 				className: ContextBody_module_css_default.relaySender,
 				"data-context-relay-sender": true,
 				children: t("message.context.relay.from", { session: sender })
-			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ModelFacingContent, {
+			}), (0, react_jsx_runtime.jsx)(ModelFacingContent, {
 				content,
 				t
 			})] });
@@ -772,35 +777,35 @@ window.__ModuleLoader__.load({
 		*/
 		function RecallBody({ content, source, t }) {
 			const sessions = recalledSessions(source);
-			if (sessions === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OpaqueBody, {
+			if (sessions === null) return (0, react_jsx_runtime.jsx)(OpaqueBody, {
 				content,
 				source,
 				t
 			});
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
+			return (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("ul", {
 				className: ContextBody_module_css_default.recalls,
 				"data-context-recalls": true,
-				children: sessions.map((session, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
+				children: sessions.map((session, index) => (0, react_jsx_runtime.jsxs)("li", {
 					className: ContextBody_module_css_default.recall,
 					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						(0, react_jsx_runtime.jsx)("span", {
 							className: ContextBody_module_css_default.recallLabel,
 							children: session.label
 						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						(0, react_jsx_runtime.jsx)("span", {
 							className: ContextBody_module_css_default.recallCounts,
 							children: t("message.context.recall.counts", {
 								retained: session.retained,
 								omitted: session.omitted
 							})
 						}),
-						session.truncated && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						session.truncated && (0, react_jsx_runtime.jsx)("span", {
 							className: ContextBody_module_css_default.recallCounts,
 							children: t("message.context.recall.truncated")
 						})
 					]
 				}, index))
-			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ModelFacingContent, {
+			}), (0, react_jsx_runtime.jsx)(ModelFacingContent, {
 				content,
 				t
 			})] });
@@ -826,41 +831,41 @@ window.__ModuleLoader__.load({
 			const opaque = {
 				rendered: null,
 				summary: null,
-				body: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OpaqueBody, { ...props })
+				body: (0, react_jsx_runtime.jsx)(OpaqueBody, { ...props })
 			};
 			switch (form) {
 				case "instructions": return instructionChanges(props.source) === null ? opaque : {
 					rendered: "instructions",
 					summary: null,
-					body: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(InstructionsBody, { ...props })
+					body: (0, react_jsx_runtime.jsx)(InstructionsBody, { ...props })
 				};
 				case "catalog": return catalogEntries(props.source) === null ? opaque : {
 					rendered: "catalog",
 					summary: null,
-					body: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CatalogBody, { ...props })
+					body: (0, react_jsx_runtime.jsx)(CatalogBody, { ...props })
 				};
 				case "snapshot": return snapshotSections(props.source) === null ? opaque : {
 					rendered: "snapshot",
 					summary: null,
-					body: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SnapshotBody, { ...props })
+					body: (0, react_jsx_runtime.jsx)(SnapshotBody, { ...props })
 				};
 				case "notice": {
 					const summary = noticeSummary(props.source);
 					return summary === null ? opaque : {
 						rendered: "notice",
 						summary,
-						body: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(NoticeBody, { ...props })
+						body: (0, react_jsx_runtime.jsx)(NoticeBody, { ...props })
 					};
 				}
 				case "relay": return relaySender(props.source) === null ? opaque : {
 					rendered: "relay",
 					summary: null,
-					body: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RelayBody, { ...props })
+					body: (0, react_jsx_runtime.jsx)(RelayBody, { ...props })
 				};
 				case "recall": return recalledSessions(props.source) === null ? opaque : {
 					rendered: "recall",
 					summary: null,
-					body: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RecallBody, { ...props })
+					body: (0, react_jsx_runtime.jsx)(RecallBody, { ...props })
 				};
 				case null: return opaque;
 				/* v8 ignore next 4 -- closed-union backstop; the compiler rejects a new
@@ -869,7 +874,7 @@ window.__ModuleLoader__.load({
 			}
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-020rc2/packages/client/ui-chat/src/client/chat/ContextInjectionRow.module.css.mjs
+		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/work/dsh-021alpha1-20261003/dsh/packages/client/ui-chat/src/client/chat/ContextInjectionRow.module.css.mjs
 		const css$15 = ".XrJvXW_root{min-width:0}.XrJvXW_root[data-open]{padding-bottom:4px}.XrJvXW_chevron{color:var(--dsw-alias-label-secondary)}.XrJvXW_sep{background:var(--dsw-alias-label-caption);border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px}.XrJvXW_source{min-width:0;color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;flex:none;overflow:hidden}.XrJvXW_summary{min-width:0;color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;flex:auto;overflow:hidden}.XrJvXW_body{box-sizing:border-box;width:calc(100% - 22px - var(--dsh-content-font-delta,0px));max-height:141px;margin:4px 0 0 calc(22px + var(--dsh-content-font-delta,0px));border-radius:var(--dsw-radius-md);background:var(--dsw-alias-markdown-code-block);color:var(--dsw-alias-label-tertiary);font:400 11px/16px var(--ds-font-family-code);border:none;padding:10px 16px 12px 12px;overflow:auto}.XrJvXW_toolChanges{white-space:nowrap}";
 		const tagId$15 = "@deepseek-ai/dsh-client-ui-chat/ContextInjectionRow.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$15) + "]") === null) {
@@ -889,7 +894,7 @@ window.__ModuleLoader__.load({
 			"toolChanges": "XrJvXW_toolChanges"
 		};
 		//#endregion
-		//#region src/client/chat/ContextInjectionRow.tsx
+		//#region lib/types/client/chat/ContextInjectionRow.js
 		/**
 		* Render logged context with the Tool calls disclosure chrome from Figma.
 		*
@@ -916,34 +921,34 @@ window.__ModuleLoader__.load({
 				added: added.length,
 				removed: removed.length
 			}) : added.length > 0 ? t("message.toolsAddedCount", { count: added.length }) : t("message.toolsRemovedCount", { count: removed.length });
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
+			return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
 				className: ContextInjectionRow_module_css_default.root,
-				icon: toolBlocks !== void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }) : producer.role === "recall" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+				icon: toolBlocks !== void 0 ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }) : producer.role === "recall" ? (0, react_jsx_runtime.jsx)("span", {
 					"data-context-recall-icon": true,
-					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.ReferenceIconRegular, { kind: "session" })
-				}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconContextInjectionOutlineRegular, { size: 14 }),
+					children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.ReferenceIconRegular, { kind: "session" })
+				}) : (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconContextInjectionOutlineRegular, { size: 14 }),
 				chevronClassName: ContextInjectionRow_module_css_default.chevron,
 				title: single !== void 0 ? t(single.type === "tool-addition" ? "message.toolAdded" : "message.toolRemoved", { name: single.toolName }) : t(toolBlocks !== void 0 ? "message.toolsUpdated" : producer.role === "recall" ? "message.contextRecall" : "message.contextInjection"),
-				collapsedContent: toolSummary !== null ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+				collapsedContent: toolSummary !== null ? (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("span", {
 					className: ContextInjectionRow_module_css_default.sep,
 					"aria-hidden": true
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+				}), (0, react_jsx_runtime.jsx)("span", {
 					className: ContextInjectionRow_module_css_default.summary,
 					children: toolSummary
-				})] }) : toolBlocks !== void 0 || producer.label === null ? void 0 : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+				})] }) : toolBlocks !== void 0 || producer.label === null ? void 0 : (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+					(0, react_jsx_runtime.jsx)("span", {
 						className: ContextInjectionRow_module_css_default.sep,
 						"aria-hidden": true
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					(0, react_jsx_runtime.jsx)("span", {
 						className: ContextInjectionRow_module_css_default.source,
 						"data-context-source": true,
 						children: producer.label
 					}),
-					summary !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					summary !== null && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("span", {
 						className: ContextInjectionRow_module_css_default.sep,
 						"aria-hidden": true
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					}), (0, react_jsx_runtime.jsx)("span", {
 						className: ContextInjectionRow_module_css_default.summary,
 						"data-context-summary": true,
 						children: summary
@@ -956,19 +961,19 @@ window.__ModuleLoader__.load({
 				onToggle: () => {
 					setOpen((value) => !value);
 				},
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				children: (0, react_jsx_runtime.jsx)("div", {
 					className: ContextInjectionRow_module_css_default.body,
 					"data-context-injection-body": true,
 					"data-context-form": rendered ?? void 0,
-					children: toolBlocks === void 0 ? body : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					children: toolBlocks === void 0 ? body : (0, react_jsx_runtime.jsxs)("div", {
 						className: ContextInjectionRow_module_css_default.toolChanges,
-						children: [added.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", { children: t("message.toolsAdded", { names: added.join(", ") }) }), removed.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", { children: t("message.toolsRemoved", { names: removed.join(", ") }) })]
+						children: [added.length > 0 && (0, react_jsx_runtime.jsx)("div", { children: t("message.toolsAdded", { names: added.join(", ") }) }), removed.length > 0 && (0, react_jsx_runtime.jsx)("div", { children: t("message.toolsRemoved", { names: removed.join(", ") }) })]
 					})
 				})
 			});
 		}
 		//#endregion
-		//#region src/client/chat/message-chrome.ts
+		//#region lib/types/client/chat/message-chrome.js
 		/** Refresh interval for whole-second live run clocks. */
 		const LIVE_RUN_CLOCK_INTERVAL_MS = 1e3;
 		function pad2(n) {
@@ -1062,7 +1067,7 @@ window.__ModuleLoader__.load({
 			return `${d.getFullYear() === n.getFullYear() ? t("clock.md", params) : t("clock.ymd", params)} ${clock}`;
 		}
 		//#endregion
-		//#region src/client/chat/use-calendar-day.ts
+		//#region lib/types/client/chat/use-calendar-day.js
 		/**
 		* Local calendar-day epoch that advances at each local midnight.
 		* @returns Midnight ms for the current local day; updates after the boundary.
@@ -1084,7 +1089,7 @@ window.__ModuleLoader__.load({
 			return day;
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-020rc2/packages/client/ui-chat/src/client/chat/MessageIconActions.module.css.mjs
+		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/work/dsh-021alpha1-20261003/dsh/packages/client/ui-chat/src/client/chat/MessageIconActions.module.css.mjs
 		const css$14 = ".xzv4MW_actions{height:calc(28px + var(--dsh-content-font-delta,0px));align-items:center;gap:8px;display:flex}.xzv4MW_timeStart{font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-tertiary);white-space:nowrap;padding-right:12px}.xzv4MW_timeEnd{font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:inherit;white-space:nowrap}.xzv4MW_endInfo{min-width:0;color:var(--dsw-alias-label-tertiary);align-items:center;gap:8px;margin-left:8px;display:inline-flex}@media (hover:hover){[data-actions-reveal=hover] .xzv4MW_actions,:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering]):has(~:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering])) .xzv4MW_actions{opacity:0;transition:opacity 80ms}[data-actions-reveal=hover]:hover .xzv4MW_actions,[data-actions-reveal=hover]:focus-within .xzv4MW_actions,:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering]):has(~:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering])):hover .xzv4MW_actions,:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering]):has(~:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering])):focus-within .xzv4MW_actions{opacity:1}}.xzv4MW_action{width:calc(28px + var(--dsh-content-font-delta,0px));height:calc(28px + var(--dsh-content-font-delta,0px));border-radius:var(--dsw-radius-sm);color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;justify-content:center;align-items:center;padding:6px;display:inline-flex}.xzv4MW_action svg{width:calc(15px + var(--dsh-content-font-delta,0px));height:calc(15px + var(--dsh-content-font-delta,0px))}.xzv4MW_actions[data-clock=end] .xzv4MW_action svg{width:calc(17px + var(--dsh-content-font-delta,0px));height:calc(17px + var(--dsh-content-font-delta,0px))}.xzv4MW_action:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}.xzv4MW_action[data-unavailable]{cursor:default;opacity:.4}.xzv4MW_action[data-unavailable]:hover{color:var(--dsw-alias-label-tertiary);background:0 0}.xzv4MW_visuallyHidden{clip:rect(0 0 0 0);white-space:nowrap;width:1px;height:1px;position:absolute;overflow:hidden}";
 		const tagId$14 = "@deepseek-ai/dsh-client-ui-chat/MessageIconActions.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$14) + "]") === null) {
@@ -1103,7 +1108,7 @@ window.__ModuleLoader__.load({
 			"visuallyHidden": "xzv4MW_visuallyHidden"
 		};
 		//#endregion
-		//#region src/client/chat/MessageIconActions.tsx
+		//#region lib/types/client/chat/MessageIconActions.js
 		/**
 		* Copy / branch (/ clock) IconActions row shared by user and assistant chrome.
 		* @param props - Copy text, event time, clock side, branch callback, className.
@@ -1136,31 +1141,31 @@ window.__ModuleLoader__.load({
 					}, 1e3);
 				});
 			}, [copied, text]);
-			const clockEl = time === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+			const clockEl = time === void 0 ? null : (0, react_jsx_runtime.jsx)("span", {
 				className: clock === "start" ? MessageIconActions_module_css_default.timeStart : MessageIconActions_module_css_default.timeEnd,
 				children: formatMessageClock(time, t, day)
 			});
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+			return (0, react_jsx_runtime.jsxs)("div", {
 				className: className === void 0 ? MessageIconActions_module_css_default.actions : `${MessageIconActions_module_css_default.actions} ${className}`,
 				"data-clock": clock,
 				children: [
 					clock === "start" ? clockEl : null,
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+					(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 						label: copied ? t("copied") : t("copy"),
 						side: "bottom",
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						children: (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
 							className: MessageIconActions_module_css_default.action,
 							"aria-label": copied ? t("copied") : t("copy"),
 							onClick: onCopy,
-							children: copied ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, {}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutlineRegular, {})
+							children: copied ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, {}) : (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutlineRegular, {})
 						})
 					}),
 					extraActions,
-					onBranch !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+					onBranch !== void 0 && (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 						label: branchUnavailable ? t("message.branchUnavailable") : t("message.branch"),
 						side: "bottom",
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						children: (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
 							className: MessageIconActions_module_css_default.action,
 							"aria-label": t("message.branch"),
@@ -1168,15 +1173,15 @@ window.__ModuleLoader__.load({
 							"aria-describedby": branchUnavailable ? reasonId : void 0,
 							"data-unavailable": branchUnavailable || void 0,
 							onClick: branchUnavailable ? void 0 : onBranch,
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBranchOutlineRegular, {})
+							children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBranchOutlineRegular, {})
 						})
 					}),
-					onBranch !== void 0 && branchUnavailable && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					onBranch !== void 0 && branchUnavailable && (0, react_jsx_runtime.jsx)("span", {
 						id: reasonId,
 						className: MessageIconActions_module_css_default.visuallyHidden,
 						children: t("message.branchUnavailable")
 					}),
-					clock === "end" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+					clock === "end" ? (0, react_jsx_runtime.jsxs)("span", {
 						className: MessageIconActions_module_css_default.endInfo,
 						children: [usageAction, clockEl]
 					}) : usageAction
@@ -1184,7 +1189,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region src/client/chat/MessageItem.tsx
+		//#region lib/types/client/chat/MessageItem.js
 		function contentParts(content) {
 			const texts = [];
 			const attachments = [];
@@ -1246,15 +1251,15 @@ window.__ModuleLoader__.load({
 			}, [active, deadline]);
 			const label = active ? t("message.retry.active") : node.retryState === "cancelled" ? t("message.retry.cancelled") : node.retryState === "started" ? t("message.retry.started") : t("message.retry.scheduled");
 			const seconds = active ? remainingSeconds : scheduledSeconds;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
+			return (0, react_jsx_runtime.jsxs)("details", {
 				className: MessageItem_module_css_default.retryRow,
 				"data-active": active || void 0,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", {
+				children: [(0, react_jsx_runtime.jsx)("summary", {
 					className: MessageItem_module_css_default.retrySummary,
-					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					children: (0, react_jsx_runtime.jsx)("span", {
 						className: MessageItem_module_css_default.retryText,
 						role: "status",
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
+						children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
 							active,
 							children: t("message.retry.status", {
 								label,
@@ -1264,12 +1269,12 @@ window.__ModuleLoader__.load({
 							})
 						})
 					})
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				}), (0, react_jsx_runtime.jsxs)("div", {
 					className: MessageItem_module_css_default.retryDetails,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					children: [(0, react_jsx_runtime.jsxs)("div", { children: [(0, react_jsx_runtime.jsx)("span", {
 						className: MessageItem_module_css_default.retryDetailLabel,
 						children: t("message.retry.delay")
-					}), t("duration.milliseconds", { milliseconds: Math.round(node.delayMs) })] }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					}), t("duration.milliseconds", { milliseconds: Math.round(node.delayMs) })] }), (0, react_jsx_runtime.jsxs)("div", { children: [(0, react_jsx_runtime.jsx)("span", {
 						className: MessageItem_module_css_default.retryDetailLabel,
 						children: t("message.retry.failure")
 					}), failureMessage(node.failure.message, node.failure.code, t)] })]
@@ -1278,25 +1283,25 @@ window.__ModuleLoader__.load({
 		}
 		/** Persistent, turn-positioned feedback for a terminal failure. */
 		function TurnErrorItem({ node, t }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+			return (0, react_jsx_runtime.jsxs)("div", {
 				className: MessageItem_module_css_default.turnErrorRow,
 				role: "status",
 				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {
+					(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {
 						state: "error",
 						className: MessageItem_module_css_default.turnErrorDot
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					(0, react_jsx_runtime.jsxs)("div", {
 						className: MessageItem_module_css_default.turnErrorCopy,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						children: [(0, react_jsx_runtime.jsx)("span", {
 							className: MessageItem_module_css_default.turnErrorTitle,
 							children: node.code === "ACCOUNT_SIGNED_OUT" ? t("message.accountStopped") : t("message.turnError")
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						}), (0, react_jsx_runtime.jsx)("span", {
 							className: MessageItem_module_css_default.turnErrorMessage,
 							children: failureMessage(node.message, node.code, t)
 						})]
 					}),
-					node.code !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", {
+					node.code !== void 0 && (0, react_jsx_runtime.jsx)("code", {
 						className: MessageItem_module_css_default.turnErrorCode,
 						children: node.code
 					})
@@ -1305,18 +1310,18 @@ window.__ModuleLoader__.load({
 		}
 		/** Persistent, turn-positioned notice for a turn ended at the output-token cap. */
 		function TurnMaxTokensItem({ t }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+			return (0, react_jsx_runtime.jsxs)("div", {
 				className: MessageItem_module_css_default.turnErrorRow,
 				role: "status",
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {
+				children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {
 					state: "warning",
 					className: MessageItem_module_css_default.turnErrorDot
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				}), (0, react_jsx_runtime.jsxs)("div", {
 					className: MessageItem_module_css_default.turnErrorCopy,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					children: [(0, react_jsx_runtime.jsx)("span", {
 						className: MessageItem_module_css_default.maxTokensTitle,
 						children: t("message.maxTokens")
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					}), (0, react_jsx_runtime.jsx)("span", {
 						className: MessageItem_module_css_default.turnErrorMessage,
 						children: t("message.maxTokens.hint")
 					})]
@@ -1330,47 +1335,47 @@ window.__ModuleLoader__.load({
 			const compactImages = attachments.length > 1;
 			const truncated = (total) => t("json.truncated", { total });
 			const showBubble = text !== "" || rest.length > 0;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+			return (0, react_jsx_runtime.jsxs)("div", {
 				className: MessageItem_module_css_default.userRow,
 				"data-pending-steering": pending || void 0,
 				"data-submission-echo": echo || void 0,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				children: [(0, react_jsx_runtime.jsxs)("div", {
 					className: MessageItem_module_css_default.userStack,
 					children: [
-						attachments.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						attachments.length > 0 && (0, react_jsx_runtime.jsx)("div", {
 							className: MessageItem_module_css_default.attachmentRow,
 							"data-message-attachments": true,
-							children: attachments.map((attachment, index) => attachment.type === "image" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react.Fragment, { children: renderMessageImages({
+							children: attachments.map((attachment, index) => attachment.type === "image" ? (0, react_jsx_runtime.jsx)(react.Fragment, { children: renderMessageImages({
 								images: [attachment.image],
 								align: "end",
 								compact: compactImages
-							}) }, `image:${index}`) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+							}) }, `image:${index}`) : (0, react_jsx_runtime.jsxs)("span", {
 								className: MessageItem_module_css_default.fileCard,
 								title: attachment.file.name,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+								children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 									path: attachment.file.name,
 									className: MessageItem_module_css_default.fileIcon
-								}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								}), (0, react_jsx_runtime.jsxs)("span", {
 									className: MessageItem_module_css_default.fileContent,
-									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									children: [(0, react_jsx_runtime.jsx)("span", {
 										className: MessageItem_module_css_default.fileName,
 										children: attachment.file.name
-									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									}), (0, react_jsx_runtime.jsx)("span", {
 										className: MessageItem_module_css_default.fileMeta,
 										children: [(0, _deepseek_ai_dsh_client_ui_primitives.fileExtension)(attachment.file.name).toUpperCase().slice(0, 8), (0, _deepseek_ai_dsh_client_ui_primitives.fileSizeText)(attachment.file.bytes)].filter(Boolean).join(" ")
 									})]
 								})]
 							}, `file:${index}`))
 						}),
-						showBubble && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						showBubble && (0, react_jsx_runtime.jsxs)("div", {
 							className: MessageItem_module_css_default.bubble,
-							children: [(0, _deepseek_ai_dsh_client_ui_primitives.projectUserText)(text, referenceLabels, skillNames, "skill", references), rest.map((block, i) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
+							children: [(0, _deepseek_ai_dsh_client_ui_primitives.projectUserText)(text, referenceLabels, skillNames, "skill", references), rest.map((block, i) => (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
 								label: t("message.extraBlock"),
 								payload: block,
 								truncatedLabel: truncated
 							}, i))]
 						}),
-						referenceLabels.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						referenceLabels.length > 0 && (0, react_jsx_runtime.jsx)("div", {
 							className: MessageItem_module_css_default.referenceSummary,
 							children: t("message.referenceSummary", { labels: referenceLabels.join(t("message.referenceSeparator")) })
 						})
@@ -1385,12 +1390,12 @@ window.__ModuleLoader__.load({
 		* @returns the pending steering bubble.
 		*/
 		function PendingSteeringBubble({ content, renderMessageImages, t }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(UserStyleBubble, {
+			return (0, react_jsx_runtime.jsx)(UserStyleBubble, {
 				content,
 				renderMessageImages,
 				pending: true,
 				t,
-				actions: (text) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(MessageIconActions, {
+				actions: (text) => (0, react_jsx_runtime.jsx)(MessageIconActions, {
 					text,
 					clock: "start",
 					className: MessageItem_module_css_default.actions,
@@ -1407,7 +1412,7 @@ window.__ModuleLoader__.load({
 		* @returns the echoed user bubble.
 		*/
 		function PendingSubmissionBubble({ submission, renderMessageImages, t }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(UserStyleBubble, {
+			return (0, react_jsx_runtime.jsx)(UserStyleBubble, {
 				content: (0, react.useMemo)(() => submission.text === "" ? [] : [{
 					type: "text",
 					text: submission.text
@@ -1428,7 +1433,7 @@ window.__ModuleLoader__.load({
 				pending: submission.placement === "steering",
 				echo: true,
 				t,
-				actions: (text) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(MessageIconActions, {
+				actions: (text) => (0, react_jsx_runtime.jsx)(MessageIconActions, {
 					text,
 					time: submission.time,
 					clock: "start",
@@ -1440,7 +1445,7 @@ window.__ModuleLoader__.load({
 		/** User and admitted-steering keyed Chat renderer. */
 		const UserMessageNodeView = (0, react.memo)(function UserMessageNodeView({ node, renderMessageImages, openFile, openSkill, t }) {
 			const data = node.data;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(UserStyleBubble, {
+			return (0, react_jsx_runtime.jsx)(UserStyleBubble, {
 				content: data.content,
 				references: {
 					openFile,
@@ -1450,7 +1455,7 @@ window.__ModuleLoader__.load({
 				...data.referenceLabels === void 0 ? {} : { referenceLabels: data.referenceLabels },
 				...data.skillNames === void 0 ? {} : { skillNames: data.skillNames },
 				t,
-				actions: (text) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(MessageIconActions, {
+				actions: (text) => (0, react_jsx_runtime.jsx)(MessageIconActions, {
 					text,
 					time: data.time,
 					clock: "start",
@@ -1462,7 +1467,7 @@ window.__ModuleLoader__.load({
 		/** Injected-context keyed Chat renderer. */
 		const ContextMessageNodeView = (0, react.memo)(function ContextMessageNodeView({ node, t }) {
 			const data = node.data;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ContextInjectionRow, {
+			return (0, react_jsx_runtime.jsx)(ContextInjectionRow, {
 				content: data.content,
 				source: data.source,
 				producer: data.producer,
@@ -1472,7 +1477,7 @@ window.__ModuleLoader__.load({
 		});
 		/** Automatic compaction keyed Chat renderer. */
 		const CompactionNodeView = (0, react.memo)(function CompactionNodeView({ node, t }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CompactionItem, {
+			return (0, react_jsx_runtime.jsx)(CompactionItem, {
 				node: node.data,
 				t
 			});
@@ -1480,7 +1485,7 @@ window.__ModuleLoader__.load({
 		/** Correlated retry-chain keyed Chat renderer. */
 		const RetryNodeView = (0, react.memo)(function RetryNodeView({ node, t }) {
 			const data = node.data;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ModelRetryItem, {
+			return (0, react_jsx_runtime.jsx)(ModelRetryItem, {
 				node: data.current,
 				active: data.current.retryState === "scheduled",
 				t
@@ -1488,21 +1493,21 @@ window.__ModuleLoader__.load({
 		});
 		/** Terminal turn-error keyed Chat renderer. */
 		const TurnErrorNodeView = (0, react.memo)(function TurnErrorNodeView({ node, t }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TurnErrorItem, {
+			return (0, react_jsx_runtime.jsx)(TurnErrorItem, {
 				node: node.data,
 				t
 			});
 		});
 		/** Max-tokens turn-end notice keyed Chat renderer. */
 		const TurnMaxTokensNodeView = (0, react.memo)(function TurnMaxTokensNodeView({ t }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TurnMaxTokensItem, { t });
+			return (0, react_jsx_runtime.jsx)(TurnMaxTokensItem, { t });
 		});
 		/** Explicit unknown-surface keyed Chat renderer. */
 		const UnknownNodeView = (0, react.memo)(function UnknownNodeView({ node, t }) {
 			const data = node.data;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+			return (0, react_jsx_runtime.jsx)("div", {
 				className: MessageItem_module_css_default.contextRow,
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
+				children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
 					label: t("message.unknownSurface", { type: data.type }),
 					payload: data.data,
 					truncatedLabel: (total) => t("json.truncated", { total })
@@ -1550,7 +1555,7 @@ window.__ModuleLoader__.load({
 			return location.turn.status === "open" || reason === "aborted" || reason === "error";
 		}
 		//#endregion
-		//#region src/client/stores.ts
+		//#region lib/types/client/stores.js
 		/** Per-Session Chat view store. */
 		/**
 		* Resolve the manually expanded answer for one Turn.
@@ -1584,7 +1589,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region src/client/chat/searchable-hidden.ts
+		//#region lib/types/client/chat/searchable-hidden.js
 		/**
 		* Apply searchable hidden state without unmounting a stable subtree.
 		* @param hidden - whether the subtree is currently hidden.
@@ -1614,7 +1619,7 @@ window.__ModuleLoader__.load({
 			return ref;
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-020rc2/packages/client/ui-chat/src/client/chat/ChatView.module.css.mjs
+		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/work/dsh-021alpha1-20261003/dsh/packages/client/ui-chat/src/client/chat/ChatView.module.css.mjs
 		const css$13 = ".EvIC1a_frame{flex-direction:column;flex:auto;min-height:0;display:flex;position:relative;container-type:inline-size}.EvIC1a_root{flex-direction:column;flex:auto;min-height:0;display:flex;position:relative;overflow:visible clip}.EvIC1a_scroll{min-height:0;padding:16px calc(var(--dsh-composer-side-clearance) + 16px);flex:auto;overflow-y:auto;container-type:inline-size}.EvIC1a_root[data-chat-following-tail] .EvIC1a_scroll,[data-conversation-scroll]:has(.EvIC1a_root[data-chat-following-tail]){overflow-anchor:none}[data-conversation-scroll] .EvIC1a_frame,[data-conversation-scroll] .EvIC1a_root{flex:none;height:auto;min-height:auto}[data-conversation-scroll] .EvIC1a_scroll{flex:none;min-height:auto;overflow:visible}.EvIC1a_column{max-width:var(--dsh-chat-content-width);flex-direction:column;width:100%;margin:0 auto;display:flex}.EvIC1a_column>:not([hidden]):not(.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty)))~:not([hidden]):not(.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty))){margin-top:var(--dsh-chat-flow-gap,6px)}.EvIC1a_flowItem[data-chat-group-part=response],.EvIC1a_column>[data-chat-group-part=response]:not([hidden]):not(:empty)+:not([hidden]):not(.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty))):not(.EvIC1a_running){--dsh-chat-flow-gap:12px}.EvIC1a_flowItem{min-width:0}.EvIC1a_flowItem[data-chat-flow-kind=turn-process],.EvIC1a_flowItem[data-turn-process-answer],.EvIC1a_column>[data-chat-flow-kind=turn-process]+:not([hidden]):not(.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty))):not(.EvIC1a_running){--dsh-chat-flow-gap:16px}.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty)){height:0}.EvIC1a_callRow{border-radius:var(--dsw-radius-sm)}.EvIC1a_hint{color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px))}.EvIC1a_running{--dsh-chat-flow-gap:12px;--dsw-alias-label-shimmer:var(--dsw-alias-label-deep-diving-shimmer);color:var(--dsw-alias-label-deep-diving);font-size:calc(var(--dsh-content-font-size,14px) - 2px);line-height:calc(22px + var(--dsh-content-font-delta,0px));flex-direction:column;align-items:flex-start;display:flex}.EvIC1a_column>:nth-last-child(2 of :not([hidden]):not(.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty)))):is(.EvIC1a_flowItem:not([data-chat-flow-kind=user]):not([data-chat-flow-kind=steering]):not([data-chat-flow-kind=turn-trigger]),[data-chat-group-key])~.EvIC1a_running>.EvIC1a_runningDivider{display:block}.EvIC1a_runningDivider{background:color-mix(in srgb, var(--dsw-alias-border-l1) 75%, var(--dsw-alias-border-l2));pointer-events:none;width:100%;height:.5px;margin:8px 0 10px;display:none}.EvIC1a_runningContent{align-items:center;gap:6px;min-width:0;display:inline-flex}.EvIC1a_runningText{font-variant-numeric:tabular-nums;min-width:0}.EvIC1a_runningIcon{width:calc(14px + var(--dsh-content-font-delta,0px));height:calc(14px + var(--dsh-content-font-delta,0px));contain:strict;flex:none;display:inline-flex;position:relative;overflow:hidden}.EvIC1a_runningWhaleAnimated{display:none;position:absolute;inset:0}.EvIC1a_runningWhaleStill{display:initial}@supports (mask-mode:alpha) and (mask-image:url('')){@media (prefers-reduced-motion:no-preference) and (forced-colors:none){.EvIC1a_runningWhaleAnimated{will-change:transform;background:currentColor;display:block;mask:url(data:image/png;base64,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) 50%/100% 100% no-repeat alpha}.EvIC1a_runningWhaleStill{display:none}}}.EvIC1a_openError{color:var(--dsw-alias-state-error-primary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px))}.EvIC1a_older{justify-content:center;display:flex}.EvIC1a_older button{border-radius:var(--dsw-radius-sm);color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-interactive-bg-hover-solid);cursor:pointer;border:none;padding:4px 12px;font-size:12px}.EvIC1a_older button:disabled{cursor:default;opacity:.6}.EvIC1a_toBottomSlot{z-index:8;height:0;padding-right:max(calc(var(--dsh-composer-side-clearance) + 16px), calc((100% - var(--dsh-chat-content-width)) / 2));pointer-events:none;justify-content:flex-end;display:flex;position:absolute;bottom:16px;left:0;right:0}[data-conversation-scroll] .EvIC1a_toBottomSlot{bottom:calc(var(--dsh-composer-height,152px) + 16px);position:sticky}.EvIC1a_toBottom{--dsw-elevation-stroke-color:var(--dsw-alias-border-l3);corner-shape:round;width:34px;height:34px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-button-floating-fill);box-shadow:var(--dsw-elevation-panel);cursor:pointer;pointer-events:auto;border:0;border-radius:100px;justify-content:center;align-items:center;margin-top:-34px;padding:0;display:flex}.EvIC1a_toBottom:hover{background:var(--dsw-alias-button-floating-hover)}.EvIC1a_modalAction{min-width:72px}";
 		const tagId$13 = "@deepseek-ai/dsh-client-ui-chat/ChatView.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$13) + "]") === null) {
@@ -1646,7 +1651,7 @@ window.__ModuleLoader__.load({
 			"toBottomSlot": "EvIC1a_toBottomSlot"
 		};
 		//#endregion
-		//#region src/client/chat/ChatNodeSeat.tsx
+		//#region lib/types/client/chat/ChatNodeSeat.js
 		function turnDataOf(node) {
 			const location = node?.location;
 			return location?.kind === "turn" || location?.kind === "step" ? location.turn.data : void 0;
@@ -1741,7 +1746,7 @@ window.__ModuleLoader__.load({
 				node: routedNode
 			};
 			const flowKey = groupPart === void 0 || groupPart === "response" ? routedNode.key : JSON.stringify([routedNode.key, groupPart]);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+			return (0, react_jsx_runtime.jsx)("div", {
 				ref: wrapperRef,
 				className: ChatView_module_css_default.flowItem,
 				"data-chat-anchor-key": flowKey,
@@ -1757,7 +1762,7 @@ window.__ModuleLoader__.load({
 				children: renderSlot("conversation.chat.node", routedOwner, {
 					entryKey: routedNode.kind,
 					hookContext,
-					fallback: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
+					fallback: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
 						label: t("message.unknownSurface", { type: routedNode.kind }),
 						payload: routedNode.data,
 						truncatedLabel: (total) => t("json.truncated", { total })
@@ -1766,7 +1771,636 @@ window.__ModuleLoader__.load({
 			});
 		});
 		//#endregion
-		//#region ../../util/values/src/index.ts
+		//#region ../../util/values/lib/index.js
+		/**
+		* Lazily scanned view of one JSON object's top-level fields, built from text
+		* that may still be streaming or from an already parsed object. Nothing is
+		* scanned until a reader asks; the view remembers every question it answered
+		* and reports changed answers when the owner refreshes for publication.
+		* Used for model tool-call arguments: a row reads the fields it
+		* cares about at whatever granularity it displays, at every stage of the call.
+		* @module @deepseek-ai/dsh-util-values/src/partial-json
+		*/
+		const SIMPLE_ESCAPES = {
+			"\"": "\"",
+			"\\": "\\",
+			"/": "/",
+			b: "\b",
+			f: "\f",
+			n: "\n",
+			r: "\r",
+			t: "	"
+		};
+		const CONTENT_ESCAPE = /[\\\u0000-\u001f]/u;
+		function isWhitespace(c) {
+			return c === " " || c === "\n" || c === "\r" || c === "	";
+		}
+		function isHex(c) {
+			return c >= "0" && c <= "9" || c >= "a" && c <= "f" || c >= "A" && c <= "F";
+		}
+		/**
+		* The view. A streaming instance grows through {@link PartialArguments.append};
+		* {@link PartialArguments.fromText} and {@link PartialArguments.fromObject} build
+		* sealed instances over a finished call. Every reader is total: an absent or
+		* differently typed field answers `undefined` (or `false`), never throws.
+		*/
+		var PartialArguments = class PartialArguments {
+			/** The view of a call with no arguments available. */
+			static EMPTY = PartialArguments.fromObject({});
+			/**
+			* View finished argument text without scanning it until a reader asks.
+			* @param text - the complete argument JSON text.
+			* @returns a sealed view.
+			*/
+			static fromText(text) {
+				const view = new PartialArguments();
+				view.append(text);
+				view.sealed = true;
+				return view;
+			}
+			/**
+			* View an already parsed argument payload, such as a PTC dispatch object.
+			* @param value - the parsed argument value.
+			* @returns a sealed view; a non-object payload has no fields.
+			*/
+			static fromObject(value) {
+				const view = new PartialArguments();
+				view.object = typeof value === "object" && value !== null && !Array.isArray(value) ? value : {};
+				view.sealed = true;
+				return view;
+			}
+			/**
+			* The source: text so far or a parsed object, plus whether it can still grow.
+			* These are the only enumerable fields, so two views over the same source
+			* compare equal structurally however far each has been read.
+			*/
+			chunks = [];
+			object;
+			sealed = false;
+			#ends = [];
+			#size = 0;
+			#consumed = 0;
+			#mode = "root";
+			#escape = false;
+			#keyStart = 0;
+			#keyEscaped = false;
+			#key = "";
+			#current = null;
+			#nestedEnds = [];
+			#nestedInString = false;
+			#invalidAt;
+			#invalidValue = false;
+			#entries = /* @__PURE__ */ new Map();
+			#order = [];
+			#reads = /* @__PURE__ */ new Map();
+			/** Whether this view rejects further appends; does not scan text or register reads. */
+			get isSealed() {
+				return this.sealed;
+			}
+			/** Whether indexing or a content read found invalid JSON; unread value contents are not validated. */
+			get invalid() {
+				this.scan();
+				return this.#mode === "invalid" || this.#invalidValue;
+			}
+			/**
+			* Retain streamed argument text without scanning or comparing observed answers.
+			* @param fragment - the text following every fragment appended before.
+			*/
+			append(fragment) {
+				if (this.sealed) throw new Error("PartialArguments: cannot append to a sealed view");
+				if (fragment.length === 0) return;
+				this.chunks.push(fragment);
+				this.#size += fragment.length;
+				this.#ends.push(this.#size);
+			}
+			/**
+			* Reconcile a streamed prefix with authoritative complete text without joining the fragments.
+			* @param text - the final argument text, which replaces missing or conflicting deltas.
+			* @returns this view sealed with its caches retained when every character matches; otherwise a new sealed view.
+			*/
+			settle(text) {
+				if (this.object !== void 0 || text.length !== this.#size) return PartialArguments.fromText(text);
+				let offset = 0;
+				for (const chunk of this.chunks) {
+					if (!text.startsWith(chunk, offset)) return PartialArguments.fromText(text);
+					offset += chunk.length;
+				}
+				this.chunks = text.length === 0 ? [] : [text];
+				this.#ends = text.length === 0 ? [] : [text.length];
+				this.sealed = true;
+				return this;
+			}
+			/**
+			* Compare observed answers and advance their publication baseline. Unread views remain unscanned.
+			* @returns whether any observed answer changed since its first read or the preceding refresh.
+			*/
+			refresh() {
+				if (this.#reads.size === 0) return false;
+				this.scan();
+				let changed = false;
+				let completions = false;
+				for (const read of this.#reads.values()) {
+					if (read.completion) {
+						completions = true;
+						continue;
+					}
+					changed = this.refreshRead(read) || changed;
+				}
+				if (completions) {
+					for (const read of this.#reads.values()) if (read.completion) changed = this.refreshRead(read) || changed;
+				}
+				if (this.sealed) this.#reads.clear();
+				return changed;
+			}
+			refreshRead(read) {
+				const now = read.answer();
+				if (Object.is(now, read.last)) return false;
+				read.last = now;
+				return true;
+			}
+			/**
+			* Check whether no further fields can arrive.
+			* @returns whether the outer object closed, indexing failed, or the view is sealed; unread values are not validated.
+			*/
+			closed() {
+				return this.remember("closed", "", () => this.closedNow());
+			}
+			/**
+			* List discovered fields in first-appearance order.
+			* @returns top-level keys seen so far, in first-appearance order.
+			*/
+			keys() {
+				return this.remember("keys", "", () => this.keysNow(), (keys) => keys.length);
+			}
+			/**
+			* Check whether a top-level field has appeared.
+			* @param key - argument name.
+			* @returns whether the field has appeared (a string opened or another value began).
+			*/
+			has(key) {
+				return this.remember("has", key, () => this.hasNow(key));
+			}
+			/**
+			* Check whether a field's closing delimiter has arrived, without validating its contents.
+			* @param key - argument name.
+			* @returns whether its delimiter arrived and no content reader has reported an error for this value.
+			*/
+			complete(key) {
+				return this.remember("complete", key, () => this.completeNow(key));
+			}
+			/**
+			* Read string length without materializing its text.
+			* @param key - argument name.
+			* @param options - change granularity for a streaming string.
+			* @returns decoded UTF-16 length of the string field so far; undefined when absent or not a string.
+			*/
+			stringLength(key, options) {
+				const step = Math.max(1, Math.floor(options?.step ?? 1));
+				const offset = options?.offset ?? 0;
+				return this.remember(`length:${step}:${offset}`, key, () => this.lengthNow(key), (length) => length === void 0 ? void 0 : Math.ceil((length + offset) / step));
+			}
+			/**
+			* Check a string against a decoded UTF-16 length limit without materializing it.
+			* @param key - argument name.
+			* @param maxLength - decoded UTF-16 limit, floored to at least zero.
+			* @returns whether the string is longer than the limit; false when absent or not a string.
+			*/
+			stringExceeds(key, maxLength) {
+				const limit = Math.max(0, Math.floor(maxLength));
+				return this.remember(`exceeds:${limit}`, key, () => (this.lengthNow(key, limit + 1) ?? 0) > limit);
+			}
+			/**
+			* Read a decoded string, including a streaming prefix.
+			* @param key - argument name.
+			* @returns the string field's decoded text so far; undefined when absent or not a string.
+			*/
+			text(key) {
+				return this.remember("text", key, () => this.textNow(key));
+			}
+			/**
+			* Read at most the first decoded UTF-16 units of a string.
+			* @param key - argument name.
+			* @param maxLength - maximum decoded UTF-16 length, floored to at least one.
+			* @returns the bounded string prefix; undefined when absent or not a string.
+			*/
+			textPrefix(key, maxLength) {
+				const limit = Math.max(1, Math.floor(maxLength));
+				return this.remember(`prefix:${limit}`, key, () => this.textPrefixNow(key, limit));
+			}
+			/**
+			* Read a completed non-string argument.
+			* @param key - argument name.
+			* @returns the parsed non-string value once it closed; undefined while open, absent, or a string.
+			*/
+			value(key) {
+				return this.remember("value", key, () => this.valueNow(key));
+			}
+			/** Answer a question and, on a streaming view, remember it for change detection. */
+			remember(kind, key, read, comparison) {
+				this.scan();
+				const result = read();
+				if (!this.sealed) {
+					const id = `${kind}/${key}`;
+					if (!this.#reads.has(id)) this.#reads.set(id, {
+						completion: kind === "complete",
+						answer: comparison === void 0 ? read : () => comparison(read()),
+						last: comparison === void 0 ? result : comparison(result)
+					});
+				}
+				return result;
+			}
+			closedNow() {
+				return this.sealed || this.#mode === "closed" || this.#mode === "invalid";
+			}
+			keysNow() {
+				return this.object === void 0 ? this.#order : Object.keys(this.object);
+			}
+			hasNow(key) {
+				return this.object === void 0 ? this.#entries.has(key) : Object.hasOwn(this.object, key);
+			}
+			completeNow(key) {
+				if (this.object !== void 0) return Object.hasOwn(this.object, key);
+				const entry = this.#entries.get(key);
+				return entry !== void 0 && entry.end >= 0 && (entry.kind === "string" ? entry.invalidAt === void 0 : !entry.invalid);
+			}
+			lengthNow(key, limit = Number.POSITIVE_INFINITY) {
+				if (this.object !== void 0) {
+					const field = Object.hasOwn(this.object, key) ? this.object[key] : void 0;
+					return typeof field === "string" ? field.length : void 0;
+				}
+				const entry = this.#entries.get(key);
+				if (entry?.kind !== "string") return void 0;
+				if (entry.text !== void 0 && entry.text.at === entry.end) return entry.text.length;
+				const read = entry.length ??= {
+					at: entry.start,
+					length: 0,
+					text: ""
+				};
+				this.readString(entry, read, limit, false);
+				return read.length;
+			}
+			textNow(key) {
+				if (this.object !== void 0) {
+					const field = Object.hasOwn(this.object, key) ? this.object[key] : void 0;
+					return typeof field === "string" ? field : void 0;
+				}
+				const entry = this.#entries.get(key);
+				if (entry?.kind !== "string") return void 0;
+				if (entry.text === void 0 && entry.end >= 0 && entry.needsDecoding && entry.invalidAt === void 0) {
+					let text;
+					try {
+						text = JSON.parse(`"${this.slice(entry.start, entry.end)}"`);
+					} catch (_error) {}
+					if (text !== void 0) entry.text = {
+						at: entry.end,
+						length: text.length,
+						text
+					};
+				}
+				const read = entry.text ??= {
+					at: entry.start,
+					length: 0,
+					text: ""
+				};
+				this.readString(entry, read, Number.POSITIVE_INFINITY, true);
+				return read.text;
+			}
+			textPrefixNow(key, maxLength) {
+				if (this.object !== void 0) {
+					const field = Object.hasOwn(this.object, key) ? this.object[key] : void 0;
+					return typeof field === "string" ? field.slice(0, maxLength) : void 0;
+				}
+				const entry = this.#entries.get(key);
+				if (entry?.kind !== "string") return void 0;
+				const prefixes = entry.prefixes ??= /* @__PURE__ */ new Map();
+				let read = prefixes.get(maxLength);
+				if (read === void 0) {
+					read = {
+						at: entry.start,
+						length: 0,
+						text: ""
+					};
+					prefixes.set(maxLength, read);
+				}
+				this.readString(entry, read, maxLength, true);
+				return read.text;
+			}
+			valueNow(key) {
+				if (this.object !== void 0) {
+					if (!Object.hasOwn(this.object, key)) return void 0;
+					const field = this.object[key];
+					return typeof field === "string" ? void 0 : field;
+				}
+				const entry = this.#entries.get(key);
+				if (entry?.kind !== "value" || entry.end < 0 || entry.invalid) return void 0;
+				if (entry.parsed === void 0) try {
+					entry.parsed = JSON.parse(this.slice(entry.start, entry.end));
+				} catch (_error) {
+					entry.invalid = true;
+					this.#invalidValue = true;
+				}
+				return entry.parsed;
+			}
+			chunkAt(at) {
+				let low = 0;
+				let high = this.#ends.length;
+				while (low < high) {
+					const mid = low + high >>> 1;
+					if (this.#ends[mid] <= at) low = mid + 1;
+					else high = mid;
+				}
+				return low;
+			}
+			/** Materialize only a requested range, never the cumulative source. */
+			slice(start, end) {
+				if (start >= end) return "";
+				const first = this.chunkAt(start);
+				const last = this.chunkAt(end - 1);
+				const base = first === 0 ? 0 : this.#ends[first - 1];
+				if (first === last) return this.chunks[first].slice(start - base, end - base);
+				const parts = [this.chunks[first].slice(start - base)];
+				for (let i = first + 1; i < last; i++) parts.push(this.chunks[i]);
+				parts.push(this.chunks[last].slice(0, end - this.#ends[last - 1]));
+				return parts.join("");
+			}
+			readString(entry, read, limit, materialize) {
+				const end = Math.min(entry.end < 0 ? this.#consumed : entry.end, entry.invalidAt ?? Number.POSITIVE_INFINITY, this.#invalidAt ?? Number.POSITIVE_INFINITY);
+				if (!entry.needsDecoding) {
+					const length = Math.min(end - read.at, limit - read.length);
+					if (length <= 0) return;
+					if (materialize) read.text += this.slice(read.at, read.at + length);
+					read.at += length;
+					read.length += length;
+					return;
+				}
+				let chunkIndex = this.chunkAt(read.at);
+				while (read.at < end && read.length < limit) {
+					const base = chunkIndex === 0 ? 0 : this.#ends[chunkIndex - 1];
+					const chunk = this.chunks[chunkIndex];
+					const remaining = chunk.slice(read.at - base, Math.min(chunk.length, end - base));
+					const boundary = remaining.search(CONTENT_ESCAPE);
+					const length = Math.min(boundary < 0 ? remaining.length : boundary, limit - read.length);
+					if (length > 0) {
+						if (materialize) read.text += remaining.slice(0, length);
+						read.at += length;
+						read.length += length;
+						if (read.at === base + chunk.length) chunkIndex++;
+						continue;
+					}
+					const type = remaining.length > 1 ? remaining[1] : read.at + 1 < end ? this.chunks[chunkIndex + 1][0] : void 0;
+					let decoded;
+					let width = 2;
+					if (remaining[0] === "\\" && type === void 0 && entry.end < 0) return;
+					if (remaining[0] === "\\" && type === "u") {
+						const hex = this.slice(read.at + 2, Math.min(end, read.at + 6));
+						let valid = true;
+						for (let i = 0; i < hex.length; i++) if (!isHex(hex[i])) valid = false;
+						if (valid) {
+							if (hex.length < 4 && entry.end < 0) return;
+							if (hex.length === 4) decoded = String.fromCharCode(Number.parseInt(hex, 16));
+						}
+						width = 6;
+					} else if (remaining[0] === "\\" && type !== void 0) decoded = SIMPLE_ESCAPES[type];
+					if (decoded === void 0) {
+						entry.invalidAt = read.at;
+						this.#invalidValue = true;
+						return;
+					}
+					if (materialize) read.text += decoded;
+					read.length++;
+					read.at += width;
+					while (chunkIndex < this.chunks.length && read.at >= this.#ends[chunkIndex]) chunkIndex++;
+				}
+			}
+			/** Locate new field ranges without decoding or parsing their contents. */
+			scan() {
+				if (this.object !== void 0 || this.#consumed === this.#size) return;
+				for (let i = this.chunkAt(this.#consumed); i < this.chunks.length && this.#invalidAt === void 0; i++) {
+					const pending = this.chunks[i];
+					const base = i === 0 ? 0 : this.#ends[i - 1];
+					for (let index = this.#consumed - base; index < pending.length && this.#mode !== "invalid"; index++) {
+						if (this.#mode === "string" || this.#mode === "nested" && this.#nestedInString) {
+							const end = this.stringBoundary(pending, index);
+							this.#consumed += end - index;
+							index = end;
+							if (index === pending.length) break;
+						}
+						this.step(pending[index], this.#consumed);
+						this.#consumed++;
+					}
+				}
+			}
+			/** Only raw quotes and their preceding backslash runs can terminate a string. */
+			stringBoundary(fragment, start) {
+				let at = start;
+				while (true) {
+					const quote = fragment.indexOf("\"", at);
+					const end = quote < 0 ? fragment.length : quote;
+					if (this.#mode === "string") {
+						const entry = this.#current;
+						if (!entry.needsDecoding && CONTENT_ESCAPE.test(fragment.slice(at, end))) entry.needsDecoding = true;
+					}
+					let slashStart = end;
+					while (slashStart > at && fragment[slashStart - 1] === "\\") slashStart--;
+					const escaped = (end - slashStart) % 2 === 1 !== (slashStart === at && this.#escape);
+					this.#escape = quote < 0 && escaped;
+					if (quote < 0 || !escaped) return end;
+					at = quote + 1;
+				}
+			}
+			step(c, at) {
+				switch (this.#mode) {
+					case "root":
+						if (isWhitespace(c)) return;
+						if (c === "{") {
+							this.#mode = "key-or-end";
+							return;
+						}
+						this.fail();
+						return;
+					case "key-or-end":
+						if (isWhitespace(c)) return;
+						if (c === "}") {
+							this.#mode = "closed";
+							return;
+						}
+						if (c === "\"") {
+							this.beginKey(at);
+							return;
+						}
+						this.fail();
+						return;
+					case "key-only":
+						if (isWhitespace(c)) return;
+						if (c === "\"") {
+							this.beginKey(at);
+							return;
+						}
+						this.fail();
+						return;
+					case "key":
+						this.stepKey(c, at);
+						return;
+					case "colon":
+						if (isWhitespace(c)) return;
+						if (c === ":") {
+							this.#mode = "value";
+							return;
+						}
+						this.fail();
+						return;
+					case "value":
+						this.beginValue(c, at);
+						return;
+					case "string": {
+						const entry = this.#current;
+						entry.end = at;
+						this.#current = null;
+						this.#mode = "comma-or-end";
+						return;
+					}
+					case "scalar":
+						this.stepScalar(c, at);
+						return;
+					case "nested":
+						this.stepNested(c, at);
+						return;
+					case "comma-or-end":
+						if (isWhitespace(c)) return;
+						if (c === ",") {
+							this.#mode = "key-only";
+							return;
+						}
+						if (c === "}") {
+							this.#mode = "closed";
+							return;
+						}
+						this.fail();
+						return;
+					case "closed":
+						if (isWhitespace(c)) return;
+						this.fail();
+						return;
+					/* v8 ignore next 2 -- scan() stops stepping once the view is invalid. */
+					case "invalid": return;
+					/* v8 ignore next 2 -- Every scanner mode has a handler above. */
+					default: assertNever(this.#mode);
+				}
+			}
+			fail() {
+				this.#invalidAt = this.#consumed;
+				this.#mode = "invalid";
+				this.#current = null;
+			}
+			beginKey(at) {
+				this.#mode = "key";
+				this.#keyStart = at + 1;
+				this.#keyEscaped = false;
+				this.#escape = false;
+			}
+			stepKey(c, at) {
+				if (c < " ") {
+					this.fail();
+					return;
+				}
+				if (this.#escape) {
+					this.#escape = false;
+					return;
+				}
+				if (c === "\\") {
+					this.#escape = true;
+					this.#keyEscaped = true;
+					return;
+				}
+				if (c !== "\"") return;
+				const raw = this.slice(this.#keyStart, at);
+				if (this.#keyEscaped) try {
+					this.#key = JSON.parse(`"${raw}"`);
+				} catch (_error) {
+					this.fail();
+					return;
+				}
+				else this.#key = raw;
+				this.#mode = "colon";
+			}
+			open(entry) {
+				if (!this.#entries.has(this.#key)) this.#order.push(this.#key);
+				this.#entries.set(this.#key, entry);
+				this.#current = entry;
+			}
+			beginValue(c, at) {
+				if (isWhitespace(c)) return;
+				if (c === "\"") {
+					this.open({
+						kind: "string",
+						start: at + 1,
+						end: -1,
+						needsDecoding: false,
+						invalidAt: void 0,
+						length: void 0,
+						text: void 0,
+						prefixes: void 0
+					});
+					this.#escape = false;
+					this.#mode = "string";
+					return;
+				}
+				if (c === "}" || c === "," || c === ":" || c === "]") {
+					this.fail();
+					return;
+				}
+				this.open({
+					kind: "value",
+					start: at,
+					end: -1,
+					parsed: void 0,
+					invalid: false
+				});
+				if (c === "{" || c === "[") {
+					this.#mode = "nested";
+					this.#nestedEnds = [c === "{" ? "}" : "]"];
+					this.#nestedInString = false;
+					this.#escape = false;
+					return;
+				}
+				this.#mode = "scalar";
+			}
+			stepScalar(c, at) {
+				if (c !== "," && c !== "}" && !isWhitespace(c)) return;
+				this.closeValue(at);
+				this.#mode = c === "," ? "key-only" : c === "}" ? "closed" : "comma-or-end";
+			}
+			stepNested(c, at) {
+				if (this.#nestedInString) {
+					this.#nestedInString = false;
+					return;
+				}
+				if (c === "\"") {
+					this.#nestedInString = true;
+					return;
+				}
+				if (c === "{" || c === "[") {
+					this.#nestedEnds.push(c === "{" ? "}" : "]");
+					return;
+				}
+				if (c === "}" || c === "]") {
+					if (this.#nestedEnds.pop() !== c) {
+						this.fail();
+						return;
+					}
+					if (this.#nestedEnds.length === 0) {
+						this.closeValue(at + 1);
+						this.#mode = "comma-or-end";
+					}
+				}
+			}
+			closeValue(end) {
+				const entry = this.#current;
+				entry.end = end;
+				this.#current = null;
+			}
+		};
+		/** Duplicate-install-safe JSON and immutable-value helpers. @module @deepseek-ai/dsh-util-values */
 		/**
 		* Mark an unreachable closed-union branch.
 		* @param value - impossible value; an unhandled typed variant fails at the call site.
@@ -1778,7 +2412,7 @@ window.__ModuleLoader__.load({
 			throw new Error(`unreachable variant${context ? ` in ${context}` : ""}: ${rendered}`);
 		}
 		//#endregion
-		//#region src/client/chat/render-entry.ts
+		//#region lib/types/client/chat/render-entry.js
 		/**
 		* Identify a rendering position independently of presentation mode.
 		* @param entry - mode-independent rendering reference.
@@ -1796,7 +2430,7 @@ window.__ModuleLoader__.load({
 			}
 		}
 		//#endregion
-		//#region src/client/chat/step-process.ts
+		//#region lib/types/client/chat/step-process.js
 		/**
 		* Compose a closed group's localized title from its top three categories without counts.
 		* @param summary - ranked work and phase evidence for this range.
@@ -1821,7 +2455,7 @@ window.__ModuleLoader__.load({
 			return summary.counts.length > 3 ? t("message.stepProcess.more", { title }) : title;
 		}
 		//#endregion
-		//#region src/client/chat/use-disclosure.ts
+		//#region lib/types/client/chat/use-disclosure.js
 		/** Bind independent disclosure state to a Chat seat's reset source. */
 		/**
 		* Own one initially collapsed disclosure without an external subscription.
@@ -1853,7 +2487,7 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
-		//#region src/client/chat/use-scroll-follow.ts
+		//#region lib/types/client/chat/use-scroll-follow.js
 		/** Independent bottom-follow intent and native scrolling, without paging or DOM observers. */
 		/**
 		* Read one scrollport without measuring its children.
@@ -2030,7 +2664,7 @@ window.__ModuleLoader__.load({
 			return follow;
 		}
 		//#endregion
-		//#region src/client/chat/use-process-scroll.ts
+		//#region lib/types/client/chat/use-process-scroll.js
 		/** Capped process-group scrolling and fades over the shared follow controller. */
 		const AT_REST = {
 			canScrollUp: false,
@@ -2142,7 +2776,7 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-020rc2/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css.mjs
+		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/work/dsh-021alpha1-20261003/dsh/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css.mjs
 		const css$12 = ".O_Ebla_root{min-width:0}.O_Ebla_title{max-width:100%;color:var(--dsw-alias-label-tertiary);font:inherit;font-size:var(--dsh-content-font-size,14px);text-align:left;cursor:pointer;background:0 0;border:0;align-items:center;gap:6px;padding:0;transition:color .1s;display:flex}.O_Ebla_title:hover{color:var(--dsw-alias-label-secondary)}.O_Ebla_leading{width:calc(16px + var(--dsh-content-font-delta,0px));height:calc(16px + var(--dsh-content-font-delta,0px));color:inherit;flex:none;justify-content:center;align-items:center;display:inline-flex;position:relative}.O_Ebla_leading svg{width:calc(14px + var(--dsh-content-font-delta,0px));height:calc(14px + var(--dsh-content-font-delta,0px))}.O_Ebla_leading svg[width=\"16\"]{width:calc(16px + var(--dsh-content-font-delta,0px));height:calc(16px + var(--dsh-content-font-delta,0px))}.O_Ebla_activityIcon,.O_Ebla_chevron{justify-content:center;align-items:center;transition:opacity .1s;display:inline-flex;position:absolute;inset:0}.O_Ebla_activityIcon{opacity:1}.O_Ebla_chevron,.O_Ebla_title:is(:hover,:focus-visible) .O_Ebla_activityIcon{opacity:0}.O_Ebla_title:is(:hover,:focus-visible) .O_Ebla_chevron{opacity:1}.O_Ebla_title[aria-expanded=true] .O_Ebla_activityIcon{opacity:0}.O_Ebla_title[aria-expanded=true] .O_Ebla_chevron{opacity:1}.O_Ebla_title[aria-expanded=true]{padding-bottom:8px}.O_Ebla_body{--dsh-chat-flow-gap:2px;overscroll-behavior-y:auto;scrollbar-gutter:stable;max-height:min(280px,45vh);position:relative;overflow-y:auto}.O_Ebla_label{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.O_Ebla_fadeTop{mask-image:linear-gradient(#0000 0,#000 24px 100%)}.O_Ebla_fadeBottom{mask-image:linear-gradient(#000 0 calc(100% - 24px),#0000 100%)}.O_Ebla_fadeTop.O_Ebla_fadeBottom{mask-image:linear-gradient(#0000 0,#000 24px calc(100% - 24px),#0000 100%)}@media (prefers-reduced-motion:reduce){.O_Ebla_title,.O_Ebla_activityIcon,.O_Ebla_chevron{transition:none}}.O_Ebla_content{flex-direction:column;display:flex}.O_Ebla_content>*{flex-shrink:0}.O_Ebla_content>:not([hidden]):not(:empty)~:not([hidden]):not(:empty){margin-top:var(--dsh-chat-flow-gap,6px)}.O_Ebla_expandedBody{scrollbar-gutter:auto;max-height:none;overflow:visible}.O_Ebla_count{color:var(--dsw-alias-label-tertiary);flex:none;font-size:11px}";
 		const tagId$12 = "@deepseek-ai/dsh-client-ui-chat/ChatGroupSeat.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$12) + "]") === null) {
@@ -2167,33 +2801,33 @@ window.__ModuleLoader__.load({
 			"title": "O_Ebla_title"
 		};
 		//#endregion
-		//#region src/client/chat/ChatGroupSeat.tsx
+		//#region lib/types/client/chat/ChatGroupSeat.js
 		/** Stable process container; display policy changes visibility, never member parents. */
 		const PROCESS_TITLE_MINIMUM_MS = 150;
 		const PROCESS_ICONS = {
-			computer: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("svg", {
+			computer: (0, react_jsx_runtime.jsx)("svg", {
 				width: "16",
 				height: "16",
 				viewBox: "0 0 24 24",
 				fill: "none",
 				stroke: "currentColor",
 				strokeWidth: "1.6",
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "M3 4h18v13H3zM8 21h8M12 17v4" })
+				children: (0, react_jsx_runtime.jsx)("path", { d: "M3 4h18v13H3zM8 21h8M12 17v4" })
 			}),
-			thinking: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular, {}),
-			read: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
-			readImage: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
-			search: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 }),
-			edit: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
-			write: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
-			commands: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular, {}),
-			code: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular, { size: 14 }),
-			webSearch: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconGlobeOutlineRegular, {}),
-			webFetch: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
-			subagents: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconAgentPresetOutlineRegular, { size: 14 }),
-			plan: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlanOutlineRegular, {}),
-			questions: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, {}),
-			tools: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSparkleRegular, { size: 14 })
+			thinking: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular, {}),
+			read: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
+			readImage: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
+			search: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 }),
+			edit: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
+			write: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
+			commands: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular, {}),
+			code: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular, { size: 14 }),
+			webSearch: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconGlobeOutlineRegular, {}),
+			webFetch: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
+			subagents: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconAgentPresetOutlineRegular, { size: 14 }),
+			plan: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlanOutlineRegular, {}),
+			questions: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, {}),
+			tools: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSparkleRegular, { size: 14 })
 		};
 		function sameLiveProcessTitle(left, right) {
 			return left.activity === right.activity && left.detail === right.detail && left.preparing === right.preparing;
@@ -2230,7 +2864,7 @@ window.__ModuleLoader__.load({
 			return active ? displayed : desired;
 		}
 		const GroupMembers = (0, react.memo)(function GroupMembers({ members, ...props }) {
-			return members.map((member) => /* @__PURE__ */ (0, react.createElement)(ChatNodeSeat, {
+			return members.map((member) => (0, react.createElement)(ChatNodeSeat, {
 				...props,
 				key: chatRenderKey(member),
 				nodeKey: member.key,
@@ -2251,7 +2885,7 @@ window.__ModuleLoader__.load({
 			const detail = detailed && !data.closed ? live.detail : "";
 			const title = detail === "" ? label : `${label}${t("message.turnProcess.separator")}${detail}`;
 			const activity = working ? live.activity : data.summary.counts[0]?.kind ?? "thinking";
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+			return (0, react_jsx_runtime.jsxs)("button", {
 				type: "button",
 				id: bodyId + "-title",
 				className: `${ChatGroupSeat_module_css_default.title} tx-cu-group-toggle`,
@@ -2263,37 +2897,37 @@ window.__ModuleLoader__.load({
 					toggle();
 				},
 				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+					(0, react_jsx_runtime.jsxs)("span", {
 						className: ChatGroupSeat_module_css_default.leading,
 						"aria-hidden": "true",
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						children: [(0, react_jsx_runtime.jsx)("span", {
 							className: ChatGroupSeat_module_css_default.activityIcon,
 							"data-step-process-icon": true,
 							children: PROCESS_ICONS[activity]
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						}), (0, react_jsx_runtime.jsx)("span", {
 							className: ChatGroupSeat_module_css_default.chevron,
 							"data-step-process-chevron": true,
-							children: open ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, {}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})
+							children: open ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, {}) : (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})
 						})]
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
+					(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
 						active: working,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
+						children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
 							className: ChatGroupSeat_module_css_default.label,
 							children: title
 						})
 					}),
-					data.summary.counts.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					data.summary.counts.length > 0 && (0, react_jsx_runtime.jsx)("span", {
 						className: ChatGroupSeat_module_css_default.count,
 						"data-process-count": true,
 						children: t("message.stepProcess.count", { count: data.summary.counts.reduce((total, item) => total + item.count, 0) })
 					}),
-					(data.summary.failures ?? 0) > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					(data.summary.failures ?? 0) > 0 && (0, react_jsx_runtime.jsx)("span", {
 						className: "tx-cu-error",
 						"data-process-failures": true,
 						children: t("message.stepProcess.failures", { count: data.summary.failures ?? 0 })
 					}),
-					(data.summary.stopped ?? 0) > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					(data.summary.stopped ?? 0) > 0 && (0, react_jsx_runtime.jsx)("span", {
 						"data-process-stopped": true,
 						children: t("message.stepProcess.stopped", { count: data.summary.stopped ?? 0 })
 					})
@@ -2360,7 +2994,7 @@ window.__ModuleLoader__.load({
 				grouped && edges.canScrollUp ? ChatGroupSeat_module_css_default.fadeTop : "",
 				grouped && edges.canScrollDown ? ChatGroupSeat_module_css_default.fadeBottom : ""
 			];
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+			return (0, react_jsx_runtime.jsxs)("div", {
 				ref: rootRef,
 				className: `${ChatGroupSeat_module_css_default.root} tx-cu-group`,
 				"data-chat-group-key": groupKey,
@@ -2371,9 +3005,9 @@ window.__ModuleLoader__.load({
 				"data-chat-paging-anchor": grouped && !open || void 0,
 				"data-step-process": true,
 				"data-group-expanded-mode": !grouped || void 0,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				children: [(0, react_jsx_runtime.jsx)("div", {
 					hidden: !grouped,
-					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ProcessGroupHeader, {
+					children: (0, react_jsx_runtime.jsx)(ProcessGroupHeader, {
 						groupKey,
 						useChatGroup,
 						usePresentation: props.usePresentation,
@@ -2382,7 +3016,7 @@ window.__ModuleLoader__.load({
 						bodyId,
 						toggle
 					})
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				}), (0, react_jsx_runtime.jsx)("div", {
 					ref: bodyRef,
 					id: bodyId,
 					role: "region",
@@ -2393,12 +3027,12 @@ window.__ModuleLoader__.load({
 					"data-scroll-up": edges.canScrollUp || void 0,
 					"data-scroll-down": edges.canScrollDown || void 0,
 					...events,
-					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					children: (0, react_jsx_runtime.jsx)("div", {
 						ref: contentRef,
 						className: ChatGroupSeat_module_css_default.content,
 						"data-step-process-content": true,
 						"data-chat-flow": "",
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(GroupMembers, {
+						children: (0, react_jsx_runtime.jsx)(GroupMembers, {
 							...props,
 							members
 						})
@@ -3584,7 +4218,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-020rc2/packages/client/ui-chat/src/client/chat/TurnNavigator.module.css.mjs
+		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/work/dsh-021alpha1-20261003/dsh/packages/client/ui-chat/src/client/chat/TurnNavigator.module.css.mjs
 		const css$11 = ".eGxaPq_slot{z-index:7;height:0;padding-inline:calc(var(--dsh-composer-side-clearance) + 16px);pointer-events:none;position:absolute;top:0;left:0;right:0;container-type:inline-size}[data-conversation-scroll] .eGxaPq_slot{position:sticky}.eGxaPq_frame{--turn-rail-band:calc(var(--dsh-conversation-viewport-height,100dvh) - var(--dsh-composer-height,152px));--turn-preview-height:100px;top:calc(var(--turn-rail-band) / 2);width:28px;max-height:min(max(0px, calc(var(--turn-rail-band) - 64px)), 420px);contain:layout;cursor:pointer;pointer-events:auto;position:absolute;right:12px;transform:translateY(-50%)}.eGxaPq_scroller{max-height:inherit;overscroll-behavior:contain;scrollbar-width:none;position:relative;overflow-y:auto}.eGxaPq_scroller::-webkit-scrollbar{display:none}.eGxaPq_fadeTop{mask-image:linear-gradient(#0000 0,#000 24px 100%)}.eGxaPq_fadeBottom{mask-image:linear-gradient(#000 0 calc(100% - 24px),#0000 100%)}.eGxaPq_fadeTop.eGxaPq_fadeBottom{mask-image:linear-gradient(#0000 0,#000 24px calc(100% - 24px),#0000 100%)}.eGxaPq_marks{position:relative}.eGxaPq_mark{cursor:pointer;background:0 0;border:0;border-radius:8px;height:10px;padding:0;position:absolute;top:0;left:0;right:0}.eGxaPq_mark:before{background:var(--dsw-alias-border-l4);content:\"\";transform-origin:100%;border-radius:2px;width:20px;height:2px;transition:transform .14s,background-color .14s;position:absolute;top:50%;right:0;transform:translateY(-50%)scaleX(.6)}.eGxaPq_markUnloaded:before{opacity:.6;transform:translateY(-50%)scaleX(.4)}.eGxaPq_markPreview:before{background:var(--dsw-alias-label-tertiary);transform:translateY(-50%)scaleX(.9)}.eGxaPq_markBusy:before{animation:1s ease-in-out infinite eGxaPq_dsh-turn-mark-busy}.eGxaPq_markActive:before{background:var(--dsw-alias-label-primary);transform:translateY(-50%)scaleX(1)}.eGxaPq_mark:focus-visible:before{background:var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));transform:translateY(-50%)scaleX(1)}.eGxaPq_mark:focus-visible{outline:none}.eGxaPq_mark:focus-visible:after{border-radius:inherit;outline:1px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:-1px;content:\"\";width:20px;position:absolute;inset:0 0 0 auto}.eGxaPq_preview{top:clamp(0px, calc(var(--turn-preview-center) - var(--turn-preview-height) / 2), calc(100% - var(--turn-preview-height)));box-sizing:border-box;width:min(300px,100cqw - 120px);max-height:var(--turn-preview-height);border-radius:var(--dsw-radius-lg);color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);box-shadow:var(--dsw-elevation-panel);pointer-events:none;border:0;padding:10px 12px;transition:top .14s cubic-bezier(.2,.8,.2,1);animation:.12s ease-out eGxaPq_dsh-turn-preview-enter;position:absolute;right:calc(100% + 10px);overflow:hidden}.eGxaPq_previewPrompt,.eGxaPq_previewResponse{-webkit-box-orient:vertical;display:-webkit-box;overflow:hidden}.eGxaPq_previewPrompt{font:var(--dsw-font-xs-strong-13);-webkit-line-clamp:1}.eGxaPq_previewResponse{color:var(--dsw-alias-label-caption);font:var(--dsw-font-xxs-12);-webkit-line-clamp:3;margin-top:4px}@keyframes eGxaPq_dsh-turn-preview-enter{0%{opacity:0;transform:translate(4px)}to{opacity:1;transform:translate(0)}}@keyframes eGxaPq_dsh-turn-mark-busy{0%,to{opacity:1}50%{opacity:.35}}@container (width<=900px){.eGxaPq_frame{display:none}}@media (prefers-reduced-motion:reduce){.eGxaPq_frame,.eGxaPq_scroller,.eGxaPq_mark:before,.eGxaPq_markBusy:before,.eGxaPq_preview{scroll-behavior:auto;transition:none;animation:none}}";
 		const tagId$11 = "@deepseek-ai/dsh-client-ui-chat/TurnNavigator.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$11) + "]") === null) {
@@ -3613,7 +4247,7 @@ window.__ModuleLoader__.load({
 			"slot": "eGxaPq_slot"
 		};
 		//#endregion
-		//#region src/client/chat/TurnNavigator.tsx
+		//#region lib/types/client/chat/TurnNavigator.js
 		/** Fixed-pitch virtual turn rail with independent activation and scroll controls. */
 		/** Fixed pitch between neighbouring marks; overflow scrolls inside the frame. */
 		const TURN_SPACING_PX = 10;
@@ -3630,7 +4264,7 @@ window.__ModuleLoader__.load({
 			if (active) classes.push(TurnNavigator_module_css_default.markActive);
 			else if (previewId !== void 0) classes.push(TurnNavigator_module_css_default.markPreview);
 			if (busy) classes.push(TurnNavigator_module_css_default.markBusy);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+			return (0, react_jsx_runtime.jsx)("button", {
 				ref: registerElement,
 				"data-index": index,
 				type: "button",
@@ -3818,9 +4452,9 @@ window.__ModuleLoader__.load({
 			const fadeClasses = [TurnNavigator_module_css_default.scroller];
 			if (scrollTop > 1) fadeClasses.push(TurnNavigator_module_css_default.fadeTop);
 			if (scrollTop < virtualizer.getTotalSize() - viewHeight - 1) fadeClasses.push(TurnNavigator_module_css_default.fadeBottom);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+			return (0, react_jsx_runtime.jsx)("div", {
 				className: TurnNavigator_module_css_default.slot,
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("nav", {
+				children: (0, react_jsx_runtime.jsxs)("nav", {
 					className: TurnNavigator_module_css_default.frame,
 					"aria-label": t("chat.turnNavigation.label"),
 					onPointerEnter: () => {
@@ -3830,16 +4464,16 @@ window.__ModuleLoader__.load({
 						pointerInsideRef.current = false;
 						setPreviewTurn(null);
 					},
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					children: [(0, react_jsx_runtime.jsx)("div", {
 						ref: scrollerRef,
 						className: fadeClasses.join(" "),
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						children: (0, react_jsx_runtime.jsx)("div", {
 							ref: virtualizer.containerRef,
 							className: TurnNavigator_module_css_default.marks,
 							children: virtualItems.map(({ index, key }) => {
 								const item = items[index];
 								if (item === void 0) return null;
-								return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TurnMark, {
+								return (0, react_jsx_runtime.jsx)(TurnMark, {
 									item,
 									index,
 									active: item.turn === activeTurn,
@@ -3853,15 +4487,15 @@ window.__ModuleLoader__.load({
 								}, key);
 							})
 						})
-					}), preview !== void 0 && previewPosition !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					}), preview !== void 0 && previewPosition !== void 0 && (0, react_jsx_runtime.jsxs)("div", {
 						id: previewId,
 						role: "tooltip",
 						className: TurnNavigator_module_css_default.preview,
 						style: { "--turn-preview-center": `${String(previewPosition.start + previewPosition.size / 2 - scrollTop)}px` },
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						children: [(0, react_jsx_runtime.jsx)("div", {
 							className: TurnNavigator_module_css_default.previewPrompt,
 							children: preview.prompt || t("chat.turnNavigation.turn", { turn: preview.turn })
-						}), preview.response !== "" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						}), preview.response !== "" && (0, react_jsx_runtime.jsx)("div", {
 							className: TurnNavigator_module_css_default.previewResponse,
 							children: preview.response
 						})]
@@ -3879,7 +4513,7 @@ window.__ModuleLoader__.load({
 		*/
 		const TurnNavigator = (0, react.memo)((0, react.forwardRef)(TurnNavigatorRail));
 		//#endregion
-		//#region src/client/chat/RunningWhaleTail.tsx
+		//#region lib/types/client/chat/RunningWhaleTail.js
 		/** Animated whale mask and static SVG fallback for the running Chat status. */
 		const REST_PATH = "M8.844 13.742C8.967 12.328 8.45 10.4 8.45 9.65C8.45 8.94 8.88 8.43 9.6 8.43C11.285 8.43 12.106 8.281 12.685 8.104C13.71 7.791 14.585 6.768 15.055 5.945C15.137 5.803 14.99 5.641 14.829 5.671C13.829 5.86 12.828 5.376 11.827 4.978C10.659 4.514 9.491 4.707 8.935 4.876C8.805 4.915 8.658 4.819 8.636 4.686C8.468 3.643 7.405 2.615 5.498 2.238C4.54 2.048 3.748 1.574 3.347 1.202C3.252 1.113 3.088 1.125 3.03 1.242C2.628 2.059 2.168 3.82 5.248 6.115C5.82 6.494 6.31 6.785 6.574 7.637C6.72 8.104 6.157 9.168 6.061 9.368C5.157 11.27 5.089 12.19 4.926 13.742";
 		/**
@@ -3887,16 +4521,16 @@ window.__ModuleLoader__.load({
 		* @returns mask and static SVG selected by browser capabilities and accessibility preferences.
 		*/
 		function RunningWhaleTail() {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+			return (0, react_jsx_runtime.jsxs)("span", {
 				className: ChatView_module_css_default.runningIcon,
 				"aria-hidden": "true",
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: ChatView_module_css_default.runningWhaleAnimated }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("svg", {
+				children: [(0, react_jsx_runtime.jsx)("span", { className: ChatView_module_css_default.runningWhaleAnimated }), (0, react_jsx_runtime.jsx)("svg", {
 					className: ChatView_module_css_default.runningWhaleStill,
 					width: "100%",
 					height: "100%",
 					viewBox: "0 0 16 16",
 					fill: "none",
-					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", {
+					children: (0, react_jsx_runtime.jsx)("path", {
 						d: REST_PATH,
 						stroke: "currentColor",
 						strokeWidth: 1
@@ -3905,7 +4539,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-020rc2/packages/client/ui-chat/src/client/chat/accessibility.module.css.mjs
+		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/work/dsh-021alpha1-20261003/dsh/packages/client/ui-chat/src/client/chat/accessibility.module.css.mjs
 		const css$10 = ".TTCZqG_visuallyHidden{clip:rect(0 0 0 0);white-space:nowrap;width:1px;height:1px;position:absolute;overflow:hidden}";
 		const tagId$10 = "@deepseek-ai/dsh-client-ui-chat/accessibility.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$10) + "]") === null) {
@@ -3917,7 +4551,7 @@ window.__ModuleLoader__.load({
 		}
 		var accessibility_module_css_default = { "visuallyHidden": "TTCZqG_visuallyHidden" };
 		//#endregion
-		//#region src/client/chat/RunningStatus.tsx
+		//#region lib/types/client/chat/RunningStatus.js
 		/** Running Turn clock isolated from the transcript's render cycle. */
 		/**
 		* Show live elapsed time after the current Turn's content without announcing ticks.
@@ -3937,24 +4571,24 @@ window.__ModuleLoader__.load({
 				};
 			}, [startTime]);
 			const label = startTime === void 0 ? t("chat.deepDiving") : t("chat.deepDivingFor", { duration: formatRunDuration(Math.max(1e3, now - startTime), t).map((part) => part.text).join("") });
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+			return (0, react_jsx_runtime.jsxs)("div", {
 				className: ChatView_module_css_default.running,
 				"data-chat-running": true,
 				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					(0, react_jsx_runtime.jsx)("span", {
 						className: accessibility_module_css_default.visuallyHidden,
 						role: "status",
 						"aria-live": "polite",
 						"aria-atomic": "true",
 						children: t("chat.deepDiving")
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					(0, react_jsx_runtime.jsx)("span", {
 						className: ChatView_module_css_default.runningDivider,
 						"aria-hidden": "true"
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+					(0, react_jsx_runtime.jsxs)("span", {
 						className: ChatView_module_css_default.runningContent,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(RunningWhaleTail, {}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
+						children: [(0, react_jsx_runtime.jsx)(RunningWhaleTail, {}), (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
 							active: true,
 							className: ChatView_module_css_default.runningText,
 							children: label
@@ -3966,6 +4600,27 @@ window.__ModuleLoader__.load({
 		//#endregion
 		//#region ../../util/brand/lib/index.js
 		/**
+		* Duplicate-install-safe nominal primitive helpers.
+		*
+		* A brand makes structurally identical strings or numbers non-interchangeable
+		* at the type level: a `SessionId` cannot be passed where a `ToolCallId` is
+		* expected, and an event sequence cannot be passed as a log offset. Comparison,
+		* logging, and serialization retain the underlying primitive behavior.
+		*
+		* This package owns no concrete domain value and keeps no runtime identity or mutable
+		* state, so independently installed copies produce interchangeable values.
+		*
+		* @module @deepseek-ai/dsh-brand
+		*/
+		/**
+		* Apply a compile-time string brand without changing the value.
+		* @param value - string admitted by the domain that owns the target brand.
+		* @returns the same string with the requested compile-time brand.
+		*/
+		function brandString(value) {
+			return value;
+		}
+		/**
 		* Apply a compile-time number brand without changing the value.
 		* @param value - number admitted by the domain that owns the target brand.
 		* @returns the same number with the requested compile-time brand.
@@ -3974,7 +4629,7 @@ window.__ModuleLoader__.load({
 			return value;
 		}
 		//#endregion
-		//#region ../../core/session/src/types.ts
+		//#region ../../core/session/lib/types/types.js
 		/**
 		* Admit a numeric value as an existing Session event position.
 		* @param value - non-negative safe integer admitted by the owning log operation.
@@ -3985,7 +4640,14 @@ window.__ModuleLoader__.load({
 			return brandNumber(value);
 		}
 		//#endregion
-		//#region src/client/chat/turn-rail-items.ts
+		//#region lib/types/client/chat/turn-rail-items.js
+		/**
+		* View-layer union of the host turn outline and the loaded rail items. The
+		* conversation snapshot never carries projection values, so this merge is the
+		* one place the rail's two sources meet: the `turnOutline` projection names
+		* every turn of the session, and the loaded window supplies anchors and
+		* richer previews for the turns it holds.
+		*/
 		const EMPTY_ITEMS$1 = [];
 		/**
 		* Structurally narrow one wire outline entry (projection values cross the
@@ -4051,7 +4713,7 @@ window.__ModuleLoader__.load({
 			return [...byTurn.values()].sort((left, right) => left.turn - right.turn);
 		}
 		//#endregion
-		//#region src/client/chat/use-chat-navigation.ts
+		//#region lib/types/client/chat/use-chat-navigation.js
 		/** Turn jumps and history-prepend anchoring, independent of DOM measurement. */
 		/** Owns one replaceable turn jump and the anchor retained while history loads. */
 		var ChatNavigation = class {
@@ -4231,7 +4893,7 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
-		//#region src/client/chat/use-chat-reading.ts
+		//#region lib/types/client/chat/use-chat-reading.js
 		/** Follow-tail ownership, saved-position restoration, and sampled reader movement. */
 		const SCROLL_SAMPLE_INTERVAL_MS = 500;
 		/** Owns reading policy and its cancellable sampling work, without DOM access. */
@@ -4465,7 +5127,7 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
-		//#region src/client/chat/use-chat-viewport.ts
+		//#region lib/types/client/chat/use-chat-viewport.js
 		/** Turn-aware DOM scrolling and geometry, without history-loading or follow policy. */
 		const READING_INTENTS = [
 			"wheel",
@@ -4918,7 +5580,7 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
-		//#region src/client/chat/use-chat-scroll.ts
+		//#region lib/types/client/chat/use-chat-scroll.js
 		/** Composes viewport operations, reading policy, and history navigation for Chat. */
 		/**
 		* Coordinate scroll policy after Chat content commits.
@@ -5055,7 +5717,7 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
-		//#region src/client/chat/ChatView.tsx
+		//#region lib/types/client/chat/ChatView.js
 		/** Host/OS refusal text for the file-open dialog; empty throws keep a locale fallback. */
 		function openFailureMessage(error, fallback) {
 			const message = error instanceof Error ? error.message : String(error);
@@ -5085,13 +5747,13 @@ window.__ModuleLoader__.load({
 		const ChatNodeList = (0, react.memo)(function ChatNodeList({ entries, useChatGroup, pendingInputs, lastInputTurn, ...seatProps }) {
 			const rows = entries.map((entry) => {
 				switch (entry.kind) {
-					case "node": return /* @__PURE__ */ (0, react.createElement)(ChatNodeSeat, {
+					case "node": return (0, react.createElement)(ChatNodeSeat, {
 						...seatProps,
 						key: chatRenderKey(entry),
 						nodeKey: entry.key,
 						...entry.groupPart === void 0 ? {} : { groupPart: entry.groupPart }
 					});
-					case "group": return /* @__PURE__ */ (0, react.createElement)(ChatGroupSeat, {
+					case "group": return (0, react.createElement)(ChatGroupSeat, {
 						...seatProps,
 						key: chatRenderKey(entry),
 						groupKey: entry.key,
@@ -5100,11 +5762,11 @@ window.__ModuleLoader__.load({
 					default: return assertNever(entry);
 				}
 			});
-			const pendingRows = pendingInputs.map((item) => "requestId" in item ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PendingSubmissionBubble, {
+			const pendingRows = pendingInputs.map((item) => "requestId" in item ? (0, react_jsx_runtime.jsx)(PendingSubmissionBubble, {
 				submission: item,
 				renderMessageImages: seatProps.renderMessageImages,
 				t: seatProps.t
-			}, item.requestId) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PendingSteeringBubble, {
+			}, item.requestId) : (0, react_jsx_runtime.jsx)(PendingSteeringBubble, {
 				content: item.content,
 				renderMessageImages: seatProps.renderMessageImages,
 				t: seatProps.t
@@ -5230,52 +5892,52 @@ window.__ModuleLoader__.load({
 				submissionId: visibleSubmissions.at(-1)?.requestId ?? null,
 				loadedTurns: turnNavigationItems
 			});
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+			return (0, react_jsx_runtime.jsxs)("div", {
 				className: ChatView_module_css_default.frame,
 				children: [
-					scroll.initialized && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TurnNavigator, {
+					scroll.initialized && (0, react_jsx_runtime.jsx)(TurnNavigator, {
 						items: railItems,
 						activeTurn: scroll.activeTurn,
 						busyTurn: scroll.busyTurn,
 						onNavigate: scroll.navigateToTurn,
 						t
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					(0, react_jsx_runtime.jsx)("div", {
 						className: ChatView_module_css_default.root,
 						"data-chat-following-tail": scroll.followingTail ? "" : void 0,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						children: (0, react_jsx_runtime.jsx)("div", {
 							ref: scroll.listRef,
 							className: ChatView_module_css_default.scroll,
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							children: (0, react_jsx_runtime.jsxs)("div", {
 								ref: scroll.columnRef,
 								className: ChatView_module_css_default.column,
 								"data-chat-flow": "",
 								children: [
-									openState === "loading" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									openState === "loading" && (0, react_jsx_runtime.jsx)("div", {
 										className: ChatView_module_css_default.hint,
 										children: t("chat.loadingHistory")
 									}),
-									openState === "error" && openError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									openState === "error" && openError !== null && (0, react_jsx_runtime.jsx)("div", {
 										className: ChatView_module_css_default.openError,
 										children: t("chat.loadError", {
 											message: openError.message,
 											code: openError.code
 										})
 									}),
-									hasMore && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									hasMore && (0, react_jsx_runtime.jsx)("div", {
 										className: ChatView_module_css_default.older,
-										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+										children: (0, react_jsx_runtime.jsx)("button", {
 											type: "button",
 											disabled: loadingOlder,
 											onClick: scroll.loadEarlier,
 											children: loadingOlder ? t("loading") : t("chat.loadOlder")
 										})
 									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownDelegateProvider, {
+									(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownDelegateProvider, {
 										openExternalLink,
 										openFile: requestOpenFile,
 										fileImages,
-										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChatNodeList, {
+										children: (0, react_jsx_runtime.jsx)(ChatNodeList, {
 											entries,
 											pendingInputs,
 											lastInputTurn,
@@ -5298,7 +5960,7 @@ window.__ModuleLoader__.load({
 											t
 										})
 									}),
-									running && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RunningStatus, {
+									running && (0, react_jsx_runtime.jsx)(RunningStatus, {
 										startTime: runningStartTime,
 										t
 									})
@@ -5306,17 +5968,17 @@ window.__ModuleLoader__.load({
 							})
 						})
 					}),
-					!scroll.followingTail && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					!scroll.followingTail && (0, react_jsx_runtime.jsx)("div", {
 						className: ChatView_module_css_default.toBottomSlot,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						children: (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
 							className: ChatView_module_css_default.toBottom,
 							"aria-label": t("chat.toBottom"),
 							onClick: scroll.returnToBottom,
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})
+							children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})
 						})
 					}),
-					fileOpenError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FileOpenErrorDialog, {
+					fileOpenError !== null && (0, react_jsx_runtime.jsx)(FileOpenErrorDialog, {
 						message: fileOpenError.message,
 						busy: fileOpenBusy,
 						onClose: closeFileOpenError,
@@ -5330,18 +5992,18 @@ window.__ModuleLoader__.load({
 		}
 		/** In-page Host open-path refusal: the wire reason plus a retry of the same path. */
 		function FileOpenErrorDialog({ message, busy, onClose, onRetry, t }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
+			return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
 				open: true,
 				onClose,
 				closeLabel: t("close"),
 				title: t("fileOpen.title"),
 				description: message,
-				footer: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				footer: (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 					variant: "outline",
 					className: ChatView_module_css_default.modalAction,
 					onClick: onClose,
 					children: t("cancel")
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				}), (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 					variant: "primary",
 					className: ChatView_module_css_default.modalAction,
 					disabled: busy,
@@ -5351,7 +6013,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region src/client/locale.ts
+		//#region lib/types/client/locale.js
 		/** Chat-owned locale namespace and dictionaries. */
 		/** Namespace for Chat target, node, statistics, and details copy. */
 		const NS = "chat";
@@ -5746,7 +6408,7 @@ window.__ModuleLoader__.load({
 			"clock.ymd": "{y}-{m}-{d}"
 		};
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-020rc2/packages/client/ui-chat/src/client/chat/ReasoningRow.module.css.mjs
+		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/work/dsh-021alpha1-20261003/dsh/packages/client/ui-chat/src/client/chat/ReasoningRow.module.css.mjs
 		const css$9 = ".lcKema_root{flex-direction:column;display:flex}.lcKema_root:not([data-expanded]){contain:size layout;height:calc(24px + var(--dsh-content-font-delta,0px))}.lcKema_row{overflow:hidden}.lcKema_root[data-expanded] [data-open] [data-disclosure-row]{z-index:1;background:var(--dsw-alias-bg-base);position:sticky;top:0}.lcKema_leading{flex-shrink:0}.lcKema_title{font-weight:400}.lcKema_separator{background:var(--dsw-alias-label-caption);border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px}.lcKema_summary{min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));white-space:nowrap;flex:auto;overflow:hidden}.lcKema_summaryText{text-overflow:ellipsis;display:block;overflow:hidden}.lcKema_summary[data-streaming]{mask-image:linear-gradient(90deg,#000 calc(100% - 48px),#0000)}.lcKema_summary[data-streaming] .lcKema_summaryText{text-overflow:clip;overflow:visible}.lcKema_root:not([data-preview]) .lcKema_separator,.lcKema_root:not([data-preview]) .lcKema_summary{display:none}.lcKema_thinkBody{padding:4px 0 4px calc(22px + var(--dsh-content-font-delta,0px));min-width:0}";
 		const tagId$9 = "@deepseek-ai/dsh-client-ui-chat/ReasoningRow.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$9) + "]") === null) {
@@ -5767,9 +6429,9 @@ window.__ModuleLoader__.load({
 			"title": "lcKema_title"
 		};
 		//#endregion
-		//#region src/client/chat/ReasoningRow.tsx
+		//#region lib/types/client/chat/ReasoningRow.js
 		/** Assistant reasoning disclosure, independent of Tool-call presentation. */
-		const THINK_ICON = /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular, { size: 14 });
+		const THINK_ICON = (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular, { size: 14 });
 		function firstLine(text) {
 			return text.split(/\r?\n/).find((line) => line.trim() !== "")?.trim() ?? "";
 		}
@@ -5808,21 +6470,21 @@ window.__ModuleLoader__.load({
 			const summaryText = (running ? latestCompletedParagraphFirstLine(text) : "") || firstLine(text);
 			const summary = (0, react.useMemo)(() => summaryText.replaceAll("**", ""), [summaryText]);
 			const preview = usePresentation((policy) => !expanded && summary !== "" && (running || policy.settledReasoningPreview));
-			const collapsedContent = (0, react.useMemo)(() => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+			const collapsedContent = (0, react.useMemo)(() => (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("span", {
 				className: ReasoningRow_module_css_default.separator,
 				"data-shimmer-decoration": true,
 				"aria-hidden": true
-			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+			}), (0, react_jsx_runtime.jsx)("span", {
 				className: ReasoningRow_module_css_default.summary,
 				"data-streaming": running || void 0,
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+				children: (0, react_jsx_runtime.jsx)("span", {
 					className: ReasoningRow_module_css_default.summaryText,
-					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, { children: summary })
+					children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, { children: summary })
 				})
 			})] }), [running, summary]);
-			const content = (0, react.useMemo)(() => expanded ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+			const content = (0, react.useMemo)(() => expanded ? (0, react_jsx_runtime.jsx)("div", {
 				className: ReasoningRow_module_css_default.thinkBody,
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+				children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 					text,
 					streaming: running,
 					labels,
@@ -5834,16 +6496,16 @@ window.__ModuleLoader__.load({
 				running,
 				text
 			]);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+			return (0, react_jsx_runtime.jsxs)("div", {
 				className: ReasoningRow_module_css_default.root,
 				"data-variant": "think",
 				"data-state": running ? "running" : "ok",
 				"data-expanded": expanded || void 0,
 				"data-preview": preview || void 0,
-				children: [running && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+				children: [running && (0, react_jsx_runtime.jsx)("span", {
 					className: accessibility_module_css_default.visuallyHidden,
 					children: t("row.running")
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
+				}), (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
 					rowClassName: ReasoningRow_module_css_default.row,
 					leadingClassName: ReasoningRow_module_css_default.leading,
 					titleClassName: ReasoningRow_module_css_default.title,
@@ -5860,7 +6522,7 @@ window.__ModuleLoader__.load({
 			});
 		});
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-020rc2/packages/client/ui-chat/src/client/chat/AssistantMarkdown.module.css.mjs
+		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/work/dsh-021alpha1-20261003/dsh/packages/client/ui-chat/src/client/chat/AssistantMarkdown.module.css.mjs
 		const css$8 = ".hWmORq_root{font-size:var(--dsh-content-font-size,14px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-primary);flex-direction:column;display:flex}.hWmORq_body{flex-direction:column;gap:16px;display:flex}.hWmORq_body .md-table-wide{--dsh-table-spare:max(0px, calc((100cqw - var(--dsh-chat-content-width)) / 2));--dsh-table-lead:calc(var(--dsh-table-spare) + min(var(--dsh-chat-content-width), 100cqw) - 100%);box-sizing:border-box;width:calc(100% + var(--dsh-table-lead) + var(--dsh-table-spare));max-width:none;margin-left:calc(-1 * var(--dsh-table-lead));padding-left:var(--dsh-table-lead)}.hWmORq_body .md-table-wide>table{z-index:1;position:relative}.hWmORq_body>[data-turn-process-inline][hidden]{margin-bottom:-16px}.hWmORq_stopped{border-radius:var(--dsw-radius-sm);background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-tertiary);align-self:flex-start;padding:0 6px;font-size:11px;line-height:18px}.hWmORq_actions{margin-top:16px;margin-left:-6px}";
 		const tagId$8 = "@deepseek-ai/dsh-client-ui-chat/AssistantMarkdown.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$8) + "]") === null) {
@@ -5877,7 +6539,7 @@ window.__ModuleLoader__.load({
 			"stopped": "hWmORq_stopped"
 		};
 		//#endregion
-		//#region src/client/chat/AssistantMarkdown.tsx
+		//#region lib/types/client/chat/AssistantMarkdown.js
 		/**
 		* Standalone fallback for image destinations (query/fragment suffixes are ignored).
 		* Chat fileImages resolves decoded file references against cwd; pathImages also
@@ -5913,7 +6575,7 @@ window.__ModuleLoader__.load({
 				if (groupPart === "response" && block.kind === "reasoning") continue;
 				switch (block.kind) {
 					case "text":
-						rendered.push(/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+						rendered.push((0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 							text: block.text,
 							streaming,
 							labels,
@@ -5930,10 +6592,10 @@ window.__ModuleLoader__.load({
 							parts.push(next.text);
 							i += 1;
 						}
-						rendered.push(/* @__PURE__ */ (0, react_jsx_runtime.jsx)(ProcessReasoning, {
+						rendered.push((0, react_jsx_runtime.jsx)(ProcessReasoning, {
 							hidden: reasoningHidden,
 							reveal: revealProcess,
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ReasoningRow, {
+							children: (0, react_jsx_runtime.jsx)(ReasoningRow, {
 								text: parts.join("\n\n"),
 								running: streaming && i === last,
 								usePresentation,
@@ -5952,26 +6614,26 @@ window.__ModuleLoader__.load({
 							group.push(next);
 							i += 1;
 						}
-						rendered.push(/* @__PURE__ */ (0, react_jsx_runtime.jsx)(react.Fragment, { children: renderMessageImages({
+						rendered.push((0, react_jsx_runtime.jsx)(react.Fragment, { children: renderMessageImages({
 							images: group.map(({ attachment }) => ({ attachment })),
 							align: "start"
 						}) }, start));
 						break;
 					}
 					case "tool-call": break;
-					default: rendered.push(/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
+					default: rendered.push((0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
 						label: t("message.unknownBlock"),
 						payload: block.block,
 						truncatedLabel: (total) => t("json.truncated", { total })
 					}, i));
 				}
 			}
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+			return (0, react_jsx_runtime.jsx)("div", {
 				className: AssistantMarkdown_module_css_default.root,
 				"data-streaming": streaming || void 0,
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				children: (0, react_jsx_runtime.jsxs)("div", {
 					className: AssistantMarkdown_module_css_default.body,
-					children: [rendered, interrupted && (groupPart === void 0 || groupPart === "response" || !blocks.some((block) => block.kind !== "reasoning" && block.kind !== "tool-call")) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					children: [rendered, interrupted && (groupPart === void 0 || groupPart === "response" || !blocks.some((block) => block.kind !== "reasoning" && block.kind !== "tool-call")) && (0, react_jsx_runtime.jsx)("span", {
 						className: AssistantMarkdown_module_css_default.stopped,
 						children: t("message.stopped")
 					})]
@@ -5979,7 +6641,7 @@ window.__ModuleLoader__.load({
 			});
 		});
 		function ProcessReasoning({ hidden, reveal, children }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+			return (0, react_jsx_runtime.jsx)("div", {
 				ref: useSearchableHidden(hidden, reveal ?? NOOP),
 				"data-turn-process-inline": hidden || void 0,
 				children
@@ -5987,7 +6649,7 @@ window.__ModuleLoader__.load({
 		}
 		const NOOP = () => {};
 		//#endregion
-		//#region src/client/chat/AssistantNodeView.tsx
+		//#region lib/types/client/chat/AssistantNodeView.js
 		/** Streaming, settled, and interrupted Assistant states share one keyed renderer instance. */
 		const AssistantNodeView = (0, react.memo)(function AssistantNodeView({ node, groupPart, useDisclosure, useTurnData, turnProcess, openFile, renderMessageImages, fileMentions, usePresentation, t }) {
 			const data = node.data;
@@ -6012,7 +6674,7 @@ window.__ModuleLoader__.load({
 			const revealProcess = (0, react.useCallback)(() => {
 				turnProcess?.setOpen(true);
 			}, [turnProcess]);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(AssistantMarkdown, {
+			return (0, react_jsx_runtime.jsx)(AssistantMarkdown, {
 				blocks: data.blocks,
 				groupPart,
 				useDisclosure,
@@ -6027,7 +6689,7 @@ window.__ModuleLoader__.load({
 			});
 		});
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-020rc2/packages/client/ui-chat/src/client/chat/GenericCommandCard.module.css.mjs
+		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/work/dsh-021alpha1-20261003/dsh/packages/client/ui-chat/src/client/chat/GenericCommandCard.module.css.mjs
 		const css$7 = "._5OnbHa_root{flex-direction:column;display:flex}._5OnbHa_leading{flex-shrink:0}._5OnbHa_title{font-weight:400}._5OnbHa_separator{background:var(--dsw-alias-label-caption);border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px}._5OnbHa_summary{min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;flex:auto;overflow:hidden}._5OnbHa_summary[data-error],._5OnbHa_body[data-error]{color:var(--dsw-alias-state-error-primary)}._5OnbHa_body{border:.5px solid var(--dsw-alias-border-l1);border-radius:var(--dsw-radius-lg);background:var(--dsw-alias-markdown-code-block);max-height:260px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-markdown-code-block-small);white-space:pre-wrap;margin:4px 0 4px 4px;padding:12px 16px;overflow:auto}";
 		const tagId$7 = "@deepseek-ai/dsh-client-ui-chat/GenericCommandCard.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$7) + "]") === null) {
@@ -6046,8 +6708,8 @@ window.__ModuleLoader__.load({
 			"title": "_5OnbHa_title"
 		};
 		//#endregion
-		//#region src/client/chat/GenericCommandCard.tsx
-		const COMMAND_ICON = /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular, { size: 14 });
+		//#region lib/types/client/chat/GenericCommandCard.js
+		const COMMAND_ICON = (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular, { size: 14 });
 		/** Node state → row state semantic (running while unsettled; outcome kind after). */
 		function stateOf(outcome) {
 			if (outcome === null) return "running";
@@ -6070,20 +6732,20 @@ window.__ModuleLoader__.load({
 			const toggle = (0, react.useCallback)(() => {
 				setExpanded((value) => !value);
 			}, []);
-			const collapsedContent = (0, react.useMemo)(() => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+			const collapsedContent = (0, react.useMemo)(() => (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("span", {
 				className: GenericCommandCard_module_css_default.separator,
 				"data-shimmer-decoration": true,
 				"aria-hidden": true
-			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+			}), (0, react_jsx_runtime.jsx)("span", {
 				className: GenericCommandCard_module_css_default.summary,
 				"data-error": state === "error" || void 0,
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, { children: summary })
+				children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, { children: summary })
 			})] }), [
 				running,
 				state,
 				summary
 			]);
-			const content = (0, react.useMemo)(() => open ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", {
+			const content = (0, react.useMemo)(() => open ? (0, react_jsx_runtime.jsx)("pre", {
 				className: GenericCommandCard_module_css_default.body,
 				"data-error": state === "error" || void 0,
 				children: body
@@ -6092,20 +6754,20 @@ window.__ModuleLoader__.load({
 				open,
 				state
 			]);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+			return (0, react_jsx_runtime.jsxs)("div", {
 				className: GenericCommandCard_module_css_default.root,
 				"data-variant": "others",
 				"data-state": state,
 				children: [
-					state === "running" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					state === "running" && (0, react_jsx_runtime.jsx)("span", {
 						className: accessibility_module_css_default.visuallyHidden,
 						children: t("row.running")
 					}),
-					state === "error" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					state === "error" && (0, react_jsx_runtime.jsx)("span", {
 						className: accessibility_module_css_default.visuallyHidden,
 						children: t("row.failed")
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
+					(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
 						leadingClassName: GenericCommandCard_module_css_default.leading,
 						titleClassName: GenericCommandCard_module_css_default.title,
 						icon: COMMAND_ICON,
@@ -6123,36 +6785,36 @@ window.__ModuleLoader__.load({
 			});
 		});
 		//#endregion
-		//#region src/client/chat/CompactionCommandCard.tsx
+		//#region lib/types/client/chat/CompactionCommandCard.js
 		/** Render one manual compaction lifecycle without duplicating its checkpoint marker. */
 		function CompactionCommandCard({ node, compaction, t }) {
-			if (compaction !== void 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CompactionItem, {
+			if (compaction !== void 0) return (0, react_jsx_runtime.jsx)(CompactionItem, {
 				node: compaction,
 				title: t("message.compaction.commandTitle"),
 				fallbackSummary: node.outcome?.text ?? null,
 				t
 			});
-			if (node.outcome !== null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(GenericCommandCard, {
+			if (node.outcome !== null) return (0, react_jsx_runtime.jsx)(GenericCommandCard, {
 				node,
 				t
 			});
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(GenericCommandCard, {
+			return (0, react_jsx_runtime.jsx)(GenericCommandCard, {
 				node,
 				t,
 				runningSummary: t("message.compaction.running")
 			});
 		}
 		//#endregion
-		//#region src/client/chat/CommandNodeView.tsx
+		//#region lib/types/client/chat/CommandNodeView.js
 		/** Ordinary command lifecycle renderer with command-name keyed specialization. */
 		const CommandNodeView = (0, react.memo)(function CommandNodeView({ node, renderSlot, t }) {
 			const command = node.data;
 			const owner = (0, react.useMemo)(() => ({ node: command }), [command]);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+			return (0, react_jsx_runtime.jsx)("div", {
 				className: ChatView_module_css_default.callRow,
 				children: renderSlot("conversation.chat.commandview", owner, {
 					entryKey: command.name ?? "",
-					fallback: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(GenericCommandCard, {
+					fallback: (0, react_jsx_runtime.jsx)(GenericCommandCard, {
 						...owner,
 						t
 					})
@@ -6162,9 +6824,9 @@ window.__ModuleLoader__.load({
 		/** One integrated `/compact` command and compaction transaction renderer. */
 		const ManualCompactionNodeView = (0, react.memo)(function ManualCompactionNodeView({ node, t }) {
 			const data = node.data;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+			return (0, react_jsx_runtime.jsx)("div", {
 				className: ChatView_module_css_default.callRow,
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CompactionCommandCard, {
+				children: (0, react_jsx_runtime.jsx)(CompactionCommandCard, {
 					node: data.command,
 					...data.compaction === null ? {} : { compaction: data.compaction },
 					t
@@ -6172,7 +6834,7 @@ window.__ModuleLoader__.load({
 			});
 		});
 		//#endregion
-		//#region src/client/chat/SystemPromptRow.tsx
+		//#region lib/types/client/chat/SystemPromptRow.js
 		/**
 		* Render one complete system prompt as a collapsed disclosure whose expanded
 		* body is the same opaque context chrome: 141px code-block scrollport and
@@ -6183,9 +6845,9 @@ window.__ModuleLoader__.load({
 		*/
 		function SystemPromptRow({ text, update = false, t }) {
 			const [open, setOpen] = (0, react.useState)(false);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
+			return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
 				className: ContextInjectionRow_module_css_default.root,
-				icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
+				icon: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
 				chevronClassName: ContextInjectionRow_module_css_default.chevron,
 				title: t(update ? "message.systemPromptUpdate" : "message.systemPrompt"),
 				open,
@@ -6194,10 +6856,10 @@ window.__ModuleLoader__.load({
 				onToggle: () => {
 					setOpen((value) => !value);
 				},
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				children: (0, react_jsx_runtime.jsx)("div", {
 					className: ContextInjectionRow_module_css_default.body,
 					"data-system-prompt-body": true,
-					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OpaqueBody, {
+					children: (0, react_jsx_runtime.jsx)(OpaqueBody, {
 						content: [{
 							type: "text",
 							text
@@ -6210,14 +6872,14 @@ window.__ModuleLoader__.load({
 		}
 		/** System-prompt keyed Chat renderer. */
 		const SystemPromptNodeView = (0, react.memo)(function SystemPromptNodeView({ node, t }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SystemPromptRow, {
+			return (0, react_jsx_runtime.jsx)(SystemPromptRow, {
 				text: node.data.text,
 				update: node.data.update === true,
 				t
 			});
 		});
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-020rc2/packages/client/ui-chat/src/client/chat/TurnProcessNodeView.module.css.mjs
+		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/work/dsh-021alpha1-20261003/dsh/packages/client/ui-chat/src/client/chat/TurnProcessNodeView.module.css.mjs
 		const css$6 = ".l_V-RG_root{box-sizing:border-box;width:100%;min-width:0;height:calc(33px + var(--dsh-content-font-delta,0px));border:none;border-bottom:.5px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-tertiary);font:inherit;font-size:var(--dsh-content-font-size,14px);cursor:pointer;text-align:left;background:0 0;align-items:center;padding:0 0 8px;transition:color .1s;display:flex}.l_V-RG_root:disabled{cursor:default}.l_V-RG_root:hover:not(:disabled){color:var(--dsw-alias-label-secondary)}.l_V-RG_chevron{width:14px;height:14px;color:inherit;flex:none;margin-left:4px;transition:transform .1s}.l_V-RG_root[data-open] .l_V-RG_chevron{transform:rotate(180deg)}.l_V-RG_label{min-width:0;font-size:inherit;line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.l_V-RG_durationNumber{font-family:var(--ds-font-family-code);font-variant-numeric:tabular-nums}@media (prefers-reduced-motion:reduce){.l_V-RG_root,.l_V-RG_chevron{transition:none}}";
 		const tagId$6 = "@deepseek-ai/dsh-client-ui-chat/TurnProcessNodeView.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$6) + "]") === null) {
@@ -6234,7 +6896,7 @@ window.__ModuleLoader__.load({
 			"root": "l_V-RG_root"
 		};
 		//#endregion
-		//#region src/client/chat/TurnProcessNodeView.tsx
+		//#region lib/types/client/chat/TurnProcessNodeView.js
 		/** Settled Turn duration and process disclosure above its content. */
 		const TurnProcessNodeView = (0, react.memo)(function TurnProcessNodeView({ node, turnProcess, t }) {
 			if (turnProcess === void 0) throw new Error("turn-process node requires Turn process owner state");
@@ -6247,13 +6909,13 @@ window.__ModuleLoader__.load({
 			const duration = elapsedMs === void 0 || reason === "aborted" || reason === "error" ? void 0 : formatRunDuration(elapsedMs, t);
 			const label = reason === "aborted" ? t("message.stopped") : reason === "error" ? t("message.turnProcess.failed") : duration === void 0 ? t("message.turnProcess.worked") : t("message.turnProcess.took");
 			const announcement = reason === "aborted" ? t("message.stopped") : reason === "error" ? t("message.turnProcess.failed") : t("message.turnProcess.worked");
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+			return (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("span", {
 				className: accessibility_module_css_default.visuallyHidden,
 				role: "status",
 				"aria-live": "polite",
 				"aria-atomic": "true",
 				children: announcement
-			}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+			}), (0, react_jsx_runtime.jsxs)("button", {
 				type: "button",
 				className: TurnProcessNodeView_module_css_default.root,
 				"data-open": open || void 0,
@@ -6267,17 +6929,17 @@ window.__ModuleLoader__.load({
 					event.currentTarget.focus();
 					turnProcess.setOpen(!open);
 				},
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+				children: [(0, react_jsx_runtime.jsxs)("span", {
 					className: TurnProcessNodeView_module_css_default.label,
-					children: [label, duration?.map((part, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					children: [label, duration?.map((part, index) => (0, react_jsx_runtime.jsx)("span", {
 						className: part.numeric ? TurnProcessNodeView_module_css_default.durationNumber : void 0,
 						children: part.text
 					}, index))]
-				}), canCollapse && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { className: TurnProcessNodeView_module_css_default.chevron })]
+				}), canCollapse && (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { className: TurnProcessNodeView_module_css_default.chevron })]
 			})] });
 		});
 		//#endregion
-		//#region src/client/chat/token-format.ts
+		//#region lib/types/client/chat/token-format.js
 		/**
 		* Compact token count: 517 / 12.2K / 517K / 1.2M.
 		* @param value - non-negative token count.
@@ -6358,7 +7020,7 @@ window.__ModuleLoader__.load({
 			return `99.${"9".repeat(distinguishingPlaces - 1)}${10 - roundedLoss}`;
 		}
 		//#endregion
-		//#region src/client/chat/stat-dialog.ts
+		//#region lib/types/client/chat/stat-dialog.js
 		/** Viewport margin the placement clamp keeps (the Menu portal margin). */
 		const PANEL_MARGIN = 12;
 		/** Distance between the trigger's top edge and the panel's bottom. */
@@ -6374,14 +7036,10 @@ window.__ModuleLoader__.load({
 		};
 		/**
 		* One trigger-anchored dialog seat: open state, viewport-clamped placement, outside-close.
-		* @param controlled - external open state; when given the seat reads and writes
-		* it instead of owning its own, letting sibling dialogs share one exclusive slot.
 		* @returns the seat; spread `pos ?? MEASURE_STYLE` onto the portaled panel.
 		*/
-		function useStatDialog(controlled) {
-			const [ownOpen, setOwnOpen] = (0, react.useState)(false);
-			const open = controlled?.open ?? ownOpen;
-			const setOpen = controlled?.setOpen ?? setOwnOpen;
+		function useStatDialog() {
+			const [open, setOpen] = (0, react.useState)(false);
 			const rootRef = (0, react.useRef)(null);
 			const panelRef = (0, react.useRef)(null);
 			const pos = (0, _deepseek_ai_dsh_client_ui_primitives.useAnchoredPosition)({
@@ -6398,9 +7056,14 @@ window.__ModuleLoader__.load({
 				const onKeyDown = (e) => {
 					if (e.key === "Escape") setOpen(false);
 				};
+				const onClick = (e) => {
+					if (e.target instanceof Node && rootRef.current?.contains(e.target) !== true && panelRef.current?.contains(e.target) !== true) setOpen(false);
+				};
 				document.addEventListener("keydown", onKeyDown);
+				document.addEventListener("click", onClick, true);
 				return () => {
 					document.removeEventListener("keydown", onKeyDown);
+					document.removeEventListener("click", onClick, true);
 				};
 			}, [open, setOpen]);
 			return {
@@ -6412,7 +7075,7 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-020rc2/packages/client/ui-chat/src/client/chat/TurnUsagePanel.module.css.mjs
+		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/work/dsh-021alpha1-20261003/dsh/packages/client/ui-chat/src/client/chat/TurnUsagePanel.module.css.mjs
 		const css$5 = ".Q51KRG_root{min-width:0;display:inline-flex}.Q51KRG_root+.Q51KRG_root{margin-left:-6px}.Q51KRG_trigger{min-width:0;height:calc(28px + var(--dsh-content-font-delta,0px));border-radius:var(--dsw-radius-sm);color:var(--dsw-alias-label-tertiary);font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);font-variant-numeric:tabular-nums;line-height:calc(24px + var(--dsh-content-font-delta,0px));white-space:nowrap;cursor:pointer;background:0 0;border:none;align-items:center;gap:4px;padding:6px 8px;display:inline-flex}.Q51KRG_label{text-overflow:ellipsis;min-width:0;overflow:hidden}.Q51KRG_trigger svg{width:calc(15px + var(--dsh-content-font-delta,0px));height:calc(15px + var(--dsh-content-font-delta,0px));flex:none}.Q51KRG_trigger:hover,.Q51KRG_trigger[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-tertiary)}@media (width<=480px){.Q51KRG_trigger{width:calc(28px + var(--dsh-content-font-delta,0px));justify-content:center;padding:6px}.Q51KRG_trigger .Q51KRG_label{display:none}.Q51KRG_root+.Q51KRG_root{margin-left:0}}";
 		const tagId$5 = "@deepseek-ai/dsh-client-ui-chat/TurnUsagePanel.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$5) + "]") === null) {
@@ -6428,7 +7091,7 @@ window.__ModuleLoader__.load({
 			"trigger": "Q51KRG_trigger"
 		};
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-020rc2/packages/client/ui-chat/src/client/chat/stat-dialog.module.css.mjs
+		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/work/dsh-021alpha1-20261003/dsh/packages/client/ui-chat/src/client/chat/stat-dialog.module.css.mjs
 		const css$4 = ".bRhRbq_panel{z-index:1100;box-sizing:border-box;border-radius:var(--dsw-radius-lg);background:var(--dsw-specific-menu);width:max-content;min-width:min(300px,100vw - 24px);max-width:min(440px,100vw - 24px);backdrop-filter:var(--dsw-menu-backdrop-filter);--dsw-elevation-stroke-color:var(--dsw-alias-border-l1);box-shadow:var(--dsw-elevation-prominent);color:var(--dsw-alias-label-secondary);cursor:default;border:0;padding:16px;font-size:12px;line-height:18px;position:fixed}.bRhRbq_title{color:var(--dsw-alias-label-primary);justify-content:space-between;gap:16px;margin-bottom:8px;font-weight:500;display:flex}.bRhRbq_titleRule{border-top:.5px solid var(--dsw-alias-border-l2);margin-bottom:10px}.bRhRbq_titleValue{font-variant-numeric:tabular-nums}.bRhRbq_titleLabel{align-items:center;gap:6px;min-width:0;display:inline-flex}.bRhRbq_titleLabel svg{flex:none;width:14px;height:14px}.bRhRbq_details{color:var(--dsw-alias-label-tertiary);grid-template-columns:minmax(76px,auto) minmax(0,1fr);gap:6px 16px;margin:0;display:grid}.bRhRbq_details dt,.bRhRbq_details dd{min-width:0;margin:0}.bRhRbq_details dd{color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums;text-align:right}.bRhRbq_details .bRhRbq_route{overflow-wrap:anywhere}.bRhRbq_reasoning{color:var(--dsw-alias-label-tertiary);white-space:nowrap}";
 		const tagId$4 = "@deepseek-ai/dsh-client-ui-chat/stat-dialog.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$4) + "]") === null) {
@@ -6449,7 +7112,7 @@ window.__ModuleLoader__.load({
 			"titleValue": "bRhRbq_titleValue"
 		};
 		//#endregion
-		//#region src/client/chat/TurnUsagePanel.tsx
+		//#region lib/types/client/chat/TurnUsagePanel.js
 		/** Completed-Turn token usage action and its accounting details dialog. */
 		function formatCompactCount(value, t) {
 			return t("message.turnUsage.count", { count: formatTokens(value, t) });
@@ -6467,10 +7130,10 @@ window.__ModuleLoader__.load({
 			const cacheHit = usage.cacheReadTokens === void 0 ? null : formatCacheHitPercent(usage.cacheReadTokens, usage.totalTokens - usage.outputTokens, 1);
 			const total = formatCompactCount(usage.totalTokens, t);
 			const routes = usage.routes?.map((route) => `${route.provider}/${route.model}`).join(", ") ?? "";
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+			return (0, react_jsx_runtime.jsxs)("span", {
 				ref: rootRef,
 				className: TurnUsagePanel_module_css_default.root,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+				children: [(0, react_jsx_runtime.jsxs)("button", {
 					type: "button",
 					className: TurnUsagePanel_module_css_default.trigger,
 					"aria-haspopup": "dialog",
@@ -6478,46 +7141,46 @@ window.__ModuleLoader__.load({
 					onClick: () => {
 						setOpen(!open);
 					},
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, {}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, {}), (0, react_jsx_runtime.jsx)("span", {
 						className: TurnUsagePanel_module_css_default.label,
 						children: t("message.turnUsage.consumed", { total })
 					})]
-				}), open && (0, react_dom.createPortal)(/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				}), open && (0, react_dom.createPortal)((0, react_jsx_runtime.jsxs)("div", {
 					ref: panelRef,
 					className: stat_dialog_module_css_default.panel,
 					role: "dialog",
 					"aria-label": t("message.turnUsage.title"),
 					style: pos ?? MEASURE_STYLE,
 					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						(0, react_jsx_runtime.jsxs)("div", {
 							className: stat_dialog_module_css_default.title,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+							children: [(0, react_jsx_runtime.jsxs)("span", {
 								className: stat_dialog_module_css_default.titleLabel,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, {}), t("message.turnUsage.title")]
-							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, {}), t("message.turnUsage.title")]
+							}), (0, react_jsx_runtime.jsx)("span", {
 								className: stat_dialog_module_css_default.titleValue,
 								children: formatExactCount(usage.totalTokens, t)
 							})]
 						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						(0, react_jsx_runtime.jsx)("div", {
 							className: stat_dialog_module_css_default.titleRule,
 							"aria-hidden": true
 						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dl", {
+						(0, react_jsx_runtime.jsxs)("dl", {
 							className: stat_dialog_module_css_default.details,
 							"data-turn-usage-details": true,
 							children: [
-								routes !== "" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.model") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", {
+								routes !== "" && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.model") }), (0, react_jsx_runtime.jsx)("dd", {
 									className: stat_dialog_module_css_default.route,
 									children: routes
 								})] }),
-								cacheHit !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheHit") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: `${cacheHit}%` })] }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.input") }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: formatExactCount(usage.uncachedInputTokens, t) }),
-								usage.cacheReadTokens !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheRead") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: formatExactCount(usage.cacheReadTokens, t) })] }),
-								usage.cacheWriteTokens !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheWrite") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: formatExactCount(usage.cacheWriteTokens, t) })] }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.output") }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dd", { children: [formatExactCount(usage.outputTokens, t), usage.reasoningTokens !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								cacheHit !== null && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheHit") }), (0, react_jsx_runtime.jsx)("dd", { children: `${cacheHit}%` })] }),
+								(0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.input") }),
+								(0, react_jsx_runtime.jsx)("dd", { children: formatExactCount(usage.uncachedInputTokens, t) }),
+								usage.cacheReadTokens !== void 0 && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheRead") }), (0, react_jsx_runtime.jsx)("dd", { children: formatExactCount(usage.cacheReadTokens, t) })] }),
+								usage.cacheWriteTokens !== void 0 && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheWrite") }), (0, react_jsx_runtime.jsx)("dd", { children: formatExactCount(usage.cacheWriteTokens, t) })] }),
+								(0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.output") }),
+								(0, react_jsx_runtime.jsxs)("dd", { children: [formatExactCount(usage.outputTokens, t), usage.reasoningTokens !== void 0 && (0, react_jsx_runtime.jsx)("span", {
 									className: stat_dialog_module_css_default.reasoning,
 									children: t("message.turnUsage.reasoning", { tokens: formatExactCount(usage.reasoningTokens, t) })
 								})] })
@@ -6528,7 +7191,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region src/client/chat/turn-assistant.ts
+		//#region lib/types/client/chat/turn-assistant.js
 		/**
 		* Collect visible prose from one Assistant lifecycle.
 		* @param blocks - Assistant content blocks.
@@ -6538,7 +7201,7 @@ window.__ModuleLoader__.load({
 			return blocks.flatMap((block) => block.kind === "text" ? [block.text] : []).join("");
 		}
 		//#endregion
-		//#region src/client/contract/assistant-content.ts
+		//#region lib/types/client/contract/assistant-content.js
 		/**
 		* Test whether Assistant blocks contain a user-facing reply rather than only
 		* reasoning or Tool-call protocol material.
@@ -6553,7 +7216,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-020rc2/packages/client/ui-chat/src/client/chat/TurnTailNodeView.module.css.mjs
+		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/work/dsh-021alpha1-20261003/dsh/packages/client/ui-chat/src/client/chat/TurnTailNodeView.module.css.mjs
 		const css$3 = ".TS9iAW_root{flex-direction:column;gap:16px;display:flex}.TS9iAW_actions{margin-top:4px;margin-left:-6px}";
 		const tagId$3 = "@deepseek-ai/dsh-client-ui-chat/TurnTailNodeView.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$3) + "]") === null) {
@@ -6568,7 +7231,7 @@ window.__ModuleLoader__.load({
 			"root": "TS9iAW_root"
 		};
 		//#endregion
-		//#region src/client/chat/TurnTailNodeView.tsx
+		//#region lib/types/client/chat/TurnTailNodeView.js
 		function lastContent(snapshot, turn, skipWarning) {
 			const keys = snapshot.locations.getTurn(turn);
 			for (let index = keys.length - 1; index >= 0; index--) {
@@ -6596,18 +7259,18 @@ window.__ModuleLoader__.load({
 				seq: closing?.finalNode.seq ?? data.seq,
 				openFile
 			});
-			if (closing === null) return tail === null ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+			if (closing === null) return tail === null ? null : (0, react_jsx_runtime.jsx)("div", {
 				className: TurnTailNodeView_module_css_default.root,
 				"data-turn-tail": data.turn,
 				children: tail
 			});
 			const messageId = closing.finalNode.messageId;
 			const assistantActions = messageId === void 0 ? null : renderSlot("conversation.chat.assistant-actions", { messageId });
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+			return (0, react_jsx_runtime.jsxs)("div", {
 				className: TurnTailNodeView_module_css_default.root,
 				"data-turn-tail": data.turn,
 				"data-actions-reveal": endsWithResponse ? "always" : "hover",
-				children: [tail, /* @__PURE__ */ (0, react_jsx_runtime.jsx)(MessageIconActions, {
+				children: [tail, (0, react_jsx_runtime.jsx)(MessageIconActions, {
 					text: assistantText(closing.blocks),
 					time: closing.time,
 					clock: "end",
@@ -6617,7 +7280,7 @@ window.__ModuleLoader__.load({
 					branchUnavailable: data.branchUnavailable || hasLaterChatNode,
 					className: TurnTailNodeView_module_css_default.actions,
 					extraActions: assistantActions,
-					usageAction: detailed && data.tokenUsage !== void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TurnUsagePanel, {
+					usageAction: detailed && data.tokenUsage !== void 0 ? (0, react_jsx_runtime.jsx)(TurnUsagePanel, {
 						usage: data.tokenUsage,
 						t
 					}) : null,
@@ -6626,7 +7289,7 @@ window.__ModuleLoader__.load({
 			});
 		});
 		//#endregion
-		//#region src/client/chat/turn-trigger.ts
+		//#region lib/types/client/chat/turn-trigger.js
 		function record(value) {
 			return typeof value === "object" && value !== null && !Array.isArray(value) ? value : {};
 		}
@@ -6686,7 +7349,7 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-020rc2/packages/client/ui-chat/src/client/chat/TurnTriggerNodeView.module.css.mjs
+		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/work/dsh-021alpha1-20261003/dsh/packages/client/ui-chat/src/client/chat/TurnTriggerNodeView.module.css.mjs
 		const css$2 = ".oz9t_a_root{border:.5px solid var(--dsw-alias-border-l1);border-radius:var(--dsw-radius-xl);background:var(--dsw-alias-turn-trigger-bg,var(--dsw-alias-markdown-code-block));min-width:0;transition:background-color .1s}.oz9t_a_root:hover{background:var(--dsw-alias-turn-trigger-bg-hover,var(--dsw-alias-interactive-bg-hover))}.oz9t_a_header{width:100%;color:var(--dsw-alias-label-tertiary);font:inherit;text-align:left;cursor:pointer;background:0 0;border:0;align-items:center;gap:10px;padding:12px 16px;transition:color .1s;display:flex}.oz9t_a_header:hover{color:var(--dsw-alias-label-secondary)}.oz9t_a_icon{color:inherit;flex:none;display:inline-flex}.oz9t_a_title{font-size:var(--dsh-content-font-size,14px);flex:none}.oz9t_a_time{color:inherit;font:var(--dsw-font-xxs-12);flex:none;margin-left:auto}.oz9t_a_chevron,.oz9t_a_openChevron{color:inherit;flex:none}.oz9t_a_openChevron{transform:rotate(180deg)}.oz9t_a_body{padding:0 16px 12px 40px}.oz9t_a_explanation{color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12);margin:8px 0}.oz9t_a_content{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;font:var(--dsw-font-xxs-12);overflow:auto}@media (prefers-reduced-motion:reduce){.oz9t_a_root,.oz9t_a_header{transition:none}}";
 		const tagId$2 = "@deepseek-ai/dsh-client-ui-chat/TurnTriggerNodeView.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
@@ -6709,7 +7372,7 @@ window.__ModuleLoader__.load({
 			"title": "oz9t_a_title"
 		};
 		//#endregion
-		//#region src/client/chat/TurnTriggerNodeView.tsx
+		//#region lib/types/client/chat/TurnTriggerNodeView.js
 		/** An independent, expandable notice explaining a non-human Turn trigger. */
 		const TRIGGER_ICONS = {
 			request: _deepseek_ai_dsh_client_ui_primitives.IconContextInjectionOutlineRegular,
@@ -6731,10 +7394,10 @@ window.__ModuleLoader__.load({
 			const TriggerIcon = TRIGGER_ICONS[details.icon];
 			const date = new Date(node.data.time);
 			const time = formatMessageClock(node.data.time, t);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+			return (0, react_jsx_runtime.jsxs)("section", {
 				className: TurnTriggerNodeView_module_css_default.root,
 				"data-turn-trigger": true,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+				children: [(0, react_jsx_runtime.jsxs)("button", {
 					className: TurnTriggerNodeView_module_css_default.header,
 					type: "button",
 					"aria-expanded": open,
@@ -6743,34 +7406,34 @@ window.__ModuleLoader__.load({
 						setOpen(!open);
 					},
 					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						(0, react_jsx_runtime.jsx)("span", {
 							className: TurnTriggerNodeView_module_css_default.icon,
 							"aria-hidden": true,
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TriggerIcon, { size: 14 })
+							children: (0, react_jsx_runtime.jsx)(TriggerIcon, { size: 14 })
 						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						(0, react_jsx_runtime.jsx)("span", {
 							className: TurnTriggerNodeView_module_css_default.title,
 							children: t(details.title)
 						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("time", {
+						(0, react_jsx_runtime.jsx)("time", {
 							className: TurnTriggerNodeView_module_css_default.time,
 							dateTime: date.toISOString(),
 							children: time
 						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {
+						(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {
 							size: 12,
 							className: open ? TurnTriggerNodeView_module_css_default.openChevron : TurnTriggerNodeView_module_css_default.chevron
 						})
 					]
-				}), open && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				}), open && (0, react_jsx_runtime.jsxs)("div", {
 					id: bodyId,
 					className: TurnTriggerNodeView_module_css_default.body,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+					children: [(0, react_jsx_runtime.jsx)("p", {
 						className: TurnTriggerNodeView_module_css_default.explanation,
 						children: t("message.trigger.explanation")
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					}), (0, react_jsx_runtime.jsx)("div", {
 						className: TurnTriggerNodeView_module_css_default.content,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(NoticeBody, {
+						children: (0, react_jsx_runtime.jsx)(NoticeBody, {
 							content: node.data.content,
 							source: node.data.source,
 							t
@@ -6780,7 +7443,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region src/client/chat/register-node-renderers.ts
+		//#region lib/types/client/chat/register-node-renderers.js
 		/**
 		* Register this package's business renderers behind the keyed Chat Node seat.
 		* Renderers whose output depends on the work-details mode receive the policy
@@ -6883,7 +7546,7 @@ window.__ModuleLoader__.load({
 			}, UnknownNodeView));
 		}
 		//#endregion
-		//#region src/client/contract/turn-metrics.ts
+		//#region lib/types/client/contract/turn-metrics.js
 		function usageOutputTokens(usage) {
 			if (typeof usage !== "object" || usage === null) return null;
 			const value = usage.outputTokens;
@@ -6903,8 +7566,8 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-020rc2/packages/client/ui-chat/src/client/chat/StatsPills.module.css.mjs
-		const css$1 = ".bOPqQW_root{box-sizing:border-box;min-width:0;max-width:100%;font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));justify-content:center;gap:12px;display:flex}.bOPqQW_anchor{min-width:0;display:inline-flex}.bOPqQW_pill{box-sizing:border-box;corner-shape:round;max-width:100%;color:var(--dsw-alias-label-tertiary);font:inherit;font-variant-numeric:tabular-nums;line-height:inherit;white-space:nowrap;background:0 0;border:none;border-radius:999px;align-items:center;gap:6px;padding:1px 8px;display:inline-flex}.bOPqQW_pill svg{flex:none;width:14px;height:14px}button.bOPqQW_pill{cursor:pointer}button.bOPqQW_pill:hover,button.bOPqQW_pill[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}.bOPqQW_label{text-overflow:ellipsis;min-width:0;overflow:hidden}.bOPqQW_sep{color:var(--dsw-alias-separator-primary);margin:0 6px}";
+		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/work/dsh-021alpha1-20261003/dsh/packages/client/ui-chat/src/client/chat/StatsPills.module.css.mjs
+		const css$1 = ".bOPqQW_anchor{min-width:0;font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));display:inline-flex}.bOPqQW_pill{box-sizing:border-box;corner-shape:round;max-width:100%;color:var(--dsw-alias-label-tertiary);font:inherit;font-variant-numeric:tabular-nums;line-height:inherit;white-space:nowrap;background:0 0;border:none;border-radius:999px;align-items:center;gap:6px;padding:1px 8px;display:inline-flex}.bOPqQW_pill svg{flex:none;width:14px;height:14px}button.bOPqQW_pill{cursor:pointer}button.bOPqQW_pill:hover,button.bOPqQW_pill[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}.bOPqQW_label{text-overflow:ellipsis;min-width:0;overflow:hidden}.bOPqQW_sep{color:var(--dsw-alias-separator-primary);margin:0 6px}";
 		const tagId$1 = "@deepseek-ai/dsh-client-ui-chat/StatsPills.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -6917,11 +7580,10 @@ window.__ModuleLoader__.load({
 			"anchor": "bOPqQW_anchor",
 			"label": "bOPqQW_label",
 			"pill": "bOPqQW_pill",
-			"root": "bOPqQW_root",
 			"sep": "bOPqQW_sep"
 		};
 		//#endregion
-		//#region src/client/chat/StatsPills.tsx
+		//#region lib/types/client/chat/StatsPills.js
 		/**
 		* Fold assistant and tool-result nodes into window-scoped display totals —
 		* the FALLBACK for assemblies without the `sessionStats` projection.
@@ -7009,189 +7671,171 @@ window.__ModuleLoader__.load({
 		function exactCount(value, t) {
 			return t("message.turnUsage.count", { count: formatExactTokens(value, t) });
 		}
-		function TimePill({ stats, t, dialog }) {
-			const { open, setOpen, rootRef, panelRef, pos } = useStatDialog(dialog);
+		function joined$1(first, second) {
+			if (second === null) return first;
+			return (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+				first,
+				(0, react_jsx_runtime.jsx)("span", {
+					className: StatsPills_module_css_default.sep,
+					"aria-hidden": true,
+					children: "·"
+				}),
+				second
+			] });
+		}
+		function useSessionStats(useChat, useProjection) {
+			const settledNodes = useChat((s) => s.legacy.nodes);
+			const projected = useProjection("sessionStats");
+			return (0, react.useMemo)(() => projected ?? deriveStats(settledNodes), [projected, settledNodes]);
+		}
+		function decodeSpeed(stats, t) {
+			return t("message.tokensPerSecond", { tps: formatTokensPerSecond(stats.decodeTokens / (stats.decodeMs / 1e3)) });
+		}
+		/** A static reading: used when the pill has no dialog rows or the mode is Compact. */
+		function PlainPill({ stat, icon, label }) {
+			return (0, react_jsx_runtime.jsx)("span", {
+				className: StatsPills_module_css_default.anchor,
+				"data-composer-stat": stat,
+				children: (0, react_jsx_runtime.jsxs)("span", {
+					className: StatsPills_module_css_default.pill,
+					children: [icon, (0, react_jsx_runtime.jsx)("span", {
+						className: StatsPills_module_css_default.label,
+						children: label
+					})]
+				})
+			});
+		}
+		/**
+		* A pill button opening its own portaled dialog. Each pill owns its open
+		* state; useStatDialog closes it on Escape or an outside pointerdown or click,
+		* so at most one dialog is open across the dock.
+		*/
+		function DialogPill({ stat, icon, label, ariaLabel, title, titleValue, children }) {
+			const { open, setOpen, rootRef, panelRef, pos } = useStatDialog();
+			return (0, react_jsx_runtime.jsxs)("span", {
+				ref: rootRef,
+				className: StatsPills_module_css_default.anchor,
+				"data-composer-stat": stat,
+				children: [(0, react_jsx_runtime.jsxs)("button", {
+					type: "button",
+					className: StatsPills_module_css_default.pill,
+					"aria-haspopup": "dialog",
+					"aria-expanded": open,
+					"aria-label": ariaLabel,
+					onClick: () => {
+						setOpen(!open);
+					},
+					children: [icon, (0, react_jsx_runtime.jsx)("span", {
+						className: StatsPills_module_css_default.label,
+						children: label
+					})]
+				}), open && (0, react_dom.createPortal)((0, react_jsx_runtime.jsxs)("div", {
+					ref: panelRef,
+					className: stat_dialog_module_css_default.panel,
+					role: "dialog",
+					"aria-label": title,
+					style: pos ?? MEASURE_STYLE,
+					children: [
+						(0, react_jsx_runtime.jsxs)("div", {
+							className: stat_dialog_module_css_default.title,
+							children: [(0, react_jsx_runtime.jsxs)("span", {
+								className: stat_dialog_module_css_default.titleLabel,
+								children: [icon, title]
+							}), titleValue !== void 0 && (0, react_jsx_runtime.jsx)("span", {
+								className: stat_dialog_module_css_default.titleValue,
+								children: titleValue
+							})]
+						}),
+						(0, react_jsx_runtime.jsx)("div", {
+							className: stat_dialog_module_css_default.titleRule,
+							"aria-hidden": true
+						}),
+						children
+					]
+				}), document.body)]
+			});
+		}
+		/**
+		* Turn and step counts with whole-session speed, opening the time and speed
+		* dialog; Compact keeps only the speed reading.
+		*/
+		const ActivityPill = (0, react.memo)(function ActivityPill({ useChat, useProjection, usePerformanceUsage, t }) {
+			const mode = usePerformanceUsage((value) => value);
+			const stats = useSessionStats(useChat, useProjection);
+			const speed = stats.decodeMs > 0 ? decodeSpeed(stats, t) : null;
+			const icon = (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconGaugeOutlineRegular, {});
+			if (mode === "compact") return speed === null ? null : (0, react_jsx_runtime.jsx)(PlainPill, {
+				stat: "activity",
+				icon,
+				label: speed
+			});
+			if (stats.steps === 0) return null;
 			const counts = t("stats.counts", {
 				turns: stats.turns,
 				steps: stats.steps
 			});
-			const tps = stats.decodeMs > 0 ? t("message.tokensPerSecond", { tps: formatTokensPerSecond(stats.decodeTokens / (stats.decodeMs / 1e3)) }) : null;
-			const label = /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-				className: StatsPills_module_css_default.label,
-				children: [counts, tps !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-					className: StatsPills_module_css_default.sep,
-					"aria-hidden": true,
-					children: "·"
-				}), tps] })]
-			});
-			if (stats.llmMs <= 0 && stats.toolMs <= 0 && stats.ttftSteps <= 0 && stats.decodeMs <= 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-				className: StatsPills_module_css_default.anchor,
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-					className: StatsPills_module_css_default.pill,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconGaugeOutlineRegular, {}), label]
+			const content = {
+				stat: "activity",
+				icon,
+				label: joined$1(counts, speed)
+			};
+			if (stats.llmMs <= 0 && stats.toolMs <= 0 && stats.ttftSteps <= 0 && speed === null) return (0, react_jsx_runtime.jsx)(PlainPill, { ...content });
+			return (0, react_jsx_runtime.jsx)(DialogPill, {
+				...content,
+				ariaLabel: speed === null ? counts : `${counts} · ${speed}`,
+				title: t("stats.dialog.title"),
+				children: (0, react_jsx_runtime.jsxs)("dl", {
+					className: stat_dialog_module_css_default.details,
+					"data-session-stats-details": true,
+					children: [
+						stats.llmMs > 0 && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("stats.dialog.llmTime") }), (0, react_jsx_runtime.jsx)("dd", { children: formatDuration(stats.llmMs, t) })] }),
+						stats.toolMs > 0 && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("stats.dialog.toolTime") }), (0, react_jsx_runtime.jsx)("dd", { children: formatDuration(stats.toolMs, t) })] }),
+						stats.ttftSteps > 0 && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("stats.dialog.ttft") }), (0, react_jsx_runtime.jsx)("dd", { children: formatDuration(stats.ttftMs / stats.ttftSteps, t) })] }),
+						speed !== null && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("stats.dialog.speed") }), (0, react_jsx_runtime.jsx)("dd", { children: speed })] })
+					]
 				})
 			});
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-				ref: rootRef,
-				className: StatsPills_module_css_default.anchor,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-					type: "button",
-					className: StatsPills_module_css_default.pill,
-					"aria-haspopup": "dialog",
-					"aria-expanded": open,
-					"aria-label": tps === null ? counts : `${counts} · ${tps}`,
-					onClick: () => {
-						setOpen(!open);
-					},
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconGaugeOutlineRegular, {}), label]
-				}), open && (0, react_dom.createPortal)(/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					ref: panelRef,
-					className: stat_dialog_module_css_default.panel,
-					role: "dialog",
-					"aria-label": t("stats.dialog.title"),
-					style: pos ?? MEASURE_STYLE,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: stat_dialog_module_css_default.title,
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-								className: stat_dialog_module_css_default.titleLabel,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconGaugeOutlineRegular, {}), t("stats.dialog.title")]
-							})
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: stat_dialog_module_css_default.titleRule,
-							"aria-hidden": true
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dl", {
-							className: stat_dialog_module_css_default.details,
-							"data-session-stats-details": true,
-							children: [
-								stats.llmMs > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("stats.dialog.llmTime") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: formatDuration(stats.llmMs, t) })] }),
-								stats.toolMs > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("stats.dialog.toolTime") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: formatDuration(stats.toolMs, t) })] }),
-								stats.ttftSteps > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("stats.dialog.ttft") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: formatDuration(stats.ttftMs / stats.ttftSteps, t) })] }),
-								stats.decodeMs > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("stats.dialog.speed") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: t("message.tokensPerSecond", { tps: formatTokensPerSecond(stats.decodeTokens / (stats.decodeMs / 1e3)) }) })] })
-							]
-						})
-					]
-				}), document.body)]
-			});
-		}
-		function UsagePill({ usage, t, dialog }) {
-			const { open, setOpen, rootRef, panelRef, pos } = useStatDialog(dialog);
-			const total = billedInputTokens(usage) + usage.outputTokens;
-			const totalText = t("message.turnUsage.count", { count: formatTokens(total, t) });
+		});
+		/** Whole-log token total and cache hit; Compact keeps only the cache hit. */
+		const UsagePill = (0, react.memo)(function UsagePill({ useProjection, usePerformanceUsage, t }) {
+			const mode = usePerformanceUsage((value) => value);
+			const usage = useProjection("tokenUsage");
+			if (usage === void 0 || billedInputTokens(usage) === 0 && usage.outputTokens === 0) return null;
 			const cacheHit = cacheHitPercent(usage);
 			const cacheHitText = cacheHit !== null ? t("stats.cacheHit", { percent: cacheHit }) : null;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-				ref: rootRef,
-				className: StatsPills_module_css_default.anchor,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-					type: "button",
-					className: StatsPills_module_css_default.pill,
-					"aria-haspopup": "dialog",
-					"aria-expanded": open,
-					"aria-label": cacheHitText === null ? totalText : `${totalText} · ${cacheHitText}`,
-					onClick: () => {
-						setOpen(!open);
-					},
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, {}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-						className: StatsPills_module_css_default.label,
-						children: [totalText, cacheHitText !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: StatsPills_module_css_default.sep,
-							"aria-hidden": true,
-							children: "·"
-						}), cacheHitText] })]
-					})]
-				}), open && (0, react_dom.createPortal)(/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					ref: panelRef,
-					className: stat_dialog_module_css_default.panel,
-					role: "dialog",
-					"aria-label": t("stats.dialog.usageTitle"),
-					style: pos ?? MEASURE_STYLE,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: stat_dialog_module_css_default.title,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-								className: stat_dialog_module_css_default.titleLabel,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, {}), t("stats.dialog.usageTitle")]
-							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: stat_dialog_module_css_default.titleValue,
-								children: exactCount(total, t)
-							})]
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: stat_dialog_module_css_default.titleRule,
-							"aria-hidden": true
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dl", {
-							className: stat_dialog_module_css_default.details,
-							"data-session-stats-usage": true,
-							children: [
-								cacheHit !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheHit") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: `${cacheHit}%` })] }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.input") }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: exactCount(usage.uncachedInputTokens, t) }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheRead") }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: exactCount(usage.cacheReadTokens, t) }),
-								usage.cacheWriteTokens !== 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheWrite") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: exactCount(usage.cacheWriteTokens, t) })] }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.output") }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: exactCount(usage.outputTokens, t) })
-							]
-						})
-					]
-				}), document.body)]
+			const icon = (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, {});
+			if (mode === "compact") return cacheHitText === null ? null : (0, react_jsx_runtime.jsx)(PlainPill, {
+				stat: "usage",
+				icon,
+				label: cacheHitText
 			});
-		}
-		const StatsPills = (0, react.memo)(function StatsPills({ useChat, useProjection, usePerformanceUsage, t }) {
-			const mode = usePerformanceUsage((value) => value);
-			const settledNodes = useChat((s) => s.legacy.nodes);
-			const usage = useProjection("tokenUsage");
-			const [openPill, setOpenPill] = (0, react.useState)(null);
-			const projected = useProjection("sessionStats");
-			const stats = (0, react.useMemo)(() => projected ?? deriveStats(settledNodes), [projected, settledNodes]);
-			const hasTokens = usage !== void 0 && (billedInputTokens(usage) > 0 || usage.outputTokens > 0);
-			if (mode === "compact") {
-				const speed = stats.decodeMs > 0 ? t("message.tokensPerSecond", { tps: formatTokensPerSecond(stats.decodeTokens / (stats.decodeMs / 1e3)) }) : null;
-				const cacheHit = hasTokens ? cacheHitPercent(usage) : null;
-				if (speed === null && cacheHit === null) return null;
-				return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: StatsPills_module_css_default.root,
-					"data-composer-stats": true,
-					children: [speed !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-						className: StatsPills_module_css_default.pill,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconGaugeOutlineRegular, {}), speed]
-					}), cacheHit !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-						className: StatsPills_module_css_default.pill,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, {}), t("stats.cacheHit", { percent: cacheHit })]
-					})]
-				});
-			}
-			if (stats.steps === 0 && !hasTokens) return null;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: StatsPills_module_css_default.root,
-				"data-composer-stats": true,
-				children: [stats.steps > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TimePill, {
-					stats,
-					t,
-					dialog: {
-						open: openPill === "time",
-						setOpen: (open) => {
-							setOpenPill(open ? "time" : null);
-						}
-					}
-				}), hasTokens && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(UsagePill, {
-					usage,
-					t,
-					dialog: {
-						open: openPill === "usage",
-						setOpen: (open) => {
-							setOpenPill(open ? "usage" : null);
-						}
-					}
-				})]
+			const total = billedInputTokens(usage) + usage.outputTokens;
+			const totalText = t("message.turnUsage.count", { count: formatTokens(total, t) });
+			return (0, react_jsx_runtime.jsx)(DialogPill, {
+				stat: "usage",
+				icon,
+				label: joined$1(totalText, cacheHitText),
+				ariaLabel: cacheHitText === null ? totalText : `${totalText} · ${cacheHitText}`,
+				title: t("stats.dialog.usageTitle"),
+				titleValue: exactCount(total, t),
+				children: (0, react_jsx_runtime.jsxs)("dl", {
+					className: stat_dialog_module_css_default.details,
+					"data-session-stats-usage": true,
+					children: [
+						cacheHit !== null && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheHit") }), (0, react_jsx_runtime.jsx)("dd", { children: `${cacheHit}%` })] }),
+						(0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.input") }),
+						(0, react_jsx_runtime.jsx)("dd", { children: exactCount(usage.uncachedInputTokens, t) }),
+						(0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheRead") }),
+						(0, react_jsx_runtime.jsx)("dd", { children: exactCount(usage.cacheReadTokens, t) }),
+						usage.cacheWriteTokens !== 0 && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheWrite") }), (0, react_jsx_runtime.jsx)("dd", { children: exactCount(usage.cacheWriteTokens, t) })] }),
+						(0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.output") }),
+						(0, react_jsx_runtime.jsx)("dd", { children: exactCount(usage.outputTokens, t) })
+					]
+				})
 			});
 		});
 		//#endregion
-		//#region src/client/conversation-nodes/common.ts
+		//#region lib/types/client/conversation-nodes/common.js
 		/**
 		* Relative positions in one durable event's seq neighborhood: interrupted
 		* Assistant, its follow-up Nodes, then follow-ups to an ordinary final. The
@@ -7235,7 +7879,8 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
-		//#region src/client/conversation-nodes/event-projection.ts
+		//#region lib/types/client/conversation-nodes/event-projection.js
+		/** Chat-owned conversion from durable Session events to Chat view data. */
 		function asRecord(value) {
 			return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
 		}
@@ -7425,7 +8070,7 @@ window.__ModuleLoader__.load({
 			}
 		}
 		//#endregion
-		//#region src/client/conversation-nodes/assistant.ts
+		//#region lib/types/client/conversation-nodes/assistant.js
 		function initialState(turn, step) {
 			return {
 				turn,
@@ -7468,6 +8113,10 @@ window.__ModuleLoader__.load({
 			};
 		}
 		function updateChunk(state, chunk, seq, time) {
+			if (chunk.type === "tool-call-delta") {
+				const previous = state.blocks[chunk.index];
+				if (previous?.kind === "tool-call" && previous.callId !== "" && (chunk.name === void 0 || chunk.name === previous.name) && (state.firstTokenTime !== void 0 || !isTokenDelta(chunk))) return state;
+			}
 			const blocks = [...state.blocks];
 			let changedIndex = -1;
 			let previousVisible = false;
@@ -7501,17 +8150,11 @@ window.__ModuleLoader__.load({
 					const previous = blocks[chunk.index];
 					changedIndex = chunk.index;
 					previousVisible = blockIsVisible(previous);
-					const base = previous?.kind === "tool-call" ? previous : {
-						kind: "tool-call",
-						callId: "",
-						name: "",
-						argsRaw: ""
-					};
 					blocks[chunk.index] = {
 						kind: "tool-call",
-						callId: base.callId || String(chunk.id),
-						name: chunk.name ?? base.name,
-						argsRaw: base.argsRaw + chunk.argumentsDelta
+						callId: (previous?.kind === "tool-call" ? previous.callId : "") || String(chunk.id),
+						name: chunk.name ?? (previous?.kind === "tool-call" ? previous.name : ""),
+						argsRaw: previous?.kind === "tool-call" ? previous.argsRaw : ""
 					};
 					break;
 				}
@@ -7700,10 +8343,19 @@ window.__ModuleLoader__.load({
 		* @param ctx - owning UI Conversation context.
 		*/
 		function registerAssistantConversationNode(ctx) {
-			ctx.uiConversation.events.register(assistantDefinition);
+			const match = assistantDefinition.match.bind(assistantDefinition);
+			ctx.uiConversation.events.register({
+				...assistantDefinition,
+				match: {
+					"step/start": match,
+					"assistant/live-chunk": match,
+					"assistant/message": match,
+					"llm/retry": match
+				}
+			});
 		}
 		//#endregion
-		//#region src/client/contract/chat-nodes.ts
+		//#region lib/types/client/contract/chat-nodes.js
 		/**
 		* Test whether a Tool root has settled.
 		* @param block - Tool root lifecycle value.
@@ -7721,7 +8373,7 @@ window.__ModuleLoader__.load({
 			return !isSettledTool(block);
 		}
 		//#endregion
-		//#region src/client/contract/chat-visibility.ts
+		//#region lib/types/client/contract/chat-visibility.js
 		/**
 		* Exclude system prompts, ordinary Context, and permission commands from visible Chat rows.
 		* Context containing tool changes retains its notice row.
@@ -7732,7 +8384,7 @@ window.__ModuleLoader__.load({
 			return node.visibility === "visible" && node.kind !== "system-prompt" && (node.kind !== "context" || node.data.content.some((block) => block.type === "tool-addition" || block.type === "tool-removal")) && !(node.kind === "command" && node.data.name === "permission");
 		}
 		//#endregion
-		//#region src/client/conversation-nodes/turn-navigation.ts
+		//#region lib/types/client/conversation-nodes/turn-navigation.js
 		/**
 		* Preview budgets, sized to the rail card's clamps (one prompt line, up to
 		* three response lines) and mirrored by the turnOutline projection so a turn
@@ -7802,7 +8454,7 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
-		//#region src/client/conversation-nodes/turn-process-presentation.ts
+		//#region lib/types/client/conversation-nodes/turn-process-presentation.js
 		function nodeTurn(node) {
 			const location = node?.location;
 			return location?.kind === "turn" || location?.kind === "step" ? location.turn.turn : void 0;
@@ -7894,7 +8546,7 @@ window.__ModuleLoader__.load({
 			}
 		};
 		//#endregion
-		//#region src/client/conversation-nodes/chat-snapshot-builder.ts
+		//#region lib/types/client/conversation-nodes/chat-snapshot-builder.js
 		const EMPTY_KEYS = [];
 		const EMPTY_TURNS = [];
 		const EMPTY_ITEMS = [];
@@ -8632,7 +9284,7 @@ window.__ModuleLoader__.load({
 		function sameContribution(left, right) {
 			return left !== void 0 && left.anchorSeq === right.anchorSeq && left.partial?.blocks === right.partial?.blocks && left.partial?.turn === right.partial?.turn && left.partial?.step === right.partial?.step && left.running === right.running && sameReferences$1(left.nodes, right.nodes);
 		}
-		/** Incremental compatibility projection for StatsPills and legacy top-level snapshot fields. */
+		/** Incremental compatibility projection for the composer stats pills and legacy top-level snapshot fields. */
 		var LegacySliceBuilder = class {
 			contributions = /* @__PURE__ */ new Map();
 			finalizedContributions = /* @__PURE__ */ new Map();
@@ -8875,7 +9527,7 @@ window.__ModuleLoader__.load({
 			ctx.uiConversation.views.register(chatViewDefinition);
 		}
 		//#endregion
-		//#region ../../core/session/src/surface.ts
+		//#region ../../core/session/lib/types/surface.js
 		/** Runtime counterpart of the message-producing event union. */
 		const SURFACE_EVENT_TYPES = new Set([
 			"system/message",
@@ -8918,7 +9570,7 @@ window.__ModuleLoader__.load({
 			return isSurfaceEvent(event) && event.surfaceOp !== "append";
 		}
 		//#endregion
-		//#region src/client/conversation-nodes/command.ts
+		//#region lib/types/client/conversation-nodes/command.js
 		const COMPACT_KIND = "compact-checkpoint";
 		function commandFromRun(match) {
 			if (match.event.type !== "command/run") throw new Error("command start requires command/run");
@@ -9089,7 +9741,7 @@ window.__ModuleLoader__.load({
 			ctx.uiConversation.events.register(commandDefinition);
 		}
 		//#endregion
-		//#region src/client/conversation-nodes/compaction.ts
+		//#region lib/types/client/conversation-nodes/compaction.js
 		function fallbackState$3(context) {
 			const summary = context.matches.find((match) => match.event.type === "compaction/summary");
 			const checkpoint = context.matches.find((match) => compactSource(match.event) !== void 0);
@@ -9136,7 +9788,7 @@ window.__ModuleLoader__.load({
 			ctx.uiConversation.events.register(compactionDefinition);
 		}
 		//#endregion
-		//#region src/client/conversation-nodes/fallback.ts
+		//#region lib/types/client/conversation-nodes/fallback.js
 		/** Unclaimed append-surface fallback Definition. */
 		const unknownFallbackDefinition = {
 			kind: "unknown-surface",
@@ -9163,7 +9815,7 @@ window.__ModuleLoader__.load({
 			ctx.uiConversation.events.registerFallback(unknownFallbackDefinition);
 		}
 		//#endregion
-		//#region src/client/conversation-nodes/inbox.ts
+		//#region lib/types/client/conversation-nodes/inbox.js
 		const EMPTY_PENDING = {
 			kind: "snapshot",
 			ids: []
@@ -9255,7 +9907,7 @@ window.__ModuleLoader__.load({
 			ctx.uiConversation.events.register(nextTurnInboxDefinition);
 		}
 		//#endregion
-		//#region src/client/conversation-nodes/message.ts
+		//#region lib/types/client/conversation-nodes/message.js
 		function isCompactionCheckpoint(event) {
 			if (event.type !== "user/message" || !isReplacementSurfaceEvent(event)) return false;
 			return event.data.source.kind === "compact-checkpoint";
@@ -9341,7 +9993,7 @@ window.__ModuleLoader__.load({
 			ctx.uiConversation.events.register(developerMessageDefinition);
 		}
 		//#endregion
-		//#region src/client/conversation-nodes/request-prompt.ts
+		//#region lib/types/client/conversation-nodes/request-prompt.js
 		/** Place a request's system prompt at the start of its visible message series. */
 		function requestPromptAnchor(match, previous, isInitial) {
 			if (match.location.kind !== "step") return match.event.seq;
@@ -9443,7 +10095,7 @@ window.__ModuleLoader__.load({
 			ctx.uiConversation.events.register(requestPromptDefinition((previous, event, system) => ctx.uiConversation.inspectRequestPrompt(previous, event, system)));
 		}
 		//#endregion
-		//#region src/client/conversation-nodes/retry.ts
+		//#region lib/types/client/conversation-nodes/retry.js
 		function scheduledNode(match) {
 			if (match.event.type !== "llm/retry") return void 0;
 			return {
@@ -9532,38 +10184,73 @@ window.__ModuleLoader__.load({
 			ctx.uiConversation.events.register(retryDefinition);
 		}
 		//#endregion
-		//#region src/client/conversation-nodes/tool.ts
+		//#region lib/types/client/conversation-nodes/tool.js
 		const MAX_DEPTH = 256;
 		const projectedBlocks = /* @__PURE__ */ new WeakMap();
 		function jsonArguments(value) {
 			return JSON.stringify(value);
 		}
-		function rootCall(match) {
-			const event = match.event;
-			if (event.type === "assistant/live-chunk") {
-				const chunk = event.data.chunk;
-				if (chunk.type !== "tool-call-delta" || !chunk.name) throw new Error("tool preparation requires a named call delta");
-				return {
-					phase: "preparing",
-					callId: String(chunk.id),
-					name: chunk.name,
-					turn: event.data.turn,
-					step: event.data.step,
-					time: event.time,
-					subCalls: []
-				};
-			}
+		function rootCall(match, previous) {
 			if (match.event.type !== "tool/call") throw new Error("tool-call start requires tool/call");
 			return {
 				phase: "start",
 				callId: String(match.event.data.callId),
 				name: match.event.data.name,
 				argsRaw: match.event.data.arguments,
+				args: previous === void 0 ? PartialArguments.fromText(match.event.data.arguments) : previous.args.settle(match.event.data.arguments),
 				turn: match.event.data.turn,
 				step: match.event.data.step,
 				time: match.event.time,
 				subCalls: []
 			};
+		}
+		/**
+		* Retain argument fragments in the named call's lazy view. Root replacement
+		* belongs to publication, after all pending fragments can be observed together.
+		*/
+		function applyDelta(state, match) {
+			const event = match.event;
+			if (event.type !== "assistant/live-chunk") return state;
+			const chunk = event.data.chunk;
+			const root = state.root;
+			if (chunk.type === "block-end" && chunk.block.type === "tool-call") {
+				if (root === void 0 || "kind" in root || root.phase !== "preparing") return state;
+				return {
+					...state,
+					root: {
+						...root,
+						name: chunk.block.name,
+						args: root.args.settle(chunk.block.arguments)
+					}
+				};
+			}
+			if (chunk.type !== "tool-call-delta") return state;
+			if (root === void 0) {
+				if (!chunk.name) return state;
+				const args = new PartialArguments();
+				args.append(chunk.argumentsDelta);
+				return {
+					...state,
+					root: {
+						phase: "preparing",
+						callId: String(chunk.id),
+						name: chunk.name,
+						turn: event.data.turn,
+						step: event.data.step,
+						time: event.time,
+						subCalls: [],
+						args
+					}
+				};
+			}
+			if ("kind" in root || root.phase !== "preparing" || root.args.isSealed) return state;
+			root.args.append(chunk.argumentsDelta);
+			return state;
+		}
+		function preparingBlock(root, current) {
+			const changed = root.args.refresh();
+			if (!changed && current !== void 0 && !("kind" in current) && current.phase === "preparing" && current.name === root.name && current.args === root.args) return current;
+			return changed ? { ...root } : root;
 		}
 		function rootResult(match, previous) {
 			if (match.event.type !== "tool/result") return void 0;
@@ -9573,6 +10260,8 @@ window.__ModuleLoader__.load({
 				seq: match.event.seq,
 				time: match.event.time,
 				callId: String(message.source.callId),
+				name: previous?.name ?? "",
+				args: previous?.args ?? PartialArguments.EMPTY,
 				call: previous === void 0 ? null : {
 					name: previous.name,
 					argsRaw: previous.argsRaw
@@ -9592,6 +10281,7 @@ window.__ModuleLoader__.load({
 				parentCallId: data.parentCallId,
 				name: data.name,
 				argsRaw: jsonArguments(data.arguments),
+				args: PartialArguments.fromObject(data.arguments),
 				turn: locationTurn(match),
 				step: locationStep(match),
 				time: match.event.time,
@@ -9605,6 +10295,8 @@ window.__ModuleLoader__.load({
 				time: match.event.time,
 				callId: data.subCallId,
 				parentCallId: data.parentCallId,
+				name: data.name,
+				args: previous !== void 0 && !("kind" in previous) ? previous.args : PartialArguments.fromObject(data.arguments),
 				call: {
 					name: data.name,
 					argsRaw: jsonArguments(data.arguments)
@@ -9704,6 +10396,8 @@ window.__ModuleLoader__.load({
 				time: interruptedAt.time,
 				callId: block.callId,
 				...block.parentCallId === void 0 ? {} : { parentCallId: block.parentCallId },
+				name: block.name,
+				args: block.args,
 				call: {
 					name: block.name,
 					argsRaw: block.argsRaw
@@ -9752,7 +10446,11 @@ window.__ModuleLoader__.load({
 			match: (event) => {
 				if (event.type === "assistant/live-chunk") {
 					const chunk = event.data.chunk;
-					return chunk.type === "tool-call-delta" && chunk.name ? {
+					if (chunk.type === "block-end" && chunk.block.type === "tool-call") return {
+						id: String(chunk.block.id),
+						role: "start"
+					};
+					return chunk.type === "tool-call-delta" ? {
 						id: String(chunk.id),
 						role: "start"
 					} : null;
@@ -9774,19 +10472,26 @@ window.__ModuleLoader__.load({
 				}
 				return null;
 			},
-			start: (_context, match) => ({
-				root: rootCall(match),
-				children: /* @__PURE__ */ new Map(),
-				parents: /* @__PURE__ */ new Map()
-			}),
+			start: (_context, match) => {
+				const state = {
+					root: void 0,
+					children: /* @__PURE__ */ new Map(),
+					parents: /* @__PURE__ */ new Map()
+				};
+				return match.event.type === "tool/call" ? {
+					...state,
+					root: rootCall(match)
+				} : applyDelta(state, match);
+			},
 			update: (context, match) => {
+				if (match.event.type === "assistant/live-chunk") return applyDelta(context.state, match);
 				if (match.event.type === "tool/call") return {
 					...context.state,
-					root: rootCall(match)
+					root: rootCall(match, context.state.root)
 				};
 				if (match.event.type === "tool/result") {
 					const root = context.state.root;
-					const result = rootResult(match, !("kind" in root) && root.phase === "start" ? root : void 0);
+					const result = rootResult(match, root !== void 0 && !("kind" in root) && root.phase === "start" ? root : void 0);
 					return result === void 0 ? context.state : {
 						...context.state,
 						root: result
@@ -9798,12 +10503,12 @@ window.__ModuleLoader__.load({
 			buildViewNode: (context) => {
 				const current = context.current.get("chat");
 				const state = context.state ?? fallbackState$2(context);
-				if (state === void 0) return current == null ? null : current.visibility === "hidden" ? current : {
+				if (state?.root === void 0) return current == null ? null : current.visibility === "hidden" ? current : {
 					...current,
 					visibility: "hidden"
 				};
 				const interruptedAt = interruption(context);
-				const projected = projectBlock(state.root, state, interruptedAt);
+				const projected = projectBlock(!("kind" in state.root) && state.root.phase === "preparing" ? preparingBlock(state.root, current?.data.root) : state.root, state, interruptedAt);
 				const anchor = context.start?.event.seq ?? ("kind" in state.root ? state.root.seq : context.matches[0]?.event.seq ?? 0);
 				const visibility = !("kind" in projected) && projected.phase === "preparing" && interruptedAt !== void 0 ? "hidden" : "visible";
 				const location = contextLocation(context);
@@ -9820,10 +10525,20 @@ window.__ModuleLoader__.load({
 		* @param ctx - owning UI Conversation context.
 		*/
 		function registerToolConversationNode(ctx) {
-			ctx.uiConversation.events.register(toolDefinition);
+			const match = toolDefinition.match.bind(toolDefinition);
+			ctx.uiConversation.events.register({
+				...toolDefinition,
+				match: {
+					"assistant/live-chunk": match,
+					"tool/call": match,
+					"tool/result": match,
+					"tool/ptc-dispatch-start": match,
+					"tool/ptc-dispatch": match
+				}
+			});
 		}
 		//#endregion
-		//#region src/client/conversation-nodes/turn-error.ts
+		//#region lib/types/client/conversation-nodes/turn-error.js
 		function lastStep$1(context) {
 			const location = context.start?.location ?? context.matches[0]?.location;
 			if (location?.kind !== "turn" && location?.kind !== "step") return 0;
@@ -9909,7 +10624,7 @@ window.__ModuleLoader__.load({
 			ctx.uiConversation.events.register(turnErrorDefinition);
 		}
 		//#endregion
-		//#region src/client/conversation-nodes/turn-max-tokens.ts
+		//#region lib/types/client/conversation-nodes/turn-max-tokens.js
 		function lastStep(context) {
 			const location = context.start?.location ?? context.matches[0]?.location;
 			if (location?.kind !== "turn" && location?.kind !== "step") return 0;
@@ -9973,7 +10688,7 @@ window.__ModuleLoader__.load({
 			ctx.uiConversation.events.register(turnMaxTokensDefinition);
 		}
 		//#endregion
-		//#region src/client/conversation-nodes/turn-process.ts
+		//#region lib/types/client/conversation-nodes/turn-process.js
 		function eventTurn(event) {
 			const data = event.data;
 			return typeof data.turn === "number" ? data.turn : void 0;
@@ -10172,7 +10887,21 @@ window.__ModuleLoader__.load({
 		* @param ctx - owning UI Conversation context.
 		*/
 		function registerTurnProcess(ctx) {
-			ctx.uiConversation.events.register(turnProcessDefinition);
+			const match = turnProcessDefinition.match.bind(turnProcessDefinition);
+			ctx.uiConversation.events.register({
+				...turnProcessDefinition,
+				match: {
+					"turn/start": match,
+					"assistant/live-chunk": match,
+					"assistant/message": match,
+					"tool/call": match,
+					"tool/result": match,
+					"llm/retry": match,
+					"step/start": match,
+					"step/end": match,
+					"turn/end": match
+				}
+			});
 		}
 		//#endregion
 		//#region ../../llm/llm/lib/types/assistant-stream.js
@@ -10189,7 +10918,7 @@ window.__ModuleLoader__.load({
 			}
 		}
 		//#endregion
-		//#region ../../llm/token-meter/src/turn-usage.ts
+		//#region ../../llm/token-meter/lib/types/turn-usage.js
 		function isCount(value) {
 			return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 		}
@@ -10403,7 +11132,7 @@ window.__ModuleLoader__.load({
 			return invalid || !sawEnd || state.kind !== "idle" ? void 0 : aggregateAttempts(attempts);
 		}
 		//#endregion
-		//#region src/client/conversation-nodes/turn-tail.ts
+		//#region lib/types/client/conversation-nodes/turn-tail.js
 		function isSessionEvent(event) {
 			return event.type !== "assistant/live-chunk";
 		}
@@ -10500,20 +11229,26 @@ window.__ModuleLoader__.load({
 		* @param ctx - owning UI Conversation context.
 		*/
 		function registerTurnTailConversationNode(ctx) {
-			ctx.uiConversation.events.register(turnTailDefinition);
+			const match = turnTailDefinition.match.bind(turnTailDefinition);
+			ctx.uiConversation.events.register({
+				...turnTailDefinition,
+				match: {
+					"turn/start": match,
+					"turn/end": match,
+					"tool/call": match,
+					"tool/result": match,
+					"assistant/message": match,
+					"assistant/attempt": match,
+					"assistant/live-chunk": match,
+					"step/start": match,
+					"step/end": match,
+					"llm/retry": match,
+					"llm/retry-started": match
+				}
+			});
 		}
 		//#endregion
-		//#region ../../util/brand/src/index.ts
-		/**
-		* Apply a compile-time string brand without changing the value.
-		* @param value - string admitted by the domain that owns the target brand.
-		* @returns the same string with the requested compile-time brand.
-		*/
-		function brandString(value) {
-			return value;
-		}
-		//#endregion
-		//#region src/client/conversation-nodes/process-activity.ts
+		//#region lib/types/client/conversation-nodes/process-activity.js
 		function activity(name) {
 			if (/^computer_use(?:_|$)/.test(name.split(/[./]/).at(-1) ?? "")) return "computer";
 			if (name === "read") return "read";
@@ -10541,6 +11276,7 @@ window.__ModuleLoader__.load({
 			return "tools";
 		}
 		const LIVE_TOOL_DETAIL_MAX_CHARS = 160;
+		const LIVE_TOOL_DETAIL_PREFIX_CHARS = 512;
 		const LIVE_TOOL_DETAIL_SEGMENTER = new Intl.Segmenter(void 0, { granularity: "grapheme" });
 		const LIVE_TOOL_DETAIL_KEYS = [
 			"title",
@@ -10566,10 +11302,46 @@ window.__ModuleLoader__.load({
 			"action",
 			"status"
 		];
+		function normalizeLiveToolText(text) {
+			const normalized = text.replace(/\s+/g, " ").trim();
+			if (normalized.length <= LIVE_TOOL_DETAIL_MAX_CHARS) return {
+				text: normalized,
+				truncated: false
+			};
+			const chars = [];
+			for (const { segment } of LIVE_TOOL_DETAIL_SEGMENTER.segment(normalized)) {
+				if (chars.length === LIVE_TOOL_DETAIL_MAX_CHARS) return {
+					text: `${chars.slice(0, LIVE_TOOL_DETAIL_MAX_CHARS - 1).join("").trimEnd()}…`,
+					truncated: true
+				};
+				chars.push(segment);
+			}
+			return {
+				text: normalized,
+				truncated: false
+			};
+		}
 		function normalizeLiveToolDetail(value) {
-			const normalized = (typeof value === "string" ? value : Array.isArray(value) && value.every((item) => typeof item === "string") ? value.join(", ") : "").replace(/\s+/g, " ").trim();
-			const chars = Array.from(LIVE_TOOL_DETAIL_SEGMENTER.segment(normalized), (part) => part.segment);
-			return chars.length <= LIVE_TOOL_DETAIL_MAX_CHARS ? normalized : `${chars.slice(0, LIVE_TOOL_DETAIL_MAX_CHARS - 1).join("").trimEnd()}…`;
+			return normalizeLiveToolText(typeof value === "string" ? value : Array.isArray(value) && value.every((item) => typeof item === "string") ? value.join(", ") : "").text;
+		}
+		function argumentTextDetail(args, key) {
+			let limit = LIVE_TOOL_DETAIL_PREFIX_CHARS;
+			while (true) {
+				let prefix = args.textPrefix(key, limit);
+				if (prefix === void 0) return void 0;
+				const last = prefix.charCodeAt(prefix.length - 1);
+				if (last >= 55296 && last <= 56319) {
+					const extended = args.textPrefix(key, limit + 1);
+					const next = extended.charCodeAt(prefix.length);
+					if (next >= 56320 && next <= 57343) {
+						prefix = extended;
+						limit++;
+					} else if (extended.length === prefix.length && !args.isSealed && !args.complete(key)) prefix = prefix.slice(0, -1);
+				}
+				const detail = normalizeLiveToolText(prefix);
+				if (detail.truncated || !args.stringExceeds(key, limit)) return detail.text;
+				limit *= 2;
+			}
 		}
 		function questionDetail(value) {
 			if (!Array.isArray(value)) return "";
@@ -10596,20 +11368,19 @@ window.__ModuleLoader__.load({
 			}
 			return "";
 		}
-		function liveToolDetail(name, argsRaw) {
-			let args;
-			try {
-				args = JSON.parse(argsRaw);
-			} catch (_error) {
-				return normalizeLiveToolDetail(name);
-			}
-			if (args === null || typeof args !== "object") return normalizeLiveToolDetail(name);
-			for (const key of LIVE_TOOL_DETAIL_KEYS) if (key in args) {
-				const value = Reflect.get(args, key);
-				const detail = key === "questions" ? questionDetail(value) : normalizeLiveToolDetail(value);
+		/**
+		* One-line task detail from the argument view, read the same way while the
+		* arguments stream and after dispatch: the first detail key present with text
+		* so far or a closed value. Without one, the tool name stands in once no further
+		* field can arrive; a field still to come is not named early.
+		*/
+		function liveToolDetail(name, args) {
+			for (const key of LIVE_TOOL_DETAIL_KEYS) {
+				if (!args.has(key)) continue;
+				const detail = key === "questions" ? questionDetail(args.value(key)) : argumentTextDetail(args, key) ?? normalizeLiveToolDetail(args.value(key));
 				if (detail !== "") return detail;
 			}
-			return normalizeLiveToolDetail(name);
+			return args.closed() ? normalizeLiveToolDetail(name) : "";
 		}
 		/**
 		* Rank categories by distinct call count, breaking ties by first appearance.
@@ -10642,7 +11413,7 @@ window.__ModuleLoader__.load({
 					if (isRunningTool(tool) && tool.time >= runningTime) {
 						running = kind;
 						preparing = tool.phase === "preparing";
-						runningDetail = tool.phase === "preparing" ? kind === "tools" ? tool.name : "" : liveToolDetail(tool.name, tool.argsRaw);
+						runningDetail = liveToolDetail(tool.name, tool.args);
 						runningTime = tool.time;
 					}
 					counts.set(kind, (counts.get(kind) ?? 0) + 1);
@@ -10664,7 +11435,7 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
-		//#region src/client/conversation-nodes/process-groups.ts
+		//#region lib/types/client/conversation-nodes/process-groups.js
 		/** Chat-owned segmentation and incremental summaries over materialized Node inputs. */
 		const INDEPENDENT = new Set([
 			"user",
@@ -11005,7 +11776,7 @@ window.__ModuleLoader__.load({
 			buildGroups: (context) => context.state.output()
 		};
 		//#endregion
-		//#region src/client/conversation-nodes/register.ts
+		//#region lib/types/client/conversation-nodes/register.js
 		/**
 		* Register the Chat business Definitions and target builder contributed by this package.
 		* @param ctx - owning UI Conversation context.
@@ -11028,7 +11799,7 @@ window.__ModuleLoader__.load({
 			ctx.uiConversation.groups.register(processGroupDefinition);
 		}
 		//#endregion
-		//#region src/client/chat/QuotaNoticeHost.tsx
+		//#region lib/types/client/chat/QuotaNoticeHost.js
 		/**
 		* The frame-wide `shell.overlay` host for quota notices. It holds the one live
 		* notice for the whole app, so leaving the Chat panel does not drop it. A
@@ -11047,9 +11818,9 @@ window.__ModuleLoader__.load({
 				dismiss: dismissNotice,
 				keepOpen: keepNoticeOpen
 			};
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react.Fragment, { children: renderSlotChain("shell.quota-notice", owner, { fallback: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Toast, {
+			return (0, react_jsx_runtime.jsx)(react.Fragment, { children: renderSlotChain("shell.quota-notice", owner, { fallback: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Toast, {
 				text: owner.message,
-				icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconWarningOutlineRegular, { size: 18 }),
+				icon: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconWarningOutlineRegular, { size: 18 }),
 				onDone: dismissNotice
 			}) }) }, `quota-notice-${String(notice.seq)}`);
 		}
@@ -11308,12 +12079,14 @@ window.__ModuleLoader__.load({
 			Time.template = template;
 		})(Time || (Time = {}));
 		//#endregion
-		//#region ../../../vendor/schemastery/src/index.ts
+		//#region ../../../vendor/schemastery/lib/index.mjs
 		const kSchema = Symbol.for("schemastery");
 		const kValidationError = Symbol.for("ValidationError");
 		globalThis.__schemastery_index__ ??= 0;
 		globalThis.__schemastery_refs__ = void 0;
 		var ValidationError = class extends TypeError {
+			options;
+			name = "ValidationError";
 			constructor(message, options) {
 				let prefix = "$";
 				for (const segment of options.path || []) if (typeof segment === "string") prefix += "." + segment;
@@ -11322,7 +12095,6 @@ window.__ModuleLoader__.load({
 				if (prefix.startsWith(".")) prefix = prefix.slice(1);
 				super((prefix === "$" ? "" : `${prefix} `) + message);
 				this.options = options;
-				this.name = "ValidationError";
 			}
 			static is(error) {
 				return !!error?.[kValidationError];
@@ -11975,7 +12747,7 @@ window.__ModuleLoader__.load({
 		};
 		Schema.object(ChatSettingsFields);
 		//#endregion
-		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/.context-upgrade/dsh-020rc2/packages/client/ui-chat/src/client/settings/PreferenceRow.module.css.mjs
+		//#region \0dsh-css:/Users/mac/Projects/trisoul_x/work/dsh-021alpha1-20261003/dsh/packages/client/ui-chat/src/client/settings/PreferenceRow.module.css.mjs
 		const css = "._2XZxNq_row{border-bottom:.5px solid var(--dsw-alias-border-l2);align-items:center;gap:8px;padding:16px 0;display:flex}._2XZxNq_rowText{flex-direction:column;flex:1;gap:4px;min-width:0;padding-right:48px;display:flex}._2XZxNq_title{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:400;line-height:22px}._2XZxNq_desc{color:var(--dsw-alias-label-tertiary);font-size:12px;font-weight:400;line-height:18px}._2XZxNq_selector{border-radius:var(--dsw-radius-md);background:var(--dsw-alias-bg-module-platform);height:36px;font:inherit;color:var(--dsw-alias-label-primary);cursor:pointer;border:none;align-items:center;gap:12px;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}._2XZxNq_selector:hover{background:var(--dsw-alias-interactive-bg-hover)}._2XZxNq_chevron{flex:none}";
 		const tagId = "@deepseek-ai/dsh-client-ui-chat/PreferenceRow.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
@@ -11994,7 +12766,7 @@ window.__ModuleLoader__.load({
 			"title": "_2XZxNq_title"
 		};
 		//#endregion
-		//#region src/client/settings/PreferenceRow.tsx
+		//#region lib/types/client/settings/PreferenceRow.js
 		/** Localized two-column selector shared by Chat preference rows. */
 		/**
 		* Render a preference label and its menu; selection restores focus before publishing the new value.
@@ -12012,7 +12784,7 @@ window.__ModuleLoader__.load({
 				closeMenu();
 				onSelect(id);
 			};
-			const selector = /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+			const selector = (0, react_jsx_runtime.jsxs)("button", {
 				ref: selectorRef,
 				type: "button",
 				className: PreferenceRow_module_css_default.selector,
@@ -12021,20 +12793,20 @@ window.__ModuleLoader__.load({
 				onClick: () => {
 					setOpen((value) => !value);
 				},
-				children: [selectedLabel, /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { className: PreferenceRow_module_css_default.chevron })]
+				children: [selectedLabel, (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { className: PreferenceRow_module_css_default.chevron })]
 			});
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+			return (0, react_jsx_runtime.jsxs)("div", {
 				className: PreferenceRow_module_css_default.row,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				children: [(0, react_jsx_runtime.jsxs)("div", {
 					className: PreferenceRow_module_css_default.rowText,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					children: [(0, react_jsx_runtime.jsx)("div", {
 						className: PreferenceRow_module_css_default.title,
 						children: title
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					}), (0, react_jsx_runtime.jsx)("div", {
 						className: PreferenceRow_module_css_default.desc,
 						children: description
 					})]
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+				}), (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
 					open,
 					onClose: closeMenu,
 					items: options,
@@ -12047,7 +12819,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region src/client/settings/TranscriptViewRow.tsx
+		//#region lib/types/client/settings/TranscriptViewRow.js
 		const LABELS = {
 			compact: "settings.transcript.compact",
 			standard: "settings.transcript.standard",
@@ -12061,7 +12833,7 @@ window.__ModuleLoader__.load({
 		*/
 		function TranscriptViewRow({ useTranscriptView, setTranscriptView, t }) {
 			const mode = useTranscriptView((value) => value);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PreferenceRow, {
+			return (0, react_jsx_runtime.jsx)(PreferenceRow, {
 				title: t("settings.transcript.title"),
 				description: t("settings.transcript.description"),
 				value: mode,
@@ -12076,7 +12848,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region src/client/transcript-view.ts
+		//#region lib/types/client/transcript-view.js
 		/** Host-backed work-details presentation policy. */
 		/** Live work-details preference consumed by Chat and its Settings row. */
 		var TranscriptViewPolicy = class {
@@ -12121,7 +12893,12 @@ window.__ModuleLoader__.load({
 			}
 		};
 		//#endregion
-		//#region src/client/presentation-policy.ts
+		//#region lib/types/client/presentation-policy.js
+		/**
+		* Runtime vocabulary derived from the persisted work-details mode. Renderers
+		* and seats select single fields of this policy; none of them compares the
+		* mode enum, so adding a mode changes only the table below.
+		*/
 		const POLICIES = {
 			compact: {
 				mode: "compact",
@@ -12165,7 +12942,7 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
-		//#region src/client/settings/LinkOpeningRow.tsx
+		//#region lib/types/client/settings/LinkOpeningRow.js
 		/**
 		* Render the link-opening destination selector.
 		* @param props - Composed Settings slot props.
@@ -12174,7 +12951,7 @@ window.__ModuleLoader__.load({
 		function LinkOpeningRow({ useLinkOpening, useBrowserAvailable, setLinkOpening, t }) {
 			const destination = useLinkOpening((value) => value);
 			if (!useBrowserAvailable((value) => value)) return null;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PreferenceRow, {
+			return (0, react_jsx_runtime.jsx)(PreferenceRow, {
 				title: t("settings.links.title"),
 				description: t("settings.links.description"),
 				value: destination,
@@ -12192,7 +12969,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region src/client/settings/PerformanceUsageRow.tsx
+		//#region lib/types/client/settings/PerformanceUsageRow.js
 		const OPTIONS = [{
 			id: "compact",
 			label: "settings.performance.compact"
@@ -12208,7 +12985,7 @@ window.__ModuleLoader__.load({
 		function PerformanceUsageRow({ usePerformanceUsage, setPerformanceUsage, t }) {
 			const mode = usePerformanceUsage((value) => value);
 			const selectedLabel = mode === "detailed" ? "settings.performance.detailed" : "settings.performance.compact";
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PreferenceRow, {
+			return (0, react_jsx_runtime.jsx)(PreferenceRow, {
 				title: t("settings.performance.title"),
 				description: t("settings.performance.description"),
 				value: mode,
@@ -12223,7 +13000,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region src/client/performance-usage.ts
+		//#region lib/types/client/performance-usage.js
 		/** Performance detail preference with process-local choices on memory-only settings scopes. */
 		/** Shared live preference for the settings row and chat statistics. */
 		var PerformanceUsagePolicy = class {
@@ -12256,7 +13033,7 @@ window.__ModuleLoader__.load({
 			}
 		};
 		//#endregion
-		//#region src/client/chat/use-turn-data.ts
+		//#region lib/types/client/chat/use-turn-data.js
 		const EMPTY_SOURCE = {
 			getSnapshot: () => void 0,
 			subscribe: () => () => {}
@@ -12272,7 +13049,7 @@ window.__ModuleLoader__.load({
 			return (0, react.useSyncExternalStore)(source.subscribe, source.getSnapshot);
 		}
 		//#endregion
-		//#region src/client/apply.ts
+		//#region lib/types/client/apply.js
 		const CHAT_NODE_INJECT = { hooks: {
 			turnData: (_standard, { turnData }) => function useTurnData(key) {
 				return useTurnDataValue(turnData, key);
@@ -12519,13 +13296,23 @@ window.__ModuleLoader__.load({
 					}
 				})
 			}, QuotaNoticeHost));
-			ctx.slots.inject("conversation.composer.dock", () => ctx.slots.register({
-				name: "conversation.composer.dock",
-				id: "stats",
-				order: 0,
-				locale: NS,
-				inject: () => ({ hooks: { performanceUsage } })
-			}, StatsPills));
+			const statPillInject = () => ({ hooks: { performanceUsage } });
+			ctx.slots.inject("conversation.composer.dock", function* () {
+				yield ctx.slots.register({
+					name: "conversation.composer.dock",
+					id: "activity",
+					order: 0,
+					locale: NS,
+					inject: statPillInject
+				}, ActivityPill);
+				yield ctx.slots.register({
+					name: "conversation.composer.dock",
+					id: "usage",
+					order: 1,
+					locale: NS,
+					inject: statPillInject
+				}, UsagePill);
+			});
 			ctx.slots.inject("conversation.approval.detail", () => ctx.slots.register({ name: "conversation.approval.detail" }, ApprovalCommand));
 		}
 		//#endregion

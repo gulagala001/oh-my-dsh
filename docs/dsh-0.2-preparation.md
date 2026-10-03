@@ -1,19 +1,13 @@
-# DSH 0.2.0-rc.2 适配与验证
+# DSH 0.2.1-alpha.1 适配与验证
 
-当前配对为 **OMD 0.3.0 / DSH 0.2.0-rc.2 / OpenCU 1.2.0**。DSH 0.1.7-rc.2 用户继续使用 OMD 0.2.2；历史准备快照不再作为本版发行基线。
+当前 Web／源码配对为 **OMD 0.2.1-alpha.1.omd.0.5.1 / DSH 0.2.1-alpha.1 / OpenCU 1.2.1**。官方桌面新版包尚待发布，rc.2 桌面继续使用此前固定发行。
 
 ## 固定来源
 
-官方标签为 `dsh-v0.2.0-rc.2`，提交为 `639ed015397290b3745d163aafe02ffee4aa3f84`。SDK 和两个组件快照采用相同版本：`vendor/dsh.json` 记录原生/Conversation 组件，`vendor/opencu/vendor/dsh-chat.json` 记录共享 Chat。源码差异、许可及文件 SHA-256 均随包保留。
+官方标签 `dsh-v0.2.1-alpha.1`，提交 `5badb15009ae1756c3afe0ae0cef1faafc290ccc`。Cordis 4.0.5-alpha.1 与 Schemastery 3.18.5-alpha.1 同步官方 SDK，避免重复模块身份。DSH SDK 和两个组件快照采用相同版本：`vendor/dsh.json` 记录原生与 Conversation，`vendor/opencu/vendor/dsh-chat.json` 记录共享 Chat。源码差异、许可及文件 SHA-256 随包保留。
 
-Chat 合并了 rc.2 的嵌套文字动画，同时保留 OMD/OpenCU 的计数、失败/中断提示和紧凑布局。原生组件按新标签重新同步，保留已有上下文、待办、工作流、权限及数据恢复设计；不顺带改动主 Agent 提示词。
+保留新版的语义草稿引用、输入预填、工具准备状态、独立输入区统计和插件样式卸载行为。沿用既有 OMD 补丁与完整能力，移除失效的旧接线。公开版从公开源码基线构建，不采入本机实验架构。
 
-## 安装闭包
+## 安装闭包与验证
 
-SDK 和宿主依赖使用完整的官方 rc.2 npm 发行版本。此前上游包发布未齐时用于本地验证的账号设置构建归档及 override 均已移除，不混用 rc.1，不留下失去用途的兼容路径。安装方法见[升级指南](upgrade.md)。
-
-## 验证范围
-
-已完成官方固定源码的完整构建、适配后 Chat/Conversation 类型检查、OMD 构建、29 项实际宿主回归、6 项源码宿主回归及官方 macOS rc.2 安装/重启/卸载恢复验证。最终各平台、独立 OpenCU 共存和发行包结果见[本版说明](release-0.3.0.md)与对应 Release 的验证记录。
-
-Windows 桌面包的大小与 SHA-512 已从官方对应 feed 固定，实际安装/运行由独立 Windows 测试记录证明，不用下载校验替代运行验证。没有执行的模型长任务、外部桌面程序和迁移组合不列为已验收范围。
+宿主及 SDK 固定完整官方 npm 版本，不混用 rc.2。当前验证结果及未覆盖范围见[发行说明](release-0.2.1-alpha.1.omd.0.5.1.md)。官方桌面大小与 SHA-512 仅在更新源实际提供新版元数据后更新，不用 rc.2 校验结果替代新版运行验证。

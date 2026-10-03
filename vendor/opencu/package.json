@@ -16,18 +16,18 @@
     "zod": "4.5.4"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "4.0.4",
-    "@deepseek-ai/dsh": "0.2.0-rc.2",
-    "@deepseek-ai/dsh-llm": "0.2.0-rc.2",
-    "@deepseek-ai/schemastery": "3.18.4",
+    "@deepseek-ai/cordis": "4.0.5-alpha.1",
+    "@deepseek-ai/dsh": "0.2.1-alpha.1",
+    "@deepseek-ai/dsh-llm": "0.2.1-alpha.1",
+    "@deepseek-ai/schemastery": "3.18.5-alpha.1",
     "esbuild": "0.25.12",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "4.0.4",
-    "@deepseek-ai/dsh-llm": "0.2.0-rc.2",
-    "@deepseek-ai/schemastery": "3.18.4"
+    "@deepseek-ai/cordis": "4.0.5-alpha.1",
+    "@deepseek-ai/dsh-llm": "0.2.1-alpha.1",
+    "@deepseek-ai/schemastery": "3.18.5-alpha.1"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {
@@ -41,7 +41,7 @@
     }
   },
   "name": "opencu",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Computer Use for DSH: browsers, desktop apps, live previews, annotations and file exports.",
   "repository": {
     "type": "git",

@@ -3,6 +3,9 @@ vendor/opencu/** -text
 vendor/dsh/** -text
 vendor/dsh/changes.patch -whitespace
 vendor/opencu/vendor/dsh-chat/changes.patch -whitespace
+vendor/dsh/ui-conversation/lib/client.js -whitespace
+lib/client.js -whitespace
+lib/host/*.factory.mjs -whitespace
 vendor/prompt-optimizer/** -text -whitespace
 
 # Preserve upstream font binaries, provenance and licenses byte-for-byte.

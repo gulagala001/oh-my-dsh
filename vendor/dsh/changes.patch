@@ -1,8 +1,8 @@
 diff --git a/packages/client/tsdown.client.ts b/packages/client/tsdown.client.ts
-index 215001dbb9..a5eece9782 100644
+index 386beef230..e714c0d3f4 100644
 --- a/packages/client/tsdown.client.ts
 +++ b/packages/client/tsdown.client.ts
-@@ -558,7 +558,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
+@@ -556,7 +556,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
          this.addWatchFile(fileId)
          const source = await readFile(fileId)
          const { code, exports: cssExports } = transform({
@@ -11,7 +11,7 @@ index 215001dbb9..a5eece9782 100644
            code: source,
            cssModules: { pattern: '[hash]_[local]' },
            minify: true,
-@@ -582,7 +582,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
+@@ -580,7 +580,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
          const fileId = virtualId.slice(INLINE_CSS_VIRTUAL_PREFIX.length, -CSS_VIRTUAL_SUFFIX.length)
          this.addWatchFile(fileId)
          const source = await readFile(fileId)
@@ -20,7 +20,7 @@ index 215001dbb9..a5eece9782 100644
          return `export default ${JSON.stringify(code.toString())};`
        },
      }, {
-@@ -597,7 +597,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
+@@ -595,7 +595,7 @@ function clientConfig(id: string, entry: string, clientBanner?: (fileName: strin
          const fileId = virtualId.slice(GLOBAL_CSS_VIRTUAL_PREFIX.length, -CSS_VIRTUAL_SUFFIX.length)
          this.addWatchFile(fileId)
          const source = await readFile(fileId)
@@ -30,17 +30,17 @@ index 215001dbb9..a5eece9782 100644
        },
      }],
 diff --git a/packages/client/ui-conversation/README.md b/packages/client/ui-conversation/README.md
-index 99e42d3017..fb120aa72d 100644
+index b557262cf4..7bc7a5ed75 100644
 --- a/packages/client/ui-conversation/README.md
 +++ b/packages/client/ui-conversation/README.md
-@@ -170,3 +170,5 @@ None.
- </details>
+@@ -178,3 +178,5 @@ None; Conversation assembly and browser input state do not alter provider-side p
+ None.
  
- **Runtime invariant:** No companion is published. Conversation Definitions, target builders, and Views are already validated by their owning registries and the Slot ledger.
+ </details>
 +
 +Unsent composer text, reference chips, and attachment IDs survive Session navigation within the current browser document. InputHub transfers only draft data between Session scopes; editors, command claims, and pending admissions retain their original lifetime. Deleting a Session or unloading the plugin releases inactive attachments. This browser-only retention does not persist image files across a page reload.
 diff --git a/packages/client/ui-conversation/src/client/apply.ts b/packages/client/ui-conversation/src/client/apply.ts
-index 0fc9b2560c..7d5d2d942f 100644
+index 9994c4e9ae..b2d1de4a7e 100644
 --- a/packages/client/ui-conversation/src/client/apply.ts
 +++ b/packages/client/ui-conversation/src/client/apply.ts
 @@ -1,3 +1,4 @@
@@ -105,10 +105,10 @@ index 0fc9b2560c..7d5d2d942f 100644
    ctx.plugin(queueDockEntry)
  }
 diff --git a/packages/client/ui-conversation/src/client/contract/input.ts b/packages/client/ui-conversation/src/client/contract/input.ts
-index 7b792d2760..cec82f7c22 100644
+index 52ec80eda9..d9139e5d7f 100644
 --- a/packages/client/ui-conversation/src/client/contract/input.ts
 +++ b/packages/client/ui-conversation/src/client/contract/input.ts
-@@ -34,6 +34,12 @@ export interface SubmitOutcome {
+@@ -35,6 +35,12 @@ export interface SubmitOutcome {
    readonly text?: string
  }
  
@@ -121,7 +121,7 @@ index 7b792d2760..cec82f7c22 100644
  /** Command-mode credential supplied by one input-trigger source. */
  export interface CommandClaim {
    /** Catalog command name without the leading slash (the key of per-command composer copy such as `hint.*`). */
-@@ -187,6 +193,13 @@ export interface SessionInput extends InputTarget {
+@@ -188,6 +194,13 @@ export interface SessionInput extends InputTarget {
     * @param mode - delivery intent retained through asynchronous adjudication and serialization.
     */
    submit(mode?: InputSubmitMode, source?: 'click' | 'enter'): void
@@ -169,13 +169,13 @@ index 0000000000..3e18942cea
 +  return false
 +}
 diff --git a/packages/client/ui-conversation/src/client/input/facade.ts b/packages/client/ui-conversation/src/client/input/facade.ts
-index 79aa620f34..4b87c8d9ea 100644
+index 9f4a264e46..df4c9beaee 100644
 --- a/packages/client/ui-conversation/src/client/input/facade.ts
 +++ b/packages/client/ui-conversation/src/client/input/facade.ts
 @@ -16,7 +16,7 @@ import {
  import type { LexicalEditor } from 'lexical'
  import type {
-   CommandClaim, ConsumeTokenRequest, DraftAttachmentId,
+   CommandClaim, ConsumeTokenRequest, DraftAttachmentId, DraftInitializationOptions, DraftInitializationResult,
 -  InputActions, InputEffect, InputNotice, InputState, InputTriggerController, PickOutcome,
 +  InputActions, InputEffect, InputNotice, InputState, InputSubmissionEvent, InputTriggerController, PickOutcome,
    SessionInput, SubmitAttempt, SubmitAttachment, SubmitOutcome,
@@ -197,14 +197,13 @@ index 79aa620f34..4b87c8d9ea 100644
  /**
   * The per-session input facade: scoped-event application verbs +
   * setDraft/submit + the published InputState store, over a shell-owned
-@@ -145,12 +147,15 @@ export class SessionInputShell implements SessionInput {
-   private lastMirroredDraft = ''
+@@ -147,12 +149,14 @@ export class SessionInputShell implements SessionInput {
+   private draftSnapshotCache: { revision: number; value: DraftSnapshot } | undefined
    private attachmentIds: readonly DraftAttachmentId[] = []
    private disposed = false
-+  /** A command already handed to the Host is no longer an unsent draft. */
 +  private commandDispatched = false
-   /** Draft persistence mirror (Conversation store write; receives the clipboard projection). */
-   private mirrorFn: ((text: string) => void) | undefined
+   /** Conversation store writer for the current semantic document. */
+   private persistDraft: ((draft: DraftSnapshot) => void) | undefined
    /** The mounted composer's file-picker opener (scoped pick-files event target). */
    private filePicker: Parameters<ComposerKeyboard['bindFilePicker']>[0] | undefined
    /** Default sends retained until admission settles or scope disposal releases their attachments. */
@@ -213,7 +212,7 @@ index 79aa620f34..4b87c8d9ea 100644
    /** Failed default sends waiting to be restored together in submission order. */
    private readonly failedDetached = new Map<number, DetachedDraft>()
    /** Revision of the last automatic failure restoration. */
-@@ -343,6 +348,19 @@ export class SessionInputShell implements SessionInput {
+@@ -387,6 +391,19 @@ export class SessionInputShell implements SessionInput {
      }
    }
  
@@ -233,7 +232,7 @@ index 79aa620f34..4b87c8d9ea 100644
    /**
     * Keyboard arbitration while the menu is open.
     * @param key - the intercepted key.
-@@ -498,6 +516,23 @@ export class SessionInputShell implements SessionInput {
+@@ -542,6 +559,23 @@ export class SessionInputShell implements SessionInput {
  
    // ---- wiring-layer extras (not on the frozen SessionInput face) ----
  
@@ -257,7 +256,7 @@ index 79aa620f34..4b87c8d9ea 100644
    /**
     * Teardown the shell and return every browser-owned attachment still retained by
     * the draft or an unsettled default send.
-@@ -518,6 +553,7 @@ export class SessionInputShell implements SessionInput {
+@@ -562,6 +596,7 @@ export class SessionInputShell implements SessionInput {
      this.unsubscribeInbox?.()
      this.unregister()
      this.detachedDrafts.clear()
@@ -265,7 +264,7 @@ index 79aa620f34..4b87c8d9ea 100644
      this.failedDetached.clear()
      this.attachmentFlights.clear()
      return [...retained]
-@@ -654,6 +690,7 @@ export class SessionInputShell implements SessionInput {
+@@ -695,6 +730,7 @@ export class SessionInputShell implements SessionInput {
      const occurrences = this.projection.occurrences
      const record = { draft, occurrences, attachmentIds }
      this.detachedDrafts.set(attempt.seq, record)
@@ -273,7 +272,7 @@ index 79aa620f34..4b87c8d9ea 100644
      if (this.failedRestoreRev === this.rev) {
        this.failedDetached.clear()
        this.failedRestoreRev = undefined
-@@ -712,6 +749,7 @@ export class SessionInputShell implements SessionInput {
+@@ -753,6 +789,7 @@ export class SessionInputShell implements SessionInput {
          }
          this.detachedDrafts.delete(attempt.seq)
          this.dispatchRun(({ type: 'sink-settled', attempt, ok: true, outcome }))
@@ -281,7 +280,7 @@ index 79aa620f34..4b87c8d9ea 100644
        },
        (error: unknown) => {
          if (this.dead(attempt)) return
-@@ -727,10 +765,12 @@ export class SessionInputShell implements SessionInput {
+@@ -768,10 +805,12 @@ export class SessionInputShell implements SessionInput {
      this.detachedDrafts.delete(attempt.seq)
      this.restoreAttachments(record.attachmentIds)
      this.failedDetached.set(attempt.seq, record)
@@ -295,7 +294,7 @@ index 79aa620f34..4b87c8d9ea 100644
    }
  
    /** Rebuild all currently failed snapshots in submission order. */
-@@ -804,11 +844,14 @@ export class SessionInputShell implements SessionInput {
+@@ -845,11 +884,14 @@ export class SessionInputShell implements SessionInput {
          // Serialization may outlive the attempt (large files, session
          // teardown); a dead attempt must not reach the Host executor.
          if (this.dead(attempt)) return undefined
@@ -310,7 +309,7 @@ index 79aa620f34..4b87c8d9ea 100644
            if (outcome.kind === 'success' && attachmentIds.length > 0) {
              const submitted = new Set(attachmentIds)
              this.attachmentIds = this.attachmentIds.filter(id => !submitted.has(id))
-@@ -822,6 +865,7 @@ export class SessionInputShell implements SessionInput {
+@@ -863,6 +905,7 @@ export class SessionInputShell implements SessionInput {
          },
          (error: unknown) => {
            if (this.dead(attempt)) return
@@ -318,44 +317,28 @@ index 79aa620f34..4b87c8d9ea 100644
            const message = error instanceof Error ? error.message : String(error)
            this.dispatchRun(({
              type: 'submit-settled', attempt, ok: false,
-@@ -852,9 +896,10 @@ export class SessionInputShell implements SessionInput {
+@@ -893,7 +936,7 @@ export class SessionInputShell implements SessionInput {
    private publish(): void {
      const next = this.compose()
      this.state.set(next)
--    if (next.draft !== this.lastMirroredDraft) {
--      this.lastMirroredDraft = next.draft
--      this.mirrorFn?.(next.draft)
-+    const unsentDraft = this.commandDispatched ? '' : next.draft
-+    if (unsentDraft !== this.lastMirroredDraft) {
-+      this.lastMirroredDraft = unsentDraft
-+      this.mirrorFn?.(unsentDraft)
-     }
-   }
- }
+-    const draft = this.draftSnapshot
++    const draft = this.commandDispatched ? snapshotDraft('', []) : this.draftSnapshot
+     if (draft !== this.lastPublishedDraft) {
+       this.lastPublishedDraft = draft
+       this.persistDraft?.(draft)
 diff --git a/packages/client/ui-conversation/src/client/input/hub.ts b/packages/client/ui-conversation/src/client/input/hub.ts
-index 8a908bb7b0..2ef64fcf6a 100644
+index fb8d8a736f..7f891a34c0 100644
 --- a/packages/client/ui-conversation/src/client/input/hub.ts
 +++ b/packages/client/ui-conversation/src/client/input/hub.ts
-@@ -2,8 +2,8 @@
-  * InputHub: the SessionInputResolver implementation (`ctx.conversation.input`) — one
-  * SessionInputShell per session, created inside the uiSession provide
-  * materialization (the 'input' standard-kit entry IS the
-- * creation trigger) and torn down by the scope disposer (instance-and-scope
-- * share one lifecycle). The hub registers the scoped input-mutation
-+ * creation trigger) and torn down by the scope disposer. Only unsent draft
-+ * data survives navigation in the hub; editors and Session scopes do not. The hub registers the scoped input-mutation
-  * listeners on each Session context and owns the default-sink choreography: every session is a
-  * real host entity, so the sink is one unconditional prompt path.
-  */
-@@ -27,6 +27,7 @@ import type { ComposerKeyboard } from '../contract/draft-editor.ts'
+@@ -24,6 +24,7 @@ import type { ComposerKeyboard } from '../contract/draft-editor.ts'
  import type { InputSubmitMode } from '../contract/composer-submission.ts'
  import type { PopupDismissFace } from './facade.ts'
  import { SessionInputShell } from './facade.ts'
 +import type { InputDraft } from './facade.ts'
  import { reportMessageSubmission } from './submission-analytics.ts'
+ import { readConversationDraft } from '../stores.ts'
  
- /** Structural command face for per-session popup resolution. */
-@@ -56,6 +57,9 @@ interface ConversationAttachmentFace {
+@@ -54,6 +55,9 @@ interface ConversationAttachmentFace {
  /** Session-addressed input facade registry (SessionInputResolver face + composer-layer extras). */
  export class InputHub implements SessionInputResolver {
    private readonly shells = new WeakMap<SessionBinding, SessionInputShell>()
@@ -365,20 +348,20 @@ index 8a908bb7b0..2ef64fcf6a 100644
  
    /**
     * @param ctx - client root context (services resolved lazily per call — boot order stays free).
-@@ -64,7 +68,31 @@ export class InputHub implements SessionInputResolver {
+@@ -62,7 +66,31 @@ export class InputHub implements SessionInputResolver {
    constructor(
      private readonly rootCtx: Context,
      private readonly t: TranslateNS<'conversation'>,
 -  ) {}
 +  ) {
 +    rootCtx.effect(() => {
-+      const off = rootCtx.remote.$on('api-session/removed', id => {
++      const off = rootCtx.get('remote')?.$on('api-session/removed', id => {
 +        // A durable child only loses its running Agent on this frame. Its
 +        // transcript remains a continuable Session, as in SessionManager.
 +        const sessions = this.sessions()
 +        if (sessions.subagentAddress(id) !== undefined || sessions.list.getSnapshot().byId[id]?.origin === 'subagent') return
 +        this.releaseDraft(id)
-+      })
++      }) ?? (() => {})
 +      return () => {
 +        this.closed = true
 +        off()
@@ -398,7 +381,7 @@ index 8a908bb7b0..2ef64fcf6a 100644
  
    /**
     * Resolve the facade for one session-scope ctx (SessionInputResolver face).
-@@ -136,8 +164,13 @@ export class InputHub implements SessionInputResolver {
+@@ -140,8 +168,13 @@ export class InputHub implements SessionInputResolver {
        },
      })
      this.shells.set(binding, shell)
@@ -414,7 +397,7 @@ index 8a908bb7b0..2ef64fcf6a 100644
      actx.effect(() => {
        const offs = [
          actx.on('slash/input-begin-command', req =>
-@@ -151,10 +184,17 @@ export class InputHub implements SessionInputResolver {
+@@ -155,10 +188,17 @@ export class InputHub implements SessionInputResolver {
        ]
        return () => {
          for (const off of offs) off()
@@ -432,9 +415,18 @@ index 8a908bb7b0..2ef64fcf6a 100644
 +        }
        }
      }, 'conversation.input: session shell')
+     actx.inject(['inputTriggers'], (scope) => {
+@@ -167,7 +207,7 @@ export class InputHub implements SessionInputResolver {
+         return () => { shell.refreshLexiconSubscription() }
+       }, 'conversation.input: reference catalogs')
+     })
+-    shell.setDraft(readConversationDraft(binding.sessionId))
++    if (saved === undefined) shell.setDraft(readConversationDraft(binding.sessionId))
      return shell
+   }
+ 
 diff --git a/packages/client/ui-conversation/src/client/locales.ts b/packages/client/ui-conversation/src/client/locales.ts
-index 78b26f7ab6..eca70d79f3 100644
+index 5f978ed0c8..86e7a434e6 100644
 --- a/packages/client/ui-conversation/src/client/locales.ts
 +++ b/packages/client/ui-conversation/src/client/locales.ts
 @@ -28,6 +28,7 @@ export const zh = {
@@ -454,7 +446,7 @@ index 78b26f7ab6..eca70d79f3 100644
    'attachment.pending': 'Pending attachments',
    'attachment.scrollLeft': 'Scroll attachments left',
 diff --git a/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx b/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
-index 2361d96c99..25d8ebcb0c 100644
+index 031413132b..4328436cd3 100644
 --- a/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
 +++ b/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
 @@ -39,6 +39,7 @@ import { attachmentErrorText, imageSizeText } from '../image-labels.ts'
@@ -535,7 +527,7 @@ index 0000000000..3595692681
 +  return running && observed?.id === sessionId && observed?.waiting === true
 +}
 diff --git a/packages/client/ui-conversation/tests/input-reference-submit.client.spec.ts b/packages/client/ui-conversation/tests/input-reference-submit.client.spec.ts
-index e25e3e6754..e3d85bf13a 100644
+index b14dadbc35..b3bed95124 100644
 --- a/packages/client/ui-conversation/tests/input-reference-submit.client.spec.ts
 +++ b/packages/client/ui-conversation/tests/input-reference-submit.client.spec.ts
 @@ -5,6 +5,9 @@
@@ -557,7 +549,7 @@ index e25e3e6754..e3d85bf13a 100644
 +    const submit = vi.fn(() => new Promise<SubmitOutcome>(resolve => { settle = resolve }))
 +    const mirror = vi.fn()
 +    const shell = new SessionInputShell({ actx: {} as Context, defaultSink: vi.fn(), commandAttachments })
-+    shell.bindMirror(mirror)
++    shell.bindDraftPersistence(draft => { mirror(draft.text) })
 +    shell.setDraft('keep')
 +    shell.beginCommand({ name: 'slow', token: '/slow ', attachments: true, submit }, { start: 0, end: 0, draftRev: shell.snapshot.draftRev })
 +    shell.actions.addAttachments(['command-image' as DraftAttachmentId])
@@ -623,7 +615,7 @@ index e25e3e6754..e3d85bf13a 100644
    it('mirrors canonical reference text so a persisted draft remains resolvable after remount', async () => {
      const mirror = vi.fn()
      const first = new SessionInputShell({
-@@ -400,3 +471,83 @@ it('retains occurrence time and Session facts across arbitration and independent
+@@ -400,3 +471,84 @@ it('retains occurrence time and Session facts across arbitration and independent
      clock.mockRestore()
    }
  })
@@ -638,21 +630,22 @@ index e25e3e6754..e3d85bf13a 100644
 +      sessions: { sessionOf: () => undefined, subagentAddress: (id: string) => children.has(id) ? { parentSessionId: 'parent' } : undefined,
 +        list: { getSnapshot: () => ({ byId: {} }) } },
 +      conversation: { releaseDraftAttachment: release },
-+    }
-+    const root = {
-+      get: (name: keyof typeof services) => services[name],
-+      effect: (run: () => () => void) => { roots.push(run()) },
 +      remote: { $on: (_name: string, listener: (id: SessionId) => void) => {
 +        removals.push(listener)
 +        return () => { removals.splice(removals.indexOf(listener), 1) }
 +      } },
++    }
++    const root = {
++      get: (name: keyof typeof services) => services[name],
++      effect: (run: () => () => void) => { roots.push(run()) },
++      remote: services.remote,
 +    } as unknown as Context
 +    const hub = new InputHub(root, (() => '') as never)
 +    const mount = (id: string) => {
 +      const disposers: Array<() => void> = []
 +      let removed = false
 +      const binding = {
-+        ctx: { effect: (run: () => () => void) => { disposers.push(run()) }, on: () => () => {} },
++        ctx: { effect: (run: () => () => void) => { disposers.push(run()) }, on: () => () => {}, inject: () => {} },
 +        session: { sessionId: id, getSnapshot: () => ({ removed }),
 +          projections: { faceOf: () => ({ getSnapshot: () => undefined, subscribe: () => () => {} }) } },
 +      } as unknown as SessionBinding
@@ -707,6 +700,29 @@ index e25e3e6754..e3d85bf13a 100644
 +    expect(b.release).toHaveBeenCalledExactlyOnceWith('child-image')
 +  })
 +})
+diff --git a/packages/client/ui-conversation/tests/service-orchestration.client.spec.ts b/packages/client/ui-conversation/tests/service-orchestration.client.spec.ts
+index 6665284ae4..740fc95cb2 100644
+--- a/packages/client/ui-conversation/tests/service-orchestration.client.spec.ts
++++ b/packages/client/ui-conversation/tests/service-orchestration.client.spec.ts
+@@ -117,7 +117,7 @@ describe('ConversationController', () => {
+     await b.runtime.dispose()
+   })
+ 
+-  it('releases draft previews when their session scope is disposed', async () => {
++  it('retains unsent draft previews across session scope disposal and releases them on plugin teardown', async () => {
+     const b = await bench()
+     const created = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:draft-1')
+     const revoked = vi.spyOn(URL, 'revokeObjectURL').mockReturnValue(undefined)
+@@ -129,6 +129,9 @@ describe('ConversationController', () => {
+       b.root.input.for(b.runtime.sessions.scope('s1')!).addAttachments([attachment.id])
+       b.reference.release()
+       await b.runtime.flush()
++      expect(b.root.resolveDraftAttachments([attachment.id])).toEqual([attachment])
++      expect(revoked).not.toHaveBeenCalledWith('blob:draft-1')
++      await b.runtime.dispose()
+       expect(b.root.resolveDraftAttachments([attachment.id])).toEqual([])
+       expect(revoked).toHaveBeenCalledWith('blob:draft-1')
+     } finally {
 diff --git a/packages/core/tools/src/index.ts b/packages/core/tools/src/index.ts
 index ca89f370fe..4a59dcfc37 100644
 --- a/packages/core/tools/src/index.ts
@@ -1191,7 +1207,7 @@ index b95eb4393b..bdd73497af 100644
      label: job.label,
      status: job.status,
 diff --git a/packages/shell/tool-bash/src/index.ts b/packages/shell/tool-bash/src/index.ts
-index 8226ad29ef..49cdf40f74 100644
+index 619514bfff..b9d035d914 100644
 --- a/packages/shell/tool-bash/src/index.ts
 +++ b/packages/shell/tool-bash/src/index.ts
 @@ -63,6 +63,7 @@ interface BashToolArgs {
@@ -1202,7 +1218,7 @@ index 8226ad29ef..49cdf40f74 100644
    workdir?: string
    run_in_background?: boolean
    sandbox_permissions?: string
-@@ -301,9 +302,9 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -302,9 +303,9 @@ export function apply(ctx: Context, config: Config = {}): void {
        return { id, process: () => proc, stopped: () => stopped }
      }
      /** Wait on a registered foreground command until it settles or the timeout passes. */
@@ -1214,7 +1230,7 @@ index 8226ad29ef..49cdf40f74 100644
        /**
         * Stop the job on this call's own account and stay on it until it
         * settles, so the settlement is `awaited` and no completion notice
-@@ -326,7 +327,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -327,7 +328,7 @@ export function apply(ctx: Context, config: Config = {}): void {
          await stop('tool call aborted')
          throw toolAborted()
        }
@@ -1223,7 +1239,7 @@ index 8226ad29ef..49cdf40f74 100644
          // The wait expired while preparation still ran: nothing is running
          // to keep, so this is the deadline's preparation timeout, with the
          // settled empty result the executor's own deadline would have given.
-@@ -388,6 +389,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -389,6 +390,7 @@ export function apply(ctx: Context, config: Config = {}): void {
              ? 'Timeout in milliseconds. The executor applies its configured default and cap; on expiry the command moves to the background as a job instead of being killed.'
              : 'Timeout in milliseconds. The executor applies its configured default and cap, and kills the command on expiry.',
          },
@@ -1231,7 +1247,7 @@ index 8226ad29ef..49cdf40f74 100644
          workdir: { type: 'string', description: 'Working directory for this command. Defaults to the session workspace; a relative path is resolved against it.' },
          ...background ? {
            run_in_background: { type: 'boolean' as const, description: 'Run in the background and return a job id immediately (collect with job_output, stop with job_kill). No timeout applies.' },
-@@ -481,6 +483,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -482,6 +484,7 @@ export function apply(ctx: Context, config: Config = {}): void {
          // Description is display metadata; workdir defaults to the caller's session.
          const standingPolicy = resolveSandboxPolicy(exec)
          validateBashArgs(args, standingPolicy?.mode)
@@ -1239,7 +1255,7 @@ index 8226ad29ef..49cdf40f74 100644
          const approvedMode = args.sandbox_permissions !== undefined && args.justification !== undefined
            ? await approveBashEscalation(args.sandbox_permissions, args.justification, exec, standingPolicy)
            : undefined
-@@ -508,12 +511,18 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -509,12 +512,18 @@ export function apply(ctx: Context, config: Config = {}): void {
            if (exec.signal.aborted) throw toolAborted()
            return { kind: 'background' as const, jobId: startJob(jobs, args, exec, ctx.shell.resolve({ ...request, onExpiry: 'none' })).id }
          }
@@ -1260,7 +1276,7 @@ index 8226ad29ef..49cdf40f74 100644
            let attached: StartedJob | undefined
            try {
 diff --git a/packages/shell/tool-pwsh/src/index.ts b/packages/shell/tool-pwsh/src/index.ts
-index cbebd6dc2a..1c13285419 100644
+index fe823dcd51..621e31fd92 100644
 --- a/packages/shell/tool-pwsh/src/index.ts
 +++ b/packages/shell/tool-pwsh/src/index.ts
 @@ -81,6 +81,7 @@ interface PwshToolArgs {
@@ -1271,7 +1287,7 @@ index cbebd6dc2a..1c13285419 100644
    workdir?: string
    run_in_background?: boolean
    sandbox_permissions?: string
-@@ -310,9 +311,9 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -311,9 +312,9 @@ export function apply(ctx: Context, config: Config = {}): void {
        return { id, process: () => proc, stopped: () => stopped }
      }
      /** Wait on a registered foreground command until it settles or the timeout passes. */
@@ -1283,7 +1299,7 @@ index cbebd6dc2a..1c13285419 100644
        /**
         * Stop the job on this call's own account and stay on it until it
         * settles, so the settlement is `awaited` and no completion notice
-@@ -335,7 +336,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -336,7 +337,7 @@ export function apply(ctx: Context, config: Config = {}): void {
          await stop('tool call aborted')
          throw toolAborted()
        }
@@ -1292,7 +1308,7 @@ index cbebd6dc2a..1c13285419 100644
          // The wait expired while preparation still ran: nothing is running
          // to keep, so this is the deadline's preparation timeout, with the
          // settled empty result the executor's own deadline would have given.
-@@ -399,6 +400,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -400,6 +401,7 @@ export function apply(ctx: Context, config: Config = {}): void {
              ? 'Timeout in milliseconds. The executor applies its configured default and cap; on expiry the command moves to the background as a job instead of being killed.'
              : 'Timeout in milliseconds. The executor applies its configured default and cap, and kills the command on expiry.',
          },
@@ -1300,7 +1316,7 @@ index cbebd6dc2a..1c13285419 100644
          workdir: { type: 'string', description: 'Working directory for this command. Defaults to the session workspace; a relative path is resolved against it.' },
          ...background ? {
            run_in_background: { type: 'boolean' as const, description: 'Run in the background and return a job id immediately (collect with job_output, stop with job_kill). No timeout applies.' },
-@@ -497,6 +499,7 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -498,6 +500,7 @@ export function apply(ctx: Context, config: Config = {}): void {
        /* jscpd:ignore-start -- the execute path mirrors dsh-tool-bash's by design (see the pwsh-tool-and-executor Agent Note). */
        async execute(args: PwshToolArgs, exec) {
          validatePwshArgs(args)
@@ -1308,7 +1324,7 @@ index cbebd6dc2a..1c13285419 100644
          // Description is display metadata; workdir defaults to the caller's session.
          const standingPolicy = resolveSandboxPolicy(exec)
          const approvedMode = args.sandbox_permissions !== undefined && args.justification !== undefined
-@@ -525,12 +528,18 @@ export function apply(ctx: Context, config: Config = {}): void {
+@@ -526,12 +529,18 @@ export function apply(ctx: Context, config: Config = {}): void {
            if (exec.signal.aborted) throw toolAborted()
            return { kind: 'background' as const, jobId: startJob(jobs, args, exec, ctx.shell.resolve({ ...request, onExpiry: 'none' })).id }
          }
@@ -1384,16 +1400,29 @@ index dbaac326b1..06444cbddf 100644
      ...seed !== undefined ? { seed } : {},
      ...seed === undefined ? {} : { inheritedEventCount: activationBoundary },
      agentOptions: resolveChildAgentOptions(parent, request.agentOptions, childDepth),
+diff --git a/packages/workflow/tool-workflow/package.json b/packages/workflow/tool-workflow/package.json
+index 09d223f289..6fd544503a 100644
+--- a/packages/workflow/tool-workflow/package.json
++++ b/packages/workflow/tool-workflow/package.json
+@@ -58,6 +58,7 @@
+     "@deepseek-ai/dsh-tool-jobs": "workspace:*",
+     "@deepseek-ai/dsh-tools": "workspace:*",
+     "@deepseek-ai/dsh-workflow": "workspace:*",
+-    "@deepseek-ai/dsh-workflow-ptc": "workspace:*"
++    "@deepseek-ai/dsh-workflow-ptc": "workspace:*",
++    "@deepseek-ai/dsh-app-boot": "workspace:*"
+   }
+ }
 diff --git a/packages/workflow/tool-workflow/src/index.ts b/packages/workflow/tool-workflow/src/index.ts
-index d6ca7140ec..88a2c1829b 100644
+index d6ca7140ec..c2d89f3bf7 100644
 --- a/packages/workflow/tool-workflow/src/index.ts
 +++ b/packages/workflow/tool-workflow/src/index.ts
 @@ -25,6 +25,8 @@ import type {
    WorkflowResult, WorkflowRun, WorkflowRunId, WorkflowStopReason,
  } from '@deepseek-ai/dsh-workflow'
  import { createWorkflowRecordMirror } from './record.ts'
-+import type { PtcWorkflowRun } from '../../workflow-ptc/src/host.ts'
-+import type PtcWorkflowEngine from '../../workflow-ptc/src/index.ts'
++import type { PtcWorkflowRun } from '@deepseek-ai/dsh-workflow-ptc/src/host.ts'
++import type PtcWorkflowEngine from '@deepseek-ai/dsh-workflow-ptc'
  import type { WorkflowRecordMirror } from './record.ts'
  import type {
    ToolWorkflowAgentEndData, ToolWorkflowAgentStartData,
@@ -1447,7 +1476,7 @@ index d6ca7140ec..88a2c1829b 100644
 +
 +function details(run: WorkflowRun) {
 +  const extended = run as PtcWorkflowRun
-+  return { name: run.meta.name, runId: run.id, scriptPath: extended.scriptPath!, transcriptDir: extended.transcriptDir!, worktrees: extended.worktrees }
++  return { name: run.meta.name, runId: run.id, scriptPath: extended.scriptPath!, transcriptDir: extended.transcriptDir!, worktrees: extended.worktrees.map(artifact => ({ ...artifact })) }
 +}
 +
 +function locationText(run: WorkflowRun): string {
@@ -1591,7 +1620,7 @@ index d6ca7140ec..88a2c1829b 100644
              },
            },
            {
-@@ -390,6 +426,10 @@ export function apply(ctx: Context, config: Config): void {
+@@ -390,20 +426,26 @@ export function apply(ctx: Context, config: Config): void {
              properties: {
                kind: { type: 'string', required: true, const: 'foreground' },
                runId: { type: 'string', required: true },
@@ -1602,9 +1631,11 @@ index d6ca7140ec..88a2c1829b 100644
                agentsStarted: { type: 'integer', required: true },
                result: { type: 'json', required: true },
              },
-@@ -398,12 +438,14 @@ export function apply(ctx: Context, config: Config): void {
+           },
+         ],
        },
-       render: (args, value) => [{
+-      render: (args, value) => [{
++      render: (_args, value) => [{
          type: 'text',
 -        text: value.kind === 'background'
 -          ? `workflow "${args.meta.name}" started in the background as job ${value.jobId}. Its return value arrives with the completion notice; check on it with job_output, stop it with job_kill.`
@@ -1664,6 +1695,37 @@ index d6ca7140ec..88a2c1829b 100644
            agentsStarted: result.agentsStarted,
            result: result.value as JsonValue,
          }
+diff --git a/packages/workflow/tool-workflow/tsconfig.json b/packages/workflow/tool-workflow/tsconfig.json
+index 89be1c3d3d..38eaee6d91 100644
+--- a/packages/workflow/tool-workflow/tsconfig.json
++++ b/packages/workflow/tool-workflow/tsconfig.json
+@@ -37,6 +37,12 @@
+     },
+     {
+       "path": "../../jobs/jobs"
++    },
++    {
++      "path": "../workflow-ptc"
++    },
++    {
++      "path": "../../boot/app-boot"
+     }
+   ]
+ }
+diff --git a/packages/workflow/workflow-ptc/package.json b/packages/workflow/workflow-ptc/package.json
+index 5afcd194d4..2bf0720506 100644
+--- a/packages/workflow/workflow-ptc/package.json
++++ b/packages/workflow/workflow-ptc/package.json
+@@ -66,6 +66,8 @@
+     "@deepseek-ai/dsh-fs-local": "workspace:*",
+     "@deepseek-ai/dsh-subprocess": "workspace:*",
+     "@deepseek-ai/dsh-subprocess-local": "workspace:*",
+-    "@deepseek-ai/dsh-sandbox-local": "workspace:*"
++    "@deepseek-ai/dsh-sandbox-local": "workspace:*",
++    "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:*",
++    "@deepseek-ai/dsh-subagent-in-process-driver": "workspace:*"
+   }
+ }
 diff --git a/packages/workflow/workflow-ptc/src/guest-types.ts b/packages/workflow/workflow-ptc/src/guest-types.ts
 index 42769a270b..8b9d42b783 100644
 --- a/packages/workflow/workflow-ptc/src/guest-types.ts
@@ -1697,17 +1759,19 @@ index be50e88e3b..3906ab9354 100644
    await drain()
    return progressError === undefined ? result : {
 diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/workflow-ptc/src/host.ts
-index 843d48f219..52748dbd57 100644
+index 843d48f219..ab636263f4 100644
 --- a/packages/workflow/workflow-ptc/src/host.ts
 +++ b/packages/workflow/workflow-ptc/src/host.ts
-@@ -1,5 +1,6 @@
+@@ -1,6 +1,8 @@
  /** Workflow child ownership and progress over the shared sandboxed PTC executor. */
  import type { Context } from '@deepseek-ai/cordis'
 +import { existsSync } from 'node:fs'
  import type { Agent } from '@deepseek-ai/dsh-agent'
++import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
  import type { PtcBindingFunction, PtcJsonValue, PtcRuntime } from '@deepseek-ai/dsh-ptc-runtime'
  import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
-@@ -15,11 +16,32 @@ import type { WorkflowProgress } from './guest-types.ts'
+ import { SessionId } from '@deepseek-ai/dsh-session'
+@@ -15,11 +17,32 @@ import type { WorkflowProgress } from './guest-types.ts'
  import { renderThrown } from './realm.ts'
  import type { ExecutionObserver } from './runtime.ts'
  import type { ChildStartRequest, WorkerInit } from './types.ts'
@@ -1740,7 +1804,7 @@ index 843d48f219..52748dbd57 100644
  }
  
  const GUEST_URL = `data:text/javascript,${encodeURIComponent(WORKFLOW_GUEST_SOURCE)}`
-@@ -46,6 +68,16 @@ function childRequest(value: unknown): ChildStartRequest {
+@@ -46,6 +69,16 @@ function childRequest(value: unknown): ChildStartRequest {
    const prompt = text(request.prompt, 'prompt')
    const provider = request.provider === undefined ? undefined : text(request.provider, 'provider')
    const model = request.model === undefined ? undefined : text(request.model, 'model')
@@ -1757,7 +1821,7 @@ index 843d48f219..52748dbd57 100644
    let schema: ObjectJsonSchema | undefined
    if (request.schema !== undefined) {
      const candidate = object(request.schema)
-@@ -53,10 +85,13 @@ function childRequest(value: unknown): ChildStartRequest {
+@@ -53,10 +86,13 @@ function childRequest(value: unknown): ChildStartRequest {
      schema = candidate
    }
    return {
@@ -1771,7 +1835,7 @@ index 843d48f219..52748dbd57 100644
    }
  }
  
-@@ -111,6 +146,8 @@ function workflowResult(value: unknown): WorkflowResult {
+@@ -111,6 +147,8 @@ function workflowResult(value: unknown): WorkflowResult {
   */
  export class PtcWorkflowRun implements WorkflowRun {
    readonly result: Promise<WorkflowResult>
@@ -1780,7 +1844,7 @@ index 843d48f219..52748dbd57 100644
    private readonly controller = new AbortController()
    private readonly children = new Map<number, ChildRecord>()
    private readonly pending = new Set<Promise<unknown>>()
-@@ -120,6 +157,13 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -120,6 +158,13 @@ export class PtcWorkflowRun implements WorkflowRun {
    private cancelReason: string | undefined
    private disposed: Promise<void> | undefined
    private readonly externalAbort: () => void
@@ -1794,7 +1858,7 @@ index 843d48f219..52748dbd57 100644
  
    constructor(
      private readonly ctx: Context,
-@@ -133,7 +177,10 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -133,7 +178,10 @@ export class PtcWorkflowRun implements WorkflowRun {
      private readonly policy: SandboxExecutionPolicy,
      private readonly observer: ExecutionObserver,
      private readonly signal?: AbortSignal,
@@ -1805,20 +1869,20 @@ index 843d48f219..52748dbd57 100644
      this.externalAbort = () => { this.cancel('workflow signal aborted') }
      if (signal?.aborted) this.externalAbort()
      else signal?.addEventListener('abort', this.externalAbort, { once: true })
-@@ -175,6 +222,12 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -175,6 +223,12 @@ export class PtcWorkflowRun implements WorkflowRun {
    private bindings(): Record<string, PtcBindingFunction> {
      return {
        begin: () => { this.requireActive(); return Promise.resolve(json(this.init)) },
 +      loadWorkflow: value => this.track((async () => {
 +        this.requireActive()
 +        if (!this.support) throw new Error('Saved workflows unavailable')
-+        if (typeof value !== 'string' && !(value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 1 && typeof value.scriptPath === 'string')) throw new Error('Invalid workflow reference')
++        if (typeof value !== 'string' && !(value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 1 && 'scriptPath' in value && typeof value.scriptPath === 'string')) throw new Error('Invalid workflow reference')
 +        return json(await this.support.loadWorkflow(value as string | { scriptPath: string }, this.controller.signal))
 +      })()),
        startChild: value => this.track(this.startChild(childRequest(value))),
        childResult: value => this.track(this.childResult(this.child(value))),
        disposeChild: async (value) => { await this.disposeChild(this.child(value)); return null },
-@@ -196,16 +249,50 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -196,16 +250,50 @@ export class PtcWorkflowRun implements WorkflowRun {
  
    private async startChild(request: ChildStartRequest): Promise<PtcJsonValue> {
      this.requireActive()
@@ -1840,16 +1904,16 @@ index 843d48f219..52748dbd57 100644
 +    if (!cached && budget?.total !== null && budget?.total !== undefined && budget.spent >= budget.total) throw new Error('Workflow token target reached; no new agents can start')
 +    if (cached) {
 +      if (cached.worktree) this.artifacts.set(callId, cached.worktree)
-+      const run = { id: SessionId(cached.childId ?? `cached-${this.id}-${callId}`), result: Promise.resolve(cached), dispose: async () => {} } as SubagentRun
++      const run: SubagentRun = { id: SessionId(cached.childId ?? `cached-${this.id}-${callId}`), localAgent: undefined, result: Promise.resolve(cached) as SubagentRun['result'], dispose: async () => {} }
 +      this.children.set(callId, { callId, run, cached: true })
 +      return { callId, childId: run.id }
 +    }
 +    if ((request.isolation || request.agentType) && this.provider !== 'omd-workflow') throw new Error('Workflow worktree/agentType options require the omd-workflow subagent provider')
 +    const workflow: WorkflowSpawnOptions = {
-+      isolation: request.isolation,
-+      agentType: request.agentType,
-+      presetFingerprint: type?.fingerprint,
-+      budgetOwner: this.support?.budgetOwner,
++      ...request.isolation === undefined ? {} : { isolation: request.isolation },
++      ...request.agentType === undefined ? {} : { agentType: request.agentType },
++      ...type?.fingerprint === undefined ? {} : { presetFingerprint: type?.fingerprint },
++      ...this.support?.budgetOwner === undefined ? {} : { budgetOwner: this.support?.budgetOwner },
 +      onWorktree: artifact => {
 +        this.artifacts.set(callId, artifact)
 +        if (artifact.retained && artifact.reason !== 'running') this.observer.log(`Worktree retained at ${artifact.path}: ${artifact.reason}`)
@@ -1866,11 +1930,11 @@ index 843d48f219..52748dbd57 100644
          agentOptions: {
            ...request.provider === undefined ? {} : { provider: request.provider },
            ...request.model === undefined ? {} : { model: request.model },
-+          ...request.effort === undefined ? {} : { reasoningEffort: request.effort },
++          ...request.effort === undefined ? {} : { reasoningEffort: ReasoningEffortId(request.effort) },
          },
        },
      })
-@@ -219,7 +306,12 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -219,7 +307,12 @@ export class PtcWorkflowRun implements WorkflowRun {
      return { callId, childId: run.id }
    }
  
@@ -1884,7 +1948,7 @@ index 843d48f219..52748dbd57 100644
      const signal = this.controller.signal
      signal.throwIfAborted()
      const aborted = Promise.withResolvers<never>()
-@@ -227,18 +319,27 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -227,18 +320,27 @@ export class PtcWorkflowRun implements WorkflowRun {
      signal.addEventListener('abort', onAbort, { once: true })
      try {
        const result = await Promise.race([record.run.result, aborted.promise])
@@ -1916,7 +1980,7 @@ index 843d48f219..52748dbd57 100644
        this.ctx.logger.warn(`workflow-ptc: child dispose failed: ${renderThrown(error)}`)
      }).finally(() => {
        this.children.delete(record.callId)
-@@ -273,6 +374,16 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -273,6 +375,16 @@ export class PtcWorkflowRun implements WorkflowRun {
    private async drive(): Promise<WorkflowResult> {
      let result: WorkflowResult
      try {
@@ -1924,7 +1988,7 @@ index 843d48f219..52748dbd57 100644
 +      if (this.support) {
 +        this.journal = await WorkflowJournal.create(this.support.root, this.parent.session.id, this.id, {
 +          script: serializeWorkflowSource(this.meta, this.init.body), meta: this.meta, args: this.init.args,
-+          resumeFromRunId: this.support.resumeFromRunId,
++          ...this.support.resumeFromRunId === undefined ? {} : { resumeFromRunId: this.support.resumeFromRunId },
 +        })
 +        this.init.budget = this.support.budget?.() ?? { total: null, spent: 0 }
 +      }
@@ -1933,7 +1997,7 @@ index 843d48f219..52748dbd57 100644
        const outcome = await this.runtime.run(this.runtime.resolve({
          program: PROGRAM,
          bindings: [{ global: 'workflowHost', functions: this.bindings() }],
-@@ -286,6 +397,7 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -286,6 +398,7 @@ export class PtcWorkflowRun implements WorkflowRun {
        else if (outcome.error !== undefined) result = { value: null, stopReason: 'error', error: `workflow execution failed (${outcome.error.kind}): ${outcome.error.message}`, agentsStarted: this.started }
        else result = workflowResult(outcome.value)
      } catch (error: unknown) {
@@ -1941,7 +2005,7 @@ index 843d48f219..52748dbd57 100644
        this.terminal = true
        result = this.cancelReason === undefined
          ? { value: null, stopReason: 'error', error: renderThrown(error), agentsStarted: this.started }
-@@ -301,6 +413,12 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -301,6 +414,12 @@ export class PtcWorkflowRun implements WorkflowRun {
        this.children.clear()
        for (const info of this.liveAgents.values()) this.endAgent({ ...info, outcome: 'cancelled' })
      }
@@ -1955,10 +2019,10 @@ index 843d48f219..52748dbd57 100644
    }
  }
 diff --git a/packages/workflow/workflow-ptc/src/index.ts b/packages/workflow/workflow-ptc/src/index.ts
-index e70eb8b0e9..f6842209bd 100644
+index e70eb8b0e9..c79f98b87a 100644
 --- a/packages/workflow/workflow-ptc/src/index.ts
 +++ b/packages/workflow/workflow-ptc/src/index.ts
-@@ -5,19 +5,28 @@
+@@ -5,19 +5,27 @@
   */
  
  import { randomUUID } from 'node:crypto'
@@ -1974,7 +2038,7 @@ index e70eb8b0e9..f6842209bd 100644
 +import { WorkflowEngine, WorkflowError, WorkflowRunId } from '@deepseek-ai/dsh-workflow'
  import type { WorkflowRun, WorkflowRunInfo, WorkflowStartRequest } from '@deepseek-ai/dsh-workflow'
  import { PtcWorkflowRun } from './host.ts'
- import { validateMeta } from './meta.ts'
+-import { validateMeta } from './meta.ts'
  import type { WorkerInit, WorkerLimits } from './types.ts'
 +import { parseWorkflowSource } from './source.ts'
 +import { workflowAgentType } from './spawn.ts'
@@ -1989,7 +2053,7 @@ index e70eb8b0e9..f6842209bd 100644
  export { materializeFromRealm, MaterializeError } from './realm.ts'
  export type {
    ChildHandle,
-@@ -30,6 +39,7 @@ export type {
+@@ -30,6 +38,7 @@ export type {
  
  /** Plugin config (all optional — `static Config` supplies the defaults). */
  export interface Config {
@@ -1997,7 +2061,7 @@ index e70eb8b0e9..f6842209bd 100644
    /** The `ctx.subagents` provider children run on (default `spawn`). */
    provider?: string
    /** Concurrent `agent()` ceiling; `0` (the default) auto-resolves to `min(16, max(1, cores - 2))`. */
-@@ -103,6 +113,7 @@ class PtcWorkflowEngine extends WorkflowEngine {
+@@ -103,6 +112,7 @@ class PtcWorkflowEngine extends WorkflowEngine {
    static inject = ['subagents', 'ptcRuntime', 'sandboxPolicy']
  
    static Config: z<Config> = z.object({
@@ -2005,7 +2069,7 @@ index e70eb8b0e9..f6842209bd 100644
      provider: z.string().default('spawn'),
      maxConcurrentAgents: z.natural().default(0),
      maxTotalAgents: z.natural().min(1).default(1000),
-@@ -120,6 +131,30 @@ class PtcWorkflowEngine extends WorkflowEngine {
+@@ -120,6 +130,30 @@ class PtcWorkflowEngine extends WorkflowEngine {
      this.config = config as ResolvedConfig
    }
  
@@ -2036,7 +2100,7 @@ index e70eb8b0e9..f6842209bd 100644
    /**
     * Validate and execute a workflow script in a sandboxed Node process. Throws
     * {@link WorkflowError} synchronously (`META_INVALID` for a malformed meta
-@@ -131,8 +166,9 @@ class PtcWorkflowEngine extends WorkflowEngine {
+@@ -131,8 +165,9 @@ class PtcWorkflowEngine extends WorkflowEngine {
     * @returns the live run (its `result` resolves when the script settles).
     */
    start(request: WorkflowStartRequest): WorkflowRun {
@@ -2048,7 +2112,7 @@ index e70eb8b0e9..f6842209bd 100644
      const subagentProvider = resolveSubagentProvider(this.ctx, this.config.provider, request.subagentProvider)
      const maxTotalAgents = resolveMaxTotalAgents(request.maxTotalAgents, this.config.maxTotalAgents)
      const id = WorkflowRunId(randomUUID())
-@@ -147,13 +183,14 @@ class PtcWorkflowEngine extends WorkflowEngine {
+@@ -147,13 +182,14 @@ class PtcWorkflowEngine extends WorkflowEngine {
      }
      const init: WorkerInit = {
        meta,
@@ -2064,7 +2128,7 @@ index e70eb8b0e9..f6842209bd 100644
      const run = new PtcWorkflowRun(
        runCtx,
        subagents,
-@@ -171,6 +208,14 @@ class PtcWorkflowEngine extends WorkflowEngine {
+@@ -171,6 +207,14 @@ class PtcWorkflowEngine extends WorkflowEngine {
          agentEnd: (agent) => { this.emitWorkflowEvent('workflow/agent-end', info, agent) },
        },
        request.signal,
@@ -2081,7 +2145,7 @@ index e70eb8b0e9..f6842209bd 100644
      this.emitWorkflowEvent('workflow/start', info)
 diff --git a/packages/workflow/workflow-ptc/src/journal.ts b/packages/workflow/workflow-ptc/src/journal.ts
 new file mode 100644
-index 0000000000..3dc4e4e59f
+index 0000000000..33293368e4
 --- /dev/null
 +++ b/packages/workflow/workflow-ptc/src/journal.ts
 @@ -0,0 +1,146 @@
@@ -2091,7 +2155,7 @@ index 0000000000..3dc4e4e59f
 +import type { FileHandle } from 'node:fs/promises'
 +import { join, resolve } from 'node:path'
 +import type { SessionId } from '@deepseek-ai/dsh-session'
-+import { SessionWriteLease } from '../../../session/session-persistence-jsonl/src/lease.ts'
++import { SessionWriteLease } from '@deepseek-ai/dsh-session-persistence-jsonl/src/lease.ts'
 +import type { ChildResult } from './types.ts'
 +
 +interface Call {
@@ -2173,7 +2237,7 @@ index 0000000000..3dc4e4e59f
 +      const directory = join(canonical, runId(id))
 +      await mkdir(directory, { mode: 0o700 })
 +      lease = await SessionWriteLease.acquire(directory, sessionId as SessionId)
-+      for (const [name, contents] of [['script.js', input.script], ['run.json', JSON.stringify({ version: 1, id, sessionId, ...input }) + '\n']]) {
++      for (const [name, contents] of [['script.js', input.script], ['run.json', JSON.stringify({ version: 1, id, sessionId, ...input }) + '\n']] as const) {
 +        const handle = await open(join(directory, name), 'wx', 0o600)
 +        try { await handle.writeFile(contents); await handle.sync() } finally { await handle.close() }
 +      }
@@ -2232,7 +2296,7 @@ index 0000000000..3dc4e4e59f
 +  }
 +}
 diff --git a/packages/workflow/workflow-ptc/src/realm.ts b/packages/workflow/workflow-ptc/src/realm.ts
-index 68bc19fbcd..12c2ddaff8 100644
+index 68bc19fbcd..b9dce0b5d4 100644
 --- a/packages/workflow/workflow-ptc/src/realm.ts
 +++ b/packages/workflow/workflow-ptc/src/realm.ts
 @@ -13,6 +13,15 @@ export class MaterializeError extends Error {
@@ -2244,7 +2308,7 @@ index 68bc19fbcd..12c2ddaff8 100644
 +  // not the first closing parenthesis inside the data URL's module source.
 +  return text.replace(/data:(?:text|application)\/(?:javascript|ecmascript)[^\s]+/g, location => {
 +    const tail = /(:\d+:\d+)(\)?)$/.exec(location)
-+    return `workflow-guest${tail ? tail[1] + tail[2] : ''}`
++    return `workflow-guest${tail ? tail[1]! + tail[2]! : ''}`
 +  })
 +}
 +
@@ -2546,15 +2610,16 @@ index 0000000000..e5d146e7c9
 +}
 diff --git a/packages/workflow/workflow-ptc/src/spawn.ts b/packages/workflow/workflow-ptc/src/spawn.ts
 new file mode 100644
-index 0000000000..8379be558f
+index 0000000000..d0d035fba1
 --- /dev/null
 +++ b/packages/workflow/workflow-ptc/src/spawn.ts
-@@ -0,0 +1,114 @@
+@@ -0,0 +1,115 @@
 +/** Workflow options over the native one-shot subagent driver and preset registry. */
 +import type { Context } from '@deepseek-ai/cordis'
++import type {} from '@deepseek-ai/dsh-fs'
 +import { mkdir, realpath, writeFile } from 'node:fs/promises'
 +import { join, relative, isAbsolute, sep } from 'node:path'
-+import { startInProcessRun } from '../../../subagent/subagent-in-process-driver/src/index.ts'
++import { startInProcessRun } from '@deepseek-ai/dsh-subagent-in-process-driver/src/index.ts'
 +import { captureDelegatedPolicyOverrides } from '@deepseek-ai/dsh-subagent'
 +import type { ResolvedSubagentStartRequest, SubagentRun } from '@deepseek-ai/dsh-subagent'
 +import { WorkflowWorktree } from './worktree.ts'
@@ -2622,7 +2687,7 @@ index 0000000000..8379be558f
 +    }
 +    const hub = (ctx as any).get('trisoulX')
 +    const budget = hub?.workflowBudget
-+    const run = await startInProcessRun(request, { cwd: worktree?.artifact.cwd, agentPreset: type.id, delegatedPolicy: inherited,
++    const run = await startInProcessRun(request, { ...worktree === undefined ? {} : { cwd: worktree.artifact.cwd }, ...type.id === undefined ? {} : { agentPreset: type.id }, delegatedPolicy: inherited,
 +      setupChild: child => {
 +        budget?.attach(child.session, options.budgetOwner)
 +        if (hub) {
@@ -2712,7 +2777,7 @@ index c8e3e39313..b75b58f727 100644
  }
 diff --git a/packages/workflow/workflow-ptc/src/worktree.ts b/packages/workflow/workflow-ptc/src/worktree.ts
 new file mode 100644
-index 0000000000..276104d14e
+index 0000000000..373b6a1b69
 --- /dev/null
 +++ b/packages/workflow/workflow-ptc/src/worktree.ts
 @@ -0,0 +1,106 @@
@@ -2734,7 +2799,7 @@ index 0000000000..276104d14e
 +  signal?.throwIfAborted()
 +  return new Promise((accept, reject) => {
 +    // Worktree setup must not execute repository hooks as a side effect.
-+    execFile(argv[0], argv.slice(1), {
++    execFile(argv[0]!, argv.slice(1), {
 +      cwd, signal, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, timeout: 120_000,
 +      windowsHide: true,
 +      // Inherited GIT_DIR/INDEX_FILE/config injections must not redirect an
@@ -2822,3 +2887,35 @@ index 0000000000..276104d14e
 +    return this.settlement
 +  }
 +}
+diff --git a/packages/workflow/workflow-ptc/tests/guest.spec.ts b/packages/workflow/workflow-ptc/tests/guest.spec.ts
+index 04431cad55..951e4427bd 100644
+--- a/packages/workflow/workflow-ptc/tests/guest.spec.ts
++++ b/packages/workflow/workflow-ptc/tests/guest.spec.ts
+@@ -19,6 +19,7 @@ function fixture(body: string, overrides: Partial<WorkflowGuestHost> = {}, limit
+   }
+   const host: WorkflowGuestHost = {
+     begin: async () => init,
++    loadWorkflow: async () => { throw new Error('No saved workflows in this fixture') },
+     async startChild(request) {
+       requests.push(request)
+       return { callId: requests.length, childId: `child-${requests.length}` }
+diff --git a/packages/workflow/workflow-ptc/tsconfig.json b/packages/workflow/workflow-ptc/tsconfig.json
+index c558f280e3..e6e0f7f5e7 100644
+--- a/packages/workflow/workflow-ptc/tsconfig.json
++++ b/packages/workflow/workflow-ptc/tsconfig.json
+@@ -49,6 +49,15 @@
+     },
+     {
+       "path": "../../sandbox/sandbox-policy"
++    },
++    {
++      "path": "../../session/session-persistence-jsonl"
++    },
++    {
++      "path": "../../subagent/subagent-in-process-driver"
++    },
++    {
++      "path": "../../fs/fs"
+     }
+   ]
+ }
