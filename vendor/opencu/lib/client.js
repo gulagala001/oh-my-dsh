@@ -63,10 +63,10 @@ var registration = {
       enumerable: true
     }) : target, mod));
     let _deepseek_ai_dsh_client_store = require2("@deepseek-ai/dsh-client-store");
+    let react_jsx_runtime = require2("react/jsx-runtime");
     let react = require2("react");
     react = __toESM2(react, 1);
     let _deepseek_ai_dsh_client_ui_primitives = require2("@deepseek-ai/dsh-client-ui-primitives");
-    let react_jsx_runtime = require2("react/jsx-runtime");
     let react_dom = require2("react-dom");
     const FILE_ADDRESS_PREFIX = "dsh-resource://file/";
     function encodeSegment(segment) {
@@ -229,9 +229,9 @@ var registration = {
         items: node.shadowedItemCount,
         tokens: node.shadowedTokenCount
       }) : fallbackSummary ?? (expandable ? t("message.compaction.expand") : t("message.compaction.unavailable"));
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+      return (0, react_jsx_runtime.jsxs)("div", {
         className: MessageItem_module_css_default.compactionRow,
-        children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+        children: [(0, react_jsx_runtime.jsxs)("button", {
           type: "button",
           className: MessageItem_module_css_default.compactionButton,
           disabled: !expandable,
@@ -240,35 +240,35 @@ var registration = {
             setExpanded((value) => !value);
           },
           children: [
-            /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+            (0, react_jsx_runtime.jsxs)("span", {
               className: MessageItem_module_css_default.compactionLeading,
               "aria-hidden": true,
-              children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+              children: [(0, react_jsx_runtime.jsx)("span", {
                 className: MessageItem_module_css_default.compactionContextIcon,
                 "data-compaction-icon": "context",
-                children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular, {})
-              }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+                children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular, {})
+              }), (0, react_jsx_runtime.jsx)("span", {
                 className: MessageItem_module_css_default.compactionDisclosureIcon,
                 "data-compaction-disclosure": open ? "expanded" : "collapsed",
-                children: open ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, {})
+                children: open ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {}) : (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, {})
               })]
             }),
-            /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+            (0, react_jsx_runtime.jsx)("span", {
               className: MessageItem_module_css_default.compactionTitle,
               children: title ?? t("message.compaction")
             }),
-            /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+            (0, react_jsx_runtime.jsx)("span", {
               className: MessageItem_module_css_default.compactionSep,
               "aria-hidden": true
             }),
-            /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+            (0, react_jsx_runtime.jsx)("span", {
               className: MessageItem_module_css_default.compactionSummary,
               children: summary
             })
           ]
-        }), open && node.summary !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+        }), open && node.summary !== null && (0, react_jsx_runtime.jsx)("div", {
           className: MessageItem_module_css_default.compactionBody,
-          children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+          children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
             text: node.summary,
             labels
           })
@@ -343,15 +343,15 @@ ${t("json.truncated", { total: text.length })}` : text;
       const hidden = formRendered ? ["kind", "form"] : ["kind"];
       const rows = Object.entries(record2).filter(([key]) => !hidden.includes(key));
       if (rows.length === 0) return null;
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dl", {
+      return (0, react_jsx_runtime.jsx)("dl", {
         className: ContextBody_module_css_default.fields,
         "data-context-fields": true,
-        children: rows.map(([key, value]) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+        children: rows.map(([key, value]) => (0, react_jsx_runtime.jsxs)("div", {
           className: ContextBody_module_css_default.field,
-          children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", {
+          children: [(0, react_jsx_runtime.jsx)("dt", {
             className: ContextBody_module_css_default.fieldKey,
             children: key
-          }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", {
+          }), (0, react_jsx_runtime.jsx)("dd", {
             className: ContextBody_module_css_default.fieldValue,
             children: fieldValue(value, t)
           })]
@@ -359,28 +359,28 @@ ${t("json.truncated", { total: text.length })}` : text;
       });
     }
     function UnknownBlocks({ blocks, t }) {
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: blocks.map((block, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
+      return (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: blocks.map((block, index) => (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
         label: t("message.unknownBlock"),
         payload: block,
         truncatedLabel: (total) => t("json.truncated", { total })
       }, index)) });
     }
     function ModelFacingContent({ content, t }) {
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: contentRuns(content).map((run, index) => "text" in run ? run.text !== "" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", {
+      return (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: contentRuns(content).map((run, index) => "text" in run ? run.text !== "" && (0, react_jsx_runtime.jsx)("pre", {
         className: ContextBody_module_css_default.text,
         "data-context-text": true,
         children: boundedText(run.text, t)
-      }, index) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
+      }, index) : (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
         label: t("message.unknownBlock"),
         payload: run.block,
         truncatedLabel: (total) => t("json.truncated", { total })
       }, index)) });
     }
     function OpaqueBody({ content, source, t }) {
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(ModelFacingContent, {
+      return (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)(ModelFacingContent, {
         content,
         t
-      }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SourceFields, {
+      }), (0, react_jsx_runtime.jsx)(SourceFields, {
         source,
         formRendered: false,
         t
@@ -417,27 +417,27 @@ ${t("json.truncated", { total: text.length })}` : text;
     }
     function InstructionsBody({ content, source, t }) {
       const changes = instructionChanges(source);
-      if (changes === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OpaqueBody, {
+      if (changes === null) return (0, react_jsx_runtime.jsx)(OpaqueBody, {
         content,
         source,
         t
       });
       const baseline = asRecord$1(source)?.["baseline"] === true;
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
+      return (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("ul", {
         className: ContextBody_module_css_default.files,
         "data-context-files": true,
-        children: changes.map((change) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
+        children: changes.map((change) => (0, react_jsx_runtime.jsxs)("li", {
           className: ContextBody_module_css_default.file,
           title: change.digest,
-          children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          children: [(0, react_jsx_runtime.jsx)("span", {
             className: ContextBody_module_css_default.filePath,
             children: change.path
-          }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          }), (0, react_jsx_runtime.jsx)("span", {
             className: ContextBody_module_css_default.fileAction,
             children: t(instructionAction(change.action, baseline))
           })]
         }, change.path))
-      }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ModelFacingContent, {
+      }), (0, react_jsx_runtime.jsx)(ModelFacingContent, {
         content,
         t
       })] });
@@ -462,7 +462,7 @@ ${t("json.truncated", { total: text.length })}` : text;
     }
     function CatalogBody({ content, source, t }) {
       const entries = catalogEntries(source);
-      if (entries === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OpaqueBody, {
+      if (entries === null) return (0, react_jsx_runtime.jsx)(OpaqueBody, {
         content,
         source,
         t
@@ -470,32 +470,32 @@ ${t("json.truncated", { total: text.length })}` : text;
       const update = asRecord$1(source)?.["update"] === true;
       const shown = entries.slice(0, MAX_ENTRIES);
       const rest = unknownBlocks(content);
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-        update && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+      return (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+        update && (0, react_jsx_runtime.jsx)("p", {
           className: ContextBody_module_css_default.catalogNotice,
           "data-context-catalog-update": true,
           children: t("message.context.catalog.replaced")
         }),
-        /* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
+        (0, react_jsx_runtime.jsx)("ul", {
           className: ContextBody_module_css_default.entries,
           "data-context-entries": true,
-          children: shown.map((entry, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
+          children: shown.map((entry, index) => (0, react_jsx_runtime.jsxs)("li", {
             className: ContextBody_module_css_default.entry,
-            children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", {
+            children: [(0, react_jsx_runtime.jsx)("code", {
               className: ContextBody_module_css_default.entryName,
               children: entry.name
-            }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+            }), (0, react_jsx_runtime.jsx)("span", {
               className: ContextBody_module_css_default.entryDescription,
               children: entry.description
             })]
           }, index))
         }),
-        shown.length < entries.length && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+        shown.length < entries.length && (0, react_jsx_runtime.jsx)("p", {
           className: ContextBody_module_css_default.catalogNotice,
           "data-context-entries-truncated": true,
           children: t("message.context.catalog.more", { count: entries.length - shown.length })
         }),
-        /* @__PURE__ */ (0, react_jsx_runtime.jsx)(UnknownBlocks, {
+        (0, react_jsx_runtime.jsx)(UnknownBlocks, {
           blocks: rest,
           t
         })
@@ -521,24 +521,24 @@ ${t("json.truncated", { total: text.length })}` : text;
     }
     function SnapshotBody({ content, source, t }) {
       const sections = snapshotSections(source);
-      if (sections === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OpaqueBody, {
+      if (sections === null) return (0, react_jsx_runtime.jsx)(OpaqueBody, {
         content,
         source,
         t
       });
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+      return (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("p", {
         className: ContextBody_module_css_default.catalogNotice,
         "data-context-snapshot-supersedes": true,
         children: t("message.context.snapshot.supersedes")
-      }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dl", {
+      }), (0, react_jsx_runtime.jsx)("dl", {
         className: ContextBody_module_css_default.sections,
         "data-context-sections": true,
-        children: sections.map((section, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+        children: sections.map((section, index) => (0, react_jsx_runtime.jsxs)("div", {
           className: ContextBody_module_css_default.section,
-          children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", {
+          children: [(0, react_jsx_runtime.jsx)("dt", {
             className: ContextBody_module_css_default.sectionName,
             children: section.name
-          }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", {
+          }), (0, react_jsx_runtime.jsx)("dd", {
             className: ContextBody_module_css_default.sectionText,
             children: boundedText(section.text, t)
           })]
@@ -546,23 +546,23 @@ ${t("json.truncated", { total: text.length })}` : text;
       })] });
     }
     function NoticeBody({ content, t }) {
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ModelFacingContent, {
+      return (0, react_jsx_runtime.jsx)(ModelFacingContent, {
         content,
         t
       });
     }
     function RelayBody({ content, source, t }) {
       const sender = relaySender(source);
-      if (sender === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OpaqueBody, {
+      if (sender === null) return (0, react_jsx_runtime.jsx)(OpaqueBody, {
         content,
         source,
         t
       });
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+      return (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("p", {
         className: ContextBody_module_css_default.relaySender,
         "data-context-relay-sender": true,
         children: t("message.context.relay.from", { session: sender })
-      }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ModelFacingContent, {
+      }), (0, react_jsx_runtime.jsx)(ModelFacingContent, {
         content,
         t
       })] });
@@ -595,35 +595,35 @@ ${t("json.truncated", { total: text.length })}` : text;
     }
     function RecallBody({ content, source, t }) {
       const sessions = recalledSessions(source);
-      if (sessions === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OpaqueBody, {
+      if (sessions === null) return (0, react_jsx_runtime.jsx)(OpaqueBody, {
         content,
         source,
         t
       });
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
+      return (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("ul", {
         className: ContextBody_module_css_default.recalls,
         "data-context-recalls": true,
-        children: sessions.map((session, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
+        children: sessions.map((session, index) => (0, react_jsx_runtime.jsxs)("li", {
           className: ContextBody_module_css_default.recall,
           children: [
-            /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+            (0, react_jsx_runtime.jsx)("span", {
               className: ContextBody_module_css_default.recallLabel,
               children: session.label
             }),
-            /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+            (0, react_jsx_runtime.jsx)("span", {
               className: ContextBody_module_css_default.recallCounts,
               children: t("message.context.recall.counts", {
                 retained: session.retained,
                 omitted: session.omitted
               })
             }),
-            session.truncated && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+            session.truncated && (0, react_jsx_runtime.jsx)("span", {
               className: ContextBody_module_css_default.recallCounts,
               children: t("message.context.recall.truncated")
             })
           ]
         }, index))
-      }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ModelFacingContent, {
+      }), (0, react_jsx_runtime.jsx)(ModelFacingContent, {
         content,
         t
       })] });
@@ -636,46 +636,46 @@ ${t("json.truncated", { total: text.length })}` : text;
       const opaque = {
         rendered: null,
         summary: null,
-        body: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OpaqueBody, { ...props })
+        body: (0, react_jsx_runtime.jsx)(OpaqueBody, { ...props })
       };
       switch (form) {
         case "instructions":
           return instructionChanges(props.source) === null ? opaque : {
             rendered: "instructions",
             summary: null,
-            body: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(InstructionsBody, { ...props })
+            body: (0, react_jsx_runtime.jsx)(InstructionsBody, { ...props })
           };
         case "catalog":
           return catalogEntries(props.source) === null ? opaque : {
             rendered: "catalog",
             summary: null,
-            body: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CatalogBody, { ...props })
+            body: (0, react_jsx_runtime.jsx)(CatalogBody, { ...props })
           };
         case "snapshot":
           return snapshotSections(props.source) === null ? opaque : {
             rendered: "snapshot",
             summary: null,
-            body: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SnapshotBody, { ...props })
+            body: (0, react_jsx_runtime.jsx)(SnapshotBody, { ...props })
           };
         case "notice": {
           const summary = noticeSummary(props.source);
           return summary === null ? opaque : {
             rendered: "notice",
             summary,
-            body: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(NoticeBody, { ...props })
+            body: (0, react_jsx_runtime.jsx)(NoticeBody, { ...props })
           };
         }
         case "relay":
           return relaySender(props.source) === null ? opaque : {
             rendered: "relay",
             summary: null,
-            body: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RelayBody, { ...props })
+            body: (0, react_jsx_runtime.jsx)(RelayBody, { ...props })
           };
         case "recall":
           return recalledSessions(props.source) === null ? opaque : {
             rendered: "recall",
             summary: null,
-            body: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RecallBody, { ...props })
+            body: (0, react_jsx_runtime.jsx)(RecallBody, { ...props })
           };
         case null:
           return opaque;
@@ -718,34 +718,34 @@ ${t("json.truncated", { total: text.length })}` : text;
         added: added.length,
         removed: removed.length
       }) : added.length > 0 ? t("message.toolsAddedCount", { count: added.length }) : t("message.toolsRemovedCount", { count: removed.length });
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
+      return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
         className: ContextInjectionRow_module_css_default.root,
-        icon: toolBlocks !== void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }) : producer.role === "recall" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+        icon: toolBlocks !== void 0 ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }) : producer.role === "recall" ? (0, react_jsx_runtime.jsx)("span", {
           "data-context-recall-icon": true,
-          children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.ReferenceIconRegular, { kind: "session" })
-        }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconContextInjectionOutlineRegular, { size: 14 }),
+          children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.ReferenceIconRegular, { kind: "session" })
+        }) : (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconContextInjectionOutlineRegular, { size: 14 }),
         chevronClassName: ContextInjectionRow_module_css_default.chevron,
         title: single !== void 0 ? t(single.type === "tool-addition" ? "message.toolAdded" : "message.toolRemoved", { name: single.toolName }) : t(toolBlocks !== void 0 ? "message.toolsUpdated" : producer.role === "recall" ? "message.contextRecall" : "message.contextInjection"),
-        collapsedContent: toolSummary !== null ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+        collapsedContent: toolSummary !== null ? (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("span", {
           className: ContextInjectionRow_module_css_default.sep,
           "aria-hidden": true
-        }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+        }), (0, react_jsx_runtime.jsx)("span", {
           className: ContextInjectionRow_module_css_default.summary,
           children: toolSummary
-        })] }) : toolBlocks !== void 0 || producer.label === null ? void 0 : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-          /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+        })] }) : toolBlocks !== void 0 || producer.label === null ? void 0 : (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+          (0, react_jsx_runtime.jsx)("span", {
             className: ContextInjectionRow_module_css_default.sep,
             "aria-hidden": true
           }),
-          /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          (0, react_jsx_runtime.jsx)("span", {
             className: ContextInjectionRow_module_css_default.source,
             "data-context-source": true,
             children: producer.label
           }),
-          summary !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          summary !== null && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("span", {
             className: ContextInjectionRow_module_css_default.sep,
             "aria-hidden": true
-          }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          }), (0, react_jsx_runtime.jsx)("span", {
             className: ContextInjectionRow_module_css_default.summary,
             "data-context-summary": true,
             children: summary
@@ -758,13 +758,13 @@ ${t("json.truncated", { total: text.length })}` : text;
         onToggle: () => {
           setOpen((value) => !value);
         },
-        children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+        children: (0, react_jsx_runtime.jsx)("div", {
           className: ContextInjectionRow_module_css_default.body,
           "data-context-injection-body": true,
           "data-context-form": rendered ?? void 0,
-          children: toolBlocks === void 0 ? body : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+          children: toolBlocks === void 0 ? body : (0, react_jsx_runtime.jsxs)("div", {
             className: ContextInjectionRow_module_css_default.toolChanges,
-            children: [added.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", { children: t("message.toolsAdded", { names: added.join(", ") }) }), removed.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", { children: t("message.toolsRemoved", { names: removed.join(", ") }) })]
+            children: [added.length > 0 && (0, react_jsx_runtime.jsx)("div", { children: t("message.toolsAdded", { names: added.join(", ") }) }), removed.length > 0 && (0, react_jsx_runtime.jsx)("div", { children: t("message.toolsRemoved", { names: removed.join(", ") }) })]
           })
         })
       });
@@ -888,31 +888,31 @@ ${t("json.truncated", { total: text.length })}` : text;
           }, 1e3);
         });
       }, [copied, text]);
-      const clockEl = time === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+      const clockEl = time === void 0 ? null : (0, react_jsx_runtime.jsx)("span", {
         className: clock === "start" ? MessageIconActions_module_css_default.timeStart : MessageIconActions_module_css_default.timeEnd,
         children: formatMessageClock(time, t, day)
       });
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+      return (0, react_jsx_runtime.jsxs)("div", {
         className: className === void 0 ? MessageIconActions_module_css_default.actions : `${MessageIconActions_module_css_default.actions} ${className}`,
         "data-clock": clock,
         children: [
           clock === "start" ? clockEl : null,
-          /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+          (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
             label: copied ? t("copied") : t("copy"),
             side: "bottom",
-            children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+            children: (0, react_jsx_runtime.jsx)("button", {
               type: "button",
               className: MessageIconActions_module_css_default.action,
               "aria-label": copied ? t("copied") : t("copy"),
               onClick: onCopy,
-              children: copied ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, {}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutlineRegular, {})
+              children: copied ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, {}) : (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutlineRegular, {})
             })
           }),
           extraActions,
-          onBranch !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+          onBranch !== void 0 && (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
             label: branchUnavailable ? t("message.branchUnavailable") : t("message.branch"),
             side: "bottom",
-            children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+            children: (0, react_jsx_runtime.jsx)("button", {
               type: "button",
               className: MessageIconActions_module_css_default.action,
               "aria-label": t("message.branch"),
@@ -920,15 +920,15 @@ ${t("json.truncated", { total: text.length })}` : text;
               "aria-describedby": branchUnavailable ? reasonId : void 0,
               "data-unavailable": branchUnavailable || void 0,
               onClick: branchUnavailable ? void 0 : onBranch,
-              children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBranchOutlineRegular, {})
+              children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBranchOutlineRegular, {})
             })
           }),
-          onBranch !== void 0 && branchUnavailable && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          onBranch !== void 0 && branchUnavailable && (0, react_jsx_runtime.jsx)("span", {
             id: reasonId,
             className: MessageIconActions_module_css_default.visuallyHidden,
             children: t("message.branchUnavailable")
           }),
-          clock === "end" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+          clock === "end" ? (0, react_jsx_runtime.jsxs)("span", {
             className: MessageIconActions_module_css_default.endInfo,
             children: [usageAction, clockEl]
           }) : usageAction
@@ -996,15 +996,15 @@ ${t("json.truncated", { total: text.length })}` : text;
       }, [active, deadline]);
       const label = active ? t("message.retry.active") : node.retryState === "cancelled" ? t("message.retry.cancelled") : node.retryState === "started" ? t("message.retry.started") : t("message.retry.scheduled");
       const seconds = active ? remainingSeconds : scheduledSeconds;
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
+      return (0, react_jsx_runtime.jsxs)("details", {
         className: MessageItem_module_css_default.retryRow,
         "data-active": active || void 0,
-        children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", {
+        children: [(0, react_jsx_runtime.jsx)("summary", {
           className: MessageItem_module_css_default.retrySummary,
-          children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          children: (0, react_jsx_runtime.jsx)("span", {
             className: MessageItem_module_css_default.retryText,
             role: "status",
-            children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
+            children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
               active,
               children: t("message.retry.status", {
                 label,
@@ -1014,12 +1014,12 @@ ${t("json.truncated", { total: text.length })}` : text;
               })
             })
           })
-        }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+        }), (0, react_jsx_runtime.jsxs)("div", {
           className: MessageItem_module_css_default.retryDetails,
-          children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          children: [(0, react_jsx_runtime.jsxs)("div", { children: [(0, react_jsx_runtime.jsx)("span", {
             className: MessageItem_module_css_default.retryDetailLabel,
             children: t("message.retry.delay")
-          }), t("duration.milliseconds", { milliseconds: Math.round(node.delayMs) })] }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          }), t("duration.milliseconds", { milliseconds: Math.round(node.delayMs) })] }), (0, react_jsx_runtime.jsxs)("div", { children: [(0, react_jsx_runtime.jsx)("span", {
             className: MessageItem_module_css_default.retryDetailLabel,
             children: t("message.retry.failure")
           }), failureMessage(node.failure.message, node.failure.code, t)] })]
@@ -1027,25 +1027,25 @@ ${t("json.truncated", { total: text.length })}` : text;
       });
     }
     function TurnErrorItem({ node, t }) {
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+      return (0, react_jsx_runtime.jsxs)("div", {
         className: MessageItem_module_css_default.turnErrorRow,
         role: "status",
         children: [
-          /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {
+          (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {
             state: "error",
             className: MessageItem_module_css_default.turnErrorDot
           }),
-          /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+          (0, react_jsx_runtime.jsxs)("div", {
             className: MessageItem_module_css_default.turnErrorCopy,
-            children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+            children: [(0, react_jsx_runtime.jsx)("span", {
               className: MessageItem_module_css_default.turnErrorTitle,
               children: node.code === "ACCOUNT_SIGNED_OUT" ? t("message.accountStopped") : t("message.turnError")
-            }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+            }), (0, react_jsx_runtime.jsx)("span", {
               className: MessageItem_module_css_default.turnErrorMessage,
               children: failureMessage(node.message, node.code, t)
             })]
           }),
-          node.code !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", {
+          node.code !== void 0 && (0, react_jsx_runtime.jsx)("code", {
             className: MessageItem_module_css_default.turnErrorCode,
             children: node.code
           })
@@ -1053,18 +1053,18 @@ ${t("json.truncated", { total: text.length })}` : text;
       });
     }
     function TurnMaxTokensItem({ t }) {
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+      return (0, react_jsx_runtime.jsxs)("div", {
         className: MessageItem_module_css_default.turnErrorRow,
         role: "status",
-        children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {
+        children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {
           state: "warning",
           className: MessageItem_module_css_default.turnErrorDot
-        }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+        }), (0, react_jsx_runtime.jsxs)("div", {
           className: MessageItem_module_css_default.turnErrorCopy,
-          children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          children: [(0, react_jsx_runtime.jsx)("span", {
             className: MessageItem_module_css_default.maxTokensTitle,
             children: t("message.maxTokens")
-          }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          }), (0, react_jsx_runtime.jsx)("span", {
             className: MessageItem_module_css_default.turnErrorMessage,
             children: t("message.maxTokens.hint")
           })]
@@ -1077,47 +1077,47 @@ ${t("json.truncated", { total: text.length })}` : text;
       const compactImages = attachments.length > 1;
       const truncated = (total) => t("json.truncated", { total });
       const showBubble = text !== "" || rest.length > 0;
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+      return (0, react_jsx_runtime.jsxs)("div", {
         className: MessageItem_module_css_default.userRow,
         "data-pending-steering": pending || void 0,
         "data-submission-echo": echo || void 0,
-        children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+        children: [(0, react_jsx_runtime.jsxs)("div", {
           className: MessageItem_module_css_default.userStack,
           children: [
-            attachments.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+            attachments.length > 0 && (0, react_jsx_runtime.jsx)("div", {
               className: MessageItem_module_css_default.attachmentRow,
               "data-message-attachments": true,
-              children: attachments.map((attachment, index) => attachment.type === "image" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react.Fragment, { children: renderMessageImages({
+              children: attachments.map((attachment, index) => attachment.type === "image" ? (0, react_jsx_runtime.jsx)(react.Fragment, { children: renderMessageImages({
                 images: [attachment.image],
                 align: "end",
                 compact: compactImages
-              }) }, `image:${index}`) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+              }) }, `image:${index}`) : (0, react_jsx_runtime.jsxs)("span", {
                 className: MessageItem_module_css_default.fileCard,
                 title: attachment.file.name,
-                children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+                children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
                   path: attachment.file.name,
                   className: MessageItem_module_css_default.fileIcon
-                }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+                }), (0, react_jsx_runtime.jsxs)("span", {
                   className: MessageItem_module_css_default.fileContent,
-                  children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+                  children: [(0, react_jsx_runtime.jsx)("span", {
                     className: MessageItem_module_css_default.fileName,
                     children: attachment.file.name
-                  }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+                  }), (0, react_jsx_runtime.jsx)("span", {
                     className: MessageItem_module_css_default.fileMeta,
                     children: [(0, _deepseek_ai_dsh_client_ui_primitives.fileExtension)(attachment.file.name).toUpperCase().slice(0, 8), (0, _deepseek_ai_dsh_client_ui_primitives.fileSizeText)(attachment.file.bytes)].filter(Boolean).join(" ")
                   })]
                 })]
               }, `file:${index}`))
             }),
-            showBubble && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+            showBubble && (0, react_jsx_runtime.jsxs)("div", {
               className: MessageItem_module_css_default.bubble,
-              children: [(0, _deepseek_ai_dsh_client_ui_primitives.projectUserText)(text, referenceLabels, skillNames, "skill", references), rest.map((block, i) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
+              children: [(0, _deepseek_ai_dsh_client_ui_primitives.projectUserText)(text, referenceLabels, skillNames, "skill", references), rest.map((block, i) => (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
                 label: t("message.extraBlock"),
                 payload: block,
                 truncatedLabel: truncated
               }, i))]
             }),
-            referenceLabels.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+            referenceLabels.length > 0 && (0, react_jsx_runtime.jsx)("div", {
               className: MessageItem_module_css_default.referenceSummary,
               children: t("message.referenceSummary", { labels: referenceLabels.join(t("message.referenceSeparator")) })
             })
@@ -1126,12 +1126,12 @@ ${t("json.truncated", { total: text.length })}` : text;
       });
     }
     function PendingSteeringBubble({ content, renderMessageImages, t }) {
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(UserStyleBubble, {
+      return (0, react_jsx_runtime.jsx)(UserStyleBubble, {
         content,
         renderMessageImages,
         pending: true,
         t,
-        actions: (text) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(MessageIconActions, {
+        actions: (text) => (0, react_jsx_runtime.jsx)(MessageIconActions, {
           text,
           clock: "start",
           className: MessageItem_module_css_default.actions,
@@ -1140,7 +1140,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       });
     }
     function PendingSubmissionBubble({ submission, renderMessageImages, t }) {
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(UserStyleBubble, {
+      return (0, react_jsx_runtime.jsx)(UserStyleBubble, {
         content: (0, react.useMemo)(() => submission.text === "" ? [] : [{
           type: "text",
           text: submission.text
@@ -1161,7 +1161,7 @@ ${t("json.truncated", { total: text.length })}` : text;
         pending: submission.placement === "steering",
         echo: true,
         t,
-        actions: (text) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(MessageIconActions, {
+        actions: (text) => (0, react_jsx_runtime.jsx)(MessageIconActions, {
           text,
           time: submission.time,
           clock: "start",
@@ -1172,7 +1172,7 @@ ${t("json.truncated", { total: text.length })}` : text;
     }
     const UserMessageNodeView = (0, react.memo)(function UserMessageNodeView2({ node, renderMessageImages, openFile, openSkill, t }) {
       const data = node.data;
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(UserStyleBubble, {
+      return (0, react_jsx_runtime.jsx)(UserStyleBubble, {
         content: data.content,
         references: {
           openFile,
@@ -1182,7 +1182,7 @@ ${t("json.truncated", { total: text.length })}` : text;
         ...data.referenceLabels === void 0 ? {} : { referenceLabels: data.referenceLabels },
         ...data.skillNames === void 0 ? {} : { skillNames: data.skillNames },
         t,
-        actions: (text) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(MessageIconActions, {
+        actions: (text) => (0, react_jsx_runtime.jsx)(MessageIconActions, {
           text,
           time: data.time,
           clock: "start",
@@ -1193,7 +1193,7 @@ ${t("json.truncated", { total: text.length })}` : text;
     });
     const ContextMessageNodeView = (0, react.memo)(function ContextMessageNodeView2({ node, t }) {
       const data = node.data;
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ContextInjectionRow, {
+      return (0, react_jsx_runtime.jsx)(ContextInjectionRow, {
         content: data.content,
         source: data.source,
         producer: data.producer,
@@ -1202,33 +1202,33 @@ ${t("json.truncated", { total: text.length })}` : text;
       });
     });
     const CompactionNodeView = (0, react.memo)(function CompactionNodeView2({ node, t }) {
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CompactionItem, {
+      return (0, react_jsx_runtime.jsx)(CompactionItem, {
         node: node.data,
         t
       });
     });
     const RetryNodeView = (0, react.memo)(function RetryNodeView2({ node, t }) {
       const data = node.data;
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ModelRetryItem, {
+      return (0, react_jsx_runtime.jsx)(ModelRetryItem, {
         node: data.current,
         active: data.current.retryState === "scheduled",
         t
       });
     });
     const TurnErrorNodeView = (0, react.memo)(function TurnErrorNodeView2({ node, t }) {
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TurnErrorItem, {
+      return (0, react_jsx_runtime.jsx)(TurnErrorItem, {
         node: node.data,
         t
       });
     });
     const TurnMaxTokensNodeView = (0, react.memo)(function TurnMaxTokensNodeView2({ t }) {
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TurnMaxTokensItem, { t });
+      return (0, react_jsx_runtime.jsx)(TurnMaxTokensItem, { t });
     });
     const UnknownNodeView = (0, react.memo)(function UnknownNodeView2({ node, t }) {
       const data = node.data;
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+      return (0, react_jsx_runtime.jsx)("div", {
         className: MessageItem_module_css_default.contextRow,
-        children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
+        children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
           label: t("message.unknownSurface", { type: data.type }),
           payload: data.data,
           truncatedLabel: (total) => t("json.truncated", { total })
@@ -1419,7 +1419,7 @@ ${t("json.truncated", { total: text.length })}` : text;
         node: routedNode
       };
       const flowKey = groupPart === void 0 || groupPart === "response" ? routedNode.key : JSON.stringify([routedNode.key, groupPart]);
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+      return (0, react_jsx_runtime.jsx)("div", {
         ref: wrapperRef,
         className: ChatView_module_css_default.flowItem,
         "data-chat-anchor-key": flowKey,
@@ -1435,7 +1435,7 @@ ${t("json.truncated", { total: text.length })}` : text;
         children: renderSlot("conversation.chat.node", routedOwner, {
           entryKey: routedNode.kind,
           hookContext,
-          fallback: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
+          fallback: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
             label: t("message.unknownSurface", { type: routedNode.kind }),
             payload: routedNode.data,
             truncatedLabel: (total) => t("json.truncated", { total })
@@ -1443,6 +1443,622 @@ ${t("json.truncated", { total: text.length })}` : text;
         })
       });
     });
+    const SIMPLE_ESCAPES = {
+      '"': '"',
+      "\\": "\\",
+      "/": "/",
+      b: "\b",
+      f: "\f",
+      n: "\n",
+      r: "\r",
+      t: "	"
+    };
+    const CONTENT_ESCAPE = /[\\\u0000-\u001f]/u;
+    function isWhitespace(c) {
+      return c === " " || c === "\n" || c === "\r" || c === "	";
+    }
+    function isHex(c) {
+      return c >= "0" && c <= "9" || c >= "a" && c <= "f" || c >= "A" && c <= "F";
+    }
+    var PartialArguments = class PartialArguments2 {
+      /** The view of a call with no arguments available. */
+      static EMPTY = PartialArguments2.fromObject({});
+      /**
+      * View finished argument text without scanning it until a reader asks.
+      * @param text - the complete argument JSON text.
+      * @returns a sealed view.
+      */
+      static fromText(text) {
+        const view = new PartialArguments2();
+        view.append(text);
+        view.sealed = true;
+        return view;
+      }
+      /**
+      * View an already parsed argument payload, such as a PTC dispatch object.
+      * @param value - the parsed argument value.
+      * @returns a sealed view; a non-object payload has no fields.
+      */
+      static fromObject(value) {
+        const view = new PartialArguments2();
+        view.object = typeof value === "object" && value !== null && !Array.isArray(value) ? value : {};
+        view.sealed = true;
+        return view;
+      }
+      /**
+      * The source: text so far or a parsed object, plus whether it can still grow.
+      * These are the only enumerable fields, so two views over the same source
+      * compare equal structurally however far each has been read.
+      */
+      chunks = [];
+      object;
+      sealed = false;
+      #ends = [];
+      #size = 0;
+      #consumed = 0;
+      #mode = "root";
+      #escape = false;
+      #keyStart = 0;
+      #keyEscaped = false;
+      #key = "";
+      #current = null;
+      #nestedEnds = [];
+      #nestedInString = false;
+      #invalidAt;
+      #invalidValue = false;
+      #entries = /* @__PURE__ */ new Map();
+      #order = [];
+      #reads = /* @__PURE__ */ new Map();
+      /** Whether this view rejects further appends; does not scan text or register reads. */
+      get isSealed() {
+        return this.sealed;
+      }
+      /** Whether indexing or a content read found invalid JSON; unread value contents are not validated. */
+      get invalid() {
+        this.scan();
+        return this.#mode === "invalid" || this.#invalidValue;
+      }
+      /**
+      * Retain streamed argument text without scanning or comparing observed answers.
+      * @param fragment - the text following every fragment appended before.
+      */
+      append(fragment) {
+        if (this.sealed) throw new Error("PartialArguments: cannot append to a sealed view");
+        if (fragment.length === 0) return;
+        this.chunks.push(fragment);
+        this.#size += fragment.length;
+        this.#ends.push(this.#size);
+      }
+      /**
+      * Reconcile a streamed prefix with authoritative complete text without joining the fragments.
+      * @param text - the final argument text, which replaces missing or conflicting deltas.
+      * @returns this view sealed with its caches retained when every character matches; otherwise a new sealed view.
+      */
+      settle(text) {
+        if (this.object !== void 0 || text.length !== this.#size) return PartialArguments2.fromText(text);
+        let offset = 0;
+        for (const chunk of this.chunks) {
+          if (!text.startsWith(chunk, offset)) return PartialArguments2.fromText(text);
+          offset += chunk.length;
+        }
+        this.chunks = text.length === 0 ? [] : [text];
+        this.#ends = text.length === 0 ? [] : [text.length];
+        this.sealed = true;
+        return this;
+      }
+      /**
+      * Compare observed answers and advance their publication baseline. Unread views remain unscanned.
+      * @returns whether any observed answer changed since its first read or the preceding refresh.
+      */
+      refresh() {
+        if (this.#reads.size === 0) return false;
+        this.scan();
+        let changed = false;
+        let completions = false;
+        for (const read of this.#reads.values()) {
+          if (read.completion) {
+            completions = true;
+            continue;
+          }
+          changed = this.refreshRead(read) || changed;
+        }
+        if (completions) {
+          for (const read of this.#reads.values()) if (read.completion) changed = this.refreshRead(read) || changed;
+        }
+        if (this.sealed) this.#reads.clear();
+        return changed;
+      }
+      refreshRead(read) {
+        const now = read.answer();
+        if (Object.is(now, read.last)) return false;
+        read.last = now;
+        return true;
+      }
+      /**
+      * Check whether no further fields can arrive.
+      * @returns whether the outer object closed, indexing failed, or the view is sealed; unread values are not validated.
+      */
+      closed() {
+        return this.remember("closed", "", () => this.closedNow());
+      }
+      /**
+      * List discovered fields in first-appearance order.
+      * @returns top-level keys seen so far, in first-appearance order.
+      */
+      keys() {
+        return this.remember("keys", "", () => this.keysNow(), (keys) => keys.length);
+      }
+      /**
+      * Check whether a top-level field has appeared.
+      * @param key - argument name.
+      * @returns whether the field has appeared (a string opened or another value began).
+      */
+      has(key) {
+        return this.remember("has", key, () => this.hasNow(key));
+      }
+      /**
+      * Check whether a field's closing delimiter has arrived, without validating its contents.
+      * @param key - argument name.
+      * @returns whether its delimiter arrived and no content reader has reported an error for this value.
+      */
+      complete(key) {
+        return this.remember("complete", key, () => this.completeNow(key));
+      }
+      /**
+      * Read string length without materializing its text.
+      * @param key - argument name.
+      * @param options - change granularity for a streaming string.
+      * @returns decoded UTF-16 length of the string field so far; undefined when absent or not a string.
+      */
+      stringLength(key, options) {
+        const step = Math.max(1, Math.floor(options?.step ?? 1));
+        const offset = options?.offset ?? 0;
+        return this.remember(`length:${step}:${offset}`, key, () => this.lengthNow(key), (length) => length === void 0 ? void 0 : Math.ceil((length + offset) / step));
+      }
+      /**
+      * Check a string against a decoded UTF-16 length limit without materializing it.
+      * @param key - argument name.
+      * @param maxLength - decoded UTF-16 limit, floored to at least zero.
+      * @returns whether the string is longer than the limit; false when absent or not a string.
+      */
+      stringExceeds(key, maxLength) {
+        const limit = Math.max(0, Math.floor(maxLength));
+        return this.remember(`exceeds:${limit}`, key, () => (this.lengthNow(key, limit + 1) ?? 0) > limit);
+      }
+      /**
+      * Read a decoded string, including a streaming prefix.
+      * @param key - argument name.
+      * @returns the string field's decoded text so far; undefined when absent or not a string.
+      */
+      text(key) {
+        return this.remember("text", key, () => this.textNow(key));
+      }
+      /**
+      * Read at most the first decoded UTF-16 units of a string.
+      * @param key - argument name.
+      * @param maxLength - maximum decoded UTF-16 length, floored to at least one.
+      * @returns the bounded string prefix; undefined when absent or not a string.
+      */
+      textPrefix(key, maxLength) {
+        const limit = Math.max(1, Math.floor(maxLength));
+        return this.remember(`prefix:${limit}`, key, () => this.textPrefixNow(key, limit));
+      }
+      /**
+      * Read a completed non-string argument.
+      * @param key - argument name.
+      * @returns the parsed non-string value once it closed; undefined while open, absent, or a string.
+      */
+      value(key) {
+        return this.remember("value", key, () => this.valueNow(key));
+      }
+      /** Answer a question and, on a streaming view, remember it for change detection. */
+      remember(kind, key, read, comparison) {
+        this.scan();
+        const result = read();
+        if (!this.sealed) {
+          const id = `${kind}/${key}`;
+          if (!this.#reads.has(id)) this.#reads.set(id, {
+            completion: kind === "complete",
+            answer: comparison === void 0 ? read : () => comparison(read()),
+            last: comparison === void 0 ? result : comparison(result)
+          });
+        }
+        return result;
+      }
+      closedNow() {
+        return this.sealed || this.#mode === "closed" || this.#mode === "invalid";
+      }
+      keysNow() {
+        return this.object === void 0 ? this.#order : Object.keys(this.object);
+      }
+      hasNow(key) {
+        return this.object === void 0 ? this.#entries.has(key) : Object.hasOwn(this.object, key);
+      }
+      completeNow(key) {
+        if (this.object !== void 0) return Object.hasOwn(this.object, key);
+        const entry = this.#entries.get(key);
+        return entry !== void 0 && entry.end >= 0 && (entry.kind === "string" ? entry.invalidAt === void 0 : !entry.invalid);
+      }
+      lengthNow(key, limit = Number.POSITIVE_INFINITY) {
+        if (this.object !== void 0) {
+          const field2 = Object.hasOwn(this.object, key) ? this.object[key] : void 0;
+          return typeof field2 === "string" ? field2.length : void 0;
+        }
+        const entry = this.#entries.get(key);
+        if (entry?.kind !== "string") return void 0;
+        if (entry.text !== void 0 && entry.text.at === entry.end) return entry.text.length;
+        const read = entry.length ??= {
+          at: entry.start,
+          length: 0,
+          text: ""
+        };
+        this.readString(entry, read, limit, false);
+        return read.length;
+      }
+      textNow(key) {
+        if (this.object !== void 0) {
+          const field2 = Object.hasOwn(this.object, key) ? this.object[key] : void 0;
+          return typeof field2 === "string" ? field2 : void 0;
+        }
+        const entry = this.#entries.get(key);
+        if (entry?.kind !== "string") return void 0;
+        if (entry.text === void 0 && entry.end >= 0 && entry.needsDecoding && entry.invalidAt === void 0) {
+          let text;
+          try {
+            text = JSON.parse(`"${this.slice(entry.start, entry.end)}"`);
+          } catch (_error) {
+          }
+          if (text !== void 0) entry.text = {
+            at: entry.end,
+            length: text.length,
+            text
+          };
+        }
+        const read = entry.text ??= {
+          at: entry.start,
+          length: 0,
+          text: ""
+        };
+        this.readString(entry, read, Number.POSITIVE_INFINITY, true);
+        return read.text;
+      }
+      textPrefixNow(key, maxLength) {
+        if (this.object !== void 0) {
+          const field2 = Object.hasOwn(this.object, key) ? this.object[key] : void 0;
+          return typeof field2 === "string" ? field2.slice(0, maxLength) : void 0;
+        }
+        const entry = this.#entries.get(key);
+        if (entry?.kind !== "string") return void 0;
+        const prefixes = entry.prefixes ??= /* @__PURE__ */ new Map();
+        let read = prefixes.get(maxLength);
+        if (read === void 0) {
+          read = {
+            at: entry.start,
+            length: 0,
+            text: ""
+          };
+          prefixes.set(maxLength, read);
+        }
+        this.readString(entry, read, maxLength, true);
+        return read.text;
+      }
+      valueNow(key) {
+        if (this.object !== void 0) {
+          if (!Object.hasOwn(this.object, key)) return void 0;
+          const field2 = this.object[key];
+          return typeof field2 === "string" ? void 0 : field2;
+        }
+        const entry = this.#entries.get(key);
+        if (entry?.kind !== "value" || entry.end < 0 || entry.invalid) return void 0;
+        if (entry.parsed === void 0) try {
+          entry.parsed = JSON.parse(this.slice(entry.start, entry.end));
+        } catch (_error) {
+          entry.invalid = true;
+          this.#invalidValue = true;
+        }
+        return entry.parsed;
+      }
+      chunkAt(at) {
+        let low = 0;
+        let high = this.#ends.length;
+        while (low < high) {
+          const mid = low + high >>> 1;
+          if (this.#ends[mid] <= at) low = mid + 1;
+          else high = mid;
+        }
+        return low;
+      }
+      /** Materialize only a requested range, never the cumulative source. */
+      slice(start, end) {
+        if (start >= end) return "";
+        const first = this.chunkAt(start);
+        const last = this.chunkAt(end - 1);
+        const base2 = first === 0 ? 0 : this.#ends[first - 1];
+        if (first === last) return this.chunks[first].slice(start - base2, end - base2);
+        const parts = [this.chunks[first].slice(start - base2)];
+        for (let i = first + 1; i < last; i++) parts.push(this.chunks[i]);
+        parts.push(this.chunks[last].slice(0, end - this.#ends[last - 1]));
+        return parts.join("");
+      }
+      readString(entry, read, limit, materialize) {
+        const end = Math.min(entry.end < 0 ? this.#consumed : entry.end, entry.invalidAt ?? Number.POSITIVE_INFINITY, this.#invalidAt ?? Number.POSITIVE_INFINITY);
+        if (!entry.needsDecoding) {
+          const length = Math.min(end - read.at, limit - read.length);
+          if (length <= 0) return;
+          if (materialize) read.text += this.slice(read.at, read.at + length);
+          read.at += length;
+          read.length += length;
+          return;
+        }
+        let chunkIndex = this.chunkAt(read.at);
+        while (read.at < end && read.length < limit) {
+          const base2 = chunkIndex === 0 ? 0 : this.#ends[chunkIndex - 1];
+          const chunk = this.chunks[chunkIndex];
+          const remaining = chunk.slice(read.at - base2, Math.min(chunk.length, end - base2));
+          const boundary = remaining.search(CONTENT_ESCAPE);
+          const length = Math.min(boundary < 0 ? remaining.length : boundary, limit - read.length);
+          if (length > 0) {
+            if (materialize) read.text += remaining.slice(0, length);
+            read.at += length;
+            read.length += length;
+            if (read.at === base2 + chunk.length) chunkIndex++;
+            continue;
+          }
+          const type = remaining.length > 1 ? remaining[1] : read.at + 1 < end ? this.chunks[chunkIndex + 1][0] : void 0;
+          let decoded;
+          let width = 2;
+          if (remaining[0] === "\\" && type === void 0 && entry.end < 0) return;
+          if (remaining[0] === "\\" && type === "u") {
+            const hex = this.slice(read.at + 2, Math.min(end, read.at + 6));
+            let valid = true;
+            for (let i = 0; i < hex.length; i++) if (!isHex(hex[i])) valid = false;
+            if (valid) {
+              if (hex.length < 4 && entry.end < 0) return;
+              if (hex.length === 4) decoded = String.fromCharCode(Number.parseInt(hex, 16));
+            }
+            width = 6;
+          } else if (remaining[0] === "\\" && type !== void 0) decoded = SIMPLE_ESCAPES[type];
+          if (decoded === void 0) {
+            entry.invalidAt = read.at;
+            this.#invalidValue = true;
+            return;
+          }
+          if (materialize) read.text += decoded;
+          read.length++;
+          read.at += width;
+          while (chunkIndex < this.chunks.length && read.at >= this.#ends[chunkIndex]) chunkIndex++;
+        }
+      }
+      /** Locate new field ranges without decoding or parsing their contents. */
+      scan() {
+        if (this.object !== void 0 || this.#consumed === this.#size) return;
+        for (let i = this.chunkAt(this.#consumed); i < this.chunks.length && this.#invalidAt === void 0; i++) {
+          const pending = this.chunks[i];
+          const base2 = i === 0 ? 0 : this.#ends[i - 1];
+          for (let index = this.#consumed - base2; index < pending.length && this.#mode !== "invalid"; index++) {
+            if (this.#mode === "string" || this.#mode === "nested" && this.#nestedInString) {
+              const end = this.stringBoundary(pending, index);
+              this.#consumed += end - index;
+              index = end;
+              if (index === pending.length) break;
+            }
+            this.step(pending[index], this.#consumed);
+            this.#consumed++;
+          }
+        }
+      }
+      /** Only raw quotes and their preceding backslash runs can terminate a string. */
+      stringBoundary(fragment, start) {
+        let at = start;
+        while (true) {
+          const quote = fragment.indexOf('"', at);
+          const end = quote < 0 ? fragment.length : quote;
+          if (this.#mode === "string") {
+            const entry = this.#current;
+            if (!entry.needsDecoding && CONTENT_ESCAPE.test(fragment.slice(at, end))) entry.needsDecoding = true;
+          }
+          let slashStart = end;
+          while (slashStart > at && fragment[slashStart - 1] === "\\") slashStart--;
+          const escaped = (end - slashStart) % 2 === 1 !== (slashStart === at && this.#escape);
+          this.#escape = quote < 0 && escaped;
+          if (quote < 0 || !escaped) return end;
+          at = quote + 1;
+        }
+      }
+      step(c, at) {
+        switch (this.#mode) {
+          case "root":
+            if (isWhitespace(c)) return;
+            if (c === "{") {
+              this.#mode = "key-or-end";
+              return;
+            }
+            this.fail();
+            return;
+          case "key-or-end":
+            if (isWhitespace(c)) return;
+            if (c === "}") {
+              this.#mode = "closed";
+              return;
+            }
+            if (c === '"') {
+              this.beginKey(at);
+              return;
+            }
+            this.fail();
+            return;
+          case "key-only":
+            if (isWhitespace(c)) return;
+            if (c === '"') {
+              this.beginKey(at);
+              return;
+            }
+            this.fail();
+            return;
+          case "key":
+            this.stepKey(c, at);
+            return;
+          case "colon":
+            if (isWhitespace(c)) return;
+            if (c === ":") {
+              this.#mode = "value";
+              return;
+            }
+            this.fail();
+            return;
+          case "value":
+            this.beginValue(c, at);
+            return;
+          case "string": {
+            const entry = this.#current;
+            entry.end = at;
+            this.#current = null;
+            this.#mode = "comma-or-end";
+            return;
+          }
+          case "scalar":
+            this.stepScalar(c, at);
+            return;
+          case "nested":
+            this.stepNested(c, at);
+            return;
+          case "comma-or-end":
+            if (isWhitespace(c)) return;
+            if (c === ",") {
+              this.#mode = "key-only";
+              return;
+            }
+            if (c === "}") {
+              this.#mode = "closed";
+              return;
+            }
+            this.fail();
+            return;
+          case "closed":
+            if (isWhitespace(c)) return;
+            this.fail();
+            return;
+          /* v8 ignore next 2 -- scan() stops stepping once the view is invalid. */
+          case "invalid":
+            return;
+          /* v8 ignore next 2 -- Every scanner mode has a handler above. */
+          default:
+            assertNever(this.#mode);
+        }
+      }
+      fail() {
+        this.#invalidAt = this.#consumed;
+        this.#mode = "invalid";
+        this.#current = null;
+      }
+      beginKey(at) {
+        this.#mode = "key";
+        this.#keyStart = at + 1;
+        this.#keyEscaped = false;
+        this.#escape = false;
+      }
+      stepKey(c, at) {
+        if (c < " ") {
+          this.fail();
+          return;
+        }
+        if (this.#escape) {
+          this.#escape = false;
+          return;
+        }
+        if (c === "\\") {
+          this.#escape = true;
+          this.#keyEscaped = true;
+          return;
+        }
+        if (c !== '"') return;
+        const raw = this.slice(this.#keyStart, at);
+        if (this.#keyEscaped) try {
+          this.#key = JSON.parse(`"${raw}"`);
+        } catch (_error) {
+          this.fail();
+          return;
+        }
+        else this.#key = raw;
+        this.#mode = "colon";
+      }
+      open(entry) {
+        if (!this.#entries.has(this.#key)) this.#order.push(this.#key);
+        this.#entries.set(this.#key, entry);
+        this.#current = entry;
+      }
+      beginValue(c, at) {
+        if (isWhitespace(c)) return;
+        if (c === '"') {
+          this.open({
+            kind: "string",
+            start: at + 1,
+            end: -1,
+            needsDecoding: false,
+            invalidAt: void 0,
+            length: void 0,
+            text: void 0,
+            prefixes: void 0
+          });
+          this.#escape = false;
+          this.#mode = "string";
+          return;
+        }
+        if (c === "}" || c === "," || c === ":" || c === "]") {
+          this.fail();
+          return;
+        }
+        this.open({
+          kind: "value",
+          start: at,
+          end: -1,
+          parsed: void 0,
+          invalid: false
+        });
+        if (c === "{" || c === "[") {
+          this.#mode = "nested";
+          this.#nestedEnds = [c === "{" ? "}" : "]"];
+          this.#nestedInString = false;
+          this.#escape = false;
+          return;
+        }
+        this.#mode = "scalar";
+      }
+      stepScalar(c, at) {
+        if (c !== "," && c !== "}" && !isWhitespace(c)) return;
+        this.closeValue(at);
+        this.#mode = c === "," ? "key-only" : c === "}" ? "closed" : "comma-or-end";
+      }
+      stepNested(c, at) {
+        if (this.#nestedInString) {
+          this.#nestedInString = false;
+          return;
+        }
+        if (c === '"') {
+          this.#nestedInString = true;
+          return;
+        }
+        if (c === "{" || c === "[") {
+          this.#nestedEnds.push(c === "{" ? "}" : "]");
+          return;
+        }
+        if (c === "}" || c === "]") {
+          if (this.#nestedEnds.pop() !== c) {
+            this.fail();
+            return;
+          }
+          if (this.#nestedEnds.length === 0) {
+            this.closeValue(at + 1);
+            this.#mode = "comma-or-end";
+          }
+        }
+      }
+      closeValue(end) {
+        const entry = this.#current;
+        entry.end = end;
+        this.#current = null;
+      }
+    };
     function assertNever(value, context) {
       const rendered = JSON.stringify(value) ?? String(value);
       throw new Error(`unreachable variant${context ? ` in ${context}` : ""}: ${rendered}`);
@@ -1783,29 +2399,29 @@ ${t("json.truncated", { total: text.length })}` : text;
     };
     const PROCESS_TITLE_MINIMUM_MS = 150;
     const PROCESS_ICONS = {
-      computer: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("svg", {
+      computer: (0, react_jsx_runtime.jsx)("svg", {
         width: "16",
         height: "16",
         viewBox: "0 0 24 24",
         fill: "none",
         stroke: "currentColor",
         strokeWidth: "1.6",
-        children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "M3 4h18v13H3zM8 21h8M12 17v4" })
+        children: (0, react_jsx_runtime.jsx)("path", { d: "M3 4h18v13H3zM8 21h8M12 17v4" })
       }),
-      thinking: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular, {}),
-      read: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
-      readImage: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
-      search: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 }),
-      edit: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
-      write: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
-      commands: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular, {}),
-      code: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular, { size: 14 }),
-      webSearch: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconGlobeOutlineRegular, {}),
-      webFetch: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
-      subagents: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconAgentPresetOutlineRegular, { size: 14 }),
-      plan: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlanOutlineRegular, {}),
-      questions: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, {}),
-      tools: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSparkleRegular, { size: 14 })
+      thinking: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular, {}),
+      read: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
+      readImage: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
+      search: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 }),
+      edit: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
+      write: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
+      commands: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular, {}),
+      code: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular, { size: 14 }),
+      webSearch: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconGlobeOutlineRegular, {}),
+      webFetch: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
+      subagents: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconAgentPresetOutlineRegular, { size: 14 }),
+      plan: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlanOutlineRegular, {}),
+      questions: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, {}),
+      tools: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSparkleRegular, { size: 14 })
     };
     function sameLiveProcessTitle(left, right) {
       return left.activity === right.activity && left.detail === right.detail && left.preparing === right.preparing;
@@ -1842,7 +2458,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       return active ? displayed : desired;
     }
     const GroupMembers = (0, react.memo)(function GroupMembers2({ members, ...props }) {
-      return members.map((member) => /* @__PURE__ */ (0, react.createElement)(ChatNodeSeat, {
+      return members.map((member) => (0, react.createElement)(ChatNodeSeat, {
         ...props,
         key: chatRenderKey(member),
         nodeKey: member.key,
@@ -1863,7 +2479,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       const detail = detailed && !data.closed ? live.detail : "";
       const title = detail === "" ? label : `${label}${t("message.turnProcess.separator")}${detail}`;
       const activity2 = working ? live.activity : data.summary.counts[0]?.kind ?? "thinking";
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+      return (0, react_jsx_runtime.jsxs)("button", {
         type: "button",
         id: bodyId + "-title",
         className: `${ChatGroupSeat_module_css_default.title} tx-cu-group-toggle`,
@@ -1875,37 +2491,37 @@ ${t("json.truncated", { total: text.length })}` : text;
           toggle();
         },
         children: [
-          /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+          (0, react_jsx_runtime.jsxs)("span", {
             className: ChatGroupSeat_module_css_default.leading,
             "aria-hidden": "true",
-            children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+            children: [(0, react_jsx_runtime.jsx)("span", {
               className: ChatGroupSeat_module_css_default.activityIcon,
               "data-step-process-icon": true,
               children: PROCESS_ICONS[activity2]
-            }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+            }), (0, react_jsx_runtime.jsx)("span", {
               className: ChatGroupSeat_module_css_default.chevron,
               "data-step-process-chevron": true,
-              children: open ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, {}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})
+              children: open ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, {}) : (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})
             })]
           }),
-          /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
+          (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
             active: working,
-            children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
+            children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
               className: ChatGroupSeat_module_css_default.label,
               children: title
             })
           }),
-          data.summary.counts.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          data.summary.counts.length > 0 && (0, react_jsx_runtime.jsx)("span", {
             className: ChatGroupSeat_module_css_default.count,
             "data-process-count": true,
             children: t("message.stepProcess.count", { count: data.summary.counts.reduce((total, item) => total + item.count, 0) })
           }),
-          (data.summary.failures ?? 0) > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          (data.summary.failures ?? 0) > 0 && (0, react_jsx_runtime.jsx)("span", {
             className: "tx-cu-error",
             "data-process-failures": true,
             children: t("message.stepProcess.failures", { count: data.summary.failures ?? 0 })
           }),
-          (data.summary.stopped ?? 0) > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          (data.summary.stopped ?? 0) > 0 && (0, react_jsx_runtime.jsx)("span", {
             "data-process-stopped": true,
             children: t("message.stepProcess.stopped", { count: data.summary.stopped ?? 0 })
           })
@@ -1971,7 +2587,7 @@ ${t("json.truncated", { total: text.length })}` : text;
         grouped && edges.canScrollUp ? ChatGroupSeat_module_css_default.fadeTop : "",
         grouped && edges.canScrollDown ? ChatGroupSeat_module_css_default.fadeBottom : ""
       ];
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+      return (0, react_jsx_runtime.jsxs)("div", {
         ref: rootRef,
         className: `${ChatGroupSeat_module_css_default.root} tx-cu-group`,
         "data-chat-group-key": groupKey,
@@ -1982,9 +2598,9 @@ ${t("json.truncated", { total: text.length })}` : text;
         "data-chat-paging-anchor": grouped && !open || void 0,
         "data-step-process": true,
         "data-group-expanded-mode": !grouped || void 0,
-        children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+        children: [(0, react_jsx_runtime.jsx)("div", {
           hidden: !grouped,
-          children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ProcessGroupHeader, {
+          children: (0, react_jsx_runtime.jsx)(ProcessGroupHeader, {
             groupKey,
             useChatGroup,
             usePresentation: props.usePresentation,
@@ -1993,7 +2609,7 @@ ${t("json.truncated", { total: text.length })}` : text;
             bodyId,
             toggle
           })
-        }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+        }), (0, react_jsx_runtime.jsx)("div", {
           ref: bodyRef,
           id: bodyId,
           role: "region",
@@ -2004,12 +2620,12 @@ ${t("json.truncated", { total: text.length })}` : text;
           "data-scroll-up": edges.canScrollUp || void 0,
           "data-scroll-down": edges.canScrollDown || void 0,
           ...events,
-          children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+          children: (0, react_jsx_runtime.jsx)("div", {
             ref: contentRef,
             className: ChatGroupSeat_module_css_default.content,
             "data-step-process-content": true,
             "data-chat-flow": "",
-            children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(GroupMembers, {
+            children: (0, react_jsx_runtime.jsx)(GroupMembers, {
               ...props,
               members
             })
@@ -3227,7 +3843,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       if (active) classes.push(TurnNavigator_module_css_default.markActive);
       else if (previewId !== void 0) classes.push(TurnNavigator_module_css_default.markPreview);
       if (busy) classes.push(TurnNavigator_module_css_default.markBusy);
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+      return (0, react_jsx_runtime.jsx)("button", {
         ref: registerElement,
         "data-index": index,
         type: "button",
@@ -3414,9 +4030,9 @@ ${t("json.truncated", { total: text.length })}` : text;
       const fadeClasses = [TurnNavigator_module_css_default.scroller];
       if (scrollTop > 1) fadeClasses.push(TurnNavigator_module_css_default.fadeTop);
       if (scrollTop < virtualizer.getTotalSize() - viewHeight - 1) fadeClasses.push(TurnNavigator_module_css_default.fadeBottom);
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+      return (0, react_jsx_runtime.jsx)("div", {
         className: TurnNavigator_module_css_default.slot,
-        children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("nav", {
+        children: (0, react_jsx_runtime.jsxs)("nav", {
           className: TurnNavigator_module_css_default.frame,
           "aria-label": t("chat.turnNavigation.label"),
           onPointerEnter: () => {
@@ -3426,16 +4042,16 @@ ${t("json.truncated", { total: text.length })}` : text;
             pointerInsideRef.current = false;
             setPreviewTurn(null);
           },
-          children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+          children: [(0, react_jsx_runtime.jsx)("div", {
             ref: scrollerRef,
             className: fadeClasses.join(" "),
-            children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+            children: (0, react_jsx_runtime.jsx)("div", {
               ref: virtualizer.containerRef,
               className: TurnNavigator_module_css_default.marks,
               children: virtualItems.map(({ index, key }) => {
                 const item = items[index];
                 if (item === void 0) return null;
-                return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TurnMark, {
+                return (0, react_jsx_runtime.jsx)(TurnMark, {
                   item,
                   index,
                   active: item.turn === activeTurn,
@@ -3449,15 +4065,15 @@ ${t("json.truncated", { total: text.length })}` : text;
                 }, key);
               })
             })
-          }), preview2 !== void 0 && previewPosition !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+          }), preview2 !== void 0 && previewPosition !== void 0 && (0, react_jsx_runtime.jsxs)("div", {
             id: previewId,
             role: "tooltip",
             className: TurnNavigator_module_css_default.preview,
             style: { "--turn-preview-center": `${String(previewPosition.start + previewPosition.size / 2 - scrollTop)}px` },
-            children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+            children: [(0, react_jsx_runtime.jsx)("div", {
               className: TurnNavigator_module_css_default.previewPrompt,
               children: preview2.prompt || t("chat.turnNavigation.turn", { turn: preview2.turn })
-            }), preview2.response !== "" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+            }), preview2.response !== "" && (0, react_jsx_runtime.jsx)("div", {
               className: TurnNavigator_module_css_default.previewResponse,
               children: preview2.response
             })]
@@ -3468,16 +4084,16 @@ ${t("json.truncated", { total: text.length })}` : text;
     const TurnNavigator = (0, react.memo)((0, react.forwardRef)(TurnNavigatorRail));
     const REST_PATH = "M8.844 13.742C8.967 12.328 8.45 10.4 8.45 9.65C8.45 8.94 8.88 8.43 9.6 8.43C11.285 8.43 12.106 8.281 12.685 8.104C13.71 7.791 14.585 6.768 15.055 5.945C15.137 5.803 14.99 5.641 14.829 5.671C13.829 5.86 12.828 5.376 11.827 4.978C10.659 4.514 9.491 4.707 8.935 4.876C8.805 4.915 8.658 4.819 8.636 4.686C8.468 3.643 7.405 2.615 5.498 2.238C4.54 2.048 3.748 1.574 3.347 1.202C3.252 1.113 3.088 1.125 3.03 1.242C2.628 2.059 2.168 3.82 5.248 6.115C5.82 6.494 6.31 6.785 6.574 7.637C6.72 8.104 6.157 9.168 6.061 9.368C5.157 11.27 5.089 12.19 4.926 13.742";
     function RunningWhaleTail() {
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+      return (0, react_jsx_runtime.jsxs)("span", {
         className: ChatView_module_css_default.runningIcon,
         "aria-hidden": "true",
-        children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: ChatView_module_css_default.runningWhaleAnimated }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("svg", {
+        children: [(0, react_jsx_runtime.jsx)("span", { className: ChatView_module_css_default.runningWhaleAnimated }), (0, react_jsx_runtime.jsx)("svg", {
           className: ChatView_module_css_default.runningWhaleStill,
           width: "100%",
           height: "100%",
           viewBox: "0 0 16 16",
           fill: "none",
-          children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", {
+          children: (0, react_jsx_runtime.jsx)("path", {
             d: REST_PATH,
             stroke: "currentColor",
             strokeWidth: 1
@@ -3508,24 +4124,24 @@ ${t("json.truncated", { total: text.length })}` : text;
         };
       }, [startTime]);
       const label = startTime === void 0 ? t("chat.deepDiving") : t("chat.deepDivingFor", { duration: formatRunDuration(Math.max(1e3, now - startTime), t).map((part) => part.text).join("") });
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+      return (0, react_jsx_runtime.jsxs)("div", {
         className: ChatView_module_css_default.running,
         "data-chat-running": true,
         children: [
-          /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          (0, react_jsx_runtime.jsx)("span", {
             className: accessibility_module_css_default.visuallyHidden,
             role: "status",
             "aria-live": "polite",
             "aria-atomic": "true",
             children: t("chat.deepDiving")
           }),
-          /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          (0, react_jsx_runtime.jsx)("span", {
             className: ChatView_module_css_default.runningDivider,
             "aria-hidden": "true"
           }),
-          /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+          (0, react_jsx_runtime.jsxs)("span", {
             className: ChatView_module_css_default.runningContent,
-            children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(RunningWhaleTail, {}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
+            children: [(0, react_jsx_runtime.jsx)(RunningWhaleTail, {}), (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
               active: true,
               className: ChatView_module_css_default.runningText,
               children: label
@@ -3534,6 +4150,9 @@ ${t("json.truncated", { total: text.length })}` : text;
         ]
       });
     });
+    function brandString(value) {
+      return value;
+    }
     function brandNumber(value) {
       return value;
     }
@@ -4576,14 +5195,14 @@ ${t("json.truncated", { total: text.length })}` : text;
       const rows = entries.map((entry) => {
         switch (entry.kind) {
           case "node":
-            return /* @__PURE__ */ (0, react.createElement)(ChatNodeSeat, {
+            return (0, react.createElement)(ChatNodeSeat, {
               ...seatProps,
               key: chatRenderKey(entry),
               nodeKey: entry.key,
               ...entry.groupPart === void 0 ? {} : { groupPart: entry.groupPart }
             });
           case "group":
-            return /* @__PURE__ */ (0, react.createElement)(ChatGroupSeat, {
+            return (0, react.createElement)(ChatGroupSeat, {
               ...seatProps,
               key: chatRenderKey(entry),
               groupKey: entry.key,
@@ -4593,11 +5212,11 @@ ${t("json.truncated", { total: text.length })}` : text;
             return assertNever(entry);
         }
       });
-      const pendingRows = pendingInputs.map((item) => "requestId" in item ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PendingSubmissionBubble, {
+      const pendingRows = pendingInputs.map((item) => "requestId" in item ? (0, react_jsx_runtime.jsx)(PendingSubmissionBubble, {
         submission: item,
         renderMessageImages: seatProps.renderMessageImages,
         t: seatProps.t
-      }, item.requestId) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PendingSteeringBubble, {
+      }, item.requestId) : (0, react_jsx_runtime.jsx)(PendingSteeringBubble, {
         content: item.content,
         renderMessageImages: seatProps.renderMessageImages,
         t: seatProps.t
@@ -4719,52 +5338,52 @@ ${t("json.truncated", { total: text.length })}` : text;
         submissionId: visibleSubmissions.at(-1)?.requestId ?? null,
         loadedTurns: turnNavigationItems
       });
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+      return (0, react_jsx_runtime.jsxs)("div", {
         className: ChatView_module_css_default.frame,
         children: [
-          scroll.initialized && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TurnNavigator, {
+          scroll.initialized && (0, react_jsx_runtime.jsx)(TurnNavigator, {
             items: railItems,
             activeTurn: scroll.activeTurn,
             busyTurn: scroll.busyTurn,
             onNavigate: scroll.navigateToTurn,
             t
           }),
-          /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+          (0, react_jsx_runtime.jsx)("div", {
             className: ChatView_module_css_default.root,
             "data-chat-following-tail": scroll.followingTail ? "" : void 0,
-            children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+            children: (0, react_jsx_runtime.jsx)("div", {
               ref: scroll.listRef,
               className: ChatView_module_css_default.scroll,
-              children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+              children: (0, react_jsx_runtime.jsxs)("div", {
                 ref: scroll.columnRef,
                 className: ChatView_module_css_default.column,
                 "data-chat-flow": "",
                 children: [
-                  openState === "loading" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+                  openState === "loading" && (0, react_jsx_runtime.jsx)("div", {
                     className: ChatView_module_css_default.hint,
                     children: t("chat.loadingHistory")
                   }),
-                  openState === "error" && openError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+                  openState === "error" && openError !== null && (0, react_jsx_runtime.jsx)("div", {
                     className: ChatView_module_css_default.openError,
                     children: t("chat.loadError", {
                       message: openError.message,
                       code: openError.code
                     })
                   }),
-                  hasMore && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+                  hasMore && (0, react_jsx_runtime.jsx)("div", {
                     className: ChatView_module_css_default.older,
-                    children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+                    children: (0, react_jsx_runtime.jsx)("button", {
                       type: "button",
                       disabled: loadingOlder,
                       onClick: scroll.loadEarlier,
                       children: loadingOlder ? t("loading") : t("chat.loadOlder")
                     })
                   }),
-                  /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownDelegateProvider, {
+                  (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownDelegateProvider, {
                     openExternalLink,
                     openFile: requestOpenFile,
                     fileImages,
-                    children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChatNodeList, {
+                    children: (0, react_jsx_runtime.jsx)(ChatNodeList, {
                       entries,
                       pendingInputs,
                       lastInputTurn,
@@ -4787,7 +5406,7 @@ ${t("json.truncated", { total: text.length })}` : text;
                       t
                     })
                   }),
-                  running && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RunningStatus, {
+                  running && (0, react_jsx_runtime.jsx)(RunningStatus, {
                     startTime: runningStartTime,
                     t
                   })
@@ -4795,17 +5414,17 @@ ${t("json.truncated", { total: text.length })}` : text;
               })
             })
           }),
-          !scroll.followingTail && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+          !scroll.followingTail && (0, react_jsx_runtime.jsx)("div", {
             className: ChatView_module_css_default.toBottomSlot,
-            children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+            children: (0, react_jsx_runtime.jsx)("button", {
               type: "button",
               className: ChatView_module_css_default.toBottom,
               "aria-label": t("chat.toBottom"),
               onClick: scroll.returnToBottom,
-              children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})
+              children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})
             })
           }),
-          fileOpenError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FileOpenErrorDialog, {
+          fileOpenError !== null && (0, react_jsx_runtime.jsx)(FileOpenErrorDialog, {
             message: fileOpenError.message,
             busy: fileOpenBusy,
             onClose: closeFileOpenError,
@@ -4818,18 +5437,18 @@ ${t("json.truncated", { total: text.length })}` : text;
       });
     }
     function FileOpenErrorDialog({ message, busy, onClose, onRetry, t }) {
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
+      return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
         open: true,
         onClose,
         closeLabel: t("close"),
         title: t("fileOpen.title"),
         description: message,
-        footer: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+        footer: (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
           variant: "outline",
           className: ChatView_module_css_default.modalAction,
           onClick: onClose,
           children: t("cancel")
-        }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+        }), (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
           variant: "primary",
           className: ChatView_module_css_default.modalAction,
           disabled: busy,
@@ -5246,7 +5865,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       "thinkBody": "lcKema_thinkBody",
       "title": "lcKema_title"
     };
-    const THINK_ICON = /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular, { size: 14 });
+    const THINK_ICON = (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular, { size: 14 });
     function firstLine(text) {
       return text.split(/\r?\n/).find((line) => line.trim() !== "")?.trim() ?? "";
     }
@@ -5272,21 +5891,21 @@ ${t("json.truncated", { total: text.length })}` : text;
       const summaryText = (running ? latestCompletedParagraphFirstLine(text) : "") || firstLine(text);
       const summary = (0, react.useMemo)(() => summaryText.replaceAll("**", ""), [summaryText]);
       const preview2 = usePresentation((policy) => !expanded && summary !== "" && (running || policy.settledReasoningPreview));
-      const collapsedContent = (0, react.useMemo)(() => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+      const collapsedContent = (0, react.useMemo)(() => (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("span", {
         className: ReasoningRow_module_css_default.separator,
         "data-shimmer-decoration": true,
         "aria-hidden": true
-      }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+      }), (0, react_jsx_runtime.jsx)("span", {
         className: ReasoningRow_module_css_default.summary,
         "data-streaming": running || void 0,
-        children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+        children: (0, react_jsx_runtime.jsx)("span", {
           className: ReasoningRow_module_css_default.summaryText,
-          children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, { children: summary })
+          children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, { children: summary })
         })
       })] }), [running, summary]);
-      const content = (0, react.useMemo)(() => expanded ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+      const content = (0, react.useMemo)(() => expanded ? (0, react_jsx_runtime.jsx)("div", {
         className: ReasoningRow_module_css_default.thinkBody,
-        children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+        children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
           text,
           streaming: running,
           labels,
@@ -5298,16 +5917,16 @@ ${t("json.truncated", { total: text.length })}` : text;
         running,
         text
       ]);
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+      return (0, react_jsx_runtime.jsxs)("div", {
         className: ReasoningRow_module_css_default.root,
         "data-variant": "think",
         "data-state": running ? "running" : "ok",
         "data-expanded": expanded || void 0,
         "data-preview": preview2 || void 0,
-        children: [running && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+        children: [running && (0, react_jsx_runtime.jsx)("span", {
           className: accessibility_module_css_default.visuallyHidden,
           children: t("row.running")
-        }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
+        }), (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
           rowClassName: ReasoningRow_module_css_default.row,
           leadingClassName: ReasoningRow_module_css_default.leading,
           titleClassName: ReasoningRow_module_css_default.title,
@@ -5362,7 +5981,7 @@ ${t("json.truncated", { total: text.length })}` : text;
         if (groupPart === "response" && block.kind === "reasoning") continue;
         switch (block.kind) {
           case "text":
-            rendered.push(/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+            rendered.push((0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
               text: block.text,
               streaming,
               labels,
@@ -5379,10 +5998,10 @@ ${t("json.truncated", { total: text.length })}` : text;
               parts.push(next.text);
               i += 1;
             }
-            rendered.push(/* @__PURE__ */ (0, react_jsx_runtime.jsx)(ProcessReasoning, {
+            rendered.push((0, react_jsx_runtime.jsx)(ProcessReasoning, {
               hidden: reasoningHidden,
               reveal: revealProcess,
-              children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ReasoningRow, {
+              children: (0, react_jsx_runtime.jsx)(ReasoningRow, {
                 text: parts.join("\n\n"),
                 running: streaming && i === last,
                 usePresentation,
@@ -5401,7 +6020,7 @@ ${t("json.truncated", { total: text.length })}` : text;
               group.push(next);
               i += 1;
             }
-            rendered.push(/* @__PURE__ */ (0, react_jsx_runtime.jsx)(react.Fragment, { children: renderMessageImages({
+            rendered.push((0, react_jsx_runtime.jsx)(react.Fragment, { children: renderMessageImages({
               images: group.map(({ attachment }) => ({ attachment })),
               align: "start"
             }) }, start));
@@ -5410,19 +6029,19 @@ ${t("json.truncated", { total: text.length })}` : text;
           case "tool-call":
             break;
           default:
-            rendered.push(/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
+            rendered.push((0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
               label: t("message.unknownBlock"),
               payload: block.block,
               truncatedLabel: (total) => t("json.truncated", { total })
             }, i));
         }
       }
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+      return (0, react_jsx_runtime.jsx)("div", {
         className: AssistantMarkdown_module_css_default.root,
         "data-streaming": streaming || void 0,
-        children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+        children: (0, react_jsx_runtime.jsxs)("div", {
           className: AssistantMarkdown_module_css_default.body,
-          children: [rendered, interrupted && (groupPart === void 0 || groupPart === "response" || !blocks.some((block) => block.kind !== "reasoning" && block.kind !== "tool-call")) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          children: [rendered, interrupted && (groupPart === void 0 || groupPart === "response" || !blocks.some((block) => block.kind !== "reasoning" && block.kind !== "tool-call")) && (0, react_jsx_runtime.jsx)("span", {
             className: AssistantMarkdown_module_css_default.stopped,
             children: t("message.stopped")
           })]
@@ -5430,7 +6049,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       });
     });
     function ProcessReasoning({ hidden, reveal, children }) {
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+      return (0, react_jsx_runtime.jsx)("div", {
         ref: useSearchableHidden(hidden, reveal ?? NOOP),
         "data-turn-process-inline": hidden || void 0,
         children
@@ -5461,7 +6080,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       const revealProcess = (0, react.useCallback)(() => {
         turnProcess?.setOpen(true);
       }, [turnProcess]);
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(AssistantMarkdown, {
+      return (0, react_jsx_runtime.jsx)(AssistantMarkdown, {
         blocks: data.blocks,
         groupPart,
         useDisclosure: useDisclosure2,
@@ -5492,7 +6111,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       "summary": "_5OnbHa_summary",
       "title": "_5OnbHa_title"
     };
-    const COMMAND_ICON = /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular, { size: 14 });
+    const COMMAND_ICON = (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular, { size: 14 });
     function stateOf(outcome) {
       if (outcome === null) return "running";
       return outcome.kind === "error" ? "error" : "ok";
@@ -5509,20 +6128,20 @@ ${t("json.truncated", { total: text.length })}` : text;
       const toggle = (0, react.useCallback)(() => {
         setExpanded((value) => !value);
       }, []);
-      const collapsedContent = (0, react.useMemo)(() => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+      const collapsedContent = (0, react.useMemo)(() => (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("span", {
         className: GenericCommandCard_module_css_default.separator,
         "data-shimmer-decoration": true,
         "aria-hidden": true
-      }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+      }), (0, react_jsx_runtime.jsx)("span", {
         className: GenericCommandCard_module_css_default.summary,
         "data-error": state === "error" || void 0,
-        children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, { children: summary })
+        children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, { children: summary })
       })] }), [
         running,
         state,
         summary
       ]);
-      const content = (0, react.useMemo)(() => open ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", {
+      const content = (0, react.useMemo)(() => open ? (0, react_jsx_runtime.jsx)("pre", {
         className: GenericCommandCard_module_css_default.body,
         "data-error": state === "error" || void 0,
         children: body
@@ -5531,20 +6150,20 @@ ${t("json.truncated", { total: text.length })}` : text;
         open,
         state
       ]);
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+      return (0, react_jsx_runtime.jsxs)("div", {
         className: GenericCommandCard_module_css_default.root,
         "data-variant": "others",
         "data-state": state,
         children: [
-          state === "running" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          state === "running" && (0, react_jsx_runtime.jsx)("span", {
             className: accessibility_module_css_default.visuallyHidden,
             children: t("row.running")
           }),
-          state === "error" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          state === "error" && (0, react_jsx_runtime.jsx)("span", {
             className: accessibility_module_css_default.visuallyHidden,
             children: t("row.failed")
           }),
-          /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
+          (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
             leadingClassName: GenericCommandCard_module_css_default.leading,
             titleClassName: GenericCommandCard_module_css_default.title,
             icon: COMMAND_ICON,
@@ -5562,17 +6181,17 @@ ${t("json.truncated", { total: text.length })}` : text;
       });
     });
     function CompactionCommandCard({ node, compaction, t }) {
-      if (compaction !== void 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CompactionItem, {
+      if (compaction !== void 0) return (0, react_jsx_runtime.jsx)(CompactionItem, {
         node: compaction,
         title: t("message.compaction.commandTitle"),
         fallbackSummary: node.outcome?.text ?? null,
         t
       });
-      if (node.outcome !== null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(GenericCommandCard, {
+      if (node.outcome !== null) return (0, react_jsx_runtime.jsx)(GenericCommandCard, {
         node,
         t
       });
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(GenericCommandCard, {
+      return (0, react_jsx_runtime.jsx)(GenericCommandCard, {
         node,
         t,
         runningSummary: t("message.compaction.running")
@@ -5581,11 +6200,11 @@ ${t("json.truncated", { total: text.length })}` : text;
     const CommandNodeView = (0, react.memo)(function CommandNodeView2({ node, renderSlot, t }) {
       const command = node.data;
       const owner = (0, react.useMemo)(() => ({ node: command }), [command]);
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+      return (0, react_jsx_runtime.jsx)("div", {
         className: ChatView_module_css_default.callRow,
         children: renderSlot("conversation.chat.commandview", owner, {
           entryKey: command.name ?? "",
-          fallback: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(GenericCommandCard, {
+          fallback: (0, react_jsx_runtime.jsx)(GenericCommandCard, {
             ...owner,
             t
           })
@@ -5594,9 +6213,9 @@ ${t("json.truncated", { total: text.length })}` : text;
     });
     const ManualCompactionNodeView = (0, react.memo)(function ManualCompactionNodeView2({ node, t }) {
       const data = node.data;
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+      return (0, react_jsx_runtime.jsx)("div", {
         className: ChatView_module_css_default.callRow,
-        children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CompactionCommandCard, {
+        children: (0, react_jsx_runtime.jsx)(CompactionCommandCard, {
           node: data.command,
           ...data.compaction === null ? {} : { compaction: data.compaction },
           t
@@ -5605,9 +6224,9 @@ ${t("json.truncated", { total: text.length })}` : text;
     });
     function SystemPromptRow({ text, update = false, t }) {
       const [open, setOpen] = (0, react.useState)(false);
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
+      return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
         className: ContextInjectionRow_module_css_default.root,
-        icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
+        icon: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
         chevronClassName: ContextInjectionRow_module_css_default.chevron,
         title: t(update ? "message.systemPromptUpdate" : "message.systemPrompt"),
         open,
@@ -5616,10 +6235,10 @@ ${t("json.truncated", { total: text.length })}` : text;
         onToggle: () => {
           setOpen((value) => !value);
         },
-        children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+        children: (0, react_jsx_runtime.jsx)("div", {
           className: ContextInjectionRow_module_css_default.body,
           "data-system-prompt-body": true,
-          children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OpaqueBody, {
+          children: (0, react_jsx_runtime.jsx)(OpaqueBody, {
             content: [{
               type: "text",
               text
@@ -5631,7 +6250,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       });
     }
     const SystemPromptNodeView = (0, react.memo)(function SystemPromptNodeView2({ node, t }) {
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SystemPromptRow, {
+      return (0, react_jsx_runtime.jsx)(SystemPromptRow, {
         text: node.data.text,
         update: node.data.update === true,
         t
@@ -5663,13 +6282,13 @@ ${t("json.truncated", { total: text.length })}` : text;
       const duration = elapsedMs === void 0 || reason === "aborted" || reason === "error" ? void 0 : formatRunDuration(elapsedMs, t);
       const label = reason === "aborted" ? t("message.stopped") : reason === "error" ? t("message.turnProcess.failed") : duration === void 0 ? t("message.turnProcess.worked") : t("message.turnProcess.took");
       const announcement = reason === "aborted" ? t("message.stopped") : reason === "error" ? t("message.turnProcess.failed") : t("message.turnProcess.worked");
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+      return (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("span", {
         className: accessibility_module_css_default.visuallyHidden,
         role: "status",
         "aria-live": "polite",
         "aria-atomic": "true",
         children: announcement
-      }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+      }), (0, react_jsx_runtime.jsxs)("button", {
         type: "button",
         className: TurnProcessNodeView_module_css_default.root,
         "data-open": open || void 0,
@@ -5683,13 +6302,13 @@ ${t("json.truncated", { total: text.length })}` : text;
           event.currentTarget.focus();
           turnProcess.setOpen(!open);
         },
-        children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+        children: [(0, react_jsx_runtime.jsxs)("span", {
           className: TurnProcessNodeView_module_css_default.label,
-          children: [label, duration?.map((part, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          children: [label, duration?.map((part, index) => (0, react_jsx_runtime.jsx)("span", {
             className: part.numeric ? TurnProcessNodeView_module_css_default.durationNumber : void 0,
             children: part.text
           }, index))]
-        }), canCollapse && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { className: TurnProcessNodeView_module_css_default.chevron })]
+        }), canCollapse && (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { className: TurnProcessNodeView_module_css_default.chevron })]
       })] });
     });
     function formatTokens(value, t) {
@@ -5757,10 +6376,8 @@ ${t("json.truncated", { total: text.length })}` : text;
       left: 0,
       top: 0
     };
-    function useStatDialog(controlled) {
-      const [ownOpen, setOwnOpen] = (0, react.useState)(false);
-      const open = controlled?.open ?? ownOpen;
-      const setOpen = controlled?.setOpen ?? setOwnOpen;
+    function useStatDialog() {
+      const [open, setOpen] = (0, react.useState)(false);
       const rootRef = (0, react.useRef)(null);
       const panelRef = (0, react.useRef)(null);
       const pos = (0, _deepseek_ai_dsh_client_ui_primitives.useAnchoredPosition)({
@@ -5777,9 +6394,14 @@ ${t("json.truncated", { total: text.length })}` : text;
         const onKeyDown = (e) => {
           if (e.key === "Escape") setOpen(false);
         };
+        const onClick = (e) => {
+          if (e.target instanceof Node && rootRef.current?.contains(e.target) !== true && panelRef.current?.contains(e.target) !== true) setOpen(false);
+        };
         document.addEventListener("keydown", onKeyDown);
+        document.addEventListener("click", onClick, true);
         return () => {
           document.removeEventListener("keydown", onKeyDown);
+          document.removeEventListener("click", onClick, true);
         };
       }, [open, setOpen]);
       return {
@@ -5834,10 +6456,10 @@ ${t("json.truncated", { total: text.length })}` : text;
       const cacheHit = usage.cacheReadTokens === void 0 ? null : formatCacheHitPercent(usage.cacheReadTokens, usage.totalTokens - usage.outputTokens, 1);
       const total = formatCompactCount(usage.totalTokens, t);
       const routes = usage.routes?.map((route) => `${route.provider}/${route.model}`).join(", ") ?? "";
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+      return (0, react_jsx_runtime.jsxs)("span", {
         ref: rootRef,
         className: TurnUsagePanel_module_css_default.root,
-        children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+        children: [(0, react_jsx_runtime.jsxs)("button", {
           type: "button",
           className: TurnUsagePanel_module_css_default.trigger,
           "aria-haspopup": "dialog",
@@ -5845,46 +6467,46 @@ ${t("json.truncated", { total: text.length })}` : text;
           onClick: () => {
             setOpen(!open);
           },
-          children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, {}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+          children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, {}), (0, react_jsx_runtime.jsx)("span", {
             className: TurnUsagePanel_module_css_default.label,
             children: t("message.turnUsage.consumed", { total })
           })]
-        }), open && (0, react_dom.createPortal)(/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+        }), open && (0, react_dom.createPortal)((0, react_jsx_runtime.jsxs)("div", {
           ref: panelRef,
           className: stat_dialog_module_css_default.panel,
           role: "dialog",
           "aria-label": t("message.turnUsage.title"),
           style: pos ?? MEASURE_STYLE,
           children: [
-            /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+            (0, react_jsx_runtime.jsxs)("div", {
               className: stat_dialog_module_css_default.title,
-              children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+              children: [(0, react_jsx_runtime.jsxs)("span", {
                 className: stat_dialog_module_css_default.titleLabel,
-                children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, {}), t("message.turnUsage.title")]
-              }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+                children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, {}), t("message.turnUsage.title")]
+              }), (0, react_jsx_runtime.jsx)("span", {
                 className: stat_dialog_module_css_default.titleValue,
                 children: formatExactCount(usage.totalTokens, t)
               })]
             }),
-            /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+            (0, react_jsx_runtime.jsx)("div", {
               className: stat_dialog_module_css_default.titleRule,
               "aria-hidden": true
             }),
-            /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dl", {
+            (0, react_jsx_runtime.jsxs)("dl", {
               className: stat_dialog_module_css_default.details,
               "data-turn-usage-details": true,
               children: [
-                routes !== "" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.model") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", {
+                routes !== "" && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.model") }), (0, react_jsx_runtime.jsx)("dd", {
                   className: stat_dialog_module_css_default.route,
                   children: routes
                 })] }),
-                cacheHit !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheHit") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: `${cacheHit}%` })] }),
-                /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.input") }),
-                /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: formatExactCount(usage.uncachedInputTokens, t) }),
-                usage.cacheReadTokens !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheRead") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: formatExactCount(usage.cacheReadTokens, t) })] }),
-                usage.cacheWriteTokens !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheWrite") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: formatExactCount(usage.cacheWriteTokens, t) })] }),
-                /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.output") }),
-                /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dd", { children: [formatExactCount(usage.outputTokens, t), usage.reasoningTokens !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+                cacheHit !== null && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheHit") }), (0, react_jsx_runtime.jsx)("dd", { children: `${cacheHit}%` })] }),
+                (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.input") }),
+                (0, react_jsx_runtime.jsx)("dd", { children: formatExactCount(usage.uncachedInputTokens, t) }),
+                usage.cacheReadTokens !== void 0 && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheRead") }), (0, react_jsx_runtime.jsx)("dd", { children: formatExactCount(usage.cacheReadTokens, t) })] }),
+                usage.cacheWriteTokens !== void 0 && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheWrite") }), (0, react_jsx_runtime.jsx)("dd", { children: formatExactCount(usage.cacheWriteTokens, t) })] }),
+                (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.output") }),
+                (0, react_jsx_runtime.jsxs)("dd", { children: [formatExactCount(usage.outputTokens, t), usage.reasoningTokens !== void 0 && (0, react_jsx_runtime.jsx)("span", {
                   className: stat_dialog_module_css_default.reasoning,
                   children: t("message.turnUsage.reasoning", { tokens: formatExactCount(usage.reasoningTokens, t) })
                 })] })
@@ -5943,18 +6565,18 @@ ${t("json.truncated", { total: text.length })}` : text;
         seq: closing?.finalNode.seq ?? data.seq,
         openFile
       });
-      if (closing === null) return tail === null ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+      if (closing === null) return tail === null ? null : (0, react_jsx_runtime.jsx)("div", {
         className: TurnTailNodeView_module_css_default.root,
         "data-turn-tail": data.turn,
         children: tail
       });
       const messageId = closing.finalNode.messageId;
       const assistantActions = messageId === void 0 ? null : renderSlot("conversation.chat.assistant-actions", { messageId });
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+      return (0, react_jsx_runtime.jsxs)("div", {
         className: TurnTailNodeView_module_css_default.root,
         "data-turn-tail": data.turn,
         "data-actions-reveal": endsWithResponse ? "always" : "hover",
-        children: [tail, /* @__PURE__ */ (0, react_jsx_runtime.jsx)(MessageIconActions, {
+        children: [tail, (0, react_jsx_runtime.jsx)(MessageIconActions, {
           text: assistantText(closing.blocks),
           time: closing.time,
           clock: "end",
@@ -5964,7 +6586,7 @@ ${t("json.truncated", { total: text.length })}` : text;
           branchUnavailable: data.branchUnavailable || hasLaterChatNode,
           className: TurnTailNodeView_module_css_default.actions,
           extraActions: assistantActions,
-          usageAction: detailed && data.tokenUsage !== void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TurnUsagePanel, {
+          usageAction: detailed && data.tokenUsage !== void 0 ? (0, react_jsx_runtime.jsx)(TurnUsagePanel, {
             usage: data.tokenUsage,
             t
           }) : null,
@@ -6066,10 +6688,10 @@ ${t("json.truncated", { total: text.length })}` : text;
       const TriggerIcon = TRIGGER_ICONS[details.icon];
       const date = new Date(node.data.time);
       const time = formatMessageClock(node.data.time, t);
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+      return (0, react_jsx_runtime.jsxs)("section", {
         className: TurnTriggerNodeView_module_css_default.root,
         "data-turn-trigger": true,
-        children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+        children: [(0, react_jsx_runtime.jsxs)("button", {
           className: TurnTriggerNodeView_module_css_default.header,
           type: "button",
           "aria-expanded": open,
@@ -6078,34 +6700,34 @@ ${t("json.truncated", { total: text.length })}` : text;
             setOpen(!open);
           },
           children: [
-            /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+            (0, react_jsx_runtime.jsx)("span", {
               className: TurnTriggerNodeView_module_css_default.icon,
               "aria-hidden": true,
-              children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TriggerIcon, { size: 14 })
+              children: (0, react_jsx_runtime.jsx)(TriggerIcon, { size: 14 })
             }),
-            /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+            (0, react_jsx_runtime.jsx)("span", {
               className: TurnTriggerNodeView_module_css_default.title,
               children: t(details.title)
             }),
-            /* @__PURE__ */ (0, react_jsx_runtime.jsx)("time", {
+            (0, react_jsx_runtime.jsx)("time", {
               className: TurnTriggerNodeView_module_css_default.time,
               dateTime: date.toISOString(),
               children: time
             }),
-            /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {
+            (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {
               size: 12,
               className: open ? TurnTriggerNodeView_module_css_default.openChevron : TurnTriggerNodeView_module_css_default.chevron
             })
           ]
-        }), open && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+        }), open && (0, react_jsx_runtime.jsxs)("div", {
           id: bodyId,
           className: TurnTriggerNodeView_module_css_default.body,
-          children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+          children: [(0, react_jsx_runtime.jsx)("p", {
             className: TurnTriggerNodeView_module_css_default.explanation,
             children: t("message.trigger.explanation")
-          }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+          }), (0, react_jsx_runtime.jsx)("div", {
             className: TurnTriggerNodeView_module_css_default.content,
-            children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(NoticeBody, {
+            children: (0, react_jsx_runtime.jsx)(NoticeBody, {
               content: node.data.content,
               source: node.data.source,
               t
@@ -6220,7 +6842,7 @@ ${t("json.truncated", { total: text.length })}` : text;
         outputTokens: usageOutputTokens(node.usage)
       };
     }
-    const css$1 = ".bOPqQW_root{box-sizing:border-box;min-width:0;max-width:100%;font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));justify-content:center;gap:12px;display:flex}.bOPqQW_anchor{min-width:0;display:inline-flex}.bOPqQW_pill{box-sizing:border-box;corner-shape:round;max-width:100%;color:var(--dsw-alias-label-tertiary);font:inherit;font-variant-numeric:tabular-nums;line-height:inherit;white-space:nowrap;background:0 0;border:none;border-radius:999px;align-items:center;gap:6px;padding:1px 8px;display:inline-flex}.bOPqQW_pill svg{flex:none;width:14px;height:14px}button.bOPqQW_pill{cursor:pointer}button.bOPqQW_pill:hover,button.bOPqQW_pill[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}.bOPqQW_label{text-overflow:ellipsis;min-width:0;overflow:hidden}.bOPqQW_sep{color:var(--dsw-alias-separator-primary);margin:0 6px}";
+    const css$1 = ".bOPqQW_anchor{min-width:0;font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));display:inline-flex}.bOPqQW_pill{box-sizing:border-box;corner-shape:round;max-width:100%;color:var(--dsw-alias-label-tertiary);font:inherit;font-variant-numeric:tabular-nums;line-height:inherit;white-space:nowrap;background:0 0;border:none;border-radius:999px;align-items:center;gap:6px;padding:1px 8px;display:inline-flex}.bOPqQW_pill svg{flex:none;width:14px;height:14px}button.bOPqQW_pill{cursor:pointer}button.bOPqQW_pill:hover,button.bOPqQW_pill[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}.bOPqQW_label{text-overflow:ellipsis;min-width:0;overflow:hidden}.bOPqQW_sep{color:var(--dsw-alias-separator-primary);margin:0 6px}";
     const tagId$1 = "opencu-shared-chat/StatsPills.module.css";
     if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
       const tag = document.createElement("style");
@@ -6233,7 +6855,6 @@ ${t("json.truncated", { total: text.length })}` : text;
       "anchor": "bOPqQW_anchor",
       "label": "bOPqQW_label",
       "pill": "bOPqQW_pill",
-      "root": "bOPqQW_root",
       "sep": "bOPqQW_sep"
     };
     function deriveStats(nodes) {
@@ -6294,185 +6915,156 @@ ${t("json.truncated", { total: text.length })}` : text;
     function exactCount(value, t) {
       return t("message.turnUsage.count", { count: formatExactTokens(value, t) });
     }
-    function TimePill({ stats, t, dialog }) {
-      const { open, setOpen, rootRef, panelRef, pos } = useStatDialog(dialog);
+    function joined$1(first, second) {
+      if (second === null) return first;
+      return (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+        first,
+        (0, react_jsx_runtime.jsx)("span", {
+          className: StatsPills_module_css_default.sep,
+          "aria-hidden": true,
+          children: "\xB7"
+        }),
+        second
+      ] });
+    }
+    function useSessionStats(useChat, useProjection) {
+      const settledNodes = useChat((s) => s.legacy.nodes);
+      const projected = useProjection("sessionStats");
+      return (0, react.useMemo)(() => projected ?? deriveStats(settledNodes), [projected, settledNodes]);
+    }
+    function decodeSpeed(stats, t) {
+      return t("message.tokensPerSecond", { tps: formatTokensPerSecond(stats.decodeTokens / (stats.decodeMs / 1e3)) });
+    }
+    function PlainPill({ stat, icon, label }) {
+      return (0, react_jsx_runtime.jsx)("span", {
+        className: StatsPills_module_css_default.anchor,
+        "data-composer-stat": stat,
+        children: (0, react_jsx_runtime.jsxs)("span", {
+          className: StatsPills_module_css_default.pill,
+          children: [icon, (0, react_jsx_runtime.jsx)("span", {
+            className: StatsPills_module_css_default.label,
+            children: label
+          })]
+        })
+      });
+    }
+    function DialogPill({ stat, icon, label, ariaLabel, title, titleValue, children }) {
+      const { open, setOpen, rootRef, panelRef, pos } = useStatDialog();
+      return (0, react_jsx_runtime.jsxs)("span", {
+        ref: rootRef,
+        className: StatsPills_module_css_default.anchor,
+        "data-composer-stat": stat,
+        children: [(0, react_jsx_runtime.jsxs)("button", {
+          type: "button",
+          className: StatsPills_module_css_default.pill,
+          "aria-haspopup": "dialog",
+          "aria-expanded": open,
+          "aria-label": ariaLabel,
+          onClick: () => {
+            setOpen(!open);
+          },
+          children: [icon, (0, react_jsx_runtime.jsx)("span", {
+            className: StatsPills_module_css_default.label,
+            children: label
+          })]
+        }), open && (0, react_dom.createPortal)((0, react_jsx_runtime.jsxs)("div", {
+          ref: panelRef,
+          className: stat_dialog_module_css_default.panel,
+          role: "dialog",
+          "aria-label": title,
+          style: pos ?? MEASURE_STYLE,
+          children: [
+            (0, react_jsx_runtime.jsxs)("div", {
+              className: stat_dialog_module_css_default.title,
+              children: [(0, react_jsx_runtime.jsxs)("span", {
+                className: stat_dialog_module_css_default.titleLabel,
+                children: [icon, title]
+              }), titleValue !== void 0 && (0, react_jsx_runtime.jsx)("span", {
+                className: stat_dialog_module_css_default.titleValue,
+                children: titleValue
+              })]
+            }),
+            (0, react_jsx_runtime.jsx)("div", {
+              className: stat_dialog_module_css_default.titleRule,
+              "aria-hidden": true
+            }),
+            children
+          ]
+        }), document.body)]
+      });
+    }
+    const ActivityPill = (0, react.memo)(function ActivityPill2({ useChat, useProjection, usePerformanceUsage, t }) {
+      const mode = usePerformanceUsage((value) => value);
+      const stats = useSessionStats(useChat, useProjection);
+      const speed = stats.decodeMs > 0 ? decodeSpeed(stats, t) : null;
+      const icon = (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconGaugeOutlineRegular, {});
+      if (mode === "compact") return speed === null ? null : (0, react_jsx_runtime.jsx)(PlainPill, {
+        stat: "activity",
+        icon,
+        label: speed
+      });
+      if (stats.steps === 0) return null;
       const counts = t("stats.counts", {
         turns: stats.turns,
         steps: stats.steps
       });
-      const tps = stats.decodeMs > 0 ? t("message.tokensPerSecond", { tps: formatTokensPerSecond(stats.decodeTokens / (stats.decodeMs / 1e3)) }) : null;
-      const label = /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-        className: StatsPills_module_css_default.label,
-        children: [counts, tps !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-          className: StatsPills_module_css_default.sep,
-          "aria-hidden": true,
-          children: "\xB7"
-        }), tps] })]
-      });
-      if (stats.llmMs <= 0 && stats.toolMs <= 0 && stats.ttftSteps <= 0 && stats.decodeMs <= 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-        className: StatsPills_module_css_default.anchor,
-        children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-          className: StatsPills_module_css_default.pill,
-          children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconGaugeOutlineRegular, {}), label]
+      const content = {
+        stat: "activity",
+        icon,
+        label: joined$1(counts, speed)
+      };
+      if (stats.llmMs <= 0 && stats.toolMs <= 0 && stats.ttftSteps <= 0 && speed === null) return (0, react_jsx_runtime.jsx)(PlainPill, { ...content });
+      return (0, react_jsx_runtime.jsx)(DialogPill, {
+        ...content,
+        ariaLabel: speed === null ? counts : `${counts} \xB7 ${speed}`,
+        title: t("stats.dialog.title"),
+        children: (0, react_jsx_runtime.jsxs)("dl", {
+          className: stat_dialog_module_css_default.details,
+          "data-session-stats-details": true,
+          children: [
+            stats.llmMs > 0 && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("stats.dialog.llmTime") }), (0, react_jsx_runtime.jsx)("dd", { children: formatDuration(stats.llmMs, t) })] }),
+            stats.toolMs > 0 && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("stats.dialog.toolTime") }), (0, react_jsx_runtime.jsx)("dd", { children: formatDuration(stats.toolMs, t) })] }),
+            stats.ttftSteps > 0 && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("stats.dialog.ttft") }), (0, react_jsx_runtime.jsx)("dd", { children: formatDuration(stats.ttftMs / stats.ttftSteps, t) })] }),
+            speed !== null && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("stats.dialog.speed") }), (0, react_jsx_runtime.jsx)("dd", { children: speed })] })
+          ]
         })
       });
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-        ref: rootRef,
-        className: StatsPills_module_css_default.anchor,
-        children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-          type: "button",
-          className: StatsPills_module_css_default.pill,
-          "aria-haspopup": "dialog",
-          "aria-expanded": open,
-          "aria-label": tps === null ? counts : `${counts} \xB7 ${tps}`,
-          onClick: () => {
-            setOpen(!open);
-          },
-          children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconGaugeOutlineRegular, {}), label]
-        }), open && (0, react_dom.createPortal)(/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-          ref: panelRef,
-          className: stat_dialog_module_css_default.panel,
-          role: "dialog",
-          "aria-label": t("stats.dialog.title"),
-          style: pos ?? MEASURE_STYLE,
-          children: [
-            /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-              className: stat_dialog_module_css_default.title,
-              children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-                className: stat_dialog_module_css_default.titleLabel,
-                children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconGaugeOutlineRegular, {}), t("stats.dialog.title")]
-              })
-            }),
-            /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-              className: stat_dialog_module_css_default.titleRule,
-              "aria-hidden": true
-            }),
-            /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dl", {
-              className: stat_dialog_module_css_default.details,
-              "data-session-stats-details": true,
-              children: [
-                stats.llmMs > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("stats.dialog.llmTime") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: formatDuration(stats.llmMs, t) })] }),
-                stats.toolMs > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("stats.dialog.toolTime") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: formatDuration(stats.toolMs, t) })] }),
-                stats.ttftSteps > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("stats.dialog.ttft") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: formatDuration(stats.ttftMs / stats.ttftSteps, t) })] }),
-                stats.decodeMs > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("stats.dialog.speed") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: t("message.tokensPerSecond", { tps: formatTokensPerSecond(stats.decodeTokens / (stats.decodeMs / 1e3)) }) })] })
-              ]
-            })
-          ]
-        }), document.body)]
-      });
-    }
-    function UsagePill({ usage, t, dialog }) {
-      const { open, setOpen, rootRef, panelRef, pos } = useStatDialog(dialog);
-      const total = billedInputTokens(usage) + usage.outputTokens;
-      const totalText = t("message.turnUsage.count", { count: formatTokens(total, t) });
+    });
+    const UsagePill = (0, react.memo)(function UsagePill2({ useProjection, usePerformanceUsage, t }) {
+      const mode = usePerformanceUsage((value) => value);
+      const usage = useProjection("tokenUsage");
+      if (usage === void 0 || billedInputTokens(usage) === 0 && usage.outputTokens === 0) return null;
       const cacheHit = cacheHitPercent(usage);
       const cacheHitText = cacheHit !== null ? t("stats.cacheHit", { percent: cacheHit }) : null;
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-        ref: rootRef,
-        className: StatsPills_module_css_default.anchor,
-        children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-          type: "button",
-          className: StatsPills_module_css_default.pill,
-          "aria-haspopup": "dialog",
-          "aria-expanded": open,
-          "aria-label": cacheHitText === null ? totalText : `${totalText} \xB7 ${cacheHitText}`,
-          onClick: () => {
-            setOpen(!open);
-          },
-          children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, {}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-            className: StatsPills_module_css_default.label,
-            children: [totalText, cacheHitText !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-              className: StatsPills_module_css_default.sep,
-              "aria-hidden": true,
-              children: "\xB7"
-            }), cacheHitText] })]
-          })]
-        }), open && (0, react_dom.createPortal)(/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-          ref: panelRef,
-          className: stat_dialog_module_css_default.panel,
-          role: "dialog",
-          "aria-label": t("stats.dialog.usageTitle"),
-          style: pos ?? MEASURE_STYLE,
-          children: [
-            /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-              className: stat_dialog_module_css_default.title,
-              children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-                className: stat_dialog_module_css_default.titleLabel,
-                children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, {}), t("stats.dialog.usageTitle")]
-              }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-                className: stat_dialog_module_css_default.titleValue,
-                children: exactCount(total, t)
-              })]
-            }),
-            /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-              className: stat_dialog_module_css_default.titleRule,
-              "aria-hidden": true
-            }),
-            /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dl", {
-              className: stat_dialog_module_css_default.details,
-              "data-session-stats-usage": true,
-              children: [
-                cacheHit !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheHit") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: `${cacheHit}%` })] }),
-                /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.input") }),
-                /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: exactCount(usage.uncachedInputTokens, t) }),
-                /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheRead") }),
-                /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: exactCount(usage.cacheReadTokens, t) }),
-                usage.cacheWriteTokens !== 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheWrite") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: exactCount(usage.cacheWriteTokens, t) })] }),
-                /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.output") }),
-                /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: exactCount(usage.outputTokens, t) })
-              ]
-            })
-          ]
-        }), document.body)]
+      const icon = (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, {});
+      if (mode === "compact") return cacheHitText === null ? null : (0, react_jsx_runtime.jsx)(PlainPill, {
+        stat: "usage",
+        icon,
+        label: cacheHitText
       });
-    }
-    const StatsPills = (0, react.memo)(function StatsPills2({ useChat, useProjection, usePerformanceUsage, t }) {
-      const mode = usePerformanceUsage((value) => value);
-      const settledNodes = useChat((s) => s.legacy.nodes);
-      const usage = useProjection("tokenUsage");
-      const [openPill, setOpenPill] = (0, react.useState)(null);
-      const projected = useProjection("sessionStats");
-      const stats = (0, react.useMemo)(() => projected ?? deriveStats(settledNodes), [projected, settledNodes]);
-      const hasTokens = usage !== void 0 && (billedInputTokens(usage) > 0 || usage.outputTokens > 0);
-      if (mode === "compact") {
-        const speed = stats.decodeMs > 0 ? t("message.tokensPerSecond", { tps: formatTokensPerSecond(stats.decodeTokens / (stats.decodeMs / 1e3)) }) : null;
-        const cacheHit = hasTokens ? cacheHitPercent(usage) : null;
-        if (speed === null && cacheHit === null) return null;
-        return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-          className: StatsPills_module_css_default.root,
-          "data-composer-stats": true,
-          children: [speed !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-            className: StatsPills_module_css_default.pill,
-            children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconGaugeOutlineRegular, {}), speed]
-          }), cacheHit !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-            className: StatsPills_module_css_default.pill,
-            children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, {}), t("stats.cacheHit", { percent: cacheHit })]
-          })]
-        });
-      }
-      if (stats.steps === 0 && !hasTokens) return null;
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-        className: StatsPills_module_css_default.root,
-        "data-composer-stats": true,
-        children: [stats.steps > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TimePill, {
-          stats,
-          t,
-          dialog: {
-            open: openPill === "time",
-            setOpen: (open) => {
-              setOpenPill(open ? "time" : null);
-            }
-          }
-        }), hasTokens && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(UsagePill, {
-          usage,
-          t,
-          dialog: {
-            open: openPill === "usage",
-            setOpen: (open) => {
-              setOpenPill(open ? "usage" : null);
-            }
-          }
-        })]
+      const total = billedInputTokens(usage) + usage.outputTokens;
+      const totalText = t("message.turnUsage.count", { count: formatTokens(total, t) });
+      return (0, react_jsx_runtime.jsx)(DialogPill, {
+        stat: "usage",
+        icon,
+        label: joined$1(totalText, cacheHitText),
+        ariaLabel: cacheHitText === null ? totalText : `${totalText} \xB7 ${cacheHitText}`,
+        title: t("stats.dialog.usageTitle"),
+        titleValue: exactCount(total, t),
+        children: (0, react_jsx_runtime.jsxs)("dl", {
+          className: stat_dialog_module_css_default.details,
+          "data-session-stats-usage": true,
+          children: [
+            cacheHit !== null && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheHit") }), (0, react_jsx_runtime.jsx)("dd", { children: `${cacheHit}%` })] }),
+            (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.input") }),
+            (0, react_jsx_runtime.jsx)("dd", { children: exactCount(usage.uncachedInputTokens, t) }),
+            (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheRead") }),
+            (0, react_jsx_runtime.jsx)("dd", { children: exactCount(usage.cacheReadTokens, t) }),
+            usage.cacheWriteTokens !== 0 && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.cacheWrite") }), (0, react_jsx_runtime.jsx)("dd", { children: exactCount(usage.cacheWriteTokens, t) })] }),
+            (0, react_jsx_runtime.jsx)("dt", { children: t("message.turnUsage.output") }),
+            (0, react_jsx_runtime.jsx)("dd", { children: exactCount(usage.outputTokens, t) })
+          ]
+        })
       });
     });
     const CHAT_SYNTHETIC_SEQ_OFFSETS = {
@@ -6697,6 +7289,10 @@ ${t("json.truncated", { total: text.length })}` : text;
       };
     }
     function updateChunk(state, chunk, seq, time) {
+      if (chunk.type === "tool-call-delta") {
+        const previous = state.blocks[chunk.index];
+        if (previous?.kind === "tool-call" && previous.callId !== "" && (chunk.name === void 0 || chunk.name === previous.name) && (state.firstTokenTime !== void 0 || !isTokenDelta(chunk))) return state;
+      }
       const blocks = [...state.blocks];
       let changedIndex = -1;
       let previousVisible = false;
@@ -6730,17 +7326,11 @@ ${t("json.truncated", { total: text.length })}` : text;
           const previous = blocks[chunk.index];
           changedIndex = chunk.index;
           previousVisible = blockIsVisible(previous);
-          const base2 = previous?.kind === "tool-call" ? previous : {
-            kind: "tool-call",
-            callId: "",
-            name: "",
-            argsRaw: ""
-          };
           blocks[chunk.index] = {
             kind: "tool-call",
-            callId: base2.callId || String(chunk.id),
-            name: chunk.name ?? base2.name,
-            argsRaw: base2.argsRaw + chunk.argumentsDelta
+            callId: (previous?.kind === "tool-call" ? previous.callId : "") || String(chunk.id),
+            name: chunk.name ?? (previous?.kind === "tool-call" ? previous.name : ""),
+            argsRaw: previous?.kind === "tool-call" ? previous.argsRaw : ""
           };
           break;
         }
@@ -6926,7 +7516,16 @@ ${t("json.truncated", { total: text.length })}` : text;
       }
     };
     function registerAssistantConversationNode(ctx) {
-      ctx.uiConversation.events.register(assistantDefinition);
+      const match = assistantDefinition.match.bind(assistantDefinition);
+      ctx.uiConversation.events.register({
+        ...assistantDefinition,
+        match: {
+          "step/start": match,
+          "assistant/live-chunk": match,
+          "assistant/message": match,
+          "llm/retry": match
+        }
+      });
     }
     function isSettledTool(block) {
       return "kind" in block;
@@ -8550,32 +9149,63 @@ ${t("json.truncated", { total: text.length })}` : text;
     function jsonArguments(value) {
       return JSON.stringify(value);
     }
-    function rootCall(match) {
-      const event = match.event;
-      if (event.type === "assistant/live-chunk") {
-        const chunk = event.data.chunk;
-        if (chunk.type !== "tool-call-delta" || !chunk.name) throw new Error("tool preparation requires a named call delta");
-        return {
-          phase: "preparing",
-          callId: String(chunk.id),
-          name: chunk.name,
-          turn: event.data.turn,
-          step: event.data.step,
-          time: event.time,
-          subCalls: []
-        };
-      }
+    function rootCall(match, previous) {
       if (match.event.type !== "tool/call") throw new Error("tool-call start requires tool/call");
       return {
         phase: "start",
         callId: String(match.event.data.callId),
         name: match.event.data.name,
         argsRaw: match.event.data.arguments,
+        args: previous === void 0 ? PartialArguments.fromText(match.event.data.arguments) : previous.args.settle(match.event.data.arguments),
         turn: match.event.data.turn,
         step: match.event.data.step,
         time: match.event.time,
         subCalls: []
       };
+    }
+    function applyDelta(state, match) {
+      const event = match.event;
+      if (event.type !== "assistant/live-chunk") return state;
+      const chunk = event.data.chunk;
+      const root = state.root;
+      if (chunk.type === "block-end" && chunk.block.type === "tool-call") {
+        if (root === void 0 || "kind" in root || root.phase !== "preparing") return state;
+        return {
+          ...state,
+          root: {
+            ...root,
+            name: chunk.block.name,
+            args: root.args.settle(chunk.block.arguments)
+          }
+        };
+      }
+      if (chunk.type !== "tool-call-delta") return state;
+      if (root === void 0) {
+        if (!chunk.name) return state;
+        const args = new PartialArguments();
+        args.append(chunk.argumentsDelta);
+        return {
+          ...state,
+          root: {
+            phase: "preparing",
+            callId: String(chunk.id),
+            name: chunk.name,
+            turn: event.data.turn,
+            step: event.data.step,
+            time: event.time,
+            subCalls: [],
+            args
+          }
+        };
+      }
+      if ("kind" in root || root.phase !== "preparing" || root.args.isSealed) return state;
+      root.args.append(chunk.argumentsDelta);
+      return state;
+    }
+    function preparingBlock(root, current) {
+      const changed = root.args.refresh();
+      if (!changed && current !== void 0 && !("kind" in current) && current.phase === "preparing" && current.name === root.name && current.args === root.args) return current;
+      return changed ? { ...root } : root;
     }
     function rootResult(match, previous) {
       if (match.event.type !== "tool/result") return void 0;
@@ -8585,6 +9215,8 @@ ${t("json.truncated", { total: text.length })}` : text;
         seq: match.event.seq,
         time: match.event.time,
         callId: String(message.source.callId),
+        name: previous?.name ?? "",
+        args: previous?.args ?? PartialArguments.EMPTY,
         call: previous === void 0 ? null : {
           name: previous.name,
           argsRaw: previous.argsRaw
@@ -8604,6 +9236,7 @@ ${t("json.truncated", { total: text.length })}` : text;
         parentCallId: data.parentCallId,
         name: data.name,
         argsRaw: jsonArguments(data.arguments),
+        args: PartialArguments.fromObject(data.arguments),
         turn: locationTurn(match),
         step: locationStep(match),
         time: match.event.time,
@@ -8617,6 +9250,8 @@ ${t("json.truncated", { total: text.length })}` : text;
         time: match.event.time,
         callId: data.subCallId,
         parentCallId: data.parentCallId,
+        name: data.name,
+        args: previous !== void 0 && !("kind" in previous) ? previous.args : PartialArguments.fromObject(data.arguments),
         call: {
           name: data.name,
           argsRaw: jsonArguments(data.arguments)
@@ -8716,6 +9351,8 @@ ${t("json.truncated", { total: text.length })}` : text;
         time: interruptedAt.time,
         callId: block.callId,
         ...block.parentCallId === void 0 ? {} : { parentCallId: block.parentCallId },
+        name: block.name,
+        args: block.args,
         call: {
           name: block.name,
           argsRaw: block.argsRaw
@@ -8763,7 +9400,11 @@ ${t("json.truncated", { total: text.length })}` : text;
       match: (event) => {
         if (event.type === "assistant/live-chunk") {
           const chunk = event.data.chunk;
-          return chunk.type === "tool-call-delta" && chunk.name ? {
+          if (chunk.type === "block-end" && chunk.block.type === "tool-call") return {
+            id: String(chunk.block.id),
+            role: "start"
+          };
+          return chunk.type === "tool-call-delta" ? {
             id: String(chunk.id),
             role: "start"
           } : null;
@@ -8785,19 +9426,26 @@ ${t("json.truncated", { total: text.length })}` : text;
         }
         return null;
       },
-      start: (_context, match) => ({
-        root: rootCall(match),
-        children: /* @__PURE__ */ new Map(),
-        parents: /* @__PURE__ */ new Map()
-      }),
+      start: (_context, match) => {
+        const state = {
+          root: void 0,
+          children: /* @__PURE__ */ new Map(),
+          parents: /* @__PURE__ */ new Map()
+        };
+        return match.event.type === "tool/call" ? {
+          ...state,
+          root: rootCall(match)
+        } : applyDelta(state, match);
+      },
       update: (context, match) => {
+        if (match.event.type === "assistant/live-chunk") return applyDelta(context.state, match);
         if (match.event.type === "tool/call") return {
           ...context.state,
-          root: rootCall(match)
+          root: rootCall(match, context.state.root)
         };
         if (match.event.type === "tool/result") {
           const root = context.state.root;
-          const result = rootResult(match, !("kind" in root) && root.phase === "start" ? root : void 0);
+          const result = rootResult(match, root !== void 0 && !("kind" in root) && root.phase === "start" ? root : void 0);
           return result === void 0 ? context.state : {
             ...context.state,
             root: result
@@ -8809,12 +9457,12 @@ ${t("json.truncated", { total: text.length })}` : text;
       buildViewNode: (context) => {
         const current = context.current.get("chat");
         const state = context.state ?? fallbackState$2(context);
-        if (state === void 0) return current == null ? null : current.visibility === "hidden" ? current : {
+        if (state?.root === void 0) return current == null ? null : current.visibility === "hidden" ? current : {
           ...current,
           visibility: "hidden"
         };
         const interruptedAt = interruption(context);
-        const projected = projectBlock(state.root, state, interruptedAt);
+        const projected = projectBlock(!("kind" in state.root) && state.root.phase === "preparing" ? preparingBlock(state.root, current?.data.root) : state.root, state, interruptedAt);
         const anchor = context.start?.event.seq ?? ("kind" in state.root ? state.root.seq : context.matches[0]?.event.seq ?? 0);
         const visibility = !("kind" in projected) && projected.phase === "preparing" && interruptedAt !== void 0 ? "hidden" : "visible";
         const location = contextLocation(context);
@@ -8827,7 +9475,17 @@ ${t("json.truncated", { total: text.length })}` : text;
       }
     };
     function registerToolConversationNode(ctx) {
-      ctx.uiConversation.events.register(toolDefinition);
+      const match = toolDefinition.match.bind(toolDefinition);
+      ctx.uiConversation.events.register({
+        ...toolDefinition,
+        match: {
+          "assistant/live-chunk": match,
+          "tool/call": match,
+          "tool/result": match,
+          "tool/ptc-dispatch-start": match,
+          "tool/ptc-dispatch": match
+        }
+      });
     }
     function lastStep$1(context) {
       const location = context.start?.location ?? context.matches[0]?.location;
@@ -9148,7 +9806,21 @@ ${t("json.truncated", { total: text.length })}` : text;
       }
     };
     function registerTurnProcess(ctx) {
-      ctx.uiConversation.events.register(turnProcessDefinition);
+      const match = turnProcessDefinition.match.bind(turnProcessDefinition);
+      ctx.uiConversation.events.register({
+        ...turnProcessDefinition,
+        match: {
+          "turn/start": match,
+          "assistant/live-chunk": match,
+          "assistant/message": match,
+          "tool/call": match,
+          "tool/result": match,
+          "llm/retry": match,
+          "step/start": match,
+          "step/end": match,
+          "turn/end": match
+        }
+      });
     }
     function lastAssistantStreamChunk(stream, type) {
       for (let index = stream.length - 1; index >= 0; index -= 1) {
@@ -9450,10 +10122,23 @@ ${t("json.truncated", { total: text.length })}` : text;
       }
     };
     function registerTurnTailConversationNode(ctx) {
-      ctx.uiConversation.events.register(turnTailDefinition);
-    }
-    function brandString(value) {
-      return value;
+      const match = turnTailDefinition.match.bind(turnTailDefinition);
+      ctx.uiConversation.events.register({
+        ...turnTailDefinition,
+        match: {
+          "turn/start": match,
+          "turn/end": match,
+          "tool/call": match,
+          "tool/result": match,
+          "assistant/message": match,
+          "assistant/attempt": match,
+          "assistant/live-chunk": match,
+          "step/start": match,
+          "step/end": match,
+          "llm/retry": match,
+          "llm/retry-started": match
+        }
+      });
     }
     function activity(name) {
       if (/^computer_use(?:_|$)/.test(name.split(/[./]/).at(-1) ?? "")) return "computer";
@@ -9482,6 +10167,7 @@ ${t("json.truncated", { total: text.length })}` : text;
       return "tools";
     }
     const LIVE_TOOL_DETAIL_MAX_CHARS = 160;
+    const LIVE_TOOL_DETAIL_PREFIX_CHARS = 512;
     const LIVE_TOOL_DETAIL_SEGMENTER = new Intl.Segmenter(void 0, { granularity: "grapheme" });
     const LIVE_TOOL_DETAIL_KEYS = [
       "title",
@@ -9507,10 +10193,46 @@ ${t("json.truncated", { total: text.length })}` : text;
       "action",
       "status"
     ];
+    function normalizeLiveToolText(text) {
+      const normalized = text.replace(/\s+/g, " ").trim();
+      if (normalized.length <= LIVE_TOOL_DETAIL_MAX_CHARS) return {
+        text: normalized,
+        truncated: false
+      };
+      const chars = [];
+      for (const { segment } of LIVE_TOOL_DETAIL_SEGMENTER.segment(normalized)) {
+        if (chars.length === LIVE_TOOL_DETAIL_MAX_CHARS) return {
+          text: `${chars.slice(0, LIVE_TOOL_DETAIL_MAX_CHARS - 1).join("").trimEnd()}\u2026`,
+          truncated: true
+        };
+        chars.push(segment);
+      }
+      return {
+        text: normalized,
+        truncated: false
+      };
+    }
     function normalizeLiveToolDetail(value) {
-      const normalized = (typeof value === "string" ? value : Array.isArray(value) && value.every((item) => typeof item === "string") ? value.join(", ") : "").replace(/\s+/g, " ").trim();
-      const chars = Array.from(LIVE_TOOL_DETAIL_SEGMENTER.segment(normalized), (part) => part.segment);
-      return chars.length <= LIVE_TOOL_DETAIL_MAX_CHARS ? normalized : `${chars.slice(0, LIVE_TOOL_DETAIL_MAX_CHARS - 1).join("").trimEnd()}\u2026`;
+      return normalizeLiveToolText(typeof value === "string" ? value : Array.isArray(value) && value.every((item) => typeof item === "string") ? value.join(", ") : "").text;
+    }
+    function argumentTextDetail(args, key) {
+      let limit = LIVE_TOOL_DETAIL_PREFIX_CHARS;
+      while (true) {
+        let prefix = args.textPrefix(key, limit);
+        if (prefix === void 0) return void 0;
+        const last = prefix.charCodeAt(prefix.length - 1);
+        if (last >= 55296 && last <= 56319) {
+          const extended = args.textPrefix(key, limit + 1);
+          const next = extended.charCodeAt(prefix.length);
+          if (next >= 56320 && next <= 57343) {
+            prefix = extended;
+            limit++;
+          } else if (extended.length === prefix.length && !args.isSealed && !args.complete(key)) prefix = prefix.slice(0, -1);
+        }
+        const detail = normalizeLiveToolText(prefix);
+        if (detail.truncated || !args.stringExceeds(key, limit)) return detail.text;
+        limit *= 2;
+      }
     }
     function questionDetail(value) {
       if (!Array.isArray(value)) return "";
@@ -9537,20 +10259,13 @@ ${t("json.truncated", { total: text.length })}` : text;
       }
       return "";
     }
-    function liveToolDetail(name, argsRaw) {
-      let args;
-      try {
-        args = JSON.parse(argsRaw);
-      } catch (_error) {
-        return normalizeLiveToolDetail(name);
-      }
-      if (args === null || typeof args !== "object") return normalizeLiveToolDetail(name);
-      for (const key of LIVE_TOOL_DETAIL_KEYS) if (key in args) {
-        const value = Reflect.get(args, key);
-        const detail = key === "questions" ? questionDetail(value) : normalizeLiveToolDetail(value);
+    function liveToolDetail(name, args) {
+      for (const key of LIVE_TOOL_DETAIL_KEYS) {
+        if (!args.has(key)) continue;
+        const detail = key === "questions" ? questionDetail(args.value(key)) : argumentTextDetail(args, key) ?? normalizeLiveToolDetail(args.value(key));
         if (detail !== "") return detail;
       }
-      return normalizeLiveToolDetail(name);
+      return args.closed() ? normalizeLiveToolDetail(name) : "";
     }
     function processActivity(nodes) {
       const counts = /* @__PURE__ */ new Map();
@@ -9578,7 +10293,7 @@ ${t("json.truncated", { total: text.length })}` : text;
           if (isRunningTool(tool) && tool.time >= runningTime) {
             running = kind;
             preparing = tool.phase === "preparing";
-            runningDetail = tool.phase === "preparing" ? kind === "tools" ? tool.name : "" : liveToolDetail(tool.name, tool.argsRaw);
+            runningDetail = liveToolDetail(tool.name, tool.args);
             runningTime = tool.time;
           }
           counts.set(kind, (counts.get(kind) ?? 0) + 1);
@@ -9959,9 +10674,9 @@ ${t("json.truncated", { total: text.length })}` : text;
         dismiss: dismissNotice,
         keepOpen: keepNoticeOpen
       };
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react.Fragment, { children: renderSlotChain("shell.quota-notice", owner, { fallback: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Toast, {
+      return (0, react_jsx_runtime.jsx)(react.Fragment, { children: renderSlotChain("shell.quota-notice", owner, { fallback: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Toast, {
         text: owner.message,
-        icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconWarningOutlineRegular, { size: 18 }),
+        icon: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconWarningOutlineRegular, { size: 18 }),
         onDone: dismissNotice
       }) }) }, `quota-notice-${String(notice.seq)}`);
     }
@@ -10193,6 +10908,8 @@ ${t("json.truncated", { total: text.length })}` : text;
     globalThis.__schemastery_index__ ??= 0;
     globalThis.__schemastery_refs__ = void 0;
     var ValidationError = class extends TypeError {
+      options;
+      name = "ValidationError";
       constructor(message, options) {
         let prefix = "$";
         for (const segment of options.path || []) if (typeof segment === "string") prefix += "." + segment;
@@ -10201,7 +10918,6 @@ ${t("json.truncated", { total: text.length })}` : text;
         if (prefix.startsWith(".")) prefix = prefix.slice(1);
         super((prefix === "$" ? "" : `${prefix} `) + message);
         this.options = options;
-        this.name = "ValidationError";
       }
       static is(error) {
         return !!error?.[kValidationError];
@@ -10877,7 +11593,7 @@ ${t("json.truncated", { total: text.length })}` : text;
         closeMenu();
         onSelect(id);
       };
-      const selector = /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+      const selector = (0, react_jsx_runtime.jsxs)("button", {
         ref: selectorRef,
         type: "button",
         className: PreferenceRow_module_css_default.selector,
@@ -10886,20 +11602,20 @@ ${t("json.truncated", { total: text.length })}` : text;
         onClick: () => {
           setOpen((value2) => !value2);
         },
-        children: [selectedLabel, /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { className: PreferenceRow_module_css_default.chevron })]
+        children: [selectedLabel, (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { className: PreferenceRow_module_css_default.chevron })]
       });
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+      return (0, react_jsx_runtime.jsxs)("div", {
         className: PreferenceRow_module_css_default.row,
-        children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+        children: [(0, react_jsx_runtime.jsxs)("div", {
           className: PreferenceRow_module_css_default.rowText,
-          children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+          children: [(0, react_jsx_runtime.jsx)("div", {
             className: PreferenceRow_module_css_default.title,
             children: title
-          }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+          }), (0, react_jsx_runtime.jsx)("div", {
             className: PreferenceRow_module_css_default.desc,
             children: description
           })]
-        }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+        }), (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
           open,
           onClose: closeMenu,
           items: options,
@@ -10919,7 +11635,7 @@ ${t("json.truncated", { total: text.length })}` : text;
     };
     function TranscriptViewRow({ useTranscriptView, setTranscriptView, t }) {
       const mode = useTranscriptView((value) => value);
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PreferenceRow, {
+      return (0, react_jsx_runtime.jsx)(PreferenceRow, {
         title: t("settings.transcript.title"),
         description: t("settings.transcript.description"),
         value: mode,
@@ -11013,7 +11729,7 @@ ${t("json.truncated", { total: text.length })}` : text;
     function LinkOpeningRow({ useLinkOpening, useBrowserAvailable, setLinkOpening, t }) {
       const destination = useLinkOpening((value) => value);
       if (!useBrowserAvailable((value) => value)) return null;
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PreferenceRow, {
+      return (0, react_jsx_runtime.jsx)(PreferenceRow, {
         title: t("settings.links.title"),
         description: t("settings.links.description"),
         value: destination,
@@ -11040,7 +11756,7 @@ ${t("json.truncated", { total: text.length })}` : text;
     function PerformanceUsageRow({ usePerformanceUsage, setPerformanceUsage, t }) {
       const mode = usePerformanceUsage((value) => value);
       const selectedLabel = mode === "detailed" ? "settings.performance.detailed" : "settings.performance.compact";
-      return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PreferenceRow, {
+      return (0, react_jsx_runtime.jsx)(PreferenceRow, {
         title: t("settings.performance.title"),
         description: t("settings.performance.description"),
         value: mode,
@@ -11336,13 +12052,23 @@ ${t("json.truncated", { total: text.length })}` : text;
           }
         })
       }, QuotaNoticeHost));
-      ctx.slots.inject("conversation.composer.dock", () => ctx.slots.register({
-        name: "conversation.composer.dock",
-        id: "stats",
-        order: 0,
-        locale: NS,
-        inject: () => ({ hooks: { performanceUsage } })
-      }, StatsPills));
+      const statPillInject = () => ({ hooks: { performanceUsage } });
+      ctx.slots.inject("conversation.composer.dock", function* () {
+        yield ctx.slots.register({
+          name: "conversation.composer.dock",
+          id: "activity",
+          order: 0,
+          locale: NS,
+          inject: statPillInject
+        }, ActivityPill);
+        yield ctx.slots.register({
+          name: "conversation.composer.dock",
+          id: "usage",
+          order: 1,
+          locale: NS,
+          inject: statPillInject
+        }, UsagePill);
+      });
       ctx.slots.inject("conversation.approval.detail", () => ctx.slots.register({ name: "conversation.approval.detail" }, ApprovalCommand));
     }
     exports.EMPTY_CHAT_SNAPSHOT = EMPTY_CHAT_SNAPSHOT;

@@ -18,7 +18,7 @@ function compactGuestLocations(text: string): string {
   // not the first closing parenthesis inside the data URL's module source.
   return text.replace(/data:(?:text|application)\/(?:javascript|ecmascript)[^\s]+/g, location => {
     const tail = /(:\d+:\d+)(\)?)$/.exec(location)
-    return `workflow-guest${tail ? tail[1] + tail[2] : ''}`
+    return `workflow-guest${tail ? tail[1]! + tail[2]! : ''}`
   })
 }
 

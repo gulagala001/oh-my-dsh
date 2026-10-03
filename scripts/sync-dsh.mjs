@@ -13,6 +13,8 @@ const commit = values.commit ?? previous.commit;
 if (!/^[0-9a-f]{40}$/.test(commit)) throw new Error('Expected a full DSH commit SHA');
 if (execFileSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim() !== commit) throw new Error(`Expected the pinned DSH source checkout ${commit}`);
 const version = JSON.parse(await readFile(join(source, 'package.json'), 'utf8')).version;
+const cordisVersion = JSON.parse(await readFile(join(source, 'vendor/cordis/package.json'), 'utf8')).version;
+const schemaVersion = JSON.parse(await readFile(join(source, 'vendor/schemastery/package.json'), 'utf8')).version;
 const officialTag = 'dsh-v' + version;
 const tag = execFileSync('git', ['tag', '--points-at', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim().split('\n').includes(officialTag) ? officialTag : null;
 const modules = { 'session-persistence-jsonl': 'session/session-persistence-jsonl', jobs: 'jobs/jobs', 'jobs-local': 'jobs/jobs-local', 'tool-jobs': 'jobs/tool-jobs', shell: 'shell/shell', 'tool-bash': 'shell/tool-bash', 'tool-pwsh': 'shell/tool-pwsh', 'bash-local': 'shell/bash-local', 'pwsh-local': 'shell/pwsh-local', 'bash-sandbox': 'shell/bash-sandbox', 'pwsh-sandbox': 'shell/pwsh-sandbox', tools: 'core/tools', 'ui-conversation': 'client/ui-conversation' };
@@ -34,7 +36,7 @@ for (const name of ['client.js', 'index.js']) {
 }
 const pkg = JSON.parse(await readFile(join(source, 'packages/client/ui-conversation/package.json'), 'utf8'));
 Object.assign(pkg, { name: '@oh-my-dsh/ui-conversation', version: version + '-omd.1', private: true,
-  dependencies: { '@deepseek-ai/schemastery': '3.18.4' }, peerDependencies: { '@deepseek-ai/cordis': '4.0.4' },
+  dependencies: { '@deepseek-ai/schemastery': schemaVersion }, peerDependencies: { '@deepseek-ai/cordis': cordisVersion },
   exports: { '.': './lib/index.js', './client': './lib/client.js', './package.json': './package.json' }, files: ['src', 'lib', 'README.md', 'LICENSE'] });
 for (const field of ['devDependencies', 'scripts', 'publishConfig', 'types']) delete pkg[field];
 await writeFile(join(ui, 'package.json'), JSON.stringify(pkg, null, 2) + '\n');

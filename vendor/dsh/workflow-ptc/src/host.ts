@@ -2,6 +2,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { existsSync } from 'node:fs'
 import type { Agent } from '@deepseek-ai/dsh-agent'
+import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
 import type { PtcBindingFunction, PtcJsonValue, PtcRuntime } from '@deepseek-ai/dsh-ptc-runtime'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import { SessionId } from '@deepseek-ai/dsh-session'
@@ -225,7 +226,7 @@ export class PtcWorkflowRun implements WorkflowRun {
       loadWorkflow: value => this.track((async () => {
         this.requireActive()
         if (!this.support) throw new Error('Saved workflows unavailable')
-        if (typeof value !== 'string' && !(value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 1 && typeof value.scriptPath === 'string')) throw new Error('Invalid workflow reference')
+        if (typeof value !== 'string' && !(value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 1 && 'scriptPath' in value && typeof value.scriptPath === 'string')) throw new Error('Invalid workflow reference')
         return json(await this.support.loadWorkflow(value as string | { scriptPath: string }, this.controller.signal))
       })()),
       startChild: value => this.track(this.startChild(childRequest(value))),
@@ -267,16 +268,16 @@ export class PtcWorkflowRun implements WorkflowRun {
     if (!cached && budget?.total !== null && budget?.total !== undefined && budget.spent >= budget.total) throw new Error('Workflow token target reached; no new agents can start')
     if (cached) {
       if (cached.worktree) this.artifacts.set(callId, cached.worktree)
-      const run = { id: SessionId(cached.childId ?? `cached-${this.id}-${callId}`), result: Promise.resolve(cached), dispose: async () => {} } as SubagentRun
+      const run: SubagentRun = { id: SessionId(cached.childId ?? `cached-${this.id}-${callId}`), localAgent: undefined, result: Promise.resolve(cached) as SubagentRun['result'], dispose: async () => {} }
       this.children.set(callId, { callId, run, cached: true })
       return { callId, childId: run.id }
     }
     if ((request.isolation || request.agentType) && this.provider !== 'omd-workflow') throw new Error('Workflow worktree/agentType options require the omd-workflow subagent provider')
     const workflow: WorkflowSpawnOptions = {
-      isolation: request.isolation,
-      agentType: request.agentType,
-      presetFingerprint: type?.fingerprint,
-      budgetOwner: this.support?.budgetOwner,
+      ...request.isolation === undefined ? {} : { isolation: request.isolation },
+      ...request.agentType === undefined ? {} : { agentType: request.agentType },
+      ...type?.fingerprint === undefined ? {} : { presetFingerprint: type?.fingerprint },
+      ...this.support?.budgetOwner === undefined ? {} : { budgetOwner: this.support?.budgetOwner },
       onWorktree: artifact => {
         this.artifacts.set(callId, artifact)
         if (artifact.retained && artifact.reason !== 'running') this.observer.log(`Worktree retained at ${artifact.path}: ${artifact.reason}`)
@@ -292,7 +293,7 @@ export class PtcWorkflowRun implements WorkflowRun {
         agentOptions: {
           ...request.provider === undefined ? {} : { provider: request.provider },
           ...request.model === undefined ? {} : { model: request.model },
-          ...request.effort === undefined ? {} : { reasoningEffort: request.effort },
+          ...request.effort === undefined ? {} : { reasoningEffort: ReasoningEffortId(request.effort) },
         },
       },
     })
@@ -378,7 +379,7 @@ export class PtcWorkflowRun implements WorkflowRun {
       if (this.support) {
         this.journal = await WorkflowJournal.create(this.support.root, this.parent.session.id, this.id, {
           script: serializeWorkflowSource(this.meta, this.init.body), meta: this.meta, args: this.init.args,
-          resumeFromRunId: this.support.resumeFromRunId,
+          ...this.support.resumeFromRunId === undefined ? {} : { resumeFromRunId: this.support.resumeFromRunId },
         })
         this.init.budget = this.support.budget?.() ?? { total: null, spent: 0 }
       }
