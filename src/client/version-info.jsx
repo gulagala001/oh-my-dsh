@@ -4,7 +4,7 @@ import { version as CLIENT_VERSION } from '../../package.json';
 import { VersionUpdate } from './version-update.jsx';
 
 const statusText = data => data.status === 'update' ? data.severity === 'required' ? '有必要更新 · 包含重要修复' : '有新版本可更新'
-  : data.status === 'current' ? '已是最新版' : data.status === 'ahead' ? '当前版本高于发布记录' : '尚未确认最新版本';
+  : data.status === 'current' ? data.hostUpgrade ? '已是当前 DSH 的最新版' : '已是最新版' : data.status === 'ahead' ? '当前版本高于发布记录' : '尚未确认最新版本';
 const timeText = time => time == null ? '尚未成功检查' : new Date(time).toLocaleString('zh-CN', { hour12: false });
 
 export function VersionInfo() {
@@ -62,10 +62,11 @@ export function VersionInfo() {
     <dialog ref={dialog} className="omd-version-dialog" aria-labelledby={titleId} onCancel={event => { event.preventDefault(); setOpen(false); }} onClose={event => { if (!event.currentTarget.open) setOpen(false); }}
       onClick={event => { if (event.target === event.currentTarget) { const r = event.currentTarget.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) setOpen(false); } }}>
       {open && <><header><h2 id={titleId}>关于 Oh My DSH</h2><button type="button" className="omd-version-close" aria-label="关闭版本信息" onClick={() => setOpen(false)}>×</button></header>
-      <dl><div><dt>当前版本</dt><dd data-testid="omd-current-version">{data.currentVersion}</dd></div><div><dt>最新版本</dt><dd>{data.latestVersion || '尚未确认'}</dd></div></dl>
+      <dl><div><dt>当前版本</dt><dd data-testid="omd-current-version">{data.currentVersion}</dd></div><div><dt>{data.hostVersion ? '最新兼容版本' : '最新版本'}</dt><dd>{data.latestVersion || '尚未确认'}</dd></div></dl>
       <p className={'omd-version-status omd-level-' + severity} role="status">{statusText(data)}{data.stale ? '（上次检查结果）' : ''}</p>
       {data.error && <p className="omd-version-error" role="alert">{data.error}</p>}
       <VersionUpdate version={data.status === 'update' ? data.latestVersion : null} stale={!!data.stale || !!data.error}/>
+      {data.hostUpgrade && <p className="omd-version-update-hint">新版 {data.hostUpgrade.version} 需要 DSH {data.hostUpgrade.requiredHostVersion}，当前宿主为 {data.hostVersion}。请先更新官方 DSH，再安装对应 OMD。</p>}
       <div className="omd-version-releases">{(updates.length ? updates : data.currentRelease ? [data.currentRelease] : []).map(release => <section key={release.version}>
         <h3><span>{release.version}</span>{updates.length > 0 && <em data-severity={release.severity}>{release.severity === 'required' ? '必要更新' : '普通更新'}</em>}</h3>
         <strong>{release.title}</strong><ul>{release.notes?.map((note, i) => <li key={i}>{note}</li>)}</ul>
