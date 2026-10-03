@@ -1,10 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import { readJsonBody } from './http.mjs';
-import { compareVersions, parseVersion } from './version.mjs';
+import { compareVersions, parseVersion, updateHostRequirement } from './version.mjs';
 import { pluginManagementError } from './recommended-plugins.mjs';
 
 const PACKAGE = 'trisoul_x';
 const failure = (message, statusCode = 409) => Object.assign(new Error(message), { statusCode });
+const hostReason = (current, target, host) => {
+  if (!target) return '';
+  const required = updateHostRequirement(current, target, host);
+  return required ? `此版本需要 DSH ${required.requiredHostVersion}，当前宿主为 ${required.hostVersion}。请先更新官方 DSH，再安装对应 OMD。` : '';
+};
 export function versionInstallSpec(version) {
   parseVersion(version);
   return 'github:gulagala001/oh-my-dsh#v' + version.replace(/^v/, '');
@@ -33,7 +38,8 @@ export class VersionUpdater {
       if (this.state.phase === 'failed') return { ...this.snapshot(), available: false, blockedReason: '安装状态有变化，请先到 DSH 的“插件”页面检查。' };
       return { phase: 'restart-required', targetVersion: bundle.version, error: '', available: false };
     }
-    const blockedReason = reason || (this.isRunning() ? '有任务正在运行，请等任务结束后更新。' : '');
+    const release = this.versions.snapshot();
+    const blockedReason = reason || hostReason(release.currentVersion, release.latestVersion, release.hostVersion) || (this.isRunning() ? '有任务正在运行，请等任务结束后更新。' : '');
     return { ...this.snapshot(), available: !this.closed && !blockedReason, blockedReason };
   }
   start(version) {
@@ -53,6 +59,8 @@ export class VersionUpdater {
   async run(version) {
     const release = await this.versions.check(true);
     if (release.error || release.stale) throw failure('未能确认最新发布信息，请重新检查更新后再试。');
+    const requirement = hostReason(release.currentVersion, version, release.hostVersion);
+    if (requirement) throw failure(requirement);
     if (release.status !== 'update' || release.latestVersion !== version) throw failure('发布版本已变化，请重新检查更新。');
     const { manager, bundle, reason } = await this.inventory();
     if (reason) throw failure(reason);
