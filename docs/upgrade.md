@@ -32,7 +32,7 @@ OMD 后续版本采用官方 DSH 完整版本前缀，随后为 `omd.主版本.�
 
 ## 桌面版：从零安装与升级
 
-桌面版由 **DSH 官方桌面应用 + Oh My DSH 插件** 组成。截至 2026-10-03，新版 `0.2.1-alpha.1` 已发布源码和 npm 包，官方 mac-arm64／win-x64 更新源仍为 `0.2.0-rc.2`。当前桌面请使用 [rc.2 固定安装与验收步骤](https://github.com/gulagala001/oh-my-dsh/blob/v0.2.0-rc.2.omd.0.5.1/docs/upgrade.md#desktop)。不要把本页 Web 版插件装入旧桌面宿主，也不要因为缺少新版桌面包擅自改装 Web。
+桌面版由 **DSH 官方桌面应用 + Oh My DSH 插件** 组成。截至 2026-10-03，新版 `0.2.1-alpha.1` 已发布源码和 npm 包，官方 mac-arm64／win-x64 更新源仍为 `0.2.0-rc.2`。当前桌面请使用 [rc.2 固定安装与验收步骤](https://github.com/gulagala001/oh-my-dsh/blob/v0.2.0-rc.2.omd.0.5.2/docs/upgrade.md#desktop)。不要把本页 Web 版插件装入旧桌面宿主，也不要因为缺少新版桌面包擅自改装 Web。
 
 新版桌面下载、安装和重启验证完成后，再将其列为本版配对。源码预览须明确标为本地预览，不能替代官方桌面发行及验收。[本版验证范围](release-0.2.1-alpha.1.omd.0.5.2.md)。
 

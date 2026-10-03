@@ -38,7 +38,7 @@ Oh My DSH 是 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 
 ### 官方桌面应用
 
-最新源码和 npm 宿主为 **DSH 0.2.1-alpha.1**。官方桌面更新源目前仍为 rc.2；桌面用户继续采用 [rc.2 的固定安装指南](https://github.com/gulagala001/oh-my-dsh/blob/v0.2.0-rc.2.omd.0.5.1/docs/upgrade.md#desktop)，待官方新版桌面包发布后再升级。
+最新源码和 npm 宿主为 **DSH 0.2.1-alpha.1**。官方桌面更新源目前仍为 rc.2；桌面用户继续采用 [rc.2 的固定安装指南](https://github.com/gulagala001/oh-my-dsh/blob/v0.2.0-rc.2.omd.0.5.2/docs/upgrade.md#desktop)，待官方新版桌面包发布后再升级。
 
 桌面使用独立的 `desktop` profile，Web 中的插件需在桌面再安装一次。[桌面教程](docs/upgrade.md#desktop) · [从 Web 迁移数据](docs/upgrade.md#web-to-desktop)。
 
