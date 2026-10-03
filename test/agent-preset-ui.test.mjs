@@ -25,14 +25,14 @@ test('native preset slots survive OMD mounting, selection and reload', { timeout
   await page.getByRole('button', { name: '新建会话', exact: true }).last().click();
   await hero.waitFor({ state: 'attached' });
   const picker = hero.getByRole('button');
-  assert.equal(await picker.count(), 0, 'the native Coding Tools preference still hides selection');
-  await codingTools(true);
   await picker.waitFor();
-  assert.equal(await picker.count(), 1, 'one native picker, with no shim');
+  assert.equal(await picker.count(), 1, 'alpha.1 keeps native preset selection available with Coding Tools disabled');
   assert.equal(await picker.innerText(), 'Oh My DSH');
   await picker.click();
   await page.getByRole('menuitem', { name: /^标准模式/ }).click();
   await until(async () => (await picker.innerText()) === '标准模式');
+  await codingTools(true);
+  assert.equal(await picker.count(), 1, 'changing Coding Tools keeps one native picker and preserves selection');
   await page.reload();
   await picker.waitFor();
   await until(async () => (await picker.innerText()) === '标准模式');
