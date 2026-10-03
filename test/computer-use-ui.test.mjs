@@ -45,10 +45,11 @@ for (const [backend, preset] of [['managed', 'trisoul-x'], ['managed', 'omd-ptc'
     // The first managed-browser launch may prepare its Windows runtime. Keep
     // the same bounded tool-result wait used by the packaged desktop fixture.
     await page.getByText('OMD 电脑接入验证完成。', { exact: true }).waitFor({ timeout: 45000 });
+    assert.ok(requests.length >= 2);
+    const toolResults = requests.at(-1).messages.filter(message => message.role === 'tool');
+    assert.match(JSON.stringify(requests.at(-1).messages), /image_url/, 'Computer Use did not attach its observation: ' + JSON.stringify(toolResults));
     assert.ok((await state()).target, JSON.stringify(await state()));
     const ready = await until(async () => { const value = await state(); return value.previewAt && value.target?.kind === 'tab' && value; });
-    assert.ok(requests.length >= 2);
-    assert.match(JSON.stringify(requests.at(-1).messages), /image_url/);
     const floating = page.getByLabel('悬浮操控预览'); await floating.waitFor();
     if (backend === 'managed' && preset === 'trisoul-x') {
       const previewImage = floating.locator('img').first();

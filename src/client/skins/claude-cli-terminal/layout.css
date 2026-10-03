@@ -91,7 +91,7 @@ html.omd[data-omd-layout="claude-cli-terminal"] :is(.uV2eYG_add,.uV2eYG_primary)
 html.omd[data-omd-layout="claude-cli-terminal"] :is(.iWlSmW_trigger,._7KE1Ra_trigger,.tx-bt-chip,.cx-scope-chip) { border-radius: 2px; min-height: 26px; font-size: 11px; }
 html.omd[data-omd-layout="claude-cli-terminal"] [data-slot="conversation.composer.dock"] { padding: 4px 2px 0; gap: 2px 8px; }
 html.omd[data-omd-layout="claude-cli-terminal"] :is(.tx-workbench-entry,.tx-cu-dock-button,.tx-usage-toggle) { font-size: 11px; min-height: 26px; padding: 3px 6px; border-radius: 0; }
-html.omd[data-omd-layout="claude-cli-terminal"] :is(.bOPqQW_pill,.tx-stats-line) { font-size: 10px; border-radius: 0; }
+html.omd[data-omd-layout="claude-cli-terminal"] :is([data-composer-stat] > :first-child,.tx-stats-line) { font-size: 10px; border-radius: 0; }
 
 /* Welcome box is near the top, like the first terminal screen. */
 html.omd[data-omd-layout="claude-cli-terminal"] .wSkVaW_root[data-phase="hero"] .wSkVaW_scrollBody { justify-content: flex-start; }

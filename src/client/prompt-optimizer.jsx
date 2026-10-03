@@ -58,7 +58,7 @@ export function applyPromptOptimizer(ctx) {
     const input = useInput(s => s), [open, setOpen] = useState(false), [localError, setLocalError] = useState('');
     const [presetName, setPresetName] = useState('');
     const requirements = optimizerRequirements(prefs), selectedPreset = prefs.requirementPresets.find(p => p.id === prefs.requirementPreset);
-    useEffect(() => { setPresetName(selectedPreset?.name ?? ''); }, [prefs.requirementPreset, selectedPreset?.name]);
+    useLayoutEffect(() => { setPresetName(selectedPreset?.name ?? ''); }, [prefs.requirementPreset, selectedPreset?.name]);
     const instruction = state.instruction, setInstruction = instruction => controller.publish({ instruction });
     const id = useId(), anchor = useRef(null), panel = useRef(null), timer = useRef(null), pinned = useRef(false);
     const [position, setPosition] = useState({ left: 8, bottom: 60, width: 370, maxHeight: 500 });
