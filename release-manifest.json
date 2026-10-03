@@ -2,6 +2,24 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-alpha.1.omd.0.5.2",
+      "severity": "required",
+      "title": "修复更新入口的宿主版本限制",
+      "notes": [
+        "更新检查只提供当前 DSH 可安装的 OMD 补丁；需要新版宿主的发行单独提示。",
+        "更新接口在安装前拒绝跨宿主请求，避免下载后失败及触碰当前安装。"
+      ]
+    },
+    {
+      "version": "0.2.0-rc.2.omd.0.5.1",
+      "severity": "required",
+      "title": "DSH rc.2 桌面更新兼容修复",
+      "notes": [
+        "继续配对官方 DSH 0.2.0-rc.2，保留既有公开功能及数据。",
+        "修复错误提供 alpha.1 更新的问题；本版仅回移更新限制及提示，不含本机实验架构。"
+      ]
+    },
+    {
       "version": "0.2.1-alpha.1.omd.0.5.1",
       "severity": "normal",
       "title": "适配 DSH 0.2.1-alpha.1",
