@@ -16,7 +16,7 @@ async function git(cwd: string, args: string[], policy: SandboxExecutionPolicy, 
   signal?.throwIfAborted()
   return new Promise((accept, reject) => {
     // Worktree setup must not execute repository hooks as a side effect.
-    execFile(argv[0], argv.slice(1), {
+    execFile(argv[0]!, argv.slice(1), {
       cwd, signal, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, timeout: 120_000,
       windowsHide: true,
       // Inherited GIT_DIR/INDEX_FILE/config injections must not redirect an

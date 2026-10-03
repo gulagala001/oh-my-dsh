@@ -1,8 +1,9 @@
 /** Workflow options over the native one-shot subagent driver and preset registry. */
 import type { Context } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-fs'
 import { mkdir, realpath, writeFile } from 'node:fs/promises'
 import { join, relative, isAbsolute, sep } from 'node:path'
-import { startInProcessRun } from '../../../subagent/subagent-in-process-driver/src/index.ts'
+import { startInProcessRun } from '@deepseek-ai/dsh-subagent-in-process-driver/src/index.ts'
 import { captureDelegatedPolicyOverrides } from '@deepseek-ai/dsh-subagent'
 import type { ResolvedSubagentStartRequest, SubagentRun } from '@deepseek-ai/dsh-subagent'
 import { WorkflowWorktree } from './worktree.ts'
@@ -70,7 +71,7 @@ async function start(ctx: Context, request: Request): Promise<SubagentRun> {
     }
     const hub = (ctx as any).get('trisoulX')
     const budget = hub?.workflowBudget
-    const run = await startInProcessRun(request, { cwd: worktree?.artifact.cwd, agentPreset: type.id, delegatedPolicy: inherited,
+    const run = await startInProcessRun(request, { ...worktree === undefined ? {} : { cwd: worktree.artifact.cwd }, ...type.id === undefined ? {} : { agentPreset: type.id }, delegatedPolicy: inherited,
       setupChild: child => {
         budget?.attach(child.session, options.budgetOwner)
         if (hub) {

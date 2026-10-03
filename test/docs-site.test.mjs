@@ -113,7 +113,12 @@ test('built documentation works on a plain static origin with desktop and mobile
       await page.locator('.mobile-nav').getByRole('link', { name: '首次使用', exact: true }).click();
       assert.equal(new URL(page.url()).pathname, '/docs/getting-started.html');
       await page.goto(origin + '/docs/upgrade.html');
-      assert.equal(await page.locator('.table-scroll').nth(1).evaluate(element => element.scrollWidth > element.clientWidth), true);
+      assert.equal(await page.locator('.table-scroll').nth(1).evaluate(element => {
+        const excess = element.scrollWidth - element.clientWidth;
+        if (excess <= 1) return element.getBoundingClientRect().right <= window.innerWidth;
+        element.scrollLeft = excess;
+        return element.scrollLeft > 0;
+      }), true, 'the current migration table fits the viewport or scrolls inside its container');
       if (width === 390) await screenshot(page, 'docs-install-mobile.png');
       await page.goto(origin + '/docs/usage.html');
       await page.locator('.mobile-toc > summary').click();

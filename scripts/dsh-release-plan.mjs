@@ -25,5 +25,5 @@ console.log(JSON.stringify({
   sourceSnapshots,
   desktopTargets: ['mac-arm64', 'win-x64'].map(target => ({ target, verifiedMetadataPresent: Boolean(desktop.releases?.[hostVersion]?.[target]) })),
   releaseFiles: ['package.json', 'pnpm-lock.yaml', 'release-manifest.json', 'README.md', 'CHANGELOG.md', 'docs/upgrade.md', 'docs/usage.md', 'scripts/desktop-releases.json'],
-  instructions: 'Use the final official tag and desktop update feeds, resync both source snapshots, rebuild OpenCU and OMD, then run the release verification described in docs/dsh-0.2-preparation.md.',
+  instructions: 'Use the final official tag and desktop update feeds, align DSH packages plus the official Cordis and Schemastery versions, resync both source snapshots, rebuild OpenCU and OMD, then run the release verification described in docs/dsh-0.2-preparation.md.',
 }, null, 2));
