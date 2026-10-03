@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { compareVersions, parseVersion, hostAlignedVersion, validateManifest, versionStatus, createVersionService, handleVersionApi, CHECK_INTERVAL_MS, UPDATE_SOURCES, INSTALLED_VERSION } from '../src/version.mjs';
+import { compareVersions, parseVersion, hostAlignedVersion, validateManifest, versionStatus, createVersionService, handleVersionApi, CHECK_INTERVAL_MS, UPDATE_SOURCES, INSTALLED_VERSION, releaseHostVersion } from '../src/version.mjs';
 
 const release = (version, severity = 'normal') => ({ version, severity, title: 'Release ' + version, notes: ['Verified release notes.'] });
 const manifest = (...rows) => validateManifest({ schema: 1, releases: rows });
@@ -88,14 +88,14 @@ test('version API is read-only, bypasses no caches on ordinary read and disables
 test('published manifest matches the installed package and retains the major-fix marker', () => {
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url)));
   const feed = validateManifest(JSON.parse(readFileSync(new URL('../release-manifest.json', import.meta.url))));
-  assert.equal(feed.releases[0].version, pkg.version); assert.equal(INSTALLED_VERSION, pkg.version);
+  assert.ok(feed.releases.some(r => r.version === pkg.version)); assert.equal(INSTALLED_VERSION, pkg.version);
   assert.equal(feed.versionPolicy, 'dsh-aligned');
   assert.ok(pkg.files.includes('release-manifest.json'));
   assert.equal(feed.releases.find(r => r.version === '1.3.0-alpha.4').severity, 'required');
   const previous = versionStatus('0.1.6-alpha.2.2', feed);
-  assert.equal(previous.status, 'update'); assert.equal(previous.latestVersion, pkg.version);
+  assert.equal(previous.status, 'update'); assert.equal(previous.latestVersion, previous.releases[0].version);
   assert.equal(previous.severity, 'required');
-  assert.equal(versionStatus(pkg.version, feed).severity, 'none');
+  assert.equal(versionStatus(pkg.version, feed, { hostVersion: releaseHostVersion(pkg.version) }).severity, 'none');
 });
 
 
@@ -183,5 +183,26 @@ test('full OMD versions migrate independent 0.3.0 and order feature, patch and h
  assert.equal(versionStatus(versions.at(-1),feed).status,'current');
  assert.equal(versionStatus('0.2.1-omd.0.1.0',feed).status,'ahead');
  const bundled=validateManifest(JSON.parse(readFileSync(new URL('../release-manifest.json',import.meta.url))));
- assert.equal(versionStatus('0.3.0',bundled).latestVersion,INSTALLED_VERSION);
+ assert.equal(versionStatus('0.3.0',bundled).latestVersion,bundled.releases[0].version);
+});
+
+test('running installations select same-host patches and separately explain newer-host releases', async () => {
+  const currentVersion = '0.2.0-rc.2.omd.0.5.0';
+  const compatible = '0.2.0-rc.2.omd.0.5.1', alpha = '0.2.1-alpha.1.omd.0.5.2';
+  const feed = validateManifest({ schema: 1, versionPolicy: 'dsh-aligned', releases: [release(alpha, 'required'), release(compatible), release(currentVersion)] });
+  const service = createVersionService({ currentVersion, bundledManifest: feed, fetchImpl: async () => jsonResponse(feed) });
+  const result = await service.check();
+  assert.equal(result.latestVersion, compatible);
+  assert.equal(result.status, 'update'); assert.equal(result.severity, 'normal');
+  assert.deepEqual(result.releases.map(r => r.version), [compatible]);
+  assert.equal(result.hostVersion, '0.2.0-rc.2');
+  assert.equal(result.hostUpgrade.version, alpha);
+  assert.equal(result.hostUpgrade.requiredHostVersion, '0.2.1-alpha.1');
+  service.dispose();
+  const installed = versionStatus(compatible, feed, { hostVersion: '0.2.0-rc.2' });
+  assert.equal(installed.status, 'current'); assert.equal(installed.latestVersion, compatible);
+  assert.equal(installed.severity, 'none'); assert.deepEqual(installed.releases, []);
+  const nativeAlpha = createVersionService({ currentVersion: '0.2.1-alpha.1.omd.0.5.1', bundledManifest: feed, fetchImpl: async () => jsonResponse(feed) });
+  const newer = await nativeAlpha.check(); assert.equal(newer.latestVersion, alpha); assert.equal(newer.status, 'update');
+  assert.equal(newer.hostUpgrade, undefined); nativeAlpha.dispose();
 });
