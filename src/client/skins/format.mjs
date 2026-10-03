@@ -82,7 +82,7 @@ export const parts = {
   'tool-group': '[data-step-process-body]',
   'tool-row': '[data-disclosure-row], .tx-cu-card-heading, .CY-8Ka_root, .o3BgMG_row',
   'code-block': 'pre', 'code-inline': 'code:not(pre code)',
-  statusbar: '.tx-stats-line, [data-composer-stats], .bOPqQW_root',
+  statusbar: '.tx-stats-line, [data-composer-stat]',
 };
 const partStates = {
   selected: ':is([aria-selected="true"], [aria-current="true"], [aria-current="page"], [aria-pressed="true"], .YDXeBa_selected, .wSkVaW_tabActive)',

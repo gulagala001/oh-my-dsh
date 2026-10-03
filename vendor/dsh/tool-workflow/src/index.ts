@@ -25,8 +25,8 @@ import type {
   WorkflowResult, WorkflowRun, WorkflowRunId, WorkflowStopReason,
 } from '@deepseek-ai/dsh-workflow'
 import { createWorkflowRecordMirror } from './record.ts'
-import type { PtcWorkflowRun } from '../../workflow-ptc/src/host.ts'
-import type PtcWorkflowEngine from '../../workflow-ptc/src/index.ts'
+import type { PtcWorkflowRun } from '@deepseek-ai/dsh-workflow-ptc/src/host.ts'
+import type PtcWorkflowEngine from '@deepseek-ai/dsh-workflow-ptc'
 import type { WorkflowRecordMirror } from './record.ts'
 import type {
   ToolWorkflowAgentEndData, ToolWorkflowAgentStartData,
@@ -197,7 +197,7 @@ type WorkflowInput = Omit<WorkflowCallArgs, 'script' | 'meta'> & Partial<Pick<Wo
 
 function details(run: WorkflowRun) {
   const extended = run as PtcWorkflowRun
-  return { name: run.meta.name, runId: run.id, scriptPath: extended.scriptPath!, transcriptDir: extended.transcriptDir!, worktrees: extended.worktrees }
+  return { name: run.meta.name, runId: run.id, scriptPath: extended.scriptPath!, transcriptDir: extended.transcriptDir!, worktrees: extended.worktrees.map(artifact => ({ ...artifact })) }
 }
 
 function locationText(run: WorkflowRun): string {
@@ -436,7 +436,7 @@ export function apply(ctx: Context, config: Config): void {
           },
         ],
       },
-      render: (args, value) => [{
+      render: (_args, value) => [{
         type: 'text',
         text: (value.kind === 'background'
           ? `workflow "${value.name}" started in the background as job ${value.jobId}. Its return value arrives with the completion notice; check on it with job_output, stop it with job_kill.`

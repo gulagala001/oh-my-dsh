@@ -12,7 +12,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  release-metadata:
+    runs-on: ubuntu-latest
+    outputs:
+      available: ${{ steps.release.outputs.available }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: release
+        name: Check whether this host has official desktop packages
+        run: |
+          node --input-type=module - <<'NODE'
+          import { readFileSync, appendFileSync } from 'node:fs';
+          const version = JSON.parse(readFileSync('package.json')).devDependencies['@deepseek-ai/dsh'];
+          const releases = JSON.parse(readFileSync('scripts/desktop-releases.json')).releases;
+          const available = ['mac-arm64', 'win-x64'].every(target => Boolean(releases[version]?.[target]));
+          appendFileSync(process.env.GITHUB_OUTPUT, `available=${available}\n`);
+          if (!available) {
+            console.log(`::notice::Official desktop verification skipped: no verified packages for DSH ${version}.`);
+            appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Official desktop installation was **not run**: DSH ${version} has no verified mac-arm64/win-x64 download metadata. Web and source-host compatibility are tested separately.\n`);
+          }
+          NODE
   packaged-desktop:
+    needs: release-metadata
+    if: needs.release-metadata.outputs.available == 'true'
     name: ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45

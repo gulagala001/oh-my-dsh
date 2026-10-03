@@ -79,6 +79,7 @@ export class RecommendedPluginManager {
     const plugin = this.catalog.find(item => item.id === id);
     if (!plugin || !['install', 'update', 'uninstall'].includes(action)) throw Error('未知的插件操作');
     if (plugin.manualInstall) throw Error(plugin.manualInstall);
+    if (plugin.unavailable && action !== 'uninstall') throw Error(plugin.unavailable);
     if (this.closed) throw Error('插件管理已停止');
     if (this.job) throw Error('另一个插件操作正在进行，请稍候');
     this.current = { id, action, automatic, startedAt: this.now(), requestId: randomUUID() };
@@ -157,7 +158,7 @@ export class RecommendedPluginManager {
       for (const plugin of this.catalog) {
         if (this.closed || this.job || !this.getConfig().recommendedPluginsAutoUpdate || this.isRunning()) return;
         const bundle = bundles.find(item => item.name === plugin.packageName);
-        if (plugin.review?.version && !plugin.review.source && !plugin.manualInstall && bundle?.installed && bundle.enabled && !bundle.readOnlyReason) await this.start(plugin.id, 'update', true);
+        if (plugin.review?.version && !plugin.review.source && !plugin.manualInstall && !plugin.unavailable && bundle?.installed && bundle.enabled && !bundle.readOnlyReason) await this.start(plugin.id, 'update', true);
       }
       if (!this.closed && this.getConfig().recommendedPluginsAutoUpdate && !this.isRunning()) this.checkedAt = this.now();
     } finally { this.checking = false; }

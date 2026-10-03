@@ -51,7 +51,7 @@ The whale contours in `src/client/brand.mjs` are adapted from the animated whale
 
 Source: https://github.com/deepseek-ai/deepseek-harness
 
-The component sources under `vendor/dsh` and generated host/browser artifacts are based on the DSH 0.2.0-rc.2 tag `dsh-v0.2.0-rc.2`, commit `639ed015397290b3745d163aafe02ffee4aa3f84`. OMD adds optional background job controls and a wait-aware composer. The source changes, license and checksum manifest are included with the distribution; see `vendor/dsh/README.md`.
+The component sources under `vendor/dsh` and generated host/browser artifacts are based on the DSH 0.2.1-alpha.1 tag `dsh-v0.2.1-alpha.1`, commit `5badb15009ae1756c3afe0ae0cef1faafc290ccc`. OMD adds optional background job controls and a wait-aware composer. The source changes, license and checksum manifest are included with the distribution; see `vendor/dsh/README.md`.
 
 MIT License
 
@@ -147,7 +147,7 @@ Source: https://github.com/lovell/sharp
 Source: https://github.com/colbymchenry/codegraph
 License: https://github.com/colbymchenry/codegraph/blob/v1.6.0/LICENSE
 
-@modelcontextprotocol/client 2.0.0 provides the MCP transport under the MIT License. @deepseek-ai/dsh-mcp-client 0.2.0-rc.2 provides the host tool/result adapter under the MIT License.
+@modelcontextprotocol/client 2.0.0 provides the MCP transport under the MIT License. @deepseek-ai/dsh-mcp-client 0.2.1-alpha.1 provides the host tool/result adapter under the MIT License.
 
 Sources: https://github.com/modelcontextprotocol/typescript-sdk and https://github.com/deepseek-ai/deepseek-harness
 

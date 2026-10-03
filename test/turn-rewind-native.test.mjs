@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { join } from 'node:path';
-import { mkdir, readFile, writeFile, stat } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, access } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
@@ -15,7 +15,7 @@ async function checkedArchive() {
 }
 
 // Executes only pinned source in an isolated fixture; lifecycle scripts are disabled.
-test('pinned rewind installs enabled and uninstalls through the isolated native manager', {timeout:180000}, async t=>{
+test('incompatible pinned rewind is rejected and the native manager restores the profile', {timeout:180000}, async t=>{
   const f=await frontendFixture(t,{headless:false,omdConfig:{computerUseEnabled:false,codegraphEnabled:false,dreamAutoEnabled:false}});
   f.call=(method,args)=>f.page.evaluate(async({method,args})=>(await fetch('api/'+method,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'client-request',rpcId:crypto.randomUUID(),method,payload:{args}})})).json(),{method,args});
   const installSource=join(f.root,'rewind-install-source');
@@ -29,33 +29,32 @@ test('pinned rewind installs enabled and uninstalls through the isolated native 
   const call=async(method,args)=>{const r=await f.call('pluginManager/'+method,args);assert.equal(r.result?.ok,true,JSON.stringify(r));return r.result.value;};
   const name='@anionex/dsh-turn-rewind';assert.equal((await call('listBundles',{})).some(b=>b.name===name),false);
   const result=await call('installBundle',{spec:name+'@file:'+join(f.root,packed.filename),options:{enabled:true,requestId:crypto.randomUUID()}});
-  assert.equal(result.application,'applied',JSON.stringify(result));
-  const bundle=(await call('listBundles',{})).find(b=>b.name===name);assert.equal(bundle?.enabled,true);assert.equal(bundle?.version,'0.3.9');
-  assert.equal((await stat(join(f.root,'rewind-state'))).isDirectory(),true,'rewind state must stay inside the fixture');
-  const disabled=await call('setBundleEnabled',{name,enabled:false});assert.equal(disabled.application,'applied');assert.equal((await call('listBundles',{})).find(b=>b.name===name).enabled,false);
-  const enabled=await call('setBundleEnabled',{name,enabled:true});assert.equal(enabled.application,'applied');
-  const dialog=f.page.getByRole('dialog',{name:'设置'});
-  const open=async()=>{await f.page.getByRole('button',{name:'设置',exact:true}).click();await dialog.getByRole('button',{name:'内置插件',exact:true}).click();await dialog.getByText('Turn Rewind 回退设置',{exact:true}).first().click();await dialog.getByRole('button',{name:/Turn Rewind 回退设置/}).last().click();};
-  await f.page.reload();await open();
-  await until(async()=>!(await dialog.innerText()).includes('正在加载设置'));
-  assert(! (await dialog.innerText()).includes('此部署没有设置服务'));
-  const mode=dialog.locator('.dcl-trs-field').filter({hasText:'自动文件检查点'}).locator('select');assert.equal(await mode.isEnabled(),true);
-  const saved=f.page.waitForResponse(r=>r.request().method()==='POST'&&r.request().postData()?.includes('turnCheckpointMode'));
-  await mode.selectOption('off');assert.equal((await saved).ok(),true);await f.page.reload();await open();
-  await until(async()=>(await mode.inputValue())==='off');
-  await f.page.screenshot({path:join(f.root,'rewind-native-settings.png')});
-  const removed=await call('removeBundle',{name});assert.equal(removed.application,'applied');
-  assert.equal((await call('listBundles',{})).some(b=>b.name===name),false);
+  assert.equal(result.application,'failed',JSON.stringify(result));
+  assert.equal(result.error?.code,'incompatible-version');
+  assert.ok(result.error.incompatible.some(item=>item.name===name&&item.runtimeVersion==='0.2.1-alpha.1'));
+  assert.equal((await call('listBundles',{})).some(b=>b.name===name&&b.installed),false);
+  const profile=JSON.parse(await readFile(join(f.home,'profiles','trisoul-x','package.json'),'utf8'));
+  assert.equal(profile.dependencies?.[name],undefined,'rejected installation must restore the profile manifest');
+  await assert.rejects(access(join(f.root,'rewind-state')), {code:'ENOENT'});
+  await f.rpc('session/prompt',{requestId:crypto.randomUUID(),sessionId:f.sessionId,mode:'queue',content:[{type:'text',text:'拒绝不兼容插件后继续工作'}]});
+  await until(async()=> (await (await f.page.request.get(new URL('/trisoul-x/api/state?session='+f.sessionId,f.page.url()).href)).json()).running==='idle');
+  assert.deepEqual(f.errors,[]);
+
 });
 
-test('the exact reviewed codeload archive installs through the native one-click contract', {timeout:90000}, async t=>{
+test('the exact reviewed codeload archive cannot bypass the host compatibility guard', {timeout:90000}, async t=>{
   const f=await frontendFixture(t,{headless:true,omdConfig:{computerUseEnabled:false,codegraphEnabled:false,dreamAutoEnabled:false}});
   // The user layer supplies a fixture-only state directory; archive bytes stay
   // exactly the reviewed SHA-256 rather than being repacked for this assertion.
   await writeFile(join(f.home,'profiles','trisoul-x','cordis.patch.yml'),JSON.stringify([{id:'turn-rewind',config:{storageDir:join(f.root,'rewind-exact-state')}}]));
   const name='@anionex/dsh-turn-rewind',file=await checkedArchive();
   const installed=await f.call('pluginManager/installBundle',{spec:name+'@file:'+file,options:{enabled:true,requestId:crypto.randomUUID()}});
-  assert.equal(installed.result?.ok,true,JSON.stringify(installed));assert.equal(installed.result.value.application,'applied',JSON.stringify(installed));
-  assert.equal((await stat(join(f.root,'rewind-exact-state'))).isDirectory(),true);
-  const removed=await f.call('pluginManager/removeBundle',{name});assert.equal(removed.result?.ok,true);assert.equal(removed.result.value.application,'applied');
+  assert.equal(installed.result?.ok,true,JSON.stringify(installed));
+  const result=installed.result.value;
+  assert.equal(result.application,'failed',JSON.stringify(result));
+  assert.equal(result.error?.code,'incompatible-version');
+  assert.ok(result.error.incompatible.some(item=>item.name===name&&item.runtimeVersion==='0.2.1-alpha.1'));
+  await assert.rejects(access(join(f.root,'rewind-exact-state')), {code:'ENOENT'});
+  assert.equal(JSON.parse(await readFile(join(f.home,'profiles','trisoul-x','package.json'),'utf8')).dependencies?.[name],undefined);
+
 });
