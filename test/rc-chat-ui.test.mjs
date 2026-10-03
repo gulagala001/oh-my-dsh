@@ -48,7 +48,7 @@ test('live tool preparation settles once and local image links retain preview ac
     await group.locator('.tx-cu-card[data-state=preparing]').waitFor();
     assert.equal(await group.getByText('执行中', { exact: true }).count(), 0);
     await group.getByText('准备写入', { exact: true }).waitFor();
-    await group.getByText(output, { exact: true }).waitFor();
+    await group.locator('[data-chat-call-id="rc-write"]').getByText(/prepared\.txt$/).waitFor();
     const anchor = await page.locator('[data-chat-call-id="rc-cu"]').elementHandle();
     release();
     await page.getByText('准备阶段验收完成。', { exact: true }).waitFor();
