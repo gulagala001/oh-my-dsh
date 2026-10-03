@@ -51,6 +51,12 @@ function alignedRelease(version) {
   } else return null;
   return { host: parsed.core.join('.') + (parts.length ? '-' + parts.join('.') : ''), patch: BigInt(patch), preview: parts.length > 0 };
 }
+export const releaseHostVersion = version => alignedRelease(version)?.host || null;
+export function updateHostRequirement(currentVersion, targetVersion, hostVersion = releaseHostVersion(currentVersion)) {
+  const required = releaseHostVersion(targetVersion);
+  return hostVersion && required && compareVersions(hostVersion, required) !== 0
+    ? { hostVersion, requiredHostVersion: required } : null;
+}
 const modernAligned = version => Boolean(alignedRelease(version)?.omd);
 const releaseIsPreview = (version, policy) => policy === 'dsh-aligned'
   ? (alignedRelease(version)?.preview ?? parseVersion(version).pre.length > 0)
@@ -89,16 +95,20 @@ export function validateManifest(value) {
   if (releases.some((r, i) => i && compareVersions(releases[i - 1].version, r.version) === 0)) throw Error('Duplicate release version');
   return { schema: 1, ...(policy ? { versionPolicy: policy } : {}), releases };
 }
-export function versionStatus(currentVersion, manifest) {
+export function versionStatus(currentVersion, manifest, { hostVersion } = {}) {
   const preview = releaseIsPreview(currentVersion, manifest.versionPolicy);
   const compare = (a, b) => releaseCompare(a, b, manifest.versionPolicy);
   const migrate = manifest.versionPolicy === 'dsh-aligned' && (legacyIndependent(currentVersion) || ['0.2.0', '0.2.1', '0.2.2', '0.3.0'].includes(currentVersion));
-  const eligible = manifest.releases.filter(r => preview || !releaseIsPreview(r.version, manifest.versionPolicy) || migrate && hostBound(r.version));
+  const channel = manifest.releases.filter(r => preview || !releaseIsPreview(r.version, manifest.versionPolicy) || migrate && hostBound(r.version));
+  const eligible = hostVersion ? channel.filter(r => releaseHostVersion(r.version) && !updateHostRequirement(currentVersion, r.version, hostVersion)) : channel;
+  const newerHost = hostVersion && channel.find(r => compare(r.version, currentVersion) > 0 && updateHostRequirement(currentVersion, r.version, hostVersion));
   const updates = eligible.filter(r => compare(r.version, currentVersion) > 0);
   return { currentVersion, latestVersion: eligible[0]?.version || null,
-    status: updates.length ? 'update' : !eligible.length ? 'unknown' : compare(currentVersion, eligible[0].version) > 0 ? 'ahead' : 'current',
+    status: updates.length ? 'update' : !eligible.length ? (channel.length && compare(currentVersion, channel[0].version) > 0 ? 'ahead' : 'unknown') : compare(currentVersion, eligible[0].version) > 0 ? 'ahead' : 'current',
     severity: updates.some(r => r.severity === 'required') ? 'required' : updates.length ? 'normal' : 'none',
-    releases: updates, currentRelease: manifest.releases.find(r => compareVersions(r.version, currentVersion) === 0) || null };
+    releases: updates, currentRelease: manifest.releases.find(r => compareVersions(r.version, currentVersion) === 0) || null,
+    ...(hostVersion ? { hostVersion } : {}),
+    ...(newerHost ? { hostUpgrade: { ...newerHost, requiredHostVersion: releaseHostVersion(newerHost.version) } } : {}) };
 }
 
 async function readManifest(response) {
@@ -117,13 +127,14 @@ export const INSTALLED_VERSION = JSON.parse(readFileSync(new URL('../package.jso
 const BUNDLED_MANIFEST = validateManifest(JSON.parse(readFileSync(new URL('../release-manifest.json', import.meta.url), 'utf8')));
 
 export function createVersionService({ currentVersion = INSTALLED_VERSION, bundledManifest = BUNDLED_MANIFEST,
+  hostVersion = releaseHostVersion(currentVersion),
   fetchImpl = globalThis.fetch, now = Date.now, timeoutMs = 3000 } = {}) {
   parseVersion(currentVersion);
   let cached = null, checkedAt = null, lastAttemptAt = null, nextCheckAt = 0, error = null, pending = null;
   const shutdown = new AbortController();
   const bundledRelease = bundledManifest.releases.find(r => compareVersions(r.version, currentVersion) === 0) || null;
   const snapshot = () => {
-    const status = cached ? versionStatus(currentVersion, cached) : {
+    const status = cached ? versionStatus(currentVersion, cached, { hostVersion }) : {
       currentVersion, latestVersion: null, status: 'unknown', severity: 'none', releases: [],
     };
     return { ...status, currentRelease: status.currentRelease ?? bundledRelease,

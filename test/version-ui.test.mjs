@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
-import { validateManifest, versionStatus, parseVersion } from '../src/version.mjs';
+import { validateManifest, versionStatus, parseVersion, releaseHostVersion } from '../src/version.mjs';
 const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.url))).version;
 const nextVersion = `${parseVersion(version).core[0] + 1n}.0.0`, laterVersion = `${parseVersion(version).core[0] + 2n}.0.0`;
 const release = (v, severity = 'normal') => ({ version: v, severity, title: severity === 'required' ? '重要缺陷修复' : '常规功能更新', notes: ['更新说明仅为文本。'] });
@@ -147,4 +147,26 @@ test('brand i opens version details; green/red indicators, offline state, keyboa
   await trigger.waitFor();
   assert.deepEqual(f.errors, []);
   if (process.env.TRISOUL_UI_ARTIFACTS) console.log('Version UI artifacts:', f.root);
+});
+
+
+test('the version panel offers only current-host patches and explains newer-host releases', { timeout: 60000 }, async t => {
+  const hostVersion = releaseHostVersion(version), other = '9.0.0-omd.0.5.0';
+  const patch = version.replace(/\d+$/, n => String(Number(n) + 1));
+  const responseFor = rows => ({ ...versionStatus(version, validateManifest({ schema: 1, versionPolicy: 'dsh-aligned', releases: rows }), { hostVersion }), checkedAt: Date.now(), error: null });
+  let response = responseFor([release(other, 'required'), release(version)]);
+  const { page, errors } = await frontendFixture(t, { versionResponse: () => response });
+  await page.route('**/trisoul-x/api/version-update', route => route.fulfill({ json: { phase: 'idle', available: true } }));
+  await page.getByRole('button', { name: '关于 Oh My DSH', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: '关于 Oh My DSH' });
+  await dialog.getByText('已是当前 DSH 的最新版', { exact: true }).waitFor();
+  assert.ok((await dialog.innerText()).includes('需要 DSH 9.0.0'));
+  assert.ok((await dialog.innerText()).includes('最新兼容版本'));
+  assert.equal(await dialog.getByRole('button', { name: '更新', exact: true }).count(), 0);
+  response = responseFor([release(other, 'required'), release(patch), release(version)]);
+  await dialog.getByRole('button', { name: '检查更新', exact: true }).click();
+  await dialog.getByRole('button', { name: '更新', exact: true }).waitFor();
+  assert.equal(await dialog.getByRole('link', { name: '查看新版说明 ↗' }).getAttribute('href'), 'https://github.com/gulagala001/oh-my-dsh/releases/tag/v' + patch);
+  assert.equal(await page.getByRole('button', { name: '关于 Oh My DSH', exact: true }).getAttribute('data-update-level'), 'normal');
+  assert.deepEqual(errors, []);
 });

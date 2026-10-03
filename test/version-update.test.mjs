@@ -121,3 +121,16 @@ test('update API responds before the installation finishes and rejects unsupport
   const huge = Readable.from([Buffer.from('x'.repeat(5000))]); huge.method = 'POST';
   await assert.rejects(handleVersionUpdateApi({ ...common, req: huge }), error => error.statusCode === 413);
 });
+
+test('a newer host release cannot reach the package manager even when advertised as an update', async () => {
+  const f = fixture();
+  Object.assign(f.release, { currentVersion: '0.2.0-rc.2.omd.0.5.0', latestVersion: '0.2.1-alpha.1.omd.0.5.1' });
+  f.bundle.version = f.release.currentVersion;
+  const state = await f.service.status();
+  assert.equal(state.available, false);
+  assert.match(state.blockedReason, /需要 DSH 0\.2\.1-alpha\.1.*当前宿主为 0\.2\.0-rc\.2/);
+  await f.service.start(f.release.latestVersion);
+  assert.equal(f.service.snapshot().phase, 'failed');
+  assert.match(f.service.snapshot().error, /请先更新官方 DSH/);
+  assert.equal(f.calls.length, 0, 'cross-host requests must not alter the profile or package tree');
+});
