@@ -14,6 +14,7 @@ import versionCss from './version-info.css';
 import { whaleCss } from './brand.mjs';
 import { createContextUI } from './context-client.mjs';
 import { applyHistorySize } from './history-settings.jsx';
+import { applyLegacyDraftRecovery } from './draft-recovery.mjs';
 import { applySkins } from './skins/settings.jsx';
 import { applyConversationRecords } from './conversation-records.jsx';
 import { applyRecommendedPlugins } from './recommended-plugins.jsx';
@@ -249,6 +250,7 @@ export async function apply(ctx) {
   applyHistorySize(ctx);
   installDesktopLifecycle(ctx);
   await ctx.plugin(hostConversation, { settingsNamespace: 'omd-ui-conversation' });
+  applyLegacyDraftRecovery(ctx);
   applyPromptOptimizer(ctx);
   applyModelPanel(ctx);
   applyWorkflowStatus(ctx);
