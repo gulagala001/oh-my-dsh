@@ -5,7 +5,7 @@
 <p align="center"><strong>长任务、电脑操作与任务验证，都在熟悉的 DSH 里。</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-alpha.1.omd.0.5.2"><img src="https://img.shields.io/badge/version-0.2.1--alpha.1.omd.0.5.1-3478F6?style=flat-square" alt="Version 0.2.1-alpha.1.omd.0.5.2" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-alpha.1.omd.0.5.2"><img src="https://img.shields.io/badge/version-0.2.1--alpha.1.omd.0.5.2-3478F6?style=flat-square" alt="Version 0.2.1-alpha.1.omd.0.5.2" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.2.1--alpha.1-475569?style=flat-square" alt="DSH 0.2.1-alpha.1" /></a>
 </p>
 <p align="center">
