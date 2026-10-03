@@ -498,12 +498,12 @@ OMD 主会话使用 pi-ai 图片路由时，发送前按提供方的实际图片
 
 `/btw` 原作者为 [JasonQQ](https://github.com/JasonQQ)，原项目是 [dsh-btw-plugin](https://github.com/JasonQQ/dsh-btw-plugin)；Turn Rewind 原作者为 [Anionex](https://github.com/Anionex)，原项目是 [dsh-turn-rewind](https://github.com/Anionex/dsh-turn-rewind)。固定来源与许可集中见 [第三方来源与许可](../THIRD_PARTY_NOTICES.md)。
 
-`/btw <问题>` 默认接入 OMD，沿用原生 fork 和主会话已完成回合。
+`/btw <问题>` 默认接入 OMD，沿用原生 fork；主任务运行时，侧问立即复用主模型最近一次已发出请求的上下文，包括当前回合已进入该请求的用户消息与工具结果，不等待主回合结束。首轮也可侧问。
 它不执行工具；若模型尝试工具调用，宿主正常记录 Error 结果后停止侧问。
 `/btw cancel` 取消当前主会话正在运行的侧问，不停止主会话。
 缓存读取统计来自渠道返回的 `cacheReadTokens`；缺少字段显示未知。
 缓存前缀无法核对或发生变化时，侧问直接报错，不静默切换到新上下文。
-宿主冷启动后需先完成主会话一轮，建立可核对的请求前缀；侧问不进入 Dream 项目或全局记忆。
+宿主冷启动后需等主模型开始响应，建立可核对的请求前缀；侧问不进入 Dream 项目或全局记忆。
 
 回合回滚在设置的推荐插件页面中，默认不安装。点击安装后由原生插件管理器启用。
 当前推荐固定为上游 0.3.9 源码快照；已在 Mac 隔离 Web 宿主验证安装、启用、卸载和临时工作区恢复。正式桌面 App 界面及 Windows 未同等实测。
