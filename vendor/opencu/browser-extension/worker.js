@@ -25,6 +25,39 @@ async function releaseInput(control, actorId) {
   }
   return errors;
 }
+// The native debugger is shared by independent preview/model actors. Keep
+// their device overrides separate so losing one actor restores the remaining
+// actor's settings instead of leaking simulation or resetting its preview.
+const overrideCommands={
+  'Emulation.setDeviceMetricsOverride':['metrics','Emulation.clearDeviceMetricsOverride',{}],
+  'Emulation.setTouchEmulationEnabled':['touch','Emulation.setTouchEmulationEnabled',{enabled:false}],
+  'Emulation.setUserAgentOverride':['ua','Emulation.setUserAgentOverride',{userAgent:''}],
+};
+function trackOverride(control,actorId,sessionId,method,params){
+  const clear=method==='Emulation.clearDeviceMetricsOverride';
+  const kind=clear?'metrics':overrideCommands[method]?.[0];if(!kind)return;
+  control.overrides??=new Map();const key=JSON.stringify([sessionId??null,kind]);
+  let entry=control.overrides.get(key);
+  if(!entry){const reset=overrideCommands[method]??overrideCommands['Emulation.setDeviceMetricsOverride'];entry={sessionId,reset:{method:reset[1],params:reset[2]},actors:new Map()};control.overrides.set(key,entry);}
+  entry.actors.delete(actorId);
+  if(!clear&&!(method==='Emulation.setUserAgentOverride'&&params.userAgent===''))entry.actors.set(actorId,{method,params:{...params}});
+  if(!entry.actors.size)control.overrides.delete(key);
+}
+async function releaseOverrides(control,actorId){
+  const errors=[];
+  for(const [key,entry]of control.overrides??[]){
+    if(actorId!==undefined&&!entry.actors.has(actorId))continue;
+    const active=[...entry.actors.keys()].at(-1);
+    const remaining=[...entry.actors].filter(([id])=>actorId!==undefined&&id!==actorId);
+    if(actorId===undefined||active===actorId){
+      const command=remaining.at(-1)?.[1]??entry.reset;
+      try{await chrome.debugger.sendCommand({tabId:control.tabId,...(entry.sessionId?{sessionId:entry.sessionId}:{})},command.method,command.params);}
+      catch(cause){errors.push(cause.message);continue;}
+    }
+    entry.actors=new Map(remaining);if(!entry.actors.size)control.overrides.delete(key);
+  }
+  return errors;
+}
 async function stopActor(control, actorId) {
   if(typeof actorId!=='string'||!actorId)throw failed('Invalid protocol actor');
   if(control.actorStops.has(actorId))return control.actorStops.get(actorId);
@@ -32,7 +65,7 @@ async function stopActor(control, actorId) {
   const grouping = groupWarning(control, sessionGroups.release(control, actorId));
   void control.cursor?.stop(actorId);
   const stopping=(async()=>{
-    const errors=await releaseInput(control,actorId);
+    const errors=[...await releaseInput(control,actorId),...await releaseOverrides(control,actorId)];
     await grouping;
     if(errors.length){control.actorErrors.set(actorId,errors.join('; '));throw failed('Input release was not confirmed: '+errors.join('; '),'INPUT_RELEASE_FAILED');}
     control.actorErrors.delete(actorId);return{released:true};
@@ -61,7 +94,7 @@ async function stop(control, reason = 'released') {
     await control.attached.catch(() => {});
     const errors = [];
     if (control.isAttached) {
-      errors.push(...await releaseInput(control));
+      errors.push(...await releaseInput(control),...await releaseOverrides(control));
       if (!errors.length) {
         try { await chrome.debugger.detach({ tabId: control.tabId }); control.isAttached = false; }
         catch (cause) { if (control.isAttached) errors.push(cause.message); }
@@ -233,6 +266,11 @@ async function dispatch(method, params, transport) {
       if (['keyDown', 'rawKeyDown'].includes(value.type)) control.held.set(key, { actorId:params.actorId,sessionId: params.sessionId, method: command, params: { ...value, type: 'keyUp', text: undefined, unmodifiedText: undefined, modifiers: 0 } });
       if (value.type === 'keyUp') released = key;
     }
+    if(command==='Input.dispatchTouchEvent'){
+      const key=prefix+':touch';
+      if(value.type==='touchStart')control.held.set(key,{actorId:params.actorId,sessionId:params.sessionId,method:command,params:{type:'touchCancel',touchPoints:[]}});
+      if(value.type==='touchEnd'||value.type==='touchCancel')released=key;
+    }
     let result;
     try { result = await (command === 'Page.captureScreenshot' ? control.cursor.capture(() => chrome.debugger.sendCommand(session, command, value)) : chrome.debugger.sendCommand(session, command, value)); }
     catch (cause) {
@@ -242,6 +280,10 @@ async function dispatch(method, params, transport) {
       }
       throw cause;
     }
+    trackOverride(control,params.actorId,params.sessionId,command,value);
+    // A command already handed to Chromium may finish after stop began.
+    // Restore its actor's override before acknowledging that late result.
+    if(control.stopped||control.stoppedActors.has(params.actorId)){const errors=await releaseOverrides(control,params.actorId);if(errors.length)throw failed(errors.join('; '),'INPUT_RELEASE_FAILED');}
     if (released) control.held.delete(released);
     return result ?? {};
   };

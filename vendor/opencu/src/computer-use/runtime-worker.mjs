@@ -3,6 +3,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { inspect } from 'node:util';
 import { createHash } from 'node:crypto';
 import { CORE_DOCUMENTATION, BROWSER_DOCUMENTATION, appDocumentation, documentationTopic } from './api-docs.mjs';
+import { documentationKey, documentationKeyForText } from './documentation-state.mjs';
 
 const scope = new AsyncLocalStorage(), pending = new Map(); let sequence = 0;
 const send = message => { if (process.connected) process.send(message); };
@@ -16,14 +17,25 @@ const rpc = (method, args = []) => {
     catch(error) { pending.delete(id); reject(error); }
   });
 };
-const emit = (type, value) => send({ type:'output', execution:scope.getStore(), block:{type,...value} });
-const display = value => emit('text',{text:typeof value==='string'?value:inspect(value,{depth:8,maxArrayLength:100,maxStringLength:24000,breakLength:100})});
+let activeExecution;
+const emit = (type, value, key) => {
+  const execution=scope.getStore();
+  send({ type:'output', execution, block:{type,...value}, ...(key?{documentationKey:key}:{}) });
+  // Provisional deduplication for this call only. The host confirms complete
+  // output acceptance and provides its accepted set before every next call.
+  if(key&&execution&&execution===activeExecution)shownDocumentation.add(key);
+};
+const display = value => {
+  const text=typeof value==='string'?value:inspect(value,{depth:8,maxArrayLength:100,maxStringLength:24000,breakLength:100});
+  emit('text',{text},documentationKeyForText(text,nativePlatform));
+};
 const shownDocumentation=new Set();
 let nativePlatform=process.platform;
-function documentation(kind){
-  for(const name of ['core',kind].filter(Boolean))if(!shownDocumentation.has(name)){
-    display(name==='core'?CORE_DOCUMENTATION:name==='browser'?BROWSER_DOCUMENTATION:appDocumentation(nativePlatform));
-    shownDocumentation.add(name);
+function documentation(kind,force=false){
+  for(const name of ['core',kind].filter(Boolean)){
+    const text=name==='core'?CORE_DOCUMENTATION:name==='browser'?BROWSER_DOCUMENTATION:appDocumentation(nativePlatform),key=documentationKey(name,text);
+    if(!force&&shownDocumentation.has(key))continue;
+    emit('text',{text},key);
   }
 }
 const captures = new WeakMap(), digest = data => createHash('sha256').update(data).digest('hex');
@@ -86,6 +98,7 @@ function target(info) {
     result.filechooser={setFiles:files=>rpc('target',[info,'filechooser.setFiles',[files]])};
     result.dev={logs:()=>rpc('target',[info,'logs']),network:{list:options=>rpc('target',[info,'network.list',[options]]),request:id=>rpc('target',[info,'network.request',[id]]),responseBody:id=>rpc('target',[info,'network.responseBody',[id]])}};
     result.viewport={set:size=>rpc('target',[info,'viewport.set',[size]]),reset:()=>rpc('target',[info,'viewport.reset'])};
+    result.emulation=Object.freeze({set:settings=>rpc('target',[info,'emulation.set',[settings]]),reset:()=>rpc('target',[info,'emulation.reset'])});
     result.screenshot=(options={})=>result.getScreenshot({...options,emit:false});
     result.content=Object.freeze({export:()=>rpc('target',[info,'content.export'])});
     const pageAssets=Object.freeze({list:()=>rpc('target',[info,'pageAssets.list']),bundle:options=>rpc('target',[info,'pageAssets.bundle',[options]])});
@@ -97,13 +110,22 @@ function target(info) {
 const bind=async(method,args)=>{const info=await rpc(method,args);documentation(info.kind==='tab'?'browser':'app');const bound=target(info);await bound.getAXState({disableDiffing:true});return bound;};
 function browserTarget(info){
   const viewport=Object.freeze({set:size=>rpc('browserViewport',[info.id,size]),reset:()=>rpc('browserViewport',[info.id,null])});
+  const emulation=Object.freeze({set:settings=>rpc('browserEmulation',[info.id,settings]),reset:()=>rpc('browserEmulation',[info.id,null])});
   const visibility=Object.freeze({set:visible=>rpc('browserVisibility',[info.id,visible])});
   return Object.freeze({...info,browserId:info.id,documentation:async()=>BROWSER_DOCUMENTATION,
-    capabilities:Object.freeze({list:async()=>[{id:'viewport',description:'Temporary viewport sizes for this task’s controlled tabs.'},{id:'visibility',description:'Show or hide the selected tab preview in the current conversation.'}],get:async id=>{if(id==='visibility')return visibility;if(id!=='viewport')throw new Error('Browser capability is not available: '+id);return viewport;}}),
+    capabilities:Object.freeze({list:async()=>[{id:'viewport',description:'Temporary viewport sizes for this task’s controlled tabs.'},{id:'emulation',description:'Temporary device scale, user agent and touch/mobile settings for this task’s controlled tabs.'},{id:'visibility',description:'Show or hide the selected tab preview in the current conversation.'}],get:async id=>{if(id==='visibility')return visibility;if(id==='emulation')return emulation;if(id!=='viewport')throw new Error('Browser capability is not available: '+id);return viewport;}}),
     tabs:{list:()=>rpc('listTabs',[{browser:info.id}]),get:id=>bind('getTab',[id,{browser:info.id}]),new:()=>bind('createBrowserTab',[info.id,'about:blank'])}});
 }
 globalThis.cua=Object.freeze({
   documentation:async topic=>documentationTopic(topic,nativePlatform),
+  rewriteDocumentation:async topic=>{
+    if(topic!==undefined){const text=documentationTopic(topic,nativePlatform);emit('text',{text},documentationKey(topic,text));return;}
+    const previous=[...shownDocumentation];
+    documentation(undefined,true);
+    for(const name of ['browser','app'])if(previous.some(key=>key.startsWith(name+':'))){
+      const text=documentationTopic(name,nativePlatform);emit('text',{text},documentationKey(name,text));
+    }
+  },
   getState:async(options={})=>{const state=await rpc('getState');documentation();if(options.emit!==false)display(state);return state;},
   listApps:async(options={})=>{const apps=await rpc('listApps');documentation();if(options.emit!==false)display(apps);return apps;},
   listTabs:async(options={})=>{const tabs=await rpc('listTabs',[options]);documentation();if(options.emit!==false)display(tabs);return tabs;},
@@ -127,7 +149,12 @@ process.on('message',message=>{
   if(message.type==='execute') {
     if(busy){send({type:'done',execution:message.execution,error:{message:'The previous call is still running.'}});return;}
     busy=true;
+    activeExecution=message.execution;
     nativePlatform=message.nativePlatform??process.platform;
+    if(Array.isArray(message.shownDocumentation)){
+      shownDocumentation.clear();
+      for(const key of message.shownDocumentation)shownDocumentation.add(key);
+    }
     scope.run(message.execution,async()=>{
       try{
         const result=await post('Runtime.evaluate',{expression:message.code,replMode:true,awaitPromise:true,returnByValue:false,objectGroup:message.execution});
@@ -138,7 +165,7 @@ process.on('message',message=>{
         }
         send({type:'done',execution:message.execution});
       }catch(error){send({type:'done',execution:message.execution,error:{message:error.message}});}
-      finally{await post('Runtime.releaseObjectGroup',{objectGroup:message.execution}).catch(()=>{});busy=false;}
+      finally{await post('Runtime.releaseObjectGroup',{objectGroup:message.execution}).catch(()=>{});busy=false;activeExecution=undefined;}
     });
   }
 });
