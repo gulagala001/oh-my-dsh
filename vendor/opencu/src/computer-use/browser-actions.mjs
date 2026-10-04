@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { applyMetrics, validateEmulation, setEmulation, emulationSettings } from './browser-emulation.mjs';
 import {basename} from 'node:path';
 import {access} from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -20,7 +21,7 @@ export class BrowserActions {
     this.id = id; this.connections = new Map(); this.owners = new Map(); this.records = new Map(); this.nextElementId = 0;
     this.onTabClosed = onTabClosed; this.onBrowserLost = onBrowserLost; this.onPointer = onPointer; this.wantsPointer = wantsPointer;
     this.onVisit=onVisit;
-    this.viewportPresets=new Map();
+    this.viewportPresets=new Map();this.viewportOwners=new Map();this.emulationPresets=new Map();this.emulations=new Map();
     this.downloadHistory=new Map();this.downloadSessions=new Map();this.downloadObservers=new Map();
   }
   recordId(_connection, targetInfo) { return targetInfo.targetId; }
@@ -78,7 +79,7 @@ export class BrowserActions {
       // tab closure. Only an actual tab close releases global ownership.
       setTimeout(() => {
         if (!connection.closing && connection.browser.isConnected()) {
-          const known = this.records.delete(id); this.owners.delete(id);this.downloadSessions.delete(id);
+          const known = this.records.delete(id); this.owners.delete(id);this.downloadSessions.delete(id);this.emulations.delete(id);this.viewportOwners.delete(id);
           if (known) this.onTabClosed?.(id);
         }
       }, 0);
@@ -138,7 +139,33 @@ export class BrowserActions {
     record.keyReleases.set(key, pending); void pending.catch(() => {}); return pending;
   }
   queueInputRelease(record) {
-    return [...[...record.heldButtons].map(button => this.releaseButton(record, button)), ...[...record.heldKeys].map(key => this.releaseKey(record, key))];
+    return [...(record.heldTouch?[this.releaseTouch(record,true)]:[]), ...[...record.heldButtons].map(button => this.releaseButton(record, button)), ...[...record.heldKeys].map(key => this.releaseKey(record, key))];
+  }
+  async touch(record,type,position){
+    if(type==='touchStart')record.heldTouch=true;
+    const touchPoints=position?[{id:1,x:position.x,y:position.y}]:[];
+    await record.cdp.send('Input.dispatchTouchEvent',{type,touchPoints});
+    if(type==='touchEnd'||type==='touchCancel')record.heldTouch=false;
+  }
+  async releaseTouch(record,cancel=false){
+    if(record.touchRelease)return record.touchRelease;
+    if(!record.heldTouch)return;
+    const pending=this.touch(record,cancel?'touchCancel':'touchEnd');record.touchRelease=pending;
+    try{await pending;}finally{if(record.touchRelease===pending)record.touchRelease=null;}
+  }
+  async tap(record,position,signal){
+    signal?.throwIfAborted();
+    try{await this.touch(record,'touchStart',position);signal?.throwIfAborted();}
+    finally{await this.releaseTouch(record,!!signal?.aborted);}
+  }
+  async tapLocator(record,locator,options={},signal){
+    // Let Playwright check strictness, visibility, stability and hit targeting
+    // without dispatching mouse input; CDP touch does not require recreating
+    // the persistent browser context with Playwright's hasTouch option.
+    await locator.click({...options,trial:true});signal?.throwIfAborted();
+    const box=await locator.boundingBox();if(!box)throw new Error('The touch target is no longer visible.');
+    const position=options.position??{x:box.width/2,y:box.height/2};
+    await this.tap(record,{x:box.x+position.x,y:box.y+position.y},signal);
   }
   async resolveElement(cdp, frame, backendNodeId) {
     const slot = '__trisoul_' + randomUUID().replaceAll('-', '');
@@ -307,11 +334,11 @@ export class BrowserActions {
     record.pendingViewportSets=(record.pendingViewportSets??0)+1;
     try{return await withViewportTransaction(record,async()=>{
       if(record.dialog||record.nativeDialog)throw new Error('Answer the open JavaScript dialog before changing the viewport.');
-      const geometry=await screenshotGeometry(record),{result}=await record.cdp.send('Runtime.evaluate',{expression:'window.devicePixelRatio',returnByValue:true});
-      record.viewportOverride=true;
-      record.viewportMode=mode;
-      await record.cdp.send('Emulation.setDeviceMetricsOverride',{width:Math.round(size.width*geometry.zoom),height:Math.round(size.height*geometry.zoom),deviceScaleFactor:result.value/geometry.zoom,mobile:false});
-      record.screenshotFrame=null;
+      const geometry=await screenshotGeometry(record),existing=this.emulations.get(record.id);
+      if(!record.viewportOverride){record.viewportNativeSize=existing?.nativeSize??{width:Math.round(geometry.width*geometry.scale),height:Math.round(geometry.height*geometry.scale)};record.viewportNativeDpr=existing?.nativeDpr??geometry.devicePixelRatio/geometry.zoom;}
+      await applyMetrics(this,record,size);
+      record.viewportOverride=true;record.viewportMode=mode;record.viewportSize={width:size.width,height:size.height};
+      this.viewportOwners.set(record.id,record);record.screenshotFrame=null;
     });}finally{record.pendingViewportSets--;}
   }
   async resetViewport(record){
@@ -320,8 +347,15 @@ export class BrowserActions {
     if(!record.viewportOverride&&!record.pendingViewportSets)return;
     return withViewportTransaction(record,async()=>{
       if(!record.viewportOverride)return;
-      if(!record.page.isClosed())await record.cdp.send('Emulation.clearDeviceMetricsOverride');
-      record.viewportOverride=false;record.viewportMode=null;record.screenshotFrame=null;
+      if(this.viewportOwners.get(record.id)===record){
+        const emulation=this.emulations.get(record.id);
+        if(!record.page.isClosed()){
+          if(emulation&&('deviceScaleFactor' in emulation.settings||'isMobile' in emulation.settings))await applyMetrics(this,record,record.viewportNativeSize??emulation.nativeSize);
+          else await record.cdp.send('Emulation.clearDeviceMetricsOverride');
+        }
+        this.viewportOwners.delete(record.id);
+      }
+      record.viewportOverride=false;record.viewportMode=null;record.viewportSize=null;record.screenshotFrame=null;
     });
   }
   async browserViewport(sessionId,size,signal){
@@ -334,6 +368,31 @@ export class BrowserActions {
       const record=await this.target(sessionId,id);
       signal?.throwIfAborted();
       if(preset){await this.setViewport(record,preset.size);record.viewportPreset=preset.id;}else await this.resetViewport(record);
+    }
+  }
+  validateEmulation(settings){return validateEmulation(settings);}
+  emulationSettings(id){return emulationSettings(this,id);}
+  async setEmulation(record,settings,signal){return setEmulation(this,record,settings,signal);}
+  async resetEmulation(record,{ownedOnly=false}={}){return setEmulation(this,record,null,undefined,{ownedOnly});}
+  async restoreOverrides(record){await this.resetEmulation(record,{ownedOnly:true});await this.resetViewport(record);}
+  async browserEmulation(sessionId,settings,signal){
+    signal?.throwIfAborted();
+    const normalized=settings===null?null:this.validateEmulation(settings);
+    const preset=normalized&&Object.keys(normalized).length?{settings:normalized,id:randomUUID()}:null;
+    const previousPreset=this.emulationPresets.get(sessionId),changed=[];
+    try{
+      for(const [id,owner]of this.owners)if(owner.sessionId===sessionId){
+        signal?.throwIfAborted();const record=await this.target(sessionId,id);signal?.throwIfAborted();
+        const previous=this.emulations.get(id),previousId=record.emulationPreset;
+        await this.setEmulation(record,preset?.settings??null,signal);changed.push({record,previous,previousId});record.emulationPreset=preset?.id;
+      }
+      if(preset)this.emulationPresets.set(sessionId,preset);else this.emulationPresets.delete(sessionId);
+    }catch(error){
+      if(previousPreset)this.emulationPresets.set(sessionId,previousPreset);else this.emulationPresets.delete(sessionId);
+      const errors=[error];
+      for(const {record,previous,previousId}of changed.reverse())try{await this.setEmulation(previous?.record??record,previous?.settings??null);record.emulationPreset=previousId;}catch(cleanup){errors.push(cleanup);}
+      if(errors.length>1)throw Object.assign(new AggregateError(errors,'Browser device emulation restoration failed: '+errors.map(error=>error.message).join('; ')),{code:'EMULATION_RESTORE_FAILED'});
+      throw error;
     }
   }
   async screenshotPoints(record, values, frame = record.screenshotFrame) {
@@ -360,6 +419,8 @@ export class BrowserActions {
       if (navigating) record.navigating = true;
       const preset=this.viewportPresets.get(sessionId);
       if(preset&&record.viewportPreset!==preset.id&&!method.startsWith('viewport.')){await this.setViewport(record,preset.size);record.viewportPreset=preset.id;}
+      const emulation=this.emulationPresets.get(sessionId);
+      if(emulation&&record.emulationPreset!==emulation.id&&!method.startsWith('emulation.')){await this.setEmulation(record,emulation.settings,signal);record.emulationPreset=emulation.id;}
       if (method === 'getAXState') return await this.snapshot(record, args[0], signal);
       if (method === 'getScreenshot'||method==='screenshot') return await this.observeScreenshot(record, args[0], signal);
       if (method === 'getAXStateAndScreenshot') return await this.snapshot(record, args[0], signal, true);
@@ -410,6 +471,8 @@ export class BrowserActions {
         await this.setViewport(record,args[0]);return null;
       }
       if (method === 'viewport.reset') {await this.resetViewport(record);return null;}
+      if (method === 'emulation.set') {await this.setEmulation(record,args[0],signal);return null;}
+      if (method === 'emulation.reset') {await this.resetEmulation(record);return null;}
       if (method === 'close') { await page.close(); return null; }
       return await this.perform(record, async () => {
         if (method === 'goto') { await page.goto(args[0], { waitUntil: 'domcontentloaded' }); return null; }
@@ -429,6 +492,8 @@ export class BrowserActions {
           if (['evaluate','evaluateAll'].includes(action) && actionArgs[0]?.$function) {
             return locator[action]((element,{source,arg}) => (0,eval)('(' + source + ')')(element,arg), {source:actionArgs[0].$function,arg:actionArgs[1]});
           }
+          const options=actionArgs[0]??{};
+          if(action==='click'&&this.emulationSettings(id)?.hasTouch&&(!options.button||options.button==='left')&&(!options.clickCount||options.clickCount===1)&&!options.trial&&!options.modifiers?.length){await this.tapLocator(record,locator,options,signal);return null;}
           const result = await locator[action](...actionArgs); return result ?? null;
         }
         if (method === 'evaluate') {
@@ -440,7 +505,12 @@ export class BrowserActions {
         if (method === 'url') return page.url();
         if (method === 'title') return page.title();
         if (method === 'drag') {
-          const [from,to] = await this.screenshotPoints(record, args, screenshotFrame); signal?.throwIfAborted(); await page.mouse.move(from.x,from.y); signal?.throwIfAborted();
+          const [from,to] = await this.screenshotPoints(record, args, screenshotFrame); signal?.throwIfAborted();
+          if(this.emulationSettings(id)?.hasTouch){
+            try{await this.touch(record,'touchStart',from);for(let step=1;step<=12;step++){signal?.throwIfAborted();await this.touch(record,'touchMove',{x:from.x+(to.x-from.x)*step/12,y:from.y+(to.y-from.y)*step/12});}}
+            finally{await this.releaseTouch(record,!!signal?.aborted);}return null;
+          }
+          await page.mouse.move(from.x,from.y); signal?.throwIfAborted();
           record.pointer = from; record.heldButtons.add('left'); await page.mouse.down();
           try { record.pointer = to; await page.mouse.move(to.x,to.y,{ steps: 12 }); }
           finally { if (record.heldButtons.has('left')) await this.releaseButton(record, 'left'); }
@@ -451,7 +521,9 @@ export class BrowserActions {
           if (typeof args[0] === 'number') handle = await this.element(record,args[0]);
           if (method === 'click') {
             const options = { button: args[1]?.mouseButton ?? 'left', clickCount: args[1]?.clickCount ?? 1 };
-            if (handle) await handle.click(options); else { const [p] = await this.screenshotPoints(record, [args[0]], screenshotFrame); signal?.throwIfAborted(); await page.mouse.click(p.x,p.y,options); }
+            if(this.emulationSettings(id)?.hasTouch&&options.button==='left'&&options.clickCount===1){
+              if(handle)await this.tapLocator(record,handle,{},signal);else{const [p]=await this.screenshotPoints(record,[args[0]],screenshotFrame);await this.tap(record,p,signal);}
+            }else if (handle) await handle.click(options); else { const [p] = await this.screenshotPoints(record, [args[0]], screenshotFrame); signal?.throwIfAborted(); await page.mouse.click(p.x,p.y,options); }
           } else if (method === 'selectText') {
             if (!handle) throw new Error('selectText requires an observed element id');
             await handle.evaluate((element, { text, options }) => {

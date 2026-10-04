@@ -6,7 +6,34 @@ import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'nod
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { once } from 'node:events';
+import { Readable } from 'node:stream';
+import { setImmediate as nextTurn } from 'node:timers/promises';
 import { promptText } from '../src/cc-adaptation/texts.mjs';
+
+async function readProviderRequest(req) {
+  // IncomingMessage yields Buffers by default. Decode across chunk boundaries
+  // so TCP framing cannot corrupt multibyte prompt text or its prefix comparison.
+  req.setEncoding('utf8');
+  let body = ''; for await (const part of req) body += part;
+  return JSON.parse(body);
+}
+
+test('fixture provider preserves UTF-8 request text across split multibyte characters', async () => {
+  const payload = { messages: [{ role: 'user', content: 'Approval disabled — 已授权 😀' }] };
+  const bytes = Buffer.from(JSON.stringify(payload));
+  for (const character of ['—', '已', '😀']) {
+    const offset = bytes.indexOf(Buffer.from(character));
+    for (let boundary = 1; boundary < Buffer.byteLength(character); boundary++) {
+      const chunks = [bytes.subarray(0, offset + boundary), bytes.subarray(offset + boundary)];
+      // Deliver both pieces separately instead of allowing Readable to coalesce
+      // them before the consumer observes the intended UTF-8 boundary.
+      const req = Readable.from((async function* () {
+        for (const chunk of chunks) { yield chunk; await nextTurn(); }
+      })(), { objectMode: false });
+      assert.deepEqual(await readProviderRequest(req), payload, `${character} split after byte ${boundary}`);
+    }
+  }
+});
 
 async function until(fn, timeout = 30000) {
   const end = Date.now() + timeout;
@@ -37,8 +64,7 @@ for (const preset of ['trisoul-x', 'omd-ptc']) test(`official DSH profile → ${
   const stopCases = new Map();
   let calls = 0, recallRange, recallReply, lastSnapshot;
   const provider = createServer(async (req, res) => {
-    let body = ''; for await (const part of req) body += part;
-    const p = JSON.parse(body); payloads.push(p);
+    const p = await readProviderRequest(req); payloads.push(p);
     res.writeHead(200, { 'Content-Type': 'text/event-stream' });
     const chunk = (delta, finish = null) => res.write(`data: ${JSON.stringify({ id: 'fixture', object: 'chat.completion.chunk', model: 'fixture', created: 1, choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`);
     const tool = (name, args) => {
