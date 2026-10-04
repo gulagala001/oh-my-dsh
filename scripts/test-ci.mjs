@@ -5,12 +5,14 @@ const compatibility = [
   'dsh-core', 'dsh-live-plugin', 'dsh-http', 'dsh-install', 'dsh-distribution',
   'host-component', 'host-lifecycle', 'session-migration', 'context-persistence',
   'workflow-host', 'workflow-integration', 'ultracode-integration', 'task-budget-native',
+  'projectless-workspaces', 'projectless-state', 'projectless-workspaces-ui',
 ];
 const windows = [
   'dsh-install', 'host-lifecycle', 'desktop-lifecycle', 'session-migration',
   'background-runtime', 'host-jobs', 'neutral-environment-native', 'workflow-host',
   'workflow-integration', 'workflow-worktree', 'ultracode-integration',
   'model-panel-ui', 'workflow-status-ui', 'browser-tools', 'computer-use-ui',
+  'projectless-workspaces', 'projectless-state', 'projectless-workspaces-ui',
 ];
 // These have their own three-platform installation workflow on every code PR.
 const offline = new Set(['offline.test.mjs', 'offline-install.test.mjs', 'offline-root.test.mjs']);
