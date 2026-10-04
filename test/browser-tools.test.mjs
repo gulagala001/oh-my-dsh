@@ -10,7 +10,7 @@ test('browser menu, device dimensions, screenshot modal and narrow keyboard flow
     window.calls=[];window.updates=0;
     function Harness(){const[target,setTarget]=useState({id:'tab',kind:'tab'}),[size,setSize]=useState({width:1280,height:720}),[state,setState]=useState({enabled:true,controlEpoch:0}),[previewScale,setPreviewScale]=useState('1');
       window.switchTab=()=>setTarget({id:'other',kind:'tab'});
-      const api=async(op,id,input)=>{window.calls.push({op,...input});if(op==='view-screenshot')return {mediaType:'image/png',data:'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aNXsAAAAASUVORK5CYII='};if(op==='view-find')return {...state,controlEpoch:state.controlEpoch+1,find:{query:input.query,found:input.query!=='missing',wrapped:input.backward===true}};setSize(input.size??{width:1280,height:720});return {...state,controlEpoch:state.controlEpoch+1,viewViewport:{overridden:input.size!==null}};};
+      const api=async(op,id,input)=>{window.calls.push({op,...input});if(op==='view-screenshot')return {mediaType:'image/png',data:'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aNXsAAAAASUVORK5CYII='};if(op==='view-find')return {...state,controlEpoch:state.controlEpoch+1,find:{query:input.query,found:input.query!=='missing',wrapped:input.backward===true}};if(op==='view-emulation')return {...state,controlEpoch:state.controlEpoch+1,viewEmulation:input.settings?{settings:input.settings}:null};setSize(input.size??{width:1280,height:720});return {...state,controlEpoch:state.controlEpoch+1,viewViewport:{overridden:input.size!==null}};};
       return <div className="tx-cu-pane" style={{width:320}}><div className="tx-cu-browser-navigation"><span>浏览器</span><BrowserTools sessionId="test" target={target} frame={{tabId:'tab',actor:'observer',...size}} state={state} api={api} onState={next=>{window.updates++;setState(next);}} onError={message=>window.error=message} previewScale={previewScale} onPreviewScale={setPreviewScale}/></div></div>;
     }createRoot(document.getElementById('root')).render(<Harness/>);
   `}});
@@ -19,7 +19,7 @@ test('browser menu, device dimensions, screenshot modal and narrow keyboard flow
   await page.addStyleTag({content:await readFile(new URL(import.meta.resolve('#opencu/src/client/computer-use.css')),'utf8')});await page.addScriptTag({content:outputFiles[0].text});
   const options=page.getByRole('button',{name:'浏览器选项'});
   await options.click();await page.getByRole('menuitem',{name:'显示设备工具栏'}).press('Escape');assert.equal(await options.evaluate(el=>el===document.activeElement),true);
-  await options.click();await page.getByRole('menuitem',{name:'显示设备工具栏'}).click();await page.getByRole('form',{name:'设备工具栏'}).waitFor();
+  await options.click();await page.getByRole('menuitem',{name:'显示设备工具栏'}).click();await page.getByRole('group',{name:'设备工具栏'}).waitFor();
   const zoom=page.getByLabel('设备预览缩放');await zoom.selectOption('fit');assert.equal(await zoom.inputValue(),'fit');await zoom.selectOption('0.5');assert.equal(await zoom.inputValue(),'0.5');assert.equal(await page.evaluate(()=>window.calls.length),0,'preview zoom is local, with no backend control writes');
   await page.getByRole('button',{name:'关闭设备工具栏'}).click();assert.equal(await page.evaluate(()=>window.calls.length),0,'showing and hiding controls does not take control');
   await options.click();await page.getByRole('menuitem',{name:'显示设备工具栏'}).click();
