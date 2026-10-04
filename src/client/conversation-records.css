@@ -16,3 +16,7 @@
 /* Groups also carry a flow key; hide only the duplicate record's node seat. */
 .trisoul-shell [data-chat-node-key]:has([data-omd-record-hidden]) { display: none; }
 .trisoul-shell [data-chat-flow-key]:has(.omd-context-record) { --dsh-chat-flow-gap: 3px; }
+.omd-btw-record { margin: 10px 0; padding: 10px 14px; border-left: 2px solid var(--dsw-alias-brand-primary, #4c87ed); color: var(--dsw-alias-label-primary); font-size: 14px; line-height: 1.65; min-width: 0; }
+.omd-btw-question { color: var(--dsw-alias-label-secondary); overflow-wrap: anywhere; }
+.omd-btw-question > span { color: var(--dsw-alias-brand-primary, #4c87ed); }
+.omd-btw-answer { margin-top: 5px; white-space: pre-wrap; overflow-wrap: anywhere; }
