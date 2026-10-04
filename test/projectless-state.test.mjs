@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { File } from 'node:buffer';
 import { ProjectlessDrafts, submitDraft } from '../src/client/projectless-state.mjs';
 
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -28,7 +29,8 @@ async function until(check) {
 function fixture(t) {
   const shells = new Map(), byId = {}, requests = [], creates = [], opened = [], notifications = [], navigation = [], retains = [], fileOwners = new Map(), sinkCalls = [];
   const uploads = {}, uploadListeners = new Set();
-  let currentId = 'temporary-a', createdIndex = 0, defaultAdmission = 'success';
+  const attachmentEntries = new Map(), copiedDrafts = [];
+  let currentId = 'temporary-a', createdIndex = 0, freshFileIndex = 0, defaultAdmission = 'success';
   const storage = {
     values: new Map(), rejectWrites: false,
     getItem(key) { return this.values.get(key) || null; },
@@ -46,6 +48,7 @@ function fixture(t) {
       restoreDraft(value) { this.draft = clone(value); this.state.set({ phase: 'plain', ...clone(value) }); },
       completeAdmission(kind = 'success', text = 'native admission failed') {
         if (kind === 'success') {
+          if (!this.command) for (const attachmentId of this.submissions.at(-1)?.input.attachmentIds || []) attachmentEntries.delete(attachmentId);
           this.restoreDraft(blank());
           if (!this.command) { byId[id].blank = false; this.emitSubmission({ kind: 'success' }); }
         } else if (this.command) this.notices.set({ level: 'error', text });
@@ -62,7 +65,10 @@ function fixture(t) {
       notify(level, message) { notifications.push({ id, level, message }); },
     };
     shells.set(id, shell);
-    for (const attachment of draft.attachmentIds) { fileOwners.set(attachment, id); uploads[attachment] = { status: 'uploaded' }; }
+    for (const attachment of draft.attachmentIds) {
+      fileOwners.set(attachment, id); uploads[attachment] = { status: 'uploaded' };
+      attachmentEntries.set(attachment, { id: attachment, file: new File([`contents of ${attachment}`], `${attachment}.txt`, { type: 'text/plain' }) });
+    }
     return shell;
   }
   const source = addSession('temporary-a', { draft: '第一份原稿', occurrences: [{ start: 0, end: 2 }], attachmentIds: ['file-a'] });
@@ -76,10 +82,22 @@ function fixture(t) {
       requestDraftInitialization(binding, options) { shells.get(binding.ctx.id).restoreDraft(options); },
     },
     rebindDraftFiles(id, attachmentIds) { for (const file of attachmentIds) fileOwners.set(file, id); },
+    resolveDraftAttachments(ids) { return ids.map(id => attachmentEntries.get(id)).filter(Boolean); },
+    createDrafts(id, files) {
+      copiedDrafts.push({ id, files });
+      return files.map(file => {
+        const entry = { id: `fresh-file-${++freshFileIndex}`, file };
+        attachmentEntries.set(entry.id, entry); fileOwners.set(entry.id, id); uploads[entry.id] = { status: 'uploaded' };
+        return entry;
+      });
+    },
     async sendSession(session, text, attachmentIds, mode, signal) {
       sinkCalls.push({ id: session.id, text, attachmentIds: clone(attachmentIds), mode, signal });
       const outcome = await f.sendSession(session, text, attachmentIds, mode, signal);
-      if (outcome.kind === 'success') byId[session.id].blank = false;
+      if (outcome.kind === 'success') {
+        byId[session.id].blank = false;
+        for (const attachmentId of attachmentIds) attachmentEntries.delete(attachmentId);
+      }
       return outcome;
     },
   };
@@ -104,9 +122,11 @@ function fixture(t) {
     uiWorkspace: { openSession(id) { opened.push(id); navigate(id); } },
   };
   const f = {
-    ctx, storage, shells, source, other, requests, creates, opened, notifications, retains, fileOwners, sinkCalls,
+    ctx, storage, shells, source, other, requests, creates, opened, notifications, retains, fileOwners, sinkCalls, copiedDrafts,
     navigate, addSession, current: () => currentId,
     setAdmission(value) { defaultAdmission = value; },
+    registerFile(id, file, owner = 'temporary-a') { attachmentEntries.set(id, { id, file }); fileOwners.set(id, owner); uploads[id] = { status: 'uploaded' }; },
+    attachment(id) { return attachmentEntries.get(id); },
     setUpload(id, value) { uploads[id] = value; for (const fn of uploadListeners) fn(); },
     request: async (_path, body) => ({ cwd: `/managed/${body.requestId}` }),
     sendSession: async () => ({ kind: 'success' }),
@@ -172,6 +192,79 @@ test('native admission remains busy without clearing or leaving the source until
   assert.equal(f.current(), targetId);
   assert.deepEqual(f.opened, [targetId]);
   assert.equal(f.fileOwners.get('file-a'), targetId);
+});
+
+test('source text changed while native admission is pending remains a new draft with a new identity', async t => {
+  const f = fixture(t);
+  const original = { draft: '已经开始发送的旧原稿', occurrences: [], attachmentIds: [] };
+  const edited = { draft: '等待期间编辑的新原稿', occurrences: [{ start: 0, end: 4 }], attachmentIds: [] };
+  f.source.restoreDraft(original); f.setAdmission('manual'); f.install().submit();
+  await until(() => f.creates.length === 1 && f.shells.get(f.creates[0].sessionId).submissions.length === 1);
+  const originalChoice = { ...f.state.drafts['temporary-a'] }, target = f.shells.get(f.creates[0].sessionId);
+  f.source.restoreDraft(edited);
+  target.completeAdmission('success'); await f.finish();
+  assert.deepEqual(target.submissions[0].input, original);
+  assert.equal(target.submissions.length, 1);
+  assert.deepEqual(f.source.captureDraft(), edited);
+  assert.equal(f.state.isDraft('temporary-a'), true);
+  assert.equal(f.current(), 'temporary-a');
+  assert.deepEqual(f.opened, []);
+  assert.equal(f.state.isManaged(originalChoice.sessionId), true);
+  const newChoice = f.state.drafts['temporary-a'];
+  assert.notEqual(newChoice.requestId, originalChoice.requestId);
+  assert.notEqual(newChoice.sessionId, originalChoice.sessionId);
+  assert.ok(f.notifications.some(item => item.level === 'info' && item.message.includes('新的草稿已保留')));
+  f.setAdmission('success'); f.source.submit(); await f.finish();
+  assert.equal(f.requests[1].body.requestId, newChoice.requestId);
+  assert.equal(f.creates[1].sessionId, newChoice.sessionId);
+  assert.deepEqual(f.shells.get(newChoice.sessionId).submissions[0].input, edited);
+  assert.deepEqual(f.opened, [newChoice.sessionId]);
+});
+
+test('source edits retaining admitted image and file attachments recreate fresh IDs without losing content', async t => {
+  const f = fixture(t);
+  const image = new File([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], 'image.png', { type: 'image/png' });
+  const document = new File(['用户的文档内容'], 'document.txt', { type: 'text/plain' });
+  const added = new File(['等待期间添加的新附件'], 'new.txt', { type: 'text/plain' });
+  f.registerFile('submitted-image', image); f.registerFile('submitted-file', document); f.registerFile('new-file', added);
+  const original = { draft: '旧消息和图文附件', occurrences: [], attachmentIds: ['submitted-image', 'submitted-file'] };
+  const edited = { draft: '新消息继续保留图文附件', occurrences: [{ start: 0, end: 3 }], attachmentIds: [...original.attachmentIds, 'new-file'] };
+  f.source.restoreDraft(original); f.setAdmission('manual'); f.install().submit();
+  await until(() => f.creates.length === 1 && f.shells.get(f.creates[0].sessionId).submissions.length === 1);
+  const originalChoice = { ...f.state.drafts['temporary-a'] }, target = f.shells.get(originalChoice.sessionId);
+  f.source.restoreDraft(edited);
+  target.completeAdmission('success'); await f.finish();
+  assert.deepEqual(target.submissions[0].input, original);
+  assert.equal(f.attachment('submitted-image'), undefined, 'native admission releases the old image draft');
+  assert.equal(f.attachment('submitted-file'), undefined, 'native admission releases the old file draft');
+  const remaining = f.source.captureDraft();
+  assert.equal(remaining.draft, edited.draft);
+  assert.deepEqual(remaining.occurrences, edited.occurrences);
+  assert.equal(remaining.attachmentIds.length, 3);
+  assert.notEqual(remaining.attachmentIds[0], original.attachmentIds[0]);
+  assert.notEqual(remaining.attachmentIds[1], original.attachmentIds[1]);
+  assert.equal(remaining.attachmentIds[2], 'new-file');
+  assert.equal(f.copiedDrafts.length, 2);
+  assert.ok(f.copiedDrafts.every(call => call.id === 'temporary-a'));
+  assert.equal(f.copiedDrafts[0].files[0], image);
+  assert.equal(f.copiedDrafts[1].files[0], document);
+  for (const [index, expected] of [image, document, added].entries()) {
+    const id = remaining.attachmentIds[index], actual = f.attachment(id).file;
+    assert.equal(actual.name, expected.name);
+    assert.equal(actual.type, expected.type);
+    assert.deepEqual(Buffer.from(await actual.arrayBuffer()), Buffer.from(await expected.arrayBuffer()));
+    assert.equal(f.fileOwners.get(id), 'temporary-a');
+  }
+  assert.equal(f.state.isDraft('temporary-a'), true);
+  assert.equal(f.current(), 'temporary-a');
+  assert.deepEqual(f.opened, []);
+  const newChoice = f.state.drafts['temporary-a'];
+  assert.notEqual(newChoice.requestId, originalChoice.requestId);
+  assert.notEqual(newChoice.sessionId, originalChoice.sessionId);
+  f.setAdmission('success'); f.source.submit(); await f.finish();
+  assert.equal(f.requests[1].body.requestId, newChoice.requestId);
+  assert.deepEqual(f.shells.get(newChoice.sessionId).submissions[0].input, remaining);
+  assert.deepEqual(f.opened, [newChoice.sessionId]);
 });
 
 test('native admission failure leaves a reachable source that can reopen and retry the same IDs', async t => {

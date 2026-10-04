@@ -155,6 +155,7 @@ export class ProjectlessDrafts {
       await this.copySettings(id, target);
       if (!current()) return;
       const conversation = this.ctx.get('conversation');
+      const files = new Map((conversation.resolveDraftAttachments?.(draft.attachmentIds) ?? []).map(attachment => [attachment.id, attachment.file]));
       rebound = true;
       conversation.rebindDraftFiles(target, draft.attachmentIds);
       await waitForDraftUploads(conversation, draft.attachmentIds,
@@ -183,9 +184,22 @@ export class ProjectlessDrafts {
       transferred = true;
       try { this.clear(id); }
       catch { delete this.drafts[id]; this.emit(); }
-      source.restoreDraft(emptyDraft());
+      const remaining = source.captureDraft(), changed = JSON.stringify(remaining) !== JSON.stringify(draft);
+      if (changed) {
+        // A separate integration may edit the source despite the visual lock.
+        // Preserve that new draft, including fresh copies of sent attachments
+        // whose native receipt/preview ownership ended with this admission.
+        const replacement = new Map();
+        for (const attachmentId of remaining.attachmentIds) if (files.has(attachmentId)) {
+          replacement.set(attachmentId, conversation.createDrafts(id, [files.get(attachmentId)])[0].id);
+        }
+        source.restoreDraft({ ...remaining, attachmentIds: remaining.attachmentIds.map(attachmentId => replacement.get(attachmentId) ?? attachmentId) });
+        try { this.mark(id); }
+        catch { this.drafts[id] = { requestId: crypto.randomUUID(), sessionId: crypto.randomUUID() }; this.emit(); }
+        source.notify('info', '上一条消息已发送，新的草稿已保留');
+      } else source.restoreDraft(emptyDraft());
       this.managed.set(target, true); this.emit();
-      if (!navigation.aborted && this.current() === id) {
+      if (!changed && !navigation.aborted && this.current() === id) {
         this.ctx.uiWorkspace.openSession(target); next.focus();
       }
     } catch (error) {
