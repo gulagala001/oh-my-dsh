@@ -7,7 +7,6 @@ import { frontendFixture, until } from './fixtures/frontend.mjs';
 import { startFixture } from './fixtures/computer-use/server.mjs';
 import { extensionFixture } from './fixtures/computer-use/extension.mjs';
 import { testBrowserExecutable } from './fixtures/computer-use/test-browser.mjs';
-import { browserExecutablePath } from '#opencu/src/computer-use/browser.mjs';
 
 // OpenCU owns navigation, input, preview geometry and native platform scenarios.
 // These checks cover the actual OMD presets, tool transport and host UI boundary.
@@ -17,7 +16,7 @@ for (const [backend, preset] of [['managed', 'trisoul-x'], ['managed', 'omd-ptc'
   }, async t => {
     const root = await mkdtemp(join(tmpdir(), 'omd-cu-integration-'));
     t.after(() => rm(root, { recursive: true, force: true }));
-    const executable = await testBrowserExecutable(root, browserExecutablePath());
+    const executable = await testBrowserExecutable(root);
     const f = await frontendFixture(t, { agentPreset: preset, omdConfig: { computerUseBrowserExecutable: executable, codegraphEnabled: false } });
     const { page, sessionId } = f, origin = new URL(page.url()).origin;
     const endpoint = path => `${origin}/trisoul-x/computer-use/${path}?session=${sessionId}`;
