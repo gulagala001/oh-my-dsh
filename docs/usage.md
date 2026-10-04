@@ -2,7 +2,7 @@
 
 [文档目录](README.md) · [首次使用](getting-started.md) · [安装](#安装到现有-dsh推荐) · [更新与卸载](#update-uninstall) · [设置](#settings) · [排障](troubleshooting.md) · [开发与验证](#开发与验证)
 
-当前 **0.2.1-alpha.1.omd.0.6.0** 适配 **DSH 0.2.1-alpha.1**，内置 **OpenCU 1.2.1**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
+当前 **0.2.1-alpha.1.omd.0.6.1** 适配 **DSH 0.2.1-alpha.1**，内置 **OpenCU 1.2.1**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
 本项目通过 `gulagala001/oh-my-dsh` 的 GitHub 来源或发行包安装。[安装来源核对](troubleshooting.md#package-source)。
 
@@ -12,7 +12,7 @@
 
 ## 安装到现有 DSH（推荐）
 
-**首次安装桌面应用请先看[桌面版完整教程](upgrade.md#desktop)。** 现有 rc.2 桌面使用 **OMD 0.2.0-rc.2.omd.0.6.0**；下列命令适用于 DSH 0.2.1-alpha.1 的 Web／源码环境。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；单独安装的 npm/npx CLI 不能管理保留的 `desktop` profile。[本版验证范围](release-0.2.1-alpha.1.omd.0.6.0.md)。
+**首次安装桌面应用请先看[桌面版完整教程](upgrade.md#desktop)。** 现有 rc.2 桌面使用 **OMD 0.2.0-rc.2.omd.0.6.1**；下列命令适用于 DSH 0.2.1-alpha.1 的 Web／源码环境。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；单独安装的 npm/npx CLI 不能管理保留的 `desktop` profile。[本版验证范围](release-0.2.1-alpha.1.omd.0.6.1.md)。
 
 桌面安装、更新、启用或停用后，先等任务结束，再完整退出应用并重新打开；有「重启应用与 Host」菜单时也可使用。仅关闭窗口会留在后台，仅刷新页面不能完成切换。
 
@@ -21,7 +21,7 @@
 已有环境先等待任务结束，停止当前 DSH Web 并完整备份实际 DSH_HOME。确认继续使用原数据目录、profile 和端口，再运行：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.6.0
+npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.6.1
 ```
 
 然后按原来的方式重新启动 DSH，例如：
@@ -43,11 +43,11 @@ npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 
 从 0.1.7-rc.2.5 起，检查到新版后可在左上角版本图标打开的面板内点击“更新”。安装后仍需完整重启。更早版本首次升级到本版时使用下方原安装方式。
 
-更新时保持原安装方式、DSH_HOME、profile 和端口；先停止服务并备份数据。使用 npx 的用户重复上面的固定版本命令即可。全局 npm 安装用户执行 `npm install -g @deepseek-ai/dsh@0.2.1-alpha.1`，确认 `dsh --version`，再执行 `dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.6.0`，按原方式启动；pnpm 全局安装则用 `pnpm add -g`。插件安装不会替你更新全局宿主。
+更新时保持原安装方式、DSH_HOME、profile 和端口；先停止服务并备份数据。使用 npx 的用户重复上面的固定版本命令即可。全局 npm 安装用户执行 `npm install -g @deepseek-ai/dsh@0.2.1-alpha.1`，确认 `dsh --version`，再执行 `dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.6.1`，按原方式启动；pnpm 全局安装则用 `pnpm add -g`。插件安装不会替你更新全局宿主。
 
-源码用户先保留本地修改，再执行 `git fetch origin --tags`、`git switch --detach v0.2.1-alpha.1.omd.0.6.0`、`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`。若切换会覆盖本地修改，先保存自己的改动，不强制覆盖。默认数据在仓库的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
+源码用户先保留本地修改，再执行 `git fetch origin --tags`、`git switch --detach v0.2.1-alpha.1.omd.0.6.1`、`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`。若切换会覆盖本地修改，先保存自己的改动，不强制覆盖。默认数据在仓库的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
 
-重启后，版本面板的**当前版本**应是 `0.2.1-alpha.1.omd.0.6.0`，原模型和旧会话仍在；最新版本只代表远端发布记录。旧 V3 会话迁移会保留原日志，alpha.1 升至 alpha.2 继续使用 V4。回退时停止新服务，以原宿主、插件和完整备份在独立数据目录启动。
+重启后，版本面板的**当前版本**应是 `0.2.1-alpha.1.omd.0.6.1`，原模型和旧会话仍在；最新版本只代表远端发布记录。旧 V3 会话迁移会保留原日志，alpha.1 升至 alpha.2 继续使用 V4。回退时停止新服务，以原宿主、插件和完整备份在独立数据目录启动。
 
 卸载也沿用原启动方式。npx Web 用户执行以下命令；自定义 profile 将 `web` 换成原名称，并沿用实际 `DSH_HOME`：
 
@@ -58,6 +58,14 @@ npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web remove trisoul_x
 全局安装用户可将命令前缀换成 `dsh`；桌面用户在应用内「插件」页面停用或卸载，随后完整退出并重新打开。重启后恢复宿主配置。卸载不删除模型配置、凭据、会话或插件的记忆文件；使用 `trisoul-x` preset 的旧会话需要重新安装插件后才能继续运行。
 
 </details>
+
+## 无项目聊天
+
+新聊天可以直接开始，不必先建立项目。已有工作区被选中时，将鼠标移到工作区标签上，点击右侧出现的 **×** 取消选择。草稿、附件和所选模型会保留，输入区可以继续编辑和发送；也可以重新选择已有工作区。
+
+首次发送消息时，OMD 才在运行 DSH 的电脑上创建独立工作目录，默认位于 **文稿（Documents）/DSH/YYYY-MM-DD/首条消息名**。目录名保留中文，同名目录自动编号；反复发送或继续同一聊天不会重复创建目录。未发送的新聊天不会提前创建目录。
+
+每段聊天持久绑定自己的工作目录，刷新、重启或继续聊天仍使用原目录。另开一段无项目聊天会获得新的目录。自动创建的目录不加入已注册的工作区列表，聊天显示在现有的 **未分组** 中。需要在已有项目中工作时，新聊天仍可选择该工作区。
 
 ## 本地开发或独立试用
 
@@ -74,7 +82,7 @@ pnpm start
 1. 首次启动会创建独立的 `trisoul-x` profile，并安装本地插件。
 2. 打开终端打印的**完整登录链接**。默认端口为 `3083`。
 3. 在 DSH 的模型设置中添加自己的提供方、模型和凭据，在对话中选好模型。
-4. 创建会话并选择工作目录；首次发送消息前，在输入区工具行选择记忆范围。
+4. 创建会话，可选择已有工作目录或使用[无项目聊天](#无项目聊天)；首次发送消息前，在输入区工具行选择记忆范围。
 5. 通过“设置 → Oh My DSH”调整后台模型与工作频率。
 
 模型需要支持原生工具调用。仓库不附带模型账号、密钥、私人会话或记忆数据。模型的上下文窗口、输出上限和思考选项应按对应提供方的实际能力配置。
