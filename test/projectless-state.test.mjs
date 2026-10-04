@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { File } from 'node:buffer';
-import { ProjectlessDrafts, submitDraft } from '../src/client/projectless-state.mjs';
+import { ProjectlessDrafts, submitDraft, copyPermissions } from '../src/client/projectless-state.mjs';
 
 const clone = value => JSON.parse(JSON.stringify(value));
 const blank = () => ({ draft: '', occurrences: [], attachmentIds: [] });
@@ -617,4 +617,112 @@ test('native submission throws and lifetime aborts reject admission without losi
   const rejected = assert.rejects(result, /disposed/);
   lifetime.abort(Error('disposed')); await rejected;
   assert.deepEqual(shell.captureDraft(), original);
+});
+
+function permissionsFixture(t, sourceValue, targetValue) {
+  const events = [], commands = [], listeners = new Set();
+  let currentValue = targetValue;
+  const lifetime = new AbortController();
+  t.after(() => lifetime.abort());
+  const selection = {
+    getSnapshot() { return { currentValue }; },
+    subscribe(fn) {
+      events.push('subscribe'); listeners.add(fn);
+      return () => { events.push('unsubscribe'); listeners.delete(fn); };
+    },
+    set(value) { currentValue = value; for (const fn of listeners) fn(); },
+  };
+  const source = { projections: { faceOf(name) { assert.equal(name, 'permissions'); return { getSnapshot: () => ({ currentValue: sourceValue }) }; } } };
+  const f = {
+    source, selection, lifetime, events, commands,
+    subscriptions: () => listeners.size,
+    command: async () => ({ ok: true, value: { matched: true } }),
+  };
+  f.target = {
+    projections: { faceOf(name) { assert.equal(name, 'permissions'); return selection; } },
+    command(text) { commands.push(text); events.push('command'); return f.command(text); },
+  };
+  return f;
+}
+
+test('permission presets already matching need no command or projection subscription', async t => {
+  for (const value of ['standard', 'unrestricted', undefined]) {
+    const f = permissionsFixture(t, value, value);
+    await copyPermissions(f.source, f.target, f.lifetime.signal);
+    assert.deepEqual(f.commands, []);
+    assert.deepEqual(f.events, []);
+    assert.equal(f.subscriptions(), 0);
+  }
+});
+
+test('different permission presets issue a command before waiting and require a matching projection', async t => {
+  const f = permissionsFixture(t, 'unrestricted', 'standard'), gate = deferred();
+  f.command = () => gate.promise;
+  let settled = false;
+  const result = copyPermissions(f.source, f.target, f.lifetime.signal).then(() => { settled = true; });
+  assert.deepEqual(f.commands, ['/permission unrestricted']);
+  assert.deepEqual(f.events, ['command']);
+  assert.equal(f.subscriptions(), 0, 'projection wait begins after command admission');
+  gate.resolve({ ok: true, value: { matched: true } });
+  await until(() => f.subscriptions() === 1);
+  assert.equal(settled, false, 'matched only confirms command recognition, not the permission state');
+  f.selection.set('sandboxed');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(settled, false, 'an unrelated projection must not admit a user message');
+  f.selection.set('unrestricted'); await result;
+  assert.equal(settled, true);
+  assert.equal(f.subscriptions(), 0);
+  assert.deepEqual(f.events, ['command', 'subscribe', 'unsubscribe']);
+  assert.deepEqual(f.commands, ['/permission unrestricted']);
+});
+
+test('an early permission projection still waits for command success', async t => {
+  const f = permissionsFixture(t, 'unrestricted', 'standard'), gate = deferred();
+  f.command = () => gate.promise;
+  let settled = false;
+  const result = copyPermissions(f.source, f.target, f.lifetime.signal).then(() => { settled = true; });
+  f.selection.set('unrestricted');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(settled, false);
+  assert.equal(f.subscriptions(), 0);
+  gate.resolve({ ok: true, value: { matched: true } }); await result;
+  assert.equal(settled, true);
+  assert.equal(f.subscriptions(), 0);
+});
+
+test('custom permission policies explicitly reject without running a preset command', async t => {
+  for (const target of ['standard', 'custom']) {
+    const f = permissionsFixture(t, 'custom', target);
+    await assert.rejects(copyPermissions(f.source, f.target, f.lifetime.signal), /请先选择一个权限预设.*草稿已保留/);
+    assert.deepEqual(f.commands, []);
+    assert.equal(f.subscriptions(), 0);
+  }
+});
+
+test('failed or unmatched permission commands reject without waiting for projection settlement', async t => {
+  for (const scenario of [
+    { outcome: { ok: false, error: { message: 'permission command failed' } }, expected: /permission command failed/ },
+    { outcome: { ok: true, value: { matched: false } }, expected: /无法保留当前权限设置.*草稿已保留/ },
+    { error: Error('permission command transport failed'), expected: /permission command transport failed/ },
+  ]) {
+    const f = permissionsFixture(t, 'unrestricted', 'standard');
+    f.command = async () => { if (scenario.error) throw scenario.error; return scenario.outcome; };
+    await assert.rejects(copyPermissions(f.source, f.target, f.lifetime.signal), scenario.expected);
+    assert.deepEqual(f.commands, ['/permission unrestricted']);
+    assert.equal(f.subscriptions(), 0);
+    assert.deepEqual(f.events, ['command']);
+  }
+});
+
+test('aborting permission projection settlement rejects and releases its subscription', async t => {
+  const f = permissionsFixture(t, 'unrestricted', 'standard');
+  const result = copyPermissions(f.source, f.target, f.lifetime.signal);
+  const rejected = assert.rejects(result, /权限设置未同步.*草稿已保留/);
+  await until(() => f.subscriptions() === 1);
+  f.lifetime.abort(Error('navigation cancelled')); await rejected;
+  assert.equal(f.subscriptions(), 0);
+  assert.deepEqual(f.events, ['command', 'subscribe', 'unsubscribe']);
+  f.selection.set('unrestricted');
+  assert.equal(f.subscriptions(), 0);
+  assert.equal(f.commands.length, 1);
 });

@@ -77,6 +77,15 @@ test('cancelled workspace sends into a physical ungrouped directory and keeps it
   const editor = page.locator('[data-composer-input]');
   await newChat(page);
   const source = await currentSession(page);
+  // Preserve a stricter native permission choice instead of inheriting OMD's
+  // default full access when the first message moves to its isolated Session.
+  const method = 'commands/execute';
+  const permission = await page.request.post(new URL('api/' + method, page.url()).href, {
+    data: { type: 'client-request', rpcId: crypto.randomUUID(), method,
+      payload: { args: { agentId: source, line: '/permission workspace-write', submittedAttachments: [] } } },
+  }).then(response => response.json());
+  assert.equal(permission.result?.ok, true);
+  await until(async () => (await f.rpc('session/projections', { sessionId: source })).values.permissions.currentValue === 'workspace-write');
   await editor.fill('独立聊天首发回归');
   await page.mouse.move(1400, 900);
   assert.equal(await page.locator('.omd-workspace-clear').evaluate(el => getComputedStyle(el).opacity), '0', 'clear is revealed by hovering the workspace chip');
@@ -97,6 +106,7 @@ test('cancelled workspace sends into a physical ungrouped directory and keeps it
   assert.equal(prepared.length, 1);
   await idle(f, target);
   const created = await summary(f, target);
+  assert.equal((await f.rpc('session/projections', { sessionId: target })).values.permissions.currentValue, 'workspace-write');
   assertInside(f.projectlessRoot, created.cwd);
   assert.equal((await stat(created.cwd)).isDirectory(), true);
   assert.equal((await summary(f, source)).blank, true, 'the source never receives the first message');
@@ -126,6 +136,7 @@ test('cancelled workspace sends into a physical ungrouped directory and keeps it
   const second = sent[2].payload.args.request.sessionId;
   await idle(f, second);
   const secondSummary = await summary(f, second);
+  assert.equal((await f.rpc('session/projections', { sessionId: second })).values.permissions.currentValue, 'workspace-write');
   assertInside(f.projectlessRoot, secondSummary.cwd);
   assert.notEqual(secondSummary.cwd, created.cwd, 'equal first prompts still receive independent directories');
   assert.equal((await stat(secondSummary.cwd)).isDirectory(), true);

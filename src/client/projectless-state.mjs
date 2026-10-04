@@ -2,6 +2,29 @@ const STORAGE_KEY = 'omd.projectless-drafts.v1';
 const emptyDraft = () => ({ draft: '', occurrences: [], attachmentIds: [] });
 const checked = result => { if (!result.ok) throw Error(result.error?.message || '会话设置未保存'); return result.value; };
 
+export async function copyPermissions(source, target, signal) {
+  const value = source.projections.faceOf('permissions').getSnapshot()?.currentValue;
+  if (value === undefined) return; // Hosts without a permission service expose no selection.
+  // The public projection exposes only the preset name, not custom sandbox /
+  // approval knobs. Never replace an unknowable custom policy with defaults.
+  if (value === 'custom') throw Error('请先选择一个权限预设，再发送独立聊天；草稿已保留');
+  const selection = target.projections.faceOf('permissions');
+  if (selection.getSnapshot()?.currentValue === value) return;
+  if (!checked(await target.command(`/permission ${value}`)).matched) throw Error('无法保留当前权限设置，草稿已保留');
+  // Command admission is not settlement. Wait for the actual durable policy
+  // projection before allowing any user message into the new Session.
+  const waiting = AbortSignal.any([signal, AbortSignal.timeout(10_000)]);
+  await new Promise((resolve, reject) => {
+    let unsubscribe = () => {};
+    const finish = error => { unsubscribe(); waiting.removeEventListener('abort', abort); error ? reject(error) : resolve(); };
+    const abort = () => finish(Error('权限设置未同步，请重试；草稿已保留'));
+    const inspect = () => { if (selection.getSnapshot()?.currentValue === value) finish(); };
+    unsubscribe = selection.subscribe(inspect);
+    waiting.addEventListener('abort', abort, { once: true });
+    if (waiting.aborted) abort(); else inspect();
+  });
+}
+
 export function waitForDraftUploads(conversation, ids, signal) {
   if (!ids.length) return Promise.resolve();
   return new Promise((resolve, reject) => {
@@ -107,7 +130,9 @@ export class ProjectlessDrafts {
   }
   shell(id) { return this.ctx.get('conversation').input.for(this.ctx.sessions.binding(id).ctx); }
   async copySettings(from, to) {
-    const projections = this.ctx.sessions.binding(from).session.projections;
+    const source = this.ctx.sessions.binding(from).session;
+    const projections = source.projections;
+    await copyPermissions(source, this.ctx.sessions.binding(to).session, this.lifetime.signal);
     const preset = projections.faceOf('agentPreset').getSnapshot();
     const model = projections.faceOf('modelSelection').getSnapshot();
     if (preset) checked(await this.ctx.remote.agentPresets.select(to, preset));
