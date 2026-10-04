@@ -30,9 +30,12 @@ export function pendingToolCalls(events) {
   }
   return pending;
 }
-export function completedBtwPrefix(session) {
+export function completedBtwPrefix(session, { allowEmpty = false } = {}) {
   const events = session.snapshotEvents(), end = events.findLastIndex(e => e.type === 'turn/end');
-  if (end < 0) throw Error('/btw 需要至少一个已完成回合；不会改用独立上下文。');
+  if (end < 0) {
+    if (allowEmpty) return [];
+    throw Error('/btw 需要至少一个已完成回合；不会改用独立上下文。');
+  }
   const prefix = events.slice(0, end + 1);
   if (prefix.some((e, i) => e.seq !== i) || pendingToolCalls(prefix).size)
     throw Error('/btw 的已完成上下文有未配对工具记录；已停止侧问。');
@@ -42,7 +45,7 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 // Compare actual request envelopes without mutating tools, persona, messages,
 // route or provider replay state. A new child sessionId is transport metadata.
 export function assertBtwCachePrefix(parent, child) {
-  if (!parent) throw Error('/btw 缺少可核对的主会话请求；请先让主会话完成一轮。');
+  if (!parent) throw Error('/btw 缺少可核对的主会话请求；请等主模型开始响应后再侧问。');
   for (const key of ['provider', 'model', 'reasoningEffort', 'temperature', 'maxTokens', 'stop', 'system', 'tools', 'toolHistory']) {
     if (!same(parent[key], child[key])) throw Error(`/btw 缓存前缀不一致（${key}）；已停止，不会另发完整上下文请求。`);
   }
