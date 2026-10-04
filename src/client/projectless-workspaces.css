@@ -1,0 +1,10 @@
+.omd-workspace-clear { display:inline-flex;align-items:center;justify-content:center;flex:none;width:22px;height:22px;padding:0;margin-left:-4px;border:0;border-radius:50%;background:transparent;color:var(--dsw-alias-label-caption);cursor:pointer;opacity:0;pointer-events:none;transition:opacity .12s; }
+button[aria-haspopup="menu"]:hover ~ [data-slot="conversation.hero.workspace"] .omd-workspace-clear:not(:disabled), button[aria-haspopup="menu"]:focus-visible ~ [data-slot="conversation.hero.workspace"] .omd-workspace-clear:not(:disabled), .omd-workspace-clear:hover, .omd-workspace-clear:focus-visible { opacity:1;pointer-events:auto; }
+.omd-workspace-clear:hover { background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary); }
+:has(>[data-slot="conversation.hero.workspace"]>.omd-projectless-picker)>button[aria-haspopup="menu"] { display:none; }
+.omd-projectless-picker { display:none; }
+.omd-projectless-trigger { display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:0 8px;border:0;border-radius:var(--dsw-radius-sm);background:transparent;color:var(--dsw-alias-label-caption);font:inherit;font-size:13px;cursor:pointer; }
+.omd-projectless-trigger:hover,.omd-projectless-trigger[aria-expanded=true] { background:var(--dsw-alias-interactive-bg-hover); }
+.omd-projectless-trigger:focus-visible,.omd-workspace-clear:focus-visible { outline:2px solid var(--dsw-alias-label-primary-bluish);outline-offset:2px; }
+@media (hover:none) { .omd-workspace-clear:not(:disabled) { opacity:1;pointer-events:auto; } }
+@media (prefers-reduced-motion:reduce) { .omd-workspace-clear { transition:none; } }

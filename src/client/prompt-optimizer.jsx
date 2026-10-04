@@ -111,4 +111,12 @@ export function applyPromptOptimizer(ctx) {
   }
   ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'omd-prompt-optimizer', order: 18, label: () => '提示词优化' }, Settings));
   ctx.slots.inject('conversation.input.right', () => ctx.slots.register({ name: 'conversation.input.right', id: 'omd-prompt-optimizer', order: 90 }, Optimizer));
+  return {
+    transferDraft(from, to) {
+      const saved = controllerFor(from)?.navigationState({ deactivate: false });
+      // Observe admission before the target composer mounts. Its pending/error
+      // events must retain the original and optimized versions on a failed send.
+      controllerFor(to)?.restoreNavigation(saved);
+    },
+  };
 }
