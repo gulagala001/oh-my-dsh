@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { symbols } from '@deepseek-ai/cordis';
+import { installRequestProjection } from './llm-request-projection.mjs';
 import { isAgentLoopRequest, markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { BTW_LABEL_PREFIX, btwCreation, markBtwSession, isBtwSession, completedBtwPrefix,
   pendingToolCalls, assertBtwCachePrefix, cacheUsageText } from './btw-policy.mjs';
@@ -16,36 +16,14 @@ export function createBtwCompatibility(ctx) {
   // Native fork still owns the balanced, durable seed. While a main turn is
   // running, its latest dispatched request is the cacheable context snapshot;
   // append only the child's side question to that immutable request history.
-  // Adapt both entry points because llm/stream receives frozen options and its
-  // next() cannot replace them. Keep prepared-call ownership and cancellation.
-  ctx.effect(() => {
-    const runtime = ctx.llm[symbols.original] || ctx.llm;
-    const stream = runtime.stream, prepareCall = runtime.prepareCall;
-    const descriptors = ['stream', 'prepareCall'].map(key => Object.getOwnPropertyDescriptor(runtime, key));
-    let installed = true;
-    const project = options => {
-      const state = installed && stateOf({ id: options.sessionId });
-      if (!state?.useRequestContext || options.purpose) return options;
-      const question = options.messages?.findLast(m => m.role === 'user' && m.source?.kind === 'user');
-      if (!question) throw Error('/btw 缺少侧问消息；已停止请求。');
-      const projected = Object.freeze({ ...options, toolHistory: state.reference.toolHistory,
-        messages: Object.freeze([...state.reference.messages, question]) });
-      return isAgentLoopRequest(options) ? markAgentLoopRequest(projected) : projected;
-    };
-    const wrappedStream = function(options) { return stream.call(this, project(options)); };
-    const wrappedPrepare = async function(...args) {
-      const prepared = await prepareCall.apply(this, args);
-      return Object.freeze({ ...prepared, stream: options => prepared.stream(project(options)) });
-    };
-    runtime.stream = wrappedStream; runtime.prepareCall = wrappedPrepare;
-    return () => {
-      installed = false;
-      for (const [i, key, wrapper] of [[0, 'stream', wrappedStream], [1, 'prepareCall', wrappedPrepare]]) {
-        if (runtime[key] !== wrapper) continue;
-        if (descriptors[i]) Object.defineProperty(runtime, key, descriptors[i]);
-        else delete runtime[key];
-      }
-    };
+  installRequestProjection(ctx, options => {
+    const state = stateOf({ id: options.sessionId });
+    if (!state?.useRequestContext || options.purpose) return options;
+    const question = options.messages?.findLast(m => m.role === 'user' && m.source?.kind === 'user');
+    if (!question) throw Error('/btw 缺少侧问消息；已停止请求。');
+    const projected = Object.freeze({ ...options, toolHistory: state.reference.toolHistory,
+      messages: Object.freeze([...state.reference.messages, question]) });
+    return isAgentLoopRequest(options) ? markAgentLoopRequest(projected) : projected;
   });
   effect(ctx.on('agent/created', ({ agent }) => {
     const state = btwCreation.getStore();

@@ -2,11 +2,15 @@ name: Offline plugin installation
 
 on:
   pull_request:
-    paths: ['scripts/*offline.mjs', 'test/offline*.test.mjs', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.github/workflows/offline.yml']
+    paths-ignore: ['README.md', 'docs/**']
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: offline-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   offline:
@@ -23,7 +27,7 @@ jobs:
           node-version: '24'
       - uses: pnpm/action-setup@v6
       - run: pnpm install --frozen-lockfile
-      - run: node --test --test-concurrency=1 test/offline.test.mjs test/offline-install.test.mjs
+      - run: node --test --test-concurrency=1 test/offline.test.mjs test/offline-install.test.mjs test/offline-root.test.mjs
         env:
           OMD_OFFLINE_ARTIFACTS: ${{ runner.temp }}/offline-artifacts
       - uses: actions/upload-artifact@v7

@@ -1,5 +1,5 @@
 import { sourceName } from '../message-source.mjs';
-import { symbols } from '@deepseek-ai/cordis';
+import { installRequestProjection } from '../llm-request-projection.mjs';
 import { freezeMessage, isAgentLoopRequest, markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 
 // Assistant settlements are immutable host records. Remove only the exposed
@@ -29,36 +29,12 @@ export function withoutMovedReasoning(messages, session, traceSlot) {
 }
 
 export function installTraceCleanup(ctx, isManagedSession, context) {
-  let active = true;
-  const project = options => {
-    if (!active) return options;
+  installRequestProjection(ctx, options => {
     const session = options.sessionId && ctx.sessions.get(options.sessionId);
     if (isAgentLoopRequest(options) && session && isManagedSession(session) && session.header?.origin !== 'subagent') {
       const messages = withoutMovedReasoning(options.messages, session, context.state(session).traceSlot);
       if (messages !== options.messages) return markAgentLoopRequest(Object.freeze({ ...options, messages: Object.freeze(messages) }));
     }
     return options;
-  };
-  // DSH freezes agent requests and llm/stream's next() cannot replace options.
-  // Adapt the two public stream entry points before that waterfall; preserve
-  // prepared-call ownership, all middleware, cancellation and request branding.
-  ctx.effect(() => {
-    const runtime = ctx.llm[symbols.original] || ctx.llm;
-    const stream = runtime.stream, prepareCall = runtime.prepareCall;
-    const descriptors = ['stream', 'prepareCall'].map(key => Object.getOwnPropertyDescriptor(runtime, key));
-    const wrappedStream = function(options) { return stream.call(this, project(options)); };
-    const wrappedPrepare = async function(...args) {
-      const prepared = await prepareCall.apply(this, args);
-      return Object.freeze({ ...prepared, stream: options => prepared.stream(project(options)) });
-    };
-    runtime.stream = wrappedStream; runtime.prepareCall = wrappedPrepare;
-    return () => {
-      active = false;
-      for (const [i, key, wrapper] of [[0, 'stream', wrappedStream], [1, 'prepareCall', wrappedPrepare]]) {
-        if (runtime[key] !== wrapper) continue;
-        if (descriptors[i]) Object.defineProperty(runtime, key, descriptors[i]);
-        else delete runtime[key];
-      }
-    };
   });
 }

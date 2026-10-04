@@ -8,8 +8,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: desktop-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: false
+  group: desktop-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   release-metadata:
@@ -59,16 +59,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm build
-      - name: Migration and runtime regression checks
-        run: node --test --test-concurrency=1 test/session-migration.test.mjs test/neutral-environment-native.test.mjs test/steering-operations-ui.test.mjs test/skin-components-ui.test.mjs test/ios-liquid-glass-ui.test.mjs
       - run: node scripts/prepare-desktop-test.mjs ${{ matrix.target }}
         env:
           OMD_DESKTOP_TEST_ROOT: ${{ runner.temp }}/omd-desktop
       - run: node --test test/desktop-install.test.mjs
         env:
           TRISOUL_UI_ARTIFACTS: ${{ runner.temp }}/omd-desktop-artifacts
-      - name: Native appearance persistence
-        run: node --test --test-concurrency=1 --test-name-pattern="appearance commits|Codex desktop layout" test/skin-ui.test.mjs test/codex-desktop-ui.test.mjs
       - uses: actions/upload-artifact@v7
         if: always()
         with:

@@ -39,6 +39,8 @@ test('delivered todo/state and grouped compaction remain expandable across repla
   };
   await prompt('记录第一段工作。');
   await prompt('记录第二段工作。');
+  await page.locator('[data-omd-record=injection]').last().waitFor({ state: 'attached' });
+  await until(async () => await page.locator('[data-turn-process]').last().getAttribute('aria-expanded') === 'false');
   assert.equal(await page.locator('[data-omd-record=injection]:visible').count(),0,'task context starts inside a collapsed drawer');
   await openRecordGroups();
   const injection = page.locator('[data-omd-record=injection]').last();
