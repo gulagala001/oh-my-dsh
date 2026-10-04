@@ -37,7 +37,7 @@ test('model panel saves real effort and independent mode, supports native select
   assert.equal(await panel.locator('.omd-effort-particle').first().evaluate(el=>getComputedStyle(el).animationDuration),'3s');
   assert.equal(await panel.locator('.omd-effort-particle').evaluateAll(items=>items.filter(el=>getComputedStyle(el).display!=='none').length),7);
   assert.equal(await panel.locator('.omd-effort-glow').evaluate(el=>getComputedStyle(el).animationName),'omd-ultra-glow');
-  await panel.getByRole('status').getByText('深入实现、按需分工与迭代，可能需要更多时间。',{exact:true}).waitFor();
+  await panel.getByRole('status').getByText('分工实现、持续迭代，可能需要更多时间。',{exact:true}).waitFor();
   await panel.getByRole('button',{name:'界面预览模型',exact:true}).click();
   await panel.getByRole('option',{name:'第二模型'}).click();
   await until(async () => (await mode()).selected.model==='second-model');

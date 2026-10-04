@@ -107,7 +107,8 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
       const next = await modeApi(sessionId, { ...route, reasoningEffort, mode: nextMode, expectedRevision: mode.revision });
       if (!live.current) return false;
       setMode(next);
-      if (nextMode !== 'off' && nextMode !== activeMode) { clearTimeout(noticeTimer.current); setNotice(nextMode); noticeTimer.current = setTimeout(() => setNotice(false), 2000); }
+      if (nextMode === 'off') { clearTimeout(noticeTimer.current); setNotice(false); }
+      else if (nextMode !== activeMode) { clearTimeout(noticeTimer.current); setNotice(nextMode); noticeTimer.current = setTimeout(() => setNotice(false), 2000); }
       return true;
     } catch (e) { if (live.current) setError(e.message); return false; }
     finally { writing.current = false; if (live.current) { setSaving(false); setDraft(null); draftRef.current = null; } }
@@ -170,7 +171,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
             onKeyUp={event => { if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(event.key)) commit(draftRef.current ?? value); }}
             onBlur={() => { if (!draggingRef.current && draftRef.current !== null) commit(draftRef.current); }}/>
         </div>
-        <div className="omd-effort-notice" data-visible={notice || undefined} data-mode={notice || undefined} role="status">{notice === 'pro' ? '深入实现、按需分工与迭代，可能需要更多时间。' : '更深入地实现与验证，可能需要更多时间。'}</div>
+        <div className="omd-effort-notice" data-visible={notice || undefined} data-mode={notice || undefined} role="status">{notice === 'pro' ? '分工实现、持续迭代，可能需要更多时间。' : notice === 'ultracode' ? '更深入地实现与验证，可能需要更多时间。' : ''}</div>
         {state.routable === false && <p className="omd-model-error">当前模型不可用，请选择其他模型。</p>}
       </> : <>
         <div className="omd-model-search"><button type="button" aria-label="返回思考强度" onClick={() => setPane('effort')}><Chevron back/></button><input ref={search} type="search" aria-label="搜索模型" placeholder="搜索模型" value={query} onChange={e=>setQuery(e.target.value)}/></div>
