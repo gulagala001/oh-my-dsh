@@ -251,7 +251,7 @@ export async function apply(ctx) {
   installDesktopLifecycle(ctx);
   const projectlessDrafts = applyProjectlessWorkspaces(ctx);
   await ctx.plugin(hostConversation, { settingsNamespace: 'omd-ui-conversation' });
-  projectlessDrafts.transferOptimizer = applyPromptOptimizer(ctx).transferDraft;
+  projectlessDrafts.transferOptimizer = applyPromptOptimizer(ctx, { draftLock: projectlessDrafts }).transferDraft;
   applyModelPanel(ctx);
   applyWorkflowStatus(ctx);
   const openPanel = section => ctx.sidebarRight.openTab('trisoul-x-workbench', { params: { section } });
