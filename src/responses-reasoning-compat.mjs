@@ -1,4 +1,4 @@
-import { symbols } from '@deepseek-ai/cordis';
+import { installRequestProjection } from './llm-request-projection.mjs';
 import { freezeMessage, isAgentLoopRequest, markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 
 // CommandCode can route DeepSeek through two Responses serializers: one puts
@@ -58,29 +58,8 @@ export function normalizeResponsesReasoning(options, profile) {
 }
 
 export function installResponsesReasoningCompatibility(ctx) {
-  ctx.effect(() => {
-    let active = true;
-    const runtime = ctx.llm[symbols.original] || ctx.llm;
-    const stream = runtime.stream, prepareCall = runtime.prepareCall;
-    const descriptors = ['stream', 'prepareCall'].map(key => Object.getOwnPropertyDescriptor(runtime, key));
-    const project = options => {
-      if (!active) return options;
-      const profile = ctx.settings?.describe().find(entry => entry.ns === 'llm-pi-ai')?.value?.providers?.[options.provider];
-      return normalizeResponsesReasoning(options, profile);
-    };
-    const wrappedStream = function(options) { return stream.call(this, project(options)); };
-    const wrappedPrepare = async function(...args) {
-      const prepared = await prepareCall.apply(this, args);
-      return Object.freeze({ ...prepared, stream: options => prepared.stream(project(options)) });
-    };
-    runtime.stream = wrappedStream; runtime.prepareCall = wrappedPrepare;
-    return () => {
-      active = false;
-      for (const [i, key, wrapper] of [[0, 'stream', wrappedStream], [1, 'prepareCall', wrappedPrepare]]) {
-        if (runtime[key] !== wrapper) continue;
-        if (descriptors[i]) Object.defineProperty(runtime, key, descriptors[i]);
-        else delete runtime[key];
-      }
-    };
+  installRequestProjection(ctx, options => {
+    const profile = ctx.settings?.describe().find(entry => entry.ns === 'llm-pi-ai')?.value?.providers?.[options.provider];
+    return normalizeResponsesReasoning(options, profile);
   });
 }

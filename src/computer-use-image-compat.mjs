@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from 'node:util';
-import { symbols } from '@deepseek-ai/cordis';
+import { installRequestProjection } from './llm-request-projection.mjs';
 import { freezeMessage, isAgentLoopRequest, markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 
 // Older Computer Use turns could auto-attach a screenshot and explicitly emit
@@ -51,33 +51,13 @@ export function withoutHistoricalCommandCodeImages(options, profile) {
 }
 
 export function installComputerUseImageCompatibility(ctx, isManagedSession) {
-  ctx.effect(() => {
-    let active = true;
-    const runtime = ctx.llm[symbols.original] || ctx.llm;
-    const stream = runtime.stream, prepareCall = runtime.prepareCall;
-    const descriptors = ['stream', 'prepareCall'].map(key => Object.getOwnPropertyDescriptor(runtime, key));
-    const project = options => {
-      if (!active || !isAgentLoopRequest(options)) return options;
-      const session = options.sessionId && ctx.sessions.get(options.sessionId);
-      if (!session || !isManagedSession(session)) return options;
-      const deduplicated = withoutDuplicateComputerImages(options);
-      if (options.provider !== 'cmdgoat-responses') return deduplicated;
-      const profile = ctx.settings?.describe().find(entry => entry.ns === 'llm-pi-ai')?.value?.providers?.[options.provider];
-      return withoutHistoricalCommandCodeImages(deduplicated, profile);
-    };
-    const wrappedStream = function(options) { return stream.call(this, project(options)); };
-    const wrappedPrepare = async function(...args) {
-      const prepared = await prepareCall.apply(this, args);
-      return Object.freeze({ ...prepared, stream: options => prepared.stream(project(options)) });
-    };
-    runtime.stream = wrappedStream; runtime.prepareCall = wrappedPrepare;
-    return () => {
-      active = false;
-      for (const [i, key, wrapper] of [[0, 'stream', wrappedStream], [1, 'prepareCall', wrappedPrepare]]) {
-        if (runtime[key] !== wrapper) continue;
-        if (descriptors[i]) Object.defineProperty(runtime, key, descriptors[i]);
-        else delete runtime[key];
-      }
-    };
+  installRequestProjection(ctx, options => {
+    if (!isAgentLoopRequest(options)) return options;
+    const session = options.sessionId && ctx.sessions.get(options.sessionId);
+    if (!session || !isManagedSession(session)) return options;
+    const deduplicated = withoutDuplicateComputerImages(options);
+    if (options.provider !== 'cmdgoat-responses') return deduplicated;
+    const profile = ctx.settings?.describe().find(entry => entry.ns === 'llm-pi-ai')?.value?.providers?.[options.provider];
+    return withoutHistoricalCommandCodeImages(deduplicated, profile);
   });
 }
