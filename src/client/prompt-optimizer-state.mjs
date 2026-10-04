@@ -197,7 +197,7 @@ export class DraftOptimizer {
   }
   inspectRecovery(id) {
     const saved = this.recoveries.get(id);
-    if (!saved || this.pending) return;
+    if (!saved || this.pending || this.locked?.()) return;
     const current = captureDraft(this.shell);
     if (this.history.length) this.recoveries.set('draft-' + ++this.recoverySeq, { history: this.history, cursor: this.cursor, snapshot: current, instruction: this.state.instruction });
     this.history = saved.history; this.cursor = saved.cursor;
@@ -211,18 +211,19 @@ export class DraftOptimizer {
     if (this.history.length > 20) { this.history = [this.history[0], ...this.history.slice(-19)]; this.cursor = this.history.length - 1; }
   }
   write(snapshot) {
+    if (this.locked?.()) throw Error('正在发送首次消息，请稍后再修改草稿');
     if (this.shell.state.getSnapshot().phase !== 'plain') throw Error('当前正在提交命令，无法替换草稿');
     this.writing = true;
     try { this.shell.editor.setEditorState(this.shell.editor.parseEditorState(snapshot.document), { tag: 'history-push' }); }
     finally { this.writing = false; }
   }
   applyCandidate() {
-    if (!this.state.candidate || this.pending) return;
+    if (!this.state.candidate || this.pending || this.locked?.()) return;
     try { const before = captureDraft(this.shell); this.write(this.state.candidate); this.remember(before); this.remember(captureDraft(this.shell)); this.publish({ candidate: null, error: '', message: '已应用，仍可撤销' }); }
     catch (error) { this.publish({ error: error.message }); }
   }
   selectVersion(index) {
-    if (this.pending || !Number.isInteger(index) || !this.history[index]) return;
+    if (this.pending || this.locked?.() || !Number.isInteger(index) || !this.history[index]) return;
     try {
       const target = this.history[index], current = captureDraft(this.shell); this.write(target);
       if (!sameDraft(this.history[this.cursor], current)) this.history.push(current);
@@ -231,7 +232,7 @@ export class DraftOptimizer {
     } catch (error) { this.publish({ error: error.message }); }
   }
   async run({ instruction = '', automatic = false, deliveryMode = 'queue', deliveryArgs = [] } = {}) {
-    if (this.pending || this.disposed) return;
+    if (this.pending || this.disposed || this.locked?.()) return;
     const input = this.shell.state.getSnapshot();
     if (input.phase !== 'plain' || /^\s*\//.test(input.draft)) { this.publish({ error: '命令由宿主直接处理，请输入普通对话草稿' }); return; }
     if (!input.draft.trim()) { this.publish({ error: '请先输入草稿' }); return; }
