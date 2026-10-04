@@ -1,67 +1,63 @@
 name: CI
 
 on:
-  push:
-    branches: ['main']
-    paths-ignore: ['README.md', 'docs/**']
   pull_request:
     paths-ignore: ['README.md', 'docs/**']
+  workflow_dispatch:
+    inputs:
+      full:
+        description: Run the complete Linux Node 22/24 and Windows matrix
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: false
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps.tests.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: tests
+        env:
+          CI_SUITE: ${{ inputs.full && 'full' || 'general' }}
+        run: echo "matrix=$(node scripts/test-ci.mjs matrix "$CI_SUITE")" >> "$GITHUB_OUTPUT"
+
   test:
+    needs: matrix
+    name: ${{ matrix.os }} / Node ${{ matrix.node }} / ${{ matrix.suite }} ${{ matrix.shard }}
     runs-on: ${{ matrix.os }}
-    # Windows cold builds overrun a two-shard job's wall-clock budget. Four
-    # isolated shards retain the entire suite and each test's original deadline.
-    # Linux uses two shards; browser files remain serial within every runner.
     timeout-minutes: 45
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            node: '22.19.0'
-            shard: '1/2'
-          - os: ubuntu-latest
-            node: '22.19.0'
-            shard: '2/2'
-          - os: ubuntu-latest
-            node: '24'
-            shard: '1/2'
-          - os: ubuntu-latest
-            node: '24'
-            shard: '2/2'
-          - os: windows-latest
-            node: '24'
-            shard: '1/4'
-          - os: windows-latest
-            node: '24'
-            shard: '2/4'
-          - os: windows-latest
-            node: '24'
-            shard: '3/4'
-          - os: windows-latest
-            node: '24'
-            shard: '4/4'
+      matrix: ${{ fromJSON(needs.matrix.outputs.tests) }}
     steps:
       - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
-      - uses: pnpm/action-setup@v6
+          cache: pnpm
       - uses: actions/setup-dotnet@v6
         if: runner.os == 'Windows'
         with:
           dotnet-version: '10.0.x'
       - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/Library/Caches/ms-playwright
+            ~/AppData/Local/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm build
-      # Real browser fixtures are resource intensive and some exercise the
-      # shared desktop. Keep platform results independent and run files in order.
-      - run: node --test --test-concurrency=1 --test-shard=${{ matrix.shard }} test/*.test.mjs
+      # Homes, hosts and browser contexts stay isolated. Files within a shard
+      # remain serial; shared coverage runs once, platform contracts separately.
+      - run: node scripts/test-ci.mjs run ${{ matrix.suite }} ${{ matrix.shard }}

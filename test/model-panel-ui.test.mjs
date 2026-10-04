@@ -86,8 +86,13 @@ test('model panel saves real effort and independent mode, supports native select
   assert.equal(await slider.inputValue(),String(max));
   assert.equal((await mode()).revision,stable.revision,'cancelled touch drag does not save');
   await touch.send('Emulation.setTouchEmulationEnabled',{enabled:false}); await touch.detach();
-  await page.mouse.move(box.x+14,box.y+box.height/2); await page.mouse.down();
-  await page.mouse.move(box.x+box.width-14,box.y+box.height/2);
+  await until(async () => await slider.isEnabled());
+  await slider.hover({ position: { x: 14, y: 22 } }); await page.mouse.down();
+  await until(async () => await panel.locator('.omd-effort-control').getAttribute('data-dragging') === 'true');
+  const conflictBox = await slider.boundingBox(), conflictRevision = (await mode()).revision;
+  await page.mouse.move(conflictBox.x+conflictBox.width-14,conflictBox.y+conflictBox.height/2);
+  assert.equal(await slider.inputValue(), String(max), 'the conflict starts from an active highest-mode drag');
+  assert.equal((await mode()).revision, conflictRevision, 'drag preview has not committed');
   await fx.rpc('session/selectModel',{sessionId:fx.sessionId,provider:'fixture',model:'fixture',reasoningEffort:'low'});
   await until(async()=>await trigger.innerText().then(text=>text.includes('低')));
   await page.mouse.up();
