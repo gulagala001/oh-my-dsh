@@ -2,7 +2,7 @@
 
 [文档目录](README.md) · [首次使用](getting-started.md) · [安装](#安装到现有-dsh推荐) · [更新与卸载](#update-uninstall) · [设置](#settings) · [排障](troubleshooting.md) · [开发与验证](#开发与验证)
 
-当前 **0.2.1-alpha.1.omd.0.5.2** 适配 **DSH 0.2.1-alpha.1**，内置 **OpenCU 1.2.1**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
+当前 **0.2.1-alpha.1.omd.0.6.0** 适配 **DSH 0.2.1-alpha.1**，内置 **OpenCU 1.2.1**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
 本项目通过 `gulagala001/oh-my-dsh` 的 GitHub 来源或发行包安装。[安装来源核对](troubleshooting.md#package-source)。
 
@@ -12,7 +12,7 @@
 
 ## 安装到现有 DSH（推荐）
 
-**首次安装桌面应用请先看[桌面版完整教程](upgrade.md#desktop)。** 新版官方桌面包尚待发布，桌面用户继续使用 rc.2 的固定配对版本；下列命令适用于 DSH 0.2.1-alpha.1 的 Web／源码环境。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；单独安装的 npm/npx CLI 不能管理保留的 `desktop` profile。[本版验证范围](release-0.2.1-alpha.1.omd.0.5.2.md)。
+**首次安装桌面应用请先看[桌面版完整教程](upgrade.md#desktop)。** 现有 rc.2 桌面使用 **OMD 0.2.0-rc.2.omd.0.6.0**；下列命令适用于 DSH 0.2.1-alpha.1 的 Web／源码环境。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；单独安装的 npm/npx CLI 不能管理保留的 `desktop` profile。[本版验证范围](release-0.2.1-alpha.1.omd.0.6.0.md)。
 
 桌面安装、更新、启用或停用后，先等任务结束，再完整退出应用并重新打开；有「重启应用与 Host」菜单时也可使用。仅关闭窗口会留在后台，仅刷新页面不能完成切换。
 
@@ -21,7 +21,7 @@
 已有环境先等待任务结束，停止当前 DSH Web 并完整备份实际 DSH_HOME。确认继续使用原数据目录、profile 和端口，再运行：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.5.2
+npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.6.0
 ```
 
 然后按原来的方式重新启动 DSH，例如：
@@ -43,11 +43,11 @@ npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 
 从 0.1.7-rc.2.5 起，检查到新版后可在左上角版本图标打开的面板内点击“更新”。安装后仍需完整重启。更早版本首次升级到本版时使用下方原安装方式。
 
-更新时保持原安装方式、DSH_HOME、profile 和端口；先停止服务并备份数据。使用 npx 的用户重复上面的固定版本命令即可。全局 npm 安装用户执行 `npm install -g @deepseek-ai/dsh@0.2.1-alpha.1`，确认 `dsh --version`，再执行 `dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.5.2`，按原方式启动；pnpm 全局安装则用 `pnpm add -g`。插件安装不会替你更新全局宿主。
+更新时保持原安装方式、DSH_HOME、profile 和端口；先停止服务并备份数据。使用 npx 的用户重复上面的固定版本命令即可。全局 npm 安装用户执行 `npm install -g @deepseek-ai/dsh@0.2.1-alpha.1`，确认 `dsh --version`，再执行 `dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.6.0`，按原方式启动；pnpm 全局安装则用 `pnpm add -g`。插件安装不会替你更新全局宿主。
 
-源码用户先保留本地修改，再执行 `git fetch origin --tags`、`git switch --detach v0.2.1-alpha.1.omd.0.5.2`、`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`。若切换会覆盖本地修改，先保存自己的改动，不强制覆盖。默认数据在仓库的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
+源码用户先保留本地修改，再执行 `git fetch origin --tags`、`git switch --detach v0.2.1-alpha.1.omd.0.6.0`、`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`。若切换会覆盖本地修改，先保存自己的改动，不强制覆盖。默认数据在仓库的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
 
-重启后，版本面板的**当前版本**应是 `0.2.1-alpha.1.omd.0.5.2`，原模型和旧会话仍在；最新版本只代表远端发布记录。旧 V3 会话迁移会保留原日志，alpha.1 升至 alpha.2 继续使用 V4。回退时停止新服务，以原宿主、插件和完整备份在独立数据目录启动。
+重启后，版本面板的**当前版本**应是 `0.2.1-alpha.1.omd.0.6.0`，原模型和旧会话仍在；最新版本只代表远端发布记录。旧 V3 会话迁移会保留原日志，alpha.1 升至 alpha.2 继续使用 V4。回退时停止新服务，以原宿主、插件和完整备份在独立数据目录启动。
 
 卸载也沿用原启动方式。npx Web 用户执行以下命令；自定义 profile 将 `web` 换成原名称，并沿用实际 `DSH_HOME`：
 
@@ -105,6 +105,8 @@ dsh plugin --profile YOUR_PROFILE add link:/absolute/path/to/oh-my-dsh
 
 重启该 profile 后生效。插件 bundle 会将默认 Agent preset 设为 `trisoul-x`。
 
+OMD 会话使用 `cmdgoat-responses` 渠道时，每次模型请求只发送最后一条真实用户消息及其后工具结果中的图片。历史文字、识图结果、会话原图和附件仍保留；新一轮没有图片时不发送历史图片。此规则仅适用于该渠道且请求域名为 `api.commandcode.ai` 的 CommandCode Responses 配置，其他渠道保持原有行为。
+
 本地 `link:` 开发建议使用不含空格的源码路径，避免命令转发时的路径兼容问题。上面的 GitHub 安装命令不含本地源路径。
 
 macOS 用户完成安装和构建后，也可执行：
@@ -161,7 +163,11 @@ node scripts/launch-macos.mjs
 
 ## 日常使用
 
-### 提示词优化
+### 模型与工作模式
+
+点击输入区的模型入口，滑条依次为模型原生推理档、**Pro**、**Ultracode**。Pro 使用最高推理档，保留需求拆解、按需委派和迭代，不增加额外验证编排；Ultracode 进一步加入完整性检查与对抗验证。两档独立保存，切模型保持模式；恢复默认或选择原生档会关闭模式。Pro 的蓝色渐变、粒子和光晕更克制，两档均支持明暗主题、窄屏和系统减少动画设置。[工作流与恢复](workflow.md)。
+
+## 提示词优化
 
 输入框星星默认显示；“设置 → 提示词优化”可隐藏入口。悬浮星星或点击旁边的展开按钮打开抽屉，选择轻润色、结构化或步骤规划，首次优化前即可在“额外要求”填写条件，或选择已保存的要求预设，再点击“开始优化”回填当前草稿。额外要求也用于后续优化与自动轻润色；留空保持原行为。版本列表支持撤销、重做和恢复原稿，补充要求后可继续优化。
 

@@ -1,6 +1,7 @@
 /** Workflow child ownership and progress over the shared sandboxed PTC executor. */
 import type { Context } from '@deepseek-ai/cordis'
 import { existsSync } from 'node:fs'
+import { foldConsumedWork } from '@deepseek-ai/dsh-agent'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
 import type { PtcBindingFunction, PtcJsonValue, PtcRuntime } from '@deepseek-ai/dsh-ptc-runtime'
@@ -145,7 +146,29 @@ function workflowResult(value: unknown): WorkflowResult {
  * its managed process and every admitted child startup/disposal. Engine unload does not
  * invalidate the captured runtime or subagent handles.
  */
+function childFailureReason(reason: unknown): string {
+  try {
+    if (typeof reason === 'string') return reason
+    return JSON.stringify(reason, (_key, value) => value instanceof Error ? { name: value.name, message: value.message, ...'code' in value ? { code: value.code } : {} } : value) ?? 'child failure reason unavailable'
+  } catch { return renderThrown(reason) }
+}
+
+function failureReasonData(reason: unknown): PtcJsonValue {
+  try { return JSON.parse(childFailureReason(reason)) } catch { return { message: childFailureReason(reason) } }
+}
+
+export interface WorkflowChildFailure {
+  seq: number
+  childId?: string
+  stopReason: string
+  reason: string
+  reasonData?: PtcJsonValue
+  cause: 'cancelled' | 'failed'
+}
+
 export class PtcWorkflowRun implements WorkflowRun {
+  private readonly failures = new Map<number, WorkflowChildFailure>()
+  get childFailures(): WorkflowChildFailure[] { return [...this.failures.values()].sort((a, b) => a.seq - b.seq).map(row => ({ ...row })) }
   readonly result: Promise<WorkflowResult>
   private readonly readiness = Promise.withResolvers<void>()
   readonly ready = this.readiness.promise
@@ -229,7 +252,14 @@ export class PtcWorkflowRun implements WorkflowRun {
         if (typeof value !== 'string' && !(value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 1 && 'scriptPath' in value && typeof value.scriptPath === 'string')) throw new Error('Invalid workflow reference')
         return json(await this.support.loadWorkflow(value as string | { scriptPath: string }, this.controller.signal))
       })()),
-      startChild: value => this.track(this.startChild(childRequest(value))),
+      startChild: value => {
+        const request = childRequest(value)
+        return this.track(this.startChild(request).catch(error => {
+          this.failures.set(request.seq, { seq: request.seq, stopReason: this.cancelReason === undefined ? 'startup-error' : 'cancelled',
+            cause: this.cancelReason === undefined ? 'failed' : 'cancelled', reason: this.cancelReason ?? renderThrown(error) })
+          throw error
+        }))
+      },
       childResult: value => this.track(this.childResult(this.child(value))),
       disposeChild: async (value) => { await this.disposeChild(this.child(value)); return null },
       progress: (value) => {
@@ -257,7 +287,7 @@ export class PtcWorkflowRun implements WorkflowRun {
       this.requireActive()
       const type = await this.support?.childType?.(request.agentType)
       const identity = { ...request, parentOptions: this.parent.session.requestHeader()?.config ?? this.parent.options, policy: this.policy, presetFingerprint: type?.fingerprint }
-      const cached = await this.journal?.start(callId, identity, value => !value.worktree?.retained || existsSync(value.worktree.path))
+      const cached = await this.journal?.start(callId, identity, value => (request.schema === undefined || value.structured !== undefined) && (!value.worktree?.retained || existsSync(value.worktree.path)))
       return { type, cached }
     })
     this.admission = admission.catch(() => {})
@@ -320,7 +350,17 @@ export class PtcWorkflowRun implements WorkflowRun {
     signal.addEventListener('abort', onAbort, { once: true })
     try {
       const result = await Promise.race([record.run.result, aborted.promise])
+      const nativeReason = record.run.localAgent ? foldConsumedWork(record.run.localAgent.session.snapshotEvents()).end?.data.reason : undefined
+      const extended = result as typeof result & { error?: unknown; reason?: unknown }
+      const reason = extended.error ?? extended.reason ?? nativeReason
+      if (result.stopReason !== 'completed') this.failures.set(record.callId, {
+        seq: record.callId, childId: record.run.id, stopReason: result.stopReason,
+        cause: result.stopReason === 'aborted' || result.stopReason === 'cancelled' ? 'cancelled' : 'failed',
+        reason: reason === undefined ? `child ended with ${result.stopReason}; inspect child session` : childFailureReason(reason),
+        ...reason !== undefined && typeof reason !== 'string' ? { reasonData: failureReasonData(reason) } : {},
+      })
       record.result = {
+        ...this.failures.has(record.callId) ? { reason: this.failures.get(record.callId)!.reason } : {},
         childId: record.run.id,
         output: [...result.output],
         stopReason: result.stopReason,
@@ -328,6 +368,11 @@ export class PtcWorkflowRun implements WorkflowRun {
       }
       const budget = this.support?.budget?.()
       return json({ ...record.result, budgetSpent: budget?.spent ?? 0, budgetTotal: budget?.total ?? null })
+    } catch (error) {
+      this.failures.set(record.callId, { seq: record.callId, childId: record.run.id,
+        stopReason: this.cancelReason === undefined ? 'result-error' : 'cancelled', cause: this.cancelReason === undefined ? 'failed' : 'cancelled',
+        reason: this.cancelReason ?? renderThrown(error) })
+      throw error
     } finally {
       signal.removeEventListener('abort', onAbort)
     }
@@ -365,6 +410,15 @@ export class PtcWorkflowRun implements WorkflowRun {
 
   private endAgent(info: WorkflowAgentEndInfo): void {
     if (!this.liveAgents.delete(info.seq)) return
+    if (info.outcome !== 'completed' && !this.failures.has(info.seq)) this.failures.set(info.seq, {
+      seq: info.seq, childId: info.childId, stopReason: info.outcome, cause: info.outcome === 'cancelled' ? 'cancelled' : 'failed',
+      reason: info.outcome === 'cancelled' ? this.cancelReason ?? 'workflow child cancelled' : 'child did not produce the requested structured result',
+    })
+    const record = this.children.get(info.seq)
+    if (info.outcome === 'failed' && record?.result?.stopReason === 'completed') {
+      record.result.stopReason = 'error'
+      record.result.reason = this.failures.get(info.seq)?.reason
+    }
     this.observer.agentEnd(info)
   }
 
@@ -418,7 +472,7 @@ export class PtcWorkflowRun implements WorkflowRun {
       if (this.journal) unquiescedJournals.add(this.journal)
       return { value: null, stopReason: 'error', agentsStarted: this.started, error: `Workflow cleanup failed; resume is locked until process exit: ${renderThrown(this.cleanupError)}` }
     }
-    try { await this.journal?.close(result.stopReason) }
+    try { await this.journal?.close(result.stopReason, this.childFailures) }
     catch (error) { return { value: null, stopReason: 'error', agentsStarted: this.started, error: `Workflow journal could not settle: ${renderThrown(error)}` } }
     return result
   }
