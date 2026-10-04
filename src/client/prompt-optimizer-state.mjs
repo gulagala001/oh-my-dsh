@@ -125,8 +125,8 @@ export class DraftOptimizer {
   }
   // Transfer data only. Requests, shell listeners and send attempts belong to
   // their original scope and must never restart merely because a view returns.
-  navigationState() {
-    this.deactivate();
+  navigationState({ deactivate = true } = {}) {
+    if (deactivate) this.deactivate();
     if (!this.history.length && !this.recoveries.size && !this.state.candidate && !this.state.instruction) return null;
     return structuredClone({ snapshot: captureDraft(this.shell), history: this.history, cursor: this.cursor,
       recoveries: [...this.recoveries], recoverySeq: this.recoverySeq, candidate: this.state.candidate,
