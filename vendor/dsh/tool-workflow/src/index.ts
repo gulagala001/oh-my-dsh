@@ -25,8 +25,8 @@ import type {
   WorkflowResult, WorkflowRun, WorkflowRunId, WorkflowStopReason,
 } from '@deepseek-ai/dsh-workflow'
 import { createWorkflowRecordMirror } from './record.ts'
-import type { PtcWorkflowRun } from '../../workflow-ptc/src/host.ts'
-import type PtcWorkflowEngine from '../../workflow-ptc/src/index.ts'
+import type { PtcWorkflowRun } from '@deepseek-ai/dsh-workflow-ptc/src/host.ts'
+import type PtcWorkflowEngine from '@deepseek-ai/dsh-workflow-ptc'
 import type { WorkflowRecordMirror } from './record.ts'
 import type {
   ToolWorkflowAgentEndData, ToolWorkflowAgentStartData,
@@ -68,7 +68,7 @@ type ResolvedConfig = Required<Config>
 
 interface WorkflowRecorder {
   start(session: Session, run: WorkflowRun): void
-  finish(runId: WorkflowRunId, stopReason: WorkflowStopReason): void
+  finish(runId: WorkflowRunId, stopReason: WorkflowStopReason, failures?: ReturnType<typeof childFailures>): void
   abandon(runId: WorkflowRunId): void
 }
 
@@ -143,9 +143,9 @@ function createWorkflowRecorder(ctx: Context): WorkflowRecorder {
         active.set(run.id, session)
       }
     },
-    finish(runId, stopReason) {
+    finish(runId, stopReason, failures = []) {
       const session = active.get(runId)
-      if (session !== undefined) append(session, 'tool-workflow/run-end', { runId, stopReason })
+      if (session !== undefined) append(session, 'tool-workflow/run-end', { runId, stopReason, failures })
       active.delete(runId)
     },
     abandon: (runId) => { active.delete(runId) },
@@ -157,7 +157,7 @@ function createWorkflowRecorder(ctx: Context): WorkflowRecorder {
  * their exact semantics, and the supported schema subset. Parameter-level
  * rules live in the parameter descriptions.
  */
-export const DESCRIPTION = `Run a JavaScript workflow that coordinates subagents when the user has authorized multi-agent orchestration. An active Ultracode reminder supplies standing authorization for substantive tasks; when Ultracode is off, the ordinary opt-in rule applies.
+export const DESCRIPTION = `Run a JavaScript workflow that coordinates subagents when the user has authorized multi-agent orchestration. An active Pro or Ultracode reminder supplies standing authorization for substantive tasks; when both modes are off, the ordinary opt-in rule applies.
 
 Pass an inline plain JavaScript script beginning with \`export const meta = {...}\`. The metadata must be a pure literal with \`name\` and \`description\`, plus optional \`whenToUse\` and \`phases\`; no calls, variables, spreads, or interpolation. A separate \`meta\` object with a script body is also accepted. Top-level \`await\` is supported; finish with a JSON-serializable \`return\` value. Pass \`args\` as actual JSON values, including arrays, rather than JSON-encoded strings.
 
@@ -197,7 +197,24 @@ type WorkflowInput = Omit<WorkflowCallArgs, 'script' | 'meta'> & Partial<Pick<Wo
 
 function details(run: WorkflowRun) {
   const extended = run as PtcWorkflowRun
-  return { name: run.meta.name, runId: run.id, scriptPath: extended.scriptPath!, transcriptDir: extended.transcriptDir!, worktrees: extended.worktrees }
+  return { name: run.meta.name, runId: run.id, scriptPath: extended.scriptPath!, transcriptDir: extended.transcriptDir!, worktrees: extended.worktrees.map(artifact => ({ ...artifact })) }
+}
+
+function childFailures(run: WorkflowRun) { return (run as PtcWorkflowRun).childFailures ?? [] }
+
+function failureText(failures: ReturnType<typeof childFailures>): string {
+  if (!failures.length) return ''
+  const maxDetailChars = 12000, maxReasonChars = 1500
+  let rendered = '', shown = 0
+  for (const row of failures) {
+    const reason = row.reason.length > maxReasonChars ? row.reason.slice(0, maxReasonChars) + '… [reason truncated]' : row.reason
+    const line = `Agent #${row.seq}${row.childId ? ` (${row.childId})` : ''}: ${row.cause}; ${row.stopReason}; ${reason}\n`
+    if (rendered.length + line.length > maxDetailChars) break
+    rendered += line; shown++
+  }
+  return `\nPartial failure: ${failures.length} child task(s) did not complete.\n${rendered}`
+    + (shown < failures.length ? `[${failures.length - shown} additional failed child task(s) omitted]\n` : '')
+    + 'Full failure details are saved in journal.jsonl. The workflow engine did not restart failed children automatically. Inspect the journal and child sessions before deciding whether to continue. Resume with workflow({scriptPath, resumeFromRunId}); only the longest unchanged completed prefix is cached, so later calls may run again, including successful calls and side effects. Do not restart a user-cancelled run without a new user instruction.'
 }
 
 function locationText(run: WorkflowRun): string {
@@ -246,12 +263,13 @@ function stopReasonError(result: WorkflowResult): string | undefined {
  * the script's failure message.
  */
 function jobOutcomeOf(result: WorkflowResult, run: WorkflowRun, maxChars: number): JobOutcome {
+  const failures = childFailures(run)
   switch (result.stopReason) {
     case 'completed':
       return {
-        status: 'completed',
-        detail: `${result.agentsStarted} agent${result.agentsStarted === 1 ? '' : 's'}`,
-        result: renderResult(run.meta.name, result.agentsStarted, result.value as JsonValue, maxChars) + '\n' + locationText(run),
+        status: failures.length ? 'failed' : 'completed',
+        detail: `${result.agentsStarted} agent${result.agentsStarted === 1 ? '' : 's'}` + (failures.length ? `; partial failure: ${failures.length} child task(s)` : ''),
+        result: renderResult(run.meta.name, result.agentsStarted, result.value as JsonValue, maxChars, failures) + '\n' + locationText(run),
       }
     case 'cancelled':
       return { status: 'killed', detail: locationText(run) }
@@ -265,13 +283,13 @@ function jobOutcomeOf(result: WorkflowResult, run: WorkflowRun, maxChars: number
 }
 
 /** Render the run's outcome text: the meta name, agent count, and the JSON value (capped). */
-function renderResult(name: string, agentsStarted: number, value: JsonValue, maxChars: number): string {
+function renderResult(name: string, agentsStarted: number, value: JsonValue, maxChars: number, failures: ReturnType<typeof childFailures> = []): string {
   // The engine returns JSON data (null for a valueless script), so stringify never yields undefined.
   const rendered = JSON.stringify(value, null, 2)
   const clipped = rendered.length > maxChars
     ? `${rendered.slice(0, maxChars)}\n… [truncated: ${rendered.length - maxChars} more characters]`
     : rendered
-  return `workflow "${name}" completed (${agentsStarted} agent${agentsStarted === 1 ? '' : 's'}).\nReturn value:\n${clipped}`
+  return `workflow "${name}" ${failures.length ? 'script completed with partial failure' : 'completed'} (${agentsStarted} agent${agentsStarted === 1 ? '' : 's'}).\nReturn value:\n${clipped}${failureText(failures)}`
 }
 
 /**
@@ -328,7 +346,7 @@ async function startBackgroundRun(
         }
         deps.mirror.stop(run.id)
         if (recordsRun) {
-          deps.recorder.finish(run.id, result.stopReason)
+          deps.recorder.finish(run.id, result.stopReason, childFailures(run))
           deps.recorder.abandon(run.id)
         }
         return jobOutcomeOf(result, run, deps.maxResultChars)
@@ -430,17 +448,18 @@ export function apply(ctx: Context, config: Config): void {
               scriptPath: { type: 'string', required: true },
               transcriptDir: { type: 'string', required: true },
               worktrees: { type: 'json', required: true },
+              failures: { type: 'json', required: true },
               agentsStarted: { type: 'integer', required: true },
               result: { type: 'json', required: true },
             },
           },
         ],
       },
-      render: (args, value) => [{
+      render: (_args, value) => [{
         type: 'text',
         text: (value.kind === 'background'
           ? `workflow "${value.name}" started in the background as job ${value.jobId}. Its return value arrives with the completion notice; check on it with job_output, stop it with job_kill.`
-          : renderResult(value.name, value.agentsStarted, value.result, maxResultChars))
+          : renderResult(value.name, value.agentsStarted, value.result, maxResultChars, value.failures))
           + `\nRun ID: ${value.runId}\nScript: ${value.scriptPath}\nJournal: ${value.transcriptDir}/journal.jsonl`
           + (Array.isArray(value.worktrees) && value.worktrees.length ? `\nWorktrees: ${JSON.stringify(value.worktrees)}` : ''),
       }],
@@ -497,11 +516,12 @@ export function apply(ctx: Context, config: Config): void {
         if (error !== undefined) {
           // Map a non-clean finish to an isError result (the registry turns a
           // throw into an isError). Report the reason, not partial output.
-          throw new Error(error + '\n' + locationText(run))
+          throw new Error(error + failureText(childFailures(run)) + '\n' + locationText(run))
         }
         return {
           kind: 'foreground' as const,
           ...details(run),
+          failures: childFailures(run),
           agentsStarted: result.agentsStarted,
           result: result.value as JsonValue,
         }
@@ -514,7 +534,7 @@ export function apply(ctx: Context, config: Config): void {
           if (recordsRun) {
             /* v8 ignore next -- WorkflowRun.result never rejects by contract, so result is assigned before finally. */
             if (result === undefined) throw new Error('workflow run settled without a result')
-            recorder.finish(run.id, result.stopReason)
+            recorder.finish(run.id, result.stopReason, childFailures(run))
           }
         } finally {
           if (recordsRun) recorder.abandon(run.id)

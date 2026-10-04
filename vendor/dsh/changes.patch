@@ -708,10 +708,32 @@ index e25e3e6754..e3d85bf13a 100644
 +  })
 +})
 diff --git a/packages/core/tools/src/index.ts b/packages/core/tools/src/index.ts
-index ca89f370fe..4a59dcfc37 100644
 --- a/packages/core/tools/src/index.ts
 +++ b/packages/core/tools/src/index.ts
-@@ -741,6 +741,7 @@ class ToolLayer implements ScopeLayer {
+@@ -625,12 +625,21 @@
+  * property (e.g. `throw { message: 'denied' }`) use it too; everything else
+  * is stringified.
+  */
+-function errorMessage(error: unknown): string {
++function errorMessage(error: unknown, cancellation = false): string {
+   try {
+     if (error instanceof Error) return error.message
+     if (typeof error === 'object' && error !== null
+       && 'message' in error && typeof error.message === 'string') {
+       return error.message
++    }
++    if (typeof error === 'object' && error !== null) {
++      if (cancellation && 'kind' in error) {
++        if (error.kind === 'user') return 'tool call cancelled by user'
++        if (error.kind === 'parent') return 'tool call cancelled by parent'
++        if (error.kind === 'disposed') return 'tool call cancelled because its owner was disposed'
++        if (error.kind === 'hook' && 'reason' in error && typeof error.reason === 'string') return `tool call cancelled by hook: ${error.reason}`
++      }
++      return JSON.stringify(error) ?? String(error)
+     }
+     return String(error)
+   } catch {
+@@ -741,6 +750,7 @@
     * "which form does the model see" is a contradiction, not a merge.
     */
    mode: ToolPresentationMode | undefined
@@ -719,7 +741,7 @@ index ca89f370fe..4a59dcfc37 100644
  
    constructor(scope: ScopeKey | undefined) {
      this.tools = new NamedEntries(name => new Error(scope === undefined
-@@ -835,6 +836,7 @@ export class ToolRuntime extends Service {
+@@ -835,6 +845,7 @@
      () => { this.ctx.emit('tools/change') },
    )
    /** Presentation for scopes that declare none; {@link presentAs} shadows it per scope. */
@@ -727,7 +749,7 @@ index ca89f370fe..4a59dcfc37 100644
    private readonly defaultMode: ToolPresentationMode
    private readonly maxParallelSubCalls: number
    /**
-@@ -879,7 +881,9 @@ export class ToolRuntime extends Service {
+@@ -879,7 +890,9 @@
        order: this.ctx.systemPrompt.getSectionOrder('PTC_ONLY'),
        // The SAME predicate the executor denies by, so the prompt cannot state
        // a rule the registry does not enforce (see `collapses`).
@@ -738,7 +760,7 @@ index ca89f370fe..4a59dcfc37 100644
      }
    }
  
-@@ -971,7 +975,7 @@ export class ToolRuntime extends Service {
+@@ -971,7 +984,7 @@
     * @param mode - the presentation the covered agents' models see.
     * @returns the exact disposer that restores the deployment default.
     */
@@ -747,7 +769,7 @@ index ca89f370fe..4a59dcfc37 100644
      const ctx = this.ctx
      if (scopeOf(ctx) === undefined) {
        throw new Error('tools.presentAs() requires a scoped context (agent.ctx): a context-global presentation is the `mode` config field on the tools row')
-@@ -984,7 +988,8 @@ export class ToolRuntime extends Service {
+@@ -984,7 +997,8 @@
              throw new Error(`tools.presentAs("${mode}") conflicts with "${layer.mode}" already declared for this scope; one composition selects one presentation`)
            }
            layer.mode = mode
@@ -757,7 +779,7 @@ index ca89f370fe..4a59dcfc37 100644
          },
          { label: 'tools.presentAs()' },
        )
-@@ -1001,6 +1006,21 @@ export class ToolRuntime extends Service {
+@@ -1001,6 +1015,21 @@
      return dispose
    }
  
@@ -779,7 +801,7 @@ index ca89f370fe..4a59dcfc37 100644
    /**
     * Build one scope's wire schemas and names for prompt-order validation.
     * Restrictions do not make known tools invalid, but a mode collapse does.
-@@ -1008,6 +1028,7 @@ export class ToolRuntime extends Service {
+@@ -1008,6 +1037,7 @@
    private wireSchemas(scope?: ScopeKey): ToolProviderResult {
      const view = this.view(scope)
      const mode = this.modeFor(scope)
@@ -787,7 +809,7 @@ index ca89f370fe..4a59dcfc37 100644
      if (mode === 'native') {
        const schemas = [...view.visible.values()].map(definition => this.schemaOf(definition, false))
        return { schemas, knownNames: [...view.knownNames] }
-@@ -1021,8 +1042,8 @@ export class ToolRuntime extends Service {
+@@ -1021,8 +1051,8 @@
      const schemas = [...view.visible.values()].map(definition => this.schemaOf(definition, false))
      if (mode === 'ptc') {
        return {
@@ -798,7 +820,7 @@ index ca89f370fe..4a59dcfc37 100644
        }
      }
      return { schemas, knownNames: [...view.knownNames, RUN_CODE_NAME] }
-@@ -1349,7 +1370,7 @@ export class ToolRuntime extends Service {
+@@ -1349,7 +1379,7 @@
     * @param nested - whether the call is a transport sub-dispatch, not a model-direct call.
     */
    private collapses(name: string, scope: ScopeKey | undefined, nested: boolean): boolean {
@@ -807,6 +829,46 @@ index ca89f370fe..4a59dcfc37 100644
    }
  
    /**
+@@ -1552,7 +1582,7 @@
+     /* v8 ignore next -- only registry-minted executions reach the staged scheduler methods */
+     if (state === undefined) throw new Error('tool registry scheduler invariant violated: missing cancellation state')
+     return state.bodyInvoked
+-      ? toolAbortedResult(prior)
++      ? toolAbortedResult(prior, state.callerSignal.reason)
+       : toolAbortedBeforeDispatchResult(prior)
+   }
+ 
+@@ -1581,10 +1611,10 @@
+       const returned = await tool.execute(exec.arguments, exec)
+       const result = this.createSuccessResult(exec, tool, returned)
+       return isAborted(signal)
+-        ? toolAbortedResult(result)
++        ? toolAbortedResult(result, signal.reason)
+         : result
+     } catch (error: unknown) {
+-      return toolErrorResult(error)
++      return isAborted(signal) ? toolAbortedResult(undefined, signal.reason) : toolErrorResult(error)
+     } finally {
+       fused.dispose()
+       exec.signal = wrapperSignal
+@@ -1955,13 +1985,14 @@
+ }
+ 
+ /** Canonical result when cancellation supersedes success after body invocation. */
+-function toolAbortedResult(prior?: ToolExecutionResult): ToolExecutionResult {
++function toolAbortedResult(prior?: ToolExecutionResult, reason?: unknown): ToolExecutionResult {
++  const message = reason === undefined ? 'tool call aborted' : `tool call aborted: ${errorMessage(reason, true)}`
+   const additionalContexts = prior?.additionalContexts ?? []
+   return {
+-    content: [{ type: 'text', text: 'Error: tool call aborted' }],
++    content: [{ type: 'text', text: `Error: ${message}` }],
+     isError: true,
+     error: {
+-      message: 'tool call aborted',
++      message,
+       info: { name: 'AbortError', code: TOOL_ABORTED },
+     },
+     ...additionalContexts.length > 0 ? { additionalContexts } : {},
 diff --git a/packages/jobs/jobs-local/src/index.ts b/packages/jobs/jobs-local/src/index.ts
 index ea68015158..cb8a803332 100644
 --- a/packages/jobs/jobs-local/src/index.ts
@@ -1385,33 +1447,55 @@ index dbaac326b1..06444cbddf 100644
      ...seed === undefined ? {} : { inheritedEventCount: activationBoundary },
      agentOptions: resolveChildAgentOptions(parent, request.agentOptions, childDepth),
 diff --git a/packages/workflow/tool-workflow/src/index.ts b/packages/workflow/tool-workflow/src/index.ts
-index d6ca7140ec..88a2c1829b 100644
 --- a/packages/workflow/tool-workflow/src/index.ts
 +++ b/packages/workflow/tool-workflow/src/index.ts
-@@ -25,6 +25,8 @@ import type {
+@@ -25,6 +25,8 @@
    WorkflowResult, WorkflowRun, WorkflowRunId, WorkflowStopReason,
  } from '@deepseek-ai/dsh-workflow'
  import { createWorkflowRecordMirror } from './record.ts'
-+import type { PtcWorkflowRun } from '../../workflow-ptc/src/host.ts'
-+import type PtcWorkflowEngine from '../../workflow-ptc/src/index.ts'
++import type { PtcWorkflowRun } from '@deepseek-ai/dsh-workflow-ptc/src/host.ts'
++import type PtcWorkflowEngine from '@deepseek-ai/dsh-workflow-ptc'
  import type { WorkflowRecordMirror } from './record.ts'
  import type {
    ToolWorkflowAgentEndData, ToolWorkflowAgentStartData,
-@@ -155,15 +157,26 @@ function createWorkflowRecorder(ctx: Context): WorkflowRecorder {
+@@ -66,7 +68,7 @@
+ 
+ interface WorkflowRecorder {
+   start(session: Session, run: WorkflowRun): void
+-  finish(runId: WorkflowRunId, stopReason: WorkflowStopReason): void
++  finish(runId: WorkflowRunId, stopReason: WorkflowStopReason, failures?: ReturnType<typeof childFailures>): void
+   abandon(runId: WorkflowRunId): void
+ }
+ 
+@@ -141,9 +143,9 @@
+         active.set(run.id, session)
+       }
+     },
+-    finish(runId, stopReason) {
++    finish(runId, stopReason, failures = []) {
+       const session = active.get(runId)
+-      if (session !== undefined) append(session, 'tool-workflow/run-end', { runId, stopReason })
++      if (session !== undefined) append(session, 'tool-workflow/run-end', { runId, stopReason, failures })
+       active.delete(runId)
+     },
+     abandon: (runId) => { active.delete(runId) },
+@@ -155,15 +157,26 @@
   * their exact semantics, and the supported schema subset. Parameter-level
   * rules live in the parameter descriptions.
   */
 -const DESCRIPTION = `Run a JavaScript workflow script that orchestrates subagents at scale. Use this for work that fans out across many independent pieces — an audit over many files, a migration, multi-angle research, adversarial verification of findings — where you write the orchestration as a script instead of delegating turn by turn.
-+export const DESCRIPTION = `Run a JavaScript workflow that coordinates subagents when the user has authorized multi-agent orchestration. An active Ultracode reminder supplies standing authorization for substantive tasks; when Ultracode is off, the ordinary opt-in rule applies.
- 
+-
 -Script-body hooks:
 -- \`agent(prompt, opts?): Promise<any>\` — run one subagent to completion. Without \`opts.schema\` it resolves to the child's final text; with \`opts.schema\` (an object-rooted JSON Schema using ONLY type/properties/required/additionalProperties/items/enum/const/oneOf) it resolves to the validated object. Resolves \`null\` when the child fails (filter with \`.filter(Boolean)\`). Other opts: \`label\` (display), \`phase\` (progress group), and independent \`provider\`/\`model\` LLM target overrides.
 -- \`pipeline(items, ...stages): Promise<any[]>\` — run each item through the stages independently with NO barrier between stages (prefer this for multi-stage work). Each stage receives \`(prev, item, index)\`. A stage throw drops that ITEM to \`null\` and skips its remaining stages.
 -- \`parallel(thunks): Promise<any[]>\` — run zero-argument functions concurrently and await ALL of them (a barrier; use only when a stage genuinely needs every prior result together). A throwing thunk resolves to \`null\`.
 -- \`phase(title)\` — start a progress phase; \`log(message)\` — narrate progress; \`args\` — the tool call's \`args\` input, verbatim.
-+Pass an inline plain JavaScript script beginning with \`export const meta = {...}\`. The metadata must be a pure literal with \`name\` and \`description\`, plus optional \`whenToUse\` and \`phases\`; no calls, variables, spreads, or interpolation. A separate \`meta\` object with a script body is also accepted. Top-level \`await\` is supported; finish with a JSON-serializable \`return\` value. Pass \`args\` as actual JSON values, including arrays, rather than JSON-encoded strings.
- 
+-
 -Misused hooks (bad arguments, unknown options, unsupported schemas, tripped caps) end the whole script instead of producing \`null\`. The script has no filesystem, network, timer, or Node.js APIs; the agents do the work.`
++export const DESCRIPTION = `Run a JavaScript workflow that coordinates subagents when the user has authorized multi-agent orchestration. An active Pro or Ultracode reminder supplies standing authorization for substantive tasks; when both modes are off, the ordinary opt-in rule applies.
++
++Pass an inline plain JavaScript script beginning with \`export const meta = {...}\`. The metadata must be a pure literal with \`name\` and \`description\`, plus optional \`whenToUse\` and \`phases\`; no calls, variables, spreads, or interpolation. A separate \`meta\` object with a script body is also accepted. Top-level \`await\` is supported; finish with a JSON-serializable \`return\` value. Pass \`args\` as actual JSON values, including arrays, rather than JSON-encoded strings.
++
 +Each invocation saves its script and returns \`runId\`, \`scriptPath\`, and \`transcriptDir\`. Edit that script and invoke with \`scriptPath\`, or use \`name\` to load \`.omd/workflows/<name>.js\` in the workspace. Supply exactly one of \`script\`, \`scriptPath\`, or \`name\`. Foreground calls return when the workflow finishes. With \`run_in_background: true\`, the tool returns a native job id; collect the result with \`job_output\` and cancel with \`job_kill\`.
 +
 +- \`agent(prompt, opts?)\`: run a child to completion. Without \`schema\`, returns final text; with a supported object-root schema, returns the validated object. A child failure returns \`null\`. Other options are \`label\`, \`phase\`, \`provider\`, \`model\`, \`effort\`, \`isolation\`, and \`agentType\`. Here \`provider\` and \`model\` are independent overrides; either may be supplied alone. Omit model and effort overrides to inherit the parent route; a changed model resolves its own default effort unless one is supplied. Effort values must be supported by the selected model. \`agentType\` selects a registered native agent preset id; \`general-purpose\` inherits the parent's preset. \`isolation: 'worktree'\` creates a separate Git checkout at HEAD. Use it when concurrent agents would otherwise conflict while editing files. Parent uncommitted changes are not copied. Unchanged checkouts are removed after the child stops; changes, new files, and commits are retained and their paths reported in \`worktrees\`. Confined modes keep their filesystem restrictions.
@@ -1431,7 +1515,7 @@ index d6ca7140ec..88a2c1829b 100644
  
  type WorkflowCallArgs = {
    script: string
-@@ -173,21 +186,37 @@ type WorkflowCallArgs = {
+@@ -173,21 +186,54 @@
      whenToUse?: string
      phases?: { title: string; detail?: string; provider?: string; model?: string }[]
    }
@@ -1447,7 +1531,24 @@ index d6ca7140ec..88a2c1829b 100644
 +
 +function details(run: WorkflowRun) {
 +  const extended = run as PtcWorkflowRun
-+  return { name: run.meta.name, runId: run.id, scriptPath: extended.scriptPath!, transcriptDir: extended.transcriptDir!, worktrees: extended.worktrees }
++  return { name: run.meta.name, runId: run.id, scriptPath: extended.scriptPath!, transcriptDir: extended.transcriptDir!, worktrees: extended.worktrees.map(artifact => ({ ...artifact })) }
++}
++
++function childFailures(run: WorkflowRun) { return (run as PtcWorkflowRun).childFailures ?? [] }
++
++function failureText(failures: ReturnType<typeof childFailures>): string {
++  if (!failures.length) return ''
++  const maxDetailChars = 12000, maxReasonChars = 1500
++  let rendered = '', shown = 0
++  for (const row of failures) {
++    const reason = row.reason.length > maxReasonChars ? row.reason.slice(0, maxReasonChars) + '… [reason truncated]' : row.reason
++    const line = `Agent #${row.seq}${row.childId ? ` (${row.childId})` : ''}: ${row.cause}; ${row.stopReason}; ${reason}\n`
++    if (rendered.length + line.length > maxDetailChars) break
++    rendered += line; shown++
++  }
++  return `\nPartial failure: ${failures.length} child task(s) did not complete.\n${rendered}`
++    + (shown < failures.length ? `[${failures.length - shown} additional failed child task(s) omitted]\n` : '')
++    + 'Full failure details are saved in journal.jsonl. The workflow engine did not restart failed children automatically. Inspect the journal and child sessions before deciding whether to continue. Resume with workflow({scriptPath, resumeFromRunId}); only the longest unchanged completed prefix is cached, so later calls may run again, including successful calls and side effects. Do not restart a user-cancelled run without a new user instruction.'
 +}
 +
 +function locationText(run: WorkflowRun): string {
@@ -1474,19 +1575,22 @@ index d6ca7140ec..88a2c1829b 100644
    void args
    void result
    return { card: 'generic' }
-@@ -216,18 +245,18 @@ function stopReasonError(result: WorkflowResult): string | undefined {
+@@ -216,18 +262,19 @@
   * cancel reason it forwarded is the same string); an errored run fails with
   * the script's failure message.
   */
 -function jobOutcomeOf(result: WorkflowResult, name: string, maxChars: number): JobOutcome {
 +function jobOutcomeOf(result: WorkflowResult, run: WorkflowRun, maxChars: number): JobOutcome {
++  const failures = childFailures(run)
    switch (result.stopReason) {
      case 'completed':
        return {
-         status: 'completed',
-         detail: `${result.agentsStarted} agent${result.agentsStarted === 1 ? '' : 's'}`,
+-        status: 'completed',
+-        detail: `${result.agentsStarted} agent${result.agentsStarted === 1 ? '' : 's'}`,
 -        result: renderResult(name, result.agentsStarted, result.value as JsonValue, maxChars),
-+        result: renderResult(run.meta.name, result.agentsStarted, result.value as JsonValue, maxChars) + '\n' + locationText(run),
++        status: failures.length ? 'failed' : 'completed',
++        detail: `${result.agentsStarted} agent${result.agentsStarted === 1 ? '' : 's'}` + (failures.length ? `; partial failure: ${failures.length} child task(s)` : ''),
++        result: renderResult(run.meta.name, result.agentsStarted, result.value as JsonValue, maxChars, failures) + '\n' + locationText(run),
        }
      case 'cancelled':
 -      return { status: 'killed' }
@@ -1497,7 +1601,23 @@ index d6ca7140ec..88a2c1829b 100644
      /* v8 ignore start -- defensive: WorkflowStopReason is a closed union, exhaustive by construction; a future variant fails here loudly */
      default:
        return { status: 'failed', detail: `workflow run ended abnormally (${String(result.stopReason satisfies never)})` }
-@@ -259,13 +288,13 @@ function renderResult(name: string, agentsStarted: number, value: JsonValue, max
+@@ -236,13 +283,13 @@
+ }
+ 
+ /** Render the run's outcome text: the meta name, agent count, and the JSON value (capped). */
+-function renderResult(name: string, agentsStarted: number, value: JsonValue, maxChars: number): string {
++function renderResult(name: string, agentsStarted: number, value: JsonValue, maxChars: number, failures: ReturnType<typeof childFailures> = []): string {
+   // The engine returns JSON data (null for a valueless script), so stringify never yields undefined.
+   const rendered = JSON.stringify(value, null, 2)
+   const clipped = rendered.length > maxChars
+     ? `${rendered.slice(0, maxChars)}\n… [truncated: ${rendered.length - maxChars} more characters]`
+     : rendered
+-  return `workflow "${name}" completed (${agentsStarted} agent${agentsStarted === 1 ? '' : 's'}).\nReturn value:\n${clipped}`
++  return `workflow "${name}" ${failures.length ? 'script completed with partial failure' : 'completed'} (${agentsStarted} agent${agentsStarted === 1 ? '' : 's'}).\nReturn value:\n${clipped}${failureText(failures)}`
+ }
+ 
+ /**
+@@ -259,13 +306,13 @@
   * @param deps - the tool's recorder/mirror taps and the render cap.
   * @returns the background result for the tool's output schema.
   */
@@ -1513,7 +1633,7 @@ index d6ca7140ec..88a2c1829b 100644
    const jobs = ctx.get('jobs')
    if (jobs === undefined) {
      throw new Error('background jobs unavailable: load @deepseek-ai/dsh-jobs and @deepseek-ai/dsh-tool-jobs')
-@@ -283,6 +312,7 @@ function startBackgroundRun(
+@@ -283,6 +330,7 @@
          script: args.script,
          meta: args.meta,
          ...args.args !== undefined ? { args: args.args } : {},
@@ -1521,8 +1641,12 @@ index d6ca7140ec..88a2c1829b 100644
          parent,
        })
        deps.mirror.start(run.id, job)
-@@ -301,7 +331,7 @@ function startBackgroundRun(
-           deps.recorder.finish(run.id, result.stopReason)
+@@ -298,10 +346,10 @@
+         }
+         deps.mirror.stop(run.id)
+         if (recordsRun) {
+-          deps.recorder.finish(run.id, result.stopReason)
++          deps.recorder.finish(run.id, result.stopReason, childFailures(run))
            deps.recorder.abandon(run.id)
          }
 -        return jobOutcomeOf(result, args.meta.name, deps.maxResultChars)
@@ -1530,7 +1654,7 @@ index d6ca7140ec..88a2c1829b 100644
        })
        return {
          cancel: (reason?: string) => { run.cancel(reason ?? 'background workflow job killed') },
-@@ -309,7 +339,9 @@ function startBackgroundRun(
+@@ -309,7 +357,9 @@
        }
      },
    })
@@ -1541,7 +1665,7 @@ index d6ca7140ec..88a2c1829b 100644
  }
  
  export function apply(ctx: Context, config: Config): void {
-@@ -327,19 +359,17 @@ export function apply(ctx: Context, config: Config): void {
+@@ -327,19 +377,17 @@
    })
    ctx.tools.register(defineTool({
      name: toolName,
@@ -1564,7 +1688,7 @@ index d6ca7140ec..88a2c1829b 100644
          properties: {
            name: { type: 'string', required: true, description: 'Short kebab-case workflow name.' },
            description: { type: 'string', required: true, description: 'One-line description of what the workflow does.' },
-@@ -361,10 +391,12 @@ export function apply(ctx: Context, config: Config): void {
+@@ -361,10 +409,12 @@
          },
        },
        args: {
@@ -1580,7 +1704,7 @@ index d6ca7140ec..88a2c1829b 100644
        ...enableRunInBackground ? {
          run_in_background: {
            type: 'boolean' as const,
-@@ -382,6 +414,10 @@ export function apply(ctx: Context, config: Config): void {
+@@ -382,6 +432,10 @@
                kind: { type: 'string', required: true, const: 'background' },
                jobId: { type: 'string', required: true },
                runId: { type: 'string', required: true },
@@ -1591,7 +1715,7 @@ index d6ca7140ec..88a2c1829b 100644
              },
            },
            {
-@@ -390,6 +426,10 @@ export function apply(ctx: Context, config: Config): void {
+@@ -390,20 +444,27 @@
              properties: {
                kind: { type: 'string', required: true, const: 'foreground' },
                runId: { type: 'string', required: true },
@@ -1599,19 +1723,22 @@ index d6ca7140ec..88a2c1829b 100644
 +              scriptPath: { type: 'string', required: true },
 +              transcriptDir: { type: 'string', required: true },
 +              worktrees: { type: 'json', required: true },
++              failures: { type: 'json', required: true },
                agentsStarted: { type: 'integer', required: true },
                result: { type: 'json', required: true },
              },
-@@ -398,12 +438,14 @@ export function apply(ctx: Context, config: Config): void {
+           },
+         ],
        },
-       render: (args, value) => [{
+-      render: (args, value) => [{
++      render: (_args, value) => [{
          type: 'text',
 -        text: value.kind === 'background'
 -          ? `workflow "${args.meta.name}" started in the background as job ${value.jobId}. Its return value arrives with the completion notice; check on it with job_output, stop it with job_kill.`
 -          : renderResult(args.meta.name, value.agentsStarted, value.result, maxResultChars),
 +        text: (value.kind === 'background'
 +          ? `workflow "${value.name}" started in the background as job ${value.jobId}. Its return value arrives with the completion notice; check on it with job_output, stop it with job_kill.`
-+          : renderResult(value.name, value.agentsStarted, value.result, maxResultChars))
++          : renderResult(value.name, value.agentsStarted, value.result, maxResultChars, value.failures))
 +          + `\nRun ID: ${value.runId}\nScript: ${value.scriptPath}\nJournal: ${value.transcriptDir}/journal.jsonl`
 +          + (Array.isArray(value.worktrees) && value.worktrees.length ? `\nWorktrees: ${JSON.stringify(value.worktrees)}` : ''),
        }],
@@ -1621,7 +1748,7 @@ index d6ca7140ec..88a2c1829b 100644
        const parent = exec.agent
        if (!parent) {
          // The loop sets `exec.agent` for every model-driven call; its absence
-@@ -411,15 +453,15 @@ export function apply(ctx: Context, config: Config): void {
+@@ -411,15 +472,15 @@
          // parent to attribute the children to. Fail loud rather than guess.
          throw new Error('workflow tool requires a calling agent (exec.agent was undefined)')
        }
@@ -1642,7 +1769,7 @@ index d6ca7140ec..88a2c1829b 100644
          return startBackgroundRun(ctx, args, parent, exec.parent === undefined, {
            recorder,
            mirror,
-@@ -434,6 +476,7 @@ export function apply(ctx: Context, config: Config): void {
+@@ -434,6 +495,7 @@
          script: args.script,
          meta: args.meta,
          ...args.args !== undefined ? { args: args.args } : {},
@@ -1650,20 +1777,41 @@ index d6ca7140ec..88a2c1829b 100644
          parent,
          signal: exec.signal,
        })
-@@ -454,11 +497,11 @@ export function apply(ctx: Context, config: Config): void {
+@@ -454,11 +516,12 @@
          if (error !== undefined) {
            // Map a non-clean finish to an isError result (the registry turns a
            // throw into an isError). Report the reason, not partial output.
 -          throw new Error(error)
-+          throw new Error(error + '\n' + locationText(run))
++          throw new Error(error + failureText(childFailures(run)) + '\n' + locationText(run))
          }
          return {
            kind: 'foreground' as const,
 -          runId: run.id,
 +          ...details(run),
++          failures: childFailures(run),
            agentsStarted: result.agentsStarted,
            result: result.value as JsonValue,
          }
+@@ -471,7 +534,7 @@
+           if (recordsRun) {
+             /* v8 ignore next -- WorkflowRun.result never rejects by contract, so result is assigned before finally. */
+             if (result === undefined) throw new Error('workflow run settled without a result')
+-            recorder.finish(run.id, result.stopReason)
++            recorder.finish(run.id, result.stopReason, childFailures(run))
+           }
+         } finally {
+           if (recordsRun) recorder.abandon(run.id)
+diff --git a/packages/workflow/tool-workflow/src/types.ts b/packages/workflow/tool-workflow/src/types.ts
+--- a/packages/workflow/tool-workflow/src/types.ts
++++ b/packages/workflow/tool-workflow/src/types.ts
+@@ -35,6 +35,7 @@
+ /** Settles one workflow run after its live resources reach quiescence. */
+ export interface ToolWorkflowRunEndData {
+   readonly runId: WorkflowRunId
++  readonly failures?: import('@deepseek-ai/dsh-workflow-ptc/src/host.ts').WorkflowChildFailure[]
+   readonly stopReason: WorkflowStopReason
+ }
+ 
 diff --git a/packages/workflow/workflow-ptc/src/guest-types.ts b/packages/workflow/workflow-ptc/src/guest-types.ts
 index 42769a270b..8b9d42b783 100644
 --- a/packages/workflow/workflow-ptc/src/guest-types.ts
@@ -1697,17 +1845,19 @@ index be50e88e3b..3906ab9354 100644
    await drain()
    return progressError === undefined ? result : {
 diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/workflow-ptc/src/host.ts
-index 843d48f219..52748dbd57 100644
 --- a/packages/workflow/workflow-ptc/src/host.ts
 +++ b/packages/workflow/workflow-ptc/src/host.ts
-@@ -1,5 +1,6 @@
+@@ -1,6 +1,9 @@
  /** Workflow child ownership and progress over the shared sandboxed PTC executor. */
  import type { Context } from '@deepseek-ai/cordis'
 +import { existsSync } from 'node:fs'
++import { foldConsumedWork } from '@deepseek-ai/dsh-agent'
  import type { Agent } from '@deepseek-ai/dsh-agent'
++import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
  import type { PtcBindingFunction, PtcJsonValue, PtcRuntime } from '@deepseek-ai/dsh-ptc-runtime'
  import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
-@@ -15,11 +16,32 @@ import type { WorkflowProgress } from './guest-types.ts'
+ import { SessionId } from '@deepseek-ai/dsh-session'
+@@ -15,11 +18,32 @@
  import { renderThrown } from './realm.ts'
  import type { ExecutionObserver } from './runtime.ts'
  import type { ChildStartRequest, WorkerInit } from './types.ts'
@@ -1740,7 +1890,7 @@ index 843d48f219..52748dbd57 100644
  }
  
  const GUEST_URL = `data:text/javascript,${encodeURIComponent(WORKFLOW_GUEST_SOURCE)}`
-@@ -46,6 +68,16 @@ function childRequest(value: unknown): ChildStartRequest {
+@@ -46,6 +70,16 @@
    const prompt = text(request.prompt, 'prompt')
    const provider = request.provider === undefined ? undefined : text(request.provider, 'provider')
    const model = request.model === undefined ? undefined : text(request.model, 'model')
@@ -1757,7 +1907,7 @@ index 843d48f219..52748dbd57 100644
    let schema: ObjectJsonSchema | undefined
    if (request.schema !== undefined) {
      const candidate = object(request.schema)
-@@ -53,10 +85,13 @@ function childRequest(value: unknown): ChildStartRequest {
+@@ -53,10 +87,13 @@
      schema = candidate
    }
    return {
@@ -1771,16 +1921,40 @@ index 843d48f219..52748dbd57 100644
    }
  }
  
-@@ -111,6 +146,8 @@ function workflowResult(value: unknown): WorkflowResult {
+@@ -109,8 +146,32 @@
+  * its managed process and every admitted child startup/disposal. Engine unload does not
+  * invalidate the captured runtime or subagent handles.
   */
++function childFailureReason(reason: unknown): string {
++  try {
++    if (typeof reason === 'string') return reason
++    return JSON.stringify(reason, (_key, value) => value instanceof Error ? { name: value.name, message: value.message, ...'code' in value ? { code: value.code } : {} } : value) ?? 'child failure reason unavailable'
++  } catch { return renderThrown(reason) }
++}
++
++function failureReasonData(reason: unknown): PtcJsonValue {
++  try { return JSON.parse(childFailureReason(reason)) } catch { return { message: childFailureReason(reason) } }
++}
++
++export interface WorkflowChildFailure {
++  seq: number
++  childId?: string
++  stopReason: string
++  reason: string
++  reasonData?: PtcJsonValue
++  cause: 'cancelled' | 'failed'
++}
++
  export class PtcWorkflowRun implements WorkflowRun {
++  private readonly failures = new Map<number, WorkflowChildFailure>()
++  get childFailures(): WorkflowChildFailure[] { return [...this.failures.values()].sort((a, b) => a.seq - b.seq).map(row => ({ ...row })) }
    readonly result: Promise<WorkflowResult>
 +  private readonly readiness = Promise.withResolvers<void>()
 +  readonly ready = this.readiness.promise
    private readonly controller = new AbortController()
    private readonly children = new Map<number, ChildRecord>()
    private readonly pending = new Set<Promise<unknown>>()
-@@ -120,6 +157,13 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -120,6 +181,13 @@
    private cancelReason: string | undefined
    private disposed: Promise<void> | undefined
    private readonly externalAbort: () => void
@@ -1794,7 +1968,7 @@ index 843d48f219..52748dbd57 100644
  
    constructor(
      private readonly ctx: Context,
-@@ -133,7 +177,10 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -133,7 +201,10 @@
      private readonly policy: SandboxExecutionPolicy,
      private readonly observer: ExecutionObserver,
      private readonly signal?: AbortSignal,
@@ -1805,20 +1979,29 @@ index 843d48f219..52748dbd57 100644
      this.externalAbort = () => { this.cancel('workflow signal aborted') }
      if (signal?.aborted) this.externalAbort()
      else signal?.addEventListener('abort', this.externalAbort, { once: true })
-@@ -175,6 +222,12 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -175,7 +246,20 @@
    private bindings(): Record<string, PtcBindingFunction> {
      return {
        begin: () => { this.requireActive(); return Promise.resolve(json(this.init)) },
+-      startChild: value => this.track(this.startChild(childRequest(value))),
 +      loadWorkflow: value => this.track((async () => {
 +        this.requireActive()
 +        if (!this.support) throw new Error('Saved workflows unavailable')
-+        if (typeof value !== 'string' && !(value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 1 && typeof value.scriptPath === 'string')) throw new Error('Invalid workflow reference')
++        if (typeof value !== 'string' && !(value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 1 && 'scriptPath' in value && typeof value.scriptPath === 'string')) throw new Error('Invalid workflow reference')
 +        return json(await this.support.loadWorkflow(value as string | { scriptPath: string }, this.controller.signal))
 +      })()),
-       startChild: value => this.track(this.startChild(childRequest(value))),
++      startChild: value => {
++        const request = childRequest(value)
++        return this.track(this.startChild(request).catch(error => {
++          this.failures.set(request.seq, { seq: request.seq, stopReason: this.cancelReason === undefined ? 'startup-error' : 'cancelled',
++            cause: this.cancelReason === undefined ? 'failed' : 'cancelled', reason: this.cancelReason ?? renderThrown(error) })
++          throw error
++        }))
++      },
        childResult: value => this.track(this.childResult(this.child(value))),
        disposeChild: async (value) => { await this.disposeChild(this.child(value)); return null },
-@@ -196,16 +249,50 @@ export class PtcWorkflowRun implements WorkflowRun {
+       progress: (value) => {
+@@ -196,16 +280,50 @@
  
    private async startChild(request: ChildStartRequest): Promise<PtcJsonValue> {
      this.requireActive()
@@ -1829,7 +2012,7 @@ index 843d48f219..52748dbd57 100644
 +      this.requireActive()
 +      const type = await this.support?.childType?.(request.agentType)
 +      const identity = { ...request, parentOptions: this.parent.session.requestHeader()?.config ?? this.parent.options, policy: this.policy, presetFingerprint: type?.fingerprint }
-+      const cached = await this.journal?.start(callId, identity, value => !value.worktree?.retained || existsSync(value.worktree.path))
++      const cached = await this.journal?.start(callId, identity, value => (request.schema === undefined || value.structured !== undefined) && (!value.worktree?.retained || existsSync(value.worktree.path)))
 +      return { type, cached }
 +    })
 +    this.admission = admission.catch(() => {})
@@ -1840,16 +2023,16 @@ index 843d48f219..52748dbd57 100644
 +    if (!cached && budget?.total !== null && budget?.total !== undefined && budget.spent >= budget.total) throw new Error('Workflow token target reached; no new agents can start')
 +    if (cached) {
 +      if (cached.worktree) this.artifacts.set(callId, cached.worktree)
-+      const run = { id: SessionId(cached.childId ?? `cached-${this.id}-${callId}`), result: Promise.resolve(cached), dispose: async () => {} } as SubagentRun
++      const run: SubagentRun = { id: SessionId(cached.childId ?? `cached-${this.id}-${callId}`), localAgent: undefined, result: Promise.resolve(cached) as SubagentRun['result'], dispose: async () => {} }
 +      this.children.set(callId, { callId, run, cached: true })
 +      return { callId, childId: run.id }
 +    }
 +    if ((request.isolation || request.agentType) && this.provider !== 'omd-workflow') throw new Error('Workflow worktree/agentType options require the omd-workflow subagent provider')
 +    const workflow: WorkflowSpawnOptions = {
-+      isolation: request.isolation,
-+      agentType: request.agentType,
-+      presetFingerprint: type?.fingerprint,
-+      budgetOwner: this.support?.budgetOwner,
++      ...request.isolation === undefined ? {} : { isolation: request.isolation },
++      ...request.agentType === undefined ? {} : { agentType: request.agentType },
++      ...type?.fingerprint === undefined ? {} : { presetFingerprint: type?.fingerprint },
++      ...this.support?.budgetOwner === undefined ? {} : { budgetOwner: this.support?.budgetOwner },
 +      onWorktree: artifact => {
 +        this.artifacts.set(callId, artifact)
 +        if (artifact.retained && artifact.reason !== 'running') this.observer.log(`Worktree retained at ${artifact.path}: ${artifact.reason}`)
@@ -1866,11 +2049,11 @@ index 843d48f219..52748dbd57 100644
          agentOptions: {
            ...request.provider === undefined ? {} : { provider: request.provider },
            ...request.model === undefined ? {} : { model: request.model },
-+          ...request.effort === undefined ? {} : { reasoningEffort: request.effort },
++          ...request.effort === undefined ? {} : { reasoningEffort: ReasoningEffortId(request.effort) },
          },
        },
      })
-@@ -219,7 +306,12 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -219,7 +337,12 @@
      return { callId, childId: run.id }
    }
  
@@ -1884,13 +2067,23 @@ index 843d48f219..52748dbd57 100644
      const signal = this.controller.signal
      signal.throwIfAborted()
      const aborted = Promise.withResolvers<never>()
-@@ -227,18 +319,27 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -227,18 +350,42 @@
      signal.addEventListener('abort', onAbort, { once: true })
      try {
        const result = await Promise.race([record.run.result, aborted.promise])
 -      return json({
 -        output: result.output,
++      const nativeReason = record.run.localAgent ? foldConsumedWork(record.run.localAgent.session.snapshotEvents()).end?.data.reason : undefined
++      const extended = result as typeof result & { error?: unknown; reason?: unknown }
++      const reason = extended.error ?? extended.reason ?? nativeReason
++      if (result.stopReason !== 'completed') this.failures.set(record.callId, {
++        seq: record.callId, childId: record.run.id, stopReason: result.stopReason,
++        cause: result.stopReason === 'aborted' || result.stopReason === 'cancelled' ? 'cancelled' : 'failed',
++        reason: reason === undefined ? `child ended with ${result.stopReason}; inspect child session` : childFailureReason(reason),
++        ...reason !== undefined && typeof reason !== 'string' ? { reasonData: failureReasonData(reason) } : {},
++      })
 +      record.result = {
++        ...this.failures.has(record.callId) ? { reason: this.failures.get(record.callId)!.reason } : {},
 +        childId: record.run.id,
 +        output: [...result.output],
          stopReason: result.stopReason,
@@ -1899,6 +2092,11 @@ index 843d48f219..52748dbd57 100644
 +      }
 +      const budget = this.support?.budget?.()
 +      return json({ ...record.result, budgetSpent: budget?.spent ?? 0, budgetTotal: budget?.total ?? null })
++    } catch (error) {
++      this.failures.set(record.callId, { seq: record.callId, childId: record.run.id,
++        stopReason: this.cancelReason === undefined ? 'result-error' : 'cancelled', cause: this.cancelReason === undefined ? 'failed' : 'cancelled',
++        reason: this.cancelReason ?? renderThrown(error) })
++      throw error
      } finally {
        signal.removeEventListener('abort', onAbort)
      }
@@ -1916,7 +2114,23 @@ index 843d48f219..52748dbd57 100644
        this.ctx.logger.warn(`workflow-ptc: child dispose failed: ${renderThrown(error)}`)
      }).finally(() => {
        this.children.delete(record.callId)
-@@ -273,6 +374,16 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -263,6 +410,15 @@
+ 
+   private endAgent(info: WorkflowAgentEndInfo): void {
+     if (!this.liveAgents.delete(info.seq)) return
++    if (info.outcome !== 'completed' && !this.failures.has(info.seq)) this.failures.set(info.seq, {
++      seq: info.seq, childId: info.childId, stopReason: info.outcome, cause: info.outcome === 'cancelled' ? 'cancelled' : 'failed',
++      reason: info.outcome === 'cancelled' ? this.cancelReason ?? 'workflow child cancelled' : 'child did not produce the requested structured result',
++    })
++    const record = this.children.get(info.seq)
++    if (info.outcome === 'failed' && record?.result?.stopReason === 'completed') {
++      record.result.stopReason = 'error'
++      record.result.reason = this.failures.get(info.seq)?.reason
++    }
+     this.observer.agentEnd(info)
+   }
+ 
+@@ -273,6 +429,16 @@
    private async drive(): Promise<WorkflowResult> {
      let result: WorkflowResult
      try {
@@ -1924,7 +2138,7 @@ index 843d48f219..52748dbd57 100644
 +      if (this.support) {
 +        this.journal = await WorkflowJournal.create(this.support.root, this.parent.session.id, this.id, {
 +          script: serializeWorkflowSource(this.meta, this.init.body), meta: this.meta, args: this.init.args,
-+          resumeFromRunId: this.support.resumeFromRunId,
++          ...this.support.resumeFromRunId === undefined ? {} : { resumeFromRunId: this.support.resumeFromRunId },
 +        })
 +        this.init.budget = this.support.budget?.() ?? { total: null, spent: 0 }
 +      }
@@ -1933,7 +2147,7 @@ index 843d48f219..52748dbd57 100644
        const outcome = await this.runtime.run(this.runtime.resolve({
          program: PROGRAM,
          bindings: [{ global: 'workflowHost', functions: this.bindings() }],
-@@ -286,6 +397,7 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -286,6 +452,7 @@
        else if (outcome.error !== undefined) result = { value: null, stopReason: 'error', error: `workflow execution failed (${outcome.error.kind}): ${outcome.error.message}`, agentsStarted: this.started }
        else result = workflowResult(outcome.value)
      } catch (error: unknown) {
@@ -1941,7 +2155,7 @@ index 843d48f219..52748dbd57 100644
        this.terminal = true
        result = this.cancelReason === undefined
          ? { value: null, stopReason: 'error', error: renderThrown(error), agentsStarted: this.started }
-@@ -301,6 +413,12 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -301,6 +468,12 @@
        this.children.clear()
        for (const info of this.liveAgents.values()) this.endAgent({ ...info, outcome: 'cancelled' })
      }
@@ -1949,7 +2163,7 @@ index 843d48f219..52748dbd57 100644
 +      if (this.journal) unquiescedJournals.add(this.journal)
 +      return { value: null, stopReason: 'error', agentsStarted: this.started, error: `Workflow cleanup failed; resume is locked until process exit: ${renderThrown(this.cleanupError)}` }
 +    }
-+    try { await this.journal?.close(result.stopReason) }
++    try { await this.journal?.close(result.stopReason, this.childFailures) }
 +    catch (error) { return { value: null, stopReason: 'error', agentsStarted: this.started, error: `Workflow journal could not settle: ${renderThrown(error)}` } }
      return result
    }
@@ -2081,7 +2295,6 @@ index e70eb8b0e9..f6842209bd 100644
      this.emitWorkflowEvent('workflow/start', info)
 diff --git a/packages/workflow/workflow-ptc/src/journal.ts b/packages/workflow/workflow-ptc/src/journal.ts
 new file mode 100644
-index 0000000000..3dc4e4e59f
 --- /dev/null
 +++ b/packages/workflow/workflow-ptc/src/journal.ts
 @@ -0,0 +1,146 @@
@@ -2091,7 +2304,7 @@ index 0000000000..3dc4e4e59f
 +import type { FileHandle } from 'node:fs/promises'
 +import { join, resolve } from 'node:path'
 +import type { SessionId } from '@deepseek-ai/dsh-session'
-+import { SessionWriteLease } from '../../../session/session-persistence-jsonl/src/lease.ts'
++import { SessionWriteLease } from '@deepseek-ai/dsh-session-persistence-jsonl/src/lease.ts'
 +import type { ChildResult } from './types.ts'
 +
 +interface Call {
@@ -2173,7 +2386,7 @@ index 0000000000..3dc4e4e59f
 +      const directory = join(canonical, runId(id))
 +      await mkdir(directory, { mode: 0o700 })
 +      lease = await SessionWriteLease.acquire(directory, sessionId as SessionId)
-+      for (const [name, contents] of [['script.js', input.script], ['run.json', JSON.stringify({ version: 1, id, sessionId, ...input }) + '\n']]) {
++      for (const [name, contents] of [['script.js', input.script], ['run.json', JSON.stringify({ version: 1, id, sessionId, ...input }) + '\n']] as const) {
 +        const handle = await open(join(directory, name), 'wx', 0o600)
 +        try { await handle.writeFile(contents); await handle.sync() } finally { await handle.close() }
 +      }
@@ -2219,9 +2432,9 @@ index 0000000000..3dc4e4e59f
 +  }
 +
 +  /** Call only after every child and pending startup has reached quiescence. */
-+  async close(outcome: unknown): Promise<void> {
++  async close(outcome: unknown, failures: readonly unknown[] = []): Promise<void> {
 +    this.closing ??= (async () => {
-+      try { await this.append({ type: 'end', outcome }) }
++      try { await this.append({ type: 'end', outcome, ...failures.length ? { failures } : {} }) }
 +      finally {
 +        this.closed = true
 +        try { await this.file.close() }
@@ -2665,10 +2878,9 @@ index 0000000000..8379be558f
 +  })
 +}
 diff --git a/packages/workflow/workflow-ptc/src/types.ts b/packages/workflow/workflow-ptc/src/types.ts
-index c8e3e39313..b75b58f727 100644
 --- a/packages/workflow/workflow-ptc/src/types.ts
 +++ b/packages/workflow/workflow-ptc/src/types.ts
-@@ -32,10 +32,13 @@ export interface WorkerInit {
+@@ -32,10 +32,13 @@
    args?: unknown
    /** The guest helper limits. */
    limits: WorkerLimits
@@ -2682,7 +2894,7 @@ index c8e3e39313..b75b58f727 100644
    /** The child's prompt text. */
    prompt: string
    /** The structured-output schema, if the call passed one (already subset-checked). */
-@@ -44,6 +47,9 @@ export interface ChildStartRequest {
+@@ -44,6 +47,9 @@
    provider?: string
    /** The per-child model override, if the call passed one. */
    model?: string
@@ -2692,10 +2904,11 @@ index c8e3e39313..b75b58f727 100644
  }
  
  /**
-@@ -58,6 +64,11 @@ export interface ChildResult {
+@@ -58,6 +64,12 @@
    structured?: unknown
    /** Why the child run ended (`'completed'` is the only value the runtime branches on). */
    stopReason: string
++  reason?: string
 +  budgetSpent?: number
 +  budgetTotal?: number | null
 +  /** Original durable child identity, retained when a cached call is replayed. */
@@ -2704,7 +2917,7 @@ index c8e3e39313..b75b58f727 100644
  }
  
  /**
-@@ -87,4 +98,5 @@ export interface ChildPort {
+@@ -87,4 +99,5 @@
     *   provider's asynchronous start fails.
     */
    startAgent(request: ChildStartRequest): Promise<ChildHandle>

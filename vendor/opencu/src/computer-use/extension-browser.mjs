@@ -3,7 +3,6 @@ import { chromium } from 'playwright';
 import { BrowserActions } from './browser-actions.mjs';
 import { ExtensionCdp } from './extension-cdp.mjs';
 import { BrowserTransport } from './browser-transport.mjs';
-import { cancelWebMcp } from './browser-webmcp.mjs';
 
 const disconnected = () => Object.assign(new Error('Chrome 连接已改变，请重新选择当前标签页。'), { code: 'EXTENSION_DISCONNECTED' });
 const failures = (results, message) => {
@@ -43,13 +42,13 @@ export class ExtensionBrowser extends BrowserActions {
   }
   forget(id, error) {
     const info = this.records.get(id); if (!info) return;
-    this.records.delete(id); this.tabs.delete(String(info.nativeTabId)); this.owners.delete(id);this.downloadSessions.delete(id);
+    this.emulations.delete(id);this.viewportOwners.delete(id);this.records.delete(id); this.tabs.delete(String(info.nativeTabId)); this.owners.delete(id);this.downloadSessions.delete(id);
     if (error) this.onControlLost?.(id, error);
     this.onTabClosed?.(id);
   }
   invalidate() {
     if (this.run.lost) return; this.run.lost = true;
-    const tabs = [...this.records.keys()]; this.records.clear(); this.tabs.clear(); this.owners.clear();
+    const tabs = [...this.records.keys()]; this.records.clear(); this.tabs.clear(); this.owners.clear();this.emulations.clear();this.viewportOwners.clear();
     this.onBrowserLost?.(tabs, disconnected(), this.run.id);
   }
   async connection(sessionId) {
@@ -149,8 +148,9 @@ export class ExtensionBrowser extends BrowserActions {
     const pending = (async () => {
       await link.ready?.catch(() => {});
       const record = connection.pages.get(link.tabId);
-      if (record) await cancelWebMcp(record);
-      const restoration = record ? await Promise.allSettled([this.resetViewport(record)]) : [];
+      if (record) await this.releaseInput(record);
+      const restoration = record ? await Promise.allSettled([this.restoreOverrides(record)]) : [];
+      if(!this.closing&&restoration.some(result=>result.status==='rejected')){link.closing=false;connection.closing=false;failures(restoration,'Chrome device settings restoration failed; retry stop');}
       // Explicit navigations stop before severing the actor. Input cleanup is
       // authoritative in the extension, including Playwright's internal keys.
       if (record?.navigating && link.browser?.isConnected()) await record.cdp.send('Page.stopLoading');
@@ -175,7 +175,7 @@ export class ExtensionBrowser extends BrowserActions {
     finally { if (entry.closing === pending) entry.closing = null; }
   }
   async disconnect(sessionId) {
-    this.viewportPresets.delete(sessionId);
+    this.viewportPresets.delete(sessionId);this.emulationPresets.delete(sessionId);
     if (this.disconnecting.has(sessionId)) return this.disconnecting.get(sessionId);
     const active = this.connections.get(sessionId); if (!active) return;
     const pending = (async () => {
@@ -192,7 +192,7 @@ export class ExtensionBrowser extends BrowserActions {
     if (this.windowCursor && link?.entry) await link.entry.gateway.cursor(link.clientId, null);
   }
   async endTurn(sessionId) {
-    this.viewportPresets.delete(sessionId);
+    this.viewportPresets.delete(sessionId);this.emulationPresets.delete(sessionId);
     for (const [id, owner] of this.owners) if (owner.sessionId === sessionId && owner.created && !owner.keep) {
       const record = await this.target(sessionId, id); await record.page.close();
     }

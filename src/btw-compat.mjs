@@ -1,16 +1,52 @@
 import { randomUUID } from 'node:crypto';
+import { symbols } from '@deepseek-ai/cordis';
+import { isAgentLoopRequest, markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { BTW_LABEL_PREFIX, btwCreation, markBtwSession, isBtwSession, completedBtwPrefix,
   pendingToolCalls, assertBtwCachePrefix, cacheUsageText } from './btw-policy.mjs';
 
 // Upstream remains byte-for-byte intact. This façade changes execution policy
 // and lifecycle only, while retaining its native fork call and original prompt.
 export function createBtwCompatibility(ctx) {
-  const active = new Map(), requests = new Map(), completed = new Map(), assemblies = new Map(), completedAssemblies = new Map();
+  const active = new Map(), requests = new Map(), completed = new Map(), assemblies = new Map();
   const ownedIds = new Set();
   let closed = false;
   const owned = agent => isBtwSession(agent?.session);
-  const stateOf = session => [...active.values()].find(s => s.child === session.id);
+  const stateOf = session => session?.id ? [...active.values()].find(s => s.child === session.id) : undefined;
   const effect = disposer => ctx.effect(() => disposer);
+  // Native fork still owns the balanced, durable seed. While a main turn is
+  // running, its latest dispatched request is the cacheable context snapshot;
+  // append only the child's side question to that immutable request history.
+  // Adapt both entry points because llm/stream receives frozen options and its
+  // next() cannot replace them. Keep prepared-call ownership and cancellation.
+  ctx.effect(() => {
+    const runtime = ctx.llm[symbols.original] || ctx.llm;
+    const stream = runtime.stream, prepareCall = runtime.prepareCall;
+    const descriptors = ['stream', 'prepareCall'].map(key => Object.getOwnPropertyDescriptor(runtime, key));
+    let installed = true;
+    const project = options => {
+      const state = installed && stateOf({ id: options.sessionId });
+      if (!state?.useRequestContext || options.purpose) return options;
+      const question = options.messages?.findLast(m => m.role === 'user' && m.source?.kind === 'user');
+      if (!question) throw Error('/btw 缺少侧问消息；已停止请求。');
+      const projected = Object.freeze({ ...options, toolHistory: state.reference.toolHistory,
+        messages: Object.freeze([...state.reference.messages, question]) });
+      return isAgentLoopRequest(options) ? markAgentLoopRequest(projected) : projected;
+    };
+    const wrappedStream = function(options) { return stream.call(this, project(options)); };
+    const wrappedPrepare = async function(...args) {
+      const prepared = await prepareCall.apply(this, args);
+      return Object.freeze({ ...prepared, stream: options => prepared.stream(project(options)) });
+    };
+    runtime.stream = wrappedStream; runtime.prepareCall = wrappedPrepare;
+    return () => {
+      installed = false;
+      for (const [i, key, wrapper] of [[0, 'stream', wrappedStream], [1, 'prepareCall', wrappedPrepare]]) {
+        if (runtime[key] !== wrapper) continue;
+        if (descriptors[i]) Object.defineProperty(runtime, key, descriptors[i]);
+        else delete runtime[key];
+      }
+    };
+  });
   effect(ctx.on('agent/created', ({ agent }) => {
     const state = btwCreation.getStore();
     if (state && agent.session.header.parentSession === state.parent) {
@@ -23,7 +59,7 @@ export function createBtwCompatibility(ctx) {
       const state = stateOf(session);
       if (!state?.assembly) throw Error('/btw 缺少主会话已装配内容；已停止。');
       // OMD's ordinary child adapter deliberately uses different tool text.
-      // Side questions keep the parent's completed assembly, including schemas,
+      // Side questions keep the parent's captured assembly, including schemas,
       // rather than composing a new persona or stripping tools from the wire.
       return state.assembly;
     }
@@ -59,21 +95,20 @@ export function createBtwCompatibility(ctx) {
         const seeded = session.snapshotEvents().slice(0, session.inheritedEventCount || 0);
         if (JSON.stringify(seeded) !== JSON.stringify(state.prefix)) throw Error('/btw 未继承完整回合前缀；已停止请求。');
       } catch(error) { state.failure = error.message; throw error; }
-    } else if (!options.purpose) requests.set(session.id, options);
+    } else if (!options.purpose) requests.set(session.id, { reference: options, assembly: assemblies.get(session.id) });
     return next();
   }, { global: true }));
   effect(ctx.on('session/event', (session, event) => {
     if (!isBtwSession(session)) {
       if (event.type === 'turn/end' && requests.has(session.id)) {
         completed.set(session.id, requests.get(session.id));
-        completedAssemblies.set(session.id, assemblies.get(session.id));
       }
       return;
     }
     const state = stateOf(session);
     if (state && event.type === 'assistant/message') state.usages.push(event.data?.usage);
   }, { global: true }));
-  effect(ctx.on('session/disposed', session => { requests.delete(session.id); completed.delete(session.id); assemblies.delete(session.id); completedAssemblies.delete(session.id); }, { global: true }));
+  effect(ctx.on('session/disposed', session => { requests.delete(session.id); completed.delete(session.id); assemblies.delete(session.id); }, { global: true }));
 
   const facade = {
     effect: (...args) => ctx.effect(...args),
@@ -107,10 +142,12 @@ export function createBtwCompatibility(ctx) {
       start: async (_provider, request) => {
         const state = btwCreation.getStore();
         if (!state || closed) throw Error('/btw 请求没有有效生命周期。');
-        state.prefix = completedBtwPrefix(request.parent.session);
-        state.reference = completed.get(state.parent);
-        state.assembly = completedAssemblies.get(state.parent);
-        if (!state.reference) throw Error('/btw 无法核对已有缓存前缀；请先让主会话完成一轮。');
+        const captured = requests.get(state.parent);
+        if (!captured) throw Error('/btw 无法核对已有缓存前缀；请等主模型开始响应后再侧问。');
+        state.prefix = completedBtwPrefix(request.parent.session, { allowEmpty: true });
+        state.reference = captured.reference;
+        state.assembly = captured.assembly;
+        state.useRequestContext = captured !== completed.get(state.parent);
         const provider = ctx.subagents.getProvider('fork');
         if (!provider?.inheritsParentContext) throw Error('/btw 需要原生上下文继承 fork；不会切换到其他 provider。');
         const run = await ctx.subagents.start('fork', { ...request, label: BTW_LABEL_PREFIX + state.id });
@@ -122,7 +159,7 @@ export function createBtwCompatibility(ctx) {
   const close = () => {
     closed = true;
     for (const state of active.values()) state.controller.abort(Error('/btw 插件退出'));
-    requests.clear(); completed.clear(); assemblies.clear(); completedAssemblies.clear();
+    requests.clear(); completed.clear(); assemblies.clear();
     return Promise.allSettled([...active.values()].map(state => state.done));
   };
   effect(close);
