@@ -46,3 +46,25 @@ for (const ending of ['completed', 'cancelled']) test(`background workflow stays
   assert.equal(await panel.locator('[data-member-status="interrupted"]').count(), 0);
   assert.deepEqual(fx.errors, []);
 });
+
+test('partial child failure remains failed in the native workflow UI after script completion and reload', {timeout:120000}, async t => {
+  let armed = false, issued = false;
+  const fx = await frontendFixture(t, {modelReply(payload) {
+    if (!payload.tools?.length || !armed) return;
+    const users = payload.messages.filter(message => message.role === 'user').map(message => typeof message.content === 'string' ? message.content.trim() : message.content?.map(block => block.text ?? '').join('\n').trim());
+    if (users.includes('OMD_PARTIAL_UI_BAD')) return {delta:{role:'assistant',content:'unfinished'},finish_reason:'length'};
+    if (users.includes('OMD_PARTIAL_UI_GOOD')) return {delta:{role:'assistant',content:'good'},finish_reason:'stop'};
+    if (!issued) { issued = true; return {delta:{role:'assistant',tool_calls:[{index:0,id:'partial-ui',type:'function',function:{name:'workflow',arguments:JSON.stringify({run_in_background:true,script:`export const meta={name:'partial-ui',description:'Partial failure UI'}; return (await parallel([() => agent('OMD_PARTIAL_UI_BAD', {label:'bad-child'}), () => agent('OMD_PARTIAL_UI_GOOD', {label:'good-child'})])).filter(Boolean);`})}}]},finish_reason:'tool_calls'}; }
+    return {delta:{role:'assistant',content:'Partial failure recorded.'},finish_reason:'stop'};
+  }});
+  armed = true;
+  await fx.rpc('session/prompt', {requestId:crypto.randomUUID(), sessionId:fx.sessionId, mode:'queue',content:[{type:'text',text:'Run the authorized partial failure UI fixture.'}]});
+  const panel = fx.page.locator('[data-workflow-run]');
+  await until(async () => await panel.getAttribute('data-run-status') === 'failed');
+  assert.equal(await panel.locator('[data-member-status="failed"]').count(), 1);
+  assert.equal(await panel.locator('[data-member-status="completed"]').count(), 1);
+  await fx.page.reload();
+  await until(async () => await panel.getAttribute('data-run-status') === 'failed');
+  assert.equal(await panel.locator('[data-member-status="failed"]').count(), 1);
+  assert.deepEqual(fx.errors, []);
+});

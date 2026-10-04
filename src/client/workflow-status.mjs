@@ -8,7 +8,7 @@ export function workflowJobs(entries) {
     else if (event.type === 'tool-workflow/run-start') runs.set(data.runId, { seq: event.seq });
     else if (event.type === 'tool-workflow/run-end') {
       const run = runs.get(data.runId);
-      if (run) run.ended = true;
+      if (run) { run.ended = true; run.failures = data.failures ?? []; }
     } else if (event.type === 'tool/result' && !data.message?.isError) {
       const message = data.message;
       if (message?.role !== 'tool' || message.source?.kind !== 'tool') continue;
@@ -34,6 +34,7 @@ export function workflowJobs(entries) {
 // Missing jobs, durable endings, and real member outcomes remain untouched.
 export function liveWorkflowData(node, runs, jobs, sessionId) {
   const run = runs.get(node.id), data = node.data;
+  if (run?.failures?.length && data.status === 'completed') return { ...data, status: 'failed', failures: run.failures };
   if (data.status !== 'interrupted' || !run?.jobId || run.ended) return data;
   const job = jobs?.find(row => row.id === run.jobId && row.kind === 'workflow' && row.owner === sessionId);
   if (!job || !['running', 'stopping'].includes(job.status)) return data;

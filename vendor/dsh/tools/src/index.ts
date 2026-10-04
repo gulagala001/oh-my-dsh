@@ -625,12 +625,21 @@ export type PostToolDecision =
  * property (e.g. `throw { message: 'denied' }`) use it too; everything else
  * is stringified.
  */
-function errorMessage(error: unknown): string {
+function errorMessage(error: unknown, cancellation = false): string {
   try {
     if (error instanceof Error) return error.message
     if (typeof error === 'object' && error !== null
       && 'message' in error && typeof error.message === 'string') {
       return error.message
+    }
+    if (typeof error === 'object' && error !== null) {
+      if (cancellation && 'kind' in error) {
+        if (error.kind === 'user') return 'tool call cancelled by user'
+        if (error.kind === 'parent') return 'tool call cancelled by parent'
+        if (error.kind === 'disposed') return 'tool call cancelled because its owner was disposed'
+        if (error.kind === 'hook' && 'reason' in error && typeof error.reason === 'string') return `tool call cancelled by hook: ${error.reason}`
+      }
+      return JSON.stringify(error) ?? String(error)
     }
     return String(error)
   } catch {
@@ -1573,7 +1582,7 @@ export class ToolRuntime extends Service {
     /* v8 ignore next -- only registry-minted executions reach the staged scheduler methods */
     if (state === undefined) throw new Error('tool registry scheduler invariant violated: missing cancellation state')
     return state.bodyInvoked
-      ? toolAbortedResult(prior)
+      ? toolAbortedResult(prior, state.callerSignal.reason)
       : toolAbortedBeforeDispatchResult(prior)
   }
 
@@ -1602,10 +1611,10 @@ export class ToolRuntime extends Service {
       const returned = await tool.execute(exec.arguments, exec)
       const result = this.createSuccessResult(exec, tool, returned)
       return isAborted(signal)
-        ? toolAbortedResult(result)
+        ? toolAbortedResult(result, signal.reason)
         : result
     } catch (error: unknown) {
-      return toolErrorResult(error)
+      return isAborted(signal) ? toolAbortedResult(undefined, signal.reason) : toolErrorResult(error)
     } finally {
       fused.dispose()
       exec.signal = wrapperSignal
@@ -1976,13 +1985,14 @@ function fuseToolSignals(caller: AbortSignal, wrapper: AbortSignal): FusedToolSi
 }
 
 /** Canonical result when cancellation supersedes success after body invocation. */
-function toolAbortedResult(prior?: ToolExecutionResult): ToolExecutionResult {
+function toolAbortedResult(prior?: ToolExecutionResult, reason?: unknown): ToolExecutionResult {
+  const message = reason === undefined ? 'tool call aborted' : `tool call aborted: ${errorMessage(reason, true)}`
   const additionalContexts = prior?.additionalContexts ?? []
   return {
-    content: [{ type: 'text', text: 'Error: tool call aborted' }],
+    content: [{ type: 'text', text: `Error: ${message}` }],
     isError: true,
     error: {
-      message: 'tool call aborted',
+      message,
       info: { name: 'AbortError', code: TOOL_ABORTED },
     },
     ...additionalContexts.length > 0 ? { additionalContexts } : {},
