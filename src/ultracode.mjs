@@ -43,10 +43,10 @@ export class UltracodeControl {
   constructor(ctx, isOmd, store) {
     this.ctx = ctx; this.isOmd = isOmd; this.store = store;
     this.folds = new WeakMap(); this.claims = new WeakMap(); this.frames = new WeakMap(); this.fresh = new WeakSet(); this.writes = new Map();
-    this.guide = promptText('runtime/workflow-authoring.md');
-    this.guideHash = createHash('sha256').update(this.guide).digest('hex');
-    const pro = proWorkflowGuide(this.guide);
-    this.guides = { ultracode: { text: this.guide, hash: this.guideHash }, pro: { text: pro, hash: createHash('sha256').update(pro).digest('hex') } };
+    const ultracode = promptText('runtime/workflow-authoring.md');
+    const texts = { ultracode, pro: proWorkflowGuide(ultracode) };
+    this.guides = Object.fromEntries(Object.entries(texts).map(([mode, text]) =>
+      [mode, { text, hash: createHash('sha256').update(text).digest('hex') }]));
   }
   fold(session) {
     let state = this.folds.get(session);

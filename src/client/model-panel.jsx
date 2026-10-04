@@ -10,7 +10,7 @@ const seeded = (index, salt) => { const value = Math.sin((index+1)*12.9898+salt*
 const particles = Array.from({ length: 14 }, (_, i) => ({
   left: `${4+seeded(i,14)*92}%`, top: `${12+seeded(i,23)*76}%`,
   '--particle-opacity':.4+seeded(i,11)*.6, '--particle-scale':.5+seeded(i,12)*.45,
-  animationDelay: `${-(i*.14+seeded(i,17)*1.2)}s`, animationDuration: `${1.9/(.8+seeded(i,21)*.4)}s`,
+  animationDelay: `${-(i*.14+seeded(i,17)*1.2)}s`, '--particle-duration': `${1.9/(.8+seeded(i,21)*.4)}s`,
 }));
 const sameRoute = (a, b) => a?.provider === b?.provider && a?.model === b?.model;
 async function modeApi(sessionId, body, signal) {
