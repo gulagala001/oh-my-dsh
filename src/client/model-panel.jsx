@@ -52,9 +52,10 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
   const selected = mode?.selected ?? state.current;
   const group = state.groups.find(item => item.id === selected?.provider);
   const model = group?.models.find(item => item.id === selected?.model);
-  const choices = useMemo(() => [...effortChoices(model), ...mode?.eligible ? [{ id: 'omd:ultracode', label: 'Ultracode', ultracode: true }] : []], [model, mode?.eligible]);
+  const choices = useMemo(() => [...effortChoices(model), ...mode?.eligible ? [{ id: 'omd:pro', label: 'Pro', mode: 'pro' }, { id: 'omd:ultracode', label: 'Ultracode', mode: 'ultracode' }] : []], [model, mode?.eligible]);
   const effective = selected?.reasoningEffort ?? model?.reasoning?.defaultEffort;
-  const selectedIndex = mode?.enabled ? choices.findIndex(item => item.ultracode) : choices.findIndex(item => !item.ultracode && item.id === effective);
+  const activeMode = mode?.mode ?? (mode?.enabled ? 'ultracode' : 'off');
+  const selectedIndex = activeMode !== 'off' ? choices.findIndex(item => item.mode === activeMode) : choices.findIndex(item => !item.mode && item.id === effective);
   const value = draft ?? Math.max(0, selectedIndex), level = choices[value] ?? choices[0];
   const modelName = model?.name ?? selected?.model ?? '选择模型';
   const label = selectedIndex < 0 && draft === null ? effective ?? '默认' : level.label;
@@ -92,7 +93,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
     target?.focus({ preventScroll: true });
   }, [busy, open, pane, sliderDisabled]);
 
-  const save = async (route, ultracode, reasoningEffort) => {
+  const save = async (route, nextMode, reasoningEffort) => {
     if (!mode || writing.current || locked) return false;
     writing.current = true; ++ticket.current;
     // Native disabled controls lose focus. Keep Escape/Tab available while
@@ -103,10 +104,11 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
     }
     setSaving(true); setError('');
     try {
-      const next = await modeApi(sessionId, { ...route, reasoningEffort, ultracode, expectedRevision: mode.revision });
+      const next = await modeApi(sessionId, { ...route, reasoningEffort, mode: nextMode, expectedRevision: mode.revision });
       if (!live.current) return false;
       setMode(next);
-      if (ultracode && !mode.enabled) { clearTimeout(noticeTimer.current); setNotice(true); noticeTimer.current = setTimeout(() => setNotice(false), 2000); }
+      if (nextMode === 'off') { clearTimeout(noticeTimer.current); setNotice(false); }
+      else if (nextMode !== activeMode) { clearTimeout(noticeTimer.current); setNotice(nextMode); noticeTimer.current = setTimeout(() => setNotice(false), 2000); }
       return true;
     } catch (e) { if (live.current) setError(e.message); return false; }
     finally { writing.current = false; if (live.current) { setSaving(false); setDraft(null); draftRef.current = null; } }
@@ -120,13 +122,13 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
     const choice = choices[index];
     if (!choice || !selected || sliderDisabled) return;
     if (index === selectedIndex) { setDraft(null); draftRef.current = null; return; }
-    void save({ provider: selected.provider, model: selected.model }, Boolean(choice.ultracode), choice.ultracode ? undefined : choice.id);
+    void save({ provider: selected.provider, model: selected.model }, choice.mode ?? 'off', choice.mode ? undefined : choice.id);
   };
   const change = index => { gestureRevision.current ??= mode?.revision; draftRef.current = index; setDraft(index); };
   const chooseModel = async (provider, next) => {
     const effort = sameRoute(selected, {provider, model:next.id}) ? selected.reasoningEffort : next.reasoning?.defaultEffort;
     const origin = document.activeElement;
-    if (await save({provider,model:next.id}, Boolean(mode?.enabled), effort)
+    if (await save({provider,model:next.id}, activeMode, effort)
       && panel.current && (document.activeElement === panel.current || document.activeElement === origin)) setPane('effort');
   };
   const keyDown = event => {
@@ -152,12 +154,12 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
     {open && createPortal(<section ref={panel} id={id} className="omd-model-panel" data-pane={pane} style={position} role="dialog" aria-label="模型与思考强度" aria-busy={busy} tabIndex={-1} onKeyDown={keyDown}>
       {pane === 'effort' ? <>
         <header className="omd-effort-heading">
-          <h2 key={label} className={level.ultracode ? 'omd-effort-ultra' : ''}>{label}</h2>
+          <h2 key={label} className={level.mode === 'ultracode' ? 'omd-effort-ultra' : level.mode === 'pro' ? 'omd-effort-pro' : ''}>{label}</h2>
           <button type="button" className="omd-model-reset" aria-label="恢复默认思考强度" title="恢复默认思考强度" disabled={busy || !model || !mode}
-            onClick={() => void save({provider:selected.provider,model:selected.model}, false, model.reasoning?.defaultEffort)}><Reset/></button>
+            onClick={() => void save({provider:selected.provider,model:selected.model}, 'off', model.reasoning?.defaultEffort)}><Reset/></button>
           <button ref={modelButton} type="button" className="omd-model-current" onClick={() => { setPane('model'); setQuery(''); }}><span>{modelName}</span><Chevron/></button>
         </header>
-        <div className="omd-effort-control" data-ultra={level.ultracode || undefined} data-dragging={dragging || undefined} style={{'--effort-progress':`${choices.length > 1 ? value / (choices.length - 1) * 100 : 0}%`,'--effort-ratio':choices.length > 1 ? value / (choices.length - 1) : 0}}>
+        <div className="omd-effort-control" data-ultra={level.mode === 'ultracode' || undefined} data-pro={level.mode === 'pro' || undefined} data-dragging={dragging || undefined} style={{'--effort-progress':`${choices.length > 1 ? value / (choices.length - 1) * 100 : 0}%`,'--effort-ratio':choices.length > 1 ? value / (choices.length - 1) : 0}}>
           <div className="omd-effort-track" aria-hidden="true"><div className="omd-effort-fill"><i className="omd-effort-glow"/>{particles.map((style,i) => <i key={i} className="omd-effort-particle" style={style}/>)}</div>
             <div className="omd-effort-ticks">{choices.map((_,i) => <i key={i} data-selected={i<=value||undefined} style={{left:`${choices.length > 1 ? i/(choices.length-1)*100 : 0}%`}}/>)}</div>
           </div><div className="omd-effort-thumb" aria-hidden="true"/>
@@ -169,7 +171,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
             onKeyUp={event => { if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(event.key)) commit(draftRef.current ?? value); }}
             onBlur={() => { if (!draggingRef.current && draftRef.current !== null) commit(draftRef.current); }}/>
         </div>
-        <div className="omd-effort-notice" data-visible={notice || undefined} role="status">更深入地实现与验证，可能需要更多时间。</div>
+        <div className="omd-effort-notice" data-visible={notice || undefined} data-mode={notice || undefined} role="status">{notice === 'pro' ? '分工实现、持续迭代，可能需要更多时间。' : notice === 'ultracode' ? '更深入地实现与验证，可能需要更多时间。' : ''}</div>
         {state.routable === false && <p className="omd-model-error">当前模型不可用，请选择其他模型。</p>}
       </> : <>
         <div className="omd-model-search"><button type="button" aria-label="返回思考强度" onClick={() => setPane('effort')}><Chevron back/></button><input ref={search} type="search" aria-label="搜索模型" placeholder="搜索模型" value={query} onChange={e=>setQuery(e.target.value)}/></div>

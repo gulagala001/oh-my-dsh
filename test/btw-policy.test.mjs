@@ -44,7 +44,7 @@ test('route, system and schema drift fail before dispatch with no standalone fal
     const child={...structuredClone(parent),messages:[...parent.messages,{role:'user',content:[]}],[key]:'changed'};
     assert.throws(()=>assertBtwCachePrefix(parent,child),/缓存前缀/);
   }
-  assert.throws(()=>assertBtwCachePrefix(null,wire()),/完成一轮/);
+  assert.throws(()=>assertBtwCachePrefix(null,wire()),/主模型开始响应/);
 });
 test('cache usage differentiates real hit, explicit zero and absent usage',()=>{
   assert.deepEqual(cacheUsage({cacheReadTokens:32}),{state:'hit',cacheReadTokens:32});

@@ -177,7 +177,7 @@ export class BrowserHost extends BrowserActions {
     if (!run.ready) return;
     this.endpoint = null; this.starting = null;
     const tabs = [...this.records.keys()];
-    this.records.clear(); this.owners.clear(); this.connections.clear();
+    this.records.clear(); this.owners.clear(); this.connections.clear(); this.emulations.clear(); this.viewportOwners.clear();
     const error = Object.assign(new Error('浏览器已退出，请重新打开浏览器。旧页面引用已失效。'), { code: 'BROWSER_DISCONNECTED', cause: reason });
     this.onBrowserLost?.(tabs, error, run.id);
     for (const id of tabs) this.onTabClosed?.(id);
@@ -256,6 +256,8 @@ export class BrowserHost extends BrowserActions {
       const record = await this.bind(connection, page); this.claim(sessionId, record.id, true);
       const preset = this.viewportPresets.get(sessionId);
       if (preset) { await this.setViewport(record, preset.size); record.viewportPreset = preset.id; }
+      const emulation=this.emulationPresets.get(sessionId);
+      if(emulation){await this.setEmulation(record,emulation.settings,signal);record.emulationPreset=emulation.id;}
       // Finish the new target's initial document before starting its first
       // requested navigation; a late blank-page load can otherwise abort it.
       // Windows Chromium can abort the first URL while its blank target is
@@ -299,7 +301,7 @@ export class BrowserHost extends BrowserActions {
     return record;
   }
   async disconnect(sessionId) {
-    this.viewportPresets.delete(sessionId);
+    this.viewportPresets.delete(sessionId);this.emulationPresets.delete(sessionId);
     if (this.disconnecting?.has(sessionId)) return this.disconnecting.get(sessionId);
     const pending = this.connections.get(sessionId);
     this.connections.delete(sessionId);
@@ -311,15 +313,15 @@ export class BrowserHost extends BrowserActions {
         // Unloading destroys this owned browser. A metrics restore racing its
         // termination can leave Chromium's acknowledgement pending forever.
         // Ordinary stop keeps the browser alive and must still restore sizing.
-        const results = await Promise.allSettled([record.navigating ? record.cdp.send('Page.stopLoading') : Promise.resolve(), this.releaseInput(record), this.closing ? Promise.resolve() : this.resetViewport(record)]);
+        const results = await Promise.allSettled([record.navigating ? record.cdp.send('Page.stopLoading') : Promise.resolve(), (async()=>{await this.releaseInput(record);if(!this.closing)await this.restoreOverrides(record);})()]);
         const failed = results.filter(r => r.status === 'rejected').map(r => r.reason);
         if (failed.length) throw new AggregateError(failed, failed.map(e => e.message).join('; '));
       }));
       const failures = releases.filter(r => r.status === 'rejected').map(r => r.reason);
-      if (failures.length && [...c.pages.values()].some(record => record.webmcp?.active.size)) {
+      if (failures.length && (!this.closing || [...c.pages.values()].some(record => record.webmcp?.active.size))) {
         c.closing = false;
         if (!this.connections.has(sessionId)) this.connections.set(sessionId, pending);
-        throw new AggregateError(failures, 'Could not confirm WebMCP cancellation; retry stop.');
+        throw new AggregateError(failures, 'Could not confirm browser cleanup; retry stop. ' + failures.map(error=>error.message).join('; '));
       }
       await c.browser.close({ reason: 'Computer Use session stopped' });
       if (failures.length) throw new AggregateError(failures, 'Could not release browser input: ' + failures.map(e => e.message).join('; '));
@@ -328,12 +330,12 @@ export class BrowserHost extends BrowserActions {
     try { await closing; } finally { if (this.disconnecting.get(sessionId) === closing) this.disconnecting.delete(sessionId); }
   }
   async endTurn(sessionId) {
-    this.viewportPresets.delete(sessionId);
+    this.viewportPresets.delete(sessionId);this.emulationPresets.delete(sessionId);
     const pending = this.connections.get(sessionId), c = pending ? await pending.catch(() => null) : null;
     for (const [id, owner] of [...this.owners]) {
       if (owner.sessionId !== sessionId) continue;
       if (owner.created && !owner.keep) await c?.pages.get(id)?.page.close().catch(() => {});
-      else if(c?.pages.has(id))await this.resetViewport(c.pages.get(id));
+      else if(c?.pages.has(id))await this.restoreOverrides(c.pages.get(id));
       this.owners.delete(id);
     }
   }

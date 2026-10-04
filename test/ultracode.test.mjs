@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { UltracodeControl, ULTRACODE_ON, ULTRACODE_SPARSE, ULTRACODE_OFF, ULTRACODE_KEYWORD, hasUltracodeKeyword } from '../src/ultracode.mjs';
+import { UltracodeControl, ULTRACODE_ON, ULTRACODE_SPARSE, ULTRACODE_OFF, ULTRACODE_KEYWORD, PRO_ON, PRO_SPARSE, PRO_OFF, hasUltracodeKeyword } from '../src/ultracode.mjs';
+import { proWorkflowGuide } from '../src/cc-adaptation/workflow-guide.mjs';
+import { promptText } from '../src/cc-adaptation/texts.mjs';
 import { highestEffort } from '../src/model-efforts.mjs';
 
 function fixture() {
@@ -108,4 +110,78 @@ test('concurrent mode changes serialize and reject a stale revision rather than 
   assert.equal(f.events.filter(e=>e.type==='model/selection').length, 1);
   assert.equal(highestEffort({efforts:[{id:'xhigh'},{id:'low'},{id:'max'}]}), 'max');
   assert.equal(highestEffort(undefined), undefined);
+});
+
+test('Pro keeps highest effort and implementation guidance while replacing the Ultracode reference', async () => {
+  const f = fixture();
+  f.store.peek().betterTodo = { todo: true, verification: true };
+  await f.control.select('root', { provider:'fixture', model:'model', ultracode:true });
+  assert.match(await f.request('Build'), /Adversarial verify/);
+  const pro = await f.control.select('root', { provider:'fixture', model:'model', mode:'pro' });
+  assert.equal(pro.mode, 'pro'); assert.equal(pro.enabled, true); assert.equal(pro.selected.reasoningEffort, 'xhigh');
+  const text = await f.request('Continue implementation');
+  assert.ok(text.includes(PRO_ON));
+  assert.match(text, /including implementation and iterative refinement/);
+  assert.match(text, /token cost is not a constraint/);
+  assert.match(text, /Candidate comparison/);
+  assert.match(text, /Multi-modal sweep/);
+  assert.match(text, /resumeFromRunId/);
+  assert.doesNotMatch(text, /Ultracode|Adversarial verify|Perspective-diverse verify|Completeness critic|Judge panel|Loop-until-dry/);
+  assert.deepEqual(f.store.peek().betterTodo, { todo: true, verification: true }, 'the mode does not override BT');
+  assert.equal(f.store.peek().ultracode.enabled, false, 'old versions cannot interpret Pro as Ultracode');
+  await f.control.select('root', { provider:'fixture', model:'second', mode:'pro' });
+  assert.equal(f.control.view(f.session).mode, 'pro');
+  const restored = new UltracodeControl(f.ctx, () => true, f.store);
+  assert.equal(restored.view(f.session).mode, 'pro');
+  f.control.lifecycle(f.agent, 'compact');
+  assert.ok((await f.request('After compact')).includes(PRO_ON));
+  await f.control.select('root', { provider:'fixture', model:'second', mode:'off', reasoningEffort:'high' });
+  const off = await f.request('Continue normally');
+  assert.ok(off.includes(PRO_OFF)); assert.doesNotMatch(off, /Workflow authoring reference/);
+});
+
+test('Pro reminder cadence survives mode changes and does not add a common-word keyword trigger', async () => {
+  const f = fixture();
+  assert.doesNotMatch(await f.request('A pro camera'), /Workflow authoring reference/);
+  await f.control.select('root', { provider:'fixture', model:'model', mode:'pro' });
+  assert.ok((await f.request('first')).includes(PRO_ON));
+  for (let i=0;i<10;i++) assert.ok((await f.request('continue '+i)).includes(PRO_ON));
+  assert.ok((await f.request('eleventh')).includes(PRO_SPARSE));
+  await f.control.select('root', { provider:'fixture', model:'model', mode:'ultracode' });
+  const ultra = await f.request('next');
+  assert.ok(ultra.includes(ULTRACODE_ON)); assert.match(ultra, /Adversarial verify/); assert.ok(!ultra.includes(PRO_SPARSE));
+});
+
+test('legacy stored boolean and reminder migrate without reinterpreting an ordinary native model selection', async () => {
+  const f = fixture();
+  await f.control.select('root', {provider:'fixture',model:'model',ultracode:true}); await f.request('first');
+  delete f.store.peek().ultracode.mode;
+  delete f.store.peek().ultracode.delivery.mode;
+  const restored = new UltracodeControl(f.ctx, () => true, f.store);
+  assert.equal(restored.view(f.session).mode, 'ultracode');
+  assert.ok((await f.request('legacy continuation')).includes(ULTRACODE_ON));
+  f.session.append('model/selection', {provider:'fixture',model:'model',reasoningEffort:'ultra'});
+  assert.equal(restored.view(f.session).mode, 'off', 'the native effort named ultra does not select an OMD mode');
+});
+
+test('invalid or conflicting modes cannot mutate model selection, including concurrent Pro writes', async () => {
+  const f = fixture(), route = {provider:'fixture',model:'model'};
+  for (const value of [{}, {mode:null}, {mode:'Ultra'}, {mode:'pro',ultracode:true}, {mode:'off',ultracode:'false'}]) {
+    await assert.rejects(f.control.select('root', {...route,...value}), /无效/);
+  }
+  assert.equal(f.events.length, 0);
+  const results = await Promise.allSettled(['pro','ultracode'].map(mode => f.control.select('root',{...route,mode,expectedRevision:-1})));
+  assert.equal(results[0].status,'fulfilled'); assert.equal(results[1].status,'rejected');
+  f.fail(true); await assert.rejects(f.control.select('root',{...route,mode:'ultracode'}),/unavailable/);
+  assert.equal(f.control.view(f.session).mode,'pro');
+});
+
+test('Pro derives only its mode policy and examples; common workflow API and resume contract remain exact', () => {
+  const ultra = promptText('runtime/workflow-authoring.md'), pro = proWorkflowGuide(ultra);
+  for (const start of ['- pipeline(items,','- parallel(thunks:','- workflow(nameOrRef:','The supported schema keywords','## Resume']) {
+    const block = ultra.slice(ultra.indexOf(start)).split('\n\n')[0];
+    assert.ok(pro.includes(block), start);
+  }
+  assert.match(pro, /while \(budget.total && budget.remaining\(\) > 50_000\)/);
+  assert.throws(() => proWorkflowGuide(ultra.replace('Subagents carry out the assigned work','Agents carry out the assigned work')), /anchor changed/);
 });

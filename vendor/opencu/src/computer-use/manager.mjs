@@ -94,7 +94,10 @@ export class ComputerUseManager {
         onStop: async () => {
           const results = await Promise.allSettled([...this.browsers().map(browser => browser.disconnect(id)), this.native.release(id)]);
           const failures = results.filter(r => r.status === 'rejected').map(r => r.reason);
-          if (failures.length) throw new AggregateError(failures, 'Stop cleanup failed: ' + failures.map(e => e.message).join('; '));
+          if (failures.length){
+            const error=new AggregateError(failures,'Stop cleanup failed: '+failures.map(e=>e.message).join('; '));
+            state.stopped=true;state.status='error';state.stopError={operation:'stop',message:error.message,at:Date.now()};this.publishControl(state);throw error;
+          }
         },
       });
       this.sessions.set(id, state);
@@ -168,9 +171,10 @@ export class ComputerUseManager {
     if (method === 'listBrowsers') return this.browsers().filter(browser => !browser.run?.lost).map(browser => this.browserInfo(browser));
     if (method === 'browserVisibility') return this.presentBrowser(id, args[0], args[1], signal);
     if(method==='browserViewport'){const browser=this.browserFor(args[0]);await Promise.all([...this.viewsFor({kind:'tab',browserId:browser.id}).views.values()].map(view=>view.layoutPending?.catch(()=>{})));signal?.throwIfAborted();await browser.browserViewport(id,args[1],signal);return null;}
+    if(method==='browserEmulation'){const browser=this.browserFor(args[0]);try{await browser.browserEmulation(id,args[1],signal);}catch(error){if(error.code==='EMULATION_RESTORE_FAILED'){session.stopped=true;session.status='error';session.stopError={operation:'emulation',message:error.message,at:Date.now()};this.publishControl(session);}throw error;}return null;}
     if (method === 'getBrowser') {
       const browser = this.browserFor(args[0]?.id);
-      return { ...this.browserInfo(browser), capabilities: ['accessibility', 'screenshots', 'playwright', 'dialogs', 'viewport', 'visibility', ...(browser === this.browser ? ['files'] : [])] };
+      return { ...this.browserInfo(browser), capabilities: ['accessibility', 'screenshots', 'playwright', 'dialogs', 'viewport', 'emulation', 'visibility', ...(browser === this.browser ? ['files'] : [])] };
     }
     if (method === 'listApps') return this.native.available() ? this.native.list(id) : [];
     if (method === 'listTabs') return this.browserFor(args[0]?.browser).list(id, { signal });
@@ -225,6 +229,7 @@ export class ComputerUseManager {
         return result;
       } catch (error) {
         const failure = signal?.aborted ? signal.reason : error;
+        if(error.code==='EMULATION_RESTORE_FAILED'){session.stopped=true;session.status='error';session.stopError={operation:'emulation',message:error.message,at:Date.now()};this.publishControl(session);}
         if (target.kind === 'app' && ['USER_INTERVENTION', 'FOREGROUND_LOST', 'INPUT_MONITOR_LOST'].includes(failure?.code)) {
           session.stopped = true; session.controlEpoch++; this.publishControl(session);
           void this.stop(id).catch(cleanup => { session.stopError = { operation: 'stop', message: cleanup.message, at: Date.now() }; });
@@ -566,6 +571,29 @@ export class ComputerUseManager {
     });
     return this.status(id);
   }
+  async emulateViewedTab(id,input,signal){
+    const state=this.sessions.get(id),viewer=state?.viewers.get(input.actor),target=this.viewerTarget(state,input);
+    if(!target)throw new Error('当前画面已改变，请重新选择网页');
+    const views=this.viewsFor(target),view=views.views.get(target.id);
+    if(!view||view.closed)throw new Error('当前浏览器画面已断开');
+    if(input.settings!==null)views.browser.validateEmulation(input.settings);
+    await this.userBrowserAction(id,input,async actionSignal=>{
+      await view.layoutPending?.catch(()=>{});
+      const lifetime=AbortSignal.any([actionSignal,view.lifetime.signal,signal].filter(Boolean));lifetime.throwIfAborted();
+      if(state.viewers.get(input.actor)!==viewer||!this.viewerTarget(state,input))throw new Error('当前画面已改变，请重新选择网页');
+      if(state.target?.id!==target.id)this.adoptViewedTab(state,target);
+      views.browser.claim(id,target.id);view.resizing=true;
+      try{
+        await Promise.allSettled([view.flushing,...(view.readers??[])]);lifetime.throwIfAborted();
+        if(state.viewers.get(input.actor)!==viewer||!this.viewerTarget(state,input))throw new Error('当前画面已改变，请重新选择网页');
+        await views.browser.setEmulation(view.record,input.settings,lifetime);
+      }catch(error){
+        if(error instanceof AggregateError){state.stopError={operation:'emulation',message:error.message,at:Date.now()};state.status='error';}
+        throw error;
+      }finally{view.resizing=false;views.queueFrame(view,{loaderId:view.loaderId,captureOnly:true});}
+    });
+    return this.status(id);
+  }
   async userBrowserAction(id, input, action, navigation, timeoutMs = 15000) {
     if (!this.enabled) throw new Error('Computer Use 已关闭');
     const state = this.session(id);
@@ -761,7 +789,10 @@ export class ComputerUseManager {
     state.pointerAfter = performance.now();
     state.cursorRetained = !!state.pointer;
     this.nativeViews.retainCursor(id);
-    if (!state.ending) state.ending = Promise.allSettled([state.stopped && state.viewers.size ? Promise.resolve() : Promise.all(this.browsers().map(browser => browser.endTurn(id))), this.native.release(id)]).finally(() => { state.ending = null; });
+    if (!state.ending) state.ending = Promise.allSettled([state.stopped && state.viewers.size ? Promise.resolve() : Promise.all(this.browsers().map(browser => browser.endTurn(id))), this.native.release(id)]).then(results=>{
+      const errors=results.filter(result=>result.status==='rejected').map(result=>result.reason);
+      if(errors.length){const error=new AggregateError(errors,'Turn cleanup failed: '+errors.map(error=>error.message).join('; '));state.stopped=true;state.status='error';state.stopError={operation:'endTurn',message:error.message,at:Date.now()};this.publishControl(state);throw error;}
+    }).finally(() => { state.ending = null; });
     await state.ending;
   }
   status(id) {
@@ -773,7 +804,9 @@ export class ComputerUseManager {
     const viewed = this.viewTarget(state), viewTarget = describe(viewed);
     const view=viewed?.kind==='tab'?(this.browserViews.views.get(viewed.id)??[...this.extensionViews.values()].map(views=>views.views.get(viewed.id)).find(Boolean)):null;
     const viewViewport=view?{overridden:!!view.record?.viewportOverride&&view.record.viewportMode!=='layout',layoutSupported:this.browserViews.views.get(viewed.id)===view,width:view.latest?.width,height:view.latest?.height}:null;
-    return { presentationRequest: state?.presentationRequest ?? null, observedAt: performance.now(), enabled: !this.closed && this.enabled, nativeInstalled: this.native.available(), status: state?.browserError && !target ? 'error' : state?.status ?? 'idle', target, viewTarget, viewViewport, viewRevision:state?.viewRevision??0, previewTargets:[...(state?.previewTargets?.values()??[])].map(({target})=>describe(target)), controlEpoch: state?.controlEpoch ?? 0, navigationRevision: state?.navigationRevision ?? 0, transitioning: !!state?.uiAction || state?.resuming === true, resuming: state?.resuming === true, operation: state?.operation ?? null, lastError: state?.stopError ?? state?.browserError ?? state?.lastError ?? null, startedAt: state?.startedAt ?? null, previewAt: this.preview.get(id)?.at ?? null, history: state?.history ?? [], operationStats: state ? structuredClone(state.operationStats) : { total: 0, succeeded: 0, failed: 0, cancelled: 0, methods: {} } };
+    const simulated=viewed?.kind==='tab'?browsers.find(browser=>browser.id===viewed.browserId||browser.records.has(viewed.id))?.emulationSettings(viewed.id):null;
+    const viewEmulation=simulated?{settings:{...simulated}}:null;
+    return { viewEmulation, presentationRequest: state?.presentationRequest ?? null, observedAt: performance.now(), enabled: !this.closed && this.enabled, nativeInstalled: this.native.available(), status: state?.browserError && !target ? 'error' : state?.status ?? 'idle', target, viewTarget, viewViewport, viewRevision:state?.viewRevision??0, previewTargets:[...(state?.previewTargets?.values()??[])].map(({target})=>describe(target)), controlEpoch: state?.controlEpoch ?? 0, navigationRevision: state?.navigationRevision ?? 0, transitioning: !!state?.uiAction || state?.resuming === true, resuming: state?.resuming === true, operation: state?.operation ?? null, lastError: state?.stopError ?? state?.browserError ?? state?.lastError ?? null, startedAt: state?.startedAt ?? null, previewAt: this.preview.get(id)?.at ?? null, history: state?.history ?? [], operationStats: state ? structuredClone(state.operationStats) : { total: 0, succeeded: 0, failed: 0, cancelled: 0, methods: {} } };
   }
   async revealPreview(id,input){
     if(!this.enabled||this.closed)throw new Error('Computer Use 已关闭');

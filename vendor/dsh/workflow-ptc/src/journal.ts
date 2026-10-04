@@ -4,7 +4,7 @@ import { mkdir, open, readFile, realpath } from 'node:fs/promises'
 import type { FileHandle } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import type { SessionId } from '@deepseek-ai/dsh-session'
-import { SessionWriteLease } from '../../../session/session-persistence-jsonl/src/lease.ts'
+import { SessionWriteLease } from '@deepseek-ai/dsh-session-persistence-jsonl/src/lease.ts'
 import type { ChildResult } from './types.ts'
 
 interface Call {
@@ -86,7 +86,7 @@ export class WorkflowJournal {
       const directory = join(canonical, runId(id))
       await mkdir(directory, { mode: 0o700 })
       lease = await SessionWriteLease.acquire(directory, sessionId as SessionId)
-      for (const [name, contents] of [['script.js', input.script], ['run.json', JSON.stringify({ version: 1, id, sessionId, ...input }) + '\n']]) {
+      for (const [name, contents] of [['script.js', input.script], ['run.json', JSON.stringify({ version: 1, id, sessionId, ...input }) + '\n']] as const) {
         const handle = await open(join(directory, name), 'wx', 0o600)
         try { await handle.writeFile(contents); await handle.sync() } finally { await handle.close() }
       }
@@ -132,9 +132,9 @@ export class WorkflowJournal {
   }
 
   /** Call only after every child and pending startup has reached quiescence. */
-  async close(outcome: unknown): Promise<void> {
+  async close(outcome: unknown, failures: readonly unknown[] = []): Promise<void> {
     this.closing ??= (async () => {
-      try { await this.append({ type: 'end', outcome }) }
+      try { await this.append({ type: 'end', outcome, ...failures.length ? { failures } : {} }) }
       finally {
         this.closed = true
         try { await this.file.close() }

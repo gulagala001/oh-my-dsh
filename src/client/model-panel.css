@@ -20,3 +20,10 @@
 
 @container (max-width:560px){.omd-model-trigger{max-width:160px;gap:4px;font-size:11px}.omd-model-caption{max-width:64px;overflow:hidden;text-overflow:ellipsis}}
 @media(max-width:480px){.omd-model-trigger{max-width:135px}.omd-model-caption{display:none}}
+
+.omd-effort-heading h2.omd-effort-pro{background:linear-gradient(100deg,#4d7ff5,#6695ed);background-clip:text;color:transparent}
+.omd-effort-control[data-pro] .omd-effort-fill{background:linear-gradient(90deg,#2586f5,#6482e8)}
+.omd-effort-control[data-pro] .omd-effort-glow{background:radial-gradient(circle at 25%,#9fcaffbf,transparent 30%),radial-gradient(circle at 70% 40%,#739cf5b8,transparent 32%);opacity:.4;animation:omd-ultra-glow 9s ease-in-out infinite alternate}
+.omd-effort-control[data-pro] .omd-effort-particle{opacity:calc(var(--particle-opacity) * .45);animation:omd-effort-particle 3s ease-in-out infinite alternate;animation-duration:3s!important}
+.omd-effort-control[data-pro] .omd-effort-particle:nth-of-type(n+9){display:none}
+.omd-effort-notice[data-visible][data-mode=pro]{background:linear-gradient(100deg,#4d7ff5,#749cea);background-clip:text;color:transparent;animation:none}

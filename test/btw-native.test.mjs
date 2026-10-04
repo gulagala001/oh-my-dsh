@@ -9,11 +9,11 @@ import { restoreFixtureLog } from './fixtures/restore-log.mjs';
 import { pendingToolCalls } from '../src/btw-policy.mjs';
 import { ULTRACODE_ON, ULTRACODE_OFF } from '../src/ultracode.mjs';
 
-// Approval-gated integration: this starts only an isolated host with a localhost
-// fake provider. It imports the pinned upstream plugin; do not run before approval.
+// Isolated native integration uses a localhost fake provider and the pinned
+// upstream plugin. It never submits a paid model request.
 test('native btw inherits the completed prefix and preserves actual wire schemas and history', {timeout:90000}, async t => {
-  const requests=[],holds=new Map();let parentRelease,parentEntered;
-  const parentReady=new Promise(resolve=>parentEntered=resolve);
+  const requests=[],holds=new Map();let parentRelease,firstRelease;
+  t.after(()=>{parentRelease?.();firstRelease?.();for(const release of holds.values())release();});
   const f=await frontendFixture(t,{headless:true,installedPackage:true,initialPrompt:'BTW_MAIN_COMPLETE',
     omdConfig:{computerUseEnabled:false,codegraphEnabled:false,dreamAutoEnabled:false},
     async modelReply(payload){
@@ -22,8 +22,8 @@ test('native btw inherits the completed prefix and preserves actual wire schemas
       if(text.includes('Question: BTW_ULTRA_TOOL'))return {delta:{role:'assistant',tool_calls:[{index:0,id:'denied-workflow',type:'function',function:{name:'workflow',arguments:JSON.stringify({script:'return { ok: true };'})}}]},finish_reason:'tool_calls'};
       const hold=text.match(/Question: (BTW_HOLD_[AB])/);
       if(hold)await new Promise(resolve=>holds.set(hold[1],resolve));
-      const latestUser=JSON.stringify(payload.messages.findLast(message=>message.role==='user'));
-      if(!text.includes('Question:')&&latestUser.includes('BTW_MAIN_INFLIGHT')){parentEntered();await new Promise(resolve=>parentRelease=resolve);}
+      if(!firstRelease&&payload.tools?.length&&!text.includes('Question: BTW_')&&text.includes('BTW_FIRST_INFLIGHT'))await new Promise(resolve=>firstRelease=resolve);
+      if(!parentRelease&&payload.tools?.length&&!text.includes('Question: BTW_')&&text.includes('BTW_MAIN_INFLIGHT'))await new Promise(resolve=>parentRelease=resolve);
       return {delta:{role:'assistant',reasoning_content:'fixture reasoning',content:'fixture answer'},finish_reason:'stop',usage:{prompt_tokens:50,completion_tokens:5,prompt_tokens_details:{cached_tokens:32}}};
     },
     async setupWorkspace({root,home}) {
@@ -60,6 +60,22 @@ export function apply(ctx){ctx.webServer.register({kind:'exact',path:'/api/btwTe
   assert.equal(state.session.shared,false);
 
   const command=async line=>{const r=await f.call('btwTest/execute',{sessionId:f.sessionId,line});assert.equal(r.result?.ok,true,JSON.stringify(r));return r.result.value;};
+  const workspace=await f.rpc('workspace/create',{path:f.workspace});
+  const first=await f.rpc('session/create',{workspaceId:workspace.workspace.workspaceId,agentPreset:'trisoul-x'});
+  await f.rpc('session/prompt',{requestId:crypto.randomUUID(),sessionId:first.sessionId,mode:'queue',content:[{type:'text',text:'BTW_FIRST_INFLIGHT'}]});await until(()=>firstRelease);
+  const firstBefore=await restoreFixtureLog(f.home,first.sessionId);
+  assert(!firstBefore.events.some(e=>e.type==='turn/end'));
+  assert.equal((await f.api('/state?session='+first.sessionId)).running,'running');
+  const firstResponse=await f.call('btwTest/execute',{sessionId:first.sessionId,line:'/btw BTW_FIRST_SIDE'});
+  assert.equal(firstResponse.result?.value?.result?.kind,'success',JSON.stringify(firstResponse));
+  const firstMain=requests.find(r=>JSON.stringify(r.messages).includes('BTW_FIRST_INFLIGHT')&&!JSON.stringify(r.messages).includes('Question: BTW_'));
+  const firstSide=requests.find(r=>JSON.stringify(r.messages).includes('Question: BTW_FIRST_SIDE'));
+  assert.ok(firstMain&&firstSide);assert.deepEqual(firstSide.tools,firstMain.tools);
+  assert.deepEqual(firstSide.messages.slice(0,firstMain.messages.length),firstMain.messages);
+  assert.equal((await f.api('/state?session='+first.sessionId)).running,'running');
+  const firstAfter=await restoreFixtureLog(f.home,first.sessionId);
+  assert(!firstAfter.events.some(e=>e.type==='turn/end'||e.type==='assistant/message'));
+  firstRelease();await until(async()=>(await f.api('/state?session='+first.sessionId)).running==='idle');
   const beforeBatch=requests.length,denied=await command('/btw BTW_TOOL_BATCH');assert.equal(denied.result.kind,'error');assert.match(denied.result.text,/调用工具/);
   assert.equal(requests.length,beforeBatch+1,'tool denial must stop before a second charged request');
   const withBatch=await restoreFixtureLog(f.home,f.sessionId),batchCatalog=withBatch.events.findLast(e=>e.type==='subagent/catalog');
@@ -70,8 +86,11 @@ export function apply(ctx){ctx.webServer.register({kind:'exact',path:'/api/btwTe
   const cancelled=await command('/btw cancel');assert.match(cancelled.result.text,/2 个/);
   for(const release of holds.values())release();for(const r of await Promise.all([a,b])){assert.equal(r.result.kind,'error');assert.match(r.result.text,/取消/);}
 
-  await f.rpc('session/prompt',{requestId:crypto.randomUUID(),sessionId:f.sessionId,mode:'queue',content:[{type:'text',text:'BTW_MAIN_INFLIGHT'}]});await parentReady;
+  await f.rpc('session/prompt',{requestId:crypto.randomUUID(),sessionId:f.sessionId,mode:'queue',content:[{type:'text',text:'BTW_MAIN_INFLIGHT'}]});await until(()=>parentRelease);
   const during=await command('/btw BTW_DURING_MAIN');assert.equal(during.result.kind,'success',JSON.stringify(during));
+  const inflightMain=requests.find(r=>!JSON.stringify(r.messages).includes('Question: BTW_')&&JSON.stringify(r.messages).includes('BTW_MAIN_INFLIGHT'));
+  const inflightSide=requests.find(r=>JSON.stringify(r.messages).includes('Question: BTW_DURING_MAIN'));
+  assert.deepEqual(inflightSide.messages.slice(0,inflightMain.messages.length),inflightMain.messages);
   const partial=await restoreFixtureLog(f.home,f.sessionId),duringCatalog=partial.events.findLast(e=>e.type==='subagent/catalog');
   const duringChild=await restoreFixtureLog(f.home,duringCatalog.data.childId);
   assert(!duringChild.events.slice(0,end.seq+1).some(e=>JSON.stringify(e).includes('BTW_MAIN_INFLIGHT')));

@@ -2,7 +2,7 @@
 
 [文档目录](README.md) · [首次使用](getting-started.md) · [安装](#安装到现有-dsh推荐) · [更新与卸载](#update-uninstall) · [设置](#settings) · [排障](troubleshooting.md) · [开发与验证](#开发与验证)
 
-当前 **0.2.0-rc.2.omd.0.5.2** 适配 **DSH 0.2.0-rc.2**，内置 **OpenCU 1.2.0**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
+当前 **0.2.0-rc.2.omd.0.6.0** 适配 **DSH 0.2.0-rc.2**，内置 **OpenCU 1.2.1**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
 本项目通过 `gulagala001/oh-my-dsh` 的 GitHub 来源或发行包安装。[安装来源核对](troubleshooting.md#package-source)。
 
@@ -12,7 +12,7 @@
 
 ## 安装到现有 DSH（推荐）
 
-**首次安装桌面应用请先看[桌面版完整教程](upgrade.md#desktop)，其中包含 Windows／Mac 下载、首次启动、模型配置和插件安装。** 官方桌面版使用 DSH 0.2.0-rc.2，在应用内「插件」页面安装 `github:gulagala001/oh-my-dsh#v0.2.0-rc.2.omd.0.5.2`。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；Web 安装不会自动启用桌面插件。单独安装的 npm/npx CLI 不能管理保留的 `desktop` profile；rc.2 官方桌面内置 CLI 可在应用退出后管理已初始化的桌面安装。以下命令适用于 Web，桌面实测范围见[本版说明](release-0.2.0-rc.2.omd.0.5.2.md)。
+**首次安装桌面应用请先看[桌面版完整教程](upgrade.md#desktop)，其中包含 Windows／Mac 下载、首次启动、模型配置和插件安装。** 官方桌面版使用 DSH 0.2.0-rc.2，在应用内「插件」页面安装 `github:gulagala001/oh-my-dsh#v0.2.0-rc.2.omd.0.6.0`。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；Web 安装不会自动启用桌面插件。单独安装的 npm/npx CLI 不能管理保留的 `desktop` profile；rc.2 官方桌面内置 CLI 可在应用退出后管理已初始化的桌面安装。以下命令适用于 Web，桌面实测范围见[本版说明](release-0.2.0-rc.2.omd.0.6.0.md)。
 
 桌面安装、更新、启用或停用后，先等任务结束，再完整退出应用并重新打开；有「重启应用与 Host」菜单时也可使用。仅关闭窗口会留在后台，仅刷新页面不能完成切换。
 
@@ -21,7 +21,7 @@
 已有环境先等待任务结束，停止当前 DSH Web 并完整备份实际 DSH_HOME。确认继续使用原数据目录、profile 和端口，再运行：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.0-rc.2.omd.0.5.2
+npx --yes @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.0-rc.2.omd.0.6.0
 ```
 
 然后按原来的方式重新启动 DSH，例如：
@@ -43,11 +43,11 @@ npx --yes @deepseek-ai/dsh@0.2.0-rc.2 --profile web
 
 从 0.1.7-rc.2.5 起，检查到新版后可在左上角版本图标打开的面板内点击“更新”。安装后仍需完整重启。更早版本首次升级到本版时使用下方原安装方式。
 
-更新时保持原安装方式、DSH_HOME、profile 和端口；先停止服务并备份数据。使用 npx 的用户重复上面的固定版本命令即可。全局 npm 安装用户执行 `npm install -g @deepseek-ai/dsh@0.2.0-rc.2`，确认 `dsh --version`，再执行 `dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.0-rc.2.omd.0.5.2`，按原方式启动；pnpm 全局安装则用 `pnpm add -g`。插件安装不会替你更新全局宿主。
+更新时保持原安装方式、DSH_HOME、profile 和端口；先停止服务并备份数据。使用 npx 的用户重复上面的固定版本命令即可。全局 npm 安装用户执行 `npm install -g @deepseek-ai/dsh@0.2.0-rc.2`，确认 `dsh --version`，再执行 `dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.0-rc.2.omd.0.6.0`，按原方式启动；pnpm 全局安装则用 `pnpm add -g`。插件安装不会替你更新全局宿主。
 
-源码用户先保留本地修改，再执行 `git fetch origin --tags`、`git switch --detach v0.2.0-rc.2.omd.0.5.2`、`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`。若切换会覆盖本地修改，先保存自己的改动，不强制覆盖。默认数据在仓库的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
+源码用户先保留本地修改，再执行 `git fetch origin --tags`、`git switch --detach v0.2.0-rc.2.omd.0.6.0`、`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`。若切换会覆盖本地修改，先保存自己的改动，不强制覆盖。默认数据在仓库的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
 
-重启后，版本面板的**当前版本**应是 `0.2.0-rc.2.omd.0.5.2`，原模型和旧会话仍在；最新版本只代表远端发布记录。旧 V3 会话迁移会保留原日志，alpha.1 升至 alpha.2 继续使用 V4。回退时停止新服务，以原宿主、插件和完整备份在独立数据目录启动。
+重启后，版本面板的**当前版本**应是 `0.2.0-rc.2.omd.0.6.0`，原模型和旧会话仍在；最新版本只代表远端发布记录。旧 V3 会话迁移会保留原日志，alpha.1 升至 alpha.2 继续使用 V4。回退时停止新服务，以原宿主、插件和完整备份在独立数据目录启动。
 
 卸载也沿用原启动方式。npx Web 用户执行以下命令；自定义 profile 将 `web` 换成原名称，并沿用实际 `DSH_HOME`：
 
@@ -291,6 +291,20 @@ Computer Use 的实现与平台测试位于 [OpenCU](https://github.com/gulagala
 
 *图中为内置浏览器的 Forma 示例，可以在工作台中接手页面、搜索与检查资料。*
 
+### 执行预算与重置恢复
+
+`computer_use` 默认每次执行预算为 30 秒，可通过 `timeoutMs` 设置 1–300000 毫秒。单个浏览器／桌面动作仍遵循自身的等待上限；预算延长不会绕过用户停止或恢复控制的要求。超时保留已经输出的内容，并说明最后成功返回、最后失败及仍在执行的动作。动作返回不等于页面业务结果已成功，重新提交前应观察当前状态。
+
+超时／重置会清除 JavaScript 变量，不关闭原标签。使用 `cua.getTab` 重新绑定原标签即可；正常拆分调用不会重置运行环境。首次 API 文档按会话和内容版本去重，重置后不整份重发；上下文已移除文档或文档更新时可重新提供。需要主动重读时使用 `await cua.rewriteDocumentation(topic)`，或 `nodeRepl.write(await cua.documentation(topic))`。
+
+### 网页登录状态与原标签恢复
+
+同一浏览器配置内，同源标签共享 localStorage，并按站点的作用域共享 Cookie；sessionStorage 属于各自标签，新建独立标签不会复制原标签的内容。内置 `@Browser` 使用独立配置，与日常 Chrome 或远程客户端浏览器的登录状态分开；需要已有 Chrome 登录态时，应连接对应 Chrome 并选择原标签。
+
+停止或断开控制后，仍存在的原标签可从标签栏或浏览器引用中重新选择，无需为了恢复控制另开同网址标签。原标签重绑定保留其 Cookie、localStorage 和 sessionStorage；原标签已关闭时，新的标签无法恢复旧 sessionStorage。站点登出、凭据到期以及远程服务更换域名仍可能要求重新登录。
+
+公开版本核查中，[dsh-pocket 2.10.6](https://unpkg.com/dsh-pocket@2.10.6/lib/proxy.mjs) 的 PIN 登录使用 Cookie，同域新标签可以共享；DSH 服务重启会使该 Cookie 的验证密钥变化，需重新输入 PIN。[Remote Web UI 0.4.4](https://unpkg.com/@linxin666/dsh-remote-web-ui@0.4.4/src/routes.ts) 的配对入口会设置设备 Cookie，`/pair-app` 页面还把设备凭据写入当前标签的 sessionStorage。HTTPS 下的 Service Worker 可通过设备 Cookie 重新打开页面；普通 HTTP 局域网没有该恢复入口，新开根网址可能仍需扫码配对。这类访问优先重绑定原标签。实际安装版本和访问路径不同，不能仅凭“同网址新标签要求登录”推断浏览器丢失了 Cookie。
+
 ### 开始使用
 
 1. 新建或打开会话，选择支持原生工具调用的模型；需要理解截图时选择支持图像输入的模型。
@@ -350,7 +364,7 @@ Computer Use 截图与「读取图片」的缩略图在当前页面打开大图�
 
 **⋮ → 历史记录** 支持搜索标题／网址、按日期查看与点击后在原浏览器新建标签页。仅记录当前会话接入后实际使用的页面，保存在 DSH 本地，重启后保留；不导入日常浏览器既有历史。清除本会话记录不影响其他会话或浏览器数据。原浏览器断开时不会静默换浏览器。
 
-地址栏右侧 **⋮ → 浏览器选项** 提供 **设备工具栏** 和 **截取屏幕截图**。设备工具栏支持手机／平板／桌面尺寸、自定义宽高、交换方向与重置；仅改变真实网页视口，不模拟设备型号、触摸或浏览器类型。展开工具栏不接管，应用尺寸时才停止并接管，导航保持所选尺寸，关闭工具栏恢复默认尺寸。**设备预览缩放** 支持适应窗口及 25%–150%：只调整画面显示，不改变网页尺寸、不暂停助手；100% 保留实际尺寸，超出侧栏的部分在预览内滚动查看，适应窗口随可用宽高自动缩小。截图通过只读观察连接生成原尺寸 PNG，在大图弹窗查看或下载，不暂停助手。
+地址栏右侧 **⋮ → 浏览器选项** 提供 **设备工具栏** 和 **截取屏幕截图**。设备工具栏默认只调整尺寸：手机／平板／桌面预设、自定义宽高和交换方向仅改变网页视口。展开 **模拟** 可独立设置触摸、移动布局、设备像素比（DPR）和 User Agent，留空或选择“默认”沿用浏览器默认值；点击 **应用模拟** 才生效，尺寸预设不会自动启用模拟。UA 只改变网页看到的标识，不更换浏览器内核。启用触摸时，默认左键单击和拖动发送触摸事件；其他显式鼠标操作仍按鼠标处理。展开工具栏、编辑模拟草稿不接管，应用尺寸或模拟时才停止并接管；导航保持已应用设置。**重置** 恢复尺寸和模拟，**关闭设备工具栏** 在两者均恢复后收起；恢复失败时保留工具栏并显示错误。用户在工具栏手动应用的设置可保留到主动重置／关闭；停止助手不会自动清除这些手动设置。**设备预览缩放** 支持适应窗口及 25%–150%：只调整画面显示，不改变网页尺寸、不暂停助手；100% 保留实际尺寸，超出侧栏的部分在预览内滚动查看，适应窗口随可用宽高自动缩小。截图通过只读观察连接生成原尺寸 PNG，在大图弹窗查看或下载，不暂停助手。
 
 设备画面两侧、底部及底角的拖动条可调整尺寸：拖动时显示拟定宽高，松手应用，Esc 取消而不接管页面。聚焦侧边或底部拖动条后可用方向键微调，Shift+方向键每次调整 10 像素。拖动条不会把鼠标或键盘操作发送给网页。
 
@@ -496,12 +510,15 @@ OMD 主会话使用 pi-ai 图片路由时，发送前按提供方的实际图片
 
 ## 侧问与回合回滚
 
-`/btw <问题>` 默认接入 OMD，沿用原生 fork 和主会话已完成回合。
+`/btw` 原作者为 [JasonQQ](https://github.com/JasonQQ)，原项目是 [dsh-btw-plugin](https://github.com/JasonQQ/dsh-btw-plugin)；Turn Rewind 原作者为 [Anionex](https://github.com/Anionex)，原项目是 [dsh-turn-rewind](https://github.com/Anionex/dsh-turn-rewind)。固定来源与许可集中见 [第三方来源与许可](../THIRD_PARTY_NOTICES.md)。
+
+`/btw <问题>` 默认接入 OMD，沿用原生 fork；主任务运行时，侧问立即复用主模型最近一次已发出请求的上下文，包括当前回合已进入该请求的用户消息与工具结果，不等待主回合结束。首轮也可侧问。
 它不执行工具；若模型尝试工具调用，宿主正常记录 Error 结果后停止侧问。
 `/btw cancel` 取消当前主会话正在运行的侧问，不停止主会话。
+侧问状态和答案直接显示在对话中，主回合运行时也可查看。
 缓存读取统计来自渠道返回的 `cacheReadTokens`；缺少字段显示未知。
 缓存前缀无法核对或发生变化时，侧问直接报错，不静默切换到新上下文。
-宿主冷启动后需先完成主会话一轮，建立可核对的请求前缀；侧问不进入 Dream 项目或全局记忆。
+宿主冷启动后需等主模型开始响应，建立可核对的请求前缀；侧问不进入 Dream 项目或全局记忆。
 
 回合回滚在设置的推荐插件页面中，默认不安装。点击安装后由原生插件管理器启用。
 当前推荐固定为上游 0.3.9 源码快照；已在 Mac 隔离 Web 宿主验证安装、启用、卸载和临时工作区恢复。正式桌面 App 界面及 Windows 未同等实测。

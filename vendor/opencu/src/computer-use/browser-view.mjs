@@ -308,6 +308,7 @@ export class BrowserViews {
     if (input.type === 'pointerup') {
       const button = ['left', 'middle', 'right'][input.button ?? 0];
       if (!button) throw new Error('鼠标按键无效');
+      if(button==='left'&&record.heldTouch){await this.browser.releaseTouch(record);return;}
       if (record.heldButtons.has(button)) {
         await this.browser.releaseButton(record, button);
       }
@@ -332,6 +333,8 @@ export class BrowserViews {
       record.pointer = p;
       const button = ['left', 'middle', 'right'][input.button ?? 0];
       if (!button) throw new Error('鼠标按键无效');
+      if(input.type==='pointermove'&&record.heldTouch){await this.browser.touch(record,'touchMove',p);return;}
+      if(input.type==='pointerdown'&&button==='left'&&this.browser.emulationSettings(tabId)?.hasTouch&&(input.clickCount??1)===1){await this.browser.touch(record,'touchStart',p);return;}
       await record.page.mouse.move(p.x, p.y);
       if (input.type === 'pointerdown') {
         const clickCount = input.clickCount ?? 1;
