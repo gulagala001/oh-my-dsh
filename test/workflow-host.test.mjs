@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, rm, readFile } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Session } from '@deepseek-ai/dsh-session';
@@ -102,4 +102,67 @@ test('failed child result ends the cache prefix and does not poison successful l
   const body = `return await parallel([() => agent('bad'), () => agent('good')])`;
   const first = fx.run(body); assert.deepEqual((await first.result).value, [null, 'good']);
   const resumed = fx.run(body, { resumeFromRunId: first.id }); assert.deepEqual((await resumed.result).value, [null, 'good']); assert.equal(fx.requests.length, 4);
+});
+
+ test('filtered nulls retain stable failures, reasons, and recovery identity', async t => {
+  const fx = await fixture(t, request => ({ id: 'child-' + request.prompt[0].text, result: Promise.resolve(request.prompt[0].text === 'bad' ? { output: [], stopReason: 'error', error: { code: 'RATE_LIMIT', message: 'quota exhausted' } } : success('good')), dispose: async () => {} }));
+  const body = `return (await parallel([() => agent('bad'), () => agent('good')])).filter(Boolean)`;
+  const run = fx.run(body), result = await run.result;
+  assert.equal(result.stopReason, 'completed'); assert.deepEqual(result.value, ['good']);
+  assert.deepEqual(run.childFailures, [{ seq: 1, childId: 'child-bad', stopReason: 'error', cause: 'failed', reason: '{"code":"RATE_LIMIT","message":"quota exhausted"}', reasonData:{code:'RATE_LIMIT', message:'quota exhausted'} }]);
+  assert.match(await readFile(join(run.transcriptDir, 'journal.jsonl'), 'utf8'), /quota exhausted/);
+  const resumed = fx.run(body, { resumeFromRunId: run.id }); await resumed.result;
+  assert.equal(resumed.childFailures.length, 1); assert.equal(fx.requests.length, 4);
+});
+
+test('missing structured output is a failed call and cannot enter the completed resume prefix', async t => {
+  const fx = await fixture(t);
+  const body = `return await agent('schema', {schema:{type:'object', properties:{value:{type:'string'}}, required:['value']}})`;
+  const run = fx.run(body); assert.equal((await run.result).value, null);
+  assert.equal(run.childFailures.length, 1);
+  const resumed = fx.run(body, {resumeFromRunId:run.id}); await resumed.result;
+  assert.equal(fx.requests.length, 2);
+});
+
+test('startup and rejected child failures cannot disappear through parallel null filtering', async t => {
+  for (const startup of [true, false]) {
+    const fx = await fixture(t, () => { if (startup) throw Error('offline'); return { id:'rejected-child', result:Promise.reject(Error('offline')), dispose:async () => {} }; });
+    const run = fx.run(`return (await parallel([() => agent('bad')])).filter(Boolean)`); await run.result;
+    assert.equal(run.childFailures.length, 1); assert.match(run.childFailures[0].reason, /offline/);
+    assert.equal(run.childFailures[0].cause, 'failed'); assert.equal(fx.requests.length, 1);
+  }
+});
+
+test('user cancellation records a separate cause and does not spawn again', async t => {
+  const entered = Promise.withResolvers();
+  const fx = await fixture(t, () => { entered.resolve(); return {id:'cancelled-child', result:new Promise(() => {}), dispose:async () => {}}; });
+  const run = fx.run(`return await agent('work')`); await entered.promise;
+  run.cancel('user stop requested'); assert.equal((await run.result).stopReason, 'cancelled');
+  assert.equal(fx.requests.length, 1);
+  assert.ok(run.childFailures.every(row => row.cause === 'cancelled'));
+});
+
+test('nested workflow child failures stay visible after the caller filters nulls', async t => {
+  const fx = await fixture(t, () => ({id:'nested-bad', result:Promise.resolve({output:[], stopReason:'error', error:'network offline'}), dispose:async () => {}}));
+  const run = fx.run(`return (await workflow('nested')).filter(Boolean)`, {loadWorkflow:async () => ({meta, body:`return await parallel([() => agent('bad')])`})});
+  const result = await run.result; assert.deepEqual(result.value, []); assert.equal(result.stopReason, 'completed');
+  assert.deepEqual(run.childFailures.map(row => [row.seq, row.childId, row.reason]), [[1,'nested-bad','network offline']]);
+});
+
+ test('legacy completed journal rows with missing structured output break the resume prefix', async t => {
+  const fx = await fixture(t), body = `return await agent('schema', {schema:{type:'object',properties:{value:{type:'string'}}}})`;
+  const first = fx.run(body); await first.result;
+  const path = join(first.transcriptDir, 'journal.jsonl');
+  const rows = (await readFile(path, 'utf8')).trim().split('\n').map(JSON.parse);
+  const row = rows.find(row => row.type === 'result'); row.result.stopReason = 'completed'; delete row.result.reason;
+  await writeFile(path, rows.map(row => JSON.stringify(row)).join('\n') + '\n');
+  const resumed = fx.run(body, {resumeFromRunId:first.id}); assert.equal((await resumed.result).value, null);
+  assert.equal(fx.requests.length, 2); assert.equal(resumed.childFailures.length, 1);
+});
+
+test('journal closing retains full structured failures even when child startup rejects', async t => {
+  const fx = await fixture(t, () => {throw Error('startup failed ' + 'x'.repeat(20000));});
+  const run = fx.run(`return await parallel([() => agent('work')])`); await run.result;
+  const rows = (await readFile(join(run.transcriptDir, 'journal.jsonl'), 'utf8')).trim().split('\n').map(JSON.parse);
+  assert.equal(rows.at(-1).failures.length, 1); assert.ok(rows.at(-1).failures[0].reason.length > 20000);
 });

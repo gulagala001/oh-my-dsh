@@ -1,4 +1,4 @@
-Run a JavaScript workflow that coordinates subagents when the user has authorized multi-agent orchestration. An active Ultracode reminder supplies standing authorization for substantive tasks; when Ultracode is off, the ordinary opt-in rule applies.
+Run a JavaScript workflow that coordinates subagents when the user has authorized multi-agent orchestration. An active Pro or Ultracode reminder supplies standing authorization for substantive tasks; when both modes are off, the ordinary opt-in rule applies.
 
 Pass an inline plain JavaScript script beginning with `export const meta = {...}`. The metadata must be a pure literal with `name` and `description`, plus optional `whenToUse` and `phases`; no calls, variables, spreads, or interpolation. A separate `meta` object with a script body is also accepted. Top-level `await` is supported; finish with a JSON-serializable `return` value. Pass `args` as actual JSON values, including arrays, rather than JSON-encoded strings.
 

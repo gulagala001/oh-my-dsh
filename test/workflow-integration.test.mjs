@@ -216,3 +216,27 @@ test('real workflow children write only in their worktree and can select a nativ
   assert.equal(isolated?.workflowProject,parent.cwd,'an isolated workflow keeps the originating project context');
   assert.doesNotMatch(JSON.stringify(returns), /workflow run failed|not been installed/);
 });
+
+for (const background of [false, true]) test(`native ${background ? 'background' : 'foreground'} workflow reports a filtered failed child independently of script completion`, {timeout:180000}, async t => {
+  let phase = 0, childCalls = 0; const returned = [];
+  const call = (name, args) => ({delta:{role:'assistant', tool_calls:[{index:0,id:`partial-${phase}`,type:'function',function:{name,arguments:JSON.stringify(args)}}]},finish_reason:'tool_calls'});
+  const fx = await frontendFixture(t, {headless:true, modelReply(payload) {
+    if (!payload.tools?.length) return;
+    const users = payload.messages.filter(message => message.role === 'user').map(message => typeof message.content === 'string' ? message.content.trim() : message.content?.map(block => block.text ?? '').join('\n').trim());
+    if (users.includes('OMD_PARTIAL_BAD')) { childCalls++; return {delta:{role:'assistant',content:'incomplete child'},finish_reason:'length'}; }
+    if (users.includes('OMD_PARTIAL_GOOD')) { childCalls++; return {delta:{role:'assistant',content:'good child'},finish_reason:'stop'}; }
+    if (phase === 0) { phase++; return call('workflow',{script:`export const meta = {name:'native-partial',description:'Failure visibility'}; return (await parallel([() => agent('OMD_PARTIAL_BAD'), () => agent('OMD_PARTIAL_GOOD')])).filter(Boolean);`,run_in_background:background}); }
+    const text = String(payload.messages.filter(message => message.role === 'tool').at(-1)?.content ?? ''); returned.push(text);
+    if (background && phase === 1) { const id = text.match(/background as job ([^.\s]+)/)?.[1]; if (id) {phase++; return call('job_output',{job_id:id,wait:true});} }
+    return {delta:{role:'assistant',content:'Partial failure inspected.'},finish_reason:'stop'};
+  }});
+  await until(() => returned.some(text => text.includes('Partial failure:')), 20000).catch(error => { throw new Error(error.message + '\n' + JSON.stringify({background, phase, childCalls, returned})); });
+  const text = returned.find(text => text.includes('Partial failure:'));
+  assert.match(text, /good child/); assert.match(text, /max-tokens/); assert.match(text, /Agent #1 \(/);
+  assert.match(text, /Run ID:/); assert.match(text, /Script:/); assert.match(text, /Journal:/);
+  assert.equal(childCalls, 2, 'failure reporting does not restart children');
+  const root = join(fx.home, 'trisoul-x', 'workflows'), scope = (await readdir(root))[0], run = (await readdir(join(root,scope)))[0];
+  const rows = (await readFile(join(root,scope,run,'journal.jsonl'),'utf8')).trim().split('\n').map(JSON.parse);
+  assert.equal(rows.at(-1).outcome, 'completed', 'script completion remains distinct from child success');
+  assert.equal(rows.find(row => row.type === 'result' && row.seq === 1).result.stopReason, 'max-tokens');
+});

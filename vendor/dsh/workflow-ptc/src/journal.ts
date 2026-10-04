@@ -132,9 +132,9 @@ export class WorkflowJournal {
   }
 
   /** Call only after every child and pending startup has reached quiescence. */
-  async close(outcome: unknown): Promise<void> {
+  async close(outcome: unknown, failures: readonly unknown[] = []): Promise<void> {
     this.closing ??= (async () => {
-      try { await this.append({ type: 'end', outcome }) }
+      try { await this.append({ type: 'end', outcome, ...failures.length ? { failures } : {} }) }
       finally {
         this.closed = true
         try { await this.file.close() }
