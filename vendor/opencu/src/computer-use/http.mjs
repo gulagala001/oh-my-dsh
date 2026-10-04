@@ -118,9 +118,9 @@ export function mountComputerUseHttp(ctx,hub){
         if(hub.config().computerUseEnabled===false){send(res,409,{error:'Computer Use 已关闭'});return;}
         if(op==='browser-history-clear'){send(res,200,manager.browsingHistory.clear(id));return;}
         if(op==='downloads-clear'){send(res,200,manager.clearDownloads(id));return;}
-        if(['annotation','annotation-style','view-screenshot','view-viewport','view-layout','view-find'].includes(op)){
-          const task=op==='view-screenshot'?'截图':['view-viewport','view-layout'].includes(op)?'视口调整':op==='view-find'?'页面查找':'页面批注';
-          const method={'annotation':'annotationSnapshot','annotation-style':'annotationStylePreview','view-screenshot':'viewScreenshot','view-viewport':'resizeViewedTab','view-layout':'layoutViewedTab','view-find':'findViewedText'}[op];
+        if(['annotation','annotation-style','view-screenshot','view-viewport','view-emulation','view-layout','view-find'].includes(op)){
+          const task=op==='view-screenshot'?'截图':['view-viewport','view-emulation','view-layout'].includes(op)?'视口调整':op==='view-find'?'页面查找':'页面批注';
+          const method={'annotation':'annotationSnapshot','annotation-style':'annotationStylePreview','view-screenshot':'viewScreenshot','view-viewport':'resizeViewedTab','view-emulation':'emulateViewedTab','view-layout':'layoutViewedTab','view-find':'findViewedText'}[op];
           send(res,200,await requestOperation(req,res,task,async signal=>manager[method](id,await body(req),signal)));
           return;
         }

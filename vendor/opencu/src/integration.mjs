@@ -7,6 +7,8 @@ import { mountComputerUseHttp } from './computer-use/http.mjs';
 import { ImageCoordinates, mountImageCoordinates } from './computer-use/image-coordinates.mjs';
 import { registerComputerTools } from './computer-use/tools.mjs';
 import { announceFreshComputerRuntime } from './computer-use/runtime-context.mjs';
+import { isAgentLoopRequest } from '@deepseek-ai/dsh-llm';
+import { updateDocumentationContext } from './computer-use/documentation-state.mjs';
 
 // Shared even when the host loads two physical copies of the package. The root
 // owns registrations; disposing one consumer must not tear down another's tools.
@@ -36,6 +38,11 @@ export async function acquireComputerUse(ctx, options = {}) {
     const explicitDirectory = initial.dataDir;
     const directory = explicitDirectory ? join(explicitDirectory, 'computer-use') : options.dataDir ?? join(initial.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'trisoul-x'), 'computer-use');
     shared = { owners: new Map(), sessionTitles: new WeakMap(), config: () => shared.getConfig(), computerImages: new ImageCoordinates() };
+    const documentationStates = new Map();
+    shared.documentationState = id => {
+      if (!documentationStates.has(id)) documentationStates.set(id, new Set());
+      return documentationStates.get(id);
+    };
     // The standalone plugin's explicit values win when it shares a runtime
     // with OMD. Each owner reads its own live Profile configuration.
     shared.getConfig = () => {
@@ -71,6 +78,11 @@ export async function acquireComputerUse(ctx, options = {}) {
       mountImageCoordinates(scope, shared.computerImages);
       mountComputerUseHttp(scope, shared);
       registerComputerTools(scope, shared);
+      scope.on('llm/stream', async function* (options, next) {
+        const session = isAgentLoopRequest(options) && options.sessionId && root.sessions?.get?.(options.sessionId);
+        if (session) updateDocumentationContext(shared, session, options.messages);
+        yield* next();
+      }, { global: true });
       scope.on('agent/pre-step', async ({ agent, signal }, next) => {
         if (!signal.aborted && shared.config().computerUseEnabled !== false) announceFreshComputerRuntime(shared.computerUse, agent.session);
         return next();
