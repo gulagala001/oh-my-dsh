@@ -20,6 +20,7 @@ import { applyRecommendedPlugins } from './recommended-plugins.jsx';
 import { applyPromptOptimizer } from './prompt-optimizer.jsx';
 import { applyModelPanel } from './model-panel.jsx';
 import { applyWorkflowStatus } from './workflow-status.jsx';
+import { applyProjectlessWorkspaces } from './projectless-workspaces.jsx';
 
 export { CONTEXT_UI_VERSION as contextUIVersion } from './context-client.mjs';
 const { ContextSettings, ScopeChip, PipelinePanel, SummaryPanel, applyStyle } = createContextUI(React);
@@ -244,12 +245,13 @@ function StatsLine({ sessionId, onOpen }) {
   return <button type="button" className="tx-stats-line" aria-label="查看运行统计" title={`上下文 ${fmt(data.meter?.totalTokens)} tokens · 缓存命中 ${total ? Math.round((m.cacheReadTokens || 0) / total * 100) : 0}% · 已替换 ${fmt(data.actions?.contextReplacements)} 次`} onClick={onOpen}><Icon name="layers" size={12}/><span>{compactNumber(data.meter?.totalTokens)} 上下文</span>{data.liveCalls?.length > 0 && <i className="tx-stats-running" aria-label="后台运行中"/>}</button>;
 }
 const hostConversation = createConversation(require);
-export const inject = [...new Set(['slots', 'sidebarRightTabs', 'sidebarRight', 'theme', 'configForms', 'layout', 'modules', ...hostConversation.inject])];
+export const inject = [...new Set(['slots', 'sidebarRightTabs', 'sidebarRight', 'theme', 'configForms', 'layout', 'modules', 'remote.session', 'remote.agentPresets', ...hostConversation.inject])];
 export async function apply(ctx) {
   applyHistorySize(ctx);
   installDesktopLifecycle(ctx);
+  const projectlessDrafts = applyProjectlessWorkspaces(ctx);
   await ctx.plugin(hostConversation, { settingsNamespace: 'omd-ui-conversation' });
-  applyPromptOptimizer(ctx);
+  projectlessDrafts.transferOptimizer = applyPromptOptimizer(ctx, { draftLock: projectlessDrafts }).transferDraft;
   applyModelPanel(ctx);
   applyWorkflowStatus(ctx);
   const openPanel = section => ctx.sidebarRight.openTab('trisoul-x-workbench', { params: { section } });

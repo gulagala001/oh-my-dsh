@@ -2,6 +2,7 @@ import { readJsonBody as readBody, rejectUntrusted, sendJson as send } from './h
 import { installFileUploadCompatibility } from './file-upload-compat.mjs';
 import { legacySettings } from '#opencu/src/legacy-settings.mjs';
 import { homedir } from 'node:os';
+import { realpath } from 'node:fs/promises';
 import { migrateSessionStorage } from './session-migration.mjs';
 import { sourceName } from './message-source.mjs';
 import { installLoaderLifecycleCompatibility } from './loader-lifecycle-compat.mjs';
@@ -42,6 +43,7 @@ import { mountRecommendedPlugins } from './recommended-plugins.mjs';
 import { createPromptOptimizer, handlePromptOptimizerApi } from './prompt-optimizer.mjs';
 import { installBtwCompatibility } from './btw-compat.mjs';
 import { isBtwSession } from './btw-policy.mjs';
+import { createProjectlessWorkspaceService } from './projectless-workspaces.mjs';
 
 export { Config };
 export const name = 'trisoul-x';
@@ -55,6 +57,10 @@ export async function apply(ctx, config) {
   await migrateSessionStorage(ctx, directory);
   installToolSchedulerCompatibility(ctx);
   const hub = new Hub(ctx, { ...config, dataDir: directory });
+  const projectless = createProjectlessWorkspaceService({
+    root: legacy.value.projectlessWorkspaceRoot || hub.config().projectlessWorkspaceRoot || join(homedir(), 'Documents', 'DSH'),
+    storeDir: join(await realpath(hub.store.dir), 'projectless-workspaces'),
+  });
   const liveConfig = hub.getConfig;
   let overlay = legacy.value;
   hub.getConfig = () => ({ ...liveConfig(), ...overlay });
@@ -225,6 +231,13 @@ export async function apply(ctx, config) {
         const url = new URL(req.url, 'http://localhost'), id = url.searchParams.get('session');
         if (await handleVersionApi({ req, res, url, service: versionService, send })) return;
         if (rejectUntrusted(ctx, req, res)) return;
+        if (url.pathname === '/trisoul-x/api/projectless-workspace') {
+          if (req.method === 'GET') {
+            send(res, 200, { managed: await projectless.owns(url.searchParams.get('cwd') || '') }); return;
+          }
+          if (req.method === 'POST') { send(res, 200, await projectless.prepare(await readBody(req))); return; }
+          send(res, 405, { error: '不支持此方法' }); return;
+        }
         if (await handleDreamApi({ hub, ctx, req, res, url, send, readBody })) return;
         if (url.pathname === '/trisoul-x/api/model-mode') {
           if (!id) { send(res, 400, { error: '缺少会话编号' }); return; }
