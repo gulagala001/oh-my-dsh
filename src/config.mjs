@@ -10,6 +10,7 @@ export function configSnapshot(config = {}) {
 }
 export const Config = z.object({
   dataDir: z.string(),
+  projectlessWorkspaceRoot: z.string(),
   contextEnabled: z.boolean().default(true),
   automaticReplace: z.boolean().default(true),
   preprocessBoundaries: z.boolean().default(false),
@@ -66,7 +67,7 @@ export const Config = z.object({
   surgeryCooldownSteps: z.number().step(1).min(0).default(contextCadence.surgeryCooldownSteps),
 });
 
-for (const [key, field] of Object.entries(Config.dict)) if (key !== 'dataDir') Config.dict[key] = field.volatile();
+for (const [key, field] of Object.entries(Config.dict)) if (!['dataDir', 'projectlessWorkspaceRoot'].includes(key)) Config.dict[key] = field.volatile();
 
 // Defaults apply to omitted values. An explicit null is not a numeric or
 // boolean setting; use the same schema for API writes and pipeline options.
