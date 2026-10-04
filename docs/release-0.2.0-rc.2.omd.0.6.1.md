@@ -26,6 +26,6 @@
 - RC 原有草稿恢复、提示词优化、原生 Web 安装与预设切换回归；官方 rc.2 macOS 应用在隔离配置中的安装、重启与卸载验收。
 - 发行元数据、包内容和文档站构建检查；RC 的 SDK、宿主组件和旧草稿兼容保持原配对。
 
-跨平台运行记录：[完整矩阵](https://github.com/gulagala001/oh-my-dsh/actions/runs/37217229228)、[最终权限补丁回归](https://github.com/gulagala001/oh-my-dsh/actions/runs/37217946767)、[官方 macOS／Windows 桌面安装](https://github.com/gulagala001/oh-my-dsh/actions/runs/37217950454)、[三平台离线安装](https://github.com/gulagala001/oh-my-dsh/actions/runs/37217957336)。完整矩阵运行于权限补丁前，最终回归覆盖补丁后的全部运行代码。
+跨平台运行记录：[完整矩阵](https://github.com/gulagala001/oh-my-dsh/actions/runs/37217229228)、[最终权限补丁回归](https://github.com/gulagala001/oh-my-dsh/actions/runs/37218487571)、[官方 macOS／Windows 桌面安装](https://github.com/gulagala001/oh-my-dsh/actions/runs/37217950454)、[三平台离线安装](https://github.com/gulagala001/oh-my-dsh/actions/runs/37217957336)。完整矩阵运行于权限补丁前，最终回归覆盖补丁后的全部运行代码。
 
 官方桌面安装检查不等于用户设备上的屏幕录制、辅助功能、显示缩放和真实第三方账户操作均已复验。
