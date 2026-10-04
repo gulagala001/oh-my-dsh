@@ -187,10 +187,15 @@ test('install into stock web, coexist with stock presets, switch both ways and r
   const legacy = await snapshot(old.sessionId);
   assert.deepEqual(legacy.projections.values.todos, oldSnapshot.projections.values.todos);
 
+  await api('/model-mode?session='+ptcSession.sessionId,{provider:'fixture',model:'fixture',mode:'pro'});
   await stop(); await boot();
   await create('omd-ptc', ptcSession.sessionId); // Restore an OMD PTC agent first after restart.
   assert.equal((await api('/model-mode?session='+ptcSession.sessionId)).enabled,true,'mode survives a real process restart');
+  assert.equal((await api('/model-mode?session='+ptcSession.sessionId)).mode,'pro','the exact Pro tier survives a real process restart');
   const resumedPtc = await prompt(ptcSession.sessionId, 'Inspect retained tasks.', 2);
+  const resumedRequest=payloads.findLast(p=>p.tools?.some(t=>t.function.name==='run_code'));
+  assert.match(resumedRequest.messages[0].content,/Pro is on/);
+  assert.doesNotMatch(resumedRequest.messages[0].content,/Ultracode is on|Adversarial verify|Completeness critic/);
   assert.equal(resumedPtc.projections.values.agentPreset, 'omd-ptc');
   assert.equal(resumedPtc.projections.values.todos[0].content, 'Keep the original requirement.');
   await create('trisoul-x', blank.sessionId); // Preset definitions still use the host's eager activation order.

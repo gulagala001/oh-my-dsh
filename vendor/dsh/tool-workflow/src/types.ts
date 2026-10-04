@@ -35,6 +35,7 @@ export interface ToolWorkflowAgentEndData {
 /** Settles one workflow run after its live resources reach quiescence. */
 export interface ToolWorkflowRunEndData {
   readonly runId: WorkflowRunId
+  readonly failures?: import('@deepseek-ai/dsh-workflow-ptc/src/host.ts').WorkflowChildFailure[]
   readonly stopReason: WorkflowStopReason
 }
 

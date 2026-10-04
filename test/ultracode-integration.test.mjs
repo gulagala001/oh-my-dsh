@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 import { restoreFixtureLog } from './fixtures/restore-log.mjs';
-import { ULTRACODE_ON, ULTRACODE_OFF, ULTRACODE_SPARSE, ULTRACODE_KEYWORD } from '../src/ultracode.mjs';
+import { ULTRACODE_ON, ULTRACODE_OFF, ULTRACODE_SPARSE, ULTRACODE_KEYWORD, PRO_ON, PRO_OFF } from '../src/ultracode.mjs';
 
 const textOf = request => request.messages.filter(m => ['system','developer'].includes(m.role)).map(m => typeof m.content === 'string' ? m.content : JSON.stringify(m.content)).join('\n');
 async function request(fx, captured, text) {
@@ -118,4 +118,43 @@ test('installed PTC mode survives bundle reload and stock sessions after disable
   value=await request(fx,captured,'PTC mode after reload');
   assert.ok(textOf(value).includes(ULTRACODE_ON));
   assert.ok(value.tools.some(tool=>tool.function.name==='run_code'));
+});
+
+for (const agentPreset of ['trisoul-x','omd-ptc']) test(`${agentPreset}: Pro replaces stronger guidance on the actual request and preserves BT across preset switches`, { timeout:180000 }, async t => {
+  const captured=[];
+  const fx=await frontendFixture(t,{headless:true,installedPackage:true,agentPreset,
+    modelProfile:{reasoningEfforts:{off:null,low:'low',xhigh:'xhigh'},compat:{supportsReasoningEffort:true}},
+    modelReply(payload){if(payload.tools?.length)captured.push(payload);},
+  });
+  const path='/model-mode?session='+fx.sessionId;
+  const selectPreset = async (sessionId,preset) => { const r=await fx.call('agentPresets/select',{agentId:sessionId,agentPreset:preset}); assert.equal(r.result?.ok,true,JSON.stringify(r)); };
+  await fx.api('/better-todo?session='+fx.sessionId,{todo:false,verification:true});
+  await fx.api(path,{provider:'fixture',model:'fixture',ultracode:true});
+  assert.match(textOf(await request(fx,captured,'Before mode transition')),/Adversarial verify/);
+  await fx.api(path,{provider:'fixture',model:'fixture',mode:'pro'});
+  let value=await request(fx,captured,'Continue in Pro');
+  assert.ok(textOf(value).includes(PRO_ON));
+  assert.equal(value.reasoning_effort,'xhigh');
+  assert.doesNotMatch(textOf(value),/Ultracode is on|Adversarial verify|Completeness critic|Judge panel|Loop-until-dry/);
+  assert.match(JSON.stringify(value),/An active Pro or Ultracode reminder supplies standing authorization/);
+  assert.match(textOf(value),/including implementation and iterative refinement/);
+  assert.equal((await fx.api('/better-todo?session='+fx.sessionId)).verification,true);
+  // The host locks presets after the first turn. Exercise supported preset
+  // changes on a fresh session, without bypassing that native rule.
+  const switched=await fx.rpc('session/create',{cwd:fx.workspace,agentPreset});
+  const switchedPath='/model-mode?session='+switched.sessionId;
+  await fx.api(switchedPath,{provider:'fixture',model:'fixture',mode:'pro'});
+  await selectPreset(switched.sessionId,'standard');
+  assert.equal((await fx.api(switchedPath)).mode,'off');
+  assert.equal((await fx.api(switchedPath)).savedMode,'pro');
+  await selectPreset(switched.sessionId,agentPreset);
+  assert.equal((await fx.api(switchedPath)).mode,'pro');
+  assert.ok(textOf(await request({...fx,sessionId:switched.sessionId},captured,'Start in Pro')).includes(PRO_ON));
+  const stock=await fx.rpc('session/create',{cwd:fx.workspace,agentPreset:'standard'});
+  assert.doesNotMatch(textOf(await request({...fx,sessionId:stock.sessionId},captured,'Continue using the stock preset')),/Pro is on|Workflow authoring reference/);
+  await fx.api(path,{provider:'fixture',model:'fixture',mode:'off',reasoningEffort:'low'});
+  value=await request(fx,captured,'Back to ordinary effort');
+  assert.ok(textOf(value).includes(PRO_OFF)); assert.equal(value.reasoning_effort,'low');
+  assert.doesNotMatch(textOf(value),/Workflow authoring reference/);
+  assert.deepEqual(fx.errors,[]);
 });

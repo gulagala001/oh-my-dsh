@@ -70,3 +70,13 @@ test('user text, failed results and unpaired or unrelated tools cannot claim a l
     assert.equal(workflowJobs(events).get('run-a')?.jobId, undefined);
   }
 });
+
+ test('durable partial failures override script completion without inferring from free text', () => {
+  const events = records();
+  const failures = [{seq:1, childId:'child-1', stopReason:'error', cause:'failed', reason:'quota'}];
+  events.push({type:'tool-workflow/run-end', seq:4, data:{runId:'run-a', stopReason:'completed', failures}});
+  const original = node(); original.data.status = 'completed';
+  const data = liveWorkflowData(original, workflowJobs(events), [], 'parent');
+  assert.equal(data.status, 'failed'); assert.deepEqual(data.failures, failures);
+  assert.equal(original.data.status, 'completed');
+});

@@ -64,6 +64,7 @@ export interface ChildResult {
   structured?: unknown
   /** Why the child run ended (`'completed'` is the only value the runtime branches on). */
   stopReason: string
+  reason?: string
   budgetSpent?: number
   budgetTotal?: number | null
   /** Original durable child identity, retained when a cached call is replayed. */
