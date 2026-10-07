@@ -40,7 +40,7 @@ export async function handleDreamApi({hub,ctx,req,res,url,send,readBody}){
   }
   if(path==='/dream/refresh'){
     if(req.method!=='POST'){send(res,405,{error:'请使用 POST'});return true;}
-    await hub.dream.sources.sync(hub.dream.lifecycle.signal);
+    await hub.dream.sources.sync(hub.dream.lifecycle.signal,{retryUnreadable:true});
     send(res,200,hub.dream.status(id));return true;
   }
   if(path==='/dream/run'){

@@ -20,6 +20,7 @@ import { applyConversationRecords } from './conversation-records.jsx';
 import { applyRecommendedPlugins } from './recommended-plugins.jsx';
 import { applyPromptOptimizer } from './prompt-optimizer.jsx';
 import { applyModelPanel } from './model-panel.jsx';
+import { applySubscriptionFast } from './subscription-fast.jsx';
 import { applyWorkflowStatus } from './workflow-status.jsx';
 import { applyProjectlessWorkspaces } from './projectless-workspaces.jsx';
 
@@ -255,6 +256,7 @@ export async function apply(ctx) {
   applyLegacyDraftRecovery(ctx);
   projectlessDrafts.transferOptimizer = applyPromptOptimizer(ctx, { draftLock: projectlessDrafts }).transferDraft;
   applyModelPanel(ctx);
+  applySubscriptionFast(ctx);
   applyWorkflowStatus(ctx);
   const openPanel = section => ctx.sidebarRight.openTab('trisoul-x-workbench', { params: { section } });
   const sections = [

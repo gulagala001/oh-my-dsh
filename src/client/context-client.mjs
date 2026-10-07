@@ -180,7 +180,7 @@ export function createContextUI(React) {
       const locked = busy || Boolean(d?.manualOperation);
       const fullRunning = d?.manualOperation === 'full' || this.state.activeAction === '/compact-f';
       const ready = records.filter(r => r.live && r.mode === 'raw').length;
-      const retryLabel = kind => ({ 'waiting-main': '等待主会话成功后恢复', manual: '重试已暂停，请手动重试', retrying: '等待自动重试' })[d?.retry?.[kind]];
+      const retryLabel = kind => ({ 'waiting-main': '等待主会话成功后恢复', 'waiting-events': '等待新增事件后自动重试', manual: '重试已暂停，请手动重试', retrying: '等待自动重试' })[d?.retry?.[kind]];
       const step = (text, state, running) => h('div', { className: 'cx-stage' }, h('span', { className: 'cx-dot ' + (running ? 'cx-pulse' : '') }), h('div', null, h('strong', null, text), h('small', null, state)));
       return h('div', { className: 'cx-panel cx-context' }, heading('工作上下文', '整理长对话，保留原话与资料。', null, button(null, this.load, { icon: 'refresh', quiet: true, label: '刷新上下文' })),
         h('div', { className: 'cx-body' }, this.failure(), alert(notice),
