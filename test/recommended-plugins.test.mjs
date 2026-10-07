@@ -95,6 +95,18 @@ test('incompatible rewind blocks installation and updates, retains uninstall and
   assert.deepEqual(posts,[{id:'dsh-turn-rewind',action:'uninstall'}]);assert.deepEqual(errors,[]);
 });
 
+test('Turn Rewind rc explicit null permits installing the reviewed source snapshot', { timeout: 30000 }, async t => {
+  const id = 'dsh-turn-rewind';
+  const { card, posts, errors } = await managedRecommendationFixture(t, id, { unavailable: null, version: '0.3.9' });
+  assert.equal(await card.locator('.tx-recommended-result.tx-warn').count(), 0);
+  assert.match(await card.locator('.tx-recommended-review').innerText(), /已核验源码 v0\.3\.9 · 9610ab9.*DSH 0\.2\.0-rc\.2/);
+  const install = card.getByRole('button', { name: '安装', exact: true });
+  assert.equal(await install.isEnabled(), true); await install.click();
+  await card.getByRole('button', { name: '更新', exact: true }).waitFor();
+  assert.equal(await card.getByRole('button', { name: '更新', exact: true }).isEnabled(), true);
+  assert.deepEqual(posts, [{ id, action: 'install' }]); assert.deepEqual(errors, []);
+});
+
 test('Subscriptions alpha availability blocks install and update while keeping existing uninstall', { timeout: 30000 }, async t => {
   const unavailable = 'npm 0.9.8 尚不兼容 DSH 0.2.1-alpha.1，暂不提供安装或更新。已有安装可卸载。';
   const { card, posts, errors, state, poll } = await managedRecommendationFixture(t, 'dsh-plugin-subscriptions', { unavailable });
@@ -129,4 +141,33 @@ test('Subscriptions falls back to the alpha catalog restriction when older serve
   assert.match(await card.innerText(), /0\.9\.8.*0\.2\.1-alpha\.1/);
   assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
   assert.deepEqual(posts, []); assert.deepEqual(errors, []);
+});
+
+for (const { id, version, unavailable, reviewLabel } of [
+  { id: 'omd-intent-assistant', version: '0.2.0', unavailable: '固定版本 0.2.0 尚不兼容 DSH 0.2.1-alpha.1，已有安装仍可卸载。', reviewLabel: /已核验 v0\.2\.0.*DSH 0\.2\.0-rc\.2/ },
+  { id: 'jevify', version: '0.1.5', unavailable: '当前最新版本 0.1.5 尚不兼容 DSH 0.2.1-alpha.1 和 0.2.0-rc.2，已有安装仍可卸载。', reviewLabel: /社区推荐 · 兼容性待核验/ },
+]) test(`${id} consumes the current server reason, keeps its review label and permits only uninstall`, { timeout: 30000 }, async t => {
+  const { card, posts, errors, state, poll } = await managedRecommendationFixture(t, id, { unavailable, version });
+  assert.equal(await card.locator('.tx-recommended-result.tx-warn').textContent(), unavailable);
+  assert.match(await card.locator('.tx-recommended-review').innerText(), reviewLabel);
+  assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
+  state.installed = true; await poll();
+  assert.equal(await card.getByRole('button', { name: '更新', exact: true }).isEnabled(), false);
+  const uninstall = card.getByRole('button', { name: '卸载', exact: true });
+  assert.equal(await uninstall.isEnabled(), true); await uninstall.click();
+  await card.getByRole('button', { name: '安装', exact: true }).waitFor();
+  assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
+  assert.deepEqual(posts, [{ id, action: 'uninstall' }]); assert.deepEqual(errors, []);
+});
+
+test('intent assistant rc explicit null permits installation while retaining the historical review label', { timeout: 30000 }, async t => {
+  const id = 'omd-intent-assistant';
+  const { card, posts, errors } = await managedRecommendationFixture(t, id, { unavailable: null, version: '0.2.0' });
+  assert.equal(await card.locator('.tx-recommended-result.tx-warn').count(), 0);
+  assert.match(await card.locator('.tx-recommended-review').innerText(), /已核验 v0\.2\.0.*DSH 0\.2\.0-rc\.2/);
+  const install = card.getByRole('button', { name: '安装', exact: true });
+  assert.equal(await install.isEnabled(), true); await install.click();
+  await card.getByRole('button', { name: '更新', exact: true }).waitFor();
+  assert.equal(await card.getByRole('button', { name: '更新', exact: true }).isEnabled(), true);
+  assert.deepEqual(posts, [{ id, action: 'install' }]); assert.deepEqual(errors, []);
 });
