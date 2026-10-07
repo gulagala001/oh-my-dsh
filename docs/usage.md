@@ -137,6 +137,10 @@ node scripts/launch-macos.mjs
 
 推荐页的「提交插件 / 申请适配」只需仓库地址和一句用途，作者或普通用户均可投稿。AI 按需批量处理、维护者一次确认；[投稿与兼容说明](plugin-submissions.md)。已核验条目固定安装核验版本，未经复核的旧推荐保留手动安装，但不自动更新。
 
+**订阅登录 · Subscriptions** 的 npm `0.9.8` 尚不兼容本版宿主 DSH `0.2.1-alpha.1`，推荐页会显示原因并停用安装与更新，已有安装仍可卸载。在兼容的 DSH `0.2.0-rc.2` 环境中仍可手动安装；它保持“社区推荐 · 兼容性待核验”状态，不参与自动更新。兼容要求见[上游包声明](https://github.com/V1ki/dsh-plugin-subscriptions/blob/v0.9.8/package.json)。
+
+在兼容宿主安装 Subscriptions 后，支持 Fast 的 Codex 模型会显示闪电开关。点击开启或关闭，保存失败时保留原状态并提示重试。Fast 偏好按会话保存在内存中，同一会话切换模型共用这份偏好；重启 DSH 后恢复 `standard`。
+
 当前推荐 [dsh-status-rotator](https://github.com/01Virex/dsh-status-rotator)、[DSH × Blender](https://github.com/sixtysevenlf/dsh-blender-plugin) 与[小鲸鱼记账挂件](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget)。小鲸鱼使用 DSH Web 产品线的 npm 包 `dsh-whale-widget`。Blender 项目当前使用开发注入方式，尚未声明标准插件包安装清单，需按其项目说明配置 Blender 与连接插件；推荐页会明确标注这一限制。
 
 **鲸鱼图标**保留 DSH 的原有轮廓，加入冰蓝渐变与玻璃高光。悬停时摆尾，当前会话运行时显示旋转光轨，结束或切换到空闲会话后静止。动效复用宿主会话状态，不增加模型或后台请求；系统启用“减少动态效果”时保留静态图标与状态提示。

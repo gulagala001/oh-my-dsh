@@ -38,6 +38,14 @@ test('recommended page defaults on, hides only after a successful save and persi
   await entry.click();
   await dialog.getByRole('heading', { name: '推荐插件', exact: true }).waitFor();
   assert.equal(await dialog.locator('.tx-recommended-card').count() > 0, true);
+  const subscriptions = dialog.locator('.tx-recommended-card').filter({ hasText: '订阅登录 · Subscriptions' });
+  await until(async () => (await subscriptions.locator('.tx-recommended-version').innerText()).includes('未安装'));
+  assert.match(await subscriptions.innerText(), /0\.9\.8.*不兼容 DSH 0\.2\.1-alpha\.1/);
+  assert.equal(await subscriptions.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
+  const blocked = await page.request.post(new URL('trisoul-x/recommended-plugins', page.url()).href,
+    { data: { id: 'dsh-plugin-subscriptions', action: 'install' } });
+  assert.equal(blocked.status(), 400);
+  assert.match((await blocked.json()).error, /0\.9\.8.*不兼容 DSH 0\.2\.1-alpha\.1/);
   assert.equal((await readConfig()).recommendedPluginsPageEnabled, true);
   assert.deepEqual(f.errors, []);
 });

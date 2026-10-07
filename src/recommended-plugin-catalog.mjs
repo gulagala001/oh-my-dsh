@@ -6,6 +6,8 @@ export const recommendedPlugins = [
     "packageName": "dsh-plugin-subscriptions",
     "author": "V1ki",
     "description": "直接登录 ChatGPT、Claude、Grok、Copilot 或 Antigravity 订阅，自动发现模型；支持 ChatGPT Fast、订阅额度及生图。",
+    "unavailable": "当前 npm 版本 0.9.8 尚不兼容 DSH 0.2.1-alpha.1，暂不提供安装或更新。DSH 0.2.0-rc.2 可安装；已有安装仍可卸载，等待上游适配。",
+    "unavailableHosts": ["0.2.1-alpha.1"],
     "category": "模型能力",
     "url": "https://github.com/V1ki/dsh-plugin-subscriptions"
   },

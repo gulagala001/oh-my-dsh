@@ -1,17 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RecommendedPluginManager, AUTO_UPDATE_INTERVAL } from '../src/recommended-plugins.mjs';
+import { recommendedPlugins } from '../src/recommended-plugin-catalog.mjs';
 
 const catalog = [{ id: 'sample', packageName: 'sample-plugin' }, { id: 'absent', packageName: 'absent-plugin' }];
-function fixture() {
+function fixture(options = {}) {
+  const packageName = options.catalog?.[0]?.packageName ?? 'sample-plugin';
   let config = {}, bundles = [], time = 1, running = false, version = '1.0.0', failure;
   const calls = [], writes = [], packages = [];
   const manager = {
     listBundles: async () => structuredClone(bundles),
     installBundle: async (spec, options) => {
       calls.push({ spec, options }); if (failure) return failure;
-      const existing = bundles.find(bundle => bundle.name === 'sample-plugin');
-      bundles = [{ name: 'sample-plugin', version, enabled: options.enabled, installed: true, removable: true }];
+      const existing = bundles.find(bundle => bundle.name === packageName);
+      bundles = [{ name: packageName, version, enabled: options.enabled, installed: true, removable: true }];
       return { application: existing ? 'restart-required' : 'applied' };
     },
     removeBundle: async name => { calls.push({ remove: name }); bundles = []; return { application: 'applied' }; },
@@ -20,7 +22,7 @@ function fixture() {
   let lookups = 0, lookup;
   const service = new RecommendedPluginManager({ manager, catalog: structuredClone(catalog), getConfig: () => config, saveConfig: async patch => { writes.push(patch); config = { ...config, ...patch }; },
     preparePackage: async (url, sha256) => { packages.push({ url, sha256 }); return 'file:/verified/package.tgz'; },
-    latest: async () => { lookups++; return lookup ? lookup() : version; }, now: () => time, isRunning: () => running });
+    latest: async () => { lookups++; return lookup ? lookup() : version; }, now: () => time, isRunning: () => running, ...options });
   return { service, calls, writes, packages, get lookups() { return lookups; }, get config() { return config; }, set version(v) { version = v; }, set time(v) { time = v; }, set running(v) { running = v; }, set failure(v) { failure = v; }, set lookup(v) { lookup = v; },
     set bundles(v) { bundles = v; }, get bundles() { return bundles; } };
 }
@@ -175,6 +177,53 @@ test('incompatible recommendations block installation and updates while retainin
   assert.equal(f.calls.length, 0); assert.equal(f.lookups, 0);
   await f.service.start('sample', 'uninstall');
   assert.deepEqual(f.calls, [{ remove: 'sample-plugin' }]);
+});
+
+test('Subscriptions reports alpha incompatibility, blocks all installation work and retains uninstall', async () => {
+  const subscription = recommendedPlugins.find(plugin => plugin.id === 'dsh-plugin-subscriptions');
+  assert.equal(subscription.review, undefined, 'a compatibility restriction does not certify the community recommendation');
+  for (const hostVersion of [undefined, '0.2.1-alpha.1']) {
+    const f = fixture({ catalog: [structuredClone(subscription)], ...(hostVersion ? { hostVersion } : {}) });
+    const state = (await f.service.status()).plugins[0];
+    assert.match(state.unavailable, /0\.9\.8.*0\.2\.1-alpha\.1/);
+    assert.throws(() => f.service.start(subscription.id, 'install'), /不兼容/);
+    f.bundles = [{ name: subscription.packageName, installed: true, enabled: true, removable: true, version: '0.9.7' }];
+    assert.throws(() => f.service.start(subscription.id, 'update'), /不兼容/);
+    await f.service.settings(true); await f.service.tick();
+    assert.equal(f.lookups, 0); assert.deepEqual(f.packages, []); assert.deepEqual(f.calls, []);
+    assert.equal((await f.service.status()).plugins[0].removable, true);
+    await f.service.start(subscription.id, 'uninstall');
+    assert.deepEqual(f.calls, [{ remove: subscription.packageName }]);
+    assert.equal((await f.service.status()).plugins[0].installed, false);
+  }
+});
+
+test('Subscriptions on rc reports explicit availability, allows manual installation and remains unreviewed', async () => {
+  const subscription = recommendedPlugins.find(plugin => plugin.id === 'dsh-plugin-subscriptions');
+  const f = fixture({ catalog: [structuredClone(subscription)], hostVersion: '0.2.0-rc.2' });
+  f.version = '0.9.8';
+  assert.equal((await f.service.status()).plugins[0].unavailable, null, 'explicit null overrides the browser catalog alpha fallback');
+  await f.service.start(subscription.id, 'install');
+  assert.equal(f.calls.length, 1); assert.equal(f.calls[0].spec, 'dsh-plugin-subscriptions@0.9.8');
+  assert.equal((await f.service.status()).plugins[0].installed, true);
+  assert.equal((await f.service.status()).plugins[0].unavailable, null);
+  assert.deepEqual(Object.keys(f.calls[0].options).sort(), ['enabled', 'requestId'], 'no compatibility exemption or script approval');
+  assert.equal(f.service.catalog[0].review, undefined);
+  f.bundles = [{ name: subscription.packageName, installed: true, enabled: true, removable: true, version: '0.9.7' }];
+  await f.service.settings(true); await f.service.tick();
+  assert.equal(f.calls.length, 1, 'the unreviewed community plugin never auto-updates');
+  assert.equal(f.lookups, 1); assert.deepEqual(f.packages, []);
+});
+
+test('host incompatibility prevents even a reviewed Subscriptions automatic update from downloading', async () => {
+  const subscription = structuredClone(recommendedPlugins.find(plugin => plugin.id === 'dsh-plugin-subscriptions'));
+  // Review is a separate gate: satisfying it must not bypass host compatibility.
+  subscription.review = { version: '0.9.8', sha256: 'a'.repeat(64) };
+  const f = fixture({ catalog: [subscription], hostVersion: '0.2.1-alpha.1' });
+  f.bundles = [{ name: subscription.packageName, installed: true, enabled: true, removable: true, version: '0.9.7' }];
+  await f.service.settings(true); await f.service.tick();
+  assert.deepEqual(f.calls, []); assert.deepEqual(f.packages, []); assert.equal(f.lookups, 0);
+  assert.match((await f.service.status()).plugins[0].unavailable, /不兼容/);
 });
 
 test('closing during inventory lookup prevents a pending uninstall', async () => {
