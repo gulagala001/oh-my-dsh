@@ -19,6 +19,8 @@
 node --test test/documentation.test.mjs test/start.test.mjs test/version-update.test.mjs test/recommended-plugin-manager.test.mjs
 ```
 
+性能入口为 `node scripts/benchmark-runtime.mjs [基线commit]`，省略基线时使用 HEAD；输出仅是合成微基准，不证明真实模型或端到端速度。
+
 完整回归需要先构建，并准备 Playwright Chromium：
 
 ```sh
@@ -39,6 +41,8 @@ node --test --test-concurrency=1 test/*.test.mjs
 安装说明沿用户的实际路径组织：选择环境 → 安装 → 确认生效 → 日常使用 → 排障／恢复。桌面、Web 和源码安装分别写明入口；更新、停用和卸载继续沿用原安装方式。
 
 版本更新时同时核对 `package.json`、发布清单、README 徽章、安装命令、升级手册和本版说明。内置组件以 `vendor/opencu.json` 等发行清单为准。不要把尚未发布的修复写成已可通过现有 tag 安装；先记录在更新日志的“未发布”部分。
+
+OpenCU 在独立源码仓库维护，用 `node scripts/sync-opencu.mjs /path/to/opencu` 构建并完整替换发行快照；脚本会先解包、校验版本并生成哈希清单，再替换 `vendor/opencu` 和 `vendor/opencu.json`，替换出错时恢复原有两项。同版本可以重新同步，低于当前清单版本的源码默认拒绝；只有明确需要回退时才加 `--allow-downgrade`。不要手工修改发行快照。同步脚本回归使用临时仓库，可运行 `node --test test/opencu-sync.test.mjs`，并纳入 Windows CI；Windows 通过 Node 执行 npm 的 JavaScript CLI，npm 需随 Node 安装或提供 PATH 中的标准 npm launcher。
 
 新增用户指南时，在 [文档目录](docs/README.md)补上对应任务入口，并在页面顶部提供返回路径。文档检查会核对各安装指南中的全部目标版本、徽章和内置组件版本，并检查当前用户文档的本地文件与章节链接；历史版本说明和研究记录不作为当前安装指南扫描。它不替代实际安装验证，也不检查外部网站的可达性。
 
