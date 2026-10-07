@@ -103,8 +103,16 @@ export class DreamService {
     // progress is durable across job retries, pause and process replacement.
     for(let target;(target=this.store.nextTarget(job.id));){
       signal.throwIfAborted();
-      if(target.kind==='session')await this.updateSession(target.target,job,signal,target);
-      else await this.updateParent(target.kind,target.target,job,signal);
+      // Persisted job targets may predate a format refusal discovered by this
+      // scan. Shared jobs must withdraw that source and continue their scope.
+      if(target.kind==='session') {
+        if(job.scope==='session'||this.store.session(target.target)?.available!==false) {
+          try { await this.updateSession(target.target,job,signal,target); }
+          catch(error) {
+            if(job.scope==='session'||!this.sources.excludeUnreadable(target.target,error,signal))throw error;
+          }
+        }
+      } else await this.updateParent(target.kind,target.target,job,signal);
       this.store.finishTarget(job.id,target.ordinal,this.epoch);
     }
   }

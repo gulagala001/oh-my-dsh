@@ -30,7 +30,7 @@ const events = [
 
 test('Desktop V0 permissions and retired ledger extensions migrate without owning the new preset', async t => {
  const root = await mkdtemp(join(tmpdir(), 'omd-v0-')); t.after(() => rm(root, { recursive: true, force: true }));
- const dir = join(root, 'logs/project/legacy'); await mkdir(dir, { recursive: true });
+ const dir = support.sessionDir(join(root,'logs'),header.cwd,'legacy'); await mkdir(dir, { recursive: true });
  const physical = { type: 'session', ...header, id: 'legacy', version: 0, agentPreset: 'anchored-standard' };
  delete physical.isSeeded;
  const rows = [physical,
@@ -53,7 +53,7 @@ test('Desktop V0 permissions and retired ledger extensions migrate without ownin
  ]) rows.push({ ...event, seq: rows.length - 1, time: 100 + rows.length });
  const bytes = Buffer.from(rows.map(r => JSON.stringify(r) + '\n').join(''));
  const path = join(dir, 'session.jsonl'); await writeFile(path, bytes);
- const damagedDir = join(root, 'logs/project/damaged'); await mkdir(damagedDir);
+ const damagedDir = support.sessionDir(join(root,'logs'),header.cwd,'damaged'); await mkdir(damagedDir);
  const damagedBytes = Buffer.from([ { ...physical, id: 'damaged', parentSession: 'legacy', origin: 'subagent', delegationDepth: 1 }, rows[1], rows[1] ].map(r => JSON.stringify(r) + '\n').join(''));
  await writeFile(join(damagedDir, 'session.jsonl'), damagedBytes);
  const warnings = [];
@@ -94,7 +94,7 @@ test('legacy normalization preserves text and opaque arguments, rejects unknown 
 });
 for (const compression of ['none', 'zstd']) test(`old OMD sessions and context references migrate atomically (${compression})`, async t => {
  const root = await mkdtemp(join(tmpdir(), 'omd-v4-')); t.after(() => rm(root, { recursive: true, force: true }));
- const sessions = join(root, 'logs'), dir = join(sessions, 'project', header.id), data = join(root, 'omd');
+ const sessions = join(root, 'logs'), dir = support.sessionDir(sessions, header.cwd, header.id), data = join(root, 'omd');
  await mkdir(dir, { recursive: true });
  const statePath = join(data, 'context-v1/sessions', hash(header.id) + '.json'); await mkdir(dirname(statePath), { recursive: true });
  const state = { schema: 1, id: header.id, records: [{ id: 'record', sessionId: header.id, mode: 'raw', sourceSeqs: [7], originalSeqs: [1, 7], sourceHash: 'old', summary: 'unchanged', documents: [], userOriginals: [{ sessionId: header.id, seq: 7, content: user.content }] }], transaction: null, pending: { choices: [] }, review: {} };
