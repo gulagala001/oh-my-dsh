@@ -42,6 +42,60 @@ function fixture(t,{generate,config={}}={}){
 }
 
 const inputOf=payload=>JSON.parse(payload.messages.findLast(m=>m.role==='user').content);
+
+test('shared Dream isolates a format refusal discovered at manifest admission and completes healthy targets',async t=>{
+  const f=fixture(t);f.add('a');f.add('healthy');await f.run();
+  const saved=f.store.memory('session:a'),healthyBefore=f.store.memory('session:healthy');
+  f.archives.get('a').records[0].summary='a 的新资料';f.archives.get('healthy').records[0].summary='健康会话的新资料';
+  f.logs.get('a').revision++;f.logs.get('healthy').revision++;
+  const open=f.hub.ctx.sessionPersistence.open;let attempts=0;
+  f.hub.ctx.sessionPersistence.open=async(...args)=>{if(args[0]==='a'&&++attempts===2)throw Object.assign(Error('format became unsupported after successful index sync'),{name:'SessionFormatUnsupportedError'});return open(...args);};
+  const job=await f.run();
+  assert.equal(attempts,2);assert.equal(job.state,'complete',job.error);assert.deepEqual(f.store.memory('session:a'),saved);
+  assert.equal(f.store.session('a').available,false);assert.equal(f.store.session('a').shared,false);
+  assert.deepEqual(f.service.status().indexWarnings.map(w=>w.sessionId),['a']);assert(f.store.memory('session:healthy').revision>healthyBefore.revision);assert.match(job.notice,/1 个会话日志异常/);
+});
+
+test('explicit session Dream reports a manifest format refusal as failure',async t=>{
+  const f=fixture(t);f.add('a');await f.run('session','a');
+  const saved=f.store.memory('session:a'),calls=f.calls.length;f.archives.get('a').records[0].summary='尚未整理的新资料';f.logs.get('a').revision++;
+  const open=f.hub.ctx.sessionPersistence.open;let attempts=0;
+  f.hub.ctx.sessionPersistence.open=async(...args)=>{if(args[0]==='a'&&++attempts===2)throw Object.assign(Error('requested session format is unsupported'),{name:'SessionFormatUnsupportedError'});return open(...args);};
+  const job=await f.run('session','a');assert.equal(attempts,2);assert.equal(job.state,'failed');assert.match(job.error,/requested session format is unsupported/);
+  assert.deepEqual(f.store.memory('session:a'),saved);assert.equal(f.calls.length,calls);
+});
+
+for(const name of ['SessionPersistenceCorruptionError','SessionFormatUnsupportedError'])test('shared Dream rejects late unreadable sources before publication and continues healthy targets: '+name,async t=>{
+  const f=fixture(t);f.add('a');f.add('healthy');await f.run();
+  const saved=f.store.memory('session:a'),progress=f.store.progress('session:a'),healthyBefore=f.store.memory('session:healthy'),used=f.store.usage().used;
+  f.archives.get('a').records[0].summary='未验证的新资料';f.archives.get('healthy').records[0].summary='健康会话的新资料';
+  f.logs.get('a').revision++;f.logs.get('healthy').revision++;
+  const open=f.hub.ctx.sessionPersistence.open;let attempts=0;
+  f.hub.ctx.sessionPersistence.open=async(...args)=>{
+    if(args[0]==='a'&&++attempts===3)throw Object.assign(Error('source became unreadable before publication'),{name});
+    return open(...args);
+  };
+  const job=await f.run();
+  assert.equal(attempts,3);assert.equal(job.state,'complete',job.error);
+  assert.deepEqual(f.store.memory('session:a'),saved);assert.deepEqual(f.store.progress('session:a'),progress);
+  assert.equal(f.store.session('a').available,false);assert.equal(f.store.session('a').shared,false);
+  assert.deepEqual(f.service.status().indexWarnings.map(w=>w.sessionId),['a']);
+  assert(f.store.memory('session:healthy').revision>healthyBefore.revision);assert(f.store.usage().used>used,'received model output is still charged');
+});
+
+test('pausing during late source refusal preserves cancellation without quarantining the session',async t=>{
+  const f=fixture(t);f.add('a');await f.run();const saved=f.store.memory('session:a'),progress=f.store.progress('session:a');
+  f.archives.get('a').records[0].summary='未验证的新资料';f.logs.get('a').revision++;
+  const open=f.hub.ctx.sessionPersistence.open;let attempts=0;
+  f.hub.ctx.sessionPersistence.open=async(...args)=>{
+    if(args[0]==='a'&&++attempts===3){f.service.pause(f.service.activeJob);throw Object.assign(Error('source refusal after pause'),{name:'SessionFormatUnsupportedError'});}
+    return open(...args);
+  };
+  const job=await f.run();assert.equal(attempts,3);assert.equal(job.state,'paused');
+  assert.deepEqual(f.store.memory('session:a'),saved);assert.deepEqual(f.store.progress('session:a'),progress);
+  assert.equal(f.store.session('a').available,true);assert.equal(f.store.session('a').shared,true);assert.equal(f.store.session('a').readError,undefined);
+  assert.deepEqual(f.service.status().indexWarnings,[]);
+});
 const writeSse=(res,choice,usage)=>res.write('data: '+JSON.stringify({id:'dream-fixture',object:'chat.completion.chunk',model:'fixture',choices:choice?[{index:0,...choice}]:[],...(usage?{usage}:{})})+'\n\n');
 const memoryDelta=payload=>({role:'assistant',tool_calls:[{index:0,id:'save-memory',type:'function',function:{name:'save_memory',arguments:JSON.stringify({summary:'真实传输保存的记忆',references:inputOf(payload).sources.map(s=>s.id)})}}]});
 function completeSse(res,payload){res.writeHead(200,{'Content-Type':'text/event-stream'});writeSse(res,{delta:memoryDelta(payload),finish_reason:'tool_calls'},{prompt_tokens:100,completion_tokens:50,total_tokens:150});res.end('data: [DONE]\n\n');}
@@ -324,6 +378,69 @@ test('changing scope invalidates already-published aggregates before another Dre
 });
 test('removed native sessions are excluded; remembered shared summaries do not recreate the session',async t=>{
   const f=fixture(t);f.add('a');await f.run();f.logs.delete('a');await f.service.sources.sync();assert.equal(f.store.session('a').available,false);assert.deepEqual(f.store.projects(),[]);assert.equal(f.hub.ctx.agents.size,0);
+});
+
+test('unsupported historical formats do not block startup, automatic Dream or healthy sessions',async t=>{
+  const f=fixture(t,{config:{dreamAutoEnabled:true}});f.add('legacy');f.add('healthy');
+  const open=f.hub.ctx.sessionPersistence.open;let attempts=0;
+  f.hub.ctx.sessionPersistence.open=async(...args)=>{
+    if(args[0]==='legacy'){attempts++;throw Object.assign(Error('cannot safely transform unclassified message source'),{name:'SessionFormatUnsupportedError'});}
+    return open(...args);
+  };
+  f.store.setMeta('indexError','previous startup failure');
+  await f.service.start();
+  assert.equal(f.service.status().indexError,null);
+  assert.equal(f.store.session('legacy').available,false);assert.equal(f.store.session('legacy').shared,false);
+  assert.equal(f.service.status().indexWarnings[0].sessionId,'legacy');
+  assert.equal(f.store.session('healthy').available,true);assert(f.store.memory('session:healthy'));
+  assert.equal(f.store.jobs()[0].state,'complete');assert.match(f.store.jobs()[0].notice,/1 个会话日志异常/);
+  assert.equal(attempts,1,'unchanged format refusals are not reparsed on every internal scan');
+  assert.equal((await f.run()).state,'complete');assert.equal(attempts,1);
+});
+
+for(const name of ['SessionPersistenceCorruptionError','SessionFormatUnsupportedError'])test(`manual refresh retries ${name} even when host compatibility changes without a log revision`,async t=>{
+  const f=fixture(t);f.add('recovering');f.add('healthy');
+  const open=f.hub.ctx.sessionPersistence.open;let broken=true,attempts=0;
+  f.hub.ctx.sessionPersistence.open=async(...args)=>{
+    if(args[0]==='recovering'){attempts++;if(broken)throw Object.assign(Error('historical source unavailable'),{name});}
+    return open(...args);
+  };
+  await f.service.sources.sync();
+  const revision=f.logs.get('recovering').revision,healthyReads=f.reads().reads;
+  broken=false;await f.service.sources.sync();assert.equal(attempts,1);
+  let response;
+  await handleDreamApi({hub:f.hub,ctx:f.hub.ctx,req:{method:'POST'},url:new URL('http://local/trisoul-x/api/dream/refresh'),send:(_res,status,data)=>{response={status,data};}});
+  assert.equal(response.status,200);assert.deepEqual(response.data.indexWarnings,[]);assert.equal(response.data.indexError,null);
+  assert.equal(attempts,2);assert.equal(f.logs.get('recovering').revision,revision);
+  assert.equal(f.reads().reads,healthyReads+1,'refresh retries failed sources without rereading unchanged healthy logs');
+  assert.equal(f.store.session('recovering').available,true);assert.equal(f.store.session('recovering').shared,true);
+  assert.equal(f.calls.length,0,'recovery refresh does not call a model');
+  assert.equal((await f.run()).state,'complete');assert(f.store.memory('session:recovering'));
+});
+
+test('format refusal withdraws shared contributions, preserves prior memory and recovers on revision change',async t=>{
+  const f=fixture(t);f.add('a');f.add('b');await f.run();
+  const saved=f.store.memory('session:a'),open=f.hub.ctx.sessionPersistence.open;let broken=true;
+  f.hub.ctx.sessionPersistence.open=async(...args)=>{if(args[0]==='a'&&broken)throw Object.assign(Error('unsupported historical source'),{name:'SessionFormatUnsupportedError'});return open(...args);};
+  f.logs.get('a').revision++;await f.service.sources.sync();
+  assert.deepEqual(f.store.memory('session:a'),saved);assert.equal(f.store.memory('global').invalid,true);
+  assert.equal((await f.run()).state,'complete');assert.equal(f.store.session('b').shared,true);
+  broken=false;f.logs.get('a').revision++;await f.service.sources.sync();
+  assert.equal(f.store.session('a').shared,true);assert.deepEqual(f.service.status().indexWarnings,[]);
+  assert.equal((await f.run()).state,'complete');assert.equal(f.store.memory('global').invalid,undefined);
+});
+
+test('resumed shared jobs skip unreadable persisted targets and still process healthy targets',async t=>{
+  let failing=true;
+  const f=fixture(t,{generate:input=>{if(failing)throw Error('provider interrupted');return {summary:'健康来源的记忆',references:input.sources.map(source=>source.id)};}});
+  f.add('a');f.add('b');const first=await f.run();assert.equal(first.state,'failed');assert.equal(first.targetsReady,true);
+  const open=f.hub.ctx.sessionPersistence.open;
+  f.hub.ctx.sessionPersistence.open=async(...args)=>{if(args[0]==='a')throw Object.assign(Error('unsupported historical source'),{name:'SessionFormatUnsupportedError'});return open(...args);};
+  f.logs.get('a').revision++;failing=false;
+  f.service.resume(first.id);await f.service.draining;
+  assert.equal(f.store.job(first.id).state,'complete',f.store.job(first.id).error);
+  assert.equal(f.store.session('a').shared,false);assert(f.store.memory('session:b'));assert(f.store.memory('global'));
+  assert.match(f.store.job(first.id).notice,/1 个会话日志异常/);
 });
 
 test('one corrupt archived session leaves healthy Dream sources usable and retries after its revision changes',async t=>{

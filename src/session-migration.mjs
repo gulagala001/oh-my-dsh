@@ -1,10 +1,11 @@
-import { readdir, readFile, open, rename, mkdir, stat } from 'node:fs/promises';
+import { readdir, readFile, open, rename, mkdir, stat, realpath } from 'node:fs/promises';
 import { isDeepStrictEqual } from 'node:util';
-import { join, dirname } from 'node:path';
+import { join, dirname, basename } from 'node:path';
 import { sourceHash, hash } from './context/core.mjs';
 import { userDocument } from './context/materials.mjs';
 import { loadMigrationSupport } from '../lib/host/session-migration.mjs';
 import { normalizeLegacyV0Row } from './session-legacy-v0.mjs';
+import { hasLegacyPluginSources } from './session-legacy-sources.mjs';
 
 const optionalJson = async path => { try { return JSON.parse(await readFile(path, 'utf8')); } catch (e) { if (e.code === 'ENOENT') return null; throw e; } };
 async function durableJson(path, value) {
@@ -184,13 +185,27 @@ function normalizeCompactionSpans(events, legacyV0 = false) {
 }
 
 export function createHistoricalRestore(support, header) {
-  if (header.version !== 0) return support.historicalSessionFormatCatalog.createRestore(header, { recovery: 'strict', validation: 'transformed' });
+  if (header.version >= 3) return support.historicalSessionFormatCatalog.createRestore(header, { recovery: 'strict', validation: 'transformed' });
+  const sourceMapping = [], sourceEvents = [], v2Mapping = [];
   const catalog = support.createLegacySessionCatalog(artifact => {
-    normalizeCompactionSpans(artifact.events, true);
+    if (header.version === 0) normalizeCompactionSpans(artifact.events, true);
     return artifact;
-  });
+  }, (event, seq) => {
+    v2Mapping[event.seq] = seq;
+    if (header.version !== 2) return;
+    sourceMapping[event.seq] = seq;
+    // Sidecar path rebasing needs the original event type, not a second copy
+    // of potentially large tool results or attachment content.
+    sourceEvents[event.seq] = { type: event.type };
+  }, header.version < 2 ? (mapping, types) => {
+    for (const [source, target] of mapping) sourceMapping[source] = target;
+    Object.assign(sourceEvents, types);
+  } : undefined);
   const restore = catalog.createRestore(header, { recovery: 'strict', validation: 'transformed' });
-  return { decodeRow: row => restore.decodeRow(normalizeLegacyV0Row(row)), finish: () => restore.finish() };
+  return { decodeRow: row => restore.decodeRow(header.version === 0 ? normalizeLegacyV0Row(row) : row), finish() {
+    const artifact = restore.finish();
+    return { ...artifact, sourceMapping: header.version < 2 ? sourceMapping.map(seq => v2Mapping[seq]) : sourceMapping, sourceEvents };
+  } };
 }
 
 export function migrateArtifact(support, historical, children) {
@@ -206,13 +221,17 @@ export function migrateArtifact(support, historical, children) {
   }
   const inheritedEventCount = stage.finish(collector);
   const combined = normalized.mapping.map(seq => mapping[seq]);
+  // Native event references are already in V3 coordinates. OMD-generated
+  // text and metadata still name original rows, including pre-V3 shifts.
+  const originalMapping = historical.sourceMapping ? historical.sourceMapping.map(seq => combined[seq]) : combined;
+  const originalEvents = historical.sourceEvents || historical.events;
   const events = structuredClone(collector.values);
   for (const event of events) {
-    if (event.type === 'compaction/summary' && event.data.omdBatchId) event.data.summary = rebaseGeneratedContent(event.data.summary, combined, header.id);
+    if (event.type === 'compaction/summary' && event.data.omdBatchId) event.data.summary = rebaseGeneratedContent(event.data.summary, originalMapping, header.id);
     const message = event.type === 'user/message' ? event.data : event.data?.message;
     if (!message) continue;
-    if (message.omdBatchId || message.source?.kind === 'plugin:trisoul-x:trace') message.content = rebaseGeneratedContent(message.content, combined, header.id);
-    for (const key of ['omdTodo', 'omdTaskContext']) if (message[key]) message[key] = remapOwned(message[key], combined, header.id, historical.events);
+    if (message.omdBatchId || message.source?.kind === 'plugin:trisoul-x:trace') message.content = rebaseGeneratedContent(message.content, originalMapping, header.id);
+    for (const key of ['omdTodo', 'omdTaskContext']) if (message[key]) message[key] = remapOwned(message[key], originalMapping, header.id, originalEvents);
   }
   const restore = support.sessionFormatCatalog.createRestore(support.sessionFormatCatalog.encodeCurrentHeader(header, inheritedEventCount), { recovery: 'strict', validation: 'current' });
   for (const event of events) restore.decodeRow(support.sessionFormatCatalog.encodeCurrentEvent(event));
@@ -265,22 +284,53 @@ async function applySidecars(updates) {
   }
   for (const update of updates) if (!isDeepStrictEqual(await optionalJson(update.path), update.after)) await durableJson(update.path, update.after);
 }
+class SessionHeaderCorruptionError extends Error {
+  constructor(message, cause) { super(message, { cause });this.name = 'SessionHeaderCorruptionError'; }
+}
+async function assertStorageIdentity(path, root, header, version, compression, support) {
+  if (header.cwd !== undefined && typeof header.cwd !== 'string') throw new SessionHeaderCorruptionError('会话目录身份缺少有效工作目录：' + path);
+  let expectedPath;
+  try { expectedPath = support.generationLogPath(root, header.cwd, header.id, version, compression); }
+  catch (error) { throw new SessionHeaderCorruptionError('会话头部不能表示有效目录身份：' + path, error); }
+  const actual = await realpath(path);
+  if (path === expectedPath) return actual;
+  let expected;
+  try { expected = await realpath(expectedPath); }
+  catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    throw new SessionHeaderCorruptionError('会话头部与宿主目录身份不符：' + path, error);
+  }
+  if (actual !== expected) throw new SessionHeaderCorruptionError('会话头部与宿主目录身份不符：' + path);
+  return actual;
+}
 async function readHeader(path, compression, support) {
   const file = await open(path, 'r');
   try {
     let bytes = Buffer.alloc(0);
     for (;;) {
       const chunk = Buffer.alloc(16384), read = await file.read(chunk);
-      if (!read.bytesRead) throw Error('会话日志缺少完整头部：' + path);
+      if (!read.bytesRead) throw new SessionHeaderCorruptionError('会话日志缺少完整头部：' + path);
       bytes = Buffer.concat([bytes, chunk.subarray(0, read.bytesRead)]);
       let first = bytes;
       if (compression === 'zstd') {
-        const frame = support.scanZstdFrames(bytes, 1).frames[0];
-        if (!frame) continue;
-        first = await support.decompressZstdPrefix(bytes.subarray(frame.start, frame.end));
+        try {
+          const frame = support.scanZstdFrames(bytes, 1).frames[0];
+          if (!frame) continue;
+          first = await support.decompressZstdPrefix(bytes.subarray(frame.start, frame.end));
+        } catch (error) {
+          if (!/^corrupt Zstandard session log:/.test(error.message) && !/^ZSTD_error_|^ERR_ZSTD_/.test(error.code || '')) throw error;
+          throw new SessionHeaderCorruptionError('会话头部压缩数据损坏：' + path, error);
+        }
       }
       const end = first.indexOf(10);
-      if (end >= 0) return JSON.parse(first.subarray(0, end).toString());
+      if (end >= 0) {
+        let header;
+        try { header = JSON.parse(first.subarray(0, end).toString()); }
+        catch (error) { throw new SessionHeaderCorruptionError('会话头部 JSON 损坏：' + path, error); }
+        if (!header || typeof header !== 'object' || Array.isArray(header) || typeof header.id !== 'string' || !header.id || !Number.isSafeInteger(header.version))
+          throw new SessionHeaderCorruptionError('会话头部缺少有效标识或版本：' + path);
+        return header;
+      }
     }
   } finally { await file.close(); }
 }
@@ -292,19 +342,41 @@ export async function migrateSessionStorage(ctx, dataDir, providedSupport) {
   if (!backend?.config?.root) return; // Memory/other backends own their formats.
   const support = providedSupport ?? await loadMigrationSupport(ctx);
   const root = backend.config.root, compression = backend.config.compression ?? 'zstd';
-  const corpus = [];
+  const discovered = [];
   async function directories(path, depth) {
     let entries; try { entries = await readdir(path, { withFileTypes: true }); } catch (e) { if (e.code === 'ENOENT') return; throw e; }
     const files = entries.filter(e => e.isFile()).map(e => ({ path: join(path, e.name), version: support.parseGenerationLogFilename(e.name, compression) })).filter(e => e.version !== undefined).sort((a, b) => b.version - a.version);
     if (files.length) {
       const selected = files[0];
-      const header = await readHeader(selected.path, compression, support);
-      if (header.version !== selected.version) throw Error('会话头部版本与文件名不符：' + selected.path);
-      corpus.push({ ...selected, dir: path, header }); return;
+      // Journal errors and filesystem failures remain strict. Only damaged
+      // unjournaled archive bytes can be isolated without hiding a transaction.
+      const journal = await optionalJson(join(path, 'omd-v4-migration.json'));
+      let header, identity;
+      try {
+        header = await readHeader(selected.path, compression, support);
+        if (header.version !== selected.version) throw new SessionHeaderCorruptionError('会话头部版本与文件名不符：' + selected.path);
+        identity = await assertStorageIdentity(selected.path, root, header, selected.version, compression, support);
+      } catch (error) {
+        if (!(error instanceof SessionHeaderCorruptionError) || journal) throw error;
+        ctx.logger.warn?.('旧会话 %s 未迁移，原始日志保留：%s', basename(path), error.message);return;
+      }
+      discovered.push({ ...selected, dir: path, header, identity, journal }); return;
     }
     if (depth > 0) for (const entry of entries) if (entry.isDirectory()) await directories(join(path, entry.name), depth - 1);
   }
   await directories(root, 2);
+  const byId = new Map();
+  for (const item of discovered) {
+    const group = byId.get(item.header.id) || [];group.push(item);byId.set(item.header.id, group);
+  }
+  const corpus = [];
+  for (const [id, group] of byId) {
+    if (new Set(group.map(item => item.identity)).size > 1) {
+      if (group.some(item => item.journal)) throw Error('迁移会话标识重复，保留迁移现场：' + id);
+      ctx.logger.warn?.('旧会话 %s 未迁移，原始日志保留：%s', id, '宿主目录中存在重复会话标识');continue;
+    }
+    corpus.push(group[0]);
+  }
   for (const item of corpus) {
     const journalPath = join(item.dir, 'omd-v4-migration.json');
     let journal = await optionalJson(journalPath);
@@ -314,7 +386,7 @@ export async function migrateSessionStorage(ctx, dataDir, providedSupport) {
       || await optionalJson(join(dataDir, 'sessions', item.header.id + '.json'));
     // Desktop and Web share the old archive. V0 predates OMD's preset names,
     // so limiting migration to the new presets leaves those sessions unreadable.
-    if (!owned && !journal && item.version !== 0) continue;
+    if (!owned && !journal && ![0, 1, 2].includes(item.version)) continue;
     let lease;
     try {
       lease = await support.SessionWriteLease.acquire(item.dir, item.header.id);
@@ -331,7 +403,14 @@ export async function migrateSessionStorage(ctx, dataDir, providedSupport) {
         }
         continue;
       }
+      if (journal?.complete) throw Error('已完成的迁移目标不存在，保留迁移现场：' + target);
       if (targetExists) throw Error('旧会话已被其他宿主升级，请先恢复 OMD 关联记录：' + item.header.id);
+      // Foreign V1/V2 archives are migrated only when they actually need this
+      // bounded compatibility. Ordinary foreign logs keep the native path.
+      if (!owned && !journal && item.version !== 0) {
+        const source = await support.readDecodedJsonlSource(item.path, item.version, compression, { createRestore: h => createHistoricalRestore(support, h) });
+        if (!hasLegacyPluginSources(source.artifact.events)) continue;
+      }
       const children = [], witnesses = [];
       for (const child of corpus.filter(c => c.header.parentSession === item.header.id && c.header.origin === 'subagent')) {
         const before = signature(await stat(child.path, { bigint: true }));
@@ -350,21 +429,37 @@ export async function migrateSessionStorage(ctx, dataDir, providedSupport) {
       let old, mapping;
       const prepared = await support.prepareJsonlMigration({ sourcePath: item.path, sourceVersion: item.version, currentPath: target, compression,
         verifyCurrentFile: support.verifyJsonlCurrentGeneration,
-        validateHistoricalHeader: header => { if (header.id !== item.header.id) throw Error('会话在迁移期间被替换'); },
+        validateHistoricalHeader: async header => {
+          if (header.id !== item.header.id || header.cwd !== item.header.cwd) throw Error('会话在迁移期间被替换');
+          await assertStorageIdentity(item.path, root, header, item.version, compression, support);
+        },
         validateRelatedSources: async () => { for (const witness of witnesses) if (signature(await stat(witness.path, { bigint: true })) !== witness.identity) throw Error('子会话在迁移期间发生变化'); },
         format: { currentVersion: 4, encodeHeader: support.sessionFormatCatalog.encodeCurrentHeader, encodeEvent: support.sessionFormatCatalog.encodeCurrentEvent,
           createRestore(header) {
             const read = createHistoricalRestore(support, header);
-            return { decodeRow: row => read.decodeRow(row), finish() { old = read.finish(); const migrated = migrateArtifact(support, old, children); mapping = migrated.mapping; return migrated.artifact; } };
+            return { decodeRow: row => read.decodeRow(row), finish() {
+              old = read.finish(); const migrated = migrateArtifact(support, old, children);
+              mapping = old.sourceMapping ? old.sourceMapping.map(seq => migrated.mapping[seq]) : migrated.mapping;
+              return migrated.artifact;
+            } };
           } },
       });
-      const updates = [];
-      for (const [path, context] of [[join(dataDir, 'context-v1/sessions', hash(item.header.id) + '.json'), true], [join(dataDir, 'sessions', item.header.id + '.json'), false]]) {
-        const before = await optionalJson(path);
-        if (before) updates.push({ path, before, after: context ? migrateContextState(before, mapping, old.events, prepared.artifact) : remapOwned(before, mapping, item.header.id, old.events) });
+      let updates;
+      if (journal) {
+        // A crash before publication can resume the exact write-ahead plan.
+        // Never remap a sidecar that has already moved to target coordinates.
+        if (journal.id !== item.header.id || journal.source !== item.path || journal.target !== target
+          || journal.artifactHash !== artifactHash(prepared.artifact) || !isDeepStrictEqual(journal.mapping, JSON.parse(JSON.stringify(mapping)))) throw Error('迁移来源或方案已发生变化，保留迁移现场');
+        updates = journal.updates;
+      } else {
+        updates = [];
+        for (const [path, context] of [[join(dataDir, 'context-v1/sessions', hash(item.header.id) + '.json'), true], [join(dataDir, 'sessions', item.header.id + '.json'), false]]) {
+          const before = await optionalJson(path);
+          if (before) updates.push({ path, before, after: context ? migrateContextState(before, mapping, old.sourceEvents || old.events, prepared.artifact) : remapOwned(before, mapping, item.header.id, old.sourceEvents || old.events) });
+        }
+        journal = { version: 1, artifactHash: artifactHash(prepared.artifact), id: item.header.id, source: item.path, target, mapping, updates, complete: false };
+        await durableJson(journalPath, journal);
       }
-      journal = { version: 1, artifactHash: artifactHash(prepared.artifact), id: item.header.id, source: item.path, target, mapping, updates, complete: false };
-      await durableJson(journalPath, journal);
       for (const update of updates) if (!isDeepStrictEqual(await optionalJson(update.path), update.before)) throw Error('迁移关联记录在发布前被修改：' + update.path);
       await prepared.publish();
       await applySidecars(updates);
@@ -372,8 +467,13 @@ export async function migrateSessionStorage(ctx, dataDir, providedSupport) {
       ctx.logger.info('OMD 已迁移旧会话 %s；原始日志和关联记录备份已保留。', item.header.id);
     } catch (error) {
       // An unrelated damaged archive must not disable the entire OMD plugin.
-      // Owned state and interrupted journals retain their strict recovery path.
-      if (owned || journal) throw error;
+      // A format refusal before journaling has published no data, including
+      // owned sidecars. Interrupted publication and all other owned failures
+      // retain their strict recovery path.
+      const formatRefusal = ['SessionFormatError', 'SessionFormatUnsupportedMigrationError'].includes(error?.name)
+        || /^(?:corrupt (?:Zstandard )?session log:|empty or header-less (?:Zstandard )?session log$)/.test(error?.message || '')
+        || /^ZSTD_error_|^ERR_ZSTD_/.test(error?.code || '');
+      if (journal || !formatRefusal) throw error;
       ctx.logger.warn?.('旧会话 %s 未迁移，原始日志保留：%s', item.header.id, error.message);
     } finally { await lease?.release(); }
   }

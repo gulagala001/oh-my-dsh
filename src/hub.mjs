@@ -129,7 +129,9 @@ export class Hub extends Service {
       iterator = this.ctx.llm.stream({ ...route, ...(reasoningEffort !== undefined ? { reasoningEffort } : {}), ...request, sessionId: agent.session.id, signal })[Symbol.asyncIterator]();
       for (;;) { const part = await Promise.race([iterator.next(), aborted]); if (part.done) break; assembler.push(part.value); }
       complete = true;
-      if (['error', 'aborted', 'max-tokens'].includes(assembler.finish.kind)) throw new Error(assembler.finish.failure?.message || `模型未完成输出：${assembler.finish.kind}`);
+      if (['error', 'aborted', 'max-tokens'].includes(assembler.finish.kind)) throw Object.assign(
+        new Error(assembler.finish.failure?.message || `模型未完成输出：${assembler.finish.kind}`),
+        assembler.finish.failure?.code ? { code: assembler.finish.failure.code } : {});
       this.record(agent.session, kind, { ...route, effort: reasoningEffort ?? null, durationMs: Date.now() - start, usage: assembler.usage });
       return { blocks: assembler.blocks(), usage: assembler.usage, ...route };
     } catch (error) {
