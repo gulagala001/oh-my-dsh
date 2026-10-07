@@ -226,6 +226,55 @@ test('host incompatibility prevents even a reviewed Subscriptions automatic upda
   assert.match((await f.service.status()).plugins[0].unavailable, /不兼容/);
 });
 
+test('Turn Rewind keeps alpha blocked and rc explicitly available through the fixed source SHA', async () => {
+  const plugin = recommendedPlugins.find(item => item.id === 'dsh-turn-rewind');
+  const alpha = fixture({ catalog: [structuredClone(plugin)], hostVersion: '0.2.1-alpha.1' });
+  assert.match((await alpha.service.status()).plugins[0].unavailable, /0\.3\.9.*0\.2\.1-alpha\.1/);
+  assert.throws(() => alpha.service.start(plugin.id, 'install'), /不兼容/);
+  alpha.bundles = [{ name: plugin.packageName, installed: true, enabled: true, removable: true, version: '0.3.9' }];
+  assert.throws(() => alpha.service.start(plugin.id, 'update'), /不兼容/);
+  await alpha.service.settings(true); await alpha.service.tick();
+  assert.equal(alpha.lookups, 0); assert.deepEqual(alpha.packages, []); assert.deepEqual(alpha.calls, []);
+  await alpha.service.start(plugin.id, 'uninstall');
+  assert.deepEqual(alpha.calls, [{ remove: plugin.packageName }]);
+
+  const rc = fixture({ catalog: [structuredClone(plugin)], hostVersion: '0.2.0-rc.2' }); rc.version = '0.3.9';
+  assert.equal((await rc.service.status()).plugins[0].unavailable, null);
+  await rc.service.start(plugin.id, 'install');
+  assert.deepEqual(rc.packages, [{
+    url: 'https://codeload.github.com/Anionex/dsh-turn-rewind/tar.gz/9610ab93c87e2405e7512d53a099b8fb2caf6936',
+    sha256: 'f4ca526ccf81d499546276cebeceb8e2cf0b9f3393bae68751c7440848ab16f2',
+  }]);
+  assert.equal(rc.calls[0].spec, plugin.packageName + '@file:/verified/package.tgz');
+  assert.deepEqual(Object.keys(rc.calls[0].options).sort(), ['enabled', 'requestId']);
+  assert.equal(rc.lookups, 0);
+  assert.equal((await rc.service.status()).plugins[0].installed, true);
+  await rc.service.settings(true); await rc.service.tick();
+  assert.equal(rc.calls.length, 1, 'the source snapshot remains manual-only');
+});
+
+for (const { id, version, hosts } of [
+  { id: 'omd-intent-assistant', version: '0.2.0', hosts: ['0.2.1-alpha.1'] },
+  { id: 'jevify', version: '0.1.5', hosts: ['0.2.1-alpha.1', '0.2.0-rc.2'] },
+]) test(`${id} rejects incompatible hosts before lookup or download and retains managed uninstall`, async () => {
+  const plugin = recommendedPlugins.find(item => item.id === id);
+  const review = structuredClone(plugin.review);
+  assert.equal(plugin.review?.version, id === 'omd-intent-assistant' ? '0.2.0' : undefined);
+  for (const hostVersion of hosts) {
+    const f = fixture({ catalog: [structuredClone(plugin)], hostVersion });
+    assert.match((await f.service.status()).plugins[0].unavailable, new RegExp(version.replaceAll('.', '\\.')));
+    assert.throws(() => f.service.start(id, 'install'), /不兼容/);
+    f.bundles = [{ name: plugin.packageName, installed: true, enabled: true, removable: true, version }];
+    assert.throws(() => f.service.start(id, 'update'), /不兼容/);
+    await f.service.settings(true); await f.service.tick();
+    assert.equal(f.lookups, 0); assert.deepEqual(f.packages, []); assert.deepEqual(f.calls, []);
+    assert.deepEqual(f.service.catalog[0].review, review, 'host restrictions leave historical review or community status intact');
+    assert.equal((await f.service.status()).plugins[0].removable, true);
+    await f.service.start(id, 'uninstall');
+    assert.deepEqual(f.calls, [{ remove: plugin.packageName }]);
+  }
+});
+
 test('closing during inventory lookup prevents a pending uninstall', async () => {
   const f = fixture();
   f.bundles = [{ name: 'sample-plugin', installed: true, removable: true, enabled: true, version: '1.0.0' }];
@@ -263,7 +312,7 @@ test('GitHub recommendations install the versioned release asset and remain opti
   const plugin = recommendedPlugins.find(p => p.id === 'jevify');
   const spec = 'https://github.com/gulagala001/jevify/releases/download/v0.1.5/dsh-plugin-jevify-0.1.5.tgz';
   assert.equal(pluginInstallSpec(plugin, '0.1.5'), spec);
-  const f = fixture(); f.service.catalog = [plugin]; f.version = '0.1.5';
+  const f = fixture({ catalog: [plugin], hostVersion: '0.1.6-alpha.2' }); f.version = '0.1.5';
   await f.service.tick(); assert.equal(f.calls.length, 0);
   await f.service.start('jevify', 'install'); assert.equal(f.calls[0].spec, spec);
   const fetchOriginal = globalThis.fetch;
@@ -292,7 +341,7 @@ test('in-flight inventory warnings never masquerade as a completed uninstall fai
   assert.equal(done.plugins[0].inventoryWarning, undefined);
 });
 
-test('intent assistant is release-pinned and never installed by opt-in auto updates', async () => {
+test('intent assistant on rc is explicitly available, release-pinned and never installed by opt-in auto updates', async () => {
   const { recommendedPlugins } = await import('../src/recommended-plugin-catalog.mjs');
   const { pluginInstallSpec } = await import('../src/recommended-plugins.mjs');
   const { readFile } = await import('node:fs/promises');
@@ -301,9 +350,12 @@ test('intent assistant is release-pinned and never installed by opt-in auto upda
   assert.equal(pluginInstallSpec(plugin, plugin.review.version), 'https://github.com/gulagala001/omd-prompt-optimizer/releases/download/v0.2.0/omd-prompt-optimizer-0.2.0.tgz');
   const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
   for (const field of ['dependencies', 'devDependencies', 'optionalDependencies']) assert.equal(pkg[field]?.[plugin.packageName], undefined);
-  const f = fixture(); f.service.catalog = [plugin]; await f.service.settings(true);
+  const f = fixture({ catalog: [plugin], hostVersion: '0.2.0-rc.2' }); f.version = '0.2.0'; await f.service.settings(true);
+  assert.equal((await f.service.status()).plugins[0].unavailable, null);
   await f.service.tick(); assert.equal(f.calls.length, 0); assert.equal(f.lookups, 0);
   await f.service.start(plugin.id, 'install'); assert.equal(f.calls.length, 1);
+  assert.equal((await f.service.status()).plugins[0].installed, true);
+  assert.deepEqual(Object.keys(f.calls[0].options).sort(), ['enabled', 'requestId']);
   assert.equal(f.calls[0].spec, plugin.packageName + '@file:/verified/package.tgz');
   assert.deepEqual(f.packages, [{ url: pluginInstallSpec(plugin, plugin.review.version), sha256: plugin.review.sha256 }]);
 });

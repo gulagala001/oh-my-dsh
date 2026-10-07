@@ -38,14 +38,21 @@ test('recommended page defaults on, hides only after a successful save and persi
   await entry.click();
   await dialog.getByRole('heading', { name: '推荐插件', exact: true }).waitFor();
   assert.equal(await dialog.locator('.tx-recommended-card').count() > 0, true);
-  const subscriptions = dialog.locator('.tx-recommended-card').filter({ hasText: '订阅登录 · Subscriptions' });
-  await until(async () => (await subscriptions.locator('.tx-recommended-version').innerText()).includes('未安装'));
-  assert.match(await subscriptions.innerText(), /0\.9\.8.*不兼容 DSH 0\.2\.1-alpha\.1/);
-  assert.equal(await subscriptions.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
-  const blocked = await page.request.post(new URL('trisoul-x/recommended-plugins', page.url()).href,
-    { data: { id: 'dsh-plugin-subscriptions', action: 'install' } });
-  assert.equal(blocked.status(), 400);
-  assert.match((await blocked.json()).error, /0\.9\.8.*不兼容 DSH 0\.2\.1-alpha\.1/);
+  for (const [id, name, version] of [
+    ['dsh-plugin-subscriptions', '订阅登录 · Subscriptions', '0.9.8'],
+    ['omd-intent-assistant', '需求理解 · OMD UI 增强版', '0.2.0'],
+    ['jevify', 'Jevify', '0.1.5'],
+    ['dsh-turn-rewind', '回合回滚 · Turn Rewind', '0.3.9'],
+  ]) {
+    const card = dialog.locator('.tx-recommended-card').filter({ has: page.getByRole('heading', { name, exact: true }) });
+    await until(async () => (await card.locator('.tx-recommended-version').innerText()).includes('未安装'));
+    assert.ok((await card.innerText()).includes(version));
+    assert.match(await card.innerText(), /不兼容 DSH 0\.2\.1-alpha\.1/);
+    assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
+    const blocked = await page.request.post(new URL('trisoul-x/recommended-plugins', page.url()).href, { data: { id, action: 'install' } });
+    assert.equal(blocked.status(), 400);
+    assert.match((await blocked.json()).error, /不兼容 DSH 0\.2\.1-alpha\.1/);
+  }
   assert.equal((await readConfig()).recommendedPluginsPageEnabled, true);
   assert.deepEqual(f.errors, []);
 });
