@@ -1,6 +1,15 @@
 // Only this curated catalog supplies package names to the installer.
 export const recommendedPlugins = [
   {
+    "id": "dsh-plugin-subscriptions",
+    "name": "订阅登录 · Subscriptions",
+    "packageName": "dsh-plugin-subscriptions",
+    "author": "V1ki",
+    "description": "直接登录 ChatGPT、Claude、Grok、Copilot 或 Antigravity 订阅，自动发现模型；支持 ChatGPT Fast、订阅额度及生图。",
+    "category": "模型能力",
+    "url": "https://github.com/V1ki/dsh-plugin-subscriptions"
+  },
+  {
     id: 'dsh-turn-rewind', name: '回合回滚 · Turn Rewind', packageName: '@anionex/dsh-turn-rewind', author: 'Anionex · dsh-external',
     description: '查看回合变更并恢复工作区；恢复前展示计划、保留救援副本并核验结果。默认不安装，点击安装后启用。',
     category: '开发工具', url: 'https://github.com/Anionex/dsh-turn-rewind',
