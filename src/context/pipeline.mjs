@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { serializePreparationInput } from './input-budget.mjs';
 import { compactFull } from './full-compaction.mjs';
 import { ContextStore } from './store.mjs';
-import { createSurfaceIndex, hash, userRevision, userMessages, rawText, actualUser, prepareCandidate, candidateInput, coordinatorInput, newRecord, activeRecords, liveSpan, validatePrepared, normalizeChoices, decodeResult, recordText, backlogView, recordSnapshot, preparationWorkload } from './core.mjs';
+import { createSurfaceIndex, hash, userRevision, userMessages, rawText, actualUser, eventTime, prepareCandidate, candidateInput, coordinatorInput, newRecord, activeRecords, liveSpan, validatePrepared, normalizeChoices, decodeResult, recordText, backlogView, recordSnapshot, preparationWorkload } from './core.mjs';
 import { attachmentsOf, combineAssets, describeAsset, messageOf } from './materials.mjs';
 import { createTransaction, applyTransaction } from './transactions.mjs';
 import { repairShadows } from './shadow.mjs';
@@ -14,9 +14,17 @@ import { SUMMARY_PROMPT_VERSION, PREPARE_SYSTEM, PREPARE_TOOL, COORDINATE_SYSTEM
 import { taskContextMeta, withoutRuntime } from '../task-context.mjs';
 import { forkArchiveSnapshot } from './fork.mjs';
 import { publishDreamMemory } from '../dream/publication.mjs';
+import { isQuotaExceededError, QUOTA_EXCEEDED_CODE, ACCOUNT_QUOTA_EXCEEDED_CODE } from '@deepseek-ai/dsh-llm';
 
 const delegated = s => s.header?.origin === 'subagent' || Number(s.header?.delegationDepth) > 0;
 const transientFailure = error => /(?:\b(?:408|429|5\d\d)\b|rate_limit|temporarily unavailable|provider unavailable|overloaded|timeout|timed out|超时|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|fetch failed|network error|socket hang up)/i.test(String(error?.message || error));
+const legacyPreparationRejection = message => /^(?:用户决定摘要|预处理没有提交完整摘要与文档|详细文档的标题和正文必须完整|基础摘要超过目标长度两倍|后台未调用 prepare_segment)/.test(message || '')
+  || /^(?:Unexpected|Expected|Unterminated|Bad|No number|Exponent part).*\bJSON\b/i.test(message || '')
+  || /^".*" is not valid JSON$/s.test(message || '');
+const legacyProviderFailure = message => /^(?:[^\s:]+\s+)?API error\s*\(\d{3}\):/i.test(message || '');
+const quotaFailure = failure => [QUOTA_EXCEEDED_CODE, ACCOUNT_QUOTA_EXCEEDED_CODE].includes(failure.code) || isQuotaExceededError(failure.message || '');
+const mainRecoverableProviderFailure = failure => quotaFailure(failure) || /(?:\b(?:401|403)\b|unauthori[sz]ed|invalid api key|余额不足)/i.test(failure.message || '');
+const preparationEvent = event => actualUser(event) || (['assistant/message', 'tool/result'].includes(event.type) && !sourceName(event.data?.message?.source));
 const iso = n => n == null ? '时间未记录' : new Date(n).toISOString();
 
 export class ContextPipeline {
@@ -25,8 +33,8 @@ export class ContextPipeline {
     this.agents = new Map(); this.releasing = new Set(); this.jobs = new Map(); this.timers = new Map(); this.reviewTimers = new Map(); this.idleSince = new Map(); this.controllers = new Map(); this.closed = false;
   }
   config() { return contextConfig(this.hub.config()); }
-  async call(agent, kind, request, signal) {
-    return this.withCallSlot(() => this.hub.call(agent, kind, request, signal), signal);
+  async call(agent, kind, request, signal, admit) {
+    return this.withCallSlot(() => { admit?.();return this.hub.call(agent, kind, request, signal); }, signal);
   }
   async withCallSlot(run, signal, lowPriority = false) {
     signal?.throwIfAborted();
@@ -78,6 +86,20 @@ export class ContextPipeline {
     if (state.summaryPromptVersion !== SUMMARY_PROMPT_VERSION) {
       state.summaryPromptVersion = SUMMARY_PROMPT_VERSION; this.store.save(state);
     }
+    for (const kind of ['prepare', 'coordinate']) {
+      const failure = state.failures[kind];
+      if (failure && failure.validation === undefined && failure.providerFailure === undefined) {
+        if (kind === 'prepare' && legacyPreparationRejection(failure.message)) {
+          failure.validation = true;
+          const events = session.snapshotEvents();
+          failure.newEvents = Number.isFinite(failure.at) ? events.filter(event => preparationEvent(event) && eventTime(event) > failure.at).length : 0;
+          failure.lastEventSeq = events.findLast(preparationEvent)?.seq ?? -1;
+          this.store.save(state);
+        } else if (legacyProviderFailure(failure.message) || quotaFailure(failure)) {
+          failure.providerFailure = true; this.store.save(state);
+        }
+      }
+    }
     // A blank session can still change its scope before any data has been read or prepared.
     if (!state.records.length && !state.transaction && !Object.keys(state.publications.catalog).length && state.publications.globalRevision === null && (state.binding.scope !== binding.scope || state.binding.project !== binding.project) && !userMessages(session).length) {
       state.binding = binding; this.store.save(state);
@@ -94,7 +116,9 @@ export class ContextPipeline {
       s.initialized = true; this.store.save(s);
     }
     void this.prepare(agent, false); this.arm(agent);
-    if (s.prepareRetryAt > Date.now()) this.arm(agent, s.prepareRetryAt - Date.now(), 'prepare');
+    if (s.failures.prepare?.mainSuccess) void this.resumeMainSuccess(agent, 'prepare');
+    else if (s.prepareRetryAt > Date.now()) this.arm(agent, s.prepareRetryAt - Date.now(), 'prepare');
+    if (s.failures.coordinate?.mainSuccess) void this.resumeMainSuccess(agent, 'coordinate');
   }
   observe(session, event) {
     if (delegated(session) || this.closed || !this.config().contextEnabled) return;
@@ -103,6 +127,11 @@ export class ContextPipeline {
     if (!agent) return;
     const s = this.state(session);
     s.eventsSincePrepare = (s.eventsSincePrepare || 0) + 1;
+    if (s.failures.prepare?.validation && s.failures.prepare.count > this.config().backgroundMaxRetries
+      && event.seq > (s.failures.prepare.lastEventSeq ?? -1)) {
+      s.failures.prepare.newEvents = (s.failures.prepare.newEvents || 0) + 1;
+      s.failures.prepare.lastEventSeq = event.seq;
+    }
     this.store.save(s); this.arm(agent);
     if (s.eventsSincePrepare >= this.config().digestEvery) void this.prepare(agent, false);
   }
@@ -126,7 +155,8 @@ export class ContextPipeline {
     const timer = setTimeout(() => {
       this.timers.delete(key); this.reviewTimers.delete(key);
       if (kind === 'idle') this.idleSince.delete(id);
-      const work = kind === 'coordinate' ? this.coordinate(agent, forceReview, { retry: true })
+      const work = ['prepare', 'coordinate'].includes(kind) && this.state(agent.session).failures[kind]?.mainSuccess ? this.resumeMainSuccess(agent, kind)
+        : kind === 'coordinate' ? this.coordinate(agent, forceReview, { retry: true })
         : kind === 'prepare' ? this.prepare(agent, true, { retry: true }) : this.flushIdle(agent);
       void work.catch(e => this.reportError(agent, kind, e));
     }, kind === 'idle' ? Math.max(1, since + delay - Date.now()) : delay);
@@ -148,7 +178,8 @@ export class ContextPipeline {
   waitsForMain(s, kind) {
     const failure = s.failures[kind];
     return Boolean(failure && failure.count > this.config().backgroundMaxRetries && this.followsMain(kind)
-      && (failure.recoverable ?? transientFailure(failure.message)));
+      && (failure.providerFailure && mainRecoverableProviderFailure(failure)
+        || (failure.recoverable ?? transientFailure(failure.message))));
   }
   mainSucceeded(session, route) {
     const agent = this.agents.get(session.id);
@@ -159,34 +190,83 @@ export class ContextPipeline {
       if (!this.waitsForMain(s, kind) || this.jobs.has(key)) continue;
       const current = this.hub.route(agent, kind);
       if (!route?.provider || !route.model || current.provider !== route.provider || current.model !== route.model) continue;
-      if (kind === 'prepare' && Date.now() < (s.prepareRetryAt || 0)) continue;
-      clearTimeout(this.timers.get(key)); this.timers.delete(key); this.reviewTimers.delete(key);
-      // A successful main request grants one probe, not another full retry burst.
-      s.failures[kind].count = this.config().backgroundMaxRetries;
-      if (kind === 'coordinate') s.review.needed = true;
-      this.store.save(s);
-      void this[kind](agent, true, { retry: true });
+      const failure = s.failures[kind], previous = failure.mainSuccess;
+      if (!previous || previous.provider !== route.provider || previous.model !== route.model) {
+        failure.mainSuccess = { provider: route.provider, model: route.model, at: Date.now() }; this.store.save(s);
+      }
+      void this.resumeMainSuccess(agent, kind);
     }
   }
-  reportError(agent, kind, error, providerFailure = false) {
+  async resumeMainSuccess(agent, kind) {
+    const id = agent.session.id, key = id + ':' + kind;
+    if (this.closed || this.agents.get(id) !== agent || delegated(agent.session)) return;
+    const s = this.state(agent.session), failure = s.failures[kind], success = failure?.mainSuccess;
+    if (!success) return;
+    const current = this.hub.route?.(agent, kind);
+    if (!this.config().contextEnabled || this.manualSessions.has(id) || s.manualQueue.length || !this.waitsForMain(s, kind)
+      || current?.provider !== success.provider || current?.model !== success.model) {
+      delete failure.mainSuccess; this.store.save(s); return;
+    }
+    if (this.jobs.has(key)) return;
+    if (kind === 'prepare' && Date.now() < (s.prepareRetryAt || 0)) {
+      this.arm(agent, s.prepareRetryAt - Date.now(), 'prepare'); return;
+    }
+    clearTimeout(this.timers.get(key)); this.timers.delete(key); this.reviewTimers.delete(key);
+    if (kind === 'coordinate') s.review.needed = true;
+    this.store.save(s);
+    await this[kind](agent, true, { retry: true, mainSuccess: success });
+  }
+  admitMainSuccess(agent, kind, success, controller) {
+    if (!success) return;
+    const s = this.state(agent.session), failure = s.failures[kind], current = this.hub.route?.(agent, kind);
+    const valid = !this.closed && this.agents.get(agent.session.id) === agent && !delegated(agent.session)
+      && this.config().contextEnabled && !this.manualSessions.has(agent.session.id) && !s.manualQueue.length
+      && failure?.mainSuccess === success && this.waitsForMain(s, kind)
+      && current?.provider === success.provider && current?.model === success.model;
+    if (failure?.mainSuccess === success) {
+      delete failure.mainSuccess;
+      // Admission owns the one probe. Queued or cancelled work cannot change
+      // the exhausted counter or authorize a call on a new background route.
+      if (valid) failure.count = this.config().backgroundMaxRetries;
+      this.store.save(s);
+    }
+    if (!valid) { controller.abort(Error('后台恢复条件已改变'));controller.signal.throwIfAborted(); }
+  }
+  reportError(agent, kind, error, providerFailure = false, validationFailure = false) {
     const s = this.state(agent.session);
-    s.failures[kind] = { count: (s.failures[kind]?.count || 0) + 1, at: Date.now(), message: error.message, recoverable: providerFailure && transientFailure(error) };
+    s.failures[kind] = { count: (s.failures[kind]?.count || 0) + 1, at: Date.now(), message: error.message,
+      recoverable: providerFailure && transientFailure(error), providerFailure,
+      ...(typeof error.code === 'string' ? { code: error.code } : {}),
+      ...(validationFailure ? { validation: true, newEvents: 0, lastEventSeq: agent.session.snapshotEvents().findLast(preparationEvent)?.seq ?? -1 } : {}) };
     this.store.notice(s, `${kind}：${error.message}`);
     this.hub.action(agent.session, `context${kind}Errors`, 1);
     this.hub.ctx.logger?.warn?.(`上下文${kind}：${error.message}`);
   }
-  async prepare(agent, force = false, { retry = false } = {}) {
+  async prepare(agent, force = false, { retry = false, mainSuccess } = {}) {
     if (this.closed || delegated(agent.session) || this.manualSessions.has(agent.session.id) || !this.config().contextEnabled) return;
     const session = agent.session, key = session.id + ':prepare';
     if (this.jobs.has(key)) return this.jobs.get(key);
     const s = this.state(session);
     const recovering = Boolean(s.failures.prepare);
     if (force && !retry) { delete s.failures.prepare; delete s.prepareRetryAt; }
-    if ((s.failures.prepare?.count || 0) > this.config().backgroundMaxRetries) return;
-    if (Date.now() < (s.prepareRetryAt || 0)) return;
+    if (Date.now() < (s.prepareRetryAt || 0)) {
+      if (s.failures.prepare?.validation && s.failures.prepare.count > this.config().backgroundMaxRetries
+        && (s.failures.prepare.newEvents || 0) >= this.config().digestEvery)
+        this.arm(agent, s.prepareRetryAt - Date.now(), 'prepare');
+      return;
+    }
+    if (!mainSuccess && (s.failures.prepare?.count || 0) > this.config().backgroundMaxRetries) {
+      if (!s.failures.prepare.validation || (s.failures.prepare.newEvents || 0) < this.config().digestEvery) return;
+      // A rejected reply exhausts the short burst, not the whole conversation.
+      // Genuine new work at the normal cadence grants one probe; another bad
+      // reply returns to the exhausted state without starting a new burst.
+      s.failures.prepare.count = this.config().backgroundMaxRetries;
+      s.failures.prepare.newEvents = 0; this.store.save(s);
+    }
     if (!force && !recovering && (s.eventsSincePrepare || 0) < this.config().digestEvery) return;
+    clearTimeout(this.timers.get(key)); this.timers.delete(key);
     const controller = new AbortController(); this.controllers.set(key, controller);
-    let providerFailure = false;
+    let providerFailure = false, validationFailure = false;
     const job = (async () => {
       let completed = 0, seenEvents = s.eventsSincePrepare || 0;
       // Only recovery from a recorded failure receives a catch-up batch.
@@ -206,10 +286,14 @@ export class ContextPipeline {
         const encoded = serializePreparationInput(inputs, cfg.prepareInputTokens * 4);
         const args = { system: PREPARE_SYSTEM, messages: [this.adapter.message(encoded, 'prepare-input')], tools: [PREPARE_TOOL],
           ...(cfg.digestMaxTokens > 0 ? { maxTokens: cfg.digestMaxTokens } : {}) };
-        const result = await this.call(agent, 'prepare', args, controller.signal).catch(error => { providerFailure = true; throw error; });
+        const result = await this.call(agent, 'prepare', args, controller.signal, () => this.admitMainSuccess(agent, 'prepare', mainSuccess, controller)).catch(error => { providerFailure = true; throw error; });
+        mainSuccess = undefined;
         controller.signal.throwIfAborted();
-        const prepared = validatePrepared(decodeResult(result, PREPARE_TOOL.name), inputs.decision_sources);
-        if (prepared.summary.length > cfg.summaryTargetChars * 2) throw Error('基础摘要超过目标长度两倍；原文保留，重试时请缩短摘要而非截断');
+        let prepared;
+        try {
+          prepared = validatePrepared(decodeResult(result, PREPARE_TOOL.name), inputs.decision_sources);
+          if (prepared.summary.length > cfg.summaryTargetChars * 2) throw Error('基础摘要超过目标长度两倍；原文保留，重试时请缩短摘要而非截断');
+        } catch (error) { validationFailure = true; throw error; }
         const record = newRecord(session, events, prepared, s.binding, { state: s });
         record.summaryFormatVersion = 2; record.summaryPromptVersion = SUMMARY_PROMPT_VERSION;
         // A write-ahead replacement owns the session records until its disk flush completes.
@@ -233,11 +317,13 @@ export class ContextPipeline {
       } while (!this.closed && !controller.signal.aborted);
     })().catch(e => {
       if (!controller.signal.aborted) {
-        this.reportError(agent, 'prepare', e, providerFailure);
+        this.reportError(agent, 'prepare', e, providerFailure, validationFailure);
         const delay = Math.min(60000, 1000 * 2 ** Math.min(6, s.failures.prepare?.count || 1));
         s.prepareRetryAt = Date.now() + delay; this.store.save(s);
         if (s.failures.prepare.count <= this.config().backgroundMaxRetries) this.arm(agent, delay, 'prepare');
-        else this.store.notice(s, this.waitsForMain(s, 'prepare') ? '预处理短重试已用尽，等待主会话请求成功后自动恢复；原文保留，也可手动重新准备。' : '预处理已达到自动重试上限；原文保留，可手动重新准备。');
+        else this.store.notice(s, this.waitsForMain(s, 'prepare') ? '预处理短重试已用尽，等待主会话请求成功后自动恢复；原文保留，也可手动重新准备。'
+          : validationFailure ? '预处理回复校验未通过；等待新增事件达到正常间隔后自动重试，原文保留，也可手动重新准备。'
+            : '预处理已达到自动重试上限；原文保留，可手动重新准备。');
       }
     }).finally(() => { this.jobs.delete(key); this.controllers.delete(key); });
     this.jobs.set(key, job); return job;
@@ -249,20 +335,27 @@ export class ContextPipeline {
     this.store.save(state);
     this.hub.action(session, 'contextDecisionsDiscarded', 1);
   }
-  async coordinate(agent, force = false, { retry = false } = {}) {
+  async coordinate(agent, force = false, { retry = false, mainSuccess } = {}) {
     if (this.closed || delegated(agent.session) || this.manualSessions.has(agent.session.id) || !this.config().contextEnabled) return;
     // Review a completed preparation batch once instead of reviewing
     // intermediate records after each window.
     const preparing = this.jobs.get(agent.session.id + ':prepare');
     if (preparing) {
       await preparing;
-      return this.coordinate(agent, force, { retry });
+      return this.coordinate(agent, force, { retry, mainSuccess });
     }
     const session = agent.session, key = session.id + ':coordinate', s = this.state(session), cfg = this.config();
+    // Successful preparation can retire the old coordinator failure while its
+    // recovery waiter is suspended. Continue only the newly due normal review;
+    // an obsolete recovery token must not occupy and cancel that work.
+    if (mainSuccess && s.failures.coordinate?.mainSuccess !== mainSuccess) {
+      if (s.failures.coordinate) return;
+      mainSuccess = undefined;force = false;retry = false;
+    }
     // Joining an existing call is not another request for a review.
     if (this.jobs.has(key)) return this.jobs.get(key);
     if (force && !retry) { delete s.failures.coordinate; s.review.rejectedPlans = []; s.review.replanAttempts = 0; s.review.needed = true; }
-    if ((s.failures.coordinate?.count || 0) > cfg.backgroundMaxRetries) return;
+    if (!mainSuccess && (s.failures.coordinate?.count || 0) > cfg.backgroundMaxRetries) return;
     if (s.transaction || (!force && s.review.newRecords < cfg.coordinatorEvery)) return;
     const elapsed = Date.now() - s.review.lastAt;
     if (elapsed < cfg.coordinatorMinGapMs) { this.arm(agent, cfg.coordinatorMinGapMs - elapsed, 'coordinate', Date.now(), { force }); return; }
@@ -278,10 +371,13 @@ export class ContextPipeline {
     let stale = false, retryFailure = false, providerFailure = false;
     const controller = new AbortController(); this.controllers.set(key, controller);
     const job = (async () => {
-      s.review.lastAt = Date.now(); s.review.needed = false; this.store.save(s);
       const result = await this.call(agent, 'coordinate', { system: COORDINATE_SYSTEM,
         messages: [this.adapter.message(JSON.stringify(input), 'coordinate-input')], tools: [COORDINATE_TOOL],
-        ...(cfg.surgeonMaxTokens > 0 ? { maxTokens: cfg.surgeonMaxTokens } : {}) }, controller.signal).catch(error => { providerFailure = true; throw error; });
+        ...(cfg.surgeonMaxTokens > 0 ? { maxTokens: cfg.surgeonMaxTokens } : {}) }, controller.signal,
+      () => {
+        this.admitMainSuccess(agent, 'coordinate', mainSuccess, controller);
+        s.review.lastAt = Date.now();s.review.needed = false;this.store.save(s);
+      }).catch(error => { providerFailure = true; throw error; });
       controller.signal.throwIfAborted();
       const currentIndex = createSurfaceIndex(session);
       const changedIds = [...seenRecords].filter(([id, signature]) => signature !== recordSnapshot(session, s.records.find(r => r.id === id), currentIndex)).map(([id]) => id);
@@ -390,6 +486,7 @@ export class ContextPipeline {
     try {
       // Superseded background replies cannot republish an old detailed/merge choice.
       for (const kind of ['prepare', 'coordinate']) this.controllers.get(id + ':' + kind)?.abort();
+      for (const kind of ['prepare', 'coordinate']) if (s.failures[kind]) delete s.failures[kind].mainSuccess;
       for (const [timerKey, timer] of this.timers) if (timerKey.startsWith(id + ':')) { clearTimeout(timer); this.timers.delete(timerKey); }
       this.idleSince.delete(id); this.reviewTimers.delete(id + ':coordinate');
       s.pending = null; s.review.needed = false; this.store.save(s);
@@ -551,7 +648,7 @@ ${r.summary}`).join('\n\n') || 'No matching saved summaries.';
       records: s.records.map(({ documents, assets = [], userOriginals, originalSeqs, sourceSeqs, sourceHash, ...r }) => ({ ...r, documentCount: documents.length, assetCount: assets.length, originalEventCount: (originalSeqs || sourceSeqs).length, live: Boolean(liveSpan(session, { ...r, documents, sourceSeqs, sourceHash }, index)) })),
       backlog: backlogView(session, s, this.config()), eventsSincePrepare: s.eventsSincePrepare || 0, prepareDeferred: s.prepareDeferred || null,
       limits: { batchWindows: this.config().prepareBatchWindows, concurrency: this.config().backgroundConcurrency, continueTokens: this.config().prepareContinueTokens },
-      failures: s.failures, retry: Object.fromEntries(['prepare', 'coordinate'].map(kind => [kind, !s.failures[kind] ? null : this.waitsForMain(s, kind) ? 'waiting-main' : s.failures[kind].count > this.config().backgroundMaxRetries ? 'manual' : 'retrying'])), notices: s.notices, trace: s.traceSlot ? { sourceSeq: s.traceSlot.sourceSeq, sourceAt: s.traceSlot.sourceAt, truncated: s.traceSlot.truncated } : null,
+      failures: s.failures, retry: Object.fromEntries(['prepare', 'coordinate'].map(kind => [kind, !s.failures[kind] ? null : this.waitsForMain(s, kind) ? 'waiting-main' : s.failures[kind].count > this.config().backgroundMaxRetries ? kind === 'prepare' && s.failures[kind].validation ? 'waiting-events' : 'manual' : 'retrying'])), notices: s.notices, trace: s.traceSlot ? { sourceSeq: s.traceSlot.sourceSeq, sourceAt: s.traceSlot.sourceAt, truncated: s.traceSlot.truncated } : null,
       preparing: this.jobs.has(session.id + ':prepare'), coordinating: this.jobs.has(session.id + ':coordinate'), transactionPending: Boolean(s.transaction),
       manualQueued: s.manualQueue.length, manualOperation: this.manualSessions.get(session.id) || null,
       queuedOperations: s.manualQueue.map(q => q.operation || 'ready'),

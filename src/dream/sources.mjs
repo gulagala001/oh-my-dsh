@@ -7,6 +7,7 @@ import { digest, splitSource, summaryIdentity, summaryFingerprint } from './core
 import { isBtwSession, btwDescriptor } from '../btw-policy.mjs';
 
 const ignoredTools = new Set(['recall', 'memory_search', 'todo_write', 'verify_link', 'todos']);
+const unreadableSessionErrors = new Set(['SessionPersistenceCorruptionError', 'SessionFormatUnsupportedError']);
 // Source text is encoded in input JSON, then again inside the request message.
 // Count that escaping while retaining offsets into the original source text.
 const requestTextBytes = text => Buffer.byteLength(JSON.stringify(JSON.stringify(text))) - 6;
@@ -46,8 +47,25 @@ export class DreamSources {
     if(!p?.list)throw Error('宿主没有可用的会话目录接口');
     return p.list({signal});
   }
-  async sync(signal) { return this.track(()=>this.syncIndex(this.signal(signal))); }
-  async syncIndex(signal) {
+  async sync(signal,options) { return this.track(()=>this.syncIndex(this.signal(signal),options)); }
+  excludeUnreadable(id,error,signal,{header,scope,publishWarnings=true}={}) {
+    this.lifecycle.signal.throwIfAborted();signal?.throwIfAborted();
+    if(!unreadableSessionErrors.has(error?.name))return false;
+    const old=this.store.session(id);
+    // Keep verified scope and completed memory. An unreadable archive cannot
+    // admit new facts or participate in shared aggregation until read succeeds.
+    if(!old&&!header)return false;
+    this.store.saveSession({...old,id,...scope,title:old?.title||header?.title||id,
+      available:false,shared:false,readError:String(error.message).slice(0,4000),
+      createdAt:old?.createdAt||Number(header?.createdAt)||0,cwd:header?.cwd||old?.cwd||''});
+    if(publishWarnings) {
+      const current=this.store.session(id),warnings=(this.store.meta('indexWarnings')||[]).filter(warning=>warning.sessionId!==id);
+      warnings.push({sessionId:id,title:current.title,project:current.project,scope:current.mode,error:current.readError});
+      this.store.setMeta('indexWarnings',warnings);
+    }
+    return true;
+  }
+  async syncIndex(signal,{retryUnreadable=false}={}) {
     const entries=await this.headers(signal);
     signal.throwIfAborted();
     const found=new Set(entries.map(entry=>entry.header.id)),warnings=[];
@@ -55,17 +73,11 @@ export class DreamSources {
       signal?.throwIfAborted();
       const id=entry.header.id, old=this.store.session(id), previous=this.revisions.get(id);
       const scope=this.scope(entry.header);
-      const unchangedFailure=old?.readError&&previous===entry.revision&&old.project===scope.project&&old.mode===scope.mode;
+      const unchangedFailure=!retryUnreadable&&old?.readError&&previous===entry.revision&&old.project===scope.project&&old.mode===scope.mode;
       if(!unchangedFailure&&(!old || previous!==entry.revision || old.available===false || old.project!==scope.project || old.mode!==scope.mode || old.shared!==scope.shared)) {
         try { await this.inspect(id,signal); }
         catch(error) {
-          signal?.throwIfAborted();
-          if(error.name!=='SessionPersistenceCorruptionError')throw error;
-          // A broken archive must not prevent indexing unrelated sessions. Keep
-          // its last readable memory, but withdraw it from shared aggregation.
-          this.store.saveSession({...old,id,title:old?.title||entry.header.title||id,...scope,
-            available:false,shared:false,readError:String(error.message).slice(0,4000),
-            createdAt:old?.createdAt||Number(entry.header.createdAt)||0,cwd:entry.header.cwd||old?.cwd||''});
+          if(!this.excludeUnreadable(id,error,signal,{header:entry.header,scope,publishWarnings:false}))throw error;
         }
       }
       this.revisions.set(id,entry.revision);
