@@ -3,6 +3,7 @@ import { DreamStore } from './store.mjs';
 import { DreamSources } from './sources.mjs';
 import { digest, nodeKey, LIMITS, estimateTokens, validateMemory, validateScope } from './core.mjs';
 import { DREAM_SYSTEM, DREAM_TOOL, DREAM_PROMPT_VERSION } from './prompts.mjs';
+import { selectedProjects } from './scope.mjs';
 import {setTimeout as delay} from 'node:timers/promises';
 
 class BudgetWait extends Error { constructor(){super('Dream 每日额度不足，已保存进度');this.budget=true;} }
@@ -95,26 +96,60 @@ export class DreamService {
   async runJob(job,signal){
     await this.sources.sync(signal);
     if(!job.targetsReady){
-      const projects=job.scope==='global'?this.store.projects():job.scope==='project'?[job.target]:[];
+      const all=this.store.projects();
+      const picked=(Array.isArray(this.config().dreamProjects)?this.config().dreamProjects:[]).filter(x=>typeof x==='string');
+      const projects=job.scope==='global'?selectedProjects(all,picked):job.scope==='project'?[job.target]:[];
       const sessions=job.scope==='session'?[job.target]:projects.flatMap(project=>this.store.sessions({project,shared:true}).map(s=>s.id));
       this.store.setTargets(job.id,[...sessions.map(target=>({kind:'session',target})),...projects.map(target=>({kind:'project',target})),...(job.scope==='global'?[{kind:'global',target:'global'}]:[])],this.epoch);
     }
     // Source manifests are fixed at each session's first admission; successful
     // progress is durable across job retries, pause and process replacement.
+    // One unrecoverable target must not discard the whole range: record it, keep
+    // its progress so a retry can attempt it again, and continue with the rest.
+    // Budget, cancellation and credential failures still abort the entire job.
+    // A previous run may have left targets flagged as failed: clear the flags so
+    // this run attempts them again. The flag only ever means "already failed in
+    // the current run", which is what keeps the loop moving past a bad target.
+    this.store.clearTargetFailures(job.id,this.epoch);
+    const doneBefore=this.store.finishedTargets(job.id);
+    let skipped=0,lastError=null;
     for(let target;(target=this.store.nextTarget(job.id));){
       signal.throwIfAborted();
+      // An aggregate built while a source failed would publish an incomplete
+      // range, and finishing it would suppress its own refresh through the
+      // next run. Leave the remaining parents unfinished, the way a failing
+      // target used to stop the loop before reaching them.
+      if(skipped&&target.kind!=='session')break;
       // Persisted job targets may predate a format refusal discovered by this
       // scan. Shared jobs must withdraw that source and continue their scope.
-      if(target.kind==='session') {
-        if(job.scope==='session'||this.store.session(target.target)?.available!==false) {
-          try { await this.updateSession(target.target,job,signal,target); }
-          catch(error) {
-            if(job.scope==='session'||!this.sources.excludeUnreadable(target.target,error,signal))throw error;
-          }
+      if(target.kind==='session'&&job.scope!=='session'&&this.store.session(target.target)?.available===false) {
+        this.store.finishTarget(job.id,target.ordinal,this.epoch);
+        continue;
+      }
+      let failed=false;
+      try{
+        if(target.kind==='session')await this.updateSession(target.target,job,signal,target);
+        else await this.updateParent(target.kind,target.target,job,signal,target);
+      }catch(error){
+        if(error.budget||signal.aborted||/401|403|unauthorized|api.?key|authentication/i.test(error.message))throw error;
+        // A shared job withdraws an unreadable source and carries on; a session
+        // job still fails outright because it cannot narrow its own range.
+        if(target.kind==='session'&&job.scope!=='session'&&this.sources.excludeUnreadable(target.target,error,signal)){
+          this.store.finishTarget(job.id,target.ordinal,this.epoch);
+          continue;
         }
-      } else await this.updateParent(target.kind,target.target,job,signal);
-      this.store.finishTarget(job.id,target.ordinal,this.epoch);
+        failed=true;skipped++;lastError=error;
+        // Leave the target unfinished so a later run retries it; the flag only
+        // steps this run past it.
+        this.store.markTargetFailed(job.id,target.ordinal,this.epoch);
+      }
+      if(!failed)this.store.finishTarget(job.id,target.ordinal,this.epoch);
     }
+    // Judge progress by targets that actually advanced, not by calls that returned.
+    // A parent target with no child memories returns without doing any work, so
+    // counting those would report an empty success when every real target failed.
+    if(skipped&&this.store.finishedTargets(job.id)===doneBefore)throw lastError;
+    if(skipped)this.store.setMeta('lastError',`Dream 有 ${skipped} 个范围未整理：${lastError.message}`.slice(0,400));
   }
   async updateSession(id,job,signal,target){
     const stamp=this.sources.stamp(id,this.config().dreamDeepAgeMs??604800000);
@@ -130,6 +165,8 @@ export class DreamService {
     if(manifest.completeCut&&stamp&&stamp===this.sources.stamp(id,this.config().dreamDeepAgeMs??604800000))this.store.tx(()=>{this.store.requireJob(job.id,this.epoch);this.store.setMeta('scan:'+id,stamp);});
   }
   async updateParent(kind,target,job,signal){
+    // Parent aggregation keeps every shared project: filtering here would look
+    // like a withdrawn source and wrongly retract its contribution.
     const key=nodeKey(kind,target),children=kind==='project'?this.store.sessions({project:target,shared:true}).map(s=>({key:nodeKey('session',s.id),title:s.title})):this.store.projects().map(p=>({key:nodeKey('project',p),title:this.sources.projectTitle(p)}));
     const current=new Map(children.map(c=>[c.key,{...c,memory:this.store.memory(c.key)}]).filter(([,c])=>c.memory&&!c.memory.invalid));
     const progress=this.store.progress(key),previousInputs=new Map(progress.map(p=>[p.source,p]));
@@ -216,7 +253,7 @@ export class DreamService {
     const s=id?this.store.session(id):null;
     return {session:s,sessionMemory:s?this.store.memory(nodeKey('session',id)):null,projectMemory:s?this.store.memory(nodeKey('project',s.project)):null,
       globalMemory:this.store.memory('global'),jobs:this.store.jobs(20,{includeUnfinished:true}).map(job=>({...job,targetTitle:job.scope==='session'?this.store.session(job.target)?.title||job.target:job.scope==='global'?'全部共享项目':job.target==='@unclassified'?'未归类':job.target})),usage:this.store.usage(),catalogRevision:this.store.meta('catalogRevision')||0,indexWarnings:this.store.meta('indexWarnings')||[],indexError:this.store.meta('indexError'),notice:this.store.meta('autoNotice')||this.store.meta('lastError'),
-      settings:{enabled:Boolean(this.config().dreamAutoEnabled),intervalMs:this.config().dreamIntervalMs||3600000,deepAgeMs:this.config().dreamDeepAgeMs??604800000,dailyTokens:this.config().dreamDailyTokens??200000,provider:this.config().dreamProvider||'',model:this.config().dreamModel||''}};
+      settings:{enabled:Boolean(this.config().dreamAutoEnabled),intervalMs:this.config().dreamIntervalMs||3600000,deepAgeMs:this.config().dreamDeepAgeMs??604800000,dailyTokens:this.config().dreamDailyTokens??200000,provider:this.config().dreamProvider||'',model:this.config().dreamModel||'',dreamProjects:(Array.isArray(this.config().dreamProjects)?this.config().dreamProjects:[]).filter(x=>typeof x==='string')}};
   }
   close(){return this.closing??=this.shutdown();}
   async shutdown(){
