@@ -39,6 +39,10 @@ test('Dream tool guidance appears only for callable fields, including the PTC SD
   const options={schemas:[recall,...assembly.tools],definition:()=>({output:{schema:{type:'string'}}}),renderSdk:tools=>JSON.stringify(tools)};
   const value=transformAssembly(assembly,ctx,options).assembly;
   assert.equal(value.sections.filter(s=>s.name==='trisoul-x:cc-dream-memory').length,1);assert.match(value.sections.find(s=>s.name==='tools:sdk').text,/including independent sessions/);
+  assert.doesNotMatch(value.sections.find(s=>s.name==='tools:sdk').text,/search=original/,'legacy recall retains Dream without advertising unsupported original search');
+  const searchable={...recall,parameters:{...recall.parameters,properties:{...recall.parameters.properties,search:{type:'string',enum:['original']}}}};
+  const current=transformAssembly(assembly,ctx,{...options,schemas:[searchable,...assembly.tools]}).assembly;
+  assert.match(current.sections.find(s=>s.name==='tools:sdk').text,/search=original/);
   const old={...recall,parameters:{type:'object',properties:{id:{},query:{},from:{},to:{}}}};
   const result=transformAssembly({...assembly,sections:[assembly.sections[0]],tools:[old]},ctx).assembly;assert(!result.sections.some(s=>s.name==='trisoul-x:cc-dream-memory'));assert.equal(result.tools[0].description,'native');
 });

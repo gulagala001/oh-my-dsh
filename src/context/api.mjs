@@ -23,6 +23,11 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
     send(res, 200, { scope: scope(), locked, default: ['session','global'].includes(hub.config().memoryScope) ? hub.config().memoryScope : 'project' }); return true;
   }
   if (path === '/context') { send(res, 200, hub.context.view(needSession())); return true; }
+  if (path === '/context/mode') {
+    if (req.method !== 'POST') { send(res, 405, { error: '请使用 POST' }); return true; }
+    const { mode } = await readBody(req);
+    send(res, 200, hub.context.setMode(needSession(), mode)); return true;
+  }
   if (path === '/context/catalog') {
     const s = needSession(); hub.context.state(s);
     const history = url.searchParams.get('history') === 'true';

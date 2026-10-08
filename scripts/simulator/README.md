@@ -22,10 +22,10 @@
 | todo、收尾提醒或 pause_turn | `todo-reminder`。 |
 | 恢复、持久化或存储失败 | `restart-checkpoint`、`storage-failure`。 |
 | 前端会话或工作台流程 | 对相应场景加 `--ui`；保留真实点击与截图证据。 |
-| 跨模块改动或宿主升级 | 构建当前代码后执行完整六场景基线；按风险加入有限探索和对应平台验收。 |
+| 跨模块改动或宿主升级 | 构建当前代码后执行完整八场景基线；按风险加入有限探索和对应平台验收。 |
 | 模拟器、判定器或隔离设施 | 模拟器测试和相应真实宿主路径；检查故意破坏能否被检出。 |
 
-`pnpm test:simulator` 运行模拟器测试，`pnpm test:conversation` 运行六场景真实宿主基线。既有 `pnpm test` 也包含模拟器测试；其中的平台跳过不能替代原生宿主仿真。CI 在 macOS 单独执行这两个入口、固定 seed 42 的五个生成场景，以及 `full-lifecycle --ui`，报告作为内部工件保存。工作流配置见 [ci.yml](../../.github/workflows/ci.yml)；远端是否通过以实际 CI 结果为准。
+`pnpm test:simulator` 运行模拟器测试，`pnpm test:conversation` 运行八场景真实宿主基线。既有 `pnpm test` 也包含模拟器测试；其中的平台跳过不能替代原生宿主仿真。CI 在 macOS 单独执行这两个入口、固定 seed 42 的五个生成场景，以及 `full-lifecycle --ui`，报告作为内部工件保存。工作流配置见 [ci.yml](../../.github/workflows/ci.yml)；远端是否通过以实际 CI 结果为准。
 
 失败时由实施者查看时间线和原生审计，用保存的输入复现，必要时最小化，再修复并重跑受影响路径。结束前核对资源清理和退出码，报告实际覆盖及未验证项；不要要求用户运行命令或代为整理证据。需要真实模型、其他设备或不可自动取得的系统授权时，才说明缺少的具体条件。
 
@@ -63,7 +63,7 @@ POSIX 进程清理由外层运行器通过 OS 进程快照核实 PID、父进程
 
 原生 PTY 会绕过当前 Node 进程门控，其独立进程所有权路径尚未验收。模拟器遇到该能力会在创建未受控任务前明确拒绝（`SIM_CAPABILITY_UNVERIFIED`），不会降级绕过；当前结果不包含 PTY、官方桌面终端或其他设备验收。
 
-## 已实现的六个场景
+## 已实现的八个场景
 
 ```sh
 pnpm simulate --scenario full-lifecycle
@@ -78,8 +78,10 @@ pnpm simulate --all
 | `todo-reminder` | 任务未完成时尝试提前结束，检查真实收尾提醒、`pause_turn` 与有限调用次数。 |
 | `restart-checkpoint` | 在工具副作用已经发生的检查点崩溃并重启，核对文件和原生持久化恢复，拒绝旧执行器迟到内容。 |
 | `storage-failure` | 对本次 workspace 的一次原生文件写入注入 `EIO`，检查故障确实命中、错误工具结果、修复后的文件和工具事件配对。 |
+| `context-enhancement` | 主动异步的请求前缀、主流程继续、工具零副作用、引用校验、切模式迟到结果、压缩后原文搜索与重启恢复。 |
+| `context-adaptive-auto` | 不调用手动准备接口，真实事件间隔自动触发一次后台整理，核对前缀、无重复调用、用量统计和下一请求应用。 |
 
-表格说明实现的检查范围，是否通过以本次报告为准。文件故障注入覆盖声明的 Node 文件 API 包装，不模拟磁盘硬件、断电或所有原生 I/O 入口。独立操作系统调度、真实服务和设备行为也不会因六个场景通过而自动获得验收。
+表格说明实现的检查范围，是否通过以本次报告为准。文件故障注入覆盖声明的 Node 文件 API 包装，不模拟磁盘硬件、断电或所有原生 I/O 入口。独立操作系统调度、真实服务和设备行为不会因这些场景通过而自动获得验收。
 
 ## 真实 Web UI
 
@@ -88,6 +90,7 @@ UI 检查需要 Playwright Chromium：
 ```sh
 pnpm exec playwright install chromium
 pnpm simulate --scenario full-lifecycle --ui
+pnpm simulate --scenario context-enhancement --ui
 ```
 
 这会用隔离的无头 Chromium 打开真实本地 Web 客户端，点击首次使用入口、选择会话、打开工作台，核对草稿输入与页面异常，并保存 `web-light.png`、`web-dark.png`。浏览器使用模拟钥匙串设置和本次宿主认证，不导入真实登录态。外部浏览器请求被阻止，本地版本查询使用明确的模拟响应。
