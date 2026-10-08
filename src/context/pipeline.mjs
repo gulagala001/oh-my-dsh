@@ -15,6 +15,7 @@ import { taskContextMeta, withoutRuntime } from '../task-context.mjs';
 import { forkArchiveSnapshot } from './fork.mjs';
 import { publishDreamMemory } from '../dream/publication.mjs';
 import { isQuotaExceededError, QUOTA_EXCEEDED_CODE, ACCOUNT_QUOTA_EXCEEDED_CODE } from '@deepseek-ai/dsh-llm';
+import { AdaptiveCompaction, adaptiveRouteKey } from './adaptive.mjs';
 
 const delegated = s => s.header?.origin === 'subagent' || Number(s.header?.delegationDepth) > 0;
 const transientFailure = error => /(?:\b(?:408|429|5\d\d)\b|rate_limit|temporarily unavailable|provider unavailable|overloaded|timeout|timed out|超时|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|fetch failed|network error|socket hang up)/i.test(String(error?.message || error));
@@ -31,8 +32,31 @@ export class ContextPipeline {
   constructor(hub, adapter) {
     this.hub = hub; this.adapter = adapter; this.activeCalls = 0; this.callWaiters = []; this.manualSessions = new Map(); this.store = new ContextStore(hub.store.dir);
     this.agents = new Map(); this.releasing = new Set(); this.jobs = new Map(); this.timers = new Map(); this.reviewTimers = new Map(); this.idleSince = new Map(); this.controllers = new Map(); this.closed = false;
+    this.adaptive = new AdaptiveCompaction(this);
   }
   config() { return contextConfig(this.hub.config()); }
+  mode(session) { return this.store.peek(session.id)?.compressionMode === 'adaptive' ? 'adaptive' : 'pipeline'; }
+  setMode(session, mode) {
+    if (!['pipeline', 'adaptive'].includes(mode)) throw Error('压缩模式只能是 pipeline 或 adaptive');
+    if (delegated(session)) throw Error('请在主会话中选择压缩模式');
+    const s = this.state(session);
+    if (s.transaction || this.manualSessions.has(session.id)) throw Error('当前压缩尚未完成，请完成后切换模式');
+    if (this.mode(session) === mode) return this.view(session);
+    for (const kind of ['prepare', 'coordinate', 'adaptive']) this.controllers.get(session.id + ':' + kind)?.abort(Error('压缩模式已切换'));
+    for (const [key, timer] of this.timers) if (key.startsWith(session.id + ':')) { clearTimeout(timer); this.timers.delete(key); this.reviewTimers.delete(key); }
+    this.idleSince.delete(session.id); this.adaptive.drop(session.id);
+    const preparedHandoff = mode === 'pipeline' && s.pending?.source === 'adaptive';
+    if (['coordinator', 'adaptive'].includes(s.pending?.source)) s.pending = null;
+    s.compressionMode = mode; s.compressionModeRevision = (s.compressionModeRevision || 0) + 1;
+    s.adaptive = {}; this.store.save(s);
+    if (preparedHandoff && this.agents.has(session.id)) {
+      // A mode change cancels the old decision, not its validated archive.
+      // Explicitly review that shared preparation once, respecting minGap.
+      s.review.needed = true; this.store.save(s);
+      void this.coordinate(this.agents.get(session.id), true);
+    }
+    return this.view(session);
+  }
   async call(agent, kind, request, signal, admit) {
     return this.withCallSlot(() => { admit?.();return this.hub.call(agent, kind, request, signal); }, signal);
   }
@@ -115,6 +139,7 @@ export class ContextPipeline {
       s.eventsSincePrepare = agent.session.surface.nodes.filter(seq => { const e = agent.session.eventAt(seq); return !covered.has(seq) && (actualUser(e) || (['assistant/message', 'tool/result'].includes(e.type) && !sourceName(e.data?.message?.source))); }).length;
       s.initialized = true; this.store.save(s);
     }
+    if (this.mode(agent.session) === 'adaptive') { void this.adaptive.check(agent); return; }
     void this.prepare(agent, false); this.arm(agent);
     if (s.failures.prepare?.mainSuccess) void this.resumeMainSuccess(agent, 'prepare');
     else if (s.prepareRetryAt > Date.now()) this.arm(agent, s.prepareRetryAt - Date.now(), 'prepare');
@@ -133,6 +158,7 @@ export class ContextPipeline {
       s.failures.prepare.lastEventSeq = event.seq;
     }
     this.store.save(s); this.arm(agent);
+    if (this.mode(session) === 'adaptive') { void this.adaptive.check(agent); return; }
     if (s.eventsSincePrepare >= this.config().digestEvery) void this.prepare(agent, false);
   }
   arm(agent, delay = this.config().flushIdleMs, kind = 'idle', since = Date.now(), options = {}) {
@@ -147,6 +173,7 @@ export class ContextPipeline {
     // Only pending work in a genuinely idle session gets an idle deadline.
     // Model/tool execution and explicit failure retries are independent of it.
     if (kind === 'idle') {
+      if (this.mode(agent.session) === 'adaptive') return;
       if (!this.config().contextEnabled || !this.config().idlePreprocessEnabled || agent.status !== 'idle') return;
       const s = this.state(agent.session);
       if (!(s.eventsSincePrepare > 0 || s.review.newRecords > 0)) return;
@@ -164,6 +191,7 @@ export class ContextPipeline {
     if (kind === 'coordinate') this.reviewTimers.set(key, { force: forceReview, dueAt: Date.now() + delay });
   }
   async flushIdle(agent) {
+    if (this.mode(agent.session) === 'adaptive') return;
     if (this.closed || !this.agents.has(agent.session.id) || agent.status !== 'idle' || !this.config().contextEnabled || !this.config().idlePreprocessEnabled) return;
     const s = this.state(agent.session);
     // Reviewing a prepared record must not drain unrelated historical backlog.
@@ -184,6 +212,7 @@ export class ContextPipeline {
   mainSucceeded(session, route) {
     const agent = this.agents.get(session.id);
     if (!agent || this.closed || delegated(session) || !this.config().contextEnabled || this.manualSessions.has(session.id)) return;
+    if (this.mode(session) === 'adaptive') { this.adaptive.confirm(agent, route); return; }
     const s = this.state(session);
     for (const kind of ['prepare', 'coordinate']) {
       const key = session.id + ':' + kind;
@@ -243,6 +272,7 @@ export class ContextPipeline {
     this.hub.ctx.logger?.warn?.(`上下文${kind}：${error.message}`);
   }
   async prepare(agent, force = false, { retry = false, mainSuccess } = {}) {
+    if (this.mode(agent.session) === 'adaptive') return this.adaptive.check(agent, { force });
     if (this.closed || delegated(agent.session) || this.manualSessions.has(agent.session.id) || !this.config().contextEnabled) return;
     const session = agent.session, key = session.id + ':prepare';
     if (this.jobs.has(key)) return this.jobs.get(key);
@@ -336,6 +366,7 @@ export class ContextPipeline {
     this.hub.action(session, 'contextDecisionsDiscarded', 1);
   }
   async coordinate(agent, force = false, { retry = false, mainSuccess } = {}) {
+    if (this.mode(agent.session) === 'adaptive') return;
     if (this.closed || delegated(agent.session) || this.manualSessions.has(agent.session.id) || !this.config().contextEnabled) return;
     // Review a completed preparation batch once instead of reviewing
     // intermediate records after each window.
@@ -417,7 +448,7 @@ export class ContextPipeline {
     });
     this.jobs.set(key, job); return job;
   }
-  async applyReady(agent, { manual = false, ids, mode = 'detail', ignoreCooldown = false, sourceCommandId, source, retainTrace = true } = {}) {
+  async applyReady(agent, { manual = false, ids, mode = 'detail', ignoreCooldown = false, sourceCommandId, source, retainTrace = true, route } = {}) {
     const session = agent.session, s = this.state(session), cfg = this.config();
     if (s.transaction) return applyTransaction(session, s, s.transaction, this.store, this.adapter);
     if (!manual && (!cfg.contextEnabled || !cfg.automaticReplace || (!ignoreCooldown && s.steps - s.lastReplacementStep < cfg.surgeryCooldownSteps))) return null;
@@ -433,6 +464,15 @@ export class ContextPipeline {
         choices: normalizeChoices({ choices: chosen.map(id => ({ action: mode, ids: [id] })) }, s, session) };
     }
     if (!plan) return null;
+    // A prepared archive remains useful, but its automatic representation
+    // decision belongs to the user request and effective route that made it.
+    // Written transactions were handled above and retain their recovery contract.
+    if (!manual && plan.source === 'adaptive' && (plan.userRevision !== userRevision(session)
+      || (route && plan.routeKey !== adaptiveRouteKey(route)))) {
+      s.pending = null; s.adaptive ||= {};
+      s.adaptive.lastDecision = 'stale'; s.adaptive.reason = '用户要求或模型路由已变化，未应用旧结果';
+      this.store.save(s); return null;
+    }
     if (!manual) {
       const changedIds = plan.choices.filter(c => c.action !== 'keep').flatMap(c => c.ids.filter((id, i) => {
         const r = s.records.find(r => r.id === id), observed = c.observed?.[i];
@@ -485,7 +525,7 @@ export class ContextPipeline {
     const joined = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
     try {
       // Superseded background replies cannot republish an old detailed/merge choice.
-      for (const kind of ['prepare', 'coordinate']) this.controllers.get(id + ':' + kind)?.abort();
+      for (const kind of ['prepare', 'coordinate', 'adaptive']) this.controllers.get(id + ':' + kind)?.abort();
       for (const kind of ['prepare', 'coordinate']) if (s.failures[kind]) delete s.failures[kind].mainSuccess;
       for (const [timerKey, timer] of this.timers) if (timerKey.startsWith(id + ':')) { clearTimeout(timer); this.timers.delete(timerKey); }
       this.idleSince.delete(id); this.reviewTimers.delete(id + ':coordinate');
@@ -513,10 +553,16 @@ export class ContextPipeline {
       throw error;
     } finally { this.manualSessions.delete(id); this.controllers.delete(key); this.releaseState(id); }
   }
-  async preStep(agent, signal) {
+  async preStep(agent, signal, route) {
     if (delegated(agent.session)) return;
     this.agents.set(agent.session.id, agent);
     const s = this.state(agent.session); s.steps++; this.store.save(s);
+    // agent/request is a proposal; adapter defaults are resolved by the native
+    // host afterwards. Compare the same effective knobs as llm/stream capture.
+    if (route && s.pending?.source === 'adaptive' && !s.transaction && !s.manualQueue.length) {
+      route = (await this.hub.ctx.llm?.prepareCall?.(route, signal))?.config ?? route;
+      signal?.throwIfAborted();
+    }
     // Ordinary replacement never waits for a model; an explicitly queued /compact-f does.
     const recovered = s.transaction ? await this.applyReady(agent) : null;
     if (!this.hub.config().stateHintsEnabled && !this.hub.config().budgetHintsEnabled) await this.stripRuntime(agent.session);
@@ -526,7 +572,7 @@ export class ContextPipeline {
     if (manual) {
       try { result = recovered && manual.operation && recovered.source === (manual.operation === 'full' ? 'compact-f' : 'compact-p') ? recovered : manual.operation ? await this.runManual(agent, manual, signal) : await this.applyReady(agent, { ...manual, manual: true }); s.manualQueue.shift(); this.store.save(s); }
       catch (error) { if (s.transaction) throw error; s.manualQueue.shift(); this.store.notice(s, error.message); }
-    } else result = await this.applyReady(agent);
+    } else result = await this.applyReady(agent, { route });
     if (repairShadows(agent.session)) await this.adapter.flush(agent.session);
     this.publishMemory(agent.session);
     this.start(agent);
@@ -594,6 +640,14 @@ export class ContextPipeline {
     this.store.save(s); return { queued: true, changed: false };
   }
   reconfigure() {
+    if (!this.config().contextEnabled) {
+      for (const [id, agent] of this.agents) {
+        this.controllers.get(id + ':adaptive')?.abort(Error('上下文整理已关闭'));
+        this.adaptive.drop(id);
+        const s = this.state(agent.session);
+        if (s.pending?.source === 'adaptive') { s.pending = null; this.store.save(s); }
+      }
+    }
     // Settings may adjust an existing deadline, never wake a dormant session.
     // Keep its original idle start, including repeated settings callbacks.
     for (const [id, since] of [...this.idleSince]) {
@@ -644,7 +698,9 @@ ${r.summary}`).join('\n\n') || 'No matching saved summaries.';
   }
   view(session) {
     const s = this.state(session), index = createSurfaceIndex(session);
-    return { schema: 1, scope: s.binding, steps: s.steps, pending: s.pending, lastReplacement: s.lastReplacement || null, todoRefresh: s.todoRefresh || null,
+    return { schema: 1, compressionMode: this.mode(session), adaptive: { running: this.jobs.has(session.id + ':adaptive'), lastAt: s.adaptive?.lastAt ?? null,
+      lastDecision: s.adaptive?.lastDecision ?? null, reason: s.adaptive?.reason ?? null, error: s.adaptive?.error ?? null,
+      waitingReason: s.adaptive?.waitingReason ?? null, cacheReadTokens: s.adaptive?.cacheReadTokens ?? null }, scope: s.binding, steps: s.steps, pending: s.pending, lastReplacement: s.lastReplacement || null, todoRefresh: s.todoRefresh || null,
       records: s.records.map(({ documents, assets = [], userOriginals, originalSeqs, sourceSeqs, sourceHash, ...r }) => ({ ...r, documentCount: documents.length, assetCount: assets.length, originalEventCount: (originalSeqs || sourceSeqs).length, live: Boolean(liveSpan(session, { ...r, documents, sourceSeqs, sourceHash }, index)) })),
       backlog: backlogView(session, s, this.config()), eventsSincePrepare: s.eventsSincePrepare || 0, prepareDeferred: s.prepareDeferred || null,
       limits: { batchWindows: this.config().prepareBatchWindows, concurrency: this.config().backgroundConcurrency, continueTokens: this.config().prepareContinueTokens },
@@ -661,6 +717,7 @@ ${r.summary}`).join('\n\n') || 'No matching saved summaries.';
     this.store.release(id); this.hub.store.release?.(id); this.releasing.delete(id);
   }
   dispose(id) {
+    this.adaptive.drop(id);
     const ids = id ? [id] : [...this.agents.keys()];
     for (const key of ids) this.releasing.add(key);
     if (!id) this.closed = true;
