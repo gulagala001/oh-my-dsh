@@ -32,10 +32,13 @@ export class HubStore {
   release(id) { this.states.delete(id); }
   state(id) {
     validateSessionId(id);
-    if (!this.states.has(id)) this.states.set(id, read(join(this.dir, 'sessions', `${id}.json`), {
+    const cached = this.states.has(id);
+    const value = cached ? this.states.get(id) : read(join(this.dir, 'sessions', `${id}.json`), {
       id, notes: [], metrics: {}, activity: [], actions: {},
-    }));
-    return this.states.get(id);
+    });
+    if (value?.id !== id) throw Error('会话存档身份不匹配');
+    if (!cached) this.states.set(id, value);
+    return value;
   }
   save(state) { validateSessionId(state.id); this.write(`sessions/${state.id}.json`, state); }
   // Statistics do not need to retain every archived conversation body in RAM.

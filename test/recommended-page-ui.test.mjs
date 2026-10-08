@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
+import { INSTALLED_VERSION, releaseHostVersion } from '../src/version.mjs';
 
 test('recommended page defaults on, hides only after a successful save and persists', { timeout: 90000 }, async t => {
   const f = await frontendFixture(t), { page } = f;
@@ -37,7 +38,46 @@ test('recommended page defaults on, hides only after a successful save and persi
   await until(async () => await entry.count() === 1);
   await entry.click();
   await dialog.getByRole('heading', { name: '推荐插件', exact: true }).waitFor();
-  assert.equal(await dialog.locator('.tx-recommended-card').count() > 0, true);
+  assert.equal(await dialog.locator('.tx-recommended-card').count(), 9);
+  assert.equal(await dialog.getByRole('heading', { name: 'Jevify', exact: true }).count(), 0);
+  const status = await (await page.request.get(new URL('trisoul-x/recommended-plugins', page.url()).href)).json();
+  assert.equal(status.plugins.length, 9);
+  assert.equal(status.plugins.some(plugin => plugin.id === 'jevify'), false);
+  for (const action of ['install', 'update', 'uninstall']) {
+    const removed = await page.request.post(new URL('trisoul-x/recommended-plugins', page.url()).href, { data: { id: 'jevify', action } });
+    assert.equal(removed.status(), 400);
+    assert.match((await removed.json()).error, /未知/);
+  }
+  for (const [id, name, version] of [
+    ['dsh-plugin-subscriptions', '订阅登录 · Subscriptions', '0.9.8-omd.1'],
+    ['omd-intent-assistant', '需求理解 · OMD UI 增强版', '0.3.0'],
+  ]) {
+    const card = dialog.locator('.tx-recommended-card').filter({ has: page.getByRole('heading', { name, exact: true }) });
+    await until(async () => (await card.locator('.tx-recommended-version').innerText()).includes('未安装'));
+    assert.ok((await card.locator('.tx-recommended-review').innerText()).includes(version));
+    assert.match(await card.innerText(), /DSH 0\.2\.0-rc\.2 · OMD 0\.2\.0-rc\.2\.omd\.0\.9\.0/);
+    assert.match(await card.innerText(), /DSH 0\.2\.1-alpha\.1 · OMD 0\.2\.1-alpha\.1\.omd\.0\.9\.0/);
+    assert.equal(status.plugins.find(plugin => plugin.id === id).unavailable, null);
+    assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), true);
+    assert.match(await card.innerText(), /非上游/);
+  }
+  for (const [id, name, version] of [
+    ['dsh-turn-rewind', '回合回滚 · Turn Rewind', '0.3.9'],
+  ]) {
+    const card = dialog.locator('.tx-recommended-card').filter({ has: page.getByRole('heading', { name, exact: true }) });
+    await until(async () => (await card.locator('.tx-recommended-version').innerText()).includes('未安装'));
+    assert.ok((await card.innerText()).includes(version));
+    if (releaseHostVersion(INSTALLED_VERSION) === '0.2.0-rc.2') {
+      assert.equal(status.plugins.find(plugin => plugin.id === id).unavailable, null);
+      assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), true);
+    } else {
+      assert.match(await card.innerText(), /不兼容 DSH 0\.2\.1-alpha\.1/);
+      assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
+      const blocked = await page.request.post(new URL('trisoul-x/recommended-plugins', page.url()).href, { data: { id, action: 'install' } });
+      assert.equal(blocked.status(), 400);
+      assert.match((await blocked.json()).error, /不兼容 DSH 0\.2\.1-alpha\.1/);
+    }
+  }
   assert.equal((await readConfig()).recommendedPluginsPageEnabled, true);
   assert.deepEqual(f.errors, []);
 });
