@@ -45,6 +45,9 @@ export function transformAssembly(assembly, context, options = {}) {
     const absent = binding.fields.filter(name => !Object.hasOwn(fields, name));
     if (absent.length) { missing.push({ name: tool.name, fields: absent }); continue; }
     let description = load(binding.file);
+    if (tool.name === 'recall' && !Object.hasOwn(fields, 'search')) {
+      description = description.replace(/ Use search=original[\s\S]*?Original search does not automatically search other sessions or change saved summaries and decisions\./, '');
+    }
     if (tool.name === 'todo_write' && (!fields.op?.enum?.includes('pause_turn') || !Object.hasOwn(fields, 'reason'))) {
       description = description.split('\n').filter(line => !line.includes('`pause_turn`')).join('\n');
     }
