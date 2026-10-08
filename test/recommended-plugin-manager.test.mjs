@@ -187,51 +187,93 @@ test('incompatible recommendations block installation and updates while retainin
   assert.deepEqual(f.calls, [{ remove: 'sample-plugin' }]);
 });
 
-test('Subscriptions reports alpha incompatibility, blocks all installation work and retains uninstall', async () => {
-  const subscription = recommendedPlugins.find(plugin => plugin.id === 'dsh-plugin-subscriptions');
-  assert.equal(subscription.review, undefined, 'a compatibility restriction does not certify the community recommendation');
-  for (const hostVersion of [undefined, '0.2.1-alpha.1']) {
-    const f = fixture({ catalog: [structuredClone(subscription)], ...(hostVersion ? { hostVersion } : {}) });
-    const state = (await f.service.status()).plugins[0];
-    assert.match(state.unavailable, /0\.9\.8.*0\.2\.1-alpha\.1/);
-    assert.throws(() => f.service.start(subscription.id, 'install'), /不兼容/);
-    f.bundles = [{ name: subscription.packageName, installed: true, enabled: true, removable: true, version: '0.9.7' }];
-    assert.throws(() => f.service.start(subscription.id, 'update'), /不兼容/);
+for (const { id, version, previous, url, sha256 } of [
+  { id: 'dsh-plugin-subscriptions', version: '0.9.8-omd.1', previous: '0.9.8',
+    url: 'https://github.com/gulagala001/dsh-plugin-subscriptions/releases/download/v0.9.8-omd.1/dsh-plugin-subscriptions-0.9.8-omd.1.tgz',
+    sha256: 'a80b5fec117acc65f23f7f7d991050797621c621f76fbc577252b3389b2533cd' },
+  { id: 'omd-intent-assistant', version: '0.3.0', previous: '0.2.0',
+    url: 'https://github.com/gulagala001/omd-prompt-optimizer/releases/download/v0.3.0/omd-prompt-optimizer-0.3.0.tgz',
+    sha256: '8b9eb882ddd57c4098b874628663615858c4a987f49fd6927235d7bd1afdeadf' },
+]) for (const hostVersion of ['0.2.0-rc.2', '0.2.1-alpha.1']) {
+  test(`${id} on ${hostVersion} installs and upgrades only its reviewed GitHub archive`, async () => {
+    const plugin = recommendedPlugins.find(plugin => plugin.id === id);
+    const f = fixture({ catalog: [plugin], hostVersion }); f.version = version;
+    assert.equal((await f.service.status()).plugins[0].unavailable, null);
     await f.service.settings(true); await f.service.tick();
-    assert.equal(f.lookups, 0); assert.deepEqual(f.packages, []); assert.deepEqual(f.calls, []);
-    assert.equal((await f.service.status()).plugins[0].removable, true);
-    await f.service.start(subscription.id, 'uninstall');
-    assert.deepEqual(f.calls, [{ remove: subscription.packageName }]);
+    assert.deepEqual(f.calls, [], 'opting into updates does not install an absent plugin');
+    await f.service.start(id, 'install');
+    assert.deepEqual(f.packages, [{ url, sha256 }], 'SHA-verified release archive reaches the host instead of npm or codeload');
+    assert.equal(f.calls[0].spec, plugin.packageName + '@file:/verified/package.tgz');
+    assert.deepEqual(Object.keys(f.calls[0].options).sort(), ['enabled', 'requestId'], 'no peer exemption or build approval');
+    f.bundles = [{ name: plugin.packageName, installed: true, enabled: false, removable: true, version: previous }];
+    await f.service.start(id, 'update');
+    assert.equal(f.calls[1].options.enabled, false, 'manual update preserves disabled state');
+    assert.equal((await f.service.status()).plugins[0].restartRequired, true);
+    await f.service.start(id, 'update'); assert.equal(f.calls.length, 2, 'fixed release is not downloaded or installed twice');
+    f.bundles[0].version = '99.0.0'; await f.service.start(id, 'update');
+    assert.equal(f.calls.length, 2, 'a newer local version is never downgraded');
+    f.bundles[0].version = previous; f.bundles[0].enabled = true; f.time += AUTO_UPDATE_INTERVAL;
+    await f.service.tick(); assert.equal(f.calls.length, 3, 'idle opt-in update can upgrade only to the reviewed fork version');
+    assert.deepEqual(f.packages, Array(3).fill({ url, sha256 }));
+    assert.equal(f.lookups, 0, 'a later upstream or fork release cannot replace the reviewed version');
+    await f.service.start(id, 'uninstall');
+    assert.deepEqual(f.calls[3], { remove: plugin.packageName });
+  });
+  test(`${id} on ${hostVersion} never reaches the native manager if archive verification fails`, async () => {
+    const plugin = recommendedPlugins.find(plugin => plugin.id === id);
+    const f = fixture({ catalog: [plugin], hostVersion, preparePackage: async () => { throw Error('插件安装包 SHA-256 与核验版本不一致，已停止安装'); } });
+    await f.service.start(id, 'install');
+    assert.deepEqual(f.calls, []); assert.equal(f.lookups, 0);
+    assert.match((await f.service.status()).plugins[0].error, /SHA-256/);
     assert.equal((await f.service.status()).plugins[0].installed, false);
+  });
+}
+
+test('fork migration requires the exact reviewed upstream and release pins without changing version ordering', async () => {
+  const plugin = recommendedPlugins.find(plugin => plugin.id === 'dsh-plugin-subscriptions');
+  const { compareVersions } = await import('../src/version.mjs');
+  assert.ok(compareVersions('0.9.8-omd.1', '0.9.8') < 0, 'global SemVer ordering remains intact');
+  for (const patch of [{ review: { upstreamVersion: undefined } }, { review: { releaseTag: undefined } },
+    { review: { sha256: undefined } }, { githubRelease: undefined }]) {
+    const altered = { ...plugin, ...patch, review: { ...plugin.review, ...patch.review } };
+    const f = fixture({ catalog: [altered], hostVersion: '0.2.1-alpha.1' });
+    f.bundles = [{ name: plugin.packageName, installed: true, enabled: true, removable: true, version: '0.9.8' }];
+    await f.service.start(plugin.id, 'update');
+    assert.deepEqual(f.packages, []); assert.deepEqual(f.calls, []);
+    assert.match((await f.service.status()).plugins[0].message, /未降级/);
+  }
+  for (const version of ['0.9.8-omd.2', '0.9.9']) {
+    const f = fixture({ catalog: [plugin], hostVersion: '0.2.1-alpha.1' });
+    f.bundles = [{ name: plugin.packageName, installed: true, enabled: true, removable: true, version }];
+    await f.service.start(plugin.id, 'update');
+    assert.deepEqual(f.packages, []); assert.deepEqual(f.calls, []);
+    assert.match((await f.service.status()).plugins[0].message, /未降级/);
   }
 });
 
-test('Subscriptions on rc reports explicit availability, allows manual installation and remains unreviewed', async () => {
-  const subscription = recommendedPlugins.find(plugin => plugin.id === 'dsh-plugin-subscriptions');
-  const f = fixture({ catalog: [structuredClone(subscription)], hostVersion: '0.2.0-rc.2' });
-  f.version = '0.9.8';
-  assert.equal((await f.service.status()).plugins[0].unavailable, null, 'explicit null overrides the browser catalog alpha fallback');
-  await f.service.start(subscription.id, 'install');
-  assert.equal(f.calls.length, 1); assert.equal(f.calls[0].spec, 'dsh-plugin-subscriptions@0.9.8');
-  assert.equal((await f.service.status()).plugins[0].installed, true);
-  assert.equal((await f.service.status()).plugins[0].unavailable, null);
-  assert.deepEqual(Object.keys(f.calls[0].options).sort(), ['enabled', 'requestId'], 'no compatibility exemption or script approval');
-  assert.equal(f.service.catalog[0].review, undefined);
-  f.bundles = [{ name: subscription.packageName, installed: true, enabled: true, removable: true, version: '0.9.7' }];
-  await f.service.settings(true); await f.service.tick();
-  assert.equal(f.calls.length, 1, 'the unreviewed community plugin never auto-updates');
-  assert.equal(f.lookups, 1); assert.deepEqual(f.packages, []);
+test('reviewed fork migration rechecks the exact upstream version after archive verification', async () => {
+  const plugin = recommendedPlugins.find(plugin => plugin.id === 'dsh-plugin-subscriptions');
+  let f, downloads = 0;
+  f = fixture({ catalog: [plugin], hostVersion: '0.2.1-alpha.1', preparePackage: async () => {
+    downloads++; f.bundles[0].version = '0.9.9'; return 'file:/verified/package.tgz';
+  } });
+  f.bundles = [{ name: plugin.packageName, installed: true, enabled: true, removable: true, version: '0.9.8' }];
+  await f.service.start(plugin.id, 'update');
+  assert.equal(downloads, 1); assert.deepEqual(f.calls, []);
+  assert.match((await f.service.status()).plugins[0].message, /未降级/);
+  assert.equal((await f.service.status()).plugins[0].version, '0.9.9', 'concurrent native updates cannot be overwritten by the fork migration');
 });
 
-test('host incompatibility prevents even a reviewed Subscriptions automatic update from downloading', async () => {
+test('a newly reported compatibility restriction blocks reviewed Subscriptions updates before downloading', async () => {
   const subscription = structuredClone(recommendedPlugins.find(plugin => plugin.id === 'dsh-plugin-subscriptions'));
-  // Review is a separate gate: satisfying it must not bypass host compatibility.
-  subscription.review = { version: '0.9.8', sha256: 'a'.repeat(64) };
-  const f = fixture({ catalog: [subscription], hostVersion: '0.2.1-alpha.1' });
-  f.bundles = [{ name: subscription.packageName, installed: true, enabled: true, removable: true, version: '0.9.7' }];
+  subscription.unavailable = '测试宿主不兼容'; subscription.unavailableHosts = ['future-host'];
+  const f = fixture({ catalog: [subscription], hostVersion: 'future-host' });
+  f.bundles = [{ name: subscription.packageName, installed: true, enabled: true, removable: true, version: '0.9.8' }];
+  assert.throws(() => f.service.start(subscription.id, 'update'), /不兼容/);
   await f.service.settings(true); await f.service.tick();
   assert.deepEqual(f.calls, []); assert.deepEqual(f.packages, []); assert.equal(f.lookups, 0);
-  assert.match((await f.service.status()).plugins[0].unavailable, /不兼容/);
+  await f.service.start(subscription.id, 'uninstall');
+  assert.deepEqual(f.calls, [{ remove: subscription.packageName }]);
 });
 
 test('Turn Rewind keeps alpha blocked and rc explicitly available through the fixed source SHA', async () => {
@@ -259,27 +301,6 @@ test('Turn Rewind keeps alpha blocked and rc explicitly available through the fi
   assert.equal((await rc.service.status()).plugins[0].installed, true);
   await rc.service.settings(true); await rc.service.tick();
   assert.equal(rc.calls.length, 1, 'the source snapshot remains manual-only');
-});
-
-for (const { id, version, hosts } of [
-  { id: 'omd-intent-assistant', version: '0.2.0', hosts: ['0.2.1-alpha.1'] },
-]) test(`${id} rejects incompatible hosts before lookup or download and retains managed uninstall`, async () => {
-  const plugin = recommendedPlugins.find(item => item.id === id);
-  const review = structuredClone(plugin.review);
-  assert.equal(plugin.review?.version, '0.2.0');
-  for (const hostVersion of hosts) {
-    const f = fixture({ catalog: [structuredClone(plugin)], hostVersion });
-    assert.match((await f.service.status()).plugins[0].unavailable, new RegExp(version.replaceAll('.', '\\.')));
-    assert.throws(() => f.service.start(id, 'install'), /不兼容/);
-    f.bundles = [{ name: plugin.packageName, installed: true, enabled: true, removable: true, version }];
-    assert.throws(() => f.service.start(id, 'update'), /不兼容/);
-    await f.service.settings(true); await f.service.tick();
-    assert.equal(f.lookups, 0); assert.deepEqual(f.packages, []); assert.deepEqual(f.calls, []);
-    assert.deepEqual(f.service.catalog[0].review, review, 'host restrictions leave historical review or community status intact');
-    assert.equal((await f.service.status()).plugins[0].removable, true);
-    await f.service.start(id, 'uninstall');
-    assert.deepEqual(f.calls, [{ remove: plugin.packageName }]);
-  }
 });
 
 test('closing during inventory lookup prevents a pending uninstall', async () => {
@@ -347,16 +368,16 @@ test('in-flight inventory warnings never masquerade as a completed uninstall fai
   assert.equal(done.plugins[0].inventoryWarning, undefined);
 });
 
-test('intent assistant on rc is explicitly available, release-pinned and never installed by opt-in auto updates', async () => {
+test('intent assistant stays optional, release-pinned and never installed by opt-in auto updates', async () => {
   const { recommendedPlugins } = await import('../src/recommended-plugin-catalog.mjs');
   const { pluginInstallSpec } = await import('../src/recommended-plugins.mjs');
   const { readFile } = await import('node:fs/promises');
   const plugin = recommendedPlugins.find(p => p.id === 'omd-intent-assistant');
-  assert.equal(plugin.review.version, '0.2.0');
-  assert.equal(pluginInstallSpec(plugin, plugin.review.version), 'https://github.com/gulagala001/omd-prompt-optimizer/releases/download/v0.2.0/omd-prompt-optimizer-0.2.0.tgz');
+  assert.equal(plugin.review.version, '0.3.0');
+  assert.equal(pluginInstallSpec(plugin, plugin.review.version), 'https://github.com/gulagala001/omd-prompt-optimizer/releases/download/v0.3.0/omd-prompt-optimizer-0.3.0.tgz');
   const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
   for (const field of ['dependencies', 'devDependencies', 'optionalDependencies']) assert.equal(pkg[field]?.[plugin.packageName], undefined);
-  const f = fixture({ catalog: [plugin], hostVersion: '0.2.0-rc.2' }); f.version = '0.2.0'; await f.service.settings(true);
+  const f = fixture({ catalog: [plugin], hostVersion: '0.2.0-rc.2' }); f.version = '0.3.0'; await f.service.settings(true);
   assert.equal((await f.service.status()).plugins[0].unavailable, null);
   await f.service.tick(); assert.equal(f.calls.length, 0); assert.equal(f.lookups, 0);
   await f.service.start(plugin.id, 'install'); assert.equal(f.calls.length, 1);

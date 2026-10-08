@@ -42,7 +42,7 @@ export function installUltracodeProjection(ctx) {
 export class UltracodeControl {
   constructor(ctx, isOmd, store) {
     this.ctx = ctx; this.isOmd = isOmd; this.store = store;
-    this.folds = new WeakMap(); this.claims = new WeakMap(); this.frames = new WeakMap(); this.fresh = new WeakSet(); this.writes = new Map();
+    this.folds = new WeakMap(); this.claims = new WeakMap(); this.frames = new WeakMap(); this.assemblyModes = new WeakMap(); this.fresh = new WeakSet(); this.writes = new Map();
     const ultracode = promptText('runtime/workflow-authoring.md');
     const texts = { ultracode, pro: proWorkflowGuide(ultracode) };
     this.guides = Object.fromEntries(Object.entries(texts).map(([mode, text]) =>
@@ -136,6 +136,12 @@ export class UltracodeControl {
     pending.push(message); this.claims.set(agent, pending);
   }
   lifecycle(agent, source) { if (source === 'clear' || source === 'compact') this.fresh.add(agent); }
+  currentMode(agent) {
+    if (!agent) return 'off';
+    const view = this.view(agent.session, agent);
+    if (!view.eligible) return 'off';
+    return view.enabled ? view.mode : this.assemblyModes.get(agent) ?? 'off';
+  }
   /** Render into the native complete system prompt so unload/clear cannot leave a stale directive. */
   async assemble(agent, next) {
     await this.writes.get(agent.session.id)?.catch(() => {});
@@ -143,13 +149,14 @@ export class UltracodeControl {
     const last = this.store.peek(agent.session.id)?.ultracode?.delivery;
     const pending = this.claims.get(agent) ?? [];
     this.claims.delete(agent);
+    const keyword = snapshot.eligible && !snapshot.enabled && (pending.some(hasUltracodeKeyword) || (last?.kind === 'keyword' && last.turn === state.turn && last.revision === snapshot.revision));
+    const mode = snapshot.enabled ? snapshot.mode : keyword ? 'ultracode' : deliveryMode(last);
+    this.assemblyModes.set(agent, snapshot.eligible && (snapshot.enabled || keyword) ? mode : 'off');
     const assembly = await next();
     if (!snapshot.eligible) {
       this.frames.delete(agent);
       return assembly;
     }
-    const keyword = !snapshot.enabled && (pending.some(hasUltracodeKeyword) || (last?.kind === 'keyword' && last.turn === state.turn && last.revision === snapshot.revision));
-    const mode = snapshot.enabled ? snapshot.mode : keyword ? 'ultracode' : deliveryMode(last);
     const guide = this.guides[mode];
     let kind, emit = false;
     if (snapshot.enabled) {

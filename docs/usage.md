@@ -2,7 +2,7 @@
 
 [文档目录](README.md) · [首次使用](getting-started.md) · [安装](#安装到现有-dsh推荐) · [更新与卸载](#update-uninstall) · [设置](#settings) · [排障](troubleshooting.md) · [开发与验证](#开发与验证)
 
-当前 **0.2.1-alpha.1.omd.0.7.0** 适配 **DSH 0.2.1-alpha.1**，内置 **OpenCU 1.2.1**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
+当前 **0.2.1-alpha.1.omd.0.9.0** 适配 **DSH 0.2.1-alpha.1**，内置 **OpenCU 1.3.0**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
 本项目通过 `gulagala001/oh-my-dsh` 的 GitHub 来源或发行包安装。[安装来源核对](troubleshooting.md#package-source)。
 
@@ -12,7 +12,7 @@
 
 ## 安装到现有 DSH（推荐）
 
-**首次安装桌面应用请先看[桌面版完整教程](upgrade.md#desktop)。** 现有 rc.2 桌面使用 **OMD 0.2.0-rc.2.omd.0.7.0**；下列命令适用于 DSH 0.2.1-alpha.1 的 Web／源码环境。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；单独安装的 npm/npx CLI 不能管理保留的 `desktop` profile。[本版验证范围](release-0.2.1-alpha.1.omd.0.7.0.md)。
+**首次安装桌面应用请先看[桌面版完整教程](upgrade.md#desktop)。** 现有 rc.2 桌面使用 **OMD 0.2.0-rc.2.omd.0.9.0**；下列命令适用于 DSH 0.2.1-alpha.1 的 Web／源码环境。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；单独安装的 npm/npx CLI 不能管理保留的 `desktop` profile。[本版验证范围](release-0.2.1-alpha.1.omd.0.9.0.md)。
 
 桌面安装、更新、启用或停用后，先等任务结束，再完整退出应用并重新打开；有「重启应用与 Host」菜单时也可使用。仅关闭窗口会留在后台，仅刷新页面不能完成切换。
 
@@ -21,7 +21,7 @@
 已有环境先等待任务结束，停止当前 DSH Web 并完整备份实际 DSH_HOME。确认继续使用原数据目录、profile 和端口，再运行：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.7.0
+npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.9.0
 ```
 
 然后按原来的方式重新启动 DSH，例如：
@@ -43,11 +43,11 @@ npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 
 从 0.1.7-rc.2.5 起，检查到新版后可在左上角版本图标打开的面板内点击“更新”。安装后仍需完整重启。更早版本首次升级到本版时使用下方原安装方式。
 
-更新时保持原安装方式、DSH_HOME、profile 和端口；先停止服务并备份数据。使用 npx 的用户重复上面的固定版本命令即可。全局 npm 安装用户执行 `npm install -g @deepseek-ai/dsh@0.2.1-alpha.1`，确认 `dsh --version`，再执行 `dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.7.0`，按原方式启动；pnpm 全局安装则用 `pnpm add -g`。插件安装不会替你更新全局宿主。
+更新时保持原安装方式、DSH_HOME、profile 和端口；先停止服务并备份数据。使用 npx 的用户重复上面的固定版本命令即可。全局 npm 安装用户执行 `npm install -g @deepseek-ai/dsh@0.2.1-alpha.1`，确认 `dsh --version`，再执行 `dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.9.0`，按原方式启动；pnpm 全局安装则用 `pnpm add -g`。插件安装不会替你更新全局宿主。
 
-源码用户先保留本地修改，再执行 `git fetch origin --tags`、`git switch --detach v0.2.1-alpha.1.omd.0.7.0`、`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`。若切换会覆盖本地修改，先保存自己的改动，不强制覆盖。默认数据在仓库的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
+源码用户先保留本地修改，再执行 `git fetch origin --tags`、`git switch --detach v0.2.1-alpha.1.omd.0.9.0`、`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`。若切换会覆盖本地修改，先保存自己的改动，不强制覆盖。默认数据在仓库的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
 
-重启后，版本面板的**当前版本**应是 `0.2.1-alpha.1.omd.0.7.0`，原模型和旧会话仍在；最新版本只代表远端发布记录。旧 V3 会话迁移会保留原日志，alpha.1 升至 alpha.2 继续使用 V4。回退时停止新服务，以原宿主、插件和完整备份在独立数据目录启动。
+重启后，版本面板的**当前版本**应是 `0.2.1-alpha.1.omd.0.9.0`，原模型和旧会话仍在；最新版本只代表远端发布记录。旧 V3 会话迁移会保留原日志，alpha.1 升至 alpha.2 继续使用 V4。回退时停止新服务，以原宿主、插件和完整备份在独立数据目录启动。
 
 卸载也沿用原启动方式。npx Web 用户执行以下命令；自定义 profile 将 `web` 换成原名称，并沿用实际 `DSH_HOME`：
 
@@ -137,7 +137,7 @@ node scripts/launch-macos.mjs
 
 推荐页的「提交插件 / 申请适配」只需仓库地址和一句用途，作者或普通用户均可投稿。AI 按需批量处理、维护者一次确认；[投稿与兼容说明](plugin-submissions.md)。已核验条目固定安装核验版本，未经复核的旧推荐保留手动安装，但不自动更新。
 
-**订阅登录 · Subscriptions** 已核对的 npm 版本 `0.9.8` 尚不兼容本版宿主 DSH `0.2.1-alpha.1`，推荐页会显示原因并停用安装与更新，已有安装仍可卸载。在兼容的 DSH `0.2.0-rc.2` 环境中仍可手动安装；它保持“社区推荐 · 兼容性待核验”状态，不参与自动更新。兼容要求见[上游包声明](https://github.com/V1ki/dsh-plugin-subscriptions/blob/v0.9.8/package.json)。
+**订阅登录 · Subscriptions** 固定安装 [OMD 适配发行包 `0.9.8-omd.1`](https://github.com/gulagala001/dsh-plugin-subscriptions/releases/tag/v0.9.8-omd.1)，适配 DSH `0.2.0-rc.2` 与 `0.2.1-alpha.1`，推荐页通过固定 tag 和 SHA-256 校验安装，不跟随上游 npm。已安装的上游 `0.9.8` 可点“更新”迁移到此固定适配包；其他更高版本仍不自动降级。发布源码为 `fac507e40af60246e5e364f07d41960b193f02e9`；保留原作者 V1ki 的 MIT 版权与来源，非上游 npm 正式发行。两宿主在 Mac 隔离 Web 完成原生安装、启停、重启、卸载与 OMD 共存；真实账号 Fast 点击、provider 优先级、付费请求及订阅额度未验收，Windows/Linux 原生桌面未实测。
 
 各条目的核验标记对应列出的宿主和平台；未被版本声明拒绝，不等于已在当前环境验证运行。
 
@@ -526,7 +526,7 @@ OMD 主会话使用 pi-ai 图片路由时，发送前按提供方的实际图片
 
 ## 可选需求理解组件
 
-“设置 → 推荐插件”里的“需求理解 · OMD UI 增强版”是独立插件，默认不安装。当前固定发行包 `0.2.0` 要求 DSH `0.2.0-rc.2`，在本版宿主 `0.2.1-alpha.1` 被原生版本门禁拒绝，暂不提供安装或更新，已有安装仍可卸载；原有核验标记保留其所列宿主和平台，rc 环境仍可手动安装。
+“设置 → 推荐插件”里的“需求理解 · OMD UI 增强版”是独立插件，默认不安装。当前固定 [发行包 `0.3.0`](https://github.com/gulagala001/omd-prompt-optimizer/releases/tag/v0.3.0) 适配 DSH `0.2.0-rc.2` 与 `0.2.1-alpha.1`，使用固定 tag 和 SHA-256 校验安装。发布源码为 `9237848d68930eb8c477c299a1358596cb96d3dd`；基于啃轮胎的西狐（WestFox-AwA）的 dsh-prompt-optimizer `0.7.4`，保留 BSD-3-Clause 许可与署名，非上游官方发行。两宿主在 Mac 隔离 Web 核验原生安装、启停、卸载、原话发送、关闭恢复与 OMD 共存；真实模型效果及 Windows/Linux 原生桌面未同等实测。
 
 在兼容宿主安装后，在“设置 → 需求理解”主动开启。默认先审查再发送，原话不改写；可随时停止或跳过。关闭后卸载其发送处理并取消尚未完成的优化，不改变 OMD 原有功能。它不附带 Bash，与原有草稿“提示词优化”独立；建议不要同时启用两个自动处理器。
 

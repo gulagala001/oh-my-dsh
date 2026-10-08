@@ -138,6 +138,18 @@ export class ProjectlessDrafts {
     if (preset) checked(await this.ctx.remote.agentPresets.select(to, preset));
     const selected = model?.next ?? model?.lastUsed;
     if (selected) checked(await this.ctx.remote.session.selectModel({ sessionId: to, ...selected }));
+    if (preset?.startsWith('omaa-')) {
+      const transferred = await fetch('omaa/api/session-transfer', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: this.lifetime.signal,
+        body: JSON.stringify({ sourceSessionId: from, targetSessionId: to, requestId: this.drafts[from]?.requestId ?? to }),
+      });
+      if (!transferred.ok) {
+        const error = await transferred.json().catch(() => ({}));
+        throw Error(error.error || '无法保留 OMAA 预设设置，请更新匹配的 OMAA；草稿已保留');
+      }
+      const result = await transferred.json();
+      if (result.handledWorkMode) return;
+    }
     // OMD modes live beside native model selection; copying just effort loses
     // Pro/Ultracode. Use the same API as the model panel after selecting preset.
     const response = await fetch('trisoul-x/api/model-mode?session=' + encodeURIComponent(from));

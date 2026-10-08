@@ -107,66 +107,42 @@ test('Turn Rewind rc explicit null permits installing the reviewed source snapsh
   assert.deepEqual(posts, [{ id, action: 'install' }]); assert.deepEqual(errors, []);
 });
 
-test('Subscriptions alpha availability blocks install and update while keeping existing uninstall', { timeout: 30000 }, async t => {
-  const unavailable = 'npm 0.9.8 尚不兼容 DSH 0.2.1-alpha.1，暂不提供安装或更新。已有安装可卸载。';
-  const { card, posts, errors, state, poll } = await managedRecommendationFixture(t, 'dsh-plugin-subscriptions', { unavailable });
-  assert.match(await card.innerText(), /0\.9\.8.*0\.2\.1-alpha\.1/);
-  assert.equal(await card.locator('.tx-recommended-result.tx-warn').textContent(), unavailable, 'the server reason takes precedence over catalog copy');
-  assert.match(await card.innerText(), /社区推荐 · 兼容性待核验/);
-  assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
-  assert.deepEqual(posts, []);
-  state.installed = true; await poll();
-  assert.equal(await card.getByRole('button', { name: '更新', exact: true }).isEnabled(), false);
-  const uninstall = card.getByRole('button', { name: '卸载', exact: true });
-  assert.equal(await uninstall.isEnabled(), true); await uninstall.click();
-  await card.getByRole('button', { name: '安装', exact: true }).waitFor();
-  assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
-  assert.deepEqual(posts, [{ id: 'dsh-plugin-subscriptions', action: 'uninstall' }]); assert.deepEqual(errors, []);
-});
-
-test('Subscriptions rc explicit null overrides alpha catalog restrictions and permits manual install', { timeout: 30000 }, async t => {
-  const { card, posts, errors } = await managedRecommendationFixture(t, 'dsh-plugin-subscriptions', { unavailable: null });
-  assert.match(await card.innerText(), /社区推荐 · 兼容性待核验/);
-  assert.doesNotMatch(await card.innerText(), /尚不兼容/);
-  const install = card.getByRole('button', { name: '安装', exact: true });
-  assert.equal(await install.isEnabled(), true); await install.click();
-  await card.getByRole('button', { name: '更新', exact: true }).waitFor();
-  assert.equal(await card.getByRole('button', { name: '更新', exact: true }).isEnabled(), true);
-  assert.match(await card.innerText(), /已安装.*v0\.9\.8/);
-  assert.deepEqual(posts, [{ id: 'dsh-plugin-subscriptions', action: 'install' }]); assert.deepEqual(errors, []);
-});
-
-test('Subscriptions falls back to the alpha catalog restriction when older servers omit availability', { timeout: 30000 }, async t => {
-  const { card, posts, errors } = await managedRecommendationFixture(t, 'dsh-plugin-subscriptions');
-  assert.match(await card.innerText(), /0\.9\.8.*0\.2\.1-alpha\.1/);
-  assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
-  assert.deepEqual(posts, []); assert.deepEqual(errors, []);
-});
-
-for (const { id, version, unavailable, reviewLabel } of [
-  { id: 'omd-intent-assistant', version: '0.2.0', unavailable: '固定版本 0.2.0 尚不兼容 DSH 0.2.1-alpha.1，已有安装仍可卸载。', reviewLabel: /已核验 v0\.2\.0.*DSH 0\.2\.0-rc\.2/ },
-]) test(`${id} consumes the current server reason, keeps its review label and permits only uninstall`, { timeout: 30000 }, async t => {
-  const { card, posts, errors, state, poll } = await managedRecommendationFixture(t, id, { unavailable, version });
-  assert.equal(await card.locator('.tx-recommended-result.tx-warn').textContent(), unavailable);
-  assert.match(await card.locator('.tx-recommended-review').innerText(), reviewLabel);
-  assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
-  state.installed = true; await poll();
-  assert.equal(await card.getByRole('button', { name: '更新', exact: true }).isEnabled(), false);
-  const uninstall = card.getByRole('button', { name: '卸载', exact: true });
-  assert.equal(await uninstall.isEnabled(), true); await uninstall.click();
-  await card.getByRole('button', { name: '安装', exact: true }).waitFor();
-  assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
-  assert.deepEqual(posts, [{ id, action: 'uninstall' }]); assert.deepEqual(errors, []);
-});
-
-test('intent assistant rc explicit null permits installation while retaining the historical review label', { timeout: 30000 }, async t => {
-  const id = 'omd-intent-assistant';
-  const { card, posts, errors } = await managedRecommendationFixture(t, id, { unavailable: null, version: '0.2.0' });
-  assert.equal(await card.locator('.tx-recommended-result.tx-warn').count(), 0);
-  assert.match(await card.locator('.tx-recommended-review').innerText(), /已核验 v0\.2\.0.*DSH 0\.2\.0-rc\.2/);
-  const install = card.getByRole('button', { name: '安装', exact: true });
-  assert.equal(await install.isEnabled(), true); await install.click();
-  await card.getByRole('button', { name: '更新', exact: true }).waitFor();
-  assert.equal(await card.getByRole('button', { name: '更新', exact: true }).isEnabled(), true);
-  assert.deepEqual(posts, [{ id, action: 'install' }]); assert.deepEqual(errors, []);
-});
+for (const { id, version, label } of [
+  { id: 'dsh-plugin-subscriptions', version: '0.9.8-omd.1', label: /已核验 v0\.9\.8-omd\.1/ },
+  { id: 'omd-intent-assistant', version: '0.3.0', label: /已核验 v0\.3\.0/ },
+]) {
+  test(`${id} offers the reviewed release when older servers omit availability and completes install/update/uninstall`, { timeout: 30000 }, async t => {
+    const { page, card, posts, errors } = await managedRecommendationFixture(t, id, { version });
+    assert.match(await card.locator('.tx-recommended-review').innerText(), label);
+    assert.match(await card.innerText(), /DSH 0\.2\.0-rc\.2 \/ 0\.2\.1-alpha\.1/);
+    assert.match(await card.innerText(), /非上游/);
+    assert.equal(await card.locator('.tx-recommended-result.tx-warn').count(), 0);
+    const install = card.getByRole('button', { name: '安装', exact: true });
+    assert.equal(await install.isEnabled(), true); await install.click();
+    const update = card.getByRole('button', { name: '更新', exact: true }); await update.waitFor();
+    assert.equal(await update.isEnabled(), true); assert.match(await card.innerText(), new RegExp('已安装.*v' + version.replaceAll('.', '\\.')));
+    await update.click();
+    const uninstall = card.getByRole('button', { name: '卸载', exact: true }); await uninstall.click();
+    await card.getByRole('button', { name: '安装', exact: true }).waitFor();
+    assert.deepEqual(posts, [{ id, action: 'install' }, { id, action: 'update' }, { id, action: 'uninstall' }]);
+    for (const colorScheme of ['light', 'dark']) for (const width of [800, 360]) {
+      await page.emulateMedia({ colorScheme }); await page.setViewportSize({ width, height: 700 });
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    }
+    assert.deepEqual(errors, []);
+  });
+  test(`${id} keeps a later server restriction authoritative and still permits uninstall`, { timeout: 30000 }, async t => {
+    const unavailable = '当前宿主不兼容，暂不提供安装或更新。已有安装仍可卸载。';
+    const { card, posts, errors, state, poll } = await managedRecommendationFixture(t, id, { unavailable, version });
+    assert.equal(await card.locator('.tx-recommended-result.tx-warn').textContent(), unavailable);
+    assert.match(await card.locator('.tx-recommended-review').innerText(), label);
+    assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
+    state.installed = true; await poll();
+    assert.equal(await card.getByRole('button', { name: '更新', exact: true }).isEnabled(), false);
+    const uninstall = card.getByRole('button', { name: '卸载', exact: true });
+    assert.equal(await uninstall.isEnabled(), true); await uninstall.click();
+    await card.getByRole('button', { name: '安装', exact: true }).waitFor();
+    assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
+    assert.deepEqual(posts, [{ id, action: 'uninstall' }]); assert.deepEqual(errors, []);
+  });
+}

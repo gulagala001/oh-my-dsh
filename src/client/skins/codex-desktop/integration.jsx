@@ -3,7 +3,7 @@ import { IconPanelLeftOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitiv
 import { decorateSlot } from '#opencu/src/client/slot-decoration.mjs';
 
 const WIDTH_KEY = 'omd.codexDesktop.rightWidth.v1';
-const isCodex = state => state.skins.find(s => s.id === state.selected)?.layout === 'codex-desktop';
+const isCodex = state => state.active !== false && state.skins.find(s => s.id === state.selected)?.layout === 'codex-desktop';
 
 function Geometry({ ctx }) {
   const ref = useRef(null);
