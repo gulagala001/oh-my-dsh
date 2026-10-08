@@ -30,6 +30,9 @@
     "offline:check": "node scripts/check-offline.mjs",
     "test": "node --test test/*.test.mjs",
     "test:context": "node --test test/context-*.test.mjs",
+    "test:simulator": "node --test --test-concurrency=1 test/simulator-*.test.mjs",
+    "test:conversation": "node scripts/simulate.mjs --all",
+    "simulate": "node scripts/simulate.mjs",
     "plugins:submissions": "node scripts/plugin-submissions.mjs"
   },
   "dependencies": {
