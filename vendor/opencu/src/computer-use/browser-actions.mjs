@@ -202,7 +202,15 @@ export class BrowserActions {
           catch (error) { if (!error.message.includes('part of the parent frame')) throw error; innerCdp = cdp; }
           record.frames.set(inner, innerCdp);
         }
-        await visit(child, inner, innerCdp);
+        let innerTree = child;
+        if (innerCdp !== cdp) {
+          // Parent targets can expose only a shallow OOPIF descriptor. Its own
+          // session has the complete subtree, including same-process children.
+          const current = await innerCdp.send('Page.getFrameTree');
+          if (current.frameTree.frame.id !== child.frame.id) throw stale();
+          innerTree = current.frameTree;
+        }
+        await visit(innerTree, inner, innerCdp);
       }
     };
     await visit(frameTree, record.page.mainFrame(), record.cdp);

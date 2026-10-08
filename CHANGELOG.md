@@ -4,6 +4,7 @@
 - 推荐目录固定 Intent 0.3.0、Subscriptions 0.9.8-omd.1 兼容发行，移除 Jevify。
 - 内置 OpenCU 1.3.0：重复 AX 控件的区域消歧、安全引用、输出预算及 iframe 支持。
 - 修复会话来源 ID、Fast 迟到保存及 OpenCU 整包同步与 Windows npm 调用。
+- 新增离线会话工程模拟器：原生宿主、生成场景、故障注入和真实 Web 交互；源码保留，安装包排除开发夹具。
 
 # 更新记录
 
