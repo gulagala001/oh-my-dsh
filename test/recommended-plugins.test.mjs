@@ -145,7 +145,6 @@ test('Subscriptions falls back to the alpha catalog restriction when older serve
 
 for (const { id, version, unavailable, reviewLabel } of [
   { id: 'omd-intent-assistant', version: '0.2.0', unavailable: '固定版本 0.2.0 尚不兼容 DSH 0.2.1-alpha.1，已有安装仍可卸载。', reviewLabel: /已核验 v0\.2\.0.*DSH 0\.2\.0-rc\.2/ },
-  { id: 'jevify', version: '0.1.5', unavailable: '当前最新版本 0.1.5 尚不兼容 DSH 0.2.1-alpha.1 和 0.2.0-rc.2，已有安装仍可卸载。', reviewLabel: /社区推荐 · 兼容性待核验/ },
 ]) test(`${id} consumes the current server reason, keeps its review label and permits only uninstall`, { timeout: 30000 }, async t => {
   const { card, posts, errors, state, poll } = await managedRecommendationFixture(t, id, { unavailable, version });
   assert.equal(await card.locator('.tx-recommended-result.tx-warn').textContent(), unavailable);

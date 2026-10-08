@@ -58,14 +58,6 @@ export const recommendedPlugins = [
       note: '核验的是固定源码快照，0.4.0 为上游源码标注版本，非正式发行包；现有标签指向三代。源码快照仅手动更新。保留上游提示词与 MIT 许可；不宣称真实模型效果，桌面及 Windows 未实测。' },
   },
   {
-    id: 'jevify', name: 'Jevify', packageName: 'dsh-plugin-jevify', author: 'gulagala001',
-    description: '让普通模型提供 Jev 风格的 Choice、Score、Noul 判断；支持百炼、DeepSeek 官方和 GOAT，可用官方 Jev SDK 直接调用。安装后在设置中选择渠道与模型。',
-    unavailable: '已核对的发行包 0.1.5 将 DSH LLM 依赖限定为 0.1.6-alpha.2，不兼容 DSH 0.2.1-alpha.1 或 0.2.0-rc.2，暂不提供安装或更新。已有安装仍可卸载，等待适配。',
-    unavailableHosts: ['0.2.1-alpha.1', '0.2.0-rc.2'],
-    category: '模型能力', url: 'https://github.com/gulagala001/jevify',
-    githubRelease: 'gulagala001/jevify',
-  },
-  {
     id: 'dsh-status-rotator', name: 'dsh-status-rotator', packageName: 'dsh-status-rotator', author: '01Virex',
     description: '把“深度求索中…”替换为轮换文案，支持打字机、彩色渐变、弹幕和主题词库，可在设置中编辑。',
     category: '界面增强', url: 'https://github.com/01Virex/dsh-status-rotator',
