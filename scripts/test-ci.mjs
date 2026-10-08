@@ -13,6 +13,7 @@ const windows = [
   'workflow-integration', 'workflow-worktree', 'ultracode-integration',
   'model-panel-ui', 'workflow-status-ui', 'browser-tools', 'computer-use-ui',
   'projectless-workspaces', 'projectless-state', 'projectless-workspaces-ui',
+  'opencu-sync',
 ];
 // These have their own three-platform installation workflow on every code PR.
 const offline = new Set(['offline.test.mjs', 'offline-install.test.mjs', 'offline-root.test.mjs']);

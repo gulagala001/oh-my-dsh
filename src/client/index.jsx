@@ -38,7 +38,11 @@ const fmt = n => Number(n || 0).toLocaleString();
 const kindName = { main: '主执行', subagent: '子代理', compactFull: '全量压缩', prepare: '上下文预处理', coordinate: '上下文替换', background: '记忆消化（历史）', recall: '记忆检索（历史）', state: '状态提炼（历史）', curation: '记忆整理（历史）', surgeon: '上下文整理（历史）', probeAsk: '探针出题（历史）', probeAnswer: '探针作答（历史）' };
 const componentEntries = kinds => [...new Set(kinds)].map(kind => [kind, kindName[kind] || kind]);
 kindName.promptOptimizer = '提示词优化';
-function BetterTodoChip({ sessionId, useSessionStatus }) {
+function BetterTodoChip(props) {
+  const preset = props.useSessions(s => s.byId[props.sessionId]?.projectionValues?.agentPreset);
+  return ['trisoul-x', 'omd-ptc'].includes(preset) ? <BetterTodoSessionChip {...props}/> : null;
+}
+function BetterTodoSessionChip({ sessionId, useSessionStatus }) {
   const [state, setState] = useState(null), [open, setOpen] = useState(false), [saving, setSaving] = useState(false), [error, setError] = useState('');
   const [notice, setNotice] = useState(false), dialog = useRef(null), noticeId = useId();
   const running = useSessionStatus(s => s.get(sessionId)?.running), active = useRef(sessionId), revision = useRef(0), writing = useRef(null); active.current = sessionId;
@@ -285,12 +289,14 @@ export async function apply(ctx) {
     useEffect(() => { setUsageOpen(true); }, [props.sessionId]);
     return <div className="tx-composer-dock" data-session-id={props.sessionId} data-omd-running={running ? '' : undefined} data-omd-usage-expanded={usageOpen ? '' : undefined}><div className="tx-composer-tools"><button type="button" className="tx-workbench-entry" aria-label="打开工作台" onClick={() => openPanel('tasks')}><Icon name="context" size={15}/><span>工作台</span></button><ComputerEntry {...props}/></div><button type="button" className="tx-usage-toggle" aria-label="用量详情" aria-expanded={usageOpen} onClick={() => setUsageOpen(value => !value)}><Icon name="monitor" size={14}/><span>用量</span><Icon name="chevron" size={12}/></button><StatsLine {...props} onOpen={() => openPanel('monitor')}/></div>;
   }
+  const getAppearanceRuntime = applySkins(ctx);
   ctx.effect(() => {
     const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css + '\n' + shellCss + '\n' + whaleCss + '\n' + versionCss + '\n' + workbenchCss; document.head.appendChild(tag);
-    document.documentElement.classList.add('trisoul-shell');
-    return () => { tag.remove(); document.documentElement.classList.remove('trisoul-shell'); };
+    const runtime = getAppearanceRuntime();
+    const sync = () => document.documentElement.classList.toggle('trisoul-shell', runtime.getSnapshot().active !== false);
+    const off = runtime.subscribe(sync); sync();
+    return () => { off(); tag.remove(); document.documentElement.classList.remove('trisoul-shell'); };
   });
-  const getAppearanceRuntime = applySkins(ctx);
   applyAppearanceBrand(ctx, getAppearanceRuntime);
   ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'trisoul-x', order: 16, label: () => 'Oh My DSH' }, ContextSettings));
   applyRecommendedPlugins(ctx);

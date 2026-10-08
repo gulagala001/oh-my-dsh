@@ -55,23 +55,94 @@ test('recommendations search, categories and project links work in both themes a
   assert.deepEqual(errors, []);
 });
 
-test('actual rewind recommendation stays optional and fits both themes at desktop and phone widths', {timeout:30000}, async t=>{
-  const bundle=await build({stdin:{contents:`import React from 'react';import {createRoot} from 'react-dom/client';import {RecommendedPlugins} from './src/client/recommended-plugins.jsx';import {recommendedPlugins} from './src/recommended-plugin-catalog.mjs';createRoot(document.getElementById('root')).render(<RecommendedPlugins plugins={recommendedPlugins.filter(p=>p.id==='dsh-turn-rewind')}/>);`,resolveDir:process.cwd(),loader:'jsx'},bundle:true,write:false,platform:'browser',format:'iife'});
-  const browser=await chromium.launch({args:['--use-mock-keychain','--password-store=basic']});t.after(()=>browser.close());
-  const page=await browser.newPage({viewport:{width:800,height:700}}),posts=[],errors=[];let installed=false;
-  page.on('pageerror',e=>errors.push(e.message));
-  await page.route('http://omd.fixture/**',async route=>{
-    if(route.request().url().includes('/trisoul-x/recommended-plugins')){
-      if(route.request().method()==='POST'){posts.push(route.request().postDataJSON());installed=true;}
-      return route.fulfill({json:{autoUpdate:false,plugins:[{id:'dsh-turn-rewind',installed,enabled:installed,version:installed?'0.3.9':undefined,removable:true}]}});
+async function managedRecommendationFixture(t, id, { unavailable, version = '0.9.8' } = {}) {
+  const bundle = await build({ stdin: { contents: `import React from 'react';import {createRoot} from 'react-dom/client';import {RecommendedPlugins} from './src/client/recommended-plugins.jsx';import {recommendedPlugins} from './src/recommended-plugin-catalog.mjs';createRoot(document.getElementById('root')).render(<RecommendedPlugins plugins={recommendedPlugins.filter(p=>p.id===${JSON.stringify(id)})}/>);`, resolveDir: process.cwd(), loader: 'jsx' }, bundle: true, write: false, platform: 'browser', format: 'iife' });
+  const browser = await chromium.launch({ headless: true, args: ['--use-mock-keychain', '--password-store=basic'] }); t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 800, height: 700 } }), posts = [], errors = [], state = { installed: false };
+  page.on('pageerror', error => errors.push(error.message));
+  await page.route('http://omd.fixture/**', async route => {
+    if (route.request().url().includes('/trisoul-x/recommended-plugins')) {
+      if (route.request().method() === 'POST') { const action = route.request().postDataJSON(); posts.push(action); state.installed = action.action !== 'uninstall'; }
+      return route.fulfill({ json: { autoUpdate: false, plugins: [{ id, installed: state.installed, enabled: state.installed, version: state.installed ? version : undefined, removable: true,
+        ...(unavailable !== undefined ? { unavailable } : {}) }] } });
     }
-    return route.fulfill({contentType:'text/html',body:'<html style="color-scheme:light dark"><body><main id="root"></main></body></html>'});
+    return route.fulfill({ contentType: 'text/html', body: '<html style="color-scheme:light dark"><body><main id="root"></main></body></html>' });
   });
-  await page.goto('http://omd.fixture/');await page.addStyleTag({content:await readFile(new URL('../src/client/style.css',import.meta.url),'utf8')});await page.addScriptTag({content:bundle.outputFiles[0].text});
+  await page.goto('http://omd.fixture/');
+  await page.addStyleTag({ content: await readFile(new URL('../src/client/style.css', import.meta.url), 'utf8') });
+  await page.addScriptTag({ content: bundle.outputFiles[0].text });
+  const card = page.locator('.tx-recommended-card'); await card.locator('.tx-recommended-version').getByText('未安装', { exact: true }).waitFor();
+  const poll = async () => {
+    // The real observer refreshes when its page becomes visible.
+    await Promise.all([page.waitForResponse(response => response.url().includes('/trisoul-x/recommended-plugins')), page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))]);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  };
+  return { page, card, posts, errors, state, poll };
+}
+
+test('incompatible rewind blocks installation and updates, retains uninstall and fits both themes', {timeout:30000}, async t=>{
+  const { page, posts, errors, state, poll } = await managedRecommendationFixture(t, 'dsh-turn-rewind', { version: '0.3.9' });
   const card=page.locator('.tx-recommended-card');await card.getByRole('button',{name:'安装',exact:true}).waitFor();
-  assert.match(await card.innerText(),/默认不安装/);assert.match(await card.innerText(),/0\.3\.9.*9610ab9/);assert(! (await card.innerText()).includes('undefined'));
+  assert.match(await card.innerText(),/尚不兼容 DSH 0\.2\.1-alpha\.1/);assert.equal(await card.getByRole('button',{name:'安装',exact:true}).isEnabled(),false);assert.match(await card.innerText(),/0\.3\.9.*9610ab9/);assert(! (await card.innerText()).includes('undefined'));
   assert.deepEqual(posts,[]);
   for(const colorScheme of ['light','dark'])for(const width of [800,360]){await page.emulateMedia({colorScheme});await page.setViewportSize({width,height:700});const box=await card.boundingBox();assert(box.x>=0&&box.x+box.width<=width);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);}
-  await page.emulateMedia({colorScheme:'light'});await page.setViewportSize({width:800,height:700});await page.screenshot({path:'/tmp/omd-btw-rewind-20261001/evidence/rewind-recommendation-light.png'});
-  await card.getByRole('button',{name:'安装',exact:true}).click();await card.getByRole('button',{name:'卸载',exact:true}).waitFor();assert.deepEqual(posts,[{id:'dsh-turn-rewind',action:'install'}]);assert.deepEqual(errors,[]);
+  state.installed=true; await poll();
+  const uninstall=card.getByRole('button',{name:'卸载',exact:true});await uninstall.waitFor();
+  assert.equal(await card.getByRole('button',{name:'更新',exact:true}).isEnabled(),false);
+  assert.equal(await uninstall.isEnabled(),true);
+  await uninstall.click();await card.getByRole('button',{name:'安装',exact:true}).waitFor();
+  assert.equal(await card.getByRole('button',{name:'安装',exact:true}).isEnabled(),false);
+  assert.deepEqual(posts,[{id:'dsh-turn-rewind',action:'uninstall'}]);assert.deepEqual(errors,[]);
 });
+
+test('Turn Rewind rc explicit null permits installing the reviewed source snapshot', { timeout: 30000 }, async t => {
+  const id = 'dsh-turn-rewind';
+  const { card, posts, errors } = await managedRecommendationFixture(t, id, { unavailable: null, version: '0.3.9' });
+  assert.equal(await card.locator('.tx-recommended-result.tx-warn').count(), 0);
+  assert.match(await card.locator('.tx-recommended-review').innerText(), /已核验源码 v0\.3\.9 · 9610ab9.*DSH 0\.2\.0-rc\.2/);
+  const install = card.getByRole('button', { name: '安装', exact: true });
+  assert.equal(await install.isEnabled(), true); await install.click();
+  await card.getByRole('button', { name: '更新', exact: true }).waitFor();
+  assert.equal(await card.getByRole('button', { name: '更新', exact: true }).isEnabled(), true);
+  assert.deepEqual(posts, [{ id, action: 'install' }]); assert.deepEqual(errors, []);
+});
+
+for (const { id, version, label } of [
+  { id: 'dsh-plugin-subscriptions', version: '0.9.8-omd.1', label: /已核验 v0\.9\.8-omd\.1/ },
+  { id: 'omd-intent-assistant', version: '0.3.0', label: /已核验 v0\.3\.0/ },
+]) {
+  test(`${id} offers the reviewed release when older servers omit availability and completes install/update/uninstall`, { timeout: 30000 }, async t => {
+    const { page, card, posts, errors } = await managedRecommendationFixture(t, id, { version });
+    assert.match(await card.locator('.tx-recommended-review').innerText(), label);
+    assert.match(await card.innerText(), /DSH 0\.2\.0-rc\.2 \/ 0\.2\.1-alpha\.1/);
+    assert.match(await card.innerText(), /非上游/);
+    assert.equal(await card.locator('.tx-recommended-result.tx-warn').count(), 0);
+    const install = card.getByRole('button', { name: '安装', exact: true });
+    assert.equal(await install.isEnabled(), true); await install.click();
+    const update = card.getByRole('button', { name: '更新', exact: true }); await update.waitFor();
+    assert.equal(await update.isEnabled(), true); assert.match(await card.innerText(), new RegExp('已安装.*v' + version.replaceAll('.', '\\.')));
+    await update.click();
+    const uninstall = card.getByRole('button', { name: '卸载', exact: true }); await uninstall.click();
+    await card.getByRole('button', { name: '安装', exact: true }).waitFor();
+    assert.deepEqual(posts, [{ id, action: 'install' }, { id, action: 'update' }, { id, action: 'uninstall' }]);
+    for (const colorScheme of ['light', 'dark']) for (const width of [800, 360]) {
+      await page.emulateMedia({ colorScheme }); await page.setViewportSize({ width, height: 700 });
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    }
+    assert.deepEqual(errors, []);
+  });
+  test(`${id} keeps a later server restriction authoritative and still permits uninstall`, { timeout: 30000 }, async t => {
+    const unavailable = '当前宿主不兼容，暂不提供安装或更新。已有安装仍可卸载。';
+    const { card, posts, errors, state, poll } = await managedRecommendationFixture(t, id, { unavailable, version });
+    assert.equal(await card.locator('.tx-recommended-result.tx-warn').textContent(), unavailable);
+    assert.match(await card.locator('.tx-recommended-review').innerText(), label);
+    assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
+    state.installed = true; await poll();
+    assert.equal(await card.getByRole('button', { name: '更新', exact: true }).isEnabled(), false);
+    const uninstall = card.getByRole('button', { name: '卸载', exact: true });
+    assert.equal(await uninstall.isEnabled(), true); await uninstall.click();
+    await card.getByRole('button', { name: '安装', exact: true }).waitFor();
+    assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
+    assert.deepEqual(posts, [{ id, action: 'uninstall' }]); assert.deepEqual(errors, []);
+  });
+}
