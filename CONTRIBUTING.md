@@ -34,7 +34,7 @@ node --test --test-concurrency=1 test/*.test.mjs
 日常变更通过 PR 合并，合并后不重复执行同一套 CI；官网仍在 main 更新后构建部署。过期 PR 的检查会取消。宿主升级、跨平台基础改动或直接推送 main 后，在 Actions 的 CI 页面手动勾选 `full`，运行完整 Linux Node 22/24 与 Windows 矩阵。必要时另行运行 Official Desktop installation 和 Host compatibility。
 
 
-会话、工具、上下文、Dream 或恢复流程的相关改动，由实施者主动使用[工程会话模拟器](scripts/simulator/README.md)完成复现与回归。先按改动选择真实宿主场景，缺少覆盖时补充场景和独立断言；跨模块改动执行 `pnpm test:conversation`，模拟器本身改动执行 `pnpm test:simulator`，前端流程另加 `--ui`。需要时运行有限 seed 探索、失败最小化及严格实录重放，分析失败并修复后再交付，不把这些工程操作转交给提出需求的用户。
+会话、工具、上下文、Dream 或恢复流程的相关改动，由实施者主动使用[工程会话模拟器](https://github.com/gulagala001/oh-my-dsh/blob/main/scripts/simulator/README.md)完成复现与回归。先按改动选择真实宿主场景，缺少覆盖时补充场景和独立断言；跨模块改动执行 `pnpm test:conversation`，模拟器本身改动执行 `pnpm test:simulator`，前端流程另加 `--ui`。需要时运行有限 seed 探索、失败最小化及严格实录重放，分析失败并修复后再交付，不把这些工程操作转交给提出需求的用户。
 
 CI 的 macOS 会话仿真任务自动运行模拟器测试、六场景基线、固定 seed 探索和真实 Web 检查，并保存报告。它真实执行隔离的 DSH／OMD，默认使用 macOS 外层沙箱和本地模型替身；预算耗尽、失败和跳过不能作为通过证据，平台、时钟、隔离及模型语义边界以本次报告为准。
 
