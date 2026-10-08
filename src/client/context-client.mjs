@@ -53,7 +53,7 @@ export function createContextUI(React) {
   const section = (text, sub, children, right) => h('section', { className: 'cx-section' }, h('div', { className: 'cx-section-head' }, h('div', null, h('h3', null, text), sub && h('p', null, sub)), right), children);
   const fold = (text, sub, children, open = false) => h('details', { className: 'cx-fold', open: open || undefined }, h('summary', null, h('span', null, h('strong', null, text), sub && h('small', null, sub)), icon('chevron', 14)), h('div', { className: 'cx-fold-body' }, children));
   const empty = (text, sub, name = 'layers') => h('div', { className: 'cx-empty' }, h('span', { className: 'cx-empty-icon' }, icon(name, 23)), h('h3', null, text), h('p', null, sub));
-  const segments = (label, value, options, change) => h('div', { className: 'cx-segments', role: 'group', 'aria-label': label }, ...options.map(([id, text]) => h('button', { key: id, type: 'button', 'aria-pressed': id === value, onClick: () => change(id) }, text)));
+  const segments = (label, value, options, change, disabled = false) => h('div', { className: 'cx-segments', role: 'group', 'aria-label': label }, ...options.map(([id, text]) => h('button', { key: id, type: 'button', disabled, 'aria-pressed': id === value, onClick: () => change(id) }, text)));
   const pageTabs = (value, options, change) => h('nav', { className: 'cx-tabs', 'aria-label': '设置分类' }, ...options.map(([id, text]) => h('button', { key: id, type: 'button', 'aria-current': id === value ? 'page' : undefined, onClick: () => change(id) }, text)));
   const duration = ms => Number(ms) >= 60000 ? Number(ms) / 60000 + ' 分钟' : Number(ms || 0) / 1000 + ' 秒';
   const rangeLabel = ranges => (ranges || []).map(x => `#${x.from}–${x.to}`).join(' · ');
@@ -159,6 +159,15 @@ export function createContextUI(React) {
       catch (e) { if (active()) this.fail(e, () => this.run(path, body, success)); }
       finally { if (active()) this.setState({ busy: false, activeAction: null }); }
     };
+    changeMode = mode => {
+      const current = this.state.data?.compressionMode === 'adaptive' ? 'adaptive' : 'pipeline';
+      if (mode === current || this.state.busy || this.state.data?.manualOperation) return;
+      return this.run('/context/mode', { mode }, result => {
+        const savedMode = result.compressionMode === 'pipeline' || result.compressionMode === 'adaptive' ? result.compressionMode : mode;
+        this.setState(state => ({ data: { ...state.data, compressionMode: savedMode } }));
+        return '已切换为' + (savedMode === 'adaptive' ? '主动异步' : '原版异步') + '，本会话已保存。';
+      });
+    };
     document = async (id, returnFocus = document.activeElement) => {
       this.setState({ error: '', retryAction: null });
       const sid = this.props.sessionId, ticket = ++this.documentTicket;
@@ -178,31 +187,39 @@ export function createContextUI(React) {
       const records = (d?.records || []).filter(r => !r.mergedInto);
       const shown = records.filter(r => filter === 'all' || (filter === 'raw' ? r.mode === 'raw' : r.mode !== 'raw'));
       const locked = busy || Boolean(d?.manualOperation);
+      const compressionMode = d?.compressionMode === 'adaptive' ? 'adaptive' : 'pipeline';
+      const adaptive = d?.adaptive || {}, isAdaptive = compressionMode === 'adaptive';
       const fullRunning = d?.manualOperation === 'full' || this.state.activeAction === '/compact-f';
       const ready = records.filter(r => r.live && r.mode === 'raw').length;
       const retryLabel = kind => ({ 'waiting-main': '等待主会话成功后恢复', 'waiting-events': '等待新增事件后自动重试', manual: '重试已暂停，请手动重试', retrying: '等待自动重试' })[d?.retry?.[kind]];
       const step = (text, state, running) => h('div', { className: 'cx-stage' }, h('span', { className: 'cx-dot ' + (running ? 'cx-pulse' : '') }), h('div', null, h('strong', null, text), h('small', null, state)));
       return h('div', { className: 'cx-panel cx-context' }, heading('工作上下文', '整理长对话，保留原话与资料。', null, button(null, this.load, { icon: 'refresh', quiet: true, label: '刷新上下文' })),
         h('div', { className: 'cx-body' }, this.failure(), alert(notice),
-          !this.props.sessionId ? empty('先选择一个会话', '这里会显示本会话的分段摘要与替换状态。') : !d ? empty('正在读取上下文', '正在连接当前会话的预处理记录。') : h(React.Fragment, null,
-            h('section', { className: 'cx-pipeline-card' }, h('div', { className: 'cx-row' }, h('span', { className: 'cx-eyebrow' }, '处理状态'), badge(names[d.scope?.scope] || '会话', d.scope?.scope === 'session' ? '' : 'blue')),
-              h('div', { className: 'cx-stages' }, step('整理摘要', d.preparing ? '正在整理' : retryLabel('prepare') || '等待新内容', d.preparing), icon('chevron', 12), step('准备替换', d.coordinating ? '正在判断范围' : retryLabel('coordinate') || (d.pending ? '结果已准备' : '等待新摘要'), d.coordinating), icon('chevron', 12), step('更新上下文', d.transactionPending ? '正在恢复' : '随下次请求更新', d.transactionPending)),
+          !this.props.sessionId ? empty('先选择一个会话', '这里会显示本会话的分段摘要与替换状态。') : !d ? empty('正在读取上下文', '正在连接当前会话的上下文记录。') : h(React.Fragment, null,
+            h('section', { className: 'cx-pipeline-card' },
+              h('div', { className: 'cx-row cx-compression-mode' }, h('span', { className: 'cx-eyebrow' }, '异步压缩'), segments('本会话异步压缩模式', compressionMode, [['pipeline', '原版异步'], ['adaptive', '主动异步']], this.changeMode, locked)),
+              h('p', { className: 'cx-hint cx-compression-hint' }, compressionMode === 'adaptive' ? '独立后台请求根据当前对话决定是否整理及整理范围；主模型继续工作。' : '后台预处理摘要，再由中枢决定替换；主模型继续工作。'),
+              compressionMode === 'adaptive' && h('p', { className: 'cx-hint cx-compression-hint' }, '尽量复用主请求前缀；缓存以提供方实际返回为准，后台调用仍产生用量。'),
+              h('div', { className: 'cx-row' }, h('span', { className: 'cx-eyebrow' }, '处理状态'), badge(names[d.scope?.scope] || '会话', d.scope?.scope === 'session' ? '' : 'blue')),
+              h('div', { className: 'cx-stages' }, isAdaptive ? step('检查对话', adaptive.running ? '正在判断' : adaptive.error ? '本次检查失败' : adaptive.lastDecision === 'skip' ? '暂不需要整理' : '等待新内容', adaptive.running) : step('整理摘要', d.preparing ? '正在整理' : retryLabel('prepare') || '等待新内容', d.preparing), icon('chevron', 12), isAdaptive ? step('准备替换', d.pending ? '结果已准备' : adaptive.lastDecision === 'stale' ? '结果已过期' : adaptive.lastDecision === 'compress' ? '已完成整理' : '等待整理结果', false) : step('准备替换', d.coordinating ? '正在判断范围' : retryLabel('coordinate') || (d.pending ? '结果已准备' : '等待新摘要'), d.coordinating), icon('chevron', 12), step('更新上下文', d.transactionPending ? '正在恢复' : '随下次请求更新', d.transactionPending)),
+              isAdaptive && (adaptive.error || adaptive.waitingReason || adaptive.reason) && h('p', { className: 'cx-hint', role: 'status' }, adaptive.error || adaptive.waitingReason || adaptive.reason),
+              isAdaptive && adaptive.cacheReadTokens != null && h('p', { className: 'cx-hint' }, '最近后台请求缓存读取：' + fmt(adaptive.cacheReadTokens) + ' tokens。'),
               h('div', { className: 'cx-metrics' }, h('div', null, h('strong', null, fmt(records.length)), h('span', null, '分段摘要')), h('div', null, h('strong', null, fmt(ready)), h('span', null, '原文待替换')), h('div', null, h('strong', null, fmt(records.reduce((n, r) => n + (r.documentCount || 0) + (r.assetCount || 0), 0))), h('span', null, '详细资料存档'))),
               h('div', { className: 'cx-row cx-pipeline-action' }, h('small', null, '只应用已有结果，不现场等待 AI。'), button('应用已准备结果', () => this.run('/compact', {}, r => r.queued ? '已排队，将在下一次请求边界应用。' : r.changed ? '替换已应用，原文仍在日志中。' : '没有可应用的结果，原文保持不变。'), { disabled: locked, primary: true, icon: 'layers' }))),
-            d.prepareDeferred && h('p', { className: 'cx-hint' }, '未达到预处理最低文本量：剩余 ' + fmt(d.prepareDeferred.events) + ' 条、约 ' + fmt(d.prepareDeferred.estimatedTokens) + ' tokens，留待下次触发。'),
-            section('未处理原文', '与已准备、待替换的摘要分开统计。', h('p', { className: 'cx-prose' }, '待预处理 ' + fmt(d.backlog?.events) + ' 条 · 估算 ' + fmt(d.backlog?.estimatedTokens) + ' tokens；近期暂留 ' + fmt(d.backlog?.recentEvents) + ' 条。')),
+            !isAdaptive && d.prepareDeferred && h('p', { className: 'cx-hint' }, '未达到预处理最低文本量：剩余 ' + fmt(d.prepareDeferred.events) + ' 条、约 ' + fmt(d.prepareDeferred.estimatedTokens) + ' tokens，留待下次触发。'),
+            section('未处理原文', '与已准备、待替换的摘要分开统计。', h('p', { className: 'cx-prose' }, (isAdaptive ? '未整理 ' : '待预处理 ') + fmt(d.backlog?.events) + ' 条 · 估算 ' + fmt(d.backlog?.estimatedTokens) + ' tokens；近期暂留 ' + fmt(d.backlog?.recentEvents) + ' 条。')),
             d.lastReplacement?.stats && section('最近一次替换', '以下为同口径估算，不是提供方实际输入账单。', h('p', { className: 'cx-prose' }, '处理 ' + fmt(d.lastReplacement.stats.selectedRecords) + ' 段 → ' + fmt(d.lastReplacement.stats.resultRecords) + ' 段；替换 ' + fmt(d.lastReplacement.stats.currentMessages) + ' 条当前消息，覆盖 ' + fmt(d.lastReplacement.stats.originalEvents) + ' 条原始事件；估算节省 ' + fmt(d.lastReplacement.stats.estimatedSavedTokens) + ' tokens。')),
             section('手动压缩', '压缩只改变当前上下文，原始日志和详细资料存档保留。', h(React.Fragment, null,
               fullRunning && h('div', { className: 'cx-info', role: 'status' }, icon('clock'), h('p', null, '正在生成全量摘要…摘要生成成功后才替换原文。')),
               d.manualQueued > 0 && h('p', { className: 'cx-hint', role: 'status' }, '有 ' + d.manualQueued + ' 项压缩操作等待下一次请求边界。'),
               h('div', { className: 'cx-compact-choice' }, h('div', { className: 'cx-row' }, h('code', null, '/compact-p'), button('已处理片段仅摘要', () => this.run('/compact-p', {}, r => r.message), { disabled: locked || !records.some(r => r.live && r.mode !== 'brief'), icon: 'layers' })), h('p', { className: 'cx-hint' }, '全部已准备片段只保留摘要，不携带文档、图片、附件；未处理内容不变，不调用 AI。')),
               h('div', { className: 'cx-compact-choice' }, h('div', { className: 'cx-row' }, h('code', null, '/compact-f'), button(fullRunning ? '全量压缩中…' : '全量压缩', () => this.run('/compact-f', {}, r => r.message), { disabled: locked, icon: fullRunning ? 'clock' : 'spark' })), h('p', { className: 'cx-hint' }, '调用 AI 将全部对话重新汇总为一份摘要，包含用户消息、工具结果、旧摘要及历史思考；保留前置 CoT、系统提示词、工具定义与用户手写全局背景。可能损失细节。')))),
-            fold('后台操作', '手动触发预处理或中枢判断', h('div', { className: 'cx-actions' }, button('准备摘要', () => this.run('/context/prepare', {}), { disabled: locked || d.preparing, icon: 'context' }), button('运行中枢', () => this.run('/context/coordinate', {}), { disabled: locked || d.coordinating, icon: 'spark' }))),
+            fold('后台操作', isAdaptive ? '手动检查当前对话是否需要整理' : '手动触发预处理或中枢判断', h('div', { className: 'cx-actions' }, button(isAdaptive ? '检查是否整理' : '准备摘要', () => this.run('/context/prepare', {}), { disabled: locked || (isAdaptive ? adaptive.running : d.preparing), icon: 'context' }), !isAdaptive && button('运行中枢', () => this.run('/context/coordinate', {}), { disabled: locked || d.coordinating, icon: 'spark' }))),
             h('div', { className: 'cx-list-head' }, h('h3', null, '分段摘要'), segments('筛选分段', filter, [['all', '全部'], ['raw', '原文'], ['applied', '已替换']], value => this.setState({ filter: value }))),
-            !shown.length ? empty(records.length ? '当前筛选没有内容' : '还没有分段摘要', records.length ? '切换“全部”查看其他记录。' : '达到预处理频率后，这里会自动出现基础摘要和文档。') : h('div', { className: 'cx-list' }, ...shown.map(r => h('article', { className: 'cx-card cx-record ' + (selected.includes(r.id) ? 'cx-selected' : ''), key: r.id },
+            !shown.length ? empty(records.length ? '当前筛选没有内容' : '还没有分段摘要', records.length ? '切换“全部”查看其他记录。' : isAdaptive ? '后台决定整理后，这里会显示摘要及关联资料。' : '达到预处理频率后，这里会自动出现基础摘要和文档。') : h('div', { className: 'cx-list' }, ...shown.map(r => h('article', { className: 'cx-card cx-record ' + (selected.includes(r.id) ? 'cx-selected' : ''), key: r.id },
               h('div', { className: 'cx-row' }, h('label', { className: 'cx-record-check' }, h('input', { type: 'checkbox', checked: selected.includes(r.id), disabled: !r.live || locked, onChange: e => this.select(r.id, e.target.checked), 'aria-label': '选择 ' + r.id }), h('time', null, date(r.timeStart) + ' — ' + time(r.timeEnd))), badge(r.live ? (r.kind === 'full' ? '全量摘要' : names[r.mode] || r.mode) : '历史存档', r.mode === 'raw' ? '' : 'blue')),
               summaryPreview(r.summary), h('div', { className: 'cx-record-footer' }, h('small', { title: r.id }, h('code', null, r.id.slice(0, 8)), ' · ', rangeLabel(r.ranges)), button(`${r.documentCount || 0} 文档 · ${r.assetCount || 0} 附件`, () => this.document(r.id), { icon: 'context', quiet: true }))))),
-            fold('中枢最近的选择', d.review?.choices?.length ? `${d.review.choices.length} 项决定` : '还没有完成的判断', h('div', null,
+            !isAdaptive && fold('中枢最近的选择', d.review?.choices?.length ? `${d.review.choices.length} 项决定` : '还没有完成的判断', h('div', null,
               ...(d.review?.choices || []).map((c, i) => h('div', { className: 'cx-decision', key: i }, badge(names[c.action] || c.action, 'blue'), h('code', null, c.ids?.map(id => id.slice(0, 8)).join('、')), c.reason && h('p', null, c.reason))),
               d.review?.lastDiscard && h('p', { className: 'cx-hint' }, '资料更新后，过期决定已作废；不计为模型失败，也不触发强制重试。'),
               button('查看中枢完整输入', this.readReview, { quiet: true, icon: 'context' }), this.state.review && h('pre', null, JSON.stringify(this.state.review.input, null, 2)))),
@@ -554,6 +571,7 @@ export const CONTEXT_CSS = `
 .cx-tabs button[aria-current=page]{border-bottom-color:var(--cx-blue);color:var(--cx-blue);font-weight:600}
 .cx-segments{display:flex;min-width:0;padding:3px;gap:3px;background:var(--cx-hover);border-radius:9px}.cx-segments button{flex:1;border:1px solid transparent;border-radius:6px;color:var(--cx-muted);background:transparent;padding:7px 9px;font:inherit;font-size:12px;line-height:1.45;white-space:nowrap;cursor:pointer}
 .cx-segments button[aria-pressed=true]{background:var(--cx-bg);border-color:var(--cx-line);color:var(--cx-blue);box-shadow:0 1px 3px #00000008;font-weight:600}
+.cx-segments button:disabled{opacity:.6;cursor:default}.cx-compression-mode{flex-wrap:wrap;margin-bottom:8px}.cx-compression-hint{margin-bottom:10px!important}
 .cx-frequency-preview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:15px 0 10px}.cx-frequency-preview>div{display:flex;align-items:baseline;gap:5px;flex-wrap:wrap;border:1px solid var(--cx-line);border-radius:10px;background:var(--cx-soft);padding:11px 13px}
 .cx-frequency-preview span{width:100%;font-size:11px;color:var(--cx-muted)}.cx-frequency-preview strong{font-size:24px;line-height:1.2;font-weight:580;letter-spacing:-.7px;color:var(--cx-text)}.cx-frequency-preview small{font-size:10px}
 .cx-hint{font-size:11px;color:var(--cx-muted);line-height:1.75}.cx-panel .cx-frequency-caption{margin-top:10px}.cx-custom-fields{margin-top:12px;padding-top:8px;border-top:1px dashed var(--cx-line)}

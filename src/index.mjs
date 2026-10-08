@@ -23,6 +23,7 @@ import { handleContextApi } from './context/api.mjs';
 import { publishDreamMemory } from './dream/publication.mjs';
 import { handleDreamApi } from './dream/api.mjs';
 import { installTraceCleanup } from './context/trace.mjs';
+import { installAdaptiveCapture } from './context/adaptive.mjs';
 import { installResponsesReasoningCompatibility } from './responses-reasoning-compat.mjs';
 import { installCommandCodeRetry } from './commandcode-retry.mjs';
 import { installCommandCodeChatCompatibility } from './commandcode-chat-compat.mjs';
@@ -146,6 +147,7 @@ export async function apply(ctx, config) {
   installCommandCodeChatCompatibility(ctx);
   installComputerUseImageCompatibility(ctx, isX);
   installTraceCleanup(ctx, isX, hub.context);
+  installAdaptiveCapture(ctx, session => isX(session) && !isBtwSession(session), hub.context);
   ctx.on('system-prompt/assemble', async (_assembly, context, next) => {
     if (context?.agent) hub.prepareBackground(context.agent);
     const assembly = await next();
@@ -195,7 +197,7 @@ export async function apply(ctx, config) {
       // A pending write-ahead transaction must finish before sending another request.
       // Only an explicitly queued full-compaction command can await model work here.
       setRuntimeContext(agent.session, () => runtimeContext(agent, hub, { messages, turn, step }));
-      await hub.context.preStep(agent, signal);
+      await hub.context.preStep(agent, signal, route);
       if ((!hub.config().budgetHintsEnabled || hub.budgets.saved(agent.session)?.visible === false)
         && agent.session.deriveMessages().some(m => /^预算(?:：|$)/m.test(taskContextMeta(m)?.runtime?.text ?? ''))) {
         await hub.context.stripRuntime(agent.session);
