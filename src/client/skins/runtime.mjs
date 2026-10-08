@@ -47,10 +47,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     emit();
   };
   const background = createBackgroundRuntime(appearanceCss, value => { state = { ...state, background: value }; emit(); }, { recovery, enabled: false });
-  const release = () => {
-    if (!owning) return;
-    owning = false;
-    background.setEnabled(false);
+  const clearTheme = () => {
     const root = document.documentElement;
     disposeTokens?.(); disposeTokens = undefined;
     style?.remove(); style = undefined;
@@ -58,9 +55,15 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     root.classList.remove('omd');
     for (const name of ['omdSkin', 'omdLayout', 'omdPalette', 'omdColors', 'appearance', 'omdReduceEffects', 'omdCustom']) delete root.dataset[name];
   };
+  const release = () => {
+    if (!owning) return;
+    owning = false; background.setEnabled(false); clearTheme();
+  };
   const apply = () => {
-    release();
-    if (!state.active || disposed) return;
+    if (!state.active || disposed) { release(); return; }
+    // Theme edits retain appearance ownership and the existing background DOM.
+    // Only coordinator handoff/unload releases surfaces and their observers.
+    clearTheme();
     owning = true;
     const root = document.documentElement;
     const active = prepared.get(state.selected);
