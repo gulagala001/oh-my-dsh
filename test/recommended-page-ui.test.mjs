@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
+import { INSTALLED_VERSION, releaseHostVersion } from '../src/version.mjs';
 
 test('recommended page defaults on, hides only after a successful save and persists', { timeout: 90000 }, async t => {
   const f = await frontendFixture(t), { page } = f;
@@ -66,11 +67,16 @@ test('recommended page defaults on, hides only after a successful save and persi
     const card = dialog.locator('.tx-recommended-card').filter({ has: page.getByRole('heading', { name, exact: true }) });
     await until(async () => (await card.locator('.tx-recommended-version').innerText()).includes('未安装'));
     assert.ok((await card.innerText()).includes(version));
-    assert.match(await card.innerText(), /不兼容 DSH 0\.2\.1-alpha\.1/);
-    assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
-    const blocked = await page.request.post(new URL('trisoul-x/recommended-plugins', page.url()).href, { data: { id, action: 'install' } });
-    assert.equal(blocked.status(), 400);
-    assert.match((await blocked.json()).error, /不兼容 DSH 0\.2\.1-alpha\.1/);
+    if (releaseHostVersion(INSTALLED_VERSION) === '0.2.0-rc.2') {
+      assert.equal(status.plugins.find(plugin => plugin.id === id).unavailable, null);
+      assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), true);
+    } else {
+      assert.match(await card.innerText(), /不兼容 DSH 0\.2\.1-alpha\.1/);
+      assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
+      const blocked = await page.request.post(new URL('trisoul-x/recommended-plugins', page.url()).href, { data: { id, action: 'install' } });
+      assert.equal(blocked.status(), 400);
+      assert.match((await blocked.json()).error, /不兼容 DSH 0\.2\.1-alpha\.1/);
+    }
   }
   assert.equal((await readConfig()).recommendedPluginsPageEnabled, true);
   assert.deepEqual(f.errors, []);
