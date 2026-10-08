@@ -142,6 +142,8 @@ allTextContents, inputValue, getAttribute, isVisible, isEnabled, isChecked,
 boundingBox or ariaSnapshot. Standard options use timeout in milliseconds.
 setInputFiles accepts paths or {name,mimeType,buffer:Buffer} file payloads.
 Strict locators reject ambiguous targets; use observed evidence to disambiguate.
+Rows whose role and name repeat may carry [ctx: "…"] naming a distinct region
+or nearby label when available within the output budget; unique names carry none.
 
 The built-in browser profile does not share an external browser's login state.
 Browser and tab IDs refer to the selected connection. DOM order can differ from
