@@ -35,6 +35,9 @@ test('review metadata identifies the fixed tested combination without certifying
   assert.equal(rotator.review.version, '0.27.0');
   for (const plugin of recommendedPlugins.filter(p => p.review)) {
     for (const key of ['version', 'dsh', 'omd']) assert.doesNotThrow(() => parseVersion(plugin.review[key]));
+    for (const pair of plugin.review.combinations ?? []) {
+      assert.doesNotThrow(() => parseVersion(pair.dsh)); assert.doesNotThrow(() => parseVersion(pair.omd));
+    }
     assert.ok(plugin.review.platforms.length); assert.ok(plugin.review.note);
   }
   assert.ok(recommendedPlugins.some(p => !p.review));

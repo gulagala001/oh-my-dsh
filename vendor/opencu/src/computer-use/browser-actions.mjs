@@ -212,7 +212,20 @@ export class BrowserActions {
     for (const frame of record.page.frames()) {
       if (visited.has(frame)) continue;
       let cdp = record.frames.get(frame);
-      if (!cdp) { cdp = await record.page.context().newCDPSession(frame); record.frames.set(frame, cdp); }
+      if (!cdp) {
+        try { cdp = await record.page.context().newCDPSession(frame); }
+        catch (error) {
+          // A same-process child can appear after the earlier frame-tree read.
+          // Retry discovery with fresh ownership instead of treating it as OOPIF.
+          if (error.message.includes('part of the parent frame')) throw Object.assign(stale(), { cause: error });
+          throw error;
+        }
+        record.frames.set(frame, cdp);
+      }
+      // A cached shared session still belongs to its ancestor. Its root tree
+      // cannot be bound to this child; refresh discovery instead of assigning
+      // parent AX nodes and opaque IDs to the wrong frame.
+      if (bindings.some(binding => binding.cdp === cdp)) throw stale();
       const { frameTree: childTree } = await cdp.send('Page.getFrameTree');
       await visit(childTree, frame, cdp);
     }
