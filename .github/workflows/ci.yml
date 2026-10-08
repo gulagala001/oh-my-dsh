@@ -61,3 +61,35 @@ jobs:
       # Homes, hosts and browser contexts stay isolated. Files within a shard
       # remain serial; shared coverage runs once, platform contracts separately.
       - run: node scripts/test-ci.mjs run ${{ matrix.suite }} ${{ matrix.shard }}
+
+  conversation-simulator:
+    name: Offline conversation engineering checks
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v6
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install chromium
+      - run: pnpm build
+      - name: Simulator contracts and failure controls
+        run: |
+          mkdir -p work/conversation-simulator
+          pnpm test:simulator > work/conversation-simulator/tests.log 2>&1
+      - name: Native host baseline
+        run: pnpm test:conversation
+      - name: Generated native interleavings
+        run: pnpm simulate --explore --seed 42 --cases 5 --max-steps 12 --budget-ms 120000
+      - name: Actual Web interaction
+        run: pnpm simulate --scenario full-lifecycle --ui
+      - name: Preserve engineering evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: conversation-simulator-${{ github.run_id }}-${{ github.run_attempt }}
+          path: work/conversation-simulator/
+          if-no-files-found: ignore
+          retention-days: 7

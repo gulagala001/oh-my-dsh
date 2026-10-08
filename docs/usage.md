@@ -2,7 +2,7 @@
 
 [文档目录](README.md) · [首次使用](getting-started.md) · [安装](#安装到现有-dsh推荐) · [更新与卸载](#update-uninstall) · [设置](#settings) · [排障](troubleshooting.md) · [开发与验证](#开发与验证)
 
-当前 **0.2.1-alpha.1.omd.0.7.0** 适配 **DSH 0.2.1-alpha.1**，内置 **OpenCU 1.2.1**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
+当前 **0.2.1-alpha.1.omd.0.9.0** 适配 **DSH 0.2.1-alpha.1**，内置 **OpenCU 1.3.0**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
 本项目通过 `gulagala001/oh-my-dsh` 的 GitHub 来源或发行包安装。[安装来源核对](troubleshooting.md#package-source)。
 
@@ -12,7 +12,7 @@
 
 ## 安装到现有 DSH（推荐）
 
-**首次安装桌面应用请先看[桌面版完整教程](upgrade.md#desktop)。** 现有 rc.2 桌面使用 **OMD 0.2.0-rc.2.omd.0.7.0**；下列命令适用于 DSH 0.2.1-alpha.1 的 Web／源码环境。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；单独安装的 npm/npx CLI 不能管理保留的 `desktop` profile。[本版验证范围](release-0.2.1-alpha.1.omd.0.7.0.md)。
+**首次安装桌面应用请先看[桌面版完整教程](upgrade.md#desktop)。** 现有 rc.2 桌面使用 **OMD 0.2.0-rc.2.omd.0.9.0**；下列命令适用于 DSH 0.2.1-alpha.1 的 Web／源码环境。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；单独安装的 npm/npx CLI 不能管理保留的 `desktop` profile。[本版验证范围](release-0.2.1-alpha.1.omd.0.9.0.md)。
 
 桌面安装、更新、启用或停用后，先等任务结束，再完整退出应用并重新打开；有「重启应用与 Host」菜单时也可使用。仅关闭窗口会留在后台，仅刷新页面不能完成切换。
 
@@ -21,7 +21,7 @@
 已有环境先等待任务结束，停止当前 DSH Web 并完整备份实际 DSH_HOME。确认继续使用原数据目录、profile 和端口，再运行：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.7.0
+npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.9.0
 ```
 
 然后按原来的方式重新启动 DSH，例如：
@@ -30,7 +30,7 @@ npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add github:gulagal
 npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 ```
 
-打开这次启动打印的登录链接，继续使用原来的 **3080**（或自己配置的端口）。输入区会出现 **工作台** 和 **电脑** 入口，右侧工作台集中显示任务、上下文、摘要、电脑与监控；新建会话选择 **Oh My DSH**（Agent preset ID：`trisoul-x`）。已有模型和凭据沿用宿主配置，已有会话保持各自的 Agent preset。
+打开这次启动打印的登录链接，继续使用原来的 **3080**（或自己配置的端口）。输入区会出现 **工作台** 和 **电脑** 入口，右侧工作台集中显示任务、上下文、记忆、电脑与监控；新建会话选择 **Oh My DSH**（Agent preset ID：`trisoul-x`）。已有模型和凭据沿用宿主配置，已有会话保持各自的 Agent preset。
 
 如果原服务用了自定义 profile，把命令中的 `web` 替换为其名称；如果设置了 `DSH_HOME`，安装时必须使用同一个值。无需克隆仓库、手动构建或另外运行 `pnpm start`。
 
@@ -43,11 +43,11 @@ npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 
 从 0.1.7-rc.2.5 起，检查到新版后可在左上角版本图标打开的面板内点击“更新”。安装后仍需完整重启。更早版本首次升级到本版时使用下方原安装方式。
 
-更新时保持原安装方式、DSH_HOME、profile 和端口；先停止服务并备份数据。使用 npx 的用户重复上面的固定版本命令即可。全局 npm 安装用户执行 `npm install -g @deepseek-ai/dsh@0.2.1-alpha.1`，确认 `dsh --version`，再执行 `dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.7.0`，按原方式启动；pnpm 全局安装则用 `pnpm add -g`。插件安装不会替你更新全局宿主。
+更新时保持原安装方式、DSH_HOME、profile 和端口；先停止服务并备份数据。使用 npx 的用户重复上面的固定版本命令即可。全局 npm 安装用户执行 `npm install -g @deepseek-ai/dsh@0.2.1-alpha.1`，确认 `dsh --version`，再执行 `dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.9.0`，按原方式启动；pnpm 全局安装则用 `pnpm add -g`。插件安装不会替你更新全局宿主。
 
-源码用户先保留本地修改，再执行 `git fetch origin --tags`、`git switch --detach v0.2.1-alpha.1.omd.0.7.0`、`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`。若切换会覆盖本地修改，先保存自己的改动，不强制覆盖。默认数据在仓库的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
+源码用户先保留本地修改，再执行 `git fetch origin --tags`、`git switch --detach v0.2.1-alpha.1.omd.0.9.0`、`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`。若切换会覆盖本地修改，先保存自己的改动，不强制覆盖。默认数据在仓库的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
 
-重启后，版本面板的**当前版本**应是 `0.2.1-alpha.1.omd.0.7.0`，原模型和旧会话仍在；最新版本只代表远端发布记录。旧 V3 会话迁移会保留原日志，alpha.1 升至 alpha.2 继续使用 V4。回退时停止新服务，以原宿主、插件和完整备份在独立数据目录启动。
+重启后，版本面板的**当前版本**应是 `0.2.1-alpha.1.omd.0.9.0`，原模型和旧会话仍在；最新版本只代表远端发布记录。旧 V3 会话迁移会保留原日志，alpha.1 升至 alpha.2 继续使用 V4。回退时停止新服务，以原宿主、插件和完整备份在独立数据目录启动。
 
 卸载也沿用原启动方式。npx Web 用户执行以下命令；自定义 profile 将 `web` 换成原名称，并沿用实际 `DSH_HOME`：
 
@@ -137,6 +137,12 @@ node scripts/launch-macos.mjs
 
 推荐页的「提交插件 / 申请适配」只需仓库地址和一句用途，作者或普通用户均可投稿。AI 按需批量处理、维护者一次确认；[投稿与兼容说明](plugin-submissions.md)。已核验条目固定安装核验版本，未经复核的旧推荐保留手动安装，但不自动更新。
 
+**订阅登录 · Subscriptions** 固定安装 [OMD 适配发行包 `0.9.8-omd.1`](https://github.com/gulagala001/dsh-plugin-subscriptions/releases/tag/v0.9.8-omd.1)，适配 DSH `0.2.0-rc.2` 与 `0.2.1-alpha.1`，推荐页通过固定 tag 和 SHA-256 校验安装，不跟随上游 npm。已安装的上游 `0.9.8` 可点“更新”迁移到此固定适配包；其他更高版本仍不自动降级。发布源码为 `fac507e40af60246e5e364f07d41960b193f02e9`；保留原作者 V1ki 的 MIT 版权与来源，非上游 npm 正式发行。两宿主在 Mac 隔离 Web 完成原生安装、启停、重启、卸载与 OMD 共存；真实账号 Fast 点击、provider 优先级、付费请求及订阅额度未验收，Windows/Linux 原生桌面未实测。
+
+各条目的核验标记对应列出的宿主和平台；未被版本声明拒绝，不等于已在当前环境验证运行。
+
+在兼容宿主安装 Subscriptions 后，支持 Fast 的 Codex 模型会显示闪电开关。点击开启或关闭，保存失败时保留原状态并提示重试。Fast 偏好按会话保存在内存中，同一会话切换模型共用这份偏好；重启 DSH 后恢复 `standard`。
+
 当前推荐 [dsh-status-rotator](https://github.com/01Virex/dsh-status-rotator)、[DSH × Blender](https://github.com/sixtysevenlf/dsh-blender-plugin) 与[小鲸鱼记账挂件](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget)。小鲸鱼使用 DSH Web 产品线的 npm 包 `dsh-whale-widget`。Blender 项目当前使用开发注入方式，尚未声明标准插件包安装清单，需按其项目说明配置 Blender 与连接插件；推荐页会明确标注这一限制。
 
 **鲸鱼图标**保留 DSH 的原有轮廓，加入冰蓝渐变与玻璃高光。悬停时摆尾，当前会话运行时显示旋转光轨，结束或切换到空闲会话后静止。动效复用宿主会话状态，不增加模型或后台请求；系统启用“减少动态效果”时保留静态图标与状态提示。
@@ -145,14 +151,14 @@ node scripts/launch-macos.mjs
 | --- | --- |
 | **工作台 → 任务** | 查看需求摘录、任务进度、验证证据、当前任务与历史状态。 |
 | **工作台 → 上下文** | 查看分段与替换状态，筛选表示方式，应用已准备结果。 |
-| **工作台 → 摘要** | 按会话和时间查看摘要，打开详细文档。 |
+| **工作台 → 记忆** | 浏览会话、项目和全局短记忆，查看来源与详细资料，按需运行 Dream 整理。 |
 | **工作台 → 电脑**，或输入区 **电脑** | 打开浏览器，查看操控画面，接管或恢复助手控制，检查运行环境。 |
 | **工作台 → 监控** | 查看主模型与后台调用、Token 用量、缓存、耗时和上下文变化。 |
 | 输入区下方 **用量** | 展开或收起步数、速度、Token 与缓存统计；点击具体统计可打开原有详情。 |
 | 输入区 **分享窗口／悬浮预览** 图标 | 把窗口截图加入草稿，或重新打开多目标实时预览。 |
 | 模型旁的 **记忆范围／BT** | 选择会话记忆范围，分别开关待办和验证收尾提醒。 |
 
-工作台的五个页面复用同一个侧栏标签，切换时保留未保存的编辑。连续 Computer Use 操作默认折叠，截图按需展开；详细用量默认收起。上下文记录展开后可查看来源和原文，完整执行过程也可在「轨迹」中查看。
+工作台的五个页面复用同一个侧栏标签，切换时保留未保存的编辑。连续 Computer Use 操作默认折叠，截图按需展开；输入区下方的详细用量默认展开，可点击「用量」收起，切换会话后恢复展开。上下文记录展开后可查看来源和原文，完整执行过程也可在「轨迹」中查看。
 
 **本版**调整了右侧工作台的导航、标题与内容间距：任务状态和完成数集中在页头，窄栏仍显示全部五个入口。「记忆」中的长内容可展开、收起，使用页面的主滚动区阅读，避免在卡片内外来回滚动。Codex 外观下，右栏使用标题栏下方的可用高度，减少底部留空造成的额外滚动。查看记忆来源时进入独立阅读区，顶部可返回，Escape 逐层返回并保留阅读位置；错误保持可见，迟到结果不会抢走对话输入焦点。
 
@@ -227,7 +233,7 @@ node scripts/launch-macos.mjs
 
 开启第二项“验证完成提醒”后，会弹窗说明此选项有助于提高任务完成率，同时消耗更多时间和 token。点击“知道了”关闭提示；开关已正常开启，不需要再次确认。
 
-**当前发行版的摘要页面**可浏览和回查已保存的摘要及原始资料。
+**工作台 → 上下文**可浏览已保存的分段摘要、详细文档与原始资料。
 
 **记忆页面**提供整理会话、整理项目、整理全局和自动整理设置四个入口，均使用 Dream 处理。默认只处理新增摘要；会话默认 7 天无活动后才分批补充原文。项目、会话和来源可逐层展开，目录支持搜索分页，返回上级保留搜索、页码和位置；“当前会话”快捷入口回到该会话所属项目，改名会同步显示。来源列表提供名称、版本或事件范围及短预览。运行中可停止并保留进度。自动 Dream 默认关闭，开启后默认每小时检查，手动与自动共用每日 200,000 token 上限。详见 [Dream 记忆](dream-memory.md)。旧自动记忆保留为只读历史；设置中的“全局背景”仍是用户手写固定文本。
 
@@ -520,7 +526,9 @@ OMD 主会话使用 pi-ai 图片路由时，发送前按提供方的实际图片
 
 ## 可选需求理解组件
 
-“设置 → 推荐插件”里的“需求理解 · OMD UI 增强版”是独立插件，默认不安装。手动安装后，在“设置 → 需求理解”主动开启。默认先审查再发送，原话不改写；可随时停止或跳过。关闭后卸载其发送处理并取消尚未完成的优化，不改变 OMD 原有功能。它不附带 Bash，与原有草稿“提示词优化”独立；建议不要同时启用两个自动处理器。
+“设置 → 推荐插件”里的“需求理解 · OMD UI 增强版”是独立插件，默认不安装。当前固定 [发行包 `0.3.0`](https://github.com/gulagala001/omd-prompt-optimizer/releases/tag/v0.3.0) 适配 DSH `0.2.0-rc.2` 与 `0.2.1-alpha.1`，使用固定 tag 和 SHA-256 校验安装。发布源码为 `9237848d68930eb8c477c299a1358596cb96d3dd`；基于啃轮胎的西狐（WestFox-AwA）的 dsh-prompt-optimizer `0.7.4`，保留 BSD-3-Clause 许可与署名，非上游官方发行。两宿主在 Mac 隔离 Web 核验原生安装、启停、卸载、原话发送、关闭恢复与 OMD 共存；真实模型效果及 Windows/Linux 原生桌面未同等实测。
+
+在兼容宿主安装后，在“设置 → 需求理解”主动开启。默认先审查再发送，原话不改写；可随时停止或跳过。关闭后卸载其发送处理并取消尚未完成的优化，不改变 OMD 原有功能。它不附带 Bash，与原有草稿“提示词优化”独立；建议不要同时启用两个自动处理器。
 
 ## 侧问与回合回滚
 
@@ -534,5 +542,5 @@ OMD 主会话使用 pi-ai 图片路由时，发送前按提供方的实际图片
 缓存前缀无法核对或发生变化时，侧问直接报错，不静默切换到新上下文。
 宿主冷启动后需等主模型开始响应，建立可核对的请求前缀；侧问不进入 Dream 项目或全局记忆。
 
-回合回滚在设置的推荐插件页面中，默认不安装。点击安装后由原生插件管理器启用。
-当前推荐固定为上游 0.3.9 源码快照；已在 Mac 隔离 Web 宿主验证安装、启用、卸载和临时工作区恢复。正式桌面 App 界面及 Windows 未同等实测。
+回合回滚在设置的推荐插件页面中，默认不安装。固定的上游 `0.3.9` 源码快照在本版宿主 DSH `0.2.1-alpha.1` 被原生版本门禁拒绝，暂不提供安装或更新，已有安装仍可卸载。DSH `0.2.0-rc.2` 环境仍可手动安装，沿用固定源码提交与 SHA 校验路径，由原生插件管理器启用。
+现有 Mac 隔离 Web 的安装、启用、卸载及临时工作区恢复核验对应目录标注的 DSH `0.2.0-rc.2`；正式桌面 App 界面及 Windows 未同等实测。

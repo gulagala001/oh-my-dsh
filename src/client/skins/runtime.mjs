@@ -5,11 +5,12 @@ import { hostTokens, tokenCss, customTokenCss } from './mapping.mjs';
 import { composePalette, paletteCatalog } from './palette.mjs';
 import { extraPalettes } from './palettes.mjs';
 import { createBackgroundRuntime, backgroundDefaults } from './background.mjs';
+import { appearanceCoordinator } from './coordinator.mjs';
 export const STORAGE_KEY = 'omd.skins.v1';
 export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss = '') {
   const recovery = new URLSearchParams(location.search).get('omd-skin') === 'default';
-  let state = { skins: [], palettes: paletteCatalog([]), selected: 'default', palette: 'theme', reduceEffects: false, advanced: advancedDefaults(), background: { ...backgroundDefaults, name: '', url: '', loading: false, error: '' }, error: '' };
-  let disposeTokens, style, customStyle, disposed = false, logoSequence = 0;
+  let state = { active: false, skins: [], palettes: paletteCatalog([]), selected: 'default', palette: 'theme', reduceEffects: false, advanced: advancedDefaults(), background: { ...backgroundDefaults, name: '', url: '', loading: false, error: '' }, error: '' };
+  let disposeTokens, style, customStyle, disposed = false, logoSequence = 0, owning = false;
   const listeners = new Set();
   const prepare = value => {
     const skin = validateSkin(value, CSS.supports.bind(CSS));
@@ -42,22 +43,34 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     state = next; prepared = ready;
   };
   const syncMode = snapshot => {
-    if (state.selected !== 'default' || state.palette !== 'theme' || state.advanced.enabled) document.documentElement.dataset.appearance = snapshot.active.colorScheme;
+    if (state.active && (state.selected !== 'default' || state.palette !== 'theme' || state.advanced.enabled)) document.documentElement.dataset.appearance = snapshot.active.colorScheme;
     emit();
   };
-  const background = createBackgroundRuntime(appearanceCss, value => { state = { ...state, background: value }; emit(); }, { recovery });
-  const apply = () => {
+  const background = createBackgroundRuntime(appearanceCss, value => { state = { ...state, background: value }; emit(); }, { recovery, enabled: false });
+  const clearTheme = () => {
     const root = document.documentElement;
-    const active = prepared.get(state.selected);
-    const source = state.palettes.find(p => p.id === state.palette);
-    const composed = composePalette(active?.skin, source);
-    background.reduceEffects(state.reduceEffects);
-    // Remove the previous layer before installing the next; all values were parsed first.
     disposeTokens?.(); disposeTokens = undefined;
     style?.remove(); style = undefined;
     customStyle?.remove(); customStyle = undefined;
     root.classList.remove('omd');
     for (const name of ['omdSkin', 'omdLayout', 'omdPalette', 'omdColors', 'appearance', 'omdReduceEffects', 'omdCustom']) delete root.dataset[name];
+  };
+  const release = () => {
+    if (!owning) return;
+    owning = false; background.setEnabled(false); clearTheme();
+  };
+  const apply = () => {
+    if (!state.active || disposed) { release(); return; }
+    // Theme edits retain appearance ownership and the existing background DOM.
+    // Only coordinator handoff/unload releases surfaces and their observers.
+    clearTheme();
+    owning = true;
+    const root = document.documentElement;
+    const active = prepared.get(state.selected);
+    const source = state.palettes.find(p => p.id === state.palette);
+    const composed = composePalette(active?.skin, source);
+    background.setEnabled(true);
+    background.reduceEffects(state.reduceEffects);
     if (state.reduceEffects) root.dataset.omdReduceEffects = '';
     if (!composed && !state.advanced.enabled) return;
     root.dataset.appearance = ctx.theme.getTheme().active.colorScheme;
@@ -87,14 +100,20 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
   };
   read();
   const offTheme = ctx.on('theme/change', syncMode);
-  apply();
+  const unregisterAppearance = appearanceCoordinator().register({ id: 'omd', priority: 0,
+    select: () => ({ key: 'omd-global' }),
+    mount: () => {
+      state = { ...state, active: true }; apply(); emit();
+      return () => { state = { ...state, active: false }; release(); emit(); };
+    },
+  });
   const onStorage = event => {
     if (event.key === STORAGE_KEY || event.key === null) { read(); apply(); emit(); }
   };
   window.addEventListener('storage', onStorage);
   // The phone layout presents navigation as a full sheet. Use the host action
   // after its own row handler; never move React nodes or simulate button clicks.
-  const hasNavigationSheet = () => ['ios-liquid', 'codex-desktop', 'claude-cli-terminal'].includes(prepared.get(state.selected)?.skin.layout);
+  const hasNavigationSheet = () => state.active && ['ios-liquid', 'codex-desktop', 'claude-cli-terminal'].includes(prepared.get(state.selected)?.skin.layout);
   const onNavigation = event => {
     if (!hasNavigationSheet() || !matchMedia('(max-width: 600px)').matches) return;
     const target = event.target instanceof Element ? event.target : null;
@@ -162,6 +181,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     },
     dispose() {
       if (disposed) return; disposed = true; ++logoSequence;
+      unregisterAppearance();
       offTheme(); window.removeEventListener('storage', onStorage); document.removeEventListener('click', onNavigation, true);
       state = { ...state, selected: 'default', palette: 'theme', advanced: advancedDefaults() }; apply(); background.dispose(); listeners.clear();
     },

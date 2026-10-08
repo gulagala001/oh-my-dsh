@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { recommendedPlugins } from './recommended-plugin-catalog.mjs';
 import { prepareReviewedPackage } from './recommended-plugin-package.mjs';
-import { compareVersions, parseVersion } from './version.mjs';
+import { compareVersions, parseVersion, releaseHostVersion, INSTALLED_VERSION } from './version.mjs';
 
 export const AUTO_UPDATE_INTERVAL = 6 * 60 * 60 * 1000;
 export function pluginManagementError(error) {
@@ -54,17 +54,20 @@ export async function latestPluginVersion(plugin, signal) {
 }
 
 export class RecommendedPluginManager {
-  constructor({ manager, getConfig, saveConfig, packageDirectory, preparePackage = prepareReviewedPackage, isRunning = () => false, catalog = recommendedPlugins, latest = latestPluginVersion, now = Date.now }) {
-    Object.assign(this, { manager, getConfig, saveConfig, packageDirectory, preparePackage, isRunning, catalog, latest, now });
+  constructor({ manager, getConfig, saveConfig, packageDirectory, preparePackage = prepareReviewedPackage, isRunning = () => false, catalog = recommendedPlugins, latest = latestPluginVersion, now = Date.now, hostVersion = releaseHostVersion(INSTALLED_VERSION) }) {
+    Object.assign(this, { manager, getConfig, saveConfig, packageDirectory, preparePackage, isRunning, catalog, latest, now, hostVersion });
     this.records = new Map(); this.job = null; this.current = null; this.checkedAt = null; this.closed = false;
     this.abort = new AbortController();
+  }
+  unavailable(plugin) {
+    return plugin.unavailable && (!plugin.unavailableHosts || plugin.unavailableHosts.includes(this.hostVersion)) ? plugin.unavailable : null;
   }
   async status() {
     const bundles = await this.manager.listBundles();
     return { autoUpdate: this.getConfig().recommendedPluginsAutoUpdate === true, checkedAt: this.checkedAt, busy: this.current,
       plugins: this.catalog.map(plugin => {
         const bundle = bundles.find(item => item.name === plugin.packageName);
-        return { id: plugin.id, installed: !!bundle?.installed, enabled: !!bundle?.enabled, removable: !!bundle?.removable && !bundle?.readOnlyReason,
+        return { id: plugin.id, installed: !!bundle?.installed, enabled: !!bundle?.enabled, removable: !!bundle?.removable && !bundle?.readOnlyReason, unavailable: this.unavailable(plugin),
           version: bundle?.version || null, ...this.records.get(plugin.id),
           ...(bundle?.error ? this.current?.id === plugin.id
             ? { inventoryWarning: pluginManagementError(bundle.error) }
@@ -79,7 +82,8 @@ export class RecommendedPluginManager {
     const plugin = this.catalog.find(item => item.id === id);
     if (!plugin || !['install', 'update', 'uninstall'].includes(action)) throw Error('未知的插件操作');
     if (plugin.manualInstall) throw Error(plugin.manualInstall);
-    if (plugin.unavailable && action !== 'uninstall') throw Error(plugin.unavailable);
+    const unavailable = this.unavailable(plugin);
+    if (unavailable && action !== 'uninstall') throw Error(unavailable);
     if (this.closed) throw Error('插件管理已停止');
     if (this.job) throw Error('另一个插件操作正在进行，请稍候');
     this.current = { id, action, automatic, startedAt: this.now(), requestId: randomUUID() };
@@ -113,7 +117,15 @@ export class RecommendedPluginManager {
         if (current?.readOnlyReason) throw Error('此插件由宿主管理，无法在这里修改');
         if (action === 'update' && !current?.installed) throw Error('插件已被卸载');
         const comparison = action === 'update' && current?.version ? compareVersions(version, current.version) : null;
-        if (comparison !== null && (comparison < 0 || (comparison === 0 && !plugin.review?.source && this.records.get(plugin.id)?.failedInstallVersion !== version))) {
+        // A reviewed fork may retain the upstream base version with an -omd
+        // suffix. SemVer ranks that below upstream's stable release, so allow
+        // only the catalog's exact, SHA-pinned migration to the fixed fork.
+        const reviewedForkMigration = typeof plugin.review?.upstreamVersion === 'string'
+          && current?.version === plugin.review.upstreamVersion
+          && version === plugin.review?.version && plugin.githubRelease
+          && plugin.review?.releaseTag === 'v' + version && /^[a-f0-9]{64}$/.test(plugin.review?.sha256 || '')
+          && version.startsWith(current.version + '-omd.');
+        if (comparison !== null && ((comparison < 0 && !reviewedForkMigration) || (comparison === 0 && !plugin.review?.source && this.records.get(plugin.id)?.failedInstallVersion !== version))) {
           this.records.set(plugin.id, { ...this.records.get(plugin.id), message: plugin.review ? (current.version === version ? '已是核验版本' : '当前版本高于核验版本，未降级') : '已是最新版本', error: '' });
           return false;
         }
@@ -158,7 +170,7 @@ export class RecommendedPluginManager {
       for (const plugin of this.catalog) {
         if (this.closed || this.job || !this.getConfig().recommendedPluginsAutoUpdate || this.isRunning()) return;
         const bundle = bundles.find(item => item.name === plugin.packageName);
-        if (plugin.review?.version && !plugin.review.source && !plugin.manualInstall && !plugin.unavailable && bundle?.installed && bundle.enabled && !bundle.readOnlyReason) await this.start(plugin.id, 'update', true);
+        if (plugin.review?.version && !plugin.review.source && !plugin.manualInstall && !this.unavailable(plugin) && bundle?.installed && bundle.enabled && !bundle.readOnlyReason) await this.start(plugin.id, 'update', true);
       }
       if (!this.closed && this.getConfig().recommendedPluginsAutoUpdate && !this.isRunning()) this.checkedAt = this.now();
     } finally { this.checking = false; }

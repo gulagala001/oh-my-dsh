@@ -6,9 +6,16 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { parse } from 'yaml';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
+import { recommendedPlugins } from '../src/recommended-plugin-catalog.mjs';
+import { INSTALLED_VERSION, releaseHostVersion } from '../src/version.mjs';
 
-test('published intent assistant installs only on request, stays off and uninstalls cleanly', {
-  timeout: 180000, skip: process.env.OMD_INTENT_RELEASE_TEST !== '1' ? 'Opt-in release network verification' : false,
+const intent = recommendedPlugins.find(plugin => plugin.id === 'omd-intent-assistant');
+const hostVersion = releaseHostVersion(INSTALLED_VERSION);
+const unavailable = intent.unavailable && (!intent.unavailableHosts || intent.unavailableHosts.includes(hostVersion));
+
+test('on a compatible host, published intent assistant installs only on request, stays off and uninstalls cleanly', {
+  timeout: 180000, skip: process.env.OMD_INTENT_RELEASE_TEST !== '1' ? 'Opt-in release network verification'
+    : unavailable ? `Fixed Intent ${intent.review.version} is unavailable on DSH ${hostVersion}; installation not verified` : false,
 }, async t => {
   const f = await frontendFixture(t), { page } = f;
   const status = async () => (await page.request.get(new URL('trisoul-x/recommended-plugins', page.url()).href)).json();
@@ -26,7 +33,7 @@ test('published intent assistant installs only on request, stays off and uninsta
     if (plugin.error) throw Error(plugin.error);
     return !state.busy && plugin.installed && plugin.version && plugin;
   }, 120000);
-  assert.equal(installed.version, '0.1.0');
+  assert.equal(installed.version, '0.3.0');
   const profile = join(f.home, 'profiles', 'trisoul-x');
   const manifest = JSON.parse(await readFile(join(profile, 'package.json'), 'utf8'));
   const spec = manifest.dependencies['omd-prompt-optimizer'];

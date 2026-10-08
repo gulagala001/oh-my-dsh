@@ -9,7 +9,7 @@ import { gzipSync } from 'node:zlib';
 import assert from 'node:assert/strict';
 import { serializePreparationInput } from '../src/context/input-budget.mjs';
 import { ContextStore } from '../src/context/store.mjs';
-import { processSummaries, operationSummary, operationIcon, operationState } from '#opencu/src/client/computer-groups.mjs';
+import { summarizeToolOutcomes, operationState } from '#opencu/src/client/computer-groups.mjs';
 
 function measure(run, count = 7) {
   run(); const samples = [];
@@ -27,16 +27,26 @@ try {
     const next=()=>serializePreparationInput(structuredClone(input),budget);
     assert.equal(old(),next()); report.workloads['preparationLookback'+references]={references,sourceCharacters:input.segment[0].text.length,...comparison(old,next)};
   }
-  const nodes=Array.from({length:16000},(_,i)=>({key:String(i),kind:i%4?'tool-call':'context',location:{turn:{turn:i%600}},data:{root:{call:{name:i%2?'read':'computer_use'},kind:'tool-result'}}}));
-  const snapshot={order:nodes.map(n=>n.key),nodes:new Map(nodes.map(n=>[n.key,n]))}, turns=[...new Set(nodes.filter(n=>n.kind==='tool-call').map(n=>n.location.turn.turn))];
-  const oldSummary=()=>new Map(turns.map(turn=>{const calls=snapshot.order.map(key=>snapshot.nodes.get(key)).filter(n=>n.kind==='tool-call'&&n.location.turn.turn===turn).map(n=>n.data.root),names=calls.map(c=>c.call.name);return[turn,{label:operationSummary(names),icon:operationIcon(names),failures:calls.filter(c=>operationState(c)==='error').length,stopped:calls.filter(c=>operationState(c)==='stopped').length}];}));
-  assert.deepEqual(oldSummary(),processSummaries(snapshot)); report.workloads.processSummary={historyNodes:nodes.length,turns:turns.length,...comparison(oldSummary,()=>processSummaries(snapshot))};
+  const data=Array.from({length:16000},(_,i)=>({root:{callId:String(i),call:{name:i%2?'read':'computer_use'},kind:'tool-result',isError:i%4===0,error:i%8===0?{code:'ABORTED'}:undefined,subCalls:[{callId:'child-'+i,call:{name:'read'},kind:'tool-result',isError:i%3===0}]}}));
+  // Duplicate roots and child references exercise first-occurrence callId semantics.
+  data.push(...data.slice(0,100));
+  data[0].root.subCalls.push(data[1].root.subCalls[0]);
+  const referenceSummary=()=>{
+    const calls=new Map(), pending=data.map(item=>item.root).reverse();
+    while(pending.length){const block=pending.pop();if(!block||calls.has(block.callId))continue;calls.set(block.callId,block);for(let i=(block.subCalls?.length??0)-1;i>=0;i--)pending.push(block.subCalls[i]);}
+    const states=[...calls.values()].map(operationState);
+    return {failures:states.filter(state=>state==='error').length,stopped:states.filter(state=>state==='stopped').length};
+  };
+  const currentSummary=()=>summarizeToolOutcomes(data);
+  assert.deepEqual(referenceSummary(),currentSummary());
+  assert.deepEqual(currentSummary(),{failures:7334,stopped:2000});
+  report.workloads.toolOutcomes={rootReferences:data.length,uniqueCalls:32000,reference:'independent iterative preorder traversal; not a historical implementation',referenceMedianMs:measure(referenceSummary),currentMedianMs:measure(currentSummary),outcomes:currentSummary()};
   const writer=new ContextStore(temp);
   for(let i=0;i<100;i++){const state=writer.state('archive-'+i,{scope:'project',project:'/fixture'});state.records=Array.from({length:15},(_,r)=>({id:`${i}-${r}`,documents:[{text:'长会话原始资料'.repeat(200)}]}));writer.save(state);}
   const reader=new ContextStore(temp), paths=readdirSync(join(reader.dir,'sessions')).map(file=>join(reader.dir,'sessions',file));
   const oldRead=()=>paths.map(path=>JSON.parse(readFileSync(path,'utf8'))), newRead=()=>reader.all();assert.deepEqual(oldRead(),newRead());
   report.workloads.archiveRead={archives:paths.length,totalSourceBytes:paths.reduce((n,p)=>n+readFileSync(p).length,0),...comparison(oldRead,newRead),cacheBudgetBytes:reader.maxDiskCacheBytes};
-  const baseline=process.argv[2]||'b85d43e80426feaa48b3aa05d7f3f228149f1c25';
+  const baseline=process.argv[2]||'HEAD';
   const before=execFileSync('git',['show',baseline+':lib/client.js'],{cwd:root,maxBuffer:16*1024*1024}),after=readFileSync(join(root,'lib/client.js'));
   report.workloads.clientBundle={baseline,beforeBytes:before.length,afterBytes:after.length,beforeGzipBytes:gzipSync(before).length,afterGzipBytes:gzipSync(after).length};
   console.log(JSON.stringify(report,null,2));

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { MaterialIcon } from './appearance.jsx';
 
 export const MATERIAL_LAYOUT = 'google-material-expressive';
-const isMaterial = state => state.skins.find(s => s.id === state.selected)?.layout === MATERIAL_LAYOUT;
+const isMaterial = state => state.active !== false && state.skins.find(s => s.id === state.selected)?.layout === MATERIAL_LAYOUT;
 const focusables = root => [...root.querySelectorAll('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]')].filter(el => el.getClientRects().length && getComputedStyle(el).visibility === 'visible' && !el.closest('[inert]'));
 function containTab(event, root) {
   if (event.key !== 'Tab' || event.defaultPrevented) return;

@@ -19,7 +19,7 @@ export function applyAppearanceBrand(ctx, getRuntime) {
     ctx.slots.inject(name, () => {
       const runtime = getRuntime(); let dispose;
       const sync = () => {
-        if (runtime.getSnapshot().advanced.brand.logo === 'native') { dispose?.(); dispose = undefined; }
+        if (runtime.getSnapshot().active === false || runtime.getSnapshot().advanced.brand.logo === 'native') { dispose?.(); dispose = undefined; }
         else if (!dispose) dispose = ctx.slots.register({ name, priority: -10 }, Component);
       };
       const off = runtime.subscribe(sync); sync();
@@ -31,7 +31,8 @@ export function applyAppearanceBrand(ctx, getRuntime) {
     const title = brandDocumentTitle(document, { mode: 'native' }, () => ['DeepSeek Harness', ctx.locale.bind('common')('brand.localBuild')]);
     let icon, last = '';
     const sync = () => {
-      const brand = runtime.getSnapshot().advanced.brand, key = JSON.stringify(brand);
+      const snapshot = runtime.getSnapshot();
+      const brand = snapshot.active === false ? { logo: 'native', title: 'native' } : snapshot.advanced.brand, key = JSON.stringify(brand);
       if (key === last) return; last = key;
       title.update?.({ mode: brand.title, text: brand.titleText });
       if (brand.logo === 'native') { icon?.remove(); icon = undefined; }

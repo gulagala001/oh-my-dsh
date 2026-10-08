@@ -19,6 +19,8 @@
 node --test test/documentation.test.mjs test/start.test.mjs test/version-update.test.mjs test/recommended-plugin-manager.test.mjs
 ```
 
+性能入口为 `node scripts/benchmark-runtime.mjs [基线commit]`，省略基线时使用 HEAD；输出仅是合成微基准，不证明真实模型或端到端速度。
+
 完整回归需要先构建，并准备 Playwright Chromium：
 
 ```sh
@@ -34,11 +36,17 @@ node --test --test-concurrency=1 test/*.test.mjs
 日常变更通过 PR 合并，合并后不重复执行同一套 CI；官网仍在 main 更新后构建部署。过期 PR 的检查会取消。宿主升级、跨平台基础改动或直接推送 main 后，在 Actions 的 CI 页面手动勾选 `full`，运行完整 Linux Node 22/24 与 Windows 矩阵。必要时另行运行 Official Desktop installation 和 Host compatibility。
 
 
+会话、工具、上下文、Dream 或恢复流程的相关改动，由实施者主动使用[工程会话模拟器](https://github.com/gulagala001/oh-my-dsh/blob/main/scripts/simulator/README.md)完成复现与回归。先按改动选择真实宿主场景，缺少覆盖时补充场景和独立断言；跨模块改动执行 `pnpm test:conversation`，模拟器本身改动执行 `pnpm test:simulator`，前端流程另加 `--ui`。需要时运行有限 seed 探索、失败最小化及严格实录重放，分析失败并修复后再交付，不把这些工程操作转交给提出需求的用户。
+
+CI 的 macOS 会话仿真任务自动运行模拟器测试、六场景基线、固定 seed 探索和真实 Web 检查，并保存报告。它真实执行隔离的 DSH／OMD，默认使用 macOS 外层沙箱和本地模型替身；预算耗尽、失败和跳过不能作为通过证据，平台、时钟、隔离及模型语义边界以本次报告为准。
+
 ## 文档与发行
 
 安装说明沿用户的实际路径组织：选择环境 → 安装 → 确认生效 → 日常使用 → 排障／恢复。桌面、Web 和源码安装分别写明入口；更新、停用和卸载继续沿用原安装方式。
 
 版本更新时同时核对 `package.json`、发布清单、README 徽章、安装命令、升级手册和本版说明。内置组件以 `vendor/opencu.json` 等发行清单为准。不要把尚未发布的修复写成已可通过现有 tag 安装；先记录在更新日志的“未发布”部分。
+
+OpenCU 在独立源码仓库维护，用 `node scripts/sync-opencu.mjs /path/to/opencu` 构建并完整替换发行快照；脚本会先解包、校验版本并生成哈希清单，再替换 `vendor/opencu` 和 `vendor/opencu.json`，替换出错时恢复原有两项。同版本可以重新同步，低于当前清单版本的源码默认拒绝；只有明确需要回退时才加 `--allow-downgrade`。不要手工修改发行快照。同步脚本回归使用临时仓库，可运行 `node --test test/opencu-sync.test.mjs`，并纳入 Windows CI；Windows 通过 Node 执行 npm 的 JavaScript CLI，npm 需随 Node 安装或提供 PATH 中的标准 npm launcher。
 
 新增用户指南时，在 [文档目录](docs/README.md)补上对应任务入口，并在页面顶部提供返回路径。文档检查会核对各安装指南中的全部目标版本、徽章和内置组件版本，并检查当前用户文档的本地文件与章节链接；历史版本说明和研究记录不作为当前安装指南扫描。它不替代实际安装验证，也不检查外部网站的可达性。
 

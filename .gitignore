@@ -43,3 +43,6 @@ data/
 
 # Local prototypes, upstream checkouts and verification artifacts.
 /work/
+
+# Preserve failed OpenCU synchronization recovery files locally.
+/.opencu-sync-*/
