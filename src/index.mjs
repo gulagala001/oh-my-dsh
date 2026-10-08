@@ -1,3 +1,4 @@
+import { installOmaaEnhancement, omaaWorkflowComposition, omaaIdentityPrompt } from './omaa-enhancement.mjs';
 import { readJsonBody as readBody, rejectUntrusted, sendJson as send } from './http.mjs';
 import { installFileUploadCompatibility } from './file-upload-compat.mjs';
 import { legacySettings } from '#opencu/src/legacy-settings.mjs';
@@ -57,6 +58,8 @@ export async function apply(ctx, config) {
   await migrateSessionStorage(ctx, directory);
   installToolSchedulerCompatibility(ctx);
   const hub = new Hub(ctx, { ...config, dataDir: directory });
+  hub.omaaWorkflowComposition = omaaWorkflowComposition;
+  hub.omaaIdentityPrompt = () => omaaIdentityPrompt(hub);
   const projectless = createProjectlessWorkspaceService({
     root: legacy.value.projectlessWorkspaceRoot || hub.config().projectlessWorkspaceRoot || join(homedir(), 'Documents', 'DSH'),
     storeDir: join(await realpath(hub.store.dir), 'projectless-workspaces'),
@@ -73,10 +76,36 @@ export async function apply(ctx, config) {
   ctx.effect(() => () => promptOptimizer.dispose());
   hub.codegraph = new CodegraphRuntime({ cacheDir: join(hub.store.dir, 'components', 'codegraph'), enabled: hub.config().codegraphEnabled !== false, autoInstall: hub.config().componentAutoSetup !== false });
   ctx.effect(() => () => hub.codegraph.dispose());
-  const versionService = createVersionService();
+  const nativeVersionService = createVersionService();
+  hub.omaaInstalledVersion = nativeVersionService.snapshot().currentVersion;
+  const omaaUpdates = () => ctx.get('omaa')?.updates;
+  let omaaInactive = false;
+  const originalVersionSnapshot = () => omaaInactive ? {
+    ...nativeVersionService.snapshot(), status: 'unknown', latestVersion: null, releases: [],
+    error: 'OMAA 已安装但未启用，请启用它以检查配对更新；卸载 OMAA 后可恢复原 OMD 更新。',
+  } : nativeVersionService.snapshot();
+  // While OMAA is installed, only its published pair may update this bridge.
+  // Disabling it pauses updates; removing it restores the original OMD feed.
+  const versionService = {
+    snapshot: () => omaaUpdates()?.omdVersionSnapshot() ?? originalVersionSnapshot(),
+    async check(force) {
+      const shared = omaaUpdates();
+      if (shared) return shared.omdVersionCheck(force);
+      omaaInactive = Boolean((await ctx.get('pluginManager')?.listBundles())?.some(row => row.name === 'oh-my-agents-above-all' && row.installed));
+      return omaaInactive ? originalVersionSnapshot() : nativeVersionService.check(force);
+    },
+    dispose: () => nativeVersionService.dispose(),
+  };
   ctx.effect(() => () => versionService.dispose());
-  const versionUpdater = new VersionUpdater({ versions: versionService, getManager: () => ctx.get('pluginManager'),
+  const nativeVersionUpdater = new VersionUpdater({ versions: versionService, getManager: () => ctx.get('pluginManager'),
     isRunning: () => ctx.agents.list().some(agent => agent.status === 'running') });
+  const versionUpdater = {
+    snapshot: () => omaaUpdates()?.omdUpdateSnapshot() ?? nativeVersionUpdater.snapshot(),
+    status: () => omaaUpdates()?.omdUpdateStatus() ?? nativeVersionUpdater.status(),
+    start: version => omaaUpdates()?.start('omd', version) ?? nativeVersionUpdater.start(version),
+    progress: event => { nativeVersionUpdater.progress(event); omaaUpdates()?.progress(event); },
+    close: () => nativeVersionUpdater.close(),
+  };
   ctx.effect(() => () => versionUpdater.close());
   ctx.on('plugin-manager/install-state', progress => versionUpdater.progress(progress), { global: true });
   ctx.effect(() => ctx.settings.configure({ auto: false }));
@@ -88,12 +117,23 @@ export async function apply(ctx, config) {
     hub.context.reconfigure();
   });
   const computer = await acquireComputerUse(ctx, { namespace: 'trisoul-x', getConfig: () => hub.config(), dataDir: join(hub.store.dir, 'computer-use') });
+  hub.installOmaaEnhancement = scope => installOmaaEnhancement(scope, computer);
   hub.components = new Components(ctx, hub, computer);
   mountComponents(ctx, hub.components);
   ctx.effect(() => { hub.components.start(); return () => hub.components.close(); });
   mountRecommendedPlugins(ctx, hub);
   const isX = session => ['trisoul-x', 'omd-ptc'].includes(ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset);
-  hub.ultracode = new UltracodeControl(ctx, isX, hub.store);
+  const isOmaaEnhanced = session => Boolean(ctx.get('omaa')?.enhancementEnabled(session));
+  hub.ultracode = new UltracodeControl(ctx, session => isX(session) || (isOmaaEnhanced(session) && ctx.get('omaa').modeFor(session) === 'default'), hub.store);
+  hub.omaaWorkMode = {
+    inspect: (session, agent) => hub.ultracode.view(session, agent),
+    current: (session, agent = ctx.agents.get(session.id)) => isOmaaEnhanced(session) ? hub.ultracode.currentMode(agent) : 'off',
+    async select(sessionId, mode) {
+      const before = await hub.ultracode.inspect(sessionId);
+      if (!before.selected) throw new Error('当前会话没有可用的模型配置');
+      return hub.ultracode.select(sessionId, { ...before.selected, mode, expectedRevision: before.revision });
+    },
+  };
   const monitored = session => !isBtwSession(session) && (isX(session) || (session.header.origin === 'subagent' && Boolean(hub.workflowBudget.owner(session))));
   installUltracodeProjection(ctx);
   ctx.on('agent/inbox/claimed', ({ agent, message }) => { if(!isBtwSession(agent.session))hub.ultracode.claimed(agent, message); }, { global: true });
@@ -122,12 +162,12 @@ export async function apply(ctx, config) {
   ctx.on('agent/assistant-stream', ({ agent, frame }) => { if (frame.type === 'start' && isX(agent.session) && !isBtwSession(agent.session)) hub.captureFrame(agent, frame.turn, frame.step); }, { global: true });
   ctx.on('agent/pre-step', async ({ agent, messages, signal, turn, step }, next) => {
     if(isBtwSession(agent.session))return next();
-    const consumed = isX(agent.session) ? await consumeBudgetAliases(agent, messages, signal) : new Set();
+    const consumed = isX(agent.session) || isOmaaEnhanced(agent.session) ? await consumeBudgetAliases(agent, messages, signal) : new Set();
     if (consumed.size && !messages.some(m => !consumed.has(m.id)) && step === 1) return { kind: 'reject' };
     const decision = await next();
     if (decision.kind !== 'enter') return decision;
     const accepted = consumed.size ? decision.messages.filter(m => !consumed.has(m.id)) : decision.messages;
-    hub.workflowBudget.admit(agent.session, { turn, step, messages: accepted, enabled: isX(agent.session) });
+    hub.workflowBudget.admit(agent.session, { turn, step, messages: accepted, enabled: isX(agent.session) || isOmaaEnhanced(agent.session) });
     pendingSteps.set(agent, { turn, step, messages: accepted });
     return { ...decision, messages: accepted };
   }, { global: true });

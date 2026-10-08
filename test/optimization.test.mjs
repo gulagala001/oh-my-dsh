@@ -60,6 +60,40 @@ test('session IDs cannot escape the historical state directory', t => {
   assert.equal(store.states.size, 0);
 });
 
+test('mutable session loads reject mismatched archives without overwriting another session', t => {
+  const root = temporary(t), store = new HubStore(root);
+  const file = id => join(root, 'sessions', `${id}.json`);
+  const archive = (id, note) => ({ id, notes: [note], metrics: {}, activity: [], actions: {} });
+  writeFileSync(file('a'), JSON.stringify(archive('b', 'material from a')));
+  writeFileSync(file('b'), JSON.stringify(archive('b', 'original b')));
+  const before = ['a', 'b'].map(id => readFileSync(file(id), 'utf8'));
+
+  assert.throws(() => store.state('a'), /身份不匹配/);
+  assert.equal(store.states.has('a'), false);
+  assert.deepEqual(['a', 'b'].map(id => readFileSync(file(id), 'utf8')), before);
+
+  writeFileSync(file('a'), JSON.stringify(archive('a', 'repaired a')));
+  const own = store.state('a'); own.notes.push('updated a'); store.save(own);
+  assert.equal(store.state('a'), own);
+  assert.deepEqual(JSON.parse(readFileSync(file('a'), 'utf8')).notes, ['repaired a', 'updated a']);
+  assert.equal(readFileSync(file('b'), 'utf8'), before[1]);
+});
+
+test('mutable session loads reject an identity changed in the active cache', t => {
+  const root = temporary(t), store = new HubStore(root);
+  const own = store.state('a'), other = store.state('b');
+  store.save(own); store.save(other);
+  const file = id => join(root, 'sessions', `${id}.json`);
+  const before = ['a', 'b'].map(id => readFileSync(file(id), 'utf8'));
+  own.id = 'b';
+  assert.throws(() => store.state('a'), /身份不匹配/);
+  assert.throws(() => store.peek('a'), /身份不匹配/);
+  assert.equal(store.state('b'), other);
+  assert.deepEqual(['a', 'b'].map(id => readFileSync(file(id), 'utf8')), before);
+  own.id = 'a';
+  assert.equal(store.state('a'), own);
+});
+
 test('compact monitoring preserves totals and excludes histories, documents and raw prompts', () => {
   const states = [
     { id: 'grandchild', origin: 'subagent', parentSession: 'child', metrics: { main: { calls: 2, peakContext: 50, inputTokens: 10 } }, actions: { contextReplacements: 1 } },

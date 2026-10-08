@@ -25,13 +25,12 @@ async function prepareImage(file) {
 
 // Image and controls commit together in one IndexedDB record. No file upload,
 // data URLs in localStorage, or transient blob URL persisted across restarts.
-export function createBackgroundRuntime(css, changed, { recovery = false } = {}) {
+export function createBackgroundRuntime(css, changed, { recovery = false, enabled = true } = {}) {
   let disposed = false, db, opening, objectUrl = '', imageId, sequence = 0, uploadSequence = 0, reduced = false;
   let state = { ...backgroundDefaults, name: '', url: '', loading: false, error: '' };
   const style = document.createElement('style'); style.dataset.omdBackgroundStyle = ''; style.textContent = css;
   const layer = document.createElement('div'); layer.dataset.omdBackgroundLayer = ''; layer.setAttribute('aria-hidden', 'true');
   const image = document.createElement('img'); image.alt = ''; image.draggable = false; layer.append(image);
-  document.head.append(style); document.body.prepend(layer);
   let channel;
   try { channel = new BroadcastChannel(BACKGROUND_DB); } catch { /* Local persistence still works without cross-tab messaging. */ }
   const emit = () => { if (!disposed) changed({ ...state }); };
@@ -39,7 +38,7 @@ export function createBackgroundRuntime(css, changed, { recovery = false } = {})
   // absolute positioning follows their size without viewport polling.
   const surfaces = createSurfaceMarkers();
   const mount = () => {
-    if (disposed) return;
+    if (disposed || !enabled) return;
     const regions = surfaces.refresh();
     const target = state.scope === 'all' ? document.body : regions[state.scope];
     const parent = target || document.body;
@@ -47,9 +46,8 @@ export function createBackgroundRuntime(css, changed, { recovery = false } = {})
     layer.hidden = !objectUrl || recovery || reduced || !target;
   };
   const observer = new MutationObserver(mount);
-  observer.observe(document.body, { childList: true, subtree: true });
   const render = () => {
-    if (disposed) return;
+    if (disposed || !enabled) return;
     const active = Boolean(objectUrl) && !recovery && !reduced;
     if (active) document.documentElement.setAttribute('data-omd-background', state.scope);
     else document.documentElement.removeAttribute('data-omd-background');
@@ -59,6 +57,22 @@ export function createBackgroundRuntime(css, changed, { recovery = false } = {})
     image.style.objectFit = state.fit;
     document.documentElement.style.setProperty('--omd-panel-opacity', `${state.opacity}%`);
   };
+  const setEnabled = value => {
+    if (disposed || enabled === value) return;
+    enabled = value;
+    if (enabled) {
+      document.head.append(style); document.body.prepend(layer);
+      observer.observe(document.body, { childList: true, subtree: true }); render();
+    } else {
+      observer.disconnect(); layer.remove(); style.remove(); surfaces.dispose();
+      document.documentElement.removeAttribute('data-omd-background');
+      document.documentElement.style.removeProperty('--omd-panel-opacity');
+    }
+  };
+  if (enabled) {
+    document.head.append(style); document.body.prepend(layer);
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
   const open = () => {
     if (db) return Promise.resolve(db);
     if (opening) return opening;
@@ -120,6 +134,7 @@ export function createBackgroundRuntime(css, changed, { recovery = false } = {})
   layer.hidden = true; void load();
   return {
     getSnapshot: () => state,
+    setEnabled,
     async upload(file) {
       const seq = ++uploadSequence; state = { ...state, loading: true, error: '' }; emit();
       try {
@@ -132,10 +147,10 @@ export function createBackgroundRuntime(css, changed, { recovery = false } = {})
     async clear() { ++uploadSequence; await mutate(() => undefined); },
     reduceEffects(value) { reduced = value; render(); },
     dispose() {
+      setEnabled(false);
       disposed = true; ++sequence; ++uploadSequence; observer.disconnect(); channel?.close(); db?.close();
       image.onerror = null; if (objectUrl) URL.revokeObjectURL(objectUrl);
-      layer.remove(); style.remove(); surfaces.dispose(); document.documentElement.removeAttribute('data-omd-background');
-      document.documentElement.style.removeProperty('--omd-panel-opacity');
+      layer.remove(); style.remove(); surfaces.dispose();
     },
   };
 }
