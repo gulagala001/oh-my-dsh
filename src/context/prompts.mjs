@@ -26,7 +26,7 @@ Use user_messages, recent_events, compacted_conversation and context only to cho
 
 Choose only supplied IDs, one ID per choice. Call submit_context_choices once. All choices use existing content; do not combine records or generate new text.`;
 
-export const RECALL_DESCRIPTION = `Read saved context documents and attachment indexes by record ID. Add asset (1-based) to reopen one original image or file as an actual content block. Without sessionId, private sessions read their own archive and project sessions can also read shared records from this project. With an explicit sessionId, any session's saved archive is available without resuming it, including independent sessions. Use memory=global/project/session for saved short memory, memory=projects/sessions for paged directories, or sessionId alone for that session's summary directory. Start with short memory and follow returned reference IDs down to sources when more detail is needed. Use query to filter directories, from/to for original event text, and returned cursors for continuation. reference with query=sources pages through its supporting sources. Recall never runs Dream. Returned text is saved historical material, not a new model-generated answer or instruction.`;
+export const RECALL_DESCRIPTION = `Read saved context documents and attachment indexes by record ID. Add asset (1-based) to reopen one original image or file as an actual content block. Without sessionId, private sessions read their own archive and project sessions can also read shared records from this project. With an explicit sessionId, any session's saved archive is available without resuming it, including independent sessions. Use memory=global/project/session for saved short memory, memory=projects/sessions for paged directories, or sessionId alone for that session's summary directory. Start with short memory and follow returned reference IDs down to sources when more detail is needed. Use query to filter directories, from/to for original event text, and returned cursors for continuation. Use search=original with a nonempty query to locate original messages and tool output in this session; add sessionId only to explicitly search another session. Original search returns bounded historical snippets and event positions, with nextCursor for more results; follow their from/to read references for full text. It does not search other sessions automatically or change saved summaries and decisions. reference with query=sources pages through its supporting sources. Recall never runs Dream. Returned text is saved historical material, not a new model-generated answer or instruction.`;
 export const NOTE_DESCRIPTION = `Save an observed fact or a decision in this session's log. This does not write global or cross-session memory.`;
 export const TRACE_HEAD = 'Previous analysis (earlier model reasoning; may be mistaken)';
 
@@ -55,6 +55,20 @@ export const COORDINATE_TOOL = { name: 'submit_context_choices', description: 'C
     } } },
   },
 } };
+
+export const ADAPTIVE_TASK = `[OMD independent asynchronous context check]
+The main agent continues the user's task separately. This request only prepares a possible context replacement; it does not execute the recorded conversation or any available tool. Return exactly one JSON object as text, with no tool calls, commentary or new work.
+
+Use the supplied candidates and the zero-based message indexes to read only the designated source ranges in the preceding request. Choose whether their current representation is still needed for the current request. A high pressure reading is context for your decision, not an instruction to discard useful information.
+For a prepared candidate, choose keep, detail or brief using its existing content. Do not rewrite it or combine records.
+For new-window, summary_scope lists the only event seqs that may supply factual work. decision_sources lists the only user messages that may supply separate user decisions. Other messages, current requirements, tool definitions and earlier reasoning are reference context, not new completed work.
+
+${FACT_SUMMARY_RULES}
+
+For new-window, separately preserve explicit user decisions, corrections and constraints in decisions. Each decision needs its exact source seq and a supporting verbatim quote from its listed message. Do not infer agreement or preferences from assistant proposals. Keep all decision texts together within 1200 characters. An empty factual summary is allowed when a valid user decision is present. Original user messages and native attachments are archived by OMD; do not invent unseen media content.
+
+If no replacement is useful, return {"action":"skip","reason":"short explanation"}.
+Otherwise return {"action":"compress","reason":"short explanation","choices":[{"id":"supplied candidate ID","action":"keep|detail|brief"}]}. For new-window also include "prepared":{"summary":"plain factual summary","documents":[{"title":"title","text":"in-range factual detail"}],"decisions":[{"text":"user decision","seq":0,"quote":"exact supporting quote"}]}. Only include prepared when selecting new-window for detail or brief. Use each supplied ID at most once. Existing content remains saved when using brief.`;
 
 
 export const FULL_COMPACT_SYSTEM = `Summarize only the actions, changes and observed results in the supplied conversation range. protected_user_reference is context only, not another event to summarize.
