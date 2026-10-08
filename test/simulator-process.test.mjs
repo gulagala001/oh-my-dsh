@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-import { realpathSync } from 'node:fs';
+import { realpathSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { spawn, execFile } from 'node:child_process';
+import { spawn, execFile, execFileSync } from 'node:child_process';
 import { promisify } from 'node:util';
 import http from 'node:http';
 import net from 'node:net';
@@ -96,11 +96,11 @@ async function noRunning(state) {
   catch { assert.deepEqual(rows, [], 'Running descendants remain after stop'); }
 }
 
-function managed(state, source, { command = process.execPath, prefix = [] } = {}) {
+function managed(state, source, { command = process.execPath, prefix = [], gatePath = processGate } = {}) {
   const args = [...prefix, '--import', clockPreload, '--import', faultPreload, '--input-type=module', '--eval', source, state.root];
   const child = spawn(command, args, { cwd: state.host.workspace,
     env: { ...cleanEnvironment(state.root, state.host.home), ...(state.ackDirectory ? {
-      OMD_SIM_PROCESS_GATE: processGate, OMD_SIM_ACK_DIR: state.ackDirectory, OMD_SIM_MONITOR_FD: '9',
+      OMD_SIM_PROCESS_GATE: gatePath, OMD_SIM_ACK_DIR: state.ackDirectory, OMD_SIM_MONITOR_FD: '9',
     } : {}) }, detached: true, stdio: ['ignore', 'pipe', 'pipe', 'ignore', 'ignore', 'ignore', 'ignore', 'ignore', 'ignore', 'pipe'] });
   state.children.push(child);
   if (child.pid) { state.pids.add(child.pid); state.groups.add(child.pid); }
@@ -208,6 +208,163 @@ test('graceful stop refuses and reaps a gated child spawned by the SIGTERM shutd
   assert.ok(state.host.monitor.snapshot().events.some(event => event.type === 'process/blocked-during-stop'));
   await assert.rejects(fs.stat(join(state.root, 'leaf.json')), { code: 'ENOENT' });
   await noRunning(state);
+});
+
+test('a pending gate recognizes shutdown recovery ACK after its first OS observation and child exit', { skip: windowsSkip, timeout: 12000 }, async t => {
+  const state = await fixture(t), monitor = await monitorFor(state, t);
+  const gatePath = join(state.root, 'delayed-process-gate.sh');
+  const release = join(state.root, 'allow-gate-stop');
+  await fs.writeFile(gatePath, `#!/bin/sh
+printf '{"type":"process/gated","pid":%s,"parentPid":%s,"file":"gate","detached":false}\\n' "$$" "$PPID" >&9
+while [ ! -f "$OMD_SIM_ROOT/allow-gate-stop" ]; do sleep 0.01; done
+kill -STOP "$$"
+exec "$@"
+`, { mode: 0o700 });
+  const run = managed(state, controller('late-detached'), { gatePath });
+  state.host.child = run.child; state.host.boots = 1;
+  await monitor.attach(run.child);
+  await poll(async () => {
+    try { return JSON.parse(await fs.readFile(join(state.root, 'leader.json'), 'utf8')); }
+    catch (error) { if (!['ENOENT', 'SyntaxError'].includes(error.code ?? error.name)) throw error; }
+  }, 'controller boot');
+
+  const actualRead = monitor._readProcesses.bind(monitor), actualTimeout = monitor._timeout;
+  let targetPid, interleaved = false, interleaveError;
+  monitor._readProcesses = async () => {
+    const rows = await actualRead();
+    if (monitor._stopping && !targetPid) {
+      const row = [...rows.values()].find(row => row.ppid === run.child.pid && !row.stat.startsWith('T') && !monitor._records.has(row.pid));
+      if (row) { targetPid = row.pid; state.pids.add(row.pid); state.groups.add(row.pgid); }
+    }
+    return rows;
+  };
+  monitor._timeout = (callback, delay, ...args) => {
+    if (delay !== 5 || !targetPid || interleaved) return actualTimeout(callback, delay, ...args);
+    interleaved = true;
+    // Hold only _gated's retry: all snapshots and signals remain real. Recovery
+    // takes another serialized OS observation before the queued frame retries.
+    return actualTimeout(async () => {
+      try {
+        assert.equal(monitor._records.has(targetPid), false);
+        await fs.writeFile(release, 'stop');
+        await poll(async () => (await actualRead()).get(targetPid)?.stat.startsWith('T'), 'actual child SIGSTOP');
+        await monitor._withRows(rows => monitor._recoverStopped(rows));
+        const recovered = monitor._records.get(targetPid), ack = monitor._acks.get(targetPid);
+        assert.equal(recovered.kind, 'gated'); assert.equal(recovered.recovered, true); assert.equal(recovered.frameSeen, false);
+        assert.equal(ack.parentPid, run.child.pid); assert.equal(ack.value.ok, false);
+        await poll(async () => {
+          const row = (await actualRead()).get(targetPid);
+          return !row || /^[ZX]/.test(row.stat);
+        }, 'recovered child exit before gate retry');
+      } catch (error) { interleaveError = error; }
+      finally { callback(...args); }
+    }, delay);
+  };
+  try { await state.host.stop(); }
+  finally { monitor._readProcesses = actualRead; monitor._timeout = actualTimeout; }
+  assert.ifError(interleaveError);
+  assert.equal(interleaved, true, 'the real child was observed before SIGSTOP and recovered before retry');
+  assert.equal(monitor._records.get(targetPid).frameSeen, true);
+  assert.equal(monitor._acks.get(targetPid).value.ok, false, 'ACK replay cannot turn shutdown refusal into spawn permission');
+  assert.equal(monitor.assertHealthy(), true);
+  assert.ok(monitor.snapshot().groups.every(group => group.retired));
+  const refusal = JSON.parse(await fs.readFile(join(state.root, 'shutdown-refused.json'), 'utf8'));
+  assert.match(refusal.message, /stopping|refused/i);
+  await assert.rejects(fs.stat(join(state.root, 'leaf.json')), { code: 'ENOENT' });
+  await noRunning(state);
+});
+
+test('macOS stale live-group snapshot survives actual EPERM after only its zombie leader remains', {
+  skip: process.platform !== 'darwin' ? 'The zombie-only negative-PGID EPERM mechanism is verified on macOS only.' : false,
+  timeout: 12000,
+}, async t => {
+  const state = await fixture(t), monitor = await monitorFor(state, t);
+  const release = join(state.root, 'release-owned-group');
+  const child = spawn('/bin/sh', ['-c', 'printf ready; while [ ! -f "$1" ]; do sleep 0.01; done', 'owned-group', release], {
+    detached: true, stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  state.children.push(child); state.pids.add(child.pid); state.groups.add(child.pid);
+  const exited = once(child, 'exit');
+  await once(child.stdout, 'data');
+  const stale = await monitor._readProcesses(), row = stale.get(child.pid);
+  assert.equal(row.ppid, process.pid); assert.equal(row.pgid, child.pid); assert.ok(!/^[ZX]/.test(row.stat));
+  monitor._register(row, 'root');
+  const group = monitor._groups.get(child.pid);
+  // Keep this parent's event loop blocked until ps observes the real zombie:
+  // an asynchronous wait would let libuv reap it and turn EPERM into ESRCH.
+  writeFileSync(release, 'exit');
+  const deadline = performance.now() + 3000;
+  let status = '';
+  do {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
+    status = execFileSync('ps', ['-p', String(child.pid), '-o', 'stat='], { encoding: 'utf8' }).trim();
+  } while (!status.startsWith('Z') && performance.now() < deadline);
+  assert.match(status, /^Z/, 'the owned group leader actually exited but has not been reaped');
+  assert.throws(() => process.kill(-child.pid, 'SIGKILL'), { code: 'EPERM' });
+  let freshReads = 0;
+  const actualRead = monitor._readProcesses.bind(monitor);
+  monitor._readProcesses = async () => { freshReads++; return actualRead(); };
+  assert.equal(await monitor._signalGroup(group, stale, 'SIGKILL'), false);
+  assert.equal(freshReads, 1, 'EPERM requires a new external OS observation');
+  assert.equal(group.retired, true); assert.deepEqual(group.members, []);
+  assert.equal(monitor.assertHealthy(), true);
+  await exited; await noRunning(state);
+});
+
+async function ownedSignalGroup(t) {
+  const state = await fixture(t), monitor = await monitorFor(state, t);
+  const child = await sentinel(t, state.root);
+  state.pids.add(child.pid); state.groups.add(child.pid);
+  const rows = await monitor._readProcesses(), row = rows.get(child.pid);
+  assert.equal(row.ppid, process.pid); assert.equal(row.pgid, child.pid);
+  monitor._register(row, 'root');
+  return { state, monitor, child, rows, group: monitor._groups.get(child.pid) };
+}
+
+async function rejectOwnedGroupSignal(monitor, group, rows) {
+  const originalKill = process.kill;
+  const denied = Object.assign(new Error('fixture signal permission denied'), { code: 'EPERM' });
+  let attempts = 0;
+  process.kill = function (pid, signal) {
+    if (pid === -group.pgid && signal === 'SIGKILL') { attempts++; throw denied; }
+    return originalKill.call(this, pid, signal);
+  };
+  try {
+    await assert.rejects(monitor._signalGroup(group, rows, 'SIGKILL'), error => {
+      assert.equal(error.code, 'EPERM'); assert.equal(error.cause, denied);
+      assert.ok(error.message.includes('SIGKILL')); assert.ok(error.message.includes(String(group.pgid)));
+      return true;
+    });
+  } finally { process.kill = originalKill; }
+  assert.equal(attempts, 1, 'only the owned group signal was denied, without retrying');
+}
+
+test('EPERM remains a failure when a fresh real OS snapshot still has live owned-group members', { skip: windowsSkip, timeout: 12000 }, async t => {
+  const { monitor, child, rows, group } = await ownedSignalGroup(t);
+  const actualRead = monitor._readProcesses.bind(monitor);
+  let freshReads = 0;
+  monitor._readProcesses = async () => { freshReads++; return actualRead(); };
+  await rejectOwnedGroupSignal(monitor, group, rows);
+  assert.equal(freshReads, 1); assert.equal(group.retired, false); assert.equal(group.unsafe, false);
+  assert.ok((await processRows()).some(row => row.pid === child.pid && !row.stat.startsWith('Z')));
+});
+
+test('EPERM still rejects a group whose fresh leader identity changed even with no reported live members', { skip: windowsSkip, timeout: 12000 }, async t => {
+  const { monitor, child, rows, group } = await ownedSignalGroup(t);
+  const actualRead = monitor._readProcesses.bind(monitor);
+  let freshReads = 0;
+  // The child remains genuinely alive. Only its fresh reported birth and state
+  // are corrupted to check that a no-live observation cannot bypass identity.
+  monitor._readProcesses = async () => {
+    freshReads++;
+    const fresh = await actualRead(), row = fresh.get(child.pid);
+    fresh.set(child.pid, { ...row, birth: 'Thu Jan 1 00:00:00 1970', stat: 'Z' });
+    return fresh;
+  };
+  await rejectOwnedGroupSignal(monitor, group, rows);
+  assert.equal(freshReads, 1); assert.equal(group.unsafe, true);
+  assert.throws(() => monitor.assertHealthy(), /identity/);
+  assert.ok((await processRows()).some(row => row.pid === child.pid && !row.stat.startsWith('Z')));
 });
 
 test('stop surfaces a damaged spawn audit instead of silently claiming successful cleanup', { skip: windowsSkip, timeout: 12000 }, async t => {

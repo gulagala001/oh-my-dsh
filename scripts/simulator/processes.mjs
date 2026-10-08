@@ -128,7 +128,7 @@ export class ProcessMonitor {
     catch (error) { if (error.code === 'ESRCH') return false; throw error; }
   }
 
-  _signalGroup(group, rows, signal) {
+  async _signalGroup(group, rows, signal) {
     if (group.retired || group.unsafe) return false;
     const members = [...rows.values()].filter(row => row.pgid === group.pgid && running(row));
     if (!members.length) { group.retired = true; return false; }
@@ -139,7 +139,23 @@ export class ProcessMonitor {
       return false;
     }
     try { process.kill(-group.pgid, signal); return true; }
-    catch (error) { if (error.code === 'ESRCH') { group.retired = true; return false; } throw error; }
+    catch (error) {
+      if (error.code === 'ESRCH') { group.retired = true; return false; }
+      if (error.code === 'EPERM') {
+        // macOS reports EPERM for a group containing only zombies. The live
+        // members in our earlier ps snapshot may have exited before kill.
+        // A fresh OS observation, never the error alone, proves completion.
+        const fresh = await this._readProcesses();
+        this._refresh(fresh);
+        const currentLeader = fresh.get(group.pgid);
+        const sameLeader = !currentLeader || currentLeader.birth === group.birth && currentLeader.pgid === group.pgid;
+        if (!group.unsafe && sameLeader && ![...fresh.values()].some(row => row.pgid === group.pgid && running(row))) {
+          group.retired = true; group.members = [];
+          return false;
+        }
+      }
+      throw Object.assign(new Error(`Cannot send ${signal} to verified process group ${group.pgid}: ${error.message}`, { cause: error }), { code: error.code });
+    }
   }
 
   async _ack(parentPid, pid, value) {
@@ -158,25 +174,21 @@ export class ProcessMonitor {
     try {
       await this._ready;
       if (!validPid(event.pid) || !validPid(event.parentPid)) throw new Error('Invalid gated process PID');
-      const existing = this._records.get(event.pid);
-      if (existing) {
-        const ack = this._acks.get(event.pid);
-        if (existing.kind !== 'gated' || !ack || ack.parentPid !== event.parentPid) throw new Error(`Duplicate gate ${event.pid} has no matching verified acknowledgement`);
-        await this._withRows(rows => {
-          const row = rows.get(event.pid);
-          if (existing.unsafe || row && running(row) && (existing.retired || row.birth !== existing.birth || row.pgid !== existing.pgid)) {
-            throw new Error(`Duplicate gate ${event.pid} has a changed OS identity`);
-          }
-        });
-        existing.frameSeen = true;
-        // Gate shell and Node sender both report the same child. Once verified,
-        // replay its ACK without re-signaling it or requiring it still be T.
-        await this._ack(event.parentPid, event.pid, ack.value);
-        return;
-      }
       const deadline = performance.now() + 1000;
       while (!verified && performance.now() < deadline) {
+        let acknowledgement;
         verified = await this._withRows(rows => {
+          // Shutdown recovery can verify, refuse and reap a stopped child
+          // between two observations here. Check its verified ACK on every
+          // iteration before treating a disappeared PID as an unknown gate.
+          const existing = this._records.get(event.pid);
+          if (existing) {
+            const ack = this._acks.get(event.pid), row = rows.get(event.pid);
+            if (existing.kind !== 'gated' || !ack || ack.parentPid !== event.parentPid) throw new Error(`Duplicate gate ${event.pid} has no matching verified acknowledgement`);
+            if (existing.unsafe || row && running(row) && (existing.retired || row.birth !== existing.birth || row.pgid !== existing.pgid)) throw new Error(`Duplicate gate ${event.pid} has a changed OS identity`);
+            existing.frameSeen = true; acknowledgement = ack;
+            return null;
+          }
           const row = rows.get(event.pid);
           if (!row || !running(row)) throw new Error(`Gated process ${event.pid} disappeared before OS verification`);
           const parent = this._records.get(row.ppid), actualParent = rows.get(row.ppid);
@@ -191,6 +203,11 @@ export class ProcessMonitor {
           this._register(row, 'gated');
           return this._records.get(row.pid);
         });
+        if (acknowledgement) {
+          // Shell and Node reports share the same externally verified child.
+          await this._ack(event.parentPid, event.pid, acknowledgement.value);
+          return;
+        }
         if (!verified) await new Promise(resolve => this._timeout(resolve, 5));
       }
       if (!verified) throw new Error(`Gated process ${event.pid} never entered the stopped state`);
@@ -324,7 +341,7 @@ export class ProcessMonitor {
               if (!crash && group.pgid === this._root?.pgid && root && running(root) && !group.unsafe) {
                 this._fail('SIM_PROCESS_TIMEOUT', 'Root process exceeded the graceful shutdown deadline');
               }
-              this._signalGroup(group, rows, 'SIGKILL');
+              await this._signalGroup(group, rows, 'SIGKILL');
             }
           }
           return [...this._groups.values()].every(group => group.retired);
@@ -334,8 +351,8 @@ export class ProcessMonitor {
         await new Promise(resolve => this._timeout(resolve, 15));
       }
       await this._drain(deadline);
-      await this._withRows(rows => {
-        for (const group of this._groups.values()) if (!group.retired && !group.unsafe) this._signalGroup(group, rows, 'SIGKILL');
+      await this._withRows(async rows => {
+        for (const group of this._groups.values()) if (!group.retired && !group.unsafe) await this._signalGroup(group, rows, 'SIGKILL');
       });
       // Observe the result of final signals, including already-exited leaders.
       while (performance.now() < deadline && ![...this._groups.values()].every(group => group.retired || group.unsafe)) {
@@ -351,7 +368,7 @@ export class ProcessMonitor {
       // number from a bad frame. Recheck OS ownership before final cleanup.
       await this._withRows(async rows => {
         await this._recoverStopped(rows);
-        for (const group of this._groups.values()) this._signalGroup(group, rows, 'SIGKILL');
+        for (const group of this._groups.values()) await this._signalGroup(group, rows, 'SIGKILL');
       }).catch(actual => this._fail('SIM_PROCESS_CLEANUP', actual.message));
     }
     finally {
