@@ -37,11 +37,19 @@ test('recommended page defaults on, hides only after a successful save and persi
   await until(async () => await entry.count() === 1);
   await entry.click();
   await dialog.getByRole('heading', { name: '推荐插件', exact: true }).waitFor();
-  assert.equal(await dialog.locator('.tx-recommended-card').count() > 0, true);
+  assert.equal(await dialog.locator('.tx-recommended-card').count(), 9);
+  assert.equal(await dialog.getByRole('heading', { name: 'Jevify', exact: true }).count(), 0);
+  const status = await (await page.request.get(new URL('trisoul-x/recommended-plugins', page.url()).href)).json();
+  assert.equal(status.plugins.length, 9);
+  assert.equal(status.plugins.some(plugin => plugin.id === 'jevify'), false);
+  for (const action of ['install', 'update', 'uninstall']) {
+    const removed = await page.request.post(new URL('trisoul-x/recommended-plugins', page.url()).href, { data: { id: 'jevify', action } });
+    assert.equal(removed.status(), 400);
+    assert.match((await removed.json()).error, /未知/);
+  }
   for (const [id, name, version] of [
     ['dsh-plugin-subscriptions', '订阅登录 · Subscriptions', '0.9.8'],
     ['omd-intent-assistant', '需求理解 · OMD UI 增强版', '0.2.0'],
-    ['jevify', 'Jevify', '0.1.5'],
     ['dsh-turn-rewind', '回合回滚 · Turn Rewind', '0.3.9'],
   ]) {
     const card = dialog.locator('.tx-recommended-card').filter({ has: page.getByRole('heading', { name, exact: true }) });

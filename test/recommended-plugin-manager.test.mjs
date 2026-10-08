@@ -43,6 +43,14 @@ test('manual install, pinned update and uninstall use the native manager and rep
   assert.throws(() => f.service.start('shell-command', 'install'), /未知/);
 });
 
+test('removed recommendations are absent and rejected before native plugin operations', async () => {
+  const f = fixture({ catalog: recommendedPlugins });
+  assert.equal(recommendedPlugins.length, 9);
+  assert.equal((await f.service.status()).plugins.some(plugin => plugin.id === 'jevify'), false);
+  for (const action of ['install', 'update', 'uninstall']) assert.throws(() => f.service.start('jevify', action), /未知/);
+  assert.equal(f.lookups, 0); assert.deepEqual(f.packages, []); assert.deepEqual(f.calls, []);
+});
+
 test('operation failures are visible without fake success or implicit script approval', async () => {
   const f = fixture();
   f.failure = { application: 'failed', pendingBuilds: ['native-build'], error: { code: 'operation-error' } };
@@ -255,11 +263,10 @@ test('Turn Rewind keeps alpha blocked and rc explicitly available through the fi
 
 for (const { id, version, hosts } of [
   { id: 'omd-intent-assistant', version: '0.2.0', hosts: ['0.2.1-alpha.1'] },
-  { id: 'jevify', version: '0.1.5', hosts: ['0.2.1-alpha.1', '0.2.0-rc.2'] },
 ]) test(`${id} rejects incompatible hosts before lookup or download and retains managed uninstall`, async () => {
   const plugin = recommendedPlugins.find(item => item.id === id);
   const review = structuredClone(plugin.review);
-  assert.equal(plugin.review?.version, id === 'omd-intent-assistant' ? '0.2.0' : undefined);
+  assert.equal(plugin.review?.version, '0.2.0');
   for (const hostVersion of hosts) {
     const f = fixture({ catalog: [structuredClone(plugin)], hostVersion });
     assert.match((await f.service.status()).plugins[0].unavailable, new RegExp(version.replaceAll('.', '\\.')));
@@ -307,17 +314,16 @@ test('unrecognized host outcomes do not claim an installation succeeded', async 
 });
 
 test('GitHub recommendations install the versioned release asset and remain optional', async () => {
-  const { recommendedPlugins } = await import('../src/recommended-plugin-catalog.mjs');
   const { pluginInstallSpec, latestPluginVersion } = await import('../src/recommended-plugins.mjs');
-  const plugin = recommendedPlugins.find(p => p.id === 'jevify');
-  const spec = 'https://github.com/gulagala001/jevify/releases/download/v0.1.5/dsh-plugin-jevify-0.1.5.tgz';
+  const plugin = { id: 'github-fixture', packageName: 'synthetic-plugin', githubRelease: 'test-fixtures/synthetic-plugin' };
+  const spec = 'https://github.com/test-fixtures/synthetic-plugin/releases/download/v0.1.5/synthetic-plugin-0.1.5.tgz';
   assert.equal(pluginInstallSpec(plugin, '0.1.5'), spec);
   const f = fixture({ catalog: [plugin], hostVersion: '0.1.6-alpha.2' }); f.version = '0.1.5';
   await f.service.tick(); assert.equal(f.calls.length, 0);
-  await f.service.start('jevify', 'install'); assert.equal(f.calls[0].spec, spec);
+  await f.service.start(plugin.id, 'install'); assert.equal(f.calls[0].spec, spec);
   const fetchOriginal = globalThis.fetch;
   try {
-    globalThis.fetch = async url => { assert.equal(url, 'https://api.github.com/repos/gulagala001/jevify/releases/latest'); return Response.json({tag_name:'v0.1.5',assets:[{browser_download_url:spec}]}); };
+    globalThis.fetch = async url => { assert.equal(url, 'https://api.github.com/repos/test-fixtures/synthetic-plugin/releases/latest'); return Response.json({tag_name:'v0.1.5',assets:[{browser_download_url:spec}]}); };
     assert.equal(await latestPluginVersion(plugin, new AbortController().signal), '0.1.5');
     globalThis.fetch = async () => Response.json({tag_name:'v0.1.5',assets:[{browser_download_url:'https://example.invalid/package.tgz'}]});
     await assert.rejects(latestPluginVersion(plugin, new AbortController().signal), /缺少预期/);
