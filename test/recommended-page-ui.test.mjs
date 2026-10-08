@@ -54,7 +54,8 @@ test('recommended page defaults on, hides only after a successful save and persi
     const card = dialog.locator('.tx-recommended-card').filter({ has: page.getByRole('heading', { name, exact: true }) });
     await until(async () => (await card.locator('.tx-recommended-version').innerText()).includes('未安装'));
     assert.ok((await card.locator('.tx-recommended-review').innerText()).includes(version));
-    assert.match(await card.innerText(), /DSH 0\.2\.0-rc\.2 \/ 0\.2\.1-alpha\.1/);
+    assert.match(await card.innerText(), /DSH 0\.2\.0-rc\.2 · OMD 0\.2\.0-rc\.2\.omd\.0\.9\.0/);
+    assert.match(await card.innerText(), /DSH 0\.2\.1-alpha\.1 · OMD 0\.2\.1-alpha\.1\.omd\.0\.9\.0/);
     assert.equal(status.plugins.find(plugin => plugin.id === id).unavailable, null);
     assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), true);
     assert.match(await card.innerText(), /非上游/);

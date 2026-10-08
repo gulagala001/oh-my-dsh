@@ -114,7 +114,8 @@ for (const { id, version, label } of [
   test(`${id} offers the reviewed release when older servers omit availability and completes install/update/uninstall`, { timeout: 30000 }, async t => {
     const { page, card, posts, errors } = await managedRecommendationFixture(t, id, { version });
     assert.match(await card.locator('.tx-recommended-review').innerText(), label);
-    assert.match(await card.innerText(), /DSH 0\.2\.0-rc\.2 \/ 0\.2\.1-alpha\.1/);
+    assert.match(await card.innerText(), /DSH 0\.2\.0-rc\.2 · OMD 0\.2\.0-rc\.2\.omd\.0\.9\.0/);
+    assert.match(await card.innerText(), /DSH 0\.2\.1-alpha\.1 · OMD 0\.2\.1-alpha\.1\.omd\.0\.9\.0/);
     assert.match(await card.innerText(), /非上游/);
     assert.equal(await card.locator('.tx-recommended-result.tx-warn').count(), 0);
     const install = card.getByRole('button', { name: '安装', exact: true });
