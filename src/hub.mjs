@@ -110,7 +110,7 @@ export class Hub extends Service {
     this.store.save(state);
   }
   async call(agent, kind, request, signal) {
-    const { effort, ...route } = this.route(agent, kind), start = Date.now();
+    const { effort, ...route } = kind === 'adaptive' ? { provider: request.provider, model: request.model, temperature: request.temperature } : this.route(agent, kind), start = Date.now();
     const timeoutMs = this.config().jobTimeoutMs;
     const controller = new AbortController(), timer = timeoutMs > 0 ? setTimeout(() => controller.abort(new Error('后台作业超时')), timeoutMs) : undefined;
     timer?.unref();
@@ -125,7 +125,7 @@ export class Hub extends Service {
     const key = `${agent.session.id}:${kind}:${this.callSerial = (this.callSerial || 0) + 1}`, active = { sessionId: agent.session.id, kind, startedAt: start, ...route };
     this.live.set(key, active);
     try {
-      reasoningEffort = await Promise.race([this.efforts.resolve(route.provider, route.model, effort), aborted]);
+      reasoningEffort = kind === 'adaptive' ? request.reasoningEffort : await Promise.race([this.efforts.resolve(route.provider, route.model, effort), aborted]);
       iterator = this.ctx.llm.stream({ ...route, ...(reasoningEffort !== undefined ? { reasoningEffort } : {}), ...request, sessionId: agent.session.id, signal })[Symbol.asyncIterator]();
       for (;;) { const part = await Promise.race([iterator.next(), aborted]); if (part.done) break; assembler.push(part.value); }
       complete = true;

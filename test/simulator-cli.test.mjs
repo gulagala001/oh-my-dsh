@@ -66,7 +66,7 @@ test('CLI help/list succeed without launching a host and include the documented 
   assert.match(help.stdout, /process.*OS 沙箱/);
   const list = await invoke(root, 'list', ['--list']);
   assert.equal(list.code, 0, list.stderr);
-  assert.deepEqual(list.stdout.trim().split('\n').map(line => line.split('\t')[0]), ['full-lifecycle', 'stream-cancel', 'background-timeout', 'todo-reminder', 'restart-checkpoint', 'storage-failure']);
+  assert.deepEqual(list.stdout.trim().split('\n').map(line => line.split('\t')[0]), ['full-lifecycle', 'stream-cancel', 'background-timeout', 'todo-reminder', 'restart-checkpoint', 'storage-failure', 'context-enhancement', 'context-adaptive-auto']);
   assert.deepEqual(await readdir(join(root, 'tmp')), []);
 });
 
