@@ -8,6 +8,7 @@ import { observeNetwork, listNetwork, networkRequest, networkResponseBody } from
 import { listPageAssets, bundlePageAssets, exportPageContent } from './browser-content.mjs';
 import { fetchWebMcpTools, callWebMcpTool, cancelWebMcp, webMcpAvailable } from './browser-webmcp.mjs';
 import { captureViewport, captureFullPage, observeScreenshot, withViewportTransaction, screenshotGeometry, sameScreenshotGeometry, staleScreenshot } from './browser-screenshot.mjs';
+import { snapshotFrameContexts } from './snapshot-context.mjs';
 
 const stale = () => Object.assign(new Error('This element belongs to an old or detached page. Read the current state again.'), { code: 'STALE_ELEMENT' });
 const keys = { cmd: 'Meta', super: 'Meta', ctrl: 'Control', control: 'Control', alt: 'Alt', option: 'Alt', shift: 'Shift', return: 'Enter', enter: 'Enter', esc: 'Escape', escape: 'Escape', backspace: 'Backspace', delete: 'Delete', tab: 'Tab', space: 'Space', left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown', home: 'Home', end: 'End', pageup: 'PageUp', pagedown: 'PageDown' };
@@ -237,7 +238,7 @@ export class BrowserActions {
   }
   async readSnapshot(record, { disableDiffing = false, maxElements = 2000 } = {}, signal, includeScreenshot) {
     if (record.dialog) return { state: JSON.stringify({ dialog: { type: record.dialog.type(), message: record.dialog.message() } }) };
-    const generation = record.generation, elements = new Map(), lines = new Map(); let truncated = false;
+    const generation = record.generation, elements = new Map(), lines = new Map(), frames = []; let truncated = false, rowCount = 0;
     for (const { frame, cdp, frameId } of await this.frameBindings(record)) {
       const frameGeneration = record.frameGenerations.get(frame) ?? 0;
       const { nodes } = await cdp.send('Accessibility.getFullAXTree', { frameId });
@@ -249,24 +250,36 @@ export class BrowserActions {
       const visit = node => { if (!node || visited.has(node.nodeId)) return; visited.add(node.nodeId); ordered.push(node); for (const id of node.childIds ?? []) visit(byId.get(id)); };
       for (const node of nodes) if (!node.parentId || !byId.has(node.parentId)) visit(node);
       for (const node of nodes) visit(node);
+      const rows = [], entries = [];
       for (const node of ordered) {
         if (node.ignored) continue;
         const role = text(node.role), name = text(node.name), value = text(node.value);
         if (!name && !value && ['none','generic','InlineTextBox'].includes(role)) continue;
         if (role === 'InlineTextBox') continue;
-        if (lines.size >= maxElements) { truncated = true; break; }
+        if (rowCount >= maxElements) { truncated = true; break; }
         const key = `${record.frameGenerations.get(record.page.mainFrame()) ?? 0}:${frameGeneration}:${frameKey}:${node.backendDOMNodeId ?? node.nodeId}`;
         if (!record.ids.has(key)) record.ids.set(key, ++this.nextElementId);
         const id = record.ids.get(key); let depth = 0, parent = node.parentId;
         while (parent && depth < 25) { const p = byId.get(parent); if (!p) break; if (!p.ignored) depth++; parent = p.parentId; }
         const props = (node.properties ?? []).filter(p => ['checked','selected','expanded','disabled','required','readonly','focused','multiselectable'].includes(p.name)).map(p => `${p.name}=${text(p.value)}`);
         const frameLabel = role === 'RootWebArea' && frame !== record.page.mainFrame() ? ' [iframe ' + JSON.stringify(frame.url()) + ']' : '';
-        const line = `${'  '.repeat(depth)}${id} ${role}${name ? ' ' + JSON.stringify(name) : ''}${value ? ' value=' + JSON.stringify(value) : ''}${props.length ? ' [' + props.join(', ') + ']' : ''}${frameLabel}`;
-        lines.set(id, line);
+        entries.push({ id, depth, role, name, value, props, frameLabel, node });
+        rows.push({ id, node, role, name }); rowCount++;
         if (node.backendDOMNodeId) elements.set(id, { backendNodeId: node.backendDOMNodeId, frame, cdp, frameGeneration, role });
       }
+      frames.push({ rows, entries, byId });
     }
     const title = await record.page.title(), url = record.page.url();
+    const heading = `Tab ${record.id}: ${JSON.stringify(title)}\nURL: ${url}\n`;
+    const footer = truncated ? '\n[Tree truncated at ' + maxElements + ' rows]' : '';
+    const format = ({ id, depth, role, name, value, props, frameLabel }, context) =>
+      `${'  '.repeat(depth)}${id} ${role}${name ? ' ' + JSON.stringify(name) : ''}${value ? ' value=' + JSON.stringify(value) : ''}${context ? ' [ctx: ' + JSON.stringify(context) + ']' : ''}${props.length ? ' [' + props.join(', ') + ']' : ''}${frameLabel}`;
+    const entries = frames.flatMap(frame => frame.entries);
+    const baseBytes = Buffer.byteLength(heading + entries.map(entry => format(entry)).join('\n') + footer);
+    // Extra context must not push an otherwise complete observation past the
+    // runtime's 48 KB text budget. Fair shares also bound each untrusted label.
+    const contexts = snapshotFrameContexts(frames, { maxBytes: Math.min(8192, Math.max(0, 48000 - baseBytes - 320)) });
+    for (const entry of entries) lines.set(entry.id, format(entry, contexts.get(entry.id)));
     const captured = includeScreenshot ? await this.observeScreenshot(record, {}, signal) : undefined;
     signal?.throwIfAborted();
     if (generation !== record.generation) throw stale();
@@ -275,9 +288,16 @@ export class BrowserActions {
       const removed = [...record.previous.keys()].filter(id => !lines.has(id));
       body = [...(removed.length ? ['Removed: ' + removed.join(', ')] : []), ...[...lines].filter(([id,line]) => record.previous.get(id) !== line).map(([id,line]) => (record.previous.has(id) ? '~ ' : '+ ') + line)].join('\n') || 'No accessibility changes.';
     } else body = [...lines.values()].join('\n');
+    // A replacement diff can be larger than its complete tree (removed IDs and
+    // per-row prefixes). Emit the complete current tree when that fits better,
+    // retaining stable contexts and all actions rather than clipping the diff.
+    if (Buffer.byteLength(heading + body + footer) > 48000) {
+      const full = [...lines.values()].join('\n');
+      if (Buffer.byteLength(heading + full + footer) <= 48000 - 80) body = '[Full accessibility tree; change list exceeded the output budget.]\n' + full;
+    }
     record.elements = elements; record.previous = lines;
     if (record.ids.size > 10000) record.ids = new Map([...record.ids].filter(([,id]) => lines.has(id)));
-    return { state: `Tab ${record.id}: ${JSON.stringify(title)}\nURL: ${url}\n${body}${truncated ? '\n[Tree truncated at ' + maxElements + ' rows]' : ''}`, generation, ...captured };
+    return { state: heading + body + footer, generation, ...captured };
   }
   async element(record, id) {
     const ref = record.elements.get(id);
