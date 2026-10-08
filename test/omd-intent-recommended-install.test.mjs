@@ -33,7 +33,7 @@ test('on a compatible host, published intent assistant installs only on request,
     if (plugin.error) throw Error(plugin.error);
     return !state.busy && plugin.installed && plugin.version && plugin;
   }, 120000);
-  assert.equal(installed.version, '0.2.0');
+  assert.equal(installed.version, '0.3.0');
   const profile = join(f.home, 'profiles', 'trisoul-x');
   const manifest = JSON.parse(await readFile(join(profile, 'package.json'), 'utf8'));
   const spec = manifest.dependencies['omd-prompt-optimizer'];

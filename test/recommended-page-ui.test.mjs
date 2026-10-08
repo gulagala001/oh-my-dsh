@@ -48,8 +48,18 @@ test('recommended page defaults on, hides only after a successful save and persi
     assert.match((await removed.json()).error, /未知/);
   }
   for (const [id, name, version] of [
-    ['dsh-plugin-subscriptions', '订阅登录 · Subscriptions', '0.9.8'],
-    ['omd-intent-assistant', '需求理解 · OMD UI 增强版', '0.2.0'],
+    ['dsh-plugin-subscriptions', '订阅登录 · Subscriptions', '0.9.8-omd.1'],
+    ['omd-intent-assistant', '需求理解 · OMD UI 增强版', '0.3.0'],
+  ]) {
+    const card = dialog.locator('.tx-recommended-card').filter({ has: page.getByRole('heading', { name, exact: true }) });
+    await until(async () => (await card.locator('.tx-recommended-version').innerText()).includes('未安装'));
+    assert.ok((await card.locator('.tx-recommended-review').innerText()).includes(version));
+    assert.match(await card.innerText(), /DSH 0\.2\.0-rc\.2 \/ 0\.2\.1-alpha\.1/);
+    assert.equal(status.plugins.find(plugin => plugin.id === id).unavailable, null);
+    assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), true);
+    assert.match(await card.innerText(), /非上游/);
+  }
+  for (const [id, name, version] of [
     ['dsh-turn-rewind', '回合回滚 · Turn Rewind', '0.3.9'],
   ]) {
     const card = dialog.locator('.tx-recommended-card').filter({ has: page.getByRole('heading', { name, exact: true }) });

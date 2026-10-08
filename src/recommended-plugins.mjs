@@ -117,7 +117,15 @@ export class RecommendedPluginManager {
         if (current?.readOnlyReason) throw Error('此插件由宿主管理，无法在这里修改');
         if (action === 'update' && !current?.installed) throw Error('插件已被卸载');
         const comparison = action === 'update' && current?.version ? compareVersions(version, current.version) : null;
-        if (comparison !== null && (comparison < 0 || (comparison === 0 && !plugin.review?.source && this.records.get(plugin.id)?.failedInstallVersion !== version))) {
+        // A reviewed fork may retain the upstream base version with an -omd
+        // suffix. SemVer ranks that below upstream's stable release, so allow
+        // only the catalog's exact, SHA-pinned migration to the fixed fork.
+        const reviewedForkMigration = typeof plugin.review?.upstreamVersion === 'string'
+          && current?.version === plugin.review.upstreamVersion
+          && version === plugin.review?.version && plugin.githubRelease
+          && plugin.review?.releaseTag === 'v' + version && /^[a-f0-9]{64}$/.test(plugin.review?.sha256 || '')
+          && version.startsWith(current.version + '-omd.');
+        if (comparison !== null && ((comparison < 0 && !reviewedForkMigration) || (comparison === 0 && !plugin.review?.source && this.records.get(plugin.id)?.failedInstallVersion !== version))) {
           this.records.set(plugin.id, { ...this.records.get(plugin.id), message: plugin.review ? (current.version === version ? '已是核验版本' : '当前版本高于核验版本，未降级') : '已是最新版本', error: '' });
           return false;
         }

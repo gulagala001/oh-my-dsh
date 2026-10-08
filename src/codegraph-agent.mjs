@@ -34,7 +34,6 @@ export async function apply(ctx) {
     }
     loaded = true;
   };
-  await load();
   ctx.on?.('agent/pre-step', async (_event, next) => { await load(); return next(); });
   ctx.systemPrompt.section({ name: 'trisoul-x:codegraph', order: 80, interpolate: false,
     text: CODEGRAPH_GUIDE });
@@ -44,4 +43,5 @@ export async function apply(ctx) {
     return { ...assembly, sections: assembly.sections.map(section => section.name === 'trisoul-x:codegraph'
       ? { ...section, text: CODEGRAPH_DISABLED_GUIDE } : section) };
   });
+  await load();
 }
