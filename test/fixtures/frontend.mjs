@@ -138,7 +138,17 @@ export function apply(ctx) { let seeded = false; ctx.on('session/created', sessi
   const bootstrap = await until(() => { if (child.exitCode !== null) throw new Error(log.replace(/token=\S+/g, 'token=[redacted]')); return log.match(/http:\/\/127\.0\.0\.1:\d+\/\?token=[\w-]+/)?.[0]; }, 45000).catch(error => { throw new Error(error.message + '\n' + log.replace(/token=\S+/g, 'token=[redacted]')); });
   const fixtureFetch = async (url, options) => {
     try { return await fetch(url, options); }
-    catch (error) { throw new Error(`Fixture ${options?.method || 'GET'} ${new URL(url).pathname} failed: ${error.cause?.code || error.message}; host exit=${child.exitCode}, signal=${child.signalCode}`, { cause: error }); }
+    catch (error) {
+      // The ready probe is idempotent. Windows can retire a pooled socket
+      // between probes; reconnect once without replaying any mutation.
+      if ((options?.method || 'GET') === 'GET' && error.cause?.code === 'ECONNRESET'
+        && child.exitCode === null && child.signalCode === null) {
+        t.diagnostic(`Reconnect one reset GET ${new URL(url).pathname} while the fixture host is alive`);
+        const headers = new Headers(options?.headers); headers.set('connection', 'close');
+        try { return await fetch(url, { ...options, headers }); } catch (next) { error = next; }
+      }
+      throw new Error(`Fixture ${options?.method || 'GET'} ${new URL(url).pathname} failed: ${error.cause?.code || error.message}; host exit=${child.exitCode}, signal=${child.signalCode}`, { cause: error });
+    }
   };
   const origin = new URL(bootstrap).origin, login = await fixtureFetch(bootstrap, { redirect: 'manual' });
   const cookie = login.headers.getSetCookie().map(value => value.split(';')[0]).join('; ');
