@@ -172,6 +172,7 @@ test('real Web preserves foreign model children and toolbar, retains OMD modes, 
   await page.getByRole('button', { name: 'OMD 模式与思考强度', exact: true }).click();
   const panel = page.getByRole('dialog', { name: '模型与思考强度', exact: true });
   const slider = panel.getByRole('slider', { name: '思考强度', exact: true });
+  await panel.getByRole('button', { name: '第三方选择的模型', exact: true }).waitFor();
   await until(() => slider.isEnabled());
   await slider.press('End');
   await until(async () => (await mode()).mode === 'ultracode');

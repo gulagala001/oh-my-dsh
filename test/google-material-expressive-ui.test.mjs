@@ -136,6 +136,11 @@ test('Google Material: real layout, all settings, fonts, mobile navigation, work
   assert.equal(await dialog.isVisible(), true, 'resetting the theme keeps settings open');
   assert.equal(await page.locator('.pI_x6G_centerCol').evaluate(el => el.inert), true, 'the settings modal keeps the background inert after a theme reset');
   assert.equal(await page.locator('.pI_x6G_frame').evaluate(el => el.style.getPropertyValue('--gm-host-right-width')), '');
+  await page.getByLabel('主题', { exact: true }).selectOption(id);
+  await until(async () => await html.getAttribute('data-omd-layout') === id);
+  assert.equal(await page.locator('.pI_x6G_centerCol').evaluate(el => el.inert), true, 'switching back transfers the open navigation without unlocking the background');
+  await page.getByRole('button', { name: '恢复默认主题', exact: true }).click();
+  await until(async () => await html.getAttribute('data-omd-layout') === null);
   await closeSettings(); await dialog.waitFor({ state: 'hidden' });
   assert.equal(await page.locator('.pI_x6G_centerCol').evaluate(el => el.inert), false, 'closing settings and mobile navigation restores the conversation');
   const pack = await readFile(new URL('../src/client/skins/bundled/google-material-expressive.json', import.meta.url));

@@ -8,6 +8,7 @@ import { migrateSessionStorage } from './session-migration.mjs';
 import { sourceName } from './message-source.mjs';
 import { installLoaderLifecycleCompatibility } from './loader-lifecycle-compat.mjs';
 import { installToolSchedulerCompatibility } from './tool-scheduler-compat.mjs';
+import { installToolCancellationPresentation } from './tool-cancellation.mjs';
 import { monitorSelection, compactMonitorSnapshot } from './monitoring.mjs';
 import { createVersionService, handleVersionApi } from './version.mjs';
 import { VersionUpdater, handleVersionUpdateApi } from './version-update.mjs';
@@ -58,6 +59,7 @@ export async function apply(ctx, config) {
   const directory = legacy.value.dataDir || config.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'trisoul-x');
   await migrateSessionStorage(ctx, directory);
   installToolSchedulerCompatibility(ctx);
+  installToolCancellationPresentation(ctx);
   const hub = new Hub(ctx, { ...config, dataDir: directory });
   hub.omaaWorkflowComposition = omaaWorkflowComposition;
   hub.omaaIdentityPrompt = () => omaaIdentityPrompt(hub);
