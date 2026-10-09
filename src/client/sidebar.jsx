@@ -1,4 +1,5 @@
 import css from './sidebar.css';
+import { acquireOverlayInert } from './overlay-inert.mjs';
 
 function bindNarrowSidebar(ctx, frame) {
   const column = frame.querySelector('[data-omd-surface="sidebar-column"]');
@@ -21,12 +22,11 @@ function bindNarrowSidebar(ctx, frame) {
     scrim.hidden = !open; frame.toggleAttribute('data-omd-sidebar-overlay', open);
     if (open) {
       previousFocus = document.activeElement;
-      const covered = [...frame.querySelectorAll(':scope > [data-omd-surface="conversation"], :scope > [data-omd-surface="workbench-column"]')].map(el => [el, el.inert]);
+      const releaseInert = acquireOverlayInert(frame.querySelectorAll(':scope > [data-omd-surface="conversation"], :scope > [data-omd-surface="workbench-column"]'));
       const attrs = ['role', 'aria-label', 'aria-modal'].map(name => [name, column.getAttribute(name)]);
-      covered.forEach(([el]) => { el.inert = true; });
       column.setAttribute('role', 'dialog'); column.setAttribute('aria-label', '侧栏导航'); column.setAttribute('aria-modal', 'true');
       restore = () => {
-        covered.forEach(([el, inert]) => { el.inert = inert; });
+        releaseInert();
         for (const [name, value] of attrs) { if (value === null) column.removeAttribute(name); else column.setAttribute(name, value); }
       };
       queueMicrotask(() => { if (open && !otherOverlay()) column.querySelector('.hHd-Xa_toggle')?.focus({ preventScroll: true }); });

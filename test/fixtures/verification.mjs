@@ -12,6 +12,7 @@ import { registerTasks } from '../../src/tasks.mjs';
 import { createModule as bashModule } from '../../lib/host/tool-bash.factory.mjs';
 import { createModule as pwshModule } from '../../lib/host/tool-pwsh.factory.mjs';
 import { ToolRuntime } from '@deepseek-ai/dsh-tools';
+import { installToolCancellationPresentation } from '../../src/tool-cancellation.mjs';
 
 const hostRequire = createRequire(realpathSync(new URL('../../node_modules/@deepseek-ai/dsh/package.json', import.meta.url)));
 const load = name => import(pathToFileURL(hostRequire.resolve(name)).href);
@@ -41,6 +42,7 @@ export function verificationFixture(t, { runTimeoutMs, maxTimeoutMs = 600000, mo
     stateOf(session, key) { const unit = units.get(key); return session.snapshotEvents().reduce((value, event) => unit.apply(value, event), unit.init()); },
   });
   new ToolRuntime(ctx, { mode: toolMode });
+  installToolCancellationPresentation(ctx);
   const policy = new SandboxPolicyService(ctx, { mode, workspaceRoot: dir });
   ctx.provide('sandbox', { async confine(argv, resolved, signal) {
     confinements.push({ argv, policy: resolved });
