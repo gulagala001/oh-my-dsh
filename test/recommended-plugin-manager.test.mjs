@@ -45,7 +45,7 @@ test('manual install, pinned update and uninstall use the native manager and rep
 
 test('removed recommendations are absent and rejected before native plugin operations', async () => {
   const f = fixture({ catalog: recommendedPlugins });
-  assert.equal(recommendedPlugins.length, 9);
+  assert.equal(recommendedPlugins.length, 10);
   assert.equal((await f.service.status()).plugins.some(plugin => plugin.id === 'jevify'), false);
   for (const action of ['install', 'update', 'uninstall']) assert.throws(() => f.service.start('jevify', action), /未知/);
   assert.equal(f.lookups, 0); assert.deepEqual(f.packages, []); assert.deepEqual(f.calls, []);
