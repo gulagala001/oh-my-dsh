@@ -38,19 +38,76 @@ export function bindLiveLoaderEntries(loader) {
   loader = untrace(loader);
   const original = loader.entries, descriptor = Object.getOwnPropertyDescriptor(loader, 'entries');
   const originalAwait = loader.await, awaitDescriptor = Object.getOwnPropertyDescriptor(loader, 'await');
-  const removing = new WeakMap(), groups = new Map(), tasks = new Set();
+  const removing = new WeakMap(), retiringEntries = new WeakMap(), groups = new Map(), tasks = new Set();
+  function retire(entry) {
+    if (!entry) return () => {};
+    let state = retiringEntries.get(entry);
+    if (!state) {
+      const original = Object.getOwnPropertyDescriptor(entry, 'disabled');
+      if (original?.configurable === false || !Object.isExtensible(entry)) return () => {};
+      // Native Loader treats an active row's disposal as an unexpected unload
+      // and saves the whole effective tree. An intentional removal must not
+      // materialize bundle patches in the user's cordis.yml. Keep the original
+      // options untouched, including group rows and failed-update rollback.
+      const guard = { value: true, writable: true, enumerable: original?.enumerable ?? false, configurable: true };
+      Object.defineProperty(entry, 'disabled', guard);
+      state = { original, guard, count: 0 }; retiringEntries.set(entry, state);
+    }
+    state.count++;
+    return () => {
+      if (--state.count) return;
+      retiringEntries.delete(entry);
+      // A separate owner may have changed the row during asynchronous teardown.
+      // Restore only the descriptor still owned by this retirement guard.
+      if (!isDeepStrictEqual(Object.getOwnPropertyDescriptor(entry, 'disabled'), state.guard)) return;
+      if (state.original) Object.defineProperty(entry, 'disabled', state.original);
+      else delete entry.disabled;
+    };
+  }
+  function belongsTo(entry, ancestor) {
+    const seen = new Set();
+    for (let current = untrace(entry); current && !seen.has(current);) {
+      if (current === ancestor) return true;
+      seen.add(current);
+      current = untrace(current.parent?.ctx?.fiber?.entry ?? current.parent?.tree?.ctx?.fiber?.entry);
+    }
+    return false;
+  }
   function watch(group) {
     group = untrace(group);
     if (!group || groups.has(group) || typeof group.remove !== 'function') return;
     const originalRemove = group.remove, own = Object.getOwnPropertyDescriptor(group, 'remove');
     function remove(id, ...args) {
       const entry = untrace(this.tree?.store?.[id]);
-      if (entry) removing.set(entry, (removing.get(entry) || 0) + 1);
       const fiber = entry?.fiber;
+      // A group/include's children can dispose before their own remove method
+      // runs. Protect the existing descendants before starting the parent.
+      const retiring = entry ? [...new Set([entry, ...original.call(loader)].map(untrace))].filter(value => belongsTo(value, entry)) : [];
+      const restores = retiring.map(retire);
+      for (const value of retiring) removing.set(value, (removing.get(value) || 0) + 1);
       let task;
-      const cleanup = () => { tasks.delete(task); if (entry) { const n = removing.get(entry) - 1; if (n) removing.set(entry, n); else removing.delete(entry); } };
-      try { task = Promise.resolve(originalRemove.call(this, id, ...args)).then(() => fiber?.dispose?.()); } catch (error) { cleanup(); throw error; }
-      tasks.add(task); task.then(cleanup, cleanup);
+      const cleanup = () => {
+        for (const restore of restores.reverse()) restore(); tasks.delete(task);
+        for (const value of retiring) { const n = removing.get(value) - 1; if (n) removing.set(value, n); else removing.delete(value); }
+      };
+      const disposalStarted = () => fiber && (fiber.uid === null || fiber.state === UNLOADING);
+      const track = promise => { task = promise; tasks.add(task); task.then(cleanup, cleanup); };
+      try {
+        track(Promise.resolve(originalRemove.call(this, id, ...args)).then(
+          () => fiber?.dispose?.(),
+          async error => {
+            // A foreign partial-dispose listener can reject after native Loader
+            // has already started tearing down a group. Its children still need
+            // protection until the existing disposal completes.
+            if (disposalStarted()) await fiber.dispose();
+            throw error;
+          },
+        ));
+      } catch (error) {
+        if (disposalStarted()) track(Promise.resolve().then(() => fiber.dispose()));
+        else cleanup();
+        throw error;
+      }
       return task;
     }
     Object.defineProperty(group, 'remove', { value: remove, configurable: true, writable: true });
