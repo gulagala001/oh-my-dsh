@@ -5,7 +5,7 @@
 <p align="center"><strong>长任务、电脑操作与任务验证，都在熟悉的 DSH 里。</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-alpha.1.omd.0.10.0"><img src="https://img.shields.io/badge/version-0.2.1--alpha.1.omd.0.10.0-3478F6?style=flat-square" alt="Version 0.2.1-alpha.1.omd.0.10.0" /></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-alpha.1.omd.0.11.0"><img src="https://img.shields.io/badge/version-0.2.1--alpha.1.omd.0.11.0-3478F6?style=flat-square" alt="Version 0.2.1-alpha.1.omd.0.11.0" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.2.1--alpha.1-475569?style=flat-square" alt="DSH 0.2.1-alpha.1" /></a>
 </p>
 <p align="center">
@@ -31,7 +31,7 @@ Oh My DSH 是 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 
 ## 开始使用
 
-当前安装配对：**DSH 0.2.1-alpha.1 · Oh My DSH 0.2.1-alpha.1.omd.0.10.0**，内置 **OpenCU 1.3.0**。已有环境升级前，先结束任务、停止服务或完整退出应用，并备份实际 `DSH_HOME`。[安装、迁移与升级指南](docs/upgrade.md)。
+当前安装配对：**DSH 0.2.1-alpha.1 · Oh My DSH 0.2.1-alpha.1.omd.0.11.0**，内置 **OpenCU 1.3.1**。已有环境升级前，先结束任务、停止服务或完整退出应用，并备份实际 `DSH_HOME`。[安装、迁移与升级指南](docs/upgrade.md)。
 
 <a id="desktop"></a>
 
@@ -39,7 +39,7 @@ Oh My DSH 是 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 
 ### 官方桌面应用
 
-最新源码和 npm 宿主为 **DSH 0.2.1-alpha.1**。官方桌面更新源目前仍为 rc.2；桌面用户安装 **OMD 0.2.0-rc.2.omd.0.10.0**，采用 [rc.2 的固定安装指南](https://github.com/gulagala001/oh-my-dsh/blob/v0.2.0-rc.2.omd.0.10.0/docs/upgrade.md#desktop)，待官方新版桌面包发布后再升级。
+最新源码和 npm 宿主为 **DSH 0.2.1-alpha.1**。官方桌面更新源目前仍为 rc.2；桌面用户安装 **OMD 0.2.0-rc.2.omd.0.11.0**，采用 [rc.2 的固定安装指南](https://github.com/gulagala001/oh-my-dsh/blob/v0.2.0-rc.2.omd.0.11.0/docs/upgrade.md#desktop)，待官方新版桌面包发布后再升级。
 
 桌面使用独立的 `desktop` profile，Web 中的插件需在桌面再安装一次。[桌面教程](docs/upgrade.md#desktop) · [从 Web 迁移数据](docs/upgrade.md#web-to-desktop)。
 
@@ -48,7 +48,7 @@ Oh My DSH 是 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 需要 **Node.js ≥22.19、pnpm 11.23.0 和 Git**；Windows 使用 PowerShell 7。首次安装：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.10.0
+npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.11.0
 npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 ```
 
@@ -181,9 +181,9 @@ npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 
 ## 文档与参与
 
-[文档目录](docs/README.md) · [首次使用](docs/getting-started.md) · [完整指南](docs/usage.md) · [排障](docs/troubleshooting.md) · [更新记录](CHANGELOG.md) · [当前发行说明](docs/release-0.2.1-alpha.1.omd.0.10.0.md)
+[文档目录](docs/README.md) · [首次使用](docs/getting-started.md) · [完整指南](docs/usage.md) · [排障](docs/troubleshooting.md) · [更新记录](CHANGELOG.md) · [当前发行说明](docs/release-0.2.1-alpha.1.omd.0.11.0.md)
 
-开发分支可能包含尚未发布的功能；安装固定 tag 时，以[该 tag 的文档](https://github.com/gulagala001/oh-my-dsh/tree/v0.2.1-alpha.1.omd.0.10.0/docs)为准。[DSH 0.2 适配与验证](docs/dsh-0.2-preparation.md)。
+开发分支可能包含尚未发布的功能；安装固定 tag 时，以[该 tag 的文档](https://github.com/gulagala001/oh-my-dsh/tree/v0.2.1-alpha.1.omd.0.11.0/docs)为准。[DSH 0.2 适配与验证](docs/dsh-0.2-preparation.md)。
 
 [反馈 Bug](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml) · [提出建议](https://github.com/gulagala001/oh-my-dsh/issues/new?template=feature-request.yml) · [参与贡献](CONTRIBUTING.md) · [展示页构建与托管](docs/site/README.md)
 
