@@ -8,6 +8,8 @@
 
 按[本地开发说明](docs/usage.md#本地开发或独立试用)安装依赖并构建。使用独立测试数据目录和测试模型，不把个人配置、会话、密钥或原始用户报告加入提交。
 
+原生插件生态兼容性是持续开发约束，覆盖 OMD、内置组件、前端和配套插件联动。保留现有功能和体验，优先使用宿主公共扩展点及作用域注册，减少全局替换和包装，保留第三方配置、注入、状态、子槽位与生命周期。以同版本原版 DSH 为对照，相关改动验证代表插件、两种加载顺序、启停、重启与卸载；可选增强失效不得阻塞基础能力。不能通过关闭增强、删减功能、绕过宿主校验或要求第三方逐个适配来宣称兼容。支持范围与未验证项如实记录，调查和验收入口见[插件兼容性](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)。
+
 1. 先复现具体问题，记录触发条件、实际结果和预期结果。涉及宿主兼容时区分 Web、官方桌面、安装来源及版本。
 2. 修复根因，同时移除失效逻辑并更新对应文档。缺陷适合自动化时，加入能在修复前失败的回归用例；纯文字或低风险调整不必建立复杂测试。
 3. 运行相关测试；修改前端后先 `pnpm build`，再验证真实点击、错误反馈、重试及窄屏／明暗主题。涉及插件安装和生命周期时，检查原生模式、切换、重启和卸载。
@@ -18,6 +20,8 @@
 ```sh
 node --test test/documentation.test.mjs test/start.test.mjs test/version-update.test.mjs test/recommended-plugin-manager.test.mjs
 ```
+
+性能入口为 `node scripts/benchmark-runtime.mjs [基线commit]`，省略基线时使用 HEAD；输出仅是合成微基准，不证明真实模型或端到端速度。
 
 完整回归需要先构建，并准备 Playwright Chromium：
 
@@ -36,13 +40,15 @@ node --test --test-concurrency=1 test/*.test.mjs
 
 会话、工具、上下文、Dream 或恢复流程的相关改动，由实施者主动使用[工程会话模拟器](https://github.com/gulagala001/oh-my-dsh/blob/main/scripts/simulator/README.md)完成复现与回归。先按改动选择真实宿主场景，缺少覆盖时补充场景和独立断言；跨模块改动执行 `pnpm test:conversation`，模拟器本身改动执行 `pnpm test:simulator`，前端流程另加 `--ui`。需要时运行有限 seed 探索、失败最小化及严格实录重放，分析失败并修复后再交付，不把这些工程操作转交给提出需求的用户。
 
-CI 的 macOS 会话仿真任务自动运行模拟器测试、六场景基线、固定 seed 探索和真实 Web 检查，并保存报告。它真实执行隔离的 DSH／OMD，默认使用 macOS 外层沙箱和本地模型替身；预算耗尽、失败和跳过不能作为通过证据，平台、时钟、隔离及模型语义边界以本次报告为准。
+CI 的 macOS 会话仿真任务自动运行模拟器测试、八场景基线、固定 seed 探索和真实 Web 检查，并保存报告。它真实执行隔离的 DSH／OMD，默认使用 macOS 外层沙箱和本地模型替身；预算耗尽、失败和跳过不能作为通过证据，平台、时钟、隔离及模型语义边界以本次报告为准。
 
 ## 文档与发行
 
 安装说明沿用户的实际路径组织：选择环境 → 安装 → 确认生效 → 日常使用 → 排障／恢复。桌面、Web 和源码安装分别写明入口；更新、停用和卸载继续沿用原安装方式。
 
 版本更新时同时核对 `package.json`、发布清单、README 徽章、安装命令、升级手册和本版说明。内置组件以 `vendor/opencu.json` 等发行清单为准。不要把尚未发布的修复写成已可通过现有 tag 安装；先记录在更新日志的“未发布”部分。
+
+OpenCU 在独立源码仓库维护，用 `node scripts/sync-opencu.mjs /path/to/opencu` 构建并完整替换发行快照；脚本会先解包、校验版本并生成哈希清单，再替换 `vendor/opencu` 和 `vendor/opencu.json`，替换出错时恢复原有两项。同版本可以重新同步，低于当前清单版本的源码默认拒绝；只有明确需要回退时才加 `--allow-downgrade`。不要手工修改发行快照。同步脚本回归使用临时仓库，可运行 `node --test test/opencu-sync.test.mjs`，并纳入 Windows CI；Windows 通过 Node 执行 npm 的 JavaScript CLI，npm 需随 Node 安装或提供 PATH 中的标准 npm launcher。
 
 新增用户指南时，在 [文档目录](docs/README.md)补上对应任务入口，并在页面顶部提供返回路径。文档检查会核对各安装指南中的全部目标版本、徽章和内置组件版本，并检查当前用户文档的本地文件与章节链接；历史版本说明和研究记录不作为当前安装指南扫描。它不替代实际安装验证，也不检查外部网站的可达性。
 
