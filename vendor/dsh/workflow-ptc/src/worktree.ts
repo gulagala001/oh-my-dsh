@@ -71,13 +71,25 @@ export class WorkflowWorktree {
       // No recursive delete on a failed add: Git may have published a checkout
       // while cancellation was racing it. Its receipt remains discoverable.
       artifact.reason = `setup failed: ${String(error)}`
-      await worktree.save()
+      try { await worktree.save() }
+      catch (receiptError) { throw new AggregateError([error, receiptError], 'Worktree setup and receipt persistence failed', { cause: error }) }
       throw new Error(`Worktree setup failed; inspect ${path}: ${String(error)}`, { cause: error })
     }
   }
 
   private async save(): Promise<void> {
     await writeFile(this.receiptPath, JSON.stringify(this.artifact) + '\n', { mode: 0o600 })
+  }
+
+  /** Only the holder calls this, after native child disposal has completed. */
+  retain(reason: string): Promise<WorktreeArtifact> {
+    this.settlement ??= (async () => {
+      this.artifact.retained = true
+      this.artifact.reason = reason
+      await this.save()
+      return { ...this.artifact }
+    })()
+    return this.settlement
   }
 
   /** Only the holder calls this, after native child disposal has completed. */

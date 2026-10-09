@@ -1,14 +1,14 @@
 export const name = 'omd-ptc-presentation';
-export const inject = ['tools', 'ptcRuntime', 'trisoulX'];
+export const inject = ['tools', 'ptcRuntime', 'trisoulX', 'loader'];
 
 // Keep the host's registry, SDK and scheduler. Only this preset's wire catalog
-// and model-direct gate differ from native `both`; nested SDK calls remain
+// and model-direct gate follow the matching host contract; nested SDK calls remain
 // visible and execute through the original policy and hooks.
-export function installPtcPresentation(ctx, directTools = () => []) {
+export function installPtcPresentation(ctx, directTools = () => [], mode = 'ptc') {
   const sampled = new WeakMap();
-  ctx.tools.presentAs('both');
+  ctx.tools.presentAs(mode);
   const sample = agent => {
-    const requested = directTools(agent);
+    const requested = mode === 'both' ? directTools(agent) : [];
     const visible = new Set(ctx.tools.schemas(agent).map(tool => tool.name));
     const names = new Set(['run_code', ...requested.filter(name => visible.has(name))]);
     sampled.set(agent, names);
@@ -37,10 +37,16 @@ export function installPtcPresentation(ctx, directTools = () => []) {
   return { sample };
 }
 
-export function apply(ctx) {
+export async function apply(ctx) {
+  const entry = [...ctx.loader.entries()].find(row => row.options.name === '@deepseek-ai/dsh-tools');
+  if (!entry) throw new Error('The matching DSH tools component is missing');
+  const module = await entry.parent.tree.import('@deepseek-ai/dsh-tools');
+  const modes = (module.ToolRuntime ?? module.default)?.Config?.dict?.mode?.list?.map(choice => choice.value);
+  if (!Array.isArray(modes) || !modes.includes('native') || !modes.includes('ptc')) throw new Error('The DSH tools component did not expose its presentation modes');
+  const mode = modes.includes('both') ? 'both' : 'ptc';
   installPtcPresentation(ctx, agent => {
     ctx.trisoulX.prepareBackground(agent);
     return ctx.trisoulX.backgroundOptions(agent).interruptibleWait
       ? ['job_output', 'job_list', 'job_kill', 'runtime_status'] : [];
-  });
+  }, mode);
 }

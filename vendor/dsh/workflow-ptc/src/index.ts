@@ -11,6 +11,8 @@ import * as vm from 'node:vm'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-ptc-runtime'
 import type {} from '@deepseek-ai/dsh-sandbox-policy'
+import type {} from '@deepseek-ai/dsh-working-directory'
+import type {} from '@deepseek-ai/dsh-fs'
 import z from '@deepseek-ai/schemastery'
 import { WorkflowEngine, WorkflowError, WorkflowRunId } from '@deepseek-ai/dsh-workflow'
 import type { WorkflowRun, WorkflowRunInfo, WorkflowStartRequest } from '@deepseek-ai/dsh-workflow'
@@ -18,6 +20,7 @@ import { PtcWorkflowRun } from './host.ts'
 import type { WorkerInit, WorkerLimits } from './types.ts'
 import { parseWorkflowSource } from './source.ts'
 import { workflowAgentType } from './spawn.ts'
+import type { WorkflowHub } from './hub.ts'
 
 export { validateMeta } from './meta.ts'
 export { WorkflowJournal, readJournal, requestKey } from './journal.ts'
@@ -109,7 +112,7 @@ function resolveMaxTotalAgents(requested: number | undefined, ceiling: number): 
  * the seam contract.
  */
 class PtcWorkflowEngine extends WorkflowEngine {
-  static inject = ['subagents', 'ptcRuntime', 'sandboxPolicy']
+  static inject = ['subagents', 'ptcRuntime', 'sandboxPolicy', 'workingDirectory']
 
   static Config: z<Config> = z.object({
     stateDirectory: z.string(),
@@ -132,7 +135,7 @@ class PtcWorkflowEngine extends WorkflowEngine {
 
   /** Resolve saved scripts through the calling world's native filesystem. */
   async prepare(input: { script?: string; meta?: unknown; name?: string; scriptPath?: string }, parent: import('@deepseek-ai/dsh-agent').Agent, signal?: AbortSignal): Promise<{ script: string; meta: import('@deepseek-ai/dsh-workflow').WorkflowMeta }> {
-    if (['script', 'name', 'scriptPath'].filter(key => (input as any)[key] !== undefined).length !== 1) throw new Error('Supply exactly one of script, name, or scriptPath')
+    if ([input.script, input.name, input.scriptPath].filter(value => value !== undefined).length !== 1) throw new Error('Supply exactly one of script, name, or scriptPath')
     if (input.script !== undefined) {
       const parsed = parseWorkflowSource(input.script, input.meta)
       return { script: parsed.body, meta: parsed.meta }
@@ -143,14 +146,15 @@ class PtcWorkflowEngine extends WorkflowEngine {
   }
 
   private async loadSource(reference: string | { scriptPath: string }, parent: import('@deepseek-ai/dsh-agent').Agent, signal?: AbortSignal): Promise<{ meta: import('@deepseek-ai/dsh-workflow').WorkflowMeta; body: string }> {
-    const fs = (this.ctx as any).get('fs')
+    const fs = this.ctx.get('fs')
     if (!fs) throw new Error('Saved workflows require the native filesystem service')
     let path: string
     if (typeof reference === 'string') {
       if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$/.test(reference)) throw new Error('Invalid saved workflow name')
       path = join('.omd', 'workflows', reference + '.js')
     } else path = reference.scriptPath
-    const target = await fs.resolve(path, { cwd: parent.session.header.cwd, signal })
+    const cwd = typeof reference === 'string' ? parent.session.header.cwd : await this.ctx.workingDirectory.ensure(parent, signal)
+    const target = await fs.resolve(path, { ...cwd === undefined ? {} : { cwd }, ...signal === undefined ? {} : { signal } })
     return parseWorkflowSource(await fs.readText(target, signal))
   }
 
@@ -164,8 +168,13 @@ class PtcWorkflowEngine extends WorkflowEngine {
    *   agent, and an optional cancel signal.
    * @returns the live run (its `result` resolves when the script settles).
    */
-  start(request: WorkflowStartRequest): WorkflowRun {
-    const source = parseWorkflowSource(request.script, request.meta)
+  start(request: WorkflowStartRequest & { resumeFromRunId?: string }): WorkflowRun {
+    let source
+    try { source = parseWorkflowSource(request.script, request.meta) }
+    catch (error) {
+      if (error instanceof WorkflowError) throw error
+      throw new WorkflowError(`workflow script does not parse: ${String(error)}`, 'SCRIPT_PARSE', { cause: error })
+    }
     const meta = source.meta
     assertBodyParses(source.body, meta.name)
     const subagentProvider = resolveSubagentProvider(this.ctx, this.config.provider, request.subagentProvider)
@@ -189,7 +198,8 @@ class PtcWorkflowEngine extends WorkflowEngine {
     // Captured service handles keep a holder-owned run usable after engine unload.
     const runCtx = this.ctx
     const subagents = runCtx.subagents
-    const budget = (runCtx as any).get('trisoulX')?.workflowBudget?.capture(request.parent.session)
+    const hub = runCtx.get('trisoulX') as WorkflowHub | undefined
+    const budget = hub?.workflowBudget?.capture(request.parent.session)
     const run = new PtcWorkflowRun(
       runCtx,
       subagents,
@@ -207,14 +217,14 @@ class PtcWorkflowEngine extends WorkflowEngine {
         agentEnd: (agent) => { this.emitWorkflowEvent('workflow/agent-end', info, agent) },
       },
       request.signal,
-      {
-        root: this.config.stateDirectory ?? join((this.ctx as any).get('trisoulX')?.store.dir ?? join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'trisoul-x'), 'workflows'),
-        resumeFromRunId: (request as any).resumeFromRunId,
+      hub !== undefined || this.config.stateDirectory !== undefined || request.resumeFromRunId !== undefined ? {
+        root: this.config.stateDirectory ?? join(hub?.store.dir ?? join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'trisoul-x'), 'workflows'),
+        ...request.resumeFromRunId === undefined ? {} : { resumeFromRunId: request.resumeFromRunId },
         budget: budget?.snapshot ?? (() => ({ total: null, spent: 0 })),
-        budgetOwner: budget?.owner,
+        ...budget?.owner === undefined ? {} : { budgetOwner: budget.owner },
         loadWorkflow: (reference, signal) => this.loadSource(reference, request.parent, signal),
         childType: type => workflowAgentType(this.ctx, type),
-      },
+      } : undefined,
     )
 
     this.emitWorkflowEvent('workflow/start', info)

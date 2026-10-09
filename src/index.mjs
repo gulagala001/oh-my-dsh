@@ -6,6 +6,7 @@ import { homedir } from 'node:os';
 import { realpath } from 'node:fs/promises';
 import { migrateSessionStorage } from './session-migration.mjs';
 import { sourceName } from './message-source.mjs';
+import { currentDirectory } from './working-directory.mjs';
 import { installLoaderLifecycleCompatibility } from './loader-lifecycle-compat.mjs';
 import { installToolSchedulerCompatibility } from './tool-scheduler-compat.mjs';
 import { installToolCancellationPresentation } from './tool-cancellation.mjs';
@@ -195,7 +196,7 @@ export async function apply(ctx, config) {
       const state = hub.store.state(agent.session.id);
       if (state.memoryScope == null) { state.memoryScope = hub.config().memoryScope; hub.store.save(state); }
       hub.agents.set(agent.session.id, agent);
-      hub.components.project(agent.session.header.cwd);
+      hub.components.project(currentDirectory(ctx, agent.session));
       // A pending write-ahead transaction must finish before sending another request.
       // Only an explicitly queued full-compaction command can await model work here.
       setRuntimeContext(agent.session, () => runtimeContext(agent, hub, { messages, turn, step }));
@@ -248,7 +249,7 @@ export async function apply(ctx, config) {
     if (agent.session.header.origin === 'subagent') { hub.store.save(state); return; }
     state.memoryScope ??= hub.scope(agent.session).mode;
     hub.store.save(state); hub.agents.set(agent.session.id, agent); hub.context.start(agent);
-    hub.components.project(agent.session.header.cwd);
+    hub.components.project(currentDirectory(ctx, agent.session));
   }, { global: true });
   ctx.on('session/created', session => {
     if (!isX(session) || !session.header.parentSession || !session.header.isSeeded || session.header.origin === 'subagent') return;

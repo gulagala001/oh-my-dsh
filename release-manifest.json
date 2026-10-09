@@ -2,6 +2,20 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-alpha.2.omd.0.12.1",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "DSH alpha.2 兼容与工作流生命周期修复",
+      "notes": [
+        "对应官方 DSH 0.2.1-alpha.2 SDK 和组件快照，使用原生 activation 管理工作流子会话、取消、后代清理和冷恢复。",
+        "执行目录跟随原生 working_directory，保留项目身份和沙箱根目录；PTC 使用原生 run_code 工具展示与公共 SDK。",
+        "内置 OpenCU 1.4.1，修复控制连接停止后的下载保存；普通工具和 PTC 的附件均保留实际文件与冷恢复。",
+        "工作流清理或结果传输失败如实记录为失败，禁止未可信结果进入已完成缓存；保留工作树、预算和验证证据。",
+        "Pro 优先使用模型已声明的 xhigh，其他模式保留原生最高级排序与用户选择。",
+        "本构建尚未正式发布；其他宿主使用其独立 SDK 构建，平台、硬件与真实账号验收按实际证据说明。"
+      ]
+    },
+    {
       "version": "0.2.1-alpha.1.omd.0.12.0",
       "severity": "normal",
       "unpublished": true,

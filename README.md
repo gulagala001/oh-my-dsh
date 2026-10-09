@@ -5,8 +5,8 @@
 <p align="center"><strong>长任务、电脑操作与任务验证，都在熟悉的 DSH 里。</strong></p>
 
 <p align="center">
-  <a href="docs/release-0.2.1-alpha.1.omd.0.12.0.md"><img src="https://img.shields.io/badge/version-0.2.1--alpha.1.omd.0.12.0-3478F6?style=flat-square" alt="Version 0.2.1-alpha.1.omd.0.12.0（待发布）" /></a>
-  <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.2.1--alpha.1-475569?style=flat-square" alt="DSH 0.2.1-alpha.1" /></a>
+  <a href="docs/release-0.2.1-alpha.2.omd.0.12.1.md"><img src="https://img.shields.io/badge/version-0.2.1--alpha.2.omd.0.12.1-3478F6?style=flat-square" alt="Version 0.2.1-alpha.2.omd.0.12.1（待发布）" /></a>
+  <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.2.1--alpha.2-475569?style=flat-square" alt="DSH 0.2.1-alpha.2" /></a>
 </p>
 <p align="center">
   <a href="#quickstart"><strong>开始使用</strong></a> · <a href="https://gulagala001.github.io/oh-my-dsh/">产品介绍</a> · <a href="docs/README.md">使用文档</a> · <a href="docs/showcase.md">实拍案例</a> · <a href="https://github.com/gulagala001/oh-my-dsh/issues">反馈与建议</a>
@@ -31,9 +31,9 @@ Oh My DSH 是 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 
 ## 开始使用
 
-当前候选配对（未正式发布）：**DSH 0.2.1-alpha.1 · Oh My DSH 0.2.1-alpha.1.omd.0.12.0**，内置 **OpenCU 1.4.0**。已有环境升级前，先结束任务、停止服务或完整退出应用，并备份实际 `DSH_HOME`。[安装、迁移与升级指南](docs/upgrade.md)。
+当前候选配对（未正式发布）：**DSH 0.2.1-alpha.2 · Oh My DSH 0.2.1-alpha.2.omd.0.12.1**，内置 **OpenCU 1.4.1**。rc.2 与 alpha.1 使用各自 SDK 的独立构建。已有环境升级前，先结束任务、停止服务或完整退出应用，并备份实际 `DSH_HOME`。[安装、迁移与升级指南](docs/upgrade.md)。
 
-公开安装版本：**OMD 0.2.1-alpha.1.omd.0.10.0 / DSH 0.2.1-alpha.1**。下方 GitHub 命令安装已发布的 0.10.0，不含 0.11／0.12 候选新特性。0.12.0 仅供[本地候选验收](docs/upgrade.md#candidate-install)。
+公开安装版本：**OMD 0.2.1-alpha.1.omd.0.10.0 / DSH 0.2.1-alpha.1**。下方 GitHub 命令安装已发布的 0.10.0，不含 0.11／0.12 候选改进或 alpha.2 适配。0.12.1 仅供[本地候选验收](docs/upgrade.md#candidate-install)。
 
 <a id="desktop"></a>
 
@@ -41,7 +41,7 @@ Oh My DSH 是 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 
 ### 官方桌面应用
 
-最新源码和 npm 宿主为 **DSH 0.2.1-alpha.1**。官方桌面更新源目前仍为 rc.2；桌面用户安装 **OMD 0.2.0-rc.2.omd.0.10.0**，采用 [rc.2 的固定安装指南](https://github.com/gulagala001/oh-my-dsh/blob/v0.2.0-rc.2.omd.0.10.0/docs/upgrade.md#desktop)，待官方新版桌面包发布后再升级。
+最新源码和 npm 宿主为 **DSH 0.2.1-alpha.2**；截至 2026-10-10，[官方 alpha.2 Release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.1-alpha.2)尚无桌面安装资产。现有 rc.2 桌面用户安装 **OMD 0.2.0-rc.2.omd.0.10.0**，采用 [rc.2 的固定安装指南](https://github.com/gulagala001/oh-my-dsh/blob/v0.2.0-rc.2.omd.0.10.0/docs/upgrade.md#desktop)，待官方新版桌面包发布后再升级。
 
 桌面使用独立的 `desktop` profile，Web 中的插件需在桌面再安装一次。[桌面教程](docs/upgrade.md#desktop) · [从 Web 迁移数据](docs/upgrade.md#web-to-desktop)。
 
@@ -105,7 +105,7 @@ npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 
 内置 [OpenCU](https://github.com/gulagala001/opencu)，把网页与桌面操作接入原生对话。通过 `@Browser`、已连接的 `@Chrome` 或应用引用指定目标；在同一工作台查看实时画面、停止操作、人工接手，再恢复助手控制。
 
-候选 0.12.0 可将内置浏览器的下载保存为持久文件附件，在原生与 OMD-PTC 对话中打开预览；失败保留原因，重复保存复用已交付文件，停止及服务重启后仍可读取附件。实时预览在重载后恢复辅助展示，缺少或失效的缓存不影响基础操控。
+候选 0.12.1 可将内置浏览器的下载保存为持久文件附件，在原生与 OMD-PTC 对话中打开预览；控制连接停止后的下载继续保存，失败保留原因，重复保存复用已交付文件，停止及服务重启后仍可读取附件。实时预览在重载后恢复辅助展示，缺少或失效的缓存不影响基础操控。
 
 这次发布清单验收中，实际执行了筛选、勾选、刷新和下载。导出的 **8 条事项**逐字段核对通过，**3 条待验收项**保留下来。[查看实际网页](docs/site/media/launchpad-browser.jpg)。
 
@@ -149,7 +149,7 @@ npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 ## 专属工具：把工作推进到交付
 
 - **Better Todo**：把用户要求、任务状态与证据连起来。待办提醒默认开启，验证提醒按需开启；实际测试结果单独记录。
-- **Pro / Ultracode**：Pro 专注需求拆解、子代理实现与持续迭代；Ultracode 额外提供完整性检查与对抗验证。两档均使用所选模型声明支持的最高推理档。[工作流说明](docs/workflow.md)。
+- **Pro / Ultracode**：Pro 专注需求拆解、子代理实现与持续迭代，优先使用模型声明的 xhigh；Ultracode 额外提供完整性检查与对抗验证，使用模型声明的最高推理档。[工作流说明](docs/workflow.md)。
 - **提示词优化**：润色、结构化或规划当前草稿，保留原稿和版本，支持撤销、继续修改。[草稿优化指南](docs/usage.md#提示词优化)。
 
 <details>
@@ -185,7 +185,7 @@ npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 
 ## 文档与参与
 
-[文档目录](docs/README.md) · [首次使用](docs/getting-started.md) · [完整指南](docs/usage.md) · [排障](docs/troubleshooting.md) · [更新记录](CHANGELOG.md) · [未发布候选说明](docs/release-0.2.1-alpha.1.omd.0.12.0.md)
+[文档目录](docs/README.md) · [首次使用](docs/getting-started.md) · [完整指南](docs/usage.md) · [排障](docs/troubleshooting.md) · [更新记录](CHANGELOG.md) · [未发布候选说明](docs/release-0.2.1-alpha.2.omd.0.12.1.md)
 
 开发分支可能包含尚未发布的功能；安装固定 tag 时，以[该 tag 的文档](https://github.com/gulagala001/oh-my-dsh/tree/v0.2.1-alpha.1.omd.0.10.0/docs)为准。[DSH 0.2 适配与验证](docs/dsh-0.2-preparation.md)。
 
