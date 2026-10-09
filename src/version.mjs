@@ -57,7 +57,6 @@ export function updateHostRequirement(currentVersion, targetVersion, hostVersion
   return hostVersion && required && compareVersions(hostVersion, required) !== 0
     ? { hostVersion, requiredHostVersion: required } : null;
 }
-const modernAligned = version => Boolean(alignedRelease(version)?.omd);
 const releaseIsPreview = (version, policy) => policy === 'dsh-aligned'
   ? (alignedRelease(version)?.preview ?? parseVersion(version).pre.length > 0)
   : parseVersion(version).pre.length > 0;
@@ -66,18 +65,41 @@ const releaseIsPreview = (version, policy) => policy === 'dsh-aligned'
 const legacyPreview = version => /^v?1\.3\.0-alpha\.\d+(?:\+[^ ]+)?$/.test(version);
 // After 1.7.4, OMD follows the full host version plus a patch suffix, starting
 // at 0.1.7-rc.2.1. Only release-feed ordering crosses this numbering boundary.
+const retiredIndependentVersions = new Set(['0.2.0', '0.2.1', '0.2.2', '0.3.0']);
+const retiredIndependent = version => {
+  const parsed = parseVersion(version);
+  return !alignedRelease(version) && !parsed.pre.length && retiredIndependentVersions.has(parsed.core.join('.'));
+};
 const legacyIndependent = version => !alignedRelease(version) && parseVersion(version).core[0] === 1n && compareVersions(version, '1.7.4') <= 0;
 const hostBound = version => alignedRelease(version) !== null
   ? compareVersions(alignedRelease(version).host, '0.1.7-rc.2') >= 0
-  : parseVersion(version).core[0] === 0n && compareVersions(version, '0.1.7-rc.2.1') >= 0;
+  : !retiredIndependent(version) && parseVersion(version).core[0] === 0n && compareVersions(version, '0.1.7-rc.2.1') >= 0;
+// These are historical numbering transitions, not supported-host boundaries.
+// Compare one family key before host/revision keys so archived formats cannot
+// create a comparison cycle or turn a migration into an older release.
+function releaseEra(version, aligned) {
+  if (legacyPreview(version)) return 0;
+  if (aligned) return compareVersions(aligned.host, '0.1.7-rc.2') < 0 ? 1
+    : compareVersions(aligned.host, '0.2.0-rc.2') < 0 ? 3 : 5;
+  const parsed = parseVersion(version);
+  if (legacyIndependent(version)) return 2;
+  if (parsed.core[0] === 0n) return parsed.core[1] < 2n
+    ? compareVersions(version, '0.1.7-rc.2') < 0 ? 1 : 3
+    : parsed.core[1] < 4n ? 4 : 6;
+  return 6;
+}
 function releaseCompare(a, b, policy) {
-  if (policy === 'dsh-aligned' && legacyPreview(a) !== legacyPreview(b)) return legacyPreview(a) ? -1 : 1;
   if (policy === 'dsh-aligned') {
-    if (modernAligned(a) !== modernAligned(b)) return modernAligned(a) ? 1 : -1;
-    if (hostBound(a) && legacyIndependent(b)) return 1;
-    if (legacyIndependent(a) && hostBound(b)) return -1;
     const left = alignedRelease(a), right = alignedRelease(b);
-    if (left && right) return compareVersions(left.host, right.host) || (left.omd && right.omd ? compareVersions(left.omd, right.omd) : 0) || (left.patch < right.patch ? -1 : left.patch > right.patch ? 1 : 0);
+    const era = releaseEra(a, left) - releaseEra(b, right);
+    if (era) return Math.sign(era);
+    const hostOrder = compareVersions(left?.host || a, right?.host || b);
+    if (hostOrder) return hostOrder;
+    if (left && right) {
+      if (Boolean(left.omd) !== Boolean(right.omd)) return left.omd ? 1 : -1;
+      return (left.omd && right.omd ? compareVersions(left.omd, right.omd) : 0) || (left.patch < right.patch ? -1 : left.patch > right.patch ? 1 : 0);
+    }
+    if (Boolean(left) !== Boolean(right)) return left ? 1 : -1;
   }
   return compareVersions(a, b);
 }
@@ -86,19 +108,22 @@ export function validateManifest(value) {
   if (value?.schema !== 1 || !Array.isArray(value.releases) || !value.releases.length || value.releases.length > 500) throw Error('Invalid release manifest');
   if (value.versionPolicy !== undefined && value.versionPolicy !== 'dsh-aligned') throw Error('Invalid version policy');
   const policy = value.versionPolicy;
+  const identities = new Set();
   const releases = value.releases.map(r => {
-    parseVersion(r.version);
+    const parsed = parseVersion(r.version);
+    const identity = parsed.core.join('.') + (parsed.pre.length ? '-' + parsed.pre.join('.') : '');
+    if (identities.has(identity)) throw Error('Duplicate release version');
+    identities.add(identity);
     if (!['normal', 'required'].includes(r.severity) || typeof r.title !== 'string' || !r.title.trim() || r.title.length > 200
       || !Array.isArray(r.notes) || r.notes.length > 20 || r.notes.some(n => typeof n !== 'string' || n.length > 2000)) throw Error('Invalid release entry');
     return { version: r.version, severity: r.severity, title: r.title, notes: [...r.notes] };
   }).sort((a, b) => releaseCompare(b.version, a.version, policy));
-  if (releases.some((r, i) => i && compareVersions(releases[i - 1].version, r.version) === 0)) throw Error('Duplicate release version');
   return { schema: 1, ...(policy ? { versionPolicy: policy } : {}), releases };
 }
 export function versionStatus(currentVersion, manifest, { hostVersion } = {}) {
   const preview = releaseIsPreview(currentVersion, manifest.versionPolicy);
   const compare = (a, b) => releaseCompare(a, b, manifest.versionPolicy);
-  const migrate = manifest.versionPolicy === 'dsh-aligned' && (legacyIndependent(currentVersion) || ['0.2.0', '0.2.1', '0.2.2', '0.3.0'].includes(currentVersion));
+  const migrate = manifest.versionPolicy === 'dsh-aligned' && (legacyIndependent(currentVersion) || retiredIndependent(currentVersion));
   const channel = manifest.releases.filter(r => preview || !releaseIsPreview(r.version, manifest.versionPolicy) || migrate && hostBound(r.version));
   const eligible = hostVersion ? channel.filter(r => releaseHostVersion(r.version) && !updateHostRequirement(currentVersion, r.version, hostVersion)) : channel;
   const newerHost = hostVersion && channel.find(r => compare(r.version, currentVersion) > 0 && updateHostRequirement(currentVersion, r.version, hostVersion));

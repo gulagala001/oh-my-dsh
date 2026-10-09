@@ -487,6 +487,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
         // Cancellation is not a test result; preserve unfinished and unstarted evidence.
         if (signal?.aborted) { aborted = true; break }
         const real = existingPath(cwd, l.path)
+        const startedAt = Date.now(), started = performance.now()
         let r
         try { r = real ? await runTestLink(l, real, execute, runTimeoutMs) : { ok: false, timedOut: false, out: `no such file ${l.path}` } }
         catch (error) {
@@ -496,7 +497,11 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
           throw error
         }
         if (r.aborted) { aborted = true; break }
-        l.lastRun = { pass: r.ok, timedOut: Boolean(r.timedOut), tail: (r.out ?? '').slice(-RUN_TAIL_CHARS) }
+        l.lastRun = { pass: r.ok, timedOut: Boolean(r.timedOut), tail: (r.out ?? '').slice(-RUN_TAIL_CHARS),
+          startedAt, finishedAt: Date.now(), durationMs: Math.max(0, Math.round(performance.now() - started)),
+          // Only the native runner can supply execution identity. Old evidence
+          // and results without a completed native call retain unknown provenance.
+          execution: r.execution ?? null }
         results.push({ t, l, pass: r.ok, timedOut: l.lastRun.timedOut, timeoutMs: r.timeoutMs ?? runTimeoutMs, tail: l.lastRun.tail })
       }
       if (results.length) commit(session, rec, next)

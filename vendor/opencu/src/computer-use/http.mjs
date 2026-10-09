@@ -3,6 +3,7 @@ import {createReadStream} from 'node:fs';
 import {stat} from 'node:fs/promises';
 import {pipeline} from 'node:stream/promises';
 import { readJsonBody, sendJson as send } from '../http.mjs';
+import { readComputerPresentation } from './presentation.mjs';
 const body = req => readJsonBody(req, { maxBytes: 65536 });
 
 async function requestOperation(req, res, task, run, timeoutMs = 15000) {
@@ -30,6 +31,10 @@ export function mountComputerUseHttp(ctx,hub){
         // Discovery and an idle control panel must work before that turn.
         if(!id||id.length>200||/[\x00-\x1f\/\\]/.test(id)){send(res,400,{error:'请选择有效会话'});return;}
         const manager=hub.computerUse;
+        if(req.method==='GET'&&op==='presentation'){
+          const meta=await requestOperation(req,res,'文件交付记录',signal=>readComputerPresentation(ctx.get('sessionQuery'),hub.computerPresentation,id,url.searchParams.get('call'),signal));
+          send(res,200,{meta});return;
+        }
         if(req.method==='GET'&&op==='setup'){send(res,200,await manager.setupStatus());return;}
         if(req.method==='GET'&&op==='state'){const state=manager.status(id);const session=ctx.agents?.get(id)?.session??ctx.sessions?.get(id);const vision=await computerVision(ctx,session);send(res,200,{...state,vision,enabled:state.enabled&&hub.config().computerUseEnabled!==false});return;}
         if(req.method==='GET'&&op==='tabs'){send(res,200,{tabs:await manager.listUserTabs(id)});return;}

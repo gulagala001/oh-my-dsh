@@ -185,14 +185,20 @@ export class BrowserHost extends BrowserActions {
   checkConnection(connection) {
     if (connection.run !== this.run || connection.run.lost || this.closing) throw Object.assign(new Error('The browser exited. Bind a current browser tab again.'), { code: 'BROWSER_DISCONNECTED' });
   }
-  async connection(sessionId) {
+  async connection(sessionId, { observer = false } = {}) {
     if (this.disconnecting?.has(sessionId)) await this.disconnecting.get(sessionId);
     if (!this.connections.has(sessionId)) {
       const pending = (async () => {
         const run = await this.start();
+        // This profile owns its downloads across controller reconnects;
+        // Playwright must not remove them with a connection's temporary files.
+        const artifactsDir = join(this.directory, 'downloads');
+        await mkdir(artifactsDir, { recursive: true, mode: 0o700 });
         const transport = new BrowserTransport(run.endpoint, this.onPointer && (event => this.onPointer({ ...event, sessionId, tabId: event.targetId })), targetId => this.wantsPointer?.(sessionId, targetId) ?? true);
         let browser;
-        try { browser = await chromium.connectOverCDP(transport, { isLocal: true }); }
+        // A preview must not replace the controller's Chromium download
+        // directory (or apply other Playwright context defaults).
+        try { browser = await chromium.connectOverCDP(transport, { isLocal: true, artifactsDir, ...(observer ? { noDefaults: true } : {}) }); }
         catch (error) { transport.close(); throw error; }
         if (run !== this.run || run.lost || this.closing) { await browser.close(); throw new Error('The browser exited while connecting'); }
         const context = browser.contexts()[0]; context.setDefaultTimeout(8000); context.setDefaultNavigationTimeout(15000);
@@ -292,7 +298,7 @@ export class BrowserHost extends BrowserActions {
   async target(sessionId, id, { claim = true, signal } = {}) {
     signal?.throwIfAborted();
     if (!this.records.has(id)) throw new Error('This tab has closed or its browser exited. List tabs and explicitly choose a current target.');
-    const connection = await this.connection(sessionId);
+    const connection = await this.connection(sessionId, { observer: !claim });
     if (!connection.pages.has(id)) await this.list(sessionId);
     signal?.throwIfAborted();
     const record = connection.pages.get(id);

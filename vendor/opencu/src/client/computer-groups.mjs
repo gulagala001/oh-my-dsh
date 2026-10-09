@@ -10,12 +10,12 @@ export function operationKind(name=''){
   return'tool';
 }
 export const operationIcon=names=>({image:'image',read:'book',command:'terminal',search:'search',web:'browser',computer:'screen',edit:'annotate',tool:'stack'})[operationKind(names[0])];
-export function operationState(block){
+export function operationState(block,meta=block.meta){
   if(block.phase==='preparing')return'preparing';
   if(block.kind!=='tool-result')return'running';
   const name=block.call?.name??block.name??'';
-  if(['ABORTED','ABORTED_BEFORE_DISPATCH','interrupted','COMPUTER_USE_STOPPED'].includes(block.error?.code)||operationKind(name)==='computer'&&block.isError&&/tool call aborted|Computer Use (?:was |is )?stopped/i.test((block.content??[]).filter(c=>c.type==='text').map(c=>c.text).join('\n')))return'stopped';
-  return block.isError||block.meta?.computerUseError?'error':'done';
+  if(['ABORTED','ABORTED_BEFORE_DISPATCH','interrupted','COMPUTER_USE_STOPPED'].includes(block.error?.code)||operationKind(name)==='computer'&&(block.isError||meta?.computerUseError)&&/tool call aborted|Computer Use (?:was |is )?stopped/i.test((block.content??[]).filter(c=>c.type==='text').map(c=>c.text).join('\n')+'\n'+(meta?.computerUseError??'')))return'stopped';
+  return block.isError||meta?.computerUseError?'error':'done';
 }
 const rowTitles={bash:['bash','运行'],pwsh:['pwsh','运行 PowerShell'],read:['read','读取'],read_image:['readImage','查看图像'],write:['write','写入'],edit:['edit','编辑'],grep:['grep','搜索'],glob:['glob','查找文件'],web_search:['webSearch','搜索网页'],web_fetch:['webFetch','读取网页'],run_code:['code','运行代码']};
 export function operationRowLocale(t,name,block){
@@ -27,13 +27,25 @@ export function operationRowLocale(t,name,block){
   return(key,...args)=>key==='tool.title.'+row[0]?title:t(key,...args);
 }
 
-export function summarizeToolOutcomes(data) {
+export function computerPresentationCalls(data) {
+  const ids = [], seen = new Set(), pending = data.map(item => item.root);
+  while (pending.length) {
+    const block = pending.pop();
+    if (!block || seen.has(block.callId)) continue;
+    seen.add(block.callId);
+    if (block.kind === 'tool-result' && (block.call?.name ?? block.name) === 'computer_use' && !block.meta && !block.isError) ids.push(block.callId);
+    pending.push(...block.subCalls ?? []);
+  }
+  return ids;
+}
+
+export function summarizeToolOutcomes(data, presentation = {}) {
   const seen = new Set();
   let failures = 0, stopped = 0;
   function visit(block) {
     if (!block || seen.has(block.callId)) return;
     seen.add(block.callId);
-    const state = operationState(block);
+    const state = operationState(block, block.meta ?? presentation[block.callId]);
     if (state === 'error') failures++;
     if (state === 'stopped') stopped++;
     for (const child of block.subCalls ?? []) visit(child);

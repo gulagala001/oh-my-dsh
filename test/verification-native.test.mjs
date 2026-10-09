@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { verificationFixture } from './fixtures/verification.mjs';
+import { createTodoStore } from '../src/todolist.mjs';
 
 const quote = 'Verify the fixture and preserve its evidence.';
 async function link(f, files) {
@@ -23,13 +24,26 @@ const completed = patch => ({ kind: 'foreground', exitCode: 0, signal: null, tim
 test('verification uses the shipped native shell and preserves its execution identity and quoting', async t => {
   const f = verificationFixture(t), path = "check ' 中文.mjs";
   writeFileSync(join(f.dir, path), 'console.log("NATIVE_VERIFICATION_PASS")'); await link(f, [path]);
+  const before = Date.now();
   assert.match(await f.verify({ op: 'run' }), /PASS.*NATIVE_VERIFICATION_PASS/);
   const outer = f.dispatches.findLast(exec => exec.name === 'verify_link'), shell = f.dispatches.findLast(exec => exec.name === f.shellName);
   assert.equal(shell.agent, outer.agent); assert.equal(shell.parent, outer.token);
   assert.equal(shell.rootCallId, outer.rootCallId); assert.notEqual(shell.callId, outer.callId);
   assert.equal(shell.arguments.timeoutMs, 300000); assert.equal(shell.arguments.run_in_background, false);
   assert.equal(shell.arguments.workdir, f.dir); assert.equal(shell.arguments.sandbox_permissions, undefined);
-  assert.equal(results(f)[0].pass, true);
+  const record = results(f)[0];
+  assert.equal(record.pass, true);
+  assert.equal(record.execution.tool, f.shellName);
+  assert.equal(record.execution.callId, shell.callId);
+  assert.equal(record.execution.rootCallId, shell.rootCallId);
+  assert.equal(record.execution.command, shell.arguments.command);
+  assert.equal(record.execution.workdir, shell.arguments.workdir);
+  assert.equal(record.execution.exitCode, 0);
+  assert.equal(record.execution.signal, null);
+  assert.equal(record.execution.timeoutMs, shell.arguments.timeoutMs);
+  assert.ok(record.startedAt >= before && record.finishedAt <= Date.now());
+  assert.ok(record.finishedAt >= record.startedAt && record.durationMs >= 0);
+  assert.deepEqual(createTodoStore().snapshot(f.session).tasks[0].links[0].lastRun, record, 'native execution provenance survives ledger recovery');
 });
 
 for (const mode of ['read-only', 'workspace-write']) test(`verification reaches the ${mode} policy boundary and cannot bypass a refusing sandbox`, async t => {

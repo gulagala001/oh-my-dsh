@@ -16,6 +16,7 @@ import { usePreviewPaneVisible, usePreviewPanePresence } from './preview-presenc
 import { PageAnnotation } from './page-annotation.jsx';
 import { ComputerIcon } from './computer-icons.jsx';
 import {SavedImage} from './tool-image.jsx';
+import { useComputerPresentation } from './computer-presentation.mjs';
 
 const base='trisoul-x/computer-use/';
 const url=(op,id)=>base+op+'?session='+encodeURIComponent(id);
@@ -88,15 +89,17 @@ export function ComputerPane({sessionId,useTabInfo,inputActions,conversation,hos
     </div>
   </div>;
 }
-function ComputerCard({block,loadImage,toolName,openFile}){
+function ComputerCard({block,loadImage,toolName,openFile,sessionId,callId}){
   const [open,setOpen]=useState(false),bodyId=useId();
+  const stored=useComputerPresentation(sessionId,block.kind==='tool-result'&&!block.meta&&!block.isError?[callId]:[]);
   const preparing=block.phase==='preparing';
   let args={};try{args=JSON.parse(block.call?.argsRaw??block.argsRaw??'{}');}catch{}
-  const settled=block.kind==='tool-result',failure=block.isError||block.meta?.computerUseError;
+  const meta=block.meta??stored[callId];
+  const settled=block.kind==='tool-result',failure=block.isError||meta?.computerUseError;
   const content=block.content??[],message=content.filter(c=>c.type==='text').map(c=>c.text).join('\n');
   const images=content.filter(c=>c.type==='image');
-  const files=block.meta?.computerUseFiles??[];
-  const stopped=failure&&/tool call aborted|COMPUTER_USE_STOPPED|Computer Use (?:was |is )?stopped|execution (?:was )?cancelled/i.test(message);
+  const files=meta?.computerUseFiles??[];
+  const stopped=failure&&/tool call aborted|COMPUTER_USE_STOPPED|Computer Use (?:was |is )?stopped|execution (?:was )?cancelled/i.test(message+'\n'+(meta?.computerUseError??''));
   const status=preparing?'准备调用':!settled?'执行中':stopped?'已停止':failure?'执行失败':'已执行';
   return <div className="tx-cu-card" data-state={preparing?'preparing':!settled?'running':stopped?'stopped':failure?'error':'idle'}>
     <button type="button" className="tx-cu-card-heading" disabled={preparing} aria-expanded={preparing?undefined:open} aria-controls={preparing?undefined:bodyId} onClick={()=>setOpen(value=>!value)}>
@@ -109,7 +112,7 @@ function ComputerCard({block,loadImage,toolName,openFile}){
     {open&&!preparing&&<div className="tx-cu-card-body" id={bodyId}>
       {!!images.length&&<div className="tx-cu-result-images">{images.map((c,i)=><SavedImage key={i} attachment={c.attachment} loadImage={loadImage}/>)}</div>}
       {!!files.length&&<div className="tx-cu-export-files">{files.map((file,i)=><button key={i} type="button" onClick={()=>openFile?.(file.path)} disabled={!openFile} title={file.path}>{file.name}<small>{Math.ceil(file.bytes/1024)} KB</small></button>)}</div>}
-      {failure&&<p className="tx-cu-error">{message.split('\n').find(line=>line.trim())||String(block.meta?.computerUseError||status)}</p>}
+      {failure&&<p className="tx-cu-error">{message.split('\n').find(line=>line.trim())||String(meta?.computerUseError||status)}</p>}
       {!images.length&&message&&<pre>{message}</pre>}
       <details><summary>查看操作与结果</summary>{args.code&&<pre>{args.code}</pre>}{message&&<pre>{message}</pre>}</details>
     </div>}

@@ -13,9 +13,9 @@
   --omd-duration: 180ms;
   --omd-switch-on: #34c759;
   --omd-on-user: #ffffff;
-  --omd-user-bg: #007aff;
-  --omd-button-bg: #007aff;
-  --omd-button-top: #2691ff;
+  --omd-user-bg: #0067db;
+  --omd-button-bg: #0067db;
+  --omd-button-top: #0070e0;
   --omd-button-fg: #ffffff;
   --omd-button-hover: #0066dc;
 }

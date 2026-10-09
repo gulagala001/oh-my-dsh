@@ -85,6 +85,7 @@ export class ComputerRuntime {
                 appendOutput(current, { type: 'text', text });
               }
               const files = method === 'content.export' && typeof value === 'string' ? [value]
+                : method === 'downloads.save' && typeof value?.path === 'string' ? [value.path]
                 : method === 'pageAssets.bundle' && value?.manifestPath ? [value.manifestPath, ...value.assets.map(asset => asset.path)] : [];
               for (const path of files) if (!current.blocks.some(block => block.type === 'file' && block.path === path)) current.blocks.push({ type: 'file', path });
             }

@@ -69,6 +69,8 @@ html.omd[data-omd-layout="ios-liquid"] .EvIC1a_column { padding-top: 16px; paddi
 html.omd[data-omd-layout="ios-liquid"] .Sixlwa_bubble { padding: 12px 18px; border-bottom-right-radius: 8px; }
 html.omd[data-omd-layout="ios-liquid"] .Sixlwa_bubble :is(a,code) { color: inherit; }
 html.omd[data-omd-layout="ios-liquid"] .Sixlwa_bubble code { background: #ffffff26; }
+/* Reference chips share the user foreground, including composed palettes. */
+html.omd[data-omd-layout="ios-liquid"] .tx-cu-user-bubble { --cu-blue: var(--omd-on-user); }
 html.omd[data-omd-layout="ios-liquid"] [data-chat-flow-kind] { line-height: var(--omd-line-height); }
 html.omd[data-omd-layout="ios-liquid"] :is(.xzv4MW_actions,.l_V-RG_label) { color: var(--omd-muted); }
 html.omd[data-omd-layout="ios-liquid"] :is(.tx-cu-group-toggle,.omd-record-toggle) { padding: 5px 10px; min-height: 32px; }

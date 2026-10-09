@@ -20,6 +20,8 @@
 
 材质参考 [Apple Materials](https://developer.apple.com/design/human-interface-guidelines/materials)：导航与控件使用透明、模糊、高光边缘与阴影，正文保持清晰。Web 实现采用 CSS backdrop-filter 与渐变，不等同于 iOS 原生合成器的实时光学折射。字体使用本机系统字体；未捆绑 Apple 字体或外部素材。真实文件与电脑画面不添加玻璃滤镜。
 
+默认用户气泡和主按钮使用较深的蓝色，白字在气泡上为 5.30:1，在主按钮渐变两端为 4.78:1 / 5.30:1；按 [Apple Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility) 引用的 WCAG AA 普通文字 4.5:1 门槛验收浅色与深色。电脑引用标签跟随气泡文字色；自定义配色继续控制主按钮和气泡的前景色，不强制改为白色。此对比度结果适用于默认配色，自定义配色由其具体颜色决定。
+
 ## 源文件与构建
 
 源目录为 `src/client/skins/ios-liquid-glass/`：`skin.json` 定义身份与布局，`tokens.css` 定义明暗设计参数，`native.css` 定义材质与控件，`layout.css` 负责宿主布局适配。它使用现有原生控件和行为，不复制会话或设置组件。
@@ -34,6 +36,6 @@ node scripts/pack-skin.mjs src/client/skins/ios-liquid-glass dist/skins/ios-liqu
 
 ## 验证
 
-`test/ios-liquid-glass-ui.test.mjs` 在真实 DSH 宿主和隔离数据目录中检查：明暗 / 系统模式、侧栏与手机导航、八个设置分页、1440 / 768 / 390px 布局、菜单、工作台、手机发送与停止、新会话、降低特效、刷新保存及默认恢复。其他皮肤的导入、覆盖、错误恢复与卸载契约由现有皮肤测试覆盖。
+`test/ios-liquid-glass-ui.test.mjs` 在真实 DSH 宿主和隔离数据目录中检查：明暗 / 系统模式、侧栏与手机导航、七个设置分页、1440 / 768 / 390px 布局、菜单、工作台、手机发送与停止、新会话、降低特效、刷新保存及默认恢复。新增可读性回归直接读取真实气泡、电脑引用标签和已启用发送按钮的 ComputedStyle，独立计算文字及渐变两端的对比度，并覆盖高对比度、减少动态效果、降低特效、深色自定义配色与高级用户消息文字色。其他皮肤的导入、覆盖、错误恢复与卸载契约由现有皮肤测试覆盖。
 
-设置 `TRISOUL_UI_ARTIFACTS=1` 运行该测试，可在 `data/ios-liquid-glass-qa/` 查看真实页面截图。当前自动验证环境为 Chromium；未宣称 iPhone Safari 或 Windows 桌面壳实机验收。
+设置 `TRISOUL_UI_ARTIFACTS=1` 运行该测试，可在 ignored `work/rea-upgrade/ios-liquid-glass-qa/` 查看真实页面截图和 `computed-contrast.json`。浏览器使用隔离的无头 Chromium，不占用用户登录态或桌面。当前自动验证环境为 Chromium；未宣称 iPhone Safari 或 Windows 桌面壳实机验收。
