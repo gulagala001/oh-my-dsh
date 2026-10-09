@@ -9,7 +9,7 @@ function setup() {
   const state = { binding: { scope: 'session', project: '/p' }, review: {} };
   const calls = [];
   const session = { id: 's', snapshotEvents: () => [] };
-  const hub = { config: () => cfg, store: { state: () => legacy, save() {}, memories() { calls.push('legacy-read'); return []; } }, context: {
+  const hub = { config: () => cfg, store: { peek: () => legacy, state: () => legacy, save() {}, memories() { calls.push('legacy-read'); return []; } }, context: {
     state: () => state, view: () => ({ ok: true }), store: { visible: () => [], get(sid, id) { if (id !== 'allowed') throw Error('范围'); return { id }; }, global: () => ({ text: 'manual', revision: 1 }), setGlobal(text, revision) { calls.push('user-save'); if (revision !== 1) throw Error('已被其他窗口更新'); return { text, revision: 2 }; } },
     manualSessions: new Map(), async requestCompaction(_session, agent, operation) { calls.push(operation); return { queued: !agent || agent.status !== 'idle', changed: false }; },
     queueManual: () => ({ queued: true, changed: false }), applyReady: async () => { calls.push('apply-only'); return null; },

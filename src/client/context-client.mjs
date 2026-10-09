@@ -480,13 +480,13 @@ export function createContextUI(React) {
     }
   }
   class ScopeControl extends React.Component {
-    state = { data: null, error: '', busy: false };
+    state = { data: null, error: '', busy: false, loading: false };
     revision = 0;
     componentDidMount() { this.alive = true; this.load(); }
     componentDidUpdate(prev) {
       if (prev.sessionId !== this.props.sessionId) {
         ++this.revision; this.writing = null;
-        this.setState({ data: null, error: '', busy: false }, this.load);
+        this.setState({ data: null, error: '', busy: false, loading: false }, this.load);
       } else if (prev.locked !== this.props.locked) this.load();
     }
     componentWillUnmount() { this.alive = false; ++this.revision; this.writing = null; }
@@ -494,8 +494,10 @@ export function createContextUI(React) {
       if (this.writing) return;
       const id = this.props.sessionId, ticket = ++this.revision;
       const active = () => this.alive && id === this.props.sessionId && ticket === this.revision;
+      this.setState({ loading: true });
       try { const data = await api('/scope' + suffix(id)); if (active()) this.setState({ data, error: '' }); }
       catch (e) { if (active()) this.setState({ error: e.message }); }
+      finally { if (active()) this.setState({ loading: false }); }
     };
     change = async scope => {
       if (this.writing) return;
@@ -514,8 +516,10 @@ export function createContextUI(React) {
     };
     render() {
       const d = this.state.data;
-      return h('label', { className: 'cx-scope-chip', title: this.state.error || (d?.locked || this.props.locked ? '本会话已绑定范围' : '新会话的记忆范围') }, icon(d?.scope === 'global'?'globe':d?.scope === 'project' ? 'layers' : 'lock', 13),
-        h('select', { 'aria-label': '会话范围', disabled: !d || d.locked || this.props.locked || this.state.busy, value: d?.scope || 'session', onChange: e => this.change(e.target.value) }, h('option', { value: 'session' }, '会话隔离'), h('option', { value: 'project' }, '项目共享'),h('option',{value:'global'},'全局记忆')));
+      return h('div', { className: 'cx-scope-chip', title: this.state.error || (d?.locked || this.props.locked ? '本会话已绑定范围' : '新会话的记忆范围') }, icon(d?.scope === 'global'?'globe':d?.scope === 'project' ? 'layers' : 'lock', 13),
+        d ? h('select', { 'aria-label': '会话范围', disabled: d.locked || this.props.locked || this.state.busy, value: d.scope, onChange: e => this.change(e.target.value) }, h('option', { value: 'session' }, '会话隔离'), h('option', { value: 'project' }, '项目共享'),h('option',{value:'global'},'全局记忆'))
+          : h('span', { role: 'status' }, this.state.error ? '范围暂不可读' : '读取范围…'),
+        this.state.error && button('', this.load, { label: '重试会话范围', title: this.state.error, icon: 'refresh', className: 'cx-scope-retry', disabled: this.state.busy || this.state.loading }));
     }
   }
   const ScopeChip = props => { const locked = props.useSessions(s => s.byId[props.sessionId]?.blank === false); return h(ScopeControl, { ...props, locked }); };
@@ -606,6 +610,7 @@ export const CONTEXT_CSS = `
 .cx-timeline{margin-left:15px;padding-left:22px;border-left:1px solid var(--cx-line)}.cx-timeline-record{position:relative;padding:0 0 19px;margin-bottom:5px}.cx-timeline-record:last-child{padding-bottom:0}.cx-timeline-dot{position:absolute;top:6px;left:-27px;width:9px;height:9px;border:2px solid var(--cx-bg);border-radius:50%;background:color-mix(in srgb,var(--cx-blue) 65%,var(--cx-bg));box-shadow:0 0 0 1px var(--cx-line)}.cx-timeline-record time{font-size:10px;color:var(--cx-muted)}.cx-timeline-record>.cx-prose{margin:7px 0 8px}.cx-timeline-record .cx-record-footer{padding-bottom:9px;border-bottom:1px solid var(--cx-line)}
 .cx-reader{position:absolute;inset:0;z-index:5;background:var(--cx-bg);display:flex;flex-direction:column;outline:none}.cx-reader-head{display:flex;align-items:center;gap:10px;padding:12px 17px;border-bottom:1px solid var(--cx-line);flex-shrink:0}.cx-reader-head>strong{flex:1;font-size:13px}.cx-record-meta{display:flex;flex-direction:column;gap:6px;padding:20px 0 0}.cx-record-meta code{font-size:11px}.cx-document{padding:21px 0;border-bottom:1px solid var(--cx-line)}.cx-document pre{max-height:none;margin:0}.cx-global-editor{min-height:295px!important}
 .cx-scope-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border:1px solid var(--cx-line);border-radius:7px;max-width:140px;line-height:1.4;font-size:11px;color:var(--cx-muted);background:var(--cx-bg)}.cx-scope-chip select{border:0;background:transparent;color:inherit;font:inherit;padding:0;min-width:0;outline:none;cursor:pointer}.cx-scope-chip select:disabled{opacity:1;appearance:none;cursor:default}
+.cx-scope-chip .cx-scope-retry{width:22px;min-width:22px;height:22px;padding:3px;border:0;background:transparent;color:inherit}
 @container cx (max-width:400px){.cx-head{padding:18px 16px 15px}.cx-body{padding:0 16px 20px}.cx-tabs{padding:0 16px;gap:19px}.cx-savebar{padding:11px 15px}.cx-frequency-preview>div{padding:10px}.cx-frequency-preview strong{font-size:22px}.cx-frequency-preview small{font-size:9px}.cx-grid{gap:2px 11px}.cx-choice{padding:12px}.cx-stage{gap:5px}.cx-stage small{font-size:8.5px}.cx-stage strong{font-size:10px}.cx-pipeline-card{padding:13px}.cx-pipeline-action{justify-content:flex-start}.cx-pipeline-action small{width:100%}.cx-record{padding:12px}.cx-selection{gap:6px;flex-wrap:wrap}.cx-selection .cx-actions{margin-left:auto}.cx-save-status{max-width:45%}.cx-head-title{gap:9px}}
 @container cx (max-width:320px){.cx-grid{grid-template-columns:1fr}.cx-choice-grid{grid-template-columns:1fr}.cx-settings .cx-segments{flex-direction:column}.cx-tabs{gap:14px}.cx-tabs button{font-size:11px}.cx-frequency-preview{gap:5px}.cx-frequency-preview>div{padding:8px}.cx-frequency-preview small{width:100%}.cx-stage .cx-dot{display:none}.cx-save-status svg{display:none}.cx-record-check time{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.cx-panel *{animation:none!important;transition:none!important}}

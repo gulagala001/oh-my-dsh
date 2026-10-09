@@ -3,21 +3,31 @@ import { sendAttachment } from '../http.mjs';
 import { compactionMessage } from './commands.mjs';
 import { Config, contextConfig } from '../config.mjs';
 import { normalizePersonalityPatch } from '../cc-adaptation/personality.mjs';
-import { userMessages } from './core.mjs';
+import { actualUser } from './core.mjs';
 
-export async function handleContextApi({ hub, ctx, req, res, url, session, agent, id, send, readBody }) {
+export async function handleContextApi({ hub, ctx, req, res, url, session, agent, inspection, archivedOnly, refreshSession, id, send, readBody }) {
   const path = url.pathname.replace('/trisoul-x/api', '');
   const needSession = () => { if (!session) throw new Error('请选择一个可读取的会话'); return session; };
   if (path === '/scope') {
-    const state = id ? hub.store.state(id) : null;
-    const preparedState = id ? hub.context.store.state?.(id) : null;
-    const locked = Boolean(state?.started || (agent && agent.status !== 'idle') || preparedState?.records?.length || Object.keys(preparedState?.publications?.catalog || {}).length || preparedState?.publications?.globalRevision != null || (session && userMessages(session).length));
+    let state = id ? hub.store.peek(id) : null;
+    const scopeLocked = target => {
+      const saved = id ? hub.store.peek(id) : null;
+      const preparedState = id ? hub.context.store.peek?.(id) : null;
+      const currentAgent = id ? ctx.agents?.get(id) ?? target.agent : target.agent;
+      const currentSession = currentAgent?.session ?? (id ? ctx.sessions?.get(id) : null) ?? target.session;
+      return Boolean(target.archivedOnly || saved?.started || (currentAgent && currentAgent.status !== 'idle') || preparedState?.records?.length || Object.keys(preparedState?.publications?.catalog || {}).length || preparedState?.publications?.globalRevision != null || currentSession?.snapshotEvents().some(actualUser) || target.inspection?.events.some(actualUser));
+    };
+    const locked = scopeLocked({ session, agent, inspection, archivedOnly });
     const scope = () => ['session','global'].includes(state?.memoryScope || hub.config().memoryScope) ? state?.memoryScope || hub.config().memoryScope : 'project';
     if (req.method === 'POST') {
       if (locked) { send(res, 409, { error: '会话已开始，隔离范围不能中途扩大' }); return true; }
       const input = await readBody(req);
       if (!['session', 'project', 'global'].includes(input.scope)) throw new Error('范围只能是 session、project 或 global');
-      if (state) { state.memoryScope = input.scope; hub.store.save(state); }
+      const fresh = id && refreshSession ? await refreshSession() : { session, agent, inspection, archivedOnly };
+      if (fresh.found === false) { send(res, 404, { error: '会话不存在' }); return true; }
+      if (scopeLocked(fresh)) { send(res, 409, { error: '会话已开始，隔离范围不能中途扩大' }); return true; }
+      state = id ? hub.store.peek(id) : null;
+      if (id) { state ??= hub.store.state(id); state.memoryScope = input.scope; hub.store.save(state); }
       else await ctx.settings.update('trisoul-x', { memoryScope: input.scope });
     }
     send(res, 200, { scope: scope(), locked, default: ['session','global'].includes(hub.config().memoryScope) ? hub.config().memoryScope : 'project' }); return true;
