@@ -71,10 +71,11 @@ test('PTC visibility permits verification only as a nested call and keeps the sh
       if (result.isError) throw Error(result.error.message);
       return result.value;
     } });
-  f.agent.ctx.tools.presentAs('ptc', { directTools: ['verification_test_entry'] });
   // This test exercises the real PTC visibility/parent-token policy, not the
   // run_code language worker. Sample the allowlist as prompt assembly does.
   f.ctx.provide('ptcRuntime', { language: 'typescript', timeout: { defaultMs: 30000, maxMs: 30000 } });
+  const { installPtcPresentation } = await import('../src/ptc.mjs');
+  installPtcPresentation(f.agent.ctx, () => ['verification_test_entry']).sample(f.agent);
   f.refreshTools();
   const direct = await f.invoke('verify_link', { op: 'run' }); assert.equal(direct.isError, true);
   assert.equal(direct.error.info.code, 'UNKNOWN_TOOL');
