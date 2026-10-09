@@ -21,8 +21,9 @@ test('recommended plugin installs, checks updates and uninstalls through the hos
   const card = page.locator('.tx-recommended-card').filter({ has: page.getByRole('heading', { name: 'dsh-status-rotator', exact: true }) });
   const blender = page.locator('.tx-recommended-card').filter({ has: page.getByRole('heading', { name: 'DSH × Blender', exact: true }) });
   await until(() => card.getByRole('button', { name: '安装', exact: true }).isEnabled());
-  assert.equal(await blender.getByRole('button', { name: '安装', exact: true }).count(), 0);
-  assert.match(await blender.innerText(), /尚未提供 DSH 标准插件包安装清单/);
+  assert.equal(await blender.getByRole('button', { name: '安装', exact: true }).count(), 1);
+  assert.match(await blender.innerText(), /固定 GitHub 标准发行资产/);
+  assert.match(await blender.innerText(), /实际视口.*未验收/);
   assert.equal((await status()).autoUpdate, false);
   const toggle = settings.getByRole('switch', { name: '自动更新推荐插件' });
   await toggle.click(); await until(async () => (await status()).autoUpdate); await until(() => toggle.isChecked());
@@ -39,7 +40,7 @@ test('recommended plugin installs, checks updates and uninstalls through the hos
   await card.getByRole('button', { name: '更新', exact: true }).click();
   await until(async () => { const s = await status(), p = s.plugins.find(p => p.id === 'dsh-status-rotator');
     if (p.error) throw Error(p.error); return !s.busy && p.message === '已是核验版本'; }, 30000);
-  assert.equal((await status()).plugins.find(p => p.id === 'dsh-status-rotator').version, '0.27.0');
+  assert.equal((await status()).plugins.find(p => p.id === 'dsh-status-rotator').version, '0.35.0');
   await verifyRotatorTitles(f);
   // Seed an older real release in this disposable profile, then exercise an
   // actual package upgrade, not only a "latest already installed" check.

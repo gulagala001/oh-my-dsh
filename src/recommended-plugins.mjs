@@ -25,9 +25,15 @@ export function pluginInstallSpec(plugin, version) {
       throw Error('已核验源码快照需要固定提交、对应版本及 SHA-256');
     return `https://codeload.github.com/${source.repository}/tar.gz/${source.commit}`;
   }
-  return plugin.githubRelease
-    ? `https://github.com/${plugin.githubRelease}/releases/download/${plugin.review?.releaseTag || 'v' + version}/${plugin.review?.asset || plugin.packageName + '-' + version + '.tgz'}`
-    : `${plugin.packageName}@${version}`;
+  if (plugin.githubRelease) return `https://github.com/${plugin.githubRelease}/releases/download/${plugin.review?.releaseTag || 'v' + version}/${plugin.review?.asset || plugin.packageName + '-' + version + '.tgz'}`;
+  if (plugin.review?.sha256) {
+    if (version !== plugin.review.version || !/^[a-f0-9]{64}$/.test(plugin.review.sha256)
+      || !/^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/.test(plugin.packageName))
+      throw Error('已核验 npm 安装包需要固定包名、版本及 SHA-256');
+    const basename = plugin.packageName.split('/').at(-1);
+    return `https://registry.npmjs.org/${plugin.packageName}/-/${basename}-${version}.tgz`;
+  }
+  return `${plugin.packageName}@${version}`;
 }
 export async function latestPluginVersion(plugin, signal) {
   const response = await fetch(plugin.githubRelease ? `https://api.github.com/repos/${plugin.githubRelease}/releases/${plugin.review?.releaseTag ? 'tags/' + encodeURIComponent(plugin.review.releaseTag) : 'latest'}` : `https://registry.npmjs.org/${encodeURIComponent(plugin.packageName)}/latest`, {

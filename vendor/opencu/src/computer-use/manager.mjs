@@ -216,6 +216,7 @@ export class ComputerUseManager {
         if (target.kind === 'tab') { await this.viewsFor(target).views.get(target.id)?.layoutPending?.catch(()=>{});signal?.throwIfAborted();await this.browserForTab(target.id, target.browserId).target(id, target.id, { signal }); signal?.throwIfAborted(); }
         this.setTarget(session, target); session.operation = operation;
         const result = await (target.kind === 'tab' ? this.browserForTab(target.id, target.browserId).invoke(id, target.id, operation, parameters, signal, imageFrameFor(coordinateFrames, target)?.geometry) : this.native.invoke(id, target.id, operation, parameters, signal));
+        if (operation === 'downloads.save') signal?.throwIfAborted();
         const triggeringFailure = ['dialog.accept', 'dialog.dismiss'].includes(operation) && result?.dialogHandled && result?.triggeringActionError;
         const partialFailure = triggeringFailure ? 'Dialog handled successfully; the triggering action failed: ' + triggeringFailure.message : null;
         session.lastError = partialFailure ? { operation, message: partialFailure, at: Date.now() } : null;
@@ -224,7 +225,7 @@ export class ComputerUseManager {
           if (owner?.created && !owner.keep) result.retention = 'temporary';
         }
         if (result?.screenshot && session.target?.kind === target.kind && session.target?.id === target.id) this.preview.set(id, { target, data: result.screenshot, at: Date.now() });
-        const artifactPath = operation === 'content.export' && typeof result === 'string' ? result : operation === 'pageAssets.bundle' ? result?.manifestPath : undefined;
+        const artifactPath = operation === 'content.export' && typeof result === 'string' ? result : operation === 'pageAssets.bundle' ? result?.manifestPath : operation === 'downloads.save' && typeof result?.path === 'string' ? result.path : undefined;
         this.recordOperation(session, { target: target.id, kind: target.kind, operation, elapsedMs: Math.round(performance.now() - started), at: Date.now(), ok: !partialFailure, ...(partialFailure ? { error: partialFailure, dialogHandled: true } : {}), ...(artifactPath ? { artifactPath } : {}) });
         return result;
       } catch (error) {
@@ -267,7 +268,7 @@ export class ComputerUseManager {
     if (state.uiAction && state.uiAction !== ownAction) state.uiAction.abort(Object.assign(new Error('Stopped by user'), { code: 'COMPUTER_USE_STOPPED' }));
     if (state.target?.kind === 'tab') this.browserForTab(state.target.id, state.target.browserId).keepForUser(id, state.target.id);
     try {
-      await state.runtime.stop(new Error('Stopped by user'));
+      await state.runtime.stop(Object.assign(new Error('Computer Use was stopped by the user.'), { code: 'COMPUTER_USE_STOPPED' }));
       if (!ownAction) await state.uiActionPending?.catch(() => {});
       if(!ownAction&&state.target?.kind==='tab'){const view=this.viewsFor(state.target).views.get(state.target.id);if(view)await restoreStylePreview(view);}
       state.status = 'stopped'; state.stopError = null; state.lastError = null;

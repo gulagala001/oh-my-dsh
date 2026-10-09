@@ -63,7 +63,7 @@ export const SCENARIOS = [
 function fullLifecycle({ trace }) {
   const prompt = '模拟完整会话：写入 source.txt 并验证交付。用户决定：保留中文、😀、数字9007199254740993和原话。';
   const source = 'SOURCE_ORIGINAL_9007199254740993 中文😀\n' + 'Source detail retained. '.repeat(600);
-  let recallRange, publicId;
+  let recallRange, publicId, verificationRun;
   const main = [
     step('task', () => toolReply('todo_write', { op: 'excerpt', from: prompt, to: prompt, tasks: [{ title: '写入并验证 source.txt', anchor: { from: prompt, to: prompt } }] }, 'full-task')),
     step('write', () => toolReply('write', { file_path: 'source.txt', content: source }, 'full-write', { split: 71 })),
@@ -104,6 +104,18 @@ function fullLifecycle({ trace }) {
     await checks.check('真实文件、任务与测试证据', async () => {
       assert.equal(await readFile(join(host.workspace, 'source.txt'), 'utf8'), source);
       assert.equal(state.tasks[0].status, 'completed'); assert.ok(state.tasks[0].links.some(link => link.lastRun?.pass && link.lastRun.tail.includes('SIMULATION_VERIFIED')));
+      verificationRun = state.tasks[0].links.find(link => link.kind === 'test').lastRun;
+      assert.equal(verificationRun.execution.tool, process.platform === 'win32' ? 'pwsh' : 'bash');
+      assert.equal(verificationRun.execution.command, process.platform === 'win32'
+        ? "$ErrorActionPreference = 'Stop'\n& {\nnode verify.mjs\n}\nif ($LASTEXITCODE -ne $null) { exit $LASTEXITCODE }"
+        : 'node verify.mjs');
+      assert.equal(verificationRun.execution.workdir, host.workspace);
+      assert.equal(verificationRun.execution.rootCallId, 'full-verify');
+      assert.ok(verificationRun.execution.callId && verificationRun.execution.callId !== 'full-verify');
+      assert.equal(verificationRun.execution.exitCode, 0);
+      assert.equal(verificationRun.execution.signal, null);
+      assert.ok(verificationRun.startedAt <= verificationRun.finishedAt);
+      assert.ok(Number.isFinite(verificationRun.durationMs) && verificationRun.durationMs >= 0);
     });
     const before = await host.control('/snapshot?session=' + publicId);
     const sourceEvent = before.events.find(event => event.type === 'tool/result' && JSON.stringify(event.data).includes('SOURCE_ORIGINAL_9007199254740993'));
@@ -132,6 +144,8 @@ function fullLifecycle({ trace }) {
     const restored = await host.control('/snapshot?session=' + publicId);
     await checks.check('真实 SIGKILL 后原生恢复', async () => {
       const native = await host.durable(publicId); assert.deepEqual(restored.events.slice(0, checkpoint.events.length), checkpoint.events); assertToolPairs(native.events);
+      const recovered = await host.api('/state?session=' + publicId);
+      assert.deepEqual(recovered.tasks[0].links.find(link => link.kind === 'test').lastRun, verificationRun);
     });
     await host.prompt(publicId, '重启后继续。'); await host.idle(publicId);
     return { sessionId: publicId, privateSessionId: privateId };

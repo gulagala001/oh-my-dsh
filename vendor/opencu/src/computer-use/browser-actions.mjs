@@ -491,7 +491,14 @@ export class BrowserActions {
         });
       }
       if (method === 'downloads.list') return [...record.downloads].map(([id,d]) => ({ id, filename: d.suggestedFilename(), url: d.url() }));
-      if (method === 'downloads.save') { const d = record.downloads.get(args[0]); if (!d) throw new Error('Unknown download'); await d.saveAs(args[1]); const failure = await d.failure(); if (failure) throw new Error(failure); return { path: args[1], filename: d.suggestedFilename() }; }
+      if (method === 'downloads.save') {
+        const d = record.downloads.get(args[0]); if (!d) throw new Error('Unknown download');
+        const failure = await d.failure(); signal?.throwIfAborted();
+        if (failure) throw new Error(failure);
+        await d.saveAs(args[1]);
+        signal?.throwIfAborted();
+        return { path: args[1], filename: d.suggestedFilename() };
+      }
       if (method === 'filechooser.setFiles') {
         // The intercepted chooser event can arrive just after click resolves.
         // Wait for that in-flight event rather than requiring another model call.

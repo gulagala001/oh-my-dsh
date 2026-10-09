@@ -224,6 +224,12 @@ export async function ecosystemFixture({ root, cli, isolation = 'native', storeD
       // A fresh browser context must settle the host's asynchronous welcome
       // gate before any background settings button can receive a click.
       if (!welcomed) { await welcome.waitFor({ timeout: 30000 }); await welcome.click(); await welcome.waitFor({ state: 'hidden' }); welcomed = true; }
+      // The empty Hero may finish creating/selecting its draft after the shell
+      // is clickable, closing an already-open panel. Select an actual completed
+      // fixture conversation and await its native header before testing settings.
+      const completed = page.getByText('ECO_SYSTEM_COMPLETE', { exact: true }).first();
+      await completed.waitFor(); await completed.click();
+      await page.locator('.wSkVaW_header').waitFor();
       const settings = page.getByRole('button', { name: '设置', exact: true }); await settings.first().click();
       const dialog = page.getByRole('dialog', { name: '设置', exact: true }), interaction = ['settings-button'];
       // Keep an observed first-click miss in evidence. The native documented

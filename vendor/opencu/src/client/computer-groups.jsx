@@ -1,6 +1,7 @@
 import React, { useSyncExternalStore } from 'react';
 import { decorateSlotComponent } from './slot-decoration.mjs';
-import { operationRowLocale, summarizeToolOutcomes } from './computer-groups.mjs';
+import { computerPresentationCalls, operationRowLocale, summarizeToolOutcomes } from './computer-groups.mjs';
+import { useComputerPresentation } from './computer-presentation.mjs';
 import { SavedImage } from './tool-image.jsx';
 
 // Native groups own ordering, disclosure and generic tool rendering.
@@ -12,7 +13,8 @@ export function computerGroupPresentation(ctx) {
       const nodes = props.useChat(state => state.nodes);
       const source = nodes.turnDataSource(props.node.data.turn, 'tool-call');
       const data = useSyncExternalStore(source.subscribe, source.getSnapshot);
-      const { failures, stopped } = summarizeToolOutcomes(data);
+      const presentation = useComputerPresentation(props.sessionId, computerPresentationCalls(data));
+      const { failures, stopped } = summarizeToolOutcomes(data, presentation);
       return <span className="tx-cu-turn-outcomes"><Original {...props}/>{failures > 0 && <span className="tx-cu-error">{failures} 项失败</span>}{stopped > 0 && <span>{stopped} 项已停止</span>}</span>;
     }
     return ProcessOutcomes;

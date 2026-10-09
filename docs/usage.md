@@ -1,10 +1,10 @@
 # Oh My DSH 使用与开发指南
 
-本地待验收构建为 **0.2.1-alpha.1.omd.0.11.0**，**未正式发布**。下方公开安装命令仍对应已发布的 0.10.0；新增 Intelligent UI 集成的最终安装包与平台验收范围见[待发布说明](release-0.2.1-alpha.1.omd.0.11.0.md)。
+本地候选构建为 **0.2.1-alpha.1.omd.0.12.0**，**未正式发布**。下方公开安装命令对应 **0.2.1-alpha.1.omd.0.10.0**，不含 0.11／0.12 候选新特性；候选只用[本地包验收](upgrade.md#candidate-install)。[候选说明](release-0.2.1-alpha.1.omd.0.12.0.md)。
 
 [文档目录](README.md) · [首次使用](getting-started.md) · [安装](#安装到现有-dsh推荐) · [更新与卸载](#update-uninstall) · [设置](#settings) · [排障](troubleshooting.md) · [开发与验证](#开发与验证)
 
-当前 **0.2.1-alpha.1.omd.0.11.0** 适配 **DSH 0.2.1-alpha.1**，内置 **OpenCU 1.3.1**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
+当前候选 **0.2.1-alpha.1.omd.0.12.0** 适配 **DSH 0.2.1-alpha.1**，内置 **OpenCU 1.4.0**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
 本项目通过 `gulagala001/oh-my-dsh` 的 GitHub 来源或发行包安装。[安装来源核对](troubleshooting.md#package-source)。
 
@@ -14,7 +14,7 @@
 
 ## 安装到现有 DSH（推荐）
 
-**首次安装桌面应用请先看[桌面版完整教程](upgrade.md#desktop)。** 现有 rc.2 桌面使用 **OMD 0.2.0-rc.2.omd.0.11.0**；下列命令适用于 DSH 0.2.1-alpha.1 的 Web／源码环境。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；单独安装的 npm/npx CLI 不能管理保留的 `desktop` profile。[本版验证范围](release-0.2.1-alpha.1.omd.0.11.0.md)。
+**首次安装桌面应用请先看[桌面版完整教程](upgrade.md#desktop)。** 现有 rc.2 桌面使用 **OMD 0.2.0-rc.2.omd.0.10.0**；下列命令适用于 DSH 0.2.1-alpha.1 的 Web／源码环境。桌面与 Web 共享实际 `DSH_HOME` 中的产品数据，但插件属于各自 profile；单独安装的 npm/npx CLI 不能管理保留的 `desktop` profile。[本版验证范围](release-0.2.1-alpha.1.omd.0.10.0.md)。
 
 桌面安装、更新、启用或停用后，先等任务结束，再完整退出应用并重新打开；有「重启应用与 Host」菜单时也可使用。仅关闭窗口会留在后台，仅刷新页面不能完成切换。
 
@@ -23,7 +23,7 @@
 已有环境先等待任务结束，停止当前 DSH Web 并完整备份实际 DSH_HOME。确认继续使用原数据目录、profile 和端口，再运行：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.11.0
+npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.10.0
 ```
 
 然后按原来的方式重新启动 DSH，例如：
@@ -45,11 +45,11 @@ npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 
 从 0.1.7-rc.2.5 起，检查到新版后可在左上角版本图标打开的面板内点击“更新”。安装后仍需完整重启。更早版本首次升级到本版时使用下方原安装方式。
 
-更新时保持原安装方式、DSH_HOME、profile 和端口；先停止服务并备份数据。使用 npx 的用户重复上面的固定版本命令即可。全局 npm 安装用户执行 `npm install -g @deepseek-ai/dsh@0.2.1-alpha.1`，确认 `dsh --version`，再执行 `dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.11.0`，按原方式启动；pnpm 全局安装则用 `pnpm add -g`。插件安装不会替你更新全局宿主。
+更新时保持原安装方式、DSH_HOME、profile 和端口；先停止服务并备份数据。使用 npx 的用户重复上面的固定版本命令即可。全局 npm 安装用户执行 `npm install -g @deepseek-ai/dsh@0.2.1-alpha.1`，确认 `dsh --version`，再执行 `dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.10.0`，按原方式启动；pnpm 全局安装则用 `pnpm add -g`。插件安装不会替你更新全局宿主。
 
-源码用户先保留本地修改，再执行 `git fetch origin --tags`、`git switch --detach v0.2.1-alpha.1.omd.0.11.0`、`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`。若切换会覆盖本地修改，先保存自己的改动，不强制覆盖。默认数据在仓库的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
+源码用户先保留本地修改，再执行 `git fetch origin --tags`、`git switch --detach v0.2.1-alpha.1.omd.0.10.0`、`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`。若切换会覆盖本地修改，先保存自己的改动，不强制覆盖。默认数据在仓库的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
 
-重启后，版本面板的**当前版本**应是 `0.2.1-alpha.1.omd.0.11.0`，原模型和旧会话仍在；最新版本只代表远端发布记录。旧 V3 会话迁移会保留原日志，alpha.1 升至 alpha.2 继续使用 V4。回退时停止新服务，以原宿主、插件和完整备份在独立数据目录启动。
+重启后，版本面板的**当前版本**应是 `0.2.1-alpha.1.omd.0.10.0`，原模型和旧会话仍在；最新版本只代表远端发布记录。旧 V3 会话迁移会保留原日志，alpha.1 升至 alpha.2 继续使用 V4。回退时停止新服务，以原宿主、插件和完整备份在独立数据目录启动。
 
 卸载也沿用原启动方式。npx Web 用户执行以下命令；自定义 profile 将 `web` 换成原名称，并沿用实际 `DSH_HOME`：
 
@@ -130,6 +130,8 @@ node scripts/launch-macos.mjs
 </details>
 
 ## 界面与入口
+
+候选 0.12.0 的任务证据记录保留真实工具调用身份、实际命令、退出状态与起止时间，可回查原始要求和运行结果。文字说明与真实运行证据分别记录；完成状态本身不替代验证。
 
 采用 DSH 与 Codex 的融合风格：中性色界面、蓝色强调、紧凑工具栏，统一浅色／深色主题和窄窗布局。保留 DSH 的会话、项目、模型与文件功能，Oh My DSH 的常用入口集中在输入区下方。
 
@@ -400,7 +402,7 @@ Computer Use 截图与「读取图片」的缩略图在当前页面打开大图�
 
 **在页面中查找** 也位于浏览器选项中；在浏览器画面或导航栏聚焦时可按 Ctrl/Cmd+F 打开。输入文字后逐项查找，Enter／Shift+Enter 前后跳转，Esc 关闭；支持主文档及嵌套跨源框架，隐藏文字不算匹配。查找会停止并接管当前查看的网页，选中文字并滚动到该处；仅打开或关闭搜索栏不接管。当前显示找到／未找到及循环提示，不提供匹配总数。
 
-地址栏右侧的 **下载记录** 显示当前会话接入后捕获的文件、进度和完成／取消状态，打开面板不会暂停助手。内置浏览器的可用文件可直接点 **保存文件**；扩展浏览器的文件留在原浏览器下载位置，目前仅同步记录和状态，不能直接传回 DSH。多个观察连接不会重复列出同一次下载，不同会话的记录相互隔离。断开观察时未完成的记录显示状态待确认，不冒充下载成功；历史目前保留在当前服务运行期间，不包括接入前或重启前的下载。浏览器移除临时文件后，保存入口不再可用。
+地址栏右侧的 **下载记录** 显示当前会话接入后捕获的文件、进度和完成／取消状态，打开面板不会暂停助手。候选 0.12.0 中，内置浏览器的可用文件可直接点 **保存文件**，保存后成为持久文件附件，原生与 OMD-PTC 对话可打开预览，重复保存复用同一交付；失败显示原因，停止助手或冷启动后仍可读取已经保存的附件。公开 0.10.0 仍使用原保存方式；扩展浏览器的文件留在原浏览器下载位置，目前仅同步记录和状态，不能直接传回 DSH。多个观察连接不会重复列出同一次下载，不同会话的记录相互隔离。断开观察时未完成的记录显示状态待确认，不冒充下载成功；未交付的下载历史保留在当前服务运行期间，不包括接入前或重启前的下载；已经保存的附件按会话持久保留。浏览器移除临时文件后，保存入口不再可用。
 
 下载面板可搜索文件名、筛选进行中／已完成／已取消、手动刷新；“清除已结束记录”只移除记录，不删除文件或取消仍在进行的下载。
 

@@ -81,20 +81,22 @@ export function currentTasks(session, cached) {
 }
 
 export function createVerificationRunner(ctx, exec) {
-  const invoke = async (name, args, signal = exec.signal) => {
+  const invoke = async (name, args, signal = exec.signal, callId = randomUUID()) => {
     const result = await ctx.tools.execute({ name, arguments: args, agent: exec.agent, signal,
-      callId: randomUUID(), rootCallId: exec.rootCallId ?? exec.callId, parent: exec.token });
+      callId, rootCallId: exec.rootCallId ?? exec.callId, parent: exec.token });
     for (const context of result.additionalContexts || []) exec.deferContext?.(context);
     return result;
   };
   return async (command, timeoutMs) => {
     if (exec.signal?.aborted) return { ok: false, aborted: true, timedOut: false, out: '' };
     const windows = process.platform === 'win32';
-    const result = await invoke(windows ? 'pwsh' : 'bash', {
+    const tool = windows ? 'pwsh' : 'bash', callId = randomUUID();
+    const args = {
       command: windows ? `$ErrorActionPreference = 'Stop'\n& {\n${command}\n}\nif ($LASTEXITCODE -ne $null) { exit $LASTEXITCODE }` : command,
       description: 'Run the linked task verification command', workdir: exec.agent.session.header.cwd,
       timeoutMs, run_in_background: false,
-    });
+    };
+    const result = await invoke(tool, args, exec.signal, callId);
     if (exec.signal?.aborted || ['ABORTED', 'ABORTED_BEFORE_DISPATCH'].includes(result.error?.info?.code))
       return { ok: false, aborted: true, timedOut: false, out: '' };
     if (result.isError) throw new Error(result.error.message);
@@ -112,6 +114,9 @@ export function createVerificationRunner(ctx, exec) {
       throw new Error('Native sandbox blocked verification or could not start; previous verification results are unchanged.');
     return { ok: value.exitCode === 0 && !value.signal && !value.timedOut && !value.aborted,
       code: value.exitCode, aborted: value.aborted, timedOut: value.timedOut, timeoutMs: value.timeoutMs,
+      execution: { tool, callId, rootCallId: exec.rootCallId ?? exec.callId,
+        command: args.command, workdir: args.workdir, exitCode: value.exitCode ?? null,
+        signal: value.signal ?? null, timeoutMs: value.timeoutMs ?? timeoutMs },
       out: `${value.stdout?.text ?? ''}${value.stderr?.text ?? ''}`.trim() };
   };
 }

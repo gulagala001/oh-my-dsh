@@ -4,21 +4,42 @@ import { readFile, access, readdir } from 'node:fs/promises';
 
 const read = path => readFile(new URL('../' + path, import.meta.url), 'utf8');
 
-test('installation docs and release badge describe the versions actually shipped', async () => {
+test('installation docs distinguish the unpublished candidate from the fixed public release', async () => {
   const pkg = JSON.parse(await read('package.json')), opencu = JSON.parse(await read('vendor/opencu.json'));
+  const host = pkg.devDependencies['@deepseek-ai/dsh'];
   const readme = await read('README.md'), upgrade = await read('docs/upgrade.md');
+  const publicPair = /公开安装版本：\*\*OMD ([\w.+-]+) \/ DSH ([\w.+-]+)\*\*/.exec(readme);
+  assert.ok(publicPair, 'README explicitly identifies the public installation version');
+  const publicVersion = publicPair[1];
+  assert.equal(publicPair[2], host, 'public build uses the same full host identity');
+  assert.equal(publicVersion, `${host}.omd.0.10.0`, 'the verified public release is fixed, not an arbitrary tag');
+  assert.equal(pkg.version, `${host}.omd.0.12.0`, 'current unpublished candidate');
+  assert.equal(pkg.omdReleaseStatus, 'unpublished', 'candidate is not a public release');
+  assert.equal(opencu.version, '1.4.0', 'candidate bundles the required OpenCU version');
+  assert.equal(JSON.parse(await read('vendor/opencu/package.json')).version, opencu.version, 'snapshot package agrees with its manifest');
   const badge = /https:\/\/img\.shields\.io\/badge\/version-(.*?)-3478F6\?/.exec(readme)?.[1];
-  assert.equal(badge, pkg.version.replaceAll('-', '--'), 'visible version badge');
+  assert.equal(badge, pkg.version.replaceAll('-', '--'), 'visible candidate version badge');
+  assert.ok(readme.includes(`href="docs/release-${pkg.version}.md"`), 'badge links to the local candidate notes');
   for (const file of ['README.md', 'docs/index.html', 'docs/usage.md', 'docs/upgrade.md', 'docs/windows.md']) {
     const text = await read(file);
     const targets = [...text.matchAll(/github:gulagala001\/oh-my-dsh#v([\w.+-]+)/g)].map(match => match[1]);
-    assert.deepEqual([...new Set(targets)], [pkg.version], file + ': every installation target matches the current release');
-    assert.ok(text.includes(`@deepseek-ai/dsh@${pkg.devDependencies['@deepseek-ai/dsh']}`), file + ': host target');
+    assert.deepEqual([...new Set(targets)], [publicVersion], file + ': public installation commands use the explicitly identified release');
+    assert.ok(text.includes(`@deepseek-ai/dsh@${host}`), file + ': host target');
+    assert.ok(text.includes(pkg.version), file + ': identifies the current candidate');
+    assert.ok(/候选/.test(text) && /未(?:正式)?发布|尚未发布/.test(text), file + ': states the candidate status');
+    assert.ok(!text.includes(`/tag/v${pkg.version}`) && !text.includes(`/blob/v${pkg.version}/`) && !text.includes(`/tree/v${pkg.version}/`), file + ': no future online release links');
   }
+  const candidates = [...upgrade.matchAll(/file:\/absolute\/path\/trisoul_x-([\w.+-]+)\.tgz/g)].map(match => match[1]);
+  assert.deepEqual(candidates, [pkg.version], 'local candidate package has the exact full version');
+  assert.ok(upgrade.includes(`@deepseek-ai/dsh@${host} plugin --profile candidate add file:/absolute/path/trisoul_x-${pkg.version}.tgz`), 'candidate installation uses its matching host');
+  assert.ok(upgrade.split('\n').some(line => line.startsWith('| Oh My DSH 当前候选 |') && line.includes(`**${pkg.version}**`)), 'candidate upgrade table');
+  assert.ok(upgrade.split('\n').some(line => line.startsWith('| Oh My DSH 公开安装版本 |') && line.includes(`**${publicVersion}**`)), 'public upgrade table');
   assert.ok(upgrade.split('\n').some(line => line.startsWith('| 内置 OpenCU |') && line.includes(`**${opencu.version}**`)), 'bundled OpenCU in upgrade table');
   const index = await read('docs/README.md');
-  assert.ok(index.includes(`**OMD ${pkg.version} / DSH ${pkg.devDependencies['@deepseek-ai/dsh']}**`), 'documentation index release pair');
+  assert.ok(index.includes(`**OMD ${pkg.version} / DSH ${host}**`), 'documentation index candidate pair');
   assert.ok(index.includes(`**OpenCU ${opencu.version}**`), 'documentation index bundled component');
+  const release = await read(`docs/release-${pkg.version}.md`);
+  assert.ok(release.includes(`DSH **${host}**`) && release.includes(`OpenCU ${opencu.version}`), 'candidate notes match package and bundled component');
 });
 
 // These documents use ATX headings and explicit HTML anchors. Match their
