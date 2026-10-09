@@ -7,6 +7,7 @@ import { realpath } from 'node:fs/promises';
 import { migrateSessionStorage } from './session-migration.mjs';
 import { sourceName } from './message-source.mjs';
 import { currentDirectory } from './working-directory.mjs';
+import { apiSessionTarget } from './api-session.mjs';
 import { installLoaderLifecycleCompatibility } from './loader-lifecycle-compat.mjs';
 import { installToolSchedulerCompatibility } from './tool-scheduler-compat.mjs';
 import { installToolCancellationPresentation } from './tool-cancellation.mjs';
@@ -292,18 +293,26 @@ export async function apply(ctx, config) {
         }
         if (await handleVersionUpdateApi({ req, res, url, service: versionUpdater, send })) return;
         if (await handlePromptOptimizerApi({ ctx, service: promptOptimizer, req, res, url, getSession: () => id ? ctx.agents.get(id)?.session ?? ctx.sessions.get(id) : undefined, send })) return;
-        const agent = id ? ctx.agents.get(id) : undefined;
-        const session = agent?.session ?? (id ? ctx.sessions.get(id) : undefined);
-        const stored = id ? hub.store.peek(id) : undefined;
-        if (id && !session && !stored) { send(res, 404, { error: '会话不存在' }); return; }
-        const scopeSession = session ?? { id: id || 'settings', header: { cwd: stored?.cwd || process.cwd() } };
+        const readTarget = async () => {
+          const reading = new AbortController();
+          const abortRead = () => reading.abort(new Error('会话读取已取消'));
+          req.once?.('aborted', abortRead); res.once?.('close', abortRead);
+          try {
+            if (req.aborted || res.destroyed) abortRead();
+            return await apiSessionTarget(ctx, hub.store, id, reading.signal);
+          } finally { req.off?.('aborted', abortRead); res.off?.('close', abortRead); }
+        };
+        const target = await readTarget();
+        const { agent, session, stored, inspection, archivedOnly } = target;
+        if (!target.found) { send(res, 404, { error: '会话不存在' }); return; }
+        const scopeSession = session ?? { id: id || 'settings', header: inspection?.meta ?? { cwd: stored?.cwd || process.cwd() } };
         if (url.pathname === '/trisoul-x/api/background-wait' && req.method === 'GET') {
           const denied = ctx.get('connection')?.requestRejection(req);
           if (denied !== undefined) { res.writeHead(denied); res.end(); return; }
           res.setHeader('Cache-Control', 'no-store');
           send(res, 200, { waiting: hub.backgroundWaiting(agent) }); return;
         }
-        if (await handleContextApi({ hub, ctx, req, res, url, session, agent, id, send, readBody })) return;
+        if (await handleContextApi({ hub, ctx, req, res, url, session, agent, inspection, archivedOnly, refreshSession: readTarget, id, send, readBody })) return;
         if (url.pathname === '/trisoul-x/api/better-todo') {
           if (!id) { send(res, 400, { error: '请选择一个会话' }); return; }
           if (!['GET', 'POST'].includes(req.method)) { send(res, 405, { error: 'Method not allowed' }); return; }

@@ -1,8 +1,8 @@
 # DSH 0.2 适配与验证
 
-当前开发候选为 **OMD 0.2.1-alpha.2.omd.0.12.1 / DSH 0.2.1-alpha.2 / OpenCU 1.4.1**，未正式发布。官方固定来源为 `dsh-v0.2.1-alpha.2`、提交 `d743267388641bc76f17c45ce8b4c231aed1d32c`。DSH SDK、原生组件与共享 Chat 均对齐此版；rc.2 和 alpha.1 使用各自独立的 SDK、快照、锁文件及产物。
+当前开发候选为 **OMD 0.2.1-alpha.2.omd.0.12.2 / DSH 0.2.1-alpha.2 / OpenCU 1.4.1**，未正式发布。官方固定来源为 `dsh-v0.2.1-alpha.2`、提交 `d743267388641bc76f17c45ce8b4c231aed1d32c`。DSH SDK、原生组件与共享 Chat 均对齐此版；rc.2 和 alpha.1 使用各自独立的 SDK、快照、锁文件及产物。
 
-alpha.2 工作流使用公共原生 activation API，执行目录读取公共 `working_directory`，PTC 展示遵循对应宿主能力。跨版本安装、插件共存与数据恢复须分别验证，不能仅修改 peer 范围宣称支持。[当前候选说明与验证边界](release-0.2.1-alpha.2.omd.0.12.1.md) · [本地候选安装](upgrade.md#candidate-install)。
+alpha.2 工作流使用公共原生 activation API，执行目录读取公共 `working_directory`，PTC 展示遵循对应宿主能力。跨版本安装、插件共存与数据恢复须分别验证，不能仅修改 peer 范围宣称支持。[当前候选说明与验证边界](release-0.2.1-alpha.2.omd.0.12.2.md) · [本地候选安装](upgrade.md#candidate-install)。
 
 ## 已发布的 alpha.1 配对
 

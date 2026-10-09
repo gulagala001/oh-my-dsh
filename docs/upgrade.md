@@ -12,7 +12,7 @@
 
 | 组件 | 版本与用途 |
 | --- | --- |
-| Oh My DSH 当前候选 | **0.2.1-alpha.2.omd.0.12.1**，未正式发布，仅用已交付并核验的本地包验收；rc.2／alpha.1 各有独立 0.12.1 构建 |
+| Oh My DSH 当前候选 | **0.2.1-alpha.2.omd.0.12.2**，未正式发布，仅用已交付并核验的本地包验收；rc.2／alpha.1 各有独立 0.12.2 构建 |
 | Oh My DSH 公开安装版本 | **0.2.1-alpha.1.omd.0.10.0**，Git tag `v0.2.1-alpha.1.omd.0.10.0`；以下公开安装步骤使用此版 |
 | DSH Web／源码宿主 | 当前候选使用 **0.2.1-alpha.2**；公开 OMD 0.10.0 仍使用其对应 **0.2.1-alpha.1** |
 | 现有官方桌面 | **DSH 0.2.0-rc.2 / OMD 0.2.0-rc.2.omd.0.10.0**，Git tag `v0.2.0-rc.2.omd.0.10.0` |
@@ -21,7 +21,7 @@
 
 候选包含 0.11／0.12 改进与 alpha.2 适配，下方 GitHub 安装与源码 tag 命令仅安装公开 0.10.0；两者不可混作同一验收身份。不要将 alpha.2 宿主与公开 alpha.1 插件混装。
 
-OMD 后续版本采用官方 DSH 完整版本前缀，随后为 `omd.主版本.功能版本.补丁版本`；新功能递增功能位、补丁归零，纯修复递增补丁位。当前候选 OMD 后缀为 `0.12.1`，公开安装后缀为 `0.10.0`。历史 tag 保持原样。旧独立版本0.3.0的已运行检查器不能识别本次编号迁移，首次按本手册新tag手动升级；新检查器可识别旧版本并正确排序。
+OMD 后续版本采用官方 DSH 完整版本前缀，随后为 `omd.主版本.功能版本.补丁版本`；新功能递增功能位、补丁归零，纯修复递增补丁位。当前候选 OMD 后缀为 `0.12.2`，公开安装后缀为 `0.10.0`。历史 tag 保持原样。旧独立版本0.3.0的已运行检查器不能识别本次编号迁移，首次按本手册新tag手动升级；新检查器可识别旧版本并正确排序。
 
 以本手册与目标 tag 的 `package.json` 配对，不能仅把一个组件换成 `latest`。若仓库刚发布新版本而配对资料未同步，先核对官方发布说明和目标包，避免混装。
 
@@ -38,11 +38,11 @@ OMD 后续版本采用官方 DSH 完整版本前缀，随后为 `omd.主版本.�
 在隔离数据目录和 profile 中，核对目标包的完整版本、SHA-256 与实际 DSH 宿主后安装。以下绝对路径是占位示例，需换成已经交付的本机候选包：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.2 plugin --profile candidate add file:/absolute/path/trisoul_x-0.2.1-alpha.2.omd.0.12.1.tgz
+npx --yes @deepseek-ai/dsh@0.2.1-alpha.2 plugin --profile candidate add file:/absolute/path/trisoul_x-0.2.1-alpha.2.omd.0.12.2.tgz
 npx --yes @deepseek-ai/dsh@0.2.1-alpha.2 --profile candidate
 ```
 
-完整重启后应显示 **0.2.1-alpha.2.omd.0.12.1**，内置 **OpenCU 1.4.1**；公开安装按下方步骤应显示 **0.2.1-alpha.1.omd.0.10.0**。候选没有可在线安装的新 tag／Release。验收结论绑定实际包与命令，不沿用历史版本的通过记录。[候选说明与当前验证范围](release-0.2.1-alpha.2.omd.0.12.1.md)。
+完整重启后应显示 **0.2.1-alpha.2.omd.0.12.2**，内置 **OpenCU 1.4.1**；公开安装按下方步骤应显示 **0.2.1-alpha.1.omd.0.10.0**。候选没有可在线安装的新 tag／Release。验收结论绑定实际包与命令，不沿用历史版本的通过记录。[候选说明与当前验证范围](release-0.2.1-alpha.2.omd.0.12.2.md)。
 
 从 alpha.1 升到 alpha.2 时，先核对 profile 已安装的 OMAA、Intelligent UI、Subscriptions 及其他插件。需要随 SDK 更换的插件应准备对应宿主的完整包，在旧服务停止并备份后，通过 alpha.2 官方 CLI 的一次 `plugin add` 事务传入全部对应包，再启动同一 profile。不要复制其他环境的 `node_modules`、放宽 peer 或绕过原生兼容检查。未安装的可选插件无需因此加装；原 bundle 顺序、启用状态、模型配置与实际数据目录须在重启后核对。
 

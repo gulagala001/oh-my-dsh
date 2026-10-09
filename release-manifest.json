@@ -2,6 +2,18 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-alpha.2.omd.0.12.2",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "冷会话只读查询与范围恢复修复",
+      "notes": [
+        "冷原生会话通过公开只读inspection核对身份，范围和状态读取不再误报会话不存在，不激活代理或创建新账本。",
+        "读取范围失败时明确显示未读取状态，提供可点击重试；已保存范围和开始后的隔离约束保留。",
+        "在保存范围前再次核对原生会话及人类输入，避免读取请求体期间开始的会话被扩大范围。",
+        "保留0.12.1的对应宿主SDK、原生activation、PTC、Pro xhigh与完整OpenCU1.4.1；本候选仍未发布。"
+      ]
+    },
+    {
       "version": "0.2.1-alpha.2.omd.0.12.1",
       "severity": "normal",
       "unpublished": true,
