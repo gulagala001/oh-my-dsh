@@ -10,7 +10,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
-import { boundContextSummary, createUserMessage, type ContentBlock } from '@deepseek-ai/dsh-llm'
+import { boundContextSummary, createUserMessage, HarnessError, type ContentBlock } from '@deepseek-ai/dsh-llm'
 import type { ContextFormed } from '@deepseek-ai/dsh-llm'
 import { TextRetainer } from '@deepseek-ai/dsh-output-retention'
 import { defineTool } from '@deepseek-ai/dsh-tools'
@@ -29,6 +29,23 @@ declare module '@deepseek-ai/dsh-llm' {
 
 export const name = 'tool-jobs'
 export const inject = ['tools', 'jobs', 'systemPrompt']
+
+/** Normalize only a wait rejecting its exact abort reason, never another failure. */
+function waitCancellation(reason: unknown): HarnessError {
+  let message: string
+  try {
+    const value = reason as { message?: string, kind?: string, reason?: string } | null
+    if (reason instanceof Error || typeof value?.message === 'string') message = value!.message!
+    else if (value?.kind === 'user') message = 'tool call cancelled by user'
+    else if (value?.kind === 'parent') message = 'tool call cancelled by parent'
+    else if (value?.kind === 'disposed') message = 'tool call cancelled because its owner was disposed'
+    else if (value?.kind === 'hook' && typeof value.reason === 'string') message = `tool call cancelled by hook: ${value.reason}`
+    else message = typeof reason === 'object' && reason !== null ? JSON.stringify(reason) ?? String(reason) : String(reason)
+  } catch { message = '[unrenderable error]' }
+  const error = new HarnessError(message, 'ABORTED')
+  error.name = 'AbortError'
+  return error
+}
 
 /**
  * How an uncollected completion reaches an owner that is already idle: `wakeup`
@@ -428,12 +445,18 @@ export function apply(ctx: Context, config: Config): void {
       let wakeReason: WakeReason | undefined
       if (args.timeout_ms !== undefined && (!Number.isFinite(args.timeout_ms) || args.timeout_ms <= 0)) throw new Error('timeout_ms must be positive')
       if (args.wait === true) {
-        if (!exec.parent && ctx.jobs.ownerOptions(exec.agent).interruptibleWait) {
-          wakeReason = await waitForEvent(ctx, exec, id, args.timeout_ms === undefined ? undefined : Math.min(args.timeout_ms, waitCap))
-          if (wakeReason !== 'completed') return { text: '', job: publicJob(ctx.jobs.get(id, exec.agent?.id)), wakeReason }
-        } else {
-          const timeout = Math.min(args.timeout_ms ?? waitDefault, waitCap)
-          await ctx.jobs.wait(id, timeout, exec.agent?.id, exec.signal)
+        const signal = exec.signal
+        try {
+          if (!exec.parent && ctx.jobs.ownerOptions(exec.agent).interruptibleWait) {
+            wakeReason = await waitForEvent(ctx, exec, id, args.timeout_ms === undefined ? undefined : Math.min(args.timeout_ms, waitCap))
+            if (wakeReason !== 'completed') return { text: '', job: publicJob(ctx.jobs.get(id, exec.agent?.id)), wakeReason }
+          } else {
+            const timeout = Math.min(args.timeout_ms ?? waitDefault, waitCap)
+            await ctx.jobs.wait(id, timeout, exec.agent?.id, signal)
+          }
+        } catch (error) {
+          if (signal.aborted && error === signal.reason) throw waitCancellation(error)
+          throw error
         }
       }
       const read = ctx.jobs.read(id, exec.agent?.id)

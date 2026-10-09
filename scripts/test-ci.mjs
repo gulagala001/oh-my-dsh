@@ -2,14 +2,14 @@ import { readdirSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
 const compatibility = [
-  'native-tools-coexist', 'plugin-frontend-coexist', 'loader-lifecycle-compat', 'llm-request-projection', 'verification-native',
+  'native-tools-coexist', 'tool-cancellation', 'plugin-frontend-coexist', 'loader-lifecycle-compat', 'llm-request-projection', 'verification-native',
   'dsh-core', 'dsh-live-plugin', 'dsh-http', 'dsh-install', 'dsh-distribution',
   'host-component', 'host-lifecycle', 'session-migration', 'context-persistence',
   'workflow-host', 'workflow-integration', 'ultracode-integration', 'task-budget-native',
   'projectless-workspaces', 'projectless-state', 'projectless-workspaces-ui',
 ];
 const windows = [
-  'native-tools-coexist', 'plugin-frontend-coexist', 'loader-lifecycle-compat', 'llm-request-projection', 'verification-native',
+  'native-tools-coexist', 'tool-cancellation', 'plugin-frontend-coexist', 'loader-lifecycle-compat', 'llm-request-projection', 'verification-native',
   'dsh-install', 'host-lifecycle', 'desktop-lifecycle', 'session-migration',
   'background-runtime', 'host-jobs', 'neutral-environment-native', 'workflow-host',
   'workflow-integration', 'workflow-worktree', 'ultracode-integration',

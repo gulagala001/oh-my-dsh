@@ -2,8 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Context, symbols } from '@deepseek-ai/cordis';
 import { TOOL_RUNTIME_SCHEDULER } from '@deepseek-ai/dsh-tools';
-import { bindToolScheduler } from '../src/tool-scheduler-compat.mjs';
-import { mountHostComponent } from '../src/host-component.mjs';
+import { bindToolScheduler, installToolSchedulerCompatibility } from '../src/tool-scheduler-compat.mjs';
 
 const scheduler = () => ({ prepare: async value => ({ value }), dispatch: async value => value,
   finalize: async (_, value) => value, finish: (_, value) => value });
@@ -64,16 +63,11 @@ test('overlapping compatibility owners release only their last alias and dispose
   assert.equal(service[foreign], value, 'the host scheduler is never removed');
 });
 
-test('host scheduler binding follows delayed tools availability and service replacement', async t => {
+test('scoped scheduler binding follows native tools availability and service replacement', async t => {
   const ctx = new Context();
   t.after(() => ctx.fiber.dispose());
   const other = await import(import.meta.resolve('@deepseek-ai/dsh-tools') + '?omd-delayed-tools');
-  const tree = { async import(name) {
-    if (name === '@deepseek-ai/cordis-plugin-loader') return { interpolate: (_, value) => value };
-    return import(name);
-  } };
-  ctx.provide('loader', { *entries() { yield { options: { id: 'tools', name: '@deepseek-ai/dsh-tools' }, parent: { tree } }; } });
-  const mounted = ctx.plugin(parent => mountHostComponent(parent, 'tools', () => other, [], {}));
+  const mounted = ctx.plugin({ inject: ['tools'], apply: installToolSchedulerCompatibility });
   await mounted;
   assert.equal(ctx.get('tools'), undefined, 'a pending dependency is not a started service');
   const settle = async () => {
@@ -83,7 +77,10 @@ test('host scheduler binding follows delayed tools availability and service repl
       await Promise.all(pending.map(fiber => fiber.await()));
     }
   };
-  const providePrompt = () => ctx.plugin(child => { child.provide('systemPrompt', { tools() {}, section() {} }); });
+  const providePrompt = () => ctx.plugin(child => {
+    child.provide('systemPrompt', { tools() {}, section() {} });
+    new other.ToolRuntime(child, {});
+  });
   let prompt = providePrompt(); await prompt; await settle();
   const first = ctx.get('tools')[symbols.original];
   assert.equal(first[TOOL_RUNTIME_SCHEDULER], first[other.TOOL_RUNTIME_SCHEDULER]);
@@ -97,6 +94,6 @@ test('host scheduler binding follows delayed tools availability and service repl
   assert.equal(second[TOOL_RUNTIME_SCHEDULER], second[other.TOOL_RUNTIME_SCHEDULER]);
   assert.ok(second[TOOL_RUNTIME_SCHEDULER]);
   await mounted.dispose(); await settle();
-  assert.equal(ctx.get('tools'), undefined);
+  assert.equal(ctx.get('tools')[symbols.original], second, 'unloading compatibility never disposes the native service');
   assert.equal(second[TOOL_RUNTIME_SCHEDULER], undefined);
 });

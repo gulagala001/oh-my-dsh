@@ -897,10 +897,43 @@ index ed3af9c0d5..3d15f47086 100644
    readonly id: JobId
    /**
 diff --git a/packages/jobs/tool-jobs/src/index.ts b/packages/jobs/tool-jobs/src/index.ts
-index e0b961e2ae..08a6846dd3 100644
+index e0b961e2ae..0905509d35 100644
 --- a/packages/jobs/tool-jobs/src/index.ts
 +++ b/packages/jobs/tool-jobs/src/index.ts
-@@ -68,6 +68,7 @@ const PUBLIC_JOB_SCHEMA = {
+@@ -10,7 +10,7 @@
+ 
+ import type { Context } from '@deepseek-ai/cordis'
+ import z from '@deepseek-ai/schemastery'
+-import { boundContextSummary, createUserMessage, type ContentBlock } from '@deepseek-ai/dsh-llm'
++import { boundContextSummary, createUserMessage, HarnessError, type ContentBlock } from '@deepseek-ai/dsh-llm'
+ import type { ContextFormed } from '@deepseek-ai/dsh-llm'
+ import { TextRetainer } from '@deepseek-ai/dsh-output-retention'
+ import { defineTool } from '@deepseek-ai/dsh-tools'
+@@ -29,6 +29,23 @@
+ 
+ export const name = 'tool-jobs'
+ export const inject = ['tools', 'jobs', 'systemPrompt']
++
++/** Normalize only a wait rejecting its exact abort reason, never another failure. */
++function waitCancellation(reason: unknown): HarnessError {
++  let message: string
++  try {
++    const value = reason as { message?: string, kind?: string, reason?: string } | null
++    if (reason instanceof Error || typeof value?.message === 'string') message = value!.message!
++    else if (value?.kind === 'user') message = 'tool call cancelled by user'
++    else if (value?.kind === 'parent') message = 'tool call cancelled by parent'
++    else if (value?.kind === 'disposed') message = 'tool call cancelled because its owner was disposed'
++    else if (value?.kind === 'hook' && typeof value.reason === 'string') message = `tool call cancelled by hook: ${value.reason}`
++    else message = typeof reason === 'object' && reason !== null ? JSON.stringify(reason) ?? String(reason) : String(reason)
++  } catch { message = '[unrenderable error]' }
++  const error = new HarnessError(message, 'ABORTED')
++  error.name = 'AbortError'
++  return error
++}
+ 
+ /**
+  * How an uncollected completion reaches an owner that is already idle: `wakeup`
+@@ -68,6 +85,7 @@
    type: 'object',
    additionalProperties: false,
    properties: {
@@ -908,7 +941,7 @@ index e0b961e2ae..08a6846dd3 100644
      id: { type: 'string', required: true },
      kind: { type: 'string', required: true },
      label: { type: 'string', required: true },
-@@ -188,6 +189,48 @@ function readBody(read: JobRead): { text: string; job: PublicJobSnapshot } {
+@@ -188,6 +206,48 @@
    return { text, job: publicJob(read.job) }
  }
  
@@ -957,10 +990,11 @@ index e0b961e2ae..08a6846dd3 100644
  export function apply(ctx: Context, config: Config): void {
    const waitDefault = config.waitTimeoutMs ?? 30_000
    const waitCap = config.maxWaitTimeoutMs ?? 600_000
-@@ -216,6 +259,37 @@ export function apply(ctx: Context, config: Config): void {
+@@ -215,6 +275,37 @@
+       if (message.source.kind === 'user') spentWakes.delete(agent)
      })
    }
- 
++
 +  ctx.on('agent/pre-step', async ({ agent }, next) => {
 +    const decision = await next()
 +    const cap = ctx.jobs.ownerOptions(agent).completionBatchBytes
@@ -991,11 +1025,10 @@ index e0b961e2ae..08a6846dd3 100644
 +    }
 +    admittedThrough.set(agent, events.at(-1)?.seq ?? -1)
 +  })
-+
+ 
    const outputLimits = new WeakMap<ToolExecution, number>()
    ctx.on('tools/pre-execute', (exec, next) => {
-     const maxBytes = visibleOutputLimit(ctx, exec)
-@@ -281,16 +355,29 @@ export function apply(ctx: Context, config: Config): void {
+@@ -281,16 +372,29 @@
      // absent here when it left before settlement — and then no inbox is left.
      const owner = ctx.get('agents')?.get(event.job.owner)
      if (owner === undefined) return
@@ -1035,7 +1068,7 @@ index e0b961e2ae..08a6846dd3 100644
      })
      if (delivery === 'wakeup' && owner.status === 'idle') {
        if (wakeBudget === undefined) {
-@@ -315,7 +402,7 @@ export function apply(ctx: Context, config: Config): void {
+@@ -315,7 +419,7 @@
      parameters: {
        job_id: { type: 'string', required: true, description: 'Job id returned by the tool that started the background work.' },
        wait: { type: 'boolean', description: 'Block until the job finishes or the timeout expires; a timed-out wait leaves the job running. Defaults to false.' },
@@ -1044,7 +1077,7 @@ index e0b961e2ae..08a6846dd3 100644
      },
      finalizeContent: finalizeJobContent,
      output: {
-@@ -325,25 +412,33 @@ export function apply(ctx: Context, config: Config): void {
+@@ -325,25 +429,39 @@
          properties: {
            text: { type: 'string', required: true },
            job: { ...PUBLIC_JOB_SCHEMA, required: true },
@@ -1071,12 +1104,18 @@ index e0b961e2ae..08a6846dd3 100644
 -        // state. A timed-out or aborted wait has left the registry's waiter
 -        // set before any later settlement, which then notifies as usual.
 -        await jobs.wait(id, Math.min(args.timeout_ms ?? waitDefault, waitCap), exec.agent?.id, exec.signal)
-+        if (!exec.parent && ctx.jobs.ownerOptions(exec.agent).interruptibleWait) {
-+          wakeReason = await waitForEvent(ctx, exec, id, args.timeout_ms === undefined ? undefined : Math.min(args.timeout_ms, waitCap))
-+          if (wakeReason !== 'completed') return { text: '', job: publicJob(ctx.jobs.get(id, exec.agent?.id)), wakeReason }
-+        } else {
-+          const timeout = Math.min(args.timeout_ms ?? waitDefault, waitCap)
-+          await ctx.jobs.wait(id, timeout, exec.agent?.id, exec.signal)
++        const signal = exec.signal
++        try {
++          if (!exec.parent && ctx.jobs.ownerOptions(exec.agent).interruptibleWait) {
++            wakeReason = await waitForEvent(ctx, exec, id, args.timeout_ms === undefined ? undefined : Math.min(args.timeout_ms, waitCap))
++            if (wakeReason !== 'completed') return { text: '', job: publicJob(ctx.jobs.get(id, exec.agent?.id)), wakeReason }
++          } else {
++            const timeout = Math.min(args.timeout_ms ?? waitDefault, waitCap)
++            await ctx.jobs.wait(id, timeout, exec.agent?.id, signal)
++          }
++        } catch (error) {
++          if (signal.aborted && error === signal.reason) throw waitCancellation(error)
++          throw error
 +        }
        }
 -      return readBody(jobs.read(id, exec.agent?.id))
