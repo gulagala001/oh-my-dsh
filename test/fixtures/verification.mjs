@@ -11,7 +11,7 @@ import { createTodoStore } from '../../src/todolist.mjs';
 import { registerTasks } from '../../src/tasks.mjs';
 import { createModule as bashModule } from '../../lib/host/tool-bash.factory.mjs';
 import { createModule as pwshModule } from '../../lib/host/tool-pwsh.factory.mjs';
-import { createModule as toolsModule } from '../../lib/host/tools.factory.mjs';
+import { ToolRuntime } from '@deepseek-ai/dsh-tools';
 
 const hostRequire = createRequire(realpathSync(new URL('../../node_modules/@deepseek-ai/dsh/package.json', import.meta.url)));
 const load = name => import(pathToFileURL(hostRequire.resolve(name)).href);
@@ -25,7 +25,6 @@ const imports = new Map(await Promise.all([
 ].map(async name => [name, await import(name)])));
 const dependency = name => name === '@deepseek-ai/schemastery' ? imports.get(name).default : { ...imports.get(name), __esModule: true };
 const shellTool = (shellName === 'pwsh' ? pwshModule : bashModule)(dependency);
-const { ToolRuntime } = toolsModule(dependency);
 const fixed = value => ({ get: () => value });
 
 // Real ToolRuntime, sandbox-policy resolution, shipped shell tool/executor and

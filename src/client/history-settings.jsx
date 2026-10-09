@@ -11,10 +11,13 @@ export function historySize() {
 // alone. RC uses a turn-aligned window capped at 500 instead of maxMessages=50.
 export function applyHistorySize(ctx) {
   ctx.effect(() => {
+    let active = true;
     const prototype = SessionEventStream.prototype;
     const restore = ['open', 'prepend'].map(name => {
       const descriptor = Object.getOwnPropertyDescriptor(prototype, name), original = prototype[name];
       function page(request, ...args) {
+        // A later plugin may still hold this function after our unload.
+        if (!active) return original.call(this, request, ...args);
         const ordinary = request?.maxMessages === 50 || request?.maxMessages === 500
           && request.turnWindow?.minMessages === 50 && request.turnWindow?.minTurns === 2;
         const size = historySize();
@@ -28,7 +31,7 @@ export function applyHistorySize(ctx) {
         if (descriptor) Object.defineProperty(prototype, name, descriptor); else delete prototype[name];
       };
     });
-    return () => restore.forEach(fn => fn());
+    return () => { active = false; restore.forEach(fn => fn()); };
   });
 }
 

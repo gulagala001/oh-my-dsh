@@ -1,7 +1,7 @@
 import { advancedDefaults, normalizeAdvanced, advancedTokens, advancedCss, prepareLogo } from './advanced.mjs';
 import { bundledSkins } from './bundled.mjs';
 import { validateSkin, compileSkinCss } from './format.mjs';
-import { hostTokens, tokenCss, customTokenCss } from './mapping.mjs';
+import { liveHostTokens, tokenCss, customTokenCss } from './mapping.mjs';
 import { composePalette, paletteCatalog } from './palette.mjs';
 import { extraPalettes } from './palettes.mjs';
 import { createBackgroundRuntime, backgroundDefaults } from './background.mjs';
@@ -43,13 +43,19 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     state = next; prepared = ready;
   };
   const syncMode = snapshot => {
-    if (state.active && (state.selected !== 'default' || state.palette !== 'theme' || state.advanced.enabled)) document.documentElement.dataset.appearance = snapshot.active.colorScheme;
+    const root = document.documentElement;
+    if (state.active && (state.selected !== 'default' || state.palette !== 'theme' || state.advanced.enabled)
+      && root.dataset.appearance !== snapshot.active.colorScheme) {
+      root.dataset.appearance = snapshot.active.colorScheme;
+      // The native presenter may have run before this mode marker changed.
+      // Set it first, so the nested notification cannot rebroadcast again.
+      ctx.emit('theme/change', snapshot);
+    }
     emit();
   };
   const background = createBackgroundRuntime(appearanceCss, value => { state = { ...state, background: value }; emit(); }, { recovery, enabled: false });
   const clearTheme = () => {
     const root = document.documentElement;
-    disposeTokens?.(); disposeTokens = undefined;
     style?.remove(); style = undefined;
     customStyle?.remove(); customStyle = undefined;
     root.classList.remove('omd');
@@ -58,6 +64,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
   const release = () => {
     if (!owning) return;
     owning = false; background.setEnabled(false); clearTheme();
+    disposeTokens?.(); disposeTokens = undefined;
   };
   const apply = () => {
     if (!state.active || disposed) { release(); return; }
@@ -72,6 +79,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     background.setEnabled(true);
     background.reduceEffects(state.reduceEffects);
     if (state.reduceEffects) root.dataset.omdReduceEffects = '';
+    if (!composed) { disposeTokens?.(); disposeTokens = undefined; }
     if (!composed && !state.advanced.enabled) return;
     root.dataset.appearance = ctx.theme.getTheme().active.colorScheme;
     if (composed) {
@@ -91,7 +99,10 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
       customStyle.textContent = customTokenCss(overrides) + '\n' + advancedCss(state.advanced);
       document.head.append(customStyle);
     }
-    if (composed) disposeTokens = ctx.theme.overrideTokens('trisoul_x/skin', hostTokens(composed));
+    if (composed && !disposeTokens) disposeTokens = ctx.theme.overrideTokens('trisoul_x/skin', liveHostTokens());
+    // Existing layers keep their order. The native presenter still needs to
+    // refresh metadata from the body's newly computed CSS variable palette.
+    else ctx.emit('theme/change', ctx.theme.getTheme());
   };
   const save = next => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ skins: next.skins.filter(skin => !skin.builtin), selected: next.selected, palette: next.palette, reduceEffects: next.reduceEffects, advanced: next.advanced })); }

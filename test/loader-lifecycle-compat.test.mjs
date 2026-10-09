@@ -108,8 +108,8 @@ test('failed provider retirement restores the prior configuration and rejects', 
   assert.deepEqual(restored, [old]); dispose();
 });
 
-test('client graph changes publish only after all provider rows finish updating', async () => {
-  const f = fixture(), row = { id: 'existing', name: 'fixture' }, published = [];
+test('client graph changes publish only after affected OMD provider rows finish updating', async () => {
+  const f = fixture(), row = { id: 'omd-ui-chat', name: 'trisoul_x/host/ui-chat' }, published = [];
   const modules = { flush(value) { published.push(value); } };
   f.loader.ctx = { get: name => name === 'clientModules' ? modules : undefined };
   const originalFlush = modules.flush;
@@ -119,6 +119,21 @@ test('client graph changes publish only after all provider rows finish updating'
   } };
   f.tree.root = group; f.tree.filename = '/fixture/cordis.yml';
   f.tree.store[row.id] = { options: row, parent: group };
-  const dispose = bindLiveLoaderEntries(f.loader); await group.update([row]);
+  const dispose = bindLiveLoaderEntries(f.loader); await group.update([{ ...row, config: { display: 'updated' } }]);
   assert.deepEqual(published, ['complete']); assert.equal(modules.flush, originalFlush); dispose();
+});
+
+test('ordinary third-party configuration updates keep their native client publication while OMD stays installed', async () => {
+  const f = fixture(), row = { id: 'omd-ui-chat', name: 'trisoul_x/host/ui-chat' }, published = [];
+  const modules = { flush(value) { published.push(value); } };
+  f.loader.ctx = { get: name => name === 'clientModules' ? modules : undefined };
+  const group = { tree: f.tree, data: [row], remove() {}, async update() {
+    modules.flush('third-party-client');
+    assert.deepEqual(published, ['third-party-client'], 'a separate plugin retains native client graph publication');
+  } };
+  f.tree.root = group; f.tree.filename = '/fixture/cordis.yml';
+  f.tree.store[row.id] = { options: row, parent: group };
+  const dispose = bindLiveLoaderEntries(f.loader);
+  try { await group.update([row, { id: 'other', name: 'third-party/plugin' }]); }
+  finally { dispose(); }
 });

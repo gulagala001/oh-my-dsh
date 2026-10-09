@@ -1,4 +1,4 @@
-import { bindToolScheduler } from './tool-scheduler-compat.mjs';
+import { isDeepStrictEqual } from 'node:util';
 
 // Host capability libraries carry private Symbols and WeakMaps. Resolve them
 // through the host Loader's resolver. Node's ordinary require.resolve can
@@ -23,21 +23,26 @@ export async function mountHostComponent(ctx, name, createModule, dependencies, 
   const component = await loadHostModule(ctx, name, createModule, dependencies);
   const originalEntry = [...ctx.loader.entries()].find(entry => entry.options.name === '@deepseek-ai/dsh-' + name);
   const tree = originalEntry.parent.tree;
-  const inherited = { tools: 'tools', 'jobs-local': 'jobs', 'bash-sandbox': 'bash-sandbox', 'pwsh-sandbox': 'pwsh-sandbox' }[name];
+  const inherited = ['jobs-local', 'bash-sandbox', 'pwsh-sandbox'].includes(name);
   let effective = config;
+  let inheritedConfig;
   if (inherited) {
-    const entry = [...ctx.loader.entries()].find(e => e.options.id === inherited);
     const { interpolate } = await tree.import('@deepseek-ai/cordis-plugin-loader');
-    effective = { ...interpolate(ctx, entry?.options.config ?? {}), ...config };
+    inheritedConfig = () => {
+      const entry = [...ctx.loader.entries()].find(row => row.options.name === '@deepseek-ai/dsh-' + name);
+      return entry ? { ...interpolate(ctx, entry.options.config ?? {}), ...config } : undefined;
+    };
+    effective = inheritedConfig();
   }
   const fiber = ctx.plugin(component.default ?? component, effective);
   await fiber;
-  if (name === 'tools') {
-    const { TOOL_RUNTIME_SCHEDULER } = await tree.import('@deepseek-ai/dsh-tools');
-    // A settled Fiber may still be waiting for systemPrompt during a profile
-    // reload. Bind only while tools is available, and rebind its replacement.
-    await ctx.inject(['tools'], child => {
-      child.effect(() => bindToolScheduler(child.tools, TOOL_RUNTIME_SCHEDULER));
+  if (inheritedConfig) {
+    ctx.on('app-boot/config-reload', async () => {
+      if (ctx.fiber?.uid === null) return;
+      const next = inheritedConfig();
+      if (!next || isDeepStrictEqual(next, effective)) return;
+      await fiber.update(next, true);
+      effective = next;
     });
   }
 }

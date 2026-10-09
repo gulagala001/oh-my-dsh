@@ -1,4 +1,4 @@
-import { decorateSlot } from './slot-decoration.mjs';
+import { decorateSlotComponent } from './slot-decoration.mjs';
 import React, { useState } from 'react';
 import {ComputerIcon} from './computer-icons.jsx';
 import { projectUserText, FileTypeIcon, JsonBlock } from '@deepseek-ai/dsh-client-ui-primitives';
@@ -17,6 +17,10 @@ function segments(text) {
   return result;
 }
 
+function ReferenceChip({ reference }) {
+  return <span className="tx-cu-reference" title={reference.url ?? reference.id} data-computer-use-reference={reference.kind}><ComputerIcon size={14} name={reference.kind === 'app' ? 'screen' : 'browser'}/><span>{reference.label ?? reference.title ?? (reference.kind === 'browser' ? 'Browser' : reference.id)}</span></span>;
+}
+
 function ReferenceMessage({ parts, node, renderMessageImages, t }) {
   const [copied, setCopied] = useState(false), [error, setError] = useState('');
   const data = node.data, content = data.content ?? [];
@@ -25,20 +29,28 @@ function ReferenceMessage({ parts, node, renderMessageImages, t }) {
   const extra = content.filter(b => b.type !== 'text' && !attachments.includes(b));
   return <div className="tx-cu-user-message">
     {!!attachments.length && <div className="tx-cu-user-attachments">{attachments.map((block, index) => block.type === 'image' ? <React.Fragment key={index}>{renderMessageImages({ images: [{ attachment: block.attachment }], align: 'end', compact: attachments.length > 1 })}</React.Fragment> : <span className="tx-cu-user-file" key={index}><FileTypeIcon path={block.attachment.name}/>{block.attachment.name}</span>)}</div>}
-    <div className="tx-cu-user-bubble">{parts.map((part, index) => part.reference ? <span className="tx-cu-reference" key={index} title={part.reference.url ?? part.reference.id} data-computer-use-reference={part.reference.kind}><ComputerIcon size={14} name={part.reference.kind==='app'?'screen':'browser'}/><span>{part.reference.label ?? part.reference.title ?? (part.reference.kind === 'browser' ? 'Browser' : part.reference.id)}</span></span> : <React.Fragment key={index}>{projectUserText(part.text, data.referenceLabels ?? [], data.skillNames ?? [])}</React.Fragment>)}{extra.map((block, index) => <JsonBlock key={index} label={t('message.extraBlock')} payload={block} truncatedLabel={total => t('json.truncated', { total })}/>)}</div>
+    <div className="tx-cu-user-bubble">{parts.map((part, index) => part.reference ? <ReferenceChip key={index} reference={part.reference}/> : <React.Fragment key={index}>{projectUserText(part.text, data.referenceLabels ?? [], data.skillNames ?? [])}</React.Fragment>)}{extra.map((block, index) => <JsonBlock key={index} label={t('message.extraBlock')} payload={block} truncatedLabel={total => t('json.truncated', { total })}/>)}</div>
     <div className="tx-cu-user-actions"><button aria-label="复制原消息" onClick={async () => { try { await navigator.clipboard.writeText(original); setCopied(true); setError(''); } catch (e) { setError(e.message); } }}>{copied ? '已复制' : '复制'}</button>{data.time && <time dateTime={new Date(data.time).toISOString()}>{new Date(data.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time>}</div>
     {error && <span className="tx-cu-error" role="alert">{error}</span>}
   </div>;
 }
 
 export function installComputerReferenceMessages(ctx) {
-  ctx.slots.inject('conversation.chat.node', () => decorateSlot(ctx.slots, 'conversation.chat.node', key => ['user', 'steering'].includes(key), original => {
+  ctx.slots.inject('conversation.chat.node', () => decorateSlotComponent(ctx.slots, 'conversation.chat.node', key => ['user', 'steering'].includes(key), original => {
     const Original = original.component;
+    // The pinned native renderer has no injected/store/child contract. Only
+    // that known shape uses the existing inline CU bubble. Other renderers
+    // keep their complete output, with CU references added beside it.
+    const native = (Original.type?.name ?? Original.name) === 'UserMessageNodeView'
+      && original.locale === 'chat' && !original.inject && !original.store && !original.children;
     function WithComputerReferences(props) {
       const text = (props.node.data.content ?? []).filter(b => b.type === 'text' && typeof b.text === 'string').map(b => b.text).join('');
       const parts = segments(text);
-      return parts.some(p => p.reference) ? <ReferenceMessage {...props} parts={parts}/> : <Original {...props}/>;
+      const references = parts.filter(part => part.reference);
+      if (!references.length) return <Original {...props}/>;
+      if (native) return <ReferenceMessage {...props} parts={parts}/>;
+      return <><Original {...props}/><div className="tx-cu-user-attachments" data-computer-reference-bar>{references.map((part, index) => <ReferenceChip key={index} reference={part.reference}/>)}</div></>;
     }
-    return { options: { name: 'conversation.chat.node', key: original.options.key, locale: 'chat', priority: (original.options.priority ?? 0) - 1 }, component: WithComputerReferences };
+    return WithComputerReferences;
   }));
 }

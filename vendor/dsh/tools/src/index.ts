@@ -625,21 +625,12 @@ export type PostToolDecision =
  * property (e.g. `throw { message: 'denied' }`) use it too; everything else
  * is stringified.
  */
-function errorMessage(error: unknown, cancellation = false): string {
+function errorMessage(error: unknown): string {
   try {
     if (error instanceof Error) return error.message
     if (typeof error === 'object' && error !== null
       && 'message' in error && typeof error.message === 'string') {
       return error.message
-    }
-    if (typeof error === 'object' && error !== null) {
-      if (cancellation && 'kind' in error) {
-        if (error.kind === 'user') return 'tool call cancelled by user'
-        if (error.kind === 'parent') return 'tool call cancelled by parent'
-        if (error.kind === 'disposed') return 'tool call cancelled because its owner was disposed'
-        if (error.kind === 'hook' && 'reason' in error && typeof error.reason === 'string') return `tool call cancelled by hook: ${error.reason}`
-      }
-      return JSON.stringify(error) ?? String(error)
     }
     return String(error)
   } catch {
@@ -750,7 +741,6 @@ class ToolLayer implements ScopeLayer {
    * "which form does the model see" is a contradiction, not a merge.
    */
   mode: ToolPresentationMode | undefined
-  directTools: readonly string[] | ((scope?: ScopeKey) => readonly string[]) | undefined
 
   constructor(scope: ScopeKey | undefined) {
     this.tools = new NamedEntries(name => new Error(scope === undefined
@@ -845,7 +835,6 @@ export class ToolRuntime extends Service {
     () => { this.ctx.emit('tools/change') },
   )
   /** Presentation for scopes that declare none; {@link presentAs} shadows it per scope. */
-  private readonly directSnapshots = new WeakMap<object, readonly string[]>()
   private readonly defaultMode: ToolPresentationMode
   private readonly maxParallelSubCalls: number
   /**
@@ -890,9 +879,7 @@ export class ToolRuntime extends Service {
       order: this.ctx.systemPrompt.getSectionOrder('PTC_ONLY'),
       // The SAME predicate the executor denies by, so the prompt cannot state
       // a rule the registry does not enforce (see `collapses`).
-      text: context => this.modeFor(context.scope) === 'ptc'
-        ? this.directFor(context.scope).length ? `Use run_code and the tools SDK for business operations. These control tools are also callable directly: ${this.directFor(context.scope).join(', ')}. All other tools require run_code.` : PTC_ONLY_INSTRUCTION
-        : '',
+      text: context => this.modeFor(context.scope) === 'ptc' ? PTC_ONLY_INSTRUCTION : '',
     }
   }
 
@@ -984,7 +971,7 @@ export class ToolRuntime extends Service {
    * @param mode - the presentation the covered agents' models see.
    * @returns the exact disposer that restores the deployment default.
    */
-  presentAs(mode: ToolPresentationMode, options: { directTools?: readonly string[] | ((scope?: ScopeKey) => readonly string[]) } = {}): () => void {
+  presentAs(mode: ToolPresentationMode): () => void {
     const ctx = this.ctx
     if (scopeOf(ctx) === undefined) {
       throw new Error('tools.presentAs() requires a scoped context (agent.ctx): a context-global presentation is the `mode` config field on the tools row')
@@ -997,8 +984,7 @@ export class ToolRuntime extends Service {
             throw new Error(`tools.presentAs("${mode}") conflicts with "${layer.mode}" already declared for this scope; one composition selects one presentation`)
           }
           layer.mode = mode
-          layer.directTools = options.directTools
-          return () => { layer.mode = undefined; layer.directTools = undefined }
+          return () => { layer.mode = undefined }
         },
         { label: 'tools.presentAs()' },
       )
@@ -1015,21 +1001,6 @@ export class ToolRuntime extends Service {
     return dispose
   }
 
-  /** Read the request-sampled allowlist; the execution path still enforces live visibility. */
-  private directFor(scope?: ScopeKey, refresh = false): readonly string[] {
-    if (!scope) return []
-    if (!refresh) {
-      const snapshot = this.directSnapshots.get(scope)
-      if (snapshot) return snapshot
-    }
-    const layer = this.layers.chainLayers(scope).findLast(layer => layer.mode !== undefined)
-    const names = typeof layer?.directTools === 'function' ? layer.directTools(scope) : layer?.directTools ?? []
-    const visible = this.view(scope).visible
-    const snapshot = [...new Set(names)].filter(name => visible.has(name) && name !== RUN_CODE_NAME)
-    this.directSnapshots.set(scope, snapshot)
-    return snapshot
-  }
-
   /**
    * Build one scope's wire schemas and names for prompt-order validation.
    * Restrictions do not make known tools invalid, but a mode collapse does.
@@ -1037,7 +1008,6 @@ export class ToolRuntime extends Service {
   private wireSchemas(scope?: ScopeKey): ToolProviderResult {
     const view = this.view(scope)
     const mode = this.modeFor(scope)
-    const direct = this.directFor(scope, true)
     if (mode === 'native') {
       const schemas = [...view.visible.values()].map(definition => this.schemaOf(definition, false))
       return { schemas, knownNames: [...view.knownNames] }
@@ -1051,8 +1021,8 @@ export class ToolRuntime extends Service {
     const schemas = [...view.visible.values()].map(definition => this.schemaOf(definition, false))
     if (mode === 'ptc') {
       return {
-        schemas: schemas.filter(schema => schema.name === RUN_CODE_NAME || direct.includes(schema.name)),
-        knownNames: [RUN_CODE_NAME, ...direct],
+        schemas: schemas.filter(schema => schema.name === RUN_CODE_NAME),
+        knownNames: [RUN_CODE_NAME],
       }
     }
     return { schemas, knownNames: [...view.knownNames, RUN_CODE_NAME] }
@@ -1379,7 +1349,7 @@ export class ToolRuntime extends Service {
    * @param nested - whether the call is a transport sub-dispatch, not a model-direct call.
    */
   private collapses(name: string, scope: ScopeKey | undefined, nested: boolean): boolean {
-    return !nested && this.modeFor(scope) === 'ptc' && name !== RUN_CODE_NAME && !this.directFor(scope).includes(name)
+    return !nested && this.modeFor(scope) === 'ptc' && name !== RUN_CODE_NAME
   }
 
   /**
@@ -1582,7 +1552,7 @@ export class ToolRuntime extends Service {
     /* v8 ignore next -- only registry-minted executions reach the staged scheduler methods */
     if (state === undefined) throw new Error('tool registry scheduler invariant violated: missing cancellation state')
     return state.bodyInvoked
-      ? toolAbortedResult(prior, state.callerSignal.reason)
+      ? toolAbortedResult(prior)
       : toolAbortedBeforeDispatchResult(prior)
   }
 
@@ -1611,10 +1581,10 @@ export class ToolRuntime extends Service {
       const returned = await tool.execute(exec.arguments, exec)
       const result = this.createSuccessResult(exec, tool, returned)
       return isAborted(signal)
-        ? toolAbortedResult(result, signal.reason)
+        ? toolAbortedResult(result)
         : result
     } catch (error: unknown) {
-      return isAborted(signal) ? toolAbortedResult(undefined, signal.reason) : toolErrorResult(error)
+      return toolErrorResult(error)
     } finally {
       fused.dispose()
       exec.signal = wrapperSignal
@@ -1985,14 +1955,13 @@ function fuseToolSignals(caller: AbortSignal, wrapper: AbortSignal): FusedToolSi
 }
 
 /** Canonical result when cancellation supersedes success after body invocation. */
-function toolAbortedResult(prior?: ToolExecutionResult, reason?: unknown): ToolExecutionResult {
-  const message = reason === undefined ? 'tool call aborted' : `tool call aborted: ${errorMessage(reason, true)}`
+function toolAbortedResult(prior?: ToolExecutionResult): ToolExecutionResult {
   const additionalContexts = prior?.additionalContexts ?? []
   return {
-    content: [{ type: 'text', text: `Error: ${message}` }],
+    content: [{ type: 'text', text: 'Error: tool call aborted' }],
     isError: true,
     error: {
-      message,
+      message: 'tool call aborted',
       info: { name: 'AbortError', code: TOOL_ABORTED },
     },
     ...additionalContexts.length > 0 ? { additionalContexts } : {},
