@@ -1,6 +1,20 @@
 // Only this curated catalog supplies package names to the installer.
 export const recommendedPlugins = [
   {
+    id: 'dsh-intelligent-ui', name: '智能交互回答 · Intelligent UI', packageName: 'dsh-intelligent-ui', author: 'gulagala001',
+    description: '在回答内操作清单、计算器、图表、表单、模拟和小游戏；提供独立智能聊天入口和按需技能，沿用 DSH 原生模型与会话。默认不安装。',
+    unavailable: 'Intelligent UI 尚未正式发布，公开安装与更新暂未开放。本地验收可安装对应宿主的已校验安装包；已有安装仍可卸载。',
+    category: '界面增强', url: 'https://github.com/gulagala001/dsh-intelligent-ui', githubRelease: 'gulagala001/dsh-intelligent-ui',
+    // SDK-aligned archives are frozen for local acceptance. The unpublished
+    // restriction above keeps public downloads closed until release approval.
+    hostBuilds: {
+      '0.2.0-rc.2': { version: '0.2.0-rc.2.iui.1.0.0', releaseTag: 'v0.2.0-rc.2.iui.1.0.0', asset: 'dsh-intelligent-ui-0.2.0-rc.2.iui.1.0.0.tgz', sha256: '2df1f901834feb9c437191ad1ddf92f1809862bbb70033123b6dd181e0ab1282', dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.11.0', platforms: ['Mac（隔离 Web 宿主）'], allowPrerelease: true,
+        note: '成品未正式发布。对应 SDK 的固定安装包已核验安装、启停、重启、取消恢复、卸载及 OMD 共存；保留用户状态。Windows/Linux CI 另有记录，原生桌面 App 未实测。' },
+      '0.2.1-alpha.1': { version: '0.2.1-alpha.1.iui.1.0.0', releaseTag: 'v0.2.1-alpha.1.iui.1.0.0', asset: 'dsh-intelligent-ui-0.2.1-alpha.1.iui.1.0.0.tgz', sha256: 'eed166b70b2bf41010a1b3abab9dce4cce5028437aecb6ae2ca44bc5d04056c8', dsh: '0.2.1-alpha.1', omd: '0.2.1-alpha.1.omd.0.11.0', platforms: ['Mac（隔离 Web 宿主）'], allowPrerelease: true,
+        note: '成品未正式发布。对应 SDK 的固定安装包已核验安装、启停、重启、取消恢复、卸载及 OMD 共存；保留用户状态。真实模型验收覆盖五类交互，生成效果依赖所选模型；原生桌面 App 未实测。' },
+    },
+  },
+  {
     "id": "dsh-plugin-subscriptions",
     "name": "订阅登录 · Subscriptions",
     "packageName": "dsh-plugin-subscriptions",
@@ -78,3 +92,13 @@ export const recommendedPlugins = [
     category: '用量管理', url: 'https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget',
   },
 ];
+
+export function resolveRecommendedPlugin(plugin, hostVersion) {
+  if (!plugin.hostBuilds) return plugin;
+  const supportedHosts = Object.keys(plugin.hostBuilds);
+  const review = typeof hostVersion === 'string' && Object.hasOwn(plugin.hostBuilds, hostVersion) ? plugin.hostBuilds[hostVersion] : undefined;
+  if (plugin.unavailable && (!plugin.unavailableHosts || plugin.unavailableHosts.includes(hostVersion))) return { ...plugin, review };
+  if (!review) return { ...plugin, review: undefined, unavailable: hostVersion ? `当前 DSH ${hostVersion} 没有已核验的对应构建，暂不提供安装或更新。支持的完整宿主版本：${supportedHosts.join('、')}。已有安装仍可卸载。` : '未能核实当前 DSH 完整版本，暂不提供安装或更新。已有安装仍可卸载。', unavailableHosts: undefined };
+  const valid = review.dsh === hostVersion && typeof review.version === 'string' && review.version.startsWith(hostVersion + '.iui.') && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(review.version.slice((hostVersion + '.iui.').length)) && review.releaseTag === 'v' + review.version && review.asset === plugin.packageName + '-' + review.version + '.tgz' && /^[a-f0-9]{64}$/.test(review.sha256 ?? '');
+  return { ...plugin, review, unavailable: valid ? null : `DSH ${hostVersion} 对应的 Intelligent UI 核验发行包尚未准备完成，暂不提供安装或更新。`, unavailableHosts: undefined };
+}
