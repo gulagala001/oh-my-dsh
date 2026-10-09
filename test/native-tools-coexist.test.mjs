@@ -53,6 +53,7 @@ export async function apply(ctx) {
     assert.ok(request, agentPreset);
     if (agentPreset === 'omd-ptc') {
       assert.deepEqual(request.tools.map(tool => tool.function.name).sort(), ['job_kill', 'job_list', 'job_output', 'run_code', 'runtime_status']);
+      assert.match(JSON.stringify(request.messages), /Use run_code and the tools SDK for business operations/, 'the reviewed PTC control instruction reaches the actual request');
       assert.match(JSON.stringify(request.messages), /coexist_probe/, 'the complete PTC SDK includes third-party tools');
     } else assert.ok(request.tools.some(tool => tool.function.name === 'coexist_probe'));
   }
