@@ -46,7 +46,8 @@ export async function until(fn, description, timeout = 30000) {
   throw Error('Timed out: ' + description);
 }
 
-export async function ecosystemFixture({ root, cli, isolation = 'native', storeDir, installTimeoutMs = 180000 }) {
+export async function ecosystemFixture({ root, cli, isolation = 'native', storeDir, installTimeoutMs = 180000, extraLoopbackPorts = [] }) {
+  if (!Array.isArray(extraLoopbackPorts) || extraLoopbackPorts.some(port => !Number.isInteger(port) || port < 1 || port > 65535)) throw Error('Invalid owned loopback port');
   root = await realpath(root); cli = await realpath(resolve(cli));
   const home = join(root, 'home'), workspace = join(root, 'workspace'), profile = 'ecosystem';
   for (const path of [home, workspace, join(root, 'tmp')]) await mkdir(path, { recursive: true });
@@ -87,7 +88,7 @@ export async function ecosystemFixture({ root, cli, isolation = 'native', storeD
     } catch (error) { protocolErrors.push(error.message); res.writeHead(500); res.end(error.message); }
   });
   await new Promise(resolve => provider.listen(0, '127.0.0.1', resolve));
-  env.OMD_SIM_ALLOW_PORTS = String(provider.address().port);
+  env.OMD_SIM_ALLOW_PORTS = [provider.address().port, ...extraLoopbackPorts].join(',');
   await writeFile(join(root, 'network.jsonl'), '');
   await writeFile(join(workspace, 'probe.txt'), 'ECO_NATIVE_FILE_READ\n');
   // Repository-aware plugins must never discover this checkout as the test
@@ -178,7 +179,8 @@ export async function ecosystemFixture({ root, cli, isolation = 'native', storeD
     let command = process.execPath, argv = args;
     if (isolation === 'native') {
       if (process.platform !== 'darwin') throw Error('Native ecosystem isolation requires macOS');
-      const policy = `(version 1) (allow default) (deny network-outbound) (allow network-outbound (remote ip "localhost:${provider.address().port}")) (deny file-write*) (allow file-write* (subpath ${JSON.stringify(root)}) (subpath ${JSON.stringify(extensionDirectory)}) (literal "/dev/null") (literal "/dev/tty"))`;
+      const allowed = [provider.address().port, ...extraLoopbackPorts].map(port => `(remote ip "localhost:${port}")`).join(' ');
+      const policy = `(version 1) (allow default) (deny network-outbound) (allow network-outbound ${allowed}) (deny file-write*) (allow file-write* (subpath ${JSON.stringify(root)}) (subpath ${JSON.stringify(extensionDirectory)}) (literal "/dev/null") (literal "/dev/tty"))`;
       command = '/usr/bin/sandbox-exec'; argv = ['-p', policy, process.execPath, ...args];
     } else if (isolation !== 'process') throw Error('Unknown isolation');
     child = spawn(command, argv, { cwd: workspace, env, detached: process.platform !== 'win32',
