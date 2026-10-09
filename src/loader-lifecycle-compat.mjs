@@ -1,8 +1,11 @@
 import { symbols } from '@deepseek-ai/cordis';
+import { isDeepStrictEqual } from 'node:util';
 // Cordis 4.0.4 exports FiberState as a TypeScript const enum.
 const UNLOADING = 5;
 const untrace = value => value?.[symbols.original] || value;
 const installed = Symbol.for('omd.loader-live-entries.alpha2');
+const omdProvider = row => row?.name === 'trisoul_x' || row?.name?.startsWith('trisoul_x/host/')
+  || row?.name === '@oh-my-dsh/ui-conversation';
 
 function holdClientGraph(loader) {
   const modules = untrace(loader.ctx?.get?.('clientModules'));
@@ -56,14 +59,18 @@ export function bindLiveLoaderEntries(loader) {
     const serialized = untrace(group.tree?.root) === group && group.tree?.filename && typeof originalUpdate === 'function';
     function update(config, ...args) {
       const task = tail.then(async () => {
+        const oldConfig = [...group.data], before = new Map(oldConfig.map(row => [row.id, row]));
+        const after = new Map(config.map(row => [row.id, row]));
+        const affected = [...new Set([...before.keys(), ...after.keys()])].some(id =>
+          (omdProvider(before.get(id)) || omdProvider(after.get(id))) && !isDeepStrictEqual(before.get(id), after.get(id)));
+        if (!affected) return originalUpdate.call(group, config, ...args);
         // Publish one complete client graph per profile transaction. Per-row
         // intermediate graphs can retire a bundle URL while the browser is
         // still loading it, leaving a partially restored conversation.
         const publish = holdClientGraph(loader);
         try {
-          const oldConfig = [...group.data], targetIds = new Set(config.map(row => row.id));
-          const retiring = oldConfig.filter(row => !targetIds.has(row.id) &&
-            (row.name === 'trisoul_x' || row.name?.startsWith('trisoul_x/host/') || row.name === '@oh-my-dsh/ui-conversation'));
+          const retiring = oldConfig.filter(row => omdProvider(row)
+            && (!after.has(row.id) || after.get(row.id).name !== row.name));
           // Loader 1.0.4 starts incoming services before removing outgoing rows.
           // OMD replaces several exclusive host services: retire our removed
           // rows first so the original services can activate. Keep oldConfig

@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { decorateSlot } from '#opencu/src/client/slot-decoration.mjs';
 import { effortChoices } from '../model-efforts.mjs';
 import css from './model-panel.css';
 
@@ -24,7 +23,7 @@ async function modeApi(sessionId, body, signal) {
 function Chevron({ back = false }) { return <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d={back ? 'm12 5-5 5 5 5' : 'm7 5 5 5-5 5'}/></svg>; }
 function Reset() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 9V4m0 5h5M4.7 8a8 8 0 1 1-.5 6"/></svg>; }
 
-function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
+function ModelPanel({ ctx, sessionId, locked, available, directory, load, additive = false }) {
   const state = useStore(directory);
   const faces = useMemo(() => {
     const projections = ctx.sessions.binding(sessionId)?.session.projections;
@@ -147,9 +146,9 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
   };
   if (!available) return null;
   return <>
-    <button ref={trigger} type="button" className="omd-model-trigger" disabled={locked} aria-label="模型与思考强度" aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? id : undefined}
+    <button ref={trigger} type="button" className="omd-model-trigger" disabled={locked} aria-label={additive ? 'OMD 模式与思考强度' : '模型与思考强度'} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? id : undefined}
       onClick={() => { if (open) close(); else { setPane(selected ? 'effort' : 'model'); setQuery(''); setOpen(true); load(); void refresh(); } }}>
-      <span>{modelName}</span><span className="omd-model-caption">{savedLabel}</span><span aria-hidden="true">⌃</span>
+      <span>{additive ? 'OMD' : modelName}</span><span className="omd-model-caption">{savedLabel}</span><span aria-hidden="true">⌃</span>
     </button>
     {open && createPortal(<section ref={panel} id={id} className="omd-model-panel" data-pane={pane} style={position} role="dialog" aria-label="模型与思考强度" aria-busy={busy} tabIndex={-1} onKeyDown={keyDown}>
       {pane === 'effort' ? <>
@@ -189,9 +188,50 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load }) {
 export function applyModelPanel(ctx) {
   ctx.effect(() => { const style = document.createElement('style'); style.dataset.plugin = 'omd-model-panel'; style.textContent = css; document.head.append(style); return () => style.remove(); });
   const name = 'conversation.input.model';
-  ctx.slots.inject(name, () => decorateSlot(ctx.slots, name, () => true, original => {
+  const listeners = new Set();
+  let additive = false;
+  const subscribe = fn => { listeners.add(fn); return () => listeners.delete(fn); };
+  ctx.slots.inject(name, () => {
+    let installed, original, stopped = false, reconciling = false, dirty = false;
     function Panel(props) { return <ModelPanel key={props.sessionId} ctx={ctx} {...props}/>; }
-    return { options: { ...original.options, name, store: original.store, locale: original.locale,
-      inject: original.inject, children: original.children, priority: (original.options.priority ?? 0)-1 }, component: Panel };
+    const reconcile = () => {
+      if (stopped || ctx.fiber?.uid === null) return;
+      if (reconciling) { dirty = true; return; }
+      reconciling = true;
+      try {
+        do {
+          dirty = false;
+          const winner = ctx.slots.entries(name).find(entry => entry.component !== Panel);
+          // This adapter replaces only the official model seat. An unrelated
+          // renderer keeps its own injected props, store and child-slot owner.
+          const native = winner?.component.name === 'ModelSelect' && winner.locale === 'model'
+            && typeof winner.inject === 'function' && !winner.children;
+          if (installed && (!native || winner !== original)) { const dispose = installed; installed = undefined; original = undefined; dispose(); }
+          if (native && !installed) {
+            original = winner;
+            // Leave the conventional integer override rank free for plugins.
+            installed = ctx.slots.register({ ...winner.options, name, store: winner.store, locale: winner.locale,
+              inject: winner.inject, priority: (winner.options.priority ?? 0) - .5 }, Panel);
+          }
+          const next = Boolean(winner && !native);
+          if (next !== additive) { additive = next; for (const fn of listeners) fn(); }
+        } while (dirty && !stopped);
+      } finally { reconciling = false; }
+    };
+    const off = ctx.slots.subscribe(name, reconcile); reconcile();
+    return () => { stopped = true; off(); installed?.(); additive = false; for (const fn of listeners) fn(); };
+  });
+  ctx.slots.inject('conversation.input.right', () => ctx.slots.register({
+    name: 'conversation.input.right', id: 'omd-model-mode', order: 120,
+    inject: sessionId => {
+      const directory = ctx.get('modelDirectories')?.directoryFor(sessionId);
+      const available = Boolean(directory) && ctx.sessions.subagentAddress(sessionId) === undefined;
+      return { directory: directory?.store ?? emptyStore, available,
+        load: () => { if (available) directory.load().catch(() => {}); } };
+    },
+  }, function ModeEntry(props) {
+    const shown = useSyncExternalStore(subscribe, () => additive);
+    const removed = props.useSession(s => s.removed) ?? false;
+    return shown && props.available ? <ModelPanel key={props.sessionId} ctx={ctx} {...props} locked={removed} additive/> : null;
   }));
 }
