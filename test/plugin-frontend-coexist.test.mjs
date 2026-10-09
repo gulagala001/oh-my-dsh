@@ -214,12 +214,16 @@ test('real Web preserves foreign model children and toolbar, retains OMD modes, 
       payload: { args: { name: 'trisoul_x', enabled } } } });
     const value = await response.json(); assert.equal(value.result?.ok, true, JSON.stringify(value));
   };
-  await Promise.all([page.waitForEvent('load'), setOmd(false)]);
+  await setOmd(false);
+  await until(async () => await page.getByRole('button', { name: '第三方模型 原契约', exact: true }).isVisible()
+    && await page.getByRole('button', { name: 'OMD 模式与思考强度', exact: true }).count() === 0);
   await page.getByRole('button', { name: '第三方模型 原契约', exact: true }).waitFor();
   await page.getByText('第三方子槽', { exact: true }).waitFor();
   await page.getByRole('button', { name: '第三方工具栏', exact: true }).click();
   assert.equal(await page.getByRole('button', { name: 'OMD 模式与思考强度', exact: true }).count(), 0);
-  await Promise.all([page.waitForEvent('load'), setOmd(true)]);
+  await setOmd(true);
+  await until(async () => await page.getByRole('button', { name: '第三方模型 原契约', exact: true }).isVisible()
+    && await page.getByRole('button', { name: 'OMD 模式与思考强度', exact: true }).isVisible());
   await page.getByRole('button', { name: '第三方模型 原契约', exact: true }).waitFor();
   await page.getByRole('button', { name: 'OMD 模式与思考强度', exact: true }).click();
   await until(() => slider.isEnabled());

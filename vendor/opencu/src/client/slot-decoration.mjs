@@ -40,7 +40,7 @@ export function decorateSlot(slots, name, accepts, decorate) {
 }
 
 const componentDecoration = Symbol.for('opencu.slot-component-decoration.v1');
-const refreshEntry = Symbol('opencu.slot-refresh');
+const refreshEntry = Symbol.for('opencu.slot-refresh.v1');
 const unwrapInactive = component => {
   while (component?.[componentDecoration]?.active === false) component = component[componentDecoration].previous;
   return component;
@@ -91,6 +91,9 @@ export function decorateSlotComponent(slots, name, accepts, decorate) {
           const state = { previous, active: true, wrapper: null };
           function Decorated(props) { return createElement(state.active ? component : previous, props); }
           state.wrapper = Decorated; Decorated[componentDecoration] = state;
+          // Older plugins identify their own shadow entry through this tag.
+          // Retain it so they never mistake an in-place wrapper for a new owner.
+          if (previous?.[decoration]) Decorated[decoration] = previous[decoration];
           entry.component = Decorated; installed.set(entry, state); changed = true;
         }
         if (changed) publish();
