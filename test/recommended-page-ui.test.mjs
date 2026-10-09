@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 import { INSTALLED_VERSION, releaseHostVersion } from '../src/version.mjs';
+import { recommendedPlugins } from '../src/recommended-plugin-catalog.mjs';
 
 test('recommended page defaults on, hides only after a successful save and persists', { timeout: 90000 }, async t => {
   const f = await frontendFixture(t), { page } = f;
@@ -38,11 +39,23 @@ test('recommended page defaults on, hides only after a successful save and persi
   await until(async () => await entry.count() === 1);
   await entry.click();
   await dialog.getByRole('heading', { name: '推荐插件', exact: true }).waitFor();
-  assert.equal(await dialog.locator('.tx-recommended-card').count(), 9);
+  assert.equal(await dialog.locator('.tx-recommended-card').count(), 10);
   assert.equal(await dialog.getByRole('heading', { name: 'Jevify', exact: true }).count(), 0);
   const status = await (await page.request.get(new URL('trisoul-x/recommended-plugins', page.url()).href)).json();
-  assert.equal(status.plugins.length, 9);
+  assert.equal(status.plugins.length, 10);
   assert.equal(status.plugins.some(plugin => plugin.id === 'jevify'), false);
+  const iui = status.plugins.find(plugin => plugin.id === 'dsh-intelligent-ui');
+  const actualHost = releaseHostVersion(INSTALLED_VERSION);
+  const build = recommendedPlugins.find(plugin => plugin.id === iui.id).hostBuilds[actualHost];
+  const iuiCard = dialog.locator('.tx-recommended-card').filter({ has: page.getByRole('heading', { name: '智能交互回答 · Intelligent UI', exact: true }) });
+  await until(async () => (await iuiCard.locator('.tx-recommended-version').innerText()).includes('未安装'));
+  assert.equal(iui.hostVersion, actualHost, 'real native Loader resolves the running host manifest');
+  assert.equal(iui.expectedVersion, build.version);
+  assert.equal(iui.review.version, build.version);
+  assert.equal(iui.review.sha256, build.sha256);
+  assert.equal(iui.installed, false, 'Intelligent UI remains optional and is never installed by opening recommendations');
+  assert.ok((await iuiCard.innerText()).includes(build.version));
+  assert.equal(await iuiCard.getByRole('button', { name: '安装', exact: true }).isEnabled(), !iui.unavailable);
   for (const action of ['install', 'update', 'uninstall']) {
     const removed = await page.request.post(new URL('trisoul-x/recommended-plugins', page.url()).href, { data: { id: 'jevify', action } });
     assert.equal(removed.status(), 400);
