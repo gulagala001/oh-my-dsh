@@ -12932,7 +12932,7 @@ var BrowserControls = (0, import_react10.forwardRef)(function BrowserControls2({
 var import_react11 = require("react");
 var decoration = Symbol.for("opencu.slot-decoration.v1");
 var componentDecoration = Symbol.for("opencu.slot-component-decoration.v1");
-var refreshEntry = Symbol("opencu.slot-refresh");
+var refreshEntry = Symbol.for("opencu.slot-refresh.v1");
 var unwrapInactive = (component) => {
   while (component?.[componentDecoration]?.active === false) component = component[componentDecoration].previous;
   return component;
@@ -12982,6 +12982,7 @@ function decorateSlotComponent(slots, name, accepts, decorate) {
           const state = { previous, active: true, wrapper: null };
           state.wrapper = Decorated;
           Decorated[componentDecoration] = state;
+          if (previous?.[decoration]) Decorated[decoration] = previous[decoration];
           entry.component = Decorated;
           installed.set(entry, state);
           changed = true;
