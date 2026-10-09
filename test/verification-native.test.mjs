@@ -85,16 +85,21 @@ test('PTC visibility permits verification only as a nested call and keeps the sh
       if (result.isError) throw Error(result.error.message);
       return result.value;
     } });
-  // This test exercises the real PTC visibility/parent-token policy, not the
-  // run_code language worker. Sample the allowlist as prompt assembly does.
-  f.ctx.provide('ptcRuntime', { language: 'typescript', timeout: { defaultMs: 30000, maxMs: 30000 } });
+  // The native run_code transport supplies the real scoped child execution
+  // token. Only its language process is controlled in this policy test.
+  f.ctx.provide('ptcRuntime', { language: 'typescript', timeout: { defaultMs: 30000, maxMs: 30000 },
+    resolve: request => request,
+    async run(spec) { return { logs: [], value: await spec.bindings[0].functions.verification_test_entry({}) }; },
+  });
   const { installPtcPresentation } = await import('../src/ptc.mjs');
   installPtcPresentation(f.agent.ctx, () => ['verification_test_entry']).sample(f.agent);
   f.refreshTools();
   const direct = await f.invoke('verify_link', { op: 'run' }); assert.equal(direct.isError, true);
   assert.equal(direct.error.info.code, 'UNKNOWN_TOOL');
-  const result = await f.invoke('verification_test_entry', {}); assert.equal(result.isError, false, JSON.stringify(result));
-  assert.match(result.value, /PTC_NESTED_PASS/);
+  const directControl = await f.invoke('verification_test_entry', {});
+  assert.equal(directControl.isError, true); assert.equal(directControl.error.info.code, 'UNKNOWN_TOOL');
+  const result = await f.invoke('run_code', { code: 'return await tools.verification_test_entry({})', description: 'Verify through the native PTC transport' });
+  assert.equal(result.isError, false, JSON.stringify(result)); assert.match(result.value.result, /PTC_NESTED_PASS/);
   const outer = f.dispatches.findLast(exec => exec.name === 'verify_link'), shell = f.dispatches.findLast(exec => exec.name === f.shellName);
   assert.ok(outer.parent); assert.equal(shell.parent, outer.token); assert.equal(shell.rootCallId, outer.rootCallId);
 });

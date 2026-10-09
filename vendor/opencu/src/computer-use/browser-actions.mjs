@@ -44,6 +44,10 @@ export class BrowserActions {
     cdp.on('Page.downloadProgress',event=>{
       const entry=this.downloadHistory.get(event.guid);if(!entry||!['inProgress','unobserved'].includes(entry.state))return;
       Object.assign(entry,{state:event.state,receivedBytes:event.receivedBytes,totalBytes:event.totalBytes});
+      // Managed profiles also retain downloads completed by the human in a
+      // live preview after the model controller has stopped. External browser
+      // connections keep their existing path-availability boundary.
+      void this.rememberManagedDownload?.(entry);
     });
     cdp.on('Page.javascriptDialogOpening', value => { record.nativeDialog = value; });
     cdp.on('Page.javascriptDialogClosed', () => { record.dialog = null; record.nativeDialog = null; });

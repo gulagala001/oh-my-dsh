@@ -42,7 +42,6 @@ for (const name of modules) {
       b.onResolve({ filter: /^@deepseek-ai\/dsh-(bash|pwsh)-local$/ }, args => ({ path: `${root}vendor/dsh/${args.path.split('dsh-')[1]}/src/index.ts` }));
       b.onResolve({ filter: /^\.\.\/\.\.\/\.\.\/(session|subagent)\// }, args => ({ path: `${root}vendor/dsh/${args.path.split('/').slice(4).join('/')}` }));
       b.onResolve({ filter: /^@deepseek-ai\/dsh-session-persistence-jsonl\/src\/lease\.ts$/ }, () => ({ path: `${root}vendor/dsh/session-persistence-jsonl/src/lease.ts` }));
-      b.onResolve({ filter: /^@deepseek-ai\/dsh-subagent-in-process-driver\/src\/index\.ts$/ }, () => ({ path: `${root}vendor/dsh/subagent-in-process-driver/src/index.ts` }));
       b.onLoad({ filter: /workflow-ptc[\\/]src[\\/]guest-source\.ts$/ }, () => ({ contents: `export const WORKFLOW_GUEST_SOURCE = ${JSON.stringify(guestSource)};`, loader: 'ts' }));
     } }, acornDependency],
   });

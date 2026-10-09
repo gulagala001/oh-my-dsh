@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
 import { createTodoStore } from './todolist.mjs';
 import { tasksFromLegacy } from './task-context.mjs';
+import { currentDirectory } from './working-directory.mjs';
 
 const TASK_ENTRY_SCHEMA = { type: 'object', properties: {
   id: { type: 'string', description: 'Required for edit: the existing task ID. Omit for excerpt/add.' },
@@ -93,7 +94,7 @@ export function createVerificationRunner(ctx, exec) {
     const tool = windows ? 'pwsh' : 'bash', callId = randomUUID();
     const args = {
       command: windows ? `$ErrorActionPreference = 'Stop'\n& {\n${command}\n}\nif ($LASTEXITCODE -ne $null) { exit $LASTEXITCODE }` : command,
-      description: 'Run the linked task verification command', workdir: exec.agent.session.header.cwd,
+      description: 'Run the linked task verification command', workdir: currentDirectory(ctx, exec.agent.session),
       timeoutMs, run_in_background: false,
     };
     const result = await invoke(tool, args, exec.signal, callId);
@@ -138,7 +139,7 @@ export function registerTasks(ctx, store = createTodoStore()) {
     },
     {
       name: 'verify_link', description: VERIFICATION_DESCRIPTION, parameters: VERIFICATION_PARAMETERS, title: '验证',
-      run: (args, session, exec) => store.execVerifyLink(session, args, session.header.cwd, exec.signal, createVerificationRunner(ctx, exec)),
+      run: (args, session, exec) => store.execVerifyLink(session, args, currentDirectory(ctx, session), exec.signal, createVerificationRunner(ctx, exec)),
     },
   ];
   for (const { name, description, parameters, title, run } of definitions) ctx.tools.register({

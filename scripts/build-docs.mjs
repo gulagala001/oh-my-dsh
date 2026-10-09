@@ -17,6 +17,7 @@ const guides = [
   'claude-cli-skin-research.md', 'google-material-expressive-research.md',
   'dream-memory.md', 'prompt-adaptation.md', 'runtime-state-background.md',
   'workflow.md', 'open-design.md', 'plugin-submissions.md', 'showcase.md', 'dsh-0.2-preparation.md',
+  'rea-development.md', 'plugin-compatibility.md',
   'upstream-patches/README.md', 'site/README.md',
 ];
 const navigation = [

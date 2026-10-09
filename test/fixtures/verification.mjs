@@ -37,6 +37,10 @@ export function verificationFixture(t, { runTimeoutMs, maxTimeoutMs = 600000, mo
   const ctx = new Context(), units = new Map(), dispatches = [], confinements = [];
   let toolProvider;
   ctx.provide('systemPrompt', { tools(provider) { toolProvider = provider; }, section() {}, context() {}, getSectionOrder() { return 0; }, getContextOrder() { return 0; } });
+  ctx.provide('workingDirectory', {
+    get: session => session.header.cwd,
+    ensure: async (agent, signal) => { signal?.throwIfAborted(); return agent.session.header.cwd; },
+  });
   ctx.provide('sessionProjections', {
     register(unit) { units.set(unit.key, unit); return () => units.delete(unit.key); },
     stateOf(session, key) { const unit = units.get(key); return session.snapshotEvents().reduce((value, event) => unit.apply(value, event), unit.init()); },

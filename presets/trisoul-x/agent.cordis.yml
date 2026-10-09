@@ -90,14 +90,12 @@
         provider: spawn
         toolName: subagent
         modelSelectionSettings: true
-        backgroundMode: continuable
 
     - id: tool-subagent-fork
       name: '@deepseek-ai/dsh-tool-subagent'
       config:
         provider: fork
         toolName: subagent_fork
-        backgroundMode: continuable
 
     - id: workflow-ptc-original
       name: '@deepseek-ai/dsh-workflow-ptc'

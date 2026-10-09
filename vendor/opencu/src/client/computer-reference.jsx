@@ -41,7 +41,7 @@ export function installComputerReferenceMessages(ctx) {
     // The pinned native renderer has no injected/store/child contract. Only
     // that known shape uses the existing inline CU bubble. Other renderers
     // keep their complete output, with CU references added beside it.
-    const native = (Original.type?.name ?? Original.name) === 'UserMessageNodeView'
+    const native = (Original.displayName ?? Original.type?.displayName ?? Original.type?.name ?? Original.name) === 'UserMessageNodeView'
       && original.locale === 'chat' && !original.inject && !original.store && !original.children;
     function WithComputerReferences(props) {
       const text = (props.node.data.content ?? []).filter(b => b.type === 'text' && typeof b.text === 'string').map(b => b.text).join('');
