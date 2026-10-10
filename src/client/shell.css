@@ -87,12 +87,11 @@
 .trisoul-shell .tx-composer-dock { display: contents; }
 .trisoul-shell .tx-composer-tools { grid-column: 1 / 3; grid-row: 1; }
 .trisoul-shell .tx-usage-toggle { grid-column: 3; grid-row: 1; justify-self: end; }
-.trisoul-shell [data-composer-stat] { display: none; grid-row: 2; min-width: 0; margin: 0; padding: 4px 2px; opacity: 1; }
+.trisoul-shell :is([data-composer-stat], [data-composer-stats]) { grid-row: 2; min-width: 0; margin: 0; padding: 4px 2px; opacity: 1; }
 .trisoul-shell [data-composer-stat='activity'] { grid-column: 1; }
 .trisoul-shell [data-composer-stat='usage'] { grid-column: 2; }
-.trisoul-shell .tx-stats-line { display: none; grid-column: 3; grid-row: 2; justify-self: end; white-space: nowrap; }
-.trisoul-shell [data-slot='conversation.composer.dock']:has(.tx-composer-dock[data-omd-usage-expanded]) [data-composer-stat] { display: inline-flex; }
-.trisoul-shell .tx-composer-dock[data-omd-usage-expanded] .tx-stats-line { display: inline-flex; }
+.trisoul-shell .tx-stats-line { grid-column: 3; grid-row: 2; justify-self: end; white-space: nowrap; }
+.trisoul-shell [data-composer-stats] { grid-column: 1 / 3; justify-content: flex-start; flex-wrap: wrap; gap: 8px; }
 /* A narrow dock shares one grid with the native context control. Keep every
    action in its original DOM and let the CU preview use the whole row. */
 @media (max-width: 540px) {
@@ -110,7 +109,7 @@
   .trisoul-shell .tx-stats-line { grid-column: 3; grid-row: 3; }
 }
 .trisoul-shell [data-composer-stat] > :first-child { padding: 2px 4px; font-size: 11px; gap: 5px; }
-.trisoul-shell [data-composer-stat] svg { width: 13px; height: 13px; }
+.trisoul-shell :is([data-composer-stat], [data-composer-stats]) svg { width: 13px; height: 13px; }
 /* Process details read as a disclosure, with the response itself in focus. */
 .trisoul-shell .l_V-RG_root { height: 26px; border-bottom: 0; padding-bottom: 0; }
 .trisoul-shell .l_V-RG_label { font-size: 12px; color: var(--tx-shell-muted); }
