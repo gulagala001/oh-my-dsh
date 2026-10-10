@@ -17,9 +17,16 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
       const currentSession = currentAgent?.session ?? (id ? ctx.sessions?.get(id) : null) ?? target.session;
       return Boolean(target.archivedOnly || saved?.started || (currentAgent && currentAgent.status !== 'idle') || preparedState?.records?.length || Object.keys(preparedState?.publications?.catalog || {}).length || preparedState?.publications?.globalRevision != null || currentSession?.snapshotEvents().some(actualUser) || target.inspection?.events.some(actualUser));
     };
-    const locked = scopeLocked({ session, agent, inspection, archivedOnly });
-    const scope = () => ['session','global'].includes(state?.memoryScope || hub.config().memoryScope) ? state?.memoryScope || hub.config().memoryScope : 'project';
+    const header=session?.header||inspection?.meta;
+    let projectless=false;
+    if(id&&header&&hub.dream?.sources?.scopeFor) {
+      try { projectless=Boolean((await hub.dream.sources.scopeFor({...header,id})).projectless); }
+      catch(error) { hub.dream.sources.lifecycle?.signal.throwIfAborted();projectless=true;hub.dream.notice(error); }
+    }
+    const locked = projectless||scopeLocked({ session, agent, inspection, archivedOnly });
+    const scope = () => projectless?'session':['session','global'].includes(state?.memoryScope || hub.config().memoryScope) ? state?.memoryScope || hub.config().memoryScope : 'project';
     if (req.method === 'POST') {
+      if(projectless) { send(res,409,{error:'非工作区 Chat 保持会话隔离；加入工作区后可选择共享范围'});return true; }
       if (locked) { send(res, 409, { error: '会话已开始，隔离范围不能中途扩大' }); return true; }
       const input = await readBody(req);
       if (!['session', 'project', 'global'].includes(input.scope)) throw new Error('范围只能是 session、project 或 global');

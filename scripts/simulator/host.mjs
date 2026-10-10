@@ -78,7 +78,7 @@ export class SimulationHost {
         models: this.models.map(id => ({ id, name: '离线模拟 ' + id, contextWindow: 1000000, maxTokens: 16384, input: ['text', 'image'] })) } } },
       'agent-default-model': { provider: 'simulation', model: this.models[0] },
       'trisoul-x': { componentAutoSetup: false, computerUseEnabled: false, codegraphEnabled: false, backgroundTasksEnabled: false,
-        dreamAutoEnabled: false, flushIdleMs: 0, digestEvery: 1000, coordinatorEvery: 1000,
+        dreamAutoEnabled: false, projectlessWorkspaceRoot: join(this.root, 'projectless-chats'), flushIdleMs: 0, digestEvery: 1000, coordinatorEvery: 1000,
         unifiedBackground: { provider: 'simulation', model: this.models[0], effort: 'off' }, dreamProvider: 'simulation', dreamModel: this.models[0],
         computerUseChromeUserDataDir: join(this.root, 'chrome-profile'), ...this.omd },
     }));

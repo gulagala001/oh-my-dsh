@@ -141,12 +141,12 @@ export function createProjectlessWorkspaceService({ root, storeDir, now = () => 
   if (typeof now !== 'function') throw fail('now must be a function');
   const requestsDir = path.join(storeDir, 'requests');
   const claimsDir = path.join(storeDir, 'names');
-  const keyFor = (id) => hash(`${root}\0${id}`);
+  const keyFor = (id, allocationRoot = root) => hash(`${allocationRoot}\0${id}`);
   const fileFor = (id) => path.join(requestsDir, `${keyFor(id)}.json`);
 
-  function result(record, id) {
-    if (record?.version !== 1 || record.requestId !== id || record.root !== root || !/^\d{4}-\d{2}-\d{2}$/.test(record.date || '') || !validStoredName(record.name) || !['pending', 'ready'].includes(record.state)) throw fail('invalid workspace metadata');
-    return { requestId: id, cwd: path.join(root, record.date, record.name), name: record.name, date: record.date };
+  function result(record, id, allocationRoot = root) {
+    if (record?.version !== 1 || record.requestId !== id || record.root !== allocationRoot || !/^\d{4}-\d{2}-\d{2}$/.test(record.date || '') || !validStoredName(record.name) || !['pending', 'ready'].includes(record.state)) throw fail('invalid workspace metadata');
+    return { requestId: id, cwd: path.join(allocationRoot, record.date, record.name), name: record.name, date: record.date };
   }
 
   async function load(id) {
@@ -164,10 +164,8 @@ export function createProjectlessWorkspaceService({ root, storeDir, now = () => 
     return await safeDirectory(workspace.cwd) ? workspace : null;
   }
 
-  async function owns(cwd) {
+  async function owns(cwd, { requireDirectory = true } = {}) {
     if (typeof cwd !== 'string' || !path.isAbsolute(cwd) || path.normalize(cwd) !== cwd) return false;
-    const parts = path.relative(root, cwd).split(path.sep);
-    if (parts.length !== 2 || !/^\d{4}-\d{2}-\d{2}$/.test(parts[0]) || !validStoredName(parts[1])) return false;
     if (!await safeDirectory(claimsDir) || !await safeDirectory(requestsDir)) return false;
     const claim = await readJson(path.join(claimsDir, `${hash(cwd)}.json`));
     if (!claim) return false;
@@ -175,8 +173,13 @@ export function createProjectlessWorkspaceService({ root, storeDir, now = () => 
     const record = await readJson(path.join(requestsDir, `${claim.requestHash}.json`));
     if (!record || record.state !== 'ready') return false;
     const id = requestKey(record.requestId);
-    if (keyFor(id) !== claim.requestHash || result(record, id).cwd !== cwd) return false;
-    return await safeDirectory(cwd);
+    // Claims outlive changes to the configured root. Verify the original
+    // allocation rather than treating old Chat directories as new projects.
+    const allocationRoot = absolute(record.root, 'stored root');
+    if (keyFor(id, allocationRoot) !== claim.requestHash || result(record, id, allocationRoot).cwd !== cwd) return false;
+    // Saved allocation provenance remains private after its files are removed.
+    // UI and file operations still require the original safe directory.
+    return requireDirectory ? await safeDirectory(cwd) : true;
   }
 
   async function prepare({ requestId, prompt } = {}) {

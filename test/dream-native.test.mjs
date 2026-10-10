@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {writeFile,mkdir} from 'node:fs/promises';
+import {writeFile,mkdir,realpath,readFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {createRequire} from 'node:module';
+import {pathToFileURL} from 'node:url';
 import {join} from 'node:path';
 import {frontendFixture,until} from './fixtures/frontend.mjs';
 import {restoreFixtureLog} from './fixtures/restore-log.mjs';
@@ -27,6 +30,79 @@ test('native standard sessions obey the independent default in Dream while expli
   assert.ok(event,'the real host persisted the original user message');
   const original=await f.api('/dream/read?sessionId='+f.sessionId+'&from='+event.seq+'&to='+event.seq);
   assert.match(original.text,/ISOLATED_NATIVE_SENTINEL/);
+});
+
+test('native managed projectless Chat stays outside shared Dream and survives a broken ownership claim', {timeout:90000}, async t=>{
+  const sentinel='PROJECTLESS_NATIVE_CHAT_SENTINEL',dreamInputs=[];
+  const chatPreset=process.env.OMD_IUI_ARCHIVE?'intelligent-chat':'standard';
+  const omdConfig={memoryScope:'project',dreamProvider:'fixture',dreamModel:'fixture',dreamDeepAgeMs:60000,
+    computerUseEnabled:false,codegraphEnabled:false,keepTailEvents:0,automaticReplace:false};
+  const f=await frontendFixture(t,{headless:true,agentPreset:'standard',omdConfig,
+    plugins:process.env.OMD_IUI_ARCHIVE?['file:'+process.env.OMD_IUI_ARCHIVE]:[],
+    async setupWorkspace({root}){omdConfig.projectlessWorkspaceRoot=join(await realpath(root),'managed-chats');},
+    modelReply(payload){
+      const names=(payload.tools||[]).map(item=>item.function.name);
+      if(names.includes('prepare_segment'))return tool('prepare_segment',{summary:sentinel,documents:[],decisions:[]});
+      if(names.includes('save_memory')){
+        const input=inputOf(payload);dreamInputs.push(input);
+        return tool('save_memory',{summary:input.kind+'：'+input.sources.map(source=>source.text).join(' '),references:input.sources.map(source=>source.id)});
+      }
+    },
+  });
+  const prepared=await f.api('/projectless-workspace',{requestId:crypto.randomUUID(),prompt:'隔离的无工作区聊天'});
+  const {sessionId}=await f.rpc('session/create',{cwd:prepared.cwd,agentPreset:chatPreset});
+  await f.rpc('session/prompt',{requestId:crypto.randomUUID(),sessionId,mode:'queue',content:[{type:'text',text:sentinel}]});
+  await until(async()=>(await f.api('/state?session='+sessionId)).running==='idle');
+  await f.api('/context/prepare?session='+sessionId,{});
+  await until(async()=>(await f.api('/context?session='+sessionId)).records.some(record=>record.summary===sentinel));
+  await f.api('/dream/refresh',{});
+  const status=await f.api('/dream?session='+sessionId);
+  assert.equal(status.session.mode,'session');assert.equal(status.session.shared,false);
+  assert.equal(status.session.project,'@unclassified');
+  const waitJob=async job=>until(async()=>{
+    const current=(await f.api('/dream')).jobs.find(item=>item.id===job.id);
+    if(current?.state==='failed')throw Error(current.error);
+    return current?.state==='complete';
+  });
+  await waitJob(await f.api('/dream/run?session='+sessionId,{scope:'global'}));
+  assert(!JSON.stringify(dreamInputs).includes(sentinel),'shared Dream payload must not contain managed Chat material');
+  assert.equal((await f.api('/dream?session='+sessionId)).sessionMemory,null);
+  await waitJob(await f.api('/dream/run?session='+sessionId,{scope:'session'}));
+  assert(dreamInputs.some(input=>input.kind==='session'&&JSON.stringify(input).includes(sentinel)),
+    'the actual prepared Chat source remains eligible for explicit session Dream');
+  const sharedStart=dreamInputs.length;
+  await waitJob(await f.api('/dream/run?session='+sessionId,{scope:'global'}));
+  assert(!JSON.stringify(dreamInputs.slice(sharedStart)).includes(sentinel),'explicit Chat memory must not enter a later shared Dream payload');
+  const list=await f.call('session/list',{_request:{}});
+  assert.equal(list.result?.ok,true,JSON.stringify(list));
+  const nativeSummary=list.result.value.items.find(item=>item.sessionId===sessionId);
+  assert.equal(nativeSummary?.cwd,prepared.cwd);assert.equal(nativeSummary?.agentPreset,chatPreset);
+  const log=await restoreFixtureLog(f.home,sessionId);
+  const event=log.events.find(item=>item.type==='user/message'&&JSON.stringify(item.data).includes(sentinel));
+  assert.ok(event,'the real host persisted the projectless original message');
+  const original=await f.api('/dream/read?sessionId='+sessionId+'&from='+event.seq+'&to='+event.seq);
+  assert.match(original.text,new RegExp(sentinel));
+
+  const broken=await f.api('/projectless-workspace',{requestId:crypto.randomUUID(),prompt:'损坏归属的聊天'});
+  const claimFile=join(await realpath(f.home),'trisoul-x','projectless-workspaces','names',createHash('sha256').update(broken.cwd).digest('hex')+'.json');
+  await writeFile(claimFile,JSON.stringify({requestHash:'invalid-claim'}));
+  const second=await f.rpc('session/create',{cwd:broken.cwd,agentPreset:'trisoul-x'});
+  await f.rpc('session/prompt',{requestId:crypto.randomUUID(),sessionId:second.sessionId,mode:'queue',content:[{type:'text',text:'BROKEN_CLAIM_NATIVE_PROMPT'}]});
+  await until(async()=>(await f.api('/state?session='+second.sessionId)).running==='idle');
+  const isolated=await until(async()=>{
+    const value=await f.api('/dream?session='+second.sessionId);return value.session?.scopeError?value:null;
+  });
+  assert.equal(isolated.session.shared,false);assert.equal(isolated.session.mode,'session');
+  assert.match(isolated.session.scopeError,/invalid workspace name metadata/);
+  const brokenLog=await restoreFixtureLog(f.home,second.sessionId);
+  assert(brokenLog.events.some(event=>event.type==='assistant/message'),'ownership lookup failure must not block the native model reply');
+  const reportDir=join(process.cwd(),'work/dream-projectless-fix/native-agent');await mkdir(reportDir,{recursive:true});
+  const hostRequire=createRequire(process.env.OMD_DSH_CLI?pathToFileURL(process.env.OMD_DSH_CLI):new URL('../node_modules/@deepseek-ai/dsh/lib/bin.js',import.meta.url));
+  const hostPackagePath=hostRequire.resolve('@deepseek-ai/dsh/package.json');
+  await writeFile(join(reportDir,'projectless-native.json'),JSON.stringify({host:JSON.parse(await readFile(hostPackagePath,'utf8')).version,
+    sourceHost:hostPackagePath,agentPreset:chatPreset,omdArchive:process.env.OMD_UI_ARCHIVE||null,iuiArchive:process.env.OMD_IUI_ARCHIVE||null,
+    sessionId,session:status.session,dreamKinds:dreamInputs.map(input=>input.kind),originalRead:true,
+    brokenClaim:{sessionId:second.sessionId,scope:isolated.session,nativeReply:true}},null,2));
 });
 
 const tool=(name,args)=>({delta:{role:'assistant',tool_calls:[{index:0,id:crypto.randomUUID(),type:'function',function:{name,arguments:JSON.stringify(args)}}]},finish_reason:'tool_calls',usage:{prompt_tokens:50,completion_tokens:20,total_tokens:70}});
