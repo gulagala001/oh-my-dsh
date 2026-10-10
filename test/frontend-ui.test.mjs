@@ -119,6 +119,10 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
     await route.fulfill({ json: { ...setupState, native: { platform: 'win32', supported: true, installed: windowsInstalled, interactive: windowsInstalled, captureSupported: windowsInstalled, repairRequired, version: '0.1.1' } } });
   };
   await page.route('**/trisoul-x/computer-use/setup?*', windowsSetup);
+  // Setup reads intentionally pause while the real browser document is hidden.
+  // Restore the user's active-page condition before testing native polling.
+  await page.bringToFront();
+  t.diagnostic('Windows setup polling begins with document visibility: ' + await page.evaluate(() => document.visibilityState));
   try {
     await until(async () => (await page.locator('.tx-cu-setup').innerText()).includes('.NET 10 SDK'));
     assert.doesNotMatch(await page.locator('.tx-cu-setup').innerText(), /Apple Command Line Tools|操作 Mac 应用/);
