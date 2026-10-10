@@ -101,6 +101,16 @@ test('native managed projectless Chat stays outside shared Dream and survives a 
   const brokenLog=await restoreFixtureLog(f.home,second.sessionId);
   assert(brokenLog.events.some(event=>event.type==='assistant/message'),'ownership lookup failure must not block the native model reply');
   await writeFile(claimFile,originalClaim);
+  const fork=await f.rpc('session/fork',{sessionId:second.sessionId});
+  const forkScope=await f.api('/scope?session='+fork.sessionId);
+  const forkContext=await f.api('/context?session='+fork.sessionId);
+  assert.equal(forkScope.scope,'session');
+  assert.equal(forkContext.scope.scope,'session','a seeded private Chat must bind privately before inherited user events lock the archive');
+  await f.rpc('session/prompt',{requestId:crypto.randomUUID(),sessionId:fork.sessionId,mode:'queue',content:[{type:'text',text:'PRIVATE_CHAT_FORK_CONTROL'}]});
+  await until(async()=>(await f.api('/state?session='+fork.sessionId)).running==='idle');
+  await f.api('/dream/refresh',{});
+  const forkDream=await f.api('/dream?session='+fork.sessionId);
+  assert.equal(forkDream.session.mode,'session');assert.equal(forkDream.session.shared,false);
   const registered=await f.rpc('workspace/create',{path:prepared.cwd});
   const workspaceSession=await f.rpc('session/create',{workspaceId:registered.workspace.workspaceId,agentPreset:'trisoul-x'});
   const workspaceScope=await f.api('/scope?session='+workspaceSession.sessionId);
@@ -112,6 +122,7 @@ test('native managed projectless Chat stays outside shared Dream and survives a 
   await f.api('/dream/refresh',{});
   const workspaceDream=await f.api('/dream?session='+workspaceSession.sessionId);
   assert.equal(workspaceDream.session.shared,true);assert.equal(workspaceDream.session.mode,'project');
+  assert.equal(workspaceDream.session.project,workspaceContext.scope.project,'Dream and Context must use the same existing project key');
   assert.equal((await f.api('/dream?session='+sessionId)).session.shared,false,'registering the directory never attaches the original private Chat implicitly');
   const reportDir=join(process.cwd(),'work/dream-projectless-fix/native-agent');await mkdir(reportDir,{recursive:true});
   const hostRequire=createRequire(process.env.OMD_DSH_CLI?pathToFileURL(process.env.OMD_DSH_CLI):new URL('../node_modules/@deepseek-ai/dsh/lib/bin.js',import.meta.url));
@@ -120,6 +131,7 @@ test('native managed projectless Chat stays outside shared Dream and survives a 
     sourceHost:hostPackagePath,agentPreset:chatPreset,omdArchive:process.env.OMD_UI_ARCHIVE||null,iuiArchive:process.env.OMD_IUI_ARCHIVE||null,
     sessionId,session:status.session,dreamKinds:dreamInputs.map(input=>input.kind),originalRead:true,
     effectiveScope:effective,workspaceControl:{sessionId:workspaceSession.sessionId,scope:workspaceScope,contextScope:workspaceContext.scope,dream:workspaceDream.session},
+    privateFork:{sessionId:fork.sessionId,scope:forkScope,contextScope:forkContext.scope,dream:forkDream.session},
     brokenClaim:{sessionId:second.sessionId,scope:isolated.session,nativeReply:true}},null,2));
 });
 

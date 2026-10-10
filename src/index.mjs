@@ -258,12 +258,16 @@ export async function apply(ctx, config) {
     if(!hub.dream.sources.projectlessKnown(agent.session.header))hub.context.start(agent);
     hub.components.project(currentDirectory(ctx, agent.session));
   }, { global: true });
-  ctx.on('session/created', session => {
+  ctx.on('session/created', async session => {
     if (!isX(session) || !session.header.parentSession || !session.header.isSeeded || session.header.origin === 'subagent') return;
     const state = hub.store.state(session.id);
     state.memoryScope ??= hub.scope(session,{effective:false}).mode;
     state.cwd = session.header.cwd; state.parentSession = session.header.parentSession; state.origin = session.header.origin ?? null;
-    hub.store.save(state); hub.context.state(session);
+    hub.store.save(state);
+    // Seeded user events already lock the archive, so resolve inherited Chat
+    // ownership before pinning its Context binding and historical records.
+    await hub.dream.sources.refreshScope(session.header);
+    hub.context.state(session);
   }, { global: true });
   ctx.on('session/event', (session, event) => {
     if (!hub.dream.closed) hub.dream.sources.observe(session, event);
