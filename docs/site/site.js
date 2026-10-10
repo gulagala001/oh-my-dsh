@@ -4,43 +4,56 @@
   const $ = selector => document.querySelector(selector);
   const imageRequests = new WeakMap();
 
-  async function swapImage(element, src, alt) {
-    const request = (imageRequests.get(element) || 0) + 1;
-    imageRequests.set(element, request);
-    const panel = element.closest('[role="tabpanel"]');
-    let status = panel.querySelector('.preview-feedback');
+  function feedbackFor(element, retryLabel) {
+    const panel = element.closest('[role="tabpanel"]') || (element.parentElement.tagName === 'A' ? element.parentElement.parentElement : element.parentElement);
+    let status = panel.querySelector(':scope > .preview-feedback');
     if (!status) {
-      status = document.createElement('span');
-      status.className = 'preview-feedback';
-      status.setAttribute('role', 'status');
-      panel.append(status);
+      status = document.createElement('span'); status.className = 'preview-feedback'; status.setAttribute('role', 'status');
+      const message = document.createElement('span'); message.className = 'preview-message';
+      const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = retryLabel;
+      status.append(message, retry); panel.append(status);
     }
-    panel.setAttribute('aria-busy', 'true');
-    panel.classList.remove('preview-failed');
-    panel.classList.add('preview-pending');
-    status.hidden = false;
-    status.textContent = '正在加载预览…';
-    const next = new Image();
-    next.src = src;
+    return { panel, status, message: status.querySelector('.preview-message'), retry: status.querySelector('button') };
+  }
+  async function swapImage(element, src, alt, commit = () => {}) {
+    const request = (imageRequests.get(element) || 0) + 1; imageRequests.set(element, request);
+    const { panel, status, message, retry } = feedbackFor(element, '重试预览');
+    panel.setAttribute('aria-busy', 'true'); panel.classList.remove('preview-failed'); panel.classList.add('preview-pending');
+    status.hidden = false; message.textContent = '正在加载预览…'; retry.hidden = true;
+    retry.onclick = () => { void swapImage(element, src, alt, commit); };
+    const next = new Image(); next.src = src;
     try { await next.decode(); }
     catch {
       if (imageRequests.get(element) === request) {
-        panel.setAttribute('aria-busy', 'false');
-        panel.classList.remove('preview-pending');
-        panel.classList.add('preview-failed');
-        status.textContent = '预览暂时无法加载，再次选择即可重试。';
+        panel.setAttribute('aria-busy', 'false'); panel.classList.remove('preview-pending'); panel.classList.add('preview-failed');
+        message.textContent = '预览暂时无法加载。'; retry.hidden = false;
       }
       return false;
     }
     if (imageRequests.get(element) !== request) return false;
-    element.src = src;
-    element.alt = alt;
-    panel.setAttribute('aria-busy', 'false');
-    panel.classList.remove('preview-pending', 'preview-failed');
+    element.src = src; element.alt = alt; commit();
+    panel.setAttribute('aria-busy', 'false'); panel.classList.remove('preview-pending', 'preview-failed');
+    if (status.contains(document.activeElement)) document.getElementById(panel.getAttribute('aria-labelledby'))?.focus();
     status.hidden = true;
     if (!reducedMotion.matches) element.animate([{ opacity: .65 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' });
     return true;
   }
+  // Initial, static and dialog images also retain a manual recovery path.
+  document.querySelectorAll('main img, #detail-image').forEach(element => {
+    let feedback;
+    element.addEventListener('error', () => {
+      feedback = feedbackFor(element, '重试图片'); const { panel, status, message, retry } = feedback;
+      message.textContent = '图片暂时无法加载。'; retry.hidden = false; retry.disabled = false; status.hidden = false;
+      panel.setAttribute('aria-busy', 'false'); panel.classList.add('preview-failed');
+      retry.onclick = () => { retry.disabled = true; message.textContent = '正在加载图片…'; panel.setAttribute('aria-busy', 'true'); element.src = element.src; };
+    });
+    element.addEventListener('load', () => {
+      if (!feedback) return; const { panel, status, retry } = feedback;
+      if (status.contains(document.activeElement)) (element.closest('a') || panel.querySelector('button:not(.preview-feedback button)'))?.focus();
+      status.hidden = true; retry.disabled = false; panel.removeAttribute('aria-busy'); panel.classList.remove('preview-failed');
+    });
+    if (element.complete && !element.naturalWidth && element.getAttribute('src')) element.dispatchEvent(new Event('error'));
+  });
 
   function bindTabs(name, onChange) {
     const list = document.querySelector(`[data-tabs="${name}"]`);
@@ -79,9 +92,9 @@
   bindTabs('hero', async (key, tab) => {
     const scene = heroScenes[key];
     $('#hero-panel').setAttribute('aria-labelledby', tab.id);
-    $('[data-hero-original]').href = scene.src;
-    if (!await swapImage($('#hero-image'), scene.src, scene.alt)) return;
-    $('#hero-caption').textContent = scene.caption;
+    await swapImage($('#hero-image'), scene.src, scene.alt, () => {
+      $('[data-hero-original]').href = scene.src; $('#hero-caption').textContent = scene.caption;
+    });
   });
 
   const memoryScenes = {
@@ -93,8 +106,8 @@
   bindTabs('memory', async (key, tab) => {
     const scene = memoryScenes[key];
     $('#memory-panel').setAttribute('aria-labelledby', tab.id);
+    await swapImage($('#memory-image'), scene.src, scene.alt, () => {
     $('#memory-original').href = scene.src;
-    if (!await swapImage($('#memory-image'), scene.src, scene.alt)) return;
     const [x, y, width, height] = scene.crop;
     const crop = $('#memory-crop');
     crop.style.setProperty('--crop-ratio', `${width}/${height}`);
@@ -106,6 +119,7 @@
     $('#memory-proof-label').textContent = scene.proofLabel;
     $('#memory-proof-value').textContent = scene.proof;
     $('#memory-capture-label').textContent = scene.label;
+    });
   });
 
   const themes = {
@@ -122,11 +136,12 @@
     const theme = themes[key];
     const src = `site/media/theme-${key}-${mode}.jpg`;
     $('#theme-panel').setAttribute('aria-labelledby', `theme-tab-${key}`);
+    await swapImage($('#theme-image'), src, `${theme.name} ${mode === 'dark' ? '深色' : '浅色'}主题的真实界面`, () => {
     $('#theme-original').href = src;
-    if (!await swapImage($('#theme-image'), src, `${theme.name} ${mode === 'dark' ? '深色' : '浅色'}主题的真实界面`)) return;
     $('#theme-name').textContent = theme.name;
     $('#theme-description').textContent = theme.description;
     $('#theme-image').dataset.preview = `${key}-${mode}`;
+    });
   }
   bindTabs('theme', key => { activeTheme = key; renderTheme(); });
   document.querySelectorAll('[name="preview-mode"]').forEach(input => input.addEventListener('change', renderTheme));
@@ -137,13 +152,15 @@
     $('.copy-status').textContent = '';
   });
   document.querySelectorAll('[data-copy]').forEach(button => button.addEventListener('click', async () => {
-    const text = document.getElementById(button.dataset.copy).textContent.trim();
+    const code = document.getElementById(button.dataset.copy), text = code.textContent.trim();
+    button.disabled = true;
     try {
       await navigator.clipboard.writeText(text);
       $('.copy-status').textContent = '已复制。按上方步骤继续安装即可。';
     } catch {
-      $('.copy-status').textContent = '当前浏览器无法直接复制，请选中上方文本后复制。';
-    }
+      const range = document.createRange(), selection = window.getSelection(); range.selectNodeContents(code); selection.removeAllRanges(); selection.addRange(range);
+      $('.copy-status').textContent = '当前浏览器无法直接复制，已选中命令，请使用复制快捷键。';
+    } finally { button.disabled = false; }
   }));
 
   const menu = $('.menu-toggle');
@@ -154,7 +171,8 @@
     $('#main-nav').classList.toggle('is-open', open);
   });
   $('#main-nav').addEventListener('click', event => { if (event.target.closest('a')) closeMenu(); });
-  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenu(); });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape' && menu.getAttribute('aria-expanded') === 'true') { closeMenu(); menu.focus(); } });
+  document.addEventListener('pointerdown', event => { if (menu.getAttribute('aria-expanded') === 'true' && !event.target.closest('.nav-wrap')) closeMenu(); });
   matchMedia('(min-width: 761px)').addEventListener('change', closeMenu);
 
   const dialog = $('#media-dialog');
@@ -165,12 +183,13 @@
   function openDialog(title) {
     $('#media-title').textContent = title;
     document.body.classList.add('dialog-open');
-    dialog.showModal();
+    dialog.showModal(); $('.dialog-close').focus();
   }
   document.querySelectorAll('[data-image]').forEach(button => button.addEventListener('click', () => {
     const item = details[button.dataset.image];
     detailImage.hidden = false;
     detailImage.src = item.file;
+    const staleFeedback = $('.dialog-content .preview-feedback'); if (staleFeedback) staleFeedback.hidden = true;
     detailImage.alt = item.alt;
     $('#media-note').textContent = item.note;
     const original = document.createElement('a');
