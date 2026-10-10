@@ -5,7 +5,7 @@
 <p align="center"><strong>长任务、电脑操作与任务验证，都在熟悉的 DSH 里。</strong></p>
 
 <p align="center">
-  <a href="docs/release-0.2.1-alpha.2.omd.0.14.0.md"><img src="https://img.shields.io/badge/version-0.2.1--alpha.2.omd.0.14.0-3478F6?style=flat-square" alt="Version 0.2.1-alpha.2.omd.0.14.0（待发布）" /></a>
+  <a href="docs/release-0.2.1-alpha.2.omd.0.15.0.md"><img src="https://img.shields.io/badge/version-0.2.1--alpha.2.omd.0.15.0-3478F6?style=flat-square" alt="Version 0.2.1-alpha.2.omd.0.15.0（待发布）" /></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.2.1--alpha.2-475569?style=flat-square" alt="DSH 0.2.1-alpha.2" /></a>
 </p>
 <p align="center">
@@ -20,6 +20,7 @@ Oh My DSH 是 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 - **长任务与记忆**：自动整理历史，需要细节时回查原话、文档和附件。[了解上下文与记忆](#memory)
 - **网页与桌面操作**：在对话中查看操作画面，随时停止、人工接手或恢复。[了解 OpenCU](#computer-use)
 - **任务与交付**：跟进待办，为完成项保留验证记录，查看生成的文件。[了解任务工具](#tools)
+- **运行监控**：用概览、用量和上下文三页查看调用进展、缓存、历史记录与预算，辨明统计范围与数据来源。[监控指南](docs/monitoring.md)
 
 还有适配 DSH 的[系统提示词](#prompts)、覆盖整个界面的[五种外观与自定义设置](#themes)，以及可按需安装的[插件生态](#plugins)。
 
@@ -31,9 +32,9 @@ Oh My DSH 是 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 
 ## 开始使用
 
-当前候选配对（未正式发布）：**DSH 0.2.1-alpha.2 · Oh My DSH 0.2.1-alpha.2.omd.0.14.0**，内置 **OpenCU 1.6.0**。rc.2 与 alpha.1 使用各自 SDK 的独立构建。已有环境升级前，先结束任务、停止服务或完整退出应用，并备份实际 `DSH_HOME`。[安装、迁移与升级指南](docs/upgrade.md)。
+当前候选配对（未正式发布）：**DSH 0.2.1-alpha.2 · Oh My DSH 0.2.1-alpha.2.omd.0.15.0**，内置 **OpenCU 1.6.0**。本次整合验收针对 alpha.2；旧宿主保留已交付的独立 0.14.0 构建。已有环境升级前，先结束任务、停止服务或完整退出应用，并备份实际 `DSH_HOME`。[安装、迁移与升级指南](docs/upgrade.md)。
 
-公开安装版本：**OMD 0.2.1-alpha.1.omd.0.10.0 / DSH 0.2.1-alpha.1**。下方 GitHub 命令安装已发布的 0.10.0，不含 0.11／0.12／0.13／0.14 候选改进或 alpha.2 适配。0.14.0 仅供[本地候选验收](docs/upgrade.md#candidate-install)。
+公开安装版本：**OMD 0.2.1-alpha.1.omd.0.10.0 / DSH 0.2.1-alpha.1**。下方 GitHub 命令安装已发布的 0.10.0，不含 0.11／0.12／0.13／0.14／0.15 候选改进或 alpha.2 适配。0.15.0 仅供[本地候选验收](docs/upgrade.md#candidate-install)。
 
 <a id="desktop"></a>
 
@@ -185,7 +186,7 @@ npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 
 ## 文档与参与
 
-[文档目录](docs/README.md) · [首次使用](docs/getting-started.md) · [完整指南](docs/usage.md) · [排障](docs/troubleshooting.md) · [更新记录](CHANGELOG.md) · [未发布候选说明](docs/release-0.2.1-alpha.2.omd.0.14.0.md)
+[文档目录](docs/README.md) · [首次使用](docs/getting-started.md) · [完整指南](docs/usage.md) · [排障](docs/troubleshooting.md) · [更新记录](CHANGELOG.md) · [未发布候选说明](docs/release-0.2.1-alpha.2.omd.0.15.0.md)
 
 开发分支可能包含尚未发布的功能；安装固定 tag 时，以[该 tag 的文档](https://github.com/gulagala001/oh-my-dsh/tree/v0.2.1-alpha.1.omd.0.10.0/docs)为准。[DSH 0.2 适配与验证](docs/dsh-0.2-preparation.md)。
 

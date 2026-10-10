@@ -12,6 +12,7 @@ import { installLoaderLifecycleCompatibility } from './loader-lifecycle-compat.m
 import { installToolSchedulerCompatibility } from './tool-scheduler-compat.mjs';
 import { installToolCancellationPresentation } from './tool-cancellation.mjs';
 import { monitorSelection, compactMonitorSnapshot } from './monitoring.mjs';
+import { handleMonitorApi } from './monitor-api.mjs';
 import { createVersionService, handleVersionApi } from './version.mjs';
 import { VersionUpdater, handleVersionUpdateApi } from './version-update.mjs';
 import { installImageBudget } from './image-budget.mjs';
@@ -303,6 +304,7 @@ export async function apply(ctx, config) {
         }
         if (await handleVersionUpdateApi({ req, res, url, service: versionUpdater, send })) return;
         if (await handlePromptOptimizerApi({ ctx, service: promptOptimizer, req, res, url, getSession: () => id ? ctx.agents.get(id)?.session ?? ctx.sessions.get(id) : undefined, send })) return;
+        if (handleMonitorApi({ hub, ctx, req, res, url, send })) return;
         const readTarget = async () => {
           const reading = new AbortController();
           const abortRead = () => reading.abort(new Error('会话读取已取消'));

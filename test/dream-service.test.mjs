@@ -46,6 +46,16 @@ function fixture(t,{generate,config={}}={}){
 
 const inputOf=payload=>JSON.parse(payload.messages.findLast(m=>m.role==='user').content);
 
+test('Dream monitor attributes actual levels and a failed recorder cannot change successful publication',async t=>{
+  const f=fixture(t),records=[];f.add('a');f.hub.live=new Map();
+  f.hub.monitor={append(entry){records.push(entry);throw Error('monitor unavailable');}};
+  const job=await f.run();assert.equal(job.state,'complete',job.error);
+  assert.deepEqual(records.map(entry=>[entry.kind,entry.sessionId]),[['dreamSession','a'],['dreamProject',null],['dreamGlobal',null]]);
+  assert.equal(new Set(records.map(entry=>entry.id)).size,3);
+  assert.ok(records.every(entry=>entry.status==='success'&&entry.source==='dream'&&entry.usage.inputTokens===100));
+  assert.equal(f.hub.live.size,0);assert.equal(f.store.usage().used,450);
+});
+
 test('shared Dream isolates a format refusal discovered at manifest admission and completes healthy targets',async t=>{
   const f=fixture(t);f.add('a');f.add('healthy');await f.run();
   const saved=f.store.memory('session:a'),healthyBefore=f.store.memory('session:healthy');

@@ -11,6 +11,8 @@ import { createEffortResolver } from './effort.mjs';
 import { promptText } from './cc-adaptation/texts.mjs';
 import { setRuntimeContext } from './task-context.mjs';
 import { DreamService } from './dream/service.mjs';
+import { randomUUID } from 'node:crypto';
+import { MonitorLedger, monitorInput, reportedMonitorUsage } from './monitor-ledger.mjs';
 
 const TASK_PAUSE_GUIDANCE = promptText('runtime/task-pause.md');
 
@@ -30,6 +32,7 @@ export class Hub extends Service {
     super(ctx, 'trisoulX');
     this.getConfig = () => configSnapshot(config);
     this.store = new HubStore(config.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), NS));
+    this.monitor = new MonitorLedger(this.store.dir);
     this.context = new ContextPipeline(this, createHostAdapter(this));
     this.efforts = createEffortResolver(ctx); this.agents = new Map();
     this.live = new Map(); this.requestStarts = new Map(); this.taskReviews = new Map();
@@ -41,6 +44,7 @@ export class Hub extends Service {
         setRuntimeContext(agent.session, () => null);
         return this.context.stripRuntime(agent.session);
       }));
+      this.monitor.close();
     });
   }
   config() { const value = this.getConfig(); return Object.fromEntries(Object.keys(Config.dict).filter(key => Object.hasOwn(value, key)).map(key => [key, value[key]])); }
@@ -80,10 +84,11 @@ export class Hub extends Service {
     const session = agent.session, state = this.store.state(session.id), meter = this.ctx.tokenMeter.measure(session);
     state.pendingFrame = { at: Date.now(), turn, step, totalTokens: meter.totalTokens, nodes: meter.nodes.map(n => {
       const e = session.eventAt(n.seq), msg = session.deriveEventMessage(e);
-      return { seq: n.seq, kind: msg?.source?.compactionId ? 'checkpoint' : sourceName(msg?.source) || msg?.source?.kind || e.type, tokens: n.tokens ?? n.heuristicTokens ?? 0 };
+      return { seq: n.seq, kind: msg?.source?.compactionId ? 'checkpoint' : sourceName(msg?.source) || msg?.source?.kind || e.type, tokens: n.tokens ?? n.heuristicTokens ?? null };
     }) };
   }
   record(session, kind, entry) {
+    entry = { ...entry, usage: reportedMonitorUsage(entry.usage, entry.hasOutput) };
     const state = this.store.state(session.id);
     state.cwd = session.header.cwd;
     state.parentSession = session.header.parentSession;
@@ -96,16 +101,24 @@ export class Hub extends Service {
     metric.peakContext = Math.max(metric.peakContext || 0, (entry.usage?.inputTokens || 0) + (entry.usage?.cacheReadTokens || 0) + (entry.usage?.cacheWriteTokens || 0));
     const recent = session.requestHeader()?.config;
     const frame = state.pendingFrame;
+    const call = { at: Date.now(), turn: frame?.turn, step: frame?.step, sessionId: session.id, kind, ...entry,
+      id: entry.id || randomUUID(), usage: entry.usage ?? null,
+      effort: entry.effort ?? (['main', 'subagent'].includes(kind) ? recent?.reasoningEffort ?? null : null) };
     if (['main', 'subagent'].includes(kind) && frame) {
-      const inputTokens = entry.usage ? (entry.usage.inputTokens || 0) + (entry.usage.cacheReadTokens || 0) + (entry.usage.cacheWriteTokens || 0) : undefined;
-      state.contextHistory ??= []; state.contextHistory.push({ ...frame, inputTokens, cacheReadTokens: entry.usage?.cacheReadTokens || 0 });
+      const inputTokens = monitorInput(entry.usage);
+      state.contextHistory ??= []; state.contextHistory.push({ ...frame, callId: call.id, sessionId: session.id, eventSeq: entry.eventSeq,
+        inputTokens, cacheReadTokens: entry.usage?.cacheReadTokens });
       state.contextHistory = state.contextHistory.slice(-80); delete state.pendingFrame;
     }
     const completed = frame ? null : session.snapshotEvents().findLast(e => e.type === 'step/end');
-    state.activity.push({ at: Date.now(), turn: frame?.turn ?? completed?.data.turn, step: frame?.step ?? completed?.data.step, sessionId: session.id, kind, ...entry, usage: entry.usage ?? null, effort: entry.effort ?? (['main', 'subagent'].includes(kind) ? recent?.reasoningEffort ?? null : null) });
+    call.turn ??= completed?.data.turn; call.step ??= completed?.data.step;
+    state.activity.push(call);
     state.activity = state.activity.slice(-60);
     this.budgets?.record(session, kind, entry);
     this.store.save(state);
+    // Telemetry is optional: a broken recorder must not turn success into a
+    // failed model call (nor cause the caller to record the same call again).
+    try { this.monitor?.append(call); } catch {}
   }
   action(session, name, count = 1) {
     const state = this.store.state(session.id);
@@ -135,10 +148,10 @@ export class Hub extends Service {
       if (['error', 'aborted', 'max-tokens'].includes(assembler.finish.kind)) throw Object.assign(
         new Error(assembler.finish.failure?.message || `模型未完成输出：${assembler.finish.kind}`),
         assembler.finish.failure?.code ? { code: assembler.finish.failure.code } : {});
-      this.record(agent.session, kind, { ...route, effort: reasoningEffort ?? null, durationMs: Date.now() - start, usage: assembler.usage });
+      this.record(agent.session, kind, { ...route, source: 'background', startedAt: start, status: 'success', effort: reasoningEffort ?? null, durationMs: Date.now() - start, usage: assembler.usage, hasOutput: Boolean(assembler.blocks().length) });
       return { blocks: assembler.blocks(), usage: assembler.usage, ...route };
     } catch (error) {
-      this.record(agent.session, kind, { ...route, effort: reasoningEffort ?? null, durationMs: Date.now() - start, usage: assembler.usage, error: error.message });
+      this.record(agent.session, kind, { ...route, source: 'background', startedAt: start, status: signal.aborted && !controller.signal.aborted ? 'cancelled' : 'error', effort: reasoningEffort ?? null, durationMs: Date.now() - start, usage: assembler.usage, hasOutput: Boolean(assembler.blocks().length), error: error.message });
       throw error;
     } finally {
       clearTimeout(timer); signal.removeEventListener('abort', onAbort);
@@ -159,12 +172,16 @@ export class Hub extends Service {
     }
     if ((event.type === 'assistant/message' || event.type === 'assistant/attempt') && sourceName(event.data.message?.source) !== NS + ':shadow') {
       const output = assembleAssistantStream(event.data.stream);
-      const route = session.requestHeader()?.config ?? {};
-      const failed = ['error', 'aborted', 'max-tokens'].includes(output.finish.kind);
+      const route = event.data.message?.source?.kind === 'model' ? event.data.message.source : session.requestHeader()?.config ?? {};
+      const cancelled = event.data.interrupted === true || output.finish.kind === 'aborted';
+      const failed = cancelled || event.type === 'assistant/attempt' || ['error', 'max-tokens'].includes(output.finish.kind);
       this.record(session, session.header.origin === 'subagent' ? 'subagent' : 'main', {
-        provider: route.provider, model: route.model, usage: output.usage,
-        durationMs: this.requestStarts.has(session.id) ? Date.now() - this.requestStarts.get(session.id) : 0,
-        ...(failed ? { error: output.finish.failure?.message || output.finish.kind } : {}),
+        id: `native:${session.id}:${event.seq}`, source: 'native', eventSeq: event.seq, at: event.time,
+        turn: event.data.turn, step: event.data.step, hasOutput: Boolean(event.data.message?.content?.length || output.blocks().length),
+        provider: route.provider, model: route.model, usage: event.data.usage ?? output.usage,
+        status: cancelled ? 'cancelled' : failed ? 'error' : 'success', startedAt: this.requestStarts.get(session.id),
+        durationMs: this.requestStarts.has(session.id) ? Date.now() - this.requestStarts.get(session.id) : null,
+        ...(failed ? { error: output.finish.failure?.message || (cancelled ? '已取消' : event.type === 'assistant/attempt' ? '请求未完成' : output.finish.kind) } : {}),
       });
       this.requestStarts.delete(session.id);
       if (!failed && event.type === 'assistant/message' && event.data.message?.source?.kind === 'model' && event.data.stream?.length) this.context.mainSucceeded(session, event.data.message.source);

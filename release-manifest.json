@@ -2,6 +2,18 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-alpha.2.omd.0.15.0",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "整合原生工作台与执行监控",
+      "notes": [
+        "整合 alpha.2 适配、插件共存、原生右侧标签页与 OpenCU 1.6.0。",
+        "监控提供概览、用量和上下文，持久记录实际调用回执，保留缺失用量与取消状态。",
+        "修复外观交由其他插件管理时用量折叠失效。",
+        "本候选仅本地部署，未发布新 tag 或 Release；当前验收针对 macOS 上的 alpha.2 Web 宿主。"
+      ]
+    },
+    {
       "version": "0.2.1-alpha.2.omd.0.14.0",
       "severity": "normal",
       "unpublished": true,
