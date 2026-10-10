@@ -1,0 +1,28 @@
+/* Scoped preview surfaces retain the host's palette and input ownership. */
+.tx-cu-native-preview > .tx-cu-live-meta { min-height: 34px; gap: 12px; padding: 7px 10px; }
+.tx-cu-live-heading { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.tx-cu-live-heading strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--cu-text); font-size: 12px; font-weight: 500; }
+.tx-cu-live-control { flex-shrink: 0; font-size: 10px; }
+.tx-cu-native-preview .tx-cu-reconnect { min-height: 28px; padding: 4px 8px; font-size: 11px; }
+.tx-cu-floating .tx-cu-preview-open:hover:not(:disabled) { background: #ffffff0a; }
+.tx-cu-floating .tx-cu-preview-card[data-connection=error] .tx-cu-preview-open::before,
+.tx-cu-floating .tx-cu-preview-card[data-connection=closed] .tx-cu-preview-open::before { opacity: 1; }
+.tx-cu-floating > .tx-cu-error { border-radius: 7px; padding: 5px 7px; background: var(--cu-bg); }
+.tx-cu-floating footer > span[data-connection=error],
+.tx-cu-floating footer > span[data-connection=closed] { color: var(--cu-danger); }
+.tx-cu-window-picker { width: min(500px, calc(100vw - 32px)); }
+.tx-cu-window-picker > header strong { font-size: 14px; }
+.tx-cu-window-picker > p { margin: 6px 0 14px; }
+.tx-cu-window-picker .tx-cu-share-list { gap: 2px; }
+.tx-cu-window-picker .tx-cu-share-list button { min-height: 54px; padding: 9px 8px; }
+.tx-cu-window-picker .tx-cu-share-window-icon { width: 30px; height: 30px; }
+.tx-cu-window-picker .tx-cu-share-window-info strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tx-cu-share-feedback { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 0; padding: 9px 10px; border: 1px solid var(--cu-line); border-radius: 8px; }
+.tx-cu-share-feedback p { min-width: 0; margin: 0; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.tx-cu-share-feedback button { flex-shrink: 0; }
+@media (max-width: 400px) {
+  .tx-cu-live-control { max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tx-cu-window-picker { padding: 14px; }
+  .tx-cu-window-picker footer { gap: 10px; }
+  .tx-cu-window-picker footer small { min-width: 0; font-size: 10px; }
+}
