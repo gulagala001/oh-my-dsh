@@ -4,6 +4,10 @@
 .tx-cu-browser-controls .tx-cu-tablist { flex: 1; }
 .tx-cu-browser-controls .tx-cu-browser-identity { display: inline-flex; align-items: center; gap: 4px; max-width: 100px; padding: 3px 6px; border-radius: 5px; color: var(--cu-muted); background: var(--cu-soft); font-size: 10px; white-space: nowrap; }
 .tx-cu-browser-identity > span { overflow: hidden; text-overflow: ellipsis; }
+.tx-cu-browser-empty .tx-cu-tablist { gap: 6px; align-items: center; }
+.tx-cu-empty-tab { display: inline-flex; align-items: center; gap: 6px; flex: none; padding: 5px 8px; color: var(--cu-text); font-size: 11px; }
+.tx-cu-browser-empty .tx-cu-tablist select { min-width: 0; max-width: 180px; width: 100%; font-size: 11px; }
+.tx-cu-browser-controls.tx-cu-browser-empty .tx-cu-location:not(:has(input:focus)) input:not(:placeholder-shown) { color: var(--cu-text); }
 .tx-cu-browser-controls .tx-cu-location { min-width: 70px; }
 .tx-cu-browser-controls .tx-cu-location input { padding-left: 32px; }
 .tx-cu-browser-controls .tx-cu-location > span { left: 32px; text-align: left; }

@@ -1,3 +1,4 @@
+import { openWorkbench } from './fixtures/workbench.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, mkdir, readFile, writeFile, access } from 'node:fs/promises';
@@ -99,8 +100,8 @@ for (const [backend, preset] of [['managed', 'trisoul-x'], ['managed', 'omd-ptc'
     const image = page.locator('.tx-cu-pane .tx-cu-live img').first(); await image.waitFor();
     await until(() => image.evaluate(img => img.complete && img.naturalWidth > 0));
     await floating.waitFor({ state: 'hidden' });
-    await page.getByRole('button', { name: '任务', exact: true }).click(); await floating.waitFor();
-    await page.getByRole('button', { name: '电脑', exact: true }).click(); await floating.waitFor({ state: 'hidden' });
+    await openWorkbench(page, '任务'); await floating.waitFor();
+    await page.getByRole('button', { name: '打开 Computer Use', exact: true }).click(); await floating.waitFor({ state: 'hidden' });
     await image.waitFor(); await until(() => image.evaluate(img => img.complete && img.naturalWidth > 0));
     assert.equal((await state()).target.id, ready.target.id);
     if (process.env.OMD_PREVIEW_ARTIFACTS && backend === 'managed' && preset === 'trisoul-x') await page.screenshot({ path: join(process.env.OMD_PREVIEW_ARTIFACTS, 'computer-pane-exclusive.png') });

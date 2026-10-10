@@ -2,6 +2,18 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-alpha.2.omd.0.14.1",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "恢复直接浏览器入口，移除 CU 中转空页",
+      "notes": [
+        "开始页直接打开宿主原生浏览器；移除应用预览和 Computer Use 中转入口。",
+        "CU 仅在已有实际目标时显示目标内容；旧无目标标签迁到浏览器，不显示空白应用页、无目标恢复按钮或设置面板。",
+        "内置 OpenCU 1.6.1，目标页的设置与操作记录按工具栏入口打开，保留停止、接管、恢复、下载和小窗能力。",
+        "左侧导航与对话布局保持现状。候选未公开发布，验证范围以本轮实际执行为准。"
+      ]
+    },
+    {
       "version": "0.2.1-alpha.2.omd.0.14.0",
       "severity": "normal",
       "unpublished": true,

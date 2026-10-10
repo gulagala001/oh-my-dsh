@@ -26,3 +26,20 @@
   .tx-cu-window-picker footer { gap: 10px; }
   .tx-cu-window-picker footer small { min-width: 0; font-size: 10px; }
 }
+
+/* Actual app content has no second page header or framed preview card. */
+.tx-cu-pane-app { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.tx-cu-pane-app > .tx-cu-native-preview.is-content { flex: 1 1 0; min-height: 0; margin: 0; border: 0; border-radius: 0; background: transparent; }
+.tx-cu-native-preview.is-content { position: relative; }
+.tx-cu-native-preview.is-content > .tx-cu-live-surface { height: 100%; display: flex; align-items: center; justify-content: center; }
+.tx-cu-native-preview.is-content .tx-cu-observed-image { max-width: 100%; max-height: 100%; }
+.tx-cu-native-preview.is-content .tx-cu-observed-image > img { max-height: 100%; object-fit: contain; }
+.tx-cu-native-actions { position: absolute; z-index: 2; top: 8px; right: 8px; display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 8px; background: var(--cu-bg); box-shadow: var(--cu-shadow); opacity: 0; pointer-events: none; }
+.tx-cu-native-preview.is-content:is(:hover,:focus-within) > .tx-cu-native-actions { opacity: 1; pointer-events: auto; }
+.tx-cu-native-actions > span { padding-inline: 4px; }
+.tx-cu-native-actions button { min-width: 28px; min-height: 28px; padding: 4px; border: 0; background: transparent; }
+.tx-cu-pane-app > .tx-cu-pane-support { flex: 0 1 auto; max-height: 45%; padding-inline: 12px; overflow: auto; }
+@media (hover: none) { .tx-cu-native-preview.is-content > .tx-cu-native-actions { opacity: 1; pointer-events: auto; } }
+
+.tx-cu-settings-dialog { width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow: auto; }
+.tx-cu-settings-dialog .tx-cu-setup { margin-top: 4px; border-top: 0; }

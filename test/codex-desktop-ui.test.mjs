@@ -61,7 +61,7 @@ test('Codex desktop layout: native navigation, every settings page, workbench an
     });
     const toggle = await page.locator('.codex-panel-toggle').boundingBox();
     assert.ok(1440 - toggle.x - toggle.width <= 16, 'panel toggle stays at the window right edge');
-    for (const tab of ['任务', '上下文', '记忆', '电脑', '监控']) {
+    for (const tab of ['任务', '上下文', '记忆', '监控']) {
       await openWorkbench(page, tab);
       await capture('workbench-' + mode + '-' + tab);
     }

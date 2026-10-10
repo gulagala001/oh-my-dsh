@@ -67,7 +67,7 @@ test('Google Material: real layout, all settings, fonts, mobile navigation, work
     await page.getByRole('menu').waitFor(); await capture(mode + '-menu'); await page.keyboard.press('Escape');
     await openWorkbench(page, '任务');
     await page.locator('.tx-workbench:visible').waitFor();
-    for (const section of ['任务', '上下文', '记忆', '电脑', '监控']) {
+    for (const section of ['任务', '上下文', '记忆', '监控']) {
       await openWorkbench(page, section);
       await capture(mode + '-workbench-' + section);
     }
