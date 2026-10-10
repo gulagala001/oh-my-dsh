@@ -2,6 +2,17 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-alpha.2.omd.0.13.0",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "侧栏、实时预览与全量前端优化",
+      "notes": [
+        "改进原生侧栏、对话与工作台、Pro/Ultracode、全部明暗主题及窄屏流程；保留真实导航、停止、接手和恢复入口。",
+        "内置OpenCU1.5.0，改进多目标预览、批注、手动减少效果与真实浮动窗口同步；配套插件同步优化保存、错误、弹窗和冷恢复。",
+        "继续使用对应官方宿主SDK与原生工具循环，保留第三方插件和使用偏好。本候选未公开发布，平台及真实账号按实际验收范围说明。"
+      ]
+    },
+    {
       "version": "0.2.1-alpha.2.omd.0.12.2",
       "severity": "normal",
       "unpublished": true,

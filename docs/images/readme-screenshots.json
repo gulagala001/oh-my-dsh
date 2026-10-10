@@ -1,24 +1,30 @@
 {
   "schemaVersion": 3,
-  "capturedDate": "2026-09-28",
-  "source": "README and the product page share the current Launchpad screenshots. The primary manifest records their exact hashes and capture boundaries.",
+  "capturedDate": "2026-10-10",
+  "source": "README and the product page share current unmodified Native Launchpad screenshots. The primary manifest records exact hashes and capture boundaries.",
   "primaryManifest": "../site/media/manifest.json",
   "notes": [
     "Actual screenshots are not retouched.",
-    "The retained Forma annotation image demonstrates temporary style preview in the usage guide.",
+    "Annotation uses a synthetic page in an isolated Chrome for Testing browser; it is a separate Native operation case.",
     "SVG files explain mechanisms and are not product screenshots."
   ],
   "assets": [
     {
-      "file": "docs/images/readme-annotation.jpg",
-      "type": "native-ui-screenshot",
-      "sourceImage": "annotation-style-preview.png",
-      "width": 1280,
-      "height": 720,
-      "bytes": 65534,
-      "case": "Forma",
-      "mimeType": "image/jpeg",
-      "sha256": "48fb1acc27506c9c1cf2e3916c4ec272acea0b67c0a7bd606ac3734650dc9a1d"
+      "file": "docs/images/readme-annotation.png",
+      "type": "unmodified-native-ui-screenshot",
+      "sourceImage": "vendor/opencu/docs/images/page-annotation-style.png",
+      "sourceCommit": "e475c2d879410baa48f2463baa415653d5d42e78",
+      "host": "0.2.1-alpha.2",
+      "omd": "0.13.0",
+      "opencu": "1.5.0",
+      "width": 3200,
+      "height": 2200,
+      "bytes": 525201,
+      "case": "OpenCU synthetic page annotation",
+      "mimeType": "image/png",
+      "sha256": "65a6d5f89c529b70c18db601a37362f1a7ac51876258a41524e21d3724c37962",
+      "sourceRepository": "https://github.com/gulagala001/opencu",
+      "sourceStatus": "unpublished development commit"
     },
     {
       "file": "docs/images/readme-context-flow.svg",

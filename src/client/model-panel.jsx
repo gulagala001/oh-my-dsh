@@ -146,7 +146,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, additi
   };
   if (!available) return null;
   return <>
-    <button ref={trigger} type="button" className="omd-model-trigger" disabled={locked} aria-label={additive ? 'OMD 模式与思考强度' : '模型与思考强度'} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? id : undefined}
+    <button ref={trigger} type="button" className="omd-model-trigger" data-mode={activeMode} disabled={locked} aria-label={additive ? 'OMD 模式与思考强度' : '模型与思考强度'} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? id : undefined}
       onClick={() => { if (open) close(); else { setPane(selected ? 'effort' : 'model'); setQuery(''); setOpen(true); load(); void refresh(); } }}>
       <span>{additive ? 'OMD' : modelName}</span><span className="omd-model-caption">{savedLabel}</span><span aria-hidden="true">⌃</span>
     </button>

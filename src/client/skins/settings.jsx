@@ -16,6 +16,7 @@ import claudeTerminalLayout from './claude-cli-terminal/layout.css';
 import { applyTerminalPresentation } from './claude-cli-terminal/presentation.jsx';
 import { HistorySizeSetting } from '../history-settings.jsx';
 import { applySidebarPresentation } from '../sidebar.jsx';
+import { createSurfaceMarkers } from './surfaces.mjs';
 import { AppearanceDrafts, useAppearanceDrafts } from './advanced.jsx';
 
 function AppearanceSettings({ runtime }) {
@@ -57,9 +58,21 @@ function AppearanceSettings({ runtime }) {
   </section>}</AppearanceDrafts.Provider>;
 }
 export function applySkins(ctx) {
+  const surfaces = createSurfaceMarkers();
+  ctx.effect(() => {
+    let frame;
+    const refresh = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => surfaces.refresh());
+    };
+    const observer = new MutationObserver(refresh);
+    observer.observe(document.body, { childList: true, subtree: true });
+    surfaces.refresh();
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); surfaces.dispose(); };
+  });
   applySidebarPresentation(ctx);
   let runtime;
-  ctx.effect(() => { runtime = createSkinRuntime(ctx, adapterCss, { 'ios-liquid': iosLiquidLayout, 'codex-desktop': codexDesktopLayout, 'claude-cli-terminal': claudeTerminalLayout, [MATERIAL_LAYOUT]: materialLayout }, appearanceCss); return () => runtime.dispose(); });
+  ctx.effect(() => { runtime = createSkinRuntime(ctx, adapterCss, { 'ios-liquid': iosLiquidLayout, 'codex-desktop': codexDesktopLayout, 'claude-cli-terminal': claudeTerminalLayout, [MATERIAL_LAYOUT]: materialLayout }, appearanceCss, surfaces); return () => runtime.dispose(); });
   applyMaterialIntegration(ctx, () => runtime);
   applyCodexIntegration(ctx, () => runtime);
   applyTerminalPresentation(ctx, () => runtime);

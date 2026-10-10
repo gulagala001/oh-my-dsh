@@ -4,11 +4,13 @@
 
 OpenCU 从 [Oh My DSH](https://github.com/gulagala001/oh-my-dsh) 的 Computer Use 提取而来，提供相同的操控工具、实时预览和接管体验，可以独立安装到 DSH。Oh My DSH 继续集成全部能力，并直接复用 OpenCU 的实现。
 
-当前候选版本：[1.4.1（未正式发布）](docs/release-1.4.1.md)，本树配对 **DSH 0.2.1-alpha.2**。公开安装版本仍为 **1.3.0**，两宿主分别使用下方固定 tag；1.3.1 renderer 修复与 1.4.x 新能力均为本地未发布内容。
+当前开发候选：[1.5.0（验收中，未发布）](docs/release-1.5.0.md)，本树配对 **DSH 0.2.1-alpha.2**。公开安装版本仍为 **1.3.0**，两宿主分别使用下方固定 tag；1.3.1 renderer 修复及后续候选能力均为本地未发布内容。
 
 ## 本版更新
 
-候选 1.4.1 对齐 a2 原生 Chat 的 flow、推理 Body Slot 和 Content Factory，保留第三方 renderer、分组计数、停止标记、共享设置与阅读状态。[a2 适配和实际验证范围](docs/release-1.4.1.md)。
+1.5.0 优化紧凑工具栏、默认预览停靠、下载记录、运行环境设置及 Chrome 扩展弹窗。[实现与实际验证范围](docs/release-1.5.0.md)。默认预览以 150 × 56 像素停靠在自有输入工具栏内，保留当前目标名称与多目标切换；明确放大、展开或拖动后继续使用浮动预览。
+
+延续 1.4.1 的 a2 原生 Chat flow、推理 Body Slot 和 Content Factory，保留第三方 renderer、分组计数、停止标记、共享设置与阅读状态。[a2 适配和实际验证范围](docs/release-1.4.1.md)。
 
 延续 1.4.0 的持久下载文件附件、原生与 PTC 对话预览、重复交付复用，以及停止／重启后的读取与辅助展示恢复。缓存缺少、失效或目标不可用时保持正常基础操控。[1.4.0 候选说明](docs/release-1.4.0.md)。
 
@@ -32,14 +34,14 @@ npx --yes @deepseek-ai/dsh@0.2.0-rc.2 --profile web
 
 ### 本地候选验收
 
-候选 **1.4.1** 没有公开 tag／Release。本树对应 **DSH 0.2.1-alpha.2**，核对实际候选包版本、SHA-256 与宿主身份，在隔离数据目录和 profile 中安装；以下是绝对路径占位示例：
+候选 **1.5.0** 正在验收，没有公开 tag／Release。本树对应 **DSH 0.2.1-alpha.2**，核对实际候选包版本、SHA-256 与宿主身份，在隔离数据目录和 profile 中安装；以下是本地工件的绝对路径占位示例：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.2 plugin --profile candidate add file:/absolute/path/opencu-1.4.1.tgz
+npx --yes @deepseek-ai/dsh@0.2.1-alpha.2 plugin --profile candidate add file:/absolute/path/opencu-1.5.0.tgz
 npx --yes @deepseek-ai/dsh@0.2.1-alpha.2 --profile candidate
 ```
 
-a1 与 rc.2 继续保留各自的 1.4.0 候选构建。必须使用对应宿主的独立工件，不混用 SDK、Chat 快照或依赖锁定；a2 的验收不能替代旧宿主或其它平台的验收。下方公开升级命令继续安装 1.3.0，不包含候选能力。
+1.5.0 已为 a2、a1 和 rc.2 独立构建，并在 macOS arm64 隔离 Chrome for Testing 中完成对应官方宿主的原生／PTC、插件生命周期和代表性组合回归；各自保留对应 SDK、Chat 快照与依赖锁。1.4.1 冻结工件保留，不覆盖历史发行。实际硬件桌面、其它平台及真实登录态仍需对应验收。下方公开升级命令继续安装 1.3.0，不包含候选能力。
 
 打开启动时的登录链接，继续使用已有 Agent preset。在输入区点击 **电脑**，或通过 `@Browser`、`@Chrome` 和应用引用选择目标：
 
@@ -58,7 +60,9 @@ OpenCU 沿用 DSH 的模型、会话、工具权限和审批配置，不更改�
 
 [完整使用指南](docs/usage.md) · [Windows 安装与自检](docs/windows.md)
 
-![实时预览](docs/images/native-preview-stack.png)
+![OpenCU 1.5.0：已展开的两个受控浏览器实时目标](docs/images/native-preview-stack.png)
+
+*真实界面实拍：DSH 0.2.1-alpha.2／Oh My DSH 0.13.0 本地候选，两个隔离演示页面；目标列表已展开并可滚动，默认预览仍为 150 × 56 像素停靠。*
 
 ## 平台
 

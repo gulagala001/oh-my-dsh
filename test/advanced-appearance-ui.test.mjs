@@ -36,6 +36,9 @@ test('advanced customization composes across themes, modes and wallpaper; restor
     for (const mode of ['light', 'dark']) {
       await page.getByLabel('明暗模式', { exact: true }).selectOption(mode);
       await until(async () => await page.locator('html').getAttribute('data-appearance') === mode);
+      // The sidebar now cross-fades its selection color. Observe the settled
+      // user preference rather than sampling an intermediate animation frame.
+      await until(async () => await style(page, '.YDXeBa_sessionRow.YDXeBa_selected', 'backgroundColor') === (mode === 'light' ? 'rgb(204, 238, 221)' : 'rgb(52, 86, 68)'), 5000);
       assert.equal(await style(page, '.wSkVaW_root', 'backgroundColor'), mode === 'light' ? 'rgb(255, 238, 221)' : 'rgb(22, 28, 40)', `${theme}/${mode} conversation`);
       assert.equal(await style(page, '.hHd-Xa_root', 'backgroundColor'), mode === 'light' ? 'rgb(221, 236, 255)' : 'rgb(32, 48, 64)', `${theme}/${mode} sidebar`);
       assert.equal(await style(page, '[data-composer-card]', 'backgroundColor'), mode === 'light' ? 'rgb(254, 254, 254)' : 'rgb(36, 43, 56)', `${theme}/${mode} input`);
