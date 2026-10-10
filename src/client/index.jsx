@@ -2,9 +2,9 @@ import { applyAppearanceBrand } from './appearance-brand.jsx';
 import { createPoller } from './polling.mjs';
 import { createConversation } from '../../lib/host/ui-conversation.factory.mjs';
 import { installDesktopLifecycle } from './desktop-lifecycle.mjs';
-import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Menu } from '@deepseek-ai/dsh-client-ui-primitives';
-import { frameTokens, contextHistoryLayout } from './context-history.mjs';
+import { createMonitor, monitorCss } from './monitor.jsx';
 import css from './style.css';
 import workbenchCss from './workbench.css';
 import shellCss from './shell.css';
@@ -32,11 +32,9 @@ const api = async (path, value, signal) => {
   if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
   return data;
 };
+const Monitor = createMonitor({ api });
 const suffix = id => `?${id ? `session=${encodeURIComponent(id)}` : ''}`;
 const fmt = n => Number(n || 0).toLocaleString();
-const kindName = { main: '主执行', subagent: '子代理', compactFull: '全量压缩', prepare: '上下文预处理', coordinate: '上下文替换', adaptive: '主动异步整理', background: '记忆消化（历史）', recall: '记忆检索（历史）', state: '状态提炼（历史）', curation: '记忆整理（历史）', surgeon: '上下文整理（历史）', probeAsk: '探针出题（历史）', probeAnswer: '探针作答（历史）' };
-const componentEntries = kinds => [...new Set(kinds)].map(kind => [kind, kindName[kind] || kind]);
-kindName.promptOptimizer = '提示词优化';
 function BetterTodoChip(props) {
   const preset = props.useSessions(s => s.byId[props.sessionId]?.projectionValues?.agentPreset);
   return ['trisoul-x', 'omd-ptc'].includes(preset) ? <BetterTodoSessionChip {...props}/> : null;
@@ -98,8 +96,6 @@ function useSnapshot(id, visible = true, range = 'session', view = 'full') {
 
 
 const compactNumber = n => Number(n || 0) >= 1000000 ? (n / 1000000).toFixed(1) + 'M' : Number(n || 0) >= 1000 ? (n / 1000).toFixed(1) + 'k' : fmt(n);
-const duration = ms => !ms ? '—' : ms >= 60000 ? `${Math.floor(ms / 60000)}m ${Math.round(ms % 60000 / 1000)}s` : `${(ms / 1000).toFixed(1)}s`;
-const shortDate = at => at ? new Date(at).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 const inputTokens = m => (m?.inputTokens || 0) + (m?.cacheReadTokens || 0) + (m?.cacheWriteTokens || 0);
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 function Icon({ name, size = 16 }) {
@@ -180,69 +176,6 @@ function TaskPanel({ sessionId, useTabInfo }) {
   </div>;
 }
 
-const frameKind = kind => kind === 'checkpoint' ? '纪要' : kind.includes('state') ? '状态' : kind.includes('memory') ? '记忆' : kind.includes('task') || kind.includes('todo') ? '任务' : kind === 'model' ? '模型' : kind === 'user' ? '用户' : kind === 'tool' || kind.includes('tool') ? '工具' : '系统';
-const frameColor = kind => ({ 纪要: '#3476e6', 状态: '#759be4', 记忆: '#82bfe4', 任务: '#8490bf', 模型: '#476fad', 用户: '#a0bcdf', 工具: '#669aaf', 系统: '#a2aaba' })[frameKind(kind)];
-const callId = call => `${call.sessionId}:${call.kind}:${call.at}`;
-function FrameBar({ nodes = [] }) {
-  return <div className="tx-frame-bar">{nodes.map(n => <i key={n.seq} style={{ flex: n.tokens || 0, background: frameColor(n.kind) }} title={`#${n.seq} ${frameKind(n.kind)} · 约 ${fmt(n.tokens)} tokens`}/>)}</div>;
-}
-function FrameLegend() { return <div className="tx-legend">{['checkpoint', 'state', 'memory', 'tasks', 'model', 'user', 'tool', 'system'].map(kind => <span key={kind}><i style={{ background: frameColor(kind) }}/>{frameKind(kind)}</span>)}</div>; }
-function ContextHistory({ data }) {
-  const frames = data.contextHistory || [], [selected, setSelected] = useState(null);
-  const selectedFrame = frames.find(f => f.at === selected) || frames.at(-1), rows = contextHistoryLayout(frames);
-  if (!frames.length) return <Empty icon="layers" title="等待下一次请求">请求发出后，可以在这里查看上下文与缓存的变化。</Empty>;
-  return <div className="tx-context-history"><div className="tx-section-heading"><h3>上下文演变</h3><span className="tx-muted">最近 {frames.length} 次请求</span></div><p className="tx-help">色块按记录估算，所有行共用刻度。下方细轨为实际输入，蓝色部分为缓存读取量。</p>
-    <div className="tx-history-chart">{rows.map(({ frame, tokens, width, inputWidth, cacheWidth }, i) => <button key={frame.at + ':' + i} type="button" className={cx('tx-history-row', selectedFrame === frame && 'tx-selected')} onClick={() => setSelected(frame.at)} title={`第 ${frame.turn} 回合 · 第 ${frame.step} 步 · 记录估算 ${fmt(tokens)} tokens`}>
-      <span>{frame.turn}.{frame.step}</span><div className="tx-history-scale"><div style={{ width: `${width}%` }}><FrameBar nodes={frame.nodes}/></div><div className="tx-history-usage"><i style={{ width: `${inputWidth}%` }}/><b style={{ width: `${cacheWidth}%` }}/></div></div><span>≈{compactNumber(tokens)}</span>
-    </button>)}</div><FrameLegend/>
-    {selectedFrame && <div className="tx-selected-frame"><Badge>第 {selectedFrame.turn} 回合 · 第 {selectedFrame.step} 步</Badge><div className="tx-detail-grid"><span>记录估算 Token</span><strong>≈{fmt(frameTokens(selectedFrame.nodes))}</strong><span>实际输入 Token</span><strong>{selectedFrame.inputTokens === undefined ? '未记录' : fmt(selectedFrame.inputTokens)}</strong><span>缓存读取 Token</span><strong>{fmt(selectedFrame.cacheReadTokens)}</strong></div></div>}
-  </div>;
-}
-function Timeline({ calls, onSelect }) {
-  const ordered = calls.slice().reverse();
-  if (!ordered.length) return <Empty icon="monitor" title="等待第一次执行">开始对话后，各组件的调用会出现在这里。</Empty>;
-  return <section className="tx-section"><div className="tx-section-heading"><h3>调用轨迹</h3><span className="tx-muted">从左到右 · 点击查看</span></div><div className="tx-timeline">
-    {componentEntries(ordered.map(call => call.kind)).map(([kind, label]) => <div key={kind} className="tx-timeline-row"><span>{label}</span><div>{ordered.map((call, i) => call.kind === kind ? <button key={i} type="button" className={call.error ? 'tx-call-error' : 'tx-call'} onClick={() => onSelect(call)} aria-label={`${label}${call.turn != null ? ` · 第 ${call.turn} 回合` : ''}${call.step != null ? ` · 第 ${call.step} 步` : ''} · ${shortDate(call.at)} · ${duration(call.durationMs)}${call.error ? ' · 调用失败' : ''}`} title={`${label} · ${call.turn ?? '—'}.${call.step ?? '—'} · ${duration(call.durationMs)}${call.error ? ' · ' + call.error : ''}`}/> : <i key={i}/>)}</div></div>)}
-  </div><div className="tx-legend"><span><i style={{ background: 'var(--tx-blue)' }}/>完成调用</span><span><i style={{ background: 'var(--tx-danger)' }}/>调用失败</span></div></section>;
-}
-function Monitor({ sessionId, useTabInfo }) {
-  const { tab } = useTabInfo(), [range, setRange] = useState('session'), [page, setPage] = useState('overview'), [stage, setStage] = useState('all'), [failures, setFailures] = useState(false), [selected, setSelected] = useState(null);
-  const monitorId = useId(), body = useRef(null), selectedSummary = useRef(null), pendingSelection = useRef(null);
-  const { data, error } = useSnapshot(sessionId, tab.visible, range), actions = data?.actions || {}, live = data?.liveCalls || [], metrics = data?.metrics || {};
-  const totals = Object.values(metrics).reduce((out, m) => ({ calls: out.calls + (m.calls || 0), errors: out.errors + (m.errors || 0), input: out.input + inputTokens(m), output: out.output + (m.outputTokens || 0), cache: out.cache + (m.cacheReadTokens || 0), ms: out.ms + (m.durationMs || 0) }), { calls: 0, errors: 0, input: 0, output: 0, cache: 0, ms: 0 });
-  const components = componentEntries((data?.activity || []).map(call => call.kind));
-  const effectiveStage = components.some(([kind]) => kind === stage) ? stage : 'all';
-  useEffect(() => { setStage('all'); setSelected(null); pendingSelection.current = null; }, [sessionId, range]);
-  const activity = (data?.activity || []).filter(a => (effectiveStage === 'all' || a.kind === effectiveStage) && (!failures || a.error));
-  const choose = call => { pendingSelection.current = callId(call); setPage('calls'); setStage('all'); setFailures(false); setSelected(callId(call)); };
-  useLayoutEffect(() => {
-    if (!tab.visible || page !== 'calls' || !pendingSelection.current || pendingSelection.current !== selected) return;
-    const summary = selectedSummary.current, viewport = body.current;
-    if (!summary || !viewport) return;
-    pendingSelection.current = null;
-    summary.focus({ preventScroll: true });
-    const target = summary.getBoundingClientRect(), bounds = viewport.getBoundingClientRect();
-    viewport.scrollTop += target.top - bounds.top - viewport.clientTop - 16;
-  }, [page, selected, data, tab.visible]);
-  const running = data?.running && data.running !== 'idle';
-  return <div className="tx-app"><Header title="执行监控" subtitle="查看执行进展与模型用量"/>
-    <div className="tx-monitor-top"><Segments label="监控统计范围" value={range} onChange={setRange} items={[[ 'session', '当前会话' ], [ 'all', '全部会话' ]]}/><div className={cx('tx-running-label', (running || live.length > 0) && 'is-running')}><span className="tx-status-dot"/>{running ? '执行中' : live.length ? '后台运行中' : '空闲'}</div></div>
-    <Tabs label="监控分类" idPrefix={monitorId} value={page} onChange={setPage} items={[[ 'overview', '概览' ], [ 'calls', '调用记录' ], [ 'context', '上下文' ]]}/>
-    <div className="tx-body" ref={body}><Alert error>{error}</Alert>
-      <div className="tx-tabpanel" role="tabpanel" id={`${monitorId}-panel-overview`} aria-labelledby={`${monitorId}-tab-overview`} hidden={page !== 'overview'} tabIndex={0}><div className="tx-stats-grid">{[['总用量', compactNumber(totals.input + totals.output), 'tokens'], ['缓存命中', totals.input ? (totals.cache / totals.input * 100).toFixed(1) + '%' : '—', '输入缓存'], ['模型调用', fmt(totals.calls), `${totals.errors} 次失败`], ['累计用时', duration(totals.ms), '各组件合计']].map(([label, value, hint]) => <div className="tx-stat" key={label}><span>{label}</span><strong>{value}</strong><small>{hint}</small></div>)}</div>
-        {live.length > 0 && <div className="tx-live-list">{live.map((call, i) => <div key={i}><span className="tx-pulse"/><div><strong>{kindName[call.kind] || call.kind}</strong><small>{call.model}</small></div><span>{duration(Date.now() - call.startedAt)}</span></div>)}</div>}
-        <Timeline calls={data?.activity || []} onSelect={choose}/>
-        {Object.keys(metrics).length > 0 && <section className="tx-section"><div className="tx-section-heading"><h3>组件用量</h3><span className="tx-muted">调用 / Token</span></div>{componentEntries(Object.keys(metrics)).filter(([kind]) => metrics[kind]?.calls).map(([kind, label]) => { const m = metrics[kind], last = data?.activity?.find(a => a.kind === kind), total = inputTokens(m) + (m.outputTokens || 0); return <details className="tx-component" key={kind}><summary><span><i className={cx('tx-component-dot', m.errors > 0 && 'has-error')}/>{label}</span><span><strong>{fmt(m.calls)}</strong><small>{compactNumber(total)} tok</small><Icon name="chevron" size={13}/></span></summary><div className="tx-component-details"><div className="tx-detail-grid"><span>输入 / 输出</span><strong>{fmt(inputTokens(m))} / {fmt(m.outputTokens)}</strong><span>缓存命中</span><strong>{inputTokens(m) ? ((m.cacheReadTokens || 0) / inputTokens(m) * 100).toFixed(1) + '%' : '—'}</strong><span>推理 Token</span><strong>{m.reasoningTokens == null ? '—' : fmt(m.reasoningTokens)}</strong><span>峰值输入 / 累计用时</span><strong>{compactNumber(m.peakContext)} / {duration(m.durationMs)}</strong><span>失败</span><strong>{fmt(m.errors)}</strong></div>{last && <p className="tx-help tx-path">{last.provider} / {last.model}</p>}{m.unmetered > 0 && <p className="tx-help">{m.unmetered} 次调用未返回用量</p>}</div></details>; })}</section>}
-        <Fold title="后台处理统计" subtitle="后台流程的累计执行结果"><div className="tx-detail-grid">{[['上下文预处理 / 失败', `${fmt(actions.preparedSegments)} / ${fmt(actions.contextprepareErrors)}`], ['上下文替换决策 / 失败', `${fmt(actions.contextDecisions)} / ${fmt(actions.contextcoordinateErrors)}`], ['记忆消化 / 失败', `${fmt(actions.digests)} / ${fmt(actions.digestErrors)}`], ['记忆整理 / 失败', `${fmt(actions.curations)} / ${fmt(actions.curationErrors)}`], ['注入 / 文档更新', `${fmt(actions.injections)} / ${fmt(actions.workdocVersions)}`], ['状态提炼 / 失败', `${fmt(actions.states)} / ${fmt(actions.stateErrors)}`], ['召回 / 命中条数', `${fmt(actions.recalls)} / ${fmt(actions.recallHits)}`], ['检索回退', fmt(actions.retrievalFallbacks)], ['压缩 / 失败', `${fmt(actions.surgeries)} / ${fmt(actions.surgeryErrors)}`], ['替换 / 决策 / 文档回查', `${fmt(actions.contextReplacements)} / ${fmt(actions.contextDecisions)} / ${fmt(actions.documentRecalls)}`], ['检查调用失败', fmt(actions.probeErrors)], ['原文回捞 / 旧快照清理', `${fmt(actions.rawRecalls)} / ${fmt(actions.staleVersions)}`], ['压缩后字符占比', actions.compactInputChars ? (actions.compactOutputChars / actions.compactInputChars * 100).toFixed(1) + '%' : '—']].filter(([label, value]) => ['上下文预处理 / 失败', '上下文替换决策 / 失败', '替换 / 决策 / 文档回查'].includes(label) || /[1-9]/.test(value)).map(([label, value]) => <React.Fragment key={label}><span>{label}</span><strong>{value}</strong></React.Fragment>)}</div></Fold>
-      </div>
-      <div className="tx-tabpanel" role="tabpanel" id={`${monitorId}-panel-calls`} aria-labelledby={`${monitorId}-tab-calls`} hidden={page !== 'calls'} tabIndex={0}><div className="tx-call-filters"><label className="tx-field"><select aria-label="调用组件" value={effectiveStage} onChange={e => setStage(e.target.value)}><option value="all">全部组件</option>{components.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label><label className="tx-check"><input type="checkbox" checked={failures} onChange={e => setFailures(e.target.checked)}/>仅失败</label></div>
-        {activity.length ? activity.map(call => <details key={callId(call)} className={cx('tx-call-row', call.error && 'tx-failed-call')} open={selected === callId(call) || undefined}><summary ref={selected === callId(call) ? selectedSummary : undefined}><span className="tx-call-icon"><Icon name={call.error ? 'close' : 'check'} size={14}/></span><div><strong>{kindName[call.kind] || call.kind}</strong><small>{shortDate(call.at)}{call.step != null ? ` · 第 ${call.step} 步` : ''}</small></div><span>{duration(call.durationMs)}</span><Icon name="chevron" size={13}/></summary><div className="tx-call-detail"><p className="tx-help tx-path">{call.provider} / {call.model}</p><div className="tx-detail-grid"><span>输入 / 输出</span><strong>{fmt(inputTokens(call.usage))} / {fmt(call.usage?.outputTokens)}</strong><span>缓存读取</span><strong>{fmt(call.usage?.cacheReadTokens)}</strong>{call.effort && <><span>推理强度</span><strong>{call.effort}</strong></>}</div><p className="tx-help tx-path">会话 {call.sessionId}</p><Alert error>{call.error}</Alert></div></details>) : <Empty icon="clock" title="这里还没有调用记录">{failures ? '当前筛选范围内没有失败调用。' : '模型调用完成后，会按时间列在这里。'}</Empty>}
-        <p className="tx-footnote">完整消息与工具往返可在 DSH「轨迹」中查看。</p>
-      </div>
-      <div className="tx-tabpanel" role="tabpanel" id={`${monitorId}-panel-context`} aria-labelledby={`${monitorId}-tab-context`} hidden={page !== 'context'} tabIndex={0}>{data?.meter ? <section className="tx-section"><div className="tx-section-heading"><h3>当前会话</h3><Badge>{fmt(data.frame?.length)} 条记录</Badge></div><div className="tx-context-number">{compactNumber(data.meter.totalTokens)}<span>tokens</span></div><FrameBar nodes={(data.frame || []).map(n => ({ ...n, kind: n.checkpoint ? 'checkpoint' : n.kind }))}/><FrameLegend/><details className="tx-subfold"><summary>查看各条记录</summary>{data.frame?.map(n => <div className="tx-frame-row" key={n.seq}><span>#{n.seq} · {frameKind(n.checkpoint ? 'checkpoint' : n.kind)}</span><span>{compactNumber(n.tokens)} tok</span></div>)}</details></section> : <Empty icon="layers" title="尚无上下文读数">继续一次对话后即可查看。</Empty>}{data && <ContextHistory data={data}/>}</div>
-    </div>
-  </div>;
-}
 function StatsLine({ sessionId, onOpen }) {
   const { data } = useSnapshot(sessionId, Boolean(sessionId), 'session', 'summary');
   if (!data?.metrics?.main?.calls) return null;
@@ -289,7 +222,7 @@ export async function apply(ctx) {
   }
   const getAppearanceRuntime = applySkins(ctx);
   ctx.effect(() => {
-    const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css + '\n' + shellCss + '\n' + whaleCss + '\n' + versionCss + '\n' + workbenchCss; document.head.appendChild(tag);
+    const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css + '\n' + shellCss + '\n' + whaleCss + '\n' + versionCss + '\n' + workbenchCss + '\n' + monitorCss; document.head.appendChild(tag);
     const runtime = getAppearanceRuntime();
     const sync = () => document.documentElement.classList.toggle('trisoul-shell', runtime.getSnapshot().active !== false);
     const off = runtime.subscribe(sync); sync();

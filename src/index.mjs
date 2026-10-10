@@ -12,6 +12,7 @@ import { installLoaderLifecycleCompatibility } from './loader-lifecycle-compat.m
 import { installToolSchedulerCompatibility } from './tool-scheduler-compat.mjs';
 import { installToolCancellationPresentation } from './tool-cancellation.mjs';
 import { monitorSelection, compactMonitorSnapshot } from './monitoring.mjs';
+import { monitorSnapshot } from './monitor-api.mjs';
 import { createVersionService, handleVersionApi } from './version.mjs';
 import { VersionUpdater, handleVersionUpdateApi } from './version-update.mjs';
 import { installImageBudget } from './image-budget.mjs';
@@ -316,6 +317,11 @@ export async function apply(ctx, config) {
         const { agent, session, stored, inspection, archivedOnly } = target;
         if (!target.found) { send(res, 404, { error: '会话不存在' }); return; }
         const scopeSession = session ?? { id: id || 'settings', header: inspection?.meta ?? { cwd: stored?.cwd || process.cwd() } };
+        if (url.pathname === '/trisoul-x/api/monitor') {
+          if (req.method !== 'GET') { send(res, 405, { error: '不支持此方法' }); return; }
+          res.setHeader('Cache-Control', 'no-store');
+          send(res, 200, monitorSnapshot({ hub, ctx, params: url.searchParams, id, session, agent, stored })); return;
+        }
         if (url.pathname === '/trisoul-x/api/background-wait' && req.method === 'GET') {
           const denied = ctx.get('connection')?.requestRejection(req);
           if (denied !== undefined) { res.writeHead(denied); res.end(); return; }

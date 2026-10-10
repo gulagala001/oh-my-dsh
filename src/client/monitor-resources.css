@@ -1,0 +1,48 @@
+.mon-resources { margin-top: 18px; min-width: 0; border: 1px solid var(--mon-line); border-radius: 10px; color: var(--mon-text); background: var(--mon-surface); container-type: inline-size; container-name: mon-resources; font-variant-numeric: tabular-nums; }
+.mon-resources *, .mon-resources *::before, .mon-resources *::after { box-sizing: border-box; }
+.mon-resources > summary { display: flex; align-items: center; gap: 10px; padding: 12px 15px; cursor: pointer; list-style: none; }
+.mon-resources > summary::-webkit-details-marker { display: none; }
+.mon-resource-disclosure { color: var(--mon-muted); font-size: 19px; line-height: 1; flex: 0 0 auto; }
+.mon-resources[open] .mon-resource-disclosure { transform: rotate(90deg); }
+.mon-resources > summary > div { min-width: 0; }
+.mon-resources > summary strong { display: block; font-size: 12px; line-height: 1.5; font-weight: 550; }
+.mon-resources > summary small { display: block; color: var(--mon-muted); font-size: 10px; margin-top: 3px; overflow-wrap: anywhere; line-height: 1.6; }
+.mon-resources > summary:focus-visible { outline: 2px solid var(--mon-accent); outline-offset: 3px; border-radius: 9px; }
+.mon-resources-body { padding: 0 15px 15px; }
+.mon-resource-group { min-width: 0; padding-top: 15px; border-top: 1px solid var(--mon-line); }
+.mon-resource-group + .mon-resource-group { margin-top: 18px; }
+.mon-resource-group > header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 13px; flex-wrap: wrap; }
+.mon-resource-group h4 { margin: 0; font-size: 12px; font-weight: 550; }
+.mon-resource-group > header > span { font-size: 10px; color: var(--mon-muted); overflow-wrap: anywhere; }
+.mon-resource-budget-line { margin-top: 13px; }
+.mon-resource-budget-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 7px; font-size: 11px; flex-wrap: wrap; }
+.mon-resource-budget-heading > span:first-child { color: var(--mon-muted); }
+.mon-resource-budget-heading > span:last-child { min-width: 0; overflow-wrap: anywhere; text-align: right; }
+.mon-resource-budget-heading strong { font-weight: 550; }
+.mon-resource-budget-heading small { font-size: 9px; color: var(--mon-muted); }
+.mon-resource-budget-separator { color: var(--mon-muted); }
+.mon-resource-progress { position: relative; height: 4px; overflow: hidden; border-radius: 3px; background: var(--mon-soft); margin-top: 8px; }
+.mon-resource-progress > i { display: block; height: 100%; border-radius: inherit; background: var(--mon-accent); }
+.mon-resource-budget-ratio { display: block; margin-top: 4px; font-size: 9px; color: var(--mon-muted); text-align: right; }
+.mon-resource-budget-line.is-exceeded .mon-resource-progress > i { background: var(--mon-danger); }
+.mon-resource-budget-line.is-exceeded .mon-resource-budget-ratio { color: var(--mon-danger); }
+.mon-resources .mon-resource-note, .mon-resources .mon-resource-source { margin: 9px 0 0; color: var(--mon-muted); font-size: 10px; line-height: 1.8; overflow-wrap: anywhere; }
+.mon-resources .mon-resource-source { margin-top: 13px; }
+.mon-resource-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px 18px; margin: 15px 0 0; }
+.mon-resource-facts > div { min-width: 0; }
+.mon-resource-facts dt { color: var(--mon-muted); font-size: 10px; line-height: 1.6; }
+.mon-resource-facts dd { margin: 4px 0 0; font-size: 13px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
+.mon-resource-facts .mon-resource-wide { grid-column: 1 / -1; }
+.mon-resource-wide dd { font-size: 11px; font-weight: 450; }
+@container mon-resources (max-width: 270px) {
+  .mon-resources-body { padding-inline: 12px; }
+  .mon-resource-budget-heading { align-items: flex-start; flex-direction: column; }
+  .mon-resource-budget-heading > span:last-child { text-align: left; }
+  .mon-resource-facts { gap: 12px; }
+  .mon-resource-facts dd { font-size: 12px; }
+}
+@container mon-resources (min-width: 700px) {
+  .mon-resources-body { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .mon-resource-group + .mon-resource-group { margin-top: 0; }
+  .mon-resource-facts { grid-template-columns: 1fr; }
+}
