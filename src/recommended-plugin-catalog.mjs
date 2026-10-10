@@ -8,10 +8,12 @@ export const recommendedPlugins = [
     // SDK-aligned archives are frozen for local acceptance. The unpublished
     // restriction above keeps public downloads closed until release approval.
     hostBuilds: {
-      '0.2.0-rc.2': { version: '0.2.0-rc.2.iui.1.0.0', releaseTag: 'v0.2.0-rc.2.iui.1.0.0', asset: 'dsh-intelligent-ui-0.2.0-rc.2.iui.1.0.0.tgz', sha256: '2df1f901834feb9c437191ad1ddf92f1809862bbb70033123b6dd181e0ab1282', dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.11.0', platforms: ['Mac（隔离 Web 宿主）'], allowPrerelease: true,
-        note: '成品未正式发布。对应 SDK 的固定安装包已核验安装、启停、重启、取消恢复、卸载及 OMD 共存；保留用户状态。Windows/Linux CI 另有记录，原生桌面 App 未实测。' },
-      '0.2.1-alpha.1': { version: '0.2.1-alpha.1.iui.1.0.0', releaseTag: 'v0.2.1-alpha.1.iui.1.0.0', asset: 'dsh-intelligent-ui-0.2.1-alpha.1.iui.1.0.0.tgz', sha256: 'eed166b70b2bf41010a1b3abab9dce4cce5028437aecb6ae2ca44bc5d04056c8', dsh: '0.2.1-alpha.1', omd: '0.2.1-alpha.1.omd.0.11.0', platforms: ['Mac（隔离 Web 宿主）'], allowPrerelease: true,
-        note: '成品未正式发布。对应 SDK 的固定安装包已核验安装、启停、重启、取消恢复、卸载及 OMD 共存；保留用户状态。真实模型验收覆盖五类交互，生成效果依赖所选模型；原生桌面 App 未实测。' },
+      '0.2.0-rc.2': { version: '0.2.0-rc.2.iui.1.0.2', releaseTag: 'v0.2.0-rc.2.iui.1.0.2', asset: 'dsh-intelligent-ui-0.2.0-rc.2.iui.1.0.2.tgz', sha256: 'd45fcd994d9ceadec4c62a952b0e8471c5078f2912ce29c587bdcd9574c58459', dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.13.0', platforms: ['Mac（隔离 Web 宿主）'], allowPrerelease: true,
+        note: '本地未发布构建。对应 rc.2 SDK 与 OMD 0.13 的原生交互、保存与冷重启恢复、明暗主题、卸载及外来插件注册保留已在 Mac 隔离 Web 验证；最终包仅补文档，运行文件与验收包逐字一致。本轮使用本地模型；真实模型生成效果及 Windows/Linux、原生桌面 App 未同等实测。' },
+      '0.2.1-alpha.1': { version: '0.2.1-alpha.1.iui.1.0.2', releaseTag: 'v0.2.1-alpha.1.iui.1.0.2', asset: 'dsh-intelligent-ui-0.2.1-alpha.1.iui.1.0.2.tgz', sha256: 'f43842d424cb6a4eee84e6bd22bc1b055e2ad261826cec73b2e9a814f2e3813b', dsh: '0.2.1-alpha.1', omd: '0.2.1-alpha.1.omd.0.13.0', platforms: ['Mac（隔离 Web 宿主）'], allowPrerelease: true,
+        note: '本地未发布构建。对应 alpha.1 SDK 与 OMD 0.13 的原生交互、保存与冷重启恢复、明暗主题、卸载及外来插件注册保留已在 Mac 隔离 Web 验证；最终包仅补文档，运行文件与验收包逐字一致。本轮使用本地模型；真实模型生成效果及 Windows/Linux、原生桌面 App 未同等实测。' },
+      '0.2.1-alpha.2': { version: '0.2.1-alpha.2.iui.1.0.2', releaseTag: 'v0.2.1-alpha.2.iui.1.0.2', asset: 'dsh-intelligent-ui-0.2.1-alpha.2.iui.1.0.2.tgz', sha256: '12b350261a5c9b865603b52e4ab105c30e6f569af7b9ec5ba8fa170e9b4bdfa3', dsh: '0.2.1-alpha.2', omd: '0.2.1-alpha.2.omd.0.13.0', platforms: ['Mac（隔离 Web 宿主）'], allowPrerelease: true,
+        note: '本地未发布构建。对应 alpha.2 SDK 与 OMD 0.13 的原生交互、小加号与展开预览、保存与冷重启恢复、明暗主题、卸载及外来插件注册保留已在 Mac 隔离 Web 验证；最终包仅补文档，运行文件与验收包逐字一致。本轮使用本地模型；真实模型生成效果及 Windows/Linux、原生桌面 App 未同等实测。' },
     },
   },
   {
@@ -23,6 +25,8 @@ export const recommendedPlugins = [
     "category": "模型能力",
     "url": "https://github.com/V1ki/dsh-plugin-subscriptions",
     githubRelease: 'gulagala001/dsh-plugin-subscriptions',
+    unavailable: '当前公开订阅插件尚未核验 DSH 0.2.1-alpha.2。本地 0.9.9-omd.3 已完成三宿主对应 SDK 与 OMD 0.13 的隔离原生验证，尚未公开发布，暂不提供公开安装或更新；已有安装仍可卸载。真实账号与付费请求未验收。',
+    unavailableHosts: ['0.2.1-alpha.2'],
     review: { version: '0.9.8-omd.1', upstreamVersion: '0.9.8', releaseTag: 'v0.9.8-omd.1', dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.9.0', combinations: [{ dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.9.0' }, { dsh: '0.2.1-alpha.1', omd: '0.2.1-alpha.1.omd.0.9.0' }], platforms: ['Mac（隔离 Web 宿主）'],
       provenance: { repository: 'gulagala001/dsh-plugin-subscriptions', commit: 'fac507e40af60246e5e364f07d41960b193f02e9' },
       sha256: 'a80b5fec117acc65f23f7f7d991050797621c621f76fbc577252b3389b2533cd',
@@ -31,8 +35,8 @@ export const recommendedPlugins = [
   {
     id: 'dsh-turn-rewind', name: '回合回滚 · Turn Rewind', packageName: '@anionex/dsh-turn-rewind', author: 'Anionex · dsh-external',
     description: '查看回合变更并恢复工作区；恢复前展示计划、保留救援副本并核验结果。',
-    unavailable: '固定版本 0.3.9 尚不兼容 DSH 0.2.1-alpha.1，暂不提供安装或更新。已有安装可卸载；等待上游适配。',
-    unavailableHosts: ['0.2.1-alpha.1'],
+    unavailable: '固定版本 0.3.9 尚不兼容 DSH 0.2.1-alpha.1 / 0.2.1-alpha.2，暂不提供安装或更新。已有安装可卸载；等待上游适配。',
+    unavailableHosts: ['0.2.1-alpha.1', '0.2.1-alpha.2'],
     category: '开发工具', url: 'https://github.com/Anionex/dsh-turn-rewind',
     review: { version: '0.3.9', dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.5.0', platforms: ['Mac（隔离 Web 宿主）'],
       source: { repository: 'Anionex/dsh-turn-rewind', commit: '9610ab93c87e2405e7512d53a099b8fb2caf6936' },
@@ -54,6 +58,8 @@ export const recommendedPlugins = [
     description: '保留原话，在发送前梳理本轮需求；支持审查、自动、模型选择与只读查证，界面跟随 OMD。默认不安装，手动安装后默认关闭；不附带 Bash，不替换原有提示词优化。',
     category: '模型能力', url: 'https://github.com/gulagala001/omd-prompt-optimizer',
     githubRelease: 'gulagala001/omd-prompt-optimizer',
+    unavailable: '公开需求理解版本 0.3.0 尚不兼容 DSH 0.2.1-alpha.2。本地 0.3.2 已完成三宿主与 OMD 0.13 的隔离原生交互及冷重启验证，尚未公开发布，暂不提供公开安装或更新；已有安装仍可卸载。真实模型效果未验收。',
+    unavailableHosts: ['0.2.1-alpha.2'],
     review: { version: '0.3.0', releaseTag: 'v0.3.0', dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.9.0', combinations: [{ dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.9.0' }, { dsh: '0.2.1-alpha.1', omd: '0.2.1-alpha.1.omd.0.9.0' }], platforms: ['Mac（隔离 Web 宿主）'],
       provenance: { repository: 'gulagala001/omd-prompt-optimizer', commit: '9237848d68930eb8c477c299a1358596cb96d3dd' },
       sha256: '8b9eb882ddd57c4098b874628663615858c4a987f49fd6927235d7bd1afdeadf',
