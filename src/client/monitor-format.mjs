@@ -13,7 +13,12 @@ export const input = metric => known(metric?.inputTotalTokens) ? metric.inputTot
   : [metric?.inputTokens, metric?.cacheReadTokens, metric?.cacheWriteTokens].every(known) ? metric.inputTokens + metric.cacheReadTokens + metric.cacheWriteTokens : undefined;
 export const tokens = metric => known(metric?.totalTokens) ? metric.totalTokens : known(input(metric)) && known(metric?.outputTokens) ? input(metric) + metric.outputTokens : undefined;
 export const cacheRatio = metric => input(metric) && !number(metric?.inputUnreported) && !number(metric?.cacheUnreported) && known(metric?.cacheReadTokens) ? `${(metric.cacheReadTokens / input(metric) * 100).toFixed(1)}%` : '—';
-export const duration = value => { if (!known(value)) return '—'; const ms = value; return ms >= 3600000 ? `${Math.floor(ms / 3600000)}h ${Math.floor(ms % 3600000 / 60000)}m` : ms >= 60000 ? `${Math.floor(ms / 60000)}m ${Math.round(ms % 60000 / 1000)}s` : `${(ms / 1000).toFixed(1)}s`; };
+export const duration = value => {
+  if (!known(value)) return '—';
+  const seconds = Math.round(value / 1000);
+  return seconds >= 3600 ? `${Math.floor(seconds / 3600)}h ${Math.floor(seconds % 3600 / 60)}m`
+    : seconds >= 60 ? `${Math.floor(seconds / 60)}m ${seconds % 60}s` : `${(value / 1000).toFixed(1)}s`;
+};
 export const date = at => { const value = new Date(at); return at && Number.isFinite(value.getTime()) ? value.toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'; };
 export const callKey = call => String(call?.id ?? `${call?.sessionId}:${call?.kind}:${call?.at}:${call?.eventSeq ?? call?.step ?? ''}`);
 export const tokenParts = metric => [

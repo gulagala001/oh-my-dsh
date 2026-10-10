@@ -130,8 +130,10 @@ test('monitor timeline clears filters, reveals long-list calls, keeps polling fo
     await until(async () => { const box = await monitor.boundingBox(); return width === 1440 ? box?.width > 600 : box?.width <= 390; });
     const usage = monitor.getByRole('tab', { name: '用量', exact: true });
     await usage.click();
+    if (await monitor.locator('.mon-filters-more').getAttribute('open') === null) await monitor.locator('.mon-filters-more > summary').click();
     await monitor.getByRole('combobox', { name: '调用组件', exact: true }).selectOption('main');
-    await monitor.getByRole('combobox', { name: '调用状态', exact: true }).selectOption('error');
+    if (await monitor.locator('.mon-filters-more').getAttribute('open') === null) await monitor.locator('.mon-filters-more > summary').click();
+  await monitor.getByRole('combobox', { name: '调用状态', exact: true }).selectOption('error');
     await until(async () => await monitor.locator('.mon-call-row').count() === 1);
     await monitor.getByRole('tab', { name: '概览', exact: true }).click();
     await until(async () => await monitor.locator('.mon-timeline-row button').count() === 16);
@@ -139,8 +141,8 @@ test('monitor timeline clears filters, reveals long-list calls, keeps polling fo
     const hit = await firstCall.boundingBox(), before = await outerScroll(page);
     if (keyboard) { await firstCall.focus(); await firstCall.press('Enter'); } else await firstCall.click();
     await until(async () => await usage.getAttribute('aria-selected') === 'true');
-    assert.equal(await monitor.getByRole('combobox', { name: '调用组件', exact: true }).inputValue(), '');
-    assert.equal(await monitor.getByRole('combobox', { name: '调用状态', exact: true }).inputValue(), 'all');
+    assert.equal(await monitor.locator('.mon-filter-panel select[aria-label="调用组件"]').inputValue(), '');
+    assert.equal(await monitor.locator('.mon-filter-panel select[aria-label="调用状态"]').inputValue(), 'all');
     await until(async () => await monitor.locator('.mon-calls > .mon-call-row').count() === 50);
     const target = monitor.locator('.mon-call-row').filter({ has: page.locator('summary').filter({ hasText: 'call-55' }) });
     assert.equal(await target.count(), 1);
@@ -157,6 +159,7 @@ test('monitor timeline clears filters, reveals long-list calls, keeps polling fo
     assert.deepEqual(await outerScroll(page), before, 'only the monitor body scrolls');
     assert.equal(await monitor.evaluate(el => el.scrollWidth <= el.clientWidth + 1), true, 'monitor content fits its native pane');
     const filter = monitor.getByRole('combobox', { name: '调用组件', exact: true });
+    if (await monitor.locator('.mon-filters-more').getAttribute('open') === null) await monitor.locator('.mon-filters-more > summary').click();
     await filter.focus();
     await monitor.locator('.mon-body').evaluate(el => { el.scrollTop = 0; });
     const beforeReads = reads;
@@ -192,6 +195,7 @@ test('monitor timeline clears filters, reveals long-list calls, keeps polling fo
   assert.equal(await unknown.getByText('未返回', { exact: true }).isVisible(), true, 'unreported reasoning remains unknown');
   assert.equal(await monitor.locator('.mon-metrics-usage > div').nth(1).locator('strong').innerText(), '—', 'missing cache reports do not create a precise cache ratio');
   assert.equal(await monitor.locator('.mon-coverage').isVisible(), true, 'cache coverage is visible even without legacy partial data');
+  if (await monitor.locator('.mon-filters-more').getAttribute('open') === null) await monitor.locator('.mon-filters-more > summary').click();
   await monitor.getByRole('combobox', { name: '调用状态', exact: true }).selectOption('cancelled');
   await until(async () => await monitor.locator('.mon-calls > .mon-call-row').count() === 1);
   const cancelled = monitor.locator('.mon-calls > .mon-call-row');

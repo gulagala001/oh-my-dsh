@@ -11,7 +11,7 @@ const periods = [['all', '全部时间'], ['today', '今天'], ['7d', '近 7 天
 const pages = [['overview', '概览'], ['usage', '用量'], ['context', '上下文']];
 
 function Icon({ name, size = 16 }) {
-  const paths = { chevron: 'm9 5 7 7-7 7', refresh: 'M20 7v5h-5M4 17v-5h5M5 8a7 7 0 0 1 12-3l3 3M19 16A7 7 0 0 1 7 19l-3-3', check: 'm5 12 4 4L19 6', close: 'm6 6 12 12M6 18 18 6', arrow: 'M5 12h14m-5-5 5 5-5 5', activity: 'M3 13h4l3-8 4 15 3-7h4' };
+  const paths = { chevron: 'm9 5 7 7-7 7', refresh: 'M20 7v5h-5M4 17v-5h5M5 8a7 7 0 0 1 12-3l3 3M19 16A7 7 0 0 1 7 19l-3-3', check: 'm5 12 4 4L19 6', close: 'm6 6 12 12M6 18 18 6', arrow: 'M5 12h14m-5-5 5 5-5 5', filter: 'M4 5h16M7 12h10M10 19h4', activity: 'M3 13h4l3-8 4 15 3-7h4' };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] || paths.activity}/></svg>;
 }
 function Empty({ title, children }) { return <div className="mon-empty"><Icon name="activity" size={23}/><strong>{title}</strong><p>{children}</p></div>; }
@@ -41,7 +41,7 @@ function Summary({ metric = {}, usage = false }) {
     {!usage && <div><span>累计用时</span><strong>{duration(metric.durationMs)}</strong></div>}
   </div>;
 }
-function Timeline({ calls, live, onSelect, count }) {
+function Timeline({ calls, live, onSelect }) {
   const ordered = [...calls].reverse().slice(-16), kinds = [...new Set([...ordered, ...live].map(call => call.kind))];
   const maxDuration = Math.max(1, ...ordered.map(call => number(call.durationMs))), hasLive = live.length > 0;
   return <section className="mon-section mon-timeline-section"><Heading title="调用轨迹" hint={`最近 ${ordered.length} 次`} action={ordered.length > 0 && <button className="mon-link" type="button" onClick={() => onSelect(ordered.at(-1))}>查看记录 <Icon name="arrow"/></button>}/>
@@ -98,7 +98,7 @@ export function createMonitor({ api }) {
     const { tab } = useTabInfo(), id = useId();
     const [page, setPage] = useState('overview'), [range, setRange] = useState('session'), [filters, setFilters] = useState(defaults), [query, setQuery] = useState('');
     const [cursor, setCursor] = useState(''), [cursors, setCursors] = useState([]), [snapshot, setSnapshot] = useState(null), [selected, setSelected] = useState(null), [pinned, setPinned] = useState(null), [openCalls, setOpenCalls] = useState(new Set());
-    const observer = useRef(null), body = useRef(null), selectedRef = useRef(null), pendingSelection = useRef(null), tabs = useRef([]), activeKey = useRef('');
+    const observer = useRef(null), body = useRef(null), selectedRef = useRef(null), pendingSelection = useRef(null), tabs = useRef([]), activeKey = useRef(''), filterBox = useRef(null);
     const path = useMemo(() => {
       const selection = page === 'usage' ? filters : { ...defaults, period: filters.period };
       const params = new URLSearchParams({ session: sessionId || '', range, ...selection, cursor: page === 'usage' ? cursor : '' });
@@ -118,8 +118,12 @@ export function createMonitor({ api }) {
       pendingSelection.current = null; const target = selectedRef.current, viewport = body.current; target.focus({ preventScroll: true });
       if (viewport) { const bounds = viewport.getBoundingClientRect(), row = target.getBoundingClientRect(); viewport.scrollTop += row.top - bounds.top - viewport.clientTop - 16; }
     }, [page, selected, pinned, data, tab.visible]);
+    useEffect(() => {
+      const close = event => { const box = filterBox.current; if (box?.open && !box.contains(event.target)) box.open = false; };
+      document.addEventListener('pointerdown', close); return () => document.removeEventListener('pointerdown', close);
+    }, []);
     const update = (key, value) => { setCursor(''); setCursors([]); setSelected(null); setPinned(null); pendingSelection.current = null; setFilters(old => ({ ...old, [key]: value, ...(key === 'provider' ? { model: '' } : {}) })); };
-    const choose = call => { if (!call) return; const key = callKey(call); setPage('usage'); setFilters(defaults); setQuery(''); setCursor(''); setCursors([]); setPinned(call); setSelected(key); setOpenCalls(old => new Set([...old, key])); pendingSelection.current = key; };
+    const choose = call => { if (!call) return; if (filterBox.current) filterBox.current.open = false; const key = callKey(call); setPage('usage'); setFilters(defaults); setQuery(''); setCursor(''); setCursors([]); setPinned(call); setSelected(key); setOpenCalls(old => new Set([...old, key])); pendingSelection.current = key; };
     const reset = () => { setQuery(''); setFilters(defaults); setCursor(''); setCursors([]); setSelected(null); setPinned(null); pendingSelection.current = null; };
     const navigate = (direction, next) => { pendingSelection.current = null; setSelected(null); setPinned(null); if (direction === 'next') { setCursors(old => [...old, cursor]); setCursor(next); } else { setCursor(cursors.at(-1) || ''); setCursors(old => old.slice(0, -1)); } };
     const totals = data?.totals || {}, live = data?.liveCalls || [], running = Boolean(data?.running && data.running !== 'idle');
@@ -134,11 +138,11 @@ export function createMonitor({ api }) {
         {error && <div className="mon-error" role="alert"><span>{error}{data ? '；保留上次读取的结果。' : ''}</span><button type="button" className="mon-link" onClick={() => observer.current?.refresh()}>重试</button></div>}
         {!data && !error && <p className="mon-loading" role="status">正在读取监控数据…</p>}
         <div role="tabpanel" id={`${id}-panel-overview`} aria-labelledby={`${id}-tab-overview`} hidden={page !== 'overview'} tabIndex={0} className="mon-page">
-          {data && <><Summary metric={totals}/><div className="mon-overview-grid"><div className="mon-overview-main"><Timeline calls={data.activity || []} live={live} onSelect={choose} count={data.activityTotal}/><Components metrics={data.metrics}/></div><aside className="mon-overview-side"><Activity calls={live} generatedAt={data.generatedAt} running={running}/><Background actions={data.actions}/><button type="button" className="mon-context-shortcut" onClick={() => setPage('context')}><span>当前上下文</span><strong>{data.meter?.totalTokens == null ? '—' : `≈${compact(data.meter.totalTokens)}`}{data.contextCapacity ? ` / ${compact(data.contextCapacity)}` : ''}</strong><Icon name="arrow"/></button></aside></div><MonitorResources data={data}/></>}
+          {data && <><Summary metric={totals}/><div className="mon-overview-grid"><div className="mon-overview-main"><Timeline calls={data.activity || []} live={live} onSelect={choose}/><Components metrics={data.metrics}/></div><aside className="mon-overview-side"><Activity calls={live} generatedAt={data.generatedAt} running={running}/><Background actions={data.actions}/><button type="button" className="mon-context-shortcut" onClick={() => setPage('context')}><span>当前上下文</span><strong>{data.meter?.totalTokens == null ? '—' : `≈${compact(data.meter.totalTokens)}`}{data.contextCapacity ? ` / ${compact(data.contextCapacity)}` : ''}</strong><Icon name="arrow"/></button></aside></div><MonitorResources data={data}/></>}
 
         </div>
         <div role="tabpanel" id={`${id}-panel-usage`} aria-labelledby={`${id}-tab-usage`} hidden={page !== 'usage'} tabIndex={0} className="mon-page">
-          <div className="mon-filters"><input type="search" aria-label="搜索调用" placeholder="搜索模型或错误" value={query} onChange={event => { setQuery(event.target.value); setCursor(''); setCursors([]); setSelected(null); setPinned(null); pendingSelection.current = null; }}/><select aria-label="调用提供方" value={filters.provider} onChange={event => update('provider', event.target.value)}><option value="">全部提供方</option>{providerOptions.map(value => <option key={value} value={value}>{value}</option>)}</select><select aria-label="调用模型" value={filters.model} onChange={event => update('model', event.target.value)}><option value="">全部模型</option>{models.map(value => <option key={value} value={value}>{value}</option>)}</select><select aria-label="调用组件" value={filters.kind} onChange={event => update('kind', event.target.value)}><option value="">全部组件</option>{kinds.map(value => <option key={value} value={value}>{kindLabel(value)}</option>)}</select><select aria-label="调用状态" value={filters.status} onChange={event => update('status', event.target.value)}><option value="all">全部状态</option><option value="error">仅失败</option><option value="cancelled">已取消</option></select><button type="button" className="mon-link" onClick={reset}>重置筛选</button></div>
+          <div className="mon-filters"><input type="search" aria-label="搜索调用" placeholder="搜索模型或错误" value={query} onChange={event => { setQuery(event.target.value); setCursor(''); setCursors([]); setSelected(null); setPinned(null); pendingSelection.current = null; }}/><details className="mon-filters-more" ref={filterBox} onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); event.currentTarget.open = false; event.currentTarget.querySelector('summary')?.focus(); } }}><summary><Icon name="filter"/>{'筛选'}{[filters.provider, filters.model, filters.kind, filters.status !== 'all' ? filters.status : ''].filter(Boolean).length > 0 && <b>{[filters.provider, filters.model, filters.kind, filters.status !== 'all' ? filters.status : ''].filter(Boolean).length}</b>}</summary><div className="mon-filter-panel"><select aria-label="调用提供方" value={filters.provider} onChange={event => update('provider', event.target.value)}><option value="">全部提供方</option>{providerOptions.map(value => <option key={value} value={value}>{value}</option>)}</select><select aria-label="调用模型" value={filters.model} onChange={event => update('model', event.target.value)}><option value="">全部模型</option>{models.map(value => <option key={value} value={value}>{value}</option>)}</select><select aria-label="调用组件" value={filters.kind} onChange={event => update('kind', event.target.value)}><option value="">全部组件</option>{kinds.map(value => <option key={value} value={value}>{kindLabel(value)}</option>)}</select><select aria-label="调用状态" value={filters.status} onChange={event => update('status', event.target.value)}><option value="all">全部状态</option><option value="error">仅失败</option><option value="cancelled">已取消</option></select><button type="button" className="mon-link" onClick={reset}>重置筛选</button></div></details></div>
           {data && <><Summary metric={totals} usage/><div className="mon-usage-charts"><Trend series={data.series}/><Distribution groups={data.groups}/></div></>}
           {(data || pinned) && <Calls data={data} selected={selected} pinned={pinned} openCalls={openCalls} setOpenCalls={setOpenCalls} selectedRef={selectedRef} cursor={cursor} cursors={cursors} navigate={navigate} onClear={() => { setPinned(null); setSelected(null); }}/>}
         </div>
