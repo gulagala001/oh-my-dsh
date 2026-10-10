@@ -14,9 +14,9 @@ test('installation docs distinguish the unpublished candidate from the fixed pub
   const publicHost = '0.2.1-alpha.1';
   assert.equal(publicPair[2], publicHost, 'the public release keeps its verified host identity');
   assert.equal(publicVersion, `${publicHost}.omd.0.10.0`, 'the verified public release is fixed, not an arbitrary tag');
-  assert.equal(pkg.version, `${host}.omd.0.13.1`, 'current unpublished candidate');
+  assert.equal(pkg.version, `${host}.omd.0.15.0`, 'current unpublished candidate');
   assert.equal(pkg.omdReleaseStatus, 'unpublished', 'candidate is not a public release');
-  assert.equal(opencu.version, '1.5.0', 'candidate bundles the required OpenCU version');
+  assert.equal(opencu.version, '1.6.0', 'candidate bundles the required OpenCU version');
   assert.equal(JSON.parse(await read('vendor/opencu/package.json')).version, opencu.version, 'snapshot package agrees with its manifest');
   const badge = /https:\/\/img\.shields\.io\/badge\/version-(.*?)-3478F6\?/.exec(readme)?.[1];
   assert.equal(badge, pkg.version.replaceAll('-', '--'), 'visible candidate version badge');

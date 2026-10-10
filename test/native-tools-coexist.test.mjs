@@ -4,14 +4,21 @@ import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { realpathSync } from 'node:fs';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 
+const cli = process.env.OMD_DSH_CLI || fileURLToPath(new URL('../node_modules/@deepseek-ai/dsh/lib/bin.js', import.meta.url));
+
 test('the installed bundle keeps the native global tool service and third-party tools in native and PTC sessions', { timeout: 180000 }, async t => {
+  const hostRequire = createRequire(realpathSync(cli));
+  const nativeTools = await import(pathToFileURL(hostRequire.resolve('@deepseek-ai/dsh-tools')).href);
+  const modes = (nativeTools.ToolRuntime ?? nativeTools.default)?.Config?.dict?.mode?.list?.map(choice => choice.value);
+  assert.ok(Array.isArray(modes) && modes.includes('native') && modes.includes('ptc'), 'the actual host exposes its native presentation modes');
   const requests = [];
   const f = await frontendFixture(t, {
     headless: true, installedPackage: true, omdConfig: { contextEnabled: false, codegraphEnabled: false },
     async setupWorkspace({ root, home }) {
-      const cli = process.env.OMD_DSH_CLI || fileURLToPath(new URL('../node_modules/@deepseek-ai/dsh/lib/bin.js', import.meta.url));
       execFileSync(process.execPath, [cli, '--profile', 'trisoul-x', '--from-default-profile', 'web', '--dump-config'], {
         env: { ...process.env, DSH_HOME: home }, encoding: 'utf8', stdio: 'pipe', timeout: 60000,
       });
@@ -52,8 +59,13 @@ export async function apply(ctx) {
     const request = requests.find(payload => JSON.stringify(payload.messages).includes('COEXIST_' + agentPreset));
     assert.ok(request, agentPreset);
     if (agentPreset === 'omd-ptc') {
-      assert.deepEqual(request.tools.map(tool => tool.function.name).sort(), ['job_kill', 'job_list', 'job_output', 'run_code', 'runtime_status']);
-      assert.match(JSON.stringify(request.messages), /Use run_code and the tools SDK for business operations/, 'the reviewed PTC control instruction reaches the actual request');
+      if (modes.includes('both')) {
+        assert.deepEqual(request.tools.map(tool => tool.function.name).sort(), ['job_kill', 'job_list', 'job_output', 'run_code', 'runtime_status']);
+        assert.match(JSON.stringify(request.messages), /Use run_code and the tools SDK for business operations/, 'the reviewed PTC control instruction reaches the actual request');
+      } else {
+        assert.deepEqual(request.tools.map(tool => tool.function.name), ['run_code']);
+        assert.match(JSON.stringify(request.messages), /`run_code` is the only tool you can call directly/, 'the matching host PTC instruction reaches the actual request');
+      }
       assert.match(JSON.stringify(request.messages), /coexist_probe/, 'the complete PTC SDK includes third-party tools');
     } else assert.ok(request.tools.some(tool => tool.function.name === 'coexist_probe'));
   }
