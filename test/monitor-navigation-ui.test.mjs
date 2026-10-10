@@ -1,3 +1,4 @@
+import { openWorkbench } from './fixtures/workbench.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -5,10 +6,8 @@ import { join } from 'node:path';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 
 async function openMonitor(page) {
-  await page.getByRole('button', { name: '打开工作台', exact: true }).click();
-  const workbench = page.locator('.tx-workbench');
+  const workbench = await openWorkbench(page, '监控');
   await until(async () => (await workbench.boundingBox())?.width > 300);
-  await workbench.locator('.cx-navigation').getByRole('button', { name: '监控', exact: true }).click();
   const monitor = workbench.locator('.tx-app').filter({ has: page.getByRole('heading', { name: '执行监控', exact: true }) });
   await monitor.getByRole('tab', { name: '概览', exact: true }).waitFor();
   return monitor;

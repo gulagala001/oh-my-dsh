@@ -260,32 +260,43 @@ export async function apply(ctx) {
   applyModelPanel(ctx);
   applySubscriptionFast(ctx);
   applyWorkflowStatus(ctx);
-  const openPanel = section => ctx.sidebarRight.openTab('trisoul-x-workbench', { params: { section } });
-  const sections = [
-    ['tasks', '任务', 'context', TaskPanel],
-    ['context', '上下文', 'layers', PipelinePanel],
-    ['memory', '记忆', 'memory', SummaryPanel],
-    ['computer', '电脑', 'computer', props => <ComputerPane {...props}/>],
-    ['monitor', '监控', 'monitor', Monitor],
+  const pages = [
+    ['tasks', 'trisoul-x-context', '任务与验证', 'context', TaskPanel],
+    ['context', 'trisoul-x-pipeline', '上下文', 'layers', PipelinePanel],
+    ['memory', 'trisoul-x-memory', '记忆 · Dream', 'memory', SummaryPanel],
+    ['monitor', 'trisoul-x-monitor', '监控', 'monitor', Monitor],
   ];
-  function Workbench({ initialSection = 'tasks', ...props }) {
-    const { tab } = props.useTabInfo();
-    const section = sections.some(([id]) => id === tab.navigation?.params?.section) ? tab.navigation.params.section : initialSection;
-    return <div className="tx-workbench cx-integrated">
-      <nav className="cx-navigation" aria-label="工作台导航">
-        {sections.map(([id, label, icon]) => <button key={id} type="button" aria-current={section === id ? 'page' : undefined} onClick={() => tab.actions.openTab('trisoul-x-workbench', { params: { section: id }, replaceTab: tab.kind !== 'trisoul-x-workbench' })}>{icon === 'computer' ? <ComputerIcon size={15}/> : <Icon name={icon} size={15}/>}<span>{label}</span></button>)}
-      </nav>
-      {sections.map(([id, label, , Component]) => <section key={id} className="tx-workbench-page" data-section={id} hidden={section !== id} aria-label={label}>
-        <Component {...props} useTabInfo={() => { const info = props.useTabInfo(); return { ...info, tab: { ...info.tab, visible: info.tab.visible && section === id } }; }} conversation={ctx.get('conversation')}/>
-      </section>)}
+  const panelKinds = Object.fromEntries(pages.map(([section, kind]) => [section, kind]));
+  panelKinds.computer = 'trisoul-x-computer-use';
+  const openPanel = section => ctx.sidebarRight.openTab(section ? panelKinds[section] || panelKinds.tasks : 'guide');
+  const { ComputerEntry, ComputerPane } = applyComputerUseClient(ctx, {
+    integrated: true, openPanel, guideTitle: '应用预览', guideOrder: 25,
+  });
+  function ContentPage({ section, title, Component, ...props }) {
+    return <div className="tx-workbench cx-integrated" data-section={section}>
+      <section className="tx-workbench-page" data-section={section} aria-label={title}>
+        <Component {...props} conversation={ctx.get('conversation')}/>
+      </section>
     </div>;
   }
-  const { ComputerEntry, ComputerPane } = applyComputerUseClient(ctx, { integrated: true, openPanel, renderPane: props => <Workbench {...props} initialSection="computer"/> });
+  // A saved workbench or old link keeps its destination, then becomes a native
+  // content tab. Other tabs and the host's pane layout remain owned by DSH.
+  function LegacyWorkbench(props) {
+    const { tab } = props.useTabInfo();
+    const section = Object.hasOwn(panelKinds, tab.navigation?.params?.section) ? tab.navigation.params.section : 'tasks';
+    const kind = panelKinds[section];
+    useEffect(() => {
+      if (tab.visible) tab.actions.openTab(kind, { replaceTab: true });
+    }, [kind, tab.visible, tab.actions]);
+    if (section === 'computer') return <ComputerPane {...props}/>;
+    const [, , title, , Component] = pages.find(([id]) => id === section);
+    return <ContentPage {...props} section={section} title={title} Component={Component}/>;
+  }
   function ComposerDock(props) {
     const running = props.useSessionStatus(s => Boolean(s.get(props.sessionId)?.running));
     const [usageOpen, setUsageOpen] = useState(true);
     useEffect(() => { setUsageOpen(true); }, [props.sessionId]);
-    return <div className="tx-composer-dock" data-session-id={props.sessionId} data-omd-running={running ? '' : undefined} data-omd-usage-expanded={usageOpen ? '' : undefined}><div className="tx-composer-tools"><button type="button" className="tx-workbench-entry" aria-label="打开工作台" title="打开工作台" onClick={() => openPanel('tasks')}><Icon name="context" size={15}/><span>工作台</span></button><ComputerEntry {...props}/></div><button type="button" className="tx-usage-toggle" aria-label="用量详情" aria-expanded={usageOpen} onClick={() => setUsageOpen(value => !value)}><Icon name="monitor" size={14}/><span>用量</span><Icon name="chevron" size={12}/></button><StatsLine {...props} onOpen={() => openPanel('monitor')}/></div>;
+    return <div className="tx-composer-dock" data-session-id={props.sessionId} data-omd-running={running ? '' : undefined} data-omd-usage-expanded={usageOpen ? '' : undefined}><div className="tx-composer-tools"><button type="button" className="tx-workbench-entry" aria-label="打开工作台" title="打开工作台" onClick={() => openPanel()}><Icon name="context" size={15}/><span>工作台</span></button><ComputerEntry {...props}/></div><button type="button" className="tx-usage-toggle" aria-label="用量详情" aria-expanded={usageOpen} onClick={() => setUsageOpen(value => !value)}><Icon name="monitor" size={14}/><span>用量</span><Icon name="chevron" size={12}/></button><StatsLine {...props} onOpen={() => openPanel('monitor')}/></div>;
   }
   const getAppearanceRuntime = applySkins(ctx);
   ctx.effect(() => {
@@ -301,19 +312,20 @@ export async function apply(ctx) {
   ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register({ name: 'conversation.composer.dock', id: 'trisoul-x-tools', order: 25 }, ComposerDock));
   ctx.slots.inject('conversation.input.left', () => ctx.slots.register({ name: 'conversation.input.left', id: 'trisoul-memory-scope', order: 50 }, ScopeChip));
   ctx.slots.inject('conversation.input.right', () => ctx.slots.register({ name: 'conversation.input.right', id: 'trisoul-better-todo', order: 100 }, BetterTodoChip));
-  const workbenchId = 'trisoul_x/trisoul-x-workbench';
-  ctx.effect(() => ctx.sidebarRightTabs.register({ id: workbenchId, kind: 'trisoul-x-workbench', title: () => '工作台', guide: [{ order: 5, title: () => '工作台', description: () => '任务、记忆、电脑与运行监控', icon: props => <Icon name="context" {...props}/> }] }));
-  ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({ name: 'sidebar.right.pane.tab', key: workbenchId }, Workbench));
-  // Keep restored tabs and old links working; new navigation uses one workbench.
-  for (const [kind, title, initialSection] of [
-    ['trisoul-x-context', '工作上下文', 'tasks'],
-    ['trisoul-x-memory', '记忆', 'memory'],
-    ['trisoul-x-monitor', '执行监控', 'monitor'],
-  ]) {
+  for (const [section, kind, title, icon, Component] of pages) {
     const id = `trisoul_x/${kind}`;
-    ctx.effect(() => ctx.sidebarRightTabs.register({ id, kind, title: () => title, guide: [] }));
-    ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({ name: 'sidebar.right.pane.tab', key: id }, props => <Workbench {...props} initialSection={initialSection}/>));
+    // The native host keeps visited pages alive without mounting unopened tabs.
+    // Preserve reading/selection state while each page gates refresh on tab.visible.
+    ctx.effect(() => ctx.sidebarRightTabs.register({ id, kind, title: () => title, keepMounted: true,
+      guide: [{ id: `omd-${section}`, order: 40 + pages.findIndex(([name]) => name === section), title: () => title,
+        icon: props => <Icon name={icon} {...props}/> }],
+    }));
+    ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({ name: 'sidebar.right.pane.tab', key: id },
+      props => <ContentPage {...props} section={section} title={title} Component={Component}/>));
   }
+  const workbenchId = 'trisoul_x/trisoul-x-workbench';
+  ctx.effect(() => ctx.sidebarRightTabs.register({ id: workbenchId, kind: 'trisoul-x-workbench', title: () => '工作台', guide: [] }));
+  ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({ name: 'sidebar.right.pane.tab', key: workbenchId }, LegacyWorkbench));
   applyStyle(ctx);
   applyConversationRecords(ctx);
 }
