@@ -52,6 +52,11 @@ export function apply(ctx, config) {
         await ctx.sessions.flush(agent.session);
         sendJson(res, 200, { header: agent.session.header, events: agent.session.snapshotEvents(), messages: agent.session.deriveMessages(), status: agent.status }); return;
       }
+      if (url.pathname === '/__simulation/workspaces' && req.method === 'GET') {
+        const registry = ctx.get('workspaceRegistry');
+        if (!registry) throw Error('Native Workspace registry is unavailable');
+        sendJson(res, 200, registry.list().map(workspace => ({ id: workspace.id, path: workspace.path, sessionIds: [...workspace.sessionIds] }))); return;
+      }
       if (url.pathname === '/__simulation/probe-model' && req.method === 'POST') {
         const input = await readJsonBody(req);
         try {

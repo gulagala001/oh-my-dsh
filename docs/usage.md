@@ -1,10 +1,10 @@
 # Oh My DSH 使用与开发指南
 
-本地候选构建为 **0.2.1-alpha.1.omd.0.12.0**，**未正式发布**。下方公开安装命令对应 **0.2.1-alpha.1.omd.0.10.0**，不含 0.11／0.12 候选新特性；候选只用[本地包验收](upgrade.md#candidate-install)。[候选说明](release-0.2.1-alpha.1.omd.0.12.0.md)。
+本地候选构建为 **0.2.1-alpha.2.omd.0.13.1**，**未正式发布**。下方公开安装命令对应 **0.2.1-alpha.1.omd.0.10.0**，不含 0.11／0.12 候选新特性；候选只用[本地包验收](upgrade.md#candidate-install)。[候选说明](release-0.2.1-alpha.2.omd.0.13.1.md)。
 
 [文档目录](README.md) · [首次使用](getting-started.md) · [安装](#安装到现有-dsh推荐) · [更新与卸载](#update-uninstall) · [设置](#settings) · [排障](troubleshooting.md) · [开发与验证](#开发与验证)
 
-当前候选 **0.2.1-alpha.1.omd.0.12.0** 适配 **DSH 0.2.1-alpha.1**，内置 **OpenCU 1.4.0**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
+当前候选 **0.2.1-alpha.2.omd.0.13.1** 适配 **DSH 0.2.1-alpha.2**，内置 **OpenCU 1.5.0**。旧宿主 DSH 0.1.6-alpha.2 请继续使用 OMD 1.6.1。本页保留安装、操作、配置与使用边界的详细说明。GitHub 项目名为 `oh-my-dsh`；插件 ID `trisoul_x`、Agent preset `trisoul-x` 和原数据目录保持兼容。
 
 本项目通过 `gulagala001/oh-my-dsh` 的 GitHub 来源或发行包安装。[安装来源核对](troubleshooting.md#package-source)。
 

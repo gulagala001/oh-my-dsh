@@ -69,6 +69,7 @@ export async function apply(ctx, config) {
     root: legacy.value.projectlessWorkspaceRoot || hub.config().projectlessWorkspaceRoot || join(homedir(), 'Documents', 'DSH'),
     storeDir: join(await realpath(hub.store.dir), 'projectless-workspaces'),
   });
+  hub.projectless = projectless;
   const liveConfig = hub.getConfig;
   let overlay = legacy.value;
   hub.getConfig = () => ({ ...liveConfig(), ...overlay });
@@ -239,10 +240,11 @@ export async function apply(ctx, config) {
     // Read-only historical sessions may never have created an agent.
     if (!hub.agents.has(session.id)) return hub.context.dispose(session.id);
   }, { global: true });
-  ctx.on('agent/created', ({ agent, source }) => {
+  ctx.on('agent/created', async ({ agent, source, signal }) => {
     if(isBtwSession(agent.session))return;
     hub.ultracode.lifecycle(agent, source);
     hub.workflowBudget.attach(agent.session);
+    await hub.dream.sources.refreshScope(agent.session.header,signal);
     if (!monitored(agent.session)) return;
     const state = hub.store.state(agent.session.id);
     state.cwd = agent.session.header.cwd; state.parentSession = agent.session.header.parentSession;

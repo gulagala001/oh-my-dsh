@@ -88,12 +88,16 @@ function fullLifecycle({ trace }) {
       assert.ok(input.segment?.some(item => item.type === 'tool/result' && item.text.includes('SOURCE_ORIGINAL_9007199254740993')), 'preprocessing input lost the actual tool material');
       return toolReply('prepare_segment', { summary: '已写入、读取和验证 source.txt。', documents: [{ title: '模拟原始资料', text: source }],
         decisions: [{ seq: decision.seq, text: '保留中文、😀、数字9007199254740993和原话。', quote: '保留中文、😀、数字9007199254740993和原话' }] }, 'full-prepare');
+    }), step('prepare-projectless', payload => {
+      assertNoLeak(payload, 'SOURCE_ORIGINAL');
+      assert.match(JSON.stringify(jsonInput(payload)), /PRIVATE_SIM_PROJECTLESS_/);
+      return toolReply('prepare_segment', { summary: 'PRIVATE_SIM_PROJECTLESS_ 非工作区材料仅在本会话保留。', documents: [{ title: '独立 Chat 材料', text: 'PRIVATE_SIM_PROJECTLESS_' }] }, 'projectless-prepare');
     })] },
     { id: 'dream', match: containsTool('save_memory'), steps: ['session', 'project', 'global'].map(kind => step('dream-' + kind, payload => {
       const input = jsonInput(payload); assert.equal(input.kind, kind); assertNoLeak(input, 'PRIVATE_SIM_');
       return toolReply('save_memory', { summary: kind + '：source.txt 已完成真实工具和证据验收。', references: input.sources.map(item => item.id) }, 'dream-' + kind);
     })) },
-    { id: 'private', match: payload => containsTool('todo_write')(payload) && userText(payload).includes('PRIVATE_SIM_'), steps: [step('private-message', () => textReply('独立会话仅本地保留。'))] },
+    { id: 'private', match: payload => containsTool('todo_write')(payload) && userText(payload).includes('PRIVATE_SIM_'), steps: [step('private-message', () => textReply('独立会话仅本地保留。')), step('projectless-message', () => textReply('无工作区 Chat 仅本地保留。'))] },
     ...['ALPHA', 'BETA'].map(kind => ({ id: 'child-' + kind, match: payload => containsTool('todo_write')(payload) && userText(payload).includes('SIM_CHILD_' + kind),
       steps: [step('child-response', () => textReply('CHILD_' + kind + '_DONE'))] })), auxiliary(),
   ] });
@@ -128,6 +132,13 @@ function fullLifecycle({ trace }) {
     await host.prompt(publicId, '回查原始 source.txt 资料。'); await host.idle(publicId);
     const privateId = await host.createSession(); await host.api('/scope?session=' + privateId, { scope: 'session' });
     await host.prompt(privateId, 'PRIVATE_SIM_ 隔离材料禁止传播。'); await host.idle(privateId);
+    const chatDirectory = await host.api('/projectless-workspace', { requestId: 'simulation-projectless', prompt: '无工作区 Chat' });
+    const projectlessId = (await host.rpc('session/create', { cwd: chatDirectory.cwd, agentPreset: 'trisoul-x' })).sessionId;
+    await host.prompt(projectlessId, 'PRIVATE_SIM_PROJECTLESS_ 非工作区材料禁止后台共享整理。'); await host.idle(projectlessId);
+    await host.api('/context/prepare?session=' + projectlessId, {});
+    await until(async () => (await host.api('/context?session=' + projectlessId)).records.some(record => record.summary?.includes('PRIVATE_SIM_PROJECTLESS_')),
+      { signal: host.signal, description: 'projectless Chat material is genuinely available for Dream' });
+    const chatBeforeDream = await host.control('/snapshot?session=' + projectlessId);
     await host.api('/dream/refresh', {});
     const job = await host.api('/dream/run?session=' + publicId, { scope: 'global' });
     await until(async () => { const status = await host.api('/dream?session=' + publicId), found = status.jobs.find(item => item.id === job.id);
@@ -135,6 +146,16 @@ function fullLifecycle({ trace }) {
     await checks.check('Dream 三级发布及独立会话隔离', async () => {
       const status = await host.api('/dream?session=' + publicId); assert.ok(status.globalMemory?.summary.includes('global'));
       assertNoLeak(status.globalMemory, 'PRIVATE_SIM_'); assert.equal((await host.api('/dream?session=' + privateId)).session.shared, false);
+    });
+    await checks.check('非工作区 Chat 目录不注册 Workspace、不进入 Dream 项目或共享模型', async () => {
+      const chatStatus = await host.api('/dream?session=' + projectlessId);
+      assert.equal(chatStatus.session.mode, 'session'); assert.equal(chatStatus.session.shared, false);
+      assert.equal(chatStatus.sessionMemory, null);
+      assert(!(await host.control('/workspaces')).some(workspace => workspace.sessionIds.includes(projectlessId)));
+      const projects = await host.api('/dream/catalog?kind=project');
+      assert(!projects.entries.some(project => project.id === chatDirectory.cwd));
+      for (const request of provider.requests.filter(request => containsTool('save_memory')(request.payload))) assertNoLeak(request.payload, 'PRIVATE_SIM_PROJECTLESS_');
+      assert.deepEqual((await host.control('/snapshot?session=' + projectlessId)).events, chatBeforeDream.events);
     });
     await host.prompt(publicId, '运行两个模拟子会话。'); await host.idle(publicId);
     const journals = await readdir(join(host.home, 'trisoul-x/workflows'));
@@ -146,6 +167,11 @@ function fullLifecycle({ trace }) {
       const native = await host.durable(publicId); assert.deepEqual(restored.events.slice(0, checkpoint.events.length), checkpoint.events); assertToolPairs(native.events);
       const recovered = await host.api('/state?session=' + publicId);
       assert.deepEqual(recovered.tasks[0].links.find(link => link.kind === 'test').lastRun, verificationRun);
+    });
+    await checks.check('重启后非工作区 Chat 仍保持独立', async () => {
+      await host.api('/dream/refresh', {});
+      const chat = (await host.api('/dream?session=' + projectlessId)).session;
+      assert.equal(chat.shared, false); assert.equal(chat.mode, 'session');
     });
     await host.prompt(publicId, '重启后继续。'); await host.idle(publicId);
     return { sessionId: publicId, privateSessionId: privateId };

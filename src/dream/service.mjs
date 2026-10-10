@@ -106,7 +106,7 @@ export class DreamService {
       // Persisted job targets may predate a format refusal discovered by this
       // scan. Shared jobs must withdraw that source and continue their scope.
       if(target.kind==='session') {
-        if(job.scope==='session'||this.store.session(target.target)?.available!==false) {
+        if(job.scope==='session'||this.store.session(target.target)?.available!==false&&this.store.session(target.target)?.shared) {
           try { await this.updateSession(target.target,job,signal,target); }
           catch(error) {
             if(job.scope==='session'||!this.sources.excludeUnreadable(target.target,error,signal))throw error;
@@ -132,10 +132,12 @@ export class DreamService {
   async updateParent(kind,target,job,signal){
     const key=nodeKey(kind,target),children=kind==='project'?this.store.sessions({project:target,shared:true}).map(s=>({key:nodeKey('session',s.id),title:s.title})):this.store.projects().map(p=>({key:nodeKey('project',p),title:this.sources.projectTitle(p)}));
     const current=new Map(children.map(c=>[c.key,{...c,memory:this.store.memory(c.key)}]).filter(([,c])=>c.memory&&!c.memory.invalid));
+    if(!current.size)return;
+    const rebuilding=Boolean(this.store.memory(key)?.invalid);
     const progress=this.store.progress(key),previousInputs=new Map(progress.map(p=>[p.source,p]));
     const items=[];
     for(const [child,c]of current){
-      const fingerprint=String(c.memory.revision);if(this.store.consumed(key,child)===fingerprint)continue;
+      const fingerprint=String(c.memory.revision);if(!rebuilding&&this.store.consumed(key,child)===fingerprint)continue;
       const source={id:c.memory.ref,kind:'memory',key:child,revision:c.memory.revision};
       const before=previousInputs.get(child);
       items.push({key:child,fingerprint,source,text:`${c.title} · ${child} · revision ${fingerprint}${before?` (replaces revision ${before.fingerprint})`:''}\n${c.memory.summary}`});
@@ -154,7 +156,8 @@ export class DreamService {
   async batches(kind,target,items,job,signal,validate){
     while(items.length){
       signal.throwIfAborted();const old=this.store.memory(nodeKey(kind,target));
-      const base={kind,target,target_characters:LIMITS[kind],previous:old?{id:old.ref,text:old.summary}:null,sources:[]};
+      const previous=old&&!old.invalid?{id:old.ref,text:old.summary}:null;
+      const base={kind,target,target_characters:LIMITS[kind],previous,sources:[]};
       const batch=[];
       while(items.length&&batch.length<24){
         const x=items[0],candidate={id:x.source.id,text:x.text};
@@ -168,7 +171,7 @@ export class DreamService {
         try{
           if(attempt)await delay(Math.min(2000,500*2**attempt),undefined,{signal});
           const raw=await this.generate(last?{...base,retry_hint:last.message.slice(0,180)}:base,job,signal);
-          result=validateMemory(raw,kind,new Set([...base.sources.map(s=>s.id),...(old?[old.ref]:[])]));break;
+          result=validateMemory(raw,kind,new Set([...base.sources.map(s=>s.id),...(previous?[previous.id]:[])]));break;
         }catch(error){if(error.budget||signal.aborted||/401|403|unauthorized|api.?key|authentication/i.test(error.message))throw error;last=error;}
       }
       if(!result)throw last;

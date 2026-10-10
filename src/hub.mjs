@@ -57,6 +57,7 @@ export class Hub extends Service {
     return next;
   }
   scope(session) {
+    if(this.dream?.sources?.projectlessKnown?.(session.header))return {mode:'session',project:`session:${session.id}`};
     const state = this.store.peek ? this.store.peek(session.id) ?? { id: session.id } : this.store.state(session.id);
     let root = state, parentId = session.header.parentSession, workflowProject = state.workflowProject;
     const ancestors = new Set([session.id]);

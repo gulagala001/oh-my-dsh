@@ -2,6 +2,17 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-alpha.2.omd.0.13.1",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "修复非工作区 Chat 的 Dream 隔离",
+      "notes": [
+        "独立 Chat 的自动文件目录不再成为 Dream 项目，不参加项目、全局或自动共享整理；显式会话整理和原文回查保留。",
+        "升级后撤回旧共享范围，恢复的旧作业不再整理该 Chat；原始会话和历史记忆版本保留。",
+        "显式工作区会话仍按原生归属处理；可选归属读取故障不会阻塞基础聊天。"
+      ]
+    },
+    {
       "version": "0.2.1-alpha.2.omd.0.13.0",
       "severity": "normal",
       "unpublished": true,
