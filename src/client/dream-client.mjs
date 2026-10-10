@@ -13,10 +13,12 @@ export function createDreamPanel(React,{api,suffix,heading,button,icon,field,sec
   const jobs={queued:'等待执行',running:'整理中',paused:'已停止',budget:'等待每日额度',failed:'需要重试',complete:'已完成'};
   const scopes={session:'会话',project:'项目',global:'全局'},levels={global:0,project:1,session:2};
   const locationKey=(view,project,sessionId)=>JSON.stringify([view,project,sessionId]);
-  const settingsKeys={enabled:'dreamAutoEnabled',intervalMinutes:'dreamIntervalMs',deepAgeDays:'dreamDeepAgeMs',dailyTokens:'dreamDailyTokens',provider:'dreamProvider',model:'dreamModel'};
+  const settingsKeys={enabled:'dreamAutoEnabled',intervalMinutes:'dreamIntervalMs',deepAgeDays:'dreamDeepAgeMs',dailyTokens:'dreamDailyTokens',provider:'dreamProvider',model:'dreamModel',folders:'dreamProjects'};
   const durationValue=(ms,unit)=>Number((ms/unit).toFixed(Math.ceil(Math.log10(unit))));
-  const editSettings=s=>({enabled:s.enabled,intervalMinutes:String(durationValue(s.intervalMs,60000)),deepAgeDays:String(durationValue(s.deepAgeMs,86400000)),dailyTokens:String(s.dailyTokens),provider:s.provider,model:s.model});
-  const settingValue=(key,value)=>key==='intervalMinutes'?Math.round(Number(value)*60000):key==='deepAgeDays'?Math.round(Number(value)*86400000):key==='dailyTokens'?Number(value):value;
+  const editSettings=s=>({enabled:s.enabled,intervalMinutes:String(durationValue(s.intervalMs,60000)),deepAgeDays:String(durationValue(s.deepAgeMs,86400000)),dailyTokens:String(s.dailyTokens),provider:s.provider,model:s.model,folders:Array.isArray(s.dreamProjects)?s.dreamProjects:[]});
+  const settingValue=(key,value)=>key==='intervalMinutes'?Math.round(Number(value)*60000):key==='deepAgeDays'?Math.round(Number(value)*86400000):key==='dailyTokens'?Number(value):key==='folders'?Array.isArray(value)?[...value]:[]:value;
+  // Folder selection is an array: compare element-wise, since a fresh reference per render would always look dirty.
+  const sameFolders=(a,b)=>{const x=Array.isArray(a)?a:[],y=Array.isArray(b)?b:[];if(x.length!==y.length)return false;const left=[...x].sort(),right=[...y].sort();return left.every((value,index)=>value===right[index]);};
   const referenceLabel=s=>s.kind==='memory'?(s.key==='global'?'全局历史版本':s.key?.startsWith('project:')?'项目记忆 · '+title(s.key.slice(8)):'会话记忆'):
     ({summary:'摘要来源',raw:'原文来源',withdrawn:'已退出共享'})[s.kind]||'来源';
   const stamp=value=>new Date(value).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
@@ -108,7 +110,7 @@ export function createDreamPanel(React,{api,suffix,heading,button,icon,field,sec
     setting=(key,value)=>this.setState(s=>({settings:{...s.settings,[key]:value,...(key==='provider'?{model:''}:{})},notice:''}));
     settingsPatch=()=>{
       const {settings,savedSettings}=this.state;if(!settings||!savedSettings)return {};
-      const patch=Object.fromEntries(Object.entries(settingsKeys).filter(([key])=>settingValue(key,settings[key])!==settingValue(key,savedSettings[key])).map(([key,name])=>[name,settingValue(key,settings[key])]));
+      const patch=Object.fromEntries(Object.entries(settingsKeys).filter(([key])=>key==='folders'?!sameFolders(settings[key],savedSettings[key]):settingValue(key,settings[key])!==settingValue(key,savedSettings[key])).map(([key,name])=>[name,settingValue(key,settings[key])]));
       if('dreamProvider' in patch||'dreamModel' in patch){patch.dreamProvider=settings.provider;patch.dreamModel=settings.model;}
       return patch;
     };
@@ -117,6 +119,20 @@ export function createDreamPanel(React,{api,suffix,heading,button,icon,field,sec
       return this.act('/dream/settings',patch,'自动 Dream 设置已保存。',result=>{const saved=editSettings(result);this.setState(state=>({savedSettings:saved,
         settings:state.settings&&Object.fromEntries(Object.keys(settingsKeys).map(key=>[key,state.settings[key]===draft[key]?saved[key]:state.settings[key]]))}));});
     };
+    folders(s){
+      const list=(this.state.data?.folders||[]).filter(item=>item&&typeof item.folder==='string'&&item.folder.trim()),selected=Array.isArray(s.folders)?s.folders:[];
+      const write=next=>this.setting('folders',next);
+      return h('div',{className:'cx-field cx-dream-folders'},h('span',null,'整理的文件夹'),
+        h('small',null,'只整理勾选的工作区文件夹；不勾选表示整理全部。'),
+        list.length>0&&h('div',{className:'cx-dream-folder-list',role:'group','aria-label':'整理的文件夹'},
+          ...list.map(item=>h('label',{key:item.folder,className:'cx-dream-folder'+(item.exists===false?' cx-dream-folder-gone':''),title:item.exists===false?item.folder+'（文件夹已删除）':item.folder},h('input',{type:'checkbox','aria-label':`整理文件夹 ${item.folder}`,checked:selected.includes(item.folder),
+            onChange:e=>write(e.target.checked?[...selected,item.folder]:selected.filter(folder=>folder!==item.folder))}),
+            h('span',{className:'cx-dream-folder-text'},h('strong',{title:item.folder},h('span',{className:'cx-dream-folder-name'},title(item.folder)),item.exists===false&&h('em',{className:'cx-dream-folder-gone-tag'},'文件夹已删除')),h('small',{title:item.folder,className:'cx-dream-folder-path'},item.folder)),
+            h('small',{className:'cx-dream-folder-count'},`${(item.projects||[]).length} 个项目`)))),
+        list.length>0&&h('div',{className:'cx-actions cx-dream-folder-actions'},h('button',{type:'button',className:'cx-btn cx-quiet',onClick:()=>write(list.map(item=>item.folder))},'全选'),
+          h('button',{type:'button',className:'cx-btn cx-quiet',onClick:()=>write([])},'清空')),
+        list.length===0&&h('small',{className:'cx-hint'},'尚未读取到工作区文件夹；刷新后重试。'));
+    }
     renderSettings(){
       const s=this.state.settings,providers=this.state.directory,models=providers.find(p=>p.id===s.provider)?.models||[];
       return section('自动 Dream 设置','定时检查新增摘要；没有新材料就不调用模型。',h('form',{onSubmit:e=>{e.preventDefault();this.saveSettings();}},
@@ -124,6 +140,7 @@ export function createDreamPanel(React,{api,suffix,heading,button,icon,field,sec
         h('div',{className:'cx-grid'},field('检查间隔 · 分钟',h('input',{type:'number',min:1,step:'any',required:true,value:s.intervalMinutes,onChange:e=>this.setting('intervalMinutes',e.target.value)})),
           field('原文整理等待 · 天',h('input',{type:'number',min:durationValue(60000,86400000),step:'any',required:true,value:s.deepAgeDays,onChange:e=>this.setting('deepAgeDays',e.target.value)}),'从会话最后一次实际活动起算；未到时间只读摘要。')),
         field('每日 Dream token 上限',h('input',{type:'number',min:0,step:1,required:true,value:s.dailyTokens,onChange:e=>this.setting('dailyTokens',e.target.value)}),'手动与自动共用；达到上限保存进度，下一额度日继续。'),
+        this.folders(s),
         field('固定后台提供方',h('select',{value:s.provider,onChange:e=>this.setting('provider',e.target.value)},h('option',{value:''},'沿用已配置的后台模型'),...providers.map(p=>h('option',{key:p.id,value:p.id},p.name||p.id)))),
         field('固定后台模型',h('input',{list:'dream-model-options',value:s.model,placeholder:'自动执行需要固定提供方与模型',onChange:e=>this.setting('model',e.target.value)})),h('datalist',{id:'dream-model-options'},...models.map(m=>h('option',{key:m.id,value:m.id}))),
         h('p',{className:'cx-hint'},'长度上限：会话 1,200、项目 2,400、全局 600 字符。单次输入按保守估算限制在 16,000 token；原始档案保留。'),
@@ -196,5 +213,13 @@ export const DREAM_CSS=`
 .cx-dream-memory{padding:14px 15px;border:1px solid var(--cx-line);border-radius:11px;margin-bottom:17px}.cx-dream-memory>.cx-row{justify-content:space-between;margin-bottom:8px}.cx-dream-memory .cx-record-footer{justify-content:space-between}
 .cx-dream-entry{display:flex;align-items:center;gap:10px;width:100%;padding:14px 2px;background:none;color:var(--cx-text);font:inherit;text-align:left;border:0;border-bottom:1px solid var(--cx-line);cursor:pointer}.cx-dream-entry:hover{background:var(--cx-hover)}.cx-dream-entry>span{flex:1;min-width:0}.cx-dream-entry strong,.cx-dream-entry small{display:block;overflow-wrap:anywhere}.cx-dream-entry strong{font-weight:550}.cx-dream-entry small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:4px}
 .cx-dream-list{margin-bottom:14px;outline:none}.cx-dream-source-heading{display:flex;flex-direction:column;gap:4px;margin:16px 0 12px;overflow-wrap:anywhere}.cx-dream-source-heading strong{font-size:14px}.cx-dream-source-heading small{color:var(--cx-muted);font-size:11px}.cx-dream-reader pre{font-family:inherit;font-size:12px;line-height:1.85;white-space:pre-wrap;overflow-wrap:anywhere;max-height:none;overflow:visible;background:none;border:0;padding:0}.cx-dream-source-link{display:flex;align-items:flex-start;gap:10px;width:100%;padding:13px 0;border:0;border-top:1px solid var(--cx-line);background:none;color:var(--cx-text);font:inherit;text-align:left;cursor:pointer}.cx-dream-source-link:hover{background:var(--cx-hover)}.cx-dream-source-link>svg{flex-shrink:0;margin-top:3px;color:var(--cx-muted)}.cx-dream-source-link>span{flex:1;min-width:0}.cx-dream-source-link strong,.cx-dream-source-link small{display:block;overflow-wrap:anywhere}.cx-dream-source-link strong{font-size:12px;font-weight:550}.cx-dream-source-link small{font-size:11px;color:var(--cx-muted);margin-top:3px}.cx-dream-source-link p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:6px 0 0;font-size:12px;line-height:1.65}.cx-dream-reader .cx-actions{margin-top:14px}.cx-reader-feedback{padding:10px var(--wb-gutter,16px) 0;flex-shrink:0}.cx-dream-feedback{padding:0 var(--wb-gutter,16px) 12px;flex-shrink:0}.cx-reader-feedback .cx-alert,.cx-dream-feedback .cx-alert{margin:0;max-height:140px;overflow:auto}
-@container cx (max-width:330px){.cx-dream-actions{padding-inline:12px;gap:5px}.cx-dream-actions .cx-btn{font-size:11px}.cx-dream-job{align-items:flex-start}.cx-dream .cx-grid{grid-template-columns:1fr}}
+.cx-dream-folder-list{display:flex;flex-direction:column;max-height:190px;overflow-y:auto;overscroll-behavior:contain;border:1px solid var(--cx-line);border-radius:9px;background:var(--cx-bg)}
+.cx-dream-folder{display:flex;align-items:center;gap:9px;padding:9px 11px;cursor:pointer;min-width:0}.cx-dream-folder+.cx-dream-folder{border-top:1px solid var(--cx-line)}
+.cx-dream-folder:hover{background:var(--cx-hover)}.cx-dream-folder-text{flex:1;min-width:0}.cx-dream-folder-text strong{display:flex;align-items:baseline;min-width:0;font-size:12px;font-weight:550}
+.cx-dream-folder-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cx-dream-folder-path{display:block;font-size:10px;color:var(--cx-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cx-dream-folder-count{flex-shrink:0;font-size:10px;color:var(--cx-muted);white-space:nowrap}.cx-dream-folder-actions{margin-top:8px}
+.cx-dream-folder-gone{opacity:.6}.cx-dream-folder-gone:hover{opacity:.85}
+.cx-dream-folder-gone-tag{flex-shrink:0;margin-inline-start:8px;font-size:10px;font-style:normal;color:var(--cx-muted);white-space:nowrap}
+@container cx (max-width:330px){.cx-dream-actions{padding-inline:12px;gap:5px}.cx-dream-actions .cx-btn{font-size:11px}.cx-dream-job{align-items:flex-start}.cx-dream .cx-grid{grid-template-columns:1fr}.cx-dream-folder{padding:8px 9px;gap:7px}.cx-dream-folder-count{font-size:9px}}
 `;

@@ -25,10 +25,15 @@ export class DreamStore {
       CREATE TABLE IF NOT EXISTS edges(node TEXT NOT NULL,revision INTEGER NOT NULL,source TEXT NOT NULL,PRIMARY KEY(node,revision,source));
       CREATE TABLE IF NOT EXISTS jobs(id TEXT PRIMARY KEY,scope TEXT NOT NULL,target TEXT NOT NULL,state TEXT NOT NULL,automatic INTEGER NOT NULL,created REAL NOT NULL,data TEXT NOT NULL);
       CREATE INDEX IF NOT EXISTS jobs_queue ON jobs(state,created);
-      CREATE TABLE IF NOT EXISTS job_targets(job TEXT NOT NULL,ordinal INTEGER NOT NULL,kind TEXT NOT NULL,target TEXT NOT NULL,done INTEGER NOT NULL DEFAULT 0,cut TEXT,PRIMARY KEY(job,ordinal));
+      CREATE TABLE IF NOT EXISTS job_targets(job TEXT NOT NULL,ordinal INTEGER NOT NULL,kind TEXT NOT NULL,target TEXT NOT NULL,done INTEGER NOT NULL DEFAULT 0,failed INTEGER NOT NULL DEFAULT 0,cut TEXT,PRIMARY KEY(job,ordinal));
       CREATE TABLE IF NOT EXISTS calls(id TEXT PRIMARY KEY,day TEXT NOT NULL,reserved INTEGER NOT NULL,charged INTEGER NOT NULL,data TEXT NOT NULL);
       CREATE INDEX IF NOT EXISTS calls_day ON calls(day);
       CREATE TABLE IF NOT EXISTS lease(id INTEGER PRIMARY KEY CHECK(id=1),owner TEXT NOT NULL,epoch INTEGER NOT NULL,expires REAL NOT NULL);`);
+    // Distinguishing "done" from "failed" is required so a retry can revisit a
+    // failed target while a single run still advances past it. Existing archives
+    // predate the column, so add it in place and keep the schema version.
+    if(!this.db.prepare('PRAGMA table_info(job_targets)').all().some(column=>column.name==='failed'))
+      this.db.prepare('ALTER TABLE job_targets ADD COLUMN failed INTEGER NOT NULL DEFAULT 0').run();
     const schema = this.meta('schema');
     if (schema !== null && schema !== 1) { this.db.close(); throw Error('Dream 数据版本不兼容；原文件保留'); }
     this.setMeta('schema', 1);
@@ -200,9 +205,17 @@ export class DreamStore {
       this.updateJob(id,{targetsReady:true,total:targets.length,done:0});
     });
   }
-  nextTarget(id) { const r=this.db.prepare('SELECT * FROM job_targets WHERE job=? AND done=0 ORDER BY ordinal LIMIT 1').get(id);return r?{...r,cut:r.cut?JSON.parse(r.cut):null}:null; }
+  nextTarget(id) { const r=this.db.prepare('SELECT * FROM job_targets WHERE job=? AND done=0 AND failed=0 ORDER BY ordinal LIMIT 1').get(id);return r?{...r,cut:r.cut?JSON.parse(r.cut):null}:null; }
   pinTarget(id, ordinal, cut, epoch) { this.tx(()=>{this.requireJob(id,epoch);this.db.prepare('UPDATE job_targets SET cut=? WHERE job=? AND ordinal=? AND cut IS NULL').run(encode(cut),id,ordinal);}); }
   finishTarget(id, ordinal, epoch) { this.tx(()=>{this.requireJob(id,epoch);this.db.prepare('UPDATE job_targets SET done=1 WHERE job=? AND ordinal=?').run(id,ordinal);const done=this.db.prepare('SELECT count(*) n FROM job_targets WHERE job=? AND done=1').get(id).n;this.updateJob(id,{done});}); }
+  // A failed target stays unfinished so a later run can retry it; the failed flag
+  // only keeps the current run moving past it.
+  markTargetFailed(id, ordinal, epoch) { this.tx(()=>{this.requireJob(id,epoch);this.db.prepare('UPDATE job_targets SET failed=1 WHERE job=? AND ordinal=?').run(id,ordinal);}); }
+  // Targets this job has advanced, split by kind: a parent target with no child
+  // memories returns without doing any work, so a caller judging progress must
+  // not count it as real advancement.
+  finishedTargets(id) { return this.db.prepare("SELECT count(*) n FROM job_targets WHERE job=? AND done=1 AND kind='session'").get(id).n; }
+  clearTargetFailures(id, epoch) { this.tx(()=>{this.requireJob(id,epoch);this.db.prepare('UPDATE job_targets SET failed=0 WHERE job=?').run(id);}); }
   usage() {
     const day = quotaDay(this.now()), row = this.db.prepare('SELECT coalesce(sum(charged),0) used FROM calls WHERE day=?').get(day);
     return { day, used: row.used, resetsAt: quotaReset(this.now()) };
