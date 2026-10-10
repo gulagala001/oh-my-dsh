@@ -40,6 +40,12 @@
 - **Dream 独立日预算**：显示当日预算扣减、上限、重置时间、运行中与排队任务。扣减包含预留及未知用量估计，不能视为模型实际 Token，也不与主会话用量相加。Dream 的实际调用回执进入用量账本，按真实返回记录统计。
 - **运行资源**：宿主进程的常驻内存、已用／已分配 JS 堆、运行时长和采样时间。它们属于宿主进程，不随会话或用量筛选变化；已分配堆不是内存上限。
 
+## 显示与动效
+
+监控使用至少 14px 的正文和控件字号，详情与数据口径默认折叠。宽页限制内容宽度，图表与分组并列；窄栏保持字号，通过单列和共享横向轨道适配。
+
+页签指示器、更新数值、图条、展开项和悬停反馈使用短过渡；只有运行中的调用显示状态脉动。系统开启减少动态效果时关闭这些动画。刷新保持当前展开、焦点和滚动位置。
+
 ## 参考来源
 
 本次信息组织参考以下项目的一级资料；OMD 的字段与统计以自身宿主、账本和实际回执为准：
@@ -48,3 +54,6 @@
 - [CC Switch 用量说明](https://github.com/farion1231/cc-switch/blob/main/docs/user-manual/en/4-proxy/4.4-usage.md)：汇总与请求记录的分层组织。
 - [ccusage 每日用量](https://ccusage.com/guide/daily-reports)：输入、输出和缓存读写的独立列，以及窄界面的渐进展示。
 - [Leeman DSH Token Usage](https://github.com/LeemanCheung/dsh-token-usage)：筛选、归因与统计覆盖说明。
+
+- [Linear 仪表盘设计实践](https://linear.app/now/dashboards-best-practices)：图表、指标与明细的模块组织。
+- [Vercel Observability](https://vercel.com/docs/observability)：趋势、分类列表与紧凑控制。

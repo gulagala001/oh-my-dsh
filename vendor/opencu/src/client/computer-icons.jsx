@@ -2,6 +2,7 @@ import React from 'react';
 
 export function ComputerIcon({ name = 'screen', size = 16, ...props }) {
   const paths = {
+    file: <><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 14h8M8 17h5"/></>,
     globe: <><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></>,
     rotate: <><rect x="3" y="3" width="9" height="15" rx="2"/><path d="M7 15h1m8-9a6 6 0 0 1 5 6m0-5v5h-5M15 16h4a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2h-9"/></>,
     region: <><path d="M8 3H4v4m12-4h4v4M4 17v4h4m8 0h4v-4M4 11v2m16-2v2M11 3h2m-2 18h2"/></>,

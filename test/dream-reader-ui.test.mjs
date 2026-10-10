@@ -1,3 +1,4 @@
+import { openWorkbench, nativeTab } from './fixtures/workbench.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -14,22 +15,21 @@ async function setup(t) {
   });
   const source = { kind: 'memory', key: 'global', text: '来源阅读正文。'.repeat(200), sources: Array.from({ length: 24 }, (_, i) => ({ kind: 'summary', reference: 'reader-source-' + i })) };
   await page.route('**/trisoul-x/api/dream/read?*', route => route.fulfill({ json: new URL(route.request().url()).searchParams.get('reference') === 'reader-memory' ? source : { kind: 'summary', text: '摘要来源内容。'.repeat(50), recordId: 'reader-record', sessionId: f.sessionId, sources: [] } }));
-  await page.getByRole('button', { name: '打开工作台', exact: true }).click();
-  const nav = page.locator('.cx-navigation'), panel = page.locator('.cx-dream');
-  await nav.getByRole('button', { name: '记忆', exact: true }).click();
+  await openWorkbench(page, '记忆');
+  const panel = page.locator('.cx-dream');
   const open = panel.getByRole('button', { name: '查看来源', exact: true });
   await open.waitFor();
-  return { ...f, nav, panel, open, summary };
+  return { ...f, panel, open, summary };
 }
 
 async function capture(page, name) {
   if (!process.env.TRISOUL_UI_ARTIFACTS) return;
   await mkdir(process.env.TRISOUL_UI_ARTIFACTS, { recursive: true });
-  await page.locator('.tx-workbench').screenshot({ path: join(process.env.TRISOUL_UI_ARTIFACTS, name + '.png') });
+  await page.locator('.tx-workbench:visible').screenshot({ path: join(process.env.TRISOUL_UI_ARTIFACTS, name + '.png') });
 }
 
 test('memory source reading starts at the top and returns to the same expanded memory and nested source position', { timeout: 60000 }, async t => {
-  const { page, panel, nav, open, errors, summary } = await setup(t);
+  const { page, panel, open, errors, summary } = await setup(t);
   await panel.getByRole('button', { name: '展开完整记忆', exact: true }).click();
   await open.scrollIntoViewIfNeeded();
   const main = panel.locator(':scope > .cx-body');
@@ -53,8 +53,8 @@ test('memory source reading starts at the top and returns to the same expanded m
   await source.waitFor();
   assert.equal(await source.evaluate(el => document.activeElement === el), true, 'nested return restores the selected source');
   assert.ok(Math.abs(await body.evaluate(el => el.scrollTop) - sourceScroll) < 2, 'nested return restores the reading position');
-  await nav.getByRole('button', { name: '任务', exact: true }).click();
-  await nav.getByRole('button', { name: '记忆', exact: true }).click();
+  await openWorkbench(page, '任务');
+  await openWorkbench(page, '记忆');
   assert.equal(await reader.evaluate(el => el.contains(document.activeElement)), true);
   await page.keyboard.press('Escape');
   assert.equal(await reader.count(), 0);
@@ -65,8 +65,8 @@ test('memory source reading starts at the top and returns to the same expanded m
   assert.deepEqual(errors, []);
 });
 
-test('memory document reader preserves its requesting control across delayed results and section switches', { timeout: 60000 }, async t => {
-  const { page, panel, nav, open, sessionId, errors } = await setup(t);
+test('memory document reader preserves its requesting control across delayed results and native tab switches', { timeout: 60000 }, async t => {
+  const { page, panel, open, sessionId, errors } = await setup(t);
   await open.click();
   await panel.locator('button[title="reader-source-0"]').click();
   const original = panel.getByRole('button', { name: '查看详细资料与附件', exact: true });
@@ -74,12 +74,13 @@ test('memory document reader preserves its requesting control across delayed res
   await page.route('**/trisoul-x/api/dream/document?*', route => { pending = route; });
   await original.click();
   await until(() => pending);
-  const tasks = nav.getByRole('button', { name: '任务', exact: true });
-  await tasks.click();
+  await openWorkbench(page, '任务');
+  const tasks = await nativeTab(page, '任务');
+  await tasks.focus();
   await pending.fulfill({ json: { id: 'reader-record', sessionId, summary: '详细资料摘要', documents: [{ title: '阅读回归', text: '正文与附件入口使用独立阅读区域。' }], assets: [] } });
   await until(async () => await panel.locator('.cx-reader:not(.cx-dream-reader)').count() === 1);
-  assert.equal(await tasks.evaluate(el => document.activeElement === el), true, 'a late result in a hidden section does not steal focus');
-  await nav.getByRole('button', { name: '记忆', exact: true }).click();
+  assert.equal(await tasks.evaluate(el => document.activeElement === el), true, 'a late result in a inactive tab does not steal focus');
+  await openWorkbench(page, '记忆');
   const detail = panel.getByRole('region', { name: '详细资料', exact: true });
   assert.equal(await detail.evaluate(el => el.contains(document.activeElement)), true);
   await page.keyboard.press('Tab');
@@ -151,8 +152,7 @@ test('switching sessions closes both memory reading layers without leaving backg
   await panel.getByRole('region', { name: '详细资料', exact: true }).waitFor();
   assert.equal(await panel.locator('.cx-reader').count(), 2);
   await page.getByText('阅读层叠退出检查', { exact: true }).first().click();
-  await page.getByRole('button', { name: '打开工作台', exact: true }).click();
-  await page.locator('.cx-navigation').getByRole('button', { name: '记忆', exact: true }).click();
+  await openWorkbench(page, '记忆');
   await panel.locator('.cx-dream-usage').waitFor();
   await until(async () => await panel.locator('.cx-reader').count() === 0);
   assert.equal(await panel.locator(':scope > *').evaluateAll(els => els.every(el => !el.inert)), true, 'closing both layers releases every background control');

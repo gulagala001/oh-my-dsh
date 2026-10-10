@@ -1,3 +1,4 @@
+import { openWorkbench } from './fixtures/workbench.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {writeFile,mkdir,realpath,readFile} from 'node:fs/promises';
@@ -172,7 +173,7 @@ test('native DSH Dream jobs, context injection, exact provenance, private reads 
   await f.rpc('session/prompt',{requestId:crypto.randomUUID(),sessionId:f.sessionId,mode:'queue',content:[{type:'text',text:'现在继续。'}]});
   await until(async()=>mainCalls.length>=4&&(await f.api('/state?session='+f.sessionId)).running==='idle');
   assert.match(JSON.stringify(mainCalls.at(-1).messages),/本项目采用四个 Dream 入口/);
-  const {page}=f;await page.getByRole('button',{name:'打开工作台',exact:true}).click();await page.locator('.cx-navigation').getByRole('button',{name:'记忆',exact:true}).click();
+  const {page}=f;await openWorkbench(page, '记忆');
   const panel=page.locator('.cx-dream');await panel.getByRole('heading',{name:'记忆',exact:true}).waitFor();
   await f.rpc('session/rename',{sessionId:f.sessionId,title:'交付清单与来源核对'});
   await until(async()=>(await f.api('/dream?session='+f.sessionId)).session.title==='交付清单与来源核对');
