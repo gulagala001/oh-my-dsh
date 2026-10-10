@@ -1,7 +1,45 @@
 import css from './sidebar.css';
+import { acquireOverlayInert } from './overlay-inert.mjs';
+import { createAttributeMarkers } from './attribute-markers.mjs';
 
-function bindNarrowSidebar(ctx, frame) {
-  const column = frame.querySelector('[data-omd-surface="sidebar-column"]');
+// Class suffixes are verified against the official browser/desktop modules.
+// Keep styling hooks local to the native sidebar without owning its React tree.
+const navParts = new Map([
+  ['toggle', 'toggle'],
+  ['logoRow', 'brand'], ['newSession', 'create'], ['newSessionContent', 'create-content'],
+  ['panelList', 'panels'], ['panelRow', 'panel'], ['footArea', 'footer'],
+  ['sectionHeader', 'header'], ['searchSlot', 'search-slot'], ['search', 'search'],
+  ['searchButton', 'search-button'], ['sectionLabel', 'section-label'], ['headerActions', 'header-actions'],
+  ['title', 'title'], ['time', 'time'], ['rowActions', 'row-actions'], ['iconButton', 'row-action'],
+  ['pinIndicator', 'pin'], ['searchResultTitle', 'search-result-title'], ['searchResultRow', 'search-result-row'],
+]);
+
+function createNavMarkers() {
+  const markers = createAttributeMarkers('data-omd-nav-part');
+  return {
+    refresh(sidebar) {
+      const next = new Map();
+      const prefix = token => token?.slice(0, token.lastIndexOf('_'));
+      const rootToken = [...sidebar?.classList ?? []].find(token => token.endsWith('_root'));
+      const header = sidebar?.querySelector('[class*="_sectionHeader"]');
+      const row = sidebar?.querySelector('[role="treeitem"]');
+      const prefixes = new Set([rootToken,
+        [...header?.classList ?? []].find(token => token.endsWith('_sectionHeader')),
+        [...row?.classList ?? []].find(token => /_(row|projectRow|sessionRow|searchResultRow)$/.test(token)),
+      ].filter(Boolean).map(prefix));
+      for (const element of sidebar?.querySelectorAll('[class]') ?? []) {
+        const part = [...element.classList].filter(token => prefixes.has(prefix(token)))
+          .map(token => navParts.get(token.slice(token.lastIndexOf('_') + 1))).find(Boolean);
+        if (part) next.set(element, part);
+      }
+      markers.update(next);
+    },
+    dispose() { markers.dispose(); },
+  };
+}
+
+function bindNarrowSidebar(ctx, frame, column) {
+  if (!frame || !column) return () => {};
   const narrow = matchMedia('(max-width: 719px)');
   const scrim = document.createElement('button');
   scrim.className = 'omd-sidebar-scrim'; scrim.type = 'button'; scrim.tabIndex = -1;
@@ -21,15 +59,14 @@ function bindNarrowSidebar(ctx, frame) {
     scrim.hidden = !open; frame.toggleAttribute('data-omd-sidebar-overlay', open);
     if (open) {
       previousFocus = document.activeElement;
-      const covered = [...frame.querySelectorAll(':scope > [data-omd-surface="conversation"], :scope > [data-omd-surface="workbench-column"]')].map(el => [el, el.inert]);
+      const releaseInert = acquireOverlayInert(frame.querySelectorAll(':scope > [data-omd-surface="conversation"], :scope > [data-omd-surface="workbench-column"]'));
       const attrs = ['role', 'aria-label', 'aria-modal'].map(name => [name, column.getAttribute(name)]);
-      covered.forEach(([el]) => { el.inert = true; });
       column.setAttribute('role', 'dialog'); column.setAttribute('aria-label', '侧栏导航'); column.setAttribute('aria-modal', 'true');
       restore = () => {
-        covered.forEach(([el, inert]) => { el.inert = inert; });
+        releaseInert();
         for (const [name, value] of attrs) { if (value === null) column.removeAttribute(name); else column.setAttribute(name, value); }
       };
-      queueMicrotask(() => { if (open && !otherOverlay()) column.querySelector('.hHd-Xa_toggle')?.focus({ preventScroll: true }); });
+      queueMicrotask(() => { if (open && !otherOverlay()) column.querySelector('[data-omd-nav-part="toggle"]')?.focus({ preventScroll: true }); });
     } else {
       frame.style.removeProperty('--omd-sidebar-right-width');
       if (frame.dataset.sidebarCollapsed === 'true' && previousFocus?.isConnected && !otherOverlay()) previousFocus.focus({ preventScroll: true });
@@ -38,7 +75,7 @@ function bindNarrowSidebar(ctx, frame) {
   const onClick = event => {
     const target = event.target instanceof Element ? event.target : null;
     if (!open || event.button !== 0 || !target || target.closest('[class*="_rowActions"]')) return;
-    if (target.closest('[data-row-key^="session:"], [class*="_searchResultRow"], .hHd-Xa_newSession, .hHd-Xa_panelRow')) queueMicrotask(close);
+    if (target.closest('[data-row-key^="session:"], [class*="_searchResultRow"], [data-omd-nav-part="create"], [data-omd-nav-part="panel"]')) queueMicrotask(close);
   };
   const onKey = event => {
     if (!open || event.defaultPrevented || event.isComposing || event.ctrlKey || event.altKey || event.metaKey || otherOverlay()) return;
@@ -189,6 +226,7 @@ function bindTreeKeyboard(root) {
 export function applySidebarPresentation(ctx) {
   ctx.effect(() => {
     const style = document.createElement('style'); style.dataset.omdSidebarStyle = ''; style.textContent = css; document.head.append(style);
+    const navMarkers = createNavMarkers();
     const owned = new Map();
     const restore = (root, record) => {
       record.dispose();
@@ -200,15 +238,23 @@ export function applySidebarPresentation(ctx) {
       // Header class suffixes identify the host-owned workspace browser across
       // npm/desktop hash variants. Never replace its child-slot declarations.
       const sidebar = document.querySelector('[data-omd-surface="sidebar"]');
+      navMarkers.refresh(sidebar);
       const root = sidebar?.querySelector('[class*="_sectionHeader"]')?.parentElement;
       for (const [element, record] of owned) if (element !== root) { restore(element, record); owned.delete(element); }
       if (!root) return;
       if (!owned.has(root)) {
         const attributes = ['data-omd-sidebar-browser', 'data-wide'].map(name => [name, root.getAttribute(name)]);
         root.setAttribute('data-omd-sidebar-browser', '');
-        const keyboard = bindTreeKeyboard(root), frame = sidebar.closest('[data-omd-surface="frame"]');
-        const overlay = frame ? bindNarrowSidebar(ctx, frame) : () => {};
-        owned.set(root, { attributes, dispose: () => { keyboard(); overlay(); } });
+        const keyboard = bindTreeKeyboard(root);
+        const record = { attributes, frame: null, column: null, overlay: () => {} };
+        record.dispose = () => { keyboard(); record.overlay(); };
+        owned.set(root, record);
+      }
+      const record = owned.get(root), frame = sidebar.closest('[data-omd-surface="frame"]');
+      const column = frame?.querySelector('[data-omd-surface="sidebar-column"]') ?? null;
+      if (record.frame !== frame || record.column !== column) {
+        record.overlay(); record.frame = frame; record.column = column;
+        record.overlay = bindNarrowSidebar(ctx, frame, column);
       }
       const wide = [...root.classList].some(name => name.endsWith('_rail')) ? 'false' : 'true';
       if (root.getAttribute('data-wide') !== wide) root.setAttribute('data-wide', wide);
@@ -216,6 +262,6 @@ export function applySidebarPresentation(ctx) {
     const observer = new MutationObserver(sync);
     observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'data-omd-surface'] });
     sync();
-    return () => { observer.disconnect(); for (const [root, record] of owned) restore(root, record); owned.clear(); style.remove(); };
+    return () => { observer.disconnect(); for (const [root, record] of owned) restore(root, record); owned.clear(); navMarkers.dispose(); style.remove(); };
   });
 }

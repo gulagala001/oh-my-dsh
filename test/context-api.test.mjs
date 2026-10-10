@@ -9,7 +9,7 @@ function setup() {
   const state = { binding: { scope: 'session', project: '/p' }, review: {} };
   const calls = [];
   const session = { id: 's', snapshotEvents: () => [] };
-  const hub = { config: () => cfg, store: { state: () => legacy, save() {}, memories() { calls.push('legacy-read'); return []; } }, context: {
+  const hub = { config: () => cfg, store: { peek: () => legacy, state: () => legacy, save() {}, memories() { calls.push('legacy-read'); return []; } }, context: {
     state: () => state, view: () => ({ ok: true }), store: { visible: () => [], get(sid, id) { if (id !== 'allowed') throw Error('范围'); return { id }; }, global: () => ({ text: 'manual', revision: 1 }), setGlobal(text, revision) { calls.push('user-save'); if (revision !== 1) throw Error('已被其他窗口更新'); return { text, revision: 2 }; } },
     manualSessions: new Map(), async requestCompaction(_session, agent, operation) { calls.push(operation); return { queued: !agent || agent.status !== 'idle', changed: false }; },
     queueManual: () => ({ queued: true, changed: false }), applyReady: async () => { calls.push('apply-only'); return null; },
@@ -22,8 +22,16 @@ function setup() {
       send(_res, status, data) { response = { status, data }; }, readBody: async () => body });
     return { handled, ...response };
   }
-  return { cfg, calls, state, legacy, call };
+  return { cfg, calls, state, legacy, call, hub, ctx, session };
 }
+test('projectless effective scope is read-only, isolated and cannot widen an unstarted Chat',async()=>{
+  const f=setup();f.session.header={id:'s',cwd:'/owned-chat'};f.legacy.memoryScope='global';
+  f.hub.dream={sources:{scopeFor:async header=>{assert.equal(header.id,'s');return {projectless:true};}},notice(){}};
+  f.hub.store.state=()=>{throw Error('GET must not create Hub state');};
+  const result=await f.call('/scope');assert.equal(result.data.scope,'session');assert.equal(result.data.locked,true);
+  assert.equal(f.legacy.memoryScope,'global','the saved user preference is not overwritten');
+  assert.equal((await f.call('/scope','POST',{scope:'project'})).status,409);assert.deepEqual(f.calls,[]);
+});
 test('private scope does not enumerate historical automatic memories', async () => {
   const f = setup(); const r = await f.call('/memories'); assert.deepEqual(r.data.items, []); assert.equal(f.calls.length, 0);
 });

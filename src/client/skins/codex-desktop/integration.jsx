@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import { IconPanelLeftOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
-import { decorateSlot } from '#opencu/src/client/slot-decoration.mjs';
+import { decorateSlotComponent } from '#opencu/src/client/slot-decoration.mjs';
 
 const WIDTH_KEY = 'omd.codexDesktop.rightWidth.v1';
 const isCodex = state => state.active !== false && state.skins.find(s => s.id === state.selected)?.layout === 'codex-desktop';
@@ -22,8 +22,8 @@ function Geometry({ ctx }) {
     // DSH 0.1.7-alpha.1 registers a shared root store factory (create returns
     // its existing instance). Use its declared geometry actions, so the frame,
     // right pane and native drag handle all agree on the same width.
-    const entry = ctx.slots.entries('root').find(item => item.store?.create);
-    const store = entry?.store.create();
+    const entry = ctx.slots.entries('root')[0];
+    const store = entry?.store?.create?.();
     let unsubscribe, previous, last;
     if (store?.getSnapshot().layoutInfo && store.actions?.setRightbar) {
       previous = store.getSnapshot().layoutInfo.rightbar;
@@ -60,9 +60,11 @@ export function applyCodexIntegration(ctx, getRuntime) {
   }
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({ name: 'shell.overlay', id: 'omd-codex-geometry', order: 10 }, Shell));
   const name = 'conversation.session.header.corner';
-  ctx.slots.inject(name, () => decorateSlot(ctx.slots, name, () => true, original => {
+  ctx.slots.inject(name, () => decorateSlotComponent(ctx.slots, name, () => true, original => {
     const Original = original.component;
     function Corner(props) {
+      if (typeof props.useStore !== 'function' || typeof props.actions?.toggleExpanded !== 'function'
+          || typeof props.t !== 'function') return <Original {...props}/>;
       const runtime = getRuntime();
       const state = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot);
       const expanded = props.useStore(value => value.bySession[props.sessionId]?.layout.expanded ?? false);
@@ -71,8 +73,6 @@ export function applyCodexIntegration(ctx, getRuntime) {
       return <button type="button" className="codex-panel-toggle" aria-label={label} title={label} aria-expanded={expanded}
         onClick={() => props.actions.toggleExpanded(props.sessionId)}><IconPanelLeftOutlineRegular/></button>;
     }
-    return { options: { ...original.options, name, store: original.store, locale: original.locale,
-      inject: original.inject, children: original.children,
-      priority: (original.options.priority ?? 0) - 1 }, component: Corner };
+    return Corner;
   }));
 }

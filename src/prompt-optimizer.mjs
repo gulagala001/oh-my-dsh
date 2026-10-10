@@ -60,10 +60,10 @@ export function createPromptOptimizer(ctx, hub, { timeoutMs = 120000 } = {}) {
       if (['error', 'aborted', 'max-tokens'].includes(assembler.finish.kind)) throw Error(assembler.finish.failure?.message || '模型没有完整输出，请重试');
       const text = assembler.blocks().filter(block => block.type === 'text').map(block => block.text).join('').trim();
       if (!text || text.length > OPTIMIZER_LIMIT * 2) throw Error('优化结果为空或过长，草稿已保留');
-      hub.record(session, 'promptOptimizer', { ...route, durationMs: Date.now() - startedAt, usage: assembler.usage });
+      hub.record(session, 'promptOptimizer', { ...route, durationMs: Date.now() - startedAt, usage: assembler.usage, hasOutput: Boolean(assembler.blocks().length) });
       return { text, ...route };
     } catch (error) {
-      hub.record(session, 'promptOptimizer', { ...route, durationMs: Date.now() - startedAt, usage: assembler.usage, error: error.message });
+      hub.record(session, 'promptOptimizer', { ...route, durationMs: Date.now() - startedAt, usage: assembler.usage, hasOutput: Boolean(assembler.blocks().length), error: error.message });
       throw error;
     } finally {
       clearTimeout(timer); combined.removeEventListener('abort', onAbort); active.delete(session.id); hub.live.delete(key); hub.context?.releaseState?.(session.id);

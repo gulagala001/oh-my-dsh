@@ -1,14 +1,14 @@
 /** Workflow child ownership and progress over the shared sandboxed PTC executor. */
 import type { Context } from '@deepseek-ai/cordis'
 import { existsSync } from 'node:fs'
-import { foldConsumedWork } from '@deepseek-ai/dsh-agent'
 import type { Agent } from '@deepseek-ai/dsh-agent'
+import type {} from '@deepseek-ai/dsh-working-directory'
 import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
 import type { PtcBindingFunction, PtcJsonValue, PtcRuntime } from '@deepseek-ai/dsh-ptc-runtime'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
 import { SessionId } from '@deepseek-ai/dsh-session'
-import type SubagentRuntime from '@deepseek-ai/dsh-subagent'
-import type { SubagentRun } from '@deepseek-ai/dsh-subagent'
+import type SubagentService from '@deepseek-ai/dsh-subagent'
+import type { SubagentActivation } from '@deepseek-ai/dsh-subagent'
 import { assertObjectJsonSchema } from '@deepseek-ai/dsh-tools'
 import type { ObjectJsonSchema } from '@deepseek-ai/dsh-tools'
 import { assertNever, snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
@@ -22,7 +22,8 @@ import type { ChildResult } from './types.ts'
 import { WorkflowJournal, workflowPaths } from './journal.ts'
 import { serializeWorkflowSource } from './source.ts'
 import type { WorktreeArtifact } from './worktree.ts'
-import type { WorkflowSpawnOptions } from './spawn.ts'
+import { WORKFLOW_PROVIDER } from './spawn.ts'
+import type { WorkflowProvider, WorkflowSpawnOptions } from './spawn.ts'
 
 export interface WorkflowSupport {
   root: string
@@ -39,7 +40,7 @@ const unquiescedJournals = new Set<WorkflowJournal>()
 
 interface ChildRecord {
   readonly callId: number
-  readonly run: SubagentRun
+  readonly run: SubagentActivation
   disposal?: Promise<void>
   result?: ChildResult
   cached?: boolean
@@ -183,15 +184,17 @@ export class PtcWorkflowRun implements WorkflowRun {
   private readonly externalAbort: () => void
   private journal?: WorkflowJournal
   private cleanupError?: unknown
+  private resultFault?: { error: unknown }
   readonly scriptPath?: string
   readonly transcriptDir?: string
+  private readonly cwd: Promise<string>
   private admission: Promise<unknown> = Promise.resolve()
   private readonly artifacts = new Map<number, WorktreeArtifact>()
   get worktrees(): WorktreeArtifact[] { return [...this.artifacts.values()].map(value => ({ ...value })) }
 
   constructor(
     private readonly ctx: Context,
-    private readonly subagents: SubagentRuntime,
+    private readonly subagents: SubagentService,
     private readonly runtime: PtcRuntime,
     readonly id: WorkflowRunId,
     readonly meta: WorkflowMeta,
@@ -208,6 +211,7 @@ export class PtcWorkflowRun implements WorkflowRun {
     this.externalAbort = () => { this.cancel('workflow signal aborted') }
     if (signal?.aborted) this.externalAbort()
     else signal?.addEventListener('abort', this.externalAbort, { once: true })
+    this.cwd = ctx.workingDirectory.ensure(parent, this.controller.signal)
     // Consumers attach durable run recording after start() returns.
     this.result = Promise.resolve().then(() => this.drive())
   }
@@ -286,7 +290,7 @@ export class PtcWorkflowRun implements WorkflowRun {
     const admission = this.admission.then(async () => {
       this.requireActive()
       const type = await this.support?.childType?.(request.agentType)
-      const identity = { ...request, parentOptions: this.parent.session.requestHeader()?.config ?? this.parent.options, policy: this.policy, presetFingerprint: type?.fingerprint }
+      const identity = { ...request, cwd: await this.cwd, parentOptions: this.parent.session.requestHeader()?.config ?? this.parent.options, policy: this.policy, presetFingerprint: type?.fingerprint }
       const cached = await this.journal?.start(callId, identity, value => (request.schema === undefined || value.structured !== undefined) && (!value.worktree?.retained || existsSync(value.worktree.path)))
       return { type, cached }
     })
@@ -298,9 +302,9 @@ export class PtcWorkflowRun implements WorkflowRun {
     if (!cached && budget?.total !== null && budget?.total !== undefined && budget.spent >= budget.total) throw new Error('Workflow token target reached; no new agents can start')
     if (cached) {
       if (cached.worktree) this.artifacts.set(callId, cached.worktree)
-      const run: SubagentRun = { id: SessionId(cached.childId ?? `cached-${this.id}-${callId}`), localAgent: undefined, result: Promise.resolve(cached) as SubagentRun['result'], dispose: async () => {} }
+      const run: SubagentActivation = { childId: SessionId(cached.childId ?? `cached-${this.id}-${callId}`), result: Promise.resolve(cached) as SubagentActivation['result'], dispose: async () => {} }
       this.children.set(callId, { callId, run, cached: true })
-      return { callId, childId: run.id }
+      return { callId, childId: run.childId }
     }
     if ((request.isolation || request.agentType) && this.provider !== 'omd-workflow') throw new Error('Workflow worktree/agentType options require the omd-workflow subagent provider')
     const workflow: WorkflowSpawnOptions = {
@@ -313,11 +317,11 @@ export class PtcWorkflowRun implements WorkflowRun {
         if (artifact.retained && artifact.reason !== 'running') this.observer.log(`Worktree retained at ${artifact.path}: ${artifact.reason}`)
       },
     }
-    const run = await this.subagents.start(this.provider, {
-      ...this.provider === 'omd-workflow' ? { workflow } : {},
-      prompt: [{ type: 'text', text: request.prompt }],
+    const label = `${this.meta.name} child ${callId}`
+    const childInputs = {
+      cwd: await this.cwd,
+      prompt: [{ type: 'text' as const, text: request.prompt }],
       parent: this.parent,
-      signal: this.controller.signal,
       ...request.schema === undefined ? {} : { outputSchema: request.schema },
       ...request.provider === undefined && request.model === undefined && request.effort === undefined ? {} : {
         agentOptions: {
@@ -326,7 +330,10 @@ export class PtcWorkflowRun implements WorkflowRun {
           ...request.effort === undefined ? {} : { reasoningEffort: ReasoningEffortId(request.effort) },
         },
       },
-    })
+    }
+    const run = this.provider === WORKFLOW_PROVIDER
+      ? await (this.subagents.getProvider(this.provider) as WorkflowProvider).startWorkflow({ ...childInputs, label, signal: this.controller.signal }, workflow)
+      : await this.subagents.startActivation({ provider: this.provider, label, delivery: 'caller', signal: this.controller.signal, request: childInputs })
     const record: ChildRecord = { callId, run }
     this.children.set(callId, record)
     // A provider can publish after the signal fired while startup was pending.
@@ -334,7 +341,7 @@ export class PtcWorkflowRun implements WorkflowRun {
       await this.disposeChild(record)
       throw new Error('workflow child started after cancellation')
     }
-    return { callId, childId: run.id }
+    return { callId, childId: run.childId }
   }
 
   private childResult(record: ChildRecord): Promise<PtcJsonValue> {
@@ -350,18 +357,17 @@ export class PtcWorkflowRun implements WorkflowRun {
     signal.addEventListener('abort', onAbort, { once: true })
     try {
       const result = await Promise.race([record.run.result, aborted.promise])
-      const nativeReason = record.run.localAgent ? foldConsumedWork(record.run.localAgent.session.snapshotEvents()).end?.data.reason : undefined
-      const extended = result as typeof result & { error?: unknown; reason?: unknown }
-      const reason = extended.error ?? extended.reason ?? nativeReason
+      // a2 exposes provider-authored diagnostic text instead of a live child handle.
+      const reason = result.diagnostic ?? (record.cached ? record.result?.reason : undefined)
       if (result.stopReason !== 'completed') this.failures.set(record.callId, {
-        seq: record.callId, childId: record.run.id, stopReason: result.stopReason,
-        cause: result.stopReason === 'aborted' || result.stopReason === 'cancelled' ? 'cancelled' : 'failed',
+        seq: record.callId, childId: record.run.childId, stopReason: result.stopReason,
+        cause: result.stopReason === 'aborted' ? 'cancelled' : 'failed',
         reason: reason === undefined ? `child ended with ${result.stopReason}; inspect child session` : childFailureReason(reason),
         ...reason !== undefined && typeof reason !== 'string' ? { reasonData: failureReasonData(reason) } : {},
       })
       record.result = {
         ...this.failures.has(record.callId) ? { reason: this.failures.get(record.callId)!.reason } : {},
-        childId: record.run.id,
+        childId: record.run.childId,
         output: [...result.output],
         stopReason: result.stopReason,
         ...result.structured === undefined ? {} : { structured: result.structured },
@@ -369,8 +375,11 @@ export class PtcWorkflowRun implements WorkflowRun {
       const budget = this.support?.budget?.()
       return json({ ...record.result, budgetSpent: budget?.spent ?? 0, budgetTotal: budget?.total ?? null })
     } catch (error) {
-      this.failures.set(record.callId, { seq: record.callId, childId: record.run.id,
-        stopReason: this.cancelReason === undefined ? 'result-error' : 'cancelled', cause: this.cancelReason === undefined ? 'failed' : 'cancelled',
+      delete record.result
+      const cancelled = signal.aborted
+      if (!cancelled) this.resultFault ??= { error }
+      this.failures.set(record.callId, { seq: record.callId, childId: record.run.childId,
+        stopReason: cancelled ? 'cancelled' : 'result-error', cause: cancelled ? 'cancelled' : 'failed',
         reason: this.cancelReason ?? renderThrown(error) })
       throw error
     } finally {
@@ -417,7 +426,8 @@ export class PtcWorkflowRun implements WorkflowRun {
     const record = this.children.get(info.seq)
     if (info.outcome === 'failed' && record?.result?.stopReason === 'completed') {
       record.result.stopReason = 'error'
-      record.result.reason = this.failures.get(info.seq)?.reason
+      const reason = this.failures.get(info.seq)?.reason
+      if (reason !== undefined) record.result.reason = reason
     }
     this.observer.agentEnd(info)
   }
@@ -429,6 +439,7 @@ export class PtcWorkflowRun implements WorkflowRun {
   private async drive(): Promise<WorkflowResult> {
     let result: WorkflowResult
     try {
+      const cwd = await this.cwd
       this.requireActive()
       if (this.support) {
         this.journal = await WorkflowJournal.create(this.support.root, this.parent.session.id, this.id, {
@@ -442,7 +453,7 @@ export class PtcWorkflowRun implements WorkflowRun {
       const outcome = await this.runtime.run(this.runtime.resolve({
         program: PROGRAM,
         bindings: [{ global: 'workflowHost', functions: this.bindings() }],
-        cwd: this.policy.workspaceRoot,
+        cwd,
         sandboxPolicy: this.policy,
         timeoutMs: null,
         signal: this.controller.signal,
@@ -470,7 +481,10 @@ export class PtcWorkflowRun implements WorkflowRun {
     }
     if (this.cleanupError !== undefined) {
       if (this.journal) unquiescedJournals.add(this.journal)
-      return { value: null, stopReason: 'error', agentsStarted: this.started, error: `Workflow cleanup failed; resume is locked until process exit: ${renderThrown(this.cleanupError)}` }
+      return { value: null, stopReason: 'error', agentsStarted: this.started, error: `Workflow cleanup failed${this.journal ? '; resume is locked until process exit' : ''}: ${renderThrown(this.cleanupError)}` }
+    }
+    if (this.resultFault !== undefined && this.cancelReason === undefined) {
+      result = { value: null, stopReason: 'error', agentsStarted: this.started, error: `Workflow child result failed: ${renderThrown(this.resultFault.error)}` }
     }
     try { await this.journal?.close(result.stopReason, this.childFailures) }
     catch (error) { return { value: null, stopReason: 'error', agentsStarted: this.started, error: `Workflow journal could not settle: ${renderThrown(error)}` } }

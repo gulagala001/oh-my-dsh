@@ -5,6 +5,28 @@ import { promisify } from 'node:util';
 import { once } from 'node:events';
 import { stopFixtureProcess } from './fixtures/process.mjs';
 import { windowsProcessTree } from './fixtures/computer-use/windows-processes.mjs';
+import { frontendEnvironment } from './fixtures/frontend.mjs';
+
+test('frontend paths stay inside their owned home and remove inherited Node hooks', () => {
+  const prior = process.env.NODE_OPTIONS;
+  try {
+    process.env.NODE_OPTIONS = '--require=/synthetic/personal-hook.cjs';
+    const env = frontendEnvironment('/synthetic/owned/home');
+    for (const key of ['HOME','USERPROFILE','XDG_CONFIG_HOME','XDG_CACHE_HOME','XDG_DATA_HOME','XDG_STATE_HOME','APPDATA','LOCALAPPDATA','TMPDIR','PI_CODING_AGENT_DIR','PNPM_HOME','COREPACK_HOME','npm_config_userconfig','NPM_CONFIG_CACHE','npm_config_prefix'])
+      assert.ok(env[key].startsWith('/synthetic/owned/home/'), key);
+    assert.equal(env.NODE_OPTIONS, undefined);
+    assert.equal(env.DSH_HOME, '/synthetic/owned/home');
+  } finally { if (prior === undefined) delete process.env.NODE_OPTIONS; else process.env.NODE_OPTIONS = prior; }
+});
+
+test('forced shutdown releases the owned child but fails acceptance', { timeout: 15000, skip: process.platform === 'win32' }, async t => {
+  const child = spawn(process.execPath, ['-e', 'process.on("SIGTERM",()=>{});setInterval(()=>{},1000);console.log("ready")'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  t.after(() => { if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL'); });
+  await once(child.stdout, 'data');
+  await assert.rejects(stopFixtureProcess(child), /required forced cleanup/);
+  assert.equal(child.signalCode, 'SIGKILL');
+  assert.equal(child.stdout.destroyed, true);
+});
 
 test('a cleanup failure closes the HTTP fixture and exits with the original error', async () => {
   const module = new URL('./fixtures/process.mjs', import.meta.url).href;

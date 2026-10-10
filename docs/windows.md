@@ -6,9 +6,11 @@ Windows 上使用同一套 Oh My DSH 插件、任务、记忆和工作台。内�
 
 Web／源码建议使用 Node.js 24（插件声明最低 22.19），并准备 pnpm 11.23.0、Git 和 PowerShell 7；官方桌面应用按下方专用教程安装。首次准备 Windows Chrome 连接或安装桌面控制还需要 **.NET 10 SDK** 和可访问 NuGet 的网络；编译后的程序自带运行时，不要求每次运行都启动 SDK。
 
+当前候选 **0.2.1-alpha.2.omd.0.15.0** 尚未发布；本页公开命令使用 **0.2.1-alpha.1.omd.0.10.0**，不含候选新特性。候选 Windows 实机流程尚未验收，范围见[候选说明](release-0.2.1-alpha.2.omd.0.15.0.md)。
+
 ## 安装与试用
 
-当前 Web／源码版 Oh My DSH **0.2.1-alpha.1.omd.0.10.0** 适配 **DSH 0.2.1-alpha.1**。官方新版桌面安装包尚待发布，桌面用户请按[固定 rc.2 桌面教程](upgrade.md#desktop)使用此前配对版本。桌面安装与管理继续使用应用内插件页或官方桌面内置 CLI。[本版验证范围](release-0.2.1-alpha.1.omd.0.10.0.md)。
+公开安装的 Web／源码版 Oh My DSH **0.2.1-alpha.1.omd.0.10.0** 适配 **DSH 0.2.1-alpha.1**。官方新版桌面安装包尚待发布，桌面用户请按[固定 rc.2 桌面教程](upgrade.md#desktop)使用此前配对版本。桌面安装与管理继续使用应用内插件页或官方桌面内置 CLI。[本版验证范围](release-0.2.1-alpha.1.omd.0.10.0.md)。
 
 以下是 Web 安装。已有环境先停止服务并备份实际 `DSH_HOME`，沿用原 profile 和端口；首次安装可使用默认 `web`。在 PowerShell 7 中运行，无需先全局安装 `dsh`：
 

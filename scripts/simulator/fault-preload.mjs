@@ -9,6 +9,11 @@ import { setImmediate as realSetImmediate } from 'node:timers';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { syncBuiltinESMExports } from 'node:module';
 
+// Windows resolves '..' before following junctions/symlinks. Refuse that
+// ambiguous spelling when arming instead of treating a collapsed path as safe.
+export const faultPathHasParentTraversal = (path, platform = process.platform) =>
+  path.split(platform === 'win32' ? /[\\/]+/ : /\/+/).includes('..');
+
 if (process.env.OMD_SIMULATION === '1') {
   const originals = Object.fromEntries(Object.keys(fs).filter((key) => typeof fs[key] === 'function').map((key) => [key, fs[key]]));
   const originalPromises = Object.fromEntries(['readFile', 'writeFile', 'appendFile', 'open', 'rename', 'unlink', 'link'].map((key) => [key, promises[key]]));
@@ -225,16 +230,27 @@ if (process.env.OMD_SIMULATION === '1') {
 
   const snapshot = () => structuredClone({ root, auditPath, active, remaining: active?.remaining ?? 0,
     matchedApis: { ...matchedApis }, matches, events, auditErrors,
-    controlled: ['fs sync/callback and node:fs/promises readFile/writeFile/appendFile/open/rename/unlink/link', 'write faults match exact rename/link publication destinations', 'open flags distinguish read and write access', 'partial prefix only for writeFileSync and fs.promises.writeFile string/byte data'],
+    controlled: ['fs sync/callback and node:fs/promises readFile/writeFile/appendFile/open/rename/unlink/link', 'write faults match exact rename/link publication destinations', 'explicit host after-sync before-publication test hook', 'open flags distinguish read and write access', 'partial prefix only for writeFileSync and fs.promises.writeFile string/byte data'],
     boundaries: ['already-open fs.FileHandle methods', 'numeric file descriptors', 'non-UTF8 Buffer paths', 'native bindings and I/O bypassing wrapped APIs', 'OS races and hardware/power-loss behavior', 'streams not using wrapped open', 'non-file storage and external processes'],
   });
   globalThis[Symbol.for('omd.simulation.faults')] = Object.freeze({
+    // Only an explicit fixture hook may bridge a native publication that does
+    // not call Node fs APIs. This does not intercept the native system call.
+    beforeNativePublication(destination, stagedSource) {
+      const hit = select('rename', [stagedSource, destination]);
+      if (!hit || hit.fault.operation !== 'write') return;
+      const api = 'host.inspectTemp.afterSyncBeforePublication';
+      partialPrefix(hit, 'nativePublication', api, [destination]);
+      const match = consume(hit, api);
+      throw finish(match, simulatedError(hit.fault, 'nativePublication'), null);
+    },
     arm(config) {
       if (!config || typeof config !== 'object' || Array.isArray(config)) throw new TypeError('Fault configuration must be an object');
       if (active?.remaining > 0) throw new Error('An unconsumed file fault is already armed; call clear() first');
       const { operation, path, count = 1, code = 'EIO', partialBytes } = config;
       if (!validOperations.has(operation)) throw new TypeError('Invalid file fault operation');
       if (typeof path !== 'string' || !isAbsolute(path) || path.includes('\0')) throw new TypeError('Fault path must be an absolute string');
+      if (faultPathHasParentTraversal(path)) throw new TypeError('Fault path must not contain parent traversal');
       if (!Number.isSafeInteger(count) || count < 1) throw new RangeError('Fault count must be a positive safe integer');
       if (!validCodes.has(code)) throw new TypeError('Invalid file fault code');
       if (partialBytes !== undefined && (operation !== 'write' || !Number.isSafeInteger(partialBytes) || partialBytes < 0)) {

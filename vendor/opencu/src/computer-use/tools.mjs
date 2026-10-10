@@ -2,6 +2,8 @@ import { computerVision, TEXT_ONLY_SCREENSHOT_NOTICE } from './model-vision.mjs'
 import { createReadStream } from 'node:fs';
 import { basename } from 'node:path';
 import { computerUseTimeout, DEFAULT_COMPUTER_USE_TIMEOUT_MS, MAX_COMPUTER_USE_TIMEOUT_MS } from './runtime.mjs';
+import { registerComputerPresentation } from './presentation.mjs';
+import { computerPresentationTarget } from './presentation-target.mjs';
 export const COMPUTER_USE_GUIDE = [
   "Control browsers and desktop applications through persistent JavaScript.",
   "Selection displays the target’s initial state and any API documentation that is not already visible at its current content version. For a specified app: const app = await cua.getApp(nameOrBundleId). For a specified URL: const tab = await cua.createBrowserTab(browserId,url). For a known tab: const tab = await cua.getTab(id,{browser}). For discovery: await cua.getState(). Selecting a browser with cua.getBrowser does not open a tab. Only listed browsers are connected.",
@@ -12,14 +14,21 @@ export const COMPUTER_USE_GUIDE = [
 ].join('\n\n');
 
 export function registerComputerTools(ctx, hub) {
+  const markPresentationOwner = registerComputerPresentation(ctx, hub.computerPresentation);
   ctx.tools.register({
     name: 'computer_use', description: COMPUTER_USE_GUIDE,
     parameters: { type: 'object', properties: { code: { type: 'string', description: 'JavaScript statements using cua and nodeRepl; top-level await and persistent bindings are supported. Do not use a top-level return. Observations display themselves; use nodeRepl.write(value) for other output.' }, title: { type: 'string', description: 'Short user-facing description of this operation.' }, timeoutMs: { type: 'integer', default: DEFAULT_COMPUTER_USE_TIMEOUT_MS, description: `Execution budget in milliseconds, including pending operations. Must be between 1 and ${MAX_COMPUTER_USE_TIMEOUT_MS}; defaults to 30000. Use a larger budget for a deliberate long wait. On timeout, the runtime resets and reports returned and in-flight operations; observe the UI before continuing.` } }, required: ['code', 'title'], additionalProperties: false },
-    output: { schema: { type: 'string' }, render: (_args, value) => JSON.parse(value).content, presentationMeta: (_args, value) => ({ computerUseError: JSON.parse(value).error, computerUseFiles: JSON.parse(value).files ?? [] }) },
+    output: { schema: { type: 'string' }, render: (_args, value) => JSON.parse(value).content, presentationMeta: (_args, value) => {
+      const result = JSON.parse(value);
+      return { computerUseError: result.error, computerUseFiles: result.files ?? [], ...(result.target ? { computerUseTarget: result.target } : {}) };
+    } },
     async execute({ code, timeoutMs }, exec) {
+      markPresentationOwner(exec.token);
       timeoutMs = computerUseTimeout(timeoutMs);
       if (hub.config().computerUseEnabled === false) throw new Error('Computer Use is disabled in settings.');
       const result = await hub.computerUse.execute(exec.agent.session.id, code, { signal: exec.signal, timeoutMs, coordinateFrames: hub.computerImages?.frames(exec.agent.session.id), documentationState: hub.documentationState?.(exec.agent.session.id) });
+      let target = null;
+      try { target = computerPresentationTarget(hub.computerUse.status?.(exec.agent.session.id)?.target); } catch { /* Optional display metadata must not fail a completed tool. */ }
       const content = [], files = [], fileErrors = [];
       for (const block of result.blocks) {
         if (block.type === 'text') content.push(block);
@@ -49,7 +58,7 @@ export function registerComputerTools(ctx, hub) {
       if (content.some(block => block.type === 'image') && (await computerVision(ctx, exec.agent.session, exec.agent.session.requestHeader?.()?.config)).input === 'text') content.push({ type: 'text', text: TEXT_ONLY_SCREENSHOT_NOTICE });
       if (result.error) content.push({ type: 'text', text: 'Execution failed: ' + result.error.message });
       if (!content.length) content.push({ type: 'text', text: 'Execution completed. Use an observation to verify the result.' });
-      return JSON.stringify({ content, files, error: result.error?.message ?? (fileErrors.length ? fileErrors.join('\n') : null) });
+      return JSON.stringify({ content, files, ...(target ? { target } : {}), error: result.error?.message ?? (fileErrors.length ? fileErrors.join('\n') : null) });
     },
   });
   ctx.tools.register({

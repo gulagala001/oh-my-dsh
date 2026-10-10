@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 export const offlineEntries = [
-  'src/index.mjs', 'lib/host/tools.mjs', 'lib/host/jobs-local.mjs',
+  'src/index.mjs', 'src/ptc.mjs', 'lib/host/jobs-local.mjs',
   'lib/host/workflow-spawn.mjs', 'lib/host/pwsh-sandbox.mjs',
   'lib/host/ui-conversation.mjs', 'vendor/opencu/src/host/ui-chat.mjs',
 ];

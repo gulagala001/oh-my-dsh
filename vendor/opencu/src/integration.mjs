@@ -9,6 +9,7 @@ import { registerComputerTools } from './computer-use/tools.mjs';
 import { announceFreshComputerRuntime } from './computer-use/runtime-context.mjs';
 import { isAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { updateDocumentationContext } from './computer-use/documentation-state.mjs';
+import { ComputerPresentationStore } from './computer-use/presentation.mjs';
 
 // Shared even when the host loads two physical copies of the package. The root
 // owns registrations; disposing one consumer must not tear down another's tools.
@@ -38,6 +39,7 @@ export async function acquireComputerUse(ctx, options = {}) {
     const explicitDirectory = initial.dataDir;
     const directory = explicitDirectory ? join(explicitDirectory, 'computer-use') : options.dataDir ?? join(initial.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'trisoul-x'), 'computer-use');
     shared = { owners: new Map(), sessionTitles: new WeakMap(), config: () => shared.getConfig(), computerImages: new ImageCoordinates() };
+    shared.computerPresentation = new ComputerPresentationStore(join(directory, 'presentation'), error => root.logger.warn('Computer Use presentation cache: ' + error.message));
     const documentationStates = new Map();
     shared.documentationState = id => {
       if (!documentationStates.has(id)) documentationStates.set(id, new Set());
@@ -101,7 +103,7 @@ export async function acquireComputerUse(ctx, options = {}) {
           for (const browser of shared.computerUse.extensionBrowsers.values()) void browser.renameSessionGroup(session.id, event.data.title).catch(error => root.logger.warn(error.message));
         }
       }, { global: true });
-      scope.effect(() => () => shared.computerUse.close());
+      scope.effect(() => async () => { await shared.computerUse.close(); await shared.computerPresentation.close(); });
     } });
   }
   const owner = Symbol();

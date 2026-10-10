@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { cp, mkdir, readFile, writeFile, readdir, rm } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { parseArgs } from 'node:util';
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -15,6 +15,13 @@ if (execFileSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8' }
 const version = JSON.parse(await readFile(join(source, 'package.json'), 'utf8')).version;
 const officialTag = 'dsh-v' + version;
 const tag = execFileSync('git', ['tag', '--points-at', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim().split('\n').includes(officialTag) ? officialTag : null;
+const client = await readFile(join(source, 'packages/client/ui-chat/lib/client.js'), 'utf8');
+const { PLATFORM_MODULES, PRELOADED_CLIENT_EXTERNALS } = await import(pathToFileURL(join(source, 'packages/client/web/src/platform.ts')).href);
+const chatPackage = JSON.parse(await readFile(join(source, 'packages/client/ui-chat/package.json'), 'utf8'));
+const available = new Set([...PLATFORM_MODULES, ...PRELOADED_CLIENT_EXTERNALS, ...(chatPackage.dsh?.client?.external ?? [])]);
+const unresolved = [...client.matchAll(/\brequire\((['"])([^'"]+)\1\)/g)]
+  .map(match => match[2]).filter(name => !available.has(name));
+if (unresolved.length) throw Error(`Chat imports unavailable browser modules: ${[...new Set(unresolved)].join(', ')}. Build the same-version Host libraries before syncing Chat.`);
 await rm(destination, { recursive: true, force: true });
 await mkdir(destination, { recursive: true });
 for (const name of ['src', 'README.md', 'lib/client.js', 'lib/index.js']) {

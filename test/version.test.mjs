@@ -206,3 +206,59 @@ test('running installations select same-host patches and separately explain newe
   const newer = await nativeAlpha.check(); assert.equal(newer.latestVersion, alpha); assert.equal(newer.status, 'update');
   assert.equal(newer.hostUpgrade, undefined); nativeAlpha.dispose();
 });
+
+test('mixed OMD numbering compares the host before the revision format', () => {
+  const olderHost = '0.2.0-rc.2.omd.0.11.0';
+  const newerLegacyHost = '0.2.1-omd.1';
+  const feed = validateManifest({ schema: 1, versionPolicy: 'dsh-aligned', releases: [
+    release(olderHost), release(newerLegacyHost, 'required'),
+  ] });
+  assert.deepEqual(feed.releases.map(row => row.version), [newerLegacyHost, olderHost]);
+  const installed = versionStatus(olderHost, feed, { hostVersion: '0.2.0-rc.2' });
+  assert.equal(installed.status, 'current');
+  assert.equal(installed.latestVersion, olderHost);
+  assert.equal(installed.severity, 'none');
+  assert.equal(installed.hostUpgrade.version, newerLegacyHost);
+  assert.equal(installed.hostUpgrade.requiredHostVersion, '0.2.1');
+  assert.equal(versionStatus(newerLegacyHost, feed, { hostVersion: '0.2.1' }).hostUpgrade, undefined);
+
+  const sameHost = validateManifest({ schema: 1, versionPolicy: 'dsh-aligned', releases: [
+    release('0.2.0-rc.2.omd.20'), release(olderHost),
+    release('0.2.0-rc.2.omd.0.11.1'), release('0.2.0-rc.2.omd.0.12.0'),
+  ] });
+  assert.deepEqual(sameHost.releases.map(row => row.version), [
+    '0.2.0-rc.2.omd.0.12.0', '0.2.0-rc.2.omd.0.11.1', olderHost, '0.2.0-rc.2.omd.20',
+  ]);
+  assert.equal(versionStatus('0.2.0-rc.2.omd.20', sameHost).latestVersion, '0.2.0-rc.2.omd.0.12.0');
+});
+
+test('archived independent versions and mixed host formats have a consistent migration order', () => {
+  const expected = ['0.2.1-omd.1', '0.2.0-rc.2.omd.0.11.0', '0.3.0'];
+  for (const a of expected) for (const b of expected) for (const c of expected) {
+    if (new Set([a, b, c]).size !== 3) continue;
+    const feed = validateManifest({ schema: 1, versionPolicy: 'dsh-aligned', releases: [a, b, c].map(v => release(v)) });
+    assert.deepEqual(feed.releases.map(r => r.version), expected);
+    const status = versionStatus('0.3.0', feed);
+    assert.equal(status.status, 'update');
+    assert.equal(status.latestVersion, expected[0]);
+    assert.equal(status.releases[0].version, status.latestVersion);
+  }
+  for (const retired of ['0.2.0', '0.2.1', '0.2.2', 'v0.3.0+build.2']) {
+    const feed = validateManifest({ schema: 1, versionPolicy: 'dsh-aligned', releases: [
+      release(retired), release(expected[1]), release(expected[0]),
+    ] });
+    assert.equal(feed.releases[0].version, expected[0]);
+    assert.equal(versionStatus(retired, feed).latestVersion, expected[0]);
+    const historical = validateManifest({ schema: 1, versionPolicy: 'dsh-aligned', releases: [
+      release('0.1.7-rc.2.20', 'required'), release('1.7.4', 'required'), release(retired),
+    ] });
+    const archived = versionStatus(retired, historical);
+    assert.equal(archived.status, 'current');
+    assert.equal(archived.latestVersion, retired);
+    assert.equal(archived.severity, 'none');
+    assert.deepEqual(archived.releases, []);
+  }
+  assert.throws(() => validateManifest({ schema: 1, versionPolicy: 'dsh-aligned', releases: [
+    release('0.3.0'), release(expected[1]), release(expected[0]), release('v0.3.0+build.2'),
+  ] }), /Duplicate release version/);
+});

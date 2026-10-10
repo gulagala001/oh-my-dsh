@@ -44,6 +44,10 @@ export class BrowserActions {
     cdp.on('Page.downloadProgress',event=>{
       const entry=this.downloadHistory.get(event.guid);if(!entry||!['inProgress','unobserved'].includes(entry.state))return;
       Object.assign(entry,{state:event.state,receivedBytes:event.receivedBytes,totalBytes:event.totalBytes});
+      // Managed profiles also retain downloads completed by the human in a
+      // live preview after the model controller has stopped. External browser
+      // connections keep their existing path-availability boundary.
+      void this.rememberManagedDownload?.(entry);
     });
     cdp.on('Page.javascriptDialogOpening', value => { record.nativeDialog = value; });
     cdp.on('Page.javascriptDialogClosed', () => { record.dialog = null; record.nativeDialog = null; });
@@ -491,7 +495,14 @@ export class BrowserActions {
         });
       }
       if (method === 'downloads.list') return [...record.downloads].map(([id,d]) => ({ id, filename: d.suggestedFilename(), url: d.url() }));
-      if (method === 'downloads.save') { const d = record.downloads.get(args[0]); if (!d) throw new Error('Unknown download'); await d.saveAs(args[1]); const failure = await d.failure(); if (failure) throw new Error(failure); return { path: args[1], filename: d.suggestedFilename() }; }
+      if (method === 'downloads.save') {
+        const d = record.downloads.get(args[0]); if (!d) throw new Error('Unknown download');
+        const failure = await d.failure(); signal?.throwIfAborted();
+        if (failure) throw new Error(failure);
+        await d.saveAs(args[1]);
+        signal?.throwIfAborted();
+        return { path: args[1], filename: d.suggestedFilename() };
+      }
       if (method === 'filechooser.setFiles') {
         // The intercepted chooser event can arrive just after click resolves.
         // Wait for that in-flight event rather than requiring another model call.

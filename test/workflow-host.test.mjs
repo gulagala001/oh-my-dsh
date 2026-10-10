@@ -18,7 +18,12 @@ async function fixture(t, start) {
   t.after(() => rm(root, { recursive: true, force: true }));
   const parent = { options: { provider: 'fixture', model: 'main', reasoningEffort: 'high' }, session: Session.create(randomUUID()) };
   const requests = [], warnings = [], signals = [];
-  const subagents = { async start(provider, request) { requests.push({ provider, request }); return start?.(request) ?? { id: randomUUID(), result: Promise.resolve(success(request.prompt[0].text)), dispose: async () => {} }; } };
+  const subagents = { async startActivation({ provider, request, signal, delivery }) {
+    assert.equal(delivery, 'caller'); assert.ok(signal instanceof AbortSignal);
+    requests.push({ provider, request });
+    const run = await (start?.(request) ?? { id: randomUUID(), result: Promise.resolve(success(request.prompt[0].text)), dispose: async () => {} });
+    return { childId: run.id, messageId: randomUUID(), result: run.result, dispose: () => run.dispose() };
+  } };
   const runtime = {
     resolve: value => value,
     async run(spec) {
@@ -30,7 +35,7 @@ async function fixture(t, start) {
       } catch (error) { return { error: { kind: 'fixture', message: String(error) } }; }
     },
   };
-  const run = (body, extras = {}) => new PtcWorkflowRun({ logger: { warn: message => warnings.push(message) } }, subagents, runtime,
+  const run = (body, extras = {}) => new PtcWorkflowRun({ logger: { warn: message => warnings.push(message) }, workingDirectory: { ensure: async () => root } }, subagents, runtime,
     randomUUID(), meta, parent, { meta, body, limits, ...extras.args === undefined ? {} : { args: extras.args } }, 'spawn', { mode: 'danger-full-access', workspaceRoot: root }, quiet, extras.signal,
     { root, loadWorkflow: async () => { throw Error('not found'); }, ...extras });
   return { root, parent, requests, warnings, signals, run };
@@ -105,11 +110,11 @@ test('failed child result ends the cache prefix and does not poison successful l
 });
 
  test('filtered nulls retain stable failures, reasons, and recovery identity', async t => {
-  const fx = await fixture(t, request => ({ id: 'child-' + request.prompt[0].text, result: Promise.resolve(request.prompt[0].text === 'bad' ? { output: [], stopReason: 'error', error: { code: 'RATE_LIMIT', message: 'quota exhausted' } } : success('good')), dispose: async () => {} }));
+  const fx = await fixture(t, request => ({ id: 'child-' + request.prompt[0].text, result: Promise.resolve(request.prompt[0].text === 'bad' ? { output: [], stopReason: 'error', diagnostic: '{"code":"RATE_LIMIT","message":"quota exhausted"}' } : success('good')), dispose: async () => {} }));
   const body = `return (await parallel([() => agent('bad'), () => agent('good')])).filter(Boolean)`;
   const run = fx.run(body), result = await run.result;
   assert.equal(result.stopReason, 'completed'); assert.deepEqual(result.value, ['good']);
-  assert.deepEqual(run.childFailures, [{ seq: 1, childId: 'child-bad', stopReason: 'error', cause: 'failed', reason: '{"code":"RATE_LIMIT","message":"quota exhausted"}', reasonData:{code:'RATE_LIMIT', message:'quota exhausted'} }]);
+  assert.deepEqual(run.childFailures, [{ seq: 1, childId: 'child-bad', stopReason: 'error', cause: 'failed', reason: '{"code":"RATE_LIMIT","message":"quota exhausted"}' }]);
   assert.match(await readFile(join(run.transcriptDir, 'journal.jsonl'), 'utf8'), /quota exhausted/);
   const resumed = fx.run(body, { resumeFromRunId: run.id }); await resumed.result;
   assert.equal(resumed.childFailures.length, 1); assert.equal(fx.requests.length, 4);
@@ -143,7 +148,7 @@ test('user cancellation records a separate cause and does not spawn again', asyn
 });
 
 test('nested workflow child failures stay visible after the caller filters nulls', async t => {
-  const fx = await fixture(t, () => ({id:'nested-bad', result:Promise.resolve({output:[], stopReason:'error', error:'network offline'}), dispose:async () => {}}));
+  const fx = await fixture(t, () => ({id:'nested-bad', result:Promise.resolve({output:[], stopReason:'error', diagnostic:'network offline'}), dispose:async () => {}}));
   const run = fx.run(`return (await workflow('nested')).filter(Boolean)`, {loadWorkflow:async () => ({meta, body:`return await parallel([() => agent('bad')])`})});
   const result = await run.result; assert.deepEqual(result.value, []); assert.equal(result.stopReason, 'completed');
   assert.deepEqual(run.childFailures.map(row => [row.seq, row.childId, row.reason]), [[1,'nested-bad','network offline']]);

@@ -11,7 +11,7 @@ const acornDependency = { name: 'workflow-acorn', setup(b) {
   b.onResolve({ filter: /^acorn$/ }, () => ({ path: 'acorn', namespace: 'omd-dependency' }));
   b.onLoad({ filter: /^acorn$/, namespace: 'omd-dependency' }, async () => ({ contents: await readFile(requireBuild.resolve('acorn'), 'utf8'), loader: 'js' }));
 } };
-const modules = ['jobs-local', 'tool-jobs', 'tool-bash', 'tool-pwsh', 'bash-sandbox', 'pwsh-sandbox', 'tools', 'workflow-ptc', 'tool-workflow', 'workflow-spawn'];
+const modules = ['jobs-local', 'tool-jobs', 'tool-bash', 'tool-pwsh', 'bash-sandbox', 'pwsh-sandbox', 'workflow-ptc', 'tool-workflow', 'workflow-spawn'];
 await mkdir(new URL('../lib/host/', import.meta.url), { recursive: true });
 // The workflow VM is transported as one self-contained ESM source string. Its
 // only external imports may be Node builtins, never plugin/host package paths.
@@ -42,7 +42,6 @@ for (const name of modules) {
       b.onResolve({ filter: /^@deepseek-ai\/dsh-(bash|pwsh)-local$/ }, args => ({ path: `${root}vendor/dsh/${args.path.split('dsh-')[1]}/src/index.ts` }));
       b.onResolve({ filter: /^\.\.\/\.\.\/\.\.\/(session|subagent)\// }, args => ({ path: `${root}vendor/dsh/${args.path.split('/').slice(4).join('/')}` }));
       b.onResolve({ filter: /^@deepseek-ai\/dsh-session-persistence-jsonl\/src\/lease\.ts$/ }, () => ({ path: `${root}vendor/dsh/session-persistence-jsonl/src/lease.ts` }));
-      b.onResolve({ filter: /^@deepseek-ai\/dsh-subagent-in-process-driver\/src\/index\.ts$/ }, () => ({ path: `${root}vendor/dsh/subagent-in-process-driver/src/index.ts` }));
       b.onLoad({ filter: /workflow-ptc[\\/]src[\\/]guest-source\.ts$/ }, () => ({ contents: `export const WORKFLOW_GUEST_SOURCE = ${JSON.stringify(guestSource)};`, loader: 'ts' }));
     } }, acornDependency],
   });
@@ -51,6 +50,7 @@ for (const name of modules) {
 }
 // Retire outputs from the earlier direct-entry build, never user data.
 for (const name of ['bash-local', 'pwsh-local']) await rm(`${root}lib/host/${name}.mjs`, { force: true });
+for (const name of ['tools.mjs', 'tools.factory.mjs']) await rm(`${root}lib/host/${name}`, { force: true });
 
 // Embed the upstream-built browser factory in OMD's own client module. A
 // file: subpackage cannot be resolved from a GitHub-installed dependency.

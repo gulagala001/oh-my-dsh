@@ -16,6 +16,9 @@
 .omd-model-search{display:flex;align-items:center;gap:5px;margin-bottom:9px}.omd-model-search button{height:32px;width:28px;display:grid;place-items:center;border-radius:8px}.omd-model-search input{flex:1;min-width:0;padding:7px 8px;border:0;border-radius:8px;background:color-mix(in srgb,currentColor 5%,transparent);color:inherit;font:inherit;font-size:13px}.omd-model-options{max-height:320px;overflow:auto;overscroll-behavior:contain}.omd-model-provider{font-size:11px;color:var(--dsw-alias-label-tertiary,#888);padding:6px 8px}.omd-model-options button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:9px 8px;text-align:left;border-radius:8px;font-size:13px}.omd-model-options button[aria-selected=true]{color:#4d7ff5}.omd-model-options button span:first-child{min-width:0;overflow-wrap:anywhere}.omd-model-error{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--dsw-alias-state-error-primary,#b84949);overflow-wrap:anywhere;padding:6px 2px}.omd-model-error button{flex-shrink:0;border-radius:5px;padding:4px}.omd-model-status{font-size:12px;color:var(--dsw-alias-label-tertiary,#888);padding:8px}
 @keyframes omd-model-enter{from{opacity:0;transform:translateY(4px) scale(.98)}to{opacity:1;transform:none}}@keyframes omd-effort-title{from{opacity:.35;transform:translateY(2px)}to{opacity:1;transform:none}}@keyframes omd-ultra-glow{from{transform:translate(-4%,-2%) scale(1)}to{transform:translate(4%,2%) scale(1.08)}}@keyframes omd-effort-particle{from{transform:translate(-3px,-2px) scale(var(--particle-scale))}50%{transform:translate(2px,2px) scale(var(--particle-scale))}to{transform:translate(4px,-1px) scale(var(--particle-scale))}}@keyframes omd-effort-notice{from{background-position:100% 0}to{background-position:0 0}}
 @media(prefers-reduced-motion:reduce){.omd-model-panel,.omd-model-panel *{animation:none!important;transition:none!important}}
+html[data-omd-reduce-effects] :is(.omd-model-panel,.omd-model-panel *),
+html[data-omd-reduce-effects] .omd-model-panel *::before,
+html[data-omd-reduce-effects] .omd-model-panel *::after{animation:none!important;transition:none!important}
 @media(pointer:coarse){.omd-model-reset{width:44px;height:44px;right:-7px;top:-8px}.omd-model-options button{min-height:44px}.omd-model-current{min-height:36px}.omd-model-search button{width:36px;height:40px}}
 
 @container (max-width:560px){.omd-model-trigger{max-width:160px;gap:4px;font-size:11px}.omd-model-caption{max-width:64px;overflow:hidden;text-overflow:ellipsis}}
@@ -27,3 +30,22 @@
 .omd-effort-control[data-pro] .omd-effort-particle{opacity:calc(var(--particle-opacity) * .45);animation:omd-effort-particle 3s ease-in-out infinite alternate}
 .omd-effort-control[data-pro] .omd-effort-particle:nth-of-type(n+9){display:none}
 .omd-effort-notice[data-visible][data-mode=pro]{background:linear-gradient(100deg,#4d7ff5,#749cea);background-clip:text;color:transparent;animation:none}
+
+/* A bounded light field stays inside the native range track. Only transform
+   and opacity animate; the title and saved mode remain readable at rest. */
+.omd-model-panel { border-color: color-mix(in srgb,var(--dsw-alias-label-primary,CanvasText) 12%,transparent); box-shadow: 0 8px 32px #00000014,0 2px 6px #00000008; }
+.omd-model-trigger[data-mode=pro] .omd-model-caption { color: var(--dsw-alias-label-link,#3978e7); }
+.omd-model-trigger[data-mode=ultracode] .omd-model-caption { color: light-dark(#7253c1,#beacff); }
+.omd-effort-heading { padding-top: 2px; }
+.omd-effort-heading h2 { line-height: 24px; font-size: 15px; }
+.omd-effort-control[data-pro] .omd-effort-fill { background: linear-gradient(110deg,#1377e4,#4e8fed 60%,#79a9f1); }
+.omd-effort-control[data-ultra] .omd-effort-fill { background: linear-gradient(110deg,#0876ea,#6764de 58%,#9d70df); }
+.omd-effort-control:is([data-pro],[data-ultra]) .omd-effort-fill::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(112deg,transparent 18%,#ffffff40 43%,#ffffff08 56%,transparent 76%); transform: translateX(-70%); animation: omd-effort-sheen 7s ease-in-out infinite; }
+.omd-effort-control[data-pro] .omd-effort-fill::after { opacity: .45; animation-duration: 10s; }
+.omd-effort-control[data-ultra] .omd-effort-thumb { box-shadow: 0 1px 5px #0003,0 0 0 1px #0000000d,0 0 12px #ad84ea45; }
+.omd-effort-control[data-pro] .omd-effort-thumb { box-shadow: 0 1px 5px #0003,0 0 0 1px #0000000d,0 0 10px #648eea30; }
+.omd-effort-control[data-dragging] .omd-effort-fill::after { animation-play-state: paused; }
+.omd-model-search input:focus-visible { outline-offset: 1px; }
+.omd-model-options button[aria-selected=true] { background: color-mix(in srgb,var(--dsw-alias-state-business-primary,#4d7ff5) 8%,transparent); }
+@keyframes omd-effort-sheen { 0%,15% { transform: translateX(-70%); } 70%,100% { transform: translateX(100%); } }
+@media(prefers-reduced-motion:reduce) { .omd-model-panel *::before,.omd-model-panel *::after { animation: none!important; transition: none!important; } }

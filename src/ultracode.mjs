@@ -114,7 +114,9 @@ export class UltracodeControl {
       const controller = this.ctx.get('sessionController');
       if (!controller) throw new Error('当前宿主未提供模型选择服务');
       const info = await this.ctx.llm.resolveModelInfo(input.provider, input.model);
-      const effort = mode !== 'off' ? highestEffort(info.reasoning) : input.reasoningEffort;
+      const effort = mode === 'pro' && info.reasoning?.efforts?.some(level => level.id === 'xhigh')
+        ? 'xhigh'
+        : mode !== 'off' ? highestEffort(info.reasoning) : input.reasoningEffort;
       const result = await controller.selectModel({ sessionId, provider: input.provider, model: input.model, ...(effort === undefined ? {} : { reasoningEffort: effort }) });
       const model = this.fold(session).model;
       if (!model || !same(model, result.selected)) throw new Error('模型在保存时再次变更，请重试');

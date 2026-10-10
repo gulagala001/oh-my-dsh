@@ -15,6 +15,9 @@ export function createHostAdapter(hub) {
     return { available, usable: available - headroom, used: hub.ctx.tokenMeter.measure(session).totalTokens };
   };
   return {
+    contextCapacity(session) {
+      return routes.get(session)?.info?.context?.contextWindow ?? session.requestContext?.()?.contextWindow ?? null;
+    },
     pricing(session) {
       const config = session.requestHeader?.()?.config;
       const llm = hub.ctx.get?.('llm') || hub.ctx.llm;

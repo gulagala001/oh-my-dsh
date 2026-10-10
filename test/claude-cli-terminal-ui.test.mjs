@@ -1,3 +1,4 @@
+import { openWorkbench } from './fixtures/workbench.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, readFile } from 'node:fs/promises';
@@ -73,8 +74,8 @@ test('terminal skin covers the real shell, fonts, all settings, navigation and r
       await page.getByRole('menu').waitFor();
       await shot(`${mode}-${width}-menu`); await page.keyboard.press('Escape');
       if (width === 1440) {
-        await page.getByRole('button', { name: '打开工作台', exact: true }).click();
-        await until(async () => { const box = await page.locator('.tx-workbench').boundingBox(); return box?.width > 300 && box.x + box.width <= 1441; });
+        await openWorkbench(page, '任务');
+        await until(async () => { const box = await page.locator('.tx-workbench:visible').boundingBox(); return box?.width > 300 && box.x + box.width <= 1441; });
         await shot(`${mode}-workbench`);
         await page.getByRole('button', { name: '收起右侧边栏', exact: true }).click();
       } else {

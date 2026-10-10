@@ -6,9 +6,13 @@ import { homedir } from 'node:os';
 import { realpath } from 'node:fs/promises';
 import { migrateSessionStorage } from './session-migration.mjs';
 import { sourceName } from './message-source.mjs';
+import { currentDirectory } from './working-directory.mjs';
+import { apiSessionTarget } from './api-session.mjs';
 import { installLoaderLifecycleCompatibility } from './loader-lifecycle-compat.mjs';
 import { installToolSchedulerCompatibility } from './tool-scheduler-compat.mjs';
+import { installToolCancellationPresentation } from './tool-cancellation.mjs';
 import { monitorSelection, compactMonitorSnapshot } from './monitoring.mjs';
+import { handleMonitorApi } from './monitor-api.mjs';
 import { createVersionService, handleVersionApi } from './version.mjs';
 import { VersionUpdater, handleVersionUpdateApi } from './version-update.mjs';
 import { installImageBudget } from './image-budget.mjs';
@@ -58,6 +62,7 @@ export async function apply(ctx, config) {
   const directory = legacy.value.dataDir || config.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'trisoul-x');
   await migrateSessionStorage(ctx, directory);
   installToolSchedulerCompatibility(ctx);
+  installToolCancellationPresentation(ctx);
   const hub = new Hub(ctx, { ...config, dataDir: directory });
   hub.omaaWorkflowComposition = omaaWorkflowComposition;
   hub.omaaIdentityPrompt = () => omaaIdentityPrompt(hub);
@@ -65,6 +70,7 @@ export async function apply(ctx, config) {
     root: legacy.value.projectlessWorkspaceRoot || hub.config().projectlessWorkspaceRoot || join(homedir(), 'Documents', 'DSH'),
     storeDir: join(await realpath(hub.store.dir), 'projectless-workspaces'),
   });
+  hub.projectless = projectless;
   const liveConfig = hub.getConfig;
   let overlay = legacy.value;
   hub.getConfig = () => ({ ...liveConfig(), ...overlay });
@@ -193,7 +199,7 @@ export async function apply(ctx, config) {
       const state = hub.store.state(agent.session.id);
       if (state.memoryScope == null) { state.memoryScope = hub.config().memoryScope; hub.store.save(state); }
       hub.agents.set(agent.session.id, agent);
-      hub.components.project(agent.session.header.cwd);
+      hub.components.project(currentDirectory(ctx, agent.session));
       // A pending write-ahead transaction must finish before sending another request.
       // Only an explicitly queued full-compaction command can await model work here.
       setRuntimeContext(agent.session, () => runtimeContext(agent, hub, { messages, turn, step }));
@@ -220,7 +226,7 @@ export async function apply(ctx, config) {
   ctx.on('agent/status', ({ agent, status }) => {
     if(isBtwSession(agent.session))return;
     hub.budgets.tick(agent.session, isX(agent.session) && status === 'running');
-    if (isX(agent.session)) hub.context.arm(agent);
+    if (isX(agent.session)&&hub.context.agents.has(agent.session.id)) hub.context.arm(agent);
   }, { global: true });
   ctx.on('user-questions/request', ({ agent }, next) => agent && isX(agent.session) ? hub.budgets.waitForUser(agent, next) : next(), { global: true });
   ctx.on('agent/disposed', ({ agent }) => {
@@ -235,25 +241,34 @@ export async function apply(ctx, config) {
     // Read-only historical sessions may never have created an agent.
     if (!hub.agents.has(session.id)) return hub.context.dispose(session.id);
   }, { global: true });
-  ctx.on('agent/created', ({ agent, source }) => {
+  ctx.on('agent/created', async ({ agent, source, signal }) => {
     if(isBtwSession(agent.session))return;
     hub.ultracode.lifecycle(agent, source);
     hub.workflowBudget.attach(agent.session);
+    await hub.dream.sources.refreshScope(agent.session.header,signal);
     if (!monitored(agent.session)) return;
     const state = hub.store.state(agent.session.id);
     state.cwd = agent.session.header.cwd; state.parentSession = agent.session.header.parentSession;
     state.origin = agent.session.header.origin ?? null;
     if (agent.session.header.origin === 'subagent') { hub.store.save(state); return; }
-    state.memoryScope ??= hub.scope(agent.session).mode;
-    hub.store.save(state); hub.agents.set(agent.session.id, agent); hub.context.start(agent);
-    hub.components.project(agent.session.header.cwd);
+    // Native create announces the agent before attaching Workspace membership.
+    // Preserve the configured preference; defer a provisional Chat binding
+    // until the first request can see the completed native registration.
+    state.memoryScope ??= hub.scope(agent.session,{effective:false}).mode;
+    hub.store.save(state); hub.agents.set(agent.session.id, agent);
+    if(!hub.dream.sources.projectlessKnown(agent.session.header))hub.context.start(agent);
+    hub.components.project(currentDirectory(ctx, agent.session));
   }, { global: true });
-  ctx.on('session/created', session => {
+  ctx.on('session/created', async session => {
     if (!isX(session) || !session.header.parentSession || !session.header.isSeeded || session.header.origin === 'subagent') return;
     const state = hub.store.state(session.id);
-    state.memoryScope ??= hub.scope(session).mode;
+    state.memoryScope ??= hub.scope(session,{effective:false}).mode;
     state.cwd = session.header.cwd; state.parentSession = session.header.parentSession; state.origin = session.header.origin ?? null;
-    hub.store.save(state); hub.context.state(session);
+    hub.store.save(state);
+    // Seeded user events already lock the archive, so resolve inherited Chat
+    // ownership before pinning its Context binding and historical records.
+    await hub.dream.sources.refreshScope(session.header);
+    hub.context.state(session);
   }, { global: true });
   ctx.on('session/event', (session, event) => {
     if (!hub.dream.closed) hub.dream.sources.observe(session, event);
@@ -289,18 +304,27 @@ export async function apply(ctx, config) {
         }
         if (await handleVersionUpdateApi({ req, res, url, service: versionUpdater, send })) return;
         if (await handlePromptOptimizerApi({ ctx, service: promptOptimizer, req, res, url, getSession: () => id ? ctx.agents.get(id)?.session ?? ctx.sessions.get(id) : undefined, send })) return;
-        const agent = id ? ctx.agents.get(id) : undefined;
-        const session = agent?.session ?? (id ? ctx.sessions.get(id) : undefined);
-        const stored = id ? hub.store.peek(id) : undefined;
-        if (id && !session && !stored) { send(res, 404, { error: '会话不存在' }); return; }
-        const scopeSession = session ?? { id: id || 'settings', header: { cwd: stored?.cwd || process.cwd() } };
+        if (handleMonitorApi({ hub, ctx, req, res, url, send })) return;
+        const readTarget = async () => {
+          const reading = new AbortController();
+          const abortRead = () => reading.abort(new Error('会话读取已取消'));
+          req.once?.('aborted', abortRead); res.once?.('close', abortRead);
+          try {
+            if (req.aborted || res.destroyed) abortRead();
+            return await apiSessionTarget(ctx, hub.store, id, reading.signal);
+          } finally { req.off?.('aborted', abortRead); res.off?.('close', abortRead); }
+        };
+        const target = await readTarget();
+        const { agent, session, stored, inspection, archivedOnly } = target;
+        if (!target.found) { send(res, 404, { error: '会话不存在' }); return; }
+        const scopeSession = session ?? { id: id || 'settings', header: inspection?.meta ?? { cwd: stored?.cwd || process.cwd() } };
         if (url.pathname === '/trisoul-x/api/background-wait' && req.method === 'GET') {
           const denied = ctx.get('connection')?.requestRejection(req);
           if (denied !== undefined) { res.writeHead(denied); res.end(); return; }
           res.setHeader('Cache-Control', 'no-store');
           send(res, 200, { waiting: hub.backgroundWaiting(agent) }); return;
         }
-        if (await handleContextApi({ hub, ctx, req, res, url, session, agent, id, send, readBody })) return;
+        if (await handleContextApi({ hub, ctx, req, res, url, session, agent, inspection, archivedOnly, refreshSession: readTarget, id, send, readBody })) return;
         if (url.pathname === '/trisoul-x/api/better-todo') {
           if (!id) { send(res, 400, { error: '请选择一个会话' }); return; }
           if (!['GET', 'POST'].includes(req.method)) { send(res, 405, { error: 'Method not allowed' }); return; }

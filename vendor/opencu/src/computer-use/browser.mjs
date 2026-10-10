@@ -2,7 +2,7 @@ import { runFile } from './run-file.mjs';
 import { chromium } from 'playwright';
 import { fork } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, rm } from 'node:fs/promises';
+import { mkdir, readFile, rm, lstat, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -73,6 +73,24 @@ export class BrowserHost extends BrowserActions {
   constructor(directory, { executablePath, headless = true, onTabClosed, onBrowserLost, onPointer, wantsPointer, onVisit } = {}) {
     super({ onTabClosed, onBrowserLost, onPointer, wantsPointer, onVisit });
     this.directory = directory; this.executablePath = executablePath; this.headless = headless;
+  }
+  async configureDownloads(connection) {
+    this.checkConnection(connection);
+    // The managed profile owns this directory. Reapply its policy after a
+    // controller disconnect, while an existing live preview keeps observing.
+    await connection.monitor.send('Browser.setDownloadBehavior', {
+      behavior: 'allowAndName', downloadPath: join(this.directory, 'downloads'), eventsEnabled: true,
+    });
+  }
+  async rememberManagedDownload(entry) {
+    if (entry.state !== 'completed' || !/^[a-zA-Z0-9_-]{1,128}$/.test(entry.id)) return;
+    const directory = join(this.directory, 'downloads'), path = join(directory, entry.id);
+    try {
+      const stat = await lstat(path);
+      if (!stat.isFile() || stat.isSymbolicLink()) return;
+      if (await realpath(path) !== join(await realpath(directory), entry.id)) return;
+      if (this.downloadHistory.get(entry.id) === entry && entry.state === 'completed') entry.path = path;
+    } catch (error) { if (error.code !== 'ENOENT') this.onDownloadError?.(error); }
   }
   async start() {
     if (this.closing) throw new Error('Computer Use browser is shutting down');
@@ -185,14 +203,20 @@ export class BrowserHost extends BrowserActions {
   checkConnection(connection) {
     if (connection.run !== this.run || connection.run.lost || this.closing) throw Object.assign(new Error('The browser exited. Bind a current browser tab again.'), { code: 'BROWSER_DISCONNECTED' });
   }
-  async connection(sessionId) {
+  async connection(sessionId, { observer = false } = {}) {
     if (this.disconnecting?.has(sessionId)) await this.disconnecting.get(sessionId);
     if (!this.connections.has(sessionId)) {
       const pending = (async () => {
         const run = await this.start();
+        // This profile owns its downloads across controller reconnects;
+        // Playwright must not remove them with a connection's temporary files.
+        const artifactsDir = join(this.directory, 'downloads');
+        await mkdir(artifactsDir, { recursive: true, mode: 0o700 });
         const transport = new BrowserTransport(run.endpoint, this.onPointer && (event => this.onPointer({ ...event, sessionId, tabId: event.targetId })), targetId => this.wantsPointer?.(sessionId, targetId) ?? true);
         let browser;
-        try { browser = await chromium.connectOverCDP(transport, { isLocal: true }); }
+        // A preview must not replace the controller's Chromium download
+        // directory (or apply other Playwright context defaults).
+        try { browser = await chromium.connectOverCDP(transport, { isLocal: true, artifactsDir, ...(observer ? { noDefaults: true } : {}) }); }
         catch (error) { transport.close(); throw error; }
         if (run !== this.run || run.lost || this.closing) { await browser.close(); throw new Error('The browser exited while connecting'); }
         const context = browser.contexts()[0]; context.setDefaultTimeout(8000); context.setDefaultNavigationTimeout(15000);
@@ -204,6 +228,8 @@ export class BrowserHost extends BrowserActions {
         browser.on('disconnected', () => { if (this.connections.get(sessionId) === pending) this.connections.delete(sessionId); });
         try {
           const monitor = await browser.newBrowserCDPSession();
+          connection.monitor = monitor;
+          await this.configureDownloads(connection);
           monitor.on('Target.targetInfoChanged', ({ targetInfo }) => {
             if (run !== this.run || run.lost || connection.closing || this.closing) return;
             const info = this.records.get(targetInfo.targetId);
@@ -292,7 +318,7 @@ export class BrowserHost extends BrowserActions {
   async target(sessionId, id, { claim = true, signal } = {}) {
     signal?.throwIfAborted();
     if (!this.records.has(id)) throw new Error('This tab has closed or its browser exited. List tabs and explicitly choose a current target.');
-    const connection = await this.connection(sessionId);
+    const connection = await this.connection(sessionId, { observer: !claim });
     if (!connection.pages.has(id)) await this.list(sessionId);
     signal?.throwIfAborted();
     const record = connection.pages.get(id);
@@ -324,6 +350,15 @@ export class BrowserHost extends BrowserActions {
         throw new AggregateError(failures, 'Could not confirm browser cleanup; retry stop. ' + failures.map(error=>error.message).join('; '));
       }
       await c.browser.close({ reason: 'Computer Use session stopped' });
+      // Playwright resets the default-context download behavior when its
+      // controlling connection closes. A remaining preview belongs to the
+      // same managed profile and must keep downloads in its durable directory.
+      if (!this.closing && c.run === this.run && !c.run.lost) {
+        for (const other of this.connections.values()) {
+          const active = await other.catch(() => null);
+          if (active && !active.closing && active.run === c.run) await this.configureDownloads(active);
+        }
+      }
       if (failures.length) throw new AggregateError(failures, 'Could not release browser input: ' + failures.map(e => e.message).join('; '));
     })();
     this.disconnecting ??= new Map(); this.disconnecting.set(sessionId, closing);

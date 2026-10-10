@@ -1,3 +1,4 @@
+import { openWorkbench } from './fixtures/workbench.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -50,9 +51,9 @@ test('Codex desktop layout: native navigation, every settings page, workbench an
     const enabledToggle = page.locator('.tx-bt-toggle.tx-on').first();
     assert.equal(await enabledToggle.evaluate(el => getComputedStyle(el, '::before').backgroundColor), mode === 'light' ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)', 'enabled switch thumb contrasts with monochrome track');
     await capture('menu-' + mode); await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: '打开工作台', exact: true }).click();
+    await openWorkbench(page, '任务');
     await until(async () => {
-      const r = await page.locator('.tx-workbench').boundingBox(); return r?.width > 300 && r.width < 390 && r.x + r.width <= 1441;
+      const r = await page.locator('.tx-workbench:visible').boundingBox(); return r?.width > 300 && r.width < 390 && r.x + r.width <= 1441;
     });
     await until(async () => {
       const header = await page.locator('.wSkVaW_header').boundingBox();
@@ -61,7 +62,7 @@ test('Codex desktop layout: native navigation, every settings page, workbench an
     const toggle = await page.locator('.codex-panel-toggle').boundingBox();
     assert.ok(1440 - toggle.x - toggle.width <= 16, 'panel toggle stays at the window right edge');
     for (const tab of ['任务', '上下文', '记忆', '电脑', '监控']) {
-      await page.locator('.cx-navigation').getByRole('button', { name: tab, exact: true }).click();
+      await openWorkbench(page, tab);
       await capture('workbench-' + mode + '-' + tab);
     }
     await page.getByRole('button', { name: '收起右侧边栏', exact: true }).click();
@@ -83,9 +84,8 @@ test('Codex desktop layout: native navigation, every settings page, workbench an
   await page.setViewportSize({ width: 1584, height: 876 });
   await page.getByLabel('明暗模式', { exact: true }).selectOption('light');
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: '打开工作台', exact: true }).click();
-  await until(async () => (await page.locator('.tx-workbench').boundingBox())?.width < 380);
-  await page.locator('.cx-navigation').getByRole('button', { name: '任务', exact: true }).click();
+  await openWorkbench(page, '任务');
+  await until(async () => (await page.locator('.tx-workbench:visible').boundingBox())?.width < 380);
   await capture('reference-layout-light');
   assert.equal(await hit(page.locator('[data-composer-input]')), true);
   await page.getByRole('button', { name: '收起右侧边栏', exact: true }).click();
@@ -114,8 +114,8 @@ test('Codex desktop layout: native navigation, every settings page, workbench an
     await capture('chat-' + width);
     await page.locator('[data-composer-input]').fill('');
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-    await page.getByRole('button', { name: '打开工作台', exact: true }).click();
-    await until(async () => await hit(page.locator('.cx-navigation button').first()));
+    await openWorkbench(page, '任务');
+    await until(async () => await hit(page.locator('[data-sidebar-right-panel] [role=tab][aria-selected=true]')));
     await capture('workbench-' + width);
     if (!await page.locator('[data-sidebar-right-panel="fullscreen"]').count()) await page.getByRole('button', { name: '全屏', exact: true }).click();
     await page.locator('[data-sidebar-right-panel="fullscreen"]').waitFor();
@@ -166,7 +166,7 @@ test('Codex geometry defaults, far-right toggle, resizing, reload and skin exit 
   };
   await settings(); await page.getByLabel('主题', { exact: true }).selectOption('codex-desktop');
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: '打开工作台', exact: true }).click();
+  await openWorkbench(page, '任务');
   const frame = page.locator('.pI_x6G_frame'), right = page.locator('.pI_x6G_rightbarCol'), corner = page.locator('.codex-panel-toggle');
   await until(async () => Math.abs((await right.boundingBox()).width - 360) < 1);
   assert.ok((await page.locator('.pI_x6G_centerCol').boundingBox()).width > 950);
@@ -178,7 +178,7 @@ test('Codex geometry defaults, far-right toggle, resizing, reload and skin exit 
   await page.mouse.move(1097, 250, { steps: 6 }); await page.mouse.up();
   await until(async () => Math.abs((await right.boundingBox()).width - 500) < 1);
   await page.reload(); await corner.waitFor();
-  await page.getByRole('button', { name: '打开工作台', exact: true }).click();
+  await openWorkbench(page, '任务');
   await until(async () => Math.abs((await right.boundingBox()).width - 500) < 1);
   await settings(); await page.getByRole('button', { name: '恢复默认主题', exact: true }).click();
   await page.keyboard.press('Escape');

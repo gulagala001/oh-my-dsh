@@ -1,3 +1,4 @@
+import { openWorkbench } from './fixtures/workbench.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
@@ -43,8 +44,7 @@ test('native slash commands and sidebar execute both compression modes without l
   assert.ok((await api('/context' + q)).records.every(r => r.mode === 'brief'));
   const invalid = await command('/compact-f unexpected'); assert.match(JSON.stringify(invalid), /不接受参数/);
   assert.equal(calls.length, before);
-  await page.getByRole('button', { name: '打开工作台', exact: true }).click();
-  await page.locator('.cx-navigation').getByRole('button', { name: '上下文', exact: true }).click();
+  await openWorkbench(page, '上下文');
   await page.locator('.cx-context').getByRole('heading', { name: '工作上下文', exact: true }).waitFor();
   const panel = page.locator('.cx-context');
   await panel.getByRole('button', { name: '已处理片段仅摘要', exact: true }).waitFor();

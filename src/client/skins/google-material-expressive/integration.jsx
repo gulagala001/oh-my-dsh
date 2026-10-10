@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { MaterialIcon } from './appearance.jsx';
+import { acquireOverlayInert } from '../../overlay-inert.mjs';
 
 export const MATERIAL_LAYOUT = 'google-material-expressive';
 const isMaterial = state => state.active !== false && state.skins.find(s => s.id === state.selected)?.layout === MATERIAL_LAYOUT;
@@ -32,9 +33,7 @@ function Navigation({ ctx }) {
       restoreInert(); restoreInert = () => {};
       if (open) {
         previousFocus = document.activeElement;
-        const elements = [...frame.querySelectorAll(':scope > .pI_x6G_centerCol, :scope > .pI_x6G_rightbarCol')].map(el => [el, el.inert]);
-        elements.forEach(([el]) => { el.inert = true; });
-        restoreInert = () => elements.forEach(([el, value]) => { el.inert = value; });
+        restoreInert = acquireOverlayInert(frame.querySelectorAll(':scope > .pI_x6G_centerCol, :scope > .pI_x6G_rightbarCol'));
         queueMicrotask(() => { if (modal && !document.querySelector('[role="dialog"]')) sidebar?.querySelector('.hHd-Xa_toggle')?.focus(); });
       } else if (previousFocus?.isConnected && !document.querySelector('[role="dialog"]')) previousFocus.focus();
     };

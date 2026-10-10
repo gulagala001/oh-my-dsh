@@ -342,6 +342,8 @@ export const UserMessageNodeView = memo(function UserMessageNodeView({
   )
 })
 
+UserMessageNodeView.displayName = 'UserMessageNodeView'
+
 /** Injected-context keyed Chat renderer. */
 export const ContextMessageNodeView = memo(function ContextMessageNodeView({ node, t }: ChatNodeViewProps<'context'>) {
   const data = node.data

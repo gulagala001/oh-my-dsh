@@ -106,7 +106,7 @@ export class DreamService {
       // Persisted job targets may predate a format refusal discovered by this
       // scan. Shared jobs must withdraw that source and continue their scope.
       if(target.kind==='session') {
-        if(job.scope==='session'||this.store.session(target.target)?.available!==false) {
+        if(job.scope==='session'||this.store.session(target.target)?.available!==false&&this.store.session(target.target)?.shared) {
           try { await this.updateSession(target.target,job,signal,target); }
           catch(error) {
             if(job.scope==='session'||!this.sources.excludeUnreadable(target.target,error,signal))throw error;
@@ -132,10 +132,12 @@ export class DreamService {
   async updateParent(kind,target,job,signal){
     const key=nodeKey(kind,target),children=kind==='project'?this.store.sessions({project:target,shared:true}).map(s=>({key:nodeKey('session',s.id),title:s.title})):this.store.projects().map(p=>({key:nodeKey('project',p),title:this.sources.projectTitle(p)}));
     const current=new Map(children.map(c=>[c.key,{...c,memory:this.store.memory(c.key)}]).filter(([,c])=>c.memory&&!c.memory.invalid));
+    if(!current.size)return;
+    const rebuilding=Boolean(this.store.memory(key)?.invalid);
     const progress=this.store.progress(key),previousInputs=new Map(progress.map(p=>[p.source,p]));
     const items=[];
     for(const [child,c]of current){
-      const fingerprint=String(c.memory.revision);if(this.store.consumed(key,child)===fingerprint)continue;
+      const fingerprint=String(c.memory.revision);if(!rebuilding&&this.store.consumed(key,child)===fingerprint)continue;
       const source={id:c.memory.ref,kind:'memory',key:child,revision:c.memory.revision};
       const before=previousInputs.get(child);
       items.push({key:child,fingerprint,source,text:`${c.title} · ${child} · revision ${fingerprint}${before?` (replaces revision ${before.fingerprint})`:''}\n${c.memory.summary}`});
@@ -154,7 +156,8 @@ export class DreamService {
   async batches(kind,target,items,job,signal,validate){
     while(items.length){
       signal.throwIfAborted();const old=this.store.memory(nodeKey(kind,target));
-      const base={kind,target,target_characters:LIMITS[kind],previous:old?{id:old.ref,text:old.summary}:null,sources:[]};
+      const previous=old&&!old.invalid?{id:old.ref,text:old.summary}:null;
+      const base={kind,target,target_characters:LIMITS[kind],previous,sources:[]};
       const batch=[];
       while(items.length&&batch.length<24){
         const x=items[0],candidate={id:x.source.id,text:x.text};
@@ -168,7 +171,7 @@ export class DreamService {
         try{
           if(attempt)await delay(Math.min(2000,500*2**attempt),undefined,{signal});
           const raw=await this.generate(last?{...base,retry_hint:last.message.slice(0,180)}:base,job,signal);
-          result=validateMemory(raw,kind,new Set([...base.sources.map(s=>s.id),...(old?[old.ref]:[])]));break;
+          result=validateMemory(raw,kind,new Set([...base.sources.map(s=>s.id),...(previous?[previous.id]:[])]));break;
         }catch(error){if(error.budget||signal.aborted||/401|403|unauthorized|api.?key|authentication/i.test(error.message))throw error;last=error;}
       }
       if(!result)throw last;
@@ -185,7 +188,7 @@ export class DreamService {
       const timeoutMs=c.jobTimeoutMs??600000,controller=new AbortController();
       const timer=timeoutMs>0?setTimeout(()=>controller.abort(Error('Dream 模型调用超时')),timeoutMs):undefined;timer?.unref?.();
       const joined=AbortSignal.any([signal,controller.signal]);
-      let usage,failure,callId,iterator,onAbort;const assembler=new BlockAssembler();
+      let usage,failure,callId,iterator,onAbort,startedAt;const assembler=new BlockAssembler();
       const aborted=new Promise((_,reject)=>{onAbort=()=>reject(joined.reason||Error('Dream 已取消'));joined.addEventListener('abort',onAbort,{once:true});if(joined.aborted)onAbort();});aborted.catch(()=>{});
       try{
         const info=await Promise.race([this.hub.ctx.llm?.resolveModelInfo?.(route.provider,route.model,joined),aborted]);
@@ -193,6 +196,8 @@ export class DreamService {
         if(capacity&&estimated+maxTokens+1024>capacity)throw Error('Dream 请求超过当前模型容量，请使用更大上下文的后台模型');
         callId=this.store.reserve(estimated+maxTokens,c.dreamDailyTokens??200000,{jobId:job.id,kind:input.kind,route,promptVersion:DREAM_PROMPT_VERSION},this.epoch);
         if(!callId)throw new BudgetWait();
+        startedAt=Date.now();
+        this.hub.live?.set(`dream:${callId}`,{id:`dream:${callId}`,kind:`dream${input.kind[0].toUpperCase()}${input.kind.slice(1)}`,sessionId:input.kind==='session'?input.target:null,provider:route.provider,model:route.model,startedAt});
         if(this.generateOverride){const r=await Promise.race([this.generateOverride(input,{signal:joined,route,request}),aborted]);usage=r.usage;return r.value??r;}
         const {effort='off',...baseRoute}=route;
           const reasoningEffort=await Promise.race([this.hub.efforts.resolve(route.provider,route.model,effort),aborted]);
@@ -207,7 +212,14 @@ export class DreamService {
         // BlockAssembler keeps usage undefined until the provider reports it.
         usage??=assembler.usage;
         clearTimeout(timer);joined.removeEventListener('abort',onAbort);try{void iterator?.return?.()?.catch?.(()=>{});}catch{}
-        if(callId)this.store.settle(callId,usage,failure);
+        if(callId){
+          this.hub.live?.delete(`dream:${callId}`);
+          try{this.hub.monitor?.append({id:`dream:${callId}`,source:'dream',kind:`dream${input.kind[0].toUpperCase()}${input.kind.slice(1)}`,
+            sessionId:input.kind==='session'?input.target:null,at:Date.now(),startedAt,
+            provider:route.provider,model:route.model,effort:route.effort??null,
+            durationMs:Date.now()-startedAt,usage,hasOutput:Boolean(assembler.blocks().length),status:failure?(signal.aborted?'cancelled':'error'):'success',error:failure});}catch{}
+          this.store.settle(callId,usage,failure);
+        }
       }
     };
     return this.hub.context.withCallSlot?this.hub.context.withCallSlot(run,signal,true):run();

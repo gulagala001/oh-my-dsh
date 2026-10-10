@@ -1,3 +1,4 @@
 # Internal engineering fixtures stay in Git, outside the installed plugin.
 /simulate.mjs
 /simulator/
+/check-plugin-coexist.mjs

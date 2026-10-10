@@ -5,7 +5,7 @@ import { proWorkflowGuide } from '../src/cc-adaptation/workflow-guide.mjs';
 import { promptText } from '../src/cc-adaptation/texts.mjs';
 import { highestEffort } from '../src/model-efforts.mjs';
 
-function fixture() {
+function fixture(efforts = ['off', 'high', 'xhigh']) {
   const events = [], messages = [];
   const session = { id: 'root', header: {}, get seq() { return events.length; }, eventAt: i => events[i], deriveMessages: () => messages, requestHeader: () => ({ config: { provider: 'fixture', model: 'model' } }),
     append(type, data) { const event = { type, data, seq: events.length }; events.push(event); return event; },
@@ -18,7 +18,7 @@ function fixture() {
     const {sessionId, ...selected} = request; session.append('model/selection', selected); return {selected};
   } };
   const ctx = { agents: { get: id => id === 'root' ? agent : undefined }, sessions: { flush: async () => {} },
-    llm: { resolveModelInfo: async () => ({ reasoning: { efforts: [{id:'off'},{id:'high'},{id:'xhigh'}] } }) },
+    llm: { resolveModelInfo: async () => ({ reasoning: { efforts: efforts.map(id => ({ id })) } }) },
     get: name => name === 'sessionController' ? controller : undefined };
   const data={id:'root'}, deliveries=[];
   const store={peek:()=>data,state:()=>data,save(value){if(value.ultracode?.delivery&&value.ultracode.delivery!==data.ultracode?.delivery)deliveries.push(value.ultracode.delivery);}};
@@ -112,7 +112,7 @@ test('concurrent mode changes serialize and reject a stale revision rather than 
   assert.equal(highestEffort(undefined), undefined);
 });
 
-test('Pro keeps highest effort and implementation guidance while replacing the Ultracode reference', async () => {
+test('Pro keeps its effort and implementation guidance while replacing the Ultracode reference', async () => {
   const f = fixture();
   f.store.peek().betterTodo = { todo: true, verification: true };
   await f.control.select('root', { provider:'fixture', model:'model', ultracode:true });
@@ -138,6 +138,19 @@ test('Pro keeps highest effort and implementation guidance while replacing the U
   await f.control.select('root', { provider:'fixture', model:'second', mode:'off', reasoningEffort:'high' });
   const off = await f.request('Continue normally');
   assert.ok(off.includes(PRO_OFF)); assert.doesNotMatch(off, /Workflow authoring reference/);
+});
+
+test('Pro prefers advertised xhigh while other modes retain native effort ordering and defaults', async () => {
+  for (const [efforts, pro, ultra] of [
+    [['off', 'high', 'xhigh', 'max', 'ultra'], 'xhigh', 'ultra'],
+    [['off', 'high', 'max'], 'max', 'max'],
+    [[], undefined, undefined],
+  ]) {
+    const f = fixture(efforts), route = { provider: 'fixture', model: 'model' };
+    assert.equal((await f.control.select('root', { ...route, mode: 'pro' })).selected.reasoningEffort, pro);
+    assert.equal((await f.control.select('root', { ...route, mode: 'ultracode' })).selected.reasoningEffort, ultra);
+    assert.equal((await f.control.select('root', { ...route, mode: 'off', reasoningEffort: 'high' })).selected.reasoningEffort, 'high');
+  }
 });
 
 test('Pro reminder cadence survives mode changes and does not add a common-word keyword trigger', async () => {

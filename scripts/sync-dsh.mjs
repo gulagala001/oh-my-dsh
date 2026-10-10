@@ -18,7 +18,8 @@ const schemaVersion = JSON.parse(await readFile(join(source, 'vendor/schemastery
 const officialTag = 'dsh-v' + version;
 const tag = execFileSync('git', ['tag', '--points-at', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim().split('\n').includes(officialTag) ? officialTag : null;
 const modules = { 'session-persistence-jsonl': 'session/session-persistence-jsonl', jobs: 'jobs/jobs', 'jobs-local': 'jobs/jobs-local', 'tool-jobs': 'jobs/tool-jobs', shell: 'shell/shell', 'tool-bash': 'shell/tool-bash', 'tool-pwsh': 'shell/tool-pwsh', 'bash-local': 'shell/bash-local', 'pwsh-local': 'shell/pwsh-local', 'bash-sandbox': 'shell/bash-sandbox', 'pwsh-sandbox': 'shell/pwsh-sandbox', tools: 'core/tools', 'ui-conversation': 'client/ui-conversation' };
-Object.assign(modules, { workflow: 'workflow/workflow', 'workflow-ptc': 'workflow/workflow-ptc', 'tool-workflow': 'workflow/tool-workflow', 'subagent-in-process-driver': 'subagent/subagent-in-process-driver' });
+Object.assign(modules, { workflow: 'workflow/workflow', 'workflow-ptc': 'workflow/workflow-ptc', 'tool-workflow': 'workflow/tool-workflow' });
+await rm(join(destination, 'subagent-in-process-driver'), { recursive: true, force: true });
 execFileSync(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm', ['exec', 'tsdown'], { cwd: join(source, 'packages/client/ui-conversation'), stdio: 'inherit', shell: process.platform === 'win32' });
 for (const [name, path] of Object.entries(modules)) {
   const target = join(destination, name);
@@ -46,7 +47,7 @@ await cp(join(source, 'packages/client/tsdown.client.ts'), join(destination, 'bu
 const paths = [...Object.values(modules).map(path => 'packages/' + path), 'packages/client/tsdown.client.ts', 'packages/llm/llm/src/error.ts'];
 // Include the newly authored file in git diff without staging any source changes.
 execFileSync('git', ['add', '-N', 'packages/client/ui-conversation/src/client/skeleton/background-wait.ts', 'packages/client/ui-conversation/src/client/conversation-reload.ts',
-  'packages/workflow/workflow-ptc/src/journal.ts', 'packages/workflow/workflow-ptc/src/source.ts', 'packages/workflow/workflow-ptc/src/worktree.ts', 'packages/workflow/workflow-ptc/src/spawn.ts'], { cwd: source });
+  'packages/workflow/workflow-ptc/src/journal.ts', 'packages/workflow/workflow-ptc/src/source.ts', 'packages/workflow/workflow-ptc/src/worktree.ts', 'packages/workflow/workflow-ptc/src/spawn.ts', 'packages/workflow/workflow-ptc/src/hub.ts'], { cwd: source });
 const patch = execFileSync('git', ['diff', '--binary', 'HEAD', '--', ...paths], { cwd: source, maxBuffer: 16 * 1024 * 1024 });
 await writeFile(join(destination, 'changes.patch'), patch);
 const files = {};

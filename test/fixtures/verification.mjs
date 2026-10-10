@@ -11,7 +11,8 @@ import { createTodoStore } from '../../src/todolist.mjs';
 import { registerTasks } from '../../src/tasks.mjs';
 import { createModule as bashModule } from '../../lib/host/tool-bash.factory.mjs';
 import { createModule as pwshModule } from '../../lib/host/tool-pwsh.factory.mjs';
-import { createModule as toolsModule } from '../../lib/host/tools.factory.mjs';
+import { ToolRuntime } from '@deepseek-ai/dsh-tools';
+import { installToolCancellationPresentation } from '../../src/tool-cancellation.mjs';
 
 const hostRequire = createRequire(realpathSync(new URL('../../node_modules/@deepseek-ai/dsh/package.json', import.meta.url)));
 const load = name => import(pathToFileURL(hostRequire.resolve(name)).href);
@@ -25,7 +26,6 @@ const imports = new Map(await Promise.all([
 ].map(async name => [name, await import(name)])));
 const dependency = name => name === '@deepseek-ai/schemastery' ? imports.get(name).default : { ...imports.get(name), __esModule: true };
 const shellTool = (shellName === 'pwsh' ? pwshModule : bashModule)(dependency);
-const { ToolRuntime } = toolsModule(dependency);
 const fixed = value => ({ get: () => value });
 
 // Real ToolRuntime, sandbox-policy resolution, shipped shell tool/executor and
@@ -37,11 +37,16 @@ export function verificationFixture(t, { runTimeoutMs, maxTimeoutMs = 600000, mo
   const ctx = new Context(), units = new Map(), dispatches = [], confinements = [];
   let toolProvider;
   ctx.provide('systemPrompt', { tools(provider) { toolProvider = provider; }, section() {}, context() {}, getSectionOrder() { return 0; }, getContextOrder() { return 0; } });
+  ctx.provide('workingDirectory', {
+    get: session => session.header.cwd,
+    ensure: async (agent, signal) => { signal?.throwIfAborted(); return agent.session.header.cwd; },
+  });
   ctx.provide('sessionProjections', {
     register(unit) { units.set(unit.key, unit); return () => units.delete(unit.key); },
     stateOf(session, key) { const unit = units.get(key); return session.snapshotEvents().reduce((value, event) => unit.apply(value, event), unit.init()); },
   });
   new ToolRuntime(ctx, { mode: toolMode });
+  installToolCancellationPresentation(ctx);
   const policy = new SandboxPolicyService(ctx, { mode, workspaceRoot: dir });
   ctx.provide('sandbox', { async confine(argv, resolved, signal) {
     confinements.push({ argv, policy: resolved });

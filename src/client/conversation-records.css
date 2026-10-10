@@ -20,3 +20,10 @@
 .omd-btw-question { color: var(--dsw-alias-label-secondary); overflow-wrap: anywhere; }
 .omd-btw-question > span { color: var(--dsw-alias-brand-primary, #4c87ed); }
 .omd-btw-answer { margin-top: 5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.omd-context-record { --omd-record-line: color-mix(in srgb,var(--dsw-alias-label-primary) 12%,transparent); }
+.omd-record-toggle { border-radius: 6px; }
+.omd-record-toggle:hover { background: color-mix(in srgb,var(--dsw-alias-label-primary) 3%,transparent); }
+.omd-record-body { border-left-color: var(--omd-record-line); max-width: 100%; }
+.omd-record-part > summary { overflow-wrap: anywhere; }
+.omd-btw-record { background: color-mix(in srgb,var(--dsw-alias-state-business-primary,#4c87ed) 3%,transparent); border-radius: 0 8px 8px 0; }
+@media (max-width: 480px) { .omd-record-title { flex-shrink: 1; overflow-wrap: anywhere; } .omd-record-part > summary span { display: block; margin-left: 0; } }
