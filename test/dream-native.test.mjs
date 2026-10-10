@@ -50,7 +50,8 @@ test('native managed projectless Chat stays outside shared Dream and survives a 
     },
   });
   const prepared=await f.api('/projectless-workspace',{requestId:crypto.randomUUID(),prompt:'隔离的无工作区聊天'});
-  const {sessionId}=await f.rpc('session/create',{cwd:prepared.cwd,agentPreset:chatPreset});
+  const created=await f.rpc('session/create',{cwd:prepared.cwd,agentPreset:chatPreset});
+  const {sessionId}=created;assert.equal(created.agentPreset,chatPreset);
   await f.rpc('session/prompt',{requestId:crypto.randomUUID(),sessionId,mode:'queue',content:[{type:'text',text:sentinel}]});
   await until(async()=>(await f.api('/state?session='+sessionId)).running==='idle');
   await f.api('/context/prepare?session='+sessionId,{});
@@ -76,15 +77,18 @@ test('native managed projectless Chat stays outside shared Dream and survives a 
   const list=await f.call('session/list',{_request:{}});
   assert.equal(list.result?.ok,true,JSON.stringify(list));
   const nativeSummary=list.result.value.items.find(item=>item.sessionId===sessionId);
-  assert.equal(nativeSummary?.cwd,prepared.cwd);assert.equal(nativeSummary?.agentPreset,chatPreset);
+  assert.equal(nativeSummary?.cwd,prepared.cwd);
   const log=await restoreFixtureLog(f.home,sessionId);
   const event=log.events.find(item=>item.type==='user/message'&&JSON.stringify(item.data).includes(sentinel));
   assert.ok(event,'the real host persisted the projectless original message');
   const original=await f.api('/dream/read?sessionId='+sessionId+'&from='+event.seq+'&to='+event.seq);
   assert.match(original.text,new RegExp(sentinel));
+  const effective=await f.api('/scope?session='+sessionId);
+  assert.equal(effective.scope,'session');assert.equal(effective.locked,true);
 
   const broken=await f.api('/projectless-workspace',{requestId:crypto.randomUUID(),prompt:'损坏归属的聊天'});
   const claimFile=join(await realpath(f.home),'trisoul-x','projectless-workspaces','names',createHash('sha256').update(broken.cwd).digest('hex')+'.json');
+  const originalClaim=await readFile(claimFile);
   await writeFile(claimFile,JSON.stringify({requestHash:'invalid-claim'}));
   const second=await f.rpc('session/create',{cwd:broken.cwd,agentPreset:'trisoul-x'});
   await f.rpc('session/prompt',{requestId:crypto.randomUUID(),sessionId:second.sessionId,mode:'queue',content:[{type:'text',text:'BROKEN_CLAIM_NATIVE_PROMPT'}]});
@@ -96,12 +100,26 @@ test('native managed projectless Chat stays outside shared Dream and survives a 
   assert.match(isolated.session.scopeError,/invalid workspace name metadata/);
   const brokenLog=await restoreFixtureLog(f.home,second.sessionId);
   assert(brokenLog.events.some(event=>event.type==='assistant/message'),'ownership lookup failure must not block the native model reply');
+  await writeFile(claimFile,originalClaim);
+  const registered=await f.rpc('workspace/create',{path:prepared.cwd});
+  const workspaceSession=await f.rpc('session/create',{workspaceId:registered.workspace.workspaceId,agentPreset:'trisoul-x'});
+  const workspaceScope=await f.api('/scope?session='+workspaceSession.sessionId);
+  const workspaceContext=await f.api('/context?session='+workspaceSession.sessionId);
+  assert.equal(workspaceScope.scope,'project','native attach occurs after agent creation and must preserve the configured project default');
+  assert.equal(workspaceContext.scope.scope,'project','provisional Chat classification must not bind a real Workspace privately');
+  await f.rpc('session/prompt',{requestId:crypto.randomUUID(),sessionId:workspaceSession.sessionId,mode:'queue',content:[{type:'text',text:'WORKSPACE_REGISTRATION_CONTROL'}]});
+  await until(async()=>(await f.api('/state?session='+workspaceSession.sessionId)).running==='idle');
+  await f.api('/dream/refresh',{});
+  const workspaceDream=await f.api('/dream?session='+workspaceSession.sessionId);
+  assert.equal(workspaceDream.session.shared,true);assert.equal(workspaceDream.session.mode,'project');
+  assert.equal((await f.api('/dream?session='+sessionId)).session.shared,false,'registering the directory never attaches the original private Chat implicitly');
   const reportDir=join(process.cwd(),'work/dream-projectless-fix/native-agent');await mkdir(reportDir,{recursive:true});
   const hostRequire=createRequire(process.env.OMD_DSH_CLI?pathToFileURL(process.env.OMD_DSH_CLI):new URL('../node_modules/@deepseek-ai/dsh/lib/bin.js',import.meta.url));
   const hostPackagePath=hostRequire.resolve('@deepseek-ai/dsh/package.json');
   await writeFile(join(reportDir,'projectless-native.json'),JSON.stringify({host:JSON.parse(await readFile(hostPackagePath,'utf8')).version,
     sourceHost:hostPackagePath,agentPreset:chatPreset,omdArchive:process.env.OMD_UI_ARCHIVE||null,iuiArchive:process.env.OMD_IUI_ARCHIVE||null,
     sessionId,session:status.session,dreamKinds:dreamInputs.map(input=>input.kind),originalRead:true,
+    effectiveScope:effective,workspaceControl:{sessionId:workspaceSession.sessionId,scope:workspaceScope,contextScope:workspaceContext.scope,dream:workspaceDream.session},
     brokenClaim:{sessionId:second.sessionId,scope:isolated.session,nativeReply:true}},null,2));
 });
 

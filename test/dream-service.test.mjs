@@ -372,9 +372,19 @@ test('ownership refresh isolates Hub injection and recovers from optional storag
   await f.service.sources.refreshScope(header);
   assert.equal(f.store.session('chat').shared,false);assert.match(f.store.session('chat').scopeError,/ownership storage failure/);
   assert.equal(Hub.prototype.scope.call(f.hub,{id:'chat',header}).mode,'session');
+  assert.equal(Hub.prototype.scope.call(f.hub,{id:'chat',header},{effective:false}).mode,'project','temporary effective isolation never overwrites the configured preference');
   f.hub.projectless={owns:async()=>false};await f.service.sources.refreshScope(header);
   assert.equal(f.store.session('chat').shared,true);assert.equal(f.store.session('chat').scopeError,undefined);
   assert.equal(Hub.prototype.scope.call(f.hub,{id:'chat',header}).mode,'project');
+});
+test('a completed independent archive remains private after Workspace attachment without overwriting the saved preference',async t=>{
+  const f=fixture(t);f.add('chat');f.states.get('chat').started=true;
+  f.archives.get('chat').binding.scope='session';
+  f.hub.ctx.workspaceRegistry={list:()=>[{sessionIds:['chat']}]};
+  const session={id:'chat',header:f.logs.get('chat').header};
+  assert.equal(Hub.prototype.scope.call(f.hub,session).mode,'session');
+  assert.equal(Hub.prototype.scope.call(f.hub,session,{effective:false}).mode,'project');
+  assert.equal((await f.service.sources.scopeFor(session.header)).shared,false);
 });
 test('resumed legacy shared targets and owned-only parents make no further Chat model calls',async t=>{
   const f=fixture(t),directory=realpathSync(f.hub.store.dir),storeDir=join(directory,'projectless');
