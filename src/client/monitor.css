@@ -88,9 +88,6 @@
 .mon-call-dot:hover::before { transform:translate(-50%,-50%) scaleY(1.4); box-shadow:0 0 0 4px color-mix(in srgb,var(--mon-accent) 12%,transparent) }
 .mon-call-dot.mon-failed::before { background:var(--mon-danger) }
 .mon-call-dot.mon-cancelled::before { background:var(--mon-muted); opacity:.65 }
-.mon-call-live { width:8px; height:8px; border:2px solid var(--mon-accent); border-radius:50%; justify-self:center; animation:mon-pulse 2s ease-in-out infinite }
-.mon-timeline-axis { margin:8px 0 0 106px; display:flex; justify-content:space-between; gap:12px; color:var(--mon-muted); font-size:14px }
-.mon-timeline-axis>span:nth-child(2) { display:none }
 .mon-live-list { display:flex; flex-direction:column; gap:16px }
 .mon-live-list>div { display:flex; align-items:center; gap:10px; min-width:0 }
 .mon-live-list>div>div { min-width:0; flex:1 }
@@ -184,11 +181,8 @@
   .mon-metrics>div { padding:18px 20px }
   .mon-metrics strong { font-size:34px }
   .mon-metrics-usage { grid-template-columns:repeat(3,minmax(0,1fr)) }
-  .mon-overview-top { display:grid; grid-template-columns:minmax(0,1.7fr) minmax(0,1fr); gap:16px; align-items:start }
-  .mon-overview-bottom { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:16px; align-items:start }
   .mon-usage-charts { display:grid; grid-template-columns:minmax(0,1.65fr) minmax(0,1fr); gap:16px; align-items:start }
   .mon-chart { height:230px }
-  .mon-timeline-axis>span:nth-child(2) { display:block }
   .mon-filters input { flex:1 1 190px; width:auto }
   .mon-filters select { flex:0 1 150px; width:150px }
   .mon-filters>.mon-link { margin-left:0 }
@@ -203,7 +197,6 @@
   .mon-section { padding:16px }
   .mon-component>summary { grid-template-columns:12px minmax(40px,1fr) 24px 52px 56px; gap:5px }
   .mon-timeline-row { grid-template-columns:90px minmax(0,1fr) }
-  .mon-timeline-axis { margin-left:98px }
   .mon-metrics>div { padding:14px 12px }
   .mon-metrics strong { font-size:28px }
   .mon-running { gap:5px }
@@ -240,3 +233,13 @@
 .mon-current-idle .mon-section-head { margin:0 }
 .mon-current-idle .mon-idle-state { padding:0 }
 .mon-current-idle .mon-idle-icon { display:none }
+
+.mon-filters input { flex:1 1 160px; width:auto }
+.mon-filters-more { position:relative; flex:none }
+.mon-filters-more>summary { display:flex; align-items:center; gap:7px; padding:6px 10px; min-height:34px; border:1px solid var(--mon-line); border-radius:7px; font-size:14px; background:var(--mon-card); transition:background .16s }
+.mon-filters-more>summary:hover { background:var(--mon-inset) }
+.mon-filters-more>summary b { font-weight:500; color:var(--mon-accent) }
+.mon-filter-panel { position:absolute; top:calc(100% + 8px); right:0; z-index:5; width:min(360px,80cqi); padding:14px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; border:1px solid var(--mon-line); border-radius:10px; background:var(--mon-card); box-shadow:0 8px 28px color-mix(in srgb,var(--mon-text) 10%,transparent); animation:mon-expand .16s ease-out }
+.omd-monitor .mon-filter-panel select { width:100%; min-width:0 }
+.mon-filter-panel>.mon-link { grid-column:1/-1; justify-self:end }
+@media (prefers-reduced-motion:reduce) { .mon-filter-panel { animation:none!important } }
