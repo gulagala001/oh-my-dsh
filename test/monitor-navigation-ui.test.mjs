@@ -1,3 +1,4 @@
+import { openWorkbench } from './fixtures/workbench.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -19,11 +20,9 @@ async function realMonitor(page, sessionId) {
   return snapshot;
 }
 async function openMonitor(page) {
-  await page.getByRole('button', { name: '打开工作台', exact: true }).click();
-  const workbench = page.locator('.tx-workbench');
+  const workbench = await openWorkbench(page, '监控');
   await until(async () => (await workbench.boundingBox())?.width > 300);
-  await workbench.getByRole('navigation', { name: '工作台导航' }).getByRole('button', { name: '监控', exact: true }).click();
-  const monitor = page.locator('.omd-monitor');
+  const monitor = workbench.locator('.omd-monitor');
   await monitor.getByRole('tab', { name: '概览', exact: true }).waitFor();
   await monitor.locator('.mon-metrics').first().waitFor();
   await until(() => page.locator('.pI_x6G_frame').evaluate(el => el.getAnimations().every(animation => animation.playState === 'finished')));
@@ -76,6 +75,13 @@ test('monitor tabs connect their three panels, preserve native layout and suppor
   assert.equal(await monitor.getByRole('combobox', { name: '统计时间范围', exact: true }).evaluate(el => document.activeElement === el), true);
   await page.keyboard.press('Tab');
   assert.equal(await monitor.getByRole('tabpanel', { name: '概览', exact: true }).evaluate(el => document.activeElement === el), true, 'Tab reaches the visible panel after its shared scope controls');
+  const fonts = await monitor.evaluate(el => [...el.querySelectorAll('p,small,label,select,input,summary,dt,dd,.mon-legend span')].filter(node => node.getClientRects().length && (node.textContent.trim() || node.tagName === 'INPUT')).map(node => ({ text: node.textContent.trim().slice(0,60), size: parseFloat(getComputedStyle(node).fontSize) })));
+  assert.ok(fonts.every(item => item.size >= 14), JSON.stringify(fonts.filter(item => item.size < 14)));
+  assert.notEqual(await monitor.locator('.mon-tab-indicator').evaluate(el => getComputedStyle(el).transitionDuration), '0s');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  assert.equal(await monitor.locator('.mon-tab-indicator').evaluate(el => getComputedStyle(el).transitionDuration), '0s');
+  assert.equal(await monitor.locator('.mon-page:visible').evaluate(el => getComputedStyle(el).animationName), 'none');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   await foreign.evaluate(el => el.remove());
   assert.deepEqual(errors, []);
 });

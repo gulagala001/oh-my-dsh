@@ -127,7 +127,7 @@
 .mon-context-shortcut>strong { margin-left:auto; font-size:14px; font-weight:500; font-variant-numeric:tabular-nums }
 .mon-context-shortcut>svg { color:var(--mon-accent) }
 .mon-filters { display:flex; gap:8px; flex-wrap:wrap; padding:0 0 16px }
-.mon-filters input,.mon-filters select { width:auto; min-width:0; padding:7px 9px; min-height:34px; border:1px solid var(--mon-line); border-radius:7px; background:var(--mon-card); color:var(--mon-text); font-size:14px; transition:border-color .16s }
+.omd-monitor .mon-filters input,.omd-monitor .mon-filters select { width:auto; min-width:0; padding:7px 9px; min-height:34px; border:1px solid var(--mon-line); border-radius:7px; background:var(--mon-card); color:var(--mon-text); font-size:14px; transition:border-color .16s }
 .mon-filters input { flex:1 1 100%; width:100% }
 .mon-filters select { flex:1 1 calc(50% - 8px); width:calc(50% - 8px) }
 .mon-filters input::placeholder { color:var(--mon-muted) }
@@ -215,3 +215,28 @@
 @media (prefers-reduced-motion:reduce) {
   .omd-monitor *, .omd-monitor *::before, .omd-monitor *::after { animation:none!important; transition:none!important; scroll-behavior:auto!important }
 }
+
+.mon-call-row small { white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+
+.mon-timeline { overflow-x:auto; scrollbar-width:thin }
+.mon-timeline-row { min-width:calc(106px + var(--mon-count)*24px) }
+.mon-timeline-row>span { position:sticky; left:0; z-index:1; background:var(--mon-card); display:flex; align-items:center; gap:6px }
+.mon-timeline-track { overflow:visible }
+.mon-lane-live { display:inline-block; width:7px; height:7px; flex:none; border-radius:50%; background:var(--mon-accent); animation:mon-pulse 2s ease-in-out infinite }
+@media (prefers-reduced-motion:reduce) { .mon-lane-live { animation:none!important } }
+
+.mon-overview-grid { display:flex; flex-direction:column }
+.mon-overview-main,.mon-overview-side { display:contents }
+.mon-overview-grid .mon-current { order:0 }
+.mon-overview-grid .mon-timeline-section { order:1 }
+.mon-overview-grid .mon-components { order:2 }
+.mon-overview-grid .mon-background { order:3 }
+.mon-overview-grid .mon-context-shortcut { order:4 }
+@container omd-monitor (min-width:740px) {
+  .mon-overview-grid { display:grid; grid-template-columns:minmax(0,1.65fr) minmax(0,1fr); gap:16px; align-items:start }
+  .mon-overview-main,.mon-overview-side { display:block; min-width:0 }
+}
+.mon-current-idle { display:flex; align-items:center; justify-content:space-between; padding-block:14px; gap:12px }
+.mon-current-idle .mon-section-head { margin:0 }
+.mon-current-idle .mon-idle-state { padding:0 }
+.mon-current-idle .mon-idle-icon { display:none }

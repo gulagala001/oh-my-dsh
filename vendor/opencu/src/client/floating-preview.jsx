@@ -1,11 +1,13 @@
 import React,{useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
-import {NativePreview} from './native-preview.jsx';
+import {NativePreview,usePreviewAlignmentStyles} from './native-preview.jsx';
 import css from './computer-use.css';
+import previewCss from './preview-alignment.css';
 import {ComputerIcon} from './computer-icons.jsx';
 
 // A separate read-only observer: closing the window releases only its stream.
-export function FloatingPreview({sessionId,state,url,api,onState,onError,anchor,onOpen,paneVisible=false}){
+export function FloatingPreview({sessionId,state,url,api,onState,onError,anchor,onOpen,paneVisible=false,mode}){
+  usePreviewAlignmentStyles();
   const [popup,setPopup]=useState(null),[opening,setOpening]=useState(false),[stopping,setStopping]=useState(false),[expanded,setExpanded]=useState(false),[zoomed,setZoomed]=useState(null),[localError,setLocalError]=useState('');
   const [shown,setShown]=useState(true),[position,setPosition]=useState({right:20,bottom:120}),[dock,setDock]=useState(null);
   const [dragging,setDragging]=useState(false);
@@ -24,10 +26,11 @@ export function FloatingPreview({sessionId,state,url,api,onState,onError,anchor,
   const targetIds=targets.map(item=>item.viewId??item.id).join('|');
   const leading=targets.find(item=>(item.viewId??item.id)===zoomed)??targets[0];
   const leadingId=leading?.viewId??leading?.id;
+  useEffect(()=>{if(popup)popup.document.title=(leading?.name||leading?.title||'操控预览')+' · Oh My DSH';},[popup,leading?.name,leading?.title]);
   const matches=item=>(item.name||item.title||item.url||'').toLocaleLowerCase().includes(query.toLocaleLowerCase());
   const visibleError=localError||targetErrors[leadingId];
   useEffect(()=>{if(!expanded)setQuery('');},[expanded]);
-  useEffect(()=>{setConnections({});setTargetErrors({});setQuery('');setResuming(false);setStopping(false);},[sessionId]);
+  useEffect(()=>{setConnections({});setTargetErrors({});setQuery('');setResuming(false);setStopping(false);setEntering(false);setOpening(false);},[sessionId]);
   useLayoutEffect(()=>{if(!keyboardTarget.current)return;const root=popup?.document??document;[...root.querySelectorAll('.tx-cu-preview-card')].find(element=>element.dataset.target===keyboardTarget.current)?.querySelector('.tx-cu-preview-open')?.focus({preventScroll:true});keyboardTarget.current=null;},[front,zoomed,popup]);
   const compact=!popup&&!zoomed&&!expanded;
   const parked=compact&&!manual.current&&!dragging;
@@ -110,19 +113,19 @@ export function FloatingPreview({sessionId,state,url,api,onState,onError,anchor,
   },[popup]);
   const open=async()=>{
     if(owned.current&&!owned.current.closed){owned.current.close();return;}
-    if(!window.documentPictureInPicture){onError('当前浏览器不支持置顶悬浮预览，请用新版 Chrome 打开 Oh My DSH。');return;}
-    const revision=generation.current;setOpening(true);
+    if(!window.documentPictureInPicture){const message='当前浏览器不支持置顶悬浮预览，可继续在对话中查看画面。';setLocalError(message);onError?.(message);return;}
+    const revision=generation.current;setOpening(true);setLocalError('');
     try{
       const next=await window.documentPictureInPicture.requestWindow({width:zoomed?640:400,height:zoomed?520:320});
       if(revision!==generation.current){next.close();return;}
-      next.document.title='Oh My DSH · 操控预览';
-      const style=next.document.createElement('style');style.textContent=css;next.document.head.append(style);
+      next.document.title=(leading?.name||leading?.title||'操控预览')+' · Oh My DSH';
+      const style=next.document.createElement('style');style.textContent=css+'\n'+previewCss;next.document.head.append(style);
       owned.current=next;
       next.addEventListener('pagehide',()=>{if(owned.current===next){owned.current=null;setPopup(null);trigger.current?.focus({preventScroll:true});}},{once:true});
       setPopup(next);
-    }catch(error){onError('无法打开悬浮预览：'+error.message);}finally{setOpening(false);}
+    }catch(error){if(revision===generation.current){const message='无法打开悬浮预览：'+error.message;setLocalError(message);onError?.(message);}}finally{if(revision===generation.current)setOpening(false);}
   };
-  const stop=async()=>{const revision=generation.current;setStopping(true);try{const next=await api('stop',sessionId,{});if(revision===generation.current)onState(next);}catch(error){if(revision===generation.current)setLocalError(error.message);}finally{if(revision===generation.current)setStopping(false);}};
+  const stop=async()=>{const revision=generation.current;setStopping(true);setLocalError('');try{const next=await api('stop',sessionId,{});if(revision===generation.current)onState(next);}catch(error){if(revision===generation.current)setLocalError(error.message);}finally{if(revision===generation.current)setStopping(false);}};
   const resume=async()=>{const revision=generation.current;setResuming(true);setLocalError('');try{const next=await api('resume',sessionId,{});if(revision===generation.current)onState(next);}catch(error){if(revision===generation.current)setLocalError(error.message);}finally{if(revision===generation.current)setResuming(false);}};
   const close=()=>{setShown(false);owned.current?.close();trigger.current?.focus({preventScroll:true});};
   const resetPosition=()=>{reposition.current=floating.current?.getBoundingClientRect();manual.current=null;setZoomed(null);setExpanded(false);setPosition(previous=>({...previous,left:undefined,top:undefined}));layout.current?.();};
@@ -137,16 +140,21 @@ export function FloatingPreview({sessionId,state,url,api,onState,onError,anchor,
   const selectPreview=async(item,index)=>{
     const id=item.viewId??item.id;
     if(index>0&&!zoomed){setFront(id);setExpanded(false);return;}
-    if(item.kind!=='tab'){setZoomed(id);return;}
     const revision=generation.current;setEntering(true);setLocalError('');
     try{
+      if(item.kind!=='tab'){
+        const next=await api('reveal-preview',sessionId,{targetId:id,controlEpoch:state?.controlEpoch});
+        if(revision===generation.current)onState(next);
+        return;
+      }
       const next=await api('view-tab',sessionId,{tabId:item.id,browserId:item.browserId});if(revision!==generation.current)return;onState(next);
       if(revision!==generation.current)return;
       await onOpen?.();close();
     }catch(error){if(revision===generation.current)setLocalError(error.message);}finally{if(revision===generation.current)setEntering(false);}
   };
-  const statusText=entering?'正在打开…':resuming||state?.resuming?'正在恢复…':stopping||state?.status==='stopping'?'正在停止…':state?.status==='stopped'?'已停止 · 可手动操作':connections[leadingId]==='error'||connections[leadingId]==='closed'?'画面已断开':state?.status==='running'?'助手正在操作':'只读预览';
-  const compactStatus=entering?'打开中':resuming||state?.resuming?'恢复中':stopping||state?.status==='stopping'?'停止中':state?.status==='stopped'?'已停止':connections[leadingId]==='error'||connections[leadingId]==='closed'?'已断开':state?.status==='running'?'操作中':'预览';
+  const viewingAssistant=leadingId===key,connection=connections[leadingId];
+  const statusText=entering?'正在打开…':resuming||state?.resuming?'正在恢复…':stopping||state?.status==='stopping'?'正在停止…':connection==='error'||connection==='closed'?'画面已断开':state?.status==='stopped'?'已停止 · 可手动操作':state?.transitioning?'正在载入…':connection==='connecting'?'正在连接画面…':connection==='paused'?'画面已暂停':state?.status==='running'&&viewingAssistant?'助手正在操作':'只读预览';
+  const compactStatus=entering?'打开中':resuming||state?.resuming?'恢复中':stopping||state?.status==='stopping'?'停止中':connection==='error'||connection==='closed'?'已断开':state?.status==='stopped'?'已停止':state?.transitioning?'载入中':connection==='connecting'?'连接中':connection==='paused'?'已暂停':state?.status==='running'&&viewingAssistant?'操作中':'预览';
   return <>{!!targets.length&&(!paneVisible||popup)&&<button ref={trigger} type="button" disabled={state?.enabled===false} onClick={()=>shown?close():setShown(true)} aria-label="悬浮预览" aria-expanded={shown} title="显示或收起操控画面"><ComputerIcon name="preview" size={14}/></button>}
     {shown&&!paneVisible&&!popup&&state?.enabled!==false&&targets.length>0&&<div ref={setDock} className="tx-cu-preview-dock"/>}
     {shown&&(!paneVisible||popup)&&state?.enabled!==false&&targets.length>0&&(popup||dock)&&createPortal(<div ref={popup?null:floating} className={'tx-cu-floating'+(popup?'':' tx-cu-floating-inline')+(compact?' tx-cu-floating-compact':'')+(!popup&&manual.current?' is-detached':'')+(parked?' tx-cu-floating-parked':'')+(zoomed?' is-zoomed':'')+(dragging?' is-dragging':'')+(expanded&&!zoomed?' is-list':'')} style={popup?{'--cu-card-max-width':position['--cu-card-max-width'],'--cu-card-max-height':position['--cu-card-max-height']}:position} aria-label="悬浮操控预览" onKeyDown={previewKey} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={finishDrag} onPointerCancel={finishDrag} onLostPointerCapture={finishDrag} onClickCapture={event=>{if(suppressClick.current&&event.detail!==0){suppressClick.current=false;event.preventDefault();event.stopPropagation();}}}>
@@ -154,13 +162,13 @@ export function FloatingPreview({sessionId,state,url,api,onState,onError,anchor,
       {expanded&&!zoomed&&<div className="tx-cu-preview-search"><ComputerIcon name="search" size={13}/><input type="search" aria-label="筛选预览目标" placeholder="搜索窗口或网页" value={query} onChange={event=>setQuery(event.target.value)} onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();if(query)setQuery('');else setExpanded(false);}}}/></div>}
       <div className={'tx-cu-preview-stack'+(zoomed?' is-focused':expanded?' is-expanded':'')} style={{'--preview-count':zoomed?1:Math.max(1,targets.length)}} aria-label="窗口预览堆叠">
         {targets.map((item,index)=>{const id=item.viewId??item.id,size=frameSizes[id]??{width:16,height:9};return <div key={id} className="tx-cu-preview-card" style={{'--preview-depth':index,'--preview-ratio':size.width/size.height,zIndex:targets.length-index,display:expanded&&!zoomed&&!matches(item)?'none':undefined}} data-target={id} data-focused={id===zoomed?true:undefined} data-connection={connections[id]}>
-          <NativePreview sessionId={sessionId} targetId={id} targetKind={item.kind} stacked visible state={state} url={url} onError={message=>setTargetErrors(previous=>previous[id]===message?previous:{...previous,[id]:message})} onConnection={connection=>{setConnections(previous=>previous[id]===connection?previous:{...previous,[id]:connection});if(connection==='live')setTargetErrors(previous=>previous[id]?{...previous,[id]:null}:previous);}} onFrameSize={size=>frameSize(id,size)}/>
-          <button type="button" className="tx-cu-preview-open" disabled={entering} aria-label={(index>0&&!zoomed?'置于最前：':item.kind==='tab'?'打开网页：':'放大预览：')+(item.name||item.title||'网页')} onClick={()=>selectPreview(item,index)}><span><ComputerIcon name={item.kind==='app'?'screen':'browser'} size={12}/><span className="tx-cu-preview-name">{item.name||item.title||'网页'}</span></span><span><ComputerIcon name={item.kind==='tab'?'popout':'expand'} size={12}/></span></button>
+          <NativePreview sessionId={sessionId} targetId={id} targetKind={item.kind} mode={mode} targetName={item.name||item.title} stacked visible state={state} url={url} onError={message=>setTargetErrors(previous=>previous[id]===message?previous:{...previous,[id]:message})} onConnection={connection=>{setConnections(previous=>previous[id]===connection?previous:{...previous,[id]:connection});if(connection==='live')setTargetErrors(previous=>previous[id]?{...previous,[id]:null}:previous);}} onFrameSize={size=>frameSize(id,size)}/>
+          <button type="button" className="tx-cu-preview-open" disabled={entering} title={index>0&&!zoomed?'置于最前':item.kind==='tab'?'打开网页':'定位应用窗口'} aria-label={(index>0&&!zoomed?'置于最前：':item.kind==='tab'?'打开网页：':'打开应用窗口：')+(item.name||item.title||'网页')} onClick={()=>selectPreview(item,index)}><span><ComputerIcon name={item.kind==='app'?'screen':'browser'} size={12}/><span className="tx-cu-preview-name">{item.name||item.title||'网页'}</span></span><span><ComputerIcon name="popout" size={12}/></span></button>
         </div>;})}
         {expanded&&!zoomed&&!targets.some(matches)&&<p className="tx-cu-preview-empty">没有匹配的窗口或网页</p>}
       </div>
       {visibleError&&<p className="tx-cu-error" role="alert">{visibleError}</p>}
-      <footer><span title={statusText} aria-label={statusText}>{compact?compactStatus:statusText}</span>{!zoomed&&<button type="button" aria-label="放大预览" title="仅放大查看" onClick={()=>setZoomed(leading.viewId??leading.id)}><ComputerIcon name="expand" size={12}/></button>}{targets.length>1&&<button type="button" aria-label={(zoomed?'查看全部':expanded?'堆叠':'展开')+' '+targets.length} title={'查看 '+targets.length+' 个预览目标'} aria-expanded={expanded&&!zoomed} onClick={()=>{if(zoomed){setZoomed(null);setExpanded(true);}else setExpanded(value=>!value);}}><ComputerIcon name="stack" size={12}/>{compact?targets.length:<>{zoomed?'查看全部':expanded?'堆叠':'展开'} {targets.length}</>}</button>}{state?.status==='stopped'?<button className="tx-cu-resume" type="button" aria-label="从预览恢复助手" title="恢复助手控制" disabled={resuming||state?.resuming||state?.transitioning} onClick={resume}><ComputerIcon name="play" size={14}/></button>:<button className="tx-cu-stop" type="button" aria-label="停止操作" title="停止操作" disabled={stopping||state?.status==='stopping'} onClick={stop}><ComputerIcon name="stop" size={14}/></button>}</footer>
+      <footer><span data-connection={connection} title={statusText} aria-label={statusText}>{compact?compactStatus:statusText}</span>{!zoomed&&<button type="button" aria-label="放大预览" title="放大查看画面" onClick={()=>setZoomed(leading.viewId??leading.id)}><ComputerIcon name="expand" size={12}/></button>}{targets.length>1&&<button type="button" aria-label={(zoomed?'查看全部':expanded?'堆叠':'展开')+' '+targets.length} title={'查看 '+targets.length+' 个预览目标'} aria-expanded={expanded&&!zoomed} onClick={()=>{if(zoomed){setZoomed(null);setExpanded(true);}else setExpanded(value=>!value);}}><ComputerIcon name="stack" size={12}/>{compact?targets.length:<>{zoomed?'查看全部':expanded?'堆叠':'展开'} {targets.length}</>}</button>}{state?.status==='stopped'?<button className="tx-cu-resume" type="button" aria-label="从预览恢复助手" title="恢复助手控制" disabled={resuming||state?.resuming||state?.transitioning} onClick={resume}><ComputerIcon name="play" size={14}/></button>:<button className="tx-cu-stop" type="button" aria-label="停止操作" title="停止操作" disabled={stopping||state?.status==='stopping'} onClick={stop}><ComputerIcon name="stop" size={14}/></button>}</footer>
     </div>,popup?.document.body??dock)}
   </>;
 }
