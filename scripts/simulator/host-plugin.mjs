@@ -10,18 +10,17 @@ export function apply(ctx, config) {
     if (entry.type === 'model/denied' && process.env.OMD_SIM_MONITOR_FD) writeSync(Number(process.env.OMD_SIM_MONITOR_FD), JSON.stringify(item) + '\n');
     appendFileSync(config.traceFile, JSON.stringify(item) + '\n');
   };
-  const stream = ctx.llm.stream;
-  const guardedStream = function (request) {
+  // Use the public stream pipeline so scoped native agents are covered too;
+  // replacing one service object's method misses the host's derived contexts.
+  ctx.on('llm/stream', (request, next) => {
     const route = { provider: request.provider, model: request.model, sessionId: request.sessionId };
     if (request.provider !== 'simulation' || !config.models.includes(request.model)) {
       record({ type: 'model/denied', ...route });
       throw Error('Simulation refused an unconfigured model route: ' + JSON.stringify(route));
     }
     record({ type: 'model/route', ...route });
-    return stream.call(this, request);
-  };
-  ctx.llm.stream = guardedStream;
-  ctx.effect(() => () => { if (ctx.llm.stream === guardedStream) ctx.llm.stream = stream; });
+    return next();
+  }, { global: true });
   ctx.on('session/event', (session, event) => record({ type: 'session/event', sessionId: session.id, event }), { global: true });
   ctx.on('agent/status', ({ agent, status }) => record({ type: 'agent/status', sessionId: agent.session.id, status }), { global: true });
   ctx.inject(['subprocess'], scope => {
