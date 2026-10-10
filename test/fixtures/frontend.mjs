@@ -111,7 +111,12 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
     });
     execFileSync(process.execPath, [cli, '--profile', 'trisoul-x', ...(profileCreated ? [] : ['--from-default-profile', 'web']), '--dump-config'], options);
     try { execFileSync(process.execPath, [cli, 'plugin', '--profile', 'trisoul-x', 'add', 'file:' + archive], options); }
-    catch (error) { throw new Error('Packed plugin installation failed: ' + String(error.stderr || error.stdout || error.message).replace(/token=\S+/g, 'token=[redacted]')); }
+    catch (error) {
+      const detail = [error.stderr, error.stdout, error.message]
+        .map(value => value == null ? '' : String(value).trim()).filter(Boolean).join('\n');
+      const state = JSON.stringify({ code: error.code, status: error.status, signal: error.signal });
+      throw new Error('Packed plugin installation failed ' + state + ': ' + detail.replace(/token=\S+/g, 'token=[redacted]'));
+    }
     if (await archiveHash() !== beforeHash) throw Error('Frontend package changed during native installation');
   }
   if (plugins.length) {
