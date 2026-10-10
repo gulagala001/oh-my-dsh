@@ -1,12 +1,14 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { validComputerPresentationTarget } from './presentation-target.mjs';
 
 const key = value => createHash('sha256').update(value).digest('hex');
 const validMeta = meta => meta && Array.isArray(meta.computerUseFiles)
   && meta.computerUseFiles.every(file => file && typeof file.path === 'string'
     && typeof file.name === 'string' && Number.isSafeInteger(file.bytes) && file.bytes >= 0)
-  && (meta.computerUseError === null || typeof meta.computerUseError === 'string');
+  && (meta.computerUseError === null || typeof meta.computerUseError === 'string')
+  && (meta.computerUseTarget === undefined || validComputerPresentationTarget(meta.computerUseTarget));
 async function waitForWrite(pending, signal) {
   if (!pending) return;
   if (!signal) return pending;
@@ -60,10 +62,11 @@ export function registerComputerPresentation(ctx, store) {
     if (!Array.isArray(files) || files.some(file => !file || typeof file.path !== 'string'
       || typeof file.name !== 'string' || !Number.isSafeInteger(file.bytes) || file.bytes < 0)
       || error !== null && typeof error !== 'string') return;
-    if (!files.length && !error) return;
+    const target = validComputerPresentationTarget(value.target) ? value.target : null;
+    if (!files.length && !error && !target) return;
     store.record(exec.agent.session.id, {
       callId: exec.callId, rootCallId: exec.rootCallId,
-      meta: { computerUseFiles: files, computerUseError: error },
+      meta: { computerUseFiles: files, computerUseError: error, ...(target ? { computerUseTarget: target } : {}) },
     });
   });
   // Execution tokens are opaque symbols. Mark only entry into our registered

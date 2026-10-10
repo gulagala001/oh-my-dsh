@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {ComputerIcon} from './computer-icons.jsx';
+import {usePreviewAlignmentStyles} from './native-preview.jsx';
 
 export function WindowShare({ sessionId, inputActions, conversation }) {
+  usePreviewAlignmentStyles();
   const [open,setOpen]=useState(false),[windows,setWindows]=useState([]),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const [query,setQuery]=useState(''),[sharing,setSharing]=useState(null);
   const dialog=useRef(null),request=useRef(null),search=useRef(null),opener=useRef(null),activeSession=useRef(sessionId);activeSession.current=sessionId;
@@ -37,14 +39,14 @@ export function WindowShare({ sessionId, inputActions, conversation }) {
     <button type="button" className="tx-cu-share-entry" onClick={()=>void list()} disabled={!sessionId||!inputActions||!conversation} title="把所选窗口的截图和文字加入当前草稿" aria-label="分享窗口"><ComputerIcon name="share" size={14}/></button>
     <dialog ref={dialog} aria-label="分享窗口" onCancel={event=>{event.preventDefault();close();}} onKeyDown={event=>event.stopPropagation()} className="tx-cu-share-dialog tx-cu-window-picker">
       <header><strong>分享窗口</strong><button type="button" onClick={close} aria-label="关闭窗口分享"><ComputerIcon name="close"/></button></header>
-      <p>选择要分享的窗口，截图和文字会加入草稿。</p>
+      <p>选择应用窗口，把当前画面与窗口文字加入草稿。</p>
       <div className="tx-cu-window-search"><ComputerIcon name="search" size={15}/><input ref={search} type="search" aria-label="搜索应用或窗口" placeholder="搜索应用或窗口" value={query} onChange={event=>setQuery(event.target.value)}/><button type="button" aria-label="刷新窗口列表" title="刷新窗口列表" disabled={busy} onClick={()=>void list(true)}><ComputerIcon name="reset" size={15}/></button></div>
-      {error&&<p className="tx-cu-error" role="alert">{error}</p>}
+      {error&&<div className="tx-cu-share-feedback"><p className="tx-cu-error" role="alert">{error}</p><button type="button" disabled={busy} onClick={()=>void list(true)}>重试</button></div>}
       {busy&&<p role="status">{sharing?'正在加入窗口快照…':windows.length?'正在刷新窗口…':'正在读取窗口…'}</p>}
       {!busy&&!error&&!windows.length&&<p>当前没有可分享的应用窗口。</p>}
       {!busy&&windows.length>0&&!filtered.length&&<p>没有匹配的窗口，试试应用名称。</p>}
-      <div className="tx-cu-share-list">{filtered.map(window=><button key={window.pid+':'+window.window_id} type="button" disabled={busy} className={sharing===window.pid+':'+window.window_id?'is-selected':undefined} onClick={()=>share(window)}><span className="tx-cu-share-window-icon"><ComputerIcon/></span><span className="tx-cu-share-window-info"><strong>{window.app_name}</strong><span>{window.title||'未命名窗口'}</span></span>{window.active&&<small>当前前台</small>}<ComputerIcon name="chevron" size={12}/></button>)}</div>
-      <footer><small>{windows.length} 个窗口 · 选择后不会自动发送</small><button type="button" onClick={close}>取消</button></footer>
+      <div className="tx-cu-share-list" aria-busy={busy}>{filtered.map(window=><button key={window.pid+':'+window.window_id} type="button" disabled={busy} title={window.app_name+' · '+(window.title||'未命名窗口')} className={sharing===window.pid+':'+window.window_id?'is-selected':undefined} onClick={()=>share(window)}><span className="tx-cu-share-window-icon"><ComputerIcon/></span><span className="tx-cu-share-window-info"><strong>{window.app_name}</strong><span>{window.title||'未命名窗口'}</span></span>{window.active&&<small>当前前台</small>}<ComputerIcon name="chevron" size={12}/></button>)}</div>
+      <footer><small>{query?filtered.length+' / ':''}{windows.length} 个窗口 · 选择后不会自动发送</small><button type="button" onClick={close}>取消</button></footer>
     </dialog>
   </div>;
 }

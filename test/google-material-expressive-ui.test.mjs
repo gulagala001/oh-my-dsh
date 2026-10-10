@@ -1,3 +1,4 @@
+import { openWorkbench } from './fixtures/workbench.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, copyFile, readFile, writeFile } from 'node:fs/promises';
@@ -64,10 +65,10 @@ test('Google Material: real layout, all settings, fonts, mobile navigation, work
     assert.equal(await hit(page.locator('[data-composer-input]')), true);
     await page.getByRole('button', { name: 'BT · Better Todo', exact: true }).click();
     await page.getByRole('menu').waitFor(); await capture(mode + '-menu'); await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: '打开工作台', exact: true }).click();
-    await page.locator('.tx-workbench').waitFor();
+    await openWorkbench(page, '任务');
+    await page.locator('.tx-workbench:visible').waitFor();
     for (const section of ['任务', '上下文', '记忆', '电脑', '监控']) {
-      await page.locator('.cx-navigation').getByRole('button', { name: section, exact: true }).click();
+      await openWorkbench(page, section);
       await capture(mode + '-workbench-' + section);
     }
     await page.getByRole('button', { name: '收起右侧边栏', exact: true }).click();
@@ -104,8 +105,8 @@ test('Google Material: real layout, all settings, fonts, mobile navigation, work
       await settleSidebar();
       assert.equal(await page.locator('.pI_x6G_centerCol').evaluate(el => el.inert), false);
       assert.equal(await hit(page.locator('[data-composer-input]')), true);
-      await page.getByRole('button', { name: '打开工作台', exact: true }).click();
-      await until(async () => await hit(page.locator('.cx-navigation button').first()));
+      await openWorkbench(page, '任务');
+      await until(async () => await hit(page.locator('[data-sidebar-right-panel] [role=tab][aria-selected=true]')));
       await capture('workbench-' + width);
       await page.getByRole('button', { name: '收起右侧边栏', exact: true }).click();
     }
@@ -182,13 +183,13 @@ test('Google Material keeps real font glyphs, native resize, focus and plugin re
   await page.locator('.hHd-Xa_toggle').click();
   await page.locator('.hHd-Xa_collapsed').waitFor();
   await until(async () => Math.round((await page.locator('.pI_x6G_sidebarCol').boundingBox()).width) === 80);
-  await page.getByRole('button', { name: '打开工作台', exact: true }).click();
-  await page.locator('.tx-workbench').waitFor();
+  await openWorkbench(page, '任务');
+  await page.locator('.tx-workbench:visible').waitFor();
   const handle = page.locator('.pI_x6G_handle[data-side="rightbar"]');
   const rect = await handle.boundingBox();
   await page.mouse.move(rect.x + rect.width / 2, 300); await page.mouse.down();
   await page.mouse.move(980, 300, { steps: 8 }); await page.mouse.up();
-  await until(async () => Math.abs((await page.locator('.tx-workbench').boundingBox()).width - 460) < 3);
+  await until(async () => Math.abs((await page.locator('.tx-workbench:visible').boundingBox()).width - 460) < 3);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
   await page.getByRole('button', { name: '收起右侧边栏', exact: true }).click();
   await page.setViewportSize({ width: 844, height: 390 });

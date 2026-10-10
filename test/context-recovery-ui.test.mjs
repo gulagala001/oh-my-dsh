@@ -1,3 +1,4 @@
+import { openWorkbench } from './fixtures/workbench.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -67,8 +68,7 @@ test('context errors remain in the long-list viewport and offer keyboard retries
   await page.route('**/trisoul-x/api/context/document?*', route => route.fulfill(documentFail
     ? { status: 503, json: { error: '本次详细资料读取失败，请重试' } }
     : { json: { ...records.at(-1), documents: [{ title: '重试后的资料', text: '资料读取已恢复' }] } }));
-  await page.getByRole('button', { name: '打开工作台', exact: true }).click();
-  await page.locator('.cx-navigation').getByRole('button', { name: '上下文', exact: true }).click();
+  await openWorkbench(page, '上下文');
   const panel = page.locator('.cx-context'), body = panel.locator(':scope > .cx-body');
   await panel.getByRole('checkbox', { name: '选择 recovery-record-17', exact: true }).check();
   assert.ok(await body.evaluate(el => el.scrollTop) > 1000, 'the failure starts far below the first list item');
@@ -113,15 +113,14 @@ test('context errors remain in the long-list viewport and offer keyboard retries
   assert.deepEqual(errors, []);
 });
 
-test('context reader restores focus across workbench sections and excludes covered controls from Tab', { timeout: 60000 }, async t => {
+test('context reader restores focus across native workbench tabs and excludes covered controls from Tab', { timeout: 60000 }, async t => {
   const { page, sessionId, errors } = await frontendFixture(t);
   const data = await (await page.request.get(new URL('/trisoul-x/api/context?session=' + sessionId, page.url()).href)).json();
   const records = longRecords();
   await page.route('**/trisoul-x/api/context?*', route => route.fulfill({ json: { ...data, records } }));
   await page.route('**/trisoul-x/api/context/document?*', route => route.fulfill({ json: { ...records[0], documents: [{ title: '回归资料', text: '保留本分区阅读状态与键盘返回能力。' }] } }));
-  await page.getByRole('button', { name: '打开工作台', exact: true }).click();
-  const nav = page.locator('.cx-navigation'), panel = page.locator('.cx-context');
-  await nav.getByRole('button', { name: '上下文', exact: true }).click();
+  await openWorkbench(page, '上下文');
+  const panel = page.locator('.cx-context');
   const open = panel.getByRole('button', { name: '1 文档 · 0 附件', exact: true }).first();
   await open.click();
   const reader = panel.getByRole('region', { name: '详细资料', exact: true });
@@ -129,8 +128,8 @@ test('context reader restores focus across workbench sections and excludes cover
   assert.equal(await reader.getAttribute('aria-modal'), null, 'a workbench reading view does not announce an application modal');
   assert.equal(await reader.evaluate(el => document.activeElement === el), true);
   for (let visit = 0; visit < 2; visit++) {
-    await nav.getByRole('button', { name: '记忆', exact: true }).click();
-    await nav.getByRole('button', { name: '上下文', exact: true }).click();
+    await openWorkbench(page, '记忆');
+    await openWorkbench(page, '上下文');
     assert.equal(await reader.evaluate(el => document.activeElement === el), true, 're-entering the section restores reader focus');
     assert.equal(await panel.locator(':scope > :not(.cx-reader)').evaluateAll(elements => elements.every(el => el.inert)), true);
     for (let key = 0; key < 12; key++) {
@@ -142,8 +141,8 @@ test('context reader restores focus across workbench sections and excludes cover
       assert.deepEqual(focus, { covered: false, inert: false, hidden: false }, 'Tab must never reach the covered context actions');
     }
   }
-  await nav.getByRole('button', { name: '记忆', exact: true }).click();
-  await nav.getByRole('button', { name: '上下文', exact: true }).click();
+  await openWorkbench(page, '记忆');
+  await openWorkbench(page, '上下文');
   await page.keyboard.press('Escape');
   assert.equal(await reader.count(), 0);
   assert.equal(await open.evaluate(el => document.activeElement === el), true, 'Escape returns focus to the document trigger');

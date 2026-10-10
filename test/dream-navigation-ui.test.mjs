@@ -1,3 +1,4 @@
+import { openWorkbench } from './fixtures/workbench.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -15,8 +16,7 @@ async function setup(t) {
     return route.fulfill({ json: { entries: [{ id: 'release-session', title: '确认新版交付清单', project: '/projects/夏季发布', shared: true, memory: { summary: '核对交付内容和验收范围。' } }], revision: 1 } });
   });
   await page.route('**/trisoul-x/api/dream/read?*', route => route.fulfill({ json: { kind: 'archive_catalog', entries: [{ id: 'release-record', summary: '交付清单保留来源与实际验证结果。', documents: 1, assets: 0 }], nextCursor: null } }));
-  await page.getByRole('button', { name: '打开工作台', exact: true }).click();
-  await page.locator('.cx-navigation').getByRole('button', { name: '记忆', exact: true }).click();
+  await openWorkbench(page, '记忆');
   const panel = page.locator('.cx-dream');
   await panel.getByRole('textbox', { name: '搜索记忆目录', exact: true }).waitFor();
   return { ...f, panel };
@@ -25,7 +25,7 @@ async function setup(t) {
 async function capture(page, name) {
   if (!process.env.TRISOUL_UI_ARTIFACTS) return;
   await mkdir(process.env.TRISOUL_UI_ARTIFACTS, { recursive: true });
-  await page.locator('.tx-workbench').screenshot({ path: join(process.env.TRISOUL_UI_ARTIFACTS, name + '.png') });
+  await page.locator('.tx-workbench:visible').screenshot({ path: join(process.env.TRISOUL_UI_ARTIFACTS, name + '.png') });
 }
 
 test('memory directory preserves search, pagination and focus when returning from a project', { timeout: 60000 }, async t => {

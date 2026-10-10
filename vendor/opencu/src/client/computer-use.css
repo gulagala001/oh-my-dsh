@@ -62,8 +62,8 @@
 :where(.tx-cu-pane, .tx-cu-share-dialog, .tx-cu-floating) .tx-cu-primary:hover:not(:disabled) { background: #2868d8; }
 .tx-cu-error { color: var(--cu-danger, #c45252) !important; overflow-wrap: anywhere; }
 .tx-cu-result-images { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 8px; }
-.tx-cu-image-button { display: block; width: 80px; height: 80px; padding: 0; overflow: hidden; border: 1px solid var(--cu-line); border-radius: 8px; background: var(--cu-bg); cursor: zoom-in; }
-.tx-cu-image-button .tx-cu-card-image { width: 100%; height: 100%; margin: 0; border: 0; border-radius: 0; object-fit: cover; }
+.tx-cu-image-button { display: flex; align-items: center; justify-content: center; width: auto; max-width: min(192px, 100%); height: auto; max-height: 192px; padding: 0; overflow: hidden; border: 1px solid var(--cu-line); border-radius: 8px; background: var(--cu-soft); cursor: zoom-in; }
+.tx-cu-image-button .tx-cu-card-image { width: auto; height: auto; max-width: 100%; max-height: 190px; margin: 0; border: 0; border-radius: 0; object-fit: contain; }
 .tx-cu-image-retry { padding: 8px; color: var(--cu-danger); }
 .tx-cu-image-dialog { position: fixed; inset: 0; width: calc(100vw - 40px); height: calc(100dvh - 40px); max-width: none; max-height: none; margin: auto; padding: 0; border: 1px solid var(--cu-line); border-radius: 12px; background: var(--cu-bg); box-shadow: var(--cu-shadow); }
 .tx-cu-image-dialog::backdrop { background: #0009; }
@@ -91,12 +91,12 @@
 .tx-cu-pane > .tx-cu-error { padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--cu-danger) 7%, var(--cu-bg)); font-size: 12px; }
 
 /* The panel keeps the host layout and concentrates actions in its header. */
-.tx-cu-pane { height: 100%; padding: 18px 16px; overflow: auto; box-sizing: border-box; background: var(--cu-bg); container-type: inline-size; scrollbar-width: thin; }
-.tx-cu-pane > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+.tx-cu-pane { height: 100%; padding: 10px 16px; overflow: auto; box-sizing: border-box; background: var(--cu-bg); container-type: inline-size; scrollbar-width: thin; }
+.tx-cu-pane > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .tx-cu-pane-heading { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .tx-cu-pane-heading > svg { color: var(--cu-muted); }
-.tx-cu-pane-heading > div { display: flex; flex-direction: column; gap: 1px; }
-.tx-cu-pane-heading strong { font-size: 13px; font-weight: 600; letter-spacing: -.15px; }
+.tx-cu-pane-heading > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.tx-cu-pane-heading strong { font-size: 12px; font-weight: 500; letter-spacing: -.15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tx-cu-status { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--cu-muted); }
 .tx-cu-status::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .55; }
 .tx-cu-status.is-running { color: var(--cu-blue); }
@@ -107,9 +107,9 @@
 .tx-cu-toolbar .tx-cu-stop:hover:not(:disabled) { background: var(--cu-hover); }
 .tx-cu-target { display: flex; align-items: center; gap: 7px; margin: 16px 0 9px; font-size: 12px; font-weight: 500; }
 .tx-cu-target svg { color: var(--cu-muted); }
-.tx-cu-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; margin: 12px 0 0; padding: 28px 18px 20px; text-align: center; }
-.tx-cu-empty > svg { width: 34px; height: 34px; margin-bottom: 16px; color: var(--cu-muted); stroke-width: 1.25; }
-.tx-cu-empty h3 { margin: 0 0 8px; font-size: 15px; font-weight: 550; letter-spacing: -.2px; }
+.tx-cu-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 190px; margin: 12px 0 0; padding: 24px 18px; text-align: center; }
+.tx-cu-empty > svg { width: 24px; height: 24px; margin-bottom: 12px; color: var(--cu-muted); stroke-width: 1.25; }
+.tx-cu-empty h3 { margin: 0 0 6px; font-size: 13px; font-weight: 500; }
 .tx-cu-empty p { max-width: 260px; margin: 0; color: var(--cu-muted); font-size: 12px; line-height: 1.75; }
 .tx-cu-information { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin: 24px 0; font-size: 12px; }
 .tx-cu-information span { color: var(--cu-muted); }
@@ -316,6 +316,15 @@
 [aria-expanded=true] .tx-cu-card-chevron, [aria-expanded=true] > .tx-cu-disclosure { transform: rotate(90deg); }
 .tx-cu-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .tx-cu-card-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tx-cu-card-target { flex-shrink: 1; max-width: 32%; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--cu-muted); }
+.tx-cu-card[data-state=running] .tx-cu-card-title { animation: cu-activity-pulse 1.6s ease-in-out infinite; }
+@keyframes cu-activity-pulse { 50% { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) { .tx-cu-card[data-state=running] .tx-cu-card-title { animation: none; } }
+.tx-cu-content-title { display: inline-flex; align-items: center; min-width: 0; gap: 6px; }
+.tx-cu-content-title > svg { flex-shrink: 0; }
+.tx-cu-content-title > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tx-cu-card-deliverables { margin-left: 22px; }
+.tx-cu-card-failure { margin: 2px 0 6px 22px; font-size: 12px; overflow-wrap: anywhere; }
 .tx-cu-card-count { font-size: 10px; flex-shrink: 0; }
 .tx-cu-card-heading small { margin-left: auto; font-size: 10px; font-weight: 400; flex-shrink: 0; color: var(--cu-muted); }
 .tx-cu-card[data-state=running] .tx-cu-card-heading small { color: var(--cu-blue); }
@@ -327,12 +336,22 @@
 .tx-cu-card pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.6 ui-monospace, monospace; max-height: 300px; overflow: auto; }
 .tx-cu-group-toggle { min-height: 26px; font-size: var(--dsh-content-font-size-secondary, 13px); }
 .tx-cu-export-files { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-.tx-cu-export-files button { display: flex; align-items: center; gap: 12px; max-width: 100%; padding: 7px 10px; border: 1px solid var(--cu-line); border-radius: 8px; background: var(--cu-soft); color: inherit; cursor: pointer; overflow-wrap: anywhere; }
+.tx-cu-export-files button { display: flex; align-items: center; gap: 10px; min-width: min(160px, 100%); max-width: 100%; padding: 10px 12px; border: 1px solid var(--cu-line); border-radius: 10px; background: var(--cu-bg); color: inherit; cursor: pointer; text-align: left; }
+.tx-cu-export-files button:hover:not(:disabled) { background: var(--cu-soft); }
+.tx-cu-export-files button:disabled { opacity: .55; cursor: default; }
+.tx-cu-export-files button > span { display: flex; flex: 1; flex-direction: column; min-width: 0; gap: 2px; }
+.tx-cu-export-files button > svg { flex-shrink: 0; color: var(--cu-muted); }
+.tx-cu-export-files strong { font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }
 .tx-cu-export-files small { color: var(--cu-muted); font-size: 10px; white-space: nowrap; }
 .tx-cu-vision-warning { color: color-mix(in srgb, #a97520 85%, var(--cu-text)); font-size: 11px; line-height: 1.7; }
 .tx-cu-pane > .tx-cu-vision-warning { padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, #a97520 7%, var(--cu-bg)); }
 
 /* Setup is a compact disclosure; paths and implementation details stay inside it. */
+.tx-cu-pane-support > summary { display: flex; align-items: center; gap: 6px; padding: 10px 0; list-style: none; cursor: pointer; color: var(--cu-muted); font-size: 11px; }
+.tx-cu-pane-support > summary::-webkit-details-marker { display: none; }
+.tx-cu-pane-support > summary > svg:last-child { margin-left: auto; }
+.tx-cu-pane-support[open] > summary > svg:last-child { transform: rotate(90deg); }
+.tx-cu-pane-support .tx-cu-setup { margin-top: 0; border-top: 0; }
 .tx-cu-setup { margin: 18px 0 0; border-top: 1px solid var(--cu-line); }
 .tx-cu-pane .tx-cu-setup-toggle { justify-content: space-between; width: 100%; padding: 13px 0; border: 0; border-radius: 0; background: transparent; text-align: left; color: var(--cu-muted); font-size: 11px; }
 .tx-cu-setup-toggle > span { display: inline-flex; align-items: center; gap: 7px; }

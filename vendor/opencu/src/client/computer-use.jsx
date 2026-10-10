@@ -2,7 +2,7 @@ import { createChat } from '../../lib/chat.factory.mjs';
 import { createChatSettings } from './chat-settings.mjs';
 import { createComputerStatePool } from './state-pool.mjs';
 import { HOST_BROWSER_ID, hostPreviewUrl, openHostBrowserPreview } from './host-browser.mjs';
-import React, { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import css from './computer-use.css';
 import { BrowserPreview } from './browser-preview.jsx';
 import { NativePreview } from './native-preview.jsx';
@@ -15,8 +15,8 @@ import {FloatingPreview} from './floating-preview.jsx';
 import { usePreviewPaneVisible, usePreviewPanePresence } from './preview-presence.mjs';
 import { PageAnnotation } from './page-annotation.jsx';
 import { ComputerIcon } from './computer-icons.jsx';
-import {SavedImage} from './tool-image.jsx';
-import { useComputerPresentation } from './computer-presentation.mjs';
+import { ComputerCard } from './computer-card.jsx';
+import { computerActivity, computerOperationLabel } from './computer-activity.mjs';
 
 const base='trisoul-x/computer-use/';
 const url=(op,id)=>base+op+'?session='+encodeURIComponent(id);
@@ -66,6 +66,7 @@ export function ComputerPane({sessionId,useTabInfo,inputActions,conversation,hos
   usePreviewPanePresence(sessionId,tab.visible);
   const target=state?.viewTarget??state?.target;
   const[busy,setBusy]=useState(false),[navigation,setNavigation]=useState(null),[frame,setFrame]=useState(null),controls=useRef(null);
+  const [supportOpen,setSupportOpen]=useState(false);
   const[previewScale,setPreviewScale]=useState('1'),[deviceMode,setDeviceMode]=useState(false);
   const currentSession=useRef(sessionId);currentSession.current=sessionId;
   useEffect(()=>{setNavigation(null);},[target?.id]);
@@ -79,49 +80,23 @@ export function ComputerPane({sessionId,useTabInfo,inputActions,conversation,hos
     {state?.status==='stopped'&&!state?.transitioning?<button type="button" className="is-resume" aria-label="恢复助手控制" title="恢复助手控制" disabled={busy} onClick={()=>act('resume')}><ComputerIcon name="play" size={14}/></button>:<button type="button" aria-label="停止并接管" title="停止并接管" disabled={busy||state?.status==='stopping'} onClick={()=>act('stop')}><ComputerIcon name="stop" size={14}/></button>}
   </>:null;
   return <div data-cu-session={sessionId} data-cu-target={target?.id} className={'tx-cu-pane'+(target?.kind==='tab'?' tx-cu-pane-browser':'')}>{target?.kind!=='tab'&&<header>
-    <div className="tx-cu-pane-heading"><ScreenIcon/><div><strong>Computer Use</strong><span className={'tx-cu-status '+(state?.status==='running'?'is-running':'')}>{state?.resuming?'正在恢复':state?.transitioning?'正在载入':names[state?.status]??'连接中'}</span></div></div>
+    <div className="tx-cu-pane-heading"><ScreenIcon/><div><strong title={target?.name}>{target?.name??'应用预览'}</strong><span className={'tx-cu-status '+(state?.status==='running'?'is-running':'')}>{computerActivity(state)}</span></div></div>
     {state?.target&&target?.id!==state.target.id&&<button type="button" onClick={()=>act('view-tab',{current:true})}>查看助手当前画面</button>}
-    <div className="tx-cu-toolbar">{target?.kind==='tab'&&<PageAnnotation sessionId={sessionId} frame={state.enabled?frame:null} target={target} inputActions={inputActions} conversation={conversation} api={api}/>} {state?.status==='stopped'&&!state?.transitioning?<button type="button" className="tx-cu-primary" disabled={busy||state.resuming} onClick={()=>act('resume')}><ComputerIcon name="play" size={12}/>恢复助手控制</button>:target&&<button type="button" className="tx-cu-stop" disabled={busy||state?.status==='stopping'} onClick={()=>act('stop')}><ComputerIcon name="stop" size={12}/>停止并接管</button>}</div>
+    <div className="tx-cu-toolbar">
+      {target?.kind==='app'&&<button type="button" title="显示应用窗口" aria-label="显示应用窗口" disabled={busy} onClick={()=>act('reveal-preview',{targetId:target.viewId,controlEpoch:state.controlEpoch})}><ComputerIcon name="popout" size={15}/></button>}
+      {state?.status==='stopped'&&!state?.transitioning?<button type="button" className="tx-cu-primary" aria-label="恢复助手控制" disabled={busy||state.resuming} onClick={()=>act('resume')}><ComputerIcon name="play" size={12}/>恢复控制</button>:target&&<button type="button" className="tx-cu-stop" aria-label="停止并接管" disabled={busy||state?.status==='stopping'} onClick={()=>act('stop')}><ComputerIcon name="stop" size={12}/>停止</button>}
+    </div>
     </header>}
     {state?.vision?.input==='text'&&<p className="tx-cu-vision-warning" role="status">{state.vision.name} 当前仅接收文字，截图不会送入模型。需要看图时，请在输入区切换支持图片的模型；应用控件文字仍可读取。</p>}
-    {!target&&<div className="tx-cu-empty"><ScreenIcon/><h3>让助手操作应用和网页</h3><p>在对话中用 @ 选择应用或网页，<br/>也可以打开浏览器开始工作。</p></div>}
+    {!target&&<div className="tx-cu-empty"><ScreenIcon/><h3>应用和网页</h3><p>在对话中 @ 选择应用或网页，画面会显示在这里。</p></div>}
     <BrowserControls ref={controls} sessionId={sessionId} state={state} visible={tab.visible} navigation={navigation} frame={frame} api={api} onState={setState} onError={setError} previewScale={previewScale} onPreviewScale={setPreviewScale} onDeviceModeChange={setDeviceMode} actions={browserActions}/>
-    {target&&target.kind!=='tab'&&<p className="tx-cu-target"><ComputerIcon/>{target.name??'当前应用'}</p>}
     {(error||state?.lastError)&&<p className="tx-cu-error" role="alert">{error||state.lastError.message}</p>}
     {target?.kind==='tab'?<BrowserPreview key={target.id} sessionId={sessionId} tabId={target.id} pageUrl={navigation?.tabId===target.id?navigation.url:target.url} visible={tab.visible} state={state} api={api} url={url} onState={setState} onError={setError} onNavigation={setNavigation} onFrame={setFrame} onBrowserShortcut={action=>controls.current?.shortcut(action)} onViewportResize={size=>controls.current?.resizeViewport(size)} deviceMode={deviceMode} previewScale={previewScale}/>:target?.kind==='app'?<NativePreview key={target.viewId} sessionId={sessionId} targetId={target.viewId} visible={tab.visible} state={state} url={url} onError={setError}/>:null}
-    <div className="tx-cu-pane-support">
-    <ComputerSetup sessionId={sessionId} visible={tab.visible} api={api}/>
-    {!!state?.history?.length&&<details className="tx-cu-history"><summary>最近操作 · {state.history.length}</summary>{state.history.slice().reverse().map((h,i)=><div key={i}><span className={h.ok||h.cancelled?'':'tx-cu-error'}>{h.operation}{h.cancelled?' · 已取消':''}</span><span>{h.elapsedMs} ms</span>{h.error&&<small>{h.error}</small>}</div>)}</details>}
-    </div>
-  </div>;
-}
-function ComputerCard({block,loadImage,toolName,openFile,sessionId,callId}){
-  const [open,setOpen]=useState(false),bodyId=useId();
-  const stored=useComputerPresentation(sessionId,block.kind==='tool-result'&&!block.meta&&!block.isError?[callId]:[]);
-  const preparing=block.phase==='preparing';
-  let args={};try{args=JSON.parse(block.call?.argsRaw??block.argsRaw??'{}');}catch{}
-  const meta=block.meta??stored[callId];
-  const settled=block.kind==='tool-result',failure=block.isError||meta?.computerUseError;
-  const content=block.content??[],message=content.filter(c=>c.type==='text').map(c=>c.text).join('\n');
-  const images=content.filter(c=>c.type==='image');
-  const files=meta?.computerUseFiles??[];
-  const stopped=failure&&/tool call aborted|COMPUTER_USE_STOPPED|Computer Use (?:was |is )?stopped|execution (?:was )?cancelled/i.test(message+'\n'+(meta?.computerUseError??''));
-  const status=preparing?'准备调用':!settled?'执行中':stopped?'已停止':failure?'执行失败':'已执行';
-  const failureText=String(meta?.computerUseError?.message??meta?.computerUseError??'')||message.split('\n').findLast(line=>/Execution failed:|tool call aborted|COMPUTER_USE_STOPPED/i.test(line))||message.split('\n').find(line=>line.trim())||status;
-  return <div className="tx-cu-card" data-state={preparing?'preparing':!settled?'running':stopped?'stopped':failure?'error':'idle'}>
-    <button type="button" className="tx-cu-card-heading" disabled={preparing} aria-expanded={preparing?undefined:open} aria-controls={preparing?undefined:bodyId} onClick={()=>setOpen(value=>!value)}>
-      <span className="tx-cu-card-leading"><ComputerIcon name="screen" size={16}/><ComputerIcon className="tx-cu-card-chevron" name="chevron" size={14}/></span>
-      <span className="tx-cu-card-title">{args.title??(toolName==='computer_use_reset'?'重置 Computer Use':'Computer Use')}</span>
-      {!!images.length&&<span className="tx-cu-card-count">{images.length} 张截图</span>}
-      {!!files.length&&<span className="tx-cu-card-count">{files.length} 个文件</span>}
-      <small className={failure&&!stopped?'tx-cu-error':settled&&!stopped?'tx-cu-visually-hidden':''}>{status}</small>
-    </button>
-    {open&&!preparing&&<div className="tx-cu-card-body" id={bodyId}>
-      {!!images.length&&<div className="tx-cu-result-images">{images.map((c,i)=><SavedImage key={i} attachment={c.attachment} loadImage={loadImage}/>)}</div>}
-      {!!files.length&&<div className="tx-cu-export-files">{files.map((file,i)=><button key={i} type="button" onClick={()=>openFile?.(file.path)} disabled={!openFile} title={file.path}>{file.name}{Number.isFinite(file.bytes)&&<small>{file.bytes>=1048576?(file.bytes/1048576).toFixed(1)+' MB':file.bytes>=1024?(file.bytes/1024).toFixed(1)+' KB':file.bytes+' B'}</small>}</button>)}</div>}
-      {failure&&<p className="tx-cu-error">{failureText}</p>}
-      <details><summary>查看操作与结果</summary>{args.code&&<pre>{args.code}</pre>}{message&&<pre>{message}</pre>}</details>
-    </div>}
+    <details className="tx-cu-pane-support" open={supportOpen} onToggle={event=>setSupportOpen(event.currentTarget.open)}>
+      <summary><ComputerIcon name="settings" size={14}/>设置与操作记录<ComputerIcon name="chevron" size={13}/></summary>
+      <ComputerSetup sessionId={sessionId} visible={tab.visible&&supportOpen} api={api}/>
+      {!!state?.history?.length&&<details className="tx-cu-history"><summary>最近操作 · {state.history.length}</summary>{state.history.slice().reverse().map((h,i)=><div key={i}><span title={h.operation} className={h.ok||h.cancelled?'':'tx-cu-error'}>{computerOperationLabel(h.operation)}{h.cancelled?' · 已取消':!h.ok?' · 失败':''}</span><span>{(h.elapsedMs/1000).toFixed(1)} 秒</span>{h.error&&<small>{h.error}</small>}</div>)}</details>}
+    </details>
   </div>;
 }
 function installComputerUseClient(ctx, shared){
@@ -149,7 +124,20 @@ function installComputerUseClient(ctx, shared){
   function StandaloneEntry(props){const options=useOptions();return options.integrated?null:<ComputerEntry {...props}/>;}
   ctx.slots.inject('conversation.composer.dock',()=>ctx.slots.register({name:'conversation.composer.dock',id:'trisoul-computer-use',order:25},StandaloneEntry));
   const id='trisoul_x/trisoul-x-computer-use';
-  ctx.effect(()=>ctx.sidebarRightTabs.register({id,kind:'trisoul-x-computer-use',title:()=>'Computer Use',guide:[{order:6,title:()=>'Computer Use',description:()=>'查看画面、停止操作与接管控制',icon:ScreenIcon}]}));
+  ctx.effect(()=>{
+    let dispose;
+    const register=()=>{dispose?.();dispose=ctx.sidebarRightTabs.register({id,kind:'trisoul-x-computer-use',title:()=>shared.current().guideTitle??'Computer Use',guide:[{id:'opencu-preview',order:shared.current().guideOrder??6,title:()=>shared.current().guideTitle??'Computer Use',description:()=>'查看应用与网页画面',icon:ScreenIcon}]});};
+    register();const unsubscribe=shared.subscribe(register);
+    return()=>{unsubscribe();dispose?.();};
+  });
+  function PreviewTitle({sessionId,useTabInfo}) {
+    const {tab}=useTabInfo();
+    const {state}=useStateView(sessionId,tab.visible);
+    const options=useOptions(),target=state?.viewTarget??state?.target;
+    const title=target?.title||target?.name||options.guideTitle||'Computer Use';
+    return <span className="tx-cu-content-title" title={title}><ComputerIcon name={target?.kind==='tab'?'browser':'screen'} size={14}/><span>{title}</span></span>;
+  }
+  ctx.slots.inject('sidebar.right.pane.tab.title',()=>ctx.slots.register({name:'sidebar.right.pane.tab.title',key:id},PreviewTitle));
   const browserSubscribe = listener => ctx.sidebarRightTabs.subscribe(listener);
   const browserSnapshot = () => ctx.sidebarRightTabs.get('browser')?.id === HOST_BROWSER_ID;
   function HostComputerPane(props) {

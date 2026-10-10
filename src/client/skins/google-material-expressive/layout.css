@@ -137,9 +137,6 @@ html.omd[data-omd-layout="google-material-expressive"][data-appearance] :is(.cx-
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] .cx-savebar { position: sticky; bottom: -32px; background: var(--omd-bg); border-top: 1px solid var(--omd-outline-soft); padding: 14px 0; margin-top: 20px; gap: 12px; z-index: 2; }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] .tx-recommended-card { background: var(--omd-surface); border-color: transparent; border-radius: 20px; }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] .tx-workbench { height: 100%; border: 0; border-radius: 24px; overflow: hidden; }
-html.omd[data-omd-layout="google-material-expressive"][data-appearance] .cx-navigation { padding: 10px; gap: 4px; background: var(--omd-surface); border: 0; overflow-x: auto; }
-html.omd[data-omd-layout="google-material-expressive"][data-appearance] .cx-navigation > button { min-height: 42px; padding: 10px 14px; border: 0; border-radius: 24px; white-space: nowrap; }
-html.omd[data-omd-layout="google-material-expressive"][data-appearance] .cx-navigation > button[aria-current=page] { background: var(--omd-selected); color: var(--omd-on-selected); }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] .pI_x6G_rightbarCol { background: var(--omd-sidebar); }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] :is([role=menu],dialog:not(.VOzbGW_panel),[role=dialog]:not(.VOzbGW_panel)) { border-radius: 20px; background: var(--omd-surface-solid); color: var(--omd-text); }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] [role=menu] { padding: 8px; }

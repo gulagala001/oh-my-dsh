@@ -1,3 +1,4 @@
+import { openWorkbench } from './fixtures/workbench.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, copyFile, writeFile } from 'node:fs/promises';
@@ -42,9 +43,9 @@ test('iOS Liquid Glass real shell, sidebar, settings, workbench and recovery', {
     await page.getByRole('button', { name: 'BT · Better Todo', exact: true }).click();
     await page.getByRole('menu').waitFor(); await capture('menu-' + mode);
     await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: '打开工作台', exact: true }).click();
+    await openWorkbench(page, '任务');
     await until(async () => {
-      const r = await page.locator('.tx-workbench').boundingBox();
+      const r = await page.locator('.tx-workbench:visible').boundingBox();
       return r && r.width > 300 && r.x + r.width <= 1441;
     });
     await capture('workbench-' + mode);
