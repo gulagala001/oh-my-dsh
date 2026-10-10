@@ -62,7 +62,7 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
       async () => {
         if (t.passed) return;
         const ui = page && !page.isClosed() ? await page.evaluate(() => ({
-          url: location.href, appearance: document.documentElement.dataset.appearance,
+          url: location.href, appearance: document.documentElement.dataset.appearance, visibility: document.visibilityState,
           rootInert: document.getElementById('root')?.inert,
           dialogs: [...document.querySelectorAll('[role="dialog"]')].map(el => el.textContent?.slice(0, 1500)),
           composer: document.querySelector('[data-composer-card]') && getComputedStyle(document.querySelector('[data-composer-card]')).backgroundColor,
