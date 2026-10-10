@@ -70,8 +70,16 @@ test('recommended page defaults on, hides only after a successful save and persi
     assert.ok((await card.locator('.tx-recommended-review').innerText()).includes(version));
     assert.match(await card.innerText(), /DSH 0\.2\.0-rc\.2 · OMD 0\.2\.0-rc\.2\.omd\.0\.9\.0/);
     assert.match(await card.innerText(), /DSH 0\.2\.1-alpha\.1 · OMD 0\.2\.1-alpha\.1\.omd\.0\.9\.0/);
-    assert.equal(status.plugins.find(plugin => plugin.id === id).unavailable, null);
-    assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), true);
+    if (actualHost === '0.2.1-alpha.2') {
+      assert.match(status.plugins.find(plugin => plugin.id === id).unavailable, /暂不提供公开安装/);
+      assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
+      const blocked = await page.request.post(new URL('trisoul-x/recommended-plugins', page.url()).href, { data: { id, action: 'install' } });
+      assert.equal(blocked.status(), 400);
+      assert.match((await blocked.json()).error, /暂不提供公开安装/);
+    } else {
+      assert.equal(status.plugins.find(plugin => plugin.id === id).unavailable, null);
+      assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), true);
+    }
     assert.match(await card.innerText(), /非上游/);
   }
   for (const [id, name, version] of [

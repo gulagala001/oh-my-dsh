@@ -52,7 +52,7 @@ export function validateSkin(value, supports) {
 
 // Semantic aliases are owned by OMD, not by skin authors. Host module names stay here.
 export const parts = {
-  sidebar: '.hHd-Xa_root', header: '.wSkVaW_header', conversation: '.wSkVaW_root',
+  sidebar: '[data-omd-surface="sidebar"]', header: '.wSkVaW_header', conversation: '.wSkVaW_root',
   composer: '[data-composer-card]', input: '[data-composer-input]',
   tool: '[data-disclosure-row]', workbench: '.tx-workbench, .cx-integrated',
   settings: '.cx-settings, .omd-appearance', dialog: '[role="dialog"], dialog',

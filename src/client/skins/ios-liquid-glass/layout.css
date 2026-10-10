@@ -78,7 +78,6 @@ html.omd[data-omd-layout="ios-liquid"] [data-step-process-body] { padding: 6px; 
 
 /* The composer floats above the content; controls keep their original actions. */
 html.omd[data-omd-layout="ios-liquid"] .wSkVaW_composerSeat { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
-html.omd[data-omd-layout="ios-liquid"] .wSkVaW_root[data-phase="active"] .wSkVaW_composerSeat { background: transparent; }
 html.omd[data-omd-layout="ios-liquid"] [data-composer-card] { padding-top: 16px; border-radius: 30px; }
 html.omd[data-omd-layout="ios-liquid"] [data-composer-input] { padding: 2px 20px 0; min-height: 44px; }
 html.omd[data-omd-layout="ios-liquid"] [data-composer-placeholder] { left: 20px; }

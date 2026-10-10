@@ -48,6 +48,10 @@ test('bundled skins work in real chat, both modes, portals, narrow settings and 
       assert.equal(inherited, skin.tokens[mode].bg, skin.id + '/' + mode + ' portal palette');
       await page.keyboard.press('Escape');
       await until(async () => await page.locator('html').getAttribute('data-omd-skin') === skin.id);
+      if (skin.id === 'ios-liquid-glass') {
+        const mask = await page.locator('[data-composer-seat]').evaluate(el => getComputedStyle(el).backgroundImage);
+        assert.match(mask, /^linear-gradient\(/, 'glass keeps the native transcript mask behind the full composer and preview dock');
+      }
       await page.getByText('皮肤验收完成。', { exact: true }).scrollIntoViewIfNeeded();
       assert.equal(await group.getAttribute('aria-expanded'), 'true', 'skin switch keeps disclosure state');
       assert.equal(await page.getByText('读取失败', { exact: true }).isVisible(), true);

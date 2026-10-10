@@ -285,7 +285,7 @@ export async function apply(ctx) {
     const running = props.useSessionStatus(s => Boolean(s.get(props.sessionId)?.running));
     const [usageOpen, setUsageOpen] = useState(true);
     useEffect(() => { setUsageOpen(true); }, [props.sessionId]);
-    return <div className="tx-composer-dock" data-session-id={props.sessionId} data-omd-running={running ? '' : undefined} data-omd-usage-expanded={usageOpen ? '' : undefined}><div className="tx-composer-tools"><button type="button" className="tx-workbench-entry" aria-label="打开工作台" onClick={() => openPanel('tasks')}><Icon name="context" size={15}/><span>工作台</span></button><ComputerEntry {...props}/></div><button type="button" className="tx-usage-toggle" aria-label="用量详情" aria-expanded={usageOpen} onClick={() => setUsageOpen(value => !value)}><Icon name="monitor" size={14}/><span>用量</span><Icon name="chevron" size={12}/></button><StatsLine {...props} onOpen={() => openPanel('monitor')}/></div>;
+    return <div className="tx-composer-dock" data-session-id={props.sessionId} data-omd-running={running ? '' : undefined} data-omd-usage-expanded={usageOpen ? '' : undefined}><div className="tx-composer-tools"><button type="button" className="tx-workbench-entry" aria-label="打开工作台" title="打开工作台" onClick={() => openPanel('tasks')}><Icon name="context" size={15}/><span>工作台</span></button><ComputerEntry {...props}/></div><button type="button" className="tx-usage-toggle" aria-label="用量详情" aria-expanded={usageOpen} onClick={() => setUsageOpen(value => !value)}><Icon name="monitor" size={14}/><span>用量</span><Icon name="chevron" size={12}/></button><StatsLine {...props} onOpen={() => openPanel('monitor')}/></div>;
   }
   const getAppearanceRuntime = applySkins(ctx);
   ctx.effect(() => {

@@ -148,14 +148,18 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await page.locator('[data-sidebar-collapsed=true]').waitFor();
   await page.mouse.move(700, 400);
   await until(async () => (await composer.boundingBox())?.width > 450);
-  const tools = await page.locator('[data-slot="conversation.composer.dock"]').boundingBox();
+  const dockBounds = () => page.locator('[data-slot="conversation.composer.dock"]').evaluate(el => {
+    const node = getComputedStyle(el).display === 'contents' ? el.parentElement : el;
+    const box = node.getBoundingClientRect(); return { x: box.x, width: box.width };
+  });
+  const tools = await dockBounds();
   assert.ok(tools.x >= 0 && tools.x + tools.width <= 760, 'composer tools remain on screen');
   for (const width of [994, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await page.mouse.move(width - 10, 400);
     await until(async () => { const box = await composer.boundingBox(); return box?.x >= 0 && box.x + box.width <= width; });
     await usageToggle.click();
-    await until(async () => { const box = await page.locator('[data-slot="conversation.composer.dock"]').boundingBox(); return box?.x >= 0 && box.x + box.width <= width; });
+    await until(async () => { const box = await dockBounds(); return box?.x >= 0 && box.x + box.width <= width; });
     assert.equal(await hostStats.isVisible(), true, 'expanded usage stays available at ' + width + 'px');
     await screenshot('conversation-' + width + '-usage');
     await usageToggle.click();
@@ -172,7 +176,7 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await until(() => recommendations.filter({ hasText: 'dsh-status-rotator' }).getByRole('button', { name: '安装', exact: true }).isEnabled());
   const rewind = recommendations.filter({ hasText: '回合回滚 · Turn Rewind' });
   assert.equal(await rewind.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
-  assert.match(await rewind.innerText(), /尚不兼容 DSH 0\.2\.1-alpha\.1/);
+  assert.match(await rewind.innerText(), /尚不兼容 DSH 0\.2\.1-alpha\.1 \/ 0\.2\.1-alpha\.2/);
   const whale = recommendations.filter({ hasText: '小鲸鱼记账挂件' });
   assert.equal(await whale.getByRole('link').getAttribute('href'), 'https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget');
   assert.equal(await whale.getByRole('button', { name: '安装', exact: true }).isEnabled(), true);

@@ -48,6 +48,13 @@
 .tx-workbench .cx-reader-head { padding-inline: var(--wb-gutter); }
 .tx-workbench .tx-empty,.tx-workbench .cx-empty { padding: 30px 16px; }
 .tx-workbench :is(.tx-empty > p,.cx-empty > p) { font-size: 12px; }
+.tx-workbench :is(.tx-task-detail,.cx-record,.cx-dream-memory,.cx-dream-entry) { min-width: 0; overflow-wrap: anywhere; }
+.tx-workbench :is(.tx-body,.cx-body) { overscroll-behavior: contain; scroll-padding-block: 12px; }
+.tx-workbench :is(.tx-tabs > button,.cx-navigation > button,.tx-button,.cx-btn,summary):focus-visible { outline: 2px solid var(--dsw-focus-ring-color,var(--tx-blue)); outline-offset: 2px; }
+.tx-workbench :is(.tx-fold,.cx-fold):focus-within { border-color: color-mix(in srgb,var(--tx-blue) 40%,var(--tx-line)); }
+.tx-workbench .tx-task-check { flex: none; }
+.tx-workbench :is(.tx-stat,.cx-metrics) { font-variant-numeric: tabular-nums; }
+@media (pointer: coarse) { .tx-workbench :is(.tx-button,.cx-btn,summary,.tx-task-check) { min-height: 40px; } }
 @container omd-workbench (max-width: 360px) {
   .tx-workbench-page { --wb-gutter: 14px; }
   .tx-workbench.cx-integrated > .cx-navigation { margin-inline: 8px; }

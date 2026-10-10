@@ -134,7 +134,7 @@
 .tx-cu-browser-actions > .is-resume { color: var(--cu-blue); }
 .tx-cu-downloads { position: relative; }
 .tx-cu-downloads > button { border: 0; background: transparent; width: 28px; min-height: 28px; padding: 5px; color: var(--cu-muted); }
-.tx-cu-download-panel { position: absolute; z-index: 31; top: calc(100% + 5px); right: -30px; width: 320px; max-width: calc(100vw - 32px); max-height: min(480px,65vh); overflow: auto; padding: 12px; border: 1px solid var(--cu-line); border-radius: 12px; background: var(--cu-bg); box-shadow: var(--cu-shadow); font-size: 12px; }
+.tx-cu-download-panel { position: absolute; z-index: 31; top: calc(100% + 5px); right: 0; width: 320px; max-width: calc(100vw - 32px); max-height: min(480px,65vh); overflow: auto; padding: 12px; border: 1px solid var(--cu-line); border-radius: 12px; background: var(--cu-bg); box-shadow: var(--cu-shadow); font-size: 12px; }
 .tx-cu-download-panel header { display: flex; align-items: center; justify-content: space-between; }
 .tx-cu-download-panel header button { border: 0; background: transparent; min-height: 26px; padding: 5px; }
 .tx-cu-download-panel ul { list-style: none; padding: 0; margin: 8px 0; }
@@ -143,6 +143,9 @@
 .tx-cu-download-panel li > div { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .tx-cu-download-panel li strong { overflow-wrap: anywhere; font-weight: 500; }
 .tx-cu-download-panel :is(small,footer) { color: var(--cu-muted); overflow-wrap: anywhere; font-size: 11px; }
+.tx-cu-download-panel .tx-cu-download-save { align-self: flex-start; display: inline-flex; align-items: center; min-height: 28px; padding: 3px 8px; border: 1px solid var(--cu-line); border-radius: 6px; color: var(--cu-blue); text-decoration: none; }
+.tx-cu-download-save:hover { background: var(--cu-tint); }
+.tx-cu-download-panel [data-download-state=unobserved] { border-left: 2px solid var(--cu-line); padding-left: 8px; }
 .tx-cu-download-panel progress { width: 100%; height: 4px; accent-color: var(--cu-blue); }
 .tx-cu-download-filters { display: flex; gap: 6px; margin-top: 10px; }
 .tx-cu-download-filters input { min-width: 0; width: 0; flex: 1; }
@@ -296,6 +299,7 @@
 .tx-cu-chip .tx-cu-entry svg { color: var(--cu-muted); }
 .tx-cu-chip-status { display: inline-flex; align-items: center; gap: 5px; margin-inline: 5px; color: var(--cu-muted); font-size: 10px; }
 .tx-cu-chip .tx-cu-chip-resume { color: var(--cu-blue); }
+.tx-cu-chip-error { flex-basis: 100%; max-width: 100%; font-size: 11px; }
 .tx-cu-share { font-size: 11px; }
 .tx-cu-share-entry { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 7px; background: transparent; color: var(--cu-muted); padding: 3px 7px; font: inherit; cursor: pointer; }
 .tx-cu-share-entry:hover { background: var(--cu-hover); }
@@ -334,6 +338,7 @@
 .tx-cu-setup-toggle > span { display: inline-flex; align-items: center; gap: 7px; }
 .tx-cu-setup-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 0; }
 .tx-cu-setup-row strong { font-size: 12px; font-weight: 500; }
+.tx-cu-setup-row > div { min-width: 0; overflow-wrap: anywhere; }
 .tx-cu-setup p { margin: 4px 0 0; color: var(--cu-muted); font-size: 11px; line-height: 1.7; }
 .tx-cu-setup-row > span { font-size: 10px; flex-shrink: 0; }
 .tx-cu-setup .is-ready { color: var(--cu-muted); }
@@ -346,6 +351,10 @@
 .tx-cu-setup code { display: block; padding: 8px 10px; border-radius: 7px; background: var(--cu-soft); font-size: 10px; white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 8px; }
 .tx-cu-setup-install { padding: 10px 0; }
 .tx-cu-setup-install button { margin-top: 10px; }
+.tx-cu-setup-section { border-top: 1px solid var(--cu-line); }
+.tx-cu-setup-feedback { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-block: 8px; }
+.tx-cu-setup-feedback p { flex: 1 1 180px; }
+.tx-cu-setup-notice { padding: 8px 10px; border-radius: 7px; background: var(--cu-soft); }
 .tx-cu-history { margin-top: 0; border-top: 1px solid var(--cu-line); }
 .tx-cu-history summary { padding: 12px 0; color: var(--cu-muted); font-size: 11px; cursor: pointer; }
 .tx-cu-history > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; padding: 8px 0; border-top: 1px solid var(--cu-line); font-size: 11px; }
@@ -502,16 +511,83 @@
 .tx-cu-floating-inline.is-dragging .tx-cu-preview-card { box-shadow: 0 10px 28px #00000030; }
 .tx-cu-floating-inline.is-list > header, .tx-cu-floating-inline.is-list > footer { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .tx-cu-floating-inline > .tx-cu-preview-search { pointer-events: auto; }
+/* The public composer dock owns this space. Default previews never cover
+   conversation cards; explicit enlarging or dragging keeps the same observer. */
+.tx-cu-preview-dock { flex: 0 0 150px; width: 150px; height: 56px; max-width: 100%; position: relative; }
+.tx-cu-floating-parked { position: relative; z-index: auto; inset: auto; max-width: 100%; height: 56px; display: block; transition: none; cursor: default; }
+.tx-cu-floating-compact > header { z-index: 6; position: absolute; inset: 0 0 0 auto; width: 28px; display: flex; opacity: 1; transform: none; padding: 0; background: transparent; backdrop-filter: none; }
+.tx-cu-floating-compact > header > div:first-child { display: none; }
+.tx-cu-floating-compact > header > div:last-child { flex-direction: column; gap: 2px; }
+.tx-cu-floating-compact > header button { width: 26px; min-height: 26px; }
+.tx-cu-floating-compact .tx-cu-preview-stack { position: absolute; inset: 0 32px 0 0; }
+.tx-cu-floating-compact .tx-cu-preview-card { left: 0; width: 100%; height: 100%; transform: none; box-shadow: none; border-radius: 8px; }
+.tx-cu-floating-compact .tx-cu-preview-card:nth-child(n+2) { visibility: hidden; pointer-events: none; }
+.tx-cu-floating-parked .tx-cu-preview-open > span:first-child { position: absolute; inset: 0 0 auto; max-width: 100%; padding: 2px 4px; opacity: 1; font-size: 9px; line-height: 13px; color: var(--cu-text); background: color-mix(in srgb,var(--cu-bg) 88%,transparent); }
+.tx-cu-floating-parked .tx-cu-preview-open > span:first-child > svg { display: none; }
+.tx-cu-floating-compact > footer { z-index: 6; position: absolute; inset: auto 32px 0 0; min-height: 24px; opacity: 1; transform: none; padding-inline: 4px; gap: 2px; backdrop-filter: none; }
+.tx-cu-floating-compact:not(.is-dragging) > header, .tx-cu-floating-compact:not(.is-dragging) > footer { pointer-events: auto; }
+.tx-cu-floating-compact footer > span { font-size: 9px; }
+.tx-cu-floating-compact footer button { padding-inline: 4px; font-size: 9px; }
+.tx-cu-floating-compact footer :is(.tx-cu-stop,.tx-cu-resume) { width: 22px; height: 22px; min-height: 22px; }
+.tx-cu-floating-compact .tx-cu-live-placeholder { min-height: 0; padding: 6px; font-size: 10px; }
+.tx-cu-floating-compact > .tx-cu-error { position: absolute; inset: 0 32px 24px 0; margin: 0; font-size: 10px; max-height: none; }
+.tx-cu-floating-compact.is-detached > header { inset: 0 0 auto; width: auto; padding-inline: 4px; background: var(--cu-bg); }
+.tx-cu-floating-compact.is-detached > header > div:first-child { display: flex; }
+.tx-cu-floating-compact.is-detached > header > div:last-child { flex-direction: row; }
+.tx-cu-floating-compact.is-detached > header button { width: 22px; min-height: 22px; padding: 3px; }
+.tx-cu-floating-compact.is-detached header strong { font-size: 10px; }
+.tx-cu-floating-compact.is-detached .tx-cu-preview-stack { right: 0; }
+.tx-cu-floating-compact.is-detached > footer { right: 0; }
+.tx-cu-floating-inline.is-zoomed > header, .tx-cu-floating-inline.is-zoomed > footer { opacity: 1; transform: none; pointer-events: auto; }
 /* Keep the observer connected while host @/command menus cover the composer. */
 body:has([role=listbox]) .tx-cu-floating-inline { visibility: hidden; pointer-events: none; }
 @media (max-width: 700px) {
   .tx-cu-style-editor > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tx-cu-share-dialog { padding: 16px; }
+  .tx-cu-chip { align-items: center; }
+  .tx-cu-preview-dock { margin-inline-start: auto; }
 }
 @media (prefers-reduced-motion: reduce) {
+  :is(.tx-cu-pane,.tx-cu-chip,.tx-cu-floating,.tx-cu-share-dialog,.tx-cu-image-dialog,.tx-cu-card) * { scroll-behavior: auto; }
+  .tx-cu-loading::before, .tx-cu-tab-loading { animation: none; }
+  .tx-cu-loading::before { width: 100%; }
   .tx-cu-assistant-cursor, .tx-cu-card-chevron, .tx-cu-disclosure { transition: none; }
   .tx-cu-floating-inline, .tx-cu-preview-card, .tx-cu-floating-inline > header, .tx-cu-floating-inline > footer, .tx-cu-preview-open::before, .tx-cu-preview-open > span { transition: none; }
   .tx-cu-cursor-pulse { animation: none; opacity: .6; }
+}
+
+/* The shared manual preference also applies when CU owns the surface directly
+   or an optional OMD adapter has been released. Live frames and controls keep
+   their original lifecycle; only the CU decoration effects are reduced. */
+html[data-omd-reduce-effects] :is(.tx-cu-pane,.tx-cu-chip,.tx-cu-floating,.tx-cu-share-dialog,.tx-cu-image-dialog,.tx-cu-card,.tx-cu-group,.tx-cu-share,.tx-cu-user-message,.tx-cu-result-images,.tx-cu-group-toggle),
+html[data-omd-reduce-effects] :is(.tx-cu-pane,.tx-cu-chip,.tx-cu-floating,.tx-cu-share-dialog,.tx-cu-image-dialog,.tx-cu-card,.tx-cu-group,.tx-cu-share,.tx-cu-user-message,.tx-cu-result-images,.tx-cu-group-toggle) *,
+html[data-omd-reduce-effects] :is(.tx-cu-pane,.tx-cu-chip,.tx-cu-floating,.tx-cu-share-dialog,.tx-cu-image-dialog,.tx-cu-card,.tx-cu-group,.tx-cu-share,.tx-cu-user-message,.tx-cu-result-images,.tx-cu-group-toggle)::before,
+html[data-omd-reduce-effects] :is(.tx-cu-pane,.tx-cu-chip,.tx-cu-floating,.tx-cu-share-dialog,.tx-cu-image-dialog,.tx-cu-card,.tx-cu-group,.tx-cu-share,.tx-cu-user-message,.tx-cu-result-images,.tx-cu-group-toggle)::after,
+html[data-omd-reduce-effects] :is(.tx-cu-pane,.tx-cu-chip,.tx-cu-floating,.tx-cu-share-dialog,.tx-cu-image-dialog,.tx-cu-card,.tx-cu-group,.tx-cu-share,.tx-cu-user-message,.tx-cu-result-images,.tx-cu-group-toggle) *::before,
+html[data-omd-reduce-effects] :is(.tx-cu-pane,.tx-cu-chip,.tx-cu-floating,.tx-cu-share-dialog,.tx-cu-image-dialog,.tx-cu-card,.tx-cu-group,.tx-cu-share,.tx-cu-user-message,.tx-cu-result-images,.tx-cu-group-toggle) *::after {
+  animation: none !important;
+  transition: none !important;
+  backdrop-filter: none !important;
+  scroll-behavior: auto !important;
+}
+html[data-omd-reduce-effects] :is(.tx-cu-share-dialog,.tx-cu-image-dialog)::backdrop { backdrop-filter: none !important; }
+html[data-omd-reduce-effects] .tx-cu-loading::before { animation: none !important; width: 100%; }
+html[data-omd-reduce-effects] .tx-cu-tab-loading,
+html[data-omd-reduce-effects] .tx-cu-cursor-pulse { animation: none !important; }
+html[data-omd-reduce-effects] :is(.tx-cu-assistant-cursor,.tx-cu-card-chevron,.tx-cu-disclosure,.tx-cu-floating-inline,.tx-cu-preview-card,.tx-cu-preview-open > span),
+html[data-omd-reduce-effects] .tx-cu-preview-open::before { transition: none !important; }
+html[data-omd-reduce-effects] .tx-cu-cursor-pulse { opacity: .6; }
+
+:is(.tx-cu-card,.tx-cu-export-files,.tx-cu-result-images,.tx-cu-image-dialog) :is(button,a,summary):focus-visible { outline: 2px solid var(--cu-blue,#3877e8); outline-offset: 2px; }
+@media (pointer:coarse) {
+  :is(.tx-cu-pane,.tx-cu-share-dialog,.tx-cu-image-dialog) :is(button,input,select,summary) { min-height: 40px; }
+  .tx-cu-floating-inline > header, .tx-cu-floating-inline > footer { opacity: 1; transform: none; pointer-events: auto; }
+  .tx-cu-preview-open::before,.tx-cu-preview-open > span { opacity: 1; }
+  .tx-cu-browser-tab .tx-cu-tab-close { opacity: 1; }
+  .tx-cu-floating-compact > header { width: 36px; }
+  .tx-cu-floating-compact > header button { width: 36px; min-height: 36px; }
+  .tx-cu-floating-compact .tx-cu-preview-stack, .tx-cu-floating-compact > footer { right: 40px; }
+  .tx-cu-floating-compact footer :is(.tx-cu-stop,.tx-cu-resume) { width: 30px; height: 30px; min-height: 30px; }
 }
 
 .tx-cu-turn-outcomes { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dsw-alias-label-secondary); }

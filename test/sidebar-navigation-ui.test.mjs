@@ -9,6 +9,14 @@ test('sidebar search and native project/session actions work with keyboard and t
   const browser = page.locator('[data-omd-sidebar-browser]');
   const row = browser.locator(`[data-row-key="session:${f.sessionId}"]`);
   const workspace = browser.locator('[data-row-key^="workspace:"]').first();
+  await browser.evaluate(el => {
+    const button = document.createElement('button'); button.className = 'another-plugin_title';
+    button.dataset.omdNavPart = 'another-plugin'; button.dataset.testForeignNavigation = '';
+    el.append(button);
+  });
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  assert.equal(await browser.locator('[data-test-foreign-navigation]').getAttribute('data-omd-nav-part'), 'another-plugin', 'native styling hooks leave foreign plugin nodes untouched');
+  await browser.locator('[data-test-foreign-navigation]').evaluate(el => el.remove());
   for (const skin of ['default', 'codex-desktop', 'ios-liquid-glass', 'claude-cli-terminal', 'google-material-expressive']) {
     await page.getByRole('button', { name: '设置', exact: true }).click();
     await page.getByRole('dialog').getByRole('button', { name: '外观', exact: true }).click();

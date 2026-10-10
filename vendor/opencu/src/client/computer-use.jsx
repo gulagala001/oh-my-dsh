@@ -36,6 +36,9 @@ const ScreenIcon=()=> <ComputerIcon name="screen" size={17}/>;
 const names={running:'正在操作',idle:'就绪',stopped:'已停止',stopping:'正在停止',error:'需要处理'};
 function ComputerChip({sessionId,onOpen,onPresentation,inputActions,conversation}){
   const{state,setState,setError,error}=useStateView(sessionId);const previewAnchor=useRef(null);
+  const [pending,setPending]=useState(''),currentSession=useRef(sessionId);currentSession.current=sessionId;
+  useEffect(()=>{setPending('');},[sessionId]);
+  const control=async op=>{if(pending)return;setPending(op);try{const next=await api(op,sessionId,{});if(currentSession.current===sessionId)setState(next);}catch(error){if(currentSession.current===sessionId)setError(error.message);}finally{if(currentSession.current===sessionId)setPending('');}};
   const paneVisible=usePreviewPaneVisible(sessionId);
   const presentationHandler=useRef(onPresentation);presentationHandler.current=onPresentation;
   useEffect(()=>{
@@ -52,9 +55,10 @@ function ComputerChip({sessionId,onOpen,onPresentation,inputActions,conversation
     <FloatingPreview sessionId={sessionId} state={state} url={url} api={api} onState={setState} onError={setError} anchor={previewAnchor} onOpen={onOpen} paneVisible={paneVisible}/>
     <WindowShare sessionId={sessionId} inputActions={inputActions} conversation={conversation}/>
     {state?.vision?.input==='text'&&<span className="tx-cu-vision-warning" title="当前模型仅接收文字，截图不会送入模型。">仅文本模型</span>}
-    {state?.target&&<span className="tx-cu-chip-status">{state.resuming?'正在恢复':state.transitioning?'正在载入':names[state.status]}</span>}
-    {active&&<button type="button" title="停止操作" aria-label="停止操作" disabled={state.status==='stopping'} onClick={()=>api('stop',sessionId,{}).then(setState).catch(e=>setError(e.message))}><ComputerIcon name="stop" size={13}/></button>}
-    {state?.status==='stopped'&&!state.transitioning&&<button type="button" className="tx-cu-chip-resume" onClick={()=>api('resume',sessionId,{}).then(setState).catch(e=>setError(e.message))}><ComputerIcon name="play" size={12}/>恢复控制</button>}
+    {state?.target&&<span className="tx-cu-chip-status" role="status">{pending==='stop'?'正在停止':pending==='resume'||state.resuming?'正在恢复':state.transitioning?'正在载入':names[state.status]}</span>}
+    {active&&<button type="button" title="停止操作" aria-label="停止操作" disabled={!!pending||state.status==='stopping'} onClick={()=>void control('stop')}><ComputerIcon name="stop" size={13}/></button>}
+    {state?.status==='stopped'&&!state.transitioning&&<button type="button" className="tx-cu-chip-resume" disabled={!!pending||state.resuming} onClick={()=>void control('resume')}><ComputerIcon name="play" size={12}/>恢复控制</button>}
+    {error&&<span className="tx-cu-chip-error tx-cu-error" role="alert">{error}</span>}
   </div>;
 }
 export function ComputerPane({sessionId,useTabInfo,inputActions,conversation,hostBrowserAvailable=false}){
@@ -63,8 +67,10 @@ export function ComputerPane({sessionId,useTabInfo,inputActions,conversation,hos
   const target=state?.viewTarget??state?.target;
   const[busy,setBusy]=useState(false),[navigation,setNavigation]=useState(null),[frame,setFrame]=useState(null),controls=useRef(null);
   const[previewScale,setPreviewScale]=useState('1'),[deviceMode,setDeviceMode]=useState(false);
+  const currentSession=useRef(sessionId);currentSession.current=sessionId;
   useEffect(()=>{setNavigation(null);},[target?.id]);
-  const act=async(op,value={})=>{setBusy(true);try{setState(await api(op,sessionId,value));setError('');}catch(e){setError(e.message);}finally{setBusy(false);}};
+  useEffect(()=>{setBusy(false);},[sessionId]);
+  const act=async(op,value={})=>{if(busy)return;setBusy(true);try{const next=await api(op,sessionId,value);if(currentSession.current===sessionId){setState(next);setError('');}}catch(e){if(currentSession.current===sessionId)setError(e.message);}finally{if(currentSession.current===sessionId)setBusy(false);}};
   const previewUrl = hostPreviewUrl(target, navigation);
   const browserActions=target?.kind==='tab'?<>
     {hostBrowserAvailable && previewUrl && <button type="button" aria-label="在官方浏览器中预览" title="用官方浏览器打开独立预览；不会改变助手控制的网页" onClick={() => { try { openHostBrowserPreview(tab.actions, previewUrl); } catch (error) { setError(error.message); } }}><ComputerIcon name="browser" size={15}/></button>}
@@ -75,7 +81,7 @@ export function ComputerPane({sessionId,useTabInfo,inputActions,conversation,hos
   return <div data-cu-session={sessionId} data-cu-target={target?.id} className={'tx-cu-pane'+(target?.kind==='tab'?' tx-cu-pane-browser':'')}>{target?.kind!=='tab'&&<header>
     <div className="tx-cu-pane-heading"><ScreenIcon/><div><strong>Computer Use</strong><span className={'tx-cu-status '+(state?.status==='running'?'is-running':'')}>{state?.resuming?'正在恢复':state?.transitioning?'正在载入':names[state?.status]??'连接中'}</span></div></div>
     {state?.target&&target?.id!==state.target.id&&<button type="button" onClick={()=>act('view-tab',{current:true})}>查看助手当前画面</button>}
-    <div className="tx-cu-toolbar">{target?.kind==='tab'&&<PageAnnotation sessionId={sessionId} frame={state.enabled?frame:null} target={target} inputActions={inputActions} conversation={conversation} api={api}/>} {state?.status==='stopped'&&!state?.transitioning?<button className="tx-cu-primary" onClick={()=>act('resume')}><ComputerIcon name="play" size={12}/>恢复助手控制</button>:target&&<button className="tx-cu-stop" disabled={busy} onClick={()=>act('stop')}><ComputerIcon name="stop" size={12}/>停止并接管</button>}</div>
+    <div className="tx-cu-toolbar">{target?.kind==='tab'&&<PageAnnotation sessionId={sessionId} frame={state.enabled?frame:null} target={target} inputActions={inputActions} conversation={conversation} api={api}/>} {state?.status==='stopped'&&!state?.transitioning?<button type="button" className="tx-cu-primary" disabled={busy||state.resuming} onClick={()=>act('resume')}><ComputerIcon name="play" size={12}/>恢复助手控制</button>:target&&<button type="button" className="tx-cu-stop" disabled={busy||state?.status==='stopping'} onClick={()=>act('stop')}><ComputerIcon name="stop" size={12}/>停止并接管</button>}</div>
     </header>}
     {state?.vision?.input==='text'&&<p className="tx-cu-vision-warning" role="status">{state.vision.name} 当前仅接收文字，截图不会送入模型。需要看图时，请在输入区切换支持图片的模型；应用控件文字仍可读取。</p>}
     {!target&&<div className="tx-cu-empty"><ScreenIcon/><h3>让助手操作应用和网页</h3><p>在对话中用 @ 选择应用或网页，<br/>也可以打开浏览器开始工作。</p></div>}
@@ -101,6 +107,7 @@ function ComputerCard({block,loadImage,toolName,openFile,sessionId,callId}){
   const files=meta?.computerUseFiles??[];
   const stopped=failure&&/tool call aborted|COMPUTER_USE_STOPPED|Computer Use (?:was |is )?stopped|execution (?:was )?cancelled/i.test(message+'\n'+(meta?.computerUseError??''));
   const status=preparing?'准备调用':!settled?'执行中':stopped?'已停止':failure?'执行失败':'已执行';
+  const failureText=String(meta?.computerUseError?.message??meta?.computerUseError??'')||message.split('\n').findLast(line=>/Execution failed:|tool call aborted|COMPUTER_USE_STOPPED/i.test(line))||message.split('\n').find(line=>line.trim())||status;
   return <div className="tx-cu-card" data-state={preparing?'preparing':!settled?'running':stopped?'stopped':failure?'error':'idle'}>
     <button type="button" className="tx-cu-card-heading" disabled={preparing} aria-expanded={preparing?undefined:open} aria-controls={preparing?undefined:bodyId} onClick={()=>setOpen(value=>!value)}>
       <span className="tx-cu-card-leading"><ComputerIcon name="screen" size={16}/><ComputerIcon className="tx-cu-card-chevron" name="chevron" size={14}/></span>
@@ -111,9 +118,8 @@ function ComputerCard({block,loadImage,toolName,openFile,sessionId,callId}){
     </button>
     {open&&!preparing&&<div className="tx-cu-card-body" id={bodyId}>
       {!!images.length&&<div className="tx-cu-result-images">{images.map((c,i)=><SavedImage key={i} attachment={c.attachment} loadImage={loadImage}/>)}</div>}
-      {!!files.length&&<div className="tx-cu-export-files">{files.map((file,i)=><button key={i} type="button" onClick={()=>openFile?.(file.path)} disabled={!openFile} title={file.path}>{file.name}<small>{Math.ceil(file.bytes/1024)} KB</small></button>)}</div>}
-      {failure&&<p className="tx-cu-error">{message.split('\n').find(line=>line.trim())||String(meta?.computerUseError||status)}</p>}
-      {!images.length&&message&&<pre>{message}</pre>}
+      {!!files.length&&<div className="tx-cu-export-files">{files.map((file,i)=><button key={i} type="button" onClick={()=>openFile?.(file.path)} disabled={!openFile} title={file.path}>{file.name}{Number.isFinite(file.bytes)&&<small>{file.bytes>=1048576?(file.bytes/1048576).toFixed(1)+' MB':file.bytes>=1024?(file.bytes/1024).toFixed(1)+' KB':file.bytes+' B'}</small>}</button>)}</div>}
+      {failure&&<p className="tx-cu-error">{failureText}</p>}
       <details><summary>查看操作与结果</summary>{args.code&&<pre>{args.code}</pre>}{message&&<pre>{message}</pre>}</details>
     </div>}
   </div>;

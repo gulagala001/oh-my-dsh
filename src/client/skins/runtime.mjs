@@ -7,10 +7,19 @@ import { extraPalettes } from './palettes.mjs';
 import { createBackgroundRuntime, backgroundDefaults } from './background.mjs';
 import { appearanceCoordinator } from './coordinator.mjs';
 export const STORAGE_KEY = 'omd.skins.v1';
-export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss = '') {
+export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss = '', surfaceMarkers) {
   const recovery = new URLSearchParams(location.search).get('omd-skin') === 'default';
   let state = { active: false, skins: [], palettes: paletteCatalog([]), selected: 'default', palette: 'theme', reduceEffects: false, advanced: advancedDefaults(), background: { ...backgroundDefaults, name: '', url: '', loading: false, error: '' }, error: '' };
   let disposeTokens, style, customStyle, disposed = false, logoSequence = 0, owning = false;
+  const effectsRoot = document.documentElement;
+  const previousEffects = effectsRoot.getAttribute('data-omd-reduce-effects');
+  let writtenEffects;
+  const syncEffects = () => {
+    const value = state.reduceEffects ? '' : null;
+    if (value === null) effectsRoot.removeAttribute('data-omd-reduce-effects');
+    else effectsRoot.setAttribute('data-omd-reduce-effects', value);
+    writtenEffects = value;
+  };
   const listeners = new Set();
   const prepare = value => {
     const skin = validateSkin(value, CSS.supports.bind(CSS));
@@ -53,13 +62,13 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     }
     emit();
   };
-  const background = createBackgroundRuntime(appearanceCss, value => { state = { ...state, background: value }; emit(); }, { recovery, enabled: false });
+  const background = createBackgroundRuntime(appearanceCss, value => { state = { ...state, background: value }; emit(); }, { recovery, enabled: false, surfaceMarkers });
   const clearTheme = () => {
     const root = document.documentElement;
     style?.remove(); style = undefined;
     customStyle?.remove(); customStyle = undefined;
     root.classList.remove('omd');
-    for (const name of ['omdSkin', 'omdLayout', 'omdPalette', 'omdColors', 'appearance', 'omdReduceEffects', 'omdCustom']) delete root.dataset[name];
+    for (const name of ['omdSkin', 'omdLayout', 'omdPalette', 'omdColors', 'appearance', 'omdCustom']) delete root.dataset[name];
   };
   const release = () => {
     if (!owning) return;
@@ -67,6 +76,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     disposeTokens?.(); disposeTokens = undefined;
   };
   const apply = () => {
+    if (!disposed) syncEffects();
     if (!state.active || disposed) { release(); return; }
     // Theme edits retain appearance ownership and the existing background DOM.
     // Only coordinator handoff/unload releases surfaces and their observers.
@@ -78,7 +88,6 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     const composed = composePalette(active?.skin, source);
     background.setEnabled(true);
     background.reduceEffects(state.reduceEffects);
-    if (state.reduceEffects) root.dataset.omdReduceEffects = '';
     if (!composed) { disposeTokens?.(); disposeTokens = undefined; }
     if (!composed && !state.advanced.enabled) return;
     root.dataset.appearance = ctx.theme.getTheme().active.colorScheme;
@@ -110,6 +119,9 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     state = { ...next, palettes: paletteCatalog(next.skins), error: '' }; apply(); emit();
   };
   read();
+  // This user preference also applies to the native theme and OMAA surfaces.
+  // Appearance handoff must not silently restore movement in model controls.
+  syncEffects();
   const offTheme = ctx.on('theme/change', syncMode);
   const unregisterAppearance = appearanceCoordinator().register({ id: 'omd', priority: 0,
     select: () => ({ key: 'omd-global' }),
@@ -128,9 +140,9 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
   const onNavigation = event => {
     if (!hasNavigationSheet() || !matchMedia('(max-width: 600px)').matches) return;
     const target = event.target instanceof Element ? event.target : null;
-    if (!target || target.closest('.YDXeBa_rowActions') || event.button !== 0) return;
-    if (!target.closest('.YDXeBa_sessionRow, .YDXeBa_searchResultRow, .hHd-Xa_newSession, .hHd-Xa_panelRow')) return;
-    const frame = target.closest('.pI_x6G_frame');
+    if (!target || target.closest('[data-omd-nav-part="row-actions"], [aria-haspopup="menu"], [aria-haspopup="true"]') || event.button !== 0) return;
+    if (!target.closest('[data-row-key^="session:"], [data-omd-nav-part="search-result-row"], [data-omd-nav-part="create"], [data-omd-nav-part="panel"]')) return;
+    const frame = target.closest('[data-omd-surface="frame"]');
     if (frame && frame.dataset.sidebarCollapsed !== 'true') queueMicrotask(() => {
       if (!disposed && frame.isConnected && frame.dataset.sidebarCollapsed !== 'true'
         && hasNavigationSheet()) ctx.layout.toggleSidebar();
@@ -195,6 +207,10 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
       unregisterAppearance();
       offTheme(); window.removeEventListener('storage', onStorage); document.removeEventListener('click', onNavigation, true);
       state = { ...state, selected: 'default', palette: 'theme', advanced: advancedDefaults() }; apply(); background.dispose(); listeners.clear();
+      if (effectsRoot.getAttribute('data-omd-reduce-effects') === writtenEffects) {
+        if (previousEffects === null) effectsRoot.removeAttribute('data-omd-reduce-effects');
+        else effectsRoot.setAttribute('data-omd-reduce-effects', previousEffects);
+      }
     },
   };
 }
