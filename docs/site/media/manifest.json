@@ -1,221 +1,307 @@
 {
-  "capturedDate": "2026-09-28",
+  "capturedDate": "2026-10-10",
+  "case": "Launchpad 发布验收清单",
+  "capture": {
+    "host": "0.2.1-alpha.2",
+    "omd": "0.2.1-alpha.2.omd.0.13.0",
+    "openCU": "1.5.0",
+    "archiveSha256": "4a3b8ec0d1f360ed320fe4be5e074799c72eb18c8035bedd01851949ec52ec8b",
+    "platform": "macOS arm64 · 隔离 Native DSH Web",
+    "model": "controlled localhost fixture",
+    "actualTools": [
+      "todo_write",
+      "read",
+      "computer_use",
+      "verify_link",
+      "present",
+      "recall"
+    ],
+    "csvSha256": "991b8e4568c31368d321cc75fde50f051dcd802ab39d94db0dff596374704f7d",
+    "rows": 8,
+    "pending": 3,
+    "contextOperations": [
+      "summary",
+      "full"
+    ],
+    "archivedDocuments": 2,
+    "scope": "虚构 Launchpad 业务数据；原生工具、浏览器操作、实际下载、CSV 逐字段核验与原话回查真实执行。未验证真实模型生成质量、付费账号、系统桌面权限或 Windows/Linux 本轮界面。"
+  },
+  "memoryCrops": {
+    "record": {
+      "file": "launchpad-requirements.jpg",
+      "crop": [
+        395.390625,
+        474,
+        352.34375,
+        107
+      ],
+      "imageWidth": 1440,
+      "imageHeight": 1000
+    },
+    "compress": {
+      "file": "launchpad-context.jpg",
+      "crop": [
+        781,
+        74,
+        659,
+        926
+      ],
+      "imageWidth": 1440,
+      "imageHeight": 1000
+    },
+    "recall": {
+      "file": "launchpad-recall.jpg",
+      "crop": [
+        300,
+        475,
+        465,
+        152
+      ],
+      "imageWidth": 1440,
+      "imageHeight": 1000
+    },
+    "continue": {
+      "file": "launchpad-tasks.jpg",
+      "crop": [
+        801,
+        153.390625,
+        631,
+        416.9375
+      ],
+      "imageWidth": 1440,
+      "imageHeight": 1000
+    }
+  },
   "assets": [
     {
-      "file": "theme-omd-light.jpg",
+      "file": "launchpad-appearance-detail.jpg",
+      "kind": "native-screenshot-clip",
+      "width": 564,
+      "height": 726,
+      "bytes": 36984,
+      "sha256": "41516359f7d4de1dfa83475828f3be5572fca5561ac12c457591f63aebc759f9",
+      "case": "Launchpad",
+      "mimeType": "image/jpeg",
+      "original": "launchpad-appearance.jpg",
+      "clip": {
+        "x": 532,
+        "y": 154,
+        "width": 564,
+        "height": 726
+      }
+    },
+    {
+      "file": "launchpad-appearance.jpg",
       "kind": "unmodified-native-ui-screenshot",
-      "width": 1280,
-      "height": 720,
-      "bytes": 54061,
-      "sha256": "2f666517734617d270040b219f668fc1056059211d20f5df46209e12a80945b6",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 89908,
+      "sha256": "647dc07f41e92c21af79def3beb00850129a3ce8a0e3cd6eed696be4d87bc00e",
       "case": "Launchpad",
       "mimeType": "image/jpeg"
     },
     {
-      "file": "theme-omd-dark.jpg",
-      "kind": "unmodified-native-ui-screenshot",
-      "width": 1280,
-      "height": 720,
-      "bytes": 53485,
-      "sha256": "694faa7fc9983be86b1b0034afa5483f788dc2c602f98ed45b26ebd514ef763d",
+      "file": "launchpad-browser.jpg",
+      "kind": "unmodified-browser-viewport-screenshot",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 82394,
+      "sha256": "43b16feba05873fb5062ddecce587db6c447e4c8d3bb31881597ec1c68a79c8f",
       "case": "Launchpad",
       "mimeType": "image/jpeg"
     },
     {
-      "file": "theme-codex-light.jpg",
+      "file": "launchpad-context.jpg",
       "kind": "unmodified-native-ui-screenshot",
-      "width": 1280,
-      "height": 720,
-      "bytes": 57937,
-      "sha256": "7d094ac88f88124c93046d5a06df5487b5e7900c7897b7b2480894f6f7b2aa5f",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 146664,
+      "sha256": "03bdda8ece27af408302921bdec691a6b6c1e525682c6661bf982568949f5606",
+      "case": "Launchpad",
+      "mimeType": "image/jpeg"
+    },
+    {
+      "file": "launchpad-plugin-detail.jpg",
+      "kind": "native-element-screenshot",
+      "width": 276,
+      "height": 590,
+      "bytes": 38116,
+      "sha256": "6cfc56bdfb47c3cf8353b7975e8ee608f6ade1acf2f43c9992d75b42cc7c9ec4",
+      "case": "Launchpad",
+      "mimeType": "image/jpeg",
+      "view": "launchpad-plugins.jpg",
+      "captureTarget": "Intelligent UI 1.0.2 recommendation card"
+    },
+    {
+      "file": "launchpad-plugins.jpg",
+      "kind": "unmodified-native-ui-screenshot",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 152081,
+      "sha256": "3e0d1f0671d222419a16ca3651d666822ba8c0e54ba68a79afadb614519ceff9",
+      "case": "Launchpad",
+      "mimeType": "image/jpeg"
+    },
+    {
+      "file": "launchpad-pro.jpg",
+      "kind": "unmodified-native-ui-screenshot",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 118463,
+      "sha256": "3ab5f81f9616d69d97142596ff70f392302db06a823b0f743552f6f2fe5beb94",
+      "case": "Launchpad",
+      "mimeType": "image/jpeg"
+    },
+    {
+      "file": "launchpad-recall.jpg",
+      "kind": "unmodified-native-ui-screenshot",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 139739,
+      "sha256": "f4ab220a8b720844fffd2feffdf5531c97666c573ac77da3e52ed3d125bc2330",
+      "case": "Launchpad",
+      "mimeType": "image/jpeg"
+    },
+    {
+      "file": "launchpad-requirements.jpg",
+      "kind": "unmodified-native-ui-screenshot",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 121448,
+      "sha256": "8bac0021df502ab0e6a0c51628b8c94ddd18af27c302f44f777ebca3dd11bb9e",
+      "case": "Launchpad",
+      "mimeType": "image/jpeg"
+    },
+    {
+      "file": "launchpad-tasks.jpg",
+      "kind": "unmodified-native-ui-screenshot",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 117111,
+      "sha256": "54f95e44473d495312ea98affe228776c57c15e24ad2a47d52085d592d3aa5e9",
+      "case": "Launchpad",
+      "mimeType": "image/jpeg"
+    },
+    {
+      "file": "launchpad-ultracode.jpg",
+      "kind": "unmodified-native-ui-screenshot",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 117884,
+      "sha256": "5822118b71408748ffc08a9d9a80ac04f45d4dbca309ebbd79efdbdf20c110eb",
+      "case": "Launchpad",
+      "mimeType": "image/jpeg"
+    },
+    {
+      "file": "launchpad-workbench.jpg",
+      "kind": "unmodified-native-ui-screenshot",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 117230,
+      "sha256": "cd461ade74ad749b9abbbd3f9b7787dcacf4ea2c3bb86a224597a17e01d7538f",
       "case": "Launchpad",
       "mimeType": "image/jpeg"
     },
     {
       "file": "theme-codex-dark.jpg",
       "kind": "unmodified-native-ui-screenshot",
-      "width": 1280,
-      "height": 720,
-      "bytes": 56367,
-      "sha256": "18d40b86a6758a32994776e780490b44448d983609cc4952643d7dd9ff27b34b",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 136360,
+      "sha256": "5d2d9096e286fb68f4e9653685f906542c67a15729d280eb079d9c1b5d582c7f",
       "case": "Launchpad",
       "mimeType": "image/jpeg"
     },
     {
-      "file": "theme-glass-light.jpg",
+      "file": "theme-codex-light.jpg",
       "kind": "unmodified-native-ui-screenshot",
-      "width": 1280,
-      "height": 720,
-      "bytes": 58182,
-      "sha256": "4479e43e337a9b01954e2cb7f201b5c735736184987f82b2fdd520fd881378d7",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 138528,
+      "sha256": "135afc61f3364ff7b9e6ec96afaf7449a2f2ed10e14e83dad666ad0ed1879398",
       "case": "Launchpad",
       "mimeType": "image/jpeg"
     },
     {
       "file": "theme-glass-dark.jpg",
       "kind": "unmodified-native-ui-screenshot",
-      "width": 1280,
-      "height": 720,
-      "bytes": 58338,
-      "sha256": "dee150ba6bfbf5ea273b5b5eff6fc29c8ee364b0e51ad0aeba1d04f344020db4",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 125737,
+      "sha256": "9778ac71cae622a8758a4c6fd99f7e9122d6131194b75cf050571b55bc4556c2",
       "case": "Launchpad",
       "mimeType": "image/jpeg"
     },
     {
-      "file": "theme-terminal-light.jpg",
+      "file": "theme-glass-light.jpg",
       "kind": "unmodified-native-ui-screenshot",
-      "width": 1280,
-      "height": 720,
-      "bytes": 61548,
-      "sha256": "44a5bcc739766fe208876a90a287967cce20c18155a875fbe6b461c92c9a7a1c",
-      "case": "Launchpad",
-      "mimeType": "image/jpeg"
-    },
-    {
-      "file": "theme-terminal-dark.jpg",
-      "kind": "unmodified-native-ui-screenshot",
-      "width": 1280,
-      "height": 720,
-      "bytes": 58775,
-      "sha256": "2f922e3609a008f3fbb2fb8878f061ba9448b7c1485b7a97aef48f7cc11e3cfd",
-      "case": "Launchpad",
-      "mimeType": "image/jpeg"
-    },
-    {
-      "file": "theme-material-light.jpg",
-      "kind": "unmodified-native-ui-screenshot",
-      "width": 1280,
-      "height": 720,
-      "bytes": 59289,
-      "sha256": "70756d48c38db8d6d1f4161228923431bb1ad425b7aa85289dbce8a50dbe8811",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 125360,
+      "sha256": "eb1580ca7fc30fb50fbb034f41fa8ac778449153457067e72f58e1ab45c0aa12",
       "case": "Launchpad",
       "mimeType": "image/jpeg"
     },
     {
       "file": "theme-material-dark.jpg",
       "kind": "unmodified-native-ui-screenshot",
-      "width": 1280,
-      "height": 720,
-      "bytes": 60881,
-      "sha256": "e981c21bad677dbae17a5447b1ad4354f229ac4f97593904fd10efefcecc72ef",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 122501,
+      "sha256": "3bfe471abc3cd2e30af31176d2bf9fdfb095a96f50531d0eede9d3cb5bf36cbe",
       "case": "Launchpad",
       "mimeType": "image/jpeg"
     },
     {
-      "file": "launchpad-appearance-detail.jpg",
-      "bytes": 11386,
-      "sha256": "db0ff272d2a5f67a7ef7f1e4d1d84e4089c70194888124a59813c63e0b346fee",
-      "width": 575,
-      "height": 520,
-      "case": "Launchpad",
-      "kind": "native-screenshot-clip",
-      "original": "launchpad-appearance.jpg",
-      "clip": {
-        "x": 445,
-        "y": 85,
-        "width": 575,
-        "height": 520
-      },
-      "mimeType": "image/jpeg"
-    },
-    {
-      "file": "launchpad-appearance.jpg",
-      "bytes": 50655,
-      "sha256": "f5689ca0384a485ddbb207467426ec6182370e72f38ca55f5a80ebaf4c34b79f",
-      "width": 1280,
-      "height": 720,
-      "case": "Launchpad",
+      "file": "theme-material-light.jpg",
       "kind": "unmodified-native-ui-screenshot",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 117920,
+      "sha256": "4185e9e665d05676f7fe1cd3020036010fb05c01b751c3d909a0fa7e66ae22a3",
+      "case": "Launchpad",
       "mimeType": "image/jpeg"
     },
     {
-      "file": "launchpad-browser.jpg",
-      "bytes": 65129,
-      "sha256": "5dbef9c758fa566d1e04d3ac827775a690e53ebebda75ca72e32b498b0d5553d",
-      "width": 1280,
-      "height": 720,
-      "case": "Launchpad",
-      "kind": "unmodified-browser-viewport-screenshot",
-      "mimeType": "image/jpeg"
-    },
-    {
-      "file": "launchpad-context.jpg",
-      "bytes": 71617,
-      "sha256": "decb19b894cb550fcf39ff4193b540d0fcb0d19ebaf5d22f70227296eb1badab",
-      "width": 1280,
-      "height": 720,
-      "case": "Launchpad",
+      "file": "theme-omd-dark.jpg",
       "kind": "unmodified-native-ui-screenshot",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 125648,
+      "sha256": "01545165a6670c7e2c5a8690d1778cf7c672855566dc4cfdbafb1dded9f324d6",
+      "case": "Launchpad",
       "mimeType": "image/jpeg"
     },
     {
-      "file": "launchpad-plugin-detail.jpg",
-      "bytes": 4965,
-      "sha256": "46f2539ac07a49f1da67c778b0ab1e744eb0d6fc9d566bd7d331390ee451cf31",
-      "width": 283,
-      "height": 308,
-      "case": "Launchpad",
-      "kind": "native-screenshot-clip",
-      "original": "launchpad-plugins.jpg",
-      "clip": {
-        "x": 448,
-        "y": 389,
-        "width": 283,
-        "height": 308
-      },
-      "mimeType": "image/jpeg"
-    },
-    {
-      "file": "launchpad-plugins.jpg",
-      "bytes": 60017,
-      "sha256": "cebd100535ef5395ff481e957e55989007af33b1c297447415828cae27ddd126",
-      "width": 1280,
-      "height": 720,
-      "case": "Launchpad",
+      "file": "theme-omd-light.jpg",
       "kind": "unmodified-native-ui-screenshot",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 126343,
+      "sha256": "bf95c6f4d83c816c97da6a001670d38e99fe6c2e3117ffdef25255ea15acb271",
+      "case": "Launchpad",
       "mimeType": "image/jpeg"
     },
     {
-      "file": "launchpad-recall.jpg",
-      "bytes": 59166,
-      "sha256": "10e240c8ac74ed55285f4e270358a4a0778da0b6f58284948ab4083f0a58712c",
-      "width": 1280,
-      "height": 720,
-      "case": "Launchpad",
+      "file": "theme-terminal-dark.jpg",
       "kind": "unmodified-native-ui-screenshot",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 128167,
+      "sha256": "f27a5c95020aab09c96492246effce265bdc978669e3a74c58c79f4bbd7c0873",
+      "case": "Launchpad",
       "mimeType": "image/jpeg"
     },
     {
-      "file": "launchpad-requirements.jpg",
-      "bytes": 68743,
-      "sha256": "df461dc0123a716bc6096d53735eeb907056863a4a5e562d305ec7b3e61f469b",
-      "width": 1280,
-      "height": 720,
-      "case": "Launchpad",
+      "file": "theme-terminal-light.jpg",
       "kind": "unmodified-native-ui-screenshot",
-      "mimeType": "image/jpeg"
-    },
-    {
-      "file": "launchpad-tasks.jpg",
-      "bytes": 72296,
-      "sha256": "c2bc93a96b5100d7ff4c1c9e9935ce5b34e556355dbabd342197001ea9a18d7b",
-      "width": 1280,
-      "height": 720,
+      "width": 1440,
+      "height": 1000,
+      "bytes": 133150,
+      "sha256": "bc65d41c586f5d3663067235120b952ed8c06a4d59b3cd0622b92e4bee936934",
       "case": "Launchpad",
-      "kind": "unmodified-native-ui-screenshot",
-      "mimeType": "image/jpeg"
-    },
-    {
-      "file": "launchpad-workbench.jpg",
-      "bytes": 74412,
-      "sha256": "9d224cc63c3039468e92afa11e935b0fc75f05fad4aee1126a7d5a196374e562",
-      "width": 1280,
-      "height": 720,
-      "case": "Launchpad",
-      "kind": "unmodified-native-ui-screenshot",
       "mimeType": "image/jpeg"
     }
   ],
-  "case": "Launchpad 发布验收清单",
-  "captureNotes": "2026-09-28 隔离 DSH master 21638c5，本地受控演示模型；原生工具、页面操作、文件下载、任务验证与回查实际执行。人物与初始勾选为示例数据。"
+  "captureNotes": "2026-10-10 对应 DSH alpha.2 / OMD 0.13 / OpenCU 1.5 的完整 R19 实拍。22 张 JPEG 保留原始字节，局部截图由原生 DOM 边界采集；非 AI 图片。公开安装仍为 OMD 0.10，候选尚未发布。"
 }

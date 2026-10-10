@@ -22,7 +22,7 @@
 .omd [data-omd-part="button"]:focus-visible { outline: 3px solid var(--omd-focus); outline-offset: 3px; }
 .omd [data-omd-part="button-primary"], .omd [data-omd-part="send"] {
   background: linear-gradient(175deg, var(--omd-button-top), var(--omd-button-bg));
-  color: #ffffff;
+  color: var(--omd-button-fg);
   border: 1px solid #ffffff26;
   border-radius: 999px;
   box-shadow: inset 0 1px 0 #ffffff33, 0 4px 10px #007aff26;

@@ -265,7 +265,7 @@ test('built documentation works on a plain static origin with desktop and mobile
     await reader.locator('#theme-original').click();
     const original = await popupPromise; await original.waitForLoadState();
     assert.equal(new URL(original.url()).pathname, '/preview/omd/docs/site/media/theme-codex-light.jpg');
-    assert.equal(await original.locator('img').evaluate(image => image.naturalWidth), 1280);
+    assert.equal(await original.locator('img').evaluate(image => image.naturalWidth), 1440);
     await original.close();
     for (const file of ['usage', 'upgrade', 'windows', 'skins', 'dream-memory']) {
       await reader.goto(`${base}/docs/${file}.html`);

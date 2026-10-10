@@ -197,7 +197,7 @@ type WorkflowInput = Omit<WorkflowCallArgs, 'script' | 'meta'> & Partial<Pick<Wo
 
 function details(run: WorkflowRun) {
   const extended = run as PtcWorkflowRun
-  return { name: run.meta.name, runId: run.id, scriptPath: extended.scriptPath!, transcriptDir: extended.transcriptDir!, worktrees: extended.worktrees.map(artifact => ({ ...artifact })) }
+  return { name: run.meta.name, runId: run.id, scriptPath: extended.scriptPath ?? '', transcriptDir: extended.transcriptDir ?? '', worktrees: (extended.worktrees ?? []).map(artifact => ({ ...artifact })) }
 }
 
 function childFailures(run: WorkflowRun) { return (run as PtcWorkflowRun).childFailures ?? [] }
@@ -219,7 +219,9 @@ function failureText(failures: ReturnType<typeof childFailures>): string {
 
 function locationText(run: WorkflowRun): string {
   const value = details(run)
-  return `Run ID: ${value.runId}\nScript: ${value.scriptPath}\nJournal: ${value.transcriptDir}/journal.jsonl`
+  return `Run ID: ${value.runId}`
+    + (value.scriptPath ? `\nScript: ${value.scriptPath}` : '')
+    + (value.transcriptDir ? `\nJournal: ${value.transcriptDir}/journal.jsonl` : '')
     + (value.worktrees.length ? `\nWorktrees: ${JSON.stringify(value.worktrees)}` : '')
 }
 
@@ -336,20 +338,22 @@ async function startBackgroundRun(
       deps.mirror.start(run.id, job)
       if (recordsRun) deps.recorder.start(parent.session, run)
       const done = run.result.then(async (result): Promise<JobOutcome> => {
+        let settled = result
         try {
           // Keep member listeners alive through disposal: an engine may
           // synthesize cancelled member endings while reaching quiescence.
           await run.dispose()
         } catch (error: unknown) {
-          // done must not reject; a failed disposal still has a settled result to report.
-          ctx.logger.warn(`background workflow run ${run.id} dispose failed: ${String(error)}`)
+          // Jobs receive a settled failure when cleanup cannot establish quiescence.
+          const cleanup = `Workflow cleanup failed: ${renderRecordingError(error)}`
+          settled = { ...result, stopReason: 'error', error: result.error === undefined ? cleanup : `${result.error}\n${cleanup}` }
         }
         deps.mirror.stop(run.id)
         if (recordsRun) {
-          deps.recorder.finish(run.id, result.stopReason, childFailures(run))
+          deps.recorder.finish(run.id, settled.stopReason, childFailures(run))
           deps.recorder.abandon(run.id)
         }
-        return jobOutcomeOf(result, run, deps.maxResultChars)
+        return jobOutcomeOf(settled, run, deps.maxResultChars)
       })
       return {
         cancel: (reason?: string) => { run.cancel(reason ?? 'background workflow job killed') },
@@ -448,7 +452,14 @@ export function apply(ctx: Context, config: Config): void {
               scriptPath: { type: 'string', required: true },
               transcriptDir: { type: 'string', required: true },
               worktrees: { type: 'json', required: true },
-              failures: { type: 'json', required: true },
+              failures: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: {
+                seq: { type: 'integer', required: true },
+                childId: { type: 'string' },
+                stopReason: { type: 'string', required: true },
+                reason: { type: 'string', required: true },
+                reasonData: { type: 'json' },
+                cause: { type: 'string', required: true, enum: ['cancelled', 'failed'] },
+              } } },
               agentsStarted: { type: 'integer', required: true },
               result: { type: 'json', required: true },
             },
@@ -460,7 +471,9 @@ export function apply(ctx: Context, config: Config): void {
         text: (value.kind === 'background'
           ? `workflow "${value.name}" started in the background as job ${value.jobId}. Its return value arrives with the completion notice; check on it with job_output, stop it with job_kill.`
           : renderResult(value.name, value.agentsStarted, value.result, maxResultChars, value.failures))
-          + `\nRun ID: ${value.runId}\nScript: ${value.scriptPath}\nJournal: ${value.transcriptDir}/journal.jsonl`
+          + `\nRun ID: ${value.runId}`
+          + (value.scriptPath ? `\nScript: ${value.scriptPath}` : '')
+          + (value.transcriptDir ? `\nJournal: ${value.transcriptDir}/journal.jsonl` : '')
           + (Array.isArray(value.worktrees) && value.worktrees.length ? `\nWorktrees: ${JSON.stringify(value.worktrees)}` : ''),
       }],
     },
@@ -472,7 +485,15 @@ export function apply(ctx: Context, config: Config): void {
         // parent to attribute the children to. Fail loud rather than guess.
         throw new Error('workflow tool requires a calling agent (exec.agent was undefined)')
       }
-      const prepared = await (ctx.workflowEngine as PtcWorkflowEngine).prepare(input, parent, exec.signal)
+      const engine = ctx.workflowEngine as PtcWorkflowEngine
+      // Saved scripts are an optional engine capability. Keep the public base
+      // WorkflowEngine's inline execution usable for independently supplied engines.
+      let prepared
+      if (typeof engine.prepare === 'function') prepared = await engine.prepare(input, parent, exec.signal)
+      else {
+        if (input.script === undefined || input.meta === undefined || input.name !== undefined || input.scriptPath !== undefined) throw new Error('This workflow engine requires an inline script and meta; saved workflow loading is unavailable')
+        prepared = { script: input.script, meta: input.meta }
+      }
       exec.signal.throwIfAborted()
       const args = { ...input, ...prepared }
       if (args.run_in_background === true) {

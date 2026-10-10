@@ -23,6 +23,7 @@
 | --- | --- |
 | 不选择项目开始聊天，自动创建独立工作目录 | [无项目聊天](usage.md#无项目聊天) |
 | 工作台、任务、BT 与界面入口 | [使用指南](usage.md#界面与入口) |
+| 调用概览、用量筛选、上下文演变与预算 | [监控指南](monitoring.md) |
 | 草稿润色、撤销与继续优化 | [提示词优化](usage.md#提示词优化) |
 | 系统提示词、工具说明与宿主适配 | [系统级适配](prompt-adaptation.md) |
 | 主题、配色、壁纸和 Logo | [外观指南](skins.md) |
@@ -40,7 +41,9 @@
 
 开发与发行维护：[DSH 0.2 适配与验证](dsh-0.2-preparation.md)，包含固定源码基线、验证范围和正式发布后的收尾步骤。
 
-本版文档对应 **OMD 0.2.1-alpha.1.omd.0.10.0 / DSH 0.2.1-alpha.1**，内置 **OpenCU 1.3.0**。[Web／源码说明](release-0.2.1-alpha.1.omd.0.10.0.md) · [rc.2 桌面说明](release-0.2.0-rc.2.omd.0.10.0.md) · [发布记录与下载](https://github.com/gulagala001/oh-my-dsh/releases) · [全部更新记录](../CHANGELOG.md)。
+当前候选文档对应 **OMD 0.2.1-alpha.2.omd.0.15.0 / DSH 0.2.1-alpha.2**，内置 **OpenCU 1.6.0**。本次整合验收针对 alpha.2；rc.2 与 alpha.1 保留已交付的独立 0.14.0 构建。[当前候选说明](release-0.2.1-alpha.2.omd.0.15.0.md) · [发布记录与下载](https://github.com/gulagala001/oh-my-dsh/releases) · [全部更新记录](../CHANGELOG.md)。
+
+候选 **0.2.1-alpha.2.omd.0.15.0** 未正式发布；公开安装版本为 **0.2.1-alpha.1.omd.0.10.0**，不含候选改进或 alpha.2 适配，参见[本地候选验收](upgrade.md#candidate-install)。
 
 `main` 分支文档可能包含下一版改动，以“开发分支／未发布”标注；安装固定 tag 时，以[该 tag 的文档](https://github.com/gulagala001/oh-my-dsh/tree/v0.2.1-alpha.1.omd.0.10.0/docs)和对应版本说明为准。历史 `release-*.md` 记录的是当时的功能与验证范围，当前安装命令见上述安装入口。
 
@@ -52,6 +55,7 @@ Dream、工作台与恢复改进已纳入本版。DSH 0.2.0-rc.1 是另一个宿
 - [提出功能或易用性建议](https://github.com/gulagala001/oh-my-dsh/issues/new?template=feature-request.yml)：描述实际遇到的问题和希望得到的结果。
 - [提交第三方插件 / 申请适配](plugin-submissions.md)：仓库地址和一句用途即可。
 - [贡献代码或文档](../CONTRIBUTING.md)：开发、验证与 PR 说明。
+- [REA 开发调查](rea-development.md)：按需核对发行工件、源码与 bundle、功能路径及运行证据。
 - [原作者、项目来源与许可](../THIRD_PARTY_NOTICES.md)：集中查阅原作者主页、原项目地址及许可说明。
 
 [OpenDesign技能桥接](open-design.md)：来源、许可、安装及验证范围。

@@ -4,7 +4,7 @@ import { build } from 'esbuild';
 import { chromium } from 'playwright';
 import { until } from './fixtures/frontend.mjs';
 
-async function fixture(t, handle) {
+async function fixture(t, handle, { waitForReady = true } = {}) {
   const bundle = await build({ stdin: { contents: `
     import React from 'react';
     import { createRoot } from 'react-dom/client';
@@ -25,9 +25,23 @@ async function fixture(t, handle) {
   await page.route('**/trisoul-x/api/scope?*', handle);
   await page.goto('http://omd.test/'); await page.addScriptTag({ content: bundle.outputFiles[0].text });
   const select = page.getByRole('combobox', { name: '会话范围', exact: true });
-  await until(() => select.isEnabled());
+  if (waitForReady) await until(() => select.isEnabled());
   return { page, select, errors };
 }
+
+test('an unreadable scope has an explicit retry instead of presenting a guessed default', async t => {
+  let reads = 0;
+  const { page, select, errors } = await fixture(t, route => ++reads === 1
+    ? route.fulfill({ status: 503, json: { error: '临时读取失败' } })
+    : route.fulfill({ json: { scope: 'global', locked: true } }), { waitForReady: false });
+  await page.getByText('范围暂不可读', { exact: true }).waitFor();
+  assert.equal(await select.count(), 0);
+  await page.getByRole('button', { name: '重试会话范围', exact: true }).click();
+  await until(async () => await select.count() === 1 && await select.inputValue() === 'global');
+  assert.equal(await select.isEnabled(), false);
+  assert.equal(await page.getByRole('button', { name: '重试会话范围', exact: true }).count(), 0);
+  assert.equal(reads, 2); assert.deepEqual(errors, []);
+});
 
 test('late scope reads cannot revert a successfully saved selection', async t => {
   let reads = 0, late;

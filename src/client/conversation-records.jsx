@@ -1,6 +1,6 @@
 import { sourceName } from '../message-source.mjs';
 import React, { useId, useState, useSyncExternalStore } from 'react';
-import { decorateSlot } from '#opencu/src/client/slot-decoration.mjs';
+import { decorateSlotComponent } from '#opencu/src/client/slot-decoration.mjs';
 import { compactionGroups, taskInjectionDefinition, supersededTaskInjections } from './conversation-records.mjs';
 import { btwRecordDefinition } from './btw-record.mjs';
 import css from './conversation-records.css';
@@ -70,7 +70,7 @@ export function applyConversationRecords(ctx) {
     </Record>;
   }
   for (const key of ['compact-p', 'compact-f']) ctx.slots.inject('conversation.chat.commandview', () => ctx.slots.register({ name: 'conversation.chat.commandview', key }, CompressionCommand));
-  ctx.slots.inject('conversation.chat.node', () => decorateSlot(ctx.slots, 'conversation.chat.node', key => ['context', 'compaction', 'manual-compaction'].includes(key), original => {
+  ctx.slots.inject('conversation.chat.node', () => decorateSlotComponent(ctx.slots, 'conversation.chat.node', key => ['context', 'compaction', 'manual-compaction'].includes(key), original => {
     const Original = original.component, key = original.options.key;
     function ContextRecord(props) {
       // The dedicated row also covers replacement messages; the process
@@ -87,6 +87,6 @@ export function applyConversationRecords(ctx) {
       if (key === 'compaction' && marker.seq !== group.firstSeq) return <span data-omd-record-hidden hidden/>;
       return <CompactionRecord key={group.id} group={group}/>;
     }
-    return { options: { ...original.options, name: 'conversation.chat.node', key, locale: original.locale, inject: original.inject, store: original.store, children: original.children, priority: (original.options.priority ?? 0) - 1 }, component: key === 'context' ? ContextRecord : GroupedCompaction };
+    return key === 'context' ? ContextRecord : GroupedCompaction;
   }));
 }

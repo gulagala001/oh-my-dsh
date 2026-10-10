@@ -123,14 +123,15 @@ test('installed PTC mode survives bundle reload and stock sessions after disable
 for (const agentPreset of ['trisoul-x','omd-ptc']) test(`${agentPreset}: Pro replaces stronger guidance on the actual request and preserves BT across preset switches`, { timeout:180000 }, async t => {
   const captured=[];
   const fx=await frontendFixture(t,{headless:true,installedPackage:true,agentPreset,
-    modelProfile:{reasoningEfforts:{off:null,low:'low',xhigh:'xhigh'},compat:{supportsReasoningEffort:true}},
+    modelProfile:{reasoningEfforts:{off:null,low:'low',xhigh:'xhigh',max:'max'},compat:{supportsReasoningEffort:true}},
     modelReply(payload){if(payload.tools?.length)captured.push(payload);},
   });
   const path='/model-mode?session='+fx.sessionId;
   const selectPreset = async (sessionId,preset) => { const r=await fx.call('agentPresets/select',{agentId:sessionId,agentPreset:preset}); assert.equal(r.result?.ok,true,JSON.stringify(r)); };
   await fx.api('/better-todo?session='+fx.sessionId,{todo:false,verification:true});
   await fx.api(path,{provider:'fixture',model:'fixture',ultracode:true});
-  assert.match(textOf(await request(fx,captured,'Before mode transition')),/Adversarial verify/);
+  const before = await request(fx,captured,'Before mode transition');
+  assert.match(textOf(before),/Adversarial verify/); assert.equal(before.reasoning_effort,'max');
   await fx.api(path,{provider:'fixture',model:'fixture',mode:'pro'});
   let value=await request(fx,captured,'Continue in Pro');
   assert.ok(textOf(value).includes(PRO_ON));

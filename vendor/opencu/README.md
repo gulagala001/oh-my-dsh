@@ -4,17 +4,23 @@
 
 OpenCU 从 [Oh My DSH](https://github.com/gulagala001/oh-my-dsh) 的 Computer Use 提取而来，提供相同的操控工具、实时预览和接管体验，可以独立安装到 DSH。Oh My DSH 继续集成全部能力，并直接复用 OpenCU 的实现。
 
-本仓库版本：[1.3.0](https://github.com/gulagala001/opencu/releases/tag/v1.3.0)。源码、发行包与 SHA-256 校验文件见版本页面；对应 Release 发布后可按下方说明安装。
+当前开发候选：[1.6.0（未发布）](docs/release-1.6.0.md)，本树配对 **DSH 0.2.1-alpha.2**。公开安装版本仍为 **1.3.0**，两宿主分别使用下方固定 tag；1.3.1 renderer 修复及后续候选能力均为本地未发布内容。
 
 ## 本版更新
 
-共用有界 UTF-8 JSON 读写与请求取消生命周期，修复中文在网络分块边界损坏的问题。电脑设置使用统一的轮询/写入所有权，安装期间暂停旧读取，防止迟到响应覆盖新状态；隐藏面板不取消已提交的操作。
+1.6.0 对齐 CU／BU 的操作展示：按目标更新内容标签标题、直接展示截图和文件交付、应用预览定位窗口、浏览器站点信息与记录列表、分组样式编辑与原图对照。保留宿主原生对话分组、停止／接管／恢复和独立观察语义。[实现与验收范围](docs/release-1.6.0.md)。
 
-重复角色与名称的可操作元素可显示不同区域的安全引用标签；覆盖 iframe，并限制标签长度与完整／差异观察的字节预算。保留操作统计、紧凑布局、浏览器与原生桌面能力。[版本说明与验证范围](docs/release-1.3.0.md)。
+1.5.0 优化紧凑工具栏、默认预览停靠、下载记录、运行环境设置及 Chrome 扩展弹窗。[实现与实际验证范围](docs/release-1.5.0.md)。默认预览以 150 × 56 像素停靠在自有输入工具栏内，保留当前目标名称与多目标切换；明确放大、展开或拖动后继续使用浮动预览。
+
+延续 1.4.1 的 a2 原生 Chat flow、推理 Body Slot 和 Content Factory，保留第三方 renderer、分组计数、停止标记、共享设置与阅读状态。[a2 适配和实际验证范围](docs/release-1.4.1.md)。
+
+延续 1.4.0 的持久下载文件附件、原生与 PTC 对话预览、重复交付复用，以及停止／重启后的读取与辅助展示恢复。缓存缺少、失效或目标不可用时保持正常基础操控。[1.4.0 候选说明](docs/release-1.4.0.md)。
+
+保留本地 1.3.1 的第三方 renderer 共存修复：第三方用户消息、操作分组和工具详情继续完整渲染，保留组件注入、store、locale 与子 slot 上下文；电脑引用相邻补充，原文与附件不重复。图片画廊、预览、启停和卸载恢复契约延续。[1.3.1 专项说明](docs/release-1.3.1.md)。
 
 ## 安装
 
-**1.3.0** 为 **DSH 0.2.1-alpha.1** 和 **0.2.0-rc.2** 分别构建，采用对应官方 SDK、Chat 快照与锁文件。需要 Node.js ≥22.19、pnpm 11.23.0 和 Git。先停止服务，按实际宿主选择固定 tag。alpha：
+公开 **1.3.0** 为 **DSH 0.2.1-alpha.1** 和 **0.2.0-rc.2** 分别构建，采用对应官方 SDK、Chat 快照与锁文件。需要 Node.js ≥22.19、pnpm 11.23.0 和 Git。先停止服务，按实际宿主选择固定 tag。alpha：
 
 ```sh
 npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add github:gulagala001/opencu#v1.3.0
@@ -27,6 +33,17 @@ rc.2 使用 [对应发行](https://github.com/gulagala001/opencu/releases/tag/v1
 npx --yes @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add github:gulagala001/opencu#v1.3.0-dsh.0.2.0-rc.2
 npx --yes @deepseek-ai/dsh@0.2.0-rc.2 --profile web
 ```
+
+### 本地候选验收
+
+候选 **1.5.0** 正在验收，没有公开 tag／Release。本树对应 **DSH 0.2.1-alpha.2**，核对实际候选包版本、SHA-256 与宿主身份，在隔离数据目录和 profile 中安装；以下是本地工件的绝对路径占位示例：
+
+```sh
+npx --yes @deepseek-ai/dsh@0.2.1-alpha.2 plugin --profile candidate add file:/absolute/path/opencu-1.5.0.tgz
+npx --yes @deepseek-ai/dsh@0.2.1-alpha.2 --profile candidate
+```
+
+1.5.0 已为 a2、a1 和 rc.2 独立构建，并在 macOS arm64 隔离 Chrome for Testing 中完成对应官方宿主的原生／PTC、插件生命周期和代表性组合回归；各自保留对应 SDK、Chat 快照与依赖锁。1.4.1 冻结工件保留，不覆盖历史发行。实际硬件桌面、其它平台及真实登录态仍需对应验收。下方公开升级命令继续安装 1.3.0，不包含候选能力。
 
 打开启动时的登录链接，继续使用已有 Agent preset。在输入区点击 **电脑**，或通过 `@Browser`、`@Chrome` 和应用引用选择目标：
 
@@ -45,7 +62,9 @@ OpenCU 沿用 DSH 的模型、会话、工具权限和审批配置，不更改�
 
 [完整使用指南](docs/usage.md) · [Windows 安装与自检](docs/windows.md)
 
-![实时预览](docs/images/native-preview-stack.png)
+![OpenCU 1.5.0：已展开的两个受控浏览器实时目标](docs/images/native-preview-stack.png)
+
+*真实界面实拍：DSH 0.2.1-alpha.2／Oh My DSH 0.13.0 本地候选，两个隔离演示页面；目标列表已展开并可滚动，默认预览仍为 150 × 56 像素停靠。*
 
 ## 平台
 

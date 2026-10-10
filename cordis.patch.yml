@@ -22,10 +22,8 @@
   config:
     policy: never
 
-# DSH 0.1.7-rc.2 providers with opt-in OMD extensions. Original rows remain
+# Matching DSH providers with opt-in OMD extensions. Original rows remain
 # intact and become active again when this bundle is removed.
-- id: tools
-  disabled: true
 - id: jobs
   disabled: true
 - id: bash-sandbox
@@ -33,8 +31,6 @@
 - id: pwsh-sandbox
   disabled: true
 - insert:
-    - id: omd-tools
-      name: trisoul_x/host/tools
     - id: omd-jobs
       name: trisoul_x/host/jobs-local
     - id: omd-workflow-spawn

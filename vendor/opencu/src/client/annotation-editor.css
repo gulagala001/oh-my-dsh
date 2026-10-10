@@ -1,0 +1,114 @@
+/* Scoped to the frozen-screenshot editor; the CU workspace keeps its own layout. */
+dialog.tx-cu-annotation-dialog.tx-cu-annotation-editor {
+  width: min(1180px, calc(100vw - 24px));
+  height: min(820px, calc(100dvh - 32px));
+  max-height: calc(100dvh - 32px);
+  box-sizing: border-box;
+  padding: 0;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.tx-cu-annotation-editor[open] { display: flex; flex-direction: column; }
+.tx-cu-annotation-editor > header {
+  min-height: 52px;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--cu-line);
+}
+.tx-cu-annotation-editor > header > div { min-width: 0; }
+.tx-cu-annotation-editor > header strong { font-size: 13px; font-weight: 600; }
+.tx-cu-annotation-editor > header small {
+  display: block;
+  max-width: min(760px, 70vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 3px;
+  color: var(--cu-muted);
+  font-size: 10px;
+}
+.tx-cu-annotation-editor button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+.tx-cu-annotation-editor > header > button { flex: 0 0 auto; width: 30px; height: 30px; padding: 0; }
+.tx-cu-annotation-editor .tx-cu-annotation-modes {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 8px 16px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--cu-line);
+}
+.tx-cu-annotation-editor .tx-cu-annotation-palette {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 8px;
+  background: var(--cu-soft);
+}
+.tx-cu-annotation-editor .tx-cu-annotation-modes button { min-height: 28px; border: 0; font-size: 11px; padding: 4px 9px; }
+.tx-cu-annotation-editor .tx-cu-annotation-palette button { background: transparent; border-radius: 6px; color: var(--cu-muted); }
+.tx-cu-annotation-editor .tx-cu-annotation-palette button[aria-pressed=true] { background: var(--cu-bg); color: var(--cu-blue); box-shadow: 0 1px 3px #00000014; }
+.tx-cu-annotation-editor .tx-cu-annotation-modes > button { width: 28px; padding: 0; }
+.tx-cu-annotation-editor .tx-cu-annotation-modes > span { margin-left: auto; color: var(--cu-muted); font-size: 10px; }
+.tx-cu-annotation-editor .tx-cu-annotation-workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 300px; overflow: hidden; }
+.tx-cu-annotation-editor .tx-cu-annotation-viewport { padding: 14px 18px; gap: 12px; background: var(--cu-soft); overflow: auto; }
+.tx-cu-annotation-editor .tx-cu-annotation-viewbar { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: auto; color: var(--cu-muted); font-size: 11px; flex: 0 0 auto; }
+.tx-cu-annotation-editor .tx-cu-annotation-viewbar > span { display: inline-flex; gap: 6px; align-items: center; }
+.tx-cu-annotation-editor [data-view=preview] .tx-cu-annotation-viewbar > span { color: var(--cu-blue); }
+.tx-cu-annotation-editor .tx-cu-annotation-viewbar > div { display: flex; gap: 2px; border: 1px solid var(--cu-line); border-radius: 6px; padding: 2px; }
+.tx-cu-annotation-editor .tx-cu-annotation-viewbar button { font-size: 10px; min-height: 24px; padding: 2px 8px; border: 0; background: transparent; color: var(--cu-muted); }
+.tx-cu-annotation-editor .tx-cu-annotation-viewbar button[aria-pressed=true] { background: var(--cu-bg); color: var(--cu-text); }
+.tx-cu-annotation-editor .tx-cu-annotation-surface { box-shadow: 0 2px 12px #0000000a; }
+.tx-cu-annotation-editor .tx-cu-annotation-surface img { max-height: min(560px, calc(100dvh - 260px)); }
+.tx-cu-annotation-editor .tx-cu-annotation-hint { padding-top: 0; margin-top: auto; line-height: 1.6; text-align: center; flex: 0 0 auto; }
+.tx-cu-annotation-editor .tx-cu-annotation-inspector { padding: 14px; background: var(--cu-bg); min-width: 0; }
+.tx-cu-annotation-editor .tx-cu-selection-heading { font-size: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--cu-line); }
+.tx-cu-annotation-editor .tx-cu-annotation-element { margin-top: 12px; padding: 10px; border-radius: 8px; background: var(--cu-soft); gap: 5px; }
+.tx-cu-annotation-editor .tx-cu-annotation-element strong { overflow-wrap: anywhere; font: 11px/1.5 ui-monospace, monospace; }
+.tx-cu-annotation-editor .tx-cu-annotation-element > span { max-height: 3em; overflow: hidden; font-size: 11px; line-height: 1.5; color: var(--cu-muted); }
+.tx-cu-annotation-editor .tx-cu-annotation-element details { margin-top: 5px; font-size: 10px; }
+.tx-cu-annotation-editor .tx-cu-annotation-element pre { max-height: 160px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tx-cu-annotation-editor .tx-cu-annotation-frame { font-size: 10px; color: var(--cu-muted); overflow-wrap: anywhere; }
+.tx-cu-annotation-editor .tx-cu-annotation-comment { margin-top: 16px; color: var(--cu-text); font-size: 11px; }
+.tx-cu-annotation-editor .tx-cu-annotation-comment > span { display: flex; align-items: center; justify-content: space-between; }
+.tx-cu-annotation-editor .tx-cu-annotation-comment small { color: var(--cu-muted); font-size: 10px; }
+.tx-cu-annotation-editor .tx-cu-annotation-comment textarea { min-height: 86px; padding: 9px; font: inherit; line-height: 1.6; border-radius: 8px; resize: vertical; }
+.tx-cu-annotation-editor .tx-cu-style-editor { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--cu-line); }
+.tx-cu-annotation-editor .tx-cu-style-editor > summary { display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 11px; font-weight: 500; }
+.tx-cu-annotation-editor .tx-cu-style-editor > summary small { color: var(--cu-muted); font-size: 10px; font-weight: 400; }
+.tx-cu-annotation-editor .tx-cu-style-editor > p { font-size: 10px; line-height: 1.6; color: var(--cu-muted); margin: 8px 0; }
+.tx-cu-annotation-editor .tx-cu-style-groups { display: block; }
+.tx-cu-annotation-editor .tx-cu-style-group { border-bottom: 1px solid var(--cu-line); }
+.tx-cu-annotation-editor .tx-cu-style-group > summary { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; font-size: 11px; cursor: pointer; }
+.tx-cu-annotation-editor .tx-cu-style-group > summary small { min-width: 16px; color: var(--cu-blue); font-size: 10px; text-align: right; }
+.tx-cu-annotation-editor .tx-cu-style-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 8px; padding-bottom: 12px; }
+.tx-cu-annotation-editor .tx-cu-style-fields label { display: block; min-width: 0; font-size: 10px; color: var(--cu-muted); }
+.tx-cu-annotation-editor .tx-cu-style-fields label > span { display: block; margin-bottom: 4px; }
+.tx-cu-annotation-editor .tx-cu-style-fields label > div { position: relative; display: flex; align-items: center; }
+.tx-cu-annotation-editor .tx-cu-style-fields input { box-sizing: border-box; width: 100%; min-width: 0; height: 30px; padding: 5px 22px 5px 7px; border-radius: 5px; font: 10px/1.4 ui-monospace, monospace; }
+.tx-cu-annotation-editor .tx-cu-style-fields button { position: absolute; right: 2px; min-height: 22px; width: 20px; padding: 0; border: 0; background: transparent; color: var(--cu-muted); }
+.tx-cu-annotation-editor .tx-cu-style-actions { display: flex; gap: 6px; margin-top: 12px; }
+.tx-cu-annotation-editor .tx-cu-style-actions button { flex: 1; min-height: 30px; padding: 5px 7px; font-size: 10px; }
+.tx-cu-annotation-editor .tx-cu-style-actions button:first-child:not(:disabled) { color: var(--cu-blue); border-color: var(--cu-blue); background: var(--cu-tint); }
+.tx-cu-annotation-editor .tx-cu-style-editor .tx-cu-style-preview-note { padding: 8px; border-radius: 6px; background: var(--cu-soft); }
+.tx-cu-annotation-editor > footer { flex: 0 0 auto; min-height: 60px; box-sizing: border-box; padding: 12px 16px; background: var(--cu-bg); }
+.tx-cu-annotation-editor > footer button { min-height: 32px; font-size: 11px; }
+.tx-cu-annotation-editor :is(button,input,textarea,summary):focus-visible { outline: 2px solid var(--cu-blue); outline-offset: 2px; }
+@media (max-width: 760px) {
+  dialog.tx-cu-annotation-dialog.tx-cu-annotation-editor { width: calc(100vw - 16px); height: calc(100dvh - 24px); max-height: calc(100dvh - 24px); border-radius: 12px; }
+  .tx-cu-annotation-editor > header { padding: 10px 12px; }
+  .tx-cu-annotation-editor > header small { display: none; }
+  .tx-cu-annotation-editor .tx-cu-annotation-modes { padding: 8px 12px; gap: 4px; }
+  .tx-cu-annotation-editor .tx-cu-annotation-modes > .tx-cu-annotation-mode-note { display: none; }
+  .tx-cu-annotation-editor .tx-cu-annotation-workspace { display: flex; flex-direction: column; overflow: hidden; }
+  .tx-cu-annotation-editor .tx-cu-annotation-viewport { flex: 0 0 auto; max-height: 36dvh; padding: 10px 12px; gap: 8px; box-sizing: border-box; }
+  .tx-cu-annotation-editor .tx-cu-annotation-surface img { max-height: 24dvh; }
+  .tx-cu-annotation-editor .tx-cu-annotation-inspector { flex: 1; min-height: 0; overflow: auto; border-left: 0; border-top: 1px solid var(--cu-line); padding: 12px; }
+  .tx-cu-annotation-editor .tx-cu-style-fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .tx-cu-annotation-editor > footer { padding: 10px 12px; gap: 6px; }
+  .tx-cu-annotation-editor > footer > div { gap: 5px; }
+  .tx-cu-annotation-editor > footer > small { font-size: 10px; }
+}

@@ -1,5 +1,6 @@
 import { readJsonBody, sendJson } from './http.mjs';
 import { installBrowser } from '#opencu/src/computer-use/browser-install.mjs';
+import { currentDirectory } from './working-directory.mjs';
 
 const CU_FIELDS = ['computerUseEnabled', 'computerUseBrowserExecutable', 'computerUseChromeUserDataDir', 'computerUseNativeBinary', 'computerUseNativeSocket'];
 
@@ -83,7 +84,7 @@ export class Components {
       this.start();
       if (this.hub.config().codegraphEnabled !== false) for (const agent of this.hub.agents.values()) {
         const preset = this.ctx.sessionProjections?.stateOf(agent.session, 'agentPreset') ?? agent.session.header.agentPreset;
-        if (['trisoul-x', 'omd-ptc'].includes(preset)) this.project(agent.session.header.cwd);
+        if (['trisoul-x', 'omd-ptc'].includes(preset)) this.project(currentDirectory(this.ctx, agent.session));
       }
     });
   }

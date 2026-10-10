@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,rmSync} from 'node:fs';
+import {mkdtempSync,rmSync,realpathSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {DreamService} from '../src/dream/service.mjs';
@@ -9,7 +9,10 @@ import {DreamStore} from '../src/dream/store.mjs';
 import {readDream} from '../src/dream/recall.mjs';
 import {projectOf} from '../src/hub-store.mjs';
 import {handleDreamApi} from '../src/dream/api.mjs';
+import {handleContextApi} from '../src/context/api.mjs';
 import {ContextPipeline} from '../src/context/pipeline.mjs';
+import {createProjectlessWorkspaceService} from '../src/projectless-workspaces.mjs';
+import {Hub} from '../src/hub.mjs';
 import {Context,Service} from '@deepseek-ai/cordis';
 import {LlmRuntime} from '@deepseek-ai/dsh-llm';
 import {createServer} from 'node:http';
@@ -42,6 +45,16 @@ function fixture(t,{generate,config={}}={}){
 }
 
 const inputOf=payload=>JSON.parse(payload.messages.findLast(m=>m.role==='user').content);
+
+test('Dream monitor attributes actual levels and a failed recorder cannot change successful publication',async t=>{
+  const f=fixture(t),records=[];f.add('a');f.hub.live=new Map();
+  f.hub.monitor={append(entry){records.push(entry);throw Error('monitor unavailable');}};
+  const job=await f.run();assert.equal(job.state,'complete',job.error);
+  assert.deepEqual(records.map(entry=>[entry.kind,entry.sessionId]),[['dreamSession','a'],['dreamProject',null],['dreamGlobal',null]]);
+  assert.equal(new Set(records.map(entry=>entry.id)).size,3);
+  assert.ok(records.every(entry=>entry.status==='success'&&entry.source==='dream'&&entry.usage.inputTokens===100));
+  assert.equal(f.hub.live.size,0);assert.equal(f.store.usage().used,450);
+});
 
 test('shared Dream isolates a format refusal discovered at manifest admission and completes healthy targets',async t=>{
   const f=fixture(t);f.add('a');f.add('healthy');await f.run();
@@ -281,6 +294,146 @@ test('independent sessions can be read and dreamt explicitly but never enter pro
   await f.run('session','private');const n=f.calls.length;await f.run();assert.equal(f.calls.length,n);
   const r=await readDream(f.hub,{sessionId:'private',id:'r-private'},{id:'shared'});assert.match(r.text,/不共享的私人内容/);
 });
+for(const preset of ['standard','intelligent-chat'])test('managed projectless Chat never enters shared Dream despite an old project binding: '+preset,async t=>{
+  const f=fixture(t,{config:{memoryScope:'project'}});
+  const directory=realpathSync(f.hub.store.dir);
+  f.hub.projectless=createProjectlessWorkspaceService({root:join(directory,'chats'),storeDir:join(directory,'projectless')});
+  const workspace=await f.hub.projectless.prepare({requestId:'chat-'+preset,prompt:'无工作区聊天'});
+  f.add('chat',{cwd:workspace.cwd,summary:'PROJECTLESS_CHAT_SENTINEL',age:8*86400000});
+  f.logs.get('chat').header.agentPreset=preset;
+  f.add('shared');
+  const job=await f.run();assert.equal(job.state,'complete',job.error);
+  assert(!JSON.stringify(f.calls).includes('PROJECTLESS_CHAT_SENTINEL'),'shared Dream model input must exclude managed Chat material');
+  assert.equal(f.store.session('chat').mode,'session');assert.equal(f.store.session('chat').shared,false);
+  assert.equal(f.store.memory('session:chat'),null);
+  assert(!f.store.projects().includes(projectOf(workspace.cwd)),'the generated Chat directory must not become a Dream project');
+  await assert.rejects(f.run('project',projectOf(workspace.cwd)),/没有可共享的会话/);
+  await f.run('session','chat');assert(f.store.memory('session:chat'),'explicit session Dream remains available');
+  assert.match((await readDream(f.hub,{sessionId:'chat',id:'r-chat'},{id:'shared'})).text,/PROJECTLESS_CHAT_SENTINEL/);
+  const calls=f.calls.length;await f.run();assert.equal(f.calls.length,calls,'explicit Chat memory must not propagate later');
+});
+test('automatic Dream excludes managed projectless Chat and withdraws its legacy shared contribution on restart',async t=>{
+  const f=fixture(t,{config:{memoryScope:'project',dreamAutoEnabled:true}});
+  const directory=realpathSync(f.hub.store.dir);
+  const projectless=createProjectlessWorkspaceService({root:join(directory,'chats'),storeDir:join(directory,'projectless')});
+  const workspace=await projectless.prepare({requestId:'legacy-chat',prompt:'旧聊天'});
+  f.add('chat',{cwd:workspace.cwd,summary:'LEGACY_PROJECTLESS_CHAT_SENTINEL'});f.add('shared');
+  await f.run();const saved=f.store.memory('session:chat');assert(saved,'fixture reproduces an existing shared Chat memory');
+  // Recreate the real service from durable claims, as an upgraded/restarted host does.
+  f.hub.projectless=createProjectlessWorkspaceService({root:projectless.root,storeDir:join(directory,'projectless')});
+  const first=f.calls.length;await f.service.sources.sync();
+  assert.equal(f.store.session('chat').shared,false);assert.equal(f.store.memory('global').invalid,true);
+  await f.service.start();
+  const automatic=f.store.jobs().find(job=>job.automatic);
+  assert(automatic);assert.equal(automatic.state,'complete',automatic.error);
+  assert(!JSON.stringify(f.calls.slice(first)).includes('LEGACY_PROJECTLESS_CHAT_SENTINEL'),'automatic Dream must exclude legacy Chat sources');
+  assert.deepEqual(f.store.memory('session:chat'),saved,'completed session memory remains available locally');
+  assert(!f.store.projects().includes(projectOf(workspace.cwd)));
+  assert.equal(f.store.memory('global').invalid,undefined);
+  assert.equal((await readDream(f.hub,{memory:'global'},{id:'shared'})).kind,'global');
+});
+test('projectless ancestry stays independent without Hub state, while explicit Workspace membership admits a promoted session',async t=>{
+  const f=fixture(t),directory=realpathSync(f.hub.store.dir);
+  f.hub.projectless=createProjectlessWorkspaceService({root:join(directory,'chats'),storeDir:join(directory,'projectless')});
+  const chat=await f.hub.projectless.prepare({requestId:'parent-chat',prompt:'独立Chat'});
+  f.add('parent',{cwd:chat.cwd,summary:'PRIVATE_PARENT_SENTINEL'});f.states.delete('parent');
+  f.add('child',{cwd:'/projects/fork',summary:'PRIVATE_CHILD_SENTINEL'});f.logs.get('child').header.parentSession='parent';
+  f.add('promoted',{cwd:chat.cwd,summary:'PROMOTED_WORKSPACE_SENTINEL'});
+  f.add('same-directory-unattached',{cwd:chat.cwd,summary:'PRIVATE_UNATTACHED_SENTINEL'});
+  f.hub.ctx.workspaceRegistry={list:()=>[{path:chat.cwd,sessionIds:['promoted']}]};
+  await f.run();const payload=JSON.stringify(f.calls);
+  assert(!/PRIVATE_(?:PARENT|CHILD|UNATTACHED)_SENTINEL/.test(payload));
+  assert(payload.includes('PROMOTED_WORKSPACE_SENTINEL'));
+  assert.equal(f.store.session('child').shared,false);assert.equal(f.store.session('promoted').shared,true);
+});
+test('projectless claims remain independent after the configured allocation root changes',async t=>{
+  const f=fixture(t),directory=realpathSync(f.hub.store.dir),storeDir=join(directory,'projectless');
+  const before=createProjectlessWorkspaceService({root:join(directory,'old-chats'),storeDir});
+  const chat=await before.prepare({requestId:'old-root-chat',prompt:'旧根目录Chat'});
+  f.hub.projectless=createProjectlessWorkspaceService({root:join(directory,'new-chats'),storeDir});
+  f.add('old-chat',{cwd:chat.cwd,summary:'OLD_ROOT_PRIVATE_SENTINEL'});f.add('shared');
+  await f.run();assert(!JSON.stringify(f.calls).includes('OLD_ROOT_PRIVATE_SENTINEL'));
+  assert.equal(f.store.session('old-chat').shared,false);
+});
+test('deleted Chat files do not erase persistent allocation provenance or share its history',async t=>{
+  const f=fixture(t),directory=realpathSync(f.hub.store.dir);
+  f.hub.projectless=createProjectlessWorkspaceService({root:join(directory,'chats'),storeDir:join(directory,'projectless')});
+  const chat=await f.hub.projectless.prepare({requestId:'deleted-chat',prompt:'已删除文件的Chat'});
+  f.add('chat',{cwd:chat.cwd,summary:'DELETED_CHAT_PRIVATE_SENTINEL'});f.add('shared');
+  rmSync(chat.cwd,{recursive:true});
+  assert.equal(await f.hub.projectless.owns(chat.cwd),false,'file operations still require a live directory');
+  assert.equal(await f.hub.projectless.owns(chat.cwd,{requireDirectory:false}),true,'Dream checks durable allocation provenance');
+  await f.run();assert(!JSON.stringify(f.calls).includes('DELETED_CHAT_PRIVATE_SENTINEL'));
+  assert.equal(f.store.session('chat').shared,false);
+});
+test('a claimed parent promoted to Workspace admits a workflow child in another directory',async t=>{
+  const f=fixture(t),directory=realpathSync(f.hub.store.dir);
+  f.hub.projectless=createProjectlessWorkspaceService({root:join(directory,'chats'),storeDir:join(directory,'projectless')});
+  const chat=await f.hub.projectless.prepare({requestId:'promoted-parent',prompt:'转工作区Chat'});
+  f.add('parent',{cwd:chat.cwd});f.states.delete('parent');
+  f.add('child',{cwd:'/projects/worktree',summary:'SHARED_WORKFLOW_SENTINEL'});f.logs.get('child').header.parentSession='parent';
+  f.hub.ctx.workspaceRegistry={list:()=>[{path:chat.cwd,sessionIds:['parent']}]};
+  await f.run();assert.equal(f.store.session('child').shared,true);
+  assert(JSON.stringify(f.calls).includes('SHARED_WORKFLOW_SENTINEL'));
+});
+test('ownership refresh isolates Hub injection and recovers from optional storage failure',async t=>{
+  const f=fixture(t);f.add('chat');const header=f.logs.get('chat').header;
+  f.hub.projectless={owns:async()=>{throw Error('ownership storage failure');}};
+  await f.service.sources.refreshScope(header);
+  assert.equal(f.store.session('chat').shared,false);assert.match(f.store.session('chat').scopeError,/ownership storage failure/);
+  assert.equal(Hub.prototype.scope.call(f.hub,{id:'chat',header}).mode,'session');
+  assert.equal(Hub.prototype.scope.call(f.hub,{id:'chat',header},{effective:false}).mode,'project','temporary effective isolation never overwrites the configured preference');
+  f.hub.projectless={owns:async()=>false};await f.service.sources.refreshScope(header);
+  assert.equal(f.store.session('chat').shared,true);assert.equal(f.store.session('chat').scopeError,undefined);
+  assert.equal(Hub.prototype.scope.call(f.hub,{id:'chat',header}).mode,'project');
+});
+test('a completed independent archive remains private after Workspace attachment without overwriting the saved preference',async t=>{
+  const f=fixture(t);f.add('chat');f.states.get('chat').started=true;
+  f.archives.get('chat').binding.scope='session';
+  f.hub.ctx.workspaceRegistry={list:()=>[{sessionIds:['chat']}]};
+  const session={id:'chat',header:f.logs.get('chat').header};
+  assert.equal(Hub.prototype.scope.call(f.hub,session).mode,'session');
+  assert.equal(Hub.prototype.scope.call(f.hub,session,{effective:false}).mode,'project');
+  assert.equal((await f.service.sources.scopeFor(session.header)).shared,false);
+});
+test('resumed legacy shared targets and owned-only parents make no further Chat model calls',async t=>{
+  const f=fixture(t),directory=realpathSync(f.hub.store.dir),storeDir=join(directory,'projectless');
+  const projectless=createProjectlessWorkspaceService({root:join(directory,'chats'),storeDir});
+  const chat=await projectless.prepare({requestId:'queued-chat',prompt:'旧Chat队列'});
+  f.add('chat',{cwd:chat.cwd,summary:'QUEUED_PRIVATE_SENTINEL'});await f.run();
+  const prior=f.calls.length,job=f.store.enqueue('global','global',false,{route:f.service.route()});
+  const epoch=f.store.acquire();
+  assert.equal(f.store.claimJob(epoch).id,job.id);
+  f.store.setTargets(job.id,[{kind:'session',target:'chat'},{kind:'project',target:projectOf(chat.cwd)},{kind:'global',target:'global'}],epoch);
+  f.store.updateJob(job.id,{state:'queued'});
+  f.store.release(epoch);
+  f.hub.projectless=projectless;await f.service.drain();
+  assert.equal(f.store.job(job.id).state,'complete');assert.equal(f.calls.length,prior);
+  assert.equal(f.store.memory('global').invalid,true);assert.equal(f.store.memory('project:'+projectOf(chat.cwd)).invalid,true);
+});
+test('Dream close waits for an ownership read and rejects its late scope commit',async t=>{
+  const f=fixture(t);f.add('chat');
+  let entered,release;const waiting=new Promise(r=>{entered=r;}),held=new Promise(r=>{release=r;});
+  f.hub.projectless={owns:async()=>{entered();await held;return true;}};
+  const inspection=f.service.sources.inspect('chat');
+  const rejected=assert.rejects(inspection,/退出/);await waiting;
+  let closed=false;const closing=f.service.close().then(()=>{closed=true;});
+  await new Promise(r=>setImmediate(r));assert.equal(closed,false);
+  release();await rejected;await closing;
+});
+test('read-only scope GET is tracked through shutdown and cannot publish a late success',async t=>{
+  const f=fixture(t);f.add('chat');
+  let entered,release,sent=false;const waiting=new Promise(r=>{entered=r;}),held=new Promise(r=>{release=r;});
+  f.hub.projectless={owns:async()=>{entered();await held;return true;}};
+  const request=handleContextApi({hub:f.hub,ctx:f.hub.ctx,req:{method:'GET'},res:{},
+    url:new URL('http://localhost/trisoul-x/api/scope?session=chat'),id:'chat',
+    session:{id:'chat',header:f.logs.get('chat').header,snapshotEvents:()=>[]},
+    send(){sent=true;},readBody:async()=>({})});
+  const rejected=assert.rejects(request,/退出/);await waiting;
+  let closed=false;const closing=f.service.close().then(()=>{closed=true;});
+  await new Promise(r=>setImmediate(r));assert.equal(closed,false);release();
+  await rejected;await closing;assert.equal(sent,false);
+});
 test('unbound native sessions inherit the independent default while existing project bindings remain shared',async t=>{
   const f=fixture(t,{config:{memoryScope:'session'}});
   f.add('unbound',{summary:'',age:8*86400000});f.states.delete('unbound');f.archives.delete('unbound');
@@ -374,7 +527,8 @@ test('an expired executor cannot fail a job already taken over or consume the ne
 test('changing scope invalidates already-published aggregates before another Dream and removes the contribution',async t=>{
   const f=fixture(t);f.add('a');await f.run();f.states.get('a').memoryScope='session';f.archives.get('a').binding.scope='session';await f.service.sources.sync();
   assert.equal(f.store.memory('global').invalid,true);assert.equal((await readDream(f.hub,{memory:'global'},{id:'a'})).kind,'awaiting_refresh');
-  await f.run();assert.equal(f.calls.at(-1).kind,'global');assert.match(f.calls.at(-1).sources[0].text,/no longer shared/);
+  const calls=f.calls.length;await f.run();assert.equal(f.calls.length,calls,'an empty shared scope needs no background model');
+  assert.equal(f.store.memory('global').invalid,true,'historic private contributions remain unavailable for injection');
 });
 test('removed native sessions are excluded; remembered shared summaries do not recreate the session',async t=>{
   const f=fixture(t);f.add('a');await f.run();f.logs.delete('a');await f.service.sources.sync();assert.equal(f.store.session('a').available,false);assert.deepEqual(f.store.projects(),[]);assert.equal(f.hub.ctx.agents.size,0);

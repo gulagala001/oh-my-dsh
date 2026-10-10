@@ -1,8 +1,10 @@
 import React,{forwardRef,useEffect,useImperativeHandle,useId,useRef,useState} from 'react';
 import {ComputerIcon} from './computer-icons.jsx';
 import {ImageDialog} from './tool-image.jsx';
+import browserChromeCss from './browser-chrome.css';
 
 const presets={phone:{width:390,height:844},tablet:{width:768,height:1024},desktop:{width:1280,height:800}};
+export const browserLabel=value=>value?.browserName||(value?.browserId==='browser'?'内置浏览器':value?.browserId==='chrome'||value?.browserId?.startsWith('chrome:')?'Chrome':value?.browserId?'外部浏览器':'浏览器');
 export const BrowserTools=forwardRef(function BrowserTools({sessionId,target,frame,state,api,onState,onError,previewScale='1',onPreviewScale,onDeviceModeChange,popupOpen,onMenuOpen,onOpenHistory,onOpenDownloads},ref){
   const [menu,setMenu]=useState(false),[devices,setDevices]=useState(false),[width,setWidth]=useState(''),[height,setHeight]=useState(''),[busy,setBusy]=useState(false),[image,setImage]=useState(null),[simulation,setSimulation]=useState(false),[dpr,setDpr]=useState(''),[userAgent,setUserAgent]=useState(''),[hasTouch,setHasTouch]=useState('default'),[isMobile,setIsMobile]=useState('default');
   const simulationId=useId();
@@ -80,16 +82,16 @@ export const BrowserTools=forwardRef(function BrowserTools({sessionId,target,fra
       items[event.key==='Home'?0:event.key==='End'?items.length-1:(at+(event.key==='ArrowDown'?1:-1)+items.length)%items.length]?.focus();
     }
   };
-  return <><div ref={anchor} className="tx-cu-browser-tools" onKeyDown={menuKey}>
+  return <><style>{browserChromeCss}</style><div ref={anchor} className="tx-cu-browser-tools" onKeyDown={menuKey}>
     <button ref={trigger} type="button" className="tx-cu-browser-options" aria-label="浏览器选项" title="浏览器选项" aria-haspopup="menu" aria-expanded={menu} onClick={()=>{if(!menu)onMenuOpen?.();setMenu(value=>!value);}}>⋮</button>
     {menu&&<div className="tx-cu-browser-menu" role="menu" aria-label="浏览器选项">
-      <button type="button" role="menuitem" disabled={!ready} onClick={()=>{closeMenu();openFind();}}><span>在页面中查找</span><kbd aria-hidden="true">⌘/Ctrl F</kbd></button>
+      <button type="button" role="menuitem" className="tx-cu-menu-item" disabled={!ready} onClick={()=>{closeMenu();openFind();}}><ComputerIcon name="search" size={15}/><span>在页面中查找</span><kbd aria-hidden="true">⌘/Ctrl F</kbd></button>
+      <button type="button" role="menuitem" className="tx-cu-menu-item" disabled={!ready} onClick={()=>{closeMenu();void action('view-screenshot');}}><ComputerIcon name="image" size={15}/><span>截取屏幕截图</span></button>
       <hr/>
-      <button type="button" role="menuitem" disabled={!ready} onClick={()=>{closeMenu();if(devices)hideDevices();else setDevices(true);}}>{devices?'隐藏设备工具栏':'显示设备工具栏'}</button>
-      <button type="button" role="menuitem" disabled={!ready} onClick={()=>{closeMenu();void action('view-screenshot');}}>截取屏幕截图</button>
+      <button type="button" role="menuitem" className="tx-cu-menu-item" disabled={!ready} onClick={()=>{closeMenu();if(devices)hideDevices();else setDevices(true);}}><ComputerIcon name="screen" size={15}/><span>{devices?'隐藏设备工具栏':'显示设备工具栏'}</span></button>
       <hr/>
-      <button type="button" role="menuitem" disabled={!onOpenDownloads} onClick={()=>{closeMenu();onOpenDownloads?.();}}><span>下载</span><kbd aria-hidden="true">⌘/Ctrl J</kbd></button>
-      <button type="button" role="menuitem" disabled={!onOpenHistory} onClick={()=>{closeMenu();onOpenHistory?.();}}><span>历史记录</span></button>
+      <button type="button" role="menuitem" className="tx-cu-menu-item" disabled={!onOpenDownloads} onClick={()=>{closeMenu();onOpenDownloads?.();}}><ComputerIcon name="download" size={15}/><span>下载</span><kbd aria-hidden="true">⌘/Ctrl J</kbd></button>
+      <button type="button" role="menuitem" className="tx-cu-menu-item" disabled={!onOpenHistory} onClick={()=>{closeMenu();onOpenHistory?.();}}><ComputerIcon name="history" size={15}/><span>历史记录</span><kbd aria-hidden="true">Ctrl H / ⌘ Y</kbd></button>
     </div>}
   </div>
   {finding&&<form role="search" aria-label="页面内查找" className="tx-cu-find" onSubmit={event=>{event.preventDefault();find();}} onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeFind();}else if(event.key==='Enter'&&event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();find(true);}}}>
@@ -102,7 +104,7 @@ export const BrowserTools=forwardRef(function BrowserTools({sessionId,target,fra
     <span>尺寸：</span><select className="tx-cu-device-preset" aria-label="视口尺寸预设" disabled={!ready} value={Object.keys(presets).find(key=>presets[key].width===Number(width)&&presets[key].height===Number(height))??'custom'} onChange={event=>{const value=presets[event.target.value];if(value)void resize(value);}}><option value="custom">响应式</option><option value="phone">手机尺寸</option><option value="tablet">平板尺寸</option><option value="desktop">桌面尺寸</option></select>
     <div className="tx-cu-device-dimensions"><input aria-label="视口宽度" type="number" min="1" max="10000000" required value={width} disabled={!ready} onChange={event=>setWidth(event.target.value)}/><span>×</span><input aria-label="视口高度" type="number" min="1" max="10000000" required value={height} disabled={!ready} onChange={event=>setHeight(event.target.value)}/></div>
     <button type="button" aria-label="旋转视口" title="交换宽高" disabled={!ready} onClick={()=>void resize({width:Number(height),height:Number(width)})}><ComputerIcon name="rotate" size={15}/></button><button type="submit" className="tx-cu-device-apply" title="应用尺寸（Enter）" aria-label="应用视口尺寸" disabled={!ready} hidden={Number(width)===Math.round(frame?.width)&&Number(height)===Math.round(frame?.height)}>↵</button>
-    <select aria-label="设备预览缩放" title="仅缩放预览显示，不改变网页尺寸或接管控制" value={previewScale} onChange={event=>onPreviewScale?.(event.target.value)}><option value="fit">适应窗口</option>{[.25,.5,.75,1,1.25,1.5].map(scale=><option key={scale} value={String(scale)}>{scale*100}%</option>)}</select>
+    <label className="tx-cu-device-zoom-label"><span>预览</span><select aria-label="设备预览缩放" title="仅缩放预览显示，不改变网页尺寸或接管控制" value={previewScale} onChange={event=>onPreviewScale?.(event.target.value)}><option value="fit">适应窗口</option>{[.25,.5,.75,1,1.25,1.5].map(scale=><option key={scale} value={String(scale)}>{scale*100}%</option>)}</select></label>
     <button type="button" className="tx-cu-device-simulation-toggle" aria-label="设备模拟" aria-expanded={simulation} aria-controls={simulationId} title={state?.viewEmulation?'设备模拟已应用':'可选设备模拟；默认只调整尺寸'} onClick={()=>setSimulation(value=>!value)}>模拟{state?.viewEmulation?' · 已应用':''}</button>
     <button type="button" aria-label="重置" title="恢复默认尺寸和设备模拟" disabled={!ready} onClick={()=>void resetDevices()}><ComputerIcon name="reset" size={13}/></button><button type="button" className="tx-cu-device-close" aria-label="关闭设备工具栏" title="关闭设备工具栏" disabled={!ready} onClick={hideDevices}><ComputerIcon name="close" size={12}/></button>
     </form>

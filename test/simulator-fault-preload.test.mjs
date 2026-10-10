@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { faultPathHasParentTraversal } from '../scripts/simulator/fault-preload.mjs';
 
 const execute = promisify(execFile);
 const preload = new URL('../scripts/simulator/fault-preload.mjs', import.meta.url).href;
@@ -69,6 +70,17 @@ test('fault preload is opt-in, isolated from node:test, and requires an existing
   await assert.rejects(child('', { rootKind: 'auditLink' }), /audit escaped/);
 });
 
+test('parent traversal is rejected before either Windows separator spelling can be collapsed', () => {
+  for (const path of [String.raw`C:\fixture\escape\..\file`, 'C:/fixture/escape/../file',
+    String.raw`C:\fixture/escape\../file`, String.raw`\\server\share\escape\..\file`]) {
+    assert.equal(faultPathHasParentTraversal(path, 'win32'), true, path);
+  }
+  for (const path of [String.raw`C:\fixture\file`, 'C:/fixture/not..parent/file',
+    String.raw`\\server\share\file`]) assert.equal(faultPathHasParentTraversal(path, 'win32'), false, path);
+  assert.equal(faultPathHasParentTraversal('/fixture/escape/../file', 'darwin'), true);
+  assert.equal(faultPathHasParentTraversal(String.raw`/fixture/escape\..\file`, 'darwin'), false);
+});
+
 test('one-shot sync EIO matches a complete path and recovery really writes the target', async () => {
   const { audit } = await child(`
     const target = join(root, 'item');
@@ -80,8 +92,15 @@ test('one-shot sync EIO matches a complete path and recovery really writes the t
     syncWrite(other, 'same basename inside');
     syncWrite(external, 'same basename outside fixture');
     assert.equal(faults.snapshot().remaining, 1);
-    assert.throws(() => syncWrite(target, 'blocked'), error => error.code === 'EIO'
-      && error.errno < 0 && error.path === fs.realpathSync(target) && error.syscall === 'writeFile');
+    assert.throws(() => syncWrite(target, 'blocked'), error => {
+      assert.equal(error.code, 'EIO');
+      assert.ok(error.errno < 0);
+      // The native API is also the host's filesystem identity source. The JS
+      // realpath walker can retain different Windows drive/component casing.
+      assert.equal(error.path, fs.realpathSync.native(target));
+      assert.equal(error.syscall, 'writeFile');
+      return true;
+    });
     assert.equal(syncRead(target, 'utf8'), 'before');
     assert.equal(syncRead(external, 'utf8'), 'same basename outside fixture');
     assert.equal(faults.snapshot().remaining, 0);
@@ -306,7 +325,7 @@ test('arm rejects invalid configurations, traversal, escaped symlinks and reserv
     const invalidPaths = [escapedFile, join(root, '..', 'outside', 'new'), join(root, 'escape-file'),
       join(root, 'escape-dir', 'new-parent', 'new'), join(root, 'dangling-escape'), join(root, 'dangling-escape', 'child'),
       root + '/escape-dir/../outside-file', root + '/missing/../valid', join(root, 'loop'), root, join(root, 'faults.jsonl'), '', 'relative', target + '\\0'];
-    for (const path of invalidPaths) assert.throws(() => faults.arm({ operation: 'write', path }));
+    for (const path of invalidPaths) assert.throws(() => faults.arm({ operation: 'write', path }), undefined, JSON.stringify(path));
     for (const count of [0, -1, 1.2, NaN, Infinity, '1']) assert.throws(() => faults.arm({ operation: 'write', path: target, count }), /count/);
     for (const config of [null, [], {}, { operation: 'unknown', path: target }, { operation: 'write', path: target, code: 'ENOENT' },
       { operation: 'read', path: target, partialBytes: 1 }, { operation: 'write', path: target, partialBytes: -1 },
@@ -316,7 +335,7 @@ test('arm rejects invalid configurations, traversal, escaped symlinks and reserv
     const alias = join(root, 'safe-alias');
     fs.symlinkSync(target, alias);
     faults.arm({ operation: 'write', path: alias });
-    assert.equal(faults.snapshot().active.path, fs.realpathSync(target));
+    assert.equal(faults.snapshot().active.path, fs.realpathSync.native(target));
     assert.throws(() => syncWrite(target, 'blocked'), { code: 'EIO' });
     assert.equal(syncRead(target, 'utf8'), 'inside');
   `);
@@ -369,7 +388,36 @@ test('already-open FileHandle and numeric descriptor operations are explicitly o
   `);
 });
 
-test('the actual installed DSH filesystem atomic create/update fails before publication, cleans staging and recovers', async () => {
+test('the explicit native publication bridge matches only an armed exact destination inside the isolated root', async () => {
+  const { audit } = await child(`
+    const target = join(root, 'target'), staging = join(root, 'staging'), other = join(root, 'other');
+    syncWrite(target, 'old'); syncWrite(staging, 'new'); syncWrite(other, 'unrelated');
+    faults.beforeNativePublication(target, staging);
+    assert.deepEqual(faults.snapshot().matches, []);
+    faults.arm({ operation: 'write', path: target, code: 'ENOSPC' });
+    faults.beforeNativePublication(other, staging);
+    faults.beforeNativePublication(target, join(outside, 'staging'));
+    assert.equal(faults.snapshot().remaining, 1);
+    assert.throws(() => faults.beforeNativePublication(target, staging), error => {
+      assert.equal(error.code, 'ENOSPC'); assert.equal(error.syscall, 'nativePublication');
+      assert.equal(error.path, fs.realpathSync.native(target)); return true;
+    });
+    assert.equal(faults.snapshot().remaining, 0);
+    faults.beforeNativePublication(target, staging);
+    assert.equal(syncRead(target, 'utf8'), 'old'); assert.equal(syncRead(staging, 'utf8'), 'new');
+    assert.equal(faults.snapshot().matches.length, 1);
+    faults.arm({ operation: 'rename', path: target });
+    faults.beforeNativePublication(target, staging);
+    assert.equal(faults.snapshot().remaining, 1); faults.clear();
+    faults.arm({ operation: 'write', path: target, partialBytes: 1 });
+    assert.throws(() => faults.beforeNativePublication(target, staging), { code: 'ERR_SIM_FAULT_PARTIAL_UNSUPPORTED' });
+    assert.equal(faults.snapshot().remaining, 1); faults.clear();
+  `);
+  assert.deepEqual(audit.filter(event => event.type === 'failure').map(event => [event.api, event.error.code]),
+    [['host.inspectTemp.afterSyncBeforePublication', 'ENOSPC']]);
+});
+
+test('the actual installed DSH atomic writer rejects after-sync before-publication faults, cleans staging and recovers', async () => {
   const { audit } = await child(`
     const localModule = hostRequire.resolve('@deepseek-ai/dsh-fs-local');
     const localRequire = createRequire(localModule);
@@ -393,21 +441,41 @@ test('the actual installed DSH filesystem atomic create/update fails before publ
       assert.equal(created.operation, 'create');
       assert.equal(await ctx.fs.readText(target), 'recovered create');
       const version = (await ctx.fs.stat(target)).version;
-      faults.arm({ operation: 'write', path: target.targetKey, code: 'ENOSPC' });
-      await assert.rejects(ctx.fs.writeText(target, 'blocked update', { kind: 'replaceIfVersion', version }), { code: 'ENOSPC' });
-      assert.equal(await ctx.fs.readText(target), 'recovered create');
-      assert.equal((await ctx.fs.stat(target)).version, version);
-      assert.deepEqual(await promises.readdir(workspace), ['fault.txt']);
-      assert.equal(faults.snapshot().remaining, 0);
-      assert.equal(faults.snapshot().matches.at(-1).api, 'fs.promises.rename');
-      const updated = await ctx.fs.writeText(target, 'recovered update', { kind: 'replaceIfVersion', version });
-      assert.equal(updated.operation, 'update');
-      assert.equal(await ctx.fs.readText(target), 'recovered update');
-      assert.deepEqual(await promises.readdir(workspace), ['fault.txt']);
+      // Windows replacements use private ReplaceFileW, bypassing Node rename.
+      // Bridge only this fixture's known write through the host's existing
+      // after-sync inspectTemp seam; keep its actual DACL/native publication.
+      const internals = ctx.fs.internals;
+      const descriptor = Object.getOwnPropertyDescriptor(internals, 'inspectTemp');
+      const originalInspect = internals.inspectTemp;
+      if (process.platform === 'win32') internals.inspectTemp = async info => {
+        await originalInspect?.call(internals, info);
+        faults.beforeNativePublication(target.targetKey, info.tempPath);
+      };
+      try {
+        faults.arm({ operation: 'write', path: target.targetKey, code: 'ENOSPC' });
+        await assert.rejects(ctx.fs.writeText(target, 'blocked update', { kind: 'replaceIfVersion', version }), { code: 'ENOSPC' });
+        assert.equal(await ctx.fs.readText(target), 'recovered create');
+        assert.equal((await ctx.fs.stat(target)).version, version);
+        assert.deepEqual(await promises.readdir(workspace), ['fault.txt']);
+        assert.equal(faults.snapshot().remaining, 0);
+        assert.equal(faults.snapshot().matches.at(-1).api, process.platform === 'win32'
+          ? 'host.inspectTemp.afterSyncBeforePublication' : 'fs.promises.rename');
+        // The consumed arm is transparent: on Windows this still really runs
+        // the host's default ReplaceFileW implementation and DACL handling.
+        const updated = await ctx.fs.writeText(target, 'recovered update', { kind: 'replaceIfVersion', version });
+        assert.equal(updated.operation, 'update');
+        assert.equal(await ctx.fs.readText(target), 'recovered update');
+        assert.deepEqual(await promises.readdir(workspace), ['fault.txt']);
+      } finally {
+        if (descriptor) Object.defineProperty(internals, 'inspectTemp', descriptor);
+        else delete internals.inspectTemp;
+      }
+      assert.deepEqual(Object.getOwnPropertyDescriptor(internals, 'inspectTemp'), descriptor);
+      assert.equal(internals.inspectTemp, originalInspect);
     } finally { await fiber.dispose(); }
   `, { clock: true });
   assert.deepEqual(audit.filter(event => event.type === 'failure').map(event => [event.api, event.error.code]),
-    [['fs.promises.link', 'EIO'], ['fs.promises.rename', 'ENOSPC']]);
+    [['fs.promises.link', 'EIO'], [process.platform === 'win32' ? 'host.inspectTemp.afterSyncBeforePublication' : 'fs.promises.rename', 'ENOSPC']]);
 });
 
 test('atomic publication write faults match only exact destinations across sync/callback/promises link and rename', async () => {

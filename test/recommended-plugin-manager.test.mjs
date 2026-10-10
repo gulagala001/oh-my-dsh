@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { RecommendedPluginManager, AUTO_UPDATE_INTERVAL } from '../src/recommended-plugins.mjs';
+import { RecommendedPluginManager, AUTO_UPDATE_INTERVAL, pluginInstallSpec } from '../src/recommended-plugins.mjs';
 import { recommendedPlugins } from '../src/recommended-plugin-catalog.mjs';
+import { prepareReviewedPackage } from '../src/recommended-plugin-package.mjs';
+import { createHash } from 'node:crypto';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
 const catalog = [{ id: 'sample', packageName: 'sample-plugin' }, { id: 'absent', packageName: 'absent-plugin' }];
 function fixture(options = {}) {
@@ -45,7 +50,7 @@ test('manual install, pinned update and uninstall use the native manager and rep
 
 test('removed recommendations are absent and rejected before native plugin operations', async () => {
   const f = fixture({ catalog: recommendedPlugins });
-  assert.equal(recommendedPlugins.length, 9);
+  assert.equal(recommendedPlugins.length, 10);
   assert.equal((await f.service.status()).plugins.some(plugin => plugin.id === 'jevify'), false);
   for (const action of ['install', 'update', 'uninstall']) assert.throws(() => f.service.start('jevify', action), /未知/);
   assert.equal(f.lookups, 0); assert.deepEqual(f.packages, []); assert.deepEqual(f.calls, []);
@@ -505,4 +510,40 @@ test('OpenDesign uses its pinned bridge release instead of the unrelated OMD lat
  assert.equal(await latestPluginVersion(p,new AbortController().signal),p.review.version);
  globalThis.fetch=async()=>new Response(JSON.stringify({tag_name:'v0.2.0-rc.2.omd.0.4.0',assets:[{browser_download_url:spec}]}));
  await assert.rejects(latestPluginVersion(p,new AbortController().signal),/固定桥接版本/);
+});
+
+test('SHA-pinned npm recommendations download the fixed registry archive before native installation', async t => {
+  const original = globalThis.fetch;
+  const directory = await mkdtemp(join(tmpdir(), 'omd-reviewed-npm-'));
+  t.after(async () => { globalThis.fetch = original; await rm(directory, { recursive: true, force: true }); });
+  const bytes = Buffer.from('fixed reviewed npm archive');
+  const sha256 = createHash('sha256').update(bytes).digest('hex');
+  for (const packageName of ['sample-plugin', '@scope/sample-plugin']) {
+    const plugin = { id: 'sample', packageName, review: { version: '1.0.0', sha256 } };
+    const expected = `https://registry.npmjs.org/${packageName}/-/sample-plugin-1.0.0.tgz`;
+    const cache = join(directory, packageName.startsWith('@') ? 'scoped' : 'plain');
+    const f = fixture({ catalog: [plugin], packageDirectory: cache, preparePackage: prepareReviewedPackage });
+    let downloads = 0;
+    globalThis.fetch = async url => {
+      assert.equal(url, expected);
+      assert.equal(new URL(url).protocol, 'https:');
+      downloads++;
+      return new Response(bytes);
+    };
+    await f.service.start('sample', 'install');
+    assert.equal(downloads, 1);
+    assert.equal(f.lookups, 0, 'the reviewed version must not float to latest');
+    assert.equal((await f.service.status()).plugins[0].error, '');
+    assert.equal(f.calls.length, 1);
+    assert.equal(f.calls[0].spec, `${packageName}@file:${join(cache, sha256 + '.tgz')}`);
+    assert.deepEqual(await readFile(join(cache, sha256 + '.tgz')), bytes);
+    assert.deepEqual(Object.keys(f.calls[0].options).sort(), ['enabled', 'requestId']);
+    assert.throws(() => pluginInstallSpec(plugin, '1.0.1'), /固定/);
+  }
+  const f = fixture({ catalog: [{ id: 'sample', packageName: 'sample-plugin', review: { version: '1.0.0', sha256 } }],
+    packageDirectory: join(directory, 'mismatch'), preparePackage: prepareReviewedPackage });
+  globalThis.fetch = async () => new Response('replaced archive');
+  await f.service.start('sample', 'install');
+  assert.equal(f.calls.length, 0);
+  assert.match((await f.service.status()).plugins[0].error, /SHA-256/);
 });

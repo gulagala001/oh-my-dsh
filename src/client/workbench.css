@@ -1,10 +1,6 @@
-/* The right workbench is a compact inspection surface, not a second page shell. */
+/* Each OMD page shares the native right-side content tabs. */
 .tx-workbench.cx-integrated { --wb-gutter: 16px; container: omd-workbench / inline-size; }
 .tx-workbench :is(.tx-app,.cx-panel) { --tx-muted: var(--omd-muted,var(--dsw-alias-label-secondary)); --cx-muted: var(--tx-muted); }
-.tx-workbench.cx-integrated > .cx-navigation { gap: 2px; margin: 10px 12px 0; padding: 3px; min-height: 38px; border: 1px solid var(--cx-line); border-radius: 10px; background: var(--cx-soft); overflow: visible; }
-.tx-workbench.cx-integrated > .cx-navigation button { min-height: 30px; padding: 5px 4px; gap: 5px; border: 0; border-radius: 7px; font-size: 12px; line-height: 20px; }
-.tx-workbench.cx-integrated > .cx-navigation button[aria-current=page] { background: var(--cx-bg); color: var(--cx-blue); box-shadow: 0 1px 3px #00000015; }
-.tx-workbench.cx-integrated > .cx-navigation button:not([aria-current]):hover { background: var(--cx-hover); color: var(--cx-text); }
 .tx-workbench :is(.tx-page-head,.cx-head) { padding: 16px var(--wb-gutter) 12px; gap: 12px; }
 .tx-workbench :is(.tx-app,.cx-panel) h2 { font-size: 16px; line-height: 1.4; letter-spacing: -.2px; }
 .tx-workbench :is(.tx-title-line p,.cx-head p) { margin-top: 3px; font-size: 12px; line-height: 1.5; }
@@ -48,13 +44,68 @@
 .tx-workbench .cx-reader-head { padding-inline: var(--wb-gutter); }
 .tx-workbench .tx-empty,.tx-workbench .cx-empty { padding: 30px 16px; }
 .tx-workbench :is(.tx-empty > p,.cx-empty > p) { font-size: 12px; }
+.tx-workbench :is(.tx-task-detail,.cx-record,.cx-dream-memory,.cx-dream-entry) { min-width: 0; overflow-wrap: anywhere; }
+.tx-workbench :is(.tx-body,.cx-body) { overscroll-behavior: contain; scroll-padding-block: 12px; }
+.tx-workbench :is(.tx-tabs > button,.tx-button,.cx-btn,summary):focus-visible { outline: 2px solid var(--dsw-focus-ring-color,var(--tx-blue)); outline-offset: 2px; }
+.tx-workbench :is(.tx-fold,.cx-fold):focus-within { border-color: color-mix(in srgb,var(--tx-blue) 40%,var(--tx-line)); }
+.tx-workbench .tx-task-check { flex: none; }
+.tx-workbench :is(.tx-stat,.cx-metrics) { font-variant-numeric: tabular-nums; }
+@media (pointer: coarse) { .tx-workbench :is(.tx-button,.cx-btn,summary,.tx-task-check) { min-height: 40px; } }
 @container omd-workbench (max-width: 360px) {
   .tx-workbench-page { --wb-gutter: 14px; }
-  .tx-workbench.cx-integrated > .cx-navigation { margin-inline: 8px; }
-  .tx-workbench.cx-integrated > .cx-navigation button { flex-direction: column; gap: 2px; min-height: 44px; padding: 5px 2px; line-height: 15px; font-size: 11px; }
   .tx-workbench .tx-task-detail { margin-left: 0; }
 }
 @container omd-workbench (min-width: 480px) {
   .tx-workbench-page { --wb-gutter: 20px; }
   .tx-workbench .cx-dream-actions { grid-template-columns: repeat(4,minmax(0,1fr)); }
+}
+
+/* Keep the host's tab controls, drag handling and fullscreen start inset. */
+html.trisoul-shell [data-sidebar-right-panel] [data-dockkit-strip] {
+  box-sizing: border-box; height: 44px; min-height: 44px; padding-block: 7px;
+  border-bottom: 1px solid var(--omd-pane-line,var(--dsw-alias-border-l3));
+}
+
+/* Shape only the shipped guide when OMD entries are present. Provider-owned
+   entries retain their DOM, actions and menus; third-party entries stay visible. */
+html.trisoul-shell [data-sidebar-right-guide]:has([data-sidebar-right-guide-entry="trisoul-x-context"]) {
+  --omd-guide-line: var(--omd-pane-line,var(--dsw-alias-border-l3));
+  --omd-guide-muted: var(--omd-muted,var(--dsw-alias-label-secondary));
+  --dsl-guide-entry-radius: 6px;
+  container: omd-guide / inline-size;
+  gap: 0; padding: 28px 24px; min-width: 0;
+  color: var(--omd-text,var(--dsw-alias-label-primary));
+  background: var(--omd-bg,var(--dsw-alias-bg-base,Canvas));
+}
+html.trisoul-shell [data-sidebar-right-guide]:has([data-sidebar-right-guide-entry="trisoul-x-context"])::after { flex: 0 1 4%; }
+html.trisoul-shell [data-sidebar-right-guide]:has([data-sidebar-right-guide-entry="trisoul-x-context"]) > span {
+  margin-bottom: 20px; color: var(--omd-guide-muted); opacity: .45;
+}
+html.trisoul-shell [data-sidebar-right-guide]:has([data-sidebar-right-guide-entry="trisoul-x-context"]) > span > svg { width: 30px; height: 30px; }
+html.trisoul-shell [data-sidebar-right-guide]:has([data-sidebar-right-guide-entry="trisoul-x-context"]) > div { width: 320px; max-width: 100%; flex-shrink: 0; }
+html.trisoul-shell [data-sidebar-right-guide]:has([data-sidebar-right-guide-entry="trisoul-x-context"]) > div:is(:first-of-type,:has([data-sidebar-right-guide-entry="trisoul-x-context"]))::before {
+  display: block; padding: 0 8px 8px; color: var(--omd-guide-muted); font-size: 11px; line-height: 18px; font-weight: 500;
+}
+/* Slot owners may insert wrappers inside entryCell; match the public entry
+   markers through them. Empty alternative text keeps group labels decorative. */
+html.trisoul-shell [data-sidebar-right-guide]:has([data-sidebar-right-guide-entry="trisoul-x-context"]) > div:first-of-type:not(:has([data-sidebar-right-guide-entry="trisoul-x-context"]))::before { content: "打开内容" / ""; }
+html.trisoul-shell [data-sidebar-right-guide]:has([data-sidebar-right-guide-entry="trisoul-x-context"]) > div:has([data-sidebar-right-guide-entry="trisoul-x-context"])::before { content: "OMD 专属" / ""; padding-top: 22px; }
+html.trisoul-shell [data-sidebar-right-guide]:has([data-sidebar-right-guide-entry="trisoul-x-context"]) > div :is(button[data-sidebar-right-guide-entry],div[data-sidebar-right-guide-entry="terminal"]) {
+  box-sizing: border-box; width: 100%; min-width: 0; min-height: 44px; padding: 9px 8px; gap: 10px;
+  border: 0; border-bottom: 1px solid var(--omd-guide-line); border-radius: 0; background: transparent;
+  color: var(--omd-text,var(--dsw-alias-label-primary)); font-size: 13px; line-height: 20px;
+}
+html.trisoul-shell [data-sidebar-right-guide]:has([data-sidebar-right-guide-entry="trisoul-x-context"]) > div button[data-sidebar-right-guide-entry]:hover {
+  background: var(--omd-hover,var(--dsw-alias-interactive-bg-hover));
+}
+html.trisoul-shell [data-sidebar-right-guide]:has([data-sidebar-right-guide-entry="trisoul-x-context"]) > div button[data-sidebar-right-guide-entry]:focus-visible {
+  outline: 2px solid var(--dsw-focus-ring-color,var(--omd-accent,#2864d7)); outline-offset: 2px; border-radius: 6px;
+}
+html.trisoul-shell [data-sidebar-right-guide]:has([data-sidebar-right-guide-entry="trisoul-x-context"]) > div button[data-sidebar-right-guide-entry] > span:first-child {
+  width: 20px; height: 20px; color: var(--omd-guide-muted);
+}
+html.trisoul-shell [data-sidebar-right-guide]:has([data-sidebar-right-guide-entry="trisoul-x-context"]) > div button[data-sidebar-right-guide-entry] > span:first-child > svg { width: 18px; height: 18px; }
+html.trisoul-shell [data-sidebar-right-guide]:has([data-sidebar-right-guide-entry="trisoul-x-context"]) > div button[data-sidebar-right-guide-entry] > span:nth-child(2) > span:first-child { font-size: 13px; }
+@container omd-guide (max-width: 250px) {
+  html.trisoul-shell [data-sidebar-right-guide] > div button[data-sidebar-right-guide-entry] > span:nth-child(2) > span:first-child { white-space: normal; overflow-wrap: anywhere; }
 }

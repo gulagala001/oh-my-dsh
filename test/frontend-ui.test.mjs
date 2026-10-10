@@ -1,10 +1,11 @@
+import { openWorkbench } from './fixtures/workbench.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 
-test('DSH frontend: one workbench, preserved edits, compact composer and both themes', { timeout: 90000 }, async t => {
+test('DSH frontend: native workbench pages, preserved edits, compact composer and both themes', { timeout: 90000 }, async t => {
   const f = await frontendFixture(t, { reply: () => ({ delta: { role: 'assistant', content: '界面适配验证完成。' }, finish_reason: 'stop', usage: { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120 } }) }), { page, root, errors } = f;
   assert.equal(await page.locator('.tx-wordmark').innerText(), 'Oh My DSH');
   await until(async () => (await page.title()).endsWith(' — Oh My DSH'));
@@ -65,26 +66,22 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   });
   assert.equal(shellScroll, 0, 'overflowing offscreen panes cannot pan the app frame');
   await screenshot('conversation-light');
-  await page.getByRole('button', { name: '打开工作台', exact: true }).click();
-  const workbench = page.locator('.cx-integrated'), nav = page.locator('.cx-navigation');
+  await openWorkbench(page, '任务');
+  const workbench = page.locator('.cx-integrated:visible');
   await until(async () => (await workbench.boundingBox())?.width > 300);
   await page.getByRole('heading', { name: '任务与验证', exact: true }).waitFor();
-  const tabCount = await page.locator('[role=tab]').count();
   for (const name of ['记忆', '上下文', '电脑', '监控', '任务']) {
-    await nav.getByRole('button', { name, exact: true }).click();
-    await until(async () => (await nav.getByRole('button', { name, exact: true }).getAttribute('aria-current')) === 'page');
-    assert.equal(await page.locator('.tx-workbench').count(), 1, 'navigation reuses the same workbench');
-    assert.equal(await page.locator('[role=tab]').count(), tabCount, 'no new dock tab is created');
+    await openWorkbench(page, name);
     await screenshot('workbench-' + name);
   }
-  await nav.getByRole('button', { name: '监控', exact: true }).click();
+  await openWorkbench(page, '监控');
   await page.getByRole('tab', { name: '调用记录', exact: true }).click();
   const componentFilter = page.getByRole('combobox', { name: '调用组件' });
   await until(async () => (await componentFilter.locator('option').allTextContents()).includes('主执行'));
   assert.deepEqual(await componentFilter.locator('option').allTextContents(), ['全部组件', '主执行'], 'unused legacy components are not offered as current filters');
-  await nav.getByRole('button', { name: '记忆', exact: true }).click();
+  await openWorkbench(page, '记忆');
   await page.getByRole('heading', { name: '记忆' }).waitFor();
-  await nav.getByRole('button', { name: '上下文', exact: true }).click();
+  await openWorkbench(page, '上下文');
   await page.locator('.cx-context').getByRole('heading', { name: '工作上下文', exact: true }).waitFor();
   await screenshot('context-records');
   await page.getByRole('button', { name: 'BT · Better Todo', exact: true }).click();
@@ -107,7 +104,7 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '打开 Computer Use', exact: true }).click();
   await page.getByRole('heading', { name: '让助手操作应用和网页', exact: true }).waitFor();
-  assert.equal(await page.locator('.tx-workbench').count(), 1);
+  assert.equal(await page.locator('.tx-cu-pane:visible').count(), 1);
   await screenshot('computer-empty');
   await page.getByRole('button', { name: '运行环境与权限', exact: true }).click();
   await page.getByText('Chrome 扩展', { exact: true }).waitFor();
@@ -119,6 +116,10 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
     await route.fulfill({ json: { ...setupState, native: { platform: 'win32', supported: true, installed: windowsInstalled, interactive: windowsInstalled, captureSupported: windowsInstalled, repairRequired, version: '0.1.1' } } });
   };
   await page.route('**/trisoul-x/computer-use/setup?*', windowsSetup);
+  // Setup reads intentionally pause while the real browser document is hidden.
+  // Restore the user's active-page condition before testing native polling.
+  await page.bringToFront();
+  t.diagnostic('Windows setup polling begins with document visibility: ' + await page.evaluate(() => document.visibilityState));
   try {
     await until(async () => (await page.locator('.tx-cu-setup').innerText()).includes('.NET 10 SDK'));
     assert.doesNotMatch(await page.locator('.tx-cu-setup').innerText(), /Apple Command Line Tools|操作 Mac 应用/);
@@ -131,11 +132,11 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
     await page.getByRole('button', { name: '修复桌面控制', exact: true }).waitFor({ state: 'hidden' });
     await screenshot('windows-setup');
   } finally { await page.unroute('**/trisoul-x/computer-use/setup?*', windowsSetup); }
-  const light = await page.locator('.tx-workbench').evaluate(el => getComputedStyle(el).backgroundColor);
+  const light = await page.locator('.tx-cu-pane:visible').evaluate(el => getComputedStyle(el).backgroundColor);
   await page.emulateMedia({ colorScheme: 'dark' });
-  await until(async () => await page.locator('.tx-workbench').evaluate(el => getComputedStyle(el).backgroundColor) !== light);
+  await until(async () => await page.locator('.tx-cu-pane:visible').evaluate(el => getComputedStyle(el).backgroundColor) !== light);
   await screenshot('computer-dark');
-  await nav.getByRole('button', { name: '记忆', exact: true }).click();
+  await openWorkbench(page, '记忆');
   await screenshot('memory-dark');
   await page.setViewportSize({ width: 1060, height: 900 });
   await until(async () => (await composer.boundingBox())?.width >= 220);
@@ -148,14 +149,18 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await page.locator('[data-sidebar-collapsed=true]').waitFor();
   await page.mouse.move(700, 400);
   await until(async () => (await composer.boundingBox())?.width > 450);
-  const tools = await page.locator('[data-slot="conversation.composer.dock"]').boundingBox();
+  const dockBounds = () => page.locator('[data-slot="conversation.composer.dock"]').evaluate(el => {
+    const node = getComputedStyle(el).display === 'contents' ? el.parentElement : el;
+    const box = node.getBoundingClientRect(); return { x: box.x, width: box.width };
+  });
+  const tools = await dockBounds();
   assert.ok(tools.x >= 0 && tools.x + tools.width <= 760, 'composer tools remain on screen');
   for (const width of [994, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await page.mouse.move(width - 10, 400);
     await until(async () => { const box = await composer.boundingBox(); return box?.x >= 0 && box.x + box.width <= width; });
     await usageToggle.click();
-    await until(async () => { const box = await page.locator('[data-slot="conversation.composer.dock"]').boundingBox(); return box?.x >= 0 && box.x + box.width <= width; });
+    await until(async () => { const box = await dockBounds(); return box?.x >= 0 && box.x + box.width <= width; });
     assert.equal(await hostStats.isVisible(), true, 'expanded usage stays available at ' + width + 'px');
     await screenshot('conversation-' + width + '-usage');
     await usageToggle.click();
@@ -172,7 +177,7 @@ test('DSH frontend: one workbench, preserved edits, compact composer and both th
   await until(() => recommendations.filter({ hasText: 'dsh-status-rotator' }).getByRole('button', { name: '安装', exact: true }).isEnabled());
   const rewind = recommendations.filter({ hasText: '回合回滚 · Turn Rewind' });
   assert.equal(await rewind.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
-  assert.match(await rewind.innerText(), /尚不兼容 DSH 0\.2\.1-alpha\.1/);
+  assert.match(await rewind.innerText(), /尚不兼容 DSH 0\.2\.1-alpha\.1 \/ 0\.2\.1-alpha\.2/);
   const whale = recommendations.filter({ hasText: '小鲸鱼记账挂件' });
   assert.equal(await whale.getByRole('link').getAttribute('href'), 'https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget');
   assert.equal(await whale.getByRole('button', { name: '安装', exact: true }).isEnabled(), true);

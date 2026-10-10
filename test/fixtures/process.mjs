@@ -29,10 +29,12 @@ export async function stopFixtureProcess(child) {
     } else {
       child.kill('SIGTERM');
     }
-    const timer = setTimeout(() => child.kill('SIGKILL'), 5000);
+    let forced = false;
+    const timer = setTimeout(() => { forced = true; child.kill('SIGKILL'); }, 5000);
     let deadline;
     try { await Promise.race([exited, new Promise((_, reject) => { deadline = setTimeout(() => reject(new Error('Fixture process did not exit')), 10000); })]); }
     finally { clearTimeout(timer); clearTimeout(deadline); }
+    if (forced) throw new Error('Fixture process required forced cleanup after SIGTERM');
   } finally {
     // Cleanup errors remain test failures, but inherited descendant pipes must
     // not keep the runner alive and hide that failure until the CI job expires.

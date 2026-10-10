@@ -1,3 +1,4 @@
+import { openWorkbench } from './fixtures/workbench.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -5,8 +6,7 @@ import { join } from 'node:path';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 
 async function openMemory(page) {
-  await page.getByRole('button', { name: '打开工作台', exact: true }).click();
-  await page.locator('.cx-navigation').getByRole('button', { name: '记忆', exact: true }).click();
+  await openWorkbench(page, '记忆');
   return page.locator('.cx-dream');
 }
 

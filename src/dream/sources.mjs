@@ -15,7 +15,7 @@ const userText = e => (e.data?.content || []).filter(b => b.type === 'text').map
 const material = blocks => (blocks || []).flatMap(b => b.type === 'text' ? [b.text || ''] : b.type === 'tool-result' ? [b.isError ? '[observed tool error]' : '[observed tool result]', material(b.content)] : ['reasoning','tool-call'].includes(b.type) ? [] : [`[${b.type} attachment reference retained; contents not read]`]).join('\n');
 
 export class DreamSources {
-  constructor(hub, store) { this.hub=hub; this.ctx=hub.ctx; this.store=store; this.revisions=new Map();this.lifecycle=new AbortController();this.pending=new Set();this.closing=null; }
+  constructor(hub, store) { this.hub=hub; this.ctx=hub.ctx; this.store=store; this.revisions=new Map();this.catalogHeaders=new Map();this.lifecycle=new AbortController();this.pending=new Set();this.closing=null; }
   track(run) {
     this.lifecycle.signal.throwIfAborted();
     const task=run();this.pending.add(task);
@@ -28,7 +28,53 @@ export class DreamSources {
     return this.closing=Promise.allSettled([...this.pending]);
   }
   persistence() { return this.ctx.get?.('sessionPersistence') || this.ctx.sessionPersistence; }
-  scope(header, sideQuestion = false) {
+  inWorkspace(id) {
+    const registry=this.ctx.get?.('workspaceRegistry')||this.ctx.workspaceRegistry;
+    return Boolean(registry?.list?.().some(workspace=>workspace.sessionIds.includes(id)));
+  }
+  projectlessKnown(header) { return this.store.session(header.id)?.projectless===true&&!this.inWorkspace(header.id); }
+  scopeFor(header,sideQuestion=false,signal) { return this.track(()=>this.classifyScope(header,sideQuestion,this.signal(signal))); }
+  async classifyScope(header,sideQuestion=false,signal) {
+    let projectless=false,current=header;
+    const seen=new Set();
+    if(this.hub.projectless&&!this.inWorkspace(header.id))while(current) {
+      signal?.throwIfAborted();
+      if(seen.has(current.id))throw Error('会话继承关系形成循环');seen.add(current.id);
+      if(this.inWorkspace(current.id))break;
+      const saved=this.hub.store.peek?.(current.id)||this.store.session(current.id);
+      if(await this.hub.projectless.owns(current.cwd||saved?.cwd,{requireDirectory:false})) { projectless=true;break; }
+      signal?.throwIfAborted();
+      const parent=current.parentSession||saved?.parentSession;
+      if(!parent)break;
+      current=this.catalogHeaders.get(parent)||this.ctx.sessions?.get?.(parent)?.header||this.hub.store.peek?.(parent);
+      if(!current) { await this.headers(signal);current=this.catalogHeaders.get(parent); }
+    }
+    this.lifecycle.signal.throwIfAborted();signal?.throwIfAborted();
+    return this.scope(header,sideQuestion,projectless);
+  }
+  refreshScope(header,signal) {
+    return this.track(async()=>{
+      signal=this.signal(signal);
+      let scope;
+      try { scope=await this.scopeFor(header,false,signal); }
+      catch(error) {
+        this.lifecycle.signal.throwIfAborted();signal.throwIfAborted();
+        // A failed optional ownership read must not block a native chat or
+        // silently admit it to shared memory. Retry from the next index scan.
+        scope={mode:'session',project:'@unclassified',shared:false,projectless:true,scopeError:String(error.message).slice(0,1000)};
+        this.hub.dream?.notice?.(error);
+      }
+      const old=this.store.session(header.id);
+      signal.throwIfAborted();
+      this.store.saveSession({...old,id:header.id,title:old?.title||header.title||header.id,...scope,
+        projectless:Boolean(scope.projectless),scopeError:scope.scopeError,...(old?.readError?{shared:false}:{}),
+        activity:old?.activity||0,createdAt:Number(header.createdAt)||old?.createdAt||0,cwd:header.cwd||'',parentSession:header.parentSession});
+      return scope;
+    });
+  }
+  scope(header, sideQuestion = false, projectless = this.projectlessKnown(header)) {
+    sideQuestion ||= isBtwSession(this.ctx.sessions?.get?.(header.id)) || this.store.session(header.id)?.sideQuestion === true;
+    if(projectless)return {mode:'session',project:'@unclassified',shared:false,projectless:true,...(sideQuestion?{sideQuestion:true}:{})};
     const saved=this.hub.store.peek?.(header.id), archive=this.hub.context.store.peek(header.id);
     let parent=header.parentSession, inherited=saved, seen=new Set([header.id]);
     while(parent) {
@@ -36,7 +82,6 @@ export class DreamSources {
       const p=this.hub.store.peek?.(parent);if(!p)break;
       inherited={...p,...inherited};parent=p.parentSession;
     }
-    sideQuestion ||= isBtwSession(this.ctx.sessions?.get?.(header.id)) || this.store.session(header.id)?.sideQuestion === true;
     const mode=sideQuestion || archive?.binding?.scope==='session'?'session':saved?.memoryScope||inherited?.memoryScope||archive?.binding?.scope||this.hub.config().memoryScope||'project';
     const cwd=header.cwd||saved?.cwd;
     const project=mode==='session'?(cwd?projectOf(cwd):'@unclassified'):archive?.binding?.project||inherited?.workflowProject||(cwd?projectOf(cwd):'@unclassified');
@@ -45,7 +90,10 @@ export class DreamSources {
   async headers(signal) {
     const p=this.persistence();
     if(!p?.list)throw Error('宿主没有可用的会话目录接口');
-    return p.list({signal});
+    const entries=await p.list({signal});
+    this.lifecycle.signal.throwIfAborted();signal?.throwIfAborted();
+    this.catalogHeaders=new Map(entries.map(entry=>[entry.header.id,entry.header]));
+    return entries;
   }
   async sync(signal,options) { return this.track(()=>this.syncIndex(this.signal(signal),options)); }
   excludeUnreadable(id,error,signal,{header,scope,publishWarnings=true}={}) {
@@ -72,9 +120,9 @@ export class DreamSources {
     for(const entry of entries) {
       signal?.throwIfAborted();
       const id=entry.header.id, old=this.store.session(id), previous=this.revisions.get(id);
-      const scope=this.scope(entry.header);
+      const scope=await this.scopeFor(entry.header,false,signal);
       const unchangedFailure=!retryUnreadable&&old?.readError&&previous===entry.revision&&old.project===scope.project&&old.mode===scope.mode;
-      if(!unchangedFailure&&(!old || previous!==entry.revision || old.available===false || old.project!==scope.project || old.mode!==scope.mode || old.shared!==scope.shared)) {
+      if(!unchangedFailure&&(!old || previous!==entry.revision || old.available===false || old.scopeError || old.project!==scope.project || old.mode!==scope.mode || old.shared!==scope.shared || Boolean(old.projectless)!==Boolean(scope.projectless))) {
         try { await this.inspect(id,signal); }
         catch(error) {
           if(!this.excludeUnreadable(id,error,signal,{header:entry.header,scope,publishWarnings:false}))throw error;
@@ -124,10 +172,12 @@ export class DreamSources {
       return {header:structuredClone(handle.header),inherited:handle.inheritedEventCount||0,events:structuredClone(events)};
     } finally { await handle.close(); }
   }
-  async inspect(id,signal) {
+  inspect(id,signal) { return this.track(()=>this.inspectSnapshot(id,this.signal(signal))); }
+  async inspectSnapshot(id,signal) {
     const snapshot=await this.read(id,signal), {header,events,inherited}=snapshot;
     this.lifecycle.signal.throwIfAborted();signal?.throwIfAborted();
-    const old=this.store.session(id), sideQuestion=header.origin==='subagent'&&Boolean(btwDescriptor(events,inherited)), scope=this.scope({...header,id},sideQuestion);
+    const old=this.store.session(id), sideQuestion=header.origin==='subagent'&&Boolean(btwDescriptor(events,inherited)), scope=await this.scopeFor({...header,id},sideQuestion,signal);
+    this.lifecycle.signal.throwIfAborted();signal?.throwIfAborted();
     let activity=0,title=header.title||old?.title||id;
     for(const event of events) {
       if(actualUser(event)||(['assistant/message','tool/result','tool/call'].includes(event.type)&&!sourceName(messageOf(event)?.source)))activity=Math.max(activity,eventTime(event)||0);
@@ -135,7 +185,7 @@ export class DreamSources {
     }
     // Generation identity is immutable metadata, not file mtime or a representation carrier.
     const generation=digest([header.id,header.version,header.createdAt,header.parentSession,inherited]);
-    const value={id,title,...scope,available:true,activity:activity||Number(header.createdAt)||0,createdAt:Number(header.createdAt)||0,cwd:header.cwd||'',generation,inherited,eventCount:events.length,eventDigest:digest(events)};
+    const value={id,title,...scope,available:true,activity:activity||Number(header.createdAt)||0,createdAt:Number(header.createdAt)||0,cwd:header.cwd||'',parentSession:header.parentSession,generation,inherited,eventCount:events.length,eventDigest:digest(events)};
     this.store.saveSession(value);return {...snapshot,metadata:value};
   }
   async manifest(id,{signal,deepAgeMs,cut,before=Infinity}) {
@@ -212,7 +262,7 @@ export class DreamSources {
   async validateBatch(metadata,batch,signal) {
     const handle=await this.persistence().open(metadata.id,'read',{signal});
     try {
-      const header=handle.header,scope=this.scope({...header,id:metadata.id});
+      const header=handle.header,scope=await this.scopeFor({...header,id:metadata.id},false,signal);
       const generation=digest([header.id,header.version,header.createdAt,header.parentSession,handle.inheritedEventCount||0]);
       if(generation!==metadata.generation||scope.project!==metadata.project||scope.shared!==metadata.shared)throw Error('会话来源或共享范围已改变；停止发布');
       const records=this.hub.context.store.peek(metadata.id)?.records||[];

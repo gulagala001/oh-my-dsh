@@ -1,3 +1,4 @@
+import { openWorkbench } from './fixtures/workbench.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
@@ -116,8 +117,7 @@ test('async mode choices save, retry and remain usable in the actual narrow work
     compressionMode = route.request().postDataJSON().mode;
     return route.fulfill({ json: { compressionMode } });
   });
-  await page.getByRole('button', { name: '打开工作台', exact: true }).click();
-  await page.locator('.cx-navigation').getByRole('button', { name: '上下文', exact: true }).click();
+  await openWorkbench(page, '上下文');
   const panel = page.locator('.cx-context'), modes = panel.getByRole('group', { name: '本会话异步压缩模式', exact: true });
   const original = modes.getByRole('button', { name: '原版异步', exact: true }), adaptive = modes.getByRole('button', { name: '主动异步', exact: true });
   await modes.waitFor(); assert.equal(await original.getAttribute('aria-pressed'), 'true');

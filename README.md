@@ -5,8 +5,8 @@
 <p align="center"><strong>长任务、电脑操作与任务验证，都在熟悉的 DSH 里。</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-alpha.1.omd.0.10.0"><img src="https://img.shields.io/badge/version-0.2.1--alpha.1.omd.0.10.0-3478F6?style=flat-square" alt="Version 0.2.1-alpha.1.omd.0.10.0" /></a>
-  <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.2.1--alpha.1-475569?style=flat-square" alt="DSH 0.2.1-alpha.1" /></a>
+  <a href="docs/release-0.2.1-alpha.2.omd.0.15.0.md"><img src="https://img.shields.io/badge/version-0.2.1--alpha.2.omd.0.15.0-3478F6?style=flat-square" alt="Version 0.2.1-alpha.2.omd.0.15.0（待发布）" /></a>
+  <a href="https://github.com/deepseek-ai/deepseek-harness"><img src="https://img.shields.io/badge/DSH-0.2.1--alpha.2-475569?style=flat-square" alt="DSH 0.2.1-alpha.2" /></a>
 </p>
 <p align="center">
   <a href="#quickstart"><strong>开始使用</strong></a> · <a href="https://gulagala001.github.io/oh-my-dsh/">产品介绍</a> · <a href="docs/README.md">使用文档</a> · <a href="docs/showcase.md">实拍案例</a> · <a href="https://github.com/gulagala001/oh-my-dsh/issues">反馈与建议</a>
@@ -20,10 +20,11 @@ Oh My DSH 是 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 - **长任务与记忆**：自动整理历史，需要细节时回查原话、文档和附件。[了解上下文与记忆](#memory)
 - **网页与桌面操作**：在对话中查看操作画面，随时停止、人工接手或恢复。[了解 OpenCU](#computer-use)
 - **任务与交付**：跟进待办，为完成项保留验证记录，查看生成的文件。[了解任务工具](#tools)
+- **运行监控**：用概览、用量和上下文三页查看调用进展、缓存、历史记录与预算，辨明统计范围与数据来源。[监控指南](docs/monitoring.md)
 
 还有适配 DSH 的[系统提示词](#prompts)、覆盖整个界面的[五种外观与自定义设置](#themes)，以及可按需安装的[插件生态](#plugins)。
 
-[![发布清单验收实拍：对话中交付 CSV 与要求文件，工作台保留三条待验收事项](docs/site/media/launchpad-workbench.jpg)](docs/site/media/launchpad-workbench.jpg)
+[![发布清单验收实拍：对话中交付 CSV 与要求文件，工作台展示实际任务与 PASS 输出](docs/site/media/launchpad-workbench.jpg)](docs/site/media/launchpad-workbench.jpg)
 
 *演示：整理发布清单、操作网页、核对并交付 CSV。虚构案例，由本地受控模型驱动，工具与文件检查实际执行。[查看过程与验证范围](docs/showcase.md)。*
 
@@ -31,7 +32,9 @@ Oh My DSH 是 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 
 ## 开始使用
 
-当前安装配对：**DSH 0.2.1-alpha.1 · Oh My DSH 0.2.1-alpha.1.omd.0.10.0**，内置 **OpenCU 1.3.0**。已有环境升级前，先结束任务、停止服务或完整退出应用，并备份实际 `DSH_HOME`。[安装、迁移与升级指南](docs/upgrade.md)。
+当前候选配对（未正式发布）：**DSH 0.2.1-alpha.2 · Oh My DSH 0.2.1-alpha.2.omd.0.15.0**，内置 **OpenCU 1.6.0**。本次整合验收针对 alpha.2；旧宿主保留已交付的独立 0.14.0 构建。已有环境升级前，先结束任务、停止服务或完整退出应用，并备份实际 `DSH_HOME`。[安装、迁移与升级指南](docs/upgrade.md)。
+
+公开安装版本：**OMD 0.2.1-alpha.1.omd.0.10.0 / DSH 0.2.1-alpha.1**。下方 GitHub 命令安装已发布的 0.10.0，不含 0.11／0.12／0.13／0.14／0.15 候选改进或 alpha.2 适配。0.15.0 仅供[本地候选验收](docs/upgrade.md#candidate-install)。
 
 <a id="desktop"></a>
 
@@ -39,7 +42,7 @@ Oh My DSH 是 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 
 ### 官方桌面应用
 
-最新源码和 npm 宿主为 **DSH 0.2.1-alpha.1**。官方桌面更新源目前仍为 rc.2；桌面用户安装 **OMD 0.2.0-rc.2.omd.0.10.0**，采用 [rc.2 的固定安装指南](https://github.com/gulagala001/oh-my-dsh/blob/v0.2.0-rc.2.omd.0.10.0/docs/upgrade.md#desktop)，待官方新版桌面包发布后再升级。
+最新源码和 npm 宿主为 **DSH 0.2.1-alpha.2**；截至 2026-10-10，[官方 alpha.2 Release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.1-alpha.2)尚无桌面安装资产。现有 rc.2 桌面用户安装 **OMD 0.2.0-rc.2.omd.0.10.0**，采用 [rc.2 的固定安装指南](https://github.com/gulagala001/oh-my-dsh/blob/v0.2.0-rc.2.omd.0.10.0/docs/upgrade.md#desktop)，待官方新版桌面包发布后再升级。
 
 桌面使用独立的 `desktop` profile，Web 中的插件需在桌面再安装一次。[桌面教程](docs/upgrade.md#desktop) · [从 Web 迁移数据](docs/upgrade.md#web-to-desktop)。
 
@@ -83,7 +86,7 @@ npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 | --- | --- |
 | 保存要求 | [原始消息](docs/site/media/launchpad-requirements.jpg)：保留负责人、优先级、未验收项与 CSV 约定 |
 | 精简当前上下文 | [压缩记录](docs/site/media/launchpad-context.jpg)：摘要用于继续工作，原话与附件留档 |
-| 回查精确细节 | [回查结果](docs/site/media/launchpad-recall.jpg)：读取存档并核对原始消息 12 |
+| 回查精确细节 | [回查结果](docs/site/media/launchpad-recall.jpg)：压缩后读取原话，核对最初的六列要求 |
 | 核验交付 | [任务证据](docs/site/media/launchpad-tasks.jpg)：实际下载文件的 BOM、六列与全部字段检查通过 |
 
 长任务通过持续存档、压缩和回查延伸；**当前模型窗口仍有容量限制**。[上下文机制](docs/context-workflow.md) · [本次演示的配置与范围](docs/showcase.md)。
@@ -101,9 +104,11 @@ npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 
 ## OpenCU：看见过程，随时接手
 
-内置 [OpenCU](https://github.com/gulagala001/opencu)，把网页与桌面操作接入原生对话。通过 `@Browser`、已连接的 `@Chrome` 或应用引用指定目标；在同一工作台查看实时画面、停止操作、人工接手，再恢复助手控制。
+内置 [OpenCU](https://github.com/gulagala001/opencu)，把网页与桌面操作接入原生对话。通过 `@Browser`、已连接的 `@Chrome` 或应用引用指定目标；在独立的电脑预览标签中查看实时画面、停止操作、人工接手，再恢复助手控制。
 
-这次发布清单验收中，实际执行了筛选、勾选、刷新和下载。导出的 **8 条事项**逐字段核对通过，**3 条待验收项**保留下来。[查看实际网页](docs/site/media/launchpad-browser.jpg)。
+候选 0.13.1 可将内置浏览器的下载保存为持久文件附件，在原生与 OMD-PTC 对话中打开预览；控制连接停止后的下载继续保存，失败保留原因，重复保存复用已交付文件，停止及服务重启后仍可读取附件。实时预览在重载后恢复辅助展示，缺少或失效的缓存不影响基础操控。
+
+这次发布清单验收中，实际执行了筛选、刷新恢复和下载。导出的 **8 条事项**逐字段核对通过，**3 条待验收项**保留下来。[查看实际网页](docs/site/media/launchpad-browser.jpg)。
 
 分享窗口、圈选区域、批注元素或临时预览样式，都可以把具体反馈带回对话。[浏览器、桌面、权限与批注指南](docs/usage.md#computer-use)。
 
@@ -145,7 +150,7 @@ npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 ## 专属工具：把工作推进到交付
 
 - **Better Todo**：把用户要求、任务状态与证据连起来。待办提醒默认开启，验证提醒按需开启；实际测试结果单独记录。
-- **Pro / Ultracode**：Pro 专注需求拆解、子代理实现与持续迭代；Ultracode 额外提供完整性检查与对抗验证。两档均使用所选模型声明支持的最高推理档。[工作流说明](docs/workflow.md)。
+- **Pro / Ultracode**：Pro 专注需求拆解、子代理实现与持续迭代，优先使用模型声明的 xhigh；Ultracode 额外提供完整性检查与对抗验证，使用模型声明的最高推理档。[工作流说明](docs/workflow.md)。
 - **提示词优化**：润色、结构化或规划当前草稿，保留原稿和版本，支持撤销、继续修改。[草稿优化指南](docs/usage.md#提示词优化)。
 
 <details>
@@ -181,7 +186,7 @@ npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 
 ## 文档与参与
 
-[文档目录](docs/README.md) · [首次使用](docs/getting-started.md) · [完整指南](docs/usage.md) · [排障](docs/troubleshooting.md) · [更新记录](CHANGELOG.md) · [当前发行说明](docs/release-0.2.1-alpha.1.omd.0.10.0.md)
+[文档目录](docs/README.md) · [首次使用](docs/getting-started.md) · [完整指南](docs/usage.md) · [排障](docs/troubleshooting.md) · [更新记录](CHANGELOG.md) · [未发布候选说明](docs/release-0.2.1-alpha.2.omd.0.15.0.md)
 
 开发分支可能包含尚未发布的功能；安装固定 tag 时，以[该 tag 的文档](https://github.com/gulagala001/oh-my-dsh/tree/v0.2.1-alpha.1.omd.0.10.0/docs)为准。[DSH 0.2 适配与验证](docs/dsh-0.2-preparation.md)。
 

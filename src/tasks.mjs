@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
 import { createTodoStore } from './todolist.mjs';
 import { tasksFromLegacy } from './task-context.mjs';
+import { currentDirectory } from './working-directory.mjs';
 
 const TASK_ENTRY_SCHEMA = { type: 'object', properties: {
   id: { type: 'string', description: 'Required for edit: the existing task ID. Omit for excerpt/add.' },
@@ -81,20 +82,22 @@ export function currentTasks(session, cached) {
 }
 
 export function createVerificationRunner(ctx, exec) {
-  const invoke = async (name, args, signal = exec.signal) => {
+  const invoke = async (name, args, signal = exec.signal, callId = randomUUID()) => {
     const result = await ctx.tools.execute({ name, arguments: args, agent: exec.agent, signal,
-      callId: randomUUID(), rootCallId: exec.rootCallId ?? exec.callId, parent: exec.token });
+      callId, rootCallId: exec.rootCallId ?? exec.callId, parent: exec.token });
     for (const context of result.additionalContexts || []) exec.deferContext?.(context);
     return result;
   };
   return async (command, timeoutMs) => {
     if (exec.signal?.aborted) return { ok: false, aborted: true, timedOut: false, out: '' };
     const windows = process.platform === 'win32';
-    const result = await invoke(windows ? 'pwsh' : 'bash', {
+    const tool = windows ? 'pwsh' : 'bash', callId = randomUUID();
+    const args = {
       command: windows ? `$ErrorActionPreference = 'Stop'\n& {\n${command}\n}\nif ($LASTEXITCODE -ne $null) { exit $LASTEXITCODE }` : command,
-      description: 'Run the linked task verification command', workdir: exec.agent.session.header.cwd,
+      description: 'Run the linked task verification command', workdir: currentDirectory(ctx, exec.agent.session),
       timeoutMs, run_in_background: false,
-    });
+    };
+    const result = await invoke(tool, args, exec.signal, callId);
     if (exec.signal?.aborted || ['ABORTED', 'ABORTED_BEFORE_DISPATCH'].includes(result.error?.info?.code))
       return { ok: false, aborted: true, timedOut: false, out: '' };
     if (result.isError) throw new Error(result.error.message);
@@ -112,6 +115,9 @@ export function createVerificationRunner(ctx, exec) {
       throw new Error('Native sandbox blocked verification or could not start; previous verification results are unchanged.');
     return { ok: value.exitCode === 0 && !value.signal && !value.timedOut && !value.aborted,
       code: value.exitCode, aborted: value.aborted, timedOut: value.timedOut, timeoutMs: value.timeoutMs,
+      execution: { tool, callId, rootCallId: exec.rootCallId ?? exec.callId,
+        command: args.command, workdir: args.workdir, exitCode: value.exitCode ?? null,
+        signal: value.signal ?? null, timeoutMs: value.timeoutMs ?? timeoutMs },
       out: `${value.stdout?.text ?? ''}${value.stderr?.text ?? ''}`.trim() };
   };
 }
@@ -133,7 +139,7 @@ export function registerTasks(ctx, store = createTodoStore()) {
     },
     {
       name: 'verify_link', description: VERIFICATION_DESCRIPTION, parameters: VERIFICATION_PARAMETERS, title: '验证',
-      run: (args, session, exec) => store.execVerifyLink(session, args, session.header.cwd, exec.signal, createVerificationRunner(ctx, exec)),
+      run: (args, session, exec) => store.execVerifyLink(session, args, currentDirectory(ctx, session), exec.signal, createVerificationRunner(ctx, exec)),
     },
   ];
   for (const { name, description, parameters, title, run } of definitions) ctx.tools.register({

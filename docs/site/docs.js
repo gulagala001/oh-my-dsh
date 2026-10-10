@@ -32,7 +32,7 @@
     image.addEventListener('load', () => {
       image.hidden = false;
       if (linkedImage) linkedImage.hidden = false;
-      if (notice) { notice.hidden = true; notice.removeAttribute('aria-busy'); retry.disabled = false; }
+      if (notice) { if (notice.contains(document.activeElement)) { image.tabIndex = -1; image.focus({ preventScroll: true }); } notice.hidden = true; notice.removeAttribute('aria-busy'); retry.disabled = false; }
     });
     const failed = () => {
       if (!notice) {
@@ -85,8 +85,13 @@
 
   document.querySelectorAll('.mobile-nav a, .mobile-toc a').forEach(link => link.addEventListener('click', () => {
     link.closest('details').open = false;
+    const target = link.hash && document.getElementById(decodeURIComponent(link.hash.slice(1)));
+    if (target) { target.tabIndex = -1; target.focus({ preventScroll: true }); }
   }));
-  const tocLinks = [...document.querySelectorAll('.doc-toc a')];
+  document.querySelectorAll('.mobile-nav, .mobile-toc').forEach(menu => menu.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && menu.open) { event.preventDefault(); menu.open = false; menu.querySelector('summary').focus(); }
+  }));
+  const tocLinks = [...document.querySelectorAll('.doc-toc a, .mobile-toc a')];
   const headings = tocLinks.map(link => document.getElementById(decodeURIComponent(link.hash.slice(1)))).filter(Boolean);
   if (!headings.length || !('IntersectionObserver' in window)) return;
   const visible = new Set();

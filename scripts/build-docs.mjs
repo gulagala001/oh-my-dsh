@@ -15,8 +15,9 @@ const guides = [
   'windows.md', 'skins.md', 'codex-desktop.md', 'ios-liquid-glass.md',
   'claude-cli-terminal.md', 'google-material-expressive.md', 'context-workflow.md',
   'claude-cli-skin-research.md', 'google-material-expressive-research.md',
-  'dream-memory.md', 'prompt-adaptation.md', 'runtime-state-background.md',
+  'monitoring.md', 'dream-memory.md', 'prompt-adaptation.md', 'runtime-state-background.md',
   'workflow.md', 'open-design.md', 'plugin-submissions.md', 'showcase.md', 'dsh-0.2-preparation.md',
+  'rea-development.md', 'plugin-compatibility.md',
   'upstream-patches/README.md', 'site/README.md',
 ];
 const navigation = [
@@ -59,7 +60,7 @@ function rewriteUrl(target, file, pages, assets, repository) {
   if (assets.has(output + '/index.html')) output += '/index.html';
   if (pages.has(destination) || assets.has(output)) return relativeUrl(file, output) + url.search + url.hash;
   // Source references stay available on GitHub without shipping implementation or local data.
-  if (/^(?:src|vendor)\//.test(destination)) return `${repository}/blob/main/${url.pathname.slice(1)}${url.search}${url.hash}`;
+  if (/^(?:src|vendor|scripts)\//.test(destination)) return `${repository}/blob/main/${url.pathname.slice(1)}${url.search}${url.hash}`;
   throw new Error(`${file}: link is outside the public site: ${target}`);
 }
 

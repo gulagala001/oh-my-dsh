@@ -1,14 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { Context } from '@deepseek-ai/cordis';
 import { transformAssembly } from '../src/cc-adaptation/adapter.mjs';
 import { registerComputerTools } from '../vendor/opencu/src/computer-use/tools.mjs';
 import { renderToolsSdk, renderToolsSdkPy } from '@deepseek-ai/dsh-tools';
 import { verificationFixture } from './fixtures/verification.mjs';
 
 const context = { agent: { session: { header: { origin: 'user' } } } };
-function registeredTools() {
-  const definitions = new Map();
-  registerComputerTools({ tools: { register: tool => definitions.set(tool.name, tool) } }, {});
+function registeredTools(t) {
+  const definitions = new Map(), ctx = new Context();
+  t.after(() => ctx.fiber.dispose());
+  ctx.provide('tools', { register: tool => ctx.effect(() => {
+    definitions.set(tool.name, tool);
+    return () => definitions.delete(tool.name);
+  }) });
+  registerComputerTools(ctx, {});
   return definitions;
 }
 function assembly(tools) {
@@ -52,8 +58,8 @@ function budgetGuidance(text) {
   assert.match(text, /cua\.rewriteDocumentation\(topic\)/);
 }
 
-test('native CC adaptation retains the actual Computer Use timeout contract and current guidance', () => {
-  const tool = registeredTools().get('computer_use');
+test('native CC adaptation retains the actual Computer Use timeout contract and current guidance', t => {
+  const tool = registeredTools(t).get('computer_use');
   const adapted = transformAssembly(assembly([tool]), context).assembly.tools[0];
   assert.equal(adapted.parameters, tool.parameters);
   budgetContract(adapted.parameters);
@@ -62,8 +68,8 @@ test('native CC adaptation retains the actual Computer Use timeout contract and 
 });
 
 for (const mode of ['ptc', 'both']) for (const language of ['typescript', 'python']) {
-  test(`${mode}/${language} CC SDK carries the actual Computer Use timeout contract and current guidance`, () => {
-    const definitions = registeredTools();
+  test(`${mode}/${language} CC SDK carries the actual Computer Use timeout contract and current guidance`, t => {
+    const definitions = registeredTools(t);
     const computer = definitions.get('computer_use');
     const runCode = { name: 'run_code', description: 'Run a program', parameters: { type: 'object', properties: { code: { type: 'string' } }, required: ['code'] } };
     const source = assembly(mode === 'ptc' ? [runCode] : [runCode, computer]);

@@ -321,6 +321,16 @@ export class ProcessMonitor {
     if (!this._attached) throw new Error('No root process has been attached');
     this._stopping = true; this._clearTimeout(this._watchTimer);
     const deadline = performance.now() + 5000;
+    const forcedGroups = new Set();
+    const force = async (group, rows, reason) => {
+      if (group.retired || group.unsafe || ![...rows.values()].some(row => row.pgid === group.pgid && running(row))) return;
+      if (!forcedGroups.has(group.pgid)) {
+        forcedGroups.add(group.pgid);
+        if (reason === 'deadline') this._fail('SIM_PROCESS_TIMEOUT', `Verified process group ${group.pgid} exceeded the graceful shutdown deadline`);
+        this._event({ type: 'process/forced-stop', pgid: group.pgid, reason });
+      }
+      await this._signalGroup(group, rows, 'SIGKILL');
+    };
     try {
       await this._ready.catch(() => {});
       await this._withRows(rows => { if (this._root) this._signalPid(this._root, rows, 'SIGSTOP'); });
@@ -334,15 +344,11 @@ export class ProcessMonitor {
         await this._drain(deadline);
         complete = await this._withRows(async rows => {
           await this._recoverStopped(rows);
-          const root = this._root && rows.get(this._root.pid);
           for (const group of this._groups.values()) {
-            const mainStillExiting = !crash && group.pgid === this._root?.pgid && root && running(root) && performance.now() < deadline - 200;
-            if (!mainStillExiting) {
-              if (!crash && group.pgid === this._root?.pgid && root && running(root) && !group.unsafe) {
-                this._fail('SIM_PROCESS_TIMEOUT', 'Root process exceeded the graceful shutdown deadline');
-              }
-              await this._signalGroup(group, rows, 'SIGKILL');
-            }
+            // Plugin disposal can finish after its root exits (e.g. a detached
+            // bridge flushes state on SIGTERM). Share the existing grace budget
+            // across all verified groups, and never report escalation as clean.
+            if (crash || performance.now() >= deadline - 200) await force(group, rows, crash ? 'requested-crash' : 'deadline');
           }
           return [...this._groups.values()].every(group => group.retired);
         });
@@ -352,7 +358,7 @@ export class ProcessMonitor {
       }
       await this._drain(deadline);
       await this._withRows(async rows => {
-        for (const group of this._groups.values()) if (!group.retired && !group.unsafe) await this._signalGroup(group, rows, 'SIGKILL');
+        for (const group of this._groups.values()) await force(group, rows, crash ? 'requested-crash' : 'deadline');
       });
       // Observe the result of final signals, including already-exited leaders.
       while (performance.now() < deadline && ![...this._groups.values()].every(group => group.retired || group.unsafe)) {
@@ -368,7 +374,7 @@ export class ProcessMonitor {
       // number from a bad frame. Recheck OS ownership before final cleanup.
       await this._withRows(async rows => {
         await this._recoverStopped(rows);
-        for (const group of this._groups.values()) await this._signalGroup(group, rows, 'SIGKILL');
+        for (const group of this._groups.values()) await force(group, rows, 'cleanup-failure');
       }).catch(actual => this._fail('SIM_PROCESS_CLEANUP', actual.message));
     }
     finally {

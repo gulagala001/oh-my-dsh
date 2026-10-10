@@ -185,19 +185,170 @@ async function monitorFor(state, t) {
   return monitor;
 }
 
+test('graceful stop lets an admitted detached child finish its 400ms SIGTERM cleanup after the root exits', { skip: windowsSkip, timeout: 12000 }, async t => {
+  const state = await fixture(t), monitor = await monitorFor(state, t);
+  const childSource = `import fs from 'node:fs';
+    const root = process.argv.at(-1);
+    const heartbeat = setInterval(() => {}, 1000);
+    let termAt;
+    process.once('SIGTERM', () => {
+      termAt = Date.now();
+      fs.writeFileSync(root + '/child-term.json', JSON.stringify({ pid: process.pid, termAt }));
+      setTimeout(() => {
+        fs.writeFileSync(root + '/child-cleaned.json', JSON.stringify({ pid: process.pid, termAt, completedAt: Date.now() }));
+        clearInterval(heartbeat);
+      }, 400);
+    });
+    process.on('exit', code => fs.writeFileSync(root + '/child-exit.json', JSON.stringify({ pid: process.pid, code })));
+    fs.writeFileSync(root + '/child-ready.json', JSON.stringify({ pid: process.pid, parentPid: process.ppid }));`;
+  const run = managed(state, `import fs from 'node:fs'; import { spawn } from 'node:child_process';
+    const root = process.argv.at(-1);
+    const child = spawn(process.execPath, ['--input-type=module', '--eval', ${JSON.stringify(childSource)}, root], { detached: true, stdio: 'ignore' });
+    process.once('SIGTERM', () => {
+      const forwarded = child.kill('SIGTERM');
+      fs.writeFileSync(root + '/root-term.json', JSON.stringify({ pid: process.pid, childPid: child.pid, forwarded }));
+      process.exit(0);
+    });
+    while (!fs.existsSync(root + '/child-ready.json')) await new Promise(resolve => setTimeout(resolve, 5));
+    fs.writeFileSync(root + '/leader.json', JSON.stringify({ pid: process.pid, childPid: child.pid }));
+    setInterval(() => {}, 1000);`);
+  state.host.child = run.child; state.host.boots = 1;
+  await monitor.attach(run.child);
+  const leader = await poll(async () => {
+    try { return JSON.parse(await fs.readFile(join(state.root, 'leader.json'), 'utf8')); }
+    catch (error) { if (!['ENOENT', 'SyntaxError'].includes(error.code ?? error.name)) throw error; }
+  }, 'root and detached child ready');
+  state.pids.add(leader.childPid); state.groups.add(leader.childPid);
+  const childRecord = monitor.snapshot().processes.find(record => record.pid === leader.childPid);
+  assert.equal(childRecord?.kind, 'gated', 'the child must already be externally admitted before stop');
+  assert.equal(childRecord.pgid, leader.childPid);
+  const ack = JSON.parse(await fs.readFile(join(state.ackDirectory, `${run.child.pid}-${leader.childPid}.json`), 'utf8'));
+  assert.equal(ack.ok, true);
+
+  // Observe real signals without suppressing or replacing any OS operation.
+  // Restore this hook before fixture cleanup so failure recovery is separate.
+  const signals = [], actualKill = process.kill;
+  process.kill = function (pid, signal) {
+    if (state.pids.has(Math.abs(pid)) || state.groups.has(Math.abs(pid))) signals.push({ pid, signal });
+    return actualKill.call(this, pid, signal);
+  };
+  const started = performance.now();
+  try { await state.host.stop(); }
+  finally { process.kill = actualKill; }
+  const elapsedMs = performance.now() - started;
+  const rootExit = await run.done;
+  const readProof = name => fs.readFile(join(state.root, name), 'utf8').then(JSON.parse, error => {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  });
+  const forwarded = await readProof('root-term.json'), received = await readProof('child-term.json');
+  const completed = await readProof('child-cleaned.json'), childExit = await readProof('child-exit.json');
+  const snapshot = monitor.snapshot();
+  t.diagnostic(JSON.stringify({ rootPid: run.child.pid, childPid: leader.childPid, rootExit: { code: rootExit.code, signal: rootExit.signal },
+    forwarded, received, completed, childExit, elapsedMs, signals, monitorErrors: snapshot.errors,
+    groupsRetired: snapshot.groups.every(group => group.retired) }));
+  assert.deepEqual(signals.filter(event => event.signal === 'SIGKILL'), [], 'normal stop must let the admitted cleanup child exit naturally');
+  assert.equal(rootExit.code, 0, rootExit.stderr); assert.equal(rootExit.signal, null);
+  assert.equal(forwarded?.forwarded, true); assert.equal(received?.pid, leader.childPid);
+  assert.ok(completed, 'detached child must finish and write its cleanup file before stop resolves');
+  assert.ok(completed.completedAt - completed.termAt >= 400, 'the real cleanup timer must complete');
+  assert.deepEqual(childExit, { pid: leader.childPid, code: 0 });
+  assert.ok(elapsedMs < 5000, 'normal child cleanup fits the existing shared five-second stop budget');
+  assert.equal(monitor.assertHealthy(), true);
+  await noRunning(state); assert.equal(state.host.child, null);
+});
+
 for (const crash of [false, true]) {
   for (const mode of ['same-group', 'leader-exited', 'detached', 'detached-exited']) {
-    test(`stop ${crash ? 'crash' : 'graceful'} reaps ${mode} SIGTERM-ignoring descendants`, { skip: windowsSkip, timeout: 12000 }, async t => {
+    test(`stop ${crash ? 'crash reaps' : 'graceful reports timeout and reaps'} ${mode} SIGTERM-ignoring descendants`, { skip: windowsSkip, timeout: 12000 }, async t => {
       const state = await topology(t, mode);
       const audit = await state.host.audit();
       assert.ok(audit.processes.some(event => event.type === 'process/spawn'));
       if (mode === 'detached-exited') assert.ok(audit.processes.some(event => event.type === 'process/exit' && event.pid === state.leader.toolPid));
-      await state.host.stop({ crash });
+      const descendant = JSON.parse(await fs.readFile(join(state.root, 'leaf.json'), 'utf8'));
+      if (mode === 'detached-exited') {
+        // The shell is admitted before it launches a background group member.
+        // Its exit does not turn that externally verified group into a new
+        // independently gated PID, nor permit ownership by writable audit.
+        const verified = await state.host.monitor._withRows(rows => {
+          const row = rows.get(descendant.pid), snapshot = state.host.monitor.snapshot();
+          return { row, group: snapshot.groups.find(group => group.pgid === row?.pgid),
+            shell: snapshot.processes.find(record => record.pid === state.leader.toolPid) };
+        });
+        assert.equal(verified.row?.pgid, state.leader.toolPid);
+        assert.equal(verified.shell?.kind, 'gated');
+        assert.equal(verified.shell.pgid, state.leader.toolPid);
+        assert.equal(verified.group?.unsafe, false); assert.equal(verified.group.retired, false);
+        assert.equal(verified.group.birth, verified.shell.birth);
+        assert.ok(verified.group.members.some(member => member.pid === descendant.pid && member.birth === verified.row.birth));
+      } else assert.ok(state.host.monitor.snapshot().processes.some(record => record.pid === descendant.pid && record.kind === 'gated'));
+      process.kill(descendant.pid, 'SIGTERM');
+      await poll(async () => {
+        try { return (await fs.readFile(join(state.root, 'ignored-term.jsonl'), 'utf8')).trim().split('\n').map(JSON.parse).some(event => event.pid === descendant.pid); }
+        catch (error) { if (error.code !== 'ENOENT') throw error; }
+      }, 'owned descendant actually receives and ignores SIGTERM');
+      if (crash) await state.host.stop({ crash });
+      else await assert.rejects(state.host.stop(), error => {
+        assert.equal(error.code, 'SIM_PROCESS_TIMEOUT');
+        assert.ok(error.errors.some(item => item.code === 'SIM_PROCESS_TIMEOUT'));
+        return true;
+      });
       await noRunning(state);
       assert.equal(state.host.child, null);
+      const snapshot = state.host.monitor.snapshot();
+      const forced = snapshot.events.filter(event => event.type === 'process/forced-stop');
+      assert.ok(forced.length > 0, 'uncooperative descendants must have an explicit escalation record');
+      assert.ok(forced.every(event => event.reason === (crash ? 'requested-crash' : 'deadline')));
+      assert.ok(snapshot.groups.every(group => group.retired));
+      if (crash) assert.equal(state.host.monitor.assertHealthy(), true);
+      else assert.throws(() => state.host.monitor.assertHealthy(), { code: 'SIM_PROCESS_TIMEOUT' });
     });
   }
 }
+
+test('a bounded graceful detached-child timeout is explicit and cannot signal an unrelated forged PID', { skip: windowsSkip, timeout: 12000 }, async t => {
+  const state = await topology(t, 'detached');
+  const independent = await sentinel(t, state.outside);
+  const descendant = JSON.parse(await fs.readFile(join(state.root, 'leaf.json'), 'utf8'));
+  const monitor = state.host.monitor;
+  const admission = monitor.snapshot().processes.find(record => record.pid === descendant.pid);
+  assert.equal(admission?.kind, 'gated'); assert.equal(admission.pgid, descendant.pid);
+  process.kill(descendant.pid, 'SIGTERM');
+  await poll(async () => {
+    try { return (await fs.readFile(join(state.root, 'ignored-term.jsonl'), 'utf8')).trim().split('\n').map(JSON.parse).some(event => event.pid === descendant.pid); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }, 'detached child ignores actual SIGTERM before stop');
+  await fs.appendFile(join(state.root, 'network.jsonl'), JSON.stringify({ type: 'process/spawn', pid: independent.pid,
+    parentPid: state.run.child.pid, detached: true, file: 'forged' }) + '\n');
+
+  const actualKill = process.kill, signals = [];
+  process.kill = function (pid, signal) {
+    if (Math.abs(pid) === independent.pid || state.pids.has(Math.abs(pid)) || state.groups.has(Math.abs(pid))) signals.push({ pid, signal, at: performance.now() });
+    return actualKill.call(this, pid, signal);
+  };
+  const started = performance.now();
+  try {
+    await assert.rejects(state.host.stop(), error => {
+      assert.equal(error.code, 'SIM_PROCESS_TIMEOUT');
+      assert.ok(error.errors.some(item => item.code === 'SIM_PROCESS_TIMEOUT'));
+      return true;
+    });
+  } finally { process.kill = actualKill; }
+  const elapsedMs = performance.now() - started;
+  const snapshot = monitor.snapshot(), forced = snapshot.events.filter(event => event.type === 'process/forced-stop');
+  t.diagnostic(JSON.stringify({ rootPid: state.run.child.pid, childPid: descendant.pid, independentPid: independent.pid, elapsedMs,
+    errors: snapshot.errors, forced, signals: signals.map(event => ({ ...event, at: event.at - started })) }));
+  assert.ok(elapsedMs < 5000, 'timeout escalation and ownership cleanup share the existing five-second budget');
+  assert.ok(forced.some(event => event.pgid === descendant.pid && event.reason === 'deadline'));
+  const killSignal = signals.find(event => event.pid === -descendant.pid && event.signal === 'SIGKILL');
+  assert.ok(killSignal && killSignal.at - started >= 4800, 'the admitted group gets its normal grace before escalation');
+  assert.ok(!signals.some(event => Math.abs(event.pid) === independent.pid), 'a forged writable PID never authorizes any signal');
+  assert.ok(!snapshot.processes.some(record => record.pid === independent.pid));
+  assert.ok((await processRows()).some(row => row.pid === independent.pid && !row.stat.startsWith('Z')));
+  assert.ok(snapshot.groups.every(group => group.retired));
+  assert.throws(() => monitor.assertHealthy(), { code: 'SIM_PROCESS_TIMEOUT' });
+  await noRunning(state); assert.equal(state.host.child, null);
+});
 
 test('graceful stop refuses and reaps a gated child spawned by the SIGTERM shutdown handler', { skip: windowsSkip, timeout: 12000 }, async t => {
   const state = await topology(t, 'late-detached');
