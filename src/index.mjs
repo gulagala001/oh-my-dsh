@@ -225,7 +225,7 @@ export async function apply(ctx, config) {
   ctx.on('agent/status', ({ agent, status }) => {
     if(isBtwSession(agent.session))return;
     hub.budgets.tick(agent.session, isX(agent.session) && status === 'running');
-    if (isX(agent.session)) hub.context.arm(agent);
+    if (isX(agent.session)&&hub.context.agents.has(agent.session.id)) hub.context.arm(agent);
   }, { global: true });
   ctx.on('user-questions/request', ({ agent }, next) => agent && isX(agent.session) ? hub.budgets.waitForUser(agent, next) : next(), { global: true });
   ctx.on('agent/disposed', ({ agent }) => {
@@ -250,14 +250,18 @@ export async function apply(ctx, config) {
     state.cwd = agent.session.header.cwd; state.parentSession = agent.session.header.parentSession;
     state.origin = agent.session.header.origin ?? null;
     if (agent.session.header.origin === 'subagent') { hub.store.save(state); return; }
-    state.memoryScope ??= hub.scope(agent.session).mode;
-    hub.store.save(state); hub.agents.set(agent.session.id, agent); hub.context.start(agent);
+    // Native create announces the agent before attaching Workspace membership.
+    // Preserve the configured preference; defer a provisional Chat binding
+    // until the first request can see the completed native registration.
+    state.memoryScope ??= hub.scope(agent.session,{effective:false}).mode;
+    hub.store.save(state); hub.agents.set(agent.session.id, agent);
+    if(!hub.dream.sources.projectlessKnown(agent.session.header))hub.context.start(agent);
     hub.components.project(currentDirectory(ctx, agent.session));
   }, { global: true });
   ctx.on('session/created', session => {
     if (!isX(session) || !session.header.parentSession || !session.header.isSeeded || session.header.origin === 'subagent') return;
     const state = hub.store.state(session.id);
-    state.memoryScope ??= hub.scope(session).mode;
+    state.memoryScope ??= hub.scope(session,{effective:false}).mode;
     state.cwd = session.header.cwd; state.parentSession = session.header.parentSession; state.origin = session.header.origin ?? null;
     hub.store.save(state); hub.context.state(session);
   }, { global: true });

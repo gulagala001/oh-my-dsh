@@ -56,9 +56,11 @@ export class Hub extends Service {
     if (!next.verification) this.taskReviews.delete(session.id);
     return next;
   }
-  scope(session) {
-    if(this.dream?.sources?.projectlessKnown?.(session.header))return {mode:'session',project:`session:${session.id}`};
+  scope(session, { effective = true } = {}) {
+    if(effective&&this.dream?.sources?.projectlessKnown?.(session.header))return {mode:'session',project:`session:${session.id}`};
     const state = this.store.peek ? this.store.peek(session.id) ?? { id: session.id } : this.store.state(session.id);
+    const prepared=effective&&this.context?.store?.peek?.(session.id);
+    if(prepared?.binding?.scope==='session'&&(state.started||prepared.records?.length))return {mode:'session',project:`session:${session.id}`};
     let root = state, parentId = session.header.parentSession, workflowProject = state.workflowProject;
     const ancestors = new Set([session.id]);
     while (parentId) {
@@ -150,7 +152,7 @@ export class Hub extends Service {
     }
     if (event.type === 'user/message' && event.data.source.kind === 'user') {
       const state = this.store.state(session.id);
-      state.memoryScope ??= this.scope(session).mode;
+      state.memoryScope ??= this.scope(session,{effective:false}).mode;
       state.cwd = session.header.cwd; state.parentSession = session.header.parentSession;
       state.origin = session.header.origin ?? null;
       state.started = true; this.store.save(state);
