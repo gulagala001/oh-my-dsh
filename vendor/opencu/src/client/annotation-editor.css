@@ -1,114 +1,75 @@
-/* Scoped to the frozen-screenshot editor; the CU workspace keeps its own layout. */
-dialog.tx-cu-annotation-dialog.tx-cu-annotation-editor {
-  width: min(1180px, calc(100vw - 24px));
-  height: min(820px, calc(100dvh - 32px));
-  max-height: calc(100dvh - 32px);
-  box-sizing: border-box;
-  padding: 0;
-  border-radius: 14px;
-  overflow: hidden;
-}
-.tx-cu-annotation-editor[open] { display: flex; flex-direction: column; }
-.tx-cu-annotation-editor > header {
-  min-height: 52px;
-  box-sizing: border-box;
-  flex: 0 0 auto;
-  padding: 11px 16px;
-  border-bottom: 1px solid var(--cu-line);
-}
-.tx-cu-annotation-editor > header > div { min-width: 0; }
-.tx-cu-annotation-editor > header strong { font-size: 13px; font-weight: 600; }
-.tx-cu-annotation-editor > header small {
-  display: block;
-  max-width: min(760px, 70vw);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  margin-top: 3px;
-  color: var(--cu-muted);
-  font-size: 10px;
-}
-.tx-cu-annotation-editor button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
-.tx-cu-annotation-editor > header > button { flex: 0 0 auto; width: 30px; height: 30px; padding: 0; }
-.tx-cu-annotation-editor .tx-cu-annotation-modes {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 48px;
-  padding: 8px 16px;
-  box-sizing: border-box;
-  border-bottom: 1px solid var(--cu-line);
-}
-.tx-cu-annotation-editor .tx-cu-annotation-palette {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 3px;
-  border-radius: 8px;
-  background: var(--cu-soft);
-}
-.tx-cu-annotation-editor .tx-cu-annotation-modes button { min-height: 28px; border: 0; font-size: 11px; padding: 4px 9px; }
-.tx-cu-annotation-editor .tx-cu-annotation-palette button { background: transparent; border-radius: 6px; color: var(--cu-muted); }
-.tx-cu-annotation-editor .tx-cu-annotation-palette button[aria-pressed=true] { background: var(--cu-bg); color: var(--cu-blue); box-shadow: 0 1px 3px #00000014; }
-.tx-cu-annotation-editor .tx-cu-annotation-modes > button { width: 28px; padding: 0; }
-.tx-cu-annotation-editor .tx-cu-annotation-modes > span { margin-left: auto; color: var(--cu-muted); font-size: 10px; }
-.tx-cu-annotation-editor .tx-cu-annotation-workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 300px; overflow: hidden; }
-.tx-cu-annotation-editor .tx-cu-annotation-viewport { padding: 14px 18px; gap: 12px; background: var(--cu-soft); overflow: auto; }
-.tx-cu-annotation-editor .tx-cu-annotation-viewbar { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: auto; color: var(--cu-muted); font-size: 11px; flex: 0 0 auto; }
-.tx-cu-annotation-editor .tx-cu-annotation-viewbar > span { display: inline-flex; gap: 6px; align-items: center; }
-.tx-cu-annotation-editor [data-view=preview] .tx-cu-annotation-viewbar > span { color: var(--cu-blue); }
-.tx-cu-annotation-editor .tx-cu-annotation-viewbar > div { display: flex; gap: 2px; border: 1px solid var(--cu-line); border-radius: 6px; padding: 2px; }
-.tx-cu-annotation-editor .tx-cu-annotation-viewbar button { font-size: 10px; min-height: 24px; padding: 2px 8px; border: 0; background: transparent; color: var(--cu-muted); }
-.tx-cu-annotation-editor .tx-cu-annotation-viewbar button[aria-pressed=true] { background: var(--cu-bg); color: var(--cu-text); }
-.tx-cu-annotation-editor .tx-cu-annotation-surface { box-shadow: 0 2px 12px #0000000a; }
-.tx-cu-annotation-editor .tx-cu-annotation-surface img { max-height: min(560px, calc(100dvh - 260px)); }
-.tx-cu-annotation-editor .tx-cu-annotation-hint { padding-top: 0; margin-top: auto; line-height: 1.6; text-align: center; flex: 0 0 auto; }
-.tx-cu-annotation-editor .tx-cu-annotation-inspector { padding: 14px; background: var(--cu-bg); min-width: 0; }
-.tx-cu-annotation-editor .tx-cu-selection-heading { font-size: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--cu-line); }
-.tx-cu-annotation-editor .tx-cu-annotation-element { margin-top: 12px; padding: 10px; border-radius: 8px; background: var(--cu-soft); gap: 5px; }
-.tx-cu-annotation-editor .tx-cu-annotation-element strong { overflow-wrap: anywhere; font: 11px/1.5 ui-monospace, monospace; }
-.tx-cu-annotation-editor .tx-cu-annotation-element > span { max-height: 3em; overflow: hidden; font-size: 11px; line-height: 1.5; color: var(--cu-muted); }
-.tx-cu-annotation-editor .tx-cu-annotation-element details { margin-top: 5px; font-size: 10px; }
-.tx-cu-annotation-editor .tx-cu-annotation-element pre { max-height: 160px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
-.tx-cu-annotation-editor .tx-cu-annotation-frame { font-size: 10px; color: var(--cu-muted); overflow-wrap: anywhere; }
-.tx-cu-annotation-editor .tx-cu-annotation-comment { margin-top: 16px; color: var(--cu-text); font-size: 11px; }
-.tx-cu-annotation-editor .tx-cu-annotation-comment > span { display: flex; align-items: center; justify-content: space-between; }
-.tx-cu-annotation-editor .tx-cu-annotation-comment small { color: var(--cu-muted); font-size: 10px; }
-.tx-cu-annotation-editor .tx-cu-annotation-comment textarea { min-height: 86px; padding: 9px; font: inherit; line-height: 1.6; border-radius: 8px; resize: vertical; }
-.tx-cu-annotation-editor .tx-cu-style-editor { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--cu-line); }
-.tx-cu-annotation-editor .tx-cu-style-editor > summary { display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 11px; font-weight: 500; }
-.tx-cu-annotation-editor .tx-cu-style-editor > summary small { color: var(--cu-muted); font-size: 10px; font-weight: 400; }
-.tx-cu-annotation-editor .tx-cu-style-editor > p { font-size: 10px; line-height: 1.6; color: var(--cu-muted); margin: 8px 0; }
-.tx-cu-annotation-editor .tx-cu-style-groups { display: block; }
-.tx-cu-annotation-editor .tx-cu-style-group { border-bottom: 1px solid var(--cu-line); }
-.tx-cu-annotation-editor .tx-cu-style-group > summary { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; font-size: 11px; cursor: pointer; }
-.tx-cu-annotation-editor .tx-cu-style-group > summary small { min-width: 16px; color: var(--cu-blue); font-size: 10px; text-align: right; }
-.tx-cu-annotation-editor .tx-cu-style-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 8px; padding-bottom: 12px; }
-.tx-cu-annotation-editor .tx-cu-style-fields label { display: block; min-width: 0; font-size: 10px; color: var(--cu-muted); }
-.tx-cu-annotation-editor .tx-cu-style-fields label > span { display: block; margin-bottom: 4px; }
-.tx-cu-annotation-editor .tx-cu-style-fields label > div { position: relative; display: flex; align-items: center; }
-.tx-cu-annotation-editor .tx-cu-style-fields input { box-sizing: border-box; width: 100%; min-width: 0; height: 30px; padding: 5px 22px 5px 7px; border-radius: 5px; font: 10px/1.4 ui-monospace, monospace; }
-.tx-cu-annotation-editor .tx-cu-style-fields button { position: absolute; right: 2px; min-height: 22px; width: 20px; padding: 0; border: 0; background: transparent; color: var(--cu-muted); }
-.tx-cu-annotation-editor .tx-cu-style-actions { display: flex; gap: 6px; margin-top: 12px; }
-.tx-cu-annotation-editor .tx-cu-style-actions button { flex: 1; min-height: 30px; padding: 5px 7px; font-size: 10px; }
-.tx-cu-annotation-editor .tx-cu-style-actions button:first-child:not(:disabled) { color: var(--cu-blue); border-color: var(--cu-blue); background: var(--cu-tint); }
-.tx-cu-annotation-editor .tx-cu-style-editor .tx-cu-style-preview-note { padding: 8px; border-radius: 6px; background: var(--cu-soft); }
-.tx-cu-annotation-editor > footer { flex: 0 0 auto; min-height: 60px; box-sizing: border-box; padding: 12px 16px; background: var(--cu-bg); }
-.tx-cu-annotation-editor > footer button { min-height: 32px; font-size: 11px; }
-.tx-cu-annotation-editor :is(button,input,textarea,summary):focus-visible { outline: 2px solid var(--cu-blue); outline-offset: 2px; }
-@media (max-width: 760px) {
-  dialog.tx-cu-annotation-dialog.tx-cu-annotation-editor { width: calc(100vw - 16px); height: calc(100dvh - 24px); max-height: calc(100dvh - 24px); border-radius: 12px; }
-  .tx-cu-annotation-editor > header { padding: 10px 12px; }
-  .tx-cu-annotation-editor > header small { display: none; }
-  .tx-cu-annotation-editor .tx-cu-annotation-modes { padding: 8px 12px; gap: 4px; }
-  .tx-cu-annotation-editor .tx-cu-annotation-modes > .tx-cu-annotation-mode-note { display: none; }
-  .tx-cu-annotation-editor .tx-cu-annotation-workspace { display: flex; flex-direction: column; overflow: hidden; }
-  .tx-cu-annotation-editor .tx-cu-annotation-viewport { flex: 0 0 auto; max-height: 36dvh; padding: 10px 12px; gap: 8px; box-sizing: border-box; }
-  .tx-cu-annotation-editor .tx-cu-annotation-surface img { max-height: 24dvh; }
-  .tx-cu-annotation-editor .tx-cu-annotation-inspector { flex: 1; min-height: 0; overflow: auto; border-left: 0; border-top: 1px solid var(--cu-line); padding: 12px; }
-  .tx-cu-annotation-editor .tx-cu-style-fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .tx-cu-annotation-editor > footer { padding: 10px 12px; gap: 6px; }
-  .tx-cu-annotation-editor > footer > div { gap: 5px; }
-  .tx-cu-annotation-editor > footer > small { font-size: 10px; }
-}
+/* $i → bi → snt comment card; Tn/kn style rows; Ue floating tools.
+ * This provider edits verified frozen frames and session-owned draft files. */
+.tx-cu-annotation-editor{position:absolute;inset:0;z-index:20;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden;background:var(--color-surface);color:var(--color-text);font-size:var(--text-sm);line-height:1.5;--browser-sidebar-annotation-selection-color:#0069FB}
+.tx-cu-annotation-editor *,.tx-cu-annotation-editor *::before,.tx-cu-annotation-editor *::after{box-sizing:border-box}
+.tx-cu-annotation-workspace,.tx-cu-annotation-viewport{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;min-width:0;min-height:0}
+.tx-cu-annotation-surface{position:relative;flex-shrink:1;width:fit-content;max-width:100%;max-height:100%;line-height:0;cursor:crosshair;touch-action:none}
+.tx-cu-annotation-surface img{display:block;width:auto;height:auto;max-width:100%;max-height:var(--cu-annotation-height);user-select:none}
+.tx-cu-annotation-viewbar{position:absolute;left:12px;bottom:12px;display:flex;align-items:center;gap:6px;max-width:calc(100% - 24px);padding:4px 8px;border-radius:8px;background:var(--color-surface-elevated-secondary);color:var(--color-text-secondary);font-size:var(--text-xs);pointer-events:none}
+.tx-cu-annotation-toolbar-content{display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap}
+.tx-cu-annotation-toolbar-content>*{flex-shrink:0}
+.tx-cu-annotation-palette{display:flex;align-items:center;gap:1px}
+.tx-cu-annotation-mode-note{padding:0 8px;font-size:var(--text-sm);user-select:none}
+.tx-cu-annotation-palette button[aria-pressed=true]{color:var(--color-text-info);background:color-mix(in srgb,var(--color-surface) 90%,var(--color-chart-blue))}
+.tx-cu-annotation-palette button[aria-pressed=true]:hover{background:color-mix(in srgb,var(--color-surface) 85%,var(--color-chart-blue))}
+.tx-cu-annotation-hint{position:absolute;left:50%;bottom:76px;transform:translateX(-50%);max-width:calc(100% - 24px);padding:6px 12px;border-radius:999px;background:var(--color-surface-elevated-secondary);color:var(--color-text-secondary);font-size:var(--text-xs);text-align:center;pointer-events:none}
+.tx-cu-annotation-inspector{position:absolute;right:12px;top:64px;display:flex;flex-direction:column;width:294px;max-width:calc(100% - 24px);max-height:calc(100% - 80px);min-width:0;min-height:0;border-radius:22px;background:var(--color-surface-elevated-secondary);box-shadow:var(--shadow-md);isolation:isolate;--codex-chat-font-size:13px;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro","Segoe UI",sans-serif}
+.tx-cu-annotation-inspector::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;mix-blend-mode:multiply;outline:1px solid var(--color-border)}
+.tx-cu-annotation-inspector.is-style-open{width:344px}
+.tx-cu-annotation-card-header{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 12px;cursor:grab;touch-action:none;user-select:none}
+.tx-cu-annotation-card-header:active,.tx-cu-style-drag-heading:active{cursor:grabbing}
+.tx-cu-selection-chip{display:flex;align-items:center;gap:4px;height:24px;min-width:0;max-width:100%;padding:2px 2px 2px 4px;border:1px solid color-mix(in srgb,var(--browser-sidebar-annotation-selection-color) 42%,transparent);border-radius:8px;background:color-mix(in srgb,var(--browser-sidebar-annotation-selection-color) 8%,var(--color-background-primary-soft));font-size:var(--text-xs);color:var(--color-text)}
+.tx-cu-selection-chip code{display:inline-flex;flex-shrink:0;padding:1px 6px;border:1px solid var(--color-border);border-radius:6px;background:color-mix(in srgb,var(--color-text) 5%,transparent);font:500 11px/14px var(--font-mono);color:var(--color-text-secondary)}
+.tx-cu-selection-chip.is-region code{border-style:dotted;border-color:var(--browser-sidebar-annotation-selection-color);background:transparent}
+.tx-cu-selection-chip>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-secondary)}
+.tx-cu-selection-chip button{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:20px;height:20px;padding:0;border:0;border-radius:6px;color:var(--color-text-tertiary);background:transparent;cursor:pointer}
+.tx-cu-selection-chip button:hover{color:var(--color-text);background:var(--color-background-primary-ghost-hover)}
+.tx-cu-annotation-inspector-body{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 16px 8px;border-radius:inherit}
+.tx-cu-annotation-comment{display:block;margin:0;min-width:0}
+.tx-cu-annotation-comment textarea{display:block;width:100%;height:72px;min-height:24px;max-height:84px;padding:0;margin:0;border:0;border-radius:0;outline:0;background:transparent;color:var(--color-text);font:13px/24px -apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro","Segoe UI",sans-serif;resize:none}
+.tx-cu-annotation-comment textarea::placeholder{color:var(--color-text-tertiary)}
+.tx-cu-annotation-inspector>footer{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-shrink:0;height:48px;padding:0 12px 0 8px;transform-origin:bottom left}
+.tx-cu-annotation-inspector>footer>small{padding-left:8px;color:var(--color-text-tertiary);font-size:var(--text-xs)}
+.tx-cu-style-editor{display:flex;min-width:0;flex-direction:column;margin:0 -16px 8px}
+.tx-cu-style-drag-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:6px 16px;background:color-mix(in srgb,var(--color-text) 5%,transparent);font-size:var(--text-xs);color:var(--color-text-tertiary);cursor:grab;touch-action:none;user-select:none}
+.tx-cu-style-drag-heading strong{font-weight:500;color:var(--color-text-secondary)}
+.tx-cu-style-groups{max-height:216px;min-width:0;overflow-y:auto;padding:0}
+.tx-cu-style-actions{display:flex;align-items:center;gap:6px;padding:8px 16px 0}
+.tx-cu-style-preview-note{margin:6px 16px 0;font-size:var(--text-xs);line-height:1.5;color:var(--color-text-tertiary)}
+.tx-cu-annotation-region{position:absolute;z-index:1;pointer-events:none;border:2px dashed #0069fb;background:color-mix(in srgb,#0069fb 3%,transparent);box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
+.tx-cu-annotation-region.is-element{border-style:solid}
+.tx-cu-annotation-outline{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.tx-cu-annotation-outline polygon{fill:color-mix(in srgb,#0069fb 3%,transparent);stroke:#0069fb;stroke-width:2px}
+.tx-cu-annotation-surface .codex-cu-browser-selection-pointer{position:absolute;pointer-events:none}
+.tx-cu-annotation-hover-label{position:absolute;left:8px;top:8px;max-width:calc(100% - 16px);padding:4px 8px;border-radius:6px;background:#0069fb;color:white;font-size:var(--text-xs);line-height:1.5;pointer-events:none}
+.tx-cu-annotation-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.tx-cu-annotation-editor.is-sheet .tx-cu-annotation-inspector{top:auto;bottom:8px;right:8px;width:344px;max-width:calc(100% - 16px);max-height:calc(100% - 72px)}
+.tx-cu-annotation-editor.is-sheet .tx-cu-annotation-mode-note{display:none}
+.tx-cu-annotation-editor.is-sheet .tx-cu-annotation-toolbar-content{gap:2px}
+.tx-cu-annotation-editor.is-sheet .tx-cu-style-groups{max-height:max(48px,min(216px,calc(var(--cu-annotation-height) - 260px)))}
+@media(prefers-reduced-motion:reduce){.tx-cu-annotation-editor *{transition:none!important}}
+
+.tx-cu-annotation-editor[data-browser-comment-control-editing] :is(.tx-cu-annotation-region,.tx-cu-annotation-outline){opacity:0}
+.tx-cu-annotation-selection-tools{position:absolute;top:12px;left:12px;gap:4px;background:var(--color-surface-elevated-secondary);border-radius:8px;padding:4px}
+.tx-cu-annotation-saved-marker{position:absolute;z-index:3;width:26px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;transform:translate(0,-100%);transform-origin:bottom left;border:1px solid white;border-radius:50% 50% 50% 3px;background:#339cff;color:white;font:700 11px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer;transition:scale 150ms cubic-bezier(.23,1,.32,1)}
+.tx-cu-annotation-saved-marker:hover,.tx-cu-annotation-saved-marker[aria-pressed=true]{scale:1.08}
+.tx-cu-annotation-status-error{position:absolute;left:12px;right:12px;top:60px;margin:0;padding:8px;background:var(--color-surface-elevated-secondary);font-size:var(--text-xs);line-height:1.5}
+.tx-cu-selection-chip code{display:block;flex-shrink:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tx-cu-annotation-saved-list{position:absolute;z-index:45;right:12px;top:60px;bottom:76px;display:flex;flex-direction:column;width:360px;max-width:calc(100% - 24px);border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface-elevated-secondary);box-shadow:0 4px 16px #0002;overflow:hidden}
+.tx-cu-annotation-saved-list-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;border-bottom:1px solid var(--color-border);font-size:13px}
+.tx-cu-annotation-saved-list-header strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.tx-cu-annotation-saved-list-items{min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.tx-cu-annotation-saved-row{display:flex;align-items:center;gap:4px;padding-right:8px;border-bottom:1px solid var(--color-border)}
+.tx-cu-annotation-saved-item{display:flex;align-items:center;gap:10px;flex:1;min-width:0;padding:10px;border:0;background:transparent;color:var(--color-text);text-align:left;cursor:pointer}
+.tx-cu-annotation-saved-item:hover{background:var(--color-background-primary-ghost-hover)}
+.tx-cu-annotation-saved-item>img{flex:none;width:72px;height:48px;object-fit:contain;border:1px solid var(--color-border);border-radius:4px}
+.tx-cu-annotation-saved-item>span{display:flex;flex-direction:column;gap:4px;min-width:0;font-size:12px;line-height:16px}
+.tx-cu-annotation-saved-item strong,.tx-cu-annotation-saved-item>span>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tx-cu-annotation-saved-item strong{font-weight:500}
+.tx-cu-annotation-saved-item>span>span{color:var(--color-text-secondary)}
+.tx-cu-annotation-status-error>button{margin-left:8px}
+.tx-cu-selection-chips{display:flex;flex-wrap:wrap;gap:4px;min-width:0;max-height:96px;overflow-y:auto}
+.tx-cu-annotation-region.is-linked{background:color-mix(in srgb,#0069fb 10%,transparent)}
+.tx-cu-annotation-outline.is-linked polygon{fill:color-mix(in srgb,#0069fb 10%,transparent)}
+.tx-cu-annotation-inspector.is-selecting{opacity:.4;pointer-events:none}
+.tx-cu-annotation-text-highlight{position:absolute;box-sizing:border-box;background:#128dff66;pointer-events:none}

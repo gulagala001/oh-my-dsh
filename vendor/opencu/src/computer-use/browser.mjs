@@ -10,6 +10,8 @@ import { BrowserActions } from './browser-actions.mjs';
 export { browserKey } from './browser-actions.mjs';
 import WebSocket from 'ws';
 import { BrowserTransport } from './browser-transport.mjs';
+import { expireWebMcpTools } from './browser-webmcp.mjs';
+import { createManagedFileProvider } from './browser-file-provider.mjs';
 
 export function browserExecutablePath(requested) {
   if (requested) return requested;
@@ -70,9 +72,11 @@ function browserProcessId(endpoint, timeoutMs = 2000) {
 export const BROWSER_STARTUP_TIMEOUT_MS = process.platform === 'win32' ? 30000 : 15000;
 
 export class BrowserHost extends BrowserActions {
-  constructor(directory, { executablePath, headless = true, onTabClosed, onBrowserLost, onPointer, wantsPointer, onVisit } = {}) {
-    super({ onTabClosed, onBrowserLost, onPointer, wantsPointer, onVisit });
+  constructor(directory, { executablePath, headless = true, onTabClosed, onBrowserLost, onPointer, wantsPointer, onVisit, capabilities, filePolicy } = {}) {
+    super({ onTabClosed, onBrowserLost, onPointer, wantsPointer, onVisit, capabilities, filePolicy });
     this.directory = directory; this.executablePath = executablePath; this.headless = headless;
+    this.handoffs = new Map();
+    this.capabilityProviders = { ...this.capabilityProviders, downloadMedia: this.capabilityProviders.downloadMedia ?? createManagedFileProvider(this, { filePolicy }) };
   }
   async configureDownloads(connection) {
     this.checkConnection(connection);
@@ -225,6 +229,7 @@ export class BrowserHost extends BrowserActions {
         // change another tab. Only an explicit target action may answer one.
         context.on('dialog', () => {});
         const connection = { browser, context, transport, pages: new Map(), run };
+        Object.defineProperty(connection, 'sessionId', { value: sessionId, enumerable: true });
         browser.on('disconnected', () => { if (this.connections.get(sessionId) === pending) this.connections.delete(sessionId); });
         try {
           const monitor = await browser.newBrowserCDPSession();
@@ -257,7 +262,7 @@ export class BrowserHost extends BrowserActions {
           const record = await this.bind(connection, page);
           const { targetInfo } = await record.cdp.send('Target.getTargetInfo');
           this.checkConnection(connection);
-          const info = { id: record.id, browserId: 'browser', title: targetInfo.title, url: page.url(), owner: this.owners.get(record.id)?.sessionId ?? null };
+          const info = { id: record.id, providerTabId: record.id, browserId: 'browser', title: targetInfo.title, url: page.url(), owner: this.owners.get(record.id)?.sessionId ?? null };
           this.records.set(record.id, info); result.push(info);
         } catch (error) {
           // A page may close after pages() but before its CDP reply. This is
@@ -310,7 +315,7 @@ export class BrowserHost extends BrowserActions {
       record.navigating = true;
       try { await page.goto(url, { waitUntil: 'domcontentloaded' }); } finally { record.navigating = false; }
       signal?.throwIfAborted();
-      const info = { id: record.id, browserId: 'browser', title: await page.title(), url: page.url() };
+      const info = { id: record.id, providerTabId: record.id, browserId: 'browser', title: await page.title(), url: page.url() };
       this.checkConnection(connection); this.records.set(record.id, info); return info;
     } catch (error) { if (page) await page.close().catch(() => {}); throw error; }
     finally { signal?.removeEventListener('abort', abort); }
@@ -326,15 +331,57 @@ export class BrowserHost extends BrowserActions {
     if (claim) this.claim(sessionId, id);
     return record;
   }
+  async openTabs(sessionId, options) { return this.list(sessionId, options); }
+  async ownedTabs(sessionId, options) {
+    return (await this.list(sessionId, options)).filter(tab => this.owners.get(tab.id)?.sessionId === sessionId);
+  }
+  async claimTab(sessionId, reference, { signal } = {}) {
+    const id = typeof reference === 'string' ? reference : reference?.id;
+    if (typeof id !== 'string' || !id) throw new TypeError('claimTab requires a current tab id or tab info object.');
+    const tab = (await this.list(sessionId)).find(tab => tab.id === id);
+    if (!tab) throw new Error('That tab no longer exists. List tabs again.');
+    if (reference && typeof reference === 'object' && ['url', 'title', 'providerTabId'].some(key => reference[key] !== undefined && reference[key] !== tab[key])) throw new Error('The referenced tab changed. Inspect the current tab identity before claiming it.');
+    await this.target(sessionId, id, { signal });
+    return tab;
+  }
+  markTab(sessionId, id, status) {
+    const owner = this.owners.get(id);
+    if (owner?.sessionId !== sessionId) throw new Error('This conversation does not control that tab.');
+    if (!['handoff', 'deliverable'].includes(status)) throw new TypeError('Invalid tab completion status.');
+    owner.status = status;
+  }
+  async invoke(sessionId, id, method, args, signal, frame, operationContext) {
+    if (method === 'markDeliverable' || method === 'markHandoff') {
+      signal?.throwIfAborted();
+      await this.target(sessionId, id, { signal });
+      this.markTab(sessionId, id, method === 'markHandoff' ? 'handoff' : 'deliverable');
+      return null;
+    }
+    return super.invoke(sessionId, id, method, args, signal, frame, operationContext);
+  }
+  async resume(sessionId, { signal } = {}) {
+    signal?.throwIfAborted();
+    const handoffs = this.handoffs.get(sessionId);
+    if (!handoffs) return;
+    const tabs = await this.list(sessionId);
+    signal?.throwIfAborted();
+    for (const [id, previous] of handoffs) {
+      signal?.throwIfAborted();
+      if (!tabs.some(tab => tab.id === id) || this.owners.has(id)) continue;
+      this.claim(sessionId, id, previous.created);
+    }
+    this.handoffs.delete(sessionId);
+  }
   async disconnect(sessionId) {
     this.viewportPresets.delete(sessionId);this.emulationPresets.delete(sessionId);
     if (this.disconnecting?.has(sessionId)) return this.disconnecting.get(sessionId);
     const pending = this.connections.get(sessionId);
-    this.connections.delete(sessionId);
     const closing = (async () => {
+      await this.releaseClipboardSession(sessionId);
       if (!pending) return;
       const c = await pending.catch(() => null); if (!c) return;
       c.closing = true;
+      if (this.connections.get(sessionId) === pending) this.connections.delete(sessionId);
       const releases = await Promise.allSettled([...c.pages.values()].map(async record => {
         // Unloading destroys this owned browser. A metrics restore racing its
         // termination can leave Chromium's acknowledgement pending forever.
@@ -349,7 +396,12 @@ export class BrowserHost extends BrowserActions {
         if (!this.connections.has(sessionId)) this.connections.set(sessionId, pending);
         throw new AggregateError(failures, 'Could not confirm browser cleanup; retry stop. ' + failures.map(error=>error.message).join('; '));
       }
-      await c.browser.close({ reason: 'Computer Use session stopped' });
+      try { await c.browser.close({ reason: 'Computer Use session stopped' }); }
+      catch (error) {
+        c.closing = false;
+        if (c.browser.isConnected() && !this.connections.has(sessionId)) this.connections.set(sessionId, pending);
+        throw error;
+      }
       // Playwright resets the default-context download behavior when its
       // controlling connection closes. A remaining preview belongs to the
       // same managed profile and must keep downloads in its durable directory.
@@ -366,20 +418,36 @@ export class BrowserHost extends BrowserActions {
   }
   async endTurn(sessionId) {
     this.viewportPresets.delete(sessionId);this.emulationPresets.delete(sessionId);
+    await this.releaseClipboardSession(sessionId);
     const pending = this.connections.get(sessionId), c = pending ? await pending.catch(() => null) : null;
+    const handoffs = new Map(this.handoffs.get(sessionId));
     for (const [id, owner] of [...this.owners]) {
       if (owner.sessionId !== sessionId) continue;
-      if (owner.created && !owner.keep) await c?.pages.get(id)?.page.close().catch(() => {});
-      else if(c?.pages.has(id))await this.restoreOverrides(c.pages.get(id));
+      const record = c?.pages.get(id);
+      if (owner.created && !owner.keep && !owner.status) {
+        if (record && !record.page.isClosed()) await record.page.close();
+        else if (this.records.has(id)) {
+          const current = await this.target(sessionId, id);
+          await current.page.close();
+        }
+      } else if (record) await this.restoreOverrides(record);
+      if (record) expireWebMcpTools(record);
+      if (owner.status === 'handoff') {
+        handoffs.set(id, { created: owner.created });
+        this.handoffs.set(sessionId, handoffs);
+      }
       this.owners.delete(id);
     }
+    if (handoffs.size) this.handoffs.set(sessionId, handoffs);
+    else this.handoffs.delete(sessionId);
   }
   async close() {
     this.closing = true;
     const pending = Promise.allSettled([...new Set([...this.connections.keys(), ...(this.disconnecting?.keys() ?? [])])].map(id => this.disconnect(id)));
     await this.terminateBrowser();
     const results = await pending;
-    const errors = results.filter(r => r.status === 'rejected').map(r => r.reason);
+    const clipboards = await Promise.allSettled([...this.clipboardScopes.keys()].map(id => this.disposeClipboardSession(id)));
+    const errors = [...results, ...clipboards].filter(r => r.status === 'rejected').map(r => r.reason);
     if (errors.length) throw new AggregateError(errors, 'Browser stopped after cleanup errors: ' + errors.map(e => e.message).join('; '));
   }
   async terminateBrowser(run = this.run) {

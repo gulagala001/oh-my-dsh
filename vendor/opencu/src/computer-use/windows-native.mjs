@@ -3,7 +3,7 @@ import { stat } from 'node:fs/promises';
 import { release } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { NativeHost, nativeValue } from './native.mjs';
-import { McpClient } from './mcp-client.mjs';
+import { McpClient, NativeProtocolError } from './mcp-client.mjs';
 import { windowsNativeBuild } from './windows-native-build.mjs';
 import { WindowsNativeRuntime } from './windows-native-runtime.mjs';
 
@@ -95,7 +95,11 @@ export class WindowsNativeHost extends NativeHost {
         const label = 'trisoul-' + randomUUID();
         const readOnly = sessionId === 'ui-permissions' || /^(native-preview-|window-share-|reveal-)/.test(sessionId);
         const clear = () => { for (const [key, pointer] of this.pointers) if (pointer.sessionId === sessionId) this.pointers.delete(key); };
+        let connection;
         const client = this.client(this.binary, ['mcp'], { onNotification: message => {
+          if (connection && this.connections.get(sessionId) === pending) for (const listener of this.notifications.get(sessionId) ?? []) {
+            try { listener(message, connection); } catch {}
+          }
           if (readOnly || message.method !== 'notifications/trisoul/cursor') return;
           const value = message.params;
           if (value?.hidden) { clear(); return; }
@@ -107,8 +111,8 @@ export class WindowsNativeHost extends NativeHost {
           const info = await client.initialize();
           if (info.serverInfo?.name !== 'trisoul-computer-use' || info._meta?.trisoul?.protocol !== 1) throw new Error('Windows 桌面控制协议不匹配，请更新运行时');
           if (this.bridge && (info._meta?.trisoul?.platform !== 'win32' || info._meta?.trisoul?.build !== (await this.expectedBuild()).build)) throw new Error('Windows 桌面控制运行时需要更新或重启，运行中的程序与指定文件不匹配');
-          await client.call('start_session', { session: label, read_only: readOnly });
-          return { client, label, info, readOnly };
+          await client.call('start_session', { session: label, read_only: readOnly, thread_id: sessionId });
+          connection = { client, label, info, readOnly }; return connection;
         } catch (error) { await client.close(); throw error; }
       })().catch(error => { if (this.connections.get(sessionId) === pending) this.connections.delete(sessionId); throw error; });
       this.connections.set(sessionId, pending);
@@ -120,17 +124,78 @@ export class WindowsNativeHost extends NativeHost {
     if (value.platform !== 'win32' || typeof value.interactive !== 'boolean' || typeof value.capture_supported !== 'boolean') throw new Error('Windows 桌面运行时返回了无效的可用性状态');
     return value;
   }
+  // Called only by the authenticated screenshot-copy UI action.
+  async copyImageToClipboard(sessionId, pngBase64, signal) {
+    signal?.throwIfAborted();
+    const maxBytes = 2 * 1024 * 1024;
+    if (typeof pngBase64 !== 'string' || !pngBase64.length || pngBase64.length % 4 || !/^[A-Za-z0-9+/]+={0,2}$/.test(pngBase64)) throw Object.assign(new TypeError('图片复制需要完整的 base64 PNG'), { code: 'INVALID_CLIPBOARD_IMAGE' });
+    if (pngBase64.length > 4 * Math.ceil(maxBytes / 3)) throw Object.assign(new RangeError('截图 PNG 超过 2 MiB 剪贴板限制'), { code: 'CLIPBOARD_IMAGE_TOO_LARGE' });
+    const pngBytes = Buffer.byteLength(pngBase64, 'base64');
+    if (pngBytes > maxBytes) throw Object.assign(new RangeError('截图 PNG 超过 2 MiB 剪贴板限制'), { code: 'CLIPBOARD_IMAGE_TOO_LARGE' });
+    const temporary = !this.connections.has(sessionId), id = temporary ? 'clipboard-copy-' + randomUUID() : sessionId;
+    let release = temporary;
+    try {
+      const connection = await this.connection(id);
+      signal?.throwIfAborted();
+      if (connection.info._meta?.trisoul?.build !== (await this.expectedBuild()).build) throw Object.assign(new Error('请先更新或重启桌面控制，再复制截图'), { code: 'NATIVE_CLIPBOARD_UPDATE_REQUIRED' });
+      const capabilities = nativeValue(await this.call(id, 'check_permissions', {}, signal));
+      if (capabilities.image_clipboard?.available !== true) throw Object.assign(new Error('当前桌面控制运行时不支持图片剪贴板'), { code: 'NATIVE_CLIPBOARD_UNAVAILABLE' });
+      const value = nativeValue(await this.call(id, 'copy_image_to_clipboard', { pngBase64 }, signal));
+      signal?.throwIfAborted();
+      if (value.copied !== true || !Number.isSafeInteger(value.width) || value.width <= 0 || value.width > 16384 || !Number.isSafeInteger(value.height) || value.height <= 0 || value.height > 16384 || value.width * value.height > 32 * 1024 * 1024 || value.pngBytes !== pngBytes) throw new NativeProtocolError('Windows runtime did not confirm the copied PNG');
+      return { copied: true, width: value.width, height: value.height, pngBytes: value.pngBytes };
+    } catch (error) {
+      if (signal?.aborted || ['CANCELLED', 'NATIVE_TRANSPORT_TIMEOUT', 'NATIVE_TRANSPORT_CLOSED', 'NATIVE_PROTOCOL_ERROR'].includes(error?.code)) release = true;
+      throw error;
+    } finally {
+      if (release) {
+        try { await this.release(id); }
+        catch (error) { throw Object.assign(new Error('图片复制会话清理尚未确认：' + error.message), { code: 'CLIPBOARD_CLEANUP_FAILED', cause: error }); }
+      }
+    }
+  }
+  async list(sessionId, signal) {
+    const value = nativeValue(await this.call(sessionId, 'list_apps', {}, signal));
+    return (value.apps ?? []).map(app => ({
+      id: app.bundle_id ?? String(app.pid), displayName: app.name, pid: app.pid,
+      isRunning: app.running, path: app.launch_path,
+      windows: (app.windows ?? []).map(window => ({
+        id: window.window_id, windowId: window.window_id, pid: window.pid, title: window.title,
+      })),
+      ...(app.discovery_error ? { unavailableReason: app.discovery_error } : {}),
+    }));
+  }
   async bind(sessionId, query, signal) {
     signal?.throwIfAborted();
     const requested = typeof query === 'string' ? { id: query } : query;
-    if (!requested || typeof requested.id !== 'string' || !requested.id.trim()) throw new Error('getApp expects an application name, ID, executable path, or {id, windowId}.');
+    if (!requested || typeof requested !== 'object' || Array.isArray(requested) || (requested.id === undefined ? requested.windowId === undefined : typeof requested.id !== 'string' || !requested.id.trim())) throw new Error('getApp expects an application name, ID, executable path, {id, windowId}, or {windowId} from current discovery.');
     if (requested.windowId !== undefined && (!Number.isSafeInteger(requested.windowId) || requested.windowId <= 0)) throw new Error('windowId must be a current Windows window ID.');
     const connection = await this.connection(sessionId), expected = await this.expectedBuild();
     if (connection.info._meta?.trisoul?.build !== expected.build) throw new Error('桌面控制运行时需要更新或重启，请先在运行环境中更新桌面控制');
-    const target = nativeValue(await this.call(sessionId, 'launch_app', { name: requested.id, ...(requested.windowId !== undefined ? { window_id: requested.windowId } : {}) }, signal));
+    let target;
+    if (requested.id === undefined) {
+      const discovery = nativeValue(await this.call(sessionId, 'list_windows', {}, signal));
+      target = (discovery.windows ?? []).find(window => window.window_id === requested.windowId);
+      if (!target) throw Object.assign(new Error(`Window ${requested.windowId} is unavailable. Discover its current window before binding again.`), { code: 'STALE_WINDOW' });
+    } else {
+      target = nativeValue(await this.call(sessionId, 'launch_app', { name: requested.id, ...(requested.windowId !== undefined ? { window_id: requested.windowId } : {}) }, signal));
+    }
     if (!Number.isSafeInteger(target.pid) || target.pid <= 0 || !Number.isSafeInteger(target.window_id) || target.window_id <= 0 || typeof target.process_identity !== 'string' || !target.process_identity || typeof target.app_id !== 'string' || !target.app_id || typeof target.app_name !== 'string') throw new Error('Windows 返回了无效的应用窗口身份，未建立控制绑定');
     signal?.throwIfAborted();
     return this.bindWindow(sessionId, { id: target.app_id, pid: target.pid, displayName: target.app_name }, { ...target, processIdentity: target.process_identity });
+  }
+  async invoke(sessionId, id, method, args = [], signal) {
+    if (method === 'scroll' && args[2] !== null && typeof args[2] === 'object') {
+      signal?.throwIfAborted();
+      const target = this.targets.get(id);
+      if (!target || target.sessionId !== sessionId) throw new Error('This native target has been released. Bind the application again.');
+      if (!Array.isArray(args[0])) throw new Error('Windows pixel scroll requires a point and a { pixels } distance.');
+      if (!Number.isFinite(args[0][0]) || !Number.isFinite(args[0][1])) throw new Error('A point must contain finite x and y coordinates: [x,y].');
+      if (Array.isArray(args[2]) || !Number.isFinite(args[2].pixels) || args[2].pixels <= 0) throw new Error('pixels must be a positive finite number.');
+      if (!['up', 'u', 'down', 'd', 'left', 'l', 'right', 'r'].includes(args[1])) throw new Error(`Unknown scroll direction: ${args[1]}.`);
+      throw Object.assign(new Error('Pixel scrolling is unavailable in the installed Windows native runtime. Use the supported page scrolling distance.'), { code: 'UNSUPPORTED_CAPABILITY' });
+    }
+    return super.invoke(sessionId, id, method, args, signal);
   }
   async call(sessionId, name, args = {}, signal) {
     const result = await super.call(sessionId, name, args, signal);
@@ -142,9 +207,30 @@ export class WindowsNativeHost extends NativeHost {
     return result;
   }
   async releaseConnection(sessionId) {
+    if (!sessionId.startsWith('native-preview-')) await this.windowsPresentations?.stopThread(sessionId, 'owner-released');
     await super.releaseConnection(sessionId);
     this.previewDescriptors.delete(sessionId);
     for (const [key, pointer] of this.pointers) if (pointer.sessionId === sessionId) this.pointers.delete(key);
+  }
+  async presentationTarget(sessionId, turnID, target) {
+    const selected = this.targets.get(target?.id);
+    if (!selected || selected.sessionId !== sessionId || selected.pid !== target.pid || selected.windowId !== target.windowId
+      || selected.processIdentity !== target.processIdentity || typeof turnID !== 'string' || !turnID) throw new NativeProtocolError('The Windows presentation owner target changed');
+    return { ...selected, viewId: selected.viewId ?? selected.id, associatedWindowIDs: [] };
+  }
+  async windowsPresentationCall(sessionId, name, args, expectedConnection) {
+    if (!['start_native_presentation', 'stop_native_presentation', 'get_native_presentation_state', 'update_native_presentation'].includes(name)) throw new TypeError('Unsupported Windows presentation operation');
+    const pending = this.connections.get(sessionId);
+    if (!pending) throw new NativeProtocolError('The Windows presentation connection has been released');
+    const connection = await pending;
+    if (connection !== expectedConnection || this.connections.get(sessionId) !== pending || connection.client.closed || connection.releasing) throw new NativeProtocolError('The Windows presentation connection changed');
+    connection.hasNativePresentation = true;
+    const result = await connection.client.call(name, { ...args, session: connection.label }, { timeoutMs: 120000 });
+    if (this.connections.get(sessionId) !== pending || connection.client.closed) throw new NativeProtocolError('The Windows presentation reply belongs to a released connection');
+    return result;
+  }
+  async endPresentationTurn(sessionId, turnID) {
+    await this.windowsPresentations?.completeTurn(sessionId, turnID, 'turn-ended');
   }
   async showSetup() { return this.permissions('ui-permissions'); }
   async confirmDisconnected(connection, original) {

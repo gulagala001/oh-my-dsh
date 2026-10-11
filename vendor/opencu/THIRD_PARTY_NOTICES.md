@@ -1,6 +1,6 @@
 # DSH
 
-The source and browser/host artifacts under `vendor/dsh-chat` are based on DSH 0.2.0-rc.2 tag `dsh-v0.2.0-rc.2`, commit `639ed015397290b3745d163aafe02ffee4aa3f84`, under the MIT license below. OpenCU preserves native grouping and settings while adding Computer Use categories, completion summaries and retained disclosure state. The snapshot includes `changes.patch` and its license; `vendor/dsh-chat.json` records file checksums.
+The source and browser/host artifacts under `vendor/dsh-chat` use the matching official DSH release under the MIT license below. The alpha.2 build is based on `dsh-v0.2.1-alpha.2`, commit `d743267388641bc76f17c45ce8b4c231aed1d32c`; the rc.2 build is based on `dsh-v0.2.0-rc.2`, commit `639ed015397290b3745d163aafe02ffee4aa3f84`. The included `vendor/dsh-chat.json` identifies this package's actual version, tag, commit and file checksums. OpenCU preserves native grouping and settings while adding Computer Use categories, completion summaries and retained disclosure state. Each snapshot includes `changes.patch` and its license.
 
 The whale contours in `browser-extension/logo.svg` are adapted from the animated whale in DSH 0.1.5-rc.1 (`ui-conversation/HeroShell`). The Chrome popup uses this static asset. The lighting and orbit artwork are modifications for Oh My DSH.
 

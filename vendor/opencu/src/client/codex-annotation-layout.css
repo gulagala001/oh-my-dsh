@@ -1,0 +1,230 @@
+/* Generated from Codex 26.1007.21159 / 20052. See results-annotation/layout/css-index.json. */
+@property --cal-tw-leading{syntax:"*";inherits:false}
+@property --cal-tw-duration{syntax:"*";inherits:false}
+@property --cal-tw-ease{syntax:"*";inherits:false}
+@property --cal-tw-backdrop-blur{syntax:"*";inherits:false}
+@property --cal-tw-backdrop-brightness{syntax:"*";inherits:false}
+@property --cal-tw-backdrop-contrast{syntax:"*";inherits:false}
+@property --cal-tw-backdrop-grayscale{syntax:"*";inherits:false}
+@property --cal-tw-backdrop-hue-rotate{syntax:"*";inherits:false}
+@property --cal-tw-backdrop-invert{syntax:"*";inherits:false}
+@property --cal-tw-backdrop-opacity{syntax:"*";inherits:false}
+@property --cal-tw-backdrop-saturate{syntax:"*";inherits:false}
+@property --cal-tw-backdrop-sepia{syntax:"*";inherits:false}
+@property --cal-tw-translate-x{syntax:"*";inherits:false;initial-value:0}
+@property --cal-tw-translate-y{syntax:"*";inherits:false;initial-value:0}
+@property --cal-tw-translate-z{syntax:"*";inherits:false;initial-value:0}
+@property --cal-tw-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}
+@property --cal-tw-shadow-color{syntax:"*";inherits:false}
+@property --cal-tw-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%}
+@property --cal-tw-inset-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}
+@property --cal-tw-inset-shadow-color{syntax:"*";inherits:false}
+@property --cal-tw-inset-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%}
+@property --cal-tw-ring-color{syntax:"*";inherits:false}
+@property --cal-tw-ring-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}
+@property --cal-tw-inset-ring-color{syntax:"*";inherits:false}
+@property --cal-tw-inset-ring-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}
+@property --cal-tw-ring-inset{syntax:"*";inherits:false}
+@property --cal-tw-ring-offset-width{syntax:"<length>";inherits:false;initial-value:0}
+@property --cal-tw-ring-offset-color{syntax:"*";inherits:false;initial-value:#fff}
+@property --cal-tw-ring-offset-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}
+@property --cal-tw-font-weight{syntax:"*";inherits:false}
+@property --cal-tw-tracking{syntax:"*";inherits:false}
+@property --cal-tw-border-style{syntax:"*";inherits:false;initial-value:solid}
+@property --cal-tw-content{syntax:"*";inherits:false;initial-value:""}
+@property --cal-tw-border-spacing-x{syntax:"<length>";inherits:false;initial-value:0}
+@property --cal-tw-border-spacing-y{syntax:"<length>";inherits:false;initial-value:0}
+@property --cal-tw-scale-x{syntax:"*";inherits:false;initial-value:1}
+@property --cal-tw-scale-y{syntax:"*";inherits:false;initial-value:1}
+@property --cal-tw-scale-z{syntax:"*";inherits:false;initial-value:1}
+@property --cal-tw-rotate-x{syntax:"*";inherits:false}
+@property --cal-tw-rotate-y{syntax:"*";inherits:false}
+@property --cal-tw-rotate-z{syntax:"*";inherits:false}
+@property --cal-tw-skew-x{syntax:"*";inherits:false}
+@property --cal-tw-skew-y{syntax:"*";inherits:false}
+@property --cal-tw-pan-x{syntax:"*";inherits:false}
+@property --cal-tw-pan-y{syntax:"*";inherits:false}
+@property --cal-tw-pinch-zoom{syntax:"*";inherits:false}
+@property --cal-tw-scroll-snap-strictness{syntax:"*";inherits:false;initial-value:proximity}
+@property --cal-tw-space-y-reverse{syntax:"*";inherits:false;initial-value:0}
+@property --cal-tw-space-x-reverse{syntax:"*";inherits:false;initial-value:0}
+@property --cal-tw-divide-x-reverse{syntax:"*";inherits:false;initial-value:0}
+@property --cal-tw-divide-y-reverse{syntax:"*";inherits:false;initial-value:0}
+@property --cal-tw-gradient-position{syntax:"*";inherits:false}
+@property --cal-tw-gradient-from{syntax:"<color>";inherits:false;initial-value:#0000}
+@property --cal-tw-gradient-via{syntax:"<color>";inherits:false;initial-value:#0000}
+@property --cal-tw-gradient-to{syntax:"<color>";inherits:false;initial-value:#0000}
+@property --cal-tw-gradient-stops{syntax:"*";inherits:false}
+@property --cal-tw-gradient-via-stops{syntax:"*";inherits:false}
+@property --cal-tw-gradient-from-position{syntax:"<length-percentage>";inherits:false;initial-value:0%}
+@property --cal-tw-gradient-via-position{syntax:"<length-percentage>";inherits:false;initial-value:50%}
+@property --cal-tw-gradient-to-position{syntax:"<length-percentage>";inherits:false;initial-value:100%}
+@property --cal-tw-mask-linear{syntax:"*";inherits:false;initial-value:linear-gradient(#fff, #fff)}
+@property --cal-tw-mask-radial{syntax:"*";inherits:false;initial-value:linear-gradient(#fff, #fff)}
+@property --cal-tw-mask-conic{syntax:"*";inherits:false;initial-value:linear-gradient(#fff, #fff)}
+@property --cal-tw-mask-left{syntax:"*";inherits:false;initial-value:linear-gradient(#fff, #fff)}
+@property --cal-tw-mask-right{syntax:"*";inherits:false;initial-value:linear-gradient(#fff, #fff)}
+@property --cal-tw-mask-bottom{syntax:"*";inherits:false;initial-value:linear-gradient(#fff, #fff)}
+@property --cal-tw-mask-top{syntax:"*";inherits:false;initial-value:linear-gradient(#fff, #fff)}
+@property --cal-tw-mask-bottom-from-position{syntax:"*";inherits:false;initial-value:0%}
+@property --cal-tw-mask-bottom-to-position{syntax:"*";inherits:false;initial-value:100%}
+@property --cal-tw-mask-bottom-from-color{syntax:"*";inherits:false;initial-value:black}
+@property --cal-tw-mask-bottom-to-color{syntax:"*";inherits:false;initial-value:transparent}
+@property --cal-tw-ordinal{syntax:"*";inherits:false}
+@property --cal-tw-slashed-zero{syntax:"*";inherits:false}
+@property --cal-tw-numeric-figure{syntax:"*";inherits:false}
+@property --cal-tw-numeric-spacing{syntax:"*";inherits:false}
+@property --cal-tw-numeric-fraction{syntax:"*";inherits:false}
+@property --cal-tw-outline-style{syntax:"*";inherits:false;initial-value:solid}
+@property --cal-tw-blur{syntax:"*";inherits:false}
+@property --cal-tw-brightness{syntax:"*";inherits:false}
+@property --cal-tw-contrast{syntax:"*";inherits:false}
+@property --cal-tw-grayscale{syntax:"*";inherits:false}
+@property --cal-tw-hue-rotate{syntax:"*";inherits:false}
+@property --cal-tw-invert{syntax:"*";inherits:false}
+@property --cal-tw-opacity{syntax:"*";inherits:false}
+@property --cal-tw-saturate{syntax:"*";inherits:false}
+@property --cal-tw-sepia{syntax:"*";inherits:false}
+@property --cal-tw-drop-shadow{syntax:"*";inherits:false}
+@property --cal-tw-drop-shadow-color{syntax:"*";inherits:false}
+@property --cal-tw-drop-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%}
+@property --cal-tw-drop-shadow-size{syntax:"*";inherits:false}
+@property --cal-tw-contain-size{syntax:"*";inherits:false}
+@property --cal-tw-contain-layout{syntax:"*";inherits:false}
+@property --cal-tw-contain-paint{syntax:"*";inherits:false}
+@property --cal-tw-contain-style{syntax:"*";inherits:false}
+/* Original shared preflight restricted to the annotation controls grid. */
+:where(.codex-annotation-layout,.codex-annotation-layout *){box-sizing:border-box;border-width:0;border-style:solid;}
+:where(.codex-annotation-layout button,.codex-annotation-layout input){font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;margin:0;background-color:#0000;border-radius:0;opacity:1;}
+:where(.codex-annotation-layout button){appearance:button;padding:0;}
+:where(.codex-annotation-layout svg){vertical-align:middle;display:block;}
+.cal-icon-3xs{width:10px;height:10px}
+.cal-icon-2xs{height:var(--icon-secondary-size,14px);width:var(--icon-secondary-size,14px)}
+.cal-pointer-events-none{pointer-events:none}
+.cal-absolute{position:absolute}
+.cal-relative{position:relative}
+.cal-inset-0{inset:0}
+.cal-end-full{inset-inline-end:100%}
+.cal-top-0{top:0}
+.cal-top-1\/2{top:50%}
+.cal--right-1\.5{right:calc(var(--spacing) * -1.5)}
+.cal-right-0{right:0}
+.cal-z-10{z-index:10}
+.cal-col-span-2{grid-column:span 2/span 2}
+.cal--mx-4{margin-inline:calc(var(--spacing) * -4)}
+.cal-my-0\.5{margin-block:calc(var(--spacing) * .5)}
+.cal-my-1{margin-block:var(--spacing)}
+.cal--ms-1{margin-inline-start:calc(var(--spacing) * -1)}
+.cal--ms-6{margin-inline-start:calc(var(--spacing) * -6)}
+.cal-ms-1{margin-inline-start:var(--spacing)}
+.cal-me-1{margin-inline-end:var(--spacing)}
+.cal-block{display:block}
+.cal-contents{display:contents}
+.cal-flex{display:flex}
+.cal-grid{display:grid}
+.cal-inline-flex{display:inline-flex}
+.cal-h-3\.5{height:calc(var(--spacing) * 3.5)}
+.cal-h-5{height:calc(var(--spacing) * 5)}
+.cal-h-7{height:calc(var(--spacing) * 7)}
+.cal-h-\[62px\]{height:62px}
+.cal-h-full{height:100%}
+.cal-min-h-7{min-height:calc(var(--spacing) * 7)}
+.cal-w-3\.5{width:calc(var(--spacing) * 3.5)}
+.cal-w-5{width:calc(var(--spacing) * 5)}
+.cal-w-9{width:calc(var(--spacing) * 9)}
+.cal-w-48{width:calc(var(--spacing) * 48)}
+.cal-w-\[calc\(100\%\+1\.5rem\)\]{width:calc(100% + 1.5rem)}
+.cal-w-full{width:100%}
+.cal-max-w-full{max-width:100%}
+.cal-min-w-0{min-width:0}
+.cal-shrink-0{flex-shrink:0}
+.cal--translate-y-1\/2{--cal-tw-translate-y:calc(calc(1 / 2 * 100%) * -1);translate:var(--cal-tw-translate-x) var(--cal-tw-translate-y)}
+.cal-rotate-90{rotate:90deg}
+.cal-cursor-interaction{cursor:var(--cursor-interaction)}
+.cal-appearance-none{appearance:none}
+.cal-grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.cal-grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.cal-grid-cols-\[minmax\(0\,--spacing\(30\)\)_minmax\(0\,1fr\)\]{grid-template-columns:minmax(0,calc(var(--spacing) * 30)) minmax(0,1fr)}
+.cal-items-center{align-items:center}
+.cal-items-start{align-items:flex-start}
+.cal-justify-center{justify-content:center}
+.cal-justify-end{justify-content:flex-end}
+.cal-gap-1{gap:var(--spacing)}
+.cal-gap-x-3{column-gap:calc(var(--spacing) * 3)}
+.cal-gap-y-1\.5{row-gap:calc(var(--spacing) * 1.5)}
+.cal-truncate{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+.cal-overflow-hidden{overflow:hidden}
+.cal-\!rounded-full{border-radius:var(--radius-full)!important}
+.cal-rounded{border-radius:.25rem}
+.cal-rounded-lg{border-radius:var(--radius-lg)}
+.cal-border{border-style:var(--cal-tw-border-style);border-width:1px}
+.cal-border-0{border-style:var(--cal-tw-border-style);border-width:0}
+.cal-border-t{border-top-style:var(--cal-tw-border-style);border-top-width:1px}
+.cal-border-l{border-left-style:var(--cal-tw-border-style);border-left-width:1px}
+.cal-\!border-transparent{border-color:#0000!important}
+.cal-border-default{border-color:var(--color-border)}
+.cal-border-primary-outline{border-color:var(--color-border-primary-outline)}
+.cal-border-subtle{border-color:var(--color-border-subtle)}
+.cal-\!bg-\[color-mix\(in_srgb\,var\(--color-surface\)_86\%\,var\(--color-text-info\)_14\%\)\]{background-color:var(--color-surface)!important}
+@supports (color:color-mix(in lab, red, red)){.cal-\!bg-\[color-mix\(in_srgb\,var\(--color-surface\)_86\%\,var\(--color-text-info\)_14\%\)\]{background-color:color-mix(in srgb,var(--color-surface) 86%,var(--color-text-info) 14%)!important}}
+.cal-\!bg-surface{background-color:var(--color-surface)!important}
+.cal-bg-primary-soft{background-color:var(--color-background-primary-soft)}
+.cal-bg-transparent{background-color:#0000}
+.cal-p-0{padding:0}
+.cal-px-1{padding-inline:var(--spacing)}
+.cal-px-3{padding-inline:calc(var(--spacing) * 3)}
+.cal-px-4{padding-inline:calc(var(--spacing) * 4)}
+.cal-py-0\.5{padding-block:calc(var(--spacing) * .5)}
+.cal-py-1{padding-block:var(--spacing)}
+.cal-py-2{padding-block:calc(var(--spacing) * 2)}
+.cal-ps-3{padding-inline-start:calc(var(--spacing) * 3)}
+.cal-ps-6{padding-inline-start:calc(var(--spacing) * 6)}
+.cal-pe-2{padding-inline-end:calc(var(--spacing) * 2)}
+.cal-pe-9{padding-inline-end:calc(var(--spacing) * 9)}
+.cal-text-center{text-align:center}
+.cal-text-end{text-align:end}
+.cal-text-start{text-align:start}
+.cal-font-mono{font-family:var(--font-mono)}
+.cal-text-sm{font-size:var(--text-sm);line-height:var(--cal-tw-leading,var(--text-sm--line-height))}
+.cal-text-xs{font-size:var(--text-xs);line-height:var(--cal-tw-leading,var(--text-xs--line-height))}
+.cal-\!text-info{color:var(--color-text-info)!important}
+.cal-\!text-secondary{color:var(--color-text-secondary)!important}
+.cal-text-default{color:var(--color-text)}
+.cal-text-secondary{color:var(--color-text-secondary)}
+.cal-text-tertiary{color:var(--color-text-tertiary)}
+.cal-shadow-sm{--cal-tw-shadow:0px 1px 2px -1px var(--cal-tw-shadow-color,#00000014);box-shadow:var(--cal-tw-inset-shadow), var(--cal-tw-inset-ring-shadow), var(--cal-tw-ring-offset-shadow), var(--cal-tw-ring-shadow), var(--cal-tw-shadow)}
+.cal-ring-0{--cal-tw-ring-shadow:var(--cal-tw-ring-inset,) 0 0 0 calc(0px + var(--cal-tw-ring-offset-width)) var(--cal-tw-ring-color,currentcolor);box-shadow:var(--cal-tw-inset-shadow), var(--cal-tw-inset-ring-shadow), var(--cal-tw-ring-offset-shadow), var(--cal-tw-ring-shadow), var(--cal-tw-shadow)}
+.cal-transition-colors{transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--cal-tw-gradient-from,--cal-tw-gradient-via,--cal-tw-gradient-to;transition-timing-function:var(--cal-tw-ease,var(--default-transition-timing-function));transition-duration:var(--cal-tw-duration,var(--default-transition-duration))}
+.cal-transition-transform{transition-property:transform,translate,scale,rotate;transition-timing-function:var(--cal-tw-ease,var(--default-transition-timing-function));transition-duration:var(--cal-tw-duration,var(--default-transition-duration))}
+.cal-outline-none{--cal-tw-outline-style:none;outline-style:none}
+.cal-placeholder\:text-tertiary::placeholder{color:var(--color-text-tertiary)}
+.cal-focus-within\:border-ring:focus-within{border-color:var(--color-ring)}
+.cal-focus-within\:ring-1:focus-within{--cal-tw-ring-shadow:var(--cal-tw-ring-inset,) 0 0 0 calc(1px + var(--cal-tw-ring-offset-width)) var(--cal-tw-ring-color,currentcolor);box-shadow:var(--cal-tw-inset-shadow), var(--cal-tw-inset-ring-shadow), var(--cal-tw-ring-offset-shadow), var(--cal-tw-ring-shadow), var(--cal-tw-shadow)}
+.cal-focus-within\:ring-ring:focus-within{--cal-tw-ring-color:var(--color-ring)}
+@media (hover:hover){.cal-hover\:bg-primary-ghost-hover:hover{background-color:var(--color-background-primary-ghost-hover);background-color:var(--color-background-primary-ghost-hover)}}
+.cal-focus\:ring-0:focus{--cal-tw-ring-shadow:var(--cal-tw-ring-inset,) 0 0 0 calc(0px + var(--cal-tw-ring-offset-width)) var(--cal-tw-ring-color,currentcolor);box-shadow:var(--cal-tw-inset-shadow), var(--cal-tw-inset-ring-shadow), var(--cal-tw-ring-offset-shadow), var(--cal-tw-ring-shadow), var(--cal-tw-shadow)}
+.cal-focus\:outline-none:focus{--cal-tw-outline-style:none;outline-style:none}
+.cal-focus-visible\:ring-0:focus-visible{--cal-tw-ring-shadow:var(--cal-tw-ring-inset,) 0 0 0 calc(0px + var(--cal-tw-ring-offset-width)) var(--cal-tw-ring-color,currentcolor);box-shadow:var(--cal-tw-inset-shadow), var(--cal-tw-inset-ring-shadow), var(--cal-tw-ring-offset-shadow), var(--cal-tw-ring-shadow), var(--cal-tw-shadow)}
+.cal-focus-visible\:outline-none:focus-visible{--cal-tw-outline-style:none;outline-style:none}
+@media (hover:hover){.cal-enabled\:hover\:\!bg-\[color-mix\(in_srgb\,var\(--color-surface\)_80\%\,var\(--color-text-info\)_20\%\)\]:enabled:hover{background-color:var(--color-surface)!important}}
+@media (hover:hover){@supports (color:color-mix(in lab, red, red)){.cal-enabled\:hover\:\!bg-\[color-mix\(in_srgb\,var\(--color-surface\)_80\%\,var\(--color-text-info\)_20\%\)\]:enabled:hover{background-color:color-mix(in srgb,var(--color-surface) 80%,var(--color-text-info) 20%)!important}}}
+@media (hover:hover){.cal-enabled\:hover\:\!bg-\[color-mix\(in_srgb\,var\(--color-surface\)_92\%\,var\(--color-text\)\)\]:enabled:hover{background-color:var(--color-surface)!important}}
+@media (hover:hover){@supports (color:color-mix(in lab, red, red)){.cal-enabled\:hover\:\!bg-\[color-mix\(in_srgb\,var\(--color-surface\)_92\%\,var\(--color-text\)\)\]:enabled:hover{background-color:color-mix(in srgb,var(--color-surface) 92%,var(--color-text))!important}}}
+@media (hover:hover){.cal-enabled\:hover\:\!text-default:enabled:hover{color:var(--color-text)!important}}
+.cal-enabled\:active\:\!bg-\[color-mix\(in_srgb\,var\(--color-surface\)_76\%\,var\(--color-text-info\)_24\%\)\]:enabled:active{background-color:var(--color-surface)!important}
+@supports (color:color-mix(in lab, red, red)){.cal-enabled\:active\:\!bg-\[color-mix\(in_srgb\,var\(--color-surface\)_76\%\,var\(--color-text-info\)_24\%\)\]:enabled:active{background-color:color-mix(in srgb,var(--color-surface) 76%,var(--color-text-info) 24%)!important}}
+.cal-enabled\:active\:\!bg-\[color-mix\(in_srgb\,var\(--color-surface\)_88\%\,var\(--color-text\)_12\%\)\]:enabled:active{background-color:var(--color-surface)!important}
+@supports (color:color-mix(in lab, red, red)){.cal-enabled\:active\:\!bg-\[color-mix\(in_srgb\,var\(--color-surface\)_88\%\,var\(--color-text\)_12\%\)\]:enabled:active{background-color:color-mix(in srgb,var(--color-surface) 88%,var(--color-text) 12%)!important}}
+.cal-enabled\:active\:\!text-default:enabled:active{color:var(--color-text)!important}
+.cal-data-\[state\=open\]\:\!bg-\[color-mix\(in_srgb\,var\(--color-surface\)_80\%\,var\(--color-text-info\)_20\%\)\][data-state=open]{background-color:var(--color-surface)!important}
+@supports (color:color-mix(in lab, red, red)){.cal-data-\[state\=open\]\:\!bg-\[color-mix\(in_srgb\,var\(--color-surface\)_80\%\,var\(--color-text-info\)_20\%\)\][data-state=open]{background-color:color-mix(in srgb,var(--color-surface) 80%,var(--color-text-info) 20%)!important}}
+.cal-data-\[state\=open\]\:\!bg-\[color-mix\(in_srgb\,var\(--color-surface\)_92\%\,var\(--color-text\)\)\][data-state=open]{background-color:var(--color-surface)!important}
+@supports (color:color-mix(in lab, red, red)){.cal-data-\[state\=open\]\:\!bg-\[color-mix\(in_srgb\,var\(--color-surface\)_92\%\,var\(--color-text\)\)\][data-state=open]{background-color:color-mix(in srgb,var(--color-surface) 92%,var(--color-text))!important}}
+.cal-data-\[state\=open\]\:\!text-default[data-state=open]{color:var(--color-text)!important}
+.cal-\[\&_\.min-w-0\]\:text-end .cal-min-w-0{text-align:end}
+.cal-\[\&_svg\]\:\!text-info svg{color:var(--color-text-info)!important}
+@supports (corner-shape:superellipse(1.5)){.cal-rounded-button-action,.cal-rounded-button-toolbar,.cal-rounded-md,.cal-rounded-lg,.cal-rounded-xl,.cal-rounded-2xl,.cal-rounded-3xl,.cal-rounded-4xl{corner-shape:var(--codex-corner-shape)}}
+.cal-_numericInput_1hft5_1{appearance:textfield}
+.cal-_numericInput_1hft5_1:focus,.cal-_numericInput_1hft5_1:focus-visible,.cal-_numericInput_1hft5_1:active{box-shadow:none;outline:none!important}
+.cal-_numericInput_1hft5_1::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.cal-_numericInput_1hft5_1::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}

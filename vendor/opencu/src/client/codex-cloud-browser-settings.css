@@ -1,0 +1,53 @@
+/* Source source/CSS records: work/rea-reconstruction/cloud-browser-settings. */
+[data-codex-cu-scope].codex-cloud-saved-passwords {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+[data-codex-cu-scope] .codex-cloud-saved-data-select-text {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+[data-codex-cu-scope] .codex-cloud-saved-data-break-all {
+  word-break: break-all;
+}
+
+[data-codex-cu-scope] .codex-cloud-saved-data-loading-status {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+  font-size: var(--text-sm);
+  line-height: var(--tw-leading, var(--text-sm--line-height));
+  color: var(--color-text-secondary);
+}
+
+[data-codex-cu-scope] .codex-cloud-saved-data-empty-text {
+  font-size: var(--text-sm);
+  line-height: var(--tw-leading, var(--text-sm--line-height));
+  color: var(--color-text-secondary);
+}
+
+[data-codex-cu-scope] .codex-cloud-saved-data-tertiary {
+  color: var(--color-text-tertiary);
+}
+
+[data-codex-cu-scope] .codex-cloud-cookie-icon {
+  width: calc(var(--spacing) * 4);
+  height: calc(var(--spacing) * 4);
+  border-radius: var(--radius-2xs);
+}
+
+[data-codex-cu-scope] .codex-cloud-cookie-favicon {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+[data-codex-cu-scope] .codex-cloud-cookie-favicon-globe {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

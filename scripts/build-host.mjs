@@ -5,6 +5,13 @@ import { createRequire, isBuiltin } from 'node:module';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const requireBuild = createRequire(import.meta.url);
+const snapshot = JSON.parse(await readFile(`${root}vendor/dsh.json`, 'utf8'));
+const hostLayouts = new Map([
+  ['0.2.0-rc.2', { subagentDriver: true }],
+  ['0.2.1-alpha.2', { subagentDriver: false }],
+]);
+const hostLayout = hostLayouts.get(snapshot.version);
+if (hostLayout === undefined) throw new Error(`Unsupported DSH snapshot version: ${snapshot.version}`);
 // A stable virtual filename keeps dependency labels independent of checkout
 // location, including builds that reuse node_modules from another directory.
 const acornDependency = { name: 'workflow-acorn', setup(b) {
@@ -42,6 +49,7 @@ for (const name of modules) {
       b.onResolve({ filter: /^@deepseek-ai\/dsh-(bash|pwsh)-local$/ }, args => ({ path: `${root}vendor/dsh/${args.path.split('dsh-')[1]}/src/index.ts` }));
       b.onResolve({ filter: /^\.\.\/\.\.\/\.\.\/(session|subagent)\// }, args => ({ path: `${root}vendor/dsh/${args.path.split('/').slice(4).join('/')}` }));
       b.onResolve({ filter: /^@deepseek-ai\/dsh-session-persistence-jsonl\/src\/lease\.ts$/ }, () => ({ path: `${root}vendor/dsh/session-persistence-jsonl/src/lease.ts` }));
+      if (hostLayout.subagentDriver) b.onResolve({ filter: /^@deepseek-ai\/dsh-subagent-in-process-driver\/src\/index\.ts$/ }, () => ({ path: `${root}vendor/dsh/subagent-in-process-driver/src/index.ts` }));
       b.onLoad({ filter: /workflow-ptc[\\/]src[\\/]guest-source\.ts$/ }, () => ({ contents: `export const WORKFLOW_GUEST_SOURCE = ${JSON.stringify(guestSource)};`, loader: 'ts' }));
     } }, acornDependency],
   });

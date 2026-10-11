@@ -79,6 +79,17 @@ internal sealed partial class WindowObservation
         string button = args.TryGetProperty("button", out var buttonValue) ? buttonValue.GetString() ?? "left" : "left";
         WindowsInputEvent[]? buttons = method == "click" ? WindowsInputEvents.Click(button, input.Tag) : null;
         string? action = args.TryGetProperty("action", out var actionValue) ? actionValue.GetString() : null;
+        string scrollDirection = "";
+        double scrollAmount = 0;
+        if (method == "scroll")
+        {
+            string unit = args.TryGetProperty("by", out var unitValue) ? unitValue.GetString() ?? "" : "page";
+            if (unit == "pixel") throw new NativeFailure("UNSUPPORTED_CAPABILITY", "Windows native pixel scrolling is unavailable in this runtime");
+            if (unit != "page") throw new NativeFailure("INVALID_ARGUMENT", "Windows structured scrolling requires page distance");
+            scrollDirection = args.GetProperty("direction").GetString() ?? "";
+            scrollAmount = args.TryGetProperty("amount", out var amountValue) ? amountValue.GetDouble() : 1;
+            if (!double.IsFinite(scrollAmount) || scrollAmount <= 0 || scrollAmount > 1000 || scrollDirection is not ("up" or "down" or "left" or "right")) throw new NativeFailure("INVALID_ARGUMENT", "Scroll requires a direction and a positive page amount no greater than 1000");
+        }
         (int X, int Y)? point = null;
         (int X, int Y) MapPoint(string xKey, string yKey)
         {
@@ -186,9 +197,6 @@ internal sealed partial class WindowObservation
             }
             else if (method == "scroll")
             {
-                string direction = args.GetProperty("direction").GetString() ?? "";
-                double amount = args.TryGetProperty("amount", out var amountValue) ? amountValue.GetDouble() : 1;
-                if (!double.IsFinite(amount) || amount <= 0 || amount > 1000 || direction is not ("up" or "down" or "left" or "right")) throw new NativeFailure("INVALID_ARGUMENT", "Scroll requires a direction and a positive page amount no greater than 1000");
                 if (element is null && point is { } scrollPoint)
                 {
                     input.RequirePoint(target, scrollPoint.X, scrollPoint.Y, token);
@@ -202,10 +210,10 @@ internal sealed partial class WindowObservation
                 {
                     if (!element.TryGetCurrentPattern(ScrollPattern.Pattern, out var raw)) throw new NativeFailure("ACTION_UNAVAILABLE", "The selected element does not support structured scrolling");
                     var pattern = (ScrollPattern)raw; var current = pattern.Current;
-                    bool horizontal = direction is "left" or "right";
+                    bool horizontal = scrollDirection is "left" or "right";
                     double view = horizontal ? current.HorizontalViewSize : current.VerticalViewSize, position = horizontal ? current.HorizontalScrollPercent : current.VerticalScrollPercent;
                     if (position < 0 || view >= 100) throw new NativeFailure("ACTION_UNAVAILABLE", "The selected control cannot scroll in that direction");
-                    double next = Math.Clamp(position + (direction is "up" or "left" ? -1 : 1) * amount * view / (100 - view) * 100, 0, 100);
+                    double next = Math.Clamp(position + (scrollDirection is "up" or "left" ? -1 : 1) * scrollAmount * view / (100 - view) * 100, 0, 100);
                     input.Check(target, token); pattern.SetScrollPercent(horizontal ? next : ScrollPattern.NoScroll, horizontal ? ScrollPattern.NoScroll : next);
                 }
                 else throw new NativeFailure("ACTION_UNAVAILABLE", "Windows page scrolling currently requires an observed scrollable element");

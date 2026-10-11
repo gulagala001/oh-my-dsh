@@ -18,7 +18,20 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  public-files:
+    name: Public Git and package files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - run: node scripts/check-public-files.mjs
+
   matrix:
+    needs: public-files
     runs-on: ubuntu-latest
     outputs:
       tests: ${{ steps.tests.outputs.matrix }}

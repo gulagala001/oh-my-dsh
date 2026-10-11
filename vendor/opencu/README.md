@@ -1,126 +1,135 @@
 # OpenCU
 
-**让 DSH 助手操作浏览器和桌面应用。**
+**让 AI 在真实浏览器和桌面应用中完成操作，你随时查看、停止、接管和继续。**
 
-OpenCU 从 [Oh My DSH](https://github.com/gulagala001/oh-my-dsh) 的 Computer Use 提取而来，提供相同的操控工具、实时预览和接管体验，可以独立安装到 DSH。Oh My DSH 继续集成全部能力，并直接复用 OpenCU 的实现。
+[简体中文](README.md) · [English](README_EN.md) · [安装](#安装) · [使用指南](docs/usage.md) · [程序集成](docs/integration.md)
 
-当前开发候选：[1.6.1（未发布）](docs/release-1.6.1.md)，本树配对 **DSH 0.2.1-alpha.2**。公开安装版本仍为 **1.3.0**，两宿主分别使用下方固定 tag；1.3.1 renderer 修复及后续候选能力均为本地未发布内容。
+![OpenCU 真实浏览器工作区：对话与网页并排](docs/images/showcase-browser.png)
 
-## 本版更新
+*真实界面截图：虚构的“青禾工坊办公文具补货”演示，商品缩略图为 AI 生成素材。截图展示尚未发布的本地 1.6.1 新实现；安装入口提供已发布的 1.3.0，入口、布局和运行方式不同。[查看版本差异](#版本与平台)。*
 
-1.6.1 修正入口与结果展示：删除通用应用预览中转页，优先打开宿主原生浏览器；实际 CU 目标直接进入内容。普通操作结果在单层详情中按列呈现，应用画面移除重复标题和常驻状态栏。保留停止／接管／恢复、设置、独立观察及交付操作。[实现与验收范围](docs/release-1.6.1.md)。
-
-1.5.0 优化紧凑工具栏、默认预览停靠、下载记录、运行环境设置及 Chrome 扩展弹窗。[实现与实际验证范围](docs/release-1.5.0.md)。默认预览以 150 × 56 像素停靠在自有输入工具栏内，保留当前目标名称与多目标切换；明确放大、展开或拖动后继续使用浮动预览。
-
-延续 1.4.1 的 a2 原生 Chat flow、推理 Body Slot 和 Content Factory，保留第三方 renderer、分组计数、停止标记、共享设置与阅读状态。[a2 适配和实际验证范围](docs/release-1.4.1.md)。
-
-延续 1.4.0 的持久下载文件附件、原生与 PTC 对话预览、重复交付复用，以及停止／重启后的读取与辅助展示恢复。缓存缺少、失效或目标不可用时保持正常基础操控。[1.4.0 候选说明](docs/release-1.4.0.md)。
-
-保留本地 1.3.1 的第三方 renderer 共存修复：第三方用户消息、操作分组和工具详情继续完整渲染，保留组件注入、store、locale 与子 slot 上下文；电脑引用相邻补充，原文与附件不重复。图片画廊、预览、启停和卸载恢复契约延续。[1.3.1 专项说明](docs/release-1.3.1.md)。
+OpenCU 是可独立安装的 Computer Use 项目，提供浏览器、桌面控制、实时预览、页面批注与文件交付。现有发行使用 DSH 的模型、会话和工具循环；集成者可通过公开模块复用同一实现。[Oh My DSH](https://github.com/gulagala001/oh-my-dsh) 是完整集成 OpenCU 的一个使用场景，独立安装不需要 OMD。
 
 ## 安装
 
-公开 **1.3.0** 为 **DSH 0.2.1-alpha.1** 和 **0.2.0-rc.2** 分别构建，采用对应官方 SDK、Chat 快照与锁文件。需要 Node.js ≥22.19、pnpm 11.23.0 和 Git。先停止服务，按实际宿主选择固定 tag。alpha：
+先结束任务、停止 DSH，再按**完整宿主版本**选择固定发行。需要 Node.js ≥22.19、pnpm 11.23.0 和 Git；Windows 使用 PowerShell 7。沿用原 profile、`DSH_HOME`、模型和会话配置。
+
+| DSH 宿主 | 固定发行 | 插件安装包 |
+| --- | --- | --- |
+| `0.2.1-alpha.1` | [v1.3.0](https://github.com/gulagala001/opencu/releases/tag/v1.3.0) | [opencu-1.3.0.tgz](https://github.com/gulagala001/opencu/releases/download/v1.3.0/opencu-1.3.0.tgz) |
+| `0.2.0-rc.2` | [v1.3.0-dsh.0.2.0-rc.2](https://github.com/gulagala001/opencu/releases/tag/v1.3.0-dsh.0.2.0-rc.2) | [opencu-1.3.0.tgz](https://github.com/gulagala001/opencu/releases/download/v1.3.0-dsh.0.2.0-rc.2/opencu-1.3.0.tgz) |
+
+两个包内版本均为 `1.3.0`，但 SDK、Chat 快照和锁文件分别匹配宿主，不能互换。发行页提供源码与 `SHA256SUMS.txt`。不通过 `releases/latest` 选包，也不要只凭相同文件名选包。
+
+DSH `0.2.1-alpha.1`：
 
 ```sh
 npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add github:gulagala001/opencu#v1.3.0
 npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 ```
 
-rc.2 使用 [对应发行](https://github.com/gulagala001/opencu/releases/tag/v1.3.0-dsh.0.2.0-rc.2)：
+DSH `0.2.0-rc.2`：
 
 ```sh
 npx --yes @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add github:gulagala001/opencu#v1.3.0-dsh.0.2.0-rc.2
 npx --yes @deepseek-ai/dsh@0.2.0-rc.2 --profile web
 ```
 
-### 本地候选验收
+打开启动时打印的登录链接，在输入区点击 **电脑 → 运行环境与权限**。1.3.0 使用本机 Chrome／Chromium；原生桌面控制首次安装需本机编译，macOS 需要 Apple Command Line Tools，Windows 需要 .NET 10 SDK。更多步骤见[使用指南](docs/usage.md#开始使用)和 [Windows 指南](docs/windows.md)。桌面版使用应用自己的插件管理或配套 CLI，并选择其实际 profile。
 
-候选 **1.5.0** 正在验收，没有公开 tag／Release。本树对应 **DSH 0.2.1-alpha.2**，核对实际候选包版本、SHA-256 与宿主身份，在隔离数据目录和 profile 中安装；以下是本地工件的绝对路径占位示例：
+## 开始工作
 
-```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.2 plugin --profile candidate add file:/absolute/path/opencu-1.5.0.tgz
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.2 --profile candidate
+在对话里选择 `@Browser`、已连接的 `@Chrome` 标签或桌面应用，说明目标和完成条件：
+
+> 帮青禾工坊整理森野文具的办公补货单，核对蓝色笔记本、绿色档案夹和铅笔尺子套装。交付日期与备注由我接管填写，保存后再读取结果，最后保留页面。
+
+图解演示使用受控模型和真实工具，人工保存后读取到交付日期 `2026-10-18`、联系人“林夏”、备注“请在下午送达，纸箱分批标记。”与含税合计 `¥3480`。本次用控制接口完成停止／恢复状态交接；[场景图解](docs/showcase.md)说明实际操作和 OMD 集成配置。
+
+助手选中目标后会返回初始画面与控件信息。你可以在对话内预览或右侧电脑面板观察；需要处理登录、验证码或修改内容时点击 **停止并接管**，完成后点击 **恢复助手控制**。看图操作需要支持图片输入的模型，OpenCU 不自动更换模型。
+
+| 任务 | 操作 | 可检查的结果 |
+| --- | --- | --- |
+| 网页表单和后台工作 | 读取控件、输入、点击、滚动、上传及下载 | 页面状态、截图、操作结果与文件 |
+| 保留已有登录状态 | 连接 Chrome 并选择原标签 | 原标签及实际登录状态 |
+| 页面修改与设计反馈 | 区域／元素批注、临时样式预览、响应式尺寸 | 图片与说明附件 |
+| 桌面应用工作 | 发现窗口、读取控件、键盘和鼠标输入 | 真实应用状态与实时预览 |
+| 网页资料交付 | MHTML 快照和已加载素材保存 | 持久附件与失败清单 |
+
+[场景图解](docs/showcase.md)说明每个场景的问题、操作与结果；[完整使用指南](docs/usage.md)涵盖停止、恢复、下载、配置和故障处理。
+
+## 能力概览
+
+- **浏览器工作区**：标签、地址栏、查找、下载、设备尺寸及实时画面；独立配置与日常浏览器分开。
+- **原生应用**：macOS 和 Windows 窗口发现、可访问性读取、截图、点击、拖拽、输入与粘贴。
+- **控制交接**：助手光标、停止、手动接管和恢复；只看画面不等于取得控制权。
+- **反馈与交付**：窗口分享、页面批注、临时 CSS 预览、页面和素材导出，接入 DSH 会话附件。
+- **页面诊断**：读取实际观察到的网络请求；满足条件时调用网页公开的 WebMCP 工具。
+
+OpenCU 操作的是 **DSH 后端和本地控制程序所在机器**。通过远程 Web 页面访问 DSH，不会让插件直接控制访问者的另一台电脑。
+
+## 版本与平台
+
+| 版本 | 状态与宿主 | 浏览器与安装差异 |
+| --- | --- | --- |
+| 1.3.0 | 已公开；配对 DSH `0.2.1-alpha.1`／`0.2.0-rc.2` | 本机 Chrome／Chromium及独立配置；桌面组件首次需源码编译 |
+| 本地 1.6.1 新实现 | 本轮改动尚未发布，不在 OpenCU 当前公开主分支；本次演示使用 DSH `0.2.0-rc.2` 本地构建 | 统一“浏览器”入口、官方预编译 Electron `44.7.0`、插件自带浏览器、站点权限、持久历史／下载、档案及 CSV 密码导入、登录窗口；完整发行包设计使用预构建桌面组件 |
+
+新工作区截图不代表 1.3.0 已提供这些功能。本次文档更新不发布 1.6.1，不提供尚不存在的下载链接。[1.3.0 发行说明](docs/release-1.3.0.md)是公开版本的依据。
+
+OMD 主线已整合 OpenCU 1.6.1 的浏览器与运行时改动；本页展示对应本地构建的实际操作。相同版本字符串不代表快照含有相同实现，也不代表本次发布了新安装包。
+
+| 平台 | 公开 1.3.0 的运行条件 | 范围与边界 |
+| --- | --- | --- |
+| macOS | 桌面需 macOS 14+、Apple Command Line Tools、辅助功能和屏幕录制权限 | 原生应用与浏览器；后台输入和应用兼容性以实际机器为准 |
+| Windows | PowerShell 7；首次桌面／Chrome 连接需 .NET 10 SDK；桌面需 Windows 10 2004+ | 单屏 125%、150%、200% 有旧版本验证；本轮 1.6.1 未做 Windows 实机验收，多屏混合缩放不在当前范围 |
+| Linux | 可用 Chrome／Chromium | 浏览器；没有 Linux 原生桌面控制 |
+
+平台实现、历史验证与本轮实测是不同信息，不能互相替代。WebMCP 要求连接支持该协议的 Chromium 153+；本地 Electron 44.7.0 不因此自动具备该能力。受保护 Cookie 和密码不保证完整迁移，见[凭据与登录](docs/usage.md#本地-161-浏览器展示)。
+
+## 集成到程序
+
+公开后端入口 `opencu/integration`提供 `acquireComputerUse(ctx, options)`；前端源码入口 `opencu/client-source`提供 `applyComputerUseClient(ctx, options)`。它们面向 DSH／Cordis 的服务与生命周期，允许独立插件或工作台共用运行时、工具与界面。
+
+```js
+import { acquireComputerUse } from 'opencu/integration';
+
+export const name = 'my-computer-use-integration';
+export const inject = ['llm', 'agents', 'sessions', 'settings', 'sessionProjections', 'tools'];
+
+export async function apply(ctx, config) {
+  await acquireComputerUse(ctx, { config, namespace: 'opencu' });
+}
 ```
 
-1.5.0 已为 a2、a1 和 rc.2 独立构建，并在 macOS arm64 隔离 Chrome for Testing 中完成对应官方宿主的原生／PTC、插件生命周期和代表性组合回归；各自保留对应 SDK、Chat 快照与依赖锁。1.4.1 冻结工件保留，不覆盖历史发行。实际硬件桌面、其它平台及真实登录态仍需对应验收。下方公开升级命令继续安装 1.3.0，不包含候选能力。
+`ctx`由 DSH 提供。当前没有供任意 MCP 客户端直接添加的通用 MCP 服务发行；内部原生传输协议不等于外部集成产品。依赖、前端打包、配置所有权与释放见[程序集成指南](docs/integration.md)。
 
-打开启动时的登录链接，继续使用已有 Agent preset。在输入区点击 **电脑**，或通过 `@Browser`、`@Chrome` 和应用引用选择目标：
+### 与 Oh My DSH 共存
 
-> 打开这个表单，填写我提供的内容，检查结果并保留页面。
+独立 OpenCU 和匹配版本的 OMD 集成版共用一套运行时、工具和预览。单独卸载一个使用者，另一个保留能力。显式 OpenCU 配置优先于 OMD 继承值，不需要重复授权或复制数据。
 
-OpenCU 沿用 DSH 的模型、会话、工具权限和审批配置，不更改默认 Agent。需要看图操作时请选择支持图片输入的模型。自定义 profile 或 `DSH_HOME` 应沿用原配置。
+为兼容已有安装，默认数据目录仍是 `DSH_HOME/trisoul-x/computer-use/`，部分扩展、应用、协议和 Chrome 标签组保留旧名称。它们是兼容标识，不限制 OpenCU 的独立使用或程序集成。
 
-## 能做什么
+## 配置、更新与卸载
 
-- **浏览器和桌面应用**：发现目标，读取控件，截图、点击、滚动、拖拽、中文输入和复制粘贴。
-- **实时预览**：对话内的画面堆叠、助手光标、独立预览窗口，以及停止、接管和恢复。
-- **浏览器工作区**：标签、导航、查找、历史、下载、设备尺寸与响应式预览。
-- **页面批注和窗口分享**：圈选区域、选择页面元素、预览样式变化，把截图与说明加入草稿。
-- **文件交付**：导出 MHTML 页面快照和已加载素材，保存为 DSH 持久会话附件。
-- **页面工具**：在兼容 Chromium 153+ 中发现并调用页面公开的 WebMCP 工具。
+配置位于 DSH 的 `opencu`设置区，支持开关、浏览器程序、Chrome 数据根目录、原生程序／socket 和数据目录。路径修改后重启 DSH；[配置说明](docs/usage.md#配置)包含完整字段。
 
-[完整使用指南](docs/usage.md) · [Windows 安装与自检](docs/windows.md)
+更新先结束任务并停止服务，再重复匹配宿主的固定 tag 安装命令，启动相同 profile。卸载示例：
 
-![OpenCU 1.5.0：已展开的两个受控浏览器实时目标](docs/images/native-preview-stack.png)
+```sh
+npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web remove opencu
+```
 
-*真实界面实拍：DSH 0.2.1-alpha.2／Oh My DSH 0.13.0 本地候选，两个隔离演示页面；目标列表已展开并可滚动，默认预览仍为 150 × 56 像素停靠。*
+rc.2 使用 `0.2.0-rc.2` CLI。卸载保留会话和本地数据；Chrome 连接与桌面运行时可在 **运行环境与权限**分别移除。另一集成仍在使用时保留共享组件。[完整说明](docs/usage.md#更新与卸载)。
 
-## 平台
+## 文档与开发
 
-| 平台 | 运行条件与范围 |
+| 文档 | 内容 |
 | --- | --- |
-| Windows | PowerShell 7；浏览器、Chrome 扩展与原生桌面控制；桌面运行时使用 .NET 10，首次源码构建需要对应 SDK |
-| macOS | 桌面控制需要 macOS 14+、辅助功能与屏幕录制权限；源码构建需要 Apple Command Line Tools |
-| Linux | 内置浏览器；本版本不提供 Linux 原生桌面控制 |
+| [使用指南](docs/usage.md) | 日常流程、预览、接管、配置、登录与 FAQ |
+| [场景图解](docs/showcase.md) | 实际工作区、交接和集成场景 |
+| [程序集成](docs/integration.md) | 真实导出、DSH 服务与共享生命周期 |
+| [Windows](docs/windows.md) | 安装、Chrome、原生桌面与 WSL |
+| [开发指南](docs/development.md) | 固定版本源码、构建、测试和贡献 |
+| [文档目录](docs/README.md) | 中英文入口与发行记录 |
 
-首次使用打开 **电脑 → 运行环境与权限**，按需安装当前平台运行时与浏览器扩展。实际应用兼容性以目标设备为准。单屏 Windows 125%、150%、200% 属于支持范围；多屏混合缩放后置。后台操控、锁屏和应用特有控件存在平台差异，见使用指南。
-
-## 与 Oh My DSH 一起使用
-
-- **只装 OpenCU**：获得 Computer Use，保留 DSH 原有工作方式。
-- **只装 Oh My DSH 集成版**：自动带入 OpenCU，仍是完整整合版。
-- **两个都装（与上述 Oh My DSH 集成版配合）**：共用一套运行时、工具和预览；电脑功能进入 Oh My 工作台。卸载其中一个后，另一个仍可使用。
-
-为了延续已有安装，数据默认仍位于 `DSH_HOME/trisoul-x/computer-use/`，扩展、原生程序和内部协议保留已有标识。部分系统安装界面仍显示 **Oh My DSH Computer Use**。独立版与整合版不需要重复授权或另建数据副本。
-
-OpenCU 配置位于 DSH 的 `opencu` 设置区。未显式设置的字段继承已有 Oh My DSH Computer Use 配置；显式 OpenCU 设置优先。浏览器路径、原生运行时路径和数据目录变更后重启 DSH。
-
-## 已有能力
-
-适配新版会话状态与插件生命周期，合并顶栏和侧栏的重复状态读取，优化长会话操作分组。网页工具栏可在同一会话的官方浏览器中打开独立预览；原操控目标、接管、恢复和独立窗口不变。官方预览受网站嵌入限制，不保证与 CU 共享登录状态。
-
-### Chrome 标签分组
-
-已连接 Chrome 的受控标签现在按会话自动分组，显示 **OMD · 会话名称**、区分颜色，并在停止后保留标记。需要扩展 **0.1.4**；更新连接文件后重新加载扩展。本版已包含该能力，详见使用指南。
-
-## 更新与卸载
-
-先停止服务，再运行对应命令，然后重新启动 `dsh web`：
-
-```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add github:gulagala001/opencu#v1.3.0
-dsh plugin --profile web remove opencu
-```
-
-上述两个命令分别用于更新和卸载，不需要一起执行。插件卸载保留会话和本地数据。移除浏览器连接、运行时及系统权限使用 **运行环境与权限** 中的对应操作；另一个插件仍使用 Computer Use 时请保留运行时。
-
-## 源码开发
-
-```sh
-git clone https://github.com/gulagala001/opencu.git
-cd opencu
-pnpm install --frozen-lockfile
-pnpm build
-pnpm exec playwright install chromium
-pnpm test
-pnpm start
-```
-
-`pnpm start` 默认使用仓库下 `data/dsh/` 的独立 DSH 配置，也可设置 `DSH_HOME`。测试使用独立浏览器配置；原生桌面专项按平台与环境条件运行。Windows 自动化配置见 `.github/workflows/windows-computer-use.yml`。
-
-`src/integration.mjs` 与 `src/client/computer-use.jsx` 提供整合入口；浏览器、原生服务、扩展和平台测试都在此仓库维护。Oh My DSH 同步完整发行快照，并校验其中每个文件，不单独修改通用实现。
-
-浏览器和原生桌面的完整界面场景分别在 `test/computer-use-ui.test.mjs`、`test/computer-use-native-ui.test.mjs` 维护；Oh My DSH 只保留宿主预设、工具传输、组件设置与真实画面接入检查。对话框场景已独立为 `test/browser-dialog-ui.test.mjs`，运行 `node --test test/browser-dialog-ui.test.mjs` 或手动触发 Browser dialog regression，不需要先执行预览拖动、缩放及桌面安装流程。
-
-第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+问题反馈到 [GitHub Issues](https://github.com/gulagala001/opencu/issues)，提供完整 OpenCU／DSH 版本、平台、入口和错误。第三方组件许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

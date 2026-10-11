@@ -29,7 +29,7 @@ Start with what you need to do. After installing OMD, keep using your DSH models
 | `0.2.1-alpha.1` | `0.2.1-alpha.1.omd.0.10.0` | [alpha.1 release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-alpha.1.omd.0.10.0) |
 | `0.2.0-rc.2`, including this desktop tutorial | `0.2.0-rc.2.omd.0.10.0` | [rc.2 release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.0-rc.2.omd.0.10.0) |
 
-GitHub `main` contains `0.2.1-alpha.2.omd.0.16.0` for DSH `0.2.1-alpha.2`, **not a public release**. It includes an earlier OpenCU 1.6.1 snapshot; the latest local browser and runtime reconstruction, also numbered 1.6.1, has not entered that OMD snapshot. Matching version numbers do not establish matching contents. These guides mark development and local changes; no new public Release download is available for them. Public `0.10.0` does not include additions from `0.11–0.16`.
+GitHub `main` contains `0.2.1-alpha.2.omd.0.16.0` for DSH `0.2.1-alpha.2`, **not a public release**. It includes the OpenCU 1.6.1 browser and runtime reconstruction. Matching version numbers do not establish matching contents. These guides mark development and local changes; no new public Release download is available for them. Public `0.10.0` does not include additions from `0.11–0.16`.
 
 Use a complete host version and a fixed matching OMD release, rather than GitHub's `latest` label. Check [compatibility](plugin-compatibility_EN.md) for other versions; do not bypass host checks.
 

@@ -1,0 +1,54 @@
+/* c_ waiting body + ag(tool)/cg/dg, exact source utility declarations.
+   No native PiP, cursor sprite, Pet layout or floating material is added. */
+:where([data-codex-cu-scope]) .codex-cu-avatar-approval-body {
+  font-size: 13px;
+  line-height: calc(var(--spacing) * 4);
+  color: var(--color-text-secondary);
+  overflow: clip;
+  transition: max-height .18s cubic-bezier(.23, 1, .32, 1);
+}
+:where([data-codex-cu-scope]) .codex-cu-avatar-approval-body[data-expanded="true"] {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+:where([data-codex-cu-scope]) .codex-cu-avatar-approval-body[data-static-height="true"] { transition-duration: 0s; }
+:where([data-codex-cu-scope]) .codex-cu-avatar-approval-summary {
+  min-width: 0;
+  padding-inline-end: 38px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:where([data-codex-cu-scope]) .codex-cu-avatar-approval-summary[data-expanded="true"] {
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
+:where([data-codex-cu-scope]) .codex-cu-avatar-approval-actions {
+  margin-top: calc(var(--spacing) * 3);
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: calc(var(--spacing) * 2);
+  overflow: visible;
+  -webkit-app-region: no-drag;
+}
+:where([data-codex-cu-scope]) .codex-cu-avatar-approval-action { min-width: 0; max-width: 100%; }
+:where([data-codex-cu-scope]) .codex-cu-avatar-approval-action-primary {
+  background-color: var(--color-chart-blue) !important;
+  color: var(--color-white) !important;
+}
+@media (hover: hover) {
+  :where([data-codex-cu-scope]) .codex-cu-avatar-approval-action:enabled:active:hover { opacity: .8; }
+  :where([data-codex-cu-scope]) .codex-cu-avatar-approval-action-primary:enabled:hover {
+    background-color: color-mix(in oklab, var(--color-chart-blue) 90%, transparent) !important;
+  }
+}
+:where([data-codex-cu-scope]) .codex-cu-avatar-approval-action-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -7,9 +7,12 @@ import { fileURLToPath } from 'node:url';
 const root = new URL('../vendor/dsh/', import.meta.url);
 test('shipped DSH sources, browser package and patch match the pinned distribution manifest', async () => {
   const manifest = JSON.parse(await readFile(new URL('../vendor/dsh.json', import.meta.url)));
-  assert.equal(manifest.commit, '5badb15009ae1756c3afe0ae0cef1faafc290ccc');
-  assert.equal(manifest.tag, 'dsh-v0.2.1-alpha.1', 'the snapshot uses the official release tag');
-  assert.equal(manifest.version, '0.2.1-alpha.1');
+  const pins = { '0.2.0-rc.2': '639ed015397290b3745d163aafe02ffee4aa3f84', '0.2.1-alpha.1': '5badb15009ae1756c3afe0ae0cef1faafc290ccc', '0.2.1-alpha.2': 'd743267388641bc76f17c45ce8b4c231aed1d32c' };
+  const sdk = JSON.parse(await readFile(new URL('../package.json', import.meta.url))).devDependencies['@deepseek-ai/dsh'];
+  assert.equal(manifest.version, sdk, 'the snapshot belongs to the exact installed host SDK');
+  assert.ok(pins[sdk], 'the SDK has a reviewed official source pin');
+  assert.equal(manifest.commit, pins[sdk]);
+  assert.equal(manifest.tag, 'dsh-v' + sdk, 'the snapshot uses the official release tag');
   const chat = JSON.parse(await readFile(new URL('../vendor/opencu/vendor/dsh-chat.json', import.meta.url)));
   assert.equal(chat.commit, manifest.commit, 'conversation and shared Chat use one DSH source baseline');
   const files = {};

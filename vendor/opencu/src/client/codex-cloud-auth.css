@@ -1,0 +1,1359 @@
+/* Exact Codex 26.1007.21159 original utility/module declarations, locally scoped.
+ * Complete original selectors, offsets and SHA: work/rea-reconstruction/cloud-auth/css-rules.json
+ * Tailwind internal properties use --cua-tw-* and retain original registration semantics.
+ */
+
+/* source @property --tw-leading; app-shared-9a94b907ed47.css; offset 109391; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@property --cua-tw-leading {syntax:"*";inherits:false}
+
+/* source @property --tw-font-weight; app-shared-9a94b907ed47.css; offset 111273; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@property --cua-tw-font-weight {syntax:"*";inherits:false}
+
+/* source @property --tw-tracking; app-shared-9a94b907ed47.css; offset 111326; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@property --cua-tw-tracking {syntax:"*";inherits:false}
+
+/* source @property --tw-border-style; app-shared-9a94b907ed47.css; offset 111376; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@property --cua-tw-border-style {syntax:"*";inherits:false;initial-value:solid}
+
+/* source @property --tw-divide-y-reverse; app-shared-9a94b907ed47.css; offset 1264873; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@property --cua-tw-divide-y-reverse {syntax:"*";inherits:false;initial-value:0}
+
+/* source @property --tw-outline-style; app-shared-9a94b907ed47.css; offset 1266931; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@property --cua-tw-outline-style {syntax:"*";inherits:false;initial-value:solid}
+
+/* Original property compatibility initialization; app-shared-9a94b907ed47.css; offset 37422; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-components {
+  @layer opencu-cloud-auth-properties {
+    @supports (((-webkit-hyphens:none)) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b)))) {
+      :where([data-codex-cu-scope]),:where([data-codex-cu-scope]) *,:where([data-codex-cu-scope]):before,:where([data-codex-cu-scope]) *:before,:where([data-codex-cu-scope]):after,:where([data-codex-cu-scope]) *:after,:where([data-codex-cu-scope])::backdrop,:where([data-codex-cu-scope]) *::backdrop {--cua-tw-leading:initial;--cua-tw-font-weight:initial;--cua-tw-tracking:initial;--cua-tw-border-style:solid;}
+    }
+  }
+}
+
+/* Original property compatibility initialization; app-shared-9a94b907ed47.css; offset 111666; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-properties {
+  @supports (((-webkit-hyphens:none)) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b)))) {
+    :where([data-codex-cu-scope]),:where([data-codex-cu-scope]) *,:where([data-codex-cu-scope]):before,:where([data-codex-cu-scope]) *:before,:where([data-codex-cu-scope]):after,:where([data-codex-cu-scope]) *:after,:where([data-codex-cu-scope])::backdrop,:where([data-codex-cu-scope]) *::backdrop {--cua-tw-border-style:solid;--cua-tw-divide-y-reverse:0;--cua-tw-leading:initial;--cua-tw-font-weight:initial;--cua-tw-tracking:initial;--cua-tw-outline-style:solid;}
+  }
+}
+
+/* source @property --tw-border-style; app-initial-99e8b4b455fa.css; offset 240314; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@property --cua-tw-border-style {syntax:"*";inherits:false;initial-value:solid}
+
+/* source @property --tw-outline-style; app-initial-99e8b4b455fa.css; offset 249936; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@property --cua-tw-outline-style {syntax:"*";inherits:false;initial-value:solid}
+
+/* Original property compatibility initialization; app-initial-99e8b4b455fa.css; offset 260; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  @layer opencu-cloud-auth-properties {
+    @supports (((-webkit-hyphens:none)) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b)))) {
+      :where([data-codex-cu-scope]),:where([data-codex-cu-scope]) *,:where([data-codex-cu-scope]):before,:where([data-codex-cu-scope]) *:before,:where([data-codex-cu-scope]):after,:where([data-codex-cu-scope]) *:after,:where([data-codex-cu-scope])::backdrop,:where([data-codex-cu-scope]) *::backdrop {--cua-tw-border-style:solid;--cua-tw-outline-style:solid;}
+    }
+  }
+}
+
+/* cloud-auth-css-001; app-shared-9a94b907ed47.css; offset 64863; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-components {
+  @layer opencu-cloud-auth-components {
+    :where([data-codex-cu-scope]) .cua-_body_1rxrl_2,
+:where([data-codex-cu-scope]).cua-_body_1rxrl_2 {padding-inline:calc(var(--spacing,.25rem) * 5);padding-block:calc(var(--spacing,.25rem) * 5)}
+  }
+}
+
+/* cloud-auth-css-002; app-shared-9a94b907ed47.css; offset 64971; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-components {
+  @layer opencu-cloud-auth-components {
+    :where([data-codex-cu-scope]) .cua-_section_1rxrl_2,
+:where([data-codex-cu-scope]).cua-_section_1rxrl_2 {padding-top:calc(var(--spacing,.25rem) * 3)}
+  }
+}
+
+/* cloud-auth-css-003; app-shared-9a94b907ed47.css; offset 65100; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-components {
+  @layer opencu-cloud-auth-components {
+    :where([data-codex-cu-scope]) .cua-_section_1rxrl_2:nth-child(1 of :not(.cua-sr-only)),
+:where([data-codex-cu-scope]).cua-_section_1rxrl_2:nth-child(1 of :not(.cua-sr-only)) {padding-top:0}
+  }
+}
+
+/* cloud-auth-css-004; app-shared-9a94b907ed47.css; offset 65163; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-components {
+  @layer opencu-cloud-auth-components {
+    :where([data-codex-cu-scope]) .cua-_body_1rxrl_2>.cua-_footer_1rxrl_2:nth-child(n/**/+2 of :not(.cua-sr-only)),
+:where([data-codex-cu-scope]).cua-_body_1rxrl_2>.cua-_footer_1rxrl_2:nth-child(n/**/+2 of :not(.cua-sr-only)) {margin-top:calc(var(--spacing,.25rem) * 5)}
+  }
+}
+
+/* cloud-auth-css-005; app-shared-9a94b907ed47.css; offset 65400; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_chatgptConfirmationBody_1rxrl_2>.cua-_section_1rxrl_2:nth-of-type(2),
+:where([data-codex-cu-scope]).cua-_chatgptConfirmationBody_1rxrl_2>.cua-_section_1rxrl_2:nth-of-type(2) {padding-top:0}
+}
+
+/* cloud-auth-css-006; app-shared-9a94b907ed47.css; offset 65481; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_chatgptConfirmationBody_1rxrl_2>.cua-_section_1rxrl_2:first-of-type,
+:where([data-codex-cu-scope]).cua-_chatgptConfirmationBody_1rxrl_2>.cua-_section_1rxrl_2:first-of-type {padding-block:calc(var(--spacing,.25rem) * 4)}
+}
+
+/* cloud-auth-css-007; app-shared-9a94b907ed47.css; offset 65593; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_chatgptConfirmationBody_1rxrl_2>.cua-_section_1rxrl_2:last-of-type,
+:where([data-codex-cu-scope]).cua-_chatgptConfirmationBody_1rxrl_2>.cua-_section_1rxrl_2:last-of-type {padding-top:calc(var(--spacing,.25rem) * 8)}
+}
+
+/* cloud-auth-css-008; app-shared-9a94b907ed47.css; offset 91049; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-icon-xs,
+:where([data-codex-cu-scope]).cua-icon-xs {width:var(--control-icon-size-xs);height:var(--control-icon-size-xs)}
+}
+
+/* cloud-auth-css-009; app-shared-9a94b907ed47.css; offset 104582; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-icon-xxs,
+:where([data-codex-cu-scope]).cua-icon-xxs {width:12px;height:12px}
+}
+
+/* cloud-auth-css-010; app-shared-9a94b907ed47.css; offset 104702; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-icon-xs,
+:where([data-codex-cu-scope]).cua-icon-xs {height:var(--icon-size,16px);width:var(--icon-size,16px)}
+}
+
+/* cloud-auth-css-011; app-shared-9a94b907ed47.css; offset 267208; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-sr-only,
+:where([data-codex-cu-scope]).cua-sr-only {clip-path:inset(50%);white-space:nowrap;border-width:0;width:1px;height:1px;margin:-1px;padding:0;position:absolute;overflow:hidden}
+}
+
+/* cloud-auth-css-012; app-shared-9a94b907ed47.css; offset 267349; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-absolute,
+:where([data-codex-cu-scope]).cua-absolute {position:absolute}
+}
+
+/* cloud-auth-css-013; app-shared-9a94b907ed47.css; offset 267439; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-relative,
+:where([data-codex-cu-scope]).cua-relative {position:relative}
+}
+
+/* cloud-auth-css-014; app-shared-9a94b907ed47.css; offset 267491; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-sticky,
+:where([data-codex-cu-scope]).cua-sticky {position:sticky}
+}
+
+/* cloud-auth-css-015; app-shared-9a94b907ed47.css; offset 267671; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-inset-0,
+:where([data-codex-cu-scope]).cua-inset-0 {inset:0}
+}
+
+/* cloud-auth-css-016; app-shared-9a94b907ed47.css; offset 280347; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-bottom-0,
+:where([data-codex-cu-scope]).cua-bottom-0 {bottom:0}
+}
+
+/* cloud-auth-css-017; app-shared-9a94b907ed47.css; offset 287466; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua--mx-4,
+:where([data-codex-cu-scope]).cua--mx-4 {margin-inline:calc(var(--spacing) * -4)}
+}
+
+/* cloud-auth-css-018; app-shared-9a94b907ed47.css; offset 290324; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-my-auto,
+:where([data-codex-cu-scope]).cua-my-auto {margin-block:auto}
+}
+
+/* cloud-auth-css-019; app-shared-9a94b907ed47.css; offset 292201; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-ms-auto,
+:where([data-codex-cu-scope]).cua-ms-auto {margin-inline-start:auto}
+}
+
+/* cloud-auth-css-020; app-shared-9a94b907ed47.css; offset 293536; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-me-auto,
+:where([data-codex-cu-scope]).cua-me-auto {margin-inline-end:auto}
+}
+
+/* cloud-auth-css-021; app-shared-9a94b907ed47.css; offset 294665; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-mt-1,
+:where([data-codex-cu-scope]).cua-mt-1 {margin-top:var(--spacing)}
+}
+
+/* cloud-auth-css-022; app-shared-9a94b907ed47.css; offset 294744; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-mt-2,
+:where([data-codex-cu-scope]).cua-mt-2 {margin-top:calc(var(--spacing) * 2)}
+}
+
+/* cloud-auth-css-023; app-shared-9a94b907ed47.css; offset 296952; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua--mb-4,
+:where([data-codex-cu-scope]).cua--mb-4 {margin-bottom:calc(var(--spacing) * -4)}
+}
+
+/* cloud-auth-css-024; app-shared-9a94b907ed47.css; offset 302399; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-flex,
+:where([data-codex-cu-scope]).cua-flex {display:flex}
+}
+
+/* cloud-auth-css-025; app-shared-9a94b907ed47.css; offset 302640; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-inline-block,
+:where([data-codex-cu-scope]).cua-inline-block {display:inline-block}
+}
+
+/* cloud-auth-css-026; app-shared-9a94b907ed47.css; offset 308118; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-size-1\.5,
+:where([data-codex-cu-scope]).cua-size-1\.5 {width:calc(var(--spacing) * 1.5);height:calc(var(--spacing) * 1.5)}
+}
+
+/* cloud-auth-css-027; app-shared-9a94b907ed47.css; offset 309131; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-size-8,
+:where([data-codex-cu-scope]).cua-size-8 {width:calc(var(--spacing) * 8);height:calc(var(--spacing) * 8)}
+}
+
+/* cloud-auth-css-028; app-shared-9a94b907ed47.css; offset 309421; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-size-12,
+:where([data-codex-cu-scope]).cua-size-12 {width:calc(var(--spacing) * 12);height:calc(var(--spacing) * 12)}
+}
+
+/* cloud-auth-css-029; app-shared-9a94b907ed47.css; offset 309569; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-size-14,
+:where([data-codex-cu-scope]).cua-size-14 {width:calc(var(--spacing) * 14);height:calc(var(--spacing) * 14)}
+}
+
+/* cloud-auth-css-030; app-shared-9a94b907ed47.css; offset 310567; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-size-40,
+:where([data-codex-cu-scope]).cua-size-40 {width:calc(var(--spacing) * 40);height:calc(var(--spacing) * 40)}
+}
+
+/* cloud-auth-css-031; app-shared-9a94b907ed47.css; offset 310863; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-size-60,
+:where([data-codex-cu-scope]).cua-size-60 {width:calc(var(--spacing) * 60);height:calc(var(--spacing) * 60)}
+}
+
+/* cloud-auth-css-032; app-shared-9a94b907ed47.css; offset 312850; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-size-full,
+:where([data-codex-cu-scope]).cua-size-full {width:100%;height:100%}
+}
+
+/* cloud-auth-css-033; app-shared-9a94b907ed47.css; offset 324635; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-h-dvh,
+:where([data-codex-cu-scope]).cua-h-dvh {height:100dvh}
+}
+
+/* cloud-auth-css-034; app-shared-9a94b907ed47.css; offset 324682; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-h-full,
+:where([data-codex-cu-scope]).cua-h-full {height:100%}
+}
+
+/* cloud-auth-css-035; app-shared-9a94b907ed47.css; offset 351573; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-w-\[var\(--browser-auth-card-width\,var\(--container-lg\)\)\],
+:where([data-codex-cu-scope]).cua-w-\[var\(--browser-auth-card-width\,var\(--container-lg\)\)\] {width:var(--browser-auth-card-width,var(--container-lg))}
+}
+
+/* cloud-auth-css-036; app-shared-9a94b907ed47.css; offset 352187; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-w-full,
+:where([data-codex-cu-scope]).cua-w-full {width:100%}
+}
+
+/* cloud-auth-css-037; app-shared-9a94b907ed47.css; offset 362556; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-max-w-full,
+:where([data-codex-cu-scope]).cua-max-w-full {max-width:100%}
+}
+
+/* cloud-auth-css-038; app-shared-9a94b907ed47.css; offset 362583; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-max-w-lg,
+:where([data-codex-cu-scope]).cua-max-w-lg {max-width:var(--container-lg)}
+}
+
+/* cloud-auth-css-039; app-shared-9a94b907ed47.css; offset 362790; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-max-w-sm,
+:where([data-codex-cu-scope]).cua-max-w-sm {max-width:var(--container-sm)}
+}
+
+/* cloud-auth-css-040; app-shared-9a94b907ed47.css; offset 362830; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-max-w-xl,
+:where([data-codex-cu-scope]).cua-max-w-xl {max-width:var(--container-xl)}
+}
+
+/* cloud-auth-css-041; app-shared-9a94b907ed47.css; offset 363046; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-min-w-0,
+:where([data-codex-cu-scope]).cua-min-w-0 {min-width:0}
+}
+
+/* cloud-auth-css-042; app-shared-9a94b907ed47.css; offset 366491; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-flex-1,
+:where([data-codex-cu-scope]).cua-flex-1 {flex:1}
+}
+
+/* cloud-auth-css-043; app-shared-9a94b907ed47.css; offset 366841; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-shrink-0,
+:where([data-codex-cu-scope]).cua-shrink-0 {flex-shrink:0}
+}
+
+/* cloud-auth-css-044; app-shared-9a94b907ed47.css; offset 366897; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-flex-grow,
+:where([data-codex-cu-scope]).cua-flex-grow,
+:where([data-codex-cu-scope]) .cua-grow,
+:where([data-codex-cu-scope]).cua-grow {flex-grow:1}
+}
+
+/* cloud-auth-css-045; app-shared-9a94b907ed47.css; offset 376959; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-cursor-interaction,
+:where([data-codex-cu-scope]).cua-cursor-interaction {cursor:var(--cursor-interaction)}
+}
+
+/* cloud-auth-css-046; app-shared-9a94b907ed47.css; offset 390797; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-flex-col,
+:where([data-codex-cu-scope]).cua-flex-col {flex-direction:column}
+}
+
+/* cloud-auth-css-047; app-shared-9a94b907ed47.css; offset 390981; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-flex-wrap,
+:where([data-codex-cu-scope]).cua-flex-wrap {flex-wrap:wrap}
+}
+
+/* cloud-auth-css-048; app-shared-9a94b907ed47.css; offset 391332; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-items-center,
+:where([data-codex-cu-scope]).cua-items-center {align-items:center}
+}
+
+/* cloud-auth-css-049; app-shared-9a94b907ed47.css; offset 391610; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-justify-between,
+:where([data-codex-cu-scope]).cua-justify-between {justify-content:space-between}
+}
+
+/* cloud-auth-css-050; app-shared-9a94b907ed47.css; offset 391657; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-justify-center,
+:where([data-codex-cu-scope]).cua-justify-center {justify-content:center}
+}
+
+/* cloud-auth-css-051; app-shared-9a94b907ed47.css; offset 391696; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-justify-end,
+:where([data-codex-cu-scope]).cua-justify-end {justify-content:flex-end}
+}
+
+/* cloud-auth-css-052; app-shared-9a94b907ed47.css; offset 391734; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-justify-evenly,
+:where([data-codex-cu-scope]).cua-justify-evenly {justify-content:space-evenly}
+}
+
+/* cloud-auth-css-053; app-shared-9a94b907ed47.css; offset 392285; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-gap-0,
+:where([data-codex-cu-scope]).cua-gap-0 {gap:0}
+}
+
+/* cloud-auth-css-054; app-shared-9a94b907ed47.css; offset 392405; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-gap-1,
+:where([data-codex-cu-scope]).cua-gap-1 {gap:var(--spacing)}
+}
+
+/* cloud-auth-css-055; app-shared-9a94b907ed47.css; offset 392431; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-gap-1\.5,
+:where([data-codex-cu-scope]).cua-gap-1\.5 {gap:calc(var(--spacing) * 1.5)}
+}
+
+/* cloud-auth-css-056; app-shared-9a94b907ed47.css; offset 392558; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-gap-2,
+:where([data-codex-cu-scope]).cua-gap-2 {gap:calc(var(--spacing) * 2)}
+}
+
+/* cloud-auth-css-057; app-shared-9a94b907ed47.css; offset 392688; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-gap-3,
+:where([data-codex-cu-scope]).cua-gap-3 {gap:calc(var(--spacing) * 3)}
+}
+
+/* cloud-auth-css-058; app-shared-9a94b907ed47.css; offset 392813; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-gap-4,
+:where([data-codex-cu-scope]).cua-gap-4 {gap:calc(var(--spacing) * 4)}
+}
+
+/* cloud-auth-css-059; app-shared-9a94b907ed47.css; offset 392897; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-gap-5,
+:where([data-codex-cu-scope]).cua-gap-5 {gap:calc(var(--spacing) * 5)}
+}
+
+/* cloud-auth-css-060; app-shared-9a94b907ed47.css; offset 392974; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-gap-6,
+:where([data-codex-cu-scope]).cua-gap-6 {gap:calc(var(--spacing) * 6)}
+}
+
+/* cloud-auth-css-061; app-shared-9a94b907ed47.css; offset 393046; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-gap-8,
+:where([data-codex-cu-scope]).cua-gap-8 {gap:calc(var(--spacing) * 8)}
+}
+
+/* cloud-auth-css-062; app-shared-9a94b907ed47.css; offset 399211; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) :where(.cua-divide-y>:not(:last-child)),
+:where([data-codex-cu-scope]):where(.cua-divide-y>:not(:last-child)) {--cua-tw-divide-y-reverse:0;border-bottom-style:var(--cua-tw-border-style);border-top-style:var(--cua-tw-border-style);border-top-width:calc(1px * var(--cua-tw-divide-y-reverse));border-bottom-width:calc(1px * calc(1 - var(--cua-tw-divide-y-reverse)))}
+}
+
+/* cloud-auth-css-063; app-shared-9a94b907ed47.css; offset 400224; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) :where(.cua-divide-border>:not(:last-child)),
+:where([data-codex-cu-scope]):where(.cua-divide-border>:not(:last-child)) {border-color:var(--color-border)}
+}
+
+/* cloud-auth-css-064; app-shared-9a94b907ed47.css; offset 400812; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-self-center,
+:where([data-codex-cu-scope]).cua-self-center {align-self:center}
+}
+
+/* cloud-auth-css-065; app-shared-9a94b907ed47.css; offset 401386; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-overflow-hidden,
+:where([data-codex-cu-scope]).cua-overflow-hidden {overflow:hidden}
+}
+
+/* cloud-auth-css-066; app-shared-9a94b907ed47.css; offset 401565; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-overflow-x-hidden,
+:where([data-codex-cu-scope]).cua-overflow-x-hidden {overflow-x:hidden}
+}
+
+/* cloud-auth-css-067; app-shared-9a94b907ed47.css; offset 401602; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-overflow-y-auto,
+:where([data-codex-cu-scope]).cua-overflow-y-auto {overflow-y:auto}
+}
+
+/* cloud-auth-css-068; app-shared-9a94b907ed47.css; offset 401793; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-overscroll-contain,
+:where([data-codex-cu-scope]).cua-overscroll-contain {overscroll-behavior:contain}
+}
+
+/* cloud-auth-css-069; app-shared-9a94b907ed47.css; offset 402953; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-rounded-2xs,
+:where([data-codex-cu-scope]).cua-rounded-2xs {border-radius:var(--radius-2xs)}
+}
+
+/* cloud-auth-css-070; app-shared-9a94b907ed47.css; offset 402998; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-rounded-3xl,
+:where([data-codex-cu-scope]).cua-rounded-3xl {border-radius:var(--radius-3xl)}
+}
+
+/* cloud-auth-css-071; app-shared-9a94b907ed47.css; offset 405681; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-rounded-full,
+:where([data-codex-cu-scope]).cua-rounded-full {border-radius:var(--radius-full)}
+}
+
+/* cloud-auth-css-072; app-shared-9a94b907ed47.css; offset 406252; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-rounded-xl,
+:where([data-codex-cu-scope]).cua-rounded-xl {border-radius:var(--radius-xl)}
+}
+
+/* cloud-auth-css-073; app-shared-9a94b907ed47.css; offset 412002; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-border,
+:where([data-codex-cu-scope]).cua-border {border-style:var(--cua-tw-border-style);border-width:1px}
+}
+
+/* cloud-auth-css-074; app-shared-9a94b907ed47.css; offset 414242; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-border-t,
+:where([data-codex-cu-scope]).cua-border-t {border-top-style:var(--cua-tw-border-style);border-top-width:1px}
+}
+
+/* cloud-auth-css-075; app-shared-9a94b907ed47.css; offset 415042; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-border-b,
+:where([data-codex-cu-scope]).cua-border-b {border-bottom-style:var(--cua-tw-border-style);border-bottom-width:1px}
+}
+
+/* cloud-auth-css-076; app-shared-9a94b907ed47.css; offset 426033; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-border-default,
+:where([data-codex-cu-scope]).cua-border-default {border-color:var(--color-border)}
+}
+
+/* cloud-auth-css-077; app-shared-9a94b907ed47.css; offset 460800; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-bg-border,
+:where([data-codex-cu-scope]).cua-bg-border {background-color:var(--color-border)}
+}
+
+/* cloud-auth-css-078; app-shared-9a94b907ed47.css; offset 473339; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-bg-surface,
+:where([data-codex-cu-scope]).cua-bg-surface {background-color:var(--color-surface)}
+}
+
+/* cloud-auth-css-079; app-shared-9a94b907ed47.css; offset 473581; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-bg-surface-elevated-secondary,
+:where([data-codex-cu-scope]).cua-bg-surface-elevated-secondary,
+:where([data-codex-cu-scope]) .cua-bg-surface-elevated-secondary\/50,
+:where([data-codex-cu-scope]).cua-bg-surface-elevated-secondary\/50 {background-color:var(--color-surface-elevated-secondary)}
+}
+
+/* cloud-auth-css-080; app-shared-9a94b907ed47.css; offset 487612; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-bg-white,
+:where([data-codex-cu-scope]).cua-bg-white {background-color:var(--color-white)}
+}
+
+/* cloud-auth-css-081; app-shared-9a94b907ed47.css; offset 517309; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-object-contain,
+:where([data-codex-cu-scope]).cua-object-contain {object-fit:contain}
+}
+
+/* cloud-auth-css-082; app-shared-9a94b907ed47.css; offset 518095; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-p-1\.5,
+:where([data-codex-cu-scope]).cua-p-1\.5 {padding:calc(var(--spacing) * 1.5)}
+}
+
+/* cloud-auth-css-083; app-shared-9a94b907ed47.css; offset 518257; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-p-4,
+:where([data-codex-cu-scope]).cua-p-4 {padding:calc(var(--spacing) * 4)}
+}
+
+/* cloud-auth-css-084; app-shared-9a94b907ed47.css; offset 521130; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-px-3,
+:where([data-codex-cu-scope]).cua-px-3 {padding-inline:calc(var(--spacing) * 3)}
+}
+
+/* cloud-auth-css-085; app-shared-9a94b907ed47.css; offset 521227; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-px-4,
+:where([data-codex-cu-scope]).cua-px-4 {padding-inline:calc(var(--spacing) * 4)}
+}
+
+/* cloud-auth-css-086; app-shared-9a94b907ed47.css; offset 521578; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-px-8,
+:where([data-codex-cu-scope]).cua-px-8 {padding-inline:calc(var(--spacing) * 8)}
+}
+
+/* cloud-auth-css-087; app-shared-9a94b907ed47.css; offset 524400; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-py-2,
+:where([data-codex-cu-scope]).cua-py-2 {padding-block:calc(var(--spacing) * 2)}
+}
+
+/* cloud-auth-css-088; app-shared-9a94b907ed47.css; offset 524502; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-py-2\.5,
+:where([data-codex-cu-scope]).cua-py-2\.5 {padding-block:calc(var(--spacing) * 2.5)}
+}
+
+/* cloud-auth-css-089; app-shared-9a94b907ed47.css; offset 524552; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-py-3,
+:where([data-codex-cu-scope]).cua-py-3 {padding-block:calc(var(--spacing) * 3)}
+}
+
+/* cloud-auth-css-090; app-shared-9a94b907ed47.css; offset 524756; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-py-4,
+:where([data-codex-cu-scope]).cua-py-4 {padding-block:calc(var(--spacing) * 4)}
+}
+
+/* cloud-auth-css-091; app-shared-9a94b907ed47.css; offset 524846; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-py-6,
+:where([data-codex-cu-scope]).cua-py-6 {padding-block:calc(var(--spacing) * 6)}
+}
+
+/* cloud-auth-css-092; app-shared-9a94b907ed47.css; offset 525076; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-py-10,
+:where([data-codex-cu-scope]).cua-py-10 {padding-block:calc(var(--spacing) * 10)}
+}
+
+/* cloud-auth-css-093; app-shared-9a94b907ed47.css; offset 538714; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-text-center,
+:where([data-codex-cu-scope]).cua-text-center {text-align:center}
+}
+
+/* cloud-auth-css-094; app-shared-9a94b907ed47.css; offset 538826; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-text-start,
+:where([data-codex-cu-scope]).cua-text-start {text-align:start}
+}
+
+/* cloud-auth-css-095; app-shared-9a94b907ed47.css; offset 544458; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-text-base,
+:where([data-codex-cu-scope]).cua-text-base {font-size:var(--text-base);line-height:var(--cua-tw-leading,var(--text-base--line-height))}
+}
+
+/* cloud-auth-css-096; app-shared-9a94b907ed47.css; offset 544676; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-text-lg,
+:where([data-codex-cu-scope]).cua-text-lg {font-size:var(--text-lg);line-height:var(--cua-tw-leading,var(--text-lg--line-height))}
+}
+
+/* cloud-auth-css-097; app-shared-9a94b907ed47.css; offset 544768; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-text-sm,
+:where([data-codex-cu-scope]).cua-text-sm {font-size:var(--text-sm);line-height:var(--cua-tw-leading,var(--text-sm--line-height))}
+}
+
+/* cloud-auth-css-098; app-shared-9a94b907ed47.css; offset 545366; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-text-xs,
+:where([data-codex-cu-scope]).cua-text-xs {font-size:var(--text-xs);line-height:var(--cua-tw-leading,var(--text-xs--line-height))}
+}
+
+/* cloud-auth-css-099; app-shared-9a94b907ed47.css; offset 548199; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-text-heading-app,
+:where([data-codex-cu-scope]).cua-text-heading-app {font-size:var(--text-heading-app)}
+}
+
+/* cloud-auth-css-100; app-shared-9a94b907ed47.css; offset 549999; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-leading-4\.5,
+:where([data-codex-cu-scope]).cua-leading-4\.5 {--cua-tw-leading:calc(var(--spacing) * 4.5);line-height:calc(var(--spacing) * 4.5)}
+}
+
+/* cloud-auth-css-101; app-shared-9a94b907ed47.css; offset 550092; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-leading-5,
+:where([data-codex-cu-scope]).cua-leading-5 {--cua-tw-leading:calc(var(--spacing) * 5);line-height:calc(var(--spacing) * 5)}
+}
+
+/* cloud-auth-css-102; app-shared-9a94b907ed47.css; offset 550475; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-leading-6,
+:where([data-codex-cu-scope]).cua-leading-6 {--cua-tw-leading:calc(var(--spacing) * 6);line-height:calc(var(--spacing) * 6)}
+}
+
+/* cloud-auth-css-103; app-shared-9a94b907ed47.css; offset 553470; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-leading-normal,
+:where([data-codex-cu-scope]).cua-leading-normal {--cua-tw-leading:var(--leading-normal);line-height:var(--leading-normal)}
+}
+
+/* cloud-auth-css-104; app-shared-9a94b907ed47.css; offset 553722; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-leading-tight,
+:where([data-codex-cu-scope]).cua-leading-tight {--cua-tw-leading:var(--leading-tight);line-height:var(--leading-tight)}
+}
+
+/* cloud-auth-css-105; app-shared-9a94b907ed47.css; offset 554801; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-font-medium,
+:where([data-codex-cu-scope]).cua-font-medium {--cua-tw-font-weight:var(--font-weight-medium);font-weight:var(--font-weight-medium)}
+}
+
+/* cloud-auth-css-106; app-shared-9a94b907ed47.css; offset 555011; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-font-normal,
+:where([data-codex-cu-scope]).cua-font-normal {--cua-tw-font-weight:var(--font-weight-normal);font-weight:var(--font-weight-normal)}
+}
+
+/* cloud-auth-css-107; app-shared-9a94b907ed47.css; offset 557755; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-tracking-normal,
+:where([data-codex-cu-scope]).cua-tracking-normal {--cua-tw-tracking:var(--tracking-normal);letter-spacing:var(--tracking-normal)}
+}
+
+/* cloud-auth-css-108; app-shared-9a94b907ed47.css; offset 558288; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-break-words,
+:where([data-codex-cu-scope]).cua-break-words {overflow-wrap:break-word}
+}
+
+/* cloud-auth-css-109; app-shared-9a94b907ed47.css; offset 558406; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-break-all,
+:where([data-codex-cu-scope]).cua-break-all {word-break:break-all}
+}
+
+/* cloud-auth-css-110; app-shared-9a94b907ed47.css; offset 558593; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-whitespace-normal,
+:where([data-codex-cu-scope]).cua-whitespace-normal {white-space:normal}
+}
+
+/* cloud-auth-css-111; app-shared-9a94b907ed47.css; offset 573687; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-text-danger,
+:where([data-codex-cu-scope]).cua-text-danger {color:var(--color-text-danger)}
+}
+
+/* cloud-auth-css-112; app-shared-9a94b907ed47.css; offset 573847; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-text-default,
+:where([data-codex-cu-scope]).cua-text-default {color:var(--color-text)}
+}
+
+/* cloud-auth-css-113; app-shared-9a94b907ed47.css; offset 575258; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-text-info,
+:where([data-codex-cu-scope]).cua-text-info {color:var(--color-text-info)}
+}
+
+/* cloud-auth-css-114; app-shared-9a94b907ed47.css; offset 577160; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-text-secondary,
+:where([data-codex-cu-scope]).cua-text-secondary {color:var(--color-text-secondary)}
+}
+
+/* cloud-auth-css-115; app-shared-9a94b907ed47.css; offset 577543; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-text-success,
+:where([data-codex-cu-scope]).cua-text-success {color:var(--color-text-success)}
+}
+
+/* cloud-auth-css-116; app-shared-9a94b907ed47.css; offset 585295; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-opacity-0,
+:where([data-codex-cu-scope]).cua-opacity-0 {opacity:0}
+}
+
+/* cloud-auth-css-117; app-shared-9a94b907ed47.css; offset 585680; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-opacity-100,
+:where([data-codex-cu-scope]).cua-opacity-100 {opacity:1}
+}
+
+/* cloud-auth-css-118; app-shared-9a94b907ed47.css; offset 656332; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-select-none,
+:where([data-codex-cu-scope]).cua-select-none {-webkit-user-select:none;user-select:none}
+}
+
+/* cloud-auth-css-119; app-shared-9a94b907ed47.css; offset 827420; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-last\:border-b-0:last-child,
+:where([data-codex-cu-scope]).cua-last\:border-b-0:last-child {border-bottom-style:var(--cua-tw-border-style);border-bottom-width:0}
+}
+
+/* cloud-auth-css-120; app-shared-9a94b907ed47.css; offset 860401; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-focus\:outline-none:focus,
+:where([data-codex-cu-scope]).cua-focus\:outline-none:focus {--cua-tw-outline-style:none;outline-style:none}
+}
+
+/* cloud-auth-css-121; app-shared-9a94b907ed47.css; offset 884234; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-disabled\:cursor-not-allowed:disabled,
+:where([data-codex-cu-scope]).cua-disabled\:cursor-not-allowed:disabled {cursor:not-allowed}
+}
+
+/* cloud-auth-css-122; app-shared-9a94b907ed47.css; offset 885628; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-disabled\:opacity-40:disabled,
+:where([data-codex-cu-scope]).cua-disabled\:opacity-40:disabled {opacity:.4}
+}
+
+/* cloud-auth-css-123; app-shared-9a94b907ed47.css; offset 1162661; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-\[\&_\.min-w-0\]\:text-end .cua-min-w-0,
+:where([data-codex-cu-scope]).cua-\[\&_\.min-w-0\]\:text-end .cua-min-w-0 {text-align:end}
+}
+
+/* cloud-auth-css-124; app-shared-9a94b907ed47.css; offset 1213217; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) .cua-overflow-auto,
+:where([data-codex-cu-scope]).cua-overflow-auto,
+:where([data-codex-cu-scope]) .cua-overflow-scroll,
+:where([data-codex-cu-scope]).cua-overflow-scroll,
+:where([data-codex-cu-scope]) .cua-overflow-x-auto,
+:where([data-codex-cu-scope]).cua-overflow-x-auto,
+:where([data-codex-cu-scope]) .cua-overflow-y-auto,
+:where([data-codex-cu-scope]).cua-overflow-y-auto,
+:where([data-codex-cu-scope]) .cua-overflow-x-scroll,
+:where([data-codex-cu-scope]).cua-overflow-x-scroll,
+:where([data-codex-cu-scope]) .cua-overflow-y-scroll,
+:where([data-codex-cu-scope]).cua-overflow-y-scroll,
+:where([data-codex-cu-scope]) :where(.cua-messaging-root) .cua-messages-scroll,
+:where([data-codex-cu-scope]):where(.cua-messaging-root) .cua-messages-scroll {scrollbar-color:var(--color-border) transparent}
+}
+
+/* cloud-auth-css-125; app-shared-9a94b907ed47.css; offset 1213410; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@layer opencu-cloud-auth-utilities {
+  :where([data-codex-cu-scope]) :is(.cua-overflow-auto,.cua-overflow-scroll,.cua-overflow-x-auto,.cua-overflow-y-auto,.cua-overflow-x-scroll,.cua-overflow-y-scroll,:where(.cua-messaging-root) .cua-messages-scroll):hover,
+:where([data-codex-cu-scope]):is(.cua-overflow-auto,.cua-overflow-scroll,.cua-overflow-x-auto,.cua-overflow-y-auto,.cua-overflow-x-scroll,.cua-overflow-y-scroll,:where(.cua-messaging-root) .cua-messages-scroll):hover,
+:where([data-codex-cu-scope]) :is(.cua-overflow-auto,.cua-overflow-scroll,.cua-overflow-x-auto,.cua-overflow-y-auto,.cua-overflow-x-scroll,.cua-overflow-y-scroll,:where(.cua-messaging-root) .cua-messages-scroll):active,
+:where([data-codex-cu-scope]):is(.cua-overflow-auto,.cua-overflow-scroll,.cua-overflow-x-auto,.cua-overflow-y-auto,.cua-overflow-x-scroll,.cua-overflow-y-scroll,:where(.cua-messaging-root) .cua-messages-scroll):active {scrollbar-color:var(--color-border-strong) transparent}
+}
+
+/* cloud-auth-css-126; app-shared-9a94b907ed47.css; offset 1261180; SHA-256 69f929f71947824fed18365d54c8aa0c975a856649339e585a50f6f547e215d7 */
+@supports (corner-shape:superellipse(1.5)) {
+  :where([data-codex-cu-scope]) .cua-rounded-button-action,
+:where([data-codex-cu-scope]).cua-rounded-button-action,
+:where([data-codex-cu-scope]) .cua-rounded-button-toolbar,
+:where([data-codex-cu-scope]).cua-rounded-button-toolbar,
+:where([data-codex-cu-scope]) .cua-rounded-md,
+:where([data-codex-cu-scope]).cua-rounded-md,
+:where([data-codex-cu-scope]) .cua-rounded-lg,
+:where([data-codex-cu-scope]).cua-rounded-lg,
+:where([data-codex-cu-scope]) .cua-rounded-xl,
+:where([data-codex-cu-scope]).cua-rounded-xl,
+:where([data-codex-cu-scope]) .cua-rounded-2xl,
+:where([data-codex-cu-scope]).cua-rounded-2xl,
+:where([data-codex-cu-scope]) .cua-rounded-3xl,
+:where([data-codex-cu-scope]).cua-rounded-3xl,
+:where([data-codex-cu-scope]) .cua-rounded-4xl,
+:where([data-codex-cu-scope]).cua-rounded-4xl {corner-shape:var(--codex-corner-shape)}
+}
+
+/* cloud-auth-css-127; app-initial-99e8b4b455fa.css; offset 30441; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_inputGroup_1jhuu_1>:first-child,
+:where([data-codex-cu-scope]).cua-_inputGroup_1jhuu_1>:first-child {border-top-left-radius:calc(var(--radius-xl) - 1px);border-top-right-radius:calc(var(--radius-xl) - 1px)}
+}
+
+/* cloud-auth-css-128; app-initial-99e8b4b455fa.css; offset 30580; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_inputGroup_1jhuu_1>:last-child,
+:where([data-codex-cu-scope]).cua-_inputGroup_1jhuu_1>:last-child {border-bottom-left-radius:calc(var(--radius-xl) - 1px);border-bottom-right-radius:calc(var(--radius-xl) - 1px)}
+}
+
+/* cloud-auth-css-129; app-initial-99e8b4b455fa.css; offset 33583; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) :where(.cua-messaging-root) .cua-sr-only,
+:where([data-codex-cu-scope]):where(.cua-messaging-root) .cua-sr-only {clip:rect(0, 0, 0, 0);white-space:nowrap;border:0;width:1px;height:1px;padding:0;position:absolute;overflow:hidden}
+}
+
+/* cloud-auth-css-130; app-initial-99e8b4b455fa.css; offset 178857; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) :where(.cua-_Favicon_fkymq_2),
+:where([data-codex-cu-scope]):where(.cua-_Favicon_fkymq_2) {position:relative}
+}
+
+/* cloud-auth-css-131; app-initial-99e8b4b455fa.css; offset 193587; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_MessageCorners_9q659_2,
+:where([data-codex-cu-scope]).cua-_MessageCorners_9q659_2,
+:where([data-codex-cu-scope]) .cua-_Material_9q659_2:is([data-avatar-overlay-material-variant=reaction-picker],[data-avatar-overlay-material-variant=transcript-message]),
+:where([data-codex-cu-scope]).cua-_Material_9q659_2:is([data-avatar-overlay-material-variant=reaction-picker],[data-avatar-overlay-material-variant=transcript-message]) {--avatar-overlay-native-corner-radius:15px;border-radius:var(--avatar-overlay-native-corner-radius)}
+}
+
+/* cloud-auth-css-132; app-initial-99e8b4b455fa.css; offset 193848; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2,
+:where([data-codex-cu-scope]).cua-_Material_9q659_2 {-owl-native-material:var(--avatar-overlay-native-material,glass);--owl-native-glass-adaptive-appearance:off;--owl-native-glass-variant:regular;--avatar-overlay-css-material-elevation:0 0 transparent;border:1px solid var(--color-border)}
+}
+
+/* cloud-auth-css-133; app-initial-99e8b4b455fa.css; offset 194149; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  @supports (color:color-mix(in lab, red, red)) {
+    :where([data-codex-cu-scope]) .cua-_Material_9q659_2,
+:where([data-codex-cu-scope]).cua-_Material_9q659_2 {border:1px solid color-mix(in srgb, var(--color-border) 60%, transparent)}
+  }
+}
+
+/* cloud-auth-css-134; app-initial-99e8b4b455fa.css; offset 194243; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2,
+:where([data-codex-cu-scope]).cua-_Material_9q659_2 {background:var(--avatar-overlay-material-background,#ffffffe6);box-shadow:inset 0 1px 1px #fff9, inset 0 -1px 2px #fff3, var(--avatar-overlay-css-material-elevation);will-change:transform}
+}
+
+/* cloud-auth-css-135; app-initial-99e8b4b455fa.css; offset 194496; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  @media (prefers-reduced-motion:no-preference) {
+    :where([data-codex-cu-scope]) [data-orb-message] .cua-_Material_9q659_2,
+:where([data-codex-cu-scope])[data-orb-message] .cua-_Material_9q659_2 {transition:background-color .1s var(--ease-basic), box-shadow .1s var(--ease-basic)}
+  }
+}
+
+/* cloud-auth-css-136; app-initial-99e8b4b455fa.css; offset 194619; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=reaction-picker],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=reaction-picker] {outline-style:var(--cua-tw-outline-style);outline-offset:calc(1px * -1);outline-width:1px;outline-color:var(--color-border)}
+}
+
+/* cloud-auth-css-137; app-initial-99e8b4b455fa.css; offset 194858; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  @supports (color:color-mix(in lab, red, red)) {
+    :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=reaction-picker],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=reaction-picker] {outline-color:color-mix(in oklab, var(--color-border) 60%, transparent)}
+  }
+}
+
+/* cloud-auth-css-138; app-initial-99e8b4b455fa.css; offset 195004; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=reaction-picker],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=reaction-picker] {--message-bubble-radius:calc(var(--avatar-overlay-native-corner-radius) - var(--spacing));gap:var(--spacing);padding:var(--spacing);--avatar-overlay-css-material-elevation:var(--shadow-lg);border:0;flex-direction:column;font-size:16px;display:flex}
+}
+
+/* cloud-auth-css-139; app-initial-99e8b4b455fa.css; offset 195325; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=reaction-badge],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=reaction-badge] {width:24px;height:24px;font-size:var(--text-xs);--avatar-overlay-css-material-elevation:var(--shadow-sm);border:0;border-radius:50%;justify-content:center;align-items:center;display:flex}
+}
+
+/* cloud-auth-css-140; app-initial-99e8b4b455fa.css; offset 195584; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-orb],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-orb] {border-radius:9999px;width:40px;height:40px}
+}
+
+/* cloud-auth-css-141; app-initial-99e8b4b455fa.css; offset 195700; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-voice],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-voice] {border-radius:20px;width:100%;height:40px}
+}
+
+/* cloud-auth-css-142; app-initial-99e8b4b455fa.css; offset 195816; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-orb],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-orb] {--quick-chat-compact-background-size:var(--quick-chat-badge-background-size)}
+}
+
+/* cloud-auth-css-143; app-initial-99e8b4b455fa.css; offset 195965; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-voice],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-voice] {--quick-chat-compact-background-size:var(--quick-chat-voice-background-size)}
+}
+
+/* cloud-auth-css-144; app-initial-99e8b4b455fa.css; offset 196116; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-quick-chat-resizable-background=true][data-avatar-overlay-material-variant=quick-chat-orb],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-quick-chat-resizable-background=true][data-avatar-overlay-material-variant=quick-chat-orb],
+:where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-quick-chat-resizable-background=true][data-avatar-overlay-material-variant=quick-chat-voice],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-quick-chat-resizable-background=true][data-avatar-overlay-material-variant=quick-chat-voice] {width:calc(var(--quick-chat-compact-background-size) * 1px);height:calc(var(--quick-chat-compact-background-size) * 1px);margin:calc((var(--quick-chat-compact-control-size) - var(--quick-chat-compact-background-size)) * .5px)}
+}
+
+/* cloud-auth-css-145; app-initial-99e8b4b455fa.css; offset 196604; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=activity],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=activity] {--avatar-overlay-native-corner-radius:32px;border-radius:var(--avatar-overlay-native-corner-radius);border-width:0}
+}
+
+/* cloud-auth-css-146; app-initial-99e8b4b455fa.css; offset 196785; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=activity]:after,
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=activity]:after {content:"";pointer-events:none;border:1px solid;border-color:inherit;border-radius:inherit;position:absolute;inset:0}
+}
+
+/* cloud-auth-css-147; app-initial-99e8b4b455fa.css; offset 196974; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=activity-dismiss],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=activity-dismiss] {--avatar-overlay-css-material-elevation:var(--shadow-sm);border:0}
+}
+
+/* cloud-auth-css-148; app-initial-99e8b4b455fa.css; offset 197114; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=activity-dismiss]:has(>button:enabled:active:hover),
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=activity-dismiss]:has(>button:enabled:active:hover) {--color-background-primary-ghost-hover:var(--color-background-primary-ghost-active)}
+}
+
+/* cloud-auth-css-149; app-initial-99e8b4b455fa.css; offset 197351; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  @media (prefers-reduced-transparency:reduce) {
+    :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=activity-dismiss],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=activity-dismiss] {--avatar-overlay-material-background:var(--color-surface);-webkit-backdrop-filter:none;backdrop-filter:none}
+  }
+}
+
+/* cloud-auth-css-150; app-initial-99e8b4b455fa.css; offset 197534; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=compact-micro],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=compact-micro] {--avatar-overlay-native-corner-radius:14.5px}
+}
+
+/* cloud-auth-css-151; app-initial-99e8b4b455fa.css; offset 197650; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=compact-small],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=compact-small] {--avatar-overlay-native-corner-radius:12px}
+}
+
+/* cloud-auth-css-152; app-initial-99e8b4b455fa.css; offset 197764; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat],
+:where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-stash],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-stash],
+:where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-stash-extension],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-stash-extension],
+:where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-caption],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-caption],
+:where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-caption-connector],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-caption-connector],
+:where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-native-surface-id=mascot-badge],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-native-surface-id=mascot-badge],
+:where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-native-surface-id=voice-controls],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-native-surface-id=voice-controls],
+:where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-native-surface-id=voice-microphone],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-native-surface-id=voice-microphone],
+:where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-native-surface-id=voice-output],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-native-surface-id=voice-output] {--owl-native-glass-variant:system}
+}
+
+/* cloud-auth-css-153; app-initial-99e8b4b455fa.css; offset 198476; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-stash-extension],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-stash-extension] {--avatar-overlay-native-corner-radius:12px;border-radius:var(--avatar-overlay-native-corner-radius)}
+}
+
+/* cloud-auth-css-154; app-initial-99e8b4b455fa.css; offset 198660; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=notification],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=notification] {z-index:1;border-radius:18px;position:relative;overflow:hidden}
+}
+
+/* cloud-auth-css-155; app-initial-99e8b4b455fa.css; offset 198793; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=tray-caption],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=tray-caption] {z-index:1;border-radius:18px;padding:8px 12px;position:relative;overflow:hidden}
+}
+
+/* cloud-auth-css-156; app-initial-99e8b4b455fa.css; offset 198943; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=speech-caption],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=speech-caption] {border-radius:15px;min-height:30px;padding:8px 12px;position:relative}
+}
+
+/* cloud-auth-css-157; app-initial-99e8b4b455fa.css; offset 199085; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=speech-caption][data-avatar-overlay-caption-typing=true],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=speech-caption][data-avatar-overlay-caption-typing=true] {justify-content:center;align-items:center;padding-inline:0;display:flex}
+}
+
+/* cloud-auth-css-158; app-initial-99e8b4b455fa.css; offset 199270; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=speech-caption-connector],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=speech-caption-connector] {bottom:0;left:var(--avatar-overlay-caption-tail-left,16px);border:0;border-radius:5px;width:10px;height:10px;display:none;position:absolute}
+}
+
+/* cloud-auth-css-159; app-initial-99e8b4b455fa.css; offset 199492; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=speech-caption-connector][data-avatar-overlay-caption-pointed-part=base],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=speech-caption-connector][data-avatar-overlay-caption-pointed-part=base] {bottom:2px}
+}
+
+/* cloud-auth-css-160; app-initial-99e8b4b455fa.css; offset 199632; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=speech-caption-connector][data-avatar-overlay-caption-pointed-part=tip],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=speech-caption-connector][data-avatar-overlay-caption-pointed-part=tip] {left:calc(var(--avatar-overlay-caption-tail-left,16px) + 3px);border-radius:2px;width:4px;height:4px}
+}
+
+/* cloud-auth-css-161; app-initial-99e8b4b455fa.css; offset 199861; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=speech-caption-connector][data-avatar-overlay-caption-connector-direction=up],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=speech-caption-connector][data-avatar-overlay-caption-connector-direction=up] {top:0;bottom:auto}
+}
+
+/* cloud-auth-css-162; app-initial-99e8b4b455fa.css; offset 200013; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=speech-caption-connector][data-avatar-overlay-caption-connector-direction=up][data-avatar-overlay-caption-pointed-part=base],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=speech-caption-connector][data-avatar-overlay-caption-connector-direction=up][data-avatar-overlay-caption-pointed-part=base] {top:2px}
+}
+
+/* cloud-auth-css-163; app-initial-99e8b4b455fa.css; offset 200202; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-chip],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-chip] {--owl-native-glass-variant:system;border-radius:var(--radius-full);border:0;width:fit-content;max-width:100%;display:flex}
+}
+
+/* cloud-auth-css-164; app-initial-99e8b4b455fa.css; offset 200397; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-card],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-card] {--owl-native-glass-variant:system;min-width:0;max-height:calc(var(--mini-transcript-max-height,100dvh) - var(--overflow-fade-top,0px));overscroll-behavior:contain;border-radius:var(--radius-4xl-base);border:0;flex-direction:column;display:flex;overflow:auto}
+}
+
+/* cloud-auth-css-165; app-initial-99e8b4b455fa.css; offset 200728; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message] {--avatar-overlay-css-material-elevation:var(--shadow-lg);--owl-native-glass-variant:system;gap:var(--spacing);width:fit-content;max-width:80%;min-height:calc(var(--spacing) * 8);border-width:0;flex-direction:column;align-items:stretch;padding:8px 11px;display:flex}
+}
+
+/* cloud-auth-css-166; app-initial-99e8b4b455fa.css; offset 201069; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) [data-orb-message]>.cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message],
+:where([data-codex-cu-scope])[data-orb-message]>.cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message] {max-width:100%}
+}
+
+/* cloud-auth-css-167; app-initial-99e8b4b455fa.css; offset 201179; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message]:has([data-markdown-copy=code-block],[data-markdown-table],[data-oai-writing-block-surface]),
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message]:has([data-markdown-copy=code-block],[data-markdown-table],[data-oai-writing-block-surface]) {width:100%}
+}
+
+/* cloud-auth-css-168; app-initial-99e8b4b455fa.css; offset 201358; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message]:not(:has([data-orbit-message-parts])),
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message]:not(:has([data-orbit-message-parts])) {background:0 0}
+}
+
+/* cloud-auth-css-169; app-initial-99e8b4b455fa.css; offset 201487; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message]:not(:has([data-orbit-message-parts])):before,
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message]:not(:has([data-orbit-message-parts])):before {content:"";z-index:-1;border-radius:inherit;pointer-events:none;background:var(--avatar-overlay-material-background,#ffffffe6);position:absolute;inset:0}
+}
+
+/* cloud-auth-css-170; app-initial-99e8b4b455fa.css; offset 201761; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message]:not(:has([data-orbit-message-parts])):before:where(),
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message]:not(:has([data-orbit-message-parts])):before:where() {background:var(--avatar-overlay-material-background,#202020e6)}
+}
+
+/* cloud-auth-css-171; app-initial-99e8b4b455fa.css; offset 201992; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  @container style(--theme-variant:dark) {
+    :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message]:not(:has([data-orbit-message-parts])):before:where(),
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message]:not(:has([data-orbit-message-parts])):before:where() {background:var(--avatar-overlay-material-background,#202020e6)}
+  }
+}
+
+/* cloud-auth-css-172; app-initial-99e8b4b455fa.css; offset 202215; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  @media (forced-colors:active) {
+    :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message]:not(:has([data-orbit-message-parts])):before,
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message]:not(:has([data-orbit-message-parts])):before {background:canvas}
+  }
+}
+
+/* cloud-auth-css-173; app-initial-99e8b4b455fa.css; offset 202355; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message][data-transcript-role]:has([data-orbit-message-parts]),
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message][data-transcript-role]:has([data-orbit-message-parts]) {-owl-native-material:none;box-shadow:none;-webkit-backdrop-filter:none;background:0 0;border-radius:0;padding:0}
+}
+
+/* cloud-auth-css-174; app-initial-99e8b4b455fa.css; offset 202597; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message][data-transcript-role=user],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=transcript-message][data-transcript-role=user] {--avatar-overlay-message-tint:rgb(from var(--avatar-overlay-message-glass-color) r g b / alpha);--owl-native-tint-color:var(--avatar-overlay-message-tint);--avatar-overlay-material-background:linear-gradient(var(--avatar-overlay-message-tint), var(--avatar-overlay-message-tint)), var(--color-surface)}
+}
+
+/* cloud-auth-css-175; app-initial-99e8b4b455fa.css; offset 203002; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=reaction-badge][data-transcript-role=user],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=reaction-badge][data-transcript-role=user] {-owl-native-material:none;background:var(--color-surface);-webkit-backdrop-filter:none;backdrop-filter:none}
+}
+
+/* cloud-auth-css-176; app-initial-99e8b4b455fa.css; offset 203239; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  @media (forced-colors:active) {
+    :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=reaction-badge][data-transcript-role=user],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=reaction-badge][data-transcript-role=user] {background:canvas}
+  }
+}
+
+/* cloud-auth-css-177; app-initial-99e8b4b455fa.css; offset 203357; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-native-surface-id=realtime-caption],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-native-surface-id=realtime-caption] {--avatar-overlay-native-corner-radius:24px;z-index:1;border-radius:24px;align-items:flex-start;width:100%;min-width:188px;min-height:68px;padding:10px 12px;display:flex;position:relative}
+}
+
+/* cloud-auth-css-178; app-initial-99e8b4b455fa.css; offset 203619; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-caption],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-caption] {--avatar-overlay-native-corner-radius:16px;border-radius:var(--avatar-overlay-native-corner-radius);height:100%;min-height:0;padding-block:11px}
+}
+
+/* cloud-auth-css-179; app-initial-99e8b4b455fa.css; offset 203839; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-caption-connector],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-caption-connector] {--avatar-overlay-native-corner-radius:50%;border-radius:var(--avatar-overlay-native-corner-radius);width:11px;height:12px;display:none;position:absolute;top:0;transform:translate(-50%,-50%)}
+}
+
+/* cloud-auth-css-180; app-initial-99e8b4b455fa.css; offset 204115; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-caption-connector][data-avatar-overlay-caption-connector-direction=down],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-material-variant=quick-chat-caption-connector][data-avatar-overlay-caption-connector-direction=down] {top:100%}
+}
+
+/* cloud-auth-css-181; app-initial-99e8b4b455fa.css; offset 204264; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-native-surface-id],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-native-surface-id] {--avatar-overlay-css-material-elevation:0 3px 16px #0003;border-color:#ffffff26}
+}
+
+/* cloud-auth-css-182; app-initial-99e8b4b455fa.css; offset 204402; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-native-surface-id^=activity-],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-native-surface-id^=activity-],
+:where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-native-surface-id=voice-status],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-native-surface-id=voice-status] {-webkit-backdrop-filter:none;backdrop-filter:none;will-change:transform}
+}
+
+/* cloud-auth-css-183; app-initial-99e8b4b455fa.css; offset 204614; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2[data-avatar-overlay-native-surface-id=voice-status][data-avatar-overlay-compact-tone=neutral],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2[data-avatar-overlay-native-surface-id=voice-status][data-avatar-overlay-compact-tone=neutral] {-owl-native-material:none}
+}
+
+/* cloud-auth-css-184; app-initial-99e8b4b455fa.css; offset 204783; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  @media (forced-colors:active) {
+    :where([data-codex-cu-scope]) .cua-_Material_9q659_2,
+:where([data-codex-cu-scope]).cua-_Material_9q659_2 {background:canvas}
+  }
+}
+
+/* cloud-auth-css-185; app-initial-99e8b4b455fa.css; offset 204821; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) html[data-owl-native-glass=active] .cua-_Material_9q659_2:is([data-avatar-overlay-material-variant=quick-chat-caption-connector],[data-avatar-overlay-material-variant=speech-caption-connector]),
+:where([data-codex-cu-scope])html[data-owl-native-glass=active] .cua-_Material_9q659_2:is([data-avatar-overlay-material-variant=quick-chat-caption-connector],[data-avatar-overlay-material-variant=speech-caption-connector]) {display:block}
+}
+
+/* cloud-auth-css-186; app-initial-99e8b4b455fa.css; offset 205025; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2:where([data-theme=dark]),
+:where([data-codex-cu-scope]).cua-_Material_9q659_2:where([data-theme=dark]) {background:var(--avatar-overlay-material-background,#202020e6);box-shadow:inset 0 1px 1px #fff3, inset 0 -1px 2px #ffffff14, var(--avatar-overlay-css-material-elevation)}
+}
+
+/* cloud-auth-css-187; app-initial-99e8b4b455fa.css; offset 205239; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_Material_9q659_2:where([data-theme=dark])[data-avatar-overlay-native-surface-id],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2:where([data-theme=dark])[data-avatar-overlay-native-surface-id] {--avatar-overlay-css-material-elevation:0 3px 16px #00000059;border-color:#ffffff1f}
+}
+
+/* cloud-auth-css-188; app-initial-99e8b4b455fa.css; offset 205436; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  @media (forced-colors:active) {
+    :where([data-codex-cu-scope]) .cua-_Material_9q659_2:where([data-theme=dark]),
+:where([data-codex-cu-scope]).cua-_Material_9q659_2:where([data-theme=dark]) {background:canvas}
+  }
+}
+
+/* cloud-auth-css-189; app-initial-99e8b4b455fa.css; offset 205538; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  @container style(--theme-variant:dark) {
+    :where([data-codex-cu-scope]) .cua-_Material_9q659_2:where(:not([data-theme])),
+:where([data-codex-cu-scope]).cua-_Material_9q659_2:where(:not([data-theme])) {background:var(--avatar-overlay-material-background,#202020e6);box-shadow:inset 0 1px 1px #fff3, inset 0 -1px 2px #ffffff14, var(--avatar-overlay-css-material-elevation)}
+  }
+}
+
+/* cloud-auth-css-190; app-initial-99e8b4b455fa.css; offset 205753; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  @container style(--theme-variant:dark) {
+    :where([data-codex-cu-scope]) .cua-_Material_9q659_2:where(:not([data-theme]))[data-avatar-overlay-native-surface-id],
+:where([data-codex-cu-scope]).cua-_Material_9q659_2:where(:not([data-theme]))[data-avatar-overlay-native-surface-id] {--avatar-overlay-css-material-elevation:0 3px 16px #00000059;border-color:#ffffff1f}
+  }
+}
+
+/* cloud-auth-css-191; app-initial-99e8b4b455fa.css; offset 205951; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  @container style(--theme-variant:dark) {
+    @media (forced-colors:active) {
+      :where([data-codex-cu-scope]) .cua-_Material_9q659_2:where(:not([data-theme])),
+:where([data-codex-cu-scope]).cua-_Material_9q659_2:where(:not([data-theme])) {background:canvas}
+    }
+  }
+}
+
+/* cloud-auth-css-192; app-initial-99e8b4b455fa.css; offset 206016; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) html:not([data-owl-native-glass=active]) [data-quick-chat-glass-group] .cua-_Material_9q659_2:not([data-avatar-overlay-material-variant=activity],[data-avatar-overlay-material-variant=activity-dismiss]),
+:where([data-codex-cu-scope])html:not([data-owl-native-glass=active]) [data-quick-chat-glass-group] .cua-_Material_9q659_2:not([data-avatar-overlay-material-variant=activity],[data-avatar-overlay-material-variant=activity-dismiss]) {background:var(--color-surface);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;will-change:transform;border-color:#0000}
+}
+
+/* cloud-auth-css-193; app-initial-99e8b4b455fa.css; offset 206354; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) html:not([data-owl-native-glass=active]) [data-quick-chat-glass-group] .cua-_Material_9q659_2:not([data-avatar-overlay-material-variant=activity],[data-avatar-overlay-material-variant=activity-dismiss])[data-avatar-overlay-quick-chat-collapsed=true],
+:where([data-codex-cu-scope])html:not([data-owl-native-glass=active]) [data-quick-chat-glass-group] .cua-_Material_9q659_2:not([data-avatar-overlay-material-variant=activity],[data-avatar-overlay-material-variant=activity-dismiss])[data-avatar-overlay-quick-chat-collapsed=true] {box-shadow:var(--avatar-overlay-css-material-elevation)}
+}
+
+/* cloud-auth-css-194; app-initial-99e8b4b455fa.css; offset 207159; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) .cua-_CompactMaterial_9q659_2.cua-_Material_9q659_2[data-avatar-overlay-compact-tone=danger],
+:where([data-codex-cu-scope]).cua-_CompactMaterial_9q659_2.cua-_Material_9q659_2[data-avatar-overlay-compact-tone=danger] {border-color:var(--color-border-danger-outline);background:var(--color-background-danger-surface);color:var(--color-text-danger);text-overflow:clip;white-space:normal;box-shadow:var(--shadow-lg);overflow:visible}
+}
+
+/* cloud-auth-css-195; app-initial-99e8b4b455fa.css; offset 207486; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  @media (forced-colors:active) {
+    :where([data-codex-cu-scope]) .cua-_CompactMaterial_9q659_2.cua-_Material_9q659_2[data-avatar-overlay-compact-tone=danger],
+:where([data-codex-cu-scope]).cua-_CompactMaterial_9q659_2.cua-_Material_9q659_2[data-avatar-overlay-compact-tone=danger] {color:canvastext;background:canvas}
+  }
+}
+
+/* cloud-auth-css-196; app-initial-99e8b4b455fa.css; offset 207607; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) html[data-owl-native-glass=active] .cua-_Material_9q659_2[data-owl-native-source-underlay],
+:where([data-codex-cu-scope])html[data-owl-native-glass=active] .cua-_Material_9q659_2[data-owl-native-source-underlay] {background:var(--color-surface);border-color:#0000}
+}
+
+/* cloud-auth-css-197; app-initial-99e8b4b455fa.css; offset 207791; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  @supports (color:color-mix(in lab, red, red)) {
+    :where([data-codex-cu-scope]) html[data-owl-native-glass=active] .cua-_Material_9q659_2[data-owl-native-source-underlay],
+:where([data-codex-cu-scope])html[data-owl-native-glass=active] .cua-_Material_9q659_2[data-owl-native-source-underlay] {background:color-mix(in srgb, var(--color-surface) 16%, transparent)}
+  }
+}
+
+/* cloud-auth-css-198; app-initial-99e8b4b455fa.css; offset 207948; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) html[data-owl-native-glass=active] .cua-_Material_9q659_2[data-owl-native-source-underlay],
+:where([data-codex-cu-scope])html[data-owl-native-glass=active] .cua-_Material_9q659_2[data-owl-native-source-underlay] {box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+}
+
+/* cloud-auth-css-199; app-initial-99e8b4b455fa.css; offset 208101; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) html[data-owl-native-glass=active] .cua-_Material_9q659_2[data-owl-native-source-underlay][data-avatar-overlay-material-variant=transcript-message]:not(:has([data-orbit-message-parts])):before,
+:where([data-codex-cu-scope])html[data-owl-native-glass=active] .cua-_Material_9q659_2[data-owl-native-source-underlay][data-avatar-overlay-material-variant=transcript-message]:not(:has([data-orbit-message-parts])):before {opacity:0}
+}
+
+/* cloud-auth-css-200; app-initial-99e8b4b455fa.css; offset 208346; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  @media (prefers-reduced-motion:no-preference) {
+    :where([data-codex-cu-scope]) html[data-owl-native-glass=active] .cua-_Material_9q659_2[data-owl-native-source-underlay][data-avatar-overlay-material-variant=transcript-message]:not(:has([data-orbit-message-parts])):before,
+:where([data-codex-cu-scope])html[data-owl-native-glass=active] .cua-_Material_9q659_2[data-owl-native-source-underlay][data-avatar-overlay-material-variant=transcript-message]:not(:has([data-orbit-message-parts])):before {transition:opacity .1s var(--ease-basic)}
+  }
+}
+
+/* cloud-auth-css-201; app-initial-99e8b4b455fa.css; offset 208577; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) :is(html[data-owl-native-glass=active] .cua-_Material_9q659_2[data-owl-native-source-underlay][data-avatar-overlay-material-variant=speech-caption],html[data-owl-native-glass=active] .cua-_Material_9q659_2[data-owl-native-source-underlay][data-avatar-overlay-material-variant=speech-caption-connector]),
+:where([data-codex-cu-scope]):is(html[data-owl-native-glass=active] .cua-_Material_9q659_2[data-owl-native-source-underlay][data-avatar-overlay-material-variant=speech-caption],html[data-owl-native-glass=active] .cua-_Material_9q659_2[data-owl-native-source-underlay][data-avatar-overlay-material-variant=speech-caption-connector]) {background:0 0}
+}
+
+/* cloud-auth-css-202; app-initial-99e8b4b455fa.css; offset 208887; SHA-256 1a75f9180b89d2457dc09e4efea288436c9cf6d44e5ba59b2c03d3d571b7bf61 */
+@layer opencu-cloud-auth-components {
+  :where([data-codex-cu-scope]) :is(html[data-owl-native-glass=active] .cua-_Material_9q659_2[data-owl-native-source-underlay][data-avatar-overlay-native-surface-id=realtime-caption],html[data-owl-native-glass=active] .cua-_Material_9q659_2[data-owl-native-source-underlay][data-avatar-overlay-native-surface-id=realtime-caption-connector]),
+:where([data-codex-cu-scope]):is(html[data-owl-native-glass=active] .cua-_Material_9q659_2[data-owl-native-source-underlay][data-avatar-overlay-native-surface-id=realtime-caption],html[data-owl-native-glass=active] .cua-_Material_9q659_2[data-owl-native-source-underlay][data-avatar-overlay-native-surface-id=realtime-caption-connector]) {border:0}
+}

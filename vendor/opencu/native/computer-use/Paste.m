@@ -1,7 +1,10 @@
 #import "ComputerUse.h"
+#import "Clipboard.h"
+#import <ImageIO/ImageIO.h>
 #import <sys/file.h>
 #import <sys/stat.h>
 #import <fcntl.h>
+#import <string.h>
 #import <unistd.h>
 
 @interface CUPasteProvider : NSObject <NSPasteboardItemDataProvider>
@@ -29,20 +32,66 @@ static NSArray<NSPasteboardItem *> *CUSaveClipboard(NSPasteboard *pasteboard) {
     [saved addObject:copy];
   }return saved;
 }
-static int CUPasteLock(CUSession *session) {
+static int CUClipboardLock(CUSession *session,NSTimeInterval timeout) {
   // General pasteboard is shared even across independently started hosts.
   NSString *path=[NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"trisoul-cu-paste-%u.lock",getuid()]];
   int fd=open(path.fileSystemRepresentation,O_CREAT|O_RDWR|O_NOFOLLOW,0600);struct stat info;
   if(fd<0)CUFail(@"CLIPBOARD_BUSY",@"Could not coordinate access to the clipboard.");
   if(fstat(fd,&info)||!S_ISREG(info.st_mode)||info.st_uid!=getuid()){close(fd);CUFail(@"CLIPBOARD_BUSY",@"Clipboard coordination is unavailable.");}
-  @try{while(flock(fd,LOCK_EX|LOCK_NB)){if(errno!=EWOULDBLOCK&&errno!=EINTR)CUFail(@"CLIPBOARD_BUSY",@"Could not coordinate access to the clipboard.");[session check];usleep(8000);}[session check];}
+  NSTimeInterval deadline=NSProcessInfo.processInfo.systemUptime+timeout;
+  @try{[session check];while(flock(fd,LOCK_EX|LOCK_NB)){if(errno!=EWOULDBLOCK&&errno!=EINTR)CUFail(@"CLIPBOARD_BUSY",@"Could not coordinate access to the clipboard.");[session check];if(timeout>0&&(NSThread.isMainThread||NSProcessInfo.processInfo.systemUptime>=deadline))CUFail(@"CLIPBOARD_BUSY",@"The clipboard is still in use. Try copying again.");usleep(8000);}[session check];}
   @catch(NSException *error){close(fd);@throw error;}return fd;
+}
+NSDictionary *CUCopyImageToClipboard(CUSession *session,NSDictionary *args) {
+  const NSUInteger maximumBytes=2*1024*1024,maximumDimension=16384,maximumPixels=32*1024*1024;
+  NSString *encoded=args[@"pngBase64"];
+  if(![encoded isKindOfClass:NSString.class]||!encoded.length||encoded.length%4)CUFail(@"INVALID_CLIPBOARD_IMAGE",@"Copy requires a base64 PNG string.");
+  if(encoded.length>4*((maximumBytes+2)/3))CUFail(@"CLIPBOARD_IMAGE_TOO_LARGE",@"The screenshot PNG exceeds the 2 MiB clipboard limit.");
+  NSData *png=[[NSData alloc]initWithBase64EncodedString:encoded options:0];
+  if(!png.length)CUFail(@"INVALID_CLIPBOARD_IMAGE",@"The screenshot is not valid base64 PNG data.");
+  if(png.length>maximumBytes)CUFail(@"CLIPBOARD_IMAGE_TOO_LARGE",@"The screenshot PNG exceeds the 2 MiB clipboard limit.");
+  const unsigned char signature[]={137,80,78,71,13,10,26,10},end[]={0,0,0,0,73,69,78,68,174,66,96,130};
+  if(png.length<sizeof(signature)+sizeof(end)||memcmp(png.bytes,signature,sizeof(signature))||memcmp((const unsigned char *)png.bytes+png.length-sizeof(end),end,sizeof(end)))CUFail(@"INVALID_CLIPBOARD_IMAGE",@"The screenshot must contain a complete PNG image.");
+  [session check];
+  NSDictionary *uncached=@{(id)kCGImageSourceShouldCache:@NO};
+  CGImageSourceRef source=CGImageSourceCreateWithData((__bridge CFDataRef)png,(__bridge CFDictionaryRef)uncached);
+  if(!source)CUFail(@"INVALID_CLIPBOARD_IMAGE",@"The screenshot PNG could not be read.");
+  NSUInteger width=0,height=0;CGImageRef image=NULL;
+  @try{
+    CFStringRef type=CGImageSourceGetType(source);
+    if(!type||!CFEqual(type,CFSTR("public.png"))||CGImageSourceGetCount(source)!=1)CUFail(@"INVALID_CLIPBOARD_IMAGE",@"Copy requires one PNG image.");
+    NSDictionary *properties=CFBridgingRelease(CGImageSourceCopyPropertiesAtIndex(source,0,(__bridge CFDictionaryRef)uncached));
+    NSNumber *pixelWidth=properties[(id)kCGImagePropertyPixelWidth],*pixelHeight=properties[(id)kCGImagePropertyPixelHeight];
+    if(![pixelWidth isKindOfClass:NSNumber.class]||![pixelHeight isKindOfClass:NSNumber.class]||pixelWidth.unsignedLongLongValue==0||pixelHeight.unsignedLongLongValue==0)CUFail(@"INVALID_CLIPBOARD_IMAGE",@"The screenshot PNG has no valid pixel dimensions.");
+    if(pixelWidth.unsignedLongLongValue>maximumDimension||pixelHeight.unsignedLongLongValue>maximumDimension)CUFail(@"CLIPBOARD_IMAGE_TOO_LARGE",@"The screenshot exceeds the 16384-pixel dimension limit.");
+    width=pixelWidth.unsignedIntegerValue;height=pixelHeight.unsignedIntegerValue;
+    if(width>maximumPixels/height)CUFail(@"CLIPBOARD_IMAGE_TOO_LARGE",@"The screenshot exceeds the 32 Mi pixel limit.");
+    // Decode eagerly before changing the pasteboard, including corrupt image data.
+    NSDictionary *decode=@{(id)kCGImageSourceShouldCache:@YES,(id)kCGImageSourceShouldCacheImmediately:@YES,(id)kCGImageSourceShouldAllowFloat:@NO};
+    image=CGImageSourceCreateImageAtIndex(source,0,(__bridge CFDictionaryRef)decode);
+    if(!image||CGImageGetWidth(image)!=width||CGImageGetHeight(image)!=height||CGImageSourceGetStatus(source)!=kCGImageStatusComplete||CGImageSourceGetStatusAtIndex(source,0)!=kCGImageStatusComplete)CUFail(@"INVALID_CLIPBOARD_IMAGE",@"The screenshot PNG could not be completely decoded.");
+  }@finally{if(image)CGImageRelease(image);CFRelease(source);}
+  NSPasteboardItem *item=[NSPasteboardItem new];
+  if(![item setData:png forType:NSPasteboardTypePNG])CUFail(@"CLIPBOARD_UNAVAILABLE",@"Could not prepare the screenshot for copying.");
+  // Wait for temporary paste and its restoration while holding the same lock.
+  int lock=CUClipboardLock(session,5);
+  @try{
+    CUPasteMain(^{
+      [session check];NSPasteboard *pasteboard=NSPasteboard.generalPasteboard;
+      [session check];NSInteger ownership=[pasteboard clearContents];
+      if(pasteboard.changeCount!=ownership)CUFail(@"CLIPBOARD_CHANGED",@"The clipboard changed while copying the screenshot. Try again.");
+      if(![pasteboard writeObjects:@[item]])CUFail(@"CLIPBOARD_UNAVAILABLE",@"Could not copy the screenshot to the clipboard.");
+      ownership=pasteboard.changeCount;
+      if(![[pasteboard dataForType:NSPasteboardTypePNG]isEqual:png]||pasteboard.changeCount!=ownership)CUFail(@"CLIPBOARD_CHANGED",@"The screenshot was not retained on the clipboard. Try again.");
+    });
+  }@finally{flock(lock,LOCK_UN);close(lock);}
+  return CUResult(@{@"copied":@YES,@"width":@(width),@"height":@(height),@"pngBytes":@(png.length)});
 }
 NSDictionary *CUPaste(CUSession *session,NSDictionary *args,AXUIElementRef focused,void (^deliver)(void)) {
   NSString *text=args[@"text"],*html=args[@"html"];
   if(![text isKindOfClass:NSString.class]||(html&&![html isKindOfClass:NSString.class]))CUFail(@"INVALID_PASTE",@"Paste requires text and an optional HTML string.");
   if(!text.length&&!html.length)return CUResult(@{@"effect":@"unchanged"});
-  int lock=CUPasteLock(session);__block NSArray *saved;__block NSInteger ownership=-1;__block NSPasteboard *pasteboard;__block BOOL published=NO,populated=NO;
+  int lock=CUClipboardLock(session,0);__block NSArray *saved;__block NSInteger ownership=-1;__block NSPasteboard *pasteboard;__block BOOL published=NO,populated=NO;
   NSString *markerType=@"ai.trisoul.computer-use.paste";NSData *marker=[NSUUID.UUID.UUIDString dataUsingEncoding:NSUTF8StringEncoding];
   BOOL (^ownsClipboard)(void)=^BOOL{return pasteboard.changeCount==ownership&&(!populated||[[pasteboard dataForType:markerType]isEqual:marker])&&pasteboard.changeCount==ownership;};
   CUPasteProvider *provider=[CUPasteProvider new];NSMutableDictionary *data=[@{NSPasteboardTypeString:[text dataUsingEncoding:NSUTF8StringEncoding]}mutableCopy];

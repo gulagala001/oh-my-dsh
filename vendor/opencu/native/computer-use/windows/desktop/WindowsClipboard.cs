@@ -1,4 +1,6 @@
 using System.Runtime.InteropServices;
+using System.IO;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -12,6 +14,8 @@ internal sealed class WindowsClipboard : IDisposable
     private IntPtr owner;
     private bool restoring;
     private bool published;
+    private Mutex? coordination;
+    private bool ownsCoordination;
     private long lastRead;
     private long targetReads, lastTargetRead;
     internal long LastRead => Interlocked.Read(ref lastRead);
@@ -26,6 +30,7 @@ internal sealed class WindowsClipboard : IDisposable
     internal Task Publish(string text, string? html, int targetPid, CancellationToken token) => dispatcher.InvokeAsync(() =>
     {
         token.ThrowIfCancellationRequested();
+        AcquireCoordination(token, -1);
         uint before = GetClipboardSequenceNumber();
         var formats = Clipboard.GetDataObject()?.GetFormats(false) ?? [];
         saved = ClipboardSnapshot.Read(formats, before, token);
@@ -48,19 +53,69 @@ internal sealed class WindowsClipboard : IDisposable
     internal Task<bool> IsOwner() => dispatcher.InvokeAsync(Owns).Task;
     internal Task<bool> Restore() => dispatcher.InvokeAsync(() =>
     {
-        if (!published) return true;
+        if (!published) { ReleaseCoordination(); return true; }
         bool restored;
         try
         {
-            if (!Owns()) { published = false; return false; }
+            if (!Owns()) { published = false; ReleaseCoordination(); return false; }
             restored = saved!.Restore(owner, () => restoring = true);
         }
         catch (Exception error) { throw new NativeFailure("CLIPBOARD_RESTORE_PENDING", "The prior clipboard has not been restored; retry Stop. " + error.Message); }
-        published = false; return restored;
+        published = false; ReleaseCoordination(); return restored;
     }).Task;
+    internal static async Task<object> CopyImage(JsonElement args, CancellationToken token)
+    {
+        using var clipboard = new WindowsClipboard();
+        return await clipboard.dispatcher.InvokeAsync(() =>
+        {
+            var image = WindowsClipboardImage.Decode(args, token);
+            clipboard.AcquireCoordination(token, 5000);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                WindowCatalog.RequireInteractive();
+                var data = new DataObject();
+                using var stream = new MemoryStream(image.Png, writable: false);
+                data.SetData("PNG", stream, false);
+                data.SetData(DataFormats.Bitmap, image.Bitmap, true);
+                token.ThrowIfCancellationRequested();
+                Clipboard.SetDataObject(data, true);
+                uint sequence = GetClipboardSequenceNumber();
+                token.ThrowIfCancellationRequested();
+                if (Clipboard.GetData("PNG") is not MemoryStream retained || !retained.ToArray().AsSpan().SequenceEqual(image.Png) || GetClipboardSequenceNumber() != sequence)
+                    throw new NativeFailure("CLIPBOARD_CHANGED", "The screenshot was not retained on the clipboard. Try again");
+                token.ThrowIfCancellationRequested();
+                return NativeProtocol.Result(new { copied = true, width = image.Bitmap.PixelWidth, height = image.Bitmap.PixelHeight, pngBytes = image.Png.Length });
+            }
+            catch (ExternalException) { throw new NativeFailure("CLIPBOARD_UNAVAILABLE", "Could not copy the screenshot to the clipboard"); }
+            finally { clipboard.ReleaseCoordination(); }
+        }).Task;
+    }
+    private void AcquireCoordination(CancellationToken token, int timeoutMilliseconds)
+    {
+        coordination ??= new Mutex(false, WindowsInput.MutexName("-Clipboard"));
+        long started = Environment.TickCount64;
+        while (!ownsCoordination)
+        {
+            token.ThrowIfCancellationRequested();
+            try { ownsCoordination = coordination.WaitOne(0); } catch (AbandonedMutexException) { ownsCoordination = true; }
+            if (ownsCoordination) break;
+            if (timeoutMilliseconds >= 0 && Environment.TickCount64 - started >= timeoutMilliseconds)
+                throw new NativeFailure("CLIPBOARD_BUSY", "The clipboard is still in use. Try copying again");
+            token.WaitHandle.WaitOne(8);
+        }
+        token.ThrowIfCancellationRequested();
+    }
+    private void ReleaseCoordination()
+    {
+        if (!ownsCoordination) return;
+        coordination!.ReleaseMutex(); ownsCoordination = false;
+    }
     public void Dispose()
     {
         if (published) throw new NativeFailure("CLIPBOARD_RESTORE_PENDING", "Restore the clipboard before closing its provider");
+        dispatcher.Invoke(ReleaseCoordination);
+        coordination?.Dispose(); coordination = null;
         saved?.Dispose(); saved = null;
         dispatcher.InvokeShutdown(); if (!thread.Join(2000)) throw new NativeFailure("CLIPBOARD_RESTORE_PENDING", "Clipboard provider shutdown has not finished");
     }

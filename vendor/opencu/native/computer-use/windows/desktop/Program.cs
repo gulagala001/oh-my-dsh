@@ -4,7 +4,7 @@ using System.Text.Json;
 
 internal static class DesktopProgram
 {
-    internal static readonly string[] Capabilities = ["windows", "applications", "launch-app", "accessibility", "screenshots", "preview", "keyboard", "click", "drag", "paste", "uia-actions", "structured-scroll"];
+    internal static readonly string[] Capabilities = ["windows", "applications", "launch-app", "accessibility", "screenshots", "preview", "keyboard", "click", "drag", "paste", "uia-actions", "structured-scroll", "native-clipboard-image", "windows-native-presentation-png"];
     internal static readonly string Build = typeof(DesktopProgram).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>().Single(a => a.Key == "TrisoulBuild").Value ?? "development";
     public static async Task<int> Main(string[] args)
     {
@@ -22,7 +22,7 @@ internal static class DesktopProgram
             var dpiContext = new IntPtr(-4);
             if (!SetProcessDpiAwarenessContext(dpiContext) && !AreDpiAwarenessContextsEqual(GetThreadDpiAwarenessContext(), dpiContext)) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error(), "Could not enable physical per-monitor coordinates");
             NativeProtocol? protocol = null;
-            using var desktop = new DesktopObservation(value => { try { protocol?.Notify("notifications/trisoul/cursor", value).GetAwaiter().GetResult(); } catch (System.IO.IOException) { } catch (ObjectDisposedException) { } });
+            using var desktop = new DesktopObservation(value => { try { protocol?.Notify("notifications/trisoul/cursor", value).GetAwaiter().GetResult(); } catch (System.IO.IOException) { } catch (ObjectDisposedException) { } }, value => protocol?.Notify("notifications/windows-native-presentation", value) ?? Task.CompletedTask);
             var info = new { protocolVersion = "2024-11-05", serverInfo = new { name = "trisoul-computer-use", version = "0.1.1" }, capabilities = new { tools = new { } }, _meta = new { trisoul = new { protocol = 1, build = Build, pid = Environment.ProcessId, platform = "win32", input = true, observation = true } } };
             protocol = new NativeProtocol(desktop.Execute, desktop.Cleanup, info, desktop.Start);
             await protocol.Run(Console.OpenStandardInput(), Console.OpenStandardOutput());
@@ -39,7 +39,9 @@ internal sealed class DesktopObservation : IDisposable
 {
     private readonly WindowObservation observation;
     private AppCatalog? apps;
-    internal DesktopObservation(Action<object>? pointer = null) { observation = new WindowObservation(pointer); }
+    private readonly Func<object, Task> presentationNotify;
+    private readonly Dictionary<string, WindowsPresentation> presentations = new();
+    internal DesktopObservation(Action<object>? pointer = null, Func<object, Task>? presentationNotify = null) { observation = new WindowObservation(pointer); this.presentationNotify = presentationNotify ?? (_ => Task.CompletedTask); }
     private readonly Dictionary<string, WindowCapture> captures = new();
     private WindowTarget? preview;
     private long sequence;
@@ -51,7 +53,29 @@ internal sealed class DesktopObservation : IDisposable
         if (name == "check_permissions")
         {
             bool interactive = true; try { WindowCatalog.RequireInteractive(); } catch (NativeFailure) { interactive = false; }
-            return NativeProtocol.Result(new { platform = "win32", interactive, capture_supported = WindowCapture.Supported, input = !readOnly, permission_model = "interactive-user" });
+            return NativeProtocol.Result(new { platform = "win32", interactive, capture_supported = WindowCapture.Supported, input = !readOnly, permission_model = "interactive-user", image_clipboard = new { available = interactive && !readOnly, format = "image/png", max_bytes = WindowsClipboardImage.MaximumBytes }, native_presentations = new { available = interactive && WindowCapture.Supported, producerKind = WindowsPresentation.ProducerKind, format = "image/png", nativeOverlay = true, hardwareSharedSurface = false } });
+        }
+        if (name == "copy_image_to_clipboard")
+        {
+            if (readOnly) throw new NativeFailure("READ_ONLY_SESSION", "An observation connection cannot modify the clipboard");
+            return await WindowsClipboard.CopyImage(args, token);
+        }
+        if (name == "show_window") return await ActivateWindow(Target(args), token);
+        if (name == "start_native_presentation")
+        {
+            if (presentations.Count >= 64) throw new NativeFailure("RESOURCE_LIMIT", "This connection has reached its presentation lifetime limit");
+            if (args.TryGetProperty("presentationID", out var existing) && existing.ValueKind == JsonValueKind.String && presentations.ContainsKey(existing.GetString()!)) throw new NativeFailure("STALE_PRESENTATION", "This presentation identity has already been used");
+            var presentation = new WindowsPresentation(Target(args), args, presentationNotify);
+            presentations.Add(presentation.Id, presentation);
+            return NativeProtocol.Result(await presentation.Start(token));
+        }
+        if (name is "stop_native_presentation" or "get_native_presentation_state" or "update_native_presentation")
+        {
+            if (!args.TryGetProperty("presentationID", out var id) || id.ValueKind != JsonValueKind.String || !presentations.TryGetValue(id.GetString()!, out var presentation)) throw new NativeFailure("STALE_PRESENTATION", "This connection does not own the presentation");
+            presentation.Match(args);
+            if (name == "stop_native_presentation") return NativeProtocol.Result(await presentation.Stop());
+            if (name == "update_native_presentation") return NativeProtocol.Result(await presentation.Update(args, token));
+            return NativeProtocol.Result(presentation.State());
         }
         if (name == "list_apps")
         {
@@ -124,6 +148,29 @@ internal sealed class DesktopObservation : IDisposable
         WindowCatalog.RequireInteractive();
         return WindowCatalog.Read(owner, id, identity.GetString());
     }
+    private static async Task<object> ActivateWindow(WindowTarget target, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        var handle = new IntPtr(target.window_id);
+        if (IsIconic(handle) && !ShowWindowAsync(handle, 9)) throw new NativeFailure("WINDOW_NOT_VISIBLE", "Windows could not restore the selected window");
+        if (GetForegroundWindow() != handle && !SetForegroundWindow(handle) && GetForegroundWindow() != handle)
+            throw new NativeFailure("FOREGROUND_REQUIRED", "Windows did not allow the selected window to become foreground");
+        long deadline = Environment.TickCount64 + 500;
+        while (GetForegroundWindow() != handle)
+        {
+            token.ThrowIfCancellationRequested();
+            if (Environment.TickCount64 >= deadline) throw new NativeFailure("FOREGROUND_REQUIRED", "The selected window has not become foreground");
+            await Task.Delay(10, token);
+        }
+        var current = WindowCatalog.Read(target.pid, target.window_id, target.process_identity);
+        token.ThrowIfCancellationRequested();
+        if (!current.is_on_screen || GetForegroundWindow() != handle) throw new NativeFailure("FOREGROUND_REQUIRED", "The selected window did not retain foreground");
+        return NativeProtocol.Result(new { shown = true, focused = true, pid = current.pid, window_id = current.window_id, process_identity = current.process_identity });
+    }
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool IsIconic(IntPtr window);
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool ShowWindowAsync(IntPtr window, int command);
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetForegroundWindow(IntPtr window);
+    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
     private WindowCapture Capture(WindowTarget target)
     {
         string key = target.process_identity + ":" + target.window_id;
@@ -136,6 +183,8 @@ internal sealed class DesktopObservation : IDisposable
     }
     internal async Task Cleanup()
     {
+        foreach (var presentation in presentations.Values) await presentation.Stop();
+        presentations.Clear();
         await observation.CloseInput();
         foreach (var capture in captures.Values) capture.Dispose();
         captures.Clear(); preview = null;

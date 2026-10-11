@@ -10,6 +10,7 @@ import workbenchCss from './workbench.css';
 import shellCss from './shell.css';
 import { ComputerIcon } from '#opencu/src/client/computer-icons.jsx';
 import { applyComputerUseClient } from '#opencu/client-source';
+import { applyCodexDshBrowser, codexDshBrowserStyles } from './codex-dsh-browser.jsx';
 import versionCss from './version-info.css';
 import { whaleCss } from './brand.mjs';
 import { createContextUI } from './context-client.mjs';
@@ -205,6 +206,7 @@ export async function apply(ctx) {
   const { ComputerEntry, ComputerPane } = applyComputerUseClient(ctx, {
     integrated: true,
   });
+  applyCodexDshBrowser(ctx);
   function ContentPage({ section, title, Component, ...props }) {
     return <div className="tx-workbench cx-integrated" data-section={section}>
       <section className="tx-workbench-page" data-section={section} aria-label={title}>
@@ -233,7 +235,7 @@ export async function apply(ctx) {
   }
   const getAppearanceRuntime = applySkins(ctx);
   ctx.effect(() => {
-    const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css + '\n' + shellCss + '\n' + whaleCss + '\n' + versionCss + '\n' + workbenchCss + '\n' + monitorCss; document.head.appendChild(tag);
+    const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css + '\n' + shellCss + '\n' + whaleCss + '\n' + versionCss + '\n' + workbenchCss + '\n' + monitorCss + '\n' + codexDshBrowserStyles; document.head.appendChild(tag);
     const runtime = getAppearanceRuntime();
     const sync = () => document.documentElement.classList.toggle('trisoul-shell', runtime.getSnapshot().active !== false);
     const off = runtime.subscribe(sync); sync();
