@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { installFileUploadCompatibility } from '../src/file-upload-compat.mjs';
+import { nativeFileUploadResolver } from './fixtures/native-file-upload-resolver.mjs';
 
 function setup(error, active = false, initialState = active ? 2 : 3) {
-  const initial = () => 'old', next = () => 'new', effects = [], controllerEffects = [];
+  const initial = nativeFileUploadResolver({ agents: { async resolveAgent() { return { agent: 'old' }; } } }), next = () => 'new', effects = [], controllerEffects = [];
   const uploads = { agentResolver: initial, registerAgentResolver(resolve) {
     if (this.agentResolver) throw Error('file-upload: Agent resolver is already registered');
     this.agentResolver = resolve;
@@ -14,7 +15,8 @@ function setup(error, active = false, initialState = active ? 2 : 3) {
     async await() { if (error) throw error; },
     async restart() { restarted++; for (const dispose of controllerEffects) dispose(); uploads.registerAgentResolver(next); this.state = 2; },
   };
-  const scope = { fileUploads: uploads, effect(fn) { effects.push(fn()); } };
+  // The injection callback runs while its own fixture fiber is loading.
+  const scope = { fiber: { uid: 'compat-fixture-loading', state: 1 }, fileUploads: uploads, effect(fn) { effects.push(fn()); } };
   const root = { inject(_services, fn) { ready = fn(scope); }, effect(fn) { effects.push(fn()); } };
   const ctx = { root, loader: { *entries() { yield { options: { name: '@deepseek-ai/dsh-api-session-controller' }, fiber: controller }; } } };
   installFileUploadCompatibility(ctx);
