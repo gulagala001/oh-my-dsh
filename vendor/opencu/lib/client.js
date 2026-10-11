@@ -57516,11 +57516,11 @@ __name(BrowserPermissions, "BrowserPermissions");
 // src/client/codex-browser-tab-transfer.jsx
 var import_react66 = __toESM(require("react"), 1);
 
-// ../../../Projects/opencu-backend-reconstruction-20261010/node_modules/.pnpm/@dnd-kit+core@6.3.1_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/@dnd-kit/core/dist/core.esm.js
+// node_modules/.pnpm/@dnd-kit+core@6.3.1_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/@dnd-kit/core/dist/core.esm.js
 var import_react65 = __toESM(require("react"));
 var import_react_dom11 = require("react-dom");
 
-// ../../../Projects/opencu-backend-reconstruction-20261010/node_modules/.pnpm/@dnd-kit+utilities@3.2.2_react@18.3.1/node_modules/@dnd-kit/utilities/dist/utilities.esm.js
+// node_modules/.pnpm/@dnd-kit+utilities@3.2.2_react@18.3.1/node_modules/@dnd-kit/utilities/dist/utilities.esm.js
 var import_react63 = require("react");
 var canUseDOM = typeof window !== "undefined" && typeof window.document !== "undefined" && typeof window.document.createElement !== "undefined";
 function isWindow(element) {
@@ -57760,7 +57760,7 @@ function findFirstFocusableNode(element) {
 }
 __name(findFirstFocusableNode, "findFirstFocusableNode");
 
-// ../../../Projects/opencu-backend-reconstruction-20261010/node_modules/.pnpm/@dnd-kit+accessibility@3.1.1_react@18.3.1/node_modules/@dnd-kit/accessibility/dist/accessibility.esm.js
+// node_modules/.pnpm/@dnd-kit+accessibility@3.1.1_react@18.3.1/node_modules/@dnd-kit/accessibility/dist/accessibility.esm.js
 var import_react64 = __toESM(require("react"));
 var hiddenStyles = {
   display: "none"
@@ -57819,7 +57819,7 @@ function useAnnouncement() {
 }
 __name(useAnnouncement, "useAnnouncement");
 
-// ../../../Projects/opencu-backend-reconstruction-20261010/node_modules/.pnpm/@dnd-kit+core@6.3.1_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/@dnd-kit/core/dist/core.esm.js
+// node_modules/.pnpm/@dnd-kit+core@6.3.1_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/@dnd-kit/core/dist/core.esm.js
 var DndMonitorContext = /* @__PURE__ */ (0, import_react65.createContext)(null);
 function useDndMonitor(listener) {
   const registerListener = (0, import_react65.useContext)(DndMonitorContext);
