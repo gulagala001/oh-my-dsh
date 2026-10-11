@@ -143,9 +143,14 @@ export class BrowserTransport {
       const observation = this.observations.get(message.id);
       if (observation) {
         this.observations.delete(message.id);
-        if (!message.error && message.result?.cssVisualViewport) this.pointer({ ...observation, geometry: viewportGeometry(message.result) });
+        const { sessionId, session, ...pointer } = observation;
+        if (!message.error && message.result?.cssVisualViewport && this.sessions.get(sessionId) === session && session.loaderId === pointer.loaderId)
+          this.pointer({ ...pointer, geometry: viewportGeometry(message.result) });
         return;
       }
+      // Negative IDs belong to this transport, including work already retired
+      // by a detach. Its late replies must not reach Playwright's connection.
+      if (Number.isInteger(message.id) && message.id < 0) return;
       const request = this.requests.get(message.id);
       if (request) {
         this.requests.delete(message.id);
@@ -177,14 +182,7 @@ export class BrowserTransport {
       } else if (message.method === 'Target.detachedFromTarget') {
         this.emitAdapterEvent(message, sourceSession ?? detached, rawRootSessionId);
         this.detachAdapterRoot(message.params.sessionId);
-        for (const attachment of this.frameAttachments.values()) if (attachment.message.params.sessionId === message.params.sessionId) attachment.detached = true;
-        this.sessions.delete(message.params.sessionId);
-        // Playwright settles the detached session's pending commands. Native
-        // captures need not send individual replies before that notification.
-        for (const [id, request] of this.requests) if (request.sessionId === message.params.sessionId) this.requests.delete(id);
-        for (const [id, command] of this.commands) if (command.sessionId === message.params.sessionId) {
-          this.commands.delete(id); command.reject(new Error('Browser session detached before the request completed'));
-        }
+        this.detachSession(message.params.sessionId);
       } else if (message.method === 'Page.frameNavigated') {
         const session = this.sessions.get(message.sessionId);
         if (session) {
@@ -457,6 +455,25 @@ export class BrowserTransport {
     if (rootTargetId === undefined && [...this.#browserAuth.targets.values()].some(value => value.writeOwners.size)) throw new Error('Unverified CDP sessions cannot change protected service worker bypass.');
     if (target?.writeOwners.size && !target.writeOwners.has(authority)) throw new Error('Service worker bypass is owned by active browser credential protection.');
   }
+  detachSession(sessionId) {
+    const detached = new Set([sessionId]);
+    let count;
+    do {
+      count = detached.size;
+      for (const [id, session] of this.sessions) if (detached.has(session.parentSessionId)) detached.add(id);
+      for (const attachment of this.frameAttachments.values()) if (detached.has(attachment.message.sessionId)) detached.add(attachment.message.params.sessionId);
+    } while (count !== detached.size);
+    for (const id of detached) this.sessions.delete(id);
+    for (const [id, restore] of this.frameRestores) if (detached.has(restore.sessionId)) this.frameRestores.delete(id);
+    for (const [id, attachment] of this.frameAttachments) if (detached.has(attachment.message.sessionId) || detached.has(attachment.message.params.sessionId)) this.frameAttachments.delete(id);
+    for (const [id, observation] of this.observations) if (detached.has(observation.sessionId)) this.observations.delete(id);
+    // Playwright settles normal requests through the detach notification.
+    // Our command promises must also settle when Chromium omits their replies.
+    for (const [id, request] of this.requests) if (detached.has(request.sessionId)) this.requests.delete(id);
+    for (const [id, command] of this.commands) if (detached.has(command.sessionId)) {
+      this.commands.delete(id); command.reject(new Error('Browser session detached before the request completed'));
+    }
+  }
   write(message, authority) {
     this.assertBrowserAuthWrite(message, authority);
     const data = JSON.stringify(message);
@@ -478,7 +495,7 @@ export class BrowserTransport {
         const id = this.nextId--, sequence = ++this.sequence, at = Date.now();
         if (type === 'mousePressed') session.press = { x, y, at, sequence, loaderId: session.loaderId };
         const press = session.press?.loaderId === session.loaderId && at - session.press.at < 250 ? session.press : undefined;
-        this.observations.set(id, { targetId: session.targetId, loaderId: session.loaderId, sequence, at, issuedAt: performance.now(), type, x, y, buttons, button, clickCount, press });
+        this.observations.set(id, { sessionId: message.sessionId, session, targetId: session.targetId, loaderId: session.loaderId, sequence, at, issuedAt: performance.now(), type, x, y, buttons, button, clickCount, press });
         // Obtain the geometry in the same protocol stream as this input. This
         // adds no awaited round trip, and does not use old screenshot bounds.
         this.write({ id, sessionId: message.sessionId, method: 'Page.getLayoutMetrics', params: {} });
