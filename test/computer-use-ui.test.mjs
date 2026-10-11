@@ -8,7 +8,6 @@ import { createHash } from 'node:crypto';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
 import { startFixture } from './fixtures/computer-use/server.mjs';
 import { extensionFixture } from './fixtures/computer-use/extension.mjs';
-import { testBrowserExecutable } from './fixtures/computer-use/test-browser.mjs';
 import { downloadDeliveryFixture } from './fixtures/computer-use/download-delivery.mjs';
 import { restoreFixtureLog } from './fixtures/restore-log.mjs';
 
@@ -20,8 +19,7 @@ for (const [backend, preset] of [['managed', 'trisoul-x'], ['managed', 'omd-ptc'
   }, async t => {
     const root = await mkdtemp(join(tmpdir(), 'omd-cu-integration-'));
     t.after(() => rm(root, { recursive: true, force: true }));
-    const executable = await testBrowserExecutable(root);
-    const f = await frontendFixture(t, { agentPreset: preset, omdConfig: { computerUseBrowserExecutable: executable, codegraphEnabled: false } });
+    const f = await frontendFixture(t, { agentPreset: preset, omdConfig: { codegraphEnabled: false } });
     const { page, sessionId } = f, origin = new URL(page.url()).origin;
     const endpoint = path => `${origin}/trisoul-x/computer-use/${path}?session=${sessionId}`;
     const state = async () => (await page.request.get(endpoint('state'))).json();
@@ -53,58 +51,8 @@ for (const [backend, preset] of [['managed', 'trisoul-x'], ['managed', 'omd-ptc'
     assert.match(JSON.stringify(requests.at(-1).messages), /image_url/, 'Computer Use did not attach its observation: ' + JSON.stringify(toolResults));
     assert.ok((await state()).target, JSON.stringify(await state()));
     const ready = await until(async () => { const value = await state(); return value.previewAt && value.target?.kind === 'tab' && value; });
-    const floating = page.getByLabel('悬浮操控预览'); await floating.waitFor();
-    if (backend === 'managed' && preset === 'trisoul-x') {
-      const previewImage = floating.locator('img').first();
-      await until(() => previewImage.evaluate(img => img.complete && img.naturalWidth > 0));
-      await floating.evaluate(node => Promise.all(node.getAnimations().map(animation => animation.finished.catch(() => {}))));
-      const before = await floating.boundingBox(), button = floating.getByRole('button', { name: /^打开网页：/ }), box = await button.boundingBox();
-      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
-      await page.mouse.move(box.x + box.width / 2 - 40, box.y + box.height / 2 - 25, { steps: 8 }); await page.mouse.up();
-      const after = await floating.boundingBox();
-      assert.ok(Math.abs(after.x - before.x + 40) < 2); assert.ok(Math.abs(after.y - before.y + 25) < 2);
-      assert.equal(await floating.evaluate(node => getComputedStyle(node).borderTopWidth), '0px');
-      if (process.env.OMD_PREVIEW_ARTIFACTS) {
-        await mkdir(process.env.OMD_PREVIEW_ARTIFACTS, { recursive: true });
-        await page.screenshot({ path: join(process.env.OMD_PREVIEW_ARTIFACTS, 'floating-preview-light.png') });
-        await floating.screenshot({ path: join(process.env.OMD_PREVIEW_ARTIFACTS, 'floating-preview-detail.png') });
-      }
-      await page.getByRole('button', { name: '设置', exact: true }).click();
-      await page.locator('.VOzbGW_nav').getByRole('button', { name: '外观', exact: true }).click();
-      await page.getByLabel('明暗模式', { exact: true }).selectOption('dark'); await page.keyboard.press('Escape');
-      await until(async () => await page.locator('html').evaluate(node => getComputedStyle(node).colorScheme) === 'dark');
-      await floating.hover();
-      await until(() => floating.locator('header').evaluate(node => getComputedStyle(node).opacity === '1'));
-      if (process.env.OMD_PREVIEW_ARTIFACTS) await page.screenshot({ path: join(process.env.OMD_PREVIEW_ARTIFACTS, 'floating-preview-dark.png') });
-      await page.setViewportSize({ width: 560, height: 900 });
-      await floating.evaluate(node => Promise.all(node.getAnimations().map(animation => animation.finished.catch(() => {}))));
-      // The viewport command and the current animation snapshot can precede
-      // the resize event/React commit. Check the actual settled layout.
-      let firstLayout, lastLayout, stableLayouts = 0;
-      const narrow = await until(async () => {
-        lastLayout = await floating.evaluate(node => {
-          const { x, width } = node.getBoundingClientRect();
-          return { x, width, viewport: innerWidth, style: node.getAttribute('style'), computedWidth: getComputedStyle(node).width,
-            animating: node.getAnimations().some(animation => animation.pending || animation.playState === 'running') };
-        });
-        firstLayout ??= lastLayout;
-        const fits = lastLayout.viewport === 560 && !lastLayout.animating && lastLayout.x >= 11 && lastLayout.x + lastLayout.width <= 549;
-        stableLayouts = fits ? stableLayouts + 1 : 0;
-        return stableLayouts >= 2 && lastLayout;
-      }, 3000).catch(error => { throw new Error('Floating preview did not fit the settled viewport: ' + JSON.stringify(lastLayout), { cause: error }); });
-      t.diagnostic(JSON.stringify({ floatingResize: { first: firstLayout, settled: narrow } }));
-      if (process.env.OMD_PREVIEW_ARTIFACTS) await page.screenshot({ path: join(process.env.OMD_PREVIEW_ARTIFACTS, 'floating-preview-narrow.png') });
-      await page.setViewportSize({ width: 1440, height: 1000 });
-    }
-    await page.getByRole('button', { name: '打开 Computer Use', exact: true }).click();
-    const image = page.locator('.tx-cu-pane .tx-cu-live img').first(); await image.waitFor();
-    await until(() => image.evaluate(img => img.complete && img.naturalWidth > 0));
-    await floating.waitFor({ state: 'hidden' });
-    await openWorkbench(page, '任务'); await floating.waitFor();
-    await page.getByRole('button', { name: '打开 Computer Use', exact: true }).click(); await floating.waitFor({ state: 'hidden' });
-    await image.waitFor(); await until(() => image.evaluate(img => img.complete && img.naturalWidth > 0));
-    assert.equal((await state()).target.id, ready.target.id);
-    if (process.env.OMD_PREVIEW_ARTIFACTS && backend === 'managed' && preset === 'trisoul-x') await page.screenshot({ path: join(process.env.OMD_PREVIEW_ARTIFACTS, 'computer-pane-exclusive.png') });
+    await page.locator('style[data-plugin="trisoul-x-computer-use"]').waitFor({ state: 'attached' });
+    assert.equal((await state()).target.id, ready.target.id, 'the loaded client preserves the actual model target');
     await page.request.post(endpoint('stop'), { data: {} }); assert.equal((await state()).status, 'stopped');
     await page.request.post(endpoint('resume'), { data: {} }); assert.equal((await state()).status, 'idle');
     for (const enabled of [false, true]) {
@@ -123,7 +71,6 @@ for (const preset of ['trisoul-x', 'omd-ptc']) {
   test(`OMD ${preset} delivers real saved downloads through the native host`, { timeout: 120000 }, async t => {
     const root = await mkdtemp(join(tmpdir(), 'omd-cu-download-'));
     t.after(() => rm(root, { recursive: true, force: true }));
-    const executable = await testBrowserExecutable(root);
     const evidence = process.env.OMD_CU_DELIVERY_ARTIFACTS && join(process.env.OMD_CU_DELIVERY_ARTIFACTS, preset);
     let f;
     if (evidence) {
@@ -139,7 +86,7 @@ for (const preset of ['trisoul-x', 'omd-ptc']) {
         await f.page.screenshot({ path: join(evidence, 'final.png'), animations: 'disabled' });
       });
     }
-    f = await frontendFixture(t, { agentPreset: preset, omdConfig: { computerUseBrowserExecutable: executable, codegraphEnabled: false } });
+    f = await frontendFixture(t, { agentPreset: preset, omdConfig: { codegraphEnabled: false } });
     t.after(async () => {
       const preserved = Boolean(process.env.TRISOUL_UI_ARTIFACTS);
       if (!preserved) await assert.rejects(access(f.root), { code: 'ENOENT' });

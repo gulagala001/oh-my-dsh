@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 2,
+  "artifact": "opencu-desktop-presentations",
+  "platform": "darwin",
+  "arch": "arm64",
+  "nodeApiVersion": 8,
+  "minimumMacOSMajorVersion": 14,
+  "runtime": {
+    "provider": "official-electron",
+    "electronVersion": "44.7.0"
+  },
+  "files": [
+    {
+      "path": "desktop-presentations.node",
+      "bytes": 523056,
+      "sha256": "995897f6c55651a4141ff767be5c9a03b63acc9fa49f7bf7284bd7cab532fcf0"
+    }
+  ]
+}

@@ -1,51 +1,76 @@
-import React,{useEffect,useId,useRef,useState} from 'react';
-import {ComputerIcon} from './computer-icons.jsx';
-import {browserLabel} from './browser-tools.jsx';
-import browserChromeCss from './browser-chrome.css';
+import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import {CodexBrowserDownloads,CodexBrowserDownloadHistory} from './codex-browser-downloads.jsx';
+import {CodexCuButton} from './codex-cu-primitives.jsx';
+import {CodexCuIcon} from './codex-cu-icons.jsx';
+import {BrowserLayer} from './browser-layer.jsx';
+import {createCodexBrowserBackend,codexProfileDownloadActions,codexCanRequestProfileAccess} from './codex-browser-backend.mjs';
 
-const bytes=value=>value>=1048576?(value/1048576).toFixed(1)+' MB':value>=1024?(value/1024).toFixed(1)+' KB':Math.max(0,value||0)+' B';
-export function BrowserDownloads({sessionId,visible,api,active,onActiveChange}){
-  const[localOpen,setLocalOpen]=useState(false),[items,setItems]=useState(null),[error,setError]=useState('');
-  const[query,setQuery]=useState(''),[filter,setFilter]=useState('all'),[reload,setReload]=useState(0),[clearing,setClearing]=useState(false),[mutationError,setMutationError]=useState('');
+function useProfileDownloads({sessionId,scope,api,enabled,history=false,query=''}){
+  const[snapshot,setSnapshot]=useState(null),[liveSnapshot,setLiveSnapshot]=useState(null),[nextOffset,setNextOffset]=useState(0),[status,setStatus]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[authorizing,setAuthorizing]=useState(false),[pageError,setPageError]=useState(false);
+  const lifetime=useRef(null),request=useRef(null),alive=useRef(false),authorizationPending=useRef(false);
+  const backend=useMemo(()=>createCodexBrowserBackend(api,sessionId,scope),[api,sessionId,scope?.browserId,scope?.tabId,scope?.actor,scope?.controlEpoch]);
+  const refresh=useCallback(async(offset=0)=>{
+    request.current?.abort();const controller=new AbortController();request.current=controller;
+    setBusy(true);setPageError(false);
+    try{
+      const available=await backend.call('profileStatus',{},controller.signal);
+      if(!alive.current||controller.signal.aborted)return;
+      setStatus(available);
+      if(!available.downloads?.available){setSnapshot(null);setError(codexCanRequestProfileAccess(available,'downloads')?'请授权访问此浏览器的下载记录':'当前浏览器未提供下载记录');return;}
+      if(history&&(available.downloads.historySearch!==true||available.downloads.persistentReady===false)){setSnapshot(null);setLiveSnapshot(null);setNextOffset(0);setError(available.downloads.persistentReady===false?'下载记录存储尚未就绪':'此浏览器尚未提供持久下载记录');return;}
+      const result=await backend.call(history?'profileDownloadHistory':'profileDownloads',history?{options:{text:query,maxResults:100,offset}}:{},controller.signal);
+      if(!alive.current||controller.signal.aborted)return;
+      if(!Array.isArray(result?.downloads)||result.downloads.some(item=>!item||typeof item.id!=='string'||!item.id)||history&&typeof result.hasMore!=='boolean')throw new Error('浏览器没有返回有效的下载记录');
+      setSnapshot(previous=>offset?{...result,downloads:[...new Map([...(previous?.downloads??[]),...result.downloads].map(item=>[item.id,item])).values()]}:result);if(history)setLiveSnapshot(null);setNextOffset(offset+result.downloads.length);setError('');
+    }catch(error){if(alive.current&&!controller.signal.aborted){setError(error.message);if(offset)setPageError(true);}}
+    finally{if(alive.current&&request.current===controller)setBusy(false);}
+  },[backend,history,query]);
+  useEffect(()=>{
+    alive.current=true;const controller=new AbortController();lifetime.current=controller;setSnapshot(null);setLiveSnapshot(null);setNextOffset(0);setStatus(null);setError('');setBusy(false);setAuthorizing(false);
+    if(!enabled)return()=>{alive.current=false;controller.abort();request.current?.abort();};
+    let timer,initial=true;const poll=async()=>{
+      if(!authorizationPending.current){
+        if(!history||initial){initial=false;await refresh();}
+        else try{const result=await backend.call('profileDownloads',{},controller.signal);if(alive.current&&!controller.signal.aborted)setLiveSnapshot(result);}
+        catch(error){if(alive.current&&!controller.signal.aborted)setError(error.message);}
+      }
+      if(alive.current)timer=setTimeout(poll,1000);
+    };
+    timer=setTimeout(()=>void poll(),query?200:0);
+    return()=>{alive.current=false;controller.abort();request.current?.abort();clearTimeout(timer);};
+  },[refresh,enabled]);
+  const grant=async()=>{
+    const signal=lifetime.current?.signal;authorizationPending.current=true;setAuthorizing(true);setError('请在浏览器打开的授权页完成授权');
+    try{await backend.requestAccess(['downloads'],signal);if(alive.current)await refresh();}
+    catch(error){if(alive.current&&!signal?.aborted)setError(error.message);}
+    finally{authorizationPending.current=false;if(alive.current)setAuthorizing(false);}
+  };
+  const actions=useMemo(()=>codexProfileDownloadActions(backend,status,()=>refresh(),lifetime.current?.signal,setError),[backend,status,refresh]);
+  return{snapshot,liveSnapshot,nextOffset,status,error,setError,busy,authorizing,pageError,refresh,grant,actions,backend,lifetime};
+}
+
+export function BrowserDownloads({sessionId,scope,visible,observeSnapshot=false,api,active,onActiveChange,floating=false,onError}){
+  const[localOpen,setLocalOpen]=useState(false);
   const open=active??localOpen,setOpen=onActiveChange??setLocalOpen;
-  const root=useRef(null),trigger=useRef(null),revision=useRef(0),mutating=useRef(false),alive=useRef(true);
-  const panelId=useId();
-  useEffect(()=>{alive.current=true;return()=>{alive.current=false;revision.current++;};},[sessionId]);
-  useEffect(()=>{setOpen(false);setItems(null);setError('');setMutationError('');setQuery('');setFilter('all');},[sessionId]);
-  useEffect(()=>{
-    if(!open||!visible)return;
-    let active=true,timer;const controller=new AbortController();
-    const refresh=async()=>{const generation=revision.current;try{if(mutating.current)return;const result=await api('downloads',sessionId,undefined,controller.signal);if(active&&generation===revision.current){setItems(result.downloads);setError('');}}catch(error){if(active)setError(error.message);}finally{if(active)timer=setTimeout(refresh,1000);}};
-    void refresh();return()=>{active=false;controller.abort();clearTimeout(timer);};
-  },[open,visible,sessionId,api,reload]);
-  useEffect(()=>{
-    if(!open)return;root.current?.querySelector('[aria-label="关闭下载记录"]')?.focus();
-    const outside=event=>{if(!root.current?.contains(event.target))setOpen(false);};
-    document.addEventListener('pointerdown',outside);return()=>document.removeEventListener('pointerdown',outside);
-  },[open]);
-  const close=()=>{setOpen(false);trigger.current?.focus();};
-  const clear=async()=>{revision.current++;mutating.current=true;setClearing(true);setMutationError('');try{const result=await api('downloads-clear',sessionId,{});if(alive.current)setItems(result.downloads);}catch(error){if(alive.current)setMutationError(error.message);}finally{mutating.current=false;if(alive.current)setClearing(false);}};
-  const filtered=(items??[]).filter(item=>(filter==='all'||filter==='active'&&['inProgress','unobserved'].includes(item.state)||filter===item.state)&&(String(item.filename??'')+' '+String(item.source??'')).toLocaleLowerCase().includes(query.toLocaleLowerCase()));
-  return <div className="tx-cu-downloads" ref={root} onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close();}}}>
-    <style>{browserChromeCss}</style>
-    <button type="button" ref={trigger} disabled={!visible} aria-label="下载记录" title="下载记录" aria-haspopup="dialog" aria-expanded={open} aria-controls={open?panelId:undefined} onClick={()=>setOpen(!open)}><ComputerIcon name="download"/></button>
-    {open&&visible&&<section id={panelId} className="tx-cu-download-panel tx-cu-record-panel" role="dialog" aria-label="当前会话下载记录">
-      <header><div><strong>下载记录</strong>{items&&<span className="tx-cu-record-count">{filtered.length} / {items.length}</span>}</div><button type="button" aria-label="关闭下载记录" onClick={close}><ComputerIcon name="close" size={14}/></button></header>
-      <p className="tx-cu-record-scope">当前会话 · 接入后捕获的下载</p>
-      <div className="tx-cu-download-filters"><input type="search" aria-label="搜索下载文件" placeholder="搜索文件名或站点" value={query} onChange={event=>setQuery(event.target.value)}/><select aria-label="筛选下载记录" value={filter} onChange={event=>setFilter(event.target.value)}><option value="all">全部</option><option value="active">进行中</option><option value="completed">已完成</option><option value="canceled">已取消</option><option value="unobserved">状态待确认</option></select></div>
-      {(error||mutationError)&&<p role="alert" className="tx-cu-error">{mutationError||error}</p>}
-      {!items&&!error&&<p className="tx-cu-record-empty" role="status">正在读取…</p>}
-      {items?.length===0&&<p className="tx-cu-record-empty">当前会话还没有下载记录</p>}
-      {!!items?.length&&filtered.length===0&&<p className="tx-cu-record-empty">没有匹配的下载记录</p>}
-      {!!filtered.length&&<ul>{filtered.map(item=><li key={item.id} data-download-state={item.state}>
-        <ComputerIcon name="download"/><div><div className="tx-cu-download-row-head"><strong title={item.filename}>{item.filename||'未命名文件'}</strong><span className="tx-cu-download-state">{item.state==='completed'?'已完成':item.state==='canceled'?'已取消或中断':item.state==='unobserved'?'状态待确认':'下载中'}</span></div><div className="tx-cu-download-row-meta"><span>{bytes(item.receivedBytes)}{item.totalBytes>0&&item.state==='inProgress'?' / '+bytes(item.totalBytes):''}</span><span>{browserLabel(item)}</span>{Number.isFinite(item.startedAt)&&<time dateTime={new Date(item.startedAt).toISOString()}>{new Date(item.startedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</time>}</div>
-          {item.state==='inProgress'&&<progress aria-label={item.filename+' 下载进度'} value={item.totalBytes>0?item.receivedBytes:undefined} max={item.totalBytes||1}/>}
-          {item.source&&<small className="tx-cu-download-source" title={item.source}>{item.source}</small>}
-          {item.state==='unobserved'&&<small>连接已断开，状态待确认</small>}
-          {item.canDownload?<a className="tx-cu-download-save" href={'trisoul-x/computer-use/download-file?session='+encodeURIComponent(sessionId)+'&id='+encodeURIComponent(item.id)} download={item.filename}><ComputerIcon name="download" size={12}/>保存文件</a>:item.state==='completed'&&<small>{item.browserId==='browser'?'文件暂不可读取':'文件保存在原浏览器的下载位置'}</small>}
-        </div>
-      </li>)}</ul>}
-      <footer><span>仅显示当前会话接入后捕获的下载</span><div><button type="button" onClick={()=>setReload(value=>value+1)}>刷新</button><button type="button" title="移除已完成或取消的记录，不删除文件" disabled={clearing||!items?.some(item=>['completed','canceled'].includes(item.state))} onClick={()=>void clear()}>{clearing?'正在清除…':'清除已结束记录'}</button></div></footer>
-    </section>}
+  const model=useProfileDownloads({sessionId,scope,api,enabled:(open||observeSnapshot)&&visible&&!!scope?.tabId});
+  useEffect(()=>{setOpen(false);},[sessionId,scope?.browserId]);
+  const{snapshot,status,error,setError,actions}=model;
+  const renderLayer=({anchorRef,open,children,onClose,sideOffset,collisionPadding,kind})=>{
+    const content=kind==='downloads'&&React.isValidElement(children)?React.cloneElement(children,{children:<>{children.props.children}{!status?.downloads?.available&&codexCanRequestProfileAccess(status,'downloads')&&<CodexCuButton size="toolbar" color="secondary" loading={model.authorizing} onClick={()=>void model.grant()}>授权下载记录</CodexCuButton>}{error&&<span className="tx-cu-error" role="alert">{error}</span>}</>}):children;
+    return <BrowserLayer open={open} type={kind==='download-peek'?'popover':'menu'} anchorRef={anchorRef} onClose={onClose} sideOffset={sideOffset??1} collisionPadding={collisionPadding??6} initialFocus={kind==='download-menu'}>{content}</BrowserLayer>;
+  };
+  return <CodexBrowserDownloads snapshot={snapshot} open={open} onOpenChange={setOpen} floating={floating} isVisible={visible} renderLayer={renderLayer} onError={message=>{setError(message);onError?.(message);}} actions={actions} browserTabId={scope?.tabId} conversationId={sessionId}/>;
+}
+
+export function BrowserDownloadHistoryPanel({sessionId,scope,api,onClose,backSlot}){
+  const[query,setQuery]=useState(''),[clearing,setClearing]=useState(false);
+  const model=useProfileDownloads({sessionId,scope,api,enabled:true,history:true,query});
+  const clear=async()=>{
+    setClearing(true);try{const result=await model.backend.downloadAction('clearHistory',{},model.lifetime.current?.signal);if(result?.ok===false)throw new Error(result.message??'清除下载记录失败');await model.refresh();}
+    catch(error){if(!model.lifetime.current?.signal.aborted)model.setError(error.message);}finally{setClearing(false);}
+  };
+  return <div style={{height:'100%',display:'flex',flexDirection:'column',minHeight:0}}>
+    <CodexBrowserDownloadHistory snapshot={model.snapshot} liveSnapshot={model.snapshot?model.liveSnapshot:null} unfilteredSnapshot={query?model.liveSnapshot:model.snapshot} searchQuery={query} onSearchQueryChange={setQuery} loading={model.busy&&model.snapshot==null} error={model.error} onRetry={()=>void model.refresh()} actions={model.actions} onError={model.setError} clearing={clearing} onClearAll={model.status?.downloads?.actions?.includes('clearHistory')?()=>void clear():undefined} hasMoreUnfiltered={(query?model.liveSnapshot:model.snapshot)?.hasMore===true} paginationError={model.pageError} onRetryNextPage={()=>void model.refresh(model.nextOffset)} paginationContent={model.snapshot?.hasMore?<CodexCuButton size="toolbar" color="secondary" loading={model.busy} onClick={()=>void model.refresh(model.nextOffset)}>加载更多</CodexCuButton>:null} backSlot={<>{backSlot??<CodexCuButton size="toolbar" color="ghost" onClick={onClose}><CodexCuIcon name="shared:uht"/>浏览器</CodexCuButton>}{!model.status?.downloads?.available&&codexCanRequestProfileAccess(model.status,'downloads')&&<CodexCuButton size="toolbar" color="secondary" loading={model.authorizing} onClick={()=>void model.grant()}>授权下载记录</CodexCuButton>}</>}/>
+    {model.error&&<span className="tx-cu-error" role="alert">{model.error}</span>}
   </div>;
 }

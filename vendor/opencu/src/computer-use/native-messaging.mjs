@@ -1,8 +1,15 @@
 import { endianness } from 'node:os';
 
 const littleEndian = endianness() === 'LE';
+function byteLimit(value) {
+  if (!Number.isSafeInteger(value) || value <= 0 || value > 0xffffffff) throw new TypeError('Native message limit must be a positive 32-bit integer');
+  return value;
+}
 export function encodeNativeMessage(value, maxBytes = 1024 * 1024) {
-  const body = Buffer.from(JSON.stringify(value));
+  byteLimit(maxBytes);
+  const serialized = JSON.stringify(value);
+  if (typeof serialized !== 'string') throw new TypeError('Native message must be serializable JSON');
+  const body = Buffer.from(serialized);
   if (!body.length || body.length > maxBytes) throw new Error(`Native message exceeds ${maxBytes} bytes`);
   const frame = Buffer.allocUnsafe(body.length + 4);
   if (littleEndian) frame.writeUInt32LE(body.length); else frame.writeUInt32BE(body.length);
@@ -13,10 +20,21 @@ export function encodeNativeMessage(value, maxBytes = 1024 * 1024) {
 // are normal. Never repeatedly concatenate an ever-growing screenshot buffer.
 export class NativeMessageReader {
   constructor(onMessage, maxBytes = 64 * 1024 * 1024) {
-    this.onMessage = onMessage; this.maxBytes = maxBytes;
+    if (typeof onMessage !== 'function') throw new TypeError('Native message handler must be a function');
+    this.onMessage = onMessage; this.maxBytes = byteLimit(maxBytes); this.ended = false; this.failure = null;
     this.header = Buffer.alloc(4); this.headerOffset = 0; this.offset = 0; this.body = null;
   }
   push(chunk) {
+    if (this.failure) throw this.failure;
+    if (this.ended) throw new Error('Native messaging has already ended');
+    if (!Buffer.isBuffer(chunk)) {
+      if (!(chunk instanceof Uint8Array)) throw new TypeError('Native messaging expects bytes');
+      chunk = Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength);
+    }
+    try { this.read(chunk); }
+    catch (error) { this.failure = error; this.body = null; throw error; }
+  }
+  read(chunk) {
     let at = 0;
     while (at < chunk.length) {
       if (!this.body) {
@@ -35,5 +53,13 @@ export class NativeMessageReader {
       }
     }
   }
-  end() { if (this.body || this.headerOffset) throw new Error('Native messaging ended inside a frame'); }
+  end() {
+    if (this.failure) throw this.failure;
+    this.ended = true;
+    if (this.body || this.headerOffset) {
+      this.failure = new Error('Native messaging ended inside a frame');
+      this.body = null;
+      throw this.failure;
+    }
+  }
 }

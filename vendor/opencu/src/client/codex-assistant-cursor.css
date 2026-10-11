@@ -1,0 +1,42 @@
+/* tab-content uc: pointer-events-none absolute inset-0 z-20 overflow-hidden.
+ * app-shared uBi: explicit CSS-pixel viewport, top-left scale, pointer-events:none.
+ * Exact source locations and SHA: work/rea-reconstruction/cursor/source-manifest.json.
+ */
+.codex-cu-browser-cursor-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  overflow: hidden;
+  pointer-events: none;
+  transform-origin: top left;
+}
+
+/* browser-page-preload hb in gb, with selectors scoped to these display components.
+ * All declarations and computed template constants are preserved; see
+ * browser-selection-manifest.json and browser-selection.css.reference.css.
+ */
+.codex-cu-browser-selection-outline.hover-box{position:fixed;box-sizing:border-box;border-radius:0;border:2px solid #0069FB;background:color-mix(in srgb,#0069FB 3%,transparent);box-shadow:inset 0 0 0 1px rgba(255,255,255,.28);pointer-events:none;transition:opacity 150ms cubic-bezier(.23,1,.32,1)}
+[data-browser-comment-control-editing] .codex-cu-browser-selection-outline.hover-box,
+.codex-cu-browser-selection-outline.hover-box[data-codex-control-editing]{opacity:0}
+.codex-cu-browser-selection-outline.text-selection-highlight{position:fixed;box-sizing:border-box;background:#128dff66;pointer-events:none}
+.codex-cu-browser-selection-outline.flex-item-overlay{position:fixed;box-sizing:border-box;border-radius:0;border:1px solid rgba(2,133,255,.52);background:rgba(18,141,255,.18);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);pointer-events:none}
+.codex-cu-browser-selection-pointer.annotation-selection-cursor{position:fixed;z-index:1;display:block}
+.codex-cu-browser-selection-pointer.annotation-selection-modifier-cursor,
+.codex-cu-browser-selection-pointer .annotation-selection-modifier-cursor{z-index:2;color:#000000;paint-order:stroke fill;stroke:white;stroke-linejoin:round;stroke-width:2px}
+.codex-cu-browser-selection-pointer.annotation-selection-comment-cursor{overflow:visible}
+.codex-cu-browser-selection-pointer.annotation-selection-comment-cursor[data-browser-comment-annotation-selection-cursor-mode="text"]{z-index:2}
+.codex-cu-browser-selection-pointer .annotation-selection-cursor-bubble{transform:translate(0,0) scale(1);transform-box:view-box;transform-origin:0 0;transition:transform 150ms cubic-bezier(.23,1,.32,1)}
+.codex-cu-browser-selection-pointer .annotation-selection-cursor-beam{opacity:0;transition:opacity 150ms cubic-bezier(.23,1,.32,1)}
+.codex-cu-browser-selection-pointer[data-browser-comment-annotation-selection-cursor-mode="text"] .annotation-selection-cursor-bubble{transform:translate(5px,10.5px) scale(.55)}
+.codex-cu-browser-selection-pointer[data-browser-comment-annotation-selection-cursor-mode="text"] .annotation-selection-cursor-beam{opacity:1}
+.codex-cu-browser-selection-outline.annotation-selection-target-hover{border-color:color-mix(in srgb,#0069FB 80%,black)}
+.codex-cu-browser-selection-outline.annotation-selection-remove-hover{background:color-mix(in srgb,#0069FB 20%,transparent)}
+.codex-cu-browser-selection-outline.region-box{border-width:2px;border-style:dashed}
+.codex-cu-browser-selection-outline.posted-region-highlight{position:fixed;box-sizing:border-box;border-radius:0;background:color-mix(in srgb,#0069FB 3%,transparent);pointer-events:none}
+.codex-cu-browser-selection-outline.google-docs-annotation-box{background:transparent;box-shadow:none}
+.codex-cu-browser-selection-outline.google-docs-element-box{border-color:transparent}
+@media(prefers-reduced-motion:reduce){
+  .codex-cu-browser-selection-outline.hover-box,
+  .codex-cu-browser-selection-pointer .annotation-selection-cursor-bubble,
+  .codex-cu-browser-selection-pointer .annotation-selection-cursor-beam{transition:none}
+}

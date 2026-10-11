@@ -1,7 +1,20 @@
 // Chromium's rendered-text search handles whitespace, split text nodes and
 // visibility. Iterate the actual frame tree because window.find does not
 // search child documents, even when its legacy searchInFrames flag is true.
+export async function clearFindInView(view,signal){
+  signal?.throwIfAborted();
+  for(const frame of view.record.page.frames()){
+    if(frame.isDetached())continue;
+    await frame.evaluate(()=>getSelection()?.removeAllRanges());
+    signal?.throwIfAborted();
+  }
+  view.findCursor=null;
+  return{query:'',found:false,wrapped:false,matches:0,activeMatchOrdinal:0};
+}
+
 export async function findInView(view,{query,backward=false},signal){
+  if(typeof query!=='string')throw new Error('请输入要查找的文字');
+  if(!query.length)return clearFindInView(view,signal);
   const frames=view.record.page.frames(),previous=view.findCursor;
   const continuing=previous?.query===query&&previous.loaderId===view.loaderId&&frames.includes(previous.frame);
   const start=continuing?frames.indexOf(previous.frame):backward?frames.length-1:0;

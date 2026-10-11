@@ -4,7 +4,7 @@
 
 OMD is a DSH plugin. Keep using the host's models, projects, conversations, files, tools, and skills; its additions work around the current conversation.
 
-Public pairs are DSH `0.2.1-alpha.1` with OMD `0.2.1-alpha.1.omd.0.10.0`, or DSH `0.2.0-rc.2` with OMD `0.2.0-rc.2.omd.0.10.0`. GitHub `main` has unpublished alpha.2 OMD `0.16.0` with an earlier OpenCU 1.6.1 snapshot. The latest local browser/runtime reconstruction, also 1.6.1, is not in that snapshot. Additions are marked below; fixed-tag documentation defines the public package.
+Public pairs are DSH `0.2.1-alpha.1` with OMD `0.2.1-alpha.1.omd.0.10.0`, or DSH `0.2.0-rc.2` with OMD `0.2.0-rc.2.omd.0.10.0`. GitHub `main` has unpublished alpha.2 OMD `0.16.0` with the OpenCU 1.6.1 browser and runtime reconstruction. Additions are marked below; fixed-tag documentation defines the public package.
 
 <a id="install-in-existing-dsh"></a>
 
@@ -206,7 +206,7 @@ For example: “Filter pending acceptance, export the full checklist, check the 
 | Windows desktop | Targets common single-screen workflows on Windows 10 2004+. Old public builds require .NET 10 SDK. No Windows hardware acceptance was performed this round. |
 | Linux | General and browser features; no native Linux desktop control in this version. |
 
-The **latest local reconstruction** uses a pinned official prebuilt browser runtime and supplies prebuilt native components in complete platform packages, so normal installation does not compile. Missing matching components require the complete package; source compilation is an explicit development mode. This is not in GitHub's earlier OMD snapshot or public `0.10.0` and does not remove SDK requirements from old packages.
+The **latest local reconstruction** uses a pinned official prebuilt browser runtime and supplies prebuilt native components in complete platform packages, so normal installation does not compile. Missing matching components require the complete package; source compilation is an explicit development mode. This is included in GitHub main, but not in public `0.10.0` and does not remove SDK requirements from old packages.
 
 <details>
 <summary>Browser controls, downloads, search, and device preview</summary>

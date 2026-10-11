@@ -2,14 +2,16 @@ import { subpathProxy } from './subpath-proxy.mjs';
 import { createServer } from 'node:http';
 import { spawn, execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { mkdtemp, mkdir, writeFile, rm, readFile, stat } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, rm, readFile, stat, cp, realpath } from 'node:fs/promises';
+import { constants } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { tmpdir, homedir } from 'node:os';
+import { join, resolve, relative } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium } from 'playwright';
 import { stopFixtureProcess, cleanupFixture, closeFixtureServer } from './process.mjs';
 import { isolateTestDownloads, testBrowserExecutable } from './computer-use/test-browser.mjs';
+import { getPluginRuntimeState, pluginRuntimeTarget } from '../../vendor/opencu/native/plugin-runtime/artifact.mjs';
 const dshCli = process.env.OMD_DSH_CLI || fileURLToPath(new URL('../../node_modules/@deepseek-ai/dsh/lib/bin.js', import.meta.url));
 const repo = fileURLToPath(new URL('../../', import.meta.url));
 
@@ -35,7 +37,7 @@ export async function until(fn, timeout = 20000) {
 export async function frontendFixture(t, { imageBudget, versionResponse, headless = false, lifecycleTrace = false, packageArchive = process.env.OMD_UI_ARCHIVE, installedPackage = process.env.OMD_UI_PACKED === '1' || Boolean(packageArchive), historyMessages = 0, legacyShadows = false, componentAutoSetup = false, omdConfig = {}, chatConfig = {}, legacyChatConfig, basePath = '/', agentPreset = 'trisoul-x', reply, optimizerReply, plugins = [], modelReply, setupWorkspace, initialPrompt = '整理工作台和对话界面', modelProfile = {}, additionalModels = [] } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'trisoul-frontend-')), home = join(root, 'home'), workspace = join(root, 'workspace');
   await mkdir(home); await mkdir(workspace);
-  const env = frontendEnvironment(home);
+  const env = { ...frontendEnvironment(home), OPENCU_SOURCE_ONLY: '1', COREPACK_ENABLE_DOWNLOAD_PROMPT: '0', COREPACK_HOME: process.env.OMD_FRONTEND_COREPACK_HOME || join(homedir(), '.cache/node/corepack') };
   for (const path of ['user-home', 'config', 'cache/npm', 'cache/corepack', 'data', 'state', 'tmp', 'pi-agent', 'bin', 'npm-global']) await mkdir(join(home, path), { recursive: true });
   await mkdir(join(workspace, '.git'));
   await writeFile(env.npm_config_userconfig, '');
@@ -82,7 +84,15 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
   });
 
   await setupWorkspace?.({ root, home, workspace });
-  const computerUseBrowserExecutable = await testBrowserExecutable(root, chromium.executablePath());
+  if (omdConfig.computerUseEnabled !== false) {
+    const installed = await getPluginRuntimeState();
+    if (!installed.available) throw new Error('Prepare the official OpenCU runtime before running the installed frontend fixture');
+    const source = pluginRuntimeTarget();
+    const target = join(env.HOME, relative(homedir(), source.directory));
+    await mkdir(join(target, '..'), { recursive: true });
+    await cp(source.directory, target, { recursive: true, verbatimSymlinks: true, mode: constants.COPYFILE_FICLONE });
+  }
+  const computerUseBrowserExecutable = await testBrowserExecutable(root, join(env.HOME, relative(homedir(), pluginRuntimeTarget().executable)));
   await isolateTestDownloads(root, join(home, 'trisoul-x/computer-use/browser-profile'));
   await writeFile(join(home, 'settings.yaml'), JSON.stringify({
     locale: { preference: 'zh' },
@@ -101,6 +111,7 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
       archive = join(root, packed.filename);
     }
     if (!(await stat(archive)).isFile()) throw Error('Frontend package archive must be a regular file');
+    archive = await realpath(archive);
     const archiveHash = () => readFile(archive).then(bytes => createHash('sha256').update(bytes).digest('hex'));
     const beforeHash = await archiveHash();
     const cli = dshCli;
@@ -110,7 +121,8 @@ export async function frontendFixture(t, { imageBudget, versionResponse, headles
       return false;
     });
     execFileSync(process.execPath, [cli, '--profile', 'trisoul-x', ...(profileCreated ? [] : ['--from-default-profile', 'web']), '--dump-config'], options);
-    try { execFileSync(process.execPath, [cli, 'plugin', '--profile', 'trisoul-x', 'add', 'file:' + archive], options); }
+    const approvedBuild = 'trisoul_x@file:' + relative(await realpath(join(home, 'profiles', 'trisoul-x')), archive).replaceAll('\\', '/');
+    try { execFileSync(process.execPath, [cli, 'plugin', '--profile', 'trisoul-x', 'add', '--allow-build=' + approvedBuild, 'file:' + archive], options); }
     catch (error) {
       const detail = [error.stderr, error.stdout, error.message]
         .map(value => value == null ? '' : String(value).trim()).filter(Boolean).join('\n');
@@ -178,7 +190,8 @@ export function apply(ctx) { let seeded = false; ctx.on('session/created', sessi
   const bootHost = async (port = 0) => {
     if (child && child.exitCode === null && child.signalCode === null) throw Error('Frontend host is already running');
     let bootLog = '';
-    child = spawn(process.execPath, [dshCli, '--profile', 'trisoul-x', '--no-open', '--port', String(port)], { cwd: workspace, env, stdio: ['ignore', 'pipe', 'pipe'] });
+    env.OPENCU_FIXTURE_PLUGIN_ROOTS = JSON.stringify([await realpath(join(home, 'profiles', 'trisoul-x', 'node_modules', 'trisoul_x', 'vendor', 'opencu'))]);
+    child = spawn(process.execPath, ['--import', fileURLToPath(new URL('./plugin-browser-keychain.mjs', import.meta.url)), dshCli, '--profile', 'trisoul-x', '--no-open', '--port', String(port)], { cwd: workspace, env, stdio: ['ignore', 'pipe', 'pipe'] });
     const append = data => { bootLog = (bootLog + data).slice(-15000); log = (log + data).slice(-15000); };
     child.stdout.on('data', append); child.stderr.on('data', append);
     return until(() => { if (child.exitCode !== null) throw new Error(bootLog.replace(/token=\S+/g, 'token=[redacted]')); return bootLog.match(/http:\/\/127\.0\.0\.1:\d+\/\?token=[\w-]+/)?.[0]; }, 45000).catch(error => { throw new Error(error.message + '\n' + bootLog.replace(/token=\S+/g, 'token=[redacted]')); });

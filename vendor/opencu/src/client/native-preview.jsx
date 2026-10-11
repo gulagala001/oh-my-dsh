@@ -1,5 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {AssistantCursor} from './assistant-cursor.jsx';
+import {CodexNativeVideo} from './codex-native-video.jsx';
+import {nativePresentationForTarget, windowsNativePresentationKey} from './codex-native-layout.mjs';
+import {useCodexNativeDomHome} from './codex-native-dom-home.jsx';
 import previewCss from './preview-alignment.css';
 
 // The preview components share one style owner, including standalone mounts.
@@ -17,7 +20,61 @@ export function usePreviewAlignmentStyles() {
   }, []);
 }
 
-export function NativePreview({sessionId,targetId,targetKind='app',mode,targetName,minimalChrome=false,actions,onActivate,stacked=false,visible,state,url,onError,onFrameSize,onConnection}){
+export function NativePreview(props) {
+  return props.targetKind === 'tab' ? <NativeRasterPreview {...props}/> : <NativeEncodedPreview {...props}/>;
+}
+
+function NativeEncodedPreview({sessionId,targetId,presentationID,visible,state,url,onError,onFrameSize,onConnection,onNativeReadyChange,onDomHomeChange,
+  onActivate,minimalChrome=false,stacked=false,presentationLayout}) {
+  usePreviewAlignmentStyles();
+  const surface=useRef(null),[surfaceWidth,setSurfaceWidth]=useState(null),[connection,setConnection]=useState('connecting');
+  const record=nativePresentationForTarget(state,sessionId,targetId,presentationID);
+  const windowsSource=record?.producerKind==='windows-wgc-png'||state?.nativePresentation?.producerKind==='windows-wgc-png';
+  const sourceKey=windowsNativePresentationKey(record);
+  const [liveSourceKey,setLiveSourceKey]=useState(null);
+  const layout=state?.nativePresentationLayout??state?.nativePresentation?.nativePresentationLayout;
+  const sourceConnection=windowsSource&&connection==='live'&&(!sourceKey||liveSourceKey!==sourceKey)?'connecting':connection;
+  const active=visible===true&&layout?.activeThreadID===sessionId;
+  const canReady=windowsSource?sourceConnection==='live'&&active&&state?.enabled!==false:connection==='live';
+  const [domReadiness,setDomReadiness]=useState(null);
+  useLayoutEffect(()=>{
+    const node=surface.current;if(!node)return;
+    const measure=()=>setSurfaceWidth(node.getBoundingClientRect().width);
+    measure();const observer=new ResizeObserver(measure);observer.observe(node);return()=>observer.disconnect();
+  },[sessionId,targetId]);
+  useEffect(()=>{
+    setDomReadiness(null);
+    if(windowsSource)onNativeReadyChange?.(sessionId,false);
+    if(!record?.presentationID)return;
+    if(!canReady){if(!windowsSource)onNativeReadyChange?.(sessionId,false);return;}
+    let handle=requestAnimationFrame(()=>{handle=requestAnimationFrame(()=>{
+      setDomReadiness({sessionId,presentationID:record.presentationID,sourceKey});onNativeReadyChange?.(sessionId,true);
+    });});
+    return()=>{cancelAnimationFrame(handle);if(windowsSource)onNativeReadyChange?.(sessionId,false);};
+  },[sessionId,record?.presentationID,sourceKey,windowsSource,canReady,onNativeReadyChange]);
+  const domReady=canReady&&domReadiness?.sessionId===sessionId&&domReadiness?.presentationID===record?.presentationID
+    &&(!windowsSource||domReadiness.sourceKey===sourceKey);
+  useCodexNativeDomHome({sessionId,surfaceRef:surface,active,
+    ready:domReady,
+    orderedPresentationIDs:record?[record.presentationID]:[],onDomHomeChange,enabled:!stacked});
+  const zoom=presentationLayout?.windowZoom??1,count=presentationLayout?.presentationCount??1;
+  const measuredWidth=presentationLayout?.containerWidth??surfaceWidth;
+  const maxDisplaySize=presentationLayout?.maxDisplaySize??(measuredWidth==null?null:Math.min(400,Math.max(1,measuredWidth*zoom-Math.max(0,count-1)*28))/zoom);
+  const video=<CodexNativeVideo sessionId={sessionId} presentationID={record?.presentationID} presentationSource={record} visible={visible}
+    enabled={state?.enabled!==false} url={url} style={maxDisplaySize==null?undefined:{maxWidth:maxDisplaySize,maxHeight:maxDisplaySize}}
+    onError={onError} onFrameSize={(size,identity)=>{if(!windowsSource||identity?.sourceKey===sourceKey)onFrameSize?.(size);}}
+    onConnection={(value,identity)=>{
+      if(windowsSource&&value==='live'&&identity?.sourceKey!==sourceKey)return;
+      setLiveSourceKey(value==='live'?identity?.sourceKey??null:null);setConnection(value);onConnection?.(value);
+    }}/>;
+  return <div ref={surface} className={'tx-cu-native-preview codex-cu-native-surface'+(minimalChrome?' is-content':'')+(stacked?' is-stacked':'')}
+    data-connection={sourceConnection} data-preview-mode="app" data-native-ready={windowsSource?domReady:connection==='live'}
+    data-native-transport={windowsSource?'png-frames':'encoded-video'} data-native-producer-kind={windowsSource?'windows-wgc-png':undefined} aria-label="Computer Use preview">
+    {onActivate?<button type="button" className="codex-cu-native-presentation" data-pip-presentation-frame={record?.presentationID} onClick={onActivate}>{video}</button>:<div className="codex-cu-native-presentation" data-pip-presentation-frame={record?.presentationID}>{video}</div>}
+  </div>;
+}
+
+function NativeRasterPreview({sessionId,targetId,targetKind='tab',mode,targetName,minimalChrome=false,actions,onActivate,stacked=false,visible,state,url,onError,onFrameSize,onConnection}){
   usePreviewAlignmentStyles();
   const [frame,setFrame]=useState(null),[connection,setConnection]=useState('connecting'),[reconnect,setReconnect]=useState(0);
   const [cursor,setCursor]=useState(null);
@@ -33,8 +90,8 @@ export function NativePreview({sessionId,targetId,targetKind='app',mode,targetNa
     stream.addEventListener('control',event=>{if(active){const value=JSON.parse(event.data);if(value.controlEpoch!==control.controlEpoch)setCursor(null);Object.assign(control,value);if(value.stopped||value.transitioning)setCursor(null);}});
     stream.addEventListener('navigation',event=>{if(active){setCursor(null);const next=JSON.parse(event.data);if(control.loaderId&&next.loaderId!==control.loaderId){control={};setConnection('connecting');}}});
     stream.addEventListener('capture',event=>{if(active){const {status}=JSON.parse(event.data);if(status!=='live')setConnection(status==='paused'?'paused':'connecting');}});
-    stream.addEventListener('failure',event=>{if(active){error.current(JSON.parse(event.data).message);setConnection('error');stream.close();}});
-    stream.addEventListener('closed',event=>{if(active){const value=JSON.parse(event.data);if(value.reason!=='target-changed')error.current(value.message);setConnection('closed');stream.close();}});
+    stream.addEventListener('failure',event=>{if(active){error.current?.(JSON.parse(event.data).message);setConnection('error');stream.close();}});
+    stream.addEventListener('closed',event=>{if(active){const value=JSON.parse(event.data);if(value.reason!=='target-changed')error.current?.(value.message);setConnection('closed');stream.close();}});
     stream.onerror=()=>{if(active){setCursor(null);control={};setConnection('connecting');}};
     return()=>{active=false;stream.close();};
   },[sessionId,targetId,targetKind,stacked,visible,reconnect,state?.enabled]);

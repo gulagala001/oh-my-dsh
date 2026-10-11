@@ -31,7 +31,7 @@
 | `0.2.1-alpha.1` | `0.2.1-alpha.1.omd.0.10.0` | [alpha.1 Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-alpha.1.omd.0.10.0) |
 | `0.2.0-rc.2`，包括本文桌面教程 | `0.2.0-rc.2.omd.0.10.0` | [rc.2 Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.0-rc.2.omd.0.10.0) |
 
-GitHub `main` 的 `0.2.1-alpha.2.omd.0.16.0` 对应 DSH `0.2.1-alpha.2`，**尚未公开发行**，内置较早的 OpenCU 1.6.1 快照。最新本地浏览器与运行时重构也使用 1.6.1 版本号，但尚未合入该快照；相同版本号不表示内容相同。本组文档标明这些差异，它们没有可供普通用户安装的新 Release 链接。公开 `0.10.0` 不包含 `0.11–0.16` 的新增改动。
+GitHub `main` 的 `0.2.1-alpha.2.omd.0.16.0` 对应 DSH `0.2.1-alpha.2`，**尚未公开发行**，已整合 OpenCU 1.6.1 的浏览器与运行时重构；相同版本号仍须核对具体源码、包内容和宿主。本组文档标明这些差异，它们没有可供普通用户安装的新 Release 链接。公开 `0.10.0` 不包含 `0.11–0.16` 的新增改动。
 
 按完整宿主版本和固定 OMD 版本配对，不用 GitHub `latest` 标记选包。其他版本先查[兼容说明](plugin-compatibility.md)，不要绕过宿主检查。
 

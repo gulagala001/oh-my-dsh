@@ -12,8 +12,8 @@ OMD uses native management, tools, skills, and scopes. Compatibility improvement
 | --- | --- |
 | Public `0.2.0-rc.2.omd.0.10.0` | DSH `0.2.0-rc.2`. |
 | Public `0.2.1-alpha.1.omd.0.10.0` | DSH `0.2.1-alpha.1`. |
-| GitHub `main` `0.2.1-alpha.2.omd.0.16.0` | Unpublished alpha.2 development, with an earlier OpenCU 1.6.1 snapshot. |
-| Latest local OpenCU `1.6.1` reconstruction | Browser/runtime changes have not entered the GitHub OMD snapshot; same version does not mean same contents. |
+| GitHub `main` `0.2.1-alpha.2.omd.0.16.0` | Unpublished alpha.2 development, including the OpenCU 1.6.1 browser and runtime reconstruction. |
+| Latest local OpenCU `1.6.1` reconstruction | Browser/runtime changes are integrated into main; local and public packages still require content and host checks. |
 
 Coverage evolves with hosts and actual verification, rather than a permanent allowlist. A historical artifact does not establish new-host compatibility.
 

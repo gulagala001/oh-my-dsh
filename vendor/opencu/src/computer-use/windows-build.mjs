@@ -1,6 +1,13 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
+export const WINDOWS_BRIDGE_IDENTITY = Object.freeze({
+  platform: 'win32',
+  name: 'oh-my-dsh-browser-bridge',
+  executable: 'OhMyDsh.BrowserBridge.exe',
+  protocol: 1,
+});
+
 // These paths enter MSBuild expressions after command-line parsing. Shell
 // argument quoting alone does not protect an apostrophe or a list separator.
 export function msbuildValue(value) {
@@ -13,5 +20,5 @@ export async function windowsBridgeBuild(arch = process.arch) {
   for (const path of ['../../native/computer-use/windows/TrisoulBrowserBridge.csproj', '../../native/computer-use/windows/Program.cs', '../../scripts/build-computer-use-windows.mjs', './windows-build.mjs']) {
     hash.update(path).update('\0').update(await readFile(new URL(path, import.meta.url)));
   }
-  return { build: hash.digest('hex'), arch, rid: 'win-' + arch, executable: 'OhMyDsh.BrowserBridge.exe' };
+  return { ...WINDOWS_BRIDGE_IDENTITY, build: hash.digest('hex'), arch, rid: 'win-' + arch };
 }

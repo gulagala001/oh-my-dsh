@@ -1,0 +1,56 @@
+/* Codex 26.1007.21159 / build 20052, source-supported settings composition.
+ * Components/offsets: work/rea-reconstruction/browser-settings/source-index.json
+ * Exact CSS: work/rea-reconstruction/browser-settings/css-source-index.json
+ * Normal row/section/input styling lives in codex-cu-settings-primitives.css.
+ */
+[data-codex-cu-scope] .codex-browser-settings-menu-anchor { position:relative; min-width:0; }
+[data-codex-cu-scope] .codex-browser-settings-menu { position:absolute; inset-inline-end:0; top:calc(100% + 1px); }
+[data-codex-cu-scope] .codex-browser-settings-annotation-trigger { width:168px; }
+[data-codex-cu-scope] .codex-browser-settings-truncate { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+[data-codex-cu-scope] .codex-browser-settings-menu-label { font-size:var(--text-sm); line-height:var(--text-sm--line-height); }
+[data-codex-cu-scope] .codex-browser-settings-review-link { margin:0; user-select:none; }
+[data-codex-cu-scope] .codex-browser-settings-review-link a { color:var(--color-text-info); cursor:var(--cursor-interaction,pointer); }
+[data-codex-cu-scope] .codex-browser-settings-review-link a:hover { text-decoration:underline; }
+[data-codex-cu-scope] .codex-browser-settings-review-link a[aria-disabled=true] { cursor:default; }
+[data-codex-cu-scope] .codex-browser-settings-location-actions { display:flex; align-items:center; gap:var(--spacing); }
+[data-codex-cu-scope] .codex-browser-settings-download-path { font-family:var(--font-mono); font-size:var(--text-xs); line-height:var(--text-xs--line-height); text-wrap:wrap; word-break:break-all; }
+[data-codex-cu-scope] .codex-browser-settings-disclosure { display:flex; flex-direction:column; }
+[data-codex-cu-scope] .codex-browser-settings-disclosure > :not(:last-child) { position:relative; }
+[data-codex-cu-scope] .codex-browser-settings-disclosure > :not(:last-child)::after { content:''; pointer-events:none; position:absolute; inset-inline:calc(var(--spacing) * 4); bottom:0; height:1px; background:var(--color-border); }
+[data-codex-cu-scope] .codex-browser-settings-data-row { gap:calc(var(--spacing) * 3); }
+[data-codex-cu-scope] .codex-browser-settings-clear-actions { display:flex; align-items:center; gap:calc(var(--spacing) * 1.5); }
+[data-codex-cu-scope] .codex-browser-settings-disclosure-icon { width:var(--icon-secondary-size,14px); height:var(--icon-secondary-size,14px); flex-shrink:0; color:var(--color-text-tertiary); transition-property:transform,translate,scale,rotate; transition-timing-function:var(--default-transition-timing-function); transition-duration:var(--default-transition-duration); }
+[data-codex-cu-scope] .codex-browser-settings-disclosure-icon.is-expanded { transform:rotate(180deg); }
+[data-codex-cu-scope] .codex-browser-settings-individual-row { display:grid; min-height:calc(var(--spacing) * 10); grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:calc(var(--spacing) * 3); padding-inline:calc(var(--spacing) * 4); padding-block:calc(var(--spacing) * .5); }
+[data-codex-cu-scope] .codex-browser-settings-individual-label { min-width:0; font-size:var(--text-sm); line-height:var(--text-sm--line-height); color:var(--color-text-secondary); }
+[data-codex-cu-scope] .codex-browser-settings-individual-action { max-width:100%; justify-self:end; text-align:start; white-space:normal; }
+
+/* Xe clear-data composition. Surface/body/sections/footer use codex-cu-dialog. */
+[data-codex-cu-scope] .codex-browser-settings-dialog-options { gap:calc(var(--spacing) * 3); }
+[data-codex-cu-scope] .codex-browser-settings-time-ranges { display:flex; gap:calc(var(--spacing) * 2); overflow-x:auto; }
+[data-codex-cu-scope] .codex-browser-settings-check-label { cursor:var(--cursor-interaction,pointer); }
+[data-codex-cu-scope] .codex-browser-settings-check-control { position:relative; }
+[data-codex-cu-scope] .codex-browser-settings-icon-sm { width:18px; height:18px; }
+[data-codex-cu-scope] .codex-browser-settings-sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border-width:0; }
+
+/* Ai/ji/h + back-forward d. The actual Chromium webview stays an adapter slot. */
+[data-codex-cu-scope] .codex-browser-settings-embedded { display:flex; height:100%; min-height:0; flex-direction:column; overflow:hidden; }
+[data-codex-cu-scope][data-codex-cu-window-type=electron] .codex-browser-settings-embedded { background:var(--color-surface); }
+[data-codex-cu-scope] .codex-browser-settings-embedded.is-windows { border-top-left-radius:var(--radius-lg); }
+[data-codex-cu-scope] .codex-browser-settings-embedded-toolbar { position:relative; display:flex; height:var(--height-toolbar); flex-shrink:0; align-items:center; gap:calc(var(--spacing) * 2); border-bottom:1px solid var(--color-border); padding-inline:calc(var(--spacing) * 2); }
+[data-codex-cu-scope] .codex-browser-settings-drag-area { position:absolute; inset:0; -webkit-app-region:drag; }
+[data-codex-cu-scope] .codex-browser-settings-navigation { position:relative; z-index:10; display:flex; align-items:center; gap:1px; -webkit-app-region:no-drag; }
+[data-codex-cu-scope] .codex-browser-settings-forward-icon { transform:scaleX(-1); }
+[data-codex-cu-scope] .codex-browser-settings-breadcrumb-wrap { position:relative; z-index:10; min-width:0; pointer-events:auto; -webkit-app-region:no-drag; }
+[data-codex-cu-scope] .codex-browser-settings-breadcrumb { display:flex; min-width:0; align-items:center; gap:var(--spacing); font-size:var(--text-base); line-height:var(--text-base--line-height); color:var(--color-codex-description); }
+[data-codex-cu-scope] .codex-browser-settings-breadcrumb-button { min-width:0; }
+[data-codex-cu-scope] .codex-browser-settings-breadcrumb-separator { flex-shrink:0; }
+[data-codex-cu-scope] .codex-browser-settings-breadcrumb-current { display:flex; height:var(--spacing-token-button-composer); min-width:0; flex:auto; align-items:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-inline:calc(var(--spacing) * 2); color:var(--color-text); }
+[data-codex-cu-scope] .codex-browser-settings-embedded-content { min-height:0; width:100%; flex:1; background:var(--color-surface); -webkit-app-region:no-drag; }
+@media (width < 48rem) {
+  [data-codex-cu-scope] .codex-browser-settings-individual-row { grid-template-columns:1fr; align-items:start; gap:var(--spacing); padding-block:calc(var(--spacing) * 2); }
+  [data-codex-cu-scope] .codex-browser-settings-individual-action { margin-inline-start:calc(var(--spacing) * -2); justify-self:start; }
+}
+@media (width < 40rem) {
+  [data-codex-cu-scope] .codex-browser-settings-data-row { flex-direction:column; align-items:stretch; }
+}

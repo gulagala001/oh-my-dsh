@@ -2,29 +2,60 @@ import { randomUUID } from 'node:crypto';
 import { viewportGeometry, sameScreenshotGeometry } from './browser-screenshot.mjs';
 import{annotationDocuments}from'./annotation-documents.mjs';
 import{rectPolygon,clipPolygon,mapQuad}from'./annotation-geometry.mjs';
+import{readAnnotationTextSelection}from'./annotation-text-anchor.mjs';
+import{readAnnotationSiteTargets}from'./annotation-site-targets.mjs';
 
-const properties=['display','visibility','opacity','overflow-x','overflow-y','color','background-color','font-size','font-family','font-weight','line-height','padding-top','padding-right','padding-bottom','padding-left','margin-top','margin-right','margin-bottom','margin-left','border-radius'];
+// Codex browser-page-preload qu/hd collects this base set and flex properties.
+export const annotationStyleProperties=['color','background-color','font-size','font-family','font-weight','border-radius','border-color','border-width','padding-top','padding-right','padding-bottom','padding-left','margin-top','margin-right','margin-bottom','margin-left','width','height','opacity','flex-direction','justify-content','align-items','gap','row-gap','column-gap'];
+const properties=['display','visibility','overflow-x','overflow-y','line-height',...annotationStyleProperties,'border-top-left-radius','border-top-right-radius','border-bottom-left-radius','border-bottom-right-radius'];
 const changed=()=>Object.assign(new Error('页面在采集时发生变化，请重新打开批注。'),{code:'ANNOTATION_CHANGED'});
 export const annotationSnapshotOptions={computedStyles:properties,includePaintOrder:true,includeDOMRects:true};
 
+function rememberAnnotation(view,result,dom){
+  if(view.annotationDocument!==view.document){
+    view.disposeAnnotationCache?.();
+    view.annotations=new Map();view.annotationDocument=view.document;
+    const signals=[view.document.signal,view.lifetime.signal],clear=()=>view.annotations.clear();
+    for(const signal of signals)signal.addEventListener('abort',clear,{once:true});
+    view.disposeAnnotationCache=()=>{clear();for(const signal of signals)signal.removeEventListener('abort',clear);};
+  }
+  view.annotations.set(result.frame.id,{result,dom});
+  while(view.annotations.size>4)view.annotations.delete(view.annotations.keys().next().value);
+}
+
 // Capture through the existing read-only observation connection. No page input,
 // model lease, DOM writes, or selector evaluation is involved in annotation.
-export async function captureAnnotation(views,view,signal,{remember=true}={}){
+export async function captureAnnotation(views,view,signal,{remember=true,textAnchor}={}){
   const lifetime=AbortSignal.any([signal,view.lifetime.signal,view.document.signal].filter(Boolean));
   const read=operation=>views.read(view,operation,lifetime);
   const snapshot=()=>annotationDocuments(views,view,annotationSnapshotOptions,lifetime);
   if(view.dialog)throw new Error('请先处理网页提示，再打开批注。');
   for(let attempt=0;attempt<2;attempt++){
     lifetime.throwIfAborted();
-    const loaderId=view.loaderId,before=await snapshot();let after;
+    const siteUrl=view.record.page.url();
     try{
+      const settings=views.siteAnnotationSettings,enabled=settings?await settings.isEnabled(siteUrl):false;
+      lifetime.throwIfAborted();if(typeof enabled!=='boolean')throw new Error('站点批注设置返回了无效的启用状态');
+      view.siteAnnotationFeaturesEnabled=enabled;view.siteAnnotationFeaturesError=null;
+    }catch(error){
+      lifetime.throwIfAborted();view.siteAnnotationFeaturesEnabled=false;view.siteAnnotationFeaturesError=error;
+    }
+    if(view.record.page.url()!==siteUrl){if(!attempt)continue;throw changed();}
+    const loaderId=view.loaderId,before=await snapshot();let after,siteVerified;
+    try{
+    const beforeTop=[...before.entries.values()].find(entry=>!entry.owner);if(!beforeTop)throw changed();
+    const textBefore=await readAnnotationTextSelection(read,beforeTop,textAnchor===undefined?{}:{anchor:textAnchor},lifetime);
+    if(textAnchor!==undefined&&!textBefore)throw changed();
     const captured=await read(views.browser.observeScreenshot(view.record,{},lifetime));
     after=await snapshot();const geometry=viewportGeometry(await read(view.cdp.send('Page.getLayoutMetrics')));
+    const afterTop=[...after.entries.values()].find(entry=>!entry.owner);if(!afterTop)throw changed();
+    const textAfter=await readAnnotationTextSelection(read,afterTop,textAnchor===undefined?{}:{anchor:textAnchor},lifetime);
+    if(textAnchor!==undefined&&!textAfter)throw changed();
     lifetime.throwIfAborted();
     if(view.closed||loaderId!==view.loaderId)throw changed();
     // Compare DOM, rendered bounds and selected computed styles on both sides
     // of the capture. Never attach new element metadata to older preview pixels.
-    if(JSON.stringify(before.signature)!==JSON.stringify(after.signature)||!sameScreenshotGeometry(captured.screenshotFrame,geometry)){if(!attempt)continue;throw changed();}
+    if(JSON.stringify(before.signature)!==JSON.stringify(after.signature)||JSON.stringify(textBefore)!==JSON.stringify(textAfter)||!sameScreenshotGeometry(captured.screenshotFrame,geometry)){if(!attempt)continue;throw changed();}
     const elements=[],entries=after.entries,mainClip=rectPolygon(geometry.offsetX,geometry.offsetY,geometry.width,geometry.height);
     for(const entry of entries.values()){
       const {nodes,layout}=entry.document;entry.layoutByNode=new Map(layout.nodeIndex.map((n,i)=>[n,i]));
@@ -71,9 +102,15 @@ export async function captureAnnotation(views,view,signal,{remember=true}={}){
       elements.push({key:entry.frameId+':'+nodes.backendNodeId[index],backendNodeId:nodes.backendNodeId[index],frameId:entry.frameId,framePath:map.framePath,...identity(index),text:text.join(' ').trim().slice(0,500),ancestry,styles,paintOrder:layout.paintOrders?.[i]??i,paintPath:[...map.paintPrefix,layout.paintOrders?.[i]??i],polygon,region:{x:left,y:top,width:right-left,height:bottom-top}});
     }
     }
-    const result={frame:{id:randomUUID(),tabId:view.tabId,loaderId,data:captured.screenshot,mediaType:'image/png',at:Date.now(),url:view.record.page.url(),geometry},elements,truncated,childFrames:Math.max(0,entries.size-1)};
-    if(remember){view.annotations??=new Map();view.annotations.set(result.frame.id,{result,dom:after.signature});while(view.annotations.size>4)view.annotations.delete(view.annotations.keys().next().value);}
+    if(view.siteAnnotationFeaturesEnabled===true){
+      const targets=await readAnnotationSiteTargets(read,after,elements,lifetime);siteVerified=await snapshot();
+      if(JSON.stringify(siteVerified.signature)!==JSON.stringify(after.signature)){if(!attempt)continue;throw changed();}
+      for(const element of elements){const plan=targets.get(element.key);if(!plan)throw changed();element.siteAnnotationTarget=plan;}
+    }
+    lifetime.throwIfAborted();if(view.closed||loaderId!==view.loaderId||view.record.page.url()!==siteUrl)throw changed();
+    const result={frame:{id:randomUUID(),tabId:view.tabId,loaderId,data:captured.screenshot,mediaType:'image/png',at:Date.now(),url:siteUrl,geometry},elements,truncated,childFrames:Math.max(0,entries.size-1),siteAnnotationFeaturesEnabled:view.siteAnnotationFeaturesEnabled===true,...(textAfter?{textSelection:{...textAfter,key:randomUUID()}}:{})};
+    if(remember)rememberAnnotation(view,result,after.signature);
     return result;
-    }finally{await Promise.all([before.dispose(),after?.dispose()]);}
+    }finally{await Promise.all([before.dispose(),after?.dispose(),siteVerified?.dispose()]);}
   }
 }

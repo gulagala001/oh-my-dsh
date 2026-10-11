@@ -32,23 +32,25 @@ export async function withViewportTransaction(record, operation, signal) {
 
 export async function observeScreenshot(record, options = {}, signal, capture) {
   screenshotOptions(options);
+  const fullPage = options.fullPage === true && !options.clip;
   return withViewportTransaction(record, async () => {
     for (let attempt = 0; attempt < 2; attempt++) {
       signal?.throwIfAborted();
-      const before = await screenshotGeometry(record);
+      const before = await screenshotGeometry(record, { includeContent: fullPage });
       signal?.throwIfAborted();
-      const data = await capture(options, before);
-      const { screenshot, region } = options.fullPage ? { screenshot: data, region: { x: 0, y: 0, scale: 1 } } : await cropViewport(data, before, options.clip);
-      let after = await screenshotGeometry(record);
+      const clip = options.clip ?? (fullPage ? contentRegion(before) : null);
+      const screenshot = clip ? await captureDocumentRegion(record, clip, before, signal) : await capture(options, before);
+      const region = clip ? { x: clip.x, y: clip.y, scale: 1, coordinateSpace: 'page' } : { x: 0, y: 0, scale: before.scale };
+      let after = await screenshotGeometry(record, { includeContent: fullPage });
       // Restoration reaches the renderer after the screenshot reply. Wait
       // read-only for that update; never reset user viewport/scroll settings.
       const deadline = performance.now() + 250;
-      while (options.fullPage && before.generation === after.generation && !sameScreenshotGeometry(before, after) && performance.now() < deadline) {
-        await delay(16); after = await screenshotGeometry(record);
+      while (clip && before.generation === after.generation && !sameScreenshotGeometry(before, after) && performance.now() < deadline) {
+        await delay(16); after = await screenshotGeometry(record, { includeContent: fullPage });
       }
       signal?.throwIfAborted();
-      if (!sameScreenshotGeometry(before, after)) { if (options.fullPage) throw staleScreenshot(); continue; }
-      const screenshotFrame = { ...after, fullPage: options.fullPage === true, region };
+      if (!sameScreenshotGeometry(before, after)) { if (clip) throw staleScreenshot(); continue; }
+      const screenshotFrame = { ...after, fullPage, region };
       record.screenshotFrame = screenshotFrame;
       return { screenshot, screenshotFrame };
     }
@@ -58,7 +60,7 @@ export async function observeScreenshot(record, options = {}, signal, capture) {
 
 export const staleScreenshot = () => Object.assign(new Error('The screenshot geometry has changed. Capture the current screenshot before using point coordinates.'), { code: 'STALE_SCREENSHOT' });
 
-export async function screenshotGeometry(record) {
+export async function screenshotGeometry(record, { includeContent = false } = {}) {
   const [metrics, pixelRatio, scrolls] = await Promise.all([
     record.cdp.send('Page.getLayoutMetrics'),
     record.cdp.send('Runtime.evaluate', { expression: 'window.devicePixelRatio', returnByValue: true }),
@@ -88,8 +90,19 @@ export async function screenshotGeometry(record) {
   ]);
   const devicePixelRatio = pixelRatio.result?.value;
   if (!Number.isFinite(devicePixelRatio) || devicePixelRatio <= 0) throw staleScreenshot();
-  return { source: record.coordinateId, generation: record.generation, ...viewportGeometry(metrics), devicePixelRatio, scrollState: JSON.stringify(scrolls) };
+  return {
+    source: record.coordinateId, generation: record.generation, ...viewportGeometry(metrics), devicePixelRatio, scrollState: JSON.stringify(scrolls),
+    ...(includeContent ? contentGeometry(metrics) : {}),
+  };
 }
+
+function contentGeometry(metrics) {
+  const size = metrics.cssContentSize;
+  if (!size || !Number.isFinite(size.width) || !Number.isFinite(size.height) || size.width <= 0 || size.height <= 0) throw new Error('Page.getLayoutMetrics returned no valid cssContentSize for full-page screenshot.');
+  return { contentX: size.x ?? 0, contentY: size.y ?? 0, contentWidth: size.width, contentHeight: size.height };
+}
+
+const contentRegion = geometry => ({ x: geometry.contentX, y: geometry.contentY, width: geometry.contentWidth, height: geometry.contentHeight });
 
 export function viewportGeometry(metrics) {
   const visual = metrics.cssVisualViewport, layout = metrics.cssLayoutViewport;
@@ -106,13 +119,18 @@ export function sameScreenshotGeometry(a, b) {
   return Object.keys(b).every(key => a[key] === b[key]);
 }
 
+export function screenshotPointToViewport(point, frame) {
+  const region = frame.region ?? { x: 0, y: 0, scale: frame.fullPage ? 1 : frame.scale };
+  const x = point.x / region.scale + region.x, y = point.y / region.scale + region.y;
+  return frame.fullPage || region.coordinateSpace === 'page' ? { x: x - frame.pageX, y: y - frame.pageY } : { x, y };
+}
+
 export function screenshotOptions(options={}){
   if(!options||typeof options!=='object'||Array.isArray(options))throw new Error('Screenshot options must be an object.');
   if(options.fullPage!==undefined&&typeof options.fullPage!=='boolean')throw new Error('fullPage must be a boolean.');
   if(options.clip!==undefined){
     const c=options.clip;
-    if(!c||!['x','y','width','height'].every(key=>Number.isFinite(c[key]))||c.x<0||c.y<0||c.width<=0||c.height<=0)throw new Error('clip requires finite x/y >= 0 and width/height > 0.');
-    if(options.fullPage)throw new Error('Choose either fullPage or a viewport clip.');
+    if(!c||!['x','y','width','height'].every(key=>Number.isFinite(c[key]))||c.width<=0||c.height<=0)throw new Error('clip requires finite x/y and width/height > 0.');
   }
   return options;
 }
@@ -126,13 +144,24 @@ export async function cropViewport(data,geometry,clip){
   return {screenshot:(await image.extract({left,top,width:right-left,height:bottom-top}).png().toBuffer()).toString('base64'),region:{x:left/scale,y:top/scale,scale}};
 }
 
-export async function captureFullPage(record){
-  const {cssContentSize}=await record.cdp.send('Page.getLayoutMetrics');
-  const {data}=await record.cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:true,clip:{x:0,y:0,width:cssContentSize.width,height:cssContentSize.height,scale:1}});
-  const bytes=Buffer.from(data,'base64'),image=sharp(bytes),meta=await image.metadata();
-  const width=Math.ceil(cssContentSize.width),height=Math.ceil(cssContentSize.height);
-  if(Math.abs(meta.width/width-meta.height/height)>2/Math.min(width,height))throw new Error('The browser did not return a complete full-page image.');
-  return meta.width===width&&meta.height===height?data:(await image.resize(width,height,{fit:'fill'}).png().toBuffer()).toString('base64');
+export async function captureDocumentRegion(record, clip, geometry, signal) {
+  signal?.throwIfAborted();
+  const current = geometry ?? await screenshotGeometry(record);
+  const { data } = await record.cdp.send('Page.captureScreenshot', {
+    format: 'png', fromSurface: true, captureBeyondViewport: true,
+    clip: { ...clip, scale: 1 / current.devicePixelRatio },
+  });
+  signal?.throwIfAborted();
+  if (typeof data !== 'string' || !data) throw new Error('Page.captureScreenshot returned no data for tab ' + record.id + '.');
+  const image = sharp(Buffer.from(data, 'base64')), meta = await image.metadata();
+  const width = Math.ceil(clip.width), height = Math.ceil(clip.height);
+  if (!meta.width || !meta.height || Math.abs(meta.width / width - meta.height / height) > 2 / Math.min(width, height)) throw new Error('The browser did not return a complete screenshot region.');
+  return meta.width === width && meta.height === height ? data : (await image.resize(width, height, { fit: 'fill' }).png().toBuffer()).toString('base64');
+}
+
+export async function captureFullPage(record, geometry, signal) {
+  const current = geometry?.contentWidth ? geometry : await screenshotGeometry(record, { includeContent: true });
+  return captureDocumentRegion(record, contentRegion(current), current, signal);
 }
 
 export async function captureViewport(record, geometry, signal) {

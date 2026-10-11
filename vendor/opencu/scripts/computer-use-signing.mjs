@@ -15,6 +15,19 @@ const run = (command, args) => {
 // No certificate is trusted system-wide and the login keychain is untouched.
 // Distribution builds should provide an actual Developer ID signing identity.
 export async function signNativeBundle(app) {
+  return signNativeCode(app,{lockHelper:join(app,'Contents/MacOS/trisoul-computer-use')});
+}
+
+// The signed helper supplies the installation-lock command for code bundles
+// whose executable is not a command-line program, such as authorization plugins.
+export async function signNativeCode(app,{lockHelper}={}) {
+  if(typeof lockHelper!=='string'||!lockHelper)throw new TypeError('Signing requires the existing native lock helper');
+  // Explicit local builds need no certificate or access to a user's keychains.
+  if (process.env.TRISOUL_CU_SIGN_IDENTITY === '-') {
+    run('codesign', ['--force', '--sign', '-', '--timestamp=none', app]);
+    run('codesign', ['--verify', '--strict', app]);
+    return;
+  }
   const signingDirectory=join(homedir(),'Library/Application Support/trisoul-x/development-signing');
   await mkdir(signingDirectory,{recursive:true,mode:0o700});
   const lockDirectory=await mkdtemp(join(tmpdir(),'trisoul-sign-lock-'));
@@ -22,7 +35,7 @@ export async function signNativeBundle(app) {
   try {
   // codesign changes the app executable. Run the locking helper from a copy so
   // signing cannot invalidate the code signature of the live lock holder.
-  const helper=join(lockDirectory,'lock');await copyFile(join(app,'Contents/MacOS/trisoul-computer-use'),helper);
+  const helper=join(lockDirectory,'lock');await copyFile(lockHelper,helper);
   unlock=await nativeLock(helper,join(signingDirectory,'signing.lock'));
   const releaseIdentity = process.env.TRISOUL_CU_SIGN_IDENTITY;
   if (releaseIdentity) {
