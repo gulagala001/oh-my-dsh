@@ -87,7 +87,7 @@ internal sealed class NativeProtocol(
                     active.Add(End(writer, id));
                     continue;
                 }
-                if (readOnly && name is not ("check_permissions" or "list_apps" or "list_windows" or "list_share_windows" or "get_window_share" or "get_window_state" or "start_preview" or "preview_frame"))
+                if (readOnly && name is not ("check_permissions" or "list_apps" or "list_windows" or "list_share_windows" or "get_window_share" or "get_window_state" or "start_preview" or "preview_frame" or "start_native_presentation" or "stop_native_presentation" or "get_native_presentation_state" or "update_native_presentation" or "show_window"))
                 { await Reply(writer, id, Error(new NativeFailure("READ_ONLY_SESSION", "This observation connection cannot send input or modify an application"))); continue; }
                 var source = CancellationTokenSource.CreateLinkedTokenSource(lease.Token);
                 if (!requests.TryAdd(id, source)) { source.Dispose(); throw new InvalidDataException("Duplicate active request id"); }

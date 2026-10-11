@@ -1,13 +1,12 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { AssistantCursor } from './assistant-cursor.jsx';
-import { ComputerIcon } from './computer-icons.jsx';
-import { DeviceFrame } from './device-frame.jsx';
+import {CodexCuScope} from './codex-cu-scope.jsx';
+import {BrowserDeviceFrame} from './browser-device-frame.jsx';
 const releases = new Set(['release', 'pointerup', 'keyup']);
 
 // Frames go straight to the pane; they do not become conversation attachments.
 // Input is serialized, with only adjacent pointer moves coalesced. A press and
 // its release always keep their order, including while the assistant stops.
-export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api, url, onState, onError, onNavigation, onBrowserShortcut, onFrame, onViewportResize, deviceMode=false, previewScale='1' }) {
+export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api, url, onState, onError, onNavigation, onBrowserShortcut, onFrame, onViewportResize, deviceMode=false, devicePreset='responsive', previewScale='1', renderBrowserCursor }) {
   const [frame, setFrame] = useState(null), [connection, setConnection] = useState('connecting');
   const [dialog, setDialog] = useState(null), [prompt, setPrompt] = useState('');
   const [reconnect, setReconnect] = useState(0);
@@ -17,7 +16,7 @@ export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api,
   const lastPointer = useRef(null);
   const displayedData = useRef(null), receivedFrame = useRef(null);
   const activeStream=useRef(null);
-  const stage=useRef(null),meta=useRef(null),[space,setSpace]=useState({width:0,height:0});
+  const stage=useRef(null),[space,setSpace]=useState({width:0,height:0});
   const [layoutSize,setLayoutSize]=useState(null),layoutResizing=useRef(false);
   const [layoutBusy, setLayoutBusy] = useState(false);
   const setLayoutResizing = value => { layoutResizing.current = value; setLayoutBusy(value); };
@@ -47,11 +46,11 @@ export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api,
       // Account for controls above the preview, without changing fit when the
       // user scrolls the pane. Observe controls, not the scaled image itself.
       const top=element.getBoundingClientRect().top-pane.getBoundingClientRect().top+pane.scrollTop;
-      const next={width:element.clientWidth,height:pane.classList.contains('tx-cu-pane-browser')?element.clientHeight:Math.max(120,pane.clientHeight-top-meta.current.offsetHeight-parseFloat(getComputedStyle(pane).paddingBottom||0))};
+      const next={width:element.clientWidth,height:pane.classList.contains('tx-cu-pane-browser')?element.clientHeight:Math.max(120,pane.clientHeight-top-parseFloat(getComputedStyle(pane).paddingBottom||0))};
       setSpace(old=>old.width===next.width&&old.height===next.height?old:next);
     };
     const resize=new ResizeObserver(measure);
-    const observe=()=>{resize.disconnect();resize.observe(pane);resize.observe(element);resize.observe(meta.current);for(const child of pane.children)if(child!==element.parentElement)resize.observe(child);measure();};
+    const observe=()=>{resize.disconnect();resize.observe(pane);resize.observe(element);for(const child of pane.children)if(child!==element.parentElement)resize.observe(child);measure();};
     const mutation=new MutationObserver(observe);mutation.observe(pane,{childList:true});observe();
     return()=>{resize.disconnect();mutation.disconnect();};
   },[isDevice,visible]);
@@ -80,14 +79,30 @@ export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api,
   useEffect(() => {
     setFrame(null); setDialog(null); setCursor(null); current.current = null; displayedData.current = null; receivedFrame.current = null;callbacks.current.onFrame?.(null);
     if (!visible) return;
-    let active = true, navigationObservedAt = -Infinity;
+    let active = true, navigationObservedAt = -Infinity, siteAnnotationChange = null, siteAnnotationState = null;
+    const clearSiteAnnotationState=()=>{
+      siteAnnotationState=null;
+      for(const value of [receivedFrame.current,current.current])if(value)delete value.siteAnnotationState;
+      setFrame(previous=>previous?.siteAnnotationState?{...previous,siteAnnotationState:undefined}:previous);
+    };
     const stream = new EventSource(url('stream', sessionId) + '&view=1&tab=' + encodeURIComponent(tabId));
     activeStream.current=stream;
     setConnection('connecting');
     stream.addEventListener('ready', event => { if (active) current.current = JSON.parse(event.data); });
+    stream.addEventListener('browser-native', event => {
+      if (!active || !current.current?.actor) return;
+      const value = JSON.parse(event.data);
+      if (!value || typeof value.event !== 'string') return;
+      window.dispatchEvent(new CustomEvent('opencu-browser-native', { detail: {
+        sessionId, tabId, actor: current.current.actor, event: value.event,
+        browserId: value.browserId, browserEpoch: value.browserEpoch, params: value.params,
+      } }));
+    });
     stream.addEventListener('frame', event => {
       if (!active) return;
       const next = JSON.parse(event.data);
+      if(siteAnnotationChange?.loaderId===next.loaderId)next.siteAnnotationRevision=siteAnnotationChange.revision;
+      if(siteAnnotationState?.loaderId===next.loaderId)next.siteAnnotationState=siteAnnotationState;else siteAnnotationState=null;
       receivedFrame.current = next;
       if (current.current?.loaderId && current.current.loaderId !== next.loaderId) current.current.id = undefined;
       if (current.current) Object.assign(current.current, { actor: next.actor, controlEpoch: next.controlEpoch, stopped: next.stopped, transitioning: next.transitioning });
@@ -102,6 +117,26 @@ export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api,
       if (current.current) Object.assign(current.current, next);
       if(current.current?.data)callbacks.current.onFrame?.({...current.current});
       if (next.stopped || next.transitioning) setCursor(null);
+    });
+    stream.addEventListener('site-annotation-features', event => {
+      if(!active)return;
+      const change=JSON.parse(event.data),observed=receivedFrame.current??current.current;
+      if(change.tabId!==tabId||change.loaderId!==observed?.loaderId||!Number.isSafeInteger(change.revision))return;
+      if(siteAnnotationChange?.loaderId===change.loaderId&&siteAnnotationChange.revision>=change.revision)return;
+      siteAnnotationChange=change;
+      for(const value of [receivedFrame.current,current.current])if(value?.loaderId===change.loaderId)value.siteAnnotationRevision=change.revision;
+      setFrame(previous=>previous?.loaderId===change.loaderId?{...previous,siteAnnotationRevision:change.revision}:previous);
+      if(current.current?.data&&current.current.loaderId===change.loaderId)callbacks.current.onFrame?.({...current.current});
+    });
+    stream.addEventListener('site-annotation-state',event=>{
+      if(!active)return;
+      const change=JSON.parse(event.data),observed=receivedFrame.current??current.current;
+      if(change.tabId!==tabId||change.loaderId!==observed?.loaderId||!Number.isSafeInteger(change.revision)||change.revision<0)return;
+      if(siteAnnotationState?.loaderId===change.loaderId&&siteAnnotationState.revision>=change.revision)return;
+      siteAnnotationState=change;
+      for(const value of [receivedFrame.current,current.current])if(value?.loaderId===change.loaderId)value.siteAnnotationState=change;
+      setFrame(previous=>previous?.loaderId===change.loaderId?{...previous,siteAnnotationState:change}:previous);
+      if(current.current?.data&&current.current.loaderId===change.loaderId)callbacks.current.onFrame?.({...current.current});
     });
     stream.addEventListener('cursor', event => {
       if (!active) return;
@@ -125,13 +160,13 @@ export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api,
       // Frame delivery can precede navigation history and img.load. Compare
       // the received document, not the image that finished decoding earlier.
       const loaderId = receivedFrame.current?.loaderId ?? current.current?.loaderId;
-      if (loaderId && value.loaderId !== loaderId) { receivedFrame.current = null; if(current.current)current.current.id = undefined; setConnection('connecting');callbacks.current.onFrame?.(null); }
+      if (loaderId && value.loaderId !== loaderId) { clearSiteAnnotationState();receivedFrame.current = null; if(current.current)current.current.id = undefined; setConnection('connecting');callbacks.current.onFrame?.(null); }
       callbacks.current.onNavigation(value);
     });
     stream.addEventListener('warning', event => { callbacks.current.onError(JSON.parse(event.data).message); });
-    stream.addEventListener('failure', event => { callbacks.current.onError(JSON.parse(event.data).message); setConnection('error'); stream.close(); stopLocalInput();callbacks.current.onFrame?.(null); });
-    stream.addEventListener('closed', event => { const data=JSON.parse(event.data); if(!['target-changed','tab-closed'].includes(data.reason))callbacks.current.onError(data.message); setConnection('closed'); stream.close(); stopLocalInput(); current.current = null;callbacks.current.onFrame?.(null); });
-    stream.onerror = () => { if (active) { setConnection('connecting'); stopLocalInput(); current.current = null;callbacks.current.onFrame?.(null); } };
+    stream.addEventListener('failure', event => { callbacks.current.onError(JSON.parse(event.data).message); clearSiteAnnotationState();setConnection('error'); stream.close(); stopLocalInput();current.current=null;receivedFrame.current=null;callbacks.current.onFrame?.(null); });
+    stream.addEventListener('closed', event => { const data=JSON.parse(event.data); if(!['target-changed','tab-closed'].includes(data.reason))callbacks.current.onError(data.message); clearSiteAnnotationState();setConnection('closed'); stream.close(); stopLocalInput(); current.current = null;receivedFrame.current=null;callbacks.current.onFrame?.(null); });
+    stream.onerror = () => { if (active) { clearSiteAnnotationState();setConnection('connecting'); stopLocalInput(); current.current = null;receivedFrame.current=null;callbacks.current.onFrame?.(null); } };
     return () => { active = false; stream.close();if(activeStream.current===stream)activeStream.current=null; stopLocalInput(); current.current = null;callbacks.current.onFrame?.(null); };
   }, [sessionId, tabId, visible, state?.enabled, reconnect]);
 
@@ -202,14 +237,13 @@ export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api,
     modifiers(event);
   };
   const insert = text => { if (text) send({ type: 'text', text }); if (input.current) input.current.value = ''; };
-  const blank=pageUrl==='about:blank'&&state?.enabled!==false&&!['closed','error'].includes(connection);
   const placeholder=state?.enabled===false?'Computer Use 已停用':connection==='closed'?'页面已断开':connection==='error'?'无法获取页面画面':'正在获取页面…';
 
-  return <div className={'tx-cu-live'+(isDevice?' is-device':'')+(blank?' is-blank':'')} data-connection={connection} data-layout-busy={layoutBusy ? 'true' : 'false'} style={isDevice?{'--cu-device-width':frameWidth*scale+'px','--cu-preview-height':space.height?space.height+'px':undefined}:undefined} aria-label="浏览器实时画面">
-    <div className="tx-cu-live-meta" ref={meta}><span className={connection === 'live' ? 'tx-cu-live-dot' : ''}>{connection === 'live' ? state?.resuming?'正在恢复':state?.status==='running'?'助手正在操作':state?.status==='stopped'?'你正在控制':'就绪' : connection === 'connecting' ? '正在连接画面…' : '画面已断开'}</span><span>{state?.status === 'stopped' ? '可在工具栏恢复助手' : '点击画面接管'}</span></div>
+  return <CodexCuScope as="div" className={'tx-cu-live'+(isDevice?' is-device':'')} data-connection={connection} data-layout-busy={layoutBusy ? 'true' : 'false'} style={isDevice?{'--cu-device-width':frameWidth*scale+'px','--cu-preview-height':space.height?space.height+'px':undefined}:undefined} data-codex-cu-browser-preview aria-label="浏览器实时画面">
+
     <div className="tx-cu-preview-stage" ref={stage}>
-    <DeviceFrame enabled={isDevice} interactive={visible&&state?.enabled!==false&&!state?.transitioning&&!state?.resuming&&connection==='live'&&!dialog&&!!onViewportResize} width={frameWidth} height={frameHeight} scale={scale} onResize={onViewportResize} onError={onError}>
-    <div className="tx-cu-live-surface" ref={surface} aria-hidden={blank||undefined} onContextMenu={e => e.preventDefault()}
+    <BrowserDeviceFrame presetId={devicePreset} enabled={isDevice} interactive={visible&&state?.enabled!==false&&!state?.transitioning&&!state?.resuming&&connection==='live'&&!dialog&&!!onViewportResize} width={frameWidth} height={frameHeight} scale={scale} onResize={onViewportResize} onError={onError}>
+    <div className="tx-cu-live-surface" ref={surface} onContextMenu={e => e.preventDefault()}
       onPointerDown={e => {
         if (connection !== 'live' || dialog || layoutResizing.current) return;
         e.preventDefault(); e.stopPropagation(); input.current?.focus({ preventScroll: true });
@@ -226,8 +260,8 @@ export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api,
         if (!pressed.current.size && e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
       }}
       onLostPointerCapture={release} onPointerCancel={release}>
-      {frame ? <img src={'data:' + frame.mediaType + ';base64,' + frame.data} alt="当前浏览器页面；点击可接管操作" draggable={false} onError={()=>{activeStream.current?.close();setConnection('error');stopLocalInput();current.current=null;callbacks.current.onFrame?.(null);callbacks.current.onError('画面加载失败，请重连');}} onLoad={()=>{displayedData.current=frame.data;if(receivedFrame.current===frame&&current.current?.actor===frame.actor){current.current={...frame,controlEpoch:current.current.controlEpoch,stopped:current.current.stopped,transitioning:current.current.transitioning};callbacks.current.onFrame?.(frame);}}}/> : <div className="tx-cu-live-placeholder" role="status">{placeholder}</div>}
-      {visible && enabled.current && connection === 'live' && !dialog && !frame?.browserCursor && <AssistantCursor cursor={cursor} frame={frame}/>}
+      {frame ? <img src={'data:' + frame.mediaType + ';base64,' + frame.data} alt="当前浏览器页面；点击可接管操作" draggable={false} onError={()=>{activeStream.current?.close();setConnection('error');stopLocalInput();current.current=null;callbacks.current.onFrame?.(null);callbacks.current.onError('画面加载失败，请重连');}} onLoad={()=>{displayedData.current=frame.data;const actual=receivedFrame.current;if(actual?.id===frame.id&&actual.loaderId===frame.loaderId&&actual.data===frame.data&&current.current?.actor===frame.actor){current.current={...actual,controlEpoch:current.current.controlEpoch,stopped:current.current.stopped,transitioning:current.current.transitioning};callbacks.current.onFrame?.({...current.current});}}}/> : <div className="tx-cu-live-placeholder" role="status">{placeholder}</div>}
+      {visible && enabled.current && connection === 'live' && !dialog && !frame?.browserCursor && renderBrowserCursor?.({cursor,frame,sessionId})}
       <textarea ref={input} className="tx-cu-keyboard" aria-label="浏览器键盘输入" autoCapitalize="off" autoCorrect="off" spellCheck={false}
         onBlur={release} onKeyDown={keyDown} onKeyUp={keyUp}
         onCompositionStart={() => { composing.current = true; }}
@@ -236,10 +270,10 @@ export function BrowserPreview({ sessionId, tabId, pageUrl, visible, state, api,
         onPaste={e => { e.preventDefault(); e.stopPropagation(); insert(e.clipboardData.getData('text/plain')); }}/>
       {connection !== 'live' && frame && <div className="tx-cu-live-overlay">{connection === 'connecting' ? '连接中，稍后可继续操作' : '画面已断开'}</div>}
     </div>
-    </DeviceFrame>
-    {blank&&<div className="tx-cu-browser-blank"><ComputerIcon name="globe" size={28}/><h3>开始浏览</h3><p>输入 URL 以打开页面</p></div>}
+    </BrowserDeviceFrame>
+
     </div>
     {['closed','error'].includes(connection) && <button className="tx-cu-reconnect" onClick={()=>{callbacks.current.onError('');setReconnect(n=>n+1);}}>重连画面</button>}
     {dialog && <form className="tx-cu-dialog" onSubmit={e => { e.preventDefault(); send({ type: 'dialog', dialogId: dialog.id, accept: true, text: prompt }); }}><strong>{dialog.type === 'prompt' ? '网页请求输入' : '网页提示'}</strong><p>{dialog.message}</p>{dialog.type === 'prompt' && <input aria-label="网页提示输入" value={prompt} onChange={e => setPrompt(e.target.value)}/>}<div>{dialog.type !== 'alert' && <button type="button" onClick={() => send({ type: 'dialog', dialogId: dialog.id, accept: false })}>取消</button>}<button className="tx-cu-primary">确定</button></div></form>}
-  </div>;
+  </CodexCuScope>;
 }

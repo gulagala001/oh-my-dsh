@@ -1,6 +1,6 @@
 import { decorateSlotComponent } from './slot-decoration.mjs';
 import React, { useState } from 'react';
-import {ComputerIcon} from './computer-icons.jsx';
+import { CodexComputerReference } from './codex-target-adapter.jsx';
 import { projectUserText, FileTypeIcon, JsonBlock } from '@deepseek-ai/dsh-client-ui-primitives';
 
 function segments(text) {
@@ -18,7 +18,7 @@ function segments(text) {
 }
 
 function ReferenceChip({ reference }) {
-  return <span className="tx-cu-reference" title={reference.url ?? reference.id} data-computer-use-reference={reference.kind}><ComputerIcon size={14} name={reference.kind === 'app' ? 'screen' : 'browser'}/><span>{reference.label ?? reference.title ?? (reference.kind === 'browser' ? 'Browser' : reference.id)}</span></span>;
+  return <CodexComputerReference reference={reference}/>;
 }
 
 function ReferenceMessage({ parts, node, renderMessageImages, t }) {

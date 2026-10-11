@@ -17,7 +17,7 @@
 
 仓库 `gulagala001/oh-my-dsh`，包 `trisoul_x`，预设 `trisoul-x`。[公开配对](upgrade.md#目标版本与完成标准)。展示名不等于来源，不误装同名 npm 包。
 
-GitHub alpha.2 OMD `0.16.0` 未发行，内置较早 OpenCU 1.6.1 快照；最新本地同版本重构未合入它，不以 `latest` 猜包或编造 alpha.2 下载链接。
+GitHub alpha.2 OMD `0.16.0` 未发行，已整合 OpenCU 1.6.1 的浏览器与运行时重构，不以 `latest` 猜包或编造 alpha.2 下载链接。
 
 ## 按症状处理
 

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "provider": "official-electron",
+  "electronVersion": "44.7.0",
+  "chromiumVersion": "152.0.7977.130",
+  "source": "electron@44.7.0/checksums.json",
+  "releaseBaseUrl": "https://github.com/electron/electron/releases/download/v44.7.0/",
+  "artifacts": {
+    "darwin-arm64": "e04e411b58a0a14375dd21b0ab4a378fd38930a702e4e20e322fee4849404c0b",
+    "darwin-x64": "4fe494a7159b10a81e2098dab388719582065e99e604c4510bb117e282213566",
+    "linux-arm64": "9cd736d1f5873839553c3fa6c8c5e57635ec4a399cc2d32e79c82a02d9cd2258",
+    "linux-x64": "3ae7d5bdad61c664486c6ab61361dd084d064c8c08af8d13a687096e18ce555a",
+    "win32-arm64": "ee2621a4513f92a952273d5363e153db6f0e4dd183d89f2c0f740faa13623316",
+    "win32-x64": "eee30dc8fa1f5ea95490e59f44e46ea68dd24c6e93d22facf70fe5c2d4c2665c"
+  }
+}

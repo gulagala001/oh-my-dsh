@@ -148,7 +148,7 @@ System instructions organize work around DSH's actual tools, permissions and exe
 - **Pro / Ultracode:** Choose work modes above a model's native reasoning levels to adjust requirement planning, implementation and checks. [Workflow](docs/workflow.md)
 - **OMD-PTC / CodeGraph:** Use composed tool calls or query code relationships as needed. [Usage guide](docs/usage_EN.md)
 - **Main-branch preview, unreleased:** Monitoring shows calls, usage and context changes. Dream incrementally organizes conversation, project and global short memories with sources; automatic processing is off by default. [Monitoring](docs/monitoring.md) · [Dream](docs/dream-memory.md)
-- **Latest local implementation, unreleased:** OpenCU's browser reconstruction uses officially precompiled Electron 44.7.0, one browser entry and a unified tab bar, while retaining split views and the sidebar. GitHub main contains an earlier OpenCU 1.6.1 snapshot; the local reconstruction retains the same unreleased version number but has different contents. Public installation packages do not include these changes, and this does not establish validation on other platforms.
+- **Latest local implementation, unreleased:** OpenCU's browser reconstruction uses officially precompiled Electron 44.7.0, one browser entry and a unified tab bar, while retaining split views and the sidebar. GitHub main includes the OpenCU 1.6.1 browser and runtime reconstruction; source integration does not mean a new installation package has been released. Public installation packages do not include these changes, and this does not establish validation on other platforms.
 
 </details>
 

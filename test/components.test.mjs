@@ -4,9 +4,13 @@ import { Components } from '../src/components.mjs';
 
 function fixture() {
   const own = { codegraphEnabled: true, componentAutoSetup: true }, cu = { computerUseEnabled: true }, calls = [];
-  const manager = { browser: {}, native: { supported: () => true, available: () => false, permissions: async () => calls.push('permissions') },
-    installBrowser: async () => { calls.push('browser'); }, installNative: async () => { calls.push('native'); }, installExtension: async () => { calls.push('extension'); },
-    extensionInstaller: { status: async () => ({ supported: true, prepared: false }) }, extensionHub: { list: () => [] },
+  let nativeInstalled = false, extensionPrepared = false;
+  const manager = { browser: {}, native: { supported: () => true, available: () => nativeInstalled,
+    installationStatus: async () => ({}), permissions: async () => { calls.push('permissions'); return { platform: 'darwin', accessibility: true, screen_recording: true }; } },
+    installBrowser: async () => { calls.push('browser'); return process.execPath; },
+    installNative: async () => { calls.push('native'); nativeInstalled = true; },
+    installExtension: async () => { calls.push('extension'); extensionPrepared = true; },
+    extensionInstaller: { status: async () => ({ supported: true, prepared: extensionPrepared }) }, extensionHub: { list: () => [] },
     setupStatus: async () => ({ browser: { installed: true }, native: { installed: false }, extension: {} }) };
   const graph = { enabled: true, projects: new Map(), prepare: async () => { calls.push('codegraph'); },
     retryCatalog() {}, setEnabled: async value => { graph.enabled = value; },
@@ -34,13 +38,13 @@ test('enabled components prepare together, share concurrent requests and retry f
   assert.equal(f.service.records.get('browser').status, 'error');
   assert.equal(f.service.records.get('native').status, 'ready');
   f.service.start(); await f.service.reconfigure();
-  assert.equal(f.calls.length, 4, 'unrelated settings changes do not repeat failed automatic installs');
-  f.manager.installBrowser = async () => { f.calls.push('browser'); };
+  assert.equal(f.calls.length, 5, 'unrelated settings changes do not repeat failed automatic installs or permission checks');
+  f.manager.installBrowser = async () => { f.calls.push('browser'); return process.execPath; };
   await f.service.prepare('browser');
   assert.equal(f.service.records.get('browser').status, 'ready');
   assert.equal(f.calls.filter(x => x === 'native').length, 1);
   f.service.close(); await f.service.prepare();
-  assert.equal(f.calls.length, 5);
+  assert.equal(f.calls.length, 6);
 });
 
 test('settings retain explicit opt-outs and use the shared OpenCU configuration', async () => {

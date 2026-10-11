@@ -1,174 +1,98 @@
 import React,{useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {NativePreview,usePreviewAlignmentStyles} from './native-preview.jsx';
-import css from './computer-use.css';
-import previewCss from './preview-alignment.css';
-import {ComputerIcon} from './computer-icons.jsx';
+import {nativeHomeMetrics} from './codex-native-layout.mjs';
+import {useCodexNativeDomHome} from './codex-native-dom-home.jsx';
 
-// A separate read-only observer: closing the window releases only its stream.
-export function FloatingPreview({sessionId,state,url,api,onState,onError,anchor,onOpen,paneVisible=false,mode}){
+// The native host supplies its presentation order, stack bounds and placement.
+// Capture geometry does not supply those values. In particular, document PiP
+// is not the native pinned NSPanel and is not used to manufacture that branch.
+export function NativePreviewStack({sessionId,state,url,onError,nativeLayout,
+  windowZoom=1,enteringPresentationIDs=[],onReadyChange,onInteractWithPresentation,onDomHomeChange,active=true}){
   usePreviewAlignmentStyles();
-  const [popup,setPopup]=useState(null),[opening,setOpening]=useState(false),[stopping,setStopping]=useState(false),[expanded,setExpanded]=useState(false),[zoomed,setZoomed]=useState(null),[localError,setLocalError]=useState('');
-  const [shown,setShown]=useState(true),[position,setPosition]=useState({right:20,bottom:120}),[dock,setDock]=useState(null);
-  const [dragging,setDragging]=useState(false);
-  const [frameSizes,setFrameSizes]=useState({});
-  const [front,setFront]=useState(null),[entering,setEntering]=useState(false);
-  const [query,setQuery]=useState(''),[resuming,setResuming]=useState(false),[connections,setConnections]=useState({}),[targetErrors,setTargetErrors]=useState({});
-  const keyboardTarget=useRef(null),trigger=useRef(null);
-  const owned=useRef(null),generation=useRef(0),floating=useRef(null),manual=useRef(null),drag=useRef(null),dragFrame=useRef(null),reposition=useRef(null),suppressClick=useRef(false),layout=useRef(null);
-  const target=state?.target,key=target?.viewId??target?.id;
-  const orderedTargets=(state?.previewTargets??(target?[target]:[])).slice().reverse();
-  const targets=orderedTargets.slice().sort((a,b)=>Number((b.viewId??b.id)===(front??key))-Number((a.viewId??a.id)===(front??key)));
-  useEffect(()=>()=>{generation.current++;owned.current?.close();owned.current=null;setPopup(null);},[sessionId,state?.enabled]);
-  useEffect(()=>{setShown(true);},[sessionId]);
-  useEffect(()=>{setLocalError('');setFront(null);},[sessionId,key]);
-  useEffect(()=>{manual.current=null;setZoomed(null);setExpanded(false);layout.current?.();},[sessionId]);
-  const targetIds=targets.map(item=>item.viewId??item.id).join('|');
-  const leading=targets.find(item=>(item.viewId??item.id)===zoomed)??targets[0];
-  const leadingId=leading?.viewId??leading?.id;
-  useEffect(()=>{if(popup)popup.document.title=(leading?.name||leading?.title||'操控预览')+' · Oh My DSH';},[popup,leading?.name,leading?.title]);
-  const matches=item=>(item.name||item.title||item.url||'').toLocaleLowerCase().includes(query.toLocaleLowerCase());
-  const visibleError=localError||targetErrors[leadingId];
-  useEffect(()=>{if(!expanded)setQuery('');},[expanded]);
-  useEffect(()=>{setConnections({});setTargetErrors({});setQuery('');setResuming(false);setStopping(false);setEntering(false);setOpening(false);},[sessionId]);
-  useLayoutEffect(()=>{if(!keyboardTarget.current)return;const root=popup?.document??document;[...root.querySelectorAll('.tx-cu-preview-card')].find(element=>element.dataset.target===keyboardTarget.current)?.querySelector('.tx-cu-preview-open')?.focus({preventScroll:true});keyboardTarget.current=null;},[front,zoomed,popup]);
-  const compact=!popup&&!zoomed&&!expanded;
-  const parked=compact&&!manual.current&&!dragging;
-  const depth=parked||zoomed||expanded?0:Math.max(0,Math.min(4,targets.length-1));
-  const sizeKey=targets.map(item=>{const size=frameSizes[item.viewId??item.id];return size?`${size.width}:${size.height}`:'16:9';}).join('|');
-  useEffect(()=>{if(zoomed&&!targets.some(item=>(item.viewId??item.id)===zoomed))setZoomed(null);},[targetIds,zoomed]);
-  const finishDrag=()=>{
-    const active=drag.current;drag.current=null;setDragging(false);
-    if(dragFrame.current!==null){cancelAnimationFrame(dragFrame.current);dragFrame.current=null;}
-    if(active?.moved&&floating.current){const node=floating.current,point=manual.current;if(point){node.style.left=point.left+'px';node.style.top=point.top+'px';node.style.right='auto';node.style.bottom='auto';}node.style.removeProperty('--cu-drag-x');node.style.removeProperty('--cu-drag-y');layout.current?.();}
-    if(active?.element.hasPointerCapture(active.id))active.element.releasePointerCapture(active.id);
-  };
-  useEffect(()=>{finishDrag();return()=>{if(dragFrame.current!==null){cancelAnimationFrame(dragFrame.current);dragFrame.current=null;}const active=drag.current;drag.current=null;floating.current?.style.removeProperty('--cu-drag-x');floating.current?.style.removeProperty('--cu-drag-y');if(active?.element.hasPointerCapture(active.id))active.element.releasePointerCapture(active.id);};},[sessionId,popup,shown,paneVisible]);
+  const surface=useRef(null),home=useRef(null),[width,setWidth]=useState(null);
+  const [frames,setFrames]=useState({sessionId,loaded:[],errors:[]});
+  const loaded=frames.sessionId===sessionId?frames.loaded:[];
+  const errors=frames.sessionId===sessionId?frames.errors:[];
+  const presentations=state?.nativePresentation?.presentations??[];
   useLayoutEffect(()=>{
-    let observedInput;
-    const update=()=>{
-      if(drag.current?.moved)return;
-      if(compact){const point=manual.current,width=parked?150:180,height=parked?56:86;setPosition({...(point?{left:Math.max(12,Math.min(point.left,window.innerWidth-width-12)),top:Math.max(12,Math.min(point.top,window.innerHeight-height-12))}:{}),width,height,'--cu-card-max-width':(width-32)+'px','--cu-card-max-height':height+'px'});return;}
-      let container=anchor?.current?.parentElement;while(container&&!container.querySelector('[contenteditable="true"]'))container=container.parentElement;
-      const input=container?.querySelector('[contenteditable="true"]');
-      if(input!==observedInput){if(observedInput)observer.unobserve(observedInput);if(input)observer.observe(input);observedInput=input;}
-      const rect=(input??anchor?.current)?.getBoundingClientRect();if(!rect)return;
-      const viewport=popup??window;
-      const availableWidth=popup?viewport.innerWidth-12:Math.min(zoomed?640:Math.max(240,rect.width+24),viewport.innerWidth-24);
-      const availableHeight=popup?viewport.innerHeight-12:Math.min(viewport.innerHeight-24,manual.current?viewport.innerHeight:Math.max(180,rect.top-40));
-      const maxWidth=Math.max(1,Math.min(zoomed?640:400,availableWidth-depth*28));
-      const maxHeight=Math.max(1,Math.min(zoomed?560:400,availableHeight-64-depth*22));
-      const visibleTargets=zoomed?targets.filter(item=>(item.viewId??item.id)===zoomed):targets.slice(0,5);
-      const sizes=visibleTargets.map((item,index)=>{const size=frameSizes[item.viewId??item.id]??{width:16,height:9};const scale=Math.min(maxWidth/size.width,maxHeight/size.height);return {width:size.width*scale+depth*28,height:size.height*scale+index*22};});
-      const width=Math.min(availableWidth,Math.max(240,...sizes.map(size=>size.width)));
-      const height=expanded?Math.min(440,availableHeight):Math.max(1,...sizes.map(size=>size.height))+64;
-      const clamp=(value,max)=>Math.max(12,Math.min(value,Math.max(12,max)));
-      const place=manual.current
-        ?{left:clamp(manual.current.left,window.innerWidth-width-12),top:clamp(manual.current.top,window.innerHeight-height-12)}
-        :{right:clamp(window.innerWidth-rect.right,window.innerWidth-width-12),bottom:clamp(window.innerHeight-rect.top+28,window.innerHeight-height-12)};
-      setPosition({...place,width,height,'--cu-card-max-width':maxWidth+'px','--cu-card-max-height':maxHeight+'px'});
-    };
-    const observer=new ResizeObserver(update);layout.current=update;update();if(anchor?.current)observer.observe(anchor.current);window.addEventListener('resize',update);popup?.addEventListener('resize',update);window.addEventListener('scroll',update,true);
-    return()=>{layout.current=null;observer.disconnect();window.removeEventListener('resize',update);popup?.removeEventListener('resize',update);window.removeEventListener('scroll',update,true);};
-  },[anchor,sessionId,shown,zoomed,popup,expanded,depth,targetIds,sizeKey,paneVisible,parked,compact,dock]);
-  useLayoutEffect(()=>{
-    const before=reposition.current;reposition.current=null;const node=floating.current;
-    if(node&&!drag.current&&!parked){
-      // A new clamp uses the target size, while a CSS transition can still
-      // render the old size. Finish only size transitions that leave the
-      // viewport, before paint; other preview animations remain unchanged.
-      const rect=node.getBoundingClientRect();
-      if(rect.left<12||rect.top<12||rect.right>window.innerWidth-12||rect.bottom>window.innerHeight-12)
-        for(const animation of node.getAnimations())if(['width','height'].includes(animation.transitionProperty))animation.cancel();
-    }
-    if(!before||!node||drag.current||window.matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.hasAttribute('data-omd-reduce-effects'))return;
-    const after=node.getBoundingClientRect(),x=before.left-after.left,y=before.top-after.top;
-    if(Math.hypot(x,y)>1)node.animate([{transform:`translate3d(${x}px,${y}px,0)`},{transform:'translate3d(0,0,0)'}],{duration:360,easing:'cubic-bezier(.22,1,.36,1)'});
-  },[position]);
-  const frameSize=(id,size)=>setFrameSizes(previous=>previous[id]?.width===size.width&&previous[id]?.height===size.height?previous:{...previous,[id]:size});
-  const startDrag=event=>{
-    suppressClick.current=false;
-    const control=event.target.closest('button,a,input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="button"]');
-    if(popup||event.button!==0||event.isPrimary===false||(control&&!control.matches('.tx-cu-preview-open:not(:disabled)')))return;
-    const box=floating.current?.getBoundingClientRect();if(!box)return;
-    const element=control??event.target.closest('header')??event.currentTarget;
-    if(!control)event.preventDefault();element.setPointerCapture(event.pointerId);
-    drag.current={id:event.pointerId,element,x:event.clientX,y:event.clientY,left:box.left,top:box.top,width:box.width,height:box.height,moved:false};
-  };
-  const moveDrag=event=>{
-    const active=drag.current;if(!active||active.id!==event.pointerId)return;
-    if(Math.hypot(event.clientX-active.x,event.clientY-active.y)<3&&!suppressClick.current)return;
-    suppressClick.current=true;
-    if(!active.moved){floating.current?.getAnimations().forEach(animation=>animation.cancel());active.moved=true;setDragging(true);setPosition(previous=>({...previous,left:active.left,top:active.top,right:undefined,bottom:undefined}));}
-    const clamp=(value,max)=>Math.max(12,Math.min(value,Math.max(12,max)));
-    manual.current={left:clamp(active.left+event.clientX-active.x,window.innerWidth-active.width-12),top:clamp(active.top+event.clientY-active.y,window.innerHeight-active.height-12)};
-    if(dragFrame.current===null)dragFrame.current=requestAnimationFrame(()=>{dragFrame.current=null;if(drag.current!==active||!floating.current)return;floating.current.style.setProperty('--cu-drag-x',(manual.current.left-active.left)+'px');floating.current.style.setProperty('--cu-drag-y',(manual.current.top-active.top)+'px');});
-  };
+    const node=surface.current;if(!node)return;
+    const measure=()=>setWidth(node.getBoundingClientRect().width);
+    measure();const observer=new ResizeObserver(measure);observer.observe(node);return()=>observer.disconnect();
+  },[sessionId,nativeLayout?.activeThreadID,nativeLayout?.placement,state?.nativePresentation?.domHome?.available,state?.nativePresentation?.domHome?.active]);
+  const metrics=nativeHomeMetrics({layout:nativeLayout,domHome:state?.nativePresentation?.domHome,conversationId:sessionId,
+    containerWidth:width,windowZoom,loadedIds:loaded,errorIds:errors,
+    enteringIds:enteringPresentationIDs});
+  const [domReadiness,setDomReadiness]=useState(null);
+  const orderKey=JSON.stringify(metrics?.orderedIds??[]);
+  const ownedOrder=metrics?.orderedIds?.every(id=>presentations.some(item=>item.presentationID===id&&item.threadID===sessionId&&item.published&&!item.cleanupPending))?metrics.orderedIds:[];
+  const domReady=ownedOrder.length>0&&metrics?.ready===true&&domReadiness?.sessionId===sessionId&&domReadiness?.orderKey===orderKey;
   useEffect(()=>{
-    if(!popup)return;
-    const sync=()=>{const source=getComputedStyle(anchor?.current??document.documentElement);for(const key of ['--dsw-alias-bg-base','--dsw-alias-label-primary','--dsw-alias-label-tertiary','--dsw-alias-state-error-primary'])popup.document.documentElement.style.setProperty(key,source.getPropertyValue(key));popup.document.documentElement.className=document.documentElement.className;popup.document.documentElement.dataset.theme=document.documentElement.dataset.theme??'';const reduced=document.documentElement.getAttribute('data-omd-reduce-effects');if(reduced===null)popup.document.documentElement.removeAttribute('data-omd-reduce-effects');else popup.document.documentElement.setAttribute('data-omd-reduce-effects',reduced);popup.document.documentElement.style.colorScheme=getComputedStyle(document.documentElement).colorScheme;};
-    sync();const observer=new MutationObserver(sync);observer.observe(document.documentElement,{attributes:true});observer.observe(document.body,{attributes:true});
-    const theme=window.matchMedia('(prefers-color-scheme: dark)');theme.addEventListener('change',sync);
-    return()=>{observer.disconnect();theme.removeEventListener('change',sync);};
-  },[popup]);
-  const open=async()=>{
-    if(owned.current&&!owned.current.closed){owned.current.close();return;}
-    if(!window.documentPictureInPicture){const message='当前浏览器不支持置顶悬浮预览，可继续在对话中查看画面。';setLocalError(message);onError?.(message);return;}
-    const revision=generation.current;setOpening(true);setLocalError('');
-    try{
-      const next=await window.documentPictureInPicture.requestWindow({width:zoomed?640:400,height:zoomed?520:320});
-      if(revision!==generation.current){next.close();return;}
-      next.document.title=(leading?.name||leading?.title||'操控预览')+' · Oh My DSH';
-      const style=next.document.createElement('style');style.textContent=css+'\n'+previewCss;next.document.head.append(style);
-      owned.current=next;
-      next.addEventListener('pagehide',()=>{if(owned.current===next){owned.current=null;setPopup(null);trigger.current?.focus({preventScroll:true});}},{once:true});
-      setPopup(next);
-    }catch(error){if(revision===generation.current){const message='无法打开悬浮预览：'+error.message;setLocalError(message);onError?.(message);}}finally{if(revision===generation.current)setOpening(false);}
+    setDomReadiness(null);if(!metrics?.ready)return;
+    let handle=requestAnimationFrame(()=>{handle=requestAnimationFrame(()=>setDomReadiness({sessionId,orderKey}));});
+    return()=>cancelAnimationFrame(handle);
+  },[sessionId,metrics?.ready,orderKey]);
+  useCodexNativeDomHome({sessionId,surfaceRef:home,active,ready:domReady,
+    orderedPresentationIDs:ownedOrder,onDomHomeChange});
+  const movingPinned=nativeLayout?.isMovingToAnchor===true&&nativeLayout?.placement==='pinned';
+  useEffect(()=>{
+    if(!metrics?.ready&&!movingPinned)return;
+    let handle=requestAnimationFrame(()=>{handle=requestAnimationFrame(()=>onReadyChange?.(sessionId,metrics?.ready===true));});
+    return()=>cancelAnimationFrame(handle);
+  },[sessionId,metrics?.ready,movingPinned,onReadyChange]);
+  useEffect(()=>()=>onReadyChange?.(sessionId,false),[sessionId,onReadyChange]);
+  if(!metrics?.canRenderHome)return <div ref={home} className="codex-cu-native-home"/>;
+  const markLoaded=id=>setFrames(previous=>{
+    const next=previous.sessionId===sessionId?previous:{sessionId,loaded:[],errors:[]};
+    if(next===previous&&next.loaded.includes(id)&&!next.errors.includes(id))return previous;
+    return {...next,loaded:next.loaded.includes(id)?next.loaded:[...next.loaded,id],errors:next.errors.filter(value=>value!==id)};
+  });
+  const markError=(id,message)=>{
+    setFrames(previous=>{
+      const next=previous.sessionId===sessionId?previous:{sessionId,loaded:[],errors:[]};
+      if(next===previous&&next.errors.includes(id))return previous;
+      return {...next,loaded:next.loaded.filter(value=>value!==id),errors:next.errors.includes(id)?next.errors:[...next.errors,id]};
+    });onReadyChange?.(sessionId,false);onError?.(message);
   };
-  const stop=async()=>{const revision=generation.current;setStopping(true);setLocalError('');try{const next=await api('stop',sessionId,{});if(revision===generation.current)onState(next);}catch(error){if(revision===generation.current)setLocalError(error.message);}finally{if(revision===generation.current)setStopping(false);}};
-  const resume=async()=>{const revision=generation.current;setResuming(true);setLocalError('');try{const next=await api('resume',sessionId,{});if(revision===generation.current)onState(next);}catch(error){if(revision===generation.current)setLocalError(error.message);}finally{if(revision===generation.current)setResuming(false);}};
-  const close=()=>{setShown(false);owned.current?.close();trigger.current?.focus({preventScroll:true});};
-  const resetPosition=()=>{reposition.current=floating.current?.getBoundingClientRect();manual.current=null;setZoomed(null);setExpanded(false);setPosition(previous=>({...previous,left:undefined,top:undefined}));layout.current?.();};
-  const previewKey=event=>{
-    if(event.target.closest('input,textarea,select')||event.metaKey||event.ctrlKey||event.altKey)return;
-    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();if(zoomed)setZoomed(null);else if(expanded)setExpanded(false);else close();return;}
-    if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key)||targets.length<2)return;
-    event.preventDefault();event.stopPropagation();const index=Math.max(0,orderedTargets.findIndex(item=>(item.viewId??item.id)===(zoomed??front??key)));
-    const next=orderedTargets[event.key==='Home'?0:event.key==='End'?orderedTargets.length-1:(index+(['ArrowLeft','ArrowUp'].includes(event.key)?-1:1)+orderedTargets.length)%orderedTargets.length],id=next.viewId??next.id;
-    keyboardTarget.current=id;setFront(id);if(zoomed)setZoomed(id);
-  };
-  const selectPreview=async(item,index)=>{
-    const id=item.viewId??item.id;
-    if(index>0&&!zoomed){setFront(id);setExpanded(false);return;}
-    const revision=generation.current;setEntering(true);setLocalError('');
-    try{
-      if(item.kind!=='tab'){
-        const next=await api('reveal-preview',sessionId,{targetId:id,controlEpoch:state?.controlEpoch});
-        if(revision===generation.current)onState(next);
-        return;
-      }
-      const next=await api('view-tab',sessionId,{tabId:item.id,browserId:item.browserId});if(revision!==generation.current)return;onState(next);
-      if(revision!==generation.current)return;
-      await onOpen?.();close();
-    }catch(error){if(revision===generation.current)setLocalError(error.message);}finally{if(revision===generation.current)setEntering(false);}
-  };
-  const viewingAssistant=leadingId===key,connection=connections[leadingId];
-  const statusText=entering?'正在打开…':resuming||state?.resuming?'正在恢复…':stopping||state?.status==='stopping'?'正在停止…':connection==='error'||connection==='closed'?'画面已断开':state?.status==='stopped'?'已停止 · 可手动操作':state?.transitioning?'正在载入…':connection==='connecting'?'正在连接画面…':connection==='paused'?'画面已暂停':state?.status==='running'&&viewingAssistant?'助手正在操作':'只读预览';
-  const compactStatus=entering?'打开中':resuming||state?.resuming?'恢复中':stopping||state?.status==='stopping'?'停止中':connection==='error'||connection==='closed'?'已断开':state?.status==='stopped'?'已停止':state?.transitioning?'载入中':connection==='connecting'?'连接中':connection==='paused'?'已暂停':state?.status==='running'&&viewingAssistant?'操作中':'预览';
-  return <>{!!targets.length&&(!paneVisible||popup)&&<button ref={trigger} type="button" disabled={state?.enabled===false} onClick={()=>shown?close():setShown(true)} aria-label="悬浮预览" aria-expanded={shown} title="显示或收起操控画面"><ComputerIcon name="preview" size={14}/></button>}
-    {shown&&!paneVisible&&!popup&&state?.enabled!==false&&targets.length>0&&<div ref={setDock} className="tx-cu-preview-dock"/>}
-    {shown&&(!paneVisible||popup)&&state?.enabled!==false&&targets.length>0&&(popup||dock)&&createPortal(<div ref={popup?null:floating} className={'tx-cu-floating'+(popup?'':' tx-cu-floating-inline')+(compact?' tx-cu-floating-compact':'')+(!popup&&manual.current?' is-detached':'')+(parked?' tx-cu-floating-parked':'')+(zoomed?' is-zoomed':'')+(dragging?' is-dragging':'')+(expanded&&!zoomed?' is-list':'')} style={popup?{'--cu-card-max-width':position['--cu-card-max-width'],'--cu-card-max-height':position['--cu-card-max-height']}:position} aria-label="悬浮操控预览" onKeyDown={previewKey} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={finishDrag} onPointerCancel={finishDrag} onLostPointerCapture={finishDrag} onClickCapture={event=>{if(suppressClick.current&&event.detail!==0){suppressClick.current=false;event.preventDefault();event.stopPropagation();}}}>
-      <header onDoubleClick={event=>{if(!popup&&!event.target.closest('button'))resetPosition();}} title={popup?undefined:'拖动移动预览，双击恢复默认位置'}><div><ComputerIcon name={leading?.kind==='app'?'screen':'browser'} size={14}/><strong title={leading?.name||leading?.title}>{leading?.name||leading?.title||'操控预览'}</strong>{targets.length>1&&<span className="tx-cu-floating-count">{targets.length}</span>}</div><div>{!popup&&manual.current&&<button type="button" aria-label="重置预览位置" title="重置位置" onClick={resetPosition}><ComputerIcon name="reset" size={13}/></button>}{zoomed&&<button type="button" aria-label="缩小预览" title="缩小预览" onClick={()=>setZoomed(null)}><ComputerIcon name="shrink" size={13}/></button>}{popup?<button type="button" aria-label="返回对话" title="返回对话" onClick={()=>{window.focus();popup.close();}}><ComputerIcon name="return" size={13}/></button>:<button type="button" aria-label="弹出预览" title="弹出为独立窗口" disabled={opening} onClick={open}><ComputerIcon name="popout" size={13}/></button>}<button type="button" aria-label="关闭操控预览" title="关闭预览" onClick={close}><ComputerIcon name="close" size={14}/></button></div></header>
-      {expanded&&!zoomed&&<div className="tx-cu-preview-search"><ComputerIcon name="search" size={13}/><input type="search" aria-label="筛选预览目标" placeholder="搜索窗口或网页" value={query} onChange={event=>setQuery(event.target.value)} onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();if(query)setQuery('');else setExpanded(false);}}}/></div>}
-      <div className={'tx-cu-preview-stack'+(zoomed?' is-focused':expanded?' is-expanded':'')} style={{'--preview-count':zoomed?1:Math.max(1,targets.length)}} aria-label="窗口预览堆叠">
-        {targets.map((item,index)=>{const id=item.viewId??item.id,size=frameSizes[id]??{width:16,height:9};return <div key={id} className="tx-cu-preview-card" style={{'--preview-depth':index,'--preview-ratio':size.width/size.height,zIndex:targets.length-index,display:expanded&&!zoomed&&!matches(item)?'none':undefined}} data-target={id} data-focused={id===zoomed?true:undefined} data-connection={connections[id]}>
-          <NativePreview sessionId={sessionId} targetId={id} targetKind={item.kind} mode={mode} targetName={item.name||item.title} stacked visible state={state} url={url} onError={message=>setTargetErrors(previous=>previous[id]===message?previous:{...previous,[id]:message})} onConnection={connection=>{setConnections(previous=>previous[id]===connection?previous:{...previous,[id]:connection});if(connection==='live')setTargetErrors(previous=>previous[id]?{...previous,[id]:null}:previous);}} onFrameSize={size=>frameSize(id,size)}/>
-          <button type="button" className="tx-cu-preview-open" disabled={entering} title={index>0&&!zoomed?'置于最前':item.kind==='tab'?'打开网页':'定位应用窗口'} aria-label={(index>0&&!zoomed?'置于最前：':item.kind==='tab'?'打开网页：':'打开应用窗口：')+(item.name||item.title||'网页')} onClick={()=>selectPreview(item,index)}><span><ComputerIcon name={item.kind==='app'?'screen':'browser'} size={12}/><span className="tx-cu-preview-name">{item.name||item.title||'网页'}</span></span><span><ComputerIcon name="popout" size={12}/></span></button>
-        </div>;})}
-        {expanded&&!zoomed&&!targets.some(matches)&&<p className="tx-cu-preview-empty">没有匹配的窗口或网页</p>}
-      </div>
-      {visibleError&&<p className="tx-cu-error" role="alert">{visibleError}</p>}
-      <footer><span data-connection={connection} title={statusText} aria-label={statusText}>{compact?compactStatus:statusText}</span>{!zoomed&&<button type="button" aria-label="放大预览" title="放大查看画面" onClick={()=>setZoomed(leading.viewId??leading.id)}><ComputerIcon name="expand" size={12}/></button>}{targets.length>1&&<button type="button" aria-label={(zoomed?'查看全部':expanded?'堆叠':'展开')+' '+targets.length} title={'查看 '+targets.length+' 个预览目标'} aria-expanded={expanded&&!zoomed} onClick={()=>{if(zoomed){setZoomed(null);setExpanded(true);}else setExpanded(value=>!value);}}><ComputerIcon name="stack" size={12}/>{compact?targets.length:<>{zoomed?'查看全部':expanded?'堆叠':'展开'} {targets.length}</>}</button>}{state?.status==='stopped'?<button className="tx-cu-resume" type="button" aria-label="从预览恢复助手" title="恢复助手控制" disabled={resuming||state?.resuming||state?.transitioning} onClick={resume}><ComputerIcon name="play" size={14}/></button>:<button className="tx-cu-stop" type="button" aria-label="停止操作" title="停止操作" disabled={stopping||state?.status==='stopping'} onClick={stop}><ComputerIcon name="stop" size={14}/></button>}</footer>
-    </div>,popup?.document.body??dock)}
-  </>;
+  return <div ref={home} className="codex-cu-native-home" hidden={metrics.hidden}>
+    <div ref={surface} className="codex-cu-native-stack" data-native-invisible={metrics.invisible}
+      style={{height:metrics.reserveHeight}}>
+      {width!=null&&metrics.maxDisplaySize!=null&&<div aria-hidden="true" className="codex-cu-native-home-anchor"
+        data-pip-home-surface="thread-summary-panel-pip" style={{insetInline:metrics.surfaceInset}}/>}
+      {width!=null&&metrics.maxDisplaySize!=null&&metrics.orderedIds.map((presentationID,index)=>{
+        const target=presentations.find(item=>item.presentationID===presentationID&&item.threadID===sessionId&&item.published===true&&!item.cleanupPending);
+        if(!target)return null;
+        const point=metrics.frame(index),ready=loaded.includes(presentationID);
+        const entering=enteringPresentationIDs.includes(presentationID);
+        return <div key={presentationID} className="codex-cu-native-stack-frame"
+          data-pip-presentation-frame={presentationID} data-native-entering={entering}
+          data-native-ready={ready} style={{marginTop:point.marginTop,zIndex:point.zIndex,
+            transform:`translateX(${point.x}px) scale(${entering&&!ready ? .72 : 1})`,
+            opacity:ready?1:0,filter:entering&&!ready?'blur(18px)':'blur(0px)'}}>
+          <NativePreview sessionId={sessionId} targetId={target.viewId} presentationID={presentationID} targetKind="app"
+            stacked visible state={state} url={url}
+            presentationLayout={{windowZoom,presentationCount:metrics.orderedIds.length,
+              containerWidth:width,maxDisplaySize:metrics.maxDisplaySize}}
+            onFrameSize={()=>markLoaded(presentationID)}
+            onConnection={value=>{if(value!=='live')setFrames(previous=>previous.sessionId===sessionId&&previous.loaded.includes(presentationID)?{...previous,loaded:previous.loaded.filter(id=>id!==presentationID)}:previous);}}
+            onError={message=>message?markError(presentationID,message):undefined}
+            onActivate={onInteractWithPresentation?()=>onInteractWithPresentation(sessionId,presentationID,index===0):undefined}/>
+        </div>;
+      })}
+    </div>
+  </div>;
+}
+
+// Compatibility entry point for the existing chip. The main UI owns the
+// sidebar section/Show-Hide controls; native host placement owns pinned PiP.
+// With no authenticated native layout adapter there is no guessed compact dock.
+export function FloatingPreview({sessionId,state,url,onError,paneVisible=false,
+  nativeLayout=state?.nativePresentationLayout,windowZoom=1,enteringPresentationIDs=[],
+  onReadyChange,onInteractWithPresentation,onDomHomeChange,active=true,homeContainer}){
+  if(state?.enabled===false||paneVisible||!nativeLayout)return null;
+  const content=<NativePreviewStack sessionId={sessionId} state={state} url={url}
+    onError={onError} nativeLayout={nativeLayout} windowZoom={windowZoom}
+    enteringPresentationIDs={enteringPresentationIDs} onReadyChange={onReadyChange}
+    onInteractWithPresentation={onInteractWithPresentation} onDomHomeChange={onDomHomeChange} active={active}/>;
+  return homeContainer?createPortal(content,homeContainer):content;
 }

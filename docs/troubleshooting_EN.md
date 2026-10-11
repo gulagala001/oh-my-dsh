@@ -19,7 +19,7 @@ Keep the first complete error. Check the installed version, running version, and
 
 Repository `gulagala001/oh-my-dsh`, package `trisoul_x`, preset `trisoul-x`. See [public pairs](upgrade_EN.md#versions-and-success-criteria). Display names do not establish identity; do not install an unrelated npm package with a similar name.
 
-GitHub alpha.2 OMD `0.16.0` is unpublished. Main includes an earlier OpenCU 1.6.1 snapshot; the latest local reconstruction has not entered it. Do not guess using `latest` or invent alpha.2 download links.
+GitHub alpha.2 OMD `0.16.0` is unpublished. Main includes the OpenCU 1.6.1 browser and runtime reconstruction. Do not guess using `latest` or invent alpha.2 download links.
 
 ## By Symptom
 

@@ -1,0 +1,29 @@
+[
+  {
+    "package": "@dnd-kit/core",
+    "version": "6.3.1",
+    "source": "git+https://github.com/clauderic/dnd-kit.git",
+    "sourceFile": "dist/core.esm.js",
+    "sourceSha256": "0c7f0d3dd754085b000e0bcc9b3ef90727d5b7781fdb7d2b89fce5bdc3fd0e6f",
+    "license": "MIT",
+    "licenseFile": "dnd-kit-core.LICENSE.txt"
+  },
+  {
+    "package": "@dnd-kit/accessibility",
+    "version": "3.1.1",
+    "source": "git+https://github.com/clauderic/dnd-kit.git",
+    "sourceFile": "dist/accessibility.esm.js",
+    "sourceSha256": "61718ac2b18b96c84914aeb7b37c018b6a202fd8898cff66ad66bc551e074655",
+    "license": "MIT",
+    "licenseFile": "dnd-kit-accessibility.LICENSE.txt"
+  },
+  {
+    "package": "@dnd-kit/utilities",
+    "version": "3.2.2",
+    "source": "git+https://github.com/clauderic/dnd-kit.git",
+    "sourceFile": "dist/utilities.esm.js",
+    "sourceSha256": "250f522bc4a6bd446c2e1710fd892ea98fe2b0bdf02008fd792394705fbfa067",
+    "license": "MIT",
+    "licenseFile": "dnd-kit-utilities.LICENSE.txt"
+  }
+]

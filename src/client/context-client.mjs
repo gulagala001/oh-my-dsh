@@ -263,7 +263,7 @@ export function createContextUI(React) {
           // and unrelated fields edited while the request was in flight.
           const paths = Object.fromEntries(Object.entries(state.paths || {}).filter(([key, value]) => !Object.hasOwn(body.patch, key) || body.patch[key] !== value));
           const dirty = Object.keys(paths).length > 0;
-          return { data, paths: dirty ? paths : null, saved: '路径已保存，重启服务后生效。' + (dirty ? '还有未保存的修改。' : '') };
+          return { data, paths: dirty ? paths : null, saved: (data.computerUse.restartRequired ? '路径已保存，重启服务后生效。' : '路径已保存。') + (dirty ? '还有未保存的修改。' : '') };
         });
       }
       catch (error) { let actual = previous; try { actual = await this.call(); } catch {} if (this.alive) this.setState({ data: actual, error: error.message }); }
@@ -274,37 +274,41 @@ export function createContextUI(React) {
     copy = async text => { try { await navigator.clipboard.writeText(text); this.setState({ saved: '已复制' }); } catch (error) { this.setState({ error: error.message }); } };
     row(title, ready, operation, hint, action) {
       const preparing = operation?.status === 'preparing', error = operation?.error;
-      return h('div', { className: 'cx-component-row' }, h('div', { className: 'cx-row' }, h('strong', null, title), badge(preparing ? '正在准备' : error ? '需要处理' : ready ? '已就绪' : '待准备', ready && !error ? 'blue' : undefined)), h('p', { className: 'cx-hint' }, error || hint), !preparing && action);
+      return h('div', { className: 'cx-component-row' }, h('div', { className: 'cx-row' }, h('strong', null, title), badge(preparing ? '正在准备' : error ? '需要处理' : ready ? '已就绪' : ready == null ? '状态未知' : operation?.status === 'permissions-required' ? '待授权' : operation?.status === 'unsupported' ? '不支持' : operation?.pendingLabel || '待准备', ready && !error ? 'blue' : undefined)), h('p', { className: 'cx-hint' }, error || hint), !preparing && action);
     }
     render() {
       const { data: d, error, loadError, busy, saved } = this.state;
       if (!d) return h('div', { className: 'cx-body' }, alert(error || loadError, true), empty(loadError ? '组件状态读取失败' : '正在检查基础组件', '安装、启动与权限集中在这里。', 'settings'), loadError && button('重试', () => this.poller?.refresh()));
       const cg = d.codegraph, cu = d.computerUse, setup = cu.setup, native = setup?.native, extension = setup?.extension, install = extension?.installation;
       const paths = { ...cu.paths, ...this.state.paths };
-      const retry = (component, label = '重新准备') => button(label, () => this.prepare(component), { disabled: busy, quiet: true, icon: 'refresh' });
-      const nativeReady = native?.installed && !native.error && (native.platform === 'win32' ? native.interactive && native.captureSupported : native.accessibility && native.screenRecording);
+      const retry = (component, label = '重新准备') => button(label, () => this.prepare(component), { disabled: busy || (component !== 'codegraph' && cu.restartRequired), quiet: true, icon: 'refresh' });
+      const nativeNeedsUpdate = native?.updateAvailable || native?.restartRequired || native?.repairRequired;
+      const nativeReady = native?.installed === true && !native.error && !nativeNeedsUpdate && (native.platform === 'win32' ? native.interactive && native.captureSupported : native.accessibility && native.screenRecording);
+      const connections = install?.connections || (extension?.browsers || []).filter(browser => browser.type === 'extension');
+      const browserHint = setup?.browser?.name === 'OpenCU Browser' ? '使用插件自有浏览器和独立配置，首次打开时启动。' : '使用配置的浏览器和独立配置，首次打开时启动。';
       return h('div', { className: 'cx-body cx-components' }, alert(error || loadError || cu.error || cg.error, true),
         h('p', { className: 'cx-hint' }, d.automatic ? '组件默认启用，运行依赖自动准备。开关立即保存；需要系统授权时会在下面提示。' : '启动时自动准备依赖已关闭，可在下方手动准备。开关立即保存。'),
+        cu.restartRequired && alert('自定义路径已变更，重启服务后生效；重启前暂停准备电脑操控组件。'),
         section('代码理解', '自动为当前项目建立索引，后续修改自动同步。', h(React.Fragment, null,
           this.toggle('codegraphEnabled', 'CodeGraph', cg.enabled, '无需全局安装或配置 MCP。索引保存在项目的 .codegraph 目录。'),
           cg.enabled && this.row('运行环境', cg.installed, cg.operation, cg.installed ? '已自动准备' : '正在准备适合本机的运行环境', !cg.installed || cg.operation?.error || cg.error ? retry('codegraph') : null),
           cg.enabled && !cg.projects.length && h('p', { className: 'cx-hint' }, '打开项目会话后自动开始准备。'),
           cg.enabled && cg.projects.map(p => h('div', { className: 'cx-component-project', key: p.path }, h('div', { className: 'cx-row' }, h('code', { className: 'cx-component-path' }, p.path), badge(p.status === 'ready' ? '索引就绪' : p.status === 'error' ? '准备失败' : '正在建索引')), p.error && h('p', { className: 'cx-hint' }, p.error), p.status === 'error' && button('重试索引', () => this.act({ action: 'index', path: p.path }), { disabled: busy, quiet: true }))))),
         section('电脑操控', '浏览器、桌面控制和日常 Chrome 连接。', h(React.Fragment, null,
-          this.toggle('computerUseEnabled', 'Computer Use', cu.enabled, '准备完成后即可在对话中使用。'),
-          cu.enabled && this.row('内置浏览器', setup?.browser?.installed, { ...cu.operations.browser, error: cu.operations.browser?.error || setup?.browser?.error }, '使用独立的浏览器配置，首次打开时启动。', !setup?.browser?.installed || setup?.browser?.error || cu.operations.browser?.error ? retry('browser', '安装浏览器') : null),
-          cu.enabled && (native?.supported ? this.row('桌面控制', nativeReady, { ...cu.operations.native, error: cu.operations.native?.error || native?.error },
-            native?.error || (!native?.installed ? native?.platform === 'win32' ? '自动编译桌面控制；本机需要 .NET 10 SDK。' : '自动安装桌面控制；本机需要 Apple Command Line Tools。' : nativeReady ? '可操作所选应用' : native.platform === 'win32' ? '请保持桌面已登录并解锁。' : '请为 Oh My DSH Computer Use 开启辅助功能和屏幕录制权限。'),
-            h('div', { className: 'cx-actions' }, (!native.installed || native.updateAvailable || native.repairRequired || cu.operations.native?.error) && retry('native', native.installed ? '更新或修复' : '安装桌面控制'), native.installed && native.platform !== 'win32' && !nativeReady && button('打开系统权限设置', () => this.act({ action: 'permissions' }), { disabled: busy, icon: 'settings' }))) : h('p', { className: 'cx-hint' }, '此平台可使用浏览器；原生桌面控制暂不支持。')),
-          cu.enabled && this.row('日常 Chrome', !!extension?.browsers?.length && !install?.reloadRequired, { ...cu.operations.extension, error: cu.operations.extension?.error || extension?.error || install?.error },
-            install?.reloadRequired ? '扩展已更新，请在 Chrome 扩展页重新加载。' : extension?.browsers?.length ? '已连接，可使用已有网页和登录状态。' : install?.prepared && install.migrated ? '旧版连接已迁移，扩展目录已保留。如果尚未连上，请在 Chrome 扩展页重新加载一次 Oh My DSH。' : install?.prepared ? '连接程序已准备好。首次在 Chrome 的 chrome://extensions 开启开发者模式，再加载下方目录。' : '自动准备连接程序；也可直接使用内置浏览器。',
+          this.toggle('computerUseEnabled', 'Computer Use', cu.enabled, cu.settingsNamespace === 'opencu' ? '与独立 OpenCU 共用配置和运行时，开关同步生效。' : '准备完成后即可在对话中使用。'),
+          cu.enabled && this.row('内置浏览器', setup?.browser?.installed, { ...cu.operations.browser, error: cu.operations.browser?.error || setup?.browser?.error }, browserHint, !setup?.browser?.installed || setup?.browser?.error || cu.operations.browser?.error ? retry('browser', '安装浏览器') : null),
+          cu.enabled && (native?.supported ? this.row('桌面控制', native?.installed == null ? null : nativeReady, { ...cu.operations.native, ...(native.installing ? { status: 'preparing' } : {}), error: cu.operations.native?.error || native?.error, pendingLabel: nativeNeedsUpdate ? '待更新' : native.installed ? '待授权' : '待准备' },
+            native?.error || (!native?.installed ? '安装与当前平台匹配的预构建桌面控制程序。' : nativeNeedsUpdate ? '桌面控制程序需要更新或重启，请手动更新或修复。' : nativeReady ? '可操作所选应用' : native.platform === 'win32' ? '请保持桌面已登录并解锁。' : '请为 Oh My DSH Computer Use 开启辅助功能和屏幕录制权限。'),
+            h('div', { className: 'cx-actions' }, (!native.installed || nativeNeedsUpdate || cu.operations.native?.error) && retry('native', native.installed ? '更新或修复' : '安装桌面控制'), native.installed && native.platform !== 'win32' && !nativeReady && !nativeNeedsUpdate && button('打开系统权限设置', () => this.act({ action: 'permissions' }), { disabled: busy || cu.restartRequired, icon: 'settings' }))) : native ? h('p', { className: 'cx-hint' }, '此平台可使用浏览器；原生桌面控制暂不支持。') : this.row('桌面控制', null, cu.operations.native, '桌面控制状态暂时不可用。')),
+          cu.enabled && this.row('日常 Chrome', !!connections.length && !install?.reloadRequired, { ...cu.operations.extension, ...(install?.preparing ? { status: 'preparing' } : {}), error: cu.operations.extension?.error || extension?.error || install?.error, pendingLabel: install?.prepared ? '待连接' : '待准备' },
+            install?.reloadRequired ? '扩展已更新，请在 Chrome 扩展页重新加载。' : connections.length ? '已连接，可使用已有网页和登录状态。' : install?.prepared && install.migrated ? '旧版连接已迁移，扩展目录已保留。如果尚未连上，请在 Chrome 扩展页重新加载一次 Oh My DSH。' : install?.prepared ? '连接程序已准备好。首次在 Chrome 的 chrome://extensions 开启开发者模式，再加载下方目录。' : '自动准备连接程序；也可直接使用内置浏览器。',
             install?.supported && (!install.prepared || extension?.error || cu.operations.extension?.error) ? retry('extension', install.superseded ? '切换 Chrome 到当前实例' : '准备 Chrome 连接') : null),
-          cu.enabled && install?.prepared && (!extension?.browsers?.length || install.reloadRequired) && h('div', { className: 'cx-component-project' }, h('code', { className: 'cx-component-path' }, install.extensionPath), h('div', { className: 'cx-actions' }, button('复制扩展目录', () => this.copy(install.extensionPath), { quiet: true }), button('复制扩展页地址', () => this.copy('chrome://extensions'), { quiet: true }))))),
+          cu.enabled && install?.prepared && (!connections.length || install.reloadRequired) && h('div', { className: 'cx-component-project' }, h('code', { className: 'cx-component-path' }, install.extensionPath), h('div', { className: 'cx-actions' }, button('复制扩展目录', () => this.copy(install.extensionPath), { quiet: true }), button('复制扩展页地址', () => this.copy('chrome://extensions'), { quiet: true }))))),
         fold('高级配置', '通常无需修改；自定义路径重启后生效。', h(React.Fragment, null,
           this.toggle('componentAutoSetup', '启动时自动准备依赖', d.automatic, '关闭后仍可使用上面的准备按钮。'),
           ...[['computerUseBrowserExecutable', '浏览器程序路径'], ['computerUseChromeUserDataDir', 'Chrome 用户数据目录'], ['computerUseNativeBinary', '桌面控制程序路径'], ['computerUseNativeSocket', '桌面连接 Socket']].map(([key, label]) => field(label, h('input', { value: paths[key] || '', placeholder: '自动检测', onChange: e => { const value = e.target.value; this.setState(s => ({ paths: { ...s.paths, [key]: value }, saved: '' })); } }))),
           button('保存自定义路径', () => this.act({ action: 'settings', patch: this.state.paths }), { disabled: busy || !this.state.paths }),
-          button('检查并准备所有组件', () => this.prepare(), { disabled: busy, quiet: true, icon: 'refresh' }))),
+          button('检查并准备所有组件', () => this.prepare(), { disabled: busy || (cu.enabled && cu.restartRequired), quiet: true, icon: 'refresh' }))),
         saved && h('p', { className: 'cx-save-status', role: 'status' }, saved));
     }
   }

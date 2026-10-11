@@ -1,0 +1,49 @@
+/* Source identity and exact definitions/CSS rules:
+ * work/rea-reconstruction/browser-import/manifest.json
+ * Dialog / Settings / menu surfaces retain their shared original styles.
+ * This file is injected by the reconstruction root.
+ */
+[data-codex-cu-scope] .codex-browser-import-profile-label { display:flex; min-width:0; flex:1; align-items:center; gap:calc(var(--spacing) * 1.5); }
+[data-codex-cu-scope] .codex-browser-import-source-icon { width:calc(var(--spacing) * 4); height:calc(var(--spacing) * 4); flex-shrink:0; }
+[data-codex-cu-scope] .codex-browser-import-source-icon.is-atlas { border-radius:22%; }
+[data-codex-cu-scope] .codex-browser-import-profile-app { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--color-text); }
+[data-codex-cu-scope] .codex-browser-import-profile-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--color-text-tertiary); }
+[data-codex-cu-scope] .codex-browser-import-picker { display:flex; align-items:center; gap:calc(var(--spacing) * 3); }
+[data-codex-cu-scope] .codex-browser-import-from { flex-shrink:0; font-size:var(--text-sm); line-height:var(--text-sm--line-height); color:var(--color-codex-description); }
+[data-codex-cu-scope] .codex-browser-import-picker-anchor { position:relative; min-width:0; flex:1; }
+[data-codex-cu-scope] .codex-browser-import-profile-trigger { min-width:0; width:100%; flex:1; }
+[data-codex-cu-scope] .codex-browser-import-profile-trigger.is-single { pointer-events:none; }
+[data-codex-cu-scope] .codex-browser-import-hidden { display:none; }
+[data-codex-cu-scope] .codex-browser-import-profile-menu { position:absolute; inset-inline-end:0; top:calc(100% + 1px); }
+[data-codex-cu-scope] .codex-browser-import-profile-menu-section { max-height:250px; overflow-y:auto; }
+[data-codex-cu-scope] .codex-browser-import-loading-icon { width:var(--icon-secondary-size,14px); height:var(--icon-secondary-size,14px); }
+[data-codex-cu-scope] .codex-browser-import-category-icon { width:calc(var(--spacing) * 5); height:calc(var(--spacing) * 5); color:var(--color-text-secondary); }
+[data-codex-cu-scope] .codex-browser-import-select-none { user-select:none; }
+[data-codex-cu-scope] .codex-browser-import-selection { gap:calc(var(--spacing) * 3); }
+[data-codex-cu-scope] .codex-browser-import-guidance { margin:0; font-size:var(--text-sm); line-height:var(--text-sm--line-height); color:var(--color-codex-description); }
+[data-codex-cu-scope] .codex-browser-import-profile-error { margin:0; padding-inline:calc(var(--spacing) * 3); font-size:var(--text-sm); line-height:var(--text-sm--line-height); color:var(--color-text-danger); }
+[data-codex-cu-scope] .codex-browser-import-footer { width:auto; gap:calc(var(--spacing) * 2); }
+[data-codex-cu-scope] .codex-browser-import-elevated-consent { display:flex; flex-direction:column; gap:calc(var(--spacing) * 2); border-radius:var(--radius-lg); border:1px solid var(--color-border-primary-outline); background:var(--color-text); padding:calc(var(--spacing) * 3); font-size:var(--text-sm); line-height:var(--text-sm--line-height); }
+@supports (color:color-mix(in lab, red, red)) {
+  [data-codex-cu-scope] .codex-browser-import-elevated-consent { background:color-mix(in oklab,var(--color-text) 2.5%,transparent); }
+}
+[data-codex-cu-scope] .codex-browser-import-consent-title { margin:0; font-weight:var(--font-weight-medium); color:var(--color-text); }
+[data-codex-cu-scope] .codex-browser-import-consent-description { margin:0; color:var(--color-codex-description); }
+[data-codex-cu-scope] .codex-browser-import-consent-label { position:relative; display:flex; cursor:var(--cursor-interaction,pointer); align-items:flex-start; gap:calc(var(--spacing) * 2); }
+[data-codex-cu-scope] .codex-browser-import-extension-failures { display:flex; margin:0; padding:0; list-style:none; flex-direction:column; gap:calc(var(--spacing) * 3); user-select:text; }
+[data-codex-cu-scope] .codex-browser-import-extension-failure { display:flex; min-width:0; flex-direction:column; gap:var(--spacing); }
+[data-codex-cu-scope] .codex-browser-import-extension-name { font-weight:var(--font-weight-medium); overflow-wrap:anywhere; color:var(--color-text); }
+[data-codex-cu-scope] .codex-browser-import-result-list { max-height:calc(var(--spacing) * 80); overflow-y:auto; }
+[data-codex-cu-scope] .codex-browser-import-no-shrink { flex-shrink:0; }
+[data-codex-cu-scope] .codex-browser-import-result-icon { width:calc(var(--spacing) * 5); height:calc(var(--spacing) * 5); }
+[data-codex-cu-scope] .codex-browser-import-result-icon.is-success { color:var(--color-chart-green); }
+[data-codex-cu-scope] .codex-browser-import-result-icon.is-empty { color:var(--color-text-tertiary); }
+[data-codex-cu-scope] .codex-browser-import-result-icon.is-warning, [data-codex-cu-scope] .codex-browser-import-warning { color:var(--color-text-warning); }
+[data-codex-cu-scope] .codex-browser-import-result-icon.is-failure, [data-codex-cu-scope] .codex-browser-import-danger { color:var(--color-text-danger); }
+[data-codex-cu-scope] .codex-browser-import-tertiary { color:var(--color-text-tertiary); }
+[data-codex-cu-scope] .codex-browser-import-result-status { display:inline-flex; width:calc(var(--spacing) * 5); height:calc(var(--spacing) * 5); align-items:center; justify-content:center; }
+[data-codex-cu-scope] .codex-browser-import-result-description { min-width:0; padding-inline:calc(var(--spacing) * 4); padding-bottom:calc(var(--spacing) * 3); font-size:var(--text-xs); line-height:calc(var(--spacing) * 4); text-wrap:balance; color:var(--color-text-secondary); }
+[data-codex-cu-scope] .codex-browser-import-result-animation { display:inline-flex; }
+[data-codex-cu-scope] .codex-browser-import-file-name { min-width:0; overflow-wrap:anywhere; }
+[data-codex-cu-scope] .codex-browser-import-count { font-variant-numeric:tabular-nums; }
+[data-codex-cu-scope] .codex-browser-import-sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border-width:0; }

@@ -11,6 +11,13 @@
     "nativeMessaging",
     "tabGroups"
   ],
+  "optional_permissions": [
+    "history",
+    "downloads",
+    "downloads.open",
+    "contentSettings",
+    "browsingData"
+  ],
   "background": {
     "service_worker": "worker.js",
     "type": "module"

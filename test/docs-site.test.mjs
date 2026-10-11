@@ -43,7 +43,8 @@ test('built documentation works on a plain static origin with desktop and mobile
   assert.ok(result.diagrams >= 1, 'authored Mermaid fences become static diagrams');
   const built = await files(outDir);
   assert.equal(built.some(file => /(?:AGENTS|HANDOFF|BASELINE|ASSESSMENT|PROMPT_MAINTENANCE|PROMPT_CHANGES)\.md$/.test(file)), false);
-  assert.equal(built.some(file => file.endsWith('.md') || file.startsWith('src/') || file.startsWith('vendor/')), false);
+  assert.equal(built.some(file => file.endsWith('.md') || /^(?:src|vendor|scripts)\//.test(file)), false);
+  assert.match(await readFile(join(outDir, 'CONTRIBUTING.html'), 'utf8'), /href="https:\/\/github\.com\/gulagala001\/oh-my-dsh\/blob\/main\/scripts\/simulator\/README\.md"/, 'engineering references point to repository sources without shipping the simulator');
   assert.ok(built.includes('docs/site/media/launchpad-workbench.jpg'));
   assert.ok(built.some(file => /^docs\/site\/diagrams\/[a-f0-9]+\.svg$/.test(file)));
   assert.equal(built.some(file => /mermaid\.(?:tiny|esm)/.test(file)), false, 'no diagram runtime is shipped to readers');

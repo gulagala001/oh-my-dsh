@@ -13,13 +13,19 @@ const commit = values.commit ?? previous.commit;
 if (!/^[0-9a-f]{40}$/.test(commit)) throw new Error('Expected a full DSH commit SHA');
 if (execFileSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim() !== commit) throw new Error(`Expected the pinned DSH source checkout ${commit}`);
 const version = JSON.parse(await readFile(join(source, 'package.json'), 'utf8')).version;
-const cordisVersion = JSON.parse(await readFile(join(source, 'vendor/cordis/package.json'), 'utf8')).version;
-const schemaVersion = JSON.parse(await readFile(join(source, 'vendor/schemastery/package.json'), 'utf8')).version;
+const hostLayouts = new Map([
+  ['0.2.0-rc.2', { subagentDriver: true, cordisVersion: '4.0.4', schemaVersion: '3.18.4' }],
+  ['0.2.1-alpha.2', { subagentDriver: false, cordisVersion: '4.0.5-alpha.1', schemaVersion: '3.18.5-alpha.1' }],
+]);
+const hostLayout = hostLayouts.get(version);
+if (hostLayout === undefined) throw new Error(`Unsupported DSH source version: ${version}`);
+const { cordisVersion, schemaVersion } = hostLayout;
 const officialTag = 'dsh-v' + version;
 const tag = execFileSync('git', ['tag', '--points-at', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim().split('\n').includes(officialTag) ? officialTag : null;
 const modules = { 'session-persistence-jsonl': 'session/session-persistence-jsonl', jobs: 'jobs/jobs', 'jobs-local': 'jobs/jobs-local', 'tool-jobs': 'jobs/tool-jobs', shell: 'shell/shell', 'tool-bash': 'shell/tool-bash', 'tool-pwsh': 'shell/tool-pwsh', 'bash-local': 'shell/bash-local', 'pwsh-local': 'shell/pwsh-local', 'bash-sandbox': 'shell/bash-sandbox', 'pwsh-sandbox': 'shell/pwsh-sandbox', tools: 'core/tools', 'ui-conversation': 'client/ui-conversation' };
 Object.assign(modules, { workflow: 'workflow/workflow', 'workflow-ptc': 'workflow/workflow-ptc', 'tool-workflow': 'workflow/tool-workflow' });
-await rm(join(destination, 'subagent-in-process-driver'), { recursive: true, force: true });
+if (hostLayout.subagentDriver) modules['subagent-in-process-driver'] = 'subagent/subagent-in-process-driver';
+else await rm(join(destination, 'subagent-in-process-driver'), { recursive: true, force: true });
 execFileSync(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm', ['exec', 'tsdown'], { cwd: join(source, 'packages/client/ui-conversation'), stdio: 'inherit', shell: process.platform === 'win32' });
 for (const [name, path] of Object.entries(modules)) {
   const target = join(destination, name);
@@ -47,7 +53,8 @@ await cp(join(source, 'packages/client/tsdown.client.ts'), join(destination, 'bu
 const paths = [...Object.values(modules).map(path => 'packages/' + path), 'packages/client/tsdown.client.ts', 'packages/llm/llm/src/error.ts'];
 // Include the newly authored file in git diff without staging any source changes.
 execFileSync('git', ['add', '-N', 'packages/client/ui-conversation/src/client/skeleton/background-wait.ts', 'packages/client/ui-conversation/src/client/conversation-reload.ts',
-  'packages/workflow/workflow-ptc/src/journal.ts', 'packages/workflow/workflow-ptc/src/source.ts', 'packages/workflow/workflow-ptc/src/worktree.ts', 'packages/workflow/workflow-ptc/src/spawn.ts', 'packages/workflow/workflow-ptc/src/hub.ts'], { cwd: source });
+  'packages/workflow/workflow-ptc/src/journal.ts', 'packages/workflow/workflow-ptc/src/source.ts', 'packages/workflow/workflow-ptc/src/worktree.ts', 'packages/workflow/workflow-ptc/src/spawn.ts',
+  ...(hostLayout.subagentDriver ? [] : ['packages/workflow/workflow-ptc/src/hub.ts'])], { cwd: source });
 const patch = execFileSync('git', ['diff', '--binary', 'HEAD', '--', ...paths], { cwd: source, maxBuffer: 16 * 1024 * 1024 });
 await writeFile(join(destination, 'changes.patch'), patch);
 const files = {};

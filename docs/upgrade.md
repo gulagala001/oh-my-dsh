@@ -15,7 +15,7 @@
 
 包名分别为 `trisoul_x-0.2.1-alpha.1.omd.0.10.0.tgz` 与 `trisoul_x-0.2.0-rc.2.omd.0.10.0.tgz`，来源为 [alpha.1 Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-alpha.1.omd.0.10.0) 与 [rc.2 Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.0-rc.2.omd.0.10.0)。仓库 `gulagala001/oh-my-dsh`，包 `trisoul_x`。
 
-GitHub `main` 的 `0.2.1-alpha.2.omd.0.16.0` **未发行**，没有 alpha.2 公开成品，内置较早的 OpenCU 1.6.1 快照；最新本地同版本浏览器重构尚未合入它。相同版本号不表示内容相同，不混同开发分支、本地包和公开 `0.10.0`，不用 `latest` 选包。
+GitHub `main` 的 `0.2.1-alpha.2.omd.0.16.0` **未发行**，没有 alpha.2 公开成品，已整合 OpenCU 1.6.1 的浏览器与运行时重构。相同版本号不表示内容相同，不混同开发分支、本地包和公开 `0.10.0`，不用 `latest` 选包。
 
 默认 Oh My DSH 预设、完整文件／命令访问、关闭审批，**profile 显式覆盖优先**，旧会话保留预设。完成需核对正常启动、当前版本、新 OMD 会话；升级还检查原模型、旧会话／附件、外观。无模型时注明对话未验证。
 

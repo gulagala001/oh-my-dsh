@@ -1,0 +1,16 @@
+/* Un/Br/Hr/Vr, original font-family and enum field chrome. */
+.codex-annotation-enum-control{display:flex;align-items:center;min-width:0;min-height:calc(var(--spacing)*7);max-width:100%;width:calc(var(--spacing)*48);overflow:hidden;border:1px solid var(--color-border-primary-outline);border-radius:var(--radius-lg);background:var(--color-background-primary-soft);color:var(--color-text);box-shadow:0px 1px 2px -1px #00000014;outline:none;transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke;transition-duration:var(--default-transition-duration);transition-timing-function:var(--default-transition-timing-function)}
+.codex-annotation-enum-control:focus-within{border-color:var(--color-ring);box-shadow:0 0 0 1px var(--color-ring)}
+.codex-annotation-enum-control input{min-width:0;flex:1;width:100%;height:calc(var(--spacing)*7);border:0;border-radius:0;background:transparent;padding:0 12px;outline:none;appearance:none;font:var(--text-xs)/var(--text-xs--line-height) var(--font-mono);color:var(--color-text);box-shadow:none}
+.codex-annotation-enum-control input::placeholder,.codex-annotation-enum-control:not([data-edited]) input,.codex-annotation-enum-control:not([data-edited]) .codex-annotation-enum-trigger{color:var(--color-text-tertiary)}
+.codex-annotation-enum-trigger{display:flex;align-items:center;gap:8px;min-width:0;min-height:calc(var(--spacing)*7);flex:1;padding:0 12px;border:0;border-radius:0;background:transparent;color:inherit;text-align:start;cursor:pointer;font:var(--text-xs)/var(--text-xs--line-height) var(--font-mono)}
+.codex-annotation-enum-trigger>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.codex-annotation-enum-control:has(input) .codex-annotation-enum-trigger{justify-content:center;flex:0 0 28px;width:28px;height:calc(var(--spacing)*7);padding:0;border-left:1px solid var(--color-border-subtle);color:var(--color-text-tertiary)}
+.codex-annotation-enum-control:has(input) .codex-annotation-enum-trigger>span{display:none}
+.codex-annotation-enum-trigger:hover{background:var(--color-background-primary-ghost-hover)}
+.codex-annotation-enum-control input:disabled,.codex-annotation-enum-trigger:disabled{cursor:default;opacity:.5}
+.codex-annotation-enum-menu{z-index:80}
+@media(prefers-reduced-motion:reduce){.codex-annotation-enum-control{transition:none}}
+
+.codex-annotation-enum-control[data-kind=text]{width:100%;padding-inline:calc(var(--spacing)*3)}
+.codex-annotation-enum-control[data-kind=text] input{padding:0}

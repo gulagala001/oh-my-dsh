@@ -1,0 +1,134 @@
+/* Source: work/rea-reconstruction/system-access/{component-index,css-reference-rules}.json.
+   Use after codex-cu-tokens.css, codex-cu-typography.css and primitive styles. */
+[data-codex-cu-scope].codex-cu-system-access { display: contents; }
+
+[data-codex-cu-scope] .codex-cu-system-request-frame { width: 100%; max-width: 536px; }
+[data-codex-cu-scope] .codex-cu-system-request {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: calc(var(--spacing) * 4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  corner-shape: var(--codex-corner-shape);
+  background: var(--color-surface);
+  padding: calc(var(--spacing) * 4);
+  box-shadow: 0 2px 6px -1px rgba(0, 0, 0, .03);
+}
+[data-codex-cu-scope] .codex-cu-system-request-icon {
+  display: flex;
+  flex-shrink: 0;
+  width: calc(var(--spacing) * 11);
+  height: calc(var(--spacing) * 11);
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  corner-shape: var(--codex-corner-shape);
+  background: #f4f4f4;
+  color: var(--color-text-secondary);
+}
+[data-codex-cu-scope][data-theme="dark"] .codex-cu-system-request-icon,
+[data-theme="dark"] [data-codex-cu-scope] .codex-cu-system-request-icon { background: #303030; }
+[data-codex-cu-scope] .codex-cu-system-request-logo {
+  width: calc(var(--spacing) * 6);
+  height: calc(var(--spacing) * 6);
+  border-radius: var(--radius-2xs);
+}
+[data-codex-cu-scope] .codex-cu-system-request-labels,
+[data-codex-cu-scope] .codex-cu-capability-labels { min-width: 0; flex: 1; }
+[data-codex-cu-scope] .codex-cu-system-request-title,
+[data-codex-cu-scope] .codex-cu-system-request-subtitle {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+[data-codex-cu-scope] .codex-cu-system-request-title,
+[data-codex-cu-scope] .codex-cu-capability-label {
+  font-size: var(--text-lg);
+  line-height: calc(var(--spacing) * 6);
+  color: var(--color-text);
+}
+[data-codex-cu-scope] .codex-cu-system-request-subtitle,
+[data-codex-cu-scope] .codex-cu-capability-description {
+  font-size: var(--text-base);
+  line-height: calc(var(--spacing) * 5);
+  color: var(--color-text-tertiary);
+}
+[data-codex-cu-scope] .codex-cu-system-request-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+}
+[data-codex-cu-scope] .codex-cu-system-request-actions button {
+  width: fit-content;
+  padding-inline: calc(var(--spacing) * 3);
+  font-size: var(--text-lg);
+  /* medium retains leading-[18px] under the card's text-lg override. */
+  line-height: 18px;
+}
+[data-codex-cu-scope] .codex-cu-system-request-error { margin: 0; font-size: var(--text-sm); line-height: var(--text-sm--line-height); }
+[data-codex-cu-scope] .codex-cu-access-declined { margin: 0; }
+
+[data-codex-cu-scope].codex-cu-capability-setup {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 4);
+  -webkit-user-select: none;
+  user-select: none;
+}
+[data-codex-cu-scope] .codex-cu-capability-panel {
+  width: 100%;
+  max-width: 536px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-3xl);
+  corner-shape: var(--codex-corner-shape);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+[data-codex-cu-scope] .codex-cu-capability-panel-header {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 1.5);
+  border-bottom: 1px solid var(--color-border);
+  padding: calc(var(--spacing) * 3) calc(var(--spacing) * 4);
+  font-size: var(--text-base);
+  line-height: calc(var(--spacing) * 5);
+  font-weight: var(--font-weight-medium);
+}
+[data-codex-cu-scope] .codex-cu-capability-panel-rows { display: flex; flex-direction: column; padding-block: calc(var(--spacing) * 2.5); }
+[data-codex-cu-scope] .codex-cu-capability-row { display: flex; min-width: 0; align-items: center; gap: calc(var(--spacing) * 4); padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 4); }
+[data-codex-cu-scope] .codex-cu-capability-icon { display: flex; width: calc(var(--spacing) * 11); height: calc(var(--spacing) * 11); flex-shrink: 0; align-items: center; justify-content: center; overflow: hidden; border-radius: var(--radius-lg); corner-shape: var(--codex-corner-shape); }
+[data-codex-cu-scope] .codex-cu-capability-logo { width: 100%; height: 100%; }
+[data-codex-cu-scope] .codex-cu-capability-description { display: flex; align-items: center; gap: calc(var(--spacing) * 2); }
+[data-codex-cu-scope] .codex-cu-capability-actions { display: flex; flex-shrink: 0; flex-direction: column; align-items: flex-end; gap: calc(var(--spacing) * 2); }
+[data-codex-cu-scope] .codex-cu-capability-spinner { display: inline-flex; width: fit-content; height: fit-content; align-items: center; justify-content: center; line-height: 1; contain: layout paint style; }
+[data-codex-cu-scope] .codex-cu-capability-spinner-icon { width: 12px; height: 12px; }
+@keyframes codex-cu-access-spin { to { transform: rotate(360deg); } }
+:root[data-reduced-motion="false"] [data-codex-cu-scope] .codex-cu-capability-spinner { animation: var(--animate-spin); animation-name: codex-cu-access-spin; }
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-reduced-motion]) [data-codex-cu-scope] .codex-cu-capability-spinner { animation: var(--animate-spin); animation-name: codex-cu-access-spin; }
+}
+
+/* streaming-text o -> app-initial Rsl/Wsl, plain-text branch Jnl/nrl/Wnl. */
+[data-codex-cu-scope] .codex-cu-access-intro {
+  --markdown-font-size: var(--codex-chat-font-size);
+  --markdown-line-height: calc(var(--markdown-font-size) * var(--leading-relaxed));
+  color: var(--color-text);
+  font-size: var(--markdown-font-size);
+  line-height: var(--markdown-line-height);
+  overflow-wrap: anywhere;
+}
+[data-codex-cu-scope] .codex-cu-access-intro p { margin: 0; }
+@keyframes codex-cu-access-fade-in { from { opacity: 0; } to { opacity: 1; } }
+[data-codex-cu-scope] .codex-cu-access-intro[data-markdown-animated] .codex-cu-access-fade {
+  opacity: 1;
+  animation: codex-cu-access-fade-in var(--duration, var(--transition-duration-basic)) var(--fade-easing, cubic-bezier(.37, .55, .86, .88)) both;
+  animation-delay: var(--fade-delay, 0s);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-codex-cu-scope] .codex-cu-access-intro[data-markdown-animated] .codex-cu-access-fade { --duration: 0s; opacity: 1; animation-duration: 0s; animation-delay: 0s !important; }
+}
