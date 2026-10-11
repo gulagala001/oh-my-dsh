@@ -32,8 +32,10 @@ export class DreamStore {
     // Distinguishing "done" from "failed" is required so a retry can revisit a
     // failed target while a single run still advances past it. Existing archives
     // predate the column, so add it in place and keep the schema version.
-    if(!this.db.prepare('PRAGMA table_info(job_targets)').all().some(column=>column.name==='failed'))
-      this.db.prepare('ALTER TABLE job_targets ADD COLUMN failed INTEGER NOT NULL DEFAULT 0').run();
+    this.tx(()=>{
+      if(!this.db.prepare('PRAGMA table_info(job_targets)').all().some(column=>column.name==='failed'))
+        this.db.prepare('ALTER TABLE job_targets ADD COLUMN failed INTEGER NOT NULL DEFAULT 0').run();
+    });
     const schema = this.meta('schema');
     if (schema !== null && schema !== 1) { this.db.close(); throw Error('Dream 数据版本不兼容；原文件保留'); }
     this.setMeta('schema', 1);

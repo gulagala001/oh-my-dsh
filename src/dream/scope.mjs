@@ -2,9 +2,7 @@
 // keys are derived from git roots / cwd, so they do not necessarily line up with a
 // workspace path; grouping therefore uses longest-ancestor matching. Drive roots are
 // never treated as folders, otherwise one drive letter would swallow a whole disk.
-import { readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { isAbsolute, join, resolve, sep } from 'node:path';
+import { isAbsolute, resolve, sep } from 'node:path';
 
 const WIN = process.platform === 'win32';
 const DRIVE_ROOT = /^[A-Za-z]:[\\/]?$/;
@@ -34,21 +32,16 @@ const key = (p) => {
 const byString = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
 /**
- * Workspace roots from ~/.dsh/storages/workspace.json (DSH_HOME wins).
- * Missing / unreadable / malformed file → [] (never throws).
+ * Use the host registry so custom storage backends and roots work alike.
+ * An unavailable optional registry does not block Dream or basic chat.
  */
-export function workspaceRoots() {
+export function workspaceRoots(ctx) {
   try {
-    const home = process.env.DSH_HOME || join(homedir(), '.dsh');
-    const data = JSON.parse(readFileSync(join(home, 'storages', 'workspace.json'), 'utf8'));
-    const table = data && data.tables ? data.tables.workspaces : null;
-    if (!table || typeof table !== 'object') return [];
-    const paths = [];
-    for (const workspace of Object.values(table)) {
-      const path = workspace && typeof workspace === 'object' ? workspace.path : null;
-      if (typeof path === 'string' && path.trim()) paths.push(path);
-    }
-    return [...new Set(paths)].sort(byString);
+    const registry = ctx?.get?.('workspaceRegistry') || ctx?.workspaceRegistry;
+    const workspaces = registry?.list?.();
+    if (!Array.isArray(workspaces)) return [];
+    return [...new Set(workspaces.map(workspace => workspace?.path)
+      .filter(path => typeof path === 'string' && path.trim()))].sort(byString);
   } catch { return []; }
 }
 
@@ -143,28 +136,21 @@ export function folderTree(projects, roots, missing) {
 
 /**
  * Projects to organize for the selected folders. Empty / non-array selection means
- * "no restriction" (full list, backward compatible); otherwise a project is kept when
- * its folder resolves into the selection.
+ * "no restriction" (full list, backward compatible); otherwise use the same
+ * complete grouping shown in the settings UI. A selected ancestor must not
+ * also admit projects displayed under a different nested group.
  *
  * Blank and non-string entries are dropped before the empty check, so an all-blank
  * selection such as [""] behaves exactly like an empty one: "no restriction". That is
  * deliberate rather than a silent narrowing to zero projects, and the settings UI
  * depends on the empty case meaning "organize everything" (its clear button writes []).
  */
-export function selectedProjects(projects, selected) {
+export function selectedProjects(projects, selected, roots = []) {
   const list = Array.isArray(projects) ? projects : [];
   const chosen = Array.isArray(selected) ? selected.filter(s => typeof s === 'string' && s.trim()) : [];
   if (!chosen.length) return list.slice();
   const chosenKeys = new Set(chosen.map(key));
-  const picked = [];
-  const seen = new Set();
-  for (const project of list) {
-    if (typeof project !== 'string' || !project.trim()) continue;
-    const folder = folderOf(project, chosen);
-    if (!chosenKeys.has(key(folder)) && !chosenKeys.has(key(project))) continue;
-    if (seen.has(project)) continue;
-    seen.add(project);
-    picked.push(project);
-  }
-  return picked;
+  const admitted = new Set(folderTree(list, roots)
+    .filter(group => chosenKeys.has(key(group.folder))).flatMap(group => group.projects));
+  return [...new Set(list.filter(project => admitted.has(project)))];
 }

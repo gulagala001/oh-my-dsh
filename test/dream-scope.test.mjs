@@ -4,12 +4,23 @@ import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { DatabaseSync } from 'node:sqlite';
-import { folderOf, folderTree, isDriveRoot, isUnderPath, selectedProjects } from '../src/dream/scope.mjs';
+import { folderOf, folderTree, isDriveRoot, isUnderPath, selectedProjects, workspaceRoots } from '../src/dream/scope.mjs';
 import { DreamStore } from '../src/dream/store.mjs';
 import { handleDreamApi } from '../src/dream/api.mjs';
 
 const win = process.platform === 'win32';
 const at = (...parts) => (win ? 'D:\\' : '/') + parts.join(win ? '\\' : '/');
+
+test('workspace grouping reads the host registry and tolerates an unavailable optional service', () => {
+  const paths = [at('work'), at('other')];
+  assert.deepEqual(workspaceRoots({ get(name) {
+    assert.equal(name, 'workspaceRegistry');
+    return { list: () => [{ path: paths[0] }, { path: paths[1] }, { path: paths[0] }, { path: null }] };
+  } }), [...paths].sort());
+  assert.deepEqual(workspaceRoots({ workspaceRegistry: { list: () => [{ path: paths[0] }] } }), [paths[0]]);
+  assert.deepEqual(workspaceRoots({ get() { throw Error('optional service unavailable'); } }), []);
+  assert.deepEqual(workspaceRoots({}), []);
+});
 
 
 test('a drive root is recognised in every spelling and is never a folder', () => {
@@ -64,12 +75,23 @@ test('a throwing folder probe keeps the folder selectable instead of failing the
   assert.equal(tree[0].exists, true);
 });
 
+test('selecting a displayed folder organizes exactly its projects, including nested groups', () => {
+  const root = at('nested'), parent = at('nested', 'a'), child = at('nested', 'a', 'b');
+  const projects = [parent, child], roots = [root];
+  const tree = folderTree(projects, roots);
+  assert.deepEqual(tree, [
+    { folder: root, projects: [parent], exists: true },
+    { folder: parent, projects: [child], exists: true },
+  ]);
+  for (const entry of tree) assert.deepEqual(selectedProjects(projects, [entry.folder], roots), entry.projects);
+});
+
 test('an empty or blank selection means every project; a folder selection narrows by folder', () => {
   const projects = [at('work', 'a'), at('work', 'b'), at('other', 'c')];
   assert.deepEqual(selectedProjects(projects, []), projects);
   assert.deepEqual(selectedProjects(projects, ['   ']), projects, 'a blank selection is not a silent narrowing');
   assert.deepEqual(selectedProjects(projects, null), projects);
-  assert.deepEqual(selectedProjects(projects, [at('work')]), [at('work', 'a'), at('work', 'b')]);
+  assert.deepEqual(selectedProjects(projects, [at('work')], [at('work')]), [at('work', 'a'), at('work', 'b')]);
   assert.deepEqual(selectedProjects(projects, [at('work', 'a')]), [at('work', 'a')]);
   assert.deepEqual(selectedProjects(projects, [at('other', 'c')]), [at('other', 'c')]);
 });

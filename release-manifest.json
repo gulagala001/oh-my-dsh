@@ -2,6 +2,19 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-alpha.2.omd.0.16.0",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "整合 Dream 文件夹选择、监控精修与原生恢复修复",
+      "notes": [
+        "Dream 全局整理按实际工作区文件夹选择范围；显示分组与执行范围一致。",
+        "部分目标失败保留已完成进度、原范围与来源截点，重试和冷恢复继续处理未完成目标。",
+        "整合监控布局、筛选与动效，以及插件重新启用后的原生文件上传解析器恢复。",
+        "内置 OpenCU 1.6.1，直接打开浏览器与实际目标内容，保留停止、接管、恢复及多目标预览。",
+        "未发布新 tag 或 Release，未更新用户当前部署；验收范围见本候选说明。"
+      ]
+    },
+    {
       "version": "0.2.1-alpha.2.omd.0.15.1",
       "severity": "normal",
       "unpublished": true,

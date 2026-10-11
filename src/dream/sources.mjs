@@ -32,7 +32,7 @@ export class DreamSources {
     const registry=this.ctx.get?.('workspaceRegistry')||this.ctx.workspaceRegistry;
     return Boolean(registry?.list?.().some(workspace=>workspace.sessionIds.includes(id)));
   }
-  projectlessKnown(header) { return this.store.session(header.id)?.projectless===true&&!this.inWorkspace(header.id); }
+  projectlessKnown(header) { return typeof header?.id==='string'&&Boolean(header.id)&&this.store.session(header.id)?.projectless===true&&!this.inWorkspace(header.id); }
   scopeFor(header,sideQuestion=false,signal) { return this.track(()=>this.classifyScope(header,sideQuestion,this.signal(signal))); }
   async classifyScope(header,sideQuestion=false,signal) {
     let projectless=false,current=header;

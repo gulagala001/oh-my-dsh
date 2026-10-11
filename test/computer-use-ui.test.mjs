@@ -197,7 +197,8 @@ for (const preset of ['trisoul-x', 'omd-ptc']) {
       const canonical = JSON.parse(rootResult.content.find(block => block.type === 'text').text);
       const response = await page.request.get(endpoint('presentation') + '&call=' + encodeURIComponent(result.subCallId));
       assert.equal(response.status(), 200);
-      const body = await response.json(); assert.deepEqual(body.meta, { computerUseFiles: canonical.files, computerUseError: canonical.error });
+      const body = await response.json(); assert.deepEqual(body.meta, { computerUseFiles: canonical.files, computerUseError: canonical.error,
+        ...(canonical.target ? { computerUseTarget: canonical.target } : {}) });
       return body.meta;
     };
     const output = computerResult(delivered), blocks = contentOf(output).filter(block => block.type === 'file');

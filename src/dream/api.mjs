@@ -39,7 +39,7 @@ export async function handleDreamApi({hub,ctx,req,res,url,send,readBody}){
   // Project keys outlive their directories, so tell the caller which folders are
   // still on disk; the UI marks the rest and sorts them last.
   const folderExists=folder=>{try{return existsSync(folder);}catch{return true;}};
-  const folderPayload=()=>{try{return folderTree(hub.dream.store.projects(),workspaceRoots(),folderExists);}catch{return [];}};
+  const folderPayload=()=>{try{return folderTree(hub.dream.store.projects(),workspaceRoots(hub.ctx||ctx),folderExists);}catch{return [];}};
   if(path==='/dream'){
     if(req.method!=='GET'){send(res,405,{error:'请使用 GET'});return true;}
     if(id&&!hub.dream.store.session(id))await hub.dream.sources.inspect(id);
