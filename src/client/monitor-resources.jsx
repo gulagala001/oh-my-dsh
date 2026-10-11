@@ -28,43 +28,54 @@ function BudgetLine({ label, value, limit, unit, format = number, nullIsUnlimite
   const ratio = used !== null && cap > 0 ? used / cap * 100 : null;
   const exceeded = used !== null && bounded && used > cap;
   return <div className={`mon-resource-budget-line${exceeded ? ' is-exceeded' : ''}`}>
-    <div className="mon-resource-budget-heading"><span>{label}</span><span><strong title={used === null ? undefined : `${number(used)}${unit ? ` ${unit}` : ''}`}>{format(used)}</strong>{unit && used !== null && <small> {unit}</small>}<span className="mon-resource-budget-separator"> / </span>{bounded ? <span title={`${number(cap)}${unit ? ` ${unit}` : ''}`}>{format(cap)}{unit && <small> {unit}</small>}</span> : <span>{limit === null && nullIsUnlimited ? '无上限' : '上限未记录'}</span>}</span></div>
+    <div className="mon-resource-budget-heading"><span>{label}</span><span><strong title={used === null ? undefined : `${number(used)}${unit ? ` ${unit}` : ''}`}>{format(used)}</strong>{unit && used !== null && <span className="mon-resource-unit"> {unit}</span>}<span className="mon-resource-budget-separator"> / </span>{bounded ? <span title={`${number(cap)}${unit ? ` ${unit}` : ''}`}>{format(cap)}{unit && <span className="mon-resource-unit"> {unit}</span>}</span> : <span>{limit === null && nullIsUnlimited ? '无上限' : '上限未记录'}</span>}</span></div>
     {ratio !== null && <div className="mon-resource-progress" role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={cap} aria-valuenow={Math.min(used, cap)} aria-valuetext={`${number(used)} / ${number(cap)}，${ratio.toFixed(1)}%${exceeded ? '，超出预算' : ''}`}><i style={{ width: `${Math.min(ratio, 100)}%` }}/></div>}
-    {bounded && <small className="mon-resource-budget-ratio">{cap === 0 ? `上限为 0${exceeded ? ' · 已超出' : ''}` : used === null ? '等待使用量读数' : `${ratio.toFixed(1)}%${exceeded ? ' · 已超出' : ''}`}</small>}
+    {bounded && <span className="mon-resource-budget-ratio">{cap === 0 ? `上限为 0${exceeded ? ' · 已超出' : ''}` : used === null ? '未记录' : `${ratio.toFixed(1)}%${exceeded ? ' · 已超出' : ''}`}</span>}
   </div>;
 }
 function SessionBudget({ budget }) {
   const configured = budget?.configured === true;
-  return <section className="mon-resource-group"><header><h4>当前会话预算</h4><span>{!budget || budget.configured === false ? '未设置' : configured ? budget.visible === false ? '已关闭' : '已配置' : '状态未记录'}</span></header>
-    {!configured ? <p className="mon-resource-note">{!budget || budget.configured === false ? '当前会话尚未配置预算。' : '暂无有效预算快照。'}</p> : <>
+  return <section className="mon-resource-group"><header><h4>会话预算</h4><span>{!budget || budget.configured === false ? '未设置' : configured ? budget.visible === false ? '已关闭' : '已配置' : '状态未记录'}</span></header>
+    {!configured ? null : <>
       <BudgetLine label="Token 预算" value={budget.tokens} limit={budget.limits?.tokens} unit="Token" format={tokens}/>
       <BudgetLine label="模型轮次" value={budget.rounds} limit={budget.limits?.rounds} unit="轮"/>
       <BudgetLine label="执行时间" value={budget.elapsedMs} limit={budget.limits?.timeMs} format={duration}/>
-      {known(budget.unmetered) > 0 && <p className="mon-resource-note">另有 {number(budget.unmetered)} 次调用未返回用量，未计入 Token 读数。</p>}
-      {budget.visible === false && <p className="mon-resource-note">预算已关闭，以上保留关闭时的读数。</p>}
+      {known(budget.unmetered) > 0 && <p className="mon-resource-note">未计量 · {number(budget.unmetered)} 次</p>}
     </>}
-    <p className="mon-resource-source">来源：会话预算快照。配置后的累计记录，与用量页筛选独立。</p>
+    <ResourceSource>会话预算快照：配置后的累计记录，与用量页筛选独立。关闭后保留最后读数；未返回用量的调用不计入 Token。</ResourceSource>
   </section>;
 }
 function DreamBudget({ dream }) {
-  return <section className="mon-resource-group"><header><h4>Dream 独立日预算</h4>{dream?.usage?.day != null && <span>{String(dream.usage.day)}</span>}</header>
-    {!dream ? <p className="mon-resource-note">尚未读取 Dream 日预算。</p> : <>
-      <BudgetLine label="预算扣减" value={dream.usage?.used} limit={dream.dailyTokens} unit="预算 Token" format={tokens} nullIsUnlimited={false}/>
+  return <section className="mon-resource-group"><header><h4>Dream 日预算</h4>{dream?.usage?.day != null && <span>{String(dream.usage.day)}</span>}</header>
+    {!dream ? <p className="mon-resource-note">未记录</p> : <>
+      <BudgetLine label="预算扣减 · 含预留" value={dream.usage?.used} limit={dream.dailyTokens} unit="预算 Token" format={tokens} nullIsUnlimited={false}/>
       <dl className="mon-resource-facts"><div><dt>运行中任务</dt><dd>{number(dream.activeJobs)}</dd></div><div><dt>排队任务</dt><dd>{number(dream.queuedJobs)}</dd></div><div className="mon-resource-wide"><dt>下次日预算重置</dt><dd>{date(dream.usage?.resetsAt)}</dd></div></dl>
     </>}
-    <p className="mon-resource-source">来源：Dream 日预算账本。扣减包含预留与未知用量估计，不能视为模型实际 Token，也不与主会话用量相加。</p>
+    <ResourceSource>Dream 日预算账本：扣减含预留与未知用量估计，不代表模型实际 Token。日预算独立于会话预算，两者不相加。</ResourceSource>
   </section>;
 }
 function ProcessResources({ resources }) {
-  return <section className="mon-resource-group"><header><h4>运行资源</h4><span>{resources?.scope || '宿主进程'}</span></header>
-    {!resources ? <p className="mon-resource-note">尚未采集宿主进程读数。</p> : <>
+  return <section className="mon-resource-group"><header><h4>宿主资源</h4><span>{resources?.scope || '宿主进程'}</span></header>
+    {!resources ? <p className="mon-resource-note">未记录</p> : <>
       <dl className="mon-resource-facts"><div><dt>进程常驻内存</dt><dd title={known(resources.rssBytes) === null ? undefined : `${number(resources.rssBytes)} 字节`}>{bytes(resources.rssBytes)}</dd></div><div><dt>已用 JS 堆</dt><dd title={known(resources.heapUsedBytes) === null ? undefined : `${number(resources.heapUsedBytes)} 字节`}>{bytes(resources.heapUsedBytes)}</dd></div><div><dt>已分配 JS 堆</dt><dd title={known(resources.heapTotalBytes) === null ? undefined : `${number(resources.heapTotalBytes)} 字节`}>{bytes(resources.heapTotalBytes)}</dd></div><div><dt>进程运行时长</dt><dd>{duration(known(resources.uptimeSeconds) === null ? null : resources.uptimeSeconds * 1000)}</dd></div></dl>
-      <p className="mon-resource-note">采样于 {date(resources.sampledAt)}</p>
+      <p className="mon-resource-note">采样 {date(resources.sampledAt)}</p>
     </>}
-    <p className="mon-resource-source">来源：宿主进程内存与运行时间采样；已分配 JS 堆不代表内存上限。此范围不随用量筛选变化。</p>
+    <ResourceSource>宿主进程内存与运行时间采样，不随用量筛选变化。已分配 JS 堆不代表内存上限。</ResourceSource>
   </section>;
 }
 
+function ResourceSource({ children }) {
+  return <details className="mon-resource-source"><summary>读数说明</summary><p>{children}</p></details>;
+}
+
 export function MonitorResources({ data }) {
-  return <details className="mon-resources"><summary><span className="mon-resource-disclosure" aria-hidden="true">›</span><div><strong>预算与运行资源</strong><small>会话预算 · Dream 日预算 · 宿主进程</small></div></summary><div className="mon-resources-body"><SessionBudget budget={data?.budget}/><DreamBudget dream={data?.dream}/><ProcessResources resources={data?.resources}/></div></details>;
+  const budget = data?.budget;
+  const rss = known(data?.resources?.rssBytes);
+  const budgetUsage = budget?.configured === true ? known(budget.tokens) : null;
+  const cap = known(budget?.limits?.tokens);
+  const summary = [];
+  if (rss !== null) summary.push(`内存 ${bytes(rss)}`);
+  if (budgetUsage !== null) summary.push(`会话 ${tokens(budgetUsage)}${cap !== null ? ` / ${tokens(cap)}` : ''} Token${budget.visible === false ? ' · 已关闭' : ''}`);
+  if (!summary.length) summary.push('会话预算 · Dream · 宿主资源');
+  return <details className="mon-resources"><summary><span className="mon-resource-disclosure" aria-hidden="true">›</span><strong>运行详情</strong><span className="mon-resource-summary">{summary.join(' · ')}</span></summary><div className="mon-resources-body"><SessionBudget budget={budget}/><DreamBudget dream={data?.dream}/><ProcessResources resources={data?.resources}/></div></details>;
 }
