@@ -1,9 +1,9 @@
 {
   "repository": "https://github.com/gulagala001/opencu",
-  "commit": "0d87093eaaeb8695a88b82574b61d27059a76bf1",
+  "commit": "c2311efe9b9be87a1a0970ac9709fa60f9a33f75",
   "workingTree": false,
   "version": "1.6.1",
-  "archiveSha256": "cff31d1a2b5bda5ce47fded5bfa1d9f5f320d098a4496e43caf1cb10ba5bfffc",
+  "archiveSha256": "d2fd12866d81f4a68f2e43196ca9dbeed2a20603fe45fab84838dd499d8064ea",
   "files": {
     "README.md": "70ddf37abeabe9b8c2ef2a6794381cebab1b19320fbbe4cce4f451f43cef1098",
     "README_EN.md": "c645bc37ab85e2e6036e5b6a124aa749fbd3c870e36372bc337064cc9dfe9c47",
@@ -491,7 +491,7 @@
     "src/computer-use/site-annotation-features.mjs": "482bddc9921260f082aad965e5f334e4b5ecdc1071217b5d99c88dfcc45e0ffd",
     "src/computer-use/site-annotation-settings.mjs": "7eb2f5f1d74c162e9d7b97fb58a74122f6eac9d71a40e322281288923d282b52",
     "src/computer-use/snapshot-context.mjs": "4368937ac884b8699ac72b98910cf7c78d8f638bd9a02d064e5ac9fa1c426bbb",
-    "src/computer-use/tools.mjs": "e715ec1d90570c86d6f8f8f8040dca41b7934b568daba132ca092dcc0188e4d4",
+    "src/computer-use/tools.mjs": "d0cd0de2d7ce5462f6169670cfc785d7b75e2bf7b6331d6cbfdd897e3578c78d",
     "src/computer-use/windows-build.mjs": "c0dfef9dd76f1782f35c3b697cde53e51f2a3a0f1c5e09f23d08fc11bcae1706",
     "src/computer-use/windows-extension.mjs": "ee7ca8433dbeafbfe4098f9b84880c74defc98e98cbfd0265ab627dd1daa15a0",
     "src/computer-use/windows-native-build.mjs": "575ffdb63375cb5e1f2f18e98626dc92f51db56862680e0706f981ba8a197fb9",
