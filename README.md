@@ -32,7 +32,7 @@ Oh My DSH 是 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepsee
 
 ## 开始使用
 
-当前候选配对（未正式发布）：**DSH 0.2.1-alpha.2 · Oh My DSH 0.2.1-alpha.2.omd.0.15.1**，内置 **OpenCU 1.6.0**。本次整合验收针对 alpha.2；旧宿主保留已交付的独立 0.14.0 构建。已有环境升级前，先结束任务、停止服务或完整退出应用，并备份实际 `DSH_HOME`。[安装、迁移与升级指南](docs/upgrade.md)。
+当前候选配对（未正式发布）：**DSH 0.2.1-alpha.2 · Oh My DSH 0.2.1-alpha.2.omd.0.15.1**，内置 **OpenCU 1.6.1**。本次整合验收针对 alpha.2；旧宿主保留已交付的独立 0.14.0 构建。已有环境升级前，先结束任务、停止服务或完整退出应用，并备份实际 `DSH_HOME`。[安装、迁移与升级指南](docs/upgrade.md)。
 
 公开安装版本：**OMD 0.2.1-alpha.1.omd.0.10.0 / DSH 0.2.1-alpha.1**。下方 GitHub 命令安装已发布的 0.10.0，不含 0.11／0.12／0.13／0.14／0.15 候选改进或 alpha.2 适配。0.15.0 仅供[本地候选验收](docs/upgrade.md#candidate-install)。
 
@@ -104,7 +104,7 @@ npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 
 ## OpenCU：看见过程，随时接手
 
-内置 [OpenCU](https://github.com/gulagala001/opencu)，把网页与桌面操作接入原生对话。通过 `@Browser`、已连接的 `@Chrome` 或应用引用指定目标；在独立的电脑预览标签中查看实时画面、停止操作、人工接手，再恢复助手控制。
+内置 [OpenCU](https://github.com/gulagala001/opencu)，把网页与桌面操作接入原生对话。通过 `@Browser`、已连接的 `@Chrome` 或应用引用指定目标；目标画面直接在内容标签中打开，可停止操作、人工接手，再恢复助手控制。
 
 候选 0.13.1 可将内置浏览器的下载保存为持久文件附件，在原生与 OMD-PTC 对话中打开预览；控制连接停止后的下载继续保存，失败保留原因，重复保存复用已交付文件，停止及服务重启后仍可读取附件。实时预览在重载后恢复辅助展示，缺少或失效的缓存不影响基础操控。
 

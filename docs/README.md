@@ -41,7 +41,7 @@
 
 开发与发行维护：[DSH 0.2 适配与验证](dsh-0.2-preparation.md)，包含固定源码基线、验证范围和正式发布后的收尾步骤。
 
-当前候选文档对应 **OMD 0.2.1-alpha.2.omd.0.15.0 / DSH 0.2.1-alpha.2**，内置 **OpenCU 1.6.0**。本次整合验收针对 alpha.2；rc.2 与 alpha.1 保留已交付的独立 0.14.0 构建。[当前候选说明](release-0.2.1-alpha.2.omd.0.15.0.md) · [发布记录与下载](https://github.com/gulagala001/oh-my-dsh/releases) · [全部更新记录](../CHANGELOG.md)。
+当前候选文档对应 **OMD 0.2.1-alpha.2.omd.0.15.0 / DSH 0.2.1-alpha.2**，内置 **OpenCU 1.6.1**。本次整合验收针对 alpha.2；rc.2 与 alpha.1 保留已交付的独立 0.14.0 构建。[当前候选说明](release-0.2.1-alpha.2.omd.0.15.0.md) · [发布记录与下载](https://github.com/gulagala001/oh-my-dsh/releases) · [全部更新记录](../CHANGELOG.md)。
 
 候选 **0.2.1-alpha.2.omd.0.15.0** 未正式发布；公开安装版本为 **0.2.1-alpha.1.omd.0.10.0**，不含候选改进或 alpha.2 适配，参见[本地候选验收](upgrade.md#candidate-install)。
 

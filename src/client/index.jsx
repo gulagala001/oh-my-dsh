@@ -203,7 +203,7 @@ export async function apply(ctx) {
   panelKinds.computer = 'trisoul-x-computer-use';
   const openPanel = section => ctx.sidebarRight.openTab(section ? panelKinds[section] || panelKinds.tasks : 'guide');
   const { ComputerEntry, ComputerPane } = applyComputerUseClient(ctx, {
-    integrated: true, openPanel, guideTitle: '应用预览', guideOrder: 25,
+    integrated: true,
   });
   function ContentPage({ section, title, Component, ...props }) {
     return <div className="tx-workbench cx-integrated" data-section={section}>
@@ -219,8 +219,8 @@ export async function apply(ctx) {
     const section = Object.hasOwn(panelKinds, tab.navigation?.params?.section) ? tab.navigation.params.section : 'tasks';
     const kind = panelKinds[section];
     useEffect(() => {
-      if (tab.visible) tab.actions.openTab(kind, { replaceTab: true });
-    }, [kind, tab.visible, tab.actions]);
+      if (tab.visible && section !== 'computer') tab.actions.openTab(kind, { replaceTab: true });
+    }, [kind, section, tab.visible, tab.actions]);
     if (section === 'computer') return <ComputerPane {...props}/>;
     const [, , title, , Component] = pages.find(([id]) => id === section);
     return <ContentPage {...props} section={section} title={title} Component={Component}/>;
