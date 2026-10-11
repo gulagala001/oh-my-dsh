@@ -52,7 +52,9 @@ export const BrowserControls = forwardRef(function BrowserControls({ sessionId, 
     }
   }, [navigation, target?.id, busy]);
   useEffect(() => {
-    if (!visible || !sessionId || state?.enabled === false) return;
+    // Listing tabs can launch the managed browser. An empty Browser pane
+    // must stay passive until a route or a manual action creates a target.
+    if (!visible || !sessionId || !target || state?.enabled === false) return;
     let active = true, timer;
     const refresh = async () => {
       try { const result = await api('tabs', sessionId); if (active) setTabSnapshot({ sessionId, tabs: result.tabs }); }
@@ -62,6 +64,7 @@ export const BrowserControls = forwardRef(function BrowserControls({ sessionId, 
     void refresh(); return () => { active = false; clearTimeout(timer); };
   }, [sessionId, visible, target?.id, state?.enabled]);
   const act = async (op, value) => {
+    if (!sessionId || !latest.current.state || latest.current.state.enabled === false || latest.current.state.resuming) return false;
     const replacing = op === 'navigate' && pending.current?.op === 'navigate' && pending.current.tabId === value.tabId;
     if ((pending.current || latest.current.state?.transitioning) && !replacing) { latest.current.onError('浏览器正在切换，请稍后重试'); return false; }
     const request = { op, tabId: value.tabId, sequence: ++sequence.current };
@@ -86,7 +89,7 @@ export const BrowserControls = forwardRef(function BrowserControls({ sessionId, 
     if (action === 'focus') { addressInput.current?.focus(); addressInput.current?.select(); }
     else if(action==='find')tools.current?.openFind();
     else if(action==='history'||action==='downloads')setPanel(action);
-    else if (action === 'new') void act('tabs', { action: 'new',browserId:latest.current.target?.browserId });
+    else if (action === 'new') void act('tabs', { action: 'new',browserId:latest.current.target?.browserId??'browser' });
     else if (latest.current.target) void act(action === 'close' ? 'tabs' : 'navigate', { action, tabId: latest.current.target.id });
   };
   const stopNavigation=async()=>{pending.current=null;setBusy(false);try{latest.current.onState(await api('stop',sessionId,{}));latest.current.onError('');}catch(error){latest.current.onError(error.message);}};
@@ -97,9 +100,18 @@ export const BrowserControls = forwardRef(function BrowserControls({ sessionId, 
     if(action){event.preventDefault();event.stopPropagation();shortcut(action);}
   };
   useImperativeHandle(ref, () => ({ shortcut,resizeViewport:size=>tools.current?.resizeViewport(size) }));
-  const disabled = !sessionId || !state || busy || state?.transitioning || state?.enabled === false;
+  const disabled = !sessionId || !state || busy || state?.transitioning || state?.resuming || state?.enabled === false;
   const canNavigate = !!sessionId && !!state && state.enabled !== false && !state.resuming && (!(busy || state.transitioning) || pending.current?.op === 'navigate');
-  if (!target) return <div className="tx-cu-browser-open"><style>{browserChromeCss}</style><button disabled={disabled} onClick={() => shortcut('new')}><Icon kind="new"/>打开浏览器</button>{!!tabs.length && <select aria-label="选择已有标签页" value="" disabled={disabled} onChange={event => { const tab = tabs.find(tab => tab.id === event.target.value); if (tab) void act('view-tab', { tabId: tab.id, browserId: tab.browserId }); }}><option value="" disabled>选择已有标签页…</option>{tabs.map(tab => <option key={tab.id} value={tab.id} disabled={!tab.available}>{tabLabel(tab)} · {browserLabel(tab)}{tab.available ? '' : ' · 其他对话正在使用'}</option>)}</select>}</div>;
+  if (!target) return <div className="tx-cu-browser-controls tx-cu-browser-empty" aria-label="浏览器导航" onKeyDown={paneKey}>
+    <style>{browserChromeCss}</style>
+    <div className="tx-cu-tabs"><div className="tx-cu-tablist"><span className="tx-cu-empty-tab"><ComputerIcon name="globe" size={14}/>新标签页</span>{!!tabs.length&&<select aria-label="选择已有标签页" value="" disabled={disabled} onChange={event=>{const tab=tabs.find(tab=>tab.id===event.target.value);if(tab?.available)void act('view-tab',{tabId:tab.id,browserId:tab.browserId});}}><option value="" disabled>选择已有标签页…</option>{tabs.map(tab=><option key={tab.id} value={tab.id} disabled={!tab.available}>{tabLabel(tab)} · {browserLabel(tab)}{tab.available?'':' · 其他对话正在使用'}</option>)}</select>}</div><button type="button" aria-label="新建标签页" title="新建标签页" disabled={disabled} onClick={()=>shortcut('new')}><Icon kind="new"/></button><span className="tx-cu-browser-identity" title="内置浏览器 · 独立配置"><ComputerIcon name="browser" size={12}/><span>内置浏览器</span></span></div>
+    <div className="tx-cu-browser-navigation"><form className="tx-cu-address" onSubmit={event=>{event.preventDefault();if(disabled||!address.trim())return;editing.current=false;void act('tabs',{action:'new',browserId:'browser',url:address});}}>
+      <button type="button" aria-label="后退" title="后退" disabled><Icon kind="back"/></button><button type="button" aria-label="前进" title="前进" disabled><Icon kind="forward"/></button><button type="button" aria-label="重新加载页面" title="重新加载页面" disabled><Icon kind="reload"/></button>
+      <div className="tx-cu-location"><div className="tx-cu-site-information"><button type="button" aria-label="查看站点信息" title="查看站点信息" disabled><ComputerIcon name="settings" size={13}/></button></div><input ref={addressInput} disabled={disabled} value={address} onChange={event=>{editing.current=true;setAddress(event.target.value);}} onFocus={event=>{editing.current=true;setPanel(null);event.currentTarget.select();}} onBlur={()=>{editing.current=false;}} onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();setAddress('');editing.current=false;event.currentTarget.blur();}}} placeholder="搜索或输入网址" aria-label="浏览器地址"/><button type="button" className="tx-cu-open-external" aria-label="在外部浏览器中打开" title="输入网址后打开页面" disabled><ComputerIcon name="popout" size={14}/></button></div><button disabled={disabled||!address.trim()} type="submit">前往</button>
+    </form><div className="tx-cu-browser-actions">{actions}</div><BrowserDownloads key={sessionId} sessionId={sessionId} visible={visible&&!!state&&state.enabled!==false} api={api} active={panel==='downloads'} onActiveChange={value=>setPanel(value?'downloads':null)}/><BrowserTools ref={tools} sessionId={sessionId} target={null} state={state} api={api} onState={onState} onError={onError} popupOpen={!!panel} onMenuOpen={()=>setPanel(null)} onOpenHistory={()=>setPanel('history')} onOpenDownloads={()=>setPanel('downloads')}/></div>
+    {panel==='history'&&visible&&<BrowserHistoryPanel key={sessionId} sessionId={sessionId} api={api} onClose={focus=>{setPanel(null);if(focus)tools.current?.focus();}} onOpen={entry=>act('tabs',{action:'new',browserId:entry.browserId,url:entry.url})}/>}
+    {(busy||state?.transitioning||state?.resuming)&&<div className="tx-cu-loading" role="status" aria-label={state?.resuming?'正在恢复助手控制…':'正在载入页面…'}><span className="tx-cu-visually-hidden">{state?.resuming?'正在恢复助手控制…':'正在载入页面…'}</span></div>}
+  </div>;
   const selected = tabs.find(t => t.id === target.id);
   const current = navigation?.tabId === target.id ? { ...target, ...navigation } : target;
   const displayedTabs=selected?tabs:[...tabs,{...current,available:true}];

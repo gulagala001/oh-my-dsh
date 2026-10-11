@@ -17,7 +17,7 @@ export function usePreviewAlignmentStyles() {
   }, []);
 }
 
-export function NativePreview({sessionId,targetId,targetKind='app',mode,targetName,stacked=false,visible,state,url,onError,onFrameSize,onConnection}){
+export function NativePreview({sessionId,targetId,targetKind='app',mode,targetName,minimalChrome=false,actions,onActivate,stacked=false,visible,state,url,onError,onFrameSize,onConnection}){
   usePreviewAlignmentStyles();
   const [frame,setFrame]=useState(null),[connection,setConnection]=useState('connecting'),[reconnect,setReconnect]=useState(0);
   const [cursor,setCursor]=useState(null);
@@ -43,9 +43,9 @@ export function NativePreview({sessionId,targetId,targetKind='app',mode,targetNa
   const label=connection==='live'?'实时画面':connection==='connecting'?'正在连接画面…':connection==='paused'?(targetKind==='tab'?'网页画面已暂停':'应用画面已暂停'):connection==='disabled'?'Computer Use 已关闭':'画面已断开';
   const controlled=[state?.target?.viewId,state?.target?.id].includes(targetId);
   const controlLabel=!controlled?'只读预览':state?.resuming?'正在恢复':state?.transitioning?'正在载入':state?.status==='stopping'?'正在停止':state?.status==='stopped'?'已停止 · 可手动操作':state?.status==='running'?'助手正在操作':'只读预览';
-  return <div className="tx-cu-live tx-cu-native-preview" data-connection={connection} data-preview-mode={mode??(targetKind==='tab'?'browser':'app')} aria-label={targetKind==='tab'?'网页悬浮实时画面':'应用实时画面'}>
-    <div className="tx-cu-live-meta"><div className="tx-cu-live-heading">{targetName&&<strong title={targetName}>{targetName}</strong>}<span role="status" className={connection==='live'?'tx-cu-live-dot':''}>{label}</span></div><span className="tx-cu-live-control" title={controlLabel}>{controlLabel}</span></div>
-    <div className="tx-cu-live-surface">
+  return <div className={"tx-cu-live tx-cu-native-preview"+(minimalChrome?" is-content":"")} data-connection={connection} data-preview-mode={mode??(targetKind==='tab'?'browser':'app')} aria-label={targetKind==='tab'?'网页悬浮实时画面':'应用实时画面'}>
+    {minimalChrome?<div className="tx-cu-native-actions"><span className="tx-cu-live-control">{controlLabel}</span>{actions}</div>:<div className="tx-cu-live-meta"><div className="tx-cu-live-heading">{targetName&&<strong title={targetName}>{targetName}</strong>}<span role="status" className={connection==='live'?'tx-cu-live-dot':''}>{label}</span></div><span className="tx-cu-live-control" title={controlLabel}>{controlLabel}</span></div>}
+    <div className="tx-cu-live-surface" role={minimalChrome&&onActivate?'button':undefined} tabIndex={minimalChrome&&onActivate?0:undefined} aria-label={minimalChrome&&onActivate?'查看应用窗口':undefined} onClick={minimalChrome?onActivate:undefined} onKeyDown={event=>{if(minimalChrome&&onActivate&&['Enter',' '].includes(event.key)){event.preventDefault();onActivate();}}}>
       <div className="tx-cu-observed-image">{frame?<img src={'data:'+frame.mediaType+';base64,'+frame.data} alt={targetKind==='app'?'当前应用窗口的实时画面':'当前网页的实时画面'} draggable={false} onError={()=>{setConnection('error');error.current?.('画面加载失败，请重连');}} onLoad={event=>{if(event.currentTarget.src==='data:'+frame.mediaType+';base64,'+frame.data){setDisplayed(frame);onFrameSize?.({width:event.currentTarget.naturalWidth,height:event.currentTarget.naturalHeight});}}}/>:<div className="tx-cu-live-placeholder" role="status">{['disabled','closed','error','paused'].includes(connection)?label:targetKind==='tab'?'正在获取网页画面…':'正在获取应用窗口…'}</div>}
       {visible&&state?.enabled&&connection==='live'&&!['stopped','stopping'].includes(state?.status)&&<AssistantCursor cursor={cursor} frame={displayed}/>}</div>
       {connection!=='live'&&frame&&<div className="tx-cu-live-overlay">{label}</div>}
