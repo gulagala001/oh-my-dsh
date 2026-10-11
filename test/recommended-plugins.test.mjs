@@ -111,8 +111,8 @@ for (const { id, version, label } of [
   { id: 'dsh-plugin-subscriptions', version: '0.9.8-omd.1', label: /已核验 v0\.9\.8-omd\.1/ },
   { id: 'omd-intent-assistant', version: '0.3.0', label: /已核验 v0\.3\.0/ },
 ]) {
-  test(`${id} offers the reviewed release when older servers omit availability and completes install/update/uninstall`, { timeout: 30000 }, async t => {
-    const { page, card, posts, errors } = await managedRecommendationFixture(t, id, { version });
+  test(`${id} offers the reviewed release when the server explicitly clears availability and completes install/update/uninstall`, { timeout: 30000 }, async t => {
+    const { page, card, posts, errors } = await managedRecommendationFixture(t, id, { unavailable: null, version });
     assert.match(await card.locator('.tx-recommended-review').innerText(), label);
     assert.match(await card.innerText(), /DSH 0\.2\.0-rc\.2 · OMD 0\.2\.0-rc\.2\.omd\.0\.9\.0/);
     assert.match(await card.innerText(), /DSH 0\.2\.1-alpha\.1 · OMD 0\.2\.1-alpha\.1\.omd\.0\.9\.0/);
@@ -131,6 +131,16 @@ for (const { id, version, label } of [
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     }
     assert.deepEqual(errors, []);
+  });
+  test(`${id} preserves the current catalog restriction when older servers omit availability`, { timeout: 30000 }, async t => {
+    const { card, posts, errors, state, poll } = await managedRecommendationFixture(t, id, { version });
+    assert.match(await card.locator('.tx-recommended-result.tx-warn').textContent(), /暂不提供公开安装/);
+    assert.equal(await card.getByRole('button', { name: '安装', exact: true }).isEnabled(), false);
+    state.installed = true; await poll();
+    assert.equal(await card.getByRole('button', { name: '更新', exact: true }).isEnabled(), false);
+    await card.getByRole('button', { name: '卸载', exact: true }).click();
+    await card.getByRole('button', { name: '安装', exact: true }).waitFor();
+    assert.deepEqual(posts, [{ id, action: 'uninstall' }]); assert.deepEqual(errors, []);
   });
   test(`${id} keeps a later server restriction authoritative and still permits uninstall`, { timeout: 30000 }, async t => {
     const unavailable = '当前宿主不兼容，暂不提供安装或更新。已有安装仍可卸载。';
