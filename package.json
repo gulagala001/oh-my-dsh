@@ -98,6 +98,7 @@
     "presets",
     "cordis.patch.yml",
     "README.md",
+    "README_EN.md",
     "CONTRIBUTING.md",
     "scripts",
     "THIRD_PARTY_NOTICES.md",
