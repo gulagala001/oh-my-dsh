@@ -1,118 +1,113 @@
-# Windows 插件使用
+# Windows 上使用 OpenCU
 
-Windows 上使用同一套 OpenCU 工具和实时预览。内置浏览器使用独立配置；已有 Chrome 扩展和原生桌面提供开发适配。桌面部分使用 Windows 前台输入、UI Automation 和窗口捕获，不同应用的兼容性需要在目标设备上验证。
+[简体中文](windows.md) · [English](windows_EN.md) · [首页](../README.md) · [使用指南](usage.md) · [开发](development.md)
 
-需要 Node.js 24、pnpm 11.23.0、Git 和 PowerShell 7。首次准备 Windows Chrome 连接或安装桌面控制还需要 **.NET 10 SDK** 和可访问 NuGet 的网络；编译后的程序自带运行时，不要求每次运行都启动 SDK。
+公开 **1.3.0**实现 Windows 浏览器、Chrome 连接与原生桌面。桌面用前台输入、UI Automation和捕获，旧版有单屏 125%、150%、200% 验证。**本轮未发布 1.6.1 新实现未做 Windows 实机验收**，历史结果不代替本轮测试。
 
-## 安装与试用
+## 条件与安装
 
-OpenCU 1.2.0 配套 **DSH 0.2.0-rc.2 Web**。先阅读[安装与升级说明](release-1.2.0.md)，在对应 Release 发布后停止服务，在 PowerShell 7 中安装插件：
+Node.js ≥22.19、pnpm 11.23.0、Git、PowerShell 7。首次准备 1.3.0 Chrome 连接／桌面需 **.NET 10 SDK**和 NuGet 网络，生成程序自包含。桌面需 Windows 10 2004+、x64／ARM64对应构建、解锁的交互桌面。
+
+结束任务并停服务，按宿主安装。alpha.1：
 
 ```powershell
-dsh plugin --profile web add github:gulagala001/opencu#v1.2.0
-if ($LASTEXITCODE -ne 0) { throw '插件安装失败' }
-dsh web
+npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add github:gulagala001/opencu#v1.3.0
+if ($LASTEXITCODE -ne 0) { throw 'OpenCU installation failed' }
+npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 ```
 
-打开启动时打印的登录链接，沿用已有 Agent preset，通过输入区的 **电脑** 使用插件。已有模型、凭据和会话沿用 DSH；自定义 profile 或 `DSH_HOME` 应保持原配置。此方式无需先下载 ZIP、手动构建或另起一套服务。
+rc.2：
 
-### 从源码独立试用（可选）
+```powershell
+npx --yes @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add github:gulagala001/opencu#v1.3.0-dsh.0.2.0-rc.2
+if ($LASTEXITCODE -ne 0) { throw 'OpenCU installation failed' }
+npx --yes @deepseek-ai/dsh@0.2.0-rc.2 --profile web
+```
 
-在 PowerShell 7 中进入完整源码目录。本地 `link:` 开发建议使用不含空格的源码路径，例如 `C:\src\opencu`。
+打开打印的登录链接，在 **电脑 → 运行环境与权限**检查；沿用模型、会话、profile和 `DSH_HOME`。桌面应用用自己的管理入口／CLI，不用其他 Web CLI 管理 `desktop` profile。[下载与校验](../README.md#安装)。公开 1.3.0 没有本地 1.6.1 的预编译 Electron 与新设置。
+
+## 浏览器与已有 Chrome
+
+内置浏览器用本机 Chrome／Chromium独立配置，不自动继承登录。没有可用浏览器可在插件目录执行 `pnpm exec playwright install chromium`，或指定路径。
+
+1. **运行环境与权限 → 准备 Chrome 连接**，等待编译与用户注册。
+2. 在 `chrome://extensions`启用开发者模式，加载面板显示的目录。
+3. 连接成功后用 `@Chrome`或标签引用选择原标签。
+
+无须管理员启动。另一个实例连接时保留原连接并提示冲突，先在原实例移除。更新后重新加载扩展。**移除 Chrome 连接**删本机注册但保留网页／目录，Chrome 中可自行删扩展；停止不退出 Chrome。
+
+## 原生桌面
+
+**运行环境与权限 → 安装桌面控制**在 1.3.0 本机编译。按发现的真实名称、ID或完整 `.exe`路径选应用，不唯一时选具体窗口，失效引用不自动重开。
+
+需前台交互，鼠标／键盘介入会停止助手；确认后接手，完成再恢复。锁屏、提升权限窗口不属普通控制。缩放变化后重新观察，不复用旧坐标；多屏混合缩放不在范围。
+
+支持控件、截图、键盘、点击、拖拽、赋值／选择和粘贴；滚动依赖应用的 UI Automation模式。Ctrl／Alt／Shift／Win为 Windows 快捷键，`super`是 Win。Markdown／HTML效果由应用决定，错误后先看是否已插入。
+
+预览点击只查看，不激活应用；停止后仍可看，关预览不关应用，停止不退出启动的应用。基础检查通过不代表其他应用、锁屏或架构全部兼容。
+
+## 更新与卸载
+
+先停服务，重用固定安装命令，重启原 profile。运行时按提示更新／修复，之后重选应用；切换失败保留旧安装。
+
+**桌面控制版本 → 移除桌面控制**停止并移除，保留窗口、文件和 Chrome连接。损坏时可能需 SDK重建卸载程序；停止／删除未确认保留信息重试，不删不明归属文件。
+
+插件卸载用同版 CLI：
+
+```powershell
+npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web remove opencu
+```
+
+保留会话和数据，共享使用者需要时保留运行时。[完整说明](usage.md#更新与卸载)。
+
+## WSL 控制 Windows 桌面
+
+WSL中 DSH可手动指定 `OhMyDsh.Desktop.exe`。仅 Microsoft内核标识且设置 `computerUseNativeBinary`时启用，普通 Linux不获得桌面。
+
+Windows中用**配套源码**构建：
+
+```powershell
+$env:TRISOUL_CU_WINDOWS_NATIVE_OUTPUT = 'C:\DSH-WinDesktop'
+node scripts/build-computer-use-windows-native.mjs
+if ($LASTEXITCODE -ne 0) { throw 'Desktop build failed' }
+```
+
+默认架构跟随 Node.js，`TRISOUL_CU_WINDOWS_ARCH`可设 `x64`／`arm64`。用项目脚本保留身份，不使用标记 `development`的程序。WSL的 `opencu`配置写实际路径并重启：
+
+```yaml
+computerUseNativeBinary: /mnt/c/DSH-WinDesktop/OhMyDsh.Desktop.exe
+```
+
+源码目录只读检查：
+
+```sh
+node scripts/check-wsl-desktop.mjs /mnt/c/DSH-WinDesktop/OhMyDsh.Desktop.exe
+```
+
+检查身份、内部连接、交互桌面和捕获，不点击／输入／启动应用，不能代替完整 WSL真机验收。Windows需解锁并允许启动程序。
+
+外部程序手动管理，无面板安装／更新／移除。更新先停止操作与服务，替换配套程序再重启。桥接不改变浏览器／扩展位置。
+
+## 源码与诊断
+
+按[开发指南](development.md)取固定 tag，路径建议不含空格如 `C:\src\opencu`：
 
 ```powershell
 pnpm install --frozen-lockfile
-if ($LASTEXITCODE -ne 0) { throw '安装依赖失败' }
+if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed' }
 pnpm build
-if ($LASTEXITCODE -ne 0) { throw '构建失败' }
+if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
 $env:DSH_HOME = Join-Path $env:LOCALAPPDATA 'opencu-win-dev'
 $env:PORT = '3090'
 pnpm start
 ```
 
-打开启动打印的登录链接，在 DSH 中配置自己的模型。没有宿主浏览器时，浏览器入口直接提供内置浏览器地址栏；若没有 Chrome，在源码目录执行 `pnpm exec playwright install chromium`。
-
-内置浏览器隐藏网页原生及 CSS 滚动条，使全页截图前后的排版保持稳定；页面和嵌套区域仍可用滚轮、键盘或滚动工具操作。
-
-## 连接已有 Chrome
-
-1. 打开 **电脑设置 → 运行环境与权限 → 准备 Chrome 连接**，等待本机程序编译与注册完成。
-2. 在 Chrome 打开 `chrome://extensions`，开启开发者模式，加载面板显示的扩展目录。
-3. 等待显示“已连接 Oh My DSH”，选择已有测试标签，再让助手操作。
-
-连接注册在当前 Windows 用户下，不需要管理员启动。若该 Chrome 已连接另一个 Oh My DSH 实例，会说明冲突并保留原连接；请先在原实例移除连接。
-
-更新后若显示“待重新加载”，回到 Chrome 扩展管理页点击重新加载。**Chrome 连接详情 → 移除 Chrome 连接** 会停止操控并移除本机注册，网页和扩展目录保留，再次使用时重新准备。
-
-## 原生桌面控制
-
-需要 Windows 10 2004 或更新版本，支持 x64 与 ARM64 构建。在 **电脑设置 → 运行环境与权限 → 安装桌面控制** 中编译并安装。助手可发现 Windows 应用目录中的已安装应用和运行窗口；`getApp` 接受发现列表中的名称／ID 或完整 `.exe` 路径，必要时启动应用，再核对真实进程与窗口。应用名或窗口不唯一时，选择具体 ID 和窗口；失效的进程／窗口引用不会自动重开应用。
-
-单屏 125%、150%、200% 显示缩放按物理像素统一处理截图、控件位置与鼠标输入；缩放改变后旧截图坐标失效，需要重新观察。
-
-Windows 使用前台操控；保持桌面解锁，鼠标或键盘介入会停止助手。点击最前面的应用悬浮卡片会显示对应窗口；后层卡片先置于最前。使用放大按钮可继续只读查看，显示窗口不会发送鼠标或键盘输入。停止操作后，独立预览仍可继续观察；关闭预览不会关闭应用。
-
-运行时提供控件读取、窗口截图、键盘输入、点击、拖拽、文本赋值／选择和粘贴。滚动依赖控件的 UI Automation 滚动模式；应用不提供相应模式时会说明限制。Windows 快捷键使用 Ctrl／Alt／Shift／Win；`super` 对应 Win，不能当成 Mac 的 Command。
-
-出现更新提示时点击 **更新桌面控制**；安装损坏时可点击 **修复桌面控制**。更新先校验新程序，切换失败时保留旧安装；之后重新选择应用。
-
-在 **桌面控制版本 → 移除桌面控制** 中卸载运行时。移除会停止原生操控与预览，保留应用窗口、用户文件和浏览器连接；之后可以重新安装。程序损坏时会用 .NET 10 SDK 重建独立卸载程序；若停止或文件删除尚未确认，会保留相应安装信息供重试。额外文件和无法确认归属的目录会保留。
-
-停止操控不会关闭启动的应用。锁屏、提升权限窗口和应用兼容性不能据基础自检结果推定可用。
-
-## WSL 控制 Windows 桌面
-
-WSL 中运行的 DSH 可以通过手动指定的 `OhMyDsh.Desktop.exe` 使用 Windows 原生桌面后端。仅在 Linux 内核版本标识包含 Microsoft 且配置了 `computerUseNativeBinary` 时启用；普通 Linux 和未配置该路径的 WSL 保持原有行为。Windows 仍需满足上面的系统版本要求、保持桌面解锁，并允许 WSL 启动 Windows 程序。
-
-1. 在 Windows 上准备 Node.js 和 .NET 10 SDK，进入与当前插件配套的 OpenCU 目录（Oh My DSH 安装包内为 `vendor/opencu`），用已有构建脚本生成自包含程序。在 PowerShell 中运行：
-
-   ```powershell
-   $env:TRISOUL_CU_WINDOWS_NATIVE_OUTPUT = 'C:\DSH-WinDesktop'
-   node scripts/build-computer-use-windows-native.mjs
-   if ($LASTEXITCODE -ne 0) { throw '桌面程序构建失败' }
-   ```
-
-   输出目录可自行选择。目标架构默认跟随 Windows Node.js；需要时通过 `TRISOUL_CU_WINDOWS_ARCH` 指定 `x64` 或 `arm64`。请使用该脚本保留构建身份，不直接使用标记为 `development` 的程序。
-
-2. 在 WSL 的当前 DSH profile 中，给 **OpenCU（`opencu`）** 的配置填入 WSL 可访问的路径：
-
-   ```yaml
-   computerUseNativeBinary: /mnt/c/DSH-WinDesktop/OhMyDsh.Desktop.exe
-   ```
-
-   这是插件配置项，不是新增一个顶层插件。自定义盘符和挂载点按实际路径填写；修改后重启相应 DSH 服务。在 Oh My DSH 的设置界面中也可填写「桌面控制程序路径」。
-
-3. 在 WSL 中进入上述 OpenCU 目录，执行只读自检：
-
-   ```bash
-   node scripts/check-wsl-desktop.mjs /mnt/c/DSH-WinDesktop/OhMyDsh.Desktop.exe
-   ```
-
-   自检验证程序身份、MCP 连接、交互桌面和捕获能力，并列出应用数量；不会点击、输入或启动目标应用。成功后在电脑设置中确认 Windows 桌面和窗口捕获状态，再选择应用。
-
-程序由用户手动管理，面板不提供安装、更新或移除按钮。更新时先停止桌面操作及 DSH 服务，再替换程序并重启服务。连接校验协议、平台及磁盘与运行中程序的构建身份；桥接模式不要求外部程序的构建哈希等于 WSL 内插件源码的哈希，因此插件升级后应使用配套源码重新构建 Windows 程序。
-
-此桥接只接通原生桌面后端；内置浏览器和 Chrome 扩展的运行位置、安装方式保持原有行为。跨平台自动回归覆盖后端选择、身份校验、设置界面和文档装配；WSL 真机的截图、输入、停止及进程清理仍需在目标设备验收，只读自检不能代替完整操控验证。
-
-## 在本机运行自检
-
-自检使用独立数据目录、测试页面和专用扩展注册，不使用账号发送消息。需要已安装 .NET 10 SDK，并先下载测试浏览器：
+开发者 Windows专项：
 
 ```powershell
 pnpm exec playwright install chromium
-if ($LASTEXITCODE -ne 0) { throw '测试浏览器安装失败' }
+if ($LASTEXITCODE -ne 0) { throw 'Test browser installation failed' }
 node scripts/test-windows.mjs
 ```
 
-脚本检查插件机制、真实浏览器、Windows 可执行桥接、注册与移除以及 DSH 界面，最后打印 `cu-artifacts/windows-check-...` 结果目录。原生测试会打开两个自有测试窗口，检查控件文字、遮挡下的截图、独立预览、文本输入、实际鼠标动作、拖拽取消和卸载／重装；请保持桌面解锁，并在这段测试期间暂时不操作鼠标和键盘。发生失败时，保留其中的 `report.json` 和对应日志以便定位；无需提供模型密钥或个人浏览器配置。
-
-若只运行原生桌面测试，在安装依赖后执行：
-
-```powershell
-$env:TRISOUL_CU_WINDOWS_NATIVE_TEST = '1'
-node --test --test-concurrency=1 test/computer-use-windows-native-protocol.test.mjs test/computer-use-windows-native.test.mjs
-```
-
-原生截图与结果写入 `cu-artifacts/windows-native-...`。报告会区分已经执行的键盘、控件、鼠标、卸载检查和仍待验证的剪贴板、人工物理接管及其他场景。
-
-通过结果仅对应实际执行的自检范围；Windows 原生桌面操控、锁屏、其他设备／架构和日常应用兼容性需分别验证。
+独立数据、合成页面与自有窗口，可能操作桌面，保持解锁且避免并行输入。不用真实账号／个人浏览器。`report.json`与日志区分通过、失败、跳过和未执行；跳过不算通过。[测试说明](development.md#测试与验收)。日常用户可直接反馈版本与错误，无需承担工程验收。

@@ -1,4 +1,10 @@
 #import "ComputerUse.h"
+#import "PreviewBridge.h"
+#import "InputFocus.h"
+#import "Clipboard.h"
+#import "WindowRegistry.h"
+#import "ScreenLockGuardian.h"
+#import "../transport/CUMachChannel.h"
 #import <sys/socket.h>
 #import <sys/un.h>
 #import <sys/stat.h>
@@ -13,6 +19,26 @@ static NSMutableDictionary<NSNumber *,id> *queues;
 static NSObject *registry;
 static NSString *socketPath;
 static int listener=-1;
+static _Atomic(bool) serviceClosing;
+static CUScreenLockController *screenLockController;
+static CUScreenLockCoordinator *screenLockCoordinator;
+static id<CUScreenLockAuthorizedProvider> screenLockProvider;
+static NSString *screenLockConfigurationError;
+
+static NSArray<NSNumber *> *CUActivePresentationWindows(NSString *threadID,NSString *turnID) {
+  NSCAssert(NSThread.isMainThread,@"Presentation registry belongs to the owner main thread.");
+  NSMutableArray *windowIDs=[NSMutableArray new];NSArray *active;
+  @synchronized(registry){active=sessions.allObjects;}
+  for(CUSession *candidate in active){
+    CUPreviewBridge *bridge=candidate.previewBridge;if(!bridge||bridge.closed)continue;
+    NSDictionary *identity=bridge.identity;
+    if(![identity[@"threadID"]isEqual:threadID]||![identity[@"turnID"]isEqual:turnID])continue;
+    NSDictionary *state=[bridge snapshot];
+    if([state[@"state"]isEqual:@"ending"]||[state[@"state"]isEqual:@"closed"])continue;
+    NSNumber *windowID=identity[@"windowId"];if(windowID&&![windowIDs containsObject:windowID])[windowIDs addObject:windowID];
+  }
+  return windowIDs;
+}
 
 @protocol CUSetupShowing <NSObject>
 - (void)setup:(id)sender;
@@ -27,42 +53,129 @@ static void CUWrite(CUSession *session,NSDictionary *message) {
   [session.writeLock unlock];
 }
 static void CUReply(CUSession *session,id identifier,id result) { if(identifier)CUWrite(session,@{@"jsonrpc":@"2.0",@"id":identifier,@"result":result?:@{}}); }
-static NSDictionary *CUError(NSException *error) { return @{@"isError":@YES,@"structuredContent":@{@"error":@{@"code":error.name,@"message":error.reason?:@"Native operation failed"}},@"content":@[@{@"type":@"text",@"text":error.reason?:@"Native operation failed"}]}; }
+static NSDictionary *CUError(NSException *error) {
+  NSMutableDictionary *value=[@{@"error":@{@"code":error.name,@"message":error.reason?:@"Native operation failed"}}mutableCopy];
+  if([error.userInfo[@"nativePresentation"]isKindOfClass:NSDictionary.class])value[@"nativePresentation"]=error.userInfo[@"nativePresentation"];
+  return @{@"isError":@YES,@"structuredContent":value,@"content":@[@{@"type":@"text",@"text":error.reason?:@"Native operation failed"}]};
+}
+static NSDictionary *CUBridgeWait(void (^operation)(CUPreviewBridgeCompletion)) {
+  if(NSThread.isMainThread)CUFail(@"NATIVE_OWNER_QUEUE",@"Native presentation requests must wait outside the AppKit thread.");
+  dispatch_semaphore_t done=dispatch_semaphore_create(0);
+  __block NSDictionary *result;__block NSError *failure;
+  dispatch_async(dispatch_get_main_queue(),^{
+    @try{operation(^(NSDictionary *value,NSError *error){result=value;failure=error;dispatch_semaphore_signal(done);});}
+    @catch(NSException *error){failure=[NSError errorWithDomain:@"ai.trisoul.computer-use.service" code:1 userInfo:@{NSLocalizedDescriptionKey:error.reason?:@"Native presentation failed."}];dispatch_semaphore_signal(done);}
+  });
+  // Bridge operations own bounded deadlines and retain unconfirmed resources.
+  dispatch_semaphore_wait(done,DISPATCH_TIME_FOREVER);
+  if(failure)@throw [NSException exceptionWithName:@"NATIVE_PRESENTATION_FAILED" reason:failure.localizedDescription userInfo:result?@{@"nativePresentation":result}:nil];
+  return result?:@{};
+}
+static CUPreviewBridge *CUCurrentBridge(CUSession *session,NSDictionary *arguments) {
+  CUPreviewBridge *bridge=session.previewBridge;
+  if(!bridge)CUFail(@"NATIVE_PRESENTATION_UNAVAILABLE",@"This capture has no native presentation.");
+  if(arguments){
+    if(![arguments[@"bridgeSessionId"] isEqual:bridge.bridgeSessionId])CUFail(@"STALE_PRESENTATION",@"The native presentation connection changed.");
+    for(NSString *key in bridge.identity)if(![arguments[key]isEqual:bridge.identity[key]])CUFail(@"STALE_PRESENTATION",@"The native presentation source identity changed.");
+  }
+  return bridge;
+}
+static BOOL CUCloseBridge(CUSession *session) {
+  @try{
+    CUBridgeWait(^(CUPreviewBridgeCompletion completion){
+      CUPreviewBridge *bridge=session.previewBridge;
+      if(!bridge){completion(@{@"closed":@YES},nil);return;}
+      [bridge closeWithCompletion:^(NSDictionary *result,NSError *error){if(!error&&bridge.closed&&session.previewBridge==bridge)session.previewBridge=nil;completion(result,error);}];
+    });return YES;
+  }@catch(NSException *error){return NO;}
+}
+static BOOL CUCleanupOperation(BOOL (^operation)(void)) {
+  @try{return operation();}
+  @catch(NSException *error){NSLog(@"Native cleanup remains pending (%@).",error.name);return NO;}
+}
 static BOOL CURelease(CUSession *session) {
+  if(!CUWindowRegistryCancelOperations(session))return NO;
   BOOL released=YES;for(CUWindow *target in session.windows.allValues)if(!CUReleaseInputFocus(target))released=NO;
+  if(released&&!CUCloseInputFocus(session))released=NO;
   if(!released)return NO;
   @synchronized(registry){for(NSString *key in [owners.allKeys copy])if(owners[key]==session)[owners removeObjectForKey:key];}
   [session.windows removeAllObjects];return YES;
 }
-static void CUStop(CUSession *session,id identifier,BOOL disconnect) {
+static void CUPrepareScreenLock(CUSession *session) {
+  [session check];
+  if(!screenLockCoordinator)CUFail(@"RUNTIME_NOT_READY",@"The screen-lock coordinator is not initialized.");
+  dispatch_semaphore_t done=dispatch_semaphore_create(0);__block NSError *failure;
+  [screenLockCoordinator prepareForRequestForThread:session.threadID owner:session.ownerID cancelled:^{return atomic_load(&session->cancelled);}
+    completion:^(BOOL unlocked,NSError *error){(void)unlocked;failure=error;dispatch_semaphore_signal(done);}];
+  dispatch_semaphore_wait(done,DISPATCH_TIME_FOREVER);
+  [session check];if(failure)CUFail(@"SCREEN_LOCK_UNAVAILABLE",failure.localizedDescription);
+}
+static void CUStopWithCompletion(CUSession *session,id identifier,BOOL disconnect,void (^completion)(BOOL)) {
   NSString *label;
-  @synchronized(registry){atomic_store(&session->cancelled,true);session.stopping=YES;label=session.label;}
+  @synchronized(registry){
+    if(session.disconnected){if(completion)completion(YES);return;}
+    atomic_store(&session->cancelled,true);session.stopping=YES;session.lifecycleGeneration++;
+    if(!session.stopRequests)session.stopRequests=[NSMutableArray new];
+    [session.stopRequests addObject:@{@"identifier":identifier?:NSNull.null,@"disconnect":@(disconnect),@"completion":completion?[completion copy]:NSNull.null}];
+    if(session.cleanupRunning)return;
+    session.cleanupRunning=YES;label=session.label;
+  }
+  dispatch_group_t lockRelease=dispatch_group_create();__block NSError *lockError;
+  if(screenLockCoordinator){
+    dispatch_group_enter(lockRelease);
+    [screenLockCoordinator serviceConnectionInvalidatedForOwner:session.ownerID completion:^(NSError *error){lockError=error;dispatch_group_leave(lockRelease);}];
+  }
   CUCursorHide(session,label,NO);
   dispatch_group_notify(session.active,dispatch_get_global_queue(QOS_CLASS_USER_INITIATED,0),^{
-    // Never wait for AppKit while holding the session registry lock.
-    BOOL cursorHidden=CUCursorHide(session,label,YES);
-    BOOL previewStopped=CUStopPreview(session);
-    if(!previewStopped&&disconnect){dispatch_after(dispatch_time(DISPATCH_TIME_NOW,100*NSEC_PER_MSEC),dispatch_get_global_queue(QOS_CLASS_USER_INITIATED,0),^{CUStop(session,nil,YES);});return;}
+    dispatch_group_wait(lockRelease,DISPATCH_TIME_FOREVER);
+    BOOL cursorHidden=CUCleanupOperation(^BOOL{return CUCursorHide(session,label,YES);});
+    BOOL presentationStopped=CUCloseBridge(session);
+    BOOL previewStopped=presentationStopped&&CUCleanupOperation(^BOOL{return CUStopPreview(session);});
+    BOOL inputReleased=CUCleanupOperation(^BOOL{return CURelease(session);}),released=cursorHidden&&previewStopped&&inputReleased&&!lockError;
+    NSArray *requests;BOOL shouldDisconnect=NO;
     @synchronized(registry){
-      if(!previewStopped&&!disconnect){CUReply(session,identifier,CUError([NSException exceptionWithName:@"PREVIEW_CLEANUP_PENDING" reason:@"Window capture has not stopped yet. Retry closing the live view." userInfo:nil]));return;}
-      if(!cursorHidden&&!disconnect){CUReply(session,identifier,CUError([NSException exceptionWithName:@"CURSOR_CLEANUP_PENDING" reason:@"The cursor surface has not disappeared yet. Retry stop before resuming control." userInfo:nil]));return;}
-      // A late EOF/duplicate stop must not release a newly started lease.
-      if([session.label isEqual:label]&&session.stopping){
-        if(!CURelease(session)){
-          if(disconnect)dispatch_after(dispatch_time(DISPATCH_TIME_NOW,100*NSEC_PER_MSEC),dispatch_get_global_queue(QOS_CLASS_USER_INITIATED,0),^{CUStop(session,nil,YES);});
-          else CUReply(session,identifier,CUError([NSException exceptionWithName:@"FOCUS_CLEANUP_PENDING" reason:@"The selected window has not released background focus yet. Retry stop before resuming control." userInfo:nil]));
-          return;
-        }
-        session.stopping=NO;
-      }
-      if(identifier)CUReply(session,identifier,CUResult(@{@"status":@"ended",@"session":label}));
-      if(disconnect){[session.writeLock lock];if(session.socket>=0){close(session.socket);session.socket=-1;}[session.writeLock unlock];[sessions removeObject:session];}
+      requests=[session.stopRequests copy];[session.stopRequests removeAllObjects];
+      for(NSDictionary *request in requests)if([request[@"disconnect"]boolValue])shouldDisconnect=YES;
+      session.cleanupRunning=NO;session.stopping=!released||shouldDisconnect;
+      if(released&&shouldDisconnect){session.disconnected=YES;[sessions removeObject:session];}
+    }
+    NSDictionary *result=released?CUResult(@{@"status":@"ended",@"session":label?:@""}):CUError([NSException exceptionWithName:@"NATIVE_CLEANUP_PENDING" reason:@"Native input, capture or presentation cleanup remains unconfirmed. Retry closing this session." userInfo:nil]);
+    for(NSDictionary *request in requests){
+      if(request[@"identifier"]!=NSNull.null)CUReply(session,request[@"identifier"],result);
+      if(request[@"completion"]!=NSNull.null){void (^done)(BOOL)=request[@"completion"];done(released);}
+    }
+    if(released&&shouldDisconnect){
+      [session.writeLock lock];if(session.socket>=0){close(session.socket);session.socket=-1;}[session.writeLock unlock];
+    }else if(shouldDisconnect){
+      dispatch_after(dispatch_time(DISPATCH_TIME_NOW,100*NSEC_PER_MSEC),dispatch_get_global_queue(QOS_CLASS_USER_INITIATED,0),^{CUStopWithCompletion(session,nil,YES,nil);});
     }
   });
 }
+static void CUStop(CUSession *session,id identifier,BOOL disconnect){CUStopWithCompletion(session,identifier,disconnect,nil);}
+static void CUPrepareShutdown(void (^completion)(BOOL)) {
+  atomic_store(&serviceClosing,true);
+  NSArray *active;@synchronized(registry){active=sessions.allObjects;}
+  dispatch_group_t done=dispatch_group_create();NSObject *resultLock=[NSObject new];__block BOOL released=YES;
+  for(CUSession *session in active){
+    dispatch_group_enter(done);
+    CUStopWithCompletion(session,nil,NO,^(BOOL success){@synchronized(resultLock){if(!success)released=NO;}dispatch_group_leave(done);});
+  }
+  dispatch_group_notify(done,dispatch_get_main_queue(),^{
+    if(!released){atomic_store(&serviceClosing,false);completion(NO);return;}
+    if(!screenLockProvider){completion(YES);return;}
+    [screenLockProvider shutdownWithCompletion:^(NSError *error){
+      dispatch_async(dispatch_get_main_queue(),^{
+        if(error){screenLockConfigurationError=error.localizedDescription;atomic_store(&serviceClosing,false);}
+        completion(error==nil);
+      });
+    }];
+  });
+}
 static NSDictionary *CUTool(CUSession *session,NSString *name,NSDictionary *args) {
-  [session check];
-  if([name isEqualToString:@"check_permissions"])return CUResult(@{@"accessibility":AXIsProcessTrusted()?@YES:@NO,@"screen_recording":CGPreflightScreenCaptureAccess()?@YES:@NO,@"source":@{@"bundle_id":NSBundle.mainBundle.bundleIdentifier?:@"",@"pid":@(getpid()),@"attribution":@"driver-daemon"}});
+  BOOL presentationCleanup=[name isEqual:@"end_native_presentation"]||[name isEqual:@"end_native_presentation_turn"]||[name isEqual:@"confirm_native_presentation_provider_destroyed"]||[name isEqual:@"native_presentation_frame_ack"]||[name isEqual:@"native_presentation_status"];
+  if(!presentationCleanup)[session check];
+  if([name isEqualToString:@"check_permissions"])return CUResult(@{@"accessibility":AXIsProcessTrusted()?@YES:@NO,@"screen_recording":CGPreflightScreenCaptureAccess()?@YES:@NO,@"image_clipboard":@{@"available":@YES,@"format":@"image/png",@"max_bytes":@(2*1024*1024)},@"screen_lock":@{@"provider":screenLockProvider?[screenLockProvider capabilities]:@{@"available":@NO},@"configuration":CUScreenUnlockConfigurationStatus(),@"error":screenLockConfigurationError?:NSNull.null},@"source":@{@"bundle_id":NSBundle.mainBundle.bundleIdentifier?:@"",@"pid":@(getpid()),@"attribution":@"driver-daemon"}});
+  if([name isEqualToString:@"copy_image_to_clipboard"])return CUCopyImageToClipboard(session,args);
   if([name isEqualToString:@"show_setup"]){
     __block BOOL shown=NO;
     dispatch_sync(dispatch_get_main_queue(),^{id delegate=NSApp.delegate;if([delegate respondsToSelector:@selector(setup:)]){[(id<CUSetupShowing>)delegate setup:nil];shown=YES;}});
@@ -71,14 +184,59 @@ static NSDictionary *CUTool(CUSession *session,NSString *name,NSDictionary *args
   }
   if([name isEqualToString:@"list_apps"])return CUResult(@{@"apps":CUApps()});
   if([name isEqualToString:@"list_windows"]){NSArray *windows=CUWindows(args[@"pid"]);return CUResult(@{@"windows":windows,@"process_identity":args[@"pid"]?CUIdentity([args[@"pid"]intValue]):@""});}
+  if([name isEqual:@"get_primary_window"]){
+    pid_t pid=[args[@"pid"]intValue];NSString *identity=CUIdentity(pid);
+    if(args[@"process_identity"]&&![args[@"process_identity"]isEqual:identity])CUFail(@"STALE_PROCESS",@"The application restarted; bind it again.");
+    NSDictionary *primary=CUWindowRegistryPrimaryWindow(pid,identity);
+    return CUResult(@{@"window":primary?:NSNull.null,@"process_identity":identity});
+  }
+  if([name isEqual:@"get_native_presentation_target"]){
+    if(![args[@"threadID"]isEqual:session.threadID]||![args[@"turnID"]isKindOfClass:NSString.class]||![args[@"turnID"]length])CUFail(@"INVALID_TURN",@"Native presentation ownership requires the actual session turn.");
+    CUWindow *target=CUResolveWindow(session,args);
+    return CUResult(CUBridgeWait(^(CUPreviewBridgeCompletion completion){
+      NSDictionary *context=CUWindowRegistryContext(target,args[@"threadID"],args[@"turnID"],CUActivePresentationWindows(args[@"threadID"],args[@"turnID"]));
+      NSNumber *owner=context[@"ownerWindowID"];
+      CUWindow *presentation=[CUWindow new];presentation.pid=target.pid;presentation.processIdentity=target.processIdentity;presentation.windowId=owner.unsignedIntValue;
+      NSArray *associated=owner?CUPreviewAssociatedWindowIDs(context,presentation):nil;
+      NSDictionary *result=owner.unsignedIntValue?@{@"available":@YES,@"window_id":owner,@"process_identity":target.processIdentity,@"pid":@(target.pid),@"associated_window_ids":associated?:@[],@"window_context_generation":context[@"windowContextGeneration"],@"source_window_cache_parity":context[@"sourceWindowCacheParityAvailable"]}:@{@"available":@NO,@"reason":@"No completed source capture selected a presentation window."};
+      completion(result,nil);
+    }));
+  }
+  if([name isEqual:@"end_native_presentation_turn"]){
+    return CUResult(CUBridgeWait(^(CUPreviewBridgeCompletion completion){
+      if(![args[@"threadID"]isKindOfClass:NSString.class]||![args[@"turnID"]isKindOfClass:NSString.class]||![args[@"turnID"]length])CUFail(@"INVALID_TURN",@"Native presentation cleanup requires the actual session turn.");
+      if(args[@"bridgeSessionId"])CUCurrentBridge(session,args);
+      else if(![args[@"threadID"]isEqual:session.threadID])CUFail(@"INVALID_TURN",@"Native presentation cleanup requires the actual session turn.");
+      CUWindowRegistryEndTurn(args[@"threadID"],args[@"turnID"]);completion(@{@"ended":@YES},nil);
+    }));
+  }
   if([name isEqual:@"list_share_windows"]){
     NSMutableArray *windows=[NSMutableArray new];
+    __block pid_t frontmostPid=0;
+    dispatch_sync(dispatch_get_main_queue(),^{frontmostPid=NSWorkspace.sharedWorkspace.frontmostApplication.processIdentifier;});
+    CGWindowID focusedWindow=0;
+    if(frontmostPid>0){
+      AXUIElementRef frontmost=AXUIElementCreateApplication(frontmostPid);
+      id focused=CUAX(frontmost,kAXFocusedWindowAttribute);
+      if(focused&&CFGetTypeID((__bridge CFTypeRef)focused)==AXUIElementGetTypeID())focusedWindow=CUAXWindowId((__bridge AXUIElementRef)focused);
+      CFRelease(frontmost);
+    }
     for(NSDictionary *window in CUWindows(nil)){
       if([window[@"layer"] intValue]!=0||![window[@"is_on_screen"] boolValue]||[window[@"bounds"][@"width"] doubleValue]<=0||[window[@"bounds"][@"height"] doubleValue]<=0)continue;
       NSRunningApplication *app=[NSRunningApplication runningApplicationWithProcessIdentifier:[window[@"pid"]intValue]];
       if(!app.bundleIdentifier||app.activationPolicy!=NSApplicationActivationPolicyRegular)continue;
-      @try{NSMutableDictionary *value=[window mutableCopy];value[@"app_id"]=app.bundleIdentifier;value[@"process_identity"]=CUIdentity(app.processIdentifier);value[@"active"]=@(app.active);[windows addObject:value];}@catch(NSException *error){if(![error.name isEqual:@"APP_EXITED"])@throw;}
+      @try{NSMutableDictionary *value=[window mutableCopy];value[@"app_id"]=app.bundleIdentifier;value[@"process_identity"]=CUIdentity(app.processIdentifier);value[@"active"]=@(focusedWindow>0&&app.processIdentifier==frontmostPid&&[window[@"window_id"]unsignedIntValue]==focusedWindow);[windows addObject:value];}@catch(NSException *error){if(![error.name isEqual:@"APP_EXITED"])@throw;}
     }
+    __block pid_t currentFrontmostPid=0;
+    dispatch_sync(dispatch_get_main_queue(),^{currentFrontmostPid=NSWorkspace.sharedWorkspace.frontmostApplication.processIdentifier;});
+    CGWindowID currentFocusedWindow=0;
+    if(currentFrontmostPid==frontmostPid&&frontmostPid>0){
+      AXUIElementRef frontmost=AXUIElementCreateApplication(frontmostPid);
+      id focused=CUAX(frontmost,kAXFocusedWindowAttribute);
+      if(focused&&CFGetTypeID((__bridge CFTypeRef)focused)==AXUIElementGetTypeID())currentFocusedWindow=CUAXWindowId((__bridge AXUIElementRef)focused);
+      CFRelease(frontmost);
+    }
+    if(currentFrontmostPid!=frontmostPid||currentFocusedWindow!=focusedWindow)for(NSMutableDictionary *window in windows)window[@"active"]=@NO;
     return CUResult(@{@"windows":windows});
   }
   // User-requested window sharing has its own read-only session and observation
@@ -106,7 +264,7 @@ static NSDictionary *CUTool(CUSession *session,NSString *name,NSDictionary *args
       AXUIElementSetAttributeValue(selected,kAXMinimizedAttribute,kCFBooleanFalse);
       AXError raised=AXUIElementPerformAction(selected,kAXRaiseAction);
       if(raised!=kAXErrorSuccess)CUFail(@"REVEAL_FAILED",@"Could not raise the selected window.");
-      __block BOOL activated=NO;dispatch_sync(dispatch_get_main_queue(),^{activated=[[NSRunningApplication runningApplicationWithProcessIdentifier:target.pid]activateWithOptions:NSApplicationActivateIgnoringOtherApps];});
+      __block BOOL activated=NO;dispatch_sync(dispatch_get_main_queue(),^{activated=[[NSRunningApplication runningApplicationWithProcessIdentifier:target.pid]activateWithOptions:0];});
       if(!activated)CUFail(@"REVEAL_FAILED",@"Could not activate the selected application.");
       AXUIElementPerformAction(selected,kAXRaiseAction);
       return CUResult(@{@"shown":@YES,@"window_id":@(target.windowId)});
@@ -114,8 +272,46 @@ static NSDictionary *CUTool(CUSession *session,NSString *name,NSDictionary *args
   }
   if([name isEqual:@"start_preview"])return CUStartPreview(session,args);
   if([name isEqual:@"preview_frame"])return CUReadPreview(session,args);
+  if([name isEqual:@"native_presentation_status"]){
+    return CUResult(CUBridgeWait(^(CUPreviewBridgeCompletion completion){
+      CUPreviewBridge *bridge=session.previewBridge;
+      if(!bridge){completion(@{@"exists":@NO},nil);return;}
+      for(NSString *key in bridge.identity)if(![args[key]isEqual:bridge.identity[key]])CUFail(@"STALE_PRESENTATION",@"The capture is associated with a different presentation.");
+      NSMutableDictionary *result=[[bridge snapshot]mutableCopy];result[@"exists"]=@YES;completion(result,nil);
+    }));
+  }
+  if([name isEqual:@"start_native_presentation"]){
+    return CUResult(CUBridgeWait(^(CUPreviewBridgeCompletion completion){
+      [session check];
+      if(session.previewBridge)CUFail(@"NATIVE_PRESENTATION_BUSY",@"Close the previous source before publishing another presentation.");
+      NSError *error;
+      if(!session.notificationQueue)session.notificationQueue=dispatch_queue_create("ai.trisoul.computer-use.notifications",DISPATCH_QUEUE_SERIAL);
+      __weak CUSession *weak=session;
+      CUPreviewBridge *bridge=[[CUPreviewBridge alloc]initWithSession:session arguments:args notificationHandler:^(NSString *method,NSDictionary *parameters){
+        CUSession *owner=weak;if(!owner)return;
+        dispatch_async(owner.notificationQueue,^{CUWrite(owner,@{@"jsonrpc":@"2.0",@"method":method,@"params":parameters});});
+      } error:&error];
+      if(!bridge){completion(nil,error);return;}
+      session.previewBridge=bridge;[bridge startWithCompletion:completion];
+    }));
+  }
+  if([@[@"native_presentation_command",@"native_presentation_frame_ack",@"end_native_presentation",@"confirm_native_presentation_provider_destroyed"]containsObject:name]){
+    return CUResult(CUBridgeWait(^(CUPreviewBridgeCompletion completion){
+      CUPreviewBridge *bridge=CUCurrentBridge(session,args);
+      if([name isEqual:@"native_presentation_frame_ack"])[bridge acknowledgeEncodedFrame:args completion:completion];
+      else if([name isEqual:@"native_presentation_command"]){
+        if(![args[@"command"]isKindOfClass:NSString.class])CUFail(@"INVALID_REQUEST",@"A native presentation command is required.");
+        [bridge performCommand:args[@"command"] arguments:args completion:completion];
+      }else{
+        CUPreviewBridgeCompletion closed=^(NSDictionary *result,NSError *error){if(!error&&bridge.closed&&session.previewBridge==bridge)session.previewBridge=nil;completion(result,error);};
+        if([name isEqual:@"end_native_presentation"])[bridge closeWithCompletion:closed];
+        else [bridge confirmProviderDestroyedWithProof:args completion:closed];
+      }
+    }));
+  }
   if([name isEqual:@"preview_session_status"]){
-    BOOL connected=NO;@synchronized(registry){for(CUSession *candidate in sessions)if([candidate.label isEqual:args[@"session_label"]]){connected=YES;break;}}
+    NSString *connectionID=[args[@"connection_id"]isKindOfClass:NSString.class]?args[@"connection_id"]:nil;
+    BOOL connected=NO;@synchronized(registry){for(CUSession *candidate in sessions)if(connectionID?[candidate.ownerID isEqual:connectionID]:[candidate.label isEqual:args[@"session_label"]]){connected=YES;break;}}
     return CUResult(@{@"connected":@(connected)});
   }
   if([name isEqualToString:@"launch_app"]){
@@ -142,6 +338,7 @@ static NSDictionary *CUTool(CUSession *session,NSString *name,NSDictionary *args
   [session check];
   NSString *key=[NSString stringWithFormat:@"%@:%@",args[@"pid"],args[@"window_id"]];
   @synchronized(registry){CUSession *owner=owners[key];if(owner&&owner!=session)CUFail(@"TARGET_BUSY",@"Another Computer Use session owns this window.");owners[key]=session;}
+  if([@[@"get_window_state",@"click",@"drag",@"scroll",@"set_value",@"type_text",@"paste",@"press_key",@"select_text",@"perform_secondary_action"]containsObject:name])CUPrepareScreenLock(session);
   if([name isEqualToString:@"get_window_state"])return CUObserve(session,args);
   return CUInput(session,name,args);
 }
@@ -151,30 +348,57 @@ static void CUHandle(CUSession *session,NSDictionary *request) {
     if(identifier)CUWrite(session,@{@"jsonrpc":@"2.0",@"id":identifier,@"error":@{@"code":@(-32600),@"message":@"Expected a method string and a params object"}});return;
   }
   if([method isEqualToString:@"initialize"]){
-    CUReply(session,identifier,@{@"protocolVersion":@"2024-11-05",@"capabilities":@{@"tools":@{}},@"serverInfo":@{@"name":@"trisoul-computer-use",@"version":@TRISOUL_VERSION},@"_meta":@{@"trisoul":@{@"protocol":@(TRISOUL_PROTOCOL),@"build":@TRISOUL_BUILD_ID,@"pid":@(getpid())}}});return;
+    NSMutableDictionary *identity=[@{@"protocol":@(TRISOUL_PROTOCOL),@"build":@TRISOUL_BUILD_ID,@"pid":@(getpid()),@"connectionId":session.ownerID}mutableCopy];
+    NSDictionary *processIdentity=CUMachCurrentProcessIdentity(NULL);if(processIdentity)[identity addEntriesFromDictionary:processIdentity];
+    CUReply(session,identifier,@{@"protocolVersion":@"2024-11-05",@"capabilities":@{@"tools":@{}},@"serverInfo":@{@"name":@"trisoul-computer-use",@"version":@TRISOUL_VERSION},@"_meta":@{@"trisoul":identity}});return;
   }
   if([method isEqualToString:@"notifications/initialized"])return;
   if([method isEqualToString:@"notifications/cancelled"]){CUStop(session,nil,NO);return;}
   if([method isEqualToString:@"shutdown"]){
-    NSArray *active;@synchronized(registry){active=sessions.allObjects;for(CUSession *s in active)atomic_store(&s->cancelled,true);}
-    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED,0),^{for(CUSession *s in active)dispatch_group_wait(s.active,DISPATCH_TIME_FOREVER);CUReply(session,identifier,@{@"stopped":@YES});dispatch_async(dispatch_get_main_queue(),^{[NSApp terminate:nil];});});return;
+    CUPrepareShutdown(^(BOOL released){
+      if(!released){CUWrite(session,@{@"jsonrpc":@"2.0",@"id":identifier?:NSNull.null,@"error":@{@"code":@(-32000),@"message":@"Native resources have not completed shutdown. Retry after cleanup."}});return;}
+      CUReply(session,identifier,@{@"stopped":@YES});[NSApp terminate:nil];
+    });return;
   }
   if([method isEqualToString:@"tools/list"]){
-    NSMutableArray *tools=[NSMutableArray new];for(NSString *name in @[@"check_permissions",@"show_setup",@"show_window",@"list_apps",@"list_windows",@"list_share_windows",@"get_window_share",@"launch_app",@"get_window_state",@"start_session",@"end_session",@"click",@"drag",@"scroll",@"set_value",@"type_text",@"paste",@"press_key",@"select_text",@"start_preview",@"preview_frame",@"preview_session_status"])[tools addObject:@{@"name":name,@"description":name,@"inputSchema":@{@"type":@"object"}}];CUReply(session,identifier,@{@"tools":tools});return;
+    NSMutableArray *tools=[NSMutableArray new];for(NSString *name in @[@"check_permissions",@"show_setup",@"show_window",@"list_apps",@"list_windows",@"list_share_windows",@"get_window_share",@"launch_app",@"get_window_state",@"start_session",@"end_session",@"click",@"drag",@"scroll",@"set_value",@"type_text",@"paste",@"press_key",@"select_text",@"perform_secondary_action",@"start_preview",@"preview_frame",@"preview_session_status"])[tools addObject:@{@"name":name,@"description":name,@"inputSchema":@{@"type":@"object"}}];
+    [tools addObject:@{@"name":@"copy_image_to_clipboard",@"description":@"Copy a complete PNG for an explicit user screenshot action.",@"inputSchema":@{@"type":@"object",@"properties":@{@"session":@{@"type":@"string"},@"pngBase64":@{@"type":@"string",@"minLength":@4,@"maxLength":@(4*((2*1024*1024+2)/3))}},@"required":@[@"pngBase64"]}}];
+    CUReply(session,identifier,@{@"tools":tools});return;
   }
   if(![method isEqualToString:@"tools/call"]){if(identifier)CUWrite(session,@{@"jsonrpc":@"2.0",@"id":identifier,@"error":@{@"code":@(-32601),@"message":@"Unknown method"}});return;}
   NSString *name=params[@"name"];NSDictionary *args=params[@"arguments"]?:@{};
   if(![name isKindOfClass:NSString.class]||![args isKindOfClass:NSDictionary.class]){CUReply(session,identifier,CUError([NSException exceptionWithName:@"INVALID_REQUEST" reason:@"Tool name and arguments are required." userInfo:nil]));return;}
+  if(atomic_load(&serviceClosing)&&![@[@"end_session",@"end_native_presentation",@"native_presentation_status",@"native_presentation_frame_ack",@"confirm_native_presentation_provider_destroyed",@"preview_session_status"]containsObject:name]){CUReply(session,identifier,CUError([NSException exceptionWithName:@"SERVICE_CLOSING" reason:@"The native service is releasing its resources." userInfo:nil]));return;}
   if([name isEqualToString:@"start_session"]){
+    __block uint64_t generation;
     @synchronized(registry){
-      if(session.stopping||dispatch_group_wait(session.active,DISPATCH_TIME_NOW)!=0){CUReply(session,identifier,CUError([NSException exceptionWithName:@"SESSION_BUSY" reason:@"Wait for the previous operations to finish." userInfo:nil]));return;}
-      CUCursorHide(session,session.label,NO);if(!CURelease(session)){CUReply(session,identifier,CUError([NSException exceptionWithName:@"FOCUS_CLEANUP_PENDING" reason:@"Wait for background focus to be released before starting a new session." userInfo:nil]));return;}session.label=[args[@"session"] isKindOfClass:NSString.class]?args[@"session"]:NSUUID.UUID.UUIDString;atomic_store(&session->cancelled,false);CUReply(session,identifier,CUResult(@{@"session":session.label}));
-    }return;
+      if(session.stopping||session.cleanupRunning||session.disconnected||session.previewBridge||dispatch_group_wait(session.active,DISPATCH_TIME_NOW)!=0){CUReply(session,identifier,CUError([NSException exceptionWithName:@"SESSION_BUSY" reason:@"Wait for the previous operations and presentation cleanup to finish." userInfo:nil]));return;}
+      generation=++session.lifecycleGeneration;
+      session.stopping=YES;atomic_store(&session->cancelled,true);dispatch_group_enter(session.active);
+    }
+    dispatch_async(session.queue,^{
+      dispatch_semaphore_t lockRelease=dispatch_semaphore_create(0);__block NSError *lockError;
+      if(screenLockCoordinator){
+        [screenLockCoordinator serviceConnectionInvalidatedForOwner:session.ownerID completion:^(NSError *error){lockError=error;dispatch_semaphore_signal(lockRelease);}];
+        dispatch_semaphore_wait(lockRelease,DISPATCH_TIME_FOREVER);
+      }
+      BOOL cursorHidden=CUCleanupOperation(^BOOL{return CUCursorHide(session,session.label,YES);});
+      BOOL inputReleased=CUCleanupOperation(^BOOL{return CURelease(session);});
+      BOOL released=cursorHidden&&inputReleased&&!lockError;
+      @synchronized(registry){
+        if(released&&session.lifecycleGeneration==generation&&!session.cleanupRunning&&!atomic_load(&serviceClosing)){session.label=[args[@"session"]isKindOfClass:NSString.class]?args[@"session"]:NSUUID.UUID.UUIDString;session.threadID=[args[@"thread_id"]isKindOfClass:NSString.class]?args[@"thread_id"]:nil;session.stopping=NO;atomic_store(&session->cancelled,false);}
+        else released=NO;
+      }
+      CUReply(session,identifier,released?CUResult(@{@"session":session.label}):CUError([NSException exceptionWithName:@"NATIVE_CLEANUP_PENDING" reason:@"The native session cannot start before input and screen-lock cleanup completes." userInfo:nil]));
+      dispatch_group_leave(session.active);
+    });return;
   }
   if(args[@"session"]&&![args[@"session"] isEqual:session.label]){CUReply(session,identifier,CUError([NSException exceptionWithName:@"WRONG_SESSION" reason:@"This connection cannot operate on another session." userInfo:nil]));return;}
   if([name isEqualToString:@"end_session"]){CUStop(session,identifier,NO);return;}
   dispatch_queue_t queue=session.queue;
-  if([args[@"pid"] isKindOfClass:NSNumber.class]&&![name isEqual:@"start_preview"]){@synchronized(registry){if(!queues[args[@"pid"]])queues[args[@"pid"]]=dispatch_queue_create("ai.trisoul.computer-use.target",DISPATCH_QUEUE_SERIAL);queue=queues[args[@"pid"]];}}
+  BOOL presentationControl=[name isEqual:@"start_native_presentation"]||[name hasPrefix:@"native_presentation_"]||[name isEqual:@"end_native_presentation"]||[name isEqual:@"confirm_native_presentation_provider_destroyed"];
+  if([@[@"native_presentation_frame_ack",@"native_presentation_status",@"end_native_presentation",@"confirm_native_presentation_provider_destroyed"]containsObject:name])queue=dispatch_get_global_queue(QOS_CLASS_USER_INITIATED,0);
+  else if([args[@"pid"] isKindOfClass:NSNumber.class]&&![name isEqual:@"start_preview"]&&!presentationControl){@synchronized(registry){if(!queues[args[@"pid"]])queues[args[@"pid"]]=dispatch_queue_create("ai.trisoul.computer-use.target",DISPATCH_QUEUE_SERIAL);queue=queues[args[@"pid"]];}}
   dispatch_group_enter(session.active);
   dispatch_async(queue,^{@autoreleasepool{@try{CUReply(session,identifier,CUTool(session,name,args));}@catch(NSException *error){CUReply(session,identifier,CUError(error));}@finally{dispatch_group_leave(session.active);}}});
 }
@@ -195,6 +419,8 @@ static int CUProxy(NSString *path,BOOL stop) {
 @property NSTextField *accessibilityStatus;
 @property NSTextField *screenStatus;
 @property NSTimer *permissionTimer;
+@property BOOL terminationPending;
+@property BOOL terminationApproved;
 @end
 @implementation CUApp
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
@@ -229,19 +455,20 @@ static int CUProxy(NSString *path,BOOL stop) {
 - (void)accessibility:(id)sender { AXIsProcessTrustedWithOptions((__bridge CFDictionaryRef)@{(__bridge id)kAXTrustedCheckOptionPrompt:@YES});[NSWorkspace.sharedWorkspace openURL:[NSURL URLWithString:@"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"]]; }
 - (void)screen:(id)sender { CGRequestScreenCaptureAccess();[NSWorkspace.sharedWorkspace openURL:[NSURL URLWithString:@"x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"]]; }
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender {
-  NSArray *active;@synchronized(registry){active=sessions.allObjects;for(CUSession *session in active)atomic_store(&session->cancelled,true);}
-  BOOL busy=NO;for(CUSession *session in active)if(dispatch_group_wait(session.active,DISPATCH_TIME_NOW)!=0){busy=YES;break;}
-  if(!busy)return NSTerminateNow;
-  dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED,0),^{
-    for(CUSession *session in active)dispatch_group_wait(session.active,DISPATCH_TIME_FOREVER);
-    // AppKit runs a nested termination loop. Dispatching back onto the main
-    // queue from a main-queue shutdown request deadlocks that loop.
-    CFRunLoopPerformBlock(CFRunLoopGetMain(),kCFRunLoopCommonModes,^{[NSApp replyToApplicationShouldTerminate:YES];});
-    CFRunLoopWakeUp(CFRunLoopGetMain());
-  });
-  return NSTerminateLater;
+  (void)sender;
+  if(self.terminationApproved)return NSTerminateNow;
+  if(!self.terminationPending){
+    self.terminationPending=YES;
+    CUPrepareShutdown(^(BOOL released){
+      self.terminationPending=NO;
+      if(!released){NSLog(@"Native Computer Use shutdown remains pending; resources were retained.");return;}
+      self.terminationApproved=YES;[NSApp terminate:nil];
+    });
+  }
+  // Cleanup needs the ordinary AppKit queue, not the nested termination loop.
+  return NSTerminateCancel;
 }
-- (void)applicationWillTerminate:(NSNotification *)notification { if(listener>=0)close(listener);if(socketPath)unlink(socketPath.fileSystemRepresentation); }
+- (void)applicationWillTerminate:(NSNotification *)notification { CUWindowRegistryClose();if(listener>=0)close(listener);if(socketPath)unlink(socketPath.fileSystemRepresentation); }
 @end
 int main(int argc,const char *argv[]) {
   @autoreleasepool {
@@ -259,6 +486,36 @@ int main(int argc,const char *argv[]) {
     if([args containsObject:@"mcp"])return CUProxy(socketPath,NO);if([args containsObject:@"stop"])return CUProxy(socketPath,YES);
     if([socketPath lengthOfBytesUsingEncoding:NSUTF8StringEncoding]>=sizeof(((struct sockaddr_un *)0)->sun_path)){fprintf(stderr,"Socket path is too long.\n");return 2;}
     sessions=[NSMutableSet new];owners=[NSMutableDictionary new];queues=[NSMutableDictionary new];registry=[NSObject new];
+    CUWindowRegistrySetControlProvider(^BOOL(pid_t pid){
+      NSString *prefix=[NSString stringWithFormat:@"%d:",pid];
+      @synchronized(registry){for(NSString *key in owners){CUSession *owner=owners[key];if([key hasPrefix:prefix]&&!owner.stopping&&!owner.disconnected&&!atomic_load(&owner->cancelled))return YES;}}
+      return NO;
+    });
+    CUWindowRegistrySetNotificationHandler(^BOOL(pid_t pid,NSString *identity,CFStringRef notification,AXUIElementRef element){
+      NSString *prefix=[NSString stringWithFormat:@"%d:",pid];NSMutableSet<CUSession *> *active=[NSMutableSet new];
+      @synchronized(registry){
+        for(NSString *key in owners){CUSession *owner=owners[key];if([key hasPrefix:prefix]&&!owner.stopping&&!owner.disconnected&&!atomic_load(&owner->cancelled))[active addObject:owner];}
+      }
+      BOOL handled=YES;
+      for(CUSession *owner in active)if(!CUInputFocusHandleAXNotification(owner,pid,identity,notification,element))handled=NO;
+      return handled;
+    });
+    CUSetPreviewWindowContextProvider(^NSDictionary *(CUSession *session,CUWindow *target){
+      NSDictionary *identity=session.previewBridge.identity;
+      NSString *threadID=identity[@"threadID"],*turnID=identity[@"turnID"];
+      return CUWindowRegistryContext(target,threadID,turnID,threadID&&turnID?CUActivePresentationWindows(threadID,turnID):@[]);
+    });
+    CUWindowRegistrySetChangeHandler(^(pid_t pid,NSString *identity){
+      dispatch_async(dispatch_get_main_queue(),^{
+        NSArray *active;@synchronized(registry){active=sessions.allObjects;}
+        for(CUSession *session in active){
+          NSDictionary *source=CUPreviewSourceIdentity(session,NULL);
+          if([source[@"pid"]intValue]==pid&&[source[@"processIdentity"]isEqual:identity]){
+            @try{CURefreshPreviewAssociatedWindows(session,NULL);}@catch(NSException *error){NSLog(@"Window-associated capture refresh failed (%@).",error.name);}
+          }
+        }
+      });
+    });
     listener=socket(AF_UNIX,SOCK_STREAM,0);struct sockaddr_un address={0};address.sun_family=AF_UNIX;strlcpy(address.sun_path,socketPath.fileSystemRepresentation,sizeof(address.sun_path));
     umask(0077);
     struct stat existing;
@@ -269,6 +526,17 @@ int main(int argc,const char *argv[]) {
       unlink(socketPath.fileSystemRepresentation);
     }
     if(bind(listener,(struct sockaddr *)&address,sizeof(address))!=0||listen(listener,16)!=0){fprintf(stderr,"Could not bind the native socket: %s\n",strerror(errno));return 1;}chmod(socketPath.fileSystemRepresentation,0600);
+    NSApplication *app=NSApplication.sharedApplication;[app setActivationPolicy:NSApplicationActivationPolicyAccessory];CUApp *delegate=[CUApp new];app.delegate=delegate;
+    screenLockController=[CUScreenLockController new];CULoginAuthorizationBroker *authorizationBroker=[CULoginAuthorizationBroker new];NSError *configurationError;
+    screenLockProvider=CUCreateConfiguredScreenLockProvider(screenLockController,authorizationBroker,&configurationError);
+    screenLockConfigurationError=configurationError.localizedDescription;
+    screenLockCoordinator=[[CUScreenLockCoordinator alloc]initWithController:screenLockController broker:authorizationBroker provider:screenLockProvider enabled:^BOOL{return screenLockProvider!=nil;}];
+    screenLockCoordinator.physicalInteractionHandler=^(BOOL hadPending){
+      (void)hadPending;
+      NSSet *affected=[NSSet setWithArray:[screenLockCoordinator snapshot][@"last_physical_owners"]?:@[]];
+      NSArray *active;@synchronized(registry){active=sessions.allObjects;}
+      for(CUSession *session in active)if([affected containsObject:session.ownerID])CUStop(session,nil,NO);
+    };
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED,0),^{while(YES){int fd=accept(listener,NULL,NULL);if(fd<0)break;uid_t uid;gid_t gid;if(getpeereid(fd,&uid,&gid)!=0||uid!=getuid()){close(fd);continue;}
       CUSession *session=[CUSession new];session.socket=fd;@synchronized(registry){[sessions addObject:session];}
       dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED,0),^{@autoreleasepool{NSMutableData *buffer=[NSMutableData new];char bytes[65536];ssize_t count;
@@ -276,7 +544,6 @@ int main(int argc,const char *argv[]) {
         CUStop(session,nil,YES);
       }});
     }});
-    NSApplication *app=NSApplication.sharedApplication;[app setActivationPolicy:NSApplicationActivationPolicyAccessory];CUApp *delegate=[CUApp new];app.delegate=delegate;
     signal(SIGTERM,SIG_IGN);dispatch_source_t terminateSource=dispatch_source_create(DISPATCH_SOURCE_TYPE_SIGNAL,SIGTERM,0,dispatch_get_main_queue());dispatch_source_set_event_handler(terminateSource,^{[NSApp terminate:nil];});dispatch_resume(terminateSource);
     [app run];
   }return 0;

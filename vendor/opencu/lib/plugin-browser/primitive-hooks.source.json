@@ -1,0 +1,29 @@
+{
+  "package": "@deepseek-ai/dsh-client-ui-primitives",
+  "version": "0.2.1-alpha.2",
+  "hostVersion": "0.2.1-alpha.2",
+  "source": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+  "sourceFile": "lib/index.js",
+  "sourceSha256": "c954d31fce29ba4cb2d7ed752ec2d4c45a24724bc3af4e45039420f7e3d2f75f",
+  "extractedSha256": "3524fb51a4cfdd1b8643a8a6164758203b01e3f802882db0a80f85da5efbaa04",
+  "declarations": [
+    "useAnchoredPosition",
+    "overlayTopMargin",
+    "useAnchoredMaxHeight",
+    "MARGIN",
+    "useDismissOnOutsidePointer"
+  ],
+  "imports": [
+    "react"
+  ],
+  "browserGlobals": [
+    "Math",
+    "Node",
+    "Number",
+    "ResizeObserver",
+    "document",
+    "getComputedStyle",
+    "window"
+  ],
+  "license": "MIT"
+}

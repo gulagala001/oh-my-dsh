@@ -70,7 +70,7 @@ The earlier Launchpad example was recorded on 2026-10-10 in isolated DSH `0.2.1-
 
 This does not evaluate supplier autonomy, summary quality, or speed. No real subscription, private material, or native desktop permission was used. It does not prove Windows hardware, all third-party versions, or public release readiness. Recording-specific context settings, preparation batches, and manual compression do not change user defaults.
 
-GitHub alpha.2 OMD `0.16.0` is unpublished and includes an earlier OpenCU 1.6.1 snapshot. The latest local reconstruction has not entered that snapshot. Screenshots are not a public `0.10.0` feature promise.
+GitHub alpha.2 OMD `0.16.0` is unpublished and includes the OpenCU 1.6.1 browser and runtime reconstruction. Screenshots are not a public `0.10.0` feature promise.
 
 ## Screenshots and Illustrations
 

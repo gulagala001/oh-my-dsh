@@ -30,16 +30,100 @@
 /* Actual app content has no second page header or framed preview card. */
 .tx-cu-pane-app { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .tx-cu-pane-app > .tx-cu-native-preview.is-content { flex: 1 1 0; min-height: 0; margin: 0; border: 0; border-radius: 0; background: transparent; }
-.tx-cu-native-preview.is-content { position: relative; }
-.tx-cu-native-preview.is-content > .tx-cu-live-surface { height: 100%; display: flex; align-items: center; justify-content: center; }
-.tx-cu-native-preview.is-content .tx-cu-observed-image { max-width: 100%; max-height: 100%; }
-.tx-cu-native-preview.is-content .tx-cu-observed-image > img { max-height: 100%; object-fit: contain; }
-.tx-cu-native-actions { position: absolute; z-index: 2; top: 8px; right: 8px; display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 8px; background: var(--cu-bg); box-shadow: var(--cu-shadow); opacity: 0; pointer-events: none; }
-.tx-cu-native-preview.is-content:is(:hover,:focus-within) > .tx-cu-native-actions { opacity: 1; pointer-events: auto; }
-.tx-cu-native-actions > span { padding-inline: 4px; }
-.tx-cu-native-actions button { min-width: 28px; min-height: 28px; padding: 4px; border: 0; background: transparent; }
 .tx-cu-pane-app > .tx-cu-pane-support { flex: 0 1 auto; max-height: 45%; padding-inline: 12px; overflow: auto; }
-@media (hover: none) { .tx-cu-native-preview.is-content > .tx-cu-native-actions { opacity: 1; pointer-events: auto; } }
+
+/* Native home surface: local-conversation-thread Iw/Bw/Lw, UTF-8
+   134495..142429. The PNG transport remains an explicit adapter. */
+.tx-cu-native-preview.codex-cu-native-surface {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  grid-template-rows: repeat(1, minmax(0, 1fr));
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+.codex-cu-native-surface > .codex-cu-native-presentation {
+  grid-column-start: 1;
+  grid-row-start: 1;
+  align-self: start;
+  justify-self: center;
+  width: fit-content;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: start;
+  transform-origin: top right;
+  line-height: 0;
+}
+.codex-cu-native-surface > button.codex-cu-native-presentation { cursor: var(--cursor-interaction); }
+.codex-cu-native-surface > button.codex-cu-native-presentation:hover:not(:disabled) { background: transparent; }
+.codex-cu-native-surface > button.codex-cu-native-presentation:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 0;
+}
+.codex-cu-native-surface .codex-cu-native-image {
+  display: block;
+  width: auto;
+  height: auto;
+  margin-inline-start: auto;
+  object-fit: contain;
+  filter: drop-shadow(var(--drop-shadow-md));
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  background: transparent;
+}
+.codex-cu-native-surface > button.codex-cu-native-presentation:focus-visible .codex-cu-native-image {
+  filter: brightness(.95) drop-shadow(var(--drop-shadow-md));
+}
+@media (hover: hover) {
+  .codex-cu-native-surface > button.codex-cu-native-presentation:hover .codex-cu-native-image { filter: brightness(.95) drop-shadow(var(--drop-shadow-md)); }
+}
+.codex-cu-native-surface[data-native-ready=false] > .codex-cu-native-presentation { visibility: hidden; }
+.codex-cu-native-surface.is-stacked { width: fit-content; }
+.codex-cu-native-surface.is-stacked > .codex-cu-native-presentation { justify-self: end; }
+
+/* Fw/Iw/Bw native home stack. No native pinned-window material is emulated. */
+.codex-cu-native-home {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  grid-template-rows: repeat(1, minmax(0, 1fr));
+  flex-shrink: 0;
+  margin-bottom: calc(var(--spacing) * 2);
+  pointer-events: auto;
+}
+.codex-cu-native-home[hidden] { display: none; }
+.codex-cu-native-stack {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  grid-template-rows: repeat(1, minmax(0, 1fr));
+}
+.codex-cu-native-stack[data-native-invisible=true] { visibility: hidden; }
+.codex-cu-native-home-anchor {
+  position: absolute;
+  inset-block: 0;
+  visibility: visible;
+  pointer-events: none;
+}
+.codex-cu-native-stack-frame {
+  grid-column-start: 1;
+  grid-row-start: 1;
+  align-self: start;
+  justify-self: end;
+  width: fit-content;
+  transform-origin: top right;
+}
 
 .tx-cu-settings-dialog { width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow: auto; }
 .tx-cu-settings-dialog .tx-cu-setup { margin-top: 4px; border-top: 0; }

@@ -15,7 +15,7 @@ You can give an AI with computer/terminal access [this guide's URL](https://gith
 
 Packages are `trisoul_x-0.2.1-alpha.1.omd.0.10.0.tgz` and `trisoul_x-0.2.0-rc.2.omd.0.10.0.tgz`, from the [alpha.1 release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-alpha.1.omd.0.10.0) and [rc.2 release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.0-rc.2.omd.0.10.0). Repository: `gulagala001/oh-my-dsh`. Package: `trisoul_x`.
 
-GitHub `main`'s `0.2.1-alpha.2.omd.0.16.0` is **unpublished**, with no public alpha.2 artifact. Main includes an earlier OpenCU 1.6.1 snapshot; the latest local reconstruction with the same version is not merged into it. Do not equate development sources, local packages, and public `0.10.0`, or use `latest` to choose a package.
+GitHub `main`'s `0.2.1-alpha.2.omd.0.16.0` is **unpublished**, with no public alpha.2 artifact. Main includes the OpenCU 1.6.1 browser and runtime reconstruction. Do not equate development sources, local packages, and public `0.10.0`, or use `latest` to choose a package.
 
 Defaults are the Oh My DSH preset, full file/command access, and no execution approvals. **Explicit profile overrides win.** Existing conversations keep presets. Success requires a running chosen environment, matching current versions, and a new OMD conversation; upgrades also check old models, conversations/attachments, and appearance. Without a usable model, report dialogue verification as incomplete.
 

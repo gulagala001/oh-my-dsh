@@ -23,14 +23,27 @@ export function registerComputerTools(ctx, hub) {
       return { computerUseError: result.error, computerUseFiles: result.files ?? [], ...(result.target ? { computerUseTarget: result.target } : {}) };
     } },
     async execute({ code, timeoutMs }, exec) {
+      exec.signal?.throwIfAborted();
       markPresentationOwner(exec.token);
       timeoutMs = computerUseTimeout(timeoutMs);
       if (hub.config().computerUseEnabled === false) throw new Error('Computer Use is disabled in settings.');
-      const result = await hub.computerUse.execute(exec.agent.session.id, code, { signal: exec.signal, timeoutMs, coordinateFrames: hub.computerImages?.frames(exec.agent.session.id), documentationState: hub.documentationState?.(exec.agent.session.id) });
+      const session = exec.agent.session;
+      const projections = exec.agent.ctx?.get?.('sessionProjections') ?? ctx.get?.('sessionProjections');
+      const boundary = projections?.stateOf(session, 'turnBoundary');
+      const turnNumber = boundary?.openTurnStartSeq != null ? boundary.lastTurn : undefined;
+      const workingDirectory = exec.agent.ctx?.get?.('workingDirectory') ?? ctx.get?.('workingDirectory');
+      const cwd = workingDirectory ? await workingDirectory.ensure(exec.agent, exec.signal) : session.header?.cwd ?? process.cwd();
+      exec.signal?.throwIfAborted();
+      const requestMeta = { sessionId: session.id,
+        ...(typeof exec.callId === 'string' ? { callId: exec.callId } : {}),
+        ...(typeof exec.rootCallId === 'string' ? { rootCallId: exec.rootCallId } : {}) };
+      const result = await hub.computerUse.execute(session.id, code, { toolExecution: exec, turnNumber, signal: exec.signal, timeoutMs, cwd, requestMeta, coordinateFrames: hub.computerImages?.frames(session.id), documentationState: hub.documentationState?.(session.id) });
+      exec.signal?.throwIfAborted();
       let target = null;
       try { target = computerPresentationTarget(hub.computerUse.status?.(exec.agent.session.id)?.target); } catch { /* Optional display metadata must not fail a completed tool. */ }
-      const content = [], files = [], fileErrors = [];
+      const content = [], files = [], fileErrors = [], images = [];
       for (const block of result.blocks) {
+        exec.signal?.throwIfAborted();
         if (block.type === 'text') content.push(block);
         else if (block.type === 'file') {
           try {
@@ -40,9 +53,11 @@ export function registerComputerTools(ctx, hub) {
             let attachment;
             try { attachment = await attachments.saveFileStream({ data, name: basename(block.path), signal: exec.signal }); }
             finally { data.destroy(); }
+            exec.signal?.throwIfAborted();
             content.push({ type: 'file', attachment });
             files.push({ name: attachment.name, bytes: attachment.bytes, path: attachments.fileHostPath?.(attachment) ?? block.path });
           } catch (error) {
+            exec.signal?.throwIfAborted();
             const message = `Export exists at ${block.path}, but attaching it failed: ${error.message}`;
             fileErrors.push(message); content.push({ type: 'text', text: message });
           }
@@ -50,12 +65,18 @@ export function registerComputerTools(ctx, hub) {
         else {
           const attachments = ctx.get('attachments');
           if (!attachments) { content.push({ type: 'text', text: 'Screenshot captured but the host attachment service is unavailable.' }); continue; }
-          const attachment = await attachments.saveImage({ data: Buffer.from(block.data, 'base64'), mediaType: block.mediaType, name: 'computer-use.png' });
-          hub.computerImages?.remember(exec.agent.session.id, block.capture, attachment);
+          const extension = ({ 'image/jpeg': 'jpg', 'image/webp': 'webp' })[block.mediaType] ?? 'png';
+          const attachment = await attachments.saveImage({ data: Buffer.from(block.data, 'base64'), mediaType: block.mediaType, name: `computer-use.${extension}` });
+          // saveImage has no cancellation input; wait for storage before stopping
+          // and never bind an undelivered screenshot to the next model call.
+          exec.signal?.throwIfAborted();
+          images.push({ capture: block.capture, attachment });
           content.push({ type: 'image', attachment });
         }
       }
       if (content.some(block => block.type === 'image') && (await computerVision(ctx, exec.agent.session, exec.agent.session.requestHeader?.()?.config)).input === 'text') content.push({ type: 'text', text: TEXT_ONLY_SCREENSHOT_NOTICE });
+      exec.signal?.throwIfAborted();
+      for (const image of images) hub.computerImages?.remember(exec.agent.session.id, image.capture, image.attachment);
       if (result.error) content.push({ type: 'text', text: 'Execution failed: ' + result.error.message });
       if (!content.length) content.push({ type: 'text', text: 'Execution completed. Use an observation to verify the result.' });
       return JSON.stringify({ content, files, ...(target ? { target } : {}), error: result.error?.message ?? (fileErrors.length ? fileErrors.join('\n') : null) });
@@ -65,6 +86,11 @@ export function registerComputerTools(ctx, hub) {
     name: 'computer_use_reset', description: 'Clear the persistent Computer Use JavaScript bindings and cancel pending operations. This does not close application windows or browser tabs. Bind targets again before acting.',
     parameters: { type: 'object', properties: {}, additionalProperties: false },
     output: { schema: { type: 'string' }, render: (_args, text) => [{ type: 'text', text }] },
-    async execute(_args, { agent }) { await hub.computerUse.reset(agent.session.id); return 'Computer Use JavaScript bindings cleared.'; },
+    async execute(_args, { agent, signal }) {
+      signal?.throwIfAborted();
+      await hub.computerUse.reset(agent.session.id);
+      signal?.throwIfAborted();
+      return 'Computer Use JavaScript bindings cleared.';
+    },
   });
 }

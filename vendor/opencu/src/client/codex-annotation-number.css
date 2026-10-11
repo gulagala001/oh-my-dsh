@@ -1,0 +1,76 @@
+/* Codex 26.1007.21159 / build 20052. Original Br/Vr/Ur/X and Kn/Hn/Vn utility rules.
+ * Source offsets, SHA and conditions: work/rea-reconstruction/results-annotation/number/css-index.json.
+ * Private Tailwind variables and class selectors are isolated as can-. */
+@property --can-tw-leading{syntax:"*";inherits:false}
+@property --can-tw-duration{syntax:"*";inherits:false}
+@property --can-tw-ease{syntax:"*";inherits:false}
+@property --can-tw-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}
+@property --can-tw-shadow-color{syntax:"*";inherits:false}
+@property --can-tw-inset-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}
+@property --can-tw-ring-color{syntax:"*";inherits:false}
+@property --can-tw-ring-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}
+@property --can-tw-inset-ring-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}
+@property --can-tw-ring-inset{syntax:"*";inherits:false}
+@property --can-tw-ring-offset-width{syntax:"<length>";inherits:false;initial-value:0}
+@property --can-tw-ring-offset-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}
+@property --can-tw-border-style{syntax:"*";inherits:false;initial-value:solid}
+@property --can-tw-gradient-from{syntax:"<color>";inherits:false;initial-value:#0000}
+@property --can-tw-gradient-via{syntax:"<color>";inherits:false;initial-value:#0000}
+@property --can-tw-gradient-to{syntax:"<color>";inherits:false;initial-value:#0000}
+@property --can-tw-outline-style{syntax:"*";inherits:false;initial-value:solid}
+.can--ms-6{margin-inline-start:calc(var(--spacing) * -6)}
+.can-flex{display:flex}
+.can-grid{display:grid}
+.can-h-7{height:calc(var(--spacing) * 7)}
+.can-min-h-7{min-height:calc(var(--spacing) * 7)}
+.can-w-\[112px\]{width:112px}
+.can-w-\[calc\(100\%\+1\.5rem\)\]{width:calc(100% + 1.5rem)}
+.can-w-full{width:100%}
+.can-min-w-0{min-width:0}
+.can-shrink-0{flex-shrink:0}
+.can-cursor-text{cursor:text}
+.can-touch-none{touch-action:none}
+.can-appearance-none{appearance:none}
+.can-grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.can-grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.can-items-center{align-items:center}
+.can-justify-center{justify-content:center}
+.can-gap-1{gap:var(--spacing)}
+.can-truncate{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+.can-overflow-hidden{overflow:hidden}
+.can-rounded-lg{border-radius:var(--radius-lg)}
+.can-border{border-style:var(--can-tw-border-style);border-width:1px}
+.can-border-0{border-style:var(--can-tw-border-style);border-width:0}
+.can-border-l{border-left-style:var(--can-tw-border-style);border-left-width:1px}
+.can-border-primary-outline{border-color:var(--color-border-primary-outline)}
+.can-border-subtle{border-color:var(--color-border-subtle)}
+.can-bg-primary-soft{background-color:var(--color-background-primary-soft)}
+.can-bg-transparent{background-color:#0000}
+.can-px-1{padding-inline:var(--spacing)}
+.can-px-3{padding-inline:calc(var(--spacing) * 3)}
+.can-text-center{text-align:center}
+.can-text-start{text-align:start}
+.can-font-mono{font-family:var(--font-mono)}
+.can-text-xs{font-size:var(--text-xs);line-height:var(--can-tw-leading,var(--text-xs--line-height))}
+.can-text-default{color:var(--color-text)}
+.can-text-tertiary{color:var(--color-text-tertiary)}
+.can-shadow-sm{--can-tw-shadow:0px 1px 2px -1px var(--can-tw-shadow-color,#00000014);box-shadow:var(--can-tw-inset-shadow), var(--can-tw-inset-ring-shadow), var(--can-tw-ring-offset-shadow), var(--can-tw-ring-shadow), var(--can-tw-shadow)}
+.can-ring-0{--can-tw-ring-shadow:var(--can-tw-ring-inset,) 0 0 0 calc(0px + var(--can-tw-ring-offset-width)) var(--can-tw-ring-color,currentcolor);box-shadow:var(--can-tw-inset-shadow), var(--can-tw-inset-ring-shadow), var(--can-tw-ring-offset-shadow), var(--can-tw-ring-shadow), var(--can-tw-shadow)}
+.can-transition-colors{transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--can-tw-gradient-from,--can-tw-gradient-via,--can-tw-gradient-to;transition-timing-function:var(--can-tw-ease,var(--default-transition-timing-function));transition-duration:var(--can-tw-duration,var(--default-transition-duration))}
+.can-outline-none{--can-tw-outline-style:none;outline-style:none}
+.can-placeholder\:text-tertiary::placeholder{color:var(--color-text-tertiary)}
+.can-focus-within\:border-ring:focus-within{border-color:var(--color-ring)}
+.can-focus-within\:ring-1:focus-within{--can-tw-ring-shadow:var(--can-tw-ring-inset,) 0 0 0 calc(1px + var(--can-tw-ring-offset-width)) var(--can-tw-ring-color,currentcolor);box-shadow:var(--can-tw-inset-shadow), var(--can-tw-inset-ring-shadow), var(--can-tw-ring-offset-shadow), var(--can-tw-ring-shadow), var(--can-tw-shadow)}
+.can-focus-within\:ring-ring:focus-within{--can-tw-ring-color:var(--color-ring)}
+@media (hover:hover){.can-hover\:cursor-ns-resize:hover{cursor:ns-resize}}
+.can-focus\:ring-0:focus{--can-tw-ring-shadow:var(--can-tw-ring-inset,) 0 0 0 calc(0px + var(--can-tw-ring-offset-width)) var(--can-tw-ring-color,currentcolor);box-shadow:var(--can-tw-inset-shadow), var(--can-tw-inset-ring-shadow), var(--can-tw-ring-offset-shadow), var(--can-tw-ring-shadow), var(--can-tw-shadow)}
+.can-focus\:outline-none:focus{--can-tw-outline-style:none;outline-style:none}
+.can-focus-visible\:ring-0:focus-visible{--can-tw-ring-shadow:var(--can-tw-ring-inset,) 0 0 0 calc(0px + var(--can-tw-ring-offset-width)) var(--can-tw-ring-color,currentcolor);box-shadow:var(--can-tw-inset-shadow), var(--can-tw-inset-ring-shadow), var(--can-tw-ring-offset-shadow), var(--can-tw-ring-shadow), var(--can-tw-shadow)}
+.can-focus-visible\:outline-none:focus-visible{--can-tw-outline-style:none;outline-style:none}
+.can-active\:cursor-ns-resize:active{cursor:ns-resize}
+.can-\[\&_\.min-w-0\]\:text-end .can-min-w-0{text-align:end}
+@supports (corner-shape:superellipse(1.5)){.can-rounded-button-action,.can-rounded-button-toolbar,.can-rounded-md,.can-rounded-lg,.can-rounded-xl,.can-rounded-2xl,.can-rounded-3xl,.can-rounded-4xl{corner-shape:var(--codex-corner-shape)}}
+.can-_numericInput_1hft5_1{appearance:textfield}
+.can-_numericInput_1hft5_1:focus,.can-_numericInput_1hft5_1:focus-visible,.can-_numericInput_1hft5_1:active{box-shadow:none;outline:none!important}
+.can-_numericInput_1hft5_1::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.can-_numericInput_1hft5_1::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}

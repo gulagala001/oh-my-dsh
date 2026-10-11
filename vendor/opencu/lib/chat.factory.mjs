@@ -13972,7 +13972,7 @@ const registration = {
 							}
 						};
 					}
-				}, ChatView);
+				}, options.renderChatView ? props => options.renderChatView(react.createElement(ChatView, props), props) : ChatView);
 			});
 			ctx.slots.inject("shell.overlay", () => ctx.slots.register({
 				name: "shell.overlay",

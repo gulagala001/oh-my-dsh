@@ -2,6 +2,13 @@ import { randomUUID } from 'node:crypto';
 import { browserKey } from './browser.mjs';
 import { viewportGeometry } from './browser-screenshot.mjs';
 import {restoreStylePreview}from'./browser-style-preview.mjs';
+import {restoreAnnotationLiveEditor}from'./annotation-live-editor.mjs';
+import {clearSiteAnnotationFeaturePreview}from'./site-annotation-features.mjs';
+
+const screencastTimestamp = event => {
+  const timestamp = event?.metadata?.timestamp;
+  return typeof timestamp === 'number' && Number.isFinite(timestamp) ? timestamp : null;
+};
 
 // One screencast per tab, shared by visible panes. Observation has an independent
 // CDP connection so stopping the model does not disconnect the user's picture.
@@ -25,6 +32,7 @@ export class BrowserViews {
     finally { clearTimeout(timer); lifetime.removeEventListener('abort', aborted); }
   }
   async snapshotRead(view,read){
+    if (this.browser.authObservation?.canPreview(this.browser, view) === false) throw new Error('页面正在保护登录信息，请先完成登录并导航到新文档');
     if(view.resizing)throw new Error('正在调整视口，请稍后截图');
     const pending=Promise.resolve().then(read);view.readers??=new Set();view.readers.add(pending);
     try{return await pending;}finally{view.readers.delete(pending);}
@@ -52,7 +60,7 @@ export class BrowserViews {
     signal?.addEventListener('abort', aborted, { once: true });
     try {
       await view.ready; signal?.throwIfAborted();
-      if (view.latest) listener('frame', view.latest);
+      if (view.latest && this.browser.authObservation?.canPreview(this.browser, view) !== false) listener('frame', view.latest);
       if (view.dialog) listener('dialog', view.dialog);
       if (view.navigation) listener('navigation', view.navigation);
       return close;
@@ -97,6 +105,7 @@ export class BrowserViews {
       await this.read(view, cdp.send('Page.enable'));
       const { frameTree } = await this.read(view, cdp.send('Page.getFrameTree')); view.loaderId = frameTree.frame.loaderId;
       view.initialGeometry = viewportGeometry(await this.read(view, cdp.send('Page.getLayoutMetrics')));
+      view.screencastAfter = Date.now() / 1000;
       await this.read(view, cdp.send('Page.startScreencast', { format: 'jpeg', quality: 80, maxWidth: 1600, maxHeight: 1200, everyNthFrame: 1 }));
       await this.navigation(view);
       // A static/background page may not emit an initial screencast frame.
@@ -160,7 +169,8 @@ export class BrowserViews {
     while (view.pending && !view.closed && !view.resizing) {
       let { event, loaderId, captureOnly } = view.pending; view.pending = null;
       try {
-        if (!captureOnly&&event?.metadata.timestamp && event.metadata.timestamp < (view.screencastAfter ?? 0)) continue;
+        const timestamp = screencastTimestamp(event);
+        if (!captureOnly && (timestamp === null || timestamp < (view.screencastAfter ?? 0))) continue;
         const observedAt = performance.now();
         const metrics = await this.read(view, view.cdp.send('Page.getLayoutMetrics'));
         if (view.closed) continue;
@@ -171,7 +181,7 @@ export class BrowserViews {
         }
         // The fence can advance during the metrics query. A merged resize
         // request may still need a fresh capture, but never its stale JPEG.
-        if (event?.metadata.timestamp && event.metadata.timestamp < (view.screencastAfter ?? 0)) {
+        if (event && (timestamp === null || timestamp < (view.screencastAfter ?? 0))) {
           if (!captureOnly) continue;
           event = undefined;
         }
@@ -202,6 +212,7 @@ export class BrowserViews {
           const scale=metadata.pageScaleFactor*geometry.zoom;
           width=metadata.deviceWidth/scale;height=metadata.deviceHeight/scale;data=event.data;mediaType='image/jpeg';
         }
+        if (this.browser.authObservation?.canPreview(this.browser, view) === false) { view.latest = undefined; continue; }
         const frame = { id: randomUUID(), tabId: view.tabId, loaderId, observedAt, width, height, geometry, browserCursor: this.browser.windowCursor === true && mediaType === 'image/jpeg', scrollX: geometry.pageX, scrollY: geometry.pageY, data, mediaType, at: Date.now(), url: view.record.page.url() };
         view.latest = frame; view.frames.push(frame.id); this.frames.set(frame.id, frame);
         while (view.frames.length > 24) this.frames.delete(view.frames.shift());
@@ -234,7 +245,9 @@ export class BrowserViews {
     view.stopping = (async () => {
       await view.ready?.catch(() => {});
       await view.layoutPending?.catch(() => {});
+      await clearSiteAnnotationFeaturePreview(view);
       await restoreStylePreview(view);
+      await restoreAnnotationLiveEditor(view);
       // Dialog-closed can precede the reply to the user's answer. Disabling
       // control must not detach this channel while that answer is returning.
       if (view.dialogReplies?.size) {

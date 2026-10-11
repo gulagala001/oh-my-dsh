@@ -1,0 +1,73 @@
+/* Exact Codex 26.1007.21159 address input/suggestion utility CSS. Source selectors, bounds and digests: work/rea-reconstruction/browser-address/css-reference-rules.json. */
+@layer base{.codex-browser-address-input::placeholder{opacity:1}}
+@layer base{:where(.codex-browser-address-input,.codex-browser-address-option){font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}}
+@layer base{:where(.codex-browser-address-input,.codex-browser-address-option,.codex-browser-address-suggestions-size),:where(.codex-browser-address-suggestions-size) *{box-sizing:border-box;border:0 solid;margin:0;padding:0}}
+@layer components{.cba-_CompactSource_ym4jk_2{display:var(--display-icon-compact,contents)}}
+@layer components{.cba-_LeadingSource_ym4jk_6{display:var(--display-icon-leading,none)}}
+@layer components{.cba-icon-2xs{height:var(--icon-secondary-size,14px);width:var(--icon-secondary-size,14px)}}
+@layer utilities{.cba-absolute{position:absolute}}
+@layer utilities{.cba-relative{position:relative}}
+@layer utilities{.cba-end-2\.5{inset-inline-end:calc(var(--spacing) * 2.5)}}
+@layer utilities{.cba-top-1\/2{top:50%}}
+@layer utilities{.cba-flex{display:flex}}
+@layer utilities{.cba-size-4{width:calc(var(--spacing) * 4);height:calc(var(--spacing) * 4)}}
+@layer utilities{.cba-h-9{height:calc(var(--spacing) * 9)}}
+@layer utilities{.cba-h-full{height:100%}}
+@layer utilities{.cba-max-h-\[inherit\]{max-height:inherit}}
+@layer utilities{.cba-w-full{width:100%}}
+@layer utilities{.cba-max-w-\[60\%\]{max-width:60%}}
+@layer utilities{.cba-min-w-0{min-width:0}}
+@layer utilities{.cba-flex-1{flex:1}}
+@layer utilities{.cba-shrink-0{flex-shrink:0}}
+@layer utilities{.cba--translate-y-1\/2{--cuc-tw-translate-y:calc(calc(1 / 2 * 100%) * -1);translate:var(--cuc-tw-translate-x) var(--cuc-tw-translate-y)}}
+@layer utilities{.cba-cursor-interaction{cursor:var(--cursor-interaction)}}
+@layer utilities{.cba-cursor-text{cursor:text}}
+@layer utilities{.cba-flex-col{flex-direction:column}}
+@layer utilities{.cba-items-baseline{align-items:baseline}}
+@layer utilities{.cba-items-center{align-items:center}}
+@layer utilities{.cba-gap-1{gap:var(--spacing)}}
+@layer utilities{.cba-gap-2\.5{gap:calc(var(--spacing) * 2.5)}}
+@layer utilities{.cba-truncate{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}}
+@layer utilities{.cba-overflow-y-auto{overflow-y:auto}}
+@layer utilities{.cba-rounded-2xs{border-radius:var(--radius-2xs)}}
+@layer utilities{.cba-rounded-lg{border-radius:var(--radius-lg)}}
+@layer utilities{.cba-rounded-xl{border-radius:var(--radius-xl)}}
+@layer utilities{.cba-border{border-style:var(--cuc-tw-border-style);border-width:1px}}
+@layer utilities{.cba-border-primary-outline{border-color:var(--color-border-primary-outline)}}
+@layer utilities{.cba-bg-primary-ghost-hover{background-color:var(--color-background-primary-ghost-hover);background-color:var(--color-background-primary-ghost-hover)}}
+@layer utilities{.cba-bg-primary-soft{background-color:var(--color-background-primary-soft)}}
+@layer utilities{.cba-bg-primary-soft-active{background-color:var(--color-background-primary-soft-active);background-color:var(--color-background-primary-soft-active)}}
+@layer utilities{.cba-bg-transparent{background-color:#0000}}
+@layer utilities{.cba-object-contain{object-fit:contain}}
+@layer utilities{.cba-p-1{padding:var(--spacing)}}
+@layer utilities{.cba-px-2\.5{padding-inline:calc(var(--spacing) * 2.5)}}
+@layer utilities{.cba-py-0{padding-block:0}}
+@layer utilities{.cba-ps-2{padding-inline-start:calc(var(--spacing) * 2)}}
+@layer utilities{.cba-pe-9{padding-inline-end:calc(var(--spacing) * 9)}}
+@layer utilities{.cba-text-center{text-align:center}}
+@layer utilities{.cba-text-start{text-align:start}}
+@layer utilities{.cba-text-sm{font-size:var(--text-sm);line-height:var(--cuc-tw-leading,var(--text-sm--line-height))}}
+@layer utilities{.cba-text-\[13px\]{font-size:13px}}
+@layer utilities{.cba-leading-\[18px\]{--cuc-tw-leading:18px;line-height:18px}}
+@layer utilities{.cba-font-semibold{--cuc-tw-font-weight:var(--font-weight-semibold);font-weight:var(--font-weight-semibold)}}
+@layer utilities{.cba-text-codex-description,.cba-text-codex-description\/50{color:var(--color-codex-description)}}
+@layer utilities{.cba-text-default{color:var(--color-text)}}
+@layer utilities{.cba-opacity-0{opacity:0}}
+@layer utilities{.cba-shadow-lg{--cuc-tw-shadow:0px 4px 8px -2px var(--cuc-tw-shadow-color,#0000001a);box-shadow:var(--cuc-tw-inset-shadow), var(--cuc-tw-inset-ring-shadow), var(--cuc-tw-ring-offset-shadow), var(--cuc-tw-ring-shadow), var(--cuc-tw-shadow)}}
+@layer utilities{.cba-outline-none{--cuc-tw-outline-style:none;outline-style:none}}
+@layer utilities{.cba-select-none{-webkit-user-select:none;user-select:none}}
+@layer utilities{.cba-select-text{-webkit-user-select:text;user-select:text}}
+@layer utilities{@media (hover:hover){.cba-group-hover\:opacity-100:is(:where(.cba-group):hover :where(.cba-group-hover\:opacity-100)){opacity:1}}}
+@layer utilities{.cba-placeholder\:text-tertiary::placeholder{color:var(--color-text-tertiary)}}
+@layer utilities{.cba-before\:content-\[\'—\'\]:before{--cuc-tw-content:"—";content:var(--cuc-tw-content)}}
+@layer utilities{@media (hover:hover){.cba-hover\:bg-background-primary-ghost-hover\/60:hover{background-color:color-mix(in oklab, var(--color-background-primary-ghost-hover) 60%, transparent)}}}
+@layer utilities{.cba-focus\:ps-2:focus{padding-inline-start:calc(var(--spacing) * 2)}}
+@layer utilities{.cba-focus\:text-start:focus{text-align:start}}
+@layer utilities{.cba-focus-visible\:opacity-100:focus-visible{opacity:1}}
+@layer utilities{.cba-\[\&_\.min-w-0\]\:text-end .cba-min-w-0{text-align:end}}
+@layer utilities{.cba-\[\&\:\:placeholder\]\:select-none::placeholder{-webkit-user-select:none;user-select:none}}
+@layer utilities{.cba-overflow-auto,.cba-overflow-scroll,.cba-overflow-x-auto,.cba-overflow-y-auto,.cba-overflow-x-scroll,.cba-overflow-y-scroll,:where(.cba-messaging-root) .cba-messages-scroll{scrollbar-color:var(--color-border) transparent}}
+@layer utilities{:is(.cba-overflow-auto,.cba-overflow-scroll,.cba-overflow-x-auto,.cba-overflow-y-auto,.cba-overflow-x-scroll,.cba-overflow-y-scroll,:where(.cba-messaging-root) .cba-messages-scroll):hover,:is(.cba-overflow-auto,.cba-overflow-scroll,.cba-overflow-x-auto,.cba-overflow-y-auto,.cba-overflow-x-scroll,.cba-overflow-y-scroll,:where(.cba-messaging-root) .cba-messages-scroll):active{scrollbar-color:var(--color-border-strong) transparent}}
+@supports (corner-shape:superellipse(1.5)){.cba-rounded-button-action,.cba-rounded-button-toolbar,.cba-rounded-md,.cba-rounded-lg,.cba-rounded-xl,.cba-rounded-2xl,.cba-rounded-3xl,.cba-rounded-4xl{corner-shape:var(--codex-corner-shape)}}
+/* Source zKi/nqi geometry adapted to CodexCuOverlay inner zoom. */
+.codex-browser-address-suggestions-size{width:var(--codex-address-suggestion-width);max-height:var(--codex-address-suggestion-max-height);display:flex;flex-direction:column;}

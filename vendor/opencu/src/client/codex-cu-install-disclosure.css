@@ -1,0 +1,50 @@
+/* Exact class decisions from install tn/ln/fn/yn/bn/xn/Sn/Dn/On/vn and mobile
+   fn/mn. Source selectors, offsets and hashes: install-disclosure/manifest.json.
+   Root injects this after the shared token/typography/primitive styles. */
+[data-codex-cu-scope].codex-cu-install-disclosure {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  corner-shape: var(--codex-corner-shape);
+  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 4);
+}
+[data-codex-cu-scope] .codex-cu-install-section {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 2);
+  border-bottom: 1px solid var(--color-border);
+  padding-block: calc(var(--spacing) * 3);
+}
+[data-codex-cu-scope] .codex-cu-install-section:last-child { border-style: none; }
+[data-codex-cu-scope] .codex-cu-install-locked-row { display: flex; align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 4); }
+[data-codex-cu-scope] .codex-cu-install-locked-labels { display: flex; flex-direction: column; gap: var(--spacing); }
+[data-codex-cu-scope] .codex-cu-install-section-title { font-size: var(--text-sm); line-height: var(--text-sm--line-height); font-weight: var(--font-weight-medium); color: var(--color-text); }
+[data-codex-cu-scope] .codex-cu-install-locked-description,
+[data-codex-cu-scope] .codex-cu-install-blurbs { font-size: var(--text-sm); line-height: var(--text-sm--line-height); color: var(--color-text-secondary); }
+[data-codex-cu-scope] .codex-cu-install-info-link { display: inline-flex; color: var(--color-text-info); }
+[data-codex-cu-scope] .codex-cu-install-blurb {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+  border-top: 1px solid var(--color-border);
+  padding-block: calc(var(--spacing) * 2.5);
+}
+[data-codex-cu-scope] .codex-cu-install-blurb:first-child { border-style: none; padding-top: 0; }
+[data-codex-cu-scope] .codex-cu-install-blurb:last-child { padding-bottom: 0; }
+[data-codex-cu-scope] .codex-cu-install-blurb-title { font-weight: var(--font-weight-medium); color: var(--color-text); }
+[data-codex-cu-scope] .codex-cu-install-blurb-link { text-decoration-line: underline; text-underline-offset: 2px; }
+[data-codex-cu-scope] .codex-cu-install-blurb-link:hover { text-decoration-line: none; }
+[data-codex-cu-scope] .codex-cu-install-skeleton-heading,
+[data-codex-cu-scope] .codex-cu-install-skeleton-line,
+[data-codex-cu-scope] .codex-cu-install-skeleton-short-line { border-radius: .25rem; background: var(--color-border); }
+[data-codex-cu-scope] .codex-cu-install-skeleton-heading { height: calc(var(--spacing) * 3); width: calc(var(--spacing) * 36); }
+[data-codex-cu-scope] .codex-cu-install-skeleton-line { height: calc(var(--spacing) * 2.5); width: 100%; }
+[data-codex-cu-scope] .codex-cu-install-skeleton-short-line { height: calc(var(--spacing) * 2.5); width: 80%; }
+
+[data-codex-cu-scope].codex-cu-mobile-cu-access { display: contents; }
+[data-codex-cu-scope] .codex-cu-mobile-cu-dialog-row { display: flex; align-items: center; justify-content: space-between; gap: calc(var(--spacing) * 4); padding: calc(var(--spacing) * 2) 14px; text-align: start; }
+[data-codex-cu-scope] .codex-cu-mobile-cu-dialog-label-group { display: flex; min-width: 0; flex: 1; align-items: center; gap: calc(var(--spacing) * 3); text-align: start; }
+[data-codex-cu-scope] .codex-cu-mobile-cu-dialog-icon { display: flex; width: calc(var(--spacing) * 11); height: calc(var(--spacing) * 11); flex-shrink: 0; align-items: center; justify-content: center; color: var(--color-text); }
+[data-codex-cu-scope] .codex-cu-mobile-cu-dialog-labels { min-width: 0; flex: 1; }
+[data-codex-cu-scope] .codex-cu-mobile-cu-dialog-title { font-size: var(--text-sm); line-height: var(--text-sm--line-height); color: var(--color-text); }
+[data-codex-cu-scope] .codex-cu-mobile-cu-dialog-description { font-size: var(--text-xs); line-height: var(--text-xs--line-height); color: var(--color-codex-description); }
+[data-codex-cu-scope] .codex-cu-mobile-cu-dialog-control { flex-shrink: 0; color: var(--color-codex-description); }

@@ -4,24 +4,167 @@ import {basename} from 'node:path';
 import {access} from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import { point } from './coordinates.mjs';
-import { observeNetwork, listNetwork, networkRequest, networkResponseBody } from './browser-network.mjs';
-import { listPageAssets, bundlePageAssets, exportPageContent } from './browser-content.mjs';
+import { observeNetwork, listNetwork, networkRequest, networkResponseBody, observeConsole, listConsole, waitForBrowser } from './browser-network.mjs';
+import { listPageAssets, bundlePageAssets, exportPageContent, exportGsuiteContent, exportYouTubeTranscript } from './browser-content.mjs';
 import { fetchWebMcpTools, callWebMcpTool, cancelWebMcp, webMcpAvailable } from './browser-webmcp.mjs';
-import { captureViewport, captureFullPage, observeScreenshot, withViewportTransaction, screenshotGeometry, sameScreenshotGeometry, staleScreenshot } from './browser-screenshot.mjs';
+import { captureViewport, captureFullPage, observeScreenshot, withViewportTransaction, screenshotGeometry, sameScreenshotGeometry, screenshotPointToViewport, staleScreenshot } from './browser-screenshot.mjs';
 import { snapshotFrameContexts } from './snapshot-context.mjs';
+import { browserClipboardReadText, browserClipboardWriteText, browserClipboardRead, browserClipboardWrite, browserClipboardPaste, browserClipboardShortcutAction, browserClipboardShortcut, cleanupBrowserClipboard } from './paste.mjs';
+import { evaluateReadonly } from './browser-evaluate.mjs';
+import { createTabCapabilities } from './browser-capabilities.mjs';
+import { downloadLocatorMedia, downloadMediaAtPoint, downloadMediaForDomNode, waitForBrowserEvent, downloadPath, setFileChooserFiles, setLocatorInputFiles } from './browser-download-media.mjs';
+import { browserDomSnapshot } from './browser-dom-snapshot.mjs';
 
 const stale = () => Object.assign(new Error('This element belongs to an old or detached page. Read the current state again.'), { code: 'STALE_ELEMENT' });
-const keys = { cmd: 'Meta', super: 'Meta', ctrl: 'Control', control: 'Control', alt: 'Alt', option: 'Alt', shift: 'Shift', return: 'Enter', enter: 'Enter', esc: 'Escape', escape: 'Escape', backspace: 'Backspace', delete: 'Delete', tab: 'Tab', space: 'Space', left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown', home: 'Home', end: 'End', pageup: 'PageUp', pagedown: 'PageDown' };
+const keys = { cmd: 'Meta', command: 'Meta', meta: 'Meta', win: 'Meta', super: 'Meta', ctrl: 'ControlOrMeta', controlormeta: 'ControlOrMeta', control: 'Control', alt: 'Alt', option: 'Alt', shift: 'Shift', return: 'Enter', enter: 'Enter', esc: 'Escape', escape: 'Escape', backspace: 'Backspace', delete: 'Delete', tab: 'Tab', space: 'Space', left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown', home: 'Home', end: 'End', pageup: 'PageUp', pagedown: 'PageDown' };
 export const browserKey = value => String(value).split('+').map(k => keys[k.toLowerCase()] ?? k).join('+');
 const text = node => node?.value === undefined ? '' : String(node.value);
-const supportedLocator = new Set(['locator', 'getByRole', 'getByText', 'getByLabel', 'getByPlaceholder', 'getByTestId', 'getByAltText', 'getByTitle', 'frameLocator', 'filter', 'nth', 'first', 'last']);
+const supportedLocator = new Set(['locator', 'getByRole', 'getByText', 'getByLabel', 'getByPlaceholder', 'getByTestId', 'getByAltText', 'getByTitle', 'frameLocator', 'filter', 'nth', 'first', 'last', 'and', 'or']);
 const readMethods = new Set(['count', 'innerText', 'textContent', 'allInnerTexts', 'allTextContents', 'inputValue', 'getAttribute', 'isVisible', 'isEnabled', 'isChecked', 'boundingBox', 'ariaSnapshot', 'waitFor']);
+const collectionMethods = new Set(['count', 'allInnerTexts', 'allTextContents', 'evaluateAll']);
+const firstMatchMethods = new Set(['isVisible', 'isEnabled', 'waitFor']);
+const valueOptionMethods = new Set(['fill', 'press', 'type', 'pressSequentially', 'setChecked', 'selectOption', 'setInputFiles', 'getAttribute']);
+const noOptionMethods = new Set(['count', 'allInnerTexts', 'allTextContents', 'evaluateAll']);
+
+function locatorArguments(action, args) {
+  const parameters = args.slice(), index = ['evaluate', 'evaluateAll'].includes(action) ? 2 : valueOptionMethods.has(action) ? 1 : 0;
+  const options = { ...parameters[index] }, maximum = action === 'downloadMedia' ? 120000 : action === 'pressSequentially' ? 5000 : 3000;
+  if (options.timeoutMs !== undefined && (!Number.isInteger(options.timeoutMs) || options.timeoutMs <= 0)) throw new Error('timeoutMs must be a positive integer');
+  const timeout = options.timeoutMs === undefined ? options.timeout ?? maximum : Math.min(maximum, Math.max(0, options.timeoutMs));
+  delete options.timeoutMs;
+  options.timeout = timeout;
+  if (!noOptionMethods.has(action)) parameters[index] = options;
+  return { parameters, timeout };
+}
+
+function selectOptions(value) {
+  const selections = Array.isArray(value) ? value : [value];
+  if (!selections.length) throw new Error('locator.selectOption requires at least one value');
+  return selections.map(selection => {
+    if (typeof selection === 'string') return { value: selection };
+    if (!selection || typeof selection !== 'object') throw new Error('locator.selectOption requires a string or { value?, label?, index? }');
+    const result = {};
+    for (const key of ['value', 'label']) if (selection[key] !== undefined) {
+      if (typeof selection[key] !== 'string') throw new Error(`locator.selectOption ${key} must be a string`);
+      result[key] = selection[key];
+    }
+    if (selection.index !== undefined) {
+      if (!Number.isInteger(selection.index) || selection.index < 0) throw new Error('locator.selectOption index must be a non-negative integer');
+      result.index = selection.index;
+    }
+    if (!Object.keys(result).length) throw new Error('locator.selectOption requires value, label, or index for each selection');
+    return result;
+  });
+}
+
+function inputDuration(options = {}) {
+  options ??= {};
+  if (options.durationMs !== undefined) {
+    if (!Number.isSafeInteger(options.durationMs) || options.durationMs < 0 || options.durationMs > 30000) throw new Error('durationMs must be an integer from 0 to 30000 milliseconds.');
+    return options.durationMs;
+  }
+  if (options.duration === undefined) return 0;
+  if (!Number.isFinite(options.duration) || options.duration < 0 || options.duration > 30) throw new Error('duration must be between 0 and 30 seconds.');
+  return options.duration * 1000;
+}
+
+function setAccessibilityValue(element, value) {
+  const view = element.ownerDocument.defaultView;
+  const { HTMLInputElement, HTMLTextAreaElement, HTMLSelectElement, HTMLOptionElement, HTMLOptGroupElement, HTMLElement, Event, InputEvent } = view;
+  const role = element.getAttribute('role');
+  const ensureWritable = (name, text = false) => {
+    if (!element.isConnected) throw new Error(`${name} is no longer connected`);
+    if (element.matches(':disabled') || element.getAttribute('aria-disabled') === 'true') throw new Error(`${name} is disabled`);
+    if (text && (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) && element.readOnly) throw new Error(`${name} is read-only`);
+  };
+  const changed = () => {
+    element.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  if (element instanceof HTMLInputElement && ['checkbox', 'radio'].includes(element.type)) {
+    const name = element.type === 'radio' ? 'Radio button' : role === 'switch' ? 'Switch' : 'Checkbox';
+    if (!['0', '1', 'false', 'true'].includes(value)) throw new Error(`${name} value must be 0, 1, false, or true`);
+    ensureWritable(name);
+    const requested = value === '1' || value === 'true', differs = element.checked !== requested || element.type === 'checkbox' && element.indeterminate;
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'checked')?.set;
+    if (!setter) throw new Error(`${name} native setter is unavailable`);
+    element.focus(); setter.call(element, requested);
+    if (element.type === 'checkbox') {
+      const indeterminate = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'indeterminate')?.set;
+      if (!indeterminate) throw new Error(`${name} indeterminate setter is unavailable`);
+      indeterminate.call(element, false);
+    }
+    if (differs) changed();
+    if (!element.isConnected || element.checked !== requested || element.type === 'checkbox' && element.indeterminate) throw new Error(`${name} did not retain the requested state`);
+    return 'done';
+  }
+  if (element instanceof HTMLSelectElement) {
+    ensureWritable('Select');
+    if (element.multiple) throw new Error('Multi-select controls are not supported');
+    const options = [...element.options];
+    let option = options.find(option => option.value === value);
+    if (!option) {
+      const matches = options.filter(option => option.label === value || option.text === value);
+      if (matches.length !== 1) throw new Error(matches.length ? `Select option label ${JSON.stringify(value)} is ambiguous` : `Select option ${JSON.stringify(value)} was not found`);
+      option = matches[0];
+    }
+    if (option.disabled || option.parentElement instanceof HTMLOptGroupElement && option.parentElement.disabled) throw new Error(`Select option ${JSON.stringify(value)} is disabled`);
+    const setter = Object.getOwnPropertyDescriptor(HTMLOptionElement.prototype, 'selected')?.set;
+    if (!setter) throw new Error('Select native option setter is unavailable');
+    const differs = !option.selected;
+    element.focus();
+    if (!element.isConnected || ![...element.options].includes(option)) throw new Error(`Select rejected option ${JSON.stringify(value)}`);
+    setter.call(option, true);
+    if (differs) changed();
+    if (!element.isConnected || element.selectedOptions[0] !== option) throw new Error('Select did not retain the requested option');
+    return 'done';
+  }
+  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+    const name = element instanceof HTMLTextAreaElement ? 'Text area' : 'Input';
+    if (element instanceof HTMLInputElement && element.type === 'file') throw new Error('File inputs cannot be set programmatically');
+    ensureWritable(name, true); element.focus();
+    let requested = value;
+    if (element instanceof HTMLInputElement && element.type === 'color') {
+      if (!/^#[0-9a-f]{6}$/i.test(value)) throw new Error('Color value must use #rrggbb');
+      requested = value.toLowerCase();
+    }
+    const prototype = element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
+    if (!setter) throw new Error(`${name} native value setter is unavailable`);
+    const previous = element.value;
+    setter.call(element, requested);
+    if (element.value !== requested) { setter.call(element, previous); throw new Error(`${name} rejected value ${JSON.stringify(value)}`); }
+    if (previous !== requested) changed();
+    return 'done';
+  }
+  if (role === 'tab') {
+    if (!['1', 'true'].includes(value)) throw new Error('Tab value must be 1 or true');
+    ensureWritable('Tab');
+    return element.getAttribute('aria-selected') === 'true' ? 'done' : 'needs-click';
+  }
+  if (['checkbox', 'radio', 'switch', 'combobox', 'listbox', 'slider', 'spinbutton'].includes(role) || element.hasAttribute('aria-pressed')) throw new Error('Custom ARIA controls do not expose a standard value setter');
+  if (element instanceof HTMLElement && element.isContentEditable) {
+    ensureWritable('Editable element'); element.focus();
+    const previous = element.textContent ?? '';
+    element.textContent = value;
+    if (previous !== value) {
+      element.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, data: value, inputType: 'insertText' }));
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    return 'done';
+  }
+  throw new Error('Accessibility element does not expose a standard value setter');
+}
 
 export class BrowserActions {
-  constructor({ id = 'browser', onTabClosed, onBrowserLost, onPointer, wantsPointer, onVisit } = {}) {
+  constructor({ id = 'browser', onTabClosed, onBrowserLost, onPointer, wantsPointer, onVisit, capabilities = {}, clipboardPages, filePolicy } = {}) {
     this.id = id; this.connections = new Map(); this.owners = new Map(); this.records = new Map(); this.nextElementId = 0;
     this.onTabClosed = onTabClosed; this.onBrowserLost = onBrowserLost; this.onPointer = onPointer; this.wantsPointer = wantsPointer;
     this.onVisit=onVisit;
+    this.capabilityProviders = capabilities;
+    this.filePolicy = filePolicy;
+    this.clipboardScopes = new Map();
+    this.clipboardPages = clipboardPages ?? new Set();
     this.viewportPresets=new Map();this.viewportOwners=new Map();this.emulationPresets=new Map();this.emulations=new Map();
     this.downloadHistory=new Map();this.downloadSessions=new Map();this.downloadObservers=new Map();
   }
@@ -32,16 +175,37 @@ export class BrowserActions {
     const cdp = await connection.context.newCDPSession(page);
     const { targetInfo } = await cdp.send('Target.getTargetInfo');
     const id = this.recordId(connection, targetInfo);
+    this.clipboardPages.add(page);
+    page.once('close', () => this.clipboardPages.delete(page));
     const record = { id, page, cdp, generation: 0, elements: new Map(), ids: new Map(), previous: new Map(), logs: [], downloads: new Map(), frames: new Map(), heldButtons: new Set(), heldKeys: new Set(), buttonReleases: new Map(), keyReleases: new Map(), pointer: { x: 0, y: 0 } };
+    Object.defineProperties(record, {
+      sessionId: { value: connection.sessionId, enumerable: true },
+      browserId: { value: this.id, enumerable: true },
+      assertFileAccess: { value: () => {
+        this.checkConnection(connection);
+        if (!connection.sessionId || connection.pages.get(id) !== record || page.isClosed() || !connection.browser.isConnected()
+          || this.owners.get(id)?.sessionId !== connection.sessionId) throw Object.assign(new Error('The upload tab execution or owner changed'), { code: 'STALE_FILE_UPLOAD' });
+        return true;
+      } },
+    });
     record.transport = connection.transport;
+    record.capabilityAdapter = connection.capabilityAdapter;
+    record.tabCapabilities = createTabCapabilities(record, this.capabilityProviders, { browserId: this.id, resolveSelector: (marker, signal) => this.locator(record, marker.chain, { signal }) });
     record.coordinateId = randomUUID();
     record.frameGenerations = new WeakMap();
+    record.frameBindingEpoch = 0;
+    record.frameBindingIds = new Map();
+    record.frameBindingSessions = new Map();
+    record.frameBindingCleanup = new Set();
+    this.observeFrameSession(record, cdp);
     observeNetwork(record);
     cdp.on('Page.downloadWillBegin',event=>{
+      if(this.capabilityProviders.downloadMedia?.nativeDownloadIdentity===true)return;
       const owner=this.owners.get(id)?.sessionId??this.downloadSessions.get(id);if(!owner||this.downloadHistory.has(event.guid))return;
       this.downloadHistory.set(event.guid,{id:event.guid,sessionId:owner,tabId:id,browserId:this.id,filename:event.suggestedFilename,url:event.url,startedAt:Date.now(),state:'inProgress',receivedBytes:0,totalBytes:0});
     });
     cdp.on('Page.downloadProgress',event=>{
+      if(this.capabilityProviders.downloadMedia?.nativeDownloadIdentity===true)return;
       const entry=this.downloadHistory.get(event.guid);if(!entry||!['inProgress','unobserved'].includes(entry.state))return;
       Object.assign(entry,{state:event.state,receivedBytes:event.receivedBytes,totalBytes:event.totalBytes});
       // Managed profiles also retain downloads completed by the human in a
@@ -62,18 +226,15 @@ export class BrowserActions {
     };
     page.on('framenavigated', frame => {
       record.generation++;
-      const invalidated = new Set(), main = frame === page.mainFrame();
-      const invalidate = changed => { if (!invalidated.has(changed)) { invalidated.add(changed); record.frameGenerations.set(changed, (record.frameGenerations.get(changed) ?? 0) + 1); } };
-      invalidate(frame);
-      for (const [id, ref] of record.elements) {
-        let ancestor = ref.frame;
-        while (ancestor && ancestor !== frame) ancestor = ancestor.parentFrame();
-        if (main || ancestor === frame || ref.frame.isDetached()) { invalidate(ref.frame); record.elements.delete(id); }
-      }
+      const main = frame === page.mainFrame();
+      this.invalidateFrameBindings(record, frame);
       if (main) { record.previous.clear(); visit(); }
     });
+    page.on('framedetached', frame => { record.generation++; this.invalidateFrameBindings(record, frame); });
     page.on('domcontentloaded',visit);page.on('load',visit);
     page.on('close', () => {
+      this.invalidateFrameBindings(record);
+      void record.tabCapabilities.dispose().catch(() => {});
       connection.pages.delete(id);
       const observers=this.downloadObservers.get(id);observers?.delete(record);
       if(observers?.size===0){
@@ -84,15 +245,14 @@ export class BrowserActions {
       // tab closure. Only an actual tab close releases global ownership.
       setTimeout(() => {
         if (!connection.closing && connection.browser.isConnected()) {
+          void this.filePolicy?.releaseTab(record).catch(error => { this.fileCleanupError = error; });
           const known = this.records.delete(id); this.owners.delete(id);this.downloadSessions.delete(id);this.emulations.delete(id);this.viewportOwners.delete(id);
           if (known) this.onTabClosed?.(id);
         }
       }, 0);
     });
-    page.on('console', message => { record.logs.push({ level: message.type(), text: message.text().slice(0,4000), at: Date.now() }); if (record.logs.length > 100) record.logs.shift(); });
-    page.on('pageerror', error => { record.logs.push({ level: 'error', text: error.message.slice(0,4000), at: Date.now() }); if (record.logs.length > 100) record.logs.shift(); });
+    observeConsole(record);
     page.on('dialog', dialog => { record.dialog = dialog; record.wake?.({ dialog: { type: dialog.type(), message: dialog.message(), defaultValue: dialog.defaultValue() } }); });
-    page.on('filechooser', chooser => { record.filechooser = chooser; });
     page.on('download', download => {
       const downloadId=randomUUID();record.downloads.set(downloadId,download);
       // Public Playwright path() resolves only after completion. Chromium's
@@ -143,8 +303,88 @@ export class BrowserActions {
     const pending = record.page.keyboard.up(key).then(() => { record.heldKeys.delete(key); }).finally(() => { record.keyReleases.delete(key); });
     record.keyReleases.set(key, pending); void pending.catch(() => {}); return pending;
   }
+  async releaseHeldKeys(record, chord) {
+    const errors = [];
+    for (const key of chord.slice().reverse()) if (record.heldKeys.has(key)) {
+      try { await this.releaseKey(record, key); } catch (error) { errors.push(error); }
+    }
+    if (errors.length) throw new AggregateError(errors, 'Browser key release failed: ' + errors.map(error => error.message).join('; '));
+  }
   queueInputRelease(record) {
-    return [...(record.heldTouch?[this.releaseTouch(record,true)]:[]), ...[...record.heldButtons].map(button => this.releaseButton(record, button)), ...[...record.heldKeys].map(key => this.releaseKey(record, key))];
+    return [...(record.heldTextKey?[this.releaseTextKey(record)]:[]), ...(record.heldTouch?[this.releaseTouch(record,true)]:[]), ...[...record.heldButtons].map(button => this.releaseButton(record, button)), ...[...record.heldKeys].map(key => this.releaseKey(record, key))];
+  }
+  async releaseTextKey(record) {
+    const held = record.heldTextKey;
+    if (!held) return;
+    if (!held.release) {
+      const pending = held.cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', ...held.params }).then(() => { if (record.heldTextKey === held) record.heldTextKey = null; }).finally(() => { if (held.release === pending) held.release = null; });
+      held.release = pending; void pending.catch(() => {});
+    }
+    return held.release;
+  }
+  async typeAccessibilityText(record, value, cdp = record.cdp, signal) {
+    if (typeof value !== 'string') throw new TypeError('AX typeText requires text');
+    for (const character of value) if (character < ' ' && !['\t', '\n', '\r'].includes(character)) throw new Error('AX typeText does not support control characters other than tab and newline');
+    let first = true;
+    for (const character of value.replaceAll(/\r\n?/g, '\n')) {
+      signal?.throwIfAborted();
+      const command = character === '\n' || character === '\t', held = first || command;
+      first = false;
+      const params = { key: command ? 'Unidentified' : character, windowsVirtualKeyCode: 0 };
+      try {
+        if (held) {
+          record.heldTextKey = { cdp, params };
+          await cdp.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', ...params, ...(command ? { commands: [character === '\n' ? 'insertParagraph' : 'insertTab'] } : {}) });
+          signal?.throwIfAborted();
+        }
+        if (!command) await cdp.send('Input.dispatchKeyEvent', { type: 'char', key: character, text: character, unmodifiedText: character });
+        signal?.throwIfAborted();
+      } finally { if (held) await this.releaseTextKey(record); }
+    }
+    signal?.throwIfAborted();
+  }
+  async pressBrowserKey(record, value, options = {}, signal) {
+    if (typeof value !== 'string' || !value) throw new Error('keypress requires at least one key');
+    const duration = inputDuration(options), chord = browserKey(value).split('+');
+    if (!duration) { await record.page.keyboard.press(chord.join('+')); return; }
+    try {
+      for (const key of chord) { signal?.throwIfAborted(); record.heldKeys.add(key); await record.page.keyboard.down(key); }
+      await delay(duration, undefined, { signal });
+    } finally { await this.releaseHeldKeys(record, chord); }
+  }
+  async clickBrowserTarget(record, handle, target, options = {}, signal, screenshotFrame) {
+    options ??= {};
+    if (options.key !== undefined && browserClipboardShortcutAction(options.key) !== null) throw new Error('Clipboard shortcuts cannot be held during a click. Use pressKey instead.');
+    const duration = inputDuration(options), button = ({ l: 'left', r: 'right', m: 'middle' })[options.mouseButton] ?? options.mouseButton ?? 'left';
+    const count = options.clickCount ?? 1, chord = options.key === undefined ? [] : browserKey(options.key).split('+');
+    if (!['left', 'right', 'middle'].includes(button)) throw new Error('mouseButton must be left, right or middle');
+    if (!Number.isInteger(count) || count <= 0) throw new Error('clickCount must be a positive integer');
+    if (!duration && !chord.length) {
+      if (this.emulationSettings(record.id)?.hasTouch && button === 'left' && count === 1) {
+        if (handle) await this.tapLocator(record, handle, {}, signal);
+        else { const [position] = await this.screenshotPoints(record, [target], screenshotFrame); await this.tap(record, position, signal); }
+      } else if (handle) await handle.click({ button, clickCount: count });
+      else { const [position] = await this.screenshotPoints(record, [target], screenshotFrame); signal?.throwIfAborted(); await record.page.mouse.click(position.x, position.y, { button, clickCount: count }); }
+      return;
+    }
+    let position;
+    if (handle) {
+      await handle.click({ button, trial: true });
+      const box = await handle.boundingBox();
+      if (!box) throw new Error('Click target has no visible bounds');
+      position = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    } else [position] = await this.screenshotPoints(record, [target], screenshotFrame);
+    try {
+      for (const key of chord) { signal?.throwIfAborted(); record.heldKeys.add(key); await record.page.keyboard.down(key); }
+      await record.page.mouse.move(position.x, position.y); record.pointer = position;
+      for (let clickCount = 1; clickCount <= count; clickCount++) {
+        signal?.throwIfAborted();
+        record.clickCounts ??= {}; record.clickCounts[button] = clickCount;
+        record.heldButtons.add(button);
+        try { await record.page.mouse.down({ button, clickCount }); if (duration) await delay(duration, undefined, { signal }); signal?.throwIfAborted(); }
+        finally { if (record.heldButtons.has(button)) await this.releaseButton(record, button); }
+      }
+    } finally { await this.releaseHeldKeys(record, chord); }
   }
   async touch(record,type,position){
     if(type==='touchStart')record.heldTouch=true;
@@ -188,31 +428,100 @@ export class BrowserActions {
       if (objectId) await cdp.send('Runtime.releaseObject', { objectId }).catch(() => {});
     }
   }
+  queueFrameSessionDetach(record, cdp) {
+    if (cdp === record.cdp) return;
+    record.frameBindingSessions?.get(cdp)?.();
+    record.frameBindingSessions?.delete(cdp);
+    const pending = cdp.detach().catch(() => {}).finally(() => record.frameBindingCleanup.delete(pending));
+    record.frameBindingCleanup.add(pending);
+    return pending;
+  }
+  invalidateFrameBindings(record, changed, session) {
+    record.frameBindingEpoch = (record.frameBindingEpoch ?? 0) + 1;
+    const seeds = session ? [...record.frames].filter(([, cdp]) => cdp === session).map(([frame]) => frame) : changed ? [changed] : [];
+    const all = !changed && !session || changed === record.page.mainFrame() || session === record.cdp;
+    const affected = frame => {
+      if (all || frame.isDetached()) return true;
+      for (let ancestor = frame; ancestor; ancestor = ancestor.parentFrame()) if (seeds.includes(ancestor)) return true;
+      return false;
+    };
+    const frames = new Set([...seeds, ...record.frames.keys(), ...record.frameBindingIds.keys(), ...record.page.frames(), ...[...record.elements.values()].map(ref => ref.frame)]);
+    const sessions = new Set();
+    for (const frame of frames) if (affected(frame)) {
+      const cdp = record.frames.get(frame);
+      if (cdp) sessions.add(cdp);
+      record.frames.delete(frame); record.frameBindingIds.delete(frame);
+      record.frameGenerations.set(frame, (record.frameGenerations.get(frame) ?? 0) + 1);
+    }
+    for (const [id, ref] of record.elements) if (affected(ref.frame)) record.elements.delete(id);
+    for (const cdp of sessions) if (cdp !== record.cdp && ![...record.frames.values()].includes(cdp)) this.queueFrameSessionDetach(record, cdp);
+  }
+  observeFrameSession(record, cdp) {
+    if (record.frameBindingSessions.has(cdp)) return;
+    const detached = event => {
+      const frame = [...record.frameBindingIds].find(([, id]) => id === event.frameId)?.[0];
+      record.generation++;
+      // A swap can happen before discovery has assigned a frame ID. A full
+      // invalidation prevents that in-flight discovery from caching old CDP.
+      this.invalidateFrameBindings(record, frame);
+    };
+    const disconnected = () => {
+      record.generation++;
+      cleanup(); record.frameBindingSessions.delete(cdp);
+      this.invalidateFrameBindings(record, undefined, cdp);
+    };
+    const cleanup = () => { cdp.removeListener('Page.frameDetached', detached); cdp.removeListener('close', disconnected); };
+    cdp.on('Page.frameDetached', detached); cdp.on('close', disconnected);
+    record.frameBindingSessions.set(cdp, cleanup);
+  }
   async frameBindings(record) {
+    const epoch = record.frameBindingEpoch ?? 0;
+    const current = frame => { if (epoch !== (record.frameBindingEpoch ?? 0) || frame?.isDetached()) throw stale(); };
+    const remember = async (frame, cdp, owned = false) => {
+      try { current(frame); }
+      catch (error) { if (owned) await this.queueFrameSessionDetach(record, cdp); throw error; }
+      record.frames.set(frame, cdp);
+      if (owned) {
+        this.observeFrameSession(record, cdp);
+        try { await cdp.send('Page.enable'); current(frame); }
+        catch (error) {
+          if (record.frames.get(frame) === cdp) record.frames.delete(frame);
+          await this.queueFrameSessionDetach(record, cdp);
+          throw error;
+        }
+      }
+    };
     const bindings = [], visited = new Set(), { frameTree } = await record.cdp.send('Page.getFrameTree');
+    current();
     const visit = async (tree, frame, cdp) => {
+      current(frame);
       if (visited.has(frame)) return;
       visited.add(frame);
+      record.frameBindingIds.set(frame, tree.frame.id);
       bindings.push({ frame, cdp, frameId: tree.frame.id });
       for (const child of tree.childFrames ?? []) {
         const { backendNodeId } = await cdp.send('DOM.getFrameOwner', { frameId: child.frame.id });
+        current(frame);
         const owner = await this.resolveElement(cdp, frame, backendNodeId);
         let inner;
-        try { inner = await owner.contentFrame(); } finally { await owner.dispose(); }
+        try { inner = await owner.contentFrame(); current(frame); } finally { await owner.dispose(); }
         if (!inner) throw stale();
         let innerCdp = record.frames.get(inner);
         if (!innerCdp) {
-          try { innerCdp = await record.page.context().newCDPSession(inner); }
+          let owned = false;
+          try { innerCdp = await record.page.context().newCDPSession(inner); owned = true; }
           catch (error) { if (!error.message.includes('part of the parent frame')) throw error; innerCdp = cdp; }
-          record.frames.set(inner, innerCdp);
+          await remember(inner, innerCdp, owned);
         }
+        current(inner);
         let innerTree = child;
         if (innerCdp !== cdp) {
           // Parent targets can expose only a shallow OOPIF descriptor. Its own
           // session has the complete subtree, including same-process children.
-          const current = await innerCdp.send('Page.getFrameTree');
-          if (current.frameTree.frame.id !== child.frame.id) throw stale();
-          innerTree = current.frameTree;
+          const subtree = await innerCdp.send('Page.getFrameTree');
+          current(inner);
+          if (subtree.frameTree.frame.id !== child.frame.id) throw stale();
+          innerTree = subtree.frameTree;
         }
         await visit(innerTree, inner, innerCdp);
       }
@@ -222,6 +531,7 @@ export class BrowserActions {
     // those through their own actual CDP sessions; URL matching is ambiguous
     // when several frames load the same document.
     for (const frame of record.page.frames()) {
+      current(frame);
       if (visited.has(frame)) continue;
       let cdp = record.frames.get(frame);
       if (!cdp) {
@@ -232,15 +542,18 @@ export class BrowserActions {
           if (error.message.includes('part of the parent frame')) throw Object.assign(stale(), { cause: error });
           throw error;
         }
-        record.frames.set(frame, cdp);
+        await remember(frame, cdp, true);
       }
+      current(frame);
       // A cached shared session still belongs to its ancestor. Its root tree
       // cannot be bound to this child; refresh discovery instead of assigning
       // parent AX nodes and opaque IDs to the wrong frame.
       if (bindings.some(binding => binding.cdp === cdp)) throw stale();
       const { frameTree: childTree } = await cdp.send('Page.getFrameTree');
+      current(frame);
       await visit(childTree, frame, cdp);
     }
+    current();
     return bindings;
   }
   async snapshot(record, options, signal, includeScreenshot = false) {
@@ -333,21 +646,140 @@ export class BrowserActions {
       return element;
     } catch (error) { throw Object.assign(stale(), { cause: error }); }
   }
-  locator(record, chain = []) {
+  async visibleLocator(locator) {
+    if (await locator.count() <= 1) return locator;
+    const visible = locator.filter({ visible: true });
+    return await visible.count() === 1 ? visible : locator;
+  }
+  async prepareInput(handle, { editable = false, remaining = () => 3000, signal } = {}) {
+    for (const state of ['visible', 'enabled', ...(editable ? ['editable'] : [])]) {
+      signal?.throwIfAborted();
+      await handle.waitForElementState(state, { timeout: remaining() });
+    }
+    await handle.scrollIntoViewIfNeeded({ timeout: remaining() });
+    await handle.focus();
+    if (!await handle.evaluate(element => element.getRootNode().activeElement === element)) throw new Error('Element is not focused');
+    signal?.throwIfAborted();
+  }
+  async clipboardInputToken(handle) {
+    const token = randomUUID();
+    await handle.evaluate((element, token) => {
+      let active = element.ownerDocument.activeElement;
+      while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+      if (active !== element) throw new Error('Element is not focused');
+      Object.defineProperty(element, '__opencuClipboardInputTargetToken', { configurable: true, writable: true, value: token });
+    }, token);
+    return token;
+  }
+  async ensureClipboardFrameFocus(page, frame, signal) {
+    const main = page.mainFrame();
+    for (let current = frame; current !== main;) {
+      signal?.throwIfAborted();
+      if (!current || current.isDetached()) throw stale();
+      const parent = current.parentFrame();
+      if (!parent || parent.isDetached()) throw stale();
+      const owner = await current.frameElement();
+      try {
+        const focused = await owner.evaluate(element => {
+          let active = element.ownerDocument.activeElement;
+          while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+          return element.isConnected && active === element;
+        });
+        if (!focused) throw new Error('Clipboard target frame is no longer focused');
+        if (current.isDetached() || current.parentFrame() !== parent) throw stale();
+      } finally { await owner.dispose(); }
+      current = parent;
+    }
+    signal?.throwIfAborted();
+    if (main.isDetached() || page.isClosed()) throw stale();
+  }
+  clipboardScope(sessionId) {
+    if (!this.clipboardScopes.has(sessionId)) this.clipboardScopes.set(sessionId, {});
+    return this.clipboardScopes.get(sessionId);
+  }
+  async releaseClipboardSession(sessionId, { dispose = false } = {}) {
+    const scope = this.clipboardScopes.get(sessionId);
+    if (!scope) return;
+    await cleanupBrowserClipboard(scope, { dispose, pages: [...this.clipboardPages] });
+    if (dispose && this.clipboardScopes.get(sessionId) === scope) this.clipboardScopes.delete(sessionId);
+  }
+  async disposeClipboardSession(sessionId) { return this.releaseClipboardSession(sessionId, { dispose: true }); }
+  pageAssetAuthorization(record, sessionId, signal) {
+    const generation = record.generation, pageUrl = record.page.url();
+    const provider = this.capabilityProviders.pageAssets ?? this.capabilityProviders.downloadMedia;
+    const isActive = () => !this.closing && !record.page.isClosed() && record.generation === generation && record.page.url() === pageUrl;
+    const authorize = async source => {
+      signal?.throwIfAborted();
+      if (!isActive()) throw stale();
+      // DSH authorizes the containing tool call. An installed file policy may
+      // narrow that grant; no Codex per-origin approval is implied here.
+      if (provider) {
+        if (typeof provider.ensureDownloadSourcePolicyAllowed !== 'function') throw new Error('The configured page asset policy cannot authorize downloads');
+        const result = await provider.ensureDownloadSourcePolicyAllowed({ record, sessionId, source, pageUrl, signal, isActive });
+        if (result === false || result?.allowed === false) throw Object.assign(new Error('The configured file policy denied this page asset export'), { code: 'FILE_POLICY_DENIED' });
+      }
+      signal?.throwIfAborted();
+      if (!isActive()) throw stale();
+    };
+    return { ensureDownloadAllowed: authorize, ensureAssetAllowed: authorize, ensureFallbackFetchAllowed: authorize };
+  }
+  async focusedFrame(page) {
+    let frame = page.mainFrame();
+    for (;;) {
+      const handle = await frame.evaluateHandle(() => {
+        let element = document.activeElement;
+        while (element?.shadowRoot?.activeElement) element = element.shadowRoot.activeElement;
+        return element;
+      });
+      try {
+        const child = await handle.asElement()?.contentFrame();
+        if (!child) return frame;
+        frame = child;
+      } finally { await handle.dispose(); }
+    }
+  }
+  async locator(record, chain = [], { resolveFrames = false, remaining = () => 3000, signal, scope } = {}) {
     let locator = record.page;
-    for (const { method, args = [] } of chain) {
+    const nestedLocator = async value => {
+      const nested = value?.$locator;
+      if (!nested || nested.id !== record.id || nested.browserId !== undefined && nested.browserId !== this.id || !Array.isArray(nested.chain)) throw new Error('Nested locators must belong to the same browser tab.');
+      return this.locator(record, nested.chain, { resolveFrames, remaining, signal, scope: { frame: record.page.mainFrame() } });
+    };
+    for (let step = 0; step < chain.length; step++) {
+      signal?.throwIfAborted();
+      const { method, args = [] } = chain[step];
       if (!supportedLocator.has(method)) throw new Error(`Unsupported locator method: ${method}`);
       const parameters = args.slice(), index = method === 'filter' ? 0 : method === 'locator' ? 1 : -1;
       if (index >= 0 && parameters[index]) {
         const options = { ...parameters[index] };
         for (const key of ['has', 'hasNot']) if (options[key] !== undefined) {
-          const nested = options[key]?.$locator;
-          if (!nested || nested.id !== record.id || !Array.isArray(nested.chain)) throw new Error('Nested locators must belong to the same browser tab.');
-          options[key] = this.locator(record, nested.chain);
+          options[key] = await nestedLocator(options[key]);
         }
+        if (options.visible !== undefined && typeof options.visible !== 'boolean') throw new Error('locator.filter visible must be a boolean');
         parameters[index] = options;
       }
-      locator = locator[method](...parameters);
+      if (method === 'and' || method === 'or') parameters[0] = await nestedLocator(parameters[0]);
+      if (method === 'frameLocator' && resolveFrames) {
+        let frame = locator.locator(parameters[0]);
+        while (['nth', 'first', 'last'].includes(chain[step + 1]?.method)) {
+          const next = chain[++step];
+          frame = frame[next.method](...(next.args ?? []));
+        }
+        // Resolve every iframe boundary by identity and visibility. Matching
+        // frames can share a URL; Playwright carries their actual frame route.
+        if (!await frame.count()) await frame.first().waitFor({ state: 'attached', timeout: remaining() });
+        frame = await this.visibleLocator(frame);
+        await frame.waitFor({ state: 'visible', timeout: remaining() });
+        await frame.scrollIntoViewIfNeeded({ timeout: remaining() });
+        const handle = await frame.elementHandle({ timeout: remaining() });
+        try {
+          const inner = handle && await handle.contentFrame();
+          if (!inner) throw new Error('Frame is not connected');
+          locator = inner;
+          if (scope) scope.frame = inner;
+        } finally { await handle?.dispose(); }
+      } else if (method === 'locator' && parameters[1]) locator = locator.locator(parameters[0]).filter(parameters[1]);
+      else locator = locator[method](...parameters);
     }
     return locator;
   }
@@ -365,8 +797,7 @@ export class BrowserActions {
   async capture(record, options = {}, geometry, signal) {
     if (options.fullPage) {
       const current = geometry ?? await screenshotGeometry(record);
-      if (current.scale !== 1) throw new Error('Full-page capture is unavailable while pinch zoom is active. Use a viewport screenshot.');
-      return captureFullPage(record);
+      return captureFullPage(record, current, signal);
     }
     return captureViewport(record, geometry ?? await screenshotGeometry(record), signal);
   }
@@ -381,7 +812,7 @@ export class BrowserActions {
       if(record.dialog||record.nativeDialog)throw new Error('Answer the open JavaScript dialog before changing the viewport.');
       const geometry=await screenshotGeometry(record),existing=this.emulations.get(record.id);
       if(!record.viewportOverride){record.viewportNativeSize=existing?.nativeSize??{width:Math.round(geometry.width*geometry.scale),height:Math.round(geometry.height*geometry.scale)};record.viewportNativeDpr=existing?.nativeDpr??geometry.devicePixelRatio/geometry.zoom;}
-      await applyMetrics(this,record,size);
+      await applyMetrics(this,record,size,undefined,{mode});
       record.viewportOverride=true;record.viewportMode=mode;record.viewportSize={width:size.width,height:size.height};
       this.viewportOwners.set(record.id,record);record.screenshotFrame=null;
     });}finally{record.pendingViewportSets--;}
@@ -395,7 +826,7 @@ export class BrowserActions {
       if(this.viewportOwners.get(record.id)===record){
         const emulation=this.emulations.get(record.id);
         if(!record.page.isClosed()){
-          if(emulation&&('deviceScaleFactor' in emulation.settings||'isMobile' in emulation.settings))await applyMetrics(this,record,record.viewportNativeSize??emulation.nativeSize);
+          if(emulation&&('deviceScaleFactor' in emulation.settings||'isMobile' in emulation.settings))await applyMetrics(this,record,record.viewportNativeSize??emulation.nativeSize,undefined,{mode:null});
           else await record.cdp.send('Emulation.clearDeviceMetricsOverride');
         }
         this.viewportOwners.delete(record.id);
@@ -445,15 +876,13 @@ export class BrowserActions {
     if (!frame) return points;
     const current = await screenshotGeometry(record);
     if (!sameScreenshotGeometry(frame, current)) throw staleScreenshot();
-    // CDP already translates a visual-viewport coordinate by the pinch pan.
-    // Adding offsetX/Y here would apply that translation a second time.
     return points.map(p => {
-      const result=frame.fullPage?{x:p.x-frame.pageX,y:p.y-frame.pageY}:{x:p.x/(frame.region?.scale??frame.scale)+(frame.region?.x??0),y:p.y/(frame.region?.scale??frame.scale)+(frame.region?.y??0)};
+      const result=screenshotPointToViewport(p,frame);
       if(result.x<0||result.y<0||result.x>=current.width||result.y>=current.height)throw new Error('This screenshot point is outside the visible viewport. Scroll to that area and take a fresh screenshot before clicking.');
       return result;
     });
   }
-  async invoke(sessionId, id, method, args = [], signal, screenshotFrame) {
+  async invoke(sessionId, id, method, args = [], signal, screenshotFrame, operationContext) {
     signal?.throwIfAborted();
     const record = await this.target(sessionId, id), page = record.page;
     const navigating = ['goto', 'back', 'forward', 'reload'].includes(method);
@@ -467,17 +896,26 @@ export class BrowserActions {
       const emulation=this.emulationPresets.get(sessionId);
       if(emulation&&record.emulationPreset!==emulation.id&&!method.startsWith('emulation.')){await this.setEmulation(record,emulation.settings,signal);record.emulationPreset=emulation.id;}
       if (method === 'getAXState') return await this.snapshot(record, args[0], signal);
+      if (method === 'playwright.domSnapshot' || method === 'domSnapshot') return await browserDomSnapshot(record, signal, { isIabBackend: this.id === 'browser' || this.info?.type === 'iab' });
       if (method === 'getScreenshot'||method==='screenshot') return await this.observeScreenshot(record, args[0], signal);
       if (method === 'getAXStateAndScreenshot') return await this.snapshot(record, args[0], signal, true);
       if (method === 'pageAssets.list') return await listPageAssets(record, signal);
       if (method === 'network.list') return listNetwork(record, args[0]);
       if (method === 'network.request') return await networkRequest(record, args[0], signal);
       if (method === 'network.responseBody') return await networkResponseBody(record, args[0], signal);
-      if (method === 'pageAssets.bundle') return await bundlePageAssets(record, args[0], signal);
+      if (method === 'waitForEvent') return await waitForBrowserEvent(record, args[0], args[1], signal, this.capabilityProviders.downloadMedia, operationContext?.onReady);
+      if (method === 'download.path') return downloadPath(record, args[0]);
+      if (method === 'cua.downloadMedia') return await downloadMediaAtPoint(record, args[0], signal, this.capabilityProviders.downloadMedia);
+      if (method === 'dom_cua.downloadMedia') return await downloadMediaForDomNode(record, args[0], signal, this.capabilityProviders.downloadMedia);
+      if (method === 'fileChooser.setFiles') { await setFileChooserFiles(record, args[0], args[1], args[2], signal, this.capabilityProviders.downloadMedia); return null; }
+      if (method === 'pageAssets.bundle') return await bundlePageAssets(record, args[0], signal, this.pageAssetAuthorization(record, sessionId, signal));
       if (method === 'content.export') return await exportPageContent(record, signal, () => this.frameBindings(record));
-      if (method === 'capabilities.list') return [{ id: 'pageAssets', description: 'Inventory and export assets already loaded by the current page.' }, ...(await webMcpAvailable(record, signal) ? [{ id: 'webmcp', description: 'Discover and invoke page-defined tools using the browser WebMCP protocol.' }] : [])];
+      if (method === 'content.exportGsuite' || method === 'exportGsuite') return await exportGsuiteContent(record, args[0], signal);
+      if (method === 'content.exportYouTubeTranscript' || method === 'exportYouTubeTranscript') return await exportYouTubeTranscript(record, signal);
+      if (method === 'capabilities.list') return [{ id: 'pageAssets', description: 'Inventory and export assets already loaded by the current page.' }, ...(await webMcpAvailable(record, signal) ? [{ id: 'webmcp', description: 'Discover and invoke page-defined tools using the browser WebMCP protocol.' }] : []), ...await record.tabCapabilities.list()];
+      if (['cdp.send', 'cdp.readEvents', 'browserAuth.request', 'botDetection.report'].includes(method)) return await record.tabCapabilities.dispatch(method, args, signal);
       if (method === 'webmcp.fetchTools') return await fetchWebMcpTools(record, signal);
-      if (method === 'webmcp.call') return await callWebMcpTool(record, args[0], args[1], args[2], signal);
+      if (method === 'webmcp.call') return await callWebMcpTool(record, args[0], args[1], args[2], signal, args[3]);
       if (method === 'dialog.get') return record.dialog ? { type: record.dialog.type(), message: record.dialog.message(), defaultValue: record.dialog.defaultValue() } : null;
       if (method === 'dialog.accept' || method === 'dialog.dismiss') {
         if (!record.dialog) throw new Error('No dialog is open');
@@ -494,6 +932,10 @@ export class BrowserActions {
           }
         });
       }
+      if (method === 'downloads.list' && typeof this.capabilityProviders.downloadMedia?.listDownloads === 'function')
+        return await this.capabilityProviders.downloadMedia.listDownloads({ record, signal });
+      if (method === 'downloads.save' && typeof this.capabilityProviders.downloadMedia?.saveDownload === 'function')
+        return await this.capabilityProviders.downloadMedia.saveDownload({ record, id: args[0], path: args[1], signal });
       if (method === 'downloads.list') return [...record.downloads].map(([id,d]) => ({ id, filename: d.suggestedFilename(), url: d.url() }));
       if (method === 'downloads.save') {
         const d = record.downloads.get(args[0]); if (!d) throw new Error('Unknown download');
@@ -507,17 +949,21 @@ export class BrowserActions {
         // The intercepted chooser event can arrive just after click resolves.
         // Wait for that in-flight event rather than requiring another model call.
         if (!record.filechooser) {
-          try { await page.waitForEvent('filechooser', { timeout: 1000 }); }
+          try { record.filechooser = await page.waitForEvent('filechooser', { timeout: 1000 }); }
           catch (error) { signal?.throwIfAborted(); if (error.name === 'TimeoutError') throw new Error('No file chooser is open'); throw error; }
         }
         signal?.throwIfAborted();
         if (!record.filechooser) throw new Error('No file chooser is open');
         const chooser = record.filechooser;
-        await chooser.setFiles(args[0]);
+        await setLocatorInputFiles(record, chooser.element(), args[0], {}, signal, this.capabilityProviders.downloadMedia);
         if (record.filechooser === chooser) record.filechooser = null;
         return null;
       }
-      if (method === 'logs') return record.logs.slice();
+      if (method === 'logs' || method === 'dev.logs') return await listConsole(record, args[0]);
+      if (method === 'clipboard.readText') return await browserClipboardReadText(page, this.clipboardScope(sessionId), signal);
+      if (method === 'clipboard.writeText') { await browserClipboardWriteText(page, args[0], this.clipboardScope(sessionId), signal); return null; }
+      if (method === 'clipboard.read') return await browserClipboardRead(page, this.clipboardScope(sessionId), signal);
+      if (method === 'clipboard.write') { await browserClipboardWrite(page, args[0], this.clipboardScope(sessionId), signal); return null; }
       if (method === 'markDeliverable' || method === 'markHandoff') { this.owners.get(id).keep = true; return null; }
       if (method === 'viewport.set') {
         await this.setViewport(record,args[0]);return null;
@@ -535,25 +981,115 @@ export class BrowserActions {
           await page.waitForFunction(() => document.readyState !== 'loading'); return null;
         }
         if (method === 'reload') { await page.reload({ waitUntil: 'domcontentloaded' }); return null; }
-        if (method === 'pressKey') { await page.keyboard.press(browserKey(args[0])); return null; }
-        if (method === 'typeText' || method === 'paste') { await page.keyboard.insertText(args[0]); return null; }
+        if (method === 'pressKey') {
+          const hasTarget = args.length > 1 && (args[0] === null || typeof args[0] === 'number');
+          const handle = hasTarget && args[0] !== null ? await this.element(record, args[0]) : null;
+          const options = (hasTarget ? args[2] : args[1]) ?? {};
+          const key = hasTarget ? args[1] : args[0];
+          try {
+            const durationMs = inputDuration(options);
+            if (handle) await this.prepareInput(handle, { signal });
+            if (browserClipboardShortcutAction(key) !== null) {
+              const frame = handle ? await handle.ownerFrame() : await this.focusedFrame(page);
+              if (!frame || frame.isDetached()) throw stale();
+              const inputTargetToken = handle ? await this.clipboardInputToken(handle) : undefined;
+              const ensureFocus = () => this.ensureClipboardFrameFocus(page, frame, signal);
+              if (await browserClipboardShortcut(frame, key, this.clipboardScope(sessionId), signal, { durationMs, inputTargetToken, ensureFocus })) return null;
+            }
+            await this.pressBrowserKey(record, key, options, signal); return null;
+          }
+          finally { await handle?.dispose(); }
+        }
+        if (method === 'typeText') {
+          const hasTarget = args.length > 1 && (args[0] === null || typeof args[0] === 'number');
+          const handle = hasTarget && args[0] !== null ? await this.element(record, args[0]) : null;
+          const ref = hasTarget && args[0] !== null ? record.elements.get(args[0]) : null;
+          try { if (handle) await this.prepareInput(handle, { editable: true, signal }); await this.typeAccessibilityText(record, hasTarget ? args[1] : args[0], ref?.cdp ?? record.cdp, signal); return null; }
+          finally { await handle?.dispose(); }
+        }
+        if (method === 'paste') {
+          const hasTarget = args.length > 1 && (args[0] === null || typeof args[0] === 'number');
+          const value = hasTarget ? args[1] : args[0], options = (hasTarget ? args[2] : args[1]) ?? {};
+          const handle = hasTarget && args[0] !== null ? await this.element(record, args[0]) : null;
+          try {
+            if (handle) await this.prepareInput(handle, { editable: true, signal });
+            const frame = handle ? await handle.ownerFrame() : await this.focusedFrame(page);
+            if (!frame || frame.isDetached()) throw stale();
+            const inputTargetToken = handle ? await this.clipboardInputToken(handle) : undefined;
+            const ensureFocus = () => this.ensureClipboardFrameFocus(page, frame, signal);
+            await browserClipboardPaste(frame, value, { ...options, inputTargetToken, ensureFocus }, this.clipboardScope(sessionId), signal);
+            return null;
+          } finally { await handle?.dispose(); }
+        }
         if (method === 'locator') {
           const [chain, action, actionArgs = []] = args;
-          if (![...readMethods, 'evaluate','evaluateAll','click','dblclick','fill','press','type','pressSequentially','check','uncheck','setChecked','selectOption','setInputFiles','hover','scrollIntoViewIfNeeded','focus','blur'].includes(action)) throw new Error(`Unsupported locator action: ${action}`);
-          const locator = this.locator(record, chain);
-          if (['evaluate','evaluateAll'].includes(action) && actionArgs[0]?.$function) {
-            return locator[action]((element,{source,arg}) => (0,eval)('(' + source + ')')(element,arg), {source:actionArgs[0].$function,arg:actionArgs[1]});
+          if (![...readMethods, 'evaluate','evaluateAll','click','dblclick','fill','press','type','pressSequentially','check','uncheck','setChecked','selectOption','setInputFiles','hover','scrollIntoViewIfNeeded','focus','blur','downloadMedia'].includes(action)) throw new Error(`Unsupported locator action: ${action}`);
+          const { parameters, timeout } = locatorArguments(action, actionArgs), deadline = timeout > 0 ? Date.now() + timeout : null;
+          const remaining = () => {
+            if (deadline === null) return 0;
+            const duration = deadline - Date.now();
+            if (duration <= 0) throw new Error(`Timed out after ${timeout}ms while resolving locator`);
+            return duration;
+          };
+          const scope = { frame: page.mainFrame() };
+          let locator = await this.locator(record, chain, { resolveFrames: true, remaining, signal, scope });
+          if (firstMatchMethods.has(action)) {
+            if (action !== 'waitFor' && !await locator.count()) return false;
+            locator = locator.first();
+          } else if (!collectionMethods.has(action)) locator = await this.visibleLocator(locator);
+          if (!noOptionMethods.has(action)) {
+            const index = ['evaluate', 'evaluateAll'].includes(action) ? 2 : valueOptionMethods.has(action) ? 1 : 0;
+            parameters[index].timeout = remaining();
           }
-          const options=actionArgs[0]??{};
+          if (action === 'selectOption') parameters[0] = selectOptions(parameters[0]);
+          if (action === 'setChecked' && typeof parameters[0] !== 'boolean') throw new Error('locator.setChecked requires a boolean');
+          if (action === 'downloadMedia') {
+            const element = await locator.elementHandle({ timeout: remaining() });
+            if (!element) throw new Error('No element matched selector');
+            try {
+              const frame = await element.ownerFrame(), binding = (await this.frameBindings(record)).find(binding => binding.frame === frame);
+              if (!binding) throw new Error('Could not determine the media frame');
+              return await downloadLocatorMedia(record, element, { frameId: binding.frameId, timeoutMs: remaining() || 120000 }, signal, this.capabilityProviders.downloadMedia);
+            } finally { await element.dispose(); }
+          }
+          if (['type', 'press', 'pressSequentially'].includes(action)) {
+            if (typeof parameters[0] !== 'string' || action === 'press' && !parameters[0]) throw new Error(`locator.${action} requires a string value`);
+            const handle = await locator.elementHandle({ timeout: remaining() });
+            if (!handle) throw new Error('No element matched selector');
+            try {
+              await this.prepareInput(handle, { editable: action !== 'press', remaining, signal });
+              if (action === 'type') await page.keyboard.insertText(parameters[0]);
+              else if (action === 'press') {
+                let shortcut = false;
+                if (browserClipboardShortcutAction(parameters[0]) !== null) {
+                  const frame = await handle.ownerFrame();
+                  if (!frame || frame.isDetached()) throw stale();
+                  const inputTargetToken = await this.clipboardInputToken(handle);
+                  const ensureFocus = () => this.ensureClipboardFrameFocus(page, frame, signal);
+                  shortcut = await browserClipboardShortcut(frame, parameters[0], this.clipboardScope(sessionId), signal, { inputTargetToken, ensureFocus });
+                }
+                if (!shortcut) await handle.press(browserKey(parameters[0]), parameters[1]);
+              }
+              else await handle.type(parameters[0], { ...parameters[1], delay: parameters[1]?.delay ?? 50 });
+              return null;
+            } finally { await handle.dispose(); }
+          }
+          if (action === 'setInputFiles') {
+            const element = await locator.elementHandle({ timeout: remaining() });
+            if (!element) throw new Error('No file input matched the selector');
+            try { await setLocatorInputFiles(record, element, parameters[0], { ...parameters[1], timeoutMs: remaining() }, signal, this.capabilityProviders.downloadMedia); }
+            finally { await element.dispose(); }
+            return null;
+          }
+          if (['evaluate','evaluateAll'].includes(action)) return await evaluateReadonly(record, actionArgs[0], actionArgs[1], { ...actionArgs[2], timeoutMs: remaining() || 3000 }, { locator, all: action === 'evaluateAll', frame: scope.frame, frameBindings: () => this.frameBindings(record), signal });
+          const options=parameters[0]??{};
           if(action==='click'&&this.emulationSettings(id)?.hasTouch&&(!options.button||options.button==='left')&&(!options.clickCount||options.clickCount===1)&&!options.trial&&!options.modifiers?.length){await this.tapLocator(record,locator,options,signal);return null;}
-          const result = await locator[action](...actionArgs); return result ?? null;
+          const result = await locator[action](...parameters); return action === 'selectOption' ? null : result ?? null;
         }
         if (method === 'evaluate') {
-          if (args[0]?.$function) return page.evaluate(({source,arg}) => (0,eval)('(' + source + ')')(arg), {source:args[0].$function,arg:args[1]});
-          return page.evaluate(args[0], args[1]);
+          return await evaluateReadonly(record, args[0], args[1], args[2], { signal });
         }
-        if (method === 'waitForLoadState') { await page.waitForLoadState(...args); return null; }
-        if (method === 'waitForURL') { await page.waitForURL(...args); return null; }
+        if (['waitForLoadState', 'waitForURL', 'waitForTimeout'].includes(method)) { await waitForBrowser(record, method, args, signal); return null; }
         if (method === 'url') return page.url();
         if (method === 'title') return page.title();
         if (method === 'drag') {
@@ -572,14 +1108,12 @@ export class BrowserActions {
         try {
           if (typeof args[0] === 'number') handle = await this.element(record,args[0]);
           if (method === 'click') {
-            const options = { button: args[1]?.mouseButton ?? 'left', clickCount: args[1]?.clickCount ?? 1 };
-            if(this.emulationSettings(id)?.hasTouch&&options.button==='left'&&options.clickCount===1){
-              if(handle)await this.tapLocator(record,handle,{},signal);else{const [p]=await this.screenshotPoints(record,[args[0]],screenshotFrame);await this.tap(record,p,signal);}
-            }else if (handle) await handle.click(options); else { const [p] = await this.screenshotPoints(record, [args[0]], screenshotFrame); signal?.throwIfAborted(); await page.mouse.click(p.x,p.y,options); }
+            await this.clickBrowserTarget(record, handle, args[0], args[1], signal, screenshotFrame);
           } else if (method === 'selectText') {
             if (!handle) throw new Error('selectText requires an observed element id');
             await handle.evaluate((element, { text, options }) => {
-              const { prefix, suffix, selectionType = 'select' } = options;
+              const { prefix, suffix } = options;
+              const selectionType = ({ text: 'select', cursor_before: 'before', cursor_after: 'after' })[options.selectionType] ?? options.selectionType ?? 'select';
               if (typeof text !== 'string' || !text.length) throw new Error('selectText requires non-empty text');
               if (!['select', 'before', 'after'].includes(selectionType)) throw new Error('selectionType must be select, before or after');
               if ((prefix !== undefined && typeof prefix !== 'string') || (suffix !== undefined && typeof suffix !== 'string')) throw new Error('prefix and suffix must be strings');
@@ -636,10 +1170,11 @@ export class BrowserActions {
             }, { text: args[1], options: args[2] ?? {} });
           } else if (method === 'setValue') {
             if (!handle) throw new Error('setValue requires an observed element id');
-            const kind = record.elements.get(args[0]).role;
-            if (kind === 'checkbox' || kind === 'switch') await handle.setChecked(['1','true',true,1].includes(args[1]));
-            else if (kind === 'combobox') await handle.selectOption(args[1]);
-            else await handle.fill(String(args[1]));
+            const value = String(args[1]);
+            if (await handle.evaluate(setAccessibilityValue, value) === 'needs-click') {
+              await handle.click({ timeout: 3000 });
+              if (await handle.evaluate(setAccessibilityValue, value) !== 'done') throw new Error('Tab did not become selected');
+            }
           } else if (method === 'scroll') {
             const box = handle ? await handle.boundingBox() : null, p = handle ? box && { x:box.x+box.width/2,y:box.y+box.height/2 } : (await this.screenshotPoints(record, [args[0]], screenshotFrame))[0];
             if (!p) throw new Error('Scroll target has no visible bounds');

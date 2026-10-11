@@ -4,12 +4,16 @@ export function addressToUrl(value) {
   if (typeof value !== 'string' || value.length > 8192) throw new Error('网址过长或无效');
   const address = value.trim();
   if (!address) return 'about:blank';
-  if (/^(?:localhost|127\.\d+\.\d+\.\d+|\[::1\])(?::\d+)?(?:[/?#]|$)/i.test(address)) return new URL('http://' + address).href;
+  if (/^(?:localhost|[\w.-]+\.localhost|0\.0\.0\.0|127\.\d+\.\d+\.\d+|\[::1\])(?::\d+)?(?:[/?#]|$)/i.test(address)) return new URL('http://' + address).href;
+  if (!/\s/.test(address) && /^\[[^\]]+\](?::\d+)?(?:[/?#]|$)/.test(address)) {
+    try { return new URL('https://' + address).href; } catch {}
+  }
+  if (!/\s/.test(address) && /^[^:/?#@]+:\d+(?:[/?#]|$)/.test(address)) return new URL('https://' + address).href;
   if (/^(?:[\w-]+\.)+[\w-]+(?::\d+)?(?:[/?#]|$)/i.test(address)) return new URL('https://' + address).href;
   if (/^[a-z][a-z\d+.-]*:/i.test(address)) {
     const parsed = new URL(address);
     if (!['http:', 'https:', 'file:'].includes(parsed.protocol) && parsed.href !== 'about:blank') throw new Error('此地址类型不能在浏览器中打开');
     return parsed.href;
   }
-  return 'https://www.google.com/search?q=' + encodeURIComponent(address);
+  return 'https://www.google.com/search?' + new URLSearchParams({q:address}).toString();
 }

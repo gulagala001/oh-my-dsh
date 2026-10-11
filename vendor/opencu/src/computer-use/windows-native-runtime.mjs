@@ -1,11 +1,12 @@
 import { runFile as run } from './run-file.mjs';
-import { existsSync, readFileSync } from 'node:fs';
-import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, rmdir, stat, writeFile } from 'node:fs/promises';
+import { existsSync, lstatSync, readFileSync } from 'node:fs';
+import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, rmdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createHash, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { windowsNativeBuild } from './windows-native-build.mjs';
+import { installPackagedWindowsNative, windowsNativeArtifactFiles } from './windows-native-prebuilt.mjs';
 import { nativeLock } from './native-lock.mjs';
 import { McpClient } from './mcp-client.mjs';
 
@@ -13,11 +14,19 @@ const owner = 'trisoul-x-windows-desktop';
 const generation = /^[a-f0-9]{64}-[a-f0-9-]{36}$/;
 
 export class WindowsNativeRuntime {
-  constructor(directory, { buildInfo = windowsNativeBuild, compile, inspect, probe, lock = nativeLock } = {}) {
+  constructor(directory, { buildInfo = windowsNativeBuild, compile, inspect, probe, lock = nativeLock,
+    allowSourceBuild = process.env.OPENCU_NATIVE_SOURCE_BUILD === '1' } = {}) {
+    if (typeof allowSourceBuild !== 'boolean') throw new TypeError('Windows source build permission must be a boolean');
     this.directory = join(directory, 'windows-desktop'); this.buildInfo = buildInfo; this.lock = lock;
-    this.compile = compile ?? (async output => {
-      try { await run(process.execPath, [fileURLToPath(new URL('../../scripts/build-computer-use-windows-native.mjs', import.meta.url))], { windowsHide: true, timeout: 180000, maxBuffer: 2 * 1024 * 1024, env: { ...process.env, TRISOUL_CU_WINDOWS_NATIVE_OUTPUT: output } }); }
-      catch (error) { throw new Error(error.killed ? 'Windows 桌面运行时编译超时，请重试' : 'Windows 桌面运行时编译失败，请确认已安装 .NET 10 SDK，并可访问 NuGet'); }
+    this.compile = compile ?? (async (output, expected) => {
+      expected ??= await this.buildInfo();
+      const packaged = await installPackagedWindowsNative(output, expected);
+      if (packaged) return packaged;
+      if (!allowSourceBuild) throw Object.assign(new Error('当前插件包缺少匹配的 Windows 预构建桌面程序，请安装包含当前平台运行时的完整插件包。'), { code: 'WINDOWS_NATIVE_ARTIFACT_MISSING' });
+      try { await run(process.execPath, [fileURLToPath(new URL('../../scripts/build-computer-use-windows-native.mjs', import.meta.url))], { windowsHide: true, timeout: 180000, maxBuffer: 2 * 1024 * 1024, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', TRISOUL_CU_WINDOWS_ARCH: expected.arch, TRISOUL_CU_WINDOWS_NATIVE_OUTPUT: output } }); }
+      catch (error) { throw new Error(error.killed ? 'Windows 桌面源码开发构建超时，请重试' : 'Windows 桌面源码开发构建失败，请确认开发环境已安装 .NET 10 SDK，并可访问 NuGet'); }
+      await windowsNativeArtifactFiles(output, expected);
+      return { provider: 'source-development-build' };
     });
     this.inspect = inspect ?? (async binary => JSON.parse((await run(binary, ['info'], { windowsHide: true, timeout: 5000, maxBuffer: 65536 })).stdout));
     this.probe = probe ?? (async binary => {
@@ -26,23 +35,35 @@ export class WindowsNativeRuntime {
     });
   }
   pointer() {
-    try { const value = JSON.parse(readFileSync(join(this.directory, 'current.json'), 'utf8')); return value.owner === owner && generation.test(value.directory) ? value : null; }
+    try {
+      const path = join(this.directory, 'current.json'), info = lstatSync(path);
+      if (!info.isFile() || info.isSymbolicLink() || info.size > 32 * 1024) throw new Error('Windows 桌面运行时安装指针不是独立普通文件');
+      const value = JSON.parse(readFileSync(path, 'utf8')); return value.owner === owner && generation.test(value.directory) ? value : null;
+    }
     catch (error) { if (error.code === 'ENOENT' || error instanceof SyntaxError) return null; throw error; }
   }
   binary() { const current = this.pointer(); return current ? join(this.directory, current.directory, 'OhMyDsh.Desktop.exe') : null; }
   async installedInfo() {
     const pointer = this.pointer(), binary = pointer ? join(this.directory, pointer.directory, 'OhMyDsh.Desktop.exe') : null;
     if (!binary || !existsSync(binary)) return null;
-    const record = JSON.parse(await readFile(join(this.directory, pointer.directory, 'build.json'), 'utf8'));
+    const directory = join(this.directory, pointer.directory), metadata = join(directory, 'build.json');
+    const root = await lstat(this.directory), folder = await lstat(directory), marker = await lstat(metadata), file = await lstat(binary);
+    if (!root.isDirectory() || root.isSymbolicLink() || !folder.isDirectory() || folder.isSymbolicLink()
+      || !marker.isFile() || marker.isSymbolicLink() || marker.size > 1024 * 1024
+      || !file.isFile() || file.isSymbolicLink() || file.size > 512 * 1024 * 1024) throw new Error('Windows 桌面运行时安装文件路径不是独立普通文件');
+    const record = JSON.parse(await readFile(metadata, 'utf8'));
     if (record.owner !== owner || record.protocol !== 1) throw new Error('桌面控制安装记录不属于匹配的应用运行时');
-    const file = await stat(binary), identity = [binary, file.dev, file.ino, file.size, file.mtimeMs, file.ctimeMs].join(':');
+    if (!/^[a-f0-9]{64}$/.test(record.build ?? '') || !/^[a-f0-9]{64}$/.test(record.sha256 ?? '')
+      || !pointer.directory.startsWith(record.build + '-') || record.published === false) throw new Error('Windows 桌面运行时身份或版本与安装记录不一致');
+    const identity = [binary, file.dev, file.ino, file.size, file.mtimeMs, file.ctimeMs].join(':');
     if (this.verified?.identity !== identity || this.verified.sha256 !== record.sha256 || this.verified.build !== record.build) {
       if (createHash('sha256').update(await readFile(binary)).digest('hex') !== record.sha256) throw new Error('Windows 桌面运行时文件已变化，请更新并修复安装');
       const info = await this.inspect(binary);
       if (info.name !== 'oh-my-dsh-windows-desktop' || info.protocol !== 1 || info.build !== record.build) throw new Error('Windows 桌面运行时身份或版本与安装记录不一致');
       this.verified = { identity, sha256: record.sha256, build: record.build };
     }
-    return { binary, identity, build: record.build, version: record.version, protocol: record.protocol, displayName: 'Oh My DSH Computer Use' };
+    return { binary, identity, build: record.build, version: record.version, protocol: record.protocol,
+      ...(record.provider ? { provider: record.provider } : {}), displayName: 'Oh My DSH Computer Use' };
   }
   async install({ beforeReplace } = {}) {
     if (this.removing) throw new Error('Windows 桌面运行时正在移除，请等待完成');
@@ -54,10 +75,17 @@ export class WindowsNativeRuntime {
     let initial; try { initial = await this.installedInfo(); } catch { initial = null; }
     if (initial?.build === expected.build) return initial;
     await mkdir(this.directory, { recursive: true });
+    const directory = await lstat(this.directory);
+    if (!directory.isDirectory() || directory.isSymbolicLink()) throw new Error('Windows 桌面运行时目录不是独立目录，未修改');
     const marker = join(this.directory, 'owner.json');
     if (!existsSync(marker) && (await readdir(this.directory)).length) throw new Error('Windows 桌面运行时目录已有其他内容，未覆盖');
     try { await writeFile(marker, JSON.stringify({ owner }) + '\n', { flag: 'wx' }); }
-    catch (error) { if (error.code !== 'EEXIST' || JSON.parse(await readFile(marker, 'utf8')).owner !== owner) throw new Error('Windows 桌面运行时目录不属于当前应用'); }
+    catch (error) {
+      if (error.code !== 'EEXIST') throw new Error('Windows 桌面运行时目录不属于当前应用');
+      const file = await lstat(marker);
+      if (!file.isFile() || file.isSymbolicLink() || file.size > 32 * 1024
+        || JSON.parse(await readFile(marker, 'utf8')).owner !== owner) throw new Error('Windows 桌面运行时目录不属于当前应用');
+    }
     const epoch = (await this.ownerRecord()).epoch ?? null;
     // Only publish the pointer after validation. In particular the lock helper
     // runs from this generation: Windows cannot rename its executable directory
@@ -66,13 +94,15 @@ export class WindowsNativeRuntime {
     await mkdir(staging);
     let unlock, published = false, prior = null;
     try {
-      await this.compile(staging);
+      const prepared = await this.compile(staging, expected);
       const candidate = join(staging, expected.executable), info = await this.inspect(candidate);
       if (info.name !== 'oh-my-dsh-windows-desktop' || info.protocol !== expected.protocol || info.build !== expected.build || (await this.buildInfo()).build !== expected.build) throw new Error('Windows 桌面运行时构建期间源码发生变化，请重新更新');
       const check = async binary => { const live = await this.probe(binary); if (live.serverInfo?.name !== 'trisoul-computer-use' || live._meta?.trisoul?.build !== expected.build || live._meta?.trisoul?.protocol !== expected.protocol) throw new Error('Windows 桌面运行时启动校验失败'); };
       await check(candidate);
       const sha256 = createHash('sha256').update(await readFile(candidate)).digest('hex');
-      const record = { ...expected, owner, sha256, published: false };
+      const record = { ...expected, owner, sha256, published: false,
+        ...(prepared?.provider ? { provider: prepared.provider } : {}),
+        ...(prepared?.manifest ? { artifactManifest: prepared.manifest } : {}) };
       await writeFile(join(staging, 'build.json'), JSON.stringify(record) + '\n');
       unlock = await this.lock(candidate, this.directory);
       if (((await this.ownerRecord()).epoch ?? null) !== epoch) throw new Error('Windows 桌面运行时已在构建期间移除；本次安装已取消，请重新安装');
@@ -97,7 +127,7 @@ export class WindowsNativeRuntime {
     const directory = await lstat(this.directory), marker = join(this.directory, 'owner.json');
     if (!directory.isDirectory() || directory.isSymbolicLink()) throw new Error('Windows 桌面运行时目录不是独立目录，未修改');
     const file = await lstat(marker);
-    if (!file.isFile() || file.isSymbolicLink()) throw new Error('Windows 桌面运行时归属记录不是普通文件，未修改');
+    if (!file.isFile() || file.isSymbolicLink() || file.size > 32 * 1024) throw new Error('Windows 桌面运行时归属记录不是普通文件，未修改');
     const record = JSON.parse(await readFile(marker, 'utf8'));
     if (record.owner !== owner) throw new Error('Windows 桌面运行时目录不属于当前应用');
     return record;
@@ -124,9 +154,9 @@ export class WindowsNativeRuntime {
         const copied = await this.inspect(helper);
         if (copied.name !== 'oh-my-dsh-windows-desktop' || copied.protocol !== 1 || copied.build !== installed.build) throw new Error('Windows 桌面卸载程序身份校验失败');
       } else {
-        // A damaged executable cannot be used to coordinate deletion. The
-        // development installer can rebuild a trusted helper in isolation.
-        const expected = await this.buildInfo(); await this.compile(temporary);
+        // A damaged executable cannot coordinate deletion. A complete product
+        // package supplies the trusted helper without requiring a compiler.
+        const expected = await this.buildInfo(); await this.compile(temporary, expected);
         const rebuilt = await this.inspect(helper);
         if (rebuilt.name !== 'oh-my-dsh-windows-desktop' || rebuilt.protocol !== 1 || rebuilt.build !== expected.build) throw new Error('Windows 桌面卸载程序构建校验失败');
       }

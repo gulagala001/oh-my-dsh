@@ -14,12 +14,14 @@ export function validateEmulation(value) {
 
 export const emulationSettings = (host, id) => host.emulations.get(id)?.settings ?? null;
 
-export async function applyMetrics(host, record, size, entry = host.emulations.get(record.id)) {
+export async function applyMetrics(host, record, size, entry = host.emulations.get(record.id), { mode = record.viewportMode ?? null } = {}) {
   const geometry = await screenshotGeometry(record);
   const settings = entry?.settings ?? {};
+  const deviceViewport = mode === 'device';
+  const zoom = deviceViewport ? 1 : geometry.zoom;
   await record.cdp.send('Emulation.setDeviceMetricsOverride', {
-    width: Math.round(size.width * geometry.zoom), height: Math.round(size.height * geometry.zoom),
-    deviceScaleFactor: settings.deviceScaleFactor ?? entry?.nativeDpr ?? geometry.devicePixelRatio / geometry.zoom,
+    width: Math.round(size.width * zoom), height: Math.round(size.height * zoom),
+    deviceScaleFactor: settings.deviceScaleFactor ?? (deviceViewport ? 1 : entry?.nativeDpr ?? geometry.devicePixelRatio / geometry.zoom),
     mobile: settings.isMobile ?? false,
   });
 }

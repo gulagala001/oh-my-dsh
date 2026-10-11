@@ -1,6 +1,52 @@
 import {readFileSync,writeFileSync,renameSync} from 'node:fs';
 import {randomUUID} from 'node:crypto';
 
+export function normalizeBrowserHistoryOptions(options = {}) {
+  if (options === null || Array.isArray(options) || typeof options !== 'object') throw new Error('browser.history expects an options object');
+  const normalized = {};
+  if (options.queries != null) {
+    if (!Array.isArray(options.queries) || !options.queries.length || options.queries.some(query => typeof query !== 'string')) throw new Error('browser.history received invalid queries');
+    normalized.queries = [...options.queries];
+  }
+  if (options.limit != null) {
+    if (!Number.isInteger(options.limit) || options.limit <= 0) throw new Error('browser.history received an invalid limit');
+    normalized.limit = options.limit;
+  }
+  for (const key of ['from', 'to']) {
+    if (options[key] == null) continue;
+    const date = options[key] instanceof Date ? options[key] : new Date(options[key]);
+    if (Number.isNaN(date.getTime())) throw new Error(`browser.history received an invalid ${key} date`);
+    normalized[key] = date.toISOString();
+  }
+  return normalized;
+}
+
+// Native history is a separate source from the session-only visit ledger below.
+// Do not wire this adapter until a backend explicitly offers native history.
+export async function searchBrowserHistory(searchHistory, options = {}) {
+  const input = normalizeBrowserHistoryOptions(options);
+  if (typeof searchHistory !== 'function') throw new Error('browser.history is unavailable.');
+  const limit = input.limit ?? 100;
+  const batches = await Promise.all((input.queries ?? ['']).map(text => searchHistory({
+    endTime: input.to == null ? undefined : Date.parse(input.to),
+    maxResults: limit,
+    startTime: input.from == null ? 0 : Date.parse(input.from),
+    text,
+  }))).catch(() => null);
+  if (batches == null) return [];
+  const entries = batches.flat().flatMap(entry => entry.url == null || entry.lastVisitTime == null ? [] : [{
+    url: entry.url,
+    title: entry.title,
+    dateVisited: new Date(entry.lastVisitTime).toISOString(),
+  }]).sort((left, right) => right.dateVisited.localeCompare(left.dateVisited));
+  const seen = new Set();
+  return entries.filter(entry => {
+    if (seen.has(entry.url)) return false;
+    seen.add(entry.url);
+    return true;
+  }).slice(0, limit);
+}
+
 // Only pages explicitly used by this session are recorded. Never import the
 // user's pre-existing Chrome history or share another session's visits.
 export class BrowserHistory {

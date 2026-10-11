@@ -4,7 +4,7 @@
 
 For source trials and contributors. Ordinary users should install a [fixed release](upgrade_EN.md), without running engineering tests.
 
-GitHub `main` is unpublished DSH alpha.2 / OMD `0.2.1-alpha.2.omd.0.16.0`, with an earlier OpenCU 1.6.1 snapshot. The latest local browser/runtime reconstruction has not merged; cloning main does not fetch unmerged contents.
+GitHub `main` is unpublished DSH alpha.2 / OMD `0.2.1-alpha.2.omd.0.16.0`, with the OpenCU 1.6.1 browser and runtime reconstruction. Cloning main fetches development sources; public packages remain pinned to their released versions.
 
 ## Running from Source
 

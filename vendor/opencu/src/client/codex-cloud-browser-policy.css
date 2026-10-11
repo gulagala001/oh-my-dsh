@@ -1,0 +1,26 @@
+/* Cloud settings-4201f6c3f5e5.js Dt/ht/dt. No local-browser policy CSS.
+ * Shared settings/dialog/menu geometry follows the original imported modules.
+ * Exact source/CSS references: work/rea-reconstruction/cloud-browser-policy. */
+.ccbp-menu-position{position:fixed;z-index:50}
+.ccbp-site-pattern{word-break:break-all}
+.ccbp-field-stack{display:flex;flex-direction:column;gap:calc(var(--spacing)*2)}
+.ccbp-field-label{font-size:var(--text-sm);line-height:var(--tw-leading,var(--text-sm--line-height));font-weight:var(--font-weight-medium);color:var(--color-text);user-select:none}
+.ccbp-input-error{font-size:var(--text-xs);line-height:var(--tw-leading,var(--text-xs--line-height));color:var(--color-text-danger)}
+
+/* VV {type:error,variant:callout,layout:horizontal}, with no title/icon/CTA.
+ * This branch uses rounded-md px-4 py-3 and has no default callout shadow,
+ * electron radius/ring replacement, or electron relaxed line-height rule. */
+.ccbp-error-callout{position:relative;isolation:isolate;display:flex;width:100%;overflow:hidden;background-color:var(--color-surface);border:1px solid var(--color-text-danger);border-radius:var(--radius-md);padding-inline:calc(var(--spacing)*4);padding-block:calc(var(--spacing)*3);color:var(--color-text-danger);font-size:var(--text-sm);line-height:var(--tw-leading,var(--text-sm--line-height));text-wrap:pretty;container-type:inline-size;align-items:flex-start;gap:calc(var(--spacing)*4)}
+.ccbp-error-backdrop{position:absolute;inset:0;z-index:-10;background-color:var(--color-background-danger-surface)}
+@supports (color:color-mix(in lab,red,red)){
+  .ccbp-error-callout{border-color:color-mix(in oklab,var(--color-text-danger) 20%,transparent)}
+  .ccbp-error-backdrop{background-color:color-mix(in oklab,var(--color-background-danger-surface) 20%,transparent)}
+}
+.ccbp-error-inner{display:flex;height:100%;width:100%;gap:calc(var(--spacing)*3);align-items:flex-start}
+.ccbp-error-copy{display:flex;min-width:0;flex-grow:1;flex-direction:column}
+.ccbp-error-column{display:flex;min-width:0;flex:1;flex-direction:column}
+.ccbp-error-text{min-width:0;flex:1}
+@container (width>=560px){
+  .ccbp-error-inner{align-items:center}
+  .ccbp-error-copy{flex-direction:row;align-items:center;justify-content:space-between;gap:calc(var(--spacing)*8)}
+}

@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { homedir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import { legacySettings } from './legacy-settings.mjs';
 import { Config, configSnapshot } from './config.mjs';
 import { ComputerUseManager } from './computer-use/manager.mjs';
@@ -10,10 +11,13 @@ import { announceFreshComputerRuntime } from './computer-use/runtime-context.mjs
 import { isAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { updateDocumentationContext } from './computer-use/documentation-state.mjs';
 import { ComputerPresentationStore } from './computer-use/presentation.mjs';
+import { PluginFilePolicy } from './computer-use/plugin-file-policy.mjs';
+import { PluginCdpProvider } from './computer-use/plugin-cdp-provider.mjs';
 
 // Shared even when the host loads two physical copies of the package. The root
 // owns registrations; disposing one consumer must not tear down another's tools.
 const sharedKey = Symbol.for('opencu.runtime.v1');
+const hostRelease = JSON.parse(readFileSync(new URL('../vendor/dsh-chat.json', import.meta.url), 'utf8')).version;
 const defined = value => Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined));
 async function startupConfig(ctx, options) {
   const entries = ctx.get('configEditor')?.configuration() ?? [];
@@ -35,6 +39,10 @@ export async function acquireComputerUse(ctx, options = {}) {
   // mount order. Recheck the root after I/O so concurrent owners still share one.
   const initial = root[sharedKey] ? null : await startupConfig(ctx, options);
   let shared = root[sharedKey];
+  if (shared?.closing) {
+    await shared.closing;
+    return acquireComputerUse(ctx, options);
+  }
   if (!shared) {
     const explicitDirectory = initial.dataDir;
     const directory = explicitDirectory ? join(explicitDirectory, 'computer-use') : options.dataDir ?? join(initial.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'trisoul-x'), 'computer-use');
@@ -62,7 +70,19 @@ export async function acquireComputerUse(ctx, options = {}) {
         appliedEnabled = enabled;
       });
     };
+    shared.filePolicy = new PluginFilePolicy(root, { directory: join(directory, 'upload-staging') });
     shared.computerUse = new ComputerUseManager(directory, {
+      filePolicy: shared.filePolicy,
+      capabilities: { cdp: new PluginCdpProvider(shared.filePolicy) },
+      getHostUrl: () => {
+        const server = root.get('webServer');
+        // The pinned rc.2 service exposes host/port and only creates HTTP servers.
+        const protocol = server?.protocol ?? (hostRelease === '0.2.0-rc.2'
+          && ['127.0.0.1', '0.0.0.0'].includes(server?.host) ? 'http:' : undefined);
+        if (!server || !['http:', 'https:'].includes(protocol) || !Number.isSafeInteger(server.port) || server.port <= 0 || typeof server.host !== 'string') return undefined;
+        const hostname = server.host.includes(':') ? `[${server.host}]` : server.host;
+        return new URL(`${protocol}//${hostname}:${server.port}`).origin;
+      },
       getSessionTitle: id => {
         const session = root.sessions?.get?.(id);
         if (!session) return '';
@@ -97,7 +117,8 @@ export async function acquireComputerUse(ctx, options = {}) {
         }
       }, { global: true });
       scope.on('session/event', (session, event) => {
-        if (event.type === 'turn/end') void shared.computerUse.endTurn(session.id);
+        if (event.type === 'turn/start' && shared.computerUse.sessions.has(session.id)) shared.computerUse.beginTurn(session.id,event.data.turn);
+        if (event.type === 'turn/end') void shared.computerUse.endTurn(session.id,event.data.turn,event.data.reason).catch(error=>root.logger.warn(error.message));
         if (event.type === 'session/title' && typeof event.data?.title === 'string') {
           shared.sessionTitles.set(session, event.data.title);
           for (const browser of shared.computerUse.extensionBrowsers.values()) void browser.renameSessionGroup(session.id, event.data.title).catch(error => root.logger.warn(error.message));
@@ -112,8 +133,12 @@ export async function acquireComputerUse(ctx, options = {}) {
   ctx.effect(() => () => {
     shared.owners.delete(owner);
     if (shared.owners.size) return shared.refresh();
-    if (root[sharedKey] === shared) delete root[sharedKey];
-    return shared.fiber.dispose();
+    // A new owner must not start another controller before release completes.
+    shared.closing ??= Promise.resolve().then(() => shared.fiber.dispose());
+    void shared.closing.then(() => {
+      if (root[sharedKey] === shared) delete root[sharedKey];
+    }, () => {});
+    return shared.closing;
   });
   return shared;
 }

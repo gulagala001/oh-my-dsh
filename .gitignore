@@ -46,3 +46,6 @@ data/
 
 # Preserve failed OpenCU synchronization recovery files locally.
 /.opencu-sync-*/
+
+# Machine-local experiments and engineering evidence.
+/.cache/
