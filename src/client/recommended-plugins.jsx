@@ -1,6 +1,7 @@
 import React, { useId, useState } from 'react';
 import { recommendedPlugins } from './recommended-plugins.mjs';
 import { usePollingAction } from '#opencu/src/client/use-polling-action.mjs';
+import { createPoller } from './polling.mjs';
 
 async function pluginApi(input, signal) {
   const response = await fetch('trisoul-x/recommended-plugins', input === undefined ? { signal } : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
@@ -66,23 +67,30 @@ export function RecommendedPlugins({ plugins = recommendedPlugins }) {
 export function applyRecommendedPlugins(ctx) {
   ctx.slots.inject('settings.section', () => {
     let remove, alive = true, revision = 0;
-    const controller = new AbortController();
     const update = config => {
       if (!alive) return;
       if (config.recommendedPluginsPageEnabled !== false) {
         remove ??= ctx.slots.register({ name: 'settings.section', id: 'trisoul-x-recommended', order: 17, label: () => '推荐插件' }, RecommendedPlugins);
       } else { remove?.(); remove = undefined; }
     };
-    const saved = event => { revision++; update(event.detail); };
-    window.addEventListener('omd:settings-saved', saved);
     const ticket = revision;
-    void fetch('trisoul-x/api/settings', { signal: controller.signal }).then(async response => {
-      if (!response.ok) throw Error(`HTTP ${response.status}`);
-      const config = await response.json();
-      if (revision === ticket) update(config);
-    }).catch(() => { if (revision === ticket) update({}); });
+    const complete = config => {
+      initialRead.stop();
+      if (alive && revision === ticket) update(config);
+    };
+    const initialRead = createPoller({
+      read: async signal => {
+        const response = await fetch('trisoul-x/api/settings', { signal });
+        if (!response.ok) throw Error(`HTTP ${response.status}`);
+        return response.json();
+      },
+      onData: complete, onError: () => complete({}), timeout: 10000,
+    });
+    const saved = event => { revision++; initialRead.stop(); update(event.detail); };
+    window.addEventListener('omd:settings-saved', saved);
+    initialRead.start();
     return () => {
-      alive = false; controller.abort();
+      alive = false; initialRead.stop();
       window.removeEventListener('omd:settings-saved', saved); remove?.();
     };
   });
