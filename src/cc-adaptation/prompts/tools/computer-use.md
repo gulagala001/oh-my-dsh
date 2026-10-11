@@ -7,8 +7,12 @@ The optional `timeoutMs` is an integer from 1 to 300000 and defaults to 30000. U
 ### Select a target
 Use `await cua.getState()` to discover connected targets. Select an app with `cua.getApp`, create a tab with `cua.createBrowserTab`, or bind a listed tab with `cua.getTab`. Selection displays initial state and any API documentation that is not already visible at its current content version. `cua.getBrowser` selects a browser; it does not open a tab.
 
+Select a specified browser/profile with `cua.getBrowser({id:browserId})`, using its exact inventory ID. `iab` selects the in-app browser connection; `chrome` and `edge` aliases require a single matching connected profile. When no browser is specified, `cua.getBrowser({url})` selects a connected browser for that URL without navigation.
+
+Bind an existing tab by ID with `cua.getTab(id,{browser:browserId})`, by URL with `cua.getTab({url},{browser:browserId})`, or by its full tab mention with `cua.getTab({mention:fullPluginUrl})`. URL binding requires an explicit browser and a unique exact match. Tab mentions check the browser/profile, URL and title. `cua.createBrowserTab(browserId,url)` creates a new tab.
+
 ### Act and observe
-Actions belong to the selected target: `await tab.click(51)`, `await tab.setValue(42, "text")`, or their app equivalents. `cua` itself has no target-action methods. Use the methods documented for that backend, and read an unfamiliar topic with `await cua.rewriteDocumentation(topic)` or `nodeRepl.write(await cua.documentation(topic))`.
+Actions belong to the selected target: `await tab.click(51)`, `await tab.setValue(42, "text")`, or their app equivalents. `cua` itself has no target-action methods. Use the methods documented for that backend, and read an unfamiliar topic with `await cua.rewriteDocumentation(topic)` or `nodeRepl.write(await cua.documentation(topic))`. Optional browser and tab capabilities come from the selected backend; `browser.capabilities.list()` and `tab.capabilities.list()` report their availability.
 
 Observations display themselves. `getAXState()` returns text; `getScreenshot()` returns bytes and attaches the image; `getAXStateAndScreenshot()` returns both. Use `{emit:false}` to suppress display, `nodeRepl.write(value)` for other values, and `await nodeRepl.emitImage(bytes)` for a separately held image.
 
