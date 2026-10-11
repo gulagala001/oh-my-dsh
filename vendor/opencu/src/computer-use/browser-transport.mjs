@@ -108,7 +108,7 @@ export class BrowserTransport {
       const attachment = this.frameAttachments.get(message.id);
       if (attachment) {
         this.frameAttachments.delete(message.id);
-        if (attachment.detached || this.sessions.get(attachment.message.sessionId) !== attachment.parent) return;
+        if (this.sessions.get(attachment.message.sessionId) !== attachment.parent) return;
         message = attachment.message;
       } else if (message.method === 'Target.attachedToTarget' && message.params.targetInfo.type === 'iframe' && !message.params.waitingForDebugger) {
         const parent = this.sessions.get(message.sessionId);
