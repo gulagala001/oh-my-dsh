@@ -52,6 +52,7 @@ export const Config = z.object({
   dreamDailyTokens: z.number().step(1).min(0).default(200000),
   dreamProvider: z.string().default(''),
   dreamModel: z.string().default(''),
+  dreamProjects: z.array(z.string()).default([]),
   backgroundMode: z.union(['unified', 'separate']).default('unified'),
   unifiedBackground: route.default({}),
   background: route.default({}),

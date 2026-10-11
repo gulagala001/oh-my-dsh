@@ -2,18 +2,19 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { until } from './frontend.mjs';
+import { startFixture } from './computer-use/server.mjs';
 
 export const workbenchSections = {
   任务: { section: 'tasks', kind: 'trisoul-x-context', title: '任务与验证' },
   上下文: { section: 'context', kind: 'trisoul-x-pipeline', title: '上下文' },
   记忆: { section: 'memory', kind: 'trisoul-x-memory', title: '记忆 · Dream' },
-  电脑: { section: 'computer', kind: 'trisoul-x-computer-use', title: 'Computer Use' },
   监控: { section: 'monitor', kind: 'trisoul-x-monitor', title: '监控' },
 };
 
 export const nativeGuide = page => page.locator('[data-sidebar-right-guide]:visible');
 export const nativeTabs = page => page.locator('[data-sidebar-right-panel] [role="tab"]').filter({ has: page.locator('[data-sidebar-right-tab]') });
-export const workbenchPage = (page, name) => page.locator(name === '电脑' ? '.tx-cu-pane' : `.tx-workbench[data-section="${workbenchSections[name].section}"]`);
+export const workbenchPage = (page, name) => page.locator(`.tx-workbench[data-section="${workbenchSections[name].section}"]`);
+export const browserAddress = page => page.getByRole('textbox', { name: '输入 HTTP(S) 地址', exact: true });
 export async function nativeTab(page, name) {
   if (workbenchSections[name]) {
     const pageBody = workbenchPage(page, name);
@@ -50,6 +51,33 @@ export async function openWorkbench(page, name = '任务') {
   await pane.waitFor({ state: 'visible' });
   await until(async () => (await pane.boundingBox())?.width > 0);
   return pane;
+}
+
+
+// Real local target creation through the installed OMD tool loop. This supports
+// integration checks that need CU content without reviving its retired empty page.
+export async function prepareComputerTarget(t, f, fixture) {
+  if (!fixture) { fixture = await startFixture(); t.after(() => fixture.close()); }
+  let sent = false;
+  const requests = [];
+  f.replyWith(payload => {
+    requests.push(payload);
+    if (sent) return { delta: { role: 'assistant', content: '真实工作台目标已准备。' }, finish_reason: 'stop' };
+    if (!payload.tools.some(tool => tool.function.name === 'computer_use')) throw Error('The actual OMD computer_use tool is unavailable');
+    sent = true;
+    const args = { title: '准备工作台真实目标', code: `var workbenchTarget = await cua.createBrowserTab('browser', ${JSON.stringify(fixture.url)}); await workbenchTarget.markHandoff(); await workbenchTarget.getAXStateAndScreenshot();` };
+    return { delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'workbench-target', type: 'function', function: { name: 'computer_use', arguments: JSON.stringify(args) } }] }, finish_reason: 'tool_calls' };
+  });
+  await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: f.sessionId, mode: 'queue', content: [{ type: 'text', text: '准备工作台真实目标' }] });
+  await f.page.getByText('真实工作台目标已准备。', { exact: true }).waitFor({ timeout: 45000 });
+  const endpoint = new URL('/trisoul-x/computer-use/state?session=' + f.sessionId, f.page.url()).href;
+  return until(async () => {
+    const state = await (await f.page.request.get(endpoint)).json();
+    return state.target?.kind === 'tab' && state.previewAt && state;
+  }).catch(async error => {
+    const results = requests.at(-1)?.messages.filter(message => message.role === 'tool');
+    throw new Error(error.message + ': ' + JSON.stringify({ state: await (await f.page.request.get(endpoint)).json(), results }).slice(0, 5000), { cause: error });
+  });
 }
 
 // An independently installed provider proves the shipped guide's extension seam
