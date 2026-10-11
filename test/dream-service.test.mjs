@@ -46,6 +46,61 @@ function fixture(t,{generate,config={}}={}){
 
 const inputOf=payload=>JSON.parse(payload.messages.findLast(m=>m.role==='user').content);
 
+test('global settings without a selected session do not query Dream with an undefined identity',t=>{
+  const f=fixture(t);
+  assert.equal(f.service.sources.projectlessKnown({cwd:f.hub.store.dir}),false);
+  assert.equal(f.service.sources.projectlessKnown(null),false);
+  assert.doesNotThrow(()=>Hub.prototype.scope.call(f.hub,{id:'settings',header:{cwd:f.hub.store.dir}}));
+});
+
+test('partially failed Dream keeps its target snapshot and retries after reopening the store',async t=>{
+  const f=fixture(t,{generate(input){
+    if(input.kind==='session'&&input.target==='a')throw Error('temporary synthetic source failure');
+    return {value:{summary:'healthy '+input.kind,references:input.sources.map(s=>s.id)},usage:{inputTokens:100,outputTokens:50}};
+  }});
+  f.add('a');f.add('b');
+  const job=await f.run();
+  assert.equal(job.state,'failed',job.error);
+  assert.equal(job.done,1);assert.equal(job.total,4);
+  const targets=f.store.db.prepare('SELECT * FROM job_targets WHERE job=? ORDER BY ordinal').all(job.id);
+  assert.equal(targets.length,4);
+  assert.equal(targets[0].failed,1);assert.equal(targets[1].done,1);
+  assert.ok(targets[0].cut,'the first admitted source cut is pinned for retry');
+  assert.equal(f.store.memory('project:'+projectOf('/projects/a')),null,'incomplete parents are not published');
+  await f.service.close();
+  const store=new DreamStore(f.hub.store.dir),calls=[];
+  const service=f.hub.dream=new DreamService(f.hub,{store,generate:async input=>{
+    calls.push(input);
+    return {value:{summary:'retried '+input.kind,references:input.sources.map(s=>s.id)},usage:{inputTokens:100,outputTokens:50}};
+  }});
+  f.services.push(service);
+  const reopened=store.db.prepare('SELECT cut FROM job_targets WHERE job=? AND ordinal=0').get(job.id);
+  assert.equal(reopened.cut,targets[0].cut);
+  service.resume(job.id);await service.draining;
+  assert.equal(store.job(job.id).state,'complete',store.job(job.id).error);
+  assert.deepEqual(calls.map(input=>[input.kind,input.target]),[['session','a'],['project',projectOf('/projects/a')],['global','global']]);
+  assert.equal(store.db.prepare('SELECT count(*) AS n FROM job_targets WHERE job=?').get(job.id).n,0);
+  assert.ok(store.memory('global'));
+});
+
+test('global Dream admits the same nested workspace group that settings display',async t=>{
+  const f=fixture(t),root=join(f.hub.store.dir,'nested'),parent=join(root,'a'),child=join(parent,'b');
+  f.hub.ctx.workspaceRegistry={list:()=>[{path:root}]};
+  f.add('a',{cwd:parent,summary:'SELECTED_SYNTHETIC_PARENT'});
+  f.add('b',{cwd:child,summary:'EXCLUDED_SYNTHETIC_CHILD'});
+  f.cfg.dreamProjects=[root];
+  const first=await f.run();
+  assert.equal(first.state,'complete',first.error);
+  assert.deepEqual(f.calls.filter(input=>input.kind==='session').map(input=>input.target),['a']);
+  assert.equal(f.store.memory('session:b'),null);
+  assert.ok(f.store.memory('session:a'));
+  const count=f.calls.length;f.cfg.dreamProjects=[parent];
+  const second=await f.run();
+  assert.equal(second.state,'complete',second.error);
+  assert.deepEqual(f.calls.slice(count).filter(input=>input.kind==='session').map(input=>input.target),['b']);
+  assert.ok(f.store.memory('session:b'));
+});
+
 test('Dream monitor attributes actual levels and a failed recorder cannot change successful publication',async t=>{
   const f=fixture(t),records=[];f.add('a');f.hub.live=new Map();
   f.hub.monitor={append(entry){records.push(entry);throw Error('monitor unavailable');}};

@@ -3,7 +3,7 @@ import { DreamStore } from './store.mjs';
 import { DreamSources } from './sources.mjs';
 import { digest, nodeKey, LIMITS, estimateTokens, validateMemory, validateScope } from './core.mjs';
 import { DREAM_SYSTEM, DREAM_TOOL, DREAM_PROMPT_VERSION } from './prompts.mjs';
-import { selectedProjects } from './scope.mjs';
+import { selectedProjects, workspaceRoots } from './scope.mjs';
 import {setTimeout as delay} from 'node:timers/promises';
 
 class BudgetWait extends Error { constructor(){super('Dream 每日额度不足，已保存进度');this.budget=true;} }
@@ -98,7 +98,7 @@ export class DreamService {
     if(!job.targetsReady){
       const all=this.store.projects();
       const picked=(Array.isArray(this.config().dreamProjects)?this.config().dreamProjects:[]).filter(x=>typeof x==='string');
-      const projects=job.scope==='global'?selectedProjects(all,picked):job.scope==='project'?[job.target]:[];
+      const projects=job.scope==='global'?selectedProjects(all,picked,workspaceRoots(this.hub.ctx)):job.scope==='project'?[job.target]:[];
       const sessions=job.scope==='session'?[job.target]:projects.flatMap(project=>this.store.sessions({project,shared:true}).map(s=>s.id));
       this.store.setTargets(job.id,[...sessions.map(target=>({kind:'session',target})),...projects.map(target=>({kind:'project',target})),...(job.scope==='global'?[{kind:'global',target:'global'}]:[])],this.epoch);
     }
@@ -111,7 +111,6 @@ export class DreamService {
     // this run attempts them again. The flag only ever means "already failed in
     // the current run", which is what keeps the loop moving past a bad target.
     this.store.clearTargetFailures(job.id,this.epoch);
-    const doneBefore=this.store.finishedTargets(job.id);
     let skipped=0,lastError=null;
     for(let target;(target=this.store.nextTarget(job.id));){
       signal.throwIfAborted();
@@ -145,11 +144,13 @@ export class DreamService {
       }
       if(!failed)this.store.finishTarget(job.id,target.ordinal,this.epoch);
     }
-    // Judge progress by targets that actually advanced, not by calls that returned.
-    // A parent target with no child memories returns without doing any work, so
-    // counting those would report an empty success when every real target failed.
-    if(skipped&&this.store.finishedTargets(job.id)===doneBefore)throw lastError;
-    if(skipped)this.store.setMeta('lastError',`Dream 有 ${skipped} 个范围未整理：${lastError.message}`.slice(0,400));
+    // Completion deletes the target snapshot. Keep partial progress retryable
+    // even when later targets succeeded, including after a process restart.
+    if(skipped){
+      const notice=`Dream 有 ${skipped} 个范围未整理：${lastError.message}`.slice(0,400);
+      this.store.setMeta('lastError',notice);
+      throw new Error(notice,{cause:lastError});
+    }
   }
   async updateSession(id,job,signal,target){
     const stamp=this.sources.stamp(id,this.config().dreamDeepAgeMs??604800000);

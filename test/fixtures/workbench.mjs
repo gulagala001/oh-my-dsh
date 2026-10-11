@@ -59,11 +59,13 @@ export async function openWorkbench(page, name = '任务') {
 export async function prepareComputerTarget(t, f, fixture) {
   if (!fixture) { fixture = await startFixture(); t.after(() => fixture.close()); }
   let sent = false;
+  const requests = [];
   f.replyWith(payload => {
+    requests.push(payload);
     if (sent) return { delta: { role: 'assistant', content: '真实工作台目标已准备。' }, finish_reason: 'stop' };
     if (!payload.tools.some(tool => tool.function.name === 'computer_use')) throw Error('The actual OMD computer_use tool is unavailable');
     sent = true;
-    const args = { title: '准备工作台真实目标', code: `var workbenchTarget = await cua.createBrowserTab('browser', ${JSON.stringify(fixture.url)}); await workbenchTarget.getAXStateAndScreenshot();` };
+    const args = { title: '准备工作台真实目标', code: `var workbenchTarget = await cua.createBrowserTab('browser', ${JSON.stringify(fixture.url)}); await workbenchTarget.markHandoff(); await workbenchTarget.getAXStateAndScreenshot();` };
     return { delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'workbench-target', type: 'function', function: { name: 'computer_use', arguments: JSON.stringify(args) } }] }, finish_reason: 'tool_calls' };
   });
   await f.rpc('session/prompt', { requestId: crypto.randomUUID(), sessionId: f.sessionId, mode: 'queue', content: [{ type: 'text', text: '准备工作台真实目标' }] });
@@ -72,6 +74,9 @@ export async function prepareComputerTarget(t, f, fixture) {
   return until(async () => {
     const state = await (await f.page.request.get(endpoint)).json();
     return state.target?.kind === 'tab' && state.previewAt && state;
+  }).catch(async error => {
+    const results = requests.at(-1)?.messages.filter(message => message.role === 'tool');
+    throw new Error(error.message + ': ' + JSON.stringify({ state: await (await f.page.request.get(endpoint)).json(), results }).slice(0, 5000), { cause: error });
   });
 }
 
