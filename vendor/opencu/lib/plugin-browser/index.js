@@ -26,9 +26,9 @@
     mod
   ));
 
-  // ../../../Projects/opencu-backend-reconstruction-20261010/node_modules/.pnpm/react@18.3.1/node_modules/react/cjs/react.production.min.js
+  // node_modules/.pnpm/react@18.3.1/node_modules/react/cjs/react.production.min.js
   var require_react_production_min = __commonJS({
-    "../../../Projects/opencu-backend-reconstruction-20261010/node_modules/.pnpm/react@18.3.1/node_modules/react/cjs/react.production.min.js"(exports) {
+    "node_modules/.pnpm/react@18.3.1/node_modules/react/cjs/react.production.min.js"(exports) {
       "use strict";
       var l = Symbol.for("react.element");
       var n = Symbol.for("react.portal");
@@ -312,9 +312,9 @@
     }
   });
 
-  // ../../../Projects/opencu-backend-reconstruction-20261010/node_modules/.pnpm/react@18.3.1/node_modules/react/index.js
+  // node_modules/.pnpm/react@18.3.1/node_modules/react/index.js
   var require_react = __commonJS({
-    "../../../Projects/opencu-backend-reconstruction-20261010/node_modules/.pnpm/react@18.3.1/node_modules/react/index.js"(exports, module) {
+    "node_modules/.pnpm/react@18.3.1/node_modules/react/index.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_react_production_min();
@@ -324,9 +324,9 @@
     }
   });
 
-  // ../../../Projects/opencu-backend-reconstruction-20261010/node_modules/.pnpm/scheduler@0.23.2/node_modules/scheduler/cjs/scheduler.production.min.js
+  // node_modules/.pnpm/scheduler@0.23.2/node_modules/scheduler/cjs/scheduler.production.min.js
   var require_scheduler_production_min = __commonJS({
-    "../../../Projects/opencu-backend-reconstruction-20261010/node_modules/.pnpm/scheduler@0.23.2/node_modules/scheduler/cjs/scheduler.production.min.js"(exports) {
+    "node_modules/.pnpm/scheduler@0.23.2/node_modules/scheduler/cjs/scheduler.production.min.js"(exports) {
       "use strict";
       function f(a, b) {
         var c = a.length;
@@ -588,9 +588,9 @@
     }
   });
 
-  // ../../../Projects/opencu-backend-reconstruction-20261010/node_modules/.pnpm/scheduler@0.23.2/node_modules/scheduler/index.js
+  // node_modules/.pnpm/scheduler@0.23.2/node_modules/scheduler/index.js
   var require_scheduler = __commonJS({
-    "../../../Projects/opencu-backend-reconstruction-20261010/node_modules/.pnpm/scheduler@0.23.2/node_modules/scheduler/index.js"(exports, module) {
+    "node_modules/.pnpm/scheduler@0.23.2/node_modules/scheduler/index.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_scheduler_production_min();
@@ -600,9 +600,9 @@
     }
   });
 
-  // ../../../Projects/opencu-backend-reconstruction-20261010/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.production.min.js
+  // node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.production.min.js
   var require_react_dom_production_min = __commonJS({
-    "../../../Projects/opencu-backend-reconstruction-20261010/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.production.min.js"(exports) {
+    "node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.production.min.js"(exports) {
       "use strict";
       var aa = require_react();
       var ca = require_scheduler();
@@ -7580,9 +7580,9 @@
     }
   });
 
-  // ../../../Projects/opencu-backend-reconstruction-20261010/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/index.js
+  // node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/index.js
   var require_react_dom = __commonJS({
-    "../../../Projects/opencu-backend-reconstruction-20261010/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/index.js"(exports, module) {
+    "node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/index.js"(exports, module) {
       "use strict";
       function checkDCE() {
         if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined" || typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE !== "function") {
@@ -7607,9 +7607,9 @@
     }
   });
 
-  // ../../../Projects/opencu-backend-reconstruction-20261010/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/client.js
+  // node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/client.js
   var require_client = __commonJS({
-    "../../../Projects/opencu-backend-reconstruction-20261010/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/client.js"(exports) {
+    "node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/client.js"(exports) {
       "use strict";
       var m = require_react_dom();
       if (true) {
