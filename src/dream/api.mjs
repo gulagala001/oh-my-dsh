@@ -1,6 +1,8 @@
 import { readDream, archiveRecord, dreamAssets } from './recall.mjs';
 import { sendAttachment } from '../http.mjs';
 import { contextConfig } from '../config.mjs';
+import { folderTree, workspaceRoots } from './scope.mjs';
+import { existsSync } from 'node:fs';
 
 // Presentation metadata belongs to the web reader, not the model recall payload.
 export function presentDreamRead(hub, value, args = {}) {
@@ -33,10 +35,15 @@ export async function handleDreamApi({hub,ctx,req,res,url,send,readBody}){
   const path=url.pathname.replace('/trisoul-x/api','');if(!path.startsWith('/dream'))return false;
   const id=url.searchParams.get('session')||'',agent=id?ctx.agents.get(id):null;
   const requester=agent?.session||{id:id||'dream-reader',header:{cwd:(id?hub.store.peek?.(id)?.cwd:null)||process.cwd()}};
+  // Folder list is derived state: a failure here must never fail the request.
+  // Project keys outlive their directories, so tell the caller which folders are
+  // still on disk; the UI marks the rest and sorts them last.
+  const folderExists=folder=>{try{return existsSync(folder);}catch{return true;}};
+  const folderPayload=()=>{try{return folderTree(hub.dream.store.projects(),workspaceRoots(),folderExists);}catch{return [];}};
   if(path==='/dream'){
     if(req.method!=='GET'){send(res,405,{error:'请使用 GET'});return true;}
     if(id&&!hub.dream.store.session(id))await hub.dream.sources.inspect(id);
-    send(res,200,hub.dream.status(id));return true;
+    send(res,200,{...hub.dream.status(id),folders:folderPayload()});return true;
   }
   if(path==='/dream/refresh'){
     if(req.method!=='POST'){send(res,405,{error:'请使用 POST'});return true;}
@@ -56,15 +63,16 @@ export async function handleDreamApi({hub,ctx,req,res,url,send,readBody}){
     send(res,200,input.action==='stop'?hub.dream.pause(input.id):hub.dream.resume(input.id,agent));return true;
   }
   if(path==='/dream/settings'){
-    if(req.method==='GET'){send(res,200,hub.dream.status(id).settings);return true;}
+    if(req.method==='GET'){send(res,200,{...hub.dream.status(id).settings,folders:folderPayload()});return true;}
     if(req.method!=='POST'){send(res,405,{error:'不支持此方法'});return true;}
-    const input=await readBody(req),allowed=new Set(['dreamAutoEnabled','dreamIntervalMs','dreamDeepAgeMs','dreamDailyTokens','dreamProvider','dreamModel']);
+    const input=await readBody(req),allowed=new Set(['dreamAutoEnabled','dreamIntervalMs','dreamDeepAgeMs','dreamDailyTokens','dreamProvider','dreamModel','dreamProjects']);
     if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(k=>!allowed.has(k)))throw Error('未知 Dream 设置');
+    if('dreamProjects' in input&&(!Array.isArray(input.dreamProjects)||input.dreamProjects.some(x=>typeof x!=='string')))throw Error('Dream 文件夹设置必须是字符串数组');
     const next=contextConfig({...hub.config(),...input});
     if(Boolean(next.dreamProvider)!==Boolean(next.dreamModel))throw Error('固定后台提供方与模型需要一起填写，或一起留空');
     await ctx.settings.update('trisoul-x',input);
     hub.dream.store.setMeta('nextAutoAt',0);void hub.dream.tick().catch(e=>hub.dream.notice(e));
-    send(res,200,hub.dream.status(id).settings);return true;
+    send(res,200,{...hub.dream.status(id).settings,folders:folderPayload()});return true;
   }
   if(path==='/dream/catalog'){
     if(req.method!=='GET'){send(res,405,{error:'请使用 GET'});return true;}
