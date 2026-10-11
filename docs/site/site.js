@@ -1,5 +1,7 @@
 (() => {
   'use strict';
+  const english = document.documentElement.lang === 'en';
+  const text = (zh, en) => english ? en : zh;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const $ = selector => document.querySelector(selector);
   const imageRequests = new WeakMap();
@@ -17,9 +19,9 @@
   }
   async function swapImage(element, src, alt, commit = () => {}) {
     const request = (imageRequests.get(element) || 0) + 1; imageRequests.set(element, request);
-    const { panel, status, message, retry } = feedbackFor(element, '重试预览');
+    const { panel, status, message, retry } = feedbackFor(element, text('重试预览', 'Retry preview'));
     panel.setAttribute('aria-busy', 'true'); panel.classList.remove('preview-failed'); panel.classList.add('preview-pending');
-    status.hidden = false; message.textContent = '正在加载预览…'; retry.hidden = true;
+    status.hidden = false; message.textContent = text('正在加载预览…', 'Loading preview...'); retry.hidden = true;
     retry.onclick = () => { void swapImage(element, src, alt, commit); };
     const next = new Image(); next.src = src;
     try { await next.decode(); }
@@ -27,7 +29,7 @@
       if (imageRequests.get(element) === request) {
         element.style.visibility = 'hidden';
         panel.setAttribute('aria-busy', 'false'); panel.classList.remove('preview-pending'); panel.classList.add('preview-failed');
-        message.textContent = '预览暂时无法加载。'; retry.hidden = false;
+        message.textContent = text('预览暂时无法加载。', 'The preview could not be loaded.'); retry.hidden = false;
       }
       return false;
     }
@@ -43,10 +45,10 @@
   document.querySelectorAll('main img, #detail-image').forEach(element => {
     let feedback;
     element.addEventListener('error', () => {
-      feedback = feedbackFor(element, '重试图片'); const { panel, status, message, retry } = feedback;
-      message.textContent = '图片暂时无法加载。'; retry.hidden = false; retry.disabled = false; status.hidden = false;
+      feedback = feedbackFor(element, text('重试图片', 'Retry image')); const { panel, status, message, retry } = feedback;
+      message.textContent = text('图片暂时无法加载。', 'The image could not be loaded.'); retry.hidden = false; retry.disabled = false; status.hidden = false;
       panel.setAttribute('aria-busy', 'false'); panel.classList.add('preview-failed');
-      retry.onclick = () => { retry.disabled = true; message.textContent = '正在加载图片…'; panel.setAttribute('aria-busy', 'true'); element.src = element.src; };
+      retry.onclick = () => { retry.disabled = true; message.textContent = text('正在加载图片…', 'Loading image...'); panel.setAttribute('aria-busy', 'true'); element.src = element.src; };
     });
     element.addEventListener('load', () => {
       if (!feedback) return; const { panel, status, retry } = feedback;
@@ -90,6 +92,11 @@
     memory: { src: 'site/media/launchpad-recall.jpg', alt: '压缩后实际回查原话，核对 CSV 六列、编码与未验收项要求', caption: '按原话核对：UTF-8 + BOM、六列、保留未验收项。' },
     tasks: { src: 'site/media/launchpad-tasks.jpg', alt: '实际任务账本中的原始要求、文件路径与通过的 CSV 核验输出', caption: '要求对应任务，下载文件对应验证结果；每一项都有依据。' },
   };
+  if (english) {
+    Object.assign(heroScenes.computer, { alt: 'Actual release checklist verification, with conversation, tasks, and file checks side by side', caption: 'One release checklist: 3 items awaiting acceptance, 2 verifications complete, and downloaded files checked.' });
+    Object.assign(heroScenes.memory, { alt: 'Original requirements recalled after compression to verify CSV columns, encoding, and pending items', caption: 'Checked against the original: UTF-8 + BOM, six columns, and pending items retained.' });
+    Object.assign(heroScenes.tasks, { alt: 'A task ledger with original requirements, file paths, and successful CSV verification output', caption: 'Requirements connect to tasks; downloaded files connect to verification results.' });
+  }
   bindTabs('hero', async (key, tab) => {
     const scene = heroScenes[key];
     $('#hero-panel').setAttribute('aria-labelledby', tab.id);
@@ -104,6 +111,12 @@
     recall: { src: 'site/media/launchpad-recall.jpg', crop: [300,475,465,152], title: '细节有疑问，直接回查原话。', description: '压缩后通过 recall 的 original 回查原始要求，核对编码、列顺序以及必须保留的未验收项。', proofLabel: '按来源核对，而不是猜测', proof: '原始要求 · 六列约定', label: '压缩后回查 · 实拍局部', alt: '原话回查后的核对回复：CSV 六列、BOM 和未验收项约定' },
     continue: { src: 'site/media/launchpad-tasks.jpg', crop: [801,153.390625,631,416.9375], title: '带着原始要求，核对交付文件。', description: '下载后的 CSV 由独立脚本逐字段检查：编码、六列、8 条事项和 3 条未验收项均一致。验证结果挂接到原始需求。', proofLabel: '实际下载文件的验证输出', proof: 'BOM · 六列 · 8 条事项', label: '任务证据 · 实际 PASS 输出', alt: '下载文件的原始需求、独立核验脚本和真实 PASS 输出' },
   };
+  if (english) {
+    Object.assign(memoryScenes.record, { title: 'Start with explicit requirements.', description: 'Keep owners, priorities, and pending items. Export a six-column CSV with UTF-8 + BOM. The original message provides the acceptance criteria.', proofLabel: 'The original checklist requirements', proof: 'Six columns · UTF-8 + BOM', label: 'Original requirements · Detail', alt: 'Original Launchpad message specifying CSV columns, encoding, and pending items' });
+    Object.assign(memoryScenes.compress, { title: 'Reduce context, retain the sources.', description: 'The example runs summary compression, then full compression. Two detailed archives, original logs, user messages, and attachments remain available for recall.', proofLabel: 'Actual post-compression state', proof: 'summary + full · Two detail archives', label: 'Working context · Actual state', alt: 'Working context showing summaries, two detail archives, and summary and full compression controls' });
+    Object.assign(memoryScenes.recall, { title: 'Retrieve the original for exact details.', description: 'After compression, original recall retrieves the requirements to check encoding, column order, and the pending items that must be retained.', proofLabel: 'Checked against the source', proof: 'Original requirements · Six columns', label: 'Recall after compression · Detail', alt: 'Recall response checking six CSV columns, BOM, and pending item requirements' });
+    Object.assign(memoryScenes.continue, { title: 'Check the file against the requirements.', description: 'An independent script checks the downloaded CSV: encoding, six columns, eight items, and three pending items. The results attach to the original requirement.', proofLabel: 'Verification of the downloaded file', proof: 'BOM · Six columns · Eight items', label: 'Task evidence · Actual PASS output', alt: 'Original requirement, independent file verification script, and actual PASS output' });
+  }
   bindTabs('memory', async (key, tab) => {
     const scene = memoryScenes[key];
     $('#memory-panel').setAttribute('aria-labelledby', tab.id);
@@ -130,6 +143,13 @@
     material: { name: 'Google Material', description: 'Material 配色与舒展的导航、输入和设置。' },
     omd: { name: 'OMD 默认', description: '保留熟悉的 DSH 布局与蓝色强调。' },
   };
+  if (english) {
+    themes.codex.description = 'A cool gray sidebar, system fonts, and clear content hierarchy.';
+    themes.glass.description = 'Translucent surfaces, rounded panels, and gentle depth.';
+    themes.terminal.description = 'Dark and paper-white surfaces, terracotta accents, and a monospace layout.';
+    themes.material.description = 'Material colors with spacious navigation, input, and settings.';
+    themes.omd = { name: 'OMD Default', description: 'The familiar DSH layout with blue accents.' };
+  }
   let activeTheme = 'codex';
   async function renderTheme() {
     const mode = $('[name="preview-mode"]:checked').value;
@@ -137,7 +157,7 @@
     const theme = themes[key];
     const src = `site/media/theme-${key}-${mode}.jpg`;
     $('#theme-panel').setAttribute('aria-labelledby', `theme-tab-${key}`);
-    await swapImage($('#theme-image'), src, `${theme.name} ${mode === 'dark' ? '深色' : '浅色'}主题的真实界面`, () => {
+    await swapImage($('#theme-image'), src, english ? `Actual ${theme.name} interface in ${mode} mode` : `${theme.name} ${mode === 'dark' ? '深色' : '浅色'}主题的真实界面`, () => {
     $('#theme-original').href = src;
     $('#theme-name').textContent = theme.name;
     $('#theme-description').textContent = theme.description;
@@ -153,14 +173,14 @@
     $('.copy-status').textContent = '';
   });
   document.querySelectorAll('[data-copy]').forEach(button => button.addEventListener('click', async () => {
-    const code = document.getElementById(button.dataset.copy), text = code.textContent.trim();
+    const code = document.getElementById(button.dataset.copy), source = code.textContent.trim();
     button.disabled = true;
     try {
-      await navigator.clipboard.writeText(text);
-      $('.copy-status').textContent = '已复制。按上方步骤继续安装即可。';
+      await navigator.clipboard.writeText(source);
+      $('.copy-status').textContent = text('已复制。按上方步骤继续安装即可。', 'Copied. Continue with the installation steps above.');
     } catch {
       const range = document.createRange(), selection = window.getSelection(); range.selectNodeContents(code); selection.removeAllRanges(); selection.addRange(range);
-      $('.copy-status').textContent = '当前浏览器无法直接复制，已选中命令，请使用复制快捷键。';
+      $('.copy-status').textContent = text('当前浏览器无法直接复制，已选中命令，请使用复制快捷键。', 'Direct copying is unavailable. The commands are selected; use your copy shortcut.');
     } finally { button.disabled = false; }
   }));
 
@@ -181,6 +201,7 @@
   const details = {
     tasks: { title: '需求、任务与验证证据', file: 'site/media/launchpad-tasks.jpg', alt: '原始要求、实际下载文件与独立核验的 PASS 结果', note: '真实原生任务账本。业务清单的初始勾选为演示数据，文件检查与浏览器操作单独验证。' },
   };
+  if (english) Object.assign(details.tasks, { title: 'Requirements, Tasks, and Verification', alt: 'Original requirements, downloaded files, and an independent verification PASS result', note: 'An actual native task ledger. Initial checklist states are sample data; file checks and browser actions were verified separately.' });
   function openDialog(title) {
     $('#media-title').textContent = title;
     document.body.classList.add('dialog-open');
@@ -195,7 +216,7 @@
     $('#media-note').textContent = item.note;
     const original = document.createElement('a');
     original.href = item.file;
-    original.textContent = ' 打开完整原图 ↗';
+    original.textContent = text(' 打开完整原图 ↗', ' Open full screenshot ↗');
     original.target = '_blank';
     original.rel = 'noreferrer';
     $('#media-note').append(original);

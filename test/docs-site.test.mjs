@@ -87,7 +87,7 @@ test('built documentation works on a plain static origin with desktop and mobile
     const expected = (await block.locator('code').textContent()).replace(/\n$/, '');
     await copy.click();
     assert.equal((await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n'), expected);
-    assert.match(expected, /github:gulagala001\/oh-my-dsh#v/);
+    assert.match(expected, /github.com\/gulagala001\/oh-my-dsh\/releases\/download\/v/);
     assert.equal(await page.getByRole('status').textContent(), '代码已复制。');
     await page.evaluate(() => { navigator.clipboard.writeText = async () => { throw new Error('clipboard denied fixture'); }; });
     await copy.click();
@@ -133,7 +133,7 @@ test('built documentation works on a plain static origin with desktop and mobile
     const noJs = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
     const plain = await noJs.newPage();
     await plain.goto(origin + '/docs/usage.html');
-    assert.match(await plain.locator('.doc-article h1').textContent(), /使用与开发指南/);
+    assert.match(await plain.locator('.doc-article h1').textContent(), /使用指南/);
     assert.equal(await plain.getByRole('button', { name: '复制代码' }).count(), 0, 'no inactive copy affordance');
     await plain.locator('.mobile-nav > summary').click();
     await plain.locator('.mobile-nav').getByRole('link', { name: '首次使用', exact: true }).click();
@@ -260,7 +260,7 @@ test('built documentation works on a plain static origin with desktop and mobile
     assert.equal(new URL(reader.url()).pathname, '/preview/omd/docs/index.html');
     await reader.getByRole('tab', { name: 'DSH Web', exact: true }).click();
     await reader.locator('[data-copy="web-command"]').click();
-    assert.match(await reader.evaluate(() => navigator.clipboard.readText()), /github:gulagala001\/oh-my-dsh#v/);
+    assert.match(await reader.evaluate(() => navigator.clipboard.readText()), /github.com\/gulagala001\/oh-my-dsh\/releases\/download\/v/);
     const popupPromise = prefixed.waitForEvent('page');
     await reader.locator('#theme-original').click();
     const original = await popupPromise; await original.waitForLoadState();
@@ -277,18 +277,18 @@ test('built documentation works on a plain static origin with desktop and mobile
 
     let attempts = 0, release;
     const pending = new Promise(resolve => { release = resolve; });
-    await reader.route('**/images/context-records.png', async route => {
+    await reader.route('**/site/media/launchpad-workbench.jpg', async route => {
       if (++attempts === 1) return route.fulfill({ status: 404, body: 'image failure fixture' });
       await pending;
-      await route.fulfill({ status: 200, contentType: 'image/png', body: await readFile(join(root, 'docs/images/context-records.png')) });
+      await route.fulfill({ status: 200, contentType: 'image/jpeg', body: await readFile(join(root, 'docs/site/media/launchpad-workbench.jpg')) });
     });
     await reader.setViewportSize({ width: 390, height: 844 });
     await reader.goto(base + '/docs/usage.html#界面与入口');
-    const image = reader.locator('.doc-article img[src*="context-records.png"]');
-    const notice = reader.locator('.doc-article p:has(img[src*="context-records.png"]) .image-fallback');
+    const image = reader.locator('.doc-article img[src*="launchpad-workbench.jpg"]');
+    const notice = reader.locator('.doc-article p:has(img[src*="launchpad-workbench.jpg"]) .image-fallback');
     await notice.waitFor();
     assert.equal(await image.isVisible(), false);
-    assert.equal(await notice.getByRole('link', { name: '打开原图' }).getAttribute('href'), base + '/docs/images/context-records.png');
+    assert.equal(await notice.getByRole('link', { name: '打开原图' }).getAttribute('href'), base + '/docs/site/media/launchpad-workbench.jpg');
     await notice.evaluate(element => element.scrollIntoView({ block: 'center' }));
     await screenshot(reader, 'docs-prefix-image-failure-mobile.png');
     assert.ok(await reader.evaluate(() => document.documentElement.scrollWidth - innerWidth) <= 1);
@@ -298,7 +298,7 @@ test('built documentation works on a plain static origin with desktop and mobile
     assert.equal(await notice.getAttribute('aria-busy'), 'true');
     assert.match(await notice.textContent(), /正在加载图片/);
     release();
-    await reader.waitForFunction(() => { const image = document.querySelector('.doc-article img[src*="context-records.png"]'); return !image.hidden && image.naturalWidth > 0; });
+    await reader.waitForFunction(() => { const image = document.querySelector('.doc-article img[src*="launchpad-workbench.jpg"]'); return !image.hidden && image.naturalWidth > 0; });
     assert.equal(await reader.locator('.image-fallback:visible').count(), 0);
     assert.equal(await notice.getAttribute('aria-busy'), null, 'a recovered image ends its loading state');
     assert.equal(attempts, 2, 'one explicit retry makes one new image request');
@@ -318,6 +318,25 @@ test('built documentation works on a plain static origin with desktop and mobile
     assert.equal(new URL(reader.url()).pathname, '/preview/omd/docs/index.html');
     await prefixed.close();
   });
+  await t.test('English navigation, clipboard feedback and language switching work on desktop and mobile', async () => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(origin + '/docs/usage_EN.html');
+    assert.equal(await page.locator('html').getAttribute('lang'), 'en');
+    await page.bringToFront();
+    await page.locator('.code-block').first().getByRole('button', { name: 'Copy code', exact: true }).click();
+    await page.waitForFunction(() => document.querySelector('.copy-status').textContent.length > 0);
+    assert.equal(await page.getByRole('status').textContent(), 'Code copied.');
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const path of ['/docs/index_EN.html', '/docs/usage_EN.html', '/README_EN.html']) {
+        await page.goto(origin + path);
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${path}: English fits ${width}px`);
+      }
+    }
+    await page.goto(origin + '/docs/usage_EN.html');
+    await page.locator('.doc-header .language-switch a[lang="zh-CN"]').click();
+    assert.equal(new URL(page.url()).pathname, '/docs/usage.html');
+  });
   assert.deepEqual(errors, []);
 });
 
@@ -332,6 +351,7 @@ test('Markdown compilation preserves Chinese and duplicate anchors, raw commands
   await write(fixture, 'docs/README.md', '# 文档\n\n[中文章节](usage.md?view=print#中文标题-1) · [根介绍](../README.md#项目介绍)');
   await write(fixture, 'docs/usage.md', '# 使用\n\n## 中文标题\n\n第一次。\n\n## 中文标题\n\n第二次。\n\n<a id="manual"></a>\n\n## **格式** 与 `code` & 标点！\n\n```sh\n' + command + '\n```\n\n<details>\n<summary>展开更多</summary>\n\n## 折叠章节\n\n保留内容。\n\n</details>\n\n## Computer Use\n');
   await write(fixture, 'docs/index.html', '<!doctype html><html><body><a href="README.md">文档</a><a href="../README.md">介绍</a></body></html>');
+  await write(fixture, 'docs/index_EN.html', '<!doctype html><html lang="en"><body><a href="README.md">Documentation</a><a href="../README.md">Overview</a></body></html>');
   await write(fixture, 'docs/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>');
   for (const file of ['AGENTS.md', 'COMPUTER_USE_HANDOFF.md', '.credentials.yaml', 'docs/private.md', 'docs/images/.private.png', 'docs/site/media/private.txt']) await write(fixture, file, sentinel);
   for (const file of ['docs/site/site.css', 'docs/site/site.js', 'docs/site/docs.css', 'docs/site/docs.js']) {

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 3,
-  "capturedDate": "2026-10-10",
-  "source": "README and the product page share current unmodified Native Launchpad screenshots. The primary manifest records exact hashes and capture boundaries.",
+  "capturedDate": "2026-10-11",
+  "source": "The README opens with the current local purchase-order demonstration. The product page also retains version-labelled Native Launchpad screenshots; the primary manifest describes those earlier assets.",
   "primaryManifest": "../site/media/manifest.json",
   "notes": [
     "Actual screenshots are not retouched.",
@@ -9,6 +9,21 @@
     "SVG files explain mechanisms and are not product screenshots."
   ],
   "assets": [
+    {
+      "file": "docs/images/showcase-browser.png",
+      "type": "unmodified-ui-screenshot",
+      "case": "Fictional stationery purchase order, real browser input and save",
+      "host": "0.2.0-rc.2",
+      "omd": "0.2.0-rc.2.omd.0.16.0",
+      "opencu": "1.6.1",
+      "sourceStatus": "unpublished local implementation",
+      "model": "controlled demonstration model with actual Computer Use tools",
+      "illustration": "AI-generated product thumbnail; interface pixels are not generated or retouched",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 290962,
+      "sha256": "5fe8bd52192ffb33e25122b5642df461ed777161e6769325204b1f87f040a222"
+    },
     {
       "file": "docs/images/readme-annotation.png",
       "type": "unmodified-native-ui-screenshot",

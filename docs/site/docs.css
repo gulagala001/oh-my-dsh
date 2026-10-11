@@ -26,10 +26,15 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .skip-link:focus { top: 12px; }
 .doc-header { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 28px; height: 76px; padding-inline: max(32px, calc((100vw - 1440px) / 2)); border-bottom: 1px solid var(--ink); background: var(--paper); }
 .doc-header a { color: var(--ink); text-decoration: none; }
-.brand { display: flex; align-items: center; gap: 8px; white-space: nowrap; font-size: 21px; font-weight: 650; letter-spacing: -.8px; }
+.brand { display: flex; align-items: center; gap: 8px; white-space: nowrap; font-size: 21px; font-weight: 650; letter-spacing: 0; }
 .brand span { color: var(--blue); margin-left: -8px; }
 .header-docs { font-size: 13px; padding-left: 28px; border-left: 1px solid var(--line); }
 .header-github { margin-left: auto; font: 12px var(--mono); }
+.language-switch { display:flex; align-items:center; gap:12px; margin-left:auto; font-size:11px; white-space:nowrap; }
+.language-switch a { color:var(--muted); padding-block:8px; }
+.language-switch a[aria-current] { color:var(--ink); font-weight:600; }
+.language-switch + .header-github { margin-left:0; }
+.nav-language { display:block; color:var(--muted); font-size:10px; }
 .header-docs:hover, .header-github:hover { text-decoration: underline; }
 .doc-layout { display: grid; grid-template-columns: 190px minmax(0, 760px) 190px; justify-content: center; align-items: start; gap: 52px; max-width: 1440px; margin-inline: auto; padding: 45px 32px 72px; }
 .doc-sidebar, .doc-toc { position: sticky; top: 112px; max-height: calc(100vh - 140px); overflow-y: auto; scrollbar-width: thin; }
@@ -39,7 +44,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .nav-group a:hover { color: var(--ink); }
 .nav-group a[aria-current='page'] { color: var(--ink); background: var(--soft); border-color: var(--blue); }
 .doc-main { min-width: 0; }
-.document-meta { display: flex; justify-content: space-between; gap: 16px; margin: 0 0 24px; color: var(--muted); font: 10px/1.6 var(--mono); letter-spacing: .04em; }
+.document-meta { display: flex; justify-content: space-between; flex-wrap:wrap; gap: 8px 16px; margin: 0 0 24px; color: var(--muted); font: 10px/1.6 var(--mono); letter-spacing: 0; }
 .document-meta span { letter-spacing: 0; }
 .doc-toc a, .mobile-toc a { display: block; padding: 6px 0 6px 12px; border-left: 1px solid var(--line); color: var(--muted); font-size: 11px; line-height: 1.65; text-decoration: none; overflow-wrap: anywhere; }
 .doc-toc a.toc-depth-3, .mobile-toc a.toc-depth-3 { padding-left: 24px; font-size: 10px; }
@@ -48,8 +53,8 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .mobile-nav, .mobile-toc { display: none; }
 .doc-article { font-size: 15px; line-height: 1.95; overflow-wrap: anywhere; }
 .doc-article > :first-child { margin-top: 0; }
-.doc-article h1, .doc-article h2, .doc-article h3, .doc-article h4 { color: var(--ink); line-height: 1.4; letter-spacing: -.025em; }
-.doc-article h1 { margin: 0 0 25px; font-size: clamp(32px, 3.4vw, 44px); font-weight: 550; line-height: 1.25; letter-spacing: -.04em; }
+.doc-article h1, .doc-article h2, .doc-article h3, .doc-article h4 { color: var(--ink); line-height: 1.4; letter-spacing: 0; }
+.doc-article h1 { margin: 0 0 25px; font-size: 40px; font-weight: 550; line-height: 1.25; letter-spacing: 0; }
 .doc-article h2 { margin: 52px 0 20px; padding-top: 24px; border-top: 1px solid var(--line); font-size: 26px; font-weight: 550; }
 .doc-article h3 { margin: 32px 0 12px; font-size: 20px; font-weight: 550; }
 .doc-article h4 { margin: 26px 0 12px; font-size: 17px; }
@@ -111,6 +116,8 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
   .brand img { width: 24px; height: 24px; }
   .header-docs { padding-left: 18px; font-size: 12px; }
   .header-github { font-size: 10px; }
+  .doc-header { flex-wrap:wrap; height:auto; min-height:64px; padding-block:12px; gap:8px 16px; }
+  .language-switch { gap:8px; font-size:10px; }
   .doc-layout { display: block; padding: 24px 20px 48px; }
   .doc-sidebar { display: none; }
   .mobile-nav { display: block; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--line); font-size: 12px; }

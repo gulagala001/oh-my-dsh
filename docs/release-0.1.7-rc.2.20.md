@@ -38,7 +38,7 @@ OpenCU 侧栏显示当前会话时收起重复小窗并释放重复观察；返�
 
 各平台最终候选的 Actions 结果、冻结包 SHA-256 与未覆盖范围随 [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.1.7-rc.2.20) 的 `verification.log` 提供。多屏混合缩放、WSL 真机操控、长期压力及尚未覆盖的应用流程继续保留原有边界。
 
-DSH `0.2.0-rc.1` 的新增宿主变更尚未纳入本版，仍按上面的固定配对安装。既有源码基线与后续升级步骤见 [DSH 0.2 适配准备](dsh-0.2-preparation.md)。
+DSH `0.2.0-rc.1` 的新增宿主变更尚未纳入本版，仍按上面的固定配对安装。后续 DSH 0.2 配对版本见 [DSH 0.2.0-rc.2 发行说明](release-0.2.0-rc.2.omd.0.10.0.md)。
 
 ## 升级
 

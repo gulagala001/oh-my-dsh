@@ -1,61 +1,58 @@
-# Oh My DSH 文档
+# Oh My DSH 使用文档
 
-[项目介绍](../README.md) · [实拍案例](showcase.md) · [首次使用](getting-started.md) · [安装与升级](upgrade.md) · [遇到问题](troubleshooting.md)
+[English](README_EN.md) · [项目介绍](../README.md) · [实拍案例](showcase.md)
 
-按你现在要做的事选择入口，无需从头读完所有文档。
+从你现在要做的事开始。安装 OMD 后，继续使用 DSH 原有的模型、会话、工具与技能。
 
-## 安装与第一次使用
-
-| 你想做什么 | 阅读入口 |
+| 你要做什么 | 入口 |
 | --- | --- |
-| 在现有 DSH Web 安装 OMD | [Web 安装](usage.md#安装到现有-dsh推荐) |
-| 安装官方桌面应用和 OMD | [桌面版完整教程](upgrade.md#desktop) |
-| 装好了，开始第一个任务 | [首次使用](getting-started.md) |
-| 更新现有环境 | [版本与更新提醒](usage.md#版本与更新提醒)、[备份与升级](upgrade.md#2-停止并完整备份) |
-| 从旧 Web 转到桌面并保留数据 | [迁移步骤](upgrade.md#web-to-desktop) |
-| 在 Windows 上使用 | [Windows 指南](windows.md) |
-| 安装失败、界面异常或需要恢复 | [按症状排障](troubleshooting.md#按症状处理) |
-| 停用或卸载 | [更新与卸载](usage.md#update-uninstall) |
+| 安装到官方桌面应用 | [桌面安装](upgrade.md#desktop) |
+| 安装到 DSH Web | [Web 安装](usage.md#安装到现有-dsh推荐) |
+| 完成第一个任务 | [首次使用](getting-started.md) |
+| 整理文件、跟进任务和查看交付 | [日常使用](usage.md#日常使用) |
+| 长对话里继续工作、找回原始要求 | [上下文与记忆](usage.md#上下文与记忆) |
+| 操作网页、查看画面、人工接手 | [Computer Use](usage.md#computer-use) |
+| 润色草稿、调整模型或外观 | [使用指南](usage.md) |
+| 更新、备份或从 Web 转到桌面 | [安装与升级](upgrade.md) |
+| 安装失败、找不到原会话、界面异常 | [按症状排障](troubleshooting.md#按症状处理) |
+| 安装其他插件并与 OMD 共用 | [插件兼容说明](plugin-compatibility.md) |
+| 停用或卸载 OMD | [更新与卸载](usage.md#update-uninstall) |
 
-## 日常操作与设置
+[![统一浏览器中的采购单：人工补充交付信息后，助手读取保存结果](images/showcase-browser.png)](showcase.md)
 
-| 内容 | 阅读入口 |
+*虚构采购单，本地未发布集成。用户填写并保存交付信息后，受控示例模型通过实际 CU 工具读取结果。[操作、结果与截图来源](showcase.md)。*
+
+<a id="版本与文档范围"></a>
+
+## 先选对版本
+
+| 你的 DSH | 可公开安装的 OMD | 固定发行 |
+| --- | --- | --- |
+| `0.2.1-alpha.1` | `0.2.1-alpha.1.omd.0.10.0` | [alpha.1 Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-alpha.1.omd.0.10.0) |
+| `0.2.0-rc.2`，包括本文桌面教程 | `0.2.0-rc.2.omd.0.10.0` | [rc.2 Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.0-rc.2.omd.0.10.0) |
+
+GitHub `main` 的 `0.2.1-alpha.2.omd.0.16.0` 对应 DSH `0.2.1-alpha.2`，**尚未公开发行**，内置较早的 OpenCU 1.6.1 快照。最新本地浏览器与运行时重构也使用 1.6.1 版本号，但尚未合入该快照；相同版本号不表示内容相同。本组文档标明这些差异，它们没有可供普通用户安装的新 Release 链接。公开 `0.10.0` 不包含 `0.11–0.16` 的新增改动。
+
+按完整宿主版本和固定 OMD 版本配对，不用 GitHub `latest` 标记选包。其他版本先查[兼容说明](plugin-compatibility.md)，不要绕过宿主检查。
+
+<a id="日常操作与设置"></a>
+
+## 按需查阅
+
+| 主题 | 详细说明 |
 | --- | --- |
-| 不选择项目开始聊天，自动创建独立工作目录 | [无项目聊天](usage.md#无项目聊天) |
-| 工作台、任务、BT 与界面入口 | [使用指南](usage.md#界面与入口) |
-| 调用概览、用量筛选、上下文演变与预算 | [监控指南](monitoring.md) |
-| 草稿润色、撤销与继续优化 | [提示词优化](usage.md#提示词优化) |
-| 系统提示词、工具说明与宿主适配 | [系统级适配](prompt-adaptation.md) |
-| 主题、配色、壁纸和 Logo | [外观指南](skins.md) |
-| 上下文摘要、原文回查与手动压缩 | [上下文机制](context-workflow.md) |
-| 会话、项目与全局短记忆，自动整理和费用限制 | [Dream 记忆](dream-memory.md) |
-| 后台模型、共享范围与全局背景 | [设置说明](usage.md#settings) |
-| 代码索引、符号与调用关系 | [CodeGraph](usage.md#codegraph) |
-| 浏览器、桌面操作、接管与恢复 | [Computer Use](usage.md#computer-use) |
-| 运行状态、预算、后台任务与阻塞 | [详细说明](runtime-state-background.md) |
-| Pro／Ultracode、Workflow 隔离、保存与续跑 | [Workflow 指南](workflow.md) |
-| 显示或隐藏推荐插件入口 | [推荐页面设置](usage.md#推荐插件页面显示) |
-| 宣传演示、原始素材与验证范围 | [素材来源](showcase.md) |
-
-## 版本与文档范围
-
-开发与发行维护：[DSH 0.2 适配与验证](dsh-0.2-preparation.md)，包含固定源码基线、验证范围和正式发布后的收尾步骤。
-
-当前候选文档对应 **OMD 0.2.1-alpha.2.omd.0.16.0 / DSH 0.2.1-alpha.2**，内置 **OpenCU 1.6.1**。本次整合验收针对 alpha.2；rc.2 与 alpha.1 保留已交付的独立 0.14.0 构建。[当前候选说明](release-0.2.1-alpha.2.omd.0.16.0.md) · [发布记录与下载](https://github.com/gulagala001/oh-my-dsh/releases) · [全部更新记录](../CHANGELOG.md)。
-
-候选 **0.2.1-alpha.2.omd.0.16.0** 未正式发布；公开安装版本为 **0.2.1-alpha.1.omd.0.10.0**，不含候选改进或 alpha.2 适配，参见[本地候选验收](upgrade.md#candidate-install)。
-
-`main` 分支文档可能包含下一版改动，以“开发分支／未发布”标注；安装固定 tag 时，以[该 tag 的文档](https://github.com/gulagala001/oh-my-dsh/tree/v0.2.1-alpha.1.omd.0.10.0/docs)和对应版本说明为准。历史 `release-*.md` 记录的是当时的功能与验证范围，当前安装命令见上述安装入口。
-
-Dream、工作台与恢复改进已纳入本版。DSH 0.2.0-rc.1 是另一个宿主版本，仍需独立适配与发行验收；见[适配准备](dsh-0.2-preparation.md)。
+| 调用、Token、缓存和上下文预算 | [监控](monitoring.md) |
+| 摘要、资料、附件和原文回查 | [上下文机制](context-workflow.md) |
+| 会话、项目与全局短记忆（开发分支） | [Dream](dream-memory.md) |
+| Pro、Ultracode 与任务恢复 | [Workflow](workflow.md) |
+| 主题、28 套配色、字体和壁纸 | [外观](skins.md) |
+| 后台任务、期限和阻塞 | [运行状态](runtime-state-background.md) |
+| Windows 使用条件 | [Windows](windows.md) |
+| CodeGraph、侧问和可选插件 | [使用指南](usage.md) |
+| 源码运行、构建与贡献 | [开发入口](development.md) · [贡献约定](../CONTRIBUTING.md) |
 
 ## 反馈与参与
 
-- [反馈 Bug](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml)：提供运行方式、版本、复现步骤与脱敏错误。
-- [提出功能或易用性建议](https://github.com/gulagala001/oh-my-dsh/issues/new?template=feature-request.yml)：描述实际遇到的问题和希望得到的结果。
-- [提交第三方插件 / 申请适配](plugin-submissions.md)：仓库地址和一句用途即可。
-- [贡献代码或文档](../CONTRIBUTING.md)：开发、验证与 PR 说明。
-- [REA 开发调查](rea-development.md)：按需核对发行工件、源码与 bundle、功能路径及运行证据。
-- [原作者、项目来源与许可](../THIRD_PARTY_NOTICES.md)：集中查阅原作者主页、原项目地址及许可说明。
+[反馈 Bug](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml) · [提出建议](https://github.com/gulagala001/oh-my-dsh/issues/new?template=feature-request.yml) · [推荐插件／申请适配](plugin-submissions.md) · [更新记录](../CHANGELOG.md) · [作者、来源与许可](../THIRD_PARTY_NOTICES.md)
 
-[OpenDesign技能桥接](open-design.md)：来源、许可、安装及验证范围。
+反馈实际版本、运行方式、最短复现和第一处脱敏错误。不要上传凭据或整个数据目录。
