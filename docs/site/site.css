@@ -85,18 +85,18 @@ button:focus:not(:focus-visible) {
 }
 .section[id], .computer-section, .appearance-section, .ecosystem-section { scroll-margin-top: -64px; }
 h2 {
-  font-size: clamp(32px, 3.5vw, 46px);
+  font-size: 42px;
   font-weight: 600;
   line-height: 1.3;
-  letter-spacing: -.045em;
+  letter-spacing: 0;
 }
 h3 {
   font-weight: 600;
-  letter-spacing: -.025em;
+  letter-spacing: 0;
 }
 .eyebrow {
   font: 11px/1.6 var(--mono);
-  letter-spacing: .09em;
+  letter-spacing: 0;
   color: var(--muted);
 }
 .sr-only {
@@ -145,7 +145,7 @@ h3 {
   white-space: nowrap;
   font-size: 20px;
   font-weight: 650;
-  letter-spacing: -.7px;
+  letter-spacing: 0;
 }
 .brand img {
   width: 28px;
@@ -170,8 +170,12 @@ h3 {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 22px;
+  gap: 16px;
 }
+.language-switch { display:flex; align-items:center; gap:10px; font-size:11px; white-space:nowrap; }
+.language-switch a { color:var(--muted); padding-block:8px; }
+.language-switch a[aria-current] { color:var(--ink); font-weight:600; }
+.language-switch a:hover { color:var(--blue); }
 .github-link {
   font-size: 12px;
   white-space: nowrap;
@@ -221,7 +225,7 @@ h3 {
 .text-link:hover { color: var(--blue); }
 .hero {
   padding-top: 30px;
-  background: linear-gradient(var(--paper) 52%,var(--soft) 100%);
+  background: var(--paper);
 }
 .hero-copy {
   text-align: center;
@@ -248,14 +252,16 @@ h3 {
   box-shadow: 0 0 0 4px #3569e80b;
 }
 .hero h1 {
-  font-size: clamp(38px, 4.2vw, 56px);
+  font-size: 52px;
   font-weight: 600;
   line-height: 1.22;
-  letter-spacing: -.05em;
+  letter-spacing: 0;
 }
 .hero h1 > span {
-  display: inline;
+  display: block;
 }
+.hero-subtitle { margin-top:12px; font-size:24px; font-weight:500; line-height:1.5; }
+.hero-version { margin-top:18px; font-size:11px; line-height:1.7; color:var(--muted); }
 .hero-aside {
   margin-top: 16px;
 }
@@ -273,7 +279,7 @@ h3 {
 .hero-product {
   padding: 12px 12px 0;
   border: 1px solid var(--line);
-  border-radius: 12px 12px 0 0;
+  border-radius: 8px 8px 0 0;
   background: var(--soft);
   box-shadow: 0 18px 55px #283b6210;
 }
@@ -326,6 +332,8 @@ h3 {
 }
 .hero-screen img {
   width: 100%;
+  max-height: 440px;
+  object-fit: contain;
 }
 .product-caption {
   display: flex;
@@ -461,14 +469,14 @@ h3 {
 }
 .memory-proof strong {
   font: 500 18px/1.5 var(--mono);
-  letter-spacing: -.04em;
+  letter-spacing: 0;
 }
 .memory-evidence {
   min-width: 0;
   padding: 24px;
   background: var(--soft);
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
 }
@@ -560,7 +568,7 @@ h3 {
   padding: 16px;
   background: #252c3a;
   border: 1px solid #353e50;
-  border-radius: 10px;
+  border-radius: 8px;
 }
 .computer-preview img {
   width: 100%;
@@ -692,6 +700,7 @@ h3 {
 .theme-caption > div {
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   gap: 18px;
 }
 .theme-caption strong {
@@ -829,7 +838,7 @@ h3 {
   min-width: 0;
   padding: 14px;
   background: var(--soft);
-  border-radius: 9px;
+  border-radius: 8px;
   border: 1px solid var(--line);
 }
 .ecosystem-image img {
@@ -986,7 +995,7 @@ h3 {
 }
 .faq-section h2 {
   font-size: 24px;
-  letter-spacing: -.03em;
+  letter-spacing: 0;
 }
 .faq-list {
   border-top: 1px solid var(--line);
@@ -1053,7 +1062,7 @@ h3 {
 .footer-wordmark {
   font-size: 42px;
   font-weight: 650;
-  letter-spacing: -.055em;
+  letter-spacing: 0;
   margin-block: 32px 25px;
 }
 .footer-wordmark > span {
@@ -1070,7 +1079,7 @@ h3 {
 .media-dialog {
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 8px;
   width: min(1120px, calc(100% - 48px));
   max-height: calc(100dvh - 48px);
   background: var(--paper);
@@ -1090,7 +1099,7 @@ h3 {
 }
 .dialog-header h2 {
   font-size: 17px;
-  letter-spacing: -.02em;
+  letter-spacing: 0;
 }
 .dialog-close {
   border: 1px solid var(--line);
@@ -1184,6 +1193,7 @@ h3 {
     gap: 12px;
   }
   .nav-actions .button {
+    display: none;
     min-height: 34px;
     padding-inline: 11px;
     font-size: 11px;
@@ -1225,12 +1235,14 @@ h3 {
     margin-bottom: 16px;
   }
   .hero h1 {
-    font-size: clamp(34px, 7.5vw, 50px);
+    font-size: 40px;
     line-height: 1.28;
   }
   .hero h1 > span {
     display: block;
   }
+  .hero-subtitle { font-size:20px; }
+  .hero-version { font-size:10px; }
   .hero-description {
     font-size: 13px;
     line-height: 1.85;
@@ -1252,7 +1264,7 @@ h3 {
   }
   .hero-product {
     padding: 10px 10px 0;
-    border-radius: 9px 9px 0 0;
+    border-radius: 8px 8px 0 0;
   }
   .product-toolbar {
     padding: 2px 0 10px;
@@ -1269,6 +1281,9 @@ h3 {
     flex: 1;
     padding: 8px;
     font-size: 11px;
+    min-height: 42px;
+    white-space: normal;
+    line-height: 1.5;
   }
   .product-caption {
     font-size: 10px;

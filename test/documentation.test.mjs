@@ -4,43 +4,37 @@ import { readFile, access, readdir } from 'node:fs/promises';
 
 const read = path => readFile(new URL('../' + path, import.meta.url), 'utf8');
 
-test('installation docs distinguish the unpublished candidate from the fixed public release', async () => {
-  const pkg = JSON.parse(await read('package.json')), opencu = JSON.parse(await read('vendor/opencu.json'));
-  const host = pkg.devDependencies['@deepseek-ai/dsh'];
-  const readme = await read('README.md'), upgrade = await read('docs/upgrade.md');
-  const publicPair = /公开安装版本：\*\*OMD ([\w.+-]+) \/ DSH ([\w.+-]+)\*\*/.exec(readme);
-  assert.ok(publicPair, 'README explicitly identifies the public installation version');
-  const publicVersion = publicPair[1];
-  const publicHost = '0.2.1-alpha.1';
-  assert.equal(publicPair[2], publicHost, 'the public release keeps its verified host identity');
-  assert.equal(publicVersion, `${publicHost}.omd.0.10.0`, 'the verified public release is fixed, not an arbitrary tag');
-  assert.equal(pkg.version, `${host}.omd.0.16.0`, 'current unpublished candidate');
-  assert.equal(pkg.omdReleaseStatus, 'unpublished', 'candidate is not a public release');
-  assert.equal(opencu.version, '1.6.1', 'candidate bundles the required OpenCU version');
-  assert.equal(JSON.parse(await read('vendor/opencu/package.json')).version, opencu.version, 'snapshot package agrees with its manifest');
-  const badge = /https:\/\/img\.shields\.io\/badge\/version-(.*?)-3478F6\?/.exec(readme)?.[1];
-  assert.equal(badge, pkg.version.replaceAll('-', '--'), 'visible candidate version badge');
-  assert.ok(readme.includes(`href="docs/release-${pkg.version}.md"`), 'badge links to the local candidate notes');
-  for (const file of ['README.md', 'docs/index.html', 'docs/usage.md', 'docs/upgrade.md', 'docs/windows.md']) {
+test('both languages offer only the existing host-matched public release assets', async () => {
+  const pkg = JSON.parse(await read('package.json')), snapshot = JSON.parse(await read('vendor/opencu.json'));
+  const publicHosts = ['0.2.0-rc.2', '0.2.1-alpha.1'];
+  assert.equal(pkg.omdReleaseStatus, 'unpublished');
+  assert.equal(pkg.version, `${pkg.devDependencies['@deepseek-ai/dsh']}.omd.0.16.0`);
+  assert.equal(JSON.parse(await read('vendor/opencu/package.json')).version, snapshot.version);
+  for (const file of ['README.md', 'README_EN.md', 'docs/index.html', 'docs/index_EN.html', 'docs/upgrade.md', 'docs/upgrade_EN.md']) {
     const text = await read(file);
-    const targets = [...text.matchAll(/github:gulagala001\/oh-my-dsh#v([\w.+-]+)/g)].map(match => match[1]);
-    assert.deepEqual([...new Set(targets)], [publicVersion], file + ': public installation commands use the explicitly identified release');
-    assert.ok(text.includes(`@deepseek-ai/dsh@${publicHost}`), file + ': public host target');
-    assert.ok(text.includes(pkg.version), file + ': identifies the current candidate');
-    assert.ok(/候选/.test(text) && /未(?:正式)?发布|尚未发布/.test(text), file + ': states the candidate status');
-    assert.ok(!text.includes(`/tag/v${pkg.version}`) && !text.includes(`/blob/v${pkg.version}/`) && !text.includes(`/tree/v${pkg.version}/`), file + ': no future online release links');
+    assert.ok(text.includes(pkg.version), `${file}: identifies the unpublished source version`);
+    assert.match(text, /未.{0,8}(发布|发行)|unpublished|unreleased|not.{0,16}released/i, file);
+    for (const host of publicHosts) {
+      const version = `${host}.omd.0.10.0`;
+      const asset = `https://github.com/gulagala001/oh-my-dsh/releases/download/v${version}/trisoul_x-${version}.tgz`;
+      assert.ok(text.includes(asset), `${file}: the fixed ${host} asset is available`);
+    }
+    assert.ok(!text.includes('/releases/latest'), `${file}: GitHub latest is an older release`);
+    assert.ok(!new RegExp(`/(?:tag|download)/v${pkg.version.replaceAll('.', '\\.')}[/\\s)]?`).test(text), `${file}: no invented source-version release`);
+    for (const command of text.matchAll(/@deepseek-ai\/dsh@([\w.-]+) plugin[^\n]+add (https:\/\/github.com\/gulagala001\/oh-my-dsh\/releases\/download\/v([^/]+)\/trisoul_x-([^\s<]+)\.tgz)/g)) {
+      assert.equal(command[3], `${command[1]}.omd.0.10.0`, `${file}: command host matches release`);
+      assert.equal(command[4], command[3], `${file}: asset and release versions match`);
+    }
   }
-  const candidates = [...upgrade.matchAll(/file:\/absolute\/path\/trisoul_x-([\w.+-]+)\.tgz/g)].map(match => match[1]);
-  assert.deepEqual(candidates, [pkg.version], 'local candidate package has the exact full version');
-  assert.ok(upgrade.includes(`@deepseek-ai/dsh@${host} plugin --profile candidate add file:/absolute/path/trisoul_x-${pkg.version}.tgz`), 'candidate installation uses its matching host');
-  assert.ok(upgrade.split('\n').some(line => line.startsWith('| Oh My DSH 当前候选 |') && line.includes(`**${pkg.version}**`)), 'candidate upgrade table');
-  assert.ok(upgrade.split('\n').some(line => line.startsWith('| Oh My DSH 公开安装版本 |') && line.includes(`**${publicVersion}**`)), 'public upgrade table');
-  assert.ok(upgrade.split('\n').some(line => line.startsWith('| 内置 OpenCU |') && line.includes(`**${opencu.version}**`)), 'bundled OpenCU in upgrade table');
-  const index = await read('docs/README.md');
-  assert.ok(index.includes(`**OMD ${pkg.version} / DSH ${host}**`), 'documentation index candidate pair');
-  assert.ok(index.includes(`**OpenCU ${opencu.version}**`), 'documentation index bundled component');
-  const release = await read(`docs/release-${pkg.version}.md`);
-  assert.ok(release.includes(`DSH **${host}**`) && release.includes(`OpenCU ${opencu.version}`), 'candidate notes match package and bundled component');
+});
+
+test('primary documentation has complete paired language entry points and identical release URLs', async () => {
+  for (const name of ['README', 'docs/README', 'docs/usage', 'docs/upgrade', 'docs/getting-started', 'docs/showcase', 'docs/troubleshooting', 'docs/plugin-compatibility', 'docs/development']) {
+    const zh = await read(`${name}.md`), en = await read(`${name}_EN.md`);
+    assert.ok(zh.length > 100 && en.length > 100, name);
+    const links = source => [...new Set([...source.matchAll(/https:\/\/github.com\/gulagala001\/[^\s)"<>]+\/releases\/download\/[^\s)"<>]+/g)].map(match => match[0]))].sort();
+    assert.deepEqual(links(zh), links(en), `${name}: download URLs match between languages`);
+  }
 });
 
 // These documents use ATX headings and explicit HTML anchors. Match their
@@ -66,7 +60,7 @@ test('current user docs link to existing local files and sections', async () => 
   }
   const docs = (await readdir(new URL('../docs/', import.meta.url)))
     .filter(file => file.endsWith('.md') && !file.startsWith('release-') && !file.endsWith('-research.md')).map(file => 'docs/' + file);
-  for (const file of ['README.md', 'CONTRIBUTING.md', ...docs]) {
+  for (const file of ['README.md', 'README_EN.md', 'CONTRIBUTING.md', ...docs]) {
     const text = (await read(file)).replace(/```[^]*?```/g, '');
     for (const match of text.matchAll(/\]\(([^\s)]+)(?:\s+"[^"]*")?\)|(?:href|src)="([^"]+)"/g)) {
       const target = (match[1] || match[2]).replace(/^<|>$/g, '');

@@ -1,26 +1,28 @@
 (() => {
   'use strict';
+  const english = document.documentElement.lang === 'en';
+  const text = (zh, en) => english ? en : zh;
   const status = document.querySelector('.copy-status');
   const resetTimers = new WeakMap();
   document.querySelectorAll('.code-copy').forEach(button => {
     button.hidden = false;
     button.addEventListener('click', async () => {
       const code = button.closest('.code-block').querySelector('code');
-      const text = code.textContent.replace(/\n$/, '');
+      const source = code.textContent.replace(/\n$/, '');
       clearTimeout(resetTimers.get(button));
       button.disabled = true;
       try {
-        await navigator.clipboard.writeText(text);
-        button.textContent = '已复制';
-        status.textContent = '代码已复制。';
+        await navigator.clipboard.writeText(source);
+        button.textContent = text('已复制', 'Copied');
+        status.textContent = text('代码已复制。', 'Code copied.');
       } catch {
         const selection = window.getSelection(), range = document.createRange();
         range.selectNodeContents(code); selection.removeAllRanges(); selection.addRange(range);
-        button.textContent = '请手动复制';
-        status.textContent = '浏览器未允许直接复制，已选中代码。请使用复制快捷键。';
+        button.textContent = text('请手动复制', 'Copy manually');
+        status.textContent = text('浏览器未允许直接复制，已选中代码。请使用复制快捷键。', 'Direct copying is unavailable. The code is selected; use your copy shortcut.');
       } finally {
         button.disabled = false;
-        resetTimers.set(button, setTimeout(() => { button.textContent = '复制'; }, 2500));
+        resetTimers.set(button, setTimeout(() => { button.textContent = text('复制', 'Copy'); }, 2500));
       }
     });
   });
@@ -38,17 +40,17 @@
       if (!notice) {
         notice = document.createElement('span'); notice.className = 'image-fallback'; notice.setAttribute('role', 'status');
         message = document.createElement('span'); message.className = 'image-fallback-text';
-        retry = document.createElement('button'); retry.type = 'button'; retry.textContent = '重试图片';
+        retry = document.createElement('button'); retry.type = 'button'; retry.textContent = text('重试图片', 'Retry image');
         const original = document.createElement('a'); original.href = image.currentSrc || image.src;
-        original.target = '_blank'; original.rel = 'noreferrer'; original.textContent = '打开原图 ↗';
+        original.target = '_blank'; original.rel = 'noreferrer'; original.textContent = text('打开原图 ↗', 'Open original ↗');
         notice.append(message, retry, original);
         (linkedImage || image).after(notice);
         retry.addEventListener('click', () => {
-          retry.disabled = true; notice.setAttribute('aria-busy', 'true'); message.textContent = '正在加载图片…';
+          retry.disabled = true; notice.setAttribute('aria-busy', 'true'); message.textContent = text('正在加载图片…', 'Loading image...');
           image.src = image.src;
         });
       }
-      message.textContent = image.alt ? `图片未能加载：${image.alt}` : '图片未能加载。';
+      message.textContent = image.alt ? `${text('图片未能加载：', 'Image could not be loaded: ')}${image.alt}` : text('图片未能加载。', 'Image could not be loaded.');
       retry.disabled = false; notice.removeAttribute('aria-busy'); notice.hidden = false;
       image.hidden = true; if (linkedImage) linkedImage.hidden = true;
     };

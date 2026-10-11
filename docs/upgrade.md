@@ -1,216 +1,198 @@
-# Oh My DSH：AI 安装与升级手册
+# Oh My DSH 安装与升级
 
-[文档目录](README.md) · [桌面安装](#desktop) · [Web 转桌面](#web-to-desktop) · [备份](#2-停止并完整备份) · [Web／源码升级](#3-按原安装方式升级) · [回退](#回退) · [排障](troubleshooting.md)
+[English](upgrade_EN.md) · [目录](README.md) · [桌面](#desktop) · [Web](#3-按原安装方式升级) · [迁移](#web-to-desktop) · [备份](#2-停止并完整备份) · [排障](troubleshooting.md)
 
-这份文档供能操作本地终端或桌面应用的 AI 执行，也可供用户照着操作。用户把本页网址交给你并要求安装／升级时，按所选版本的流程完成；用户只是询问文档时，不执行安装。用户的实际要求和所在环境规则优先。
+按实际 DSH 版本选配套插件。已有环境沿用运行方式、数据目录、profile 和端口；升级先结束任务、停止服务或完整退出，并备份。
 
-自己操作的用户请看[手动安装](usage.md#安装到现有-dsh推荐)。本页固定入口：<https://github.com/gulagala001/oh-my-dsh/blob/main/docs/upgrade.md>；无法读取 GitHub 页面时可读[原始 Markdown](https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/upgrade.md)。
-
-**首次安装桌面应用从[桌面版：从零安装与升级](#desktop)开始；旧版 DSH Web 转桌面先看[迁移专节](#web-to-desktop)；继续使用 Web 的用户从[识别真实运行环境](#1-识别真实运行环境)开始。** 未要求换安装方式时沿用原环境；首次安装未说明桌面还是 Web，且上下文也无法判断时，先确认这一项，不默认改装 Web。
+可把[本页网址](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/upgrade.md)交给能操作电脑／终端的 AI，说明桌面或 Web、安装或升级。它应完成环境识别、备份、安装、重启和核对。
 
 ## 目标版本与完成标准
 
-| 组件 | 版本与用途 |
-| --- | --- |
-| Oh My DSH 当前候选 | **0.2.1-alpha.2.omd.0.16.0**，未正式发布，仅用已交付并核验的本地包验收；rc.2／alpha.1 保留已交付的独立 0.14.0 构建 |
-| Oh My DSH 公开安装版本 | **0.2.1-alpha.1.omd.0.10.0**，Git tag `v0.2.1-alpha.1.omd.0.10.0`；以下公开安装步骤使用此版 |
-| DSH Web／源码宿主 | 当前候选使用 **0.2.1-alpha.2**；公开 OMD 0.10.0 仍使用其对应 **0.2.1-alpha.1** |
-| 现有官方桌面 | **DSH 0.2.0-rc.2 / OMD 0.2.0-rc.2.omd.0.10.0**，Git tag `v0.2.0-rc.2.omd.0.10.0` |
-| 内置 OpenCU | 候选 **1.6.1**，公开 0.10.0 使用其原配套版本，无需另装 |
-| Web／源码环境 | Node.js ≥22.19、Git；候选锁定 pnpm 11.28.5，公开 0.10.0 使用其原 pnpm 11.23.0；Windows 使用 PowerShell 7 |
+| 环境 | DSH | 公开 OMD／固定 tag |
+| --- | --- | --- |
+| Web alpha.1 | `0.2.1-alpha.1` | [v0.2.1-alpha.1.omd.0.10.0 安装包](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-alpha.1.omd.0.10.0/trisoul_x-0.2.1-alpha.1.omd.0.10.0.tgz) |
+| Web rc.2／本文桌面 | `0.2.0-rc.2` | [v0.2.0-rc.2.omd.0.10.0 安装包](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.0-rc.2.omd.0.10.0/trisoul_x-0.2.0-rc.2.omd.0.10.0.tgz) |
 
-候选包含 0.11 至 0.16 改进与 alpha.2 适配，下方 GitHub 安装与源码 tag 命令仅安装公开 0.10.0；两者不可混作同一验收身份。不要将 alpha.2 宿主与公开 alpha.1 插件混装。
+包名分别为 `trisoul_x-0.2.1-alpha.1.omd.0.10.0.tgz` 与 `trisoul_x-0.2.0-rc.2.omd.0.10.0.tgz`，来源为 [alpha.1 Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-alpha.1.omd.0.10.0) 与 [rc.2 Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.0-rc.2.omd.0.10.0)。仓库 `gulagala001/oh-my-dsh`，包 `trisoul_x`。
 
-OMD 后续版本采用官方 DSH 完整版本前缀，随后为 `omd.主版本.功能版本.补丁版本`；新功能递增功能位、补丁归零，纯修复递增补丁位。当前候选 OMD 后缀为 `0.16.0`，公开安装后缀为 `0.10.0`。历史 tag 保持原样。旧独立版本0.3.0的已运行检查器不能识别本次编号迁移，首次按本手册新tag手动升级；新检查器可识别旧版本并正确排序。
+GitHub `main` 的 `0.2.1-alpha.2.omd.0.16.0` **未发行**，没有 alpha.2 公开成品，内置较早的 OpenCU 1.6.1 快照；最新本地同版本浏览器重构尚未合入它。相同版本号不表示内容相同，不混同开发分支、本地包和公开 `0.10.0`，不用 `latest` 选包。
 
-以本手册与目标 tag 的 `package.json` 配对，不能仅把一个组件换成 `latest`。若仓库刚发布新版本而配对资料未同步，先核对官方发布说明和目标包，避免混装。
-
-安装来源为 `github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.10.0` 或本仓库的发行包，包名为 `trisoul_x`。遇到安装报错、版本没有变化、界面空白或离线搬运问题时，先看[排障指南](troubleshooting.md)。
-
-**本版包含已发布的旧 V0 会话兼容修复。** 遇到“历史加载失败”时，先按[故障处理](#legacy-history-failure)备份原始数据，再更新并验证。
-
-完成意味着：**首次安装能启动所选桌面应用或 Web、加载插件并显示与宿主配对的当前版本（Web／源码为 0.2.1-alpha.1.omd.0.10.0，rc.2 桌面为 0.2.0-rc.2.omd.0.10.0）；升级时原环境已备份，旧模型／会话／皮肤经过核对。** 同一安装方式升级沿用原数据目录和 profile（Web 还需保留原端口）；Web 转桌面则按[迁移专节](#web-to-desktop)接入数据，并切换到桌面独立的 `desktop` profile。GitHub 最新版本、下载成功或文件已改，均不能代替实际安装和重启。没有模型凭据时如实报告对话验证尚未完成。
-
-<a id="candidate-install"></a>
-
-## 本地候选验收（未正式发布）
-
-在隔离数据目录和 profile 中，核对目标包的完整版本、SHA-256 与实际 DSH 宿主后安装。以下绝对路径是占位示例，需换成已经交付的本机候选包：
-
-```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.2 plugin --profile candidate add file:/absolute/path/trisoul_x-0.2.1-alpha.2.omd.0.16.0.tgz
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.2 --profile candidate
-```
-
-完整重启后应显示 **0.2.1-alpha.2.omd.0.16.0**，内置 **OpenCU 1.6.1**；公开安装按下方步骤应显示 **0.2.1-alpha.1.omd.0.10.0**。候选没有可在线安装的新 tag／Release。验收结论绑定实际包与命令，不沿用历史版本的通过记录。[候选说明与当前验证范围](release-0.2.1-alpha.2.omd.0.16.0.md)。
-
-从 alpha.1 升到 alpha.2 时，先核对 profile 已安装的 OMAA、Intelligent UI、Subscriptions 及其他插件。需要随 SDK 更换的插件应准备对应宿主的完整包，在旧服务停止并备份后，通过 alpha.2 官方 CLI 的一次 `plugin add` 事务传入全部对应包，再启动同一 profile。不要复制其他环境的 `node_modules`、放宽 peer 或绕过原生兼容检查。未安装的可选插件无需因此加装；原 bundle 顺序、启用状态、模型配置与实际数据目录须在重启后核对。
+默认 Oh My DSH 预设、完整文件／命令访问、关闭审批，**profile 显式覆盖优先**，旧会话保留预设。完成需核对正常启动、当前版本、新 OMD 会话；升级还检查原模型、旧会话／附件、外观。无模型时注明对话未验证。
 
 <a id="desktop"></a>
 
 ## 桌面版：从零安装与升级
 
-桌面版由 **DSH 官方桌面应用 + Oh My DSH 插件** 组成。截至 2026-10-10，`0.2.1-alpha.2` 已发布源码和 npm 包，[官方 Release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.1-alpha.2)尚无桌面安装资产。现有 `0.2.0-rc.2` 桌面请使用 [rc.2 固定安装与验收步骤](https://github.com/gulagala001/oh-my-dsh/blob/v0.2.0-rc.2.omd.0.10.0/docs/upgrade.md#desktop)或已交付的 rc.2 本地候选包。不要把本页 alpha.2 插件装入旧桌面宿主，也不要因为缺少新版桌面包擅自改装 Web。
+本页提供官方桌面 rc.2 配对，其他宿主先查其桌面资产与配套 OMD。没有新桌面包时不自动改装 Web。
 
-新版桌面下载、安装和重启验证完成后，再将其列为本版配对。源码预览须明确标为本地预览，不能替代官方桌面发行及验收。[本版验证范围](release-0.2.1-alpha.1.omd.0.10.0.md)。
+| 电脑 | 固定官方安装包 |
+| --- | --- |
+| Windows x64 | [rc.2 EXE](https://download.deepseek.com/dsh-desk/bin/win-x64/deepseek-harness-0.2.0-rc.2-win-x64.exe) |
+| Mac Apple 芯片 | [rc.2 ZIP](https://download.deepseek.com/dsh-desk/bin/mac-arm64/deepseek-harness-0.2.0-rc.2-mac-arm64.zip) |
+
+其他架构查[官方说明](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.0-rc.2)，已有更高宿主不直接降级。
+
+1. 有旧数据先[备份](#2-停止并完整备份)。Windows 运行安装程序，Mac 解压移入“应用程序”。
+2. 打开应用，在模型设置沿用／配置自己的渠道与凭据。原生工具必需，截图理解需图像输入；密钥在应用内填。
+3. 在 **插件** 页用下方来源安装并启用。
+4. 完整退出重开，或 **重启应用与 Host**。仅关窗口／刷新不够。
+5. 查 DSH `0.2.0-rc.2`、OMD **当前版本** `0.2.0-rc.2.omd.0.10.0`。新会话选 Oh My DSH，做短对话和无副作用工具调用。
+
+```text
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.0-rc.2.omd.0.10.0/trisoul_x-0.2.0-rc.2.omd.0.10.0.tgz
+```
+
+桌面独立 `desktop` profile，Web 已装不会自动共享。终端安装须桌面自带 CLI，不能 npm／npx Web CLI 写保留 profile，也不能全局 npm 替换桌面宿主。
+
+<a id="desktop-cli"></a>
+
+<details>
+<summary>Mac 桌面自带 CLI</summary>
+
+默认应用位置下，先核对桌面宿主再装匹配包：
+
+```sh
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.0-rc.2.omd.0.10.0/trisoul_x-0.2.0-rc.2.omd.0.10.0.tgz
+```
+
+不是 rc.2 时先换对应发行。其他安装位置替换应用路径，沿用桌面实际 `DSH_HOME`。这是 Mac 布局，不照搬为 Windows 路径；Windows 可用应用插件页。之后仍完整重启检查。
+
+</details>
+
+电脑控制按需准备[运行环境与权限](usage.md#平台与运行条件)，不是桌面安装前提。
 
 <a id="web-to-desktop"></a>
 
 ## 旧版 DSH Web 转桌面，同时安装 OMD
 
-**OMD 不会包办整个迁移。** 数据目录的接入、Web 配置向桌面配置的转移，以及旧格式升级是三件不同的事。桌面与 Web 只有在指向同一个实际 `DSH_HOME` 时才会读取其中共享的产品数据；桌面不会自动寻找另一个源码目录、服务器或自定义路径里的数据。
+同一实际 `DSH_HOME` 才共享产品数据。数据目录接入、profile 配置转移、会话格式迁移分别处理。
 
-### 哪些会自动处理
+1. 记录旧版本、启动方式、目录、Web profile、端口、必要插件，以及外部自定义数据。
+2. 停 Web 和自动拉起服务，完整退桌面，备份全部实际数据。
+3. 让桌面进程使用目标目录。默认 Web `~/.dsh`，Windows 用户目录 `.dsh`；自定义需在真实桌面启动入口设 `DSH_HOME`，另一个终端的变量不证明 Dock／开始菜单继承。
+4. 安装匹配桌面与 OMD、重启后再开旧 OMD 会话，不覆盖 `profiles/desktop` 的整套 Web profile／依赖／锁文件。
+5. 核对桌面渠道、必要插件、OMD 设置和外观；共享凭据存在不代表渠道已配置。旧纯 DSH 会话不自动变 OMD。
+6. 抽查原文／附件、原 OMD 上下文与任务，新会话短聊并读取文件，再从长期桌面入口重开确认。
 
-| 内容 | 处理方式与边界 |
-| --- | --- |
-| 普通 DSH 旧会话格式 | 由新版 DSH 的持久化层按其支持的格式处理，不是安装 OMD 才能迁移。更早或定制格式须在副本验证，不能承诺全部兼容。 |
-| 早期 V0 会话显示“历史加载失败” | 部分旧字段和压缩记录需要额外兼容处理；**本版已包含修复**。按[故障处理](#legacy-history-failure)保留原件并核对修复版本。 |
-| 旧 OMD 会话与上下文关联 | OMD 加载时检查当前会话存储和 OMD 数据目录，迁移它能识别的旧会话，并重映射关联记录；V3 → V4 保留原日志和 `omd-v4-migration.json`。已经是 V4 的完整会话不会重复迁移。 |
-| 旧 `settings.yaml` | DSH 尝试导入当前 profile，原文件保留为 `settings.yaml.imported`；无法导入的条目会记录警告。OMD 可从这两个文件恢复其支持的旧设置字段，当前 profile 的显式设置优先。 |
-| Web 插件、profile 设置与外部路径 | **不会整套自动转移。** 桌面插件要重新安装；模型渠道、OMD 参数、主题等若保存在 Web profile 的 patch 中，要在桌面逐项核对并补齐。环境变量提供的凭据和自定义路径也需单独核对。 |
+搬到默认目录时先备份目标，只在目标不存在时复制整目录，保留原件，不覆盖合并两套数据。切换后旧 Web 不再写升级目录。
 
-### 迁移顺序
+<details>
+<summary>自动迁移的边界</summary>
 
-1. **识别旧环境。** 记录实际 DSH／OMD 版本、启动方式、`DSH_HOME` 和 Web profile。确认会话存储、OMD 的 `dataDir` 是否有单独覆盖；记录旧模型渠道、主题和必要插件。第一次安装 OMD 的纯 DSH 用户没有 OMD 历史关联记录需要迁移。
-2. **停止并备份。** 等任务结束，停止旧 Web 及自动拉起它的服务，完整退出桌面应用。备份整个实际 `DSH_HOME`，包含隐藏凭据文件、profiles、会话、附件和 `trisoul-x` 资料；另外备份位于目录外的自定义会话／OMD 数据。保留原程序和原配置，先在副本验证更早版本或定制环境。
-3. **让桌面读取正确的数据目录。** 同一用户下，旧 Web 使用默认 `~/.dsh`（Windows 为用户目录下的 `.dsh`）且桌面未设置覆盖时，可接入该目录。旧 Web 使用自定义目录时，必须在启动桌面进程的环境中明确设置同一个 `DSH_HOME`；只在另一个终端中 `export` 或设置 `$env:DSH_HOME`，不能证明从 Dock／开始菜单启动的桌面也会继承。长期使用应把目录设置保存在实际桌面启动入口，并在完整退出后重新启动核对。若选择搬到默认目录，先备份已有目标；仅在目标不存在时将完整数据目录复制过去，保留原目录，不把两套已有数据直接覆盖合并。自定义绝对路径需另行核对。
-4. **安装桌面和 OMD，随后完整重启。** 当前 rc.2 桌面按固定指南安装 OMD 0.2.0-rc.2.omd.0.10.0；只有官方桌面已升级为 alpha.1 时才安装对应 alpha.1 插件；若遇到下方 V0 兼容问题，先按[故障处理](#legacy-history-failure)保留数据，再验证旧会话。**以前用过 OMD 且仍有旧格式会话时，在 OMD 安装、启用并重启完成前，不要打开或继续旧会话**，以免原生宿主先转换会话、而 OMD 关联记录尚未同步。不要把整个 Web profile、`node_modules` 或锁文件复制覆盖 `profiles/desktop`；它由桌面应用管理。
-5. **核对桌面配置。** 在桌面设置中补齐旧 profile 独有的模型渠道、必要插件、OMD 参数和主题；共享凭据文件存在不等于相应渠道已在桌面配置好。`settings.yaml.imported` 表示曾执行导入，不代表当前 `desktop` profile 已包含另一个 profile 的全部设置。不要改回文件名来强制重复导入。已有会话保留原 preset，纯 DSH 旧会话不会因安装插件全部自动变成 OMD；新建会话可选择 Oh My DSH。
-6. **检查后再停用旧入口。** 确认桌面实际版本、目标目录、模型与主题；抽查一个旧会话的原文和附件。原来用过 OMD 时，还要核对上下文记录与任务账本；在新会话完成一次短对话和无副作用工具调用。最后通过计划长期使用的桌面启动入口再次打开，确认仍是同一批数据。旧版 Web 不再写入已经升级的数据目录。
+DSH 处理其支持的旧格式；OMD 迁移可识别会话与关联，V3 → V4 保留原日志和 `omd-v4-migration.json`，已有 V4 不重复迁移。
 
-如果旧会话已经先被其他宿主转换、OMD 关联记录不一致，停止继续写入，保留现场，在完整备份副本上重新按上述顺序验证；不要删除 V4 日志或迁移记录来强制重跑。回退时用原版本运行升级前的备份副本，不让旧版直接读取并写入已升级目录。
+`settings.yaml` 导入后留 `settings.yaml.imported`，不代表桌面拥有其他 profile 全部配置，当前显式覆盖优先；不改回名字强制导入。更早／定制环境先在备份副本验证，不承诺所有组合。
 
-以上根据 [DSH rc.2 桌面数据与 profile 约定](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.0-rc.2/apps/desktop/README.zh.md#安装归属)及 OMD 迁移实现整理。现有验证覆盖 OMD V3 → V4 迁移和桌面安装／重启；**不表示所有旧版本、自定义目录和跨平台迁移组合都经过端到端实测**。
+</details>
 
 <a id="legacy-history-failure"></a>
 
 ### 旧会话显示“历史加载失败”怎么办
 
-**发布状态：修复自 `v0.1.7-rc.2.2` 起提供，本版已包含。** 更新并完整重启后，核对“当前版本”与旧会话实际加载结果，不能仅根据“最新版本”判断问题已解决。
+公开配对包含早期 V0 兼容修复，该提示仍可能有其他原因。保留完整错误、会话 ID 和数据，再[定位](troubleshooting.md#按症状处理)。
 
-这次已确认的问题涉及早期 **V0 会话**：日志中的 `permission/preset` 的 `origin`、TriSoul 推理／任务附加字段、旧子会话描述或压缩记录与当前格式不兼容。历史可能使用 `standard`、`anchored-standard` 等旧预设，不能只按现在的 OMD preset 名称判断是否需要兼容处理。“历史加载失败”是通用提示；须结合具体错误判断，不能将所有加载失败都归为此原因。
-
-1. **保留现场与备份。** 等任务结束、完整退出应用并停止相关 Web 服务，备份实际 `DSH_HOME` 及目录外的自定义数据。记录宿主／插件当前版本、失败会话 ID 和完整错误信息；对外反馈前移除凭据及私人正文。不要删会话、手动删除字段、重排事件序号或改写原日志来试错。
-2. **核对修复版本。** 按本版要求配对宿主和插件，在桌面应用内更新并完整重启。需要继续使用旧版时，使用升级前的备份副本，不能让旧版写入已升级目录。
-3. **确认迁移结果。** 修复对可识别的旧记录生成通过当前格式及消息流回放校验的新副本，原 `session.jsonl`／`session.jsonl.zstd` 保留。已退役的推理附加信息、旧任务账本字段仍保存在原件中，不代表会全部恢复为当前界面功能。事件序号冲突等不能确认的记录可能仍无法迁移，应保留原件和诊断继续排查。
-4. **实际打开验证。** 重启后打开此前失败的旧会话，核对正文、附件、任务和操作记录，并查看是否仍有迁移诊断。部分会话恢复不等于全部历史已恢复；仍失败的逐项记录，不删除原件或迁移记录强制重跑。
-
-历史恢复与 demo／工作区清理应分开进行。先确认哪些记录可读、哪些仍需修复；清理候选清单只用于人工审核，不能把加载失败当成“无用数据”自动删除。
+识别成功的旧记录生成兼容副本，原 `session.jsonl`／`session.jsonl.zstd` 保留；退役附加字段不保证恢复成现界面功能，事件冲突仍可能失败。重启实际打开原失败会话核对，不删原日志／迁移记录或手工改序号。
 
 ## 1. 识别真实运行环境
 
-以下识别和命令行安装流程适用于 **Web／源码环境**。用户要求安装或升级桌面应用时，执行上方[桌面版流程](#desktop)。
+Web／源码先核对实际进程／服务用的可执行文件、版本、`DSH_HOME`、profile、端口；PATH 另一份 `dsh --version` 不代表运行服务。
 
-只读取安装与运行需要的信息，不输出密钥、登录 token 或会话正文。
+Web 默认用户目录 `.dsh`；源码默认仓库 `data/dsh/`、`trisoul-x` profile、3083。保留参数、代理和覆盖，不以空白 profile 代替升级。
 
-- 查实际启动命令、服务管理器、运行进程和监听端口；判断 npx、npm／pnpm 全局、OMD 源码，还是定制宿主。查当前宿主和插件版本，不能只凭 PATH 中另一个 `dsh --version` 下结论。
-- 确认实际 `DSH_HOME`、profile、端口和工作目录。默认 Web 数据在 `~/.dsh`；服务管理器可能另设环境变量。OMD 源码 `pnpm start` 默认用仓库 `data/dsh/`、`trisoul-x` profile、3083 端口。
-- 记录需要沿用的启动参数、代理、环境变量、模型渠道、皮肤和 profile 自定义覆盖。已有用户不要创建一个空白 profile 来代替升级。
-- 确认任务是否还在执行。等任务结束再停机；不要未经用户授权中断活动任务。可以先下载依赖、准备隔离目录和核对升级步骤。
-- 首次安装且已明确选择 Web 时，采用 Web 默认环境。若是桌面版、定制启动器或有宿主源码改动，先识别其安装机制；不要拿 Web CLI 命令直接替换桌面程序。
-
-只在缺少决定性信息时询问。已获安装／升级授权后，备份、安装和必要检查连续完成，无需每一步重复确认。
+AI 只读安装必需信息，不输出凭据、登录 Token、私人正文。已授权连续完成；缺决定性信息或权限限制才说明原因。
 
 ## 2. 停止并完整备份
 
-安全停止旧服务，必要时暂停服务管理器自动重启。将**实际 DSH_HOME 整个目录**复制到新的带时间戳目录，包含隐藏文件、凭据、profiles、会话、附件和插件资料。项目工作目录若在 DSH_HOME 外，不会随它一起备份。
+停任务、服务和自动拉起入口，复制整个实际 `DSH_HOME` 到新时间戳目录，包括隐藏凭据、profiles、会话、附件、OMD 资料；外部项目／自定义数据另备份。
 
-macOS / Linux 示例，先把第一行替换成查到的绝对路径：
+<details>
+<summary>备份命令</summary>
+
+换成实际路径，macOS／Linux：
 
 ```sh
-omdDataDir='/实际/DSH_HOME'
-omdBackupDir="${omdDataDir}.backup-$(date +%Y%m%d-%H%M%S)"
+omdDataDir='/absolute/path/to/dsh-data'
+omdBackupDir="$omdDataDir.backup-$(date +%Y%m%d-%H%M%S)"
 test -d "$omdDataDir" && cp -a "$omdDataDir" "$omdBackupDir"
 ```
 
 PowerShell 7：
 
 ```powershell
-$omdDataDir = 'C:\实际\DSH_HOME'
+$omdDataDir = 'C:\dsh-data'
 $omdBackupDir = "$omdDataDir.backup-$(Get-Date -Format yyyyMMdd-HHmmss)"
-if (!(Test-Path -LiteralPath $omdDataDir -PathType Container)) { throw '请核对原数据目录' }
+if (!(Test-Path -LiteralPath $omdDataDir -PathType Container)) { throw 'Check the data directory' }
 Copy-Item -LiteralPath $omdDataDir -Destination $omdBackupDir -Recurse -Force -ErrorAction Stop
 ```
 
-确认复制成功，目录和关键文件齐全后再继续；保存备份路径。备份含凭据，仅保留本机，不提交仓库或上传。首次安装尚无数据目录时跳过备份并如实说明。
+确认成功和关键目录齐全，备份只留本机。首次无数据可跳过并说明。
+
+</details>
 
 ## 3. 按原安装方式升级
 
-在同一执行环境中绑定真实 `DSH_HOME`；下列 `web` 一律替换成原 profile，启动命令沿用原端口与参数。保持原服务启动方式，避免新旧两个实例同时写同一目录。
+以下是 Web 命令，绑定实际 `DSH_HOME`，用原 profile 替换 `web`，保留端口，不同时运行两个写入实例。
 
 ### npx 或首次安装
 
-```sh
-# macOS / Linux
-export DSH_HOME="$omdDataDir"
-```
-
-```powershell
-# PowerShell 7
-$env:DSH_HOME = $omdDataDir
-```
+alpha.1：
 
 ```sh
 npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --version
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.10.0
+npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-alpha.1.omd.0.10.0/trisoul_x-0.2.1-alpha.1.omd.0.10.0.tgz
 npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 ```
 
-自定义端口启动时追加 `--port 原端口`。需要常驻时使用原服务管理方式，不把临时终端进程误报为持久部署。
+保留 rc.2 的 Web：
 
-### npm／pnpm 全局安装
+```sh
+npx --yes @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.0-rc.2.omd.0.10.0/trisoul_x-0.2.0-rc.2.omd.0.10.0.tgz
+npx --yes @deepseek-ai/dsh@0.2.0-rc.2 --profile web
+```
 
-用原包管理器更新原安装位置：
+自定义端口加 `--port 原端口`，常驻沿用服务管理器，临时终端不等于持久部署。
+
+<details>
+<summary>npm／pnpm 全局与源码</summary>
+
+沿用原包管理器：
 
 ```sh
 npm install -g @deepseek-ai/dsh@0.2.1-alpha.1
-# 原来通过 pnpm 全局安装时，使用 pnpm add -g @deepseek-ai/dsh@0.2.1-alpha.1
-
 dsh --version
-dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.2.1-alpha.1.omd.0.10.0
+dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-alpha.1.omd.0.10.0/trisoul_x-0.2.1-alpha.1.omd.0.10.0.tgz
 dsh --profile web
 ```
 
-确认原服务管理器使用的可执行文件就是更新后的版本；插件安装命令不会升级全局宿主。保留原来的 DSH_HOME、profile 和端口参数。
+pnpm 用 `pnpm add -g @deepseek-ai/dsh@0.2.1-alpha.1`。核对服务调用同一可执行文件；只装插件不升级宿主。
 
-### OMD 源码启动
+源码保留改动，在独立 checkout 准备固定 tag，装锁定依赖、构建、沿用数据启动。[源码步骤](development.md#源码运行)。不强制清理用户改动或改写运行产物。
 
-读取仓库工作约定和 `git status`，保留用户修改。干净工作区可执行：
-
-```sh
-git fetch origin --tags
-git switch --detach v0.2.1-alpha.1.omd.0.10.0
-pnpm install --frozen-lockfile
-pnpm build
-pnpm start
-```
-
-存在本地修改时，在独立 checkout／worktree 准备该 tag，沿用原数据目录及启动参数，并保留旧 checkout；不要 `reset --hard`、清除文件或强制覆盖。不要一边运行原服务，一边改写它正在加载的构建产物。
+</details>
 
 ## 4. 处理必要的版本差异
 
-- **DSH 0.1.7-alpha.1 / alpha.2 → rc.1：** 会话继续采用 V4，无需重复迁移旧日志。OMD 旧“简洁／详细”映射为新版“标准”，旧“完全展开”映射为新版“详细”，保留实际显示习惯；之后的主动选择不再迁移。保留 OMD 上下文、任务账本、BT、PTC、预算、皮肤及其设置。
-- **DSH 0.1.6-alpha.2 → 本版：** OMD 自动迁移支持的旧会话与关联记录；V3 原日志保留，`omd-v4-migration.json` 保存恢复信息。旧配置导入后保留为 `settings.yaml.imported`；不要重建已导入文件触发二次覆盖。
-- **更早的 V0 会话：** 本版已包含额外兼容修复。错误特征、备份、修复版本确认及重启后验证见[“历史加载失败”故障处理](#legacy-history-failure)。
-- **更早或定制环境：** 先在数据副本上核对对应宿主迁移结果，再切换；无法确定兼容性时报告具体阻碍，不删除旧数据试错。暂留 DSH 0.1.6-alpha.2 的用户应留在 OMD 1.6.1；DSH alpha.1 对应 OMD 1.7.0，alpha.2 对应 OMD 1.7.1。
-- **自定义 spill-policy：** alpha.2 将 `maxInlineBytes` 改为 `maxInlineTokens`，文本和图片共用 token 预算。只有实际存在旧自定义项时才处理；字节与 token 单位不同，不机械照抄数值。可用新版默认值时移除旧覆盖；用户有明确限额要求时先确认合适预算。OMD 图片请求大小、输出预览等合法字节限制不改名。
-- **后台唤醒：** alpha.2 默认不再限制连续三次完成唤醒；用户显式配置的 `maxConsecutiveWakes` 仍要保留。
-- **旧 bundle／渠道：** 仅在发现对应旧配置时修正。独立 `agent-team-web-profile` 已并入 `agent-team-profile`；旧 `.agent-presets` 应转为 preset bundle。官方 DeepSeek 渠道的旧 `protocol` 配置需按 Messages API 迁移，其他 OpenAI 兼容渠道保持各自协议。参阅 [DSH alpha.1 说明](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.7-alpha.1) 和 [alpha.2 说明](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.7-alpha.2)。
+换宿主时查全部已装插件，对应 SDK 的构建一起准备；互相依赖包按原生事务换全套匹配工件。不复制别的 `node_modules`、放宽 peer 或跳过检查。
 
-安装插件会将该 profile 默认 Agent preset 设为 `trisoul-x`，并带入完整文件／命令访问、关闭执行审批的配置；用户已有显式覆盖优先，不为安装擅自移除限制。已有会话保留自己的 preset。
+只迁移实际存在且目标要求的旧配置，保留限额、渠道协议、启用状态；字节／Token 预算不照抄。会话边界见迁移专节。
 
 ## 5. 少量检查并交付
 
-只检查这次安装的实际结果，不在用户电脑跑整个开发测试集：
-
-1. 服务从原入口正常启动，日志无阻止运行的错误；Web／源码宿主实际为 0.2.1-alpha.1，插件当前版本为 0.2.1-alpha.1.omd.0.10.0。
-2. 使用本次启动的登录链接打开页面；确认对话、工作台和原皮肤正常显示。已有用户能看到原模型配置和一个旧会话的历史，不输出其正文。
-3. 如可使用已配置模型，在新测试会话做一次短对话和无副作用的工具调用；没有可用模型或凭据时明确这一项未完成，不伪造成功。
-4. 向用户简洁报告实际版本、访问地址（不公开登录 token）、备份位置和任何未完成步骤。用户未要求时，不公开推送本机配置或数据。
-
-发现空白新环境先核对 DSH_HOME 和 profile，不要求用户重新录入凭据。发现旧版本先核对仍在运行的进程和启动器，不用反复安装掩盖没重启的问题。任务未结束、权限或必需凭据阻塞时，保留当前可用服务，说明具体下一步。
+1. 原入口启动，实际宿主与插件当前版本匹配，无阻止运行错误。
+2. 对话／工作台、原模型／外观、旧会话／附件正常。
+3. 有模型就新会话短聊并无副作用读文件，无模型注明未完成。
+4. 记录实际版本、备份位置、未完成项，不公开登录 Token。
 
 ## 回退
 
-停止新版，以升级前的宿主和插件版本运行完整备份副本，使用独立 DSH_HOME。保留升级后的目录；不要让新旧宿主交替写同一目录，也不要只降级程序后继续写已迁移数据。回退后同样确认真实版本与旧会话可见。
+停新版，以原宿主／插件运行升级前完整备份的副本，用独立 `DSH_HOME`。保留升级目录，旧版不写已迁移数据，两版不交替写同目录。
+
+<a id="candidate-install"></a>
+
+<details>
+<summary>收到本地构建时核对身份</summary>
+
+完整版本、来源、校验值、宿主齐全，再在隔离数据/profile 验证。GitHub alpha.2 OMD `0.16.0` 未发行，最新本地 CU 不是 GitHub 快照。文件名或版本号不足以证明内容相同。普通用户用公开配对，源码见[开发入口](development.md)。
+
+</details>

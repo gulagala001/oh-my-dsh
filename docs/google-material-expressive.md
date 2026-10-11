@@ -2,7 +2,7 @@
 
 在「设置 → 外观 → 皮肤」选择 **Google Material · 全新布局**。版本 1.0.0，id 和 layout 均为 `google-material-expressive`。
 
-本套从空白建立，以 Google Material 3 Expressive、Android 设置模式与 Gemini 对话布局为参考。独立的参数、布局、外观设置和字体资源位于 `src/client/skins/google-material-expressive/`；资料来源见 [调研记录](google-material-expressive-research.md)。
+本套从空白建立，以 Google Material 3 Expressive、Android 设置模式与 Gemini 对话布局为参考。独立的参数、布局、外观设置和字体资源位于 `src/client/skins/google-material-expressive/`。
 
 ## 布局与覆盖
 

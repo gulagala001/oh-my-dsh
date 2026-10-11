@@ -8,26 +8,50 @@ import { Parser } from 'htmlparser2';
 const projectRoot = fileURLToPath(new URL('../', import.meta.url));
 const outputMarker = '.omd-docs-site';
 const markerContent = 'oh-my-dsh-docs/v1\n';
-const rootDocuments = ['README.md', 'CHANGELOG.md', 'CONTRIBUTING.md', 'THIRD_PARTY_NOTICES.md'];
+const rootDocuments = ['README.md', 'README_EN.md', 'CHANGELOG.md', 'CONTRIBUTING.md', 'THIRD_PARTY_NOTICES.md'];
 // Publish authored user documentation, never a recursive copy of the workspace.
 const guides = [
   'README.md', 'getting-started.md', 'usage.md', 'upgrade.md', 'troubleshooting.md',
   'windows.md', 'skins.md', 'codex-desktop.md', 'ios-liquid-glass.md',
   'claude-cli-terminal.md', 'google-material-expressive.md', 'context-workflow.md',
-  'claude-cli-skin-research.md', 'google-material-expressive-research.md',
   'monitoring.md', 'dream-memory.md', 'prompt-adaptation.md', 'runtime-state-background.md',
-  'workflow.md', 'open-design.md', 'plugin-submissions.md', 'showcase.md', 'dsh-0.2-preparation.md',
-  'rea-development.md', 'plugin-compatibility.md',
+  'workflow.md', 'open-design.md', 'plugin-submissions.md', 'showcase.md',
+  'plugin-compatibility.md', 'development.md',
   'upstream-patches/README.md', 'site/README.md',
+  'README_EN.md', 'getting-started_EN.md', 'usage_EN.md', 'upgrade_EN.md',
+  'troubleshooting_EN.md', 'showcase_EN.md', 'plugin-compatibility_EN.md',
+  'development_EN.md', 'site/README_EN.md',
 ];
 const navigation = [
   ['开始使用', [['docs/README.md', '文档目录'], ['docs/getting-started.md', '首次使用'],
     ['docs/upgrade.md', '安装与升级'], ['docs/usage.md', '完整使用指南'], ['docs/troubleshooting.md', '遇到问题']]],
   ['继续探索', [['docs/context-workflow.md', '上下文与记忆'], ['docs/dream-memory.md', 'Dream 记忆'],
     ['docs/usage.md#computer-use', '电脑操作'], ['docs/skins.md', '主题与定制'],
-    ['docs/workflow.md', 'Ultracode 与 Workflow'], ['docs/plugin-submissions.md', '插件投稿']]],
+    ['docs/workflow.md', 'Ultracode 与 Workflow'], ['docs/plugin-compatibility.md', '插件兼容性'],
+    ['docs/plugin-submissions.md', '插件投稿'], ['docs/showcase.md', '演示来源']]],
+  ['参与开发', [['docs/development.md', '开发指南'], ['CONTRIBUTING.md', '参与改进'], ['docs/site/README.md', '文档站']]],
 ];
-const privateDocument = /^(?:AGENTS|CLAUDE|AI_README|PROMPT_MAINTENANCE|PROMPT_CHANGES|COMPUTER_USE_(?:HANDOFF|BASELINE|ASSESSMENT)|WINDOWS_HANDOFF)\.md$/i;
+const englishNavigation = [
+  ['Get Started', [['docs/README_EN.md', 'Documentation'], ['docs/getting-started_EN.md', 'First Run'],
+    ['docs/upgrade_EN.md', 'Install and Upgrade'], ['docs/usage_EN.md', 'Usage Guide'], ['docs/troubleshooting_EN.md', 'Troubleshooting']]],
+  ['Explore', [['docs/context-workflow.md', 'Context and Memory'], ['docs/dream-memory.md', 'Dream Memory'],
+    ['docs/usage_EN.md#computer-use', 'Computer Use'], ['docs/skins.md', 'Themes'],
+    ['docs/workflow.md', 'Pro and Ultracode'], ['docs/plugin-compatibility_EN.md', 'Plugin Compatibility'],
+    ['docs/plugin-submissions.md', 'Plugin Submissions'], ['docs/showcase_EN.md', 'Screenshots and Sources']]],
+  ['Develop', [['docs/development_EN.md', 'Development Guide'], ['CONTRIBUTING.md', 'Contributing'], ['docs/site/README_EN.md', 'Documentation Site']]],
+];
+const privateDocument = /^(?:AGENTS|CLAUDE|AI_README|PROMPT_MAINTENANCE|PROMPT_CHANGES|COMPUTER_USE_(?:HANDOFF|BASELINE|ASSESSMENT)|WINDOWS_HANDOFF|claude-cli-skin-research|google-material-expressive-research|rea-development|dsh-0\.2-preparation)\.md$/i;
+const isEnglish = file => /_EN\.md$/i.test(file);
+const counterpart = file => isEnglish(file) ? file.replace(/_EN\.md$/i, '.md') : file.replace(/\.md$/i, '_EN.md');
+const uiText = file => isEnglish(file) ? {
+  lang: 'en', heading: 'Link to:', code: 'Code', copy: 'Copy', copyLabel: 'Copy code', diagramSource: 'View diagram source', table: 'Data table',
+  skip: 'Skip to documentation', home: 'Oh My DSH home', docs: 'Docs', nav: 'Documentation navigation', mobileNav: 'Mobile documentation navigation',
+  toc: 'On This Page', mobileToc: 'Mobile table of contents', back: 'Documentation index', source: 'View Markdown source', candidate: 'Unpublished source candidate',
+} : {
+  lang: 'zh-CN', heading: '链接到：', code: '代码', copy: '复制', copyLabel: '复制代码', diagramSource: '查看图示源码', table: '数据表格',
+  skip: '跳到文档内容', home: 'Oh My DSH 产品首页', docs: '文档', nav: '文档导航', mobileNav: '移动文档导航',
+  toc: '本页目录', mobileToc: '移动本页目录', back: '文档目录', source: '查看 Markdown 源文件', candidate: '未发布源码候选',
+};
 const imageExtensions = new Set(['.png', '.jpg', '.jpeg', '.svg', '.webp', '.gif', '.avif']);
 const escapeHtml = text => String(text).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const htmlFile = file => file.replace(/\.md$/i, '.html');
@@ -86,66 +110,75 @@ function rewriteHtml(html, file, pages, assets, repository) {
 }
 
 function renderMarkdown(markdown, file, diagrams) {
+  const ui = uiText(file);
   const headings = [], ids = new Set();
   let diagramNumber = 0;
   const renderer = new marked.Renderer();
   // Explicit anchors are part of the existing GitHub document contract.
-  for (const token of marked.lexer(markdown)) {
+  marked.walkTokens(marked.lexer(markdown), token => {
     if (token.type === 'html') parseHtml(token.text, { onopentag(name, attrs) { if (attrs.id) ids.add(attrs.id); } });
-  }
+  });
   renderer.heading = function ({ tokens, depth }) {
     const inline = this.parser.parseInline(tokens), text = textContent(inline);
     const base = headingSlug(text);
     let id = base, number = 0;
     while (ids.has(id)) id = `${base}-${++number}`;
     ids.add(id); headings.push({ text, depth, id });
-    return `<h${depth} id="${escapeHtml(id)}">${inline}<a class="heading-link" href="#${encodeURIComponent(id)}" aria-label="链接到：${escapeHtml(text)}">#</a></h${depth}>\n`;
+    return `<h${depth} id="${escapeHtml(id)}">${inline}<a class="heading-link" href="#${encodeURIComponent(id)}" aria-label="${ui.heading} ${escapeHtml(text)}">#</a></h${depth}>\n`;
   };
   const baseCode = renderer.code, baseTable = renderer.table;
   renderer.code = function (token) {
     const language = (token.lang || '').split(/\s+/)[0];
-    const code = `<div class="code-block"><div class="code-toolbar"><span>${escapeHtml(language || '代码')}</span><button class="code-copy" type="button" aria-label="复制代码" hidden>复制</button></div>${baseCode.call(this, token)}</div>\n`;
+    const code = `<div class="code-block"><div class="code-toolbar"><span>${escapeHtml(language || ui.code)}</span><button class="code-copy" type="button" aria-label="${ui.copyLabel}" hidden>${ui.copy}</button></div>${baseCode.call(this, token)}</div>\n`;
     if (language !== 'mermaid') return code;
     const marker = `<!--omd-diagram-${diagrams.length + 1}-->`;
     diagrams.push({ file, source: token.text, marker, number: ++diagramNumber });
-    return `<figure class="doc-diagram">${marker}<details class="diagram-source"><summary>查看图示源码</summary>${code}</details></figure>\n`;
+    return `<figure class="doc-diagram">${marker}<details class="diagram-source"><summary>${ui.diagramSource}</summary>${code}</details></figure>\n`;
   };
   renderer.table = function (token) {
-    return `<div class="table-scroll" role="region" aria-label="数据表格" tabindex="0">${baseTable.call(this, token)}</div>\n`;
+    return `<div class="table-scroll" role="region" aria-label="${ui.table}" tabindex="0">${baseTable.call(this, token)}</div>\n`;
   };
   return { html: marked.parse(markdown, { renderer, gfm: true }), headings };
 }
 
 function documentPage(file, markdown, { pages, assets, repository, version, source = file, diagrams }) {
+  const ui = uiText(file), english = isEnglish(file);
   const firstDiagram = diagrams.length;
   const rendered = renderMarkdown(markdown, file, diagrams);
   const title = rendered.headings.find(heading => heading.depth === 1)?.text || (file === 'README.md' ? '项目介绍' : path.posix.basename(file, '.md'));
-  for (let index = firstDiagram; index < diagrams.length; index++) diagrams[index].title = `${title} · 图示 ${diagrams[index].number}`;
+  for (let index = firstDiagram; index < diagrams.length; index++) diagrams[index].title = `${title} · ${english ? 'Diagram' : '图示'} ${diagrams[index].number}`;
   const article = rewriteHtml(rendered.html, file, pages, assets, repository);
   const link = target => rewriteUrl(relativeUrl(file, target), file, pages, assets, repository);
-  const nav = navigation.map(([label, entries]) => `<div class="nav-group"><p>${label}</p>${entries.filter(([target]) => pages.has(target.split('#')[0])).map(([target, text]) => `<a href="${escapeHtml(link(target))}"${target === file ? ' aria-current="page"' : ''}>${text}</a>`).join('')}</div>`).join('');
+  const nav = (english ? englishNavigation : navigation).map(([label, entries]) => `<div class="nav-group"><p>${label}</p>${entries.filter(([target]) => pages.has(target.split('#')[0])).map(([target, text]) => `<a href="${escapeHtml(link(target))}"${target === file ? ' aria-current="page"' : ''}>${text}${english && !isEnglish(target.split('#')[0]) ? '<span class="nav-language">Chinese</span>' : ''}</a>`).join('')}</div>`).join('');
+  const translated = counterpart(file), fallback = english ? 'docs/README.md' : 'docs/README_EN.md';
+  const switchTarget = pages.has(translated) ? translated : pages.has(fallback) ? fallback : null;
+  const languageLink = (locale, label, current) => current
+    ? `<a href="${escapeHtml(relativeUrl(file, htmlFile(file)))}" lang="${locale}" aria-current="page">${label}</a>`
+    : switchTarget ? `<a href="${escapeHtml(link(switchTarget))}" lang="${locale}">${label}</a>` : '';
+  const languageSwitch = `<nav class="language-switch" aria-label="${english ? 'Language' : '语言'}">${languageLink('zh-CN', '简体中文', !english)}${languageLink('en', 'English', english)}</nav>`;
+  const home = english ? 'docs/index_EN.html' : 'docs/index.html', index = english ? 'docs/README_EN.md' : 'docs/README.md';
   const sections = rendered.headings.filter(heading => heading.depth === 2 || heading.depth === 3);
   const toc = sections.map(heading => `<a class="toc-depth-${heading.depth}" href="#${encodeURIComponent(heading.id)}">${escapeHtml(heading.text)}</a>`).join('');
   const description = textContent(rendered.html).replace(/\s+/g, ' ').slice(0, 150);
   return `<!doctype html>
-<html lang="zh-CN"><head>
+<html lang="${ui.lang}"><head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="${escapeHtml(description)}"><meta name="theme-color" content="#f5f5f2">
   <title>${escapeHtml(title)} · Oh My DSH</title>
   <link rel="icon" href="${link('docs/images/logo.svg')}" type="image/svg+xml">
   <link rel="stylesheet" href="${link('docs/site/docs.css')}"><script src="${link('docs/site/docs.js')}" defer></script>
 </head><body>
-  <a class="skip-link" href="#document">跳到文档内容</a>
-  <header class="doc-header"><a class="brand" href="${link('docs/index.html')}" aria-label="Oh My DSH 产品首页"><img src="${link('docs/images/logo.svg')}" width="28" height="28" alt="">Oh My DSH<span>.</span></a><a class="header-docs" href="${link('docs/README.md')}">文档</a><a class="header-github" href="${repository}" target="_blank" rel="noreferrer">GitHub ↗</a></header>
-  <div class="doc-layout"><aside class="doc-sidebar"><nav aria-label="文档导航">${nav}</nav></aside>
+  <a class="skip-link" href="#document">${ui.skip}</a>
+  <header class="doc-header"><a class="brand" href="${link(home)}" aria-label="${ui.home}"><img src="${link('docs/images/logo.svg')}" width="28" height="28" alt="">Oh My DSH<span>.</span></a><a class="header-docs" href="${link(index)}">${ui.docs}</a>${languageSwitch}<a class="header-github" href="${repository}" target="_blank" rel="noreferrer">GitHub ↗</a></header>
+  <div class="doc-layout"><aside class="doc-sidebar"><nav aria-label="${ui.nav}">${nav}</nav></aside>
     <main id="document" class="doc-main">
-      <details class="mobile-nav"><summary>文档导航</summary><nav aria-label="移动文档导航">${nav}</nav></details>
-      <p class="document-meta">DOCUMENTATION <span>OMD ${escapeHtml(version)}</span></p>
-      ${toc ? `<details class="mobile-toc"><summary>本页目录</summary><nav aria-label="移动本页目录">${toc}</nav></details>` : ''}
+      <details class="mobile-nav"><summary>${ui.nav}</summary><nav aria-label="${ui.mobileNav}">${nav}</nav></details>
+      <p class="document-meta">DOCUMENTATION <span>${ui.candidate} · ${escapeHtml(version)}</span></p>
+      ${toc ? `<details class="mobile-toc"><summary>${ui.toc}</summary><nav aria-label="${ui.mobileToc}">${toc}</nav></details>` : ''}
       <article class="doc-article">${rendered.headings.some(heading => heading.depth === 1) ? '' : `<h1>${escapeHtml(title)}</h1>`}${article}</article>
-      <footer class="doc-footer"><a href="${link('docs/README.md')}">← 文档目录</a>${source ? `<a href="${repository}/blob/main/${source}" target="_blank" rel="noreferrer">查看 Markdown 源文件 ↗</a>` : ''}</footer>
+      <footer class="doc-footer"><a href="${link(index)}">← ${ui.back}</a>${source ? `<a href="${repository}/blob/main/${source}" target="_blank" rel="noreferrer">${ui.source} ↗</a>` : ''}</footer>
     </main>
-    ${toc ? `<aside class="doc-toc"><nav aria-label="本页目录"><p>本页目录</p>${toc}</nav></aside>` : ''}
+    ${toc ? `<aside class="doc-toc"><nav aria-label="${ui.toc}"><p>${ui.toc}</p>${toc}</nav></aside>` : ''}
   </div><p class="copy-status sr-only" role="status" aria-live="polite"></p>
 </body></html>\n`;
 }
@@ -213,8 +246,9 @@ async function renderDiagrams(diagrams, output, chromiumExecutablePath) {
         const graphic = `docs/site/diagrams/${createHash('sha256').update(rendered.svg).digest('hex').slice(0, 24)}.svg`;
         output.set(graphic, rendered.svg);
         const src = escapeHtml(relativeUrl(diagram.file, graphic)), title = escapeHtml(rendered.title);
-        const alternative = escapeHtml(`${rendered.title}：${rendered.description}`);
-        const markup = `<figcaption><span>${title}</span><a href="${src}" target="_blank" rel="noreferrer">放大图示 ↗</a></figcaption><div class="diagram-scroll" role="region" aria-label="${title}，可横向滚动" tabindex="0" style="--diagram-width:${Math.ceil(rendered.width)}px"><img src="${src}" width="${rendered.width}" height="${rendered.height}" alt="${alternative}"></div>`;
+        const english = isEnglish(diagram.file);
+        const alternative = escapeHtml(`${rendered.title}: ${rendered.description}`);
+        const markup = `<figcaption><span>${title}</span><a href="${src}" target="_blank" rel="noreferrer">${english ? 'Open diagram' : '放大图示'} ↗</a></figcaption><div class="diagram-scroll" role="region" aria-label="${title}${english ? ', horizontally scrollable' : '，可横向滚动'}" tabindex="0" style="--diagram-width:${Math.ceil(rendered.width)}px"><img src="${src}" width="${rendered.width}" height="${rendered.height}" alt="${alternative}"></div>`;
         const file = htmlFile(diagram.file);
         output.set(file, output.get(file).replace(diagram.marker, markup));
       } catch (error) {
@@ -321,7 +355,7 @@ export async function buildDocs({ root = projectRoot, outDir = path.join(root, '
     if (await regularFile(root, file, ['README.md', 'docs/README.md'].includes(file))) pages.add(file);
   }
   const staticAssets = [
-    'docs/index.html', 'docs/site/site.css', 'docs/site/site.js', 'docs/site/docs.css', 'docs/site/docs.js',
+    'docs/index.html', 'docs/index_EN.html', 'docs/site/site.css', 'docs/site/site.js', 'docs/site/docs.css', 'docs/site/docs.js',
     ...await assetFiles(root, 'docs/images', file => imageExtensions.has(path.extname(file)) || file === 'docs/images/readme-screenshots.json'),
     ...await assetFiles(root, 'docs/site/media', file => imageExtensions.has(path.extname(file)) || ['.mp4', '.webm'].includes(path.extname(file)) || file === 'docs/site/media/manifest.json'),
     ...await assetFiles(root, 'docs/skin-font-licenses', file => file.endsWith('-OFL.txt')),
@@ -337,6 +371,7 @@ export async function buildDocs({ root = projectRoot, outDir = path.join(root, '
   }
   for (const file of pages) output.set(htmlFile(file), documentPage(file, await readFile(path.join(root, file), 'utf8'), { pages, assets, repository, version: pkg.version, diagrams }));
   output.set('docs/index.html', rewriteHtml(await readFile(path.join(root, 'docs/index.html'), 'utf8'), 'docs/index.html', pages, assets, repository));
+  output.set('docs/index_EN.html', rewriteHtml(await readFile(path.join(root, 'docs/index_EN.html'), 'utf8'), 'docs/index_EN.html', pages, assets, repository));
   output.set('index.html', '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="0;url=docs/index.html"><title>Oh My DSH</title></head><body><a href="docs/index.html">进入 Oh My DSH 产品首页</a></body></html>\n');
   output.set('.nojekyll', '');
   output.set(outputMarker, markerContent);

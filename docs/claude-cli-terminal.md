@@ -26,5 +26,4 @@
 
 - `test/claude-cli-terminal-ui.test.mjs`：安装打包后的插件，使用真实 DSH 测试实例、隔离配置和模拟模型提供方；覆盖字体、各设置页面、深浅色、390px、工具调用、停止、设置保存、导入与恢复。
 - `TRISOUL_UI_ARTIFACTS=1 node --test test/claude-cli-terminal-ui.test.mjs`：保留各页面截图到 `data/claude-cli-terminal-qa/`，用于视觉复核。
-- 多会话同时构建时，共用 UI 回归可以设置 `OMD_UI_PACKED=1`，让测试安装包快照，避免另一个会话更新 `lib/client.js` 导致测试浏览器中途热重载。
-- 官方视觉与行为资料见 [调研记录](claude-cli-skin-research.md)。
+- 共用 UI 回归可以设置 `OMD_UI_PACKED=1`，让测试安装包快照，避免构建更新 `lib/client.js` 导致测试浏览器中途热重载。
