@@ -2,6 +2,17 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-alpha.2.omd.0.15.1",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "修复重新启用后的原生会话恢复",
+      "notes": [
+        "修复停用、冷重启后重新启用时原生文件上传解析器的遗留注册。",
+        "只补偿已识别的原生重复注册，保留其他插件的回调与生命周期。",
+        "保留全部 0.15.0 增强；仅生成本地构建，未创建 tag 或 Release。"
+      ]
+    },
+    {
       "version": "0.2.1-alpha.2.omd.0.15.0",
       "severity": "normal",
       "unpublished": true,
