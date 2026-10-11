@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { frontendFixture, until } from './fixtures/frontend.mjs';
-import { nativeGuide, nativeTabs, nativeTab, openNativeGuide, openWorkbench, workbenchPage, workbenchSections, workbenchProvider } from './fixtures/workbench.mjs';
+import { startFixture } from './fixtures/computer-use/server.mjs';
+import { prepareComputerTarget, browserAddress, nativeGuide, nativeTabs, nativeTab, openNativeGuide, openWorkbench, workbenchPage, workbenchSections, workbenchProvider } from './fixtures/workbench.mjs';
 
 // One actual-host flow owns the workbench structure. Other UI suites retain
 // their business regressions and use this same native entry path.
@@ -11,7 +12,30 @@ test('native right tabs preserve independent pages, reading state, legacy links 
   const plugin = await workbenchProvider(t);
   // The UI branch already launches headless Chromium. The fixture's
   // headless:true option instead skips browser creation and is for API tests.
-  const { page, sessionId, errors } = await frontendFixture(t, { plugins: [plugin] });
+  const f = await frontendFixture(t, { plugins: [plugin] }), { page, sessionId, errors } = f;
+  const browserFixture = await startFixture(); t.after(() => browserFixture.close());
+  const observeNoTargetCu = () => {
+    window.__noTargetCuObservation = true;
+    window.__noTargetCuNodes = [];
+    const selector = '.tx-cu-empty,.tx-cu-pane:not([data-cu-target]),.tx-cu-pane[data-cu-target=""]';
+    const inspect = node => {
+      if (!(node instanceof Element)) return;
+      const found = [...(node.matches(selector) ? [node] : []), ...node.querySelectorAll(selector)];
+      for (const el of found) if (window.__noTargetCuNodes.length < 20)
+        window.__noTargetCuNodes.push(el.outerHTML.slice(0, 500));
+    };
+    new MutationObserver(records => {
+      if (!window.__noTargetCuObservation) return;
+      for (const record of records) for (const node of record.addedNodes) inspect(node);
+    }).observe(document, { childList: true, subtree: true });
+    if (document.documentElement) inspect(document.documentElement);
+  };
+  await page.addInitScript(observeNoTargetCu);
+  await page.evaluate(observeNoTargetCu);
+  const assertNoEmptyFlash = async () => {
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.deepEqual(await page.evaluate(() => window.__noTargetCuNodes), [], 'the retired CU empty page or generic preview body never flashes while no target exists');
+  };
   const capture = async name => {
     if (!process.env.OMD_WORKBENCH_ARTIFACTS) return;
     await mkdir(process.env.OMD_WORKBENCH_ARTIFACTS, { recursive: true });
@@ -33,6 +57,7 @@ test('native right tabs preserve independent pages, reading state, legacy links 
   };
   const stored = () => page.evaluate(id => JSON.parse(localStorage.getItem('dsh.sidebar-right.v1.' + id)).bySession[id].layout, sessionId);
   const countKind = async kind => Object.values((await stored()).tabs).filter(tab => tab.kind === kind).length;
+  const activeRecord = async () => { const layout = await stored(); return layout.tabs[layout.nodes[layout.activePaneId].activeTabId]; };
   const pickGuide = async kind => {
     const guide = await openNativeGuide(page), before = await nativeTabs(page).count();
     await guide.locator(`[data-sidebar-right-guide-entry="${kind}"]`).click();
@@ -45,8 +70,10 @@ test('native right tabs preserve independent pages, reading state, legacy links 
   assert.equal(await page.locator('.tx-workbench').count(), 0, 'the initial new tab has no mounted workbench pages');
   assert.equal(await page.locator('.tx-cu-pane').count(), 0, 'the initial guide has no Computer Use setup or session state');
   const kinds = await nativeGuide(page).locator('[data-sidebar-right-guide-entry]').evaluateAll(elements => elements.map(el => el.dataset.sidebarRightGuideEntry));
-  for (const kind of ['files', 'terminal', ...Object.values(workbenchSections).map(section => section.kind), 'fixture-provider']) assert.ok(kinds.includes(kind), 'native guide retains ' + kind);
-  const omdKinds = Object.values(workbenchSections).filter(section => section.section !== 'computer').map(section => section.kind);
+  for (const kind of ['files', 'terminal', 'browser', ...Object.values(workbenchSections).map(section => section.kind), 'fixture-provider']) assert.ok(kinds.includes(kind), 'native guide retains ' + kind);
+  const omdKinds = Object.values(workbenchSections).map(section => section.kind);
+  assert.deepEqual(kinds.filter(kind => ['trisoul-x-computer-use', 'opencu-browser'].includes(kind)), [], 'the native start page has no CU or fallback-browser entry');
+  assert.equal(await nativeGuide(page).getByRole('button', { name: '应用预览', exact: true }).count(), 0, 'the intermediate application-preview entry is removed');
   assert.deepEqual(kinds.filter(kind => omdKinds.includes(kind)), omdKinds, 'OMD guide entries keep their declared order');
   assert.equal(await page.locator('.cx-navigation').count(), 0, 'there is no second fixed navigation strip');
   const taskEntry = nativeGuide(page).locator('[data-sidebar-right-guide-entry="trisoul-x-context"]');
@@ -56,6 +83,17 @@ test('native right tabs preserve independent pages, reading state, legacy links 
   assert.ok((await taskEntry.evaluate(el => getComputedStyle(el.closest('[data-sidebar-right-guide] > div'), '::before').content)).includes('OMD 专属'));
   await assertConversation();
   await capture('initial-guide');
+
+  await pickGuide('browser');
+  const address = browserAddress(page);
+  await address.waitFor({ state: 'visible' });
+  assert.equal(await page.locator('.tx-cu-pane').count(), 0, 'the native Browser opens directly without a CU empty page');
+  await address.fill(browserFixture.url);
+  await address.press('Enter');
+  await page.frameLocator('[data-sidebar-browser-frame="iframe"]').getByRole('heading', { name: 'Computer Use 测试工作台', exact: true }).waitFor();
+  await capture('native-browser-direct-address');
+  const browserTabId = await address.evaluate(el => el.closest('[data-sidebar-right-tab]').dataset.sidebarRightTab);
+  await nativeTabs(page).filter({ has: page.locator(`[data-sidebar-right-tab="${browserTabId}"]`) }).getByRole('button', { name: /^关闭/ }).click();
 
   await pickGuide('trisoul-x-memory');
   const memory = workbenchPage(page, '记忆'), text = memory.locator('.cx-dream-memory > .cx-prose');
@@ -107,6 +145,14 @@ test('native right tabs preserve independent pages, reading state, legacy links 
     assert.equal(await countKind(section.kind), 1, 'legacy params restore ' + section.section + ' into its own type');
   }
   await (await nativeTab(page, '第三方原生页')).click();
+  await provider.getByRole('button', { name: '旧工作台 computer', exact: true }).click();
+  await until(async () => await countKind('trisoul-x-workbench') === 0);
+  await browserAddress(page).waitFor({ state: 'visible' });
+  assert.equal((await activeRecord()).kind, 'browser', 'a no-target compatibility link enters the native Browser directly');
+  assert.equal(await page.locator('.tx-cu-pane').count(), 0, 'an old computer link without a target redirects without mounting an intermediate application page');
+  assert.equal(await page.locator('.tx-cu-empty').count(), 0);
+  await assertNoEmptyFlash();
+  await (await nativeTab(page, '第三方原生页')).click();
   await provider.getByRole('button', { name: '旧任务链接', exact: true }).click();
   await workbenchPage(page, '任务').waitFor({ state: 'visible' });
   assert.equal(await countKind('trisoul-x-context'), 1, 'old task links keep their original kind');
@@ -135,8 +181,7 @@ test('native right tabs preserve independent pages, reading state, legacy links 
     await provider.waitFor({ state: 'visible' });
     for (const name of Object.keys(workbenchSections)) {
       const body = await openWorkbench(page, name);
-      if (name === '电脑') assert.equal(await body.count(), 1, 'Computer Use owns one native preview pane');
-      else assert.equal(await body.locator(':scope > .tx-workbench-page').count(), 1, 'each OMD kind owns one page');
+      assert.equal(await body.locator(':scope > .tx-workbench-page').count(), 1, 'each OMD kind owns one page');
       assert.equal(await body.evaluate(el => el.scrollWidth <= el.clientWidth + 1), true, name + ': no horizontal spill');
     }
     await openWorkbench(page, '记忆');
@@ -194,5 +239,54 @@ test('native right tabs preserve independent pages, reading state, legacy links 
   await workbenchPage(page, '任务').waitFor({ state: 'visible' });
   assert.equal(await countKind('trisoul-x-context'), 1, 'explicit legacy tab selection migrates exactly one task page');
   assert.equal((await stored()).expanded, true);
+
+  // A persisted generic CU record has no target identity and must not restore
+  // the retired application empty page. Its compatibility route enters the
+  // public native Browser directly, just like the old computer link.
+  await page.evaluate(id => {
+    const key = 'dsh.sidebar-right.v1.' + id, saved = JSON.parse(localStorage.getItem(key));
+    const task = Object.values(saved.bySession[id].layout.tabs).find(tab => tab.kind === 'trisoul-x-context');
+    task.kind = 'trisoul-x-computer-use'; task.contentId = 'sidebar://trisoul-x-computer-use'; task.title = 'Computer Use';
+    localStorage.setItem(key, JSON.stringify(saved));
+  }, sessionId);
+  await page.reload();
+  await page.getByRole('button', { name: '打开工作台', exact: true }).waitFor();
+  await browserAddress(page).waitFor({ state: 'visible' });
+  assert.equal((await activeRecord()).kind, 'browser', 'a no-target compatibility link enters the native Browser directly');
+  assert.equal(await page.locator('.tx-cu-pane').count(), 0, 'a restored legacy CU record without a target has no application-preview node');
+  assert.equal(await page.locator('.tx-cu-empty').count(), 0, 'no retired empty CU content survives restoration');
+  await until(async () => await countKind('trisoul-x-computer-use') === 0);
+  await capture('legacy-cu-without-target');
+  await assertNoEmptyFlash();
+  await page.evaluate(() => { window.__noTargetCuObservation = false; });
+
+  const ready = await prepareComputerTarget(t, f, browserFixture);
+  await page.getByRole('button', { name: '打开 Computer Use', exact: true }).click();
+  const targetPane = page.locator('.tx-cu-pane');
+  await targetPane.waitFor({ state: 'visible' });
+  assert.equal(await targetPane.getAttribute('data-cu-target'), ready.target.id, 'the composer CU entry opens its actual target directly');
+  assert.equal((await activeRecord()).kind, 'trisoul-x-computer-use', 'real CU content owns the native target kind');
+  assert.equal(await countKind('trisoul-x-computer-use'), 1);
+  assert.equal(await targetPane.locator('.tx-cu-empty').count(), 0, 'an actual target never passes through the removed application empty page');
+  const image = targetPane.locator('.tx-cu-live img').first();
+  await image.waitFor();
+  await until(() => image.evaluate(img => img.complete && img.naturalWidth > 0));
+  await capture('actual-cu-target-direct');
+  await openWorkbench(page, '任务');
+  await page.getByRole('button', { name: '打开 Computer Use', exact: true }).click();
+  await targetPane.waitFor({ state: 'visible' });
+  assert.equal(await targetPane.getAttribute('data-cu-target'), ready.target.id, 'reopening CU from another native tab preserves the actual target');
+  await (await nativeTab(page, '第三方原生页')).click();
+  await provider.getByRole('button', { name: '旧工作台 computer', exact: true }).click();
+  await until(async () => await countKind('trisoul-x-workbench') === 0);
+  await targetPane.waitFor({ state: 'visible' });
+  const restoredTarget = await activeRecord();
+  assert.equal(restoredTarget.kind, 'trisoul-x-computer-use', 'old workbench computer params restore into the native CU target kind');
+  assert.equal(await countKind('trisoul-x-computer-use'), 1, 'the old target link reveals the existing CU page');
+  assert.equal(await targetPane.getAttribute('data-cu-target'), ready.target.id);
+  const targetTab = nativeTabs(page).filter({ has: page.locator(`[data-sidebar-right-tab="${restoredTarget.id}"]`) });
+  const targetTitle = targetTab.locator('.tx-cu-content-title');
+  await until(async () => await targetTitle.getAttribute('title') === (ready.target.title || ready.target.name));
+  assert.notEqual((await targetTab.innerText()).trim(), '工作台', 'the restored target tab shows its actual content title');
   assert.deepEqual(errors, []);
 });

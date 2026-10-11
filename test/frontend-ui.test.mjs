@@ -1,4 +1,4 @@
-import { openWorkbench } from './fixtures/workbench.mjs';
+import { openWorkbench, prepareComputerTarget } from './fixtures/workbench.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
@@ -70,7 +70,7 @@ test('DSH frontend: native workbench pages, preserved edits, compact composer an
   const workbench = page.locator('.cx-integrated:visible');
   await until(async () => (await workbench.boundingBox())?.width > 300);
   await page.getByRole('heading', { name: '任务与验证', exact: true }).waitFor();
-  for (const name of ['记忆', '上下文', '电脑', '监控', '任务']) {
+  for (const name of ['记忆', '上下文', '监控', '任务']) {
     await openWorkbench(page, name);
     await screenshot('workbench-' + name);
   }
@@ -102,11 +102,17 @@ test('DSH frontend: native workbench pages, preserved edits, compact composer an
   assert.equal((await (await disabled).json()).verification, false);
   assert.equal(await btNotice.isVisible(), false, 'turning verification off does not show the notice');
   await page.keyboard.press('Escape');
+  await prepareComputerTarget(t, f);
   await page.getByRole('button', { name: '打开 Computer Use', exact: true }).click();
-  await page.getByRole('heading', { name: '让助手操作应用和网页', exact: true }).waitFor();
+  const previewImage = page.locator('.tx-cu-pane .tx-cu-live img').first();
+  await previewImage.waitFor();
+  await until(() => previewImage.evaluate(img => img.complete && img.naturalWidth > 0));
   assert.equal(await page.locator('.tx-cu-pane:visible').count(), 1);
-  await screenshot('computer-empty');
-  await page.getByRole('button', { name: '运行环境与权限', exact: true }).click();
+  await screenshot('computer-target');
+  await page.getByRole('button', { name: '设置与操作记录', exact: true }).click();
+  const supportDialog = page.getByRole('dialog');
+  await supportDialog.waitFor();
+  await supportDialog.getByRole('button', { name: '运行环境与权限', exact: true }).click();
   await page.getByText('Chrome 扩展', { exact: true }).waitFor();
   await screenshot('computer-setup');
   const setupState = await page.evaluate(async session => (await fetch('/trisoul-x/computer-use/setup?session='+encodeURIComponent(session))).json(), f.sessionId);
@@ -132,6 +138,7 @@ test('DSH frontend: native workbench pages, preserved edits, compact composer an
     await page.getByRole('button', { name: '修复桌面控制', exact: true }).waitFor({ state: 'hidden' });
     await screenshot('windows-setup');
   } finally { await page.unroute('**/trisoul-x/computer-use/setup?*', windowsSetup); }
+  await page.keyboard.press('Escape');
   const light = await page.locator('.tx-cu-pane:visible').evaluate(el => getComputedStyle(el).backgroundColor);
   await page.emulateMedia({ colorScheme: 'dark' });
   await until(async () => await page.locator('.tx-cu-pane:visible').evaluate(el => getComputedStyle(el).backgroundColor) !== light);

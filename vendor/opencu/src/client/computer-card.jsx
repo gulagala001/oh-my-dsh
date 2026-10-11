@@ -27,15 +27,13 @@ export function ComputerCard({ block, loadImage, toolName, openFile, sessionId, 
       {target && <span className="tx-cu-card-target" title={target.origin ?? target.label}>{target.label}</span>}
       <small className={failure && !stopped ? 'tx-cu-error' : settled && !stopped ? 'tx-cu-visually-hidden' : ''}>{status}</small>
     </button>
-    {(images.length > 0 || files.length > 0) && <div className="tx-cu-card-deliverables" aria-label="操作结果">
-      {!!images.length && <div className="tx-cu-result-images">{images.map((item, index) => <SavedImage key={index} attachment={item.attachment} loadImage={loadImage}/>)}</div>}
-      {!!files.length && <div className="tx-cu-export-files">{files.map((file, index) => <button key={index} type="button" onClick={() => openFile?.(file.path)} disabled={!openFile} title={file.path}>
-        <ComputerIcon name="file" size={21}/><span><strong>{file.name}</strong><small>{sizeLabel(file.bytes)}</small></span><ComputerIcon name="popout" size={14}/>
-      </button>)}</div>}
-    </div>}
     {failure && <p className="tx-cu-card-failure tx-cu-error" role="status">{failureText}</p>}
     {open && !preparing && <div className="tx-cu-card-body" id={bodyId}>
-      <details open={!images.length && !files.length}><summary>查看操作与结果</summary>{args.code && <pre aria-label="操作代码">{args.code}</pre>}{message && <pre aria-label="操作输出">{message}</pre>}</details>
+      {!!images.length && <div className="tx-cu-result-images" aria-label="结果截图">{images.map((item, index) => <SavedImage key={index} attachment={item.attachment} loadImage={loadImage}/>)}</div>}
+      {!!files.length && <div className="tx-cu-export-files" aria-label="交付文件">{files.map((file, index) => <button key={index} type="button" onClick={() => openFile?.(file.path)} disabled={!openFile} title={file.path}>
+        <ComputerIcon name="file" size={16}/><span><strong>{file.name}</strong><small>{sizeLabel(file.bytes)}</small></span><ComputerIcon name="popout" size={14}/>
+      </button>)}</div>}
+      {args.code && <pre aria-label="操作代码">{args.code}</pre>}{message && <pre aria-label="操作输出">{message}</pre>}
     </div>}
   </div>;
 }
