@@ -2,6 +2,26 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.2.omd.0.17.4",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "修复重复的模型与思考强度入口",
+      "notes": [
+        "兼容原生模型按钮新增的标签子槽，恢复合并的模型与思考强度入口。",
+        "保留第三方模型控件的优先级与原生标签子槽归属。"
+      ]
+    },
+    {
+      "version": "0.2.1-rc.1.omd.0.17.4",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "修复重复的模型与思考强度入口",
+      "notes": [
+        "兼容原生模型按钮新增的标签子槽，恢复合并的模型与思考强度入口。",
+        "保留第三方模型控件的优先级与原生标签子槽归属。"
+      ]
+    },
+    {
       "version": "0.2.1-rc.2.omd.0.17.3",
       "severity": "normal",
       "unpublished": false,

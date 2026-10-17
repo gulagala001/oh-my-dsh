@@ -204,10 +204,14 @@ export function applyModelPanel(ctx) {
           const elected = ctx.slots.entriesOfSlot(name)[0];
           const winner = elected?.component === Panel
             ? ctx.slots.entries(name).includes(original) ? original : undefined : elected;
-          // This adapter replaces only the official model seat. An unrelated
-          // renderer keeps its own injected props, store and child-slot owner.
+          // rc.1+ adds an inline label slot to the official model seat. Leave
+          // its declaration owned by the original entry when shadowing it;
+          // unrelated renderers and unknown child contracts stay untouched.
+          const children = winner?.children, label = children?.[`${name}.label`];
+          const nativeChildren = !children || (Object.keys(children).length === 1
+            && label?.kind === 'single' && label.scope === 'session' && label.inline === true);
           const native = winner?.component.name === 'ModelSelect' && winner.locale === 'model'
-            && typeof winner.inject === 'function' && !winner.children;
+            && typeof winner.inject === 'function' && nativeChildren;
           if (installed && (!native || winner !== original)) { const dispose = installed; installed = undefined; original = undefined; dispose(); }
           if (native && !installed) {
             original = winner;

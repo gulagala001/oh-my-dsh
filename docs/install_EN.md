@@ -6,7 +6,7 @@
 
 ## Start here
 
-**OMD is a DSH plugin, not a standalone client. Match the complete host version.** The current default build is `0.2.1-rc.2.omd.0.17.3` for DSH `0.2.1-rc.2`, bundling OpenCU `2.0.0`. Both rc.1 and rc.2 packages are available from [current releases](releases.md).
+**OMD is a DSH plugin, not a standalone client. Match the complete host version.** The current default build is `0.2.1-rc.2.omd.0.17.4` for DSH `0.2.1-rc.2`, bundling OpenCU `2.0.0`. Both rc.1 and rc.2 packages are available from [current releases](releases.md).
 
 OpenCU's complete embedded browser, annotations and native monitoring also require the **matching Host, Client and preload adapters**. Installing a plugin into arbitrary stock DSH does not add those host changes. Text, file and theme features do not require desktop control first.
 

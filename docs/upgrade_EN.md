@@ -15,7 +15,7 @@ You can give an AI with computer/terminal access [this guide's URL](https://gith
 
 Repository: `gulagala001/oh-my-dsh`. Package: `trisoul_x`. Archives are `trisoul_x-0.2.1-alpha.1.omd.0.10.0.tgz` and `trisoul_x-0.2.0-rc.2.omd.0.10.0.tgz`, from the [alpha.1 release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-alpha.1.omd.0.10.0) and [rc.2 release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.0-rc.2.omd.0.10.0). Use fixed-tag documentation for public installation.
 
-Current release **`0.2.1-rc.2.omd.0.17.3`** targets **DSH `0.2.1-rc.2`**, bundles new OpenCU `2.0.0`. For the new generation, start with [installation and version matching](install_EN.md); fixed URLs below are for historical 0.10 only. Complete CU UI requires matching Host, Client and preload adapters. rc.2, alpha.3 and rc.1 each use separate SDK/build inputs—not relabeled archives or cross-host `latest` selection.
+Current release **`0.2.1-rc.2.omd.0.17.4`** targets **DSH `0.2.1-rc.2`**, bundles new OpenCU `2.0.0`. For the new generation, start with [installation and version matching](install_EN.md); fixed URLs below are for historical 0.10 only. Complete CU UI requires matching Host, Client and preload adapters. rc.2, alpha.3 and rc.1 each use separate SDK/build inputs—not relabeled archives or cross-host `latest` selection.
 
 Installation contributes the Oh My DSH preset, full file/command access, and no execution approvals by default. **Explicit profile overrides win**; do not remove user restrictions. Existing conversations retain presets. Success requires a running chosen environment, matching current versions, and a new OMD conversation; upgrades also check original models, old messages/attachments, and appearance. Downloads, HTTP 200, or Latest version do not prove installation. Configure a model before starting a conversation.
 
@@ -212,7 +212,7 @@ Stop the new version and run the old host/plugin on a complete pre-upgrade backu
 <details>
 <summary>If you received a local build</summary>
 
-Check full version `0.2.1-rc.2.omd.0.17.3`, source, archive SHA-256, DSH `0.2.1-rc.2` and matching SDK/components/lockfile. Other hosts need their own builds. Check with isolated data, profile and port first. Names/version numbers alone do not identify contents. [New installation](install_EN.md) · [Source builds](development_EN.md).
+Check full version `0.2.1-rc.2.omd.0.17.4`, source, archive SHA-256, DSH `0.2.1-rc.2` and matching SDK/components/lockfile. Other hosts need their own builds. Check with isolated data, profile and port first. Names/version numbers alone do not identify contents. [New installation](install_EN.md) · [Source builds](development_EN.md).
 
 Preserve other plugins' source, uncommitted work, data and archives without rollback or overwriting. Combinations need matching builds from each independent project. Text, file and theme use does not require desktop control first.
 

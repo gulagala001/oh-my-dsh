@@ -15,7 +15,7 @@
 
 仓库 `gulagala001/oh-my-dsh`，包 `trisoul_x`。包名分别为 `trisoul_x-0.2.1-alpha.1.omd.0.10.0.tgz` 与 `trisoul_x-0.2.0-rc.2.omd.0.10.0.tgz`，来源为 [alpha.1 Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-alpha.1.omd.0.10.0) 与 [rc.2 Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.0-rc.2.omd.0.10.0)。公开安装以固定 tag 文档为准。
 
-当前发行 **`0.2.1-rc.2.omd.0.17.3`** 对应 **DSH `0.2.1-rc.2`**，默认内置新版 OpenCU `2.0.0`。新版安装请先看[安装与版本配对](install.md)；下方固定 URL 只用于旧 0.10。完整 CU 界面需要匹配 Host／Client／preload 适配。rc.2、alpha.3、rc.1 各用独立 SDK 与构建，不改版本号混装，不用 `latest` 跨宿主选包。
+当前发行 **`0.2.1-rc.2.omd.0.17.4`** 对应 **DSH `0.2.1-rc.2`**，默认内置新版 OpenCU `2.0.0`。新版安装请先看[安装与版本配对](install.md)；下方固定 URL 只用于旧 0.10。完整 CU 界面需要匹配 Host／Client／preload 适配。rc.2、alpha.3、rc.1 各用独立 SDK 与构建，不改版本号混装，不用 `latest` 跨宿主选包。
 
 安装默认带入 Oh My DSH 预设、完整文件／命令访问和关闭执行审批的配置；**profile 显式覆盖优先**，不擅自移除用户限制，旧会话保留预设。完成需核对正常启动、当前版本、新 OMD 会话；升级还检查原模型、旧会话／附件、外观。下载成功、HTTP 200 或“最新版本”都不等于安装成功；未配置模型时先完成模型设置。
 
@@ -212,7 +212,7 @@ pnpm 用 `pnpm add -g @deepseek-ai/dsh@0.2.1-alpha.1`。核对服务调用同一
 <details>
 <summary>收到本地构建时核对身份</summary>
 
-核对完整版本 `0.2.1-rc.2.omd.0.17.3`、来源、归档 SHA-256、匹配 DSH `0.2.1-rc.2` 及 SDK／组件／锁文件；其他宿主使用各自单独构建。先在独立数据、profile、端口中检查。文件名或版本号不足以证明内容相同。[新版安装](install.md) · [源码构建](development.md)。
+核对完整版本 `0.2.1-rc.2.omd.0.17.4`、来源、归档 SHA-256、匹配 DSH `0.2.1-rc.2` 及 SDK／组件／锁文件；其他宿主使用各自单独构建。先在独立数据、profile、端口中检查。文件名或版本号不足以证明内容相同。[新版安装](install.md) · [源码构建](development.md)。
 
 保留其他插件的源码、未提交成果、数据与独立归档，不回档、不覆盖；生态组合还需各独立插件的匹配构建。仅使用文字、文件和主题无需先配置电脑控制。
 

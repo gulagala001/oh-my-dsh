@@ -2,8 +2,8 @@
 
 | DSH 完整版本 / Host | 插件版本 / Plugin | 固定入口 / Download |
 | --- | --- | --- |
-| `0.2.1-rc.1` | `0.2.1-rc.1.omd.0.17.3` | [下载 / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.17.3/trisoul_x-0.2.1-rc.1.omd.0.17.3.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.17.3) |
-| `0.2.1-rc.2` | `0.2.1-rc.2.omd.0.17.3` | [下载 / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.17.3/trisoul_x-0.2.1-rc.2.omd.0.17.3.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.17.3) |
+| `0.2.1-rc.1` | `0.2.1-rc.1.omd.0.17.4` | [下载 / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.17.4/trisoul_x-0.2.1-rc.1.omd.0.17.4.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.17.4) |
+| `0.2.1-rc.2` | `0.2.1-rc.2.omd.0.17.4` | [下载 / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.17.4/trisoul_x-0.2.1-rc.2.omd.0.17.4.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.17.4) |
 
 使用与实际 DSH 完整版本一致的包，先备份原数据目录，使用原 profile 安装。Use the exact host-matched package and preserve your existing data/profile.
 
