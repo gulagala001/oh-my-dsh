@@ -39,3 +39,20 @@ jobs:
         run: |
           pnpm list @deepseek-ai/dsh @deepseek-ai/cordis --depth 0
           node --test test/recommended-update-native.test.mjs
+      - name: Titlebar clearance source and bundled CSS regression
+        run: |
+          node --test test/titlebar-clearance.test.mjs
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const shell = readFileSync('src/client/shell.css', 'utf8');
+          const bundle = readFileSync('lib/client.js', 'utf8');
+          const scope = "html.trisoul-shell[data-platform='darwin'] .pI_x6G_frame[data-sidebar-collapsed]";
+          for (const name of ['header', 'titleRow']) {
+            const start = shell.indexOf(scope + ' .wSkVaW_' + name + ' {');
+            assert.ok(start >= 0, 'Missing scoped source rule: ' + name);
+            const rule = shell.slice(start, shell.indexOf('}', start) + 1);
+            assert.ok(bundle.includes(rule), 'Built client is missing scoped clearance rule: ' + name);
+          }
+          console.log('Both scoped titlebar clearance rules are present in the built client.');
+          NODE
