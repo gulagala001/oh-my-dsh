@@ -186,7 +186,17 @@ export class RecommendedPluginManager {
         // activation retries and explicit source-snapshot reinstallation.
         spec = `${plugin.packageName}@${spec}`;
       }
-      result = await this.manager.installBundle(spec, { enabled: action === 'install' ? true : bundle.enabled, requestId: this.current.requestId });
+      const enabled = action === 'install' ? true : bundle.enabled;
+      if (action === 'update') {
+        // Match the native update flow: retire the old bundle before installing.
+        // A running bundle without HMR stays installed until the required restart.
+        const removed = await this.manager.removeBundle(plugin.packageName);
+        if (removed.error?.code !== 'stop-profile' && !['applied', 'restart-required'].includes(removed.application)) result = removed;
+      }
+      if (!result) {
+        this.abort.signal.throwIfAborted();
+        result = await this.manager.installBundle(spec, { enabled, requestId: this.current.requestId });
+      }
     }
     if (result.application === 'failed') {
       const pending = result.pendingBuilds || [];
