@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -14,6 +15,7 @@ for (const file of ['src/context/pipeline.mjs', 'src/context/core.mjs', 'src/con
 }
 const report = { timestamp: new Date().toISOString(), platform: `${process.platform} ${release()} ${arch()}`, node: process.version,
   refs: Object.fromEntries(Object.entries(roots).map(([name, root]) => [name, ref(root)])),
+  fixtureSha256: createHash('sha256').update(await readFile(resolve(repositoryRoot, 'test/fixtures/auto-compact-native.mjs'))).digest('hex'),
   conditions: { concurrency: 1, pairs: 3, data: [[300, 30], [1000, 100]], warmup: 'one complete 40-node/4-record operation per variant, discarded' },
   scope: 'Entire awaited AutoCompaction.check using native Session, host adapter, transactions and real fsync-backed ContextStore. Fresh controlled archive per operation; modules/OS caches warm. Setup, post-completion assertions and cold ContextStore reread excluded. Token threshold is a fixed local heuristic, not reported usage; outer session service flush is counted but stubbed. No real model, cloud cache, pricing, full desktop startup or GUI claim.', samples: [] };
 for (const root of Object.values(roots)) {

@@ -6,7 +6,7 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
 import { createHash } from 'node:crypto';
 import { Session } from '@deepseek-ai/dsh-session';
-import { createUserMessage } from '@deepseek-ai/dsh-llm';
+import { createMessage, createUserMessage } from '@deepseek-ai/dsh-llm';
 
 export const repositoryRoot = fileURLToPath(new URL('../../', import.meta.url));
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -25,9 +25,9 @@ export async function nativeCompactionFixture({ root = repositoryRoot, nodes = 3
     const session = Session.create('native-auto-index');
     const user = session.append('user/message', createUserMessage({ source: { kind: 'user' },
       content: [{ type: 'text', text: 'Preserve this user constraint and every original event.' }] }), { surfaceOp: 'append' });
-    const sources = Array.from({ length: nodes }, (_, i) => session.append('assistant/message', { turn: 1, step: i + 1,
-      message: { id: `source-${i}`, role: 'assistant', source: { kind: 'model', model: 'offline-fixture' },
-        content: [{ type: 'text', text: `Observation ${i}: ` + 'Recorded evidence remains available. '.repeat(30) }] } }, { surfaceOp: 'append' }));
+    const sources = Array.from({ length: nodes }, (_, i) => session.append('assistant/message', { turn: 1, step: i + 1, stream: [],
+      message: createMessage({ id: `source-${i}`, role: 'assistant', source: { kind: 'model', provider: 'fixture', model: 'offline-fixture' },
+        content: [{ type: 'text', text: `Observation ${i}: ` + 'Recorded evidence remains available. '.repeat(30) }] }) }, { surfaceOp: 'append' }));
     const original = structuredClone(session.snapshotEvents());
     const originalHash = digest(original);
     const estimate = value => Math.ceil(JSON.stringify(value.deriveMessages()).length / 4);
@@ -67,11 +67,14 @@ export async function nativeCompactionFixture({ root = repositoryRoot, nodes = 3
         assert.deepEqual(recovered.records, state.records);
         assert.equal(recovered.transaction, null);
         assert.equal(recovered.autoCompact.lastKey, state.autoCompact.lastKey);
+        const replay = Session.create(session.id, structuredClone(session.snapshotEvents()), session.header);
+        assert.deepEqual(replay.deriveMessages(), session.deriveMessages());
+        assert.deepEqual(replay.surface.nodes, session.surface.nodes);
         const afterEvents = session.snapshotEvents().length;
         assert.equal(await pipeline.autoCompact.check(agent), null);
         assert.equal(session.snapshotEvents().length, afterEvents); assert.equal(modelCalls, 0);
         return { wallMs, nodesBefore, records, nodesAfter: session.surface.nodes.length, originalEvents: original.length,
-          originalEventsPreserved: true, coldContextArchiveMatches: true, modelCalls, sessionFlushCalls: flushes,
+          originalEventsPreserved: true, coldContextArchiveMatches: true, nativeSessionReplayMatches: true, modelCalls, sessionFlushCalls: flushes,
           completedRecordsHash: digest(recovered.records.map(({ id, mode, summary, documents, sourceSeqs }) => ({ id, mode, summary, documents, sourceSeqs }))) };
       },
       async close() { try { await pipeline.dispose(); } finally { await rm(directory, { recursive: true, force: true }); } },
