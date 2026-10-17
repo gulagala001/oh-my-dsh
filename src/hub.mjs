@@ -147,8 +147,9 @@ export class Hub extends Service {
     call.turn ??= completed?.data.turn; call.step ??= completed?.data.step;
     state.activity.push(call);
     state.activity = state.activity.slice(-60);
-    this.budgets?.record(session, kind, entry);
-    this.store.save(state);
+    // An enabled own budget has already saved this complete state synchronously.
+    // Keep that save before ancestor traversal, including its failure behavior.
+    if (this.budgets?.record(session, kind, entry) !== true) this.store.save(state);
     // Telemetry is optional: a broken recorder must not turn success into a
     // failed model call (nor cause the caller to record the same call again).
     try { this.monitor?.append(call); } catch {}
