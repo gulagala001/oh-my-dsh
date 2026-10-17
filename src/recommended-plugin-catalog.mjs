@@ -14,10 +14,7 @@ export const recommendedPlugins = [
     category: '界面增强', url: 'https://github.com/gulagala001/dsh-intelligent-ui', githubRelease: 'gulagala001/dsh-intelligent-ui',
     // Keep retained host-specific identities. Byte binding is not product acceptance.
     hostBuilds: {
-      '0.2.1-rc.2': { version: '0.2.1-rc.2.iui.1.0.9', releaseTag: 'v0.2.1-rc.2.iui.1.0.9', asset: 'dsh-intelligent-ui-0.2.1-rc.2.iui.1.0.9.tgz', sha256: 'b9a5b9070f9fab271dd22e818e7176d87f9a0f321d2fa0ac1911f528bc20bbd5', dsh: '0.2.1-rc.2', platforms: ['本地构建，未作平台验收'], allowPrerelease: true, wholeProductAccepted: false,
-        sdk: { cordis: '4.0.5', schemastery: '3.18.5' },
-        note: 'rc.2 未发布本地候选；匹配 SDK、依赖锁、前端构建和包清单检查通过。未作整产品、第三方共存或真实平台验收；公开安装与更新继续关闭，已有安装与数据保留。' },
-      '0.2.1-rc.1': { version: '0.2.1-rc.1.iui.1.0.8', releaseTag: 'v0.2.1-rc.1.iui.1.0.8', asset: 'dsh-intelligent-ui-0.2.1-rc.1.iui.1.0.8.tgz', sha256: 'a102863a9baf346723dd68c33f2d8b208f87b200d109a5d958dc128821fb5eaa', dsh: '0.2.1-rc.1', platforms: ['本地构建，未作平台验收'], allowPrerelease: true, wholeProductAccepted: false,
+      '0.2.1-rc.1': { version: '0.2.1-rc.1.iui.1.0.9', releaseTag: 'v0.2.1-rc.1.iui.1.0.9', asset: 'dsh-intelligent-ui-0.2.1-rc.1.iui.1.0.9.tgz', sha256: '7fa3cad0824ecf7ab0d2e788acbad0aa2fbc4b879b2a938053cd5b74698d75cf', dsh: '0.2.1-rc.1', platforms: ['本地构建，未作平台验收'], allowPrerelease: true, wholeProductAccepted: false,
         sdk: { cordis: '4.0.5', schemastery: '3.18.5' },
         note: 'rc.1 未发布本地候选；匹配 SDK、冻结锁、前端构建和包清单检查通过。未作整产品、第三方共存或真实平台验收；公开安装与更新继续关闭，已有安装与数据保留。' },
       '0.2.0-rc.2': { version: '0.2.0-rc.2.iui.1.0.6', releaseTag: 'v0.2.0-rc.2.iui.1.0.6', asset: 'dsh-intelligent-ui-0.2.0-rc.2.iui.1.0.6.tgz', sha256: '69d0861a67435533a1b22b35c8b42ddfc0d3699f2b5f61dddff7f31c42902c9c', dsh: '0.2.0-rc.2', platforms: ['本地保留构建'], allowPrerelease: true, wholeProductAccepted: false,
