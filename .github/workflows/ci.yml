@@ -30,7 +30,7 @@ jobs:
       - run: pnpm build
       - run: pnpm test
       - name: Auto Compact surface-index regression
-        run: node --test test/auto-compact-surface-index.test.mjs
+        run: node --test test/auto-compact-surface-index.test.mjs test/auto-compact-native-session.test.mjs
       - name: Auto Compact native SDK boundary regression
         run: |
           pnpm list @deepseek-ai/dsh @deepseek-ai/dsh-session @deepseek-ai/dsh-compaction @deepseek-ai/cordis --depth 0
