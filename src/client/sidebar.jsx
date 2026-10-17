@@ -239,11 +239,16 @@ export function applySidebarPresentation(ctx) {
         if (value === null) root.removeAttribute(name); else root.setAttribute(name, value);
       }
     };
-    const sync = () => {
+    let markedSidebar = null;
+    const sync = records => {
       // Header class suffixes identify the host-owned workspace browser across
       // npm/desktop hash variants. Never replace its child-slot declarations.
       const sidebar = document.querySelector('[data-omd-surface="sidebar"]');
-      navMarkers.refresh(sidebar);
+      // Global mutations still discover replaced layout roots, but only the
+      // sidebar's own DOM can change its class-based styling hooks.
+      if (!records || sidebar !== markedSidebar || records.some(record => sidebar?.contains(record.target))) {
+        navMarkers.refresh(sidebar); markedSidebar = sidebar;
+      }
       const root = sidebar?.querySelector('[class*="_sectionHeader"]')?.parentElement;
       for (const [element, record] of owned) if (element !== root) { restore(element, record); owned.delete(element); }
       if (!root) return;
@@ -267,6 +272,6 @@ export function applySidebarPresentation(ctx) {
     const observer = new MutationObserver(sync);
     observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'data-omd-surface'] });
     sync();
-    return () => { observer.disconnect(); for (const [root, record] of owned) restore(root, record); owned.clear(); navMarkers.dispose(); style.remove(); };
+    return () => { observer.disconnect(); markedSidebar = null; for (const [root, record] of owned) restore(root, record); owned.clear(); navMarkers.dispose(); style.remove(); };
   });
 }
