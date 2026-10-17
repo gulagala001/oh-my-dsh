@@ -11,14 +11,15 @@ const markerContent = 'oh-my-dsh-docs/v1\n';
 const rootDocuments = ['README.md', 'README_EN.md', 'CHANGELOG.md', 'CONTRIBUTING.md', 'THIRD_PARTY_NOTICES.md'];
 // Publish authored user documentation, never a recursive copy of the workspace.
 const guides = [
-  'README.md', 'getting-started.md', 'usage.md', 'upgrade.md', 'troubleshooting.md',
+  'README.md', 'releases.md', 'install.md', 'computer-use.md', 'release-visuals.md',
+  'getting-started.md', 'usage.md', 'upgrade.md', 'troubleshooting.md',
   'windows.md', 'skins.md', 'codex-desktop.md', 'ios-liquid-glass.md',
   'claude-cli-terminal.md', 'google-material-expressive.md', 'context-workflow.md',
   'monitoring.md', 'dream-memory.md', 'prompt-adaptation.md', 'runtime-state-background.md',
   'workflow.md', 'open-design.md', 'plugin-submissions.md', 'showcase.md',
   'plugin-compatibility.md', 'development.md', 'deepseek-workbench.md',
   'upstream-patches/README.md', 'site/README.md',
-  'README_EN.md', 'getting-started_EN.md', 'usage_EN.md', 'upgrade_EN.md',
+  'README_EN.md', 'install_EN.md', 'getting-started_EN.md', 'usage_EN.md', 'upgrade_EN.md',
   'troubleshooting_EN.md', 'showcase_EN.md', 'plugin-compatibility_EN.md',
   'development_EN.md', 'site/README_EN.md',
 ];
