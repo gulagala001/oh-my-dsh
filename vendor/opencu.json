@@ -1,10 +1,10 @@
 {
   "name": "opencu",
   "version": "2.0.0-dsh.0.2.1-rc.2",
-  "source": "https://github.com/gulagala001/opencu/releases/download/v2.0.0-dsh.0.2.1-rc.2/opencu-2.0.0-dsh.0.2.1-rc.2.tgz",
+  "source": "https://github.com/gulagala001/opencu/tree/4f301a737d8c85d2c9c004dab20dcc07bf4e8d59",
   "policy": "rewritten-plugin",
   "hostVersion": "0.2.1-rc.2",
-  "archiveSha256": "21e430b2c630900f813bf7181b7a5714025d97f9d529fed8deb3449a1baa3729",
+  "archiveSha256": "a9c2190d80d86f518f8e74d05116853b06854223e933f620b98067320a4d53f0",
   "files": {
     "CHANGELOG.md": "2ef6683beb5e5be94065d9dc9d8aa759dd2a72a141a73d572698739a5273fb0a",
     "DEVELOPMENT.md": "d97f8386c0b1f59bb7c2f70791de64d5009efb2bd4ba4ab9d9385eb9031442ad",
@@ -584,7 +584,7 @@
     "src/dsh/app-approvals.mjs": "38e605f809acea5fc6d7a6dffa8615566bb2b9f218345b71f77945b3f6b1b66c",
     "src/dsh/browser-api.mjs": "dd41899446d2e02c3dbdaba698e845ef44207f38049294fb18c267eb8dc0482e",
     "src/dsh/browser-history.mjs": "33b2412e5cc42b9e37a7135436eb9be0bc8c968e568c5c97abb21d90f74f8a3b",
-    "src/dsh/browser-host.mjs": "2f57f5e3ff6268d8d7b7c5e09893cd655407bafbdfd3662f185dbbca3385e3a0",
+    "src/dsh/browser-host.mjs": "e47bfdf8638383cc0cd571a46ba3cd13140ed68f27f70d06127f51f98beaf5bc",
     "src/dsh/computer-docs.mjs": "135455c0822e7837618d2f20f58571879a243a32ee45d924c3520b077afad484",
     "src/dsh/computer.mjs": "162488009f561e53d024cf865272ee8b13fd59cf6c1476630944151c0bf8874b",
     "src/dsh/config.mjs": "56ac50acfa9bdc69f85773976f0e6a6a98b8edeeddd760134a14a005c56c938f",
