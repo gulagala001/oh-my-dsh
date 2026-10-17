@@ -187,14 +187,21 @@ export async function operateOpenCUExtensions(owner: WebContents, guest: WebCont
   }
   if (operation === 'state') {
     const extensions = profile.session.extensions.getAllExtensions()
+    // Share immutable icon strings only within this synchronous state query.
+    // A later query must re-read files, including previously missing icons.
+    const icons = new Map<Extension, string | undefined>()
+    const readIcon = (extension: Extension): string | undefined => {
+      if (!icons.has(extension)) icons.set(extension, icon(extension))
+      return icons.get(extension)
+    }
     const actions = profile.actions.getState().actions.map(action => {
       const current = { ...action, ...action.tabs?.[guest.id] }, extension = extensions.find(item => item.id === action.id)
       return { id: action.id, title: current.title ?? extension?.name, enabled: current.enabled !== false,
         hasPopup: !!current.popup, badgeText: current.text,
         badgeBackgroundColor: Array.isArray(current.color) ? `rgba(${current.color.slice(0, 3).join(',')},${(current.color[3] ?? 255) / 255})` : current.color,
-        iconDataUrl: extension ? icon(extension) : undefined }
+        iconDataUrl: extension ? readIcon(extension) : undefined }
     })
-    return { profile: { extensions: extensions.map(extension => ({ id: extension.id, name: extension.name, version: extension.version, iconDataUrl: icon(extension) })),
+    return { profile: { extensions: extensions.map(extension => ({ id: extension.id, name: extension.name, version: extension.version, iconDataUrl: readIcon(extension) })),
       recentlyUsedExtensionIds: profile.recent, toolbar: { ready: true, pinnedExtensionIds: profile.pinned, forcePinnedExtensionIds: [] } },
       actions: { status: 'available', supportsContextMenu: true, actions }, popupActionId: profile.popup?.id ?? null }
   }
