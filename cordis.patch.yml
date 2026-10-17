@@ -1,6 +1,10 @@
 - insert:
     - id: trisoul-x
       name: trisoul_x
+    - id: omd-deepseek-workbench
+      name: trisoul_x/deepseek-workbench
+    - id: omd-opencu
+      name: trisoul_x/opencu
 
 - id: agent-preset-registry
   config:
@@ -47,10 +51,6 @@
 
 - id: ui-chat
   disabled: true
-
-# The shipped Browser is a direct content page on Web as well as Desktop.
-- id: ui-sidebar-browser
-  disabled: false
 
 - insert:
     - id: omd-ui-conversation

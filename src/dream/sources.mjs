@@ -1,7 +1,8 @@
 import { basename } from 'node:path';
 import { projectOf } from '../hub-store.mjs';
 import { sourceName } from '../message-source.mjs';
-import { eventTime, actualUser, textBlocks } from '../context/core.mjs';
+import { eventTime, actualUser } from '../context/core.mjs';
+import { originalEvent } from '../context/original-search.mjs';
 import { messageOf } from '../context/materials.mjs';
 import { digest, splitSource, summaryIdentity, summaryFingerprint } from './core.mjs';
 import { isBtwSession, btwDescriptor } from '../btw-policy.mjs';
@@ -10,7 +11,15 @@ const ignoredTools = new Set(['recall', 'memory_search', 'todo_write', 'verify_l
 const unreadableSessionErrors = new Set(['SessionPersistenceCorruptionError', 'SessionFormatUnsupportedError']);
 // Source text is encoded in input JSON, then again inside the request message.
 // Count that escaping while retaining offsets into the original source text.
-const requestTextBytes = text => Buffer.byteLength(JSON.stringify(JSON.stringify(text))) - 6;
+const requestTextBytes = text => {
+  const code = text.charCodeAt(0);
+  if (text.length === 2 && code >= 0xd800 && code <= 0xdbff && text.charCodeAt(1) >= 0xdc00 && text.charCodeAt(1) <= 0xdfff) return 4;
+  if (text.length !== 1) return Buffer.byteLength(JSON.stringify(JSON.stringify(text))) - 6;
+  if (code === 34 || code === 92) return 4;
+  if (code < 32) return code === 8 || code === 9 || code === 10 || code === 12 || code === 13 ? 3 : 7;
+  if (code >= 0xd800 && code <= 0xdfff) return 7;
+  return code < 0x80 ? 1 : code < 0x800 ? 2 : 3;
+};
 const userText = e => (e.data?.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
 const material = blocks => (blocks || []).flatMap(b => b.type === 'text' ? [b.text || ''] : b.type === 'tool-result' ? [b.isError ? '[observed tool error]' : '[observed tool result]', material(b.content)] : ['reasoning','tool-call'].includes(b.type) ? [] : [`[${b.type} attachment reference retained; contents not read]`]).join('\n');
 
@@ -32,7 +41,11 @@ export class DreamSources {
     const registry=this.ctx.get?.('workspaceRegistry')||this.ctx.workspaceRegistry;
     return Boolean(registry?.list?.().some(workspace=>workspace.sessionIds.includes(id)));
   }
-  projectlessKnown(header) { return typeof header?.id==='string'&&Boolean(header.id)&&this.store.session(header.id)?.projectless===true&&!this.inWorkspace(header.id); }
+  projectlessKnown(header) {
+    if(typeof header?.id!=='string'||!header.id||this.store.session(header.id)?.projectless!==true)return false;
+    try { return !this.inWorkspace(header.id); }
+    catch { return true; } // Optional registry failure cannot widen a known private scope or block native chat.
+  }
   scopeFor(header,sideQuestion=false,signal) { return this.track(()=>this.classifyScope(header,sideQuestion,this.signal(signal))); }
   async classifyScope(header,sideQuestion=false,signal) {
     let projectless=false,current=header;
@@ -52,18 +65,20 @@ export class DreamSources {
     this.lifecycle.signal.throwIfAborted();signal?.throwIfAborted();
     return this.scope(header,sideQuestion,projectless);
   }
+  async safeScope(header,sideQuestion=false,signal) {
+    try { return await this.scopeFor(header,sideQuestion,signal); }
+    catch(error) {
+      this.lifecycle.signal.throwIfAborted();signal?.throwIfAborted();
+      // Apply the same temporary fence to cold scans and live creation. Otherwise
+      // a failed scan could leave an old shared contribution eligible for injection.
+      this.hub.dream?.notice?.(error);
+      return {mode:'session',project:'@unclassified',shared:false,projectless:true,scopeError:String(error.message).slice(0,1000),...(sideQuestion?{sideQuestion:true}:{})};
+    }
+  }
   refreshScope(header,signal) {
     return this.track(async()=>{
       signal=this.signal(signal);
-      let scope;
-      try { scope=await this.scopeFor(header,false,signal); }
-      catch(error) {
-        this.lifecycle.signal.throwIfAborted();signal.throwIfAborted();
-        // A failed optional ownership read must not block a native chat or
-        // silently admit it to shared memory. Retry from the next index scan.
-        scope={mode:'session',project:'@unclassified',shared:false,projectless:true,scopeError:String(error.message).slice(0,1000)};
-        this.hub.dream?.notice?.(error);
-      }
+      const scope=await this.safeScope(header,false,signal);
       const old=this.store.session(header.id);
       signal.throwIfAborted();
       this.store.saveSession({...old,id:header.id,title:old?.title||header.title||header.id,...scope,
@@ -120,7 +135,14 @@ export class DreamSources {
     for(const entry of entries) {
       signal?.throwIfAborted();
       const id=entry.header.id, old=this.store.session(id), previous=this.revisions.get(id);
-      const scope=await this.scopeFor(entry.header,false,signal);
+      const scope=await this.safeScope(entry.header,false,signal);
+      if(scope.scopeError) {
+        signal.throwIfAborted();
+        this.store.saveSession({...old,id,title:old?.title||entry.header.title||id,...scope,
+          activity:old?.activity||0,createdAt:old?.createdAt||Number(entry.header.createdAt)||0,cwd:entry.header.cwd||old?.cwd||'',parentSession:entry.header.parentSession});
+        if(old?.readError)warnings.push({sessionId:id,title:old.title,project:scope.project,scope:scope.mode,error:old.readError});
+        continue;
+      }
       const unchangedFailure=!retryUnreadable&&old?.readError&&previous===entry.revision&&old.project===scope.project&&old.mode===scope.mode;
       if(!unchangedFailure&&(!old || previous!==entry.revision || old.available===false || old.scopeError || old.project!==scope.project || old.mode!==scope.mode || old.shared!==scope.shared || Boolean(old.projectless)!==Boolean(scope.projectless))) {
         try { await this.inspect(id,signal); }
@@ -176,7 +198,7 @@ export class DreamSources {
   async inspectSnapshot(id,signal) {
     const snapshot=await this.read(id,signal), {header,events,inherited}=snapshot;
     this.lifecycle.signal.throwIfAborted();signal?.throwIfAborted();
-    const old=this.store.session(id), sideQuestion=header.origin==='subagent'&&Boolean(btwDescriptor(events,inherited)), scope=await this.scopeFor({...header,id},sideQuestion,signal);
+    const old=this.store.session(id), sideQuestion=header.origin==='subagent'&&Boolean(btwDescriptor(events,inherited)), scope=await this.safeScope({...header,id},sideQuestion,signal);
     this.lifecycle.signal.throwIfAborted();signal?.throwIfAborted();
     let activity=0,title=header.title||old?.title||id;
     for(const event of events) {
@@ -281,9 +303,21 @@ export class DreamSources {
     }finally{await handle.close();}
   }
   async original(id,from,to,signal) {
-    const {events}=await this.read(id,signal);
+    signal?.throwIfAborted();
     if(!Number.isSafeInteger(from)||!Number.isSafeInteger(to)||from<0||to<from||to-from>200)throw Error('原文范围应为不超过 201 个事件的非负整数区间');
-    return events.filter(e=>e.seq>=from&&e.seq<=to).map(e=>({seq:e.seq,type:e.type,text:actualUser(e)?userText(e):textBlocks(messageOf(e)?.content||e.data?.content||[])}));
+    const {header,events,inherited=0}=await this.read(id,signal);
+    signal?.throwIfAborted();
+    if(header?.id!==undefined&&header.id!==id)throw Error('目标会话头部与 sessionId 不一致');
+    if(!Array.isArray(events)||!Number.isSafeInteger(inherited)||inherited<0||inherited>events.length)throw Error('目标会话原始事件范围无效');
+    const calls=new Map(),result=[];
+    for(let index=0;index<events.length&&index<=to;index++) {
+      signal?.throwIfAborted();
+      const event=events[index];
+      if(!event||event.seq!==index)throw Error('目标会话原始事件序列不完整');
+      const original=originalEvent(event,calls,index>=from);
+      if(index>=from)result.push({seq:event.seq,type:event.type,...(original||{text:''})});
+    }
+    return result;
   }
   projectTitle(project) { return project==='@unclassified'?'未归类':basename(project)||project||'未归类'; }
 }

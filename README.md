@@ -1,242 +1,152 @@
-<p align="center"><img src="docs/images/logo.svg" width="64" height="64" alt="Oh My DSH" /></p>
+<p align="center"><img src="docs/images/release/omd-hero-zh.jpg" alt="Oh My DSH — 不止换个界面，换一种工作方式。" width="100%" /></p>
+
 <h1 align="center">Oh My DSH</h1>
-<p align="center"><strong>在熟悉的 DSH 里，把长任务、网页与电脑操作推进到可检查的交付。</strong></p>
-<p align="center">
-  <strong>简体中文</strong> · <a href="README_EN.md"><strong>English</strong></a> · <a href="#quickstart"><strong>安装 Oh My DSH</strong></a> · <a href="docs/getting-started.md"><strong>首次使用</strong></a>
-</p>
+<p align="center"><strong>更懂任务的提示词，更顺手的界面，更连贯的长任务。</strong></p>
+<p align="center">系统提示词增强 · 五套主题 · 电脑操作 · 侧栏批注 · 用量监控 · 记忆与自动压缩</p>
+<p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a> · <a href="#quickstart">安装</a> · <a href="docs/getting-started.md">第一次使用</a> · <a href="docs/README.md">完整文档</a></p>
 
-[![Oh My DSH 实拍：人工保存采购单后，助手读取网页并确认交付结果](docs/images/showcase-browser.png)](docs/showcase.md)
+**把你已经在用的 DSH，变成更完整的 AI 工作台。**
 
-<sub>最新本地实现实拍：虚构采购单、受控演示模型，OpenCU 工具与网页保存实际执行；商品配图由 AI 生成，界面未重绘。截图不是公开安装包的功能承诺。[版本与场景说明](docs/showcase.md)</sub>
+Oh My DSH（OMD）是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的增强插件。它不要求你抛弃已有模型、会话、工具和技能，而是把系统提示词、界面、电脑操作、上下文、记忆和任务管理接在一起：从说清要求，到实际执行，再到检查结果，尽量少在不同入口之间来回切换。
 
-Oh My DSH（OMD）是 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 的增强插件。继续使用已有模型、会话、文件、工具和技能，同时获得长任务的上下文整理、任务与验证记录、电脑操作、草稿优化和可定制工作界面。
-
-[功能](#features) · [安装](#quickstart) · [实际场景](#scenarios) · [开始使用](#start) · [外观与设置](#settings) · [插件生态](#plugins) · [更新与卸载](#maintenance) · [平台与 FAQ](#support) · [文档与开发](#docs)
+> **安装 / Install:** [DSH rc.1 / rc.2 固定版本与安装入口](docs/releases.md)，内置 OpenCU 2.0.0。
 
 <a id="features"></a>
 
-## 用它完成什么
+## 一个插件，把日常工作的几块短板补齐
 
-| 你的工作 | OMD 提供的帮助 |
+| 你想要的 | OMD 带来的变化 |
 | --- | --- |
-| 一段对话做很久，还要记住最初要求 | 整理上下文，保留原话、附件与详细资料，需要精确细节时回查来源。 |
-| 查网页、操作应用、导出资料 | 内置 OpenCU，把目标画面放进对话工作台；可以停止、人工接手，再恢复助手控制。 |
-| “做完了”还不够，要检查结果 | 任务账本关联要求、状态与验证记录，生成文件直接在 DSH 中预览或打开。 |
-| 想法零散，发出去之前想理清楚 | 轻润色、结构化或规划草稿，保留原稿和版本，可撤销并继续修改。 |
-| 不想每次聊天都先建项目 | **主分支预览，尚未发布**：取消已选工作区，首次发送时创建这段聊天自己的目录；以后继续使用同一目录。 |
-| 想按习惯布置工作界面 | 五种外观、明暗模式、独立配色与背景，调整字体、布局和工作台。 |
-| 想看运行进度、用量与长期记忆 | **主分支预览，尚未发布**：监控查看调用、缓存与上下文；Dream 整理带来源的会话、项目与全局短记忆。 |
-
-模型能力、上下文窗口和服务费用仍由所选提供方决定；后台整理也会产生模型用量。详细边界见[使用指南](docs/usage.md)。
-
-<a id="quickstart"></a>
-
-## 安装
-
-**先核对实际运行的完整 DSH 版本，再选择相同宿主前缀的包。** 当前公开可下载的安装包如下：
-
-| DSH 宿主 | OMD 完整版本 | 固定安装包 |
-| --- | --- | --- |
-| `0.2.0-rc.2` | `0.2.0-rc.2.omd.0.10.0` | [下载 rc.2 包](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.0-rc.2.omd.0.10.0/trisoul_x-0.2.0-rc.2.omd.0.10.0.tgz) |
-| `0.2.1-alpha.1` | `0.2.1-alpha.1.omd.0.10.0` | [下载 alpha.1 包](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-alpha.1.omd.0.10.0/trisoul_x-0.2.1-alpha.1.omd.0.10.0.tgz) |
-
-`main` 的包版本是 **0.2.1-alpha.2.omd.0.16.0，未发布**；它没有对应的公开安装包。上面的 0.10.0 不包含后续监控、Dream 与本地改进。更早宿主保留其历史发行，按[安装与升级指南](docs/upgrade.md)核对，不混装其他宿主的包。
-
-### 已有 DSH Web
-
-需要 Node.js ≥22.19、可用的 DSH 模型，以及公开包对应的运行环境；Windows 使用 PowerShell 7。先等任务结束、停止服务，备份实际 `DSH_HOME`，保留原 profile 和端口。
-
-以下示例用于 **DSH 0.2.1-alpha.1 / `web` profile**：
-
-```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-alpha.1.omd.0.10.0/trisoul_x-0.2.1-alpha.1.omd.0.10.0.tgz
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
-```
-
-rc.2 用户将**两条命令的宿主版本**换为 `0.2.0-rc.2`，安装地址换为表中的 rc.2 包；自定义 profile 将 `web` 换为原名称。已使用全局 `dsh` 或服务管理器的环境沿用原启动方式和实际数据目录。也可先下载，再用 `file:/absolute/path/安装包.tgz` 安装。
-
-打开本次启动打印的登录链接，新建会话选择 **Oh My DSH**。已有会话保留原来的 Agent preset。安装后核对“当前版本”，不能只看“最新版本”。[完整步骤](docs/usage.md) · [安装与升级](docs/upgrade.md)
-
-### 官方 DSH 桌面应用
-
-在桌面应用的插件管理入口安装与它的**完整宿主版本**配对的包。桌面使用独立的 `desktop` profile，Web 已装插件需在桌面重新安装；独立 npm CLI 不能代替桌面应用管理该 profile。安装后完整退出并重新打开，关闭窗口或刷新页面不能完成切换。[桌面安装步骤](docs/upgrade.md#desktop) · [Web 转桌面并保留数据](docs/upgrade.md#web-to-desktop)
-
-> **安装会改变运行权限：** OMD 默认设置完整文件／命令访问并关闭执行审批，同时将默认 Agent preset 设为 `trisoul-x`。profile 的显式覆盖优先。安装前确认这符合你的使用方式；macOS 系统授权与 Chrome 扩展首次加载仍需按提示完成。[权限与运行条件](docs/usage.md)
-
-<details>
-<summary>让能操作终端或电脑的 AI 协助安装</summary>
-
-把这段话交给 AI，并说明你使用桌面还是 Web：
-
-> 请按 https://github.com/gulagala001/oh-my-dsh/blob/main/docs/upgrade.md 安装或升级 Oh My DSH。先核对实际 DSH 完整版本与对应公开安装包，备份并保留已有模型、会话、数据目录和配置，完成安装与完整重启后核对当前版本。
-
-</details>
-
-<a id="scenarios"></a>
-
-## 实际场景
-
-下面三个场景来自同一份发布清单演示。它使用虚构业务数据与本地受控模型，展示的是实际执行和检查的流程。完整问题、操作与验证范围见[实拍案例](docs/showcase.md)。
-
-### 长对话之后，找回最初的要求
-
-> 整理发布清单。CSV 使用 UTF-8 + BOM，固定六列：编号、事项、负责人、优先级、状态、验收说明；保留未验收项。
-
-持续工作并整理上下文后，让助手回查这条原始要求；在工作台查看来源与原文，确认编码、列序和未验收项要求。
-
-[![上下文整理后回查原始消息，重新核对 CSV 六列要求](docs/site/media/launchpad-recall.jpg)](docs/site/media/launchpad-recall.jpg)
-
-**结果：** 精简当前上下文后，仍能读取原话并核对具体约定。原始材料留档不代表模型窗口无限大。[上下文记录](docs/site/media/launchpad-context.jpg) · [上下文机制](docs/context-workflow.md)
-
-### 操作网页，保留该留下的事项
-
-> 打开发布清单，检查筛选和刷新后的状态，下载 CSV；不要把待验收项当作已完成。
-
-用 `@Browser` 指定网页，在工作台查看实际画面，执行筛选、刷新与下载。需要自己修改时停止或接手，完成后恢复助手控制。
-
-[![发布清单网页实拍：筛选、状态和 CSV 下载入口](docs/site/media/launchpad-browser.jpg)](docs/site/media/launchpad-browser.jpg)
-
-**结果：** 导出包含 8 条事项，3 条待验收项得到保留；下载文件随后接受独立字段检查。[电脑操作指南](docs/usage.md#computer-use)
-
-### 交付文件，同时留下检查记录
-
-> 核对下载文件的编码、六列和全部字段，把文件与验收结果交给我。
-
-在任务与验证中关联原始要求和实际运行结果，检查 CSV 的 BOM、列序、记录数与字段内容，再打开交付附件。
-
-[![任务与验证实拍：要求、核验脚本与实际 PASS 输出](docs/site/media/launchpad-tasks.jpg)](docs/site/media/launchpad-tasks.jpg)
-
-**结果：** 文件检查通过，交付 CSV 和要求文件。业务清单的初始勾选是示例数据；任务完成状态与运行证据分别记录。[完整演示与证据说明](docs/showcase.md)
-
-<a id="start"></a>
-
-## 开始使用
-
-1. **选模型与会话。** 新建会话选择 Oh My DSH，沿用宿主模型配置；模型需支持原生工具调用，理解截图还需图像输入。
-2. **选工作目录。** 在已有项目中工作；主分支预览还可取消工作区选择开始独立聊天，首次发送时才创建独立目录。
-3. **说清要交付什么。** 例如“整理这个目录，输出一份清单并检查文件数量”。输入框的草稿优化可先整理表达。
-4. **边做边查看。** 从输入区打开工作台查看任务、上下文或文件；通过电脑入口查看目标画面，随时停止与接手。
-5. **检查交付。** 打开附件和验证记录，需要追溯细节时让助手回查原始材料。
-
-公开版本与开发源码的入口可能不同，以所装版本文档为准。[首次使用](docs/getting-started.md) · [完整指南](docs/usage.md)
-
-<a id="settings"></a>
-
-## 外观与设置
-
-在 **设置 → Oh My DSH** 调整后台模型、上下文整理、身份、外观与电脑操作。主模型仍在 DSH 模型设置中配置；后台整理可单独选择模型与频率。Better Todo 的待办提醒默认开启，验证提醒默认关闭，可按会话设置。
-
-[![iOS Liquid Glass 浅色主题：同一份实际任务与文件交付](docs/site/media/theme-glass-light.jpg)](docs/site/media/theme-glass-light.jpg)
-
-| 外观 | 浅色与深色实拍 |
-| --- | --- |
-| OMD 默认 | [浅色](docs/site/media/theme-omd-light.jpg) · [深色](docs/site/media/theme-omd-dark.jpg) |
-| Codex Desktop | [浅色](docs/site/media/theme-codex-light.jpg) · [深色](docs/site/media/theme-codex-dark.jpg) |
-| iOS Liquid Glass | [浅色](docs/site/media/theme-glass-light.jpg) · [深色](docs/site/media/theme-glass-dark.jpg) |
-| Claude CLI | [浅色](docs/site/media/theme-terminal-light.jpg) · [深色](docs/site/media/theme-terminal-dark.jpg) |
-| Google Material | [浅色](docs/site/media/theme-material-light.jpg) · [深色](docs/site/media/theme-material-dark.jpg) |
-
-主题、28 套配色与背景独立选择，也可调整字体、字号、材质、分区颜色、名称和 Logo，导入设置或恢复默认。主题提供视觉风格，不提供对应品牌的账号服务。[外观设置](docs/skins.md) · [设置实拍](docs/site/media/launchpad-appearance.jpg)
-
-<details>
-<summary>进阶功能与尚未发布的改进</summary>
+| **不只是回答，而是把任务做下去** | 系统提示词覆盖需求理解、代码工作、工具使用、交付与核验，并随实际工具和模式适配。 |
+| **每天打开，都看着顺眼** | 五套主题、明暗模式、28 套配色；布局、材质、字体与背景可以按自己的习惯调整。 |
+| **让 AI 走出聊天框** | 内置 OpenCU，操作浏览器与桌面应用，在会话中看到页面、活动和预览。 |
+| **“改这里”不用来回解释** | 在网页、图片或支持的内容旁留下批注，把具体位置和意见带回对话。 |
+| **聊得长，也能接着做** | 上下文整理、Auto Compact 与 Dream 分工协作；关键要求与原始资料可以回查。 |
+| **知道过程，也知道用量** | OMD 控制台集中查看任务背景、上下文、记忆、调用记录和后台日志。 |
 
 <a id="prompts"></a>
 
-系统提示词按 DSH 实际工具、权限和执行模式组织工作，不声明宿主没有的能力。[提示词适配](docs/prompt-adaptation.md)
+## 01 / 先升级 AI 的工作方式
 
-- **Pro / Ultracode**：在模型原生推理档之上选择工作模式，调整需求拆解、实现与核对方式。[工作流](docs/workflow.md)
-- **OMD-PTC / CodeGraph**：按需使用组合工具调用或查询代码关系。[使用指南](docs/usage.md)
-- **主分支预览，未发布**：监控查看调用、用量与上下文变化；Dream 增量整理会话、项目和全局短记忆，保留来源，自动整理默认关闭。[监控](docs/monitoring.md) · [Dream](docs/dream-memory.md)
-- **最新本地实现，尚未发布**：OpenCU 的浏览器重构使用官方预编译 Electron 44.7.0，统一浏览器入口和标签栏，保留分栏与侧栏。GitHub main 已整合 OpenCU 1.6.1 的浏览器与运行时重构；源码整合不代表发布了新的安装包。公开安装包不包含这些新改动，其他平台也不能据此视为已验证。
+### 系统提示词增强，不是把你的输入润色一下
 
-</details>
+OMD 把智能体的工作方法放在系统层：先理解目标与约束，读取必要上下文，使用实际存在的工具，完成后核对结果。工具说明、执行模式与动态提醒一起装配，避免把一大段通用提示词原样塞给所有场景。
 
-<a id="plugins"></a>
+- **面向交付**：区分计划、已执行动作和实际结果，不把“说做完了”当作检查通过。
+- **面向真实工具**：Native 与 OMD-PTC 使用各自的调用方式；OpenCU 保留自己的实时工具契约。
+- **面向长任务**：配合需求锚点、后台作业和上下文提醒，减少做到一半偏离最初要求。
+- **保留你的习惯**：支持身份／个性设置；Pro、Ultracode 与 Workflow 提供进一步拆解和委派入口。
 
-## DSH 与插件生态
+这是执行策略，不是模型智力升级或成功率保证。输入框星星的**草稿优化**是另一个独立功能，提供轻润色、结构化与步骤规划。
 
-OMD 复用 DSH 原生模型、会话、工具循环、技能、文件与内容标签。你可以继续使用其他 DSH 插件；需要随宿主 SDK 更新的插件，应安装各自对应宿主的构建。
+[了解系统级适配 →](docs/prompt-adaptation.md)
 
-**设置 → 推荐插件** 展示用途、作者、版本与核验状态，支持可用条目的安装、更新和卸载。自动更新默认关闭；启用后只检查符合目录规则的已安装插件，需要重启时提示。[目录实拍](docs/site/media/launchpad-plugins.jpg)
+<a id="themes"></a>
 
-兼容性持续核验安装顺序、启停、重启和卸载，目标是让原版 DSH 可用的插件在整套 OMD 启用时继续共存。**这不是所有插件、宿主和平台均已验证的保证**；具体组合、限制与未验证项见[插件兼容性](docs/plugin-compatibility.md)。
+## 02 / 不止换色，连工作氛围一起换
 
-推荐自己的插件或开源项目，只需仓库地址和一句用途：[提交插件／申请适配](https://github.com/gulagala001/oh-my-dsh/issues/new?template=plugin-submission.yml) · [投稿说明](docs/plugin-submissions.md)
+![五套主题的真实界面：OMD 默认、Codex Desktop、iOS Liquid Glass、Claude CLI 与 Google Material](docs/images/release/themes.jpg)
 
-<a id="maintenance"></a>
+**OMD 默认 · Codex Desktop · iOS Liquid Glass · Claude CLI · Google Material**
 
-## 数据、更新与卸载
+喜欢克制的桌面布局、通透玻璃、终端风格，还是更鲜明的 Material？五套外观各有自己的布局与材质，均支持明暗模式。主题与 **28 套配色**、自定义背景相互独立，切换主题不必重新配置一切。
 
-安装到现有 DSH 时沿用实际 `DSH_HOME`，OMD 资料保存在其中的 `trisoul-x/`；Web 默认数据目录通常是 `~/.dsh`。桌面与 Web 的插件属于各自 profile，只有使用同一实际数据目录时才共享其中的产品数据。
+字体、分区颜色、Logo 与浏览器标题也能调整；需要安静界面时，可以减少透明和动态效果。主题不附带对应品牌的模型或账号服务。
 
-更新前等任务结束、停止服务或完整退出桌面应用，备份整个数据目录；安装与宿主匹配的固定包，完整重启后核对当前版本、模型与旧会话。源码更新与公开包更新是不同流程。[升级、迁移与回退](docs/upgrade.md)
+[查看外观设置 →](docs/skins.md)
 
-<details>
-<summary>卸载命令与数据保留</summary>
+<a id="computer-use"></a>
 
-Web 示例（按实际宿主版本和 profile 修改）：
+## 03 / AI 动手，你看得见，也插得上话
 
-```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web remove trisoul_x
-```
+![OpenCU 在隔离 DSH 中展示本地设计评审页面与批注](docs/images/release/computer-use.jpg)
 
-桌面用户在应用的插件管理中停用或卸载，随后完整退出并重新打开。卸载不删除模型配置、凭据、会话和 OMD 记忆文件；使用 `trisoul-x` preset 的旧会话需要重新安装插件才能继续运行。[维护说明](docs/usage.md)
+**新版 OpenCU 默认内置，无需再装一份。** 直接在对话里交代浏览器或电脑任务，工具调用会带出真实页面、操作记录和轻量监看，不用另开 CU 控制台。
 
-</details>
+- **浏览器与桌面应用**：发现目标、读取内容、截图、输入、点击、导航与文件操作。
+- **在具体位置给反馈**：网页批注、图片评论和回复文字批注，让“这段”“这里”带着上下文回到草稿；保存批注与发送是两步。
+- **预览不绑架任务**：观看目标与操作目标分开，隐藏监看不会等同于停止；人工操作后 AI 需要重新观察。
+- **后台优先，边界明确**：选目标不主动抢焦点；后台不支持时报告限制，不偷偷退回全局键鼠。
+
+完整内置浏览器与原生监看需要**匹配的 OpenCU 宿主适配**，不是给任意 stock DSH 装一个插件就能获得全部界面。Chrome／Edge 扩展需首次配对，桌面控制需系统权限。
+
+[OpenCU 使用与边界 →](docs/computer-use.md)
+
+<a id="memory"></a>
+
+## 04 / 长任务不用靠一遍遍重述背景
+
+![上下文占用、构成和手动压缩入口的真实界面](docs/images/release/context.jpg)
+
+三个层次，各做一件事：
+
+| 层次 | 解决什么 |
+| --- | --- |
+| **上下文整理** | 将当前会话里的事实摘要、用户决定与详细资料分别保存，在后续请求中按需使用。 |
+| **Auto Compact** | 上下文达到你设定的 Token 阈值时自动压缩，支持“摘要＋资料”或“仅摘要”。默认关闭，预填阈值为 400,000 tokens。 |
+| **Dream 记忆** | 独立整理会话、项目和全局的长期短记忆，保留来源，让后续工作有背景可接。 |
+
+原话、图片与附件仍可通过 `recall` 回查，摘要不代替原始证据。会话隔离、项目共享和全局共享由你选择；无项目 Chat 的自动文件目录不会被误当成共享项目。
+
+Dream 自动整理默认关闭，开启后默认每小时检查；手动和自动整理共用每日 200,000 Token 上限。后台处理也会调用模型，模型窗口仍然有限。
+
+[上下文机制](docs/context-workflow.md) · [Dream 记忆](docs/dream-memory.md)
+
+<a id="tools"></a>
+
+## 05 / 把“做了什么、花了多少”放到眼前
+
+![OMD 控制台：调用、缓存、费用与后台活动](docs/images/release/monitor.jpg)
+
+右侧栏的 **OMD 控制台** 汇集概览、上下文、记忆、调用日志和后台日志。按日期、模型、组件或状态筛选，查看趋势、分组与单次调用，不必翻一整屏工具输出。
+
+用量来自实际回执：**未知不是零，`≥` 表示已知下界**。缺少缓存信息时不计算虚假的命中率；后台调用也纳入本地持久账本。
+
+**Better Todo** 则把需求、来源锚点、任务状态与证据关联起来：勾选任务、命令结束和验证通过是三件不同的事。待办提醒默认开启，验证提醒可单独开启。
+
+[监控统计口径 →](docs/monitoring.md)
+
+## 还有这些，你会在日常工作里用到
+
+| 能力 | 用法 |
+| --- | --- |
+| **无项目 Chat** | 不必先建项目；首次发送时建立独立文件目录。 |
+| **CodeGraph** | 内置运行时，自动准备项目索引，按符号和调用关系理解代码，无需全局安装 CLI。 |
+| **Pro / Ultracode / Workflow** | 拆解任务、委派子代理、组合工作流；保留宿主权限与后台 Jobs。 |
+| **OMD-PTC** | 用 JavaScript 组合工具调用，不替换宿主 Tools 服务。 |
+| **草稿优化** | 发送前轻润色、结构化、步骤规划，保留原稿与版本；自动润色默认关闭。 |
+| **DeepSeek Workbench** | 网页聊天／开放平台入口，可提取的历史可导入原生会话；不会替你自动发送下一条。 |
+| **插件协作** | 保留 DSH 文件、终端、技能与第三方入口；IUI、OMAA、Subscriptions 等仍是独立项目。 |
+| **Fast** | 与匹配的 Subscriptions／Codex 路由配合；不承诺服务端优先级或实际提速。 |
+
+<a id="quickstart"></a>
+<a id="desktop"></a>
+
+## 安装：先配对版本，再开始工作
+
+1. **核对实际 DSH 完整版本**，选择为该宿主构建的 OMD，不能只改包名或版本号混装。
+2. **备份实际 `DSH_HOME`**，保留原 profile、会话、凭据与其他插件。
+3. 桌面应用使用其插件管理入口或自带 CLI；Web 使用匹配版本 CLI 和原 profile。安装后按对应说明完整重启，再新建会话选择 **Oh My DSH**。
+
+> **权限提示**：OMD 安装配置默认完整文件／命令访问、关闭执行审批；显式 profile 覆盖优先。安装前确认符合你的用途。OMD 不附带模型账号，模型调用和后台整理按你的提供方计费。
+
+**[查看安装步骤、旧版固定包与新版候选条件 →](docs/install.md)**
 
 <a id="support"></a>
 
-## 平台与常见问题
+## 支持范围，说清楚再用
 
-| 你要使用的能力 | 条件与当前边界 |
-| --- | --- |
-| 对话、上下文、任务、主题与 Web 工作台 | 基于 DSH；Windows、macOS、Linux 的实际验证范围以对应发行记录为准。 |
-| 浏览器操作与日常 Chrome 连接 | 需要可用 Chrome／Chromium；已有 Chrome 首次连接需手动加载扩展。 |
-| 公开 0.10.0 的 macOS 原生桌面控制 | macOS 14+、Apple Command Line Tools、辅助功能和屏幕录制权限。 |
-| 公开 0.10.0 的 Windows 原生桌面控制 | Windows 10 2004+、PowerShell 7、.NET 10 SDK、解锁的交互桌面；本轮未做 Windows 实机验收。 |
-| 最新本地预编译运行时 | 尚未公开发布，不能用来免除旧公开包的原生构建前提；Linux 原生桌面控制不列为已支持能力。 |
+- 对话、主题、任务与记忆面向匹配 DSH 的 macOS、Windows、Linux。
+- OpenCU 的能力随后端、系统权限和应用无障碍支持变化。使用前在“电脑与浏览器”设置中查看当前后端的可用能力；多屏混合缩放不在当前支持范围。
+- 社区独立项目，非 DeepSeek、OpenAI、Anthropic、Apple 或 Google 官方产品，亦无上述品牌背书。
 
-<details>
-<summary>安装、模型、权限与版本 FAQ</summary>
-
-**装了插件却没有入口？** 核对当前 profile、插件启用状态和实际版本，完成服务或桌面应用的完整重启；新建会话选择 Oh My DSH。
-
-**为什么没有 alpha.2 的下载链接？** 主分支版本 0.16.0 尚未发布。公开安装请使用表中对应宿主的 0.10.0，等待新的配对发行。
-
-**电脑画面模型看不懂？** 模型需要图像输入；仅文本模型仍能读取部分控件文字，但不能自动获得识图能力。
-
-**桌面操作失败？** 检查原生运行环境和系统授权；公开旧包需要本机编译前提。已有 Chrome 连接还需核对扩展是否实际加载。[完整排障](docs/troubleshooting.md)
-
-**已有模型和会话会丢吗？** 插件安装沿用宿主数据；升级仍需完整备份。Web 转桌面不是自动搬迁，先按迁移指南核对数据目录和配置。
-
-**能保证其他插件都兼容吗？** 不能。按完整宿主、插件版本和平台查看已验证组合，遇到冲突提交这些版本及最小复现。[兼容性说明](docs/plugin-compatibility.md)
-
-</details>
-
+<a id="plugins"></a>
 <a id="docs"></a>
 
-## 文档与开发
+## 继续探索
 
-[文档目录](docs/README.md) · [首次使用](docs/getting-started.md) · [完整指南](docs/usage.md) · [安装与升级](docs/upgrade.md) · [实拍案例](docs/showcase.md) · [兼容性](docs/plugin-compatibility.md) · [更新记录](CHANGELOG.md)
+[完整文档](docs/README.md) · [首次使用](docs/getting-started.md) · [开发与构建](docs/development.md) · [插件兼容](docs/plugin-compatibility.md) · [更新记录](CHANGELOG.md)
 
-<details>
-<summary>源码开发入口</summary>
+[反馈问题](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml) · [提出建议](https://github.com/gulagala001/oh-my-dsh/issues/new?template=feature-request.yml) · [推荐插件](docs/plugin-submissions.md) · [参与贡献](CONTRIBUTING.md)
 
-当前主分支使用 DSH `0.2.1-alpha.2`、Node.js ≥22.19 和 `pnpm 11.28.5`，不是公开稳定安装入口。
-
-```sh
-git clone https://github.com/gulagala001/oh-my-dsh.git
-cd oh-my-dsh
-pnpm install --frozen-lockfile
-pnpm build
-pnpm start
-```
-
-开发启动默认使用仓库的 `data/dsh/`、独立 `trisoul-x` profile 和 `3083` 端口，打开终端打印的完整登录链接。使用自己的模型凭据。固定 tag 的构建条件以该 tag 文档为准；通用 Computer Use 在 [OpenCU](https://github.com/gulagala001/opencu) 源仓维护。[参与贡献](CONTRIBUTING.md) · [开发指南](docs/usage.md)
-
-</details>
-
-[反馈 Bug](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml) · [提出建议](https://github.com/gulagala001/oh-my-dsh/issues/new?template=feature-request.yml) · [产品介绍](https://gulagala001.github.io/oh-my-dsh/)
-
-反馈时提供完整 DSH／OMD 版本、平台、使用入口、预期与实际行为，并移除私人数据与凭据。项目代码许可暂未指定；原项目与第三方来源、许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。包名 `trisoul_x` 与 preset ID `trisoul-x` 为兼容旧安装保留。
+**来源与许可**：核心机制与提示词源自 trisoul，宿主及公共组件源自 DeepSeek Harness。项目代码许可尚未指定；内置 OpenCU 的 REA 资产和扩展宿主库另有上游权利及分发条件，不因可见源码而自动获得再分发授权。详见 [第三方声明](THIRD_PARTY_NOTICES.md) 与 [OpenCU 声明](vendor/opencu/THIRD_PARTY_NOTICES.md)。兼容包名为 `trisoul_x`，Agent preset 为 `trisoul-x`。

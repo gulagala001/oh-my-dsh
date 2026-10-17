@@ -8,8 +8,6 @@
 
 在原安装入口更新到 `github:gulagala001/oh-my-dsh#v0.2.1`，重启宿主后确认当前插件版本为 0.2.1。详见[升级指南](upgrade.md)。
 
-## 验证
-
-本次进行预处理频率、最低文本量、失败恢复、上下文窗口、设置和文档的针对性回归，并完成构建。具体检查见 Release 的 verification.log；不将本次局部修复称为全平台重新验收。
+<a id="验证"></a>
 
 [上下文机制](context-workflow.md) · [文档目录](README.md)

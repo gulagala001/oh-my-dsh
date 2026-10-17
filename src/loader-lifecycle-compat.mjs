@@ -11,12 +11,18 @@ function holdClientGraph(loader) {
   const modules = untrace(loader.ctx?.get?.('clientModules'));
   if (!modules || typeof modules.flush !== 'function') return () => {};
   const flush = modules.flush, descriptor = Object.getOwnPropertyDescriptor(modules, 'flush');
-  let pending;
-  const held = (...args) => { pending = args; };
+  let pending, active = true;
+  const held = (...args) => { if (active) pending = args; else return flush.apply(modules, args); };
   Object.defineProperty(modules, 'flush', { value: held, configurable: true, writable: true });
+  const owned = Object.getOwnPropertyDescriptor(modules, 'flush');
   return () => {
-    if (Object.getOwnPropertyDescriptor(modules, 'flush')?.value !== held) return;
-    if (descriptor) Object.defineProperty(modules, 'flush', descriptor); else delete modules.flush;
+    if (!active) return;
+    active = false;
+    if (isDeepStrictEqual(Object.getOwnPropertyDescriptor(modules, 'flush'), owned)) {
+      if (descriptor) Object.defineProperty(modules, 'flush', descriptor); else delete modules.flush;
+    }
+    // A later owner may retain our callback. Release its hold as well as the
+    // current property so it cannot indefinitely suppress the native graph.
     if (pending) flush.apply(modules, pending);
   };
 }
@@ -111,6 +117,7 @@ export function bindLiveLoaderEntries(loader) {
       return task;
     }
     Object.defineProperty(group, 'remove', { value: remove, configurable: true, writable: true });
+    const removeOwned = Object.getOwnPropertyDescriptor(group, 'remove');
     const originalUpdate = group.update, updateOwn = Object.getOwnPropertyDescriptor(group, 'update');
     let tail = Promise.resolve();
     const serialized = untrace(group.tree?.root) === group && group.tree?.filename && typeof originalUpdate === 'function';
@@ -154,9 +161,10 @@ export function bindLiveLoaderEntries(loader) {
       return task;
     }
     if (serialized) Object.defineProperty(group, 'update', { value: update, configurable: true, writable: true });
+    const updateOwned = Object.getOwnPropertyDescriptor(group, 'update');
     groups.set(group, () => {
-      if (Object.getOwnPropertyDescriptor(group, 'remove')?.value === remove) { if (own) Object.defineProperty(group, 'remove', own); else delete group.remove; }
-      if (serialized && Object.getOwnPropertyDescriptor(group, 'update')?.value === update) { if (updateOwn) Object.defineProperty(group, 'update', updateOwn); else delete group.update; }
+      if (isDeepStrictEqual(Object.getOwnPropertyDescriptor(group, 'remove'), removeOwned)) { if (own) Object.defineProperty(group, 'remove', own); else delete group.remove; }
+      if (serialized && isDeepStrictEqual(Object.getOwnPropertyDescriptor(group, 'update'), updateOwned)) { if (updateOwn) Object.defineProperty(group, 'update', updateOwn); else delete group.update; }
     });
   }
   function* entries(...args) {
@@ -166,6 +174,7 @@ export function bindLiveLoaderEntries(loader) {
     }
   }
   Object.defineProperty(loader, 'entries', { configurable: true, writable: true, value: entries });
+  const entriesOwned = Object.getOwnPropertyDescriptor(loader, 'entries');
   // Discover groups before the first removal, not only during its audit.
   for (const entry of original.call(loader)) watch(entry.parent);
   async function settled(...args) {
@@ -176,10 +185,11 @@ export function bindLiveLoaderEntries(loader) {
     }
   }
   if (typeof originalAwait === 'function') Object.defineProperty(loader, 'await', { configurable: true, writable: true, value: settled });
+  const awaitOwned = Object.getOwnPropertyDescriptor(loader, 'await');
   return () => {
     for (const restore of [...groups.values()].reverse()) restore(); groups.clear();
-    if (Object.getOwnPropertyDescriptor(loader, 'entries')?.value === entries) { if (descriptor) Object.defineProperty(loader, 'entries', descriptor); else delete loader.entries; }
-    if (Object.getOwnPropertyDescriptor(loader, 'await')?.value === settled) { if (awaitDescriptor) Object.defineProperty(loader, 'await', awaitDescriptor); else delete loader.await; }
+    if (isDeepStrictEqual(Object.getOwnPropertyDescriptor(loader, 'entries'), entriesOwned)) { if (descriptor) Object.defineProperty(loader, 'entries', descriptor); else delete loader.entries; }
+    if (typeof originalAwait === 'function' && isDeepStrictEqual(Object.getOwnPropertyDescriptor(loader, 'await'), awaitOwned)) { if (awaitDescriptor) Object.defineProperty(loader, 'await', awaitDescriptor); else delete loader.await; }
   };
 }
 

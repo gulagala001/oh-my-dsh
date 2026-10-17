@@ -127,9 +127,7 @@ html.omd[data-omd-layout="codex-desktop"] {
   & .uV2eYG_primary { width: 29px; height: 29px; opacity: 1; }
   & .uV2eYG_primary svg { width: 18px; height: 18px; }
   & .uV2eYG_add { width: 28px; height: 28px; border-radius: 50%; }
-  & .uV2eYG_dock { padding-top: 5px; }
-  & [data-slot="conversation.composer.dock"] { padding-bottom: 8px; }
-  & :is(.tx-workbench-entry, .tx-bt-option, .tx-usage-toggle) { font-size: 12px; }
+  & .tx-bt-option { font-size: 12px; }
   & .pXSMma_headline { font-size: 26px; font-weight: 500; margin-bottom: 18px; letter-spacing: -.5px; }
   & .pXSMma_workspace { font-weight: 400; }
 

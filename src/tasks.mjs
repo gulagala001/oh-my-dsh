@@ -98,9 +98,11 @@ export function createVerificationRunner(ctx, exec) {
       timeoutMs, run_in_background: false,
     };
     const result = await invoke(tool, args, exec.signal, callId);
-    if (exec.signal?.aborted || ['ABORTED', 'ABORTED_BEFORE_DISPATCH'].includes(result.error?.info?.code))
-      return { ok: false, aborted: true, timedOut: false, out: '' };
-    if (result.isError) throw new Error(result.error.message);
+    const aborted = exec.signal?.aborted || ['ABORTED', 'ABORTED_BEFORE_DISPATCH'].includes(result.error?.info?.code);
+    if (result.isError) {
+      if (aborted) return { ok: false, aborted: true, timedOut: false, out: '' };
+      throw new Error(result.error.message);
+    }
     const value = result.value;
     if (value?.kind !== 'foreground') {
       // OMD configures foreground execution. A changed host configuration must
@@ -109,8 +111,10 @@ export function createVerificationRunner(ctx, exec) {
         const stopped = await invoke('job_kill', { job_id: value.jobId, reason: 'Verification requires a completed foreground result.' }, AbortSignal.timeout(10000));
         if (stopped.isError) throw new Error(`Verification job ${value.jobId} could not be stopped: ${stopped.error.message}`);
       }
+      if (aborted) return { ok: false, aborted: true, timedOut: false, out: '' };
       throw new Error('Native shell returned no completed foreground result; previous verification results are unchanged.');
     }
+    if (aborted) return { ok: false, aborted: true, timedOut: false, out: '' };
     if (value.sandbox?.denied || value.sandbox?.runnerFailed)
       throw new Error('Native sandbox blocked verification or could not start; previous verification results are unchanged.');
     return { ok: value.exitCode === 0 && !value.signal && !value.timedOut && !value.aborted,

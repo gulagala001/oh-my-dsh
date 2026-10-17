@@ -1,8 +1,9 @@
 import { installOmaaEnhancement, omaaWorkflowComposition, omaaIdentityPrompt } from './omaa-enhancement.mjs';
 import { readJsonBody as readBody, rejectUntrusted, sendJson as send } from './http.mjs';
 import { installFileUploadCompatibility } from './file-upload-compat.mjs';
-import { legacySettings } from '#opencu/src/legacy-settings.mjs';
+import { legacySettings } from './legacy-settings.mjs';
 import { homedir } from 'node:os';
+import { isAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { realpath } from 'node:fs/promises';
 import { migrateSessionStorage } from './session-migration.mjs';
 import { sourceName } from './message-source.mjs';
@@ -11,8 +12,12 @@ import { apiSessionTarget } from './api-session.mjs';
 import { installLoaderLifecycleCompatibility } from './loader-lifecycle-compat.mjs';
 import { installToolSchedulerCompatibility } from './tool-scheduler-compat.mjs';
 import { installToolCancellationPresentation } from './tool-cancellation.mjs';
-import { monitorSelection, compactMonitorSnapshot } from './monitoring.mjs';
+import { monitorSelection, compactMonitorSnapshot, unavailableMonitorMetrics } from './monitoring.mjs';
 import { handleMonitorApi } from './monitor-api.mjs';
+import { coldNativeMonitorTarget } from './monitor-session.mjs';
+import { monitorQuery } from './monitor-ledger.mjs';
+import { monitorCallStream } from './monitor-call.mjs';
+import { validateSessionId } from './hub-store.mjs';
 import { createVersionService, handleVersionApi } from './version.mjs';
 import { VersionUpdater, handleVersionUpdateApi } from './version-update.mjs';
 import { installImageBudget } from './image-budget.mjs';
@@ -36,7 +41,7 @@ import { repairShadows } from './context/shadow.mjs';
 import { TODO_NUDGE } from './todolist.mjs';
 import { message } from './hub.mjs';
 import { join } from 'node:path';
-import { acquireComputerUse } from '#opencu/integration';
+import { acquireComputer } from './opencu.mjs';
 import { CodegraphRuntime } from './codegraph.mjs';
 import { Components, mountComponents } from './components.mjs';
 import { runtimeContext } from './runtime-state.mjs';
@@ -72,9 +77,9 @@ export async function apply(ctx, config) {
   });
   hub.projectless = projectless;
   const liveConfig = hub.getConfig;
-  let overlay = legacy.value;
-  hub.getConfig = () => ({ ...liveConfig(), ...overlay });
-  legacy.persist(() => { overlay = {}; });
+  let importing = true;
+  hub.getConfig = () => ({ ...liveConfig(), ...(importing ? legacy.current() : {}) });
+  legacy.persist(() => { importing = false; });
   ctx.effect(() => { void hub.dream.start().catch(error => hub.dream.notice(error)); });
   hub.budgets = new TaskBudgets(hub);
   hub.workflowBudget = new WorkflowBudget(hub.store);
@@ -91,13 +96,20 @@ export async function apply(ctx, config) {
     ...nativeVersionService.snapshot(), status: 'unknown', latestVersion: null, releases: [],
     error: 'OMAA 已安装但未启用，请启用它以检查配对更新；卸载 OMAA 后可恢复原 OMD 更新。',
   } : nativeVersionService.snapshot();
+  const sharedVersionSnapshot = shared => {
+    if (!shared) return originalVersionSnapshot();
+    const native = nativeVersionService.snapshot();
+    return shared.currentRelease == null && shared.currentVersion === native.currentVersion
+      ? { ...shared, currentRelease: native.currentRelease } : shared;
+  };
   // While OMAA is installed, only its published pair may update this bridge.
+  // Keep bundled notes for the same running version, never native update targets.
   // Disabling it pauses updates; removing it restores the original OMD feed.
   const versionService = {
-    snapshot: () => omaaUpdates()?.omdVersionSnapshot() ?? originalVersionSnapshot(),
+    snapshot: () => sharedVersionSnapshot(omaaUpdates()?.omdVersionSnapshot()),
     async check(force) {
       const shared = omaaUpdates();
-      if (shared) return shared.omdVersionCheck(force);
+      if (shared) return sharedVersionSnapshot(await shared.omdVersionCheck(force));
       omaaInactive = Boolean((await ctx.get('pluginManager')?.listBundles())?.some(row => row.name === 'oh-my-agents-above-all' && row.installed));
       return omaaInactive ? originalVersionSnapshot() : nativeVersionService.check(force);
     },
@@ -123,9 +135,9 @@ export async function apply(ctx, config) {
     currentConfig = next;
     hub.context.reconfigure();
   });
-  const computer = await acquireComputerUse(ctx, { namespace: 'trisoul-x', getConfig: () => hub.config(), dataDir: join(hub.store.dir, 'computer-use') });
+  const computer = acquireComputer();
   hub.installOmaaEnhancement = scope => installOmaaEnhancement(scope, computer);
-  hub.components = new Components(ctx, hub, computer);
+  hub.components = new Components(ctx, hub);
   mountComponents(ctx, hub.components);
   ctx.effect(() => { hub.components.start(); return () => hub.components.close(); });
   mountRecommendedPlugins(ctx, hub);
@@ -201,7 +213,7 @@ export async function apply(ctx, config) {
       hub.agents.set(agent.session.id, agent);
       hub.components.project(currentDirectory(ctx, agent.session));
       // A pending write-ahead transaction must finish before sending another request.
-      // Only an explicitly queued full-compaction command can await model work here.
+      // Explicit full compaction and opt-in Auto Compact may await model work here.
       setRuntimeContext(agent.session, () => runtimeContext(agent, hub, { messages, turn, step }));
       await hub.context.preStep(agent, signal, route);
       if ((!hub.config().budgetHintsEnabled || hub.budgets.saved(agent.session)?.visible === false)
@@ -212,32 +224,50 @@ export async function apply(ctx, config) {
         hub.todoStore.maintainInjection(agent.session);
         if (messages.some(m => m.source?.kind === 'user')) agent.session.append('user/message', message(TODO_NUDGE, 'task-reminder'), { surfaceOp: 'append' });
       }
+      await hub.context.autoCompact.check(agent, signal, { maintenance: false });
     }
     }
     // Old OMD placeholders can survive a preset switch or be inherited by a child.
     // Only repair our own shadows; ordinary user content remains untouched.
     if (!signal.aborted && (!isX(agent.session) || agent.session.header.origin === 'subagent' || Number(agent.session.header.delegationDepth) > 0)
       && repairShadows(agent.session)) await hub.context.adapter.flush(agent.session);
-    if (monitored(agent.session)) hub.requestStarts.set(agent.session.id, Date.now());
+    if (!hub.closed && monitored(agent.session)) hub.requestStarts.set(agent.session.id, { startedAt: Date.now(), signal, turn, step });
     return route;
+  }, { global: true });
+  ctx.on('llm/stream', (options, next) => {
+    if (isAgentLoopRequest(options) && options.sessionId) {
+      const request = hub.requestStarts.get(options.sessionId);
+      // This boundary sees the prepared adapter route, not the next model
+      // selection nor the agent/request proposal before defaults are resolved.
+      if (request && request.signal === options.signal) {
+        request.route ??= Object.freeze({ provider: options.provider, model: options.model, reasoningEffort: options.reasoningEffort });
+        return monitorCallStream(next(), request);
+      }
+    }
+    return next();
   }, { global: true });
   installContextErrorRecovery(ctx, hub, session=>isX(session)&&!isBtwSession(session));
   ctx.on('agent/turn-stopping', ({ agent, turn, signal }) => { if (isX(agent.session)&&!isBtwSession(agent.session)) hub.finishTasks(agent, turn, signal); }, { global: true });
   ctx.on('agent/status', ({ agent, status }) => {
     if(isBtwSession(agent.session))return;
     hub.budgets.tick(agent.session, isX(agent.session) && status === 'running');
-    if (isX(agent.session)&&hub.context.agents.has(agent.session.id)) hub.context.arm(agent);
+    if (isX(agent.session)&&hub.context.agents.has(agent.session.id)) {
+      hub.context.arm(agent);
+      if (status === 'idle') hub.context.autoCompact.idle(agent);
+    }
   }, { global: true });
   ctx.on('user-questions/request', ({ agent }, next) => agent && isX(agent.session) ? hub.budgets.waitForUser(agent, next) : next(), { global: true });
   ctx.on('agent/disposed', ({ agent }) => {
     hub.budgets.dispose(agent.session);
     // A preset can have changed before disposal; release resources we owned.
     const id = agent.session.id;
+    hub.requestStarts.delete(id);
     if (!monitored(agent.session) && !hub.agents.has(id) && !hub.context.agents.has(id)) return;
-    const disposed = hub.context.dispose(id); hub.taskReviews.delete(id); hub.agents.delete(id); hub.requestStarts.delete(id);
+    const disposed = hub.context.dispose(id); hub.taskReviews.delete(id); hub.agents.delete(id);
     return disposed;
   }, { global: true });
   ctx.on('session/disposed', session => {
+    hub.requestStarts.delete(session.id);
     // Read-only historical sessions may never have created an agent.
     if (!hub.agents.has(session.id)) return hub.context.dispose(session.id);
   }, { global: true });
@@ -275,7 +305,7 @@ export async function apply(ctx, config) {
     if(isBtwSession(session))return;
     hub.ultracode.committed(session, event);
     hub.workflowBudget.observe(session, event);
-    if (!monitored(session)) return;
+    if (!monitored(session) && !hub.requestStarts.has(session.id)) return;
     hub.observe(session, event);
     if (isX(session)) hub.context.observe(session, event);
   }, { global: true });
@@ -299,12 +329,40 @@ export async function apply(ctx, config) {
         if (url.pathname === '/trisoul-x/api/model-mode') {
           if (!id) { send(res, 400, { error: '缺少会话编号' }); return; }
           if (req.method === 'POST') { send(res, 200, await hub.ultracode.select(id, await readBody(req))); return; }
-          if (req.method === 'GET') { send(res, 200, await hub.ultracode.inspect(id)); return; }
+          if (req.method === 'GET') {
+            validateSessionId(id);
+            const reading = new AbortController(), abortRead = () => reading.abort(new Error('模型模式读取已取消'));
+            req.once?.('aborted', abortRead); res.once?.('close', abortRead);
+            try {
+              if (req.aborted || res.destroyed) abortRead();
+              send(res, 200, await hub.ultracode.inspect(id, reading.signal));
+            } finally { req.off?.('aborted', abortRead); res.off?.('close', abortRead); }
+            return;
+          }
           send(res, 405, { error: '不支持此方法' }); return;
         }
         if (await handleVersionUpdateApi({ req, res, url, service: versionUpdater, send })) return;
         if (await handlePromptOptimizerApi({ ctx, service: promptOptimizer, req, res, url, getSession: () => id ? ctx.agents.get(id)?.session ?? ctx.sessions.get(id) : undefined, send })) return;
-        if (handleMonitorApi({ hub, ctx, req, res, url, send })) return;
+        if (await handleMonitorApi({ hub, ctx, req, res, url, send })) return;
+        if (url.pathname === '/trisoul-x/api/state' && req.method === 'GET' && url.searchParams.get('view') === 'summary') {
+          if (id) validateSessionId(id);
+          const agent = id ? ctx.agents.get(id) : undefined;
+          const session = agent?.session ?? (id ? ctx.sessions.get(id) : undefined);
+          const query = monitorQuery({ session: id || '', range: url.searchParams.get('range') || 'session' });
+          const { ids, selected: all, metrics: legacyMetrics, actions } = monitorSelection(hub.store.monitorStates(), id, query.range);
+          if (id && !session && !all.some(state => state.id === id) && !hub.monitor.hasSession(id)
+            && !await coldNativeMonitorTarget(ctx, id, req, res)) {
+            send(res, 404, { error: '会话不存在' }); return;
+          }
+          let metrics;
+          try { metrics = hub.monitor.query(all, ids, query).metrics; }
+          catch { metrics = unavailableMonitorMetrics(legacyMetrics); }
+          let meter = null;
+          try { if (session) meter = ctx.tokenMeter.measure(session); } catch {}
+          const liveCalls = [...hub.live.values()].filter(call => !id || url.searchParams.get('range') === 'all' || ids.has(call.sessionId));
+          res.setHeader('Cache-Control', 'no-store');
+          send(res, 200, { ...compactMonitorSnapshot({ metrics, actions, meter, liveCalls, sessionCount: all.length, running: agent?.status ?? 'idle' }), unreadableArchives: hub.store.monitorErrors.size }); return;
+        }
         const readTarget = async () => {
           const reading = new AbortController();
           const abortRead = () => reading.abort(new Error('会话读取已取消'));
@@ -340,14 +398,15 @@ export async function apply(ctx, config) {
         }
         if (url.pathname === '/trisoul-x/api/state' && req.method === 'GET') {
           const directory = id ? [] : await Promise.all(ctx.llm.listProviders().map(async provider => ({ ...provider, models: await ctx.llm.listModels(provider.id).catch(() => []) })));
-          const { ids, selected: all, metrics, actions } = monitorSelection(hub.store.monitorStates(), id, url.searchParams.get('range'));
+          const query = monitorQuery({ session: id || '', range: url.searchParams.get('range') || 'session' });
+          const { ids, selected: all, metrics: legacyMetrics, actions } = monitorSelection(hub.store.monitorStates(), id, query.range);
+          let metrics;
+          try { metrics = hub.monitor.query(all, ids, query).metrics; }
+          catch { metrics = unavailableMonitorMetrics(legacyMetrics); }
           const unreadableArchives = hub.store.monitorErrors.size;
           const meter = session ? ctx.tokenMeter.measure(session) : null;
           const liveCalls = [...hub.live.values()].filter(call => !id || url.searchParams.get('range') === 'all' || ids.has(call.sessionId));
           res.setHeader('Cache-Control', 'no-store');
-          if (url.searchParams.get('view') === 'summary') {
-            send(res, 200, { ...compactMonitorSnapshot({ metrics, actions, meter, liveCalls, sessionCount: all.length, running: agent?.status ?? 'idle' }), unreadableArchives }); return;
-          }
           send(res, 200, {
             config: hub.config(), directory, metrics, actions, unreadableArchives, sessionCount: all.length, contextHistory: stored?.contextHistory || [],
             notes: stored?.notes || [],
@@ -361,7 +420,7 @@ export async function apply(ctx, config) {
             live: id ? ([...hub.live.values()].find(call => call.sessionId === id) ?? null) : [...hub.live.values()],
             liveCalls,
             scope: hub.scope(scopeSession), running: agent?.status ?? 'idle', meter,
-            frame: session ? meter.nodes.map(n => { const e = session.eventAt(n.seq), m = session.deriveEventMessage(e); return { seq: n.seq, role: m?.role, kind: sourceName(m?.source) || m?.source?.kind || e.type, tokens: n.tokens ?? n.heuristicTokens, chars: eventText(session, e).length, checkpoint: Boolean(m?.source?.compactionId) }; }) : [],
+            frame: session ? meter.nodes.map(n => { const e = session.eventAt(n.seq), m = e ? session.deriveEventMessage(e) : null; return { seq: n.seq, role: m?.role, kind: sourceName(m?.source) || m?.source?.kind || e?.type || 'unknown', tokens: n.tokens ?? n.heuristicTokens, chars: e ? eventText(session, e).length : null, checkpoint: Boolean(m?.source?.compactionId) }; }) : [],
             route: session?.requestHeader()?.config ? { provider: session.requestHeader().config.provider, model: session.requestHeader().config.model } : null,
           }); return;
         }

@@ -47,7 +47,10 @@ export function apply(ctx, config) {
         sendJson(res, 200, clock.snapshot()); return;
       }
       if (url.pathname === '/__simulation/snapshot' && req.method === 'GET') {
-        const id = url.searchParams.get('session'), agent = ctx.agents.get(id);
+        const id = url.searchParams.get('session');
+        const found = id && await ctx.get('sessionController')?.resolveAgent(id);
+        if (found?.error) throw found.error;
+        const agent = found?.agent ?? ctx.agents.get(id);
         if (!agent) throw Error('No loaded simulation session: ' + id);
         await ctx.sessions.flush(agent.session);
         sendJson(res, 200, { header: agent.session.header, events: agent.session.snapshotEvents(), messages: agent.session.deriveMessages(), status: agent.status }); return;
@@ -60,10 +63,21 @@ export function apply(ctx, config) {
       if (url.pathname === '/__simulation/probe-model' && req.method === 'POST') {
         const input = await readJsonBody(req);
         try {
-          const result = ctx.llm.stream({ provider: input.provider, model: input.model, messages: [], system: '', signal: new AbortController().signal });
-          for await (const _part of result) {}
-          sendJson(res, 200, { refused: false });
-        } catch (error) { sendJson(res, 200, { refused: true, message: error.message }); }
+          const found = input.sessionId && await ctx.get('sessionController')?.resolveAgent(input.sessionId);
+          if (found?.error) throw found.error;
+          const agent = found?.agent ?? (input.sessionId && ctx.agents.get(input.sessionId));
+          if (input.sessionId && !agent) throw Error('No native probe agent');
+          // A scoped probe must never silently fall back to the root service:
+          // that would let a missing global listener pass the negative control.
+          const llm = input.sessionId ? agent.ctx?.get('llm') : ctx.llm;
+          if (!llm) throw Error('No scoped native probe LLM service');
+          const scope = input.sessionId ? 'native-agent' : 'root';
+          try {
+            const result = llm.stream({ provider: input.provider, model: input.model, sessionId: input.sessionId, messages: [], system: '', signal: new AbortController().signal });
+            for await (const _part of result) {}
+            sendJson(res, 200, { refused: false, scope });
+          } catch (error) { sendJson(res, 200, { refused: true, scope, message: error.message }); }
+        } catch (error) { sendJson(res, 500, { error: error.message }); }
         return;
       }
       if (url.pathname === '/__simulation/fault') {

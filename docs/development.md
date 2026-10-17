@@ -1,14 +1,16 @@
 # 开发与源码运行
 
-[English](development_EN.md) · [目录](README.md) · [用户指南](usage.md) · [贡献约定](../CONTRIBUTING.md)
+[English](development_EN.md) · [目录](README.md) · [用户指南](usage.md) · [贡献说明](../CONTRIBUTING.md)
 
-供源码试用／贡献者使用。普通用户用[固定发行](upgrade.md)，无需跑工程测试。
+供源码试用和贡献者使用。普通用户用[固定发行](upgrade.md)，无需跑工程测试。
+本 checkout 保留固定 `0.10.0` 底座与后续成果，默认为 **OMD `0.2.1-rc.2.omd.0.17.3` / DSH `0.2.1-rc.2` 本地兼容候选**；0.2.0-rc.2／alpha.3／0.2.1-rc.1 的独立构建入口、旧工件与数据保留。[包元数据](../package.json)标为 `unpublished`、`private`。匹配的公共 Chat、Conversation 与宿主组件来源见 [DSH manifest](../vendor/dsh.json)；[新版 OpenCU 2.0.0](../vendor/opencu.json)已整体内置，只装 OMD 即包含核心、工具与真实 REA 前端。0.2.1-rc.2 使用 Cordis `4.0.5`、Schemastery `3.18.5` 与冻结依赖锁，不放宽门禁。
 
-GitHub `main` 是 DSH alpha.2／OMD `0.2.1-alpha.2.omd.0.16.0` 未发布分支，已整合 OpenCU 1.6.1 的浏览器与运行时重构；克隆 main 获取开发源码，公开安装包仍以固定发行版为准。
+OMD 发行包不重复携带 OpenCU 的独立注册包 `vendor/opencu/lib/client.js`：集成客户端已在 OMD 主包内，`client.factory.mjs` 仍保留用于离线重建；工作区快照和独立 OpenCU 发行不受影响。
 
 ## 源码运行
 
-Node.js ≥22.19、Git、checkout 的 `package.json` 指定 pnpm；公开 `0.10.0` 用 11.23.0，开发版用自己的锁定版本。
+需要 Node.js ≥22.19、Git，以及 checkout 的 `package.json` 指定的 pnpm。
+下面只演示已公开的固定 `0.10.0` 源码运行，不是本地 `0.17.3` 候选的安装命令。
 
 ```sh
 git clone --branch v0.2.1-alpha.1.omd.0.10.0 https://github.com/gulagala001/oh-my-dsh.git
@@ -18,7 +20,10 @@ pnpm build
 pnpm start
 ```
 
-默认仓库 `data/dsh/`、`trisoul-x` profile、3083，首次装本地插件。打开完整登录链接，在 DSH 配置模型，不附私人数据／凭据。
+**本地兼容构建：** `scripts/host-targets.mjs` 集中定义已审阅宿主的官方提交与框架；`scripts/align-host.mjs <完整宿主版本> <官方源码目录>` 对齐清单、枚举来源和框架 overrides。`scripts/sync-dsh.mjs` 接收独立匹配源码及其真实浏览产物，`scripts/sync-opencu.mjs` 接收对应新版 tgz。每份构建单独生成并核对冻结锁、peer 与工件，不改版本号混装。独立聊天的草稿初始化集中在 `src/client/projectless-state.mjs`：新版调用原生初始化接口，rc.2 使用同一目标 Session 的输入 facade，保留已有草稿、附件所有权及提交锁。本地安装包使用 `OMD_PNPM_ENTRY="$PNPM" node scripts/pack-local.mjs <输出目录>`，保留内置 macOS helper 的执行位与原签名字节。最小定点检查使用隔离数据/profile；日常部署与重启另需明确授权。
+
+默认数据目录为仓库内的 `data/dsh/`，profile 为 `trisoul-x`，端口为 3083；首次启动安装本地插件。
+打开终端输出的完整登录链接，在 DSH 中配置模型。仓库不提供私人数据或凭据。
 
 <details>
 <summary>端口、数据和本地链接</summary>
@@ -38,15 +43,15 @@ $env:DSH_HOME = 'C:\dsh-data'
 pnpm start
 ```
 
-构建后链接已有 Web profile，用匹配 CLI：
+构建后，用匹配宿主版本的 CLI 链接已有 Web profile：
 
 ```sh
 dsh plugin --profile YOUR_PROFILE add link:/absolute/path/to/oh-my-dsh
 ```
 
-重启生效，桌面用[自带 CLI](upgrade.md#desktop-cli)，普通 CLI 不写 desktop。路径建议无空格。
-
-Mac `node scripts/launch-macos.mjs` 后台启动并开链接，关浏览器不停服务，日志留本地；前台 Ctrl+C 停止。
+重启生效；桌面用[自带 CLI](upgrade.md#desktop)，普通 CLI 不写 desktop profile。源码路径建议无空格。
+macOS 的 `node scripts/launch-macos.mjs` 使用默认数据目录和端口，后台启动并打开登录链接，日志在 `data/dsh-stage.log`。
+关闭浏览器不会停止后台服务；前台 `pnpm start` 用 Ctrl+C 停止。
 
 </details>
 
@@ -58,38 +63,26 @@ Mac `node scripts/launch-macos.mjs` 后台启动并开链接，关浏览器不�
 | `src/index.mjs`、`src/dsh-agent.mjs` | 生命周期／工具 |
 | `src/context/` | 摘要、资料、替换、回查 |
 | `src/tasks.mjs`、`src/todolist.mjs` | 锚点、任务、证据 |
-| `src/hub.mjs`、`src/hub-store.mjs` | 后台／监控 |
-| `src/codegraph.mjs` | 索引／查询 |
+| `src/hub.mjs`、`src/hub-store.mjs`、`src/monitor-ledger.mjs` | 后台／持久监控账本 |
+| `src/dream/` | 隔离归属、来源、短记忆与续跑 |
+| `src/codegraph.mjs` | 索引／查询；取消及初始化失败保留可读错误与原始 cause |
 | `src/client/` | 对话、工作台、设置、主题 |
-| `vendor/opencu/` | 固定发行快照，通用实现在 OpenCU 项目 |
+| `vendor/dsh/` | 匹配当前构建目标的公共 Chat、Conversation 与宿主组件 |
+| `vendor/opencu/` | 新版 OpenCU 完整发行快照；对应目标 tgz 整体同步，不手改 |
 | `scripts/`、`test/` | 构建／启动／检查 |
 
-build 从通用清单生成 OMD-PTC，改源配置，不手改生成文件。
+`pnpm build` 构建前端，并从 `presets/trisoul-x/agent.cordis.yml` 生成普通与 OMD-PTC 预设；修改源配置，不手改生成文件。
 
-## 验证与贡献
+宿主构建通过 [`host-const-enums.mjs`](../scripts/host-const-enums.mjs)，使用根 `devDependencies` 显式锁定、经来源清单核验的 TypeScript `6.0.3`，按 AST 与真实符号绑定内联官方 `const enum` 成员并消除运行时枚举引用。DSH／Cordis 复用宿主 SDK 单例，不打包第二份；官方来源提交、SHA-256 与完整枚举声明／成员按[枚举 manifest](../scripts/host-const-enums.json)校验。默认构建不依赖桌面 SDK 路径中的未声明编译器 fallback。
 
-先读[贡献说明](../CONTRIBUTING.md)，检查与风险匹配。会话、工具、提醒、压缩、Dream、期限／恢复改动按[模拟器指南](../scripts/simulator/README.md)选真实宿主场景，前端加真实 Web。
+CodeGraph 的 `codegraph.json` 排除规则只作用于当前项目根，不会自动继承到独立子仓库。工作区与各子仓库分别排除隔离宿主、构建产物和 REA 提取包，查询保留手写适配层；调查提取包原件用定点文件读取。索引异常膨胀时先确认无活动写入者，再清理可重建的 `.codegraph` 数据库，执行 `codegraph_index` 并以实际查询确认；不得删除用户数据或源文件。
 
-```sh
-pnpm exec playwright install --with-deps chromium
-pnpm build
-pnpm test
-```
+## 按需测试
 
-临时数据、受控模型、真实宿主，不需密钥。原生桌面依赖平台、组件、权限；跳过、耗尽、清理失败不算通过，本轮 Windows 未实机。
+专注实现和交付，尽量少做测试。按需做最小构建／启动检查，仅为具体问题或用户明确要求做定点验证（含 CU）。依据用户实际使用反馈改进体验。贡献与发行要点见[贡献说明](../CONTRIBUTING.md)。
+- `pnpm test`（或 `pnpm test:smoke`）：仅保留 6 个文件的少量明确回归，不反复安装宿主、不启动完整桌面。
+- 单项回归：`node --test test/<name>.test.mjs`，仅指定实际保留的文件。
+- `pnpm test:all`：兼容入口，运行同一组最小检查，不再另设重型全量套件；结果只说明这些检查的有限范围。
+- 需要运行检查时，使用隔离数据/profile，保持当前工作 DSH 原状。
 
-宿主升级匹配 SDK／快照／锁，保留工具／技能／配置／生命周期。共存查固定版本、两加载顺序、启停重启卸载，原生拒绝继续拒绝，不改 peer 代替适配。
-
-## 图片与上下文预算
-
-开发分支批量卸载旧图请求表示，留文件附件可重读，提供方路由与硬上限照实际。减少替换不保证缓存／省费。
-
-空闲预处理默认关，启用等待 90 秒。正常／手动／已开始任务各有边界，失败或窗口耗尽不凭空续接、不静默丢原文。
-
-## 发行与公开文件
-
-完整 DSH 前缀加 `omd.主版本.功能版本.补丁版本`，包/tag/清单/文档一致；功能增加功能位补丁归零，修复增加补丁位。
-
-发布查 Git 文件、历史、tag、安装包和许可。内部计划／代理记录／原始研究验收／真实会话／凭据／日志／运行产物留本地；维护源码、合成夹具、测试、用户文档按用途保留。历史说明不证明新包验收。
-
-问题反馈实际版本和脱敏错误。[作者来源许可](../THIRD_PARTY_NOTICES.md)。
+图片、上下文预算和空闲预处理见[上下文整理与原文回查](context-workflow.md)；来源与许可见[第三方声明](../THIRD_PARTY_NOTICES.md)。

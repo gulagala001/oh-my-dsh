@@ -20,7 +20,7 @@ Linux CI 使用 `pnpm exec playwright install --with-deps chromium`，安装浏�
 
 只托管源码中的 `docs` 目录时，文档仍是 Markdown 文件，浏览器可能显示原文或下载文件。不要把整个仓库作为静态站点目录。
 
-`scripts/build-docs.mjs` 使用已有 `marked` 与 `htmlparser2`，按显式白名单发布中英文指南、版本记录和公共素材；源码与 vendor 引用链接回 GitHub。构建核对每个内部链接和章节，私密文档引用、符号链接、缺失目标或重复 ID 会中止构建；原始研究、内部实施计划、本地交接、账号配置与工作记录不进入站点。
+`scripts/build-docs.mjs` 使用已有 `marked` 与 `htmlparser2`，按显式白名单发布中英文指南、版本记录和公共素材；源码与 vendor 引用链接回 GitHub。构建核对每个内部链接和章节，私密文档及工作数据引用、本机绝对链接、符号链接、缺失目标或重复 ID 会中止构建；原始研究、内部实施计划、本地交接、账号配置与工作记录不进入站点。
 
 中英文页面使用各自的导航、目录、复制反馈与辅助标签。语言入口优先跳转到同一篇文档的对应译文；没有译文时进入另一语言的文档目录。英文导航中的未翻译专项资料标为 Chinese。历史发行记录保留原文；发行说明的存在不代表对应候选已公开发行。
 
@@ -39,6 +39,6 @@ Markdown 中的 Mermaid 图示在构建时使用固定版本的官方 `@mermaid-
 
 图片来自当前展示素材，具体使用边界见 [演示与素材来源](../showcase.md)。站点不包含模型调用、登录或安装执行逻辑。
 
-安装入口固定到已公开的 alpha.1 与 rc.2 两个 `0.10.0` tag 和对应 `trisoul_x-<完整版本>.tgz`。不用 GitHub latest 选择安装包。源码候选与较新的本地 OpenCU 实现单独标注，不能将 GitHub main 构建或旧包说成包含本地新功能。
+安装入口区分新版候选与历史固定发行，不用 GitHub latest 跨宿主选包。版本、安装条件和完整界面所需的宿主适配见[安装指南](../install.md)。
 
 更新版本时同步两种语言的安装来源、宿主版本与下载链接。文档、静态站点与产品预览检查分别位于 `test/documentation.test.mjs`、`test/docs-site.test.mjs` 和 `test/site-preview-ui.test.mjs`；实际通过情况以本次运行结果为准。

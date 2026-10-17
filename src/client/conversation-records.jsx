@@ -1,6 +1,6 @@
 import { sourceName } from '../message-source.mjs';
 import React, { useId, useState, useSyncExternalStore } from 'react';
-import { decorateSlotComponent } from '#opencu/src/client/slot-decoration.mjs';
+import { decorateSlotComponent } from './slot-decoration.mjs';
 import { compactionGroups, taskInjectionDefinition, supersededTaskInjections } from './conversation-records.mjs';
 import { btwRecordDefinition } from './btw-record.mjs';
 import css from './conversation-records.css';

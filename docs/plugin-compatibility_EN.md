@@ -1,72 +1,51 @@
 # Using Other Plugins with OMD
 
-[简体中文](plugin-compatibility.md) · [Documentation](README_EN.md) · [Installation](upgrade_EN.md) · [Recommended plugins](usage_EN.md#recommended-plugins) · [Adaptation requests (Chinese)](plugin-submissions.md)
+[简体中文](plugin-compatibility.md) · [Documentation](README_EN.md) · [Installation](install_EN.md)
 
-Check complete DSH, OMD, and third-party plugin versions first. Passing installation checks does not establish account workflows, interface behavior, and every lifecycle step.
+OMD retains native DSH tools, skills, sessions and third-party entries. **Use plugins built for the complete host version.**
 
-OMD uses native management, tools, skills, and scopes. Compatibility improvements retain functionality rather than bypassing checks or disabling enhancements to claim coexistence.
+## Match the artifacts
 
-## Public Pairs and Development Status
+Current source targets DSH `0.2.1-rc.2`: OMD `0.17.3` and standalone/bundled OpenCU `2.0.0`. Independent projects such as IUI and OMAA need their own matching builds. 0.2.0-rc.2, alpha.3 and 0.2.1-rc.1 have separate build inputs; relabeling the same frontend is not adaptation.
 
-| Status | Scope |
-| --- | --- |
-| Public `0.2.0-rc.2.omd.0.10.0` | DSH `0.2.0-rc.2`. |
-| Public `0.2.1-alpha.1.omd.0.10.0` | DSH `0.2.1-alpha.1`. |
-| GitHub `main` `0.2.1-alpha.2.omd.0.16.0` | Unpublished alpha.2 development, including the OpenCU 1.6.1 browser and runtime reconstruction. |
-| Latest local OpenCU `1.6.1` reconstruction | Browser/runtime changes are integrated into main; local and public packages still require content and host checks. |
+Do not replace current work with old packages, older HEAD or version exemptions. Back up actual data and retain explicit settings, accounts and third-party provenance.
 
-Coverage evolves with hosts and actual verification, rather than a permanent allowlist. A historical artifact does not establish new-host compatibility.
+## Native tools and ownership
 
-## Install and Update Other Plugins
+- The host owns registry, SDK, lookup, scheduling, permissions, cancellation and plugin scopes.
+- OMD provides PTC presentation only within its presets. Ordinary work uses `run_code`; matching scopes retain four direct background controls.
+- Visibility in `standard` is not visibility in every preset. Check actual scoped tools.
+- Request projection is reversible; removal withdraws owned contributions, retaining later third-party wrappers, registrations and public slots.
+- Loader removal preserves original user configuration rather than persisting the whole effective bundle patch.
 
-1. Check purpose, author, fixed source, host, and status in Recommended plugins. Unpublished entries or missing checksums may be unavailable.
-2. Install natively in the current profile. Desktop uses the app or its bundled CLI.
-3. Fully restart, open the plugin's entry, and check tools, skills, or settings.
-4. Verify account workflows separately. Installation/enabling does not establish quotas, OAuth, or paid requests.
-
-Automatic updates default off, apply only to installed/enabled verified releases, and do not cross host builds automatically. Check SDKs and fixed builds for all plugins before upgrading. Do not relax peers or copy another host's dependencies.
+[System prompts and tool boundaries (Chinese)](prompt-adaptation.md)
 
 <a id="opencu"></a>
 
-## Standalone OpenCU and OMD Integration
+## New OpenCU is bundled
 
-OMD includes OpenCU already. If you only need computer operation, [install OpenCU independently](https://github.com/gulagala001/opencu); OMD is not required.
+New OMD needs no second OpenCU installation. Standalone use remains available; coinstallation shares one core, tool set and presentation implementation. The frozen 1.3.0 transition snapshot has been replaced.
 
-The latest local implementation was checked in both loading orders with standalone OpenCU. This result belongs to that actual pairing, not arbitrary versions, and does not mean the GitHub OMD snapshot includes the latest fix. Use release-specific documentation for public combinations.
+The complete embedded browser, annotations and native monitor need matching Host, Client and preload adapters. Plugin installation does not automatically patch stock DSH. Text and file tasks do not require desktop control first. [Setup and boundaries (Chinese)](computer-use.md)
 
-## Common Plugin Boundaries
+## Independent companion projects
 
-| Plugin | Check before use |
+| Project | Boundary |
 | --- | --- |
-| OMAA | Independent presets; base behavior and optional enhancements have separate availability. Changing hosts needs matching builds. |
-| Subscriptions | Fixed OMD-adapted package; accounts, Fast, quotas, and paid workflows need separate checks. |
-| Intelligent UI | Optional; explicit submission continues the conversation. Fixed release/checksum must exist before installation. |
-| OpenDesign | Prepare its own skills/design tools. OMD does not replace account requirements. |
-| Turn Rewind `0.3.9` | Native alpha.1 refuses it; rc.2 accepts it. Do not bypass the gate. |
-| Status Rotator and other standard packages | Full source/version, actual interface, enable/disable/removal behavior. |
-| Blender and development-injection projects | Follow their connection/injection instructions if not standard packages. |
+| **Intelligent UI** | Independent interactive-content capabilities. OMD maintains recommendations, matching artifacts, public slots and tool projection—not its implementation or data. |
+| **OMAA** | Independent presets/features, usable through supported workflow/mode boundaries. |
+| **Subscriptions** | Independent login, account pools, routing and persistent Fast settings. OMD supplies no accounts, quota or server-priority guarantees. |
+| **Intent / requirement understanding** | Independent and off by default, separate from OMD's system instructions and manual draft refinement. |
+| **DeepSeek Workbench** | Bundled; the recommendation page provides entry/state rather than third-party install/update/remove. |
+| **OpenDesign / standard plugins** | Retain independent skills, tools, UI ownership, account requirements and licenses. |
+| **Development-injected projects** | Follow their project instructions when no standard artifact exists; do not disguise them as directly installable packages. |
 
-Use current directory records and independent release notes. One coexistence run does not cover every version/platform.
+## Recommendations, updates and data
 
-## What Coexistence Results Establish
+The catalog lists purpose, original author, fixed source, full host, SHA-256 and state. Unknown hosts, missing artifacts and unpublished targets do not get invented installation entries. Use the current profile's native manager; on desktop, use the app or its bundled CLI.
 
-Representative fixed plugins were compared in native DSH and OMD across both loading orders, enable/disable, restart, removal, and tool/skill/interface contributions. Later alpha.2 and local integrations have their own scope and do not inherit all old results.
+Automatic updates default off and apply only to eligible installed/enabled releases. They do not cross hosts, approve scripts or restart. Accounts, OAuth, Fast and paid behavior need separate confirmation.
 
-Isolated Web checks used controlled models and fictional material. They do not establish real subscriptions, all OAuth workflows, every third-party version, or Windows native desktop acceptance. No Windows hardware test was performed this round. Native refusal is not successful installation.
+Disable/removal retains conversations, drafts, attachments, settings, short memory and companion data. A saved conversation missing its preset may need that plugin restored.
 
-<details>
-<summary>Scopes and saved conversations</summary>
-
-A plugin can contribute only to particular presets. Visibility in standard does not establish visibility in OMD.
-
-Uninstall retains conversations, drafts, attachments, and settings, but saved conversations with a missing preset may need OMD, OMAA, or the original plugin restored. A new standard conversation does not establish automatic conversion of old conversations.
-
-Optional failures should remain isolated from base behavior. Keep diagnostics for uncertain combinations and restore matching versions or disable the affected component.
-
-</details>
-
-## Conflicts and Recommendations
-
-Record the three versions, loading order, profile, minimal reproduction, first error, and native DSH behavior. [Back up](upgrade_EN.md#2-stop-and-back-up), then [troubleshoot](troubleshooting_EN.md).
-
-[Recommend a plugin/request adaptation (Chinese)](plugin-submissions.md) with a repository and one sentence about its purpose, whether yours or another open-source project.
+Report full versions, loading order, profile, a minimal reproduction and the first redacted error. Do not clear data or disable every enhancement to conceal conflicts. [Troubleshooting](troubleshooting_EN.md) · [Sources and licensing](../THIRD_PARTY_NOTICES.md)

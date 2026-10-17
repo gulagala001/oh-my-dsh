@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>OpenCU · 连接浏览器</title><link rel="stylesheet" href="options.css">
+</head>
+<body>
+<main>
+  <header><span class="mark" aria-hidden="true">↗</span><div><h1>允许连接此浏览器？</h1><p>OpenCU · 仅连接这台电脑上的 DSH</p></div></header>
+  <p id="status" role="status" aria-live="polite">读取连接状态…</p>
+  <form id="connection" novalidate>
+    <div id="setup">
+      <p>允许本机 DSH 中的 AI 查看和操作此浏览器的网页，并保存连接期间的浏览器下载。</p>
+      <label id="host-label" for="host" hidden>选择本机 DSH</label><select id="host" hidden></select>
+      <p class="hint">只需允许一次。配对保存在这台电脑和此浏览器配置中，正常重启、更新后自动恢复；你随时可以撤销。</p>
+      <button id="connect" type="submit" disabled>允许并记住</button>
+      <button id="decline" type="button" class="secondary">不允许</button>
+    </div>
+    <button id="disconnect" type="button" class="secondary" hidden>断开连接</button>
+    <button id="forget" type="button" class="secondary" hidden>撤销配对</button>
+    <details id="help">
+      <summary>更多说明</summary>
+      <p><strong>自动连接：</strong>保持 DSH 打开。AI 首次使用此浏览器时会自动弹出此窗口，无需复制任何信息。DSH 内置浏览器无需此扩展。</p>
+      <p><strong>配对后：</strong>浏览器、DSH 或电脑正常重启，以及保留此扩展身份和数据的更新，不需要重新允许。主动撤销配对、清除扩展数据或卸载重装后需重新配对。</p>
+      <p><strong>断开与撤销：</strong>断开会暂停自动连接；之后可点「允许并记住」恢复。撤销会删除此浏览器保存的配对。调试提示条被取消也会暂停控制。</p>
+      <details><summary>技术信息</summary><p>使用 Chrome debugger 权限进行截图和真实输入；Chrome 的调试提示条不会隐藏。重连创建全新控制会话，不重放旧操作，AI 必须重新观察。仅支持普通 HTTP(S) 网页。下载记录归整个浏览器配置，不区分标签；下载仍保存在原目录，并按授权复制到 OpenCU。</p><p id="diagnostic" class="hint"></p><p id="identity" class="hint"></p></details>
+    </details>
+  </form>
+</main>
+<script type="module" src="options.js"></script>
+</body></html>

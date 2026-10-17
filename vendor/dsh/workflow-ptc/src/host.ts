@@ -441,6 +441,9 @@ export class PtcWorkflowRun implements WorkflowRun {
     try {
       const cwd = await this.cwd
       this.requireActive()
+      if (this.runtime.sandboxMode === undefined && this.policy.mode !== 'danger-full-access') {
+        throw new Error(`workflow runtime cannot enforce the ${this.policy.mode} file policy`)
+      }
       if (this.support) {
         this.journal = await WorkflowJournal.create(this.support.root, this.parent.session.id, this.id, {
           script: serializeWorkflowSource(this.meta, this.init.body), meta: this.meta, args: this.init.args,
@@ -451,10 +454,10 @@ export class PtcWorkflowRun implements WorkflowRun {
       this.requireActive()
       this.readiness.resolve()
       const outcome = await this.runtime.run(this.runtime.resolve({
-        program: PROGRAM,
+        program: this.runtime.programFormat === 'repl' ? `await (async () => {\n${PROGRAM}\n})()` : PROGRAM,
         bindings: [{ global: 'workflowHost', functions: this.bindings() }],
         cwd,
-        sandboxPolicy: this.policy,
+        ...this.runtime.sandboxMode === undefined ? {} : { sandboxPolicy: this.policy },
         timeoutMs: null,
         signal: this.controller.signal,
       }))

@@ -1,0 +1,360 @@
+import { createServer } from 'node:http';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { randomBytes, randomUUID, createHash } from 'node:crypto';
+import { constants } from 'node:fs';
+import { mkdir, readFile, writeFile, rename, realpath, open, unlink } from 'node:fs/promises';
+import { basename, dirname, join, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createRuntime, DEFAULT_DATA_DIR } from '../runtime.mjs';
+import { publicConfig } from './config.mjs';
+import { modelResult } from './model-output.mjs';
+import { createSidebarDownloads } from './downloads.mjs';
+import { createBrowserResources } from '../browser/resources.mjs';
+import { createDeliveryFiles } from './delivery-files.mjs';
+import { createImageRegistry } from './image-registry.mjs';
+import { createAppApprovals } from './app-approvals.mjs';
+import { createBrowserPairing } from '../extension/pairing.mjs';
+import { listenExtension } from '../extension/listen.mjs';
+import { referenceMatches, sameIdentity, checkExpected } from '../protocol.mjs';
+
+const methods = { state: 'getState', targets: 'listTargets', select: 'selectTarget', observe: 'observe', act: 'act', stop: 'stop', userActivity: 'notifyUserActivity', resume: 'resume', deliveries: 'deliveries', permissions: 'permissions', openPermissionSettings: 'openPermissionSettings', requestPermission: 'requestPermission', revealPermissionHelper: 'revealPermissionHelper' };
+const active = new Set(['select', 'observe', 'act', 'focus', 'openTarget', 'stop', 'resume']);
+
+function error(code, message) { return Object.assign(new Error(message), { code }); }
+function stripPaths(value) {
+  if (Array.isArray(value)) return value.map(stripPaths);
+  if (!value || typeof value !== 'object') return value;
+  const result = {};
+  for (const key of Object.keys(value)) {
+    if (key === 'path' || key === 'dataDir' || key === 'base64' || key === 'dataUrl') continue;
+    const child = stripPaths(value[key]);
+    if (key === '__proto__') Object.defineProperty(result, key, { value: child, enumerable: true, writable: true, configurable: true });
+    else result[key] = child;
+  }
+  return result;
+}
+
+/** Lazy shared controller. Only the extension transport owns a loopback listener. */
+export function createPluginRuntime(options = {}) {
+  const getConfig = options.getConfig || (() => options);
+  const browserResources = createBrowserResources();
+  const cursorContext = new AsyncLocalStorage();
+  let dataDir, starting, controller, bridge, connection, browserPairing, closing, disposed = false;
+  let annotations = [], annotationTail = Promise.resolve(), lastObservation = null, revision = 0, activity = null;
+  const files = new Map(), imageRefs = new Map();
+  const sidebarDownloads = createSidebarDownloads(() => dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR));
+  const deliveryFiles = createDeliveryFiles(() => dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR));
+  const appApprovals = createAppApprovals(() => dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR));
+  let imageRegistry, startedConfig, reconfiguring;
+  const configurationKey = config => JSON.stringify([config.browserEnabled, config.nativeEnabled, config.extensionEnabled]);
+  async function start() {
+    if (disposed) throw new Error('OpenCU plugin is unloading');
+    if (reconfiguring) { await reconfiguring; return start(); }
+    const config = getConfig();
+    const nextConfig = configurationKey(config);
+    if (starting && startedConfig !== nextConfig) {
+      reconfiguring = (async () => {
+        const previous = await starting;
+        const result = await previous.close();
+        if (result.ok === false) throw Object.assign(new Error(result.error.message), result.error);
+        await Promise.all([annotationTail, imageRegistry?.close()]);
+        if (bridge?.listening) await new Promise((done, reject) => bridge.close(error => error ? reject(error) : done()));
+        browserPairing?.close(); browserPairing = undefined;
+        starting = undefined; controller = undefined; bridge = undefined; connection = undefined;
+      })().finally(() => { reconfiguring = undefined; });
+      await reconfiguring;
+      return start();
+    }
+    if (!starting) { startedConfig = nextConfig; starting = (async () => {
+      dataDir = resolve(config.dataDir || DEFAULT_DATA_DIR);
+      await mkdir(dataDir, { recursive: true, mode: 0o700 });
+      if (disposed) throw new Error('OpenCU plugin is unloading');
+      const token = randomBytes(32).toString('base64url');
+      if (config.extensionEnabled !== false) {
+        browserPairing = createBrowserPairing(join(dataDir, 'extension'));
+        await browserPairing.ready;
+      }
+      controller = await createRuntime({ ...config, dataDir, token, browserPairing, dshBrowser: options.dshBrowser, nativeOptions: { ...config.nativeOptions, onCursor: cursor => options.onCursor?.(cursor, cursorContext.getStore()) } });
+      try {
+        try { annotations = JSON.parse(await readFile(join(dataDir, 'annotations.json'), 'utf8')); }
+        catch (error) { if (error.code !== 'ENOENT') throw error; }
+        if (!Array.isArray(annotations)) throw new Error('Invalid persisted annotations');
+        imageRegistry = createImageRegistry(() => dataDir);
+        await imageRegistry.ready();
+        if (controller.extensionRequest) {
+          bridge = createServer((req, res) => {
+            if (controller.extensionRequest(req, res)) return;
+            res.writeHead(404); res.end();
+          });
+          await listenExtension(bridge);
+          connection = { origin: `http://127.0.0.1:${bridge.address().port}`, token };
+          await writeFile(join(dataDir, 'extension-connection.json'), JSON.stringify(connection), { mode: 0o600 });
+        }
+        if (disposed) throw new Error('OpenCU plugin is unloading');
+        return controller;
+      } catch (error) {
+        const result = await controller.close();
+        if (bridge?.listening) await new Promise((done, reject) => bridge.close(error => error ? reject(error) : done()));
+        if (result.ok === false) throw Object.assign(new Error(result.error.message), result.error);
+        browserPairing?.close(); browserPairing = undefined;
+        controller = undefined; bridge = undefined; connection = undefined;
+        throw error;
+      }
+    })().catch(error => {
+      if (!controller) { starting = undefined; startedConfig = undefined; }
+      throw error;
+    }); }
+    return starting;
+  }
+  async function privateFile(path, maximum) {
+    const root = await realpath(dataDir), actual = await realpath(path);
+    if (!actual.startsWith(`${root}${sep}`)) throw error('INVALID_FILE', 'File is outside the plugin data directory');
+    const file = await open(actual, constants.O_RDONLY | constants.O_NOFOLLOW);
+    try {
+      const info = await file.stat();
+      if (!info.isFile() || (maximum && info.size > maximum)) throw error('INVALID_FILE', 'Invalid OpenCU file');
+      return file;
+    } catch (error) { await file.close(); throw error; }
+  }
+  async function discardScreenshot(path) {
+    if (typeof path !== 'string') return;
+    try {
+      const root = await realpath(dataDir), source = resolve(path), actual = await realpath(path);
+      const expected = source.startsWith(`${dataDir}${sep}`) ? root + source.slice(dataDir.length) : source;
+      // Permit the configured root's alias, never links inside a backend capture directory.
+      if (actual !== expected || !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\.png$/i.test(basename(actual))) return;
+      if (!['browser/observations', 'extension/observations', 'native/native/screenshots', 'native/native'].some(directory => dirname(actual) === join(root, directory))) return;
+      await unlink(actual);
+    } catch (failure) { if (failure.code !== 'ENOENT') console.warn('OpenCU screenshot cleanup', failure); }
+  }
+  async function attachScreenshot(result, attachments) {
+    const screenshot = result.observation?.screenshot;
+    if (!screenshot) return result;
+    if (!attachments?.saveImage) throw error('ATTACHMENTS_UNAVAILABLE', 'Image attachment storage is required for screenshot observations');
+    let mediaType = screenshot.mimeType || screenshot.mediaType || 'image/png';
+    let base64 = screenshot.base64 || screenshot.data;
+    if (!base64 && typeof screenshot.dataUrl === 'string') {
+      const match = /^data:(image\/[\w+.-]+);base64,(.+)$/.exec(screenshot.dataUrl);
+      if (match) { mediaType = match[1]; base64 = match[2]; }
+    }
+    let bytes;
+    if (typeof base64 === 'string') bytes = Buffer.from(base64, 'base64');
+    else if (screenshot.path) {
+      const file = await privateFile(screenshot.path, 32 * 1024 * 1024);
+      try { bytes = await file.readFile(); } finally { await file.close(); }
+    }
+    if (!bytes?.length) throw error('INVALID_SCREENSHOT', 'Screenshot has no encoded bytes');
+    const digest = createHash('sha256').update(bytes).digest('hex');
+    let image = imageRefs.get(digest);
+    if (!image) { image = await attachments.saveImage({ data: bytes, mediaType, name: `opencu-${result.targetId || 'observation'}.png` }); imageRefs.set(digest, image); }
+    await imageRegistry.retain(image);
+    await discardScreenshot(screenshot.path);
+    const { path, base64: ignored, data, dataUrl, ...metadata } = screenshot;
+    return { ...result, observation: { ...result.observation, screenshot: { ...metadata, image } }, image };
+  }
+  async function deliveries(runtime, attachments, signal) {
+    const result = await runtime.deliveries();
+    if (result.ok === false) return result;
+    const records = [];
+    try {
+      for (const item of [...result.deliveries, ...await sidebarDownloads.list({ maxResults: 1000 })]) {
+        signal?.throwIfAborted();
+        const { path, filename, ...metadata } = item;
+        let file = files.get(`${item.id}:${item.sha256}`);
+        if (item.status === 'complete' && path && !file) {
+          if (!attachments?.saveFileStream) throw error('ATTACHMENTS_UNAVAILABLE', 'File attachment storage is required for deliveries');
+          const source = await privateFile(path);
+          try {
+            const info = await source.stat();
+            if (info.size !== item.bytes) throw error('DELIVERY_CHANGED', 'Delivery bytes changed');
+            const hash = createHash('sha256');
+            async function* chunks() {
+              for await (const chunk of source.createReadStream({ autoClose: false })) { signal?.throwIfAborted(); hash.update(chunk); yield chunk; }
+              if (item.sha256 && hash.digest('hex') !== item.sha256) throw error('DELIVERY_CHANGED', 'Delivery digest changed');
+            }
+            file = await attachments.saveFileStream({ data: chunks(), name: item.name, signal });
+            files.set(`${item.id}:${item.sha256}`, file);
+          } finally { await source.close(); }
+        }
+        records.push({ ...stripPaths(metadata), deliverable: !!file, ...(file ? { file } : {}) });
+      }
+    } finally { await deliveryFiles.retainAll(records.flatMap(record => record.file ? [record.file] : [])); }
+    return { ok: true, deliveries: records };
+  }
+  async function authorizeApplication(runtime, endpoint, args, sessionKey, signal) {
+    if (!['select', 'observe', 'act', 'resume', 'preview'].includes(endpoint)) return;
+    let target;
+    if (endpoint === 'select') {
+      const inventory = await runtime.listTargets();
+      if (inventory.ok === false) throw Object.assign(new Error(inventory.error.message), inventory.error);
+      const matches = inventory.targets.filter(value => referenceMatches(value, args.reference));
+      if (matches.length !== 1) return;
+      target = matches[0];
+      if (args.reference?.identity && !sameIdentity(target.identity, args.reference.identity)) throw error('TARGET_IDENTITY_CHANGED', 'Reference identity does not match the live application');
+      checkExpected(target, args.reference?.expected);
+    } else {
+      const current = await runtime.getState();
+      if (current.ok === false) throw Object.assign(new Error(current.error.message), current.error);
+      target = current.state.targets.find(value => value.id === (args.targetId ?? current.state.activeTargetId));
+    }
+    if (target?.backend === 'native') await appApprovals.authorize(target, sessionKey, signal, () => runtime.applicationMetadata(target));
+  }
+  async function request(endpoint, args = {}, { attachments, signal, sessionKey, modelProjection = false } = {}) {
+    if (disposed) throw new Error('OpenCU plugin is unloading');
+    if (!args || typeof args !== 'object' || Array.isArray(args)) throw error('INVALID_ARGUMENT', 'OpenCU payload must be an object');
+    if (endpoint === 'appApprovals/read') return { ok: true, approvals: await appApprovals.read() };
+    if (endpoint === 'appApprovals/remove') return { ok: true, approvals: await appApprovals.remove(args.bundleIdentifier) };
+    if (endpoint === 'appApprovals/pending') return { ok: true, requests: appApprovals.pending(args.conversationId) };
+    if (endpoint === 'appApprovals/respond') return { ok: true, ...await appApprovals.respond(args) };
+    if (endpoint === 'stop') appApprovals.cancel(sessionKey);
+    if (endpoint === 'browserSettings/status') return { ok: true, connections: controller?.extensionConnections() ?? [] };
+    if (endpoint === 'extensionFiles') return { ok: true, path: fileURLToPath(new URL('../../extension/', import.meta.url)) };
+    if (endpoint === 'browserResources/status') return { ok: true, resources: await browserResources.status() };
+    if (endpoint === 'browserResources/install') return { ok: true, resources: await browserResources.install(signal) };
+    if (endpoint === 'downloads/configure') return { ok: true, directory: await sidebarDownloads.location() };
+    if (endpoint === 'downloads/update') return { ok: true, download: stripPaths(await sidebarDownloads.update(args.download)) };
+    if (endpoint === 'downloads/history') {
+      const downloads = stripPaths(await sidebarDownloads.list(args));
+      const revision = args.conditional === true ? createHash('sha256').update(JSON.stringify(downloads)).digest('hex') : undefined;
+      if (revision && args.after === revision) return { ok: true, revision, unchanged: true };
+      return { ok: true, ...(revision ? { revision } : {}), value: { capturedAtMs: Date.now(), downloads, unacknowledgedIds: [] } };
+    }
+    if (endpoint === 'downloads/remove') return sidebarDownloads.remove(args.id, args.since);
+    if (endpoint === 'files/resolve') return deliveryFiles.resolve(args, attachments, signal);
+    if (endpoint === 'reconfigure' && !starting) return { ok: true, config: publicConfig(getConfig()) };
+    const runtime = await start();
+    signal?.throwIfAborted();
+    if (endpoint === 'reconfigure') return { ok: true, config: publicConfig(getConfig()) };
+    if (endpoint === 'presentationContrast') return { ok: true, ...await runtime.presentationContrast(args) };
+    if (endpoint === 'capabilities') return { ok: true, ...runtime.runtimeInfo, config: publicConfig(getConfig()),
+      native: await runtime.permissions(), browserResources: await browserResources.status(), connections: runtime.extensionConnections(), pairings: await runtime.browserPairings() };
+    if (endpoint === 'connectBrowser') {
+      const requested = await runtime.connectBrowser({...args, signal});
+      return {ok: true, ...requested, browsers: [...runtime.extensionConnections().map(item => ({id: 'extension:' + item.instanceId, name: item.label, provider: 'extension', connected: true})), ...(requested.browsers ?? [])]};
+    }
+    const browserConnection = endpoint === 'targets' && sessionKey && runtime.runtimeInfo.backends.extension ? await runtime.connectBrowser({signal}) : null;
+    if (endpoint === 'browserSettings/forget') return {ok: true, ...await runtime.forgetBrowser(args)};
+    if (endpoint === 'browserSettings/open') return { ok: true, ...await runtime.openBrowserSettings(args) };
+    if (endpoint === 'browserSettings/disconnect') return { ok: true, ...await runtime.disconnectBrowser(args) };
+    if (endpoint === 'extensionConnection') {
+      if (!connection) throw error('EXTENSION_UNAVAILABLE', 'Browser extension connections are disabled');
+      return { ok: true, connection };
+    }
+    if (endpoint === 'image/resolve') {
+      const ref = imageRegistry.get(args.attachmentId);
+      if (!ref) throw error('IMAGE_NOT_FOUND', 'Image is not in this OpenCU image registry');
+      const stored = await attachments.readImage(ref, signal);
+      signal?.throwIfAborted();
+      const extension = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' }[ref.mediaType];
+      if (!extension) throw error('INVALID_IMAGE', 'Unsupported stored image format');
+      const file = await attachments.saveFileStream({ data: (async function* () { yield Buffer.from(stored.data); })(),
+        name: `image-${ref.attachmentId.slice(7, 19)}.${extension}`, signal });
+      await deliveryFiles.retain(file);
+      return deliveryFiles.resolve(file, attachments, signal);
+    }
+    if (endpoint === 'image/save') {
+      if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(args.mediaType) || typeof args.data !== 'string' || args.data.length > 44 * 1024 * 1024) throw error('INVALID_IMAGE', 'An encoded image up to 32 MiB is required');
+      const data = Buffer.from(args.data, 'base64');
+      if (data.length > 32 * 1024 * 1024) throw error('INVALID_IMAGE', 'Image exceeds 32 MiB');
+      const image = await attachments.saveImage({ data, mediaType: args.mediaType, name: args.name });
+      await imageRegistry.retain(image);
+      return { ok: true, image };
+    }
+    await authorizeApplication(runtime, endpoint, args, sessionKey, signal);
+    signal?.throwIfAborted();
+    if (active.has(endpoint)) { revision++; activity = { endpoint, targetId: args.targetId ?? null, at: new Date().toISOString(), status: 'running' }; }
+    try {
+      let result;
+      if (endpoint === 'preview') return runtime.preview(args);
+      if (endpoint === 'stopPreview') return runtime.stopPreview(args);
+      if (endpoint === 'image') {
+        const ref = imageRegistry.get(args.attachmentId);
+        if (!ref) throw error('IMAGE_NOT_FOUND', 'Image is not in this OpenCU image registry');
+        const stored = await attachments.readImage(ref, signal);
+        result = { ok: true, mediaType: ref.mediaType, data: Buffer.from(stored.data).toString('base64') };
+      } else if (endpoint === 'annotate') {
+        const current = await runtime.getState();
+        if (current.ok === false) return current;
+        if (!current.state.targets.some(target => target.id === args.targetId)) throw error('TARGET_NOT_SELECTED', 'Select the annotation target first');
+        if (!Array.isArray(args.annotations) || args.annotations.length > 100 || args.annotations.some(item => !item || typeof item !== 'object' || Array.isArray(item))) throw error('INVALID_ARGUMENT', 'annotations must be at most 100 JSON objects');
+        const record = { id: randomUUID(), targetId: args.targetId, observationId: args.observationId ?? null, annotations: args.annotations, note: typeof args.note === 'string' ? args.note.slice(0, 10000) : '', createdAt: new Date().toISOString() };
+        const work = annotationTail.then(async () => {
+          const next = [...annotations, record].slice(-500), temporary = join(dataDir, 'annotations.json.tmp');
+          try {
+            await writeFile(temporary, JSON.stringify(next, null, 2), { mode: 0o600 });
+            await rename(temporary, join(dataDir, 'annotations.json'));
+            annotations = next; return { ok: true, annotation: record };
+          } finally { await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
+        });
+        annotationTail = work.catch(() => {});
+        result = await work;
+      } else if (endpoint === 'focus') result = await runtime.focus({ targetId: args.targetId, reference: args.reference });
+      else if (endpoint === 'openTarget') {
+        if (args.backend === 'native' || args.bundleId) throw error('UNSUPPORTED_METHOD', 'This native backend does not support launching applications');
+        const inventory = await runtime.listTargets();
+        if (inventory.ok === false) return inventory;
+        const matches = inventory.targets.filter(target => target.backend === 'browser' && (!args.browserId || target.browserId === args.browserId) && (!args.targetId || target.id === args.targetId));
+        const ids = new Set(matches.map(target => target.browserId));
+        if (args.browserId && !args.targetId) {
+          result = await runtime.openTarget(args);
+        } else {
+          if (!matches.length || ids.size !== 1) throw error('AMBIGUOUS_TARGET', 'Choose one real browser inventory ID before opening a tab');
+          let selected = await runtime.selectTarget(matches[0]);
+          if (selected.ok !== false && !selected.target.verified) selected = await runtime.resume({ targetId: selected.target.id });
+          if (selected.ok === false) return selected;
+          result = await runtime.act({ targetId: selected.target.id, action: 'newTab', url: args.url });
+          if (result.ok !== false) result = { ...result, target: result.result?.target };
+        }
+      } else if (endpoint === 'deliveries') result = await deliveries(runtime, attachments, signal);
+      else {
+        const method = methods[endpoint];
+        if (!method || typeof runtime[method] !== 'function') throw error('UNSUPPORTED_METHOD', 'Unknown or unsupported OpenCU operation');
+        result = await runtime[method](endpoint === 'select' ? args.reference : endpoint === 'observe' ? { ...args, includeBase64: false } : args);
+      }
+      if (result.ok === false) return stripPaths(result);
+      if (endpoint === 'targets' || endpoint === 'state') result.browsers = [...new Map([...(result.browsers ?? []), ...runtime.extensionConnections().map(item => ({id: 'extension:' + item.instanceId, name: item.label, provider: 'extension', connected: true})), ...(browserConnection?.browsers ?? [])].map(item => [item.id, item])).values()];
+      if (result.observation) { result = await attachScreenshot(result, attachments); lastObservation = { targetId: result.targetId, observation: stripPaths(result.observation), image: result.image ?? null }; }
+      if (result.state) result = { ...result, state: { ...result.state, status: result.state.mode, selectedTarget: result.state.targets.find(target => target.id === result.state.activeTargetId) ?? null, annotations, lastObservation, revision, activity }, service: { name: 'OpenCU', ...runtime.runtimeInfo }, config: publicConfig(getConfig()) };
+      return stripPaths(modelProjection && endpoint === 'state' ? modelResult(result, args) : result);
+    } finally {
+      if (active.has(endpoint)) { revision++; activity = { ...activity, status: 'settled', finishedAt: new Date().toISOString() }; }
+    }
+  }
+  return {
+    forgetSession: sessionId => appApprovals.forgetSession(sessionId),
+    get dataDir() { return dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR); },
+    request: (endpoint, args, context = {}) => cursorContext.run(context.sessionKey, () => request(endpoint, args, context)),
+    async close() {
+      disposed = true; browserPairing?.close();
+      if (!closing) closing = (async () => {
+        const failures = [];
+        const settle = async work => { try { return await work(); } catch (error) { failures.push(error); } };
+        const pending = [appApprovals, browserResources, sidebarDownloads, deliveryFiles].map(service => settle(() => service.close()));
+        if (reconfiguring) await settle(() => reconfiguring);
+        let result = { ok: true }, coreFailure;
+        try {
+          if (starting) {
+            let runtime;
+            try { runtime = await starting; }
+            catch (error) { runtime = controller; }
+            if (runtime) {
+              result = await runtime.close();
+              if (result.ok === false) throw Object.assign(new Error(result.error.message), { ...result.error, state: result.state });
+            }
+          }
+        } catch (error) { coreFailure = error; failures.push(error); }
+        await settle(() => Promise.all([annotationTail, imageRegistry?.close()]));
+        // A failed core close retains its release channel for retry.
+        if (!coreFailure && bridge?.listening) await settle(() => new Promise((done, reject) => bridge.close(error => error ? reject(error) : done())));
+        await Promise.all(pending);
+        if (failures.length === 1) throw failures[0];
+        if (failures.length > 1) {
+          const primary = coreFailure ?? failures[0];
+          throw Object.assign(new AggregateError(failures, primary.message, { cause: primary }), primary);
+        }
+        return result;
+      })().catch(error => { closing = undefined; throw error; });
+      return closing;
+    },
+  };
+}

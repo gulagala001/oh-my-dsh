@@ -1,6 +1,6 @@
 # Product Page and Documentation Site
 
-[简体中文](README.md) · [Documentation index](../README_EN.md)
+[简体中文](README.md) · [Documentation index (Chinese)](../README.md)
 
 The site starts at the [English product page](../index_EN.html) or [Chinese product page](../index.html). Product pages use plain HTML, CSS, and JavaScript without external scripts or fonts. Markdown remains the authored source for documentation and can be read directly on GitHub. Build HTML before hosting it on a regular static server.
 
@@ -22,7 +22,7 @@ Do not host the whole repository. Hosting only the source `docs` directory leave
 
 ## Publication Boundary
 
-`scripts/build-docs.mjs` uses `marked` and `htmlparser2` with an explicit list of public guides, release notes, and assets. It checks internal links and sections. Private document references, symlinks, missing targets, and duplicate IDs stop the build. Raw research, internal implementation plans, handoffs, account configuration, and work records are excluded.
+`scripts/build-docs.mjs` uses `marked` and `htmlparser2` with an explicit list of public guides, release notes, and assets. It checks internal links and sections. Private document and work-data references, machine-local absolute links, symlinks, missing targets, and duplicate IDs stop the build. Raw research, internal implementation plans, handoffs, account configuration, and work records are excluded.
 
 Source and vendor references link to GitHub without publishing those trees in the static output. The presence of release notes does not mean an unpublished candidate has a public release package.
 
@@ -36,10 +36,10 @@ Diagrams use static labels and descriptions; scripts, interactive links, and rem
 
 `site.css` and `site.js` provide the product layout, screenshot tabs, light and dark theme previews, install tabs, copying, image recovery, and full-size previews. `docs.css` and `docs.js` provide document navigation, section navigation, code copying, and image recovery. Long tables and code scroll independently. Native navigation and document content remain readable without JavaScript.
 
-`media/manifest.json` records screenshot hashes and the relationship between originals and cropped details. Screenshots show the same Launchpad sample task across requirements, browser actions, recall, and file checks. See [screenshots and sources](../showcase_EN.md) for the demonstration limits. The static site does not execute model calls, authentication, or installation.
+`media/manifest.json` records screenshot hashes and the relationship between originals and cropped details. Screenshots show the same Launchpad sample task across requirements, browser actions, recall, and file checks. See [screenshots and sources (Chinese)](../showcase.md) for the demonstration limits. The static site does not execute model calls, authentication, or installation.
 
 ## Release Links
 
-Install links use the two public `0.10.0` tags for DSH alpha.1 and rc.2, with their exact `trisoul_x-<complete-version>.tgz` assets. Do not choose packages through GitHub latest. The source candidate and newer local OpenCU implementation are labeled separately; GitHub main and old packages must not be presented as containing those local changes.
+Installation distinguishes new candidates from fixed historical releases. Do not select across hosts using GitHub latest. See [installation](../install_EN.md) for version matching and host-adapter requirements.
 
 Update host pairings, tags, assets, and text in both languages together. Documentation, static-site, and product-preview checks live in `test/documentation.test.mjs`, `test/docs-site.test.mjs`, and `test/site-preview-ui.test.mjs`. Report validation from the actual run.

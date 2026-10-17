@@ -1,6 +1,7 @@
 import { mkdirSync, existsSync, readFileSync, writeFileSync, renameSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { projectKeyOf, sameProject } from './project.mjs';
+import { readonlyMonitorActivity } from './monitor-activity.mjs';
 
 const read = (path, fallback) => existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : fallback;
 export const projectOf = cwd => projectKeyOf(cwd) ?? process.cwd();
@@ -59,7 +60,8 @@ export class HubStore {
       if (cached?.signature !== signature) {
         const value = read(file);
         if (value?.id !== id) throw Error('会话存档身份不匹配');
-        cached = { signature, value: project(value) }; this.monitorCache.set(name, cached);
+        const snapshot = project(value); snapshot.activity = readonlyMonitorActivity(snapshot.activity);
+        cached = { signature, value: snapshot }; this.monitorCache.set(name, cached);
       }
       return [cached.value];
       } catch (error) {

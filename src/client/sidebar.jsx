@@ -44,29 +44,34 @@ function bindNarrowSidebar(ctx, frame, column) {
   const scrim = document.createElement('button');
   scrim.className = 'omd-sidebar-scrim'; scrim.type = 'button'; scrim.tabIndex = -1;
   scrim.setAttribute('aria-label', '收起侧栏'); scrim.hidden = true; frame.append(scrim);
-  let open = false, previousFocus, restore = () => {};
+  let open = false, previousFocus, restore = () => {}, regions = [];
   const otherOverlay = () => [...document.querySelectorAll('[role="dialog"],[role="menu"]')].some(el => el !== column && el.getClientRects().length);
   const close = () => { if (open && frame.dataset.sidebarCollapsed !== 'true') ctx.layout.toggleSidebar(); };
   const sync = () => {
-    const next = narrow.matches && !document.documentElement.hasAttribute('data-omd-layout')
+    const next = narrow.matches && document.documentElement.classList.contains('trisoul-shell')
+      && !document.documentElement.hasAttribute('data-omd-layout')
       && frame.dataset.sidebarCollapsed !== 'true' && !frame.hasAttribute('data-rightbar-fullscreen');
     if (next) {
       const right = frame.style.gridTemplateColumns.match(/(\d+(?:\.\d+)?px)\s*$/)?.[1] || '0px';
       if (frame.style.getPropertyValue('--omd-sidebar-right-width') !== right) frame.style.setProperty('--omd-sidebar-right-width', right);
     }
-    if (next === open) return;
+    const nextRegions = [...frame.querySelectorAll(':scope > [data-omd-surface="conversation"], :scope > [data-omd-surface="workbench-column"]')];
+    const changedRegions = regions.length !== nextRegions.length || regions.some((element, i) => element !== nextRegions[i]);
+    if (next === open && !changedRegions) return;
+    const entering = next && !open;
+    regions = nextRegions;
     open = next; restore(); restore = () => {};
     scrim.hidden = !open; frame.toggleAttribute('data-omd-sidebar-overlay', open);
     if (open) {
-      previousFocus = document.activeElement;
-      const releaseInert = acquireOverlayInert(frame.querySelectorAll(':scope > [data-omd-surface="conversation"], :scope > [data-omd-surface="workbench-column"]'));
+      if (entering) previousFocus = document.activeElement;
+      const releaseInert = acquireOverlayInert(regions);
       const attrs = ['role', 'aria-label', 'aria-modal'].map(name => [name, column.getAttribute(name)]);
       column.setAttribute('role', 'dialog'); column.setAttribute('aria-label', '侧栏导航'); column.setAttribute('aria-modal', 'true');
       restore = () => {
         releaseInert();
         for (const [name, value] of attrs) { if (value === null) column.removeAttribute(name); else column.setAttribute(name, value); }
       };
-      queueMicrotask(() => { if (open && !otherOverlay()) column.querySelector('[data-omd-nav-part="toggle"]')?.focus({ preventScroll: true }); });
+      if (entering) queueMicrotask(() => { if (open && !otherOverlay()) column.querySelector('[data-omd-nav-part="toggle"]')?.focus({ preventScroll: true }); });
     } else {
       frame.style.removeProperty('--omd-sidebar-right-width');
       if (frame.dataset.sidebarCollapsed === 'true' && previousFocus?.isConnected && !otherOverlay()) previousFocus.focus({ preventScroll: true });
@@ -74,8 +79,8 @@ function bindNarrowSidebar(ctx, frame, column) {
   };
   const onClick = event => {
     const target = event.target instanceof Element ? event.target : null;
-    if (!open || event.button !== 0 || !target || target.closest('[class*="_rowActions"]')) return;
-    if (target.closest('[data-row-key^="session:"], [class*="_searchResultRow"], [data-omd-nav-part="create"], [data-omd-nav-part="panel"]')) queueMicrotask(close);
+    if (!open || event.button !== 0 || !target || target.closest('[data-omd-nav-part="row-actions"], [aria-haspopup="menu"], [aria-haspopup="true"]')) return;
+    if (target.closest('[data-row-key^="session:"], [data-omd-nav-part="search-result-row"], [data-omd-nav-part="create"], [data-omd-nav-part="panel"]')) queueMicrotask(close);
   };
   const onKey = event => {
     if (!open || event.defaultPrevented || event.isComposing || event.ctrlKey || event.altKey || event.metaKey || otherOverlay()) return;
@@ -89,8 +94,8 @@ function bindNarrowSidebar(ctx, frame, column) {
     }
   };
   const observer = new MutationObserver(sync);
-  observer.observe(frame, { attributes: true, attributeFilter: ['data-sidebar-collapsed', 'data-rightbar-fullscreen', 'style'] });
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-omd-layout'] });
+  observer.observe(frame, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-sidebar-collapsed', 'data-rightbar-fullscreen', 'data-omd-surface', 'style'] });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-omd-layout', 'class'] });
   narrow.addEventListener('change', sync); scrim.addEventListener('click', close);
   column.addEventListener('click', onClick, true); document.addEventListener('keydown', onKey); sync();
   return () => {

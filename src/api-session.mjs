@@ -17,14 +17,13 @@ export async function apiSessionTarget(ctx, store, id, signal) {
   let inspection;
   if (id && !session) {
     const controller = ctx.get('sessionController');
-    if (typeof controller?.inspect === 'function') {
-      try {
-        inspection = await controller.inspect(id, signal);
-        signal?.throwIfAborted();
-        if (inspection?.meta?.id !== id || !Array.isArray(inspection.events)) throw Error('原生会话查询身份或记录无效');
-      } catch (error) {
-        if (!await nativeNotFound(ctx, error)) throw error;
-      }
+    if (typeof controller?.inspect !== 'function') throw Error('宿主没有可用的原生会话查询接口');
+    try {
+      inspection = await controller.inspect(id, signal);
+      signal?.throwIfAborted();
+      if (inspection?.meta?.id !== id || !Array.isArray(inspection.events)) throw Error('原生会话查询身份或记录无效');
+    } catch (error) {
+      if (!await nativeNotFound(ctx, error)) throw error;
     }
   }
   signal?.throwIfAborted();

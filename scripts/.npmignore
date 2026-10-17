@@ -2,3 +2,5 @@
 /simulate.mjs
 /simulator/
 /check-plugin-coexist.mjs
+/*.test.mjs
+/host-const-enums-observer.mjs

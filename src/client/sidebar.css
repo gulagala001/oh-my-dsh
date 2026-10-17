@@ -1,5 +1,5 @@
 
-html:not([data-omd-layout]) [data-omd-surface="frame"]:not([data-sidebar-collapsed="true"]) [data-omd-surface="sidebar"] {
+html.trisoul-shell:not([data-omd-layout]) [data-omd-surface="frame"]:not([data-sidebar-collapsed="true"]) [data-omd-surface="sidebar"] {
   & [data-omd-nav-part="brand"] { height: 52px; margin-bottom: 8px; }
   & [data-omd-nav-part="create"] { height: 36px; margin-bottom: 8px; padding-inline: 12px; border: 1px solid color-mix(in srgb, var(--dsw-alias-border-l4) 55%, transparent); border-radius: 9px; background: color-mix(in srgb, var(--dsw-alias-bg-base) 65%, transparent); font-weight: 500; font-size: 13px; transition: background-color 140ms ease, border-color 140ms ease; }
   & [data-omd-nav-part="create"]:hover { background: var(--dsw-alias-interactive-bg-hover); border-color: color-mix(in srgb, var(--dsw-alias-state-business-primary) 22%, transparent); }
@@ -12,7 +12,7 @@ html:not([data-omd-layout]) [data-omd-surface="frame"]:not([data-sidebar-collaps
 
 /* The default layout keeps search visible as a full-width entry. Theme layouts
    retain their own geometry; the same native search and list still own state. */
-html:not([data-omd-layout]) [data-omd-sidebar-browser][data-wide="true"] {
+html.trisoul-shell:not([data-omd-layout]) [data-omd-sidebar-browser][data-wide="true"] {
   & [data-omd-nav-part="header"] { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 34px 28px; height: auto; gap: 8px 4px; margin-bottom: 4px; padding: 0 4px; overflow: visible; }
   & [data-omd-nav-part="search-slot"] { grid-area: 1 / 1 / 2 / -1; width: 100%; max-width: none; margin: 0; padding: 0; }
   & [data-omd-nav-part="search"] { height: 34px; border: 1px solid transparent; border-radius: 8px; background: color-mix(in srgb, var(--dsw-alias-label-primary) 4%, var(--dsw-alias-bg-base)); }
@@ -28,7 +28,7 @@ html:not([data-omd-layout]) [data-omd-sidebar-browser][data-wide="true"] {
   & [data-omd-nav-part="time"] { font-size: 11px; color: var(--dsw-alias-label-tertiary); }
   & [role="treeitem"][aria-selected="true"] :is([data-omd-nav-part="title"],[data-omd-nav-part="search-result-title"]) { font-weight: 600; }
 }
-html:not([data-omd-layout]):not([data-omd-custom]) [data-omd-sidebar-browser][data-wide="true"] [role="treeitem"][aria-selected="true"] { background: color-mix(in srgb,var(--dsw-alias-state-business-primary) 9%,var(--dsw-alias-bg-base)); box-shadow: inset 2px 0 var(--dsw-alias-state-business-primary); }
+html.trisoul-shell:not([data-omd-layout]):not([data-omd-custom]) [data-omd-sidebar-browser][data-wide="true"] [role="treeitem"][aria-selected="true"] { background: color-mix(in srgb,var(--dsw-alias-state-business-primary) 9%,var(--dsw-alias-bg-base)); box-shadow: inset 2px 0 var(--dsw-alias-state-business-primary); }
 
 /* Pointer, keyboard and touch expose the same native commands. Preserve row
    heights so the host's animations and scroll calculations remain accurate. */

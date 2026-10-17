@@ -14,6 +14,4 @@
 dsh plugin --profile web add github:gulagala001/oh-my-dsh#v0.1.6-alpha.2.4
 ```
 
-## 验证范围
-
-Todo 提示词适配、任务账本与提示词指纹检查通过。此次文字调整没有真实模型 A/B 数据，不宣称已消除所有漏填调用。
+<a id="验证范围"></a>

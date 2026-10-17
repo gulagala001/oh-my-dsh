@@ -88,9 +88,22 @@ export function preparationStop(session, cfg) {
   }
   return balanced;
 }
+export function resolveTraceSlot(session, slot) {
+  if (!slot) return slot;
+  const matches = seq => {
+    const message = withoutTodo(session.deriveEventMessage(session.eventAt(seq)));
+    return sourceName(message?.source) === 'trisoul-x:trace'
+      && hash(message.content.slice(1)) === hash(slot.original?.content || []);
+  };
+  if (session.surface.nodes.includes(slot.carrierSeq) && matches(slot.carrierSeq)) return slot;
+  // Rebind stale sidecar positions only to the same original request carried
+  // by one live Trace message; never treat an unrelated visible seq as Trace.
+  const carriers = session.surface.nodes.filter(matches);
+  return carriers.length === 1 ? { ...slot, carrierSeq: carriers[0] } : null;
+}
 export function carrierBarrier(session, state, cfg) {
   const nodes = session.surface.nodes;
-  const saved = state.traceSlot && nodes.includes(state.traceSlot.carrierSeq) ? state.traceSlot.carrierSeq : undefined;
+  const saved = resolveTraceSlot(session, state.traceSlot)?.carrierSeq;
   const trace = saved ?? nodes.find(seq => eventSource(session.eventAt(seq)) === 'trisoul-x:trace');
   const anchor = trace ?? (cfg.traceEnabled && !state.fullCompaction ? nodes.find(seq => actualUser(session.eventAt(seq)) || eventSource(session.eventAt(seq)) === 'trisoul-x:todo-prefix') : undefined);
   return nodes.indexOf(anchor);
@@ -296,10 +309,9 @@ export function prepareCandidate(session, state, cfg, pairing) {
   Object.assign(events, { windowSeqs, retainedSeqs: windowSeqs.filter(seq => keep.has(seq)), parents: parents.map(r => r.id), wholeWindow: true });
   return events;
 }
-export function backlogView(session, state, cfg) {
-  const index = createSurfaceIndex(session);
+export function backlogView(session, state, cfg, index = createSurfaceIndex(session), spans) {
   const keep = protectedSeqs(session, state, cfg), reserved = new Set();
-  for (const r of activeRecords(state)) for (const seq of liveSpan(session, r, index)?.seqs || []) reserved.add(seq);
+  for (const r of activeRecords(state)) for (const seq of (spans ? spans.get(r) : liveSpan(session, r, index))?.seqs || []) reserved.add(seq);
   const nodes = session.surface.nodes, stop = preparationStop(session, cfg);
   let events = 0, tokens = 0, recentEvents = 0;
   for (let i = 0; i < nodes.length; i++) {

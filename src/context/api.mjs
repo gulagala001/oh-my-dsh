@@ -9,37 +9,50 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
   const path = url.pathname.replace('/trisoul-x/api', '');
   const needSession = () => { if (!session) throw new Error('请选择一个可读取的会话'); return session; };
   if (path === '/scope') {
-    let state = id ? hub.store.peek(id) : null;
-    const scopeLocked = target => {
-      const saved = id ? hub.store.peek(id) : null;
-      const preparedState = id ? hub.context.store.peek?.(id) : null;
-      const currentAgent = id ? ctx.agents?.get(id) ?? target.agent : target.agent;
-      const currentSession = currentAgent?.session ?? (id ? ctx.sessions?.get(id) : null) ?? target.session;
-      return Boolean(target.archivedOnly || saved?.started || (currentAgent && currentAgent.status !== 'idle') || preparedState?.records?.length || Object.keys(preparedState?.publications?.catalog || {}).length || preparedState?.publications?.globalRevision != null || currentSession?.snapshotEvents().some(actualUser) || target.inspection?.events.some(actualUser));
-    };
-    const header=session?.header||inspection?.meta;
-    let projectless=false,effectiveMode;
-    if(id&&header&&hub.dream?.sources?.scopeFor) {
-      try { const effective=await hub.dream.sources.scopeFor({...header,id});projectless=Boolean(effective.projectless);effectiveMode=effective.mode; }
-      catch(error) { hub.dream.sources.lifecycle?.signal.throwIfAborted();projectless=true;hub.dream.notice(error); }
-    }
-    const locked = projectless||scopeLocked({ session, agent, inspection, archivedOnly });
-    const scope = () => projectless||locked&&effectiveMode==='session'?'session':['session','global'].includes(state?.memoryScope || hub.config().memoryScope) ? state?.memoryScope || hub.config().memoryScope : 'project';
-    if (req.method === 'POST') {
-      if(projectless) { send(res,409,{error:'非工作区 Chat 保持会话隔离；请在工作区新建会话以使用共享范围'});return true; }
-      if (locked) { send(res, 409, { error: '会话已开始，隔离范围不能中途扩大' }); return true; }
-      const input = await readBody(req);
-      if (!['session', 'project', 'global'].includes(input.scope)) throw new Error('范围只能是 session、project 或 global');
-      const fresh = id && refreshSession ? await refreshSession() : { session, agent, inspection, archivedOnly };
-      if (fresh.found === false) { send(res, 404, { error: '会话不存在' }); return true; }
-      if (scopeLocked(fresh)) { send(res, 409, { error: '会话已开始，隔离范围不能中途扩大' }); return true; }
-      state = id ? hub.store.peek(id) : null;
-      if (id) { state ??= hub.store.state(id); state.memoryScope = input.scope; hub.store.save(state); }
-      else await ctx.settings.update('trisoul-x', { memoryScope: input.scope });
-    }
-    send(res, 200, { scope: scope(), locked, default: ['session','global'].includes(hub.config().memoryScope) ? hub.config().memoryScope : 'project' }); return true;
+    const reading = new AbortController(), abortRead = () => reading.abort(Error('会话范围读取已取消'));
+    req.once?.('aborted', abortRead); res.once?.('close', abortRead);
+    try {
+      if (req.aborted || res.destroyed) abortRead();
+      reading.signal.throwIfAborted();
+      let state = id ? hub.store.peek(id) : null;
+      const scopeLocked = target => {
+        const saved = id ? hub.store.peek(id) : null;
+        const preparedState = id ? hub.context.store.peek?.(id) : null;
+        const currentAgent = id ? ctx.agents?.get(id) ?? target.agent : target.agent;
+        const currentSession = currentAgent?.session ?? (id ? ctx.sessions?.get(id) : null) ?? target.session;
+        return Boolean(target.archivedOnly || saved?.started || (currentAgent && currentAgent.status !== 'idle') || preparedState?.records?.length || Object.keys(preparedState?.publications?.catalog || {}).length || preparedState?.publications?.globalRevision != null || currentSession?.snapshotEvents().some(actualUser) || target.inspection?.events.some(actualUser));
+      };
+      let projectless=false,effectiveMode;
+      const classify = async target => {
+        const header=target.session?.header||target.inspection?.meta;
+        if(id&&header&&hub.dream?.sources?.scopeFor) {
+          try { const effective=await hub.dream.sources.scopeFor({...header,id},false,reading.signal);projectless=Boolean(effective.projectless);effectiveMode=effective.mode; }
+          catch(error) { reading.signal.throwIfAborted();hub.dream.sources.lifecycle?.signal.throwIfAborted();projectless=true;hub.dream.notice(error); }
+        }
+        reading.signal.throwIfAborted();
+      };
+      await classify({session,inspection});
+      const locked = projectless||scopeLocked({ session, agent, inspection, archivedOnly });
+      const scope = () => projectless||locked&&effectiveMode==='session'?'session':['session','global'].includes(state?.memoryScope || hub.config().memoryScope) ? state?.memoryScope || hub.config().memoryScope : 'project';
+      if (req.method === 'POST') {
+        if(projectless) { send(res,409,{error:'非工作区 Chat 保持会话隔离；请在工作区新建会话以使用共享范围'});return true; }
+        if (locked) { send(res, 409, { error: '会话已开始，隔离范围不能中途扩大' }); return true; }
+        const input = await readBody(req);
+        if (!['session', 'project', 'global'].includes(input.scope)) throw new Error('范围只能是 session、project 或 global');
+        const fresh = id && refreshSession ? await refreshSession() : { session, agent, inspection, archivedOnly };
+        reading.signal.throwIfAborted();
+        if (fresh.found === false) { send(res, 404, { error: '会话不存在' }); return true; }
+        await classify(fresh);
+        if (projectless||scopeLocked(fresh)) { send(res, 409, { error: '会话已开始或属于非工作区 Chat，隔离范围不能中途扩大' }); return true; }
+        state = id ? hub.store.peek(id) : null;
+        if (id) { state ??= hub.store.state(id); state.memoryScope = input.scope; hub.store.save(state); }
+        else await ctx.settings.update('trisoul-x', { memoryScope: input.scope });
+      }
+      reading.signal.throwIfAborted();
+      send(res, 200, { scope: scope(), locked, default: ['session','global'].includes(hub.config().memoryScope) ? hub.config().memoryScope : 'project' }); return true;
+    } finally { req.off?.('aborted', abortRead); res.off?.('close', abortRead); }
   }
-  if (path === '/context') { send(res, 200, hub.context.view(needSession())); return true; }
+  if (path === '/context') { send(res, 200, hub.context.view(needSession(), { compact: url.searchParams.get('compact') === 'true' })); return true; }
   if (path === '/context/mode') {
     if (req.method !== 'POST') { send(res, 405, { error: '请使用 POST' }); return true; }
     const { mode } = await readBody(req);

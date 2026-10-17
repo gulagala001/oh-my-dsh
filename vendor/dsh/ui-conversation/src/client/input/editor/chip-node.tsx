@@ -153,6 +153,13 @@ export class ReferenceChipNode extends DecoratorNode<JSX.Element> {
    * Flip the owner-resolution failure bit.
    * @param invalid - next bit; no-op writes are the caller's concern.
    */
+  /** Replace the reference fields while preserving this occurrence's node key. */
+  updateReference(ref: ReferenceInsert): void {
+    const writable = this.getWritable()
+    writable.__source = ref.source; writable.__ref = ref.ref; writable.__label = ref.label
+    writable.__appearance = ref.appearance; writable.__clipboardText = ref.clipboardText; writable.__invalid = false
+  }
+
   setInvalid(invalid: boolean): void {
     const writable = this.getWritable()
     writable.__invalid = invalid

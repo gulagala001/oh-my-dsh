@@ -27,6 +27,8 @@ const key = (p) => {
     const raw = p.trim().replace(/[\\/]+$/, '');
     return (WIN ? raw.toLowerCase() : raw) + sep;
   }
+  // Historical relative keys are identities, not paths relative to this host's cwd.
+  if (!isAbsolute(p)) return 'relative:' + (WIN ? p.toLowerCase() : p);
   return WIN ? normalize(p).toLowerCase() : normalize(p);
 };
 const byString = (a, b) => (a < b ? -1 : a > b ? 1 : 0);

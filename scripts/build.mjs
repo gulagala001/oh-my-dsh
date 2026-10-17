@@ -1,4 +1,5 @@
 import './build-host.mjs';
+import './build-deepseek-workbench.mjs';
 import { build } from 'esbuild';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -25,7 +26,13 @@ await mkdir(new URL('../lib/', import.meta.url), { recursive: true });
 const logo = new URL('../docs/images/logo.svg', import.meta.url);
 await mkdir(new URL('./', logo), { recursive: true });
 await writeFile(logo, whaleSvg('omd-logo').replace('aria-hidden="true"', 'role="img" aria-label="Oh My DSH"'));
+// Capability detection on the bundled host chat: the composer statistics
+// entries differ between hosts (alpha.3 activity+usage, rc.2 stats). OMD
+// shadows exactly the ids its host ships, by the documented same-id rule.
+const hostChat = await readFile(new URL('../lib/host/ui-chat.factory.mjs', import.meta.url), 'utf8');
+const composerStats = [...hostChat.matchAll(/name: "conversation\.composer\.dock",\s*id: "(\w+)",\s*order: (\d+)/g)].map(m => ({ id: m[1], order: Number(m[2]) }));
 await build({
+  define: { __OMD_COMPOSER_STATS__: JSON.stringify(JSON.stringify(composerStats)) },
   entryPoints: [fileURLToPath(new URL('../src/client/index.jsx', import.meta.url))],
   outfile: fileURLToPath(new URL('../lib/client.js', import.meta.url)),
   bundle: true, platform: 'browser', format: 'cjs', target: 'es2022',
@@ -33,7 +40,12 @@ await build({
   external: ['react-dom', 'react', 'react/jsx-runtime', '@deepseek-ai/cordis', '@deepseek-ai/dsh-client-ui-primitives', '@deepseek-ai/dsh-api-session-controller/client'],
   banner: { js: 'window.__ModuleLoader__.load({id:"trisoul_x",factory:(require)=>{var module={exports:{}};var exports=module.exports;' },
   footer: { js: 'return module.exports;}});' },
-  plugins: [{ name: 'inline-css', setup(b) {
+  plugins: [{ name: 'opencu-factory', setup(b) {
+    b.onResolve({ filter: /^\/api\/opencu\/rea-assets\// }, args => args.kind === 'dynamic-import'
+      && args.importer.endsWith('/vendor/opencu/lib/client.factory.mjs') ? { path: args.path, external: true } : undefined);
+    b.onResolve({ filter: /^\.\// }, args => args.kind === 'dynamic-import' && args.importer.endsWith('/vendor/opencu/lib/client.factory.mjs')
+      ? { path: args.path, external: true } : undefined);
+  } }, { name: 'inline-css', setup(b) {
     b.onLoad({ filter: /\.css$/ }, async args => ({ contents: `export default ${JSON.stringify(await readFile(args.path, 'utf8'))}`, loader: 'js' }));
   } }],
 });

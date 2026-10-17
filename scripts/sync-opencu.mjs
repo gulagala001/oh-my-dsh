@@ -1,182 +1,57 @@
-import { execFileSync } from 'node:child_process';
-import { mkdtemp, readFile, writeFile, rm, mkdir, readdir, rename, stat, lstat, realpath, copyFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { resolve, join, dirname, basename, delimiter } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { parseArgs } from 'node:util';
+import { execFileSync } from 'node:child_process';
+import { copyFile, mkdir, readFile, writeFile, rename, mkdtemp, stat, readdir, lstat, realpath } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { resolve, join } from 'node:path';
+import { nativePackageModes } from './native-package-modes.mjs';
 
-export async function npmInvocation({ platform = process.platform, execPath = process.execPath, env = process.env } = {}) {
-  if (platform !== 'win32') return { command: 'npm', args: [] };
-  const candidates = [];
-  if (env.npm_execpath && basename(env.npm_execpath) === 'npm-cli.js') candidates.push(env.npm_execpath);
-  candidates.push(join(dirname(execPath), 'node_modules/npm/bin/npm-cli.js'));
-  async function invocation(cli) {
-    try { if ((await stat(cli)).isFile()) return { command: execPath, args: [cli] }; }
-    catch (error) { if (error.code !== 'ENOENT' && error.code !== 'ENOTDIR') throw error; }
-  }
-  for (const cli of candidates) { const found = await invocation(cli); if (found) return found; }
-  const path = env[Object.keys(env).find(key => key.toLowerCase() === 'path')] || '';
-  for (const entry of path.split(delimiter).filter(Boolean)) {
-    const directory = entry.replace(/^"(.*)"$/, '$1');
-    for (const name of ['npm.cmd', 'npm']) {
-      try {
-        const launcher = await realpath(join(directory, name));
-        const found = await invocation(basename(launcher) === 'npm-cli.js' ? launcher : join(dirname(launcher), 'node_modules/npm/bin/npm-cli.js'));
-        if (found) return found;
-      } catch (error) { if (error.code !== 'ENOENT' && error.code !== 'ENOTDIR') throw error; }
-    }
-  }
-  throw Error('Cannot locate npm-cli.js for Windows. Install npm alongside Node or put its npm launcher on PATH.');
+const root = fileURLToPath(new URL('..', import.meta.url));
+const source = resolve(process.argv[2] || join(root, '../opencu'));
+const local = join(root, '../.local');
+await mkdir(local, { recursive: true });
+const staging = await mkdtemp(join(local, 'opencu-bundle-'));
+let archive;
+if ((await stat(source)).isDirectory()) {
+  if (!process.env.OMD_NPM_ENTRY) throw new Error('Supply the build-owned OMD_NPM_ENTRY or an already built OpenCU tgz');
+  const [packed] = JSON.parse(execFileSync(process.execPath, [process.env.OMD_NPM_ENTRY, 'pack', '--json', '--ignore-scripts', '--pack-destination', staging], { cwd: source, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }));
+  archive = join(staging, packed.filename);
+} else {
+  archive = join(staging, 'opencu.tgz');
+  await copyFile(source, archive);
 }
-
-async function syncOpenCU() {
-  const { values, positionals } = parseArgs({ options: {
-    'allow-downgrade': { type: 'boolean', default: false }, archive: { type: 'string' },
-  }, allowPositionals: true });
-  if (positionals.length !== 1) throw Error('Usage: node scripts/sync-opencu.mjs /path/to/opencu [--archive /path/to/opencu.tgz] [--allow-downgrade]\n       node scripts/sync-opencu.mjs /path/to/opencu.tgz [--allow-downgrade]');
-  const input = resolve(positionals[0]), inputState = await stat(input), root = fileURLToPath(new URL('../', import.meta.url));
-  const source = inputState.isDirectory() ? input : undefined;
-  if (!source && (values.archive || !inputState.isFile() || !input.endsWith('.tgz'))) throw Error('OpenCU input must be a source directory or a .tgz release archive');
-  let archive = values.archive ? resolve(values.archive) : source ? undefined : input;
-  if (archive && (!(await stat(archive)).isFile() || !archive.endsWith('.tgz'))) throw Error('OpenCU archive must be a .tgz file');
-  const vendor = join(root, 'vendor'), destination = join(vendor, 'opencu'), manifestPath = join(vendor, 'opencu.json');
-
-  // Keep this maintenance script independent of runtime release-manifest loading.
-  function parseVersion(version) {
-    const match = typeof version === 'string' && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/.exec(version);
-    const pre = match?.[4]?.split('.') || [];
-    if (!match || pre.some(part => /^0\d+$/.test(part))) throw Error(`Invalid OpenCU version: ${version}`);
-    return { core: match.slice(1, 4).map(BigInt), pre };
-  }
-  function compareVersions(a, b) {
-    const x = parseVersion(a), y = parseVersion(b), compare = (u, v) => u < v ? -1 : u > v ? 1 : 0;
-    for (let i = 0; i < 3; i++) { const result = compare(x.core[i], y.core[i]); if (result) return result; }
-    if (!x.pre.length || !y.pre.length) return compare(!x.pre.length, !y.pre.length);
-    for (let i = 0; i < Math.max(x.pre.length, y.pre.length); i++) {
-      const u = x.pre[i], v = y.pre[i];
-      if (u === undefined || v === undefined) return compare(u !== undefined, v !== undefined);
-      const un = /^\d+$/.test(u), vn = /^\d+$/.test(v);
-      const result = un && vn ? compare(BigInt(u), BigInt(v)) : un !== vn ? (un ? -1 : 1) : compare(u, v);
-      if (result) return result;
-    }
-    return 0;
-  }
-  const sourcePackage = source ? JSON.parse(await readFile(join(source, 'package.json'), 'utf8')) : undefined;
-  if (sourcePackage && sourcePackage.name !== 'opencu') throw Error('Source package is not OpenCU');
-  const sourceVersion = sourcePackage?.version;
-  if (source) parseVersion(sourceVersion);
-  let previous;
-  try { previous = JSON.parse(await readFile(manifestPath, 'utf8')); }
-  catch (error) { if (error.code !== 'ENOENT') throw error; }
-  if (previous !== undefined) parseVersion(previous?.version);
-  function checkVersion(version) {
-    parseVersion(version);
-    if (previous !== undefined && compareVersions(version, previous.version) < 0 && !values['allow-downgrade']) {
-      throw Error(`OpenCU downgrade refused: ${previous.version} -> ${version}. Use --allow-downgrade for an intentional rollback.`);
-    }
-  }
-  if (source) checkVersion(sourceVersion);
-  const digest = bytes => createHash('sha256').update(bytes).digest('hex');
-  async function snapshot(directory) {
-    const files = Object.create(null);
-    const state = await lstat(directory);
-    if (!state.isDirectory() || state.isSymbolicLink()) throw Error(`OpenCU snapshot is not a regular directory: ${directory}`);
-    async function walk(dir, prefix = '') {
-      for (const entry of await readdir(dir, { withFileTypes: true })) {
-        const path = prefix + entry.name;
-        if (entry.isDirectory()) await walk(join(dir, entry.name), path + '/');
-        else if (entry.isFile()) files[path] = digest(await readFile(join(dir, entry.name)));
-        else throw Error(`OpenCU snapshot contains an unsupported file type: ${path}`);
-      }
-    }
-    await walk(directory);
-    return Object.fromEntries(Object.entries(files).sort());
-  }
-  async function existingSnapshot() {
-    let files;
-    try { files = await snapshot(destination); }
-    catch (error) { if (error.code !== 'ENOENT') throw error; return undefined; }
-    if (!previous || !previous.files || typeof previous.files !== 'object' || Array.isArray(previous.files)) {
-      throw Error('OpenCU snapshot has no valid file manifest; refusing to delete unrecognized files');
-    }
-    // package.json is known package metadata, including older manifests that omitted it.
-    const unrecognized = Object.keys(files).filter(path => path !== 'package.json' && !Object.hasOwn(previous.files, path));
-    if (unrecognized.length) throw Error(`OpenCU snapshot contains unrecognized files; preserve them before syncing: ${unrecognized.join(', ')}`);
-    return files;
-  }
-  const before = await existingSnapshot();
-  const npm = archive ? undefined : await npmInvocation();
-  await mkdir(vendor, { recursive: true });
-  let temporary, staging, keepStaging = false;
-  const run = (command, args) => execFileSync(command, args, { cwd: source, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
-  try {
-    // Stay on the project filesystem, outside the package.files vendor allowlist.
-    staging = await mkdtemp(join(root, '.opencu-sync-'));
-    if (!archive) {
-      temporary = await mkdtemp(join(tmpdir(), 'omd-opencu-pack-'));
-      run(process.execPath, ['scripts/build.mjs']);
-      const packedResult = JSON.parse(run(npm.command, [...npm.args, 'pack', '--json', '--ignore-scripts', '--pack-destination', temporary]));
-      const [packed] = Array.isArray(packedResult) ? packedResult : Object.values(packedResult);
-      if (packed.version !== sourceVersion) throw Error('Packed OpenCU version differs from the source package.json');
-      archive = join(temporary, packed.filename);
-    } else {
-      // Validate external archives before tar can create anything on disk.
-      const suppliedArchive = join(staging, 'supplied.tgz');
-      await copyFile(archive, suppliedArchive);
-      archive = suppliedArchive;
-      const members = run('tar', ['-tzf', archive]).split('\n').filter(Boolean);
-      if (!members.length || members.some(path => !path.startsWith('package/') || /[\\\r\x00]/.test(path) || path.split('/').some(part => part === '..' || part === '.'))) {
-        throw Error('OpenCU archive contains a path outside the npm package root');
-      }
-      const entries = run('tar', ['-tvzf', archive]).split('\n').filter(Boolean);
-      if (entries.length !== members.length || entries.some(line => !/^[-d]/.test(line))) throw Error('OpenCU archive contains links or unsupported file types');
-    }
-    const next = join(staging, 'next'), nextManifest = join(staging, 'next-manifest.json');
-    await mkdir(next);
-    execFileSync('tar', ['-xzf', archive, '--strip-components=1', '-C', next]);
-    const extracted = JSON.parse(await readFile(join(next, 'package.json'), 'utf8'));
-    if (extracted.name !== 'opencu') throw Error('Release archive is not OpenCU');
-    if (source && extracted.version !== sourceVersion) throw Error('Extracted OpenCU version differs from the source package.json');
-    checkVersion(extracted.version);
-    const files = await snapshot(next);
-    await writeFile(nextManifest, JSON.stringify({ repository: 'https://github.com/gulagala001/opencu',
-      commit: source ? run('git', ['rev-parse', 'HEAD']).trim() : extracted.gitHead ?? null,
-      workingTree: source ? Boolean(run('git', ['status', '--porcelain']).trim()) : null,
-      version: extracted.version, archiveSha256: digest(await readFile(archive)), files }, null, 2) + '\n');
-    if (JSON.stringify(await existingSnapshot()) !== JSON.stringify(before)) throw Error('OpenCU snapshot changed while syncing; refusing to replace it');
-    let currentManifest;
-    try { currentManifest = JSON.parse(await readFile(manifestPath, 'utf8')); }
-    catch (error) { if (error.code !== 'ENOENT') throw error; }
-    if (JSON.stringify(currentManifest) !== JSON.stringify(previous)) throw Error('OpenCU manifest changed while syncing; refusing to replace it');
-    const old = join(staging, 'previous'), oldManifest = join(staging, 'previous-manifest.json');
-    let hadSnapshot = false, hadManifest = false, installedSnapshot = false, installedManifest = false;
-    async function backup(from, to) {
-      try { await rename(from, to); return true; }
-      catch (error) { if (error.code !== 'ENOENT') throw error; return false; }
-    }
-    try {
-      hadSnapshot = await backup(destination, old);
-      hadManifest = await backup(manifestPath, oldManifest);
-      await rename(next, destination); installedSnapshot = true;
-      await rename(nextManifest, manifestPath); installedManifest = true;
-    } catch (error) {
-      try {
-        if (installedManifest) await rm(manifestPath, { force: true });
-        if (installedSnapshot) await rm(destination, { recursive: true, force: true });
-        if (hadSnapshot) await rename(old, destination);
-        if (hadManifest) await rename(oldManifest, manifestPath);
-      } catch (rollbackError) {
-        keepStaging = true;
-        throw new AggregateError([error, rollbackError], `OpenCU rollback failed; preserved recovery files in ${staging}`);
-      }
-      throw error;
-    }
-  } finally {
-    if (temporary) await rm(temporary, { recursive: true, force: true });
-    if (staging && !keepStaging) await rm(staging, { recursive: true, force: true });
+await nativePackageModes(archive);
+const members = execFileSync('tar', ['-tzf', archive], { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).trim().split('\n');
+if (!members.length || members.some(name => !name.startsWith('package/') || name.includes('\\') || name.split('/').includes('..'))) throw new Error('Expected a package-only OpenCU archive');
+execFileSync('tar', ['-xzf', archive, '-C', staging]);
+const unpacked = join(staging, 'package'), files = {};
+async function inspect(directory, prefix = '') {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const name = prefix + entry.name, path = join(directory, entry.name);
+    if (await realpath(path) !== path || !(await lstat(path)).isDirectory() && !entry.isFile()) throw new Error(`OpenCU contains a non-owned file: ${name}`);
+    if (entry.isDirectory()) await inspect(path, name + '/');
+    else files[name] = createHash('sha256').update(await readFile(path)).digest('hex');
   }
 }
-
-const entry = process.argv[1] && await realpath(process.argv[1]).catch(() => null);
-if (entry === fileURLToPath(import.meta.url)) await syncOpenCU();
+await inspect(unpacked);
+if (process.platform === 'darwin') {
+  const { checkMacHelperDistribution } = await import(new URL('./check-opencu-native.mjs', import.meta.url));
+  await checkMacHelperDistribution(unpacked);
+}
+const manifest = JSON.parse(await readFile(join(unpacked, 'package.json'), 'utf8'));
+if (manifest.name !== 'opencu' || manifest.exports?.['./integration'] !== './src/dsh/index.mjs' || !files['lib/client.factory.mjs']) throw new Error('Expected the rewritten OpenCU distribution');
+const host = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
+for (const [name, version] of Object.entries(manifest.peerDependencies)) {
+  if ((host.peerDependencies?.[name] ?? host.devDependencies?.[name]) !== version) throw new Error(`Bundled OpenCU requires matching ${name} ${version}`);
+}
+if (manifest.opencu?.host !== host.devDependencies['@deepseek-ai/dsh']) throw new Error('OpenCU build target does not match OMD');
+const target = join(root, 'vendor/opencu');
+try {
+  if (!(await lstat(target)).isDirectory() || await realpath(target) !== target) throw new Error('Refusing a non-owned OpenCU destination');
+  await rename(target, join(staging, 'previous'));
+} catch (error) { if (error.code !== 'ENOENT') throw error; }
+try { await rename(unpacked, target); }
+catch (error) { await rename(join(staging, 'previous'), target); throw error; }
+await writeFile(join(root, 'vendor/opencu.json'), JSON.stringify({ name: manifest.name, version: manifest.version,
+  source: source.endsWith('.tgz') ? source : '../opencu', policy: 'rewritten-plugin', hostVersion: manifest.opencu.host,
+  archiveSha256: createHash('sha256').update(await readFile(archive)).digest('hex'), files }, null, 2) + '\n');
+console.log(`Bundled OpenCU ${manifest.version}; previous source preserved outside the package at ${staging}/previous`);

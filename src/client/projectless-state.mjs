@@ -1,5 +1,16 @@
 const STORAGE_KEY = 'omd.projectless-drafts.v1';
 const emptyDraft = () => ({ draft: '', occurrences: [], attachmentIds: [] });
+
+export function initializeDraft(conversation, binding, options) {
+  if (conversation.input.requestDraftInitialization) return conversation.input.requestDraftInitialization(binding, options);
+  const input = conversation.input.for(binding.ctx), state = input.state.getSnapshot();
+  if (state.phase === 'adjudicating' || state.phase === 'submitting') return 'blocked';
+  if (options.prompt === undefined && options.clearPreviousDraft !== true) return 'preserved';
+  if (options.clearPreviousDraft !== true && (state.draft !== '' || state.attachmentIds.length > 0)) return 'preserved';
+  input.setDraft(options.prompt ?? '');
+  return 'applied';
+}
+
 const checked = result => { if (!result.ok) throw Error(result.error?.message || '会话设置未保存'); return result.value; };
 
 export async function copyPermissions(source, target, signal) {
@@ -212,9 +223,9 @@ export class ProjectlessDrafts {
       else {
         // The native attachment-only shortcut emits no onSubmission events.
         // Its same send sink provides the actual admission promise directly.
+        next.restoreDraft(emptyDraft());
         const outcome = await conversation.sendSession(targetRef.binding.session, '', draft.attachmentIds, mode, this.lifetime.signal);
         if (outcome.kind !== 'success') throw Error(outcome.text || '发送失败，附件已保留，请重试');
-        next.restoreDraft(emptyDraft());
       }
       // The source remains the recoverable native blank until this point.
       // A failed first admission never leaves an unreachable ungrouped blank.
@@ -242,7 +253,12 @@ export class ProjectlessDrafts {
     } catch (error) {
       if (!this.lifetime.signal.aborted && !navigation.aborted) source.notify('error', error.message || '创建独立工作区失败，请重试');
     } finally {
-      if (targetShell && !transferred) targetShell.restoreDraft(emptyDraft());
+      if (targetShell && !transferred) {
+        const remaining = targetShell.captureDraft();
+        targetShell.restoreDraft(JSON.stringify(remaining) === JSON.stringify(draft) ? emptyDraft() : {
+          ...remaining, attachmentIds: remaining.attachmentIds.filter(attachmentId => !draft.attachmentIds.includes(attachmentId)),
+        });
+      }
       if (rebound && !transferred && !this.lifetime.signal.aborted) this.ctx.get('conversation').rebindDraftFiles(id, draft.attachmentIds);
       targetRef?.release(); sourceRef.release(); this.pending.delete(id); this.emit();
     }
@@ -264,7 +280,7 @@ export class ProjectlessDrafts {
         await this.copySettings(from, id);
         if (navigation.aborted || this.lifetime.signal.aborted) return;
         this.mark(id);
-        if (options) this.ctx.get('conversation').input.requestDraftInitialization(targetRef.binding, options);
+        if (options) initializeDraft(this.ctx.get('conversation'), targetRef.binding, options);
         this.ctx.uiWorkspace.openSession(id);
       } catch (error) { if (!this.lifetime.signal.aborted) this.shell(from).notify('error', error.message); }
       finally { targetRef?.release(); sourceRef.release(); }

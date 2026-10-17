@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="510" viewBox="0 0 1040 510" role="img" aria-labelledby="title desc">
+<title id="title">ContextPipeline: facts, decisions and source materials</title>
+<desc id="desc">Complete tool exchanges are prepared in the background. Facts, source-backed user decisions and detailed materials remain separate. Ready results apply at a later safe request boundary. Original text and attachments remain available through recall. Dream maintains short memories separately; only shared sessions feed project and global memory. Private Chat and descendants not added to a real workspace remain isolated. This is a mechanism diagram, not a test result.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M1 1 7 4 1 7" fill="none" stroke="#2563eb" stroke-width="1.5"/></marker></defs>
+<rect x=".5" y=".5" width="1039" height="509" rx="16" fill="#fff" stroke="#dce2eb"/>
+<g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif">
+<text x="40" y="42" font-size="13" font-weight="600" fill="#2563eb" letter-spacing="1.2">CONTEXTPIPELINE</text>
+<text x="40" y="80" font-size="28" font-weight="650" fill="#17243a">Use summaries to continue. Return to sources to verify.</text>
+<text x="40" y="110" font-size="16" fill="#5b687b">Keep three kinds of material separate. Apply ready results at a later request boundary.</text>
+<rect x="40" y="152" width="206" height="190" rx="12" fill="#f7f9fc" stroke="#dce2eb"/>
+<text x="62" y="186" font-size="13" font-weight="600" fill="#64748b">01 · ORIGINAL INPUT</text>
+<text x="62" y="223" font-size="22" font-weight="600" fill="#17243a">User requests</text>
+<text x="62" y="254" font-size="17" fill="#5b687b">Text &amp; attachments</text>
+<text x="62" y="289" font-size="22" font-weight="600" fill="#17243a">Tool exchanges</text>
+<text x="62" y="320" font-size="17" fill="#5b687b">Keep calls with results</text>
+<path d="M247 244H287" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="300" y="152" width="380" height="190" rx="12" fill="#f1f6ff" stroke="#b9cdf7"/>
+<text x="322" y="186" font-size="13" font-weight="600" fill="#2563eb">02 · BACKGROUND PREPARATION</text>
+<text x="322" y="225" font-size="19" font-weight="600" fill="#17243a">Facts</text><text x="466" y="225" font-size="17" fill="#5b687b">Observed results</text>
+<path d="M322 241H658" stroke="#d9e5fb"/>
+<text x="322" y="275" font-size="19" font-weight="600" fill="#17243a">Decisions</text><text x="466" y="275" font-size="17" fill="#5b687b">Original quotes</text>
+<path d="M322 291H658" stroke="#d9e5fb"/>
+<text x="322" y="325" font-size="19" font-weight="600" fill="#17243a">Materials</text><text x="466" y="325" font-size="17" fill="#5b687b">Text &amp; file indexes</text>
+<path d="M681 244H721" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="734" y="152" width="266" height="190" rx="12" fill="#f7f9fc" stroke="#dce2eb"/>
+<text x="756" y="186" font-size="13" font-weight="600" fill="#64748b">03 · WORKING CONTEXT</text>
+<text x="756" y="224" font-size="22" font-weight="600" fill="#17243a">Apply as needed</text>
+<text x="756" y="260" font-size="17" fill="#5b687b">Original / detailed / brief</text>
+<text x="756" y="298" font-size="17" fill="#5b687b">Main model keeps working</text>
+<text x="756" y="324" font-size="16" fill="#5b687b">Reject late or invalid results</text>
+<path d="M143 343V393H299" fill="none" stroke="#8b98aa" stroke-width="1.7"/>
+<rect x="300" y="364" width="700" height="62" rx="10" fill="#f7f9fc" stroke="#dce2eb"/>
+<text x="322" y="401" font-size="18" font-weight="600" fill="#17243a">Source archive</text><text x="502" y="401" font-size="17" fill="#5b687b">Keep text &amp; attachments · recall by source</text>
+<path d="M867 364V347" fill="none" stroke="#2563eb" stroke-width="1.7" marker-end="url(#arrow)"/>
+<path d="M40 450H1000" stroke="#dce2eb"/>
+<text x="40" y="474" font-size="16" fill="#5b687b"><tspan font-weight="600" fill="#17243a">Dream runs separately</tspan>　Only shared sessions → project → global short memory.</text>
+<text x="40" y="497" font-size="14" fill="#5b687b">Private Chat and descendants outside real workspaces stay isolated. Context preparation remains separate.</text>
+</g></svg>

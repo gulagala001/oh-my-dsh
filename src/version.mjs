@@ -115,16 +115,21 @@ export function validateManifest(value) {
     if (identities.has(identity)) throw Error('Duplicate release version');
     identities.add(identity);
     if (!['normal', 'required'].includes(r.severity) || typeof r.title !== 'string' || !r.title.trim() || r.title.length > 200
-      || !Array.isArray(r.notes) || r.notes.length > 20 || r.notes.some(n => typeof n !== 'string' || n.length > 2000)) throw Error('Invalid release entry');
-    return { version: r.version, severity: r.severity, title: r.title, notes: [...r.notes] };
+      || !Array.isArray(r.notes) || r.notes.length > 20 || r.notes.some(n => typeof n !== 'string' || n.length > 2000)
+      || r.unpublished !== undefined && typeof r.unpublished !== 'boolean') throw Error('Invalid release entry');
+    return { version: r.version, severity: r.severity, title: r.title, notes: [...r.notes],
+      ...(r.unpublished !== undefined ? { unpublished: r.unpublished } : {}) };
   }).sort((a, b) => releaseCompare(b.version, a.version, policy));
   return { schema: 1, ...(policy ? { versionPolicy: policy } : {}), releases };
 }
-export function versionStatus(currentVersion, manifest, { hostVersion } = {}) {
+export function versionStatus(currentVersion, manifest, { hostVersion, includeUnpublished = false } = {}) {
   const preview = releaseIsPreview(currentVersion, manifest.versionPolicy);
   const compare = (a, b) => releaseCompare(a, b, manifest.versionPolicy);
   const migrate = manifest.versionPolicy === 'dsh-aligned' && (legacyIndependent(currentVersion) || retiredIndependent(currentVersion));
-  const channel = manifest.releases.filter(r => preview || !releaseIsPreview(r.version, manifest.versionPolicy) || migrate && hostBound(r.version));
+  // A preview host can receive published prereleases; it does not authorize
+  // installing local development candidates that have no public release tag.
+  const channel = manifest.releases.filter(r => (includeUnpublished === true || r.unpublished !== true)
+    && (preview || !releaseIsPreview(r.version, manifest.versionPolicy) || migrate && hostBound(r.version)));
   const eligible = hostVersion ? channel.filter(r => releaseHostVersion(r.version) && !updateHostRequirement(currentVersion, r.version, hostVersion)) : channel;
   const newerHost = hostVersion && channel.find(r => compare(r.version, currentVersion) > 0 && updateHostRequirement(currentVersion, r.version, hostVersion));
   const updates = eligible.filter(r => compare(r.version, currentVersion) > 0);
@@ -152,14 +157,15 @@ export const INSTALLED_VERSION = JSON.parse(readFileSync(new URL('../package.jso
 const BUNDLED_MANIFEST = validateManifest(JSON.parse(readFileSync(new URL('../release-manifest.json', import.meta.url), 'utf8')));
 
 export function createVersionService({ currentVersion = INSTALLED_VERSION, bundledManifest = BUNDLED_MANIFEST,
-  hostVersion = releaseHostVersion(currentVersion),
+  hostVersion = releaseHostVersion(currentVersion), includeUnpublished = false,
   fetchImpl = globalThis.fetch, now = Date.now, timeoutMs = 3000 } = {}) {
   parseVersion(currentVersion);
   let cached = null, checkedAt = null, lastAttemptAt = null, nextCheckAt = 0, error = null, pending = null;
   const shutdown = new AbortController();
   const bundledRelease = bundledManifest.releases.find(r => compareVersions(r.version, currentVersion) === 0) || null;
+  const localCandidates = new Set(bundledManifest.releases.filter(r => r.unpublished === true).map(r => r.version.replace(/^v/, '').split('+')[0]));
   const snapshot = () => {
-    const status = cached ? versionStatus(currentVersion, cached, { hostVersion }) : {
+    const status = cached ? versionStatus(currentVersion, cached, { hostVersion, includeUnpublished }) : {
       currentVersion, latestVersion: null, status: 'unknown', severity: 'none', releases: [],
     };
     return { ...status, currentRelease: status.currentRelease ?? bundledRelease,
@@ -177,6 +183,11 @@ export function createVersionService({ currentVersion = INSTALLED_VERSION, bundl
           const response = await fetchImpl(url, { headers: { Accept: 'application/vnd.github.raw+json', 'User-Agent': 'OhMyDSH-UpdateCheck' },
             redirect: 'error', signal: AbortSignal.any([shutdown.signal, AbortSignal.timeout(timeoutMs)]) });
           const manifest = await readManifest(response);
+          // Older public feeds predate publication markers. Missing metadata
+          // cannot turn an archived local candidate into a downloadable tag;
+          // an explicit false marker may record its later public release.
+          manifest.releases = manifest.releases.map(row => row.unpublished === undefined
+            && localCandidates.has(row.version.replace(/^v/, '').split('+')[0]) ? { ...row, unpublished: true } : row);
           shutdown.signal.throwIfAborted();
           cached = manifest; checkedAt = now(); nextCheckAt = checkedAt + CHECK_INTERVAL_MS; error = null;
           return snapshot();

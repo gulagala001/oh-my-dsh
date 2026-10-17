@@ -2,6 +2,124 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.2.omd.0.17.3",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "DSH rc.1 / rc.2 双宿主发行",
+      "notes": [
+        "精确匹配官方 DSH 0.2.1-rc.2 SDK、框架、组件快照与独立锁；保留原生新版 Web Search / Fetch 配置，不接管 provider。",
+        "整合当前工作区上下文、Dream、监控、主题、后台与新版中英文介绍和视觉素材，保留旧宿主输入及用户数据。",
+        "内置 OpenCU 2.0.0，包含最新悬浮监看异步采集、隐藏与恢复修复，以及 macOS 截图重试、后台按钮与 Helper 执行位修复。"
+      ]
+    },
+    {
+      "version": "0.2.1-rc.1.omd.0.17.3",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "DSH rc.1 / rc.2 双宿主发行",
+      "notes": [
+        "精确匹配官方 DSH 0.2.1-rc.2 SDK、框架、组件快照与独立锁；保留原生新版 Web Search / Fetch 配置，不接管 provider。",
+        "整合当前工作区上下文、Dream、监控、主题、后台与新版中英文介绍和视觉素材，保留旧宿主输入及用户数据。",
+        "内置 OpenCU 2.0.0，包含最新悬浮监看异步采集、隐藏与恢复修复，以及 macOS 截图重试、后台按钮与 Helper 执行位修复。"
+      ]
+    },
+    {
+      "version": "0.2.1-rc.1.omd.0.17.2",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "rc.1 本地兼容候选",
+      "notes": [
+        "对齐官方 rc.1 SDK、公共 Chat/Conversation、宿主组件、Cordis 4.0.5、Schemastery 3.18.5 与独立冻结锁，不放宽版本检查。",
+        "保留全部既有成果、旧宿主独立构建入口、数据和第三方生态；适配语义草稿及命令 chip 恢复。",
+        "内置 OpenCU 0.1.2，与独立包共享核心和真实 REA 前端；Workbench 保留当前 CU 释放事务。",
+        "IUI 1.0.8、OMAA 0.15.2 使用匹配宿主独立构建；可选增强不替代基础预设。",
+        "仅工作区 private/unpublished 候选；不部署或重启，不以构建替代完整 GUI、生态和跨平台验收。"
+      ]
+    },
+    {
+      "version": "0.2.1-alpha.3.omd.0.17.1",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "alpha.3 本地兼容候选",
+      "notes": [
+        "保留 0.17 非 CU 成果，匹配 alpha.3 SDK、官方组件、Cordis/Schemastery 与锁。",
+        "保留原生 Jobs、Loader 与工作流机制，接回后台投递、草稿、journal/resume 和 continuable 增强。",
+        "内置新版 OpenCU 0.1.1；独立和共装复用，REA 真实前端及完整核心保留。",
+        "保留 OMAA 可选增强、工作流组合、独立基础预设与第三方所有权。",
+        "本地 private/unpublished 构建；仅声明实际定点确认范围，不代表全平台与完整产品验收。"
+      ]
+    },
+    {
+      "version": "0.2.0-rc.2.omd.0.17.1",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "rc.2 本地兼容候选",
+      "notes": [
+        "与 alpha.3 共用有效产品实现，差异集中适配，使用 rc.2 SDK、官方组件、框架及独立锁重建。",
+        "保留全部非 CU 成果，内置新版 OpenCU 0.1.1，不回用旧 CU。",
+        "保留账号、会话、配置、第三方插件及 IUI/OMAA 数据；本地部署前完整备份。",
+        "本地 private/unpublished 构建；仅声明实际定点确认范围，不代表全平台与完整产品验收。"
+      ]
+    },
+    {
+      "version": "0.2.1-alpha.2.omd.0.17.0",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "固定 0.10 底座与新版 OpenCU 的 alpha.2 重构候选",
+      "notes": [
+        "恢复后续已提交及未提交的非 CU 成果，匹配 DSH 0.2.1-alpha.2 的 SDK、公共 Chat、Conversation 与宿主组件。",
+        "保留 Dream 私人 Chat 隔离、文件夹选择和失败续跑，原生工具及插件共存、PTC 控制、持久监控和 DeepSeek Workbench。",
+        "IUI 保留当前 1.0.6 源码、未提交成果与用户数据，不回档或重写。",
+        "默认内置从零重写的 OpenCU 0.1.0，旧 CU 与过渡控制台已移除；真实 REA 前端、核心与工具支持独立和共享安装。",
+        "本地 private/unpublished 候选，已构建，正在隔离安装和真实使用验收；未验收平台与 Office 不作完成声明。"
+      ]
+    },
+    {
+      "version": "0.2.1-alpha.2.omd.0.16.2",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "修复预览弹窗和网页批注状态衔接",
+      "notes": [
+        "原生网页对话框打开时隐藏悬浮预览中的虚拟鼠标，保留正常空闲位置和停止／恢复保护。",
+        "页面导航或恢复助手控制时结束失效的手工批注编辑，保留已保存的批注；正常导航取消与真实操作失败分别处理。",
+        "内置 OpenCU 1.6.3；尚未公开发布，本地安装须使用与宿主匹配的归档并核对实际运行。"
+      ]
+    },
+    {
+      "version": "0.2.0-rc.2.omd.0.16.2",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "修复预览弹窗和网页批注状态衔接",
+      "notes": [
+        "原生网页对话框打开时隐藏悬浮预览中的虚拟鼠标，保留正常空闲位置和停止／恢复保护。",
+        "页面导航或恢复助手控制时结束失效的手工批注编辑，保留已保存的批注；正常导航取消与真实操作失败分别处理。",
+        "内置 OpenCU 1.6.3；尚未公开发布，本地安装须使用与宿主匹配的归档并核对实际运行。"
+      ]
+    },
+    {
+      "version": "0.2.1-alpha.2.omd.0.16.1",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "修复 Computer Use 使用流程与插件联动",
+      "notes": [
+        "修复浏览器首次加载对话框、预览画面尺寸、虚拟鼠标与悬浮窗的状态衔接。",
+        "修复下载归属、生成文件导出、停止恢复与浏览器退出清理，保留实际权限与旧数据。",
+        "修复设置覆盖、后台工具控制及主题联动，保留第三方插件贡献。",
+        "内置 OpenCU 1.6.2；这是未公开发布的本地修复候选，安装须使用与宿主配套的构建。"
+      ]
+    },
+    {
+      "version": "0.2.0-rc.2.omd.0.16.1",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "Computer Use 修复候选的 rc.2 配套构建",
+      "notes": [
+        "与 0.16.1 使用相同产品修复，对齐 rc.2 的 SDK、组件快照和依赖。",
+        "内置 OpenCU 1.6.2，保留既有插件标识、用户配置、会话和附件。",
+        "尚未公开发布；本地安装须核对包校验值与实际运行版本。"
+      ]
+    },
+    {
       "version": "0.2.1-alpha.2.omd.0.16.0",
       "severity": "normal",
       "unpublished": true,
@@ -143,6 +261,7 @@
     {
       "version": "0.2.1-alpha.1.omd.0.11.0",
       "severity": "normal",
+      "unpublished": true,
       "title": "智能交互回答与原生插件共存",
       "notes": [
         "恢复宿主原生 Tools 服务，以作用域 PTC 和可逆请求投影保留现有增强能力。",
@@ -157,6 +276,7 @@
     {
       "version": "0.2.0-rc.2.omd.0.11.0",
       "severity": "normal",
+      "unpublished": true,
       "title": "智能交互回答与原生插件共存",
       "notes": [
         "恢复宿主原生 Tools 服务，以作用域 PTC 和可逆请求投影保留现有增强能力。",
@@ -758,6 +878,7 @@
     {
       "version": "1.3.0-alpha.10",
       "severity": "normal",
+      "unpublished": true,
       "title": "调整频率基准与默认档位",
       "notes": [
         "适中默认调整为 48 条新事件、48 条窗口、3 段新摘要，中枢间隔 60 秒、替换间隔 30 步。",
@@ -768,6 +889,7 @@
     {
       "version": "1.3.0-alpha.9",
       "severity": "required",
+      "unpublished": true,
       "title": "中枢触发规则修复与关闭合并",
       "notes": [
         "取消用户发言直接触发中枢，以及因新发言取消待执行方案或丢弃生成结果的行为。",
@@ -778,6 +900,7 @@
     {
       "version": "1.3.0-alpha.8",
       "severity": "required",
+      "unpublished": true,
       "title": "压缩后 todo 重新注入与用户原话附件",
       "notes": [
         "预处理跳过 todo 快照和任务工具正文，不再用它们切断范围或复述任务。",
@@ -788,6 +911,7 @@
     {
       "version": "1.3.0-alpha.7",
       "severity": "required",
+      "unpublished": true,
       "title": "预处理续跑与中枢过期结果修复",
       "notes": [
         "后续预处理需满足消息数量或文本量门槛，零碎尾巴留待下次；重试不额外启动整批任务。",
@@ -798,6 +922,7 @@
     {
       "version": "1.3.0-alpha.6",
       "severity": "required",
+      "unpublished": true,
       "title": "摘要范围与重复内容修正",
       "notes": [
         "预处理、合并和全量摘要统一只写范围内实际操作、改动与结果，不写计划或复述旧背景。",
@@ -807,6 +932,7 @@
     {
       "version": "1.3.0-alpha.5",
       "severity": "normal",
+      "unpublished": true,
       "title": "版本信息与分级更新提醒",
       "notes": [
         "左上角新增版本信息入口，普通更新显示绿点，必要更新显示红点。",
@@ -816,6 +942,7 @@
     {
       "version": "1.3.0-alpha.4",
       "severity": "required",
+      "unpublished": true,
       "title": "上下文压缩重大问题修复",
       "notes": [
         "修复预处理范围被消息切碎、原文积压，以及历史推理成本漏算。",

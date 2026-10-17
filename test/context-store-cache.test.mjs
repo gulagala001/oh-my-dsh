@@ -1,0 +1,38 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtempSync, writeFileSync, unlinkSync, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { ContextStore } from '../src/context/store.mjs';
+
+test('archive sweeps retain a bounded useful subset and still validate changed, missing and corrupt files', t => {
+  const directory = mkdtempSync(join(tmpdir(), 'omd-archive-cache-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const store = new ContextStore(directory, { maxDiskCacheBytes: 3000 });
+  const values = Array.from({ length: 6 }, (_, index) => ({ schema: 1, id: 'fixture-' + index, records: [{ id: 'record-' + index, text: 'x'.repeat(900) }] }));
+  for (const value of values) writeFileSync(store.path(value.id), JSON.stringify(value));
+  const read = store.read.bind(store); let reads = 0;
+  store.read = (...args) => { reads++; return read(...args); };
+  const first = store.all(), retained = new Set(store.diskCache.keys());
+  assert.equal(first.length, 6); assert.ok(retained.size > 0 && retained.size < 6);
+  reads = 0; assert.deepEqual(store.all(), first);
+  assert.equal(reads, 6 - retained.size);
+  assert.deepEqual(new Set(store.diskCache.keys()), retained);
+  assert.ok(store.diskCacheBytes <= store.maxDiskCacheBytes);
+  const [filename] = retained, cached = store.diskCache.get(filename).value, file = store.path(cached.id);
+  const changed = { ...cached, records: [{ id: 'changed' }] };
+  writeFileSync(file, JSON.stringify(changed));
+  assert.deepEqual(store.all().find(value => value.id === changed.id), changed);
+  const active = store.state(changed.id); active.records.push({ id: 'active-unsaved' });
+  assert.equal(store.all().find(value => value.id === changed.id), active);
+  writeFileSync(file, '{corrupt');
+  assert.throws(() => store.all(), /上下文存档无法读取/);
+  assert.throws(() => store.all({ tolerateInvalid: true, requiredId: changed.id }), /上下文存档无法读取/);
+  assert.ok(!store.all({ tolerateInvalid: true }).some(value => value.id === changed.id));
+  assert.ok(store.readErrors.has(filename));
+  writeFileSync(file, JSON.stringify(changed)); store.release(changed.id);
+  assert.ok(!store.cache.has(changed.id)); assert.ok(!store.diskCache.has(filename));
+  store.all(); unlinkSync(file);
+  assert.equal(store.all().length, 5); assert.ok(!store.diskCache.has(filename));
+  assert.equal(store.diskCacheBytes, [...store.diskCache.keys()].reduce((bytes, name) => bytes + statSync(join(store.dir, 'sessions', name)).size, 0));
+});

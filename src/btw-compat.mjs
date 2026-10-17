@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { symbols } from '@deepseek-ai/cordis';
+import { isDeepStrictEqual } from 'node:util';
 import { installRequestProjection } from './llm-request-projection.mjs';
 import { isAgentLoopRequest, markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { BTW_LABEL_PREFIX, btwCreation, markBtwSession, isBtwSession, completedBtwPrefix,
@@ -24,6 +26,27 @@ export function createBtwCompatibility(ctx) {
     const projected = Object.freeze({ ...options, toolHistory: state.reference.toolHistory,
       messages: Object.freeze([...state.reference.messages, question]) });
     return isAgentLoopRequest(options) ? markAgentLoopRequest(projected) : projected;
+  });
+  ctx.effect(() => {
+    const runtime = ctx.llm[symbols.original] || ctx.llm;
+    const previous = Object.getOwnPropertyDescriptor(runtime, 'forAdapter'), original = runtime.forAdapter;
+    // rc.2 / alpha.3 expose no independent cache key. Codex derives its wire
+    // cache key from sessionId, so change it only AFTER middleware and replay
+    // filtering; guards, monitoring and durable events must still own the child.
+    if (typeof original !== 'function') throw Error('/btw 无法安装当前宿主的缓存键适配。');
+    function forAdapter(options, adapter) {
+      const projected = original.call(this, options, adapter);
+      const state = stateOf({ id: options.sessionId });
+      if (!state || options.purpose || !['codex', 'openai-codex'].includes(options.provider)) return projected;
+      return Object.freeze({ ...projected, sessionId: state.reference.sessionId });
+    }
+    runtime.forAdapter = forAdapter;
+    const installed = Object.getOwnPropertyDescriptor(runtime, 'forAdapter');
+    return () => {
+      if (!isDeepStrictEqual(Object.getOwnPropertyDescriptor(runtime, 'forAdapter'), installed)) return;
+      if (previous) Object.defineProperty(runtime, 'forAdapter', previous);
+      else delete runtime.forAdapter;
+    };
   });
   effect(ctx.on('agent/created', ({ agent }) => {
     const state = btwCreation.getStore();

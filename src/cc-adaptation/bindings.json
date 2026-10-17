@@ -269,20 +269,9 @@
     "mode": "retain-native"
   },
   "computer_use": {
-    "file": "tools/computer-use.md",
-    "fields": [
-      "code",
-      "title"
-    ],
-    "sections": [
-      "tool:computer_use"
-    ]
+    "mode": "retain-native"
   },
   "computer_use_reset": {
-    "file": "tools/computer-use-reset.md",
-    "fields": [],
-    "sections": [
-      "tool:computer_use_reset"
-    ]
+    "mode": "retain-native"
   }
 }

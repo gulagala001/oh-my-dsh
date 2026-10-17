@@ -1,4 +1,5 @@
 import { symbols } from '@deepseek-ai/cordis';
+import { isDeepStrictEqual } from 'node:util';
 const original = value => value?.[symbols.original] ?? value;
 const installed = Symbol.for('omd.file-upload-resolver-v017');
 // Cordis exposes these states as a TypeScript const enum.
@@ -40,8 +41,9 @@ export function installFileUploadCompatibility(ctx) {
     const bound = resolve => register.call(uploads, resolve);
     const descriptor = Object.getOwnPropertyDescriptor(uploads, 'registerAgentResolver');
     Object.defineProperty(uploads, 'registerAgentResolver', { value: bound, configurable: true, writable: true });
+    const owned = Object.getOwnPropertyDescriptor(uploads, 'registerAgentResolver');
     scope.effect(() => () => {
-      if (uploads.registerAgentResolver !== bound) return;
+      if (!isDeepStrictEqual(Object.getOwnPropertyDescriptor(uploads, 'registerAgentResolver'), owned)) return;
       if (descriptor) Object.defineProperty(uploads, 'registerAgentResolver', descriptor);
       else delete uploads.registerAgentResolver;
     });
@@ -55,7 +57,7 @@ export function installFileUploadCompatibility(ctx) {
       try { await controller.await(); } catch (error) { failure = error; }
       if (failure?.message === 'file-upload: Agent resolver is already registered'
         && scope.fiber?.uid !== null && [LOADING, ACTIVE].includes(scope.fiber?.state)
-        && controller.state === FAILED && uploads.registerAgentResolver === bound
+        && controller.state === FAILED && isDeepStrictEqual(Object.getOwnPropertyDescriptor(uploads, 'registerAgentResolver'), owned)
         && (uploads.agentResolver === initial || clearedInitial && uploads.agentResolver === undefined)) {
         uploads.agentResolver = undefined;
         await controller.restart();

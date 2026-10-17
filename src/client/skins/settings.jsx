@@ -1,4 +1,4 @@
-import React, { useState, useSyncExternalStore } from 'react';
+import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createSkinRuntime } from './runtime.mjs';
 import { MAX_SKIN_BYTES } from './format.mjs';
 import adapterCss from './adapter.css';
@@ -22,9 +22,11 @@ import { AppearanceDrafts, useAppearanceDrafts } from './advanced.jsx';
 function AppearanceSettings({ runtime }) {
   const state = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot);
   const [error, setError] = useState('');
-  const drafts = useAppearanceDrafts();
+  const drafts = useAppearanceDrafts(), importSequence = useRef(0);
+  useEffect(() => () => { ++importSequence.current; }, [runtime]);
   const act = (action, leaving = false) => {
     if (leaving && !drafts.flush()) return false;
+    if (leaving) ++importSequence.current;
     const saved = () => { setError(''); return true; };
     const failed = e => { setError(e.message); return false; };
     try {
@@ -35,11 +37,14 @@ function AppearanceSettings({ runtime }) {
   const importFile = async event => {
     const file = event.target.files?.[0]; event.target.value = '';
     if (!file) return;
+    const seq = ++importSequence.current;
     try {
       if (file.size > MAX_SKIN_BYTES) throw new Error('主题包不能超过 1 MB');
-      const value = JSON.parse(await file.text());
+      const text = await file.text();
+      if (seq !== importSequence.current) return;
+      const value = JSON.parse(text);
       act(() => runtime.import(value), true);
-    } catch (e) { setError(e instanceof SyntaxError ? '主题文件不是有效的 JSON' : e.message); }
+    } catch (e) { if (seq === importSequence.current) setError(e instanceof SyntaxError ? '主题文件不是有效的 JSON' : e.message); }
   };
   const layout = state.skins.find(s => s.id === state.selected)?.layout;
   return <AppearanceDrafts.Provider value={drafts}>{layout === MATERIAL_LAYOUT ? <MaterialAppearance {...{ runtime, state, act, importFile, error }}/>
@@ -66,7 +71,7 @@ export function applySkins(ctx) {
       frame = requestAnimationFrame(() => surfaces.refresh());
     };
     const observer = new MutationObserver(refresh);
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-omd-surface'] });
     surfaces.refresh();
     return () => { observer.disconnect(); cancelAnimationFrame(frame); surfaces.dispose(); };
   });

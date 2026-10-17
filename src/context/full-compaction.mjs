@@ -1,7 +1,7 @@
 import { summaryMessageReader, isTaskInjection } from '../task-context.mjs';
 import { attachTodoRefresh, requireSavings } from './todo-refresh.mjs';
 import { randomUUID } from 'node:crypto';
-import { activeRecords, decodeResult, eventSource, hash, liveSpan, newRecord, recordText, sourceHash, userRevision, carrierBarrier } from './core.mjs';
+import { activeRecords, decodeResult, eventSource, hash, liveSpan, newRecord, recordText, sourceHash, userRevision, carrierBarrier, resolveTraceSlot } from './core.mjs';
 import { messageTokens } from './materials.mjs';
 import { SUMMARY_PROMPT_VERSION, FULL_COMPACT_SYSTEM, FULL_COMPACT_TOOL } from './prompts.mjs';
 
@@ -91,7 +91,8 @@ export async function compactFull(pipeline, agent, signal, sourceCommandId) {
   const operations = orderedGroups.map((group, i) => ({ id: randomUUID(), kind: i ? 'delete' : 'record',
     ...(i ? {} : { recordId: record.id, accountingSeqs: seqs }), seqs: group, text: i ? '' : text,
     position: snapshot.nodes.indexOf(group[0]), ...(sourceCommandId ? { sourceCommandId } : {}) }));
-  const tx = { id: randomUUID(), planId: randomUUID(), source: 'compact-f', operations, records, traceSlot: s.traceSlot && snapshot.retained.has(s.traceSlot.carrierSeq) ? structuredClone(s.traceSlot) : null,
+  const traceSlot = resolveTraceSlot(session, s.traceSlot);
+  const tx = { id: randomUUID(), planId: randomUUID(), source: 'compact-f', operations, records, traceSlot: traceSlot && snapshot.retained.has(traceSlot.carrierSeq) ? structuredClone(traceSlot) : null,
     inputChars, outputChars: text.length, inputTokens, outputTokens,
     stats: { selectedRecords: parents.length, currentMessages: visible.length, currentNodes: seqs.length, originalEvents: record.originalSeqs.length, resultRecords: 1, estimatedSavedTokens: inputTokens - outputTokens, costBasis: 'host-route-estimate' },
     createdAt: Date.now(), applied: {}, userRevision: snapshot.userRevision,

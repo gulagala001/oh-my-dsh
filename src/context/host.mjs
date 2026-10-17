@@ -7,8 +7,8 @@ export function createHostAdapter(hub) {
   const routes = new WeakMap();
   const message = (text, kind) => createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'plugin:trisoul-x:' + kind } });
   const requestBudget = session => {
-    const { route, info } = routes.get(session) ?? { route: session.requestHeader?.()?.config };
-    const capacity = info?.context?.contextWindow ?? session.requestContext?.()?.contextWindow;
+    const prepared = routes.get(session), { route, info } = prepared ?? { route: session.requestHeader?.()?.config };
+    const capacity = prepared ? info?.context?.contextWindow : session.requestContext?.()?.contextWindow;
     if (!capacity) return null;
     const available = capacity - (route?.maxTokens ?? info?.defaultMaxTokens ?? 0);
     const headroom = Math.min(65536, Math.floor(Math.max(0, available) * 0.1));
@@ -16,7 +16,8 @@ export function createHostAdapter(hub) {
   };
   return {
     contextCapacity(session) {
-      return routes.get(session)?.info?.context?.contextWindow ?? session.requestContext?.()?.contextWindow ?? null;
+      const prepared = routes.get(session);
+      return (prepared ? prepared.info?.context?.contextWindow : session.requestContext?.()?.contextWindow) ?? null;
     },
     pricing(session) {
       const config = session.requestHeader?.()?.config;
@@ -94,9 +95,10 @@ export function createHostAdapter(hub) {
 
 export class ReplacementCanvas extends CompactionEngine {
   constructor(ctx, hub) { super(ctx); this.hub = hub; }
-  compactIfNeeded(agent, trigger, signal) {
-    if (signal?.aborted) return Promise.resolve(null);
-    return this.hub.context.applyReady(agent);
+  async compactIfNeeded(agent, trigger, signal) {
+    if (signal?.aborted) return null;
+    const automatic = await this.hub.context.autoCompact.check(agent, signal, { maintenance: false });
+    return automatic || this.hub.context.applyReady(agent);
   }
   compactNow(agent, signal, sourceCommandId) {
     // /compact consumes existing preparation. It never starts or awaits a model.

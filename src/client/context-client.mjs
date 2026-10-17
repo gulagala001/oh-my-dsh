@@ -2,7 +2,6 @@ import { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
 export { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
 import { createPoller } from './polling.mjs';
 import { PERSONALITY_PRESETS, personalityPreset, personalityText, personalityPatch } from '../cc-adaptation/personality.mjs';
-import {createDreamPanel,DREAM_CSS} from './dream-client.mjs';
 
 export const CONTEXT_UI_VERSION = '1.3.0';
 export function contextFrequencyOf(config = {}) {
@@ -29,9 +28,6 @@ export function createContextUI(React) {
   };
   const suffix = id => '?session=' + encodeURIComponent(id || '');
   const fmt = value => Number(value || 0).toLocaleString();
-  const date = value => value == null ? '时间未记录' : new Date(value).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
-  const time = value => value == null ? '—' : new Date(value).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
-  const names = { raw: '原文', keep: '保留原文', detail: '摘要＋详细资料', brief: '仅基础摘要', merge: '合并替换', session: '会话隔离', project: '项目共享' };
   const frequencyNames = { always: '频繁', medium: '适中', slow: '较少', custom: '自定义' };
   const paths = {
     settings: 'M4 7h16M4 17h16M8 4v6M16 14v6', clock: 'M12 8v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
@@ -56,181 +52,6 @@ export function createContextUI(React) {
   const segments = (label, value, options, change, disabled = false) => h('div', { className: 'cx-segments', role: 'group', 'aria-label': label }, ...options.map(([id, text]) => h('button', { key: id, type: 'button', disabled, 'aria-pressed': id === value, onClick: () => change(id) }, text)));
   const pageTabs = (value, options, change) => h('nav', { className: 'cx-tabs', 'aria-label': '设置分类' }, ...options.map(([id, text]) => h('button', { key: id, type: 'button', 'aria-current': id === value ? 'page' : undefined, onClick: () => change(id) }, text)));
   const duration = ms => Number(ms) >= 60000 ? Number(ms) / 60000 + ' 分钟' : Number(ms || 0) / 1000 + ' 秒';
-  const rangeLabel = ranges => (ranges || []).map(x => `#${x.from}–${x.to}`).join(' · ');
-  const summaryPreview = text => h(React.Fragment, null, h('p', { className: 'cx-prose' }, text.length > 240 ? text.slice(0, 240) + '…' : text), text.length > 240 && fold('展开完整摘要', text.length + ' 字符', h('p', { className: 'cx-prose' }, text)));
-  const assetUrl = (r, i) => (r.dreamTarget?'trisoul-x/api/dream/asset?sessionId='+encodeURIComponent(r.requestSessionId||r.sessionId):'trisoul-x/api/context/asset'+suffix(r.requestSessionId || r.sessionId)) + '&id=' + encodeURIComponent(r.id) + '&asset=' + (i + 1);
-
-  // Reading surfaces share focus, background isolation and return behavior.
-  const readingBackground = new WeakMap();
-  class ReadingView extends React.Component {
-    componentDidMount() { this.previousFocus = this.props.returnFocus || document.activeElement; this.background = new Set(); this.syncView(true, true); }
-    componentDidUpdate(prev) { this.syncView(prev.page !== this.props.page); }
-    capturePosition() {
-      const body = this.root?.querySelector(':scope > .cx-body');
-      return { scrollTop: body?.scrollTop || 0, focusIndex: [...(body?.querySelectorAll('button,a[href],input,select,textarea,[tabindex]') || [])].indexOf(document.activeElement) };
-    }
-    syncView(changed = false, initial = false) {
-      // Only cover earlier siblings: a later reader may be layered above us.
-      for (const el of this.root?.parentElement?.children || []) {
-        if (el === this.root) break;
-        if (this.background.has(el)) continue;
-        const state = readingBackground.get(el) || { inert: el.inert, readers: new Set() };
-        state.readers.add(this); readingBackground.set(el, state);
-        this.background.add(el); el.inert = true;
-      }
-      if (changed) this.pendingPosition = this.props.position || { scrollTop: 0 };
-      const visible = this.props.visible !== false && Boolean(this.root?.getClientRects().length) && !this.root.closest('[inert]');
-      if (visible && (!this.visible || this.pendingPosition)) {
-        const body = this.root.querySelector(':scope > .cx-body'), position = this.pendingPosition;
-        const target = position && body?.querySelectorAll('button,a[href],input,select,textarea,[tabindex]')[position.focusIndex];
-        const active = document.activeElement;
-        // A delayed response must not interrupt typing outside this reader.
-        if (!initial && !changed || active === (this.props.requestFocus || this.previousFocus) || active === document.body || this.root.contains(active)) {
-          if (position || !this.root.contains(active)) (target || this.root).focus({ preventScroll: true });
-        }
-        if (position && body) body.scrollTop = position.scrollTop;
-        this.pendingPosition = null;
-      }
-      this.visible = visible;
-    }
-    componentWillUnmount() {
-      const restore = this.root?.contains(document.activeElement) || document.activeElement === document.body;
-      for (const el of this.background) {
-        const state = readingBackground.get(el);
-        state.readers.delete(this);
-        if (!state.readers.size) { el.inert = state.inert; readingBackground.delete(el); }
-      }
-      if (restore && this.previousFocus?.isConnected && this.previousFocus.getClientRects().length && !this.previousFocus.closest('[inert]')) this.previousFocus.focus?.({ preventScroll: true });
-    }
-    render() {
-      return h('section', { className: 'cx-reader ' + (this.props.className || ''), ref: el => { this.root = el; }, tabIndex: -1, role: 'region', 'aria-label': this.props.label || '详细资料', onKeyDown: e => {
-        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.props.onClose(); }
-      } }, this.props.children);
-    }
-  }
-  function DocumentReader(props) {
-      const r = props.record;
-      return h(ReadingView, props,
-        h('header', { className: 'cx-reader-head' }, button('返回', props.onClose, { icon: 'arrow', quiet: true }), h('strong', null, '摘要与详细资料'), badge((r.documents || []).length + ' 份')),
-        h('div', { className: 'cx-body', 'data-testid': 'record-documents' }, h('div', { className: 'cx-record-meta' }, h('code', null, r.id), h('small', null, date(r.timeStart) + ' — ' + time(r.timeEnd))),
-          section('基础摘要', null, h('p', { className: 'cx-prose' }, r.summary)),
-          r.decisions?.length>0&&section('用户决定', '保留原话依据，可向下回查。', h('div',null,...r.decisions.map((d,i)=>h('p',{className:'cx-prose',key:i},d.text,h('small',null,' · #'+d.seq+'「'+d.quote+'」'))))),
-          ...(r.documents || []).map((d, i) => h('article', { className: 'cx-document', key: i }, h('div', { className: 'cx-section-head' }, h('h3', null, d.title), badge(String(i + 1).padStart(2, '0'))), h('pre', null, d.text))),
-          ...(r.assets || []).map((asset, i) => fold((asset.block.attachment?.name || asset.block.type) + ' · 附件 ' + (i + 1), (asset.sources || []).map(x => x.sessionId + '#' + x.seq).join('、'), h('div', null, asset.block.type === 'image' && h('img', { src: assetUrl(r, i), alt: '原始图片 ' + (i + 1), loading: 'lazy', style: { maxWidth: '100%', height: 'auto' } }), h('a', { href: assetUrl(r, i), target: '_blank', rel: 'noopener noreferrer' }, '打开原件')))),
-          !(r.documents || []).length && empty('这份摘要没有附加文档', '基础摘要和来源仍可查看。', 'context'),
-          fold('来源与版本', rangeLabel(r.ranges), h('div', { className: 'cx-prose' }, h('p', null, '原始区间：' + rangeLabel(r.ranges)), h('p', null, '摘要编号：' + r.id), (r.parents || []).length > 0 && h('p', null, '合并来源：' + r.parents.join('、'))))));
-  }
-  class PipelinePanel extends React.Component {
-    constructor(props) { super(props); this.state = { data: null, error: '', loadError: '', retryAction: null, notice: '', busy: false, detail: null, selected: [], filter: 'all' }; this.epoch = 0; this.documentTicket = 0; this.reviewTicket = 0; }
-    componentDidMount() { this.alive = true; this.observe(); }
-    componentWillUnmount() { this.alive = false; this.documentTicket++; this.reviewTicket++; this.poller?.stop(); }
-    componentDidUpdate(prev) {
-      if (prev.sessionId !== this.props.sessionId) {
-        this.epoch++; this.documentTicket++; this.reviewTicket++;
-        this.setState({ data: null, detail: null, selected: [], review: null, error: '', loadError: '', retryAction: null, notice: '', busy: false, activeAction: null }, () => this.observe());
-      } else if (prev.visible !== this.props.visible) this.observe();
-    }
-    observe() {
-      this.poller?.stop();
-      const id = this.props.sessionId;
-      if (this.props.visible === false || !id) { this.poller = null; return; }
-      this.poller = createPoller({
-        read: signal => api('/context' + suffix(id), undefined, signal),
-        onData: data => this.setState(s => ({ data, loadError: '', selected: s.selected.filter(key => data.records?.some(r => r.id === key && r.live && !r.mergedInto)) })),
-        onError: error => this.setState({ loadError: error.message }),
-      });
-      this.poller.start();
-    }
-    load = () => this.poller?.refresh();
-    fail(error, retryAction) {
-      this.setState({ error: error.message, retryAction }, () => {
-        if (this.props.visible !== false && this.errorAlert?.getClientRects().length) this.errorAlert.focus({ preventScroll: true });
-      });
-    }
-    failure() {
-      const { error, loadError, retryAction, busy } = this.state;
-      return (error || loadError) && h('div', { className: 'cx-alert cx-error cx-action-error', role: 'alert', tabIndex: -1, ref: el => { this.errorAlert = el; } }, icon('info'), h('span', null, error || loadError), button('重试', error ? retryAction : this.load, { disabled: busy, quiet: true, icon: 'refresh' }));
-    }
-    run = async (path, body, success) => {
-      if (this.state.busy) return;
-      this.setState({ busy: true, activeAction: path, error: '', retryAction: null, notice: '' }); const id = this.props.sessionId, epoch = this.epoch;
-      const active = () => this.alive && this.props.sessionId === id && this.epoch === epoch;
-      try { const result = await api(path + suffix(id), body); if (active()) { this.setState({ notice: success ? success(result) : result.queued ? '已加入后台队列。' : '已保存', ...(['/compact', '/compact-p', '/compact-f'].includes(path) ? { selected: [] } : {}) }); await this.load(); } }
-      catch (e) { if (active()) this.fail(e, () => this.run(path, body, success)); }
-      finally { if (active()) this.setState({ busy: false, activeAction: null }); }
-    };
-    changeMode = mode => {
-      const current = this.state.data?.compressionMode === 'adaptive' ? 'adaptive' : 'pipeline';
-      if (mode === current || this.state.busy || this.state.data?.manualOperation) return;
-      return this.run('/context/mode', { mode }, result => {
-        const savedMode = result.compressionMode === 'pipeline' || result.compressionMode === 'adaptive' ? result.compressionMode : mode;
-        this.setState(state => ({ data: { ...state.data, compressionMode: savedMode } }));
-        return '已切换为' + (savedMode === 'adaptive' ? '主动异步' : '原版异步') + '，本会话已保存。';
-      });
-    };
-    document = async (id, returnFocus = document.activeElement) => {
-      this.setState({ error: '', retryAction: null });
-      const sid = this.props.sessionId, ticket = ++this.documentTicket;
-      try { const detail = await api('/context/document' + suffix(sid) + '&id=' + encodeURIComponent(id)); if (this.alive && this.props.sessionId === sid && ticket === this.documentTicket) { this.documentFocus = returnFocus; this.setState({ detail }); } }
-      catch (e) { if (this.alive && this.props.sessionId === sid && ticket === this.documentTicket) this.fail(e, () => this.document(id, returnFocus)); }
-    };
-    readReview = async () => {
-      this.setState({ error: '', retryAction: null });
-      const sid = this.props.sessionId, ticket = ++this.reviewTicket;
-      try { const review = await api('/context/review' + suffix(sid)); if (this.alive && sid === this.props.sessionId && ticket === this.reviewTicket) this.setState({ review }); }
-      catch (e) { if (this.alive && sid === this.props.sessionId && ticket === this.reviewTicket) this.fail(e, this.readReview); }
-    };
-    reader() { return this.state.detail && h(DocumentReader, { record: this.state.detail, visible: this.props.visible, returnFocus: this.documentFocus, onClose: () => { this.documentTicket++; this.setState({ detail: null }); } }); }
-    select(id, checked) { this.setState(s => ({ selected: checked ? [...new Set([...s.selected, id])] : s.selected.filter(x => x !== id) })); }
-    render() {
-      const { data: d, notice, busy, selected, filter } = this.state;
-      const records = (d?.records || []).filter(r => !r.mergedInto);
-      const shown = records.filter(r => filter === 'all' || (filter === 'raw' ? r.mode === 'raw' : r.mode !== 'raw'));
-      const locked = busy || Boolean(d?.manualOperation);
-      const compressionMode = d?.compressionMode === 'adaptive' ? 'adaptive' : 'pipeline';
-      const adaptive = d?.adaptive || {}, isAdaptive = compressionMode === 'adaptive';
-      const fullRunning = d?.manualOperation === 'full' || this.state.activeAction === '/compact-f';
-      const ready = records.filter(r => r.live && r.mode === 'raw').length;
-      const retryLabel = kind => ({ 'waiting-main': '等待主会话成功后恢复', 'waiting-events': '等待新增事件后自动重试', manual: '重试已暂停，请手动重试', retrying: '等待自动重试' })[d?.retry?.[kind]];
-      const step = (text, state, running) => h('div', { className: 'cx-stage' }, h('span', { className: 'cx-dot ' + (running ? 'cx-pulse' : '') }), h('div', null, h('strong', null, text), h('small', null, state)));
-      return h('div', { className: 'cx-panel cx-context' }, heading('工作上下文', '整理长对话，保留原话与资料。', null, button(null, this.load, { icon: 'refresh', quiet: true, label: '刷新上下文' })),
-        h('div', { className: 'cx-body' }, this.failure(), alert(notice),
-          !this.props.sessionId ? empty('先选择一个会话', '这里会显示本会话的分段摘要与替换状态。') : !d ? empty('正在读取上下文', '正在连接当前会话的上下文记录。') : h(React.Fragment, null,
-            h('section', { className: 'cx-pipeline-card' },
-              h('div', { className: 'cx-row cx-compression-mode' }, h('span', { className: 'cx-eyebrow' }, '异步压缩'), segments('本会话异步压缩模式', compressionMode, [['pipeline', '原版异步'], ['adaptive', '主动异步']], this.changeMode, locked)),
-              h('p', { className: 'cx-hint cx-compression-hint' }, compressionMode === 'adaptive' ? '独立后台请求根据当前对话决定是否整理及整理范围；主模型继续工作。' : '后台预处理摘要，再由中枢决定替换；主模型继续工作。'),
-              compressionMode === 'adaptive' && h('p', { className: 'cx-hint cx-compression-hint' }, '尽量复用主请求前缀；缓存以提供方实际返回为准，后台调用仍产生用量。'),
-              h('div', { className: 'cx-row' }, h('span', { className: 'cx-eyebrow' }, '处理状态'), badge(names[d.scope?.scope] || '会话', d.scope?.scope === 'session' ? '' : 'blue')),
-              h('div', { className: 'cx-stages' }, isAdaptive ? step('检查对话', adaptive.running ? '正在判断' : adaptive.error ? '本次检查失败' : adaptive.lastDecision === 'skip' ? '暂不需要整理' : '等待新内容', adaptive.running) : step('整理摘要', d.preparing ? '正在整理' : retryLabel('prepare') || '等待新内容', d.preparing), icon('chevron', 12), isAdaptive ? step('准备替换', d.pending ? '结果已准备' : adaptive.lastDecision === 'stale' ? '结果已过期' : adaptive.lastDecision === 'compress' ? '已完成整理' : '等待整理结果', false) : step('准备替换', d.coordinating ? '正在判断范围' : retryLabel('coordinate') || (d.pending ? '结果已准备' : '等待新摘要'), d.coordinating), icon('chevron', 12), step('更新上下文', d.transactionPending ? '正在恢复' : '随下次请求更新', d.transactionPending)),
-              isAdaptive && (adaptive.error || adaptive.waitingReason || adaptive.reason) && h('p', { className: 'cx-hint', role: 'status' }, adaptive.error || adaptive.waitingReason || adaptive.reason),
-              isAdaptive && adaptive.cacheReadTokens != null && h('p', { className: 'cx-hint' }, '最近后台请求缓存读取：' + fmt(adaptive.cacheReadTokens) + ' tokens。'),
-              h('div', { className: 'cx-metrics' }, h('div', null, h('strong', null, fmt(records.length)), h('span', null, '分段摘要')), h('div', null, h('strong', null, fmt(ready)), h('span', null, '原文待替换')), h('div', null, h('strong', null, fmt(records.reduce((n, r) => n + (r.documentCount || 0) + (r.assetCount || 0), 0))), h('span', null, '详细资料存档'))),
-              h('div', { className: 'cx-row cx-pipeline-action' }, h('small', null, '只应用已有结果，不现场等待 AI。'), button('应用已准备结果', () => this.run('/compact', {}, r => r.queued ? '已排队，将在下一次请求边界应用。' : r.changed ? '替换已应用，原文仍在日志中。' : '没有可应用的结果，原文保持不变。'), { disabled: locked, primary: true, icon: 'layers' }))),
-            !isAdaptive && d.prepareDeferred && h('p', { className: 'cx-hint' }, '未达到预处理最低文本量：剩余 ' + fmt(d.prepareDeferred.events) + ' 条、约 ' + fmt(d.prepareDeferred.estimatedTokens) + ' tokens，留待下次触发。'),
-            section('未处理原文', '与已准备、待替换的摘要分开统计。', h('p', { className: 'cx-prose' }, (isAdaptive ? '未整理 ' : '待预处理 ') + fmt(d.backlog?.events) + ' 条 · 估算 ' + fmt(d.backlog?.estimatedTokens) + ' tokens；近期暂留 ' + fmt(d.backlog?.recentEvents) + ' 条。')),
-            d.lastReplacement?.stats && section('最近一次替换', '以下为同口径估算，不是提供方实际输入账单。', h('p', { className: 'cx-prose' }, '处理 ' + fmt(d.lastReplacement.stats.selectedRecords) + ' 段 → ' + fmt(d.lastReplacement.stats.resultRecords) + ' 段；替换 ' + fmt(d.lastReplacement.stats.currentMessages) + ' 条当前消息，覆盖 ' + fmt(d.lastReplacement.stats.originalEvents) + ' 条原始事件；估算节省 ' + fmt(d.lastReplacement.stats.estimatedSavedTokens) + ' tokens。')),
-            section('手动压缩', '压缩只改变当前上下文，原始日志和详细资料存档保留。', h(React.Fragment, null,
-              fullRunning && h('div', { className: 'cx-info', role: 'status' }, icon('clock'), h('p', null, '正在生成全量摘要…摘要生成成功后才替换原文。')),
-              d.manualQueued > 0 && h('p', { className: 'cx-hint', role: 'status' }, '有 ' + d.manualQueued + ' 项压缩操作等待下一次请求边界。'),
-              h('div', { className: 'cx-compact-choice' }, h('div', { className: 'cx-row' }, h('code', null, '/compact-p'), button('已处理片段仅摘要', () => this.run('/compact-p', {}, r => r.message), { disabled: locked || !records.some(r => r.live && r.mode !== 'brief'), icon: 'layers' })), h('p', { className: 'cx-hint' }, '全部已准备片段只保留摘要，不携带文档、图片、附件；未处理内容不变，不调用 AI。')),
-              h('div', { className: 'cx-compact-choice' }, h('div', { className: 'cx-row' }, h('code', null, '/compact-f'), button(fullRunning ? '全量压缩中…' : '全量压缩', () => this.run('/compact-f', {}, r => r.message), { disabled: locked, icon: fullRunning ? 'clock' : 'spark' })), h('p', { className: 'cx-hint' }, '调用 AI 将全部对话重新汇总为一份摘要，包含用户消息、工具结果、旧摘要及历史思考；保留前置 CoT、系统提示词、工具定义与用户手写全局背景。可能损失细节。')))),
-            fold('后台操作', isAdaptive ? '手动检查当前对话是否需要整理' : '手动触发预处理或中枢判断', h('div', { className: 'cx-actions' }, button(isAdaptive ? '检查是否整理' : '准备摘要', () => this.run('/context/prepare', {}), { disabled: locked || (isAdaptive ? adaptive.running : d.preparing), icon: 'context' }), !isAdaptive && button('运行中枢', () => this.run('/context/coordinate', {}), { disabled: locked || d.coordinating, icon: 'spark' }))),
-            h('div', { className: 'cx-list-head' }, h('h3', null, '分段摘要'), segments('筛选分段', filter, [['all', '全部'], ['raw', '原文'], ['applied', '已替换']], value => this.setState({ filter: value }))),
-            !shown.length ? empty(records.length ? '当前筛选没有内容' : '还没有分段摘要', records.length ? '切换“全部”查看其他记录。' : isAdaptive ? '后台决定整理后，这里会显示摘要及关联资料。' : '达到预处理频率后，这里会自动出现基础摘要和文档。') : h('div', { className: 'cx-list' }, ...shown.map(r => h('article', { className: 'cx-card cx-record ' + (selected.includes(r.id) ? 'cx-selected' : ''), key: r.id },
-              h('div', { className: 'cx-row' }, h('label', { className: 'cx-record-check' }, h('input', { type: 'checkbox', checked: selected.includes(r.id), disabled: !r.live || locked, onChange: e => this.select(r.id, e.target.checked), 'aria-label': '选择 ' + r.id }), h('time', null, date(r.timeStart) + ' — ' + time(r.timeEnd))), badge(r.live ? (r.kind === 'full' ? '全量摘要' : names[r.mode] || r.mode) : '历史存档', r.mode === 'raw' ? '' : 'blue')),
-              summaryPreview(r.summary), h('div', { className: 'cx-record-footer' }, h('small', { title: r.id }, h('code', null, r.id.slice(0, 8)), ' · ', rangeLabel(r.ranges)), button(`${r.documentCount || 0} 文档 · ${r.assetCount || 0} 附件`, () => this.document(r.id), { icon: 'context', quiet: true }))))),
-            !isAdaptive && fold('中枢最近的选择', d.review?.choices?.length ? `${d.review.choices.length} 项决定` : '还没有完成的判断', h('div', null,
-              ...(d.review?.choices || []).map((c, i) => h('div', { className: 'cx-decision', key: i }, badge(names[c.action] || c.action, 'blue'), h('code', null, c.ids?.map(id => id.slice(0, 8)).join('、')), c.reason && h('p', null, c.reason))),
-              d.review?.lastDiscard && h('p', { className: 'cx-hint' }, '资料更新后，过期决定已作废；不计为模型失败，也不触发强制重试。'),
-              button('查看中枢完整输入', this.readReview, { quiet: true, icon: 'context' }), this.state.review && h('pre', null, JSON.stringify(this.state.review.input, null, 2)))),
-            d.todoRefresh && h('p', { className: 'cx-hint' }, '上次压缩后已注入最新版 todo，并清理旧快照；预处理不读取 todo。用户原话与图片、文档同属详细资料。'),
-            fold('Trace 与替换记录', d.trace ? '已前置提供方暴露的推理文本' : '尚无前置推理', h('div', null,
-              h('p', { className: 'cx-hint' }, d.trace ? '来源事件 #' + d.trace.sourceSeq + (d.trace.truncated ? ' · 按设置截取' : ' · 原文本') : '没有已前置的推理文本；不会生成替代推理。'), d.lastReplacement && h('pre', null, JSON.stringify(d.lastReplacement, null, 2)),
-              ...(d.notices || []).slice().reverse().map((n, i) => h('p', { className: 'cx-log-line', key: i }, h('time', null, date(n.at)), ' ', n.text))))),
-          h('div', { className: 'cx-footnote' }, icon('info', 13), '退出当前上下文，不等于删除原始记录。')),
-        selected.length > 0 && h('footer', { className: 'cx-savebar cx-selection' }, h('span', null, '已选 ', h('strong', null, selected.length), ' 段'), h('div', { className: 'cx-actions' }, button('取消', () => this.setState({ selected: [] }), { quiet: true }), button('摘要＋详细资料', () => this.run('/compact', { ids: selected, mode: 'detail' }), { disabled: locked }), button('仅摘要', () => this.run('/compact', { ids: selected, mode: 'brief' }), { disabled: locked, primary: true }))), this.reader());
-    }
-  }
   class ComponentsPanel extends React.Component {
     state = { data: null, error: '', loadError: '', busy: false, paths: null, saved: '' };
     componentDidMount() {
@@ -252,19 +73,11 @@ export function createContextUI(React) {
       this.epoch = (this.epoch || 0) + 1;
       const patch = body.patch || {}, previous = this.state.data;
       const data = { ...previous, ...(typeof patch.componentAutoSetup === 'boolean' ? { automatic: patch.componentAutoSetup } : {}),
-        codegraph: { ...previous.codegraph, ...(typeof patch.codegraphEnabled === 'boolean' ? { enabled: patch.codegraphEnabled } : {}) },
-        computerUse: { ...previous.computerUse, ...(typeof patch.computerUseEnabled === 'boolean' ? { enabled: patch.computerUseEnabled } : {}) } };
+        codegraph: { ...previous.codegraph, ...(typeof patch.codegraphEnabled === 'boolean' ? { enabled: patch.codegraphEnabled } : {}) } };
       this.setState({ data, busy: true, error: '', saved: '' });
       try {
         const data = await this.call(body);
-        if (this.alive) this.setState(state => {
-          if (!body.patch || !Object.keys(body.patch).some(k => k !== 'computerUseEnabled' && k.startsWith('computerUse'))) return { data, saved: body.action === 'settings' ? '已保存' : '' };
-          // A response only commits the submitted draft. Preserve later typing
-          // and unrelated fields edited while the request was in flight.
-          const paths = Object.fromEntries(Object.entries(state.paths || {}).filter(([key, value]) => !Object.hasOwn(body.patch, key) || body.patch[key] !== value));
-          const dirty = Object.keys(paths).length > 0;
-          return { data, paths: dirty ? paths : null, saved: (data.computerUse.restartRequired ? '路径已保存，重启服务后生效。' : '路径已保存。') + (dirty ? '还有未保存的修改。' : '') };
-        });
+        if (this.alive) this.setState({ data, saved: body.action === 'settings' ? '已保存' : '' });
       }
       catch (error) { let actual = previous; try { actual = await this.call(); } catch {} if (this.alive) this.setState({ data: actual, error: error.message }); }
       finally { if (this.alive) this.setState({ busy: false }); }
@@ -274,41 +87,24 @@ export function createContextUI(React) {
     copy = async text => { try { await navigator.clipboard.writeText(text); this.setState({ saved: '已复制' }); } catch (error) { this.setState({ error: error.message }); } };
     row(title, ready, operation, hint, action) {
       const preparing = operation?.status === 'preparing', error = operation?.error;
-      return h('div', { className: 'cx-component-row' }, h('div', { className: 'cx-row' }, h('strong', null, title), badge(preparing ? '正在准备' : error ? '需要处理' : ready ? '已就绪' : ready == null ? '状态未知' : operation?.status === 'permissions-required' ? '待授权' : operation?.status === 'unsupported' ? '不支持' : operation?.pendingLabel || '待准备', ready && !error ? 'blue' : undefined)), h('p', { className: 'cx-hint' }, error || hint), !preparing && action);
+      return h('div', { className: 'cx-component-row' }, h('div', { className: 'cx-row' }, h('strong', null, title), badge(preparing ? '正在准备' : error ? '需要处理' : ready ? '已就绪' : '待准备', ready && !error ? 'blue' : undefined)), h('p', { className: 'cx-hint' }, error || hint), !preparing && action);
     }
     render() {
       const { data: d, error, loadError, busy, saved } = this.state;
       if (!d) return h('div', { className: 'cx-body' }, alert(error || loadError, true), empty(loadError ? '组件状态读取失败' : '正在检查基础组件', '安装、启动与权限集中在这里。', 'settings'), loadError && button('重试', () => this.poller?.refresh()));
-      const cg = d.codegraph, cu = d.computerUse, setup = cu.setup, native = setup?.native, extension = setup?.extension, install = extension?.installation;
-      const paths = { ...cu.paths, ...this.state.paths };
-      const retry = (component, label = '重新准备') => button(label, () => this.prepare(component), { disabled: busy || (component !== 'codegraph' && cu.restartRequired), quiet: true, icon: 'refresh' });
-      const nativeNeedsUpdate = native?.updateAvailable || native?.restartRequired || native?.repairRequired;
-      const nativeReady = native?.installed === true && !native.error && !nativeNeedsUpdate && (native.platform === 'win32' ? native.interactive && native.captureSupported : native.accessibility && native.screenRecording);
-      const connections = install?.connections || (extension?.browsers || []).filter(browser => browser.type === 'extension');
-      const browserHint = setup?.browser?.name === 'OpenCU Browser' ? '使用插件自有浏览器和独立配置，首次打开时启动。' : '使用配置的浏览器和独立配置，首次打开时启动。';
-      return h('div', { className: 'cx-body cx-components' }, alert(error || loadError || cu.error || cg.error, true),
+      const cg = d.codegraph;
+      const retry = (component, label = '重新准备') => button(label, () => this.prepare(component), { disabled: busy, quiet: true, icon: 'refresh' });
+      return h('div', { className: 'cx-body cx-components' }, alert(error || loadError || cg.error, true),
         h('p', { className: 'cx-hint' }, d.automatic ? '组件默认启用，运行依赖自动准备。开关立即保存；需要系统授权时会在下面提示。' : '启动时自动准备依赖已关闭，可在下方手动准备。开关立即保存。'),
-        cu.restartRequired && alert('自定义路径已变更，重启服务后生效；重启前暂停准备电脑操控组件。'),
         section('代码理解', '自动为当前项目建立索引，后续修改自动同步。', h(React.Fragment, null,
           this.toggle('codegraphEnabled', 'CodeGraph', cg.enabled, '无需全局安装或配置 MCP。索引保存在项目的 .codegraph 目录。'),
           cg.enabled && this.row('运行环境', cg.installed, cg.operation, cg.installed ? '已自动准备' : '正在准备适合本机的运行环境', !cg.installed || cg.operation?.error || cg.error ? retry('codegraph') : null),
           cg.enabled && !cg.projects.length && h('p', { className: 'cx-hint' }, '打开项目会话后自动开始准备。'),
           cg.enabled && cg.projects.map(p => h('div', { className: 'cx-component-project', key: p.path }, h('div', { className: 'cx-row' }, h('code', { className: 'cx-component-path' }, p.path), badge(p.status === 'ready' ? '索引就绪' : p.status === 'error' ? '准备失败' : '正在建索引')), p.error && h('p', { className: 'cx-hint' }, p.error), p.status === 'error' && button('重试索引', () => this.act({ action: 'index', path: p.path }), { disabled: busy, quiet: true }))))),
-        section('电脑操控', '浏览器、桌面控制和日常 Chrome 连接。', h(React.Fragment, null,
-          this.toggle('computerUseEnabled', 'Computer Use', cu.enabled, cu.settingsNamespace === 'opencu' ? '与独立 OpenCU 共用配置和运行时，开关同步生效。' : '准备完成后即可在对话中使用。'),
-          cu.enabled && this.row('内置浏览器', setup?.browser?.installed, { ...cu.operations.browser, error: cu.operations.browser?.error || setup?.browser?.error }, browserHint, !setup?.browser?.installed || setup?.browser?.error || cu.operations.browser?.error ? retry('browser', '安装浏览器') : null),
-          cu.enabled && (native?.supported ? this.row('桌面控制', native?.installed == null ? null : nativeReady, { ...cu.operations.native, ...(native.installing ? { status: 'preparing' } : {}), error: cu.operations.native?.error || native?.error, pendingLabel: nativeNeedsUpdate ? '待更新' : native.installed ? '待授权' : '待准备' },
-            native?.error || (!native?.installed ? '安装与当前平台匹配的预构建桌面控制程序。' : nativeNeedsUpdate ? '桌面控制程序需要更新或重启，请手动更新或修复。' : nativeReady ? '可操作所选应用' : native.platform === 'win32' ? '请保持桌面已登录并解锁。' : '请为 Oh My DSH Computer Use 开启辅助功能和屏幕录制权限。'),
-            h('div', { className: 'cx-actions' }, (!native.installed || nativeNeedsUpdate || cu.operations.native?.error) && retry('native', native.installed ? '更新或修复' : '安装桌面控制'), native.installed && native.platform !== 'win32' && !nativeReady && !nativeNeedsUpdate && button('打开系统权限设置', () => this.act({ action: 'permissions' }), { disabled: busy || cu.restartRequired, icon: 'settings' }))) : native ? h('p', { className: 'cx-hint' }, '此平台可使用浏览器；原生桌面控制暂不支持。') : this.row('桌面控制', null, cu.operations.native, '桌面控制状态暂时不可用。')),
-          cu.enabled && this.row('日常 Chrome', !!connections.length && !install?.reloadRequired, { ...cu.operations.extension, ...(install?.preparing ? { status: 'preparing' } : {}), error: cu.operations.extension?.error || extension?.error || install?.error, pendingLabel: install?.prepared ? '待连接' : '待准备' },
-            install?.reloadRequired ? '扩展已更新，请在 Chrome 扩展页重新加载。' : connections.length ? '已连接，可使用已有网页和登录状态。' : install?.prepared && install.migrated ? '旧版连接已迁移，扩展目录已保留。如果尚未连上，请在 Chrome 扩展页重新加载一次 Oh My DSH。' : install?.prepared ? '连接程序已准备好。首次在 Chrome 的 chrome://extensions 开启开发者模式，再加载下方目录。' : '自动准备连接程序；也可直接使用内置浏览器。',
-            install?.supported && (!install.prepared || extension?.error || cu.operations.extension?.error) ? retry('extension', install.superseded ? '切换 Chrome 到当前实例' : '准备 Chrome 连接') : null),
-          cu.enabled && install?.prepared && (!connections.length || install.reloadRequired) && h('div', { className: 'cx-component-project' }, h('code', { className: 'cx-component-path' }, install.extensionPath), h('div', { className: 'cx-actions' }, button('复制扩展目录', () => this.copy(install.extensionPath), { quiet: true }), button('复制扩展页地址', () => this.copy('chrome://extensions'), { quiet: true }))))),
-        fold('高级配置', '通常无需修改；自定义路径重启后生效。', h(React.Fragment, null,
+        section('电脑与浏览器', 'OpenCU 已内置；和独立安装共用一套工具、目标和预览。', h('p', { className: 'cx-hint' }, '在设置的“电脑与浏览器”和“浏览器偏好”中管理能力、权限、扩展与下载。直接在对话中交代任务，无需开启 CU 控制台。')),
+        fold('高级配置', 'CodeGraph 运行依赖。', h(React.Fragment, null,
           this.toggle('componentAutoSetup', '启动时自动准备依赖', d.automatic, '关闭后仍可使用上面的准备按钮。'),
-          ...[['computerUseBrowserExecutable', '浏览器程序路径'], ['computerUseChromeUserDataDir', 'Chrome 用户数据目录'], ['computerUseNativeBinary', '桌面控制程序路径'], ['computerUseNativeSocket', '桌面连接 Socket']].map(([key, label]) => field(label, h('input', { value: paths[key] || '', placeholder: '自动检测', onChange: e => { const value = e.target.value; this.setState(s => ({ paths: { ...s.paths, [key]: value }, saved: '' })); } }))),
-          button('保存自定义路径', () => this.act({ action: 'settings', patch: this.state.paths }), { disabled: busy || !this.state.paths }),
-          button('检查并准备所有组件', () => this.prepare(), { disabled: busy || (cu.enabled && cu.restartRequired), quiet: true, icon: 'refresh' }))),
+          button('检查并准备组件', () => this.prepare(), { disabled: busy, quiet: true, icon: 'refresh' }))),
         saved && h('p', { className: 'cx-save-status', role: 'status' }, saved));
     }
   }
@@ -408,6 +204,11 @@ export function createContextUI(React) {
         this.frequency(),
         section('预处理范围', '默认整窗处理，受保护内容保留，但不阻断范围。', this.toggle('preprocessBoundaries', '按消息边界分段', '默认关闭；开启恢复兼容分段。系统提示词、前置 CoT、近期保留区和完整工具往返始终受保护。')),
         section('自动运行', null, h('div', { className: 'cx-switches' }, this.toggle('contextEnabled', '后台预处理与中枢', '提前生成基础摘要和详细资料，再判断如何替换。'), this.toggle('automaticReplace', '自动应用已完成决定', '在请求边界应用；关闭后仍可手动替换。'))),
+        section('Auto Compact', '独立于宿主自动压缩，在 OMD 压缩模式下同样生效。达到阈值立即处理并应用，不等待下一次请求。', h(React.Fragment, null,
+          this.toggle('autoCompactEnabled', '启用 Auto Compact', '默认关闭。按当前上下文总 token 数触发，不受普通预处理频率、自动替换开关或冷却步数限制；工具往返与受保护提示词保持完整。'),
+          this.number('autoCompactThreshold', '触发阈值 · tokens', 1, '可设任意正整数。当前上下文达到或超过此值时启动；原始记录始终可回查。', 1, !c.autoCompactEnabled),
+          field('压缩内容', h('select', { value: c.autoCompactMode || 'detail', disabled: !c.autoCompactEnabled, onChange: e => this.set('autoCompactMode', e.target.value) },
+            h('option', { value: 'detail' }, '摘要＋资料'), h('option', { value: 'brief' }, '仅摘要')), '摘要＋资料保留详细文档与附件；仅摘要让资料退出当前上下文，但保留存档。'))),
         section('空闲预处理', '默认关闭；不影响按新事件数量触发的正常预处理，也不影响手动操作。', h(React.Fragment, null,
           this.toggle('idlePreprocessEnabled', '空闲时自动预处理', '仅在会话真正空闲且有待处理内容时触发；模型或工具运行中不计时。'),
           this.number('flushIdleMs', '空闲等待时间 · 秒', 0, '默认 90 秒；关闭开关会取消等待中的任务。已开始的任务正常结束，0 秒也表示禁用。', 1000, !c.idlePreprocessEnabled))),
@@ -500,7 +301,7 @@ export function createContextUI(React) {
       const active = () => this.alive && id === this.props.sessionId && ticket === this.revision;
       this.setState({ loading: true });
       try { const data = await api('/scope' + suffix(id)); if (active()) this.setState({ data, error: '' }); }
-      catch (e) { if (active()) this.setState({ error: e.message }); }
+      catch (e) { if (active()) this.setState({ data: null, error: e.message }); }
       finally { if (active()) this.setState({ loading: false }); }
     };
     change = async scope => {
@@ -508,15 +309,16 @@ export function createContextUI(React) {
       const id = this.props.sessionId, write = {};
       this.writing = write; ++this.revision;
       const active = () => this.alive && id === this.props.sessionId && this.writing === write;
-      this.setState({ busy: true, error: '' });
+      this.setState({ busy: true, loading: false, error: '' });
       try { const data = await api('/scope' + suffix(id), { scope }); if (active()) this.setState({ data }); }
       catch (e) {
         if (active()) {
           this.setState({ error: e.message });
           // Recover the actual selection without erasing the failed write.
-          try { const data = await api('/scope' + suffix(id)); if (active()) this.setState({ data }); } catch {}
+          try { const data = await api('/scope' + suffix(id)); if (active()) this.setState({ data }); }
+          catch (recoveryError) { if (active()) this.setState({ data: null, error: e.message + '；重新读取范围失败：' + recoveryError.message }); }
         }
-      } finally { if (active()) { this.writing = null; this.setState({ busy: false }); } }
+      } finally { if (active()) { this.writing = null; this.setState({ busy: false, loading: false }); } }
     };
     render() {
       const d = this.state.data;
@@ -527,14 +329,11 @@ export function createContextUI(React) {
     }
   }
   const ScopeChip = props => { const locked = props.useSessions(s => s.byId[props.sessionId]?.blank === false); return h(ScopeControl, { ...props, locked }); };
-  const PipelineSlot = props => { const { tab } = props.useTabInfo(); return h(PipelinePanel, { ...props, visible: tab.visible }); };
-  const DreamPanel=createDreamPanel(React,{api,suffix,heading,button,icon,field,section,alert,badge,empty,DocumentReader,ReadingView});
-  const SummarySlot = props => { const { tab } = props.useTabInfo(); return h(DreamPanel, { ...props, visible: tab.visible }); };
-  return { ContextSettings, ScopeChip, PipelinePanel: PipelineSlot, SummaryPanel: SummarySlot, applyStyle(ctx) {
+  return { ContextSettings, ScopeChip, applyStyle(ctx) {
     ctx.effect(() => {
       const style = document.createElement('style');
       style.dataset.plugin = 'trisoul-context-v1'; style.dataset.version = CONTEXT_UI_VERSION;
-      style.textContent = CONTEXT_CSS+DREAM_CSS; document.head.appendChild(style);
+      style.textContent = CONTEXT_CSS; document.head.appendChild(style);
       return () => style.remove();
     });
   } };
@@ -565,13 +364,16 @@ export const CONTEXT_CSS = `
 .cx-btn:hover:not(:disabled){background:var(--cx-hover);border-color:color-mix(in srgb,var(--cx-text) 22%,var(--cx-bg))}.cx-btn.cx-primary{background:#2864d7;border-color:#2864d7;color:#fff;box-shadow:0 1px 2px #15347110}.cx-btn.cx-primary:hover:not(:disabled){background:#2158c3;border-color:#2158c3}
 .cx-btn.cx-quiet{background:transparent;border-color:transparent;color:var(--cx-muted)}.cx-btn.cx-quiet:hover:not(:disabled){color:var(--cx-text);background:var(--cx-hover);border-color:transparent}
 .cx-btn:disabled{opacity:.45;cursor:default;box-shadow:none}.cx-btn.cx-primary:disabled{color:var(--cx-muted);background:var(--cx-soft);border-color:var(--cx-line);opacity:.8}
-.cx-panel button:focus-visible,.cx-panel summary:focus-visible,.cx-scope-chip:focus-within{outline:2px solid var(--cx-blue);outline-offset:3px}
+.cx-panel button:focus-visible,.cx-panel summary:focus-visible,.cx-navigation button:focus-visible,.cx-scope-chip:focus-within{outline:2px solid var(--cx-blue);outline-offset:3px}
 .cx-panel input:not([type=checkbox]),.cx-panel select,.cx-panel textarea{width:100%;min-width:0;border:1px solid var(--cx-line);border-radius:8px;padding:9px 11px;background:var(--cx-bg);color:var(--cx-text);font:inherit;font-size:12px;line-height:1.6;outline:none;transition:border-color .15s,box-shadow .15s}
 .cx-panel input:not([type=checkbox]):focus,.cx-panel select:focus,.cx-panel textarea:focus{border-color:var(--cx-blue);box-shadow:0 0 0 3px var(--cx-tint)}.cx-panel input::placeholder,.cx-panel textarea::placeholder{color:var(--cx-muted);opacity:.75}
 .cx-panel textarea{resize:vertical;line-height:1.9;min-height:150px}.cx-panel input[type=checkbox]{accent-color:#2864d7;width:14px;height:14px;margin:0;flex-shrink:0}.cx-panel input:disabled,.cx-panel textarea:disabled{opacity:.65}
 .cx-field{display:flex;flex-direction:column;gap:7px;min-width:0;margin:9px 0}.cx-field>span{font-size:11px;color:var(--cx-muted)}.cx-field small{font-size:10px}
 .cx-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 16px}.cx-fields{border:0;margin:0;padding:0;min-width:0}.cx-fields:disabled{opacity:.72}
 .cx-settings-form{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+.cx-navigation{display:flex;gap:3px;padding:7px 10px;border-bottom:1px solid var(--cx-line);flex-shrink:0;overflow:auto;scrollbar-width:none}
+.cx-navigation button{display:flex;align-items:center;justify-content:center;gap:6px;flex:1;min-width:0;white-space:nowrap;font:inherit;font-size:12px;color:var(--cx-muted);border:1px solid transparent;border-radius:8px;background:transparent;padding:8px 5px;cursor:pointer}
+.cx-navigation button[aria-current=page]{color:var(--cx-blue);background:var(--cx-tint);border-color:color-mix(in srgb,var(--cx-blue) 16%,var(--cx-bg));font-weight:600}.cx-navigation button:hover{background:var(--cx-hover)}
 .cx-tabs{display:flex;gap:24px;padding:0 22px;border-bottom:1px solid var(--cx-line);flex-shrink:0;overflow:auto;scrollbar-width:none}.cx-tabs button{border:0;border-bottom:2px solid transparent;background:transparent;color:var(--cx-muted);font:inherit;font-size:12px;cursor:pointer;padding:10px 0 12px;white-space:nowrap}
 .cx-tabs button[aria-current=page]{border-bottom-color:var(--cx-blue);color:var(--cx-blue);font-weight:600}
 .cx-segments{display:flex;min-width:0;padding:3px;gap:3px;background:var(--cx-hover);border-radius:9px}.cx-segments button{flex:1;border:1px solid transparent;border-radius:6px;color:var(--cx-muted);background:transparent;padding:7px 9px;font:inherit;font-size:12px;line-height:1.45;white-space:nowrap;cursor:pointer}

@@ -215,6 +215,10 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       const d = last.data
       r.excerpts = structuredClone(d.excerpts ?? [])
       r.tasks = structuredClone(d.tasks ?? tasksFromLegacy(d.todos ?? []))
+      // Absence of native provenance means unknown, including older snapshots.
+      for (const task of r.tasks) for (const link of task.links ?? []) {
+        if (link.lastRun && !Object.hasOwn(link.lastRun, 'execution')) link.lastRun.execution = null
+      }
       r.nextE = d.nextE ?? r.excerpts.length + 1
       r.nextT = d.nextT ?? r.tasks.length + 1
       r.nextL = d.nextL ?? 1

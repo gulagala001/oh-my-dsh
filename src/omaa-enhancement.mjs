@@ -1,6 +1,6 @@
+import { scopeOf } from '@deepseek-ai/dsh-scope';
 import { personalityText } from './cc-adaptation/personality.mjs';
 import { apply as applyCodegraph } from './codegraph-agent.mjs';
-import { registerComputerTools } from '#opencu/src/computer-use/tools.mjs';
 
 // Mount these sibling rows inside OMAA's workflowEngine-isolated Group. The
 // disabled native entries retain the host Loader's dependency resolver; only
@@ -17,12 +17,14 @@ export function omaaWorkflowComposition() {
 // Reuse the installed OMD runtime in the caller's preset scope. The preset
 // keeps its own prompt, tools, and compaction; no OMD main-agent is mounted.
 export async function installOmaaEnhancement(scope, computer) {
-  const before = new Set(scope.tools.schemas().map(tool => tool.name));
-  registerComputerTools(scope, computer);
+  const key = scopeOf(scope), before = new Set(scope.tools.schemas(key).map(tool => tool.name));
   await applyCodegraph(scope);
-  const names = scope.tools.schemas().map(tool => tool.name).filter(name => !before.has(name));
-  // CodeGraph's catalog can appear later; the two prefixes stay owned by OMD.
-  return [...new Set([...names, 'codegraph_index', 'computer_use', 'computer_use_reset'])];
+  const computerNames = await computer.installTools(scope);
+  const names = scope.tools.schemas(key).map(tool => tool.name).filter(name => !before.has(name));
+  // Return only names present in this scope's actual SDK view, including an
+  // owned CodeGraph index that may shadow an already visible global tool.
+  const visible = new Set(scope.tools.schemas(key).map(tool => tool.name));
+  return [...new Set([...names, ...computerNames, ...(visible.has('codegraph_index') ? ['codegraph_index'] : [])])];
 }
 
 export const omaaIdentityPrompt = hub => personalityText(hub.config());

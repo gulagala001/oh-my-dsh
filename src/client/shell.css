@@ -1,5 +1,5 @@
-/* DSH 0.2.1-alpha.1 shell. Use public data attributes first; the few module
-   selectors below match the installed host and are covered by frontend UI QA. */
+/* Use public data attributes first. The remaining module selectors belong to
+   the matching-host contract and need real DOM verification in central UI QA. */
 .trisoul-shell {
   --tx-shell-text: var(--dsw-alias-label-primary, CanvasText);
   --tx-shell-muted: var(--dsw-alias-label-secondary, GrayText);
@@ -15,6 +15,8 @@
 .trisoul-shell .wSkVaW_root {
   --dsh-chat-content-width: min(var(--dsh-chat-user-width, 760px), max(160px, calc(var(--dsh-conversation-column-width, 840px) - 64px)));
   --dsh-composer-card-max-width: calc(var(--dsh-chat-content-width) + 32px);
+  container-type: inline-size;
+  container-name: omd-conversation;
 }
 /* Bottom-only sticky positioning can follow the transcript upward when a
    disclosure collapses while its scroll offset is retained. Both edges keep
@@ -45,7 +47,6 @@
 .trisoul-shell .uV2eYG_add { background: transparent; width: 28px; height: 28px; color: var(--tx-shell-muted); }
 .trisoul-shell .uV2eYG_add:hover:not(:disabled) { background: var(--tx-shell-hover); }
 .trisoul-shell .uV2eYG_primary { width: 30px; height: 30px; transform: none; }
-.trisoul-shell [data-slot='conversation.composer.dock'] { display: grid !important; grid-template-columns: auto minmax(0, 1fr) auto; flex: 1; min-width: 0; width: auto; max-width: none; padding: 2px 4px 8px; box-sizing: border-box; }
 .trisoul-shell .pXSMma_headline { font-size: 27px; font-weight: 500; letter-spacing: -.6px; gap: 12px; margin-bottom: 20px; }
 .trisoul-shell .pXSMma_previewBadge { font-size: 11px; line-height: 18px; font-weight: 400; color: var(--tx-shell-muted); background: var(--tx-shell-hover); border: 0; }
 .trisoul-shell .pXSMma_workspace { color: var(--tx-shell-muted); font-size: 12px; }
@@ -74,42 +75,11 @@
   .trisoul-shell [data-composer-card] { border-radius: 16px; }
   .trisoul-shell .uV2eYG_row { gap: 5px; padding-inline: 8px; }
   .trisoul-shell :is(.uV2eYG_tools, .uV2eYG_modes, .uV2eYG_trailing) { gap: 4px; }
-  .trisoul-shell .tx-composer-dock { padding-inline: 2px; }
 }
 @media (max-width: 540px) {
   .trisoul-shell .wSkVaW_titleRow { flex-basis: 100%; }
   .trisoul-shell .wSkVaW_tabs { margin-left: 0; }
 }
-/* Reveal the original host statistics on demand; keep their live popovers. */
-.trisoul-shell :has(> [data-slot='conversation.composer.dock']) { display: flex; align-items: flex-start; gap: 8px; width: min(var(--dsh-composer-card-max-width), calc(100% - 32px)); box-sizing: border-box; }
-.trisoul-shell [data-slot='conversation.composer.dock'] { align-items: center; gap: 3px 10px; }
-.trisoul-shell [data-slot='conversation.composer.dock'] + .JObwrW_root { padding-top: 6px; }
-.trisoul-shell .tx-composer-dock { display: contents; }
-.trisoul-shell .tx-composer-tools { grid-column: 1 / 3; grid-row: 1; }
-.trisoul-shell .tx-usage-toggle { grid-column: 3; grid-row: 1; justify-self: end; }
-.trisoul-shell :is([data-composer-stat], [data-composer-stats]) { grid-row: 2; min-width: 0; margin: 0; padding: 4px 2px; opacity: 1; }
-.trisoul-shell [data-composer-stat='activity'] { grid-column: 1; }
-.trisoul-shell [data-composer-stat='usage'] { grid-column: 2; }
-.trisoul-shell .tx-stats-line { grid-column: 3; grid-row: 2; justify-self: end; white-space: nowrap; }
-.trisoul-shell [data-composer-stats] { grid-column: 1 / 3; justify-content: flex-start; flex-wrap: wrap; gap: 8px; }
-/* A narrow dock shares one grid with the native context control. Keep every
-   action in its original DOM and let the CU preview use the whole row. */
-@media (max-width: 540px) {
-  .trisoul-shell :has(> [data-slot='conversation.composer.dock']) { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 3px 6px; padding: 2px 4px 8px; }
-  .trisoul-shell [data-slot='conversation.composer.dock'] { display: contents !important; }
-  .trisoul-shell .tx-composer-tools { grid-column: 1 / -1; grid-row: 1; align-items: flex-start; }
-  .trisoul-shell .tx-composer-tools > .tx-cu-chip { flex: 1; min-width: 0; }
-  .trisoul-shell .tx-workbench-entry { width: 28px; flex: none; justify-content: center; padding-inline: 4px; }
-  .trisoul-shell .tx-workbench-entry > span,
-  .trisoul-shell .tx-cu-entry > span { display: none; }
-  .trisoul-shell .tx-cu-entry { width: 28px; justify-content: center; padding-inline: 4px; }
-  .trisoul-shell .tx-usage-toggle { grid-column: 1; grid-row: 2; justify-self: start; }
-  .trisoul-shell [data-slot='conversation.composer.dock'] + .JObwrW_root { grid-column: 3; grid-row: 2; padding-top: 0; justify-self: end; }
-  .trisoul-shell [data-composer-stat] { grid-row: 3; }
-  .trisoul-shell .tx-stats-line { grid-column: 3; grid-row: 3; }
-}
-.trisoul-shell [data-composer-stat] > :first-child { padding: 2px 4px; font-size: 11px; gap: 5px; }
-.trisoul-shell :is([data-composer-stat], [data-composer-stats]) svg { width: 13px; height: 13px; }
 /* Process details read as a disclosure, with the response itself in focus. */
 .trisoul-shell .l_V-RG_root { height: 26px; border-bottom: 0; padding-bottom: 0; }
 .trisoul-shell .l_V-RG_label { font-size: 12px; color: var(--tx-shell-muted); }

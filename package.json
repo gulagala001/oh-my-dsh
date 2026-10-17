@@ -1,6 +1,6 @@
 {
   "name": "trisoul_x",
-  "version": "0.2.1-alpha.2.omd.0.16.0",
+  "version": "0.2.1-rc.2.omd.0.17.3",
   "private": true,
   "type": "module",
   "description": "DSH 增强插件：长上下文、任务验证、提示词优化、代码理解、电脑操作与独立主题、配色和背景。",
@@ -28,51 +28,45 @@
     "dev": "node scripts/build.mjs && node scripts/start.mjs",
     "offline:prepare": "node scripts/prepare-offline.mjs",
     "offline:check": "node scripts/check-offline.mjs",
-    "prepare:computer-use": "node scripts/prepare-computer-use.mjs",
-    "postinstall": "node scripts/prepare-computer-use.mjs",
-    "test": "node --test test/*.test.mjs",
+    "test": "node scripts/test-ci.mjs run core",
+    "test:all": "node scripts/test-ci.mjs run all",
+    "test:smoke": "node scripts/test-ci.mjs run core",
     "test:context": "node --test test/context-*.test.mjs",
-    "test:simulator": "node --test --test-concurrency=1 test/simulator-*.test.mjs",
-    "test:conversation": "node scripts/simulate.mjs --all",
     "simulate": "node scripts/simulate.mjs",
     "plugins:submissions": "node scripts/plugin-submissions.mjs",
     "prepack": "node scripts/check-public-files.mjs"
   },
   "dependencies": {
     "@colbymchenry/codegraph": "1.6.0",
-    "@deepseek-ai/dsh-mcp-client": "0.2.1-alpha.2",
-    "@dnd-kit/core": "6.3.1",
-    "@electron-internal/extract-zip": "1.0.5",
+    "@deepseek-ai/dsh-mcp-client": "0.2.1-rc.2",
     "@modelcontextprotocol/client": "2.0.0",
     "acorn": "8.18.0",
-    "csv-parse": "6.1.0",
     "diff": "9.0.0",
-    "electron": "44.7.0",
     "html-to-text": "10.0.1",
     "htmlparser2": "10.1.0",
     "marked": "18.0.12",
     "playwright": "1.63.0",
-    "sharp": "0.35.4",
+    "sharp": "0.35.5",
     "ws": "8.21.3",
     "yaml": "2.8.1",
-    "yauzl": "3.4.0",
-    "yazl": "3.3.1",
-    "zod": "4.5.4",
-    "zxing-wasm": "3.1.2"
+    "zod": "4.5.4"
   },
   "engines": {
-    "node": ">=22.19"
+    "node": ">=22.19",
+    "dsh": "0.2.1-rc.2"
   },
   "main": "src/index.mjs",
   "exports": {
     ".": "./src/index.mjs",
     "./agent": "./src/dsh-agent.mjs",
+    "./opencu": "./vendor/opencu/src/dsh/index.mjs",
     "./codegraph": "./src/codegraph-agent.mjs",
     "./client": "./lib/client.js",
     "./package.json": "./package.json",
     "./ptc": "./src/ptc.mjs",
     "./host/*": "./lib/host/*.mjs",
-    "./host/ui-chat": "./vendor/opencu/src/host/ui-chat.mjs"
+    "./host/ui-chat": "./src/host/ui-chat.mjs",
+    "./deepseek-workbench": "./plugins/deepseek-workbench/src/index.mjs"
   },
   "dsh": {
     "bundle": {
@@ -84,7 +78,10 @@
     "client": {
       "platform": "web",
       "inject": [
+        "@deepseek-ai/dsh-client-connection",
         "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-primitives",
         "@deepseek-ai/dsh-client-ui-theme",
         "@deepseek-ai/dsh-client-ui-sidebar-right",
         "@deepseek-ai/dsh-client-ui-sidebar",
@@ -109,46 +106,50 @@
     "cordis.patch.yml",
     "README.md",
     "README_EN.md",
+    "plugins",
     "CONTRIBUTING.md",
     "scripts",
     "THIRD_PARTY_NOTICES.md",
     "docs",
     "vendor",
+    "!vendor/opencu/lib/client.js",
     "release-manifest.json",
     "CHANGELOG.md"
   ],
   "devDependencies": {
-    "@deepseek-ai/cordis": "4.0.5-alpha.1",
-    "@deepseek-ai/dsh": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-attachment": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-brand": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-compaction": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-jobs": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-llm": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-output-retention": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-sandbox": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-scope": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-session": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-session-persistence-jsonl": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-shell": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-subagent": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-timeout": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-tools": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-util-values": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-workflow": "0.2.1-alpha.2",
-    "@deepseek-ai/schemastery": "3.18.5-alpha.1",
+    "@deepseek-ai/cordis": "4.0.5",
+    "@deepseek-ai/dsh": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-attachment": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-brand": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-compaction": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-jobs": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-llm": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-output-retention": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-sandbox": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-scope": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-session": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-session-persistence-jsonl": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-shell": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-subagent": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-timeout": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-util-values": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-workflow": "0.2.1-rc.2",
+    "@deepseek-ai/schemastery": "3.18.5",
     "@mermaid-js/tiny": "12.0.0",
     "esbuild": "0.25.12",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "typescript": "6.0.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "4.0.5-alpha.1",
-    "@deepseek-ai/dsh-attachment": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-compaction": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-llm": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-tools": "0.2.1-alpha.2",
-    "@deepseek-ai/schemastery": "3.18.5-alpha.1"
+    "@deepseek-ai/cordis": "4.0.5",
+    "@deepseek-ai/dsh-attachment": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-compaction": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-llm": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-scope": "0.2.1-rc.2",
+    "@deepseek-ai/schemastery": "3.18.5"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {
@@ -171,9 +172,7 @@
     }
   },
   "imports": {
-    "#opencu/integration": "./vendor/opencu/src/integration.mjs",
-    "#opencu/client-source": "./vendor/opencu/src/client/computer-use.jsx",
+    "#opencu/integration": "./vendor/opencu/src/dsh/index.mjs",
     "#opencu/*": "./vendor/opencu/*"
-  },
-  "omdReleaseStatus": "unpublished"
+  }
 }
