@@ -30,6 +30,7 @@ jobs:
       - run: node scripts/check-public-files.mjs
       - uses: pnpm/action-setup@v6
       - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm docs:build
       - uses: actions/upload-pages-artifact@v4
         if: github.ref == 'refs/heads/main'
