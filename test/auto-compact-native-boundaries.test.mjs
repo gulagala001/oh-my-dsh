@@ -24,7 +24,7 @@ async function fixture(t) {
     message: createSystemMessage('Protected host instructions.') }, { surfaceOp: 'append' });
   const user = text => session.append('user/message', createUserMessage({ source: { kind: 'user' },
     content: [{ type: 'text', text }] }), { surfaceOp: 'append' });
-  const assistant = content => session.append('assistant/message', { turn: 1, step: 1,
+  const assistant = content => session.append('assistant/message', { turn: 1, step: 1, stream: [],
     message: createMessage({ role: 'assistant', source: { kind: 'model', provider: 'fixture', model: 'fixture' }, content }) }, { surfaceOp: 'append' });
   const receipt = (callId, text) => session.append('tool/result', { turn: 1, step: 1,
     message: createToolResultMessage({ callId, content: [{ type: 'text', text }], isError: false }) }, { surfaceOp: 'append' });
