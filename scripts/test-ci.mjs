@@ -7,6 +7,7 @@ const core = [
   'file-upload-compat', 'context-original-search-boundary',
 ].map(name => `test/${name}.test.mjs`);
 core.push('plugins/deepseek-workbench/test/ui-adapter.test.mjs');
+core.push('test/opencu-browser-generation.test.mjs');
 
 const [command = 'run', suite = 'core', shard = '1/1'] = process.argv.slice(2);
 if (command === 'matrix') {
