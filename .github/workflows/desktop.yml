@@ -19,6 +19,8 @@ jobs:
       matrix: ${{ steps.release.outputs.matrix }}
     steps:
       - uses: actions/checkout@v7
+      - name: Check Desktop release eligibility regressions
+        run: node --test test/desktop-release-eligibility.test.mjs test/build-opencu-imports.test.mjs
       - id: release
         name: Check whether this host has official desktop packages
         run: |
@@ -26,9 +28,10 @@ jobs:
           import { readFileSync, appendFileSync } from 'node:fs';
           const version = JSON.parse(readFileSync('package.json')).devDependencies['@deepseek-ai/dsh'];
           const releases = JSON.parse(readFileSync('scripts/desktop-releases.json')).releases;
-          if (version !== '0.2.1-alpha.2') throw Error('Non-CU Desktop requires the matching alpha.2 SDK; do not retarget this checkout.');
+          if (version !== '0.2.1-rc.2') throw Error('Desktop requires the verified 0.2.1-rc.2 SDK; do not retarget this checkout.');
           const targets = [{ os: 'windows-latest', target: 'win-x64' }, { os: 'macos-latest', target: 'mac-arm64' }];
           const include = targets.filter(({ target }) => Boolean(releases[version]?.[target]));
+          if (include.length !== targets.length) throw Error(`Missing verified official Desktop package metadata for DSH ${version}; both targets are required.`);
           appendFileSync(process.env.GITHUB_OUTPUT, `available=${include.length > 0}\nmatrix=${JSON.stringify({ include })}\n`);
           for (const { target } of targets.filter(row => !include.includes(row))) {
             console.log(`::notice::Desktop package build NOT RUN: no verified package for DSH ${version}/${target}.`);
