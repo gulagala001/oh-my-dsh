@@ -270,12 +270,6 @@ function sameReferences<T>(left: readonly T[], right: readonly T[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index])
 }
 
-function awaitingAnswer(block: ToolCallBlock): boolean {
-  if (!('kind' in block) && block.phase === 'start'
-    && ['ask_user_question', 'request_user_input', 'exit_plan_mode'].includes(block.name)) return true
-  return block.subCalls.some(awaitingAnswer)
-}
-
 function interruption(context: ConversationNodeContext<ToolState>): { seq: number; time: number } | undefined {
   const location = context.start?.location
   if (location?.kind === 'step' && location.step.status === 'closed') return location.step.end
@@ -352,10 +346,9 @@ export const toolDefinition: ConversationNodeDefinition<ToolState> = {
     const visibility = preparing && interruptedAt !== undefined ? 'hidden' : 'visible'
     const location = contextLocation(context)
     const data = current?.data.root === projected ? current.data : { root: projected } satisfies ToolChatData
-    const groupTree = awaitingAnswer(projected) ? 'turn' : undefined
     if (current?.data === data && current.anchorSeq === anchor
-      && current.visibility === visibility && current.location === location && current.groupTree === groupTree) return current
-    return chatNode(context, 'tool-call', anchor, data, { visibility, location, groupTree })
+      && current.visibility === visibility && current.location === location) return current
+    return chatNode(context, 'tool-call', anchor, data, { visibility, location })
   },
 }
 

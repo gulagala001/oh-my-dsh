@@ -4,4 +4,4 @@
 
 `src/runtime.mjs` creates the composite and controller. `src/dsh/runtime.mjs` owns the controller and, where enabled, the extension-only loopback bridge. No external service or standalone page is required. The plugin's bridge owns its random port and private connection configuration; it closes only after successful input release and backend shutdown.
 
-Extension download events are browser-wide metadata, not local deliverable files. They remain metadata-only until explicitly imported and validated.
+Extension download events are browser-wide metadata, not local deliverable files. They remain metadata-only until explicitly imported and validated. Existing real headless browser verification does not verify real extension navigation, disconnect release, or extension file import.

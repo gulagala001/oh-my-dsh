@@ -1,6 +1,6 @@
 # OpenCU Chrome / Edge 本地连接扩展
 
-从零实现的 Manifest V3 unpacked 扩展和无依赖 Node ESM HTTP 桥。不会安装 Chrome、触碰已有 extension/profile 或更新当前 DSH。Chrome / Chromium 最低 118；Edge 使用同一 Chromium 扩展 API。
+从零实现的 Manifest V3 unpacked 扩展和无依赖 Node ESM HTTP 桥。不会安装 Chrome、触碰已有 extension/profile 或更新当前 DSH。Chrome / Chromium 最低 118；Edge 使用同一 Chromium 扩展 API，但未实机验收。
 
 ## 安装与授权
 
@@ -77,8 +77,22 @@ await extension.act(tab, {
 
 点击/Unicode type/fill/key/scroll/drag 使用官方 `chrome.debugger` CDP Input。fill 先选择真实控件文本，再用 Input.insertText 替换。macOS 的组合键同时携带原生编辑命令，Cmd+A、Shift 导航及词／行删除作用于真实编辑器，网页仍可 preventDefault；自动标记使用实际键值。滚轮标记按坐标与增量一次匹配，在提交结算后开始有效期，提交前取消会移除标记。`press` 支持单独 `+` 和 `Control++` 等加号组合，临时组合只释放本次新增的按键，保留此前显式持有的修饰键。`set_value` 使用 native DOM setter 与 **untrusted** input/change 事件，返回 `inputMode:'synthetic-dom'`；自定义网站可能忽略，不应把此操作当作 OS 输入成功。DOM 内容脚本不使用 `.click()` 冒充真实点击。cursor 是 pointer-events:none、aria-hidden 的产品指针，不截获用户点击；释放移除。
 
+## 已实际验证
+
+2026-10-16：真实隔离 Chrome 自动弹窗，原生单击「允许并记住」；重建本地服务及关闭再启动同一隔离浏览器均自动恢复，无二次点击；安装实例不变，重连 epoch 更新，浏览器重启 browserInstanceId 更新。HTTP 配对定点覆盖摘要存储、撤销、拒绝、坏网页 Origin 和旧会话不重放；Edge 与整机重启未实机运行。
+
+历史 2026-10-13：
+
+- `node --check extension/background.js`、`node --check extension/content.js`。
+- `node --test test/extension-protocol.test.mjs`：网站 Origin/坏 token/无授权拒绝、epoch 隔离、下载事件幂等与服务重建后读取、Retina + preview 缩放映射边界。
+- `OPENCU_EXTENSION_REAL=1 node --test test/extension-protocol.test.mjs test/extension-real.test.mjs`：最终退出 0，真实隔离 Google Chrome for Testing 153，独立 profile + 下载目录；MV3 加载、主动连接、禁止内部页、2× viewport截图按 CSS-sized preview 精准点击、页面 isTrusted:true、中文 type/fill、Enter、合成 set_value、拖拽/滚动旧截图拒绝、真实下载路径/文件内容、navigate/back/forward/reload document 更新、held key/button 持久与释放、释放后重新观察、用户断开。
+- 额外真实操作：Playwright 持有同标签时返回 TARGET_BUSY；浏览器重启后未授权且桥 inventory 为空；native AX 获取成功。未触碰用户当前 Chrome 扩展/profile 或当前 DSH。
+
+少量实操测试为 opt-in，不加入默认大套回归。测试专用 launch flags 关闭 Chromium 后台网络及 local-network checks，避免新隔离 profile 的后台服务干扰本地夹具；不是产品安装要求。测试 profile 在本目录 `.verification-*` 下，仅测试会产生，打包必须排除/清理它们。
+
 ## 明确限制
 
+- Edge、Windows/多屏/不同系统缩放、实际账号/复杂真实网站、Chrome debugger 提示条取消、MV3 被强制终止时 held 输入释放尚未实机验收；实现持久 held 状态和 fail-closed 恢复，不等于已验收。
 - DOM 数字元素覆盖主文档和 open shadow roots；closed shadow / cross-origin iframe 通过新截图坐标操作，非完整 native AX-to-element 定位。native AX 返回 CDP node/backendDOMNodeId，仅观察用。
 - viewport 截图，不支持 fullPage 或 pinch-zoom screenshot 操作；不提供 Playwright locator/evaluate 能力，不改 Playwright 全局设置。
 - 下载 API 没有可靠 tabId，仅连接授权期间 browser-wide 事件；不自动读取本机任意路径、不替换文件 provider、不处理 upload/dialog/clipboard。Chrome downloads 中的 filename 是实际路径；跨设备交付需主服务后续授权文件桥。
