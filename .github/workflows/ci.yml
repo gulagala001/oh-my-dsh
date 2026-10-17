@@ -29,3 +29,5 @@ jobs:
       - run: node scripts/check-public-files.mjs
       - run: pnpm build
       - run: pnpm test
+      - name: Auto Compact surface-index regression
+        run: node --test test/auto-compact-surface-index.test.mjs
