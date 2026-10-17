@@ -1,5 +1,5 @@
 import React, { useSyncExternalStore } from 'react';
-import { decorateSlotComponent } from '#opencu/src/client/slot-decoration.mjs';
+import { decorateSlotComponent } from '../../slot-decoration.mjs';
 
 // Decorate the host's actual brand seats. No replacement navigation or shadow
 // settings state: switching skins immediately restores the original occupants.

@@ -2,32 +2,88 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
+import { monitorActivityFingerprint } from './monitor-activity.mjs';
 
 const fields = ['inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'reasoningTokens', 'totalTokens'];
-const additive = ['calls', 'errors', 'cancelled', 'unmetered', 'inputUnreported', 'cacheUnreported', 'durationMs', 'inputTotalTokens', ...fields];
+const measurements = ['durationMs', 'inputTotalTokens', 'knownInputTokens', 'knownTotalTokens', 'cacheMeasuredInputTokens', 'cacheMeasuredReadTokens', ...fields];
+const additive = ['calls', 'errors', 'cancelled', 'unmetered', 'usageUnreported', 'totalUnreported', 'outputUnreported', 'cacheMeasuredCalls',
+  'inputUnreported', 'inputBucketUnreported', 'cacheUnreported', 'cacheWriteUnreported', 'durationUnreported', ...measurements];
 const number = value => Number.isFinite(value) && value >= 0 ? value : null;
 const text = (value, limit = 256) => typeof value === 'string' ? value.slice(0, limit) : null;
 const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const inputSQL = `CASE WHEN totalTokens>=outputTokens THEN totalTokens-outputTokens
   ELSE inputTokens+cacheReadTokens+cacheWriteTokens END`;
+// Sum known disjoint buckets per call, not aggregate exact-call subtotals: the
+// latter silently omit partial receipts and can mix cache numerator/denominator.
+const knownInputSQL = `CASE WHEN (${inputSQL}) IS NOT NULL THEN (${inputSQL})
+  WHEN inputTokens IS NOT NULL OR cacheReadTokens IS NOT NULL OR cacheWriteTokens IS NOT NULL
+  THEN COALESCE(inputTokens,0)+COALESCE(cacheReadTokens,0)+COALESCE(cacheWriteTokens,0) END`;
+const knownTotalSQL = `CASE WHEN totalTokens IS NOT NULL THEN totalTokens
+  WHEN (${knownInputSQL}) IS NOT NULL OR outputTokens IS NOT NULL
+  THEN COALESCE((${knownInputSQL}),0)+COALESCE(outputTokens,0) END`;
+// Keep both sides of the hit rate on the same valid receipts. Missing writes
+// are fine when the receipt independently establishes the exact input total.
+const cacheMeasuredSQL = `(${inputSQL})>0 AND cacheReadTokens IS NOT NULL AND cacheReadTokens<=(${inputSQL})
+  AND COALESCE(inputTokens,0)+cacheReadTokens+COALESCE(cacheWriteTokens,0)<=(${inputSQL})
+  AND (inputTokens IS NULL OR cacheWriteTokens IS NULL OR inputTokens+cacheReadTokens+cacheWriteTokens=(${inputSQL}))
+  AND (totalTokens IS NULL OR outputTokens IS NULL OR totalTokens>=outputTokens)`;
 const metricsSQL = `COUNT(*) calls, COALESCE(SUM(status='error'),0) errors,
+  COALESCE(SUM(CASE WHEN ${cacheMeasuredSQL} THEN 1 ELSE 0 END),0) cacheMeasuredCalls,
+  CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(CASE WHEN ${cacheMeasuredSQL} THEN (${inputSQL}) END) END cacheMeasuredInputTokens,
+  CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(CASE WHEN ${cacheMeasuredSQL} THEN cacheReadTokens END) END cacheMeasuredReadTokens,
   COALESCE(SUM(status='cancelled'),0) cancelled, COALESCE(SUM(totalTokens IS NULL OR outputTokens IS NULL OR (${inputSQL}) IS NULL),0) unmetered,
-  COALESCE(SUM(cacheReadTokens IS NULL),0) cacheUnreported, COALESCE(SUM(durationMs),0) durationMs,
-  COALESCE(SUM((${inputSQL}) IS NULL),0) inputUnreported,
+  COALESCE(SUM((${knownTotalSQL}) IS NULL),0) usageUnreported,
+  COALESCE(SUM(totalTokens IS NULL),0) totalUnreported, COALESCE(SUM(outputTokens IS NULL),0) outputUnreported,
+  COALESCE(SUM(inputTokens IS NULL),0) inputBucketUnreported,
+  COALESCE(SUM(cacheReadTokens IS NULL),0) cacheUnreported, COALESCE(SUM(cacheWriteTokens IS NULL),0) cacheWriteUnreported,
+  CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(durationMs) END durationMs,
+  COALESCE(SUM(durationMs IS NULL),0) durationUnreported, COALESCE(SUM((${inputSQL}) IS NULL),0) inputUnreported,
   CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(${inputSQL}) END inputTotalTokens,
+  CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(${knownInputSQL}) END knownInputTokens,
+  CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(${knownTotalSQL}) END knownTotalTokens,
   ${fields.map(key => `CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(${key}) END ${key}`).join(',')},
   CASE WHEN COUNT(*)=0 THEN 0 ELSE MAX(${inputSQL}) END peakContext`;
 
+const groupedMetricsSQL = [[cacheMeasuredSQL, '_cacheMeasured'], [knownTotalSQL, '_knownTotal'],
+  [knownInputSQL, '_knownInput'], [inputSQL, '_inputTotal']].reduce((sql, [expression, column]) => sql.replaceAll(expression, column), metricsSQL);
+const metricGroupsSQL = [['totals', null], ['components', 'kind'], ['models', 'provider,model'],
+  ['providers', 'provider'], ['sessions', 'sessionId']].map(([group, column]) => {
+  const keys = group === 'models' ? 'NULL _key,provider _provider,model _model' : `${column || 'NULL'} _key,NULL _provider,NULL _model`;
+  const select = `SELECT '${group}' _group,${keys},${groupedMetricsSQL} FROM measured`;
+  return column ? `SELECT * FROM (${select} GROUP BY ${column} ORDER BY knownTotalTokens DESC)` : select;
+}).join(' UNION ALL ');
+function groupedMetrics(db, where, args) {
+  // Reuse derived receipt values across all groups within this read snapshot,
+  // without retaining error text or other activity-only columns in the temporary rows.
+  const rows = db.prepare(`WITH measured AS MATERIALIZED (SELECT kind,provider,model,sessionId,status,durationMs,${fields.join(',')},${inputSQL} _inputTotal,${knownInputSQL} _knownInput,
+    ${knownTotalSQL} _knownTotal,${cacheMeasuredSQL} _cacheMeasured FROM calls WHERE ${where}) ${metricGroupsSQL}`).all(...args);
+  const groups = { totals: [], components: [], models: [], providers: [], sessions: [] };
+  for (const row of rows) {
+    const { _group, _key, _provider, _model, ...metrics } = row;
+    const value = _group === 'totals' ? metrics : _group === 'models'
+      ? { key: JSON.stringify([_provider, _model]), provider: _provider, model: _model, ...metrics } : { key: _key, ...metrics };
+    groups[_group].push(_group === 'models' ? value : Object.assign(Object.create(Object.getPrototypeOf(row)), value));
+  }
+  const { totals: [totals], ...result } = groups;
+  return { totals, ...result };
+}
+
+// Public aggregate contract: durationMs: null | number; durationUnreported: number.
+// Empty ranges and measured zero stay 0; calls without readings stay null.
+// Mixed readings retain a known subtotal and count uncovered calls separately.
 export const emptyMonitorMetric = () => Object.fromEntries([...additive, 'peakContext'].map(key => [key, 0]));
 export function addMonitorMetric(target, value) {
-  const calls = target.calls || 0;
+  const calls = target.calls || 0, nextCalls = value?.calls || 0;
+  const durationUnreported = number(target.durationUnreported) ?? (number(target.durationMs) === null ? calls : 0);
   for (const key of additive) {
-    if (fields.includes(key) || key === 'inputTotalTokens') {
-      const before = calls ? number(target[key]) : null, next = value?.calls ? number(value[key]) : null;
-      target[key] = before === null && next === null ? null : (before || 0) + (next || 0);
+    if (measurements.includes(key)) {
+      const before = calls ? number(target[key]) : null, next = nextCalls ? number(value[key]) : null;
+      target[key] = before === null && next === null ? (key === 'durationMs' && !calls && !nextCalls ? 0 : null) : (before || 0) + (next || 0);
+    } else if (key === 'durationUnreported') {
+      target[key] = durationUnreported + (number(value?.[key]) ?? (number(value?.durationMs) === null ? nextCalls : 0));
     } else target[key] = (target[key] || 0) + (number(value?.[key]) || 0);
   }
-  const before = calls ? number(target.peakContext) : null, next = value?.calls ? number(value.peakContext) : null;
+  const before = calls ? number(target.peakContext) : null, next = nextCalls ? number(value.peakContext) : null;
   target.peakContext = before === null && next === null ? null : Math.max(before || 0, next || 0);
   return target;
 }
@@ -71,10 +127,20 @@ export function monitorQuery(params, now = Date.now()) {
   return { range, period, status, limit, from, to: now, session: text(get('session')), cursor: get('cursor') || '', ...filter };
 }
 
+export function monitorEventQuery(params, now = Date.now()) {
+  const get = key => params instanceof URLSearchParams ? params.get(key) : params?.[key];
+  const base = monitorQuery({ range: get('range'), period: get('period'), limit: get('limit') ?? 20, session: get('session') }, now);
+  const status = get('status') || 'all', kind = get('kind') || '', query = get('query') || '', offset = Number(get('offset') || 0);
+  if (!['all', 'success', 'error', 'skip', 'stale', 'running', 'info'].includes(status)) throw Error('事件筛选无效');
+  if (kind.length > 64 || query.length > 200) throw Error('事件筛选过长');
+  if (!Number.isInteger(offset) || offset < 0 || offset > 1e6) throw Error('事件分页无效');
+  return { ...base, status, kind: kind === 'all' ? '' : kind, query, offset };
+}
+
 /** Derived metadata only; no messages, credentials or tool arguments are stored. */
 export class MonitorLedger {
   constructor(directory, { now = Date.now } = {}) {
-    this.now = now; this.error = null; this.imported = new Map(); this.closed = false;
+    this.now = now; this.error = null; this.imported = new Map(); this.closed = false; this.groupCache = null;
     try {
       mkdirSync(join(directory, 'monitor-v1'), { recursive: true, mode: 0o700 });
       this.db = new DatabaseSync(join(directory, 'monitor-v1', 'usage.sqlite'));
@@ -86,13 +152,20 @@ export class MonitorLedger {
           inputTokens REAL,outputTokens REAL,cacheReadTokens REAL,cacheWriteTokens REAL,reasoningTokens REAL,totalTokens REAL);
         CREATE INDEX IF NOT EXISTS monitor_session_time ON calls(sessionId,at DESC,id);
         CREATE INDEX IF NOT EXISTS monitor_time ON calls(at DESC,id);
-        CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);`);
+        CREATE TABLE IF NOT EXISTS call_timings(id TEXT PRIMARY KEY,firstTokenMs REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS events(id TEXT PRIMARY KEY,sessionId TEXT,kind TEXT NOT NULL,at REAL NOT NULL,
+          status TEXT NOT NULL,title TEXT,detail TEXT,count REAL,savedTokens REAL,inputTokens REAL,outputTokens REAL,data TEXT);
+        CREATE INDEX IF NOT EXISTS events_session_time ON events(sessionId,at DESC,id);
+        CREATE INDEX IF NOT EXISTS events_time ON events(at DESC,id);`);
       const schema = this.db.prepare('SELECT value FROM metadata WHERE key=?').get('schema');
       if (schema && schema.value !== '1') throw Error('监控数据版本不兼容');
       this.db.prepare('INSERT OR IGNORE INTO metadata VALUES(?,?)').run('schema', '1');
       this.db.prepare('INSERT OR IGNORE INTO metadata VALUES(?,?)').run('startedAt', String(now()));
       this.startedAt = Number(this.db.prepare('SELECT value FROM metadata WHERE key=?').get('startedAt').value);
       this.insert = this.db.prepare('INSERT OR IGNORE INTO calls VALUES(' + Array(21).fill('?').join(',') + ')');
+      this.insertTiming = this.db.prepare('INSERT OR IGNORE INTO call_timings VALUES(?,?)');
+      this.insertEvent = this.db.prepare('INSERT OR IGNORE INTO events VALUES(' + Array(12).fill('?').join(',') + ')');
     } catch (error) {
       this.error = String(error.message); try { this.db?.close(); } catch {} this.db = null;
     }
@@ -106,55 +179,134 @@ export class MonitorLedger {
         text(entry.provider), text(entry.model), status, text(entry.source) || 'background',
         number(entry.turn), number(entry.step), number(entry.eventSeq), number(entry.startedAt), number(entry.durationMs),
         text(entry.effort), text(entry.error, 2000), ...fields.map(key => u[key]));
+      if (number(entry.firstTokenMs) !== null) this.insertTiming.run(id, entry.firstTokenMs);
       return true;
     } catch (error) { this.error = String(error.message); return false; }
+  }
+  // Background mechanism history (preparation, hub decisions, replacements,
+  // compaction, adaptive checks, Dream jobs). Derived summaries only.
+  appendEvent(entry) {
+    if (!this.db || this.closed || !this.insertEvent) return false;
+    try {
+      let data = null;
+      if (entry.data && typeof entry.data === 'object') { data = JSON.stringify(entry.data); if (data.length > 8000) data = null; }
+      this.insertEvent.run(text(entry.id, 512) || randomUUID(), text(entry.sessionId), text(entry.kind) || 'unknown', number(entry.at) ?? this.now(),
+        text(entry.status, 32) || 'success', text(entry.title, 400), text(entry.detail, 2000),
+        number(entry.count), Number.isFinite(entry.savedTokens) ? entry.savedTokens : null, number(entry.inputTokens), number(entry.outputTokens), data);
+      return true;
+    } catch (error) { this.error = String(error.message); return false; }
+  }
+  events(ids, query) {
+    if (!this.db || this.closed) throw Error(this.error || '监控账本不可用');
+    const clauses = ['at>=?', 'at<=?'], args = [query.from, query.to];
+    if (query.range !== 'all') { clauses.push('sessionId IN (SELECT value FROM json_each(?))'); args.push(JSON.stringify([...ids])); }
+    const scoped = clauses.join(' AND '), scopedArgs = [...args];
+    if (query.kind) { clauses.push('kind=?'); args.push(query.kind); }
+    if (query.status !== 'all') { clauses.push('status=?'); args.push(query.status); }
+    if (query.query) { clauses.push("instr(lower(kind||' '||COALESCE(title,'')||' '||COALESCE(detail,'')),lower(?))>0"); args.push(query.query); }
+    const where = clauses.join(' AND ');
+    const total = this.db.prepare(`SELECT COUNT(*) n FROM events WHERE ${where}`).get(...args).n;
+    const items = this.db.prepare(`SELECT * FROM events WHERE ${where} ORDER BY at DESC,id DESC LIMIT ? OFFSET ?`).all(...args, query.limit, query.offset)
+      .map(row => { let data = null; try { data = row.data ? JSON.parse(row.data) : null; } catch {} return { ...row, data }; });
+    const kinds = this.db.prepare(`SELECT kind key,COUNT(*) events,COALESCE(SUM(status='error'),0) errors,
+      COALESCE(SUM(CASE WHEN savedTokens>0 THEN savedTokens END),0) savedTokens,COALESCE(SUM(count),0) count,MAX(at) lastAt
+      FROM events WHERE ${scoped} GROUP BY kind`).all(...scopedArgs);
+    const statuses = this.db.prepare(`SELECT status key,COUNT(*) events FROM events WHERE ${scoped} GROUP BY status`).all(...scopedArgs);
+    return { generatedAt: this.now(), total, items, kinds, statuses, offset: query.offset, limit: query.limit };
   }
   hasSession(id) {
     return Boolean(this.db && !this.closed && this.db.prepare('SELECT 1 FROM calls WHERE sessionId=? LIMIT 1').get(id));
   }
   import(states) {
-    // The old ring is intentionally not promoted to complete historical data.
-    for (const state of states) {
-      const signature = hash(state.activity || []);
-      if (this.imported.get(state.id) === signature) continue;
-      const duplicates = new Map(); let complete = true;
-      for (const entry of state.activity || []) {
-        if (number(entry.at) === null) continue; // Old undated totals cannot be placed on today's timeline.
-        const key = hash([state.id, entry]), ordinal = duplicates.get(key) || 0; duplicates.set(key, ordinal + 1);
-        if (!this.append({ ...entry, id: entry.id || `legacy:${key}:${ordinal}`, sessionId: state.id, source: entry.source || 'legacy' })) complete = false;
+    if (!this.db || this.closed) return;
+    const pending = states.map(state => [state, monitorActivityFingerprint(state.activity || [])]).filter(([state, signature]) => this.imported.get(state.id) !== signature);
+    if (!pending.length) return;
+    const imported = []; let opened = false;
+    try {
+      this.db.exec('SAVEPOINT monitor_import'); opened = true;
+      // The old ring is intentionally not promoted to complete historical data.
+      for (const [state, signature] of pending) {
+        const duplicates = new Map(); let complete = true;
+        for (const entry of state.activity || []) {
+          if (number(entry.at) === null) continue; // Old undated totals cannot be placed on today's timeline.
+          const key = hash([state.id, entry]), ordinal = duplicates.get(key) || 0; duplicates.set(key, ordinal + 1);
+          if (!this.append({ ...entry, id: entry.id || `legacy:${key}:${ordinal}`, sessionId: state.id, source: entry.source || 'legacy' })) complete = false;
+        }
+        if (complete) imported.push([state.id, signature]);
       }
-      if (complete) this.imported.set(state.id, signature);
+      this.db.exec('RELEASE monitor_import');
+      for (const [id, signature] of imported) this.imported.set(id, signature);
+    } catch (error) {
+      if (opened) try { this.db.exec('ROLLBACK TO monitor_import; RELEASE monitor_import'); } catch {}
+      this.error = String(error.message);
     }
   }
-  query(states, ids, query) {
+  metricGroups(where, args, upperIndex) {
+    // Read versions inside the transaction so external writers cannot race a cache hit.
+    const version = this.db.prepare('SELECT total_changes() changes,(SELECT data_version FROM pragma_data_version) version,(SELECT MAX(at) FROM calls) lastAt').get();
+    const effective = [...args]; effective[upperIndex] = Math.min(effective[upperIndex], version.lastAt ?? effective[upperIndex]);
+    const key = hash([version.changes, version.version, where, effective]);
+    let value = this.groupCache?.key === key ? this.groupCache.value : null;
+    if (!value) {
+      this.groupCache = null;
+      value = groupedMetrics(this.db, where, args);
+      if (Buffer.byteLength(JSON.stringify(value)) <= 512 * 1024) this.groupCache = { key, value };
+    }
+    const copy = row => Object.assign(Object.create(Object.getPrototypeOf(row)), row);
+    return Object.fromEntries(Object.entries(value).map(([group, rows]) => [group, Array.isArray(rows) ? rows.map(copy) : copy(rows)]));
+  }
+  query(states, ids, query, costOf, { callsOnly = false, usageOnly = false } = {}) {
     if (!this.db || this.closed) throw Error(this.error || '监控账本不可用');
     this.import(states);
     const scope = query.range === 'all' ? '1=1' : 'sessionId IN (SELECT value FROM json_each(?))';
     const scopeArgs = query.range === 'all' ? [] : [JSON.stringify([...ids])];
-    const clauses = [scope, 'at>=?', 'at<=?'], args = [...scopeArgs, query.from, query.to];
+    const fingerprint = hash({ range: query.range, period: query.period, status: query.status, limit: query.limit,
+      provider: query.provider, model: query.model, kind: query.kind, query: query.query,
+      ids: query.range === 'all' ? [] : [...ids].sort(), session: query.range === 'all' ? null : query.session });
+    let cursor = null, from = query.from, until = query.to;
+    if (query.cursor) {
+      if (typeof query.cursor !== 'string' || query.cursor.length > 1800 || !/^[\w-]+$/.test(query.cursor)) throw Error('监控分页标记无效');
+      try { cursor = JSON.parse(Buffer.from(query.cursor, 'base64url')); } catch { throw Error('监控分页标记无效'); }
+      if (!cursor || typeof cursor !== 'object' || Array.isArray(cursor)
+        || typeof cursor.fingerprint !== 'string' || !/^[a-f0-9]{64}$/.test(cursor.fingerprint)) throw Error('监控分页标记无效');
+      if (cursor.fingerprint !== fingerprint) throw Error('筛选已变化，请重新读取调用记录');
+      if (number(cursor.from) === null || number(cursor.until) === null || number(cursor.at) === null
+        || cursor.from > cursor.until || cursor.until > query.to || cursor.at < cursor.from || cursor.at > cursor.until
+        || typeof cursor.id !== 'string' || !cursor.id.length || cursor.id.length > 512
+        || cursor.from !== monitorQuery({ period: query.period }, cursor.until).from) throw Error('监控分页标记无效');
+      // Relative periods are evaluated once; midnight must not change a page's
+      // lower bound or look like an intentional filter change.
+      from = cursor.from; until = cursor.until;
+    }
+    const clauses = [scope, 'at>=?', 'at<=?'], args = [...scopeArgs, from, until];
     for (const key of ['provider', 'model', 'kind']) if (query[key]) { clauses.push(`${key}=?`); args.push(query[key]); }
     if (query.status !== 'all') { clauses.push('status=?'); args.push(query.status); }
     if (query.query) {
       clauses.push("(instr(lower(COALESCE(provider,'')||' '||COALESCE(model,'')||' '||kind||' '||COALESCE(error,'')),lower(?))>0)"); args.push(query.query);
     }
-    const where = clauses.join(' AND '), fingerprint = hash({ ...query,
-      ids: query.range === 'all' || query.session ? [] : [...ids].sort(),
-      session: query.range === 'all' ? null : query.session, cursor: '', to: 0 });
-    let cursor = null, until = query.to;
-    if (query.cursor) {
-      if (query.cursor.length > 1800) throw Error('监控分页标记无效');
-      try { cursor = JSON.parse(Buffer.from(query.cursor, 'base64url')); } catch { throw Error('监控分页标记无效'); }
-      if (cursor?.fingerprint !== fingerprint || !Number.isFinite(cursor.at) || typeof cursor.id !== 'string' || cursor.id.length > 512 || !Number.isFinite(cursor.until) || cursor.until > query.to || cursor.at > cursor.until) throw Error('筛选已变化，请重新读取调用记录');
-      until = cursor.until; args[scopeArgs.length + 1] = until;
-    }
+    const where = clauses.join(' AND ');
     // One synchronous read transaction keeps all widgets on the same snapshot.
     this.db.exec('BEGIN');
     try {
-      const totals = this.db.prepare(`SELECT ${metricsSQL} FROM calls WHERE ${where}`).get(...args);
-      const group = column => this.db.prepare(`SELECT ${column} key,${metricsSQL} FROM calls WHERE ${where} GROUP BY ${column} ORDER BY totalTokens DESC`).all(...args);
-      const components = group('kind'), metrics = Object.fromEntries(components.map(({ key, ...value }) => [key, value]));
-      const models = this.db.prepare(`SELECT provider,model,${metricsSQL} FROM calls WHERE ${where} GROUP BY provider,model ORDER BY totalTokens DESC`).all(...args).map(row => ({ key: JSON.stringify([row.provider, row.model]), ...row }));
-      const groups = { components, models, providers: group('provider'), sessions: group('sessionId') };
+      const { totals, ...groups } = usageOnly
+        ? { totals: emptyMonitorMetric(), components: this.db.prepare(`SELECT kind key,${metricsSQL} FROM calls WHERE ${where} GROUP BY kind ORDER BY knownTotalTokens DESC`).all(...args) }
+        : callsOnly ? { totals: this.db.prepare(`SELECT ${metricsSQL} FROM calls WHERE ${where}`).get(...args), components: [] }
+        : this.metricGroups(where, args, scopeArgs.length + 1);
+      let performance;
+      if (!callsOnly && !usageOnly) {
+        performance = this.db.prepare(`SELECT AVG(t.firstTokenMs) avgFirstTokenMs,COUNT(t.firstTokenMs) firstTokenCalls,
+          COALESCE(SUM(CASE WHEN c.outputTokens>=0 AND c.durationMs>t.firstTokenMs THEN c.outputTokens END),0) decodeTokens,
+          COALESCE(SUM(CASE WHEN c.outputTokens>=0 AND c.durationMs>t.firstTokenMs THEN c.durationMs-t.firstTokenMs END),0) decodeMs,
+          COUNT(CASE WHEN c.outputTokens>=0 AND c.durationMs>t.firstTokenMs THEN 1 END) tpsCalls
+          FROM calls c LEFT JOIN call_timings t ON t.id=c.id WHERE ${where}`).get(...args);
+        performance.avgTps = performance.decodeMs > 0 ? performance.decodeTokens / (performance.decodeMs / 1000) : null;
+        performance.sessionSpans = this.db.prepare(`SELECT sessionId,
+          MIN(CASE WHEN startedAt<=at THEN startedAt WHEN durationMs<=at THEN at-durationMs ELSE at END) startedAt,
+          MAX(at) endedAt,COUNT(*) calls,
+          SUM(CASE WHEN startedAt<=at OR durationMs<=at THEN 0 ELSE 1 END) untimedCalls
+          FROM calls WHERE ${where} GROUP BY sessionId`).all(...args);
+      }
+      const metrics = Object.fromEntries(groups.components.map(({ key, ...value }) => [key, value]));
       const legacy = this.legacy(states, scope, scopeArgs);
       const includeLegacy = query.period === 'all' && !query.provider && !query.model && !query.query && query.status === 'all';
       let legacyCalls = 0;
@@ -164,41 +316,84 @@ export class MonitorLedger {
           addMonitorMetric(totals, value); addMonitorMetric(metrics[kind] ||= emptyMonitorMetric(), value);
         }
       }
-      if (includeLegacy) {
+      if (usageOnly) {
+        this.db.exec('COMMIT');
+        return { generatedAt: this.now(), range: query.range, period: query.period, selection: { ...query, cursor: undefined, from, to: until }, metrics };
+      }
+      if (includeLegacy && !callsOnly) {
         groups.components = Object.entries(metrics).map(([key, value]) => ({ key, ...value }));
         const rest = Object.entries(legacy).filter(([kind]) => !query.kind || query.kind === kind).reduce((m, [, value]) => addMonitorMetric(m, value), emptyMonitorMetric());
         if (rest.calls) for (const name of ['models', 'providers', 'sessions']) groups[name].push({ key: 'legacy-unattributed', label: '历史累计（未归因）', ...rest });
       }
-      const first = this.db.prepare(`SELECT MIN(at) at FROM calls WHERE ${where}`).get(...args).at;
-      const grain = query.period === 'today' ? '%Y-%m-%d %H:00' : first != null && until - first > 90 * 86400000 ? '%Y-%m' : '%Y-%m-%d';
-      const series = this.db.prepare(`SELECT strftime('${grain}',at/1000,'unixepoch','localtime') label,MIN(at) at,${metricsSQL} FROM calls WHERE ${where} GROUP BY label ORDER BY label`).all(...args);
+      let series, seriesSplit, costSummary;
+      if (!callsOnly) {
+        const first = this.db.prepare(`SELECT MIN(at) at FROM calls WHERE ${where}`).get(...args).at;
+        const grain = query.period === 'today' ? '%Y-%m-%d %H:00' : first != null && until - first > 90 * 86400000 ? '%Y-%m' : '%Y-%m-%d';
+        const buckets = this.db.prepare(`SELECT strftime('${grain}',at/1000,'unixepoch','localtime') label,MIN(at) at,${metricsSQL},
+          COALESCE(SUM(CASE WHEN kind IN ('main','subagent') THEN ${knownTotalSQL} END),0) main,
+          COALESCE(SUM(CASE WHEN kind NOT IN ('main','subagent') THEN ${knownTotalSQL} END),0) background
+          FROM calls WHERE ${where} GROUP BY label ORDER BY label`).all(...args);
+        series = buckets.map(({ main, background, ...row }) => row);
+        const split = buckets.map(({ label, main, background, errors, calls }) => ({ label, main, background, errors, calls }));
+        seriesSplit = fillBuckets(split, grain, query.period === 'all' ? first : from, Math.min(until, this.now()), { main: 0, background: 0, errors: 0, calls: 0 });
+        const byLabel = new Map(seriesSplit.map(row => [row.label, row]));
+        for (const row of seriesSplit) row.models = {};
+        const modelBuckets = this.db.prepare(`SELECT strftime('${grain}',at/1000,'unixepoch','localtime') label,
+          NULLIF(model,'') model,COALESCE(SUM(${knownTotalSQL}),0) tokens FROM calls WHERE ${where} GROUP BY label,NULLIF(model,'')`).all(...args);
+        for (const row of modelBuckets) byLabel.get(row.label).models[JSON.stringify(row.model)] = row.tokens;
+        costSummary = { totals: [], unpricedCalls: 0, partialCalls: 0 };
+        if (costOf) {
+          const totalsByCurrency = new Map();
+          for (const row of seriesSplit) { row.costs = {}; row.unpricedCalls = 0; }
+          // Price each receipt before summing: context tiers and missing buckets are per call.
+          const receipts = this.db.prepare(`SELECT strftime('${grain}',at/1000,'unixepoch','localtime') label,provider,model,${fields.join(',')} FROM calls WHERE ${where}`);
+          for (const row of receipts.iterate(...args)) {
+            const bucket = byLabel.get(row.label), cost = costOf({ provider: row.provider, model: row.model,
+              usage: Object.fromEntries(fields.filter(key => row[key] !== null).map(key => [key, row[key]])) });
+            if (!cost) { costSummary.unpricedCalls++; if (bucket) bucket.unpricedCalls++; continue; }
+            const total = totalsByCurrency.get(cost.currency) || { currency: cost.currency, amount: 0, calls: 0 };
+            total.amount += cost.amount; total.calls++; totalsByCurrency.set(cost.currency, total);
+            if (cost.partial) costSummary.partialCalls++;
+            if (bucket) bucket.costs[cost.currency] = (bucket.costs[cost.currency] || 0) + cost.amount;
+          }
+          costSummary.totals = [...totalsByCurrency.values()].sort((a, b) => a.currency.localeCompare(b.currency));
+          if (includeLegacy) costSummary.unpricedCalls += Object.entries(legacy).filter(([kind]) => !query.kind || query.kind === kind).reduce((n, [, value]) => n + value.calls, 0);
+        }
+      }
       const pageClause = cursor ? ' AND (at<? OR (at=? AND id<?))' : '';
-      const items = this.db.prepare(`SELECT * FROM calls WHERE ${where}${pageClause} ORDER BY at DESC,id DESC LIMIT ?`).all(...args, ...(cursor ? [cursor.at, cursor.at, cursor.id] : []), query.limit + 1);
+      const items = this.db.prepare(`SELECT *,(SELECT firstTokenMs FROM call_timings WHERE call_timings.id=calls.id) firstTokenMs FROM calls WHERE ${where}${pageClause} ORDER BY at DESC,id DESC LIMIT ?`).all(...args, ...(cursor ? [cursor.at, cursor.at, cursor.id] : []), query.limit + 1);
       const more = items.length > query.limit; items.length = Math.min(items.length, query.limit);
       const activity = items.map(row => {
         const usage = Object.fromEntries(fields.filter(key => row[key] !== null).map(key => [key, row[key]]));
         const value = Object.fromEntries(Object.entries(row).filter(([key]) => !fields.includes(key)));
         return { ...value, usage: Object.keys(usage).length ? usage : null };
       });
-      const tail = items.at(-1), nextCursor = more ? Buffer.from(JSON.stringify({ fingerprint, until, at: tail.at, id: tail.id })).toString('base64url') : null;
+      const tail = items.at(-1), nextCursor = more ? Buffer.from(JSON.stringify({ fingerprint, from, until, at: tail.at, id: tail.id })).toString('base64url') : null;
       const available = this.db.prepare(`SELECT DISTINCT provider,model,kind FROM calls WHERE ${scope} ORDER BY provider,model,kind`).all(...scopeArgs);
       const count = this.db.prepare(`SELECT COUNT(*) total FROM calls WHERE ${where}`).get(...args).total;
+      const sessionIds = callsOnly ? [] : this.db.prepare(`SELECT DISTINCT sessionId FROM calls WHERE ${scope} AND sessionId IS NOT NULL`).all(...scopeArgs).map(row => row.sessionId);
       const messages = [];
       if (legacyCalls) messages.push(`${legacyCalls} 次较早调用仅保留累计统计，无法按日期或模型归因；趋势和明细只含有记录的调用。`);
-      if (totals.unmetered) messages.push(`${totals.unmetered} 次调用未返回完整用量。`);
+      if (totals.usageUnreported) messages.push(`${totals.usageUnreported} 次调用未返回可用用量。`);
+      if (totals.unmetered > totals.usageUnreported) messages.push(`${totals.unmetered - totals.usageUnreported} 次调用仅返回部分用量；已知值保留，≥ 表示已知下界，不是完整消耗。`);
       if (totals.cacheUnreported) messages.push(`${totals.cacheUnreported} 次调用未单独披露缓存读取。`);
+      if (totals.cacheWriteUnreported) messages.push(`${totals.cacheWriteUnreported} 次调用未单独披露缓存写入；未知不按零计。`);
+      if (totals.durationUnreported) messages.push(`${totals.durationUnreported} 次调用未记录耗时；未知不按零计${totals.durationMs === null ? '。' : '，已知耗时仅为下界。'}`);
       if (this.error) messages.push('部分监控记录写入失败；原生执行不受影响。');
       this.db.exec('COMMIT');
-      const sessionIds = this.db.prepare(`SELECT DISTINCT sessionId FROM calls WHERE ${scope} AND sessionId IS NOT NULL`).all(...scopeArgs).map(row => row.sessionId);
-      return { generatedAt: this.now(), range: query.range, period: query.period, selection: { ...query, cursor: undefined, to: until },
-        sessionCount: new Set([...states.map(state => state.id), ...sessionIds]).size,
-        totals, metrics, groups, series, activity, activityTotal: count, nextCursor,
+      return { generatedAt: this.now(), range: query.range, period: query.period, selection: { ...query, cursor: undefined, from, to: until },
+        ...(callsOnly ? {} : { sessionCount: new Set([...states.map(state => state.id), ...sessionIds]).size,
+          metrics, groups, series, seriesSplit, costSummary, performance }),
+        totals, activity, activityTotal: count, nextCursor,
         filters: { providers: [...new Set(available.map(row => row.provider).filter(Boolean))], models: [...new Map(available.filter(row => row.model).map(row => [JSON.stringify([row.provider, row.model]), { provider: row.provider, model: row.model }])).values()], kinds: [...new Set(available.map(row => row.kind))] },
-        coverage: { partial: Boolean(legacyCalls || this.error), legacyCalls, unmetered: totals.unmetered, cacheUnreported: totals.cacheUnreported, startedAt: this.startedAt,
+        coverage: { partial: Boolean(legacyCalls || this.error), legacyCalls, unmetered: totals.unmetered,
+          usageUnreported: totals.usageUnreported, cacheUnreported: totals.cacheUnreported, cacheWriteUnreported: totals.cacheWriteUnreported,
+          durationUnreported: totals.durationUnreported, startedAt: this.startedAt,
           message: messages.join(' '), scope: 'OMD 主会话、其真实子代理及已记录后台调用；不包含未接入的原生预设或侧问。' } };
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
   }
   legacy(states, scope, args) {
+    if (!states.some(state => Object.values(state.metrics || {}).some(metric => metric.calls > 0))) return {};
     const seen = this.db.prepare(`SELECT sessionId,kind,${metricsSQL} FROM calls WHERE ${scope} AND source!='dream' GROUP BY sessionId,kind`).all(...args);
     const byId = new Map(seen.map(row => [JSON.stringify([row.sessionId, row.kind]), row])), result = {};
     for (const state of states) for (const [kind, saved] of Object.entries(state.metrics || {})) {
@@ -209,13 +404,45 @@ export class MonitorLedger {
       // The old counter treated interrupted calls as errors; the new ledger
       // separates cancellation. Subtract both before carrying the remainder.
       value.errors = Math.max(0, (saved.errors || 0) - known.errors - known.cancelled);
-      value.calls = calls; value.cacheUnreported = calls; value.peakContext = saved.peakContext || 0;
-      value.inputTotalTokens = ['inputTokens', 'cacheReadTokens', 'cacheWriteTokens'].reduce((n, key) => n + value[key], 0);
-      if (saved.totalTokens == null) value.totalTokens = ['inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens'].reduce((n, key) => n + value[key], 0);
-      if (value.unmetered >= calls) for (const key of [...fields, 'inputTotalTokens', 'peakContext']) value[key] = null;
+      const entirelyUnmetered = value.unmetered >= calls;
+      value.calls = calls; value.unmetered = calls;
+      value.cacheUnreported = calls; value.cacheWriteUnreported = calls;
+      // Historical counters have no per-field receipt coverage, even when the
+      // old unmetered counter is absent. Keep positive remainders as lower
+      // bounds; missing fields and inherited initializer zeros prove nothing.
+      value.inputBucketUnreported = calls; value.outputUnreported = calls;
+      value.totalUnreported = calls; value.inputUnreported = calls;
+      value.peakContext = number(saved.peakContext) > 0 ? saved.peakContext : null;
+      for (const key of [...fields, 'durationMs']) {
+        if (number(saved[key]) === null || value[key] === 0) value[key] = null;
+      }
+      value.durationUnreported = calls;
+      const knownSum = keys => keys.some(key => value[key] !== null)
+        ? keys.reduce((sum, key) => sum + (value[key] || 0), 0) : null;
+      value.inputTotalTokens = entirelyUnmetered ? null : knownSum(['inputTokens', 'cacheReadTokens', 'cacheWriteTokens']);
+      if (saved.totalTokens == null) value.totalTokens = entirelyUnmetered ? null : knownSum(['inputTotalTokens', 'outputTokens']);
+      value.knownInputTokens = value.inputTotalTokens ?? knownSum(['inputTokens', 'cacheReadTokens', 'cacheWriteTokens']);
+      value.knownTotalTokens = value.totalTokens ?? knownSum(['knownInputTokens', 'outputTokens']);
+      value.usageUnreported = value.knownTotalTokens === null ? calls : 0;
       addMonitorMetric(result[kind] ||= emptyMonitorMetric(), value);
     }
     return result;
   }
-  close() { this.closed = true; try { this.db?.close(); } catch (error) { this.error = String(error.message); } }
+  close() { this.closed = true; this.groupCache = null; try { this.db?.close(); } catch (error) { this.error = String(error.message); } }
+}
+
+// Empty buckets keep the console trend on a steady time axis. Labels follow
+// SQLite's localtime strftime, which uses this process's time zone as Date does.
+function fillBuckets(rows, grain, start, end, blank) {
+  if (!rows.length || number(start) === null) return rows;
+  const p2 = n => String(n).padStart(2, '0'), hour = grain.includes('%H'), month = grain === '%Y-%m';
+  const label = d => month ? `${d.getFullYear()}-${p2(d.getMonth() + 1)}`
+    : `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}${hour ? ` ${p2(d.getHours())}:00` : ''}`;
+  const d = new Date(start); d.setMinutes(0, 0, 0); if (!hour) d.setHours(0); if (month) d.setDate(1);
+  const byLabel = new Map(rows.map(row => [row.label, row])), out = [];
+  while (d.getTime() <= end && out.length < 400) {
+    const key = label(d); out.push(byLabel.get(key) ?? { label: key, ...blank }); byLabel.delete(key);
+    if (hour) d.setHours(d.getHours() + 1); else if (month) d.setMonth(d.getMonth() + 1); else d.setDate(d.getDate() + 1);
+  }
+  return [...out, ...byLabel.values()].sort((a, b) => a.label < b.label ? -1 : a.label > b.label ? 1 : 0);
 }

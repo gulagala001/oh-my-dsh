@@ -1,54 +1,48 @@
 # Oh My DSH Documentation
 
-[简体中文](README.md) · [Project overview](../README_EN.md) · [Recorded example](showcase_EN.md)
+[简体中文](README.md) · [Project overview](../README_EN.md) · [Feature gallery](releases.md)
 
-Start with what you need to do. After installing OMD, keep using your DSH models, conversations, tools, and skills.
+Start with what you want to do. OMD retains your DSH models, conversations, tools and skills.
 
-| What you need | Guide |
+## First time here?
+
+**[Install and match versions](install_EN.md) → [First steps](getting-started_EN.md) → [Everyday usage](usage_EN.md)**
+
+Current release `0.2.1-rc.2.omd.0.17.3` targets DSH `0.2.1-rc.2` and bundles new OpenCU `2.0.0`. It is not publicly released yet. Use fixed-tag docs for historical 0.10 packages; new features are not a claim about old releases. Complete CU UI also requires matching host adapters.
+
+## Find your topic
+
+Topics without an English edition are marked **Chinese**.
+
+| What you want | Guide |
 | --- | --- |
-| Install in the official desktop app | [Desktop installation](upgrade_EN.md#desktop) |
-| Install in DSH Web | [Web installation](usage_EN.md#install-in-existing-dsh) |
-| Complete your first task | [Getting started](getting-started_EN.md) |
-| Work on files, track tasks, and inspect deliverables | [Everyday work](usage_EN.md#everyday-work) |
-| Continue a long conversation and retrieve original requirements | [Context and memory](usage_EN.md#context-and-memory) |
-| Operate a website, watch progress, or take over | [Computer Use](usage_EN.md#computer-use) |
-| Refine a draft, choose a mode, or customize the interface | [Usage guide](usage_EN.md) |
-| Update, back up, or move from Web to desktop | [Installation and upgrades](upgrade_EN.md) |
-| Fix installation, missing conversations, or interface problems | [Troubleshooting by symptom](troubleshooting_EN.md#by-symptom) |
-| Use other plugins alongside OMD | [Plugin compatibility](plugin-compatibility_EN.md) |
-| Disable or uninstall OMD | [Updates and removal](usage_EN.md#update-uninstall) |
+| Understand the agent's system-level working practices | [System prompts and tools (Chinese)](prompt-adaptation.md) |
+| Change themes, colors, fonts or backgrounds | [Appearance (Chinese)](skins.md) |
+| Use a computer, browser or annotations | [OpenCU setup and boundaries (Chinese)](computer-use.md) |
+| Inspect calls, tokens, costs and background work | [Monitoring (Chinese)](monitoring.md) |
+| Manage long conversations, auto compaction and original sources | [Context (Chinese)](context-workflow.md) |
+| Set session, project and global memory | [Dream (Chinese)](dream-memory.md) |
+| Use Pro, Ultracode, PTC and workflows | [Workflow (Chinese)](workflow.md) |
+| Track tasks, requirements and evidence | [Everyday usage](usage_EN.md#everyday-work) |
+| Understand background jobs, budgets and sampled state | [Runtime state (Chinese)](runtime-state-background.md) |
+| Open DeepSeek web tools or import extractable history | [DeepSeek Workbench (Chinese)](deepseek-workbench.md) |
+| Use CodeGraph, side questions and optional plugins | [Usage](usage_EN.md) · [OpenDesign (Chinese)](open-design.md) |
+| Install other plugins | [Compatibility](plugin-compatibility_EN.md) |
+| Back up, upgrade, migrate or roll back | [Upgrade guide](upgrade_EN.md) |
+| Diagnose installation or UI problems | [Troubleshooting](troubleshooting_EN.md#by-symptom) |
+| Disable or uninstall | [Updates and removal](usage_EN.md#update-uninstall) |
+| Build from source or contribute | [Development](development_EN.md) · [Contribution rules (Chinese)](../CONTRIBUTING.md) |
 
-[![Unified browser purchase order: saved delivery details read by the assistant](images/showcase-browser.png)](showcase_EN.md)
+### Individual themes (Chinese)
 
-*Fictional purchase order in an unpublished local integration. The user entered and saved delivery details; a controlled example model read the result through actual CU tools. [Actions, results, and screenshot sources](showcase_EN.md).*
+[Codex Desktop](codex-desktop.md) · [iOS Liquid Glass](ios-liquid-glass.md) · [Claude CLI](claude-cli-terminal.md) · [Google Material](google-material-expressive.md)
 
-## Choose the Right Version
+### Platforms and visuals
 
-| Your DSH | Public OMD package | Fixed release |
-| --- | --- | --- |
-| `0.2.1-alpha.1` | `0.2.1-alpha.1.omd.0.10.0` | [alpha.1 release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-alpha.1.omd.0.10.0) |
-| `0.2.0-rc.2`, including this desktop tutorial | `0.2.0-rc.2.omd.0.10.0` | [rc.2 release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.0-rc.2.omd.0.10.0) |
+[Windows conditions (Chinese)](windows.md) · [Feature gallery](releases.md) · [Feature showcase](showcase_EN.md)
 
-GitHub `main` contains `0.2.1-alpha.2.omd.0.16.0` for DSH `0.2.1-alpha.2`, **not a public release**. It includes the OpenCU 1.6.1 browser and runtime reconstruction. Matching version numbers do not establish matching contents. These guides mark development and local changes; no new public Release download is available for them. Public `0.10.0` does not include additions from `0.11–0.16`.
+## Feedback and contribution
 
-Use a complete host version and a fixed matching OMD release, rather than GitHub's `latest` label. Check [compatibility](plugin-compatibility_EN.md) for other versions; do not bypass host checks.
+[Report a bug](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml) · [Suggest a feature](https://github.com/gulagala001/oh-my-dsh/issues/new?template=feature-request.yml) · [Recommend a plugin (Chinese)](plugin-submissions.md) · [Changelog](../CHANGELOG.md) · [Sources and licensing](../THIRD_PARTY_NOTICES.md)
 
-## Further Reference
-
-| Topic | Reference |
-| --- | --- |
-| Calls, tokens, cache, and context budgets | [Monitoring (Chinese)](monitoring.md) |
-| Summaries, documents, attachments, and original messages | [Context details (Chinese)](context-workflow.md) |
-| Session, project, and global short memory in development | [Dream (Chinese)](dream-memory.md) |
-| Pro, Ultracode, and workflow recovery | [Workflow (Chinese)](workflow.md) |
-| Themes, 28 palettes, fonts, and wallpaper | [Appearance (Chinese)](skins.md) |
-| Background tasks, deadlines, and blockers | [Runtime state (Chinese)](runtime-state-background.md) |
-| Windows requirements | [Windows reference (Chinese)](windows.md) |
-| CodeGraph, side questions, and optional plugins | [Usage guide](usage_EN.md) |
-| Source checkout, builds, and contributions | [Development](development_EN.md) · [Contribution rules](../CONTRIBUTING.md) |
-
-## Feedback and Contributions
-
-[Report a bug](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml) · [Suggest a feature](https://github.com/gulagala001/oh-my-dsh/issues/new?template=feature-request.yml) · [Recommend a plugin (Chinese)](plugin-submissions.md) · [Changelog](../CHANGELOG.md) · [Authors, sources, and licenses](../THIRD_PARTY_NOTICES.md)
-
-Include actual versions, how you run DSH, a minimal reproduction, and the first redacted error. Do not upload credentials or your entire data directory.
+Provide full versions, your launch method, a minimal reproduction and the first redacted error. Do not upload credentials or the entire data directory.

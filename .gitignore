@@ -40,6 +40,7 @@ data/
 
 # Machine-local CodeGraph indexes and runtime state.
 /.codegraph/
+/.cache/
 
 # Local prototypes, upstream checkouts and verification artifacts.
 /work/
@@ -47,5 +48,15 @@ data/
 # Preserve failed OpenCU synchronization recovery files locally.
 /.opencu-sync-*/
 
-# Machine-local experiments and engineering evidence.
-/.cache/
+# Local review notes, CI source checkouts and browser test output.
+/.local/
+/.host-source/
+/test-results/
+
+# Local research and release preparation
+codegraph.json
+REFERENCE.md
+COMPONENT-ALLOCATION.md
+vendor/rea/
+docs/release-visuals.md
+docs/visuals.md

@@ -69,8 +69,8 @@ export class ContextStore {
         if (value?.schema !== 1 || typeof value.id !== 'string' || !Array.isArray(value.records) || this.path(value.id) !== path) throw Error('上下文存档版本或会话身份不匹配');
         cached = { signature, value: this.cache.get(value.id) || value, bytes: this.cache.has(value.id) ? 0 : Number(stat.size) };
         this.dropDiskCache(file);
-        if (cached.bytes <= this.maxDiskCacheBytes) {
-          while (this.diskCacheBytes + cached.bytes > this.maxDiskCacheBytes && this.diskCache.size) this.dropDiskCache(this.diskCache.keys().next().value);
+        // A full sweep must not evict valid entries before reaching them.
+        if (this.diskCacheBytes + cached.bytes <= this.maxDiskCacheBytes) {
           this.diskCache.set(file, cached); this.diskCacheBytes += cached.bytes;
         }
       }

@@ -1,1 +1,38 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="440" viewBox="0 0 1200 440" role="img" aria-labelledby="title desc"><title id="title">可追溯的上下文与记忆</title><desc id="desc">对话在后台整理成摘要与详细资料，当前工作按需使用；原始材料存档并可回查。</desc><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M1 1L7 4L1 7" fill="none" stroke="#7093c3" stroke-width="1.3"/></marker></defs><rect width="1200" height="440" rx="16" fill="#f4f7fb"/><g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif"><text x="52" y="53" font-size="12" fill="#587ba9" letter-spacing="2">CONTEXT &amp; MEMORY</text><text x="52" y="92" font-size="28" font-weight="600" fill="#1c3557">让工作上下文变轻，让精确细节有出处。</text><rect x="52" y="127" width="242" height="102" rx="12" fill="#fff" stroke="#dce4ef"/><text x="74" y="165" font-size="21" font-weight="600" fill="#203c62">持续对话</text><text x="74" y="197" font-size="15" fill="#71839c">用户要求 · 工具往返</text><rect x="398" y="127" width="340" height="102" rx="12" fill="#edf3fe" stroke="#b8cdee"/><text x="420" y="165" font-size="21" font-weight="600" fill="#203c62">异步智能整理</text><text x="420" y="197" font-size="15" fill="#71839c">事实摘要 · 详细资料 · 表示选择</text><rect x="842" y="127" width="306" height="102" rx="12" fill="#fff" stroke="#dce4ef"/><text x="864" y="165" font-size="21" font-weight="600" fill="#203c62">当前工作上下文</text><text x="864" y="197" font-size="15" fill="#71839c">按需替换，在请求边界应用</text><path d="M294 178H390" fill="none" stroke="#7093c3" stroke-width="1.7" marker-end="url(#arrow)"/><path d="M738 178H834" fill="none" stroke="#7093c3" stroke-width="1.7" marker-end="url(#arrow)"/><rect x="398" y="281" width="340" height="96" rx="12" fill="#edf3fe" stroke="#b8cdee"/><text x="420" y="319" font-size="21" font-weight="600" fill="#203c62">原始材料存档</text><text x="420" y="351" font-size="15" fill="#71839c">原话 · 文档 · 图片 · 附件</text><path d="M174 229V329H390" fill="none" stroke="#7093c3" stroke-width="1.7" marker-end="url(#arrow)"/><path d="M738 329H997V237" fill="none" stroke="#7093c3" stroke-width="1.7" marker-end="url(#arrow)"/><text x="64" y="283" font-size="14" fill="#71839c">保存原始材料</text><text x="850" y="311" font-size="14" fill="#5279ac">回查细节与原件</text><text x="52" y="414" font-size="14" fill="#8290a4">摘要用于继续工作，原始材料用于核对细节。图示解释机制，不表示容量或压缩速度指标。</text></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="510" viewBox="0 0 1040 510" role="img" aria-labelledby="title desc">
+<title id="title">ContextPipeline：摘要、用户决定与原始资料</title>
+<desc id="desc">对话按完整工具往返预处理，分别保存事实摘要、有原话依据的用户决定和详细资料，在后续安全请求边界按需应用。原始材料和附件保留，recall 可回查。Dream 独立整理短记忆；仅共享会话向项目和全局传播，私人 Chat 及未加入真实工作区的后代保持隔离。图示是机制说明，不是测试结果。</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M1 1 7 4 1 7" fill="none" stroke="#2563eb" stroke-width="1.5"/></marker></defs>
+<rect x=".5" y=".5" width="1039" height="509" rx="16" fill="#fff" stroke="#dce2eb"/>
+<g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif">
+<text x="40" y="42" font-size="13" font-weight="600" fill="#2563eb" letter-spacing="1.2">CONTEXTPIPELINE</text>
+<text x="40" y="80" font-size="28" font-weight="650" fill="#17243a">继续工作时读摘要，核对细节时回到原文。</text>
+<text x="40" y="110" font-size="16" fill="#5b687b">三种资料分别保存；准备好的结果在后续请求边界应用。</text>
+<rect x="40" y="152" width="206" height="190" rx="12" fill="#f7f9fc" stroke="#dce2eb"/>
+<text x="62" y="186" font-size="13" font-weight="600" fill="#64748b">01 · 原始对话</text>
+<text x="62" y="223" font-size="22" font-weight="600" fill="#17243a">用户要求</text>
+<text x="62" y="254" font-size="17" fill="#5b687b">原话、文件与附件</text>
+<text x="62" y="289" font-size="22" font-weight="600" fill="#17243a">工具往返</text>
+<text x="62" y="320" font-size="17" fill="#5b687b">保留调用与结果配对</text>
+<path d="M247 244H287" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="300" y="152" width="380" height="190" rx="12" fill="#f1f6ff" stroke="#b9cdf7"/>
+<text x="322" y="186" font-size="13" font-weight="600" fill="#2563eb">02 · 后台预处理</text>
+<text x="322" y="225" font-size="19" font-weight="600" fill="#17243a">事实摘要</text><text x="450" y="225" font-size="17" fill="#5b687b">实际操作与观察结果</text>
+<path d="M322 241H658" stroke="#d9e5fb"/>
+<text x="322" y="275" font-size="19" font-weight="600" fill="#17243a">用户决定</text><text x="450" y="275" font-size="17" fill="#5b687b">保留原话依据</text>
+<path d="M322 291H658" stroke="#d9e5fb"/>
+<text x="322" y="325" font-size="19" font-weight="600" fill="#17243a">详细资料</text><text x="450" y="325" font-size="17" fill="#5b687b">原话、文档与附件索引</text>
+<path d="M681 244H721" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="734" y="152" width="266" height="190" rx="12" fill="#f7f9fc" stroke="#dce2eb"/>
+<text x="756" y="186" font-size="13" font-weight="600" fill="#64748b">03 · 当前工作上下文</text>
+<text x="756" y="224" font-size="22" font-weight="600" fill="#17243a">按需应用表示</text>
+<text x="756" y="260" font-size="17" fill="#5b687b">保留原文 / 详细 / 简要</text>
+<text x="756" y="298" font-size="17" fill="#5b687b">主模型继续工作</text>
+<text x="756" y="324" font-size="17" fill="#5b687b">迟到或无效结果不应用</text>
+<path d="M143 343V393H299" fill="none" stroke="#8b98aa" stroke-width="1.7"/>
+<rect x="300" y="364" width="700" height="62" rx="10" fill="#f7f9fc" stroke="#dce2eb"/>
+<text x="322" y="401" font-size="18" font-weight="600" fill="#17243a">原始材料存档</text><text x="502" y="401" font-size="17" fill="#5b687b">原话与附件保留 · recall 按来源回查</text>
+<path d="M867 364V347" fill="none" stroke="#2563eb" stroke-width="1.7" marker-end="url(#arrow)"/>
+<path d="M40 450H1000" stroke="#dce2eb"/>
+<text x="40" y="474" font-size="16" fill="#5b687b"><tspan font-weight="600" fill="#17243a">Dream 独立运行</tspan>　仅共享会话 → 项目 → 全局短记忆。</text>
+<text x="40" y="497" font-size="14" fill="#5b687b">私人 Chat 与未加入真实工作区的后代保持隔离；Dream 不替代当前对话整理。</text>
+</g></svg>

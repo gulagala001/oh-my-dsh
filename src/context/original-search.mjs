@@ -10,7 +10,7 @@ export const ORIGINAL_SEARCH_MAX_PAGE_BYTES = 24 * 1024;
 const CHUNK_SIZE = 32 * 1024, SNIPPET_SIZE = 360;
 const echoTools = new Set(['recall', 'memory_search']);
 const messageTypes = new Set(['user/message', 'assistant/message', 'tool/result']);
-const fold = text => text.replace(/[A-Z]+/g, value => value.toLowerCase());
+const fold = text => text.replace(/[A-Z][\x00-\x7f]*/g, value => value.toLowerCase());
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const identifier = /^[a-z0-9_./:@-]+$/i;
 const wordChar = char => Boolean(char && /[a-z0-9_]/i.test(char));
@@ -57,25 +57,144 @@ export function validateOriginalSearchArgs(args, targetId) {
   return value;
 }
 
-// Only accepted event messages grant source access. Display text, including a
-// forged Context record header, never expands this session's event prefix.
-function originalMessage(event) {
-  if (!messageTypes.has(event.type)) return null;
-  // The native unprojected reader returns the immutable logged message. Live
-  // surface projections may hide or rewrite it and are not original material.
-  const message = deriveEventMessage(event);
-  if (!message || !['user', 'assistant', 'tool'].includes(message.role) || sourceName(message.source)) return null;
+const record = value => Boolean(value && typeof value === 'object' && !Array.isArray(value));
+const callId = value => typeof value === 'string' && value.length > 0 && value.length <= 512 && !/[\u0000-\u001f\u007f]/.test(value);
+
+function jsonArguments(value) {
+  const pending = [value], seen = new Set();
+  while (pending.length) {
+    const item = pending.pop();
+    if (item === null || typeof item === 'string' || typeof item === 'boolean') continue;
+    if (typeof item === 'number') { if (Number.isFinite(item)) continue; return false; }
+    if (!item || typeof item !== 'object' || seen.has(item)) return false;
+    seen.add(item);
+    if (!Array.isArray(item) && ![Object.prototype, null].includes(Object.getPrototypeOf(item))) return false;
+    const values = Object.values(item);
+    if (Array.isArray(item) && values.length !== item.length) return false;
+    for (const child of values) pending.push(child);
+  }
+  return true;
+}
+
+function dispatchContent(blocks, calls) {
+  if (!Array.isArray(blocks)) return false;
+  const pending = [...blocks].reverse(), seen = new Set(), nested = new Map(calls);
+  while (pending.length) {
+    const block = pending.pop();
+    if (!record(block) || seen.has(block)) return false;
+    seen.add(block);
+    if (block.type === 'tool-call' && callId(block.id) && callId(block.name)) nested.set(block.id, block.name);
+    if (echoValue(block, nested)) continue;
+    if (['text', 'reasoning'].includes(block.type)) { if (typeof block.text !== 'string') return false; }
+    else if (block.type === 'tool-call') {
+      if (!callId(block.id) || !callId(block.name) || !jsonArguments(block.arguments)) return false;
+    } else if (block.type === 'tool-result') {
+      if (!callId(block.toolCallId) || !Array.isArray(block.content) || (block.isError !== undefined && typeof block.isError !== 'boolean')) return false;
+      for (let index = block.content.length - 1; index >= 0; index--) pending.push(block.content[index]);
+    } else if (['image', 'file'].includes(block.type)) {
+      const ref = block.attachment;
+      if (!record(ref) || !callId(ref.attachmentId) || !Number.isSafeInteger(ref.bytes) || ref.bytes < 0
+        || (ref.name !== undefined && !callId(ref.name))) return false;
+      if (block.type === 'file' && !callId(ref.name)) return false;
+      if (block.type === 'image' && (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(ref.mediaType)
+        || !Number.isSafeInteger(ref.width) || ref.width < 1 || !Number.isSafeInteger(ref.height) || ref.height < 1)) return false;
+    } else return false;
+  }
+  return true;
+}
+
+function dispatchIdentity(data, calls) {
+  if (!record(data) || !['rootCallId', 'parentCallId', 'subCallId', 'name'].every(key => callId(data[key]))) return false;
+  const prefix = `${data.parentCallId}:ptc:`, ordinal = data.subCallId.slice(prefix.length);
+  return data.subCallId.startsWith(prefix) && /^[1-9][0-9]*$/.test(ordinal) && Number.isSafeInteger(Number(ordinal))
+    && calls.get(data.parentCallId) === 'run_code' && calls.has(data.rootCallId) && !echoTools.has(calls.get(data.rootCallId));
+}
+
+function nativeDispatch(event, calls) {
+  const data = event.data;
+  if (typeof data.isError !== 'boolean' || !Object.hasOwn(data, 'arguments')
+    || !jsonArguments(data.arguments) || !dispatchContent(data.content, calls)) return null;
+  if (data.error !== undefined && (!data.isError || !record(data.error) || !callId(data.error.name) || !callId(data.error.code)
+    || (data.error.reason !== undefined && typeof data.error.reason !== 'string'))) return null;
+  // The PTC value is transient. Only the SDK's durable content and dispatched
+  // arguments are original material; presentation meta and error detail are not.
+  return { id: data.subCallId, role: 'tool', toolCallId: data.subCallId, isError: data.isError,
+    content: data.content, dispatch: { rootCallId: data.rootCallId, parentCallId: data.parentCallId, name: data.name, arguments: data.arguments } };
+}
+
+// Only accepted logged events grant source access. Display text never expands
+// this session's prefix, and log-only PTC outcomes need no surface projection.
+function originalMessage(event, calls) {
+  let message;
+  if (event.type === 'tool/call') {
+    const data = event.data;
+    if (record(data) && callId(data.callId) && callId(data.name) && typeof data.arguments === 'string') calls.set(data.callId, data.name);
+    return null;
+  }
+  if (event.type === 'tool/ptc-dispatch') {
+    // A legal SDK dispatch belongs to a logged run_code call in this prefix.
+    // Do not authorize fabricated log-only records or follow a parent session.
+    if (!dispatchIdentity(event.data, calls)) return null;
+    // Echo calls grant no source material: do not traverse their arguments or
+    // nested content even to construct a searchable message.
+    if (echoTools.has(event.data.name)) {
+      calls.set(event.data.subCallId, event.data.name);
+      return null;
+    }
+    message = nativeDispatch(event, calls);
+    if (!message) return null;
+    calls.set(message.toolCallId, message.dispatch.name);
+    registerCalls(message.content, calls);
+  } else {
+    if (!messageTypes.has(event.type)) return null;
+    const logged = event.type === 'user/message' ? event.data : event.data?.message;
+    const role = event.type === 'tool/result' ? 'tool' : event.type.split('/')[0];
+    if (!record(logged) || logged.role !== role || !Array.isArray(logged.content)
+      || (logged.source !== undefined && (!record(logged.source) || (logged.source.kind !== undefined && typeof logged.source.kind !== 'string')))) return null;
+    // Use the native unprojected reader, not a live surface or canonical value.
+    message = deriveEventMessage(event);
+    if (!message || !['user', 'assistant', 'tool'].includes(message.role) || sourceName(message.source)) return null;
+    if (message.role === 'assistant') registerCalls(message.content, calls);
+  }
+  if (message.role === 'tool' && echoTools.has(calls.get(message.toolCallId ?? message.source?.callId))) return null;
   return message;
 }
 
-function* argumentParts(value, path) {
-  if (typeof value === 'string') yield { text: value, path, kind: 'tool-call' };
-  else if (value && typeof value === 'object') {
+function echoValue(value, calls) {
+  if (typeof value === 'string' && /^\s*[\[{]/.test(value)) {
+    try { value = JSON.parse(value); } catch { return false; }
+  }
+  return record(value) && (echoTools.has(value.name) || value.search === 'original'
+    || echoTools.has(calls.get(value.toolCallId)));
+}
+
+function* argumentParts(value, path, calls) {
+  if (typeof value === 'string') {
+    // PTC arguments are JSON values; native assistant calls may carry the same
+    // structure serialized as JSON. Do not let nested recall echoes re-enter it.
+    if (/^\s*[\[{]/.test(value)) {
+      let parsed;
+      try { parsed = JSON.parse(value); } catch {}
+      if (parsed !== undefined) { yield* argumentParts(parsed, path, calls); return; }
+    }
+    yield { text: value, path, kind: 'tool-call' };
+  } else if (value && typeof value === 'object') {
+    if (echoValue(value, calls)) return;
+    const attachment = argumentAttachment(value);
+    if (attachment) { yield attachmentPart(attachment, path); return; }
     for (const [key, child] of Object.entries(value)) {
+      if (echoValue(child, calls)) continue;
       yield { text: key, path: [...path, key], kind: 'tool-call' };
-      yield* argumentParts(child, [...path, key]);
+      yield* argumentParts(child, [...path, key], calls);
     }
   } else if (value !== undefined) yield { text: JSON.stringify(value), path, kind: 'tool-call' };
+}
+
+function argumentAttachment(value) {
+  if (['image', 'file'].includes(value.type)) return value;
+  if (record(value.attachment)) return { type: typeof value.attachment.mediaType === 'string' && value.attachment.mediaType.startsWith('image/') ? 'image' : 'file', attachment: value.attachment };
+  if (typeof value.attachmentId === 'string') return { type: typeof value.mediaType === 'string' && value.mediaType.startsWith('image/') ? 'image' : 'file', attachment: value };
+  return null;
 }
 
 function attachmentReference(block, path) {
@@ -88,34 +207,99 @@ function attachmentReference(block, path) {
   return { type: String(block.type).slice(0, 64), path, reference, contentsRead: false };
 }
 
-function* contentParts(blocks, calls, path = []) {
-  for (const [index, block] of (blocks || []).entries()) {
+function attachmentPart(block, path) {
+  const attachment = attachmentReference(block, path);
+  return { text: Object.values(attachment.reference).filter(value => typeof value === 'string').join('\n'), path, kind: 'attachment-reference', attachment };
+}
+
+function* contentParts(blocks, calls, path = [], isError = false) {
+  if (!Array.isArray(blocks)) return;
+  for (const [index, block] of blocks.entries()) {
+    if (!record(block)) continue;
     const at = [...path, index];
-    // Search the body/tool material supported by the original-text reader.
-    // Reasoning is retained in the log, but is not a full-text recall source.
-    if (block.type === 'reasoning') continue;
+    // Reasoning is durable, but is not a full-text recall source.
+    if (block.type === 'reasoning' || echoValue(block, calls)) continue;
     if (block.type === 'text') {
-      if (typeof block.text === 'string') yield { text: block.text, path: at, kind: block.type };
+      if (typeof block.text !== 'string') continue;
+      const text = originalArgument(block.text, calls);
+      if (text !== excludedArgument) yield { text, path: at, kind: block.type, isError };
     } else if (block.type === 'tool-call') {
-      if (echoTools.has(block.name)) continue;
-      yield { text: block.name || '', path: at, kind: 'tool-call' };
-      yield* argumentParts(block.arguments, [...at, 'arguments']);
+      yield { text: block.name || '', path: at, kind: 'tool-call', isError };
+      yield* argumentParts(block.arguments, [...at, 'arguments'], calls);
     } else if (block.type === 'tool-result') {
-      if (!echoTools.has(calls.get(block.toolCallId))) yield* contentParts(block.content, calls, at);
-    } else {
-      const attachment = attachmentReference(block, at);
-      yield { text: Object.values(attachment.reference).filter(value => typeof value === 'string').join('\n'), path: at, kind: 'attachment-reference', attachment };
-    }
+      yield* contentParts(block.content, calls, at, isError || block.isError === true);
+    } else if (['image', 'file'].includes(block.type)) yield attachmentPart(block, at);
   }
 }
 
 function registerCalls(blocks, calls) {
-  for (const block of blocks || []) {
-    if (block.type === 'tool-call' && typeof block.id === 'string') {
-      if (echoTools.has(block.name)) calls.set(block.id, block.name); else calls.delete(block.id);
-    }
-    else if (block.type === 'tool-result') registerCalls(block.content, calls);
+  if (!Array.isArray(blocks)) return;
+  for (const block of blocks) {
+    if (!record(block)) continue;
+    if (block.type === 'tool-call' && typeof block.id === 'string') calls.set(block.id, block.name);
+    else if (block.type === 'tool-result' && !echoValue(block, calls)) registerCalls(block.content, calls);
   }
+}
+
+function* messageParts(message, calls) {
+  if (message.dispatch) {
+    yield { text: message.dispatch.name, path: ['name'], kind: 'tool-call' };
+    yield* argumentParts(message.dispatch.arguments, ['arguments'], calls);
+  }
+  yield* contentParts(message.content, calls, message.dispatch ? ['content'] : [], message.isError === true);
+}
+
+const excludedArgument = Symbol('recall echo');
+function originalArgument(value, calls) {
+  if (typeof value === 'string' && /^\s*[\[{]/.test(value)) {
+    let parsed;
+    try { parsed = JSON.parse(value); } catch {}
+    if (parsed !== undefined) {
+      const clean = originalArgument(parsed, calls);
+      if (clean === excludedArgument) return clean;
+      return JSON.stringify(clean) === JSON.stringify(parsed) ? value : JSON.stringify(clean);
+    }
+  }
+  if (!value || typeof value !== 'object') return value;
+  if (echoValue(value, calls)) return excludedArgument;
+  const attachment = argumentAttachment(value);
+  if (attachment) return { type: attachment.type, attachment: attachmentReference(attachment, []).reference };
+  if (Array.isArray(value)) return value.map(child => originalArgument(child, calls)).filter(child => child !== excludedArgument);
+  return Object.fromEntries(Object.entries(value).flatMap(([key, child]) => {
+    const clean = originalArgument(child, calls);
+    return clean === excludedArgument ? [] : [[key, clean]];
+  }));
+}
+const argumentText = (value, calls) => {
+  const clean = originalArgument(value, calls);
+  return clean === excludedArgument ? '[recall echo excluded]' : typeof clean === 'string' ? clean : JSON.stringify(clean);
+};
+function originalText(blocks, calls) {
+  if (!Array.isArray(blocks)) return '';
+  return blocks.flatMap(block => {
+    if (!record(block) || echoValue(block, calls)) return [];
+    if (block.type === 'text') {
+      if (typeof block.text !== 'string') return [];
+      const clean = originalArgument(block.text, calls);
+      return clean === excludedArgument ? [] : [clean];
+    }
+    if (block.type === 'tool-call') return [`${block.name}(${argumentText(block.arguments, calls)})`];
+    if (block.type === 'tool-result') return [(block.isError ? '[error] ' : '') + originalText(block.content, calls)];
+    if (['image', 'file'].includes(block.type)) return [`[${block.type} attachment reference; contents not read] ${JSON.stringify(attachmentReference(block, []).reference)}`];
+    return [];
+  }).join('\n');
+}
+
+// Shared only by original search and explicit original-text retrieval. This is
+// not a Dream generation source and never opens a session, index or attachment.
+export function originalEvent(event, calls = new Map(), includeText = true) {
+  const message = originalMessage(event, calls);
+  if (!message || !includeText) return null;
+  const attachments = [];
+  for (const part of messageParts(message, calls)) if (part.attachment) attachments.push(part.attachment);
+  const body = (message.isError ? '[error] ' : '') + originalText(message.content, calls);
+  const text = message.dispatch ? `${message.dispatch.name}(${argumentText(message.dispatch.arguments, calls)})\n${body}` : body;
+  return { text, ...(message.role === 'tool' ? { isError: message.isError === true } : {}), ...(attachments.length ? { attachments } : {}) };
 }
 
 function findTerm(chunk, term, offset, original) {
@@ -134,7 +318,7 @@ function snippet(part, at, length) {
   if (start > 0 && /[\udc00-\udfff]/.test(part.text[start])) start--;
   if (end < part.text.length && /[\udc00-\udfff]/.test(part.text[end])) end--;
   return { text: part.text.slice(start, end), offset: start, path: part.path, kind: part.kind,
-    before: start > 0, after: end < part.text.length };
+    before: start > 0, after: end < part.text.length, ...(part.isError ? { isError: true } : {}) };
 }
 
 const compare = (a, b) => b.score - a.score || a.seq - b.seq;
@@ -175,11 +359,10 @@ export async function searchOriginal(session, args = {}, { signal } = {}) {
     await cooperate();
     const event = events[index];
     if (!event || event.seq !== index) throw Error('目标会话原始事件序列不完整');
-    const message = originalMessage(event);
-    hash.update(JSON.stringify([event.seq, event.type, message?.id, message?.role, message?.source, message?.toolCallId, message?.isError]));
+    const message = originalMessage(event, calls);
+    hash.update(JSON.stringify([event.seq, event.type, message?.id, message?.role, message?.source, message?.toolCallId, message?.isError,
+      message?.dispatch && [message.dispatch.rootCallId, message.dispatch.parentCallId, message.dispatch.name]]));
     if (!message) continue;
-    if (message.role === 'assistant') registerCalls(message.content, calls);
-    if (message.role === 'tool' && echoTools.has(calls.get(message.toolCallId ?? message.source?.callId))) continue;
     const found = new Set(), gramHits = new Map(), marks = [], attachments = [];
     let exact = false, foldedExact = false;
     const mark = (part, at, length, priority = false) => {
@@ -189,9 +372,9 @@ export async function searchOriginal(session, args = {}, { signal } = {}) {
       if (priority) marks.unshift(entry); else marks.push(entry);
       marks.splice(2);
     };
-    for (const part of contentParts(message.content, calls)) {
+    for (const part of messageParts(message, calls)) {
       await cooperate();
-      hash.update(JSON.stringify([part.path, part.kind, part.text.length, part.attachment]));
+      hash.update(JSON.stringify([part.path, part.kind, part.text.length, part.attachment, part.isError]));
       if (part.attachment && attachments.length < 2) attachments.push(part.attachment);
       const overlap = Math.max(query.length, ...terms.map(term => term.length), 2) - 1;
       for (let offset = 0; offset < part.text.length; offset += CHUNK_SIZE) {
@@ -223,7 +406,7 @@ export async function searchOriginal(session, args = {}, { signal } = {}) {
     if (!after(candidate, cursor)) continue;
     const result = { ...candidate, sessionId: session.id, role: message.role, type: event.type, inherited: event.seq < inherited,
       from: event.seq, to: event.seq, recall: { sessionId: session.id, from: event.seq, to: event.seq }, snippets: marks,
-      ...(attachments.length ? { attachments } : {}) };
+      ...(message.role === 'tool' ? { isError: message.isError === true } : {}), ...(attachments.length ? { attachments } : {}) };
     best.push(result); best.sort(compare); if (best.length > limit + 1) best.pop();
   }
   signal?.throwIfAborted();

@@ -1,8 +1,10 @@
 # Google Material · 全新布局
 
+[文档目录](README.md) · [外观指南](skins.md) · [其他布局](README.md#按需查阅)
+
 在「设置 → 外观 → 皮肤」选择 **Google Material · 全新布局**。版本 1.0.0，id 和 layout 均为 `google-material-expressive`。
 
-本套从空白建立，以 Google Material 3 Expressive、Android 设置模式与 Gemini 对话布局为参考。独立的参数、布局、外观设置和字体资源位于 `src/client/skins/google-material-expressive/`。
+本套从空白建立，以 Google Material 3 Expressive、Android 设置模式与 Gemini 对话布局为参考。独立的参数、布局、外观设置和字体资源位于 `src/client/skins/google-material-expressive/`。当前指引使用[外观入口](skins.md)，不恢复已删除的研究／交接文档。
 
 ## 布局与覆盖
 
@@ -11,7 +13,7 @@
 - 设置使用大尺寸双栏表面，覆盖通用、模型、内置插件、外观、Oh My DSH、推荐插件、Agent 预设和已归档会话；OMD 六个子页均保留原有功能和保存行为。
 - 小于 840 CSS px 时，导航以带遮罩的侧边面板打开；选择会话、按 Escape 或点击遮罩可关闭。小于 600 px 时使用顶栏菜单入口。
 - 窄屏设置有「设置分类」入口，分类列表和详情分别呈现；Escape 先返回详情，再按宿主规则关闭设置。
-- 工作台任务、上下文、摘要、电脑、监控及预览沿用真实宿主功能，右栏仍支持宿主宽度调整。真实文件内容和电脑截图不添加色彩滤镜。
+- OMD 控制台使用一个原生内容标签（概览、上下文、记忆、调用日志、后台日志），保留文件、终端和第三方入口，右栏支持宿主宽度调整。真实文件内容不添加色彩滤镜；不带入旧后续 CU 的浏览器装饰或引用配色承诺。
 
 ## 字体
 
@@ -31,14 +33,6 @@ node scripts/pack-skin.mjs src/client/skins/google-material-expressive /输出�
 
 支持浅色、深色、跟随系统、减少动态效果；偏好保存在当前浏览器站点。恢复默认入口始终位于外观页；异常时可通过 `?omd-skin=default` 临时恢复默认界面。
 
-## 验证
+## 查看效果
 
-主要回归入口：`test/google-material-expressive-ui.test.mjs`。它在实际安装的 DSH 插件中覆盖设置、各工作台区域、窄屏导航、发送/停止、主题同步、刷新保持、默认恢复、字体实际渲染、宿主字号与右栏调整，以及禁用/重新启用插件。
-
-可保存实际截图与字体证据：
-
-```sh
-TRISOUL_UI_ARTIFACTS=1 node --test test/google-material-expressive-ui.test.mjs
-```
-
-产物写入本地 `data/google-material-expressive-qa/`；不会进入发行包。窗口覆盖 1440、1200、840、768、390 px，并检查低高度窗口。原生系统窗口、浏览器页面缩放和其他设备上的行为应以对应实测为准；本套验收使用 Chromium 中的实际 DSH Web 界面。
+[新版图集](release-visuals.md) · [外观设置](skins.md) · [安装与版本配对](install.md)

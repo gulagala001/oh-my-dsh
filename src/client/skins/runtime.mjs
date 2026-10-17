@@ -6,20 +6,15 @@ import { composePalette, paletteCatalog } from './palette.mjs';
 import { extraPalettes } from './palettes.mjs';
 import { createBackgroundRuntime, backgroundDefaults } from './background.mjs';
 import { appearanceCoordinator } from './coordinator.mjs';
+import { createAttributeMarkers } from '../attribute-markers.mjs';
 export const STORAGE_KEY = 'omd.skins.v1';
 export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss = '', surfaceMarkers) {
   const recovery = new URLSearchParams(location.search).get('omd-skin') === 'default';
   let state = { active: false, skins: [], palettes: paletteCatalog([]), selected: 'default', palette: 'theme', reduceEffects: false, advanced: advancedDefaults(), background: { ...backgroundDefaults, name: '', url: '', loading: false, error: '' }, error: '' };
   let disposeTokens, style, customStyle, disposed = false, logoSequence = 0, owning = false;
   const effectsRoot = document.documentElement;
-  const previousEffects = effectsRoot.getAttribute('data-omd-reduce-effects');
-  let writtenEffects;
-  const syncEffects = () => {
-    const value = state.reduceEffects ? '' : null;
-    if (value === null) effectsRoot.removeAttribute('data-omd-reduce-effects');
-    else effectsRoot.setAttribute('data-omd-reduce-effects', value);
-    writtenEffects = value;
-  };
+  const effectsMarkers = createAttributeMarkers('data-omd-reduce-effects');
+  const syncEffects = () => effectsMarkers.update(new Map(state.reduceEffects ? [[effectsRoot, '']] : []));
   const listeners = new Set();
   const prepare = value => {
     const skin = validateSkin(value, CSS.supports.bind(CSS));
@@ -49,6 +44,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     if (recovery) { next.selected = 'default'; next.palette = 'theme'; next.advanced = advancedDefaults(); next.advanced.brand = { ...next.advanced.brand, logo: 'native', title: 'native' }; }
     next.skins = [...ready.values()].map(item => item.skin);
     next.palettes = paletteCatalog(next.skins);
+    if (JSON.stringify(next.advanced.brand) !== JSON.stringify(state.advanced.brand)) ++logoSequence;
     state = next; prepared = ready;
   };
   const syncMode = snapshot => {
@@ -207,10 +203,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
       unregisterAppearance();
       offTheme(); window.removeEventListener('storage', onStorage); document.removeEventListener('click', onNavigation, true);
       state = { ...state, selected: 'default', palette: 'theme', advanced: advancedDefaults() }; apply(); background.dispose(); listeners.clear();
-      if (effectsRoot.getAttribute('data-omd-reduce-effects') === writtenEffects) {
-        if (previousEffects === null) effectsRoot.removeAttribute('data-omd-reduce-effects');
-        else effectsRoot.setAttribute('data-omd-reduce-effects', previousEffects);
-      }
+      effectsMarkers.dispose();
     },
   };
 }

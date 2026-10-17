@@ -14,8 +14,4 @@ WSL 中运行的 DSH 可以通过 `computerUseNativeBinary` 调用手动指定�
 
 在版本面板更新，或在原生插件管理器安装 `github:gulagala001/oh-my-dsh#v0.1.7-rc.2.13`。Web 用户重启原 DSH 服务；桌面用户完整退出并重启应用与 Host，确认当前版本为 0.1.7-rc.2.13。已有 Oh My DSH 用户无需另外安装 OpenCU。
 
-## 验证
-
-本地 macOS 回归覆盖 OpenCU 的后端选择、程序校验、会话与窗口清理、运行时文档和 Windows 设置界面；Oh My DSH 验证发行快照、组件准备、宿主卸载重载、普通／PTC／Chrome 扩展工具接入及版本更新逻辑。详细执行结果见发行附件 `verification.log`。
-
-WSL 检测和 Windows 程序响应使用自动测试夹具，WSL 真机的截图、输入、停止及进程清理尚未验收。只读连接自检不等于完整操控验证。远端 CI 以对应提交的 Actions 实际结论为准。
+<a id="验证"></a>

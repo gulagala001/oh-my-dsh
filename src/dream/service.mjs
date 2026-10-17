@@ -1,4 +1,4 @@
-import { BlockAssembler } from '@deepseek-ai/dsh-llm';
+import { BlockAssembler, isHarnessError } from '@deepseek-ai/dsh-llm';
 import { DreamStore } from './store.mjs';
 import { DreamSources } from './sources.mjs';
 import { digest, nodeKey, LIMITS, estimateTokens, validateMemory, validateScope } from './core.mjs';
@@ -6,12 +6,25 @@ import { DREAM_SYSTEM, DREAM_TOOL, DREAM_PROMPT_VERSION } from './prompts.mjs';
 import { selectedProjects, workspaceRoots } from './scope.mjs';
 import {setTimeout as delay} from 'node:timers/promises';
 
+const authenticationFailure = error => error?.code==='AUTH'||error?.failure?.code==='AUTH'
+  ||[401,403].includes(error?.status)||[401,403].includes(error?.failure?.status)
+  ||/401|403|unauthorized|api.?key|authentication/i.test(error?.message||'');
 class BudgetWait extends Error { constructor(){super('Dream 每日额度不足，已保存进度');this.budget=true;} }
+class DreamCleanupError extends AggregateError {
+  constructor(errors,primary=errors.find(error=>typeof error?.code==='string'||Number.isInteger(error?.status)||error?.failure)){
+    super(errors,`Dream 模型流收尾失败：${errors.map(error=>String(error?.message||error)).join('；')}`);this.cleanup=true;
+    if(primary)Object.assign(this,{...(typeof primary.code==='string'?{code:primary.code}:{}),
+      ...(Number.isInteger(primary.status??primary.failure?.status)?{status:primary.status??primary.failure.status}:{}),
+      ...(primary.failure?{failure:primary.failure}:{})});
+  }
+}
 export class DreamService {
-  constructor(hub, { store, sources, generate } = {}) {
+  #consumersRetired;
+  constructor(hub, { store, sources, generate, consumersRetired } = {}) {
+    this.#consumersRetired=consumersRetired;
     this.hub=hub;this.store=store||new DreamStore(hub.store.dir);this.sources=sources||new DreamSources(hub,this.store);
     this.generateOverride=generate;this.closed=false;this.draining=null;this.controller=null;this.timer=null;this.epoch=null;
-    this.lifecycle=new AbortController();this.ready=null;this.ticking=null;this.closing=null;
+    this.lifecycle=new AbortController();this.ready=null;this.ticking=null;this.closing=null;this.generating=new Set();this.cleanupFailures=new Set();
   }
   config(){return this.hub.config();}
   route(agent) {
@@ -28,6 +41,10 @@ export class DreamService {
     if(this.closed)return;
     this.timer=setInterval(()=>{void this.tick().catch(e=>this.notice(e));},30000);this.timer.unref?.();
     await this.tick();
+  }
+  jobEvent(job,status,title,detail){
+    this.hub?.event?.(job.scope==='session'?job.target:null,{kind:'dream',status,title,detail,
+      data:{jobId:job.id,scope:job.scope,target:job.target,auto:Boolean(job.auto)}});
   }
   notice(error){if(!this.closed)this.store.setMeta('lastError',String(error?.message||error));}
   async enqueue(scope,target,agent){
@@ -53,7 +70,7 @@ export class DreamService {
     const job=this.store.job(id);if(!job)throw Error('Dream 作业不存在');
     if(['complete','running','queued'].includes(job.state))return job;
     const route=this.route(agent)||job.route;if(!route?.provider||!route.model)throw Error('请先配置 Dream 模型');
-    const next=this.store.updateJobIf(id,['paused','failed','budget'],{state:'queued',error:null,route});void this.drain().catch(e=>this.notice(e));return next;
+    const next=this.store.updateJobIf(id,['paused','failed','budget'],{state:'queued',error:null,code:null,httpStatus:null,failure:null,route});void this.drain().catch(e=>this.notice(e));return next;
   }
   tick(){if(this.ticking)return this.ticking;return this.ticking=this.checkQueue().finally(()=>{this.ticking=null;});}
   async checkQueue(){
@@ -74,24 +91,32 @@ export class DreamService {
   }
   async drain(){
     if(this.closed||this.draining)return this.draining;
+    if(!this.store.hasRunnableJobs())return;
     const epoch=this.store.acquire();if(epoch==null)return;
     this.epoch=epoch;
-    this.draining=(async()=>{
-      this.store.recover(epoch);
+    this.draining=Promise.resolve().then(async()=>{
       const heartbeat=setInterval(()=>{if(!this.store.renew(epoch))this.controller?.abort(Error('Dream 执行租约失效'));},15000);heartbeat.unref?.();
       try{
+        this.store.recover(epoch);
         for(let job;!this.closed&&(job=this.store.claimJob(epoch));){
           this.activeJob=job.id;this.controller=new AbortController();
           try{
             await this.runJob(job,this.controller.signal);
             const skipped=(this.store.meta('indexWarnings')||[]).filter(item=>item.scope!=='session'&&(job.scope==='global'||job.scope==='project'&&item.project===job.target)).length;
             this.store.settleJob(job.id,{state:'complete',notice:skipped?`已整理可读取范围；${skipped} 个会话日志异常，未参与本次汇总`:'本次范围已整理；未到时长的下层资料继续保留'},epoch);
+            this.jobEvent(job,'success','Dream 整理完成',skipped?`${skipped} 个会话日志异常未参与`:null);
           }catch(error){
-            this.store.settleJob(job.id,{state:this.closed?'queued':error.budget?'budget':'failed',error:error.message,...(error.budget?{resumeAt:this.store.usage().resetsAt}:{})},epoch);
+            try{this.store.settleJob(job.id,{state:this.closed?'queued':error.budget?'budget':'failed',error:error.message,
+              ...(typeof error.code==='string'?{code:error.code}:{}),
+              ...(Number.isInteger(error.status??error.failure?.status)?{httpStatus:error.status??error.failure.status}:{}),
+              ...(error.failure?{failure:error.failure}:{}),...(error.budget?{resumeAt:this.store.usage().resetsAt}:{})},epoch);}
+            catch(settleError){throw new DreamCleanupError([error,settleError]);}
+            if(!this.closed)this.jobEvent(job,'error',error.budget?'Dream 超出今日额度':'Dream 整理失败',error.message);
+            if(error.cleanup)throw error;
           }finally{this.activeJob=null;this.controller=null;}
         }
-      }finally{clearInterval(heartbeat);this.store.release(epoch);this.epoch=null;}
-    })().finally(()=>{this.draining=null;});return this.draining;
+      }finally{clearInterval(heartbeat);try{this.store.release(epoch);}catch(error){throw new DreamCleanupError([error]);}finally{this.epoch=null;}}
+    }).catch(error=>{if(error.cleanup)this.cleanupFailures.add(error);throw error;}).finally(()=>{this.draining=null;});return this.draining;
   }
   async runJob(job,signal){
     await this.sources.sync(signal);
@@ -130,7 +155,7 @@ export class DreamService {
         if(target.kind==='session')await this.updateSession(target.target,job,signal,target);
         else await this.updateParent(target.kind,target.target,job,signal,target);
       }catch(error){
-        if(error.budget||signal.aborted||/401|403|unauthorized|api.?key|authentication/i.test(error.message))throw error;
+        if(error.cleanup||error.budget||signal.aborted||authenticationFailure(error))throw error;
         // A shared job withdraws an unreadable source and carries on; a session
         // job still fails outright because it cannot narrow its own range.
         if(target.kind==='session'&&job.scope!=='session'&&this.sources.excludeUnreadable(target.target,error,signal)){
@@ -149,7 +174,10 @@ export class DreamService {
     if(skipped){
       const notice=`Dream 有 ${skipped} 个范围未整理：${lastError.message}`.slice(0,400);
       this.store.setMeta('lastError',notice);
-      throw new Error(notice,{cause:lastError});
+      throw Object.assign(new Error(notice,{cause:lastError}),{
+        ...(typeof lastError.code==='string'?{code:lastError.code}:{}),
+        ...(Number.isInteger(lastError.status??lastError.failure?.status)?{status:lastError.status??lastError.failure.status}:{}),
+        ...(lastError.failure?{failure:lastError.failure}:{})});
     }
   }
   async updateSession(id,job,signal,target){
@@ -210,57 +238,114 @@ export class DreamService {
           if(attempt)await delay(Math.min(2000,500*2**attempt),undefined,{signal});
           const raw=await this.generate(last?{...base,retry_hint:last.message.slice(0,180)}:base,job,signal);
           result=validateMemory(raw,kind,new Set([...base.sources.map(s=>s.id),...(previous?[previous.id]:[])]));break;
-        }catch(error){if(error.budget||signal.aborted||/401|403|unauthorized|api.?key|authentication/i.test(error.message))throw error;last=error;}
+        }catch(error){if(error.cleanup||error.budget||signal.aborted||authenticationFailure(error))throw error;last=error;}
       }
       if(!result)throw last;
       signal.throwIfAborted();await validate(batch);signal.throwIfAborted();
-      this.store.publish({kind,target,baseRevision:old?.revision||0,...result,sources:batch.map(x=>x.source),consumed:batch.map(({key,fingerprint})=>({key,fingerprint})),epoch:this.epoch,jobId:job.id});
+      this.store.publish({kind,target,baseRevision:old?.revision||0,baseInvalid:Boolean(old?.invalid),...result,sources:batch.map(x=>x.source),consumed:batch.map(({key,fingerprint})=>({key,fingerprint})),epoch:this.epoch,jobId:job.id});
     }
   }
   request(input){return {system:DREAM_SYSTEM,messages:[this.hub.context.adapter.message(JSON.stringify(input),'dream-input')],tools:[DREAM_TOOL],maxTokens:LIMITS[input.kind]*2+1024};}
   async generate(input,job,signal){
+    signal=AbortSignal.any([signal,this.lifecycle.signal]);
     const run=async()=>{
-      signal.throwIfAborted();const c=this.config(),request=this.request(input),maxTokens=request.maxTokens;
-      const estimated=estimateTokens(request),route=job.route;
+      signal.throwIfAborted();this.lifecycle.signal.throwIfAborted();
+      const c=this.config(),request=this.request(input),estimated=estimateTokens(request),route=job.route;
       if(estimated>LIMITS.input)throw Error('Dream 请求超过单次输入上限');
       const timeoutMs=c.jobTimeoutMs??600000,controller=new AbortController();
       const timer=timeoutMs>0?setTimeout(()=>controller.abort(Error('Dream 模型调用超时')),timeoutMs):undefined;timer?.unref?.();
       const joined=AbortSignal.any([signal,controller.signal]);
-      let usage,failure,callId,iterator,onAbort,startedAt;const assembler=new BlockAssembler();
+      let usage,failure,callId,iterator,pendingNext,onAbort,startedAt,cleanupFailure,actual=route,hasOutput=false,status='error',finished=false;
+      const assembler=new BlockAssembler();
       const aborted=new Promise((_,reject)=>{onAbort=()=>reject(joined.reason||Error('Dream 已取消'));joined.addEventListener('abort',onAbort,{once:true});if(joined.aborted)onAbort();});aborted.catch(()=>{});
       try{
-        const info=await Promise.race([this.hub.ctx.llm?.resolveModelInfo?.(route.provider,route.model,joined),aborted]);
-        const capacity=info?.context?.contextWindow;
-        if(capacity&&estimated+maxTokens+1024>capacity)throw Error('Dream 请求超过当前模型容量，请使用更大上下文的后台模型');
-        callId=this.store.reserve(estimated+maxTokens,c.dreamDailyTokens??200000,{jobId:job.id,kind:input.kind,route,promptVersion:DREAM_PROMPT_VERSION},this.epoch);
+        let prepared,maxTokens=request.maxTokens;
+        if(!this.generateOverride){
+          const {effort='off',...baseRoute}=route;
+          // Capture capacity, supported selection, defaults and dispatch together.
+          // Await the real preparation producer even if its signal was cancelled.
+          prepared=await this.hub.ctx.llm.prepareCall({...baseRoute,maxTokens},joined,(controls,info)=>({...controls,
+            reasoningEffort:effort!=='inherit'&&info.reasoning?.efforts.some(item=>item.id===effort)?effort:undefined}));
+          actual={...prepared.config,effort:prepared.config.reasoningEffort??null};maxTokens=prepared.config.maxTokens;
+          const capacity=prepared.context?.contextWindow;
+          if(capacity&&estimated+maxTokens+1024>capacity)throw Error('Dream 请求超过当前模型容量，请使用更大上下文的后台模型');
+        }
+        joined.throwIfAborted();
+        callId=this.store.reserve(estimated+maxTokens,c.dreamDailyTokens??200000,{jobId:job.id,kind:input.kind,route:actual,promptVersion:DREAM_PROMPT_VERSION},this.epoch);
         if(!callId)throw new BudgetWait();
         startedAt=Date.now();
-        this.hub.live?.set(`dream:${callId}`,{id:`dream:${callId}`,kind:`dream${input.kind[0].toUpperCase()}${input.kind.slice(1)}`,sessionId:input.kind==='session'?input.target:null,provider:route.provider,model:route.model,startedAt});
-        if(this.generateOverride){const r=await Promise.race([this.generateOverride(input,{signal:joined,route,request}),aborted]);usage=r.usage;return r.value??r;}
-        const {effort='off',...baseRoute}=route;
-          const reasoningEffort=await Promise.race([this.hub.efforts.resolve(route.provider,route.model,effort),aborted]);
-          iterator=this.hub.ctx.llm.stream({...baseRoute,...request,reasoningEffort,signal:joined})[Symbol.asyncIterator]();
-          for(;;){const part=await Promise.race([iterator.next(),aborted]);if(part.done)break;assembler.push(part.value);}
-          usage=assembler.usage;
-          if(['error','aborted','max-tokens'].includes(assembler.finish.kind))throw Error(assembler.finish.failure?.message||`Dream 模型输出未完成：${assembler.finish.kind}`);
-          const call=assembler.blocks().findLast(b=>b.type==='tool-call'&&b.name==='save_memory');
-          if(!call)throw Error('Dream 未提交短记忆');return typeof call.arguments==='string'?JSON.parse(call.arguments):call.arguments;
-      }catch(error){failure=error.message;throw error;}
+        this.hub.live?.set(`dream:${callId}`,{id:`dream:${callId}`,kind:`dream${input.kind[0].toUpperCase()}${input.kind.slice(1)}`,sessionId:input.kind==='session'?input.target:null,provider:actual.provider,model:actual.model,effort:actual.effort??null,startedAt});
+        if(this.generateOverride){const r=await Promise.race([this.generateOverride(input,{signal:joined,route,request}),aborted]);joined.throwIfAborted();usage=r.usage;hasOutput=true;status='success';return r.value??r;}
+        const options={...request,...prepared.config,signal:joined};
+        for(const key of ['reasoningEffort','temperature','maxTokens','stop'])if(!(key in prepared.config))delete options[key];
+        iterator=prepared.stream(options)[Symbol.asyncIterator]();
+        for(;;){
+          pendingNext=iterator.next();const part=await Promise.race([pendingNext,aborted]);
+          joined.throwIfAborted();pendingNext=null;if(part.done)break;
+          const chunk=part.value;
+          hasOutput||=(chunk.type==='text-delta'||chunk.type==='reasoning-delta')?Boolean(chunk.text):chunk.type==='tool-call-delta'?Boolean(chunk.id||chunk.name||chunk.argumentsDelta):chunk.type==='block-end';
+          assembler.push(chunk);finished||=chunk.type==='finish';
+        }
+        usage=assembler.usage;
+        if(!finished)throw Error('Dream 模型流结束但未报告完成状态');
+        if(['error','aborted','max-tokens'].includes(assembler.finish.kind))throw Object.assign(
+          Error(assembler.finish.failure?.message||`Dream 模型输出未完成：${assembler.finish.kind}`),
+          assembler.finish.failure?{...assembler.finish.failure,failure:assembler.finish.failure}:{});
+        const call=assembler.blocks().findLast(b=>b.type==='tool-call'&&b.name==='save_memory');
+        if(!call)throw Error('Dream 未提交短记忆');
+        const result=typeof call.arguments==='string'?JSON.parse(call.arguments):call.arguments;status='success';return result;
+      }catch(error){
+        // Provider failures arrive as finish chunks. A thrown next() is a real
+        // middleware/producer failure, including its native finally cleanup.
+        if(pendingNext&&error!==joined.reason){error=new DreamCleanupError([error]);this.cleanupFailures.add(error);}
+        failure=error;status=error.cleanup?'error':signal.aborted||assembler.finish.kind==='aborted'?'cancelled':'error';throw error;
+      }
       finally{
-        // BlockAssembler keeps usage undefined until the provider reports it.
+        clearTimeout(timer);joined.removeEventListener('abort',onAbort);
+        // A raced next() still owns its producer. Drain both it and return(),
+        // keeping late chunks out of the admitted usage and publication result.
+        if(iterator){
+          const errors=[],collectPart=part=>{
+            const chunk=!part?.done?part?.value:null,reason=chunk?.type==='finish'?chunk.reason:null;
+            // The SDK may turn a pending adapter throw into a terminal chunk.
+            // Only the caller's own abort is expected; other failures still matter.
+            if(reason?.failure&&['error','aborted'].includes(reason.kind)&&reason.failure.code!=='ABORTED'
+              &&!(reason.failure.message===joined.reason?.message&&reason.failure.code===(isHarnessError(joined.reason)?joined.reason.code:'UNKNOWN')))
+              errors.push(Object.assign(Error(reason.failure.message),{...reason.failure,failure:reason.failure}));
+          };
+          // Async generators may yield from finally; return() is not done then.
+          const returning=(async()=>{for(let part=await iterator.return?.();part&&!part.done;part=await iterator.next())collectPart(part);})();
+          const results=await Promise.allSettled([returning,...(pendingNext?[pendingNext]:[])]);
+          for(const [index,result]of results.entries()){
+            if(result.status==='rejected'){
+              if(index===0||result.reason!==failure&&result.reason!==joined.reason&&!failure?.errors?.includes(result.reason))errors.push(result.reason);
+            }else if(index>0)collectPart(result.value);
+          }
+          if(errors.length){
+            // Late producer facts outrank the caller's retained cancellation.
+            const primary=errors.find(error=>typeof error?.code==='string'||Number.isInteger(error?.status)||error?.failure)||failure;
+            cleanupFailure=new DreamCleanupError([...(failure?[failure]:[]),...errors],primary);this.cleanupFailures.add(cleanupFailure);failure=cleanupFailure;status='error';
+          }
+        }
+        // Reserve is a quota hold, never a fabricated provider usage receipt.
         usage??=assembler.usage;
-        clearTimeout(timer);joined.removeEventListener('abort',onAbort);try{void iterator?.return?.()?.catch?.(()=>{});}catch{}
         if(callId){
+          try{this.store.settle(callId,usage,failure?String(failure.message||failure):undefined);}
+          catch(error){cleanupFailure=new DreamCleanupError([...(failure?[failure]:[]),error]);this.cleanupFailures.add(cleanupFailure);failure=cleanupFailure;status='error';}
           this.hub.live?.delete(`dream:${callId}`);
           try{this.hub.monitor?.append({id:`dream:${callId}`,source:'dream',kind:`dream${input.kind[0].toUpperCase()}${input.kind.slice(1)}`,
             sessionId:input.kind==='session'?input.target:null,at:Date.now(),startedAt,
-            provider:route.provider,model:route.model,effort:route.effort??null,
-            durationMs:Date.now()-startedAt,usage,hasOutput:Boolean(assembler.blocks().length),status:failure?(signal.aborted?'cancelled':'error'):'success',error:failure});}catch{}
-          this.store.settle(callId,usage,failure);
+            provider:actual.provider,model:actual.model,effort:actual.effort??null,
+            durationMs:Date.now()-startedAt,usage,hasOutput,status,error:failure?String(failure.message||failure):undefined,
+            ...(typeof failure?.code==='string'?{code:failure.code}:{}),
+            ...(Number.isInteger(failure?.status??failure?.failure?.status)?{httpStatus:failure.status??failure.failure.status}:{}),
+            ...(failure?.failure?{failure:failure.failure}:{})});}catch{}
         }
+        if(cleanupFailure)throw cleanupFailure;
       }
     };
-    return this.hub.context.withCallSlot?this.hub.context.withCallSlot(run,signal,true):run();
+    const task=this.hub.context.withCallSlot?this.hub.context.withCallSlot(run,signal,true):run();this.generating.add(task);
+    try{return await task;}finally{this.generating.delete(task);}
   }
   status(id){
     const s=id?this.store.session(id):null;
@@ -271,6 +356,18 @@ export class DreamService {
   close(){return this.closing??=this.shutdown();}
   async shutdown(){
     this.closed=true;clearInterval(this.timer);this.lifecycle.abort(Error('Dream 服务正在退出'));this.controller?.abort(Error('Dream 服务正在退出'));
-    await Promise.allSettled([this.sources.close?.(),this.draining,this.ready,this.ticking].filter(Boolean));this.store.close();
+    const cancelled=new Set([this.lifecycle.signal.reason,this.sources.lifecycle?.signal.reason,this.controller?.signal.reason]),errors=new Set(this.cleanupFailures);
+    const collect=results=>{for(const result of results)if(result.status==='rejected'&&!cancelled.has(result.reason)&&result.reason!==this.sources.lifecycle?.signal.reason)errors.add(result.reason);};
+    // ready/tick can create a drain while close is already waiting for sources.
+    // Keep the database open until every real generation and producer retires.
+    const results=await Promise.allSettled([(async()=>this.sources.close?.())(),...new Set([this.draining,this.ready,this.ticking,...this.generating].filter(Boolean))]);
+    collect(results);
+    if(results[0].status==='fulfilled'&&Array.isArray(results[0].value))collect(results[0].value);
+    collect(await Promise.allSettled([...new Set([this.draining,this.ready,this.ticking,...this.generating].filter(Boolean))]));
+    for(const error of this.cleanupFailures)errors.add(error);
+    // Hub runtime removal still classifies sessions through this database.
+    await this.#consumersRetired?.();
+    try{this.store.close();}catch(error){errors.add(error);}
+    if(errors.size)throw new AggregateError([...errors],'Dream 服务收尾失败');
   }
 }

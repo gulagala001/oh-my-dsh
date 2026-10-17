@@ -69,8 +69,6 @@ html.omd[data-omd-layout="ios-liquid"] .EvIC1a_column { padding-top: 16px; paddi
 html.omd[data-omd-layout="ios-liquid"] .Sixlwa_bubble { padding: 12px 18px; border-bottom-right-radius: 8px; }
 html.omd[data-omd-layout="ios-liquid"] .Sixlwa_bubble :is(a,code) { color: inherit; }
 html.omd[data-omd-layout="ios-liquid"] .Sixlwa_bubble code { background: #ffffff26; }
-/* Reference chips share the user foreground, including composed palettes. */
-html.omd[data-omd-layout="ios-liquid"] .tx-cu-user-bubble { --cu-blue: var(--omd-on-user); }
 html.omd[data-omd-layout="ios-liquid"] [data-chat-flow-kind] { line-height: var(--omd-line-height); }
 html.omd[data-omd-layout="ios-liquid"] :is(.xzv4MW_actions,.l_V-RG_label) { color: var(--omd-muted); }
 html.omd[data-omd-layout="ios-liquid"] :is(.tx-cu-group-toggle,.omd-record-toggle) { padding: 5px 10px; min-height: 32px; }
@@ -90,9 +88,6 @@ html.omd[data-omd-layout="ios-liquid"] .uV2eYG_add { background: var(--omd-hover
 html.omd[data-omd-layout="ios-liquid"] :is(.iWlSmW_trigger,._7KE1Ra_trigger,.tx-bt-chip,.cx-scope-chip) {
   border-radius: 999px; min-height: 30px; background: transparent; border-color: transparent;
 }
-html.omd[data-omd-layout="ios-liquid"] [data-slot="conversation.composer.dock"] { padding: 9px 10px 2px; }
-html.omd[data-omd-layout="ios-liquid"] :is(.tx-workbench-entry,.tx-cu-dock-button,.tx-usage-toggle) { border-radius: 999px; padding-inline: 10px; }
-html.omd[data-omd-layout="ios-liquid"] .tx-workbench-entry { white-space: nowrap; flex-shrink: 0; }
 html.omd[data-omd-layout="ios-liquid"] .pXSMma_headline { font-size: clamp(26px, 3vw, 36px); font-weight: 700; letter-spacing: -1px; margin-bottom: 24px; }
 html.omd[data-omd-layout="ios-liquid"] [data-slot="conversation.hero.brand.mark"] .tx-brand-mark {
   width: 86px; height: 86px; padding: 12px; border-radius: 28px;
@@ -242,13 +237,8 @@ html.omd[data-omd-layout="ios-liquid"] :is([role=tooltip],.tx-cu-live-banner) { 
   html.omd[data-omd-layout="ios-liquid"] [data-composer-input] { padding-inline: 14px; font-size: max(16px, var(--dsh-content-font-size, 15px)); }
   html.omd[data-omd-layout="ios-liquid"] [data-composer-placeholder] { left: 14px; font-size: 13px; }
   html.omd[data-omd-layout="ios-liquid"] .uV2eYG_row { gap: 4px; padding: 2px 8px 8px; }
-  html.omd[data-omd-layout="ios-liquid"] [data-slot="conversation.composer.dock"] { padding-inline: 0; }
-  html.omd[data-omd-layout="ios-liquid"] :is(.tx-workbench-entry,.tx-usage-toggle) { padding-inline: 5px; }
   html.omd[data-omd-layout="ios-liquid"] .tx-composer-tools { flex-wrap: wrap; }
   html.omd[data-omd-layout="ios-liquid"] .tx-cu-chip { flex-shrink: 0; }
-  html.omd[data-omd-layout="ios-liquid"] .uV2eYG_dock { flex-wrap: wrap; gap: 0; }
-  html.omd[data-omd-layout="ios-liquid"] [data-slot="conversation.composer.dock"] { flex-basis: 100%; }
-  html.omd[data-omd-layout="ios-liquid"] .uV2eYG_dock > .JObwrW_root { margin-left: auto; padding-top: 0; }
   html.omd[data-omd-layout="ios-liquid"] .VOzbGW_panel {
     width: calc(100vw - 16px); max-width: calc(100vw - 16px); height: calc(100dvh - 32px);
     max-height: calc(100dvh - 32px); border-radius: 26px; flex-direction: column;

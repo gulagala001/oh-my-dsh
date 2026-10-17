@@ -1,0 +1,437 @@
+--- a/apps/desktop/src/browser-guests.ts
++++ b/apps/desktop/src/browser-guests.ts
+@@ -1,12 +1,17 @@
+ /** Main-process ownership and fixed isolation policy for Sidebar webview guests. */
+ import { randomUUID } from 'node:crypto'
+-import { app, session, type BrowserWindow, type Session, type WebContents } from 'electron'
++import { join } from 'node:path'
++import { DEEPSEEK_PROFILE, DEEPSEEK_PARTITION, resolveDeepSeekProfile, allowsDeepSeekNavigation, allowsDeepSeekResource, allowsDeepSeekDownload, allowsDeepSeekFileDownloadRequest, safeDownloadFilename } from './deepseek-browser-policy.ts'
++import { app, session, type BrowserWindow, type Session, type WebContents, type DownloadItem } from 'electron'
+ import type { DesktopBrowserLeaseId, DesktopBrowserOpenRequest, DesktopBrowserReservation } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
+ import { DESKTOP_IPC } from './ipc.ts'
+ 
+ interface GuestLease {
+   readonly owner: WebContents
+   readonly partition: string
++  readonly profile?: typeof DEEPSEEK_PROFILE
++  readonly downloads: Set<DownloadItem>
++  readonly requestedDownloads: Map<string, { source: string; expires: number }>
+   attached: boolean
+   guest?: WebContents
+   releaseInput?: () => void
+@@ -15,6 +20,7 @@
+ /** Owns workspace storage partitions independently from individual tab guests. */
+ export class DesktopBrowserGuests {
+   private readonly partitions = new Map<string, string>()
++  private persistentSession: Session | undefined
+   private readonly leases = new Map<DesktopBrowserLeaseId, GuestLease>()
+ 
+   /** @param hostUrl - current authenticated DSH Host, which guests cannot request. */
+@@ -24,20 +30,27 @@
+    * Reserve one guest in a workspace's process-lifetime partition.
+    * @param owner - authenticated primary application WebContents.
+    * @param workspace - workspace identity received over IPC.
++   * @param options - opt-in persistent product profile, validated at IPC entry.
+    * @returns opaque lease and the partition approved for it.
+    */
+-  acquire(owner: WebContents, workspace: unknown): DesktopBrowserReservation {
++  acquire(owner: WebContents, workspace: unknown, options?: unknown): DesktopBrowserReservation {
+     if (typeof workspace !== 'string' || workspace.length === 0 || workspace.length > 4096) {
+       throw new Error('desktop browser: a workspace storage identity is required')
+     }
+-    let partition = this.partitions.get(workspace)
++    const profile = resolveDeepSeekProfile(options)
++    let partition = profile === DEEPSEEK_PROFILE ? DEEPSEEK_PARTITION : this.partitions.get(workspace)
++    if (profile === DEEPSEEK_PROFILE && this.persistentSession === undefined) {
++      const persistentSession = session.fromPartition(DEEPSEEK_PARTITION)
++      this.configureSession(persistentSession, profile)
++      this.persistentSession = persistentSession
++    }
+     if (partition === undefined) {
+       partition = `dsh-sidebar-browser-${randomUUID()}`
+       this.configureSession(session.fromPartition(partition))
+       this.partitions.set(workspace, partition)
+     }
+     const lease = randomUUID() as DesktopBrowserLeaseId
+-    this.leases.set(lease, { owner, partition, attached: false })
++    this.leases.set(lease, { owner, partition, attached: false, downloads: new Set(), requestedDownloads: new Map(), ...(profile === undefined ? {} : { profile }) })
+     return { lease, partition }
+   }
+ 
+@@ -52,8 +65,11 @@
+     const lease = this.leases.get(key)
+     if (lease === undefined) return
+     if (lease.owner !== owner) throw new Error('desktop browser: guest belongs to another window')
+-    lease.releaseInput?.()
+     this.leases.delete(key)
++    lease.requestedDownloads.clear()
++    for (const item of lease.downloads) item.cancel()
++    lease.downloads.clear()
++    lease.releaseInput?.()
+     const guest = lease.guest
+     if (guest !== undefined && !guest.isDestroyed()) {
+       const destroyed = new Promise<void>((resolve) => { guest.once('destroyed', resolve) })
+@@ -88,10 +104,12 @@
+         contextIsolation: true, sandbox: true, webSecurity: true, allowRunningInsecureContent: false,
+         webviewTag: false, plugins: false, navigateOnDragDrop: false, disableDialogs: true,
+         devTools: !app.isPackaged,
++        backgroundThrottling: lease.profile !== DEEPSEEK_PROFILE,
+       })
+       params.httpreferrer = ''
+     })
+     owner.on('did-attach-webview', (_event, guest) => {
++      const profile = guest.session === this.persistentSession ? DEEPSEEK_PROFILE : undefined
+       let attachedLease: DesktopBrowserLeaseId | undefined
+       // The first document is an inert about:blank carrying the approved lease.
+       // Bind on the main-process event before the renderer can navigate the ready guest.
+@@ -106,22 +124,33 @@
+         lease.guest = guest
+         attachedLease = id
+         lease.releaseInput = attachInput(guest, id)
+-        guest.once('destroyed', () => { lease.releaseInput?.(); this.leases.delete(id) })
++        guest.once('destroyed', () => {
++          this.leases.delete(id)
++          lease.requestedDownloads.clear()
++          for (const item of lease.downloads) item.cancel()
++          lease.downloads.clear()
++          lease.releaseInput?.()
++        })
+       })
+       guest.setWindowOpenHandler(({ url, postBody }) => {
+         const lease = attachedLease === undefined ? undefined : this.leases.get(attachedLease)
++        if (profile === DEEPSEEK_PROFILE && lease?.guest === guest && lease.owner === owner
++          && !owner.isDestroyed() && postBody === undefined && this.requestFileDownload(lease, url)) return { action: 'deny' }
+         if (attachedLease !== undefined && lease?.guest === guest && lease.owner === owner && !owner.isDestroyed()
+-          && postBody === undefined && this.allowedNavigation(url)) {
+-          const request: DesktopBrowserOpenRequest = { lease: attachedLease, url: new URL(url).href }
++          && postBody === undefined && this.allowedNavigation(url, profile)) {
++          const request: DesktopBrowserOpenRequest = { lease: attachedLease, url: new URL(url).href, ...(profile === undefined ? {} : { profile }) }
+           owner.send(DESKTOP_IPC.browserOpenRequested, request)
+         }
+         return { action: 'deny' }
+       })
+       guest.on('will-frame-navigate', (event) => {
+-        if (event.isMainFrame && !this.allowedNavigation(event.url)) event.preventDefault()
++        const lease = attachedLease === undefined ? undefined : this.leases.get(attachedLease)
++        if (event.isMainFrame && profile === DEEPSEEK_PROFILE && lease?.guest === guest
++          && this.requestFileDownload(lease, event.url)) { event.preventDefault(); return }
++        if (event.isMainFrame && !this.allowedNavigation(event.url, profile)) event.preventDefault()
+       })
+       guest.on('will-redirect', (event, url, _inPlace, mainFrame) => {
+-        if (mainFrame && !this.allowedNavigation(url)) event.preventDefault()
++        if (mainFrame && !this.allowedNavigation(url, profile)) event.preventDefault()
+       })
+       guest.on('will-attach-webview', (event) => { event.preventDefault() })
+       guest.on('login', (event, _details, _authInfo, callback) => { event.preventDefault(); callback() })
+@@ -138,24 +167,75 @@
+     owner.once('destroyed', releaseAll)
+   }
+ 
+-  private configureSession(browserSession: Session): void {
++  private configureSession(browserSession: Session, profile?: typeof DEEPSEEK_PROFILE): void {
+     browserSession.setPermissionRequestHandler((_contents, _permission, callback) => { callback(false) })
+     browserSession.setPermissionCheckHandler(() => false)
+     browserSession.setDevicePermissionHandler(() => false)
+     browserSession.setDisplayMediaRequestHandler((_request, callback) => { callback({}) })
+-    browserSession.on('will-download', (event) => { event.preventDefault() })
++    browserSession.on('will-download', (event, item, contents) => {
++      const lease = [...this.leases.values()].find(candidate => candidate.guest === contents
++        && candidate.attached && candidate.profile === DEEPSEEK_PROFILE && !candidate.owner.isDestroyed())
++      const firstUrl = item.getURLChain()[0]
++      const request = firstUrl === undefined ? undefined : lease?.requestedDownloads.get(firstUrl)
++      if (firstUrl !== undefined) lease?.requestedDownloads.delete(firstUrl)
++      const initiator = item.getInitiatorOrigin()
++      const approvedSource = initiator === '' && request !== undefined && request.expires >= Date.now() ? request.source : initiator
++      if (profile !== DEEPSEEK_PROFILE || lease === undefined || contents.isDestroyed()
++        || !allowsDeepSeekDownload(contents.getURL(), item.getURLChain(), approvedSource)
++        || item.getURLChain().some(value => URL.canParse(value) && this.isApplicationHost(new URL(value)))) {
++        event.preventDefault()
++        return
++      }
++      try {
++        item.setSaveDialogOptions({
++          defaultPath: join(app.getPath('downloads'), safeDownloadFilename(item.getFilename())),
++          properties: ['createDirectory', 'showOverwriteConfirmation'],
++        })
++      } catch (error) {
++        event.preventDefault()
++        console.error('Desktop browser download dialog failed', error)
++        return
++      }
++      // Omitting setSavePath preserves Electron's native save/cancel dialog.
++      lease.downloads.add(item)
++      item.once('done', () => { lease.downloads.delete(item) })
++    })
+     browserSession.webRequest.onBeforeRequest((details, callback) => {
+       const url = new URL(details.url)
+       const network = ['http:', 'https:', 'ws:', 'wss:'].includes(url.protocol)
+       callback({ cancel: network
+         ? url.username !== '' || url.password !== '' || this.isApplicationHost(url)
++          || (profile === DEEPSEEK_PROFILE && !allowsDeepSeekResource(details.url))
+         : !['about:', 'data:', 'blob:'].includes(url.protocol) })
+     })
+   }
+ 
+-  private allowedNavigation(value: string): boolean {
++  private requestFileDownload(lease: GuestLease, value: string): boolean {
++    const guest = lease.guest
++    if (guest === undefined || guest.isDestroyed() || lease.owner.isDestroyed()
++      || !allowsDeepSeekNavigation(guest.getURL()) || !allowsDeepSeekFileDownloadRequest(value)) return false
++    const url = new URL(value).href
++    for (const [key, request] of lease.requestedDownloads) {
++      if (request.expires < Date.now()) lease.requestedDownloads.delete(key)
++    }
++    // Bound unfulfilled requests, and bind main-issued downloads to this live lease and exact URL.
++    if (lease.requestedDownloads.size >= 32) return true
++    lease.requestedDownloads.set(url, { source: guest.getURL(), expires: Date.now() + 30_000 })
++    queueMicrotask(() => {
++      if (!lease.requestedDownloads.has(url) || guest.isDestroyed() || lease.owner.isDestroyed()) return
++      try { guest.downloadURL(url) }
++      catch (error) {
++        lease.requestedDownloads.delete(url)
++        console.error('Desktop browser attachment download failed', error instanceof Error ? error.name : 'Error')
++      }
++    })
++    return true
++  }
++
++  private allowedNavigation(value: string, profile?: typeof DEEPSEEK_PROFILE): boolean {
+     if (!URL.canParse(value)) return false
+     const url = new URL(value)
++    if (profile === DEEPSEEK_PROFILE) return allowsDeepSeekNavigation(value) && !this.isApplicationHost(url)
+     return ['http:', 'https:'].includes(url.protocol) && url.username === '' && url.password === ''
+       && !this.isApplicationHost(url)
+   }
+--- a/apps/desktop/src/preload-browser.ts
++++ b/apps/desktop/src/preload-browser.ts
+@@ -1,23 +1,27 @@
+ /** Lease-scoped browser operations and one main-process event subscription per window. */
+ import { ipcRenderer } from 'electron'
+-import type { DesktopBrowserBridge, DesktopBrowserLeaseId } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
++import type { DesktopBrowserBridge, DesktopBrowserLeaseId, DesktopBrowserOpenRequest } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
+ import { DESKTOP_IPC } from './ipc.ts'
+ 
+ /** @returns browser operations that expose neither IPC nor Electron objects. */
+ export function createDesktopBrowserBridge(): DesktopBrowserBridge {
+-  const listeners = new Map<DesktopBrowserLeaseId, Set<(url: string) => void>>()
++  const listeners = new Map<DesktopBrowserLeaseId, Set<(url: string, request: DesktopBrowserOpenRequest) => void>>()
+   ipcRenderer.on(DESKTOP_IPC.browserOpenRequested, (_event, request: unknown) => {
+     if (typeof request !== 'object' || request === null || !('lease' in request) || !('url' in request)
+       || typeof request.lease !== 'string' || typeof request.url !== 'string') return
+-    const callbacks = listeners.get(request.lease as DesktopBrowserLeaseId)
++    if ('profile' in request && request.profile !== 'deepseek-workbench') return
++    const approved: DesktopBrowserOpenRequest = { lease: request.lease as DesktopBrowserLeaseId, url: request.url,
++      ...('profile' in request ? { profile: 'deepseek-workbench' as const } : {}) }
++    const callbacks = listeners.get(approved.lease)
+     if (callbacks === undefined) return
+     for (const callback of [...callbacks]) {
+-      try { callback(request.url) }
++      try { callback(approved.url, approved) }
+       catch (error) { console.error('Desktop browser link handler failed', error) }
+     }
+   })
+   return {
+-    acquire: workspace => ipcRenderer.invoke(DESKTOP_IPC.browserAcquire, workspace) as ReturnType<DesktopBrowserBridge['acquire']>,
++    capabilities: () => ipcRenderer.invoke(DESKTOP_IPC.browserCapabilities) as ReturnType<NonNullable<DesktopBrowserBridge['capabilities']>>,
++    acquire: (workspace, options) => ipcRenderer.invoke(DESKTOP_IPC.browserAcquire, workspace, options) as ReturnType<DesktopBrowserBridge['acquire']>,
+     release: lease => ipcRenderer.invoke(DESKTOP_IPC.browserRelease, lease) as Promise<void>,
+     onOpenRequested(lease, listener) {
+       let callbacks = listeners.get(lease)
+--- a/apps/desktop/src/ipc.ts
++++ b/apps/desktop/src/ipc.ts
+@@ -17,6 +17,7 @@
+   onboardingActive: 'dsh-desktop:onboarding-active',
+   onboardingApiKey: 'dsh-desktop:onboarding-api-key',
+   bootFailed: 'dsh-desktop:boot-failed',
++  browserCapabilities: 'dsh-desktop:browser-capabilities',
+   browserAcquire: 'dsh-desktop:browser-acquire',
+   browserRelease: 'dsh-desktop:browser-release',
+   browserOpenRequested: 'dsh-desktop:browser-open-requested',
+--- a/apps/desktop/src/main.ts
++++ b/apps/desktop/src/main.ts
+@@ -700,9 +700,13 @@
+     reportFatal(new Error(message), 'web-boot')
+   })
+ 
+-  ipcMain.handle(DESKTOP_IPC.browserAcquire, (event, workspace: unknown) => {
++  ipcMain.handle(DESKTOP_IPC.browserCapabilities, (event) => {
+     assertProductSender(event)
+-    return browserGuests.acquire(event.sender, workspace)
++    return { persistentProfiles: true, downloads: true }
++  })
++  ipcMain.handle(DESKTOP_IPC.browserAcquire, (event, workspace: unknown, options?: unknown) => {
++    assertProductSender(event)
++    return browserGuests.acquire(event.sender, workspace, options)
+   })
+   ipcMain.handle(DESKTOP_IPC.browserRelease, (event, lease: unknown) => {
+     assertProductSender(event)
+@@ -734,7 +738,7 @@
+   })
+   ipcMain.handle(PLATFORM_IPC.open, (event, page: unknown, bounds: unknown) => {
+     const owner = assertMainApplication(event)
+-    if (page !== 'usage' && page !== 'top-up') throw new Error('Invalid Platform page')
++    if (page !== 'usage' && page !== 'top-up' && page !== 'api-keys') throw new Error('Invalid Platform page')
+     return platformView.open(owner, page, platformBounds(bounds))
+   })
+   ipcMain.handle(PLATFORM_IPC.bounds, (event, bounds: unknown) => {
+--- a/packages/client/ui-sidebar-browser/src/types.ts
++++ b/packages/client/ui-sidebar-browser/src/types.ts
+@@ -4,7 +4,7 @@
+ /** Main-issued identity of one guest reservation. */
+ export type DesktopBrowserLeaseId = Branded<'DesktopBrowserLeaseId'>
+ 
+-/** A guest's approved, process-local storage partition. */
++/** A guest's approved storage partition; persistence requires an explicit product profile. */
+ export interface DesktopBrowserReservation {
+   readonly lease: DesktopBrowserLeaseId
+   readonly partition: string
+@@ -12,16 +12,19 @@
+ 
+ /** Main-approved request to open an HTTP(S) page from an existing guest. */
+ export interface DesktopBrowserOpenRequest {
++  readonly profile?: 'deepseek-workbench'
+   readonly lease: DesktopBrowserLeaseId
+   readonly url: string
+ }
+ 
+ /** Origin-scoped operations; no Electron objects or arbitrary IPC cross this interface. */
+ export interface DesktopBrowserBridge {
+-  /** @param workspace - resolved storage account. @returns one approved guest reservation. */
+-  acquire(workspace: string): Promise<DesktopBrowserReservation>
++  /** @returns opt-in profile/download support; absence means an older shell. */
++  capabilities?(): Promise<{ readonly persistentProfiles: boolean; readonly downloads: boolean }>
++  /** @param workspace - resolved storage account. @param options - explicit persistent profile. @returns one approved guest reservation. */
++  acquire(workspace: string, options?: { readonly profile: 'deepseek-workbench' }): Promise<DesktopBrowserReservation>
+   /** @param lease - the caller's reservation. @returns after its guest has been destroyed. */
+   release(lease: DesktopBrowserLeaseId): Promise<void>
+   /** @param lease - originating guest. @param listener - approved URL consumer. @returns unsubscribe callback. */
+-  onOpenRequested(lease: DesktopBrowserLeaseId, listener: (url: string) => void): () => void
++  onOpenRequested(lease: DesktopBrowserLeaseId, listener: (url: string, request: DesktopBrowserOpenRequest) => void): () => void
+ }
+--- a/apps/desktop/src/preload-app.ts
++++ b/apps/desktop/src/preload-app.ts
+@@ -87,7 +87,8 @@
+     failed: (message: string) => ipcRenderer.invoke(DESKTOP_IPC.bootFailed, message) as Promise<void>,
+   })
+   contextBridge.exposeInMainWorld('dshPlatform', {
+-    open: (page: 'usage' | 'top-up', bounds: { x: number; y: number; width: number; height: number }) => ipcRenderer.invoke(PLATFORM_IPC.open, page, bounds),
++    pages: ['usage', 'top-up', 'api-keys'],
++    open: (page: 'usage' | 'top-up' | 'api-keys', bounds: { x: number; y: number; width: number; height: number }) => ipcRenderer.invoke(PLATFORM_IPC.open, page, bounds),
+     setBounds: (bounds: { x: number; y: number; width: number; height: number }) => ipcRenderer.invoke(PLATFORM_IPC.bounds, bounds),
+     close: () => ipcRenderer.invoke(PLATFORM_IPC.close),
+   })
+--- a/apps/desktop/src/platform-view.ts
++++ b/apps/desktop/src/platform-view.ts
+@@ -76,7 +76,7 @@
+    * @param bounds - owned renderer rectangle.
+    * @returns when loading finishes, or without a document when superseded or the owner closes or navigates.
+    */
+-  async open(owner: PlatformOwner, page: 'usage' | 'top-up', bounds: PlatformBounds): Promise<void> {
++  async open(owner: PlatformOwner, page: 'usage' | 'top-up' | 'api-keys', bounds: PlatformBounds): Promise<void> {
+     if (this.disposed) throw new Error('Platform view disposed')
+     this.close()
+     const account = this.account
+@@ -166,7 +166,7 @@
+     owner.contentView.addChildView(view)
+     view.setBounds(bounds)
+     try {
+-      const url = new URL(page === 'usage' ? '/usage' : '/top_up', account.origin)
++      const url = new URL(page === 'usage' ? '/usage' : page === 'api-keys' ? '/api_keys' : '/top_up', account.origin)
+       if (account.embeddedPageDist) url.searchParams.set('dist', account.embeddedPageDist)
+       await view.webContents.loadURL(url.href)
+     } catch (error) {
+--- /dev/null
++++ b/apps/desktop/src/deepseek-browser-policy.ts
+@@ -0,0 +1,82 @@
++/** Opt-in DeepSeek guest policy; ordinary Sidebar guests keep their existing policy. */
++export const DEEPSEEK_PROFILE = 'deepseek-workbench' as const
++/** Application-wide Chromium storage survives tab release and application restart. */
++export const DEEPSEEK_PARTITION = 'persist:dsh-deepseek-workbench-v1'
++/** Navigation stays on the two product entry points, including their local sign-in pages. */
++const PAGE_HOSTS = new Set(['chat.deepseek.com', 'platform.deepseek.com'])
++/** Official page SDKs require these captcha service origins; they never become navigable pages. */
++const CAPTCHA_HOSTS = new Set(['challenges.cloudflare.com', 'castatic.fengkongcloud.cn',
++  'castatic-xjp.fengkongcloud.cn', 'tracker.fengkongcloud.com', 'captcha.fengkongcloud.com', 'captcha1.fengkongcloud.cn',
++  'a0fea896111e.edge.captcha-sdk.awswaf.com', 'a0fea896111e.edge.sdk.awswaf.com'])
++
++/** @param options - untrusted acquire IPC options. @returns the supported opt-in profile. */
++export function resolveDeepSeekProfile(options: unknown): typeof DEEPSEEK_PROFILE | undefined {
++  if (options === undefined) return undefined
++  if (typeof options !== 'object' || options === null || Array.isArray(options)
++    || Object.keys(options).length !== 1 || !('profile' in options) || options.profile !== DEEPSEEK_PROFILE) {
++    throw new Error('desktop browser: unsupported browser profile')
++  }
++  return DEEPSEEK_PROFILE
++}
++
++/** @param value - untrusted URL. @returns an HTTPS URL without credentials or custom ports. */
++function officialUrl(value: string): URL | undefined {
++  if (!URL.canParse(value)) return undefined
++  const url = new URL(value)
++  if (url.protocol !== 'https:' || url.username !== '' || url.password !== '' || url.port !== '') return undefined
++  return url
++}
++
++/** @param value - requested top-level URL. @returns whether the official product may navigate there. */
++export function allowsDeepSeekNavigation(value: string): boolean {
++  const url = officialUrl(value)
++  return url !== undefined && PAGE_HOSTS.has(url.hostname)
++}
++
++/** @param value - requested attachment link. @returns whether the shell may download it without page navigation. */
++export function allowsDeepSeekFileDownloadRequest(value: string): boolean {
++  const url = officialUrl(value)
++  return url !== undefined && url.hostname === 'files.deepseeksvc.com' && url.pathname.startsWith('/api/')
++}
++
++/** @param value - network request URL. @returns whether it is a product resource or required login/captcha SDK. */
++export function allowsDeepSeekResource(value: string): boolean {
++  // Chromium's secure WebSocket transport shares the same site restrictions.
++  const normalized = value.startsWith('wss:') ? `https:${value.slice(4)}` : value
++  const url = officialUrl(normalized)
++  if (url === undefined) return false
++  if (url.hostname === 'deepseek.com' || url.hostname.endsWith('.deepseek.com')) return true
++  if (value.startsWith('wss:')) return false
++  if (url.hostname === 'files.deepseeksvc.com') return true
++  // hCaptcha documents rotating asset hosts, so its own site is deliberately suffix-scoped.
++  if (url.hostname === 'hcaptcha.com' || url.hostname.endsWith('.hcaptcha.com')) return true
++  if (CAPTCHA_HOSTS.has(url.hostname)) return true
++  if (url.hostname === 'captcha.awswaf.com' || url.hostname.endsWith('.captcha.awswaf.com')) return true
++  return url.hostname === 'appleid.cdn-apple.com' && url.pathname.startsWith('/appleauth/static/')
++}
++
++/** @param pageUrl - guest document. @param chain - download redirects. @param initiator - Chromium's initiating origin. @returns whether every source is approved. */
++export function allowsDeepSeekDownload(pageUrl: string, chain: readonly string[], initiator: string): boolean {
++  return allowsDeepSeekNavigation(pageUrl) && allowsDeepSeekNavigation(initiator) && chain.length > 0 && chain.every(value => {
++    if (value.startsWith('blob:')) return allowsDeepSeekNavigation(value.slice(5))
++    const url = officialUrl(value)
++    return url !== undefined && (url.hostname === 'deepseek.com' || url.hostname.endsWith('.deepseek.com')
++      || url.hostname === 'files.deepseeksvc.com')
++  })
++}
++
++/** @param value - server-supplied filename. @returns a portable filename for the native save dialog. */
++export function safeDownloadFilename(value: string): string {
++  const cleaned = value.normalize('NFC').replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069<>:"/\\|?*]/gu, '_')
++    .replace(/[. ]+$/u, '').replace(/^\.+/u, '')
++  let result = '', bytes = 0
++  for (const character of cleaned) {
++    bytes += new TextEncoder().encode(character).length
++    if (bytes > 180) break
++    result += character
++  }
++  result = result.replace(/[. ]+$/u, '')
++  if (result.length === 0) return 'deepseek-download'
++  if (/^(con|prn|aux|nul|com[0-9]|lpt[0-9])(?:\.|$)/iu.test(result)) return `_${result}`
++  return result
++}
+--- a/tsconfig.client.json
++++ b/tsconfig.client.json
+@@ -19,6 +19,7 @@
+     "apps/desktop/src/keyboard.ts",
+     "apps/desktop/src/keybindings.ts",
+     "apps/desktop/src/browser-guests.ts",
++    "apps/desktop/src/deepseek-browser-policy.ts",
+     "apps/desktop/src/ipc.ts",
+     "apps/desktop/src/update-overlay.ts",
+     "apps/desktop/tests/**/*.client.spec.tsx",

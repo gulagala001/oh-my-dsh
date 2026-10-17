@@ -15,6 +15,7 @@ export function pluginManagementError(error) {
   return error?.diagnostic || error?.code || '';
 }
 export function pluginInstallSpec(plugin, version) {
+  if (plugin.bundled) throw Error('内置插件随 OMD 管理，请通过 OMD 更新');
   parseVersion(version);
   if (plugin.review?.releaseTag && version !== plugin.review.version) throw Error("桥接发行包需要固定核验版本");
   if (plugin.hostBuilds && (!plugin.review || plugin.unavailable || !/^[a-f0-9]{64}$/.test(plugin.review.sha256 ?? ''))) throw Error('对应宿主的固定核验构建尚未就绪');
@@ -36,6 +37,7 @@ export function pluginInstallSpec(plugin, version) {
   return `${plugin.packageName}@${version}`;
 }
 export async function latestPluginVersion(plugin, signal) {
+  if (plugin.bundled) throw Error('内置插件随 OMD 管理，不查询独立发行版本');
   const response = await fetch(plugin.githubRelease ? `https://api.github.com/repos/${plugin.githubRelease}/releases/${plugin.review?.releaseTag ? 'tags/' + encodeURIComponent(plugin.review.releaseTag) : 'latest'}` : `https://registry.npmjs.org/${encodeURIComponent(plugin.packageName)}/latest`, {
     signal: AbortSignal.any([signal, AbortSignal.timeout(20000)]), headers: { Accept: 'application/json' },
   });
@@ -63,8 +65,8 @@ export async function latestPluginVersion(plugin, signal) {
 }
 
 export class RecommendedPluginManager {
-  constructor({ manager, getConfig, saveConfig, packageDirectory, preparePackage = prepareReviewedPackage, isRunning = () => false, catalog = recommendedPlugins, latest = latestPluginVersion, now = Date.now, hostVersion = releaseHostVersion(INSTALLED_VERSION), getHostVersion }) {
-    Object.assign(this, { manager, getConfig, saveConfig, packageDirectory, preparePackage, isRunning, catalog, latest, now, hostVersion, getHostVersion });
+  constructor({ manager, getConfig, saveConfig, packageDirectory, preparePackage = prepareReviewedPackage, isRunning = () => false, catalog = recommendedPlugins, latest = latestPluginVersion, now = Date.now, hostVersion = releaseHostVersion(INSTALLED_VERSION), getHostVersion, getBundledPluginState = () => ({}) }) {
+    Object.assign(this, { manager, getConfig, saveConfig, packageDirectory, preparePackage, isRunning, catalog, latest, now, hostVersion, getHostVersion, getBundledPluginState });
     this.hostResolved = !getHostVersion;
     this.records = new Map(); this.job = null; this.current = null; this.checkedAt = null; this.closed = false;
     this.abort = new AbortController();
@@ -74,6 +76,7 @@ export class RecommendedPluginManager {
   }
   unavailable(plugin) {
     plugin = resolveRecommendedPlugin(plugin, this.hostVersion);
+    if (plugin.unavailable && plugin.unavailableHosts && !this.hostVersion) return '未能核实当前 DSH 完整版本，暂不提供安装或更新。已有安装仍可卸载。';
     return plugin.unavailable && (!plugin.unavailableHosts || plugin.unavailableHosts.includes(this.hostVersion)) ? plugin.unavailable : null;
   }
   async status() {
@@ -82,13 +85,20 @@ export class RecommendedPluginManager {
     return { autoUpdate: this.getConfig().recommendedPluginsAutoUpdate === true, checkedAt: this.checkedAt, busy: this.current,
       plugins: this.catalog.map(plugin => {
         plugin = resolveRecommendedPlugin(plugin, this.hostVersion);
+        if (plugin.bundled) {
+          const enabled = this.getBundledPluginState(plugin)?.enabled === true;
+          return { id: plugin.id, bundled: true, installed: true, enabled, removable: false, version: plugin.version ?? null,
+            unavailable: enabled ? null : '内置工作台尚未启用，请检查宿主插件配置并重启 DSH。' };
+        }
         const bundle = bundles.find(item => item.name === plugin.packageName);
         const record = this.records.get(plugin.id);
         const needsBuildSwitch = !!plugin.hostBuilds && !!bundle?.installed && !!bundle.version && !!plugin.review && bundle.version !== plugin.review.version && !bundle.version.startsWith(this.hostVersion + '.iui.');
         return { id: plugin.id, installed: !!bundle?.installed, enabled: !!bundle?.enabled, removable: !!bundle?.removable && !bundle?.readOnlyReason, unavailable: this.unavailable(plugin),
           version: bundle?.version || null, ...record,
           ...(plugin.hostBuilds ? { hostVersion: this.hostVersion, review: plugin.review ?? null, expectedVersion: plugin.review?.version ?? null, needsBuildSwitch,
-            ...(needsBuildSwitch && !record?.error ? { message: `当前安装包面向其他宿主，请点“更新”换成 DSH ${this.hostVersion} 对应的 ${plugin.review.version}；界面状态数据将保留。` } : {}) } : {}),
+            ...(needsBuildSwitch && !record?.error ? { message: this.unavailable(plugin)
+              ? '当前安装包面向其他宿主，安装与更新暂未开放；已有界面状态数据将保留。'
+              : `当前安装包面向其他宿主，请点“更新”换成 DSH ${this.hostVersion} 对应的 ${plugin.review.version}；界面状态数据将保留。` } : {}) } : {}),
           ...(bundle?.error ? this.current?.id === plugin.id
             ? { inventoryWarning: pluginManagementError(bundle.error) }
             : { error: this.records.get(plugin.id)?.error || pluginManagementError(bundle.error) } : {}) };
@@ -102,9 +112,10 @@ export class RecommendedPluginManager {
     const entry = this.catalog.find(item => item.id === id);
     const plugin = entry && resolveRecommendedPlugin(entry, this.hostVersion);
     if (!plugin || !['install', 'update', 'uninstall'].includes(action)) throw Error('未知的插件操作');
+    if (plugin.bundled) throw Error('内置插件随 OMD 管理，请通过 OMD 更新，不能在推荐页安装、更新或卸载');
     if (plugin.manualInstall) throw Error(plugin.manualInstall);
     const unavailable = this.unavailable(plugin);
-    if (unavailable && action !== 'uninstall' && (!entry.hostBuilds || this.hostResolved)) throw Error(unavailable);
+    if (unavailable && action !== 'uninstall' && (this.hostResolved || entry.unavailable && !entry.unavailableHosts)) throw Error(unavailable);
     if (this.closed) throw Error('插件管理已停止');
     if (this.job) throw Error('另一个插件操作正在进行，请稍候');
     this.current = { id, action, automatic, startedAt: this.now(), requestId: randomUUID() };
@@ -115,6 +126,7 @@ export class RecommendedPluginManager {
     return this.job;
   }
   async run(plugin, action, automatic) {
+    if (plugin.bundled) throw Error('内置插件随 OMD 管理，请通过 OMD 更新');
     const entry = plugin;
     if (this.getHostVersion) await this.refreshHost();
     const operationHost = this.hostVersion;
@@ -138,6 +150,7 @@ export class RecommendedPluginManager {
       // concurrent host changes or opt-out cannot be overwritten by stale state.
       const installable = current => {
         this.abort.signal.throwIfAborted();
+        if (this.unavailable(entry)) throw Error(this.unavailable(entry));
         if (automatic && (!plugin.review?.version || plugin.review.source || !this.getConfig().recommendedPluginsAutoUpdate || this.isRunning() || !current?.installed || !current.enabled)) return false;
         if (action === 'install' && current?.installed) throw Error('插件已经安装，请使用更新');
         if (current?.readOnlyReason) throw Error('此插件由宿主管理，无法在这里修改');
@@ -152,7 +165,7 @@ export class RecommendedPluginManager {
           && plugin.review?.releaseTag === 'v' + version && /^[a-f0-9]{64}$/.test(plugin.review?.sha256 || '')
           && version.startsWith(current.version + '-omd.');
         const reviewedBuildMigration = !!plugin.hostBuilds && plugin.review?.dsh === this.hostVersion && /^[a-f0-9]{64}$/.test(plugin.review?.sha256 ?? '')
-          && Object.entries(plugin.hostBuilds).some(([host, build]) => host !== this.hostVersion && build.version === current?.version);
+          && [...Object.entries(plugin.historicalHostBuilds ?? {}), ...Object.entries(plugin.hostBuilds)].some(([host, build]) => host !== this.hostVersion && build.version === current?.version);
         if (automatic && plugin.hostBuilds && current?.version && !current.version.startsWith(this.hostVersion + '.iui.')) { this.records.set(plugin.id, { ...this.records.get(plugin.id), message: '宿主已变更，请手动更新为对应核验构建；界面状态数据将保留。', error: '' }); return false; }
         if (comparison !== null && ((comparison < 0 && !reviewedForkMigration && !reviewedBuildMigration) || (comparison === 0 && !plugin.review?.source && this.records.get(plugin.id)?.failedInstallVersion !== version))) {
           this.records.set(plugin.id, { ...this.records.get(plugin.id), message: plugin.review ? (current.version === version ? '已是核验版本' : '当前版本高于核验版本，未降级') : '已是最新版本', error: '' });
@@ -200,6 +213,7 @@ export class RecommendedPluginManager {
       if (this.getHostVersion) await this.refreshHost();
       const bundles = await this.manager.listBundles();
       for (const entry of this.catalog) {
+        if (entry.bundled) continue;
         const plugin = resolveRecommendedPlugin(entry, this.hostVersion);
         if (this.closed || this.job || !this.getConfig().recommendedPluginsAutoUpdate || this.isRunning()) return;
         const bundle = bundles.find(item => item.name === plugin.packageName);
@@ -219,6 +233,7 @@ export function mountRecommendedPlugins(ctx, hub) {
     const service = new RecommendedPluginManager({ manager: scope.pluginManager, getConfig: () => hub.config(),
       packageDirectory: resolve(hub.store.dir, 'recommended-packages'),
       getHostVersion: () => actualHostVersion(scope),
+      getBundledPluginState: plugin => plugin.id === 'dsh-deepseek-workbench' ? { enabled: scope.get('deepseekWorkbench')?.enabled === true } : {},
       saveConfig: patch => scope.settings.update('trisoul-x', patch), isRunning: () => scope.agents.list().some(agent => agent.status === 'running') });
     scope.effect(() => {
       const tick = () => { void service.tick().catch(error => scope.logger.warn(error.message)); };
@@ -244,7 +259,7 @@ export function mountRecommendedPlugins(ctx, hub) {
 
 export async function actualHostVersion(ctx) {
   const loader = ctx.get('loader')?.internal;
-  if (!loader || !ctx.baseUrl) return null;
+  if (!loader || !['v1', 'v2'].includes(loader.version) || !ctx.baseUrl) return null;
   try {
     const specifier = '@deepseek-ai/dsh/package.json';
     const result = loader.version === 'v2' ? loader.resolveSync(ctx.baseUrl, { specifier, attributes: {} }) : loader.resolveSync(specifier, ctx.baseUrl, {});

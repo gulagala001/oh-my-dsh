@@ -1,242 +1,150 @@
-<p align="center"><img src="docs/images/logo.svg" width="64" height="64" alt="Oh My DSH" /></p>
+<p align="center"><img src="docs/images/release/omd-hero-en.jpg" alt="Oh My DSH — More than a new look. A better way to work." width="100%" /></p>
+
 <h1 align="center">Oh My DSH</h1>
-<p align="center"><strong>Take long tasks, browser work and desktop actions to a result you can check, inside familiar DSH.</strong></p>
-<p align="center">
-  <a href="README.md"><strong>简体中文</strong></a> · <strong>English</strong> · <a href="#quickstart"><strong>Install Oh My DSH</strong></a> · <a href="docs/getting-started_EN.md"><strong>First Task</strong></a>
-</p>
+<p align="center"><strong>Better agent instructions. A workspace that feels yours. Longer work, less repetition.</strong></p>
+<p align="center">System prompts · Five themes · Computer use · Annotations · Usage monitoring · Memory & auto compaction</p>
+<p align="center"><a href="README.md">简体中文</a> · <strong>English</strong> · <a href="#quickstart">Install</a> · <a href="docs/getting-started_EN.md">First steps</a> · <a href="docs/README_EN.md">Documentation</a></p>
 
-[![Oh My DSH in use: after manual saving, the assistant reads the order page and confirms delivery details](docs/images/showcase-browser.png)](docs/showcase_EN.md)
+**Turn the DSH you already use into a more complete AI workspace.**
 
-<sub>Captured from the latest local implementation: a fictional purchase order and a controlled demo model, with actual OpenCU tool execution and a real page save. The product thumbnail is AI-generated; the UI is not redrawn. The capture does not promise these features in public packages. [Versions and scenarios](docs/showcase_EN.md)</sub>
+Oh My DSH (OMD) enhances [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). Keep your models, conversations, tools and skills. Bring system instructions, appearance, computer use, context, memory and task tracking into one workflow—from explaining the goal to doing the work and checking the result.
 
-Oh My DSH (OMD) is an enhancement plugin for [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness). Keep using your models, conversations, files, tools and skills, with context management for long tasks, task and verification records, computer use, draft refinement and a customizable work interface.
-
-[Features](#features) · [Install](#quickstart) · [Real Scenarios](#scenarios) · [Get Started](#start) · [Appearance and Settings](#settings) · [Plugin Ecosystem](#plugins) · [Update and Uninstall](#maintenance) · [Platforms and FAQ](#support) · [Docs and Development](#docs)
+> **安装 / Install:** [DSH rc.1 / rc.2 固定版本与安装入口](docs/releases.md)，内置 OpenCU 2.0.0。
 
 <a id="features"></a>
 
-## What You Can Do
+## One plugin. A more complete working day.
 
-| Your work | How OMD helps |
+| What you want | What OMD adds |
 | --- | --- |
-| Work through a long conversation without losing the original requirements | Organize context while retaining original messages, attachments and detailed records; recall sources when exact details matter. |
-| Research websites, operate apps and export material | Built-in OpenCU brings target views into the conversation workbench; stop, take over manually and resume assistant control. |
-| Check the result before accepting “done” | Link requirements, task status and verification records; preview or open generated files directly in DSH. |
-| Clarify a rough idea before sending it | Refine, structure or plan a draft, retaining the original and its versions for undo and further edits. |
-| Start a conversation without setting up a project | **Main-branch preview, unreleased**: clear the selected workspace; the first message creates a directory for this conversation, reused when you return. |
-| Arrange the interface around your habits | Choose five appearances, light/dark modes, separate colors and backgrounds, and adjust typography, layout and the workbench. |
-| Inspect progress, usage and longer-term memory | **Main-branch preview, unreleased**: monitoring shows calls, caching and context; Dream organizes sourced conversation, project and global short memories. |
-
-Model capabilities, context windows and service charges still depend on your provider; background processing also consumes model usage. See the [usage guide](docs/usage_EN.md) for details.
-
-<a id="quickstart"></a>
-
-## Install
-
-**Check the full version of the DSH host you actually run, then choose the package with the matching host prefix.** These are the currently available public packages:
-
-| DSH host | Full OMD version | Fixed package |
-| --- | --- | --- |
-| `0.2.0-rc.2` | `0.2.0-rc.2.omd.0.10.0` | [Download rc.2](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.0-rc.2.omd.0.10.0/trisoul_x-0.2.0-rc.2.omd.0.10.0.tgz) |
-| `0.2.1-alpha.1` | `0.2.1-alpha.1.omd.0.10.0` | [Download alpha.1](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-alpha.1.omd.0.10.0/trisoul_x-0.2.1-alpha.1.omd.0.10.0.tgz) |
-
-The package version on `main` is **0.2.1-alpha.2.omd.0.16.0, unreleased**, with no corresponding public package. The 0.10.0 downloads above do not contain the later monitoring, Dream or local changes. Earlier hosts retain historical releases; check the [installation and upgrade guide](docs/upgrade_EN.md) rather than mixing packages for different hosts.
-
-### Existing DSH Web
-
-You need Node.js ≥22.19, a working DSH model and the runtime requirements of the public package; use PowerShell 7 on Windows. Let active tasks finish, stop the service, back up the actual `DSH_HOME`, and retain your profile and port.
-
-This example is for **DSH 0.2.1-alpha.1 / the `web` profile**:
-
-```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-alpha.1.omd.0.10.0/trisoul_x-0.2.1-alpha.1.omd.0.10.0.tgz
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
-```
-
-For rc.2, change the **host version in both commands** to `0.2.0-rc.2` and use the rc.2 package URL from the table. Replace `web` with your existing custom profile. If you use a global `dsh` installation or service manager, keep that launch method and actual data directory. You can also download a package and install it with `file:/absolute/path/package.tgz`.
-
-Open the login link printed by this launch, then choose **Oh My DSH** for a new conversation. Existing conversations keep their Agent preset. Check “Current version” after installation; “Latest version” alone does not confirm installation. [Full steps](docs/usage_EN.md) · [Installation and upgrade](docs/upgrade_EN.md)
-
-### Official DSH Desktop App
-
-Use the desktop app's plugin manager to install the package matching its **full host version**. Desktop uses the separate `desktop` profile, so Web plugins need to be installed again; a separate npm CLI does not manage that profile in place of the app. Fully quit and reopen after installation; closing a window or refreshing a page is not a full restart. [Desktop installation](docs/upgrade_EN.md#desktop) · [Move from Web while retaining data](docs/upgrade_EN.md#web-to-desktop)
-
-> **Installation changes execution permissions:** OMD defaults to full file/command access with execution approval disabled, and sets the default Agent preset to `trisoul-x`. Explicit profile overrides take precedence. Confirm this suits your use before installing; macOS permissions and the first Chrome extension load still require the indicated manual steps. [Permissions and runtime requirements](docs/usage_EN.md)
-
-<details>
-<summary>Ask an AI with terminal or computer access to help install</summary>
-
-Give it this instruction and specify desktop or Web:
-
-> Follow https://github.com/gulagala001/oh-my-dsh/blob/main/docs/upgrade_EN.md to install or upgrade Oh My DSH. First check the actual full DSH version and matching public package. Back up and retain existing models, conversations, data directory and configuration, then verify the current version after installation and a full restart.
-
-</details>
-
-<a id="scenarios"></a>
-
-## Real Scenarios
-
-These three scenarios come from one release-checklist demonstration using fictional business data and a local controlled model. They show actual execution and checks. See the [showcase](docs/showcase_EN.md) for the full requests, actions and validation scope. The screenshots use the Chinese interface.
-
-### Recover the Original Requirement After a Long Conversation
-
-> Organize the release checklist. Use UTF-8 with BOM for the CSV and exactly six columns: ID, item, owner, priority, status and acceptance notes. Keep items awaiting acceptance.
-
-After continued work and context processing, ask the assistant to recall the original request. Inspect its source and original text in the workbench to confirm encoding, column order and the requirement to retain pending items.
-
-[![Recalling the original message after context processing to check the six CSV columns](docs/site/media/launchpad-recall.jpg)](docs/site/media/launchpad-recall.jpg)
-
-**Result:** Original wording remains accessible for checking specific requirements after reducing current context. Keeping source material does not make the model window unlimited. [Context records](docs/site/media/launchpad-context.jpg) · [Context workflow](docs/context-workflow.md)
-
-### Operate a Website and Keep the Items That Matter
-
-> Open the release checklist, check filtering and state after refresh, and download the CSV. Do not treat items awaiting acceptance as completed.
-
-Use `@Browser` to specify the website, view its actual screen in the workbench, then filter, refresh and download. Stop or take over when you need to make a change yourself, then resume assistant control.
-
-[![Release checklist website: filtering, statuses and CSV download](docs/site/media/launchpad-browser.jpg)](docs/site/media/launchpad-browser.jpg)
-
-**Result:** The export includes 8 items and retains 3 awaiting acceptance; an independent field check then examines the downloaded file. [Computer use guide](docs/usage_EN.md#computer-use)
-
-### Deliver the File with a Record of Its Checks
-
-> Check the downloaded file's encoding, six columns and every field, then deliver the file and the validation result.
-
-Link the original requirements to actual execution results in Tasks and Verification. Check the CSV BOM, column order, row count and field contents, then open the delivered attachment.
-
-[![Tasks and verification: requirements, check script and actual PASS output](docs/site/media/launchpad-tasks.jpg)](docs/site/media/launchpad-tasks.jpg)
-
-**Result:** The file checks pass, with the CSV and requirements file delivered. Initial checkmarks in the business checklist are sample data; task completion and execution evidence are recorded separately. [Full demonstration and evidence](docs/showcase_EN.md)
-
-<a id="start"></a>
-
-## Get Started
-
-1. **Choose a model and conversation.** Select Oh My DSH for a new conversation and reuse your host model configuration. Native tool calling is required; interpreting screenshots also needs image input.
-2. **Choose a working directory.** Work in an existing project. In the main-branch preview, you can also clear the workspace selection for a separate conversation; its directory is created only when you first send a message.
-3. **Describe the deliverable.** For example, “Organize this directory, produce a file list and check the file count.” Draft refinement can help clarify the request first.
-4. **Inspect work as it proceeds.** Open the workbench from the input area to view tasks, context or files. The computer entry shows the target screen, with stop and takeover controls.
-5. **Check the delivery.** Open attachments and verification records; ask the assistant to recall original material when you need to trace a detail.
-
-Public versions and development source may have different entries; follow the docs for your installed version. [First task](docs/getting-started_EN.md) · [Full guide](docs/usage_EN.md)
-
-<a id="settings"></a>
-
-## Appearance and Settings
-
-Use **Settings → Oh My DSH** for background models, context processing, identity, appearance and computer use. Configure the main model in DSH's model settings; background processing can use a separate model and frequency. Better Todo reminders are enabled by default, while verification reminders are off by default and can be set per conversation.
-
-[![iOS Liquid Glass light appearance showing the same actual task and file delivery](docs/site/media/theme-glass-light.jpg)](docs/site/media/theme-glass-light.jpg)
-
-| Appearance | Light and dark captures |
-| --- | --- |
-| OMD default | [Light](docs/site/media/theme-omd-light.jpg) · [Dark](docs/site/media/theme-omd-dark.jpg) |
-| Codex Desktop | [Light](docs/site/media/theme-codex-light.jpg) · [Dark](docs/site/media/theme-codex-dark.jpg) |
-| iOS Liquid Glass | [Light](docs/site/media/theme-glass-light.jpg) · [Dark](docs/site/media/theme-glass-dark.jpg) |
-| Claude CLI | [Light](docs/site/media/theme-terminal-light.jpg) · [Dark](docs/site/media/theme-terminal-dark.jpg) |
-| Google Material | [Light](docs/site/media/theme-material-light.jpg) · [Dark](docs/site/media/theme-material-dark.jpg) |
-
-Choose themes, 28 color schemes and backgrounds independently. Adjust fonts, type size, materials, section colors, name and logo; import settings or restore defaults. Themes provide visual styles, not accounts or services from the corresponding brands. [Appearance settings](docs/skins.md) · [Settings capture](docs/site/media/launchpad-appearance.jpg)
-
-<details>
-<summary>Advanced features and unreleased changes</summary>
+| **Work that moves beyond an answer** | System instructions for understanding requirements, working with code, using tools, delivering and checking results. |
+| **An interface you enjoy opening** | Five themes, light/dark modes and 28 palettes, with configurable layout, materials, fonts and backgrounds. |
+| **An agent that can act outside the chat** | Bundled OpenCU for browser and desktop tasks, with pages, activity and previews in the conversation. |
+| **“Change this” without re-explaining everything** | Annotate a page, image or supported content and bring the location and feedback back into the draft. |
+| **Continuity across long work** | Context preparation, Auto Compact and Dream, with original requirements and sources available for recall. |
+| **Visibility into work and usage** | An OMD Console for context, memory, calls and background activity. |
 
 <a id="prompts"></a>
 
-System instructions organize work around DSH's actual tools, permissions and execution modes without claiming unavailable host capabilities. [Prompt adaptation (Chinese)](docs/prompt-adaptation.md)
+## 01 / Upgrade how the agent works
 
-- **Pro / Ultracode:** Choose work modes above a model's native reasoning levels to adjust requirement planning, implementation and checks. [Workflow](docs/workflow.md)
-- **OMD-PTC / CodeGraph:** Use composed tool calls or query code relationships as needed. [Usage guide](docs/usage_EN.md)
-- **Main-branch preview, unreleased:** Monitoring shows calls, usage and context changes. Dream incrementally organizes conversation, project and global short memories with sources; automatic processing is off by default. [Monitoring](docs/monitoring.md) · [Dream](docs/dream-memory.md)
-- **Latest local implementation, unreleased:** OpenCU's browser reconstruction uses officially precompiled Electron 44.7.0, one browser entry and a unified tab bar, while retaining split views and the sidebar. GitHub main includes the OpenCU 1.6.1 browser and runtime reconstruction; source integration does not mean a new installation package has been released. Public installation packages do not include these changes, and this does not establish validation on other platforms.
+### System-level instructions—not just polishing your input
 
-</details>
+OMD puts working practices in the system layer: understand goals and constraints, read relevant context, use tools that actually exist, and check the outcome. Tool descriptions, execution modes and dynamic reminders are assembled together rather than treating every environment as the same generic prompt.
 
-<a id="plugins"></a>
+- **Built around delivery:** distinguish a plan, an executed action and a verified result.
+- **Grounded in actual tools:** Native and OMD-PTC get their own calling conventions; OpenCU retains its live tool contract.
+- **Designed for long tasks:** requirement anchors, background jobs and context reminders help keep the original goal in view.
+- **Room for your preferences:** identity/personality settings, plus Pro, Ultracode and Workflow for decomposition and delegation.
 
-## DSH and Its Plugin Ecosystem
+These are execution strategies, not an intelligence upgrade or a success-rate guarantee. The composer's **draft optimizer** is a separate feature for light polish, structure and step planning.
 
-OMD reuses DSH's native models, conversations, tool loop, skills, files and content tabs. You can continue using other DSH plugins; plugins that depend on a host SDK update need their own matching host builds.
+[How system-level adaptation works →](docs/prompt-adaptation.md) *(Chinese)*
 
-**Settings → Recommended Plugins** shows purpose, author, version and verification status, with install, update and uninstall actions for available entries. Automatic updates are off by default; when enabled, they only check installed plugins eligible under the catalog rules and indicate when a restart is needed. [Catalog capture](docs/site/media/launchpad-plugins.jpg)
+<a id="themes"></a>
 
-Compatibility work checks installation order, enable/disable, restart and uninstall, aiming to keep plugins that work in original DSH usable with the full OMD setup enabled. **This does not guarantee every plugin, host and platform has been verified.** See [plugin compatibility](docs/plugin-compatibility_EN.md) for exact combinations, limitations and unverified cases.
+## 02 / Change the atmosphere, not just the accent color
 
-Recommend your own plugin or another open-source project with its repository URL and one sentence about its purpose: [Submit a plugin / request adaptation](https://github.com/gulagala001/oh-my-dsh/issues/new?template=plugin-submission.yml) · [Submission guide](docs/plugin-submissions.md)
+![Real interfaces in OMD Default, Codex Desktop, iOS Liquid Glass, Claude CLI and Google Material](docs/images/release/themes.jpg)
 
-<a id="maintenance"></a>
+**OMD Default · Codex Desktop · iOS Liquid Glass · Claude CLI · Google Material**
 
-## Data, Updates and Uninstall
+Choose a restrained desktop, translucent glass, a terminal-inspired workspace or expressive Material styling. Each has its own layout and materials, with light and dark modes. Themes, **28 palettes** and custom backgrounds are independent, so changing a theme does not mean starting over.
 
-Installation into existing DSH keeps the actual `DSH_HOME`, with OMD records under `trisoul-x/`; Web commonly defaults to `~/.dsh`. Desktop and Web plugins belong to separate profiles and share product data only when they use the same actual data directory.
+Adjust fonts, section colors, logos and browser titles. Reduce transparency and motion when you want a quieter workspace. Themes do not include the corresponding brands' models or accounts.
 
-Before updating, let tasks finish, stop the service or fully quit the desktop app, and back up the entire data directory. Install the fixed package matching your host, then fully restart and check the current version, models and old conversations. Source updates and public-package updates follow different paths. [Upgrade, migration and rollback](docs/upgrade_EN.md)
+[Appearance settings →](docs/skins.md) *(Chinese)*
 
-<details>
-<summary>Uninstall command and retained data</summary>
+<a id="computer-use"></a>
 
-Web example (use your actual host version and profile):
+## 03 / The agent acts. You can see and collaborate.
 
-```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web remove trisoul_x
-```
+![OpenCU displaying a local design-review page and annotations in isolated DSH](docs/images/release/computer-use.jpg)
 
-Desktop users disable or uninstall in the app's plugin manager, then fully quit and reopen. Uninstalling does not delete model configuration, credentials, conversations or OMD memory files; old conversations using the `trisoul-x` preset need the plugin reinstalled to continue execution. [Maintenance details](docs/usage_EN.md)
+**The rewritten OpenCU is bundled—no second installation required.** Describe a browser or desktop task in the conversation. Ordinary tool calls bring up real pages, operation records and lightweight monitoring, without a separate CU console.
 
-</details>
+- **Browsers and desktop apps:** discover targets, read content, capture screenshots, enter text, click, navigate and work with files.
+- **Feedback at the right place:** page annotations, image comments and assistant-text annotations carry specific context into the draft. Saving and sending remain separate.
+- **A preview is not a lock:** viewing and control targets are independent. Hiding monitoring does not stop the task; human input requires a fresh observation.
+- **Background-first, explicit limits:** selecting a target does not intentionally steal focus. Unsupported background actions fail clearly, without silently switching to global input.
+
+The complete embedded browser and native monitor require a **matching OpenCU host adapter**. Installing the plugin into arbitrary stock DSH does not add every host capability. Chrome/Edge require initial extension pairing; desktop control needs OS permissions.
+
+[Computer-use setup and boundaries →](docs/computer-use.md) *(Chinese)*
+
+<a id="memory"></a>
+
+## 04 / Long work without repeating the whole backstory
+
+![Context usage, composition and manual compaction](docs/images/release/context.jpg)
+
+| Layer | Its job |
+| --- | --- |
+| **Context preparation** | Separately preserve factual summaries, user decisions and detailed material for later requests. |
+| **Auto Compact** | Automatically compact when context reaches your chosen token threshold. Choose summary plus material or summary only. Off by default; the prefilled threshold is 400,000 tokens. |
+| **Dream memory** | Independently organize sourced session, project and global short memory for future work. |
+
+Original messages, images and attachments remain available through `recall`; summaries are not substitutes for evidence. Choose session isolation, project sharing or global sharing. A projectless Chat's automatically created file directory does not become a shared project.
+
+Automatic Dream is off by default. When enabled, its default check interval is one hour; manual and automatic processing share a daily 200,000-token cap. Background processing uses models too, and model context windows remain finite.
+
+[Context](docs/context-workflow.md) · [Dream memory](docs/dream-memory.md) *(Chinese)*
+
+<a id="tools"></a>
+
+## 05 / See what happened—and what it used
+
+![OMD Console: calls, cache, costs and background activity](docs/images/release/monitor.jpg)
+
+The right-sidebar **OMD Console** brings together overview, context, memory, call logs and background logs. Filter by date, model, component or status; inspect trends, groups and individual calls instead of digging through a wall of tool output.
+
+Usage comes from actual receipts: **unknown is not zero; `≥` is a known lower bound**. Missing cache information does not produce an invented hit rate. Background calls enter the persistent local ledger too.
+
+**Better Todo** connects requirements, source anchors, task state and evidence. A checked task, a finished command and a passing verification are different things. Task reminders default on; verification reminders can be enabled separately.
+
+[Monitoring and accounting →](docs/monitoring.md) *(Chinese)*
+
+## More tools for everyday work
+
+| Capability | What it does |
+| --- | --- |
+| **Projectless Chat** | Start without creating a project; the first message creates a separate file directory. |
+| **CodeGraph** | Bundled runtime and automatic project preparation for symbol and call-graph exploration, without a global CLI installation. |
+| **Pro / Ultracode / Workflow** | Decompose tasks, delegate work and compose workflows while retaining host permissions and Jobs. |
+| **OMD-PTC** | Compose tool calls in JavaScript without replacing the host Tools service. |
+| **Draft optimizer** | Light polish, structure and step planning with original/version retention. Automatic polish defaults off. |
+| **DeepSeek Workbench** | Web chat/platform entry points and import of extractable history into native conversations, without automatically sending another message. |
+| **Plugin coexistence** | Keep DSH files, terminals, skills and third-party entries. IUI, OMAA and Subscriptions remain separate projects. |
+| **Fast** | Works with matching Subscriptions/Codex routes; no guarantee of server priority or actual acceleration. |
+
+<a id="quickstart"></a>
+<a id="desktop"></a>
+
+## Install: match the host first
+
+1. **Check the full DSH version actually running.** Use OMD built for that host; changing metadata is not compatibility.
+2. **Back up the actual `DSH_HOME`.** Preserve profiles, conversations, credentials and other plugins.
+3. On desktop, use the app's plugin manager or bundled CLI. On Web, use the matching CLI and your existing profile. Follow the restart instructions, then choose **Oh My DSH** in a new conversation.
+
+> **Permissions:** OMD's installation configuration defaults to full file/command access and no execution approvals; explicit profile overrides win. Confirm this suits your use. OMD supplies no model account; provider charges also apply to background processing.
+
+**[Installation steps, fixed older packages and candidate requirements →](docs/install_EN.md)**
 
 <a id="support"></a>
 
-## Platforms and FAQ
+## Clear boundaries
 
-| Capability | Requirements and current limits |
-| --- | --- |
-| Conversations, context, tasks, themes and Web workbench | Built on DSH; actual Windows, macOS and Linux verification scope follows each release record. |
-| Browser control and everyday Chrome connection | Working Chrome/Chromium; the first connection to existing Chrome requires manually loading the extension. |
-| Native macOS desktop control in public 0.10.0 | macOS 14+, Apple Command Line Tools, Accessibility and Screen Recording permissions. |
-| Native Windows desktop control in public 0.10.0 | Windows 10 2004+, PowerShell 7, .NET 10 SDK and an unlocked interactive desktop; this round has no real Windows machine validation. |
-| Latest locally precompiled runtime | Not publicly released; it does not remove native build requirements from older public packages. Native Linux desktop control is not listed as supported. |
+- Conversations, themes, tasks and memory target matching DSH on macOS, Windows and Linux.
+- OpenCU capabilities vary by backend, OS permissions and application accessibility. Check available backend capabilities in Computer & browser settings. Mixed-monitor scaling is outside the current scope.
+- This is an independent community project, not an official DeepSeek, OpenAI, Anthropic, Apple or Google product, and is not endorsed by those brands.
 
-<details>
-<summary>Installation, models, permissions and versions</summary>
-
-**Installed but no entry appears?** Check the active profile, enabled state and actual plugin version. Fully restart the service or desktop app, then choose Oh My DSH for a new conversation.
-
-**Why is there no alpha.2 download?** Main-branch 0.16.0 is unreleased. Use public 0.10.0 with the matching host from the table, or wait for a new paired release.
-
-**The model cannot understand the computer view?** Image input is required. A text-only model can still read some control text but does not gain image understanding automatically.
-
-**Desktop actions fail?** Check the native runtime and system permissions; older public packages require local build prerequisites. For existing Chrome, confirm the extension is actually loaded. [Troubleshooting](docs/troubleshooting.md)
-
-**Will existing models and conversations disappear?** Plugin installation reuses host data, but upgrades still need a full backup. Moving from Web to desktop is not automatic migration; check data directories and configuration using the guide.
-
-**Is every other plugin guaranteed compatible?** No. Consult verified combinations by full host version, plugin version and platform; report those versions and a minimal reproduction for conflicts. [Compatibility](docs/plugin-compatibility_EN.md)
-
-</details>
-
+<a id="plugins"></a>
 <a id="docs"></a>
 
-## Docs and Development
+## Keep exploring
 
-[Docs index](docs/README_EN.md) · [First task](docs/getting-started_EN.md) · [Full guide](docs/usage_EN.md) · [Installation and upgrade](docs/upgrade_EN.md) · [Showcase](docs/showcase_EN.md) · [Compatibility](docs/plugin-compatibility_EN.md) · [Changelog](CHANGELOG.md)
+[Documentation](docs/README_EN.md) · [First steps](docs/getting-started_EN.md) · [Development](docs/development_EN.md) · [Plugin compatibility](docs/plugin-compatibility_EN.md) · [Changelog](CHANGELOG.md)
 
-<details>
-<summary>Develop from source</summary>
+[Report a bug](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml) · [Suggest a feature](https://github.com/gulagala001/oh-my-dsh/issues/new?template=feature-request.yml) · [Recommend a plugin](docs/plugin-submissions.md) · [Contribute](CONTRIBUTING.md)
 
-Current main uses DSH `0.2.1-alpha.2`, Node.js ≥22.19 and `pnpm 11.28.5`; it is not the public stable installation path.
-
-```sh
-git clone https://github.com/gulagala001/oh-my-dsh.git
-cd oh-my-dsh
-pnpm install --frozen-lockfile
-pnpm build
-pnpm start
-```
-
-The development launcher defaults to the repository's `data/dsh/`, a separate `trisoul-x` profile and port `3083`. Open the full login link printed in the terminal and configure your own model credentials. For fixed tags, follow that tag's build requirements. Generic Computer Use is maintained in the [OpenCU](https://github.com/gulagala001/opencu) source repository. [Contribute](CONTRIBUTING.md) · [Development guide](docs/usage_EN.md)
-
-</details>
-
-[Report a bug](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml) · [Suggest a feature](https://github.com/gulagala001/oh-my-dsh/issues/new?template=feature-request.yml) · [Product page](https://gulagala001.github.io/oh-my-dsh/)
-
-Include full DSH/OMD versions, platform, entry point, expected behavior and actual behavior in reports, and remove private data and credentials. The project has not specified a code license; original projects and third-party sources and licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Package name `trisoul_x` and preset ID `trisoul-x` remain for compatibility with existing installations.
+**Sources and licensing:** core mechanisms and prompts originate from trisoul; the host and public components originate from DeepSeek Harness. No project code license has been specified. Bundled OpenCU's REA assets and extension-host library retain separate upstream rights and distribution conditions; visible source does not automatically grant redistribution rights. See [third-party notices](THIRD_PARTY_NOTICES.md) and [OpenCU notices](vendor/opencu/THIRD_PARTY_NOTICES.md). Compatibility identifiers remain `trisoul_x` (package) and `trisoul-x` (preset).

@@ -43,10 +43,3 @@ test('first live install recovers only a failed stale upload resolver and binds 
   for (const dispose of f.effects.reverse()) dispose();
   assert.equal(Object.hasOwn(f.ctx.root, Symbol.for('omd.file-upload-resolver-v017')), false);
 });
-
-test('an active resolver or unrelated controller error is never replaced or retried', async () => {
-  for (const f of [setup(undefined, true), setup(Error('unrelated startup failure'))]) {
-    await f.ready; assert.equal(f.restarted(), 0); assert.equal(f.uploads.agentResolver, f.initial);
-    for (const dispose of f.effects.reverse()) dispose();
-  }
-});

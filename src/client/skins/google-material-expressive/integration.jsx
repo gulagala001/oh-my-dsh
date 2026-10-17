@@ -18,29 +18,41 @@ function containTab(event, root) {
 function Navigation({ ctx }) {
   const ref = useRef(null), [expanded, setExpanded] = useState(false);
   useEffect(() => {
-    const frame = ref.current?.closest('.pI_x6G_frame');
-    if (!frame) return;
-    const narrow = matchMedia('(max-width: 839px)'), sidebar = frame.querySelector('.pI_x6G_sidebarCol');
-    let restoreInert = () => {}, modal = false, previousFocus;
-    const close = () => { if (frame.dataset.sidebarCollapsed !== 'true') ctx.layout.toggleSidebar(); };
+    const narrow = matchMedia('(max-width: 839px)');
+    let frame, sidebar, restoreInert = () => {}, modal = false, previousFocus, regions = [];
+    const close = () => { if (modal && frame?.dataset.sidebarCollapsed !== 'true') ctx.layout.toggleSidebar(); };
     const sync = () => {
-      const right = frame.style.gridTemplateColumns.match(/(\d+(?:\.\d+)?px)\s*$/)?.[1] || '0px';
-      if (frame.style.getPropertyValue('--gm-host-right-width') !== right) frame.style.setProperty('--gm-host-right-width', right);
-      const open = narrow.matches && frame.dataset.sidebarCollapsed !== 'true';
+      const nextFrame = ref.current?.closest('[data-omd-surface="frame"]');
+      const nextSidebar = nextFrame?.querySelector(':scope > [data-omd-surface="sidebar-column"]');
+      const nextRegions = [...nextFrame?.querySelectorAll(':scope > [data-omd-surface="conversation"], :scope > [data-omd-surface="workbench-column"]') ?? []];
+      const entering = !modal;
+      // Surface ownership can change without unmounting this overlay entry.
+      // Release old leases before binding the replacement column or frame.
+      if (frame !== nextFrame || sidebar !== nextSidebar || regions.length !== nextRegions.length || regions.some((element, i) => element !== nextRegions[i])) {
+        restoreInert(); restoreInert = () => {}; modal = false;
+        frame?.style.removeProperty('--gm-host-right-width');
+        frame = nextFrame; sidebar = nextSidebar; regions = nextRegions;
+      }
+      if (frame && sidebar) {
+        const right = frame.style.gridTemplateColumns.match(/(\d+(?:\.\d+)?px)\s*$/)?.[1] || '0px';
+        if (frame.style.getPropertyValue('--gm-host-right-width') !== right) frame.style.setProperty('--gm-host-right-width', right);
+      }
+      const open = Boolean(frame && sidebar && narrow.matches && frame.dataset.sidebarCollapsed !== 'true' && !frame.hasAttribute('data-rightbar-fullscreen'));
       setExpanded(open);
       if (open === modal) return;
       modal = open;
       restoreInert(); restoreInert = () => {};
       if (open) {
-        previousFocus = document.activeElement;
-        restoreInert = acquireOverlayInert(frame.querySelectorAll(':scope > .pI_x6G_centerCol, :scope > .pI_x6G_rightbarCol'));
-        queueMicrotask(() => { if (modal && !document.querySelector('[role="dialog"]')) sidebar?.querySelector('.hHd-Xa_toggle')?.focus(); });
-      } else if (previousFocus?.isConnected && !document.querySelector('[role="dialog"]')) previousFocus.focus();
+        if (entering) previousFocus = document.activeElement;
+        restoreInert = acquireOverlayInert(regions);
+        if (entering) queueMicrotask(() => { if (modal && !document.querySelector('[role="dialog"]')) sidebar?.querySelector('[data-omd-nav-part="toggle"]')?.focus(); });
+      } else if (frame?.dataset.sidebarCollapsed === 'true' && previousFocus?.isConnected && !document.querySelector('[role="dialog"]')) previousFocus.focus();
     };
     const onClick = event => {
       const target = event.target instanceof Element ? event.target : null;
-      if (!modal || event.button !== 0 || !target || target.closest('.YDXeBa_rowActions')) return;
-      if (target.closest('.YDXeBa_sessionRow, .hHd-Xa_newSession, .hHd-Xa_panelRow, .hHd-Xa_brand')) queueMicrotask(() => { if (modal && frame.isConnected) close(); });
+      if (!modal || event.button !== 0 || !target || !sidebar?.contains(target)
+        || target.closest('[data-omd-nav-part="row-actions"], [aria-haspopup="menu"], [aria-haspopup="true"]')) return;
+      if (target.closest('[data-row-key^="session:"], [data-omd-nav-part="search-result-row"], [data-omd-nav-part="create"], [data-omd-nav-part="panel"], [data-omd-nav-part="brand"]')) queueMicrotask(close);
     };
     const onKey = event => {
       if (event.defaultPrevented || !modal || document.querySelector('[role="dialog"], [role="menu"]')) return;
@@ -48,10 +60,10 @@ function Navigation({ ctx }) {
       else if (sidebar) containTab(event, sidebar);
     };
     const observer = new MutationObserver(sync);
-    observer.observe(frame, { attributes: true, attributeFilter: ['data-sidebar-collapsed', 'style'] });
-    narrow.addEventListener('change', sync); frame.addEventListener('click', onClick, true); document.addEventListener('keydown', onKey);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-omd-surface', 'data-sidebar-collapsed', 'data-rightbar-fullscreen', 'style'] });
+    narrow.addEventListener('change', sync); document.addEventListener('click', onClick, true); document.addEventListener('keydown', onKey);
     sync();
-    return () => { modal = false; observer.disconnect(); narrow.removeEventListener('change', sync); frame.removeEventListener('click', onClick, true); document.removeEventListener('keydown', onKey); restoreInert(); frame.style.removeProperty('--gm-host-right-width'); };
+    return () => { modal = false; observer.disconnect(); narrow.removeEventListener('change', sync); document.removeEventListener('click', onClick, true); document.removeEventListener('keydown', onKey); restoreInert(); frame?.style.removeProperty('--gm-host-right-width'); };
   }, [ctx]);
   return <div ref={ref} className="gm-shell">{expanded && <button type="button" className="gm-nav-scrim" tabIndex={-1} aria-label="收起导航" onClick={() => ctx.layout.toggleSidebar()}/>}</div>;
 }

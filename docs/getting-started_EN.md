@@ -1,70 +1,59 @@
 # Your First Task
 
-[简体中文](getting-started.md) · [Documentation](README_EN.md) · [Installation](upgrade_EN.md) · [Usage](usage_EN.md) · [Troubleshooting](troubleshooting_EN.md)
+[简体中文](getting-started.md) · [Docs index](README_EN.md) · [Public installation](../README_EN.md#quickstart) · [Usage](usage_EN.md) · [Troubleshooting](troubleshooting_EN.md)
 
-After installation and a complete restart, complete a small task to check the model, file tools, and delivery. If you have not installed OMD, choose [desktop](upgrade_EN.md#desktop) or [Web](usage_EN.md#install-in-existing-dsh).
+Start with an installed, fully restarted, matching environment. Current release **`0.2.1-rc.2.omd.0.17.3` / DSH `0.2.1-rc.2`** bundles OpenCU `2.0.0`. Check [installation and version matching](install_EN.md) first. Historical 0.10 users should follow their fixed-tag docs.
 
-## 1. Check the Version and Model
+## 1. Check Actual Versions and Model
 
-Open the version icon beside the brand at the top left and read **Current version**:
+Open the version panel and read **Current version**. Latest version is remote information; public calculation excludes `unpublished`. Do not pair old public packages with newer hosts or choose across host versions using `latest`. Desktop/Web profiles differ: check full host, plugin enablement, actual data directory, and source.
 
-| DSH | Public OMD current version |
+OMD uses host models/credentials and supplies no account. File tasks need native tool calling; screenshot interpretation also requires image input. Text/file use does not require preparing desktop control or a Chrome extension first.
+
+## 2. Choose Conversation, Directory, and Scope
+
+Choose **Oh My DSH** for a new session. Saved sessions keep their preset. Select an existing workspace, or clear its label with **×**. Projectless Chat creates a file directory only on first send, then reuses it; unsent conversations create none.
+
+Choose memory scope before sending; it then locks:
+
+| Scope | Purpose and boundary |
 | --- | --- |
-| `0.2.1-alpha.1` | `0.2.1-alpha.1.omd.0.10.0` |
-| `0.2.0-rc.2` | `0.2.0-rc.2.omd.0.10.0` |
+| **Session isolation** | No automatic shared-memory injection/propagation; explicit historical recall remains. |
+| **Project sharing** | Project material and completed short memory for later conversations. |
+| **Global sharing** | Compact global memory and a paged project directory; detail read on demand. |
 
-“Latest version” is remote release information. If the current version did not change or controls are missing, [check the running environment](troubleshooting_EN.md#check-the-running-environment).
+An automatic Chat file directory is **not a Dream project**. Descendants not added to a real workspace stay isolated. Directory changes/deletion do not expand sharing. [Dream (Chinese)](dream-memory.md)
 
-OMD uses models and credentials already configured in DSH; it does not include an account. Choose a model with native tool calling, and image input if it needs to interpret screenshots. A file task does not require desktop permissions or a Chrome extension.
+Installation defaults to full file/command access and no execution approvals; **explicit profile overrides win**. Check current execution directory and actual permissions. Memory sharing is not filesystem access. Cold context/scope reads do not activate an Agent or create a ledger; saving rechecks whether the conversation started.
 
-## 2. Choose a Conversation, Directory, and Scope
+## 3. Complete a Small File Task
 
-Create a conversation, choose **Oh My DSH**, and select a directory containing a README. Existing conversations keep their original presets.
+In a usable installed environment, try:
 
-Before sending the first message, choose **Session isolation** or **Project sharing**. Use isolation for independent work and project sharing when later conversations in the same project should use shared material. The scope locks once the conversation starts; create a new conversation to change it. Development builds also offer global scope; see [context and memory](usage_EN.md#context-and-memory).
+> Read the README in this directory and explain its purpose, startup steps, and requirements. Include only what you actually read; mark unspecified details as “not specified.” Save project-start.md and open it for inspection.
 
-**Installation defaults to full file and command access with execution approvals disabled. Explicit profile overrides take priority.** Check the selected directory and actual access settings before sending.
+Check the right file, successful actual tool result, and accessible deliverable. Do not invent startup instructions. Use a prepared non-sensitive file if there is no README. This checks model/file work, not every component, platform, or the new candidate.
 
-<details>
-<summary>You can start without a project</summary>
+## 4. Find Common Controls
 
-Clear the selected workspace and start chatting. The first message creates a separate directory on the DSH host, normally Documents/DSH/date/first-message-name. Continuing the conversation reuses it; another conversation gets a new directory. [Projectless chat](usage_EN.md#projectless-chat).
-
-</details>
-
-## 3. Read a File and Deliver a Result
-
-Try:
-
-> Read the README in this directory. Explain the project's purpose, startup steps, and requirements. Put only what you actually find into project-start.md, list anything the README does not specify, and open the file for me to inspect.
-
-Check that the right file was read and the tool succeeded, then inspect the delivered file. If the README omits startup instructions, the result should say so rather than invent a command. If there is no README, use a prepared file without sensitive information.
-
-The result should be a supported explanation and an accessible Markdown file. This checks that model and file workflow; prepare other components when needed.
-
-## 4. Follow Requirements, Actions, and Checks
-
-Open **Workbench → Tasks and verification** for longer tasks. Ask the assistant to preserve requirements, track work, and check the output:
-
-> Export the supplied checklist as CSV. Keep unaccepted items, check encoding, column order, and every field, then deliver the file with the check result.
-
-The recorded fictional checklist contains eight items, including three awaiting acceptance. Its CSV uses UTF-8 with BOM and six fixed columns. The downloaded file was actually checked and passed.
-
-[![Tasks: original requirements, two work items, and actual PASS output](site/media/launchpad-tasks.jpg)](showcase_EN.md)
-
-*Business acceptance states are example data; the file check is an actual result. [Full example](showcase_EN.md).*
-
-## 5. Find the Common Controls
-
-| Control | When to use it |
+| Control | Purpose/default |
 | --- | --- |
-| Star beside the draft | Refine unsent text and recover draft versions; each refinement makes an extra model call. |
-| **Tasks and verification** | Inspect requirements, status, and evidence. BT task reminders default on; verification reminders default off. |
-| **Context** | Read summaries, documents, and sources. An empty new conversation is normal. |
-| **Memory · Dream** | Short-memory controls in development builds; automatic organization defaults off. |
-| **Monitoring** | Inspect calls, usage, and context. Background calls also incur usage. |
-| **Computer** | Inspect a browser or app. Stop or take over before manual interaction; resume afterward. |
-| **Settings → Appearance** | Change theme, palette, font, or background. |
-| **Base components** | Prepare CodeGraph, browser, or native desktop components as needed. |
+| Star | Refine an unsent draft and keep versions; each call incurs usage. Automatic polish defaults off. |
+| **OMD Console** | The single right-sidebar entry: overview, context (prepare → hub → replace, compaction), memory (automatic Dream off; empty folder selection means all), call log, background log. `≥` is a lower bound; unknown is not zero; background calls also cost usage. New-session empty state is normal. |
+| Composer info bar | Native turn/token readings plus context and Dream job items; each opens the matching console section. |
+| **BT** | Task reminders on; verification reminders off. “View task evidence” opens requirements, status, and evidence. |
+| Model/Fast | Pro prefers `xhigh`, otherwise highest; Ultra highest. Fast needs actual matching Subscriptions/model support. |
+| **Appearance** | Five themes, palettes, fonts, backgrounds, reduced motion. |
+| **Base components** | CodeGraph readiness and retained native/third-party entries. |
 
-Stopping the conversation, stopping computer control, and closing a preview are different actions. Continue with [computer operation](usage_EN.md#get-started-with-computer-use), or use the [symptom table](troubleshooting_EN.md#by-symptom).
+Workbench uses native content tabs alongside files/terminals. Tools, evidence, CodeGraph, and Workflow follow the current directory. Ordinary OMD-PTC operations use `run_code`, with four direct background controls in matching scopes. [Full usage](usage_EN.md)
+
+## 5. DeepSeek and CU Boundaries
+
+DeepSeek Workbench provides web chat and platform entries and imports extractable web history into native conversations. You send the next message; there is no auto-send. See [conditions and limitations (Chinese)](deepseek-workbench.md).
+
+New OpenCU is bundled by default. Open **Settings → Computer & browser** to inspect backends, OS permissions and browser resources; pair Chrome/Edge on first use if needed. The complete embedded browser and native monitor need matching host adapters. Plugin installation does not automatically patch stock DSH. Start with a nonsensitive task and check the actual page. [Setup and boundaries (Chinese)](computer-use.md)
+
+IUI, OMAA and Subscriptions remain separate plugins. Match complete versions and their [integration boundaries](plugin-compatibility_EN.md).
+
+Keep complete versions, actual entry, and the first complete error. Use [symptom troubleshooting (Chinese)](troubleshooting.md), rather than deleting data or bypassing version checks.

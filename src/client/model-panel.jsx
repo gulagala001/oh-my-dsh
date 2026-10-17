@@ -201,7 +201,9 @@ export function applyModelPanel(ctx) {
       try {
         do {
           dirty = false;
-          const winner = ctx.slots.entries(name).find(entry => entry.component !== Panel);
+          const elected = ctx.slots.entriesOfSlot(name)[0];
+          const winner = elected?.component === Panel
+            ? ctx.slots.entries(name).includes(original) ? original : undefined : elected;
           // This adapter replaces only the official model seat. An unrelated
           // renderer keeps its own injected props, store and child-slot owner.
           const native = winner?.component.name === 'ModelSelect' && winner.locale === 'model'

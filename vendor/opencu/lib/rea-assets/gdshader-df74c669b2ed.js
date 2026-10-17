@@ -1,0 +1,1 @@
+import{n as e,t}from"./gdshader-19d346c8700a.js";e();export{t as default};

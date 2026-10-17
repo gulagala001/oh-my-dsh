@@ -1,0 +1,2 @@
+import{n as e}from"./chunk-Y2CYZVJY-ec17b93e265e.js";function t(e,t){e.accDescr&&t.setAccDescription?.(e.accDescr),e.accTitle&&t.setAccTitle?.(e.accTitle),e.title&&t.setDiagramTitle?.(e.title)}e(t,`populateCommonDb`);export{t};
+//# sourceMappingURL=chunk-JWPE2WC7-b64131fd37b9.js.map

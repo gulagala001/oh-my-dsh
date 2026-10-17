@@ -1,0 +1,397 @@
+import {createStorage} from './storage.mjs';
+import {createBrowserBackend} from '../browser/backend.mjs';
+import {
+  PROTOCOL_VERSION, assertBackend, assertTarget, checkExpected, errorJSON, fail,
+  json, referenceMatches, sameIdentity,
+} from '../protocol.mjs';
+
+/** All public methods resolve to {ok:true,...} or {ok:false,error,state}. */
+export async function createController({dataDir, browser, native} = {}) {
+  const storage = await createStorage(dataDir);
+  const backends = new Map();
+  let saved;
+  try {
+    saved = await storage.read('controller.json', null);
+    if (saved && saved.version !== PROTOCOL_VERSION) fail('STATE_VERSION', 'Unsupported controller state version');
+    if (browser !== false) {
+      const backend = typeof browser?.listTargets === 'function'
+        ? browser : await createBrowserBackend({...browser, dataDir: storage.directory});
+      assertBackend(backend, 'browser');
+      backends.set('browser', backend);
+    }
+    if (native) { assertBackend(native, 'native'); backends.set('native', native); }
+  } catch (error) { await storage.close(); throw error; }
+
+  const selected = new Map((saved?.targets ?? []).map(target => [target.id, {...target, verified: false, cold: true}]));
+  const userActivity = new Map();
+  const observedActivity = new Map();
+  const previews = new Map();
+  let mode = saved ? 'recovery_required' : 'active';
+  let activeTargetId = saved?.activeTargetId ?? null;
+  let releasePending = saved?.releasePending ?? false;
+  let releaseErrors = saved?.releaseErrors ?? [];
+  let closed = false;
+  let closing;
+  const closedBackends = new Set();
+  let epoch = 0;
+  let aborter = new AbortController();
+  let tail = Promise.resolve();
+
+  function snapshot() {
+    return json({version: PROTOCOL_VERSION, mode, activeTargetId, releasePending, releaseErrors,
+      targets: [...selected.values()], userActivity: [...userActivity.values()], closed});
+  }
+  async function persist() { await storage.write('controller.json', snapshot()); }
+  function response(work) {
+    return Promise.resolve().then(work).then(result => json({ok: true, ...result}))
+      .catch(error => ({ok: false, error: errorJSON(error), state: snapshot()}));
+  }
+  function serial(work) {
+    const result = tail.then(work);
+    tail = result.then(() => undefined, () => undefined);
+    return result;
+  }
+  function alive() {
+    if (closed) fail('CONTROLLER_CLOSED', 'Controller is closed');
+    if (mode === 'closing') fail('CONTROLLER_CLOSING', 'Controller is closing');
+    if (mode === 'close_failed' || closedBackends.size) fail('CLOSE_FAILED', 'Retry close before using this controller');
+  }
+  function controlAllowed() {
+    alive();
+    if (mode !== 'active' || releasePending) fail('CONTROL_STOPPED', `Control is blocked (${mode})`);
+  }
+  function checkOperation(operationEpoch) {
+    if (operationEpoch !== epoch) fail('CONTROL_STOPPED', 'Operation interrupted by cancellation or shutdown');
+  }
+  function targetFor(id = activeTargetId) {
+    const target = selected.get(id);
+    if (!target) fail('TARGET_NOT_SELECTED', 'Select a target first', {targetId: id});
+    const backend = backends.get(target.backend);
+    if (!backend) fail('BACKEND_UNAVAILABLE', `Backend ${target.backend} is not configured`);
+    return {target, backend};
+  }
+  async function verify(target, backend, cold = false, operationEpoch = epoch) {
+    const result = await backend.verify(json(target), {cold});
+    checkOperation(operationEpoch);
+    if (result?.valid !== true) {
+      target.verified = false;
+      fail('TARGET_IDENTITY_CHANGED', result?.reason ?? 'Target occurrence could not be verified', {targetId: target.id});
+    }
+    const current = assertTarget(result.target ?? target, target.backend);
+    if (current.id !== target.id || !sameIdentity(current.identity, target.identity)) {
+      target.verified = false;
+      fail('TARGET_IDENTITY_CHANGED', 'Backend returned a different target occurrence', {targetId: target.id});
+    }
+    if (cold) checkExpected(current, {url: target.url, title: target.title});
+    Object.assign(target, current);
+    return target;
+  }
+  async function releaseAll() {
+    const failures = [];
+    for (const [name, backend] of backends) {
+      if (closedBackends.has(name)) continue;
+      try {
+        const result = await backend.release({targets: [...selected.values()].filter(target => target.backend === name).map(json)});
+        if (result?.released !== true || result.failures?.length || result.errors?.length) {
+          failures.push({backend: name, ...result, released: false});
+        }
+      } catch (error) { failures.push({backend: name, ...errorJSON(error)}); }
+    }
+    releaseErrors = failures;
+    releasePending = failures.length > 0;
+    if (releasePending) mode = 'release_failed';
+    await persist();
+    if (releasePending) fail('RELEASE_FAILED', 'Input release failed; control remains blocked', failures);
+  }
+  function block(nextMode) {
+    alive();
+    mode = nextMode;
+    releasePending = true;
+    epoch++;
+    aborter.abort();
+    for (const target of selected.values()) target.verified = false;
+  }
+  async function inventory() {
+    alive();
+    const targets = [];
+    const errors = [];
+    for (const [name, backend] of backends) {
+      try { targets.push(...(await backend.listTargets()).map(target => assertTarget(target, name))); }
+      catch (error) { errors.push({backend: name, ...errorJSON(error)}); }
+    }
+    let browsers = [];
+    try { browsers = await backends.get('browser')?.listBrowsers?.() ?? []; }
+    catch (error) { errors.push({backend: 'browser', ...errorJSON(error)}); }
+    return {targets, browsers, errors};
+  }
+
+  const controller = {
+    listTargets: () => response(() => serial(inventory)),
+    openTarget: (request = {}) => response(() => serial(async () => {
+      controlAllowed();
+      const operationEpoch = epoch, backend = backends.get('browser');
+      if (typeof backend?.newTab !== 'function') fail('UNSUPPORTED_OPERATION', 'This browser cannot create a tab without an existing target');
+      const {browsers} = await inventory();
+      checkOperation(operationEpoch);
+      if (!request.browserId || browsers.filter(item => item.id === request.browserId).length !== 1) fail('AMBIGUOUS_TARGET', 'Choose one connected browser ID');
+      let target;
+      try {
+        target = assertTarget(await backend.newTab(request.browserId, request.url, {signal: aborter.signal}), 'browser');
+        checkOperation(operationEpoch);
+        if (target.browserId !== request.browserId) fail('TARGET_IDENTITY_CHANGED', 'Created tab belongs to another browser');
+        const current = assertTarget(await backend.select(json(target)), 'browser');
+        checkOperation(operationEpoch);
+        if (current.id !== target.id || current.browserId !== request.browserId || !sameIdentity(current.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'Selection changed the created tab occurrence');
+        Object.assign(target, current);
+        await verify(target, backend, false, operationEpoch);
+        selected.set(target.id, {...target, verified: true, cold: false});
+        activeTargetId = target.id;
+        await persist();
+        checkOperation(operationEpoch);
+        return {target: selected.get(target.id)};
+      } catch (error) {
+        if (target) error.details = {...error.details, created: true, target,
+          notice: 'A tab was created. Select this target after recovery; do not create another tab.'};
+        if (operationEpoch === epoch) { block('faulted'); await releaseAll(); }
+        throw error;
+      }
+    })),
+    selectTarget: reference => response(() => serial(async () => {
+      alive();
+      const operationEpoch = epoch;
+      const {targets, errors} = await inventory();
+      checkOperation(operationEpoch);
+      const matches = targets.filter(target => referenceMatches(target, reference));
+      if (matches.length !== 1) fail(matches.length ? 'AMBIGUOUS_TARGET' : 'TARGET_NOT_FOUND',
+        'Reference must match exactly one live target', {matches: matches.map(target => target.id), errors});
+      const candidate = matches[0];
+      const previous = selected.get(candidate.id);
+      if (previous && !sameIdentity(previous.identity, candidate.identity)) fail('TARGET_IDENTITY_CHANGED', 'Target ID was reused');
+      if (previous?.cold) checkExpected(candidate, {url: previous.url, title: previous.title});
+      if (reference?.identity && !sameIdentity(reference.identity, candidate.identity)) fail('TARGET_IDENTITY_CHANGED', 'Reference identity does not match the live occurrence');
+      checkExpected(candidate, reference?.expected);
+      const backend = backends.get(candidate.backend);
+      const controlling = mode === 'active' && !releasePending && !previous?.cold;
+      const target = assertTarget(controlling ? await backend.select(candidate) : candidate, candidate.backend);
+      checkOperation(operationEpoch);
+      if (target.id !== candidate.id || !sameIdentity(target.identity, candidate.identity)) fail('TARGET_IDENTITY_CHANGED', 'Selection changed occurrence');
+      await verify(target, backend, previous?.cold ?? false, operationEpoch);
+      checkOperation(operationEpoch);
+      // Selection cannot bypass cold recovery or a previous stop.
+      Object.assign(target, {verified: mode === 'active' && !releasePending && !previous?.cold, cold: previous?.cold ?? false});
+      selected.set(target.id, target);
+      activeTargetId = target.id;
+      await persist();
+      return {target, state: snapshot()};
+    })),
+    observe: (request = {}) => response(() => serial(async () => {
+      alive();
+      const operationEpoch = epoch;
+      const {target, backend} = targetFor(request.targetId);
+      if (target.provider === 'extension' || target.backend === 'extension' || target.id.startsWith('extension:')) controlAllowed();
+      if (target.cold) fail('RECOVERY_REQUIRED', 'Resume and verify the saved occurrence before observing');
+      await verify(target, backend, false, operationEpoch);
+      checkOperation(operationEpoch);
+      const activitySequence = userActivity.get(target.id)?.sequence ?? 0;
+      const observation = await backend.observe(json(target), {...request, format: request.format ?? 'both'});
+      checkOperation(operationEpoch);
+      const activity = observation.userActivity, previous = userActivity.get(target.id);
+      if (activity?.sequence && (previous?.documentId !== activity.documentId || previous.sequence < activity.sequence)) {
+        userActivity.set(target.id, { ...activity, targetId: target.id });
+      }
+      observedActivity.set(target.id, activity?.sequence ?? activitySequence);
+      await persist();
+      checkOperation(operationEpoch);
+      return {targetId: target.id, observation, userActivity: userActivity.get(target.id) ?? null,
+        observedUserActivitySequence: observedActivity.get(target.id) ?? 0};
+    })),
+    act: (request = {}) => response(() => serial(async () => {
+      controlAllowed();
+      const operationEpoch = epoch;
+      const {target, backend} = targetFor(request.targetId);
+      if (!target.verified || target.cold) fail('RECOVERY_REQUIRED', 'Resume this target before acting');
+      await verify(target, backend);
+      controlAllowed();
+      let result;
+      try { result = await backend.act(json(target), {...request, signal: aborter.signal}); }
+      catch (error) {
+        const unresolvedLocator = ['locator','domSnapshot'].includes(request.action) && error.details?.inputDispatched !== true && ['LOCATOR_NOT_FOUND', 'AMBIGUOUS_LOCATOR', 'UNSUPPORTED_LOCATOR', 'LOCATOR_NOT_ACTIONABLE', 'LOCATOR_NOT_STABLE', 'STALE_ELEMENT', 'STALE_OBSERVATION', 'FRAME_NOT_FOUND', 'FRAME_DETACHED'].includes(error.code);
+        if (operationEpoch === epoch && !unresolvedLocator) {
+          block('faulted');
+          await releaseAll();
+        }
+        throw error;
+      }
+      if (operationEpoch !== epoch) fail('CONTROL_STOPPED', 'Action interrupted by cancellation or shutdown');
+      if (result?.target) {
+        const current = assertTarget(result.target, target.backend);
+        if (current.id === target.id && !sameIdentity(current.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'Action changed occurrence');
+        const navigation = ['navigate', 'back', 'forward', 'reload'].includes(request.action);
+        const replaced = navigation && result.replacedTargetId === target.id && target.provider === 'extension' && current.provider === 'extension' &&
+          ['instanceId', 'browserInstanceId', 'epoch', 'tabId'].every(key => current.identity[key] === target.identity[key]);
+        if (current.id !== target.id && request.action !== 'newTab' && !replaced) fail('TARGET_IDENTITY_CHANGED', 'Action returned another target');
+        if (current.id !== target.id) await verify(current, backend);
+        if (operationEpoch !== epoch) fail('CONTROL_STOPPED', 'Action interrupted by cancellation or shutdown');
+        if (replaced) { selected.delete(target.id); userActivity.delete(target.id); observedActivity.delete(target.id); }
+        selected.set(current.id, {...current, verified: true, cold: false});
+        activeTargetId = current.id;
+      }
+      if (result?.closedTargetId) {
+        selected.delete(result.closedTargetId);
+        if (activeTargetId === result.closedTargetId) activeTargetId = [...selected.keys()].at(-1) ?? null;
+      }
+      await persist();
+      return {targetId: result?.target?.id ?? target.id, result: result ?? {}};
+    })),
+    stop: () => {
+      try { block('stopped'); } catch (error) { return response(() => { throw error; }); }
+      return response(() => serial(async () => { await releaseAll(); return {state: snapshot()}; }));
+    },
+    notifyUserActivity: (request = {}) => response(() => {
+      alive();
+      const {target} = targetFor(request.targetId);
+      const previous = userActivity.get(target.id);
+      const activity = {targetId: target.id, sequence: (previous?.sequence ?? 0) + 1, at: new Date().toISOString(), kind: request.kind ?? 'interaction'};
+      userActivity.set(target.id, activity);
+      return {activity, state: snapshot()};
+    }),
+    resume: (request = {}) => response(() => serial(async () => {
+      alive();
+      if (closedBackends.size) fail('CLOSE_FAILED', 'Some backends are already closed; retry close');
+      const operationEpoch = epoch;
+      const {target, backend} = targetFor(request.targetId);
+      let selecting = false;
+      try {
+        if (releasePending || mode === 'recovery_required') {
+          await releaseAll();
+          checkOperation(operationEpoch);
+        }
+        await verify(target, backend, target.cold, operationEpoch);
+        checkOperation(operationEpoch);
+        selecting = true;
+        const current = await backend.select(json(target));
+        checkOperation(operationEpoch);
+        const resumed = assertTarget(current, target.backend);
+        if (resumed.id !== target.id || !sameIdentity(resumed.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'Resume selection changed occurrence');
+        if (target.cold) checkExpected(resumed, {url: target.url, title: target.title});
+        await verify(resumed, backend, target.cold, operationEpoch);
+        checkOperation(operationEpoch);
+        if (mode !== 'active') aborter = new AbortController();
+        Object.assign(target, resumed, {verified: true, cold: false});
+        activeTargetId = target.id;
+        mode = 'active';
+        await persist();
+        checkOperation(operationEpoch);
+        return {target, state: snapshot()};
+      } catch (error) {
+        if (selecting) {
+          if (operationEpoch === epoch) block('faulted');
+          const releaseEpoch = epoch;
+          await releaseAll();
+          checkOperation(releaseEpoch);
+        }
+        throw error;
+      }
+    })),
+    getState: () => response(async () => ({state: snapshot()})),
+    preview: (request = {}) => response(async () => {
+      alive();
+      const operationEpoch = epoch;
+      const {target, backend} = targetFor(request.targetId);
+      if (target.cold) fail('RECOVERY_REQUIRED', 'The saved target has not been verified');
+      if (typeof backend.preview !== 'function') fail('UNSUPPORTED_OPERATION', 'This backend does not provide monitor frames');
+      let capture = previews.get(target.id);
+      if (!capture) {
+        // Capturing monitor frames must not occupy the serial input/recovery lane.
+        capture = (async () => {
+          const current = await backend.verify(json(target), {monitoring: true});
+          checkOperation(operationEpoch);
+          if (current?.valid !== true || current.target && (current.target.id !== target.id || !sameIdentity(current.target.identity, target.identity))) fail('TARGET_IDENTITY_CHANGED', current?.reason ?? 'Preview target is no longer available');
+          const preview = await backend.preview(json(target));
+          return { ...preview, active: preview.active ?? current.target?.active === true, isDetached: current.target?.isDetached === true };
+        })().finally(() => { if (previews.get(target.id) === capture) previews.delete(target.id); });
+        previews.set(target.id, capture);
+      }
+      let timer;
+      const preview = await Promise.race([capture, new Promise((_, reject) => {
+        timer = setTimeout(() => reject(Object.assign(new Error('Monitor capture timed out; input remains available'), {code: 'PRESENTATION_TIMEOUT'})), 12000);
+      })]).finally(() => clearTimeout(timer));
+      checkOperation(operationEpoch);
+      if (selected.get(target.id) !== target) fail('TARGET_IDENTITY_CHANGED', 'The monitored target changed');
+      return {target, preview};
+    }),
+    stopPreview: (request = {}) => response(async () => {
+      alive();
+      const target = selected.get(request.targetId), backend = backends.get(target?.backend);
+      if (typeof backend?.stopPreview === 'function') await backend.stopPreview(target.id);
+      return {released: true};
+    }),
+    focus: (request = {}) => response(() => serial(async () => {
+      alive();
+      const operationEpoch = epoch;
+      let target, backend;
+      if (request.reference) {
+        const reference = request.reference;
+        if (!reference.identity || typeof reference.id !== 'string') fail('TARGET_IDENTITY_REQUIRED', 'Opening a target reference requires its original identity');
+        const matches = (await inventory()).targets.filter(value => value.id === reference.id && sameIdentity(value.identity, reference.identity));
+        if (matches.length !== 1) fail('TARGET_IDENTITY_CHANGED', 'The referenced application or browser occurrence is no longer available');
+        target = matches[0]; backend = backends.get(target.backend);
+        checkExpected(target, reference.expected);
+      } else ({target, backend} = targetFor(request.targetId));
+      if (target.cold) fail('RECOVERY_REQUIRED', 'Resume and verify the saved target before opening it');
+      await verify(target, backend, false, operationEpoch);
+      if (typeof backend.focus !== 'function') fail('UNSUPPORTED_OPERATION', 'This backend cannot open the selected target');
+      const result = await backend.focus(json(target));
+      checkOperation(operationEpoch);
+      await persist();
+      return {targetId: target.id, result, state: snapshot()};
+    })),
+    permissions: () => response(() => serial(async () => {
+      alive();
+      const backend = backends.get('native');
+      if (!backend || typeof backend.permissions !== 'function') return {permissions: {available: false, platform: process.platform}};
+      return {permissions: {available: true, ...await backend.permissions()}};
+    })),
+    openPermissionSettings: (request = {}) => response(() => serial(async () => {
+      alive();
+      const backend = backends.get('native');
+      if (!backend || typeof backend.openPermissionSettings !== 'function') fail('BACKEND_UNAVAILABLE', 'Native permission settings are unavailable');
+      return {result: await backend.openPermissionSettings(request.permission)};
+    })),
+    deliveries: () => response(() => serial(async () => {
+      alive();
+      const records = [];
+      for (const backend of backends.values()) {
+        if (typeof backend.deliveries === 'function') records.push(...await backend.deliveries());
+      }
+      return {deliveries: records};
+    })),
+    close: () => {
+      if (closed) return response(async () => ({state: snapshot()}));
+      if (closing) return closing;
+      mode = 'closing'; releasePending = true; epoch++; aborter.abort();
+      for (const target of selected.values()) target.verified = false;
+      closing = response(() => serial(async () => {
+        await releaseAll();
+        // Backend teardown cancels its captures; a missing monitor frame cannot hold shutdown hostage.
+        const failures = [];
+        for (const [name, backend] of backends) {
+          if (closedBackends.has(name)) continue;
+          try { await backend.close(); closedBackends.add(name); }
+          catch (error) { failures.push({backend: name, ...errorJSON(error)}); }
+        }
+        if (failures.length) { mode = 'close_failed'; await persist(); fail('CLOSE_FAILED', 'Backend close failed', failures); }
+        mode = 'closed'; closed = true;
+        try { await persist(); await storage.close(); }
+        catch (error) { closed = false; mode = 'close_failed'; throw error; }
+        return {state: snapshot()};
+      })).finally(() => { closing = undefined; });
+      return closing;
+    },
+  };
+  try { await persist(); }
+  catch (error) { await storage.close(); throw error; }
+  return controller;
+}
+
+export {PROTOCOL_VERSION, BACKEND_CONTRACT, BROWSER_ACTIONS, OpenCUError} from '../protocol.mjs';

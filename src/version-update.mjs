@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { readJsonBody } from './http.mjs';
 import { compareVersions, parseVersion, updateHostRequirement } from './version.mjs';
 import { pluginManagementError } from './recommended-plugins.mjs';
@@ -10,6 +11,13 @@ const hostReason = (current, target, host) => {
   const required = updateHostRequirement(current, target, host);
   return required ? `此版本需要 DSH ${required.requiredHostVersion}，当前宿主为 ${required.hostVersion}。请先更新官方 DSH，再安装对应 OMD。` : '';
 };
+const bundledCandidates = JSON.parse(readFileSync(new URL('../release-manifest.json', import.meta.url), 'utf8')).releases.filter(row => row.unpublished === true);
+const unpublishedReason = (release, version, includeUnpublished) => {
+  if (includeUnpublished || !version) return '';
+  const row = release.releases?.find(row => compareVersions(row.version, version) === 0);
+  return row?.unpublished === true || row?.unpublished !== false && bundledCandidates.some(candidate => compareVersions(candidate.version, version) === 0)
+    ? '此版本尚未公开发布，不能通过公开更新安装。' : '';
+};
 export function versionInstallSpec(version) {
   parseVersion(version);
   return 'github:gulagala001/oh-my-dsh#v' + version.replace(/^v/, '');
@@ -18,8 +26,8 @@ export function versionInstallSpec(version) {
 // Updating an existing bundle uses the host's transaction and requires a restart.
 // Keep the running version separate from the package now present on disk.
 export class VersionUpdater {
-  constructor({ versions, getManager, isRunning = () => false }) {
-    Object.assign(this, { versions, getManager, isRunning });
+  constructor({ versions, getManager, isRunning = () => false, includeUnpublished = false }) {
+    Object.assign(this, { versions, getManager, isRunning, includeUnpublished: includeUnpublished === true });
     this.state = { phase: 'idle', targetVersion: null, error: '' };
     this.job = null; this.closed = false; this.requestId = null;
   }
@@ -39,7 +47,8 @@ export class VersionUpdater {
       return { phase: 'restart-required', targetVersion: bundle.version, error: '', available: false };
     }
     const release = this.versions.snapshot();
-    const blockedReason = reason || hostReason(release.currentVersion, release.latestVersion, release.hostVersion) || (this.isRunning() ? '有任务正在运行，请等任务结束后更新。' : '');
+    const blockedReason = reason || unpublishedReason(release, release.latestVersion, this.includeUnpublished)
+      || hostReason(release.currentVersion, release.latestVersion, release.hostVersion) || (this.isRunning() ? '有任务正在运行，请等任务结束后更新。' : '');
     return { ...this.snapshot(), available: !this.closed && !blockedReason, blockedReason };
   }
   start(version) {
@@ -59,6 +68,8 @@ export class VersionUpdater {
   async run(version) {
     const release = await this.versions.check(true);
     if (release.error || release.stale) throw failure('未能确认最新发布信息，请重新检查更新后再试。');
+    const publication = unpublishedReason(release, version, this.includeUnpublished);
+    if (publication) throw failure(publication);
     const requirement = hostReason(release.currentVersion, version, release.hostVersion);
     if (requirement) throw failure(requirement);
     if (release.status !== 'update' || release.latestVersion !== version) throw failure('发布版本已变化，请重新检查更新。');

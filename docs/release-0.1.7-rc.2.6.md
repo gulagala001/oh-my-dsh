@@ -20,6 +20,4 @@ github:gulagala001/oh-my-dsh#v0.1.7-rc.2.6
 
 GitHub 对同日版本的排序会受版本号影响，旧编号 `1.7.4` 可能显示在 `0.1.7-rc.2.x` 前面。请以 **Latest** 标记和[最新发布入口](https://github.com/gulagala001/oh-my-dsh/releases/latest)为准；完整发布顺序见[更新记录](https://github.com/gulagala001/oh-my-dsh/blob/main/CHANGELOG.md)。旧编号页面已补充历史版本提示，保留原标签和下载地址。
 
-## 验证范围
-
-版本服务与浏览器回归覆盖当前版本、有更新、离线和窄屏，核对完整发布列表与新版说明两个链接。此前的原生宿主安装和更新流程验证继续适用；本轮未新增 Windows 或原生桌面真机验证。
+<a id="验证范围"></a>

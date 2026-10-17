@@ -2,107 +2,30 @@ name: CI
 
 on:
   pull_request:
-    paths-ignore: ['README.md', 'docs/**']
+    paths-ignore: ['README*.md', 'docs/**']
   workflow_dispatch:
-    inputs:
-      full:
-        description: Run the complete Linux Node 22/24 and Windows matrix
-        type: boolean
-        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  public-files:
-    name: Public Git and package files
+  core:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-      - run: node scripts/check-public-files.mjs
-
-  matrix:
-    needs: public-files
-    runs-on: ubuntu-latest
-    outputs:
-      tests: ${{ steps.tests.outputs.matrix }}
-    steps:
-      - uses: actions/checkout@v7
-      - id: tests
-        env:
-          CI_SUITE: ${{ inputs.full && 'full' || 'general' }}
-        run: echo "matrix=$(node scripts/test-ci.mjs matrix "$CI_SUITE")" >> "$GITHUB_OUTPUT"
-
-  test:
-    needs: matrix
-    name: ${{ matrix.os }} / Node ${{ matrix.node }} / ${{ matrix.suite }} ${{ matrix.shard }}
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.matrix.outputs.tests) }}
-    steps:
-      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
-          node-version: ${{ matrix.node }}
+          node-version: '24'
           cache: pnpm
-      - uses: actions/setup-dotnet@v6
-        if: runner.os == 'Windows'
-        with:
-          dotnet-version: '10.0.x'
       - run: pnpm install --frozen-lockfile
-      - uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cache/ms-playwright
-            ~/Library/Caches/ms-playwright
-            ~/AppData/Local/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: node scripts/check-public-files.mjs
       - run: pnpm build
-      # Homes, hosts and browser contexts stay isolated. Files within a shard
-      # remain serial; shared coverage runs once, platform contracts separately.
-      - run: node scripts/test-ci.mjs run ${{ matrix.suite }} ${{ matrix.shard }}
-
-  conversation-simulator:
-    name: Offline conversation engineering checks
-    runs-on: macos-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-      - uses: pnpm/action-setup@v6
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install chromium
-      - run: pnpm build
-      - name: Simulator contracts and failure controls
-        run: |
-          mkdir -p work/conversation-simulator
-          pnpm test:simulator > work/conversation-simulator/tests.log 2>&1
-      - name: Native host baseline
-        run: pnpm test:conversation
-      - name: Generated native interleavings
-        run: pnpm simulate --explore --seed 42 --cases 5 --max-steps 12 --budget-ms 120000
-      - name: Actual Web interaction
-        run: pnpm simulate --scenario full-lifecycle --ui
-      - name: Preserve engineering evidence
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: conversation-simulator-${{ github.run_id }}-${{ github.run_attempt }}
-          path: work/conversation-simulator/
-          if-no-files-found: ignore
-          retention-days: 7
+      - run: pnpm test

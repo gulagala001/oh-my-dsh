@@ -84,10 +84,18 @@
     if (url.origin === location.origin && url.pathname === location.pathname && url.search === location.search && url.hash && url.hash === location.hash) revealHash();
   });
   revealHash();
+  document.addEventListener('focusin', event => {
+    const element = event.target;
+    if (!(element instanceof HTMLElement) || !element.closest('.doc-main')) return;
+    const header = document.querySelector('.doc-header').getBoundingClientRect(), bounds = element.getBoundingClientRect();
+    if (bounds.top < header.bottom + 8) window.scrollBy({ top: bounds.top - header.bottom - 8, behavior: 'instant' });
+    else if (bounds.bottom > innerHeight - 8) window.scrollBy({ top: Math.min(bounds.top - header.bottom - 8, bounds.bottom - innerHeight + 8), behavior: 'instant' });
+  });
 
   document.querySelectorAll('.mobile-nav a, .mobile-toc a').forEach(link => link.addEventListener('click', () => {
     link.closest('details').open = false;
-    const target = link.hash && document.getElementById(decodeURIComponent(link.hash.slice(1)));
+    const url = new URL(link.href);
+    const target = url.origin === location.origin && url.pathname === location.pathname && url.hash && document.getElementById(decodeURIComponent(url.hash.slice(1)));
     if (target) { target.tabIndex = -1; target.focus({ preventScroll: true }); }
   }));
   document.querySelectorAll('.mobile-nav, .mobile-toc').forEach(menu => menu.addEventListener('keydown', event => {

@@ -1,5 +1,7 @@
 # iOS Liquid Glass
 
+[文档目录](README.md) · [外观指南](skins.md) · [其他布局](README.md#按需查阅)
+
 从零制作的一套完整 DSH 外观，独立 id 为 `ios-liquid-glass`。在「设置 → 外观 → 皮肤」选择 **iOS Liquid Glass · 全新布局**，刷新后仍保持选择。明暗模式继续使用 DSH 的设置。
 
 ## 覆盖范围
@@ -14,13 +16,13 @@
 | 新会话 | 玻璃品牌图标、标题、项目与预设选择、输入卡 |
 | 设置 | 圆角玻璃浮层、彩色图标导航、分组列表、分段选择、表单、开关、保存栏 |
 | 设置分页 | 通用设置、模型、内置插件、外观、Oh My DSH、推荐插件、Agent 预设、已归档会话 |
-| 工作台 | 玻璃侧面板、原生页签、任务 / 上下文 / 摘要 / 电脑 / 监控导航，保留缩放与全屏行为 |
+| 控制台 | 玻璃侧面板、一个 OMD 控制台原生内容标签：概览 / 上下文 / 记忆 / 调用日志 / 后台日志，保留宿主其他入口、缩放与全屏行为 |
 | 浮层 | 菜单、下拉、对话框、提示、焦点、悬停、按下和禁用状态 |
 | 辅助选项 | 浅色、深色、跟随系统；降低透明与动态效果；系统减少动态效果 / 透明度、高对比度 |
 
 材质参考 [Apple Materials](https://developer.apple.com/design/human-interface-guidelines/materials)：导航与控件使用透明、模糊、高光边缘与阴影，正文保持清晰。Web 实现采用 CSS backdrop-filter 与渐变，不等同于 iOS 原生合成器的实时光学折射。字体使用本机系统字体；未捆绑 Apple 字体或外部素材。真实文件与电脑画面不添加玻璃滤镜。
 
-默认用户气泡和主按钮使用较深的蓝色，白字在气泡上为 5.30:1，在主按钮渐变两端为 4.78:1 / 5.30:1；按 [Apple Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility) 引用的 WCAG AA 普通文字 4.5:1 门槛验收浅色与深色。电脑引用标签跟随气泡文字色；自定义配色继续控制主按钮和气泡的前景色，不强制改为白色。此对比度结果适用于默认配色，自定义配色由其具体颜色决定。
+默认用户气泡和主按钮使用较深的蓝色。自定义配色可分别调整按钮和气泡的前景色；搭配时注意文字与背景的对比度，参考 [Apple Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility)。
 
 ## 源文件与构建
 
@@ -34,8 +36,6 @@ node scripts/pack-skin.mjs src/client/skins/ios-liquid-glass dist/skins/ios-liqu
 
 布局适配器由本版 OMD 插件提供。JSON 可以更新颜色与材质并选择该布局；不能携带任意脚本或布局代码。恢复默认皮肤会移除本套所有布局规则。
 
-## 验证
+## 查看效果
 
-`test/ios-liquid-glass-ui.test.mjs` 在真实 DSH 宿主和隔离数据目录中检查：明暗 / 系统模式、侧栏与手机导航、七个设置分页、1440 / 768 / 390px 布局、菜单、工作台、手机发送与停止、新会话、降低特效、刷新保存及默认恢复。新增可读性回归直接读取真实气泡、电脑引用标签和已启用发送按钮的 ComputedStyle，独立计算文字及渐变两端的对比度，并覆盖高对比度、减少动态效果、降低特效、深色自定义配色与高级用户消息文字色。其他皮肤的导入、覆盖、错误恢复与卸载契约由现有皮肤测试覆盖。
-
-设置 `TRISOUL_UI_ARTIFACTS=1` 运行该测试，可在 ignored `work/rea-upgrade/ios-liquid-glass-qa/` 查看真实页面截图和 `computed-contrast.json`。浏览器使用隔离的无头 Chromium，不占用用户登录态或桌面。当前自动验证环境为 Chromium；未宣称 iPhone Safari 或 Windows 桌面壳实机验收。
+[新版图集](release-visuals.md) · [外观设置](skins.md) · [安装与版本配对](install.md)

@@ -2,7 +2,7 @@ import { sourceName } from '../message-source.mjs';
 import { withoutTodo, isTaskInjection, TODO_META } from '../task-context.mjs';
 import { attachTodoRefresh, requireSavings } from './todo-refresh.mjs';
 import { randomUUID } from 'node:crypto';
-import { createSurfaceIndex, hash, liveSpan, recordText, recordBlocks, exposedTrace, actualUser, carrierBarrier, recordSnapshot, sourceHash, splitGroups } from './core.mjs';
+import { createSurfaceIndex, hash, liveSpan, recordText, recordBlocks, exposedTrace, actualUser, carrierBarrier, recordSnapshot, sourceHash, splitGroups, resolveTraceSlot } from './core.mjs';
 import { combineAssets, attachmentsOf, contentChars, messageTokens } from './materials.mjs';
 import { TRACE_HEAD } from './prompts.mjs';
 
@@ -47,9 +47,9 @@ export function createTransaction(session, state, plan, cfg, pairing, pricing = 
         inputTokens: sourceTokens, outputTokens: resultTokens }), seqs, text: i ? '' : text, position: session.surface.nodes.indexOf(seqs[0]) }));
   }
   if (!operations.length) return null;
-  let traceSlot = structuredClone(state.traceSlot), trace = cfg.traceEnabled ? exposedTrace(session, { maxChars: cfg.traceMaxChars, afterSeq: state.fullCompaction?.throughSeq ?? -1 }) : null;
+  let traceSlot = structuredClone(resolveTraceSlot(session, state.traceSlot) || state.traceSlot), trace = cfg.traceEnabled ? exposedTrace(session, { maxChars: cfg.traceMaxChars, afterSeq: state.fullCompaction?.throughSeq ?? -1 }) : null;
   if (trace) {
-    const slotLive = traceSlot && session.surface.nodes.includes(traceSlot.carrierSeq);
+    const slotLive = Boolean(resolveTraceSlot(session, traceSlot));
     const firstChanged = Math.min(...operations.filter(o => o.kind === 'record').map(o => o.position));
     const covered = new Set(operations.flatMap(o => o.seqs));
     const anchor = slotLive ? session.eventAt(traceSlot.carrierSeq) : session.surface.nodes.slice(0, firstChanged).map(seq => session.eventAt(seq)).find(e => (actualUser(e) || sourceName(e.data?.source) === 'trisoul-x:todo-prefix') && !covered.has(e.seq));

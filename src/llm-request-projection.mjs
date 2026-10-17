@@ -1,4 +1,5 @@
 import { symbols } from '@deepseek-ai/cordis';
+import { isDeepStrictEqual } from 'node:util';
 
 const registrations = new WeakMap();
 const projectOptions = (entries, options) => {
@@ -21,9 +22,10 @@ function install(runtime) {
     return Object.freeze({ ...prepared, stream: options => prepared.stream(projectOptions(entries, options)) });
   };
   runtime.stream = state.stream; runtime.prepareCall = state.prepareCall;
+  const owned = ['stream', 'prepareCall'].map(key => Object.getOwnPropertyDescriptor(runtime, key));
   state.restore = () => {
     for (const [i, key] of ['stream', 'prepareCall'].entries()) {
-      if (runtime[key] !== state[key]) continue;
+      if (!isDeepStrictEqual(Object.getOwnPropertyDescriptor(runtime, key), owned[i])) continue;
       if (descriptors[i]) Object.defineProperty(runtime, key, descriptors[i]);
       else delete runtime[key];
     }

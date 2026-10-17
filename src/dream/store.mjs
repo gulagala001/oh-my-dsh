@@ -94,13 +94,16 @@ export class DreamStore {
   holds(epoch) { const r = this.db.prepare('SELECT * FROM lease WHERE id=1').get(); return r?.owner === this.owner && r.epoch === epoch && r.expires > this.now(); }
   renew(epoch, ttl = 60000) { return this.db.prepare('UPDATE lease SET expires=? WHERE id=1 AND owner=? AND epoch=? AND expires>?').run(this.now()+ttl, this.owner, epoch, this.now()).changes === 1; }
   release(epoch) { this.db.prepare('UPDATE lease SET expires=0 WHERE id=1 AND owner=? AND epoch=?').run(this.owner, epoch); }
-  publish({ kind, target, baseRevision = 0, summary, sources = [], references = [], consumed = [], epoch, jobId }) {
+  publish({ kind, target, baseRevision = 0, baseInvalid, summary, sources = [], references = [], consumed = [], epoch, jobId }) {
     const key = nodeKey(kind, target);
     return this.tx(() => {
       if (!this.holds(epoch)) throw Error('Dream 执行租约已失效');
       if (jobId && this.job(jobId)?.state !== 'running') throw Error('Dream 已停止；未发布迟到结果');
       const old = this.memory(key);
       if ((old?.revision || 0) !== baseRevision) throw Error('Dream 记忆已更新；未覆盖较新版本');
+      // Invalidation deliberately keeps the revision. Fence it separately so a
+      // scope withdrawal during generation cannot re-publish a polluted previous.
+      if (baseInvalid !== undefined && Boolean(old?.invalid) !== baseInvalid) throw Error('Dream 来源范围在生成期间已改变；停止发布');
       // Membership is checked inside the same transaction as publication: a
       // second process may update scope after the asynchronous source read.
       if(kind==='project'||kind==='global')for(const source of sources){
@@ -186,6 +189,16 @@ export class DreamStore {
     const sql=includeUnfinished?`SELECT data FROM jobs WHERE state IN ('queued','running','budget','paused','failed') OR id IN (SELECT id FROM jobs ORDER BY created DESC LIMIT ?) ORDER BY created DESC`:'SELECT data FROM jobs ORDER BY created DESC LIMIT ?';
     return this.db.prepare(sql).all(limit).map(decode);
   }
+  jobActivity({ includeJob = false } = {}) {
+    const row = this.db.prepare(`SELECT
+      (SELECT count(*) FROM jobs WHERE state='running') activeJobs,
+      (SELECT count(*) FROM jobs WHERE state IN ('queued','budget')) queuedJobs
+      ${includeJob ? `, coalesce(
+        (SELECT data FROM jobs WHERE state='running' ORDER BY created DESC,rowid ASC LIMIT 1),
+        (SELECT data FROM jobs WHERE state IN ('queued','budget') ORDER BY created DESC,rowid ASC LIMIT 1)) data` : ''}`).get();
+    return { activeJobs: row.activeJobs, queuedJobs: row.queuedJobs, ...(includeJob ? { job: decode(row) } : {}) };
+  }
+  hasRunnableJobs() { return Boolean(this.db.prepare("SELECT 1 FROM jobs WHERE state IN ('queued','running') LIMIT 1").get()); }
   recover(epoch) {
     return this.tx(() => {
       if (!this.holds(epoch)) throw Error('Dream 执行租约已失效');
@@ -227,8 +240,10 @@ export class DreamStore {
     // immutable so all historical citations continue to resolve.
     const before=this.now()-30*86400000;
     this.tx(()=>{
-      this.db.prepare("DELETE FROM job_targets WHERE job IN (SELECT id FROM jobs WHERE state IN ('complete','failed') AND created<?)").run(before);
-      this.db.prepare("DELETE FROM jobs WHERE state IN ('complete','failed') AND created<?").run(before);
+      // Failed jobs still own pinned cuts and successful targets. Only complete
+      // jobs are disposable history; age must not erase retryable progress.
+      this.db.prepare("DELETE FROM job_targets WHERE job IN (SELECT id FROM jobs WHERE state='complete' AND created<?)").run(before);
+      this.db.prepare("DELETE FROM jobs WHERE state='complete' AND created<?").run(before);
       this.db.prepare('DELETE FROM calls WHERE day<?').run(quotaDay(before));
     });
   }

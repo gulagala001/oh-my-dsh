@@ -4,20 +4,9 @@ import { join } from 'node:path';
 import { ScriptedModel, Gate } from './scene.mjs';
 import { until } from './host.mjs';
 import { assertToolPairs, assertNoLeak } from './assertions.mjs';
-
-const usage = { prompt_tokens: 200, completion_tokens: 50, total_tokens: 250 };
-export const textReply = text => ({ chunks: [{ delta: { role: 'assistant', content: text }, finish_reason: 'stop', usage }] });
-export function toolReply(name, args, id, { split = 0 } = {}) {
-  const json = JSON.stringify(args);
-  if (!split) return { chunks: [{ delta: { role: 'assistant', tool_calls: [{ index: 0, id, type: 'function', function: { name, arguments: json } }] }, finish_reason: 'tool_calls', usage }] };
-  const at = Math.max(1, Math.min(json.length - 1, split));
-  return { chunks: [
-    { delta: { role: 'assistant', tool_calls: [{ index: 0, id, type: 'function', function: { name, arguments: json.slice(0, at) } }] }, finish_reason: null },
-    { delta: { tool_calls: [{ index: 0, function: { arguments: json.slice(at) } }] }, finish_reason: 'tool_calls', usage },
-  ] };
-}
-export const toolNames = payload => (payload.tools ?? []).map(tool => tool.function.name);
-export const userText = payload => payload.messages.filter(message => message.role === 'user').map(message => typeof message.content === 'string' ? message.content : JSON.stringify(message.content)).join('\n');
+import { ptcControlsScenario } from './ptc-controls.mjs';
+import { usage, textReply, toolReply, toolNames, userText } from './replies.mjs';
+export { textReply, toolReply, toolNames, userText } from './replies.mjs';
 const toolResults = payload => payload.messages.filter(message => message.role === 'tool').map(message => message.content).join('\n');
 const containsTool = name => payload => toolNames(payload).includes(name);
 const adaptiveMarker = '[OMD independent asynchronous context check]';
@@ -58,6 +47,7 @@ export const SCENARIOS = [
   { id: 'storage-failure', title: '真实原生文件工具遇到 I/O 错误后继续修复', create: storageFailure },
   { id: 'context-enhancement', title: '独立主动异步压缩、请求前缀、模式切换与原文搜索', create: contextEnhancement },
   { id: 'context-adaptive-auto', title: '真实主请求成功后自动调度主动异步压缩及缓存用量传递', create: contextAdaptiveAuto },
+  ptcControlsScenario,
 ];
 
 function fullLifecycle({ trace }) {
@@ -118,6 +108,7 @@ function fullLifecycle({ trace }) {
       assert.ok(verificationRun.execution.callId && verificationRun.execution.callId !== 'full-verify');
       assert.equal(verificationRun.execution.exitCode, 0);
       assert.equal(verificationRun.execution.signal, null);
+      assert.ok(Number.isFinite(verificationRun.startedAt) && Number.isFinite(verificationRun.finishedAt));
       assert.ok(verificationRun.startedAt <= verificationRun.finishedAt);
       assert.ok(Number.isFinite(verificationRun.durationMs) && verificationRun.durationMs >= 0);
     });
@@ -151,7 +142,7 @@ function fullLifecycle({ trace }) {
       const chatStatus = await host.api('/dream?session=' + projectlessId);
       assert.equal(chatStatus.session.mode, 'session'); assert.equal(chatStatus.session.shared, false);
       assert.equal(chatStatus.sessionMemory, null);
-      assert(!(await host.control('/workspaces')).some(workspace => workspace.sessionIds.includes(projectlessId)));
+      assert(!(await host.control('/workspaces')).some(workspace => workspace.path === chatDirectory.cwd || workspace.sessionIds.includes(projectlessId)));
       const projects = await host.api('/dream/catalog?kind=project');
       assert(!projects.entries.some(project => project.id === chatDirectory.cwd));
       for (const request of provider.requests.filter(request => containsTool('save_memory')(request.payload))) assertNoLeak(request.payload, 'PRIVATE_SIM_PROJECTLESS_');
@@ -170,8 +161,13 @@ function fullLifecycle({ trace }) {
     });
     await checks.check('重启后非工作区 Chat 仍保持独立', async () => {
       await host.api('/dream/refresh', {});
-      const chat = (await host.api('/dream?session=' + projectlessId)).session;
-      assert.equal(chat.shared, false); assert.equal(chat.mode, 'session');
+      const chatStatus = await host.api('/dream?session=' + projectlessId), chat = chatStatus.session;
+      assert.equal(chat.shared, false); assert.equal(chat.mode, 'session'); assert.equal(chatStatus.sessionMemory, null);
+      assert(!(await host.control('/workspaces')).some(workspace => workspace.path === chatDirectory.cwd || workspace.sessionIds.includes(projectlessId)));
+      assert(!(await host.api('/dream/catalog?kind=project')).entries.some(project => project.id === chatDirectory.cwd));
+      assert.deepEqual((await host.control('/snapshot?session=' + projectlessId)).events, chatBeforeDream.events);
+      assert.deepEqual((await host.durable(projectlessId)).events, chatBeforeDream.events);
+      for (const request of provider.requests.filter(request => containsTool('save_memory')(request.payload))) assertNoLeak(request.payload, 'PRIVATE_SIM_PROJECTLESS_');
     });
     await host.prompt(publicId, '重启后继续。'); await host.idle(publicId);
     return { sessionId: publicId, privateSessionId: privateId };

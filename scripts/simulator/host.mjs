@@ -1,17 +1,14 @@
-import { spawn, execFile } from 'node:child_process';
-import { promisify } from 'node:util';
+import { spawn } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, writeFile, symlink, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { createHash } from 'node:crypto';
 import { realpathSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
-import { once } from 'node:events';
+import { stopFixtureProcess } from '../../test/fixtures/process.mjs';
 import { assertFaultLedger } from './assertions.mjs';
 import { ProcessMonitor } from './processes.mjs';
 
-const exec = promisify(execFile);
 export const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 const preload = fileURLToPath(new URL('./clock-preload.mjs', import.meta.url));
 const guard = fileURLToPath(new URL('./network-guard.mjs', import.meta.url));
@@ -36,6 +33,9 @@ export function cleanEnvironment(root, home) {
     if (process.env[key]) env[key] = process.env[key];
   }
   return { ...env, HOME: home, USERPROFILE: home, TMPDIR: join(root, 'tmp'), TMP: join(root, 'tmp'), TEMP: join(root, 'tmp'),
+    XDG_CONFIG_HOME: join(home, 'config'), XDG_CACHE_HOME: join(home, 'cache'), XDG_DATA_HOME: join(home, 'data'), XDG_STATE_HOME: join(home, 'state'),
+    APPDATA: join(home, 'config'), LOCALAPPDATA: join(home, 'cache'), PI_CODING_AGENT_DIR: join(home, 'pi-agent'),
+    PNPM_HOME: join(home, 'bin'), COREPACK_HOME: join(home, 'cache/corepack'), COREPACK_ENABLE_DOWNLOAD_PROMPT: '0',
     DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1', OMD_SIMULATION: '1', OMD_SIM_ROOT: root, OMD_SIM_AUDIT: join(root, 'network.jsonl'),
     // Node children of real native tools inherit the network fence, but not the
     // host's virtual clock. Their native timers must continue to run normally.
@@ -54,7 +54,8 @@ export class SimulationHost {
     this.anchor = createRequire(realpathSync(join(dirname(this.cli), '../package.json')));
   }
   async prepare() {
-    for (const dir of [this.home, this.workspace, join(this.root, 'tmp'), join(this.home, 'profiles/simulation/node_modules')]) await mkdir(dir, { recursive: true });
+    for (const dir of [this.home, this.workspace, join(this.root, 'tmp'), join(this.home, 'profiles/simulation/node_modules'),
+      ...['config','cache/corepack','data','state','pi-agent','bin'].map(path => join(this.home, path))]) await mkdir(dir, { recursive: true });
     this.version = JSON.parse(await readFile(this.anchor.resolve('@deepseek-ai/dsh/package.json'), 'utf8')).version;
     const { initProfile, PROFILE_TEMPLATES } = await import(pathToFileURL(this.anchor.resolve('@deepseek-ai/dsh-app-boot')).href);
     const profile = join(this.home, 'profiles/simulation');
@@ -80,17 +81,12 @@ export class SimulationHost {
       'trisoul-x': { componentAutoSetup: false, computerUseEnabled: false, codegraphEnabled: false, backgroundTasksEnabled: false,
         dreamAutoEnabled: false, projectlessWorkspaceRoot: join(this.root, 'projectless-chats'), flushIdleMs: 0, digestEvery: 1000, coordinatorEvery: 1000,
         unifiedBackground: { provider: 'simulation', model: this.models[0], effort: 'off' }, dreamProvider: 'simulation', dreamModel: this.models[0],
-        computerUseChromeUserDataDir: join(this.root, 'chrome-profile'), ...this.omd },
+        ...this.omd },
     }));
     await writeFile(join(this.home, '.credentials.yaml'), JSON.stringify({ version: 1, refs: { OMD_SIMULATION_KEY: 'local-simulation-only' } }), { mode: 0o600 });
     await writeFile(join(this.workspace, 'AGENTS.md'), 'Simulation workspace: keep all generated files here.\n');
     await mkdir(join(this.workspace, '.git'));
     await writeFile(this.hostTrace, ''); await writeFile(join(this.root, 'network.jsonl'), '');
-    if (process.platform === 'darwin') {
-      const key = createHash('sha256').update(join(this.home, 'trisoul-x/computer-use')).digest('hex').slice(0, 24);
-      this.extensionDirectory = '/private/tmp/trisoul-cu-' + key;
-      await mkdir(this.extensionDirectory, { mode: 0o700 });
-    }
     return this;
   }
   check() {
@@ -118,10 +114,10 @@ export class SimulationHost {
     let command = process.execPath, argv = args;
     if (this.isolation === 'native') {
       if (process.platform !== 'darwin') throw Object.assign(Error('Native isolation currently requires macOS sandbox-exec. Use process isolation only when its documented boundary is acceptable.'), { code: 'ISOLATION_UNAVAILABLE' });
-      const profile = '(version 1) (allow default) (deny network-outbound) (allow network-outbound (remote ip "localhost:' + new URL(this.provider.baseURL).port + '")) (deny signal) (allow signal (target self) (target children) (target same-sandbox)) (deny file-write*) (allow file-write* (subpath ' + JSON.stringify(this.root) + ') (subpath ' + JSON.stringify(this.extensionDirectory) + ') (literal "/dev/null") (literal "/dev/tty"))';
+      const profile = '(version 1) (allow default) (deny network-outbound) (allow network-outbound (remote ip "localhost:' + new URL(this.provider.baseURL).port + '")) (deny signal) (allow signal (target self) (target children) (target same-sandbox)) (deny file-write*) (allow file-write* (subpath ' + JSON.stringify(this.root) + ') (literal "/dev/null") (literal "/dev/tty"))';
       command = '/usr/bin/sandbox-exec'; argv = ['-p', profile, process.execPath, ...args];
     } else if (this.isolation !== 'process') throw Error('Unknown isolation: ' + this.isolation);
-    this.boots++; this.log = '';
+    this.boots++; this.log = ''; this.spawnError = undefined;
     const child = this.child = spawn(command, argv, { cwd: this.workspace, env, detached: process.platform !== 'win32',
       stdio: process.platform === 'win32' ? ['ignore', 'pipe', 'pipe'] : ['ignore', 'pipe', 'pipe', 'ignore', 'ignore', 'ignore', 'ignore', 'ignore', 'ignore', 'pipe'] });
     child.on('error', error => { this.spawnError = error; });
@@ -208,19 +204,8 @@ export class SimulationHost {
       if (auditError) throw auditError;
       return;
     }
-    const kill = signal => { try { if (process.platform === 'win32') child.kill(signal); else process.kill(-child.pid, signal); } catch (error) { if (error.code !== 'ESRCH') throw error; } };
-    if (child.exitCode === null && child.signalCode === null) {
-      const exited = once(child, 'exit');
-      if (process.platform === 'win32') await exec('taskkill', ['/PID', String(child.pid), '/T', '/F']).catch(error => { if (child.exitCode === null && child.signalCode === null) throw error; });
-      else kill(crash ? 'SIGKILL' : 'SIGTERM');
-      let deadline;
-      try { await Promise.race([exited, new Promise((_, reject) => { deadline = setTimeout(() => { kill('SIGKILL'); reject(Error('DSH shutdown timed out')); }, 5000); })]); }
-      finally { clearTimeout(deadline); }
-    }
-    // The dedicated group can outlive its leader (for example esbuild after a
-    // crash). Always reap it, including when DSH already exited on its own.
-    if (process.platform !== 'win32') kill('SIGKILL');
-    child.stdout?.destroy(); child.stderr?.destroy(); child.unref();
+    if (process.platform !== 'win32') throw Error('POSIX simulation shutdown requires its attached ownership monitor');
+    await stopFixtureProcess(child);
     this.trace({ type: 'host/stop', boot: this.boots, crash, exitCode: child.exitCode, signal: child.signalCode });
     if (auditError) throw auditError;
   }
@@ -266,7 +251,6 @@ export class SimulationHost {
     try { await this.stop(); } finally {
       this.closed = true;
       for (const monitor of this.monitors ?? []) await rm(monitor.ackDirectory, { recursive: true, force: true });
-      if (this.extensionDirectory) await rm(this.extensionDirectory, { recursive: true, force: true });
     }
   }
 }

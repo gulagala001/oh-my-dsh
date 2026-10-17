@@ -1,10 +1,12 @@
 import { sourceName } from '../message-source.mjs';
 import { installRequestProjection } from '../llm-request-projection.mjs';
+import { resolveTraceSlot } from './core.mjs';
 import { freezeMessage, isAgentLoopRequest, markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 
 // Assistant settlements are immutable host records. Remove only the exposed
 // reasoning from request copies, keeping tool calls, results and the audit log.
 export function withoutMovedReasoning(messages, session, traceSlot) {
+  traceSlot = resolveTraceSlot(session, traceSlot);
   if (!traceSlot) return messages;
   const carrier = session.deriveEventMessage(session.eventAt(traceSlot.carrierSeq));
   if (!carrier || !messages.some(m => m.id === carrier.id && sourceName(m.source) === 'trisoul-x:trace')) return messages;

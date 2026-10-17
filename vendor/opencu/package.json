@@ -1,120 +1,24 @@
 {
-  "type": "module",
-  "packageManager": "pnpm@11.23.0",
-  "engines": {
-    "node": ">=22.19"
-  },
-  "dependencies": {
-    "@dnd-kit/core": "6.3.1",
-    "@electron-internal/extract-zip": "1.0.5",
-    "csv-parse": "6.1.0",
-    "diff": "9.0.0",
-    "electron": "44.7.0",
-    "html-to-text": "10.0.1",
-    "htmlparser2": "10.1.0",
-    "marked": "18.0.12",
-    "playwright": "1.63.0",
-    "sharp": "0.35.4",
-    "ws": "8.21.3",
-    "yaml": "2.8.1",
-    "yauzl": "3.4.0",
-    "yazl": "3.3.1",
-    "zod": "4.5.4",
-    "zxing-wasm": "3.1.2"
-  },
-  "devDependencies": {
-    "@deepseek-ai/cordis": "4.0.5-alpha.1",
-    "@deepseek-ai/dsh": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-client-ui-primitives": "0.2.1-alpha.2",
-    "@deepseek-ai/dsh-llm": "0.2.1-alpha.2",
-    "@deepseek-ai/schemastery": "3.18.5-alpha.1",
-    "acorn": "8.19.0",
-    "esbuild": "0.25.12",
-    "eslint-scope": "9.1.2",
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
-  },
-  "peerDependencies": {
-    "@deepseek-ai/cordis": "4.0.5-alpha.1",
-    "@deepseek-ai/dsh-llm": "0.2.1-alpha.2",
-    "@deepseek-ai/schemastery": "3.18.5-alpha.1"
-  },
-  "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
-      "optional": true
-    },
-    "@deepseek-ai/dsh-llm": {
-      "optional": true
-    },
-    "@deepseek-ai/schemastery": {
-      "optional": true
-    }
-  },
   "name": "opencu",
-  "version": "1.6.1",
-  "description": "Computer Use for DSH: browsers, desktop apps, live previews, annotations and file exports.",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/gulagala001/opencu.git"
+  "version": "2.0.0-dsh.0.2.1-rc.2",
+  "description": "Computer-use plugin with original REA browser, annotation and monitoring components for DSH",
+  "type": "module",
+  "engines": {
+    "node": ">=22.19",
+    "dsh": "0.2.1-rc.2"
   },
-  "homepage": "https://github.com/gulagala001/opencu#readme",
-  "bugs": {
-    "url": "https://github.com/gulagala001/opencu/issues"
-  },
-  "main": "src/index.mjs",
   "exports": {
     ".": "./src/index.mjs",
-    "./integration": "./src/integration.mjs",
+    "./core": "./src/core/controller.mjs",
+    "./browser": "./src/browser/backend.mjs",
+    "./native": "./src/native/backend.mjs",
+    "./extension": "./src/extension/backend.mjs",
+    "./dsh": "./src/dsh/index.mjs",
+    "./integration": "./src/dsh/index.mjs",
     "./client": "./lib/client.js",
-    "./client-source": "./src/client/computer-use.jsx",
-    "./src/*": "./src/*",
-    "./package.json": "./package.json",
-    "./scripts/*": "./scripts/*",
-    "./native/*": "./native/*",
-    "./host/ui-chat": "./src/host/ui-chat.mjs"
+    "./protocol": "./src/protocol.mjs",
+    "./package.json": "./package.json"
   },
-  "scripts": {
-    "build": "node scripts/build.mjs",
-    "build:browser": "node scripts/build.mjs --browser-only",
-    "build:presentations": "node native/desktop-presentations/build.mjs",
-    "stage:windows-native": "node scripts/stage-windows-native-runtime.mjs",
-    "prepare:runtime": "node scripts/prepare-plugin-runtime.mjs",
-    "prepare:engine": "node scripts/prepare-plugin-engine.mjs",
-    "postinstall": "node scripts/prepare-plugin-runtime.mjs",
-    "start": "node scripts/start.mjs",
-    "test": "node --test --test-concurrency=1 test/*.test.mjs",
-    "prepack": "node scripts/check-public-files.mjs"
-  },
-  "files": [
-    "src",
-    "lib",
-    "native/computer-use/**/*.{m,h,swift,cs,csproj,manifest,md}",
-    "native/computer-use/resources/SoftwareCursor.png",
-    "native/computer-use/prebuilt/**/manifest.json",
-    "native/computer-use/prebuilt/darwin-*/Oh My DSH Computer Use.app/Contents/**",
-    "native/computer-use/prebuilt/win32-*/OhMyDsh.Desktop.exe.gz",
-    "native/computer-use/prebuilt/win32-*/build.json",
-    "!native/computer-use/prebuilt/**/*.{o,obj,pdb,log}",
-    "native/plugin-browser/**/*.{mjs,cjs,md}",
-    "native/plugin-browser/site-information*",
-    "!native/plugin-browser/native-settings-resources.mjs",
-    "native/plugin-runtime/*.{mjs,json,md}",
-    "!native/plugin-browser/{history,profile,profiles,runfiles}/**",
-    "native/desktop-presentations/*.{mjs,mm,h,md}",
-    "native/desktop-presentations/prebuilt/**/*.{node,json}",
-    "native/screen-unlock-login-plugin/*.{m,h}",
-    "native/transport/*.{m,h,md}",
-    "browser-extension",
-    "scripts",
-    "!scripts/build-plugin-engine.mjs",
-    "!scripts/stage-plugin-engine-release.mjs",
-    "cordis.patch.yml",
-    "README.md",
-    "README_EN.md",
-    "docs",
-    "THIRD_PARTY_NOTICES.md",
-    "vendor"
-  ],
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
@@ -122,20 +26,64 @@
     "client": {
       "platform": "web",
       "inject": [
-        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-ui-slots",
         "@deepseek-ai/dsh-client-ui-sidebar-right",
-        "@deepseek-ai/dsh-client-ui-sidebar",
-        "@deepseek-ai/dsh-api-session-controller",
-        "@deepseek-ai/dsh-api-workspace-controller",
-        "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-client-ui-conversation",
-        "@deepseek-ai/dsh-client-ui-commands",
-        "@deepseek-ai/dsh-client-ui-input-trigger",
+        "@deepseek-ai/dsh-client-ui-settings",
         "@deepseek-ai/dsh-client-ui-layout",
-        "@deepseek-ai/dsh-client-ui-renderer",
-        "@deepseek-ai/dsh-client-ui-session",
+        "@deepseek-ai/dsh-client-ui-conversation",
         "@deepseek-ai/dsh-client-ui-workspace"
       ]
     }
+  },
+  "files": [
+    "src/",
+    "lib/",
+    "host/",
+    "cordis.patch.yml",
+    "native/macos/",
+    "native/windows/",
+    "native/linux/",
+    "native/bin/",
+    "extension/",
+    "README.md",
+    "THIRD_PARTY_NOTICES.md",
+    "!src/client/",
+    "!native/bin/opencu-native-*",
+    "!**/.*/**",
+    "!**/.*",
+    "README_EN.md",
+    "DEVELOPMENT.md",
+    "docs/"
+  ],
+  "dependencies": {
+    "playwright": "1.63.0",
+    "sharp": "0.35.5"
+  },
+  "devDependencies": {
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "react-compiler-runtime": "1.0.0",
+    "esbuild": "0.25.12",
+    "@babel/parser": "7.29.7",
+    "@babel/traverse": "7.29.7",
+    "acorn": "8.18.0",
+    "@babel/generator": "7.29.7"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.5",
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-attachment": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-scope": "0.2.1-rc.2",
+    "@deepseek-ai/schemastery": "3.18.5"
+  },
+  "opencu": {
+    "host": "0.2.1-rc.2",
+    "sourceCommit": "687f282e8625c6b8d11ff58211a90524be2e4317",
+    "adapterRevision": 2
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gulagala001/opencu.git"
   }
 }

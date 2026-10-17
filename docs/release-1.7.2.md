@@ -22,8 +22,4 @@ npx --yes @deepseek-ai/dsh@0.1.7-rc.1 --profile web
 
 [手动安装](usage.md#安装到现有-dsh推荐) · [AI 安装与升级](upgrade.md)
 
-## 验证范围
-
-本地完成 RC 源码类型检查、聊天／会话组件回归、上下文与任务契约、旧显示配置迁移、插件卸载恢复、四套皮肤的明暗与窄屏检查，以及收起侧栏的几何和点击验证。Office 的 DOCX、XLSX、PPTX 均实际转换为 PDF；本机缺少 Calibri，表格转换使用字体替代。
-
-跨平台结果以本版提交的 CI 为准；macOS 检查不代表 Windows 原生桌面与缩放验收。完整 Computer Use 对标、锁屏和后置生态边界沿用现有说明。
+<a id="验证范围"></a>

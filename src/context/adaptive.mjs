@@ -143,6 +143,7 @@ export class AdaptiveCompaction {
       if (value.action === 'skip') {
         if (value.prepared !== undefined || value.choices?.length) throw Error('不压缩的回复不能提交替换内容');
         status.lastKey = fingerprint; status.lastDecision = 'skip'; status.reason = value.reason || '本次保留当前上下文'; status.failures = 0;
+        p.hub.event?.(session, { kind: 'adaptive', status: 'skip', title: '主动整理：保留', detail: status.reason, data: { cacheReadTokens: result.usage?.cacheReadTokens ?? null } });
         s.eventsSincePrepare = Math.max(0, (s.eventsSincePrepare || 0) - seenEvents);
         status.cacheReadTokens = result.usage?.cacheReadTokens ?? null; p.store.save(s); return;
       }
@@ -177,10 +178,13 @@ export class AdaptiveCompaction {
       s.pending = { id: randomUUID(), createdAt: Date.now(), source: 'adaptive', routeKey: routeKey(snapshot.request), userRevision: userRevision(session), choices: normalized, summaryPromptVersion: SUMMARY_PROMPT_VERSION };
       p.hub.action(session, 'contextDecisions', 1);
       status.lastKey = fingerprint; status.lastDecision = 'compress'; status.reason = value.reason || '已准备替换，等待安全请求边界'; status.failures = 0;
+      p.hub.event?.(session, { kind: 'adaptive', status: 'success', title: '主动整理：准备替换', detail: status.reason,
+        count: normalized.reduce((n, c) => n + (c.action === 'keep' ? 0 : c.ids.length), 0), data: { newRecord: Boolean(record) } });
       status.cacheReadTokens = result.usage?.cacheReadTokens ?? null; p.store.save(s);
     })().catch(error => {
       if (!current()) return;
       status.error = error.message; status.failures = (status.failures || 0) + 1; status.failureRoute = routeKey(snapshot.request); p.store.save(s);
+      p.hub.event?.(session, { kind: 'adaptive', status: 'error', title: '主动整理失败', detail: error.message, data: { count: status.failures } });
       p.hub.ctx.logger?.warn?.(`主动异步整理：${error.message}`);
     }).finally(() => {
       if (p.jobs.get(key) === job) p.jobs.delete(key);

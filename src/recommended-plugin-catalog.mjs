@@ -1,19 +1,39 @@
-// Only this curated catalog supplies package names to the installer.
+// Only this curated catalog supplies third-party package names to the installer.
+// Bundled entries are navigation and status cards, never installation sources.
 export const recommendedPlugins = [
+  {
+    id: 'dsh-deepseek-workbench', name: 'DeepSeek 工作台 · DeepSeek Workbench', packageName: 'dsh-deepseek-workbench', author: 'gulagala001',
+    description: '在 DSH 内打开 DeepSeek 网页聊天与开放平台，将网页会话导入 DSH 原生历史后继续。随 OMD 内置并默认启用；网页能力取决于宿主提供的浏览器桥接。',
+    category: '内置工作台', bundled: true, version: '0.1.0',
+    url: 'https://github.com/gulagala001/oh-my-dsh/blob/main/docs/deepseek-workbench.md',
+  },
   {
     id: 'dsh-intelligent-ui', name: '智能交互回答 · Intelligent UI', packageName: 'dsh-intelligent-ui', author: 'gulagala001',
     description: '在回答内操作清单、计算器、图表、表单、模拟和小游戏；提供独立智能聊天入口和按需技能，沿用 DSH 原生模型与会话。默认不安装。',
     unavailable: 'Intelligent UI 尚未正式发布，公开安装与更新暂未开放。本地验收可安装对应宿主的已校验安装包；已有安装仍可卸载。',
     category: '界面增强', url: 'https://github.com/gulagala001/dsh-intelligent-ui', githubRelease: 'gulagala001/dsh-intelligent-ui',
-    // SDK-aligned archives are frozen for local acceptance. The unpublished
-    // restriction above keeps public downloads closed until release approval.
+    // Keep retained host-specific identities. Byte binding is not product acceptance.
     hostBuilds: {
-      '0.2.0-rc.2': { version: '0.2.0-rc.2.iui.1.0.2', releaseTag: 'v0.2.0-rc.2.iui.1.0.2', asset: 'dsh-intelligent-ui-0.2.0-rc.2.iui.1.0.2.tgz', sha256: 'd45fcd994d9ceadec4c62a952b0e8471c5078f2912ce29c587bdcd9574c58459', dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.13.0', platforms: ['Mac（隔离 Web 宿主）'], allowPrerelease: true,
-        note: '本地未发布构建。对应 rc.2 SDK 与 OMD 0.13 的原生交互、保存与冷重启恢复、明暗主题、卸载及外来插件注册保留已在 Mac 隔离 Web 验证；最终包仅补文档，运行文件与验收包逐字一致。本轮使用本地模型；真实模型生成效果及 Windows/Linux、原生桌面 App 未同等实测。' },
-      '0.2.1-alpha.1': { version: '0.2.1-alpha.1.iui.1.0.2', releaseTag: 'v0.2.1-alpha.1.iui.1.0.2', asset: 'dsh-intelligent-ui-0.2.1-alpha.1.iui.1.0.2.tgz', sha256: 'f43842d424cb6a4eee84e6bd22bc1b055e2ad261826cec73b2e9a814f2e3813b', dsh: '0.2.1-alpha.1', omd: '0.2.1-alpha.1.omd.0.13.0', platforms: ['Mac（隔离 Web 宿主）'], allowPrerelease: true,
-        note: '本地未发布构建。对应 alpha.1 SDK 与 OMD 0.13 的原生交互、保存与冷重启恢复、明暗主题、卸载及外来插件注册保留已在 Mac 隔离 Web 验证；最终包仅补文档，运行文件与验收包逐字一致。本轮使用本地模型；真实模型生成效果及 Windows/Linux、原生桌面 App 未同等实测。' },
-      '0.2.1-alpha.2': { version: '0.2.1-alpha.2.iui.1.0.2', releaseTag: 'v0.2.1-alpha.2.iui.1.0.2', asset: 'dsh-intelligent-ui-0.2.1-alpha.2.iui.1.0.2.tgz', sha256: '12b350261a5c9b865603b52e4ab105c30e6f569af7b9ec5ba8fa170e9b4bdfa3', dsh: '0.2.1-alpha.2', omd: '0.2.1-alpha.2.omd.0.13.0', platforms: ['Mac（隔离 Web 宿主）'], allowPrerelease: true,
-        note: '本地未发布构建。对应 alpha.2 SDK 与 OMD 0.13 的原生交互、小加号与展开预览、保存与冷重启恢复、明暗主题、卸载及外来插件注册保留已在 Mac 隔离 Web 验证；最终包仅补文档，运行文件与验收包逐字一致。本轮使用本地模型；真实模型生成效果及 Windows/Linux、原生桌面 App 未同等实测。' },
+      '0.2.1-rc.2': { version: '0.2.1-rc.2.iui.1.0.9', releaseTag: 'v0.2.1-rc.2.iui.1.0.9', asset: 'dsh-intelligent-ui-0.2.1-rc.2.iui.1.0.9.tgz', sha256: 'b9a5b9070f9fab271dd22e818e7176d87f9a0f321d2fa0ac1911f528bc20bbd5', dsh: '0.2.1-rc.2', platforms: ['本地构建，未作平台验收'], allowPrerelease: true, wholeProductAccepted: false,
+        sdk: { cordis: '4.0.5', schemastery: '3.18.5' },
+        note: 'rc.2 未发布本地候选；匹配 SDK、依赖锁、前端构建和包清单检查通过。未作整产品、第三方共存或真实平台验收；公开安装与更新继续关闭，已有安装与数据保留。' },
+      '0.2.1-rc.1': { version: '0.2.1-rc.1.iui.1.0.8', releaseTag: 'v0.2.1-rc.1.iui.1.0.8', asset: 'dsh-intelligent-ui-0.2.1-rc.1.iui.1.0.8.tgz', sha256: 'a102863a9baf346723dd68c33f2d8b208f87b200d109a5d958dc128821fb5eaa', dsh: '0.2.1-rc.1', platforms: ['本地构建，未作平台验收'], allowPrerelease: true, wholeProductAccepted: false,
+        sdk: { cordis: '4.0.5', schemastery: '3.18.5' },
+        note: 'rc.1 未发布本地候选；匹配 SDK、冻结锁、前端构建和包清单检查通过。未作整产品、第三方共存或真实平台验收；公开安装与更新继续关闭，已有安装与数据保留。' },
+      '0.2.0-rc.2': { version: '0.2.0-rc.2.iui.1.0.6', releaseTag: 'v0.2.0-rc.2.iui.1.0.6', asset: 'dsh-intelligent-ui-0.2.0-rc.2.iui.1.0.6.tgz', sha256: '69d0861a67435533a1b22b35c8b42ddfc0d3699f2b5f61dddff7f31c42902c9c', dsh: '0.2.0-rc.2', platforms: ['本地保留构建'], allowPrerelease: true, wholeProductAccepted: false,
+        sourceSha256: '08f922f7b2af33142e66f54597568eac559c4d1e5eddc7b9b3f2ee67b911bca7', sdk: { cordis: '4.0.4', schemastery: '3.18.4' },
+        note: '当前 IUI 1.0.6 的 rc.2 未发布保留构建；已只读核对归档身份、SHA-256、对应 SDK 与核心源码绑定。wholeProductAccepted=false，不代表新版 OMD 底座共存、整产品或真实平台验收通过。公开安装与更新关闭；已有安装与数据不回档。' },
+      '0.2.1-alpha.2': { version: '0.2.1-alpha.2.iui.1.0.6', releaseTag: 'v0.2.1-alpha.2.iui.1.0.6', asset: 'dsh-intelligent-ui-0.2.1-alpha.2.iui.1.0.6.tgz', sha256: 'cc0e3f2c8b2815c4b0558d58de5dbf9c804f501dc6b05ead4b1cb1b507ef4d97', dsh: '0.2.1-alpha.2', platforms: ['本地保留构建'], allowPrerelease: true, wholeProductAccepted: false,
+        sourceSha256: '08f922f7b2af33142e66f54597568eac559c4d1e5eddc7b9b3f2ee67b911bca7', sdk: { cordis: '4.0.5-alpha.1', schemastery: '3.18.5-alpha.1' },
+        note: '当前 IUI 1.0.6 的 alpha.2 未发布保留构建，保留 HEAD d8d5505 及 dirty 成果；已只读核对归档身份、SHA-256、对应 SDK 与核心源码绑定。wholeProductAccepted=false，不代表新版 OMD 底座共存、整产品或真实平台验收通过。公开安装与更新关闭；不存在当前 alpha.1 的 1.0.6 构建。' },
+    },
+    historicalHostBuilds: {
+      '0.2.0-rc.2': { version: '0.2.0-rc.2.iui.1.0.2', releaseTag: 'v0.2.0-rc.2.iui.1.0.2', asset: 'dsh-intelligent-ui-0.2.0-rc.2.iui.1.0.2.tgz', sha256: 'd45fcd994d9ceadec4c62a952b0e8471c5078f2912ce29c587bdcd9574c58459', dsh: '0.2.0-rc.2',
+        note: '仅保留旧 1.0.2 构建身份供历史安装识别与显式迁移，不是当前 1.0.6 构建或新版 OMD 验收记录。' },
+      '0.2.1-alpha.2': { version: '0.2.1-alpha.2.iui.1.0.2', releaseTag: 'v0.2.1-alpha.2.iui.1.0.2', asset: 'dsh-intelligent-ui-0.2.1-alpha.2.iui.1.0.2.tgz', sha256: '12b350261a5c9b865603b52e4ab105c30e6f569af7b9ec5ba8fa170e9b4bdfa3', dsh: '0.2.1-alpha.2',
+        note: '仅保留旧 1.0.2 构建身份供历史安装识别与显式迁移，不是当前 1.0.6 构建或新版 OMD 验收记录。' },
+      '0.2.1-alpha.1': { version: '0.2.1-alpha.1.iui.1.0.2', releaseTag: 'v0.2.1-alpha.1.iui.1.0.2', asset: 'dsh-intelligent-ui-0.2.1-alpha.1.iui.1.0.2.tgz', sha256: 'f43842d424cb6a4eee84e6bd22bc1b055e2ad261826cec73b2e9a814f2e3813b', dsh: '0.2.1-alpha.1',
+        note: '仅保留旧 1.0.2 构建身份供历史安装识别与显式迁移，不是当前 1.0.6 支持宿主或新版 OMD 验收记录。' },
     },
   },
   {

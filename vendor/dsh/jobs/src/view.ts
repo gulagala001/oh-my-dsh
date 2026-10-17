@@ -66,7 +66,7 @@ export interface JobView {
   readonly runId?: string
   /** Content actually admitted to a model request; not an execution-success claim. */
   readonly resultDelivery?: 'none' | 'notice' | 'preview' | 'full'
-  /** The registry-issued id (`<kind>-N`). */
+  /** The registry-issued id (`<kind>-<short-uuid>`). */
   readonly id: JobId
   /**
    * The producer kind the job was registered with: a Host-registered

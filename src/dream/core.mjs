@@ -42,12 +42,13 @@ export function validateMemory(value, kind, allowedRefs) {
   return { summary, references: [...new Set(value.references)] };
 }
 export function splitSource(text, maxBytes = 8000, byteSize = Buffer.byteLength) {
-  const parts = []; let chunk = '', bytes = 0, from = 0, offset = 0;
-  for (const char of String(text)) {
+  const source = String(text), parts = []; let bytes = 0, from = 0, offset = 0;
+  const part = end => ({ from, to: end, text: Buffer.from(source.slice(from, end), 'utf16le').toString('utf16le') });
+  for (const char of source) {
     const size = byteSize(char);
-    if (bytes + size > maxBytes && chunk) { parts.push({ from, to: offset, text: chunk }); chunk = ''; bytes = 0; from = offset; }
-    chunk += char; bytes += size; offset += char.length;
+    if (bytes + size > maxBytes && offset > from) { parts.push(part(offset)); bytes = 0; from = offset; }
+    bytes += size; offset += char.length;
   }
-  if (chunk) parts.push({ from, to: offset, text: chunk });
+  if (offset > from) parts.push(part(offset));
   return parts;
 }

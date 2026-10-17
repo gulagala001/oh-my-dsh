@@ -1,4 +1,4 @@
-name: Official Desktop installation
+name: Official Desktop package build
 
 on:
   pull_request:
@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       available: ${{ steps.release.outputs.available }}
+      matrix: ${{ steps.release.outputs.matrix }}
     steps:
       - uses: actions/checkout@v7
       - id: release
@@ -25,11 +26,13 @@ jobs:
           import { readFileSync, appendFileSync } from 'node:fs';
           const version = JSON.parse(readFileSync('package.json')).devDependencies['@deepseek-ai/dsh'];
           const releases = JSON.parse(readFileSync('scripts/desktop-releases.json')).releases;
-          const available = ['mac-arm64', 'win-x64'].every(target => Boolean(releases[version]?.[target]));
-          appendFileSync(process.env.GITHUB_OUTPUT, `available=${available}\n`);
-          if (!available) {
-            console.log(`::notice::Official desktop verification skipped: no verified packages for DSH ${version}.`);
-            appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Official desktop installation was **not run**: DSH ${version} has no verified mac-arm64/win-x64 download metadata. Web and source-host compatibility are tested separately.\n`);
+          if (version !== '0.2.1-alpha.2') throw Error('Non-CU Desktop requires the matching alpha.2 SDK; do not retarget this checkout.');
+          const targets = [{ os: 'windows-latest', target: 'win-x64' }, { os: 'macos-latest', target: 'mac-arm64' }];
+          const include = targets.filter(({ target }) => Boolean(releases[version]?.[target]));
+          appendFileSync(process.env.GITHUB_OUTPUT, `available=${include.length > 0}\nmatrix=${JSON.stringify({ include })}\n`);
+          for (const { target } of targets.filter(row => !include.includes(row))) {
+            console.log(`::notice::Desktop package build NOT RUN: no verified package for DSH ${version}/${target}.`);
+            appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Desktop package build **NOT RUN**: DSH ${version}/${target} has no verified official download metadata. 真实桌面使用未由CI验收。\n`);
           }
           NODE
   packaged-desktop:
@@ -40,34 +43,58 @@ jobs:
     timeout-minutes: 45
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            target: win-x64
-          - os: macos-latest
-            target: mac-arm64
+      matrix: ${{ fromJSON(needs.release-metadata.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
       - uses: pnpm/action-setup@v6
-      - uses: actions/setup-dotnet@v6
-        if: runner.os == 'Windows'
-        with:
-          dotnet-version: '10.0.x'
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm build
+      - name: Reserve fresh inputs inside the new workspace
+        shell: bash
+        run: |
+          node --input-type=module - <<'NODE'
+          import { appendFileSync, mkdirSync, mkdtempSync, realpathSync } from 'node:fs';
+          import { join } from 'node:path';
+          const workspace = realpathSync(process.env.GITHUB_WORKSPACE);
+          mkdirSync(join(workspace, '.cache'), { recursive: true });
+          const root = mkdtempSync(join(workspace, '.cache', 'desktop-build-'));
+          appendFileSync(process.env.GITHUB_ENV, `OMD_DESKTOP_TEST_ROOT=${root}\n`);
+          NODE
       - run: node scripts/prepare-desktop-test.mjs ${{ matrix.target }}
+      - name: Freeze the final archive and wire the official app root
+        shell: bash
         env:
-          OMD_DESKTOP_TEST_ROOT: ${{ runner.temp }}/omd-desktop
-      - run: node --test test/desktop-install.test.mjs
-        env:
-          TRISOUL_UI_ARTIFACTS: ${{ runner.temp }}/omd-desktop-artifacts
+          DESKTOP_TARGET: ${{ matrix.target }}
+        run: |
+          npm pack --json --ignore-scripts --pack-destination "$OMD_DESKTOP_TEST_ROOT" > "$OMD_DESKTOP_TEST_ROOT/pack.json"
+          node --input-type=module - <<'NODE'
+          import { appendFileSync, readFileSync, realpathSync, statSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          import { join } from 'node:path';
+          const root = process.env.OMD_DESKTOP_TEST_ROOT;
+          const packed = JSON.parse(readFileSync(join(root, 'pack.json'), 'utf8'));
+          if (packed.length !== 1) throw Error('Expected exactly one final OMD archive');
+          const archive = realpathSync(join(root, packed[0].filename));
+          const resources = process.env.DESKTOP_TARGET === 'mac-arm64'
+            ? join(root, 'mac-app', 'DeepSeek Harness.app', 'Contents', 'Resources')
+            : join(root, 'windows-app', 'resources');
+          const appRoot = realpathSync(join(resources, 'app.asar'));
+          if (!statSync(appRoot).isFile()) throw Error('Official Electron app.asar is missing');
+          const sha256 = createHash('sha256').update(readFileSync(archive)).digest('hex');
+          appendFileSync(process.env.GITHUB_ENV, `OMD_DESKTOP_APP_ROOT=${appRoot}\nOMD_PLUGIN_ARCHIVE=${archive}\nOMD_PLUGIN_ARCHIVE_SHA256=${sha256}\n`);
+          NODE
+      - name: Record Desktop build scope
+        shell: bash
+        run: |
+          printf '%s\n' '构建完成，真实桌面使用未由CI验收。' >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: desktop-${{ matrix.target }}
-          path: ${{ runner.temp }}/omd-desktop-artifacts
+          path: |
+            ${{ env.OMD_PLUGIN_ARCHIVE }}
+            ${{ env.OMD_DESKTOP_TEST_ROOT }}/pack.json
           if-no-files-found: warn

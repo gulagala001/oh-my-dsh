@@ -1,0 +1,16 @@
+import{n as e}from"./chunk-Y2CYZVJY-ec17b93e265e.js";var t=e(()=>`
+  /* Font Awesome icon styling - consolidated */
+  .label-icon {
+    display: inline-block;
+    height: 1em;
+    overflow: visible;
+    vertical-align: -0.125em;
+  }
+  
+  .node .label-icon path {
+    fill: currentColor;
+    stroke: revert;
+    stroke-width: revert;
+  }
+`,`getIconStyles`);export{t};
+//# sourceMappingURL=chunk-5VM5RSS4-be47a4237e96.js.map

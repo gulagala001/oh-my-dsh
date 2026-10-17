@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { serializePreparationInput } from './input-budget.mjs';
 import { compactFull } from './full-compaction.mjs';
 import { ContextStore } from './store.mjs';
-import { createSurfaceIndex, hash, userRevision, userMessages, rawText, actualUser, eventTime, prepareCandidate, candidateInput, coordinatorInput, newRecord, activeRecords, liveSpan, validatePrepared, normalizeChoices, decodeResult, recordText, backlogView, recordSnapshot, preparationWorkload } from './core.mjs';
+import { createSurfaceIndex, hash, userRevision, userMessages, rawText, actualUser, eventTime, prepareCandidate, candidateInput, coordinatorInput, newRecord, activeRecords, liveSpan, validatePrepared, normalizeChoices, decodeResult, recordText, backlogView, recordSnapshot, preparationWorkload, resolveTraceSlot } from './core.mjs';
 import { attachmentsOf, combineAssets, describeAsset, messageOf } from './materials.mjs';
 import { createTransaction, applyTransaction } from './transactions.mjs';
 import { repairShadows } from './shadow.mjs';
@@ -16,6 +16,7 @@ import { forkArchiveSnapshot } from './fork.mjs';
 import { publishDreamMemory } from '../dream/publication.mjs';
 import { isQuotaExceededError, QUOTA_EXCEEDED_CODE, ACCOUNT_QUOTA_EXCEEDED_CODE } from '@deepseek-ai/dsh-llm';
 import { AdaptiveCompaction, adaptiveRouteKey } from './adaptive.mjs';
+import { AutoCompaction } from './auto-compact.mjs';
 
 const delegated = s => s.header?.origin === 'subagent' || Number(s.header?.delegationDepth) > 0;
 const transientFailure = error => /(?:\b(?:408|429|5\d\d)\b|rate_limit|temporarily unavailable|provider unavailable|overloaded|timeout|timed out|超时|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|fetch failed|network error|socket hang up)/i.test(String(error?.message || error));
@@ -33,6 +34,7 @@ export class ContextPipeline {
     this.hub = hub; this.adapter = adapter; this.activeCalls = 0; this.callWaiters = []; this.manualSessions = new Map(); this.store = new ContextStore(hub.store.dir);
     this.agents = new Map(); this.releasing = new Set(); this.jobs = new Map(); this.timers = new Map(); this.reviewTimers = new Map(); this.idleSince = new Map(); this.controllers = new Map(); this.closed = false;
     this.adaptive = new AdaptiveCompaction(this);
+    this.autoCompact = new AutoCompaction(this);
   }
   config() { return contextConfig(this.hub.config()); }
   mode(session) { return this.store.peek(session.id)?.compressionMode === 'adaptive' ? 'adaptive' : 'pipeline'; }
@@ -93,6 +95,10 @@ export class ContextPipeline {
       this.store.write(this.store.path(state.id), { ...state, ...inherited });
       Object.assign(state, inherited);
     }
+    const traceSlot = resolveTraceSlot(session, state.traceSlot);
+    if (!state.transaction && traceSlot && traceSlot !== state.traceSlot) {
+      state.traceSlot = traceSlot; this.store.save(state);
+    }
     // Older counters measured uncovered backlog, not newly arrived events.
     // Rebase once; archives stay intact and the ordinary idle flush remains available.
     if (state.prepareCadenceVersion !== 1) {
@@ -146,7 +152,12 @@ export class ContextPipeline {
     if (s.failures.coordinate?.mainSuccess) void this.resumeMainSuccess(agent, 'coordinate');
   }
   observe(session, event) {
-    if (delegated(session) || this.closed || !this.config().contextEnabled) return;
+    if (delegated(session) || this.closed) return;
+    if (['user/message', 'assistant/message', 'tool/result', 'compaction/end'].includes(event.type)) {
+      const active = this.agents.get(session.id);
+      if (active) this.autoCompact.kick(active);
+    }
+    if (!this.config().contextEnabled) return;
     if (!actualUser(event) && (!['assistant/message', 'tool/result'].includes(event.type) || sourceName(event.data?.message?.source))) return;
     const agent = this.agents.get(session.id);
     if (!agent) return;
@@ -269,6 +280,8 @@ export class ContextPipeline {
       ...(validationFailure ? { validation: true, newEvents: 0, lastEventSeq: agent.session.snapshotEvents().findLast(preparationEvent)?.seq ?? -1 } : {}) };
     this.store.notice(s, `${kind}：${error.message}`);
     this.hub.action(agent.session, `context${kind}Errors`, 1);
+    this.hub.event?.(agent.session, { kind, status: 'error', title: { prepare: '预处理失败', coordinate: '中枢判断失败' }[kind] || '失败', detail: error.message,
+      data: { count: s.failures[kind].count, recoverable: s.failures[kind].recoverable, code: s.failures[kind].code } });
     this.hub.ctx.logger?.warn?.(`上下文${kind}：${error.message}`);
   }
   async prepare(agent, force = false, { retry = false, mainSuccess } = {}) {
@@ -342,6 +355,8 @@ export class ContextPipeline {
         clearTimeout(this.timers.get(session.id + ':prepare')); this.timers.delete(session.id + ':prepare');
         this.store.save(s);
         this.hub.action(session, 'preparedSegments', 1);
+        this.hub.event?.(session, { kind: 'prepare', status: 'success', title: '预处理产出摘要', detail: record.summary?.slice(0, 300),
+          count: events.length, data: { recordId: record.id, documents: record.documents?.length || 0, assets: record.assets?.length || 0, merged: record.parents.length } });
         void this.coordinate(agent, false);
         if (completed >= batchLimit || !s.prepareBacklog.events) break;
       } while (!this.closed && !controller.signal.aborted);
@@ -373,6 +388,7 @@ export class ContextPipeline {
     const preparing = this.jobs.get(agent.session.id + ':prepare');
     if (preparing) {
       await preparing;
+      if (this.agents.get(agent.session.id) !== agent) return;
       return this.coordinate(agent, force, { retry, mainSuccess });
     }
     const session = agent.session, key = session.id + ':coordinate', s = this.state(session), cfg = this.config();
@@ -430,6 +446,10 @@ export class ContextPipeline {
       s.review.lastInput = input; s.review.lastChoices = choices;
       delete s.failures.coordinate; this.store.save(s);
       this.hub.action(session, 'contextDecisions', 1);
+      const tally = choices.reduce((m, c) => (m[c.action] = (m[c.action] || 0) + c.ids.length, m), {});
+      this.hub.event?.(session, { kind: 'coordinate', status: 'success', title: '中枢决定替换方案',
+        detail: Object.entries(tally).map(([k, n]) => `${{ keep: '保留', detail: '详细', brief: '简略' }[k] || k} ${n}`).join(' · '),
+        count: choices.reduce((n, c) => n + (c.action === 'keep' ? 0 : c.ids.length), 0), data: { tally, planId: s.pending.id } });
     })().catch(e => {
       if (!controller.signal.aborted) {
         this.reportError(agent, 'coordinate', e, providerFailure);
@@ -450,8 +470,9 @@ export class ContextPipeline {
   }
   async applyReady(agent, { manual = false, ids, mode = 'detail', ignoreCooldown = false, sourceCommandId, source, retainTrace = true, route } = {}) {
     const session = agent.session, s = this.state(session), cfg = this.config();
+    if (manual && this.manualSessions.get(session.id) === 'auto-compact' && source !== 'auto-compact') throw Error('本会话正在 Auto Compact，请稍候');
     if (s.transaction) return applyTransaction(session, s, s.transaction, this.store, this.adapter);
-    if (!manual && (!cfg.contextEnabled || !cfg.automaticReplace || (!ignoreCooldown && s.steps - s.lastReplacementStep < cfg.surgeryCooldownSteps))) return null;
+    if (!manual && (this.manualSessions.has(session.id) || !cfg.contextEnabled || !cfg.automaticReplace || (!ignoreCooldown && s.steps - s.lastReplacementStep < cfg.surgeryCooldownSteps))) return null;
     const index = createSurfaceIndex(session);
     let plan = s.pending;
     // Applying a prepared plan preserves the coordinator's keep/brief/detail
@@ -502,7 +523,19 @@ export class ContextPipeline {
     if (!tx) { s.pending = null; this.store.save(s); return null; }
     const outcome = await applyTransaction(session, s, tx, this.store, this.adapter);
     this.hub.action(session, 'contextReplacements', 1);
+    this.replacementEvent(session, outcome, manual);
+    if (source !== 'auto-compact') await this.autoCompact.check(agent, undefined, { maintenance: false });
     return outcome;
+  }
+  replacementEvent(session, outcome, manual) {
+    if (!outcome?.stats && outcome?.inputTokens == null) return;
+    const kind = outcome.source === 'compact-f' ? 'compactFull' : outcome.source === 'compact-p' ? 'compactProcessed' : 'replace';
+    const st = outcome.stats || {};
+    this.hub.event?.(session, { kind, status: 'success',
+      title: { compactFull: '全量压缩', compactProcessed: '手动压缩已处理内容', replace: manual ? '手动应用替换' : '自动应用替换' }[kind],
+      detail: `${st.currentMessages ?? '?'} 条消息 → ${st.resultRecords ?? '?'} 段摘要`, count: st.currentMessages ?? null,
+      savedTokens: st.estimatedSavedTokens ?? (outcome.inputTokens - outcome.outputTokens), inputTokens: outcome.inputTokens, outputTokens: outcome.outputTokens,
+      data: { source: outcome.source, originalEvents: st.originalEvents, resultRecords: st.resultRecords, selectedRecords: st.selectedRecords, costBasis: st.costBasis, replacementId: outcome.id } });
   }
   async requestCompaction(session, agent, operation, { signal, sourceCommandId } = {}) {
     if (!['processed', 'full'].includes(operation)) throw Error('未知压缩模式');
@@ -512,6 +545,7 @@ export class ContextPipeline {
     if (!agent || agent.status !== 'idle') return this.queueManual(session, { operation, sourceCommandId });
     const run = ownSignal => this.runManual(agent, { operation, sourceCommandId }, signal && ownSignal ? AbortSignal.any([signal, ownSignal]) : signal || ownSignal);
     const result = agent.runMaintenance ? await agent.runMaintenance(run) : await run();
+    await this.autoCompact.check(agent, signal);
     return { changed: Boolean(result), queued: false, result };
   }
   async runManual(agent, { operation, sourceCommandId }, signal) {
@@ -540,7 +574,7 @@ export class ContextPipeline {
         const tx = await compactFull(this, agent, joined, sourceCommandId);
         joined.throwIfAborted();
         result = tx ? await applyTransaction(session, s, tx, this.store, this.adapter) : null;
-        if (result) this.hub.action(session, 'contextReplacements', 1);
+        if (result) { this.hub.action(session, 'contextReplacements', 1); this.replacementEvent(session, result, true); }
       } else {
         const ids = activeRecords(s).filter(r => r.mode !== 'brief' && liveSpan(session, r)).map(r => r.id);
         result = await this.applyReady(agent, { manual: true, ids, mode: 'brief', sourceCommandId, source: 'compact-p', retainTrace: false });
@@ -563,7 +597,8 @@ export class ContextPipeline {
       route = (await this.hub.ctx.llm?.prepareCall?.(route, signal))?.config ?? route;
       signal?.throwIfAborted();
     }
-    // Ordinary replacement never waits for a model; an explicitly queued /compact-f does.
+    // Auto Compact is opt-in and completes threshold work before this request.
+    await this.autoCompact.check(agent, signal);
     const recovered = s.transaction ? await this.applyReady(agent) : null;
     if (!this.hub.config().stateHintsEnabled && !this.hub.config().budgetHintsEnabled) await this.stripRuntime(agent.session);
     await this.retireLegacyInjections(agent.session);
@@ -648,6 +683,12 @@ export class ContextPipeline {
         if (s.pending?.source === 'adaptive') { s.pending = null; this.store.save(s); }
       }
     }
+    for (const agent of this.agents.values()) {
+      const id = agent.session.id, s = this.state(agent.session), job = this.jobs.get(id + ':autoCompact');
+      this.controllers.get(id + ':autoCompact')?.abort(Error('Auto Compact 设置已变化'));
+      const restart = () => { if (s.autoCompact) { delete s.autoCompact.lastKey; this.store.save(s); } this.autoCompact.kick(agent); };
+      if (job) void job.then(restart, restart); else restart();
+    }
     // Settings may adjust an existing deadline, never wake a dormant session.
     // Keep its original idle start, including repeated settings callbacks.
     for (const [id, since] of [...this.idleSince]) {
@@ -696,18 +737,50 @@ ${r.summary}`).join('\n\n') || 'No matching saved summaries.';
     this.hub.action(session, 'attachmentRecalls', 1);
     return [{ type: 'text', text: describeAsset(asset, args.asset - 1) }, block];
   }
-  view(session) {
+  // Read-only dry run of the same transaction builder; cached per surface so
+  // console polling never repeats token counting for an unchanged session.
+  estimate(session, s, index, spans) {
+    if (s.transaction) return null;
+    const key = [session.surface.nodes.length, session.surface.nodes.at(-1), s.pending?.id, s.records.length, s.records.map(r => r.version + r.mode).join()].join(':');
+    const cache = this.estimates ??= new Map(), hit = cache.get(session.id);
+    if (hit?.key === key) return hit.value;
+    const cfg = this.config(), pricing = this.adapter.pricing?.(session);
+    const run = plan => {
+      try {
+        const tx = plan && createTransaction(session, { ...s, transaction: null }, plan, { ...cfg, traceEnabled: false }, this.adapter.pairing, pricing);
+        return tx ? { ...tx.stats, inputTokens: tx.inputTokens, outputTokens: tx.outputTokens } : null;
+      } catch (error) { return { error: error.message }; }
+    };
+    let compact = null;
+    try {
+      index ??= createSurfaceIndex(session);
+      const ids = activeRecords(s).filter(r => r.mode !== 'brief' && (spans ? spans.get(r) : liveSpan(session, r, index))).map(r => r.id);
+      if (ids.length) compact = run({ choices: normalizeChoices({ choices: ids.map(id => ({ action: 'brief', ids: [id] })) }, s, session) });
+    } catch (error) { compact = { error: error.message }; }
+    const value = { pending: s.pending ? run(s.pending) : null, compact };
+    cache.set(session.id, { key, value });
+    if (cache.size > 32) cache.delete(cache.keys().next().value);
+    return value;
+  }
+  view(session, { compact = false } = {}) {
     const s = this.state(session), index = createSurfaceIndex(session);
-    return { schema: 1, compressionMode: this.mode(session), adaptive: { running: this.jobs.has(session.id + ':adaptive'), lastAt: s.adaptive?.lastAt ?? null,
+    const spans = new Map(s.records.map(record => [record, liveSpan(session, record, index)]));
+    return { schema: 1, compressionMode: this.mode(session), autoCompact: { ...s.autoCompact, enabled: this.config().autoCompactEnabled,
+      threshold: this.config().autoCompactThreshold, mode: this.config().autoCompactMode, running: this.jobs.has(session.id + ':autoCompact') },
+      adaptive: { running: this.jobs.has(session.id + ':adaptive'), lastAt: s.adaptive?.lastAt ?? null,
       lastDecision: s.adaptive?.lastDecision ?? null, reason: s.adaptive?.reason ?? null, error: s.adaptive?.error ?? null,
       waitingReason: s.adaptive?.waitingReason ?? null, cacheReadTokens: s.adaptive?.cacheReadTokens ?? null }, scope: s.binding, steps: s.steps, pending: s.pending, lastReplacement: s.lastReplacement || null, todoRefresh: s.todoRefresh || null,
-      records: s.records.map(({ documents, assets = [], userOriginals, originalSeqs, sourceSeqs, sourceHash, ...r }) => ({ ...r, documentCount: documents.length, assetCount: assets.length, originalEventCount: (originalSeqs || sourceSeqs).length, live: Boolean(liveSpan(session, { ...r, documents, sourceSeqs, sourceHash }, index)) })),
-      backlog: backlogView(session, s, this.config()), eventsSincePrepare: s.eventsSincePrepare || 0, prepareDeferred: s.prepareDeferred || null,
+      ...(compact ? { recordCount: activeRecords(s).length } : { records: s.records.map(record => {
+        const { documents, assets = [], userOriginals, originalSeqs, sourceSeqs, sourceHash, ...r } = record;
+        return { ...r, documentCount: documents.length, assetCount: assets.length, originalEventCount: (originalSeqs || sourceSeqs).length, live: Boolean(spans.get(record)) };
+      }) }),
+      backlog: backlogView(session, s, this.config(), index, spans), eventsSincePrepare: s.eventsSincePrepare || 0, prepareDeferred: s.prepareDeferred || null,
       limits: { batchWindows: this.config().prepareBatchWindows, concurrency: this.config().backgroundConcurrency, continueTokens: this.config().prepareContinueTokens },
       failures: s.failures, retry: Object.fromEntries(['prepare', 'coordinate'].map(kind => [kind, !s.failures[kind] ? null : this.waitsForMain(s, kind) ? 'waiting-main' : s.failures[kind].count > this.config().backgroundMaxRetries ? kind === 'prepare' && s.failures[kind].validation ? 'waiting-events' : 'manual' : 'retrying'])), notices: s.notices, trace: s.traceSlot ? { sourceSeq: s.traceSlot.sourceSeq, sourceAt: s.traceSlot.sourceAt, truncated: s.traceSlot.truncated } : null,
       preparing: this.jobs.has(session.id + ':prepare'), coordinating: this.jobs.has(session.id + ':coordinate'), transactionPending: Boolean(s.transaction),
       manualQueued: s.manualQueue.length, manualOperation: this.manualSessions.get(session.id) || null,
       queuedOperations: s.manualQueue.map(q => q.operation || 'ready'),
+      estimate: (() => { try { return this.estimate(session, s, index, spans); } catch { return null; } })(),
       review: { lastAt: s.review.lastAt, choices: s.review.lastChoices || [], lastRejection: s.review.lastRejection || null, lastDiscard: s.review.lastDiscard || null, discarded: s.review.discarded || 0 } };
   }
   releaseState(id) {

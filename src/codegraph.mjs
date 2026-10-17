@@ -8,11 +8,60 @@ import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport, getDefaultEnvironment } from '@modelcontextprotocol/client/stdio';
 
 const require = createRequire(import.meta.url);
+const STDERR_LIMIT = 8000;
+
+function diagnosticTail(output, secrets, truncated) {
+  // A bounded byte tail may begin in the middle of a sensitive value.
+  if (truncated) output = output.slice(output.indexOf('\n') + 1 || output.length);
+  // Diagnostics contain stderr only, never the environment, request arguments
+  // or stdout. Redaction is not a classifier for protocol/SDK failures.
+  for (const secret of secrets) output = output.split(secret).join('[redacted]');
+  return output
+    .replace(/-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g, '[redacted]')
+    .replace(/^[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g, '[redacted]')
+    .replace(/([a-z][a-z\d+.-]*:\/\/)[^\s/@]+:[^\s/@]+@/gi, '$1[redacted]@')
+    .replace(/\b(Bearer|Basic)\s+[^\s,;"']+/gi, '$1 [redacted]')
+    .replace(/(["']?[\w-]*(?:token|secret|password|passwd|api[_-]?key|authorization|cookie|credential|private[_-]?key)[\w-]*["']?\s*[:=]\s*)(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s,;]+)/gi, '$1[redacted]')
+    .slice(-STDERR_LIMIT);
+}
+
+function codegraphFailure(error) {
+  if (error instanceof Error) return error;
+  let message;
+  try {
+    message = typeof error === 'string' ? error : typeof error?.message === 'string' ? error.message : JSON.stringify(error);
+  } catch { /* A non-serializable cancellation reason still retains its original cause. */ }
+  return new Error(message || 'CodeGraph 请求失败；请重新索引当前项目后重试。', { cause: error });
+}
+
+function connectionFailure(error, connection, phase) {
+  // Cancellation reasons may be plain objects before an MCP connection exists.
+  const failure = codegraphFailure(error);
+  if (!connection) return failure;
+  // Keep the original SDK instance, code, data, cause and stack intact.
+  const facts = { ...failure.facts, codegraph: { phase, ...connection.diagnostics() } };
+  try { failure.facts = facts; return failure; }
+  catch {
+    // A frozen caller/SDK error cannot accept facts. Preserve its identity and
+    // structured fields in cause rather than replacing it with a TypeError.
+    const wrapped = new Error(failure.message, { cause: failure });
+    wrapped.name = failure.name;
+    wrapped.stack = failure.stack;
+    if ('code' in failure) wrapped.code = failure.code;
+    if ('data' in failure) wrapped.data = failure.data;
+    wrapped.facts = facts;
+    return wrapped;
+  }
+}
+
+function throwIfAborted(signal) {
+  if (signal?.aborted) throw codegraphFailure(signal.reason);
+}
 
 function waitFor(promise, signal) {
-  signal.throwIfAborted();
+  throwIfAborted(signal);
   return new Promise((resolveResult, reject) => {
-    const abort = () => reject(signal.reason);
+    const abort = () => reject(codegraphFailure(signal.reason));
     signal.addEventListener('abort', abort, { once: true });
     promise.then(resolveResult, reject).finally(() => signal.removeEventListener('abort', abort));
   });
@@ -58,6 +107,12 @@ async function indexedRoot(directory) {
     // index database identifies a project, not a bundles-only cache folder.
     try { if ((await stat(join(current, '.codegraph', 'codegraph.db'))).isFile()) return current; }
     catch (error) { if (error.code !== 'ENOENT') throw error; }
+    // A nested repository or worktree owns its project identity, even before
+    // it has an index. Its own index is usable, but an outer project's is not.
+    try {
+      const git = await stat(join(current, '.git'));
+      if (git.isDirectory() || git.isFile()) return directory;
+    } catch (error) { if (error.code !== 'ENOENT') throw error; }
     if (dirname(current) === current) return directory;
   }
 }
@@ -114,7 +169,7 @@ export class CodegraphRuntime {
         await this.prepare();
         await this.index({}, { cwd: directory });
         state.status = 'ready'; return directory;
-      } catch (error) { state.status = 'error'; state.error = error.message; throw error; }
+      } catch (error) { const failure = codegraphFailure(error); state.status = 'error'; state.error = failure.message; throw failure; }
       finally { state.pending = null; }
     })();
     return state.pending;
@@ -128,29 +183,56 @@ export class CodegraphRuntime {
   }
 
   async connect(directory, signal, { catalog = false } = {}) {
-    signal?.throwIfAborted();
-    (catalog ? this.catalogController : this.controller).signal.throwIfAborted();
+    throwIfAborted(signal);
+    throwIfAborted((catalog ? this.catalogController : this.controller).signal);
     const launch = await this.prepare({ catalog });
-    signal?.throwIfAborted();
+    throwIfAborted(signal);
     const client = new Client({ name: 'oh-my-dsh', version: '1' });
     const transport = new StdioClientTransport({ ...launch,
       args: [...launch.args, 'serve', '--mcp', '--path', directory],
       cwd: directory, env: codegraphEnvironment(), stderr: 'pipe' });
-    let diagnostic = '';
-    transport.stderr.on('data', chunk => { diagnostic = (diagnostic + chunk).slice(-8000); });
-    const connection = { client, transport, closed: false, catalog };
+    const secrets = Object.entries(process.env)
+      .filter(([key, value]) => value && /token|secret|password|passwd|api[_-]?key|authorization|cookie|credential|private[_-]?key/i.test(key))
+      .map(([, value]) => value).sort((a, b) => b.length - a.length);
+    let stderrTail = Buffer.alloc(0), truncated = false;
+    const connection = { client, transport, directory, command: launch.command, pid: null,
+      handshakeComplete: false, closed: false, closeObserved: false, closeRequested: false, catalog };
+    connection.diagnostics = () => ({ directory: connection.directory, command: connection.command,
+      pid: connection.pid, transportPid: transport.pid, handshakeComplete: connection.handshakeComplete, closed: connection.closed,
+      closeObserved: connection.closeObserved, closeRequested: connection.closeRequested, catalog,
+      stderrTail: diagnosticTail(stderrTail.toString('utf8'), secrets, truncated), stderrTruncated: truncated });
+    transport.stderr.on('data', chunk => {
+      const output = Buffer.concat([stderrTail, Buffer.from(chunk)]);
+      truncated ||= output.length > STDERR_LIMIT;
+      stderrTail = Buffer.from(output.subarray(-STDERR_LIMIT));
+    });
     this.processes.add(connection);
-    client.onclose = () => { connection.closed = true; };
+    client.onclose = () => {
+      connection.closed = true;
+      connection.closeObserved = true;
+    };
+    // Capture the public PID before the SDK clears it on close, including a
+    // handshake failure. Keep the base transport (and its negotiation) intact.
+    const start = transport.start.bind(transport);
+    transport.start = async () => {
+      const starting = start();
+      connection.pid = transport.pid ?? connection.pid;
+      try { await starting; }
+      finally { connection.pid = transport.pid ?? connection.pid; }
+    };
     try {
       await client.connect(transport, { signal, timeout: 30_000 });
+      connection.handshakeComplete = true;
       return connection;
     } catch (error) {
-      await this.close(connection);
-      throw new Error(`CodeGraph MCP 连接失败：${error.message}${diagnostic ? '\n' + diagnostic : ''}`, { cause: error });
+      const failure = connectionFailure(error, connection, 'connect');
+      try { await this.close(connection); } catch {}
+      throw failure;
     }
   }
 
   async close(connection) {
+    connection.closeRequested = true;
     if (!connection.closing) connection.closing = (async () => {
       try { await connection.client.close(); }
       finally { connection.closed = true; this.processes.delete(connection); }
@@ -161,14 +243,21 @@ export class CodegraphRuntime {
   catalog() {
     return this.catalogPromise ??= (async () => {
       const directory = await mkdtemp(join(tmpdir(), 'oh-my-dsh-codegraph-'));
-      let connection;
+      let connection, failure;
       try {
         connection = await this.connect(directory, this.catalogController.signal, { catalog: true });
         const { tools } = await connection.client.listTools();
         return { tools, instructions: connection.client.getInstructions() || '' };
+      } catch (error) {
+        failure = connectionFailure(error, connection, 'catalog');
+        throw failure;
       } finally {
-        if (connection) await this.close(connection);
-        await rm(directory, { recursive: true, force: true });
+        try {
+          if (connection) await this.close(connection);
+          await rm(directory, { recursive: true, force: true });
+        } catch (error) {
+          if (!failure) throw connectionFailure(error, connection, 'catalog-close');
+        }
       }
     })().catch(error => { this.catalogPromise = undefined; this.catalogError = error.message; throw error; });
   }
@@ -176,10 +265,13 @@ export class CodegraphRuntime {
   async call(name, args, { cwd, signal }) {
     if (!this.enabled) throw new Error('CodeGraph 已关闭。');
     const combined = signal ? AbortSignal.any([signal, this.controller.signal]) : this.controller.signal;
-    combined.throwIfAborted();
+    throwIfAborted(combined);
     const directory = await indexedRoot(await projectDirectory(cwd, args.projectPath));
-    if (this.autoIndex) await waitFor(this.ensureProject(directory), combined);
-    combined.throwIfAborted();
+    if (this.autoIndex) {
+      try { await waitFor(this.ensureProject(directory), combined); }
+      catch (error) { throw codegraphFailure(error); }
+    }
+    throwIfAborted(combined);
     let entry = this.connections.get(directory);
     if (!entry) {
       entry = { busy: 0, timer: null };
@@ -192,18 +284,19 @@ export class CodegraphRuntime {
     entry.busy++;
     try {
       const connection = await waitFor(entry.ready, combined);
-      combined.throwIfAborted();
+      throwIfAborted(combined);
       if (connection.closed) throw new Error('CodeGraph 连接已关闭，请重试。');
       return await connection.client.callTool({ name, arguments: { ...args, projectPath: directory } },
         { signal: combined, timeout: 120_000 });
     } catch (error) {
       // Never replay a failed call. A later call reconnects after a crash.
       const connection = entry.connection;
+      const failure = connectionFailure(error, connection, 'call');
       if ((!connection && !combined.aborted) || connection?.closed) {
         if (this.connections.get(directory) === entry) this.connections.delete(directory);
-        if (connection) await this.close(connection);
+        if (connection) try { await this.close(connection); } catch {}
       }
-      throw error;
+      throw failure;
     } finally {
       entry.busy--;
       if (!entry.busy && this.connections.get(directory) === entry) {
@@ -218,7 +311,7 @@ export class CodegraphRuntime {
 
   async index({ projectPath } = {}, { cwd, signal }) {
     const combined = signal ? AbortSignal.any([signal, this.controller.signal]) : this.controller.signal;
-    combined.throwIfAborted();
+    throwIfAborted(combined);
     const directory = await projectDirectory(cwd, projectPath);
     if (this.indexing.has(directory)) return waitFor(this.indexing.get(directory), combined);
     const pending = this.buildIndex(directory, combined);
@@ -229,9 +322,10 @@ export class CodegraphRuntime {
       if (state) { state.status = 'ready'; state.error = null; }
       return result;
     } catch (error) {
+      const failure = codegraphFailure(error);
       const state = this.projects.get(directory);
-      if (state) { state.status = 'error'; state.error = error.message; }
-      throw error;
+      if (state) { state.status = 'error'; state.error = failure.message; }
+      throw failure;
     }
     finally { if (this.indexing.get(directory) === pending) this.indexing.delete(directory); }
   }
@@ -241,7 +335,7 @@ export class CodegraphRuntime {
     let initialized = false;
     try { initialized = (await stat(join(directory, '.codegraph', 'codegraph.db'))).isFile(); }
     catch (error) { if (error.code !== 'ENOENT') throw error; }
-    combined.throwIfAborted();
+    throwIfAborted(combined);
     // Sync existing graphs, including a partially indexed graph left by an
     // interrupted init. Never silently return "already initialized" instead.
     const args = initialized ? ['sync', directory] : ['init', directory, '--yes'];
@@ -249,7 +343,7 @@ export class CodegraphRuntime {
   }
 
   run(command, args, { cwd, signal: combined, env = codegraphEnvironment() }) {
-    combined.throwIfAborted();
+    throwIfAborted(combined);
     return new Promise((resolveResult, reject) => {
       let output = '', killTimer;
       const child = spawn(command, args, {
@@ -269,7 +363,7 @@ export class CodegraphRuntime {
         child.once('error', reject);
         child.once('close', (code, exitSignal) => {
           clearTimeout(killTimer); combined.removeEventListener('abort', abort); this.processes.delete(job); done();
-          if (combined.aborted) reject(combined.reason);
+          if (combined.aborted) reject(codegraphFailure(combined.reason));
           else if (code !== 0) reject(new Error(`CodeGraph 运行失败（${code ?? exitSignal}）：\n${output}`));
           else resolveResult(output || 'CodeGraph 已就绪。');
         });

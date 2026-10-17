@@ -17,15 +17,4 @@
 
 安装来源：`github:gulagala001/oh-my-dsh#v0.2.0-rc.2.omd.0.6.1`。另一宿主见[对应发行说明](release-0.2.1-alpha.1.omd.0.6.1.md)，完整步骤见[安装与升级指南](upgrade.md)。
 
-## 验证与范围
-
-本轮本地验证通过：
-
-- 75 项目录、发送状态与提示词优化单元测试，其中 47 项覆盖本次无项目聊天及权限继承。
-- 3 项真实浏览器验收：悬停取消、首次创建、未分组、刷新与续聊、同名独立目录、附件／模型／权限保留，以及失败后的原稿恢复和重试。
-- RC 原有草稿恢复、提示词优化、原生 Web 安装与预设切换回归；官方 rc.2 macOS 应用在隔离配置中的安装、重启与卸载验收。
-- 发行元数据、包内容和文档站构建检查；RC 的 SDK、宿主组件和旧草稿兼容保持原配对。
-
-跨平台运行记录：[完整矩阵](https://github.com/gulagala001/oh-my-dsh/actions/runs/37217229228)、[最终权限补丁回归](https://github.com/gulagala001/oh-my-dsh/actions/runs/37218487571)、[官方 macOS／Windows 桌面安装](https://github.com/gulagala001/oh-my-dsh/actions/runs/37217950454)、[三平台离线安装](https://github.com/gulagala001/oh-my-dsh/actions/runs/37217957336)。完整矩阵运行于权限补丁前，最终回归覆盖补丁后的全部运行代码。
-
-官方桌面安装检查不等于用户设备上的屏幕录制、辅助功能、显示缩放和真实第三方账户操作均已复验。
+<a id="验证与范围"></a>

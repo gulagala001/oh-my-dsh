@@ -1,6 +1,6 @@
 import { sourceName } from './message-source.mjs';
 import { Service } from '@deepseek-ai/cordis';
-import { BlockAssembler, assembleAssistantStream, createUserMessage } from '@deepseek-ai/dsh-llm';
+import { BlockAssembler, assembleAssistantStream, createUserMessage, isHarnessError } from '@deepseek-ai/dsh-llm';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { HubStore, projectOf } from './hub-store.mjs';
@@ -13,8 +13,11 @@ import { setRuntimeContext } from './task-context.mjs';
 import { DreamService } from './dream/service.mjs';
 import { randomUUID } from 'node:crypto';
 import { MonitorLedger, monitorInput, reportedMonitorUsage } from './monitor-ledger.mjs';
+import { monitorTokenChunk } from './monitor-call.mjs';
+import { MonitorPricing } from './monitor-pricing.mjs';
 
 const TASK_PAUSE_GUIDANCE = promptText('runtime/task-pause.md');
+const DREAM_CONSUMERS = Symbol('dream-consumers');
 
 export const NS = 'trisoul-x';
 export const message = (text, kind = 'context') => createUserMessage({
@@ -33,19 +36,49 @@ export class Hub extends Service {
     this.getConfig = () => configSnapshot(config);
     this.store = new HubStore(config.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), NS));
     this.monitor = new MonitorLedger(this.store.dir);
+    this.pricing = new MonitorPricing(this.store.dir);
+    ctx.effect(() => { void this.pricing.start(); });
     this.context = new ContextPipeline(this, createHostAdapter(this));
     this.efforts = createEffortResolver(ctx); this.agents = new Map();
-    this.live = new Map(); this.requestStarts = new Map(); this.taskReviews = new Map();
-    this.dream = new DreamService(this);
-    ctx.effect(() => async () => {
-      await this.dream.close();
-      this.context.dispose();
-      await Promise.all([...this.agents.values()].map(agent => {
-        setRuntimeContext(agent.session, () => null);
-        return this.context.stripRuntime(agent.session);
-      }));
-      this.monitor.close();
-    });
+    this.live = new Map(); this.calls = new Map(); this.requestStarts = new Map(); this.taskReviews = new Map();
+    this.closed = false; this.closing = null;
+    this[DREAM_CONSUMERS] = { retired: null };
+    this.dream = new DreamService(this, { consumersRetired: () => this[DREAM_CONSUMERS].retired });
+    ctx.effect(() => () => this.close());
+  }
+  close() { return this.closing ??= this.shutdown(); }
+  async shutdown() {
+    this.closed = true;
+    const sessions = new Map([...this.agents.values(), ...this.context.agents.values(), ...this.calls.values()].map(owner => [owner.session.id, owner.session]));
+    const errors = [], calls = [...this.calls.values()], pending = [...this.context.jobs.values(), ...(this.context.runtimeRetirements?.values() || [])];
+    const collect = results => { for (const result of results) if (result.status === 'rejected') errors.push(result.reason); };
+    let retireDreamConsumers;
+    this[DREAM_CONSUMERS].retired = new Promise(resolve => { retireDreamConsumers = resolve; });
+    for (const call of this.calls.values()) call.controller.abort(Error('OMD 服务正在退出'));
+    const dream = Promise.allSettled([(async () => this.dream.close())(), this.pricing?.close()]);
+    try {
+      // Context.dispose itself allSettles its jobs; retain their real rejections
+      // here rather than promoting a failed drain to a successful unload.
+      collect(await Promise.allSettled([
+        (async () => this.context.dispose())(), ...pending,
+      ]));
+      const cleanup = await Promise.allSettled(calls.map(call => call.done));
+      collect(cleanup);
+      for (const result of cleanup) if (result.status === 'fulfilled') errors.push(...result.value);
+      collect(await Promise.allSettled([...sessions.values()].map(session => Promise.resolve().then(() => {
+        setRuntimeContext(session, () => null);
+        return this.context.stripRuntime(session);
+      }))));
+    } finally {
+      // Abort Dream immediately, but release its database only after the last
+      // Context consumer (including in-flight runtime removal) has retired.
+      collect(await Promise.allSettled([...(this.context.runtimeRetirements?.values() || [])]));
+      retireDreamConsumers();
+      collect(await dream);
+      this.requestStarts.clear(); this.taskReviews.clear(); this.agents.clear();
+      try { this.monitor.close(); } catch (error) { errors.push(error); }
+    }
+    if (errors.length) throw new AggregateError([...new Set(errors)], 'OMD 退出清理失败');
   }
   config() { const value = this.getConfig(); return Object.fromEntries(Object.keys(Config.dict).filter(key => Object.hasOwn(value, key)).map(key => [key, value[key]])); }
   taskReminders(session) {
@@ -83,8 +116,8 @@ export class Hub extends Service {
   captureFrame(agent, turn, step) {
     const session = agent.session, state = this.store.state(session.id), meter = this.ctx.tokenMeter.measure(session);
     state.pendingFrame = { at: Date.now(), turn, step, totalTokens: meter.totalTokens, nodes: meter.nodes.map(n => {
-      const e = session.eventAt(n.seq), msg = session.deriveEventMessage(e);
-      return { seq: n.seq, kind: msg?.source?.compactionId ? 'checkpoint' : sourceName(msg?.source) || msg?.source?.kind || e.type, tokens: n.tokens ?? n.heuristicTokens ?? null };
+      const e = session.eventAt(n.seq), msg = e ? session.deriveEventMessage(e) : undefined;
+      return { seq: n.seq, kind: msg?.source?.compactionId ? 'checkpoint' : sourceName(msg?.source) || msg?.source?.kind || e?.type || (e ? 'unknown' : 'missing'), tokens: n.tokens ?? n.heuristicTokens ?? null };
     }) };
   }
   record(session, kind, entry) {
@@ -103,7 +136,7 @@ export class Hub extends Service {
     const frame = state.pendingFrame;
     const call = { at: Date.now(), turn: frame?.turn, step: frame?.step, sessionId: session.id, kind, ...entry,
       id: entry.id || randomUUID(), usage: entry.usage ?? null,
-      effort: entry.effort ?? (['main', 'subagent'].includes(kind) ? recent?.reasoningEffort ?? null : null) };
+      effort: Object.hasOwn(entry, 'effort') ? entry.effort : (['main', 'subagent'].includes(kind) ? recent?.reasoningEffort ?? null : null) };
     if (['main', 'subagent'].includes(kind) && frame) {
       const inputTokens = monitorInput(entry.usage);
       state.contextHistory ??= []; state.contextHistory.push({ ...frame, callId: call.id, sessionId: session.id, eventSeq: entry.eventSeq,
@@ -120,46 +153,126 @@ export class Hub extends Service {
     // failed model call (nor cause the caller to record the same call again).
     try { this.monitor?.append(call); } catch {}
   }
+  event(session, entry) {
+    // Background history is optional telemetry; never fail the mechanism itself.
+    try { this.monitor?.appendEvent({ sessionId: typeof session === 'string' ? session : session?.id ?? null, ...entry }); } catch {}
+  }
   action(session, name, count = 1) {
     const state = this.store.state(session.id);
     state.actions ??= {}; state.actions[name] = (state.actions[name] || 0) + count;
     this.store.save(state);
   }
   async call(agent, kind, request, signal) {
-    const { effort, ...route } = kind === 'adaptive' ? { provider: request.provider, model: request.model, temperature: request.temperature } : this.route(agent, kind), start = Date.now();
-    const timeoutMs = this.config().jobTimeoutMs;
-    const controller = new AbortController(), timer = timeoutMs > 0 ? setTimeout(() => controller.abort(new Error('后台作业超时')), timeoutMs) : undefined;
+    if (this.closed) throw Error('OMD 服务已关闭');
+    const { effort, ...route } = kind === 'adaptive' ? {} : this.route(agent, kind);
+    const proposed = { ...route, ...request }, fields = ['provider', 'model', 'temperature', 'reasoningEffort', 'maxTokens', 'stop'];
+    const config = Object.fromEntries(fields.filter(key => Object.hasOwn(proposed, key)).map(key => [key, proposed[key]]));
+    const envelope = Object.fromEntries(Object.entries(request).filter(([key]) => !fields.includes(key)));
+    const requestedEffort = kind === 'adaptive' || Object.hasOwn(request, 'reasoningEffort') ? request.reasoningEffort : effort;
+    const timeoutMs = this.config().jobTimeoutMs, timeoutReason = new Error('后台作业超时');
+    const controller = new AbortController(), timeout = new AbortController();
+    const timer = timeoutMs > 0 ? setTimeout(() => timeout.abort(timeoutReason), timeoutMs) : undefined;
     timer?.unref();
-    signal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
-    let onAbort, iterator, complete = false, reasoningEffort;
+    signal = AbortSignal.any([controller.signal, timeout.signal, ...(signal ? [signal] : [])]);
+    let onAbort, iterator, pendingNext, failure, complete = false, resolving, drained, startedAt, firstTokenMs, finalConfig, recorded = false, hasOutput = false, finished = false;
+    const cleanup = [], done = new Promise(resolve => { drained = resolve; });
     const aborted = new Promise((_, reject) => {
       onAbort = () => reject(signal.reason instanceof Error ? signal.reason : new Error('后台作业已取消'));
       if (signal.aborted) onAbort(); else signal.addEventListener('abort', onAbort, { once: true });
     });
     aborted.catch(() => {});
     const assembler = new BlockAssembler();
-    const key = `${agent.session.id}:${kind}:${this.callSerial = (this.callSerial || 0) + 1}`, active = { sessionId: agent.session.id, kind, startedAt: start, ...route };
-    this.live.set(key, active);
+    const key = `${agent.session.id}:${kind}:${this.callSerial = (this.callSerial || 0) + 1}`;
+    const active = { sessionId: agent.session.id, kind, status: 'preparing', preparingAt: Date.now(), provider: config.provider, model: config.model };
+    const owned = { session: agent.session, controller, done };
+    this.live.set(key, active); this.calls.set(key, owned);
     try {
-      reasoningEffort = kind === 'adaptive' ? request.reasoningEffort : await Promise.race([this.efforts.resolve(route.provider, route.model, effort), aborted]);
-      iterator = this.ctx.llm.stream({ ...route, ...(reasoningEffort !== undefined ? { reasoningEffort } : {}), ...request, sessionId: agent.session.id, signal })[Symbol.asyncIterator]();
-      for (;;) { const part = await Promise.race([iterator.next(), aborted]); if (part.done) break; assembler.push(part.value); }
+      signal.throwIfAborted();
+      // Select controls from the same registration that owns defaults and dispatch.
+      // Unsupported/inherit selections omit the control, letting this adapter default.
+      resolving = this.ctx.llm.prepareCall(config, signal, (controls, modelInfo) => {
+        const { reasoningEffort, ...rest } = controls;
+        return requestedEffort && requestedEffort !== 'inherit' && modelInfo.reasoning?.efforts.some(option => option.id === requestedEffort)
+          ? { ...rest, reasoningEffort: requestedEffort } : rest;
+      });
+      const prepared = await Promise.race([resolving, aborted]);
+      signal.throwIfAborted();
+      finalConfig = prepared.config;
+      iterator = prepared.stream({ ...envelope, ...finalConfig, sessionId: agent.session.id, signal })[Symbol.asyncIterator]();
+      signal.throwIfAborted();
+      startedAt = Date.now();
+      Object.assign(active, finalConfig, { status: 'running', startedAt, effort: finalConfig.reasoningEffort ?? null });
+      for (;;) {
+        pendingNext = iterator.next();
+        const part = await Promise.race([pendingNext, aborted]);
+        signal.throwIfAborted(); pendingNext = null;
+        if (part.done) break;
+        const chunk = part.value;
+        if (firstTokenMs === undefined && monitorTokenChunk(chunk)) firstTokenMs = Math.max(0, Date.now() - startedAt);
+        hasOutput ||= (chunk.type === 'text-delta' || chunk.type === 'reasoning-delta') ? Boolean(chunk.text)
+          : chunk.type === 'tool-call-delta' ? Boolean(chunk.id || chunk.name || chunk.argumentsDelta) : chunk.type === 'block-end';
+        assembler.push(chunk); finished ||= chunk.type === 'finish';
+      }
       complete = true;
+      if (!finished) throw Error('模型流结束但未报告完成状态');
       if (['error', 'aborted', 'max-tokens'].includes(assembler.finish.kind)) throw Object.assign(
         new Error(assembler.finish.failure?.message || `模型未完成输出：${assembler.finish.kind}`),
-        assembler.finish.failure?.code ? { code: assembler.finish.failure.code } : {});
-      this.record(agent.session, kind, { ...route, source: 'background', startedAt: start, status: 'success', effort: reasoningEffort ?? null, durationMs: Date.now() - start, usage: assembler.usage, hasOutput: Boolean(assembler.blocks().length) });
-      return { blocks: assembler.blocks(), usage: assembler.usage, ...route };
+        assembler.finish.failure ? { ...assembler.finish.failure, failure: assembler.finish.failure } : {});
+      const blocks = assembler.blocks();
+      recorded = true;
+      this.record(agent.session, kind, { ...finalConfig, source: 'background', startedAt, firstTokenMs, status: 'success', effort: finalConfig.reasoningEffort ?? null, durationMs: Date.now() - startedAt, usage: assembler.usage, hasOutput });
+      return { blocks, usage: assembler.usage, ...finalConfig, effort: finalConfig.reasoningEffort ?? null };
     } catch (error) {
-      this.record(agent.session, kind, { ...route, source: 'background', startedAt: start, status: signal.aborted && !controller.signal.aborted ? 'cancelled' : 'error', effort: reasoningEffort ?? null, durationMs: Date.now() - start, usage: assembler.usage, hasOutput: Boolean(assembler.blocks().length), error: error.message });
+      failure = error;
+      if (startedAt !== undefined && !recorded) {
+        recorded = true;
+        try {
+          const cancelled = signal.aborted ? signal.reason !== timeoutReason : assembler.finish.kind === 'aborted';
+          this.record(agent.session, kind, { ...finalConfig, source: 'background', startedAt, firstTokenMs, status: cancelled ? 'cancelled' : 'error', effort: finalConfig.reasoningEffort ?? null, durationMs: Date.now() - startedAt, usage: assembler.usage, hasOutput, error: error.message,
+            ...(typeof error.code === 'string' ? { code: error.code } : {}),
+            ...(Number.isInteger(error.status ?? error.failure?.status) ? { httpStatus: error.status ?? error.failure.status } : {}),
+            ...(error.failure ? { failure: error.failure } : {}) });
+        } catch (recordError) { if (recordError !== error) cleanup.push(recordError); }
+      }
       throw error;
     } finally {
       clearTimeout(timer); signal.removeEventListener('abort', onAbort);
-      if (!complete) { try { void iterator?.return?.()?.catch?.(() => {}); } catch {} }
-      if (this.live.get(key) === active) this.live.delete(key);
+      // Aborting the race does not retire adapter-owned preparation. Drain its
+      // real continuation before unload; aborted preparation never records consumption.
+      try { await resolving; } catch (error) { if (error !== failure) cleanup.push(error); }
+      const collect = part => {
+        const reason = !part?.done && part?.value?.type === 'finish' ? part.value.reason : null;
+        if (reason?.failure && ['error', 'aborted'].includes(reason.kind)
+          && reason.failure.code !== 'ABORTED'
+          && !(reason.failure.message === signal.reason?.message && reason.failure.code === (isHarnessError(signal.reason) ? signal.reason.code : 'UNKNOWN')))
+          cleanup.push(Object.assign(Error(reason.failure.message), { ...reason.failure, failure: reason.failure }));
+      };
+      try {
+        const returning = !complete && iterator ? (async () => {
+          for (let part = await iterator.return?.(); part && !part.done; part = await iterator.next()) collect(part);
+        })() : Promise.resolve();
+        for (const result of await Promise.allSettled([returning, ...(pendingNext ? [pendingNext] : [])])) {
+          if (result.status === 'rejected') {
+            if (result.reason !== failure && result.reason !== signal.reason) cleanup.push(result.reason);
+          } else collect(result.value);
+        }
+      } finally {
+        if (this.live.get(key) === active) this.live.delete(key);
+        if (this.calls.get(key) === owned) this.calls.delete(key);
+        drained(cleanup);
+      }
+      if (cleanup.length) throw Object.assign(new AggregateError([...(failure ? [failure] : []), ...cleanup], '后台调用清理失败', { cause: failure }),
+        { ...(typeof failure?.code === 'string' ? { code: failure.code } : {}),
+          ...(Number.isInteger(failure?.status ?? failure?.failure?.status) ? { status: failure.status ?? failure.failure.status } : {}),
+          ...(failure?.failure ? { failure: failure.failure } : {}) });
     }
   }
   observe(session, event) {
+    if (event.type === 'step/end' || event.type === 'turn/end') {
+      // Preparation can abort before live.start, leaving no assistant settlement.
+      const request = this.requestStarts.get(session.id);
+      if (request?.turn === event.data.turn && (event.type === 'turn/end' || request.step === event.data.step)) this.requestStarts.delete(session.id);
+    }
     if (event.type === 'todo/write') {
       const state = this.store.state(session.id); state.taskList = event.data; this.store.save(state);
     }
@@ -172,18 +285,24 @@ export class Hub extends Service {
     }
     if ((event.type === 'assistant/message' || event.type === 'assistant/attempt') && sourceName(event.data.message?.source) !== NS + ':shadow') {
       const output = assembleAssistantStream(event.data.stream);
-      const route = event.data.message?.source?.kind === 'model' ? event.data.message.source : session.requestHeader()?.config ?? {};
-      const cancelled = event.data.interrupted === true || output.finish.kind === 'aborted';
+      const pending = this.requestStarts.get(session.id);
+      const request = pending && pending.turn === event.data.turn && pending.step === event.data.step ? pending : null;
+      const route = request?.route ?? (event.data.message?.source?.kind === 'model' ? event.data.message.source : session.requestHeader()?.config ?? {});
+      const cancelled = event.data.interrupted === true || output.finish.kind === 'aborted' || request?.signal.aborted === true;
       const failed = cancelled || event.type === 'assistant/attempt' || ['error', 'max-tokens'].includes(output.finish.kind);
-      this.record(session, session.header.origin === 'subagent' ? 'subagent' : 'main', {
-        id: `native:${session.id}:${event.seq}`, source: 'native', eventSeq: event.seq, at: event.time,
-        turn: event.data.turn, step: event.data.step, hasOutput: Boolean(event.data.message?.content?.length || output.blocks().length),
-        provider: route.provider, model: route.model, usage: event.data.usage ?? output.usage,
-        status: cancelled ? 'cancelled' : failed ? 'error' : 'success', startedAt: this.requestStarts.get(session.id),
-        durationMs: this.requestStarts.has(session.id) ? Date.now() - this.requestStarts.get(session.id) : null,
-        ...(failed ? { error: output.finish.failure?.message || (cancelled ? '已取消' : event.type === 'assistant/attempt' ? '请求未完成' : output.finish.kind) } : {}),
-      });
-      this.requestStarts.delete(session.id);
+      try {
+        this.record(session, session.header.origin === 'subagent' ? 'subagent' : 'main', {
+          id: `native:${session.id}:${event.seq}`, source: 'native', eventSeq: event.seq, at: event.time,
+          turn: event.data.turn, step: event.data.step, hasOutput: Boolean(event.data.message?.content?.length || output.blocks().length),
+          provider: route.provider, model: route.model, usage: event.data.usage ?? output.usage,
+          ...(request?.route ? { effort: request.route.reasoningEffort ?? null } : {}),
+          status: cancelled ? 'cancelled' : failed ? 'error' : 'success', startedAt: request?.streamStartedAt ?? request?.startedAt,
+          durationMs: request ? Date.now() - (request.streamStartedAt ?? request.startedAt) : null, firstTokenMs: request?.firstTokenMs ?? null,
+          ...(failed ? { error: output.finish.failure?.message || (cancelled ? '已取消' : event.type === 'assistant/attempt' ? '请求未完成' : output.finish.kind) } : {}),
+        });
+      } finally {
+        if (request && this.requestStarts.get(session.id) === request) this.requestStarts.delete(session.id);
+      }
       if (!failed && event.type === 'assistant/message' && event.data.message?.source?.kind === 'model' && event.data.stream?.length) this.context.mainSucceeded(session, event.data.message.source);
     }
   }

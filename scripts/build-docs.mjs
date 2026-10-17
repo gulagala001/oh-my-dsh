@@ -16,7 +16,7 @@ const guides = [
   'claude-cli-terminal.md', 'google-material-expressive.md', 'context-workflow.md',
   'monitoring.md', 'dream-memory.md', 'prompt-adaptation.md', 'runtime-state-background.md',
   'workflow.md', 'open-design.md', 'plugin-submissions.md', 'showcase.md',
-  'plugin-compatibility.md', 'development.md',
+  'plugin-compatibility.md', 'development.md', 'deepseek-workbench.md',
   'upstream-patches/README.md', 'site/README.md',
   'README_EN.md', 'getting-started_EN.md', 'usage_EN.md', 'upgrade_EN.md',
   'troubleshooting_EN.md', 'showcase_EN.md', 'plugin-compatibility_EN.md',
@@ -40,8 +40,10 @@ const englishNavigation = [
     ['docs/plugin-submissions.md', 'Plugin Submissions'], ['docs/showcase_EN.md', 'Screenshots and Sources']]],
   ['Develop', [['docs/development_EN.md', 'Development Guide'], ['CONTRIBUTING.md', 'Contributing'], ['docs/site/README_EN.md', 'Documentation Site']]],
 ];
-const privateDocument = /^(?:AGENTS|CLAUDE|AI_README|PROMPT_MAINTENANCE|PROMPT_CHANGES|COMPUTER_USE_(?:HANDOFF|BASELINE|ASSESSMENT)|WINDOWS_HANDOFF|claude-cli-skin-research|google-material-expressive-research|rea-development|dsh-0\.2-preparation)\.md$/i;
-const isEnglish = file => /_EN\.md$/i.test(file);
+const privateDocument = /^(?:AGENTS|CLAUDE|AI_README|PLAN|OMAA_HANDOFF|PROMPT_MAINTENANCE|PROMPT_CHANGES|COMPUTER_USE_(?:HANDOFF|BASELINE|ASSESSMENT)|WINDOWS_HANDOFF|claude-cli-skin-research|google-material-expressive-research|rea-development|dsh-0\.2-preparation)\.md$/i;
+const sourceDocuments = new Set(['docs/claude-cli-skin-research.md', 'docs/google-material-expressive-research.md', 'docs/dsh-0.2-preparation.md']);
+const privateTree = /(?:^|\/)(?:work|data|cu-artifacts|test-results|playwright-report|native\/browser-engine)(?:\/|$)/;
+const isEnglish = file => /_EN\.(?:md|html)$/i.test(file);
 const counterpart = file => isEnglish(file) ? file.replace(/_EN\.md$/i, '.md') : file.replace(/\.md$/i, '_EN.md');
 const uiText = file => isEnglish(file) ? {
   lang: 'en', heading: 'Link to:', code: 'Code', copy: 'Copy', copyLabel: 'Copy code', diagramSource: 'View diagram source', table: 'Data table',
@@ -73,18 +75,22 @@ function headingSlug(text) {
 }
 
 function rewriteUrl(target, file, pages, assets, repository) {
-  if (/^(?:javascript|vbscript|file):/i.test(target) || /[\u0000-\u001f]/.test(target)) throw new Error(`${file}: unsafe document URL ${target}`);
+  if (/^(?:javascript|vbscript|file):/i.test(target) || /^(?:[a-z]:[\\/]|\/(?:Users|home|private|Volumes)\/)/i.test(target) || /[\u0000-\u001f]/.test(target)) throw new Error(`${file}: unsafe document URL ${target}`);
   if (!target || /^(?:[a-z][\w+.-]*:|\/\/|#|\?)/i.test(target)) return target;
   const url = new URL(target, `https://docs.invalid/${file}`);
   const destination = decodeURIComponent(url.pathname).slice(1);
-  if (privateDocument.test(path.posix.basename(destination)) || destination.split('/').some(part => part.startsWith('.'))) {
+  if (sourceDocuments.has(destination)) return `${repository}/blob/main/${url.pathname.slice(1)}${url.search}${url.hash}`;
+  if (privateDocument.test(path.posix.basename(destination)) || privateTree.test(destination) || destination.split('/').some(part => part.startsWith('.'))) {
     throw new Error(`${file}: private document cannot be published: ${target}`);
   }
-  let output = pages.has(destination) ? htmlFile(destination) : destination;
+  // Product links use an available translation; authored language switches and
+  // section fragments keep their explicit targets rather than guessing anchors.
+  const translated = /_EN\.html$/i.test(file) && !url.hash && /\.md$/i.test(destination) && !isEnglish(destination) && pages.has(counterpart(destination)) ? counterpart(destination) : destination;
+  let output = pages.has(translated) ? htmlFile(translated) : translated;
   if (assets.has(output + '/index.html')) output += '/index.html';
-  if (pages.has(destination) || assets.has(output)) return relativeUrl(file, output) + url.search + url.hash;
+  if (pages.has(translated) || assets.has(output)) return relativeUrl(file, output) + url.search + url.hash;
   // Source references stay available on GitHub without shipping implementation or local data.
-  if (/^(?:src|vendor|scripts)\//.test(destination)) return `${repository}/blob/main/${url.pathname.slice(1)}${url.search}${url.hash}`;
+  if (/^(?:src|vendor|scripts|plugins)\//.test(destination)) return `${repository}/blob/main/${url.pathname.slice(1)}${url.search}${url.hash}`;
   throw new Error(`${file}: link is outside the public site: ${target}`);
 }
 
@@ -149,14 +155,19 @@ function documentPage(file, markdown, { pages, assets, repository, version, sour
   for (let index = firstDiagram; index < diagrams.length; index++) diagrams[index].title = `${title} · ${english ? 'Diagram' : '图示'} ${diagrams[index].number}`;
   const article = rewriteHtml(rendered.html, file, pages, assets, repository);
   const link = target => rewriteUrl(relativeUrl(file, target), file, pages, assets, repository);
-  const nav = (english ? englishNavigation : navigation).map(([label, entries]) => `<div class="nav-group"><p>${label}</p>${entries.filter(([target]) => pages.has(target.split('#')[0])).map(([target, text]) => `<a href="${escapeHtml(link(target))}"${target === file ? ' aria-current="page"' : ''}>${text}${english && !isEnglish(target.split('#')[0]) ? '<span class="nav-language">Chinese</span>' : ''}</a>`).join('')}</div>`).join('');
-  const translated = counterpart(file), fallback = english ? 'docs/README.md' : 'docs/README_EN.md';
-  const switchTarget = pages.has(translated) ? translated : pages.has(fallback) ? fallback : null;
+  const nav = (english ? englishNavigation : navigation).map(([label, entries]) => `<div class="nav-group"><p>${label}</p>${entries.map(([target, text]) => {
+    const [document, fragment] = target.split('#');
+    const available = pages.has(document) ? document : english && pages.has(counterpart(document)) ? counterpart(document) : null;
+    return available ? [available + (fragment ? '#' + fragment : ''), text] : null;
+  }).filter(Boolean).map(([target, text]) => `<a href="${escapeHtml(link(target))}"${target === file ? ' aria-current="page"' : ''}>${text}${english && !isEnglish(target.split('#')[0]) ? '<span class="nav-language">Chinese</span>' : ''}</a>`).join('')}</div>`).join('');
+  const translated = counterpart(file), fallbacks = english ? ['docs/README.md'] : ['docs/README_EN.md', 'docs/site/README_EN.md'];
+  const switchTarget = pages.has(translated) ? translated : fallbacks.find(target => pages.has(target));
   const languageLink = (locale, label, current) => current
     ? `<a href="${escapeHtml(relativeUrl(file, htmlFile(file)))}" lang="${locale}" aria-current="page">${label}</a>`
     : switchTarget ? `<a href="${escapeHtml(link(switchTarget))}" lang="${locale}">${label}</a>` : '';
   const languageSwitch = `<nav class="language-switch" aria-label="${english ? 'Language' : '语言'}">${languageLink('zh-CN', '简体中文', !english)}${languageLink('en', 'English', english)}</nav>`;
-  const home = english ? 'docs/index_EN.html' : 'docs/index.html', index = english ? 'docs/README_EN.md' : 'docs/README.md';
+  const home = english ? 'docs/index_EN.html' : 'docs/index.html';
+  const index = english && pages.has('docs/README_EN.md') ? 'docs/README_EN.md' : 'docs/README.md';
   const sections = rendered.headings.filter(heading => heading.depth === 2 || heading.depth === 3);
   const toc = sections.map(heading => `<a class="toc-depth-${heading.depth}" href="#${encodeURIComponent(heading.id)}">${escapeHtml(heading.text)}</a>`).join('');
   const description = textContent(rendered.html).replace(/\s+/g, ' ').slice(0, 150);

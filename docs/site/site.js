@@ -21,7 +21,7 @@
     const request = (imageRequests.get(element) || 0) + 1; imageRequests.set(element, request);
     const { panel, status, message, retry } = feedbackFor(element, text('重试预览', 'Retry preview'));
     panel.setAttribute('aria-busy', 'true'); panel.classList.remove('preview-failed'); panel.classList.add('preview-pending');
-    status.hidden = false; message.textContent = text('正在加载预览…', 'Loading preview...'); retry.hidden = true;
+    status.hidden = false; message.textContent = text('正在加载预览…', 'Loading preview...'); retry.hidden = true; retry.disabled = false; retry.textContent = text('重试预览', 'Retry preview');
     retry.onclick = () => { void swapImage(element, src, alt, commit); };
     const next = new Image(); next.src = src;
     try { await next.decode(); }
@@ -45,13 +45,14 @@
   document.querySelectorAll('main img, #detail-image').forEach(element => {
     let feedback;
     element.addEventListener('error', () => {
+      if (imageRequests.has(element)) return;
       feedback = feedbackFor(element, text('重试图片', 'Retry image')); const { panel, status, message, retry } = feedback;
       message.textContent = text('图片暂时无法加载。', 'The image could not be loaded.'); retry.hidden = false; retry.disabled = false; status.hidden = false;
       panel.setAttribute('aria-busy', 'false'); panel.classList.add('preview-failed');
       retry.onclick = () => { retry.disabled = true; message.textContent = text('正在加载图片…', 'Loading image...'); panel.setAttribute('aria-busy', 'true'); element.src = element.src; };
     });
     element.addEventListener('load', () => {
-      if (!feedback) return; const { panel, status, retry } = feedback;
+      if (!feedback || imageRequests.has(element)) return; const { panel, status, retry } = feedback;
       if (status.contains(document.activeElement)) (element.closest('a') || panel.querySelector('button:not(.preview-feedback button)'))?.focus();
       status.hidden = true; retry.disabled = false; panel.removeAttribute('aria-busy'); panel.classList.remove('preview-failed');
     });
@@ -88,12 +89,12 @@
   }
 
   const heroScenes = {
-    computer: { src: 'site/media/launchpad-workbench.jpg', alt: '发布清单的实际验收，对话、任务与文件核验输出并排显示', caption: '同一份发布清单：3 项待验收，2 项验证完成，下载文件已逐项核对。' },
+    computer: { src: 'site/media/launchpad-workbench.jpg', alt: '发布清单的实际验收，对话、任务与文件核验输出并排显示', caption: '需求、任务与交付文件并排查看。' },
     memory: { src: 'site/media/launchpad-recall.jpg', alt: '压缩后实际回查原话，核对 CSV 六列、编码与未验收项要求', caption: '按原话核对：UTF-8 + BOM、六列、保留未验收项。' },
     tasks: { src: 'site/media/launchpad-tasks.jpg', alt: '实际任务账本中的原始要求、文件路径与通过的 CSV 核验输出', caption: '要求对应任务，下载文件对应验证结果；每一项都有依据。' },
   };
   if (english) {
-    Object.assign(heroScenes.computer, { alt: 'Actual release checklist verification, with conversation, tasks, and file checks side by side', caption: 'One release checklist: 3 items awaiting acceptance, 2 verifications complete, and downloaded files checked.' });
+    Object.assign(heroScenes.computer, { alt: 'Actual release checklist verification, with conversation, tasks, and file checks side by side', caption: 'Requirements, tasks and delivered files, side by side.' });
     Object.assign(heroScenes.memory, { alt: 'Original requirements recalled after compression to verify CSV columns, encoding, and pending items', caption: 'Checked against the original: UTF-8 + BOM, six columns, and pending items retained.' });
     Object.assign(heroScenes.tasks, { alt: 'A task ledger with original requirements, file paths, and successful CSV verification output', caption: 'Requirements connect to tasks; downloaded files connect to verification results.' });
   }
@@ -106,14 +107,14 @@
   });
 
   const memoryScenes = {
-    record: { src: 'site/media/launchpad-requirements.jpg', crop: [395.390625,474,352.34375,107], title: '先把要求说清楚。', description: '保留负责人、优先级和未验收项；CSV 固定六列，使用 UTF-8 + BOM。原始消息成为后续验收的依据。', proofLabel: '这份清单的原始约定', proof: '六列 · UTF-8 + BOM', label: '原始要求 · 实拍局部', alt: 'Launchpad 原始用户消息中的六列编码与未验收项要求' },
-    compress: { src: 'site/media/launchpad-context.jpg', crop: [781,74,659,926], title: '精简当前上下文，保留来源。', description: '本次先执行 summary 分段摘要，再执行 full 全量压缩。两份详细资料、原始日志、用户原话和附件保留，供之后回查。', proofLabel: '本次实际压缩后的状态', proof: 'summary + full · 两份详细资料留档', label: '工作上下文 · 实际完成状态', alt: '工作上下文中的分段摘要、两份详细资料存档和 summary 与 full 手动压缩入口' },
-    recall: { src: 'site/media/launchpad-recall.jpg', crop: [300,475,465,152], title: '细节有疑问，直接回查原话。', description: '压缩后通过 recall 的 original 回查原始要求，核对编码、列顺序以及必须保留的未验收项。', proofLabel: '按来源核对，而不是猜测', proof: '原始要求 · 六列约定', label: '压缩后回查 · 实拍局部', alt: '原话回查后的核对回复：CSV 六列、BOM 和未验收项约定' },
-    continue: { src: 'site/media/launchpad-tasks.jpg', crop: [801,153.390625,631,416.9375], title: '带着原始要求，核对交付文件。', description: '下载后的 CSV 由独立脚本逐字段检查：编码、六列、8 条事项和 3 条未验收项均一致。验证结果挂接到原始需求。', proofLabel: '实际下载文件的验证输出', proof: 'BOM · 六列 · 8 条事项', label: '任务证据 · 实际 PASS 输出', alt: '下载文件的原始需求、独立核验脚本和真实 PASS 输出' },
+    record: { src: 'site/media/launchpad-requirements.jpg', crop: [628, 60, 500, 210], title: '先把要求说清楚。', description: '保留负责人、优先级和未验收项；CSV 固定六列，使用 UTF-8 + BOM。原始消息成为后续验收的依据。', proofLabel: '这份清单的原始约定', proof: '六列 · UTF-8 + BOM', label: '原始要求 · 实拍局部', alt: 'Launchpad 原始用户消息中的六列编码与未验收项要求' },
+    compress: { src: 'site/media/launchpad-context.jpg', crop: [505, 105, 760, 555], title: '精简当前上下文，保留来源。', description: '历史示例把已处理片段切换为摘要表示。原始日志、用户原话和页面附件继续保存在存档中。', proofLabel: '历史示例压缩后的状态', proof: '1 段摘要 · 原话与附件留档', label: '工作上下文 · 历史状态', alt: '历史工作上下文中一段摘要、两份详细资料存档及最近替换记录' },
+    recall: { src: 'site/media/launchpad-recall.jpg', crop: [420, 300, 720, 158], title: '细节有疑问，直接回查原话。', description: '压缩后通过 recall 的 original 回查原始要求，核对编码、列顺序以及必须保留的未验收项。', proofLabel: '按来源核对，而不是猜测', proof: '原始要求 · 六列约定', label: '压缩后回查 · 实拍局部', alt: '原话回查后的核对回复：CSV 六列、BOM 和未验收项约定' },
+    continue: { src: 'site/media/launchpad-tasks.jpg', crop: [510, 245, 750, 375], title: '带着原始要求，核对交付文件。', description: '下载后的 CSV 由独立脚本逐字段检查：编码、六列、8 条事项和 3 条未验收项均一致。验证结果挂接到原始需求。', proofLabel: '实际下载文件的验证输出', proof: 'BOM · 六列 · 8 条事项', label: '任务证据 · 实际 PASS 输出', alt: '下载文件的原始需求、独立核验脚本和真实 PASS 输出' },
   };
   if (english) {
     Object.assign(memoryScenes.record, { title: 'Start with explicit requirements.', description: 'Keep owners, priorities, and pending items. Export a six-column CSV with UTF-8 + BOM. The original message provides the acceptance criteria.', proofLabel: 'The original checklist requirements', proof: 'Six columns · UTF-8 + BOM', label: 'Original requirements · Detail', alt: 'Original Launchpad message specifying CSV columns, encoding, and pending items' });
-    Object.assign(memoryScenes.compress, { title: 'Reduce context, retain the sources.', description: 'The example runs summary compression, then full compression. Two detailed archives, original logs, user messages, and attachments remain available for recall.', proofLabel: 'Actual post-compression state', proof: 'summary + full · Two detail archives', label: 'Working context · Actual state', alt: 'Working context showing summaries, two detail archives, and summary and full compression controls' });
+    Object.assign(memoryScenes.compress, { title: 'Reduce context, retain the sources.', description: 'The historical example replaces a processed segment with a summary. Original logs, messages, and attachments remain archived.', proofLabel: 'Historical post-compression state', proof: 'One summary · Originals and attachments archived', label: 'Working context · Historical state', alt: 'Historical working context with one summary, two detail archives, and replacement history' });
     Object.assign(memoryScenes.recall, { title: 'Retrieve the original for exact details.', description: 'After compression, original recall retrieves the requirements to check encoding, column order, and the pending items that must be retained.', proofLabel: 'Checked against the source', proof: 'Original requirements · Six columns', label: 'Recall after compression · Detail', alt: 'Recall response checking six CSV columns, BOM, and pending item requirements' });
     Object.assign(memoryScenes.continue, { title: 'Check the file against the requirements.', description: 'An independent script checks the downloaded CSV: encoding, six columns, eight items, and three pending items. The results attach to the original requirement.', proofLabel: 'Verification of the downloaded file', proof: 'BOM · Six columns · Eight items', label: 'Task evidence · Actual PASS output', alt: 'Original requirement, independent file verification script, and actual PASS output' });
   }
@@ -199,9 +200,9 @@
   const dialog = $('#media-dialog');
   const detailImage = $('#detail-image');
   const details = {
-    tasks: { title: '需求、任务与验证证据', file: 'site/media/launchpad-tasks.jpg', alt: '原始要求、实际下载文件与独立核验的 PASS 结果', note: '真实原生任务账本。业务清单的初始勾选为演示数据，文件检查与浏览器操作单独验证。' },
+    tasks: { title: '需求、任务与验证证据', file: 'site/media/launchpad-tasks.jpg', alt: '原始要求、实际下载文件与独立核验的历史 PASS 结果', note: '需求、任务和产物检查结果集中展示。' },
   };
-  if (english) Object.assign(details.tasks, { title: 'Requirements, Tasks, and Verification', alt: 'Original requirements, downloaded files, and an independent verification PASS result', note: 'An actual native task ledger. Initial checklist states are sample data; file checks and browser actions were verified separately.' });
+  if (english) Object.assign(details.tasks, { title: 'Requirements, Tasks, and Verification', alt: 'Original requirements, downloaded files, and a historical independent verification PASS result', note: 'Requirements, tasks and artifact checks in one place.' });
   function openDialog(title) {
     $('#media-title').textContent = title;
     document.body.classList.add('dialog-open');

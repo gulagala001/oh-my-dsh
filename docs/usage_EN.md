@@ -1,279 +1,189 @@
 # Oh My DSH Usage Guide
 
-[简体中文](usage.md) · [Documentation](README_EN.md) · [First task](getting-started_EN.md) · [Installation](upgrade_EN.md) · [Update and Remove](#update-uninstall) · [Troubleshooting](troubleshooting_EN.md) · [Development](development_EN.md)
+[简体中文](usage.md) · [Docs index](README_EN.md) · [First task](getting-started_EN.md) · [Troubleshooting](troubleshooting_EN.md) · [Development](development_EN.md)
 
-OMD is a DSH plugin. Keep using the host's models, projects, conversations, files, tools, and skills; its additions work around the current conversation.
+> Current source is **OMD `0.2.1-rc.2.omd.0.17.3` / DSH `0.2.1-rc.2`**, bundling OpenCU `2.0.0`. Start with [version matching](install_EN.md); historical 0.10 users should follow their fixed-tag documentation.
 
-Public pairs are DSH `0.2.1-alpha.1` with OMD `0.2.1-alpha.1.omd.0.10.0`, or DSH `0.2.0-rc.2` with OMD `0.2.0-rc.2.omd.0.10.0`. GitHub `main` has unpublished alpha.2 OMD `0.16.0` with the OpenCU 1.6.1 browser and runtime reconstruction. Additions are marked below; fixed-tag documentation defines the public package.
+OMD retains DSH's models, projects, sessions, native tools, files, skills, and content tabs. Package ID `trisoul_x`, preset `trisoul-x`, and existing data locations remain compatible.
 
 <a id="install-in-existing-dsh"></a>
 
 ## Install in Existing DSH
 
-Desktop users should follow the [desktop tutorial](upgrade_EN.md#desktop). These commands are for alpha.1 Web. End active work, stop an existing service, and [back it up](upgrade_EN.md#2-stop-and-back-up).
+Published fixed pairs are DSH `0.2.1-alpha.1` / OMD `0.2.1-alpha.1.omd.0.10.0`, or DSH `0.2.0-rc.2` / OMD `0.2.0-rc.2.omd.0.10.0`. Local 0.17 has no public URL. Select a complete pair from the [fixed artifact table](../README_EN.md#quickstart), not `latest`; do not relabel alpha.2 artifacts for rc.2.
 
-Use Node.js ≥22.19, Git, and pnpm 11.23.0 for the public version; on Windows, use PowerShell 7. Run with the same `DSH_HOME` as the service:
+This example installs public **alpha.1 Web** only. Use Node.js ≥22.19, Git, pnpm 11.23.0 for that fixed release, and PowerShell 7 on Windows. Finish tasks, stop the original service, back up actual `DSH_HOME`, and retain profile, port, and launch method. Use the same data directory:
 
 ```sh
 npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-alpha.1.omd.0.10.0/trisoul_x-0.2.1-alpha.1.omd.0.10.0.tgz
 npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 ```
 
-Open the complete login link printed by this launch. A new Web environment defaults to port 3080; retain existing ports and launch methods. Replace `web` with your actual custom profile. Installation and execution must use the same data directory.
+Open the complete login link printed at launch. A new Web environment defaults to 3080; retain existing ports and replace `web` with your actual profile. Desktop uses the app or bundled CLI and a package matching its full host version. Its separate `desktop` profile is not managed by an unrelated Web CLI. Public-package details follow [fixed-tag docs](https://github.com/gulagala001/oh-my-dsh/tree/v0.2.1-alpha.1.omd.0.10.0/docs).
 
-The default preset becomes `trisoul-x` (Oh My DSH), with full file/command access and execution approvals disabled. **Explicit profile overrides take priority.** Existing conversations keep their presets. A regular Web CLI cannot manage the desktop app's reserved `desktop` profile.
+Installation defaults to Oh My DSH, full file/command access, and disabled execution approvals. **Explicit profile overrides win.** Existing sessions keep their presets, without automatic conversion. This reconstruction does not update or restart the working DSH.
 
 <a id="update-uninstall"></a>
 
 <details>
-<summary>Update, disable, or uninstall</summary>
+<summary>Update, disable, and uninstall</summary>
 
-Back up first and choose the [fixed release for your host](upgrade_EN.md#versions-and-success-criteria). The version panel's Update action uses the current profile's native manager; it does not upgrade DSH or restart it. Do not choose a package by `latest`.
+Back up, then select a fixed release for the actual full host. The version panel manages OMD in the current profile only; it does not update the host or restart it. Current and remote versions differ. Public calculation excludes `unpublished`; status and installation reject unpublished targets. Unreleased candidates do not get invented download links.
 
-After installing, updating, enabling, or disabling, restart completely. Desktop: use Restart App and Host, or fully quit and reopen. Web: restart the original service. Closing a window or refreshing does not replace the running backend.
-
-Web removal:
+After installation/update/enable/disable, let tasks finish and fully restart the app or original Web service. Closing a window or refreshing does not switch the backend. Public alpha.1 Web removal:
 
 ```sh
 npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web remove trisoul_x
 ```
 
-Desktop: use its Plugins page or [bundled CLI](upgrade_EN.md#desktop-cli). Removal retains models, credentials, conversations, and data. Old OMD conversations need their preset restored to continue. A new standard conversation can use DSH; this does not convert old OMD conversations automatically.
+Disable/uninstall retains models, credentials, sessions, drafts, and memory. Old sessions missing their OMD preset require re-enabling it. A working new standard session does not establish conversion of old sessions. Loader protection does not persist effective bundle patches into user configuration and retains third-party registrations/wrappers.
 
 </details>
 
 ## Projectless Chat
 
-Hover the selected workspace label and click **×** to clear it. Drafts, attachments, model, and access selection remain; you can select another workspace.
+Hover the workspace label and click **×**. Drafts, attachments, model, and access selection remain; you can select another workspace. First send creates a directory on the DSH host, normally **Documents/DSH/date/first-message-name**, numbered on collision. Refresh/restart/continuation reuses it; another conversation gets another directory. It is not registered as a workspace; the conversation stays Ungrouped.
 
-Sending the first message creates a separate directory on the DSH host, normally **Documents/DSH/date/first-message-name**, with a number for duplicate names. Unsent conversations create no directory. Refreshing, restarting, or continuing reuses it; another conversation gets a new directory. These chats appear under Ungrouped without registering a workspace.
+**An automatic file directory is not a Dream project.** Chat and descendants not added to a real workspace stay isolated. Changing the save root/current execution directory or deleting the original directory must not admit historical Chat or old Dream jobs into shared organization. Unknown ownership is temporarily isolated with diagnostics while basic chat continues. Explicitly joining a native workspace uses that ownership and selected scope. [Dream isolation (Chinese)](dream-memory.md)
 
-If access shows Custom, choose a preset first. A failed synchronization retains the draft and offers retry.
+If access shows Custom, select an access preset first. Synchronization failure keeps the draft and offers retry. File permissions and memory-sharing scope are different controls.
 
 <a id="local-development-or-trial"></a>
 
-See [development](development_EN.md) for source runs and isolated trials. Normal installation needs neither cloning nor manual builds.
+Source trials use the [short development guide](development_EN.md). Public fixed installation needs no clone/manual build.
 
 ## Interface and Entry Points
 
-**Workbench** below the composer opens native content tabs on the right. Choose tasks, context, memory, or monitoring. Existing file, terminal, browser, and third-party entries remain available.
+The right-sidebar guide offers one **OMD Console** entry with overview, context, memory, call log, and background log sections: top tabs in a narrow sidebar, left navigation when wide or fullscreen. Composer info-bar items and the BT menu jump straight to a section. File, terminal, native browser, and third-party entries remain; material reading supports Back and Escape.
 
 | Entry | Purpose |
 | --- | --- |
-| **Tasks and verification** | Requirements, source anchors, status, and check records. |
-| **Context** | Summaries, detailed material, sources, and compression mode. |
-| **Memory · Dream** | Development builds' session, project, and global short memory. |
-| **Monitoring** | Overview, Usage, and Context views. |
-| **Computer** | Current target, or the browser entry when none is selected. |
-| Composer **Usage** | Expand/collapse steps, speed, tokens, and cache figures. |
-| **Scope / BT** beside the model | Scope before the first message; reminders at any time. |
+| **Overview** | Tokens, cache hit, calls/failures, current context, OMD savings, Dream quota; main vs OMD background trend, component usage, background feed. |
+| **Context** | Occupancy breakdown and post-replacement estimate; prepare → hub → replace status, apply prepared results, `/compact-p`/`/compact-f`, segment summaries and material. |
+| **Memory** | Session/project/global short memory, summary catalog, jobs, and automatic Dream settings. |
+| **Call log / Background log** | Each model call (kind, model, tokens, duration, status) and each background mechanism record (prepare, hub decision, replacement, compaction, adaptive, Dream); searchable, filterable, paged. |
+| **Task evidence** | Opened from the BT menu “View task evidence”: requirement excerpts, status, and checks. |
+| Composer info bar | Native readings unchanged, with jumps to overview or call log; the context item appears while organizing or when a replacement is ready and can apply it; Dream jobs show progress. |
+| **Scope / BT** | Scope before first send; reminders at any time. |
+| Model / Fast | Native effort, Pro, Ultra, and a bolt when matching Subscriptions supports it. |
 
-[![Conversation and workbench with openable files and recorded checks](site/media/launchpad-workbench.jpg)](showcase_EN.md)
+[![OMD Console overview](images/release/monitor.jpg)](monitoring.md)
 
-*Fictional business data and a controlled example model; tools and checks actually ran. [Sources](showcase_EN.md).*
-
-<details>
-<summary>Process details, keyboard navigation, and narrow windows</summary>
-
-Consecutive actions are grouped; expand screenshots and individual results when needed. After completion, tool details and reasoning remain accessible, with the final answer outside the process group. Settings → General → Work process display controls density.
-
-The sidebar supports arrows, Home/End, Enter, Escape, and Shift+F10 for its native menu. In narrow windows, dismiss it by selecting a conversation, clicking the backdrop, or pressing Escape. Switching workbench tabs retains edits; returning from source reading retains position.
-
-</details>
+Native sidebar search, menus, and third-party row actions remain. Use arrows, Home/End, Enter, Escape, and Shift+F10. Narrow windows dismiss with backdrop, selection, or Escape. Composer responsiveness follows the actual conversation column, not the whole viewport. System/manual reduced motion retains static state. Theme attributes and registrations respect third-party takeover; uninstall withdraws owned contributions only.
 
 ## Everyday Work
 
-Give the assistant the goal, material, and constraints together. For longer work, ask it to track tasks and check the output: “Organize this checklist, keep unaccepted items, download the CSV, check its fields, and deliver it.”
+Provide goals, inputs, boundaries, and delivery conditions. For multi-step tasks, preserve original requirements, track work, check artifacts, and then deliver. `todo_write` manages tasks/anchors; `verify_link` links, runs, or withdraws evidence. Evidence retains actual tool/callId, command, exit state, and timing. Task completion, process completion, and passing verification differ.
 
-**BT** is saved per conversation. Task reminders default on; verification reminders default off. Verification reminders check missing or textual evidence and may use more time and tokens. Turning them off does not disable tasks or verification tools. A blocker can pause this turn's reminders without marking tasks complete.
-
-`todo_write` manages tasks, excerpts, and anchors; `verify_link` manages evidence and actual checks. Development builds additionally retain tool-call identity, command, exit status, and timing. Completion status alone is not a passing check.
-
-[![Actual CSV checks: encoding, counts, and all fields passed](site/media/launchpad-tasks.jpg)](showcase_EN.md)
+**BT** persists per conversation: task reminders default on; verification reminders off. Verification checks missing or textual evidence and may use more time/tokens. Turning reminders off keeps the tools. A blocker can pause this turn's reminders without marking completion.
 
 ### Models and Work Modes
 
-The model control offers native reasoning levels, **Pro**, and **Ultracode**. Pro supports decomposition, delegation when useful, and sustained work; Ultracode adds completeness and adversarial checks. Reasoning levels follow the model's declared capabilities. Modes save separately and survive model changes; choosing a native level or restoring defaults disables the mode. [Workflow reference (Chinese)](workflow.md).
+The panel retains native efforts plus **Pro** and **Ultracode**. Pro prefers declared `xhigh`, otherwise the highest supported effort. Ultra always uses the highest supported effort. Ordinary mode retains the user's selection; no effort declaration means provider default. Modes save separately, survive model changes, and turn off on native effort/default selection. They do not expand permissions. [Workflow (Chinese)](workflow.md)
 
-**OMD-PTC** uses tools through `run_code` while retaining OMD context, tasks, skills, and computer control. It shares settings with Oh My DSH; tasks and conversations remain separate. The host's own PTC preset is also retained.
+**Fast** reads Subscriptions' actual state/capability and supports `codex` and `openai-codex`. It hides without matching services or model support. A write invalidates stale polling; failure retains the old state and shows an accessible top-level error. The actual Subscriptions version owns persistence, pools, and routing. Real OAuth, quotas, priority speedup, and paid requests remain unaccepted.
+
+### Native Tools and OMD-PTC
+
+OMD retains native registry, SDK, scheduling, permissions, and cancellation instead of replacing Tools wholesale. Ordinary OMD-PTC operations use `run_code`; only matching, sampled scopes retain direct **`job_output`, `job_list`, `job_kill`, `runtime_status`**. Nested SDKs, native presets, and third-party tools stay host-owned. Request projection is reversible; uninstall retains other wrappers. [Adaptation boundary (Chinese)](prompt-adaptation.md)
+
+Tools, verification commands, CodeGraph, and Workflow resolve paths in the host's **current execution directory**, not permanently in the initial cwd. Project identity and memory ownership remain. A directory change does not bypass access or make independent Chat shared.
 
 ## Context and Memory
 
-Background processing stores factual summaries, user decisions, and detailed material, then replaces historical representations in requests when appropriate. Original messages and attachments remain. For exact conditions, ask: “Retrieve the CSV encoding and column order from my first message.”
+Background preparation stores facts, source-backed user decisions, and detailed material separately, applying representations at safe request boundaries. Originals, documents, images, and attachments remain; windows are finite. Choose scope before first send; it then locks:
 
-[![Retrieving the original BOM and six-column requirement after compression](site/media/launchpad-recall.jpg)](showcase_EN.md)
-
-Choose before the first message; scope then locks:
-
-| Scope | Purpose and boundary |
+| Scope | Automatic injection and boundary |
 | --- | --- |
-| **Session isolation** | No automatic shared-memory injection or propagation to project/global memory. |
-| **Project sharing** | Project summaries and material; development builds also inject completed project short memory. |
-| **Global sharing** (development) | Compact global short memory and a project directory, with detail retrieved as needed. |
+| **Session isolation** | No automatic shared-memory injection or project/global propagation; explicit recall remains available. |
+| **Project sharing** | Project summaries/material and completed project short memory. |
+| **Global sharing** | Compact global short memory and a paged project directory; detail is read on demand. |
 
-Scope controls memory sharing, not file access. Explicit requests can retrieve other conversations in every scope.
+Cold sessions use public read-only inspection without activating an Agent, creating a ledger, or starting a model. Scope saving rechecks whether the conversation started. Read failure retains errors, retry, and the original scope.
 
-<details>
-<summary>Compression, Dream, frequency, and cost</summary>
+**Context → Asynchronous compression** defaults to Original asynchronous. Active asynchronous uses a separate request to decide the range. The main model continues; later requests apply only valid completed results. Switching cancels old requests and ignores late results while keeping archives. `/compact` applies a prepared plan, `/compact-p` selects summaries for prepared segments, and `/compact-f` calls a model to summarize again; failure keeps originals. [Mechanism, budgets, original search (Chinese)](context-workflow.md)
 
-Context → Asynchronous compression selects this conversation's mode. Default Original asynchronous processes event windows; Active asynchronous uses a separate request to decide the range. The main model continues, and the next request applies completed results. Switching cancels unfinished old requests while retaining sources and saved material. [Context reference (Chinese)](context-workflow.md).
+`recall({search: 'original', query: 'keyword'})` searches current original events. Cross-session search needs explicit `sessionId`; `query` alone still filters summaries. Results are bounded/paged and retain source locations. Retrieved history is data, not new execution authority.
 
-Development builds' Memory · Dream organizes sessions, projects, and global memory with searchable, paged source navigation. It normally reads new summaries, supplementing original messages only for long-inactive conversations. Automatic Dream defaults off; when enabled it checks hourly by default. Manual and automatic work share a daily 200,000-token limit; stopping preserves progress. [Dream reference (Chinese)](dream-memory.md).
+**Dream** offers session/project/global organization and automatic settings. Global jobs select large folders; an empty selection means all. Custom registries, nested projects, and deleted historical directories share one ownership rule. Partial failure retains successful progress and initial source cutoffs; retry/restart continues unfinished targets, without publishing incomplete parent summaries or marking failure complete. Automatic Dream defaults off, checks every 60 minutes when enabled, and shares 200,000 tokens/day across manual/automatic work. [Dream details (Chinese)](dream-memory.md)
 
-Common settings default to Moderate frequency. Idle preprocessing defaults off; its default delay when enabled is 90 seconds. Background models may follow the main model or be configured separately and still incur usage. Savings are not guaranteed. Model context windows remain finite, and monitoring distinguishes estimates from reported billed usage.
-
-</details>
+Moderate is the default frequency. Idle preprocessing defaults off, with a 90-second default delay when enabled. Background models can follow or differ from the main model; usage remains chargeable and savings are not guaranteed.
 
 ## Draft Optimization
 
-Click the star, choose **Light polish**, **Structure**, or **Step planning**, add requirements, and start. Review before sending. Undo, redo, restore the original, refine again, or save a requirement preset.
+Click the star for **Light polish, Structure, Step planning**; add requirements/save a preset, inspect, then send. Undo, redo, original recovery, and further refinement remain. Automatic pre-send polish defaults off and adds a current-model call each send without reading attachment contents or the entire history. Changed drafts/attachments, stop, error, timeout, or session switch never auto-send.
 
-Automatic polish before sending defaults off. When enabled, each send makes an extra call to the current model using light polish. It does not read attachment contents or the full history. If the draft or attachments change during optimization, the result waits for application; stopping, errors, timeouts, or switching conversations do not send it automatically.
-
-<details>
-<summary>Draft persistence and failed sends</summary>
-
-Each conversation keeps up to 20 draft versions. Refresh clears optimizer versions; DSH manages the text draft. Preferences and requirement presets persist in the current browser and synchronize same-origin tabs, not other devices.
-
-Development builds recover originals and versions after failed sends, and retain unsent attachments and optimization history across conversation switches within the current page. If you already started another draft, retained versions appear separately; viewing does not immediately replace the current text. Refreshing or closing discards those files and versions.
-
-</details>
+Each session retains up to 20 versions. Within the page, switching retains unsent attachments/optimizer history while cancelling unfinished work; returning does not replay. Native admission failure retains originals/versions. If another draft is being edited, retained versions appear separately without replacing it. Refresh/close discards these attachments/versions; the host owns text drafts. Preferences/presets stay in the current browser and synchronize same-origin tabs, not devices. Fixed MIT templates/authors appear in [notices](../THIRD_PARTY_NOTICES.md).
 
 <a id="settings"></a>
 
 ## Settings and Saving
 
-Settings → Oh My DSH contains Common, Base components, Model and identity, Experimental, Advanced, and Global background. Click **Save settings** for ordinary edits. Component toggles save immediately; runtime path changes need a restart.
+Settings include Common, Base components, Model/identity, Experimental, Advanced, Global background. Use **Save settings** for ordinary changes; component toggles save immediately. Only edited fields are sent. Edits made during saving remain and need another save. Migration reads the live legacy configuration rather than letting an old overlay swallow new settings.
 
-Personality choices include Default, Hard, Soft, Custom, and Off. Saving takes effect on the next model request. Preview built-in text or copy it to Custom; switching does not delete saved custom text.
+Personalities include Default, Hard, Soft, Custom, Off. Preview/copy to Custom; switching retains saved custom content, with effect on the next main request. Global background is user-maintained. On conflict, **Read latest version**, compare, merge/adopt, then save; reading does not overwrite a draft. Dream does not edit this background.
 
-Global background is manually maintained. On conflict, **Read latest version**, compare, merge or adopt, then save. Reading does not overwrite your draft.
-
-[![Theme, palette, font, and background settings](site/media/launchpad-appearance.jpg)](skins.md)
-
-Appearance offers OMD default, Codex Desktop, iOS Liquid Glass, Claude CLI, and Google Material, each in light and dark. Themes, 28 palettes, and backgrounds are independent; fonts, sizes, section colors, logo, title, and reduced motion are configurable. [Detailed reference (Chinese)](skins.md) · [Recorded themes](showcase_EN.md#themes-and-settings).
+Five themes, 28 palettes, backgrounds, section colors, fonts, logos/titles, and reduced motion remain independent. [Appearance (Chinese)](skins.md)
 
 <a id="runtime-state-and-blockers"></a>
 
-<details>
-<summary>Experimental options</summary>
+Runtime/budget hints default off, background optimization on, CoT placement on, CFR off. They affect the next request, not permissions. [Background options (Chinese)](runtime-state-background.md)
 
-Runtime/budget hints default off; background optimization defaults on. CoT placement defaults on and CFR defaults off. Saving affects the next request and respects existing access permissions. [Runtime reference (Chinese)](runtime-state-background.md).
+## Monitoring
 
-</details>
+The OMD Console overview, call log, and background log share session/time scopes. A persistent SQLite ledger records actual call identity, parent/real-child/background attribution, route, status, error, usage, and duration, with date/model/component filters, trends, groups, and paged details. Write failures retain diagnostics without failing the model call.
+
+**`≥` is a known lower bound, not complete consumption.** Missing input/cache/output is not zero. Unmetered calls retain state but do not plot false zero trends. Cache ratios require complete, consistent disclosures. Context estimates are not provider bills; summed durations may overlap and are not wall-clock elapsed time. Unattributed historical totals remain separate, not distributed across dates/models. [Accounting (Chinese)](monitoring.md)
 
 ## CodeGraph
 
-Check readiness in Base components. Selecting a code project prepares `.codegraph/` automatically. Ask “Which functions handle login?” or “Who calls this function?” Retry failed preparation; ordinary file and search tools remain available.
+Bundled 1.6.0 prepares `.codegraph/` in the current code directory without a global CLI. Ask “Which functions handle login?” Queries follow the current execution directory and nearest ancestor index; use explicit `projectPath` for another repository. First query waits for preparation. Retry failures; ordinary file/search tools remain.
 
-Indexing runs locally, but source returned by queries enters the conversation and is sent to the chosen model. Structure does not replace execution checks.
+Connections watch changes, release when idle, and catch up later. Disable/uninstall stops owned processes but keeps indexes. They are outside DSH session backups and normally not committed. Source results enter model requests; structure is not compilation/testing. Explicit read-only/no-index directories must not be prepared.
 
-<details>
-<summary>Index maintenance</summary>
-
-Bundled 1.6.0 needs no global CLI. Connections watch changes, release when idle, and catch up on the next query. Ask to update the index. Disabling or uninstalling stops owned processes while retaining `.codegraph/`; project indexes are outside the DSH data backup and normally need not be committed.
-
-</details>
+<a id="computer-use"></a>
 
 ## Computer Use
 
-OMD includes a fixed OpenCU snapshot; no separate installation is required. [OpenCU can also run independently](https://github.com/gulagala001/opencu) without OMD. See [coexistence](plugin-compatibility_EN.md#opencu).
-
-Select a browser/app target and watch while the assistant operates. **Watching is not taking over; closing the preview is not stopping control.**
-
-The latest local implementation has a single **Browser** entry. After the user fills and saves the page, the assistant can resume reading that same page. The [purchase-order recording](showcase_EN.md#current-local-example-purchase-order) shows this flow. It is unpublished; older packages use their fixed-tag controls.
+New OpenCU `2.0.0` is bundled by default, replacing the frozen 1.3.0 transition snapshot. It provides real browser/native target discovery, observation, background-first input, monitoring and annotations. Complete UI requires matching Host, Client and preload adapters; plugin installation alone does not patch stock DSH. [Guide (Chinese)](computer-use.md) · [Integration boundaries](plugin-compatibility_EN.md#opencu).
 
 <a id="get-started-with-computer-use"></a>
 
 ### Get Started
 
-1. Choose a native-tool model, with image input for screenshot interpretation.
-2. Check required components in **Base components** or **Computer → Runtime and permissions**.
-3. In the latest local build, use the unified **Browser** entry. Public packages use their version's `@Browser`, connected Chrome tab, or app reference; describe the goal and inputs.
-4. Inspect through **Computer**. **Stop / take over** before manual interaction, then **Resume assistant control**.
-
-For example: “Filter pending acceptance, export the full checklist, check the download, and deliver it.” The recorded example actually filtered, recovered after refresh, and downloaded all eight items, including three pending acceptance.
-
-[![Running example page with search, filters, and CSV export](site/media/launchpad-browser.jpg)](showcase_EN.md)
+After matching the build and permissions, ask the assistant to open a site, inspect a page or work with a connected app. Choose embedded, extension-connected or automation browsers separately; first extension pairing requires the user's Allow. Viewing is not takeover, closing a preview is not stop, and continuation starts with a fresh observation. [Operation and annotations (Chinese)](computer-use.md). Old 0.10 users should keep using the [fixed-tag instructions](https://github.com/gulagala001/oh-my-dsh/blob/v0.2.1-alpha.1.omd.0.10.0/docs/usage.md#computer-use).
 
 ### Platforms and Requirements
 
-| Component | Requirement and this round's limit |
-| --- | --- |
-| Files, tasks, context, themes | Independent of native desktop control, running with a matching host. |
-| Browser | Separate work profile; load the Chrome extension when prompted and reload it after updates. |
-| macOS desktop / window sharing | macOS 14+, Accessibility and Screen Recording. Old public packages compile locally and require Apple Command Line Tools. |
-| Windows desktop | Targets common single-screen workflows on Windows 10 2004+. Old public builds require .NET 10 SDK. No Windows hardware acceptance was performed this round. |
-| Linux | General and browser features; no native Linux desktop control in this version. |
-
-The **latest local reconstruction** uses a pinned official prebuilt browser runtime and supplies prebuilt native components in complete platform packages, so normal installation does not compile. Missing matching components require the complete package; source compilation is an explicit development mode. This is included in GitHub main, but not in public `0.10.0` and does not remove SDK requirements from old packages.
-
-<details>
-<summary>Browser controls, downloads, search, and device preview</summary>
-
-Switching tabs changes only what you view. Clicking, typing, navigating, or changing styles stops and takes over. Return to the assistant's current view when needed. Open externally launches the DSH host's default browser, not a remote client's browser.
-
-The address bar provides navigation, refresh, and stop; menus include history, find, downloads, and device tools. History records pages used after this conversation connected. Search, filter, or refresh downloads; clearing records neither deletes files nor cancels downloads.
-
-Size, touch, DPR, and User Agent settings are separate. Applying them takes over; preview zoom changes only display, and screenshot capture observes without stopping control.
-
-Development builds save built-in-browser downloads as persistent attachments accessible in native and OMD-PTC conversations, after stop or restart. Repeat saves reuse the file. Extension-browser downloads remain in their original download location, with records/status synchronized.
-
-Built-in and everyday browser profiles differ. Rebind an existing original tab when possible; a new tab does not copy sessionStorage. Logout, service restart, or expired credentials may still require login.
-
-</details>
-
-<details>
-<summary>Window sharing, annotations, and styles</summary>
-
-Share window adds a screenshot and accessibility text to the draft for review; it does not acquire control. Page annotations capture a region or element with image, notes, and element information. Cancel adds nothing.
-
-Style preview pauses the assistant, temporarily changes the real page, captures the result, and restores it; it does not edit source. After source changes based on the annotation, open and check the actual page. Resume before further control.
-
-</details>
-
-<details>
-<summary>Export, WebMCP, and recovery</summary>
-
-Export MHTML or loaded images, fonts, styles, and video resources, reporting failures. Files become persistent attachments; load lazy content first. This is not a full session backup or complete streaming/Workspace-format export.
-
-Compatible Chromium 153+ can call page-published WebMCP tools; ordinary control remains when none are registered.
-
-`computer_use` defaults to a 30-second budget, configurable from 1–300000 ms. Stop remains effective. Timeout does not guarantee an action was undone; observe before continuing. Reset clears JavaScript variables, but existing tabs can be rebound to avoid duplicate submissions.
-
-</details>
+Non-CU work targets matching DSH on Windows/macOS/Linux without native desktop dependencies; this candidate remains unaccepted. Old public 0.10 prerequisites follow its release docs. This page expands no Linux desktop, Windows multi-screen, or account promise. New CU's common single-screen journeys and Windows 125%/150%/200% need separate real-device results.
 
 ## Recommended Plugins
 
-The directory shows purpose, author, source, host version, and status. Native management handles standard packages; development-injection projects follow their own instructions.
+The directory lists purpose, original author, source, full host, fixed artifact, SHA-256, and state. The current profile's native manager installs. Unknown combinations/missing artifacts/unpublished targets are not made installable. Cross-host switching is explicit/manual and preserves data. Automatic updates do not cross hosts, approve scripts, or restart. Recommendation writes and response bodies have 10-second limits; a lost receipt triggers state reading rather than endless writing or blind duplicate installation.
 
-Automatic updates default off and check only installed, enabled entries with verified releases while idle. They do not install other plugins, restart, or automatically switch host builds. Hiding the page does not uninstall anything.
+**IUI, OMAA, Subscriptions and Intent remain independent projects**, each needing a matching host build. OMD retains their entries, tools, configuration and user data rather than taking over their accounts or business features. [Compatibility](plugin-compatibility_EN.md)
 
-[![Recommended directory with purpose, versions, and installation controls](site/media/launchpad-plugins.jpg)](plugin-compatibility_EN.md)
+**DeepSeek Workbench** is bundled and enabled by default. It opens web chat/platform and imports extractable history into native conversations, retaining the original webpage; the user sends the next message. Embedded pages, persistent login and downloads require matching host bridges. [Usage (Chinese)](deepseek-workbench.md)
 
 <a id="optional-intent-component"></a>
 
-Intent understanding, Subscriptions, Intelligent UI, and OMAA are optional. Entries missing fixed artifacts or checksums remain unavailable. [Compatibility](plugin-compatibility_EN.md) · [Recommendations/adaptation (Chinese)](plugin-submissions.md).
+Intent understanding, Subscriptions, IUI, and OMAA are optional. Do not invent releases without fixed artifacts/checksums. [Recommendations/adaptation (Chinese)](plugin-submissions.md)
 
 ## Side Questions and Turn Rewind
 
-`/btw question` reuses the latest dispatched main-model request context and displays an answer while work runs, without tools. `/btw cancel` stops only the side question. After cold start, wait for the first main request. Side questions do not enter project/global Dream. [Original project](https://github.com/JasonQQ/dsh-btw-plugin).
+`/btw question` uses the latest dispatched main-request prefix while main work runs, without tools. `/btw cancel` stops only the side question. Codex subscription requests reuse the parent cache key only at adapter dispatch; guards and logs still belong to the independent child. Cache reads use provider-reported usage, undisclosed values are not zero, and server-side hits are not guaranteed. Cold start waits for a verifiable main prefix; no project/global Dream propagation. Original author: JasonQQ. Turn Rewind by Anionex has a historical alpha.1 refusal for fixed `0.3.9`; match its required host version and retain native version checks. [Authors/licenses](../THIRD_PARTY_NOTICES.md)
 
-Turn Rewind is optional. Its pinned upstream `0.3.9` is refused by alpha.1's native gate; rc.2 permits manual directory installation. Do not bypass checks. [Sources/licenses](../THIRD_PARTY_NOTICES.md).
+When Turn Rewind is installed and enabled, OMD keeps its original action, preview, and confirmation dialog. Actions match the viewed session's actual turn-opening user message, including openings classified as steering. Delayed loading, remounted rows, and in-place node updates refresh the match; later interleaved messages are not advertised as rewind points. The original dialog still offers messages-only rewind when no file checkpoint exists.
 
 ## Data and Maintenance
 
-Data uses actual `DSH_HOME`, normally the user's `.dsh` for Web, with OMD under `trisoul-x/`. Source trials default to repository `data/dsh/`. Back up profiles, credentials, conversations, attachments, and OMD data together; external projects/indexes need separate backup.
-
-Retired automatic memory is read-only. Uninstall does not delete user material; follow [upgrade guidance](upgrade_EN.md) for migration and rollback.
+Use actual `DSH_HOME` (normally user `.dsh` for Web), OMD under `trisoul-x/`, source default repository `data/dsh/`. Back up profiles, credentials, sessions, attachments, context, memory together. Dream uses `dream-v1/memory.sqlite`, monitoring `monitor-v1/usage.sqlite`; retired automatic memory stays read-only. External projects/indexes need separate backups. Disable/uninstall does not clear user data.
 
 ## Versions and Update Notices
 
-The panel separates current and remote versions, with notes, progress, errors, and restart status. Green indicates ordinary updates, red required fixes. Checking makes no model call or conversation upload; failure is not “up to date.”
-
-Choose a [complete matching pair](upgrade_EN.md#versions-and-success-criteria), then restart and inspect the current version. Plugin updates affect only OMD in this profile; update the host separately.
+Current/remote versions, progress, errors, and restart states remain separate. Green is ordinary update, red required fix. Checks make no model calls or conversation uploads; failure is not “latest.” Local `unpublished` is excluded and rejected again before install. Historical sorting/deduplication follows version rules rather than dates or old highest numbers. Upgrade the host separately.
 
 <a id="development-and-verification"></a>
 <a id="idle-preprocessing-and-image-budget"></a>
 
-See [development](development_EN.md) for builds, checks, image budgets, and source structure. Historical documentation records its own scope rather than current compatibility.
+See the [short development guide](development_EN.md) and [context/image budgets (Chinese)](context-workflow.md).

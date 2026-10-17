@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { decorateSlot } from '#opencu/src/client/slot-decoration.mjs';
+import { createPortal } from 'react-dom';
+import { decorateSlot } from './slot-decoration.mjs';
 
 const emptyStore = { subscribe: () => () => {}, getSnapshot: () => undefined };
 
@@ -29,9 +30,9 @@ export function SubscriptionFast({ ctx, sessionId, loadSpeed, setSpeed }) {
     const timer = setInterval(refresh, 3000);
     return () => { ++generation.current; clearInterval(timer); };
   }, [scope]);
-  if (!setSpeed || state?.scope !== scope || !state?.visible || selected && selected.provider !== 'codex') return null;
+  if (!setSpeed || state?.scope !== scope || !state?.visible || selected && !['codex', 'openai-codex'].includes(selected.provider)) return null;
   const enabled = state.tier === 'fast';
-  return <button type="button" aria-label="Fast 模式" aria-pressed={enabled} disabled={busy}
+  return <><button type="button" aria-label="Fast 模式" aria-pressed={enabled} disabled={busy}
     title={error || (enabled ? 'Fast 已开启 · 点击关闭' : 'Fast 已关闭 · 点亮闪电开启')}
     style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28,
       padding: 4, border: 0, borderRadius: 6, background: 'transparent', cursor: busy ? 'wait' : 'pointer',
@@ -51,7 +52,14 @@ export function SubscriptionFast({ ctx, sessionId, loadSpeed, setSpeed }) {
       }, () => { if (ticket === generation.current) { writing.current = false; setBusy(false); setError('Fast 设置未保存，请重试'); } });
     }}>
     <svg width="18" height="18" viewBox="0 0 24 24" fill={enabled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 10-12h-7l1-8Z"/></svg>
-  </button>;
+  </button>
+    {error && createPortal(<div role="alert" aria-live="assertive" aria-atomic="true"
+      style={{ position: 'fixed', top: 12, right: 12, zIndex: 1200, maxWidth: 'calc(100vw - 24px)',
+        boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8, pointerEvents: 'none',
+        border: '1px solid var(--dsw-alias-border-l3, #bbb)', background: 'var(--dsw-alias-bg-layer-2, Canvas)',
+        color: 'var(--dsw-alias-state-error-primary, #b84949)', fontSize: 14, lineHeight: '20px',
+        overflowWrap: 'anywhere', boxShadow: '0 4px 16px #0003' }}>{error}</div>, document.body)}
+  </>;
 }
 
 export function applySubscriptionFast(ctx) {

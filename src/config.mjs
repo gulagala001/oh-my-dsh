@@ -11,8 +11,15 @@ export function configSnapshot(config = {}) {
 export const Config = z.object({
   dataDir: z.string(),
   projectlessWorkspaceRoot: z.string(),
+  monitorPrices: z.array(z.object({
+    provider: z.string().pattern(/\S/).required(), model: z.string().pattern(/\S/).required(), currency: z.string().pattern(/^[A-Z]{3}$/).required(),
+    inputTokens: z.number().min(0), outputTokens: z.number().min(0), cacheReadTokens: z.number().min(0), cacheWriteTokens: z.number().min(0),
+  })).default([]),
   contextEnabled: z.boolean().default(true),
   automaticReplace: z.boolean().default(true),
+  autoCompactEnabled: z.boolean().default(false),
+  autoCompactThreshold: z.number().step(1).min(1).default(400000),
+  autoCompactMode: z.union(['detail', 'brief']).default('detail'),
   preprocessBoundaries: z.boolean().default(false),
   prepareBatchWindows: z.number().step(1).min(1).default(2),
   prepareContinueTokens: z.number().step(1).min(1).default(8000),
@@ -40,11 +47,6 @@ export const Config = z.object({
   componentAutoSetup: z.boolean().default(true),
   recommendedPluginsPageEnabled: z.boolean().default(true),
   recommendedPluginsAutoUpdate: z.boolean().default(false),
-  computerUseEnabled: z.boolean().default(true),
-  computerUseBrowserExecutable: z.string().default(''),
-  computerUseChromeUserDataDir: z.string().default(''),
-  computerUseNativeBinary: z.string().default(''),
-  computerUseNativeSocket: z.string().default(''),
   memoryScope: z.union(['full', 'project', 'session', 'global']).default('project'),
   dreamAutoEnabled: z.boolean().default(false),
   dreamIntervalMs: z.number().step(1).min(60000).default(3600000),
@@ -77,5 +79,14 @@ export function contextConfig(raw = {}) {
     const type = Config.dict[key]?.type;
     if (value === null && ['number', 'boolean'].includes(type)) throw new Error(key + ' expected ' + type + ', got null');
   }
-  return structuredClone(configSnapshot(Config(raw)));
+  const value = structuredClone(configSnapshot(Config(raw))), routes = new Set();
+  for (const price of value.monitorPrices) {
+    for (const key of ['inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens']) {
+      if (Object.hasOwn(price, key) && (typeof price[key] !== 'number' || !Number.isFinite(price[key]) || price[key] < 0)) throw new Error('单价必须是非负有限数值，未知请留空');
+    }
+    const key = JSON.stringify([price.provider, price.model]);
+    if (routes.has(key)) throw new Error('同一提供方和模型只能配置一条单价');
+    routes.add(key);
+  }
+  return value;
 }

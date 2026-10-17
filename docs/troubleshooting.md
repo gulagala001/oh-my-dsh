@@ -1,102 +1,113 @@
 # 安装与使用排障
 
-[English](troubleshooting_EN.md) · [目录](README.md) · [首次使用](getting-started.md) · [安装与升级](upgrade.md)
+[文档目录](README.md) · [首次使用](getting-started.md) · [安装与升级](upgrade.md) · [反馈 Bug](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml)
 
-保留第一次完整错误，分别核对安装版本、运行版本和数据目录。
+先找到具体症状，再沿对应步骤处理。保留第一次失败的完整错误；重复安装或删除数据通常会让定位更困难。
+
+当前发行为 `0.2.1-rc.2.omd.0.17.3`，内置 OpenCU `2.0.0`。先核对[完整版本与安装条件](install.md)，尤其是插件与 Host／Client／preload 是否配套；不要用更新“最新版本”代替定位错误。
 
 ## 先确认是否装到了正在使用的环境
 
-1. 查实际 DSH 与版本面板 **当前版本**，“最新版本”不是结果。
-2. 桌面独立 `desktop`，Web 用启动 profile，安装状态不共享。
-3. 核对 `DSH_HOME`，Web 默认用户 `.dsh`，源码默认仓库 `data/dsh/`、`trisoul-x`、3083。
-4. 桌面完整重开，Web 重启原服务，新会话选 OMD；升级再查原模型／会话／主题。
+1. **核对来源和版本。** 本项目的仓库是 `gulagala001/oh-my-dsh`，插件包名为 `trisoul_x`。宿主版本与插件版本分别查看；左上角「关于 Oh My DSH」中的“当前版本”才代表正在运行的插件，“最新版本”只是发布信息。
+2. **核对运行方式。** 桌面版在应用内安装，属于 `desktop` profile；Web 安装到启动命令使用的 profile。两者不会自动共享插件安装状态。
+3. **核对数据位置。** 沿用实际 `DSH_HOME`。Web 默认是用户目录的 `.dsh`；本仓库源码 `pnpm start` 默认是仓库下的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
+4. **完整重启后做一次操作。** 等任务结束，桌面完整退出再打开，Web 按原方式重启服务。新建会话选择 Oh My DSH，使用已配置模型发一条消息；升级用户再检查一个旧会话与原主题。没有模型凭据时，先在模型设置中添加可用渠道。
 
 <a id="package-source"></a>
 
 ### 安装来源怎么核对
 
-仓库 `gulagala001/oh-my-dsh`，包 `trisoul_x`，预设 `trisoul-x`。[公开配对](upgrade.md#目标版本与完成标准)。展示名不等于来源，不误装同名 npm 包。
+复制[首页安装命令](../README.md#quickstart)中的完整 GitHub 来源，或使用本仓库 Release 的发行包。安装页面的展示名称不等于包名；本仓库 `package.json` 的 `name` 为 `trisoul_x`，`repository.url` 指向 `gulagala001/oh-my-dsh`。
 
-GitHub alpha.2 OMD `0.16.0` 未发行，已整合 OpenCU 1.6.1 的浏览器与运行时重构，不以 `latest` 猜包或编造 alpha.2 下载链接。
+如果安装日志中的包名、仓库或宿主版本与上述配对不符，先记录实际来源与版本，核对后再继续，避免对错误的安装目标反复更新。
 
 ## 按症状处理
 
-| 症状 | 操作 | 恢复结果 |
-| --- | --- | --- |
-| pnpm 缺失／Node 太旧 | Web／源码准备对应环境，桌面用内置宿主。 | 实际入口环境正确。 |
-| 不兼容 DSH | 核对完整宿主与[配套包](upgrade.md#目标版本与完成标准)，不放宽 peer。 | 原生接受并可重启。 |
-| 需要批安装脚本 | 宿主插件页看包与入口，按规则处理后检查。 | 对应组件可用。 |
-| 没有 OMD 入口 | 查 profile、启用、重启、预设。 | 新 OMD 会话有工作台。 |
-| 当前版本仍旧 | 桌面重启应用与 Host／完整退出，Web 重启后端。 | 当前版本实际变更。 |
-| 模型／旧会话不见 | 查目录/profile，按[迁移](upgrade.md#web-to-desktop)。 | 原数据重新可见。 |
-| 历史加载失败 | 保留日志、错误、ID，按[恢复](upgrade.md#legacy-history-failure)。 | 原文附件可读，失败项记录。 |
-| 全局背景保存冲突 | 读最新版、比较合并再保存。 | 草稿保留，保存成功。 |
-| 推荐插件失败 | 查是否已装，区分网络、校验、脚本、版本。 | 状态明确，按需重启。 |
-| 浏览器／桌面组件错 | 基础组件／运行环境查该项并修复。 | 目标实际可看可操作。 |
-| Mac 看得到但不能输入 | 查辅助功能；无图查屏幕录制，重开运行时。 | 图像与输入分别可用。 |
-| 新标签要登录 | 优先重绑原标签，查浏览器配置和站点会话。 | 原标签继续或重新登录。 |
-| 下载完却无文件 | 下载记录保存文件，扩展查原下载位置。 | 可打开且内容已核对。 |
+| 现象 | 检查与恢复 |
+| --- | --- |
+| 找不到 `pnpm`，或 Node 版本不满足要求 | Web／源码按[运行要求](usage.md#本地开发或独立试用)准备 Node 和 pnpm；桌面使用内置运行时，在应用内安装插件。不要用全局 Node 升级替换桌面内置宿主。 |
+| 安装报“不兼容 DSH” | 记录宿主实际版本与目标插件版本，按[首页固定配对](../README.md#quickstart)选择真实已发布包。不要单独把一个组件改成 `latest` 或绕过宿主兼容检查。 |
+| 需要批准安装脚本 | 在 DSH「插件」页面查看具体包与原因，按宿主提供的入口处理。批准后重新检查安装结果；提示消失不等于组件已经可用。 |
+| 离线检查提示缺少 `node_modules` 或清单损坏 | 普通源码压缩包没有离线依赖。在同系统、同架构的有网机按[离线准备步骤](#offline)生成完整目录，再整体压缩、复制和解压；不要只复制插件源码或手工修改清单。 |
+| 已装好，但看不到 OMD 入口 | 检查是否安装到当前 profile、是否启用，并完整重启。新建会话选择 Oh My DSH；已有会话保留原 preset。 |
+| 已更新，但“当前版本”仍旧 | 安装到磁盘和运行中的版本可能不同。桌面完整退出应用后重开，Web 重启原服务；仅刷新页面不能替换后端。 |
+| 桌面提示服务已更新、界面版本不同 | 等任务结束，使用「重启应用与 Host」或完整退出后重开。桌面缓存启动模块信息，不以反复刷新页面替代重启。 |
+| 找不到原会话或模型配置 | 先核对 `DSH_HOME` 与 profile，参照[Web 转桌面迁移](upgrade.md#web-to-desktop)。不要在空白环境重新录入配置来掩盖目录不一致。 |
+| 旧会话显示“历史加载失败” | 按[旧会话恢复说明](upgrade.md#legacy-history-failure)保留原日志，核对修复版本及迁移诊断。不要删除记录或手动改事件序号。 |
+| 全局背景提示被其他窗口更新 | 点击“读取最新版本”比较内容，再选择保留草稿继续合并或使用最新内容；读取不会覆盖草稿，合并后需再次保存。旧版没有此入口时，先复制草稿再重新打开设置。[设置说明](usage.md#settings)。 |
+| 保存自定义路径时继续输入，结果被还原 | 当前恢复源码保留保存期间的后续输入，仍需再次保存；不是让你更新到未发行版。旧包可等待本次保存结束后再编辑。[设置边界](usage.md#settings)。 |
+| 推荐插件操作报错或曾卡在写入 | 保留具体错误并回读原生状态。当前恢复包含 POST 回执／响应体 10 秒上限，丢失回执后读取状态，不盲目重复安装。未知宿主、缺工件／SHA 或未发布目标不绕过，见[共存边界](plugin-compatibility.md)。 |
+| 更新面板没有本地 0.17 下载／更新按钮 | 0.17 `unpublished` 正应排除公开计算，安装前也拒绝；使用[真实公开固定包](../README.md#quickstart)，不要造 GitHub URL 或只改宿主版本。 |
+| Fast 不显示或保存失败 | 核对实际 Subscriptions 服务、模型 Fast 支持及 `codex`／`openai-codex` 渠道；失败保留原状态和可见提示。持久化／账号路由由独立插件负责，不凭闪电推断真实付费或提速通过。 |
+| Dream 某范围失败但其他已有结果 | 成功进度与首次来源截点保留，作业不算全部完成，修复原因后点重试续未完范围；额度、认证、取消分别处理，不清 SQLite 重新来过。[Dream](dream-memory.md)。 |
+| Chat 没出现在共享 Dream 项目 | 无工作区 Chat 的自动目录本就不属于共享项目，未入真实工作区的后代也隔离；改路径／删除目录不扩共享。归属异常保留诊断，显式回查仍可用。 |
+| 全局 Dream 没整理某个文件夹 | 核对全局作业的文件夹选择和原生 workspace 归属，空选是全部；嵌套分组不随父组误纳入，已删除目录历史仍保留。排除整理不等于撤回已有记忆。 |
+| 监控出现 `≥`、`—`、空趋势或底部不同 | `≥` 是已知下界，缺失输入／缓存／输出不是零，无回执不画零趋势；核对会话、日期、归因与真实提供方回执。上下文估算不是账单。[口径](monitoring.md)。 |
+| 冷会话上下文／范围读取失败 | 保留错误重试，不为只读查询激活 Agent 或新建账本；保存前重新确认尚未开始，不用旧读数修改锁定范围。 |
+| 相对路径到了另一目录 | 工具、证据、CodeGraph、Workflow 跟随原生当前执行目录；核对实际目录与权限，项目／Dream 身份不会自动改成该目录。 |
+| 推荐记录比已安装插件旧 | 保留当前版本与数据，核对对应宿主的固定发行；不要为匹配旧推荐记录而降级。 |
+| DeepSeek 入口存在但网页／导入不可用 | 核对当前宿主 guest / WebContents、分区及提取能力，缺少桥接时按降级提示使用外部浏览器。[说明](deepseek-workbench.md)。 |
+| 电脑操作的某个组件报错 | 在「设置 → Oh My DSH → 基础组件」查看对应组件的错误并按需准备；其他组件正常不代表该组件正常，单项失败也不代表整个插件不可用。[平台要求](usage.md#平台与运行条件)。 |
 
-最新本地完整包有预编译浏览器／原生组件，缺组件应换匹配完整包；旧公开 `0.10.0` 的编译仍需 SDK。Windows 本轮未实机，不以自动检查替代。
+## 需求理解插件安装报 `ERR_PNPM_MISSING_TARBALL_INTEGRITY`
+
+这表示包管理器缺少远程压缩包的完整性记录。OMD 0.1.7-rc.2.16 已将该插件改为先按固定 SHA-256 校验发行包，再通过原生插件管理器安装本地包；安装包保留在 OMD 数据目录的 `recommended-packages/`，供后续重装使用，备份数据时一并保留。
+
+仍使用旧版时，可从[插件 Release](https://github.com/gulagala001/omd-prompt-optimizer/releases/tag/v0.1.0)下载 `omd-prompt-optimizer-0.1.0.tgz`，对照同页的校验文件核对后，放在固定目录，通过当前 profile 的原生插件管理器安装本地包。不要关闭完整性校验或删除整个 profile。若错误指向其他已安装依赖，需单独核对该依赖的锁文件与来源。
+
+该插件原作者为[啃轮胎的西狐（WestFox-AwA）](https://github.com/WestFox-AwA/dsh-prompt-optimizer)，gulagala001 负责 OMD 适配；保留 BSD-3-Clause 许可与署名，非上游官方发行版。
 
 ## 无法启动、白屏或大量 `waiting for service`
 
-找首个 `failed to import`／启动异常，保留类型、`cause`、包路径、堆栈。
+“等待服务”通常是后续症状。优先找第一个 `failed to import` 或启动异常，保留异常类型、`cause`、包路径和堆栈，而不仅是弹窗最后几行。
 
-桌面看 Diagnostic report，可用有备份的第三方停用入口定位。Web 看原终端，能进管理器时停涉事插件再重启。源码查 checkout、依赖、构建和旧 `link:`。
+- **桌面版：** 查看错误弹窗给出的 `Diagnostic report` 路径并保留该次日志。若提供“禁用第三方插件、备份 profile patch 后重启”，可用它隔离启用配置；它不会重建依赖目录，未恢复时不要重复点击来代替诊断。
+- **Web 版：** 保留实际启动终端的第一处错误。若能打开插件管理器，先停用发生问题的插件，再按原方式重启并测试原生会话。
+- **源码版：** 核对实际 checkout、SDK、组件和生成物是否属于同一宿主。使用隔离 profile／数据／端口核验，不覆盖日常环境；公开固定版步骤仍以其 tag 为准。
 
-恢复后继续定位组合，宿主加载插件前失败时 OMD 界面也无法修。先[备份](upgrade.md#2-停止并完整备份)，不删 `.dsh` 或覆盖其他机器依赖。
-
-<details>
-<summary>`ERR_PNPM_MISSING_TARBALL_INTEGRITY`</summary>
-
-缺远程压缩包完整性信息。推荐管理器先固定校验包再原生安装；旧入口失败时从插件自己的固定 Release 下载匹配包，核对同页校验值，当前 profile 本地安装。不关闭校验，其他依赖问题单独查来源和锁。
-
-</details>
+停用后恢复只能说明与该插件或其组合有关，仍需完整错误定位。若宿主在加载插件前就失败，OMD 界面中的修复入口也无法执行。不要直接删除整个 `.dsh`，也不要把其他机器的 `node_modules` 覆盖进去；涉及重建时，先按[备份步骤](upgrade.md#2-停止并完整备份)保留实际数据及原配置。
 
 <a id="offline"></a>
 
 ## 离线搬运与本地安装
 
-发行 `.tgz` 不含全部依赖／运行时。离线目录需同系统同架构联网机准备并完整搬运；不能跨平台，也不直接打包有绝对链接的普通依赖目录。
+Release 的 `.tgz` 是插件发行包，不包含全部依赖和运行环境。离线搬运不能跨系统、跨架构使用；例如 Windows x64 应在另一台 Windows x64 电脑上准备。
 
-<details>
-<summary>准备可搬运目录</summary>
+`pnpm install` 生成的依赖包含链接结构、平台包和可能需要执行安装脚本的组件。压缩工具遗漏隐藏目录、未保留链接，或准备机与目标机系统／架构不同，都可能造成导入失败。宿主本地安装也可能仍需下载依赖。
 
-目标版本源码与其指定 pnpm，输出为源码外新目录：
+不要直接压缩默认 `pnpm install` 后的目录。Windows 依赖目录可能包含仍指向准备机绝对路径的 junction，换盘符后即使 `.pnpm` 和包目录都在，也可能无法导入。
 
-```sh
-pnpm install --frozen-lockfile
-node scripts/prepare-offline.mjs /absolute/path/to/omd-offline
-```
+### 准备可搬运的离线目录
 
-PowerShell：
+固定 0.10 包含 `scripts/prepare-offline.mjs` 和 `scripts/check-offline.mjs`。下面是该已发布版本的准备入口；新版离线搬运需在与目标同系统／架构的准备机使用匹配源码与锁，不复用旧离线 manifest。
+
+在与目标机同系统、同架构的有网机上，准备上述公开固定 0.10 源码、Node.js ≥22.19（建议 Node.js 24）与 pnpm 11.23.0。在源码根目录运行，输出目录必须是源码目录外尚不存在的新目录：
 
 ```powershell
 pnpm install --frozen-lockfile
-if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed' }
+if ($LASTEXITCODE -ne 0) { throw '安装依赖失败' }
 node scripts/prepare-offline.mjs 'C:\omd-offline'
-if ($LASTEXITCODE -ne 0) { throw 'Offline preparation failed' }
+if ($LASTEXITCODE -ne 0) { throw '离线准备失败' }
 ```
 
-脚本准备发行文件、可搬运依赖、构建和入口检查，不复制会话／凭据，失败不产完成目录。
+macOS／Linux 同样运行 `node scripts/prepare-offline.mjs /绝对路径/omd-offline`。脚本只取实际发行文件，在隔离目录重新安装无符号链接的依赖布局、构建并检查 OMD 入口、Sharp 和 CodeGraph 平台包；不会搬运准备机的配置、凭据和会话，也不会改动原安装。检查失败时不产出完成目录。
 
-1. 完整压缩含隐藏内容和 `node_modules`，解压到目标固定位置。
-2. Windows `.\check-offline.cmd`，其他平台 Node ≥22.19 跑 `node scripts/check-offline.mjs`。
-3. 桌面应用本地插件加 `link:绝对目录`，Web 匹配 CLI 加同目录。保留整目录，不用 tgz 代替离线环境。
-4. 对照 `offline-manifest.json` 宿主，完整重启，检查新会话／工具。
+1. 完整压缩输出目录（包含 `node_modules`），搬到离线机并解压到固定位置，例如 `D:\omd-offline`。不要把目录中的文件拆散，也不要覆盖 DSH 自己的 `node_modules`。
+2. Windows 离线机在解压目录运行 `check-offline.cmd`（PowerShell 中为 `.\check-offline.cmd`），使用随包运行时，无需另外安装 Node。其他系统有 Node.js ≥22.19 时运行 `node scripts/check-offline.mjs`。检查会报告失效链接、平台不匹配和完整导入异常；不需要在离线机重新安装依赖或构建。
+3. 桌面版在应用内「插件 → 安装 → 本地」填写 `link:D:\omd-offline`（按实际绝对路径替换），**链接整个目录，不安装 `.tgz` 或 `file:` 包**。目录需要保留；日后移动目录后应重新安装到新位置。沿用原 `desktop` profile，不使用 CLI 修改桌面 profile。
+4. 确认 DSH 宿主与离线目录 `offline-manifest.json` 中的 `hostVersion` 配对，完整退出 DSH 后重开，验证新会话和工具调用。Web 用户沿用实际 `DSH_HOME` 与原 profile，通过宿主 CLI 添加 `link:/解压目录绝对路径`，必要时使用 `--offline`。
 
-模型服务仍需可达，按需组件另准备。入口检查不等于目标机全部能力已验收。
+模型服务仍须可达；浏览器、Python、.NET 与桌面控制等按需组件需另外准备。
 
-</details>
+仍失败时，保留离线检查输出、准备机和目标机的系统／架构、DSH 与 OMD 版本，以及 Host／诊断日志中第一处导入异常。不能只凭包目录存在判断依赖完整，也不要删除 `.dsh`、配置或会话。
 
 ## 反馈问题时提供什么
 
-[Bug 模板](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml)：
+使用 [Bug 模板](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml)，一次提供以下信息：
 
-- 系统／架构，桌面／Web／源码，实际 DSH 与 OMD 当前版本。
-- 来源、profile、是否自定义目录，无需公开私人完整路径。
-- 最短复现、预期／实际、频率、起始版本。
-- 首个完整脱敏错误、截图、尝试方法和结果。
+- 系统与架构、桌面／Web／源码、DSH 版本和 OMD 当前版本。
+- 安装来源、profile 名称；数据目录是否自定义即可，不必公开用户名或私人路径。
+- 最短复现步骤、预期结果与实际结果；从哪个版本开始、是否每次发生。
+- 第一处完整错误及相关日志片段，必要时附截图；已经试过的恢复方法及结果。
 
-遮盖 Key、Token、私人正文，不上传整目录或凭据。未知写“未知”。
+对外提交前遮盖 API Key、登录 token、凭据和私人会话内容。不要上传整个数据目录或 `.credentials.yaml`。无法取得的信息写“未知”，不要猜测。

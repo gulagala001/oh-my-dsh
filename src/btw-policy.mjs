@@ -43,7 +43,8 @@ export function completedBtwPrefix(session, { allowEmpty = false } = {}) {
 }
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 // Compare actual request envelopes without mutating tools, persona, messages,
-// route or provider replay state. A new child sessionId is transport metadata.
+// route or provider replay state. Child lifecycle identity stays separate from
+// the adapter's provider-specific cache transport identity.
 export function assertBtwCachePrefix(parent, child) {
   if (!parent) throw Error('/btw 缺少可核对的主会话请求；请等主模型开始响应后再侧问。');
   for (const key of ['provider', 'model', 'reasoningEffort', 'temperature', 'maxTokens', 'stop', 'system', 'tools', 'toolHistory']) {

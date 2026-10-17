@@ -1,12 +1,13 @@
 import React, { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import { IconPanelLeftOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
-import { decorateSlotComponent } from '#opencu/src/client/slot-decoration.mjs';
+import { decorateSlotComponent } from '../../slot-decoration.mjs';
 
 const WIDTH_KEY = 'omd.codexDesktop.rightWidth.v1';
 const isCodex = state => state.active !== false && state.skins.find(s => s.id === state.selected)?.layout === 'codex-desktop';
 
 function Geometry({ ctx }) {
   const ref = useRef(null);
+  const entry = useSyncExternalStore(fn => ctx.slots.subscribe('root', fn), () => ctx.slots.entriesOfSlot('root')[0]);
   useLayoutEffect(() => {
     const frame = ref.current?.closest('[data-shell-overlay]')?.parentElement;
     if (!frame) return;
@@ -19,10 +20,8 @@ function Geometry({ ctx }) {
     if (right) observer.observe(right);
     sync();
 
-    // DSH 0.1.7-alpha.1 registers a shared root store factory (create returns
-    // its existing instance). Use its declared geometry actions, so the frame,
-    // right pane and native drag handle all agree on the same width.
-    const entry = ctx.slots.entries('root')[0];
+    // Only the live root winner owns geometry. The pinned host's factory
+    // returns its shared instance; covered or abdicated roots are not seats.
     const store = entry?.store?.create?.();
     let unsubscribe, previous, last;
     if (store?.getSnapshot().layoutInfo && store.actions?.setRightbar) {
@@ -48,7 +47,7 @@ function Geometry({ ctx }) {
         store.actions.setRightbar(previous ?? fallback);
       }
     };
-  }, [ctx]);
+  }, [ctx, entry]);
   return <span ref={ref} hidden/>;
 }
 

@@ -17,9 +17,4 @@
 
 [完整安装与升级指南](upgrade.md) · [上下文恢复机制](context-workflow.md) · [Dream 与旧会话](dream-memory.md)
 
-## 验证与范围
-
-- 133 项相关回归通过，覆盖长会话恢复、原生 V0／V1／V2 迁移、普通／zstd 日志、引用映射和事务恢复。
-- Fast 使用真实 SlotCore 验证注册、唯一显示、重载与卸载；本机原生 DSH 验证开关和其他渠道隐藏。
-- PR #41 的 Linux／Windows CI 及三平台离线安装通过：[运行记录](https://github.com/gulagala001/oh-my-dsh/pull/41/checks)。版本、文档和两个宿主的打包另行核对。
-- Windows issue 用户原始日志未直接实测；已使用合成日志和原生格式迁移验证对应边界。
+<a id="验证与范围"></a>

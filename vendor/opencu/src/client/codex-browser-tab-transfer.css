@@ -1,8 +1,0 @@
-.codex-cu-scope .codex-cu-detached-tab-placeholder{width:100%;height:100%;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 12px;box-sizing:border-box;user-select:none;color:var(--color-text)}
-.codex-cu-scope.tx-cu-pane-browser > .codex-cu-detached-tab-placeholder{flex:1 1 0;height:auto;overflow:auto}
-.codex-cu-scope .codex-cu-detached-tab-placeholder-content{display:flex;width:100%;max-width:var(--container-xl,36rem);flex-direction:column;align-items:center;text-align:center;gap:12px}
-.codex-cu-scope .codex-cu-detached-tab-placeholder-icon{pointer-events:none;display:flex;width:64px;height:64px;flex-shrink:0;align-items:center;justify-content:center;overflow:hidden;border-radius:24px;border:1px solid var(--color-border);background:var(--color-surface-elevated)}
-.codex-cu-scope .codex-cu-detached-tab-placeholder-text{display:flex;max-width:100%;flex-direction:column;align-items:center;gap:8px}
-.codex-cu-scope .codex-cu-detached-tab-placeholder-title{max-width:100%;overflow-wrap:anywhere;font-size:var(--text-lg);line-height:24px;font-weight:500}
-.codex-cu-scope .codex-cu-detached-tab-placeholder-description{font-size:var(--text-sm);color:var(--color-text-secondary)}
-.codex-cu-scope .codex-cu-detached-tab-placeholder-actions{display:flex;width:100%;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px}

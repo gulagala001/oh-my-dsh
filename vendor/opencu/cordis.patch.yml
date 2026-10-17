@@ -1,10 +1,3 @@
 - insert:
     - id: opencu
       name: opencu
-
-- id: ui-chat
-  disabled: true
-
-- insert:
-    - id: opencu-ui-chat
-      name: opencu/host/ui-chat
