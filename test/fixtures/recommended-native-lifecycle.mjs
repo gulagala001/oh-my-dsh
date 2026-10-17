@@ -22,7 +22,9 @@ for (const name of ['dsh-plugin-manager', 'dsh-app-boot', 'dsh-hmr']) {
 }
 assert.equal(host('@deepseek-ai/cordis/package.json').version, '4.0.5');
 const sdk = spec => import(pathToFileURL(host.resolve(spec)).href);
-const { FiberState } = await sdk('@deepseek-ai/cordis');
+// Cordis 4.0.5 declares a const enum, erased from its published JavaScript.
+// Fixed SDK 687f282e/vendor/cordis/src/fiber.ts: PENDING=0, LOADING=1, ACTIVE=2.
+const ACTIVE = 2;
 const { boot, createRuntimeResolution, initProfile, loadProfileDirectory, PluginPackages, readProfileManifest, readProfilePatches } = await sdk('@deepseek-ai/dsh-app-boot');
 const { default: PluginManager } = await sdk('@deepseek-ai/dsh-plugin-manager');
 const { default: Hmr } = await sdk('@deepseek-ai/dsh-hmr');
@@ -98,14 +100,17 @@ async function fixture(t, { enabled = true, live = true } = {}) {
   const service = createService();
   const entry = () => [...ctx.loader.entries()].find(row => row.id === 'include:addon');
   const packageVersion = () => ctx.pluginPackages.packageOf('addon-plugin', pathToFileURL(join(dir, 'node_modules', 'addon', 'package.json')).href)?.version;
+  const callerPackageVersion = () => ctx.pluginPackages.packageOf('addon-plugin', pathToFileURL(join(dir, 'caller.mjs')).href)?.version;
   const commands = () => existsSync(join(root, 'package-trace.log')) ? readFileSync(join(root, 'package-trace.log'), 'utf8').trim().split('\n') : [];
   const view = async (current = service) => (await current.status()).plugins[0];
-  return { root, dir, ctx, manager, service, createService, control, trace, entry, packageVersion, commands, view, sibling: ctx.get('nativeSibling') };
+  return { root, dir, ctx, manager, service, createService, control, trace, entry, packageVersion, callerPackageVersion, commands, view, sibling: ctx.get('nativeSibling') };
 }
 
 function assertActive(f, version) {
   assert.equal(f.ctx.get('nativeVersion'), version);
-  assert.equal(f.entry()?.fiber?.state, FiberState.ACTIVE);
+  assert.equal(f.entry()?.fiber?.state, ACTIVE);
+  assert.notEqual(f.entry()?.fiber?.uid, null);
+  assert.notEqual(f.entry()?.fiber?.uid, undefined);
   assert.equal(f.packageVersion(), `${version}.0.0`);
   assert.equal(f.ctx.get('nativeSibling'), f.sibling);
 }
@@ -172,7 +177,13 @@ test('native removal failure stops the update without pretending the old bundle 
   assert.equal(view.enabled, false);
   assert.equal(view.version, '1.0.0');
   assert.equal(f.ctx.get('nativeVersion'), undefined);
-  assert.equal(f.packageVersion(), undefined);
+  // Removal failed before deleting files: the disabled bundle retains its own private dependency.
+  assert.equal(f.packageVersion(), '1.0.0');
+  assert.equal(f.callerPackageVersion(), undefined);
+  assert.equal(f.entry()?.fiber, undefined);
+  const manifest = readProfileManifest('test', f.dir);
+  assert.equal(manifest.dependencies.addon, '1.0.0');
+  assert.equal(manifest.dsh.profile.bundles.includes('addon'), false);
   assert.deepEqual(f.commands(), ['remove']);
   assert.deepEqual(f.trace, ['start:sibling', 'start:addon:1', 'stop:addon:1']);
 });
