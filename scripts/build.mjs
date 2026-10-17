@@ -42,8 +42,8 @@ await build({
   footer: { js: 'return module.exports;}});' },
   plugins: [{ name: 'opencu-factory', setup(b) {
     b.onResolve({ filter: /^\/api\/opencu\/rea-assets\// }, args => args.kind === 'dynamic-import'
-      && args.importer.endsWith('/vendor/opencu/lib/client.factory.mjs') ? { path: args.path, external: true } : undefined);
-    b.onResolve({ filter: /^\.\// }, args => args.kind === 'dynamic-import' && args.importer.endsWith('/vendor/opencu/lib/client.factory.mjs')
+      && args.importer.replaceAll('\\', '/').endsWith('/vendor/opencu/lib/client.factory.mjs') ? { path: args.path, external: true } : undefined);
+    b.onResolve({ filter: /^\.\// }, args => args.kind === 'dynamic-import' && args.importer.replaceAll('\\', '/').endsWith('/vendor/opencu/lib/client.factory.mjs')
       ? { path: args.path, external: true } : undefined);
   } }, { name: 'inline-css', setup(b) {
     b.onLoad({ filter: /\.css$/ }, async args => ({ contents: `export default ${JSON.stringify(await readFile(args.path, 'utf8'))}`, loader: 'js' }));
