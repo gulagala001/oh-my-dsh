@@ -26,6 +26,18 @@
 }
 .trisoul-shell .wSkVaW_header { min-height: 56px; padding: 10px 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border-bottom: 1px solid var(--tx-shell-line); }
 .trisoul-shell .wSkVaW_titleRow { flex: 1 1 240px; min-width: 0; }
+/* OMD reorders tabs into the header's first flex row; some layouts also use
+   display:contents for titleRow. Reserve the host-owned window-chrome band on
+   the header itself, not on that optional box. The host changes this variable
+   for fullscreen and removes it when the sidebar opens. Never guess a traffic
+   light width or apply the macOS inset to ordinary web/Windows layouts.
+   These two geometry constraints intentionally outrank skin padding shorthands. */
+html.trisoul-shell[data-platform='darwin'] .pI_x6G_frame[data-sidebar-collapsed] .wSkVaW_header {
+  padding-inline-start: var(--dsh-frame-leading-clearance, 0px) !important;
+}
+html.trisoul-shell[data-platform='darwin'] .pI_x6G_frame[data-sidebar-collapsed] .wSkVaW_titleRow {
+  padding-inline-start: 0 !important;
+}
 .trisoul-shell .wSkVaW_headerUtilities { margin-left: 10px; gap: 5px; }
 .trisoul-shell .wSkVaW_tabs { order: -1; flex: 0 0 auto; align-items: center; margin: 0; gap: 2px; padding: 2px; border-radius: 8px; background: var(--tx-shell-hover); }
 .trisoul-shell .wSkVaW_tab { padding: 5px 10px; border-radius: 6px; font-size: 12px; line-height: 18px; font-weight: 400; }
