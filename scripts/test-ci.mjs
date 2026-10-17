@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 
 // A few known regressions only; no host installation, browser or build matrix.
 const core = [
-  'start', 'monitor-partial', 'workflow-budget',
+  'start', 'monitor-partial', 'workflow-budget', 'task-budget-persistence',
   'file-upload-compat', 'context-original-search-boundary', 'background-owner-reload',
 ].map(name => `test/${name}.test.mjs`);
 core.push('plugins/deepseek-workbench/test/ui-adapter.test.mjs');
