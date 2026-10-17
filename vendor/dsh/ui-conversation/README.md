@@ -192,3 +192,5 @@ None; Conversation assembly and browser input state do not alter provider-side p
 None.
 
 </details>
+
+Unsent composer text, reference chips, and attachment IDs survive Session navigation within the current browser document. InputHub transfers only draft data between Session scopes; editors, command claims, and pending admissions retain their original lifetime. Deleting a Session or unloading the plugin releases inactive attachments. This browser-only retention does not persist image files across a page reload.

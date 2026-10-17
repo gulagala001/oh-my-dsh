@@ -5,7 +5,6 @@ const hostTargets = {
   '0.2.0-rc.2': { cordisVersion: '4.0.4', schemaVersion: '3.18.4' },
   '0.2.1-alpha.3': { cordisVersion: '4.0.5-alpha.2', schemaVersion: '3.18.5-alpha.2' },
   '0.2.1-rc.1': { cordisVersion: '4.0.5', schemaVersion: '3.18.5' },
-  '0.2.1-rc.2': { cordisVersion: '4.0.5', schemaVersion: '3.18.5' },
 };
 
 if (!process.argv[2]) throw new Error('Usage: node desktop/apply-host.mjs /absolute/owned/dsh-source');
@@ -13,7 +12,7 @@ const root = await realpath(resolve(process.argv[2]));
 if (root.includes('.app/') || root.endsWith('.app') || root.includes('/oh-my-dsh/.cache/dsh-source/')) throw new Error('Workbench requires an independent owned source copy');
 const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 const target = hostTargets[manifest.version];
-if (!target) throw new Error('Unsupported Workbench host');
+if (!target || !['0.2.0-rc.2', '0.2.1-alpha.3', '0.2.1-rc.1'].includes(manifest.version)) throw new Error('Unsupported Workbench host');
 for (const [name, version] of [['cordis', target.cordisVersion], ['schemastery', target.schemaVersion]]) {
   if (JSON.parse(await readFile(join(root, 'vendor', name, 'package.json'), 'utf8')).version !== version) throw new Error(`Workbench framework mismatch: ${name}`);
 }

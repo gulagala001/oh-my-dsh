@@ -1,17 +1,17 @@
 {
-  "version": "0.2.1-rc.2",
-  "commit": "687f282e8625c6b8d11ff58211a90524be2e4317",
+  "version": "0.2.1-rc.1",
+  "commit": "1600d8a1e140dcde43a1a0941940a0480712c011",
   "cordis": "4.0.5",
   "schema": "3.18.5",
   "electron": "44.7.0",
   "peers": {
     "@deepseek-ai/cordis": "4.0.5",
-    "@deepseek-ai/dsh-tools": "0.2.1-rc.2",
-    "@deepseek-ai/dsh-attachment": "0.2.1-rc.2",
-    "@deepseek-ai/dsh-scope": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.1",
+    "@deepseek-ai/dsh-attachment": "0.2.1-rc.1",
+    "@deepseek-ai/dsh-scope": "0.2.1-rc.1",
     "@deepseek-ai/schemastery": "3.18.5"
   },
-  "sdk": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-sdk-021rc2",
-  "lock": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-sdk-021rc2/pnpm-lock.yaml",
+  "sdk": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-sdk-rc1",
+  "lock": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-sdk-rc1/pnpm-lock.yaml",
   "frontendLock": "/Users/mac/Projects/omd/opencu/.local/frontend-deps/pnpm-lock.yaml"
 }

@@ -1877,7 +1877,7 @@
   {
     "file": "dotnet.native.wasm",
     "sha256": "70b9c2d8695ac1dd05369917e3b8640e359d9b8bc8321ce9a6ce91035c20429f",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/dotnet.native.g0qvcu2x9f.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/dotnet.native.g0qvcu2x9f.wasm"
   },
   {
     "file": "dotnet.runtime.8ha609180a.js",
@@ -1887,158 +1887,158 @@
   {
     "file": "dotnet.native.g0qvcu2x9f.wasm",
     "sha256": "70b9c2d8695ac1dd05369917e3b8640e359d9b8bc8321ce9a6ce91035c20429f",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/dotnet.native.g0qvcu2x9f.wasm",
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/dotnet.native.g0qvcu2x9f.wasm",
     "asset": "dotnet.native.wasm"
   },
   {
     "file": "System.Private.CoreLib.ekcb3829hn.wasm",
     "sha256": "5e778593250d423845027af88d490a65c5706a486ad286077eee0c8988815624",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Private.CoreLib.ekcb3829hn.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Private.CoreLib.ekcb3829hn.wasm"
   },
   {
     "file": "System.Runtime.InteropServices.JavaScript.p5jxanpmp7.wasm",
     "sha256": "3df5e33ffe320214338cce2e3f51e0ae8fa65c82670fae5ef3680810bf6e8348",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Runtime.InteropServices.JavaScript.p5jxanpmp7.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Runtime.InteropServices.JavaScript.p5jxanpmp7.wasm"
   },
   {
     "file": "DocumentFormat.OpenXml.Framework.vsp3g6rq8c.wasm",
     "sha256": "a142923ef94ffd9bb96258117d0c8bf11c002ed58a9d2b1c3c63c6116308339f",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/DocumentFormat.OpenXml.Framework.vsp3g6rq8c.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/DocumentFormat.OpenXml.Framework.vsp3g6rq8c.wasm"
   },
   {
     "file": "DocumentFormat.OpenXml.mwa9472424.wasm",
     "sha256": "8a402f13db99ae59b41eb815c5f6d56c6e4e142c9bb723fb9f9d11c6db96c4f7",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/DocumentFormat.OpenXml.mwa9472424.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/DocumentFormat.OpenXml.mwa9472424.wasm"
   },
   {
     "file": "Google.Protobuf.ze35jf5cfr.wasm",
     "sha256": "8b7f1bac2252626a6c5041b79f7e2e12e0c57cbc64ae5102ab8c0838c9690626",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/Google.Protobuf.ze35jf5cfr.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/Google.Protobuf.ze35jf5cfr.wasm"
   },
   {
     "file": "System.Collections.Concurrent.fv1xo90b4e.wasm",
     "sha256": "bb2337e4ebd785ab2e7943ee7b00ccb8b3717b96c7e6d56fd74ed3d32cd04bec",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Collections.Concurrent.fv1xo90b4e.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Collections.Concurrent.fv1xo90b4e.wasm"
   },
   {
     "file": "System.Collections.NonGeneric.fizn4w82qi.wasm",
     "sha256": "871743255f218b596618fd990e5c52cc4005418a0b9800d85af77547e318afa4",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Collections.NonGeneric.fizn4w82qi.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Collections.NonGeneric.fizn4w82qi.wasm"
   },
   {
     "file": "System.Collections.Specialized.35mqs569zd.wasm",
     "sha256": "699d78075c23a03be5afc5da7f202612a6abf471986c6ef13789d02e926f9452",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Collections.Specialized.35mqs569zd.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Collections.Specialized.35mqs569zd.wasm"
   },
   {
     "file": "System.Collections.my3pqh5qks.wasm",
     "sha256": "b2118d09c9227939f709ee1055df2bd0ffe2aaea5ce9d6ad317018daf3e40a74",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Collections.my3pqh5qks.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Collections.my3pqh5qks.wasm"
   },
   {
     "file": "System.ComponentModel.Primitives.1lm1rqemqq.wasm",
     "sha256": "952b98a68dcb0d8479bfbada3ce275d4a6e677038db3c0c5168e7864af94b805",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.ComponentModel.Primitives.1lm1rqemqq.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.ComponentModel.Primitives.1lm1rqemqq.wasm"
   },
   {
     "file": "System.ComponentModel.TypeConverter.hmoum3qawf.wasm",
     "sha256": "d745e44ca06d952ad0bca904d6e53fcacf7587a339242c49c134b619ee27bb5c",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.ComponentModel.TypeConverter.hmoum3qawf.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.ComponentModel.TypeConverter.hmoum3qawf.wasm"
   },
   {
     "file": "System.ComponentModel.fb6b35yifs.wasm",
     "sha256": "455436e971c5bd41f2de5062ea7a2abb6b9a80870b11986750705a6d2164697a",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.ComponentModel.fb6b35yifs.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.ComponentModel.fb6b35yifs.wasm"
   },
   {
     "file": "System.Console.iaekx381qv.wasm",
     "sha256": "a60d570d2c385723b2d5de9234089ffccd737f70b29a56aa0ab2d97f368fc4e4",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Console.iaekx381qv.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Console.iaekx381qv.wasm"
   },
   {
     "file": "System.Diagnostics.DiagnosticSource.wu8o7idmiu.wasm",
     "sha256": "287e24f3284a152ee1bc95c6e47945e50caa55e65e32b99a0625f4c1e4f6f3be",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Diagnostics.DiagnosticSource.wu8o7idmiu.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Diagnostics.DiagnosticSource.wu8o7idmiu.wasm"
   },
   {
     "file": "System.IO.Compression.ous27n6au3.wasm",
     "sha256": "70fef27a52200aa091f2fd618593ed6dce520669290ffacaabb3a65d45af7525",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.IO.Compression.ous27n6au3.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.IO.Compression.ous27n6au3.wasm"
   },
   {
     "file": "System.IO.Packaging.ejb20qp7p2.wasm",
     "sha256": "1661fcb91c792edaf888898aaef9fc285842d2a67ceb7a25644917a07af0d409",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.IO.Packaging.ejb20qp7p2.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.IO.Packaging.ejb20qp7p2.wasm"
   },
   {
     "file": "System.Linq.Expressions.j0t0463l0v.wasm",
     "sha256": "1da1d43a16c80c18a4a8a7a97899e3ed6ddb73a6ffefb68e201b3f7368f9ec6d",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Linq.Expressions.j0t0463l0v.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Linq.Expressions.j0t0463l0v.wasm"
   },
   {
     "file": "System.Linq.5qhwogj18r.wasm",
     "sha256": "bde958c19d89870835a4125ff7f419ead7cc5575321d0068da00b24ff11dd5b1",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Linq.5qhwogj18r.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Linq.5qhwogj18r.wasm"
   },
   {
     "file": "System.Memory.a6jd6cfkb1.wasm",
     "sha256": "5208f175aeff537039b4a10d2bbe21373aa72140b984dc93ccd8456eccf61edb",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Memory.a6jd6cfkb1.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Memory.a6jd6cfkb1.wasm"
   },
   {
     "file": "System.Net.Http.fro10fs6zt.wasm",
     "sha256": "9b0fb399392156cd058ce5718f603ab859a141991974be32477097fe98ef0e5f",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Net.Http.fro10fs6zt.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Net.Http.fro10fs6zt.wasm"
   },
   {
     "file": "System.Net.Primitives.ndnk2jp0p4.wasm",
     "sha256": "a54ef248e2ddfcb4991c7b196ee6b33a8c2bd06775309c9f339b1b0f50879777",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Net.Primitives.ndnk2jp0p4.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Net.Primitives.ndnk2jp0p4.wasm"
   },
   {
     "file": "System.ObjectModel.wvdbpj86i9.wasm",
     "sha256": "0c005780e883b9dc7eb96c81bda4586e2e6f743dc1674dae826cf2acb284bf44",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.ObjectModel.wvdbpj86i9.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.ObjectModel.wvdbpj86i9.wasm"
   },
   {
     "file": "System.Private.Uri.f5ncrldlzr.wasm",
     "sha256": "337f3a3b2cdbd3b078c57cb412550707e495896924a1667ef81db618ca7c8c7e",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Private.Uri.f5ncrldlzr.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Private.Uri.f5ncrldlzr.wasm"
   },
   {
     "file": "System.Private.Xml.Linq.djg9mjqiyi.wasm",
     "sha256": "072289bb81b822ecdb952458462e05c3bf15c1591a5593b31cc815e863a1e762",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Private.Xml.Linq.djg9mjqiyi.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Private.Xml.Linq.djg9mjqiyi.wasm"
   },
   {
     "file": "System.Private.Xml.fmldu235uf.wasm",
     "sha256": "b7443e8a0f38a8652eecb99809e1908002f9fe8db7f5b2fe16b40fab184ea72c",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Private.Xml.fmldu235uf.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Private.Xml.fmldu235uf.wasm"
   },
   {
     "file": "System.Security.Cryptography.cqaarzu8pm.wasm",
     "sha256": "2c64e971d01174bbf39b732fe4aa82cf96499fcfce087157bf40e6c681e2272b",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Security.Cryptography.cqaarzu8pm.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Security.Cryptography.cqaarzu8pm.wasm"
   },
   {
     "file": "System.Text.RegularExpressions.uamgjk8gvb.wasm",
     "sha256": "1ae81017a32f2a4bbef6ec99eb1e2c69112ef6d33c7d4c1a00363ded0e302695",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Text.RegularExpressions.uamgjk8gvb.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Text.RegularExpressions.uamgjk8gvb.wasm"
   },
   {
     "file": "System.p0vf5aoex5.wasm",
     "sha256": "3728b499c0e20abaecdf900beef8c116c9ebe743d59a565cd18193097834875f",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.p0vf5aoex5.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.p0vf5aoex5.wasm"
   },
   {
     "file": "System.Xml.Linq.f94siaol93.wasm",
     "sha256": "937ef5ff8a2252bd5c88167090f6f864fb7f760322a270b21df422f54521180a",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Xml.Linq.f94siaol93.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/System.Xml.Linq.f94siaol93.wasm"
   },
   {
     "file": "Walnut.936yqw70jc.wasm",
     "sha256": "559df3fe9e2195ed406fc3ed96538bd758bee939a84704d28958459629cd992e",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/Walnut.936yqw70jc.wasm"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/Walnut.936yqw70jc.wasm"
   },
   {
     "file": "walnut-presentation-decoder.worker-5c0722bcd9d6.js",
@@ -2363,11 +2363,11 @@
   {
     "file": "pdf.worker.min-46513d3652c6.mjs",
     "sha256": "90b49a1bf7b6c4d689d7d7bc0a52869bb3b1bc5935a0fa0ea6413b49f85ac8de",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/pdf.worker.min-46513d3652c6.mjs"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/pdf.worker.min-46513d3652c6.mjs"
   },
   {
     "file": "shape-8f8944fcc9a5.svg",
     "sha256": "60cf23b1f9df626de0ee63c72ecb7334f9ab0e24160857a04e34784d003a1d7e",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/shape-8f8944fcc9a5.svg"
+    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-rc1/vendor/rea/assets/shape-8f8944fcc9a5.svg"
   }
 ]

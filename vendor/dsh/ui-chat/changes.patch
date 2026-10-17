@@ -330,19 +330,10 @@ index 1c2cddb6..ae21c47e 100644
    readonly running: ProcessActivity | undefined
    readonly runningDetail: string
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/README.md b/packages/client/ui-chat/src/client/conversation-nodes/README.md
-index 2efd2681..bf086d81 100644
+index 2efd2681..6253203c 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/README.md
 +++ b/packages/client/ui-chat/src/client/conversation-nodes/README.md
-@@ -96,6 +96,8 @@ Trigger titles and icons use the recorded `source.kind`: `schedule`, `tool-jobs`
- 
- The final answer is the latest Step's settled Assistant reply, provided it has visible reply content and no tool-call block. Its response remains outside whole-Turn folding; its reasoning remains process content. A Node whose [group-tree position](../contract/group-tree.ts) is `turn` or outer remains independent of whole-Turn folding. Turn inputs stand at `input` or `exchange`: user and steering messages and trigger notices; an input after the process start keeps the whole Turn open. Terminal errors, max-token notices, the completed-turn footer, and the Turn control stand at `turn`. A `process` Node, such as a model retry, separates secondary groups but whole-Turn folding still includes it.
- 
-+A dispatched `ask_user_question`, `request_user_input`, or `exit_plan_mode` call stays outside both secondary groups and whole-Turn folding while it waits for the user. A nested waiting call keeps its root row outside too. Once the call settles, the row returns to ordinary process grouping; preparing calls keep their normal preparation rows.
-+
- Loading an older page preserves the reader's group-opening choices. Newly loaded process content follows the same Turn state while the final answer is unchanged and whole-Turn folding remains eligible. If the page reveals an intervening input, individual group disclosures replace whole-Turn hiding. When the real start arrives, the duration becomes available; loading all history is not an additional folding condition. When new content only extends an existing group at its beginning, that group and its old message rows retain their identities and opening choices. Replies, steering, and other real boundaries in the new page still separate groups; not every new row joins the old group.
- 
- Clicking Load older anchors the first visible content item below that button in transcript order, regardless of its position in the viewport. A collapsed group anchors its header; an expanded group skips its header and anchors its first visible member. The whole-Turn process control is excluded because paging can move it ahead of newly loaded work and steering. When a whole Turn is collapsed, the anchor is its first remaining visible message, such as steering or the final answer. Ordinary messages and steering anchor themselves; hidden and empty rows are skipped. Loading more content inside a collapsed group keeps its header stationary; adding earlier groups or rows preserves that same group header while they appear above it.
-@@ -106,7 +108,7 @@ While the Session runs, Chat appends a Session-level indicator at the bottom of
+@@ -106,7 +106,7 @@ While the Session runs, Chat appends a Session-level indicator at the bottom of
  
  The top duration/status control and trigger title use the group-title font size and follow the font-size setting. Completed duration digits use the code font with tabular numerals; running and completed minutes and seconds have no leading zero. The timed running label ends with a space and “···”; completion shows “Completed in”.
  
@@ -351,7 +342,7 @@ index 2efd2681..bf086d81 100644
  
  -----
  
-@@ -146,7 +148,7 @@ Verbose retains its flat process rows under either timing. Failed, stopped, and
+@@ -146,7 +146,7 @@ Verbose retains its flat process rows under either timing. Failed, stopped, and
  
  ### Group-title rules
  
@@ -360,7 +351,7 @@ index 2efd2681..bf086d81 100644
  
  All three stages share the tool-name classification below. A preparing Tool node uses its category's preparation label: read files for `read`, read images for `read_image`, write files for `write`, edit files for `edit` and `apply_patch`, and update the plan for `todo_write` and goal tools. Standard mode appends available argument detail using the same readers as dispatched calls. It contributes one call and renders one non-expandable row. A named live delta can create this node; historical calls start directly from tool/call without replaying preparation.
  
-@@ -185,7 +187,7 @@ Group headers show a category icon, replace it with a down arrow on hover or key
+@@ -185,7 +185,7 @@ Group headers show a category icon, replace it with a down arrow on hover or key
  
  An open capped group follows content growth only while its own scroll position is at the bottom. Scrolling away pauses that group's following; returning to the bottom resumes it, independently of outer transcript following. Manually opening an unclosed group starts at the bottom and follows growth; manually opening a closed group starts at the top with following disabled, even when its initial content fits without scrolling. Closing the group in the data or restoring its height cap through a mode change does not reset an already-open reader's position. Browser find retains its own reveal position.
  
@@ -369,26 +360,17 @@ index 2efd2681..bf086d81 100644
  
  Switching modes retains manually opened groups and inner disclosures. It changes visibility and sizing without recreating the message rows. Detailed and Verbose do not open every individual disclosure. Only Verbose keeps the whole Turn open.
  
-@@ -329,3 +331,5 @@ The priority list is shared by every tool, not specialized per category. For exa
+@@ -329,3 +329,5 @@ The priority list is shared by every tool, not specialized per category. For exa
  | No usable field yet | Empty while arguments can grow; otherwise the tool name. |
  
  All live detail collapses whitespace, trims its ends, and is limited to 160 grapheme clusters, including a final `…` when truncated. String arguments initially supply at most 512 decoded UTF-16 units; normalization expands that prefix only when whitespace or multi-unit clusters leave too little text to determine truncation. Each truncation pass reads at most 161 clusters. A closed group's published summary clears its live category and detail while retaining category counts.
 +
 +When every tool in the last step completes, the header exposes final counts and outcome badges while the step may still be running; the later Assistant reply remains in the same group.
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md b/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md
-index e121f624..02e9f653 100644
+index e121f624..f037722a 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md
 +++ b/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md
-@@ -96,6 +96,8 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
- 
- 最终答案取最后一个 Step 中已结算的 Assistant 回复，要求有可见回复内容且没有工具调用块。最终答案的回复正文不参与整轮折叠，推理仍属于过程。[分组树位置](../contract/group-tree.ts)为 `turn` 或更外层的 Node 不参与整轮折叠。轮次输入位于 `input` 或 `exchange`：用户与 steering 消息、触发通知；过程开始后出现的输入使整个轮次保持展开。终止错误、最大 token 提示、已完成轮次页脚和整轮控件位于 `turn`。`process` 位置的 Node（如模型重试）分隔二级分组，但整轮折叠仍包含它。
- 
-+已派发的 `ask_user_question`、`request_user_input` 或 `exit_plan_mode` 在等待用户时位于二级分组和整轮折叠之外；嵌套等待中的调用也使其根工具行留在外面。调用结算后，该行恢复普通过程分组；准备中的调用保留原有准备行。
-+
- 加载更早的一页保留用户的组级开合选择。最终答案未变化且仍符合整轮折叠条件时，新加载的过程内容沿用该轮的开合状态；若新页揭示中途输入，则改用各组开合，不再整轮隐藏。真正的起点到达后才显示时长，是否已加载完全部历史不是额外折叠条件。若新内容只是接在旧组前面，旧组和旧消息行保留身份及已有展开状态。新页出现回复、steering 等真实边界时仍按规则分组，不把所有新增内容强并进旧组。
- 
- 点击加载更早时，按正文顺序锚定按钮下的第一个可见内容项，不根据它在视口中的位置选择。组收起时选组 header；展开时跳过组 header，选内部第一个可见成员。整轮过程控件不作为锚点，因为分页可能将它移到新加载的过程及 steering 前面。整轮收起时，锚定第一个仍可见的消息，例如 steering 或最终答案。普通消息与 steering 选择自身，跳过隐藏和空行。新增内容全进入收起的组时，组 header 保持原位；前面出现更早的组或节点时，仍保持该组 header 的位置，让新增内容出现在它上方。
-@@ -106,7 +108,7 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
+@@ -106,7 +106,7 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
  
  顶部用时／状态控件与唤醒标题沿用二级汇总标题字号，并跟随字号设置。已完成用时的数字使用代码等宽字体；运行和完成状态的分钟和秒数均不补前导零。含用时的运行文案末尾附加一个空格及“···”，完成后显示“已完成，用时”。
  
@@ -397,7 +379,7 @@ index e121f624..02e9f653 100644
  
  -----
  
-@@ -146,7 +148,7 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
+@@ -146,7 +146,7 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
  
  ### 组标题规则
  
@@ -406,7 +388,7 @@ index e121f624..02e9f653 100644
  
  三个阶段共用下方工具名分类。准备中的 Tool 节点使用对应类别的准备文案；`read` 为「准备读取文件」，`read_image` 为「准备读取图片」，`write` 为「准备写入文件」，`edit` 和 `apply_patch` 为「准备编辑文件」，`todo_write` 及目标工具为「准备更新计划」。标准模式通过与已派发调用相同的读器追加可用参数详情。它计为一次调用，只渲染不可展开的一行。具名实时 delta 可以创建该节点；历史调用直接从 tool/call 开始，不重现准备过程。
  
-@@ -185,7 +187,7 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
+@@ -185,7 +185,7 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
  
  已展开的限高组仅在自己的滚动位置处于底部时跟随内容增长。滚离底部暂停该组跟随，滚回底部后恢复，与外层文本记录的跟随状态独立。手动展开未关闭的组时定位到底部并跟随增长；手动展开已关闭的组时从顶部开始且不启用跟随，即使初始内容无需滚动即可容纳。数据中的组变为已关闭，或通过模式切换恢复限高时，不重置已展开组的阅读位置。浏览器查找沿用自身的展开定位。
  
@@ -415,7 +397,7 @@ index e121f624..02e9f653 100644
  
  切换模式保留手动展开的组和内部开合状态，只改变显隐与尺寸，不重建消息行。详细和完全展开都不表示自动打开每个内部控件；只有完全展开模式始终展开整轮。
  
-@@ -329,3 +331,5 @@ TurnProcess 和 TurnTail 保留工具参数 Match，作为 Turn 起始事件在
+@@ -329,3 +329,5 @@ TurnProcess 和 TurnTail 保留工具参数 Match，作为 Turn 起始事件在
  | 暂无可用字段 | 参数仍可增长时留空，否则使用工具名。 |
  
  所有实时详情都合并空白、去除首尾空白，并限制为 160 个字素簇；截断时末尾的 `…` 计入上限。字符串参数起初最多提供 512 个已解码 UTF-16 单元；只有空白或包含多个单元的字素簇使文本不足以判定截断时，规范化才扩大该前缀。每次截断遍历最多读取 161 个字素簇。已结束组发布的摘要清空实时类别和详情，保留类别次数。
@@ -471,36 +453,6 @@ index 20156944..abe8a534 100644
      && left.counts.length === right.counts.length && left.counts.every((value, index) =>
      value.kind === right.counts[index]?.kind && value.count === right.counts[index].count)
  }
-diff --git a/packages/client/ui-chat/src/client/conversation-nodes/tool.ts b/packages/client/ui-chat/src/client/conversation-nodes/tool.ts
-index 02525390..5a32201f 100644
---- a/packages/client/ui-chat/src/client/conversation-nodes/tool.ts
-+++ b/packages/client/ui-chat/src/client/conversation-nodes/tool.ts
-@@ -270,6 +270,12 @@ function sameReferences<T>(left: readonly T[], right: readonly T[]): boolean {
-   return left.length === right.length && left.every((value, index) => value === right[index])
- }
- 
-+function awaitingAnswer(block: ToolCallBlock): boolean {
-+  if (!('kind' in block) && block.phase === 'start'
-+    && ['ask_user_question', 'request_user_input', 'exit_plan_mode'].includes(block.name)) return true
-+  return block.subCalls.some(awaitingAnswer)
-+}
-+
- function interruption(context: ConversationNodeContext<ToolState>): { seq: number; time: number } | undefined {
-   const location = context.start?.location
-   if (location?.kind === 'step' && location.step.status === 'closed') return location.step.end
-@@ -346,9 +352,10 @@ export const toolDefinition: ConversationNodeDefinition<ToolState> = {
-     const visibility = preparing && interruptedAt !== undefined ? 'hidden' : 'visible'
-     const location = contextLocation(context)
-     const data = current?.data.root === projected ? current.data : { root: projected } satisfies ToolChatData
-+    const groupTree = awaitingAnswer(projected) ? 'turn' : undefined
-     if (current?.data === data && current.anchorSeq === anchor
--      && current.visibility === visibility && current.location === location) return current
--    return chatNode(context, 'tool-call', anchor, data, { visibility, location })
-+      && current.visibility === visibility && current.location === location && current.groupTree === groupTree) return current
-+    return chatNode(context, 'tool-call', anchor, data, { visibility, location, groupTree })
-   },
- }
- 
 diff --git a/packages/client/ui-chat/src/client/locale.ts b/packages/client/ui-chat/src/client/locale.ts
 index 48cfcc8e..84157988 100644
 --- a/packages/client/ui-chat/src/client/locale.ts
@@ -539,3 +491,160 @@ index 48cfcc8e..84157988 100644
    'message.stepProcess.done.thinking': 'Analysis completed',
    'message.stepProcess.done.read': 'Read files',
    'message.stepProcess.done.readImage': 'Read images',
+diff --git a/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx b/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx
+index 29ad9a4e..251cbb72 100644
+--- a/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx
++++ b/packages/client/ui-chat/tests/reasoning-row.client.spec.tsx
+@@ -39,7 +39,7 @@ describe('AssistantMarkdown reasoning blocks', () => {
+     expect(view.getAllByRole('button')).toHaveLength(1)
+     expect(view.container.querySelectorAll('[data-variant="think"]')).toHaveLength(1)
+     fireEvent.click(view.getByRole('button'))
+-    expect(calls).toHaveBeenCalledWith('conversation.chat.reasoning.body', { text, running: false })
++    expect(calls).toHaveBeenCalledWith('conversation.chat.reasoning.body', { text: texts.join('\n\n'), running: streaming })
+     expect(view.getByText('Visible reasoning').tagName).toBe('STRONG')
+     expect(blocks.map(block => block.text)).toEqual(texts)
+   })
+@@ -55,45 +55,30 @@ describe('AssistantMarkdown reasoning blocks', () => {
+     expect(view.getAllByRole('button')).toHaveLength(1)
+   })
+ 
+-  it('retains an expanded earlier row when a blank streaming tail receives text', () => {
++  it('retains one expanded disclosure when an adjacent blank streaming tail receives text', () => {
+     const first = { kind: 'reasoning' as const, text: 'First thought\n\nEarlier body' }
+     const blank = { kind: 'reasoning' as const, text: ' \t\r\n' }
+     const view = render(<AssistantMarkdown {...props} blocks={[first, blank, blank]} streaming />)
+-    const earlierToggle = view.getByRole('button')
+-    const earlierRow = earlierToggle.closest('[data-variant="think"]')
+-    expect(earlierRow?.getAttribute('data-state')).toBe('ok')
+-    expect(view.queryByText('运行中')).toBeNull()
+-    fireEvent.click(earlierToggle)
+-    const earlierBody = view.getByText('Earlier body')
++    const toggle = view.getByRole('button')
++    const row = toggle.closest('[data-variant="think"]')
++    expect(row?.getAttribute('data-state')).toBe('running')
++    fireEvent.click(toggle)
++    expect(view.getByText('Earlier body')).toBeTruthy()
+ 
+     const tail = { kind: 'reasoning' as const, text: 'An unfinished tail' }
+     const blocks = [first, blank, tail]
+     view.rerender(<AssistantMarkdown {...props} blocks={blocks} streaming />)
+-    const toggles = view.getAllByRole('button')
+-    expect(toggles).toHaveLength(2)
+-    expect(toggles[0]).toBe(earlierToggle)
+-    expect(view.getByText('Earlier body')).toBe(earlierBody)
+-    expect(earlierToggle.getAttribute('aria-expanded')).toBe('true')
+-    expect(earlierRow?.getAttribute('data-state')).toBe('ok')
+-    const tailToggle = toggles[1]!
+-    const tailRow = tailToggle.closest('[data-variant="think"]')
+-    expect(tailRow?.getAttribute('data-state')).toBe('running')
+-    expect(view.queryByText(tail.text)).toBeNull()
+-    fireEvent.click(tailToggle)
++    expect(view.getAllByRole('button')).toHaveLength(1)
++    expect(view.getByRole('button')).toBe(toggle)
++    expect(toggle.getAttribute('aria-expanded')).toBe('true')
++    expect(view.getByText('Earlier body')).toBeTruthy()
+     expect(view.getByText(tail.text)).toBeTruthy()
+-    expect(earlierToggle.getAttribute('aria-expanded')).toBe('true')
++    expect(row?.getAttribute('data-state')).toBe('running')
+ 
+     view.rerender(<AssistantMarkdown {...props} blocks={blocks} streaming={false} />)
+-    const settledToggles = view.getAllByRole('button')
+-    expect(settledToggles).toHaveLength(2)
+-    expect(settledToggles[0]).toBe(earlierToggle)
+-    expect(settledToggles[1]).toBe(tailToggle)
+-    expect(view.getByText('Earlier body')).toBe(earlierBody)
+-    expect(tailRow?.getAttribute('data-state')).toBe('ok')
+-    expect(tailToggle.getAttribute('aria-expanded')).toBe('true')
+-    fireEvent.click(tailToggle)
+-    expect(earlierToggle.getAttribute('aria-expanded')).toBe('true')
+-    expect(tailToggle.getAttribute('aria-expanded')).toBe('false')
++    expect(view.getByRole('button')).toBe(toggle)
++    expect(row?.getAttribute('data-state')).toBe('ok')
++    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+   })
+ 
+   it.each(['Partial thought', '', ' \t\r\n'])('retains the stopped marker with blank reasoning around %j', (text) => {
+@@ -133,6 +118,51 @@ describe('AssistantMarkdown reasoning blocks', () => {
+   })
+ })
+ 
++describe('consecutive reasoning fragments', () => {
++  const parts = ['First fragment\n', 'Second fragment\n', 'Third fragment\n', 'Fourth fragment\n']
++  const reasoning = parts.map(text => ({ kind: 'reasoning' as const, text }))
++  const tool = { kind: 'tool-call' as const, callId: 'call-1', name: 'read', argsRaw: '{}' }
++  const props = { renderSlot, useGroupAction: useSearchableHidden, useDisclosure, usePresentation: useDetailedPresentation, t, loadImage: unusedImageLoader }
++
++  it('keeps one open disclosure while fragments stream, settle, and replay', () => {
++    const view = render(<AssistantMarkdown {...props} blocks={reasoning.slice(0, 1)} streaming />)
++    const toggle = view.getByRole('button')
++    fireEvent.click(toggle)
++    for (let count = 2; count <= reasoning.length; count++) {
++      view.rerender(<AssistantMarkdown {...props} blocks={reasoning.slice(0, count)} streaming />)
++      expect(view.getAllByText('思考')).toHaveLength(1)
++      expect(view.getByRole('button')).toBe(toggle)
++      expect(toggle.getAttribute('aria-expanded')).toBe('true')
++      expect(view.container.querySelector('[data-variant="think"]')?.getAttribute('data-state')).toBe('running')
++      expect(view.container.querySelectorAll('[data-markdown-variant="compact"] p')).toHaveLength(count)
++    }
++    view.rerender(<AssistantMarkdown {...props} blocks={[...reasoning, tool]} streaming />)
++    expect(view.queryByText('运行中')).toBeNull()
++    view.rerender(<AssistantMarkdown {...props} blocks={[...reasoning, tool]} streaming={false} />)
++    expect(view.getByRole('button')).toBe(toggle)
++    expect(toggle.getAttribute('aria-expanded')).toBe('true')
++    expect(Array.from(view.container.querySelectorAll('[data-markdown-variant="compact"] p'), p => p.textContent))
++      .toEqual(parts.map(text => text.trim()))
++    view.unmount()
++
++    const replay = render(<AssistantMarkdown {...props} blocks={[...reasoning, tool]} streaming={false} />)
++    expect(replay.getAllByText('思考')).toHaveLength(1)
++    expect(replay.getByRole('button').getAttribute('aria-expanded')).toBe('false')
++    fireEvent.click(replay.getByRole('button'))
++    expect(Array.from(replay.container.querySelectorAll('[data-markdown-variant="compact"] p'), p => p.textContent))
++      .toEqual(parts.map(text => text.trim()))
++  })
++
++  it('keeps runs separated by prose or a tool call even in the reasoning-only view', () => {
++    const view = render(<AssistantMarkdown {...props} groupPart="reasoning" streaming={false}
++      blocks={[...reasoning, { kind: 'text', text: 'Progress update' }, ...reasoning, tool, ...reasoning]} />)
++    expect(view.getAllByText('思考')).toHaveLength(3)
++    expect(view.queryByText('Progress update')).toBeNull()
++    for (const toggle of view.getAllByRole('button')) fireEvent.click(toggle)
++    expect(view.container.querySelectorAll('[data-markdown-variant="compact"] p')).toHaveLength(12)
++  })
++})
++
+ describe('ReasoningRow', () => {
+   it('offers only text and streaming state to the standard Body Slot after expansion', () => {
+     const calls = vi.fn()
+@@ -151,7 +181,7 @@ describe('ReasoningRow', () => {
+ 
+   it.each([
+     ['', ''],
+-    ['An unfinished line', ''],
++    ['An unfinished line', 'An unfinished line'],
+     ['A completed first line\nUnfinished continuation', 'A completed first line'],
+     ['First\nSecond\nThird\n', 'First'],
+     ['First\n\nNext unfinished', 'First'],
+@@ -202,7 +232,7 @@ describe('ReasoningRow', () => {
+     expect(view.getByRole('button')).toBe(toggle)
+   })
+ 
+-  it('keeps a running preview enabled in Compact and hides it on settlement without removing it', () => {
++  it('hides the settled preview in Compact without discarding its text', () => {
+     const mode = createSnapshotStore<TranscriptViewMode>('compact')
+     const usePresentation = bindSnapshotSelector(derivePresentationPolicy(mode, createSnapshotStore<CollapseTiming>('completion')))
+     const props = { text: 'First line\n', usePresentation, t }
+@@ -215,6 +245,13 @@ describe('ReasoningRow', () => {
+     expect(view.getByText('First line')).toBe(summary)
+   })
+ 
++  it.each([false, true])('previews content after leading blank lines, running=%s', (running) => {
++    const view = render(<ReasoningRow renderSlot={renderSlot} useDisclosure={useDisclosure} usePresentation={useDetailedPresentation}
++      t={t} text={'\n  \n**Inspect the workspace**\nDetails'} running={running} />)
++    expect(view.container.querySelector('[data-variant="think"]')?.hasAttribute('data-preview')).toBe(true)
++    expect(view.container.querySelector('[class*="summaryText"]')?.textContent).toBe('Inspect the workspace')
++  })
++
+   it.each([
+     { kind: 'text' as const, text: 'Answer' },
+     { kind: 'tool-call' as const, callId: 'call-1', name: 'read', argsRaw: '{}' },

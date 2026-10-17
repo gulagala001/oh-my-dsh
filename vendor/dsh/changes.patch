@@ -29,6 +29,16 @@ index 90b26c19..445c032a 100644
          return styleInjectionModule(id, fileId, code.toString())
        },
      }, {
+diff --git a/packages/client/ui-conversation/README.md b/packages/client/ui-conversation/README.md
+index 1a0cb88b..5cb0a917 100644
+--- a/packages/client/ui-conversation/README.md
++++ b/packages/client/ui-conversation/README.md
+@@ -192,3 +192,5 @@ None; Conversation assembly and browser input state do not alter provider-side p
+ None.
+ 
+ </details>
++
++Unsent composer text, reference chips, and attachment IDs survive Session navigation within the current browser document. InputHub transfers only draft data between Session scopes; editors, command claims, and pending admissions retain their original lifetime. Deleting a Session or unloading the plugin releases inactive attachments. This browser-only retention does not persist image files across a page reload.
 diff --git a/packages/client/ui-conversation/src/client/apply.ts b/packages/client/ui-conversation/src/client/apply.ts
 index e567bd1a..ff3f9ec0 100644
 --- a/packages/client/ui-conversation/src/client/apply.ts
@@ -620,6 +630,291 @@ index ef957965..feb4d6cd 100644
        : t('input.send')
    const onPrimary = (): void => {
      if (primaryStops) {
+diff --git a/packages/client/ui-conversation/src/client/skeleton/background-wait.ts b/packages/client/ui-conversation/src/client/skeleton/background-wait.ts
+new file mode 100644
+index 00000000..35956926
+--- /dev/null
++++ b/packages/client/ui-conversation/src/client/skeleton/background-wait.ts
+@@ -0,0 +1,36 @@
++/** Observe the active top-level wait; never reinterpret an explicitly queued message. */
++import { useEffect, useState } from 'react'
++export function useBackgroundWait(sessionId: string | undefined, running: boolean): boolean {
++  const [observed, setObserved] = useState<{ id: string; waiting: boolean } | null>(null)
++  useEffect(() => {
++    setObserved(null)
++    if (!sessionId || !running) return
++    const id = sessionId
++    let active = true, generation = 0
++    let timer: ReturnType<typeof setTimeout> | undefined
++    let controller: AbortController | undefined
++    const visible = (): boolean => document.visibilityState !== 'hidden'
++    const poll = async (): Promise<void> => {
++      if (!active || !visible()) return
++      const ticket = ++generation, own = controller = new AbortController()
++      const timeout = setTimeout(() => own.abort(), 5000)
++      try {
++        const response = await fetch(new URL(`trisoul-x/api/background-wait?session=${encodeURIComponent(id)}`, document.baseURI), { signal: own.signal })
++        if (!response.ok) throw new Error(`HTTP ${response.status}`)
++        const value: unknown = await response.json()
++        if (active && ticket === generation) setObserved({ id, waiting: typeof value === 'object' && value !== null && 'waiting' in value && value.waiting === true })
++      } catch (error) {
++        // Missing/disconnected OMD never changes the host's saved input preference.
++        if (active && ticket === generation) setObserved(null)
++      } finally {
++        clearTimeout(timeout)
++        if (active && ticket === generation && visible()) timer = setTimeout(() => { void poll() }, 500)
++      }
++    }
++    const visibility = (): void => { generation++; clearTimeout(timer); controller?.abort(); if (visible()) void poll() }
++    document.addEventListener('visibilitychange', visibility)
++    void poll()
++    return () => { active = false; generation++; clearTimeout(timer); controller?.abort(); document.removeEventListener('visibilitychange', visibility) }
++  }, [sessionId, running])
++  return running && observed?.id === sessionId && observed?.waiting === true
++}
+diff --git a/packages/client/ui-conversation/tests/input-reference-submit.client.spec.ts b/packages/client/ui-conversation/tests/input-reference-submit.client.spec.ts
+index 9ca7bdb0..15a5a4a1 100644
+--- a/packages/client/ui-conversation/tests/input-reference-submit.client.spec.ts
++++ b/packages/client/ui-conversation/tests/input-reference-submit.client.spec.ts
+@@ -5,6 +5,9 @@
+  */
+ import { describe, expect, it, vi } from 'vitest'
+ import type { Context } from '@deepseek-ai/cordis'
++import type { SessionBinding } from '@deepseek-ai/dsh-api-session-controller/client'
++import type { SessionId } from '@deepseek-ai/dsh-session/types'
++import { InputHub } from '../src/client/input/hub.ts'
+ import type { InputTriggerController, SubmitOutcome, PickOutcome } from '../src/client/contract/input.ts'
+ import { SessionInputShell } from '../src/client/input/facade.ts'
+ import type { DraftAttachmentId } from '../src/client/contract/input.ts'
+@@ -33,6 +36,107 @@ function chip(shell: SessionInputShell): void {
+ }
+ 
+ describe('reference submission', () => {
++  it('restores an unsent command chip and its references across Session scopes', async () => {
++    const submit = vi.fn(async (): Promise<SubmitOutcome> => ({ kind: 'success' }))
++    const claim = { name: 'slow', token: '/slow ', attachments: true, submit }
++    const inputTriggers: InputTriggerController = {
++      launcher: { getSnapshot: () => null, subscribe: () => () => {} },
++      lexicon: { getSnapshot: () => new Map(), subscribe: () => () => {} },
++      track: () => {}, arbitrate: () => 'pass', onSpace: () => false,
++      serializeReference: async (_source, reference) => reference,
++      openReference: () => false, toggleSource: () => {},
++      adjudicate: () => Promise.resolve(undefined),
++      resolveClaim: () => Promise.resolve(claim),
++    }
++    const deps = { actx: {} as Context, inputTriggers: () => inputTriggers, defaultSink: vi.fn(), commandAttachments }
++    const first = new SessionInputShell(deps)
++    const restored = new SessionInputShell(deps)
++    try {
++      chip(first)
++      first.beginCommand(claim, { start: 0, end: 0, draftRev: first.snapshot.draftRev })
++      first.actions.addAttachments(['retained-image' as DraftAttachmentId])
++      const saved = first.captureDraft()
++      expect(saved.command).toEqual({ token: '/slow ' })
++      restored.restoreDraft(saved)
++      await vi.waitFor(() => { expect(restored.snapshot.phase).toBe('claimed') })
++      expect(restored.draftSnapshot).toEqual(first.draftSnapshot)
++      expect(restored.captureDraft()).toMatchObject({ command: saved.command, attachmentIds: saved.attachmentIds,
++        occurrences: [{ ref: mention, source: 'reference' }] })
++      expect(submit).not.toHaveBeenCalled()
++    } finally {
++      first.dispose()
++      restored.dispose()
++    }
++  })
++
++  it('does not cache or persist a command already handed to the Host, but restores an active rejection', async () => {
++    let settle!: (result: SubmitOutcome) => void
++    const submit = vi.fn(() => new Promise<SubmitOutcome>(resolve => { settle = resolve }))
++    const mirror = vi.fn()
++    const shell = new SessionInputShell({ actx: {} as Context, defaultSink: vi.fn(), commandAttachments })
++    shell.bindDraftPersistence(draft => { mirror(draft.text) })
++    shell.setDraft('keep')
++    shell.beginCommand({ name: 'slow', token: '/slow ', attachments: true, submit }, { start: 0, end: 0, draftRev: shell.snapshot.draftRev })
++    shell.actions.addAttachments(['command-image' as DraftAttachmentId])
++    shell.submit()
++    // Before serialization/dispatch, navigation can still retain the unsent command.
++    expect(shell.captureDraft().draft).toBe('/slow keep')
++    await vi.waitFor(() => { expect(submit).toHaveBeenCalledTimes(1) })
++    expect(shell.captureDraft()).toEqual({ draft: '', occurrences: [], attachmentIds: [] })
++    expect(mirror).toHaveBeenLastCalledWith('')
++    settle({ kind: 'error', text: 'retry' })
++    await vi.waitFor(() => { expect(shell.snapshot.phase).toBe('claimed') })
++    expect(shell.captureDraft().draft).toBe('/slow keep')
++    expect(mirror).toHaveBeenLastCalledWith('/slow keep')
++    shell.submit()
++    await vi.waitFor(() => { expect(submit).toHaveBeenCalledTimes(2) })
++    const saved = shell.captureDraft()
++    expect(shell.dispose()).toEqual(['command-image'])
++    settle({ kind: 'success' }); await Promise.resolve()
++    expect(saved).toEqual({ draft: '', occurrences: [], attachmentIds: [] })
++    expect(mirror).toHaveBeenLastCalledWith('')
++  })
++
++  it('notifies admission separately from editor clearing and contains observer failures', async () => {
++    const sink = vi.fn<() => Promise<SubmitOutcome>>()
++      .mockResolvedValueOnce({ kind: 'error', text: 'offline' })
++      .mockResolvedValue({ kind: 'success' })
++    const shell = new SessionInputShell({ actx: {} as Context, defaultSink: sink, commandAttachments })
++    const events: object[] = []
++    shell.onSubmission(() => { throw Error('observer failed') })
++    const unsubscribe = shell.onSubmission(event => { events.push({ ...event, currentDraft: shell.snapshot.draft }) })
++    shell.setDraft('retain original versions')
++    shell.submit()
++    expect(events).toEqual([{ kind: 'pending', id: 1, draft: 'retain original versions', currentDraft: 'retain original versions' }])
++    expect(shell.snapshot.draft).toBe('')
++    await vi.waitFor(() => { expect(events).toHaveLength(2) })
++    expect(events[1]).toEqual({ kind: 'error', id: 1, restored: true, text: 'offline', currentDraft: 'retain original versions' })
++    shell.submit()
++    await vi.waitFor(() => { expect(events).toHaveLength(4) })
++    expect(events[3]).toEqual({ kind: 'success', id: 2, currentDraft: '' })
++    unsubscribe()
++    shell.setDraft('not observed'); shell.submit()
++    expect(events).toHaveLength(4)
++    shell.dispose()
++  })
++
++  it('distinguishes a failed admission beside newer typing and drops late results after disposal', async () => {
++    let settle!: (outcome: SubmitOutcome) => void
++    const shell = new SessionInputShell({ actx: {} as Context,
++      defaultSink: () => new Promise<SubmitOutcome>(resolve => { settle = resolve }), commandAttachments })
++    const events: object[] = []
++    shell.onSubmission(event => { events.push(event) })
++    shell.setDraft('first'); shell.submit(); shell.setDraft('newer draft')
++    settle({ kind: 'error' })
++    await vi.waitFor(() => { expect(events).toHaveLength(2) })
++    expect(events[1]).toEqual({ kind: 'error', id: 1, restored: false })
++    expect(shell.snapshot.draft).toBe('newer draft')
++    shell.submit(); shell.dispose(); settle({ kind: 'error' })
++    await Promise.resolve()
++    expect(events).toHaveLength(3)
++    shell.onSubmission(() => { throw Error('must not register after disposal') })()
++  })
++
+   it('mirrors canonical reference text so a persisted draft remains resolvable after remount', async () => {
+     const mirror = vi.fn()
+     const first = new SessionInputShell({
+@@ -402,3 +506,84 @@ it('retains occurrence time and Session facts across arbitration and independent
+     clock.mockRestore()
+   }
+ })
++
++describe('inactive session draft ownership', () => {
++  function hubBench() {
++    const roots: Array<() => void> = []
++    const removals: Array<(id: SessionId) => void> = []
++    const release = vi.fn()
++    const children = new Set<string>()
++    const services = {
++      sessions: { sessionOf: () => undefined, subagentAddress: (id: string) => children.has(id) ? { parentSessionId: 'parent' } : undefined,
++        list: { getSnapshot: () => ({ byId: {} }) } },
++      conversation: { releaseDraftAttachment: release },
++      remote: { $on: (_name: string, listener: (id: SessionId) => void) => {
++        removals.push(listener)
++        return () => { removals.splice(removals.indexOf(listener), 1) }
++      } },
++    }
++    const root = {
++      get: (name: keyof typeof services) => services[name],
++      effect: (run: () => () => void) => { roots.push(run()) },
++      remote: services.remote,
++    } as unknown as Context
++    const hub = new InputHub(root, (() => '') as never)
++    const mount = (id: string) => {
++      const disposers: Array<() => void> = []
++      let removed = false
++      const binding = {
++        ctx: { effect: (run: () => () => void) => { disposers.push(run()) }, on: () => () => {}, inject: () => {} },
++        session: { sessionId: id, getSnapshot: () => ({ removed }),
++          projections: { faceOf: () => ({ getSnapshot: () => undefined, subscribe: () => () => {} }) } },
++      } as unknown as SessionBinding
++      return { shell: hub.shellFor(binding), unmount: () => { for (const dispose of disposers) dispose() },
++        remove: () => { removed = true } }
++    }
++    return { mount, release, children, remove: (id: string) => { for (const listener of removals) listener(id as SessionId) },
++      close: () => { for (const dispose of roots) dispose() } }
++  }
++
++  it('transfers unsent references and images across scopes, isolates sessions, and releases parked drafts on removal', () => {
++    const b = hubBench(), imageId = 'retained-image' as DraftAttachmentId
++    const first = b.mount('A'); chip(first.shell); first.shell.actions.addAttachments([imageId])
++    const expected = first.shell.snapshot.draft
++    first.unmount()
++    expect(b.release).not.toHaveBeenCalled()
++    const other = b.mount('B'); other.shell.setDraft('independent'); other.unmount()
++    const restored = b.mount('A')
++    expect(restored.shell.snapshot.draft).toBe(expected)
++    expect(restored.shell.captureDraft().occurrences).toMatchObject([{ source: 'reference', ref: mention }])
++    expect(restored.shell.snapshot.attachmentIds).toEqual([imageId])
++    restored.unmount(); b.remove('A')
++    expect(b.release).toHaveBeenCalledExactlyOnceWith(imageId)
++    const deleted = b.mount('A')
++    expect(deleted.shell.snapshot.draft).toBe('')
++    expect(deleted.shell.snapshot.attachmentIds).toEqual([])
++    deleted.unmount()
++    const independent = b.mount('B')
++    expect(independent.shell.snapshot.draft).toBe('independent')
++    independent.unmount(); b.close()
++  })
++
++  it('releases both parked and active attachments during teardown and never saves a removed session', () => {
++    const b = hubBench()
++    const parked = b.mount('A'); parked.shell.actions.addAttachments(['parked' as DraftAttachmentId]); parked.unmount()
++    const removed = b.mount('B'); removed.shell.actions.addAttachments(['removed' as DraftAttachmentId]); removed.remove(); removed.unmount()
++    expect(b.release).toHaveBeenCalledWith('removed')
++    const active = b.mount('C'); active.shell.actions.addAttachments(['active' as DraftAttachmentId])
++    b.close(); active.unmount()
++    expect(b.release.mock.calls.map(([id]) => id).sort()).toEqual(['active', 'parked', 'removed'])
++  })
++
++  it('keeps a durable child draft when its running Agent is released', () => {
++    const b = hubBench(); b.children.add('child')
++    const child = b.mount('child'); chip(child.shell); child.shell.actions.addAttachments(['child-image' as DraftAttachmentId]); child.unmount()
++    b.remove('child')
++    expect(b.release).not.toHaveBeenCalled()
++    const restored = b.mount('child')
++    expect(restored.shell.captureDraft().occurrences).toHaveLength(1)
++    expect(restored.shell.snapshot.attachmentIds).toEqual(['child-image'])
++    restored.unmount(); b.close()
++    expect(b.release).toHaveBeenCalledExactlyOnceWith('child-image')
++  })
++})
+diff --git a/packages/client/ui-conversation/tests/service-orchestration.client.spec.ts b/packages/client/ui-conversation/tests/service-orchestration.client.spec.ts
+index d784e37b..bf420a1f 100644
+--- a/packages/client/ui-conversation/tests/service-orchestration.client.spec.ts
++++ b/packages/client/ui-conversation/tests/service-orchestration.client.spec.ts
+@@ -117,7 +117,7 @@ describe('ConversationController', () => {
+     await b.runtime.dispose()
+   })
+ 
+-  it('releases draft previews when their session scope is disposed', async () => {
++  it('retains unsent draft previews across session scope disposal and releases them on plugin teardown', async () => {
+     const b = await bench()
+     const created = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:draft-1')
+     const revoked = vi.spyOn(URL, 'revokeObjectURL').mockReturnValue(undefined)
+@@ -129,6 +129,9 @@ describe('ConversationController', () => {
+       b.root.input.for(b.runtime.sessions.scope('s1')!).addAttachments([attachment.id])
+       b.reference.release()
+       await b.runtime.flush()
++      expect(b.root.resolveDraftAttachments([attachment.id])).toEqual([attachment])
++      expect(revoked).not.toHaveBeenCalledWith('blob:draft-1')
++      await b.runtime.dispose()
+       expect(b.root.resolveDraftAttachments([attachment.id])).toEqual([])
+       expect(revoked).toHaveBeenCalledWith('blob:draft-1')
+     } finally {
+diff --git a/packages/jobs/jobs-local/README.md b/packages/jobs/jobs-local/README.md
+index 3f0f80d2..19305529 100644
+--- a/packages/jobs/jobs-local/README.md
++++ b/packages/jobs/jobs-local/README.md
+@@ -56,6 +56,8 @@ The limit counts the exact owner's `running` and `stopping` records; all unowned
+ 
+ Jobs belong to their owner and backend, not to the producer tool, so producer or controller reloads do not stop them. When an agent that owns jobs is disposed, its jobs are cancelled, their producers awaited, and their snapshots removed; service disposal does the same for every remaining job. A cancellation that throws during teardown force-fails the record and warns that the work may be orphaned, so teardown never deadlocks.
+ 
++Waiting does not cancel the job or consume its output. A bounded wait returns the current job view on timeout and rejects with the caller's exact abort reason on cancellation.
++
+ ### Session timing records
+ 
+ Owned jobs record registration and settlement in their original Session, independently of model output collection. SDK consumers receive the same events through `session.event`; the [jobs reference](../../../docs/subsystems/jobs.md#session-lifecycle-records) defines identities, timestamps, and producer settlement reports. Events already persisted remain available after process exit; live jobs and output rings are not resumed.
 diff --git a/packages/jobs/jobs-local/src/index.ts b/packages/jobs/jobs-local/src/index.ts
 index daa4ce0d..a2109361 100644
 --- a/packages/jobs/jobs-local/src/index.ts
@@ -1180,6 +1475,19 @@ index 5d08a541..30e885d7 100644
            const spec = ctx.shell.resolve({ ...request, onExpiry: 'none' })
            let attached: StartedJob | undefined
            try {
+diff --git a/packages/workflow/tool-workflow/package.json b/packages/workflow/tool-workflow/package.json
+index 69547ceb..6da3f27f 100644
+--- a/packages/workflow/tool-workflow/package.json
++++ b/packages/workflow/tool-workflow/package.json
+@@ -60,6 +60,7 @@
+     "@deepseek-ai/dsh-tool-jobs": "workspace:*",
+     "@deepseek-ai/dsh-tools": "workspace:*",
+     "@deepseek-ai/dsh-workflow": "workspace:*",
+-    "@deepseek-ai/dsh-workflow-ptc": "workspace:*"
++    "@deepseek-ai/dsh-workflow-ptc": "workspace:*",
++    "@deepseek-ai/dsh-app-boot": "workspace:*"
+   }
+ }
 diff --git a/packages/workflow/tool-workflow/src/index.ts b/packages/workflow/tool-workflow/src/index.ts
 index 66fda2da..17c078b8 100644
 --- a/packages/workflow/tool-workflow/src/index.ts
@@ -1578,6 +1886,332 @@ index c1844049..2b016965 100644
    readonly stopReason: WorkflowStopReason
  }
  
+diff --git a/packages/workflow/tool-workflow/tests/tool-workflow.spec.ts b/packages/workflow/tool-workflow/tests/tool-workflow.spec.ts
+index 7375e521..e0b8a401 100644
+--- a/packages/workflow/tool-workflow/tests/tool-workflow.spec.ts
++++ b/packages/workflow/tool-workflow/tests/tool-workflow.spec.ts
+@@ -19,6 +19,7 @@ import LocalJobRegistry from '@deepseek-ai/dsh-jobs-local'
+ import * as ToolTasks from '@deepseek-ai/dsh-tool-jobs'
+ import SubagentRuntime from '@deepseek-ai/dsh-subagent'
+ import PtcWorkflowEngine from '@deepseek-ai/dsh-workflow-ptc'
++import type { PtcWorkflowRun } from '@deepseek-ai/dsh-workflow-ptc'
+ import { mountWorkflowRuntime } from '../../workflow-ptc/tests/setup.ts'
+ import * as toolWorkflow from '../src/index.ts'
+ import type {} from '../src/types.ts'
+@@ -37,6 +38,7 @@ class StubEngine extends WorkflowEngine {
+   settle!: (result: WorkflowResult) => void
+   readonly settlements = new Map<WorkflowRunIdType, (result: WorkflowResult) => void>()
+   startError: Error | undefined
++  metadata: Partial<Pick<PtcWorkflowRun, 'scriptPath' | 'transcriptDir' | 'worktrees' | 'childFailures'>> = {}
+ 
+   start(request: WorkflowStartRequest): WorkflowRun {
+     if (this.startError) throw this.startError
+@@ -50,6 +52,7 @@ class StubEngine extends WorkflowEngine {
+     return {
+       id,
+       meta: request.meta,
++      ...this.metadata,
+       result,
+       cancel: (reason?: string) => {
+         this.cancels.push(reason ?? 'cancelled')
+@@ -142,7 +145,10 @@ describe('dsh-tool-workflow', () => {
+     const result = await pending
+     expect(result.isError).toBe(false)
+     if (result.isError) throw new Error('expected workflow success')
+-    expect(result.value).toEqual({ kind: 'foreground', runId: 'run-1', agentsStarted: 7, result: { findings: [1, 2] } })
++    expect(result.value).toEqual({
++      kind: 'foreground', runId: 'run-1', name: 'audit', scriptPath: '', transcriptDir: '', worktrees: [], failures: [],
++      agentsStarted: 7, result: { findings: [1, 2] },
++    })
+     const rendered = (result.content[0] as { text: string }).text
+     expect(rendered).toContain('workflow "audit" completed (7 agents)')
+     expect(rendered).toContain('"findings"')
+@@ -176,10 +182,37 @@ describe('dsh-tool-workflow', () => {
+         runId: 'run-1', seq: 1, label: '', phase: '', childId: 'child-1',
+       }],
+       ['tool-workflow/agent-end', { runId: 'run-1', seq: 1, outcome: 'completed' }],
+-      ['tool-workflow/run-end', { runId: 'run-1', stopReason: 'completed' }],
++      ['tool-workflow/run-end', { runId: 'run-1', stopReason: 'completed', failures: [] }],
+     ])
+   })
+ 
++  it('preserves engine-owned paths, worktrees and child failures in the result, record and partial-result rendering', async () => {
++    const { ctx, engine, parent, session } = await setup()
++    const worktree = { path: '/owned/worktree', cwd: '/owned/worktree/sub', repository: '/owned/project', base: 'base-commit', retained: true, reason: 'modified files' }
++    const failure = { seq: 1, childId: 'failed-child', stopReason: 'error', reason: 'child failed', cause: 'failed' as const, reasonData: { kind: 'error', message: 'child failed' } }
++    engine.metadata = { scriptPath: '/owned/audit.js', transcriptDir: '/owned/transcript/run-1', worktrees: [worktree], childFailures: [failure] }
++    const pending = execute(ctx, { script: SCRIPT, meta: META }, { agent: parent })
++    await vi.waitFor(() => { expect(engine.requests).toHaveLength(1) })
++    engine.settle({ value: [null], stopReason: 'completed', agentsStarted: 1 })
++    const result = await pending
++    expect(result.isError).toBe(false)
++    if (result.isError) throw new Error('expected a completed script with explicit child failures')
++    expect(result.value).toEqual({
++      kind: 'foreground', runId: 'run-1', name: 'audit', scriptPath: '/owned/audit.js', transcriptDir: '/owned/transcript/run-1',
++      worktrees: [worktree], failures: [failure], agentsStarted: 1, result: [null],
++    })
++    const lines = (result.content[0] as { text: string }).text.split('\n')
++    expect(lines[0]).toBe('workflow "audit" script completed with partial failure (1 agent).')
++    expect(lines.filter(line => line.startsWith('Agent #'))).toEqual(['Agent #1 (failed-child): failed; error; child failed'])
++    expect(lines.filter(line => /^(Run ID:|Script:|Journal:|Worktrees:)/.test(line))).toEqual([
++      'Run ID: run-1', 'Script: /owned/audit.js', 'Journal: /owned/transcript/run-1/journal.jsonl', 'Worktrees: ' + JSON.stringify([worktree]),
++    ])
++    expect(session.snapshotEvents().filter(event => event.type === 'tool-workflow/run-end').map(event => event.data)).toEqual([
++      { runId: 'run-1', stopReason: 'completed', failures: [failure] },
++    ])
++    expect(engine.disposed).toBe(1)
++  })
++
+   it('writes run-end only after run disposal reaches quiescence', async () => {
+     const { ctx, engine, parent, session } = await setup()
+     const barrier = Promise.withResolvers<undefined>()
+@@ -218,8 +251,8 @@ describe('dsh-tool-workflow', () => {
+       .toHaveLength(1)
+     expect(session.snapshotEvents().filter(event => event.type === 'tool-workflow/run-end').map(event => event.data))
+       .toEqual([
+-        { runId: 'run-1', stopReason: 'completed' },
+-        { runId: 'run-2', stopReason: 'error' },
++        { runId: 'run-1', stopReason: 'completed', failures: [] },
++        { runId: 'run-2', stopReason: 'error', failures: [] },
+       ])
+   })
+ 
+@@ -304,6 +337,20 @@ describe('dsh-tool-workflow', () => {
+     expect(engine.disposed).toBe(1)
+   })
+ 
++  it('does not return a successful foreground value when run disposal fails', async () => {
++    const { ctx, engine, parent, session } = await setup()
++    engine.disposeError = new Error('foreground cleanup exploded')
++    const pending = execute(ctx, { script: SCRIPT, meta: META }, { agent: parent })
++    await vi.waitFor(() => { expect(engine.requests).toHaveLength(1) })
++    engine.settle({ value: 'must not publish', stopReason: 'completed', agentsStarted: 0 })
++    const result = await pending
++    expect(result.isError).toBe(true)
++    expect(result.error?.message).toBe('foreground cleanup exploded')
++    expect(result.value).toBeUndefined()
++    expect(engine.disposed).toBe(1)
++    expect(session.snapshotEvents().map(event => event.type)).toEqual(['tool-workflow/run-start'])
++  })
++
+   it('reports a cancelled run distinctly (with and without a reason)', async () => {
+     const { ctx, engine, parent } = await setup()
+     const pending = execute(ctx, { script: SCRIPT, meta: META }, { agent: parent })
+@@ -311,12 +358,16 @@ describe('dsh-tool-workflow', () => {
+     engine.settle({ value: null, stopReason: 'cancelled', error: 'user', agentsStarted: 0 })
+     const result = await pending
+     expect(result.isError).toBe(true)
++    expect(result.error?.message).toBe('workflow run was cancelled (user)\nRun ID: run-1')
+     expect((result.content[0] as { text: string }).text).toContain('workflow run was cancelled (user)')
+ 
+     const bare = execute(ctx, { script: SCRIPT, meta: META }, { agent: parent })
+     await vi.waitFor(() => { expect(engine.requests.length).toBe(2) })
+     engine.settle({ value: null, stopReason: 'cancelled', agentsStarted: 0 })
+-    expect(((await bare).content[0] as { text: string }).text.trim().endsWith('cancelled')).toBe(true)
++    const bareResult = await bare
++    expect(bareResult.isError).toBe(true)
++    expect(bareResult.error?.message).toBe('workflow run was cancelled\nRun ID: run-2')
++    expect(engine.disposed).toBe(2)
+   })
+ 
+   it('an error result without a message renders the unknown-error fallback', async () => {
+@@ -355,11 +406,20 @@ describe('dsh-tool-workflow', () => {
+     expect(engine.requests.length).toBe(0)
+   })
+ 
+-  it('validates its own arguments via the schema DSL (missing script)', async () => {
+-    const { ctx, parent } = await setup()
++  it('rejects an absent source before starting a base engine without saved-workflow loading', async () => {
++    const { ctx, engine, parent } = await setup()
+     const result = await execute(ctx, {}, { agent: parent })
+     expect(result.isError).toBe(true)
++    expect(result.error?.message).toBe('This workflow engine requires an inline script and meta; saved workflow loading is unavailable')
++    expect(engine.requests).toEqual([])
++  })
++
++  it('validates a supplied script type through the schema DSL before starting the engine', async () => {
++    const { ctx, engine, parent } = await setup()
++    const result = await execute(ctx, { script: 1, meta: META }, { agent: parent })
++    expect(result.isError).toBe(true)
+     expect(result.error?.info?.code).toBe('INVALID_ARGS')
++    expect(engine.requests).toEqual([])
+   })
+ 
+   it('skips workflow startup when exec.signal is already aborted', async () => {
+@@ -384,7 +444,10 @@ describe('dsh-tool-workflow', () => {
+     engine.settle({ value: { blob: 'x'.repeat(500) }, stopReason: 'completed', agentsStarted: 1 })
+     const result = await pending
+     if (result.isError) throw new Error('expected workflow success')
+-    expect(result.value).toEqual({ kind: 'foreground', runId: 'run-1', agentsStarted: 1, result: { blob: 'x'.repeat(500) } })
++    expect(result.value).toEqual({
++      kind: 'foreground', runId: 'run-1', name: 'audit', scriptPath: '', transcriptDir: '', worktrees: [], failures: [],
++      agentsStarted: 1, result: { blob: 'x'.repeat(500) },
++    })
+     const rendered = (result.content[0] as { text: string }).text
+     expect(rendered).toContain('[truncated:')
+     expect(rendered.length).toBeLessThan(400)
+@@ -425,11 +488,12 @@ describe('dsh-tool-workflow', () => {
+     const { ctx } = await setup()
+     const tool = ctx.tools.get('workflow')!
+     expect(tool.presentResult!({ script: SCRIPT, meta: META }, { content: [], isError: false })).toEqual({ card: 'generic' })
+-    // defineTool soft-validates presentation args: a malformed logged shape
+-    // (wrong fields entirely, or a call missing its meta) falls back to
+-    // undefined instead of throwing mid-replay.
+-    expect(tool.presentCall!({ not: 'the schema' })).toBeUndefined()
+-    expect(tool.presentCall!({ script: SCRIPT })).toBeUndefined()
++    // Source selectors and inline metadata are optional until preparation;
++    // replay cards identify available input without inventing a run or title.
++    expect(tool.presentCall!({ not: 'the schema' })).toEqual({ card: 'generic', title: 'workflow: script', rawInput: '' })
++    expect(tool.presentCall!({ script: SCRIPT })).toEqual({ card: 'generic', title: 'workflow: script', rawInput: SCRIPT })
++    expect(tool.presentCall!({ name: 'saved-audit' })).toEqual({ card: 'generic', title: 'workflow: saved-audit', rawInput: 'saved-audit' })
++    expect(tool.presentCall!({ scriptPath: '/owned/audit.js' })).toEqual({ card: 'generic', title: 'workflow: /owned/audit.js', rawInput: '/owned/audit.js' })
+   })
+ 
+   it('has the namespace-plugin export shape (no stray default)', () => {
+@@ -476,7 +540,9 @@ describe('dsh-tool-workflow', () => {
+       expect(result.isError).toBe(false)
+       if (result.isError) throw new Error('expected background acceptance')
+       const jobId = (result.value as { jobId: string }).jobId as JobId
+-      expect(result.value).toEqual({ kind: 'background', jobId, runId: 'run-1' })
++      expect(result.value).toEqual({
++        kind: 'background', jobId, runId: 'run-1', name: 'audit', scriptPath: '', transcriptDir: '', worktrees: [],
++      })
+       expect((result.content[0] as { text: string }).text)
+         .toContain(`workflow "audit" started in the background as job ${jobId}`)
+       // The engine run carries no tool-step signal: the job owns cancellation.
+@@ -534,7 +600,7 @@ describe('dsh-tool-workflow', () => {
+       expect(jobs.kill(jobId, parent.id, 'operator stop')).toBe('requested')
+       expect(engine.cancels).toEqual(['operator stop'])
+       await vi.waitFor(() => { expect(jobs.get(jobId, parent.id).status).toBe('killed') })
+-      expect(jobs.get(jobId, parent.id).detail).toBe('operator stop')
++      expect(jobs.get(jobId, parent.id).detail).toBe('Run ID: run-1; operator stop')
+       expect(engine.disposed).toBe(1)
+ 
+       // A reasonless kill falls back to the producer's default cancel reason.
+@@ -555,7 +621,7 @@ describe('dsh-tool-workflow', () => {
+       engine.settleRun(WorkflowRunId('run-1'), { value: null, stopReason: 'error', error: 'script exploded', agentsStarted: 2 })
+       const jobs = ctx.jobs
+       await vi.waitFor(() => { expect(jobs.get(firstId, parent.id).status).toBe('failed') })
+-      expect(jobs.get(firstId, parent.id).detail).toBe('script exploded')
++      expect(jobs.get(firstId, parent.id).detail).toBe('script exploded\nRun ID: run-1')
+ 
+       // A failure without a message falls back to the unknown-error detail.
+       const second = await execute(ctx, { script: SCRIPT, meta: META, run_in_background: true }, { agent: parent })
+@@ -563,13 +629,12 @@ describe('dsh-tool-workflow', () => {
+       const secondId = (second.value as { jobId: string }).jobId as JobId
+       engine.settleRun(WorkflowRunId('run-2'), { value: null, stopReason: 'error', agentsStarted: 0 })
+       await vi.waitFor(() => { expect(jobs.get(secondId, parent.id).status).toBe('failed') })
+-      expect(jobs.get(secondId, parent.id).detail).toBe('unknown error')
++      expect(jobs.get(secondId, parent.id).detail).toBe('unknown error\nRun ID: run-2')
+     })
+ 
+-    it('a nested transport call records job lifecycle but no workflow events, and a dispose failure still settles', async () => {
++    it('a nested transport disposal failure fails the job, drains its mirror and records only job lifecycle events', async () => {
+       const { ctx, engine, parent, session } = await setupBackground()
+       engine.disposeError = new Error('worker already gone')
+-      const warn = vi.spyOn(ctx.logger, 'warn').mockImplementation(() => {})
+       const result = await execute(
+         ctx,
+         { script: SCRIPT, meta: META, run_in_background: true },
+@@ -577,15 +642,46 @@ describe('dsh-tool-workflow', () => {
+       )
+       if (result.isError) throw new Error('expected background acceptance')
+       const jobId = (result.value as { jobId: string }).jobId as JobId
++      engine.logLine(WorkflowRunId('run-1'), 'before cleanup')
+       engine.settleRun(WorkflowRunId('run-1'), { value: 'ok', stopReason: 'completed', agentsStarted: 1 })
+       const jobs = ctx.jobs
+-      await vi.waitFor(() => { expect(jobs.get(jobId, parent.id).status).toBe('completed') })
+-      expect(jobs.get(jobId, parent.id).detail).toBe('1 agent')
+-      expect(warn.mock.calls.map(args => String(args[0])).join('\n')).toContain('dispose failed')
++      await vi.waitFor(() => { expect(jobs.get(jobId, parent.id).status).toBe('failed') })
++      expect(jobs.get(jobId, parent.id).detail).toBe('Workflow cleanup failed: Error: worker already gone\nRun ID: run-1')
++      expect(jobs.get(jobId, parent.id).progress).toBeUndefined()
++      expect(jobs.read(jobId, parent.id).result).toBeUndefined()
++      expect(retained(ctx, jobId, parent)).toBe('before cleanup\n')
++      engine.logLine(WorkflowRunId('run-1'), 'late after cleanup')
++      expect(retained(ctx, jobId, parent)).toBe('before cleanup\n')
++      expect(engine.disposed).toBe(1)
+       expect(session.snapshotEvents().map(event => event.type)).toEqual(['job/registered', 'job/settled'])
+       expect(session.snapshotEvents().at(-1)?.data).toMatchObject({ producerReported: true })
+     })
+ 
++    it.each(['completed', 'error'] as const)('retains diagnostics and records a failed top-level run when cleanup fails after a %s script', async (stopReason) => {
++      const { ctx, engine, parent, session } = await setupBackground()
++      engine.disposeError = new Error('cleanup exploded')
++      const result = await execute(ctx, { script: SCRIPT, meta: META, run_in_background: true }, { agent: parent })
++      if (result.isError) throw new Error('expected background acceptance')
++      const runId = WorkflowRunId('run-1'), jobId = (result.value as { jobId: string }).jobId as JobId
++      engine.logLine(runId, 'before failed cleanup')
++      engine.settleRun(runId, {
++        value: stopReason === 'completed' ? 'must not publish' : null, stopReason, agentsStarted: 1,
++        ...stopReason === 'error' ? { error: 'script exploded' } : {},
++      })
++      await vi.waitFor(() => { expect(ctx.jobs.get(jobId, parent.id).status).toBe('failed') })
++      expect(ctx.jobs.get(jobId, parent.id).detail).toBe((stopReason === 'error' ? 'script exploded\n' : '') + 'Workflow cleanup failed: Error: cleanup exploded\nRun ID: run-1')
++      expect(ctx.jobs.get(jobId, parent.id).progress).toBeUndefined()
++      expect(ctx.jobs.read(jobId, parent.id).result).toBeUndefined()
++      expect(session.snapshotEvents().map(event => [event.type, event.data])).toEqual([
++        ['tool-workflow/run-start', { runId: 'run-1', name: 'audit' }],
++        ['tool-workflow/run-end', { runId: 'run-1', stopReason: 'error', failures: [] }],
++      ])
++      expect(retained(ctx, jobId, parent)).toBe('before failed cleanup\n')
++      engine.logLine(runId, 'late after failed cleanup')
++      expect(retained(ctx, jobId, parent)).toBe('before failed cleanup\n')
++      expect(engine.disposed).toBe(1)
++    })
++
+     it('a synchronous engine rejection registers no job', async () => {
+       const { ctx, engine, parent } = await setupBackground()
+       engine.startError = new Error('META_INVALID: name required')
+diff --git a/packages/workflow/tool-workflow/tsconfig.json b/packages/workflow/tool-workflow/tsconfig.json
+index 89be1c3d..38eaee6d 100644
+--- a/packages/workflow/tool-workflow/tsconfig.json
++++ b/packages/workflow/tool-workflow/tsconfig.json
+@@ -37,6 +37,12 @@
+     },
+     {
+       "path": "../../jobs/jobs"
++    },
++    {
++      "path": "../workflow-ptc"
++    },
++    {
++      "path": "../../boot/app-boot"
+     }
+   ]
+ }
+diff --git a/packages/workflow/workflow-ptc/package.json b/packages/workflow/workflow-ptc/package.json
+index 8e794352..64c073f9 100644
+--- a/packages/workflow/workflow-ptc/package.json
++++ b/packages/workflow/workflow-ptc/package.json
+@@ -39,12 +39,16 @@
+     "@deepseek-ai/dsh-ptc-runtime": "workspace:*",
+     "@deepseek-ai/dsh-sandbox": "workspace:*",
+     "@deepseek-ai/dsh-sandbox-policy": "workspace:*",
+-    "@deepseek-ai/dsh-working-directory": "workspace:*"
++    "@deepseek-ai/dsh-working-directory": "workspace:*",
++    "@deepseek-ai/dsh-fs": "workspace:*",
++    "@deepseek-ai/dsh-agent-preset-registry": "workspace:*",
++    "@deepseek-ai/dsh-system-prompt": "workspace:*"
+   },
+   "dependencies": {
+     "@deepseek-ai/dsh-brand": "workspace:*",
+     "@deepseek-ai/dsh-util-values": "workspace:*",
+-    "@deepseek-ai/schemastery": "workspace:~"
++    "@deepseek-ai/schemastery": "workspace:~",
++    "acorn": "8.17.0"
+   },
+   "devDependencies": {
+     "@deepseek-ai/dsh-llm-deepseek-api-key": "workspace:*",
+@@ -71,6 +75,7 @@
+     "@deepseek-ai/dsh-subprocess-local": "workspace:*",
+     "@deepseek-ai/dsh-sandbox-local": "workspace:*",
+     "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:*",
+-    "@deepseek-ai/dsh-working-directory": "workspace:*"
++    "@deepseek-ai/dsh-working-directory": "workspace:*",
++    "@deepseek-ai/dsh-agent-preset-registry": "workspace:*"
+   }
+ }
 diff --git a/packages/workflow/workflow-ptc/src/guest-source.ts b/packages/workflow/workflow-ptc/src/guest-source.ts
 index 6174a320..a2931a6c 100644
 --- a/packages/workflow/workflow-ptc/src/guest-source.ts
@@ -1984,6 +2618,32 @@ index 7a2266e7..487e9130 100644
      return result
    }
  }
+diff --git a/packages/workflow/workflow-ptc/src/hub.ts b/packages/workflow/workflow-ptc/src/hub.ts
+new file mode 100644
+index 00000000..ad9ce1c4
+--- /dev/null
++++ b/packages/workflow/workflow-ptc/src/hub.ts
+@@ -0,0 +1,20 @@
++/** Optional OMD integration boundary; native workflow execution does not require this service. */
++import type { Session } from '@deepseek-ai/dsh-session'
++
++interface WorkflowSessionState {
++  parentSession?: string
++  workflowProject?: string
++  [key: string]: unknown
++}
++
++export interface WorkflowHub {
++  workflowBudget?: {
++    attach(session: Session, owner?: { sessionId: string; poolId: string }): void
++    capture(session: Session): {
++      snapshot(): { total: number | null; spent: number; unmetered?: number }
++      owner?: { sessionId: string; poolId: string }
++    }
++  }
++  store: { dir: string; state(id: string): WorkflowSessionState; save(state: WorkflowSessionState): void }
++  scope(session: Session): { mode: string; project?: string }
++}
 diff --git a/packages/workflow/workflow-ptc/src/index.ts b/packages/workflow/workflow-ptc/src/index.ts
 index 9bd42169..6482e5a0 100644
 --- a/packages/workflow/workflow-ptc/src/index.ts
@@ -2121,6 +2781,158 @@ index 9bd42169..6482e5a0 100644
      )
  
      this.emitWorkflowEvent('workflow/start', info)
+diff --git a/packages/workflow/workflow-ptc/src/journal.ts b/packages/workflow/workflow-ptc/src/journal.ts
+new file mode 100644
+index 00000000..1b2e6b68
+--- /dev/null
++++ b/packages/workflow/workflow-ptc/src/journal.ts
+@@ -0,0 +1,146 @@
++/** Durable, start-ordered child results. A resume reuses only an unchanged prefix. */
++import { createHash } from 'node:crypto'
++import { mkdir, open, readFile, realpath } from 'node:fs/promises'
++import type { FileHandle } from 'node:fs/promises'
++import { join, resolve } from 'node:path'
++import type { SessionId } from '@deepseek-ai/dsh-session'
++import { SessionWriteLease } from '@deepseek-ai/dsh-session-persistence-jsonl/src/lease.ts'
++import type { ChildResult } from './types.ts'
++
++interface Call {
++  key: string
++  result?: ChildResult
++}
++
++function runId(value: string): string {
++  if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value)) throw new Error('Invalid workflow run id')
++  return value
++}
++
++/** Sort object keys without changing arrays, so equivalent option bags have one identity. */
++export function requestKey(value: unknown): string {
++  const canonical = (item: any): any => Array.isArray(item) ? item.map(canonical)
++    : item && typeof item === 'object' ? Object.fromEntries(Object.keys(item).sort().map(key => [key, canonical(item[key])])) : item
++  return createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex')
++}
++
++export function workflowPaths(root: string, sessionId: string, id: string): { directory: string; scriptPath: string; transcriptDir: string } {
++  const directory = resolve(root, createHash('sha256').update(sessionId).digest('hex'), runId(id))
++  return { directory, scriptPath: join(directory, 'script.js'), transcriptDir: directory }
++}
++
++/** Ignore only a torn final append; corruption of a committed line fails closed. */
++export function readJournal(text: string): Map<number, Call> {
++  const lines = text.split('\n')
++  if (lines.at(-1) !== '') lines.pop()
++  const calls = new Map<number, Call>()
++  for (const line of lines) {
++    if (!line) continue
++    const event = JSON.parse(line)
++    if (event.type === 'start') {
++      if (!Number.isSafeInteger(event.seq) || event.seq < 1 || calls.has(event.seq) || typeof event.key !== 'string') throw new Error('Invalid workflow journal start')
++      calls.set(event.seq, { key: event.key })
++    } else if (event.type === 'result') {
++      const call = calls.get(event.seq)
++      if (!call || call.result || !event.result || typeof event.result.stopReason !== 'string' || !Array.isArray(event.result.output)) throw new Error('Invalid workflow journal result')
++      call.result = event.result
++    } else if (event.type !== 'run' && event.type !== 'end') throw new Error('Unknown workflow journal event')
++  }
++  return calls
++}
++
++export class WorkflowJournal {
++  private chain: Promise<void> = Promise.resolve()
++  private next = 1
++  private prefix = true
++  private closed = false
++  private closing?: Promise<void>
++  private readonly calls = new Set<number>()
++  private readonly results = new Set<number>()
++  private constructor(
++    readonly directory: string,
++    private readonly file: FileHandle,
++    private readonly lease: SessionWriteLease,
++    private readonly sourceLease: SessionWriteLease | undefined,
++    private readonly cached: Map<number, Call>,
++  ) {}
++
++  static async create(root: string, sessionId: string, id: string, input: { script: string; meta: unknown; args?: unknown; resumeFromRunId?: string }): Promise<WorkflowJournal> {
++    const scope = join(root, createHash('sha256').update(sessionId).digest('hex'))
++    await mkdir(scope, { recursive: true, mode: 0o700 })
++    // Canonicalize before using the same path as a kernel-lock identity on Windows.
++    const canonical = await realpath(scope)
++    let sourceLease: SessionWriteLease | undefined
++    let lease: SessionWriteLease | undefined
++    let file: FileHandle | undefined
++    try {
++      let cached = new Map<number, Call>()
++      if (input.resumeFromRunId !== undefined) {
++        if (input.resumeFromRunId === id) throw new Error('A workflow cannot resume itself')
++        const source = join(canonical, runId(input.resumeFromRunId))
++        // Do not create a phantom source directory when a run belongs to another session.
++        await readFile(join(source, 'run.json'), 'utf8')
++        sourceLease = await SessionWriteLease.acquire(source, sessionId as SessionId)
++        cached = readJournal(await readFile(join(source, 'journal.jsonl'), 'utf8'))
++      }
++      const directory = join(canonical, runId(id))
++      await mkdir(directory, { mode: 0o700 })
++      lease = await SessionWriteLease.acquire(directory, sessionId as SessionId)
++      for (const [name, contents] of [['script.js', input.script], ['run.json', JSON.stringify({ version: 1, id, sessionId, ...input }) + '\n']] as const) {
++        const handle = await open(join(directory, name), 'wx', 0o600)
++        try { await handle.writeFile(contents); await handle.sync() } finally { await handle.close() }
++      }
++      file = await open(join(directory, 'journal.jsonl'), 'ax', 0o600)
++      const journal = new WorkflowJournal(directory, file, lease, sourceLease, cached)
++      await journal.append({ type: 'run', version: 1, id, sessionId })
++      return journal
++    } catch (error) {
++      await file?.close()
++      await lease?.release()
++      await sourceLease?.release()
++      throw error
++    }
++  }
++
++  private append(event: unknown): Promise<void> {
++    if (this.closed) return Promise.reject(new Error('Workflow journal is closed'))
++    const text = JSON.stringify(event) + '\n'
++    this.chain = this.chain.then(async () => { await this.file.writeFile(text); await this.file.sync() })
++    return this.chain
++  }
++
++  async start(seq: number, identity: unknown, valid: (result: ChildResult) => boolean = () => true): Promise<ChildResult | undefined> {
++    if (seq !== this.next) throw new Error('Workflow calls must be journaled in start order')
++    this.next++
++    this.calls.add(seq)
++    const key = requestKey(identity)
++    const old = this.cached.get(seq)
++    const hit = this.prefix && old?.key === key && old.result?.stopReason === 'completed' && valid(old.result)
++    if (!hit) this.prefix = false
++    await this.append({ type: 'start', seq, key, cached: hit })
++    if (!hit) return undefined
++    // A resumed run is itself a complete source for a later resume.
++    const result = structuredClone(old!.result!)
++    await this.complete(seq, result)
++    return result
++  }
++
++  async complete(seq: number, result: ChildResult): Promise<void> {
++    if (!this.calls.has(seq) || this.results.has(seq)) throw new Error('Workflow result has no unique start')
++    this.results.add(seq)
++    await this.append({ type: 'result', seq, result })
++  }
++
++  /** Call only after every child and pending startup has reached quiescence. */
++  async close(outcome: unknown, failures: readonly unknown[] = []): Promise<void> {
++    this.closing ??= (async () => {
++      try { await this.append({ type: 'end', outcome, ...failures.length ? { failures } : {} }) }
++      finally {
++        this.closed = true
++        try { await this.file.close() }
++        finally { try { await this.lease.release() } finally { await this.sourceLease?.release() } }
++      }
++    })()
++    return this.closing
++  }
++}
 diff --git a/packages/workflow/workflow-ptc/src/realm.ts b/packages/workflow/workflow-ptc/src/realm.ts
 index 68bc19fb..b9dce0b5 100644
 --- a/packages/workflow/workflow-ptc/src/realm.ts
@@ -2389,273 +3201,6 @@ index 71c153e5..1d2e5a48 100644
    /** The `parallel(thunks)` hook: each thunk caught → `null`; fatal errors propagate. */
    private async parallel(rawThunks: unknown): Promise<unknown[]> {
      if (!Array.isArray(rawThunks)) {
-diff --git a/packages/workflow/workflow-ptc/src/types.ts b/packages/workflow/workflow-ptc/src/types.ts
-index c8e3e393..bcd42361 100644
---- a/packages/workflow/workflow-ptc/src/types.ts
-+++ b/packages/workflow/workflow-ptc/src/types.ts
-@@ -32,10 +32,13 @@ export interface WorkerInit {
-   args?: unknown
-   /** The guest helper limits. */
-   limits: WorkerLimits
-+  budget?: { total: number | null; spent: number }
- }
- 
- /** One `agent()` child request after the guest validates script options. */
- export interface ChildStartRequest {
-+  /** Invocation order, assigned before acquiring a concurrency slot. */
-+  seq: number
-   /** The child's prompt text. */
-   prompt: string
-   /** The structured-output schema, if the call passed one (already subset-checked). */
-@@ -44,6 +47,9 @@ export interface ChildStartRequest {
-   provider?: string
-   /** The per-child model override, if the call passed one. */
-   model?: string
-+  effort?: string
-+  isolation?: 'worktree'
-+  agentType?: string
- }
- 
- /**
-@@ -58,6 +64,12 @@ export interface ChildResult {
-   structured?: unknown
-   /** Why the child run ended (`'completed'` is the only value the runtime branches on). */
-   stopReason: string
-+  reason?: string
-+  budgetSpent?: number
-+  budgetTotal?: number | null
-+  /** Original durable child identity, retained when a cached call is replayed. */
-+  childId?: string
-+  worktree?: import('./worktree.ts').WorktreeArtifact
- }
- 
- /**
-@@ -87,4 +99,5 @@ export interface ChildPort {
-    *   provider's asynchronous start fails.
-    */
-   startAgent(request: ChildStartRequest): Promise<ChildHandle>
-+  loadWorkflow?(reference: string | { scriptPath: string }): Promise<{ meta: WorkflowMeta; body: string }>
- }
-diff --git a/packages/client/ui-conversation/src/client/skeleton/background-wait.ts b/packages/client/ui-conversation/src/client/skeleton/background-wait.ts
-new file mode 100644
-index 00000000..35956926
---- /dev/null
-+++ b/packages/client/ui-conversation/src/client/skeleton/background-wait.ts
-@@ -0,0 +1,36 @@
-+/** Observe the active top-level wait; never reinterpret an explicitly queued message. */
-+import { useEffect, useState } from 'react'
-+export function useBackgroundWait(sessionId: string | undefined, running: boolean): boolean {
-+  const [observed, setObserved] = useState<{ id: string; waiting: boolean } | null>(null)
-+  useEffect(() => {
-+    setObserved(null)
-+    if (!sessionId || !running) return
-+    const id = sessionId
-+    let active = true, generation = 0
-+    let timer: ReturnType<typeof setTimeout> | undefined
-+    let controller: AbortController | undefined
-+    const visible = (): boolean => document.visibilityState !== 'hidden'
-+    const poll = async (): Promise<void> => {
-+      if (!active || !visible()) return
-+      const ticket = ++generation, own = controller = new AbortController()
-+      const timeout = setTimeout(() => own.abort(), 5000)
-+      try {
-+        const response = await fetch(new URL(`trisoul-x/api/background-wait?session=${encodeURIComponent(id)}`, document.baseURI), { signal: own.signal })
-+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-+        const value: unknown = await response.json()
-+        if (active && ticket === generation) setObserved({ id, waiting: typeof value === 'object' && value !== null && 'waiting' in value && value.waiting === true })
-+      } catch (error) {
-+        // Missing/disconnected OMD never changes the host's saved input preference.
-+        if (active && ticket === generation) setObserved(null)
-+      } finally {
-+        clearTimeout(timeout)
-+        if (active && ticket === generation && visible()) timer = setTimeout(() => { void poll() }, 500)
-+      }
-+    }
-+    const visibility = (): void => { generation++; clearTimeout(timer); controller?.abort(); if (visible()) void poll() }
-+    document.addEventListener('visibilitychange', visibility)
-+    void poll()
-+    return () => { active = false; generation++; clearTimeout(timer); controller?.abort(); document.removeEventListener('visibilitychange', visibility) }
-+  }, [sessionId, running])
-+  return running && observed?.id === sessionId && observed?.waiting === true
-+}
-diff --git a/packages/workflow/workflow-ptc/src/hub.ts b/packages/workflow/workflow-ptc/src/hub.ts
-new file mode 100644
-index 00000000..ad9ce1c4
---- /dev/null
-+++ b/packages/workflow/workflow-ptc/src/hub.ts
-@@ -0,0 +1,20 @@
-+/** Optional OMD integration boundary; native workflow execution does not require this service. */
-+import type { Session } from '@deepseek-ai/dsh-session'
-+
-+interface WorkflowSessionState {
-+  parentSession?: string
-+  workflowProject?: string
-+  [key: string]: unknown
-+}
-+
-+export interface WorkflowHub {
-+  workflowBudget?: {
-+    attach(session: Session, owner?: { sessionId: string; poolId: string }): void
-+    capture(session: Session): {
-+      snapshot(): { total: number | null; spent: number; unmetered?: number }
-+      owner?: { sessionId: string; poolId: string }
-+    }
-+  }
-+  store: { dir: string; state(id: string): WorkflowSessionState; save(state: WorkflowSessionState): void }
-+  scope(session: Session): { mode: string; project?: string }
-+}
-diff --git a/packages/workflow/workflow-ptc/src/journal.ts b/packages/workflow/workflow-ptc/src/journal.ts
-new file mode 100644
-index 00000000..1b2e6b68
---- /dev/null
-+++ b/packages/workflow/workflow-ptc/src/journal.ts
-@@ -0,0 +1,146 @@
-+/** Durable, start-ordered child results. A resume reuses only an unchanged prefix. */
-+import { createHash } from 'node:crypto'
-+import { mkdir, open, readFile, realpath } from 'node:fs/promises'
-+import type { FileHandle } from 'node:fs/promises'
-+import { join, resolve } from 'node:path'
-+import type { SessionId } from '@deepseek-ai/dsh-session'
-+import { SessionWriteLease } from '@deepseek-ai/dsh-session-persistence-jsonl/src/lease.ts'
-+import type { ChildResult } from './types.ts'
-+
-+interface Call {
-+  key: string
-+  result?: ChildResult
-+}
-+
-+function runId(value: string): string {
-+  if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value)) throw new Error('Invalid workflow run id')
-+  return value
-+}
-+
-+/** Sort object keys without changing arrays, so equivalent option bags have one identity. */
-+export function requestKey(value: unknown): string {
-+  const canonical = (item: any): any => Array.isArray(item) ? item.map(canonical)
-+    : item && typeof item === 'object' ? Object.fromEntries(Object.keys(item).sort().map(key => [key, canonical(item[key])])) : item
-+  return createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex')
-+}
-+
-+export function workflowPaths(root: string, sessionId: string, id: string): { directory: string; scriptPath: string; transcriptDir: string } {
-+  const directory = resolve(root, createHash('sha256').update(sessionId).digest('hex'), runId(id))
-+  return { directory, scriptPath: join(directory, 'script.js'), transcriptDir: directory }
-+}
-+
-+/** Ignore only a torn final append; corruption of a committed line fails closed. */
-+export function readJournal(text: string): Map<number, Call> {
-+  const lines = text.split('\n')
-+  if (lines.at(-1) !== '') lines.pop()
-+  const calls = new Map<number, Call>()
-+  for (const line of lines) {
-+    if (!line) continue
-+    const event = JSON.parse(line)
-+    if (event.type === 'start') {
-+      if (!Number.isSafeInteger(event.seq) || event.seq < 1 || calls.has(event.seq) || typeof event.key !== 'string') throw new Error('Invalid workflow journal start')
-+      calls.set(event.seq, { key: event.key })
-+    } else if (event.type === 'result') {
-+      const call = calls.get(event.seq)
-+      if (!call || call.result || !event.result || typeof event.result.stopReason !== 'string' || !Array.isArray(event.result.output)) throw new Error('Invalid workflow journal result')
-+      call.result = event.result
-+    } else if (event.type !== 'run' && event.type !== 'end') throw new Error('Unknown workflow journal event')
-+  }
-+  return calls
-+}
-+
-+export class WorkflowJournal {
-+  private chain: Promise<void> = Promise.resolve()
-+  private next = 1
-+  private prefix = true
-+  private closed = false
-+  private closing?: Promise<void>
-+  private readonly calls = new Set<number>()
-+  private readonly results = new Set<number>()
-+  private constructor(
-+    readonly directory: string,
-+    private readonly file: FileHandle,
-+    private readonly lease: SessionWriteLease,
-+    private readonly sourceLease: SessionWriteLease | undefined,
-+    private readonly cached: Map<number, Call>,
-+  ) {}
-+
-+  static async create(root: string, sessionId: string, id: string, input: { script: string; meta: unknown; args?: unknown; resumeFromRunId?: string }): Promise<WorkflowJournal> {
-+    const scope = join(root, createHash('sha256').update(sessionId).digest('hex'))
-+    await mkdir(scope, { recursive: true, mode: 0o700 })
-+    // Canonicalize before using the same path as a kernel-lock identity on Windows.
-+    const canonical = await realpath(scope)
-+    let sourceLease: SessionWriteLease | undefined
-+    let lease: SessionWriteLease | undefined
-+    let file: FileHandle | undefined
-+    try {
-+      let cached = new Map<number, Call>()
-+      if (input.resumeFromRunId !== undefined) {
-+        if (input.resumeFromRunId === id) throw new Error('A workflow cannot resume itself')
-+        const source = join(canonical, runId(input.resumeFromRunId))
-+        // Do not create a phantom source directory when a run belongs to another session.
-+        await readFile(join(source, 'run.json'), 'utf8')
-+        sourceLease = await SessionWriteLease.acquire(source, sessionId as SessionId)
-+        cached = readJournal(await readFile(join(source, 'journal.jsonl'), 'utf8'))
-+      }
-+      const directory = join(canonical, runId(id))
-+      await mkdir(directory, { mode: 0o700 })
-+      lease = await SessionWriteLease.acquire(directory, sessionId as SessionId)
-+      for (const [name, contents] of [['script.js', input.script], ['run.json', JSON.stringify({ version: 1, id, sessionId, ...input }) + '\n']] as const) {
-+        const handle = await open(join(directory, name), 'wx', 0o600)
-+        try { await handle.writeFile(contents); await handle.sync() } finally { await handle.close() }
-+      }
-+      file = await open(join(directory, 'journal.jsonl'), 'ax', 0o600)
-+      const journal = new WorkflowJournal(directory, file, lease, sourceLease, cached)
-+      await journal.append({ type: 'run', version: 1, id, sessionId })
-+      return journal
-+    } catch (error) {
-+      await file?.close()
-+      await lease?.release()
-+      await sourceLease?.release()
-+      throw error
-+    }
-+  }
-+
-+  private append(event: unknown): Promise<void> {
-+    if (this.closed) return Promise.reject(new Error('Workflow journal is closed'))
-+    const text = JSON.stringify(event) + '\n'
-+    this.chain = this.chain.then(async () => { await this.file.writeFile(text); await this.file.sync() })
-+    return this.chain
-+  }
-+
-+  async start(seq: number, identity: unknown, valid: (result: ChildResult) => boolean = () => true): Promise<ChildResult | undefined> {
-+    if (seq !== this.next) throw new Error('Workflow calls must be journaled in start order')
-+    this.next++
-+    this.calls.add(seq)
-+    const key = requestKey(identity)
-+    const old = this.cached.get(seq)
-+    const hit = this.prefix && old?.key === key && old.result?.stopReason === 'completed' && valid(old.result)
-+    if (!hit) this.prefix = false
-+    await this.append({ type: 'start', seq, key, cached: hit })
-+    if (!hit) return undefined
-+    // A resumed run is itself a complete source for a later resume.
-+    const result = structuredClone(old!.result!)
-+    await this.complete(seq, result)
-+    return result
-+  }
-+
-+  async complete(seq: number, result: ChildResult): Promise<void> {
-+    if (!this.calls.has(seq) || this.results.has(seq)) throw new Error('Workflow result has no unique start')
-+    this.results.add(seq)
-+    await this.append({ type: 'result', seq, result })
-+  }
-+
-+  /** Call only after every child and pending startup has reached quiescence. */
-+  async close(outcome: unknown, failures: readonly unknown[] = []): Promise<void> {
-+    this.closing ??= (async () => {
-+      try { await this.append({ type: 'end', outcome, ...failures.length ? { failures } : {} }) }
-+      finally {
-+        this.closed = true
-+        try { await this.file.close() }
-+        finally { try { await this.lease.release() } finally { await this.sourceLease?.release() } }
-+      }
-+    })()
-+    return this.closing
-+  }
-+}
 diff --git a/packages/workflow/workflow-ptc/src/source.ts b/packages/workflow/workflow-ptc/src/source.ts
 new file mode 100644
 index 00000000..e5d146e7
@@ -2929,6 +3474,53 @@ index 00000000..0d0edb72
 +  })
 +  refreshProvider()
 +}
+diff --git a/packages/workflow/workflow-ptc/src/types.ts b/packages/workflow/workflow-ptc/src/types.ts
+index c8e3e393..bcd42361 100644
+--- a/packages/workflow/workflow-ptc/src/types.ts
++++ b/packages/workflow/workflow-ptc/src/types.ts
+@@ -32,10 +32,13 @@ export interface WorkerInit {
+   args?: unknown
+   /** The guest helper limits. */
+   limits: WorkerLimits
++  budget?: { total: number | null; spent: number }
+ }
+ 
+ /** One `agent()` child request after the guest validates script options. */
+ export interface ChildStartRequest {
++  /** Invocation order, assigned before acquiring a concurrency slot. */
++  seq: number
+   /** The child's prompt text. */
+   prompt: string
+   /** The structured-output schema, if the call passed one (already subset-checked). */
+@@ -44,6 +47,9 @@ export interface ChildStartRequest {
+   provider?: string
+   /** The per-child model override, if the call passed one. */
+   model?: string
++  effort?: string
++  isolation?: 'worktree'
++  agentType?: string
+ }
+ 
+ /**
+@@ -58,6 +64,12 @@ export interface ChildResult {
+   structured?: unknown
+   /** Why the child run ended (`'completed'` is the only value the runtime branches on). */
+   stopReason: string
++  reason?: string
++  budgetSpent?: number
++  budgetTotal?: number | null
++  /** Original durable child identity, retained when a cached call is replayed. */
++  childId?: string
++  worktree?: import('./worktree.ts').WorktreeArtifact
+ }
+ 
+ /**
+@@ -87,4 +99,5 @@ export interface ChildPort {
+    *   provider's asynchronous start fails.
+    */
+   startAgent(request: ChildStartRequest): Promise<ChildHandle>
++  loadWorkflow?(reference: string | { scriptPath: string }): Promise<{ meta: WorkflowMeta; body: string }>
+ }
 diff --git a/packages/workflow/workflow-ptc/src/worktree.ts b/packages/workflow/workflow-ptc/src/worktree.ts
 new file mode 100644
 index 00000000..00748543
@@ -3053,3 +3645,374 @@ index 00000000..00748543
 +    return this.settlement
 +  }
 +}
+diff --git a/packages/workflow/workflow-ptc/tests/guest.spec.ts b/packages/workflow/workflow-ptc/tests/guest.spec.ts
+index 04431cad..a6c97ae4 100644
+--- a/packages/workflow/workflow-ptc/tests/guest.spec.ts
++++ b/packages/workflow/workflow-ptc/tests/guest.spec.ts
+@@ -19,6 +19,7 @@ function fixture(body: string, overrides: Partial<WorkflowGuestHost> = {}, limit
+   }
+   const host: WorkflowGuestHost = {
+     begin: async () => init,
++    loadWorkflow: async () => { throw new Error('No saved workflows in this fixture') },
+     async startChild(request) {
+       requests.push(request)
+       return { callId: requests.length, childId: `child-${requests.length}` }
+@@ -39,7 +40,7 @@ describe('workflow guest callbacks', () => {
+       return await agent(args.prompt, { label: 'Answer', provider: 'openai', model: 'small', schema: { type: 'object' } })
+     `, { childResult: async () => ({ output: [], structured: { answer: 42 }, stopReason: 'completed' }) })
+     await expect(runWorkflowGuest(test.host)).resolves.toEqual({ value: { answer: 42 }, stopReason: 'completed', agentsStarted: 1 })
+-    expect(test.requests).toEqual([{ prompt: 'answer this', provider: 'openai', model: 'small', schema: { type: 'object' } }])
++    expect(test.requests).toEqual([{ seq: 1, prompt: 'answer this', provider: 'openai', model: 'small', schema: { type: 'object' } }])
+     expect(test.events).toEqual([
+       { type: 'phase', title: 'Read' },
+       { type: 'log', message: 'starting' },
+@@ -320,9 +321,9 @@ describe('workflow child results', () => {
+ describe('workflow script validation', () => {
+   it.each([
+     ['return await agent(1)', 'non-empty prompt'],
+-    ['return await agent("x", new Date())', 'options must be plain JSON'],
++    ['return await agent("x", new Date())', 'Workflow scripts must be deterministic'],
+     ['return await agent("x", [])', 'options must be an object'],
+-    ['return await agent("x", {effort: "high"})', 'deferred and not supported'],
++    ['return await agent("x", {effort: ""})', 'non-empty'],
+     ['return await agent("x", {unknown: true})', 'not recognized'],
+     ['return await agent("x", {label: 1})', 'must be a string'],
+     ['return await agent("x", {schema: {type: "object", pattern: "x"}})', 'outside the supported subset'],
+diff --git a/packages/workflow/workflow-ptc/tests/host.spec.ts b/packages/workflow/workflow-ptc/tests/host.spec.ts
+index 4a866175..cbf3ecda 100644
+--- a/packages/workflow/workflow-ptc/tests/host.spec.ts
++++ b/packages/workflow/workflow-ptc/tests/host.spec.ts
+@@ -101,7 +101,7 @@ describe('workflow host callback validation', () => {
+       launched = spec
+       entered.resolve(undefined)
+       await release.promise
+-      await bindings.startChild!({ prompt: 'child' })
++      await bindings.startChild!({ seq: 1, prompt: 'child' })
+       return completed
+     })
+     const initial = `${process.cwd()}/selected`
+@@ -189,9 +189,9 @@ describe('workflow runtime outcomes', () => {
+     const released = Promise.withResolvers<undefined>()
+     const schema = { type: 'object' as const, properties: { answer: { type: 'number' as const } } }
+     const { ctx, parent, start } = await setup(async (bindings) => {
+-      const child = await bindings.startChild!({ prompt: 'answer', schema, model: 'selected' })
++      const child = await bindings.startChild!({ seq: 1, prompt: 'answer', schema, model: 'selected' })
+       expect(child).toEqual({ callId: 1, childId: 'ready-child' })
+-      expect(await bindings.childResult!(child)).toEqual({ output: [], structured: { answer: 42 }, stopReason: 'completed' })
++      expect(await bindings.childResult!(child)).toEqual({ childId: 'ready-child', output: [], structured: { answer: 42 }, stopReason: 'completed', budgetSpent: 0, budgetTotal: null })
+       await bindings.disposeChild!(child)
+       return completed
+     })
+@@ -269,7 +269,7 @@ describe('workflow runtime outcomes', () => {
+     const publication = Promise.withResolvers<SubagentActivation>()
+     const disposed = vi.fn(() => Promise.resolve())
+     const { ctx, start } = await setup(async (bindings) => {
+-      await expect(bindings.startChild!({ prompt: 'child' })).rejects.toThrow('workflow child started after cancellation')
++      await expect(bindings.startChild!({ seq: 1, prompt: 'child' })).rejects.toThrow('workflow child started after cancellation')
+       return completed
+     })
+     vi.spyOn(ctx.subagents, 'startActivation').mockImplementation(() => {
+@@ -299,7 +299,7 @@ describe('workflow runtime outcomes', () => {
+     const disposed = vi.fn(() => Promise.resolve())
+     let outputWait: Promise<unknown> | undefined
+     const { ctx, start } = await setup(async (bindings) => {
+-      const child = await bindings.startChild!({ prompt: 'child' })
++      const child = await bindings.startChild!({ seq: 1, prompt: 'child' })
+       outputWait = bindings.childResult!(child)
+       void outputWait.catch(() => {})
+       return completed
+diff --git a/packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts b/packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts
+index 29ae47d0..fec604da 100644
+--- a/packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts
++++ b/packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts
+@@ -347,11 +347,13 @@ describe('dsh-workflow-ptc', { timeout: 120_000 }, () => {
+       await handle.dispose()
+     })
+ 
+-    it('a fatal hook error inside the guest kills the script and reports the error', async () => {
+-      const { ctx, parent } = await setup()
+-      const result = await run(ctx, parent, scripted("return await parallel([() => agent('x', { isolation: 'worktree' })])"))
++    it.each([{ isolation: 'worktree' }, { agentType: 'reviewer' }])('rejects delegation options %j without the OMD provider before creating children', async (options) => {
++      const { ctx, parent, provider } = await setup()
++      const result = await run(ctx, parent, scripted(`return await parallel([() => agent('x', ${JSON.stringify(options)})])`))
+       expect(result.stopReason).toBe('error')
+-      expect(result.error).toContain('"isolation" is deferred')
++      expect(result.value).toBeNull()
++      expect(result.error?.split('\n')[0]).toBe('WorkflowError: agent() could not start a child: Error: Workflow worktree/agentType options require the omd-workflow subagent provider')
++      expect(provider.runs).toEqual([])
+     })
+ 
+     it('rejects an unregistered configured provider before publishing a run', async () => {
+@@ -408,10 +410,18 @@ describe('dsh-workflow-ptc', { timeout: 120_000 }, () => {
+ 
+       provider.runs[0]!.publish()
+       const result = await handle.result
+-      expect(result.value).toMatchObject({ code: 'AGENT_RESULT' })
+-      expect((result.value as { message: string }).message).toContain('backend failed before publication')
++      expect(result).toMatchObject({ value: null, stopReason: 'error', agentsStarted: 1 })
++      expect(result.error?.split('\n')[0]).toBe('Workflow cleanup failed: SubagentError: subagent "stub-child-0" activation teardown failed: backend failed before publication')
+       expect(lifecycle).toEqual(['start', 'end:failed'])
++      expect(handle).toBeInstanceOf(ptcEngineModule.PtcWorkflowRun)
++      if (!(handle instanceof ptcEngineModule.PtcWorkflowRun)) throw new Error('expected a native PTC run')
++      expect(handle.childFailures.map(({ reason, ...failure }) => failure)).toEqual([
++        { seq: 1, childId: 'stub-child-0', stopReason: 'result-error', cause: 'failed' },
++      ])
++      expect(handle.childFailures[0]!.reason.split('\n')[0]).toBe('Error: backend failed before publication')
+       await handle.dispose()
++      expect(provider.runs[0]!.disposed).toBe(true)
++      expect(provider.runs[0]!.disposeCalls).toBe(1)
+     })
+ 
+     it('classifies provider start rejection as AGENT_START, drops an early result, and emits no false lifecycle pair', async () => {
+@@ -433,8 +443,15 @@ describe('dsh-workflow-ptc', { timeout: 120_000 }, () => {
+ 
+       const result = await handle.result
+       expect(result.value).toMatchObject({ code: 'AGENT_START' })
++      expect(result.stopReason).toBe('completed')
+       expect((result.value as { message: string }).message).toContain('publication rolled back')
+       expect(lifecycle).toEqual([])
++      expect(handle).toBeInstanceOf(ptcEngineModule.PtcWorkflowRun)
++      if (!(handle instanceof ptcEngineModule.PtcWorkflowRun)) throw new Error('expected a native PTC run')
++      expect(handle.childFailures.map(({ reason, ...failure }) => failure)).toEqual([
++        { seq: 1, stopReason: 'startup-error', cause: 'failed' },
++      ])
++      expect(handle.childFailures[0]!.reason.split('\n')[0]).toBe('Error: publication rolled back')
+       await waitFor(() => {
+         expect(provider.runs[0]!.disposed).toBe(true)
+         expect(provider.runs[0]!.disposeCalls).toBe(1)
+@@ -468,7 +485,7 @@ describe('dsh-workflow-ptc', { timeout: 120_000 }, () => {
+       expect(provider.runs[0]!.disposeCalls).toBe(1)
+     })
+ 
+-    it('a child result REJECTION crosses back as a fatal AGENT_RESULT error (a broken provider is not a failed child)', async () => {
++    it('a published child result rejection fails the run even when the guest catches AGENT_RESULT', async () => {
+       const ctx = new Context()
+       await ctx.plugin(SessionProjectionRegistry)
+       await mountPtcRuntime(ctx)
+@@ -489,51 +506,109 @@ describe('dsh-workflow-ptc', { timeout: 120_000 }, () => {
+       const result = await run(ctx, await fakeParent(ctx), scripted(`
+         try { await agent('p'); return 'unreachable' } catch (e) { return { name: e.name, code: e.code, fatal: e.fatal, message: e.message } }
+       `))
+-      expect(result.value).toMatchObject({ name: 'WorkflowError', code: 'AGENT_RESULT', fatal: true })
+-      expect((result.value as { message: string }).message).toContain('backend exploded')
++      expect(result).toMatchObject({ value: null, stopReason: 'error', agentsStarted: 1 })
++      expect(result.error?.split('\n')[0]).toBe('Workflow cleanup failed: SubagentError: subagent "reject-child" activation teardown failed: backend exploded')
+     })
+ 
+     it('maps a non-JSON ready-child result to fatal AGENT_RESULT instead of wedging the bridge', async () => {
+-      const { ctx, parent } = await setup({
++      const { ctx, parent, provider } = await setup({
+         reply: () => ({ output: [], structured: () => { /* deliberately outside lossless JSON */ }, stopReason: 'completed' }),
+       })
++      const lifecycle: string[] = []
++      ctx.on('workflow/agent-start', (_info, agent) => { lifecycle.push(`start:${agent.childId}`) })
++      ctx.on('workflow/agent-end', (_info, agent) => { lifecycle.push(`end:${agent.outcome}`) })
+       const result = await run(ctx, parent, scripted(`
+         try { await agent('p'); return 'unreachable' } catch (e) { return { code: e.code, message: e.message } }
+       `))
+-      expect(result.value).toMatchObject({ code: 'AGENT_RESULT' })
+-      expect((result.value as { message: string }).message).toContain('lossless JSON')
++      expect(result).toMatchObject({ value: null, stopReason: 'error', agentsStarted: 1 })
++      expect(result.error?.split('\n')[0]).toBe('Workflow child result failed: Error: workflow binding value must be lossless JSON')
++      expect(lifecycle).toEqual(['start:stub-child-0', 'end:failed'])
++      expect(provider.runs[0]!.disposed).toBe(true)
++      expect(provider.runs[0]!.disposeCalls).toBe(1)
+     })
+ 
+-    it('contains a non-JSON result even if the injected subagent service violates its normalization contract', async () => {
++    it('refuses a caught non-JSON receipt result, closes its journal as error and resumes without caching the failed call', async () => {
+       // Host callback results cross PTC as lossless JSON.
+-      const { ctx, parent } = await setup()
++      const { ctx, parent, engineFiber } = await setup()
++      const cwd = parent.session.header.cwd
++      if (cwd === undefined) throw new Error('expected the fixture-owned workspace')
++      await engineFiber.dispose()
++      await ctx.plugin(PtcWorkflowEngine, { provider: 'stub', maxConcurrentAgents: 8, stateDirectory: join(cwd, 'workflow-state') })
++      const lifecycle: string[] = []
++      ctx.on('workflow/agent-start', (_info, agent) => { lifecycle.push(`start:${agent.childId}`) })
++      ctx.on('workflow/agent-end', (_info, agent) => { lifecycle.push(`end:${agent.outcome}`) })
+       const invalid = {
+         output: [],
+         structured: () => { /* deliberately outside lossless JSON */ },
+         stopReason: 'completed',
+       } as unknown as SubagentResult
++      const dispose = vi.fn(() => Promise.resolve())
+       const start = vi.spyOn(ctx.subagents, 'startActivation').mockResolvedValue({
+         childId: SessionId('raw-invalid-child'),
+         result: Promise.resolve(invalid),
+-        dispose: () => Promise.resolve(),
++        dispose,
+       })
+ 
+-      const result = await run(ctx, parent, scripted(`
++      const source = scripted(`
+         try { await agent('p'); return 'unreachable' } catch (e) { return { code: e.code, message: e.message } }
+-      `))
++      `)
++      const first = ctx.workflowEngine.start({ ...source, parent })
++      try {
++        const result = await first.result
++        expect(result).toMatchObject({ value: null, stopReason: 'error', agentsStarted: 1 })
++        expect(result.error?.split('\n')[0]).toBe('Workflow child result failed: Error: workflow binding value must be lossless JSON')
++        expect(start).toHaveBeenCalledOnce()
++        expect(dispose).toHaveBeenCalledOnce()
++        expect(lifecycle).toEqual(['start:raw-invalid-child', 'end:failed'])
++        expect(first).toBeInstanceOf(ptcEngineModule.PtcWorkflowRun)
++        if (!(first instanceof ptcEngineModule.PtcWorkflowRun) || first.transcriptDir === undefined) throw new Error('expected a durable native PTC run')
++        const journal = await readFile(join(first.transcriptDir, 'journal.jsonl'), 'utf8')
++        expect([...ptcEngineModule.readJournal(journal)].map(([seq, call]) => ({ seq, hasResult: Object.hasOwn(call, 'result') }))).toEqual([
++          { seq: 1, hasResult: false },
++        ])
++        expect(JSON.parse(journal.trim().split('\n').at(-1)!)).toEqual({ type: 'end', outcome: 'error', failures: first.childFailures })
++        await first.dispose()
++        const resumed = ctx.workflowEngine.start({ ...source, parent, resumeFromRunId: first.id })
++        try {
++          expect(await resumed.result).toMatchObject({ value: null, stopReason: 'error', agentsStarted: 1 })
++          expect(start).toHaveBeenCalledTimes(2)
++          expect(dispose).toHaveBeenCalledTimes(2)
++          expect(lifecycle).toEqual(['start:raw-invalid-child', 'end:failed', 'start:raw-invalid-child', 'end:failed'])
++        } finally { await resumed.dispose() }
++      } finally { await first.dispose() }
++    })
+ 
+-      expect(start).toHaveBeenCalledOnce()
+-      expect(result.value).toMatchObject({ code: 'AGENT_RESULT' })
+-      expect((result.value as { message: string }).message)
+-        .toContain('lossless JSON')
++    it('a valid failed child returns null and allows a successful fallback without infrastructure failure', async () => {
++      const { ctx, parent, provider } = await setup({
++        reply: (_request, index) => index === 0
++          ? { output: [], stopReason: 'error', diagnostic: 'recoverable child failure' }
++          : text('fallback recovered'),
++      })
++      const outcomes: string[] = []
++      ctx.on('workflow/agent-end', (_info, agent) => { outcomes.push(agent.outcome) })
++      const handle = ctx.workflowEngine.start({ ...scripted("const first = await agent('failed'); return first ?? await agent('fallback')"), parent })
++      try {
++        expect(await handle.result).toEqual({ value: 'fallback recovered', stopReason: 'completed', agentsStarted: 2 })
++        expect(outcomes).toEqual(['failed', 'completed'])
++        expect(provider.runs.map(child => ({ disposed: child.disposed, disposeCalls: child.disposeCalls }))).toEqual([
++          { disposed: true, disposeCalls: 1 }, { disposed: true, disposeCalls: 1 },
++        ])
++        expect(handle).toBeInstanceOf(ptcEngineModule.PtcWorkflowRun)
++        if (!(handle instanceof ptcEngineModule.PtcWorkflowRun)) throw new Error('expected a native PTC run')
++        expect(handle.childFailures).toEqual([
++          { seq: 1, childId: 'stub-child-0', stopReason: 'error', cause: 'failed', reason: 'recoverable child failure' },
++        ])
++      } finally { await handle.dispose() }
+     })
+ 
+-    it('a child whose dispose() throws synchronously cannot wedge the script (the host acks anyway)', async () => {
++    it('a synchronous child disposal failure settles the run as an error without publishing the successful value', async () => {
+       const ctx = new Context()
+       await ctx.plugin(SessionProjectionRegistry)
+       await mountPtcRuntime(ctx)
+       provideWorkingDirectoryFixture(ctx)
+       await ctx.plugin(SubagentRuntime)
++      let disposeCalls = 0
++      const warn = vi.spyOn(ctx.logger, 'warn').mockImplementation(() => {})
+       const provider: SubagentProvider = {
+         name: 'bad-dispose',
+         capabilities: { agentOptions: true, agentPreset: false, outputSchema: true, depthLimit: true },
+@@ -542,22 +617,30 @@ describe('dsh-workflow-ptc', { timeout: 120_000 }, () => {
+           id: SessionId('bad-dispose-child'),
+           result: Promise.resolve({ output: [{ type: 'text', text: 'fine' }], stopReason: 'completed' }),
+           cancel: () => { /* settled already */ },
+-          dispose: () => { throw new Error('dispose exploded') },
++          dispose: () => { disposeCalls += 1; throw new Error('dispose exploded') },
+         }),
+       }
+       ctx.subagents.registerProvider(provider)
+       await ctx.plugin(PtcWorkflowEngine, { provider: 'bad-dispose', maxConcurrentAgents: 2 })
+       const result = await run(ctx, await fakeParent(ctx), scripted("return await agent('p')"))
+-      expect(result.stopReason).toBe('completed')
+-      expect(result.value).toBe('fine')
++      expect(result).toMatchObject({ value: null, stopReason: 'error', agentsStarted: 1 })
++      expect(result.error?.split('\n')[0]).toBe('Workflow cleanup failed: SubagentError: subagent "bad-dispose-child" activation handle disposal failed: dispose exploded')
++      expect(disposeCalls).toBe(1)
++      expect(warn.mock.calls.map(args => String(args[0]).split('\n')[0])
++        .filter(message => message.startsWith('workflow-ptc:') || message.startsWith('subagent "bad-dispose-child"'))).toEqual([
++        'subagent "bad-dispose-child" activation teardown failed: subagent "bad-dispose-child" activation handle disposal failed: dispose exploded',
++        'workflow-ptc: child dispose failed: SubagentError: subagent "bad-dispose-child" activation handle disposal failed: dispose exploded',
++      ])
+     })
+ 
+-    it('a child dispose() rejecting an UNRENDERABLE value still acks — the containment warn is total', async () => {
++    it('an unrenderable child disposal rejection settles an error and retains a total diagnostic', async () => {
+       const ctx = new Context()
+       await ctx.plugin(SessionProjectionRegistry)
+       await mountPtcRuntime(ctx)
+       provideWorkingDirectoryFixture(ctx)
+       await ctx.plugin(SubagentRuntime)
++      let disposeCalls = 0
++      const warn = vi.spyOn(ctx.logger, 'warn').mockImplementation(() => {})
+       const provider: SubagentProvider = {
+         name: 'coercion-trap-dispose',
+         capabilities: { agentOptions: true, agentPreset: false, outputSchema: true, depthLimit: true },
+@@ -567,14 +650,20 @@ describe('dsh-workflow-ptc', { timeout: 120_000 }, () => {
+           result: Promise.resolve({ output: [{ type: 'text', text: 'fine' }], stopReason: 'completed' }),
+           cancel: () => { /* settled already */ },
+           // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- the non-Error rejection IS the scenario under test
+-          dispose: () => Promise.reject({ toString: () => { throw new Error('coercion trap') } }),
++          dispose: () => { disposeCalls += 1; return Promise.reject({ toString: () => { throw new Error('coercion trap') } }) },
+         }),
+       }
+       ctx.subagents.registerProvider(provider)
+       await ctx.plugin(PtcWorkflowEngine, { provider: 'coercion-trap-dispose', maxConcurrentAgents: 2 })
+       const result = await run(ctx, await fakeParent(ctx), scripted("return await agent('p')"))
+-      expect(result.stopReason).toBe('completed')
+-      expect(result.value).toBe('fine')
++      expect(result).toMatchObject({ value: null, stopReason: 'error', agentsStarted: 1 })
++      expect(result.error?.split('\n')[0]).toBe('Workflow cleanup failed: SubagentError: subagent "trap-child" activation handle disposal failed: unknown teardown failure')
++      expect(disposeCalls).toBe(1)
++      expect(warn.mock.calls.map(args => String(args[0]).split('\n')[0])
++        .filter(message => message.startsWith('workflow-ptc:') || message.startsWith('subagent "trap-child"'))).toEqual([
++        'subagent "trap-child" activation teardown failed: subagent "trap-child" activation handle disposal failed: unknown teardown failure',
++        'workflow-ptc: child dispose failed: SubagentError: subagent "trap-child" activation handle disposal failed: unknown teardown failure',
++      ])
+     })
+   })
+ 
+@@ -585,9 +674,8 @@ describe('dsh-workflow-ptc', { timeout: 120_000 }, () => {
+       expect(() => ctx.workflowEngine.start({ script: 'return 1', meta: { name: '', description: 'd' }, parent })).toThrow(/meta\.name must be a non-empty string/)
+       expect(() => ctx.workflowEngine.start({ script: 'return 1', meta: { name: 'x', description: 'd', extra: 1 } as unknown as WorkflowMeta, parent })).toThrow(/META_INVALID|not a recognized field/)
+       expect(() => ctx.workflowEngine.start({ ...scripted('return ((('), parent })).toThrow(/does not parse/)
+-      // The likeliest authoring slip — a Claude Code-style meta header in the
+-      // body — gets a pointed message, not a bare SyntaxError.
+-      expect(() => ctx.workflowEngine.start({ ...scripted("export const meta = { name: 'x', description: 'd' }\nreturn 1"), parent })).toThrow(/meta rides the `meta` request field/)
++      // Inline metadata is supported; contradictory supplied metadata is rejected.
++      expect(() => ctx.workflowEngine.start({ ...scripted("export const meta = { name: 'x', description: 'd' }\nreturn 1"), parent })).toThrow(/^workflow script does not parse: Error: Workflow inline meta and meta field disagree$/)
+     })
+ 
+     it('cancel() aborts in-flight children and settles after their cleanup', async () => {
+diff --git a/packages/workflow/workflow-ptc/tsconfig.json b/packages/workflow/workflow-ptc/tsconfig.json
+index aaaa8160..41f1550f 100644
+--- a/packages/workflow/workflow-ptc/tsconfig.json
++++ b/packages/workflow/workflow-ptc/tsconfig.json
+@@ -52,6 +52,15 @@
+     },
+     {
+       "path": "../../session/working-directory"
++    },
++    {
++      "path": "../../fs/fs"
++    },
++    {
++      "path": "../../preset/agent-preset-registry"
++    },
++    {
++      "path": "../../core/system-prompt"
+     }
+   ]
+ }
+diff --git a/packages/workflow/workflow-ptc/tsdown.config.ts b/packages/workflow/workflow-ptc/tsdown.config.ts
+index caaa1aef..ad4089de 100644
+--- a/packages/workflow/workflow-ptc/tsdown.config.ts
++++ b/packages/workflow/workflow-ptc/tsdown.config.ts
+@@ -9,4 +9,6 @@ export default defineConfig({
+   fixedExtension: false,
+   dts: false,
+   clean: false,
++  // JSONL journal leases retain the Host's lazy native Windows dependency.
++  deps: { neverBundle: ['koffi'] },
+ })
