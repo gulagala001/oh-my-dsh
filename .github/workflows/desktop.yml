@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Check Desktop release eligibility regressions
-        run: node --test test/desktop-release-eligibility.test.mjs
+        run: node --test test/desktop-release-eligibility.test.mjs test/build-opencu-imports.test.mjs
       - id: release
         name: Check whether this host has official desktop packages
         run: |
