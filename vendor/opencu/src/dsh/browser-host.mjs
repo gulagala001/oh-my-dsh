@@ -6,7 +6,7 @@ export function createBrowserHost() {
   const clients = new Map(), pending = new Map(), sessionOwners = new Map();
   let closed = false;
   function disconnect(client, reason) {
-    clients.delete(client.id);
+    if (clients.get(client.id) === client) clients.delete(client.id);
     client.wake?.();
     for (const [id, task] of pending) if (task.client === client) {
       clearTimeout(task.timer); pending.delete(id);
@@ -29,8 +29,8 @@ export function createBrowserHost() {
     // verifies the retained guest occurrence before executing a bound command.
     return client;
   }
-  function request(client, method, params = {}, monitoring = false) {
-    if (closed || !clients.has(client.id)) fail('BROWSER_HOST_DISCONNECTED', 'The DSH browser renderer is disconnected');
+  async function request(client, method, params = {}, monitoring = false) {
+    if (closed || clients.get(client.id) !== client) fail('BROWSER_HOST_DISCONNECTED', 'The DSH browser renderer is disconnected');
     const id = randomUUID();
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -184,7 +184,8 @@ export function createBrowserHost() {
           signal?.addEventListener('abort', abort, { once: true });
           if (signal?.aborted) abort();
         });
-        return { ok: true, commands: client.commands.splice(0), connected: clients.has(client.id) };
+        const connected = clients.get(client.id) === client;
+        return { ok: true, commands: connected ? client.commands.splice(0) : [], connected };
       }
       if (method === 'browser/disconnect') { disconnect(client, 'The sidebar renderer disconnected'); return { ok: true }; }
       fail('UNSUPPORTED_METHOD', 'Unknown sidebar browser transport operation');
