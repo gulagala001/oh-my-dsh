@@ -26,7 +26,7 @@ function fixture(t, ownBudget = budget()) {
     record: (kind = 'main', value = entry(), owner = session()) => Hub.prototype.record.call(hub, owner, kind, value) };
 }
 
- test('enabled budget saves the complete accounted call once and cold-recovers', t => {
+test('enabled budget saves the complete accounted call once and cold-recovers', t => {
   const f = fixture(t);
   f.state.contextHistory = Array.from({ length: 80 }, (_, n) => ({ at: n, nodes: [{ seq: n, tokens: 7 }] }));
   f.state.pendingFrame = { at: 99, turn: 1, step: 2, totalTokens: 125, nodes: [{ seq: 100, tokens: 125 }] };
@@ -54,7 +54,7 @@ for (const mode of ['unconfigured', 'hidden', 'absent', 'service-absent', 'legac
   });
 }
 
- test('delegated chain persists origin then ancestors once without consuming ancestor rounds', t => {
+test('delegated chain persists origin then ancestors once without consuming ancestor rounds', t => {
   const f = fixture(t);
   Object.assign(f.store.state('parent'), { budget: budget(), origin: 'subagent', parentSession: 'grandparent' });
   Object.assign(f.store.state('grandparent'), { budget: budget(), origin: null });
@@ -66,14 +66,14 @@ for (const mode of ['unconfigured', 'hidden', 'absent', 'service-absent', 'legac
   assert.equal(f.recover('own').metrics.subagent.calls, 1);
 });
 
- test('ancestor-only budget cannot acknowledge an unsaved origin', t => {
+test('ancestor-only budget cannot acknowledge an unsaved origin', t => {
   const f = fixture(t, null); f.store.state('parent').budget = budget();
   f.record('subagent', entry(), session('own', 'parent', 'subagent'));
   assert.deepEqual(f.writes.map(w => w.name), ['sessions/parent.json', 'sessions/own.json']);
   assert.equal(f.recover('own').metrics.subagent.calls, 1); assert.equal(f.recover('parent').budget.tokens, 135);
 });
 
- test('ancestor write failure leaves already saved origin recoverable and propagates the same error', t => {
+test('ancestor write failure leaves already saved origin recoverable and propagates the same error', t => {
   const f = fixture(t), parent = f.store.state('parent'); parent.budget = budget();
   f.store.save(f.state); f.store.save(parent); f.writes.length = 0;
   const write = f.store.write.bind(f.store), error = Error('synthetic ancestor disk failure');
@@ -85,7 +85,7 @@ for (const mode of ['unconfigured', 'hidden', 'absent', 'service-absent', 'legac
   assert.equal(f.calls.length, 0);
 });
 
- test('own write failure does not publish a budget, touch ancestors or append telemetry', t => {
+test('own write failure does not publish a budget, touch ancestors or append telemetry', t => {
   const f = fixture(t); f.store.state('parent').budget = budget(); f.store.save(f.state); f.writes.length = 0;
   const previousBudget = f.state.budget, error = Error('synthetic origin disk failure');
   f.store.write = () => { throw error; };
@@ -95,7 +95,7 @@ for (const mode of ['unconfigured', 'hidden', 'absent', 'service-absent', 'legac
   assert.equal(f.calls.length, 0); assert.equal(f.writes.length, 0);
 });
 
- test('budget accounting preserves unmetered and background calls; telemetry failure stays optional', t => {
+test('budget accounting preserves unmetered and background calls; telemetry failure stays optional', t => {
   const f = fixture(t); f.hub.monitor.append = () => { throw Error('synthetic telemetry failure'); };
   f.record('dream', entry({ usage: null }));
   f.record('main', entry({ id: 'call-2', hasOutput: true, usage: { inputTokens: 0, outputTokens: 0 } }));
@@ -105,7 +105,7 @@ for (const mode of ['unconfigured', 'hidden', 'absent', 'service-absent', 'legac
   assert.equal(restored.metrics.dream.calls, 1); assert.equal(restored.metrics.main.calls, 1);
 });
 
- test('cyclic ancestor metadata terminates and direct budget callers still persist', t => {
+test('cyclic ancestor metadata terminates and direct budget callers still persist', t => {
   const f = fixture(t); f.state.parentSession = 'parent';
   Object.assign(f.store.state('parent'), { budget: budget(), origin: 'subagent', parentSession: 'own' });
   assert.equal(f.hub.budgets.record(session('own', 'parent', 'subagent'), 'subagent', entry()), true);
