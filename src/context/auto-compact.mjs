@@ -1,4 +1,4 @@
-import { hash, activeRecords, liveSpan, prepareCandidate, candidateInput, decodeResult, validatePrepared, newRecord, backlogView } from './core.mjs';
+import { hash, activeRecords, createSurfaceIndex, liveSpan, prepareCandidate, candidateInput, decodeResult, validatePrepared, newRecord, backlogView } from './core.mjs';
 import { serializePreparationInput } from './input-budget.mjs';
 import { SUMMARY_PROMPT_VERSION, PREPARE_SYSTEM, PREPARE_TOOL } from './prompts.mjs';
 
@@ -61,7 +61,9 @@ export class AutoCompaction {
       const limit = session.surface.nodes.length;
       for (let i = 0; i <= limit; i++) {
         current();
-        const ids = activeRecords(s).filter(r => liveSpan(session, r)
+        // Share only this synchronous batch; rebuild after any awaited work.
+        let index;
+        const ids = activeRecords(s).filter(r => liveSpan(session, r, index ??= createSurfaceIndex(session))
           && (cfg.autoCompactMode === 'brief' ? r.mode !== 'brief' : r.mode === 'raw')).map(r => r.id);
         if (ids.length) {
           const applied = await p.applyReady(agent, { manual: true, ids, mode: cfg.autoCompactMode, source: 'auto-compact' });
