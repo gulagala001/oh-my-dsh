@@ -30,4 +30,4 @@ jobs:
       - run: pnpm build
       - run: pnpm test
       - name: Auto Compact surface-index regression
-        run: node --test test/auto-compact-surface-index.test.mjs
+        run: node --test test/auto-compact-surface-index.test.mjs test/auto-compact-native-session.test.mjs
