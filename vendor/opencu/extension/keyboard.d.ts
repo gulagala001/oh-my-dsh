@@ -3,3 +3,6 @@ export function keyEventParameters(spec: { key: string; code: string; windowsVir
   key: string; code: string; windowsVirtualKeyCode: number; type: 'keyDown' | 'rawKeyDown' | 'keyUp'; modifiers: number;
   commands?: string[]; text?: string; unmodifiedText?: string;
 };
+
+export function guestKeySpec(value: unknown): {key:string;code:string;windowsVirtualKeyCode:number};
+export function extensionKeySpec(value: unknown): {key:string;code:string;windowsVirtualKeyCode:number};

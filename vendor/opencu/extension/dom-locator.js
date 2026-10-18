@@ -1,5 +1,7 @@
+import {selectOptionsDOM} from './select-options.js';
+
 /** Fixed DOM operations, serialized into the selected main document by each backend. */
-export function runDOMLocator(request = {}) {
+export function runDOMLocator(request = {}, selectOptions = selectOptionsDOM) {
   const fail = (code, message) => { throw Object.assign(new Error(message), {code, details:{inputDispatched:false}}); };
   const unsupported = message => fail('UNSUPPORTED_LOCATOR', message);
   const normalize = text => String(text ?? '').replace(/\s+/gu, ' ').trim();
@@ -186,11 +188,7 @@ export function runDOMLocator(request = {}) {
     if (element.type === 'radio' && (method === 'uncheck' || method === 'setChecked' && !options.checked)) unsupported('A radio input cannot be unchecked by clicking it');
   }
   if (method === 'selectOption') {
-    if (element.tagName !== 'SELECT') unsupported('selectOption requires an HTML select');
-    const values = Array.isArray(options.value) ? options.value : [options.value];
-    if (!values.length || values.some(value => typeof value !== 'string')) unsupported('selectOption currently accepts a string value or an array of string values');
-    if (!element.multiple && values.length > 1) unsupported('A non-multiple select accepts one option');
-    for (const value of values) if (![...element.options].some(option => option.value === value && !option.disabled && !option.parentElement?.disabled)) fail('LOCATOR_NOT_FOUND', `No enabled select option has value ${JSON.stringify(value)}`);
+    selectOptions(element, options.value);
   }
   if (method === 'fill' && (element.readOnly || element.getAttribute('aria-readonly') === 'true')) fail('LOCATOR_NOT_ACTIONABLE', 'Locator element is readonly');
   if (['click','dblclick','check','uncheck','setChecked','selectOption'].includes(method)) {

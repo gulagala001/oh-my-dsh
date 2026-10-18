@@ -40,6 +40,8 @@ export class OpenCUPresentations {
   private readonly records = new Map<WebContents, RecordEntry>()
   private readonly layouts = new Map<WebContents, Layout>()
   private readonly sessions = new Map<WebContents, string[]>()
+  constructor(private readonly hostIsQuitting: () => boolean) {}
+
   private create(sender: WebContents): RecordEntry {
     const owner = BrowserWindow.fromWebContents(sender)
     if (!owner) throw new Error('The monitoring owner is unavailable')
@@ -187,6 +189,7 @@ export class OpenCUPresentations {
       }
     }
     const hide = (event: Electron.Event): void => {
+      if (this.hostIsQuitting()) return
       event.preventDefault(); record.hide()
       if (!sender.isDestroyed()) sender.send('dsh-desktop:opencu-presentation-event', { type: 'hidden' })
     }

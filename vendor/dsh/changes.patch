@@ -30,7 +30,7 @@ index 90b26c19..445c032a 100644
        },
      }, {
 diff --git a/packages/client/ui-conversation/src/client/apply.ts b/packages/client/ui-conversation/src/client/apply.ts
-index e567bd1a..ff3f9ec0 100644
+index e567bd1a..f91b4ef3 100644
 --- a/packages/client/ui-conversation/src/client/apply.ts
 +++ b/packages/client/ui-conversation/src/client/apply.ts
 @@ -57,17 +57,19 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -72,19 +72,32 @@ index e567bd1a..ff3f9ec0 100644
    )
  
    ctx.effect(() => () => { submissionPolicy.dispose() })
-@@ -571,11 +573,14 @@ export function apply(ctx: Context, config: Config = Config({})): void {
+@@ -557,6 +559,16 @@ export function apply(ctx: Context, config: Config = Config({})): void {
+     },
+   }, InputBar)
+ 
++  // Session hooks and input registries must precede controller readiness.
++  // Consumers wait for declarations through slots.inject; publish the renderable
++  // tree only after the controller is ACTIVE, so selected sessions can resolve
++  // conversation through strict ctx.get during synchronous slot injection.
++  await ctx.plugin(ConversationController, {
++    input: inputHub,
++    blocks: composerBlocks,
++    maxConcurrentFileUploads,
++  })
++
+   slots.inject('main', function* () {
+     yield slots.register({
+       name: 'main',
+@@ -571,11 +583,6 @@ export function apply(ctx: Context, config: Config = Config({})): void {
      yield registerComposerBar()
    })
  
 -  ctx.plugin(ConversationController, {
-+  // Native consumers use `conversation` readiness to register into these slots.
-+  // Publish it only after the Session hooks and complete slot tree are installed.
-+  await ctx.plugin(ConversationController, {
-     input: inputHub,
-     blocks: composerBlocks,
-     maxConcurrentFileUploads,
-   })
-+
+-    input: inputHub,
+-    blocks: composerBlocks,
+-    maxConcurrentFileUploads,
+-  })
    ctx.plugin(todoDockEntry)
    ctx.plugin(queueDockEntry)
  }
@@ -1621,7 +1634,6 @@ index be50e88e..3906ab93 100644
    await drain()
    return progressError === undefined ? result : {
 diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/workflow-ptc/src/host.ts
-index 7a2266e7..487e9130 100644
 --- a/packages/workflow/workflow-ptc/src/host.ts
 +++ b/packages/workflow/workflow-ptc/src/host.ts
 @@ -1,11 +1,13 @@
@@ -1639,7 +1651,7 @@ index 7a2266e7..487e9130 100644
  import type { SubagentActivation } from '@deepseek-ai/dsh-subagent'
  import { assertObjectJsonSchema } from '@deepseek-ai/dsh-tools'
  import type { ObjectJsonSchema } from '@deepseek-ai/dsh-tools'
-@@ -16,11 +18,33 @@ import type { WorkflowProgress } from './guest-types.ts'
+@@ -16,11 +18,33 @@
  import { renderThrown } from './realm.ts'
  import type { ExecutionObserver } from './runtime.ts'
  import type { ChildStartRequest, WorkerInit } from './types.ts'
@@ -1673,7 +1685,7 @@ index 7a2266e7..487e9130 100644
  }
  
  const GUEST_URL = `data:text/javascript,${encodeURIComponent(WORKFLOW_GUEST_SOURCE)}`
-@@ -47,6 +71,16 @@ function childRequest(value: unknown): ChildStartRequest {
+@@ -47,6 +71,16 @@
    const prompt = text(request.prompt, 'prompt')
    const provider = request.provider === undefined ? undefined : text(request.provider, 'provider')
    const model = request.model === undefined ? undefined : text(request.model, 'model')
@@ -1690,12 +1702,13 @@ index 7a2266e7..487e9130 100644
    let schema: ObjectJsonSchema | undefined
    if (request.schema !== undefined) {
      const candidate = object(request.schema)
-@@ -54,10 +88,13 @@ function childRequest(value: unknown): ChildStartRequest {
+@@ -54,10 +88,14 @@
      schema = candidate
    }
    return {
 +    seq: request.seq as number,
      prompt,
++    ...request.label === undefined ? {} : { label: text(request.label, 'agent label') },
      ...provider === undefined ? {} : { provider },
      ...model === undefined ? {} : { model },
      ...schema === undefined ? {} : { schema },
@@ -1704,7 +1717,7 @@ index 7a2266e7..487e9130 100644
    }
  }
  
-@@ -110,8 +147,32 @@ function workflowResult(value: unknown): WorkflowResult {
+@@ -110,8 +148,32 @@
   * its managed process and every admitted child startup/disposal. Engine unload does not
   * invalidate the captured runtime or subagent handles.
   */
@@ -1737,7 +1750,7 @@ index 7a2266e7..487e9130 100644
    private readonly controller = new AbortController()
    private readonly children = new Map<number, ChildRecord>()
    private readonly pending = new Set<Promise<unknown>>()
-@@ -121,11 +182,19 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -121,11 +183,19 @@
    private cancelReason: string | undefined
    private disposed: Promise<void> | undefined
    private readonly externalAbort: () => void
@@ -1758,7 +1771,7 @@ index 7a2266e7..487e9130 100644
      private readonly runtime: PtcRuntime,
      readonly id: WorkflowRunId,
      readonly meta: WorkflowMeta,
-@@ -135,7 +204,10 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -135,7 +205,10 @@
      private readonly policy: SandboxExecutionPolicy,
      private readonly observer: ExecutionObserver,
      private readonly signal?: AbortSignal,
@@ -1769,7 +1782,7 @@ index 7a2266e7..487e9130 100644
      this.externalAbort = () => { this.cancel('workflow signal aborted') }
      if (signal?.aborted) this.externalAbort()
      else signal?.addEventListener('abort', this.externalAbort, { once: true })
-@@ -178,7 +250,20 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -178,7 +251,20 @@
    private bindings(): Record<string, PtcBindingFunction> {
      return {
        begin: () => { this.requireActive(); return Promise.resolve(json(this.init)) },
@@ -1791,7 +1804,7 @@ index 7a2266e7..487e9130 100644
        childResult: value => this.track(this.childResult(this.child(value))),
        disposeChild: async (value) => { await this.disposeChild(this.child(value)); return null },
        progress: (value) => {
-@@ -199,25 +284,56 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -199,25 +285,59 @@
  
    private async startChild(request: ChildStartRequest): Promise<PtcJsonValue> {
      this.requireActive()
@@ -1816,7 +1829,10 @@ index 7a2266e7..487e9130 100644
 +    const admission = this.admission.then(async () => {
 +      this.requireActive()
 +      const type = await this.support?.childType?.(request.agentType)
-+      const identity = { ...request, cwd: await this.cwd, parentOptions: this.parent.session.requestHeader()?.config ?? this.parent.options, policy: this.policy, presetFingerprint: type?.fingerprint }
++      // Display-only edits must not rerun a completed child (including journals
++      // written before labels crossed the guest/host boundary).
++      const { label: _label, ...execution } = request
++      const identity = { ...execution, cwd: await this.cwd, parentOptions: this.parent.session.requestHeader()?.config ?? this.parent.options, policy: this.policy, presetFingerprint: type?.fingerprint }
 +      const cached = await this.journal?.start(callId, identity, value => (request.schema === undefined || value.structured !== undefined) && (!value.worktree?.retained || existsSync(value.worktree.path)))
 +      return { type, cached }
 +    })
@@ -1843,7 +1859,7 @@ index 7a2266e7..487e9130 100644
 +        if (artifact.retained && artifact.reason !== 'running') this.observer.log(`Worktree retained at ${artifact.path}: ${artifact.reason}`)
 +      },
 +    }
-+    const label = `${this.meta.name} child ${callId}`
++    const label = request.label?.trim() || `${this.meta.name} child ${callId}`
 +    const childInputs = {
 +      cwd: await this.cwd,
 +      prompt: [{ type: 'text' as const, text: request.prompt }],
@@ -1864,7 +1880,7 @@ index 7a2266e7..487e9130 100644
      const record: ChildRecord = { callId, run }
      this.children.set(callId, record)
      // A provider can publish after the signal fired while startup was pending.
-@@ -228,7 +344,12 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -228,7 +348,12 @@
      return { callId, childId: run.childId }
    }
  
@@ -1878,7 +1894,7 @@ index 7a2266e7..487e9130 100644
      const signal = this.controller.signal
      signal.throwIfAborted()
      const aborted = Promise.withResolvers<never>()
-@@ -236,18 +357,44 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -236,18 +361,44 @@
      signal.addEventListener('abort', onAbort, { once: true })
      try {
        const result = await Promise.race([record.run.result, aborted.promise])
@@ -1927,7 +1943,7 @@ index 7a2266e7..487e9130 100644
        this.ctx.logger.warn(`workflow-ptc: child dispose failed: ${renderThrown(error)}`)
      }).finally(() => {
        this.children.delete(record.callId)
-@@ -272,6 +419,16 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -272,6 +423,16 @@
  
    private endAgent(info: WorkflowAgentEndInfo): void {
      if (!this.liveAgents.delete(info.seq)) return
@@ -1944,7 +1960,7 @@ index 7a2266e7..487e9130 100644
      this.observer.agentEnd(info)
    }
  
-@@ -287,6 +444,15 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -287,6 +448,15 @@
        if (this.runtime.sandboxMode === undefined && this.policy.mode !== 'danger-full-access') {
          throw new Error(`workflow runtime cannot enforce the ${this.policy.mode} file policy`)
        }
@@ -1960,7 +1976,7 @@ index 7a2266e7..487e9130 100644
        const outcome = await this.runtime.run(this.runtime.resolve({
          program: this.runtime.programFormat === 'repl' ? `await (async () => {\n${PROGRAM}\n})()` : PROGRAM,
          bindings: [{ global: 'workflowHost', functions: this.bindings() }],
-@@ -300,6 +466,7 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -300,6 +470,7 @@
        else if (outcome.error !== undefined) result = { value: null, stopReason: 'error', error: `workflow execution failed (${outcome.error.kind}): ${outcome.error.message}`, agentsStarted: this.started }
        else result = workflowResult(outcome.value)
      } catch (error: unknown) {
@@ -1968,7 +1984,7 @@ index 7a2266e7..487e9130 100644
        this.terminal = true
        result = this.cancelReason === undefined
          ? { value: null, stopReason: 'error', error: renderThrown(error), agentsStarted: this.started }
-@@ -315,6 +482,15 @@ export class PtcWorkflowRun implements WorkflowRun {
+@@ -315,6 +486,15 @@
        this.children.clear()
        for (const info of this.liveAgents.values()) this.endAgent({ ...info, outcome: 'cancelled' })
      }
@@ -2160,10 +2176,9 @@ index 68bc19fb..b9dce0b5 100644
      // A throwing accessor/toString on the thrown value — rendering must be
      // total (drive()'s never-reject contract), so fall back to a fixed label.
 diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/workflow-ptc/src/runtime.ts
-index 71c153e5..1d2e5a48 100644
 --- a/packages/workflow/workflow-ptc/src/runtime.ts
 +++ b/packages/workflow/workflow-ptc/src/runtime.ts
-@@ -30,9 +30,14 @@ export interface ExecutionObserver {
+@@ -30,9 +30,14 @@
  }
  
  /** The `agent()` options the script may pass; everything else rejects loud. */
@@ -2181,7 +2196,7 @@ index 71c153e5..1d2e5a48 100644
  
  /** Flatten a child's final output blocks to text (the non-schema `agent()` result). */
  function outputText(blocks: ContentBlock[]): string {
-@@ -55,9 +60,6 @@ function defaultLabel(prompt: string): string {
+@@ -55,9 +60,6 @@
   */
  export class WorkflowExecution {
    /** 1-based count of `agent()` calls started (the `agentsStarted` result field). */
@@ -2191,7 +2206,7 @@ index 71c153e5..1d2e5a48 100644
    private currentPhase: string | undefined
    private readonly context: vm.Context
    private readonly compiled: vm.Script
-@@ -69,6 +71,8 @@ export class WorkflowExecution {
+@@ -69,6 +71,8 @@
      private readonly limits: WorkerLimits,
      private readonly observer: ExecutionObserver,
      private readonly children: ChildPort,
@@ -2200,7 +2215,7 @@ index 71c153e5..1d2e5a48 100644
    ) {
      // The host parses this same wrapper before publishing a run.
      try {
-@@ -81,6 +85,7 @@ export class WorkflowExecution {
+@@ -81,6 +85,7 @@
      }
  
      this.context = vm.createContext({}, { name: `workflow:${meta.name}` })
@@ -2208,7 +2223,7 @@ index 71c153e5..1d2e5a48 100644
  
      const globals: Record<string, unknown> = {
        agent: (prompt: unknown, opts?: unknown) => this.contain(this.agent(prompt, opts)),
-@@ -88,6 +93,12 @@ export class WorkflowExecution {
+@@ -88,6 +93,12 @@
        pipeline: (items: unknown, ...stages: unknown[]) => this.contain(this.pipeline(items, stages)),
        phase: (title: unknown) => { this.phase(title) },
        log: (message: unknown) => { this.log(message) },
@@ -2221,7 +2236,7 @@ index 71c153e5..1d2e5a48 100644
        // PTC has already copied these inputs through its JSON channel.
        args,
      }
-@@ -96,6 +107,20 @@ export class WorkflowExecution {
+@@ -96,6 +107,20 @@
        // a script overwriting its own hooks only sabotages itself.
        ;(this.context as Record<string, unknown>)[key] = typeof value === 'function' ? Object.freeze(value) : value
      }
@@ -2242,7 +2257,7 @@ index 71c153e5..1d2e5a48 100644
    }
  
    /**
-@@ -107,9 +132,9 @@ export class WorkflowExecution {
+@@ -107,9 +132,9 @@
        const scriptPromise = this.compiled.runInContext(this.context, { timeout: this.limits.syncTimeoutMs }) as Promise<unknown>
        const raw: unknown = await this.contain(Promise.resolve(scriptPromise))
        const value = raw === undefined ? null : this.materializeResult(raw)
@@ -2254,7 +2269,7 @@ index 71c153e5..1d2e5a48 100644
      }
    }
  
-@@ -141,21 +166,21 @@ export class WorkflowExecution {
+@@ -141,21 +166,21 @@
  
    /** Acquire one concurrency slot in FIFO order. */
    private acquireSlot(): Promise<void> {
@@ -2282,7 +2297,7 @@ index 71c153e5..1d2e5a48 100644
      if (next) next()
    }
  
-@@ -165,14 +190,14 @@ export class WorkflowExecution {
+@@ -165,15 +190,15 @@
        throw new WorkflowError('agent() requires a non-empty prompt string', 'INVALID_ARGUMENT')
      }
      const opts = this.readAgentOptions(rawOpts)
@@ -2295,16 +2310,19 @@ index 71c153e5..1d2e5a48 100644
      }
 -    this.started += 1
 -    const seq = this.started
+-    const label = opts.label ?? defaultLabel(rawPrompt)
 +    this.shared.started += 1
 +    const seq = this.shared.started
-     const label = opts.label ?? defaultLabel(rawPrompt)
++    const label = opts.label?.trim() || defaultLabel(rawPrompt)
      const phase = opts.phase ?? this.currentPhase
  
-@@ -181,10 +206,14 @@ export class WorkflowExecution {
+     await this.acquireSlot()
+@@ -181,10 +206,15 @@
        let run: ChildHandle
        try {
          run = await this.children.startAgent({
 +          seq,
++          label,
            prompt: rawPrompt,
            ...opts.schema !== undefined ? { schema: opts.schema } : {},
            ...opts.provider !== undefined ? { provider: opts.provider } : {},
@@ -2315,7 +2333,7 @@ index 71c153e5..1d2e5a48 100644
          })
        } catch (error: unknown) {
          throw new WorkflowError(`agent() could not start a child: ${renderThrown(error)}`, 'AGENT_START', { cause: error })
-@@ -195,6 +224,8 @@ export class WorkflowExecution {
+@@ -195,6 +225,8 @@
          let result
          try {
            result = await run.result
@@ -2324,7 +2342,7 @@ index 71c153e5..1d2e5a48 100644
          } catch (error: unknown) {
            // A rejected child result is an INFRASTRUCTURE fault relayed by the
            // host — distinct from a child that failed and resolved. Pair the
-@@ -234,6 +265,9 @@ export class WorkflowExecution {
+@@ -234,6 +266,9 @@
      phase?: string
      provider?: string
      model?: string
@@ -2334,7 +2352,7 @@ index 71c153e5..1d2e5a48 100644
      schema?: ObjectJsonSchema
    } {
      if (rawOpts === undefined) return {}
-@@ -251,16 +285,17 @@ export class WorkflowExecution {
+@@ -251,16 +286,17 @@
      const record = opts as Record<string, unknown>
      for (const key of Object.keys(record)) {
        if (SUPPORTED_AGENT_OPTIONS.has(key)) continue
@@ -2342,9 +2360,10 @@ index 71c153e5..1d2e5a48 100644
 -        throw new WorkflowError(`agent() option "${key}" is deferred and not supported by this engine (supported: label, phase, schema, provider, model)`, 'UNSUPPORTED_OPTION')
 -      }
 -      throw new WorkflowError(`agent() option "${key}" is not recognized (supported: label, phase, schema, provider, model)`, 'UNSUPPORTED_OPTION')
-+      throw new WorkflowError(`agent() option "${key}" is not recognized (supported: ${[...SUPPORTED_AGENT_OPTIONS].join(', ')})`, 'UNSUPPORTED_OPTION')
-     }
+-    }
 -    for (const key of ['label', 'phase', 'provider', 'model'] as const) {
++      throw new WorkflowError(`agent() option "${key}" is not recognized (supported: ${[...SUPPORTED_AGENT_OPTIONS].join(', ')})`, 'UNSUPPORTED_OPTION')
++    }
 +    for (const key of ['label', 'phase', 'provider', 'model', 'effort', 'agentType'] as const) {
        if (record[key] !== undefined && typeof record[key] !== 'string') {
          throw new WorkflowError(`agent() option "${key}" must be a string`, 'INVALID_ARGUMENT')
@@ -2357,7 +2376,7 @@ index 71c153e5..1d2e5a48 100644
      let schema: ObjectJsonSchema | undefined
      if (record.schema !== undefined) {
        try {
-@@ -277,10 +312,31 @@ export class WorkflowExecution {
+@@ -277,8 +313,29 @@
        ...record.phase !== undefined ? { phase: record.phase as string } : {},
        ...record.provider !== undefined ? { provider: record.provider as string } : {},
        ...record.model !== undefined ? { model: record.model as string } : {},
@@ -2366,8 +2385,8 @@ index 71c153e5..1d2e5a48 100644
 +      ...record.agentType !== undefined ? { agentType: record.agentType as string } : {},
        ...schema !== undefined ? { schema } : {},
      }
-   }
- 
++  }
++
 +  private async workflow(rawReference: unknown, rawArgs: unknown): Promise<unknown> {
 +    if (this.depth !== 0) throw new WorkflowError('workflow() nesting is limited to one level', 'INVALID_ARGUMENT')
 +    const ref = materializeFromRealm(rawReference, 'workflow reference')
@@ -2384,16 +2403,13 @@ index 71c153e5..1d2e5a48 100644
 +    const result = await new WorkflowExecution(source.meta, source.body, input, this.limits, observer, this.children, this.shared, 1).drive()
 +    if (result.stopReason !== 'completed') throw new WorkflowError(result.error ?? 'Nested workflow failed', 'AGENT_RESULT')
 +    return result.value
-+  }
-+
+   }
+ 
    /** The `parallel(thunks)` hook: each thunk caught → `null`; fatal errors propagate. */
-   private async parallel(rawThunks: unknown): Promise<unknown[]> {
-     if (!Array.isArray(rawThunks)) {
 diff --git a/packages/workflow/workflow-ptc/src/types.ts b/packages/workflow/workflow-ptc/src/types.ts
-index c8e3e393..bcd42361 100644
 --- a/packages/workflow/workflow-ptc/src/types.ts
 +++ b/packages/workflow/workflow-ptc/src/types.ts
-@@ -32,10 +32,13 @@ export interface WorkerInit {
+@@ -32,10 +32,15 @@
    args?: unknown
    /** The guest helper limits. */
    limits: WorkerLimits
@@ -2404,10 +2420,12 @@ index c8e3e393..bcd42361 100644
  export interface ChildStartRequest {
 +  /** Invocation order, assigned before acquiring a concurrency slot. */
 +  seq: number
++  /** Display label shared by workflow progress and the native child catalog. */
++  label?: string
    /** The child's prompt text. */
    prompt: string
    /** The structured-output schema, if the call passed one (already subset-checked). */
-@@ -44,6 +47,9 @@ export interface ChildStartRequest {
+@@ -44,6 +49,9 @@
    provider?: string
    /** The per-child model override, if the call passed one. */
    model?: string
@@ -2417,7 +2435,7 @@ index c8e3e393..bcd42361 100644
  }
  
  /**
-@@ -58,6 +64,12 @@ export interface ChildResult {
+@@ -58,6 +66,12 @@
    structured?: unknown
    /** Why the child run ended (`'completed'` is the only value the runtime branches on). */
    stopReason: string
@@ -2430,7 +2448,7 @@ index c8e3e393..bcd42361 100644
  }
  
  /**
-@@ -87,4 +99,5 @@ export interface ChildPort {
+@@ -87,4 +101,5 @@
     *   provider's asynchronous start fails.
     */
    startAgent(request: ChildStartRequest): Promise<ChildHandle>

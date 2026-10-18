@@ -1,12 +1,16 @@
 import { randomUUID } from 'node:crypto'
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { stat } from 'node:fs/promises'
 import { isAbsolute } from 'node:path'
-import { nativeImage, type NavigationEntry, type WebContents } from 'electron'
+import { type NavigationEntry, type WebContents } from 'electron'
 import { inspectSiteTools, beginSiteTool, invokeSiteTool, cancelSiteTool } from './opencu-site-tools.ts'
 import { readPageImage } from './opencu-page-image.ts'
 import { runCDPLocator } from './opencu-cdp-locator.js'
-import { keyEventParameters } from './opencu-keyboard.js'
+import { selectOptionsFunction, selectOptionsResult } from './opencu-select-options.js'
+import { guestKeySpec as inputKey, keyEventParameters } from './opencu-keyboard.js'
+import { runTextEdit, validateTextEditRequest } from './opencu-text-edit.js'
 import { createCDPFrameRouter, hitTestViewport, type CDPFrameRouter, type FrameElement } from './opencu-frame-router.js'
+import { openCUDialogs, type DialogFence } from './opencu-dialogs.ts'
 
 type AXValue = { value?: string | number | boolean; relatedNodes?: { text?: string; idref?: string }[] }
 type AXNode = { nodeId: string; backendDOMNodeId?: number; ignored?: boolean; role?: AXValue; name?: AXValue; value?: AXValue; properties?: { name: string; value: AXValue }[]; childIds?: string[] }
@@ -21,6 +25,7 @@ interface ObservationState {
   inputActive?: boolean
   inputKeys: Map<string, ReturnType<typeof inputKey>>
   inputButtons: Set<string>
+  releasingInputs: Map<string, Promise<unknown>>
   inputPosition: { x: number; y: number }
   uploadGeneration: number
   documentGeneration: number
@@ -29,18 +34,20 @@ interface ObservationState {
   rendererExited?: boolean
 }
 const states = new WeakMap<WebContents, ObservationState>()
-const guestExited = (): Error => Object.assign(new Error('The browser page process exited; reload the page before observing or sending input'), { code: 'BROWSER_GUEST_CRASHED', details: { inputDispatched: false } })
-const metadata = `(() => { const state = globalThis.__opencuDocument ??= { id: crypto.randomUUID(), next: 0, elements: new Map() }; return { documentId: state.id, url: location.href, title: document.title, viewport: { width: innerWidth, height: innerHeight, deviceScaleFactor: devicePixelRatio, scrollX, scrollY } }; })()`
-
-function inputKey(value: unknown): { key: string; code: string; windowsVirtualKeyCode: number } {
-  if (typeof value !== 'string' || !value) throw new Error('Input requires a key name')
-  const aliases: Record<string, string> = { ctrl: 'Control', control: 'Control', alt: 'Alt', option: 'Alt', shift: 'Shift', meta: 'Meta', cmd: 'Meta', command: 'Meta', enter: 'Enter', return: 'Enter', esc: 'Escape', escape: 'Escape', tab: 'Tab', space: ' ', backspace: 'Backspace', delete: 'Delete', up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' }
-  const key = aliases[value.toLowerCase()] ?? value
-  const named: Record<string, [string, number]> = { Control: ['ControlLeft', 17], Alt: ['AltLeft', 18], Shift: ['ShiftLeft', 16], Meta: ['MetaLeft', 91], Enter: ['Enter', 13], Escape: ['Escape', 27], Tab: ['Tab', 9], ' ': ['Space', 32], Backspace: ['Backspace', 8], Delete: ['Delete', 46], Insert: ['Insert', 45], ArrowLeft: ['ArrowLeft', 37], ArrowUp: ['ArrowUp', 38], ArrowRight: ['ArrowRight', 39], ArrowDown: ['ArrowDown', 40], Home: ['Home', 36], End: ['End', 35], PageUp: ['PageUp', 33], PageDown: ['PageDown', 34], '+': ['Equal', 187], '=': ['Equal', 187], '-': ['Minus', 189] }
-  const spec = named[key] ?? (/^[a-z]$/i.test(key) ? [`Key${key.toUpperCase()}`, key.toUpperCase().charCodeAt(0)] as [string, number] : /^\d$/.test(key) ? [`Digit${key}`, key.charCodeAt(0)] as [string, number] : /^F([1-9]|1\d|2[0-4])$/.test(key) ? [key, 111 + Number(key.slice(1))] as [string, number] : undefined)
-  if (!spec) throw Object.assign(new Error('Use a supported named key; insertText handles Unicode'), { code: 'UNSUPPORTED_KEY' })
-  return { key, code: spec[0], windowsVirtualKeyCode: spec[1] }
+const operations = new AsyncLocalStorage<{ fence: DialogFence; inputDispatched: boolean; operation: string }>()
+function dispatchesInput(method: string, params: Record<string, unknown>, operation?: string): boolean {
+  if (method === 'Target.sendMessageToTarget' && typeof params.message === 'string') {
+    try { method = JSON.parse(params.message).method } catch { return false }
+  }
+  return typeof method === 'string' && (method.startsWith('Input.') ||
+    ['DOM.focus', 'DOM.scrollIntoViewIfNeeded', 'DOM.setFileInputFiles'].includes(method) ||
+    method === 'Runtime.callFunctionOn' && ['focus', 'selectAll', 'patch'].includes(operation ?? ''))
 }
+const guestExited = (): Error => Object.assign(new Error('The browser page process exited; reload the page before observing or sending input'), { code: 'BROWSER_GUEST_CRASHED', details: { inputDispatched: false } })
+// Error documents and ordinary HTTP pages need not expose crypto.randomUUID.
+// Mint a fresh candidate in the host; the document retains its existing identity.
+const metadata = (): string => `(() => { const state = globalThis.__opencuDocument ??= { id: ${JSON.stringify(randomUUID())}, next: 0, elements: new Map() }; return { documentId: state.id, url: location.href, title: document.title, viewport: { width: innerWidth, height: innerHeight, deviceScaleFactor: devicePixelRatio, scrollX, scrollY } }; })()`
+
 
 function value(result: RemoteResult): unknown {
   if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text)
@@ -75,9 +82,26 @@ export function resolveOpenCUNavigation(input: unknown, allowedNavigation: (url:
 
 /** Run fixed accessibility and DOM operations on the caller's already verified guest. */
 export function openCUAutomation(guest: WebContents, operation: unknown, input: unknown, allowedNavigation: (url: string) => boolean): Promise<unknown> {
-  if (typeof operation !== 'string' || !['observe', 'locator', 'domSnapshot', 'checked', 'point', 'verifyElement', 'focus', 'selectAll', 'selectOption', 'describe', 'patch', 'hitTest', 'upload', 'navigationSnapshot', 'restoreNavigation', 'siteTools', 'invokeSiteTool', 'cancelSiteTool', 'cancelUpload', 'capture', 'readPageImage', 'input', 'insertText', 'releaseInput'].includes(operation)) throw new Error('Unsupported guest automation operation')
+  if (typeof operation !== 'string' || !['getDialog', 'handleDialog', 'pageState', 'inputMarker', 'observe', 'locator', 'domSnapshot', 'checked', 'point', 'verifyElement', 'focus', 'selectAll', 'selectOption', 'selectText', 'paste', 'describe', 'patch', 'hitTest', 'upload', 'navigationSnapshot', 'restoreNavigation', 'siteTools', 'invokeSiteTool', 'cancelSiteTool', 'cancelUpload', 'capture', 'readPageImage', 'input', 'insertText', 'releaseInput'].includes(operation)) throw new Error('Unsupported guest automation operation')
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Invalid guest automation arguments')
   const args = input as Record<string, unknown>
+  const dialogs = openCUDialogs(guest)
+  // These operations must bypass the page's serialized/focus/DOM command queue.
+  if (operation === 'getDialog') return Promise.resolve(dialogs.get())
+  if (operation === 'handleDialog') {
+    const handled = dialogs.handle(args)
+    return openCUAutomation(guest, 'releaseInput', { dismissDialogs: false }, allowedNavigation).then(() => ({ ...handled,
+      ...(dialogs.pending() ? { pendingDialog: dialogs.pending() } : {}) }), error => {
+      return { ...handled, ...(dialogs.pending() ? { pendingDialog: dialogs.pending() } : {}),
+        releasePending: true, releaseFailures: [{ code: error?.code, message: error?.message ?? String(error) }] }
+    })
+  }
+  if (operation === 'releaseInput' && args.dismissDialogs !== false) dialogs.dismiss()
+  if (operation === 'releaseInput' && dialogs.pending()) {
+    const input = states.get(guest)
+    if (!input?.inputKeys.size && !input?.inputButtons.size) return Promise.resolve({ released: true, deferredFocus: true })
+  }
+  if (!['cancelSiteTool', 'cancelUpload'].includes(operation)) dialogs.assertClear()
   if (operation === 'cancelSiteTool') return cancelSiteTool(guest, typeof args.requestId === 'string' ? args.requestId : undefined)
   if (operation === 'cancelUpload') {
     cancelOpenCUUpload(guest)
@@ -86,13 +110,13 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
   let state = states.get(guest)
   if (!state) {
     state = { elements: new Map(), pending: Promise.resolve(), debuggerUsers: 0, ownsDebugger: false, uploadGeneration: 0, documentGeneration: 0, identityScope: randomUUID(),
-      inputKeys: new Map(), inputButtons: new Set(), inputPosition: { x: 0, y: 0 } }
+      inputKeys: new Map(), inputButtons: new Set(), releasingInputs: new Map(), inputPosition: { x: 0, y: 0 } }
     states.set(guest, state)
     const tracked = state
     const invalidate = (): void => { tracked.documentGeneration++; tracked.identityScope = randomUUID(); tracked.elements.clear(); delete tracked.observationId }
     guest.on('render-process-gone', () => {
       invalidate(); tracked.rendererExited = true; tracked.uploadGeneration++
-      tracked.inputKeys.clear(); tracked.inputButtons.clear(); tracked.inputActive = false
+      tracked.inputKeys.clear(); tracked.inputButtons.clear(); tracked.releasingInputs.clear(); tracked.inputActive = false
       const router = tracked.frameRouter; delete tracked.frameRouter
       void router?.close().catch(() => {}) // The exited process already owns no frame sessions.
     })
@@ -111,8 +135,11 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
   const siteInvocation = operation === 'invokeSiteTool' ? beginSiteTool(guest, args.requestId) : undefined
   if (operation === 'capture' && current.capture) return current.capture
   const work = (operation === 'capture' ? Promise.resolve() : current.pending).then(async () => {
+    const context = { fence: dialogs.fence(), inputDispatched: false, operation }
+    const execute = async (): Promise<unknown> => {
     siteInvocation?.controller.signal.throwIfAborted()
     if (guest.isDestroyed()) throw new Error('The browser guest is closed')
+    dialogs.assertClear()
     if (current.rendererExited || guest.isCrashed()) throw guestExited()
     if (current.documentGeneration !== documentGeneration && operation !== 'releaseInput') throw Object.assign(new Error('STALE_ELEMENT: the queued document changed'), { code: 'STALE_ELEMENT', details: { inputDispatched: false } })
     if (operation === 'verifyElement') {
@@ -135,21 +162,87 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       current.ownsDebugger = true
     }
     current.debuggerUsers++
-    let inputDispatched = false
     const send = (method: string, params: object = {}): Promise<any> => {
       if (current.rendererExited || guest.isCrashed()) return Promise.reject(guestExited())
-      return new Promise((resolve, reject) => {
+      const active = operations.getStore()
+      return (active?.fence ?? dialogs).guard(() => {
+        const data = params as Record<string, unknown>
+        const releasedKey = method === 'Input.dispatchKeyEvent' && data.type === 'keyUp' ? String(data.key) : undefined
+        const releasedButton = method === 'Input.dispatchMouseEvent' && data.type === 'mouseReleased' ? String(data.button) : undefined
+        const releaseId = releasedKey ? `key:${releasedKey}` : releasedButton ? `button:${releasedButton}` : undefined
+        if (releaseId && current.releasingInputs.has(releaseId)) return current.releasingInputs.get(releaseId)!
+        const ack = new Promise((resolve, reject) => {
         const gone = (): void => { finish(); reject(guestExited()) }
         const finish = (): void => { guest.off('render-process-gone', gone) }
         guest.once('render-process-gone', gone)
-        if (method.startsWith('Input.') || method === 'DOM.setFileInputFiles') inputDispatched = true
+        if (dispatchesInput(method, data, active?.operation)) {
+          if (active) active.inputDispatched = true
+        }
         try { void guest.debugger.sendCommand(method, params).then(value => { finish(); resolve(value) }, error => { finish(); reject(error) }) }
         catch (error) { finish(); reject(error) }
+        })
+        if (releaseId) {
+          current.releasingInputs.set(releaseId, ack)
+          const forget = (): void => { if (current.releasingInputs.get(releaseId) === ack) current.releasingInputs.delete(releaseId) }
+          void ack.then(() => {
+            if (releasedKey) current.inputKeys.delete(releasedKey)
+            if (releasedButton) current.inputButtons.delete(releasedButton)
+            forget()
+          }, forget)
+        }
+        return ack
       })
     } // CDP replies vary by method; validate at their consumers below.
     let releaseSend = send
     let objectId: string | undefined
+    const insertMarkedText = async (text: string, verify?: () => Promise<unknown>): Promise<void> => {
+      const marker = value(await send('Runtime.evaluate', { expression: `globalThis.__opencuAnnotations?.expectTextInput?.(${JSON.stringify(text)})`, returnByValue: true }))
+      let failure: (Error & {details?: Record<string, unknown>}) | undefined
+      try {
+        await verify?.()
+        if (current.documentGeneration !== documentGeneration) throw Object.assign(new Error('STALE_ELEMENT: document changed before text dispatch'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
+        await send('Input.insertText', { text })
+      } catch (error) { failure = error as typeof failure; throw error }
+      finally {
+        // A modal interrupts this operation permanently. Never wait for its JS
+        // context or resume the old dispatch just to clean up a page marker.
+        if (marker && !context.fence.interrupted && !dialogs.pending() && !guest.isDestroyed() && !current.rendererExited && !guest.isCrashed()) {
+          try { await send('Runtime.evaluate', {expression:`globalThis.__opencuAnnotations?.finishInput(${JSON.stringify(marker)},false)`}) }
+          catch (error) { if (!failure) throw error; failure.details = {...failure.details,inputMarkerError:(error as Error).message} }
+        }
+      }
+    }
     try {
+      if (operation === 'pageState') return value(await send('Runtime.evaluate', { expression:
+        '({ documentId: globalThis.__opencuDocument?.id, url: location.href, width: innerWidth, height: innerHeight, scrollX, scrollY, focused: document.hasFocus() })', returnByValue: true }))
+      if (operation === 'inputMarker') {
+        if (!['expect', 'finish', 'clear'].includes(String(args.method)) || args.method === 'expect' && (!Array.isArray(args.events) || args.events.length > 64)) throw new Error('Invalid input marker operation')
+        return value(await send('Runtime.evaluate', { expression: `(() => { const args = ${JSON.stringify(args)}; const markers = globalThis.__opencuAnnotations;
+          if (args.method === 'expect') return markers?.expectInput(args.events, args.pending === true);
+          if (args.method === 'finish') return markers?.finishInput(args.marker, args.dispatched === true);
+          return markers?.clearInput(); })()`, returnByValue: true }))
+      }
+      if (operation === 'selectText' || operation === 'paste') {
+        validateTextEditRequest(operation,args)
+        const entry = args.elementId != null ? current.elements.get(String(args.elementId)) : undefined
+        const generation = current.documentGeneration
+        if (args.elementId != null && !entry || args.observationId !== undefined && args.observationId !== current.observationId) throw Object.assign(new Error('STALE_ELEMENT: observe the current editable element again'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
+        const validate = async (): Promise<void> => {
+          if (guest.isDestroyed() || current.rendererExited || guest.isCrashed()) throw guestExited()
+          if (current.documentGeneration !== generation || entry && current.elements.get(String(args.elementId)) !== entry) throw Object.assign(new Error('STALE_ELEMENT: the selected editable document changed'),{code:'STALE_ELEMENT',details:{inputDispatched:false}})
+          if (entry?.route) await current.frameRouter!.validate(entry.route)
+        }
+        const elementSend = (method:string,params:object={}):Promise<any> => context.fence.guard(() => (entry?.route?.send ?? send)(method,params))
+        return await runTextEdit(elementSend,operation,args,{
+          backendNodeId:entry?.backendNodeId,contextId:entry?.route?.contextId,validate,
+          onFocus:()=>{context.inputDispatched=true;current.inputActive=true},
+          beforeFocus:async()=>{
+            await guest.hostWebContents?.executeJavaScript(`(() => { const view=[...document.querySelectorAll('webview')].find(item=>item.getWebContentsId()===${guest.id});if(!view)throw new Error('Browser input guest is detached');if(document.activeElement===view)view.blur();view.focus(); })()`)
+            await send('Emulation.setFocusEmulationEnabled',{enabled:true})
+          },
+          insertText:insertMarkedText,
+        })
+      }
       if (operation === 'input' || operation === 'insertText') {
         current.inputActive = true
         const generation = current.documentGeneration
@@ -169,7 +262,10 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         if (!releasing && current.documentGeneration !== generation) throw new Error('STALE_ELEMENT: document changed before input dispatch')
         if (operation === 'insertText') {
           if (typeof args.text !== 'string') throw new Error('insertText requires text')
-          await send('Input.insertText', { text: args.text })
+          await insertMarkedText(args.text, async () => {
+            if (inputElement?.route) await current.frameRouter!.validate(inputElement.route)
+            if (args.elementId != null && current.elements.get(String(args.elementId)) !== inputElement) throw Object.assign(new Error('STALE_ELEMENT: editable target changed before text dispatch'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
+          })
         } else {
           const modifierNames = Array.isArray(args.modifiers) ? args.modifiers : []
           const modifiers = modifierNames.reduce<number>((bits, name) => bits | ({ alt: 1, control: 2, meta: 4, shift: 8 }[String(name)] ?? 0), 0)
@@ -195,14 +291,17 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       }
       if (operation === 'releaseInput') {
         const errors: unknown[] = []
-        for (const [key, spec] of [...current.inputKeys].reverse()) {
-          const modifiers = [...current.inputKeys.keys()].filter(name => name !== key).reduce((bits, name) => bits | ({ Alt: 1, Control: 2, Meta: 4, Shift: 8 }[name] ?? 0), 0)
-          try { await send('Input.dispatchKeyEvent', keyEventParameters(spec, false, modifiers, process.platform === 'darwin')); current.inputKeys.delete(key) }
+        const modifiers = [...current.inputKeys.keys()].reduce((bits, name) => bits | ({ Alt: 1, Control: 2, Meta: 4, Shift: 8 }[name] ?? 0), 0)
+        for (const button of [...current.inputButtons]) {
+          const buttons = [...current.inputButtons].filter(name => name !== button).reduce((bits, name) => bits | ({ left: 1, right: 2, middle: 4 }[name] ?? 0), 0)
+          try { await send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...current.inputPosition, button, buttons, clickCount: 1, modifiers }); current.inputButtons.delete(button) }
           catch (error) { errors.push(error) }
         }
-        for (const button of current.inputButtons) {
-          const buttons = [...current.inputButtons].filter(name => name !== button).reduce((bits, name) => bits | ({ left: 1, right: 2, middle: 4 }[name] ?? 0), 0)
-          try { await send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...current.inputPosition, button, buttons, clickCount: 1 }); current.inputButtons.delete(button) }
+        // Failed mouse-up keeps its modifier journal intact for the next release.
+        if (!current.inputButtons.size) for (const [key, spec] of [...current.inputKeys].reverse()) {
+          if (!current.inputKeys.has(key)) continue
+          const modifiers = [...current.inputKeys.keys()].filter(name => name !== key).reduce((bits, name) => bits | ({ Alt: 1, Control: 2, Meta: 4, Shift: 8 }[name] ?? 0), 0)
+          try { await send('Input.dispatchKeyEvent', keyEventParameters(spec, false, modifiers, process.platform === 'darwin')); current.inputKeys.delete(key) }
           catch (error) { errors.push(error) }
         }
         if (errors.length) throw new AggregateError(errors, 'Target CDP input release failed')
@@ -219,12 +318,17 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         const screenshot: { data: string } = await Promise.race([
           send('Page.captureScreenshot', { format: 'png', fromSurface: true, captureBeyondViewport: false }),
           new Promise<never>((_resolve, reject) => {
-            timer = setTimeout(() => { reject(new Error('Browser frame capture timed out')) }, 8000)
+            timer = setTimeout(() => { reject(Object.assign(new Error('Browser frame capture timed out'), { code: 'BROWSER_CAPTURE_TIMEOUT' })) }, 8000)
           }),
         ]).finally(() => { clearTimeout(timer) })
-        const image = nativeImage.createFromBuffer(Buffer.from(screenshot.data, 'base64'))
-        if (image.isEmpty()) throw new Error('The browser returned an empty screenshot')
-        return { dataUrl: image.toDataURL(), ...image.getSize() }
+        // CDP already produced PNG. Read its fixed IHDR instead of decoding and
+        // re-encoding every preview on Electron's window/input event loop.
+        const header = Buffer.from(screenshot.data.slice(0, 44), 'base64')
+        if (header.length < 24 || !header.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+          || header.readUInt32BE(8) !== 13 || header.toString('ascii', 12, 16) !== 'IHDR') throw new Error('The browser returned an invalid PNG screenshot')
+        const width = header.readUInt32BE(16), height = header.readUInt32BE(20)
+        if (!width || !height || width > 32768 || height > 32768) throw new Error('The browser returned invalid screenshot dimensions')
+        return { dataUrl: `data:image/png;base64,${screenshot.data}`, width, height }
       }
       if (operation === 'locator' || operation === 'domSnapshot') {
         const generation = current.documentGeneration
@@ -248,7 +352,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
           if (guest.isDestroyed()) throw new Error('The browser guest is closed')
           if (generation !== current.documentGeneration) throw Object.assign(new Error('STALE_OBSERVATION: the document changed during observation'), { code: 'STALE_OBSERVATION' })
         }
-        const details = value(await send('Runtime.evaluate', { expression: metadata, returnByValue: true }))
+        const details = value(await send('Runtime.evaluate', { expression: metadata(), returnByValue: true }))
         if (!details || typeof details !== 'object') throw new Error('Guest metadata is unavailable')
         live()
         const observationId = randomUUID()
@@ -285,7 +389,10 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         current.elements.set(elementId, entry)
       } else {entry = elementId ? current.elements.get(elementId) : undefined; backendNodeId = entry?.backendNodeId}
       if (!backendNodeId || args.observationId !== undefined && args.observationId !== current.observationId) throw new Error('STALE_ELEMENT: observe the current document again')
-      const elementSend = entry?.route?.send ?? send
+      const routedSend = entry?.route?.send ?? send
+      const elementSend = (method: string, params: object = {}): Promise<any> => context.fence.guard(() => {
+        return routedSend(method, params)
+      })
       releaseSend = elementSend
       if (entry?.route) await current.frameRouter!.validate(entry.route)
       if (operation === 'point' && entry?.route) return current.frameRouter!.point(entry as FrameElement & {route:NonNullable<FrameElement['route']>})
@@ -320,7 +427,17 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       objectId = remote.object.objectId
       live()
       if (!objectId) throw new Error('STALE_ELEMENT: the DOM node is unavailable')
-      if (operation === 'selectOption') inputDispatched = true
+      if (operation === 'selectOption') {
+        const inputDispatched = context.inputDispatched
+        context.inputDispatched = true
+        const result: RemoteResult = await elementSend('Runtime.callFunctionOn', {objectId,returnByValue:true,
+          functionDeclaration:selectOptionsFunction,arguments:[{value:args.values ?? args.value}]})
+        const selected = value(result) as {__opencuSelectError?:unknown;selected?:string[]}
+        if (selected?.__opencuSelectError) context.inputDispatched = inputDispatched
+        const detail = selectOptionsResult(selected)
+        live()
+        return {...detail,elementId}
+      }
       const result: RemoteResult = await elementSend('Runtime.callFunctionOn', { objectId, returnByValue: true,
         functionDeclaration: `function(operation, args) {
           if (!this.isConnected || this.nodeType !== 1) throw new Error('Selected element is no longer connected');
@@ -331,12 +448,6 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
             else if (this.isContentEditable) { const range = document.createRange(); range.selectNodeContents(this); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); }
             else throw new Error('Selected element is not an editable text control');
             return {selected:true};
-          }
-          if (operation === 'selectOption') {
-            if (this.tagName !== 'SELECT') throw new Error('Selected element is not a select');
-            const values = args.values ?? (Array.isArray(args.value) ? args.value : [args.value]);
-            for (const option of this.options) option.selected = values.includes(option.value);
-            this.dispatchEvent(new Event('input', {bubbles:true})); this.dispatchEvent(new Event('change', {bubbles:true}));
           }
           if (operation === 'patch') {
             if (args.text !== undefined) { if (typeof args.text !== 'string' || this.children.length) throw new Error('Text adjustment requires a leaf text element'); this.textContent = args.text; }
@@ -356,11 +467,11 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       const failure = error as Error & {code?:string;details?:Record<string,unknown>}
       const code = /^(STALE_ELEMENT|STALE_OBSERVATION|FRAME_NOT_FOUND|FRAME_DETACHED):/u.exec(failure.message)?.[1]
       if (code) failure.code ??= code
-      failure.details = {...failure.details,inputDispatched:inputDispatched || failure.details?.inputDispatched === true}
+      failure.details = {...failure.details,inputDispatched:context.inputDispatched || failure.details?.inputDispatched === true}
       throw error
     } finally {
       try {
-        if (objectId && !guest.isDestroyed() && !current.rendererExited && !guest.isCrashed() && guest.debugger.isAttached()) await releaseSend('Runtime.releaseObject', { objectId })
+        if (objectId && !context.fence.interrupted && !dialogs.pending() && !guest.isDestroyed() && !current.rendererExited && !guest.isCrashed() && guest.debugger.isAttached()) await releaseSend('Runtime.releaseObject', { objectId })
       } finally {
         current.debuggerUsers--
         if (!current.debuggerUsers && current.ownsDebugger && !current.inputActive && !current.frameRouter) {
@@ -369,6 +480,13 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         }
       }
     }
+    }
+    try { return await operations.run(context, () => context.fence.guard(execute)) }
+    catch (error) {
+      const failure = error as Error & {details?:Record<string,unknown>}
+      failure.details = { ...failure.details, inputDispatched: context.inputDispatched || failure.details?.inputDispatched === true }
+      throw error
+    } finally { context.fence.close() }
   })
   if (operation === 'capture') {
     const capture = work.finally(() => { if (current.capture === capture) delete current.capture })

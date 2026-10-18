@@ -16,7 +16,7 @@ export async function apply(ctx, config = {}) {
     dataDir: config.dataDir || (process.env.DSH_HOME ? join(process.env.DSH_HOME, 'opencu') : undefined),
   }) };
   const lease = acquireOpenCU(ctx, options);
-  for (const key of ['browserEnabled', 'nativeEnabled', 'extensionEnabled']) {
+  for (const key of ['browserEnabled', 'nativeEnabled', 'extensionEnabled', 'managedHeadless']) {
     if (typeof config[key]?.subscribe === 'function') ctx.effect(() => config[key].subscribe(() => {
       void lease.request('reconfigure').catch(error => ctx.logger.error(error));
     }));

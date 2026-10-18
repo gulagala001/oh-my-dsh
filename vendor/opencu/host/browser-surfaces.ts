@@ -78,6 +78,7 @@ export class OpenCUBrowserSurfaces {
   constructor(
     private readonly setup: (contents: WebContents, window: () => BrowserWindow | undefined) => void,
     private readonly release: (contents: WebContents) => Promise<void>,
+    private readonly hostIsQuitting: () => boolean,
   ) {}
 
   /** Only the registered main frame at the exact surface document receives OpenCU IPC. */
@@ -239,13 +240,15 @@ export class OpenCUBrowserSurfaces {
     record.detached = window
     window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
     window.on('close', event => {
-      if (record.dead || record.detached !== window) return
+      if (this.hostIsQuitting() || record.dead || record.detached !== window) return
       event.preventDefault()
       try { this.dock(record) } catch (error) { this.fault(record, error) }
     })
     window.on('closed', () => {
       if (record.dead || record.detached !== window) return
       record.detached = undefined; record.parent = undefined
+      // The owner lifecycle releases the guest; do not reopen a parking window during quit.
+      if (this.hostIsQuitting()) return
       try { this.layout(record); this.placement(record) } catch (error) { this.fault(record, error) }
     })
     window.on('resize', () => { if (!record.dead) { try { this.layout(record) } catch (error) { this.fault(record, error) } } })

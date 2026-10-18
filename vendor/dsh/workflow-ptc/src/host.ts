@@ -90,6 +90,7 @@ function childRequest(value: unknown): ChildStartRequest {
   return {
     seq: request.seq as number,
     prompt,
+    ...request.label === undefined ? {} : { label: text(request.label, 'agent label') },
     ...provider === undefined ? {} : { provider },
     ...model === undefined ? {} : { model },
     ...schema === undefined ? {} : { schema },
@@ -290,7 +291,10 @@ export class PtcWorkflowRun implements WorkflowRun {
     const admission = this.admission.then(async () => {
       this.requireActive()
       const type = await this.support?.childType?.(request.agentType)
-      const identity = { ...request, cwd: await this.cwd, parentOptions: this.parent.session.requestHeader()?.config ?? this.parent.options, policy: this.policy, presetFingerprint: type?.fingerprint }
+      // Display-only edits must not rerun a completed child (including journals
+      // written before labels crossed the guest/host boundary).
+      const { label: _label, ...execution } = request
+      const identity = { ...execution, cwd: await this.cwd, parentOptions: this.parent.session.requestHeader()?.config ?? this.parent.options, policy: this.policy, presetFingerprint: type?.fingerprint }
       const cached = await this.journal?.start(callId, identity, value => (request.schema === undefined || value.structured !== undefined) && (!value.worktree?.retained || existsSync(value.worktree.path)))
       return { type, cached }
     })
@@ -317,7 +321,7 @@ export class PtcWorkflowRun implements WorkflowRun {
         if (artifact.retained && artifact.reason !== 'running') this.observer.log(`Worktree retained at ${artifact.path}: ${artifact.reason}`)
       },
     }
-    const label = `${this.meta.name} child ${callId}`
+    const label = request.label?.trim() || `${this.meta.name} child ${callId}`
     const childInputs = {
       cwd: await this.cwd,
       prompt: [{ type: 'text' as const, text: request.prompt }],

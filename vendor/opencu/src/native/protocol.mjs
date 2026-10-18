@@ -1,3 +1,6 @@
+import {clickParameters} from '../../extension/click-options.js';
+import {pressParameters} from '../../extension/key-options.js';
+
 export class NativeBackendError extends Error {
   constructor(code, message, details = {}) {
     super(message);
@@ -23,8 +26,9 @@ export function normalizeAction(action) {
   const type = action.type ?? action.action;
   const aliases = { doubleClick: 'double_click', rightClick: 'right_click', mouseDown: 'mouse_down',
     mouseUp: 'mouse_up', keyDown: 'key_down', keyUp: 'key_up', setValue: 'set_value',
-    keypress: 'press_key', press: 'press_key', type: 'type_text', typeText: 'type_text', input: 'type_text',
-    fill: 'set_value', mouse_move: 'move', key: 'press_key', focus: 'activate', hitTest: 'hit_test' };
+    keypress: 'press_key', press: 'press_key', pressKey: 'press_key', type: 'type_text', typeText: 'type_text', input: 'type_text',
+    fill: 'set_value', mouse_move: 'move', key: 'press_key', focus: 'activate', hitTest: 'hit_test',
+    selectText: 'select_text', performSecondaryAction: 'perform_secondary_action' };
   const value = { ...action, type: aliases[type] ?? type, inputMode: action.inputMode ?? 'background' };
   if (!['background', 'foreground'].includes(value.inputMode)) throw new NativeBackendError('INVALID_ACTION', 'inputMode must be background or foreground; foreground input requires explicit user permission.');
   if (Array.isArray(value.position)) [value.x, value.y] = value.position;
@@ -40,6 +44,16 @@ export function normalizeAction(action) {
   value.text ??= value.value;
   value.key ??= value.combo;
   value.button ??= value.mouseButton;
+  if (value.type === 'press_key') {
+    // The legacy helper also accepts explicit keyCode/keys; validate their hold
+    // without replacing those backend-specific key representations.
+    pressParameters({...value,key:value.key ?? (value.keyCode !== undefined || Array.isArray(value.keys) ? 'explicit' : value.key)}, {mac:process.platform === 'darwin'});
+  }
+  if (['click','double_click','right_click'].includes(value.type)) {
+    const click = clickParameters({...value,...(value.type === 'right_click' ? {button:'right'} : {})}, {mac:process.platform === 'darwin',count:value.type === 'double_click' ? 2 : 1});
+    if (value.key !== undefined) value.key = click.keys.join('+');
+    value.button = click.button;
+  }
   if (value.clickCount === 2 && value.type === 'click') value.type = 'double_click';
   return value;
 }

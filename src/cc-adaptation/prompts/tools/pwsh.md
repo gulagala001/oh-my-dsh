@@ -1,6 +1,8 @@
 Execute a PowerShell command and return its stdout and stderr.
 
 - Each call starts a fresh `pwsh` process. Pass `workdir`; variables, functions, and working-directory changes do not persist. Use native Windows paths and `$env:NAME` for environment variables.
+- Before any delete or move, verify that the resolved absolute target path is the intended one; never act on an unchecked computed path.
+- Do not assign to automatic variables such as `$HOME`. Variable names are case-insensitive, so `$home` is the same read-only variable; use task-specific variable names.
 - Read the managed `$env:DSH_*` values when you need the current execution environment. Long output is truncated; use the returned file path for the full output when one is provided.
 - A nonzero exit is reported as `[exit code: N]`. After an interruption, a bare exit code 1 may mean the process was killed rather than the command failed.
 - When `run_in_background` is available, set it to `true` for long-running work while you handle independent steps. Track the returned job id and collect its result with `job_output`; do not repeat the command to check on it.

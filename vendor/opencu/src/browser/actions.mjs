@@ -2,13 +2,18 @@ import {stat} from 'node:fs/promises';
 import {isAbsolute} from 'node:path';
 import {checkSignal, fail, finite} from '../protocol.mjs';
 import {elementFor, elementPoint, focusElement} from './observation.mjs';
-import {hitTest, callElement, patchDOM, screenshotPoint} from './dom.mjs';
+import {hitTest, callElement, patchDOM, screenshotPoint, verifyScreenshot} from './dom.mjs';
 import {runCDPLocator} from '../../extension/cdp-locator.js';
+import {runTextEdit} from '../../extension/text-edit.js';
+import {selectOptionsFunction, selectOptionsResult} from '../../extension/select-options.js';
+import {clickParameters, checkClickHeld, holdClick} from '../../extension/click-options.js';
+import {pressParameters, checkPressHeld} from '../../extension/key-options.js';
+import {playwrightKeyIdentity} from './playwright-keyboard.mjs';
 
 export function normalizeBrowserAction(request = {}) {
   const aliases = {goto: 'navigate', new_tab: 'newTab', close_tab: 'closeTab', double_click: 'doubleClick',
     mouse_move: 'move', mouse_down: 'mouseDown', mouse_up: 'mouseUp', key_down: 'keyDown', key_up: 'keyUp',
-    press_key: 'press', keypress: 'press', type_text: 'type', typeText: 'type', set_value: 'fill', setValue: 'fill',
+    press_key: 'press', pressKey: 'press', keypress: 'press', type_text: 'type', typeText: 'type', set_value: 'fill', setValue: 'fill',
     hit_test: 'hitTest', get_dom: 'getDOM', set_text: 'setText', set_style: 'setStyle', design_tweak: 'designTweak'};
   const name = request.action ?? request.type;
   const action = {...request, action: aliases[name] ?? name};
@@ -36,11 +41,15 @@ export async function actOnPage(record, request, options) {
   request = normalizeBrowserAction(request);
   const {page} = record;
   const signal = request.signal;
+  const check = () => { checkSignal(signal); options.actionGuard?.check(); };
+  const screenshotInput = request.elementId == null && ['screenshot', 'screenshot-pixels', 'physical-screenshot-pixels'].includes(request.coordinateSpace);
+  const inputScreenshot = record.screenshot;
+  const checkScreenshot = async () => { if (screenshotInput) await verifyScreenshot(record, request, inputScreenshot); };
   const elementGeneration = ['type', 'press'].includes(request.action) && request.elementId != null ? record.documentGeneration : undefined;
   if (!['background', 'foreground'].includes(request.inputMode ?? 'background')) fail('INVALID_ARGUMENT', 'inputMode must be background or foreground');
   const step = async work => {
-    checkSignal(signal);
-    const pending = Promise.resolve().then(() => { checkSignal(signal); return work(); });
+    check();
+    const pending = Promise.resolve().then(() => { check(); return work(); });
     record.pending.add(pending);
     pending.finally(() => record.pending.delete(pending)).catch(() => {});
     let listener;
@@ -49,8 +58,9 @@ export async function actOnPage(record, request, options) {
       signal?.addEventListener('abort', listener, {once: true});
     });
     try {
-      const value = await Promise.race([pending, aborted]);
-      checkSignal(signal);
+      const work = Promise.race([pending, aborted]);
+      const value = await (options.actionGuard ? options.actionGuard.wait(work) : work);
+      check();
       return value;
     } finally { signal?.removeEventListener('abort', listener); }
   };
@@ -61,28 +71,40 @@ export async function actOnPage(record, request, options) {
       void stopping.catch(() => {});
     };
     signal?.addEventListener('abort', stop, {once: true});
-    try { return await step(work); }
+    try { return await step(() => { record.inputDispatchSequence = (record.inputDispatchSequence ?? 0) + 1; return work(); }); }
     finally { signal?.removeEventListener('abort', stop); if (stopping) await stopping; }
   };
   const input = (events, work, beforeDispatch) => step(async () => {
+    const textEdit = events.some(event => event.textInput);
+    check();
     if (request.locatorGeneration !== undefined && request.locatorGeneration !== record.documentGeneration) fail('STALE_ELEMENT', 'Document changed before locator input');
     await record.session.send('Emulation.setFocusEmulationEnabled', { enabled: true });
     record.focusEmulated = true;
-    checkSignal(signal);
-    await options.expectInput?.(events);
-    checkSignal(signal);
-    if (elementGeneration !== undefined) {
-      if (elementGeneration !== record.documentGeneration) fail('STALE_ELEMENT', 'Document changed before element keyboard input');
-      elementFor(record, request);
+    check();
+    const expected = await options.expectInput?.(events), marker = textEdit ? expected : undefined;
+    let failure;
+    try {
+      check();
+      if (elementGeneration !== undefined) {
+        if (elementGeneration !== record.documentGeneration) fail('STALE_ELEMENT', 'Document changed before element keyboard input');
+        elementFor(record, request);
+      }
+      if (request.elementId != null) {const entry = elementFor(record, request); if (entry.route) await record.frameRouter.validate(entry.route);}
+      check();
+      await beforeDispatch?.();
+      check();
+      record.inputDispatchSequence = (record.inputDispatchSequence ?? 0) + 1;
+      return await work();
+    } catch (error) { failure = error; throw error; }
+    finally {
+      if (marker) try { await options.finishInput?.(marker); }
+      catch (error) { if (!failure) throw error; failure.details = {...failure.details,inputMarkerError:error.message}; }
     }
-    if (request.elementId != null) {const entry = elementFor(record, request); if (entry.route) await record.frameRouter.validate(entry.route);}
-    await beforeDispatch?.();
-    checkSignal(signal);
-    record.inputDispatchSequence = (record.inputDispatchSequence ?? 0) + 1;
-    return work();
   });
+  const insertText = (text, verify) => input([{type:'beforeinput',inputType:'insertText',data:text,textInput:true}], () => page.keyboard.insertText(text), verify);
   const keyDown = async key => {
     key = keyName(key);
+    playwrightKeyIdentity(key);
     record.keys.add(key);
     await options.persistInputs();
     const events = [{type: 'keydown', key: key === 'Space' ? ' ' : key}];
@@ -91,7 +113,8 @@ export async function actOnPage(record, request, options) {
   };
   const keyUp = async key => {
     key = keyName(key);
-    await step(() => page.keyboard.up(key));
+    playwrightKeyIdentity(key);
+    await step(() => { record.inputDispatchSequence = (record.inputDispatchSequence ?? 0) + 1; return page.keyboard.up(key); });
     record.keys.delete(key);
   };
   const mouseDown = async button => {
@@ -102,7 +125,7 @@ export async function actOnPage(record, request, options) {
   };
   const mouseUp = async button => {
     button = buttonName(button);
-    await step(() => page.mouse.up({button}));
+    await step(() => { record.inputDispatchSequence = (record.inputDispatchSequence ?? 0) + 1; return page.mouse.up({button}); });
     record.buttons.delete(button);
   };
   const point = async value => {
@@ -112,34 +135,44 @@ export async function actOnPage(record, request, options) {
   const move = async value => {
     const location = await point(value);
     if (options.cursor) await step(() => options.cursor({...location, visible: true, animateMovement: true}));
-    await input([], () => page.mouse.move(location.x, location.y));
+    await input([], () => page.mouse.move(location.x, location.y), checkScreenshot);
     record.pointer = location;
     return location;
   };
   const checkPointer = async () => {
     if (request.elementId != null) {const entry = elementFor(record, request); if (entry.route) await record.frameRouter.checkPoint(entry,record.pointer);}
+    await checkScreenshot();
   };
   const click = async count => {
+    const click = clickParameters(request, {mac:process.platform === 'darwin',count});
+    checkClickHeld(record, click);
     await move(request);
-    const button = buttonName(request.button);
-    for (let index = 1; index <= count; index++) {
+    const {button} = click;
+    for (const key of click.keys) await keyDown(key);
+    for (let index = 1; index <= click.count; index++) {
       record.buttons.add(button);
       await options.persistInputs();
       await input([{type: 'pointerdown', ...record.pointer}], () => page.mouse.down({button, clickCount: index}), checkPointer);
-      await step(() => page.mouse.up({button, clickCount: index}));
+      await step(() => holdClick(click.durationMs, check));
+      await step(() => { record.inputDispatchSequence = (record.inputDispatchSequence ?? 0) + 1; return page.mouse.up({button, clickCount: index}); });
       record.buttons.delete(button);
     }
+    for (const key of [...click.keys].reverse()) await keyUp(key);
   };
-  const press = async value => {
-    const keys = [];
-    let token = '';
-    for (const char of keyName(value)) {
-      if (char === '+' && token) { keys.push(keyName(token)); token = ''; }
-      else token += char;
-    }
-    keys.push(keyName(token));
-    if (keys.some(key => record.keys.has(key))) fail('INVALID_ARGUMENT', 'press cannot reuse an explicitly held key');
+  const focusKeyboardElement = () => step(async () => {
+    elementFor(record,request);
+    // Missing observation IDs fail before this fence. Once focus is attempted,
+    // its result may be unknown and must not be treated as an undispatched input.
+    record.inputDispatchSequence = (record.inputDispatchSequence ?? 0) + 1;
+    return focusElement(record,request);
+  });
+  const press = async (value = request.key, {durationMs:hold = request.durationMs, focus = true} = {}) => {
+    const keyboard={mac:process.platform === 'darwin',identity:playwrightKeyIdentity};
+    const {keys,durationMs} = pressParameters({key:value,durationMs:hold},keyboard);
+    checkPressHeld(record,keys,keyboard);
+    if (focus && request.elementId !== undefined) await focusKeyboardElement();
     for (const key of keys) await keyDown(key);
+    await step(() => holdClick(durationMs, check));
     for (const key of [...keys].reverse()) await keyUp(key);
   };
   const invalidate = () => { record.elements.clear(); record.screenshot = undefined; };
@@ -201,11 +234,14 @@ export async function actOnPage(record, request, options) {
     case 'mouseUp': await mouseUp(request.button); break;
     case 'scroll':
       if (request.x !== undefined || request.elementId !== undefined) await move(request);
-      await input([{type: 'wheel'}], () => page.mouse.wheel(finite(request.deltaX ?? 0, 'deltaX'), finite(request.deltaY ?? 0, 'deltaY')));
+      await input([{type: 'wheel'}], () => page.mouse.wheel(finite(request.deltaX ?? 0, 'deltaX'), finite(request.deltaY ?? 0, 'deltaY')), checkPointer);
       break;
     case 'drag': {
       if (!Array.isArray(request.path) || request.path.length < 2) fail('INVALID_ARGUMENT', 'drag requires at least two path points');
       const points = request.path.map(value => ({x: finite(value.x, 'x'), y: finite(value.y, 'y')}));
+      // Reject an invalid later endpoint before any pointer input. move() still
+      // resolves each point again so preflight does not replace freshness checks.
+      for (const value of points) await point(value);
       await move(points[0]);
       await mouseDown(request.button);
       for (const value of points.slice(1)) await move(value);
@@ -214,30 +250,53 @@ export async function actOnPage(record, request, options) {
     }
     case 'keyDown': await keyDown(request.key); break;
     case 'keyUp': await keyUp(request.key); break;
-    case 'press': if (request.elementId !== undefined) await step(() => focusElement(record, request)); await press(request.key); break;
+    case 'press': await press(); break;
+    case 'selectText':
+    case 'paste': {
+      const generation = record.documentGeneration;
+      const entry = request.elementId != null ? elementFor(record, request) : undefined;
+      const validate = async () => {
+        check();
+        if (generation !== record.documentGeneration || entry && elementFor(record,request) !== entry) fail('STALE_ELEMENT','The selected document or editable element changed');
+        if (entry?.route) await step(() => record.frameRouter.validate(entry.route));
+        check();
+      };
+      const send = (method,params) => step(() => (entry?.route?.send ?? ((method,params)=>record.session.send(method,params)))(method,params));
+      const result = await runTextEdit(send,request.action,request,{
+        backendNodeId:entry?.backendNodeId,contextId:entry?.route?.contextId,validate,
+        onFocus:()=>{record.inputDispatchSequence=(record.inputDispatchSequence??0)+1;},
+        beforeFocus:async()=>{await step(()=>record.session.send('Emulation.setFocusEmulationEnabled',{enabled:true}));record.focusEmulated=true;},
+        insertText,
+      });
+      record.screenshot=undefined;
+      return {action:request.action,...result};
+    }
     case 'type':
       if (typeof request.text !== 'string') fail('INVALID_ARGUMENT', 'type requires text');
-      if (request.elementId !== undefined) await step(() => focusElement(record, request));
-      await input([{type: 'input'}], () => page.keyboard.insertText(request.text));
+      if (request.elementId !== undefined) await focusKeyboardElement();
+      await insertText(request.text);
       break;
     case 'fill':
       if (typeof request.value !== 'string') fail('INVALID_ARGUMENT', 'fill requires a string value');
-      await step(() => focusElement(record, request));
-      await press('ControlOrMeta+A');
-      if (request.value === '') await press('Backspace');
-      else await input([{type: 'input'}], () => page.keyboard.insertText(request.value));
+      await focusKeyboardElement();
+      await press('ControlOrMeta+A',{durationMs:0,focus:false});
+      if (request.value === '') await press('Backspace',{durationMs:0,focus:false});
+      else await insertText(request.value);
       break;
     case 'selectOption': {
       const {elementFor} = await import('./observation.mjs');
       const entry = elementFor(record, request);
       const {object} = await step(() => (entry.route?.send ?? ((method, params) => record.session.send(method, params)))('DOM.resolveNode', {backendNodeId: entry.backendNodeId, ...(entry.route ? {executionContextId:entry.route.contextId} : {})}));
       try {
+        const inputSequence = record.inputDispatchSequence ?? 0;
         const result = await input([{type: 'input'}], () => (entry.route?.send ?? ((method, params) => record.session.send(method, params)))('Runtime.callFunctionOn', {
           objectId: object.objectId,
-          functionDeclaration: 'function(values) { if (this.tagName !== "SELECT") throw new Error("Element is not a select"); for (const option of this.options) option.selected = values.includes(option.value); this.dispatchEvent(new Event("input", {bubbles:true})); this.dispatchEvent(new Event("change", {bubbles:true})); return [...this.selectedOptions].map(option => option.value); }',
-          arguments: [{value: Array.isArray(request.value) ? request.value : [request.value]}], returnByValue: true,
+          functionDeclaration: selectOptionsFunction,
+          arguments: [{value: request.values ?? request.value}], returnByValue: true,
         }));
         if (result.exceptionDetails) fail('INVALID_ARGUMENT', result.exceptionDetails.text);
+        if (result.result.value?.__opencuSelectError) record.inputDispatchSequence = inputSequence;
+        selectOptionsResult(result.result.value);
       } finally { await (entry.route?.send ?? ((method, params) => record.session.send(method, params)))('Runtime.releaseObject', {objectId: object.objectId}); }
       break;
     }
@@ -262,33 +321,69 @@ export async function actOnPage(record, request, options) {
   return {action: request.action, inputMode: 'background', delivery: 'target-cdp', effectVerified: false};
 }
 
-export async function releasePage(record, timeoutMs) {
-  if (record.page.isClosed()) {
+export async function releasePage(record, timeoutMs, {dismissDialogs = true, persistInputs} = {}) {
+  if (record.page.isClosed() || record.crashed) {
     record.keys.clear(); record.buttons.clear();
     return [];
   }
-  let timer;
-  const settled = await Promise.race([
-    Promise.allSettled([...record.pending]).then(() => true),
-    new Promise(resolve => { timer = setTimeout(() => resolve(false), timeoutMs); }),
-  ]).finally(() => clearTimeout(timer));
-  if (!settled) return [{targetId: record.id, error: 'Input command is still in flight'}];
-  const failures = [];
-  for (const key of [...record.keys].reverse()) {
-    try { await record.page.keyboard.up(key); record.keys.delete(key); }
-    catch (error) {
-      // Playwright rejects unknown keys before dispatching any input.
-      if (error.message === `keyboard.up: Unknown key: "${key}"`) record.keys.delete(key);
-      else failures.push({targetId: record.id, key, error: error.message});
+  const dialog = record.dialogs?.read();
+  if (dialog && !dismissDialogs) return [{targetId:record.id,error:'A JavaScript dialog remains open; automatic cleanup did not dismiss it',dialog}];
+  const deadline = Date.now() + timeoutMs;
+  const guard = !dismissDialogs ? record.dialogs?.begin() : undefined;
+  const releaseInput = (work, released) => {
+    const pending = Promise.resolve().then(() => { guard?.check(); return work(); }).then(async value => {
+      released();
+      await persistInputs?.();
+      return value;
+    });
+    record.pending.add(pending);
+    pending.finally(() => record.pending.delete(pending)).catch(() => {});
+    return pending;
+  };
+  const bounded = async work => {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) throw new Error('Input release deadline reached');
+    let timer;
+    try {
+      const pending = Promise.race([Promise.resolve().then(() => { guard?.check(); return work(); }),new Promise((_resolve,reject)=>{timer=setTimeout(()=>reject(new Error('Input release is still in flight')),remaining);})]);
+      return await (guard ? guard.wait(pending) : pending);
     }
-  }
-  for (const button of [...record.buttons]) {
-    try { await record.page.mouse.up({button}); record.buttons.delete(button); }
-    catch (error) { failures.push({targetId: record.id, button, error: error.message}); }
-  }
-  if (record.focusEmulated && !record.keys.size && !record.buttons.size) {
-    try { await record.session.send('Emulation.setFocusEmulationEnabled', { enabled: false }); record.focusEmulated = false; }
-    catch (error) { failures.push({targetId: record.id, error: error.message}); }
-  }
-  return failures;
+    finally { clearTimeout(timer); }
+  };
+  let timer, dialogRelease;
+  try { if (dismissDialogs) dialogRelease = await record.dialogs?.beginRelease(timeoutMs); }
+  catch (error) { return [{targetId:record.id,error:error.message}]; }
+  try {
+    if (dialogRelease?.failures.length) return dialogRelease.failures.map(error => ({targetId:record.id,error}));
+    const pending = Promise.race([
+      Promise.allSettled([...record.pending]).then(() => true),
+      new Promise(resolve => { timer = setTimeout(() => resolve(false), Math.max(0,deadline-Date.now())); }),
+    ]).finally(() => clearTimeout(timer));
+    const settled = await (guard ? guard.wait(pending) : pending);
+    if (!settled) return [{targetId: record.id, error: 'Input command is still in flight'}, ...(dialogRelease?.failures ?? []).map(error=>({targetId:record.id,error}))];
+    const failures = [];
+    for (const button of [...record.buttons]) {
+      try { await bounded(() => releaseInput(() => record.page.mouse.up({button}), () => record.buttons.delete(button))); }
+      catch (error) { guard?.check(); failures.push({targetId: record.id, button, error: error.message}); }
+    }
+    // Retain modifiers until every mouse-up is acknowledged, including retries.
+    if (!record.buttons.size) for (const key of [...record.keys].reverse()) {
+      try { await bounded(() => releaseInput(() => record.page.keyboard.up(key), () => record.keys.delete(key))); }
+      catch (error) {
+        guard?.check();
+        // Playwright rejects unknown keys before dispatching any input.
+        if (error.message === `keyboard.up: Unknown key: "${key}"`) record.keys.delete(key);
+        else failures.push({targetId: record.id, key, error: error.message});
+      }
+    }
+    if (record.focusEmulated && !record.keys.size && !record.buttons.size) {
+      try { await bounded(() => record.session.send('Emulation.setFocusEmulationEnabled', { enabled: false })); record.focusEmulated = false; }
+      catch (error) { guard?.check(); failures.push({targetId: record.id, error: error.message}); }
+    }
+    failures.push(...(dialogRelease?.failures ?? []).map(error=>({targetId:record.id,error})));
+    return failures;
+  } catch (error) {
+    const dialog = guard?.dialog ?? record.dialogs?.read();
+    return [{targetId:record.id,error:error.message,...(dialog ? {dialog} : {})}];
+  } finally { clearTimeout(timer); guard?.finish(); dialogRelease?.finish(); }
 }

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { decorateSlot } from './slot-decoration.mjs';
+import { useMainConversation } from './main-conversation.mjs';
 
 const emptyStore = { subscribe: () => () => {}, getSnapshot: () => undefined };
 
@@ -73,7 +74,11 @@ export function applySubscriptionFast(ctx) {
       register: (options, component) => ctx.slots.register(options, component),
     };
     return decorateSlot(slots, name, () => true, original => {
-      function Fast(props) { return <SubscriptionFast ctx={ctx} {...props}/>; }
+      const Original = original.component;
+      function Fast(props) {
+        const main = useMainConversation(props);
+        return main ? <SubscriptionFast ctx={ctx} {...props}/> : <Original {...props}/>;
+      }
       return { options: { ...original.options, name, order: 110, priority: (original.options.priority ?? 0) - 1,
         store: original.store, locale: original.locale, inject: original.inject, children: original.children }, component: Fast };
     });

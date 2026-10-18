@@ -1,0 +1,31 @@
+{
+  "packageVersion": "2.0.0-dsh.0.2.1-rc.2",
+  "extensionVersion": "0.2.0",
+  "manifestKeySha256": "98b602d9937b77441bdc77b57a653029e83acf95f2e0ee88b1efe20763cabbe1",
+  "files": {
+    "README.md": "96bab308adff9b4399907a4bf08ae89c7a92e77a2963cc5d34616a2917c59a6a",
+    "accessibility.js": "502f662652aafd4b9f2987d15d2475a4fddf103f7f85b7b33e8f908e91b30299",
+    "background.js": "44a856ea1530e7711ea7776d4ef662c862f2a69562196a5f9d954c693bad9cee",
+    "cdp-locator.d.ts": "9a2e97ddf5d1b7d0f2cf8f880e3b6d6508cca4aa2e9b5a85695326acb2c42342",
+    "cdp-locator.js": "caa1b27f1b13c4b45bd9117049397ef931ea03063e25f1aee5978b7cf026113f",
+    "click-options.js": "9ecbccb48f59601a0ab022a2d6296e01a95cd5ae3d19cd04e3b9b59390196714",
+    "connection-details.js": "9d187286e47e9fa25603580224ea5cf78e6232b27562986d46d38d6a44793afd",
+    "content.js": "75ab138af5871957fd1e86ccf565cfbb745f03980196a9167d43a4aa39f63c2a",
+    "dom-locator.js": "db1807f4111dec6eb12aaefc16705580a9fe5d7ec3da2fb81911736628452947",
+    "frame-router.d.ts": "c852387b5dc03ebd94bfaf971204eb3b66a38be0c88aaab9e0561eb888788a4a",
+    "frame-router.js": "f80f954acefad686fccc0060420fa1700349fad1feeb0b3e5d119ea7764a6092",
+    "key-options.js": "2067763e36be5dd0810e15cffed56aa9acb05a61736bdc537304bd1a3175ede6",
+    "keyboard.d.ts": "1ee653d45706911d2f6a8ce9a629601085e67766d744b4643b4fe28553b85aa3",
+    "keyboard.js": "8b244fcea4f0c74d45e528cda2a69f9f8d079585b6f4d5464ad5ecf433f45745",
+    "manifest.json": "d5a6b51d1966cd536fa23e2051d61c4ac3ef9403d0c2d0f0c72e4362c8b3b415",
+    "options.css": "fd90f3db1cecce51fb03cc8a42ae13c7dfa536cc2a23398f6ba9cdbc37d79122",
+    "options.html": "94b11299ae15eaf6373501f66332b6629cc77dadd88f397fbe405016a12133ba",
+    "options.js": "cb17a38e1a43f711987bc342413ca475ec2d2f6d76a8c0aaa7c51d3f779c8762",
+    "page-cursor.js": "9aece5995f3952f60aeeb5022c27f1c062ec434bebc816c18cfed0fed4837dc5",
+    "pairing.js": "cea5b39167c8880b44e015da83c3fef2b043d9b3f8349cc5aad3832064824b54",
+    "select-options.d.ts": "d488c04ff55a7e393b670877c65af4fbaca91f8b352622c9f8137d3e22155d69",
+    "select-options.js": "0a6718e15a82eb89cb2aa402a9a7ceff140f522ff116e6bd330de40091d1f97a",
+    "text-edit.d.ts": "ee6c554eeac0f01c99c666ee33bc7e33304fc5fc777f4d8bb5cb3dfad05026b5",
+    "text-edit.js": "f6ffae9b7dc8e09f7f8709eb8c83a68cde813cbfaeb0507089ee6e1d09bb9182"
+  }
+}

@@ -1,12 +1,60 @@
 import Foundation
 import AppKit
 import ApplicationServices
+import Darwin
 
 final class Cancellation {
     private let lock = NSLock()
     private var epoch = 0
     func current() -> Int { lock.lock(); defer { lock.unlock() }; return epoch }
     func stop() { lock.lock(); epoch += 1; lock.unlock() }
+}
+
+func pressDuration(_ action: [String: Any]) throws -> Double {
+    guard let value = action["durationMs"] else { return 0 }
+    guard let number = value as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(), number.doubleValue.isFinite,
+          number.doubleValue >= 0, number.doubleValue <= 10000, number.doubleValue.rounded(.towardZero) == number.doubleValue else {
+        throw NativeFailure("INVALID_ARGUMENT", "durationMs must be an integer from 0 to 10000.", ["inputDispatched":false,"retryable":false])
+    }
+    return number.doubleValue / 1000
+}
+
+struct ClickOptions {
+    let keys: [UInt16]
+    let duration: Double
+    let count: Int
+    let transactional: Bool
+    init(_ action: [String: Any], type: String) throws {
+        let invalid = { (message: String) in NativeFailure("INVALID_ARGUMENT", message, ["inputDispatched": false, "retryable": false]) }
+        transactional = action["key"] != nil || action["durationMs"] != nil
+        var milliseconds = 0.0
+        if let value = action["durationMs"] {
+            guard let number = value as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(), number.doubleValue.isFinite,
+                  number.doubleValue >= 0, number.doubleValue <= 10000, number.doubleValue.rounded(.towardZero) == number.doubleValue else {
+                throw invalid("durationMs must be an integer from 0 to 10000.")
+            }
+            milliseconds = number.doubleValue
+        }
+        duration = milliseconds / 1000
+        var clicks = type == "double_click" ? 2 : 1
+        if let value = action["clickCount"] {
+            guard let number = value as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(), [1.0, 2.0].contains(number.doubleValue),
+                  type != "double_click" || number.intValue == 2 else { throw invalid("clickCount must be 1 or 2; doubleClick requires 2.") }
+            clicks = number.intValue
+        }
+        count = clicks
+        var chord: [UInt16] = []
+        if let value = action["key"] {
+            guard let names = value as? String, !names.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw invalid("Click key must be a non-empty modifier chord.") }
+            let aliases: [String: UInt16] = ["shift":56,"control":59,"ctrl":59,"alt":58,"option":58,"meta":55,"cmd":55,"command":55,"super":55,"controlormeta":55]
+            for part in names.components(separatedBy: "+") {
+                guard let code = aliases[part.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()] else { throw invalid("Click key supports only Shift, Control/Ctrl, Alt/Option, Meta/Cmd/Command/Super, or ControlOrMeta.") }
+                guard !chord.contains(code) else { throw invalid("Click modifier chord contains duplicate aliases.") }
+                chord.append(code)
+            }
+        }
+        keys = chord
+    }
 }
 
 final class InputStore {
@@ -16,9 +64,11 @@ final class InputStore {
     var keys = Set<UInt16>()
     var buttons = Set<Int>()
     var recoveryRequired = false
+    private(set) var dispatchSequence: UInt64 = 0
     var activePID: pid_t?
     var activeWindow: AXUIElement?
-    var moved: ((CGPoint) throws -> Void)?
+    var moved: ((CGPoint, Bool) throws -> Void)?
+    var pointerSettled: ((CGPoint) -> Void)?
     var released: (() -> Void)?
     let source = CGEventSource(stateID: .combinedSessionState)
     let backgroundSource = CGEventSource(stateID: .privateState)
@@ -56,8 +106,9 @@ final class InputStore {
             event.setIntegerValueField(.eventTargetUnixProcessID, value: Int64(pid))
             event.setIntegerValueField(.mouseEventWindowUnderMousePointer, value: Int64(windowId))
             event.setIntegerValueField(.mouseEventWindowUnderMousePointerThatCanHandleThisEvent, value: Int64(windowId))
+            dispatchSequence &+= 1
             event.postToPid(pid)
-        } else { event.post(tap: .cghidEventTap) }
+        } else { dispatchSequence &+= 1; event.post(tap: .cghidEventTap) }
     }
 
     init(directory: URL, cancellation: Cancellation) throws {
@@ -89,8 +140,18 @@ final class InputStore {
         var value: [String: Any] = ["version": 2, "keys": keys.sorted().map { Int($0) }, "buttons": buttons.sorted(), "mode": background ? "background" : "foreground"]
         if let destination = destination { value["target"] = destination }
         if let point = lastPoint { value["point"] = ["x": point.x, "y": point.y] }
-        try JSONSerialization.data(withJSONObject: value, options: .sortedKeys).write(to: journal, options: .atomic)
-        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: journal.path)
+        let data = try JSONSerialization.data(withJSONObject: value, options: .sortedKeys)
+        // Foundation's .atomic may allocate its replacement file outside the
+        // allowed data directory. Keep both the private temporary file and the
+        // atomic rename here, so sandboxed helpers can persist input ownership.
+        let temporary = journal.deletingLastPathComponent().appendingPathComponent(".input-journal-\(UUID().uuidString).tmp")
+        let descriptor = open(temporary.path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, S_IRUSR | S_IWUSR)
+        guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+        let file = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
+        defer { try? file.close(); try? FileManager.default.removeItem(at: temporary) }
+        try file.write(contentsOf: data)
+        try file.synchronize()
+        guard rename(temporary.path, journal.path) == 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
     }
 
     func check() throws {
@@ -109,6 +170,53 @@ final class InputStore {
     }
 
     func held() -> [String: Any] { ["heldKeys": keys.sorted().map { Int($0) }, "heldButtons": buttons.sorted()] }
+
+    func checkPress(_ codes: [UInt16]) throws {
+        let paired: [UInt16: [UInt16]] = [55:[54,55],56:[56,60],58:[58,61],59:[59,62]]
+        let overlap = codes.contains { code in (paired[code] ?? [code]).contains { keys.contains($0) || CGEventSource.keyState(.combinedSessionState, key: $0) } }
+        guard !overlap else {
+            throw NativeFailure("INPUT_ALREADY_HELD", "pressKey cannot reuse a key already held by OpenCU or the user; no held input was borrowed or released.", ["inputDispatched":false,"retryable":false])
+        }
+    }
+
+    func checkClick(_ click: ClickOptions, button: Int) throws {
+        let paired: [UInt16: [UInt16]] = [55:[54,55],56:[56,60],58:[58,61],59:[59,62]]
+        let userHeld = click.keys.contains { code in (paired[code] ?? [code]).contains { CGEventSource.keyState(.combinedSessionState, key: $0) } }
+        let userButton = CGEventSource.buttonState(.combinedSessionState, button: CGMouseButton(rawValue: UInt32(button))!)
+        guard !buttons.contains(button), !click.transactional || keys.isEmpty && buttons.isEmpty, !userHeld, !userButton else {
+            throw NativeFailure("INPUT_ALREADY_HELD", "Release existing held input before a modified or timed click; no held input was borrowed or released.", ["inputDispatched":false,"retryable":false])
+        }
+    }
+
+    func holdClick(_ duration: Double) throws {
+        let deadline = ProcessInfo.processInfo.systemUptime + duration
+        while true {
+            try check()
+            let remaining = deadline - ProcessInfo.processInfo.systemUptime
+            if remaining <= 0 { return }
+            pump(min(0.02, remaining))
+        }
+    }
+
+    // An AX setter/action can time out after the application consumed it. Only
+    // failures before its first attempt are safe to describe as undispatched.
+    func semanticAction<T>(_ operation: (_ willDispatch: () -> Void) throws -> T) throws -> T {
+        var dispatched = false
+        do {
+            try check()
+            guard keys.isEmpty && buttons.isEmpty else {
+                throw NativeFailure("RELEASE_REQUIRED", "Release held input before an accessibility editing/action operation.", held())
+            }
+            return try operation { dispatched = true; self.dispatchSequence &+= 1 }
+        } catch let failure as NativeFailure {
+            throw NativeFailure(failure.code, failure.message, failure.details.merging([
+                "inputDispatched": dispatched, "effectVerified": false, "retryable": false
+            ]) { _, value in value })
+        } catch {
+            throw NativeFailure("NATIVE_ACTION_FAILED", error.localizedDescription,
+                ["inputDispatched": dispatched, "effectVerified": false, "retryable": false])
+        }
+    }
 
     func flags() -> CGEventFlags {
         var flags: CGEventFlags = []
@@ -167,6 +275,7 @@ final class InputStore {
         if !down {
             buttons.remove(button)
             do { try persist() } catch { buttons.insert(button); throw error }
+            if !releasing && buttons.isEmpty { pointerSettled?(point) }
         }
     }
 
@@ -176,7 +285,9 @@ final class InputStore {
         let type: CGEventType = heldButton == 0 ? .leftMouseDragged : heldButton == 1 ? .rightMouseDragged : heldButton == 2 ? .otherMouseDragged : .mouseMoved
         guard let event = CGEvent(mouseEventSource: eventSource, mouseType: type, mouseCursorPosition: point,
             mouseButton: CGMouseButton(rawValue: UInt32(heldButton ?? 0))!) else { throw NativeFailure("INPUT_EVENT_FAILED", "Could not allocate mouse move.") }
-        try moved?(point)
+        // Held-button motion is already a sampled drag path. Do not turn each
+        // point into another spring animation that must arrive before posting.
+        try moved?(point, heldButton != nil)
         try check(); event.flags = flags(); lastPoint = point; try post(event); pump(0.008)
         if !CGPreflightPostEventAccess() { throw NativeFailure("INPUT_PERMISSION_REQUIRED", "Event posting permission was revoked.", ["permissions": permissions()]) }
     }
@@ -208,9 +319,12 @@ final class InputStore {
                 if units[index] == 13 && index + 1 < units.count && units[index + 1] == 10 { index += 1 }
                 index += 1; continue
             }
-            var end = min(units.count, index + 20)
-            if let control = units[index..<end].firstIndex(where: { $0 == 10 || $0 == 13 || $0 == 9 }) { end = control }
-            if end < units.count && (0xD800...0xDBFF).contains(units[end - 1]) { end -= 1 }
+            // Event-driven controls (for example Calculator) handle one character
+            // per key event and silently ignore the remainder of a Unicode chunk.
+            // Emit one scalar, keeping a surrogate pair together.
+            var end = index + 1
+            if (0xD800...0xDBFF).contains(units[index]) && end < units.count &&
+                (0xDC00...0xDFFF).contains(units[end]) { end += 1 }
             let chunk = Array(units[index..<end])
             if !background && CGEventSource.keyState(.combinedSessionState, key: 0) {
                 throw NativeFailure("INPUT_ALREADY_HELD", "The user already holds the Unicode event key; it was not acquired.", ["keyCode": 0])
@@ -242,12 +356,15 @@ final class InputStore {
             catch let error as NativeFailure { failures.append(error.json) }
             catch { failures.append(NativeFailure("INPUT_JOURNAL_FAILED", error.localizedDescription).json) }
         }
-        // Release non-modifiers before modifiers to avoid changing a held chord mid-release.
+        // Keep modifiers for retrying any mouse-up that was not acknowledged.
+        // Once all buttons are up, release non-modifiers before modifiers.
         let modifiers: Set<UInt16> = [54, 55, 56, 58, 59, 60, 61, 62, 63]
-        for code in keys.sorted(by: { modifiers.contains($0) == modifiers.contains($1) ? $0 < $1 : !modifiers.contains($0) }) {
-            do { try key(code, down: false, releasing: true) }
-            catch let error as NativeFailure { failures.append(error.json) }
-            catch { failures.append(NativeFailure("INPUT_JOURNAL_FAILED", error.localizedDescription).json) }
+        if buttons.isEmpty {
+            for code in keys.sorted(by: { modifiers.contains($0) == modifiers.contains($1) ? $0 < $1 : !modifiers.contains($0) }) {
+                do { try key(code, down: false, releasing: true) }
+                catch let error as NativeFailure { failures.append(error.json) }
+                catch { failures.append(NativeFailure("INPUT_JOURNAL_FAILED", error.localizedDescription).json) }
+            }
         }
         recoveryRequired = !keys.isEmpty || !buttons.isEmpty || !failures.isEmpty
         return ["released": !recoveryRequired, "failures": failures, "heldKeys": keys.sorted().map { Int($0) }, "heldButtons": buttons.sorted()]

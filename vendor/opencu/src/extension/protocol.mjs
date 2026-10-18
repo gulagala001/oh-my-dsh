@@ -1,3 +1,5 @@
+import {pressParameters} from '../../extension/key-options.js';
+
 export const PROTOCOL_VERSION = 1;
 export const EXTENSION_PATH = '/opencu-extension/v1';
 
@@ -36,6 +38,8 @@ export function normalizeAction(action) {
   value.elementId ??= value.element ?? value.runtimeElementId;
   value.text ??= value.type === 'type_text' || value.type === 'setText' ? value.value : undefined;
   value.key ??= value.combo;
+  value.button ??= value.mouseButton;
+  if (value.type === 'press_key') pressParameters(value,{mac:process.platform === 'darwin'});
   return value;
 }
 

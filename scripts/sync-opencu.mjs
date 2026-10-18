@@ -52,6 +52,6 @@ try {
 try { await rename(unpacked, target); }
 catch (error) { await rename(join(staging, 'previous'), target); throw error; }
 await writeFile(join(root, 'vendor/opencu.json'), JSON.stringify({ name: manifest.name, version: manifest.version,
-  source: source.endsWith('.tgz') ? source : '../opencu', policy: 'rewritten-plugin', hostVersion: manifest.opencu.host,
+  source: source.endsWith('.tgz') ? `${manifest.name}@${manifest.version}` : '../opencu', policy: 'rewritten-plugin', hostVersion: manifest.opencu.host,
   archiveSha256: createHash('sha256').update(await readFile(archive)).digest('hex'), files }, null, 2) + '\n');
 console.log(`Bundled OpenCU ${manifest.version}; previous source preserved outside the package at ${staging}/previous`);

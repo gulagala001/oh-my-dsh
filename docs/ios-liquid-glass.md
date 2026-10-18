@@ -38,4 +38,4 @@ node scripts/pack-skin.mjs src/client/skins/ios-liquid-glass dist/skins/ios-liqu
 
 ## 查看效果
 
-[新版图集](release-visuals.md) · [外观设置](skins.md) · [安装与版本配对](install.md)
+[功能展示](showcase.md) · [外观设置](skins.md) · [安装与版本配对](install.md)

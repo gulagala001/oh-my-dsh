@@ -42,7 +42,7 @@ Check the right file, successful actual tool result, and accessible deliverable.
 | **OMD Console** | The single right-sidebar entry: overview, context (prepare → hub → replace, compaction), memory (automatic Dream off; empty folder selection means all), call log, background log. `≥` is a lower bound; unknown is not zero; background calls also cost usage. New-session empty state is normal. |
 | Composer info bar | Native turn/token readings plus context and Dream job items; each opens the matching console section. |
 | **BT** | Task reminders on; verification reminders off. “View task evidence” opens requirements, status, and evidence. |
-| Model/Fast | Pro prefers `xhigh`, otherwise highest; Ultra highest. Fast needs actual matching Subscriptions/model support. |
+| Model/Fast | Ultra has Workflow / Agent Team / Free submodes and prefers `xhigh`, otherwise highest. Agent Team requires DSH to enable it. Fast needs actual matching Subscriptions/model support. |
 | **Appearance** | Five themes, palettes, fonts, backgrounds, reduced motion. |
 | **Base components** | CodeGraph readiness and retained native/third-party entries. |
 

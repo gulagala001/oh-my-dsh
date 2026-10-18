@@ -9,6 +9,7 @@ const core = [
 core.push('plugins/deepseek-workbench/test/ui-adapter.test.mjs');
 core.push('test/opencu-browser-generation.test.mjs');
 core.push('test/opencu-app-approval-session-cancel.test.mjs');
+core.push('test/prompt-adaptation.test.mjs');
 
 const [command = 'run', suite = 'core', shard = '1/1'] = process.argv.slice(2);
 if (command === 'matrix') {

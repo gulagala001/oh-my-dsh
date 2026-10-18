@@ -235,6 +235,30 @@ await patch(desktop + 'main.ts', [
   ["ipcMain.handle('dsh-desktop:opencu-presentation', (event, operation: unknown, payload: unknown) => {\n    assertProductSender(event)\n    return openCUPresentations.operate(event.sender, operation, payload)", "ipcMain.handle('dsh-desktop:opencu-presentation', (event, operation: unknown, payload: unknown) => {\n    assertOpenCUSender(event)\n    return openCUPresentations.operate(openCUBrowserSurfaces.owner(event.sender), operation, payload)"],
   ['ipcMain.handle(DESKTOP_IPC.browserRelease, (event, lease: unknown) => {\n    assertProductSender(event)', 'ipcMain.handle(DESKTOP_IPC.browserRelease, (event, lease: unknown) => {\n    assertOpenCUSender(event)'],
 ], surfaceMarker);
+// Reuse the host's approved quit state; a pending or cancelled confirmation is not a quit.
+const windowQuitMarker = '// opencu-window-quit-lifecycle:v1';
+const mainSource = await source(desktop + 'main.ts');
+for (const before of [
+  '  let quitting = false\n',
+  '  let shellInstallerOwnsQuit = false\n',
+  '  let sessionEnding = false\n',
+  "    window.on('close', (event) => {\n      if (quitting || shellInstallerOwnsQuit || sessionEnding) return\n      event.preventDefault()",
+]) {
+  if (mainSource.split(before).length !== 2) throw new Error(`DSH ${target.id} quit lifecycle changed: ${before}`);
+}
+const windowQuitHooks = [
+  ['  const openCUPresentations = new OpenCUPresentations()', `  ${windowQuitMarker}
+  const openCUHostIsQuitting = (): boolean => quitting || shellInstallerOwnsQuit || sessionEnding
+  const openCUPresentations = new OpenCUPresentations(openCUHostIsQuitting)`],
+  ['  }, contents => browserGuests.releaseAll(contents))', '  }, contents => browserGuests.releaseAll(contents), openCUHostIsQuitting)'],
+];
+if (mainSource.includes(windowQuitMarker)) {
+  if (mainSource.split(windowQuitMarker).length !== 2 || windowQuitHooks.some(([, after]) => mainSource.split(after).length !== 2)) {
+    throw new Error(`DSH ${target.id} OpenCU quit lifecycle hook changed`);
+  }
+} else {
+  await patch(desktop + 'main.ts', windowQuitHooks);
+}
 await patch('apps/desktop/tsdown.config.ts', [["'preload-opencu-presentation',", "'preload-opencu-presentation', 'preload-opencu-surface',"]], "'preload-opencu-surface'");
 await patch('apps/desktop/tsdown.config.ts', [["const manifest = JSON.parse(", "await (await import('node:fs/promises')).copyFile(new URL('./src/opencu-rea-context-menu.js', import.meta.url), new URL('./lib/types/opencu-rea-context-menu.js', import.meta.url))\nconst manifest = JSON.parse("]], "copyFile(new URL('./src/opencu-rea-context-menu.js'");
 await patch('apps/desktop/scripts/electron-builder-config.mjs', [["      'lib/preload-app.cjs',", "      'lib/preload-app.cjs',\n      'lib/preload-opencu-surface.cjs',"]], "'lib/preload-opencu-surface.cjs'");
@@ -325,12 +349,13 @@ for (const [from, to] of [
   ['presentation-motion', 'opencu-presentation-motion'], ['presentation-transfer', 'opencu-presentation-transfer'],
   ['browser-surfaces', 'opencu-browser-surfaces'], ['preload-surface', 'preload-opencu-surface'],
   ['cursor', 'opencu-cursor'], ['preload-cursor', 'preload-opencu-cursor'], ['automation', 'opencu-automation'],
+  ['dialogs', 'opencu-dialogs'],
   ['site-tools', 'opencu-site-tools'], ['extensions', 'opencu-extensions'], ['files', 'opencu-files'], ['profile', 'opencu-profile'],
 ]) pending.set(desktop + to + '.ts', await readFile(new URL(`./${from}.ts`, import.meta.url), 'utf8'));
 // The same locator and real frame-session router serve all three browser backends.
-for (const file of ['dom-locator.js','cdp-locator.js','cdp-locator.d.ts','frame-router.js','frame-router.d.ts','keyboard.js','keyboard.d.ts']) {
+for (const file of ['dom-locator.js','cdp-locator.js','cdp-locator.d.ts','select-options.js','select-options.d.ts','frame-router.js','frame-router.d.ts','keyboard.js','keyboard.d.ts','text-edit.js','text-edit.d.ts']) {
   const value = await readFile(new URL(`../extension/${file}`, import.meta.url), 'utf8');
-  pending.set(desktop + 'opencu-' + file, value.replaceAll("'./dom-locator.js'", "'./opencu-dom-locator.js'").replaceAll("'./frame-router.js'", "'./opencu-frame-router.js'"));
+  pending.set(desktop + 'opencu-' + file, value.replaceAll("'./dom-locator.js'", "'./opencu-dom-locator.js'").replaceAll("'./frame-router.js'", "'./opencu-frame-router.js'").replaceAll("'./select-options.js'", "'./opencu-select-options.js'"));
 }
 // Copied modules keep lease ownership; only native window lookup and anchors follow placement.
 await patch(desktop + 'opencu-permissions.ts', [

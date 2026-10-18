@@ -1,5 +1,6 @@
 import './build-host.mjs';
 import './build-deepseek-workbench.mjs';
+import './build-overview-native.mjs';
 import { build } from 'esbuild';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
