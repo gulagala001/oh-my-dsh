@@ -9,7 +9,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { desktopInputs, desktopIdentity, assertDesktopPaths, assertExternalBackends, digest, inside } from './fixtures/desktop-host-boot/inputs.mjs';
 import { prepareEnvironment } from '../scripts/desktop-test-environment.mjs';
 import { assertModelTakeover, modelPriority } from './fixtures/desktop-host-boot/model-panel.mjs';
-import { assertClientIdentity, assertHostUiIdentity } from './fixtures/desktop-host-boot/client-identity.mjs';
+import { assertClientIdentity, assertHostUiIdentity, assertBlankNavigation } from './fixtures/desktop-host-boot/client-identity.mjs';
 import { cleanupFixture, closeFixtureServer } from './fixtures/process.mjs';
 
 const redact = value => String(value).replace(/token=[\w-]+/g, 'token=[redacted]');
@@ -231,11 +231,16 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     const registered = await rpc('workspace/create', { request: { path: workspace } });
     const session = await rpc('session/create', { request: { workspaceId: registered.workspace.workspaceId, agentPreset: 'trisoul-x' } });
     assert(session.sessionId, 'Create a synthetic empty session without prompting');
-    await rpc('session/rename', { request: { sessionId: session.sessionId, title: '合成启动验收（无模型调用）' } });
-    await page.getByText('workspace', { exact: true }).first().click();
-    await page.getByText('合成启动验收（无模型调用）', { exact: true }).first().click();
+    await page.evaluate(id => window.__OMD_DESKTOP_OPEN_SESSION__(id), session.sessionId);
+    const expectedNavigation = { sessionId: session.sessionId, agentPreset: 'trisoul-x', cwd: workspace };
+    const navigation = await until(async () => {
+      const state = (await page.evaluate(() => window.__OMD_DESKTOP_HOST_BOOT__())).navigation;
+      return state.sessionId === session.sessionId && state.openState === 'open' && state.agentPreset === 'trisoul-x' && state;
+    }, 'real blank Session selection and preset');
+    assertBlankNavigation(navigation, expectedNavigation); report.navigation = { afterOpen: navigation };
     await page.locator('[data-composer-input]').waitFor();
     await page.getByRole('button', { name: '模型与思考强度', exact: true }).waitFor({ state: 'visible' });
+    assertBlankNavigation((await page.evaluate(() => window.__OMD_DESKTOP_HOST_BOOT__())).navigation, expectedNavigation);
     await page.getByRole('button', { name: '关于 Oh My DSH', exact: true }).click();
     const about = page.getByRole('dialog', { name: '关于 Oh My DSH' });
     await until(async () => await about.getByTestId('omd-current-version').innerText() === inputs.manifest.version, 'matching real client/server version');
@@ -266,6 +271,8 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     await page.screenshot({ path: join(evidence, 'computer-settings-disabled.png'), animations: 'disabled' });
     await settings.getByRole('button', { name: '浏览器偏好', exact: true }).click();
     await page.screenshot({ path: join(evidence, 'browser-preferences.png'), animations: 'disabled' });
+    report.navigation.afterSettings = (await page.evaluate(() => window.__OMD_DESKTOP_HOST_BOOT__())).navigation;
+    assertBlankNavigation(report.navigation.afterSettings, expectedNavigation);
     await close();
     assert.deepEqual(errors, []); assert.equal(providerRequests.length, 0);
     assert.equal(report.launches.length, 2); assert.equal(report.shutdowns.length, 2);

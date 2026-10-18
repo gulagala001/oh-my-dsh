@@ -7,11 +7,16 @@ window.__ModuleLoader__.load({ id: 'omd-desktop-host-boot-observer', factory: re
     '@deepseek-ai/dsh-client-ui-primitives': require('@deepseek-ai/dsh-client-ui-primitives'),
   };
   return {
-    inject: ['slots', 'loader', 'modules'],
+    inject: ['slots', 'loader', 'modules', 'uiWorkspace', 'uiSession', 'sessions'],
     apply(ctx) {
       ctx.inject(['uiConversation'], scope => {
         const observe = async () => {
           const modules = scope.modules, rows = modules.manifest.modules;
+          const current = scope.uiSession.adapter.current.getSnapshot();
+          const sessionId = current.props.sessionId;
+          const binding = sessionId === undefined ? undefined : scope.sessions.binding(sessionId);
+          const session = binding?.session.getSnapshot();
+          const summary = sessionId === undefined ? undefined : scope.sessions.list.getSnapshot().byId[sessionId];
           const renderer = await modules.import('@deepseek-ai/dsh-client-ui-renderer', '', {});
           const originalConversation = scope.uiConversation[cordis.symbols.original] || scope.uiConversation;
           const ancestry = [], seen = new Set();
@@ -34,6 +39,12 @@ window.__ModuleLoader__.load({ id: 'omd-desktop-host-boot-observer', factory: re
               dynamicRow: rows.some(row => row.id === name) };
           }
           return {
+            navigation: { sessionId, bindingKey: current.key, boundSessionId: session?.sessionId,
+              agentPreset: binding?.session.projections.faceOf('agentPreset').getSnapshot(), cwd: summary?.cwd,
+              blank: session?.blank, listedBlank: summary?.blank, openState: session?.openState, running: session?.running,
+              promptAttempted: session?.promptAttempted, pendingSubmissions: session?.pendingSubmissions.length,
+              mainViewReferences: sessionId === undefined ? 0 : scope.sessions.retainInfo(sessionId).getSnapshot().retainedBy.mainView,
+              eventTypes: binding?.eventSource.getSnapshot().entries.filter(row => row.type === 'event').map(row => row.event.type) },
             identity: { shellProtocol: window.dshDesktop?.protocolVersion, moduleSystem: modules.version,
               release: modules.manifest.release, rev: modules.manifest.rev,
               bootRelease: window.__DSH_BOOT__?.release, bootRev: window.__DSH_BOOT__?.rev,
@@ -50,9 +61,16 @@ window.__ModuleLoader__.load({ id: 'omd-desktop-host-boot-observer', factory: re
             entries: [...scope.loader.entries()].map(row => ({ name: row.options.name, state: row.fiber?.state })),
           };
         };
+        // Public navigation only. Its return value is not acceptance evidence:
+        // the runner checks actual current scope, binding and rendered controls.
+        const openSession = id => scope.uiWorkspace.openSession(id);
         scope.effect(() => {
           window.__OMD_DESKTOP_HOST_BOOT__ = observe;
-          return () => { if (window.__OMD_DESKTOP_HOST_BOOT__ === observe) delete window.__OMD_DESKTOP_HOST_BOOT__; };
+          window.__OMD_DESKTOP_OPEN_SESSION__ = openSession;
+          return () => {
+            if (window.__OMD_DESKTOP_HOST_BOOT__ === observe) delete window.__OMD_DESKTOP_HOST_BOOT__;
+            if (window.__OMD_DESKTOP_OPEN_SESSION__ === openSession) delete window.__OMD_DESKTOP_OPEN_SESSION__;
+          };
         });
       });
     },

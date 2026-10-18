@@ -11,7 +11,7 @@ import { spawnSync } from 'node:child_process';
 import { desktopInputs, desktopIdentity, assertDesktopPaths, assertExternalBackends, digest, inside, repoRoot } from './fixtures/desktop-host-boot/inputs.mjs';
 import { desktopEnvironment } from '../scripts/desktop-test-environment.mjs';
 import { assertModelTakeover, modelPriority } from './fixtures/desktop-host-boot/model-panel.mjs';
-import { assertClientIdentity, assertHostUiIdentity, uiReplacements, clientComponents } from './fixtures/desktop-host-boot/client-identity.mjs';
+import { assertClientIdentity, assertHostUiIdentity, assertBlankNavigation, uiReplacements, clientComponents } from './fixtures/desktop-host-boot/client-identity.mjs';
 
 // These are dependency-free contract checks. No Electron, browser, installer,
 // package manager, real account, provider or user-home operation is performed.
@@ -161,7 +161,17 @@ test('actual client probe verifies shell seeds, boot release, dynamic module sou
     import: async name => exports.get(name), loadCache: new Map(rows.map(row => [row.id, { id: row.id, exports: exports.get(row.id) }])) };
   const rootContext = new Context();
   rootContext.fiber = { state: 2, runtime: null, parent: rootContext };
+  let selected;
+  const sessionId = 'synthetic-blank-id', requested = [];
+  const session = { getSnapshot: () => ({ sessionId, blank: true, openState: 'open', running: false, promptAttempted: false, pendingSubmissions: [] }),
+    projections: { faceOf: () => ({ getSnapshot: () => 'trisoul-x' }) } };
+  const binding = { session, eventSource: { getSnapshot: () => ({ entries: [{ type: 'event', event: { type: 'session/title' } }] }) } };
   const scope = { root: rootContext, slots: new SlotRegistry(), modules,
+    uiSession: { adapter: { current: { getSnapshot: () => ({ key: selected, props: { sessionId: selected } }) } } },
+    uiWorkspace: { openSession: id => { requested.push(id); } },
+    sessions: { binding: id => id === sessionId ? binding : undefined,
+      list: { getSnapshot: () => ({ byId: { [sessionId]: { blank: true, cwd: '/synthetic/workspace', title: 'renamed but still blank' } } }) },
+      retainInfo: id => ({ getSnapshot: () => ({ retainedBy: { mainView: selected === id ? 1 : 0 } }) }) },
     loader: { internal: modules, entries: () => [] }, uiConversation: {
       ctx: { fiber: { state: 2, runtime: { callback: exports.get(conversationName).apply }, parent: rootContext } },
       events: { entries: () => [] }, views: { entries: () => [] } }, effect: fn => fn() };
@@ -171,6 +181,15 @@ test('actual client probe verifies shell seeds, boot release, dynamic module sou
   runInNewContext(await readFile(new URL('./fixtures/desktop-host-boot/client.js', import.meta.url), 'utf8'), { window });
   const plugin = registration.factory(name => { assert(exports.has(name), 'No ignored seed require'); return exports.get(name); });
   plugin.apply({ inject: (_services, apply) => apply(scope) });
+  window.__OMD_DESKTOP_OPEN_SESSION__(sessionId);
+  assert.deepEqual(requested, [sessionId]);
+  const navigationExpected = { sessionId, agentPreset: 'trisoul-x', cwd: '/synthetic/workspace' };
+  // A successful public API return and a stored title do not prove current
+  // selection. Only the observed UI/session scope transition can satisfy it.
+  const beforeSelection = (await window.__OMD_DESKTOP_HOST_BOOT__()).navigation;
+  assert.throws(() => assertBlankNavigation(beforeSelection, navigationExpected), /Actual current Session identity/);
+  selected = sessionId;
+  assertBlankNavigation((await window.__OMD_DESKTOP_HOST_BOOT__()).navigation, navigationExpected);
   const identity = JSON.parse(JSON.stringify((await window.__OMD_DESKTOP_HOST_BOOT__()).identity));
   assertClientIdentity(identity, expected);
   for (const [mutate, message] of [
@@ -211,6 +230,19 @@ test('actual client probe verifies shell seeds, boot release, dynamic module sou
     const invalid = structuredClone(installed); mutate(invalid);
     assert.throws(() => assertClientIdentity(invalid, installedExpected), message);
   }
+});
+
+test('blank navigation does not treat a title, API return, wrong selection or fabricated turn as UI evidence', () => {
+  const expected = { sessionId: 'blank-id', agentPreset: 'trisoul-x', cwd: '/fixture/workspace' };
+  const blank = { sessionId: 'blank-id', bindingKey: 'blank-id', boundSessionId: 'blank-id', agentPreset: 'trisoul-x', cwd: expected.cwd,
+    title: 'title metadata does not clear blank', blank: true, listedBlank: true, openState: 'open', running: false,
+    promptAttempted: false, pendingSubmissions: 0, mainViewReferences: 1, eventTypes: ['session/title', 'permission/preset'] };
+  assertBlankNavigation(blank, expected);
+  for (const invalid of [
+    { ...blank, sessionId: 'previous-session' }, { ...blank, boundSessionId: 'previous-session' },
+    { ...blank, mainViewReferences: 0 }, { ...blank, agentPreset: 'wrong-preset' }, { ...blank, listedBlank: false },
+    { ...blank, blank: false }, { ...blank, promptAttempted: true }, { ...blank, eventTypes: ['session/title', 'turn/start'] },
+  ]) assert.throws(() => assertBlankNavigation(invalid, expected));
 });
 
 test('installed UI identity requires the exact disabled originals and active replacements from the installed candidate', () => {
@@ -319,6 +351,9 @@ test('actual Host observer vetoes model streams before continuation and rejects 
 test('actual workflow acceptance gate rejects zero execution, skips and unsuccessful evidence', async t => {
   const env = await fixture(t), root = env.OMD_DESKTOP_TEST_ROOT;
   const workflow = await readFile(new URL('../.github/workflows/desktop.yml', import.meta.url), 'utf8');
+  const delivery = workflow.indexOf('node scripts/check-opencu-delivery.mjs "$OMD_PLUGIN_ARCHIVE"');
+  assert(delivery > workflow.indexOf('name: Freeze the final archive'), 'Verify the actual frozen tgz after freezing');
+  assert(delivery < workflow.indexOf('node --test --test-reporter=tap test/desktop-host-boot.test.mjs'), 'Both matrix targets verify delivery before Electron launch');
   const gate = [...workflow.matchAll(/node --input-type=module - <<'NODE'\n([\s\S]*?)\n          NODE/g)]
     .map(match => match[1]).find(text => text.includes("'host-boot.tap'"));
   assert(gate, 'Real workflow must verify test counts and evidence');

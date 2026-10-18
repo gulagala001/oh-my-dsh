@@ -27,6 +27,20 @@ label declaration owner unchanged. The exact `模型与思考强度` button must
 visible; the additive `OMD 模式与思考强度` fallback does not satisfy this check.
 No model button is clicked.
 
+Blank Session navigation uses the real public `uiWorkspace.openSession(id)`
+capability through a test-only bridge. API return is not acceptance: the real
+`uiSession.adapter.current` props/key, bound Session id, mainView retention,
+actual preset and blank/open state must agree, with no prompt attempt or turn.
+The composer/model button and settings are still checked in the rendered UI,
+and selection is rechecked after those interactions. A stored title is never
+used as navigation evidence: rc.2 preserves blank for title metadata and shows
+only the current blank as its localized New Session row. No turn is fabricated.
+
+Each Windows/macOS job runs `check-opencu-delivery.mjs` on its own frozen
+`OMD_PLUGIN_ARCHIVE` before Electron launch. It verifies the raw rebuilt root
+client, manifest, packed member bytes and native helper modes; failure is not
+repaired or skipped. `opencu-delivery.json` records that exact archive's hash.
+
 Identity follows the fixed rc.2 packaging split. Seven Host SDK packages and
 Cordis retain their actual resources/name/version/path checks. The official
 shell's static seeds (currently ui-slots and ui-primitives in OMD's inject list)

@@ -93,6 +93,11 @@ jobs:
           const sha256 = createHash('sha256').update(readFileSync(archive)).digest('hex');
           appendFileSync(process.env.GITHUB_ENV, `OMD_DESKTOP_APP_ROOT=${appRoot}\nOMD_PLUGIN_ARCHIVE=${archive}\nOMD_PLUGIN_ARCHIVE_SHA256=${sha256}\n`);
           NODE
+      - name: Verify the actual frozen Desktop tgz delivery
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/check-opencu-delivery.mjs "$OMD_PLUGIN_ARCHIVE" | tee "$OMD_DESKTOP_TEST_ROOT/opencu-delivery.json"
       - name: Boot official Desktop and verify isolated OMD registration
         shell: bash
         run: |
@@ -122,5 +127,6 @@ jobs:
             ${{ env.OMD_PLUGIN_ARCHIVE }}
             ${{ env.OMD_DESKTOP_TEST_ROOT }}/pack.json
             ${{ env.OMD_DESKTOP_TEST_ROOT }}/host-boot.tap
+            ${{ env.OMD_DESKTOP_TEST_ROOT }}/opencu-delivery.json
             ${{ env.OMD_DESKTOP_TEST_ROOT }}/host-boot-evidence/
           if-no-files-found: warn

@@ -39,6 +39,17 @@ export function clientComponents(names) {
   return { static: names.filter(name => shellSeeds.includes(name)), dynamic: names.filter(name => !shellSeeds.includes(name)) };
 }
 
+export function assertBlankNavigation(state, expected) {
+  for (const field of ['sessionId', 'bindingKey', 'boundSessionId']) assert.equal(state[field], expected.sessionId, 'Actual current Session identity: ' + field);
+  assert.equal(state.agentPreset, expected.agentPreset, 'Actual selected Session preset');
+  assert.equal(state.cwd, expected.cwd, 'Actual selected Workspace directory');
+  assert.equal(state.blank, true); assert.equal(state.listedBlank, true);
+  assert.equal(state.openState, 'open'); assert.equal(state.running, false); assert.equal(state.promptAttempted, false);
+  assert.equal(state.pendingSubmissions, 0);
+  assert(Number.isFinite(state.mainViewReferences) && state.mainViewReferences > 0, 'Real main-view retention belongs to the selected Session');
+  assert(!state.eventTypes.some(type => ['turn/start', 'user/message', 'llm/request', 'tool/call'].includes(type)), 'Blank navigation must not fabricate a turn, prompt or tool call');
+}
+
 export function assertClientIdentity(identity, expected) {
   assert(['stock', 'installed'].includes(expected.stage), 'Explicit UI identity stage');
   assert.equal(expected.appVersion, expected.hostVersion, 'Verified official shell release');
