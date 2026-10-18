@@ -38,6 +38,14 @@ and selection is rechecked after those interactions. A stored title is never
 used as navigation evidence: rc.2 preserves blank for title metadata and shows
 only the current blank as its localized New Session row. No turn is fabricated.
 
+The real “电脑与浏览器” settings button opens one combined panel, as pinned
+OpenCU `3908660` mounts `CapabilitySettings` and `BrowserSettings` together.
+The probe requires visible “Chrome / Edge 连接”, “内置浏览器” and “托管浏览器”
+content and the actual REA switches “启用浏览器连接” / “启用托管浏览器” with
+`role="switch"` and explicit `aria-checked="false"`. Missing checked state is
+an error. Both parts are scrolled into view for screenshots; no switch is
+clicked. There is no separate “浏览器偏好” navigation button in this build.
+
 Each Windows/macOS job runs `check-opencu-delivery.mjs` on its own frozen
 `OMD_PLUGIN_ARCHIVE` before Electron launch. Both Desktop and Linux CI follow
 the production pack pipeline: preserve the raw npm archive, run

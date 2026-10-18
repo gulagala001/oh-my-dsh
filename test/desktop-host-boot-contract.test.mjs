@@ -10,6 +10,7 @@ import { runInNewContext } from 'node:vm';
 import { spawnSync } from 'node:child_process';
 import { desktopInputs, desktopIdentity, assertDesktopPaths, assertExternalBackends, digest, inside, repoRoot } from './fixtures/desktop-host-boot/inputs.mjs';
 import { desktopEnvironment } from '../scripts/desktop-test-environment.mjs';
+import { assertComputerBrowserPanel } from './fixtures/desktop-host-boot/settings-panel.mjs';
 import { assertModelTakeover, modelPriority } from './fixtures/desktop-host-boot/model-panel.mjs';
 import { assertClientIdentity, assertHostUiIdentity, assertBlankNavigation, uiReplacements, clientComponents } from './fixtures/desktop-host-boot/client-identity.mjs';
 
@@ -386,4 +387,39 @@ test('actual workflow acceptance gate rejects zero execution, skips and unsucces
     tap.replace('# skipped 0', '# skipped 1'), tap.replace('# cancelled 0', '# cancelled 1')])
     assert.notEqual((await run(text)).status, 0, 'Do not greenlight missing/zero/skipped/cancelled tests');
   assert.notEqual((await run(tap, { ...report, status: 'failed' })).status, 0, 'Cleanup failure cannot pass');
+});
+
+
+test('actual combined settings probe rejects either missing block and invalid switch semantics', async () => {
+  const texts = ['Chrome / Edge 连接', '内置浏览器', '托管浏览器'];
+  const names = ['启用浏览器连接', '启用托管浏览器'];
+  const panel = (changes = {}) => {
+    const rows = new Map([
+      ...texts.map(text => [text, { visible: true, count: 1 }]),
+      ...names.map(name => [name, { visible: true, count: 1, role: 'switch', 'aria-checked': 'false' }]),
+    ]);
+    for (const [key, value] of Object.entries(changes)) rows.set(key, { ...rows.get(key), ...value });
+    const locator = name => ({
+      waitFor: async options => { assert.equal(options.state, 'visible'); assert.equal(rows.get(name)?.visible, true, 'Missing or hidden panel content: ' + name); },
+      count: async () => rows.get(name)?.count ?? 0,
+      getAttribute: async key => rows.get(name)?.[key] ?? null,
+    });
+    return {
+      getByText: (text, options) => { assert.equal(options.exact, true); return locator(text); },
+      getByRole: (role, options) => { assert.equal(role, 'switch'); assert.equal(options.exact, true); return locator(options.name); },
+    };
+  };
+  assert.deepEqual(await assertComputerBrowserPanel(panel()), {
+    content: texts, switches: names.map(name => ({ name, role: 'switch', checked: 'false' })),
+  });
+  // A computer-only or browser-only mount cannot pass as the combined panel.
+  for (const text of texts) await assert.rejects(assertComputerBrowserPanel(panel({ [text]: { visible: false } })), /Missing or hidden panel content/);
+  for (const name of names) {
+    for (const checked of ['true', 'mixed', '', null, false]) {
+      await assert.rejects(assertComputerBrowserPanel(panel({ [name]: { 'aria-checked': checked } })), /Explicitly disabled settings switch/);
+    }
+    await assert.rejects(assertComputerBrowserPanel(panel({ [name]: { role: 'button' } })), /Actual REA switch role/);
+    await assert.rejects(assertComputerBrowserPanel(panel({ [name]: { visible: false } })), /Missing or hidden panel content/);
+    await assert.rejects(assertComputerBrowserPanel(panel({ [name]: { count: 2 } })), /Single settings switch/);
+  }
 });
