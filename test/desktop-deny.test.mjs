@@ -106,7 +106,7 @@ test('official rc.2 Agent and real REA card decline one synthetic OpenCU target 
   await new Promise((done, reject) => { provider.once('error', reject); provider.listen(0, '127.0.0.1', done); });
   const providerOrigin = `http://127.0.0.1:${provider.address().port}`;
   const probe = join(root, 'observer'); await mkdir(probe);
-  for (const file of ['observer.mjs', 'protocol.mjs']) await writeFile(join(probe, file), await readFile(new URL('./fixtures/desktop-deny/' + file, import.meta.url)));
+  for (const file of ['observer.mjs', 'protocol.mjs', 'http-observer.mjs']) await writeFile(join(probe, file), await readFile(new URL('./fixtures/desktop-deny/' + file, import.meta.url)));
   await writeFile(join(probe, 'client.js'), await readFile(new URL('./fixtures/desktop-host-boot/client.js', import.meta.url)));
   await writeFile(join(probe, 'package.json'), JSON.stringify({ name: 'omd-desktop-host-boot-observer', version: '1.0.0', private: true, type: 'module',
     exports: { '.': './observer.mjs', './client': './client.js', './package.json': './package.json' },
@@ -148,6 +148,11 @@ test('official rc.2 Agent and real REA card decline one synthetic OpenCU target 
   };
   const observe = async () => {
     const value = await request('/__desktop-deny');
+    report.responseObservation = value.responseObservation;
+    assert.equal(value.responseObservation.source, 'host-http');
+    assert.deepEqual(value.responseObservation.failures, []);
+    assert(value.responseObservation.matches <= 1, 'Only one real matching approval response');
+    approvalResponses.splice(0, approvalResponses.length, ...value.responseObservation.records);
     assert.deepEqual(value.rejectedModels, []); assert(value.modelCalls.length <= 2); assert(providerRequests.length <= 2); assert.deepEqual(wire.failures, []);
     assert.equal(value.profile, profile); assert.equal(value.sandbox.mode, 'read-only'); assert.equal(value.approval, 'ask');
     assert.equal(value.environmentHome, env.HOME); assert.equal(value.nodeHome, env.HOME);
@@ -189,15 +194,6 @@ test('official rc.2 Agent and real REA card decline one synthetic OpenCU target 
       const url = new URL(route.request().url());
       if (['dsh-app:', 'data:', 'blob:'].includes(url.protocol) || url.origin === origin) await route.continue();
       else { externalRendererRequests.push({ origin: url.origin, path: url.pathname }); await route.abort(); }
-    });
-    page.on('requestfinished', async request => {
-      if (new URL(request.url()).pathname !== '/api/opencu' || request.method() !== 'POST') return;
-      try {
-        const body = request.postDataJSON();
-        if (body.method !== 'appApprovals/respond') return;
-        const response = await request.response();
-        approvalResponses.push({ args: body.args, status: response.status(), value: await response.json() });
-      } catch (error) { errors.push('Approval response observation: ' + error.message); }
     });
     await page.getByText('更多', { exact: true }).waitFor();
     await until(() => page.evaluate(() => Boolean(window.__OMD_DESKTOP_HOST_BOOT__)), 'real client registry observer');
@@ -344,7 +340,10 @@ test('official rc.2 Agent and real REA card decline one synthetic OpenCU target 
       const value = await observe();
       return value.deny.agent?.status === 'idle' && value.deny.events.some(row => row.type === 'turn/end') && value;
     }, 'natural completed turn after the real Deny action', 60000);
-    await until(() => approvalResponses.length === 1, 'one observed real response');
+    await until(async () => { await observe(); return approvalResponses.length === 1; }, 'one finished host-http real response');
+    assert.equal(approvalResponses[0].source, 'host-http');
+    assert.equal(approvalResponses[0].requestComplete, true); assert.equal(approvalResponses[0].readableEnded, true);
+    assert.equal(approvalResponses[0].responseFinished, true);
     assert.equal(approvalResponses[0].status, 200);
     assertDenied({ ...settled.deny, modelCalls: settled.modelCalls, rejectedModels: settled.rejectedModels }, {
       sessionId: armedSessionId, requestId: pending.id, response: approvalResponses[0], wire,

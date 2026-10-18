@@ -4,7 +4,7 @@ The unchanged `desktop-host-boot.test.mjs` remains a separate zero-model test.
 `desktop-deny.test.mjs` installs the same final, hash-frozen complete OMD tgz
 in a new independent profile, quits naturally, and restarts the official app.
 The existing app/ASAR/SDK/client and installed package identity checks remain.
-The workflow still gates all 610 packed vendor members and helper mode 0755.
+The workflow still gates all 613 packed vendor members and helper mode 0755.
 
 Only the physical backend is synthetic. Its sole target has an executable
 sentinel which does not exist in the owned temporary tree, without a PID or
@@ -53,7 +53,31 @@ saved before Deny or failure cancellation. Failure capture precedes cleanup
 cancellation. It locates the actual open-shadow REA approval surface and
 exact application title, screenshots it, and clicks the real Deny button.
 It only observes the resulting authenticated response; it never sends an
-approval response itself or edits React/DOM state. The settled request id
+approval response itself or edits React/DOM state. The response evidence is
+`host-http`, from the public authenticated `connection/request` waterfall.
+The real pending id is taken from the existing read-only Host inspection.
+The fixture temporarily wraps only the armed POST /api/opencu request's emit,
+copying data events the original consumer already causes, without adding a
+data listener or calling read/resume/pause/pipe. It immediately returns the
+original next result; no body is replaced or replayed. Only the exact current
+Session/request decline/persist:null is retained. Other method/session buffers
+are discarded and no headers, cookies or tokens enter the report.
+
+Only after that exact request is parsed are response write/end wrapped. Each
+original method gets the same receiver, arguments and callbacks and returns
+or throws unchanged; false/drain semantics are retained. Private copies are
+bounded before allocation. A receipt requires response finish, request
+complete/readableEnded and response writableFinished, not merely next()
+resolution. Abort, close-before-finish, malformed/oversize data and duplicate
+responses fail observation. Original own-property descriptors are restored;
+prototype methods lose the temporary own property. All observer listeners and
+wrappers are also removed on fixture disposal. Real Node HTTP contracts cover
+these cases, including a downstream async delay before body consumption.
+
+The source-level hook/bridge analysis uses public source 687f282 as interface
+evidence. It does not establish byte-for-byte equivalence with the packaged
+shell releaseCommit 332895e. New fixed-head Windows/macOS runtime evidence is
+still required; renderer requestfinished is not claimed as the producer. The settled request id
 and Session must match. The card disappears; selected targets and grants
 remain empty; both approval files remain absent. OpenCU activity must report
 APP_ACCESS_DENIED, and the official Session's tool result must be isError

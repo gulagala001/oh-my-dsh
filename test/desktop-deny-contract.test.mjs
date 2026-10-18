@@ -2,6 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { createServer, request as nodeRequest } from 'node:http';
+import { once } from 'node:events';
+import { createHash } from 'node:crypto';
+import { createApprovalHttpObserver } from './fixtures/desktop-deny/http-observer.mjs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -97,7 +101,7 @@ test('real OpenCU controller and official ToolRuntime reject before any syntheti
     authorizationFiles: { persisted: existsSync(join(dataDir, 'app-approvals.json')), pending: existsSync(join(dataDir, 'app-approvals.json.pending')) },
   };
   assertPending(snapshot, 'unit-session');
-  const response = { args: { conversationId: 'unit-session', requestId: pending.id, action: 'decline', persist: null } };
+  const response = { source: 'host-http', requestComplete: true, readableEnded: true, responseFinished: true, responseBytes: 26, responseSha256: 'a'.repeat(64), args: { conversationId: 'unit-session', requestId: pending.id, action: 'decline', persist: null } };
   response.value = await lease.request('appApprovals/respond', response.args);
   const result = await resultPromise;
   assert.equal(result.isError, true); assert(result.content.some(row => row.type === 'text' && row.text.includes(declinedText)));
@@ -138,7 +142,7 @@ test('real OpenCU controller and official ToolRuntime reject before any syntheti
     pending: { deny: snapshot }, denied: { deny: value, modelCalls: value.modelCalls, rejectedModels: [] }, providerRequests: wire.requests, providerFailures: [] };
   assertDenyReport(tap, report);
   for (const invalid of ['', tap.replace('# tests 1', '# tests 0'), tap.replace('# skipped 0', '# skipped 1'), tap.replace('# pass 1', '# pass 0')]) assert.throws(() => assertDenyReport(invalid, report));
-  for (const mutate of [r => { r.cancelledForCleanup = true; }, r => { r.shutdowns[1].naturalExit = false; }, r => { r.counts.localModelRequests = 1; },
+  for (const mutate of [r => { r.approvalResponses[0].source = 'renderer-requestfinished'; }, r => { r.approvalResponses[0].responseFinished = false; }, r => { r.cancelledForCleanup = true; }, r => { r.shutdowns[1].naturalExit = false; }, r => { r.counts.localModelRequests = 1; },
     r => { r.groupNavigation.after.requestId = 'another-request'; }, r => { r.groupNavigation.after.localModelRequests = 2; }, r => { r.groupNavigation.manualGroupExpansion = false; }, r => { r.groupNavigation.defaultApprovalVisible = true; }, r => { r.groupNavigation.after.physicalInputs = 1; },
     r => { r.counts.externalModelRequests = 1; }, r => { r.counts.physicalInputs = 1; }, r => { r.launches[1].pid = 1; }]) {
     const invalid = structuredClone(report); mutate(invalid); assert.throws(() => assertDenyReport(tap, invalid));
@@ -199,4 +203,237 @@ test('real navigation helper uses only the uniquely bound normal toggle and rech
   const changedPending = fixture(); changedPending.callbacks.beforeExpansion = async () => { throw Error('pending changed'); };
   await assert.rejects(revealApprovalCard(changedPending.page, changedPending.callbacks), /pending changed/);
   assert.deepEqual(changedPending.actions, [], 'A changed pending/model/input state blocks navigation');
+});
+
+const httpScope = { sessionId: 'unit-session-验收', requestId: 'unit-pending-1' };
+const responseBody = '{"ok":true,"settled":true}';
+const requestBody = () => Buffer.from(JSON.stringify({ method: 'appApprovals/respond', args: {
+  conversationId: httpScope.sessionId, requestId: httpScope.requestId, action: 'decline', persist: null,
+} }));
+const shaHttp = bytes => createHash('sha256').update(bytes).digest('hex');
+async function httpHarness(t, observer, handler, prepare) {
+  const entries = [], errors = [];
+  const server = createServer((req, res) => {
+    const entry = { req, res, nextCalls: 0, received: [], dataEvents: [] }; entries.push(entry);
+    prepare?.(req, res, entry);
+    entry.methods = [[req, 'emit'], [res, 'write'], [res, 'end']].map(([object, key]) => ({ object, key,
+      descriptor: Object.getOwnPropertyDescriptor(object, key), method: object[key] }));
+    const flow = req.readableFlowing, dataListeners = req.listenerCount('data');
+    try {
+      let original;
+      const returned = observer.intercept(req, res, () => {
+        entry.nextCalls++;
+        assert.equal(req.readableFlowing, flow, 'Installing the observer never changes flow mode');
+        assert.equal(req.listenerCount('data'), dataListeners, 'No extra data consumer');
+        original = handler(req, res, entry); return original;
+      });
+      assert.equal(returned, original, 'Original next return/promise identity');
+      Promise.resolve(returned).catch(error => { errors.push(error); res.destroy(); });
+    } catch (error) { entry.thrown = error; res.end('downstream handled its own error'); }
+  });
+  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  t.after(async () => { observer.dispose(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });
+  const send = (body = requestBody(), { path = '/api/opencu', method = 'POST' } = {}) => new Promise((resolve, reject) => {
+    const req = nodeRequest({ hostname: '127.0.0.1', port: server.address().port, path, method,
+      headers: { 'content-length': body.length, cookie: 'SYNTHETIC_DO_NOT_RECORD', authorization: 'SYNTHETIC_DO_NOT_RECORD' } }, res => {
+      const chunks = []; res.on('data', chunk => chunks.push(chunk)); res.once('error', reject);
+      res.once('end', () => resolve({ bytes: Buffer.concat(chunks), status: res.statusCode }));
+    });
+    req.once('error', reject);
+    req.write(body.subarray(0, 7)); setImmediate(() => { req.write(body.subarray(7, 29)); req.end(body.subarray(29)); });
+  });
+  const restored = () => {
+    assert.equal(observer.snapshot().active, 0);
+    for (const entry of entries) {
+      assert.equal(entry.nextCalls, 1);
+      for (const { object, key, descriptor, method } of entry.methods) {
+        assert.equal(object[key], method); assert.deepEqual(Object.getOwnPropertyDescriptor(object, key), descriptor);
+      }
+      assert(!entry.res.listeners('finish').some(fn => fn.name === 'onFinish'));
+      assert(!entry.res.listeners('close').some(fn => fn.name === 'onClose'));
+    }
+    assert.deepEqual(errors, []);
+  };
+  return { server, entries, errors, send, restored };
+}
+async function consumeHttp(req, entry) {
+  // This deliberate await would lose body bytes with an active data listener.
+  await delay(15);
+  for await (const chunk of req) entry.received.push(chunk);
+  return Buffer.concat(entry.received);
+}
+
+test('host-http observes actual delayed Node consumption, multiple response chunks and transparent own descriptors', async t => {
+  const observer = createApprovalHttpObserver({ expected: () => httpScope });
+  let writeCallbacks = 0, endCallbacks = 0;
+  const callback1 = () => writeCallbacks++, callback2 = () => writeCallbacks++, callbackEnd = () => endCallbacks++;
+  const h = await httpHarness(t, observer, async (req, res, entry) => {
+    assert.equal(req.emit('unit-no-listener', 1, callback1), false);
+    let delivered = 0; const object = {};
+    req.once('unit-arguments', (a, b, c) => { delivered++; assert.equal(a, object); assert.equal(b, callback1); assert.equal(c, 7); });
+    assert.equal(req.emit('unit-arguments', object, callback1, 7), true); assert.equal(delivered, 1);
+    const bytes = await consumeHttp(req, entry); assert(bytes.equals(requestBody()));
+    const first = res.write(Buffer.from('{"ok":'), callback1);
+    const second = res.write(new Uint8Array(Buffer.from('true,')), 'utf8', callback2);
+    assert.equal(first, entry.writeReturns[0]); assert.equal(second, entry.writeReturns[1]);
+    assert.equal(res.end('"settled":true}', 'utf8', callbackEnd), res);
+  }, (req, res, entry) => {
+    entry.writeReturns = []; entry.writeArgs = []; entry.endArgs = [];
+    for (const [object, key] of [[req, 'emit'], [res, 'write'], [res, 'end']]) {
+      const original = object[key];
+      Object.defineProperty(object, key, { enumerable: true, configurable: true, writable: true, value: function (...args) {
+        assert.equal(this, object, 'Original receiver is preserved');
+        if (key === 'emit' && args[0] === 'data') entry.dataEvents.push(args[1]);
+        if (key === 'write') entry.writeArgs.push(args);
+        if (key === 'end') entry.endArgs.push(args);
+        const result = Reflect.apply(original, this, args);
+        if (key === 'write') entry.writeReturns.push(result);
+        return result;
+      } });
+    }
+  });
+  const wire = await h.send(); await delay(0); h.restored();
+  assert.equal(wire.bytes.toString(), responseBody); assert.equal(writeCallbacks, 2); assert.equal(endCallbacks, 1);
+  const entry = h.entries[0];
+  assert.equal(entry.writeArgs[0][1], callback1); assert.equal(entry.writeArgs[1][2], callback2); assert.equal(entry.endArgs[0][2], callbackEnd);
+  assert.equal(entry.dataEvents.length, entry.received.length);
+  entry.received.forEach((chunk, i) => assert.equal(chunk, entry.dataEvents[i], 'Original chunk reference reaches downstream'));
+  const snapshot = observer.snapshot(); assert.deepEqual(snapshot.failures, []); assert.equal(snapshot.matches, 1); assert.equal(snapshot.records.length, 1);
+  const record = snapshot.records[0];
+  assert.equal(record.source, 'host-http'); assert.equal(record.responseSha256, shaHttp(wire.bytes));
+  assert.equal(record.responseBytes, wire.bytes.length, 'end(chunk) is counted once');
+  assert.equal(record.requestComplete, true); assert.equal(record.readableEnded, true); assert.equal(record.responseFinished, true);
+  assert.deepEqual(record.args, JSON.parse(requestBody()).args); assert.deepEqual(record.value, { ok: true, settled: true });
+  assert.doesNotMatch(JSON.stringify(snapshot), /cookie|headers|authorization|SYNTHETIC_DO_NOT_RECORD/);
+});
+
+test('host-http preserves genuine write false/drain and waits for finish rather than next resolution', async t => {
+  const observer = createApprovalHttpObserver({ expected: () => httpScope, responseLimit: 2 * 1024 * 1024 });
+  let nextResolvedBeforeFinish = false, drained = false;
+  const spaces = Buffer.alloc(1024 * 1024, 32);
+  const h = await httpHarness(t, observer, async (req, res, entry) => {
+    assert((await consumeHttp(req, entry)).equals(requestBody()));
+    assert.equal(res.write(spaces), false, 'Real Node backpressure is not changed to true');
+    await once(res, 'drain'); drained = true;
+    // End deliberately occurs after next's Promise resolves.
+    setTimeout(() => res.end(responseBody), 15);
+    nextResolvedBeforeFinish = true;
+    assert.equal(observer.snapshot().records.length, 0);
+  });
+  const wire = await h.send(); h.restored();
+  assert(drained && nextResolvedBeforeFinish); assert.equal(wire.bytes.length, spaces.length + Buffer.byteLength(responseBody));
+  const record = observer.snapshot().records[0]; assert.equal(record.responseSha256, shaHttp(wire.bytes)); assert.equal(record.responseBytes, wire.bytes.length);
+});
+
+test('host-http ignores wrong path/method/scope/action and discards other method bodies', async t => {
+  const observer = createApprovalHttpObserver({ expected: () => httpScope });
+  const h = await httpHarness(t, observer, async (req, res, entry) => { await consumeHttp(req, entry); res.end(responseBody); });
+  const cases = [{ options: { path: '/api/other' } }, { options: { path: '/api/opencu?query=1' } }, { options: { method: 'GET' } },
+    { mutate: value => { value.method = 'state'; } }, { mutate: value => { value.args.conversationId = 'other-session'; } },
+    { mutate: value => { value.args.requestId = 'other-pending'; } }, { mutate: value => { value.args.action = 'accept'; } },
+    { mutate: value => { value.args.persist = 'always'; } }, { mutate: value => { delete value.args.persist; } }];
+  for (const value of cases) {
+    const body = JSON.parse(requestBody()); value.mutate?.(body); const bytes = Buffer.from(JSON.stringify(body));
+    assert.equal((await h.send(bytes, value.options)).bytes.toString(), responseBody);
+    assert(Buffer.concat(h.entries.at(-1).received).equals(bytes));
+  }
+  h.restored(); assert.deepEqual(observer.snapshot(), { source: 'host-http', records: [], failures: [], matches: 0, active: 0 });
+});
+
+test('host-http bounded malformed/oversize request and response failures never alter downstream bytes', async t => {
+  for (const scenario of ['bad-request-json', 'request-limit', 'bad-response-json', 'response-limit']) {
+    const observer = createApprovalHttpObserver({ expected: () => httpScope, requestLimit: scenario === 'request-limit' ? 16 : 4096,
+      responseLimit: scenario === 'response-limit' ? 8 : 4096 });
+    const reply = scenario === 'bad-response-json' ? 'malformed-original-response' : responseBody;
+    const body = scenario === 'bad-request-json' ? Buffer.from('{malformed') : requestBody();
+    const h = await httpHarness(t, observer, async (req, res, entry) => { await consumeHttp(req, entry); res.end(reply); });
+    const wire = await h.send(body); h.restored();
+    assert(Buffer.concat(h.entries[0].received).equals(body)); assert.equal(wire.bytes.toString(), reply);
+    assert.equal(observer.snapshot().records.length, 0); assert(observer.snapshot().failures.length > 0);
+  }
+});
+
+test('host-http duplicate matching responses remain detectable and unarmed requests remain untouched', async t => {
+  let armed = false;
+  const observer = createApprovalHttpObserver({ expected: () => armed ? httpScope : undefined });
+  const h = await httpHarness(t, observer, async (req, res, entry) => { await consumeHttp(req, entry); res.end(responseBody); });
+  await h.send(); assert.equal(observer.snapshot().matches, 0);
+  armed = true; await h.send(); await h.send(); h.restored();
+  assert.equal(observer.snapshot().matches, 2); assert.equal(observer.snapshot().records.length, 2);
+  assert(observer.snapshot().failures.includes('duplicate-response'));
+});
+
+test('host-http restores prototype methods on request abort, close-before-finish and disposal', async t => {
+  for (const scenario of ['request-abort', 'response-close', 'dispose']) {
+    const observer = createApprovalHttpObserver({ expected: () => httpScope });
+    const h = await httpHarness(t, observer, async (req, res, entry) => {
+      if (scenario === 'request-abort') {
+        try { for await (const chunk of req) entry.received.push(chunk); } catch { entry.expectedAbort = true; }
+        return;
+      }
+      await consumeHttp(req, entry);
+      if (scenario === 'dispose') observer.dispose();
+      res.write('{"ok":true'); res.destroy();
+    });
+    if (scenario === 'request-abort') {
+      const req = nodeRequest({ hostname: '127.0.0.1', port: h.server.address().port, path: '/api/opencu', method: 'POST', headers: { 'content-length': 999 } });
+      req.on('error', () => {}); req.write(Buffer.from('partial'));
+      await until(() => h.entries[0]?.received.length > 0); req.destroy();
+      await until(() => observer.snapshot().active === 0);
+      assert.equal(Buffer.concat(h.entries[0].received).toString(), 'partial');
+    } else await assert.rejects(h.send());
+    await delay(0); h.restored(); assert.equal(observer.snapshot().records.length, 0);
+    if (scenario !== 'dispose') assert(observer.snapshot().failures.length > 0);
+    for (const { object, key, descriptor } of h.entries[0].methods) assert.equal(Object.hasOwn(object, key), descriptor !== undefined);
+  }
+});
+
+test('host-http forwards original emit/write/end exceptions and next throws without compensation', async t => {
+  for (const scenario of ['emit', 'write', 'end', 'next']) {
+    const observer = createApprovalHttpObserver({ expected: () => httpScope });
+    const marker = Error('exact-original-error'); let originalError;
+    const h = await httpHarness(t, observer, (req, res, entry) => {
+      if (scenario === 'next') throw marker;
+      if (scenario === 'emit') { req.on('unit-throw', () => { throw marker; }); req.emit('unit-throw', marker); }
+      return (async () => {
+        await consumeHttp(req, entry);
+        try { res[scenario]({ invalidNodeChunk: true }); }
+        catch (error) { assert.equal(error, originalError); entry.caught = error; res.end('original downstream recovery'); }
+      })();
+    }, (_req, res) => {
+      if (!['write', 'end'].includes(scenario)) return;
+      const original = res[scenario];
+      Object.defineProperty(res, scenario, { configurable: true, enumerable: false, writable: true, value: function (...args) {
+        try { return Reflect.apply(original, this, args); } catch (error) { originalError = error; throw error; }
+      } });
+    });
+    const wire = await h.send(); h.restored(); assert.equal(observer.snapshot().records.length, 0);
+    if (scenario === 'next' || scenario === 'emit') { assert.equal(h.entries[0].thrown, marker); assert.equal(wire.bytes.toString(), 'downstream handled its own error'); }
+    else { assert(h.entries[0].caught); assert.equal(wire.bytes.toString(), 'original downstream recovery'); }
+  }
+});
+
+test('host-http preserves an asynchronously rejected next Promise without swallowing its error', async t => {
+  const observer = createApprovalHttpObserver({ expected: () => httpScope }), marker = Error('original-next-rejection');
+  const h = await httpHarness(t, observer, () => Promise.reject(marker));
+  await assert.rejects(h.send()); await until(() => observer.snapshot().active === 0);
+  assert.equal(h.errors.shift(), marker); h.restored(); assert.equal(observer.snapshot().records.length, 0);
+});
+
+test('host-http rejects changed scope and caps active copies without changing either original request', async t => {
+  let scope = httpScope;
+  const observer = createApprovalHttpObserver({ expected: () => scope });
+  const h = await httpHarness(t, observer, async (req, res, entry) => {
+    await consumeHttp(req, entry); scope = { ...httpScope, requestId: 'another-request' }; res.end(responseBody);
+  });
+  assert.equal((await h.send()).bytes.toString(), responseBody); h.restored();
+  assert.equal(observer.snapshot().records.length, 0); assert(observer.snapshot().failures.includes('scope-changed'));
+  const bounded = createApprovalHttpObserver({ expected: () => httpScope, maxActive: 1 });
+  const parallel = await httpHarness(t, bounded, async (req, res, entry) => { await consumeHttp(req, entry); await delay(20); res.end(responseBody); });
+  const both = await Promise.all([parallel.send(), parallel.send()]); parallel.restored();
+  both.forEach(value => assert.equal(value.bytes.toString(), responseBody));
+  parallel.entries.forEach(entry => assert(Buffer.concat(entry.received).equals(requestBody())));
+  assert(bounded.snapshot().failures.includes('active-limit')); assert.equal(bounded.snapshot().records.length, 1);
+  for (const options of [{ requestLimit: Infinity }, { requestLimit: 65537 }, { responseLimit: 4 * 1024 * 1024 + 1 }, { maxActive: 17 }])
+    assert.throws(() => createApprovalHttpObserver({ expected: () => httpScope, ...options }), /bound/);
 });

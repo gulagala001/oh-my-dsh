@@ -4,6 +4,7 @@ import { join, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { homedir } from 'node:os';
 
+import { createApprovalHttpObserver } from './http-observer.mjs';
 import { syntheticBackend, acquireBeforeStart, warmTargets, createModelGuard, credentialFiles } from './protocol.mjs';
 
 // Test-only plugin, copied to an exclusive package in the temporary home. It
@@ -26,7 +27,10 @@ export async function apply(ctx, config) {
     return value.sessionId;
   };
   const guard = createModelGuard(readSession, llm.isAgentLoopRequest), modelCalls = guard.attempts;
-  let synthetic, lease, warmed, injectionFailure;
+  let synthetic, lease, warmed, injectionFailure, expectedApproval;
+  const approvalHttp = createApprovalHttpObserver({ expected: () => expectedApproval });
+  ctx.on('connection/request', approvalHttp.intercept, { global: true, prepend: true });
+  ctx.effect(() => () => approvalHttp.dispose());
   const record = event => appendFileSync(config.trace, JSON.stringify({ bootId, pid: process.pid, ...event }) + '\n');
   const contained = path => typeof path === 'string' && resolve(path).startsWith(config.root + sep);
   for (const key of ['HOME', 'USERPROFILE', 'DSH_HOME', 'APPDATA', 'LOCALAPPDATA', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_DATA_HOME',
@@ -74,6 +78,12 @@ export async function apply(ctx, config) {
         const state = await lease.request('state');
         const activity = await lease.request('events');
         if (!pending.ok || !approvals.ok || !state.ok || !activity.ok) throw Error('Public OpenCU inspection failed');
+        if (sessionId && pending.requests.length === 1 && pending.requests[0].conversationId === sessionId) {
+          const next = { sessionId, requestId: pending.requests[0].id };
+          if (expectedApproval && (expectedApproval.sessionId !== next.sessionId || expectedApproval.requestId !== next.requestId))
+            throw Error('The real armed pending approval changed');
+          expectedApproval = next;
+        }
         deny = { pending: pending.requests, approvals: approvals.approvals, selected: state.state.targets,
           activity: activity.sessions.find(row => row.sessionId === sessionId),
           calls: { ...synthetic.calls }, credentialFiles: credentialFiles(config.dataDir), warmed, target: synthetic.target, injected: true,
@@ -104,7 +114,7 @@ export async function apply(ctx, config) {
       });
       const settings = ctx.get('settings')?.describe({ redactSecrets: true }) ?? [];
       const opencu = settings.find(row => row.ns === 'omd-opencu')?.value;
-      const value = { bootId, pid: process.pid, sdk, entries, modelCalls, rejectedModels: guard.rejected, deny, profile: ctx.profileContext.dir,
+      const value = { responseObservation: approvalHttp.snapshot(), bootId, pid: process.pid, sdk, entries, modelCalls, rejectedModels: guard.rejected, deny, profile: ctx.profileContext.dir,
         environmentHome: process.env.HOME, nodeHome: homedir(), dshHome: process.env.DSH_HOME, profileHome: ctx.profileContext.home,
         shellVersion: process.env.DSH_CLIENT_VERSION,
         sandbox: ctx.get('sandboxPolicy')?.resolve(), approval: ctx.get('approval')?.config?.policy,
