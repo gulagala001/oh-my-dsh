@@ -28,6 +28,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: node scripts/check-public-files.mjs
       - run: pnpm build
+      - name: Verify rebuilt client and actual OpenCU package delivery
+        run: |
+          node --test test/opencu-delivery.test.mjs
+          node scripts/check-opencu-delivery.mjs
       - run: pnpm test
       - name: Auto Compact surface-index regression
         run: node --test test/auto-compact-surface-index.test.mjs test/auto-compact-native-session.test.mjs
