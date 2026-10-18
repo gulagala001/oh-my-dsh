@@ -5,6 +5,8 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { performance } from 'node:perf_hooks';
+import { createResourceDiagnostics } from './fixtures/conversation-hot-install/resources.mjs';
 import { setTimeout as delay } from 'node:timers/promises';
 import { desktopInputs, desktopIdentity, assertDesktopPaths, digest, inside, pins } from './fixtures/conversation-hot-install/inputs.mjs';
 import { prepareEnvironment } from './fixtures/conversation-hot-install/environment.mjs';
@@ -38,8 +40,23 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
       nativeOsPathException: 'Disposable GitHub-hosted runner only: native OS home/logs are observed, not redirected. The official shell may prune/write its default native logs outside the fixture; native home account/config data is not used or copied.' },
     nativePathObservations: [],
     launches: [], stages: [], receipts: [], diagnostics: [], shutdowns: [], checks: [], errors, providerRequests, externalRendererRequests };
-  const save = async () => writeFile(join(evidence, 'conversation-hot-install.json'), JSON.stringify(report, null, 2));
+  const resources = createResourceDiagnostics({ now: () => performance.now() });
+  const save = async () => { report.resources = resources.snapshot(); await writeFile(join(evidence, 'conversation-hot-install.json'), JSON.stringify(report, null, 2)); };
   const lifecycle = async () => (await readFile(trace, 'utf8')).trim().split('\n').filter(Boolean).map(JSON.parse);
+  let hostPoll, hostReadFailures = 0;
+  const receivedHost = new Set();
+  const pollHost = async () => {
+    try {
+      // Host Date.now fields are not compared with this process's monotonic clock.
+      const text = await readFile(trace, 'utf8');
+      for (const line of text.split('\n').slice(0, -1).filter(Boolean)) {
+        const row = JSON.parse(line), key = row.bootId + ':' + row.event;
+        if (!['before-exit', 'exit'].includes(row.event) || receivedHost.has(key)) continue;
+        receivedHost.add(key);
+        resources.mark(row.event === 'before-exit' ? 'host-before-exit-received' : 'host-exit-received', { pid: row.pid });
+      }
+    } catch (error) { hostReadFailures++; } // Missing/partially written trace is retried; lifecycle assertions remain authoritative.
+  };
   await mkdir(evidence, { mode: 0o700 });
   // Cleanup remains registered before the first process/server is created.
   // A rejected close keeps app set and prevents deleting its live profile.
@@ -62,6 +79,7 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
         async () => {
           assert(!app, 'Never delete userData beneath an unclosed Desktop');
           assert(!launchUncertain, 'Retain the profile after an Electron launch rejection with no process handle');
+          await pollHost(); clearInterval(hostPoll);
           const rows = await lifecycle(); report.lifecycle = rows;
           assert.equal(rows.filter(row => row.event === 'model-call').length, 0);
           assert.equal(providerRequests.length, 0, 'Local provider must receive zero requests');
@@ -75,10 +93,11 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
       report.status = report.phase === 'checks-complete' ? 'passed' : 'failed';
     } catch (error) {
       report.status = 'failed'; report.cleanup = { removed: false, error: redact(error.message) }; throw error;
-    } finally { await save(); }
+    } finally { clearInterval(hostPoll); report.hostTraceReadFailures = hostReadFailures; resources.flush(); await save(); }
   });
   for (const path of [profile, workspace, userData]) await mkdir(path, { recursive: true });
   await writeFile(trace, '');
+  hostPoll = setInterval(() => { void pollHost(); }, 50); hostPoll.unref();
   provider = createServer((req, res) => {
     providerRequests.push({ method: req.method, path: new URL(req.url, 'http://localhost').pathname });
     req.resume(); res.writeHead(500); res.end('Model requests forbidden in desktop boot acceptance');
@@ -126,6 +145,7 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
   };
   const observe = async () => {
     const value = await request('/__conversation-hot-install');
+    resources.allowModules(value.clientGraph?.entries);
     assert.deepEqual(value.modelCalls, []); assert.equal(providerRequests.length, 0);
     assert.equal(value.profile, profile); assert.equal(value.sandbox.mode, 'read-only'); assert.equal(value.approval, 'ask');
     assert.equal(value.environmentHome, env.HOME); assert.equal(value.nodeHome, env.HOME);
@@ -138,14 +158,22 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
     return value;
   };
   const launch = async stage => {
-    assert(!app, 'Complete previous shutdown before relaunch'); currentStage = stage;
+    assert(!app, 'Complete previous shutdown before relaunch'); currentStage = stage; resources.mark('launch');
     assert.equal(digest(await readFile(inputs.archive)), inputs.sha256);
     const { _electron } = await import('playwright');
     try {
       app = await _electron.launch({ executablePath: inputs.executablePath, cwd: workspace, env, timeout: 60000,
         args: ['--user-data-dir=' + userData, '--password-store=basic', ...(process.platform === 'darwin' ? ['--use-mock-keychain'] : [])] });
     } catch (error) { launchUncertain = true; throw error; }
-    for (const stream of [app.process().stdout, app.process().stderr]) stream?.on('data', chunk => { log += redact(chunk); });
+    const electron = app.process();
+    electron.once('exit', () => resources.mark('electron-exit', { pid: electron.pid }));
+    let markerBuffer = '', quitMarkerSeen = false;
+    for (const stream of [app.process().stdout, app.process().stderr]) stream?.on('data', chunk => {
+      log += redact(chunk); markerBuffer = (markerBuffer + String(chunk)).slice(-2048);
+      if (!quitMarkerSeen && markerBuffer.includes('OMD_HOT_QUIT_ISSUED')) {
+        quitMarkerSeen = true; resources.mark('quit-issued-received');
+      }
+    });
     const identity = await app.evaluate(desktopIdentity, { ...inputs, publicComponents: inputs.manifest.dsh.client.inject,
       cordisVersion: inputs.manifest.peerDependencies['@deepseek-ai/cordis'] });
     report.nativePathObservations.push({ pid: app.process().pid, nativeHome: identity.nativeHome, nativeLogs: identity.nativeLogs,
@@ -157,9 +185,17 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
     assert.equal(digest(await readFile(inputs.executablePath)), inputs.executableSha256);
     app.context().on('page', candidate => candidate.on('pageerror', error => errors.push(redact(error.message))));
     page = await until(() => app.windows().find(candidate => candidate.url().startsWith('dsh-app://app/')), 'native app window', 60000);
+    page.on('request', request => resources.request({ key: request, url: request.url(), method: request.method(), type: request.resourceType() }));
+    page.on('response', response => resources.response({ key: response.request(), url: response.url(), status: response.status(),
+      method: response.request().method(), type: response.request().resourceType() }));
+    page.on('requestfailed', request => resources.failed({ key: request, url: request.url(), errorText: request.failure()?.errorText,
+      method: request.method(), type: request.resourceType() }));
+    page.on('close', () => resources.pageEvent('page-close'));
+    page.on('crash', () => resources.pageEvent('page-crash'));
     page.on('pageerror', error => errors.push(redact(error.message))); page.setDefaultTimeout(20000);
-    page.on('console', message => { if (message.type() === 'error') { errors.push(redact(message.text())); log += '\nRenderer: ' + redact(message.text()); } });
+    page.on('console', message => { if (message.type() === 'error') { resources.consoleError(message.location()); errors.push(redact(message.text())); log += '\nRenderer: ' + redact(message.text()); } });
     origin = await page.evaluate(async () => (await window.dshDesktopBoot.ready()).streamBaseUrl);
+    resources.setLoopback(origin);
     const url = new URL(origin); assert.equal(url.hostname, '127.0.0.1'); assert.notEqual(url.port, '19387');
     cookie = await app.evaluate(async ({ session }, origin) => (await session.defaultSession.cookies.get({ url: origin })).map(row => row.name + '=' + row.value).join('; '), origin);
     assert(cookie, 'Use this boot\'s authenticated loopback cookie');
@@ -178,10 +214,13 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
     const child = app.process(), host = await observe();
     // Ask the official app to quit and wait before calling Playwright.close().
     // Its force-kill fallback cannot produce a successful cold-restart record.
-    await app.evaluate(({ app }) => { setTimeout(() => app.quit(), 0); });
+    resources.mark('quit-before');
+    await app.evaluate(({ app }) => { setTimeout(() => { console.log('OMD_HOT_QUIT_ISSUED'); app.quit(); }, 0); });
+    resources.mark('quit-evaluation-returned');
     await until(() => child.exitCode !== null || child.signalCode !== null, 'natural Electron exit', 30000);
+    await pollHost();
     assert.equal(child.exitCode, 0); assert.equal(child.signalCode, null);
-    assertNaturalShutdown(await lifecycle(), host.pid);
+    assertNaturalShutdown(await lifecycle(), host.pid); resources.mark('exit-verified');
     await app.close(); app = undefined; page = undefined;
     report.shutdowns.push({ stage: currentStage, pid: child.pid, hostPid: host.pid, exitCode: child.exitCode, signalCode: child.signalCode, naturalExit: true });
     await save();
@@ -250,15 +289,15 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
     assert(session.sessionId); report.sessionId = session.sessionId;
     // An empty session remains blank and may not appear as a renamed tree row.
     // Only the public openSession API plus real adapter/retain evidence selects it.
-    await openSession(); report.stages.push(await snapshot('stock')); await save();
+    await openSession(); report.stages.push(await snapshot('stock')); resources.mark('stock-selected'); await save();
     for (const [operation, next] of [['install', 'installed']]) {
-      report.phase = operation + ':request'; report.targetStage = next; await save();
+      resources.mark('install-request'); report.phase = operation + ':request'; report.targetStage = next; await save();
       const host = await observe(), before = { pid: app.process().pid, hostPid: host.pid };
       const eventCount = (await lifecycle()).filter(row => row.event === 'plugin-change').length;
       const receipt = operation === 'install'
         ? await rpc('pluginManager/installBundle', { spec: 'file:' + inputs.archive })
         : await rpc('pluginManager/setBundleEnabled', { name: 'trisoul_x', enabled: operation === 'reenable' });
-      const value = await persistReceipt(report, { operation, receipt, before, coldStage: next }, save);
+      const value = await persistReceipt(report, { operation, receipt, before, coldStage: next }, save); resources.mark('receipt-returned');
       await captureDiagnostic(operation + ':receipt-returned');
       assert(['applied', 'restart-required'].includes(receipt.application), 'Real receipt: ' + JSON.stringify(receipt));
       const bundleRoot = await realpath(join(profile, 'node_modules', 'trisoul_x'));
@@ -270,7 +309,10 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
       Object.assign(value, { changedEvents: (await lifecycle()).filter(row => row.event === 'plugin-change').length - eventCount,
         persisted: await persisted(), bundle: bundles.find(row => row.name === 'trisoul_x') });
       report.phase = operation + ':hot-check'; await save();
-      if (receipt.application === 'applied') value.hot = await snapshot(next); // Observe retained selection; never reopen it to mask a lost session.
+      if (receipt.application === 'applied') {
+        value.hot = await snapshot(next); // Observe retained selection; never reopen it to mask a lost session.
+        resources.mark('installed-snapshot-ok');
+      }
       assertReceipt(value, next); value.validated = true; await save();
       report.readiness = await page.evaluate(() => window.__OMD_HOT_DIAGNOSTICS__());
       assert.deepEqual(report.readiness.crashes, [], 'No slot abdication during actual hot installation');
@@ -280,8 +322,11 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
       const flatten = rows => rows.flatMap(row => [row, ...flatten(row.children ?? [])]);
       const dock = flatten(value.hot.ui.slots).find(row => row.name === 'conversation.input.dock');
       assert(dock?.occupants.some(row => row.id === 'queue' && row.active), 'Native QueueDock registers after readiness');
+      resources.mark('readiness-ok');
       report.stages.push(value.hot); await save();
+      resources.mark('screenshot-before');
       await page.screenshot({ path: join(evidence, next + '-slots.png'), animations: 'disabled' });
+      resources.mark('screenshot-after');
     }
     await close();
     assert.equal(report.launches.length, 1); assert.equal(report.stages.length, 2);
@@ -289,11 +334,10 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
     assert.deepEqual(errors, []); assert.equal(providerRequests.length, 0);
     report.checks = ['official-rc2-and-frozen-candidate-bytes', 'standard-blank-session-public-open',
       'one-natural-exit', 'one-real-applied-hot-manager-receipt', 'applied-same-pid-current-host-graph',
-      'unique-model-and-direct-label-owner', 'exact-two-occupant-takeover-and-clean-disable',
-      'restored-official-conversation-chat', 'three-external-backends-false', 'no-prompts-or-model-calls'];
+      'unique-model-and-direct-label-owner', 'exact-two-occupant-hot-takeover', 'three-external-backends-false', 'no-prompts-or-model-calls'];
     report.phase = 'checks-complete';
   } catch (error) {
-    report.status = 'failed'; report.failure = redact(error.stack ?? error.message); await save();
+    resources.mark('failure'); report.status = 'failed'; report.failure = redact(error.stack ?? error.message); await save();
     await captureDiagnostic('failure-immediate');
     // Read-only follow-up is evidence, never recovery or a replacement acceptance.
     await delay(1000); await captureDiagnostic('failure-followup');

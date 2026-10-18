@@ -31,3 +31,16 @@ tests execute actual transpiled apply/service/QueueDock source and Cordis 4.0.5
 with synthetic SlotRegistry/UI/session collaborators. They establish the ordering
 barrier and cleanup, not a real selected-session renderer result. Only the
 separate macOS CI job can establish that result.
+
+Passive resource diagnostics use `OMD_HOT_RESOURCE ` lines (1200 bytes per line,
+65536 bytes per run). Requests retain their observed initiation phase; responses,
+failures, console locations and page close/crash record their own receipt phase.
+The test process's monotonic clock is the sole timing basis. Host before-exit/exit
+rows are received by a 50ms trace poll, and the Electron quit-issued marker is
+received on stdout; these are receipt times, not execution times from a shared
+cross-process clock. Snapshot/readiness success, screenshot edges, quit request,
+quit evaluation return and Electron exit are explicitly marked. Unknown paths,
+queries and modules are redacted; only fixed static paths or allowlisted module
+IDs with revisions verified against the actual Host graph can be printed.
+No request/response body, header, cookie, token, session ID or user path is read
+for this projection. Full original renderer errors remain acceptance failures.
