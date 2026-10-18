@@ -39,19 +39,19 @@ OMD 已内置 OpenCU，不重复安装。不要把仓库 main 当成已发布安
 
 ### 2. 复制与你的 DSH 对应的地址
 
-**DSH 0.2.1-rc.2 → OMD 0.17.4：**
+**DSH 0.2.1-rc.2 → OMD 0.18.0：**
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.17.4/trisoul_x-0.2.1-rc.2.omd.0.17.4.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.0/trisoul_x-0.2.1-rc.2.omd.0.18.0.tgz
 ```
 
-**DSH 0.2.1-rc.1 → OMD 0.17.4：**
+**DSH 0.2.1-rc.1 → OMD 0.18.0：**
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.17.4/trisoul_x-0.2.1-rc.1.omd.0.17.4.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.18.0/trisoul_x-0.2.1-rc.1.omd.0.18.0.tgz
 ```
 
-完整插件版本中的前半段对应 DSH，末尾 0.17.4 才是 OMD 版本。其他宿主版本请看[下载与旧版入口](releases.md)，不要直接粘贴不匹配的包。
+完整插件版本中的前半段对应 DSH，末尾 0.18.0 才是 OMD 版本。其他宿主版本请看[下载与旧版入口](releases.md)，不要直接粘贴不匹配的包。
 
 ### 3. 粘贴并安装
 
@@ -89,7 +89,7 @@ OMD 默认安装配置包含完整文件／命令访问并关闭执行审批；�
 
 ```sh
 dsh --version
-dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.17.4/trisoul_x-0.2.1-rc.2.omd.0.17.4.tgz
+dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.0/trisoul_x-0.2.1-rc.2.omd.0.18.0.tgz
 ```
 
 之后按原方式启动服务，保留原数据目录和端口。DSH 0.2.1-rc.1 使用上面的 rc.1 地址。
@@ -97,7 +97,7 @@ dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/d
 首次使用 Web（需要 Node.js ≥22.19；Windows 使用 PowerShell 7）：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-rc.2 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.17.4/trisoul_x-0.2.1-rc.2.omd.0.17.4.tgz
+npx --yes @deepseek-ai/dsh@0.2.1-rc.2 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.0/trisoul_x-0.2.1-rc.2.omd.0.18.0.tgz
 npx --yes @deepseek-ai/dsh@0.2.1-rc.2 --profile web
 ```
 
@@ -107,11 +107,11 @@ macOS 默认桌面安装位置的 CLI 示例（仅适用于实际 DSH 0.2.1-rc.2
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.17.4/trisoul_x-0.2.1-rc.2.omd.0.17.4.tgz
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.0/trisoul_x-0.2.1-rc.2.omd.0.18.0.tgz
 ```
 
 Windows 桌面建议直接用上面的插件界面；命令行路径以实际安装为准。Web CLI 不代替桌面 CLI。
 
 </details>
 
-**版本说明：** 本页固定下载地址指向已发布的 0.17.4 包。main 上后续合入的修复不会自动进入已有 Release；需要这些更新时，等待新发行或按开发文档构建。安装之后看[第一次使用](getting-started.md)。
+**版本说明：** 本页 rc.2 固定地址指向 OMD 0.18.0，rc.1 同样提供 OMD 0.18.0。固定 Release 不会随 main 后续修改而改变。安装之后看[第一次使用](getting-started.md)。

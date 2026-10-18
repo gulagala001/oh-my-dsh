@@ -2,7 +2,7 @@
 
 [简体中文](getting-started.md) · [Docs index](README_EN.md) · [Public installation](../README_EN.md#quickstart) · [Usage](usage_EN.md) · [Troubleshooting](troubleshooting_EN.md)
 
-Start with an installed, fully restarted, matching environment. Current release **`0.2.1-rc.2.omd.0.17.4` / DSH `0.2.1-rc.2`** bundles OpenCU `2.0.0`. Check [installation and version matching](install_EN.md) first. Historical 0.10 users should follow their fixed-tag docs.
+Start with an installed, fully restarted, matching environment. Current release **`0.2.1-rc.2.omd.0.18.0` / DSH `0.2.1-rc.2`** bundles OpenCU `2.0.1`. Check [installation and version matching](install_EN.md) first. Historical 0.10 users should follow their fixed-tag docs.
 
 ## 1. Check Actual Versions and Model
 

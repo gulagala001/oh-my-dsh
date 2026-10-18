@@ -2,7 +2,7 @@
 
 [English](getting-started_EN.md) · [文档目录](README.md) · [公开安装](../README.md#quickstart) · [使用指南](usage.md) · [排障](troubleshooting.md)
 
-这页从已安装、完整重启的匹配环境开始。当前发行为 **`0.2.1-rc.2.omd.0.17.4` / DSH `0.2.1-rc.2`**，默认内置 OpenCU `2.0.0`。先按[安装与版本配对](install.md)确认环境；旧 0.10 用户使用对应固定 tag 文档。
+这页从已安装、完整重启的匹配环境开始。当前发行为 **`0.2.1-rc.2.omd.0.18.0` / DSH `0.2.1-rc.2`**，默认内置 OpenCU `2.0.1`。先按[安装与版本配对](install.md)确认环境；旧 0.10 用户使用对应固定 tag 文档。
 
 ## 1. 确认实际版本与模型
 

@@ -8,7 +8,7 @@
     "README.md": "4c490b99a09d2d3136c3cfd06931d12f400acb5047baab8a92fd5a29b7fc7919",
     "build/tsdown.client.ts": "5f3218957a7ae850f9626f09a76086efe9dbb3bc8f61e93b0bf89f0379b493a4",
     "changes.patch": "0942aaec479f46e7fe843d4199f21e01f0515c6ee3c8e482465c2a869a93f25b",
-    "lib/client.js": "7ac8f7bdefe0e8d2225c866e34e0b8818997ee1a0d97cca02271aaf2b3122d57",
+    "lib/client.js": "57b60fbc4bd429ee4e7619e68a4f2ddf063f47b6697b9a185c1c671e3ca27f4f",
     "lib/index.js": "90d584745ab80f5db1bcb397f7caf72910f08a9ec065f3c899763700d0e405f3",
     "src/chat-settings.ts": "5d96070312f6157c992a0dfeb6f0a31a85b3ac0ce0b374df11a5eb1f668884aa",
     "src/client/apply.ts": "b1d7e0f67d4eafec295aed9081ddf19fbe2025930edab563180289c9ccc5f3ba",

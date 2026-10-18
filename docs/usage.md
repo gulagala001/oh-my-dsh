@@ -2,7 +2,7 @@
 
 [English](usage_EN.md) · [文档目录](README.md) · [首次使用](getting-started.md) · [排障](troubleshooting.md) · [开发入口](development.md)
 
-> 当前源码为 **OMD `0.2.1-rc.2.omd.0.17.4` / DSH `0.2.1-rc.2`**，默认内置 OpenCU `2.0.0`。安装先看[版本配对](install.md)，旧 0.10 用户使用对应固定 tag 文档。
+> 当前源码为 **OMD `0.2.1-rc.2.omd.0.18.0` / DSH `0.2.1-rc.2`**，默认内置 OpenCU `2.0.1`。安装先看[版本配对](install.md)，旧 0.10 用户使用对应固定 tag 文档。
 
 OMD 继续使用 DSH 的模型、项目、会话、原生工具、文件、技能与内容标签。包 ID `trisoul_x`、preset `trisoul-x` 和原数据目录保持兼容。
 
@@ -141,7 +141,7 @@ OMD 保留原生 Tools registry、SDK、调度、权限和取消，不整套替�
 
 ## Computer Use
 
-新版 OpenCU `2.0.0` 已默认内置，替换旧 1.3.0 过渡快照。提供真实浏览器与原生目标发现、观察、后台优先输入、监看和批注。完整 UI 依赖匹配 Host／Client／preload 适配，不是 stock DSH 仅安装插件即可自动获得。[使用指南](computer-use.md) · [接入边界](plugin-compatibility.md#opencu)。
+新版 OpenCU `2.0.1` 已默认内置，替换旧 1.3.0 过渡快照。提供真实浏览器与原生目标发现、观察、后台优先输入、监看和批注。完整 UI 依赖匹配 Host／Client／preload 适配，不是 stock DSH 仅安装插件即可自动获得。[使用指南](computer-use.md) · [接入边界](plugin-compatibility.md#opencu)。
 
 ### 开始使用
 

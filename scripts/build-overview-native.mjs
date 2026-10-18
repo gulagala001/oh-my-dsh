@@ -39,7 +39,8 @@ for (const [name, exportName] of [['dsh-experimental-client-ui-agent-team', 'cre
   if (JSON.parse(await readFile(new URL('package.json', base))).version !== version) throw Error('Overview SDK mismatch');
   let source = await readFile(new URL('lib/client.js', base), 'utf8');
   const hash = createHash('sha256').update(source).digest('hex');
-  if (version !== '0.2.1-rc.2' || hash !== reviewed[name]) throw Error(`Unreviewed native overview source: ${name} ${version}`);
+  // The pinned rc.1 and rc.2 packages contain byte-identical overview sources.
+  if (!['0.2.1-rc.1', '0.2.1-rc.2'].includes(version) || hash !== reviewed[name]) throw Error(`Unreviewed native overview source: ${name} ${version}`);
   const ast = parse(source, { ecmaVersion: 'latest', sourceType: 'script' });
   const functions = new Map();
   walk(ast, node => { if (node.type === 'FunctionDeclaration') functions.set(node.id.name, node); });

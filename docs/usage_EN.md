@@ -2,7 +2,7 @@
 
 [简体中文](usage.md) · [Docs index](README_EN.md) · [First task](getting-started_EN.md) · [Troubleshooting](troubleshooting_EN.md) · [Development](development_EN.md)
 
-> Current source is **OMD `0.2.1-rc.2.omd.0.17.4` / DSH `0.2.1-rc.2`**, bundling OpenCU `2.0.0`. Start with [version matching](install_EN.md); historical 0.10 users should follow their fixed-tag documentation.
+> Current source is **OMD `0.2.1-rc.2.omd.0.18.0` / DSH `0.2.1-rc.2`**, bundling OpenCU `2.0.1`. Start with [version matching](install_EN.md); historical 0.10 users should follow their fixed-tag documentation.
 
 OMD retains DSH's models, projects, sessions, native tools, files, skills, and content tabs. Package ID `trisoul_x`, preset `trisoul-x`, and existing data locations remain compatible.
 
@@ -140,7 +140,7 @@ Connections watch changes, release when idle, and catch up later. Disable/uninst
 
 ## Computer Use
 
-New OpenCU `2.0.0` is bundled by default, replacing the frozen 1.3.0 transition snapshot. It provides real browser/native target discovery, observation, background-first input, monitoring and annotations. Complete UI requires matching Host, Client and preload adapters; plugin installation alone does not patch stock DSH. [Guide (Chinese)](computer-use.md) · [Integration boundaries](plugin-compatibility_EN.md#opencu).
+New OpenCU `2.0.1` is bundled by default, replacing the frozen 1.3.0 transition snapshot. It provides real browser/native target discovery, observation, background-first input, monitoring and annotations. Complete UI requires matching Host, Client and preload adapters; plugin installation alone does not patch stock DSH. [Guide (Chinese)](computer-use.md) · [Integration boundaries](plugin-compatibility_EN.md#opencu).
 
 <a id="get-started-with-computer-use"></a>
 

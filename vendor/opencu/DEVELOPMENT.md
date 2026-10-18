@@ -2,7 +2,7 @@
 
 OpenCU 是 DSH 插件：新控制核心、浏览器／原生／扩展后端配合真实 REA 前端组件。AI 像使用其他工具一样调用电脑；页面、活动和监看自然呈现，没有单独的 CU 控制台。
 
-当前源码默认适配 DSH `0.2.1-rc.2`，当前发行版本为 `2.0.0-dsh.0.2.1-rc.2`；0.2.0-rc.2／alpha.3／0.2.1-rc.1 的独立 SDK 构建入口与旧工件保留。
+当前源码默认适配 DSH `0.2.1-rc.2`，当前发行版本为 `2.0.1-dsh.0.2.1-rc.2`；0.2.0-rc.2／alpha.3／0.2.1-rc.1 的独立 SDK 构建入口与旧工件保留。
 
 ## 加载
 
@@ -88,7 +88,7 @@ CU 工具卡保留真实 REA 组件，参数适配同时读取 alpha.3 的 `bloc
 OPENCU_PNPM="$PNPM" "$NODE" scripts/build-targets.mjs
 ```
 
-输出为工作区 `builds/opencu/021rc2/opencu-2.0.0-dsh.0.2.1-rc.2.tgz`（本次最新宿主工件；旧宿主工件分别保留，不混装）。每份包包含共用完整 core/native/browser/extension、独立重建的 REA client、真实 macOS arm64 helper 和宿主补丁；不会捆绑 SDK、node_modules、研究原件或用户数据。打包入口通过 `scripts/native-package-modes.mjs` 恢复 npm/pnpm 归一化移除的 helper 执行位；不改签名或二进制字节，实际解包后必须可执行。
+输出为工作区 `builds/opencu/021rc2/opencu-2.0.1-dsh.0.2.1-rc.2.tgz`（本次最新宿主工件；旧宿主工件分别保留，不混装）。每份包包含共用完整 core/native/browser/extension、独立重建的 REA client、真实 macOS arm64 helper 和宿主补丁；不会捆绑 SDK、node_modules、研究原件或用户数据。打包入口通过 `scripts/native-package-modes.mjs` 恢复 npm/pnpm 归一化移除的 helper 执行位；不改签名或二进制字节，实际解包后必须可执行。
 
 桌面宿主必须在主代理拥有的匹配源码副本执行 `"$NODE" opencu/host/apply.mjs /absolute/owned/dsh-source`。补丁验证目标版本／框架，预检所有修改，拒绝只读 source cache 和安装目录；新增能力只属于显式 OpenCU lease，普通 DSH guest 权限／下载／导航策略保持原样。然后在该宿主副本安装 `electron-chrome-extensions@4.9.0`，更新自己的锁，重建受影响 Host、Client、Web、desktop main 和对应 sandboxed preloads（含 browser surface preload），再按宿主流程打包。不能只装插件或重建 desktop main：通用 accessory 槽及浏览器桥也需要相应 Client 和 preload 工件。
 
