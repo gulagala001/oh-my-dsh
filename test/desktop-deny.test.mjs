@@ -316,7 +316,7 @@ test('official rc.2 Agent and real REA card decline one synthetic OpenCU target 
     const pending = assertPending(pendingState.deny, armedSessionId); report.pending = pendingState;
     const card = page.locator('[data-codex-approval-surface]');
     await card.waitFor({ state: 'visible' }); assert.equal(await card.count(), 1);
-    await card.getByText(`允许 ChatGPT 使用 ${appName}？`, { exact: true }).waitFor({ state: 'visible' });
+    await card.getByText(`允许 DSH 使用 ${appName}？`, { exact: true }).waitFor({ state: 'visible' });
     const deny = card.getByRole('button', { name: /^(?:拒绝|Deny)(?:\s.*)?$/ });
     await deny.waitFor({ state: 'visible' }); assert.equal(await deny.count(), 1);
     await page.screenshot({ path: join(evidence, 'approval-pending.png'), animations: 'disabled' });
