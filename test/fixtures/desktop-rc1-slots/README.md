@@ -53,6 +53,23 @@ Disabling removes OMD Host/client rows, model takeover, business contributions
 and button, and restores official conversation/chat. Failed fibers, duplicate
 registrations, renderer errors and model requests fail.
 
+Manager responses are saved immediately with the operation, target cold stage
+and `validated=false`, before package checks or hot assertions. Validation is
+marked only after the existing receipt/hot contract succeeds. Failure evidence
+includes actual Host graph and renderer state immediately and one second later;
+the latter is diagnostic observation, not recovery or an acceptance retry.
+The independent renderer probe survives conversation-service injection changes.
+Public `slots.onEntryError` captures the synchronous crash, per-run WeakMap
+registration identity, scalar options/registrant, abdication, live slot snapshot,
+manifest revision, loader owner UID/state/ancestry, and strict/raw conversation
+presence through the current uiConversation provider context. It records public
+Cordis plugin/status/service events (last 1000, with a dropped count); crashes
+are retained separately. These observations do not prove an arbitrary callback's
+captured context: registration labels and provider ancestry must be correlated.
+A later ACTIVE provider does not undo a slot's abdication or clear any error.
+Diagnostic read failures are recorded separately and never count as passing
+state. The pinned published package and all renderer-error gates remain intact.
+
 Isolation and natural shutdown follow PR68 without editing its files. The
 shared version-independent environment/path/ASAR identity faces are reused;
 its rc2 input guard is untouched. The actual runtime resolves SDK packages in

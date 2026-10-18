@@ -9,6 +9,70 @@ window.__ModuleLoader__.load({ id: 'omd-desktop-rc1-slot-observer', factory: req
   return {
     inject: ['slots', 'loader', 'modules'],
     apply(ctx) {
+      // Synchronous public supervision: no substitution, error clearing or retry.
+      const timeline = [], crashes = [], registrationIds = new WeakMap();
+      let nextRegistrationId = 0, sequence = 0, dropped = 0;
+      const original = value => value?.[cordis.symbols.original] || value;
+      const fiberInfo = fiber => {
+        const ancestry = [], seen = new Set();
+        while (fiber && !seen.has(fiber)) {
+          seen.add(fiber);
+          ancestry.push({ uid: fiber.uid, state: fiber.state,
+            name: fiber.runtime?.name ?? fiber.runtime?.callback?.name });
+          fiber = fiber.parent?.fiber;
+        }
+        return ancestry;
+      };
+      const serviceInfo = context => {
+        try {
+          const active = context?.get('conversation'), raw = context?.get('conversation', false);
+          return { activePresent: active !== undefined, rawPresent: raw !== undefined,
+            provider: fiberInfo(original(raw)?.ctx?.fiber) };
+        } catch (error) { return { readError: String(error) }; }
+      };
+      const state = () => {
+        try {
+          const ui = original(ctx.get('uiConversation', false));
+          return { manifestRev: ctx.modules.manifest.rev,
+            rootConversation: serviceInfo(ctx),
+            uiConversation: { present: ui !== undefined, owner: fiberInfo(ui?.ctx?.fiber),
+              conversation: serviceInfo(ui?.ctx) },
+            entries: [...ctx.loader.entries()].map(row => ({ name: row.options.name, owner: fiberInfo(row.fiber) })),
+            slots: ctx.slots.snapshot() };
+        } catch (error) { return { readError: String(error) }; }
+      };
+      const record = (kind, detail) => {
+        const row = { sequence: ++sequence, at: Date.now(), kind, ...detail };
+        if (timeline.length === 1000) { timeline.shift(); dropped++; }
+        timeline.push(row); return row;
+      };
+      const diagnostics = () => ({ ...state(), crashes: [...crashes], timeline: [...timeline], dropped });
+      ctx.effect(() => {
+        window.__OMD_RC1_DIAGNOSTICS__ = diagnostics;
+        const off = ctx.slots.onEntryError((key, entry, error, info) => {
+          try {
+            if (!registrationIds.has(entry)) registrationIds.set(entry, ++nextRegistrationId);
+            // Options contain callbacks: retain only serializable identifying fields.
+            const options = Object.fromEntries(Object.entries(entry.options ?? {}).filter(([, value]) =>
+              value === null || ['string', 'number', 'boolean'].includes(typeof value)));
+            crashes.push(record('slot-entry-error', { key, registrationId: registrationIds.get(entry),
+              registrant: entry.registrant, options, abdicated: info.abdicated,
+              error: String(error?.stack ?? error), state: state() }));
+          } catch (readError) { record('diagnostic-read-error', { error: String(readError) }); }
+        });
+        return () => { off(); if (window.__OMD_RC1_DIAGNOSTICS__ === diagnostics) delete window.__OMD_RC1_DIAGNOSTICS__; };
+      });
+      for (const event of ['internal/plugin', 'internal/status']) {
+        ctx.on(event, (fiber, oldState) => {
+          try { record(event, { fiber: fiberInfo(fiber), oldState,
+            conversation: serviceInfo(original(ctx.get('uiConversation', false))?.ctx ?? ctx),
+            manifestRev: ctx.modules.manifest.rev }); }
+          catch (error) { record('diagnostic-read-error', { error: String(error) }); }
+        });
+      }
+      ctx.on('internal/service', name => {
+        if (name === 'conversation' || name === 'uiConversation') record('internal/service', { name, state: state() });
+      });
       ctx.inject(['uiConversation', 'uiWorkspace', 'uiSession', 'sessions'], scope => {
         const observe = async ({ sessionId, openSessionId } = {}) => {
           if (openSessionId) {

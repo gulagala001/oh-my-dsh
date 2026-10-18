@@ -5,6 +5,7 @@ import { gzipSync, gunzipSync } from 'node:zlib';
 import { runInNewContext } from 'node:vm';
 import { assertRunner, digest, pins, verifyPublishedPackage } from './fixtures/desktop-rc1-slots/inputs.mjs';
 import { assertReport, assertStage, stages } from './fixtures/desktop-rc1-slots/contract.mjs';
+import { persistReceipt } from './fixtures/desktop-rc1-slots/diagnostics.mjs';
 import { publishedTar } from './fixtures/desktop-rc1-slots/published-tar.mjs';
 
 // Dependency-free synthetic contracts only: no downloads, GUI or model calls.
@@ -211,7 +212,7 @@ test('report gate cannot turn zero tests, skipped acceptance or cleanup failure 
 
 test('actual rc1 client probe opens only through public UI APIs and observes real adapter/retain faces', async () => {
   const source = await readFile(new URL('./fixtures/desktop-rc1-slots/client.js', import.meta.url), 'utf8');
-  class Context {} class Service {} class SlotRegistry extends Service { snapshot() { return []; } }
+  class Context {} class Service {} class SlotRegistry extends Service { snapshot() { return []; } onEntryError(fn) { this.errorListener = fn; return () => { this.errorListener = undefined; }; } }
   const cordis = { Context, Service, symbols: { original: Symbol('original') } };
   const modules = { version: 'client', manifest: { release, rev: 'current-live-graph', modules: [] }, loadCache: new Map(),
     import: async () => ({ SlotRegistry }) };
@@ -227,7 +228,8 @@ test('actual rc1 client probe opens only through public UI APIs and observes rea
   const window = { dshDesktop: { protocolVersion: 1 }, __DSH_BOOT__: { rev: 'old-boot' }, __ModuleLoader__: { load: value => { registration = value; } } };
   runInNewContext(source, { window });
   const plugin = registration.factory(name => name === '@deepseek-ai/cordis' ? cordis : {});
-  plugin.apply({ inject: (names, apply) => { assert(names.includes('uiWorkspace') && names.includes('uiSession') && names.includes('sessions')); apply(scope); } });
+  const hooks = {};
+  plugin.apply({ ...scope, get: () => undefined, on: (event, fn) => { hooks[event] = fn; }, inject: (names, apply) => { assert(names.includes('uiWorkspace') && names.includes('uiSession') && names.includes('sessions')); apply(scope); } });
   const value = await window.__OMD_RC1_SLOTS__({ openSessionId: sessionId, sessionId });
   assert.deepEqual(opened, [sessionId]); assert.equal(value.session.currentSessionId, sessionId); assert.equal(value.session.retainedMainView, 1);
   assert.deepEqual(order, ['refresh', 'open']);
@@ -236,4 +238,54 @@ test('actual rc1 client probe opens only through public UI APIs and observes rea
   await assert.rejects(window.__OMD_RC1_SLOTS__({ openSessionId: sessionId, sessionId }), /refreshed public catalog/);
   assert.deepEqual(opened, [sessionId], 'An unknown public identity is never opened or privately fabricated');
   for (const dispose of disposers) dispose(); assert.equal(window.__OMD_RC1_SLOTS__, undefined);
+});
+
+
+test('raw receipt and target survive a subsequent hot assertion failure without becoming validated', async () => {
+  const report = { phase: 'prepare', receipts: [] }, saved = [];
+  const receipt = { application: 'applied', changed: true, version: 'original' };
+  await assert.rejects(async () => {
+    await persistReceipt(report, { operation: 'install', receipt, before: { pid: 5 }, coldStage: 'installed' },
+      async () => { saved.push(structuredClone(report)); });
+    throw Error('Renderer error fails slot acceptance');
+  }, /Renderer error/);
+  assert.deepEqual(saved[0].receipts[0].receipt, receipt);
+  assert.equal(saved[0].receipts[0].validated, false);
+  assert.equal(saved[0].targetStage, 'installed'); assert.equal(saved[0].phase, 'install:receipt-returned');
+});
+
+test('synchronous slot crash preserves registration identity and raw LOADING provider followed by ACTIVE', async () => {
+  const source = await readFile(new URL('./fixtures/desktop-rc1-slots/client.js', import.meta.url), 'utf8');
+  const original = Symbol('original'), disposers = [], handlers = {};
+  const providerFiber = { uid: 92, state: 1 }, ownerFiber = { uid: 91, state: 2 };
+  const provider = { ctx: { fiber: providerFiber } };
+  const owner = { ctx: { fiber: ownerFiber, get: (name, strict = true) =>
+    name === 'conversation' && (!strict || providerFiber.state === 2) ? provider : undefined } };
+  let listener, active = true, registration;
+  const ctx = { modules: { manifest: { rev: 'current-live-rev' } }, loader: { entries: () => [{ options: { name: 'trisoul_x' }, fiber: ownerFiber }] },
+    slots: { snapshot: () => [{ name: 'conversation.composer.bar', occupants: [{ registrant: 'trisoul_x', active }] }],
+      onEntryError: fn => { listener = fn; return () => { listener = undefined; }; } },
+    get: name => name === 'uiConversation' ? { [original]: owner } : undefined,
+    effect: fn => disposers.push(fn()), on: (event, fn) => { handlers[event] = fn; }, inject: () => {} };
+  const window = { __ModuleLoader__: { load: value => { registration = value; } } };
+  runInNewContext(source, { window });
+  registration.factory(name => name === '@deepseek-ai/cordis' ? { symbols: { original } } : {}).apply(ctx);
+  const entry = { registrant: 'trisoul_x', options: { name: 'conversation.composer.bar', priority: -0.5, inject: () => {} } };
+  active = false; listener('conversation.composer.bar', entry, Error('conversation unavailable'), { abdicated: true });
+  const crash = window.__OMD_RC1_DIAGNOSTICS__().crashes[0];
+  assert.equal(crash.state.uiConversation.conversation.activePresent, false);
+  assert.equal(crash.state.uiConversation.conversation.rawPresent, true);
+  assert.equal(crash.state.uiConversation.conversation.provider[0].uid, 92);
+  assert.equal(crash.state.uiConversation.conversation.provider[0].state, 1);
+  assert.equal(crash.registrant, 'trisoul_x'); assert.equal(crash.options.inject, undefined); assert.equal(crash.abdicated, true);
+  providerFiber.state = 2; handlers['internal/status'](providerFiber, 1);
+  const later = window.__OMD_RC1_DIAGNOSTICS__();
+  assert.equal(later.uiConversation.conversation.provider[0].uid, 92);
+  assert.equal(later.uiConversation.conversation.activePresent, true);
+  assert.equal(later.crashes[0].state.uiConversation.conversation.provider[0].state, 1, 'Error-time state is immutable evidence');
+  assert.equal(later.slots[0].occupants[0].active, false, 'Provider readiness never clears slot abdication');
+  listener('conversation.composer.bar', entry, Error('second observation'), { abdicated: true });
+  assert.equal(window.__OMD_RC1_DIAGNOSTICS__().crashes[1].registrationId, crash.registrationId);
+  for (const dispose of disposers) dispose();
+  assert.equal(window.__OMD_RC1_DIAGNOSTICS__, undefined); assert.equal(listener, undefined);
 });

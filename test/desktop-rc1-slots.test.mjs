@@ -9,6 +9,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { rc1Inputs, desktopIdentity, assertDesktopPaths, digest, inside, pins } from './fixtures/desktop-rc1-slots/inputs.mjs';
 import { prepareEnvironment } from '../scripts/desktop-test-environment.mjs';
 import { assertStage, assertReceipt, assertNaturalShutdown, stockBaseline } from './fixtures/desktop-rc1-slots/contract.mjs';
+import { persistReceipt } from './fixtures/desktop-rc1-slots/diagnostics.mjs';
 import { cleanupFixture, closeFixtureServer } from './fixtures/process.mjs';
 
 const redact = value => String(value).replace(/token=[\w-]+/g, 'token=[redacted]');
@@ -36,7 +37,7 @@ test('official rc1 mac-x64 verifies published OMD slot install-disable-reenable 
       externalBackends: { browserEnabled: false, nativeEnabled: false, extensionEnabled: false }, computerUseActions: 'not-exercised',
       nativeOsPathException: 'Disposable GitHub-hosted runner only: native OS home/logs are observed, not redirected. The official shell may prune/write its default native logs outside the fixture; native home account/config data is not used or copied.' },
     nativePathObservations: [],
-    launches: [], stages: [], receipts: [], shutdowns: [], checks: [], errors, providerRequests, externalRendererRequests };
+    launches: [], stages: [], receipts: [], diagnostics: [], shutdowns: [], checks: [], errors, providerRequests, externalRendererRequests };
   const save = async () => writeFile(join(evidence, 'desktop-rc1-slots.json'), JSON.stringify(report, null, 2));
   const lifecycle = async () => (await readFile(trace, 'utf8')).trim().split('\n').filter(Boolean).map(JSON.parse);
   await mkdir(evidence, { mode: 0o700 });
@@ -113,10 +114,10 @@ test('official rc1 mac-x64 verifies published OMD slot install-disable-reenable 
       config: { trace, root, sdkNames: inputs.sdkNames } }] },
   ]));
   // No settings.yaml, credential store, external credential creation or remote login.
-  const request = async (path, body) => {
+  const request = async (path, body, timeout = 180000) => {
     assert(origin && cookie);
     const response = await fetch(origin + path, { redirect: 'error', headers: { cookie, 'content-type': 'application/json' },
-      signal: AbortSignal.timeout(180000), ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }) });
+      signal: AbortSignal.timeout(timeout), ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }) });
     const value = await response.json(); assert.equal(response.status, 200, path + ': ' + JSON.stringify(value)); return value;
   };
   const rpc = async (method, args = {}) => {
@@ -228,7 +229,19 @@ test('official rc1 mac-x64 verifies published OMD slot install-disable-reenable 
       }, stage + ' actual Host/renderer/slot/session convergence', 45000);
     } catch (error) { throw new Error(error.message + (lastFailure ? ': ' + lastFailure.message : ''), { cause: error }); }
   };
+  const captureDiagnostic = async label => {
+    const value = { label, at: Date.now(), phase: report.phase, targetStage: report.targetStage,
+      pid: app?.process().pid, errors: [...errors] };
+    const reads = { host: () => request('/__desktop-rc1-slots', undefined, 10000),
+      renderer: () => page.evaluate(() => window.__OMD_RC1_DIAGNOSTICS__?.() ?? { observerUnavailable: true }) };
+    await Promise.all(Object.entries(reads).map(async ([key, read]) => {
+      try { value[key] = await read(); }
+      catch (error) { value[key + 'Error'] = redact(error.stack ?? error); }
+    }));
+    report.diagnostics.push(value); await save();
+  };
   try {
+    report.phase = 'stock'; report.targetStage = 'stock'; await save();
     await launch('stock');
     const workspaceResult = await rpc('workspace/create', { request: { path: workspace } });
     const session = await rpc('session/create', { request: { workspaceId: workspaceResult.workspace.workspaceId, agentPreset: 'standard' } });
@@ -237,11 +250,14 @@ test('official rc1 mac-x64 verifies published OMD slot install-disable-reenable 
     // Only the public openSession API plus real adapter/retain evidence selects it.
     await openSession(); report.stages.push(await snapshot('stock')); await save();
     for (const [operation, next] of [['install', 'installed'], ['disable', 'disabled'], ['reenable', 'reenabled']]) {
+      report.phase = operation + ':request'; report.targetStage = next; await save();
       const host = await observe(), before = { pid: app.process().pid, hostPid: host.pid };
       const eventCount = (await lifecycle()).filter(row => row.event === 'plugin-change').length;
       const receipt = operation === 'install'
         ? await rpc('pluginManager/installBundle', { spec: 'file:' + inputs.archive })
         : await rpc('pluginManager/setBundleEnabled', { name: 'trisoul_x', enabled: operation === 'reenable' });
+      const value = await persistReceipt(report, { operation, receipt, before, coldStage: next }, save);
+      await captureDiagnostic(operation + ':receipt-returned');
       assert(['applied', 'restart-required'].includes(receipt.application), 'Real receipt: ' + JSON.stringify(receipt));
       const bundleRoot = await realpath(join(profile, 'node_modules', 'trisoul_x'));
       assert(inside(profile, bundleRoot), 'Actual installed package remains under the temporary profile');
@@ -249,11 +265,12 @@ test('official rc1 mac-x64 verifies published OMD slot install-disable-reenable 
       assert.equal(JSON.parse(await readFile(join(bundleRoot, 'package.json'))).version, pins.plugin.version);
       assert.equal(digest(await readFile(join(bundleRoot, 'lib/client.js'))), inputs.clientSha256, 'Installed published client bytes');
       const bundles = await rpc('pluginManager/listBundles');
-      const value = { operation, receipt, before, coldStage: next,
-        changedEvents: (await lifecycle()).filter(row => row.event === 'plugin-change').length - eventCount,
-        persisted: await persisted(), bundle: bundles.find(row => row.name === 'trisoul_x') };
+      Object.assign(value, { changedEvents: (await lifecycle()).filter(row => row.event === 'plugin-change').length - eventCount,
+        persisted: await persisted(), bundle: bundles.find(row => row.name === 'trisoul_x') });
+      report.phase = operation + ':hot-check'; await save();
       if (receipt.application === 'applied') { await openSession(); value.hot = await snapshot(next); }
-      assertReceipt(value, next); report.receipts.push(value); await save();
+      assertReceipt(value, next); value.validated = true; await save();
+      report.phase = operation + ':cold-check'; await save();
       await close(); await launch(next); await openSession();
       const valueAfterColdBoot = await snapshot(next); report.stages.push(valueAfterColdBoot);
       await page.screenshot({ path: join(evidence, next + '-slots.png'), animations: 'disabled' }); await save();
@@ -267,5 +284,11 @@ test('official rc1 mac-x64 verifies published OMD slot install-disable-reenable 
       'unique-model-and-direct-label-owner', 'exact-two-occupant-takeover-and-clean-disable',
       'restored-official-conversation-chat', 'three-external-backends-false', 'no-prompts-or-model-calls'];
     report.phase = 'checks-complete';
-  } catch (error) { report.status = 'failed'; report.failure = redact(error.stack ?? error.message); throw error; }
+  } catch (error) {
+    report.status = 'failed'; report.failure = redact(error.stack ?? error.message); await save();
+    await captureDiagnostic('failure-immediate');
+    // Read-only follow-up is evidence, never recovery or a replacement acceptance.
+    await delay(1000); await captureDiagnostic('failure-followup');
+    throw error;
+  }
 });
