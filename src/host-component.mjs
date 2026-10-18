@@ -1,8 +1,54 @@
 import { isDeepStrictEqual } from 'node:util';
+import { readFile, realpath, stat } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import pluginPackage from '../package.json' with { type: 'json' };
 
-function requireHostEntry(ctx, name) {
+async function privateComponentPath(candidate, specifier) {
+  if (typeof candidate !== 'string' || !candidate.startsWith('file:')) return null;
+  try {
+    const url = new URL(candidate);
+    if (url.search || url.hash) return null;
+    const file = await realpath(fileURLToPath(url));
+    if (!(await stat(file)).isFile()) return null;
+    for (let directory = dirname(file);;) {
+      let metadata;
+      try { metadata = JSON.parse(await readFile(join(directory, 'package.json'), 'utf8')); }
+      catch (error) { if (error.code !== 'ENOENT') return null; }
+      if (metadata) {
+        if (metadata.name !== specifier || metadata.version !== pluginPackage.engines.dsh || typeof metadata.main !== 'string') return null;
+        // The configured file must be the real entry of the matching package,
+        // not just a similarly named directory or an arbitrary submodule.
+        return await realpath(join(directory, metadata.main)) === file ? file : null;
+      }
+      const parent = dirname(directory);
+      if (parent === directory) return null;
+      directory = parent;
+    }
+  } catch { return null; }
+}
+
+async function requireHostEntry(ctx, name) {
   const specifier = '@deepseek-ai/dsh-' + name;
-  const entry = [...ctx.loader.entries()].find(row => row.options.name === specifier);
+  const entries = [...ctx.loader.entries()];
+  const entry = entries.find(row => row.options.name === specifier);
+  if (entry) return entry;
+  // Purge replaces these two registrations with private file URLs. Keep the
+  // Loader's own dependency tree; never resolve a second copy via Node here.
+  if (name === 'tool-bash' || name === 'tool-pwsh') {
+    const matches = [];
+    for (const row of entries) {
+      const file = await privateComponentPath(row.options.name, specifier);
+      if (file && typeof row.parent?.tree?.import === 'function') matches.push({ row, file });
+    }
+    if (matches.length) {
+      const first = matches[0];
+      if (matches.every(match => match.file === first.file && match.row.parent.tree === first.row.parent.tree)) return first.row;
+      throw Object.assign(new Error(`Multiple private registrations match ${specifier}; OMD cannot choose a component dependency tree.`), {
+        code: 'OMD_HOST_COMPONENT_AMBIGUOUS', details: { component: specifier },
+      });
+    }
+  }
   if (!entry) throw Object.assign(new Error(`The matching DSH component is missing: ${specifier}. Another plugin may have replaced its registration; restore the original component registration or use a compatible plugin version. OMD cannot safely infer a private replacement's ownership and dependencies.`), {
     code: 'OMD_HOST_COMPONENT_MISSING', details: { component: specifier },
   });
@@ -13,7 +59,7 @@ function requireHostEntry(ctx, name) {
 // through the host Loader's resolver. Node's ordinary require.resolve can
 // select a stale hoisted package after an in-place host upgrade.
 export async function loadHostModule(ctx, name, createModule, dependencies) {
-  const originalEntry = requireHostEntry(ctx, name);
+  const originalEntry = await requireHostEntry(ctx, name);
   const tree = originalEntry.parent.tree;
   const modules = new Map(await Promise.all(dependencies.map(async specifier => [specifier,
     specifier.startsWith('node:') ? await import(specifier) : await tree.import(specifier)])));
@@ -28,7 +74,7 @@ export async function loadHostModule(ctx, name, createModule, dependencies) {
 
 export async function mountHostComponent(ctx, name, createModule, dependencies, config) {
   const component = await loadHostModule(ctx, name, createModule, dependencies);
-  const originalEntry = requireHostEntry(ctx, name);
+  const originalEntry = await requireHostEntry(ctx, name);
   const tree = originalEntry.parent.tree;
   const inherited = ['jobs-local', 'bash-sandbox', 'pwsh-sandbox'].includes(name);
   let effective = config;

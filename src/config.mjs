@@ -21,6 +21,7 @@ export const Config = z.object({
   autoCompactThreshold: z.number().step(1).min(1).default(400000),
   autoCompactMode: z.union(['detail', 'brief']).default('detail'),
   preprocessBoundaries: z.boolean().default(false),
+  memoryCacheEnabled: z.boolean().default(false),
   prepareBatchWindows: z.number().step(1).min(1).default(2),
   prepareContinueTokens: z.number().step(1).min(1).default(8000),
   prepareInputTokens: z.number().step(1).min(1).default(300000),

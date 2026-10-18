@@ -10,11 +10,12 @@ const retryText = r => ({ 'waiting-main': '等待主会话成功后恢复', 'wai
 export function pipelineSteps(c) {
   const adaptive = c.compressionMode === 'adaptive', a = c.adaptive || {};
   const prepareError = c.failures?.prepare, coordError = c.failures?.coordinate;
+  const cacheWait = c.memoryCache?.enabled && c.memoryCache.waitingReason;
   const first = adaptive
     ? { key: 'check', title: '主动检查', running: a.running, tone: a.running ? 'blue' : a.error ? 'red' : 'green',
       text: a.running ? '正在判断' : a.error ? `失败：${a.error}` : a.lastDecision === 'skip' ? `保留 · ${a.reason || ''}` : a.lastDecision === 'compress' ? '已准备替换' : '等待新内容' }
-    : { key: 'prepare', title: '预处理', running: c.preparing, tone: c.preparing ? 'blue' : prepareError ? 'red' : 'green',
-      text: c.preparing ? '正在生成摘要' : prepareError ? `${retryText(c.retry?.prepare) || '失败'}：${prepareError.message}` : `待处理 ${c.backlog?.events ?? 0} 条 · ≈${k(c.backlog?.estimatedTokens)}` };
+    : { key: 'prepare', title: '预处理', running: c.preparing, tone: c.preparing ? 'blue' : prepareError ? 'red' : cacheWait ? 'gray' : 'green',
+      text: c.preparing ? '正在生成摘要' : prepareError ? `${retryText(c.retry?.prepare) || '失败'}：${prepareError.message}` : cacheWait || `待处理 ${c.backlog?.events ?? 0} 条 · ≈${k(c.backlog?.estimatedTokens)}` };
   const second = adaptive
     ? { key: 'plan', title: '替换方案', tone: c.pending ? 'green' : 'gray', text: c.pending ? '结果已准备' : a.lastDecision === 'stale' ? '结果已过期' : '等待整理结果' }
     : { key: 'hub', title: '中枢', running: c.coordinating, tone: c.coordinating ? 'blue' : coordError ? 'red' : c.pending ? 'green' : 'gray',
@@ -82,6 +83,7 @@ export function ContextSection({ sessionId, visible, go, params }) {
       </Card>
       <Card title={adaptive ? '主动异步整理' : '预处理 → 中枢 → 替换'} icon="hub">
         <Steps steps={pipelineSteps(c)}/>
+        {!adaptive && c.memoryCache?.enabled && <p className="omc-hint">记忆缓存模式 · 最近预处理缓存读取：{c.memoryCache.cacheReadTokens == null ? '渠道未返回' : `${k(c.memoryCache.cacheReadTokens)} tokens`}。</p>}
         {pending && !pending.error ? <div className="omc-callout omc-callout-green">
           <div><strong>{pending.selectedRecords} 段可替换 · {pending.currentMessages} 条消息</strong><span>预计节省 ≈{k(pending.estimatedSavedTokens)} tokens</span></div>
           <Button kind="primary" icon="check" busy={action.busy === '/compact'} disabled={locked}

@@ -201,7 +201,10 @@ export function installAdaptiveCapture(ctx, isManagedSession, pipeline) {
   ctx.on('llm/stream', (options, next) => {
     if (isAgentLoopRequest(options) && options.sessionId) {
       const session = ctx.sessions.get(options.sessionId);
-      if (session && isManagedSession(session) && session.header?.origin !== 'subagent') pipeline.adaptive.capture(session, options);
+      if (session && isManagedSession(session) && session.header?.origin !== 'subagent') {
+        pipeline.adaptive.capture(session, options);
+        pipeline.cachedPreparation.capture(session, options);
+      }
     }
     return next();
   }, { global: true });

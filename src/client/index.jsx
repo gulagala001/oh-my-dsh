@@ -104,7 +104,7 @@ export async function apply(ctx) {
   const chatSettings = createChatSettings(() => ctx.configForms.get('omd-ui-chat'), () => () => {});
   ctx.effect(() => () => chatSettings.dispose());
   await ctx.plugin(hostChat, { settings: chatSettings });
-  ctx.plugin(openCU);
+  await ctx.plugin(openCU);
   projectlessDrafts.transferOptimizer = applyPromptOptimizer(ctx, { draftLock: projectlessDrafts }).transferDraft;
   applyModelPanel(ctx);
   applySubscriptionFast(ctx);

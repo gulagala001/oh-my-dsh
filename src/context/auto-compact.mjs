@@ -1,12 +1,14 @@
 import { hash, activeRecords, createSurfaceIndex, liveSpan, prepareCandidate, candidateInput, decodeResult, validatePrepared, newRecord, backlogView } from './core.mjs';
 import { serializePreparationInput } from './input-budget.mjs';
 import { SUMMARY_PROMPT_VERSION, PREPARE_SYSTEM, PREPARE_TOOL } from './prompts.mjs';
+import { decodeCachedPreparation } from './cached-preparation.mjs';
 
 export class AutoCompaction {
   constructor(pipeline) { this.pipeline = pipeline; this.signals = new WeakMap(); }
   used(session) { return this.pipeline.hub.ctx.tokenMeter?.measure(session)?.totalTokens ?? 0; }
   fingerprint(session, state, cfg) {
-    return hash([session.surface.nodes, state.records.map(r => [r.id, r.version, r.mode, r.mergedInto]), cfg.autoCompactThreshold, cfg.autoCompactMode]);
+    return hash([session.surface.nodes, state.records.map(r => [r.id, r.version, r.mode, r.mergedInto]), cfg.autoCompactThreshold, cfg.autoCompactMode,
+      cfg.memoryCacheEnabled, cfg.memoryCacheEnabled ? this.pipeline.cachedPreparation.version(session) : null]);
   }
   idle(agent) {
     const signal = this.signals.get(agent);
@@ -75,12 +77,18 @@ export class AutoCompaction {
         if (!events) break;
         const inputs = candidateInput(session, events, cfg.digestLookback);
         inputs.target_characters = cfg.summaryTargetChars;
-        const encoded = serializePreparationInput(inputs, cfg.prepareInputTokens * 4);
-        const reply = await p.call(agent, 'prepare', { system: PREPARE_SYSTEM,
-          messages: [p.adapter.message(encoded, 'prepare-input')], tools: [PREPARE_TOOL],
-          ...(cfg.digestMaxTokens > 0 ? { maxTokens: cfg.digestMaxTokens } : {}) }, activeSignal);
+        const cached = cfg.memoryCacheEnabled ? p.cachedPreparation.build(agent, events, inputs) : null;
+        if (cfg.memoryCacheEnabled && !cached) break;
+        let reply;
+        if (cached) reply = await p.cachedPreparation.call(agent, cached, controller, activeSignal);
+        else {
+          const encoded = serializePreparationInput(inputs, cfg.prepareInputTokens * 4);
+          reply = await p.call(agent, 'prepare', { system: PREPARE_SYSTEM,
+            messages: [p.adapter.message(encoded, 'prepare-input')], tools: [PREPARE_TOOL],
+            ...(cfg.digestMaxTokens > 0 ? { maxTokens: cfg.digestMaxTokens } : {}) }, activeSignal);
+        }
         current();
-        const prepared = validatePrepared(decodeResult(reply, PREPARE_TOOL.name), inputs.decision_sources);
+        const prepared = validatePrepared(cached ? decodeCachedPreparation(reply) : decodeResult(reply, PREPARE_TOOL.name), inputs.decision_sources);
         if (prepared.summary.length > cfg.summaryTargetChars * 2) throw Error('基础摘要超过目标长度两倍；原文保留');
         const record = newRecord(session, events, prepared, s.binding, { state: s });
         record.summaryFormatVersion = 2; record.summaryPromptVersion = SUMMARY_PROMPT_VERSION;

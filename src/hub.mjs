@@ -110,6 +110,10 @@ export class Hub extends Service {
   }
   route(agent, kind) {
     const main = agent.session.requestHeader()?.config ?? agent.options;
+    if (kind === 'prepare' && this.config().memoryCacheEnabled) {
+      const captured = this.context.cachedPreparation.requests.get(agent.session.id)?.request;
+      return { provider: captured?.provider ?? main.provider, model: captured?.model ?? main.model };
+    }
     const custom = this.config().backgroundMode === 'unified' ? this.config().unifiedBackground : this.config()[['coordinate', 'compactFull'].includes(kind) ? 'surgeon' : 'background'] ?? {};
     return { provider: custom.provider || main.provider, model: custom.model || main.model, temperature: custom.temperature, effort: custom.effort ?? 'off' };
   }
@@ -163,13 +167,13 @@ export class Hub extends Service {
     state.actions ??= {}; state.actions[name] = (state.actions[name] || 0) + count;
     this.store.save(state);
   }
-  async call(agent, kind, request, signal) {
+  async call(agent, kind, request, signal, { preserveRoute = kind === 'adaptive' } = {}) {
     if (this.closed) throw Error('OMD 服务已关闭');
-    const { effort, ...route } = kind === 'adaptive' ? {} : this.route(agent, kind);
+    const { effort, ...route } = preserveRoute ? {} : this.route(agent, kind);
     const proposed = { ...route, ...request }, fields = ['provider', 'model', 'temperature', 'reasoningEffort', 'maxTokens', 'stop'];
     const config = Object.fromEntries(fields.filter(key => Object.hasOwn(proposed, key)).map(key => [key, proposed[key]]));
     const envelope = Object.fromEntries(Object.entries(request).filter(([key]) => !fields.includes(key)));
-    const requestedEffort = kind === 'adaptive' || Object.hasOwn(request, 'reasoningEffort') ? request.reasoningEffort : effort;
+    const requestedEffort = preserveRoute || Object.hasOwn(request, 'reasoningEffort') ? request.reasoningEffort : effort;
     const timeoutMs = this.config().jobTimeoutMs, timeoutReason = new Error('后台作业超时');
     const controller = new AbortController(), timeout = new AbortController();
     const timer = timeoutMs > 0 ? setTimeout(() => timeout.abort(timeoutReason), timeoutMs) : undefined;
@@ -199,6 +203,8 @@ export class Hub extends Service {
       const prepared = await Promise.race([resolving, aborted]);
       signal.throwIfAborted();
       finalConfig = prepared.config;
+      if (preserveRoute && kind === 'prepare' && fields.some(key => JSON.stringify(finalConfig[key]) !== JSON.stringify(config[key])))
+        throw Error('主执行请求配置已改变，未发送不同前缀的后台请求');
       iterator = prepared.stream({ ...envelope, ...finalConfig, sessionId: agent.session.id, signal })[Symbol.asyncIterator]();
       signal.throwIfAborted();
       startedAt = Date.now();

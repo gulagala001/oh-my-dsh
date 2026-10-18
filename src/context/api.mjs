@@ -128,6 +128,7 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
     patch = normalizePersonalityPatch(hub.config(), patch);
     if (patch.memoryScope !== undefined && !['session', 'project', 'global'].includes(patch.memoryScope)) throw new Error('旧 full 档不再参与跨项目记忆；全局模式使用 global');
     await ctx.settings.update('trisoul-x', patch);
+    hub.context.cachedPreparation.configure();
     send(res, 200, hub.config()); return true;
   }
   if (path === '/memories') {

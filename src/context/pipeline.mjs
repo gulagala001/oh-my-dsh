@@ -17,6 +17,7 @@ import { publishDreamMemory } from '../dream/publication.mjs';
 import { isQuotaExceededError, QUOTA_EXCEEDED_CODE, ACCOUNT_QUOTA_EXCEEDED_CODE } from '@deepseek-ai/dsh-llm';
 import { AdaptiveCompaction, adaptiveRouteKey } from './adaptive.mjs';
 import { AutoCompaction } from './auto-compact.mjs';
+import { CachedPreparation, decodeCachedPreparation } from './cached-preparation.mjs';
 
 const delegated = s => s.header?.origin === 'subagent' || Number(s.header?.delegationDepth) > 0;
 const transientFailure = error => /(?:\b(?:408|429|5\d\d)\b|rate_limit|temporarily unavailable|provider unavailable|overloaded|timeout|timed out|超时|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|fetch failed|network error|socket hang up)/i.test(String(error?.message || error));
@@ -35,6 +36,7 @@ export class ContextPipeline {
     this.agents = new Map(); this.releasing = new Set(); this.jobs = new Map(); this.timers = new Map(); this.reviewTimers = new Map(); this.idleSince = new Map(); this.controllers = new Map(); this.closed = false;
     this.adaptive = new AdaptiveCompaction(this);
     this.autoCompact = new AutoCompaction(this);
+    this.cachedPreparation = new CachedPreparation(this);
   }
   config() { return contextConfig(this.hub.config()); }
   mode(session) { return this.store.peek(session.id)?.compressionMode === 'adaptive' ? 'adaptive' : 'pipeline'; }
@@ -47,6 +49,7 @@ export class ContextPipeline {
     for (const kind of ['prepare', 'coordinate', 'adaptive']) this.controllers.get(session.id + ':' + kind)?.abort(Error('压缩模式已切换'));
     for (const [key, timer] of this.timers) if (key.startsWith(session.id + ':')) { clearTimeout(timer); this.timers.delete(key); this.reviewTimers.delete(key); }
     this.idleSince.delete(session.id); this.adaptive.drop(session.id);
+    this.cachedPreparation.drop(session.id);
     const preparedHandoff = mode === 'pipeline' && s.pending?.source === 'adaptive';
     if (['coordinator', 'adaptive'].includes(s.pending?.source)) s.pending = null;
     s.compressionMode = mode; s.compressionModeRevision = (s.compressionModeRevision || 0) + 1;
@@ -59,8 +62,8 @@ export class ContextPipeline {
     }
     return this.view(session);
   }
-  async call(agent, kind, request, signal, admit) {
-    return this.withCallSlot(() => { admit?.();return this.hub.call(agent, kind, request, signal); }, signal);
+  async call(agent, kind, request, signal, admit, options) {
+    return this.withCallSlot(() => { admit?.();return this.hub.call(agent, kind, request, signal, options); }, signal);
   }
   async withCallSlot(run, signal, lowPriority = false) {
     signal?.throwIfAborted();
@@ -211,6 +214,7 @@ export class ContextPipeline {
       && this.config().idlePreprocessEnabled && (s.review.newRecords > 0 || s.review.needed)) await this.coordinate(agent, true, { retry: true });
   }
   followsMain(kind) {
+    if (kind === 'prepare' && this.config().memoryCacheEnabled) return true;
     const cfg = this.config(), route = cfg.backgroundMode === 'unified' ? cfg.unifiedBackground : cfg[kind === 'coordinate' ? 'surgeon' : 'background'];
     return !route?.provider && !route?.model;
   }
@@ -222,6 +226,17 @@ export class ContextPipeline {
   }
   mainSucceeded(session, route) {
     const agent = this.agents.get(session.id);
+    if (agent && !this.closed && !delegated(session) && this.cachedPreparation.confirm(session, route)) {
+      if (this.config().autoCompactEnabled) this.autoCompact.kick(agent);
+      const waiting = this.cachedPreparation.waiting.get(session.id);
+      if (waiting && this.mode(session) !== 'adaptive' && !this.manualSessions.has(session.id)) {
+        this.cachedPreparation.waiting.delete(session.id);
+        const resume = () => this.agents.get(session.id) === agent && !this.closed && this.config().memoryCacheEnabled
+          && this.mode(session) !== 'adaptive' ? this.prepare(agent, waiting.force, { retry: waiting.retry }) : undefined;
+        const running = this.jobs.get(session.id + ':prepare');
+        void (running ? running.then(resume) : resume()).catch(error => this.hub.ctx.logger?.warn?.(`记忆缓存预处理：${error.message}`));
+      }
+    }
     if (!agent || this.closed || delegated(session) || !this.config().contextEnabled || this.manualSessions.has(session.id)) return;
     if (this.mode(session) === 'adaptive') { this.adaptive.confirm(agent, route); return; }
     const s = this.state(session);
@@ -326,15 +341,22 @@ export class ContextPipeline {
         const inputs = candidateInput(session, events, cfg.digestLookback);
         inputs.target_characters = cfg.summaryTargetChars;
         if (s.failures.prepare) inputs.previous_rejection = s.failures.prepare.message;
-        const encoded = serializePreparationInput(inputs, cfg.prepareInputTokens * 4);
-        const args = { system: PREPARE_SYSTEM, messages: [this.adapter.message(encoded, 'prepare-input')], tools: [PREPARE_TOOL],
-          ...(cfg.digestMaxTokens > 0 ? { maxTokens: cfg.digestMaxTokens } : {}) };
-        const result = await this.call(agent, 'prepare', args, controller.signal, () => this.admitMainSuccess(agent, 'prepare', mainSuccess, controller)).catch(error => { providerFailure = true; throw error; });
+        const cached = cfg.memoryCacheEnabled ? this.cachedPreparation.build(agent, events, inputs, { force, retry }) : null;
+        if (cfg.memoryCacheEnabled && !cached) break;
+        const admit = () => this.admitMainSuccess(agent, 'prepare', mainSuccess, controller);
+        const execute = () => {
+          if (cached) return this.cachedPreparation.call(agent, cached, controller, controller.signal, admit);
+          const encoded = serializePreparationInput(inputs, cfg.prepareInputTokens * 4);
+          const args = { system: PREPARE_SYSTEM, messages: [this.adapter.message(encoded, 'prepare-input')], tools: [PREPARE_TOOL],
+            ...(cfg.digestMaxTokens > 0 ? { maxTokens: cfg.digestMaxTokens } : {}) };
+          return this.call(agent, 'prepare', args, controller.signal, admit);
+        };
+        const result = await execute().catch(error => { providerFailure = true; throw error; });
         mainSuccess = undefined;
         controller.signal.throwIfAborted();
         let prepared;
         try {
-          prepared = validatePrepared(decodeResult(result, PREPARE_TOOL.name), inputs.decision_sources);
+          prepared = validatePrepared(cached ? decodeCachedPreparation(result) : decodeResult(result, PREPARE_TOOL.name), inputs.decision_sources);
           if (prepared.summary.length > cfg.summaryTargetChars * 2) throw Error('基础摘要超过目标长度两倍；原文保留，重试时请缩短摘要而非截断');
         } catch (error) { validationFailure = true; throw error; }
         const record = newRecord(session, events, prepared, s.binding, { state: s });
@@ -775,6 +797,7 @@ ${r.summary}`).join('\n\n') || 'No matching saved summaries.';
         return { ...r, documentCount: documents.length, assetCount: assets.length, originalEventCount: (originalSeqs || sourceSeqs).length, live: Boolean(spans.get(record)) };
       }) }),
       backlog: backlogView(session, s, this.config(), index, spans), eventsSincePrepare: s.eventsSincePrepare || 0, prepareDeferred: s.prepareDeferred || null,
+      memoryCache: { ...s.memoryCache, enabled: this.config().memoryCacheEnabled },
       limits: { batchWindows: this.config().prepareBatchWindows, concurrency: this.config().backgroundConcurrency, continueTokens: this.config().prepareContinueTokens },
       failures: s.failures, retry: Object.fromEntries(['prepare', 'coordinate'].map(kind => [kind, !s.failures[kind] ? null : this.waitsForMain(s, kind) ? 'waiting-main' : s.failures[kind].count > this.config().backgroundMaxRetries ? kind === 'prepare' && s.failures[kind].validation ? 'waiting-events' : 'manual' : 'retrying'])), notices: s.notices, trace: s.traceSlot ? { sourceSeq: s.traceSlot.sourceSeq, sourceAt: s.traceSlot.sourceAt, truncated: s.traceSlot.truncated } : null,
       preparing: this.jobs.has(session.id + ':prepare'), coordinating: this.jobs.has(session.id + ':coordinate'), transactionPending: Boolean(s.transaction),
@@ -790,6 +813,7 @@ ${r.summary}`).join('\n\n') || 'No matching saved summaries.';
     this.store.release(id); this.hub.store.release?.(id); this.releasing.delete(id);
   }
   dispose(id) {
+    this.cachedPreparation.drop(id);
     this.adaptive.drop(id);
     const ids = id ? [id] : [...this.agents.keys()];
     for (const key of ids) this.releasing.add(key);

@@ -16,7 +16,11 @@ const entriesFor = (slots, name, accept) => ({ ctx: slots.ctx,
 
 export function applySessionOverview(ctx, openCU) {
   if (!openCU.OverviewSlot) return;
-  const Overview = openCU.OverviewSlot, states = new Map(), listeners = new Set(), composers = new Map(), chatActions = new Map();
+  function Overview(props) {
+    const Component = openCU.getOverviewSlot?.(ctx) ?? openCU.OverviewSlot;
+    return <Component {...props}/>;
+  }
+  const states = new Map(), listeners = new Set(), composers = new Map(), chatActions = new Map();
   const notify = () => { for (const listener of listeners) listener(); };
   const subscribe = listener => { listeners.add(listener); return () => listeners.delete(listener); };
   const useOverview = sessionId => useSyncExternalStore(subscribe, () => states.get(sessionId));
