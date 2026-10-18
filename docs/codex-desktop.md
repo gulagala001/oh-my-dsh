@@ -20,4 +20,4 @@
 node scripts/pack-skin.mjs src/client/skins/codex-desktop dist/skins/codex-desktop.omd-skin.json
 ```
 
-当前外观见[新版图集](release-visuals.md)，安装条件见[版本配对](install.md)。
+当前外观见[功能展示](showcase.md)，安装条件见[版本配对](install.md)。
