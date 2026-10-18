@@ -115,8 +115,8 @@ export function assertPending(value, sessionId) {
 
 export function assertWaitingApproval(snapshot, { sessionId, pending, localModelRequests }) {
   const current = assertPending(snapshot.deny, sessionId);
-  assert.deepEqual(current, pending, 'Group navigation must retain the same real pending request');
-  assert.equal(snapshot.modelCalls.length, 1, 'Group navigation cannot advance the Agent');
+  assert.deepEqual(current, pending, 'Default-card observation must retain the same real pending request');
+  assert.equal(snapshot.modelCalls.length, 1, 'Default-card observation cannot advance the Agent');
   assert.deepEqual(snapshot.rejectedModels, []); assert.equal(localModelRequests, 1);
   const row = snapshot.modelCalls[0];
   assert.equal(row.provider, provider); assert.equal(row.model, model); assert.equal(row.sessionId, sessionId); assert.equal(row.purpose, undefined);

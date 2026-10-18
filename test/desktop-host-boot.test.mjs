@@ -240,7 +240,7 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     }, 'real blank Session selection and preset');
     assertBlankNavigation(navigation, expectedNavigation); report.navigation = { afterOpen: navigation };
     await page.locator('[data-composer-input]').waitFor();
-    await page.getByRole('button', { name: '模型与思考强度', exact: true }).waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: /^模型与思考强度(?:：.+)?$/ }).waitFor({ state: 'visible' });
     assertBlankNavigation((await page.evaluate(() => window.__OMD_DESKTOP_HOST_BOOT__())).navigation, expectedNavigation);
     await page.getByRole('button', { name: '关于 Oh My DSH', exact: true }).click();
     const about = page.getByRole('dialog', { name: '关于 Oh My DSH' });
@@ -264,7 +264,8 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     for (const key of ['omd-task-injection', 'omd-btw']) assert(chat.occupants.some(row => row.key === key && row.active), 'Active OMD chat slot: ' + key);
     report.ui = ui;
     await page.screenshot({ path: join(evidence, 'installed-native-ui.png'), animations: 'disabled' });
-    await page.getByText('更多', { exact: true }).click(); await page.getByText('设置', { exact: true }).click();
+    await page.getByRole('button', { name: '账号菜单', exact: true }).click();
+    await page.getByRole('menuitem', { name: '设置', exact: true }).click();
     const settings = page.getByRole('dialog');
     await settings.getByRole('button', { name: '电脑与浏览器', exact: true }).waitFor();
     await settings.getByRole('button', { name: '电脑与浏览器', exact: true }).click();

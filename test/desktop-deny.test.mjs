@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { revealApprovalCard } from './fixtures/desktop-deny/navigation.mjs';
-import { createWireProtocol, assertPending, assertWaitingApproval, assertDenied, disabledBackends, forbiddenMethods, appName, provider as fixtureProvider, model as fixtureModel } from './fixtures/desktop-deny/protocol.mjs';
+import { defaultApprovalCard } from './fixtures/desktop-deny/navigation.mjs';
+import { createWireProtocol, assertPending, assertWaitingApproval, assertDenied, disabledBackends, forbiddenMethods, provider as fixtureProvider, model as fixtureModel } from './fixtures/desktop-deny/protocol.mjs';
 import { randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -270,7 +270,7 @@ test('official rc.2 Agent and real REA card decline one synthetic OpenCU target 
     }, 'real blank Session selection and preset');
     assertBlankNavigation(navigation, expectedNavigation); report.navigation = { afterOpen: navigation };
     await page.locator('[data-composer-input]').waitFor();
-    await page.getByRole('button', { name: '模型与思考强度', exact: true }).waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: /^模型与思考强度(?:：.+)?$/ }).waitFor({ state: 'visible' });
     assertBlankNavigation((await page.evaluate(() => window.__OMD_DESKTOP_HOST_BOOT__())).navigation, expectedNavigation);
     await page.getByRole('button', { name: '关于 Oh My DSH', exact: true }).click();
     const about = page.getByRole('dialog', { name: '关于 Oh My DSH' });
@@ -311,26 +311,25 @@ test('official rc.2 Agent and real REA card decline one synthetic OpenCU target 
       content: [{ type: 'text', text: 'OMD_DENY_LOCAL_FIXTURE_ONLY: request the single fixed synthetic target, then finish after denial.' }] } });
     const pendingState = await until(async () => { const value = await observe(); return value.deny.pending.length && value; }, 'one real application approval request');
     const pending = assertPending(pendingState.deny, armedSessionId); report.pending = pendingState;
-    report.groupNavigation = { defaultApprovalVisible: undefined, manualGroupExpansion: undefined };
-    const approvalNavigation = await revealApprovalCard(page, {
-      beforeExpansion: async evidenceState => {
-        await page.screenshot({ path: join(evidence, 'approval-collapsed.png'), animations: 'disabled' });
+    report.approvalDisplay = {};
+    const approvalNavigation = await defaultApprovalCard(page, {
+      sessionId: armedSessionId, pending,
+      beforeObservation: async () => {
         const state = await observe();
-        report.groupNavigation.before = assertWaitingApproval(state, { sessionId: armedSessionId, pending, localModelRequests: wire.requests.length });
-        Object.assign(report.groupNavigation, evidenceState); await save();
+        report.approvalDisplay.before = assertWaitingApproval(state, { sessionId: armedSessionId, pending, localModelRequests: wire.requests.length });
+        await save();
       },
-      afterExpansion: async evidenceState => {
-        await page.screenshot({ path: join(evidence, 'approval-expanded.png'), animations: 'disabled' });
+      afterObservation: async beforeCard => {
+        report.approvalDisplay.beforeCard = beforeCard;
+        await page.screenshot({ path: join(evidence, 'approval-default-visible.png'), animations: 'disabled' });
         const state = await observe();
-        report.groupNavigation.after = assertWaitingApproval(state, { sessionId: armedSessionId, pending, localModelRequests: wire.requests.length });
-        Object.assign(report.groupNavigation, evidenceState); await save();
+        report.approvalDisplay.after = assertWaitingApproval(state, { sessionId: armedSessionId, pending, localModelRequests: wire.requests.length });
+        await save();
       },
     });
     const { card } = approvalNavigation;
-    assert.equal(report.groupNavigation.defaultApprovalVisible, false, 'Pinned standard layout hides the pending card by default; this UX gap remains');
-    assert.equal(report.groupNavigation.manualGroupExpansion, true);
-    report.defaultApprovalUxGap = 'Default standard ChatGroupSeat folds the real pending approval card; explicit normal group expansion is required. Production UX is unchanged.';
-    await card.getByText(`允许 DSH 使用 ${appName}？`, { exact: true }).waitFor({ state: 'visible' });
+    Object.assign(report.approvalDisplay, approvalNavigation.evidence); await save();
+    await card.getByText(`允许 OpenCU 使用 ${pending.request.appDisplayName}？`, { exact: true }).waitFor({ state: 'visible' });
     const deny = card.getByRole('button', { name: /^(?:拒绝|Deny)(?:\s.*)?$/ });
     await deny.waitFor({ state: 'visible' }); assert.equal(await deny.count(), 1);
     await page.screenshot({ path: join(evidence, 'approval-pending.png'), animations: 'disabled' });
@@ -360,7 +359,7 @@ test('official rc.2 Agent and real REA card decline one synthetic OpenCU target 
     assert.deepEqual(errors, []); assert.equal(providerRequests.length, 2); assert.deepEqual(wire.failures, []);
     assert.equal(report.launches.length, 2); assert.equal(report.shutdowns.length, 2);
     report.checks = ['official-rc2-identities', 'dsh-app-renderer', 'frozen-tgz-installed', 'natural-cold-restart',
-      'uiConversation-definitions', 'omd-model-priority-takeover-and-visible-button', 'four-real-backends-disabled', 'real-agent-and-tool-runtime', 'real-rea-deny-response', 'naturally-completed', 'local-model-requests-two', 'physical-inputs-zero'];
+      'uiConversation-definitions', 'omd-model-priority-takeover-and-visible-button', 'four-real-backends-disabled', 'real-agent-and-tool-runtime', 'unique-default-visible-rea-card-in-viewport', 'same-session-and-pending-uuid', 'real-rea-deny-response', 'naturally-completed', 'local-model-requests-two', 'physical-inputs-zero'];
     report.phase = 'checks-complete';
   } catch (error) { report.status = 'failed'; report.failure = redact(error.stack ?? error.message); throw error; }
 });

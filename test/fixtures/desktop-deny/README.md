@@ -38,20 +38,18 @@ real title-LLM row and OMD background features are disabled in the temporary
 profile. No Agent/pre-step hook, tool body or result producer is replaced.
 
 The test waits for one pending request, an empty approved-app list and absent
-approval files. The pinned standard Desktop layout folds its ChatGroupSeat by
-default, leaving the pending approval card hidden. This is an unresolved
-production UX/discoverability gap. The acceptance records
-`defaultApprovalVisible=false` and `manualGroupExpansion=true`; it does not
-change ui-chat, DOM/React state, default preferences or permissions. It finds
-the unique real call by data-chat-call-id, the unique containing process group,
-and its visible normal toggle. aria-controls must match that group's unique
-process body id. Only aria-expanded=false receives a normal click; the result
-must be true and the same tool's unique approval surface must become visible.
-The same pending request, one model request and zero physical operations are
-rechecked before and after expansion. Real collapsed/expanded screenshots are
-saved before Deny or failure cancellation. Failure capture precedes cleanup
-cancellation. It locates the actual open-shadow REA approval surface and
-exact application title, screenshots it, and clicks the real Deny button.
+approval files. It requires exactly one real open-shadow REA approval surface,
+bound through the pending application's actual name and exact localized title
+`允许 OpenCU 使用 {appDisplayName}？`. The card and its unique real Deny button
+must already be visible and fit entirely inside the actual viewport. The
+selected and bound Client session must both match the actual armed Session.
+No process group is expanded, no scrollIntoView is called, and no approval API
+or DOM/React mutation is used to make the card available. Before and after
+read-only inspection and its screenshot, the same Host pending UUID, one model
+request, empty grants and zero physical operations must remain unchanged.
+Both card observations are saved and checked independently by the report gate.
+Failure capture still precedes cleanup cancellation. The runner then clicks
+only the real Deny button.
 It only observes the resulting authenticated response; it never sends an
 approval response itself or edits React/DOM state. The response evidence is
 `host-http`, from the public authenticated `connection/request` waterfall.
