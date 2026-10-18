@@ -19,8 +19,10 @@ jobs:
       matrix: ${{ steps.release.outputs.matrix }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Check Desktop release eligibility regressions
-        run: node --test test/desktop-release-eligibility.test.mjs test/build-opencu-imports.test.mjs
+        run: node --test test/desktop-release-eligibility.test.mjs test/build-opencu-imports.test.mjs test/desktop-host-boot-contract.test.mjs
       - id: release
         name: Check whether this host has official desktop packages
         run: |
@@ -49,6 +51,8 @@ jobs:
       matrix: ${{ fromJSON(needs.release-metadata.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -89,10 +93,27 @@ jobs:
           const sha256 = createHash('sha256').update(readFileSync(archive)).digest('hex');
           appendFileSync(process.env.GITHUB_ENV, `OMD_DESKTOP_APP_ROOT=${appRoot}\nOMD_PLUGIN_ARCHIVE=${archive}\nOMD_PLUGIN_ARCHIVE_SHA256=${sha256}\n`);
           NODE
-      - name: Record Desktop build scope
+      - name: Boot official Desktop and verify isolated OMD registration
         shell: bash
         run: |
-          printf '%s\n' '构建完成，真实桌面使用未由CI验收。' >> "$GITHUB_STEP_SUMMARY"
+          set -euo pipefail
+          node --test --test-reporter=tap test/desktop-host-boot.test.mjs | tee "$OMD_DESKTOP_TEST_ROOT/host-boot.tap"
+          node --input-type=module - <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync, appendFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const root = process.env.OMD_DESKTOP_TEST_ROOT;
+          const tap = readFileSync(join(root, 'host-boot.tap'), 'utf8');
+          for (const [key, expected] of [['tests', 1], ['pass', 1], ['fail', 0], ['cancelled', 0], ['skipped', 0]]) {
+            const match = tap.match(new RegExp(`^# ${key} (\\d+)$`, 'm'));
+            assert.equal(Number(match?.[1]), expected, `Desktop acceptance count: ${key}`);
+          }
+          const report = JSON.parse(readFileSync(join(root, 'host-boot-evidence', 'desktop-host-boot.json')));
+          assert.equal(report.status, 'passed'); assert.equal(report.executed, 1); assert.equal(report.skipped, 0);
+          assert.equal(report.launches.length, 2); assert.equal(report.shutdowns.length, 2);
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+            '官方 rc.2 Desktop：本地 tgz 安装、完整退出重启、真实前端及注册/设置入口验收通过；模型调用 0，CU backends 全关闭。\n#54 rc.1 配对与 #64 真实 native/CU 动作仍未验收，不得据此关闭。详见脱敏截图和 JSON/TAP。\n');
+          NODE
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -100,4 +121,6 @@ jobs:
           path: |
             ${{ env.OMD_PLUGIN_ARCHIVE }}
             ${{ env.OMD_DESKTOP_TEST_ROOT }}/pack.json
+            ${{ env.OMD_DESKTOP_TEST_ROOT }}/host-boot.tap
+            ${{ env.OMD_DESKTOP_TEST_ROOT }}/host-boot-evidence/
           if-no-files-found: warn
