@@ -1,3 +1,5 @@
+import {validateSelectOptions} from '../../extension/select-options.js';
+
 /** Serializable locators; each retry resolves the current document, never replays uncertain input. */
 export function createPlaywrightAPI(invoke, display, context = {}) {
   const string = (value, name) => {
@@ -63,7 +65,7 @@ export function createPlaywrightAPI(invoke, display, context = {}) {
       press: (key, options = {}) => run('press', {...options, key: string(key, 'key')}),
       getAttribute: (name, options = {}) => run('getAttribute', {...options, name: string(name, 'name')}),
       setChecked: (checked, options = {}) => { if (typeof checked !== 'boolean') throw new TypeError('checked must be boolean'); return run('setChecked', {...options, checked}); },
-      selectOption: (value, options = {}) => run('selectOption', {...options, value}),
+      selectOption: (value, options = {}) => run('selectOption', {...options, value:validateSelectOptions(value)}),
       waitFor: (options = {}) => run('waitFor', {state: 'visible', ...options}),
     };
     for (const method of ['count', 'innerText', 'textContent', 'allTextContents', 'isVisible', 'isEnabled', 'click', 'dblclick', 'check', 'uncheck']) api[method] = (options = {}) => run(method, options);

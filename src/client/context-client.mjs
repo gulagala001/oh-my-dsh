@@ -1,6 +1,7 @@
 import { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
 export { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
 import { createPoller } from './polling.mjs';
+import { useMainConversation } from './main-conversation.mjs';
 import { PERSONALITY_PRESETS, personalityPreset, personalityText, personalityPatch } from '../cc-adaptation/personality.mjs';
 
 export const CONTEXT_UI_VERSION = '1.3.0';
@@ -328,7 +329,11 @@ export function createContextUI(React) {
         this.state.error && button('', this.load, { label: '重试会话范围', title: this.state.error, icon: 'refresh', className: 'cx-scope-retry', disabled: this.state.busy || this.state.loading }));
     }
   }
-  const ScopeChip = props => { const locked = props.useSessions(s => s.byId[props.sessionId]?.blank === false); return h(ScopeControl, { ...props, locked }); };
+  const ScopeChip = props => {
+    const main = useMainConversation(props);
+    const locked = props.useSessions(s => s.byId[props.sessionId]?.blank === false);
+    return main ? h(ScopeControl, { ...props, locked }) : null;
+  };
   return { ContextSettings, ScopeChip, applyStyle(ctx) {
     ctx.effect(() => {
       const style = document.createElement('style');

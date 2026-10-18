@@ -1,26 +1,21 @@
 import { createHash } from 'node:crypto';
 import { promptText } from './cc-adaptation/texts.mjs';
 import { highestEffort } from './model-efforts.mjs';
-import { proWorkflowGuide } from './cc-adaptation/workflow-guide.mjs';
 import { z } from 'zod';
 import { apiSessionTarget } from './api-session.mjs';
 import { validateSessionId } from './hub-store.mjs';
 
-export const ULTRACODE_ON = "Ultracode is on: optimize for the most exhaustive, correct answer — not the fastest or cheapest. Use the Workflow tool on every substantive task to delegate its concrete requirements to subagents; token cost is not a constraint. See the **Ultracode** section and quality patterns in the workflow authoring reference. Solo only on conversational/trivial turns.";
-export const ULTRACODE_SPARSE = "Ultracode is still on — use the Workflow tool; see the Ultracode section of the workflow authoring reference.";
-export const ULTRACODE_OFF = "Ultracode is off — the Workflow tool's standard opt-in rule applies again.";
-export const ULTRACODE_KEYWORD = 'The user included the keyword "ultracode", opting this turn into multi-agent orchestration — use the Workflow tool to fulfill the request.';
-export const PRO_ON = ULTRACODE_ON.replaceAll('Ultracode', 'Pro');
-export const PRO_SPARSE = ULTRACODE_SPARSE.replaceAll('Ultracode', 'Pro');
-export const PRO_OFF = ULTRACODE_OFF.replaceAll('Ultracode', 'Pro');
-const reminders = {
-  ultracode: { on: ULTRACODE_ON, sparse: ULTRACODE_SPARSE, off: ULTRACODE_OFF, keyword: ULTRACODE_KEYWORD },
-  pro: { on: PRO_ON, sparse: PRO_SPARSE, off: PRO_OFF },
-};
-const modes = new Set(['off', 'pro', 'ultracode']);
-const savedMode = state => modes.has(state?.mode) ? state.mode : state?.enabled ? 'ultracode' : 'off';
-// Old delivery records belong to Ultracode; the storage key remains compatible.
-const deliveryMode = delivery => delivery?.mode === 'pro' ? 'pro' : 'ultracode';
+export const ULTRA_WORKFLOW_ON = "Ultra is on: optimize for the most exhaustive, correct answer — not the fastest or cheapest. Use the Workflow tool on every substantive task to delegate its concrete requirements to subagents; token cost is not a constraint. See the **Ultra** section and quality patterns in the workflow authoring reference. Solo only on conversational/trivial turns.";
+export const ULTRA_OFF = "Ultra is off. Its standing multi-agent authorization and selected collaboration strategy no longer apply; follow the user's current task and the tools' ordinary guidance.";
+export const ULTRA_SUBMODES = new Set(['workflow', 'team', 'free']);
+const modes = new Set(['off', 'ultra']);
+// Keep the storage key readable by existing archives, but retire the old
+// exhaustive Ultracode mode (including enabled-only records and keywords).
+export function savedUltraMode(state) {
+  if (state?.mode === 'pro') return { mode: 'ultra', submode: 'workflow' };
+  return { mode: state?.mode === 'ultra' ? 'ultra' : 'off',
+    submode: ULTRA_SUBMODES.has(state?.submode) ? state.submode : 'free' };
+}
 const same = (a, b) => a?.provider === b?.provider && a?.model === b?.model && a?.reasoningEffort === b?.reasoningEffort;
 const human = message => message?.source?.kind === 'user';
 const emptyFold = () => ({ through: 0, model: null, request: null, preset: undefined, turn: 0, humans: 0, humanIds: new Set() });
@@ -43,13 +38,19 @@ export function foldUltracodeEvents(events) {
   }
   return state;
 }
-function modeView(state, route, mode, eligible) {
-  const selected = route ? { provider: route.provider, model: route.model, ...(route.reasoningEffort === undefined ? {} : { reasoningEffort: route.reasoningEffort }) } : null;
-  const saved = state.model && mode?.selectionSeq === state.model.seq ? savedMode(mode) : 'off';
-  return { selected, mode: eligible ? saved : 'off', savedMode: saved, enabled: saved !== 'off' && eligible, savedEnabled: saved !== 'off', eligible, revision: state.model?.seq ?? -1 };
+export function hasNativeTeamTools(schemas = []) {
+  const tools = new Map(schemas.map(tool => [tool.name, tool]));
+  return ['spawn_teammate', 'send_message', 'list_agents', 'wait_agent',
+    'team_task_create', 'team_task_list', 'team_task_get', 'team_task_update'].every(name => tools.has(name))
+    && Object.hasOwn(tools.get('send_message').parameters?.properties ?? {}, 'target');
 }
-export const hasUltracodeKeyword = message => human(message) && message.content?.some(block => block.type === 'text' && /\bultracode\b/i.test(block.text) && !/^\s*\//.test(block.text));
-
+function modeView(state, route, mode, eligible, teamAvailable = false) {
+  const selected = route ? { provider: route.provider, model: route.model, ...(route.reasoningEffort === undefined ? {} : { reasoningEffort: route.reasoningEffort }) } : null;
+  const remembered = savedUltraMode(mode);
+  const saved = state.model && mode?.selectionSeq === state.model.seq ? remembered.mode : 'off';
+  const submode = remembered.submode === 'team' && !teamAvailable ? 'free' : remembered.submode;
+  return { selected, mode: eligible ? saved : 'off', submode, savedSubmode: remembered.submode, teamAvailable, savedMode: saved, enabled: saved !== 'off' && eligible, savedEnabled: saved !== 'off', eligible, revision: state.model?.seq ?? -1 };
+}
 export function installUltracodeProjection(ctx) {
   const schema = z.object({ revision: z.number() });
   ctx.sessionProjections.register({ key: 'omdUltracode', stateVersion: 2, stateSchema: schema,
@@ -69,9 +70,8 @@ export function installUltracodeProjection(ctx) {
 export class UltracodeControl {
   constructor(ctx, isOmd, store) {
     this.ctx = ctx; this.isOmd = isOmd; this.store = store;
-    this.folds = new WeakMap(); this.claims = new WeakMap(); this.frames = new WeakMap(); this.assemblyModes = new WeakMap(); this.fresh = new WeakSet(); this.writes = new Map();
-    const ultracode = promptText('runtime/workflow-authoring.md');
-    const texts = { ultracode, pro: proWorkflowGuide(ultracode) };
+    this.folds = new WeakMap(); this.claims = new WeakMap(); this.frames = new WeakMap(); this.active = new WeakMap(); this.fresh = new WeakSet(); this.writes = new Map();
+    const texts = { workflow: promptText('runtime/workflow-authoring.md'), team: promptText('runtime/ultra-team.md'), free: promptText('runtime/ultra-free.md') };
     this.guides = Object.fromEntries(Object.entries(texts).map(([mode, text]) =>
       [mode, { text, hash: createHash('sha256').update(text).digest('hex') }]));
   }
@@ -96,10 +96,22 @@ export class UltracodeControl {
     if (!agent || agent.session.header.origin === 'subagent' || !this.isOmd(agent.session)) return false;
     return Boolean(agent.ctx.get('tools')?.schemas(agent).find(tool => tool.name === 'workflow')?.parameters?.properties?.resumeFromRunId);
   }
+  teamAvailable(agent) {
+    return Boolean(agent && hasNativeTeamTools(agent.ctx.get('tools')?.schemas(agent)));
+  }
+  coldTeamAvailable() {
+    // Native Team tools are installed per live Agent. For a cold session only
+    // read DSH's existing service and active plugin; never hydrate or enable it.
+    return Boolean(this.ctx.get('agentTeams') && [...this.ctx.get('loader')?.entries() ?? []].some(entry =>
+      entry.options.name === '@deepseek-ai/dsh-experimental-tool-agent-team' && !entry.disabled && entry.fiber?.state === 2));
+  }
   view(session, agent = this.ctx.agents.get(session.id)) {
     const state = this.fold(session);
     const route = state.model ?? session.requestHeader()?.config ?? this.ctx.get('agentDefaultModel')?.currentSelection();
-    return modeView(state, route, this.store.peek(session.id)?.ultracode, this.eligible(agent));
+    const view = modeView(state, route, this.store.peek(session.id)?.ultracode, this.eligible(agent), this.teamAvailable(agent));
+    const active = agent && this.active.get(agent);
+    const activeSubmode = active?.submode === 'team' && !view.teamAvailable ? 'free' : active?.submode;
+    return { ...view, pending: agent?.status === 'running' && Boolean(active && (active.mode !== view.mode || activeSubmode !== view.submode)) };
   }
   async agent(sessionId) {
     let agent = this.ctx.agents.get(sessionId);
@@ -151,8 +163,8 @@ export class UltracodeControl {
     this.assertTarget(sessionId, session?.header ?? inspection?.meta ?? stored, agent);
     if (agent) return this.view(session, agent);
     if (target.archivedOnly) {
-      const saved = savedMode(stored?.ultracode);
-      return { selected: null, mode: 'off', savedMode: saved, enabled: false, savedEnabled: saved !== 'off', eligible: false, revision: -1,
+      const { mode: saved, submode } = savedUltraMode(stored?.ultracode);
+      return { selected: null, mode: 'off', submode: submode === 'team' ? 'free' : submode, savedSubmode: submode, teamAvailable: false, savedMode: saved, enabled: false, savedEnabled: saved !== 'off', eligible: false, revision: -1,
         cold: true, archivedOnly: true, capability: 'archived-only', workflowResumeReady: false, reason: '仅有 OMD 存档，原生会话不存在；保存模式不代表可恢复的模型选择或 Workflow 能力。' };
     }
     const header = session?.header ?? inspection.meta, events = session ? session.snapshotEvents() : inspection.events;
@@ -163,24 +175,27 @@ export class UltracodeControl {
     const preset = state.preset === undefined ? header.agentPreset : state.preset;
     const capability = await this.coldCapability(preset, signal); signal?.throwIfAborted();
     const route = state.model ?? state.request?.config ?? this.ctx.get('agentDefaultModel')?.currentSelection();
-    return { ...modeView(state, route, stored?.ultracode, capability.eligible), ...capability, cold: true, archivedOnly: false, preset: preset ?? null };
+    return { ...modeView(state, route, stored?.ultracode, capability.eligible, this.coldTeamAvailable()), ...capability, cold: true, archivedOnly: false, preset: preset ?? null };
   }
   async select(sessionId, input) {
     const previous = this.writes.get(sessionId) ?? Promise.resolve();
     const operation = previous.catch(() => {}).then(async () => {
-      const mode = input?.mode ?? (typeof input?.ultracode === 'boolean' ? input.ultracode ? 'ultracode' : 'off' : undefined);
-      if (!input || !modes.has(mode) || (Object.hasOwn(input, 'mode') && !modes.has(input.mode))
-        || (Object.hasOwn(input, 'ultracode') && input.ultracode !== (mode === 'ultracode'))
+      const mode = input?.mode;
+      if (!input || !modes.has(mode) || Object.hasOwn(input, 'ultracode')
+        || (input.submode !== undefined && !ULTRA_SUBMODES.has(input.submode))
         || typeof input.provider !== 'string' || !input.provider.trim() || typeof input.model !== 'string' || !input.model.trim()
         || (input.reasoningEffort !== undefined && (typeof input.reasoningEffort !== 'string' || !input.reasoningEffort))) throw new Error('模型、档位和工作模式无效');
       const agent = await this.agent(sessionId), session = agent.session;
       const before = this.view(session, agent);
+      const submode = input.submode ?? (mode === 'off' ? before.savedSubmode : before.submode);
+      this.prepare(agent);
       if (input.expectedRevision !== undefined && input.expectedRevision !== before.revision) throw new Error('模型设置已在另一处更新，请重试');
-      if (mode !== 'off' && !before.eligible) throw new Error('Pro / Ultracode 需要当前会话的 OMD Workflow 能力');
+      if (mode !== 'off' && !before.eligible) throw new Error('Ultra 需要当前会话的 OMD 协作能力');
+      if (mode === 'ultra' && submode === 'team' && !before.teamAvailable) throw new Error('请先在 DSH 中启用 Agent Team');
       const controller = this.ctx.get('sessionController');
       if (!controller) throw new Error('当前宿主未提供模型选择服务');
       const info = await this.ctx.llm.resolveModelInfo(input.provider, input.model);
-      const effort = mode === 'pro' && info.reasoning?.efforts?.some(level => level.id === 'xhigh')
+      const effort = mode === 'ultra' && info.reasoning?.efforts?.some(level => level.id === 'xhigh')
         ? 'xhigh'
         : mode !== 'off' ? highestEffort(info.reasoning) : input.reasoningEffort;
       const result = await controller.selectModel({ sessionId, provider: input.provider, model: input.model, ...(effort === undefined ? {} : { reasoningEffort: effort }) });
@@ -190,9 +205,8 @@ export class UltracodeControl {
       // Flush the native selection first. A crash before the plugin save then
       // leaves an ordinary selection, never a mode tied to an uncommitted route.
       if (this.fold(session).model?.seq !== model.seq) throw new Error('模型在保存时再次变更，请重试');
-      // Keep the legacy flag specific to Ultracode so an older plugin cannot
-      // silently turn Pro into the stronger mode after a downgrade.
-      this.persist(session, { mode, enabled: mode === 'ultracode', selectionSeq: model.seq });
+      this.persist(session, { mode, submode, enabled: false, selectionSeq: model.seq });
+      if (agent.status !== 'running') this.prepare(agent, true);
       return this.view(session, agent);
     });
     this.writes.set(sessionId, operation);
@@ -204,51 +218,62 @@ export class UltracodeControl {
     pending.push(message); this.claims.set(agent, pending);
   }
   lifecycle(agent, source) { if (source === 'clear' || source === 'compact') this.fresh.add(agent); }
-  currentMode(agent) {
-    if (!agent) return 'off';
+  prepare(agent, force = false) {
+    const turn = this.fold(agent.session).turn;
+    const active = this.active.get(agent);
+    if (!force && active?.turn === turn) return active;
     const view = this.view(agent.session, agent);
-    if (!view.eligible) return 'off';
-    return view.enabled ? view.mode : this.assemblyModes.get(agent) ?? 'off';
+    const next = { turn, mode: view.mode, submode: view.submode };
+    this.active.set(agent, next);
+    return next;
   }
-  /** Render into the native complete system prompt so unload/clear cannot leave a stale directive. */
+  currentMode(agent) {
+    if (!agent || !this.eligible(agent)) return 'off';
+    return (agent.status === 'running' ? this.active.get(agent)?.mode : undefined) ?? this.view(agent.session, agent).mode;
+  }
+  currentSubmode(agent) {
+    if (!agent) return 'free';
+    const selected = (agent.status === 'running' ? this.active.get(agent)?.submode : undefined) ?? this.view(agent.session, agent).submode;
+    return selected === 'team' && !this.teamAvailable(agent) ? 'free' : selected;
+  }
+  /** Pin the requested strategy per turn. DSH alone owns tools and children;
+   * a disabled native Team must not leave instructions for unavailable tools. */
   async assemble(agent, next) {
     await this.writes.get(agent.session.id)?.catch(() => {});
-    const snapshot = this.view(agent.session, agent), state = { ...this.fold(agent.session) };
+    const active = this.prepare(agent), state = this.fold(agent.session);
+    const assembly = await next();
+    if (!this.eligible(agent)) return assembly;
     const last = this.store.peek(agent.session.id)?.ultracode?.delivery;
+    const submode = active.submode === 'team' && !this.teamAvailable(agent) ? 'free' : active.submode;
+    const guide = this.guides[submode];
     const pending = this.claims.get(agent) ?? [];
     this.claims.delete(agent);
-    const keyword = snapshot.eligible && !snapshot.enabled && (pending.some(hasUltracodeKeyword) || (last?.kind === 'keyword' && last.turn === state.turn && last.revision === snapshot.revision));
-    const mode = snapshot.enabled ? snapshot.mode : keyword ? 'ultracode' : deliveryMode(last);
-    this.assemblyModes.set(agent, snapshot.eligible && (snapshot.enabled || keyword) ? mode : 'off');
-    const assembly = await next();
-    if (!snapshot.eligible) {
-      this.frames.delete(agent);
-      return assembly;
+    const on = active.mode === 'ultra';
+    const kind = on ? 'on' : 'off';
+    const emit = this.fresh.has(agent) || last?.kind !== kind || last?.submode !== submode || last?.guideHash !== guide.hash
+      || pending.some(human) && state.humans - (last?.humanCount ?? 0) >= 10;
+    this.frames.set(agent, { kind, mode: active.mode, submode, emit,
+      revision: this.fold(agent.session).model?.seq ?? -1, turn: state.turn, guideHash: guide.hash });
+    // Fuse the selected Team prompt into DSH's existing policy section. The
+    // native identity, tool contracts, registration and UI remain DSH-owned.
+    if (on && submode === 'team' && assembly.sections.some(section => section.name === 'team:policy')) {
+      return { ...assembly, sections: assembly.sections.map(section => section.name === 'team:policy' ? { ...section, text: guide.text, interpolate: false } : section) };
     }
-    const guide = this.guides[mode];
-    let kind, emit = false;
-    if (snapshot.enabled) {
-      const missing = !agent.session.deriveMessages().some(message => message.role === 'system' && message.content?.some(block => block.type === 'text' && block.text.includes(guide.text)));
-      if (this.fresh.has(agent) || missing || !['on', 'sparse'].includes(last?.kind) || deliveryMode(last) !== mode || last.revision !== snapshot.revision || last.guideHash !== guide.hash) { kind = 'on'; emit = true; }
-      else if (pending.some(human) && state.humans - last.humanCount >= 10) { kind = 'sparse'; emit = true; }
-      else kind = last.kind;
-    } else if (keyword) {
-      kind = 'keyword'; emit = last?.kind !== kind || last.turn !== state.turn;
-    } else if (['on', 'sparse', 'off'].includes(last?.kind)) { kind = 'off'; emit = last.kind !== 'off' || last.revision !== snapshot.revision; }
-    const frame = { kind, mode, emit, revision: snapshot.revision, turn: state.turn, guideHash: guide.hash };
-    this.frames.set(agent, frame);
-    if (!kind) return assembly;
-    const text = [reminders[mode][kind], ...kind === 'on' || kind === 'sparse' || kind === 'keyword' ? [guide.text] : []].join('\n\n');
-    return { ...assembly, sections: [...assembly.sections, { name: 'omd:ultracode', text, interpolate: false }] };
+    const text = on ? [submode === 'workflow' ? ULTRA_WORKFLOW_ON : '', guide.text].filter(Boolean).join('\n\n') : last ? ULTRA_OFF : '';
+    return text ? { ...assembly, sections: [...assembly.sections, { name: 'omd:ultra', text, interpolate: false }] } : assembly;
   }
   committed(session, event) {
+    if (event.type === 'turn/start') {
+      const running = this.ctx.agents.get(session.id);
+      if (running) this.prepare(running, true);
+    }
     if (event.type !== 'request/header') return;
     const agent = this.ctx.agents.get(session.id), frame = agent && this.frames.get(agent);
     if (!frame?.emit || !frame.kind) return;
     // No extra model call; durable accounting follows actual request admission.
     const state = this.fold(session);
-    const delivery = { kind: frame.kind, mode: frame.mode, revision: frame.revision, guideHash: frame.guideHash, turn: frame.turn, humanCount: state.humans };
+    const delivery = { kind: frame.kind, mode: frame.mode, submode: frame.submode, revision: frame.revision, guideHash: frame.guideHash, turn: frame.turn, humanCount: state.humans };
     try { this.persist(session, { delivery }); frame.emit = false; this.fresh.delete(agent); }
-    catch (error) { this.ctx.logger?.warn?.('Ultracode reminder accounting failed: ' + error.message); }
+    catch (error) { this.ctx.logger?.warn?.('Ultra reminder accounting failed: ' + error.message); }
   }
 }

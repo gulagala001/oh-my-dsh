@@ -35,6 +35,7 @@ export async function createController({dataDir, browser, native} = {}) {
   const closedBackends = new Set();
   let epoch = 0;
   let aborter = new AbortController();
+  const dialogRecoveries = new Set();
   let tail = Promise.resolve();
 
   function snapshot() {
@@ -70,8 +71,17 @@ export async function createController({dataDir, browser, native} = {}) {
     if (!backend) fail('BACKEND_UNAVAILABLE', `Backend ${target.backend} is not configured`);
     return {target, backend};
   }
-  async function verify(target, backend, cold = false, operationEpoch = epoch) {
-    const result = await backend.verify(json(target), {cold});
+  async function verify(target, backend, cold = false, operationEpoch = epoch, signal) {
+    let interrupt;
+    const pending = backend.verify(json(target), {cold});
+    const interrupted = signal && new Promise((_, reject) => {
+      interrupt = () => reject(Object.assign(new Error('Target verification interrupted'), {code: 'CONTROL_STOPPED'}));
+      signal.addEventListener('abort', interrupt, {once: true});
+      if (signal.aborted) interrupt();
+    });
+    let result;
+    try { result = await (interrupted ? Promise.race([pending, interrupted]) : pending); }
+    finally { if (interrupt) signal.removeEventListener('abort', interrupt); }
     checkOperation(operationEpoch);
     if (result?.valid !== true) {
       target.verified = false;
@@ -86,12 +96,12 @@ export async function createController({dataDir, browser, native} = {}) {
     Object.assign(target, current);
     return target;
   }
-  async function releaseAll() {
+  async function releaseAll({ dismissDialogs = false } = {}) {
     const failures = [];
     for (const [name, backend] of backends) {
       if (closedBackends.has(name)) continue;
       try {
-        const result = await backend.release({targets: [...selected.values()].filter(target => target.backend === name).map(json)});
+        const result = await backend.release({targets: [...selected.values()].filter(target => target.backend === name).map(json), dismissDialogs});
         if (result?.released !== true || result.failures?.length || result.errors?.length) {
           failures.push({backend: name, ...result, released: false});
         }
@@ -109,6 +119,7 @@ export async function createController({dataDir, browser, native} = {}) {
     releasePending = true;
     epoch++;
     aborter.abort();
+    for (const recovery of dialogRecoveries) recovery.abort();
     for (const target of selected.values()) target.verified = false;
   }
   async function inventory() {
@@ -129,6 +140,25 @@ export async function createController({dataDir, browser, native} = {}) {
     listTargets: () => response(() => serial(inventory)),
     openTarget: (request = {}) => response(() => serial(async () => {
       controlAllowed();
+      if (request.backend==='native') {
+        const operationEpoch=epoch, backend=backends.get('native');
+        if (request.launch!==true || ['id','targetId','identity','pid','windowId'].some(key=>request[key]!==undefined)) fail('INVALID_TARGET','Native launch requires a fresh app path or bundleId and launch:true');
+        if (request.path!==undefined && !(typeof request.path==='string'&&request.path.startsWith('/')&&request.path.endsWith('.app')) || request.path===undefined && !(typeof request.bundleId==='string'&&request.bundleId)) fail('INVALID_TARGET','Native launch requires an absolute .app path or explicit bundleId');
+        if (typeof backend?.openApplication!=='function') fail('UNSUPPORTED_OPERATION','This native backend cannot explicitly launch an application');
+        let target;
+        try {
+          target=assertTarget(await backend.openApplication(request),'native');
+          checkOperation(operationEpoch);
+          await verify(target,backend,false,operationEpoch);
+          checkOperation(operationEpoch);
+          // Launch discovers a process; selection and application authorization
+          // remain separate. Never activate, select, observe or persist it here.
+          return {target,launched:true};
+        } catch(error) {
+          if(target)error.details={...error.details,launched:true,target,notice:'The app was launched. Rediscover its windows; do not automatically repeat launch.'};
+          throw error;
+        }
+      }
       const operationEpoch = epoch, backend = backends.get('browser');
       if (typeof backend?.newTab !== 'function') fail('UNSUPPORTED_OPERATION', 'This browser cannot create a tab without an existing target');
       const {browsers} = await inventory();
@@ -206,22 +236,40 @@ export async function createController({dataDir, browser, native} = {}) {
         observedUserActivitySequence: observedActivity.get(target.id) ?? 0};
     })),
     act: (request = {}) => response(() => serial(async () => {
-      controlAllowed();
+      const dialogAction = ['getDialog', 'handleDialog'].includes(request.action);
+      if (dialogAction) alive(); else controlAllowed();
       const operationEpoch = epoch;
       const {target, backend} = targetFor(request.targetId);
-      if (!target.verified || target.cold) fail('RECOVERY_REQUIRED', 'Resume this target before acting');
-      await verify(target, backend);
-      controlAllowed();
+      if (target.cold || !dialogAction && !target.verified) fail('RECOVERY_REQUIRED', 'Resume this target before acting');
       let result;
-      try { result = await backend.act(json(target), {...request, signal: aborter.signal}); }
+      const recovery = dialogAction && aborter.signal.aborted ? new AbortController() : null;
+      if (recovery) dialogRecoveries.add(recovery);
+      try {
+        const signal = recovery?.signal ?? aborter.signal;
+        await verify(target, backend, false, operationEpoch, signal);
+        if (dialogAction) alive(); else controlAllowed();
+        result = await backend.act(json(target), {...request, signal});
+      }
       catch (error) {
         const unresolvedLocator = ['locator','domSnapshot'].includes(request.action) && error.details?.inputDispatched !== true && ['LOCATOR_NOT_FOUND', 'AMBIGUOUS_LOCATOR', 'UNSUPPORTED_LOCATOR', 'LOCATOR_NOT_ACTIONABLE', 'LOCATOR_NOT_STABLE', 'STALE_ELEMENT', 'STALE_OBSERVATION', 'FRAME_NOT_FOUND', 'FRAME_DETACHED'].includes(error.code);
-        if (operationEpoch === epoch && !unresolvedLocator) {
+        const rejectedEditing = ['selectText','paste'].includes(request.action) && error.details?.inputDispatched === false
+          && ['INVALID_ARGUMENT','ELEMENT_NOT_EDITABLE','AMBIGUOUS_TEXT','TEXT_NOT_FOUND','UNSUPPORTED_PASTE_FORMAT','UNSUPPORTED_ACTION','STALE_ELEMENT','STALE_OBSERVATION','FRAME_NOT_FOUND','FRAME_DETACHED'].includes(error.code);
+        const rejectedSecondary = request.action === 'performSecondaryAction' && error.details?.inputDispatched === false
+          && ['INVALID_ARGUMENT','UNSUPPORTED_ACTION','ELEMENT_DISABLED','STALE_ELEMENT'].includes(error.code);
+        const rejectedClick = ['click','doubleClick','double_click','rightClick','right_click'].includes(request.action) && error.details?.inputDispatched === false
+          && ['INVALID_ARGUMENT','INPUT_ALREADY_HELD','RELEASE_REQUIRED','UNSUPPORTED_ACTION','STALE_ELEMENT','STALE_OBSERVATION'].includes(error.code);
+        const rejectedPress = ['press','pressKey','press_key','keypress','key'].includes(request.action) && error.details?.inputDispatched === false
+          && ['INVALID_ARGUMENT','INVALID_ACTION','UNKNOWN_KEY','UNSUPPORTED_KEY','INPUT_ALREADY_HELD','RELEASE_REQUIRED','UNSUPPORTED_ACTION','STALE_ELEMENT','STALE_OBSERVATION'].includes(error.code);
+        const staleTextInput = ['fill','setValue','set_value','type','typeText','type_text'].includes(request.action) && error.details?.inputDispatched === false
+          && ['STALE_ELEMENT','STALE_OBSERVATION'].includes(error.code);
+        const recoverableDialog = ['JS_DIALOG_OPEN', 'STALE_DIALOG'].includes(error.code);
+        if (operationEpoch === epoch && !unresolvedLocator && !rejectedEditing && !rejectedSecondary && !rejectedClick && !rejectedPress && !staleTextInput && !recoverableDialog) {
           block('faulted');
           await releaseAll();
         }
         throw error;
       }
+      finally { if (recovery) dialogRecoveries.delete(recovery); }
       if (operationEpoch !== epoch) fail('CONTROL_STOPPED', 'Action interrupted by cancellation or shutdown');
       if (result?.target) {
         const current = assertTarget(result.target, target.backend);
@@ -245,7 +293,7 @@ export async function createController({dataDir, browser, native} = {}) {
     })),
     stop: () => {
       try { block('stopped'); } catch (error) { return response(() => { throw error; }); }
-      return response(() => serial(async () => { await releaseAll(); return {state: snapshot()}; }));
+      return response(() => serial(async () => { await releaseAll({dismissDialogs:true}); return {state: snapshot()}; }));
     },
     notifyUserActivity: (request = {}) => response(() => {
       alive();
@@ -370,9 +418,10 @@ export async function createController({dataDir, browser, native} = {}) {
       if (closed) return response(async () => ({state: snapshot()}));
       if (closing) return closing;
       mode = 'closing'; releasePending = true; epoch++; aborter.abort();
+      for (const recovery of dialogRecoveries) recovery.abort();
       for (const target of selected.values()) target.verified = false;
       closing = response(() => serial(async () => {
-        await releaseAll();
+        await releaseAll({dismissDialogs:true});
         // Backend teardown cancels its captures; a missing monitor frame cannot hold shutdown hostage.
         const failures = [];
         for (const [name, backend] of backends) {

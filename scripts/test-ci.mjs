@@ -3,10 +3,13 @@ import { spawnSync } from 'node:child_process';
 
 // A few known regressions only; no host installation, browser or build matrix.
 const core = [
-  'start', 'monitor-partial', 'workflow-budget',
-  'file-upload-compat', 'context-original-search-boundary',
+  'start', 'monitor-partial', 'workflow-budget', 'task-budget-persistence',
+  'file-upload-compat', 'context-original-search-boundary', 'background-owner-reload', 'recommended-update',
 ].map(name => `test/${name}.test.mjs`);
 core.push('plugins/deepseek-workbench/test/ui-adapter.test.mjs');
+core.push('test/opencu-browser-generation.test.mjs');
+core.push('test/opencu-app-approval-session-cancel.test.mjs');
+core.push('test/prompt-adaptation.test.mjs');
 
 const [command = 'run', suite = 'core', shard = '1/1'] = process.argv.slice(2);
 if (command === 'matrix') {

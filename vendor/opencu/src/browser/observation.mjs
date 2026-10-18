@@ -31,6 +31,7 @@ export async function observePage(record, request, options) {
   }
   if (format !== 'ax') {
     const fullPage = request.fullPage === true;
+    const viewportBefore = await record.page.evaluate(() => ({width: innerWidth, height: innerHeight, deviceScaleFactor: devicePixelRatio, scrollX, scrollY}));
     const bytes = await record.page.screenshot({type: 'png', fullPage, animations: 'disabled', timeout: options.timeoutMs});
     const sharp = options.sharp ?? (await import('sharp')).default;
     const original = await sharp(bytes).metadata();
@@ -42,11 +43,12 @@ export async function observePage(record, request, options) {
       output = await sharp(bytes).resize({width: request.maxWidth, height: request.maxHeight, fit: 'inside', withoutEnlargement: true}).png().toBuffer();
     }
     const metadata = await sharp(output).metadata();
+    const viewport = await record.page.evaluate(() => ({width: innerWidth, height: innerHeight, deviceScaleFactor: devicePixelRatio, scrollX, scrollY}));
+    if (['width', 'height', 'deviceScaleFactor', 'scrollX', 'scrollY'].some(key => viewport[key] !== viewportBefore[key])) fail('STALE_OBSERVATION', 'Viewport or scroll changed during screenshot capture; observe again');
     const directory = join(options.dataDir, 'observations');
     await mkdir(directory, {recursive: true});
     const path = join(directory, `${observationId}.png`);
     await writeFile(path, output, {mode: 0o600});
-    const viewport = await record.page.evaluate(() => ({width: innerWidth, height: innerHeight, deviceScaleFactor: devicePixelRatio, scrollX, scrollY}));
     result.screenshot = {
       path, mediaType: 'image/png', width: metadata.width, height: metadata.height,
       originalWidth: original.width, originalHeight: original.height, viewport, fullPage,

@@ -2,6 +2,7 @@ import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, us
 import { createPortal } from 'react-dom';
 import { createOptimizerPreferences, DraftOptimizer, OPTIMIZER_MODES, optimizerRequirements } from './prompt-optimizer-state.mjs';
 import css from './prompt-optimizer.css';
+import { isSubagentSession, useMainConversation } from './main-conversation.mjs';
 
 const descriptions = { basic: '只润色表达，保留原意和限制。', structured: '整理已有目标、约束与交付要求。', planning: '将现有任务组织为可执行的步骤。' };
 function Sparkle() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="m10 3 2.1 6.9L19 12l-6.9 2.1L10 21l-2.1-6.9L1 12l6.9-2.1L10 3ZM20 2v6M17 5h6"/></svg>; }
@@ -11,6 +12,7 @@ export function applyPromptOptimizer(ctx, { draftLock } = {}) {
   const preferences = createOptimizerPreferences(), controllers = new Map(), drafts = new Map();
   let closed = false;
   const controllerFor = sessionId => {
+    if (ctx.sessions.subagentAddress(sessionId) !== undefined || isSubagentSession(ctx.sessions.list.getSnapshot(), sessionId)) return null;
     const binding = ctx.sessions.binding(sessionId);
     if (!binding) return null;
     const saved = controllers.get(binding);
@@ -50,7 +52,11 @@ export function applyPromptOptimizer(ctx, { draftLock } = {}) {
       <small>优化模板源自 <a href="https://github.com/linshenkx/prompt-optimizer/tree/93c37090846dd7ba9619a0ebc152f205624df9f1" target="_blank" rel="noreferrer">Prompt Optimizer（MIT 版本）</a>。</small>
     </section>;
   }
-  function Optimizer({ sessionId, useInput }) {
+  function Optimizer(props) {
+    const main = useMainConversation(props);
+    return main ? <MainOptimizer {...props}/> : null;
+  }
+  function MainOptimizer({ sessionId, useInput }) {
     const controller = useMemo(() => controllerFor(sessionId), [sessionId]);
     return controller ? <Entry key={sessionId} controller={controller} useInput={useInput}/> : null;
   }

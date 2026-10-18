@@ -49,14 +49,20 @@ export async function callElement(record, request, operation, payload = {}) {
   } finally { if (objectId) await send('Runtime.releaseObject', {objectId}).catch(() => {}); }
 }
 
+export async function verifyScreenshot(record, request, screenshot = record.screenshot) {
+  if (!screenshot || record.screenshot !== screenshot || (request.screenshotId ?? request.observationId ?? screenshot.observationId) !== screenshot.observationId || screenshot.url !== record.page.url()) fail('STALE_SCREENSHOT', 'Use coordinates from the latest screenshot of this document');
+  if (screenshot.fullPage) fail('UNSUPPORTED_COORDINATE_SPACE', 'Full-page screenshot input is unsupported; observe the viewport');
+  const viewport = await record.page.evaluate(() => ({width: innerWidth, height: innerHeight, scrollX, scrollY}));
+  if (record.screenshot !== screenshot || screenshot.url !== record.page.url()) fail('STALE_SCREENSHOT', 'The screenshot document changed; observe again');
+  if (['width', 'height', 'scrollX', 'scrollY'].some(key => viewport[key] !== screenshot.viewport[key])) fail('STALE_SCREENSHOT', 'Viewport or scroll changed; observe again');
+  return viewport;
+}
+
 export async function screenshotPoint(record, request) {
   const x = finite(request.x, 'x'), y = finite(request.y, 'y');
   if (!['screenshot', 'screenshot-pixels', 'physical-screenshot-pixels'].includes(request.coordinateSpace)) return {x, y};
   const screenshot = record.screenshot;
-  if (!screenshot || (request.screenshotId ?? request.observationId ?? screenshot.observationId) !== screenshot.observationId || screenshot.url !== record.page.url()) fail('STALE_SCREENSHOT', 'Use coordinates from the latest screenshot of this document');
-  if (screenshot.fullPage) fail('UNSUPPORTED_COORDINATE_SPACE', 'Full-page screenshot input is unsupported; observe the viewport');
-  const viewport = await record.page.evaluate(() => ({width: innerWidth, height: innerHeight, scrollX, scrollY}));
-  if (['width', 'height', 'scrollX', 'scrollY'].some(key => viewport[key] !== screenshot.viewport[key])) fail('STALE_SCREENSHOT', 'Viewport or scroll changed; observe again');
+  const viewport = await verifyScreenshot(record, request, screenshot);
   const width = request.previewWidth ?? screenshot.width, height = request.previewHeight ?? screenshot.height;
   if (!(width > 0 && height > 0) || x < 0 || y < 0 || x >= width || y >= height) fail('INVALID_COORDINATES', 'Point is outside the displayed screenshot');
   return {x: x * viewport.width / width, y: y * viewport.height / height};

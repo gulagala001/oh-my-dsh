@@ -1,5 +1,7 @@
 import { runCDPLocator } from './cdp-locator.js';
 import { hitTestViewport } from './frame-router.js';
+import { runTextEdit } from './text-edit.js';
+import {selectOptionsFunction, selectOptionsResult} from './select-options.js';
 const states = new Map();
 const fail = message => { throw Object.assign(new Error(message), { code: 'STALE_ELEMENT' }); };
 function result(reply) {
@@ -23,7 +25,7 @@ export async function observeAccessibility(tabId, send, documentId) {
   return { observationId, ax: { nodes: visible, source: 'chromium-accessibility-tree', stableIds: true, identityScope },
     text: visible.map(node => `${node.elementId ? `[${node.elementId}] ` : ''}${node.role} ${JSON.stringify(node.name)}${node.value !== undefined ? ` value=${JSON.stringify(node.value)}` : ''}`).join('\n') };
 }
-export async function elementOperation(tabId, send, operation, args, router) {
+export async function elementOperation(tabId, send, operation, args, router, editOptions = {}) {
   const state = states.get(tabId), elements = state?.elements;
   if (args.observationId !== undefined && args.observationId !== state?.observationId) fail('Element observation has expired; observe again.');
   const entry = elements?.get(args.elementId);
@@ -35,6 +37,14 @@ export async function elementOperation(tabId, send, operation, args, router) {
     backendNodeId = hit.backendNodeId; elementId = `${crypto.randomUUID()}:hit`;
     const next = elements ?? new Map(); next.set(elementId, {backendNodeId});
     if (!state) states.set(tabId, {elements:next,identityScope:crypto.randomUUID()});
+  }
+  if (operation === 'selectText' || operation === 'paste') {
+    if (args.elementId != null && !backendNodeId) fail('Use an element ID from the current Chromium observation.');
+    return runTextEdit(send,operation,args,{...editOptions,backendNodeId,contextId:route?.contextId,validate:async()=>{
+      if (entry && states.get(tabId)?.elements.get(args.elementId)!==entry) fail('The selected editable element changed.');
+      if (route) await router.validate(route);
+      await editOptions.validate?.();
+    }});
   }
   if (!backendNodeId) fail('Use an element ID from the latest Chromium accessibility observation.');
   if (operation === 'verifyElement') return {valid:true};
@@ -48,17 +58,15 @@ export async function elementOperation(tabId, send, operation, args, router) {
   const { object } = await send('DOM.resolveNode', { backendNodeId, ...(route ? {executionContextId:route.contextId} : {}) });
   if (!object.objectId) fail('The selected DOM node is no longer available.');
   try {
+    if (operation === 'selectOption') {
+      const value = selectOptionsResult(result(await send('Runtime.callFunctionOn', {objectId:object.objectId,returnByValue:true,
+        functionDeclaration:selectOptionsFunction,arguments:[{value:args.values ?? args.value}]})));
+      return {...value,elementId};
+    }
     const value = result(await send('Runtime.callFunctionOn', { objectId: object.objectId, returnByValue: true,
       functionDeclaration: `function(operation, args) {
         if (!this.isConnected || this.nodeType !== 1) throw new Error('The selected element is no longer connected');
         if (operation === 'checked') return {checked:this.checked};
-        if (operation === 'selectOption') {
-          if (this.tagName !== 'SELECT') throw new Error('Element is not a select');
-          const values = Array.isArray(args.value) ? args.value : [args.value];
-          for (const option of this.options) option.selected = values.includes(option.value);
-          this.dispatchEvent(new Event('input',{bubbles:true,composed:true})); this.dispatchEvent(new Event('change',{bubbles:true}));
-          return {selected:[...this.selectedOptions].map(option=>option.value)};
-        }
         if (operation === 'point') {
           this.scrollIntoView({behavior:'instant',block:'center',inline:'center'});
           const box = this.getBoundingClientRect();

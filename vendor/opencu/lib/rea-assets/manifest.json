@@ -2,2372 +2,2372 @@
   {
     "file": "abap-4341a951e10d.js",
     "sha256": "7ab58f90b224cbaaf1522ac1e8026289268e3ade72f43b059fd25d3d1242545e",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/abap-4341a951e10d.js"
+    "source": "webview/assets/abap-4341a951e10d.js"
   },
   {
     "file": "rolldown-runtime-2d059c5e81f4.js",
     "sha256": "e0a79ad36c6ca1ffbc796c80aa5661803a9d1bc684e29d1587f48b4ba9a82714",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/rolldown-runtime-2d059c5e81f4.js"
+    "source": "webview/assets/rolldown-runtime-2d059c5e81f4.js"
   },
   {
     "file": "actionscript-3-cedededbdd3a.js",
     "sha256": "a8744f724bc43a608224b6ba02b3c7fc36642e078f4fb34557308a8f420c8376",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/actionscript-3-cedededbdd3a.js"
+    "source": "webview/assets/actionscript-3-cedededbdd3a.js"
   },
   {
     "file": "ada-f94b9812889e.js",
     "sha256": "ef7061c875e0c4998dc6479227f39b4699e14c2b3500743c8b1f8c098910a0e7",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/ada-f94b9812889e.js"
+    "source": "webview/assets/ada-f94b9812889e.js"
   },
   {
     "file": "angular-html-af8a1b408ff5.js",
     "sha256": "d02b503bb388a0fff7e0c6273dc1623e0c5c224adf103acb485eb4117da56e30",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/angular-html-af8a1b408ff5.js"
+    "source": "webview/assets/angular-html-af8a1b408ff5.js"
   },
   {
     "file": "angular-html-d4489a2bd77e.js",
     "sha256": "48f89913dde9bad109660f90179cc5bcba4641bf35ac173cba5ae1d90b64b2d5",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/angular-html-d4489a2bd77e.js"
+    "source": "webview/assets/angular-html-d4489a2bd77e.js"
   },
   {
     "file": "html-e4355dc6819b.js",
     "sha256": "cadf7d071591cc7cfc96f8eea9d6fc9ed4b92616558111eb5d38c86b2a1f7312",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/html-e4355dc6819b.js"
+    "source": "webview/assets/html-e4355dc6819b.js"
   },
   {
     "file": "javascript-f4061ef937b2.js",
     "sha256": "5aa1166e200ac592d90e2465b6b453c9aea00f2a5f987b18fb339ddbbb0a1fa2",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/javascript-f4061ef937b2.js"
+    "source": "webview/assets/javascript-f4061ef937b2.js"
   },
   {
     "file": "css-cfa74b3f30cd.js",
     "sha256": "164dc8fc77b892dd2322403ae06bd825c42ed36e611713ca698cb93851efcf97",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/css-cfa74b3f30cd.js"
+    "source": "webview/assets/css-cfa74b3f30cd.js"
   },
   {
     "file": "angular-ts-b31114976b16.js",
     "sha256": "50f21d778dd76d6c9074476bb26f2a31bf0b857122a60d48b264d94fd6893bd7",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/angular-ts-b31114976b16.js"
+    "source": "webview/assets/angular-ts-b31114976b16.js"
   },
   {
     "file": "scss-95abe03f682f.js",
     "sha256": "21058703763530ce7afe9fe88ffc375cdf54b46c65e5fe94a4ece59470b17d15",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/scss-95abe03f682f.js"
+    "source": "webview/assets/scss-95abe03f682f.js"
   },
   {
     "file": "apache-2abbef8d32bd.js",
     "sha256": "b6fd8aa47b71071083444a7458769fa3501e72aa0b7f394c929b83e4aca39c31",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/apache-2abbef8d32bd.js"
+    "source": "webview/assets/apache-2abbef8d32bd.js"
   },
   {
     "file": "apex-f39750d4bc4b.js",
     "sha256": "ac72bf462e60d38953e1ba153c1bc3a85cc2b1b7fcd56c47430841a54c6b47a0",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/apex-f39750d4bc4b.js"
+    "source": "webview/assets/apex-f39750d4bc4b.js"
   },
   {
     "file": "apl-ccf268f5552c.js",
     "sha256": "aa2f4d7f565a2fcd4c6167ad60e8e6f01473928ff79fc348260e739f3c044c7e",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/apl-ccf268f5552c.js"
+    "source": "webview/assets/apl-ccf268f5552c.js"
   },
   {
     "file": "xml-e3156ce65998.js",
     "sha256": "f90c9739300307b32052e72bb16532856255d368c49450bf34bf10d04c4e78e1",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/xml-e3156ce65998.js"
+    "source": "webview/assets/xml-e3156ce65998.js"
   },
   {
     "file": "java-49a633209a8d.js",
     "sha256": "49a53b6fb8ab371e48a00eac63cf80eca4c54013f0ccabfa2d481159bc1bc299",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/java-49a633209a8d.js"
+    "source": "webview/assets/java-49a633209a8d.js"
   },
   {
     "file": "json-145acf21f9d9.js",
     "sha256": "e7b93301c61199f678ce96a401638dff2db769abc6b2467521a38643495fea9a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/json-145acf21f9d9.js"
+    "source": "webview/assets/json-145acf21f9d9.js"
   },
   {
     "file": "applescript-58c7487af6b8.js",
     "sha256": "93ccccb6ef48aff5e165c5bac97966608a3845114c7fe92b3fc6af556b56e4b1",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/applescript-58c7487af6b8.js"
+    "source": "webview/assets/applescript-58c7487af6b8.js"
   },
   {
     "file": "ara-98cd9c9298f3.js",
     "sha256": "4cb72cf27d01bdc1e16ad4f460903c27f5b965e8efc6dbe3c3edf0edeee12420",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/ara-98cd9c9298f3.js"
+    "source": "webview/assets/ara-98cd9c9298f3.js"
   },
   {
     "file": "asciidoc-1c0d4aa83d17.js",
     "sha256": "f64a84fa1d27fb896ad2dfe0d4207dde103d564674380737b20c2607cc0cb154",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/asciidoc-1c0d4aa83d17.js"
+    "source": "webview/assets/asciidoc-1c0d4aa83d17.js"
   },
   {
     "file": "asm-9f61fbe95efa.js",
     "sha256": "e5c700666f36bf66acc1ac60379dcaaeb9091051b0585412dadaa95ec0e19435",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/asm-9f61fbe95efa.js"
+    "source": "webview/assets/asm-9f61fbe95efa.js"
   },
   {
     "file": "astro-a043f7d715a9.js",
     "sha256": "6265f30b03685f572b85a595ba5e30bf287021fc8e78b6128f9e28b3a45032b0",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/astro-a043f7d715a9.js"
+    "source": "webview/assets/astro-a043f7d715a9.js"
   },
   {
     "file": "typescript-4acd9618395b.js",
     "sha256": "2455d801be050718f04c9acf656524280a0ad236f542cb9e88c94ed5baaadbe7",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/typescript-4acd9618395b.js"
+    "source": "webview/assets/typescript-4acd9618395b.js"
   },
   {
     "file": "postcss-f5a8d7f48b2f.js",
     "sha256": "f31e8c09171495c1a698e203dc76071848dd7cbbfe3ef1098fad2192aa0e17c9",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/postcss-f5a8d7f48b2f.js"
+    "source": "webview/assets/postcss-f5a8d7f48b2f.js"
   },
   {
     "file": "tsx-b05f45ec50d2.js",
     "sha256": "34901ce93c4145224b4c8a0c1f6360b773561cd94f4a9fd07d81d1102b51e5c3",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/tsx-b05f45ec50d2.js"
+    "source": "webview/assets/tsx-b05f45ec50d2.js"
   },
   {
     "file": "awk-a8f356715551.js",
     "sha256": "91d793a5608854389ba741e2ae1cc1c89b83a41148dcad4b8d76e950dac92c7b",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/awk-a8f356715551.js"
+    "source": "webview/assets/awk-a8f356715551.js"
   },
   {
     "file": "ballerina-beab98e8c318.js",
     "sha256": "bc12f8066202960d30775022c3821b9d27a91d75d2cc174a7c85694fef3a36d7",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/ballerina-beab98e8c318.js"
+    "source": "webview/assets/ballerina-beab98e8c318.js"
   },
   {
     "file": "bat-54ba94408a32.js",
     "sha256": "8837b9594197ea3565d4e756c204386c1d3a4335c6dcebb4b7f75b3ae3e90d09",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/bat-54ba94408a32.js"
+    "source": "webview/assets/bat-54ba94408a32.js"
   },
   {
     "file": "beancount-591be52f90d5.js",
     "sha256": "b3e9e30b79b4c3d692944832d8e7740b24a33c029a1ed99e713a346ac0b08a82",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/beancount-591be52f90d5.js"
+    "source": "webview/assets/beancount-591be52f90d5.js"
   },
   {
     "file": "berry-f351fa36f6a8.js",
     "sha256": "3f27b5b0d896ab05d98e30dc9db6fa60eb77eebff4034360af9fb1711e01eb5f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/berry-f351fa36f6a8.js"
+    "source": "webview/assets/berry-f351fa36f6a8.js"
   },
   {
     "file": "bibtex-bde485510b27.js",
     "sha256": "c2551471c8547cba7e21f96a6f9f81a90baf695b5ab449f5b3dad93960a472b6",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/bibtex-bde485510b27.js"
+    "source": "webview/assets/bibtex-bde485510b27.js"
   },
   {
     "file": "bicep-dd81a6c187d6.js",
     "sha256": "ce1eb140af13b35f84d06fe032dc419719956ecd66210c87ceaf77d7a4b8c757",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/bicep-dd81a6c187d6.js"
+    "source": "webview/assets/bicep-dd81a6c187d6.js"
   },
   {
     "file": "blade-e3764a778470.js",
     "sha256": "b2c348e992e623a4bf4cdfd04adacda224fceed81b9269652784e63fce8c24b1",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/blade-e3764a778470.js"
+    "source": "webview/assets/blade-e3764a778470.js"
   },
   {
     "file": "html-derivative-97c7bc70986e.js",
     "sha256": "2ff0282994b69eab5a05ac073377e090164594ea4303e8be695d501c1ced1433",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/html-derivative-97c7bc70986e.js"
+    "source": "webview/assets/html-derivative-97c7bc70986e.js"
   },
   {
     "file": "sql-9c46a3cc15ad.js",
     "sha256": "8b5a630e05fe1d76f6ef500b24c503db6061bfaa65346e2c7ab151440ffc191c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/sql-9c46a3cc15ad.js"
+    "source": "webview/assets/sql-9c46a3cc15ad.js"
   },
   {
     "file": "bsl-24d3ee0c7fca.js",
     "sha256": "6dfa235ebbafeb0209a7046a21d358c00dee4eab23e91d3e879887e7b294a860",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/bsl-24d3ee0c7fca.js"
+    "source": "webview/assets/bsl-24d3ee0c7fca.js"
   },
   {
     "file": "sdbl-6070b1c9ddb9.js",
     "sha256": "984c8158b4375a7b011ea1ed8335d7efc540169720d95ddc89ad13126edf0be1",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/sdbl-6070b1c9ddb9.js"
+    "source": "webview/assets/sdbl-6070b1c9ddb9.js"
   },
   {
     "file": "c-ac5eb10559fb.js",
     "sha256": "214e4acb8930447befc0d9bc82383e3baa3c5c66a4e19f46d67fcd2807184dc4",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/c-ac5eb10559fb.js"
+    "source": "webview/assets/c-ac5eb10559fb.js"
   },
   {
     "file": "c-3dc82c570549.js",
     "sha256": "db7f38ad3a750f0289c85b25792ff588c07a7bb383fcafa603968545db7ee1a9",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/c-3dc82c570549.js"
+    "source": "webview/assets/c-3dc82c570549.js"
   },
   {
     "file": "cadence-62707a77ae38.js",
     "sha256": "43c0726ae4d62a2f804ed98ca574f20eff75ee5e67a91a38a034f01187c5ebc8",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/cadence-62707a77ae38.js"
+    "source": "webview/assets/cadence-62707a77ae38.js"
   },
   {
     "file": "cairo-a05595a5d7fa.js",
     "sha256": "e43a9ae7c1e79dd0f17008c06f07e5ee01cb6e74da599ebf38148b7e8a1a25ba",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/cairo-a05595a5d7fa.js"
+    "source": "webview/assets/cairo-a05595a5d7fa.js"
   },
   {
     "file": "python-fdf8b6adcc28.js",
     "sha256": "fa0ec7b0d9fa1b7ab8464fd62873b7b7adda6ffbfa7ae01610561ce462d56cb7",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/python-fdf8b6adcc28.js"
+    "source": "webview/assets/python-fdf8b6adcc28.js"
   },
   {
     "file": "clarity-3366c891cc4f.js",
     "sha256": "d65a7a8f85718d25dfdf279409e7a15a0996deb4e675e2c52cfea1358480c969",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/clarity-3366c891cc4f.js"
+    "source": "webview/assets/clarity-3366c891cc4f.js"
   },
   {
     "file": "clojure-ffd07d14fcfc.js",
     "sha256": "055a02f843d66372d33ad57f186287deb50f7b956166cc58528b7407a6def5df",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/clojure-ffd07d14fcfc.js"
+    "source": "webview/assets/clojure-ffd07d14fcfc.js"
   },
   {
     "file": "cmake-1858d5f79e7c.js",
     "sha256": "89f1bca46af848819ff2ffb9505bccdd7833d34d78a8013435c42b0a4f9a9b6d",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/cmake-1858d5f79e7c.js"
+    "source": "webview/assets/cmake-1858d5f79e7c.js"
   },
   {
     "file": "cmake-41f37fc34f77.js",
     "sha256": "049b9ee51ed57ce590f2cb69bd25280f218f99172ac0a1d9c58b3f9975d46890",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/cmake-41f37fc34f77.js"
+    "source": "webview/assets/cmake-41f37fc34f77.js"
   },
   {
     "file": "cobol-af4650bb6eac.js",
     "sha256": "17091fcaf7757a7e2d66a10647a04f46965728ebda45a2849168a47f062195ce",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/cobol-af4650bb6eac.js"
+    "source": "webview/assets/cobol-af4650bb6eac.js"
   },
   {
     "file": "codeowners-e80c0e04ae84.js",
     "sha256": "a85cfe97e19558624053d56b4fea63c433a6fb21d1f7dd4aad7db8c966c19166",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/codeowners-e80c0e04ae84.js"
+    "source": "webview/assets/codeowners-e80c0e04ae84.js"
   },
   {
     "file": "codeql-893e4d6b015a.js",
     "sha256": "fe8fb0a2bedba14f270e2b6ffd6d2826f4edf7ba77ac9e8683b35bd683775094",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/codeql-893e4d6b015a.js"
+    "source": "webview/assets/codeql-893e4d6b015a.js"
   },
   {
     "file": "coffee-151a81ffc355.js",
     "sha256": "1839838c372bc25b64b7c3751ba79ca7898e550e8014c3c46ac6811318eee8d5",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/coffee-151a81ffc355.js"
+    "source": "webview/assets/coffee-151a81ffc355.js"
   },
   {
     "file": "common-lisp-6555e88f0d22.js",
     "sha256": "b50a6415228d0da65cdbb666a78b3e4841c4e0dcc33d8619c2d4126d7368da9c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/common-lisp-6555e88f0d22.js"
+    "source": "webview/assets/common-lisp-6555e88f0d22.js"
   },
   {
     "file": "coq-9d03868602c6.js",
     "sha256": "5221f0c170f2a55bebd63a206ee47c97893131fdfab87bf035cbf4e16792bb8f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/coq-9d03868602c6.js"
+    "source": "webview/assets/coq-9d03868602c6.js"
   },
   {
     "file": "cpp-115418ba4245.js",
     "sha256": "2b14461ed954ec67607681d9b602c54d417847f09249d3528ed4f29f5e3ff2ca",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/cpp-115418ba4245.js"
+    "source": "webview/assets/cpp-115418ba4245.js"
   },
   {
     "file": "cpp-73c01217e4f2.js",
     "sha256": "3034c2b198fbfdd86297e1502105811a694affa362264200e75e15fc51db00a5",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/cpp-73c01217e4f2.js"
+    "source": "webview/assets/cpp-73c01217e4f2.js"
   },
   {
     "file": "regexp-8a0959d878b9.js",
     "sha256": "1bbcc91bb8e09c810cf2799ab8531461bebc42cf52f3dd279050e84096bbf5e5",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/regexp-8a0959d878b9.js"
+    "source": "webview/assets/regexp-8a0959d878b9.js"
   },
   {
     "file": "glsl-984664825cc1.js",
     "sha256": "9babe5609b3761c6078580497aeb64af57a1712e4de8e4b8e6f549e8c4ee96ad",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/glsl-984664825cc1.js"
+    "source": "webview/assets/glsl-984664825cc1.js"
   },
   {
     "file": "crystal-ab804662c003.js",
     "sha256": "8c37109020006fd398d76f661f0905c0f02ad1891cc9d3d7558ada72b5e8ec7d",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/crystal-ab804662c003.js"
+    "source": "webview/assets/crystal-ab804662c003.js"
   },
   {
     "file": "shellscript-de7df40ae1fa.js",
     "sha256": "c874980a19620b029d61adc81404f81e462f08e17b164c56c00ad859f6585f40",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/shellscript-de7df40ae1fa.js"
+    "source": "webview/assets/shellscript-de7df40ae1fa.js"
   },
   {
     "file": "csharp-8c303cc1438c.js",
     "sha256": "24a850a51d41a14f0f24d8727b021eb2926d0fb95113fd8c195b3e68efc32cc6",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/csharp-8c303cc1438c.js"
+    "source": "webview/assets/csharp-8c303cc1438c.js"
   },
   {
     "file": "csharp-3b3778d82232.js",
     "sha256": "06ab33309c5f6af594ad714e11c9874963fa80baff9db40011d83064f5759e95",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/csharp-3b3778d82232.js"
+    "source": "webview/assets/csharp-3b3778d82232.js"
   },
   {
     "file": "css-ab9a89e18f84.js",
     "sha256": "5adb0af78f9424cd2c0c4c66e3b1193387b6ec45a5a09186de3bd1c24f541fcd",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/css-ab9a89e18f84.js"
+    "source": "webview/assets/css-ab9a89e18f84.js"
   },
   {
     "file": "csv-b6e2b8c81267.js",
     "sha256": "5c4cbf5b60f760aef4ba8efaaf71c019e5a0969779123215c51b70ceedee8238",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/csv-b6e2b8c81267.js"
+    "source": "webview/assets/csv-b6e2b8c81267.js"
   },
   {
     "file": "csv-ce71efbe80f9.js",
     "sha256": "179571ebd9a993e73c4f99e19c2f610a2e6c6f61f5333dd9503383295658ac12",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/csv-ce71efbe80f9.js"
+    "source": "webview/assets/csv-ce71efbe80f9.js"
   },
   {
     "file": "cue-1fa5bb3624b7.js",
     "sha256": "3549e311c7b0a5e6279a3f3e9d01f87ef6b27e5126ac34ad5b7e852c963c307f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/cue-1fa5bb3624b7.js"
+    "source": "webview/assets/cue-1fa5bb3624b7.js"
   },
   {
     "file": "cypher-186e80a8c4e9.js",
     "sha256": "42f02ad3ca72bf3e6531f185b565cfff24f79c670b0adc81df7c71ba25dee89b",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/cypher-186e80a8c4e9.js"
+    "source": "webview/assets/cypher-186e80a8c4e9.js"
   },
   {
     "file": "d-279b60731012.js",
     "sha256": "044522f111106faad1e5e12229ae68f455a63a42da2b9bf697a4b537fa7691de",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/d-279b60731012.js"
+    "source": "webview/assets/d-279b60731012.js"
   },
   {
     "file": "dart-be8b4aea8c63.js",
     "sha256": "7b23f7ad4f34704e1b44e764f9573c8be5293c2257c9a7269941c29172b5b203",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/dart-be8b4aea8c63.js"
+    "source": "webview/assets/dart-be8b4aea8c63.js"
   },
   {
     "file": "dax-20c18f2ccee5.js",
     "sha256": "8a7a6bbeae551f90949feb41c235f2f1d958785d07ba17ac29bd09840bdd3971",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/dax-20c18f2ccee5.js"
+    "source": "webview/assets/dax-20c18f2ccee5.js"
   },
   {
     "file": "desktop-6609d262a613.js",
     "sha256": "42ca42f03fde8e94c57286a0a950da6c9e244a30b418e479e12c6995258566d1",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/desktop-6609d262a613.js"
+    "source": "webview/assets/desktop-6609d262a613.js"
   },
   {
     "file": "diff-ca09736157a0.js",
     "sha256": "f239b15d2ec66f94113fed7826b3ed51f6b20fd0377ded579b97157240aab247",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/diff-ca09736157a0.js"
+    "source": "webview/assets/diff-ca09736157a0.js"
   },
   {
     "file": "diff-613c218ad89b.js",
     "sha256": "b57daadf329c28f49f09259577702e987bdcd1effa61f21768a49838797909f7",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/diff-613c218ad89b.js"
+    "source": "webview/assets/diff-613c218ad89b.js"
   },
   {
     "file": "docker-211209ca40bd.js",
     "sha256": "fb879fc508687be02d6aa7d4d6f17e43b4267adf9ce8b7675d1f3809e8a53d6f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/docker-211209ca40bd.js"
+    "source": "webview/assets/docker-211209ca40bd.js"
   },
   {
     "file": "dotenv-ea2094339639.js",
     "sha256": "a08f4502ff7853ca28ca0556cbc63009c8dd9d3011de1865a09ec00350b23b48",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/dotenv-ea2094339639.js"
+    "source": "webview/assets/dotenv-ea2094339639.js"
   },
   {
     "file": "dream-maker-22eaa93dab95.js",
     "sha256": "5e0fae116cb9e17b4532b665fad2f11b80e1766cdc8f852bd4333011534d4efe",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/dream-maker-22eaa93dab95.js"
+    "source": "webview/assets/dream-maker-22eaa93dab95.js"
   },
   {
     "file": "edge-cc5c206624ee.js",
     "sha256": "a3a804e66393bea7b5a8287c6009c87e709eab51127c1abaf6b55706c67c5340",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/edge-cc5c206624ee.js"
+    "source": "webview/assets/edge-cc5c206624ee.js"
   },
   {
     "file": "elixir-2427e77a607e.js",
     "sha256": "d7876bb32c52689c88dbed6bb88edc0340b79da0344b502751a04ec17a811f74",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/elixir-2427e77a607e.js"
+    "source": "webview/assets/elixir-2427e77a607e.js"
   },
   {
     "file": "elm-3cf10484d7d9.js",
     "sha256": "5bb822065f23b1d53e76923c62b7372db4ee42d6f64b06fd187d42beca3bf5bd",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/elm-3cf10484d7d9.js"
+    "source": "webview/assets/elm-3cf10484d7d9.js"
   },
   {
     "file": "emacs-lisp-d99565cf7a8b.js",
     "sha256": "c9a7091d5157ef538a20bd573bcc4484a620a5093edd2d1436c3503a77574d5d",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/emacs-lisp-d99565cf7a8b.js"
+    "source": "webview/assets/emacs-lisp-d99565cf7a8b.js"
   },
   {
     "file": "erb-c168bae06f2b.js",
     "sha256": "41b1f76c6e67511487385ac39cd2fe5cb836dec1206a6b8fab46a6ea2a06f0be",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/erb-c168bae06f2b.js"
+    "source": "webview/assets/erb-c168bae06f2b.js"
   },
   {
     "file": "ruby-13d4043d144f.js",
     "sha256": "c204ce2ff8e47b866880de3b30955d7c2ee8f636c121c964ddb02582632cac45",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/ruby-13d4043d144f.js"
+    "source": "webview/assets/ruby-13d4043d144f.js"
   },
   {
     "file": "haml-3bbab7efb1b9.js",
     "sha256": "20a2cc369fdc7f872d3ad628e4756fdd36c4e7dd22c64bb1c0697511cc9fd3d0",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/haml-3bbab7efb1b9.js"
+    "source": "webview/assets/haml-3bbab7efb1b9.js"
   },
   {
     "file": "graphql-fcc279bd92c5.js",
     "sha256": "ea5d49b26a1886bd294365c1c575693d48534028eae319b1db046ae98bddf472",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/graphql-fcc279bd92c5.js"
+    "source": "webview/assets/graphql-fcc279bd92c5.js"
   },
   {
     "file": "jsx-114d4b77e22d.js",
     "sha256": "0f83eef120719b7dee5e432b4826737bdd36693fa52f2a8fa1d5c1167540cb04",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/jsx-114d4b77e22d.js"
+    "source": "webview/assets/jsx-114d4b77e22d.js"
   },
   {
     "file": "lua-ec4138ed9dd4.js",
     "sha256": "076f861a8bf3292124ba64c8c0cb11e8780dfe13ef99413173ca82fd38d23d4f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/lua-ec4138ed9dd4.js"
+    "source": "webview/assets/lua-ec4138ed9dd4.js"
   },
   {
     "file": "yaml-bd5a72a355a2.js",
     "sha256": "2d915a1c5e2c5ea6db7ddaede6d13d2bc1cd2bc4c2e43bbe4097857ade28f7f0",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/yaml-bd5a72a355a2.js"
+    "source": "webview/assets/yaml-bd5a72a355a2.js"
   },
   {
     "file": "erlang-49d0815bfbef.js",
     "sha256": "127135433f251b562ef4be93186df0cf947566803f53b551ff1cb1bc620e1a13",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/erlang-49d0815bfbef.js"
+    "source": "webview/assets/erlang-49d0815bfbef.js"
   },
   {
     "file": "markdown-1c15c2fc01dc.js",
     "sha256": "c89ab0c9753185eec2faedae275ef59c59a6c40e430a9386f287250c8b485fe4",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/markdown-1c15c2fc01dc.js"
+    "source": "webview/assets/markdown-1c15c2fc01dc.js"
   },
   {
     "file": "fennel-9239f307e200.js",
     "sha256": "ab11c4a63e46614596ec86111759d2460c362924cb7c743ff8ca42829a56601c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/fennel-9239f307e200.js"
+    "source": "webview/assets/fennel-9239f307e200.js"
   },
   {
     "file": "fish-a3460550232a.js",
     "sha256": "0b0eabd59f283d1d228e16194273e3f486db26245c7d5db54907eae99b76d047",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/fish-a3460550232a.js"
+    "source": "webview/assets/fish-a3460550232a.js"
   },
   {
     "file": "fluent-64552c1f20da.js",
     "sha256": "d61c04cbd122e83067fc4c7f33959fc781bbdb16b365d3e32eb489a379376d63",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/fluent-64552c1f20da.js"
+    "source": "webview/assets/fluent-64552c1f20da.js"
   },
   {
     "file": "fortran-fixed-form-150607408663.js",
     "sha256": "5300af2cf99e83d37dc1f78c6244226be0c2811d974fa34bc39db121b2015c61",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/fortran-fixed-form-150607408663.js"
+    "source": "webview/assets/fortran-fixed-form-150607408663.js"
   },
   {
     "file": "fortran-free-form-29925ea254af.js",
     "sha256": "9620df007c0904cbd195b34414bdc9b86be5264940551c5df9c090c624c825f9",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/fortran-free-form-29925ea254af.js"
+    "source": "webview/assets/fortran-free-form-29925ea254af.js"
   },
   {
     "file": "fortran-free-form-cdbb0f6ffbe0.js",
     "sha256": "3546eb3ee3825420b795af50f2caee554a85dcdbeb2ab7c9621933b99e1bfc8c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/fortran-free-form-cdbb0f6ffbe0.js"
+    "source": "webview/assets/fortran-free-form-cdbb0f6ffbe0.js"
   },
   {
     "file": "fsharp-f4fef38e10dc.js",
     "sha256": "3c99555383639b1513610e00c953566b776ede197d7a6acba9b03453b25da543",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/fsharp-f4fef38e10dc.js"
+    "source": "webview/assets/fsharp-f4fef38e10dc.js"
   },
   {
     "file": "gdresource-b15af986a821.js",
     "sha256": "70702d056aec9acf997eebf9110706b8b1a58eb99146a531bb6c126e03c50653",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/gdresource-b15af986a821.js"
+    "source": "webview/assets/gdresource-b15af986a821.js"
   },
   {
     "file": "gdshader-19d346c8700a.js",
     "sha256": "df7f5a29d20c0996c60a1135df79dcbd171a6819830a457ac443a46ef213928e",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/gdshader-19d346c8700a.js"
+    "source": "webview/assets/gdshader-19d346c8700a.js"
   },
   {
     "file": "gdscript-a2165fb2e1cc.js",
     "sha256": "94c881c080de0721ecdc3e18e4ba44ecd6d662c0a8443688298eea49a26d4c1e",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/gdscript-a2165fb2e1cc.js"
+    "source": "webview/assets/gdscript-a2165fb2e1cc.js"
   },
   {
     "file": "gdscript-f14b099b0cfd.js",
     "sha256": "5b81019bd0302be7af9c68812d1cbdd3b886a008a7018e18bfc57a84542271cd",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/gdscript-f14b099b0cfd.js"
+    "source": "webview/assets/gdscript-f14b099b0cfd.js"
   },
   {
     "file": "gdshader-df74c669b2ed.js",
     "sha256": "fe620aad27e0b7f621cd65fe860bad189b2a4eef743adf5420fc9ad24469e2a7",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/gdshader-df74c669b2ed.js"
+    "source": "webview/assets/gdshader-df74c669b2ed.js"
   },
   {
     "file": "genie-2fc1ae1e47ff.js",
     "sha256": "b9b062740f0a257a5a9919082648f7dc5221fef3d5235acbfc59f0c7890fa593",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/genie-2fc1ae1e47ff.js"
+    "source": "webview/assets/genie-2fc1ae1e47ff.js"
   },
   {
     "file": "gherkin-31970a0d15b1.js",
     "sha256": "c6e62c3cab1c1499f5e6f5533fbe07e46da26e4975a3656e7472ca647688fcb5",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/gherkin-31970a0d15b1.js"
+    "source": "webview/assets/gherkin-31970a0d15b1.js"
   },
   {
     "file": "git-commit-805129a7b49a.js",
     "sha256": "6f90d15ae57101b378a2dda3c2b117377bc9371ec0b2c736c49cceec2947c353",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/git-commit-805129a7b49a.js"
+    "source": "webview/assets/git-commit-805129a7b49a.js"
   },
   {
     "file": "git-rebase-fda593e0d064.js",
     "sha256": "5f682041bcf8bb7bd0e7f4da31c6ed731a1ba309869e3900f8d6d20abf6ca824",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/git-rebase-fda593e0d064.js"
+    "source": "webview/assets/git-rebase-fda593e0d064.js"
   },
   {
     "file": "gleam-dd19dd0309d8.js",
     "sha256": "785cb7c9039fbd6f0ede67ce83e3c2827f6b443ab05712e37095d54118149a76",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/gleam-dd19dd0309d8.js"
+    "source": "webview/assets/gleam-dd19dd0309d8.js"
   },
   {
     "file": "glimmer-js-d83365669e77.js",
     "sha256": "e96202b31f7f565aafdbaa05474deccdc568c4c94e64b50ae0b8c67728850420",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/glimmer-js-d83365669e77.js"
+    "source": "webview/assets/glimmer-js-d83365669e77.js"
   },
   {
     "file": "glimmer-ts-45110b7faab2.js",
     "sha256": "79fc2f16dba5b9a62b87900d126e2a45e12a4f88535fdb7499a9884ff33618b4",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/glimmer-ts-45110b7faab2.js"
+    "source": "webview/assets/glimmer-ts-45110b7faab2.js"
   },
   {
     "file": "glsl-a0fe947a2b45.js",
     "sha256": "5e32e506eac73ddf3a193c554a2c768eb7aa7a44452a135cc0a7c0f273ef2872",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/glsl-a0fe947a2b45.js"
+    "source": "webview/assets/glsl-a0fe947a2b45.js"
   },
   {
     "file": "gnuplot-f707734f55c4.js",
     "sha256": "dde1d4800fdfcbe93d0ab5ed3c24b83f3ddad611ef6259490ce2bfc7b9139043",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/gnuplot-f707734f55c4.js"
+    "source": "webview/assets/gnuplot-f707734f55c4.js"
   },
   {
     "file": "go-9a5eb757db6b.js",
     "sha256": "e5386b63eba7b830e057d537dd43b5f1e38a0dda2d0c56efaed8fc4e496741ff",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/go-9a5eb757db6b.js"
+    "source": "webview/assets/go-9a5eb757db6b.js"
   },
   {
     "file": "go-9204c07b28c2.js",
     "sha256": "a16538a3bfb687f38ef116a3ed7e00bdabf09d0997d846a82156a77a493de180",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/go-9204c07b28c2.js"
+    "source": "webview/assets/go-9204c07b28c2.js"
   },
   {
     "file": "graphql-81794aa9e870.js",
     "sha256": "acfd7ed1d040888a8a64a5562dc5184aff25c2ca7e06558533bb5631c777975a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/graphql-81794aa9e870.js"
+    "source": "webview/assets/graphql-81794aa9e870.js"
   },
   {
     "file": "groovy-8e5da8b0bd63.js",
     "sha256": "80fc6e9daa182907ba6c9ce37e855dbb581649e841032d7bf51b129f5b7a5239",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/groovy-8e5da8b0bd63.js"
+    "source": "webview/assets/groovy-8e5da8b0bd63.js"
   },
   {
     "file": "hack-3d79c40b8b82.js",
     "sha256": "09fd326a09e3fe5a4f9981b0ee28eb68be4c826e3e2b2d65554617e30e31486a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/hack-3d79c40b8b82.js"
+    "source": "webview/assets/hack-3d79c40b8b82.js"
   },
   {
     "file": "haml-d470fdfe9f4c.js",
     "sha256": "9cd269158a48986e6a529eb4017ea59792a8c979a01cc19c1f93f19523ac6991",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/haml-d470fdfe9f4c.js"
+    "source": "webview/assets/haml-d470fdfe9f4c.js"
   },
   {
     "file": "handlebars-5b8c57789009.js",
     "sha256": "f213e76be93ecb21316b3ebf980ed903e37319ebc7b165d4dff17323f250bfe9",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/handlebars-5b8c57789009.js"
+    "source": "webview/assets/handlebars-5b8c57789009.js"
   },
   {
     "file": "haskell-42ca6adcf6f7.js",
     "sha256": "327b53dcd8a933ceebecdc1a765df5a870037d1db826243997ecff0994a308d2",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/haskell-42ca6adcf6f7.js"
+    "source": "webview/assets/haskell-42ca6adcf6f7.js"
   },
   {
     "file": "haxe-5f4404ed24c9.js",
     "sha256": "0c9fb962c966188a17f272c608ed377c1ba584ec6e748bab6939cbe838536381",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/haxe-5f4404ed24c9.js"
+    "source": "webview/assets/haxe-5f4404ed24c9.js"
   },
   {
     "file": "haxe-4b8170017548.js",
     "sha256": "e43835f2ea95ded95aee438348d9103d22b208e9d56e0f96088e79ea01e5c2e1",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/haxe-4b8170017548.js"
+    "source": "webview/assets/haxe-4b8170017548.js"
   },
   {
     "file": "hcl-a5063db83c2a.js",
     "sha256": "96c40c79f24c42521648eac594187e2cf82bed2d574b93708be928e429b15dda",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/hcl-a5063db83c2a.js"
+    "source": "webview/assets/hcl-a5063db83c2a.js"
   },
   {
     "file": "hjson-61b911f7ddb9.js",
     "sha256": "b9c6ad290c51c66a00c14d12f031445a0a403b088b7e8669d25f0d71ea9daa0c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/hjson-61b911f7ddb9.js"
+    "source": "webview/assets/hjson-61b911f7ddb9.js"
   },
   {
     "file": "hlsl-246e1a652ff1.js",
     "sha256": "ef4529faeb6fe4e690735a00122e3109b33175dbf4d174653383475ccfc4b413",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/hlsl-246e1a652ff1.js"
+    "source": "webview/assets/hlsl-246e1a652ff1.js"
   },
   {
     "file": "hlsl-a292573f74ca.js",
     "sha256": "84aa116c4236ae44942fc2e50890626bda02a05906104a2e72778ddb36651f92",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/hlsl-a292573f74ca.js"
+    "source": "webview/assets/hlsl-a292573f74ca.js"
   },
   {
     "file": "html-e0b96e3e1725.js",
     "sha256": "00bf7dc9180d1e4f47c489c683146b07ef590acb39f29f23d1c78ad19ac2dfa9",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/html-e0b96e3e1725.js"
+    "source": "webview/assets/html-e0b96e3e1725.js"
   },
   {
     "file": "html-derivative-60c0018e2a7c.js",
     "sha256": "e76bf207d4994ba1c44735366c15391a050b17564dbc35d6173d5f4772e24f7a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/html-derivative-60c0018e2a7c.js"
+    "source": "webview/assets/html-derivative-60c0018e2a7c.js"
   },
   {
     "file": "http-16302150f64d.js",
     "sha256": "1f0d0b8dd4f4fdd8fe4f09b17db59e1c3111e82088c2c07c78453b5d94ba540b",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/http-16302150f64d.js"
+    "source": "webview/assets/http-16302150f64d.js"
   },
   {
     "file": "hurl-ced3e59c5214.js",
     "sha256": "3cc76f7ea4f7969f61a5f0df392a439f83486eaeea93b7b661f731b352d10444",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/hurl-ced3e59c5214.js"
+    "source": "webview/assets/hurl-ced3e59c5214.js"
   },
   {
     "file": "hxml-b602bb5f7721.js",
     "sha256": "475eadb4730f13eed6c9d35b7bedec70008575f4899621f682237b77231a9760",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/hxml-b602bb5f7721.js"
+    "source": "webview/assets/hxml-b602bb5f7721.js"
   },
   {
     "file": "hy-18f390a1888c.js",
     "sha256": "6a06123f7a0a4411fccef30caced3c2ce73d337dc7529c30524ab2d0fcac583a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/hy-18f390a1888c.js"
+    "source": "webview/assets/hy-18f390a1888c.js"
   },
   {
     "file": "imba-dead5ff7a297.js",
     "sha256": "1c03688406ef747d42f372bd48f46aadb522da7818f2e3701fa2d1dd8d944db0",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/imba-dead5ff7a297.js"
+    "source": "webview/assets/imba-dead5ff7a297.js"
   },
   {
     "file": "ini-f3209ae8a178.js",
     "sha256": "38d8dde2db92692ce57380460096b91ee3ec7ead1dce0e303d92d4b6ab3c3cca",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/ini-f3209ae8a178.js"
+    "source": "webview/assets/ini-f3209ae8a178.js"
   },
   {
     "file": "java-e7082f9b5716.js",
     "sha256": "9afc72f96019ce586473f350651251f3c4ac0b62294feceb756767456f96a784",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/java-e7082f9b5716.js"
+    "source": "webview/assets/java-e7082f9b5716.js"
   },
   {
     "file": "javascript-4ffd1caf0873.js",
     "sha256": "bf74dc88b7e11e93446770a4cf8aed17be61e7f1b70623781ff74370027918e8",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/javascript-4ffd1caf0873.js"
+    "source": "webview/assets/javascript-4ffd1caf0873.js"
   },
   {
     "file": "jinja-0c11fd9a8185.js",
     "sha256": "0eb1bf670740869f8157ffd9716a7a960bd0477d46e05cf4c0d19cdb44b24e88",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/jinja-0c11fd9a8185.js"
+    "source": "webview/assets/jinja-0c11fd9a8185.js"
   },
   {
     "file": "jison-f5b5eb6d59d2.js",
     "sha256": "0462c4d6d842b477777e549acc3715c74b447f9de68fef6d179d6acbbfa5eca2",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/jison-f5b5eb6d59d2.js"
+    "source": "webview/assets/jison-f5b5eb6d59d2.js"
   },
   {
     "file": "json-106b4a581de3.js",
     "sha256": "5a637f283e2b67b388ffbb5c46329abb45348dcd7385de19db1748de8dd20c2e",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/json-106b4a581de3.js"
+    "source": "webview/assets/json-106b4a581de3.js"
   },
   {
     "file": "json5-b11994cc8578.js",
     "sha256": "f77c58fc603f9ae23064a6931c34cf345ac2ca91453b0f5db1d2485d772a0512",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/json5-b11994cc8578.js"
+    "source": "webview/assets/json5-b11994cc8578.js"
   },
   {
     "file": "jsonc-eaf27898a6d0.js",
     "sha256": "21ad8746f31e077ef63741334f7cdbab1d3fd72eb18a17415fed57e16ffdcbfe",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/jsonc-eaf27898a6d0.js"
+    "source": "webview/assets/jsonc-eaf27898a6d0.js"
   },
   {
     "file": "jsonl-405fa9ecccec.js",
     "sha256": "81754ba51bca6a7f10f619bc29a8e9e8b3b53fbbe40f532311da352c93fe27dc",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/jsonl-405fa9ecccec.js"
+    "source": "webview/assets/jsonl-405fa9ecccec.js"
   },
   {
     "file": "jsonnet-8a17f73b1075.js",
     "sha256": "30b9cc45a39ae4e28f376dae246ddaf3548489b75d63be40cf9679aa5b9bf065",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/jsonnet-8a17f73b1075.js"
+    "source": "webview/assets/jsonnet-8a17f73b1075.js"
   },
   {
     "file": "jssm-554455183a02.js",
     "sha256": "c24a5ba6434c8fd4dc65d21df9b25d0d1e089154c22b62782af735f9223b9077",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/jssm-554455183a02.js"
+    "source": "webview/assets/jssm-554455183a02.js"
   },
   {
     "file": "jsx-1d597b40cbbc.js",
     "sha256": "d60f22ef569c28717f052ae1266ec22bd6097f959ec79c58cbf3aecd6c5e4132",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/jsx-1d597b40cbbc.js"
+    "source": "webview/assets/jsx-1d597b40cbbc.js"
   },
   {
     "file": "julia-728b59d885fb.js",
     "sha256": "5f4f205bdf6046708715c501abae66f996651eadab6b1c57c91b5914e0d1c506",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/julia-728b59d885fb.js"
+    "source": "webview/assets/julia-728b59d885fb.js"
   },
   {
     "file": "r-24747feccd98.js",
     "sha256": "6653ade2a9c394415176638b6962b813a012d520951cb14edc0fb68f44e20134",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/r-24747feccd98.js"
+    "source": "webview/assets/r-24747feccd98.js"
   },
   {
     "file": "kdl-f3749ab4bee8.js",
     "sha256": "923644ca7df962ea063bb3cb8f35526e2befb27434f5ed00bfdfc6588c1629b0",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/kdl-f3749ab4bee8.js"
+    "source": "webview/assets/kdl-f3749ab4bee8.js"
   },
   {
     "file": "kotlin-a98770ad6108.js",
     "sha256": "528b9cde8177b668252e69dd9a0ca97080570c7637e6d46b1f221805769fa7a3",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/kotlin-a98770ad6108.js"
+    "source": "webview/assets/kotlin-a98770ad6108.js"
   },
   {
     "file": "kusto-5a4764ed9968.js",
     "sha256": "d39ce33c99bac82a69407689686f9c193dcc959753ccb98ed7224d91c32ace3b",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/kusto-5a4764ed9968.js"
+    "source": "webview/assets/kusto-5a4764ed9968.js"
   },
   {
     "file": "latex-60a93e5746e6.js",
     "sha256": "fd07af1e43ddeffb9a315b9ff824a5e6441a3512b0fe0c5ad4523f2d5eb0aeb0",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/latex-60a93e5746e6.js"
+    "source": "webview/assets/latex-60a93e5746e6.js"
   },
   {
     "file": "tex-88a281e4c36a.js",
     "sha256": "d3ee3f79d6e542db1e91967a80b171e17a397408526af4f85eb8ebe9fabf1b88",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/tex-88a281e4c36a.js"
+    "source": "webview/assets/tex-88a281e4c36a.js"
   },
   {
     "file": "lean-44b5927f306d.js",
     "sha256": "7cdacb85d22bc192e83bd8454ca1be4098a5e292f7af1df776982b7c4b9e4181",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/lean-44b5927f306d.js"
+    "source": "webview/assets/lean-44b5927f306d.js"
   },
   {
     "file": "less-6e450891a185.js",
     "sha256": "2dbe0c87a1a7572b59a171ee526ba7625fde570fc3d3f933d53b911c4063fdc4",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/less-6e450891a185.js"
+    "source": "webview/assets/less-6e450891a185.js"
   },
   {
     "file": "less-4e351974aeb6.js",
     "sha256": "41746d5daebb15af9f3a0efda42734875c976b66d83e3233aa09247c864f9100",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/less-4e351974aeb6.js"
+    "source": "webview/assets/less-4e351974aeb6.js"
   },
   {
     "file": "liquid-1ad990f3e8af.js",
     "sha256": "d92e5fd5dfd088a8c2821f26813b5aee64d34eac7e3e404e61195083e0ef88aa",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/liquid-1ad990f3e8af.js"
+    "source": "webview/assets/liquid-1ad990f3e8af.js"
   },
   {
     "file": "llvm-4cc1e52aa7d1.js",
     "sha256": "5284e27b38cff1cd06dddc3e1964cc64413a490fd2af5ac60616f3c9cc4815cc",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/llvm-4cc1e52aa7d1.js"
+    "source": "webview/assets/llvm-4cc1e52aa7d1.js"
   },
   {
     "file": "log-fc27006a65ab.js",
     "sha256": "956268d1be5922ddfbfcd160e524d26708ffcd6eb4cff406ce47a8e9cef6084e",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/log-fc27006a65ab.js"
+    "source": "webview/assets/log-fc27006a65ab.js"
   },
   {
     "file": "logo-ac46b6d5596c.js",
     "sha256": "352d9eef4bc071a7d579d5a7bf4791a1963e8fe978e0a7bc9284330992198535",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/logo-ac46b6d5596c.js"
+    "source": "webview/assets/logo-ac46b6d5596c.js"
   },
   {
     "file": "lua-ac29337895f8.js",
     "sha256": "e65e4431cb8ca6c6d37a0189ee0be2e05d1cf7a73cdc7852a16bd8f44269109c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/lua-ac29337895f8.js"
+    "source": "webview/assets/lua-ac29337895f8.js"
   },
   {
     "file": "luau-af32ac672287.js",
     "sha256": "ed70e55bfc3f12337292553c90d236da6859fb47c1553be3e983647fb19dd64c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/luau-af32ac672287.js"
+    "source": "webview/assets/luau-af32ac672287.js"
   },
   {
     "file": "make-9a743bf89d5a.js",
     "sha256": "b89fcc49263fc224bb981fc85c0bf879b766ec5df0285b445641cdfbd1378558",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/make-9a743bf89d5a.js"
+    "source": "webview/assets/make-9a743bf89d5a.js"
   },
   {
     "file": "markdown-d7043fbbade8.js",
     "sha256": "c6a081441a09aa7924d9a432fa4c5b7099f15472434d61786d580afbf4ae5a63",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/markdown-d7043fbbade8.js"
+    "source": "webview/assets/markdown-d7043fbbade8.js"
   },
   {
     "file": "marko-4aec0bbd7e63.js",
     "sha256": "e768995a4966c4bebebc4ffb7c7a1c2f835b9f3f331b4889c54a3437d4f917b9",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/marko-4aec0bbd7e63.js"
+    "source": "webview/assets/marko-4aec0bbd7e63.js"
   },
   {
     "file": "matlab-64ab9b10628f.js",
     "sha256": "b07a183f7221bbf800a1c945ca11fc22aef078837aa109478c9f0767b1ce316c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/matlab-64ab9b10628f.js"
+    "source": "webview/assets/matlab-64ab9b10628f.js"
   },
   {
     "file": "mdc-7ea2d3ba0f2c.js",
     "sha256": "79eec19baee5890c063d469471b8a5fb9be17b8b0ff224c1e4f9a45f419a7d96",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/mdc-7ea2d3ba0f2c.js"
+    "source": "webview/assets/mdc-7ea2d3ba0f2c.js"
   },
   {
     "file": "mdx-b255fa6706e7.js",
     "sha256": "ed43a02bb6f5a1a0fe3a2558a91815afd73bdc7eba10be02be1982abbe96158f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/mdx-b255fa6706e7.js"
+    "source": "webview/assets/mdx-b255fa6706e7.js"
   },
   {
     "file": "mermaid-15f275192ca7.js",
     "sha256": "a06a03058b7de7215fde06ebf3f196b9ca34e0c0ba5a6b3a4959fccc119def7a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/mermaid-15f275192ca7.js"
+    "source": "webview/assets/mermaid-15f275192ca7.js"
   },
   {
     "file": "mermaid-54e250569eb6.js",
     "sha256": "5ff499ee10bd885cf255455409ea369f6ce2139719bff1c5f516a25cc15562a8",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/mermaid-54e250569eb6.js"
+    "source": "webview/assets/mermaid-54e250569eb6.js"
   },
   {
     "file": "mipsasm-bb936f7899ac.js",
     "sha256": "9509e97eddd520fbdfb011055bef22965b27c80cc7c299237aa399a378f57663",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/mipsasm-bb936f7899ac.js"
+    "source": "webview/assets/mipsasm-bb936f7899ac.js"
   },
   {
     "file": "mojo-b6e83dbb224e.js",
     "sha256": "dd4d328b43a7c48441489b5a109e31667c13aba6c3471f3c501b5839c4645e6c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/mojo-b6e83dbb224e.js"
+    "source": "webview/assets/mojo-b6e83dbb224e.js"
   },
   {
     "file": "move-cecb4c703761.js",
     "sha256": "72ea19c559e7f532b4ab7cd3b2b9a25e786eaa2e01d58355afbc294edc954155",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/move-cecb4c703761.js"
+    "source": "webview/assets/move-cecb4c703761.js"
   },
   {
     "file": "narrat-2ea5db78a89c.js",
     "sha256": "d1737b274912e748068b8771dcc09e72773edbf3b3ed40c61033b00a944f07fd",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/narrat-2ea5db78a89c.js"
+    "source": "webview/assets/narrat-2ea5db78a89c.js"
   },
   {
     "file": "nextflow-659c84397019.js",
     "sha256": "967467ff5af279964bebe6606324ae70aeb2a61282fe479055ce58c926297424",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/nextflow-659c84397019.js"
+    "source": "webview/assets/nextflow-659c84397019.js"
   },
   {
     "file": "nginx-871d90573e4d.js",
     "sha256": "cf1c7accec523e8cbb6421ce6676c359aa043f2edb62e1273a1ed71136397d9d",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/nginx-871d90573e4d.js"
+    "source": "webview/assets/nginx-871d90573e4d.js"
   },
   {
     "file": "nim-9edfb6eed9c0.js",
     "sha256": "f1c4f78152b98baf5ecd775bd3a6dfcc442e44f1ccd5fbea4d7572e09e809ee7",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/nim-9edfb6eed9c0.js"
+    "source": "webview/assets/nim-9edfb6eed9c0.js"
   },
   {
     "file": "nix-d578d0a1042b.js",
     "sha256": "ac1bbc581b63e048d3d8ad8698cd3f5a9a4f43881ade6b74426e871475930769",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/nix-d578d0a1042b.js"
+    "source": "webview/assets/nix-d578d0a1042b.js"
   },
   {
     "file": "nushell-26bdb8be0341.js",
     "sha256": "a50ca58424b60574072169fa968dd5ee557da044f7e4998f8bd3995afe2abc2e",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/nushell-26bdb8be0341.js"
+    "source": "webview/assets/nushell-26bdb8be0341.js"
   },
   {
     "file": "objective-c-db20f6f96f34.js",
     "sha256": "beab983c0a0ae566d7fb58383e73224c81e62799a8351697c64504b0e46d453c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/objective-c-db20f6f96f34.js"
+    "source": "webview/assets/objective-c-db20f6f96f34.js"
   },
   {
     "file": "objective-cpp-5c0bf73ace31.js",
     "sha256": "82f610b222375da0a3c79a3f48b44fdfca92ad840d1af594b81d1c62906390dd",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/objective-cpp-5c0bf73ace31.js"
+    "source": "webview/assets/objective-cpp-5c0bf73ace31.js"
   },
   {
     "file": "ocaml-83dc9e2f60cc.js",
     "sha256": "d0457313ed529a9f2f7c8d9df5adba0b0c5128872a4f0061f42b037f31bca383",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/ocaml-83dc9e2f60cc.js"
+    "source": "webview/assets/ocaml-83dc9e2f60cc.js"
   },
   {
     "file": "openscad-8dbac786f981.js",
     "sha256": "12626c2f8d3754456f7e22da8b679a6beca86265bfefa4b9ed043092b2b80780",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/openscad-8dbac786f981.js"
+    "source": "webview/assets/openscad-8dbac786f981.js"
   },
   {
     "file": "pascal-b648fd2afd7c.js",
     "sha256": "794cdc27e92f42efb2d78b8e46c9c46a43e2094f22da85841bffa8dcd1832fd8",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/pascal-b648fd2afd7c.js"
+    "source": "webview/assets/pascal-b648fd2afd7c.js"
   },
   {
     "file": "perl-9cbd6b3cc04a.js",
     "sha256": "2249cd1ee4bf0db8bc241fa6f128fd3194bfe5e9c43fee0c2b6c9d804f4cffbb",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/perl-9cbd6b3cc04a.js"
+    "source": "webview/assets/perl-9cbd6b3cc04a.js"
   },
   {
     "file": "php-cf1b91dd2d19.js",
     "sha256": "dd49859d9f4bd2b0904ff7fd297ce063bdb2450db209398cfb2bda8c1e3e2a5c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/php-cf1b91dd2d19.js"
+    "source": "webview/assets/php-cf1b91dd2d19.js"
   },
   {
     "file": "php-c02d2a7395b0.js",
     "sha256": "667b1eab4393577a6d2e4375e0a33dcf494d703597d37d74cbf17c1f78473046",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/php-c02d2a7395b0.js"
+    "source": "webview/assets/php-c02d2a7395b0.js"
   },
   {
     "file": "pkl-c9b132f7a245.js",
     "sha256": "74767a7339226050348d6f01720095cb70b60f42522a53424c17af8267fb2bed",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/pkl-c9b132f7a245.js"
+    "source": "webview/assets/pkl-c9b132f7a245.js"
   },
   {
     "file": "plsql-d1c904d1ee6e.js",
     "sha256": "4867584c68140fc70081c2808a8a2377c9299efcb6d24a3e00c1e5427b20c0b7",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/plsql-d1c904d1ee6e.js"
+    "source": "webview/assets/plsql-d1c904d1ee6e.js"
   },
   {
     "file": "po-419584ab95fc.js",
     "sha256": "15debfc5766aa01138d40f188996e86f5b23df8e42f66239b62f23e2811016ae",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/po-419584ab95fc.js"
+    "source": "webview/assets/po-419584ab95fc.js"
   },
   {
     "file": "polar-141fe9dfbdaf.js",
     "sha256": "b1924e9a0256953d4d9a70527f3fe9d85a4bff4062b13abc1faee8be428c8b3b",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/polar-141fe9dfbdaf.js"
+    "source": "webview/assets/polar-141fe9dfbdaf.js"
   },
   {
     "file": "postcss-866e5266f689.js",
     "sha256": "74ddda46719b94d978bdc3d1fe4e9462392bec6b6eef2cc95f5f482f82d43a06",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/postcss-866e5266f689.js"
+    "source": "webview/assets/postcss-866e5266f689.js"
   },
   {
     "file": "powerquery-bf7dacaa1d93.js",
     "sha256": "5ab16ebb0f67bd79e9605d0b8783b241221f7a2de7f7daee80844da229ba68af",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/powerquery-bf7dacaa1d93.js"
+    "source": "webview/assets/powerquery-bf7dacaa1d93.js"
   },
   {
     "file": "powershell-6437dba8c304.js",
     "sha256": "223d4a5828a30babd4a88a1048dde33f9e3fa18ab18beaf1e98e3d1df7d7dd20",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/powershell-6437dba8c304.js"
+    "source": "webview/assets/powershell-6437dba8c304.js"
   },
   {
     "file": "prisma-287d5ec0a570.js",
     "sha256": "873eb9cd7c5f94914b54a8ebb40f9e48385b7209dc9c8c30f35ab10023d61617",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/prisma-287d5ec0a570.js"
+    "source": "webview/assets/prisma-287d5ec0a570.js"
   },
   {
     "file": "prolog-bab4ab3fd088.js",
     "sha256": "4c64a7736ad0f1cbb659f5049556f373e069730a9ff1e14e203a7409bee62e83",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/prolog-bab4ab3fd088.js"
+    "source": "webview/assets/prolog-bab4ab3fd088.js"
   },
   {
     "file": "proto-c37f4138e757.js",
     "sha256": "d509c4e7ca0f40540fadf88522da391f054bfe4a881e0080d8a10fc41c5f4c49",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/proto-c37f4138e757.js"
+    "source": "webview/assets/proto-c37f4138e757.js"
   },
   {
     "file": "pug-e502eaf84bb5.js",
     "sha256": "3859e91503ad0291ff5dda201506516cf565ed4860377d32eacca872e0e03aeb",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/pug-e502eaf84bb5.js"
+    "source": "webview/assets/pug-e502eaf84bb5.js"
   },
   {
     "file": "puppet-bfeae2f377db.js",
     "sha256": "c05232998162cc6cf12a45ee37d08f742be206e81c099d4f6e447f1f590cb8db",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/puppet-bfeae2f377db.js"
+    "source": "webview/assets/puppet-bfeae2f377db.js"
   },
   {
     "file": "purescript-4e8039c0cf2a.js",
     "sha256": "c098d3c041ad1c82e5f0b41fc9f2b47fe7baaa4c4e97aba8940226446e67a919",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/purescript-4e8039c0cf2a.js"
+    "source": "webview/assets/purescript-4e8039c0cf2a.js"
   },
   {
     "file": "python-805c25541893.js",
     "sha256": "7cf4574012755b5c2ab9dad4303aba67738cb6e9749c75519e4b095120efdb0b",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/python-805c25541893.js"
+    "source": "webview/assets/python-805c25541893.js"
   },
   {
     "file": "qml-9063b638c35d.js",
     "sha256": "a71c3fc4e28209f2c269951e0d65d92a304397885dfa4e48b5e46d0a8f3e53f8",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/qml-9063b638c35d.js"
+    "source": "webview/assets/qml-9063b638c35d.js"
   },
   {
     "file": "qmldir-d93e751b2e79.js",
     "sha256": "5a3ad1d2c9fc6c0e4faa71da7cfb006e60c633181f31fdeaaa0f9bf3931831ef",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/qmldir-d93e751b2e79.js"
+    "source": "webview/assets/qmldir-d93e751b2e79.js"
   },
   {
     "file": "qss-4778639be898.js",
     "sha256": "5980729ab8eede100b6e350f96b3106cbbdf973517a4d971c74cf87013e19cbf",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/qss-4778639be898.js"
+    "source": "webview/assets/qss-4778639be898.js"
   },
   {
     "file": "r-880e4ee3048b.js",
     "sha256": "44f36e9c9e67667c7e1628c57b484cc93b351248d50785c1ce1cc0f8b8ab1ff0",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/r-880e4ee3048b.js"
+    "source": "webview/assets/r-880e4ee3048b.js"
   },
   {
     "file": "racket-90202fce4ac0.js",
     "sha256": "5083c5e9048a3bf0f84f51d4a570c15fb92c5036b284f69b1965ed532a16130e",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/racket-90202fce4ac0.js"
+    "source": "webview/assets/racket-90202fce4ac0.js"
   },
   {
     "file": "raku-d903360b4d49.js",
     "sha256": "005f2db6c8d91ad06ce7219379403c4f88425b42b50c47e2c0f060535b5aa209",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/raku-d903360b4d49.js"
+    "source": "webview/assets/raku-d903360b4d49.js"
   },
   {
     "file": "razor-c8065f2c6a05.js",
     "sha256": "20bdf27d1f75c0f3ee08fe4b6364a09d698b2278b7ae230cf9d722466d131ca7",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/razor-c8065f2c6a05.js"
+    "source": "webview/assets/razor-c8065f2c6a05.js"
   },
   {
     "file": "reg-88e8c66af7db.js",
     "sha256": "d00346624b44f9891f6241cace37dae18561909c35e0e8e7363054495c66dbd3",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/reg-88e8c66af7db.js"
+    "source": "webview/assets/reg-88e8c66af7db.js"
   },
   {
     "file": "regexp-ad3b2e1330ac.js",
     "sha256": "e932bcf51457d1710e3e99734073d66e9bcd909593e4cef6474aa2ed2340202e",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/regexp-ad3b2e1330ac.js"
+    "source": "webview/assets/regexp-ad3b2e1330ac.js"
   },
   {
     "file": "rel-915a0f0f9090.js",
     "sha256": "51a943ddd921cf0ffc7a9b1d82a833e4e9fe64b9cd621e0a2f99a3ed190aadb9",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/rel-915a0f0f9090.js"
+    "source": "webview/assets/rel-915a0f0f9090.js"
   },
   {
     "file": "riscv-e69e16dc5131.js",
     "sha256": "25ba2ace9cf66d560f2ada4f175d00ac9c9b1b07f76612536ce000b0dc7d2614",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/riscv-e69e16dc5131.js"
+    "source": "webview/assets/riscv-e69e16dc5131.js"
   },
   {
     "file": "rosmsg-6ebd2bc6b086.js",
     "sha256": "8d5f07dc3d0cb49f1d3ef34bfccde494193553c643e8bee0ede81e23feafbad0",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/rosmsg-6ebd2bc6b086.js"
+    "source": "webview/assets/rosmsg-6ebd2bc6b086.js"
   },
   {
     "file": "rst-8fea79bb1bef.js",
     "sha256": "3d00ccca4b973dfa20060d9c29905bed345237d751d86cfed2bbe9a2d007040a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/rst-8fea79bb1bef.js"
+    "source": "webview/assets/rst-8fea79bb1bef.js"
   },
   {
     "file": "ruby-6366a38aef51.js",
     "sha256": "1043f3a9b64be97a1fe7ff4d3cccc3fffa53de4e325ff69c43ea3936061248e6",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/ruby-6366a38aef51.js"
+    "source": "webview/assets/ruby-6366a38aef51.js"
   },
   {
     "file": "rust-8d7ccc80bbce.js",
     "sha256": "54c0bd89486082831d101f754c2e258a2ef2523a7e223a67d90bc7b3ebb9d357",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/rust-8d7ccc80bbce.js"
+    "source": "webview/assets/rust-8d7ccc80bbce.js"
   },
   {
     "file": "sas-285dbe80bb4e.js",
     "sha256": "bc0011d3b6a7b0ddbb6c66226cdd7ff52819ed8a44222a0920414de351f2dfe4",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/sas-285dbe80bb4e.js"
+    "source": "webview/assets/sas-285dbe80bb4e.js"
   },
   {
     "file": "sass-c29e46bc590c.js",
     "sha256": "1b5069dd20aa25c172aa4cae55a0edcafeb1e086fbe05e0cbdeeb7d141d55e7b",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/sass-c29e46bc590c.js"
+    "source": "webview/assets/sass-c29e46bc590c.js"
   },
   {
     "file": "scala-ac1868a232c8.js",
     "sha256": "3921c1a39db7141d4a118c272a0aaf68043dbedbbb1136d9e6788270e5d047f2",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/scala-ac1868a232c8.js"
+    "source": "webview/assets/scala-ac1868a232c8.js"
   },
   {
     "file": "scheme-52032b63276a.js",
     "sha256": "8d9f45c22623c72b3c689718467787227ebc74c64e7f1a08a2103136f8615709",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/scheme-52032b63276a.js"
+    "source": "webview/assets/scheme-52032b63276a.js"
   },
   {
     "file": "scss-53bcf4f12d13.js",
     "sha256": "35a447b4fcc429bb456cfbb51d1e0cfde625f691c11471822b0b233793da573d",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/scss-53bcf4f12d13.js"
+    "source": "webview/assets/scss-53bcf4f12d13.js"
   },
   {
     "file": "sdbl-193315ecf9e2.js",
     "sha256": "bc5fdfad9b69d8ee3503f90e73d4485ccadbb33a7cc4f74d118220b180981ee8",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/sdbl-193315ecf9e2.js"
+    "source": "webview/assets/sdbl-193315ecf9e2.js"
   },
   {
     "file": "shaderlab-42c04f74a45b.js",
     "sha256": "f05e3897d29f10b6a499f508090bd17073779d8d4ff88f8bfb427ca4c8354b67",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/shaderlab-42c04f74a45b.js"
+    "source": "webview/assets/shaderlab-42c04f74a45b.js"
   },
   {
     "file": "shellscript-8ccca808d9e0.js",
     "sha256": "aa706a2672c797797db78890895cfec2a8281301fb1ad389900d6dc049c3b561",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/shellscript-8ccca808d9e0.js"
+    "source": "webview/assets/shellscript-8ccca808d9e0.js"
   },
   {
     "file": "shellsession-176ea3a6b2e8.js",
     "sha256": "1fd5d9a6156092aaf65f2b0e53301b7a0d67dfc2137cd023df057a35a2c757c0",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/shellsession-176ea3a6b2e8.js"
+    "source": "webview/assets/shellsession-176ea3a6b2e8.js"
   },
   {
     "file": "smalltalk-79dd4baca0b8.js",
     "sha256": "3b658d8431651138bcd6d068f2f19ba8db1b7e8baeca42e96b0748ce881aee3c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/smalltalk-79dd4baca0b8.js"
+    "source": "webview/assets/smalltalk-79dd4baca0b8.js"
   },
   {
     "file": "solidity-e120e2c70d65.js",
     "sha256": "3ea06b4e89908411db93d3d2a82a6d0be61be3f7e751809c1e4738807021498a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/solidity-e120e2c70d65.js"
+    "source": "webview/assets/solidity-e120e2c70d65.js"
   },
   {
     "file": "soy-e89a7d40fc18.js",
     "sha256": "62e296d25e949eab7378cb2abb6c847ffec34957963cc4eee1efaf676f8a6774",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/soy-e89a7d40fc18.js"
+    "source": "webview/assets/soy-e89a7d40fc18.js"
   },
   {
     "file": "sparql-c2f6c5bf3e6e.js",
     "sha256": "b7a6880d26bbfb3649ba00b043fc0d38d7d4e47f38bf07de99da45d5641bff8d",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/sparql-c2f6c5bf3e6e.js"
+    "source": "webview/assets/sparql-c2f6c5bf3e6e.js"
   },
   {
     "file": "turtle-3789894e20e3.js",
     "sha256": "e09efaf4f72f0b1be1dc8ab52a817e1f85afaa6a24aea630d0f2ffbaf8ced7b0",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/turtle-3789894e20e3.js"
+    "source": "webview/assets/turtle-3789894e20e3.js"
   },
   {
     "file": "splunk-2e5dc9664248.js",
     "sha256": "ae902fa171df68457feaa322ac815c1a6a1ec675c6a31e445ff9416b36d7f4bd",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/splunk-2e5dc9664248.js"
+    "source": "webview/assets/splunk-2e5dc9664248.js"
   },
   {
     "file": "sql-1bbe31b620be.js",
     "sha256": "35539fc5f518ac98fef2047837c4f78c1eff3cd10f11f9cdb0c4e9b7df8e5dda",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/sql-1bbe31b620be.js"
+    "source": "webview/assets/sql-1bbe31b620be.js"
   },
   {
     "file": "ssh-config-9970ee85950c.js",
     "sha256": "2bf80860eee9668b4856972f8ab51dd85982a8dd56984dae1b1cae75e0dbd888",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/ssh-config-9970ee85950c.js"
+    "source": "webview/assets/ssh-config-9970ee85950c.js"
   },
   {
     "file": "stata-166785edfb1b.js",
     "sha256": "318474c548e58b5b69e4c2447b1e13321f6630c3c7416cdaa7804f086bf76b11",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/stata-166785edfb1b.js"
+    "source": "webview/assets/stata-166785edfb1b.js"
   },
   {
     "file": "stylus-c53b33630761.js",
     "sha256": "f7eb73c75deeb791eff6fd474374a647c614335ff111b4ee94b6095864dcb572",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/stylus-c53b33630761.js"
+    "source": "webview/assets/stylus-c53b33630761.js"
   },
   {
     "file": "stylus-832d4facd004.js",
     "sha256": "6b5c0b70e6de8c3820ab49f28a3df436dda646b8d3365ba1c6d0805e49426a34",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/stylus-832d4facd004.js"
+    "source": "webview/assets/stylus-832d4facd004.js"
   },
   {
     "file": "svelte-890f984e77ad.js",
     "sha256": "b87028ca9cf2c04031a0f19618c475b564f06f84e0020393999bbdc0462720cb",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/svelte-890f984e77ad.js"
+    "source": "webview/assets/svelte-890f984e77ad.js"
   },
   {
     "file": "swift-72e666e4c455.js",
     "sha256": "f7234510092a55e057742240a245765d77018ddf3e9e2fb4f5e48baa8a8e6760",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/swift-72e666e4c455.js"
+    "source": "webview/assets/swift-72e666e4c455.js"
   },
   {
     "file": "system-verilog-f59007365ead.js",
     "sha256": "2903d772df956f7a1267b4835d69071f501d13d3f994b316c8825c9d258563a9",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/system-verilog-f59007365ead.js"
+    "source": "webview/assets/system-verilog-f59007365ead.js"
   },
   {
     "file": "systemd-38004cbed811.js",
     "sha256": "893c83d2545585b550abf7156d7d6367835d71a97e486cc751d989a9c610202a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/systemd-38004cbed811.js"
+    "source": "webview/assets/systemd-38004cbed811.js"
   },
   {
     "file": "talonscript-41e9872f09fe.js",
     "sha256": "87da49268a416d398840a2110da8bd8c11eea0e728e74d3c671231bbb03d384f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/talonscript-41e9872f09fe.js"
+    "source": "webview/assets/talonscript-41e9872f09fe.js"
   },
   {
     "file": "tasl-48a9bc81d271.js",
     "sha256": "0e598af350e8fe9a335d2214dbade17a3b6773f6757211a41cb20a9be770e0ef",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/tasl-48a9bc81d271.js"
+    "source": "webview/assets/tasl-48a9bc81d271.js"
   },
   {
     "file": "tcl-ce7278de3a8a.js",
     "sha256": "353d530208b30d6abbf2f0721173c115b9b5fccca5ce90a70a5d6ba19daa574a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/tcl-ce7278de3a8a.js"
+    "source": "webview/assets/tcl-ce7278de3a8a.js"
   },
   {
     "file": "templ-2af534dcce06.js",
     "sha256": "3d4bc9136fca9d7500c6b50ef053f0d690a6b34db58bd8054be9e3d449e0c602",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/templ-2af534dcce06.js"
+    "source": "webview/assets/templ-2af534dcce06.js"
   },
   {
     "file": "terraform-253271c20fbb.js",
     "sha256": "720596a295d71336d16146ac474536a9131c0a47eea5915b604213220868898a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/terraform-253271c20fbb.js"
+    "source": "webview/assets/terraform-253271c20fbb.js"
   },
   {
     "file": "tex-f9292bf27eba.js",
     "sha256": "e06440a2b68574ba64f51bb2f5b7f6729a041161f1f03d567fa1a790da7afa9d",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/tex-f9292bf27eba.js"
+    "source": "webview/assets/tex-f9292bf27eba.js"
   },
   {
     "file": "toml-20f56a2d5853.js",
     "sha256": "419e15394dcdf4597ecaa3c2eb775aa8d407842d9f905d88bf5a9e2dfb4b51ed",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/toml-20f56a2d5853.js"
+    "source": "webview/assets/toml-20f56a2d5853.js"
   },
   {
     "file": "ts-tags-e9dff42088e8.js",
     "sha256": "a619021e64cb85087d228d2f5fc6fcd19871341cb72afe967a0016c21b57fef6",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/ts-tags-e9dff42088e8.js"
+    "source": "webview/assets/ts-tags-e9dff42088e8.js"
   },
   {
     "file": "tsv-eafd13f1482c.js",
     "sha256": "ab7c53849fea175920c72bab646b520262cd9a9ecdd8c2c0be936db593bb2cee",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/tsv-eafd13f1482c.js"
+    "source": "webview/assets/tsv-eafd13f1482c.js"
   },
   {
     "file": "tsx-c2aadc6c4d39.js",
     "sha256": "ed0644fcc82920df20a6d692063c08c26d66398c2d10b22697e56b09c77f1ff1",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/tsx-c2aadc6c4d39.js"
+    "source": "webview/assets/tsx-c2aadc6c4d39.js"
   },
   {
     "file": "turtle-37245fe51e76.js",
     "sha256": "4905ea16276b287e9e647f20fe523e6ab98247421ab2244d9a6607f9a7ef7081",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/turtle-37245fe51e76.js"
+    "source": "webview/assets/turtle-37245fe51e76.js"
   },
   {
     "file": "twig-41c75b3315aa.js",
     "sha256": "749ab7ba425470b66181ccd4d09fde907eceecb080e3a0890c4369e0f68f39fd",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/twig-41c75b3315aa.js"
+    "source": "webview/assets/twig-41c75b3315aa.js"
   },
   {
     "file": "typescript-b4ac10ce3896.js",
     "sha256": "b7b221bbabdbf241b27b9a18bc242ccc51c0e8590c813c48f87c6a2e6efdfbed",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/typescript-b4ac10ce3896.js"
+    "source": "webview/assets/typescript-b4ac10ce3896.js"
   },
   {
     "file": "typespec-93043181fcf1.js",
     "sha256": "07a30c4fb018f8e7fe5bad1be11ef4368056911f93b4a6e6fa384621a0cc74fc",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/typespec-93043181fcf1.js"
+    "source": "webview/assets/typespec-93043181fcf1.js"
   },
   {
     "file": "typst-88a3f7e93ab9.js",
     "sha256": "975f06489bbf82a0294dbd06e6a42221c6c39fabf650866bbcdcd10c0df29b19",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/typst-88a3f7e93ab9.js"
+    "source": "webview/assets/typst-88a3f7e93ab9.js"
   },
   {
     "file": "v-6ef545f4b0a6.js",
     "sha256": "9e3b66a5f681c375025c8455f5ad840ecbb262d47ba9a8322f041aab5ddc439f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/v-6ef545f4b0a6.js"
+    "source": "webview/assets/v-6ef545f4b0a6.js"
   },
   {
     "file": "vala-8228adcfa249.js",
     "sha256": "74dd96c8ed7c7e15c623fe9192d82f9a3f18ea7d8bd02797ad30ebd697da6444",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/vala-8228adcfa249.js"
+    "source": "webview/assets/vala-8228adcfa249.js"
   },
   {
     "file": "vb-5d5bfd92b0b1.js",
     "sha256": "6ae43a61c1970347112d7f026af71d33cfebf57d2243e54f753aa0abe8b7a54c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/vb-5d5bfd92b0b1.js"
+    "source": "webview/assets/vb-5d5bfd92b0b1.js"
   },
   {
     "file": "verilog-b38469302e31.js",
     "sha256": "825a79243bc1f43575aab3e7cf5cf2f5b45199f33bd25ef5fd80b7bb8f26bf58",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/verilog-b38469302e31.js"
+    "source": "webview/assets/verilog-b38469302e31.js"
   },
   {
     "file": "vhdl-d4b7bcdb12b6.js",
     "sha256": "3a75fe6746b122089b20c3e7f0dc18c8c00fcca0df73d5be3c09326892e10cef",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/vhdl-d4b7bcdb12b6.js"
+    "source": "webview/assets/vhdl-d4b7bcdb12b6.js"
   },
   {
     "file": "viml-f9063f64ebee.js",
     "sha256": "9b0b4171d212ca140c1a504dc0b91259ae0836ccaf9593b4177b75e0c050b494",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/viml-f9063f64ebee.js"
+    "source": "webview/assets/viml-f9063f64ebee.js"
   },
   {
     "file": "vue-eb78715a4a6b.js",
     "sha256": "30efabfd0570d05ff4d4da8d783a794dda26a0aa7e11e26821662c3320648020",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/vue-eb78715a4a6b.js"
+    "source": "webview/assets/vue-eb78715a4a6b.js"
   },
   {
     "file": "vue-7951fbedcefd.js",
     "sha256": "0e9bfdad8747c0ecedf097ebbcd6fc3b502b030683c6ace9f1c57ef129a32491",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/vue-7951fbedcefd.js"
+    "source": "webview/assets/vue-7951fbedcefd.js"
   },
   {
     "file": "vue-html-953cc2eea6e2.js",
     "sha256": "bb4a1591f1206fb375dd24c0d0f0ee6b84e9b12b85dab402f54c3b183616605f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/vue-html-953cc2eea6e2.js"
+    "source": "webview/assets/vue-html-953cc2eea6e2.js"
   },
   {
     "file": "vue-vine-d3780642b5d9.js",
     "sha256": "cab86feb34c2eddc2ab1d7ba09b264f470120977e83e26fb1341229bcc1e78e8",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/vue-vine-d3780642b5d9.js"
+    "source": "webview/assets/vue-vine-d3780642b5d9.js"
   },
   {
     "file": "vyper-d7d1e1b4b512.js",
     "sha256": "6436fe31f86a787fc5ce8e67ec985812cda1906ed6ec8f9736bc401175d3bce7",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/vyper-d7d1e1b4b512.js"
+    "source": "webview/assets/vyper-d7d1e1b4b512.js"
   },
   {
     "file": "wasm-1fb480ce33a1.js",
     "sha256": "86528b44a062c27b276c6b19bf1054c5402b6658b106511e99df951549f126b5",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/wasm-1fb480ce33a1.js"
+    "source": "webview/assets/wasm-1fb480ce33a1.js"
   },
   {
     "file": "wenyan-1c9f004946f8.js",
     "sha256": "9635171e91411d1fd29aaae0f31f732891d10b0f2a4b167d3ece7f751c6a580f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/wenyan-1c9f004946f8.js"
+    "source": "webview/assets/wenyan-1c9f004946f8.js"
   },
   {
     "file": "wgsl-fc7001991efb.js",
     "sha256": "c9e1435667748be7150e68b0d968ad16e36ebc74ff2591a46c2b54d29f595f73",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/wgsl-fc7001991efb.js"
+    "source": "webview/assets/wgsl-fc7001991efb.js"
   },
   {
     "file": "wikitext-a65e21ccf075.js",
     "sha256": "65a51fd8fe65abffe5ffda348b2139ee21707977ba5e98c5b9a95e8ca5c18b2f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/wikitext-a65e21ccf075.js"
+    "source": "webview/assets/wikitext-a65e21ccf075.js"
   },
   {
     "file": "wit-517f7ec03023.js",
     "sha256": "cb923f76e85b1d445aefcb0ad80b369c17be51594158680e79895feb95a82a40",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/wit-517f7ec03023.js"
+    "source": "webview/assets/wit-517f7ec03023.js"
   },
   {
     "file": "wolfram-7e59eb473ab7.js",
     "sha256": "f4054b16a5e426e88a7ad29e754d1f6d1375068cd533aff988de38ca215682a9",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/wolfram-7e59eb473ab7.js"
+    "source": "webview/assets/wolfram-7e59eb473ab7.js"
   },
   {
     "file": "xml-e376fa40de0a.js",
     "sha256": "2737b43cf50a84872be90e8cd4aaa1a4229084c9f513f47d47218c624ff28906",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/xml-e376fa40de0a.js"
+    "source": "webview/assets/xml-e376fa40de0a.js"
   },
   {
     "file": "xsl-ebda38951f10.js",
     "sha256": "a8eda192d0fc0f346fa79eddf66a5fa7102482e2b8c452fa586cca23688b21cf",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/xsl-ebda38951f10.js"
+    "source": "webview/assets/xsl-ebda38951f10.js"
   },
   {
     "file": "yaml-84335cdfd018.js",
     "sha256": "e8481bbd29a7e489e8fc9c4887baf3f4c22bde35827c4cd7a09fa3214a53a97e",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/yaml-84335cdfd018.js"
+    "source": "webview/assets/yaml-84335cdfd018.js"
   },
   {
     "file": "zenscript-1672cfe42250.js",
     "sha256": "595272c02ff16e01a5cbff6241e97ac544e439346b2f968baa0334cddcac6a76",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/zenscript-1672cfe42250.js"
+    "source": "webview/assets/zenscript-1672cfe42250.js"
   },
   {
     "file": "zig-17a985773bd6.js",
     "sha256": "4190737ab54c5a9c760b8f2690658f90f8578fe10b7c9c5e80fc48e8b2f3e506",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/zig-17a985773bd6.js"
+    "source": "webview/assets/zig-17a985773bd6.js"
   },
   {
     "file": "runtime.worker-430bca8c9c7b.js",
     "sha256": "0114409c332e6660aa3ce81165d40f72d5f03a3fcada5874e653321f26376de0",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/runtime.worker-430bca8c9c7b.js"
+    "source": "vendor/build-inputs/rea/assets/runtime.worker-430bca8c9c7b.js"
   },
   {
     "file": "rolldown-runtime-7467d20d835c.js",
     "sha256": "5e9b0d884d2ebb14e241ab38b43e41efb61bce2e74d71507b0b95b264fba4047",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/rolldown-runtime-7467d20d835c.js"
+    "source": "vendor/build-inputs/rea/assets/rolldown-runtime-7467d20d835c.js"
   },
   {
     "file": "defaultLocale-8d3c65a932e7.js",
     "sha256": "21e7b484ec82995b15f2a934283a42eb9662ea1ec65ca1f4747d6fd715eb979d",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/defaultLocale-8d3c65a932e7.js"
+    "source": "vendor/build-inputs/rea/assets/defaultLocale-8d3c65a932e7.js"
   },
   {
     "file": "ordinal-9b87408e3342.js",
     "sha256": "e55fe9782b7d678f376d9593d5d353162752484123617ea555712f64cb6786f4",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/ordinal-9b87408e3342.js"
+    "source": "vendor/build-inputs/rea/assets/ordinal-9b87408e3342.js"
   },
   {
     "file": "init-be3903289783.js",
     "sha256": "4d49f5bba549f03d16d62e86da0f818b1fe4354c8bac9dc6b11d43f8dc40eb31",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/init-be3903289783.js"
+    "source": "vendor/build-inputs/rea/assets/init-be3903289783.js"
   },
   {
     "file": "path-d00f9f1c08b9.js",
     "sha256": "3c19d9ef5b67975764753ffa507887bc3537fb3984b3f547a6a54524253eb3fa",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/path-d00f9f1c08b9.js"
+    "source": "vendor/build-inputs/rea/assets/path-d00f9f1c08b9.js"
   },
   {
     "file": "math-d32c9f1b6861.js",
     "sha256": "9c3124ccbdaa7e56ac509f967000c44baca170fbf29d9148e9b0ce8d523d1477",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/math-d32c9f1b6861.js"
+    "source": "vendor/build-inputs/rea/assets/math-d32c9f1b6861.js"
   },
   {
     "file": "array-627e14aa5d75.js",
     "sha256": "9b59ea6c93cfc249962ff29c613ac6be584c0b5b043f71b57459e369b3f2c530",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/array-627e14aa5d75.js"
+    "source": "vendor/build-inputs/rea/assets/array-627e14aa5d75.js"
   },
   {
     "file": "monotone-7fd3405b5c97.js",
     "sha256": "a4b2f2bb74e115cc590944bbb6efdea14e61b62c5e501e8827a4d4d34f46d3cd",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/monotone-7fd3405b5c97.js"
+    "source": "vendor/build-inputs/rea/assets/monotone-7fd3405b5c97.js"
   },
   {
     "file": "union-5a693e552c13.js",
     "sha256": "03be27adc3fa14f56a4d0898ca16e657ce6c94979cea98e3a5111c180eb4a597",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/union-5a693e552c13.js"
+    "source": "vendor/build-inputs/rea/assets/union-5a693e552c13.js"
   },
   {
     "file": "pdfkit-runtime.browser-77d1e359dbf4.js",
     "sha256": "cbe49dbe0fe32de58e65fdb784272e855e5d2b1e3430c0326f6bc5a5d92a5e15",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/pdfkit-runtime.browser-77d1e359dbf4.js"
+    "source": "vendor/build-inputs/rea/assets/pdfkit-runtime.browser-77d1e359dbf4.js"
   },
   {
     "file": "mermaid.core-cb6b1ed58263.js",
     "sha256": "e6b63456a0c1ed1c521dd4a2ae4e60f12dc67d548893a1f3027f24a1fde13214",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/mermaid.core-cb6b1ed58263.js"
+    "source": "vendor/build-inputs/rea/assets/mermaid.core-cb6b1ed58263.js"
   },
   {
     "file": "src-86e6ae2666f4.js",
     "sha256": "55141b1ab85fefb2617452d93826fa982ca9600731765e6c9707ce96a87fe030",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/src-86e6ae2666f4.js"
+    "source": "vendor/build-inputs/rea/assets/src-86e6ae2666f4.js"
   },
   {
     "file": "chunk-Y2CYZVJY-ec17b93e265e.js",
     "sha256": "e1d69de7aed283d8b8d941ea8b15458a33d6acb4f8c1bedb4c1483ec31bb4365",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-Y2CYZVJY-ec17b93e265e.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-Y2CYZVJY-ec17b93e265e.js"
   },
   {
     "file": "chunk-ICXQ74PX-eb6810c42103.js",
     "sha256": "6a73fc00b70a23e47998ad285437d1f0e5a0a2a9d8ac0d71c79573592a183cdf",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-ICXQ74PX-eb6810c42103.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-ICXQ74PX-eb6810c42103.js"
   },
   {
     "file": "chunk-WYO6CB5R-807809ec42e4.js",
     "sha256": "9e7e646f3d57fbc060b2259ebe412cc2545ad3550c6d509a455f34360819f81a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-WYO6CB5R-807809ec42e4.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-WYO6CB5R-807809ec42e4.js"
   },
   {
     "file": "katex-d2ceaf861312.js",
     "sha256": "b599ec20da625222b5fb9264538ecc71a683abc7a45898dbd09b69bc5ecb0bc8",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/katex-d2ceaf861312.js"
+    "source": "vendor/build-inputs/rea/assets/katex-d2ceaf861312.js"
   },
   {
     "file": "dist-a295ef6d6249.js",
     "sha256": "1f0d9d09d1b49e408a1d01e352816fb93ef914a4f34442b892770c6c24d3ae14",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/dist-a295ef6d6249.js"
+    "source": "vendor/build-inputs/rea/assets/dist-a295ef6d6249.js"
   },
   {
     "file": "chunk-HOUHSVGY-7af045e84100.js",
     "sha256": "4c7764beb2e24f68d5c97d1c35ab32fa39885644e24b04c1d38c8c39c08802f9",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-HOUHSVGY-7af045e84100.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-HOUHSVGY-7af045e84100.js"
   },
   {
     "file": "chunk-Q4XR5HBZ-76ba1ac4a38f.js",
     "sha256": "fbcc49fc36d6426280ea41ebb6806a91d6b6f9698c750e86a2597df77b4b1921",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-Q4XR5HBZ-76ba1ac4a38f.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-Q4XR5HBZ-76ba1ac4a38f.js"
   },
   {
     "file": "chunk-7BUUIJ7U-f091a5411c5e.js",
     "sha256": "a8d31523343ddb4e225e8250dfc8889a4dd4da9c015137421b3be5f8ee9741f6",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-7BUUIJ7U-f091a5411c5e.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-7BUUIJ7U-f091a5411c5e.js"
   },
   {
     "file": "chunk-OGEWGWER-a40a932addf5.js",
     "sha256": "79d7bb071bfa51954c5cfa30a28ce50ff2869fda36c30b2d61d9d16a9ee36647",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-OGEWGWER-a40a932addf5.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-OGEWGWER-a40a932addf5.js"
   },
   {
     "file": "chunk-C7G6YPKG-a78e23b4572c.js",
     "sha256": "cea03d56bc5cfe8ab5e72de96ea877a52ae22735b0a81ab10f19fb2f3299f385",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-C7G6YPKG-a78e23b4572c.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-C7G6YPKG-a78e23b4572c.js"
   },
   {
     "file": "chunk-ZGVPDNZ5-d43f03546b79.js",
     "sha256": "e2aa0c364e69b4c3f05336d7559c3e1082d73d8059fe5954ac47472557f87d56",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-ZGVPDNZ5-d43f03546b79.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-ZGVPDNZ5-d43f03546b79.js"
   },
   {
     "file": "rough.esm-3e53fd338f7d.js",
     "sha256": "d0e47568be741a7e34bed6f05d122f76d54ea1db13486f5d1956ec706f0fae3a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/rough.esm-3e53fd338f7d.js"
+    "source": "vendor/build-inputs/rea/assets/rough.esm-3e53fd338f7d.js"
   },
   {
     "file": "chunk-52WLFC77-bf7c23e42df4.js",
     "sha256": "34cdf8bfa4707e5d102bd1546a33477904aa9aa046e3c8b7ff05a9b138f99cb3",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-52WLFC77-bf7c23e42df4.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-52WLFC77-bf7c23e42df4.js"
   },
   {
     "file": "dagre-VKFMJZFB-984d3d84f549.js",
     "sha256": "aa08826a248a96bb124e5fed34c4f88e99e4254e961a4c3cf2fe812342769047",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/dagre-VKFMJZFB-984d3d84f549.js"
+    "source": "vendor/build-inputs/rea/assets/dagre-VKFMJZFB-984d3d84f549.js"
   },
   {
     "file": "chunk-RYQCIY6F-3ccadad054ae.js",
     "sha256": "5b27a12a683e71810845330b3a491b4dfcd4a8be7f1577c6bc39a0188ecc5a76",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-RYQCIY6F-3ccadad054ae.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-RYQCIY6F-3ccadad054ae.js"
   },
   {
     "file": "graphlib-fb4d6385a887.js",
     "sha256": "7905dab4c749d2914e4608a2aeff65b8bae9d74f72977874656117235e23a681",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/graphlib-fb4d6385a887.js"
+    "source": "vendor/build-inputs/rea/assets/graphlib-fb4d6385a887.js"
   },
   {
     "file": "dagre-1643b08cea46.js",
     "sha256": "90fea297027afe38a13573a8757687b564f237166ab768d7915550024585b2b2",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/dagre-1643b08cea46.js"
+    "source": "vendor/build-inputs/rea/assets/dagre-1643b08cea46.js"
   },
   {
     "file": "swimlanes-5IMT3BWC-a42d619333a0.js",
     "sha256": "3c6bd178b84eaec047f1708315bfaa42a600af32db33fe39091de87f2a649a69",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/swimlanes-5IMT3BWC-a42d619333a0.js"
+    "source": "vendor/build-inputs/rea/assets/swimlanes-5IMT3BWC-a42d619333a0.js"
   },
   {
     "file": "sizeCapture-X5ZJPWSS-35cad884972a.js",
     "sha256": "a7d1db3c820446d638f3109da11dc725f5301d202ab681daaa41b5e11fc64526",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/sizeCapture-X5ZJPWSS-35cad884972a.js"
+    "source": "vendor/build-inputs/rea/assets/sizeCapture-X5ZJPWSS-35cad884972a.js"
   },
   {
     "file": "cose-bilkent-JH36ORCC-6a5df4e7e7b4.js",
     "sha256": "2d2022d3d13b2432367707e587f99f9b25f2d6844f2f5f91e639e8f15d2c451f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/cose-bilkent-JH36ORCC-6a5df4e7e7b4.js"
+    "source": "vendor/build-inputs/rea/assets/cose-bilkent-JH36ORCC-6a5df4e7e7b4.js"
   },
   {
     "file": "cytoscape.esm-1029c72ddab6.js",
     "sha256": "816e7c80d3f8278ba97e3cacb0bc1a277909cc14cf31d376491570f945d8777f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/cytoscape.esm-1029c72ddab6.js"
+    "source": "vendor/build-inputs/rea/assets/cytoscape.esm-1029c72ddab6.js"
   },
   {
     "file": "c4Diagram-LMCZKHZV-55f43c8445cf.js",
     "sha256": "ccd715a6a9c3ba972e4d9803bfcdacf512df6353d74734e0604ea0a13c522db3",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/c4Diagram-LMCZKHZV-55f43c8445cf.js"
+    "source": "vendor/build-inputs/rea/assets/c4Diagram-LMCZKHZV-55f43c8445cf.js"
   },
   {
     "file": "chunk-32BRIVSS-58a70ccadfec.js",
     "sha256": "daf00e976b6749e1942071db771cbac5acb44701b24782249dae953edb9c35e2",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-32BRIVSS-58a70ccadfec.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-32BRIVSS-58a70ccadfec.js"
   },
   {
     "file": "flowDiagram-23GEKE2U-1f63fcbd2fda.js",
     "sha256": "ccf48d74cbb6064a8815a4f08037a3aadc9641c5507022768f3bd918b0acae1f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/flowDiagram-23GEKE2U-1f63fcbd2fda.js"
+    "source": "vendor/build-inputs/rea/assets/flowDiagram-23GEKE2U-1f63fcbd2fda.js"
   },
   {
     "file": "chunk-XXDRQBXY-63d3b66bd5a0.js",
     "sha256": "9f45d53f376578d6f714ab8b8acdf9c1304ccde1a63b79ee02111213076d38ae",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-XXDRQBXY-63d3b66bd5a0.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-XXDRQBXY-63d3b66bd5a0.js"
   },
   {
     "file": "chunk-VR4S4FIN-df22b643e0b0.js",
     "sha256": "3b5e26a0d2f9c4097925c0e325de07d74e0fdf540950ea72dd6d6d52ab9dd4bc",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-VR4S4FIN-df22b643e0b0.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-VR4S4FIN-df22b643e0b0.js"
   },
   {
     "file": "chunk-PUDLZKDR-e774771214ba.js",
     "sha256": "a0ef6323ee0221004fac6066f5d241d7981a91a914ce67674b2d1492afd4b730",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-PUDLZKDR-e774771214ba.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-PUDLZKDR-e774771214ba.js"
   },
   {
     "file": "channel-723a8d53a3d3.js",
     "sha256": "b5e7148a8a04e43428e6a92cd820dad83e5759a62d972b166b2823e22a0f9fb2",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/channel-723a8d53a3d3.js"
+    "source": "vendor/build-inputs/rea/assets/channel-723a8d53a3d3.js"
   },
   {
     "file": "chunk-5VM5RSS4-be47a4237e96.js",
     "sha256": "ab5bd1413c97602a7da7e71ce00f4c6f9a1c5c83b27c62494bf1bc5ae5a879ef",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-5VM5RSS4-be47a4237e96.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-5VM5RSS4-be47a4237e96.js"
   },
   {
     "file": "swimlanesDiagram-G3AALYLV-e0d8e9e3a7c8.js",
     "sha256": "91f2d5507db7a59b0541acc1396af26930493e66f535abfe7c218bc2cc8cae3d",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/swimlanesDiagram-G3AALYLV-e0d8e9e3a7c8.js"
+    "source": "vendor/build-inputs/rea/assets/swimlanesDiagram-G3AALYLV-e0d8e9e3a7c8.js"
   },
   {
     "file": "erDiagram-Q63AITRT-f65554379fd0.js",
     "sha256": "f62398cad567c124a6400fd1936631846cf24d7d3a43bc6e67fd01a6d8cbbf5a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/erDiagram-Q63AITRT-f65554379fd0.js"
+    "source": "vendor/build-inputs/rea/assets/erDiagram-Q63AITRT-f65554379fd0.js"
   },
   {
     "file": "gitGraphDiagram-IHSO6WYX-25de7b75fab4.js",
     "sha256": "3514281da97d44f174979f15a8b9c6cd2f93534fec061adff0a8b60569137e45",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/gitGraphDiagram-IHSO6WYX-25de7b75fab4.js"
+    "source": "vendor/build-inputs/rea/assets/gitGraphDiagram-IHSO6WYX-25de7b75fab4.js"
   },
   {
     "file": "mermaid-parser.core-9ffe5a9fb28c.js",
     "sha256": "520029f3ed493a2ac2c214312fbf70590e5a38d4f5df96387e407fe51905467a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/mermaid-parser.core-9ffe5a9fb28c.js"
+    "source": "vendor/build-inputs/rea/assets/mermaid-parser.core-9ffe5a9fb28c.js"
   },
   {
     "file": "chunk-KEIR6QF5-326e1da7e0a5.js",
     "sha256": "b24bee274ab58678893a502906ce223985e54ac0166ad084bb55ee4b478baf09",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-KEIR6QF5-326e1da7e0a5.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-KEIR6QF5-326e1da7e0a5.js"
   },
   {
     "file": "info-DKCQHKI2-8310f358bb35.js",
     "sha256": "14e19303a102b7df4aba15854504d562259a01eb75987cf01bd352c04e58b616",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/info-DKCQHKI2-8310f358bb35.js"
+    "source": "vendor/build-inputs/rea/assets/info-DKCQHKI2-8310f358bb35.js"
   },
   {
     "file": "packet-7NZHBO7P-a556b9452792.js",
     "sha256": "c6f2772b807f518fa25be78e1f498c8234c5e1e51b256b3ced062d94a23e8835",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/packet-7NZHBO7P-a556b9452792.js"
+    "source": "vendor/build-inputs/rea/assets/packet-7NZHBO7P-a556b9452792.js"
   },
   {
     "file": "pie-RZYD4A2V-78a4b0d2f50a.js",
     "sha256": "374f92964805d7746d3651cec5d797e4b051b9ea2bdb55afa42874a4da9d553a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/pie-RZYD4A2V-78a4b0d2f50a.js"
+    "source": "vendor/build-inputs/rea/assets/pie-RZYD4A2V-78a4b0d2f50a.js"
   },
   {
     "file": "treeView-QDETBFTQ-5a62f64dd50d.js",
     "sha256": "a5db35764e67c422a3c1d7cfcecf339444d58c62b93b183f089f20ebbc3f9391",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/treeView-QDETBFTQ-5a62f64dd50d.js"
+    "source": "vendor/build-inputs/rea/assets/treeView-QDETBFTQ-5a62f64dd50d.js"
   },
   {
     "file": "architecture-TIHT7OUA-ad8e527a0b6e.js",
     "sha256": "4bfe23c7955e27e4e73848264bfa4552633b063a437cc8ba10afbcdcacbe06bf",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/architecture-TIHT7OUA-ad8e527a0b6e.js"
+    "source": "vendor/build-inputs/rea/assets/architecture-TIHT7OUA-ad8e527a0b6e.js"
   },
   {
     "file": "gitGraph-TEB2WS4Q-505aa8e90e88.js",
     "sha256": "a832dcdc732d7c0131f1e7565923071c0683abcc6e9c3c19b9ae8a0e75341646",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/gitGraph-TEB2WS4Q-505aa8e90e88.js"
+    "source": "vendor/build-inputs/rea/assets/gitGraph-TEB2WS4Q-505aa8e90e88.js"
   },
   {
     "file": "eventmodeling-45OFAUF4-4a42dd97a58e.js",
     "sha256": "b013fd4bce0b8a0cb46c153acfc92484119d6f19a7b884f054c8bd458b1c44a7",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/eventmodeling-45OFAUF4-4a42dd97a58e.js"
+    "source": "vendor/build-inputs/rea/assets/eventmodeling-45OFAUF4-4a42dd97a58e.js"
   },
   {
     "file": "radar-I7S5WNFK-ea6bd36b3fbc.js",
     "sha256": "b0f8736b15859e1e3f0b8cc67c0f3db169d67401e9bcb4559cee75fbd9845a34",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/radar-I7S5WNFK-ea6bd36b3fbc.js"
+    "source": "vendor/build-inputs/rea/assets/radar-I7S5WNFK-ea6bd36b3fbc.js"
   },
   {
     "file": "railroad-3IZDKUUU-1907123bcc7a.js",
     "sha256": "a23ea17a2c5a699cfc11d891baf833104c5b8fcb43f75a8caf05d3cecff8d3c0",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/railroad-3IZDKUUU-1907123bcc7a.js"
+    "source": "vendor/build-inputs/rea/assets/railroad-3IZDKUUU-1907123bcc7a.js"
   },
   {
     "file": "railroad-ebnf-EBAXGLYW-24586b366634.js",
     "sha256": "441912bab7076d653a0989ed1926a3f9a62dc7aea70ec93705391b713a77e3ae",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/railroad-ebnf-EBAXGLYW-24586b366634.js"
+    "source": "vendor/build-inputs/rea/assets/railroad-ebnf-EBAXGLYW-24586b366634.js"
   },
   {
     "file": "railroad-abnf-AHOZXSZD-d91ab9f0b260.js",
     "sha256": "14538ea9950758ec99bdc55a126b4b1497a551e6c4f73bde812af7ecf6cb2fe8",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/railroad-abnf-AHOZXSZD-d91ab9f0b260.js"
+    "source": "vendor/build-inputs/rea/assets/railroad-abnf-AHOZXSZD-d91ab9f0b260.js"
   },
   {
     "file": "railroad-peg-LSFZ7HO6-2720ed1045e5.js",
     "sha256": "740226132ef14fbe5f35bfeb9fa0bdeeff57322b873c4aff3bea7e6bdbc278e1",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/railroad-peg-LSFZ7HO6-2720ed1045e5.js"
+    "source": "vendor/build-inputs/rea/assets/railroad-peg-LSFZ7HO6-2720ed1045e5.js"
   },
   {
     "file": "treemap-6X3UGDF4-bd0c63007aa8.js",
     "sha256": "9eac3b43082580f6821cb19ffb2e5725b86bf76159ac93baf0b7f1005cb5e54e",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/treemap-6X3UGDF4-bd0c63007aa8.js"
+    "source": "vendor/build-inputs/rea/assets/treemap-6X3UGDF4-bd0c63007aa8.js"
   },
   {
     "file": "wardley-OPB4EBWU-73d89dac25a5.js",
     "sha256": "38d350c7b1fc530f9410ff98199f2b8a89f92fc275288834d9e554cfcfe06b03",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/wardley-OPB4EBWU-73d89dac25a5.js"
+    "source": "vendor/build-inputs/rea/assets/wardley-OPB4EBWU-73d89dac25a5.js"
   },
   {
     "file": "cynefin-VYW2F7L2-7ae4cdc77c53.js",
     "sha256": "0228870dedaf73bc720a2f35383f3928aa962363c9ba06e2d0e5d0f20de7ba50",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/cynefin-VYW2F7L2-7ae4cdc77c53.js"
+    "source": "vendor/build-inputs/rea/assets/cynefin-VYW2F7L2-7ae4cdc77c53.js"
   },
   {
     "file": "chunk-JWPE2WC7-b64131fd37b9.js",
     "sha256": "0d840b04eeb754dc140a2176543bb2250161e01603526e5dd1b0316d65672d1a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-JWPE2WC7-b64131fd37b9.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-JWPE2WC7-b64131fd37b9.js"
   },
   {
     "file": "chunk-2Q5K7J3B-11fde89fd17e.js",
     "sha256": "50510f4e57ad7177dfb35f30b085a94c06c3627d2d40eac54b2c72c6eae03b4b",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-2Q5K7J3B-11fde89fd17e.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-2Q5K7J3B-11fde89fd17e.js"
   },
   {
     "file": "ganttDiagram-NO4QXBWP-8c4d97500633.js",
     "sha256": "cd356c00b4f034df495e3cfcc12a385d03561321cba10ba63d5e98e2ee94139a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/ganttDiagram-NO4QXBWP-8c4d97500633.js"
+    "source": "vendor/build-inputs/rea/assets/ganttDiagram-NO4QXBWP-8c4d97500633.js"
   },
   {
     "file": "infoDiagram-FWYZ7A6U-c3ff7d673c85.js",
     "sha256": "075cf80f6b4d3c73af3f3dd4bcc29d02b18d1274982dda9ce3bbf3400b475638",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/infoDiagram-FWYZ7A6U-c3ff7d673c85.js"
+    "source": "vendor/build-inputs/rea/assets/infoDiagram-FWYZ7A6U-c3ff7d673c85.js"
   },
   {
     "file": "pieDiagram-ENE6RG2P-1895efbe5a5e.js",
     "sha256": "dc30e3bf0dc1bf3c4fd1f206633c37ae118b210d6b7fcd1a0b1cd500c1077239",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/pieDiagram-ENE6RG2P-1895efbe5a5e.js"
+    "source": "vendor/build-inputs/rea/assets/pieDiagram-ENE6RG2P-1895efbe5a5e.js"
   },
   {
     "file": "quadrantDiagram-ABIIQ3AL-b21139dccbfb.js",
     "sha256": "153beb11747cea90a84e8c41c0433dd27e27af6b022d5c57211565a05ae967fc",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/quadrantDiagram-ABIIQ3AL-b21139dccbfb.js"
+    "source": "vendor/build-inputs/rea/assets/quadrantDiagram-ABIIQ3AL-b21139dccbfb.js"
   },
   {
     "file": "xychartDiagram-FW5EYKEG-2550943ed5a1.js",
     "sha256": "fd09fa69423bdb423e3581533a59112eb2b59b404d512d61643f6c0fd94ff08b",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/xychartDiagram-FW5EYKEG-2550943ed5a1.js"
+    "source": "vendor/build-inputs/rea/assets/xychartDiagram-FW5EYKEG-2550943ed5a1.js"
   },
   {
     "file": "requirementDiagram-TGXJPOKE-62beb021d9ac.js",
     "sha256": "5587a946b27940f92c167ff3d24e2e5ec39e98cc624e6a2934799e37af30e905",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/requirementDiagram-TGXJPOKE-62beb021d9ac.js"
+    "source": "vendor/build-inputs/rea/assets/requirementDiagram-TGXJPOKE-62beb021d9ac.js"
   },
   {
     "file": "sequenceDiagram-DBY2YBRQ-ab0c8e0d13ad.js",
     "sha256": "a283be4e70d889734ac0bfaad165d6b50483c4e55fc7f026dc88eb07a2e06cff",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/sequenceDiagram-DBY2YBRQ-ab0c8e0d13ad.js"
+    "source": "vendor/build-inputs/rea/assets/sequenceDiagram-DBY2YBRQ-ab0c8e0d13ad.js"
   },
   {
     "file": "classDiagram-OUVF2IWQ-60570a05867a.js",
     "sha256": "3c999831ad0df418277753d72f092e65cf328ed58309dcd61be37c082497f146",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/classDiagram-OUVF2IWQ-60570a05867a.js"
+    "source": "vendor/build-inputs/rea/assets/classDiagram-OUVF2IWQ-60570a05867a.js"
   },
   {
     "file": "chunk-V7JOEXUC-1b757c8b4511.js",
     "sha256": "9a6ae20e6476d3160a0b841b4043e4276a80005dcf68eb5f0802bc7543d2c1ed",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-V7JOEXUC-1b757c8b4511.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-V7JOEXUC-1b757c8b4511.js"
   },
   {
     "file": "classDiagram-v2-EOCWNBFH-60570a05867a.js",
     "sha256": "82f2c3213d6c560465415a34df43c9c82ec56206a0685fb3542d9dfc9dc09d30",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/classDiagram-v2-EOCWNBFH-60570a05867a.js"
+    "source": "vendor/build-inputs/rea/assets/classDiagram-v2-EOCWNBFH-60570a05867a.js"
   },
   {
     "file": "stateDiagram-2N3HPSRC-a3bd3a91152b.js",
     "sha256": "92db7760f466a7a6b38ac880064b7a14bc4c15038fa695f3af59746a611e6e86",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/stateDiagram-2N3HPSRC-a3bd3a91152b.js"
+    "source": "vendor/build-inputs/rea/assets/stateDiagram-2N3HPSRC-a3bd3a91152b.js"
   },
   {
     "file": "chunk-EX3LRPZG-b8a32f905792.js",
     "sha256": "82df1209352c7e6c2b00aa07b59e32dd4880726cccfa9932b0029be0f5acf24e",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-EX3LRPZG-b8a32f905792.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-EX3LRPZG-b8a32f905792.js"
   },
   {
     "file": "stateDiagram-v2-6OUMAXLB-f3ea10cb2e20.js",
     "sha256": "503c0c3206392db0f89ea8528655251c68fde71a1de7f35292c683ff0bfd15ef",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/stateDiagram-v2-6OUMAXLB-f3ea10cb2e20.js"
+    "source": "vendor/build-inputs/rea/assets/stateDiagram-v2-6OUMAXLB-f3ea10cb2e20.js"
   },
   {
     "file": "journeyDiagram-5HDEW3XC-57d940f0f661.js",
     "sha256": "7508eb5f1db7161663573a2c25aa242ae1e35f0132c214bd7acbecf2454655d7",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/journeyDiagram-5HDEW3XC-57d940f0f661.js"
+    "source": "vendor/build-inputs/rea/assets/journeyDiagram-5HDEW3XC-57d940f0f661.js"
   },
   {
     "file": "timeline-definition-FHXFAJF6-ed66a13f9c59.js",
     "sha256": "b3841e290b7e8ad865bd10ff18adbb423f40cf743e2cc4549b189f5d37705119",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/timeline-definition-FHXFAJF6-ed66a13f9c59.js"
+    "source": "vendor/build-inputs/rea/assets/timeline-definition-FHXFAJF6-ed66a13f9c59.js"
   },
   {
     "file": "mindmap-definition-LN4V7U3C-c30006d8a2a9.js",
     "sha256": "20cf7ac1565321c513431059ac0c83860387703a2a7f4bad3e3c87a76d5aa25f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/mindmap-definition-LN4V7U3C-c30006d8a2a9.js"
+    "source": "vendor/build-inputs/rea/assets/mindmap-definition-LN4V7U3C-c30006d8a2a9.js"
   },
   {
     "file": "kanban-definition-HUTT4EX6-09b15d0e2832.js",
     "sha256": "2c854c9de003ab1e020bdcc6776d81caf79d64a7c285c4f4879f39683e882258",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/kanban-definition-HUTT4EX6-09b15d0e2832.js"
+    "source": "vendor/build-inputs/rea/assets/kanban-definition-HUTT4EX6-09b15d0e2832.js"
   },
   {
     "file": "sankeyDiagram-HTMAVEWB-e8c440784046.js",
     "sha256": "a2097a5f6d1ba4e55f3db8822951054e565a1f5be833868e8955f080c302574b",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/sankeyDiagram-HTMAVEWB-e8c440784046.js"
+    "source": "vendor/build-inputs/rea/assets/sankeyDiagram-HTMAVEWB-e8c440784046.js"
   },
   {
     "file": "diagram-NH7WQ7WH-9165e1cd3706.js",
     "sha256": "b39deb45c96055784f6a19b69d2edafbd309e5635313032b760370499ecf6387",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/diagram-NH7WQ7WH-9165e1cd3706.js"
+    "source": "vendor/build-inputs/rea/assets/diagram-NH7WQ7WH-9165e1cd3706.js"
   },
   {
     "file": "diagram-WEI45ONY-fb810e9ec4f4.js",
     "sha256": "30adb9197a23b2e3a4eb8c8e1ccc99d9ad68b2aa269b3edac22991c728015b77",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/diagram-WEI45ONY-fb810e9ec4f4.js"
+    "source": "vendor/build-inputs/rea/assets/diagram-WEI45ONY-fb810e9ec4f4.js"
   },
   {
     "file": "blockDiagram-677ZJIJ3-8514f07db9c8.js",
     "sha256": "73d47a73a1e42fbcf3d046a5724b5f0157b73081bcc1d1ea58af32387851a169",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/blockDiagram-677ZJIJ3-8514f07db9c8.js"
+    "source": "vendor/build-inputs/rea/assets/blockDiagram-677ZJIJ3-8514f07db9c8.js"
   },
   {
     "file": "diagram-OA4YK3LP-44f625fb4bb1.js",
     "sha256": "6d9669f979c1ed71ae7f3f166e12ff88e5e8d981fc8912fb0afe931fdf2bc872",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/diagram-OA4YK3LP-44f625fb4bb1.js"
+    "source": "vendor/build-inputs/rea/assets/diagram-OA4YK3LP-44f625fb4bb1.js"
   },
   {
     "file": "architectureDiagram-ZJ3FMSHR-48dc2768043f.js",
     "sha256": "47a88574a64715201b24ab981d31638c5db04cadd181c70efeb85d1365c97633",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/architectureDiagram-ZJ3FMSHR-48dc2768043f.js"
+    "source": "vendor/build-inputs/rea/assets/architectureDiagram-ZJ3FMSHR-48dc2768043f.js"
   },
   {
     "file": "diagram-FQU43EPY-13bec4a20a84.js",
     "sha256": "2e9a0e4b246e7275bd700ce1188570fdc225d966d10ccb8b84807e94090ba4d5",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/diagram-FQU43EPY-13bec4a20a84.js"
+    "source": "vendor/build-inputs/rea/assets/diagram-FQU43EPY-13bec4a20a84.js"
   },
   {
     "file": "ishikawaDiagram-FXEZZL3T-a7c839f04a59.js",
     "sha256": "d16225a2821633903df24e5380dc4eed6ed32da37bcbd3db2983385fd9e1db53",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/ishikawaDiagram-FXEZZL3T-a7c839f04a59.js"
+    "source": "vendor/build-inputs/rea/assets/ishikawaDiagram-FXEZZL3T-a7c839f04a59.js"
   },
   {
     "file": "vennDiagram-L72KCM5P-d4aff39d5512.js",
     "sha256": "bad9fab47021bdc29cdaee2a4fbd611cef93ba19c86705fe508baef2f4a1273c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/vennDiagram-L72KCM5P-d4aff39d5512.js"
+    "source": "vendor/build-inputs/rea/assets/vennDiagram-L72KCM5P-d4aff39d5512.js"
   },
   {
     "file": "diagram-G47NLZAW-b5102a2979f8.js",
     "sha256": "1a574a78d42c269014714b705f042e547d741595ce5267cbeb7d8a533732c074",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/diagram-G47NLZAW-b5102a2979f8.js"
+    "source": "vendor/build-inputs/rea/assets/diagram-G47NLZAW-b5102a2979f8.js"
   },
   {
     "file": "wardleyDiagram-EHGQE667-251e287fc0a8.js",
     "sha256": "86c2e4ced76c8951d57e5f548676ba4947f5e2d0d47c5e4e94269ddd55d2c86f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/wardleyDiagram-EHGQE667-251e287fc0a8.js"
+    "source": "vendor/build-inputs/rea/assets/wardleyDiagram-EHGQE667-251e287fc0a8.js"
   },
   {
     "file": "cynefinDiagram-TSTJHNR4-690cac2a7ad8.js",
     "sha256": "901c1c7dd2eb1fdb4898ff77477753def403ece77f643cd3e1aa32a1a2b91339",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/cynefinDiagram-TSTJHNR4-690cac2a7ad8.js"
+    "source": "vendor/build-inputs/rea/assets/cynefinDiagram-TSTJHNR4-690cac2a7ad8.js"
   },
   {
     "file": "railroadDiagram-RFXS5EU6-90f3e033f243.js",
     "sha256": "440e6c24f286a24ecd5ad8d914c0d195aa8f722b89fd1215c6506cb19f17555f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/railroadDiagram-RFXS5EU6-90f3e033f243.js"
+    "source": "vendor/build-inputs/rea/assets/railroadDiagram-RFXS5EU6-90f3e033f243.js"
   },
   {
     "file": "chunk-MOJQB5TN-6481d032d90b.js",
     "sha256": "5593c296ff2eb56a84fa863287dd8d65d82bc4cd293a6708dd681d52bad2a3af",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-MOJQB5TN-6481d032d90b.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-MOJQB5TN-6481d032d90b.js"
   },
   {
     "file": "ebnfDiagram-CCIWWBDH-355e0e79aa7e.js",
     "sha256": "bc650a11d9a507e84232eedeb6000cb74203d789c210f5670e069a2ed3869ff6",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/ebnfDiagram-CCIWWBDH-355e0e79aa7e.js"
+    "source": "vendor/build-inputs/rea/assets/ebnfDiagram-CCIWWBDH-355e0e79aa7e.js"
   },
   {
     "file": "abnfDiagram-VRR7QNED-c11d33ad33d0.js",
     "sha256": "a39b2a6ba586fc05730627bbabc26071113f3e95e06a43093d71f650b52bc0f8",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/abnfDiagram-VRR7QNED-c11d33ad33d0.js"
+    "source": "vendor/build-inputs/rea/assets/abnfDiagram-VRR7QNED-c11d33ad33d0.js"
   },
   {
     "file": "pegDiagram-2B236MQR-179b2533f0ae.js",
     "sha256": "219fa38880e26421262d4bcbe099c9633f76b2d66ff478e45ab3fd8ba5aa58b7",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/pegDiagram-2B236MQR-179b2533f0ae.js"
+    "source": "vendor/build-inputs/rea/assets/pegDiagram-2B236MQR-179b2533f0ae.js"
   },
   {
     "file": "workbook-from-markdown-761249e6d0b9.js",
     "sha256": "305651f2cbe56e5de3202a59db3e6b046b85b1763c653ff5618b84f9cc42230d",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/workbook-from-markdown-761249e6d0b9.js"
+    "source": "vendor/build-inputs/rea/assets/workbook-from-markdown-761249e6d0b9.js"
   },
   {
     "file": "workbook-from-csv-6bb2f24e4158.js",
     "sha256": "39e1f05260791eb953e14586518b459d8b34e972b997157174eca4c7d0933d72",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/workbook-from-csv-6bb2f24e4158.js"
+    "source": "vendor/build-inputs/rea/assets/workbook-from-csv-6bb2f24e4158.js"
   },
   {
     "file": "walnut-reader.worker-f89300d4d450.js",
     "sha256": "763fa5c3a6f3e7362b94b2012e2185c2bb078af8d16746184d82e355fc5a95f6",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/walnut-reader.worker-f89300d4d450.js"
+    "source": "vendor/build-inputs/rea/assets/walnut-reader.worker-f89300d4d450.js"
   },
   {
     "file": "dotnet-8b6430468111.js",
     "sha256": "8b8146a1944dc2d481a2bd02a326385607f9203544d7baa5a2befe8d5de38f68",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/dotnet-8b6430468111.js"
+    "source": "vendor/build-inputs/rea/assets/dotnet-8b6430468111.js"
   },
   {
     "file": "dotnet.native.k09zdxq5tw.js",
     "sha256": "9cb67ed6ec2a7670d645309cb49aee3d1aaecc6d095e9af8038c8d7b8e462c0e",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/dotnet.native.k09zdxq5tw.js"
+    "source": "vendor/build-inputs/rea/assets/dotnet.native.k09zdxq5tw.js"
   },
   {
     "file": "dotnet.native.wasm",
     "sha256": "70b9c2d8695ac1dd05369917e3b8640e359d9b8bc8321ce9a6ce91035c20429f",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/dotnet.native.g0qvcu2x9f.wasm"
+    "source": "vendor/build-inputs/rea/assets/dotnet.native.g0qvcu2x9f.wasm"
   },
   {
     "file": "dotnet.runtime.8ha609180a.js",
     "sha256": "74b1a24475d6e5d8a11856d5369153cf5522795b9a48ff4594576d934731405a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/dotnet.runtime.8ha609180a.js"
+    "source": "vendor/build-inputs/rea/assets/dotnet.runtime.8ha609180a.js"
   },
   {
     "file": "dotnet.native.g0qvcu2x9f.wasm",
     "sha256": "70b9c2d8695ac1dd05369917e3b8640e359d9b8bc8321ce9a6ce91035c20429f",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/dotnet.native.g0qvcu2x9f.wasm",
+    "source": "vendor/build-inputs/rea/assets/dotnet.native.g0qvcu2x9f.wasm",
     "asset": "dotnet.native.wasm"
   },
   {
     "file": "System.Private.CoreLib.ekcb3829hn.wasm",
     "sha256": "5e778593250d423845027af88d490a65c5706a486ad286077eee0c8988815624",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Private.CoreLib.ekcb3829hn.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Private.CoreLib.ekcb3829hn.wasm"
   },
   {
     "file": "System.Runtime.InteropServices.JavaScript.p5jxanpmp7.wasm",
     "sha256": "3df5e33ffe320214338cce2e3f51e0ae8fa65c82670fae5ef3680810bf6e8348",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Runtime.InteropServices.JavaScript.p5jxanpmp7.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Runtime.InteropServices.JavaScript.p5jxanpmp7.wasm"
   },
   {
     "file": "DocumentFormat.OpenXml.Framework.vsp3g6rq8c.wasm",
     "sha256": "a142923ef94ffd9bb96258117d0c8bf11c002ed58a9d2b1c3c63c6116308339f",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/DocumentFormat.OpenXml.Framework.vsp3g6rq8c.wasm"
+    "source": "vendor/build-inputs/rea/assets/DocumentFormat.OpenXml.Framework.vsp3g6rq8c.wasm"
   },
   {
     "file": "DocumentFormat.OpenXml.mwa9472424.wasm",
     "sha256": "8a402f13db99ae59b41eb815c5f6d56c6e4e142c9bb723fb9f9d11c6db96c4f7",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/DocumentFormat.OpenXml.mwa9472424.wasm"
+    "source": "vendor/build-inputs/rea/assets/DocumentFormat.OpenXml.mwa9472424.wasm"
   },
   {
     "file": "Google.Protobuf.ze35jf5cfr.wasm",
     "sha256": "8b7f1bac2252626a6c5041b79f7e2e12e0c57cbc64ae5102ab8c0838c9690626",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/Google.Protobuf.ze35jf5cfr.wasm"
+    "source": "vendor/build-inputs/rea/assets/Google.Protobuf.ze35jf5cfr.wasm"
   },
   {
     "file": "System.Collections.Concurrent.fv1xo90b4e.wasm",
     "sha256": "bb2337e4ebd785ab2e7943ee7b00ccb8b3717b96c7e6d56fd74ed3d32cd04bec",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Collections.Concurrent.fv1xo90b4e.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Collections.Concurrent.fv1xo90b4e.wasm"
   },
   {
     "file": "System.Collections.NonGeneric.fizn4w82qi.wasm",
     "sha256": "871743255f218b596618fd990e5c52cc4005418a0b9800d85af77547e318afa4",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Collections.NonGeneric.fizn4w82qi.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Collections.NonGeneric.fizn4w82qi.wasm"
   },
   {
     "file": "System.Collections.Specialized.35mqs569zd.wasm",
     "sha256": "699d78075c23a03be5afc5da7f202612a6abf471986c6ef13789d02e926f9452",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Collections.Specialized.35mqs569zd.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Collections.Specialized.35mqs569zd.wasm"
   },
   {
     "file": "System.Collections.my3pqh5qks.wasm",
     "sha256": "b2118d09c9227939f709ee1055df2bd0ffe2aaea5ce9d6ad317018daf3e40a74",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Collections.my3pqh5qks.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Collections.my3pqh5qks.wasm"
   },
   {
     "file": "System.ComponentModel.Primitives.1lm1rqemqq.wasm",
     "sha256": "952b98a68dcb0d8479bfbada3ce275d4a6e677038db3c0c5168e7864af94b805",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.ComponentModel.Primitives.1lm1rqemqq.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.ComponentModel.Primitives.1lm1rqemqq.wasm"
   },
   {
     "file": "System.ComponentModel.TypeConverter.hmoum3qawf.wasm",
     "sha256": "d745e44ca06d952ad0bca904d6e53fcacf7587a339242c49c134b619ee27bb5c",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.ComponentModel.TypeConverter.hmoum3qawf.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.ComponentModel.TypeConverter.hmoum3qawf.wasm"
   },
   {
     "file": "System.ComponentModel.fb6b35yifs.wasm",
     "sha256": "455436e971c5bd41f2de5062ea7a2abb6b9a80870b11986750705a6d2164697a",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.ComponentModel.fb6b35yifs.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.ComponentModel.fb6b35yifs.wasm"
   },
   {
     "file": "System.Console.iaekx381qv.wasm",
     "sha256": "a60d570d2c385723b2d5de9234089ffccd737f70b29a56aa0ab2d97f368fc4e4",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Console.iaekx381qv.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Console.iaekx381qv.wasm"
   },
   {
     "file": "System.Diagnostics.DiagnosticSource.wu8o7idmiu.wasm",
     "sha256": "287e24f3284a152ee1bc95c6e47945e50caa55e65e32b99a0625f4c1e4f6f3be",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Diagnostics.DiagnosticSource.wu8o7idmiu.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Diagnostics.DiagnosticSource.wu8o7idmiu.wasm"
   },
   {
     "file": "System.IO.Compression.ous27n6au3.wasm",
     "sha256": "70fef27a52200aa091f2fd618593ed6dce520669290ffacaabb3a65d45af7525",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.IO.Compression.ous27n6au3.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.IO.Compression.ous27n6au3.wasm"
   },
   {
     "file": "System.IO.Packaging.ejb20qp7p2.wasm",
     "sha256": "1661fcb91c792edaf888898aaef9fc285842d2a67ceb7a25644917a07af0d409",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.IO.Packaging.ejb20qp7p2.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.IO.Packaging.ejb20qp7p2.wasm"
   },
   {
     "file": "System.Linq.Expressions.j0t0463l0v.wasm",
     "sha256": "1da1d43a16c80c18a4a8a7a97899e3ed6ddb73a6ffefb68e201b3f7368f9ec6d",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Linq.Expressions.j0t0463l0v.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Linq.Expressions.j0t0463l0v.wasm"
   },
   {
     "file": "System.Linq.5qhwogj18r.wasm",
     "sha256": "bde958c19d89870835a4125ff7f419ead7cc5575321d0068da00b24ff11dd5b1",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Linq.5qhwogj18r.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Linq.5qhwogj18r.wasm"
   },
   {
     "file": "System.Memory.a6jd6cfkb1.wasm",
     "sha256": "5208f175aeff537039b4a10d2bbe21373aa72140b984dc93ccd8456eccf61edb",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Memory.a6jd6cfkb1.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Memory.a6jd6cfkb1.wasm"
   },
   {
     "file": "System.Net.Http.fro10fs6zt.wasm",
     "sha256": "9b0fb399392156cd058ce5718f603ab859a141991974be32477097fe98ef0e5f",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Net.Http.fro10fs6zt.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Net.Http.fro10fs6zt.wasm"
   },
   {
     "file": "System.Net.Primitives.ndnk2jp0p4.wasm",
     "sha256": "a54ef248e2ddfcb4991c7b196ee6b33a8c2bd06775309c9f339b1b0f50879777",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Net.Primitives.ndnk2jp0p4.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Net.Primitives.ndnk2jp0p4.wasm"
   },
   {
     "file": "System.ObjectModel.wvdbpj86i9.wasm",
     "sha256": "0c005780e883b9dc7eb96c81bda4586e2e6f743dc1674dae826cf2acb284bf44",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.ObjectModel.wvdbpj86i9.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.ObjectModel.wvdbpj86i9.wasm"
   },
   {
     "file": "System.Private.Uri.f5ncrldlzr.wasm",
     "sha256": "337f3a3b2cdbd3b078c57cb412550707e495896924a1667ef81db618ca7c8c7e",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Private.Uri.f5ncrldlzr.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Private.Uri.f5ncrldlzr.wasm"
   },
   {
     "file": "System.Private.Xml.Linq.djg9mjqiyi.wasm",
     "sha256": "072289bb81b822ecdb952458462e05c3bf15c1591a5593b31cc815e863a1e762",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Private.Xml.Linq.djg9mjqiyi.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Private.Xml.Linq.djg9mjqiyi.wasm"
   },
   {
     "file": "System.Private.Xml.fmldu235uf.wasm",
     "sha256": "b7443e8a0f38a8652eecb99809e1908002f9fe8db7f5b2fe16b40fab184ea72c",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Private.Xml.fmldu235uf.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Private.Xml.fmldu235uf.wasm"
   },
   {
     "file": "System.Security.Cryptography.cqaarzu8pm.wasm",
     "sha256": "2c64e971d01174bbf39b732fe4aa82cf96499fcfce087157bf40e6c681e2272b",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Security.Cryptography.cqaarzu8pm.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Security.Cryptography.cqaarzu8pm.wasm"
   },
   {
     "file": "System.Text.RegularExpressions.uamgjk8gvb.wasm",
     "sha256": "1ae81017a32f2a4bbef6ec99eb1e2c69112ef6d33c7d4c1a00363ded0e302695",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Text.RegularExpressions.uamgjk8gvb.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Text.RegularExpressions.uamgjk8gvb.wasm"
   },
   {
     "file": "System.p0vf5aoex5.wasm",
     "sha256": "3728b499c0e20abaecdf900beef8c116c9ebe743d59a565cd18193097834875f",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.p0vf5aoex5.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.p0vf5aoex5.wasm"
   },
   {
     "file": "System.Xml.Linq.f94siaol93.wasm",
     "sha256": "937ef5ff8a2252bd5c88167090f6f864fb7f760322a270b21df422f54521180a",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/System.Xml.Linq.f94siaol93.wasm"
+    "source": "vendor/build-inputs/rea/assets/System.Xml.Linq.f94siaol93.wasm"
   },
   {
     "file": "Walnut.936yqw70jc.wasm",
     "sha256": "559df3fe9e2195ed406fc3ed96538bd758bee939a84704d28958459629cd992e",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/Walnut.936yqw70jc.wasm"
+    "source": "vendor/build-inputs/rea/assets/Walnut.936yqw70jc.wasm"
   },
   {
     "file": "walnut-presentation-decoder.worker-5c0722bcd9d6.js",
     "sha256": "ea8e2a54219f0f389c86e637af2a5674ba4d234a2a28453b6bdf716c7db50f55",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/walnut-presentation-decoder.worker-5c0722bcd9d6.js"
+    "source": "vendor/build-inputs/rea/assets/walnut-presentation-decoder.worker-5c0722bcd9d6.js"
   },
   {
     "file": "image-f0c579f95a79.js",
     "sha256": "a00565e225330044d8cef8acdf6682307f046941683843752ac2fe3f4e54ca5e",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/image-f0c579f95a79.js"
+    "source": "vendor/build-inputs/rea/assets/image-f0c579f95a79.js"
   },
   {
     "file": "runtime.worker-e6675a4130c8.js",
     "sha256": "c33d31414b45192800a6d2be6591a6297c553939a6dccb5c1271a6fe61be9a4c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/runtime.worker-e6675a4130c8.js"
+    "source": "vendor/build-inputs/rea/assets/runtime.worker-e6675a4130c8.js"
   },
   {
     "file": "mermaid.core-38faffec0901.js",
     "sha256": "db98236ff90117e0822d5e8e766aea04fc553eee54c527a360cd7a3235c2989d",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/mermaid.core-38faffec0901.js"
+    "source": "vendor/build-inputs/rea/assets/mermaid.core-38faffec0901.js"
   },
   {
     "file": "src-4c2a02a7916f.js",
     "sha256": "b6d8a5a1cfcceab67183d23140f6648ed6b0f4647aac9c91daea74d17ffa9d87",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/src-4c2a02a7916f.js"
+    "source": "vendor/build-inputs/rea/assets/src-4c2a02a7916f.js"
   },
   {
     "file": "chunk-ICXQ74PX-7eb191357062.js",
     "sha256": "bbb0ef93b9d29976afbbc85c122ab58a111b81d92b364352e8408276207eea45",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-ICXQ74PX-7eb191357062.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-ICXQ74PX-7eb191357062.js"
   },
   {
     "file": "chunk-WYO6CB5R-f991717e8e13.js",
     "sha256": "374d6767a2385b6469e9d5480ba241d0f8135eae93f40939f4c6a85c71f7c4e3",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-WYO6CB5R-f991717e8e13.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-WYO6CB5R-f991717e8e13.js"
   },
   {
     "file": "chunk-HOUHSVGY-434563f630c4.js",
     "sha256": "b81e28ecfc8cb17acc509e9537c30dd2071c68413f5a687e984aa1685072eeef",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-HOUHSVGY-434563f630c4.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-HOUHSVGY-434563f630c4.js"
   },
   {
     "file": "chunk-Q4XR5HBZ-12f89e74f620.js",
     "sha256": "58e3cf6fdd0e751f2819404859a781e923130554370c9739552741c8955949bb",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-Q4XR5HBZ-12f89e74f620.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-Q4XR5HBZ-12f89e74f620.js"
   },
   {
     "file": "chunk-OGEWGWER-84453c65ffa8.js",
     "sha256": "105b17e9b38ce2ef3cea9a36b7d95a25c45a655a71bef4eb17b5e350ec5a53d5",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-OGEWGWER-84453c65ffa8.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-OGEWGWER-84453c65ffa8.js"
   },
   {
     "file": "chunk-C7G6YPKG-eed4025946d8.js",
     "sha256": "c661828ef3a7ae00494938cb4ca2a68f0e0669bafe93d2a980ed8fcb938c90a5",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-C7G6YPKG-eed4025946d8.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-C7G6YPKG-eed4025946d8.js"
   },
   {
     "file": "chunk-ZGVPDNZ5-a7739fca7970.js",
     "sha256": "dafc36bd0c8278d425e75813a91303fa389964950e1a39f5e58d6963b81a0e1a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-ZGVPDNZ5-a7739fca7970.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-ZGVPDNZ5-a7739fca7970.js"
   },
   {
     "file": "chunk-52WLFC77-ea6aaa171e36.js",
     "sha256": "5e3f6df0ca210f77c1a78699e0ffdf244c8eae02196f17c5da2ab76fc48e9a58",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-52WLFC77-ea6aaa171e36.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-52WLFC77-ea6aaa171e36.js"
   },
   {
     "file": "dagre-VKFMJZFB-b37f1323abaf.js",
     "sha256": "a87913d0f6f12810b053b7c6223168af03b9fdfe93b5fead52e2042ff27c6c7e",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/dagre-VKFMJZFB-b37f1323abaf.js"
+    "source": "vendor/build-inputs/rea/assets/dagre-VKFMJZFB-b37f1323abaf.js"
   },
   {
     "file": "chunk-RYQCIY6F-22e624122f83.js",
     "sha256": "8ae7b564d7e25db3c346bc92ff0cdbf790265f30a9c5a7074a4f9071401112f0",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-RYQCIY6F-22e624122f83.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-RYQCIY6F-22e624122f83.js"
   },
   {
     "file": "dagre-36baab01e627.js",
     "sha256": "2dd5485a74bd318c58e89b6b400a306319e78579c678a6d33a07bce29e767062",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/dagre-36baab01e627.js"
+    "source": "vendor/build-inputs/rea/assets/dagre-36baab01e627.js"
   },
   {
     "file": "swimlanes-5IMT3BWC-1a37161cd15d.js",
     "sha256": "1d4f8e2bc6ab48469e466fc8822f1f34b12998976cf301495bbb3dc29cfbb79b",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/swimlanes-5IMT3BWC-1a37161cd15d.js"
+    "source": "vendor/build-inputs/rea/assets/swimlanes-5IMT3BWC-1a37161cd15d.js"
   },
   {
     "file": "cose-bilkent-JH36ORCC-6f72f430f610.js",
     "sha256": "7c8f3cb49d380b2e176862e7bbad5210d3af08de856f89810eb12920924be2fd",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/cose-bilkent-JH36ORCC-6f72f430f610.js"
+    "source": "vendor/build-inputs/rea/assets/cose-bilkent-JH36ORCC-6f72f430f610.js"
   },
   {
     "file": "c4Diagram-LMCZKHZV-6f5be1df3f9e.js",
     "sha256": "3c041dc5463f1c37c9dc73f38619c72cc75e97af35e4f7aba1ca71788ed707c7",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/c4Diagram-LMCZKHZV-6f5be1df3f9e.js"
+    "source": "vendor/build-inputs/rea/assets/c4Diagram-LMCZKHZV-6f5be1df3f9e.js"
   },
   {
     "file": "chunk-32BRIVSS-c5b8a611fb6a.js",
     "sha256": "5d70f87a83181e9bd55c02a9bb5c376e75e849556a27daccf17211f09c4124ee",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-32BRIVSS-c5b8a611fb6a.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-32BRIVSS-c5b8a611fb6a.js"
   },
   {
     "file": "flowDiagram-23GEKE2U-8f26886c0319.js",
     "sha256": "41775cbedddd013b84193479f6e0ad155d7fdc5d7d00cdd9ee0d13d4723bc5cb",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/flowDiagram-23GEKE2U-8f26886c0319.js"
+    "source": "vendor/build-inputs/rea/assets/flowDiagram-23GEKE2U-8f26886c0319.js"
   },
   {
     "file": "chunk-XXDRQBXY-b7ecf0f4f6d8.js",
     "sha256": "a031d31f5d06b0ab7bf74a7568ef4fc5edfa44d141b7b03e82d4da258829bc04",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-XXDRQBXY-b7ecf0f4f6d8.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-XXDRQBXY-b7ecf0f4f6d8.js"
   },
   {
     "file": "chunk-VR4S4FIN-6a763ed1df6e.js",
     "sha256": "5dfd9f678caf95b5925c3cfe40e079b42fb664bff8a51b7d93a8d17375914814",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-VR4S4FIN-6a763ed1df6e.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-VR4S4FIN-6a763ed1df6e.js"
   },
   {
     "file": "chunk-PUDLZKDR-d464f875ef34.js",
     "sha256": "7f41f48d228a3273a76b9f928a269a42cc206f4355e85275628647cb2b518d39",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-PUDLZKDR-d464f875ef34.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-PUDLZKDR-d464f875ef34.js"
   },
   {
     "file": "channel-569228c235cf.js",
     "sha256": "3dc876ef8580d91fb50d868b36f5d2c3cc75ff3aed98f9227514e06f80be3e32",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/channel-569228c235cf.js"
+    "source": "vendor/build-inputs/rea/assets/channel-569228c235cf.js"
   },
   {
     "file": "swimlanesDiagram-G3AALYLV-7ef7a995cc42.js",
     "sha256": "957f29e1abffe51fb170077cc6d3e09878c3bad1eb6f967d62e16a00c413199d",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/swimlanesDiagram-G3AALYLV-7ef7a995cc42.js"
+    "source": "vendor/build-inputs/rea/assets/swimlanesDiagram-G3AALYLV-7ef7a995cc42.js"
   },
   {
     "file": "erDiagram-Q63AITRT-93585f13f1bd.js",
     "sha256": "6049a5e8ff1488bbf14bfff351ef30d689ba86d71d43a579b184f8f4a0ba6e2c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/erDiagram-Q63AITRT-93585f13f1bd.js"
+    "source": "vendor/build-inputs/rea/assets/erDiagram-Q63AITRT-93585f13f1bd.js"
   },
   {
     "file": "gitGraphDiagram-IHSO6WYX-2477309f774e.js",
     "sha256": "8dac89814529c87acd472814939cbe8ab85a165bc3ad761af028469a1c57e0f0",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/gitGraphDiagram-IHSO6WYX-2477309f774e.js"
+    "source": "vendor/build-inputs/rea/assets/gitGraphDiagram-IHSO6WYX-2477309f774e.js"
   },
   {
     "file": "ganttDiagram-NO4QXBWP-13d15e13e4cf.js",
     "sha256": "6b3dcdf7b9eaa5ccad7487a3534c731056cf0c327615fa1f1f553e80cd094b46",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/ganttDiagram-NO4QXBWP-13d15e13e4cf.js"
+    "source": "vendor/build-inputs/rea/assets/ganttDiagram-NO4QXBWP-13d15e13e4cf.js"
   },
   {
     "file": "infoDiagram-FWYZ7A6U-295097e1ea76.js",
     "sha256": "8824d80f4b8c316bef2136083ce4e851a540c831a5a45ea54959643d01a2890e",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/infoDiagram-FWYZ7A6U-295097e1ea76.js"
+    "source": "vendor/build-inputs/rea/assets/infoDiagram-FWYZ7A6U-295097e1ea76.js"
   },
   {
     "file": "pieDiagram-ENE6RG2P-15a420417b1b.js",
     "sha256": "ad4df676741db652141838b2661941e3f0eff9fa5711ec8e6508baad0f0cbed8",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/pieDiagram-ENE6RG2P-15a420417b1b.js"
+    "source": "vendor/build-inputs/rea/assets/pieDiagram-ENE6RG2P-15a420417b1b.js"
   },
   {
     "file": "quadrantDiagram-ABIIQ3AL-3db7f1ca7429.js",
     "sha256": "8da44866bbe3337580fe4347f6c5d491cbefb0b82ed8a9c697f1fa87ce197495",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/quadrantDiagram-ABIIQ3AL-3db7f1ca7429.js"
+    "source": "vendor/build-inputs/rea/assets/quadrantDiagram-ABIIQ3AL-3db7f1ca7429.js"
   },
   {
     "file": "xychartDiagram-FW5EYKEG-0211bd10de27.js",
     "sha256": "2fb5154b56f4db70b5ad793b8bad7238b37341d9fe47adda1dd7b32637945148",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/xychartDiagram-FW5EYKEG-0211bd10de27.js"
+    "source": "vendor/build-inputs/rea/assets/xychartDiagram-FW5EYKEG-0211bd10de27.js"
   },
   {
     "file": "requirementDiagram-TGXJPOKE-1e9ec0a7a715.js",
     "sha256": "fda0efdc25b3abb47d6cb7c45b4eb54cc475e2a13e71d196df3161c8a70aa582",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/requirementDiagram-TGXJPOKE-1e9ec0a7a715.js"
+    "source": "vendor/build-inputs/rea/assets/requirementDiagram-TGXJPOKE-1e9ec0a7a715.js"
   },
   {
     "file": "sequenceDiagram-DBY2YBRQ-1d575def6496.js",
     "sha256": "edd9ffefa69aae5bcf1d6102da174e83a3226ad7d511e38b656c53af59d1185a",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/sequenceDiagram-DBY2YBRQ-1d575def6496.js"
+    "source": "vendor/build-inputs/rea/assets/sequenceDiagram-DBY2YBRQ-1d575def6496.js"
   },
   {
     "file": "classDiagram-OUVF2IWQ-7f9c8960beb4.js",
     "sha256": "756e20926392e370f2271d1b933eda80bf32f3ca9ac75b00a93c83594e23844c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/classDiagram-OUVF2IWQ-7f9c8960beb4.js"
+    "source": "vendor/build-inputs/rea/assets/classDiagram-OUVF2IWQ-7f9c8960beb4.js"
   },
   {
     "file": "chunk-V7JOEXUC-8417704cf5ac.js",
     "sha256": "a2e3ded7e67f1f93ce8c8d734b1708b3063c7058a4f8cebc7df56ef5c54cefad",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-V7JOEXUC-8417704cf5ac.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-V7JOEXUC-8417704cf5ac.js"
   },
   {
     "file": "classDiagram-v2-EOCWNBFH-7f9c8960beb4.js",
     "sha256": "7b23f96ef00120dca05fa86337e400ed125872cdb28c8735f6fb8097b82b0e7c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/classDiagram-v2-EOCWNBFH-7f9c8960beb4.js"
+    "source": "vendor/build-inputs/rea/assets/classDiagram-v2-EOCWNBFH-7f9c8960beb4.js"
   },
   {
     "file": "stateDiagram-2N3HPSRC-31fab262ad72.js",
     "sha256": "72e402af7c21591a99a144f9c3fb1c4b0355f157e7562907329d99af954ac54f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/stateDiagram-2N3HPSRC-31fab262ad72.js"
+    "source": "vendor/build-inputs/rea/assets/stateDiagram-2N3HPSRC-31fab262ad72.js"
   },
   {
     "file": "chunk-EX3LRPZG-4dd27bee6bc8.js",
     "sha256": "071a16cac7858fc4aa6c4d86aa43b0335ac9194c023d184a5387604b7eaab466",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-EX3LRPZG-4dd27bee6bc8.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-EX3LRPZG-4dd27bee6bc8.js"
   },
   {
     "file": "stateDiagram-v2-6OUMAXLB-458010f28eb5.js",
     "sha256": "d16167147afd0e651551c3dec8aa5cec264a2ef2d78687f6279b8f9447352fe5",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/stateDiagram-v2-6OUMAXLB-458010f28eb5.js"
+    "source": "vendor/build-inputs/rea/assets/stateDiagram-v2-6OUMAXLB-458010f28eb5.js"
   },
   {
     "file": "journeyDiagram-5HDEW3XC-7ba76e9d2b61.js",
     "sha256": "fcb9a2263b5180844c5f7381251ffb65ca88d7db76afb001c5d93ffce543159f",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/journeyDiagram-5HDEW3XC-7ba76e9d2b61.js"
+    "source": "vendor/build-inputs/rea/assets/journeyDiagram-5HDEW3XC-7ba76e9d2b61.js"
   },
   {
     "file": "timeline-definition-FHXFAJF6-ad1b288e47dc.js",
     "sha256": "6d32af97eeceb00acd41a394b41eafaa7b3b0e3372b0abd68e5496af71155b4d",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/timeline-definition-FHXFAJF6-ad1b288e47dc.js"
+    "source": "vendor/build-inputs/rea/assets/timeline-definition-FHXFAJF6-ad1b288e47dc.js"
   },
   {
     "file": "mindmap-definition-LN4V7U3C-66a0000378f7.js",
     "sha256": "9373f413d84f4c606c3a48e7e21309901084679fef5074ccc5a2be61f19b5b49",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/mindmap-definition-LN4V7U3C-66a0000378f7.js"
+    "source": "vendor/build-inputs/rea/assets/mindmap-definition-LN4V7U3C-66a0000378f7.js"
   },
   {
     "file": "kanban-definition-HUTT4EX6-112928b71141.js",
     "sha256": "6d03caf62e3116ac0630911a2f1523b28b3de01f32d094347ad46a422c5da259",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/kanban-definition-HUTT4EX6-112928b71141.js"
+    "source": "vendor/build-inputs/rea/assets/kanban-definition-HUTT4EX6-112928b71141.js"
   },
   {
     "file": "sankeyDiagram-HTMAVEWB-853f0e67b592.js",
     "sha256": "5e95227bdf0ce5ba0d30c8f5018a4aefc8e8ff891b7d87c5af35b97a0dc85c78",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/sankeyDiagram-HTMAVEWB-853f0e67b592.js"
+    "source": "vendor/build-inputs/rea/assets/sankeyDiagram-HTMAVEWB-853f0e67b592.js"
   },
   {
     "file": "diagram-NH7WQ7WH-b70c5ac8f32d.js",
     "sha256": "7841c5260a78195b172f7434e3834b4ff2382213f1c05a285c44abb8039be0a6",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/diagram-NH7WQ7WH-b70c5ac8f32d.js"
+    "source": "vendor/build-inputs/rea/assets/diagram-NH7WQ7WH-b70c5ac8f32d.js"
   },
   {
     "file": "diagram-WEI45ONY-aa8710bd2a04.js",
     "sha256": "e651d76b739c4d8f731c1dd6b5ada949aca78de5825a7df1a6704e9881f4a7c3",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/diagram-WEI45ONY-aa8710bd2a04.js"
+    "source": "vendor/build-inputs/rea/assets/diagram-WEI45ONY-aa8710bd2a04.js"
   },
   {
     "file": "blockDiagram-677ZJIJ3-81a2cd64a78f.js",
     "sha256": "f8f3c053d517b3365a7ff50b0e44fb2873a1b2543811f38ba1c64ce47f9760f5",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/blockDiagram-677ZJIJ3-81a2cd64a78f.js"
+    "source": "vendor/build-inputs/rea/assets/blockDiagram-677ZJIJ3-81a2cd64a78f.js"
   },
   {
     "file": "diagram-OA4YK3LP-dc420ae040b3.js",
     "sha256": "2dc1b956379240e12c2674f8f14f4dff66f2f3f307d6c0bd28c55afac77b9079",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/diagram-OA4YK3LP-dc420ae040b3.js"
+    "source": "vendor/build-inputs/rea/assets/diagram-OA4YK3LP-dc420ae040b3.js"
   },
   {
     "file": "architectureDiagram-ZJ3FMSHR-ff2e3b78b227.js",
     "sha256": "dae2aa3455acba5f5547bea62d60712dc2e262df9784fec656a3ebd3abc34b51",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/architectureDiagram-ZJ3FMSHR-ff2e3b78b227.js"
+    "source": "vendor/build-inputs/rea/assets/architectureDiagram-ZJ3FMSHR-ff2e3b78b227.js"
   },
   {
     "file": "diagram-FQU43EPY-e01fdf0d46fa.js",
     "sha256": "c3fdc5fe391a1735978651508ed077d06f21fe51c470519e220372bbc0744db1",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/diagram-FQU43EPY-e01fdf0d46fa.js"
+    "source": "vendor/build-inputs/rea/assets/diagram-FQU43EPY-e01fdf0d46fa.js"
   },
   {
     "file": "ishikawaDiagram-FXEZZL3T-4e93b4a7e67a.js",
     "sha256": "adff79879d548b3671faf98b69efbca1ccca0a248f8de95ec876edb14b8916aa",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/ishikawaDiagram-FXEZZL3T-4e93b4a7e67a.js"
+    "source": "vendor/build-inputs/rea/assets/ishikawaDiagram-FXEZZL3T-4e93b4a7e67a.js"
   },
   {
     "file": "vennDiagram-L72KCM5P-eb0e03005f6a.js",
     "sha256": "5af1bcc5a2c10df4cd498a0eb0a1b099b7eb40f06d151300fbf8728e4c603250",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/vennDiagram-L72KCM5P-eb0e03005f6a.js"
+    "source": "vendor/build-inputs/rea/assets/vennDiagram-L72KCM5P-eb0e03005f6a.js"
   },
   {
     "file": "diagram-G47NLZAW-4b620c3884ea.js",
     "sha256": "96f638f2953e3a9b67d848743c401825deabf52b64e9a9238ff2f6575a17523e",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/diagram-G47NLZAW-4b620c3884ea.js"
+    "source": "vendor/build-inputs/rea/assets/diagram-G47NLZAW-4b620c3884ea.js"
   },
   {
     "file": "wardleyDiagram-EHGQE667-f86ddabaeabe.js",
     "sha256": "cbba7bb9c9680afca59ea87d1af970e98e5cf201af38fa584bd4fe7c2581aa6d",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/wardleyDiagram-EHGQE667-f86ddabaeabe.js"
+    "source": "vendor/build-inputs/rea/assets/wardleyDiagram-EHGQE667-f86ddabaeabe.js"
   },
   {
     "file": "cynefinDiagram-TSTJHNR4-731c3c52532c.js",
     "sha256": "b930d5803150695dabc6ccc77d24fbf5446785de2d914c54a20d77c9acda104c",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/cynefinDiagram-TSTJHNR4-731c3c52532c.js"
+    "source": "vendor/build-inputs/rea/assets/cynefinDiagram-TSTJHNR4-731c3c52532c.js"
   },
   {
     "file": "railroadDiagram-RFXS5EU6-a8fcd03d1e64.js",
     "sha256": "075e40855c99b1be04988920db68192e4d339c508ca1b4529a21ce36f701a439",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/railroadDiagram-RFXS5EU6-a8fcd03d1e64.js"
+    "source": "vendor/build-inputs/rea/assets/railroadDiagram-RFXS5EU6-a8fcd03d1e64.js"
   },
   {
     "file": "chunk-MOJQB5TN-dd83bc578d97.js",
     "sha256": "6b27abc65229ad40af951a3d2e07bb9a9e493183f1e1bd944a962e03a5f232b4",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/chunk-MOJQB5TN-dd83bc578d97.js"
+    "source": "vendor/build-inputs/rea/assets/chunk-MOJQB5TN-dd83bc578d97.js"
   },
   {
     "file": "ebnfDiagram-CCIWWBDH-d2ea92ba3ad9.js",
     "sha256": "349f24d98439373186cee0d34832ca40ca89b7b658dc5d60045debb0252ac795",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/ebnfDiagram-CCIWWBDH-d2ea92ba3ad9.js"
+    "source": "vendor/build-inputs/rea/assets/ebnfDiagram-CCIWWBDH-d2ea92ba3ad9.js"
   },
   {
     "file": "abnfDiagram-VRR7QNED-adf56f7be56b.js",
     "sha256": "27c29b7aab08b33322f30ce4814a05bbf3d61976eb5d881fbdec1f0678c6ac38",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/abnfDiagram-VRR7QNED-adf56f7be56b.js"
+    "source": "vendor/build-inputs/rea/assets/abnfDiagram-VRR7QNED-adf56f7be56b.js"
   },
   {
     "file": "pegDiagram-2B236MQR-04067de9f12b.js",
     "sha256": "b159a23f670f75935d9c9a6aade38014af24e9cdcdbce931a937a5d3efe20bc2",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/pegDiagram-2B236MQR-04067de9f12b.js"
+    "source": "vendor/build-inputs/rea/assets/pegDiagram-2B236MQR-04067de9f12b.js"
   },
   {
     "file": "workbook-from-csv-c1132cd78d81.js",
     "sha256": "1f296cb1cb9eb4ab73f3d7363546adcf0f9cf6d3192f0288e3466b80213a7f5e",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/workbook-from-csv-c1132cd78d81.js"
+    "source": "vendor/build-inputs/rea/assets/workbook-from-csv-c1132cd78d81.js"
   },
   {
     "file": "walnut-workbook-decoder.worker-d0f3ddd00d10.js",
     "sha256": "15404d87913d405cd223e71bbc9b3d8b3f9287d1c886dd369057dbfb82d1b600",
-    "source": "/Users/mac/Projects/trisoul_x/work/rea-upgrade/cu-bu-frontend-20261010/codex/packed-frontend/webview/assets/walnut-workbook-decoder.worker-d0f3ddd00d10.js"
+    "source": "vendor/build-inputs/rea/assets/walnut-workbook-decoder.worker-d0f3ddd00d10.js"
   },
   {
     "file": "pdf.worker.min-46513d3652c6.mjs",
     "sha256": "90b49a1bf7b6c4d689d7d7bc0a52869bb3b1bc5935a0fa0ea6413b49f85ac8de",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/pdf.worker.min-46513d3652c6.mjs"
+    "source": "vendor/build-inputs/rea/assets/pdf.worker.min-46513d3652c6.mjs"
   },
   {
     "file": "shape-8f8944fcc9a5.svg",
     "sha256": "60cf23b1f9df626de0ee63c72ecb7334f9ab0e24160857a04e34784d003a1d7e",
-    "source": "/Users/mac/Projects/omd/.local/host-compat-20261015/opencu-build-021rc2/vendor/rea/assets/shape-8f8944fcc9a5.svg"
+    "source": "vendor/build-inputs/rea/assets/shape-8f8944fcc9a5.svg"
   }
 ]

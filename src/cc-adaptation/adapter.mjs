@@ -35,6 +35,10 @@ export function transformAssembly(assembly, context, options = {}) {
   const known = new Map((options.schemas ?? assembly.tools ?? []).map(tool => [tool.name, tool]));
   const applied = new Set(), retained = [], missing = [], changedSchemas = new Map();
   for (const tool of known.values()) {
+    // Native Team controls use member targets, not ordinary child ids.
+    if (['send_message', 'list_agents', 'interrupt_agent'].includes(tool.name) && known.has('spawn_teammate')) {
+      retained.push({ name: tool.name, reason: 'native-team-control' }); continue;
+    }
     if (tool.name === 'run_code') { retained.push({ name: tool.name, reason: 'runtime-owned-transport' }); continue; }
     const binding = map[tool.name];
     if (!binding) { retained.push({ name: tool.name, reason: 'unmapped-native-tool' }); continue; }
@@ -79,7 +83,7 @@ export function transformAssembly(assembly, context, options = {}) {
   if (options.backgroundTasksEnabled && known.has('job_output')) {
     persona += '\n\n' + load('runtime/background-guidance.md');
     const direct = (assembly.tools ?? []).filter(t => ['job_output', 'job_list', 'job_kill', 'runtime_status'].includes(t.name)).map(t => t.name);
-    if (activeSdk && direct.length) persona += '\n\nThe following control tools are available directly in this request: ' + direct.map(n => '`' + n + '`').join(', ') + '. Start background work in a short program, return its id, and call these controls in later steps as needed.';
+    if (activeSdk && direct.length) persona += '\n\nThe following control tools are available directly in this request: ' + direct.map(n => '`' + n + '`').join(', ') + '. Start background work in a short program, emit its id using the current runtime output syntax, and call these controls in later steps as needed.';
   }
   if (constraintGuidance) persona += '\n\n## Constraint-first reasoning\n' + constraintGuidance;
   const suppressed = new Set();
@@ -94,7 +98,7 @@ export function transformAssembly(assembly, context, options = {}) {
     if (section.name === 'plan:policy' && toolMode === 'ptc') {
       return [{ ...section, text: section.text.replace(
         'make `exit_plan_mode` the only and final tool call in that response',
-        'invoke `tools.exit_plan_mode` alone inside `run_code`, return its result, and end that response',
+        'invoke `tools.exit_plan_mode` alone inside `run_code`, emit its result using the current runtime output syntax, and end that response',
       ) }];
     }
     // Generated SDK needs live descriptions AND live return contracts, not copied old stubs.
@@ -144,8 +148,10 @@ export function installPromptAdapter(ctx) {
     let renderSdk;
     if (activeSdk) {
       const { renderToolsSdk, renderToolsSdkPy } = await import('@deepseek-ai/dsh-tools');
-      const language = ctx.get('ptcRuntime')?.language;
-      renderSdk = language === 'typescript' ? renderToolsSdk : language === 'python' ? renderToolsSdkPy : undefined;
+      const runtime = ctx.get('ptcRuntime');
+      const language = runtime?.language;
+      renderSdk = language === 'typescript' ? sdk => renderToolsSdk(sdk, runtime.programFormat)
+        : language === 'python' ? renderToolsSdkPy : undefined;
       if (!renderSdk) throw new Error(`Unsupported PTC SDK language: ${language}`);
     }
     const config = ctx.trisoulX.config();

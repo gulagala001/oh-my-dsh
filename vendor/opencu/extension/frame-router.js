@@ -10,6 +10,29 @@ export function createCDPFrameRouter(sendRoot, subscribe) {
   const sessions = new Map(), pending = new Map();
   let sequence = 0, closed = false;
   const failure = (message, code = 'STALE_ELEMENT') => Object.assign(new Error(message), {code, details:{inputDispatched:false}});
+  const errorInfo = error => ({message:error.message ?? String(error),...(error.code === undefined ? {} : {code:error.code}),...(error.details === undefined ? {} : {details:error.details})});
+  const routeError = (source, method, frameId, sessionId) => {
+    const error = Object.assign(new Error(`Frame route ${method} failed: ${source.message ?? String(source)}`, {cause:source}), source);
+    error.message = `Frame route ${method} failed: ${source.message ?? String(source)}`;
+    error.details = {...source.details,frameRouting:{...source.details?.frameRouting,method,frameId,sessionId}};
+    return error;
+  };
+  const canAttachFrame = error => {
+    // Only protocol evidence that this session cannot address the child permits
+    // trying a separate target. Page exceptions and identity/dialog fences are not
+    // evidence of an out-of-process frame, even when their default code is STALE_ELEMENT.
+    const method = error.details?.frameRouting?.method;
+    const protocol = error.code === undefined || typeof error.code === 'number' || error.code === 'STALE_ELEMENT' && error.details?.cdpError;
+    return protocol && error.details?.inputDispatched !== true && ['Page.createIsolatedWorld','Runtime.evaluate'].includes(method) &&
+      /No frame (?:for|with) (?:the )?(?:given|specified) id|Frame with (?:the )?(?:given|specified) id (?:was )?not found|frame is not (?:a )?local frame|frame.*(?:out-of-process|another process)|Cannot find (?:execution )?context with (?:(?:the )?(?:given|specified) )?id|(?:No|Missing) execution context|Execution context with (?:the )?(?:given|specified) id (?:was )?not found/iu.test(error.message);
+  };
+  const fallbackError = (first, second, method, frameId, sessionId) => {
+    const error = routeError(second, method, frameId, sessionId);
+    error.code ??= 'FRAME_DETACHED';
+    error.message = `Frame document is unavailable. Same-session route: ${first.message}. Fallback: ${error.message}`;
+    error.details = {...error.details,frameRouting:{...error.details.frameRouting,sameProcessError:errorInfo(first),fallbackError:errorInfo(second)}};
+    return error;
+  };
   const unwrap = reply => {
     if (reply.exceptionDetails) throw failure(reply.exceptionDetails.exception?.description ?? reply.exceptionDetails.text);
     return reply.result.value;
@@ -21,7 +44,11 @@ export function createCDPFrameRouter(sendRoot, subscribe) {
         const key = `${params.sessionId}:${reply.id}`, task = pending.get(key);
         if (!task) return;
         pending.delete(key); clearTimeout(task.timer);
-        reply.error ? task.reject(failure(reply.error.message)) : task.resolve(reply.result);
+        if (reply.error) {
+          const error = failure(reply.error.message);
+          error.details.cdpError = reply.error;
+          task.reject(error);
+        } else task.resolve(reply.result);
       }
     }
     if (method === 'Target.detachedFromTarget') {
@@ -43,8 +70,14 @@ export function createCDPFrameRouter(sendRoot, subscribe) {
     });
   };
   const makeRoute = async (send, frameId, sessionId, sessionFrameId, owners) => {
-    const {executionContextId} = await send('Page.createIsolatedWorld', {frameId,worldName:'opencu-frame-locators',grantUniveralAccess:false});
-    const token = unwrap(await send('Runtime.evaluate', {contextId:executionContextId,returnByValue:true,expression:`globalThis.__opencuFrameDocument ??= ${JSON.stringify(globalThis.crypto.randomUUID())}`}));
+    let executionContextId, token;
+    try {
+      ({executionContextId} = await send('Page.createIsolatedWorld', {frameId,worldName:'opencu-frame-locators',grantUniveralAccess:false}));
+      if (!Number.isSafeInteger(executionContextId) || executionContextId <= 0) throw Object.assign(new Error('Missing execution context in Page.createIsolatedWorld reply'), {details:{inputDispatched:false}});
+    } catch (error) { throw routeError(error,'Page.createIsolatedWorld',frameId,sessionId); }
+    try {
+      token = unwrap(await send('Runtime.evaluate', {contextId:executionContextId,returnByValue:true,expression:`globalThis.__opencuFrameDocument ??= ${JSON.stringify(globalThis.crypto.randomUUID())}`}));
+    } catch (error) { throw routeError(error,'Runtime.evaluate',frameId,sessionId); }
     return {send,frameId,sessionId,sessionFrameId,contextId:executionContextId,documentId:token,owners};
   };
   const validateDocument = async route => {
@@ -74,18 +107,33 @@ export function createCDPFrameRouter(sendRoot, subscribe) {
       owner.childSessionId = route.sessionId;
       return route;
     } catch (sameProcessError) {
+      if (!canAttachFrame(sameProcessError)) throw sameProcessError;
       let session = sessions.get(frameId);
       if (!session?.valid) {
         let attached;
-        try { attached = await sendRoot('Target.attachToTarget', {targetId:frameId,flatten:false}); }
-        catch (error) { throw failure(`Frame document is unavailable: ${error.message}`, 'FRAME_DETACHED'); }
+        try {
+          try { attached = await sendRoot('Target.attachToTarget', {targetId:frameId,flatten:false}); }
+          catch (error) {
+            if (!/^No target with given id found\.?$/u.test(error.message) || error.code && typeof error.code !== 'number') throw error;
+            // Electron can defer creating the OOPIF DevTools target until discovery.
+            // Discover once, then attach only the exact frame already read from its owner.
+            let targetInfos;
+            try { ({targetInfos} = await sendRoot('Target.getTargets')); }
+            catch (discoveryError) { throw routeError(discoveryError,'Target.getTargets',frameId,parent.sessionId); }
+            if (!targetInfos?.some(target => target.targetId === frameId && target.type === 'iframe')) throw error;
+            await validate(parent);
+            const {node} = await parent.send('DOM.describeNode', {backendNodeId});
+            if ((node.frameId ?? node.contentDocument?.frameId) !== frameId) throw failure('Frame element was removed or replaced', 'FRAME_DETACHED');
+            attached = await sendRoot('Target.attachToTarget', {targetId:frameId,flatten:false});
+          }
+        } catch (error) { throw fallbackError(sameProcessError,error,error.details?.frameRouting?.method ?? 'Target.attachToTarget',frameId,parent.sessionId); }
         session = {id:attached.sessionId,valid:true}; session.send = childSend(session); sessions.set(frameId,session);
       }
       try {
         const route = await makeRoute(session.send,frameId,session.id,frameId,[...parent.owners,owner]);
         owner.childSessionId = route.sessionId;
         return route;
-      } catch (error) { throw failure(`Cannot access the selected frame document: ${error.message}`, 'FRAME_DETACHED'); }
+      } catch (error) { throw fallbackError(sameProcessError,error,error.details?.frameRouting?.method ?? 'makeRoute',frameId,session.id); }
     }
   };
   const remoteElement = async (route, backendNodeId) => {

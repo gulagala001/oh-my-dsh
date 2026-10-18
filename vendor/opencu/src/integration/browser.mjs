@@ -4,7 +4,7 @@ import {parseTarget, targetId} from '../extension/protocol.mjs';
 import {normalizeBrowserAction} from '../browser/actions.mjs';
 
 const navigation = new Set(['navigate', 'back', 'forward', 'reload']);
-const aliases = {press: 'press_key', selectOption: 'set_value', closeTab: 'close_tab', doubleClick: 'double_click'};
+const aliases = {press: 'press_key', closeTab: 'close_tab', doubleClick: 'double_click'};
 
 // Extension ids retain document occurrences; navigation promotes only a freshly verified same-tab identity.
 export function createCompositeBrowserBackend({browser, extension, dsh, releaseUnavailable = {}} = {}) {
@@ -191,7 +191,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
       if (['activate', 'focus'].includes(request.action)) return {action: request.action, ...await composite.focus(target)};
       const {signal, ...action} = request;
       action.type = aliases[request.action] ?? request.action;
-      if (request.action === 'selectOption') action.value = request.values?.[0] ?? request.value;
+      if (request.action === 'selectOption') action.value = request.values ?? request.value;
       const result = await extension.act(unwrap(target, provider), {...action, signal});
       if (result?.reselectRequired && request.action !== 'newTab' && !navigation.has(request.action)) stale.add(target.id);
       checkSignal(signal);

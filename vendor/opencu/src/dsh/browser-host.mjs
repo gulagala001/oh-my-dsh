@@ -6,7 +6,7 @@ export function createBrowserHost() {
   const clients = new Map(), pending = new Map(), sessionOwners = new Map();
   let closed = false;
   function disconnect(client, reason) {
-    clients.delete(client.id);
+    if (clients.get(client.id) === client) clients.delete(client.id);
     client.wake?.();
     for (const [id, task] of pending) if (task.client === client) {
       clearTimeout(task.timer); pending.delete(id);
@@ -29,8 +29,8 @@ export function createBrowserHost() {
     // verifies the retained guest occurrence before executing a bound command.
     return client;
   }
-  function request(client, method, params = {}, monitoring = false) {
-    if (closed || !clients.has(client.id)) fail('BROWSER_HOST_DISCONNECTED', 'The DSH browser renderer is disconnected');
+  async function request(client, method, params = {}, monitoring = false) {
+    if (closed || clients.get(client.id) !== client) fail('BROWSER_HOST_DISCONNECTED', 'The DSH browser renderer is disconnected');
     const id = randomUUID();
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -57,6 +57,17 @@ export function createBrowserHost() {
   }
   const backend = {
     kind: 'browser',
+    getDiagnostics() {
+      const renderers = liveClients();
+      const targetCount = renderers.reduce((count, client) => count + client.targets.length, 0);
+      return { configured: true, connectedRenderers: renderers.length, targetCount,
+        status: !renderers.length ? 'renderer_unavailable' : targetCount ? 'ready' : 'no_tabs',
+        ...(!renderers.length ? { code: 'DSH_RENDERER_UNAVAILABLE',
+          message: 'No DSH sidebar browser renderer is connected. Installing the plugin alone does not provide a sidebar browser.',
+          nextStep: 'Open a DSH client with a supported sidebar browser adapter, or configure a browser extension or CDP connection.' }
+          : !targetCount ? { code: 'DSH_NO_BROWSER_TABS', message: 'The DSH browser renderer is connected but has no published browser tabs.',
+            nextStep: 'Open a browser tab in the connected DSH client.' } : {}) };
+    },
     async listTargets() { return liveClients().flatMap(client => client.targets).map(json); },
     async select(reference) {
       const matches = (await backend.listTargets()).filter(target => referenceMatches(target, reference));
@@ -98,8 +109,8 @@ export function createBrowserHost() {
         }
       }
     },
-    async release() {
-      const results = await Promise.allSettled(liveClients().map(client => request(client, 'release')));
+    async release({ dismissDialogs = true } = {}) {
+      const results = await Promise.allSettled(liveClients().map(client => request(client, 'release', { dismissDialogs })));
       const failures = results.flatMap(result => result.status === 'rejected' ? [{ message: result.reason.message }] : result.value?.released === true ? [] : [result.value]);
       return { released: failures.length === 0, failures };
     },
@@ -184,7 +195,8 @@ export function createBrowserHost() {
           signal?.addEventListener('abort', abort, { once: true });
           if (signal?.aborted) abort();
         });
-        return { ok: true, commands: client.commands.splice(0), connected: clients.has(client.id) };
+        const connected = clients.get(client.id) === client;
+        return { ok: true, commands: connected ? client.commands.splice(0) : [], connected };
       }
       if (method === 'browser/disconnect') { disconnect(client, 'The sidebar renderer disconnected'); return { ok: true }; }
       fail('UNSUPPORTED_METHOD', 'Unknown sidebar browser transport operation');

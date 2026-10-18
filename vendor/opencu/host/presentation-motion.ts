@@ -189,12 +189,16 @@ export class PresentationMotion {
   frame(): { bounds: Point & Size; items: (Point & Size & { id: string; index: number })[]; dragging: boolean; leader: string | null; exitRevision: number } {
     const active = this.order.map(id => this.items.get(id)!), values = [...active, ...this.exits.values()]
     if (!values.length) return { bounds: { ...this.anchor, width: 1, height: 1 }, items: [], dragging: false, leader: null, exitRevision: this.exitRevision }
-    const x = Math.floor(Math.min(...values.map(item => item.position.x)) - padding)
-    const y = Math.floor(Math.min(...values.map(item => item.position.y)) - padding)
-    const right = Math.ceil(Math.max(...values.map(item => item.position.x + item.size.width)) + padding)
-    const bottom = Math.ceil(Math.max(...values.map(item => item.position.y + item.size.height)) + padding)
-    return { bounds: { x, y, width: right - x, height: bottom - y },
-      items: values.map((item, index) => ({ id: item.id, index, x: item.position.x - x, y: item.position.y - y, ...item.size })),
+    // Electron's window origin is integral DIP. Round the common translation
+    // once; fractional global movement must not resize the window or relayout
+    // every card. Relative spring/resize geometry retains its full precision.
+    const originX = Math.min(...values.map(item => item.position.x))
+    const originY = Math.min(...values.map(item => item.position.y))
+    const x = Math.round(originX - padding), y = Math.round(originY - padding)
+    const width = Math.ceil(Math.max(...values.map(item => item.position.x - originX + item.size.width)) + padding * 2)
+    const height = Math.ceil(Math.max(...values.map(item => item.position.y - originY + item.size.height)) + padding * 2)
+    return { bounds: { x, y, width, height },
+      items: values.map((item, index) => ({ id: item.id, index, x: item.position.x - originX + padding, y: item.position.y - originY + padding, ...item.size })),
       dragging: this.dragging && this.moved, leader: this.leader, exitRevision: this.exitRevision }
   }
 }

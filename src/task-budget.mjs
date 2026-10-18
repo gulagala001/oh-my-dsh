@@ -75,7 +75,7 @@ export class TaskBudgets {
   record(session, kind, entry) {
     // Attribute delegated and background token usage to an already configured
     // ancestor budget too; only the owning session's main calls consume rounds.
-    const seen = new Set(); let id = session.id;
+    const seen = new Set(); let id = session.id, savedOwn = false;
     while (id && !seen.has(id)) {
       seen.add(id);
       const state = this.hub.store.state(id), budget = state.budget && { ...state.budget };
@@ -86,11 +86,14 @@ export class TaskBudgets {
         }
         else budget.unmetered++;
         this.save({ id }, budget);
+        if (id === session.id) savedOwn = true;
       }
       const delegated = id === session.id ? session.header?.origin === 'subagent' || kind === 'subagent'
         : state.origin === 'subagent' || (state.origin === undefined && state.metrics?.subagent?.calls > 0);
       id = delegated ? state.parentSession : undefined;
     }
+    // Only acknowledge the origin after its synchronous save has succeeded.
+    return savedOwn;
   }
   async waitForUser(agent, next) {
     const session = agent.session, id = session.id;

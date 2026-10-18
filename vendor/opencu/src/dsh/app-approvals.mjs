@@ -13,8 +13,14 @@ const identity = target => {
 const sameApp = (a, b) => a.bundleIdentifier === b.bundleIdentifier && a.executable === b.executable;
 
 /** Permanent approvals skip prompts in later conversations; removal keeps current grants. */
-export function createAppApprovals(getDirectory) {
+export function createAppApprovals(getDirectory, onChange = () => {}) {
   const sessions = new Map(), pending = new Map(), authorizing = new Set();
+  const changed = () => {
+    const failed = () => console.error('OpenCU approval notification failed');
+    try { Promise.resolve(onChange()).catch(failed); } catch { failed(); }
+  };
+  const publicRequest = value => ({ id: value.id, conversationId: value.conversationId,
+    request: { appDisplayName: value.app.displayName, connectorName: 'OpenCU', persistModes: ['session', 'always'], riskLevel: 'normal' } });
   let tail = Promise.resolve(), closed = false;
   async function read() {
     let value;
@@ -74,7 +80,7 @@ export function createAppApprovals(getDirectory) {
           if (!request) {
             const display = metadata ? { ...app, displayName: metadata.displayName || app.displayName, iconDataURL: metadata.iconDataURL ?? null } : app;
             request = { id: randomUUID(), conversationId: sessionId, app: display, targetId: target.id, waiters: new Set() };
-            pending.set(request.id, request);
+            pending.set(request.id, request); changed();
           }
         }
       } finally { authorizing.delete(attempt); }
@@ -82,7 +88,7 @@ export function createAppApprovals(getDirectory) {
         const waiter = { resolve, reject, cleanup: () => signal?.removeEventListener('abort', abort) };
         const abort = () => {
           waiter.cleanup(); request.waiters.delete(waiter);
-          if (!request.waiters.size) pending.delete(request.id);
+          if (!request.waiters.size && pending.delete(request.id)) changed();
           reject(signal.reason ?? failure('APP_APPROVAL_CANCELLED', 'Application request was cancelled'));
         };
         request.waiters.add(waiter);
@@ -90,6 +96,7 @@ export function createAppApprovals(getDirectory) {
         if (signal?.aborted) abort();
       });
     },
+    snapshot() { return [...pending.values()].map(publicRequest); },
     pending(sessionId) {
       return [...pending.values()].filter(value => value.conversationId === sessionId).map(value => ({
         id: value.id, conversationId: value.conversationId, targetId: value.targetId,
@@ -105,7 +112,7 @@ export function createAppApprovals(getDirectory) {
         if (action === 'accept' && persist === 'always') await change(value => ({ approvedApps: [...value.approvedApps.filter(app => app.bundleIdentifier !== request.app.bundleIdentifier), request.app] }));
         if (!pending.has(requestId)) throw failure('APP_REQUEST_EXPIRED', 'The task ended while saving this approval');
         if (action === 'accept') grants(conversationId).set(request.app.bundleIdentifier, request.app);
-        pending.delete(requestId);
+        pending.delete(requestId); changed();
         for (const waiter of request.waiters) {
           waiter.cleanup();
           if (action === 'accept') waiter.resolve();
@@ -117,7 +124,7 @@ export function createAppApprovals(getDirectory) {
     cancel(sessionId) {
       for (const attempt of authorizing) if (sessionId == null || attempt.sessionId === sessionId) attempt.cancelled = true;
       for (const request of pending.values()) if (sessionId == null || request.conversationId === sessionId) {
-        pending.delete(request.id);
+        pending.delete(request.id); changed();
         for (const waiter of request.waiters) { waiter.cleanup(); waiter.reject(failure('APP_APPROVAL_CANCELLED', 'The computer task was cancelled')); }
       }
     },

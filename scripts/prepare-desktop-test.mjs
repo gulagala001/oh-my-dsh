@@ -2,11 +2,12 @@
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { access, appendFile, mkdir, readFile, rename, rm, stat } from 'node:fs/promises';
+import { access, appendFile, mkdir, mkdtemp, readFile, rename, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { prepareEnvironment } from './desktop-test-environment.mjs';
 
 const [target, ...options] = process.argv.slice(2);
 const usage = 'Usage: node scripts/prepare-desktop-test.mjs <win-x64|mac-arm64> [--version <DSH version>] [--release-manifest <JSON>] [--archive <local file>] [--verify-only]';
@@ -38,6 +39,8 @@ if (!/^[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$/.test(version)
 if (!verifyOnly && (process.platform !== release.platform || process.arch !== release.arch)) {
   throw new Error(`${target} requires ${release.platform}/${release.arch}; got ${process.platform}/${process.arch}`);
 }
+if (!verifyOnly && target === 'win-x64' && (process.env.GITHUB_ACTIONS !== 'true' || process.env.RUNNER_ENVIRONMENT !== 'github-hosted'))
+  throw new Error('Official NSIS installation is restricted to disposable GitHub-hosted CI runners');
 
 const filename = `deepseek-harness-${version}-${target}.${release.extension}`;
 const url = `https://download.deepseek.com/dsh-desk/bin/${target}/${filename}`;
@@ -80,9 +83,9 @@ async function download() {
   }
 }
 
-async function command(executable, args) {
+async function command(executable, args, options) {
   await new Promise((done, reject) => {
-    const child = spawn(executable, args, { stdio: 'inherit', windowsHide: true });
+    const child = spawn(executable, args, { stdio: 'inherit', windowsHide: true, ...options });
     child.once('error', reject);
     child.once('exit', (code, signal) => code === 0 ? done() : reject(new Error(`${executable} exited with ${code ?? signal}`)));
   });
@@ -93,18 +96,24 @@ else if (verifyOnly) throw new Error('--verify-only requires --archive');
 else await download();
 
 if (!verifyOnly) {
+  // Running the official NSIS installer is authorized only on disposable,
+  // GitHub-hosted CI, never on a contributor's or user's Windows computer.
+  await mkdir(root, { recursive: true });
+  const preparation = await mkdtemp(join(root, 'prepare-home-'));
+  const isolated = { cwd: preparation, env: await prepareEnvironment(preparation) };
   let executable;
   if (target === 'mac-arm64') {
     const appRoot = join(root, 'mac-app');
     await mkdir(appRoot, { recursive: true });
-    await command('ditto', ['-x', '-k', archive, appRoot]);
+    await command('ditto', ['-x', '-k', archive, appRoot], isolated);
     executable = join(appRoot, 'DeepSeek Harness.app', 'Contents', 'MacOS', 'DeepSeek Harness');
   } else {
     const installRoot = join(root, 'windows-app');
     if (/\s/u.test(installRoot)) throw new Error('NSIS /D= installation path must contain no spaces');
     await mkdir(root, { recursive: true });
-    // NSIS requires /D= to be the final argument. This per-user install stays in runner.temp.
-    await command(archive, ['/S', `/D=${installRoot}`]);
+    // NSIS requires /D= last. Install, user folders and caches stay in this
+    // run's fresh tree; no Actions tokens are forwarded to the installer.
+    await command(archive, ['/S', `/D=${installRoot}`], isolated);
     executable = join(installRoot, 'DeepSeek Harness.exe');
   }
   await access(executable);
