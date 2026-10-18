@@ -11,7 +11,7 @@
 }
 /* The hidden right pane overflows the grid. clip prevents focus/scrollIntoView
    from horizontally scrolling the entire app, while keeping its paint bounds. */
-.trisoul-shell .pI_x6G_frame { overflow: clip; }
+.trisoul-shell :is(.pI_x6G_frame, [data-omd-surface="frame"]) { overflow: clip; }
 .trisoul-shell .wSkVaW_root {
   --dsh-chat-content-width: min(var(--dsh-chat-user-width, 760px), max(160px, calc(var(--dsh-conversation-column-width, 840px) - 64px)));
   --dsh-composer-card-max-width: calc(var(--dsh-chat-content-width) + 32px);
