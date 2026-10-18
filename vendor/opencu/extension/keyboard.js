@@ -62,3 +62,33 @@ export function keyEventParameters(spec, down, modifiers, isMac) {
     ...(text ? { text, unmodifiedText: text } : {}),
   };
 }
+
+// These are the event routes' actual key definitions, shared with their preflight checks.
+export function guestKeySpec(value) {
+  if (typeof value !== 'string' || !value) throw Object.assign(new TypeError('Input requires a key name'), { code:'INVALID_ARGUMENT', details:{inputDispatched:false,retryable:false} })
+  const aliases = { ctrl: 'Control', control: 'Control', alt: 'Alt', option: 'Alt', shift: 'Shift', meta: 'Meta', cmd: 'Meta', command: 'Meta', enter: 'Enter', return: 'Enter', esc: 'Escape', escape: 'Escape', tab: 'Tab', space: ' ', backspace: 'Backspace', delete: 'Delete', up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' }
+  const key = aliases[value.toLowerCase()] ?? value
+  const named = { Control: ['ControlLeft', 17], Alt: ['AltLeft', 18], Shift: ['ShiftLeft', 16], Meta: ['MetaLeft', 91], Enter: ['Enter', 13], Escape: ['Escape', 27], Tab: ['Tab', 9], ' ': ['Space', 32], Backspace: ['Backspace', 8], Delete: ['Delete', 46], Insert: ['Insert', 45], ArrowLeft: ['ArrowLeft', 37], ArrowUp: ['ArrowUp', 38], ArrowRight: ['ArrowRight', 39], ArrowDown: ['ArrowDown', 40], Home: ['Home', 36], End: ['End', 35], PageUp: ['PageUp', 33], PageDown: ['PageDown', 34], '+': ['Equal', 187], '=': ['Equal', 187], '-': ['Minus', 189] }
+  const spec = named[key] ?? (/^[a-z]$/i.test(key) ? [`Key${key.toUpperCase()}`, key.toUpperCase().charCodeAt(0)] : /^\d$/.test(key) ? [`Digit${key}`, key.charCodeAt(0)] : /^F([1-9]|1\d|2[0-4])$/.test(key) ? [key, 111 + Number(key.slice(1))] : undefined)
+  if (!spec) throw Object.assign(new Error('Use a supported named key; insertText handles Unicode'), { code:'UNSUPPORTED_KEY', details:{inputDispatched:false,retryable:false} })
+  return { key, code: spec[0], windowsVirtualKeyCode: spec[1] }
+}
+
+
+export function extensionKeySpec(value) {
+  const names = { CTRL: 'Control', CONTROL: 'Control', ALT: 'Alt', OPTION: 'Alt', SHIFT: 'Shift', META: 'Meta', CMD: 'Meta', COMMAND: 'Meta',
+    ENTER: 'Enter', RETURN: 'Enter', TAB: 'Tab', ESC: 'Escape', ESCAPE: 'Escape', SPACE: ' ', BACKSPACE: 'Backspace', DELETE: 'Delete',
+    UP: 'ArrowUp', DOWN: 'ArrowDown', LEFT: 'ArrowLeft', RIGHT: 'ArrowRight', HOME: 'Home', END: 'End', PAGEUP: 'PageUp', PAGEDOWN: 'PageDown' };
+  const key = names[String(value).toUpperCase()] || value;
+  const codes = { Control: ['ControlLeft', 17], Alt: ['AltLeft', 18], Shift: ['ShiftLeft', 16], Meta: ['MetaLeft', 91],
+    Enter: ['Enter', 13], Tab: ['Tab', 9], Escape: ['Escape', 27], ' ': ['Space', 32], Backspace: ['Backspace', 8], Delete: ['Delete', 46],
+    ArrowLeft: ['ArrowLeft', 37], ArrowUp: ['ArrowUp', 38], ArrowRight: ['ArrowRight', 39], ArrowDown: ['ArrowDown', 40],
+    Home: ['Home', 36], End: ['End', 35], PageUp: ['PageUp', 33], PageDown: ['PageDown', 34], '+': ['Equal', 187] };
+  let code, vk;
+  if (codes[key]) [code, vk] = codes[key];
+  else if (/^[a-z]$/i.test(key)) { code = 'Key' + key.toUpperCase(); vk = key.toUpperCase().charCodeAt(0); }
+  else if (/^\d$/.test(key)) { code = 'Digit' + key; vk = key.charCodeAt(0); }
+  else if (/^F([1-9]|1[0-2])$/.test(key)) { code = key; vk = 111 + Number(key.slice(1)); }
+  else throw Object.assign(new Error('Use named keys, letters, digits or F1–F12; type_text handles other Unicode.'), {code:'UNSUPPORTED_KEY',details:{inputDispatched:false,retryable:false}});
+  return { key, code, windowsVirtualKeyCode: vk };
+}

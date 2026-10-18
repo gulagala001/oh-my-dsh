@@ -6,6 +6,15 @@ import { createReadStream } from 'node:fs';
 /** The desktop writes bytes into this private directory; the plugin owns durable metadata. */
 export function createSidebarDownloads(getDataDir) {
   let records, directory, index, loading, tail = Promise.resolve();
+  const unavailableFile = failure => ['ENOENT', 'ENOTDIR', 'EACCES', 'EPERM', 'ELOOP', 'INVALID_FILE', 'DELIVERY_CHANGED'].includes(failure.code);
+  const fileFailure = failure => ({ code: failure.code, message: 'The retained download file is missing, changed, or unavailable' });
+  async function retainedFile(record) {
+    const actual = await realpath(record.path);
+    if (!actual.startsWith(`${await realpath(directory)}${sep}`)) throw Object.assign(new Error('Retained download escaped storage'), { code: 'INVALID_FILE' });
+    const info = await stat(actual);
+    if (!info.isFile() || info.size !== (record.bytes ?? record.receivedBytes)) throw Object.assign(new Error('Retained download size changed'), { code: 'DELIVERY_CHANGED' });
+    return { actual, info };
+  }
   async function ready() {
     directory ??= join(resolve(getDataDir()), 'sidebar-downloads');
     index ??= join(directory, 'index.json');
@@ -32,12 +41,15 @@ export function createSidebarDownloads(getDataDir) {
         const record = { ...value, updatedAtMs: value.updatedAtMs ?? previous?.updatedAtMs ?? value.startedAtMs,
           path: join(directory, id, value.filename), name: value.filename, provider: 'dsh', backend: 'browser' };
         if (record.status === 'complete') {
-          const actual = await realpath(record.path);
-          if (!actual.startsWith(`${await realpath(directory)}${sep}`)) throw new Error('Retained download escaped storage');
-          const info = await stat(actual), hash = createHash('sha256');
-          if (!info.isFile() || info.size !== record.receivedBytes) throw new Error('Retained download size changed');
-          for await (const chunk of createReadStream(actual)) hash.update(chunk);
-          record.bytes = info.size; record.sha256 = hash.digest('hex');
+          record.bytes = value.receivedBytes;
+          try {
+            const { actual, info } = await retainedFile(record), hash = createHash('sha256');
+            for await (const chunk of createReadStream(actual)) hash.update(chunk);
+            record.bytes = info.size; record.sha256 = hash.digest('hex'); record.fileExists = true;
+          } catch (failure) {
+            if (!unavailableFile(failure)) throw failure;
+            record.fileExists = false; record.fileError = fileFailure(failure);
+          }
         } else if (['started', 'in_progress', 'paused'].includes(record.status)) {
           record.status = 'failed'; record.error = 'The download was interrupted when its desktop host exited';
           record.canPause = false; record.canResume = false; record.canCancel = false;
@@ -84,9 +96,13 @@ export function createSidebarDownloads(getDataDir) {
       const found = records.filter(item => !item.removed && `${item.filename}\n${item.url}`.toLowerCase().includes(needle))
         .sort((a, b) => b.startedAtMs - a.startedAtMs).slice(Math.max(0, offset), Math.max(0, offset) + Math.min(1000, Math.max(1, maxResults)));
       return Promise.all(found.map(async record => {
-        let fileExists = false;
-        if (record.status === 'complete') { try { fileExists = (await stat(record.path)).size === record.bytes; } catch { /* A removed delivery stays in history. */ } }
-        return { ...record, fileExists };
+        const { fileError: previousError, ...metadata } = record;
+        let fileExists = false, fileError;
+        if (record.status === 'complete') {
+          try { await retainedFile(record); fileExists = true; }
+          catch (failure) { if (!unavailableFile(failure)) throw failure; fileError = fileFailure(failure); }
+        }
+        return { ...metadata, fileExists, ...(fileError ? { fileError } : {}) };
       }));
     },
     remove(id, since = 0) {

@@ -19,8 +19,10 @@ jobs:
       matrix: ${{ steps.release.outputs.matrix }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Check Desktop release eligibility regressions
-        run: node --test test/desktop-release-eligibility.test.mjs test/build-opencu-imports.test.mjs
+        run: node --test test/desktop-release-eligibility.test.mjs test/build-opencu-imports.test.mjs test/desktop-host-boot-contract.test.mjs
       - id: release
         name: Check whether this host has official desktop packages
         run: |
@@ -49,11 +51,15 @@ jobs:
       matrix: ${{ fromJSON(needs.release-metadata.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
       - uses: pnpm/action-setup@v6
       - run: pnpm install --frozen-lockfile
+      - name: Synthetic Deny contracts with real OpenCU controller and ToolRuntime
+        run: node --test test/desktop-deny-contract.test.mjs
       - run: pnpm build
       - name: Reserve fresh inputs inside the new workspace
         shell: bash
@@ -74,13 +80,21 @@ jobs:
         run: |
           npm pack --json --ignore-scripts --pack-destination "$OMD_DESKTOP_TEST_ROOT" > "$OMD_DESKTOP_TEST_ROOT/pack.json"
           node --input-type=module - <<'NODE'
-          import { appendFileSync, readFileSync, realpathSync, statSync } from 'node:fs';
+          import { appendFileSync, copyFileSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
           import { createHash } from 'node:crypto';
           import { join } from 'node:path';
+          import { nativePackageModes } from './scripts/native-package-modes.mjs';
           const root = process.env.OMD_DESKTOP_TEST_ROOT;
           const packed = JSON.parse(readFileSync(join(root, 'pack.json'), 'utf8'));
           if (packed.length !== 1) throw Error('Expected exactly one final OMD archive');
           const archive = realpathSync(join(root, packed[0].filename));
+          // Match the existing production pack-local pipeline before freezing.
+          // Keep the raw input for failure analysis; delivery never repairs it.
+          const rawArchive = join(root, 'raw-' + packed[0].filename);
+          copyFileSync(archive, rawArchive);
+          const rawSha256 = createHash('sha256').update(readFileSync(rawArchive)).digest('hex');
+          writeFileSync(join(root, 'raw-package.json'), JSON.stringify({ file: rawArchive, sha256: rawSha256 }, null, 2));
+          await nativePackageModes(archive);
           const resources = process.env.DESKTOP_TARGET === 'mac-arm64'
             ? join(root, 'mac-app', 'DeepSeek Harness.app', 'Contents', 'Resources')
             : join(root, 'windows-app', 'resources');
@@ -89,10 +103,48 @@ jobs:
           const sha256 = createHash('sha256').update(readFileSync(archive)).digest('hex');
           appendFileSync(process.env.GITHUB_ENV, `OMD_DESKTOP_APP_ROOT=${appRoot}\nOMD_PLUGIN_ARCHIVE=${archive}\nOMD_PLUGIN_ARCHIVE_SHA256=${sha256}\n`);
           NODE
-      - name: Record Desktop build scope
+      - name: Verify the actual frozen Desktop tgz delivery
         shell: bash
         run: |
-          printf '%s\n' '构建完成，真实桌面使用未由CI验收。' >> "$GITHUB_STEP_SUMMARY"
+          set -euo pipefail
+          node scripts/check-opencu-delivery.mjs "$OMD_PLUGIN_ARCHIVE" | tee "$OMD_DESKTOP_TEST_ROOT/opencu-delivery.json"
+      - name: Boot official Desktop and verify isolated OMD registration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test --test-reporter=tap test/desktop-host-boot.test.mjs | tee "$OMD_DESKTOP_TEST_ROOT/host-boot.tap"
+          node --input-type=module - <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync, appendFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const root = process.env.OMD_DESKTOP_TEST_ROOT;
+          const tap = readFileSync(join(root, 'host-boot.tap'), 'utf8');
+          for (const [key, expected] of [['tests', 1], ['pass', 1], ['fail', 0], ['cancelled', 0], ['skipped', 0]]) {
+            const match = tap.match(new RegExp(`^# ${key} (\\d+)$`, 'm'));
+            assert.equal(Number(match?.[1]), expected, `Desktop acceptance count: ${key}`);
+          }
+          const report = JSON.parse(readFileSync(join(root, 'host-boot-evidence', 'desktop-host-boot.json')));
+          assert.equal(report.status, 'passed'); assert.equal(report.executed, 1); assert.equal(report.skipped, 0);
+          assert.equal(report.launches.length, 2); assert.equal(report.shutdowns.length, 2);
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+            '官方 rc.2 Desktop：本地 tgz 安装、完整退出重启、真实前端及注册/设置入口验收通过；模型调用 0，三个外部 CU backend 关闭且未执行 CU 动作（DSH 自有 browser 适配仍存在）。\n#54 rc.1 配对与 #64 真实 native/CU 动作仍未验收，不得据此关闭。详见脱敏截图和 JSON/TAP。\n');
+          NODE
+      - name: Real Agent and REA Deny against one synthetic target
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test --test-reporter=tap test/desktop-deny.test.mjs | tee "$OMD_DESKTOP_TEST_ROOT/deny.tap"
+          node --input-type=module - <<'NODE'
+          import { readFileSync, appendFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          import { assertDenyReport } from './test/fixtures/desktop-deny/gate.mjs';
+          const root = process.env.OMD_DESKTOP_TEST_ROOT;
+          const tap = readFileSync(join(root, 'deny.tap'), 'utf8');
+          const report = JSON.parse(readFileSync(join(root, 'deny-evidence', 'desktop-deny.json')));
+          assertDenyReport(tap, report);
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+            'Issue #64 partial: official rc.2 Electron, full frozen OMD, real Agent/ToolRuntime/OpenCU and REA Deny passed against one synthetic target. The unique default composer approval card and Deny button were visible inside the viewport without group expansion, scrolling or API approval; the same Session and pending UUID remained bound. Two loopback model requests, one tool call, zero rejected/external model routes and zero physical backend operations. Original zero-model host boot remains separate. Physical CU, Allow/grants, Web/WSL export and rc.1 pairing are unverified.\n');
+          NODE
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -100,4 +152,11 @@ jobs:
           path: |
             ${{ env.OMD_PLUGIN_ARCHIVE }}
             ${{ env.OMD_DESKTOP_TEST_ROOT }}/pack.json
+            ${{ env.OMD_DESKTOP_TEST_ROOT }}/raw-*.tgz
+            ${{ env.OMD_DESKTOP_TEST_ROOT }}/raw-package.json
+            ${{ env.OMD_DESKTOP_TEST_ROOT }}/host-boot.tap
+            ${{ env.OMD_DESKTOP_TEST_ROOT }}/deny.tap
+            ${{ env.OMD_DESKTOP_TEST_ROOT }}/deny-evidence/
+            ${{ env.OMD_DESKTOP_TEST_ROOT }}/opencu-delivery.json
+            ${{ env.OMD_DESKTOP_TEST_ROOT }}/host-boot-evidence/
           if-no-files-found: warn

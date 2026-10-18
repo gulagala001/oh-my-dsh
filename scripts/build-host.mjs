@@ -7,6 +7,7 @@ import { join, relative, isAbsolute } from 'node:path';
 import { createHostConstEnums } from './host-const-enums.mjs';
 import { hostTarget } from './host-targets.mjs';
 import { checkMacHelperDistribution } from './check-opencu-native.mjs';
+import { buildChatStyleFactory } from './chat-style-adapter.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 if (process.platform === 'darwin') await checkMacHelperDistribution(join(root, 'vendor/opencu'));
@@ -145,7 +146,13 @@ for (const name of ['bash-local.mjs', 'pwsh-local.mjs', 'tools.mjs', 'tools.fact
 // Embed the upstream-built browser factories in OMD's own client module. A
 // file: subpackage cannot be resolved from a GitHub-installed dependency.
 for (const [name, create, styleOwner] of [['ui-conversation', 'createConversation', 'trisoul_x'], ['ui-chat', 'createChat', 'trisoul_x/chat']]) {
-  const client = (await readFile(`${root}vendor/dsh/${name}/lib/client.js`, 'utf8')).replace(/^\/\/# sourceMappingURL=.*\n?/gm, '');
+  const rawClient = await readFile(`${root}vendor/dsh/${name}/lib/client.js`, 'utf8');
+  if (name === 'ui-chat') {
+    const { code } = buildChatStyleFactory(rawClient, { commit: snapshot.commit, sha256: chatSnapshot.files['lib/client.js'] });
+    await writeFile(`${root}lib/host/${name}.factory.mjs`, code);
+    continue;
+  }
+  const client = rawClient.replace(/^\/\/# sourceMappingURL=.*\n?/gm, '');
   if (!client.startsWith('window.__ModuleLoader__.load({') || !client.trimEnd().endsWith('});')) throw new Error(`Unexpected DSH ${name} browser factory format`);
   if (!client.slice(0, 150).includes(`id: "@deepseek-ai/dsh-client-${name}"`)) throw new Error(`Unexpected DSH ${name} module identity`);
   const stylePrefix = name === 'ui-chat' ? styleOwner : 'trisoul_x/conversation';

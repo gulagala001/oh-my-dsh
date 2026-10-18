@@ -33,7 +33,7 @@ export class DeepSeekWorkbench extends Service {
       if (denied !== undefined) { res.writeHead(denied); res.end(); return; }
       const path = new URL(req.url, 'http://localhost').pathname;
       try {
-        if (path === '/deepseek-workbench/api/state' && req.method === 'GET') { send(res, 200, { enabled: this.enabled, version: VERSION, demoOpen: process.env.DSW_DEMO_OPEN === '1', demoVerify: process.env.DSW_DEMO_VERIFY === '1' }); return; }
+        if (path === '/deepseek-workbench/api/state' && req.method === 'GET') { send(res, 200, { enabled: this.enabled, version: VERSION, accountDiagnostics: process.env.DSW_ACCOUNT_DIAGNOSTICS === '1', demoOpen: process.env.DSW_DEMO_OPEN === '1', demoVerify: process.env.DSW_DEMO_VERIFY === '1' }); return; }
         if (path === '/deepseek-workbench/api/verification-result' && req.method === 'POST' && process.env.DSW_DEMO_VERIFY === '1') {
           const value = await body(req);
           const directory = resolve(process.env.DSH_HOME || resolve(homedir(), '.dsh'), 'deepseek-workbench');

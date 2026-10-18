@@ -93,7 +93,12 @@ function bindNarrowSidebar(ctx, frame, column) {
       else if (!event.shiftKey && (document.activeElement === last || !column.contains(document.activeElement))) { event.preventDefault(); first?.focus(); }
     }
   };
-  const observer = new MutationObserver(sync);
+  const observer = new MutationObserver(records => {
+    // Only the frame itself and its direct surface regions affect this overlay.
+    // Streaming messages can change descendant nodes/styles without changing it.
+    if (records.some(record => record.target === document.documentElement || record.target === frame
+      || record.type === 'attributes' && record.attributeName === 'data-omd-surface' && record.target.parentElement === frame)) sync();
+  });
   observer.observe(frame, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-sidebar-collapsed', 'data-rightbar-fullscreen', 'data-omd-surface', 'style'] });
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-omd-layout', 'class'] });
   narrow.addEventListener('change', sync); scrim.addEventListener('click', close);
@@ -233,22 +238,18 @@ export function applySidebarPresentation(ctx) {
     const style = document.createElement('style'); style.dataset.omdSidebarStyle = ''; style.textContent = css; document.head.append(style);
     const navMarkers = createNavMarkers();
     const owned = new Map();
+    let sidebar, syncFrame;
     const restore = (root, record) => {
       record.dispose();
       for (const [name, value] of record.attributes) {
         if (value === null) root.removeAttribute(name); else root.setAttribute(name, value);
       }
     };
-    let markedSidebar = null;
-    const sync = records => {
+    const sync = () => {
       // Header class suffixes identify the host-owned workspace browser across
       // npm/desktop hash variants. Never replace its child-slot declarations.
-      const sidebar = document.querySelector('[data-omd-surface="sidebar"]');
-      // Global mutations still discover replaced layout roots, but only the
-      // sidebar's own DOM can change its class-based styling hooks.
-      if (!records || sidebar !== markedSidebar || records.some(record => sidebar?.contains(record.target))) {
-        navMarkers.refresh(sidebar); markedSidebar = sidebar;
-      }
+      sidebar = document.querySelector('[data-omd-surface="sidebar"]');
+      navMarkers.refresh(sidebar);
       const root = sidebar?.querySelector('[class*="_sectionHeader"]')?.parentElement;
       for (const [element, record] of owned) if (element !== root) { restore(element, record); owned.delete(element); }
       if (!root) return;
@@ -269,9 +270,16 @@ export function applySidebarPresentation(ctx) {
       const wide = [...root.classList].some(name => name.endsWith('_rail')) ? 'false' : 'true';
       if (root.getAttribute('data-wide') !== wide) root.setAttribute('data-wide', wide);
     };
-    const observer = new MutationObserver(sync);
+    const observer = new MutationObserver(records => {
+      // Host rows/classes and shell replacement matter here; transcript mutations
+      // in a sibling surface do not change sidebar markers or browser bindings.
+      if (sidebar?.isConnected && !records.some(record => record.type === 'attributes'
+        ? record.attributeName === 'data-omd-surface' || sidebar.contains(record.target)
+        : sidebar.contains(record.target) || record.target.contains(sidebar))) return;
+      if (syncFrame === undefined) syncFrame = requestAnimationFrame(() => { syncFrame = undefined; sync(); });
+    });
     observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'data-omd-surface'] });
     sync();
-    return () => { observer.disconnect(); markedSidebar = null; for (const [root, record] of owned) restore(root, record); owned.clear(); navMarkers.dispose(); style.remove(); };
+    return () => { observer.disconnect(); cancelAnimationFrame(syncFrame); for (const [root, record] of owned) restore(root, record); owned.clear(); navMarkers.dispose(); style.remove(); };
   });
 }

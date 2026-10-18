@@ -55,7 +55,7 @@ export async function openSidebarReplay(browser, bundle, { rows = 50, history = 
     document.querySelector('#fixture-sidebar-column').append(makeSidebar());
     document.querySelector('#fixture-history').innerHTML = Array.from({ length: history }, (_, i) => `<p>Historical message ${i}</p>`).join('');
     const nextTask = () => new Promise(resolve => { const channel = new MessageChannel(); channel.port1.onmessage = () => { channel.port1.close(); channel.port2.close(); resolve(); }; channel.port2.postMessage(null); });
-    const settle = async () => { await nextTask(); await nextTask(); };
+    const settle = async () => { await nextTask(); await new Promise(requestAnimationFrame); await nextTask(); };
     const api = window.__sidebarFixture = { rows, history, clicks: 0, makeRow, makeSidebar, nextTask, settle, resetCounters,
       snapshot: () => ({ ...counters }), disposers: [], stop() { for (const dispose of this.disposers.splice(0)) dispose(); },
       async run({ operations = 120, kind = 'structural' } = {}) {

@@ -96,7 +96,7 @@ export class OpenCUCursors {
     record.window.setBounds(bounds, false)
     record.window.webContents.setZoomFactor(1)
     record.window.webContents.send('dsh-desktop:opencu-cursor-update', { x: location.x - bounds.x, y: location.y - bounds.y,
-      visible: true, animateMovement: true })
+      visible: true, animateMovement: true, glowColor: '#000' })
     record.window.showInactive()
     return { visible: true, windowId: record.window.id }
   }

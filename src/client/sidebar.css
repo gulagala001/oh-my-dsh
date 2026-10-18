@@ -1,4 +1,13 @@
 
+/* Windows caption controls are fixed to the viewport. A blurred sidebar
+   changes their containing block and drops them onto the brand row. */
+html.omd[data-windows-titlebar] :is([data-omd-part="sidebar"], [data-omd-surface="sidebar"], [data-omd-surface="sidebar-column"]) {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+/* Keep the caption's drag surface clear of the host's 28px toggle at x=12. */
+html.omd[data-windows-titlebar] [data-omd-surface="frame"]::before { left: 48px; }
+
 html.trisoul-shell:not([data-omd-layout]) [data-omd-surface="frame"]:not([data-sidebar-collapsed="true"]) [data-omd-surface="sidebar"] {
   & [data-omd-nav-part="brand"] { height: 52px; margin-bottom: 8px; }
   & [data-omd-nav-part="create"] { height: 36px; margin-bottom: 8px; padding-inline: 12px; border: 1px solid color-mix(in srgb, var(--dsw-alias-border-l4) 55%, transparent); border-radius: 9px; background: color-mix(in srgb, var(--dsw-alias-bg-base) 65%, transparent); font-weight: 500; font-size: 13px; transition: background-color 140ms ease, border-color 140ms ease; }

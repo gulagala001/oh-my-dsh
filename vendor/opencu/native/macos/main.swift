@@ -40,7 +40,8 @@ final class NativeService {
         try FileManager.default.createDirectory(at: screenshots, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         capture = CaptureStore(directory: screenshots)
         input = try InputStore(directory: directory, cancellation: cancellation)
-        input.moved = { [weak self] point in try self?.cursor.show(point) }
+        input.moved = { [weak self] point, continuous in try self?.cursor.show(point, continuous: continuous) }
+        input.pointerSettled = { [weak self] point in self?.cursor.settled(point) }
         input.released = { [weak self] in self?.cursor.hide() }
     }
 
@@ -102,6 +103,7 @@ final class NativeService {
             return result
         case "act":
             let action = params["action"] as? [String: Any] ?? [:]
+            let inputStart = input.dispatchSequence
             input.actionEpoch = params["_controlEpoch"] as? Int ?? input.cancellation.current()
             input.activePID = nil; input.activeWindow = nil
             defer { input.activePID = nil; input.activeWindow = nil }
@@ -110,8 +112,17 @@ final class NativeService {
                 return try act(target, action)
             }
             catch let failure as NativeFailure {
+                let dispatched = failure.details["inputDispatched"] as? Bool == true || input.dispatchSequence != inputStart
+                let clickAction = ["click","double_click","right_click"].contains(action["type"] as? String ?? "")
+                let pressAction = action["type"] as? String == "press_key"
+                let rejectedPress = pressAction && ["INVALID_ARGUMENT","INVALID_ACTION","UNKNOWN_KEY","INPUT_ALREADY_HELD","RELEASE_REQUIRED","UNSUPPORTED_ACTION"].contains(failure.code)
+                if !dispatched, rejectedPress || clickAction && ["INVALID_ARGUMENT","INPUT_ALREADY_HELD","RELEASE_REQUIRED","UNSUPPORTED_ACTION"].contains(failure.code) {
+                    throw NativeFailure(failure.code, failure.message, failure.details.merging(["inputDispatched":false,"retryable":false]) { _, value in value })
+                }
                 let release = input.release()
-                throw NativeFailure(failure.code, failure.message, failure.details.merging(["release": release]) { _, right in right })
+                var details: [String: Any] = ["release": release]
+                if clickAction || pressAction { details["inputDispatched"] = dispatched }
+                throw NativeFailure(failure.code, failure.message, failure.details.merging(details) { _, right in right })
             }
             catch { let release = input.release(); throw NativeFailure("NATIVE_ACTION_FAILED", error.localizedDescription, ["release": release]) }
         case "release": return input.release()
@@ -154,14 +165,17 @@ final class NativeService {
             try requireAX()
             return ["element": try ax.hitTest(capture.point(action, target: target), target: target, targets: targets)]
         }
-        guard ["set_value", "ax_press", "move", "click", "double_click", "right_click", "mouse_down", "mouse_up", "drag", "scroll", "key_down", "key_up", "press_key", "type_text"].contains(type) else {
+        guard ["set_value", "ax_press", "select_text", "paste", "perform_secondary_action", "move", "click", "double_click", "right_click", "mouse_down", "mouse_up", "drag", "scroll", "key_down", "key_up", "press_key", "type_text"].contains(type) else {
             throw NativeFailure("UNSUPPORTED_ACTION", "Unsupported native action: \(type).")
         }
         let mode = action["inputMode"] as? String ?? "background"
         guard ["background", "foreground"].contains(mode) else { throw NativeFailure("INVALID_ACTION", "inputMode must be background or foreground.") }
+        let click = ["click","double_click","right_click"].contains(type) ? try ClickOptions(action, type: type) : nil
+        let keyDuration = type == "press_key" ? try pressDuration(action) : 0
+        if let click = click { try input.checkClick(click, button: type == "right_click" ? 1 : mouseButton(action)) }
         var rowSelection: AXUIElement?, pressElement: AXUIElement?
         if mode == "background", type == "click", try mouseButton(action) == 0,
-            input.keys.isEmpty, input.buttons.isEmpty {
+            click?.transactional != true, click?.count == 1, input.keys.isEmpty, input.buttons.isEmpty {
             let id: Int?
             if let selected = action["elementId"] as? Int { id = selected }
             else if AXIsProcessTrusted() {
@@ -174,7 +188,7 @@ final class NativeService {
                 if pressElement == nil { rowSelection = try ax.selectableRow(id, target: target, targets: targets) }
             }
         }
-        let semantic = ["set_value", "ax_press"].contains(type) || rowSelection != nil || pressElement != nil
+        let semantic = ["set_value", "ax_press", "select_text", "paste", "perform_secondary_action"].contains(type) || rowSelection != nil || pressElement != nil
         if !semantic {
             try input.route(to: mode == "background" ? target : nil)
             let application = try targets.app(target)
@@ -196,6 +210,29 @@ final class NativeService {
             cursor.track { [weak self] in self?.targets.verify(target)["valid"] as? Bool == true }
         }
         switch type {
+        case "select_text":
+            try input.semanticAction { willDispatch in
+                guard let id = action["elementId"] as? Int else { throw NativeFailure("INVALID_ARGUMENT", "selectText requires a numeric elementId from this target's latest AX observation.") }
+                try ax.selectText(id, target: target, targets: targets, action: action, check: input.check, willDispatch: willDispatch)
+            }
+        case "paste":
+            try input.semanticAction { willDispatch in
+                guard let text = action["text"] as? String,
+                      action["elementId"] == nil || action["elementId"] is NSNull || action["elementId"] is Int else {
+                    throw NativeFailure("INVALID_ARGUMENT", "paste requires text and an optional numeric elementId (or null for this application's focused editor).")
+                }
+                let format = action["format"] as? String ?? "text"
+                guard action["format"] == nil || action["format"] is String else { throw NativeFailure("INVALID_ARGUMENT", "paste format must be a string.") }
+                guard ["text", "md"].contains(format) else { throw NativeFailure("UNSUPPORTED_PASTE_FORMAT", "Native paste supports text and md as literal text; HTML formatting is not supported.") }
+                try ax.paste(action["elementId"] as? Int, target: target, targets: targets, text: text, check: input.check, willDispatch: willDispatch)
+            }
+        case "perform_secondary_action":
+            try input.semanticAction { willDispatch in
+                guard let id = action["elementId"] as? Int, let name = action["actionName"] as? String, !name.isEmpty else {
+                    throw NativeFailure("INVALID_ARGUMENT", "performSecondaryAction requires a numeric elementId and non-empty actionName from the element's observed actions.")
+                }
+                try ax.performSecondaryAction(id, target: target, targets: targets, name: name, check: input.check, willDispatch: willDispatch)
+            }
         case "set_value":
             guard let id = action["elementId"] as? Int, let value = action["value"], value is String || value is NSNumber else { throw NativeFailure("INVALID_ACTION", "AX set_value requires numeric elementId and string/number value.") }
             try ax.setValue(id, target: target, value: value)
@@ -205,13 +242,17 @@ final class NativeService {
         case "move": try input.move(point(action, target))
         case "click", "double_click", "right_click", "mouse_down", "mouse_up":
             if let element = pressElement {
-                try input.check()
-                try checkedAX(AXUIElementPerformAction(element, kAXPressAction as CFString), "press control")
+                try input.semanticAction { willDispatch in
+                    try input.check(); willDispatch()
+                    try checkedAX(AXUIElementPerformAction(element, kAXPressAction as CFString), "press control")
+                }
                 break
             }
             if let row = rowSelection {
-                try input.check()
-                try checkedAX(AXUIElementSetAttributeValue(row, kAXSelectedAttribute as CFString, kCFBooleanTrue), "select row")
+                try input.semanticAction { willDispatch in
+                    try input.check(); willDispatch()
+                    try checkedAX(AXUIElementSetAttributeValue(row, kAXSelectedAttribute as CFString, kCFBooleanTrue), "select row")
+                }
                 break
             }
             let at = try point(action, target)
@@ -219,11 +260,16 @@ final class NativeService {
             if type == "mouse_up" { try input.button(button, point: at, down: false) }
             else {
                 try input.move(at)
-                let count = type == "double_click" ? 2 : 1
+                let count = click?.count ?? 1
+                for code in click?.keys ?? [] { try input.key(code, down: true) }
                 for index in 1...count {
                     try input.button(button, point: at, down: true, clicks: index)
-                    if type != "mouse_down" { try input.button(button, point: at, down: false, clicks: index) }
+                    if type != "mouse_down" {
+                        try input.holdClick(click?.duration ?? 0)
+                        try input.button(button, point: at, down: false, clicks: index)
+                    }
                 }
+                for code in (click?.keys ?? []).reversed() { try input.key(code, down: false) }
             }
         case "drag":
             var from = action
@@ -237,15 +283,28 @@ final class NativeService {
             }
             let start = points[0], end = points[points.count - 1], button = try mouseButton(action)
             let duration = min(10, max(0.05, (action["durationMs"] as? Double ?? 350) / 1000))
-            let segmentDuration = duration / Double(points.count - 1), steps = max(1, Int(segmentDuration * 60))
             try input.move(start); try input.button(button, point: start, down: true)
-            for index in 1..<points.count {
-                let a = points[index - 1], b = points[index]
-                for step in 1...steps {
-                    try input.move(CGPoint(x: a.x + (b.x - a.x) * Double(step) / Double(steps), y: a.y + (b.y - a.y) * Double(step) / Double(steps)))
-                    pump(segmentDuration / Double(steps))
+            let started = ProcessInfo.processInfo.systemUptime, frameInterval = 1.0 / 60.0
+            let deadline = started + duration
+            var nextFrame = started + frameInterval
+            while true {
+                try input.check()
+                let now = ProcessInfo.processInfo.systemUptime
+                if now >= deadline { break }
+                if now < nextFrame {
+                    pump(min(nextFrame, deadline) - now)
+                    continue
                 }
+                let position = min(Double(points.count - 1), (now - started) / duration * Double(points.count - 1))
+                let index = min(points.count - 2, Int(position)), fraction = position - Double(index)
+                let a = points[index], b = points[index + 1]
+                try input.move(CGPoint(x: a.x + (b.x - a.x) * fraction, y: a.y + (b.y - a.y) * fraction))
+                // Rendering and event-posting time are part of the trajectory.
+                // Skip expired frames instead of queuing catch-up input.
+                let elapsed = ProcessInfo.processInfo.systemUptime - started
+                nextFrame = started + (floor(elapsed / frameInterval) + 1) * frameInterval
             }
+            try input.move(end)
             try input.button(button, point: end, down: false)
         case "scroll":
             if action["x"] != nil || action["elementId"] != nil { try input.move(point(action, target)) }
@@ -290,7 +349,9 @@ final class NativeService {
                 codes = chord
             }
             guard !codes.isEmpty && Set(codes).count == codes.count else { throw NativeFailure("INVALID_ACTION", "press_key requires a key or unique key chord.") }
+            try input.checkPress(codes)
             for code in codes { try input.key(code, down: true) }
+            try input.holdClick(keyDuration)
             for code in codes.reversed() { try input.key(code, down: false) }
         case "type_text":
             guard let text = action["text"] as? String, text.utf16.count <= 100000 else { throw NativeFailure("INVALID_ACTION", "type_text requires text of at most 100000 UTF-16 units.") }
@@ -307,9 +368,11 @@ final class NativeService {
             try input.typeText(text)
         default: throw NativeFailure("UNSUPPORTED_ACTION", "Unsupported native action: \(type).")
         }
-        return ["performed": true, "type": type, "input": input.held(), "inputMode": mode,
+        var result: [String: Any] = ["performed": true, "type": type, "input": input.held(), "inputMode": mode,
             "delivery": semantic ? "accessibility-acknowledged" : mode == "background" ? "process-posted" : "foreground-posted",
             "effectVerified": false]
+        if ["select_text", "paste", "perform_secondary_action", "click", "double_click", "right_click", "press_key"].contains(type) { result["inputDispatched"] = true }
+        return result
     }
 }
 

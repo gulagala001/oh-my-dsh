@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef,
 import { createPortal } from 'react-dom';
 import { effortChoices } from '../model-efforts.mjs';
 import css from './model-panel.css';
+import { useMainConversation } from './main-conversation.mjs';
 
 const emptyStore = { subscribe: () => () => {}, getSnapshot: () => undefined };
 const useStore = store => useSyncExternalStore(fn => store.subscribe(fn), () => store.getSnapshot());
@@ -11,6 +12,11 @@ const particles = Array.from({ length: 14 }, (_, i) => ({
   '--particle-opacity':.4+seeded(i,11)*.6, '--particle-scale':.5+seeded(i,12)*.45,
   animationDelay: `${-(i*.14+seeded(i,17)*1.2)}s`, '--particle-duration': `${1.9/(.8+seeded(i,21)*.4)}s`,
 }));
+const ultraSubmodes = [
+  { id: 'workflow', label: 'Workflow', description: '按工作流编排任务与子代理。' },
+  { id: 'team', label: 'Agent Team', description: '通过成员沟通与共享任务板协作。' },
+  { id: 'free', label: '自由', description: '由模型自行组织多 AI 协作，专注完成任务。' },
+];
 const sameRoute = (a, b) => a?.provider === b?.provider && a?.model === b?.model;
 async function modeApi(sessionId, body, signal) {
   const response = await fetch(`trisoul-x/api/model-mode?session=${encodeURIComponent(sessionId)}`, {
@@ -32,13 +38,13 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, additi
   const projected = useStore(faces.mode), preset = useStore(faces.preset);
   const [mode, setMode] = useState(null), [error, setError] = useState(''), [saving, setSaving] = useState(false);
   const [open, setOpen] = useState(false), [pane, setPane] = useState('effort'), [query, setQuery] = useState('');
-  const [draft, setDraft] = useState(null), [dragging, setDragging] = useState(false), [notice, setNotice] = useState(false);
+  const [draft, setDraft] = useState(null), [dragging, setDragging] = useState(false);
   const [position, setPosition] = useState({ visibility: 'hidden' });
   const trigger = useRef(null), panel = useRef(null), slider = useRef(null), search = useRef(null), modelButton = useRef(null);
-  const live = useRef(true), ticket = useRef(0), writing = useRef(false), draggingRef = useRef(false), draftRef = useRef(null), noticeTimer = useRef(), commitTimer = useRef();
+  const live = useRef(true), ticket = useRef(0), writing = useRef(false), draggingRef = useRef(false), draftRef = useRef(null), commitTimer = useRef();
   const gestureRevision = useRef(null), focusAfterSave = useRef(null);
   const id = useId();
-  useEffect(() => { live.current = true; return () => { live.current = false; clearTimeout(noticeTimer.current); clearTimeout(commitTimer.current); }; }, []);
+  useEffect(() => { live.current = true; return () => { live.current = false; clearTimeout(commitTimer.current); }; }, []);
   const refresh = useCallback(async () => {
     if (!available || writing.current) return;
     const revision = ++ticket.current;
@@ -46,18 +52,24 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, additi
     catch (e) { if (live.current && revision === ticket.current) setError(e.message); }
   }, [sessionId, available]);
   useEffect(() => { void refresh(); }, [refresh, projected, preset]);
+  useEffect(() => ctx.modules?.entries.state.subscribe(() => { void refresh(); }), [ctx, refresh]);
   useEffect(() => { if (!available || locked) setOpen(false); }, [available, locked]);
 
   const selected = mode?.selected ?? state.current;
   const group = state.groups.find(item => item.id === selected?.provider);
   const model = group?.models.find(item => item.id === selected?.model);
-  const choices = useMemo(() => [...effortChoices(model), ...mode?.eligible ? [{ id: 'omd:pro', label: 'Pro', mode: 'pro' }, { id: 'omd:ultracode', label: 'Ultracode', mode: 'ultracode' }] : []], [model, mode?.eligible]);
+  const choices = useMemo(() => [
+    ...effortChoices(model).map(choice => /^ultra$/i.test(choice.label) ? { ...choice, label: `${choice.label} 推理` } : choice),
+    ...mode?.eligible ? [{ id: 'omd:ultra', label: 'Ultra', mode: 'ultra' }] : [],
+  ], [model, mode?.eligible]);
   const effective = selected?.reasoningEffort ?? model?.reasoning?.defaultEffort;
-  const activeMode = mode?.mode ?? (mode?.enabled ? 'ultracode' : 'off');
+  const activeMode = mode?.mode ?? 'off';
+  const submodes = ultraSubmodes.filter(item => item.id !== 'team' || mode?.teamAvailable === true);
+  const submode = submodes.find(item => item.id === mode?.submode) ?? ultraSubmodes[2];
   const selectedIndex = activeMode !== 'off' ? choices.findIndex(item => item.mode === activeMode) : choices.findIndex(item => !item.mode && item.id === effective);
   const value = draft ?? Math.max(0, selectedIndex), level = choices[value] ?? choices[0];
   const modelName = model?.name ?? selected?.model ?? '选择模型';
-  const label = selectedIndex < 0 && draft === null ? effective ?? '默认' : level.label;
+  const label = selectedIndex < 0 && draft === null ? effective ?? '默认' : level?.label ?? '默认';
   const savedLabel = selectedIndex < 0 ? effective ?? '默认' : choices[selectedIndex]?.label ?? '默认';
   const busy = saving || state.pending !== null, sliderDisabled = busy || !mode || !model || choices.length < 2;
 
@@ -92,7 +104,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, additi
     target?.focus({ preventScroll: true });
   }, [busy, open, pane, sliderDisabled]);
 
-  const save = async (route, nextMode, reasoningEffort) => {
+  const save = async (route, nextMode, reasoningEffort, nextSubmode = nextMode === 'off' ? mode?.savedSubmode ?? submode.id : submode.id) => {
     if (!mode || writing.current || locked) return false;
     writing.current = true; ++ticket.current;
     // Native disabled controls lose focus. Keep Escape/Tab available while
@@ -103,11 +115,9 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, additi
     }
     setSaving(true); setError('');
     try {
-      const next = await modeApi(sessionId, { ...route, reasoningEffort, mode: nextMode, expectedRevision: mode.revision });
+      const next = await modeApi(sessionId, { ...route, reasoningEffort, mode: nextMode, submode: nextSubmode, expectedRevision: mode.revision });
       if (!live.current) return false;
       setMode(next);
-      if (nextMode === 'off') { clearTimeout(noticeTimer.current); setNotice(false); }
-      else if (nextMode !== activeMode) { clearTimeout(noticeTimer.current); setNotice(nextMode); noticeTimer.current = setTimeout(() => setNotice(false), 2000); }
       return true;
     } catch (e) { if (live.current) setError(e.message); return false; }
     finally { writing.current = false; if (live.current) { setSaving(false); setDraft(null); draftRef.current = null; } }
@@ -135,7 +145,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, additi
       event.preventDefault(); event.stopPropagation();
       if (pane === 'model') { setPane('effort'); queueMicrotask(() => modelButton.current?.focus()); } else close(true);
     } else if (event.key === 'Tab') {
-      const focusable = [...panel.current.querySelectorAll('button:not([disabled]),input:not([disabled])')];
+      const focusable = [...panel.current.querySelectorAll('button:not([disabled]),input:not([disabled]):not([tabindex="-1"])')];
       if (event.shiftKey && (document.activeElement === panel.current || document.activeElement === focusable[0]) || !event.shiftKey && document.activeElement === focusable.at(-1)) { event.preventDefault(); close(true); }
     } else if (pane === 'model' && ['ArrowDown','ArrowUp'].includes(event.key)) {
       const items = [...panel.current.querySelectorAll('[role="option"]:not([disabled])')];
@@ -146,19 +156,19 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, additi
   };
   if (!available) return null;
   return <>
-    <button ref={trigger} type="button" className="omd-model-trigger" data-mode={activeMode} disabled={locked} aria-label={additive ? 'OMD 模式与思考强度' : '模型与思考强度'} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? id : undefined}
+    <button ref={trigger} type="button" className="omd-model-trigger" data-mode={activeMode} disabled={locked} aria-label={`${additive ? 'OMD 模式与思考强度' : '模型与思考强度'}：${modelName} · ${savedLabel}${activeMode === 'ultra' ? ` · ${submode.label}` : ''}`} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? id : undefined}
       onClick={() => { if (open) close(); else { setPane(selected ? 'effort' : 'model'); setQuery(''); setOpen(true); load(); void refresh(); } }}>
-      <span>{additive ? 'OMD' : modelName}</span><span className="omd-model-caption">{savedLabel}</span><span aria-hidden="true">⌃</span>
+      <span>{additive && activeMode !== 'ultra' ? 'OMD' : modelName}</span><span className="omd-model-caption">· {savedLabel}{activeMode === 'ultra' ? ` · ${submode.label}` : ''}</span><span aria-hidden="true">⌃</span>
     </button>
     {open && createPortal(<section ref={panel} id={id} className="omd-model-panel" data-pane={pane} style={position} role="dialog" aria-label="模型与思考强度" aria-busy={busy} tabIndex={-1} onKeyDown={keyDown}>
       {pane === 'effort' ? <>
         <header className="omd-effort-heading">
-          <h2 key={label} className={level.mode === 'ultracode' ? 'omd-effort-ultra' : level.mode === 'pro' ? 'omd-effort-pro' : ''}>{label}</h2>
+          <h2 key={label} className={level?.mode === 'ultra' ? 'omd-effort-ultra' : ''}>{label}</h2>
           <button type="button" className="omd-model-reset" aria-label="恢复默认思考强度" title="恢复默认思考强度" disabled={busy || !model || !mode}
             onClick={() => void save({provider:selected.provider,model:selected.model}, 'off', model.reasoning?.defaultEffort)}><Reset/></button>
           <button ref={modelButton} type="button" className="omd-model-current" onClick={() => { setPane('model'); setQuery(''); }}><span>{modelName}</span><Chevron/></button>
         </header>
-        <div className="omd-effort-control" data-ultra={level.mode === 'ultracode' || undefined} data-pro={level.mode === 'pro' || undefined} data-dragging={dragging || undefined} style={{'--effort-progress':`${choices.length > 1 ? value / (choices.length - 1) * 100 : 0}%`,'--effort-ratio':choices.length > 1 ? value / (choices.length - 1) : 0}}>
+        <div className="omd-effort-control" data-ultra={level?.mode === 'ultra' || undefined} data-dragging={dragging || undefined} style={{'--effort-progress':`${choices.length > 1 ? value / (choices.length - 1) * 100 : 0}%`,'--effort-ratio':choices.length > 1 ? value / (choices.length - 1) : 0}}>
           <div className="omd-effort-track" aria-hidden="true"><div className="omd-effort-fill"><i className="omd-effort-glow"/>{particles.map((style,i) => <i key={i} className="omd-effort-particle" style={style}/>)}</div>
             <div className="omd-effort-ticks">{choices.map((_,i) => <i key={i} data-selected={i<=value||undefined} style={{left:`${choices.length > 1 ? i/(choices.length-1)*100 : 0}%`}}/>)}</div>
           </div><div className="omd-effort-thumb" aria-hidden="true"/>
@@ -170,7 +180,17 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, additi
             onKeyUp={event => { if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(event.key)) commit(draftRef.current ?? value); }}
             onBlur={() => { if (!draggingRef.current && draftRef.current !== null) commit(draftRef.current); }}/>
         </div>
-        <div className="omd-effort-notice" data-visible={notice || undefined} data-mode={notice || undefined} role="status">{notice === 'pro' ? '分工实现、持续迭代，可能需要更多时间。' : notice === 'ultracode' ? '更深入地实现与验证，可能需要更多时间。' : ''}</div>
+        {level?.mode === 'ultra' && <div className="omd-ultra-options">
+          <div className="omd-ultra-submodes" role="radiogroup" aria-label="Ultra 协作方式">
+            {submodes.map(item => <label key={item.id} data-selected={submode.id === item.id || undefined}>
+              <input type="radio" name={`${id}-submode`} value={item.id} checked={submode.id === item.id} tabIndex={submode.id === item.id ? 0 : -1} disabled={busy || locked || activeMode !== 'ultra'}
+                onChange={() => { if (item.id !== submode.id) void save({ provider: selected.provider, model: selected.model }, 'ultra', undefined, item.id); }}/>
+              <span>{item.label}</span>
+            </label>)}
+          </div>
+          <p className="omd-ultra-description">{submode.description}</p>
+        </div>}
+        <div className="omd-effort-notice" data-visible={mode?.pending || undefined} role="status">{mode?.pending ? '已保存，下一轮生效。' : ''}</div>
         {state.routable === false && <p className="omd-model-error">当前模型不可用，请选择其他模型。</p>}
       </> : <>
         <div className="omd-model-search"><button type="button" aria-label="返回思考强度" onClick={() => setPane('effort')}><Chevron back/></button><input ref={search} type="search" aria-label="搜索模型" placeholder="搜索模型" value={query} onChange={e=>setQuery(e.target.value)}/></div>
@@ -193,7 +213,10 @@ export function applyModelPanel(ctx) {
   const subscribe = fn => { listeners.add(fn); return () => listeners.delete(fn); };
   ctx.slots.inject(name, () => {
     let installed, original, stopped = false, reconciling = false, dirty = false;
-    function Panel(props) { return <ModelPanel key={props.sessionId} ctx={ctx} {...props}/>; }
+    function Panel(props) {
+      const main = useMainConversation(props);
+      return main ? <ModelPanel key={props.sessionId} ctx={ctx} {...props}/> : null;
+    }
     const reconcile = () => {
       if (stopped || ctx.fiber?.uid === null) return;
       if (reconciling) { dirty = true; return; }
@@ -236,8 +259,9 @@ export function applyModelPanel(ctx) {
         load: () => { if (available) directory.load().catch(() => {}); } };
     },
   }, function ModeEntry(props) {
+    const main = useMainConversation(props);
     const shown = useSyncExternalStore(subscribe, () => additive);
     const removed = props.useSession(s => s.removed) ?? false;
-    return shown && props.available ? <ModelPanel key={props.sessionId} ctx={ctx} {...props} locked={removed} additive/> : null;
+    return main && shown && props.available ? <ModelPanel key={props.sessionId} ctx={ctx} {...props} locked={removed} additive/> : null;
   }));
 }

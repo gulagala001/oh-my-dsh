@@ -22,7 +22,7 @@ Topics without an English edition are marked **Chinese**.
 | Inspect calls, tokens, costs and background work | [Monitoring (Chinese)](monitoring.md) |
 | Manage long conversations, auto compaction and original sources | [Context (Chinese)](context-workflow.md) |
 | Set session, project and global memory | [Dream (Chinese)](dream-memory.md) |
-| Use Pro, Ultracode, PTC and workflows | [Workflow (Chinese)](workflow.md) |
+| Use Ultra, PTC and workflows | [Workflow (Chinese)](workflow.md) |
 | Track tasks, requirements and evidence | [Everyday usage](usage_EN.md#everyday-work) |
 | Understand background jobs, budgets and sampled state | [Runtime state (Chinese)](runtime-state-background.md) |
 | Open DeepSeek web tools or import extractable history | [DeepSeek Workbench (Chinese)](deepseek-workbench.md) |

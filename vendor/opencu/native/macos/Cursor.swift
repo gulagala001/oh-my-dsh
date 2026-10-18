@@ -59,7 +59,7 @@ final class CursorHost: NSObject, WKNavigationDelegate {
         }
     }
 
-    func show(_ point: CGPoint) throws {
+    func show(_ point: CGPoint, continuous: Bool = false) throws {
         guard ready, let panel = panel, let web = web else { throw NativeFailure("CURSOR_RENDER_FAILED", "The original cursor is not ready.") }
         generation += 1
         hideTimer?.invalidate(); hideTimer = nil; hiding = false
@@ -72,8 +72,8 @@ final class CursorHost: NSObject, WKNavigationDelegate {
         panel.setFrame(screen.frame, display: false)
         panel.orderFrontRegardless()
         var complete = false, failure: Error?
-        web.callAsyncJavaScript("return await globalThis.__opencuCursor.update({x,y,visible:true,animateMovement:animate,waitForArrival:true})",
-            arguments: ["x": location.x - screen.frame.minX, "y": screen.frame.maxY - location.y, "animate": !changedDisplay],
+        web.callAsyncJavaScript("return await globalThis.__opencuCursor.update({x,y,visible:true,animateMovement:animate,waitForArrival:wait,glowColor:'#000'})",
+            arguments: ["x": location.x - screen.frame.minX, "y": screen.frame.maxY - location.y, "animate": !continuous && !changedDisplay, "wait": !continuous],
             in: nil, in: .page, completionHandler: { result in
                 if case .failure(let error) = result { failure = error }
                 complete = true
@@ -84,6 +84,7 @@ final class CursorHost: NSObject, WKNavigationDelegate {
             hide(); throw NativeFailure("CURSOR_RENDER_FAILED", failure?.localizedDescription ?? "Cursor rendering was interrupted or timed out.")
         }
         panel.orderFrontRegardless()
+        if !continuous { settled(point) }
         if lifetimeTimer == nil {
             lifetimeTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
                 guard let self = self else { return }
@@ -107,6 +108,16 @@ final class CursorHost: NSObject, WKNavigationDelegate {
         hideTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { _ in finish() }
         web.callAsyncJavaScript("return await globalThis.__opencuCursor.update({visible:false})",
             arguments: [:], in: nil, in: .page, completionHandler: { _ in finish() })
+    }
+
+    func settled(_ point: CGPoint) {
+        guard ready, !hiding, let panel = panel, panel.isVisible, let web = web else { return }
+        let top = NSScreen.screens.first?.frame.maxY ?? 0
+        let location = NSPoint(x: point.x, y: top - point.y)
+        guard panel.frame.contains(location) else { return }
+        web.callAsyncJavaScript("return globalThis.__opencuCursor.settled({x,y})",
+            arguments: ["x": location.x - panel.frame.minX, "y": panel.frame.maxY - location.y],
+            in: nil, in: .page, completionHandler: { _ in })
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { if webView === web { ready = true } }

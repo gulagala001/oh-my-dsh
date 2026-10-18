@@ -161,18 +161,19 @@ export class ProjectlessDrafts {
       const result = await transferred.json();
       if (result.handledWorkMode) return;
     }
-    // OMD modes live beside native model selection; copying just effort loses
-    // Pro/Ultracode. Use the same API as the model panel after selecting preset.
-    const response = await fetch('trisoul-x/api/model-mode?session=' + encodeURIComponent(from));
+    // OMD mode and the remembered Ultra submode live beside native model
+    // selection. Copy both, including the submode while Ultra is off.
+    const response = await fetch('trisoul-x/api/model-mode?session=' + encodeURIComponent(from), { signal: this.lifetime.signal });
     if (!response.ok) throw Error('无法读取当前模型模式');
     const mode = await response.json();
-    if (mode.mode && mode.mode !== 'off') {
-      const saved = await fetch('trisoul-x/api/model-mode?session=' + encodeURIComponent(to), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...mode.selected, mode: mode.mode }),
-      });
-      if (!saved.ok) throw Error((await saved.json()).error || '无法保留模型模式');
-    }
+    const targetResponse = await fetch('trisoul-x/api/model-mode?session=' + encodeURIComponent(to), { signal: this.lifetime.signal });
+    if (!targetResponse.ok) throw Error('无法读取目标模型模式');
+    const targetMode = await targetResponse.json();
+    const saved = await fetch('trisoul-x/api/model-mode?session=' + encodeURIComponent(to), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: this.lifetime.signal,
+      body: JSON.stringify({ ...mode.selected, mode: mode.mode ?? 'off', submode: (mode.mode === 'off' ? mode.savedSubmode : mode.submode) ?? mode.submode ?? 'free', expectedRevision: targetMode.revision }),
+    });
+    if (!saved.ok) throw Error((await saved.json()).error || '无法保留模型模式');
   }
   installSubmit(id) {
     const shell = this.shell(id), original = shell.submit, owner = this;

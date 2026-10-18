@@ -198,7 +198,7 @@ export class WorkflowExecution {
     }
     this.shared.started += 1
     const seq = this.shared.started
-    const label = opts.label ?? defaultLabel(rawPrompt)
+    const label = opts.label?.trim() || defaultLabel(rawPrompt)
     const phase = opts.phase ?? this.currentPhase
 
     await this.acquireSlot()
@@ -207,6 +207,7 @@ export class WorkflowExecution {
       try {
         run = await this.children.startAgent({
           seq,
+          label,
           prompt: rawPrompt,
           ...opts.schema !== undefined ? { schema: opts.schema } : {},
           ...opts.provider !== undefined ? { provider: opts.provider } : {},

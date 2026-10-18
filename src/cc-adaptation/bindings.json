@@ -200,20 +200,10 @@
     ]
   },
   "list_agents": {
-    "file": "tools/list-agents.md",
-    "fields": [],
-    "sections": [
-      "tool:list_agents"
-    ]
+    "mode": "retain-native"
   },
   "interrupt_agent": {
-    "file": "tools/interrupt-agent.md",
-    "fields": [
-      "agent_id"
-    ],
-    "sections": [
-      "tool:interrupt_agent"
-    ]
+    "mode": "retain-native"
   },
   "list_subagent_models": {
     "mode": "retain-native"

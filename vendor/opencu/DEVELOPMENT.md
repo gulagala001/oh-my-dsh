@@ -39,7 +39,7 @@ Windows 原生 helper 由系统 Windows PowerShell 编译随包 C#，需要 Wind
 选择目标与聚焦分离：`select`／`getApp`／`getTab` 不激活窗口或标签；只有显式 `focus`／`activate` 改变前台。输入默认 `inputMode: 'background'`，后台不可用时不自动降级为全局键鼠。目标的 `control` 字段（JavaScript 目标通过 `capabilities.control()`）说明路由和限制；`delivery` 仅说明提交方式，`effectVerified: false` 要求后续观察，不能当作界面变化已成功。
 
 - 内置、Playwright 和 Chrome／Edge 扩展浏览器使用目标页 CDP 与焦点模拟；AI 新建标签不激活，内置标签不展开侧栏或切走当前会话。释放只清理 AI 记录的目标输入，并撤销焦点模拟。后台页面暂停动画帧时返回 `visualDeferred`，不伪造游标到达，也不阻塞输入。
-- macOS 使用私有事件源和 `postToPid`，不移动系统鼠标；需要明确窗口。对已观察表格行、单元格或其文本的后台普通左键点击，先在精确窗口内寻找最近行并使用可写 `AXSelected`；不支持时返回 `BACKGROUND_SELECTION_UNAVAILABLE`，不发送指针输入。多选表格中普通点击只保留目标行；持键、其他鼠标按钮及双击仍沿原事件路径。键盘仅发给应用内部当前键盘窗口，其他窗口用 AX 元素操作或返回 `BACKGROUND_KEYBOARD_UNAVAILABLE`。目标应用仍可能忽略事件或因自身行为激活窗口；这不是全应用无干扰保证。
+- macOS 使用私有事件源和 `postToPid`，不移动系统鼠标；需要明确窗口。后台普通左键点击优先对支持的控件或其子元素执行 `AXPress`，禁用控件直接拒绝；否则，对已观察表格行、单元格或其文本在精确窗口内寻找最近行并使用可写 `AXSelected`，不支持时返回 `BACKGROUND_SELECTION_UNAVAILABLE`，不发送指针输入。多选表格中普通点击只保留目标行；持键、其他鼠标按钮及双击仍沿原事件路径。键盘仅发给应用内部当前键盘窗口，其他窗口用 AX 元素操作或返回 `BACKGROUND_KEYBOARD_UNAVAILABLE`。目标应用仍可能忽略事件或因自身行为激活窗口；这不是全应用无干扰保证。
 - Windows 使用 UI Automation 的文本、Invoke／Toggle／SelectionItem／ExpandCollapse 和滚动模式；截图使用 `PrintWindow`，不还原最小化窗口或回退桌面截图。应用拒绝或不提供窗口像素时明确不可用。
 - X11 使用 AT-SPI 动作与 XComposite 窗口像素；Wayland 使用 AT-SPI 动作，portal 仍只共享显示器，不提供被遮挡应用的独立像素，非活跃应用截图明确不可用。Windows／Linux 的后台滚动是应用定义的步长，不是精确像素。
 
@@ -47,7 +47,7 @@ Windows 原生 helper 由系统 Windows PowerShell 编译随包 C#，需要 Wind
 
 ### 模型输出与提示词
 
-[运行时说明](<src/dsh/computer-docs.mjs>)统一拥有 `computer_use` 主入口及 `core`／`browser`／`native` 文档，OMD 保留该契约。首次使用自动显示基础文档，绑定目标时显示对应文档及初始 AX；绑定和输入默认后台。上下文压缩后调用 `cua.rewriteDocumentation()` 恢复文档与全量基线，不重置绑定。
+[运行时说明](<src/dsh/computer-docs.mjs>)统一拥有 `computer_use` 主入口及 `core`／`browser`／`native` 文档，OMD 保留该契约。首次使用或重置后的第一个调用仅执行一个入口，可将返回值绑定到变量；读取返回文档和状态后，再决定下一步操作，不在该次调用中追加其他 API、等待或观察。首次自动显示基础文档，绑定应用或标签时显示对应文档及初始 AX；`getBrowser` 仅绑定浏览器并显示文档，不创建或选择标签，也不返回初始 AX。绑定和输入默认后台，不绕过目标保护或隐式回退全局键鼠。上下文压缩后调用 `cua.rewriteDocumentation()` 恢复文档与全量基线，不重置绑定。
 
 AX 默认返回紧凑语义文本，保留元素身份、层级、值、状态和动作；`details:true` 获取完整节点与几何。身份稳定且基线完整时返回差分，`disableDiffing:true` 强制全量；截图、静默观察、目标切换、截断或失效基线会恢复全量。截图返回附件引用。内置 guest 的透明捕获在可信 surface 中按页面深浅方案补齐默认 Canvas 背景，保留显式背景及原始尺寸，不修改网页。观察自动输出一次，`emit:false` 仅供代码读取。
 

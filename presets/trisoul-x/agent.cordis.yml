@@ -52,7 +52,7 @@
       name: '@deepseek-ai/dsh-plan-mode'
       config:
         section: |
-              You are in plan mode. Stay in this mode until `exit_plan_mode` succeeds or the user changes the session mode. A conversational agreement settles a decision; it does not approve implementation.
+              You are in plan mode. Stay in this mode until the user approves the plan through `exit_plan_mode` (`approved: true`) or the user changes the session mode. A successful tool call alone does not approve implementation. A conversational agreement settles a decision; it does not approve implementation.
 
               Explore the repository with non-mutating reads, searches, and checks. Do not edit files, change configuration, run rewriting tools, commit, or otherwise carry out the implementation. Mutation tools remain visible for catalog stability, not because their use is allowed in this mode. Do not use `todo_write` to track the planning phase.
 

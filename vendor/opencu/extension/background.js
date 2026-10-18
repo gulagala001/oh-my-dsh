@@ -1,7 +1,9 @@
 import { observeAccessibility, elementOperation, locatorOperation, invalidateElements } from './accessibility.js';
 import { createPairingClient } from './pairing.js';
 import { createCDPFrameRouter } from './frame-router.js';
-import { keyEventParameters } from './keyboard.js';
+import { extensionKeySpec as keySpec, keyEventParameters } from './keyboard.js';
+import { clickParameters, checkClickHeld, holdClick } from './click-options.js';
+import { pressParameters, checkPressHeld } from './key-options.js';
 const PATH = '/opencu-extension/v1';
 const attached = new Map(), observations = new Map(), documents = new Map(), releasing = new Set();
 let connection, connecting = false, reconnectDisabled = false, running = false, controlEpoch = 0, commandChain = Promise.resolve(), downloadChain = Promise.resolve(), status = { connected: false };
@@ -115,23 +117,7 @@ async function saveAttached() {
   await chrome.storage.session.set({ attachedTabs: active.map(([tabId]) => tabId), heldInputs: active.map(([tabId, state]) => ({ tabId,
     keys: [...state.keys.values()], buttons: [...state.buttons], x: state.x, y: state.y })) });
 }
-function keySpec(value) {
-  const names = { CTRL: 'Control', CONTROL: 'Control', ALT: 'Alt', OPTION: 'Alt', SHIFT: 'Shift', META: 'Meta', CMD: 'Meta', COMMAND: 'Meta',
-    ENTER: 'Enter', RETURN: 'Enter', TAB: 'Tab', ESC: 'Escape', ESCAPE: 'Escape', SPACE: ' ', BACKSPACE: 'Backspace', DELETE: 'Delete',
-    UP: 'ArrowUp', DOWN: 'ArrowDown', LEFT: 'ArrowLeft', RIGHT: 'ArrowRight', HOME: 'Home', END: 'End', PAGEUP: 'PageUp', PAGEDOWN: 'PageDown' };
-  const key = names[String(value).toUpperCase()] || value;
-  const codes = { Control: ['ControlLeft', 17], Alt: ['AltLeft', 18], Shift: ['ShiftLeft', 16], Meta: ['MetaLeft', 91],
-    Enter: ['Enter', 13], Tab: ['Tab', 9], Escape: ['Escape', 27], ' ': ['Space', 32], Backspace: ['Backspace', 8], Delete: ['Delete', 46],
-    ArrowLeft: ['ArrowLeft', 37], ArrowUp: ['ArrowUp', 38], ArrowRight: ['ArrowRight', 39], ArrowDown: ['ArrowDown', 40],
-    Home: ['Home', 36], End: ['End', 35], PageUp: ['PageUp', 33], PageDown: ['PageDown', 34], '+': ['Equal', 187] };
-  let code, vk;
-  if (codes[key]) [code, vk] = codes[key];
-  else if (/^[a-z]$/i.test(key)) { code = 'Key' + key.toUpperCase(); vk = key.toUpperCase().charCodeAt(0); }
-  else if (/^\d$/.test(key)) { code = 'Digit' + key; vk = key.charCodeAt(0); }
-  else if (/^F([1-9]|1[0-2])$/.test(key)) { code = key; vk = 111 + Number(key.slice(1)); }
-  else fail('UNSUPPORTED_KEY', 'Use named keys, letters, digits or F1–F12; type_text handles other Unicode.');
-  return { key, code, windowsVirtualKeyCode: vk };
-}
+
 const modifiers = state => [...state.keys.keys()].reduce((n, key) => n | ({ Alt: 1, Control: 2, Meta: 4, Shift: 8 }[key] || 0), 0);
 async function keyEvent(tabId, spec, down, epoch, beforeDispatch) {
   checkControl(epoch);
@@ -177,7 +163,8 @@ async function releaseTab(tabId) {
     state.cursor = null;
     const errors = [];
     for (const button of [...state.buttons]) try { await mouse(tabId, 'mouseReleased', state, button, 1); } catch (error) { errors.push(errorJSON(error)); }
-    for (const key of [...state.keys.values()].reverse()) try { await keyEvent(tabId, key, false); } catch (error) { errors.push(errorJSON(error)); }
+    // Preserve modifiers while a mouse-up remains unacknowledged for retry.
+    if (!state.buttons.size) for (const key of [...state.keys.values()].reverse()) try { await keyEvent(tabId, key, false); } catch (error) { errors.push(errorJSON(error)); }
     try { await content(tabId, 'release'); } catch (error) { if (allowed((await chrome.tabs.get(tabId).catch(() => ({}))).url)) errors.push(errorJSON(error)); }
     if (!errors.length) try { await cdp(tabId, 'Emulation.setFocusEmulationEnabled', { enabled: false }); } catch (error) { errors.push(errorJSON(error)); }
     if (!errors.length) {
@@ -251,6 +238,13 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
   inputState = attached.get(identity.tabId); inputStart = inputState.inputSequence ?? 0;
   const current = await verify(identity, true), tabId = identity.tabId;
   checkControl(epoch);
+  const click = ['click','double_click','right_click'].includes(action.type)
+    ? clickParameters({...action,...(action.type === 'right_click' ? {button:'right'} : {})}, {mac:/Mac/u.test(navigator.platform),count:action.type === 'double_click' ? 2 : 1}) : undefined;
+  if (click) checkClickHeld(inputState, click);
+  const keyboard={mac:/Mac/u.test(navigator.platform),identity:key=>keySpec(key).code};
+  const press = action.type === 'press_key' ? pressParameters(action,keyboard) : undefined;
+  const pressKeys = press?.keys.map(keySpec);
+  if (pressKeys) checkPressHeld(inputState,pressKeys.map(key => key.key),keyboard);
   const done = result => { checkControl(epoch); return { ...result, inputMode: 'background', delivery: 'target-cdp', effectVerified: false, identity }; };
   if (!['background', 'foreground'].includes(action.inputMode ?? 'background')) fail('INVALID_ACTION', 'inputMode must be background or foreground');
   if (['click', 'double_click', 'right_click', 'move', 'mouse_down', 'mouse_up', 'scroll', 'drag', 'type_text', 'press_key', 'key_down', 'key_up', 'fill', 'set_value'].includes(action.type)) {
@@ -265,14 +259,35 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
     await elementOperation(tabId, (method, params) => cdp(tabId, method, params), 'verifyElement', action, attached.get(tabId)?.frameRouter);
     checkControl(epoch);
   };
+  let textInputFence, textInputGuard;
+  const checkInput = () => {checkControl(epoch);textInputFence?.();};
   const send = async (method, params) => {
-    checkControl(epoch);
-    if (method === 'Input.insertText' || method === 'DOM.setFileInputFiles') {
+    checkInput();
+    if (method === 'DOM.setFileInputFiles') {
       await content(tabId, 'expectInput', { events: [{ type: 'input' }] }, current.browserDocumentId);
-      checkControl(epoch);
+      checkInput();
     }
-    if (method === 'Input.insertText' && action.elementId != null) await verifyInputElement();
-    const result = await cdp(tabId, method, params); checkControl(epoch); return result;
+    let marker, failure;
+    try {
+      if (method === 'Input.insertText') {
+        marker = await content(tabId, 'expectTextInput', {text:params.text}, current.browserDocumentId);
+        checkInput();
+        if (action.elementId != null) await verifyInputElement();
+        checkInput();
+      }
+      const result = await cdp(tabId, method, params); checkInput(); return result;
+    } catch (error) {failure=error;throw error;}
+    finally {
+      // The paste fence remains interrupted after a modal. Never resume page JS
+      // cleanup under that old operation or let it dispatch trailing text.
+      let clear = !!marker?.markerId;
+      try {checkInput();} catch {clear=false;}
+      if (clear) try {
+        const cleanup=()=>content(tabId,'finishInput',{markerId:marker.markerId,documentId:marker.documentId,dispatched:false},marker.browserDocumentId);
+        await (textInputGuard?textInputGuard(cleanup):cleanup());
+      }
+      catch (error) {if(!failure)throw error;failure.details={...failure.details,inputMarkerError:errorJSON(error)};}
+    }
   };
   const inputKey = (spec, down) => keyEvent(tabId, spec, down, epoch, action.elementId != null ? verifyInputElement : undefined);
   const pointer = (type, point, button = 'none', count = 0, extra = {}) => mouse(tabId, type, point, button, count, extra, epoch,
@@ -347,30 +362,59 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
       invalidate();
       await send('Input.insertText', { text: String(action.text ?? action.value ?? '') }); return done({ filled: true });
     }
-    case 'selectOption':
+    case 'selectOption': {
       await content(tabId, 'expectInput', {events:[{type:'input'}]}, current.browserDocumentId);
       checkControl(epoch);
-      invalidate(); attached.get(tabId).inputSequence = (attached.get(tabId).inputSequence ?? 0) + 1; return done(await element('selectOption'));
+      try {
+        const result = await element('selectOption');
+        invalidate(); attached.get(tabId).inputSequence = (attached.get(tabId).inputSequence ?? 0) + 1; return done(result);
+      } catch (error) {
+        if (error.details?.inputDispatched !== false) {invalidate();attached.get(tabId).inputSequence = (attached.get(tabId).inputSequence ?? 0) + 1;}
+        throw error;
+      }
+    }
     case 'set_value': invalidate(); return done(await element('setValue'));
     case 'type_text': {
       if (typeof action.text !== 'string' || action.text.length > 100000) fail('INVALID_TEXT', 'type_text requires text (maximum 100000 characters).');
       if (action.elementId != null) await element('focus');
       invalidate(); await send('Input.insertText', { text: action.text }); return done({ typed: true });
     }
+    case 'selectText':
+    case 'paste': {
+      // This fence is local to the new edit operation. It never answers a dialog,
+      // and a late focus/selection reply cannot resume text after interruption.
+      let interrupted, rejectDialog;
+      const dialogOpened=new Promise((_,reject)=>{rejectDialog=reject;});
+      const check=()=>{checkControl(epoch);if(interrupted)throw interrupted;};
+      textInputFence=check;
+      const receive=(source,method,params)=>{
+        if(source.tabId!==tabId||method!=='Page.javascriptDialogOpening')return;
+        interrupted=Object.assign(new Error('A JavaScript dialog interrupted text editing; handle it before retrying'),{code:'JS_DIALOG_OPEN',details:{dialog:params,inputDispatched:(inputState.inputSequence??0)!==inputStart}});
+        rejectDialog(interrupted);
+      };
+      const guarded=work=>{check();return Promise.race([Promise.resolve().then(()=>{check();return work();}),dialogOpened]);};
+      textInputGuard=guarded;
+      chrome.debugger.onEvent.addListener(receive);
+      try {
+        const result=await guarded(()=>elementOperation(tabId,(method,params)=>guarded(()=>send(method,params)),action.type,action,attached.get(tabId)?.frameRouter,{
+          validate:async()=>{check();await guarded(()=>verify(identity,true));check();},
+          onFocus:()=>{check();inputState.inputSequence=(inputState.inputSequence??0)+1;},
+          beforeFocus:()=>guarded(()=>cdp(tabId,'Emulation.setFocusEmulationEnabled',{enabled:true})),
+          insertText:async(text,verifySelection)=>{await verifySelection();check();await guarded(()=>send('Input.insertText',{text}));},
+        }));
+        invalidate();return done(result);
+      } finally {chrome.debugger.onEvent.removeListener(receive);}
+    }
     case 'press_key': {
-      if (action.elementId != null) await element('focus');
-      const keys = [];
-      let token = '';
-      for (const character of String(action.key || '')) {
-        if (character === '+' && token) { keys.push(keySpec(token)); token = ''; }
-        else token += character;
+      if (action.elementId != null) {
+        await element('verifyElement');
+        inputState.inputSequence = (inputState.inputSequence ?? 0) + 1;
+        await element('focus');
       }
-      keys.push(keySpec(token));
-      const state = attached.get(tabId);
-      const added = keys.filter(k => !state.keys.has(k.key));
       invalidate();
-      try { for (const key of added) await inputKey(key, true); }
-      finally { for (const key of added.reverse()) if (attached.has(tabId)) await keyEvent(tabId, key, false); }
+      for (const key of pressKeys) await inputKey(key, true);
+      await holdClick(press.durationMs, () => checkControl(epoch));
+      for (const key of [...pressKeys].reverse()) await inputKey(key, false);
       return done({ pressed: true });
     }
     case 'key_down': invalidate(); await inputKey(keySpec(action.key), true); return done({ held: true });
@@ -384,7 +428,7 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
       const held = attached.get(tabId);
       const point = action.type === 'mouse_up' && action.x === undefined && action.elementId === undefined
         ? { x: held.x, y: held.y } : await step(() => actionPoint(identity, action, current));
-      const button = action.type === 'right_click' ? 'right' : action.button || 'left';
+      const button = click?.button ?? (action.type === 'right_click' ? 'right' : action.button || 'left');
       if (!['left', 'middle', 'right'].includes(button)) fail('INVALID_BUTTON', 'Use left, middle or right mouse button.');
       if (action.type === 'scroll' && (!Number.isFinite(action.deltaX ?? 0) || !Number.isFinite(action.deltaY ?? 0))) fail('INVALID_SCROLL', 'Finite wheel deltas are required.');
       let path;
@@ -419,12 +463,15 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
           }
         } finally { const state = attached.get(tabId); if (state?.buttons.has(button)) await mouse(tabId, 'mouseReleased', state, button, 1); }
       } else {
-        const count = action.type === 'double_click' ? 2 : action.clickCount ?? 1;
-        if (![1, 2, 3].includes(count)) fail('INVALID_CLICK_COUNT', 'clickCount must be 1, 2 or 3.');
+        const count = click.count;
         await pointer('mouseMoved', point);
+        for (const key of click.keys) await inputKey(keySpec(key), true);
         for (let i = 1; i <= count; i++) {
-          await pointer('mousePressed', point, button, i); await pointer('mouseReleased', point, button, i);
+          await pointer('mousePressed', point, button, i);
+          await holdClick(click.durationMs, () => checkControl(epoch));
+          await pointer('mouseReleased', point, button, i);
         }
+        for (const key of [...click.keys].reverse()) await inputKey(keySpec(key), false);
       }
       return done({ acted: true, point });
     }

@@ -31,7 +31,10 @@ final class TargetStore {
 
     func windows() -> [WindowRecord] {
         guard let rows = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { return [] }
-        return rows.compactMap { row in
+        return rows.compactMap(windowRecord)
+    }
+
+    private func windowRecord(_ row: [String: Any]) -> WindowRecord? {
             guard let pid = row[kCGWindowOwnerPID as String] as? Int,
                   let id = row[kCGWindowNumber as String] as? Int,
                   let layer = row[kCGWindowLayer as String] as? Int, layer == 0,
@@ -40,7 +43,13 @@ final class TargetStore {
                   let x = b["X"] as? Double, let y = b["Y"] as? Double,
                   let w = b["Width"] as? Double, let h = b["Height"] as? Double, w > 0, h > 24 else { return nil }
             return WindowRecord(id: id, pid: pid_t(pid), title: row[kCGWindowName as String] as? String ?? "", bounds: CGRect(x: x, y: y, width: w, height: h))
-        }
+    }
+
+    private func window(_ id: Int) -> WindowRecord? {
+        guard id > 0, id <= Int(UInt32.max),
+              let rows = CGWindowListCopyWindowInfo(.optionIncludingWindow, CGWindowID(id)) as? [[String: Any]],
+              rows.count == 1, let record = windowRecord(rows[0]), record.id == id else { return nil }
+        return record
     }
 
     func target(_ app: NSRunningApplication, _ window: WindowRecord? = nil) throws -> [String: Any] {
@@ -79,6 +88,29 @@ final class TargetStore {
     }
 
     func resolve(_ reference: [String: Any]) throws -> [String: Any] {
+        // A bound occurrence needs only its own process and window. Discovery still
+        // enumerates all targets; observation/input/preview never reuse cached identity.
+        if let identity = reference["identity"] as? [String: Any],
+           let id = reference["id"] as? String, let pid = identity["pid"] as? Int,
+           pid > 1, pid <= Int(Int32.max), identity["processStart"] is String,
+           identity["bundleId"] is String, identity["executable"] is String {
+            guard let app = NSRunningApplication(processIdentifier: pid_t(pid)),
+                  !app.isTerminated, app.activationPolicy == .regular else {
+                throw NativeFailure("TARGET_IDENTITY_CHANGED", "The saved application/window occurrence no longer exists.")
+            }
+            let current: [String: Any]
+            if let windowID = identity["windowId"] as? Int {
+                guard let record = window(windowID), record.pid == app.processIdentifier else {
+                    throw NativeFailure("TARGET_IDENTITY_CHANGED", "The saved application/window occurrence no longer exists.")
+                }
+                current = try target(app, record)
+            } else { current = try target(app) }
+            guard current["id"] as? String == id,
+                  sameIdentity(identity, current["identity"] as? [String: Any] ?? [:]) else {
+                throw NativeFailure("TARGET_IDENTITY_CHANGED", "The saved application/window occurrence no longer exists.")
+            }
+            return current
+        }
         let values = list().filter { value in
             if let id = reference["id"] as? String { return value["id"] as? String == id }
             if let pid = reference["pid"] as? Int, value["pid"] as? Int != pid { return false }
@@ -189,7 +221,7 @@ final class TargetStore {
         try requireAX()
         let running = try app(target), root = AXUIElementCreateApplication(running.processIdentifier)
         if let id = target["windowId"] as? Int {
-            guard let cg = windows().first(where: { $0.id == id && $0.pid == running.processIdentifier }) else {
+            guard let cg = window(id), cg.pid == running.processIdentifier else {
                 throw NativeFailure("TARGET_IDENTITY_CHANGED", "Selected window no longer exists.")
             }
             let candidates = axElements(root, kAXWindowsAttribute).filter { element in

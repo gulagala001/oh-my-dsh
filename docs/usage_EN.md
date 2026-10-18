@@ -65,7 +65,7 @@ The right-sidebar guide offers one **OMD Console** entry with overview, context,
 | **Task evidence** | Opened from the BT menu “View task evidence”: requirement excerpts, status, and checks. |
 | Composer info bar | Native readings unchanged, with jumps to overview or call log; the context item appears while organizing or when a replacement is ready and can apply it; Dream jobs show progress. |
 | **Scope / BT** | Scope before first send; reminders at any time. |
-| Model / Fast | Native effort, Pro, Ultra, and a bolt when matching Subscriptions supports it. |
+| Model / Fast | Native effort, Ultra and its three submodes, and a bolt when matching Subscriptions supports it. |
 
 [![OMD Console overview](images/release/monitor.jpg)](monitoring.md)
 
@@ -73,13 +73,17 @@ Native sidebar search, menus, and third-party row actions remain. Use arrows, Ho
 
 ## Everyday Work
 
+The **Conversation overview** button beside the title brings together outputs, subagents, background processes, sources and computer-use controls. Expand subagents to open an active member directly in the right sidebar, or open the categorized overview. Workflow stages and Agent Team members and task boards retain their native layout and behavior. Colored DSH whales stay consistent for each agent. Continuable chats retain native messaging, queueing, steering and stop controls. The overview replaces the corresponding duplicate header entries while it is available.
+
+BT completion reminders belong to the main conversation. Ordinary, Workflow and Team subagents retain their task tools without BT, memory scope, prompt optimization, OMD context/Dream or model/Ultra settings. Usage and timing remain visible; chat, permissions and stop controls follow native DSH restrictions. Fast retains the subscription plugin's native behavior.
+
 Provide goals, inputs, boundaries, and delivery conditions. For multi-step tasks, preserve original requirements, track work, check artifacts, and then deliver. `todo_write` manages tasks/anchors; `verify_link` links, runs, or withdraws evidence. Evidence retains actual tool/callId, command, exit state, and timing. Task completion, process completion, and passing verification differ.
 
 **BT** persists per conversation: task reminders default on; verification reminders off. Verification checks missing or textual evidence and may use more time/tokens. Turning reminders off keeps the tools. A blocker can pause this turn's reminders without marking completion.
 
 ### Models and Work Modes
 
-The panel retains native efforts plus **Pro** and **Ultracode**. Pro prefers declared `xhigh`, otherwise the highest supported effort. Ultra always uses the highest supported effort. Ordinary mode retains the user's selection; no effort declaration means provider default. Modes save separately, survive model changes, and turn off on native effort/default selection. They do not expand permissions. [Workflow (Chinese)](workflow.md)
+The panel retains native efforts plus **Ultra**, with **Workflow / Agent Team / Free** submodes; Free is the default. Ultra prefers declared `xhigh`, otherwise the highest supported effort. Ordinary mode retains the user's selection; no effort declaration means provider default. DSH owns the Agent Team switch and native interface; OMD only adds Ultra mode guidance. When Team is unavailable its option is hidden, and a saved Team choice temporarily uses Free without losing that preference. Mode and submode save separately and survive model changes. Selecting native effort/default turns Ultra off while remembering its submode. Ultra does not expand permissions. [Workflow (Chinese)](workflow.md)
 
 **Fast** reads Subscriptions' actual state/capability and supports `codex` and `openai-codex`. It hides without matching services or model support. A write invalidates stale polling; failure retains the old state and shows an accessible top-level error. The actual Subscriptions version owns persistence, pools, and routing. Real OAuth, quotas, priority speedup, and paid requests remain unaccepted.
 

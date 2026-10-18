@@ -39,6 +39,8 @@ export interface WorkerInit {
 export interface ChildStartRequest {
   /** Invocation order, assigned before acquiring a concurrency slot. */
   seq: number
+  /** Display label shared by workflow progress and the native child catalog. */
+  label?: string
   /** The child's prompt text. */
   prompt: string
   /** The structured-output schema, if the call passed one (already subset-checked). */

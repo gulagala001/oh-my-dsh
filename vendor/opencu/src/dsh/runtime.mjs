@@ -44,9 +44,9 @@ export function createPluginRuntime(options = {}) {
   const files = new Map(), imageRefs = new Map();
   const sidebarDownloads = createSidebarDownloads(() => dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR));
   const deliveryFiles = createDeliveryFiles(() => dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR));
-  const appApprovals = createAppApprovals(() => dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR));
+  const appApprovals = createAppApprovals(() => dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR), () => options.onAppApprovalsChanged?.());
   let imageRegistry, startedConfig, reconfiguring;
-  const configurationKey = config => JSON.stringify([config.browserEnabled, config.nativeEnabled, config.extensionEnabled]);
+  const configurationKey = config => JSON.stringify([config.browserEnabled, config.nativeEnabled, config.extensionEnabled, config.managedHeadless === true]);
   async function start() {
     if (disposed) throw new Error('OpenCU plugin is unloading');
     if (reconfiguring) { await reconfiguring; return start(); }
@@ -152,31 +152,47 @@ export function createPluginRuntime(options = {}) {
     const { path, base64: ignored, data, dataUrl, ...metadata } = screenshot;
     return { ...result, observation: { ...result.observation, screenshot: { ...metadata, image } }, image };
   }
-  async function deliveries(runtime, attachments, signal) {
+  async function deliveries(runtime, attachments, signal, { emit = true } = {}) {
     const result = await runtime.deliveries();
     if (result.ok === false) return result;
     const records = [];
     try {
       for (const item of [...result.deliveries, ...await sidebarDownloads.list({ maxResults: 1000 })]) {
         signal?.throwIfAborted();
-        const { path, filename, ...metadata } = item;
-        let file = files.get(`${item.id}:${item.sha256}`);
-        if (item.status === 'complete' && path && !file) {
-          if (!attachments?.saveFileStream) throw error('ATTACHMENTS_UNAVAILABLE', 'File attachment storage is required for deliveries');
-          const source = await privateFile(path);
+        const { path, filename, file: ignoredFile, deliverable: ignoredDeliverable, fileExists: ignoredExists, fileError: retainedError, ...metadata } = item;
+        let file, fileExists = false, fileError = item.fileExists === false ? retainedError : undefined, source;
+        if (item.status === 'complete' && path && item.fileExists !== false) {
           try {
-            const info = await source.stat();
-            if (info.size !== item.bytes) throw error('DELIVERY_CHANGED', 'Delivery bytes changed');
-            const hash = createHash('sha256');
-            async function* chunks() {
-              for await (const chunk of source.createReadStream({ autoClose: false })) { signal?.throwIfAborted(); hash.update(chunk); yield chunk; }
-              if (item.sha256 && hash.digest('hex') !== item.sha256) throw error('DELIVERY_CHANGED', 'Delivery digest changed');
+            try {
+              source = await privateFile(path);
+              if ((await source.stat()).size !== item.bytes) throw error('DELIVERY_CHANGED', 'Delivery bytes changed');
+              fileExists = true;
+            } catch (failure) {
+              if (!['ENOENT', 'ENOTDIR', 'EACCES', 'EPERM', 'ELOOP', 'INVALID_FILE', 'DELIVERY_CHANGED'].includes(failure.code)) throw failure;
+              fileError = { code: failure.code, message: 'The retained download file is missing, changed, or unavailable' };
             }
-            file = await attachments.saveFileStream({ data: chunks(), name: item.name, signal });
-            files.set(`${item.id}:${item.sha256}`, file);
-          } finally { await source.close(); }
+            if (fileExists && emit !== false) {
+              file = files.get(`${item.id}:${item.sha256}`);
+              if (!file) {
+                if (!attachments?.saveFileStream) throw error('ATTACHMENTS_UNAVAILABLE', 'File attachment storage is required for deliveries');
+                const hash = createHash('sha256');
+                async function* chunks() {
+                  for await (const chunk of source.createReadStream({ autoClose: false })) { signal?.throwIfAborted(); hash.update(chunk); yield chunk; }
+                  if (item.sha256 && hash.digest('hex') !== item.sha256) throw error('DELIVERY_CHANGED', 'Delivery digest changed');
+                }
+                try {
+                  file = await attachments.saveFileStream({ data: chunks(), name: item.name, signal });
+                  files.set(`${item.id}:${item.sha256}`, file);
+                } catch (failure) {
+                  if (failure.code !== 'DELIVERY_CHANGED') throw failure;
+                  fileExists = false;
+                  fileError = { code: failure.code, message: 'The retained download file changed before delivery' };
+                }
+              }
+            }
+          } finally { await source?.close(); }
         }
-        records.push({ ...stripPaths(metadata), deliverable: !!file, ...(file ? { file } : {}) });
+        records.push({ ...stripPaths(metadata), fileExists, ...(fileError ? { fileError } : {}), deliverable: !!file, ...(file ? { file } : {}) });
       }
     } finally { await deliveryFiles.retainAll(records.flatMap(record => record.file ? [record.file] : [])); }
     return { ok: true, deliveries: records };
@@ -232,7 +248,21 @@ export function createPluginRuntime(options = {}) {
       const requested = await runtime.connectBrowser({...args, signal});
       return {ok: true, ...requested, browsers: [...runtime.extensionConnections().map(item => ({id: 'extension:' + item.instanceId, name: item.label, provider: 'extension', connected: true})), ...(requested.browsers ?? [])]};
     }
-    const browserConnection = endpoint === 'targets' && sessionKey && runtime.runtimeInfo.backends.extension ? await runtime.connectBrowser({signal}) : null;
+    let browserConnection = null, targetInventory;
+    if (endpoint === 'targets') {
+      targetInventory = await runtime.listTargets();
+      signal?.throwIfAborted();
+      // Inventory is not a browser choice. Preserve an explicit ID, existing
+      // targets/connections and backend errors without unrelated pairing.
+      if (targetInventory.ok !== false && !args.browserId && !targetInventory.targets.length
+        && !targetInventory.browsers?.some(browser => browser.connected && !browser.pairingRequired)
+        && !targetInventory.errors?.length && sessionKey && runtime.runtimeInfo.backends.extension) {
+        browserConnection = await runtime.connectBrowser({signal});
+        signal?.throwIfAborted();
+        targetInventory = await runtime.listTargets();
+        signal?.throwIfAborted();
+      }
+    }
     if (endpoint === 'browserSettings/forget') return {ok: true, ...await runtime.forgetBrowser(args)};
     if (endpoint === 'browserSettings/open') return { ok: true, ...await runtime.openBrowserSettings(args) };
     if (endpoint === 'browserSettings/disconnect') return { ok: true, ...await runtime.disconnectBrowser(args) };
@@ -290,29 +320,36 @@ export function createPluginRuntime(options = {}) {
         result = await work;
       } else if (endpoint === 'focus') result = await runtime.focus({ targetId: args.targetId, reference: args.reference });
       else if (endpoint === 'openTarget') {
-        if (args.backend === 'native' || args.bundleId) throw error('UNSUPPORTED_METHOD', 'This native backend does not support launching applications');
-        const inventory = await runtime.listTargets();
-        if (inventory.ok === false) return inventory;
-        const matches = inventory.targets.filter(target => target.backend === 'browser' && (!args.browserId || target.browserId === args.browserId) && (!args.targetId || target.id === args.targetId));
-        const ids = new Set(matches.map(target => target.browserId));
-        if (args.browserId && !args.targetId) {
+        if (args.backend === 'native') {
+          // Only return the launched process identity. The following ordinary
+          // select/observe still goes through authorizeApplication above.
           result = await runtime.openTarget(args);
         } else {
-          if (!matches.length || ids.size !== 1) throw error('AMBIGUOUS_TARGET', 'Choose one real browser inventory ID before opening a tab');
-          let selected = await runtime.selectTarget(matches[0]);
-          if (selected.ok !== false && !selected.target.verified) selected = await runtime.resume({ targetId: selected.target.id });
-          if (selected.ok === false) return selected;
-          result = await runtime.act({ targetId: selected.target.id, action: 'newTab', url: args.url });
-          if (result.ok !== false) result = { ...result, target: result.result?.target };
+          if (args.bundleId || args.path) throw error('INVALID_TARGET', 'Native launch requires backend:native and launch:true');
+          const inventory = await runtime.listTargets();
+          if (inventory.ok === false) return inventory;
+          const matches = inventory.targets.filter(target => target.backend === 'browser' && (!args.browserId || target.browserId === args.browserId) && (!args.targetId || target.id === args.targetId));
+          const ids = new Set(matches.map(target => target.browserId));
+          if (args.browserId && !args.targetId) {
+            result = await runtime.openTarget(args);
+          } else {
+            if (!matches.length || ids.size !== 1) throw error('AMBIGUOUS_TARGET', 'Choose one real browser inventory ID before opening a tab');
+            let selected = await runtime.selectTarget(matches[0]);
+            if (selected.ok !== false && !selected.target.verified) selected = await runtime.resume({ targetId: selected.target.id });
+            if (selected.ok === false) return selected;
+            result = await runtime.act({ targetId: selected.target.id, action: 'newTab', url: args.url });
+            if (result.ok !== false) result = { ...result, target: result.result?.target };
+          }
         }
-      } else if (endpoint === 'deliveries') result = await deliveries(runtime, attachments, signal);
+      } else if (endpoint === 'deliveries') result = await deliveries(runtime, attachments, signal, args);
       else {
         const method = methods[endpoint];
         if (!method || typeof runtime[method] !== 'function') throw error('UNSUPPORTED_METHOD', 'Unknown or unsupported OpenCU operation');
-        result = await runtime[method](endpoint === 'select' ? args.reference : endpoint === 'observe' ? { ...args, includeBase64: false } : args);
+        result = targetInventory ?? await runtime[method](endpoint === 'select' ? args.reference : endpoint === 'observe' ? { ...args, includeBase64: false } : args);
       }
       if (result.ok === false) return stripPaths(result);
       if (endpoint === 'targets' || endpoint === 'state') result.browsers = [...new Map([...(result.browsers ?? []), ...runtime.extensionConnections().map(item => ({id: 'extension:' + item.instanceId, name: item.label, provider: 'extension', connected: true})), ...(browserConnection?.browsers ?? [])].map(item => [item.id, item])).values()];
+      if (endpoint === 'targets' || endpoint === 'state') result.browserProviders = runtime.runtimeInfo.browserProviders;
       if (result.observation) { result = await attachScreenshot(result, attachments); lastObservation = { targetId: result.targetId, observation: stripPaths(result.observation), image: result.image ?? null }; }
       if (result.state) result = { ...result, state: { ...result.state, status: result.state.mode, selectedTarget: result.state.targets.find(target => target.id === result.state.activeTargetId) ?? null, annotations, lastObservation, revision, activity }, service: { name: 'OpenCU', ...runtime.runtimeInfo }, config: publicConfig(getConfig()) };
       return stripPaths(modelProjection && endpoint === 'state' ? modelResult(result, args) : result);
@@ -321,6 +358,7 @@ export function createPluginRuntime(options = {}) {
     }
   }
   return {
+    pendingAppApprovals: () => appApprovals.snapshot(),
     forgetSession: sessionId => appApprovals.forgetSession(sessionId),
     get dataDir() { return dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR); },
     request: (endpoint, args, context = {}) => cursorContext.run(context.sessionKey, () => request(endpoint, args, context)),

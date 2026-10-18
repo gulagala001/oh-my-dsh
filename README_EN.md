@@ -35,7 +35,7 @@ OMD puts working practices in the system layer: understand goals and constraints
 - **Built around delivery:** distinguish a plan, an executed action and a verified result.
 - **Grounded in actual tools:** Native and OMD-PTC get their own calling conventions; OpenCU retains its live tool contract.
 - **Designed for long tasks:** requirement anchors, background jobs and context reminders help keep the original goal in view.
-- **Room for your preferences:** identity/personality settings, plus Pro, Ultracode and Workflow for decomposition and delegation.
+- **Room for your preferences:** identity/personality settings, plus Ultra with Workflow, Agent Team and Free modes for decomposition and collaboration; Agent Team is shown only when enabled by DSH.
 
 These are execution strategies, not an intelligence upgrade or a success-rate guarantee. The composer's **draft optimizer** is a separate feature for light polish, structure and step planning.
 
@@ -110,7 +110,7 @@ Usage comes from actual receipts: **unknown is not zero; `≥` is a known lower 
 | --- | --- |
 | **Projectless Chat** | Start without creating a project; the first message creates a separate file directory. |
 | **CodeGraph** | Bundled runtime and automatic project preparation for symbol and call-graph exploration, without a global CLI installation. |
-| **Pro / Ultracode / Workflow** | Decompose tasks, delegate work and compose workflows while retaining host permissions and Jobs. |
+| **Ultra / Workflow** | Decompose tasks, delegate work and compose workflows while retaining host permissions and Jobs. |
 | **OMD-PTC** | Compose tool calls in JavaScript without replacing the host Tools service. |
 | **Draft optimizer** | Light polish, structure and step planning with original/version retention. Automatic polish defaults off. |
 | **DeepSeek Workbench** | Web chat/platform entry points and import of extractable history into native conversations, without automatically sending another message. |

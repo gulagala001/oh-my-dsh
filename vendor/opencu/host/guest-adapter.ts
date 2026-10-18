@@ -6,6 +6,7 @@ import { cancelOpenCUUpload, openCUAutomation, releaseOpenCUInput, resolveOpenCU
 import { cancelSiteTool } from './opencu-site-tools.ts'
 import { prepareOpenCUExtensions, attachOpenCUExtensionGuest, operateOpenCUExtensions } from './opencu-extensions.ts'
 import { operateOpenCUProfile } from './opencu-profile.ts'
+import { openCUDialogs } from './opencu-dialogs.ts'
 
 const partition = 'persist:opencu-browser-v1'
 export interface OpenCUGuestState {
@@ -102,6 +103,7 @@ export class OpenCUGuests {
   attach(lease: OpenCUGuestLease, guest: WebContents): void {
     if (!lease.openCU) return
     this.owned(lease.owner, lease, true)
+    openCUDialogs(guest)
     guest.setBackgroundThrottling(false)
     attachOpenCUExtensionGuest(lease.owner, guest)
     if (lease.openCU.initialNavigation) {
