@@ -25,7 +25,10 @@ import { applyRecommendedPlugins } from './recommended-plugins.jsx';
 import { applyPromptOptimizer } from './prompt-optimizer.jsx';
 import { applyModelPanel } from './model-panel.jsx';
 import { applySubscriptionFast } from './subscription-fast.jsx';
+import { useMainConversation } from './main-conversation.mjs';
 import { applyWorkflowStatus } from './workflow-status.jsx';
+import { applyWorkflowHeader } from './workflow-header.jsx';
+import { applySessionOverview } from './session-overview.jsx';
 import { applyProjectlessWorkspaces } from './projectless-workspaces.jsx';
 import { apply as applyDeepSeekWorkbench } from '../../plugins/deepseek-workbench/src/client/index.jsx';
 
@@ -43,7 +46,8 @@ const fmt = n => Number(n || 0).toLocaleString();
 const shortDate = at => at == null ? '时间未记录' : new Date(at).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 function BetterTodoChip(props) {
   const preset = props.useSessions(s => s.byId[props.sessionId]?.projectionValues?.agentPreset);
-  return ['trisoul-x', 'omd-ptc'].includes(preset) ? <BetterTodoSessionChip {...props}/> : null;
+  const main = useMainConversation(props);
+  return main && ['trisoul-x', 'omd-ptc'].includes(preset) ? <BetterTodoSessionChip {...props}/> : null;
 }
 function BetterTodoSessionChip({ sessionId, useSessionStatus }) {
   const [state, setState] = useState(null), [open, setOpen] = useState(false), [saving, setSaving] = useState(false), [error, setError] = useState('');
@@ -105,6 +109,8 @@ export async function apply(ctx) {
   applyModelPanel(ctx);
   applySubscriptionFast(ctx);
   applyWorkflowStatus(ctx);
+  applyWorkflowHeader(ctx);
+  applySessionOverview(ctx, openCU);
   function RunningMarker(props) {
     const running = props.useSessionStatus(s => Boolean(s.get(props.sessionId)?.running));
     return <span hidden data-omd-running={running ? '' : undefined}/>;

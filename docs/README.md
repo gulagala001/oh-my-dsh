@@ -24,7 +24,7 @@
 | 查看调用、Token、费用和后台工作 | [监控统计](monitoring.md) |
 | 管理长对话、自动压缩与原文回查 | [上下文机制](context-workflow.md) |
 | 设置会话、项目与全局记忆 | [Dream](dream-memory.md) |
-| 使用 Pro、Ultracode、PTC 和工作流 | [Workflow](workflow.md) |
+| 使用 Ultra、PTC 和工作流 | [Workflow](workflow.md) |
 | 跟进任务、要求与证据 | [日常使用](usage.md#日常使用) |
 | 了解后台任务、预算与运行状态 | [运行状态](runtime-state-background.md) |
 | 打开 DeepSeek 网页入口、导入可提取历史 | [DeepSeek Workbench](deepseek-workbench.md) |

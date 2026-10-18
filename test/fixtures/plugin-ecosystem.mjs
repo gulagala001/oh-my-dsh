@@ -15,7 +15,7 @@ import { ProcessMonitor } from '../../scripts/simulator/processes.mjs';
 
 const exec = promisify(execFile);
 const redact = value => String(value).replace(/token=[\w-]+/g, 'token=[redacted]');
-export const inject = ['webServer', 'connection', 'tools', 'agents', 'sessions'];
+export const inject = ['loader', 'webServer', 'connection', 'tools', 'agents', 'sessions'];
 export function apply(ctx) {
   const modelRoutes = [], modelDenials = [];
   ctx.on('llm/stream', (request, next) => {
@@ -39,11 +39,17 @@ export function apply(ctx) {
       let catalog = [], skillError;
       try { if (skills?.list) catalog = await skills.list({ cwd: session?.header.cwd, scope: agent }); }
       catch (error) { skillError = error.message; }
-      const value = { agent: agent && { id: agent.id, status: agent.status },
+      const toolsEntry = [...ctx.loader.entries()].find(row => row.options.name === '@deepseek-ai/dsh-tools');
+      if (!toolsEntry) throw Error('Actual Host ToolRuntime entry missing');
+      const native = await toolsEntry.parent.tree.import('@deepseek-ai/dsh-tools');
+      const cordis = await toolsEntry.parent.tree.import('@deepseek-ai/cordis');
+      const value = { nativeToolRuntime: (ctx.tools[cordis.symbols.original] ?? ctx.tools) instanceof native.ToolRuntime,
+        entries: [...ctx.loader.entries()].map(row => ({ name: row.options.name, id: row.options.id })),
+        agent: agent && { id: agent.id, status: agent.status },
         services: Object.fromEntries(['tools', 'llm', 'skills', 'skill', 'pluginManager', 'trisoulX', 'omaa'].map(name => [name, Boolean(ctx.get(name))])),
         tools: ctx.tools.schemas(agent).map(tool => ({ name: tool.name, parameters: tool.parameters })),
         skills: catalog.map(skill => ({ name: skill.name, provider: skill.provider })), skillError, modelRoutes, modelDenials,
-        events: session?.snapshotEvents().filter(event => ['turn/end', 'tool/call', 'tool/result'].includes(event.type)) ?? [] };
+        events: session?.snapshotEvents().filter(event => ['user/message', 'request/header', 'turn/end', 'tool/call', 'tool/result'].includes(event.type)) ?? [] };
       res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(value));
     } catch (error) { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: error.message })); }
   } }));
@@ -55,7 +61,7 @@ export async function until(fn, description, timeout = 30000) {
   throw Error('Timed out: ' + description);
 }
 
-export async function ecosystemFixture({ root, cli, isolation = 'native', storeDir, installTimeoutMs = 180000, extraLoopbackPorts = [], monitorEvidenceDir, onMonitorCleanup = () => {} }) {
+export async function ecosystemFixture({ root, cli, isolation = 'native', storeDir, installTimeoutMs = 180000, extraLoopbackPorts = [], monitorEvidenceDir, onMonitorCleanup = () => {}, simulationProvider, signal: lifecycleSignal }) {
   if (!Array.isArray(extraLoopbackPorts) || extraLoopbackPorts.some(port => !Number.isInteger(port) || port < 1 || port > 65535)) throw Error('Invalid owned loopback port');
   if (!Number.isSafeInteger(installTimeoutMs) || installTimeoutMs < 1000) throw Error('Installation deadline must be at least one second');
   if (typeof onMonitorCleanup !== 'function') throw Error('Monitor cleanup observer must be a function');
@@ -70,7 +76,9 @@ export async function ecosystemFixture({ root, cli, isolation = 'native', storeD
   delete installEnv.NODE_OPTIONS;
   const env = { ...installEnv, NODE_OPTIONS: '--import=' + pathToFileURL(fileURLToPath(new URL('../../scripts/simulator/network-guard.mjs', import.meta.url))).href };
   const requests = [], protocolErrors = [], issued = new Set(), monitorCleanups = [];
-  let child, browser, origin, cookie, monitor, acknowledgements, stopping, stop, log = '', boots = 0, welcomed = false, ready = false;
+  let child, childClosed, browser, origin, cookie, monitor, acknowledgements, stopping, stop, log = '', boots = 0, welcomed = false, ready = false;
+  // Optional caller-owned strict SSE provider; the default read/skill lane is unchanged.
+  if (simulationProvider && (!/^http:\/\/127\.0\.0\.1:\d+\/v1$/.test(simulationProvider.baseURL) || typeof simulationProvider.assertHealthy !== 'function')) throw Error('Expected owned loopback simulation provider');
   const provider = createServer(async (req, res) => {
     try {
       if (req.url !== '/v1/chat/completions' || req.method !== 'POST') throw Error('Unexpected model route: ' + req.method + ' ' + req.url);
@@ -100,9 +108,12 @@ export async function ecosystemFixture({ root, cli, isolation = 'native', storeD
       res.end('data: ' + JSON.stringify({ id: 'ecosystem', object: 'chat.completion.chunk', model: 'ecosystem', choices: [{ index: 0, delta: { role: 'assistant', ...delta }, finish_reason: delta.tool_calls ? 'tool_calls' : 'stop' }] }) + '\n\ndata: [DONE]\n\n');
     } catch (error) { protocolErrors.push(error.message); res.writeHead(500); res.end(error.message); }
   });
-  await new Promise(resolve => provider.listen(0, '127.0.0.1', resolve));
+  if (!simulationProvider) await new Promise(resolve => provider.listen(0, '127.0.0.1', resolve));
+  const providerPort = simulationProvider ? Number(new URL(simulationProvider.baseURL).port) : provider.address().port;
+  // The caller owns optional provider shutdown; this fixture owns only its server.
+  const closeProvider = () => simulationProvider ? undefined : closeFixtureServer(provider);
   try {
-    env.OMD_SIM_ALLOW_PORTS = [provider.address().port, ...extraLoopbackPorts].join(',');
+    env.OMD_SIM_ALLOW_PORTS = [providerPort, ...extraLoopbackPorts].join(',');
     await writeFile(join(root, 'network.jsonl'), '');
     await writeFile(join(workspace, 'probe.txt'), 'ECO_NATIVE_FILE_READ\n');
     // Repository-aware plugins must never discover this checkout as the test
@@ -110,11 +121,11 @@ export async function ecosystemFixture({ root, cli, isolation = 'native', storeD
     for (const args of [['-c', 'init.defaultBranch=main', 'init', '--quiet', workspace],
       ['-C', workspace, 'add', '--', 'probe.txt'],
       ['-C', workspace, '-c', 'user.name=Ecosystem test', '-c', 'user.email=ecosystem@example.invalid', 'commit', '--quiet', '-m', 'Isolated ecosystem workspace']]) {
-      await exec('git', args, { env: installEnv, timeout: 30000 });
+      await exec('git', args, { env: installEnv, signal: lifecycleSignal, timeout: 30000 });
     }
     await writeFile(join(home, 'settings.yaml'), JSON.stringify({ locale: { preference: 'zh' },
-      'llm-pi-ai': { providers: { ecosystem: { api: 'openai-completions', baseURL: `http://127.0.0.1:${provider.address().port}/v1`, apiKeyEnv: 'ECOSYSTEM_ONLY_KEY',
-        models: [{ id: 'ecosystem', name: 'Local ecosystem verification', contextWindow: 1000000, maxTokens: 8192, input: ['text'] }] } } },
+      'llm-pi-ai': { providers: { ecosystem: { api: 'openai-completions', baseURL: `http://127.0.0.1:${providerPort}/v1`, apiKeyEnv: 'ECOSYSTEM_ONLY_KEY',
+        models: [{ id: 'ecosystem', name: 'Local ecosystem verification', contextWindow: 1000000, maxTokens: 8192, input: simulationProvider ? ['text', 'image'] : ['text'] }] } } },
       'agent-default-model': { provider: 'ecosystem', model: 'ecosystem' },
       // This first-stage ecology checks non-CU capabilities; the fixed legacy CU
       // snapshot is not a prerequisite or an installation-time runtime download.
@@ -129,7 +140,7 @@ export async function ecosystemFixture({ root, cli, isolation = 'native', storeD
       // the documented pnpm flag on every add/remove, rather than silently
       // falling back to the per-HOME store (or an unexpected-store failure).
       const forwarded = storeDir && args[0] === 'plugin' && args.some(arg => ['add', 'remove'].includes(arg)) ? [...args, '--store-dir', storeDir] : args;
-      try { const value = await exec(process.execPath, [cli, ...forwarded], { cwd: workspace, env: installEnv, timeout: installTimeoutMs, maxBuffer: 8 * 1024 * 1024 }); return { ok: true, exitCode: 0, elapsedMs: Date.now() - startedAt, argv: forwarded, stdout: redact(value.stdout), stderr: redact(value.stderr) }; }
+      try { const value = await exec(process.execPath, [cli, ...forwarded], { cwd: workspace, env: installEnv, signal: lifecycleSignal, timeout: installTimeoutMs, maxBuffer: 8 * 1024 * 1024 }); return { ok: true, exitCode: 0, elapsedMs: Date.now() - startedAt, argv: forwarded, stdout: redact(value.stdout), stderr: redact(value.stderr) }; }
       catch (error) { return { ok: false, code: error.code, exitCode: error.code, status: error.status, signal: error.signal, killed: error.killed === true, elapsedMs: Date.now() - startedAt,
         timeoutMs: installTimeoutMs, argv: forwarded, diagnostic: redact(error.message), stdout: redact(error.stdout ?? ''), stderr: redact(error.stderr ?? error.message) }; }
     };
@@ -146,16 +157,16 @@ export async function ecosystemFixture({ root, cli, isolation = 'native', storeD
       { id: 'approval', config: { policy: 'never' } },
       { insert: [{ id: 'ecosystem-observer', name: pathToFileURL(join(observerDirectory, 'index.mjs')).href }] },
     ]));
-    const request = async (path, body) => {
+    const request = async (path, body, { signal } = {}) => {
       const response = await fetch(origin + path, { headers: { cookie, 'content-type': 'application/json' },
-        ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }), signal: AbortSignal.timeout(15000) });
+        ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }), signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000) });
       const text = await response.text(); let value;
       try { value = JSON.parse(text); } catch { throw Error(path + ': ' + response.status + ' ' + text.slice(0, 300)); }
       if (!response.ok) throw Error(path + ': ' + response.status + ' ' + JSON.stringify(value));
       return value;
     };
-    const rpc = async (method, args = {}) => {
-      const result = await request('/api/' + method, { type: 'client-request', rpcId: randomUUID(), method, payload: { args } });
+    const rpc = async (method, args = {}, options) => {
+      const result = await request('/api/' + method, { type: 'client-request', rpcId: randomUUID(), method, payload: { args } }, options);
       if (!result.result?.ok) throw Error(method + ': ' + JSON.stringify(result));
       return result.result.value;
     };
@@ -168,10 +179,11 @@ export async function ecosystemFixture({ root, cli, isolation = 'native', storeD
         // Retain every failure instead of a finally block replacing the original.
         await cleanupFixture([
           async () => {
-            if (!owned || !ready) return;
+            if (!owned || !ready || owned.exitCode !== null || owned.signalCode !== null) return;
             const observation = await request('/ecosystem-observer');
             if (observation.modelDenials.length) throw Error('Rejected ecosystem model routes during lifecycle: ' + JSON.stringify(observation.modelDenials));
             if (protocolErrors.length) throw Error('Ecosystem provider failed: ' + protocolErrors.join('; '));
+            simulationProvider?.assertHealthy();
           },
           () => currentBrowser?.close(),
           () => owned && writeFile(join(root, 'boot-' + boot + '.log'), log),
@@ -229,12 +241,13 @@ export async function ecosystemFixture({ root, cli, isolation = 'native', storeD
       let command = process.execPath, argv = args;
       if (isolation === 'native') {
         if (process.platform !== 'darwin') throw Error('Native ecosystem isolation requires macOS');
-        const allowed = [provider.address().port, ...extraLoopbackPorts].map(port => `(remote ip "localhost:${port}")`).join(' ');
+        const allowed = [providerPort, ...extraLoopbackPorts].map(port => `(remote ip "localhost:${port}")`).join(' ');
         const policy = `(version 1) (allow default) (deny network-outbound) (allow network-outbound ${allowed}) (deny file-write*) (allow file-write* (subpath ${JSON.stringify(root)}) (literal "/dev/null") (literal "/dev/tty"))`;
         command = '/usr/bin/sandbox-exec'; argv = ['-p', policy, process.execPath, ...args];
       } else if (isolation !== 'process') throw Error('Unknown isolation');
       child = spawn(command, argv, { cwd: workspace, env, detached: process.platform !== 'win32',
         stdio: process.platform === 'win32' ? ['ignore', 'pipe', 'pipe'] : ['ignore', 'pipe', 'pipe', 'ignore', 'ignore', 'ignore', 'ignore', 'ignore', 'ignore', 'pipe'] });
+      childClosed = new Promise(resolve => child.once('close', (code, signal) => resolve({ code, signal })));
       child.on('error', error => { spawnError = error; });
       child.stdout.on('data', chunk => { bootstrap ??= String(chunk).match(/http:\/\/127\.0\.0\.1:\d+\/\?token=[\w-]+/)?.[0]; log = (log + redact(chunk)).slice(-100000); });
       child.stderr.on('data', chunk => { log = (log + redact(chunk)).slice(-100000); });
@@ -247,7 +260,7 @@ export async function ecosystemFixture({ root, cli, isolation = 'native', storeD
       await until(async () => (await rpc('llm/listProviders')).some(provider => provider.id === 'ecosystem'), 'local provider');
       await request('/ecosystem-observer'); ready = true;
     };
-    const inspect = id => request('/ecosystem-observer' + (id ? '?session=' + encodeURIComponent(id) : ''));
+    const inspect = (id, options) => request('/ecosystem-observer' + (id ? '?session=' + encodeURIComponent(id) : ''), undefined, options);
     const exercise = async (preset, skill = false) => {
       const skillNames = skill === true ? ['open-design'] : Array.isArray(skill) ? skill : [];
       if (skillNames.some(name => typeof name !== 'string' || !/^[a-z0-9-]+$/.test(name))) throw Error('Invalid ecosystem skill expectation');
@@ -310,12 +323,12 @@ export async function ecosystemFixture({ root, cli, isolation = 'native', storeD
     };
     // Receipts are detached observations, never cleanup capabilities. ACK path
     // authority remains exclusively in the allocator closure retained above.
-    return { root, home, workspace, cli, hostVersion, profile, requests, protocolErrors, cliRun, start, stop, rpc, request, inspect, exercise, ui, log: () => log,
+    return { root, home, workspace, cli, hostVersion, profile, hostMonitorSnapshot: () => monitor?.snapshot(), get ownedHostProcess() { return child; }, get hostClose() { return childClosed; }, get origin() { return origin; }, get cookie() { return cookie; }, requests, protocolErrors, cliRun, start, stop, rpc, request, inspect, exercise, ui, log: () => log,
       monitorCleanup: () => structuredClone(monitorCleanups),
       async httpStatus(path) { const response = await fetch(origin + path, { headers: { cookie }, signal: AbortSignal.timeout(10000) }); await response.body?.cancel(); return response.status; },
-      async close() { await cleanupFixture([stop, () => closeFixtureServer(provider)]); return structuredClone(monitorCleanups); } };
+      async close() { await cleanupFixture([stop, closeProvider]); return structuredClone(monitorCleanups); } };
   } catch (error) {
-    try { await cleanupFixture([() => stop?.(), () => closeFixtureServer(provider)]); }
+    try { await cleanupFixture([() => stop?.(), closeProvider]); }
     catch (cleanupError) { throw new AggregateError([error, cleanupError], 'Ecosystem setup and cleanup failed', { cause: error }); }
     throw error;
   }

@@ -7,6 +7,7 @@ import {createHelperTransport} from './transport.mjs';
 import {NativeBackendError, nativeError, normalizeAction} from './protocol.mjs';
 import {installMacHelper} from './macos-install.mjs';
 import {checkMacHelperIdentity} from './macos-identity.mjs';
+import {MACOS_AX_EXTENSIONS} from '../protocol.mjs';
 
 /** Plain backend contract; the controller owns public ok/error envelopes. */
 export async function createNativeBackend({dataDir, helperPath, compileHelper = false, onCursor} = {}) {
@@ -139,6 +140,14 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
       known.set(target.id, target);
       return target;
     },
+    async openApplication(reference) {
+      if (process.platform!=='darwin') throw new NativeBackendError('UNSUPPORTED_PLATFORM','Explicit application launch is currently supported only by the macOS helper.');
+      if (!reference || typeof reference!=='object' || reference.launch!==true || ['id','targetId','identity','pid','windowId'].some(key=>reference[key]!==undefined)) throw new NativeBackendError('INVALID_TARGET','Launch requires a fresh explicit app path or bundleId, not a saved occurrence.');
+      if (!(typeof reference.path==='string'&&reference.path.startsWith('/')&&reference.path.endsWith('.app')) && !(typeof reference.bundleId==='string'&&reference.bundleId)) throw new NativeBackendError('INVALID_TARGET','Specify an absolute .app path or bundleId to launch.');
+      const target=await request('select',{reference:{...(reference.path?{path:reference.path}:{bundleId:reference.bundleId}),launch:true}});
+      known.set(target.id,target);
+      return target;
+    },
     async focus(target) {
       const value = await request('focus', {reference: reference(target)});
       known.set(value.id, value);
@@ -167,6 +176,18 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
     async act(target, action = {}) {
       if (action.signal?.aborted) throw new NativeBackendError('CONTROL_STOPPED', 'Control has been stopped.');
       const normalized = normalizeAction(action);
+      if (process.platform !== 'darwin' && normalized.type === 'press_key' && normalized.durationMs !== undefined) {
+        throw new NativeBackendError('UNSUPPORTED_ACTION', 'Timed native pressKey currently requires macOS; no input was dispatched.',
+          {platform:process.platform,action:normalized.type,inputDispatched:false,retryable:false});
+      }
+      if (process.platform !== 'darwin' && ['click','double_click','right_click'].includes(normalized.type) && (normalized.key !== undefined || normalized.durationMs !== undefined)) {
+        throw new NativeBackendError('UNSUPPORTED_ACTION', 'Modified and timed native clicks currently require macOS; no input was dispatched.',
+          {platform:process.platform,action:normalized.type,inputDispatched:false,retryable:false});
+      }
+      if (process.platform !== 'darwin' && MACOS_AX_EXTENSIONS.includes(normalized.type)) {
+        throw new NativeBackendError('UNSUPPORTED_ACTION', 'Native selectText, paste and performSecondaryAction currently require macOS accessibility; this platform has no equivalent route.',
+          {platform: process.platform, action: normalized.type, inputDispatched: false, retryable: false});
+      }
       if (normalized.type === 'permissions' || normalized.type === 'getPermissions') return backend.permissions();
       if (normalized.type === 'openPermissionSettings') return backend.openPermissionSettings(normalized.permission ?? 'accessibility');
       delete normalized.signal;

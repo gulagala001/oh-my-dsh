@@ -26,6 +26,66 @@ jobs:
           node-version: '24'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Synthetic Deny contracts with real OpenCU controller and ToolRuntime
+        run: node --test test/desktop-deny-contract.test.mjs
       - run: node scripts/check-public-files.mjs
       - run: pnpm build
+      - name: Verify rebuilt client and actual OpenCU package delivery
+        run: |
+          node --test test/opencu-delivery.test.mjs
+          node --input-type=module - <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          import { appendFileSync, copyFileSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          import { join } from 'node:path';
+          import { nativePackageModes } from './scripts/native-package-modes.mjs';
+          const root = mkdtempSync(join(process.env.RUNNER_TEMP, 'omd-delivery-'));
+          appendFileSync(process.env.GITHUB_ENV, `OMD_DELIVERY_ROOT=${root}\n`);
+          const packed = JSON.parse(execFileSync('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', root], { encoding: 'utf8' }));
+          if (packed.length !== 1) throw Error('Expected exactly one final OMD archive');
+          const archive = join(root, packed[0].filename);
+          const rawArchive = join(root, 'raw-' + packed[0].filename);
+          copyFileSync(archive, rawArchive);
+          const sha256 = file => createHash('sha256').update(readFileSync(file)).digest('hex');
+          const rawSha256 = sha256(rawArchive);
+          await nativePackageModes(archive);
+          const evidence = { rawArchive, rawSha256, archive, sha256: sha256(archive) };
+          writeFileSync(join(root, 'package-evidence.json'), JSON.stringify(evidence, null, 2));
+          console.log(JSON.stringify(evidence));
+          execFileSync(process.execPath, ['scripts/check-opencu-delivery.mjs', archive], { stdio: 'inherit' });
+          execFileSync(process.execPath, ['--test', 'test/opencu-static-zip-delivery.test.mjs'], { stdio: 'inherit', env: { ...process.env, OMD_DELIVERY_ARCHIVE: archive } });
+          NODE
       - run: pnpm test
+      - name: Auto Compact surface-index regression
+        run: node --test test/auto-compact-surface-index.test.mjs test/auto-compact-native-session.test.mjs
+      - name: Auto Compact native SDK boundary regression
+        run: |
+          pnpm list @deepseek-ai/dsh @deepseek-ai/dsh-session @deepseek-ai/dsh-compaction @deepseek-ai/cordis --depth 0
+          node --test test/auto-compact-coordinate.test.mjs test/auto-compact-retry.test.mjs test/auto-compact-native-boundaries.test.mjs
+      - name: Recommended plugin native SDK lifecycle regression
+        run: |
+          pnpm list @deepseek-ai/dsh @deepseek-ai/cordis --depth 0
+          node --test test/recommended-update-native.test.mjs
+      - name: Titlebar clearance source and bundled CSS regression
+        run: |
+          node --test test/titlebar-clearance.test.mjs
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const shell = readFileSync('src/client/shell.css', 'utf8');
+          const bundle = readFileSync('lib/client.js', 'utf8');
+          const scope = "html.trisoul-shell[data-platform='darwin'] [data-sidebar-collapsed] .wSkVaW_header[data-window-drag]";
+          for (const name of ['header', 'titleRow']) {
+            const start = shell.indexOf(scope + (name === 'header' ? '' : ' .wSkVaW_' + name) + ' {');
+            assert.ok(start >= 0, 'Missing scoped source rule: ' + name);
+            const rule = shell.slice(start, shell.indexOf('}', start) + 1);
+            assert.ok(bundle.includes(rule), 'Built client is missing scoped clearance rule: ' + name);
+          }
+          console.log('Both scoped titlebar clearance rules are present in the built client.');
+          NODE
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: core-opencu-delivery
+          path: ${{ env.OMD_DELIVERY_ROOT }}
+          if-no-files-found: warn

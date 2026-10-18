@@ -361,23 +361,23 @@ export async function ordinaryWithAttachment(f, observe) {
 export async function exercisePro(f, observe, preset, existingSession, skills = ['open-design', 'saas-landing'], previous) {
   const workspace = await f.rpc('workspace/create', { request: { path: f.workspace } });
   const sessionId = existingSession ?? (await f.rpc('session/create', { request: { workspaceId: workspace.workspace.workspaceId, agentPreset: preset } })).sessionId;
-  const mode = await f.request('/trisoul-x/api/model-mode?session=' + sessionId, existingSession ? undefined : { provider: 'ecosystem', model: 'ecosystem', mode: 'pro' });
-  assert.equal(mode.eligible, true); assert.equal(mode.mode, 'pro');
+  const mode = await f.request('/trisoul-x/api/model-mode?session=' + sessionId, existingSession ? undefined : { provider: 'ecosystem', model: 'ecosystem', mode: 'ultra', submode: 'workflow' });
+  assert.equal(mode.eligible, true); assert.equal(mode.mode, 'ultra'); assert.equal(mode.submode, 'workflow');
   const before = f.requests.length, eventCount = previous?.observer.events.at(-1)?.seq ?? ((await observe(sessionId)).events.at(-1)?.seq ?? -1);
 
   if (previous) {
     const cold = await observe(sessionId, { residency: '1' });
-    assert.equal(cold.agentAttached, false, 'Persisted Pro stays cold until the intentional prompt');
+    assert.equal(cold.agentAttached, false, 'Persisted Ultra Workflow stays cold until the intentional prompt');
     assert.equal(cold.sessionAttached, false); assert.ok(!cold.created.includes(sessionId));
   }
   const ends = previous?.observer.events.filter(event => event.type === 'turn/end').at(-1)?.seq ?? (await observe(sessionId)).events.filter(row => row.type === 'turn/end').at(-1)?.seq ?? -1;
   await f.rpc('session/prompt', { request: { sessionId, requestId: randomUUID(), mode: 'queue', content: [{ type: 'text', text: `ECO_CHECK:read:${randomUUID()}` }] } });
-  await until(async () => { assert.deepEqual(f.protocolErrors, []); const view = await observe(sessionId); return view.agent?.status === 'idle' && view.events.some(row => row.type === 'turn/end' && row.seq > ends) && view; }, preset + ' persistent Pro read', 45000);
+  await until(async () => { assert.deepEqual(f.protocolErrors, []); const view = await observe(sessionId); return view.agent?.status === 'idle' && view.events.some(row => row.type === 'turn/end' && row.seq > ends) && view; }, preset + ' persistent Ultra Workflow read', 45000);
   const observer = await observe(sessionId); observer.events = observer.events.filter(event => event.seq > eventCount);
   const result = { preset, sessionId, workspace: f.workspace, mode, observer, requests: f.requests.slice(before) };
   await exerciseSkillTurns(f, observe, result, skills); assertNativeRead(result);
   if (preset === 'omd-ptc') assertPtc(result);
-  else assert.ok(result.requests.some(row => row.tools?.some(tool => tool.function.name === 'workflow' && tool.function.parameters?.properties?.resumeFromRunId)), 'Persistent normal Pro keeps actual native Workflow resume capability');
+  else assert.ok(result.requests.some(row => row.tools?.some(tool => tool.function.name === 'workflow' && tool.function.parameters?.properties?.resumeFromRunId)), 'Persistent Ultra Workflow keeps actual native Workflow resume capability');
   return result;
 }
 export async function realUi(f, input, out, sessionId, label, plugins, disabled = new Set()) {

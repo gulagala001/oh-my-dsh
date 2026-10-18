@@ -25,6 +25,7 @@ export function createActivityFeed(currentTurn) {
     return session;
   }
   return {
+    invalidate() { if (!closed) publish(); },
     begin(sessionId, endpoint, args) {
       if (closed || typeof sessionId !== 'string') return null;
       const session = sessionFor(sessionId);

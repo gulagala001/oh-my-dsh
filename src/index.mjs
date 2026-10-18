@@ -48,6 +48,7 @@ import { runtimeContext } from './runtime-state.mjs';
 import { TaskBudgets, consumeBudgetAliases } from './task-budget.mjs';
 import { WorkflowBudget } from './workflow-budget.mjs';
 import { UltracodeControl, installUltracodeProjection } from './ultracode.mjs';
+import { installOverviewProjection } from './session-overview-projection.mjs';
 import { setRuntimeContext, taskContextMeta } from './task-context.mjs';
 import { installBackground } from './background.mjs';
 import { mountRecommendedPlugins } from './recommended-plugins.mjs';
@@ -147,14 +148,16 @@ export async function apply(ctx, config) {
   hub.omaaWorkMode = {
     inspect: (session, agent) => hub.ultracode.view(session, agent),
     current: (session, agent = ctx.agents.get(session.id)) => isOmaaEnhanced(session) ? hub.ultracode.currentMode(agent) : 'off',
-    async select(sessionId, mode) {
+    submode: (session, agent = ctx.agents.get(session.id)) => hub.ultracode.currentSubmode(agent),
+    async select(sessionId, mode, submode) {
       const before = await hub.ultracode.inspect(sessionId);
       if (!before.selected) throw new Error('当前会话没有可用的模型配置');
-      return hub.ultracode.select(sessionId, { ...before.selected, mode, expectedRevision: before.revision });
+      return hub.ultracode.select(sessionId, { ...before.selected, mode, submode, expectedRevision: before.revision });
     },
   };
   const monitored = session => !isBtwSession(session) && (isX(session) || (session.header.origin === 'subagent' && Boolean(hub.workflowBudget.owner(session))));
   installUltracodeProjection(ctx);
+  installOverviewProjection(ctx);
   ctx.on('agent/inbox/claimed', ({ agent, message }) => { if(!isBtwSession(agent.session))hub.ultracode.claimed(agent, message); }, { global: true });
   ctx.on('system-prompt/assemble', (_assembly, context, next) => context?.agent && !isBtwSession(context.agent.session)
     ? hub.ultracode.assemble(context.agent, next) : next(), { global: true, prepend: true });

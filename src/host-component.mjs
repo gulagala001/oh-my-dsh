@@ -1,12 +1,19 @@
 import { isDeepStrictEqual } from 'node:util';
 
+function requireHostEntry(ctx, name) {
+  const specifier = '@deepseek-ai/dsh-' + name;
+  const entry = [...ctx.loader.entries()].find(row => row.options.name === specifier);
+  if (!entry) throw Object.assign(new Error(`The matching DSH component is missing: ${specifier}. Another plugin may have replaced its registration; restore the original component registration or use a compatible plugin version. OMD cannot safely infer a private replacement's ownership and dependencies.`), {
+    code: 'OMD_HOST_COMPONENT_MISSING', details: { component: specifier },
+  });
+  return entry;
+}
+
 // Host capability libraries carry private Symbols and WeakMaps. Resolve them
 // through the host Loader's resolver. Node's ordinary require.resolve can
 // select a stale hoisted package after an in-place host upgrade.
 export async function loadHostModule(ctx, name, createModule, dependencies) {
-  const specifier = '@deepseek-ai/dsh-' + name;
-  const originalEntry = [...ctx.loader.entries()].find(entry => entry.options.name === specifier);
-  if (!originalEntry) throw new Error(`The matching DSH component is missing: ${specifier}`);
+  const originalEntry = requireHostEntry(ctx, name);
   const tree = originalEntry.parent.tree;
   const modules = new Map(await Promise.all(dependencies.map(async specifier => [specifier,
     specifier.startsWith('node:') ? await import(specifier) : await tree.import(specifier)])));
@@ -21,7 +28,7 @@ export async function loadHostModule(ctx, name, createModule, dependencies) {
 
 export async function mountHostComponent(ctx, name, createModule, dependencies, config) {
   const component = await loadHostModule(ctx, name, createModule, dependencies);
-  const originalEntry = [...ctx.loader.entries()].find(entry => entry.options.name === '@deepseek-ai/dsh-' + name);
+  const originalEntry = requireHostEntry(ctx, name);
   const tree = originalEntry.parent.tree;
   const inherited = ['jobs-local', 'bash-sandbox', 'pwsh-sandbox'].includes(name);
   let effective = config;

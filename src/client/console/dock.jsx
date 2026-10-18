@@ -7,6 +7,7 @@ import { api, qs, usePoll, usePopover, Popover, Steps, Button, Icon, Dot, cx } f
 import { k, ago } from './model.mjs';
 import { pipelineSteps } from './context.jsx';
 import { openConsole } from './nav.mjs';
+import { useMainConversation } from '../main-conversation.mjs';
 
 const OMD_PRESETS = ['trisoul-x', 'omd-ptc'];
 // Native ui-chat readings, so a replaced pill reads exactly like the original.
@@ -22,9 +23,10 @@ function hitPercent(read, prompt) {
   for (let d = 1; d < 8; d++) { const v = (Math.floor(ratio * 10 ** d) / 10 ** d).toFixed(d); if (Number(v) < 100) return v; }
   return '99.9';
 }
-function useIsOmd({ useSessions, sessionId }) {
-  const preset = useSessions ? useSessions(s => s.byId?.[sessionId]?.projectionValues?.agentPreset) : undefined;
-  return OMD_PRESETS.includes(preset);
+function useIsOmd(props) {
+  const main = useMainConversation(props);
+  const preset = props.useSessions(s => s.byId?.[props.sessionId]?.projectionValues?.agentPreset);
+  return main && OMD_PRESETS.includes(preset);
 }
 const Jump = ({ section, extra, children = '在控制台查看' }) => <button type="button" className="omc-pop-jump" onClick={() => openConsole(section, extra)}>{children}<Icon name="chevron" size={12}/></button>;
 
@@ -76,23 +78,23 @@ function useStats(useProjection) {
   return { stats: stats && stats.steps > 0 ? stats : null, usage: hasUsage ? usage : null };
 }
 
-function ActivityPill({ stats, mode }) {
+function ActivityPill({ stats, mode, main }) {
   const seat = usePopover(), speed = speedOf(stats), icon = <IconGaugeOutlineRegular/>;
   if (mode === 'compact') return speed ? <Plain stat="activity" icon={icon} label={speed}/> : null;
   const counts = `${stats.turns} 轮 ${stats.steps} 步`;
   return <Pill seat={seat} stat="activity" icon={icon} aria={speed ? `${counts} · ${speed}` : counts} title="会话统计"
-    label={<>{counts}{speed && <><Sep/>{speed}</>}</>} footer={<Jump section="calls" extra={{ kind: 'main' }}>主执行调用日志</Jump>}>
+    label={<>{counts}{speed && <><Sep/>{speed}</>}</>} footer={main && <Jump section="calls" extra={{ kind: 'main' }}>主执行调用日志</Jump>}>
     <ActivityRows stats={stats}/>
   </Pill>;
 }
-function UsagePill({ usage, mode, sessionId }) {
+function UsagePill({ usage, mode, sessionId, main }) {
   const seat = usePopover(), icon = <IconDatabaseOutlineRegular/>, cache = cacheOf(usage);
   const cacheText = cache != null ? `缓存命中 ${cache}%` : null;
   if (mode === 'compact') return cacheText ? <Plain stat="usage" icon={icon} label={cacheText}/> : null;
   const total = billed(usage) + usage.outputTokens, totalText = `${tok(total)} tok`;
   return <Pill seat={seat} stat="usage" icon={icon} aria={cacheText ? `${totalText} · ${cacheText}` : totalText} title="Token 用量" value={`${exact(total)} tok`}
-    label={<>{totalText}{cacheText && <><Sep/>{cacheText}</>}</>} footer={<Jump section="overview">用量概览</Jump>}>
-    <UsageRows usage={usage} sessionId={sessionId} open={seat.open}/>
+    label={<>{totalText}{cacheText && <><Sep/>{cacheText}</>}</>} footer={main && <Jump section="overview">用量概览</Jump>}>
+    <UsageRows usage={usage} sessionId={sessionId} open={main && seat.open}/>
   </Pill>;
 }
 
@@ -100,20 +102,23 @@ function createStats(readMode) {
   const subscribe = readMode ? readMode.subscribe : () => () => {};
   const snapshot = () => readMode?.get() === 'compact' ? 'compact' : 'detailed';
   const useMode = () => useSyncExternalStore(subscribe, snapshot, snapshot);
-  const ActivityStat = memo(function ActivityStat({ useProjection }) {
-    const mode = useMode(), { stats } = useStats(useProjection);
-    return stats ? <ActivityPill stats={stats} mode={mode}/> : null;
+  const ActivityStat = memo(function ActivityStat(props) {
+    const main = useMainConversation(props);
+    const mode = useMode(), { stats } = useStats(props.useProjection);
+    return stats ? <ActivityPill stats={stats} mode={mode} main={main}/> : null;
   });
-  const UsageStat = memo(function UsageStat({ useProjection, sessionId }) {
-    const mode = useMode(), { usage } = useStats(useProjection);
-    return usage ? <UsagePill usage={usage} mode={mode} sessionId={sessionId}/> : null;
+  const UsageStat = memo(function UsageStat(props) {
+    const main = useMainConversation(props);
+    const mode = useMode(), { usage } = useStats(props.useProjection);
+    return usage ? <UsagePill usage={usage} mode={mode} sessionId={props.sessionId} main={main}/> : null;
   });
   // rc.2 ships both pills inside one `stats` entry.
-  const CombinedStat = memo(function CombinedStat({ useProjection, sessionId }) {
-    const mode = useMode(), { stats, usage } = useStats(useProjection);
+  const CombinedStat = memo(function CombinedStat(props) {
+    const main = useMainConversation(props);
+    const mode = useMode(), { stats, usage } = useStats(props.useProjection);
     if (!stats && !usage) return null;
     return <span className="omc-pill-group" data-composer-stats="">
-      {stats && <ActivityPill stats={stats} mode={mode}/>}{usage && <UsagePill usage={usage} mode={mode} sessionId={sessionId}/>}
+      {stats && <ActivityPill stats={stats} mode={mode} main={main}/>}{usage && <UsagePill usage={usage} mode={mode} sessionId={props.sessionId} main={main}/>}
     </span>;
   });
   return { activity: ActivityStat, usage: UsageStat, stats: CombinedStat };

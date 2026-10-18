@@ -6,6 +6,7 @@ import { extractionScript } from './extraction.mjs';
 import { NativeChat } from './native-chat.jsx';
 import { NativePlatformPage } from './platform-page.jsx';
 import { statusScript, previewScript, commandScript } from './native-chat-bridge.mjs';
+import { initializeHostCapabilities } from './host-capabilities.mjs';
 import css from './style.css';
 import nativeCss from './native-chat.css';
 
@@ -267,6 +268,9 @@ function mountClient(ctx) {
   const stopUI = () => { lifetime.abort(); window.removeEventListener('deepseek-workbench:open', openRequested); root.unmount(); host.remove(); style.remove(); };
   const installMain = scope => {
     if (stopped) return () => {};
+    const diagnostics = new AbortController();
+    const abortDiagnostics = () => diagnostics.abort();
+    lifetime.signal.addEventListener('abort', abortDiagnostics, { once: true });
     const disposeSlot = ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: PANEL_ID }, () => <ChatMain ctx={scope} notify={notify} ownerSignal={lifetime.signal}/>));
     const open = () => {
       scope.layout.selectPanel(PANEL_ID);
@@ -282,14 +286,12 @@ function mountClient(ctx) {
           && !frame.hasAttribute('data-rightbar-fullscreen') && typeof scope.layout.toggleSidebar === 'function') scope.layout.toggleSidebar();
       });
     }; openChat.current = open;
-    void api('/state', undefined, lifetime.signal).then(async state => {
-      if (lifetime.signal.aborted) return;
-      if (state.demoOpen) open();
-      const capabilities = await window.dshDesktop?.browser?.capabilities?.() ?? {};
-      if (!lifetime.signal.aborted) await api('/host-capabilities', { persistentProfiles: capabilities.persistentProfiles === true,
-        downloads: capabilities.downloads === true, nativeAccountView: typeof window.dshPlatform?.open === 'function' }, lifetime.signal).catch(() => {});
-    }).catch(() => {});
-    return keep(() => { if (openChat.current === open) openChat.current = null; disposeSlot?.(); });
+    void initializeHostCapabilities({ api, signal: diagnostics.signal,
+      onState: state => { if (state.demoOpen) open(); },
+      readCapabilities: () => window.dshDesktop?.browser?.capabilities?.(),
+      readNativeAccountView: () => typeof window.dshPlatform?.open === 'function',
+    }).catch(error => { if (!diagnostics.signal.aborted) console.error('Workbench capability initialization failed', error); });
+    return keep(() => { abortDiagnostics(); lifetime.signal.removeEventListener('abort', abortDiagnostics); if (openChat.current === open) openChat.current = null; disposeSlot?.(); });
   };
   if (typeof ctx.inject === 'function') ctx.inject(['layout'], installMain);
   else if (ctx.layout) installMain(ctx);

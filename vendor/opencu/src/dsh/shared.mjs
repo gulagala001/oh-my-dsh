@@ -1,3 +1,4 @@
+import { registerExtensionDownload } from '../extension/distribution.mjs';
 import { readFile } from 'node:fs/promises';
 import { Context } from '@deepseek-ai/cordis';
 import { createScope, scopeOf } from '@deepseek-ai/dsh-scope';
@@ -27,7 +28,7 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
     entry = { root, leases: new Set(), tools: new Map(), config: () => config };
     entry.browserHost = createBrowserHost();
     let cursorOwner;
-    entry.runtime = createPluginRuntime({ getConfig: () => entry.config(), dshBrowser: entry.browserHost.backend,
+    entry.runtime = createPluginRuntime({ getConfig: () => entry.config(), dshBrowser: entry.browserHost.backend, onAppApprovalsChanged: () => entry.activity?.invalidate(),
       async onCursor(cursor, sessionId) {
         if (!cursor.visible) {
           const previous = cursorOwner; cursorOwner = undefined;
@@ -68,7 +69,10 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
       if (endpoint === 'settings/read') return { ok: true, settings: await entry.preferences.read() };
       if (endpoint === 'settings/write') return { ok: true, settings: await entry.preferences.write(args.key, args.value) };
       if (endpoint.startsWith('history/')) return { ok: true, value: await entry.history.handle(endpoint.slice(8), args) };
-      if (endpoint === 'events') return entry.activity.wait(args.after, signal, { heartbeat: args.heartbeat === true, compact: args.compact === true });
+      if (endpoint === 'events') {
+        const snapshot = await entry.activity.wait(args.after, signal, { heartbeat: args.heartbeat === true, compact: args.compact === true });
+        return snapshot.unchanged ? snapshot : { ...snapshot, appApprovals: entry.runtime.pendingAppApprovals() };
+      }
       if (endpoint === 'presentation/event') return entry.presentation.event(args);
       if (endpoint.startsWith('presentation/')) return entry.presentation.handle(endpoint.slice(13), args);
       if (endpoint.startsWith('browser/')) {
@@ -79,7 +83,9 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
       }
       const activity = mutating.has(endpoint) ? entry.activity.begin(sessionKey, endpoint, args) : null;
       let release, outcome, failure;
-      const onAbort = () => { release ??= entry.runtime.request('stop'); };
+      // Input release remains global; only the aborted owner's approvals are cancelled.
+      // Anonymous API requests have no approval owner, so use a non-null root sentinel.
+      const onAbort = () => { release ??= entry.runtime.request('stop', {}, { sessionKey: sessionKey ?? root }); };
       if (mutating.has(endpoint)) signal?.addEventListener('abort', onAbort, { once: true });
       try {
         if (signal?.aborted) { if (mutating.has(endpoint)) onAbort(); signal.throwIfAborted(); }
@@ -114,6 +120,7 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
     entry.service = { request: entry.request, acquire: (owner, options) => acquireOpenCU(owner, options), installTools: (scope, options) => installTools(scope, options), get leaseCount() { return entry.leases.size; } };
     entry.unprovide = root.provide('opencu', entry.service);
     entry.rpcFiber = root.inject(['connection', 'attachments'], async connectionCtx => {
+      connectionCtx.effect(() => registerExtensionDownload(connectionCtx), 'opencu: static extension download');
       const resources = JSON.parse(await readFile(new URL('../../lib/rea-assets/manifest.json', import.meta.url), 'utf8'));
       for (const { file, asset = file } of resources) connectionCtx.effect(() => connectionCtx.connection.fetch.register({
         path: `/api/opencu/rea-assets/${file}`, methods: ['GET'], requestBody: 'buffered',
