@@ -1,6 +1,7 @@
 /** Registers the target-neutral Conversation assembly, shell, input, and docks. */
 import type {} from '@deepseek-ai/dsh-client-product-analytics/client'
 import type { Context } from '@deepseek-ai/cordis'
+import { createElement, useSyncExternalStore, type ComponentProps } from 'react'
 import z from '@deepseek-ai/schemastery'
 import type { ISessions, SessionBinding } from '@deepseek-ai/dsh-api-session-controller/client'
 import { IconPaperclipOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -559,22 +560,21 @@ export async function apply(ctx: Context, config: Config = Config({})): Promise<
     },
   }, InputBar)
 
-  // Session hooks and input registries must precede controller readiness.
-  // Consumers wait for declarations through slots.inject; publish the renderable
-  // tree only after the controller is ACTIVE, so selected sessions can resolve
-  // conversation through strict ctx.get during synchronous slot injection.
-  await ctx.plugin(ConversationController, {
-    input: inputHub,
-    blocks: composerBlocks,
-    maxConcurrentFileUploads,
-  })
+  // Native consumers register directly when `conversation` becomes available.
+  // Declare their slots first, but keep the Session subtree unmounted until
+  // the controller is ACTIVE: restored sessions resolve it during injection.
+  const ready = createSnapshotStore(false)
+  function ReadyConversationPanel(props: ComponentProps<typeof ConversationPanel>) {
+    const active = useSyncExternalStore(ready.subscribe, ready.getSnapshot, ready.getSnapshot)
+    return active ? createElement(ConversationPanel, props) : null
+  }
 
   slots.inject('main', function* () {
     yield slots.register({
       name: 'main',
       key: 'conversation',
       children: { 'main.conversation': { kind: 'single', scope: 'session-maybe' } },
-    }, ConversationPanel)
+    }, ReadyConversationPanel)
     yield registerConversationRoot()
     yield registerConversationContent()
     yield registerConversationSession()
@@ -582,6 +582,13 @@ export async function apply(ctx: Context, config: Config = Config({})): Promise<
     yield registerSessionHeader()
     yield registerComposerBar()
   })
+
+  await ctx.plugin(ConversationController, {
+    input: inputHub,
+    blocks: composerBlocks,
+    maxConcurrentFileUploads,
+  })
+  ready.set(true)
 
   ctx.plugin(todoDockEntry)
   ctx.plugin(queueDockEntry)
