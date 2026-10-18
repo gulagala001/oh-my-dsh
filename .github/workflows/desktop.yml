@@ -58,6 +58,8 @@ jobs:
           node-version: '24'
       - uses: pnpm/action-setup@v6
       - run: pnpm install --frozen-lockfile
+      - name: Synthetic Deny contracts with real OpenCU controller and ToolRuntime
+        run: node --test test/desktop-deny-contract.test.mjs
       - run: pnpm build
       - name: Reserve fresh inputs inside the new workspace
         shell: bash
@@ -127,6 +129,22 @@ jobs:
           appendFileSync(process.env.GITHUB_STEP_SUMMARY,
             '官方 rc.2 Desktop：本地 tgz 安装、完整退出重启、真实前端及注册/设置入口验收通过；模型调用 0，三个外部 CU backend 关闭且未执行 CU 动作（DSH 自有 browser 适配仍存在）。\n#54 rc.1 配对与 #64 真实 native/CU 动作仍未验收，不得据此关闭。详见脱敏截图和 JSON/TAP。\n');
           NODE
+      - name: Real Agent and REA Deny against one synthetic target
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test --test-reporter=tap test/desktop-deny.test.mjs | tee "$OMD_DESKTOP_TEST_ROOT/deny.tap"
+          node --input-type=module - <<'NODE'
+          import { readFileSync, appendFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          import { assertDenyReport } from './test/fixtures/desktop-deny/gate.mjs';
+          const root = process.env.OMD_DESKTOP_TEST_ROOT;
+          const tap = readFileSync(join(root, 'deny.tap'), 'utf8');
+          const report = JSON.parse(readFileSync(join(root, 'deny-evidence', 'desktop-deny.json')));
+          assertDenyReport(tap, report);
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+            'Issue #64 partial: official rc.2 Electron, full frozen OMD, real Agent/ToolRuntime/OpenCU and REA Deny passed against one synthetic target. Two loopback model requests, one tool call, zero rejected/external model routes and zero physical backend operations. Original zero-model host boot remains separate. Physical CU, Allow/grants, Web/WSL export and rc.1 pairing are unverified.\n');
+          NODE
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -137,6 +155,8 @@ jobs:
             ${{ env.OMD_DESKTOP_TEST_ROOT }}/raw-*.tgz
             ${{ env.OMD_DESKTOP_TEST_ROOT }}/raw-package.json
             ${{ env.OMD_DESKTOP_TEST_ROOT }}/host-boot.tap
+            ${{ env.OMD_DESKTOP_TEST_ROOT }}/deny.tap
+            ${{ env.OMD_DESKTOP_TEST_ROOT }}/deny-evidence/
             ${{ env.OMD_DESKTOP_TEST_ROOT }}/opencu-delivery.json
             ${{ env.OMD_DESKTOP_TEST_ROOT }}/host-boot-evidence/
           if-no-files-found: warn

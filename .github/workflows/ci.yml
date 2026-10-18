@@ -26,6 +26,8 @@ jobs:
           node-version: '24'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Synthetic Deny contracts with real OpenCU controller and ToolRuntime
+        run: node --test test/desktop-deny-contract.test.mjs
       - run: node scripts/check-public-files.mjs
       - run: pnpm build
       - name: Verify rebuilt client and actual OpenCU package delivery
