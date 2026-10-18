@@ -112,7 +112,7 @@ jobs:
           assert.equal(report.status, 'passed'); assert.equal(report.executed, 1); assert.equal(report.skipped, 0);
           assert.equal(report.launches.length, 2); assert.equal(report.shutdowns.length, 2);
           appendFileSync(process.env.GITHUB_STEP_SUMMARY,
-            '官方 rc.2 Desktop：本地 tgz 安装、完整退出重启、真实前端及注册/设置入口验收通过；模型调用 0，CU backends 全关闭。\n#54 rc.1 配对与 #64 真实 native/CU 动作仍未验收，不得据此关闭。详见脱敏截图和 JSON/TAP。\n');
+            '官方 rc.2 Desktop：本地 tgz 安装、完整退出重启、真实前端及注册/设置入口验收通过；模型调用 0，三个外部 CU backend 关闭且未执行 CU 动作（DSH 自有 browser 适配仍存在）。\n#54 rc.1 配对与 #64 真实 native/CU 动作仍未验收，不得据此关闭。详见脱敏截图和 JSON/TAP。\n');
           NODE
       - uses: actions/upload-artifact@v7
         if: always()

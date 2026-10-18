@@ -26,7 +26,9 @@ export function apply(ctx, config) {
   ctx.effect(() => () => record({ event: 'disposed', modelCalls: modelCalls.length }));
   // The CLI's bounded forceExit(0) skips beforeExit. Require this event to
   // distinguish natural quiescence from a timeout that happens to exit 0.
-  process.once('beforeExit', code => record({ event: 'before-exit', code, rootDisposed: ctx.root.fiber.uid === null,
+  // Cordis keeps the root fiber uid at 0 after disposal; use the unloaded
+  // Loader service as the root-teardown evidence instead of a child-fiber uid.
+  process.once('beforeExit', code => record({ event: 'before-exit', code, rootDisposed: ctx.get('loader') === undefined,
     modelCalls: modelCalls.length }));
   process.once('exit', code => record({ event: 'exit', code, modelCalls: modelCalls.length }));
   for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => record({ event: 'termination-signal', signal }));

@@ -86,17 +86,20 @@ test('app and installer environment excludes tokens, provider keys and old HOME/
 
 test('actual Host observer vetoes model streams before continuation and rejects unauthenticated reads', async () => {
   const root = resolve(repoRoot, '.cache', 'observer-contract'), records = [], handlers = new Map();
-  const callbacks = new Map(), registration = {};
+  const callbacks = new Map(), registration = {}, disposers = [];
   const text = await readFile(new URL('./fixtures/desktop-host-boot/observer.mjs', import.meta.url), 'utf8');
   const apply = runInNewContext(text.replace(/^import .*\n/gm, '').replace('export const inject', 'const inject')
     .replace('export function apply', 'function apply') + '\napply', {
     appendFileSync: (_file, text) => records.push(JSON.parse(text)), randomUUID, resolve, sep, pathToFileURL,
     process: { pid: 3141, env: desktopEnvironment(root, {}), once: (name, fn) => handlers.set(name, fn) },
   });
-  const rootFiber = { uid: 'active' };
+  const rootFiber = Object.freeze({ uid: 0 });
+  let loader = {};
   const ctx = { fiber: { state: 2 }, root: { fiber: rootFiber }, profileContext: { dir: join(root, 'home/profiles/desktop') },
+    get: name => name === 'loader' ? loader : undefined,
     on: (name, fn, options) => { callbacks.set(name, fn); registration[name] = options; },
-    effect: fn => fn(), webServer: { register: route => { callbacks.set('http', route.handler); } },
+    effect: fn => { const dispose = fn(); if (typeof dispose === 'function') disposers.push(dispose); return dispose; },
+    webServer: { register: route => { callbacks.set('http', route.handler); } },
     connection: { requestRejection: () => 403 } };
   apply(ctx, { root, trace: join(root, 'trace'), sdkNames: [] });
   let continued = false;
@@ -106,8 +109,15 @@ test('actual Host observer vetoes model streams before continuation and rejects 
   let status;
   callbacks.get('http')({ method: 'GET' }, { writeHead: value => { status = value; }, end() {} });
   assert.equal(status, 403);
-  rootFiber.uid = null; handlers.get('beforeExit')(0); handlers.get('exit')(0);
-  assert.equal(records.find(row => row.event === 'before-exit').rootDisposed, true);
+  // Exercise the actual beforeExit callback's predicate on both service
+  // states. The real Cordis root uid remains 0 throughout, never null.
+  handlers.get('beforeExit')(0);
+  assert.equal(records.at(-1).rootDisposed, false, 'A still-mounted Loader is not root teardown evidence');
+  for (const dispose of disposers.reverse()) dispose();
+  assert.equal(records.at(-1).event, 'disposed');
+  loader = undefined; handlers.get('beforeExit')(0);
+  assert.equal(records.at(-1).rootDisposed, true, 'Loader removal attests root teardown with uid still 0');
+  assert.equal(rootFiber.uid, 0); handlers.get('exit')(0);
   assert.equal(records.at(-1).modelCalls, 1, 'Model failure stays counted through process exit');
 });
 

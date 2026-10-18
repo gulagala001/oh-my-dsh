@@ -24,7 +24,10 @@ fails any request. Counts cover installation, both boots and shutdown.
 HOME, DSH_HOME, userData, profiles, XDG/AppData and package-manager caches are
 temporary; the app/installer receive an environment allowlist without Actions
 tokens. Home `cordis.patch.yml` is the final configuration layer and restores
-`read-only`/`ask` after OMD bundle defaults. All three OpenCU backends are false.
+`read-only`/`ask` after OMD bundle defaults. The three external OpenCU backends
+(`browserEnabled`, `nativeEnabled`, `extensionEnabled`) are false and no CU
+actions are exercised. DSH's own browser adapter remains present; this does
+not assert that every backend is absent.
 In rc.2 `approval: never` means rejection without prompting, not approval.
 No prompt, tool action, login or real credential is used. Renderer routing is
 not a process-wide egress fence. Public dependency/update traffic is not model
@@ -33,7 +36,8 @@ traffic and is not claimed to be zero.
 `host-boot-evidence/` contains the sanitized JSON, logs and synthetic screenshots.
 Successful restart evidence requires every Host observer activation to dispose,
 reach `beforeExit` (which a CLI timeout's `process.exit(0)` bypasses), and exit
-with code 0, no termination signals, and Electron to exit without a
+with code 0, an unloaded root Loader (`ctx.get('loader') === undefined`), no
+termination signals, and Electron to exit without a
 signal before Playwright close. Failure cleanup may use Playwright's owned
 process cleanup, fails the test and retains files if close/Host exit is uncertain.
 This is no conversation-persistence or native CU attestation. #54 rc.1 pairing
