@@ -36,6 +36,17 @@ renderer. Every dynamic inject component still requires a matching package in
 official resources plus a revisioned, materialized row in the real client table.
 The seed classification is pinned to official `packages/client/web/src/seed.ts`
 and `platform.ts`; unknown/missing dynamic components fail, never catch-ignore.
+Stock boot requires the complete official dynamic UI rows. Installed boot
+instead requires the exact `cordis.patch.yml` transition: official conversation
+and chat Host rows remain configured but disabled/inactive; the two slash-named
+OMD Host replacements and root resolve to the installed candidate package with
+matching versions and imported callbacks. In the renderer there is one actual
+`trisoul_x` materialized row containing both inline factories, not slash-named
+replacement rows. The real conversation service must descend from that cached
+module's exact apply callback through its public fiber parents. All other
+dynamic-row checks remain. Installed bytes/hash, version-dialog client/server
+agreement, actual conversation/slot registrations and model takeover are still
+required; missing replacements or wrong sources/versions fail.
 
 Process `env.HOME`, Node `os.homedir()`, DSH_HOME, userData, profiles, XDG/AppData
 and package-manager caches must use the temporary fixture. Main and Host probes

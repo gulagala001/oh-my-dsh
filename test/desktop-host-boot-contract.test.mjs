@@ -11,7 +11,7 @@ import { spawnSync } from 'node:child_process';
 import { desktopInputs, desktopIdentity, assertDesktopPaths, digest, inside, repoRoot } from './fixtures/desktop-host-boot/inputs.mjs';
 import { desktopEnvironment } from '../scripts/desktop-test-environment.mjs';
 import { assertModelTakeover, modelPriority } from './fixtures/desktop-host-boot/model-panel.mjs';
-import { assertClientIdentity, clientComponents } from './fixtures/desktop-host-boot/client-identity.mjs';
+import { assertClientIdentity, assertHostUiIdentity, uiReplacements, clientComponents } from './fixtures/desktop-host-boot/client-identity.mjs';
 
 // These are dependency-free contract checks. No Electron, browser, installer,
 // package manager, real account, provider or user-home operation is performed.
@@ -131,23 +131,28 @@ test('serialized main identity reads installed resources without an import callb
 test('actual client probe verifies shell seeds, boot release, dynamic module sources and real service instances', async () => {
   const slotsName = '@deepseek-ai/dsh-client-ui-slots', primitivesName = '@deepseek-ai/dsh-client-ui-primitives';
   const rendererName = '@deepseek-ai/dsh-client-ui-renderer', connectionName = '@deepseek-ai/dsh-client-connection';
-  const expected = { appVersion: '0.2.1-rc.2', hostVersion: '0.2.1-rc.2',
+  const conversationName = '@deepseek-ai/dsh-client-ui-conversation', chatName = '@deepseek-ai/dsh-client-ui-chat';
+  const expected = { stage: 'stock', appVersion: '0.2.1-rc.2', hostVersion: '0.2.1-rc.2',
     publicComponents: [slotsName, primitivesName, rendererName, connectionName] };
   assert.deepEqual(clientComponents(expected.publicComponents), { static: [slotsName, primitivesName], dynamic: [rendererName, connectionName] });
   class Context {}
   class Service {}
   class SlotRegistry extends Service { snapshot() { return []; } }
   const exports = new Map([
-    ['@deepseek-ai/cordis', { Context, Service }],
+    ['@deepseek-ai/cordis', { Context, Service, symbols: { original: Symbol.for('cordis.original') } }],
     [slotsName, { SlotCore: class {}, standardHookPropName() {} }], [primitivesName, { Menu() {} }],
-    [rendererName, { SlotRegistry }], [connectionName, {}],
+    [rendererName, { SlotRegistry }], [connectionName, {}], [conversationName, { apply() {} }], [chatName, { apply() {} }],
   ]);
   const release = { version: expected.hostVersion, commit: 'fixture-official-commit' }, rev = 'fixture-boot-rev';
-  const rows = [rendererName, connectionName].map(id => ({ id, rev: 'fixture-module-rev', url: `plugins/??${id}/client.js&rev=fixture-module-rev` }));
+  const rows = [rendererName, connectionName, conversationName, chatName].map(id => ({ id, rev: 'fixture-module-rev', url: `plugins/??${id}/client.js&rev=fixture-module-rev` }));
   const modules = { version: 'client', manifest: { release, rev, modules: rows },
     import: async name => exports.get(name), loadCache: new Map(rows.map(row => [row.id, { id: row.id, exports: exports.get(row.id) }])) };
-  const scope = { root: new Context(), slots: new SlotRegistry(), modules,
-    loader: { internal: modules, entries: () => [] }, uiConversation: { events: { entries: () => [] }, views: { entries: () => [] } }, effect: fn => fn() };
+  const rootContext = new Context();
+  rootContext.fiber = { state: 2, runtime: null, parent: rootContext };
+  const scope = { root: rootContext, slots: new SlotRegistry(), modules,
+    loader: { internal: modules, entries: () => [] }, uiConversation: {
+      ctx: { fiber: { state: 2, runtime: { callback: exports.get(conversationName).apply }, parent: rootContext } },
+      events: { entries: () => [] }, views: { entries: () => [] } }, effect: fn => fn() };
   let registration;
   const window = { dshDesktop: { protocolVersion: 1 }, __DSH_BOOT__: { release, rev },
     __ModuleLoader__: { load: value => { registration = value; } } };
@@ -161,6 +166,7 @@ test('actual client probe verifies shell seeds, boot release, dynamic module sou
     [value => { delete value.seeds[slotsName]; }, /Required shell seed/],
     [value => { value.seeds[slotsName].sameAsFactory = false; }, /shell factory export/],
     [value => { value.dynamic = value.dynamic.filter(row => row.id !== connectionName); }, /Required dynamic client module/],
+    [value => { value.dynamic = value.dynamic.filter(row => row.id !== conversationName); }, /Required dynamic client module/],
     [value => { value.dynamic[0].url = 'https://external.invalid/client.js'; }, /revisioned module source/],
     [value => { value.dynamic[0].materialized = false; }, /really loaded/],
   ]) {
@@ -169,6 +175,52 @@ test('actual client probe verifies shell seeds, boot release, dynamic module sou
   scope.slots = { snapshot: () => [] };
   const invalidService = JSON.parse(JSON.stringify((await window.__OMD_DESKTOP_HOST_BOOT__()).identity));
   assert.throws(() => assertClientIdentity(invalidService, expected), /Real service instance/);
+  scope.slots = new SlotRegistry();
+  const omd = { apply() {} };
+  modules.manifest.modules = [...rows.filter(row => ![conversationName, chatName].includes(row.id)),
+    { id: 'trisoul_x', rev: 'omd-rev', url: 'plugins/??trisoul_x/client.js&rev=omd-rev' }];
+  for (const name of [conversationName, chatName]) modules.loadCache.delete(name);
+  modules.loadCache.set('trisoul_x', { id: 'trisoul_x', exports: omd });
+  // The service is owned by an inline factory below the root bundle callback,
+  // not by a fabricated slash-named renderer row or matching display name.
+  scope.uiConversation.ctx.fiber = { state: 2, runtime: { callback() {} },
+    parent: { fiber: { state: 2, runtime: { callback: omd.apply }, parent: rootContext } } };
+  const installed = JSON.parse(JSON.stringify((await window.__OMD_DESKTOP_HOST_BOOT__()).identity));
+  const installedExpected = { ...expected, stage: 'installed' };
+  assertClientIdentity(installed, installedExpected);
+  assert.throws(() => assertClientIdentity(installed, { ...installedExpected,
+    publicComponents: [...installedExpected.publicComponents, '@deepseek-ai/dsh-client-unknown'] }), /Required dynamic client module/);
+  for (const [mutate, message] of [
+    [value => { value.dynamic = value.dynamic.filter(row => row.id !== 'trisoul_x'); }, /Required dynamic client module/],
+    [value => { value.dynamic.find(row => row.id === 'trisoul_x').url = 'plugins/??other/client.js&rev=omd-rev'; }, /revisioned module source/],
+    [value => { value.conversationOwners.trisoul_x = false; }, /loaded provider callback/],
+    [value => { value.dynamic.push(rows.find(row => row.id === conversationName)); }, /Bundle-disabled official client row/],
+  ]) {
+    const invalid = structuredClone(installed); mutate(invalid);
+    assert.throws(() => assertClientIdentity(invalid, installedExpected), message);
+  }
+});
+
+test('installed UI identity requires the exact disabled originals and active replacements from the installed candidate', () => {
+  const expected = { stage: 'installed', bundleRoot: '/fixture/profile/installed-omd', omdVersion: source.version };
+  const stock = { entries: uiReplacements.map(row => ({ id: row.officialId, name: row.officialClient, disabled: false, active: true })) };
+  assertHostUiIdentity(stock, { stage: 'stock' });
+  const installed = { entries: [...stock.entries.map(row => ({ ...row, disabled: true, active: false })),
+    ...[['trisoul-x', 'trisoul_x'], ...uiReplacements.map(row => [row.replacementId, row.replacementHost])].map(([id, name]) => ({
+      id, name, disabled: false, active: true, moduleCallbackMatches: true,
+      source: { name: 'trisoul_x', dir: expected.bundleRoot, version: expected.omdVersion },
+    }))] };
+  assertHostUiIdentity(installed, expected);
+  for (const [mutate, message] of [
+    [value => { value.entries = value.entries.filter(row => row.id !== 'omd-ui-chat'); }, /Required OMD Host replacement/],
+    [value => { value.entries.find(row => row.id === 'omd-ui-conversation').source.dir = '/checkout/fallback'; }, /installed tgz/],
+    [value => { value.entries.find(row => row.id === 'omd-ui-conversation').source.version = 'wrong-candidate'; }, /package version/],
+    [value => { value.entries.find(row => row.id === 'ui-conversation').disabled = false; }, /bundle-patch disabled state/],
+    [value => { value.entries.find(row => row.id === 'omd-ui-chat').moduleCallbackMatches = false; }, /imported callback/],
+  ]) {
+    const invalid = structuredClone(installed); mutate(invalid);
+    assert.throws(() => assertHostUiIdentity(invalid, expected), message);
+  }
 });
 
 test('rc.2 input accepts only the frozen current bundle and its exact isolated paths', async t => {

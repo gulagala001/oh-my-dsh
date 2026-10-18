@@ -1,4 +1,4 @@
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, realpathSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -45,8 +45,17 @@ export function apply(ctx, config) {
     // Cordis 4.0.5 FiberState.ACTIVE is 2; this const enum is erased from its
     // public JS exports. Source: deepseek-harness@687f282 vendor/cordis/src/fiber.ts.
     if (ctx.fiber.state !== 2) throw Error('Host observer is not active');
-    const entries = [...ctx.loader.entries()].map(row => ({ id: row.options.id, name: row.options.name,
-      active: row.fiber?.state === 2, state: row.fiber?.state }));
+    const entries = [...ctx.loader.entries()].map(row => {
+      let source, moduleCallbackMatches = false;
+      if (['trisoul_x', 'trisoul_x/host/ui-conversation', 'trisoul_x/host/ui-chat'].includes(row.options.name) && row.fiber?.state === 2) {
+        const pkg = ctx.pluginPackages.packageOf(row.options.name, row.parent.tree.ctx.baseUrl);
+        if (!pkg) throw Error('Loaded OMD Host entry has no package source: ' + row.options.name);
+        source = { name: pkg.name, dir: realpathSync(pkg.dir), version: pkg.version };
+        moduleCallbackMatches = row.fiber.runtime.callback === ctx.registry.resolve(ctx.loader.unwrapExports(row.moduleNamespace));
+      }
+      return { id: row.options.id, name: row.options.name, disabled: row.disabled,
+        active: row.fiber?.state === 2, state: row.fiber?.state, source, moduleCallbackMatches };
+    });
     const settings = ctx.get('settings')?.describe({ redactSecrets: true }) ?? [];
     const opencu = settings.find(row => row.ns === 'omd-opencu')?.value;
     const value = { bootId, pid: process.pid, sdk, entries, modelCalls, profile: ctx.profileContext.dir,

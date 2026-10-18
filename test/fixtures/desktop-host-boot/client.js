@@ -13,6 +13,18 @@ window.__ModuleLoader__.load({ id: 'omd-desktop-host-boot-observer', factory: re
         const observe = async () => {
           const modules = scope.modules, rows = modules.manifest.modules;
           const renderer = await modules.import('@deepseek-ai/dsh-client-ui-renderer', '', {});
+          const originalConversation = scope.uiConversation[cordis.symbols.original] || scope.uiConversation;
+          const ancestry = [], seen = new Set();
+          let fiber = originalConversation.ctx.fiber;
+          while (fiber && !seen.has(fiber)) {
+            seen.add(fiber); ancestry.push(fiber); fiber = fiber.parent?.fiber;
+          }
+          const conversationOwners = {};
+          for (const id of ['@deepseek-ai/dsh-client-ui-conversation', 'trisoul_x']) {
+            const callback = modules.loadCache.get(id)?.exports?.apply;
+            conversationOwners[id] = typeof callback === 'function'
+              && ancestry.some(owner => owner.state === 2 && owner.runtime?.callback === callback);
+          }
           const seedIdentity = {};
           for (const [name, exports] of Object.entries(seeds)) {
             seedIdentity[name] = { sameAsFactory: await modules.import(name, '', {}) === exports,
@@ -26,6 +38,7 @@ window.__ModuleLoader__.load({ id: 'omd-desktop-host-boot-observer', factory: re
               release: modules.manifest.release, rev: modules.manifest.rev,
               bootRelease: window.__DSH_BOOT__?.release, bootRev: window.__DSH_BOOT__?.rev,
               seeds: seedIdentity,
+              conversationOwners,
               services: { moduleTableIsLoader: modules === scope.loader.internal,
                 rootUsesShellCordis: scope.root instanceof cordis.Context, slotsUsesShellCordis: scope.slots instanceof cordis.Service,
                 slotsUsesDynamicRenderer: scope.slots instanceof renderer.SlotRegistry },

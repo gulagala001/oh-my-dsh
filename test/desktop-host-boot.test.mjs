@@ -9,7 +9,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { desktopInputs, desktopIdentity, assertDesktopPaths, digest, inside } from './fixtures/desktop-host-boot/inputs.mjs';
 import { prepareEnvironment } from '../scripts/desktop-test-environment.mjs';
 import { assertModelTakeover, modelPriority } from './fixtures/desktop-host-boot/model-panel.mjs';
-import { assertClientIdentity } from './fixtures/desktop-host-boot/client-identity.mjs';
+import { assertClientIdentity, assertHostUiIdentity } from './fixtures/desktop-host-boot/client-identity.mjs';
 import { cleanupFixture, closeFixtureServer } from './fixtures/process.mjs';
 
 const redact = value => String(value).replace(/token=[\w-]+/g, 'token=[redacted]');
@@ -138,7 +138,7 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     }
     return value;
   };
-  const launch = async () => {
+  const launch = async stage => {
     assert(!app, 'Complete previous shutdown before relaunch');
     assert.equal(digest(await readFile(inputs.archive)), inputs.sha256);
     const { _electron } = await import('playwright');
@@ -171,11 +171,13 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     });
     await page.getByText('更多', { exact: true }).waitFor();
     await until(() => page.evaluate(() => Boolean(window.__OMD_DESKTOP_HOST_BOOT__)), 'real client registry observer');
-    const client = await page.evaluate(() => window.__OMD_DESKTOP_HOST_BOOT__());
-    assertClientIdentity(client.identity, { appVersion: identity.appVersion, hostVersion: inputs.hostVersion,
-      publicComponents: inputs.manifest.dsh.client.inject });
     const host = await observe();
-    report.launches.push({ pid: app.process().pid, identity, nativePathLocations, clientIdentity: client.identity, host });
+    const bundleRoot = stage === 'installed' ? await realpath(join(profile, 'node_modules', 'trisoul_x')) : undefined;
+    assertHostUiIdentity(host, { stage, bundleRoot, omdVersion: inputs.manifest.version });
+    const client = await page.evaluate(() => window.__OMD_DESKTOP_HOST_BOOT__());
+    assertClientIdentity(client.identity, { stage, appVersion: identity.appVersion, hostVersion: inputs.hostVersion,
+      publicComponents: inputs.manifest.dsh.client.inject });
+    report.launches.push({ stage, pid: app.process().pid, identity, nativePathLocations, clientIdentity: client.identity, host });
     await save();
   };
   const close = async () => {
@@ -199,7 +201,7 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     await save();
   };
   try {
-    await launch(); report.phase = 'stock-boot';
+    await launch('stock'); report.phase = 'stock-boot';
     const stockUI = await page.evaluate(() => window.__OMD_DESKTOP_HOST_BOOT__());
     const stockSlots = flattenSlots(stockUI.slots);
     const stockPriority = modelPriority(stockSlots.find(row => row.name === 'conversation.input.model'));
@@ -212,7 +214,7 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     const dependency = JSON.parse(await readFile(join(profile, 'package.json')));
     assert(dependency.dependencies.trisoul_x, 'Real package-manager installation persisted');
     await close();
-    await launch(); report.phase = 'installed-boot';
+    await launch('installed'); report.phase = 'installed-boot';
     assert.notEqual(report.launches[0].pid, report.launches[1].pid);
     assert.notEqual(report.launches[0].host.pid, report.launches[1].host.pid);
     assert.equal(await page.locator('[data-omd-desktop-restart]').count(), 0);
@@ -238,6 +240,7 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     await page.getByRole('button', { name: '关于 Oh My DSH', exact: true }).click();
     const about = page.getByRole('dialog', { name: '关于 Oh My DSH' });
     await until(async () => await about.getByTestId('omd-current-version').innerText() === inputs.manifest.version, 'matching real client/server version');
+    assert.doesNotMatch(await about.innerText(), /服务已更新，当前界面仍为/, 'Loaded client build version matches the installed candidate');
     await about.getByRole('button', { name: '关闭版本信息' }).click();
     const ui = await until(async () => {
       const value = await page.evaluate(() => window.__OMD_DESKTOP_HOST_BOOT__?.());
