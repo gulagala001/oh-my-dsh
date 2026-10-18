@@ -2,13 +2,13 @@
 <h1 align="center">OpenCU</h1>
 <p align="center"><strong>电脑与浏览器操作，直接发生在 DSH 对话里。</strong></p>
 <p align="center">真实页面 · 后台优先 · 轻量监看 · 批注协作</p>
-<p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a> · <a href="#install">安装条件</a> · <a href="DEVELOPMENT.md">开发与后端细节</a></p>
+<p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a> · <a href="docs/install.md">安装与升级</a> · <a href="DEVELOPMENT.md">开发与后端细节</a></p>
 
 **把“你去操作一下”，变成你能看见、能指出问题的工作过程。**
 
 OpenCU 是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的电脑操作插件。AI 发现浏览器或应用，读取页面、点击、输入、导航和处理文件；你在同一个会话里看实际现场、留批注、继续协作。无需另开控制服务，也没有一套必须手动进入的 CU 控制台。
 
-> **安装 / Install:** [DSH rc.1 / rc.2 固定版本与安装入口](docs/releases.md)。完整浏览器与原生监看需要对应宿主适配。
+> **已装 OMD？无需再装 OpenCU。** 请沿用 [OMD 安装与升级指南](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md)。独立使用请看 [OpenCU 安装步骤](docs/install.md)，按 DSH 完整版本选择固定包。
 
 ## 能操作，也能一起工作
 
@@ -82,20 +82,16 @@ await tab.getAXState();
 
 ## 安装与第一次使用
 
-### 已经使用新版 OMD
+**已装 OMD，无需再单独安装 OpenCU。** 按 [OMD 安装与升级指南](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) 更新即可。还没有 DSH 时，先按 [DSH 官方说明](https://github.com/deepseek-ai/deepseek-harness) 安装宿主。
 
-**不用再装一份。** 新版 OMD 默认内置 OpenCU；独立共装时复用同一套核心与工具。完整界面仍需要与该构建匹配的宿主适配。
+独立安装有两种方式，见 [OpenCU 安装指南](docs/install.md)：
 
-### 独立使用 OpenCU
+1. **复制给 AI**：整段复制安装指令，AI 核对实际宿主、版本和数据目录后安装。
+2. **自己点界面**：打开 **插件 → 右上角「+ 添加插件」**，在可输入“包名 / GitHub 仓库地址 / 本地路径”的输入框中粘贴对应版本的固定包 URL，点击 **安装**。
 
-1. 核对 DSH 的完整版本，准备**为该版本构建**的 OpenCU 包及匹配宿主；备份实际 `DSH_HOME`。
-2. 桌面用应用的插件管理入口或自带 CLI；Web 用匹配宿主 CLI 和实际 profile 加载本地包。不要通过重命名包、放宽 peer 或 `latest` 混装。
-3. 打开 **设置 → 电脑与浏览器**，检查后端、浏览器资源和系统权限。Chrome／Edge 扩展按提示配对。
-4. 先用无敏感信息的页面做一个小任务，例如：“打开这个页面，找到搜索框并搜索 release notes，完成后截图。”
+指南提供 `0.2.1-rc.1`／`0.2.1-rc.2` 可直接复制的地址；不要与 `0.2.0-rc.*` 混用。升级保留原 profile、`DSH_HOME`、数据及第三方插件，完成后重启受影响实例。
 
-宿主需 Node.js ≥22.19。原生 helper 缺失、系统权限未授予或浏览器资源未准备时，会报告具体错误。插件不捆绑模型账号、Node、Chromium 或独立桌面应用。
-
-构建、Host 补丁和 profile 配置见 [DEVELOPMENT.md](DEVELOPMENT.md#构建和本地插件包)。**只安装插件不会自动修改 stock DSH 的 Host／preload。**
+固定 Release 没有完整桌面安装器。完整内置浏览器、原生监看和相关界面需要匹配的 Host／Client／preload 源码适配；只装插件不会自动补齐。主干的新修复也不代表已进入固定发行包，见[发行说明](docs/releases.md)。
 
 ## 平台边界
 

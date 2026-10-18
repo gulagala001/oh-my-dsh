@@ -2,13 +2,13 @@
 <h1 align="center">OpenCU</h1>
 <p align="center"><strong>Computer and browser work, right inside your DSH conversation.</strong></p>
 <p align="center">Real pages · Background-first input · Live previews · Annotations</p>
-<p align="center"><a href="README.md">简体中文</a> · <strong>English</strong> · <a href="#install">Installation</a> · <a href="DEVELOPMENT.md">Developer reference (Chinese)</a></p>
+<p align="center"><a href="README.md">简体中文</a> · <strong>English</strong> · <a href="docs/install_EN.md">Install & upgrade</a> · <a href="DEVELOPMENT.md">Developer reference (Chinese)</a></p>
 
 **Turn “go do this” into a process you can see and collaborate on.**
 
 OpenCU is a computer-use plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). AI discovers browsers and apps, reads content, clicks, types, navigates and works with files. You see the actual workspace, add feedback and continue in the same conversation—without starting a separate control service or entering a dedicated CU console.
 
-> **安装 / Install:** [DSH rc.1 / rc.2 固定版本与安装入口](docs/releases.md)。完整浏览器与原生监看需要对应宿主适配。
+> **Already using OMD? You do not need a separate OpenCU installation.** Follow the [OMD installation and upgrade guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install_EN.md). For standalone use, follow the [OpenCU installation steps](docs/install_EN.md) for your exact DSH version.
 
 ## More than remote clicks
 
@@ -82,20 +82,16 @@ Discover real browsers/tabs before using their IDs. Control names in this exampl
 
 ## Installation and first use
 
-### Already using new-generation OMD?
+**OMD already includes OpenCU; no separate installation is needed.** Follow the [OMD installation and upgrade guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install_EN.md). If DSH is not installed, install the host using the [official DSH instructions](https://github.com/deepseek-ai/deepseek-harness) first.
 
-**No second installation needed.** New OMD bundles OpenCU by default. A standalone coinstallation shares the same core and tools; complete UI features still need matching host adapters.
+For standalone use, choose either method in the [OpenCU installation guide](docs/install_EN.md):
 
-### Standalone OpenCU
+1. **Copy to AI:** send the complete installation instruction so AI can check your actual host, version and data directories, then install.
+2. **Use the interface:** open **Plugins → “+ Add plugin” in the top right**, paste the matching fixed package URL into the input for a package name / GitHub repository address / local path, and click **Install**.
 
-1. Check the complete DSH version. Obtain an OpenCU build **for that version** and matching host, and back up the actual `DSH_HOME`.
-2. Desktop: use the app's plugin manager or bundled CLI. Web: use the matching host CLI and actual profile to load the local package. Do not mix hosts through relabeling, relaxed peers or `latest`.
-3. Open **Settings → Computer & browser** to check backends, browser resources and OS permissions. Pair Chrome/Edge if needed.
-4. Begin on a nonsensitive page: “Open this page, find the search box, search for release notes, and capture the result.”
+The guide provides copyable URLs for `0.2.1-rc.1` and `0.2.1-rc.2`; do not mix them with `0.2.0-rc.*`. Keep the original profile, `DSH_HOME`, data and third-party plugins when upgrading, then restart the affected instance.
 
-Host Node.js must be ≥22.19. Missing native helpers, permissions or browser resources produce explicit errors. No model account, Node, Chromium or separate desktop application is bundled.
-
-Builds, host patches and profile configuration: [DEVELOPMENT.md](DEVELOPMENT.md#构建和本地插件包). **Plugin installation alone does not patch stock DSH's Host/preload.**
+Fixed Releases do not include a complete desktop installer. The full embedded browser, native monitoring and related UI require matching Host/Client/preload source adapters; installing the plugin alone does not supply them. New main-branch fixes are not automatically included in fixed packages; see [release information](docs/releases.md).
 
 ## Platform boundaries
 
