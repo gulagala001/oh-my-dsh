@@ -66,9 +66,14 @@ are discarded and no headers, cookies or tokens enter the report.
 Only after that exact request is parsed are response write/end wrapped. Each
 original method gets the same receiver, arguments and callbacks and returns
 or throws unchanged; false/drain semantics are retained. Private copies are
-bounded before allocation. A receipt requires response finish, request
-complete/readableEnded and response writableFinished, not merely next()
-resolution. Abort, close-before-finish, malformed/oversize data and duplicate
+bounded before allocation. A receipt requires both successful next completion
+and response finish,
+with request complete/readableEnded and response writableFinished. The
+original next return/Promise and its rejection remain unchanged. Wire facts
+are frozen at finish; normal close after finish is allowed while next is
+pending. Rejection discards the candidate receipt and independently restores
+the observer, even without finish/close. Abort, close-before-finish,
+malformed/oversize data and duplicate
 responses fail observation. Original own-property descriptors are restored;
 prototype methods lose the temporary own property. All observer listeners and
 wrappers are also removed on fixture disposal. Real Node HTTP contracts cover

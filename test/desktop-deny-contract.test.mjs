@@ -437,3 +437,96 @@ test('host-http rejects changed scope and caps active copies without changing ei
   for (const options of [{ requestLimit: Infinity }, { requestLimit: 65537 }, { responseLimit: 4 * 1024 * 1024 + 1 }, { maxActive: 17 }])
     assert.throws(() => createApprovalHttpObserver({ expected: () => httpScope, ...options }), /bound/);
 });
+
+// No harness catch/destroy: only the original caller observes rejection.
+// Teardown or an explicit end happens after observer cleanup assertions.
+async function deferredHttpOutcome(t, finishFirst) {
+  const observer = createApprovalHttpObserver({ expected: () => httpScope });
+  const outcome = Promise.withResolvers(), ready = Promise.withResolvers(), finished = Promise.withResolvers();
+  let entry, callerError;
+  const server = createServer((req, res) => {
+    const methods = [[req, 'emit'], [res, 'write'], [res, 'end']].map(([object, key]) => ({ object, key,
+      descriptor: Object.getOwnPropertyDescriptor(object, key), method: object[key] }));
+    entry = { req, res, methods, nextCalls: 0, closeSeen: false };
+    res.once('close', () => { entry.closeSeen = true; });
+    res.once('finish', finished.resolve);
+    const returned = observer.intercept(req, res, () => {
+      entry.nextCalls++;
+      (async () => {
+        const chunks = []; for await (const chunk of req) chunks.push(chunk);
+        assert(Buffer.concat(chunks).equals(requestBody()));
+        if (finishFirst) res.end(responseBody);
+        ready.resolve();
+      })().catch(ready.reject);
+      return outcome.promise;
+    });
+    assert.equal(returned, outcome.promise);
+    returned.catch(error => { callerError = error; }); // Never close/destroy/end here.
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(async () => { observer.dispose(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });
+  const wire = new Promise((resolve, reject) => {
+    const req = nodeRequest({ hostname: '127.0.0.1', port: server.address().port, method: 'POST', path: '/api/opencu' }, res => {
+      const chunks = []; res.on('data', chunk => chunks.push(chunk)); res.on('error', reject);
+      res.on('end', () => resolve(Buffer.concat(chunks).toString()));
+    }); req.on('error', reject); req.end(requestBody());
+  });
+  wire.catch(() => {}); await ready.promise;
+  if (finishFirst) await finished.promise;
+  const restored = () => {
+    assert.equal(observer.snapshot().active, 0); assert.equal(entry.nextCalls, 1);
+    for (const { object, key, descriptor, method } of entry.methods) {
+      assert.equal(object[key], method); assert.deepEqual(Object.getOwnPropertyDescriptor(object, key), descriptor);
+    }
+    assert(!entry.res.listeners('finish').some(fn => fn.name === 'onFinish'));
+    assert(!entry.res.listeners('close').some(fn => fn.name === 'onClose'));
+  };
+  return { observer, outcome, entry, wire, restored, callerError: () => callerError };
+}
+
+test('host-http async reject without finish or close cleans itself and preserves original rejection', async t => {
+  const h = await deferredHttpOutcome(t, false), marker = Error('reject-without-close');
+  assert.equal(h.entry.res.destroyed, false); assert.equal(h.entry.res.writableEnded, false);
+  h.outcome.reject(marker);
+  await assert.rejects(h.outcome.promise, error => error === marker); await delay(0);
+  assert.equal(h.callerError(), marker); h.restored();
+  assert(h.observer.snapshot().failures.includes('next-rejected')); assert.equal(h.observer.snapshot().records.length, 0);
+  assert.equal(h.entry.res.destroyed, false); assert.equal(h.entry.res.writableEnded, false);
+  h.entry.res.end(responseBody); assert.equal(await h.wire, responseBody);
+});
+
+test('host-http finish before delayed reject never publishes a successful receipt', async t => {
+  const h = await deferredHttpOutcome(t, true), marker = Error('reject-after-finish');
+  assert.equal(await h.wire, responseBody);
+  const beforeReject = h.observer.snapshot().records.length;
+  await delay(5); h.outcome.reject(marker);
+  await assert.rejects(h.outcome.promise, error => error === marker); await delay(0);
+  h.restored(); assert.equal(h.callerError(), marker);
+  assert.deepEqual([beforeReject, h.observer.snapshot().records.length], [0, 0], 'Neither finish alone nor later rejection may publish success');
+  assert(h.observer.snapshot().failures.includes('next-rejected'));
+});
+
+test('host-http finish before delayed fulfill publishes exactly once only after fulfill', async t => {
+  const h = await deferredHttpOutcome(t, true);
+  assert.equal(await h.wire, responseBody); await until(() => h.entry.closeSeen);
+  assert.deepEqual(h.observer.snapshot().failures, []); assert.equal(h.observer.snapshot().records.length, 0);
+  h.entry.res.statusCode = 599; // Cannot change the already-finished wire status.
+  await delay(5); h.outcome.resolve(); await h.outcome.promise; await delay(0);
+  h.restored(); assert.deepEqual(h.observer.snapshot().failures, []); assert.equal(h.observer.snapshot().records.length, 1);
+  assert.equal(h.observer.snapshot().records[0].status, 200);
+  assert.equal(h.observer.snapshot().records[0].responseSha256, shaHttp(Buffer.from(responseBody)));
+  await delay(0); assert.equal(h.observer.snapshot().records.length, 1);
+});
+
+test('host-http preserves synchronous non-Promise next values while waiting for real finish', async t => {
+  for (const value of [17, { original: true }]) {
+    const observer = createApprovalHttpObserver({ expected: () => httpScope });
+    const h = await httpHarness(t, observer, (req, res, entry) => {
+      consumeHttp(req, entry).then(() => res.end(responseBody), error => { entry.bodyError = error; res.destroy(); });
+      return value;
+    });
+    assert.equal((await h.send()).bytes.toString(), responseBody); h.restored();
+    assert.equal(h.entries[0].bodyError, undefined); assert.deepEqual(observer.snapshot().failures, []);
+    assert.equal(observer.snapshot().records.length, 1);
+  }
+});

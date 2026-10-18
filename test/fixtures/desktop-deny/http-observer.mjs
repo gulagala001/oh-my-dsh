@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { isPromise } from 'node:util/types';
 
 // Test-only, authenticated connection/request waterfall. No data listener,
 // reads, flow-mode changes, routes, body replay, headers or compensation writes.
@@ -24,7 +25,8 @@ export function createApprovalHttpObserver({ expected, requestLimit = 4096, resp
       if (active.size >= maxActive) { fail('active-limit'); return next(); }
       const restores = [];
       let closed = false, requestEnded = false, matched = false, requestBytes = 0, responseBytes = 0, ending = 0;
-      let requestChunks = [], responseChunks = [];
+      let requestChunks = [], responseChunks = [], finishedReceipt;
+      let nextSucceeded = false, responseFinished = false;
       const restoreMethod = (object, key, wrapper, descriptor) => {
         if (object[key] !== wrapper) return;
         if (descriptor) Object.defineProperty(object, key, descriptor);
@@ -39,7 +41,7 @@ export function createApprovalHttpObserver({ expected, requestLimit = 4096, resp
       };
       const cleanup = () => {
         if (closed) return;
-        closed = true; requestChunks = []; responseChunks = [];
+        closed = true; requestChunks = []; responseChunks = []; finishedReceipt = undefined;
         res.off('finish', onFinish); res.off('close', onClose);
         for (const restore of restores.reverse()) { try { restore(); } catch { fail('restore-failed'); } }
         active.delete(cleanup);
@@ -64,7 +66,12 @@ export function createApprovalHttpObserver({ expected, requestLimit = 4096, resp
           }
         } catch { reject(response ? 'response-chunk' : 'request-chunk'); }
       };
-      function onClose() { if (!closed) reject('close-before-finish'); }
+      const publish = () => {
+        if (closed || !nextSucceeded || !responseFinished) return;
+        if (records.length < 2) records.push(finishedReceipt);
+        cleanup();
+      };
+      function onClose() { if (!closed && !responseFinished) reject('close-before-finish'); }
       function onFinish() {
         if (closed) return;
         if (!matched || !requestEnded || req.complete !== true || req.readableEnded !== true || res.writableFinished !== true) return reject('incomplete-finish');
@@ -73,12 +80,13 @@ export function createApprovalHttpObserver({ expected, requestLimit = 4096, resp
           if (!current || current.sessionId !== armed.sessionId || current.requestId !== armed.requestId) return reject('scope-changed');
           const bytes = Buffer.concat(responseChunks), value = JSON.parse(bytes.toString('utf8'));
           if (!value || Object.keys(value).sort().join(',') !== 'ok,settled' || typeof value.ok !== 'boolean' || typeof value.settled !== 'boolean') return reject('response-json-shape');
-          if (records.length < 2) records.push({ source: 'host-http', args: {
+          finishedReceipt = Object.freeze({ source: 'host-http', args: Object.freeze({
             conversationId: armed.sessionId, requestId: armed.requestId, action: 'decline', persist: null,
-          }, status: res.statusCode, value: { ok: value.ok, settled: value.settled }, responseBytes: bytes.length,
+          }), status: res.statusCode, value: Object.freeze({ ok: value.ok, settled: value.settled }), responseBytes: bytes.length,
           responseSha256: createHash('sha256').update(bytes).digest('hex'), requestComplete: true, readableEnded: true, responseFinished: true });
-        } catch { fail('response-json'); }
-        cleanup();
+          responseFinished = true; responseChunks = [];
+        } catch { return reject('response-json'); }
+        publish();
       }
       const beginResponse = () => {
         if (closed) return;
@@ -117,8 +125,15 @@ export function createApprovalHttpObserver({ expected, requestLimit = 4096, resp
           try { return Reflect.apply(original, this, args); } catch (error) { reject('emit-threw'); throw error; }
         });
       } catch { reject('request-wrap'); }
-      // Return the original next result, with no await/then or replacement body.
-      try { return next(); } catch (error) { reject('next-threw'); throw error; }
+      // Observe settlement without replacing the original return/Promise.
+      let result;
+      try { result = next(); } catch (error) { reject('next-threw'); throw error; }
+      const fulfilled = () => { nextSucceeded = true; publish(); };
+      try {
+        if (isPromise(result)) Promise.prototype.then.call(result, fulfilled, () => reject('next-rejected'));
+        else fulfilled();
+      } catch { reject('next-observation'); }
+      return result;
     },
   };
 }
