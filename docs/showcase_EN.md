@@ -1,6 +1,6 @@
 # Feature Showcase
 
-[简体中文](showcase.md) · [Project overview](../README_EN.md) · [Full gallery](release-visuals.md)
+[简体中文](showcase.md) · [Project overview](../README_EN.md)
 
 ## Make the workspace yours
 

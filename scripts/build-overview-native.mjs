@@ -1,6 +1,6 @@
 // Reuse the installed, version-pinned Team body and job rows without their
 // header popovers. The original styles, task cards and behavior stay intact.
-import { readFile, writeFile, readdir } from 'node:fs/promises';
+import { readFile, writeFile, readdir, realpath } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { parse } from 'acorn';
 const root = new URL('../', import.meta.url);
@@ -18,10 +18,24 @@ const reviewed = {
   'dsh-client-ui-jobs': 'ad8f57b1b5b9adcd09b197b97ced17e3da4b9dcd0615d25a07f1282beba89fc8',
   'dsh-client-ui-workflow-run': 'c0e08d98885bfc4733c470c80520a460798060ccb9d08778bbef3dfc8011cbcf',
 };
+async function overviewSource(name) {
+  const candidates = new Map();
+  // pnpm shortens virtual-store directory names on Windows. Resolve package
+  // identity instead, deduplicating dependency links to the same installation.
+  for (const entry of await readdir(pnpm, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const base = new URL(`${encodeURIComponent(entry.name)}/node_modules/@deepseek-ai/${name}/`, pnpm);
+    const manifest = new URL('package.json', base);
+    let pkg;
+    try { pkg = JSON.parse(await readFile(manifest, 'utf8')); }
+    catch (error) { if (error.code === 'ENOENT') continue; throw error; }
+    if (pkg.name === `@deepseek-ai/${name}` && pkg.version === version) candidates.set(await realpath(manifest), base);
+  }
+  if (candidates.size !== 1) throw Error(`Ambiguous overview source: ${name} (${candidates.size} matching installations)`);
+  return candidates.values().next().value;
+}
 for (const [name, exportName] of [['dsh-experimental-client-ui-agent-team', 'createTeamOverview'], ['dsh-client-ui-jobs', 'createJobsOverview'], ['dsh-client-ui-workflow-run', 'createWorkflowOverview']]) {
-  const candidates = (await readdir(pnpm)).filter(file => file.startsWith(`@deepseek-ai+${name}@${version}_`));
-  if (candidates.length !== 1) throw Error(`Ambiguous overview source: ${name}`);
-  const base = new URL(`${candidates[0]}/node_modules/@deepseek-ai/${name}/`, pnpm);
+  const base = await overviewSource(name);
   if (JSON.parse(await readFile(new URL('package.json', base))).version !== version) throw Error('Overview SDK mismatch');
   let source = await readFile(new URL('lib/client.js', base), 'utf8');
   const hash = createHash('sha256').update(source).digest('hex');

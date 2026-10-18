@@ -1,6 +1,6 @@
 # 功能展示
 
-[English](showcase_EN.md) · [项目首页](../README.md) · [完整图集](release-visuals.md)
+[English](showcase_EN.md) · [项目首页](../README.md)
 
 ## 选一种喜欢的工作氛围
 

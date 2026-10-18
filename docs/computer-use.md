@@ -38,4 +38,4 @@
 - 动作回执说明派发状态，实际结果需重新观察。
 - 本地数据按配置的 `dataDir` 保存，未配置时使用 `DSH_HOME/opencu` 或 `~/.opencu`。下载历史清理不删除已交付文件。
 
-工程说明及后端边界见[内置 OpenCU 说明](../vendor/opencu/README.md)，组件来源和分发条件见[第三方声明](../vendor/opencu/THIRD_PARTY_NOTICES.md)。新视觉的版本与演示范围见[素材说明](release-visuals.md)。
+工程说明及后端边界见[内置 OpenCU 说明](../vendor/opencu/README.md)，组件来源和分发条件见[第三方声明](../vendor/opencu/THIRD_PARTY_NOTICES.md)。视觉展示见[功能展示](showcase.md)。
