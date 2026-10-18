@@ -5,6 +5,8 @@ import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
+import { gunzipSync } from 'node:zlib';
+import { nativePackageModes } from '../scripts/native-package-modes.mjs';
 import { deliveryBaseline, verifyDeliveryArchive } from '../scripts/check-opencu-delivery.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -109,4 +111,45 @@ test('a changed package manifest cannot redefine the expected vendor hashes', as
   const files = entries(); files.set('package/vendor/opencu.json', Buffer.from('{"files":{}}'));
   const packed = await archive(t, files);
   assert.throws(() => verifyDeliveryArchive(packed, baseline), /Packed vendor\/opencu.json differs from HEAD/);
+});
+
+// Exercise the production pack step with actual signed distribution bytes.
+// On macOS nativePackageModes also runs the real codesign distribution check.
+for (const mode of [0o644, 0o700]) test(`production pack normalizes ${mode.toString(8)} without changing payload`, async t => {
+  const actualVendor = { ...vendor };
+  for (const name of [helper, 'native/bin/darwin-arm64/OpenCU Helper.app/Contents/Info.plist',
+    'native/bin/darwin-arm64/OpenCU Helper.app/Contents/_CodeSignature/CodeResources', 'native/macos/signing-identity.json']) {
+    actualVendor[name] = await readFile(new URL('../vendor/opencu/' + name, import.meta.url));
+  }
+  const actualManifest = Buffer.from(JSON.stringify({ files: Object.fromEntries(Object.entries(actualVendor).map(([name, bytes]) => [name, hash(bytes)])) }) + '\n');
+  const actualBaseline = { client, manifest: actualManifest };
+  const files = new Map([
+    ['package/lib/client.js', client], ['package/vendor/opencu.json', actualManifest],
+    ...Object.entries(actualVendor).filter(([name]) => name !== 'lib/client.js').map(([name, bytes]) => ['package/vendor/opencu/' + name, bytes]),
+  ]);
+  const raw = await archive(t, files, mode);
+  assert.throws(() => verifyDeliveryArchive(raw, actualBaseline), /Packed macOS helper must be 0755/);
+  const path = await directory(t), rawPath = join(path, 'raw.tgz'), finalPath = join(path, 'final.tgz');
+  await writeFile(rawPath, raw); await writeFile(finalPath, raw);
+  await nativePackageModes(finalPath);
+  assert.deepEqual(await readFile(rawPath), raw, 'raw archive remains unchanged');
+  const final = await readFile(finalPath);
+  const result = verifyDeliveryArchive(final, actualBaseline);
+  assert.deepEqual(result.helpers, [{ file: helper, mode: '0755' }]);
+  const before = gunzipSync(raw), after = gunzipSync(final);
+  let adjusted = 0;
+  const text = (offset, size) => before.subarray(offset, offset + size).toString().replace(/\0.*$/s, '');
+  for (let offset = 0; offset + 512 <= before.length;) {
+    if (before.subarray(offset, offset + 512).every(byte => byte === 0)) break;
+    const name = text(offset, 100), prefix = text(offset + 345, 155);
+    if ((prefix ? prefix + '/' + name : name) === 'package/vendor/opencu/' + helper) {
+      after.copy(before, offset + 100, offset + 100, offset + 108);
+      after.copy(before, offset + 148, offset + 148, offset + 156);
+      adjusted++;
+    }
+    const size = Number.parseInt(text(offset + 124, 12).trim(), 8);
+    offset += 512 + Math.ceil(size / 512) * 512;
+  }
+  assert.equal(adjusted, 1);
+  assert.deepEqual(before, after, 'only helper mode and its header checksum change; every payload byte remains identical');
 });

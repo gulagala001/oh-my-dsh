@@ -63,7 +63,13 @@ window.__ModuleLoader__.load({ id: 'omd-desktop-host-boot-observer', factory: re
         };
         // Public navigation only. Its return value is not acceptance evidence:
         // the runner checks actual current scope, binding and rendered controls.
-        const openSession = id => scope.uiWorkspace.openSession(id);
+        const openSession = async id => {
+          // HTTP-created Sessions are not yet guaranteed to be in the Client
+          // catalog required by retain(). Refresh through the public face.
+          await scope.sessions.refresh();
+          if (!scope.sessions.list.getSnapshot().byId[id]) throw Error('Session is absent from the refreshed Client catalog: ' + id);
+          scope.uiWorkspace.openSession(id);
+        };
         scope.effect(() => {
           window.__OMD_DESKTOP_HOST_BOOT__ = observe;
           window.__OMD_DESKTOP_OPEN_SESSION__ = openSession;

@@ -162,14 +162,14 @@ test('actual client probe verifies shell seeds, boot release, dynamic module sou
   const rootContext = new Context();
   rootContext.fiber = { state: 2, runtime: null, parent: rootContext };
   let selected;
-  const sessionId = 'synthetic-blank-id', requested = [];
+  const sessionId = 'synthetic-blank-id', requested = [], navigationCalls = [];
   const session = { getSnapshot: () => ({ sessionId, blank: true, openState: 'open', running: false, promptAttempted: false, pendingSubmissions: [] }),
     projections: { faceOf: () => ({ getSnapshot: () => 'trisoul-x' }) } };
   const binding = { session, eventSource: { getSnapshot: () => ({ entries: [{ type: 'event', event: { type: 'session/title' } }] }) } };
   const scope = { root: rootContext, slots: new SlotRegistry(), modules,
     uiSession: { adapter: { current: { getSnapshot: () => ({ key: selected, props: { sessionId: selected } }) } } },
-    uiWorkspace: { openSession: id => { requested.push(id); } },
-    sessions: { binding: id => id === sessionId ? binding : undefined,
+    uiWorkspace: { openSession: id => { navigationCalls.push('open:' + id); requested.push(id); } },
+    sessions: { refresh: async () => { navigationCalls.push('refresh'); }, binding: id => id === sessionId ? binding : undefined,
       list: { getSnapshot: () => ({ byId: { [sessionId]: { blank: true, cwd: '/synthetic/workspace', title: 'renamed but still blank' } } }) },
       retainInfo: id => ({ getSnapshot: () => ({ retainedBy: { mainView: selected === id ? 1 : 0 } }) }) },
     loader: { internal: modules, entries: () => [] }, uiConversation: {
@@ -181,8 +181,11 @@ test('actual client probe verifies shell seeds, boot release, dynamic module sou
   runInNewContext(await readFile(new URL('./fixtures/desktop-host-boot/client.js', import.meta.url), 'utf8'), { window });
   const plugin = registration.factory(name => { assert(exports.has(name), 'No ignored seed require'); return exports.get(name); });
   plugin.apply({ inject: (_services, apply) => apply(scope) });
-  window.__OMD_DESKTOP_OPEN_SESSION__(sessionId);
+  await window.__OMD_DESKTOP_OPEN_SESSION__(sessionId);
   assert.deepEqual(requested, [sessionId]);
+  assert.deepEqual(navigationCalls, ['refresh', 'open:' + sessionId]);
+  await assert.rejects(window.__OMD_DESKTOP_OPEN_SESSION__('uncatalogued'), /refreshed Client catalog/);
+  assert.deepEqual(requested, [sessionId], 'Unknown catalog entries never reach openSession/retain');
   const navigationExpected = { sessionId, agentPreset: 'trisoul-x', cwd: '/synthetic/workspace' };
   // A successful public API return and a stored title do not prove current
   // selection. Only the observed UI/session scope transition can satisfy it.
@@ -351,7 +354,19 @@ test('actual Host observer vetoes model streams before continuation and rejects 
 test('actual workflow acceptance gate rejects zero execution, skips and unsuccessful evidence', async t => {
   const env = await fixture(t), root = env.OMD_DESKTOP_TEST_ROOT;
   const workflow = await readFile(new URL('../.github/workflows/desktop.yml', import.meta.url), 'utf8');
+  const core = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  const coreNormalization = core.indexOf('await nativePackageModes(archive)');
+  assert(coreNormalization > core.indexOf("['pack', '--json', '--ignore-scripts'"));
+  assert(core.indexOf('copyFileSync(archive, rawArchive)') < coreNormalization);
+  assert(coreNormalization < core.indexOf('archive, sha256: sha256(archive)'));
+  assert(coreNormalization < core.indexOf("['scripts/check-opencu-delivery.mjs', archive]"));
+  assert(!core.includes('node scripts/check-opencu-delivery.mjs\n'), 'Core CI must pass an explicit final archive');
   const delivery = workflow.indexOf('node scripts/check-opencu-delivery.mjs "$OMD_PLUGIN_ARCHIVE"');
+  const normalization = workflow.indexOf('await nativePackageModes(archive)');
+  assert(normalization > workflow.indexOf('npm pack --json --ignore-scripts'), 'Production normalization follows pack');
+  assert(workflow.indexOf('copyFileSync(archive, rawArchive)') < normalization, 'Preserve raw package before normalization');
+  assert(normalization < workflow.indexOf("const sha256 = createHash('sha256').update(readFileSync(archive))"), 'Freeze the final hash only after production normalization');
+  assert(normalization < delivery, 'Strict gate receives the normalized final package');
   assert(delivery > workflow.indexOf('name: Freeze the final archive'), 'Verify the actual frozen tgz after freezing');
   assert(delivery < workflow.indexOf('node --test --test-reporter=tap test/desktop-host-boot.test.mjs'), 'Both matrix targets verify delivery before Electron launch');
   const gate = [...workflow.matchAll(/node --input-type=module - <<'NODE'\n([\s\S]*?)\n          NODE/g)]

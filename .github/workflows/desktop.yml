@@ -78,13 +78,21 @@ jobs:
         run: |
           npm pack --json --ignore-scripts --pack-destination "$OMD_DESKTOP_TEST_ROOT" > "$OMD_DESKTOP_TEST_ROOT/pack.json"
           node --input-type=module - <<'NODE'
-          import { appendFileSync, readFileSync, realpathSync, statSync } from 'node:fs';
+          import { appendFileSync, copyFileSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
           import { createHash } from 'node:crypto';
           import { join } from 'node:path';
+          import { nativePackageModes } from './scripts/native-package-modes.mjs';
           const root = process.env.OMD_DESKTOP_TEST_ROOT;
           const packed = JSON.parse(readFileSync(join(root, 'pack.json'), 'utf8'));
           if (packed.length !== 1) throw Error('Expected exactly one final OMD archive');
           const archive = realpathSync(join(root, packed[0].filename));
+          // Match the existing production pack-local pipeline before freezing.
+          // Keep the raw input for failure analysis; delivery never repairs it.
+          const rawArchive = join(root, 'raw-' + packed[0].filename);
+          copyFileSync(archive, rawArchive);
+          const rawSha256 = createHash('sha256').update(readFileSync(rawArchive)).digest('hex');
+          writeFileSync(join(root, 'raw-package.json'), JSON.stringify({ file: rawArchive, sha256: rawSha256 }, null, 2));
+          await nativePackageModes(archive);
           const resources = process.env.DESKTOP_TARGET === 'mac-arm64'
             ? join(root, 'mac-app', 'DeepSeek Harness.app', 'Contents', 'Resources')
             : join(root, 'windows-app', 'resources');
@@ -126,6 +134,8 @@ jobs:
           path: |
             ${{ env.OMD_PLUGIN_ARCHIVE }}
             ${{ env.OMD_DESKTOP_TEST_ROOT }}/pack.json
+            ${{ env.OMD_DESKTOP_TEST_ROOT }}/raw-*.tgz
+            ${{ env.OMD_DESKTOP_TEST_ROOT }}/raw-package.json
             ${{ env.OMD_DESKTOP_TEST_ROOT }}/host-boot.tap
             ${{ env.OMD_DESKTOP_TEST_ROOT }}/opencu-delivery.json
             ${{ env.OMD_DESKTOP_TEST_ROOT }}/host-boot-evidence/
