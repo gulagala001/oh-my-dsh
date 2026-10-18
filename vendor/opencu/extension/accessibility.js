@@ -9,8 +9,9 @@ function result(reply) {
   return reply.result.value;
 }
 export function invalidateElements(tabId) { states.delete(tabId); }
-export async function observeAccessibility(tabId, send, documentId) {
+export async function observeAccessibility(tabId, send, documentId, check = () => {}) {
   const { nodes } = await send('Accessibility.getFullAXTree');
+  check();
   const observationId = crypto.randomUUID(), elements = new Map();
   const previous = states.get(tabId);
   const identityScope = previous && previous.documentId === documentId ? previous.identityScope : crypto.randomUUID();

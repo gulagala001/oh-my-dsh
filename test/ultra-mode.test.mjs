@@ -11,7 +11,7 @@ function fixture(saved, teamEnabled = false) {
   const session = { id: 'session-mode', header: {}, get seq() { return events.length; }, eventAt: seq => events[seq] };
   const tools = { schemas: () => [{ name: 'workflow', parameters: { properties: { resumeFromRunId: {} } } }, ...teamEnabled ? teamTools : []] };
   const agent = { session, status: 'idle', ctx: { get: () => tools } };
-  const state = { ultracode: saved };
+  const state = { id: session.id, ultracode: saved };
   const store = { peek: () => state, state: () => state, save: next => Object.assign(state, next) };
   const ctx = { agents: { get: () => agent }, sessions: { flush: async () => {} },
     llm: { resolveModelInfo: async () => ({ reasoning: { efforts: [{ id: 'xhigh' }, { id: 'max' }] } }) },
@@ -22,7 +22,7 @@ function fixture(saved, teamEnabled = false) {
   const control = new UltracodeControl(ctx, () => true, store);
   const select = (mode, submode) => control.select(session.id, { provider: 'local', model: 'main', mode, submode, expectedRevision: control.view(session, agent).revision });
   const turn = n => { const event = { seq: events.length, type: 'turn/start', data: { turn: n } }; events.push(event); control.committed(session, event); };
-  return { agent, session, state, control, select, turn, setTeamEnabled: enabled => { teamEnabled = enabled; } };
+  return { agent, session, state, ctx, control, select, turn, setTeamEnabled: enabled => { teamEnabled = enabled; } };
 }
 
 test('legacy Pro becomes Ultra Workflow while the retired mode cannot reactivate', async () => {
@@ -83,7 +83,10 @@ test('Team availability follows existing DSH tools and does not activate or repl
 test('a running turn keeps its strategy until the next turn, including disable', async () => {
   const f = fixture(); await f.select('ultra', 'workflow');
   f.agent.status = 'running'; f.turn(1);
-  assert.equal((await f.select('ultra', 'free')).pending, true);
+  const pending = await f.select('ultra', 'free');
+  assert.equal(pending.pending, true);
+  assert.equal(pending.currentMode, 'ultra'); assert.equal(pending.currentSubmode, 'workflow');
+  assert.equal(pending.savedMode, 'ultra'); assert.equal(pending.submode, 'free');
   const assemble = () => f.control.assemble(f.agent, async () => ({ sections: [] }));
   assert.match((await assemble()).sections.at(-1).text, /Workflow authoring reference/);
   f.turn(2);
@@ -93,4 +96,31 @@ test('a running turn keeps its strategy until the next turn, including disable',
   assert.equal(f.control.currentMode(f.agent), 'ultra');
   f.turn(3); assert.equal(f.control.currentMode(f.agent), 'off');
   assert.ok(!(await assemble()).sections.some(section => section.text.includes('Ultra 的自由模式已开启')));
+});
+
+test('restoring a saved Ultra snapshot preserves unavailable Team memory', async () => {
+  const f = fixture({ mode: 'ultra', submode: 'team', selectionSeq: 0 });
+  const before = f.control.view(f.session);
+  await f.control.select(f.session.id, { provider: 'local', model: 'other', mode: 'ultra', submode: 'workflow' });
+  const restored = await f.control.restore(f.session.id, before);
+  assert.equal(restored.savedMode, 'ultra'); assert.equal(restored.savedSubmode, 'team');
+  assert.equal(restored.mode, 'ultra'); assert.equal(restored.submode, 'free');
+  assert.equal(restored.selected.model, 'other', 'compensation restores mode intent without reverting the host model route');
+  await assert.rejects(f.select('ultra', 'team'), /DSH/, 'ordinary selection still requires native Team');
+});
+
+test('mode reads wait until an already queued native selection and plugin save finish', async () => {
+  const f = fixture();
+  let releaseFlush, flushStarted;
+  const started = new Promise(resolve => { flushStarted = resolve; });
+  f.ctx.sessions.flush = () => { flushStarted(); return new Promise(resolve => { releaseFlush = resolve; }); };
+  const writing = f.select('ultra', 'workflow');
+  await started;
+  let readFinished = false;
+  const reading = f.control.inspectView(f.session, f.agent).then(value => { readFinished = true; return value; });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(readFinished, false, 'the model projection must not expose the transient off mode');
+  releaseFlush(); await writing;
+  const value = await reading;
+  assert.equal(value.savedMode, 'ultra'); assert.equal(value.currentSubmode, 'workflow');
 });

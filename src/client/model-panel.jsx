@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { effortChoices } from '../model-efforts.mjs';
 import css from './model-panel.css';
 import { useMainConversation } from './main-conversation.mjs';
+import { decorateSlotComponent } from './slot-decoration.mjs';
 
 const emptyStore = { subscribe: () => () => {}, getSnapshot: () => undefined };
 const useStore = store => useSyncExternalStore(fn => store.subscribe(fn), () => store.getSnapshot());
@@ -29,7 +30,7 @@ async function modeApi(sessionId, body, signal) {
 function Chevron({ back = false }) { return <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d={back ? 'm12 5-5 5 5 5' : 'm7 5 5 5-5 5'}/></svg>; }
 function Reset() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 9V4m0 5h5M4.7 8a8 8 0 1 1-.5 6"/></svg>; }
 
-function ModelPanel({ ctx, sessionId, locked, available, directory, load, additive = false }) {
+function ModelPanel({ ctx, sessionId, locked, available, directory, load, renderSlot, additive = false }) {
   const state = useStore(directory);
   const faces = useMemo(() => {
     const projections = ctx.sessions.binding(sessionId)?.session.projections;
@@ -71,6 +72,14 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, additi
   const selectedIndex = activeMode !== 'off' ? choices.findIndex(item => item.mode === activeMode) : choices.findIndex(item => !item.mode && item.id === effective);
   const value = draft ?? Math.max(0, selectedIndex), level = choices[value] ?? choices[0];
   const modelName = model?.name ?? selected?.model ?? '选择模型';
+  const renderModelLabel = (providerGroup, catalogModel, placement) => {
+    if (!providerGroup || !catalogModel) return modelName;
+    const provider = providerGroup.provider ?? { id: providerGroup.id, name: providerGroup.name };
+    return <span data-provider-id={provider.id} data-model-id={catalogModel.id}>{renderSlot
+      ? renderSlot('conversation.input.model.label', { provider, model: catalogModel, placement,
+        selected: sameRoute(selected, { provider: providerGroup.id, model: catalogModel.id }) }, { fallback: catalogModel.name })
+      : catalogModel.name}</span>;
+  };
   const label = selectedIndex < 0 && draft === null ? effective ?? '默认' : level?.label ?? '默认';
   const savedLabel = selectedIndex < 0 ? effective ?? '默认' : choices[selectedIndex]?.label ?? '默认';
   const busy = saving || state.pending !== null, sliderDisabled = busy || !mode || !model || choices.length < 2;
@@ -175,7 +184,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, additi
   return <>
     <button ref={trigger} type="button" className="omd-model-trigger" data-mode={activeMode} disabled={locked} aria-label={`${additive ? 'OMD 模式与思考强度' : '模型与思考强度'}：${modelName} · ${savedLabel}${activeMode === 'ultra' ? ` · ${submode.label}` : ''}`} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? id : undefined}
       onClick={() => { if (open) close(); else { setPane(selected ? 'effort' : 'model'); setQuery(''); setOpen(true); load(); void refresh(); } }}>
-      <span>{additive && activeMode !== 'ultra' ? 'OMD' : modelName}</span><span className="omd-model-caption">· {savedLabel}{activeMode === 'ultra' ? ` · ${submode.label}` : ''}</span><span aria-hidden="true">⌃</span>
+      <span>{additive && activeMode !== 'ultra' ? 'OMD' : renderModelLabel(group, model, 'trigger')}</span><span className="omd-model-caption">· {savedLabel}{activeMode === 'ultra' ? ` · ${submode.label}` : ''}</span><span aria-hidden="true">⌃</span>
     </button>
     {open && createPortal(<section ref={panel} id={id} className="omd-model-panel" data-pane={pane} style={position} role="dialog" aria-label="模型与思考强度" aria-busy={busy} tabIndex={-1} onKeyDown={keyDown}>
       {pane === 'effort' ? <>
@@ -183,7 +192,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, additi
           <h2 key={label} className={level?.mode === 'ultra' ? 'omd-effort-ultra' : ''}>{label}</h2>
           <button type="button" className="omd-model-reset" aria-label="恢复默认思考强度" title="恢复默认思考强度" disabled={busy || !model || !mode}
             onClick={() => void save({provider:selected.provider,model:selected.model}, 'off', model.reasoning?.defaultEffort)}><Reset/></button>
-          <button ref={modelButton} type="button" className="omd-model-current" onClick={() => { setPane('model'); setQuery(''); }}><span>{modelName}</span><Chevron/></button>
+          <button ref={modelButton} type="button" className="omd-model-current" onClick={() => { setPane('model'); setQuery(''); }}><span>{renderModelLabel(group, model, 'menu')}</span><Chevron/></button>
         </header>
         <div className="omd-effort-control" data-ultra={level?.mode === 'ultra' || undefined} data-dragging={dragging || undefined} style={{'--effort-progress':`${choices.length > 1 ? value / (choices.length - 1) * 100 : 0}%`,'--effort-ratio':choices.length > 1 ? value / (choices.length - 1) : 0}}>
           <div className="omd-effort-track" aria-hidden="true"><div className="omd-effort-fill"><i className="omd-effort-glow"/>{particles.map((style,i) => <i key={i} className="omd-effort-particle" style={style}/>)}</div>
@@ -212,7 +221,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, additi
       </> : <>
         <div className="omd-model-search"><button type="button" aria-label="返回思考强度" onClick={() => setPane('effort')}><Chevron back/></button><input ref={search} type="search" aria-label="搜索模型" placeholder="搜索模型" value={query} onChange={e=>setQuery(e.target.value)}/></div>
         <div className="omd-model-options" role="listbox" aria-label="模型">
-          {state.groups.map(group => { const models = group.models.filter(item => `${group.name} ${item.name} ${item.id}`.toLowerCase().includes(query.toLowerCase())); return !models.length ? null : <div role="group" aria-label={group.name} key={group.id}><div className="omd-model-provider">{group.name}</div>{models.map(item => <button type="button" role="option" aria-selected={sameRoute(selected,{provider:group.id,model:item.id})} key={item.id} disabled={busy || !mode} onClick={() => void chooseModel(group.id,item)}><span>{item.name}</span>{sameRoute(selected,{provider:group.id,model:item.id}) && <span aria-hidden="true">✓</span>}</button>)}</div>; })}
+          {state.groups.map(group => { const models = group.models.filter(item => `${group.name} ${item.name} ${item.id}`.toLowerCase().includes(query.toLowerCase())); return !models.length ? null : <div role="group" aria-label={group.name} key={group.id}><div className="omd-model-provider">{group.name}</div>{models.map(item => <button type="button" role="option" aria-selected={sameRoute(selected,{provider:group.id,model:item.id})} key={item.id} disabled={busy || !mode} onClick={() => void chooseModel(group.id,item)}><span>{renderModelLabel(group, item, 'option')}</span>{sameRoute(selected,{provider:group.id,model:item.id}) && <span aria-hidden="true">✓</span>}</button>)}</div>; })}
           {state.status === 'loading' && <p className="omd-model-status">正在加载模型…</p>}
           {state.status !== 'loading' && !state.groups.some(group => group.models.some(item => `${group.name} ${item.name} ${item.id}`.toLowerCase().includes(query.toLowerCase()))) && <p className="omd-model-status">没有匹配的模型</p>}
         </div>
@@ -229,43 +238,32 @@ export function applyModelPanel(ctx) {
   let additive = false;
   const subscribe = fn => { listeners.add(fn); return () => listeners.delete(fn); };
   ctx.slots.inject(name, () => {
-    let installed, original, stopped = false, reconciling = false, dirty = false;
-    function Panel(props) {
-      const main = useMainConversation(props);
-      return main ? <ModelPanel key={props.sessionId} ctx={ctx} {...props}/> : null;
-    }
+    let stopped = false;
+    const nativeEntries = new WeakSet();
+    const isNative = entry => {
+      const children = entry?.children, label = children?.[`${name}.label`];
+      const nativeChildren = !children || (Object.keys(children).length === 1
+        && label?.kind === 'single' && label.scope === 'session' && label.inline === true);
+      return entry?.component.name === 'ModelSelect' && entry.locale === 'model'
+        && typeof entry.inject === 'function' && nativeChildren;
+    };
+    // Keep the native entry identity: its renderSlot binding authorizes the
+    // label child and cannot be transferred to a shadow registration.
+    const dispose = decorateSlotComponent(ctx.slots, name, (_key, entry) => isNative(entry), original => {
+      nativeEntries.add(original);
+      return function Panel(props) {
+        const main = useMainConversation(props);
+        return main ? <ModelPanel key={props.sessionId} ctx={ctx} {...props}/> : null;
+      };
+    });
     const reconcile = () => {
       if (stopped || ctx.fiber?.uid === null) return;
-      if (reconciling) { dirty = true; return; }
-      reconciling = true;
-      try {
-        do {
-          dirty = false;
-          const elected = ctx.slots.entriesOfSlot(name)[0];
-          const winner = elected?.component === Panel
-            ? ctx.slots.entries(name).includes(original) ? original : undefined : elected;
-          // rc.1+ adds an inline label slot to the official model seat. Leave
-          // its declaration owned by the original entry when shadowing it;
-          // unrelated renderers and unknown child contracts stay untouched.
-          const children = winner?.children, label = children?.[`${name}.label`];
-          const nativeChildren = !children || (Object.keys(children).length === 1
-            && label?.kind === 'single' && label.scope === 'session' && label.inline === true);
-          const native = winner?.component.name === 'ModelSelect' && winner.locale === 'model'
-            && typeof winner.inject === 'function' && nativeChildren;
-          if (installed && (!native || winner !== original)) { const dispose = installed; installed = undefined; original = undefined; dispose(); }
-          if (native && !installed) {
-            original = winner;
-            // Leave the conventional integer override rank free for plugins.
-            installed = ctx.slots.register({ ...winner.options, name, store: winner.store, locale: winner.locale,
-              inject: winner.inject, priority: (winner.options.priority ?? 0) - .5 }, Panel);
-          }
-          const next = Boolean(winner && !native);
-          if (next !== additive) { additive = next; for (const fn of listeners) fn(); }
-        } while (dirty && !stopped);
-      } finally { reconciling = false; }
+      const winner = ctx.slots.entriesOfSlot(name)[0];
+      const next = Boolean(winner && !nativeEntries.has(winner));
+      if (next !== additive) { additive = next; for (const fn of listeners) fn(); }
     };
     const off = ctx.slots.subscribe(name, reconcile); reconcile();
-    return () => { stopped = true; off(); installed?.(); additive = false; for (const fn of listeners) fn(); };
+    return () => { stopped = true; off(); dispose(); additive = false; for (const fn of listeners) fn(); };
   });
   ctx.slots.inject('conversation.input.right', () => ctx.slots.register({
     name: 'conversation.input.right', id: 'omd-model-mode', order: 120,

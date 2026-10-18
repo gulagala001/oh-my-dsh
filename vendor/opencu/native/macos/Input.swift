@@ -3,13 +3,6 @@ import AppKit
 import ApplicationServices
 import Darwin
 
-final class Cancellation {
-    private let lock = NSLock()
-    private var epoch = 0
-    func current() -> Int { lock.lock(); defer { lock.unlock() }; return epoch }
-    func stop() { lock.lock(); epoch += 1; lock.unlock() }
-}
-
 func pressDuration(_ action: [String: Any]) throws -> Double {
     guard let value = action["durationMs"] else { return 0 }
     guard let number = value as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(), number.doubleValue.isFinite,

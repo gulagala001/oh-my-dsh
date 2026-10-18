@@ -294,9 +294,12 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
       return request(session, 'preview', { identity }, requestTimeoutMs, true);
     },
     async observe(target, options = {}) {
+      const {signal, ...payload} = options;
+      if (signal?.aborted) throw failure('CONTROL_STOPPED', 'Control has been stopped.');
       const { session, identity } = sessionFor(target);
       if (options.fullPage) throw failure('UNSUPPORTED_OPERATION', 'Extension screenshots are viewport-only.');
-      const result = await request(session, 'observe', { identity, options: { ...options, screenshot: options.format === 'ax' ? false : options.screenshot } });
+      const result = await request(session, 'observe', { identity, options: { ...payload, screenshot: options.format === 'ax' ? false : options.screenshot } });
+      if (signal?.aborted) throw failure('CONTROL_STOPPED', 'Control has been stopped.');
       result.observationId ??= randomUUID();
       result.coordinateSpace = 'screenshot-pixels';
       if (result.ax?.source !== 'chromium-accessibility-tree' || !Array.isArray(result.ax.nodes)) throw failure('INVALID_OBSERVATION', 'The extension did not return a Chromium accessibility tree; reload the matching extension package.');
@@ -309,6 +312,7 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
         screenshot.viewport = { width: screenshot.bounds.width, height: screenshot.bounds.height };
         if (!options.includeBase64) { delete screenshot.data; delete screenshot.base64; }
       }
+      if (signal?.aborted) throw failure('CONTROL_STOPPED', 'Control has been stopped.');
       return result;
     },
     async act(target, action) {

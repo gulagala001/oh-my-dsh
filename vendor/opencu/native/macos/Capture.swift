@@ -19,11 +19,19 @@ struct ScreenshotMapping {
 final class CaptureStore {
     var mappings: [String: ScreenshotMapping] = [:]
     let directory: URL
+    private var temporaryFiles: [URL] = []
+    private var discardFiles = false
     init(directory: URL) { self.directory = directory }
+    init(copying previous: CaptureStore) {
+        directory = previous.directory; mappings = previous.mappings; discardFiles = true
+    }
+    func retainFiles() { discardFiles = false; temporaryFiles.removeAll() }
+    deinit { if discardFiles { for file in temporaryFiles { try? FileManager.default.removeItem(at: file) } } }
 
-    func windowImage(_ target: [String: Any], targets: TargetStore) throws -> (CGImage, CGRect) {
+    func windowImage(_ target: [String: Any], targets: TargetStore, checkpoint: () throws -> Void = {}) throws -> (CGImage, CGRect) {
         var selected: WindowRecord?
         for attempt in 0..<3 {
+            try checkpoint()
             if attempt > 0 { pump(0.08 * Double(attempt)) }
             let current = try targets.validated(target)
             guard let window = targets.windows().first(where: { $0.id == current["windowId"] as? Int && Int($0.pid) == current["pid"] as? Int }) else {
@@ -31,6 +39,7 @@ final class CaptureStore {
             }
             selected = window
             if let image = CGWindowListCreateImage(.null, .optionIncludingWindow, CGWindowID(window.id), [.boundsIgnoreFraming, .bestResolution]), image.width > 0, image.height > 0 {
+                try checkpoint()
                 return (image, window.bounds)
             }
         }
@@ -43,7 +52,8 @@ final class CaptureStore {
             ["windowId": window.id, "attempts": 3, "retryable": true, "permissions": permissions()])
     }
 
-    func capture(_ target: [String: Any], targets: TargetStore, options: [String: Any]) throws -> [String: Any] {
+    func capture(_ target: [String: Any], targets: TargetStore, options: [String: Any], checkpoint: () throws -> Void = {}) throws -> [String: Any] {
+        try checkpoint()
         guard CGPreflightScreenCaptureAccess() else {
             throw NativeFailure("SCREEN_CAPTURE_PERMISSION_REQUIRED", "Screen Recording permission is not granted. No permission was requested or changed.", ["permissions": permissions()])
         }
@@ -59,17 +69,21 @@ final class CaptureStore {
             }
             image = pixels
         } else {
-            (image, bounds) = try windowImage(target, targets: targets)
+            (image, bounds) = try windowImage(target, targets: targets, checkpoint: checkpoint)
         }
+        try checkpoint()
         let bitmap = NSBitmapImageRep(cgImage: image)
         guard let png = bitmap.representation(using: .png, properties: [:]) else { throw NativeFailure("SCREEN_CAPTURE_FAILED", "Could not encode screenshot as PNG.") }
         let token = UUID().uuidString
         let file = directory.appendingPathComponent("\(token).png")
+        try checkpoint()
+        if discardFiles { temporaryFiles.append(file) }
         try png.write(to: file, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
         let capturedWindow = windowID != nil && options["scope"] as? String != "display" ? windowID : nil
         let mapping = ScreenshotMapping(bounds: bounds, width: image.width, height: image.height, token: token, windowId: capturedWindow)
         mappings[target["id"] as? String ?? ""] = mapping
+        try checkpoint()
         return ["path": file.path, "mimeType": "image/png", "mediaType": "image/png", "width": image.width, "height": image.height,
             "scale": Double(image.width) / bounds.width, "scaleX": Double(image.width) / bounds.width,
             "scaleY": Double(image.height) / bounds.height, "bounds": rectJSON(bounds), "coordinateSpace": "physical-screenshot-pixels",

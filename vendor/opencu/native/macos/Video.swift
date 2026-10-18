@@ -15,13 +15,15 @@ final class WindowVideo: NSObject, SCStreamOutput, SCStreamDelegate {
     private var idle: Timer?
     private(set) var closed = false
 
-    func start(windowID: Int) throws {
+    func start(windowID: Int, checkpoint: () throws -> Void = {}) throws {
+        try checkpoint()
         var content: SCShareableContent?, lookupError: Error?, completed = false
         SCShareableContent.getExcludingDesktopWindows(false, onScreenWindowsOnly: false) { value, error in
             content = value; lookupError = error; completed = true
         }
         let deadline = Date(timeIntervalSinceNow: 4)
-        while !completed && Date() < deadline { pump(0.004) }
+        while !completed && Date() < deadline { try checkpoint(); pump(0.004) }
+        try checkpoint()
         if let error = lookupError { throw NativeFailure("VIDEO_CAPTURE_FAILED", error.localizedDescription) }
         guard let window = content?.windows.first(where: { Int($0.windowID) == windowID }) else {
             throw NativeFailure("TARGET_IDENTITY_CHANGED", "The native video window is no longer available.")
@@ -37,16 +39,18 @@ final class WindowVideo: NSObject, SCStreamOutput, SCStreamDelegate {
         completed = false; lookupError = nil
         capture.startCapture { error in lookupError = error; completed = true }
         let startDeadline = Date(timeIntervalSinceNow: 4)
-        while !completed && Date() < startDeadline { pump(0.004) }
+        while !completed && Date() < startDeadline { try checkpoint(); pump(0.004) }
+        try checkpoint()
         if let error = lookupError { close(); throw NativeFailure("VIDEO_CAPTURE_FAILED", error.localizedDescription) }
         if !completed { close(); throw NativeFailure("VIDEO_CAPTURE_TIMEOUT", "The native video stream did not start.") }
     }
 
-    func frame() throws -> [String: Any] {
+    func frame(checkpoint: () throws -> Void = {}) throws -> [String: Any] {
         idle?.invalidate()
         idle = Timer.scheduledTimer(withTimeInterval: 3, repeats: false) { [weak self] _ in self?.close() }
         let deadline = Date(timeIntervalSinceNow: 3)
         while Date() < deadline {
+            try checkpoint()
             lock.lock(); let value = latest, error = failure; lock.unlock()
             if let error = error { throw NativeFailure("VIDEO_CAPTURE_FAILED", error.localizedDescription) }
             if let value = value { return value }
@@ -87,7 +91,8 @@ final class WindowVideo: NSObject, SCStreamOutput, SCStreamDelegate {
 
 final class VideoStore {
     private var streams: [String: WindowVideo] = [:]
-    func preview(_ target: [String: Any]) throws -> [String: Any] {
+    func preview(_ target: [String: Any], checkpoint: () throws -> Void = {}) throws -> [String: Any] {
+        try checkpoint()
         guard CGPreflightScreenCaptureAccess() else { throw NativeFailure("SCREEN_CAPTURE_PERMISSION_REQUIRED", "Screen Recording permission is required for native video monitoring.") }
         guard let id = target["id"] as? String, let windowID = target["windowId"] as? Int else {
             throw NativeFailure("WINDOW_REQUIRED", "Choose a specific application window for video monitoring.")
@@ -95,11 +100,11 @@ final class VideoStore {
         streams = streams.filter { !$0.value.closed }
         if streams[id] == nil {
             let video = WindowVideo()
-            do { try video.start(windowID: windowID) }
+            do { try video.start(windowID: windowID, checkpoint: checkpoint) }
             catch { video.close(); throw error }
             streams[id] = video
         }
-        do { return try streams[id]!.frame() }
+        do { return try streams[id]!.frame(checkpoint: checkpoint) }
         catch { streams.removeValue(forKey: id)?.close(); throw error }
     }
     func stop(_ id: String) { streams.removeValue(forKey: id)?.close() }

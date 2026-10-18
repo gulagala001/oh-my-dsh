@@ -15832,6 +15832,7 @@ window.__ModuleLoader__.load({
 			rootCtx;
 			t;
 			shells = /* @__PURE__ */ new WeakMap();
+			activeShells = /* @__PURE__ */ new Set();
 			/** Unsent data survives navigation without holding editors, scopes, or history subscriptions. */
 			drafts = /* @__PURE__ */ new Map();
 			closed = false;
@@ -15851,6 +15852,7 @@ window.__ModuleLoader__.load({
 					return () => {
 						this.closed = true;
 						off();
+						for (const release of this.activeShells) release();
 						for (const id of this.drafts.keys()) this.releaseDraft(id);
 					};
 				}, "conversation.input: inactive drafts");
@@ -15881,12 +15883,13 @@ window.__ModuleLoader__.load({
 			}
 			/**
 			* Resolve the resident shell for an already-retained, addressable Session binding.
-			* Draft import completes before return. The Session scope owns input listeners,
-			* the inject-managed catalog subscription, and shell teardown.
+			* Draft import completes before return. Session and Conversation lifetimes
+			* jointly own listeners, the catalog injection, and shell teardown.
 			* @param binding - session assembly handle.
 			* @returns the shell.
 			*/
 			shellFor(binding) {
+				if (this.closed) throw new Error("conversation.input: owner disposed");
 				const existing = this.shells.get(binding);
 				if (existing !== void 0) return existing;
 				const { session, ctx: actx } = binding;
@@ -15936,15 +15939,26 @@ window.__ModuleLoader__.load({
 					this.drafts.delete(session.sessionId);
 					shell.restoreDraft(saved);
 				}
-				actx.effect(() => {
+				let release;
+				release = actx.effect(() => {
 					const offs = [
 						actx.on("slash/input-begin-command", (req) => shell.beginCommand(req.claim, req.span) ? true : void 0),
 						actx.on("slash/input-insert-reference", (req) => shell.insertReference(req.reference, req.span) ? true : void 0),
 						actx.on("slash/input-consume-token", (req) => shell.consumeToken(req.guard) ? true : void 0),
 						actx.on("slash/input-insert-text", (req) => shell.insertText(req.text, req.span, req.continue === true) ? true : void 0)
 					];
+					const catalogs = actx.inject(["inputTriggers"], (scope) => {
+						scope.effect(() => {
+							shell.refreshLexiconSubscription();
+							return () => {
+								shell.refreshLexiconSubscription();
+							};
+						}, "conversation.input: reference catalogs");
+					});
 					return () => {
+						if (release !== void 0) this.activeShells.delete(release);
 						for (const off of offs) off();
+						catalogs.dispose();
 						const saved = shell.captureDraft();
 						const keep = !this.closed && !session.getSnapshot().removed && (saved.draft !== "" || saved.attachmentIds.length > 0);
 						if (keep) this.drafts.set(session.sessionId, saved);
@@ -15955,14 +15969,7 @@ window.__ModuleLoader__.load({
 						for (const attachmentId of drafts) if (!retained.has(attachmentId)) conversation?.releaseDraftAttachment(attachmentId);
 					};
 				}, "conversation.input: session shell");
-				actx.inject(["inputTriggers"], (scope) => {
-					scope.effect(() => {
-						shell.refreshLexiconSubscription();
-						return () => {
-							shell.refreshLexiconSubscription();
-						};
-					}, "conversation.input: reference catalogs");
-				});
+				this.activeShells.add(release);
 				if (saved === void 0) shell.setDraft(readConversationDraft(binding.sessionId));
 				return shell;
 			}

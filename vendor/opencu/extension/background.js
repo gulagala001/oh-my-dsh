@@ -8,10 +8,17 @@ const PATH = '/opencu-extension/v1';
 const attached = new Map(), observations = new Map(), documents = new Map(), releasing = new Set();
 let connection, connecting = false, reconnectDisabled = false, running = false, controlEpoch = 0, commandChain = Promise.resolve(), downloadChain = Promise.resolve(), status = { connected: false };
 const tabEpochs = new Map();
+const readOperations = new Set();
 const controlToken = tabId => ({ connection, epoch: controlEpoch, tabId, tabEpoch: tabEpochs.get(tabId) ?? 0 });
+function cancelReads(tabId) {
+  for (const read of readOperations) if (tabId === undefined || read.tabId === tabId) {
+    read.controller.abort(Object.assign(new Error('Read operation was cancelled.'), { code: 'CONTROL_STOPPED', details: { inputDispatched: false } }));
+  }
+}
 function cancelControl(tabId) {
   if (tabId === undefined) controlEpoch++;
   else tabEpochs.set(tabId, (tabEpochs.get(tabId) ?? 0) + 1);
+  cancelReads(tabId);
 }
 function checkControl(token) {
   if (token && (token.connection !== connection || token.epoch !== controlEpoch || token.tabEpoch !== (tabEpochs.get(token.tabId) ?? 0))) fail('CONTROL_STOPPED', 'Input sequence was cancelled.');
@@ -19,6 +26,28 @@ function checkControl(token) {
 const fail = (code, message, details = {}) => { const error = new Error(message); Object.assign(error, { code, details }); throw error; };
 const errorJSON = error => ({ code: error.code || 'BROWSER_FAILURE', message: error.message, details: error.details || {} });
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+const directRead = work => work();
+// Abandon only read replies. Attach/input dispatch and release still retain the
+// command lane until Chrome acknowledges them, even when cancellation arrives.
+async function readOperation(token, work) {
+  checkControl(token);
+  const operation = { tabId: token.tabId, controller: new AbortController() }, signal = operation.controller.signal;
+  const check = () => { checkControl(token); if (signal.aborted) throw signal.reason; };
+  const read = async callback => {
+    check();
+    let abort;
+    const cancelled = new Promise((_, reject) => { abort = () => reject(signal.reason); });
+    signal.addEventListener('abort', abort, { once: true });
+    try {
+      const result = await Promise.race([Promise.resolve().then(() => { check(); return callback(); }), cancelled]);
+      check(); return result;
+    } finally { signal.removeEventListener('abort', abort); }
+  };
+  read.check = check;
+  readOperations.add(operation);
+  try { const result = await work(read); check(); return result; }
+  finally { readOperations.delete(operation); }
+}
 
 function allowed(url) {
   try {
@@ -39,20 +68,20 @@ async function api(path, value, c = connection) {
   if (!response.ok) fail(result.error?.code || 'BRIDGE_FAILURE', result.error?.message || `HTTP ${response.status}`);
   return result;
 }
-async function content(tabId, method, input = {}, expectedDocumentId) {
-  const tab = await chrome.tabs.get(tabId);
+async function content(tabId, method, input = {}, expectedDocumentId, read = directRead) {
+  const tab = await read(() => chrome.tabs.get(tabId));
   if (!allowed(tab.url)) fail('UNSUPPORTED_PAGE', 'Chrome/Edge internal pages, extension pages, browser stores and non-HTTP(S) URLs cannot be controlled.');
   const target = expectedDocumentId ? { tabId, documentIds: [expectedDocumentId] } : { tabId, frameIds: [0] };
-  const probe = await chrome.scripting.executeScript({ target, world: 'ISOLATED', injectImmediately: true,
-    func: () => Boolean(globalThis.__opencuDocument && globalThis.__opencuCursor) });
+  const probe = await read(() => chrome.scripting.executeScript({ target, world: 'ISOLATED', injectImmediately: true,
+    func: () => Boolean(globalThis.__opencuDocument && globalThis.__opencuCursor) }));
   if (probe.length !== 1 || probe[0].frameId !== 0) fail('STALE_DOCUMENT', 'Main document changed during initialization.');
   const currentTarget = { tabId, documentIds: [probe[0].documentId] };
-  if (!probe[0].result) await chrome.scripting.executeScript({ target: currentTarget, files: ['page-cursor.js', 'content.js'], world: 'ISOLATED', injectImmediately: true });
-  const result = await chrome.scripting.executeScript({ target: currentTarget,
+  if (!probe[0].result) await read(() => chrome.scripting.executeScript({ target: currentTarget, files: ['page-cursor.js', 'content.js'], world: 'ISOLATED', injectImmediately: true }));
+  const result = await read(() => chrome.scripting.executeScript({ target: currentTarget,
     world: 'ISOLATED', injectImmediately: true, func: async (method, input) => {
       try { return { ok: true, result: await globalThis.__opencuDocument.run(method, input) }; }
       catch (error) { return { ok: false, error: { code: error.code || 'CONTENT_FAILURE', message: error.message } }; }
-    }, args: [method, input] });
+    }, args: [method, input] }));
   if (result.length !== 1 || result[0].frameId !== 0) fail('STALE_DOCUMENT', 'Main document changed during operation.');
   const value = result[0].result;
   if (!value?.ok) fail(value?.error?.code || 'CONTENT_FAILURE', value?.error?.message || 'Content script returned no result.');
@@ -71,11 +100,11 @@ async function tabInfo(tab) {
     title: tab.title, windowId: tab.windowId, active: tab.active, supported: allowed(tab.url), incognito: tab.incognito,
     ...(allowed(tab.url) ? {} : { error: { code: 'UNSUPPORTED_PAGE', message: 'Browser-internal/store/non-HTTP(S) page is discovery-only.' } }) };
 }
-async function verify(identity, selected = false) {
+async function verify(identity, selected = false, read = directRead) {
   if (!connection || identity.epoch !== connection.epoch || identity.instanceId !== connection.instanceId || identity.browserInstanceId !== connection.browserInstanceId) fail('STALE_CONNECTION', 'Connection identity changed; list tabs and select again.');
-  const tab = await chrome.tabs.get(identity.tabId);
+  const tab = await read(() => chrome.tabs.get(identity.tabId));
   if (!allowed(tab.url)) fail('UNSUPPORTED_PAGE', 'This page cannot be controlled.');
-  const current = await content(identity.tabId, 'identity');
+  const current = await content(identity.tabId, 'identity', {}, undefined, read);
   if (current.documentId !== identity.documentId) fail('STALE_DOCUMENT', 'Document changed; list tabs and select again.');
   if (selected && (!attached.has(identity.tabId) || attached.get(identity.tabId).released)) fail('NOT_SELECTED', 'Select this tab before observing or acting.');
   return { verified: true, identity, ...current };
@@ -84,16 +113,17 @@ const cdp = (tabId, method, params = {}) => {
   if (method.startsWith('Input.') || method === 'DOM.setFileInputFiles') {const state = attached.get(tabId); if (state) state.inputSequence = (state.inputSequence ?? 0) + 1;}
   return chrome.debugger.sendCommand({tabId}, method, params);
 };
-async function attach(identity) {
-  await verify(identity);
+async function attach(identity, read = directRead) {
+  await verify(identity, false, read);
   if (attached.get(identity.tabId)?.released) await releaseTab(identity.tabId);
   if (attached.has(identity.tabId)) {
     const state = attached.get(identity.tabId);
     if (state.error) throw state.error;
     return;
   }
-  const targets = await chrome.debugger.getTargets();
+  const targets = await read(() => chrome.debugger.getTargets());
   if (targets.find(t => t.tabId === identity.tabId)?.attached) fail('TARGET_BUSY', 'Another debugger or Playwright owns this tab. OpenCU will not detach or steal it.');
+  read.check?.();
   try { await chrome.debugger.attach({ tabId: identity.tabId }, '1.3'); }
   catch (error) { fail('DEBUGGER_ATTACH_FAILED', 'Chrome denied debugger access or another client owns this tab: ' + error.message); }
   const state = { keys: new Map(), buttons: new Set(), x: 0, y: 0 };
@@ -103,6 +133,7 @@ async function attach(identity) {
     chrome.debugger.onEvent.addListener(receive); return () => chrome.debugger.onEvent.removeListener(receive);
   });
   try {
+    read.check?.();
     await saveAttached();
     await cdp(identity.tabId, 'Page.enable'); await cdp(identity.tabId, 'Accessibility.enable');
   } catch (error) {
@@ -157,6 +188,7 @@ async function mouse(tabId, type, point, button = 'none', count = 0, extra = {},
   }
 }
 async function releaseTab(tabId) {
+  cancelReads(tabId);
   const state = attached.get(tabId); observations.delete(tabId); invalidateElements(tabId);
   if (!state) return { tabId, released: true };
   if (!state.released) {
@@ -190,30 +222,35 @@ function pngSize(base64) {
   if (view.getUint32(0) !== 0x89504e47) fail('SCREENSHOT_FAILURE', 'Expected a PNG screenshot.');
   return { width: view.getUint32(16), height: view.getUint32(20) };
 }
-async function observe(identity, options = {}) {
-  await attach(identity);
-  const current = await verify(identity, true);
-  const dom = await content(identity.tabId, 'identity', { documentId: identity.documentId }, current.browserDocumentId);
-  const accessibility = await observeAccessibility(identity.tabId, (method, params) => cdp(identity.tabId, method, params), identity.documentId);
-  let screenshot;
-  if (options.screenshot !== false) {
-    if (Math.abs(dom.geometry.visual.scale - 1) > 0.001) fail('UNSUPPORTED_PINCH_ZOOM', 'Reset pinch zoom before screenshot-coordinate actions. Browser page zoom is supported.');
-    const image = await cdp(identity.tabId, 'Page.captureScreenshot', { format: 'png', captureBeyondViewport: false, fromSurface: true });
-    const after = await content(identity.tabId, 'identity', {}, current.browserDocumentId);
-    if (JSON.stringify(after.geometry) !== JSON.stringify(dom.geometry)) fail('OBSERVATION_CHANGED', 'Page geometry changed during screenshot; observe again.');
-    screenshot = { id: crypto.randomUUID(), mimeType: 'image/png', encoding: 'base64', data: image.data, ...pngSize(image.data),
-      bounds: { x: dom.geometry.visual.x, y: dom.geometry.visual.y, width: dom.geometry.visual.width, height: dom.geometry.visual.height }, geometry: dom.geometry };
-    observations.set(identity.tabId, screenshot);
-  }
-  await verify(identity, true);
-  return { identity, ...dom, ...accessibility, ...(screenshot ? { screenshot } : {}) };
+async function observe(identity, options = {}, token = controlToken(identity.tabId)) {
+  return readOperation(token, async read => {
+    await attach(identity, read);
+    const current = await verify(identity, true, read);
+    const dom = await content(identity.tabId, 'identity', { documentId: identity.documentId }, current.browserDocumentId, read);
+    const accessibility = await observeAccessibility(identity.tabId, (method, params) => read(() => cdp(identity.tabId, method, params)), identity.documentId, read.check);
+    let screenshot;
+    if (options.screenshot !== false) {
+      if (Math.abs(dom.geometry.visual.scale - 1) > 0.001) fail('UNSUPPORTED_PINCH_ZOOM', 'Reset pinch zoom before screenshot-coordinate actions. Browser page zoom is supported.');
+      const image = await read(() => cdp(identity.tabId, 'Page.captureScreenshot', { format: 'png', captureBeyondViewport: false, fromSurface: true }));
+      const after = await content(identity.tabId, 'identity', {}, current.browserDocumentId, read);
+      if (JSON.stringify(after.geometry) !== JSON.stringify(dom.geometry)) fail('OBSERVATION_CHANGED', 'Page geometry changed during screenshot; observe again.');
+      screenshot = { id: crypto.randomUUID(), mimeType: 'image/png', encoding: 'base64', data: image.data, ...pngSize(image.data),
+        bounds: { x: dom.geometry.visual.x, y: dom.geometry.visual.y, width: dom.geometry.visual.width, height: dom.geometry.visual.height }, geometry: dom.geometry };
+    }
+    await verify(identity, true, read);
+    read.check();
+    if (screenshot) observations.set(identity.tabId, screenshot);
+    return { identity, ...dom, ...accessibility, ...(screenshot ? { screenshot } : {}) };
+  });
 }
-async function preview(identity) {
-  await verify(identity, true);
-  const image = await cdp(identity.tabId, 'Page.captureScreenshot', { format: 'png', captureBeyondViewport: false, fromSurface: true });
-  await verify(identity, true);
-  const tab = await chrome.tabs.get(identity.tabId), window = await chrome.windows.get(tab.windowId);
-  return { dataUrl: `data:image/png;base64,${image.data}`, ...pngSize(image.data), active: tab.active && window.focused };
+async function preview(identity, token = controlToken(identity.tabId)) {
+  return readOperation(token, async read => {
+    await verify(identity, true, read);
+    const image = await read(() => cdp(identity.tabId, 'Page.captureScreenshot', { format: 'png', captureBeyondViewport: false, fromSurface: true }));
+    await verify(identity, true, read);
+    const tab = await read(() => chrome.tabs.get(identity.tabId)), window = await read(() => chrome.windows.get(tab.windowId));
+    return { dataUrl: `data:image/png;base64,${image.data}`, ...pngSize(image.data), active: tab.active && window.focused };
+  });
 }
 async function actionPoint(identity, action, current, from = false) {
   if (action.elementId != null) return elementOperation(identity.tabId, (method, params) => cdp(identity.tabId, method, params), 'point', action, attached.get(identity.tabId)?.frameRouter);
@@ -547,9 +584,9 @@ async function command(message, token) {
       await chrome.windows.update(tab.windowId, { focused: true }); checkControl(token);
       return { focused: true };
     }
-    case 'verify': return verify(identity);
-    case 'observe': return observe(identity, options);
-    case 'preview': return preview(identity);
+    case 'verify': return readOperation(token, read => verify(identity, false, read));
+    case 'observe': return observe(identity, options, token);
+    case 'preview': return preview(identity, token);
     case 'act': return act(identity, action, token);
     case 'openSettings': {
       const edge = /Edg\//.test(navigator.userAgent), section = message.params.section;
@@ -653,17 +690,17 @@ async function loop(c) {
       if (connection !== c) break;
       for (const message of result.commands || []) {
         if (message.epoch !== c.epoch || Date.now() > message.deadline) continue;
-        let cursorRelease;
         if (message.method === 'release' || message.method === 'disconnect') {
           const tabId = message.params?.identity?.tabId;
           cancelControl(tabId);
-          cursorRelease = Promise.allSettled((tabId === undefined ? [...attached.keys()] : [tabId]).map(id => content(id, 'release')));
+          // Cursor hiding is best-effort; real key/mouse release must not wait
+          // for a renderer reply from this early visual cleanup.
+          void Promise.allSettled((tabId === undefined ? [...attached.keys()] : [tabId]).map(id => content(id, 'release')));
         }
         const token = controlToken(message.params?.identity?.tabId);
         const lane = message.monitoring === true && ['preview', 'verify'].includes(message.method) ? Promise.resolve() : commandChain;
         const work = lane.then(async () => {
           if (connection !== c) return;
-          if (cursorRelease) await cursorRelease;
           let result;
           try {
             if (message.method === 'disconnect') {

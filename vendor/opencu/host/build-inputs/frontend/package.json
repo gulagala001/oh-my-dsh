@@ -1,0 +1,1 @@
+{"name":"opencu-rea-build-dependencies","private":true,"type":"module","dependencies":{"@babel/generator":"7.29.7","@babel/parser":"7.29.7","@babel/traverse":"7.29.7","acorn":"8.18.0","esbuild":"0.25.12","react":"19.2.7","react-compiler-runtime":"1.0.0","react-dom":"19.2.7","zod":"4.5.4"}}

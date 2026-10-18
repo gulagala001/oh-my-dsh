@@ -7,7 +7,7 @@ import {createHelperTransport} from './transport.mjs';
 import {NativeBackendError, nativeError, normalizeAction} from './protocol.mjs';
 import {installMacHelper} from './macos-install.mjs';
 import {checkMacHelperIdentity} from './macos-identity.mjs';
-import {MACOS_AX_EXTENSIONS} from '../protocol.mjs';
+import {MACOS_AX_EXTENSIONS, checkSignal} from '../protocol.mjs';
 
 /** Plain backend contract; the controller owns public ok/error envelopes. */
 export async function createNativeBackend({dataDir, helperPath, compileHelper = false, onCursor} = {}) {
@@ -169,8 +169,12 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
       return request('presentationContrast', args, { monitoring: true, timeoutMs: 2000 });
     },
     async observe(target, options = {}) {
-      const value = await request('observe', {target: reference(target), options});
+      const {signal, ...payload} = options;
+      checkSignal(signal);
+      const value = await request('observe', {target: reference(target), options: payload});
+      checkSignal(signal);
       if (value.screenshot && options.includeBase64) value.screenshot.base64 = (await readFile(value.screenshot.path)).toString('base64');
+      checkSignal(signal);
       return value;
     },
     async act(target, action = {}) {

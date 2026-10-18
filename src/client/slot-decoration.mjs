@@ -102,7 +102,7 @@ export function decorateSlotComponent(slots, name, accepts, decorate) {
           // An entry's registration lifetime is the rebind axis. Rewrapping
           // merely because its component changed would recurse into an opaque
           // later wrapper; the pinned SDK replaces entries via dispose/register.
-          if (!accepts(entry.options.key) || entry.component?.[refreshEntry] || installed.has(entry)) continue;
+          if (!accepts(entry.options.key, entry) || entry.component?.[refreshEntry] || installed.has(entry)) continue;
           const previous = entry.component, component = decorate(entry);
           const state = { previous, active: true, wrapper: null };
           function Decorated(props) { return createElement(state.active ? component : unwrapInactive(state.previous), props); }

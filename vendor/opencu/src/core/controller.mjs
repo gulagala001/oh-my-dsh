@@ -35,7 +35,7 @@ export async function createController({dataDir, browser, native} = {}) {
   const closedBackends = new Set();
   let epoch = 0;
   let aborter = new AbortController();
-  const dialogRecoveries = new Set();
+  const recoveryOperations = new Set();
   let tail = Promise.resolve();
 
   function snapshot() {
@@ -64,24 +64,33 @@ export async function createController({dataDir, browser, native} = {}) {
   function checkOperation(operationEpoch) {
     if (operationEpoch !== epoch) fail('CONTROL_STOPPED', 'Operation interrupted by cancellation or shutdown');
   }
-  function targetFor(id = activeTargetId) {
+  function targetFor(id = activeTargetId, identity) {
     const target = selected.get(id);
     if (!target) fail('TARGET_NOT_SELECTED', 'Select a target first', {targetId: id});
+    if (identity && !sameIdentity(target.identity, identity)) fail('TARGET_IDENTITY_CHANGED', 'The approved target occurrence changed', {targetId: id});
     const backend = backends.get(target.backend);
     if (!backend) fail('BACKEND_UNAVAILABLE', `Backend ${target.backend} is not configured`);
     return {target, backend};
   }
-  async function verify(target, backend, cold = false, operationEpoch = epoch, signal) {
+  async function readOperation(work, signal) {
+    if (signal?.aborted) fail('CONTROL_STOPPED', 'Read interrupted by cancellation or shutdown');
     let interrupt;
-    const pending = backend.verify(json(target), {cold});
     const interrupted = signal && new Promise((_, reject) => {
-      interrupt = () => reject(Object.assign(new Error('Target verification interrupted'), {code: 'CONTROL_STOPPED'}));
+      interrupt = () => reject(Object.assign(new Error('Read interrupted by cancellation or shutdown'), {code: 'CONTROL_STOPPED'}));
       signal.addEventListener('abort', interrupt, {once: true});
       if (signal.aborted) interrupt();
     });
-    let result;
-    try { result = await (interrupted ? Promise.race([pending, interrupted]) : pending); }
+    try {
+      const pending = Promise.resolve().then(() => {
+        if (signal?.aborted) fail('CONTROL_STOPPED', 'Read interrupted by cancellation or shutdown');
+        return work();
+      });
+      return await (interrupted ? Promise.race([pending, interrupted]) : pending);
+    }
     finally { if (interrupt) signal.removeEventListener('abort', interrupt); }
+  }
+  async function verify(target, backend, cold = false, operationEpoch = epoch, signal) {
+    const result = await readOperation(() => backend.verify(json(target), {cold, signal}), signal);
     checkOperation(operationEpoch);
     if (result?.valid !== true) {
       target.verified = false;
@@ -119,7 +128,7 @@ export async function createController({dataDir, browser, native} = {}) {
     releasePending = true;
     epoch++;
     aborter.abort();
-    for (const recovery of dialogRecoveries) recovery.abort();
+    for (const recovery of recoveryOperations) recovery.abort();
     for (const target of selected.values()) target.verified = false;
   }
   async function inventory() {
@@ -214,36 +223,46 @@ export async function createController({dataDir, browser, native} = {}) {
       await persist();
       return {target, state: snapshot()};
     })),
-    observe: (request = {}) => response(() => serial(async () => {
-      alive();
+    observe: (request = {}) => {
       const operationEpoch = epoch;
-      const {target, backend} = targetFor(request.targetId);
-      if (target.provider === 'extension' || target.backend === 'extension' || target.id.startsWith('extension:')) controlAllowed();
-      if (target.cold) fail('RECOVERY_REQUIRED', 'Resume and verify the saved occurrence before observing');
-      await verify(target, backend, false, operationEpoch);
-      checkOperation(operationEpoch);
-      const activitySequence = userActivity.get(target.id)?.sequence ?? 0;
-      const observation = await backend.observe(json(target), {...request, format: request.format ?? 'both'});
-      checkOperation(operationEpoch);
-      const activity = observation.userActivity, previous = userActivity.get(target.id);
-      if (activity?.sequence && (previous?.documentId !== activity.documentId || previous.sequence < activity.sequence)) {
-        userActivity.set(target.id, { ...activity, targetId: target.id });
-      }
-      observedActivity.set(target.id, activity?.sequence ?? activitySequence);
-      await persist();
-      checkOperation(operationEpoch);
-      return {targetId: target.id, observation, userActivity: userActivity.get(target.id) ?? null,
-        observedUserActivitySequence: observedActivity.get(target.id) ?? 0};
-    })),
+      return response(() => serial(async () => {
+        alive();
+        checkOperation(operationEpoch);
+        const {target, backend} = targetFor(request.targetId, request.targetIdentity);
+        if (target.provider === 'extension' || target.backend === 'extension' || target.id.startsWith('extension:')) controlAllowed();
+        if (target.cold) fail('RECOVERY_REQUIRED', 'Resume and verify the saved occurrence before observing');
+        // Read-only observation remains available after stop on supported backends,
+        // but a second stop/close must also cancel that recovery read.
+        const recovery = aborter.signal.aborted ? new AbortController() : null;
+        if (recovery) recoveryOperations.add(recovery);
+        try {
+          const signal = recovery?.signal ?? aborter.signal;
+          await verify(target, backend, false, operationEpoch, signal);
+          checkOperation(operationEpoch);
+          const activitySequence = userActivity.get(target.id)?.sequence ?? 0;
+          const observation = await readOperation(() => backend.observe(json(target), {...request, signal, format: request.format ?? 'both'}), signal);
+          checkOperation(operationEpoch);
+          const activity = observation.userActivity, previous = userActivity.get(target.id);
+          if (activity?.sequence && (previous?.documentId !== activity.documentId || previous.sequence < activity.sequence)) {
+            userActivity.set(target.id, { ...activity, targetId: target.id });
+          }
+          observedActivity.set(target.id, activity?.sequence ?? activitySequence);
+          await persist();
+          checkOperation(operationEpoch);
+          return {targetId: target.id, observation, userActivity: userActivity.get(target.id) ?? null,
+            observedUserActivitySequence: observedActivity.get(target.id) ?? 0};
+        } finally { if (recovery) recoveryOperations.delete(recovery); }
+      }));
+    },
     act: (request = {}) => response(() => serial(async () => {
       const dialogAction = ['getDialog', 'handleDialog'].includes(request.action);
       if (dialogAction) alive(); else controlAllowed();
       const operationEpoch = epoch;
-      const {target, backend} = targetFor(request.targetId);
+      const {target, backend} = targetFor(request.targetId, request.targetIdentity);
       if (target.cold || !dialogAction && !target.verified) fail('RECOVERY_REQUIRED', 'Resume this target before acting');
       let result;
       const recovery = dialogAction && aborter.signal.aborted ? new AbortController() : null;
-      if (recovery) dialogRecoveries.add(recovery);
+      if (recovery) recoveryOperations.add(recovery);
       try {
         const signal = recovery?.signal ?? aborter.signal;
         await verify(target, backend, false, operationEpoch, signal);
@@ -269,7 +288,7 @@ export async function createController({dataDir, browser, native} = {}) {
         }
         throw error;
       }
-      finally { if (recovery) dialogRecoveries.delete(recovery); }
+      finally { if (recovery) recoveryOperations.delete(recovery); }
       if (operationEpoch !== epoch) fail('CONTROL_STOPPED', 'Action interrupted by cancellation or shutdown');
       if (result?.target) {
         const current = assertTarget(result.target, target.backend);
@@ -307,7 +326,7 @@ export async function createController({dataDir, browser, native} = {}) {
       alive();
       if (closedBackends.size) fail('CLOSE_FAILED', 'Some backends are already closed; retry close');
       const operationEpoch = epoch;
-      const {target, backend} = targetFor(request.targetId);
+      const {target, backend} = targetFor(request.targetId, request.targetIdentity);
       let selecting = false;
       try {
         if (releasePending || mode === 'recovery_required') {
@@ -345,7 +364,7 @@ export async function createController({dataDir, browser, native} = {}) {
     preview: (request = {}) => response(async () => {
       alive();
       const operationEpoch = epoch;
-      const {target, backend} = targetFor(request.targetId);
+      const {target, backend} = targetFor(request.targetId, request.targetIdentity);
       if (target.cold) fail('RECOVERY_REQUIRED', 'The saved target has not been verified');
       if (typeof backend.preview !== 'function') fail('UNSUPPORTED_OPERATION', 'This backend does not provide monitor frames');
       let capture = previews.get(target.id);
@@ -418,7 +437,7 @@ export async function createController({dataDir, browser, native} = {}) {
       if (closed) return response(async () => ({state: snapshot()}));
       if (closing) return closing;
       mode = 'closing'; releasePending = true; epoch++; aborter.abort();
-      for (const recovery of dialogRecoveries) recovery.abort();
+      for (const recovery of recoveryOperations) recovery.abort();
       for (const target of selected.values()) target.verified = false;
       closing = response(() => serial(async () => {
         await releaseAll({dismissDialogs:true});

@@ -81,12 +81,27 @@ CU 工具卡保留真实 REA 组件，参数适配同时读取 alpha.3 的 `bloc
 
 ## 构建和本地插件包
 
-默认源码及 `package-lock.json` 精确锁定 rc.2；各宿主交付走独立 SDK、独立 staging 和真实 REA 编译，不把同一前端包只换 metadata。SDK／build 锁由 `scripts/build-targets.mjs` 写入工作区 `.local/host-compat-20261015/opencu-sdk-{rc2,alpha3,rc1}/pnpm-lock.yaml`，rc.1 桌面类型使用 Electron `44.7.0`，REA 真实 React 19 与 compiler 沿用本仓库 `.local/frontend-deps/pnpm-lock.yaml`。
+默认源码及根 `package-lock.json` 精确锁定 rc.2，标准源码安装入口为 `npm ci`。发布构建使用独立 SDK、独立 staging 和真实 REA 编译。实际 SDK 清单、完整 pnpm 锁与必要 workspace overrides 固定在 `host/build-inputs/{rc1,021rc2}/`；这些 SDK 输入保留原构建使用的字节，两个宿主均使用 Electron `44.7.0`。REA 的独立清单与完整锁固定在 `host/build-inputs/frontend/`。
+
+`scripts/build-targets.mjs` 从公开输入创建本地 SDK 和前端工作目录，始终使用 `--frozen-lockfile --ignore-scripts`，缺锁、清单不匹配或输入 SHA-256 不匹配即失败，不自动重新解析。构建前还核对安装后的完整解析锁和全部实际 DSH 包版本，拒绝混入另一宿主版本。固定输入的 SHA-256 见 `host/build-inputs/manifest.json`；包内 `lib/host-build.json` 与输出目录 `build.json` 保存所用输入哈希、实际 DSH 包清单与安装解析锁哈希，可直接对照公开源码。
 
 ```sh
-# NODE 与 PNPM 分别是 load_workspace_dependencies 返回的 Node 和 pnpm.mjs。
+# NODE 为 Node >=22.19，PNPM 为 pnpm 11.28.5 的 pnpm.mjs 入口。
 OPENCU_PNPM="$PNPM" "$NODE" scripts/build-targets.mjs
 ```
+
+默认构建当前 `rc1` 与 `021rc2` 两个宿主，也可在命令末尾只指定其中一项。旧 `rc2`（DSH 0.2.0-rc.2）与 `alpha3` 的固定 SDK 输入保留，需显式指定对应 target；不在默认构建中重新构建旧宿主。
+
+本地复核可设置 `OPENCU_BUILD_ROOT` 和 `OPENCU_PACKAGE_OUT` 指向独立构建与输出目录，保留既有发行工件。
+
+需要 rc.1 源码变体时，在单独源码 checkout 中执行以下命令；该入口同步宿主清单、完整 npm 根解析图、客户端目标与扩展包版本。rc.1 根 npm 锁针对其声明重新生成，与发布构建的 SDK pnpm 锁分别保存；只替换根版本字段不能得到有效变体。恢复 rc.2 时使用 `021rc2`。
+
+```sh
+"$NODE" scripts/prepare-host-source.mjs rc1 .
+npm ci
+```
+
+此修复提供后续源码与构建的完整可复核输入；已发布旧 tag 的锁文件保持历史原状。
 
 输出为工作区 `builds/opencu/021rc2/opencu-2.0.1-dsh.0.2.1-rc.2.tgz`（本次最新宿主工件；旧宿主工件分别保留，不混装）。每份包包含共用完整 core/native/browser/extension、独立重建的 REA client、真实 macOS arm64 helper 和宿主补丁；不会捆绑 SDK、node_modules、研究原件或用户数据。打包入口通过 `scripts/native-package-modes.mjs` 恢复 npm/pnpm 归一化移除的 helper 执行位；不改签名或二进制字节，实际解包后必须可执行。
 

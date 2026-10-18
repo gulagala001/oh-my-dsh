@@ -146,7 +146,7 @@ export async function apply(ctx, config) {
   const isOmaaEnhanced = session => Boolean(ctx.get('omaa')?.enhancementEnabled(session));
   hub.ultracode = new UltracodeControl(ctx, session => isX(session) || (isOmaaEnhanced(session) && ctx.get('omaa').modeFor(session) === 'default'), hub.store);
   hub.omaaWorkMode = {
-    inspect: (session, agent) => hub.ultracode.view(session, agent),
+    inspect: (session, agent) => hub.ultracode.inspectView(session, agent),
     current: (session, agent = ctx.agents.get(session.id)) => isOmaaEnhanced(session) ? hub.ultracode.currentMode(agent) : 'off',
     submode: (session, agent = ctx.agents.get(session.id)) => hub.ultracode.currentSubmode(agent),
     async select(sessionId, mode, submode) {
@@ -154,6 +154,7 @@ export async function apply(ctx, config) {
       if (!before.selected) throw new Error('当前会话没有可用的模型配置');
       return hub.ultracode.select(sessionId, { ...before.selected, mode, submode, expectedRevision: before.revision });
     },
+    restore: (sessionId, snapshot) => hub.ultracode.restore(sessionId, snapshot),
   };
   const monitored = session => !isBtwSession(session) && (isX(session) || (session.header.origin === 'subagent' && Boolean(hub.workflowBudget.owner(session))));
   installUltracodeProjection(ctx);

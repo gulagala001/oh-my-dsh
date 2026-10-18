@@ -12,7 +12,7 @@ final class CommandQueue: @unchecked Sendable {
     func push(_ command: [String: Any]) {
         var command = command
         if ["release", "close"].contains(command["method"] as? String ?? "") { cancellation.stop() }
-        if command["method"] as? String == "act" {
+        if ["act", "verify", "observe", "preview"].contains(command["method"] as? String ?? "") {
             var params = command["params"] as? [String: Any] ?? [:]
             params["_controlEpoch"] = cancellation.current(); command["params"] = params
         }
@@ -28,8 +28,8 @@ final class CommandQueue: @unchecked Sendable {
 
 final class NativeService {
     let targets = TargetStore()
-    let ax = AccessibilityStore()
-    let capture: CaptureStore
+    var ax = AccessibilityStore()
+    var capture: CaptureStore
     let input: InputStore
     let cursor = CursorHost()
     let video = VideoStore()
@@ -67,10 +67,14 @@ final class NativeService {
             let target = try method == "focus" ? targets.focus(reference) : targets.select(reference)
             activity.watch(target); return target
         case "verify":
-            return targets.verify(params["target"] as? [String: Any] ?? [:], cold: (params["options"] as? [String: Any])?["cold"] as? Bool ?? false)
+            let cancellation = input.cancellation, epoch = params["_controlEpoch"] as? Int ?? cancellation.current()
+            return try cancellableRead(cancellation, epoch: epoch) {
+                TargetStore().verify(params["target"] as? [String: Any] ?? [:], cold: (params["options"] as? [String: Any])?["cold"] as? Bool ?? false)
+            }
         case "preview":
-            let target = try targets.validated(params["target"] as? [String: Any] ?? [:])
-            var frame = try video.preview(target)
+            let cancellation = input.cancellation, epoch = params["_controlEpoch"] as? Int ?? cancellation.current()
+            let target = try cancellableRead(cancellation, epoch: epoch) { try TargetStore().validated(params["target"] as? [String: Any] ?? [:]) }
+            var frame = try video.preview(target, checkpoint: { try cancellation.check(epoch) })
             if let app = try? targets.app(target), let icon = targets.icon(app) { frame["iconDataURL"] = icon }
             return frame
         case "presentationContrast": return try capture.presentationContrast(params)
@@ -78,28 +82,41 @@ final class NativeService {
             guard let id = params["targetId"] as? String else { throw NativeFailure("INVALID_REQUEST", "A preview target is required.") }
             video.stop(id); return ["released": true]
         case "observe":
-            let target = try targets.validated(params["target"] as? [String: Any] ?? [:])
-            let options = params["options"] as? [String: Any] ?? [:]
-            let format = options["format"] as? String ?? "both"
-            guard ["both", "ax", "screenshot"].contains(format) else { throw NativeFailure("INVALID_OBSERVATION", "format must be both, ax or screenshot.") }
-            var result: [String: Any] = ["observationId": UUID().uuidString, "targetId": target["id"] ?? "", "identity": target["identity"] ?? [:],
-                "target": target, "coordinateSpace": "physical-screenshot-pixels", "permissions": permissions(), "observedAt": ISO8601DateFormatter().string(from: Date())]
-            // Partial observations carry their actual errors. A completely failed observation throws.
-            var failures: [[String: Any]] = []
-            if format != "screenshot" {
-                do { let tree = try ax.observe(target, targets: targets, options: options); result["ax"] = tree; result["state"] = tree["text"]; result["text"] = tree["text"] }
-                catch let failure as NativeFailure { failures.append(failure.json) }
+            let cancellation = input.cancellation, epoch = params["_controlEpoch"] as? Int ?? cancellation.current()
+            let ax = AccessibilityStore(copying: self.ax), capture = CaptureStore(copying: self.capture)
+            var result = try cancellableRead(cancellation, epoch: epoch) { () throws -> [String: Any] in
+                let checkpoint = { try cancellation.check(epoch) }
+                let targets = TargetStore()
+                let target = try targets.validated(params["target"] as? [String: Any] ?? [:])
+                try checkpoint()
+                let options = params["options"] as? [String: Any] ?? [:]
+                let format = options["format"] as? String ?? "both"
+                guard ["both", "ax", "screenshot"].contains(format) else { throw NativeFailure("INVALID_OBSERVATION", "format must be both, ax or screenshot.") }
+                var result: [String: Any] = ["observationId": UUID().uuidString, "targetId": target["id"] ?? "", "identity": target["identity"] ?? [:],
+                    "target": target, "coordinateSpace": "physical-screenshot-pixels", "permissions": permissions(), "observedAt": ISO8601DateFormatter().string(from: Date())]
+                // Partial observations carry their actual errors. A completely failed observation throws.
+                var failures: [[String: Any]] = []
+                if format != "screenshot" {
+                    do { let tree = try ax.observe(target, targets: targets, options: options, checkpoint: checkpoint); result["ax"] = tree; result["state"] = tree["text"]; result["text"] = tree["text"] }
+                    catch let failure as NativeFailure { if failure.code == "CONTROL_STOPPED" { throw failure }; failures.append(failure.json) }
+                }
+                try checkpoint()
+                if format != "ax" {
+                    do { result["screenshot"] = try capture.capture(target, targets: targets, options: options, checkpoint: checkpoint) }
+                    catch let failure as NativeFailure { if failure.code == "CONTROL_STOPPED" { throw failure }; failures.append(failure.json) }
+                }
+                if result["ax"] == nil && result["screenshot"] == nil {
+                    if failures.count == 1, let first = failures.first { throw NativeFailure(first["code"] as? String ?? "OBSERVATION_FAILED", first["message"] as? String ?? "Observation failed.", first["details"] as? [String: Any] ?? [:]) }
+                    throw NativeFailure("OBSERVATION_FAILED", "Neither AX state nor screenshot could be obtained.", ["failures": failures, "permissions": permissions()])
+                }
+                if !failures.isEmpty { result["partial"] = true; result["errors"] = failures }
+                return result
             }
-            if format != "ax" {
-                do { result["screenshot"] = try capture.capture(target, targets: targets, options: options) }
-                catch let failure as NativeFailure { failures.append(failure.json) }
-            }
-            if result["ax"] == nil && result["screenshot"] == nil {
-                if failures.count == 1, let first = failures.first { throw NativeFailure(first["code"] as? String ?? "OBSERVATION_FAILED", first["message"] as? String ?? "Observation failed.", first["details"] as? [String: Any] ?? [:]) }
-                throw NativeFailure("OBSERVATION_FAILED", "Neither AX state nor screenshot could be obtained.", ["failures": failures, "permissions": permissions()])
-            }
-            if !failures.isEmpty { result["partial"] = true; result["errors"] = failures }
-            result.merge(activity.snapshot(target)) { _, value in value }
+            try cancellation.check(epoch)
+            // Only the main command lane publishes completed read snapshots.
+            // An interrupted worker retains private stores until its RPC ends.
+            capture.retainFiles(); self.ax = ax; self.capture = capture
+            result.merge(activity.snapshot(result["target"] as? [String: Any] ?? [:])) { _, value in value }
             return result
         case "act":
             let action = params["action"] as? [String: Any] ?? [:]

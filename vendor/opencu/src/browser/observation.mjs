@@ -1,16 +1,19 @@
 import {randomUUID} from 'node:crypto';
 import {mkdir, writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
-import {fail} from '../protocol.mjs';
+import {fail, checkSignal} from '../protocol.mjs';
 
 export async function observePage(record, request, options) {
+  checkSignal(request.signal);
   const format = request.format ?? 'both';
   if (!['ax', 'screenshot', 'both'].includes(format)) fail('INVALID_ARGUMENT', 'format must be ax, screenshot, or both');
   const generation = record.documentGeneration;
   const observationId = randomUUID();
   const result = {observationId, url: record.page.url(), title: await record.page.title(), coordinateSpace: 'viewport-css-pixels'};
+  checkSignal(request.signal);
   if (format !== 'screenshot') {
     const {nodes} = await record.session.send('Accessibility.getFullAXTree');
+    checkSignal(request.signal);
     if (generation !== record.documentGeneration) fail('STALE_OBSERVATION', 'Document changed during accessibility observation');
     const previous = new Map([...record.elements].filter(([, entry]) => !entry.route?.sessionId).map(([id, entry]) => [entry.backendNodeId, id]));
     record.elements.clear();
@@ -32,7 +35,9 @@ export async function observePage(record, request, options) {
   if (format !== 'ax') {
     const fullPage = request.fullPage === true;
     const viewportBefore = await record.page.evaluate(() => ({width: innerWidth, height: innerHeight, deviceScaleFactor: devicePixelRatio, scrollX, scrollY}));
+    checkSignal(request.signal);
     const bytes = await record.page.screenshot({type: 'png', fullPage, animations: 'disabled', timeout: options.timeoutMs});
+    checkSignal(request.signal);
     const sharp = options.sharp ?? (await import('sharp')).default;
     const original = await sharp(bytes).metadata();
     let output = bytes;
@@ -44,6 +49,7 @@ export async function observePage(record, request, options) {
     }
     const metadata = await sharp(output).metadata();
     const viewport = await record.page.evaluate(() => ({width: innerWidth, height: innerHeight, deviceScaleFactor: devicePixelRatio, scrollX, scrollY}));
+    checkSignal(request.signal);
     if (['width', 'height', 'deviceScaleFactor', 'scrollX', 'scrollY'].some(key => viewport[key] !== viewportBefore[key])) fail('STALE_OBSERVATION', 'Viewport or scroll changed during screenshot capture; observe again');
     const directory = join(options.dataDir, 'observations');
     await mkdir(directory, {recursive: true});
@@ -56,6 +62,7 @@ export async function observePage(record, request, options) {
       ...(request.includeBase64 ? {base64: output.toString('base64')} : {}),
     };
   }
+  checkSignal(request.signal);
   if (generation !== record.documentGeneration) fail('STALE_OBSERVATION', 'Document changed during observation');
   record.observationId = observationId;
   if (result.screenshot) {

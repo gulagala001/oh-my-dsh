@@ -29,9 +29,16 @@ final class AccessibilityStore {
     var elements: [Int: ElementRecord] = [:]
     var nextID = 1
     var generation = 0
-    private let identityScope = UUID().uuidString
+    private let identityScope: String
+    init(copying previous: AccessibilityStore? = nil) {
+        identityScope = previous?.identityScope ?? UUID().uuidString
+        if let previous = previous {
+            elements = previous.elements; nextID = previous.nextID; generation = previous.generation
+        }
+    }
 
-    func observe(_ target: [String: Any], targets: TargetStore, options: [String: Any]) throws -> [String: Any] {
+    func observe(_ target: [String: Any], targets: TargetStore, options: [String: Any], checkpoint: () throws -> Void = {}) throws -> [String: Any] {
+        try checkpoint()
         try requireAX()
         let root = target["windowId"] == nil ? AXUIElementCreateApplication(pid_t(target["pid"] as? Int ?? 0)) : try targets.axWindow(target)
         let id = target["id"] as? String ?? ""
@@ -45,7 +52,8 @@ final class AccessibilityStore {
         AXUIElementSetMessagingTimeout(AXUIElementCreateApplication(pid_t(target["pid"] as? Int ?? 0)), 0.5)
         var lines: [String] = [], nodes: [[String: Any]] = [], visited: [CFHashCode: [AXUIElement]] = [:]
         var truncated = false
-        func visit(_ element: AXUIElement, depth: Int, parentID: Int?) {
+        func visit(_ element: AXUIElement, depth: Int, parentID: Int?) throws {
+            try checkpoint()
             if nodes.count >= maxNodes || depth > maxDepth || Date() > deadline { truncated = true; return }
             let hash = CFHash(element)
             if visited[hash]?.contains(where: { CFEqual($0, element) }) == true { return }
@@ -87,9 +95,10 @@ final class AccessibilityStore {
             }.joined()
             let value = node["value"].map { " value=\(String(describing: $0).prefix(500))" } ?? ""
             lines.append(String(repeating: "  ", count: depth) + "[\(numericID)] \(role) \(label)\(supplementary)\(value)")
-            for child in axElements(element, kAXChildrenAttribute) { visit(child, depth: depth + 1, parentID: numericID) }
+            for child in axElements(element, kAXChildrenAttribute) { try visit(child, depth: depth + 1, parentID: numericID) }
         }
-        visit(root, depth: 0, parentID: nil)
+        try visit(root, depth: 0, parentID: nil)
+        try checkpoint()
         return ["text": lines.joined(separator: "\n"), "nodes": nodes, "generation": current, "truncated": truncated,
                 "stableIds": true, "identityScope": identityScope + ":" + id,
                 "numericIds": "stable while the same element remains in this target; removed elements and helper restart invalidate IDs"]

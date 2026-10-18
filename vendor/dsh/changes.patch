@@ -473,28 +473,38 @@ index a0d772da..eaae7f58 100644
        this.lastPublishedDraft = draft
        this.persistDraft?.(draft)
 diff --git a/packages/client/ui-conversation/src/client/input/hub.ts b/packages/client/ui-conversation/src/client/input/hub.ts
-index fb8d8a73..7f891a34 100644
+index fb8d8a73..52cc27fc 100644
 --- a/packages/client/ui-conversation/src/client/input/hub.ts
 +++ b/packages/client/ui-conversation/src/client/input/hub.ts
-@@ -24,6 +24,7 @@ import type { ComposerKeyboard } from '../contract/draft-editor.ts'
+@@ -2,7 +2,7 @@
+  * Session-bound input registry and default-send routing for Conversation.
+  * Each retained Session binding owns one shell, its input listeners, and its
+  * catalog subscription. Saved drafts enter the model before the first lookup
+- * returns; Session-scope disposal releases the shell and its resources.
++ * returns; either Conversation or Session disposal releases these resources.
+  */
+ import type {} from '@deepseek-ai/dsh-client-product-analytics/client'
+ import type { ModelSelectionProjection } from '@deepseek-ai/dsh-api-session-controller/types'
+@@ -24,6 +24,7 @@
  import type { InputSubmitMode } from '../contract/composer-submission.ts'
  import type { PopupDismissFace } from './facade.ts'
  import { SessionInputShell } from './facade.ts'
 +import type { InputDraft } from './facade.ts'
  import { reportMessageSubmission } from './submission-analytics.ts'
  import { readConversationDraft } from '../stores.ts'
- 
-@@ -54,6 +55,9 @@ interface ConversationAttachmentFace {
+
+@@ -54,6 +55,10 @@
  /** Session-addressed input facade registry (SessionInputResolver face + composer-layer extras). */
  export class InputHub implements SessionInputResolver {
    private readonly shells = new WeakMap<SessionBinding, SessionInputShell>()
++  private readonly activeShells = new Set<() => void>()
 +  /** Unsent data survives navigation without holding editors, scopes, or history subscriptions. */
 +  private readonly drafts = new Map<SessionId, InputDraft>()
 +  private closed = false
- 
+
    /**
     * @param ctx - client root context (services resolved lazily per call — boot order stays free).
-@@ -62,7 +66,31 @@ export class InputHub implements SessionInputResolver {
+@@ -62,8 +67,33 @@
    constructor(
      private readonly rootCtx: Context,
      private readonly t: TranslateNS<'conversation'>,
@@ -511,11 +521,12 @@ index fb8d8a73..7f891a34 100644
 +      return () => {
 +        this.closed = true
 +        off()
++        for (const release of this.activeShells) release()
 +        for (const id of this.drafts.keys()) this.releaseDraft(id)
 +      }
 +    }, 'conversation.input: inactive drafts')
 +  }
-+
+
 +  /** Release an inactive draft on Session deletion or plugin teardown. */
 +  private releaseDraft(id: SessionId): void {
 +    const draft = this.drafts.get(id)
@@ -524,29 +535,60 @@ index fb8d8a73..7f891a34 100644
 +    const conversation = this.rootCtx.get('conversation') as ConversationAttachmentFace | undefined
 +    for (const attachmentId of draft.attachmentIds) conversation?.releaseDraftAttachment(attachmentId)
 +  }
- 
++
    /**
     * Resolve the facade for one session-scope ctx (SessionInputResolver face).
-@@ -140,8 +168,13 @@ export class InputHub implements SessionInputResolver {
+    * @param actx - session-scope context.
+@@ -88,12 +118,13 @@
+
+   /**
+    * Resolve the resident shell for an already-retained, addressable Session binding.
+-   * Draft import completes before return. The Session scope owns input listeners,
+-   * the inject-managed catalog subscription, and shell teardown.
++   * Draft import completes before return. Session and Conversation lifetimes
++   * jointly own listeners, the catalog injection, and shell teardown.
+    * @param binding - session assembly handle.
+    * @returns the shell.
+    */
+   shellFor(binding: SessionBinding): SessionInputShell {
++    if (this.closed) throw new Error('conversation.input: owner disposed')
+     const existing = this.shells.get(binding)
+     if (existing !== undefined) return existing
+     const { session, ctx: actx } = binding
+@@ -140,9 +171,16 @@
        },
      })
      this.shells.set(binding, shell)
 -    // The one teardown axis: listeners, shell, and map entries all ride the
 -    // scope fiber (nothing here outlives the scope).
+-    actx.effect(() => {
 +    const saved = this.drafts.get(session.sessionId)
 +    if (saved !== undefined) {
 +      this.drafts.delete(session.sessionId)
 +      shell.restoreDraft(saved)
 +    }
-+    // Live listeners and editors follow the scope. Transfer only unsent data
-+    // to the browser lifetime before releasing the old shell's other resources.
-     actx.effect(() => {
++    // Both owners can outlive one another. Cordis makes this shared disposer
++    // idempotent; normal navigation retains only unsent data, while unloading
++    // Conversation releases all of its resources without disposing the Session.
++    let release: (() => void) | undefined
++    release = actx.effect(() => {
        const offs = [
          actx.on('slash/input-begin-command', req =>
-@@ -155,10 +188,17 @@ export class InputHub implements SessionInputResolver {
+           shell.beginCommand(req.claim, req.span) ? true : undefined),
+@@ -153,21 +191,31 @@
+         actx.on('slash/input-insert-text', req =>
+           shell.insertText(req.text, req.span, req.continue === true) ? true : undefined),
        ]
++      const catalogs = actx.inject(['inputTriggers'], (scope) => {
++        scope.effect(() => {
++          shell.refreshLexiconSubscription()
++          return () => { shell.refreshLexiconSubscription() }
++        }, 'conversation.input: reference catalogs')
++      })
        return () => {
++        if (release !== undefined) this.activeShells.delete(release)
          for (const off of offs) off()
++        void catalogs.dispose()
 +        const saved = shell.captureDraft()
 +        const keep = !this.closed && !session.getSnapshot().removed
 +          && (saved.draft !== '' || saved.attachmentIds.length > 0)
@@ -561,16 +603,18 @@ index fb8d8a73..7f891a34 100644
 +        }
        }
      }, 'conversation.input: session shell')
-     actx.inject(['inputTriggers'], (scope) => {
-@@ -167,7 +207,7 @@ export class InputHub implements SessionInputResolver {
-         return () => { shell.refreshLexiconSubscription() }
-       }, 'conversation.input: reference catalogs')
-     })
+-    actx.inject(['inputTriggers'], (scope) => {
+-      scope.effect(() => {
+-        shell.refreshLexiconSubscription()
+-        return () => { shell.refreshLexiconSubscription() }
+-      }, 'conversation.input: reference catalogs')
+-    })
 -    shell.setDraft(readConversationDraft(binding.sessionId))
++    this.activeShells.add(release)
 +    if (saved === undefined) shell.setDraft(readConversationDraft(binding.sessionId))
      return shell
    }
- 
+
 diff --git a/packages/client/ui-conversation/src/client/locales.ts b/packages/client/ui-conversation/src/client/locales.ts
 index f1f70807..2a4c0cf8 100644
 --- a/packages/client/ui-conversation/src/client/locales.ts

@@ -12,6 +12,7 @@ core.push('test/opencu-app-approval-session-cancel.test.mjs');
 core.push('test/prompt-adaptation.test.mjs');
 core.push('test/context-memory-cache.test.mjs');
 core.push('test/host-component-overlay.test.mjs');
+core.push('test/ultra-mode.test.mjs', 'test/conversation-input-owner.test.mjs', 'test/model-label-contract.test.mjs');
 
 const [command = 'run', suite = 'core', shard = '1/1'] = process.argv.slice(2);
 if (command === 'matrix') {

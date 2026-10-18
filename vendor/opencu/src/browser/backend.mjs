@@ -370,13 +370,17 @@ export async function createBrowserBackend(options = {}) {
       });
     },
     async observe(target, request = {}) {
+      checkSignal(request.signal);
       const record = await recordFor(target);
+      checkSignal(request.signal);
       return record.dialogs.guard(async () => {
         const observation = await observePage(record, request, {dataDir, sharp: options.sharp, timeoutMs});
+        checkSignal(request.signal);
         record.dialogs.assertClosed();
         observation.identity = record.identity;
         observation.targetId = record.id;
         observation.userActivity = await (await activityFor(record)).read();
+        checkSignal(request.signal);
         return observation;
       });
     },

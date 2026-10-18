@@ -9,7 +9,7 @@ import {NativeBackendError} from './protocol.mjs';
 
 const exec = promisify(execFile);
 const sourceDirectory = fileURLToPath(new URL('../../native/macos/', import.meta.url));
-const sources = ['Protocol.swift', 'Responsibility.swift', 'Targets.swift', 'Accessibility.swift', 'Capture.swift', 'Video.swift', 'Input.swift', 'Activity.swift', 'Cursor.swift', 'Presentation.swift', 'main.swift'];
+const sources = ['Protocol.swift', 'Responsibility.swift', 'Targets.swift', 'ReadOperation.swift', 'Accessibility.swift', 'Capture.swift', 'Video.swift', 'Input.swift', 'Activity.swift', 'Cursor.swift', 'Presentation.swift', 'main.swift'];
 const systemHeader = join(sourceDirectory, 'System.h');
 const infoPlist = join(sourceDirectory, 'Info.plist');
 

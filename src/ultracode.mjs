@@ -111,7 +111,21 @@ export class UltracodeControl {
     const view = modeView(state, route, this.store.peek(session.id)?.ultracode, this.eligible(agent), this.teamAvailable(agent));
     const active = agent && this.active.get(agent);
     const activeSubmode = active?.submode === 'team' && !view.teamAvailable ? 'free' : active?.submode;
-    return { ...view, pending: agent?.status === 'running' && Boolean(active && (active.mode !== view.mode || activeSubmode !== view.submode)) };
+    const currentMode = view.eligible && agent?.status === 'running' && active ? active.mode : view.mode;
+    const currentSubmode = agent?.status === 'running' && active ? activeSubmode : view.submode;
+    return { ...view, currentMode, currentSubmode,
+      pending: agent?.status === 'running' && Boolean(active && (currentMode !== view.mode || currentSubmode !== view.submode)) };
+  }
+  async settled(sessionId, signal) {
+    let pending;
+    do {
+      pending = this.writes.get(sessionId);
+      await pending?.catch(() => {}); signal?.throwIfAborted();
+    } while (pending && this.writes.get(sessionId) && this.writes.get(sessionId) !== pending);
+  }
+  async inspectView(session, agent) {
+    await this.settled(session.id);
+    return this.view(session, agent);
   }
   async agent(sessionId) {
     let agent = this.ctx.agents.get(sessionId);
@@ -155,7 +169,7 @@ export class UltracodeControl {
   }
   async inspect(sessionId, signal) {
     validateSessionId(sessionId); signal?.throwIfAborted();
-    await this.writes.get(sessionId)?.catch(() => {}); signal?.throwIfAborted();
+    await this.settled(sessionId, signal); signal?.throwIfAborted();
     const target = await apiSessionTarget(this.ctx, this.store, sessionId, signal);
     if (!target.found) throw Object.assign(Error('会话不存在'), { statusCode: 404 });
     const { session, agent, stored, inspection } = target;
@@ -177,7 +191,16 @@ export class UltracodeControl {
     const route = state.model ?? state.request?.config ?? this.ctx.get('agentDefaultModel')?.currentSelection();
     return { ...modeView(state, route, stored?.ultracode, capability.eligible, this.coldTeamAvailable()), ...capability, cold: true, archivedOnly: false, preset: preset ?? null };
   }
-  async select(sessionId, input) {
+  select(sessionId, input) { return this.writeSelection(sessionId, input); }
+  // Compensation restores intent, including a remembered Team whose native
+  // tools are currently unavailable. This is not a user-selectable override.
+  async restore(sessionId, snapshot) {
+    const before = await this.inspect(sessionId);
+    if (!before.selected) throw new Error('当前会话没有可用的模型配置');
+    return this.writeSelection(sessionId, { ...before.selected, mode: snapshot?.savedMode,
+      submode: snapshot?.savedSubmode ?? snapshot?.submode, expectedRevision: before.revision }, true);
+  }
+  async writeSelection(sessionId, input, restoring = false) {
     const previous = this.writes.get(sessionId) ?? Promise.resolve();
     const operation = previous.catch(() => {}).then(async () => {
       const mode = input?.mode;
@@ -190,8 +213,8 @@ export class UltracodeControl {
       const submode = input.submode ?? (mode === 'off' ? before.savedSubmode : before.submode);
       this.prepare(agent);
       if (input.expectedRevision !== undefined && input.expectedRevision !== before.revision) throw new Error('模型设置已在另一处更新，请重试');
-      if (mode !== 'off' && !before.eligible) throw new Error('Ultra 需要当前会话的 OMD 协作能力');
-      if (mode === 'ultra' && submode === 'team' && !before.teamAvailable) throw new Error('请先在 DSH 中启用 Agent Team');
+      if (mode !== 'off' && !before.eligible && !restoring) throw new Error('Ultra 需要当前会话的 OMD 协作能力');
+      if (mode === 'ultra' && submode === 'team' && !before.teamAvailable && !restoring) throw new Error('请先在 DSH 中启用 Agent Team');
       const controller = this.ctx.get('sessionController');
       if (!controller) throw new Error('当前宿主未提供模型选择服务');
       const info = await this.ctx.llm.resolveModelInfo(input.provider, input.model);
@@ -239,7 +262,7 @@ export class UltracodeControl {
   /** Pin the requested strategy per turn. DSH alone owns tools and children;
    * a disabled native Team must not leave instructions for unavailable tools. */
   async assemble(agent, next) {
-    await this.writes.get(agent.session.id)?.catch(() => {});
+    await this.settled(agent.session.id);
     const active = this.prepare(agent), state = this.fold(agent.session);
     const assembly = await next();
     if (!this.eligible(agent)) return assembly;

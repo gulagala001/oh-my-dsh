@@ -15,7 +15,7 @@ import { createImageRegistry } from './image-registry.mjs';
 import { createAppApprovals } from './app-approvals.mjs';
 import { createBrowserPairing } from '../extension/pairing.mjs';
 import { listenExtension } from '../extension/listen.mjs';
-import { referenceMatches, sameIdentity, checkExpected } from '../protocol.mjs';
+import { referenceMatches, sameIdentity, checkExpected, json } from '../protocol.mjs';
 
 const methods = { state: 'getState', targets: 'listTargets', select: 'selectTarget', observe: 'observe', act: 'act', stop: 'stop', userActivity: 'notifyUserActivity', resume: 'resume', deliveries: 'deliveries', permissions: 'permissions', openPermissionSettings: 'openPermissionSettings', requestPermission: 'requestPermission', revealPermissionHelper: 'revealPermissionHelper' };
 const active = new Set(['select', 'observe', 'act', 'focus', 'openTarget', 'stop', 'resume']);
@@ -198,13 +198,13 @@ export function createPluginRuntime(options = {}) {
     return { ok: true, deliveries: records };
   }
   async function authorizeApplication(runtime, endpoint, args, sessionKey, signal) {
-    if (!['select', 'observe', 'act', 'resume', 'preview'].includes(endpoint)) return;
+    if (!['select', 'observe', 'act', 'resume', 'preview'].includes(endpoint)) return args;
     let target;
     if (endpoint === 'select') {
       const inventory = await runtime.listTargets();
       if (inventory.ok === false) throw Object.assign(new Error(inventory.error.message), inventory.error);
       const matches = inventory.targets.filter(value => referenceMatches(value, args.reference));
-      if (matches.length !== 1) return;
+      if (matches.length !== 1) throw error(matches.length ? 'AMBIGUOUS_TARGET' : 'TARGET_NOT_FOUND', 'Reference must match exactly one live target');
       target = matches[0];
       if (args.reference?.identity && !sameIdentity(target.identity, args.reference.identity)) throw error('TARGET_IDENTITY_CHANGED', 'Reference identity does not match the live application');
       checkExpected(target, args.reference?.expected);
@@ -213,7 +213,15 @@ export function createPluginRuntime(options = {}) {
       if (current.ok === false) throw Object.assign(new Error(current.error.message), current.error);
       target = current.state.targets.find(value => value.id === (args.targetId ?? current.state.activeTargetId));
     }
+    if (!target) throw error('TARGET_NOT_SELECTED', 'Select a target first');
+    // Keep the selected occurrence across approval and controller queue waits.
+    // Neither a peer's selection nor a reused ID can change the approved target.
+    const identity = json(target.identity);
+    const bound = endpoint === 'select'
+      ? {...args, reference: {...(typeof args.reference === 'object' ? args.reference : {}), id: target.id, targetId: target.id, identity}}
+      : {...args, targetId: target.id, targetIdentity: identity};
     if (target?.backend === 'native') await appApprovals.authorize(target, sessionKey, signal, () => runtime.applicationMetadata(target));
+    return bound;
   }
   async function request(endpoint, args = {}, { attachments, signal, sessionKey, modelProjection = false } = {}) {
     if (disposed) throw new Error('OpenCU plugin is unloading');
@@ -290,7 +298,7 @@ export function createPluginRuntime(options = {}) {
       await imageRegistry.retain(image);
       return { ok: true, image };
     }
-    await authorizeApplication(runtime, endpoint, args, sessionKey, signal);
+    args = await authorizeApplication(runtime, endpoint, args, sessionKey, signal);
     signal?.throwIfAborted();
     if (active.has(endpoint)) { revision++; activity = { endpoint, targetId: args.targetId ?? null, at: new Date().toISOString(), status: 'running' }; }
     try {

@@ -1,0 +1,20 @@
+{
+  "name": "opencu-sdk-rc2",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@deepseek-ai/cordis": "4.0.4",
+    "@deepseek-ai/dsh-tools": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-attachment": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-scope": "0.2.0-rc.2",
+    "@deepseek-ai/schemastery": "3.18.4",
+    "playwright": "1.63.0",
+    "sharp": "0.35.5",
+    "@deepseek-ai/dsh-system-prompt": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-attachment-local": "0.2.0-rc.2",
+    "typescript": "6.0.3",
+    "@types/node": "22.20.0",
+    "electron": "44.0.0",
+    "electron-chrome-extensions": "4.9.0"
+  }
+}

@@ -2,7 +2,7 @@
  * Session-bound input registry and default-send routing for Conversation.
  * Each retained Session binding owns one shell, its input listeners, and its
  * catalog subscription. Saved drafts enter the model before the first lookup
- * returns; Session-scope disposal releases the shell and its resources.
+ * returns; either Conversation or Session disposal releases these resources.
  */
 import type {} from '@deepseek-ai/dsh-client-product-analytics/client'
 import type { ModelSelectionProjection } from '@deepseek-ai/dsh-api-session-controller/types'
@@ -55,6 +55,7 @@ interface ConversationAttachmentFace {
 /** Session-addressed input facade registry (SessionInputResolver face + composer-layer extras). */
 export class InputHub implements SessionInputResolver {
   private readonly shells = new WeakMap<SessionBinding, SessionInputShell>()
+  private readonly activeShells = new Set<() => void>()
   /** Unsent data survives navigation without holding editors, scopes, or history subscriptions. */
   private readonly drafts = new Map<SessionId, InputDraft>()
   private closed = false
@@ -78,6 +79,7 @@ export class InputHub implements SessionInputResolver {
       return () => {
         this.closed = true
         off()
+        for (const release of this.activeShells) release()
         for (const id of this.drafts.keys()) this.releaseDraft(id)
       }
     }, 'conversation.input: inactive drafts')
@@ -116,12 +118,13 @@ export class InputHub implements SessionInputResolver {
 
   /**
    * Resolve the resident shell for an already-retained, addressable Session binding.
-   * Draft import completes before return. The Session scope owns input listeners,
-   * the inject-managed catalog subscription, and shell teardown.
+   * Draft import completes before return. Session and Conversation lifetimes
+   * jointly own listeners, the catalog injection, and shell teardown.
    * @param binding - session assembly handle.
    * @returns the shell.
    */
   shellFor(binding: SessionBinding): SessionInputShell {
+    if (this.closed) throw new Error('conversation.input: owner disposed')
     const existing = this.shells.get(binding)
     if (existing !== undefined) return existing
     const { session, ctx: actx } = binding
@@ -173,9 +176,11 @@ export class InputHub implements SessionInputResolver {
       this.drafts.delete(session.sessionId)
       shell.restoreDraft(saved)
     }
-    // Live listeners and editors follow the scope. Transfer only unsent data
-    // to the browser lifetime before releasing the old shell's other resources.
-    actx.effect(() => {
+    // Both owners can outlive one another. Cordis makes this shared disposer
+    // idempotent; normal navigation retains only unsent data, while unloading
+    // Conversation releases all of its resources without disposing the Session.
+    let release: (() => void) | undefined
+    release = actx.effect(() => {
       const offs = [
         actx.on('slash/input-begin-command', req =>
           shell.beginCommand(req.claim, req.span) ? true : undefined),
@@ -186,8 +191,16 @@ export class InputHub implements SessionInputResolver {
         actx.on('slash/input-insert-text', req =>
           shell.insertText(req.text, req.span, req.continue === true) ? true : undefined),
       ]
+      const catalogs = actx.inject(['inputTriggers'], (scope) => {
+        scope.effect(() => {
+          shell.refreshLexiconSubscription()
+          return () => { shell.refreshLexiconSubscription() }
+        }, 'conversation.input: reference catalogs')
+      })
       return () => {
+        if (release !== undefined) this.activeShells.delete(release)
         for (const off of offs) off()
+        void catalogs.dispose()
         const saved = shell.captureDraft()
         const keep = !this.closed && !session.getSnapshot().removed
           && (saved.draft !== '' || saved.attachmentIds.length > 0)
@@ -201,12 +214,7 @@ export class InputHub implements SessionInputResolver {
         }
       }
     }, 'conversation.input: session shell')
-    actx.inject(['inputTriggers'], (scope) => {
-      scope.effect(() => {
-        shell.refreshLexiconSubscription()
-        return () => { shell.refreshLexiconSubscription() }
-      }, 'conversation.input: reference catalogs')
-    })
+    this.activeShells.add(release)
     if (saved === undefined) shell.setDraft(readConversationDraft(binding.sessionId))
     return shell
   }
