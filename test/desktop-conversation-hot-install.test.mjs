@@ -188,7 +188,8 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
     assert.equal(digest(await readFile(inputs.executablePath)), inputs.executableSha256);
     app.context().on('page', candidate => candidate.on('pageerror', error => errors.push(redact(error.message))));
     page = await until(() => app.windows().find(candidate => candidate.url().startsWith('dsh-app://app/')), 'native app window', 60000);
-    page.on('request', request => resources.request({ key: request, url: request.url(), method: request.method(), type: request.resourceType() }));
+    page.on('request', request => resources.request({ key: request, url: request.url(), method: request.method(), type: request.resourceType(),
+      readBody: () => request.postData() }));
     page.on('response', response => resources.response({ key: response.request(), url: response.url(), status: response.status(),
       method: response.request().method(), type: response.request().resourceType() }));
     page.on('requestfailed', request => resources.failed({ key: request, url: request.url(), errorText: request.failure()?.errorText,

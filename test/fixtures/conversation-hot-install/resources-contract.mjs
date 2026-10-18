@@ -56,6 +56,72 @@ test('same request retains initiation phase while response and failure retain th
   assert.equal(response.resource.category, 'module-events'); assert.equal(f.lines.join('\n').includes('SECRET'), false);
   assert(rows.filter(row => row.kind === 'mark').every(row => row.clock === 'test-receive-monotonic'));
 });
+test('OpenCU method enum follows its requestId through response and failure without retaining sensitive args', () => {
+  const f = fixture(), secret = 'PRIVATE_ARGS_SESSION_RENDERER_HEADERS';
+  for (const [origin, method] of [['dsh-app://app', 'events'], ['http://127.0.0.1:43210', 'browser/disconnect']]) {
+    const key = {}, url = origin + '/api/opencu'; let reads = 0;
+    f.value.mark('quit-issued-received');
+    f.value.request({ key, url, method: 'POST', type: 'fetch', readBody: () => {
+      reads++; return JSON.stringify({ method, args: [secret, { session: secret, rendererId: secret }], headers: { secret } });
+    } });
+    f.tick(2); f.value.mark('host-exit-received');
+    f.value.response({ key, url, method: 'POST', type: 'fetch', status: 503 });
+    f.value.failed({ key, url, method: 'POST', type: 'fetch', errorText: 'net::ERR_UNEXPECTED' });
+    assert.equal(reads, 1);
+  }
+  assert.equal(JSON.stringify(f.value.snapshot()).includes(secret), false);
+  f.value.flush(); const rows = f.rows().filter(row => row.requestId);
+  assert.equal(rows.length, 6);
+  for (let i = 0; i < rows.length; i += 3) {
+    const group = rows.slice(i, i + 3);
+    assert.deepEqual(group.map(row => row.kind), ['request', 'response', 'requestfailed']);
+    assert.equal(new Set(group.map(row => row.requestId)).size, 1);
+    assert.equal(new Set(group.map(row => row.opencuMethod)).size, 1);
+    assert.equal(group[0].opencuMethod, i === 0 ? 'events' : 'browser/disconnect');
+    assert(group.every(row => row.startedPhase === 'quit-issued-received'));
+    assert.equal(group[1].phase, 'host-exit-received'); assert.equal(group[1].status, 503);
+    assert.equal(group[2].errorText, 'net::ERR_UNEXPECTED');
+  }
+  assert.notEqual(rows[0].requestId, rows[3].requestId);
+  assert.equal(f.lines.join('\n').includes(secret), false);
+});
+test('unknown and invalid OpenCU bodies retain only fixed classifications, never secrets or parse errors', () => {
+  const f = fixture(), secret = 'PRIVATE_UNKNOWN_METHOD_AND_BODY';
+  const cases = [
+    [() => JSON.stringify({ method: secret, args: [secret] }), 'other'],
+    [() => JSON.stringify({ method: 'events/' + secret }), 'other'],
+    [() => '{' + secret, 'invalid'],
+    [() => JSON.stringify({ args: [secret] }), 'invalid'],
+    [() => JSON.stringify({ method: 42, args: [secret] }), 'invalid'],
+    [() => '[]', 'invalid'], [() => 'null', 'invalid'], [() => null, 'invalid'],
+    [() => secret.repeat(4000), 'invalid'],
+    [() => { throw Error(secret); }, 'invalid'],
+  ];
+  for (const [readBody] of cases) f.value.request({ key: {}, url: 'dsh-app://app/api/opencu', method: 'POST', type: 'fetch', readBody });
+  assert.equal(JSON.stringify(f.value.snapshot()).includes(secret), false);
+  f.value.flush();
+  assert.deepEqual(f.rows().filter(row => row.kind === 'request').map(row => row.opencuMethod), cases.map(row => row[1]));
+  assert.equal(f.lines.join('\n').includes(secret), false);
+});
+test('non-exact OpenCU routes, origins and HTTP methods never read bodies or invent a method without a request', () => {
+  const f = fixture(), secret = 'PRIVATE_NON_ROUTE', cases = [
+    ['https://external.example/api/opencu', 'POST'], ['http://127.0.0.1:43211/api/opencu', 'POST'],
+    ['http://localhost:43210/api/opencu', 'POST'], ['https://127.0.0.1:43210/api/opencu', 'POST'],
+    ['dsh-app://other/api/opencu', 'POST'], ['dsh-app://app:123/api/opencu', 'POST'],
+    ['dsh-app://user:PRIVATE@app/api/opencu', 'POST'],
+    ['http://user:PRIVATE@127.0.0.1:43210/api/opencu', 'POST'],
+    ['dsh-app://app/api/opencu/', 'POST'], ['dsh-app://app/api/opencu-extra', 'POST'],
+    ['dsh-app://app/api/%6fpencu', 'POST'], ['dsh-app://app/api/opencu', 'GET'],
+    ['invalid URL ' + secret, 'POST'],
+  ];
+  for (const [url, method] of cases) f.value.request({ key: {}, url, method, type: 'fetch',
+    readBody() { assert.fail('body must remain unread for non-exact route/origin/method'); } });
+  f.value.failed({ key: {}, url: 'dsh-app://app/api/opencu', method: 'POST', type: 'fetch', errorText: 'net::ERR_UNEXPECTED' });
+  f.value.flush();
+  assert(f.rows().every(row => !Object.hasOwn(row, 'opencuMethod')));
+  assert.equal(f.rows().find(row => row.kind === 'requestfailed').startObserved, false);
+  assert.equal(f.lines.join('\n').includes('PRIVATE'), false);
+});
 test('unknown resource events cannot fabricate successful phases or a known clock', () => {
   const f = fixture(); f.value.mark('installed-snapshot-ok'); f.value.mark('PRIVATE_PHASE');
   f.value.failed({ url: 'unknown:PRIVATE_URL', errorText: 'PRIVATE_ERROR', method: 'PRIVATE_METHOD', type: 'PRIVATE_TYPE' });

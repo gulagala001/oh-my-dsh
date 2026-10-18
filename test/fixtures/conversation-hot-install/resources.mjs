@@ -25,6 +25,20 @@ export function createResourceDiagnostics({ now, write = line => console.log(lin
   const staticPaths = new Set(declaredStaticPaths);
   let requestId = 0, sequence = 0, phase = 'prepare', loopback, dropped = 0, emitted = false;
   const ms = () => Math.max(0, Math.min(720000, Math.round(now() - started)));
+  function opencuMethod(raw, method, readBody) {
+    let url;
+    try { url = new URL(raw); } catch { return; }
+    const shell = url.protocol === 'dsh-app:' && url.host === 'app';
+    const local = loopback && url.origin === loopback;
+    if ((!shell && !local) || url.username || url.password || url.pathname !== '/api/opencu' || method !== 'POST') return;
+    try {
+      const body = readBody?.();
+      if (typeof body !== 'string' || body.length > 65536) return 'invalid';
+      const value = JSON.parse(body);
+      if (!value || typeof value !== 'object' || Array.isArray(value) || typeof value.method !== 'string') return 'invalid';
+      return choice(value.method, ['events', 'browser/disconnect']);
+    } catch { return 'invalid'; }
+  }
   function resource(raw) {
     let url;
     try { url = new URL(raw); } catch { return { category: 'invalid' }; }
@@ -89,8 +103,11 @@ export function createResourceDiagnostics({ now, write = line => console.log(lin
       marks.push({ sequence: ++sequence, ms: ms(), phase, kind: 'mark', label,
         pid: integer(fields.pid), clock: 'test-receive-monotonic' });
     },
-    request({ key, url, method, type }) {
+    request({ key, url, method, type, readBody }) {
       const start = { requestId: ++requestId, startObserved: true, startedMs: ms(), startedPhase: phase };
+      // Only the fixed enum survives; body/args and unknown method strings are never retained.
+      const classification = opencuMethod(url, method, readBody);
+      if (classification !== undefined) start.opencuMethod = classification;
       if (key && typeof key === 'object') requests.set(key, start);
       record('request', { ...start, resource: resource(url), method: choice(method, ['GET', 'HEAD', 'POST', 'OPTIONS']),
         type: choice(type, ['document', 'stylesheet', 'image', 'media', 'font', 'script', 'fetch', 'xhr', 'eventsource', 'other']) });
