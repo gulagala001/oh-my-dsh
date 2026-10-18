@@ -1,6 +1,6 @@
 # Oh My DSH 使用文档
 
-[English](README_EN.md) · [项目介绍](../README.md) · [新版素材](releases.md)
+[English](README_EN.md) · [项目介绍](../README.md) · [下载与版本](releases.md)
 
 从你现在要做的事开始，无需读完全部文档。OMD 继续使用 DSH 原有模型、会话、工具与技能。
 
@@ -8,7 +8,7 @@
 
 **[安装与版本配对](install.md) → [第一次使用](getting-started.md) → [日常使用](usage.md)**
 
-当前发行 `0.2.1-rc.2.omd.0.17.3` 匹配 DSH `0.2.1-rc.2`，默认内置新版 OpenCU `2.0.0`；尚未公开发布。旧 0.10 包使用固定 tag 文档，不能把新版介绍当作旧包能力。完整 CU 界面还需要匹配宿主适配。
+安装有两种方式：**[复制指令给 AI](install.md#ai)** 或 **[在“添加插件”中粘贴地址](install.md#gui)**。已发布 OMD 0.17.4 的 DSH 0.2.1-rc.1／0.2.1-rc.2 配套包，内置 OpenCU。[下载与发行范围](releases.md)。
 
 <a id="版本与文档范围"></a>
 <a id="按需查阅"></a>
@@ -41,7 +41,7 @@
 
 ### 平台与素材
 
-[Windows 条件](windows.md) · [新版截图版本与来源](releases.md) · [功能展示](showcase.md)
+[Windows 条件](windows.md) · [下载与版本](releases.md) · [功能展示](showcase.md)
 
 ## 反馈与参与
 

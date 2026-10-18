@@ -2,7 +2,7 @@
 
 [简体中文](usage.md) · [Docs index](README_EN.md) · [First task](getting-started_EN.md) · [Troubleshooting](troubleshooting_EN.md) · [Development](development_EN.md)
 
-> Current source is **OMD `0.2.1-rc.2.omd.0.17.3` / DSH `0.2.1-rc.2`**, bundling OpenCU `2.0.0`. Start with [version matching](install_EN.md); historical 0.10 users should follow their fixed-tag documentation.
+> Current source is **OMD `0.2.1-rc.2.omd.0.17.4` / DSH `0.2.1-rc.2`**, bundling OpenCU `2.0.0`. Start with [version matching](install_EN.md); historical 0.10 users should follow their fixed-tag documentation.
 
 OMD retains DSH's models, projects, sessions, native tools, files, skills, and content tabs. Package ID `trisoul_x`, preset `trisoul-x`, and existing data locations remain compatible.
 
@@ -10,18 +10,9 @@ OMD retains DSH's models, projects, sessions, native tools, files, skills, and c
 
 ## Install in Existing DSH
 
-Published fixed pairs are DSH `0.2.1-alpha.1` / OMD `0.2.1-alpha.1.omd.0.10.0`, or DSH `0.2.0-rc.2` / OMD `0.2.0-rc.2.omd.0.10.0`. Local 0.17 has no public URL. Select a complete pair from the [fixed artifact table](../README_EN.md#quickstart), not `latest`; do not relabel alpha.2 artifacts for rc.2.
+Choose **[copy instructions to an AI](install_EN.md#ai)** or **[use the Add Plugin dialog](install_EN.md#gui)**. The installation guide contains the fixed package URLs for DSH 0.2.1-rc.1 and 0.2.1-rc.2; OMD already includes OpenCU.
 
-This example installs public **alpha.1 Web** only. Use Node.js ≥22.19, Git, pnpm 11.23.0 for that fixed release, and PowerShell 7 on Windows. Finish tasks, stop the original service, back up actual `DSH_HOME`, and retain profile, port, and launch method. Use the same data directory:
-
-```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-alpha.1.omd.0.10.0/trisoul_x-0.2.1-alpha.1.omd.0.10.0.tgz
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
-```
-
-Open the complete login link printed at launch. A new Web environment defaults to 3080; retain existing ports and replace `web` with your actual profile. Desktop uses the app or bundled CLI and a package matching its full host version. Its separate `desktop` profile is not managed by an unrelated Web CLI. Public-package details follow [fixed-tag docs](https://github.com/gulagala001/oh-my-dsh/tree/v0.2.1-alpha.1.omd.0.10.0/docs).
-
-Installation defaults to Oh My DSH, full file/command access, and disabled execution approvals. **Explicit profile overrides win.** Existing sessions keep their presets, without automatic conversion. This reconstruction does not update or restart the working DSH.
+After a full restart, create a conversation and select **Oh My DSH**. Existing conversations retain their presets. OMD uses your model accounts; explicit profile permission settings take precedence over its installation defaults.
 
 <a id="update-uninstall"></a>
 
@@ -30,10 +21,10 @@ Installation defaults to Oh My DSH, full file/command access, and disabled execu
 
 Back up, then select a fixed release for the actual full host. The version panel manages OMD in the current profile only; it does not update the host or restart it. Current and remote versions differ. Public calculation excludes `unpublished`; status and installation reject unpublished targets. Unreleased candidates do not get invented download links.
 
-After installation/update/enable/disable, let tasks finish and fully restart the app or original Web service. Closing a window or refreshing does not switch the backend. Public alpha.1 Web removal:
+After installation/update/enable/disable, let tasks finish and fully restart the app or original Web service. Closing a window or refreshing does not switch the backend. Removal example for DSH 0.2.1-rc.2 with the web profile; desktop users should use the plugin interface:
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web remove trisoul_x
+npx --yes @deepseek-ai/dsh@0.2.1-rc.2 plugin --profile web remove trisoul_x
 ```
 
 Disable/uninstall retains models, credentials, sessions, drafts, and memory. Old sessions missing their OMD preset require re-enabling it. A working new standard session does not establish conversion of old sessions. Loader protection does not persist effective bundle patches into user configuration and retains third-party registrations/wrappers.

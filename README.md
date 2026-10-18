@@ -9,7 +9,7 @@
 
 Oh My DSH（OMD）是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的增强插件。它不要求你抛弃已有模型、会话、工具和技能，而是把系统提示词、界面、电脑操作、上下文、记忆和任务管理接在一起：从说清要求，到实际执行，再到检查结果，尽量少在不同入口之间来回切换。
 
-> **安装 / Install:** [DSH rc.1 / rc.2 固定版本与安装入口](docs/releases.md)，内置 OpenCU 2.0.0。
+> **安装：** [复制指令给 AI](docs/install.md#ai) · [在“添加插件”中安装](docs/install.md#gui)。OMD 已内置 OpenCU。
 
 <a id="features"></a>
 
@@ -122,15 +122,14 @@ Dream 自动整理默认关闭，开启后默认每小时检查；手动和自�
 <a id="quickstart"></a>
 <a id="desktop"></a>
 
-## 安装：先配对版本，再开始工作
+## 安装：两种方式任选一种
 
-1. **核对实际 DSH 完整版本**，选择为该宿主构建的 OMD，不能只改包名或版本号混装。
-2. **备份实际 `DSH_HOME`**，保留原 profile、会话、凭据与其他插件。
-3. 桌面应用使用其插件管理入口或自带 CLI；Web 使用匹配版本 CLI 和原 profile。安装后按对应说明完整重启，再新建会话选择 **Oh My DSH**。
+1. **[交给 AI 安装](docs/install.md#ai)**：复制一整段指令，AI 自动确认现有 DSH 环境并选择匹配安装包。
+2. **[自己点界面安装](docs/install.md#gui)**：打开 **插件 → ＋ 添加插件**，粘贴与你的 DSH 版本对应的地址，点击 **安装**。
 
-> **权限提示**：OMD 安装配置默认完整文件／命令访问、关闭执行审批；显式 profile 覆盖优先。安装前确认符合你的用途。OMD 不附带模型账号，模型调用和后台整理按你的提供方计费。
+两种方式都沿用现有环境。当前公开包支持 DSH **0.2.1-rc.2** 和 **0.2.1-rc.1**。OMD 已内置 OpenCU；完整桌面 CU 另有[宿主条件](docs/install.md#computer-use)。
 
-**[查看安装步骤、旧版固定包与新版候选条件 →](docs/install.md)**
+[下载与旧版入口](docs/releases.md) · [已有安装如何升级](docs/upgrade.md)
 
 <a id="support"></a>
 

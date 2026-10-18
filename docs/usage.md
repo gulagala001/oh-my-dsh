@@ -2,24 +2,17 @@
 
 [English](usage_EN.md) · [文档目录](README.md) · [首次使用](getting-started.md) · [排障](troubleshooting.md) · [开发入口](development.md)
 
-> 当前源码为 **OMD `0.2.1-rc.2.omd.0.17.3` / DSH `0.2.1-rc.2`**，默认内置 OpenCU `2.0.0`。安装先看[版本配对](install.md)，旧 0.10 用户使用对应固定 tag 文档。
+> 当前源码为 **OMD `0.2.1-rc.2.omd.0.17.4` / DSH `0.2.1-rc.2`**，默认内置 OpenCU `2.0.0`。安装先看[版本配对](install.md)，旧 0.10 用户使用对应固定 tag 文档。
 
 OMD 继续使用 DSH 的模型、项目、会话、原生工具、文件、技能与内容标签。包 ID `trisoul_x`、preset `trisoul-x` 和原数据目录保持兼容。
 
-## 安装到现有 DSH（推荐）
+<a id="安装到现有-dsh推荐"></a>
 
-公开固定配对为 DSH `0.2.1-alpha.1`／OMD `0.2.1-alpha.1.omd.0.10.0`，或 DSH `0.2.0-rc.2`／OMD `0.2.0-rc.2.omd.0.10.0`。本地 0.17 没有公开安装 URL；按[首页固定包表](../README.md#quickstart)选择完整匹配，不用 `latest`，不将 alpha.2 包改 metadata 装到 rc.2。
+## 安装到现有 DSH
 
-以下只演示公开 **alpha.1 Web**：Node.js ≥22.19、Git、固定版本的 pnpm 11.23.0，Windows 使用 PowerShell 7。先结束任务、停止服务并备份实际 `DSH_HOME`，保留原 profile、端口及启动方式，在同一数据目录执行：
+选择 **[复制指令给 AI 安装](install.md#ai)** 或 **[通过“添加插件”安装](install.md#gui)**。安装页提供 DSH 0.2.1-rc.1／0.2.1-rc.2 对应的固定地址，OMD 已包含 OpenCU。
 
-```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-alpha.1.omd.0.10.0/trisoul_x-0.2.1-alpha.1.omd.0.10.0.tgz
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
-```
-
-打开本次启动打印的完整登录链接。新 Web 默认 3080，已有环境沿用原端口；自定义 profile 替换 `web`。桌面通过应用内或自带 CLI 安装与实际完整宿主匹配的公开包，属于独立 `desktop` profile，普通 Web CLI 不能代替它。固定发行的详细步骤以[对应 tag 文档](https://github.com/gulagala001/oh-my-dsh/tree/v0.2.1-alpha.1.omd.0.10.0/docs)为准。
-
-默认 preset 为 Oh My DSH，包含完整文件／命令访问、关闭执行审批；**profile 显式覆盖优先**。旧会话保留原 preset，不自动转换。当前重构不更新或重启工作 DSH。
+完整重启后新建会话，选择 **Oh My DSH**；已有会话保留原 preset。模型沿用你的 DSH 配置，权限以现有 profile 的显式设置为准。
 
 <a id="update-uninstall"></a>
 
@@ -28,10 +21,10 @@ npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
 
 升级先备份，再按真实完整宿主选择固定发行。版本面板只操作当前 profile 的 OMD，不升级宿主，不自动重启。当前版本与远端版本分开；公开计算默认排除 `unpublished`，展示和安装前均拒绝未发布目标。没有对应公开成品时，不为本地候选伪造下载入口。
 
-安装、更新、启停后，等任务结束再完整重启应用或原 Web 服务，关窗口或刷新不替代后端切换。公开 alpha.1 Web 卸载示例：
+安装、更新、启停后，等任务结束再完整重启应用或原 Web 服务，关窗口或刷新不替代后端切换。以下为 DSH 0.2.1-rc.2、web profile 的卸载示例；桌面请使用插件页：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web remove trisoul_x
+npx --yes @deepseek-ai/dsh@0.2.1-rc.2 plugin --profile web remove trisoul_x
 ```
 
 停用／卸载保留模型、凭据、会话、草稿和记忆；缺少 OMD preset 的旧会话需重新启用插件后继续。新 standard 会话可运行不证明旧会话已经转换。Loader 的配置保护不把 bundle effective patch 写回用户配置，卸载保留第三方注册和包装。

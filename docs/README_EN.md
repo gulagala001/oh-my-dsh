@@ -1,6 +1,6 @@
 # Oh My DSH Documentation
 
-[简体中文](README.md) · [Project overview](../README_EN.md) · [Feature gallery](releases.md)
+[简体中文](README.md) · [Project overview](../README_EN.md) · [Downloads and versions](releases.md)
 
 Start with what you want to do. OMD retains your DSH models, conversations, tools and skills.
 
@@ -8,7 +8,7 @@ Start with what you want to do. OMD retains your DSH models, conversations, tool
 
 **[Install and match versions](install_EN.md) → [First steps](getting-started_EN.md) → [Everyday usage](usage_EN.md)**
 
-Current release `0.2.1-rc.2.omd.0.17.3` targets DSH `0.2.1-rc.2` and bundles new OpenCU `2.0.0`. It is not publicly released yet. Use fixed-tag docs for historical 0.10 packages; new features are not a claim about old releases. Complete CU UI also requires matching host adapters.
+Installation offers two routes: **[give an AI the instructions](install_EN.md#ai)** or **[paste a URL into Add Plugin](install_EN.md#gui)**. Published OMD 0.17.4 packages support DSH 0.2.1-rc.1 and 0.2.1-rc.2 and include OpenCU. [Downloads and release scope](releases.md).
 
 ## Find your topic
 
@@ -39,7 +39,7 @@ Topics without an English edition are marked **Chinese**.
 
 ### Platforms and visuals
 
-[Windows conditions (Chinese)](windows.md) · [Feature gallery](releases.md) · [Feature showcase](showcase_EN.md)
+[Windows conditions (Chinese)](windows.md) · [Downloads and versions](releases.md) · [Feature showcase](showcase_EN.md)
 
 ## Feedback and contribution
 

@@ -2,7 +2,7 @@
 
 [文档目录](README.md) · [首次使用](getting-started.md) · [安装与升级](upgrade.md) · [排障](troubleshooting.md)
 
-Windows 上的任务、上下文、记忆、工作流与主题不以原生桌面控制为前提。当前源码为 **`0.2.1-rc.2.omd.0.17.3` / DSH `0.2.1-rc.2`**；安装与宿主适配见[版本配对](install.md)。原生桌面能力与系统权限条件见[OpenCU 使用指南](computer-use.md)。
+Windows 上的任务、上下文、记忆、工作流与主题不以原生桌面控制为前提。当前源码为 **`0.2.1-rc.2.omd.0.17.4` / DSH `0.2.1-rc.2`**；安装与宿主适配见[版本配对](install.md)。原生桌面能力与系统权限条件见[OpenCU 使用指南](computer-use.md)。
 
 ## 环境与版本
 
@@ -12,19 +12,14 @@ Windows 上的任务、上下文、记忆、工作流与主题不以原生桌面
 | Web／源码 | Node.js ≥22.19（建议 24）、Git、PowerShell 7，以及该 checkout 的 `packageManager` 指定版本。当前候选是 pnpm 11.28.5；公开 0.10 文档使用 11.23.0。 |
 | 当前 0.2.1-rc.2 源码 | SDK、组件、依赖和锁文件必须匹配 DSH `0.2.1-rc.2`。其他宿主使用各自独立构建；Windows 系统依赖和权限需在实际设备上准备。 |
 
-公开固定配对仍是 **DSH `0.2.1-alpha.1` / OMD `0.2.1-alpha.1.omd.0.10.0`**，或[固定 rc.2 桌面配对](upgrade.md#desktop)。这些例子只对应已存在的公开资产，不包含本地恢复的新行为，不暗示当前所有官方桌面更新源仍为 rc.2。
+当前公开 OMD 0.17.4 分别提供 DSH **0.2.1-rc.1／0.2.1-rc.2** 配套包。注意 0.2.0-rc.2 是另一宿主版本，不能混装。
 
 ## 安装与试用
 
-以下只演示公开 **alpha.1 Web**。已有环境先结束任务、停止服务并备份实际 `DSH_HOME`，沿用原 profile 和端口；首次可用 `web`。在 PowerShell 7 中运行：
+- **[交给 AI 安装](install.md#ai)**：复制整段指令，AI 核对现有环境后安装。
+- **[自己安装](install.md#gui)**：打开左侧“插件” → 右上角“＋ 添加插件”，粘贴安装页中匹配宿主的完整地址，点击“安装”。桌面和 Web 均可走此入口。
 
-```powershell
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-alpha.1.omd.0.10.0/trisoul_x-0.2.1-alpha.1.omd.0.10.0.tgz
-if ($LASTEXITCODE -ne 0) { throw '插件安装失败；保留原生错误，不绕过门禁' }
-npx --yes @deepseek-ai/dsh@0.2.1-alpha.1 --profile web
-```
-
-打开启动时打印的登录链接，新建会话选择 **Oh My DSH**。已有模型、凭据和会话沿用 DSH；检查当前版本、原模型、旧会话／附件、外观和一次无副作用工具调用。公开安装无需克隆、手动构建或另起服务；有实际脚本批准错误再看[对应排障](upgrade.md#build-approval)，不使用 version exemption。
+已有用户先备份，装好后完整重启对应应用或 Web 服务。首次 Web 启动和 CLI 备用步骤见[安装页补充说明](install.md#cli)。仅在遇到构建批准错误时查看[安装脚本处理](upgrade.md#build-approval)。
 
 ### 从源码独立试用（可选）
 

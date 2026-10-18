@@ -9,7 +9,7 @@
 
 Oh My DSH (OMD) enhances [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). Keep your models, conversations, tools and skills. Bring system instructions, appearance, computer use, context, memory and task tracking into one workflow—from explaining the goal to doing the work and checking the result.
 
-> **安装 / Install:** [DSH rc.1 / rc.2 固定版本与安装入口](docs/releases.md)，内置 OpenCU 2.0.0。
+> **Install:** [Copy instructions to an AI](docs/install_EN.md#ai) · [Use Add Plugin](docs/install_EN.md#gui). OMD includes OpenCU.
 
 <a id="features"></a>
 
@@ -120,15 +120,14 @@ Usage comes from actual receipts: **unknown is not zero; `≥` is a known lower 
 <a id="quickstart"></a>
 <a id="desktop"></a>
 
-## Install: match the host first
+## Installation: choose one method
 
-1. **Check the full DSH version actually running.** Use OMD built for that host; changing metadata is not compatibility.
-2. **Back up the actual `DSH_HOME`.** Preserve profiles, conversations, credentials and other plugins.
-3. On desktop, use the app's plugin manager or bundled CLI. On Web, use the matching CLI and your existing profile. Follow the restart instructions, then choose **Oh My DSH** in a new conversation.
+1. **[Let an AI install it](docs/install_EN.md#ai)** — copy one instruction block; the AI checks your running DSH and selects the matching package.
+2. **[Install through the interface](docs/install_EN.md#gui)** — open **Plugins → ＋ Add Plugin**, paste the URL matching your DSH version, and click **Install**.
 
-> **Permissions:** OMD's installation configuration defaults to full file/command access and no execution approvals; explicit profile overrides win. Confirm this suits your use. OMD supplies no model account; provider charges also apply to background processing.
+Both methods preserve your existing environment. Published packages are available for DSH **0.2.1-rc.2** and **0.2.1-rc.1**. OMD includes OpenCU; complete desktop CU has [additional host requirements](docs/install_EN.md#computer-use).
 
-**[Installation steps, fixed older packages and candidate requirements →](docs/install_EN.md)**
+[Downloads and older versions](docs/releases.md) · [Upgrade an existing installation](docs/upgrade_EN.md)
 
 <a id="support"></a>
 

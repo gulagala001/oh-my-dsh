@@ -2,7 +2,7 @@
 
 [简体中文](development.md) · [Documentation (Chinese)](README.md) · [Usage](usage_EN.md) · [Contributing](../CONTRIBUTING.md)
 
-For source trials and contributors. Ordinary users should install a [fixed release (Chinese)](upgrade.md), without running engineering tests.
+For source trials and contributors. Ordinary users should install a [installation guide](install_EN.md), without running engineering tests.
 This checkout retains the fixed `0.10.0` base and later work. The default is the **local OMD `0.2.1-rc.2.omd.0.17.4` / DSH `0.2.1-rc.2` compatibility candidate**; 0.2.0-rc.2/alpha.3/0.2.1-rc.1 build paths, existing artifacts and data remain. [Package metadata](https://github.com/gulagala001/oh-my-dsh/blob/main/package.json) remains `unpublished` and `private`. Matching public Chat, Conversation and host components are pinned in the [DSH manifest](../vendor/dsh.json). [Rewritten OpenCU 2.0.0](../vendor/opencu.json) is fully bundled, supplying the core, tools and original REA frontend with OMD alone. The 0.2.1-rc.2 build uses Cordis `4.0.5`, Schemastery `3.18.5` and a frozen dependency lock without relaxed compatibility checks.
 
 OMD tarballs omit the redundant standalone registration bundle `vendor/opencu/lib/client.js`: the integrated client is already in OMD’s main bundle, while `client.factory.mjs` remains available for offline rebuilds. The workspace snapshot and standalone OpenCU distribution are unchanged.

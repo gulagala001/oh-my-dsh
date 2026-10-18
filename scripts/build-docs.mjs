@@ -25,7 +25,7 @@ const guides = [
 ];
 const navigation = [
   ['开始使用', [['docs/README.md', '文档目录'], ['docs/getting-started.md', '首次使用'],
-    ['docs/upgrade.md', '安装与升级'], ['docs/usage.md', '完整使用指南'], ['docs/troubleshooting.md', '遇到问题']]],
+    ['docs/install.md', '安装'], ['docs/upgrade.md', '升级与迁移'], ['docs/usage.md', '完整使用指南'], ['docs/troubleshooting.md', '遇到问题']]],
   ['继续探索', [['docs/context-workflow.md', '上下文与记忆'], ['docs/dream-memory.md', 'Dream 记忆'],
     ['docs/usage.md#computer-use', '电脑操作'], ['docs/skins.md', '主题与定制'],
     ['docs/workflow.md', 'Ultracode 与 Workflow'], ['docs/plugin-compatibility.md', '插件兼容性'],
@@ -34,7 +34,7 @@ const navigation = [
 ];
 const englishNavigation = [
   ['Get Started', [['docs/README_EN.md', 'Documentation'], ['docs/getting-started_EN.md', 'First Run'],
-    ['docs/upgrade_EN.md', 'Install and Upgrade'], ['docs/usage_EN.md', 'Usage Guide'], ['docs/troubleshooting_EN.md', 'Troubleshooting']]],
+    ['docs/install_EN.md', 'Install'], ['docs/upgrade_EN.md', 'Upgrade and Migration'], ['docs/usage_EN.md', 'Usage Guide'], ['docs/troubleshooting_EN.md', 'Troubleshooting']]],
   ['Explore', [['docs/context-workflow.md', 'Context and Memory'], ['docs/dream-memory.md', 'Dream Memory'],
     ['docs/usage_EN.md#computer-use', 'Computer Use'], ['docs/skins.md', 'Themes'],
     ['docs/workflow.md', 'Pro and Ultracode'], ['docs/plugin-compatibility_EN.md', 'Plugin Compatibility'],

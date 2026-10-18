@@ -1,71 +1,117 @@
-[rc.1 / rc.2 当前下载与安装](releases.md)
+# 安装 Oh My DSH
 
-# 安装与版本配对
+[English](install_EN.md) · [首页](../README.md) · [升级与迁移](upgrade.md)
 
-[English](install_EN.md) · [首页](../README.md) · [装好后第一次使用](getting-started.md)
+**选一种方式即可：复制指令让 AI 安装，或在 DSH 的“添加插件”窗口粘贴安装地址。** OMD 是 DSH 插件，已内置 OpenCU，不用再单独安装 OpenCU。
 
-## 先看这一条
+还没有 DSH？先安装 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)，再回到本页。两种方式都适用于已有的桌面或 Web 环境；第一次使用 Web 的命令见[补充说明](#cli)。
 
-**OMD 是 DSH 插件。当前发行支持 DSH `0.2.1-rc.1` 与 `0.2.1-rc.2`，各自使用完整宿主前缀的 OMD `0.17.4`，内置 OpenCU `2.0.0`。下载及版本配对见[当前发行](releases.md)。
+<a id="ai"></a>
 
-新版 OpenCU 的完整内置浏览器、批注及原生监看还需要**配套 Host／Client／preload 适配**。普通 stock DSH 加装一个插件，不会自动获得这些宿主改动。仅文字、文件、主题等功能不要求先准备电脑控制。
+## 方法一：复制给 AI 安装
 
-| 你手里的环境 | 怎么选 |
-| --- | --- |
-| 当前发行 | 使用维护者交付的匹配插件与宿主适配；核对完整版本、来源及归档 SHA-256。 |
-| DSH `0.2.0-rc.2` | 只能用为 rc.2 单独构建的插件与宿主，不使用 rc.1 包。 |
-| DSH `0.2.1-alpha.3` | 只能用对应 alpha.3 构建，不改版本号强行安装。 |
-| 公开旧版 0.10 | 按下方固定发行及该 tag 文档安装；不包含本页介绍的新版 OpenCU。 |
+将下面整段交给能操作你电脑或终端的 AI。AI 需要访问安装 DSH 的那台电脑；只有文字聊天能力的 AI 无法代为安装。
 
-## 安装前
+```text
+请在这台电脑现有的 DeepSeek Harness（DSH）中安装或升级 Oh My DSH（OMD）。
 
-1. 从实际应用或服务核对 DSH 版本、`DSH_HOME` 和 profile。终端 PATH 里的另一份 `dsh` 不一定是正在运行的宿主。
-2. 结束活动任务并完整退出要更新的实例，备份实际数据目录。保留凭据、会话、附件、其他插件和显式设置；不要用空 profile 冒充升级成功。
-3. 准备自己的模型渠道。OMD 不附带账号；工具任务要求模型支持工具调用，截图理解要求图像输入。
-4. 确认权限：OMD 安装配置默认完整文件／命令访问、关闭执行审批，显式 profile 覆盖优先。记忆共享范围不是文件权限。
+先读取：
+https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md
+https://github.com/gulagala001/oh-my-dsh/blob/main/docs/releases.md
 
-## 桌面应用
-
-在应用的 **插件** 页安装并启用核对过的本地 `.tgz`。需要 CLI 时，使用该桌面应用自带的 CLI，而非全局 npm／npx CLI；桌面保留 `desktop` profile。
-
-macOS 默认安装路径示例（替换归档占位路径，沿用实际 `DSH_HOME`）：
-
-```sh
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add 'file:/absolute/path/to/matching-omd.tgz'
+请自动确认实际运行的是桌面版还是 Web、DSH 完整版本、数据目录（DSH_HOME）和 profile，选择与该 DSH 版本完全匹配的已发布 OMD .tgz。
+保留原模型配置、凭据、会话、附件、用户设置和其他插件；已有数据先备份。若有正在执行的任务，先告知我，不强行中断。
+通过当前 DSH 的“插件 → 添加插件”或该实例配套的 CLI 安装。桌面使用应用自带 CLI 和 desktop profile；Web 沿用原服务的 CLI、profile、数据目录和端口。
+OMD 已内置 OpenCU，不重复安装。不要把仓库 main 当成已发布安装包，也不要为安装插件擅自升级或降级 DSH、换成另一种运行方式、替换宿主或公开发布。
+如果没有匹配的已发布包，说明缺少哪个版本，不要猜下载地址或强行混装。
+安装成功后完整重启此次更新的 DSH 实例，确认 OMD 已启用、新会话能选择 Oh My DSH、原数据和其他插件仍在，最后告诉我实际版本与备份位置。
 ```
 
-Windows 使用应用插件页或实际桌面 CLI，不照搬 Mac 路径。匹配的宿主适配按其交付说明安装；插件 CLI 不负责替换桌面 Host。
+这段指令安装的是已发布插件。完整桌面电脑控制还有[额外条件](#computer-use)，不会由插件安装自动补齐。
 
-## DSH Web
+<a id="gui"></a>
 
-使用原服务的匹配 CLI、原 profile、实际数据目录和端口。下面的 `dsh` 必须指向已核实的原宿主，`web` 换成原 profile：
+## 方法二：在“添加插件”窗口安装
+
+### 1. 确认 DSH 版本
+
+在 DSH 的“关于／版本信息”中查看**宿主完整版本**，例如 0.2.1-rc.2。它不是 OMD 版本；0.2.0-rc.2 和 0.2.1-rc.2 也不是同一版。
+
+### 2. 复制与你的 DSH 对应的地址
+
+**DSH 0.2.1-rc.2 → OMD 0.17.4：**
+
+```text
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.17.4/trisoul_x-0.2.1-rc.2.omd.0.17.4.tgz
+```
+
+**DSH 0.2.1-rc.1 → OMD 0.17.4：**
+
+```text
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.17.4/trisoul_x-0.2.1-rc.1.omd.0.17.4.tgz
+```
+
+完整插件版本中的前半段对应 DSH，末尾 0.17.4 才是 OMD 版本。其他宿主版本请看[下载与旧版入口](releases.md)，不要直接粘贴不匹配的包。
+
+### 3. 粘贴并安装
+
+1. 等当前任务结束。已有 OMD 的用户先按[升级指南](upgrade.md)备份数据。
+2. 点击左侧 **插件**，再点右上角 **＋ 添加插件**。
+3. 在“输入插件的包名、GitHub 仓库地址或本地目录路径”输入框中，粘贴上面的**完整 .tgz 地址**。
+4. 点击 **安装**，等安装完成，确认 Oh My DSH 已启用。
+5. 完整退出并重新打开桌面应用；Web 用户重启原 Web 服务。仅关窗口或刷新网页不等于重启后端。
+6. 新建会话，选择 **Oh My DSH**。模型使用你在 DSH 中配置的渠道，不附带账号。
+
+输入框虽然也支持仓库地址，本指南使用固定发行包，避免直接安装仍在变化的 main 分支。无需先下载 Source code，也不用把 host-adapters.zip 填进去。
+
+安装失败时保留错误，先核对宿主版本；只有遇到“构建脚本未批准”等提示时，才看[安装脚本处理](upgrade.md#build-approval)。
+
+<a id="computer-use"></a>
+
+## 需要电脑或浏览器控制时
+
+| 你要用的功能 | 还需要什么 |
+| --- | --- |
+| 对话、主题、任务、上下文与记忆 | 安装匹配的 OMD，配置模型即可；无需先配置 CU。 |
+| Chrome／Edge 扩展控制 | 在“设置 → 电脑与浏览器”按该版本提示安装扩展并允许配对。 |
+| 完整内置浏览器、侧栏批注、原生监看 | 匹配的 DSH 宿主适配与构建，以及对应系统权限。 |
+
+**目前这些 Release 提供插件包和宿主适配源码，没有可直接安装的配套完整桌面安装器。** host-adapters.zip 是源码适配和构建说明，不是另一个插件。需要完整桌面 CU 时看[构建说明](development.md)及 [OpenCU 使用条件](computer-use.md)；普通插件安装不会替换 DSH 宿主。
+
+OMD 默认安装配置包含完整文件／命令访问并关闭执行审批；已有 profile 的显式权限设置优先。模型调用及后台整理按你的提供方计费。
+
+<a id="cli"></a>
+
+<details>
+<summary>补充：终端安装／首次使用 Web（供 AI 或熟悉命令行的用户）</summary>
+
+已有 Web：使用原服务配套的 CLI，先停止该服务；以下仅适用于 DSH 0.2.1-rc.2 和 web profile。自定义 profile 沿用原名称。
 
 ```sh
 dsh --version
-dsh plugin --profile web add 'file:/absolute/path/to/matching-omd.tgz'
+dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.17.4/trisoul_x-0.2.1-rc.2.omd.0.17.4.tgz
 ```
 
-随后用原启动方式重启。Web 不会因为插件安装而变成有完整内置浏览器的桌面 Host。源码构建及各宿主入口见[开发文档](development.md)。
+之后按原方式启动服务，保留原数据目录和端口。DSH 0.2.1-rc.1 使用上面的 rc.1 地址。
 
-## 装好以后
+首次使用 Web（需要 Node.js ≥22.19；Windows 使用 PowerShell 7）：
 
-完整重启对应实例；桌面仅关窗口或刷新页面不等于重启 Host。核对：
+```sh
+npx --yes @deepseek-ai/dsh@0.2.1-rc.2 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.17.4/trisoul_x-0.2.1-rc.2.omd.0.17.4.tgz
+npx --yes @deepseek-ai/dsh@0.2.1-rc.2 --profile web
+```
 
-- 当前宿主与 OMD 完整版本匹配，插件已启用。
-- 新建会话可以选择 **Oh My DSH**，原模型、旧会话及其他插件仍在。
-- 做一次短对话和无副作用的文件读取；如未配置模型，先完成模型设置。
-- 需要 CU 时打开 **设置 → 电脑与浏览器**，按需准备浏览器资源、系统权限或 Chrome／Edge 扩展配对。详见[电脑操作](computer-use.md)。
+打开终端打印的完整登录链接。默认数据目录为用户目录下的 .dsh，新 Web 默认端口为 3080。已有安装不要用这段命令另建环境。
 
-构建脚本被拦截时，按[精准批准步骤](upgrade.md#build-approval)处理同一已核验包，不用 `ignoreScripts`、放宽 peer、version exemption 或批准全部来绕过。
+macOS 默认桌面安装位置的 CLI 示例（仅适用于实际 DSH 0.2.1-rc.2）：
 
-## 已公开的旧版本
+```sh
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.17.4/trisoul_x-0.2.1-rc.2.omd.0.17.4.tgz
+```
 
-以下是历史固定版本，不是当前发行的下载入口：
+Windows 桌面建议直接用上面的插件界面；命令行路径以实际安装为准。Web CLI 不代替桌面 CLI。
 
-| DSH | OMD | 发行与对应文档 |
-| --- | --- | --- |
-| `0.2.1-alpha.1` | `0.2.1-alpha.1.omd.0.10.0` | [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-alpha.1.omd.0.10.0) · [该版本文档](https://github.com/gulagala001/oh-my-dsh/blob/v0.2.1-alpha.1.omd.0.10.0/README.md) |
-| `0.2.0-rc.2` | `0.2.0-rc.2.omd.0.10.0` | [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.0-rc.2.omd.0.10.0) · [该版本文档](https://github.com/gulagala001/oh-my-dsh/blob/v0.2.0-rc.2.omd.0.10.0/README.md) |
+</details>
 
-不用 GitHub 的 `latest` 标记跨宿主选包。迁移、备份和回退细节保留在[升级指南](upgrade.md)。
+**版本说明：** 本页固定下载地址指向已发布的 0.17.4 包。main 上后续合入的修复不会自动进入已有 Release；需要这些更新时，等待新发行或按开发文档构建。安装之后看[第一次使用](getting-started.md)。
