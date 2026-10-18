@@ -46,7 +46,7 @@ export function createPluginRuntime(options = {}) {
   const deliveryFiles = createDeliveryFiles(() => dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR));
   const appApprovals = createAppApprovals(() => dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR));
   let imageRegistry, startedConfig, reconfiguring;
-  const configurationKey = config => JSON.stringify([config.browserEnabled, config.nativeEnabled, config.extensionEnabled]);
+  const configurationKey = config => JSON.stringify([config.browserEnabled, config.nativeEnabled, config.extensionEnabled, config.managedHeadless === true]);
   async function start() {
     if (disposed) throw new Error('OpenCU plugin is unloading');
     if (reconfiguring) { await reconfiguring; return start(); }
@@ -313,6 +313,7 @@ export function createPluginRuntime(options = {}) {
       }
       if (result.ok === false) return stripPaths(result);
       if (endpoint === 'targets' || endpoint === 'state') result.browsers = [...new Map([...(result.browsers ?? []), ...runtime.extensionConnections().map(item => ({id: 'extension:' + item.instanceId, name: item.label, provider: 'extension', connected: true})), ...(browserConnection?.browsers ?? [])].map(item => [item.id, item])).values()];
+      if (endpoint === 'targets' || endpoint === 'state') result.browserProviders = runtime.runtimeInfo.browserProviders;
       if (result.observation) { result = await attachScreenshot(result, attachments); lastObservation = { targetId: result.targetId, observation: stripPaths(result.observation), image: result.image ?? null }; }
       if (result.state) result = { ...result, state: { ...result.state, status: result.state.mode, selectedTarget: result.state.targets.find(target => target.id === result.state.activeTargetId) ?? null, annotations, lastObservation, revision, activity }, service: { name: 'OpenCU', ...runtime.runtimeInfo }, config: publicConfig(getConfig()) };
       return stripPaths(modelProjection && endpoint === 'state' ? modelResult(result, args) : result);
