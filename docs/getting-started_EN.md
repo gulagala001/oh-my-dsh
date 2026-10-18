@@ -1,8 +1,10 @@
 # Your First Task
 
+> **Release withdrawn (2026-10-18):** OMD 0.18.0, OpenCU 2.0.1 and OMAA 0.16.0 have been withdrawn while a missing preset selector is investigated. The links below point to previous releases; main-branch changes are not a new verified release. Existing users should keep their data and settings.
+
 [简体中文](getting-started.md) · [Docs index](README_EN.md) · [Public installation](../README_EN.md#quickstart) · [Usage](usage_EN.md) · [Troubleshooting](troubleshooting_EN.md)
 
-Start with an installed, fully restarted, matching environment. Current release **`0.2.1-rc.2.omd.0.18.0` / DSH `0.2.1-rc.2`** bundles OpenCU `2.0.1`. Check [installation and version matching](install_EN.md) first. Historical 0.10 users should follow their fixed-tag docs.
+Start with an installed, fully restarted, matching environment. Current release **`0.2.1-rc.2.omd.0.17.4` / DSH `0.2.1-rc.2`** bundles OpenCU `2.0.1`. Check [installation and version matching](install_EN.md) first. Historical 0.10 users should follow their fixed-tag docs.
 
 ## 1. Check Actual Versions and Model
 

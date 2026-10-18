@@ -1,13 +1,15 @@
 # 下载与版本 / Downloads and versions
 
+> **发行已撤回（2026-10-18）：** OMD 0.18.0、OpenCU 2.0.1、OMAA 0.16.0 已撤回，正在修复预设选择入口缺失。以下安装链接恢复为上一发行；main 分支改动不代表新版本已验收。已安装用户请保留数据与配置。
+
 **安装步骤：[复制给 AI 安装](install.md#ai) · [在“添加插件”中安装](install.md#gui) · [English guide](install_EN.md)**
 
 OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表列的是已发布插件包；选择与你正在运行的 DSH **完整版本**相同的一行。OMD includes OpenCU. Match the complete DSH version.
 
 | DSH 宿主 / Host | OMD 插件 / Plugin | 可粘贴安装的包 / Package |
 | --- | --- | --- |
-| 0.2.1-rc.2 | 0.2.1-rc.2.omd.0.18.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.0/trisoul_x-0.2.1-rc.2.omd.0.18.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.0) |
-| 0.2.1-rc.1 | 0.2.1-rc.1.omd.0.18.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.18.0/trisoul_x-0.2.1-rc.1.omd.0.18.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.18.0) |
+| 0.2.1-rc.2 | 0.2.1-rc.2.omd.0.17.4 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.17.4/trisoul_x-0.2.1-rc.2.omd.0.17.4.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.17.4) |
+| 0.2.1-rc.1 | 0.2.1-rc.1.omd.0.17.4 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.17.4/trisoul_x-0.2.1-rc.1.omd.0.17.4.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.17.4) |
 
 ## Release 里的文件怎么选？ / Which asset?
 
@@ -19,7 +21,7 @@ OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表列的是已发�
 | metadata.json | 发行版本及来源信息。 / Release metadata. |
 | GitHub 自动生成的 Source code | 源码归档，供开发者使用，不填入普通插件安装步骤。 / Source archives for developers. |
 
-宿主适配与校验文件：[rc.2 适配源码](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.0/host-adapters.zip) · [rc.2 校验值](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.0/SHA256SUMS) · [rc.1 适配源码](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.18.0/host-adapters.zip) · [rc.1 校验值](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.18.0/SHA256SUMS)
+宿主适配与校验文件：[rc.2 适配源码](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.17.4/host-adapters.zip) · [rc.2 校验值](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.17.4/SHA256SUMS) · [rc.1 适配源码](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.17.4/host-adapters.zip) · [rc.1 校验值](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.17.4/SHA256SUMS)
 
 这些发行**不包含配套完整桌面安装器**。对话、主题、任务和记忆可按插件步骤安装；完整内置浏览器、批注和原生监看需要匹配宿主构建。见[安装条件](install.md#computer-use)。These releases do not include a complete desktop installer; full desktop CU requires a matching host build.
 
@@ -38,4 +40,4 @@ For older hosts, use the matching tag's documentation. Do not choose a package s
 
 ## 市场同步记录（2026-10-18）
 
-[Awesome DSH Plugin 投稿／更新](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/7931)：已有目录条目；本次固定安装地址更新待审。本次维护同一仓库条目，向共用该数据源的下游不重复投稿。自动发现 topics 已配置，市场同步与外部审核尚未确认完成；当前安装请使用上方固定 Release 地址。
+[Awesome DSH Plugin 投稿／更新](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/7931)：本次新版投稿／更新已撤回，等待修复后重新评估。已有旧条目不受影响；不宣称新版已收录。

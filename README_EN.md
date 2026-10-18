@@ -1,5 +1,7 @@
 <p align="center"><img src="docs/images/release/omd-hero-en.jpg" alt="Oh My DSH — More than a new look. A better way to work." width="100%" /></p>
 
+> **Release withdrawn (2026-10-18):** OMD 0.18.0, OpenCU 2.0.1 and OMAA 0.16.0 have been withdrawn while a missing preset selector is investigated. The links below point to previous releases; main-branch changes are not a new verified release. Existing users should keep their data and settings.
+
 <h1 align="center">Oh My DSH</h1>
 <p align="center"><strong>Better agent instructions. A workspace that feels yours. Longer work, less repetition.</strong></p>
 <p align="center">System prompts · Five themes · Computer use · Annotations · Usage monitoring · Memory & auto compaction</p>

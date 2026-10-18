@@ -1,5 +1,7 @@
 # Upgrade, Migration, and Rollback
 
+> **Release withdrawn (2026-10-18):** OMD 0.18.0, OpenCU 2.0.1 and OMAA 0.16.0 have been withdrawn while a missing preset selector is investigated. The links below point to previous releases; main-branch changes are not a new verified release. Existing users should keep their data and settings.
+
 [简体中文](upgrade.md) · [Installation](install_EN.md) · [Backup](#2-stop-and-back-up) · [Web to desktop](#web-to-desktop) · [Troubleshooting](troubleshooting_EN.md)
 
 **For a first installation, use [AI instructions](install_EN.md#ai) or [Add Plugin](install_EN.md#gui).** This page covers an existing installation. Upgrading OMD does not upgrade DSH or install desktop host adapters.
@@ -10,7 +12,7 @@
 
 Check the actual DSH version, desktop/Web mode, data directory (DSH_HOME), and profile. Desktop uses desktop; Web uses the profile in its original launch command. A different CLI on PATH may belong to a different installation.
 
-DSH **0.2.1-rc.2** uses OMD **0.18.0**; DSH **0.2.1-rc.1** also uses OMD **0.18.0**. Select the matching package from [downloads](releases.md); DSH 0.2.0-rc.2 is a different host. Keep a newer or customized installation unchanged until a matching upgrade is available.
+DSH **0.2.1-rc.2** uses OMD **0.17.4**; DSH **0.2.1-rc.1** also uses OMD **0.17.4**. Select the matching package from [downloads](releases.md); DSH 0.2.0-rc.2 is a different host. Keep a newer or customized installation unchanged until a matching upgrade is available.
 
 ## 2. Stop and Back Up
 

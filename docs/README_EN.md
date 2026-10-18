@@ -1,5 +1,7 @@
 # Oh My DSH Documentation
 
+> **Release withdrawn (2026-10-18):** OMD 0.18.0, OpenCU 2.0.1 and OMAA 0.16.0 have been withdrawn while a missing preset selector is investigated. The links below point to previous releases; main-branch changes are not a new verified release. Existing users should keep their data and settings.
+
 [简体中文](README.md) · [Project overview](../README_EN.md) · [Downloads and versions](releases.md)
 
 Start with what you want to do. OMD retains your DSH models, conversations, tools and skills.
@@ -8,7 +10,7 @@ Start with what you want to do. OMD retains your DSH models, conversations, tool
 
 **[Install and match versions](install_EN.md) → [First steps](getting-started_EN.md) → [Everyday usage](usage_EN.md)**
 
-Installation offers two routes: **[give an AI the instructions](install_EN.md#ai)** or **[paste a URL into Add Plugin](install_EN.md#gui)**. DSH 0.2.1-rc.2 uses OMD 0.18.0; rc.1 also uses OMD 0.18.0. Both include OpenCU. [Downloads and release scope](releases.md).
+Installation offers two routes: **[give an AI the instructions](install_EN.md#ai)** or **[paste a URL into Add Plugin](install_EN.md#gui)**. DSH 0.2.1-rc.2 uses OMD 0.17.4; rc.1 also uses OMD 0.17.4. Both include OpenCU. [Downloads and release scope](releases.md).
 
 ## Find your topic
 
