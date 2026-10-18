@@ -11,10 +11,14 @@ export async function createRuntime(options = {}) {
   let extension = options.extension;
   const warnings = [];
   try {
-    // DSH already owns a browser; inventory must not launch a second Chromium.
-    if (browser === undefined && options.browserEnabled !== false && (!options.dshBrowser || options.cdpEndpoint || options.browserOptions?.context)) {
+    // DSH inventory must not implicitly launch a second Chromium. A web user
+    // may explicitly opt into a separate, server-owned headless browser.
+    if (browser === undefined && options.browserEnabled !== false && (!options.dshBrowser || options.managedHeadless === true || options.cdpEndpoint || options.browserOptions?.context)) {
       const { createBrowserBackend } = await import('./browser/backend.mjs');
-      browser = await createBrowserBackend({ ...options.browserOptions, dataDir: join(dataDir, 'browser'), cdpEndpoint: options.cdpEndpoint, headless: options.headless === true });
+      const managedHeadless = options.managedHeadless === true && !options.cdpEndpoint && !options.browserOptions?.context;
+      browser = await createBrowserBackend({ ...options.browserOptions, dataDir: join(dataDir, 'browser'), cdpEndpoint: options.cdpEndpoint,
+        headless: managedHeadless || options.headless === true,
+        ...(managedHeadless ? { launchOptions: { ...options.browserOptions?.launchOptions, headless: true } } : {}) });
     }
     if (native === undefined && options.nativeEnabled !== false) {
       try {
@@ -43,6 +47,16 @@ export async function createRuntime(options = {}) {
       releaseUnavailable: { browser: () => releaseUnavailableBrowser(join(dataDir, 'browser')) } }) : false;
     const controller = await createController({ dataDir, browser: composite, native: native || undefined });
     controller.runtimeInfo = { platform: process.platform, architecture: process.arch, backends: { browser: !!browser, native: !!native, extension: !!extension, dsh: !!options.dshBrowser }, warnings };
+    // Configuration is not proof of a live renderer. Preserve legacy booleans,
+    // but expose current provider readiness without launching or probing a browser.
+    Object.defineProperty(controller.runtimeInfo, 'browserProviders', { enumerable: true, get() {
+      return {
+        managed: { configured: !!browser, mode: options.cdpEndpoint ? 'cdp' : options.browserOptions?.context ? 'provided_context' : options.managedHeadless === true ? 'managed_headless' : 'managed',
+          ...(!options.cdpEndpoint && !options.browserOptions?.context ? { executionLocation: 'server' } : {}) },
+        dsh: options.dshBrowser?.getDiagnostics?.() ?? { configured: !!options.dshBrowser, status: options.dshBrowser ? 'unknown' : 'disabled' },
+        extension: { configured: !!extension, connectedBrowsers: extension?.connections?.().length ?? 0 },
+      };
+    } });
     controller.applicationMetadata = target => native?.applicationMetadata?.(target) ?? { displayName: target.name || target.title, iconDataURL: target.iconDataURL ?? null };
     controller.presentationContrast = args => native?.presentationContrast?.(args) ?? { available: false };
     controller.extensionConnections = () => extension?.connections?.() ?? [];

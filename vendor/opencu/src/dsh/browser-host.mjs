@@ -57,6 +57,17 @@ export function createBrowserHost() {
   }
   const backend = {
     kind: 'browser',
+    getDiagnostics() {
+      const renderers = liveClients();
+      const targetCount = renderers.reduce((count, client) => count + client.targets.length, 0);
+      return { configured: true, connectedRenderers: renderers.length, targetCount,
+        status: !renderers.length ? 'renderer_unavailable' : targetCount ? 'ready' : 'no_tabs',
+        ...(!renderers.length ? { code: 'DSH_RENDERER_UNAVAILABLE',
+          message: 'No DSH sidebar browser renderer is connected. Installing the plugin alone does not provide a sidebar browser.',
+          nextStep: 'Open a DSH client with a supported sidebar browser adapter, or configure a browser extension or CDP connection.' }
+          : !targetCount ? { code: 'DSH_NO_BROWSER_TABS', message: 'The DSH browser renderer is connected but has no published browser tabs.',
+            nextStep: 'Open a browser tab in the connected DSH client.' } : {}) };
+    },
     async listTargets() { return liveClients().flatMap(client => client.targets).map(json); },
     async select(reference) {
       const matches = (await backend.listTargets()).filter(target => referenceMatches(target, reference));
