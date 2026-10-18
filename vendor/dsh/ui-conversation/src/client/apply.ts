@@ -559,6 +559,16 @@ export async function apply(ctx: Context, config: Config = Config({})): Promise<
     },
   }, InputBar)
 
+  // Session hooks and input registries must precede controller readiness.
+  // Consumers wait for declarations through slots.inject; publish the renderable
+  // tree only after the controller is ACTIVE, so selected sessions can resolve
+  // conversation through strict ctx.get during synchronous slot injection.
+  await ctx.plugin(ConversationController, {
+    input: inputHub,
+    blocks: composerBlocks,
+    maxConcurrentFileUploads,
+  })
+
   slots.inject('main', function* () {
     yield slots.register({
       name: 'main',
@@ -571,14 +581,6 @@ export async function apply(ctx: Context, config: Config = Config({})): Promise<
     yield registerHeader()
     yield registerSessionHeader()
     yield registerComposerBar()
-  })
-
-  // Native consumers use `conversation` readiness to register into these slots.
-  // Publish it only after the Session hooks and complete slot tree are installed.
-  await ctx.plugin(ConversationController, {
-    input: inputHub,
-    blocks: composerBlocks,
-    maxConcurrentFileUploads,
   })
 
   ctx.plugin(todoDockEntry)
