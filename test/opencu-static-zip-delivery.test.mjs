@@ -11,9 +11,12 @@ import { deliveryBaseline, verifyDeliveryArchive } from '../scripts/check-opencu
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const base = 'e1a4ac251acdacf6ee23c400cf782c4809acbfe3';
-const source = '53128743490aa10e4e36e9ab9de3c492ad0f973d';
 const additions = ['lib/extension.zip', 'src/extension/distribution.json', 'src/extension/distribution.mjs'];
-const zipSha256 = 'e4109c04b73b0231e7ff17a957e0c96983fb28f4e7eea8f71dce79466c65a8ac';
+const integratedAdditions = [...additions, 'docs/licenses/playwright-keyboard.txt', 'docs/visuals.md',
+  'extension/click-options.js', 'extension/key-options.js', 'extension/select-options.d.ts', 'extension/select-options.js',
+  'extension/text-edit.d.ts', 'extension/text-edit.js', 'host/dialogs.ts', 'native/README.md',
+  'src/browser/dialogs.mjs', 'src/browser/playwright-keyboard.mjs', 'src/dsh/repl-output.mjs'];
+const zipSha256 = 'eab9c7c530399f07da976e4970a9c513acc785cdd8e1a6d9819b92e4b59a7b5f';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
 // Fault injection in owned memory only; no extraction, server or browser.
@@ -44,32 +47,41 @@ function changedArchive(archive, member, change) {
   return gzipSync(Buffer.concat([...records, Buffer.alloc(1024)]));
 }
 
-test('final OMD tgz retains the complete established envelope plus all three static ZIP dependencies', async () => {
+test('final OMD tgz retains the reviewed integrated envelope and all static ZIP dependencies', async () => {
   assert(process.env.OMD_DELIVERY_ARCHIVE, 'Supply the actual final tgz after build, pack and nativePackageModes; no skip or synthetic package fallback');
   const archive = await readFile(await realpath(process.env.OMD_DELIVERY_ARCHIVE));
   const baseline = await deliveryBaseline(root), manifest = JSON.parse(baseline.manifest);
   const old = JSON.parse(execFileSync('git', ['show', base + ':vendor/opencu.json'], { cwd: root, maxBuffer: 1024 * 1024 }));
-  assert.equal(manifest.source, 'https://github.com/gulagala001/opencu/tree/' + source);
+  assert.equal(manifest.source, `opencu@${manifest.version}`);
   assert.equal(Object.keys(old.files).length, 611);
-  assert.deepEqual(Object.keys(manifest.files).sort(), [...Object.keys(old.files), ...additions].sort());
-  assert.equal(Object.keys(manifest.files).length, 614);
-  assert(manifest.files['CHANGELOG.md']); assert(!manifest.files['native/README.md']);
+  // The integrated distribution intentionally replaces the old changelog with
+  // maintained docs, and includes the reviewed dialog/input implementation.
+  assert.deepEqual(Object.keys(manifest.files).sort(),
+    [...Object.keys(old.files).filter(name => name !== 'CHANGELOG.md'), ...integratedAdditions].sort());
+  assert.equal(Object.keys(manifest.files).length, 626);
+  assert(!manifest.files['CHANGELOG.md']); assert(manifest.files['native/README.md']);
   const pkg = JSON.parse(await readFile(join(root, 'vendor/opencu/package.json')));
+  assert.equal(manifest.name, pkg.name); assert.equal(manifest.version, pkg.version);
+  assert.equal(manifest.hostVersion, pkg.opencu.host);
   assert(!Object.hasOwn(pkg, 'scripts'));
   assert.equal(pkg.opencu.sourceCommit, '687f282e8625c6b8d11ff58211a90524be2e4317', 'DSH source identity is not the OpenCU source commit');
   assert.deepEqual(pkg.files, JSON.parse(execFileSync('git', ['show', base + ':vendor/opencu/package.json'], { cwd: root })).files);
   for (const name of additions) assert.equal(hash(await readFile(join(root, 'vendor/opencu', name))), manifest.files[name]);
   const zip = await readFile(join(root, 'vendor/opencu/lib/extension.zip'));
-  assert.equal(zip.length, 156564); assert.equal(hash(zip), zipSha256);
-  assert(zip.equals(await buildExtensionZip(join(root, 'vendor/opencu'))), 'Shipped ZIP equals the actual installed production builder over all 18 static members');
+  assert.equal(zip.length, 188859); assert.equal(hash(zip), zipSha256);
+  assert.equal(manifest.files['lib/extension.zip'], zipSha256);
+  assert(zip.equals(await buildExtensionZip(join(root, 'vendor/opencu'))), 'Shipped ZIP equals the actual installed production builder over all 24 static members');
   const distribution = JSON.parse(await readFile(join(root, 'vendor/opencu/src/extension/distribution.json')));
-  assert.equal(Object.keys(distribution.files).length, 18);
+  assert.equal(distribution.packageVersion, manifest.version);
+  assert.equal(distribution.manifestKeySha256, '98b602d9937b77441bdc77b57a653029e83acf95f2e0ee88b1efe20763cabbe1');
+  assert.equal(Object.keys(distribution.files).length, 24);
+  assert.deepEqual(Object.keys(distribution.files).sort(), Object.keys(manifest.files)
+    .filter(name => name.startsWith('extension/')).map(name => name.slice('extension/'.length)).sort());
   for (const [name, digest] of Object.entries(distribution.files)) {
-    assert.equal(digest, old.files['extension/' + name], 'Existing extension payload remains intact');
     assert.equal(digest, manifest.files['extension/' + name]);
   }
   const result = verifyDeliveryArchive(archive, baseline);
-  assert.equal(result.vendorMembers, 613); assert.equal(result.helpers.length, 1); assert.equal(result.helpers[0].mode, '0755');
+  assert.equal(result.vendorMembers, 625); assert.equal(result.helpers.length, 1); assert.equal(result.helpers[0].mode, '0755');
   for (const name of additions) {
     assert.throws(() => verifyDeliveryArchive(changedArchive(archive, 'package/vendor/opencu/' + name, 'drop'), baseline), /Missing packed OpenCU member/);
     assert.throws(() => verifyDeliveryArchive(changedArchive(archive, 'package/vendor/opencu/' + name, 'bytes'), baseline), /Packed OpenCU hash mismatch/);
