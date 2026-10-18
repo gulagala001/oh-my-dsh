@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { randomUUID } from 'node:crypto';
@@ -8,7 +8,7 @@ import { resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { runInNewContext } from 'node:vm';
 import { spawnSync } from 'node:child_process';
-import { desktopInputs, digest, inside, repoRoot } from './fixtures/desktop-host-boot/inputs.mjs';
+import { desktopInputs, desktopIdentity, digest, inside, repoRoot } from './fixtures/desktop-host-boot/inputs.mjs';
 import { desktopEnvironment } from '../scripts/desktop-test-environment.mjs';
 import { assertModelTakeover, modelPriority } from './fixtures/desktop-host-boot/model-panel.mjs';
 
@@ -61,6 +61,47 @@ async function fixture(t, manifest = source) {
     OMD_DESKTOP_TEST_ROOT: root, OMD_DESKTOP_EXECUTABLE: executable, OMD_DESKTOP_APP_ROOT: appRoot,
     OMD_PLUGIN_ARCHIVE: tgz, OMD_PLUGIN_ARCHIVE_SHA256: digest(bytes) };
 }
+
+test('serialized main identity reads installed resources without an import callback and still rejects mismatches/escapes', async t => {
+  const env = await fixture(t), root = env.OMD_DESKTOP_TEST_ROOT;
+  // Directory-shaped stand-ins exercise real fs and createRequire resolution;
+  // actual ASAR handling remains an Electron CI check, never a Linux GUI run.
+  const appRoot = join(root, 'identity-app.asar'), anchor = join(appRoot, 'dsh', 'package.json');
+  await mkdir(join(appRoot, 'dsh'), { recursive: true });
+  await writeFile(anchor, JSON.stringify({ name: 'isolated-runtime-anchor', private: true }));
+  const expected = { appRoot, hostVersion: '0.2.1-rc.2', cordisVersion: '4.0.5',
+    sdkNames: ['@deepseek-ai/dsh'], publicComponents: ['@deepseek-ai/dsh-client-ui-slots'] };
+  const packages = [...expected.sdkNames, ...expected.publicComponents, '@deepseek-ai/cordis'];
+  for (const name of packages) {
+    const directory = join(appRoot, 'dsh', 'node_modules', name); await mkdir(directory, { recursive: true });
+    await writeFile(join(directory, 'package.json'), JSON.stringify({ name,
+      version: name === '@deepseek-ai/cordis' ? expected.cordisVersion : expected.hostVersion,
+      exports: { './package.json': './package.json' } }));
+  }
+  const builtins = [];
+  const sandbox = { process: { execPath: env.OMD_DESKTOP_EXECUTABLE, versions: { electron: 'contract-fixture' },
+    getBuiltinModule: name => { builtins.push(name); return process.getBuiltinModule(name); } } };
+  assert.equal(runInNewContext('typeof require', sandbox), 'undefined');
+  // Deliberately omit importModuleDynamically: the original await import()
+  // implementation fails here with the same missing-callback error as CI.
+  const evaluate = runInNewContext('(' + desktopIdentity.toString() + ')', sandbox);
+  const app = { isPackaged: true, getAppPath: () => appRoot, getVersion: () => expected.hostVersion,
+    getPath: key => join(root, key === 'home' ? 'user-home' : 'electron-data') };
+  const result = await evaluate({ app }, expected);
+  assert.deepEqual(builtins, ['fs', 'path', 'module']);
+  for (const name of packages) {
+    assert.equal(result.manifests[name].file, await realpath(join(appRoot, 'dsh', 'node_modules', name, 'package.json')));
+    assert.equal(result.manifests[name].version, name === '@deepseek-ai/cordis' ? expected.cordisVersion : expected.hostVersion);
+  }
+  assert.equal(result.appRoot, appRoot);
+  const sdkDirectory = join(appRoot, 'dsh', 'node_modules', '@deepseek-ai/dsh');
+  await writeFile(join(sdkDirectory, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh', version: '0.2.1-rc.1' }));
+  await assert.rejects(evaluate({ app }, expected), /Actual SDK identity mismatch/);
+  const foreign = join(root, 'outside-resources'); await mkdir(foreign);
+  await writeFile(join(foreign, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh', version: expected.hostVersion }));
+  await rm(sdkDirectory, { recursive: true }); await symlink(foreign, sdkDirectory, 'junction');
+  await assert.rejects(evaluate({ app }, expected), /SDK outside official resources/);
+});
 
 test('rc.2 input accepts only the frozen current bundle and its exact isolated paths', async t => {
   const env = await fixture(t), value = await desktopInputs(env, 'win32', 'x64');

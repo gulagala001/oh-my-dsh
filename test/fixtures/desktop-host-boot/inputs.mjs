@@ -84,7 +84,12 @@ export async function desktopInputs(env = process.env, platform = process.platfo
 
 // Execute in Electron's ASAR-aware main process, never through checkout SDKs.
 export async function desktopIdentity({ app }, expected) {
-  const fs = await import('node:fs/promises'), path = await import('node:path'), module = await import('node:module');
+  // Playwright serializes this function into the main-process inspector realm,
+  // which has no dynamic-import callback or lexical CommonJS require. Electron
+  // patches the builtin fs object for ASAR at startup; read its promises face.
+  if (typeof process.getBuiltinModule !== 'function') throw Error('Packaged Electron has no builtin module accessor');
+  const fs = process.getBuiltinModule('fs').promises;
+  const path = process.getBuiltinModule('path'), module = process.getBuiltinModule('module');
   const appRoot = app.getAppPath();
   if (!app.isPackaged || path.resolve(appRoot) !== path.resolve(expected.appRoot)) throw Error('Unexpected/unpackaged Electron app root');
   const anchor = module.createRequire(path.join(appRoot, 'dsh', 'package.json'));
