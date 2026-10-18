@@ -143,7 +143,7 @@ jobs:
           const report = JSON.parse(readFileSync(join(root, 'deny-evidence', 'desktop-deny.json')));
           assertDenyReport(tap, report);
           appendFileSync(process.env.GITHUB_STEP_SUMMARY,
-            'Issue #64 partial: official rc.2 Electron, full frozen OMD, real Agent/ToolRuntime/OpenCU and REA Deny passed against one synthetic target. Two loopback model requests, one tool call, zero rejected/external model routes and zero physical backend operations. Original zero-model host boot remains separate. Physical CU, Allow/grants, Web/WSL export and rc.1 pairing are unverified.\n');
+            'Issue #64 partial: official rc.2 Electron, full frozen OMD, real Agent/ToolRuntime/OpenCU and REA Deny passed against one synthetic target. Two loopback model requests, one tool call, zero rejected/external model routes and zero physical backend operations. Original zero-model host boot remains separate. Normal manual group expansion was required; default approval visibility remains an unresolved production UX gap. Physical CU, Allow/grants, Web/WSL export and rc.1 pairing are unverified.\n');
           NODE
       - uses: actions/upload-artifact@v7
         if: always()

@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { createWireProtocol, assertPending, assertDenied, disabledBackends, forbiddenMethods, appName, provider as fixtureProvider, model as fixtureModel } from './fixtures/desktop-deny/protocol.mjs';
+import { revealApprovalCard } from './fixtures/desktop-deny/navigation.mjs';
+import { createWireProtocol, assertPending, assertWaitingApproval, assertDenied, disabledBackends, forbiddenMethods, appName, provider as fixtureProvider, model as fixtureModel } from './fixtures/desktop-deny/protocol.mjs';
 import { randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -52,14 +53,14 @@ test('official rc.2 Agent and real REA card decline one synthetic OpenCU target 
     try {
       await cleanupFixture([
         async () => {
+          await writeFile(join(evidence, 'desktop-log.txt'), redact(log));
+          if (page && !page.isClosed()) await page.screenshot({ path: join(evidence, 'failure.png') });
+        },
+        async () => {
           if (armedSessionId && report.phase !== 'checks-complete' && app) {
             report.cancelledForCleanup = true;
             await rpc('session/cancel', { request: { sessionId: armedSessionId } });
           }
-        },
-        async () => {
-          await writeFile(join(evidence, 'desktop-log.txt'), redact(log));
-          if (page && !page.isClosed()) await page.screenshot({ path: join(evidence, 'failure.png') });
         },
         async () => {
           if (!app) return;
@@ -314,8 +315,25 @@ test('official rc.2 Agent and real REA card decline one synthetic OpenCU target 
       content: [{ type: 'text', text: 'OMD_DENY_LOCAL_FIXTURE_ONLY: request the single fixed synthetic target, then finish after denial.' }] } });
     const pendingState = await until(async () => { const value = await observe(); return value.deny.pending.length && value; }, 'one real application approval request');
     const pending = assertPending(pendingState.deny, armedSessionId); report.pending = pendingState;
-    const card = page.locator('[data-codex-approval-surface]');
-    await card.waitFor({ state: 'visible' }); assert.equal(await card.count(), 1);
+    report.groupNavigation = { defaultApprovalVisible: undefined, manualGroupExpansion: undefined };
+    const approvalNavigation = await revealApprovalCard(page, {
+      beforeExpansion: async evidenceState => {
+        await page.screenshot({ path: join(evidence, 'approval-collapsed.png'), animations: 'disabled' });
+        const state = await observe();
+        report.groupNavigation.before = assertWaitingApproval(state, { sessionId: armedSessionId, pending, localModelRequests: wire.requests.length });
+        Object.assign(report.groupNavigation, evidenceState); await save();
+      },
+      afterExpansion: async evidenceState => {
+        await page.screenshot({ path: join(evidence, 'approval-expanded.png'), animations: 'disabled' });
+        const state = await observe();
+        report.groupNavigation.after = assertWaitingApproval(state, { sessionId: armedSessionId, pending, localModelRequests: wire.requests.length });
+        Object.assign(report.groupNavigation, evidenceState); await save();
+      },
+    });
+    const { card } = approvalNavigation;
+    assert.equal(report.groupNavigation.defaultApprovalVisible, false, 'Pinned standard layout hides the pending card by default; this UX gap remains');
+    assert.equal(report.groupNavigation.manualGroupExpansion, true);
+    report.defaultApprovalUxGap = 'Default standard ChatGroupSeat folds the real pending approval card; explicit normal group expansion is required. Production UX is unchanged.';
     await card.getByText(`允许 DSH 使用 ${appName}？`, { exact: true }).waitFor({ state: 'visible' });
     const deny = card.getByRole('button', { name: /^(?:拒绝|Deny)(?:\s.*)?$/ });
     await deny.waitFor({ state: 'visible' }); assert.equal(await deny.count(), 1);
