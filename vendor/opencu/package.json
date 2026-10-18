@@ -56,15 +56,6 @@
     "DEVELOPMENT.md",
     "docs/"
   ],
-  "scripts": {
-    "build": "node scripts/build.mjs",
-    "build:client": "node scripts/build-client.mjs",
-    "build:native": "node scripts/build-native.mjs",
-    "build:targets": "node scripts/build-targets.mjs",
-    "pack": "node scripts/pack.mjs",
-    "test": "node --test test/core.controller.test.mjs",
-    "prepack": "node scripts/check-public-files.mjs"
-  },
   "dependencies": {
     "playwright": "1.63.0",
     "sharp": "0.35.5"
