@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { gzipSync } from 'node:zlib';
+import { gzipSync, gunzipSync } from 'node:zlib';
 import { runInNewContext } from 'node:vm';
 import { assertRunner, digest, pins, verifyPublishedPackage } from './fixtures/desktop-rc1-slots/inputs.mjs';
 import { assertReport, assertStage, stages } from './fixtures/desktop-rc1-slots/contract.mjs';
+import { publishedTar } from './fixtures/desktop-rc1-slots/published-tar.mjs';
 
 // Dependency-free synthetic contracts only: no downloads, GUI or model calls.
 const sessionId = 'synthetic-empty-session', bundleRoot = '/synthetic/profile/node_modules/trisoul_x';
@@ -59,19 +60,34 @@ test('only the pinned rc1/mac-x64 disposable runner is accepted', () => {
   assert.equal(pins.plugin.sha256, 'e5d1902d8e168337d1b47c63de028a65a42eea7ab5feecb8b29dcb72d993b4f7');
 });
 
+function tarRecords(records) {
+  const parts = [];
+  for (const { name, body: content = '', mode = 0o644, type = '0', prefix = '', link = '', magic = 'ustar\0', version = '00' } of records) {
+    const body = Buffer.from(content), header = Buffer.alloc(512);
+    header.write(name, 0, 100); header.write(prefix, 345, 155); header[156] = type.charCodeAt(0);
+    header.write(mode.toString(8).padStart(7, '0') + '\0', 100);
+    header.write(body.length.toString(8).padStart(11, '0') + '\0', 124);
+    header.write(link, 157, 100); header.write(magic, 257, 6); header.write(version, 263, 2);
+    header.fill(32, 148, 156);
+    header.write(header.reduce((sum, byte) => sum + byte, 0).toString(8).padStart(6, '0') + '\0 ', 148);
+    parts.push(header, body, Buffer.alloc((512 - body.length % 512) % 512));
+  }
+  return gzipSync(Buffer.concat([...parts, Buffer.alloc(1024)]));
+}
+function paxRecord(path, key = 'path') {
+  const record = `${key}=${path}\n`; let size = Buffer.byteLength(record) + 2;
+  for (;;) {
+    const encoded = Buffer.from(`${size} ${record}`);
+    if (encoded.length === size) return encoded;
+    size = encoded.length;
+  }
+}
 function archive(manifest, helperMode = 0o755) {
   const helper = 'package/vendor/opencu/native/bin/darwin-arm64/OpenCU Helper.app/Contents/MacOS/opencu-native';
   const files = { 'package/package.json': JSON.stringify(manifest), 'package/lib/client.js': 'synthetic released client',
     'package/vendor/dsh.json': JSON.stringify({ version: pins.desktop.version, commit: pins.desktop.sourceCommit }),
     'package/cordis.patch.yml': '[]', 'package/presets/cordis.patch.yml': '[]', [helper]: 'synthetic helper; never executed' };
-  const parts = [];
-  for (const [name, content] of Object.entries(files)) {
-    const body = Buffer.from(content), header = Buffer.alloc(512); header.write(name); header[156] = 48;
-    header.write((name === helper ? helperMode : 0o644).toString(8).padStart(7, '0') + '\0', 100);
-    header.write(body.length.toString(8).padStart(11, '0') + '\0', 124);
-    parts.push(header, body, Buffer.alloc((512 - body.length % 512) % 512));
-  }
-  return gzipSync(Buffer.concat([...parts, Buffer.alloc(1024)]));
+  return tarRecords(Object.entries(files).map(([name, body]) => ({ name, body, mode: name === helper ? helperMode : 0o644 })));
 }
 const publishedManifest = { name: pins.plugin.name, version: pins.plugin.version, engines: { dsh: pins.desktop.version },
   devDependencies: { '@deepseek-ai/dsh': pins.desktop.version }, peerDependencies: { '@deepseek-ai/cordis': '4.0.5' },
@@ -94,6 +110,52 @@ test('published helper mode is checked inside original tar bytes and is never re
     assert.throws(() => verifyPublishedPackage(bytes, { size: bytes.length, sha256: before }), /Published helper mode/);
     assert.equal(digest(bytes), before);
   }
+});
+
+test('verified release local PAX path resolves CodeResources without treating its control header as a payload', () => {
+  const path = 'package/vendor/opencu/native/bin/darwin-arm64/OpenCU Helper.app/Contents/_CodeSignature/CodeResources';
+  const truncated = path.slice(0, -1), body = paxRecord(path);
+  assert.equal(body.length, 111, 'Exact observed release record length');
+  const bytes = tarRecords([{ name: '././@PaxHeader', type: 'x', mode: 0, body }, { name: truncated, body: 'synthetic signed resource' }]);
+  const { entries, paxHeaders } = publishedTar(bytes);
+  assert.equal(entries.size, 1); assert.equal(entries.get(path).bytes.toString(), 'synthetic signed resource');
+  assert.equal(entries.has(truncated), false); assert.equal(entries.has('././@PaxHeader'), false);
+  assert.equal(paxHeaders[0].path, path);
+});
+
+test('USTAR prefix names are read while checksum and bounded format remain mandatory', () => {
+  assert(publishedTar(tarRecords([{ prefix: 'package/deep', name: 'leaf', body: 'data' }])).entries.has('package/deep/leaf'));
+  const tar = gunzipSync(tarRecords([{ name: 'package/safe', body: 'data' }])); tar[0] ^= 1;
+  assert.throws(() => publishedTar(gzipSync(tar)), /checksum mismatch/);
+  for (const fields of [{ magic: 'ustar ' }, { version: '01' }])
+    assert.throws(() => publishedTar(tarRecords([{ name: 'package/safe', ...fields }])), /Unsupported published tar format/);
+});
+
+test('tar and PAX traversal, absolute paths, aliases and links remain rejected', () => {
+  for (const name of ['package/../escape', '/outside', './package/alias', 'package\\escape'])
+    assert.throws(() => publishedTar(tarRecords([{ name }])), /Invalid published member/);
+  for (const path of ['package/../escape', '/outside', './package/alias', 'package\\escape'])
+    assert.throws(() => publishedTar(tarRecords([{ name: '././@PaxHeader', type: 'x', body: paxRecord(path) }, { name: 'package/safe' }])), /Invalid PAX path/);
+  for (const type of ['1', '2', 'g'])
+    assert.throws(() => publishedTar(tarRecords([{ name: 'package/link', type, link: 'package/target' }])), /regular files/);
+  assert.throws(() => publishedTar(tarRecords([{ name: '././@PaxHeader', type: 'x', body: paxRecord('package/target', 'linkpath') }, { name: 'package/safe' }])), /Unsupported PAX key/);
+});
+
+test('duplicate effective names and ambiguous, malformed or dangling PAX are rejected', () => {
+  const control = { name: '././@PaxHeader', type: 'x', body: paxRecord('package/a') };
+  assert.throws(() => publishedTar(tarRecords([{ name: 'package/a' }, { name: 'package/a' }])), /Duplicate published member/);
+  assert.throws(() => publishedTar(tarRecords([{ name: 'package/a' }, control, { name: 'package/truncated' }])), /Duplicate published member/);
+  assert.throws(() => publishedTar(tarRecords([control])), /Dangling PAX/);
+  assert.throws(() => publishedTar(tarRecords([control, control, { name: 'package/a' }])), /Unsupported local PAX envelope/);
+  assert.throws(() => publishedTar(tarRecords([{ ...control, body: '999 path=package/a\n' }, { name: 'package/a' }])), /Truncated or multiple PAX/);
+});
+
+test('invalid header diagnostics retain offset, raw name, prefix, typeflag, magic and version', () => {
+  assert.throws(() => publishedTar(tarRecords([{ name: 'invalid', prefix: 'other' }])), error => {
+    const row = JSON.parse(error.message.split('; tarHeader=')[1]);
+    assert.equal(row.offset, 0); assert.equal(row.rawName, 'invalid'); assert.equal(row.prefix, 'other');
+    assert.equal(row.typeflag, '0'); assert.equal(row.magicHex, '757374617200'); assert.equal(row.version, '00'); return true;
+  });
 });
 
 test('four cold phases accept an empty rc1 label and current graph despite an old boot rev', () => {

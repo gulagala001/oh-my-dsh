@@ -67,6 +67,8 @@ jobs:
           name: rc1-mac-x64-slot-acceptance
           path: |
             ${{ env.OMD_RC1_ROOT }}/verified-inputs.json
+            ${{ env.OMD_RC1_ROOT }}/verified-downloads.json
+            ${{ env.OMD_RC1_ROOT }}/published-package-verification.json
             ${{ env.OMD_RC1_ROOT }}/rc1-slots.tap
             ${{ env.OMD_RC1_ROOT }}/rc1-slot-evidence/
           if-no-files-found: warn

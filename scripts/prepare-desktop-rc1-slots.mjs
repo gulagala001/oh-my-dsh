@@ -11,6 +11,7 @@ assertRunner();
 const cache = await realpath(join(repoRoot, '.cache')), root = await realpath(process.env.OMD_RC1_ROOT);
 assert.equal(cache, join(await realpath(repoRoot), '.cache'));
 assert(inside(cache, root) && root !== cache);
+const downloads = [];
 async function download(input, filename, algorithm, expected) {
   const response = await fetch(input.url, { signal: AbortSignal.timeout(15 * 60_000) });
   assert(response.ok && response.body, `${input.url}: HTTP ${response.status}; stop without fallback`);
@@ -21,12 +22,26 @@ async function download(input, filename, algorithm, expected) {
   try {
     for await (const chunk of response.body) { size += chunk.length; assert(size <= input.size, 'Download exceeds pinned size'); hash.update(chunk); await handle.writeFile(chunk); }
   } finally { await handle.close(); }
-  assert.equal(size, input.size, 'Downloaded size mismatch'); assert.equal(hash.digest(algorithm === 'sha512' ? 'base64' : 'hex'), expected, 'Downloaded hash mismatch');
-  await rename(part, file); return file;
+  const actual = hash.digest(algorithm === 'sha512' ? 'base64' : 'hex');
+  assert.equal(size, input.size, 'Downloaded size mismatch'); assert.equal(actual, expected, 'Downloaded hash mismatch');
+  await rename(part, file);
+  downloads.push({ url: input.url, filename, size, algorithm, digest: actual, status: 'hash-verified' });
+  // Persist the successful downloads before parsing, so a later format/mode
+  // failure cannot erase or misclassify their independently verified identity.
+  await writeFile(join(root, 'verified-downloads.json'), JSON.stringify({ schema: 1, downloads }, null, 2) + '\n');
+  return file;
 }
 const archive = await download(pins.desktop, 'official-rc1-mac-x64.zip', 'sha512', pins.desktop.sha512);
 const plugin = await download(pins.plugin, 'published-omd-rc1.tgz', 'sha256', pins.plugin.sha256);
-verifyPublishedPackage(await readFile(plugin));
+try {
+  const parsed = verifyPublishedPackage(await readFile(plugin));
+  await writeFile(join(root, 'published-package-verification.json'), JSON.stringify({ status: 'parsed',
+    sha256: pins.plugin.sha256, tar: parsed.tarSummary, helperModes: parsed.helperModes }, null, 2) + '\n');
+} catch (error) {
+  await writeFile(join(root, 'published-package-verification.json'), JSON.stringify({ status: 'failed',
+    sha256: pins.plugin.sha256, error: error.message }, null, 2) + '\n');
+  throw error;
+}
 const preparation = join(root, 'prepare-home'); await mkdir(preparation);
 const env = await prepareEnvironment(preparation), app = join(root, 'mac-app'); await mkdir(app);
 execFileSync('/usr/bin/ditto', ['-x', '-k', archive, app], { cwd: preparation, env, stdio: 'inherit' });

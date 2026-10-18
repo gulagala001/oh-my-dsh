@@ -8,6 +8,17 @@ exact URL, size and SHA-512 from the public mac-x64 feed snapshot obtained on
 not refetch that feed, guess another URL, use adapters.zip or retry a denied
 download through another channel. A hash/size/pairing mismatch fails.
 
+The original hash-verified release was inspected read-only after CI rejected
+its tar at offset 170798592. It contains 1469 regular files and one USTAR/00
+local `x` PAX header named `././@PaxHeader`: a 111-byte `path` record for the
+helper's `Contents/_CodeSignature/CodeResources`. The next raw header truncates
+that name to `CodeResource`. The parser now honors this one per-file path
+extension, verifies every header checksum and effective path, and rejects
+links, duplicate effective names, traversal, other PAX keys/global headers,
+malformed or dangling records. It does not strip arbitrary `./` prefixes.
+Both successful downloads are recorded before parsing; preparation uploads
+that hash evidence and a parsed summary or detailed header failure separately.
+
 Only the new `desktop-rc1-slots.yml` job runs GUI, on disposable
 `macos-15-intel`. It downloads the original files, checks the helper mode in the
 original tgz, and never repairs/repackages that release. A helper mode other

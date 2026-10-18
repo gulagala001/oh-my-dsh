@@ -3,9 +3,9 @@ import { createHash } from 'node:crypto';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { gunzipSync } from 'node:zlib';
 import { digest, inside, desktopIdentity, assertDesktopPaths } from '../desktop-host-boot/inputs.mjs';
 import { clientComponents } from '../desktop-host-boot/client-identity.mjs';
+import { publishedTar } from './published-tar.mjs';
 
 export { digest, inside, desktopIdentity, assertDesktopPaths };
 export const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
@@ -21,23 +21,13 @@ export function assertRunner(env = process.env, platform = process.platform, arc
 export function verifyPublishedPackage(bytes, expected = pins.plugin) {
   assert.equal(bytes.length, expected.size, 'Published OMD size mismatch');
   assert.equal(digest(bytes), expected.sha256, 'Published OMD SHA-256 mismatch');
-  const tar = gunzipSync(bytes, { maxOutputLength: 512 * 1024 * 1024 }), files = new Map(), helperModes = [];
-  for (let offset = 0; offset + 512 <= tar.length;) {
-    const header = tar.subarray(offset, offset + 512); if (header.every(byte => byte === 0)) break;
-    const field = (start, length) => header.subarray(start, start + length).toString().replace(/\0.*$/s, '');
-    const name = [field(345, 155), field(0, 100)].filter(Boolean).join('/');
-    const numeric = field(124, 12).trim(); assert.match(numeric, /^[0-7]+$/);
-    const size = Number.parseInt(numeric, 8), start = offset + 512;
-    assert(Number.isSafeInteger(size) && start + size <= tar.length, 'Truncated published archive');
-    assert(name.startsWith('package/') && !name.includes('\\') && !name.split('/').includes('..'), 'Invalid published member');
-    assert([0, 48].includes(header[156]), 'Published members must be regular files');
-    assert(!files.has(name), 'Duplicate published member'); files.set(name, tar.subarray(start, start + size));
+  const { entries, paxHeaders } = publishedTar(bytes), files = new Map(), helperModes = [];
+  for (const [name, { bytes: body, mode }] of entries) {
+    files.set(name, body);
     if (/^package\/vendor\/opencu\/native\/bin\/darwin-(?:x64|arm64)\/OpenCU Helper\.app\/Contents\/MacOS\/opencu-native$/.test(name)) {
-      const mode = Number.parseInt(field(100, 8).trim(), 8);
       assert.equal(mode, 0o755, `Published helper mode ${mode.toString(8).padStart(4, '0')} is not 0755; do not rewrite the verified release: ${name}`);
       helperModes.push({ file: name, mode: '0755' });
     }
-    offset = start + Math.ceil(size / 512) * 512;
   }
   assert(helperModes.length > 0, 'Published macOS helper mode evidence missing');
   const manifest = JSON.parse(files.get('package/package.json'));
@@ -53,7 +43,7 @@ export function verifyPublishedPackage(bytes, expected = pins.plugin) {
   assert.equal(source.version, pins.desktop.version);
   for (const file of ['lib/client.js', ...manifest.dsh.bundle.patch.map(path => path.replace(/^\.\//, ''))])
     assert(files.get('package/' + file)?.length, 'Missing released bundle member: ' + file);
-  return { manifest, helperModes, clientSha256: digest(files.get('package/lib/client.js')) };
+  return { manifest, helperModes, tarSummary: { members: entries.size, paxHeaders }, clientSha256: digest(files.get('package/lib/client.js')) };
 }
 
 export async function rc1Inputs(env = process.env, platform = process.platform, arch = process.arch) {
