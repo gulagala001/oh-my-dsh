@@ -79,7 +79,9 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
       }
       const activity = mutating.has(endpoint) ? entry.activity.begin(sessionKey, endpoint, args) : null;
       let release, outcome, failure;
-      const onAbort = () => { release ??= entry.runtime.request('stop'); };
+      // Input release remains global; only the aborted owner's approvals are cancelled.
+      // Anonymous API requests have no approval owner, so use a non-null root sentinel.
+      const onAbort = () => { release ??= entry.runtime.request('stop', {}, { sessionKey: sessionKey ?? root }); };
       if (mutating.has(endpoint)) signal?.addEventListener('abort', onAbort, { once: true });
       try {
         if (signal?.aborted) { if (mutating.has(endpoint)) onAbort(); signal.throwIfAborted(); }

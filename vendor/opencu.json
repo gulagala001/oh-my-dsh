@@ -1,10 +1,10 @@
 {
   "name": "opencu",
   "version": "2.0.0-dsh.0.2.1-rc.2",
-  "source": "https://github.com/gulagala001/opencu/tree/4f301a737d8c85d2c9c004dab20dcc07bf4e8d59",
+  "source": "https://github.com/gulagala001/opencu/tree/654d6a55e87c8a909a7f2f587fffdbd54797cc77",
   "policy": "rewritten-plugin",
   "hostVersion": "0.2.1-rc.2",
-  "archiveSha256": "a9c2190d80d86f518f8e74d05116853b06854223e933f620b98067320a4d53f0",
+  "archiveSha256": "38566dc54046bcac471f4913fa11543ff5b2401a763696714d2cbfd120de8b73",
   "files": {
     "CHANGELOG.md": "2ef6683beb5e5be94065d9dc9d8aa759dd2a72a141a73d572698739a5273fb0a",
     "DEVELOPMENT.md": "d97f8386c0b1f59bb7c2f70791de64d5009efb2bd4ba4ab9d9385eb9031442ad",
@@ -597,7 +597,7 @@
     "src/dsh/preferences.mjs": "9fe12ecd020ce8acf4621cbe22876d896c464c080e15dbcbd1f1fafd1e2741f1",
     "src/dsh/presentation.mjs": "915fd362dd81ad69ba8622587ec5ee3bfb89a142fdcb820f94309a9ffdd9b264",
     "src/dsh/runtime.mjs": "42420daf0171003fafc914722808cca5388c827cd22c07ad61de067d8cde9866",
-    "src/dsh/shared.mjs": "8a13df2d8eacc8ac0b32df44e6abb2224208b19da09e5a23a00880a27925d657",
+    "src/dsh/shared.mjs": "2049593becf321b6d272c956e7c188d7ce33c9c0d18cd7e6757e3df9eb30b87a",
     "src/dsh/tools.mjs": "63bda2b0eb2ca6d998aef14f33e8c8ef614a8f30caa9282553bf704962cbe215",
     "src/extension/backend.mjs": "8ecd9fb6273a7ce1a0a18954256d10400e803270f5731dbcad624a8b63591503",
     "src/extension/index.mjs": "109c9209c5c092542fbc82eff94367fbee713ba162deeac0c5b93199b6f29008",
