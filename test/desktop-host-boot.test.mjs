@@ -6,7 +6,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promi
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
-import { desktopInputs, desktopIdentity, assertDesktopPaths, digest, inside } from './fixtures/desktop-host-boot/inputs.mjs';
+import { desktopInputs, desktopIdentity, assertDesktopPaths, assertExternalBackends, digest, inside } from './fixtures/desktop-host-boot/inputs.mjs';
 import { prepareEnvironment } from '../scripts/desktop-test-environment.mjs';
 import { assertModelTakeover, modelPriority } from './fixtures/desktop-host-boot/model-panel.mjs';
 import { assertClientIdentity, assertHostUiIdentity } from './fixtures/desktop-host-boot/client-identity.mjs';
@@ -104,7 +104,7 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     { id: 'llm-pi-ai', config: { providers: { 'desktop-host-fixture': { api: 'openai-completions', baseURL: providerOrigin + '/v1',
       apiKeyEnv: 'DESKTOP_HOST_FIXTURE', models: [{ id: 'fixture', name: '隔离启动验收（禁止调用）', contextWindow: 1000000, maxTokens: 4096, input: ['text'] }] } } } },
     { id: 'agent-default-model', config: { provider: 'desktop-host-fixture', model: 'fixture' } },
-    { id: 'trisoul-x', config: { componentAutoSetup: false, computerUseEnabled: false, codegraphEnabled: false, backgroundTasksEnabled: false,
+    { id: 'trisoul-x', config: { componentAutoSetup: false, codegraphEnabled: false, backgroundTasksEnabled: false,
       dreamAutoEnabled: false, idlePreprocessEnabled: false, recommendedPluginsAutoUpdate: false,
       projectlessWorkspaceRoot: join(root, 'projectless'), dreamProvider: 'desktop-host-fixture', dreamModel: 'fixture',
       unifiedBackground: { provider: 'desktop-host-fixture', model: 'fixture', effort: 'off' } } },
@@ -225,8 +225,7 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     const compatibility = await readFile(join(profile, 'compatibility.json'), 'utf8').catch(error => { if (error.code === 'ENOENT') return ''; throw error; });
     assert(!compatibility.includes('trisoul_x'), 'No SDK compatibility exemption');
     const host = await observe();
-    assert.equal(host.computerUseEnabled, false);
-    assert.deepEqual(host.opencu, { browserEnabled: false, nativeEnabled: false, extensionEnabled: false });
+    assertExternalBackends(host.opencu);
     for (const name of ['trisoul_x', 'trisoul_x/opencu', 'trisoul_x/host/ui-conversation', 'trisoul_x/host/ui-chat'])
       assert(host.entries.some(row => row.name === name && row.active), 'Active real host entry: ' + name);
     const registered = await rpc('workspace/create', { request: { path: workspace } });

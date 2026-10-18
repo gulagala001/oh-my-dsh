@@ -8,7 +8,7 @@ import { resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { runInNewContext } from 'node:vm';
 import { spawnSync } from 'node:child_process';
-import { desktopInputs, desktopIdentity, assertDesktopPaths, digest, inside, repoRoot } from './fixtures/desktop-host-boot/inputs.mjs';
+import { desktopInputs, desktopIdentity, assertDesktopPaths, assertExternalBackends, digest, inside, repoRoot } from './fixtures/desktop-host-boot/inputs.mjs';
 import { desktopEnvironment } from '../scripts/desktop-test-environment.mjs';
 import { assertModelTakeover, modelPriority } from './fixtures/desktop-host-boot/model-panel.mjs';
 import { assertClientIdentity, assertHostUiIdentity, uiReplacements, clientComponents } from './fixtures/desktop-host-boot/client-identity.mjs';
@@ -16,6 +16,18 @@ import { assertClientIdentity, assertHostUiIdentity, uiReplacements, clientCompo
 // These are dependency-free contract checks. No Electron, browser, installer,
 // package manager, real account, provider or user-home operation is performed.
 const source = JSON.parse(await readFile(new URL('../package.json', import.meta.url)));
+
+test('real external backend gate rejects any missing, enabled or non-boolean setting', () => {
+  const disabled = { browserEnabled: false, nativeEnabled: false, extensionEnabled: false };
+  assertExternalBackends(disabled);
+  assert.throws(() => assertExternalBackends(undefined), /explicitly false/);
+  for (const key of Object.keys(disabled)) {
+    const missing = { ...disabled }; delete missing[key];
+    assert.throws(() => assertExternalBackends(missing), /explicitly false/);
+    for (const value of [true, undefined, null, 0])
+      assert.throws(() => assertExternalBackends({ ...disabled, [key]: value }), /explicitly false/);
+  }
+});
 
 test('model takeover evidence rejects unchanged stock UI, missing stock and multiple active occupants', () => {
   const stock = { kind: 'single', occupants: [{ priority: 3, active: true }] };

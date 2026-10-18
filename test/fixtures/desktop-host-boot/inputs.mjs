@@ -14,6 +14,11 @@ export const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 export const sdkNames = ['@deepseek-ai/dsh', '@deepseek-ai/dsh-desktop-host', '@deepseek-ai/dsh-app-boot',
   '@deepseek-ai/dsh-plugin-manager', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-tools'];
 
+export function assertExternalBackends(backends) {
+  assert.deepEqual(backends, { browserEnabled: false, nativeEnabled: false, extensionEnabled: false },
+    'All three real external backend settings must be explicitly false');
+}
+
 export function assertDesktopPaths(identity, expected) {
   for (const [field, path] of [['environmentHome', expected.home], ['nodeHome', expected.home],
     ['dshHome', expected.dshHome], ['userData', expected.userData]]) {

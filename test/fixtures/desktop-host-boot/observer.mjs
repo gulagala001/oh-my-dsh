@@ -62,7 +62,6 @@ export function apply(ctx, config) {
       environmentHome: process.env.HOME, nodeHome: homedir(), dshHome: process.env.DSH_HOME, profileHome: ctx.profileContext.home,
       shellVersion: process.env.DSH_CLIENT_VERSION,
       sandbox: ctx.get('sandboxPolicy')?.resolve(), approval: ctx.get('approval')?.config?.policy,
-      computerUseEnabled: ctx.get('trisoulX')?.config().computerUseEnabled,
       opencu: opencu && Object.fromEntries(['browserEnabled', 'nativeEnabled', 'extensionEnabled'].map(key => [key, opencu[key]])) };
     res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(value));
   } }));
