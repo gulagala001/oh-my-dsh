@@ -1,7 +1,5 @@
 # Oh My DSH 使用文档
 
-> **发行已撤回（2026-10-18）：** OMD 0.18.0、OpenCU 2.0.1、OMAA 0.16.0 已撤回，正在修复预设选择入口缺失。以下安装链接恢复为上一发行；main 分支改动不代表新版本已验收。已安装用户请保留数据与配置。
-
 [English](README_EN.md) · [项目介绍](../README.md) · [下载与版本](releases.md)
 
 从你现在要做的事开始，无需读完全部文档。OMD 继续使用 DSH 原有模型、会话、工具与技能。
@@ -10,7 +8,7 @@
 
 **[安装与版本配对](install.md) → [第一次使用](getting-started.md) → [日常使用](usage.md)**
 
-安装有两种方式：**[复制指令给 AI](install.md#ai)** 或 **[在“添加插件”中粘贴地址](install.md#gui)**。DSH 0.2.1-rc.2 配套 OMD 0.17.4，rc.1 同样配套 OMD 0.17.4；均内置 OpenCU。[下载与发行范围](releases.md)。
+安装有两种方式：**[复制指令给 AI](install.md#ai)** 或 **[在“添加插件”中粘贴地址](install.md#gui)**。DSH 0.2.1-rc.2 配套 OMD 0.18.1，rc.1 同样配套 OMD 0.18.1；均内置 OpenCU。[下载与发行范围](releases.md)。
 
 <a id="版本与文档范围"></a>
 <a id="按需查阅"></a>

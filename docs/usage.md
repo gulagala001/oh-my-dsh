@@ -2,7 +2,7 @@
 
 [English](usage_EN.md) · [文档目录](README.md) · [首次使用](getting-started.md) · [排障](troubleshooting.md) · [开发入口](development.md)
 
-> 当前源码为 **OMD `0.2.1-rc.2.omd.0.18.0` / DSH `0.2.1-rc.2`**，默认内置 OpenCU `2.0.1`。安装先看[版本配对](install.md)，旧 0.10 用户使用对应固定 tag 文档。
+> 当前源码为 **OMD `0.2.1-rc.2.omd.0.18.1` / DSH `0.2.1-rc.2`**，默认内置 OpenCU `2.0.1`。安装先看[版本配对](install.md)，旧 0.10 用户使用对应固定 tag 文档。
 
 OMD 继续使用 DSH 的模型、项目、会话、原生工具、文件、技能与内容标签。包 ID `trisoul_x`、preset `trisoul-x` 和原数据目录保持兼容。
 

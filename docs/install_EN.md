@@ -1,7 +1,5 @@
 # Install Oh My DSH
 
-> **Release withdrawn (2026-10-18):** OMD 0.18.0, OpenCU 2.0.1 and OMAA 0.16.0 have been withdrawn while a missing preset selector is investigated. The links below point to previous releases; main-branch changes are not a new verified release. Existing users should keep their data and settings.
-
 [简体中文](install.md) · [Overview](../README_EN.md) · [Upgrade and migration](upgrade_EN.md)
 
 **Choose one method: give an AI the instructions below, or paste a package URL into DSH's Add Plugin dialog.** OMD is a DSH plugin and already includes OpenCU; a second OpenCU installation is unnecessary.
@@ -41,19 +39,19 @@ Read the **complete host version** in DSH's About/version information, for examp
 
 ### 2. Copy the URL for your host
 
-**DSH 0.2.1-rc.2 → OMD 0.17.4:**
+**DSH 0.2.1-rc.2 → OMD 0.18.1:**
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.17.4/trisoul_x-0.2.1-rc.2.omd.0.17.4.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.1/trisoul_x-0.2.1-rc.2.omd.0.18.1.tgz
 ```
 
-**DSH 0.2.1-rc.1 → OMD 0.17.4:**
+**DSH 0.2.1-rc.1 → OMD 0.18.1:**
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.17.4/trisoul_x-0.2.1-rc.1.omd.0.17.4.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.18.1/trisoul_x-0.2.1-rc.1.omd.0.18.1.tgz
 ```
 
-The first part of the complete plugin version identifies DSH; the trailing 0.17.4 identifies OMD. For other hosts, use [downloads and historical versions](releases.md).
+The first part of the complete plugin version identifies DSH; the trailing 0.18.1 identifies OMD. For other hosts, use [downloads and historical versions](releases.md).
 
 ### 3. Paste and install
 
@@ -91,7 +89,7 @@ Existing Web installation: stop the service and use its original CLI. This examp
 
 ```sh
 dsh --version
-dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.17.4/trisoul_x-0.2.1-rc.2.omd.0.17.4.tgz
+dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.1/trisoul_x-0.2.1-rc.2.omd.0.18.1.tgz
 ```
 
 Restart through the original launch method, retaining the data directory and port. For DSH 0.2.1-rc.1, use the rc.1 URL above.
@@ -99,7 +97,7 @@ Restart through the original launch method, retaining the data directory and por
 First-time Web setup requires Node.js ≥22.19; use PowerShell 7 on Windows:
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-rc.2 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.17.4/trisoul_x-0.2.1-rc.2.omd.0.17.4.tgz
+npx --yes @deepseek-ai/dsh@0.2.1-rc.2 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.1/trisoul_x-0.2.1-rc.2.omd.0.18.1.tgz
 npx --yes @deepseek-ai/dsh@0.2.1-rc.2 --profile web
 ```
 
@@ -109,11 +107,11 @@ Default macOS desktop CLI example, only for an actual DSH 0.2.1-rc.2 installatio
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.17.4/trisoul_x-0.2.1-rc.2.omd.0.17.4.tgz
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.1/trisoul_x-0.2.1-rc.2.omd.0.18.1.tgz
 ```
 
 On Windows desktop, the plugin dialog is the simplest route; CLI paths depend on the installation. A Web CLI does not substitute for the desktop CLI.
 
 </details>
 
-**Release scope:** the rc.2 URL installs OMD 0.17.4; rc.1 also uses OMD 0.17.4. Existing Release assets do not change with later main-branch fixes. Continue with [your first task](getting-started_EN.md).
+**Release scope:** the rc.2 URL installs OMD 0.18.1; rc.1 also uses OMD 0.18.1. Existing Release assets do not change with later main-branch fixes. Continue with [your first task](getting-started_EN.md).

@@ -1,8 +1,68 @@
-## 未发布
+## 0.18.1（DSH 0.2.1-rc.1 / rc.2）
 
-- 修复会话启动时预设入口丢失：先声明原生扩展槽，再开放会话服务；服务就绪前延迟会话内容渲染，恢复新任务预设选择器和标题栏预设标识。
-- 避免启用预算时重复写入同一份调用结算状态，保留父子预算归集、同步落盘与写入失败时的恢复行为。
-- 避免正文与右侧面板更新时重复扫描未变化的侧栏，保留侧栏导航、样式标记和窄屏交互。
+[中文](#zh) | [English](#en)
+
+<a id="zh"></a>
+
+## 中文
+
+本次更新包含自 0.17.4 以来的改进，并修复 0.18.0 的预设入口回归。0.18.0 已撤回，请直接使用 0.18.1。
+
+### 新增功能
+
+- 新增可选的记忆预处理缓存开关，位于“常用 → 预处理范围”，默认关闭；开启后复用成功主请求的前缀与模型路由。
+- Ultra 提供 Workflow、Agent Team、自由三种子模式。首次默认自由；旧 Pro 设置迁移为 Workflow，Agent Team 仍遵循 DSH 原生开关。
+- 扩充原生会话总览，集中查看产出、来源、后台命令、工作流、子智能体和电脑操作；子智能体可直接进入右侧真实会话。
+
+### 体验优化
+
+- Ultra 开启后可立即选择子模式，保存中的切换按顺序处理；跨工作区转交保留模式与已保存的子模式。
+- 减少正文和右侧面板变化引发的无关侧栏扫描，以及预算结算的重复写入；保留同步落盘和失败恢复。
+- Auto Compact 在同一批同步处理中复用上下文索引，异步边界后重新读取；子会话隐藏只适用于主会话的设置。
+
+### 问题修复
+
+- 修复预设选择器和会话标题旁预设名称消失：先建立原生扩展槽，再开放会话服务；服务就绪后才挂载会话内容。
+- 修复打开子智能体或代码预览时会话正文横移、遮挡，以及内置与独立 OpenCU 共装时的总览组件归属冲突。
+- 修复默认可见审批、取消及停止后的输入释放；恢复 Web CU 扩展连接与中断后的操作链路。
+- 修复 Purge 共存时 shell 的 file URL 注册识别；重新加载后台任务服务后重新绑定其设置归属。
+- 内置 OpenCU 修复高分屏图像批注坐标与 SVG 批注导出。计划模式只在明确 approved: true 时退出，工具提示遵循实际 programFormat。
+
+### 其他变更
+
+- 内置 OpenCU 2.0.1，MCP client 更新至 2.2.0。安装指南提供“复制给 AI”和“添加插件”两种路径。
+- 分别提供匹配 DSH 0.2.1-rc.1 与 rc.2 的构建。完整内置浏览器和原生监看仍需对应宿主适配；插件不会自动替换宿主。
+
+<a id="en"></a>
+
+## English
+
+This release includes the changes since 0.17.4 and fixes the missing preset controls in 0.18.0. The withdrawn 0.18.0 release is superseded by 0.18.1.
+
+### New Features
+
+- Optional memory preprocessing cache under General → Preprocessing scope. It is off by default and can reuse the prefix and model route from a successful main request.
+- Ultra now offers Workflow, Agent Team and Free modes. Free is the initial default; legacy Pro selections migrate to Workflow, and Agent Team follows the native DSH setting.
+- The native session overview brings together outputs, sources, background commands, workflows, subagents and computer activity. Subagent entries open their real conversations in the right pane.
+
+### Improvements
+
+- Ultra submodes are immediately selectable when enabled, with saves processed in order. Workspace transfers retain the mode and saved submode.
+- Reduces unrelated sidebar scans and duplicate budget writes while retaining durable accounting and failure recovery.
+- Auto Compact reuses its context index within a synchronous batch and refreshes it after asynchronous work. Main-session-only settings stay hidden in child conversations.
+
+### Bug Fixes
+
+- Restores the preset selector and preset name beside the session title. Native slots are declared before the conversation service becomes available, and session content waits for service readiness.
+- Fixes displaced or clipped conversation content when opening subagents or code previews, and resolves overview ownership conflicts between bundled and standalone OpenCU.
+- Fixes visible approval handling, cancellation and input release on stop, plus extension reconnection and recovery in Web CU.
+- Fixes shell file-URL registration with Purge and rebinds background-job settings after the job service reloads.
+- Bundled OpenCU fixes high-DPI annotation coordinates and annotated SVG export. Plan mode exits only with explicit approved: true, and tool instructions follow the actual programFormat.
+
+### Other Changes
+
+- Bundles OpenCU 2.0.1 and updates MCP client to 2.2.0. Installation guides cover both AI-assisted setup and the Add Plugin dialog.
+- Separate builds target DSH 0.2.1-rc.1 and rc.2. Full embedded-browser and native-monitoring surfaces still require matching host adapters; installing a plugin does not replace the host.
 
 ## 0.18.0（已撤回；DSH 0.2.1-rc.1 / rc.2）
 

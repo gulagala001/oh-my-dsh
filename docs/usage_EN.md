@@ -2,7 +2,7 @@
 
 [简体中文](usage.md) · [Docs index](README_EN.md) · [First task](getting-started_EN.md) · [Troubleshooting](troubleshooting_EN.md) · [Development](development_EN.md)
 
-> Current source is **OMD `0.2.1-rc.2.omd.0.18.0` / DSH `0.2.1-rc.2`**, bundling OpenCU `2.0.1`. Start with [version matching](install_EN.md); historical 0.10 users should follow their fixed-tag documentation.
+> Current source is **OMD `0.2.1-rc.2.omd.0.18.1` / DSH `0.2.1-rc.2`**, bundling OpenCU `2.0.1`. Start with [version matching](install_EN.md); historical 0.10 users should follow their fixed-tag documentation.
 
 OMD retains DSH's models, projects, sessions, native tools, files, skills, and content tabs. Package ID `trisoul_x`, preset `trisoul-x`, and existing data locations remain compatible.
 

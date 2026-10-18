@@ -1,7 +1,5 @@
 <p align="center"><img src="docs/images/release/omd-hero-zh.jpg" alt="Oh My DSH — 不止换个界面，换一种工作方式。" width="100%" /></p>
 
-> **发行已撤回（2026-10-18）：** OMD 0.18.0、OpenCU 2.0.1、OMAA 0.16.0 已撤回，正在修复预设选择入口缺失。以下安装链接恢复为上一发行；main 分支改动不代表新版本已验收。已安装用户请保留数据与配置。
-
 <h1 align="center">Oh My DSH</h1>
 <p align="center"><strong>更懂任务的提示词，更顺手的界面，更连贯的长任务。</strong></p>
 <p align="center">系统提示词增强 · 五套主题 · 电脑操作 · 侧栏批注 · 用量监控 · 记忆与自动压缩</p>

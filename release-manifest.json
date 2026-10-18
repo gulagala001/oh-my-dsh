@@ -2,10 +2,32 @@
   "schema": 1,
   "releases": [
     {
-      "version": "0.2.1-rc.2.omd.0.18.0",
+      "version": "0.2.1-rc.2.omd.0.18.1",
       "severity": "normal",
       "unpublished": false,
-      "title": "记忆缓存、Ultra 与审批／电脑操作修复",
+      "title": "预设入口恢复、记忆缓存与 Ultra／电脑操作更新",
+      "notes": [
+        "恢复新任务预设选择器与会话标题栏标识，保留会话就绪保护。",
+        "包含记忆预处理缓存、Ultra、原生总览与审批／Web CU 修复。",
+        "内置 OpenCU 2.0.1；替代已撤回的 OMD 0.18.0。"
+      ]
+    },
+    {
+      "version": "0.2.1-rc.1.omd.0.18.1",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "预设入口恢复、记忆缓存与 Ultra／电脑操作更新",
+      "notes": [
+        "恢复新任务预设选择器与会话标题栏标识，保留会话就绪保护。",
+        "包含记忆预处理缓存、Ultra、原生总览与审批／Web CU 修复。",
+        "内置 OpenCU 2.0.1；替代已撤回的 OMD 0.18.0。"
+      ]
+    },
+    {
+      "version": "0.2.1-rc.2.omd.0.18.0",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "已撤回：预设入口回归",
       "notes": [
         "新增可选记忆预处理缓存，整合 Ultra 与原生会话总览。",
         "修复审批、Web CU、子智能体／代码预览布局、Purge 共存及图像批注。",
@@ -15,8 +37,8 @@
     {
       "version": "0.2.1-rc.1.omd.0.18.0",
       "severity": "normal",
-      "unpublished": false,
-      "title": "记忆缓存、Ultra 与审批／电脑操作修复",
+      "unpublished": true,
+      "title": "已撤回：预设入口回归",
       "notes": [
         "新增可选记忆预处理缓存，整合 Ultra 与原生会话总览。",
         "修复审批、Web CU、子智能体／代码预览布局、Purge 共存及图像批注。",
