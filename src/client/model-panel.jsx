@@ -39,10 +39,12 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, additi
   const [mode, setMode] = useState(null), [error, setError] = useState(''), [saving, setSaving] = useState(false);
   const [open, setOpen] = useState(false), [pane, setPane] = useState('effort'), [query, setQuery] = useState('');
   const [draft, setDraft] = useState(null), [dragging, setDragging] = useState(false);
+  const [submodeDraft, setSubmodeDraft] = useState(null);
   const [position, setPosition] = useState({ visibility: 'hidden' });
   const trigger = useRef(null), panel = useRef(null), slider = useRef(null), search = useRef(null), modelButton = useRef(null);
   const live = useRef(true), ticket = useRef(0), writing = useRef(false), draggingRef = useRef(false), draftRef = useRef(null), commitTimer = useRef();
   const gestureRevision = useRef(null), focusAfterSave = useRef(null);
+  const pendingSubmode = useRef(null);
   const id = useId();
   useEffect(() => { live.current = true; return () => { live.current = false; clearTimeout(commitTimer.current); }; }, []);
   const refresh = useCallback(async () => {
@@ -65,7 +67,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, additi
   const effective = selected?.reasoningEffort ?? model?.reasoning?.defaultEffort;
   const activeMode = mode?.mode ?? 'off';
   const submodes = ultraSubmodes.filter(item => item.id !== 'team' || mode?.teamAvailable === true);
-  const submode = submodes.find(item => item.id === mode?.submode) ?? ultraSubmodes[2];
+  const submode = submodes.find(item => item.id === (submodeDraft ?? mode?.submode)) ?? ultraSubmodes[2];
   const selectedIndex = activeMode !== 'off' ? choices.findIndex(item => item.mode === activeMode) : choices.findIndex(item => !item.mode && item.id === effective);
   const value = draft ?? Math.max(0, selectedIndex), level = choices[value] ?? choices[0];
   const modelName = model?.name ?? selected?.model ?? '选择模型';
@@ -115,12 +117,27 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, additi
     }
     setSaving(true); setError('');
     try {
-      const next = await modeApi(sessionId, { ...route, reasoningEffort, mode: nextMode, submode: nextSubmode, expectedRevision: mode.revision });
-      if (!live.current) return false;
-      setMode(next);
+      let revision = mode.revision;
+      while (true) {
+        const next = await modeApi(sessionId, { ...route, reasoningEffort, mode: nextMode, submode: nextSubmode, expectedRevision: revision });
+        if (!live.current) return false;
+        setMode(next);
+        const queued = pendingSubmode.current; pendingSubmode.current = null;
+        if (queued === null || next.mode === 'ultra' && queued === next.submode) break;
+        // A submode click made while Ultra is saving follows that write, using
+        // its returned revision instead of racing it with the stale selection.
+        nextMode = 'ultra'; reasoningEffort = undefined; nextSubmode = queued; revision = next.revision;
+      }
       return true;
     } catch (e) { if (live.current) setError(e.message); return false; }
-    finally { writing.current = false; if (live.current) { setSaving(false); setDraft(null); draftRef.current = null; } }
+    finally { writing.current = false; pendingSubmode.current = null; if (live.current) { setSaving(false); setSubmodeDraft(null); setDraft(null); draftRef.current = null; } }
+  };
+  const chooseSubmode = next => {
+    clearTimeout(commitTimer.current); gestureRevision.current = null;
+    draggingRef.current = false; setDragging(false);
+    setSubmodeDraft(next);
+    if (writing.current) { pendingSubmode.current = next; return; }
+    void save({ provider: selected.provider, model: selected.model }, 'ultra', undefined, next);
   };
   const commit = index => {
     clearTimeout(commitTimer.current);
@@ -183,8 +200,8 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, additi
         {level?.mode === 'ultra' && <div className="omd-ultra-options">
           <div className="omd-ultra-submodes" role="radiogroup" aria-label="Ultra 协作方式">
             {submodes.map(item => <label key={item.id} data-selected={submode.id === item.id || undefined}>
-              <input type="radio" name={`${id}-submode`} value={item.id} checked={submode.id === item.id} tabIndex={submode.id === item.id ? 0 : -1} disabled={busy || locked || activeMode !== 'ultra'}
-                onChange={() => { if (item.id !== submode.id) void save({ provider: selected.provider, model: selected.model }, 'ultra', undefined, item.id); }}/>
+              <input type="radio" name={`${id}-submode`} value={item.id} checked={(activeMode === 'ultra' || submodeDraft !== null) && submode.id === item.id} tabIndex={submode.id === item.id ? 0 : -1} disabled={locked || !mode || !selected || state.pending !== null}
+                onChange={() => chooseSubmode(item.id)}/>
               <span>{item.label}</span>
             </label>)}
           </div>
