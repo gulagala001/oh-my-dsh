@@ -6,6 +6,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promi
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { performance } from 'node:perf_hooks';
+import { assertLiveErrors, readSnapshotWithLiveErrors } from './fixtures/conversation-hot-install/live-errors.mjs';
 import { createResourceDiagnostics } from './fixtures/conversation-hot-install/resources.mjs';
 import { setTimeout as delay } from 'node:timers/promises';
 import { desktopInputs, desktopIdentity, assertDesktopPaths, digest, inside, pins } from './fixtures/conversation-hot-install/inputs.mjs';
@@ -70,7 +71,8 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
         async () => {
           if (!app) return;
           const process = app.process();
-          await app.close();
+          resources.mark('cleanup-app-close-before');
+          await app.close(); resources.mark('cleanup-app-close-returned');
           assert.equal(process.exitCode, 0, 'Failure cleanup did not exit successfully; retain its profile');
           assert.equal(process.signalCode, null, 'Forced Playwright cleanup is a failure, never a graceful restart');
           app = undefined;
@@ -176,6 +178,7 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
     });
     const identity = await app.evaluate(desktopIdentity, { ...inputs, publicComponents: inputs.manifest.dsh.client.inject,
       cordisVersion: inputs.manifest.peerDependencies['@deepseek-ai/cordis'] });
+    resources.allowStaticPaths(identity.staticPaths);
     report.nativePathObservations.push({ pid: app.process().pid, nativeHome: identity.nativeHome, nativeLogs: identity.nativeLogs,
       environmentHome: identity.environmentHome, nodeHome: identity.nodeHome, dshHome: identity.dshHome, userData: identity.userData });
     await save();
@@ -214,6 +217,7 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
     const child = app.process(), host = await observe();
     // Ask the official app to quit and wait before calling Playwright.close().
     // Its force-kill fallback cannot produce a successful cold-restart record.
+    assertLiveErrors(errors, 'before-quit');
     resources.mark('quit-before');
     await app.evaluate(({ app }) => { setTimeout(() => { console.log('OMD_HOT_QUIT_ISSUED'); app.quit(); }, 0); });
     resources.mark('quit-evaluation-returned');
@@ -247,18 +251,18 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
   const snapshot = async stage => {
     let lastFailure;
     try {
-      return await until(async () => {
+      const completed = await until(async () => {
         assert.deepEqual(errors, [], 'Renderer error fails slot acceptance');
         const host = await observe();
         assert.equal(host.entries.some(row => row.state === 3), false, 'Failed Host fiber');
         const ui = await page.evaluate(id => window.__OMD_HOT_SLOTS__?.({ sessionId: id }), report.sessionId);
         if (!ui) return false;
         const button = page.getByRole('button', { name: '模型与思考强度', exact: true }), count = await button.count();
-        const value = { stage, pid: app.process().pid, host, ui, persisted: await persisted(),
+        const value = await readSnapshotWithLiveErrors(async () => ({ stage, pid: app.process().pid, host, ui, persisted: await persisted(),
           bundles: await rpc('pluginManager/listBundles'), errors: [...errors],
           composerVisible: await page.locator('[data-composer-input]').first().isVisible(),
           modelButtonCount: count, modelButtonVisible: count === 1 && await button.isVisible(),
-          additiveButtonCount: await page.getByRole('button', { name: 'OMD 模式与思考强度', exact: true }).count() };
+          additiveButtonCount: await page.getByRole('button', { name: 'OMD 模式与思考强度', exact: true }).count() }), errors);
         try {
           const baseline = report.baseline ?? stockBaseline(ui);
           assertStage(value, baseline, { stage, sessionId: report.sessionId, bundleRoot: report.bundleRoot });
@@ -266,6 +270,8 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
           return value;
         } catch (error) { lastFailure = error; return false; }
       }, stage + ' actual Host/renderer/slot/session convergence', 45000);
+      assertLiveErrors(errors, 'snapshot-complete');
+      return completed;
     } catch (error) { throw new Error(error.message + (lastFailure ? ': ' + lastFailure.message : ''), { cause: error }); }
   };
   const captureDiagnostic = async label => {

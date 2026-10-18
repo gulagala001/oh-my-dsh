@@ -1,12 +1,18 @@
+import { createHash } from 'node:crypto';
 // Passive diagnostics only. This projection never changes acceptance errors.
 export const resourcePrefix = 'OMD_HOT_RESOURCE ';
 const phases = ['prepare', 'launch', 'stock-selected', 'install-request', 'receipt-returned',
   'installed-snapshot-ok', 'readiness-ok', 'screenshot-before', 'screenshot-after',
   'quit-before', 'quit-evaluation-returned', 'quit-issued-received', 'electron-exit',
-  'host-before-exit-received', 'host-exit-received', 'exit-verified', 'failure'];
+  'host-before-exit-received', 'host-exit-received', 'exit-verified', 'failure',
+  'cleanup-app-close-before', 'cleanup-app-close-returned'];
 const moduleIds = ['trisoul_x', '@deepseek-ai/dsh-client-ui-conversation', '@deepseek-ai/dsh-client-ui-chat',
   '@deepseek-ai/dsh-client-ui-renderer', 'omd-desktop-conversation-hot-observer'];
-const staticPaths = new Set(['/', '/index.html', '/favicon.ico', '/favicon.svg']);
+const declaredStaticPaths = ['/', '/index.html', '/favicon.ico', '/favicon.svg', '/favicon-dark.svg', '/manifest.webmanifest'];
+const omdPaths = new Set(['/trisoul-x/api/version', '/trisoul-x/api/model-mode']);
+// Fixed rc2 @Remote declarations and the fixture's public RPC methods only.
+const sdkPaths = new Set(['session/list', 'session/create', 'session/modelCatalog', 'session/rename',
+  'workspace/create', 'pluginManager/listBundles', 'pluginManager/installBundle'].map(name => '/api/' + name));
 const choice = (value, values) => values.includes(value) ? value : 'other';
 const integer = value => Number.isSafeInteger(value) && value >= 0 && value <= 1e9 ? value : null;
 const errorTexts = ['net::ERR_ABORTED', 'net::ERR_FAILED', 'net::ERR_UNEXPECTED',
@@ -16,6 +22,7 @@ const errorTexts = ['net::ERR_ABORTED', 'net::ERR_FAILED', 'net::ERR_UNEXPECTED'
 export function createResourceDiagnostics({ now, write = line => console.log(line) }) {
   const started = now(), events = [], critical = [], marks = [], revisions = new Map();
   const requests = new WeakMap();
+  const staticPaths = new Set(declaredStaticPaths);
   let requestId = 0, sequence = 0, phase = 'prepare', loopback, dropped = 0, emitted = false;
   const ms = () => Math.max(0, Math.min(720000, Math.round(now() - started)));
   function resource(raw) {
@@ -35,9 +42,12 @@ export function createResourceDiagnostics({ now, write = line => console.log(lin
       return { category: 'module-redacted', origin };
     }
     if (staticPaths.has(url.pathname)) return { category: 'known-static', origin, path: url.pathname };
-    if (url.pathname.startsWith('/api/')) return { category: 'api-redacted', origin };
-    if (url.pathname.startsWith('/assets/')) return { category: 'asset-redacted', origin };
-    return { category: 'path-redacted', origin };
+    if (omdPaths.has(url.pathname)) return { category: 'omd-api', origin, path: url.pathname };
+    if (sdkPaths.has(url.pathname)) return { category: 'sdk-api', origin, method: url.pathname.slice(5) };
+    const pathnameSha256 = createHash('sha256').update(url.pathname).digest('hex');
+    if (url.pathname.startsWith('/api/')) return { category: 'api-redacted', origin, pathnameSha256 };
+    if (url.pathname.startsWith('/assets/')) return { category: 'asset-redacted', origin, pathnameSha256 };
+    return { category: 'path-redacted', origin, pathnameSha256 };
   }
   function record(kind, fields, important = false) {
     const row = { sequence: ++sequence, ms: ms(), phase, kind, ...fields };
@@ -47,6 +57,16 @@ export function createResourceDiagnostics({ now, write = line => console.log(lin
   }
   const link = key => key && typeof key === 'object' ? requests.get(key) ?? { startObserved: false } : { startObserved: false };
   return {
+    allowStaticPaths(paths) {
+      // Called only with the pinned packaged application's enumerated dist.
+      if (!Array.isArray(paths) || paths.length > 4096) throw Error('Invalid packaged static inventory');
+      for (const path of paths) {
+        if (declaredStaticPaths.includes(path)) { staticPaths.add(path); continue; }
+        if (typeof path !== 'string' || path.length > 256 || !/^\/assets\/[A-Za-z0-9_./-]+\.(?:js|css|svg|png|webp|woff2|map)$/.test(path)
+          || path.split('/').slice(1).some(part => part === '.' || part === '..' || part === '')) continue;
+        staticPaths.add(path);
+      }
+    },
     setLoopback(value) {
       const url = new URL(value);
       if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || !url.port || url.username || url.password)

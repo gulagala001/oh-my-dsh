@@ -121,8 +121,28 @@ export async function desktopIdentity({ app }, expected) {
     if (manifest.name !== name || manifest.version !== version) throw Error('Actual SDK identity mismatch: ' + name);
     manifests[name] = { version: manifest.version, file: actual };
   }
+  const frontend = await fs.realpath(anchor.resolve('@deepseek-ai/dsh-web-frontend/package.json'));
+  if (![appRoot + path.sep, appRoot + '.unpacked' + path.sep].some(root => frontend.startsWith(root)))
+    throw Error('Static inventory outside verified official resources');
+  const frontendPackage = JSON.parse(await fs.readFile(frontend, 'utf8'));
+  if (frontendPackage.name !== '@deepseek-ai/dsh-web-frontend' || frontendPackage.version !== expected.hostVersion)
+    throw Error('Static inventory package identity mismatch');
+  const dist = path.join(path.dirname(frontend), 'dist'), staticPaths = [];
+  const roots = new Set(['index.html', 'favicon.svg', 'favicon-dark.svg', 'manifest.webmanifest']);
+  let inspected = 0;
+  const inventory = async (directory, depth = 0) => {
+    if (depth > 16) throw Error('Static inventory depth limit');
+    for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
+      if (++inspected > 4096) throw Error('Static inventory size limit');
+      const file = path.join(directory, entry.name), relative = path.relative(dist, file).split(path.sep).join('/');
+      if (entry.isDirectory()) await inventory(file, depth + 1);
+      else if (entry.isFile() && (roots.has(relative) || relative.startsWith('assets/'))) staticPaths.push('/' + relative);
+      else if (entry.isSymbolicLink()) throw Error('Static inventory symlink');
+    }
+  };
+  await inventory(dist);
   return { executable: process.execPath, appRoot, appVersion: app.getVersion(), electron: process.versions.electron,
     nativeHome: app.getPath('home'), nativeLogs: app.getPath('logs'),
     environmentHome: process.env.HOME, nodeHome: os.homedir(), dshHome: process.env.DSH_HOME,
-    userData: app.getPath('userData'), manifests };
+    userData: app.getPath('userData'), manifests, staticPaths };
 }

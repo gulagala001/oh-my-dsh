@@ -44,3 +44,12 @@ queries and modules are redacted; only fixed static paths or allowlisted module
 IDs with revisions verified against the actual Host graph can be printed.
 No request/response body, header, cookie, token, session ID or user path is read
 for this projection. Full original renderer errors remain acceptance failures.
+
+The static allowlist now includes the fixed official icon/manifest paths and
+bounded actual assets enumerated inside the version-checked official ASAR dist.
+Fixed OMD version/model-mode routes and a small fixed SDK method table retain
+their identities without query or payload. Other controlled pathnames retain
+only SHA256 for offline dictionary matching, never the original pathname.
+Snapshot completion rechecks the live error array after its final asynchronous
+read, and normal quit has its own live-error prerequisite; the original final
+guard remains. An async/deferred regression covers the previously stale copy.

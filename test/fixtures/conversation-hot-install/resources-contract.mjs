@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createResourceDiagnostics, resourcePrefix } from './resources.mjs';
+import { createHash } from 'node:crypto';
+import { assertLiveErrors, readSnapshotWithLiveErrors } from './live-errors.mjs';
 
 function fixture() {
   let time = 500;
@@ -70,4 +72,46 @@ test('bounded stdout retains first critical failure despite a flood and flushes 
   assert(f.lines.every(line => Buffer.byteLength(line + '\n') <= 1200));
   assert(Buffer.byteLength(f.lines.join('\n') + '\n') <= 65536);
   assert(f.rows().some(row => row.errorText === 'net::ERR_FAILED')); assert(f.rows().at(-1).droppedOrOmitted > 0);
+});
+test('declared and actual packaged static files are exact matches, never wildcard paths', () => {
+  const f = fixture();
+  f.value.allowStaticPaths(['/assets/index-ab12cd34.js', '/assets/fonts/font-1122.woff2', '/assets/../PRIVATE.js']);
+  for (const url of ['dsh-app://app/favicon-dark.svg?token=PRIVATE', 'dsh-app://app/manifest.webmanifest#PRIVATE',
+    'dsh-app://app/assets/index-ab12cd34.js?PRIVATE', 'dsh-app://app/assets/fonts/font-1122.woff2',
+    'dsh-app://app/assets/unknown-PRIVATE.js']) f.value.consoleError({ url, lineNumber: 0, columnNumber: 0 });
+  f.value.flush(); const rows = f.rows().filter(row => row.kind === 'console-error');
+  assert.deepEqual(rows.slice(0, 4).map(row => row.resource.category), Array(4).fill('known-static'));
+  assert.equal(rows[4].resource.category, 'asset-redacted');
+  assert.equal(rows[4].resource.pathnameSha256, createHash('sha256').update('/assets/unknown-PRIVATE.js').digest('hex'));
+  assert.equal(f.lines.join('\n').includes('PRIVATE'), false);
+});
+test('fixed OMD and SDK methods discard session/query/fragment, unknown paths retain only pathname hash', () => {
+  const f = fixture();
+  for (const url of ['dsh-app://app/trisoul-x/api/version?refresh=PRIVATE',
+    'dsh-app://app/trisoul-x/api/model-mode?session=PRIVATE',
+    'dsh-app://app/api/session/create?token=PRIVATE', 'dsh-app://app/api/PRIVATE?token=PRIVATE#PRIVATE'])
+    f.value.consoleError({ url, lineNumber: 0, columnNumber: 0 });
+  f.value.flush(); const rows = f.rows().filter(row => row.kind === 'console-error');
+  assert.equal(rows[0].resource.path, '/trisoul-x/api/version');
+  assert.equal(rows[1].resource.path, '/trisoul-x/api/model-mode');
+  assert.equal(rows[2].resource.method, 'session/create');
+  assert.equal(rows[3].resource.category, 'api-redacted');
+  assert.equal(rows[3].resource.pathnameSha256, createHash('sha256').update('/api/PRIVATE').digest('hex'));
+  assert.equal(f.lines.join('\n').includes('PRIVATE'), false);
+});
+test('renderer error arriving during deferred snapshot reads rejects the actual live-error helper', async () => {
+  const errors = []; let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  const reading = readSnapshotWithLiveErrors(async () => {
+    const value = { errors: [...errors] }; await gate; return value;
+  }, errors);
+  errors.push('late asynchronous resource error'); release();
+  await assert.rejects(reading, /snapshot-complete/);
+  assert.deepEqual(errors, ['late asynchronous resource error']);
+  assert.throws(() => assertLiveErrors(errors, 'before-quit'), /before-quit/);
+});
+test('clean asynchronous snapshot succeeds without replacing or clearing the shared errors array', async () => {
+  const errors = [], value = { result: true };
+  assert.equal(await readSnapshotWithLiveErrors(async () => value, errors), value);
+  assertLiveErrors(errors, 'before-quit'); assert.deepEqual(errors, []);
 });
