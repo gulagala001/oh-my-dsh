@@ -35,3 +35,7 @@ OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表列的是已发�
 - DSH 0.2.0-rc.2 / OMD 0.10：[历史发行](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.0-rc.2.omd.0.10.0) · [对应文档](https://github.com/gulagala001/oh-my-dsh/blob/v0.2.0-rc.2.omd.0.10.0/README.md)
 
 For older hosts, use the matching tag's documentation. Do not choose a package solely from GitHub's Latest label.
+
+## 市场同步记录（2026-10-18）
+
+[Awesome DSH Plugin 投稿／更新](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/7931)：已有目录条目；本次固定安装地址更新待审。本次维护同一仓库条目，向共用该数据源的下游不重复投稿。自动发现 topics 已配置，市场同步与外部审核尚未确认完成；当前安装请使用上方固定 Release 地址。
