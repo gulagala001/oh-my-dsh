@@ -13,11 +13,11 @@ import { Context } from '@deepseek-ai/cordis';
 import { ToolRuntime } from '@deepseek-ai/dsh-tools';
 import { markAgentLoopRequest, isAgentLoopRequest, createToolResultMessage } from '@deepseek-ai/dsh-llm';
 import { acquireOpenCU } from '../vendor/opencu/src/dsh/shared.mjs';
-import { revealApprovalCard } from './fixtures/desktop-deny/navigation.mjs';
+import { defaultApprovalCard } from './fixtures/desktop-deny/navigation.mjs';
 import { assertDenyReport } from './fixtures/desktop-deny/gate.mjs';
 import { installToolDefinitions } from '../vendor/opencu/src/dsh/tools.mjs';
 import { syntheticBackend, acquireBeforeStart, warmTargets, createModelGuard, createWireProtocol,
-  credentialFiles, disabledBackends, forbiddenMethods, provider, model, callId, targetId, declinedText, assertPending, assertWaitingApproval, assertDenied } from './fixtures/desktop-deny/protocol.mjs';
+  credentialFiles, disabledBackends, forbiddenMethods, provider, model, callId, targetId, appName, declinedText, assertPending, assertWaitingApproval, assertDenied } from './fixtures/desktop-deny/protocol.mjs';
 
 async function directory(t) {
   const root = await mkdtemp(join(tmpdir(), 'omd-deny-contract-'));
@@ -33,6 +33,11 @@ const secondRequest = () => ({ ...firstRequest(), messages: [
   { role: 'assistant', tool_calls: [{ id: callId, type: 'function', function: { name: 'opencu_select', arguments: JSON.stringify({ reference: targetId }) } }] },
   { role: 'tool', tool_call_id: callId, content: declinedText },
 ] });
+const cardEvidence = requestId => ({ sessionId: 'unit-session', boundSessionId: 'unit-session', requestId,
+  appDisplayName: appName, title: `允许 OpenCU 使用 ${appName}？`, cardCount: 1, matchingCardCount: 1, titleCount: 1,
+  defaultApprovalVisible: true, denyCount: 1, denyVisible: true,
+  bounds: { x: 100, y: 200, width: 600, height: 300 }, denyBounds: { x: 120, y: 440, width: 80, height: 30 },
+  viewport: { width: 1280, height: 900 } });
 
 test('model guard permits only two armed official Agent-loop requests and preserves next()', () => {
   const legal = () => markAgentLoopRequest({ provider, model, sessionId: 'actual-returned-id' });
@@ -137,13 +142,23 @@ test('real OpenCU controller and official ToolRuntime reject before any syntheti
   const tap = '# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n';
   const report = { status: 'passed', executed: 1, skipped: 0, phase: 'checks-complete', cancelledForCleanup: false,
     launches: [{ pid: 1 }, { pid: 2 }], shutdowns: [1, 2].map(() => ({ naturalExit: true, exitCode: 0, signalCode: null })),
-    groupNavigation: { defaultApprovalVisible: false, manualGroupExpansion: true, callId, bodyId: 'unit-body', before: { requestId: pending.id, sessionId: 'unit-session', localModelRequests: 1, physicalInputs: 0 }, after: { requestId: pending.id, sessionId: 'unit-session', localModelRequests: 1, physicalInputs: 0 } },
+    approvalDisplay: { manualGroupExpansion: false, scrolledIntoView: false, apiApproval: false,
+      beforeCard: cardEvidence(pending.id), afterCard: cardEvidence(pending.id),
+      before: { requestId: pending.id, sessionId: 'unit-session', localModelRequests: 1, physicalInputs: 0 },
+      after: { requestId: pending.id, sessionId: 'unit-session', localModelRequests: 1, physicalInputs: 0 } },
     counts: { localModelRequests: 2, toolCalls: 1, externalModelRequests: 0, physicalInputs: 0 }, errors: [], approvalResponses: [response],
     pending: { deny: snapshot }, denied: { deny: value, modelCalls: value.modelCalls, rejectedModels: [] }, providerRequests: wire.requests, providerFailures: [] };
   assertDenyReport(tap, report);
   for (const invalid of ['', tap.replace('# tests 1', '# tests 0'), tap.replace('# skipped 0', '# skipped 1'), tap.replace('# pass 1', '# pass 0')]) assert.throws(() => assertDenyReport(invalid, report));
   for (const mutate of [r => { r.approvalResponses[0].source = 'renderer-requestfinished'; }, r => { r.approvalResponses[0].responseFinished = false; }, r => { r.cancelledForCleanup = true; }, r => { r.shutdowns[1].naturalExit = false; }, r => { r.counts.localModelRequests = 1; },
-    r => { r.groupNavigation.after.requestId = 'another-request'; }, r => { r.groupNavigation.after.localModelRequests = 2; }, r => { r.groupNavigation.manualGroupExpansion = false; }, r => { r.groupNavigation.defaultApprovalVisible = true; }, r => { r.groupNavigation.after.physicalInputs = 1; },
+    r => { r.approvalDisplay.after.requestId = 'another-request'; }, r => { r.approvalDisplay.after.localModelRequests = 2; },
+    r => { r.approvalDisplay.manualGroupExpansion = true; }, r => { r.approvalDisplay.scrolledIntoView = true; }, r => { r.approvalDisplay.apiApproval = true; },
+    r => { r.approvalDisplay.after.physicalInputs = 1; }, r => { r.approvalDisplay.beforeCard.defaultApprovalVisible = false; },
+    r => { r.approvalDisplay.afterCard.cardCount = 2; }, r => { r.approvalDisplay.afterCard.matchingCardCount = 0; },
+    r => { r.approvalDisplay.afterCard.sessionId = 'other-session'; }, r => { r.approvalDisplay.afterCard.boundSessionId = 'other-session'; },
+    r => { r.approvalDisplay.afterCard.requestId = 'other-request'; }, r => { r.approvalDisplay.afterCard.title = `允许 DSH 使用 ${appName}？`; },
+    r => { r.approvalDisplay.afterCard.bounds.y = -1; }, r => { r.approvalDisplay.afterCard.bounds.x = 1280; },
+    r => { r.approvalDisplay.afterCard.bounds.height = 901; }, r => { r.approvalDisplay.afterCard.denyBounds.y = 900; },
     r => { r.counts.externalModelRequests = 1; }, r => { r.counts.physicalInputs = 1; }, r => { r.launches[1].pid = 1; }]) {
     const invalid = structuredClone(report); mutate(invalid); assert.throws(() => assertDenyReport(tap, invalid));
   }
@@ -154,55 +169,50 @@ test('real OpenCU controller and official ToolRuntime reject before any syntheti
   assert.equal(existsSync(join(dataDir, 'app-approvals.json')), false); assert.equal(existsSync(join(dataDir, 'app-approvals.json.pending')), false);
 });
 
-test('real navigation helper uses only the uniquely bound normal toggle and rechecks pending state around expansion', async () => {
+test('default-card inspection rejects hidden, duplicated, wrong-session and clipped approvals without UI actions', async () => {
   function fixture(change = {}) {
-    const state = { tool: 1, group: 1, body: 1, toggle: 1, card: 1, bodyId: 'actual-process-body', controls: 'actual-process-body',
-      expanded: 'false', visible: false, toggleVisible: true, opens: true, ...change };
-    const actions = [], count = name => async () => state[name];
-    const wait = (name, visible) => async ({ state: requested }) => {
-      assert(state[name] > 0, 'Missing actual ' + name);
-      if (requested === 'visible') assert(visible(), 'Hidden actual ' + name);
-      else assert.equal(requested, 'attached');
+    const state = { ...cardEvidence('unit-pending'), ...change }, actions = [];
+    const pending = { id: 'unit-pending', conversationId: 'unit-session', request: { appDisplayName: appName } };
+    const title = { count: async () => state.titleCount, innerText: async () => state.title };
+    const deny = { count: async () => state.denyCount, isVisible: async () => state.denyVisible,
+      boundingBox: async () => state.denyBounds };
+    const card = { count: async () => state.matchingCardCount,
+      waitFor: async options => { assert.deepEqual(options, { state: 'attached' }); assert(state.matchingCardCount > 0); },
+      isVisible: async () => state.defaultApprovalVisible, boundingBox: async () => state.bounds,
+      getByText(value, options) { assert.equal(value, `允许 OpenCU 使用 ${appName}？`); assert.deepEqual(options, { exact: true }); return title; },
+      getByRole(role, options) { assert.equal(role, 'button'); assert(options.name.test('拒绝')); return deny; },
     };
-    const card = { count: count('card'), waitFor: wait('card', () => state.visible), isVisible: async () => state.visible };
-    const tool = { count: count('tool'), waitFor: wait('tool', () => state.visible), locator(selector) { assert.equal(selector, '[data-codex-approval-surface]'); return card; } };
-    const body = { count: count('body'), getAttribute: async key => { assert.equal(key, 'id'); return state.bodyId; } };
-    const toggle = { count: count('toggle'), waitFor: wait('toggle', () => state.toggleVisible),
-      getAttribute: async key => { assert(['aria-expanded', 'aria-controls'].includes(key)); return key === 'aria-controls' ? state.controls : state.expanded; },
-      async click(options) { assert.equal(options, undefined, 'No force or synthetic event'); actions.push('normal-toggle-click'); if (state.opens) { state.expanded = 'true'; state.visible = true; } },
+    const surfaces = { count: async () => state.cardCount,
+      filter(options) { assert.deepEqual(options, { hasText: appName }); return card; } };
+    const page = { locator(selector) { assert.equal(selector, '[data-codex-approval-surface]'); return surfaces; },
+      evaluate: async () => ({ sessionId: state.sessionId, boundSessionId: state.boundSessionId, viewport: state.viewport }) };
+    const options = { sessionId: 'unit-session', pending,
+      beforeObservation: async () => { actions.push('before'); },
+      afterObservation: async () => { actions.push('after'); },
     };
-    const group = { count: count('group'), filter(options) { assert.equal(options.has, tool); return group; }, locator(selector) {
-      if (selector === 'button.tx-cu-group-toggle[aria-controls]') return toggle;
-      assert.equal(selector, '[data-step-process-body]'); return body;
-    } };
-    const page = { locator(selector) {
-      if (selector === '[data-chat-call-id="omd-deny-select-1"]') return tool;
-      assert.equal(selector, '[data-step-process][data-chat-group-key]'); return group;
-    } };
-    const callbacks = {
-      async beforeExpansion(value) { actions.push('before'); assert.equal(value.manualGroupExpansion, false); },
-      async afterExpansion(value) { actions.push('after'); assert.equal(state.expanded, 'true'); assert.equal(state.visible, true); },
-    };
-    return { page, callbacks, state, actions, card };
+    // No locator click, scrollIntoView, DOM mutation or approval API mock exists.
+    return { state, actions, options, page, card };
   }
-  const folded = fixture(); const result = await revealApprovalCard(folded.page, folded.callbacks);
-  assert.equal(result.card, folded.card); assert.deepEqual(folded.actions, ['before', 'normal-toggle-click', 'after']);
-  assert.deepEqual(result.evidence, { callId, bodyId: 'actual-process-body', defaultApprovalVisible: false, manualGroupExpansion: true });
-  const open = fixture({ expanded: 'true', visible: true });
-  const existing = await revealApprovalCard(open.page, open.callbacks);
-  assert.deepEqual(open.actions, ['before', 'after']); assert.equal(existing.evidence.manualGroupExpansion, false);
+  const visible = fixture(), result = await defaultApprovalCard(visible.page, visible.options);
+  assert.equal(result.card, visible.card); assert.deepEqual(visible.actions, ['before', 'after']);
+  assert.deepEqual(result.evidence, { beforeCard: cardEvidence('unit-pending'), afterCard: cardEvidence('unit-pending'),
+    manualGroupExpansion: false, scrolledIntoView: false, apiApproval: false });
   for (const change of [
-    ...['tool', 'group', 'body', 'toggle', 'card'].flatMap(name => [0, 2].map(value => ({ [name]: value }))),
-    { bodyId: null }, { bodyId: '' }, { controls: 'another-process' }, { expanded: null }, { expanded: 'mixed' }, { toggleVisible: false },
+    { defaultApprovalVisible: false }, { cardCount: 0 }, { cardCount: 2 }, { matchingCardCount: 0 }, { matchingCardCount: 2 },
+    { titleCount: 2 }, { title: `允许 DSH 使用 ${appName}？` }, { denyCount: 2 }, { denyVisible: false },
+    { sessionId: 'other-session' }, { boundSessionId: 'other-session' }, { viewport: null }, { bounds: null },
+    { bounds: { x: -1, y: 0, width: 600, height: 300 } }, { bounds: { x: 800, y: 0, width: 600, height: 300 } },
+    { bounds: { x: 0, y: 800, width: 600, height: 300 } }, { denyBounds: { x: 0, y: 900, width: 80, height: 30 } },
   ]) {
-    const invalid = fixture(change); await assert.rejects(revealApprovalCard(invalid.page, invalid.callbacks));
-    assert(!invalid.actions.includes('normal-toggle-click'), 'Ambiguous or mismatched UI never receives a click');
+    const invalid = fixture(change); await assert.rejects(defaultApprovalCard(invalid.page, invalid.options));
   }
-  const stalled = fixture({ opens: false }); await assert.rejects(revealApprovalCard(stalled.page, stalled.callbacks));
-  assert(!stalled.actions.includes('after'), 'Failed expansion cannot produce expanded evidence');
-  const changedPending = fixture(); changedPending.callbacks.beforeExpansion = async () => { throw Error('pending changed'); };
-  await assert.rejects(revealApprovalCard(changedPending.page, changedPending.callbacks), /pending changed/);
-  assert.deepEqual(changedPending.actions, [], 'A changed pending/model/input state blocks navigation');
+  const wrongSession = fixture(); wrongSession.options.pending.conversationId = 'other-session';
+  await assert.rejects(defaultApprovalCard(wrongSession.page, wrongSession.options));
+  const wrongRequest = fixture(); wrongRequest.options.beforeObservation = async () => { wrongRequest.options.pending.id = 'other-request'; };
+  await assert.rejects(defaultApprovalCard(wrongRequest.page, wrongRequest.options));
+  assert.deepEqual(wrongRequest.actions, []);
+  const changed = fixture(); changed.options.afterObservation = async () => { changed.state.defaultApprovalVisible = false; };
+  await assert.rejects(defaultApprovalCard(changed.page, changed.options));
 });
 
 const httpScope = { sessionId: 'unit-session-验收', requestId: 'unit-pending-1' };

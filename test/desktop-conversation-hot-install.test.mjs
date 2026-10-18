@@ -260,12 +260,12 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
         assert.equal(host.entries.some(row => row.state === 3), false, 'Failed Host fiber');
         const ui = await page.evaluate(id => window.__OMD_HOT_SLOTS__?.({ sessionId: id }), report.sessionId);
         if (!ui) return false;
-        const button = page.getByRole('button', { name: '模型与思考强度', exact: true }), count = await button.count();
+        const button = page.getByRole('button', { name: /^模型与思考强度(?:：.+)?$/ }), count = await button.count();
         const value = await readSnapshotWithLiveErrors(async () => ({ stage, pid: app.process().pid, host, ui, persisted: await persisted(),
           bundles: await rpc('pluginManager/listBundles'), errors: [...errors],
           composerVisible: await page.locator('[data-composer-input]').first().isVisible(),
           modelButtonCount: count, modelButtonVisible: count === 1 && await button.isVisible(),
-          additiveButtonCount: await page.getByRole('button', { name: 'OMD 模式与思考强度', exact: true }).count() }), errors);
+          additiveButtonCount: await page.getByRole('button', { name: /^OMD 模式与思考强度(?:：.+)?$/ }).count() }), errors);
         try {
           const baseline = report.baseline ?? stockBaseline(ui);
           assertStage(value, baseline, { stage, sessionId: report.sessionId, bundleRoot: report.bundleRoot });

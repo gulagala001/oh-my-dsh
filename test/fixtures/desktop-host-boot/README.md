@@ -23,8 +23,9 @@ fails any request. Counts cover installation, both boots and shutdown.
 
 Model-seat takeover requires one active occupant at the captured stock priority
 minus 0.5, with the stock-priority occupant retained but inactive and the native
-label declaration owner unchanged. The exact `模型与思考强度` button must be
-visible; the additive `OMD 模式与思考强度` fallback does not satisfy this check.
+label declaration owner unchanged. One visible button must have the accessible
+name `模型与思考强度`, optionally followed by `：` and nonempty model/effort details;
+the additive `OMD 模式与思考强度` fallback does not satisfy this check.
 No model button is clicked.
 
 Blank Session navigation uses the real public `uiWorkspace.openSession(id)`

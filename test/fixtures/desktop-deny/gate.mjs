@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { assertPending, assertDenied } from './protocol.mjs';
+import { assertDefaultApprovalEvidence } from './navigation.mjs';
 
 export function assertDenyReport(tap, report) {
   for (const [key, expected] of [['tests', 1], ['pass', 1], ['fail', 0], ['cancelled', 0], ['skipped', 0]]) {
@@ -20,12 +21,13 @@ export function assertDenyReport(tap, report) {
   assert(response.responseBytes > 0); assert.match(response.responseSha256, /^[a-f0-9]{64}$/);
   const sessionId = report.denied.deny.agent.id;
   const pending = assertPending(report.pending.deny, sessionId);
-  assert.equal(report.groupNavigation.defaultApprovalVisible, false);
-  assert.equal(report.groupNavigation.manualGroupExpansion, true);
-  assert.equal(report.groupNavigation.callId, 'omd-deny-select-1');
-  assert(report.groupNavigation.bodyId);
-  for (const state of [report.groupNavigation.before, report.groupNavigation.after])
+  const display = report.approvalDisplay;
+  assert.equal(display.manualGroupExpansion, false); assert.equal(display.scrolledIntoView, false); assert.equal(display.apiApproval, false);
+  for (const state of [display.before, display.after])
     assert.deepEqual(state, { requestId: pending.id, sessionId, localModelRequests: 1, physicalInputs: 0 });
+  for (const value of [display.beforeCard, display.afterCard]) assertDefaultApprovalEvidence(value, {
+    sessionId, requestId: pending.id, appDisplayName: pending.request.appDisplayName,
+  });
   assertDenied({ ...report.denied.deny, modelCalls: report.denied.modelCalls, rejectedModels: report.denied.rejectedModels }, {
     sessionId, requestId: pending.id, response: report.approvalResponses[0],
     wire: { requests: report.providerRequests, failures: report.providerFailures },
