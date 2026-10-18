@@ -39,7 +39,7 @@
   "dependencies": {
     "@colbymchenry/codegraph": "1.6.0",
     "@deepseek-ai/dsh-mcp-client": "0.2.1-rc.2",
-    "@modelcontextprotocol/client": "2.0.0",
+    "@modelcontextprotocol/client": "2.2.0",
     "acorn": "8.18.0",
     "diff": "9.0.0",
     "html-to-text": "10.0.1",
@@ -147,8 +147,8 @@
     "@deepseek-ai/dsh-attachment": "0.2.1-rc.2",
     "@deepseek-ai/dsh-compaction": "0.2.1-rc.2",
     "@deepseek-ai/dsh-llm": "0.2.1-rc.2",
-    "@deepseek-ai/dsh-tools": "0.2.1-rc.2",
     "@deepseek-ai/dsh-scope": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.2",
     "@deepseek-ai/schemastery": "3.18.5"
   },
   "peerDependenciesMeta": {
