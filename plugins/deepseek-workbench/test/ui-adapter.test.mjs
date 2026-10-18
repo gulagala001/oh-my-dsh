@@ -1,3 +1,4 @@
+import './capability-contract.test.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createBrowserAdapter, CHAT_URL, browserLimitations } from '../src/client/browser-adapter.mjs';
