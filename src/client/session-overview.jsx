@@ -141,24 +141,36 @@ export function applySessionOverview(ctx, openCU) {
     });
     function JobsPage({ sessionId, useTabInfo }) {
       const state = useStore(scope.jobs.state), { tab } = useTabInfo();
-      const rows = state?.rows?.[sessionId] ?? [];
+      const rows = useMemo(() => jobsNative.ordered(state?.rows?.[sessionId] ?? []), [state?.rows?.[sessionId]]);
       const [expanded, setExpanded] = useState(tab.navigation?.params?.jobId), [armed, setArmed] = useState(null), [error, setError] = useState(null), [now, setNow] = useState(Date.now);
+      const [settledOpen, setSettledOpen] = useState(undefined), [clearedKeys, setClearedKeys] = useState(() => new Set());
+      const liveRows = rows.filter(jobsNative.isLive), settledRows = rows.filter(job => !jobsNative.isLive(job) && !clearedKeys.has(String(job.id)));
+      const settledExpanded = settledOpen ?? liveRows.length === 0;
       useEffect(() => scope.jobs.watchRows(sessionId), [sessionId]);
-      useEffect(() => { setExpanded(tab.navigation?.params?.jobId); }, [tab.navigation?.params?.nonce]);
-      const observable = rows.find(row => row.id === expanded && jobsNative.isObservable(row))?.id;
+      useEffect(() => {
+        const id = tab.navigation?.params?.jobId;
+        setExpanded(id);
+        if (id != null) { setSettledOpen(true); setClearedKeys(keys => { const next = new Set(keys); next.delete(String(id)); return next; }); }
+      }, [tab.navigation?.params?.nonce]);
+      const observable = [...liveRows, ...(settledExpanded ? settledRows : [])].find(row => row.id === expanded && jobsNative.isObservable(row))?.id;
       useEffect(() => { if (!observable || !tab.visible) return; return scope.jobs.observe(sessionId, observable); }, [sessionId, observable, tab.visible]);
       useEffect(() => { if (!tab.visible || !rows.some(row => row.status === 'running')) return; const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, [tab.visible, rows]);
       useEffect(() => { if (!armed) return; const timer = setTimeout(() => setArmed(null), 4000); return () => clearTimeout(timer); }, [armed]);
       const t = scope.locale.bind('omdOverviewJobs');
-      return <div style={{ padding: 20, overflow: 'auto', height: '100%' }}>
-        {error && <p role="alert">{error}</p>}
-        {['running', 'settled'].map(group => <section key={group}><h3>{group === 'running' ? '正在运行' : '已结束'}</h3>{rows.filter(row => ['running', 'stopping'].includes(row.status) === (group === 'running')).map(job => <jobsNative.JobItem key={job.id} job={job} view={state?.observed?.[String(job.id)]} expanded={expanded === job.id} now={now} t={t}
+      const clearSettled = () => {
+        setClearedKeys(keys => new Set([...keys, ...settledRows.map(job => String(job.id))]));
+        if (settledRows.some(job => job.id === expanded)) setExpanded(undefined);
+      };
+      const item = job => <jobsNative.JobItem key={job.id} job={job} view={state?.observed?.[String(job.id)]} expanded={expanded === job.id} now={now} t={t}
           onToggle={() => setExpanded(value => value === job.id ? undefined : job.id)}
           kill={job.status === 'running' ? { state: armed === job.id ? 'armed' : 'idle', onPress: async () => {
             if (armed !== job.id) { setArmed(job.id); return; }
             setArmed(null); try { const result = await scope.jobs.kill(sessionId, job.id); if (!result.ok) throw Error(result.error?.message || '停止失败'); } catch (reason) { setError(reason.message); }
-          } } : undefined}/>)}</section>)}
-        {!rows.length && <p>暂无后台任务</p>}
+          } } : undefined}/>;
+      return <div style={{ display: 'flex', flexDirection: 'column', padding: 8, boxSizing: 'border-box', minHeight: 0, height: '100%' }}>
+        {error && <p className={jobsNative.styles.notice} role="alert">{error}</p>}
+        <jobsNative.JobsBody {...{ liveRows, settledRows, item, settledExpanded, setSettledOpen, clearSettled, t }}/>
+        {!liveRows.length && !settledRows.length && <p className={jobsNative.styles.notice}>暂无后台任务</p>}
       </div>;
     }
     function OverviewPage(props) {
@@ -194,8 +206,10 @@ export function applySessionOverview(ctx, openCU) {
         try { const url = new URL(tab.contentId); parentId = url.searchParams.get('parent'); childId = decodeURIComponent(url.pathname.split('/').at(-1)); } catch {}
         const all = useSyncExternalStore(subscribe, () => [...states.values()].find(data => data.rows.some(row => row.id === childId)));
         const data = all, row = data?.rows.find(row => row.id === childId);
+        // Return through this native tab's placement, reusing its pane's overview.
+        const returnToOverview = section => tab.actions.openTab(pageKinds[section], { replaceTab: true });
         return <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          {data && row && <Overview sessionId={parentId} variant="detail" overview={{ ...data, detail: row }}/>}<div style={{ flex: 1, minHeight: 0 }}><Original {...props}/></div>
+          {data && row && <Overview sessionId={parentId} variant="detail" overview={{ ...data, detail: row, openPage: returnToOverview }}/>}<div style={{ flex: 1, minHeight: 0 }}><Original {...props}/></div>
         </div>;
       };
     }));

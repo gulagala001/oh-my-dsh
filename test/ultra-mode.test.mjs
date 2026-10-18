@@ -69,11 +69,11 @@ test('Team availability follows existing DSH tools and does not activate or repl
   const native = { name: 'team:policy', text: 'Native policy' }, identity = { name: 'team:identity', text: 'Native identity' };
   const assembly = await f.control.assemble(f.agent, async () => ({ sections: [native], contexts: [identity], tools: teamTools }));
   assert.equal(assembly.tools, teamTools); assert.equal(assembly.contexts[0], identity);
-  assert.equal(assembly.sections.length, 1); assert.match(assembly.sections[0].text, /Ultra 的 Agent Team/);
+  assert.equal(assembly.sections.length, 1); assert.match(assembly.sections[0].text, /Ultra Agent Team/);
   assert.equal(native.text, 'Native policy');
   f.setTeamEnabled(false);
   const fallback = await f.control.assemble(f.agent, async () => ({ sections: [] }));
-  assert.match(fallback.sections.at(-1).text, /Ultra 的自由模式/);
+  assert.match(fallback.sections.at(-1).text, /Ultra Free mode/);
   assert.equal(f.state.ultracode.submode, 'team');
   assert.equal(f.control.view(f.session).pending, false);
   const remembered = await f.select('off');
@@ -91,11 +91,11 @@ test('a running turn keeps its strategy until the next turn, including disable',
   assert.match((await assemble()).sections.at(-1).text, /Workflow authoring reference/);
   f.turn(2);
   assert.equal(f.control.view(f.session).pending, false);
-  assert.match((await assemble()).sections.at(-1).text, /Ultra 的自由模式已开启/);
+  assert.match((await assemble()).sections.at(-1).text, /Ultra Free mode is on/);
   assert.equal((await f.select('off')).pending, true);
   assert.equal(f.control.currentMode(f.agent), 'ultra');
   f.turn(3); assert.equal(f.control.currentMode(f.agent), 'off');
-  assert.ok(!(await assemble()).sections.some(section => section.text.includes('Ultra 的自由模式已开启')));
+  assert.ok(!(await assemble()).sections.some(section => section.text.includes('Ultra Free mode is on')));
 });
 
 test('restoring a saved Ultra snapshot preserves unavailable Team memory', async () => {

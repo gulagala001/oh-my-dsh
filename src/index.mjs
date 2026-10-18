@@ -221,7 +221,7 @@ export async function apply(ctx, config) {
       setRuntimeContext(agent.session, () => runtimeContext(agent, hub, { messages, turn, step }));
       await hub.context.preStep(agent, signal, route);
       if ((!hub.config().budgetHintsEnabled || hub.budgets.saved(agent.session)?.visible === false)
-        && agent.session.deriveMessages().some(m => /^预算(?:：|$)/m.test(taskContextMeta(m)?.runtime?.text ?? ''))) {
+        && agent.session.deriveMessages().some(m => /^(?:预算(?:：|$)|Budget(?::|$))/m.test(taskContextMeta(m)?.runtime?.text ?? ''))) {
         await hub.context.stripRuntime(agent.session);
       }
       if (hub.todoStore) {

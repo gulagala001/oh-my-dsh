@@ -27,9 +27,17 @@ export function parseBudgetInput(input = '') {
   return { op: 'set', limits };
 }
 
-export function renderBudget(budget) {
+export function renderBudget(budget, { language = 'zh' } = {}) {
   if (!budget || budget.visible === false) return '';
   const { limits } = budget;
+  if (language === 'en') {
+    if (Object.values(limits).every(value => value == null)) return 'Budget: unlimited';
+    const format = value => value.toLocaleString('en-US', { maximumFractionDigits: 1 });
+    const row = (label, used, limit, scale = 1, unit = '') => `${label}: ${format(used / scale)}${unit} / ${limit == null ? 'unlimited' : `${format(limit / scale)}${unit} (${format(used / limit * 100)}%)`}`;
+    return ['Budget', row('Tokens', budget.tokens, limits.tokens), row('Model rounds', budget.rounds, limits.rounds),
+      row('Execution time', budget.elapsedMs, limits.timeMs, 60000, ' minutes'),
+      ...(budget.unmetered ? [`Token usage was not reported for ${budget.unmetered} additional calls.`] : [])].join('\n');
+  }
   if (Object.values(limits).every(value => value == null)) return '预算：无限制';
   const format = value => value.toLocaleString('en-US', { maximumFractionDigits: 1 });
   const row = (label, used, limit, scale = 1, unit = '') => `${label}：${format(used / scale)}${unit} / ${limit == null ? '无限制' : `${format(limit / scale)}${unit}（${format(used / limit * 100)}%）`}`;

@@ -6,7 +6,7 @@
 
 已装 OMD，无需再装 OpenCU；请按 [OMD 中文指南](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md)／[OMD English guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install_EN.md) 更新。OMD includes OpenCU; no separate installation is needed.
 
-## 2.0.1
+## 2.0.2
 
 [中文](#zh) | [English](#en)
 
@@ -14,72 +14,72 @@
 
 ## 中文
 
-本次更新改进自 2.0.0 以来的审批、浏览器恢复与批注体验。本次恢复分发原 2.0.1 工件；预设入口问题位于 OMD，使用 OMD 的用户应升级至 0.18.1。
+OpenCU 2.0.2 汇总 2.0.1 之后的修复，改进审批目标的一致性、停止操作时的输入释放，以及两套宿主构建的可复现性。OMD 用户随 OMD 0.18.2 更新内置 OpenCU，无需重复安装。
 
-### 新增功能
+### 审批与目标归属
 
-- 设置页提供与已安装版本匹配的 Chrome／Edge MV3 扩展包下载，并校验包身份与文件哈希。
-- 补齐浏览器点击按键组合、按钮、次数与按住时长，以及下拉选择、Unicode 文本编辑和键盘操作。
-- 监看支持按目标单独隐藏和恢复；关闭预览不会停止任务，多个目标的截图故障相互隔离。
+- 审批固定到请求时的目标身份；应用或标签页变化后，旧审批不能用于操作新目标。
+- 拒绝、取消与断线按实际会话清理，不把迟到的读取结果当作新连接响应。
 
-### 体验优化
+### 停止与恢复
 
-- 优化可访问性观察的冗余文本和增量差异输出，保留稳定标识与层级。
-- 首次使用提供真实接口说明；普通操作错误保留绑定和已加载文档，超时或主动取消按生命周期清理。
+- 控制器、macOS Helper 与 MV3 扩展都可取消等待中的观察，避免读取停滞阻碍停止。
+- 停止与取消时释放已按住的键鼠，保留输入回执；结果不明的输入仍不自动重放。
 
-### 问题修复
+### 浏览器观察与连接设置
 
-- 修复默认审批卡片的显示与会话归属、授权复用、拒绝和取消；取消一个请求不再影响其他会话。
-- 停止或断线后释放持键与拖拽；恢复时拒绝旧连接迟到响应，不重放结果不明的输入。
-- 修复浏览器弹窗生命周期和恢复，以及 macOS AX 文本选择。DSH 内置浏览器支持 alert／confirm；window.prompt 仍不支持。
-- 修复高分屏批注错位、SVG 批注导出及共装时总览组件归属；Native Helper 日志改为原子写入并保留既有签名身份。
+- 截图与返回的观察信息保持一致，避免混用不同次读取的内容。
+- 扩展观察取消后隔离迟到结果，后续调用可重新获取状态。
+- 修复 Chrome／Edge 连接设置中安装说明被挤成单字窄列的问题；安装、配对、profile 选择与已连接状态使用上下排列。
 
-### 其他变更
+### 构建与兼容
 
-- rc.1／rc.2 分别使用匹配的 SDK 和依赖锁。OMD 已内置 OpenCU，无需另装；完整桌面界面需匹配宿主适配。
+- rc.1／rc.2 分别保存完整 SDK 与前端依赖锁；构建强制使用冻结锁并核对实际安装版本。
+- 对应源码变体携带匹配的根 npm 锁，避免源码安装混入其他宿主版本。
+- 保留现有 macOS Helper 签名身份。仅支持表中精确宿主版本；完整桌面界面仍需匹配的 Host、Client 与 preload 适配。
 
 <a id="en"></a>
 
 ## English
 
-This update improves approval, browser recovery and annotations since 2.0.0. The original 2.0.1 artifacts are being republished unchanged. The preset regression was in OMD; OMD users should upgrade to 0.18.1.
+OpenCU 2.0.2 brings together fixes added after 2.0.1: consistent approval targets, input release when stopping, and reproducible builds for both supported hosts. OMD users receive the bundled OpenCU through OMD 0.18.2 and do not need a separate installation.
 
-### New Features
+### Approval and target ownership
 
-- Settings can download the Chrome/Edge MV3 extension matching the installed plugin, with package identity and file-hash checks.
-- Expands browser clicks with modifiers, button choice, click count and hold duration, alongside select controls, Unicode text editing and keyboard operations.
-- Monitoring can be hidden and restored per target without stopping the task, with capture failures isolated across targets.
+- Approval is pinned to the target identity requested. A previous approval cannot operate a replacement app or tab.
+- Denial, cancellation and disconnect clean up the actual session and reject late read results from older connections.
 
-### Improvements
+### Stop and recovery
 
-- Reduces redundant accessibility text and improves ordered incremental differences while preserving stable identifiers and hierarchy.
-- First use provides the actual interface documentation. Ordinary operation errors retain bindings and loaded documentation, while timeouts and active cancellation follow lifecycle cleanup.
+- The controller, macOS Helper and MV3 extension can cancel pending observations, preventing stalled reads from blocking stop.
+- Stop and cancellation release held keys and mouse buttons while preserving input acknowledgements. Inputs with an unknown outcome are still not replayed automatically.
 
-### Bug Fixes
+### Browser observation and connection settings
 
-- Fixes approval-card visibility, session ownership, grant reuse, denial and cancellation. Cancelling one request no longer cancels another session’s request.
-- Releases held keys and drags on stop or disconnect, rejects stale responses from older connections, and avoids replaying inputs whose outcome is unknown.
-- Fixes browser-dialog lifecycle and recovery, plus macOS AX text selection. The DSH embedded browser supports alert/confirm; window.prompt remains unsupported.
-- Fixes high-DPI annotation alignment, SVG annotation export and shared overview ownership. Native Helper journal writes are atomic and retain the existing signing identity.
+- Screenshots remain consistent with the returned observation instead of mixing data from different reads.
+- Extension observation cancellation isolates late results and permits fresh state reads on later calls.
+- Fixes Chrome/Edge connection instructions collapsing into a one-character-wide column. Installation, pairing, profile choices and connected status now stack their text and controls vertically.
 
-### Other Changes
+### Build and compatibility
 
-- The rc.1 and rc.2 builds use their matching SDKs and lockfiles. OMD already includes OpenCU; full desktop surfaces require matching host adapters.
+- The rc.1 and rc.2 variants preserve complete SDK and frontend lockfiles. Builds require frozen installation and verify the actual installed versions.
+- Each source variant carries the matching root npm lockfile to prevent installation against another host's SDK graph.
+- Preserves the existing macOS Helper signing identity. Only the exact host versions below are supported; full desktop surfaces still require matching Host, Client and preload adapters.
 
 ## 按实际 DSH 完整版本下载 / Match the exact DSH version
 
 | DSH | OpenCU | 固定包 / Fixed package | 发行页 / Release |
 | --- | --- | --- | --- |
-| `0.2.1-rc.1` | `2.0.1-dsh.0.2.1-rc.1` | [opencu-2.0.1-dsh.0.2.1-rc.1.tgz](https://github.com/gulagala001/opencu/releases/download/v2.0.1-dsh.0.2.1-rc.1/opencu-2.0.1-dsh.0.2.1-rc.1.tgz) | [rc.1](https://github.com/gulagala001/opencu/releases/tag/v2.0.1-dsh.0.2.1-rc.1) |
-| `0.2.1-rc.2` | `2.0.1-dsh.0.2.1-rc.2` | [opencu-2.0.1-dsh.0.2.1-rc.2.tgz](https://github.com/gulagala001/opencu/releases/download/v2.0.1-dsh.0.2.1-rc.2/opencu-2.0.1-dsh.0.2.1-rc.2.tgz) | [rc.2](https://github.com/gulagala001/opencu/releases/tag/v2.0.1-dsh.0.2.1-rc.2) |
+| `0.2.1-rc.1` | `2.0.2-dsh.0.2.1-rc.1` | [opencu-2.0.2-dsh.0.2.1-rc.1.tgz](https://github.com/gulagala001/opencu/releases/download/v2.0.2-dsh.0.2.1-rc.1/opencu-2.0.2-dsh.0.2.1-rc.1.tgz) | [rc.1](https://github.com/gulagala001/opencu/releases/tag/v2.0.2-dsh.0.2.1-rc.1) |
+| `0.2.1-rc.2` | `2.0.2-dsh.0.2.1-rc.2` | [opencu-2.0.2-dsh.0.2.1-rc.2.tgz](https://github.com/gulagala001/opencu/releases/download/v2.0.2-dsh.0.2.1-rc.2/opencu-2.0.2-dsh.0.2.1-rc.2.tgz) | [rc.2](https://github.com/gulagala001/opencu/releases/tag/v2.0.2-dsh.0.2.1-rc.2) |
 
 `0.2.1-rc.1`、`0.2.1-rc.2` 与 `0.2.0-rc.*` 不可混用。These builds are not interchangeable and do not target `0.2.0-rc.*`.
 
 | 附件 / Asset | rc.1 | rc.2 | 用途 / Purpose |
 | --- | --- | --- | --- |
-| `host-adapters.zip` | [下载 / Download](https://github.com/gulagala001/opencu/releases/download/v2.0.1-dsh.0.2.1-rc.1/host-adapters.zip) | [下载 / Download](https://github.com/gulagala001/opencu/releases/download/v2.0.1-dsh.0.2.1-rc.2/host-adapters.zip) | 宿主适配源码材料，非完整安装器 / Host source adapters, not a complete installer |
-| `metadata.json` | [下载 / Download](https://github.com/gulagala001/opencu/releases/download/v2.0.1-dsh.0.2.1-rc.1/metadata.json) | [下载 / Download](https://github.com/gulagala001/opencu/releases/download/v2.0.1-dsh.0.2.1-rc.2/metadata.json) | 该固定发行的版本信息 / Version information for that fixed Release |
-| `SHA256SUMS` | [下载 / Download](https://github.com/gulagala001/opencu/releases/download/v2.0.1-dsh.0.2.1-rc.1/SHA256SUMS) | [下载 / Download](https://github.com/gulagala001/opencu/releases/download/v2.0.1-dsh.0.2.1-rc.2/SHA256SUMS) | 下载文件校验值 / Download checksums |
+| `host-adapters.zip` | [下载 / Download](https://github.com/gulagala001/opencu/releases/download/v2.0.2-dsh.0.2.1-rc.1/host-adapters.zip) | [下载 / Download](https://github.com/gulagala001/opencu/releases/download/v2.0.2-dsh.0.2.1-rc.2/host-adapters.zip) | 宿主适配源码材料，非完整安装器 / Host source adapters, not a complete installer |
+| `metadata.json` | [下载 / Download](https://github.com/gulagala001/opencu/releases/download/v2.0.2-dsh.0.2.1-rc.1/metadata.json) | [下载 / Download](https://github.com/gulagala001/opencu/releases/download/v2.0.2-dsh.0.2.1-rc.2/metadata.json) | 该固定发行的版本信息 / Version information for that fixed Release |
+| `SHA256SUMS` | [下载 / Download](https://github.com/gulagala001/opencu/releases/download/v2.0.2-dsh.0.2.1-rc.1/SHA256SUMS) | [下载 / Download](https://github.com/gulagala001/opencu/releases/download/v2.0.2-dsh.0.2.1-rc.2/SHA256SUMS) | 下载文件校验值 / Download checksums |
 
 ## 插件与完整界面的区别 / Plugin versus full UI
 

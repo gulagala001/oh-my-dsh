@@ -1,3 +1,27 @@
+## 0.18.2（DSH 0.2.1-rc.1 / rc.2）
+
+### 问题修复
+
+- 后台进程页恢复 DSH 原生紧凑列表、任务分组、折叠与停止按钮；长命令单行截断，输出按需展开。修复原生插件重载后后台进程、Team 和 Workflow 总览样式丢失。
+- 修复 Ultra 已保存子模式恢复、当前与下一轮状态显示，以及保存完成前读取旧设置的问题。
+- 修复会话卸载时共享输入服务的生命周期与原生模型标签槽位归属，保留第三方控件和模型名称显示。
+- 内置 OpenCU 2.0.2：审批绑定最终操作目标与身份；停止操作能取消控制器、macOS 只读观测和浏览器扩展观测，并释放输入。
+- 固化 OpenCU 两套匹配宿主的 SDK／前端依赖锁，构建与安装包保持一致。
+- 修复 Chrome／Edge 连接页说明被压成单字列，以及子智能体详情返回时新增标签的问题。
+- Ultra 自由／Agent Team 与预算提醒统一使用英文指令；人格提示、提示词优化器、界面与用户输入保留原样。
+
+### Bug fixes
+
+- Restores the native DSH background-job list, compact grouping, collapse controls and stop buttons. Long commands stay on one line and output expands on demand. Overview styles survive native Jobs, Team and Workflow plugin reloads.
+- Fixes saved Ultra submode restoration, current-versus-next-turn state and reads racing pending saves.
+- Fixes shared input-service disposal and native model-label slot ownership while retaining third-party controls.
+- Bundles OpenCU 2.0.2 with approval bound to the final target and identity, cancellable controller/macOS/browser observations, and input release on stop.
+- Locks the matching OpenCU SDK and frontend dependencies for each host build.
+- Fixes collapsed Chrome/Edge connection instructions and extra tabs when returning from a subagent detail.
+- Uses English instructions for Ultra Free/Agent Team and budget reminders. Personality prompts, the prompt optimizer, UI and user content remain unchanged.
+
+Separate packages target the complete DSH versions 0.2.1-rc.1 and 0.2.1-rc.2. Full desktop CU still requires matching host adapters.
+
 ## 0.18.1（DSH 0.2.1-rc.1 / rc.2）
 
 [中文](#zh) | [English](#en)

@@ -50,7 +50,7 @@ export function renderRuntimeState(status) {
   const c = status.context, last = c.lastRequest;
   const lines = [`[runtime state · as of ${status.sampledAt} · turn ${status.turn ?? 'not started'} · step ${status.step ?? 'not started'}]`,
     'Latest snapshot supersedes earlier runtime snapshots.',
-    ...(status.budget ? [renderBudget(status.budget)].filter(Boolean) : []),
+    ...(status.budget ? [renderBudget(status.budget, { language: 'en' })].filter(Boolean) : []),
     'Turn and step are host execution positions at sampling time, not live counters.',
     ...(status.turnWallElapsedMs == null ? [] : [`Turn wall time: ${Math.floor(status.turnWallElapsedMs / 1000)}s (includes tools and waiting).`]),
     `Retained context estimate: ${c.retainedTokensEstimate == null ? 'not yet measured' : `${c.retainedTokensEstimate} tokens`}; excludes pending input and new prompt assembly.`,
@@ -72,8 +72,8 @@ export function runtimeContext(agent, hub, options) {
   const config = hub.config();
   if (!config.stateHintsEnabled && !config.budgetHintsEnabled) return null;
   const status = collectRuntimeStatus(agent, hub, options);
-  const text = config.stateHintsEnabled ? renderRuntimeState(status) : renderBudget(status.budget);
-  const budgetText = renderBudget(status.budget), interval = config.budgetInjectionEvery ?? 1;
+  const text = config.stateHintsEnabled ? renderRuntimeState(status) : renderBudget(status.budget, { language: 'en' });
+  const budgetText = renderBudget(status.budget, { language: 'en' }), interval = config.budgetInjectionEvery ?? 1;
   const limited = status.budget?.visible && Object.values(status.budget.limits).some(value => value != null);
   return text ? { key: `${Boolean(config.stateHintsEnabled)}:${runtimeStateKey(status)}`, sampledAt: status.sampledAt, text,
     ...(budgetText ? { budget: { text: budgetText, rounds: status.budget.rounds,

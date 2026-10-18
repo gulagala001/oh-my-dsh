@@ -90,11 +90,24 @@ for (const [name, exportName] of [['dsh-experimental-client-ui-agent-team', 'cre
     extra = `const OverviewAvatarContext = react.createContext(null);
       exports.WorkflowPanel = function(props) { return react.createElement(OverviewAvatarContext.Provider, {value:props.renderAvatar}, react.createElement(WorkflowRunPanel, props)); };`;
   } else {
-    if (!functions.has('JobItem') || !functions.has('isObservable')) throw Error('Native job row changed');
-    extra = 'exports.JobItem = JobItem; exports.isObservable = isObservable; exports.locale = {zh,en};';
+    let body;
+    walk(functions.get('JobListAction'), node => {
+      if (node.type === 'CallExpression' && source.slice(field(node.arguments?.[1], 'className')?.start, field(node.arguments?.[1], 'className')?.end) === 'JobListAction_module_css_default.menuBody') body = node;
+    });
+    if (!body || !functions.has('JobItem') || !functions.has('isObservable') || !functions.has('ordered') || !functions.has('isLive')) throw Error('Native job list changed');
+    extra = `function JobsBody({liveRows, settledRows, item, settledExpanded, setSettledOpen, clearSettled, t}) { return ${source.slice(body.start, body.end)}; }
+      exports.JobsBody = JobsBody; exports.JobItem = JobItem; exports.isObservable = isObservable;
+      exports.ordered = ordered; exports.isLive = isLive; exports.styles = JobListAction_module_css_default; exports.locale = {zh,en};`;
   }
   if (!source.includes('exports.apply = apply;')) throw Error('Native factory changed');
   source = source.replace('exports.apply = apply;', `${extra}\nexports.apply = apply;`);
+  // These components live in OMD. Native plugin reloads must only remove the
+  // native plugin's styles, even when both copies use identical CSS classes.
+  const tagPattern = new RegExp(`(const tagId(?:\\$\\d+)? = )"@deepseek-ai/${name}/`, 'g');
+  const dataset = `tag.dataset.plugin = "@deepseek-ai/${name}"`;
+  const tags = [...source.matchAll(tagPattern)].length, owners = source.split(dataset).length - 1;
+  if (!tags || tags !== owners) throw Error(`Native overview style ownership changed: ${name} ${tags}/${owners}`);
+  source = source.replace(tagPattern, `$1"trisoul_x/overview/${name}/`).replaceAll(dataset, 'tag.dataset.plugin = "trisoul_x"');
   source = source.replace(/\/\/# sourceMappingURL=.*$/m, '');
   sources.push(`// ${name} ${version}; upstream SHA-256 ${hash}\nexport function ${exportName}(require) { let record; const window = {__ModuleLoader__: {load(value) { record=value; }}};\n${source}\nreturn record.factory(require); }`);
 }

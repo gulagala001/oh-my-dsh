@@ -1,8 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { parse } from 'acorn';
 import { installPromptAdapter } from '../src/cc-adaptation/adapter.mjs';
+import { buildMainPrompt } from '../src/cc-adaptation/texts.mjs';
+import { renderBudget } from '../src/task-budget.mjs';
+import { renderRuntimeState } from '../src/runtime-state.mjs';
 
 const composition = readFileSync(new URL('../presets/trisoul-x/agent.cordis.yml', import.meta.url), 'utf8');
 const policy = composition.match(/section: \|\n([\s\S]*?)\n- id: compaction/)[1].replace(/^ {14}/gm, '').trim();
@@ -93,4 +96,21 @@ test('Shell path and variable guards survive native and SDK adaptation', async (
       if (name === 'pwsh') assert.ok(text.includes('case-insensitive') && text.includes('$home'));
     }
   }
+});
+
+test('execution guidance is English while budget UI and user identities retain their language', () => {
+  const root = new URL('../src/cc-adaptation/prompts/', import.meta.url);
+  for (const path of readdirSync(root, { recursive: true }).filter(path => path.endsWith('.md'))) {
+    assert.doesNotMatch(readFileSync(new URL(path, root), 'utf8'), /\p{Script=Han}/u, path);
+  }
+  for (const toolMode of ['native', 'ptc']) assert.doesNotMatch(buildMainPrompt(undefined, { toolMode }), /\p{Script=Han}/u);
+  assert.ok(buildMainPrompt('用户自定义身份').startsWith('用户自定义身份'));
+  const budget = { visible: true, limits: { tokens: 10000, rounds: 5, timeMs: 120000 }, tokens: 5000, rounds: 2, elapsedMs: 60000, unmetered: 1 };
+  assert.match(renderBudget(budget), /预算/);
+  const state = renderRuntimeState({ sampledAt: '2026-10-18', turn: 1, step: 2, budget, jobs: [], jobsAvailable: true,
+    context: { records: { raw: 0, detail: 0, brief: 0 }, automaticReplace: true } });
+  assert.doesNotMatch(state, /\p{Script=Han}/u);
+  assert.match(state, /Tokens: 5,000 \/ 10,000 \(50%\)/);
+  assert.match(state, /Execution time: 1 minutes \/ 2 minutes \(50%\)/);
+  assert.equal(renderBudget({ ...budget, limits: { tokens: null, rounds: null, timeMs: null } }, { language: 'en' }), 'Budget: unlimited');
 });
