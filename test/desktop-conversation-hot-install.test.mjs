@@ -1,3 +1,4 @@
+import { classifyShutdownErrors } from './fixtures/conversation-hot-install/shutdown-errors.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -31,7 +32,7 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
   const profile = join(home, 'profiles', 'desktop'), workspace = join(root, 'workspace'), userData = join(root, 'electron-data');
   const trace = join(root, 'host-lifecycle.jsonl');
   let currentStage, app, page, provider, cookie, origin, log = '', launchUncertain = false;
-  const errors = [], providerRequests = [], externalRendererRequests = [];
+  const errors = [], errorEvents = [], providerRequests = [], externalRendererRequests = [];
   const report = { status: 'running', executed: 1, skipped: 0, phase: 'prepare', platform: process.platform, arch: process.arch,
     scope: '#54 rc2/mac-arm64 selected-session hot installation only; frozen rc1 package failure baseline remains separate; no #64 CU or Windows attestation',
     networkScope: 'Renderer routing begins after Electron launch; this is not process-wide network isolation or a zero-egress attestation',
@@ -40,8 +41,9 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
       externalBackends: { browserEnabled: false, nativeEnabled: false, extensionEnabled: false }, computerUseActions: 'not-exercised',
       nativeOsPathException: 'Disposable GitHub-hosted runner only: native OS home/logs are observed, not redirected. The official shell may prune/write its default native logs outside the fixture; native home account/config data is not used or copied.' },
     nativePathObservations: [],
-    launches: [], stages: [], receipts: [], diagnostics: [], shutdowns: [], checks: [], errors, providerRequests, externalRendererRequests };
+    launches: [], stages: [], receipts: [], diagnostics: [], shutdowns: [], checks: [], errors, errorEvents, providerRequests, externalRendererRequests };
   const resources = createResourceDiagnostics({ now: () => performance.now() });
+  const recordError = (source, message, resourceSequence) => { const text = redact(message); errors.push(text); errorEvents.push({ source, message: text, resourceSequence }); };
   const save = async () => { report.resources = resources.snapshot(); await writeFile(join(evidence, 'conversation-hot-install.json'), JSON.stringify(report, null, 2)); };
   const lifecycle = async () => (await readFile(trace, 'utf8')).trim().split('\n').filter(Boolean).map(JSON.parse);
   let hostPoll, hostReadFailures = 0;
@@ -186,7 +188,7 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
     const nativePathLocations = assertDesktopPaths(identity, { root, home: env.HOME, dshHome: home, userData });
     assert.equal(identity.appVersion, inputs.hostVersion); assert(identity.electron);
     assert.equal(digest(await readFile(inputs.executablePath)), inputs.executableSha256);
-    app.context().on('page', candidate => candidate.on('pageerror', error => errors.push(redact(error.message))));
+    app.context().on('page', candidate => candidate.on('pageerror', error => recordError('pageerror', error.message)));
     page = await until(() => app.windows().find(candidate => candidate.url().startsWith('dsh-app://app/')), 'native app window', 60000);
     page.on('request', request => resources.request({ key: request, url: request.url(), method: request.method(), type: request.resourceType(),
       readBody: () => request.postData() }));
@@ -196,8 +198,8 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
       method: request.method(), type: request.resourceType() }));
     page.on('close', () => resources.pageEvent('page-close'));
     page.on('crash', () => resources.pageEvent('page-crash'));
-    page.on('pageerror', error => errors.push(redact(error.message))); page.setDefaultTimeout(20000);
-    page.on('console', message => { if (message.type() === 'error') { resources.consoleError(message.location()); errors.push(redact(message.text())); log += '\nRenderer: ' + redact(message.text()); } });
+    page.on('pageerror', error => recordError('pageerror', error.message)); page.setDefaultTimeout(20000);
+    page.on('console', message => { if (message.type() === 'error') { const sequence = resources.consoleError(message.location()); recordError('console', message.text(), sequence); log += '\nRenderer: ' + redact(message.text()); } });
     origin = await page.evaluate(async () => (await window.dshDesktopBoot.ready()).streamBaseUrl);
     resources.setLoopback(origin);
     const url = new URL(origin); assert.equal(url.hostname, '127.0.0.1'); assert.notEqual(url.port, '19387');
@@ -338,7 +340,13 @@ test('official rc2 arm64 hot-installs the candidate with an already-selected bla
     await close();
     assert.equal(report.launches.length, 1); assert.equal(report.stages.length, 2);
     assert.equal(report.shutdowns.length, 1); assert.equal(report.receipts.length, 1);
-    assert.deepEqual(errors, []); assert.equal(providerRequests.length, 0);
+    report.lifecycle = await lifecycle();
+    assert.equal(providerRequests.length, 0);
+    assert.equal(report.lifecycle.filter(row => row.event === 'model-call').length, 0);
+    report.resources = resources.snapshot();
+    report.shutdownErrorClassification = classifyShutdownErrors(report);
+    console.log('OMD_HOT_SHUTDOWN ' + JSON.stringify(report.shutdownErrorClassification));
+    assert.equal(report.shutdownErrorClassification.ok, true, report.shutdownErrorClassification.reasons.join(', '));
     report.checks = ['official-rc2-and-frozen-candidate-bytes', 'standard-blank-session-public-open',
       'one-natural-exit', 'one-real-applied-hot-manager-receipt', 'applied-same-pid-current-host-graph',
       'unique-model-and-direct-label-owner', 'exact-two-occupant-hot-takeover', 'three-external-backends-false', 'no-prompts-or-model-calls'];

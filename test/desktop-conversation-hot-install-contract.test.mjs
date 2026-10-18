@@ -1,3 +1,5 @@
+import { shutdownFixture } from './fixtures/conversation-hot-install/shutdown-errors-contract.mjs';
+import { classifyShutdownErrors } from './fixtures/conversation-hot-install/shutdown-errors.mjs';
 import './fixtures/conversation-hot-install/resources-contract.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -35,10 +37,11 @@ function stageValue(stage, index) {
         children: [{ name: 'conversation.input.model.label', kind: 'single', declaredBy: baseline.labelOwner, occupants: [{ priority: 1017, active: true }], children: [] }] }] } };
 }
 
-function reportFixture() {
+function reportFixture(kinds = []) {
   const values = stages.map(stage => stageValue(stage, 0)), installed = values[1];
-  return { status: 'passed', executed: 1, skipped: 0, platform: 'darwin', arch: 'arm64',
-    archive: { sha256: expected.sha256, version: pins.plugin.version }, errors: [], providerRequests: [], cleanup: { removed: true },
+  const shutdown = shutdownFixture(kinds);
+  return { ...shutdown, shutdownErrorClassification: classifyShutdownErrors(shutdown), status: 'passed', executed: 1, skipped: 0, platform: 'darwin', arch: 'arm64',
+    archive: { sha256: expected.sha256, version: pins.plugin.version }, errors: shutdown.errors, providerRequests: [], cleanup: { removed: true },
     baseline, sessionId, bundleRoot, stages: values, launches: [{ pid: 200, hostPid: 100 }],
     shutdowns: [{ pid: 200, hostPid: 100, exitCode: 0, signalCode: null, naturalExit: true }],
     receipts: [{ operation: 'install', coldStage: 'installed', before: { pid: 200, hostPid: 100 }, changedEvents: 1,
@@ -50,6 +53,8 @@ function reportFixture() {
     readiness: { crashes: [], uiConversation: { owner: [{ uid: 91, state: 2 }], conversation: { activePresent: true, provider: [{ uid: 92, state: 2 }, { uid: 91, state: 2 }] } } } };
 }
 test('synthetic hot evidence requires one applied receipt, retained selection and one natural exit', () => assertReport(reportFixture(), tap, expected));
+test('full report preserves and accepts only proven shutdown errors', () => assertReport(reportFixture(['module', 'opencu']), tap, expected));
+test('full report recomputes classification rather than trusting a saved success', () => { const r = reportFixture(['module']); r.errorEvents[0].source = 'pageerror'; assert.throws(() => assertReport(r, tap, expected)); });
 for (const [name, change] of [
   ['restart-required receipt', r => { r.receipts[0].receipt.application = 'restart-required'; r.receipts[0].receipt.restartReason = 'no-hmr'; }],
   ['renderer error', r => r.errors.push('first renderer failure')],

@@ -1,3 +1,5 @@
+import { assertNaturalShutdown, classifyShutdownErrors } from './shutdown-errors.mjs';
+export { assertNaturalShutdown } from './shutdown-errors.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -117,17 +119,6 @@ export function assertReceipt(value, targetStage) {
   assert.equal(receipt.application, 'applied', 'This regression requires actual hot application; restart-required is insufficient');
 }
 
-export function assertNaturalShutdown(rows, hostPid) {
-  const owned = rows.filter(row => row.pid === hostPid);
-  assert.equal(owned.some(row => ['termination-signal', 'model-call'].includes(row.event)), false, 'No Host signal/model call');
-  const ready = owned.filter(row => row.event === 'ready'); assert(ready.length > 0, 'Actual Host activation evidence');
-  for (const start of ready) {
-    const activation = owned.filter(row => row.bootId === start.bootId && row.event !== 'plugin-change');
-    assert.deepEqual(activation.map(row => row.event), ['ready', 'disposed', 'before-exit', 'exit'], 'Natural Host lifecycle');
-    assert.equal(activation.at(-2).rootDisposed, true); assert.equal(activation.at(-2).code, 0);
-    assert.equal(activation.at(-1).code, 0); assert.equal(activation.at(-1).modelCalls, 0);
-  }
-}
 
 export function assertReport(report, tap, expected) {
   for (const [name, count] of [['tests', 1], ['pass', 1], ['fail', 0], ['cancelled', 0], ['skipped', 0]])
@@ -136,7 +127,10 @@ export function assertReport(report, tap, expected) {
   assert.equal(report.platform, 'darwin'); assert.equal(report.arch, 'arm64');
   assert.match(expected.sha256, /^[a-f0-9]{64}$/); assert.equal(report.archive.sha256, expected.sha256);
   assert.equal(report.archive.version, pins.plugin.version); assert.equal(report.cleanup.removed, true);
-  assert.deepEqual(report.errors, []); assert.deepEqual(report.providerRequests, []);
+  assert.deepEqual(report.providerRequests, []);
+  const classification = classifyShutdownErrors(report);
+  assert.equal(classification.ok, true, classification.reasons.join(', '));
+  assert.deepEqual(report.shutdownErrorClassification, classification);
   assert.deepEqual(report.stages.map(row => row.stage), stages);
   assert.equal(report.launches.length, 1); assert.equal(report.shutdowns.length, 1); assert.equal(report.receipts.length, 1);
   assert.equal(report.launches[0].pid, report.stages[0].pid);

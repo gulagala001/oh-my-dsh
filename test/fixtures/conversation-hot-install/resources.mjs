@@ -68,6 +68,16 @@ export function createResourceDiagnostics({ now, write = line => console.log(lin
     const target = important ? critical : events, limit = important ? 64 : 128;
     if (target.length === limit) { dropped++; if (important) return; target.shift(); }
     target.push(row);
+    return row.sequence;
+  }
+  function projection() {
+    const lines = []; let bytes = 0, omitted = dropped + Math.max(0, events.length - 64);
+    for (const row of [...marks, ...events.slice(-64), ...critical].sort((a, b) => a.sequence - b.sequence)) {
+      const line = resourcePrefix + JSON.stringify(row), size = Buffer.byteLength(line + '\n');
+      if (size > 1200 || bytes + size > 65536 - 128) { omitted++; continue; }
+      lines.push(line); bytes += size;
+    }
+    return { lines, omitted };
   }
   const link = key => key && typeof key === 'object' ? requests.get(key) ?? { startObserved: false } : { startObserved: false };
   return {
@@ -123,23 +133,19 @@ export function createResourceDiagnostics({ now, write = line => console.log(lin
         type: choice(type, ['document', 'stylesheet', 'image', 'media', 'font', 'script', 'fetch', 'xhr', 'eventsource', 'other']) }, true);
     },
     consoleError({ url, lineNumber, columnNumber }) {
-      record('console-error', { resource: resource(url), line: integer(lineNumber), column: integer(columnNumber) }, true);
+      return record('console-error', { resource: resource(url), line: integer(lineNumber), column: integer(columnNumber) }, true);
     },
     pageEvent(kind) { record(choice(kind, ['page-close', 'page-crash']), {}, true); },
     snapshot() {
       return { clock: 'test-process monotonic; Host/quit markers are receive times, not cross-process execution timestamps',
-        dropped, marks: [...marks], events: [...events], critical: [...critical] };
+        dropped, droppedOrOmitted: projection().omitted, marks: [...marks], events: [...events], critical: [...critical] };
     },
     flush() {
       if (emitted) return;
       emitted = true;
-      let bytes = 0, omitted = dropped;
-      for (const row of [...marks, ...events.slice(-64), ...critical].sort((a, b) => a.sequence - b.sequence)) {
-        const line = resourcePrefix + JSON.stringify(row), size = Buffer.byteLength(line + '\n');
-        if (size > 1200 || bytes + size > 65536 - 128) { omitted++; continue; }
-        write(line); bytes += size;
-      }
-      write(resourcePrefix + JSON.stringify({ kind: 'end', droppedOrOmitted: omitted + Math.max(0, events.length - 64), clock: 'test-receive-monotonic' }));
+      const { lines, omitted } = projection();
+      for (const line of lines) write(line);
+      write(resourcePrefix + JSON.stringify({ kind: 'end', droppedOrOmitted: omitted, clock: 'test-receive-monotonic' }));
     },
   };
 }
