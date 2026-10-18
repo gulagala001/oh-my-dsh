@@ -8,7 +8,7 @@ import { resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { runInNewContext } from 'node:vm';
 import { spawnSync } from 'node:child_process';
-import { desktopInputs, desktopIdentity, digest, inside, repoRoot } from './fixtures/desktop-host-boot/inputs.mjs';
+import { desktopInputs, desktopIdentity, assertDesktopPaths, digest, inside, repoRoot } from './fixtures/desktop-host-boot/inputs.mjs';
 import { desktopEnvironment } from '../scripts/desktop-test-environment.mjs';
 import { assertModelTakeover, modelPriority } from './fixtures/desktop-host-boot/model-panel.mjs';
 import { assertClientIdentity, clientComponents } from './fixtures/desktop-host-boot/client-identity.mjs';
@@ -81,16 +81,35 @@ test('serialized main identity reads installed resources without an import callb
       exports: { './package.json': './package.json' } }));
   }
   const builtins = [];
-  const sandbox = { process: { execPath: env.OMD_DESKTOP_EXECUTABLE, versions: { electron: 'contract-fixture' },
-    getBuiltinModule: name => { builtins.push(name); return process.getBuiltinModule(name); } } };
+  const isolated = desktopEnvironment(root, {});
+  let nodeHome = isolated.HOME;
+  const sandbox = { process: { execPath: env.OMD_DESKTOP_EXECUTABLE, env: isolated, versions: { electron: 'contract-fixture' },
+    getBuiltinModule: name => { builtins.push(name); return name === 'os' ? { homedir: () => nodeHome } : process.getBuiltinModule(name); } } };
   assert.equal(runInNewContext('typeof require', sandbox), 'undefined');
   // Deliberately omit importModuleDynamically: the original await import()
   // implementation fails here with the same missing-callback error as CI.
   const evaluate = runInNewContext('(' + desktopIdentity.toString() + ')', sandbox);
+  // Native OS paths deliberately differ from the isolated process HOME. They
+  // are path metadata only: no directory is read, copied, created or redirected.
+  const nativeHome = resolve(root, '..', 'synthetic-native-home');
+  const paths = { home: nativeHome, logs: join(nativeHome, 'Library', 'Logs', 'DeepSeek Harness'), userData: join(root, 'electron-data') };
   const app = { isPackaged: true, getAppPath: () => appRoot, getVersion: () => expected.hostVersion,
-    getPath: key => join(root, key === 'home' ? 'user-home' : 'electron-data') };
+    getPath: key => { assert(Object.hasOwn(paths, key)); return paths[key]; } };
   const result = await evaluate({ app }, expected);
-  assert.deepEqual(builtins, ['fs', 'path', 'module']);
+  assert.deepEqual(builtins, ['fs', 'path', 'module', 'os']);
+  const isolatedPaths = { root, home: isolated.HOME, dshHome: isolated.DSH_HOME, userData: paths.userData };
+  assert.equal(result.nativeHome, nativeHome); assert.equal(result.nativeLogs, paths.logs);
+  assert.deepEqual(assertDesktopPaths(result, isolatedPaths), { homeWithinFixture: false, logsWithinFixture: false });
+  nodeHome = nativeHome;
+  const escapedNodeHome = await evaluate({ app }, expected);
+  assert.throws(() => assertDesktopPaths(escapedNodeHome, isolatedPaths), /temporary fixture: nodeHome/);
+  nodeHome = isolatedPaths.home;
+  isolated.HOME = nativeHome;
+  const escapedEnvironmentHome = await evaluate({ app }, expected);
+  assert.throws(() => assertDesktopPaths(escapedEnvironmentHome, isolatedPaths), /temporary fixture: environmentHome/);
+  isolated.HOME = isolatedPaths.home;
+  for (const field of ['dshHome', 'userData'])
+    assert.throws(() => assertDesktopPaths({ ...result, [field]: nativeHome }, isolatedPaths), /temporary fixture/);
   for (const name of packages) {
     assert.equal(result.manifests[name].file, await realpath(join(appRoot, 'dsh', 'node_modules', name, 'package.json')));
     assert.equal(result.manifests[name].version, name === '@deepseek-ai/cordis' ? expected.cordisVersion : expected.hostVersion);
@@ -193,11 +212,14 @@ test('app and installer environment excludes tokens, provider keys and old HOME/
 test('actual Host observer vetoes model streams before continuation and rejects unauthenticated reads', async () => {
   const root = resolve(repoRoot, '.cache', 'observer-contract'), records = [], handlers = new Map();
   const callbacks = new Map(), registration = {}, disposers = [];
+  const hostEnvironment = desktopEnvironment(root, {});
+  let hostNodeHome = hostEnvironment.HOME;
   const text = await readFile(new URL('./fixtures/desktop-host-boot/observer.mjs', import.meta.url), 'utf8');
   const apply = runInNewContext(text.replace(/^import .*\n/gm, '').replace('export const inject', 'const inject')
     .replace('export function apply', 'function apply') + '\napply', {
     appendFileSync: (_file, text) => records.push(JSON.parse(text)), randomUUID, resolve, sep, pathToFileURL,
-    process: { pid: 3141, env: desktopEnvironment(root, {}), once: (name, fn) => handlers.set(name, fn) },
+    homedir: () => hostNodeHome,
+    process: { pid: 3141, env: hostEnvironment, once: (name, fn) => handlers.set(name, fn) },
   });
   const rootFiber = Object.freeze({ uid: 0 });
   let loader = {};
@@ -207,6 +229,9 @@ test('actual Host observer vetoes model streams before continuation and rejects 
     effect: fn => { const dispose = fn(); if (typeof dispose === 'function') disposers.push(dispose); return dispose; },
     webServer: { register: route => { callbacks.set('http', route.handler); } },
     connection: { requestRejection: () => 403 } };
+  hostNodeHome = resolve(root, '..', 'foreign-home');
+  assert.throws(() => apply(ctx, { root, trace: join(root, 'trace'), sdkNames: [] }), /Host Node home escaped/);
+  hostNodeHome = hostEnvironment.HOME;
   apply(ctx, { root, trace: join(root, 'trace'), sdkNames: [] });
   let continued = false;
   assert.throws(() => callbacks.get('llm/stream')({ provider: 'unexpected', model: 'must-not-run' }, () => { continued = true; }), /forbids all model calls/);

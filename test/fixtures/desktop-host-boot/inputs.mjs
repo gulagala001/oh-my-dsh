@@ -14,6 +14,23 @@ export const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 export const sdkNames = ['@deepseek-ai/dsh', '@deepseek-ai/dsh-desktop-host', '@deepseek-ai/dsh-app-boot',
   '@deepseek-ai/dsh-plugin-manager', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-tools'];
 
+export function assertDesktopPaths(identity, expected) {
+  for (const [field, path] of [['environmentHome', expected.home], ['nodeHome', expected.home],
+    ['dshHome', expected.dshHome], ['userData', expected.userData]]) {
+    assert.equal(typeof identity[field], 'string', 'Actual process path: ' + field);
+    const actual = resolve(identity[field]);
+    assert(isAbsolute(identity[field]) && inside(expected.root, actual) && actual !== expected.root,
+      'Process path must stay in the temporary fixture: ' + field);
+    assert.equal(actual, path, 'Exact isolated process path: ' + field);
+  }
+  for (const field of ['nativeHome', 'nativeLogs'])
+    assert.equal(typeof identity[field] === 'string' && isAbsolute(identity[field]), true, 'Observed native OS path: ' + field);
+  // Metadata only. Official default OS paths are not claimed to be redirected;
+  // default native log effects are authorized only on disposable hosted CI.
+  return { homeWithinFixture: inside(expected.root, resolve(identity.nativeHome)),
+    logsWithinFixture: inside(expected.root, resolve(identity.nativeLogs)) };
+}
+
 // Inspect frozen bytes without extracting or installing the archive locally.
 export function archiveFiles(bytes) {
   const tar = gunzipSync(bytes, { maxOutputLength: 512 * 1024 * 1024 }), files = new Map();
@@ -92,6 +109,7 @@ export async function desktopIdentity({ app }, expected) {
   if (typeof process.getBuiltinModule !== 'function') throw Error('Packaged Electron has no builtin module accessor');
   const fs = process.getBuiltinModule('fs').promises;
   const path = process.getBuiltinModule('path'), module = process.getBuiltinModule('module');
+  const os = process.getBuiltinModule('os');
   const appRoot = app.getAppPath();
   if (!app.isPackaged || path.resolve(appRoot) !== path.resolve(expected.appRoot)) throw Error('Unexpected/unpackaged Electron app root');
   const anchor = module.createRequire(path.join(appRoot, 'dsh', 'package.json'));
@@ -106,5 +124,7 @@ export async function desktopIdentity({ app }, expected) {
     manifests[name] = { version: manifest.version, file: actual };
   }
   return { executable: process.execPath, appRoot, appVersion: app.getVersion(), electron: process.versions.electron,
-    home: app.getPath('home'), userData: app.getPath('userData'), manifests };
+    nativeHome: app.getPath('home'), nativeLogs: app.getPath('logs'),
+    environmentHome: process.env.HOME, nodeHome: os.homedir(), dshHome: process.env.DSH_HOME,
+    userData: app.getPath('userData'), manifests };
 }

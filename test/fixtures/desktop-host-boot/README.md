@@ -37,9 +37,26 @@ official resources plus a revisioned, materialized row in the real client table.
 The seed classification is pinned to official `packages/client/web/src/seed.ts`
 and `platform.ts`; unknown/missing dynamic components fail, never catch-ignore.
 
-HOME, DSH_HOME, userData, profiles, XDG/AppData and package-manager caches are
-temporary; the app/installer receive an environment allowlist without Actions
-tokens. Home `cordis.patch.yml` is the final configuration layer and restores
+Process `env.HOME`, Node `os.homedir()`, DSH_HOME, userData, profiles, XDG/AppData
+and package-manager caches must use the temporary fixture. Main and Host probes
+check the actual process paths; the app/installer receive an environment
+allowlist without Actions tokens. Electron's native `app.getPath('home')` and
+`app.getPath('logs')` are separately recorded, not claimed to be isolated.
+On these disposable GitHub-hosted runners only, the official shell's default
+native log pruning/writes may occur outside the fixture (macOS typically uses
+the runner's native Library/Logs directory). The test neither redirects those
+paths after startup nor copies/reads native home account/configuration data.
+`nativePathObservations` and each launch's `nativePathLocations` expose the
+actual values and containment results, including failures after the probe.
+User machines and self-hosted runners remain prohibited.
+
+The checked official boundaries are `main.ts`'s default `setAppLogsPath`, crash
+report pruning/writing under native logs, shell settings/shortcuts under the
+temporary userData, and `paths.ts`'s profile under the temporary DSH_HOME.
+Only the fixture tree is removed by test cleanup; native logs are not collected
+or cleaned by the test.
+
+Home `cordis.patch.yml` is the final configuration layer and restores
 `read-only`/`ask` after OMD bundle defaults. The three external OpenCU backends
 (`browserEnabled`, `nativeEnabled`, `extensionEnabled`) are false and no CU
 actions are exercised. DSH's own browser adapter remains present; this does

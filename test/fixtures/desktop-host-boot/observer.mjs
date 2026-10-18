@@ -2,6 +2,7 @@ import { appendFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { homedir } from 'node:os';
 
 // Test-only plugin, copied to an exclusive package in the temporary home. It
 // observes actual services; the sole interceptor refuses every model stream.
@@ -14,6 +15,7 @@ export function apply(ctx, config) {
   for (const key of ['HOME', 'USERPROFILE', 'DSH_HOME', 'APPDATA', 'LOCALAPPDATA', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_DATA_HOME',
     'XDG_STATE_HOME', 'TEMP', 'TMP', 'TMPDIR', 'npm_config_cache', 'npm_config_userconfig'])
     if (!contained(process.env[key])) throw Error('Host environment escaped the fixture: ' + key);
+  if (!contained(homedir())) throw Error('Host Node home escaped the fixture');
   for (const key of ['GITHUB_TOKEN', 'GH_TOKEN', 'ACTIONS_RUNTIME_TOKEN', 'OPENAI_API_KEY', 'DEEPSEEK_API_KEY', 'NODE_OPTIONS'])
     if (process.env[key] !== undefined) throw Error('Forbidden inherited Host variable: ' + key);
   if (process.env.DESKTOP_HOST_FIXTURE !== 'local-test-only') throw Error('Missing synthetic credential marker');
@@ -22,7 +24,7 @@ export function apply(ctx, config) {
     record({ event: 'model-call', calls: modelCalls.length });
     throw Error('Desktop boot acceptance forbids all model calls');
   }, { global: true, prepend: true });
-  record({ event: 'ready', home: process.env.DSH_HOME, profile: ctx.profileContext.dir });
+  record({ event: 'ready', home: process.env.DSH_HOME, environmentHome: process.env.HOME, nodeHome: homedir(), profile: ctx.profileContext.dir });
   ctx.effect(() => () => record({ event: 'disposed', modelCalls: modelCalls.length }));
   // The CLI's bounded forceExit(0) skips beforeExit. Require this event to
   // distinguish natural quiescence from a timeout that happens to exit 0.
@@ -48,6 +50,7 @@ export function apply(ctx, config) {
     const settings = ctx.get('settings')?.describe({ redactSecrets: true }) ?? [];
     const opencu = settings.find(row => row.ns === 'omd-opencu')?.value;
     const value = { bootId, pid: process.pid, sdk, entries, modelCalls, profile: ctx.profileContext.dir,
+      environmentHome: process.env.HOME, nodeHome: homedir(), dshHome: process.env.DSH_HOME, profileHome: ctx.profileContext.home,
       shellVersion: process.env.DSH_CLIENT_VERSION,
       sandbox: ctx.get('sandboxPolicy')?.resolve(), approval: ctx.get('approval')?.config?.policy,
       computerUseEnabled: ctx.get('trisoulX')?.config().computerUseEnabled,

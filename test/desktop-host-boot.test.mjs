@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
-import { desktopInputs, desktopIdentity, digest, inside } from './fixtures/desktop-host-boot/inputs.mjs';
+import { desktopInputs, desktopIdentity, assertDesktopPaths, digest, inside } from './fixtures/desktop-host-boot/inputs.mjs';
 import { prepareEnvironment } from '../scripts/desktop-test-environment.mjs';
 import { assertModelTakeover, modelPriority } from './fixtures/desktop-host-boot/model-panel.mjs';
 import { assertClientIdentity } from './fixtures/desktop-host-boot/client-identity.mjs';
@@ -35,7 +35,9 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     networkScope: 'Renderer routing begins after Electron launch; this is not process-wide network isolation or a zero-egress attestation',
     archive: { sha256: inputs.sha256, clientSha256: inputs.clientSha256, version: inputs.manifest.version },
     isolation: { root, home, profile, workspace, userData, modelEndpoint: 'fixture loopback only',
-      externalBackends: { browserEnabled: false, nativeEnabled: false, extensionEnabled: false }, computerUseActions: 'not-exercised' },
+      externalBackends: { browserEnabled: false, nativeEnabled: false, extensionEnabled: false }, computerUseActions: 'not-exercised',
+      nativeOsPathException: 'Disposable GitHub-hosted runner only: native OS home/logs are observed, not redirected. The official shell may prune/write its default native logs outside the fixture; native home account/config data is not used or copied.' },
+    nativePathObservations: [],
     launches: [], shutdowns: [], checks: [], errors, providerRequests, externalRendererRequests };
   const save = async () => writeFile(join(evidence, 'desktop-host-boot.json'), JSON.stringify(report, null, 2));
   const lifecycle = async () => (await readFile(trace, 'utf8')).trim().split('\n').filter(Boolean).map(JSON.parse);
@@ -127,6 +129,8 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     const value = await request('/__desktop-host-boot');
     assert.deepEqual(value.modelCalls, []); assert.equal(providerRequests.length, 0);
     assert.equal(value.profile, profile); assert.equal(value.sandbox.mode, 'read-only'); assert.equal(value.approval, 'ask');
+    assert.equal(value.environmentHome, env.HOME); assert.equal(value.nodeHome, env.HOME);
+    assert.equal(value.dshHome, home); assert.equal(value.profileHome, home);
     assert.equal(value.shellVersion, inputs.hostVersion, 'Actual shell build version passed to desktop-host');
     for (const name of inputs.sdkNames) {
       assert.equal(value.sdk[name]?.version, inputs.hostVersion, 'Real desktop-host SDK: ' + name);
@@ -145,8 +149,11 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     for (const stream of [app.process().stdout, app.process().stderr]) stream?.on('data', chunk => { log += redact(chunk); });
     const identity = await app.evaluate(desktopIdentity, { ...inputs, publicComponents: inputs.manifest.dsh.client.inject,
       cordisVersion: inputs.manifest.peerDependencies['@deepseek-ai/cordis'] });
+    report.nativePathObservations.push({ pid: app.process().pid, nativeHome: identity.nativeHome, nativeLogs: identity.nativeLogs,
+      environmentHome: identity.environmentHome, nodeHome: identity.nodeHome, dshHome: identity.dshHome, userData: identity.userData });
+    await save();
     assert.equal(await realpath(identity.executable), inputs.executablePath);
-    assert.equal(resolve(identity.home), env.HOME); assert.equal(resolve(identity.userData), userData);
+    const nativePathLocations = assertDesktopPaths(identity, { root, home: env.HOME, dshHome: home, userData });
     assert.equal(identity.appVersion, inputs.hostVersion); assert(identity.electron);
     assert.equal(digest(await readFile(inputs.executablePath)), inputs.executableSha256);
     app.context().on('page', candidate => candidate.on('pageerror', error => errors.push(redact(error.message))));
@@ -168,7 +175,7 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     assertClientIdentity(client.identity, { appVersion: identity.appVersion, hostVersion: inputs.hostVersion,
       publicComponents: inputs.manifest.dsh.client.inject });
     const host = await observe();
-    report.launches.push({ pid: app.process().pid, identity, clientIdentity: client.identity, host });
+    report.launches.push({ pid: app.process().pid, identity, nativePathLocations, clientIdentity: client.identity, host });
     await save();
   };
   const close = async () => {
