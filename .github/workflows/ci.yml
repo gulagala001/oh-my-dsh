@@ -53,6 +53,7 @@ jobs:
           writeFileSync(join(root, 'package-evidence.json'), JSON.stringify(evidence, null, 2));
           console.log(JSON.stringify(evidence));
           execFileSync(process.execPath, ['scripts/check-opencu-delivery.mjs', archive], { stdio: 'inherit' });
+          execFileSync(process.execPath, ['--test', 'test/opencu-static-zip-delivery.test.mjs'], { stdio: 'inherit', env: { ...process.env, OMD_DELIVERY_ARCHIVE: archive } });
           NODE
       - run: pnpm test
       - name: Auto Compact surface-index regression

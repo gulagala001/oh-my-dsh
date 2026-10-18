@@ -74,6 +74,8 @@ export function verifyDeliveryArchive(archive, baseline) {
     if (nativeHelper.test(name)) {
       assert.equal(mode, 0o755, `Packed macOS helper must be 0755, got ${mode.toString(8).padStart(4, '0')}: ${name}`);
       helpers.push({ file: name, mode: '0755' });
+    } else {
+      assert.equal(mode, 0o644, `Packed OpenCU file must be 0644, got ${mode.toString(8).padStart(4, '0')}: ${name}`);
     }
     found.add(name);
   }

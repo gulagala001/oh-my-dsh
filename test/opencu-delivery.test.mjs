@@ -31,12 +31,12 @@ async function directory(t) {
   return path;
 }
 
-async function archive(t, files = entries(), helperMode = 0o755) {
+async function archive(t, files = entries(), helperMode = 0o755, ordinaryMode = 0o644) {
   const path = await directory(t);
   for (const [name, bytes] of files) {
     await mkdir(dirname(join(path, name)), { recursive: true });
     await writeFile(join(path, name), bytes);
-    if (name === 'package/vendor/opencu/' + helper) await chmod(join(path, name), helperMode);
+    await chmod(join(path, name), name === 'package/vendor/opencu/' + helper ? helperMode : ordinaryMode);
   }
   const output = join(path, 'actual.tgz');
   execFileSync('tar', ['--format=ustar', '-czf', output, '-C', path, ...files.keys()]);
@@ -152,4 +152,9 @@ for (const mode of [0o644, 0o700]) test(`production pack normalizes ${mode.toStr
   }
   assert.equal(adjusted, 1);
   assert.deepEqual(before, after, 'only helper mode and its header checksum change; every payload byte remains identical');
+});
+
+test('actual tgz ordinary vendor files cannot retain temporary 0600 modes', async t => {
+  const packed = await archive(t, entries(), 0o755, 0o600);
+  assert.throws(() => verifyDeliveryArchive(packed, baseline), /Packed OpenCU file must be 0644/);
 });
