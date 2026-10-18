@@ -1,0 +1,72 @@
+name: Official rc1 mac-x64 slot acceptance
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/desktop-rc1-slots.yml'
+      - 'scripts/desktop-rc1-slot-inputs.json'
+      - 'scripts/prepare-desktop-rc1-slots.mjs'
+      - 'test/desktop-rc1-slots*.test.mjs'
+      - 'test/fixtures/desktop-rc1-slots/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc1-slots-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  rc1-slot-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - run: node --test test/desktop-rc1-slots-contract.test.mjs
+
+  rc1-slot-desktop:
+    needs: rc1-slot-contract
+    runs-on: macos-15-intel
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v6
+      - run: pnpm install --frozen-lockfile
+      - name: Reserve an exclusive rc1 input tree
+        run: |
+          node --input-type=module - <<'NODE'
+          import { appendFileSync, mkdirSync, mkdtempSync, realpathSync } from 'node:fs';
+          import { join } from 'node:path';
+          const repo = realpathSync(process.env.GITHUB_WORKSPACE);
+          mkdirSync(join(repo, '.cache'), { recursive: true });
+          const root = mkdtempSync(join(repo, '.cache', 'rc1-slots-'));
+          appendFileSync(process.env.GITHUB_ENV, `OMD_RC1_ROOT=${root}\n`);
+          NODE
+      - name: Verify official rc1 and the already published matching OMD
+        run: node scripts/prepare-desktop-rc1-slots.mjs
+      - name: Four cold phases, natural exits and exact slot takeover
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test --test-reporter=tap test/desktop-rc1-slots.test.mjs | tee "$OMD_RC1_ROOT/rc1-slots.tap"
+          node test/fixtures/desktop-rc1-slots/contract.mjs "$OMD_RC1_ROOT/rc1-slot-evidence/desktop-rc1-slots.json" "$OMD_RC1_ROOT/rc1-slots.tap"
+          echo 'rc1/mac-x64 #54: four cold slot phases/exits and three real receipts passed; zero prompts/models/CU actions. Windows rc1 and #64 native authorization remain unverified.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: rc1-mac-x64-slot-acceptance
+          path: |
+            ${{ env.OMD_RC1_ROOT }}/verified-inputs.json
+            ${{ env.OMD_RC1_ROOT }}/rc1-slots.tap
+            ${{ env.OMD_RC1_ROOT }}/rc1-slot-evidence/
+          if-no-files-found: warn

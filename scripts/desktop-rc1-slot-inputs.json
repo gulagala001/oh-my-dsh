@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "desktop": {
+    "version": "0.2.1-rc.1",
+    "sourceCommit": "1600d8a1e140dcde43a1a0941940a0480712c011",
+    "target": "mac-x64",
+    "feed": "https://download.deepseek.com/dsh-desk/feeds/mac-x64/nightly-mac.yml",
+    "url": "https://download.deepseek.com/dsh-desk/bin/mac-x64/deepseek-harness-0.2.1-rc.1-mac-x64.zip",
+    "size": 362402720,
+    "sha512": "4SViINh3tDLRvvR80w4OJW/zj+j7Rp5ApjO41XeYtCpvhV9cS10Vibx90jnt90GLaE4HTGvXMp0ot4evs57JzA==",
+    "releaseDate": "2026-10-17T03:13:33.166Z"
+  },
+  "plugin": {
+    "name": "trisoul_x",
+    "version": "0.2.1-rc.1.omd.0.17.4",
+    "tagCommit": "748ebfe6e07d79455cb11c3f9d7b4c91d75e52ef",
+    "url": "https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.17.4/trisoul_x-0.2.1-rc.1.omd.0.17.4.tgz",
+    "size": 54976035,
+    "sha256": "e5d1902d8e168337d1b47c63de028a65a42eea7ab5feecb8b29dcb72d993b4f7"
+  }
+}
