@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { desktopInputs, desktopIdentity, digest, inside } from './fixtures/desktop-host-boot/inputs.mjs';
 import { prepareEnvironment } from '../scripts/desktop-test-environment.mjs';
+import { assertModelTakeover, modelPriority } from './fixtures/desktop-host-boot/model-panel.mjs';
 import { cleanupFixture, closeFixtureServer } from './fixtures/process.mjs';
 
 const redact = value => String(value).replace(/token=[\w-]+/g, 'token=[redacted]');
@@ -188,7 +189,10 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
   try {
     await launch(); report.phase = 'stock-boot';
     const stockUI = await page.evaluate(() => window.__OMD_DESKTOP_HOST_BOOT__());
-    const stockLabel = flattenSlots(stockUI.slots).find(row => row.name === 'conversation.input.model.label');
+    const stockSlots = flattenSlots(stockUI.slots);
+    const stockPriority = modelPriority(stockSlots.find(row => row.name === 'conversation.input.model'));
+    report.stockModelPriority = stockPriority;
+    const stockLabel = stockSlots.find(row => row.name === 'conversation.input.model.label');
     assert(stockLabel?.declaredBy, 'Verified rc.2 stock model label owner'); report.stockUI = stockUI;
     const installed = await rpc('pluginManager/installBundle', { spec: 'file:' + inputs.archive });
     assert(['applied', 'restart-required'].includes(installed.application), JSON.stringify(installed));
@@ -218,6 +222,7 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     await page.getByText('workspace', { exact: true }).first().click();
     await page.getByText('合成启动验收（无模型调用）', { exact: true }).first().click();
     await page.locator('[data-composer-input]').waitFor();
+    await page.getByRole('button', { name: '模型与思考强度', exact: true }).waitFor({ state: 'visible' });
     await page.getByRole('button', { name: '关于 Oh My DSH', exact: true }).click();
     const about = page.getByRole('dialog', { name: '关于 Oh My DSH' });
     await until(async () => await about.getByTestId('omd-current-version').innerText() === inputs.manifest.version, 'matching real client/server version');
@@ -232,7 +237,7 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     for (const name of ['conversation.input.model', 'conversation.input.model.label', 'conversation.chat.node', 'settings.section'])
       assert.equal(slots.filter(row => row.name === name).length, 1, 'Single declared slot: ' + name);
     const model = slots.find(row => row.name === 'conversation.input.model');
-    assert.equal(model.occupants.filter(row => row.active).length, 1, 'Exactly one elected model seat');
+    assertModelTakeover(model, stockPriority);
     assert.equal(slots.find(row => row.name === 'conversation.input.model.label').declaredBy, stockLabel.declaredBy,
       'Native rc.2 model label declaration retains its actual stock owner');
     const chat = slots.find(row => row.name === 'conversation.chat.node');
@@ -251,7 +256,7 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     assert.deepEqual(errors, []); assert.equal(providerRequests.length, 0);
     assert.equal(report.launches.length, 2); assert.equal(report.shutdowns.length, 2);
     report.checks = ['official-rc2-identities', 'dsh-app-renderer', 'frozen-tgz-installed', 'natural-cold-restart',
-      'uiConversation-definitions', 'single-model-slot-owner', 'settings-entries-visible',
+      'uiConversation-definitions', 'omd-model-priority-takeover-and-visible-button', 'settings-entries-visible',
       'three-external-backends-disabled-no-cu-actions', 'model-calls-zero'];
     report.phase = 'checks-complete';
   } catch (error) { report.status = 'failed'; report.failure = redact(error.stack ?? error.message); throw error; }

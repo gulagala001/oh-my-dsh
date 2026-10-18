@@ -10,10 +10,26 @@ import { runInNewContext } from 'node:vm';
 import { spawnSync } from 'node:child_process';
 import { desktopInputs, digest, inside, repoRoot } from './fixtures/desktop-host-boot/inputs.mjs';
 import { desktopEnvironment } from '../scripts/desktop-test-environment.mjs';
+import { assertModelTakeover, modelPriority } from './fixtures/desktop-host-boot/model-panel.mjs';
 
 // These are dependency-free contract checks. No Electron, browser, installer,
 // package manager, real account, provider or user-home operation is performed.
 const source = JSON.parse(await readFile(new URL('../package.json', import.meta.url)));
+
+test('model takeover evidence rejects unchanged stock UI, missing stock and multiple active occupants', () => {
+  const stock = { kind: 'single', occupants: [{ priority: 3, active: true }] };
+  const priority = modelPriority(stock);
+  // Registrant display names are deliberately identical: takeover evidence
+  // comes from the public numeric priority/active contract, never owner names.
+  const installed = { kind: 'single', occupants: [
+    { priority: 3, active: false, registrant: 'apply' }, { priority: 2.5, active: true, registrant: 'apply' },
+  ] };
+  assertModelTakeover(installed, priority);
+  assert.throws(() => assertModelTakeover(stock, priority), /priority minus 0.5/);
+  assert.throws(() => assertModelTakeover({ ...installed, occupants: [installed.occupants[1]] }, priority), /stock-priority occupant/);
+  assert.throws(() => assertModelTakeover({ ...installed, occupants: installed.occupants.map(row => ({ ...row, active: true })) }, priority), /Exactly one elected/);
+});
+
 function archive(manifest) {
   const members = {
     'package/package.json': JSON.stringify(manifest), 'package/lib/client.js': 'frozen client fixture',

@@ -21,6 +21,12 @@ test-only package reads the actual public conversation registries and
 Host `llm/stream` listener throws on every call; a loopback-only provider also
 fails any request. Counts cover installation, both boots and shutdown.
 
+Model-seat takeover requires one active occupant at the captured stock priority
+minus 0.5, with the stock-priority occupant retained but inactive and the native
+label declaration owner unchanged. The exact `模型与思考强度` button must be
+visible; the additive `OMD 模式与思考强度` fallback does not satisfy this check.
+No model button is clicked.
+
 HOME, DSH_HOME, userData, profiles, XDG/AppData and package-manager caches are
 temporary; the app/installer receive an environment allowlist without Actions
 tokens. Home `cordis.patch.yml` is the final configuration layer and restores
