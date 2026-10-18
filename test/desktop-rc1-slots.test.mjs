@@ -9,7 +9,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { rc1Inputs, desktopIdentity, assertDesktopPaths, digest, inside, pins } from './fixtures/desktop-rc1-slots/inputs.mjs';
 import { prepareEnvironment } from '../scripts/desktop-test-environment.mjs';
 import { assertStage, assertReceipt, assertNaturalShutdown, stockBaseline } from './fixtures/desktop-rc1-slots/contract.mjs';
-import { persistReceipt } from './fixtures/desktop-rc1-slots/diagnostics.mjs';
+import { persistReceipt, printDiagnosticSummary } from './fixtures/desktop-rc1-slots/diagnostics.mjs';
 import { cleanupFixture, closeFixtureServer } from './fixtures/process.mjs';
 
 const redact = value => String(value).replace(/token=[\w-]+/g, 'token=[redacted]');
@@ -238,7 +238,9 @@ test('official rc1 mac-x64 verifies published OMD slot install-disable-reenable 
       try { value[key] = await read(); }
       catch (error) { value[key + 'Error'] = redact(error.stack ?? error); }
     }));
-    report.diagnostics.push(value); await save();
+    report.diagnostics.push(value);
+    printDiagnosticSummary(report, value);
+    await save();
   };
   try {
     report.phase = 'stock'; report.targetStage = 'stock'; await save();

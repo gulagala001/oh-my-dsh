@@ -69,6 +69,15 @@ captured context: registration labels and provider ancestry must be correlated.
 A later ACTIVE provider does not undo a slot's abdication or clear any error.
 Diagnostic read failures are recorded separately and never count as passing
 state. The pinned published package and all renderer-error gates remain intact.
+Each capture also prints a closed-field summary with prefix `OMD_RC1_DIAG `
+to ordinary CI logs, including failure captures. Each line is at most 2048
+bytes and each capture at most 16384 bytes, including newlines. It includes
+only enumerated stage/receipt states, numeric registration/provider identities,
+strict/raw presence, abdication and at most 40 related lifecycle events with
+times relative to the first captured crash. At most eight crashes are printed;
+omission counts are explicit. Names outside the fixed allowlist become `other`.
+Error text, configuration, environment, session data, paths and receipt details
+are excluded; complete diagnostic evidence remains in the existing artifact.
 
 Isolation and natural shutdown follow PR68 without editing its files. The
 shared version-independent environment/path/ASAR identity faces are reused;

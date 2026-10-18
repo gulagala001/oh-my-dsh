@@ -5,7 +5,7 @@ import { gzipSync, gunzipSync } from 'node:zlib';
 import { runInNewContext } from 'node:vm';
 import { assertRunner, digest, pins, verifyPublishedPackage } from './fixtures/desktop-rc1-slots/inputs.mjs';
 import { assertReport, assertStage, stages } from './fixtures/desktop-rc1-slots/contract.mjs';
-import { persistReceipt } from './fixtures/desktop-rc1-slots/diagnostics.mjs';
+import { persistReceipt, diagnosticPrefix, diagnosticLimits, printDiagnosticSummary } from './fixtures/desktop-rc1-slots/diagnostics.mjs';
 import { publishedTar } from './fixtures/desktop-rc1-slots/published-tar.mjs';
 
 // Dependency-free synthetic contracts only: no downloads, GUI or model calls.
@@ -288,4 +288,43 @@ test('synchronous slot crash preserves registration identity and raw LOADING pro
   assert.equal(window.__OMD_RC1_DIAGNOSTICS__().crashes[1].registrationId, crash.registrationId);
   for (const dispose of disposers) dispose();
   assert.equal(window.__OMD_RC1_DIAGNOSTICS__, undefined); assert.equal(listener, undefined);
+});
+
+
+test('CI diagnostic stdout uses closed fields and values, never credential/config/session/path text', () => {
+  const secret = 'SENSITIVE_TOKEN_CONFIG_SESSION_PATH';
+  const provider = { activePresent: false, rawPresent: true, provider: [{ uid: 92, state: 1, name: secret, token: secret }] };
+  const face = { uiConversation: { owner: [{ uid: 91, state: 2, name: secret }], conversation: provider },
+    rootConversation: provider, config: secret, environment: { TOKEN: secret }, session: secret, path: secret };
+  const capture = { label: 'failure-immediate', phase: 'install:hot-check', targetStage: 'installed', at: 1002,
+    errors: [secret], host: { config: secret }, renderer: { ...face, dropped: 0,
+      crashes: [{ at: 1000, sequence: 1, registrationId: 7, key: 'conversation.composer.bar',
+        registrant: secret, options: { name: secret }, error: secret, abdicated: true, state: face }],
+      timeline: [{ at: 1001, sequence: 2, kind: 'internal/status', oldState: 1,
+        fiber: [{ uid: 92, state: 2, name: secret }], conversation: provider, config: secret }] } };
+  const lines = [];
+  printDiagnosticSummary({ receipts: [{ operation: 'install', validated: false,
+    receipt: { application: 'applied', changed: true, token: secret, detail: secret } }], config: secret }, capture, line => lines.push(line));
+  const stdout = lines.join('\n');
+  assert.equal(stdout.includes(secret), false);
+  assert(lines.every(line => line.startsWith(diagnosticPrefix)));
+  const rows = lines.map(line => JSON.parse(line.slice(diagnosticPrefix.length)));
+  assert.equal(rows[0].stage, 'installed'); assert.equal(rows[0].receipts[0].application, 'applied');
+  assert.equal(rows[1].registrationId, 7); assert.equal(rows[1].registrant, 'other');
+  assert.equal(rows[1].state.conversation.strict, false); assert.equal(rows[1].state.conversation.raw, true);
+  assert.equal(rows[1].state.conversation.provider[0].uid, 92);
+  assert.equal(rows[2].ms, 1); assert.equal(rows[2].fiber[0].state, 2);
+});
+
+test('CI summary bounds every line and total output even for oversized failure histories', () => {
+  const fiber = { uid: 92, state: 1, name: 'private'.repeat(10000) };
+  const face = { uiConversation: { owner: Array(100).fill(fiber), conversation: { provider: Array(100).fill(fiber) } } };
+  const lines = [];
+  printDiagnosticSummary({ receipts: [] }, { label: 'failure-followup', phase: 'install:hot-check', targetStage: 'installed',
+    at: 1000, renderer: { ...face, crashes: Array.from({ length: 100 }, (_, index) => ({ at: 1000 + index, state: face })),
+      timeline: Array.from({ length: 2000 }, (_, index) => ({ at: index, kind: 'internal/status', fiber: [fiber] })) } }, line => lines.push(line));
+  assert(lines.every(line => Buffer.byteLength(line + '\n') <= diagnosticLimits.line));
+  assert(Buffer.byteLength(lines.join('\n') + '\n') <= diagnosticLimits.total);
+  const end = JSON.parse(lines.at(-1).slice(diagnosticPrefix.length));
+  assert.equal(end.kind, 'end'); assert(end.omittedRows > 0);
 });
