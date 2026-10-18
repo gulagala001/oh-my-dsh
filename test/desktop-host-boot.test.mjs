@@ -9,6 +9,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { desktopInputs, desktopIdentity, digest, inside } from './fixtures/desktop-host-boot/inputs.mjs';
 import { prepareEnvironment } from '../scripts/desktop-test-environment.mjs';
 import { assertModelTakeover, modelPriority } from './fixtures/desktop-host-boot/model-panel.mjs';
+import { assertClientIdentity } from './fixtures/desktop-host-boot/client-identity.mjs';
 import { cleanupFixture, closeFixtureServer } from './fixtures/process.mjs';
 
 const redact = value => String(value).replace(/token=[\w-]+/g, 'token=[redacted]');
@@ -87,7 +88,7 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
   for (const file of ['observer.mjs', 'client.js']) await writeFile(join(probe, file), await readFile(new URL('./fixtures/desktop-host-boot/' + file, import.meta.url)));
   await writeFile(join(probe, 'package.json'), JSON.stringify({ name: 'omd-desktop-host-boot-observer', version: '1.0.0', private: true, type: 'module',
     exports: { '.': './observer.mjs', './client': './client.js', './package.json': './package.json' },
-    dsh: { client: { platform: 'web', inject: ['@deepseek-ai/dsh-client-ui-slots'] } } }));
+    dsh: { client: { platform: 'web', inject: ['@deepseek-ai/dsh-client-modules', '@deepseek-ai/dsh-client-ui-renderer'] } } }));
   // rc.2 order: bundle -> profile patch -> home patch. The final HOME layer
   // restores restrictive defaults after OMD's bundle defaults on every boot.
   // In rc.2 approval 'never' rejects; it does not auto-approve requests.
@@ -126,6 +127,7 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     const value = await request('/__desktop-host-boot');
     assert.deepEqual(value.modelCalls, []); assert.equal(providerRequests.length, 0);
     assert.equal(value.profile, profile); assert.equal(value.sandbox.mode, 'read-only'); assert.equal(value.approval, 'ask');
+    assert.equal(value.shellVersion, inputs.hostVersion, 'Actual shell build version passed to desktop-host');
     for (const name of inputs.sdkNames) {
       assert.equal(value.sdk[name]?.version, inputs.hostVersion, 'Real desktop-host SDK: ' + name);
       assert(inside(inputs.appRoot, value.sdk[name].dir) || inside(inputs.appRoot + '.unpacked', value.sdk[name].dir), 'Host SDK remains in official resources');
@@ -162,8 +164,11 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     });
     await page.getByText('更多', { exact: true }).waitFor();
     await until(() => page.evaluate(() => Boolean(window.__OMD_DESKTOP_HOST_BOOT__)), 'real client registry observer');
+    const client = await page.evaluate(() => window.__OMD_DESKTOP_HOST_BOOT__());
+    assertClientIdentity(client.identity, { appVersion: identity.appVersion, hostVersion: inputs.hostVersion,
+      publicComponents: inputs.manifest.dsh.client.inject });
     const host = await observe();
-    report.launches.push({ pid: app.process().pid, identity, host });
+    report.launches.push({ pid: app.process().pid, identity, clientIdentity: client.identity, host });
     await save();
   };
   const close = async () => {

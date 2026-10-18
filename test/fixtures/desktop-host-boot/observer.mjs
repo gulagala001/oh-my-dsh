@@ -48,6 +48,7 @@ export function apply(ctx, config) {
     const settings = ctx.get('settings')?.describe({ redactSecrets: true }) ?? [];
     const opencu = settings.find(row => row.ns === 'omd-opencu')?.value;
     const value = { bootId, pid: process.pid, sdk, entries, modelCalls, profile: ctx.profileContext.dir,
+      shellVersion: process.env.DSH_CLIENT_VERSION,
       sandbox: ctx.get('sandboxPolicy')?.resolve(), approval: ctx.get('approval')?.config?.policy,
       computerUseEnabled: ctx.get('trisoulX')?.config().computerUseEnabled,
       opencu: opencu && Object.fromEntries(['browserEnabled', 'nativeEnabled', 'extensionEnabled'].map(key => [key, opencu[key]])) };

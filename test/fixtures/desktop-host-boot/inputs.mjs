@@ -4,6 +4,7 @@ import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
+import { clientComponents } from './client-identity.mjs';
 
 // Deliberately narrower than the legacy non-CU fixture's parent-of-repo root.
 export const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
@@ -79,7 +80,8 @@ export async function desktopInputs(env = process.env, platform = process.platfo
   assert(releases.releases.some(row => row.version === manifest.version), 'Current rc.2 release identity');
   return { root, executablePath: paths.OMD_DESKTOP_EXECUTABLE, appRoot: paths.OMD_DESKTOP_APP_ROOT,
     archive: paths.OMD_PLUGIN_ARCHIVE, sha256, executableSha256: digest(await readFile(executable)), manifest,
-    clientSha256: digest(files.get('package/lib/client.js')), sdkNames, hostVersion };
+    clientSha256: digest(files.get('package/lib/client.js')), sdkNames, hostVersion,
+    clientComponents: clientComponents(manifest.dsh.client.inject) };
 }
 
 // Execute in Electron's ASAR-aware main process, never through checkout SDKs.
@@ -94,7 +96,7 @@ export async function desktopIdentity({ app }, expected) {
   if (!app.isPackaged || path.resolve(appRoot) !== path.resolve(expected.appRoot)) throw Error('Unexpected/unpackaged Electron app root');
   const anchor = module.createRequire(path.join(appRoot, 'dsh', 'package.json'));
   const manifests = {};
-  for (const name of [...new Set([...expected.sdkNames, ...expected.publicComponents, '@deepseek-ai/cordis'])]) {
+  for (const name of [...new Set([...expected.sdkNames, ...expected.clientComponents.dynamic, '@deepseek-ai/cordis'])]) {
     const file = anchor.resolve(name + '/package.json');
     const manifest = JSON.parse(await fs.readFile(file, 'utf8'));
     const actual = await fs.realpath(file);

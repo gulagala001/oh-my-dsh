@@ -11,6 +11,7 @@ import { spawnSync } from 'node:child_process';
 import { desktopInputs, desktopIdentity, digest, inside, repoRoot } from './fixtures/desktop-host-boot/inputs.mjs';
 import { desktopEnvironment } from '../scripts/desktop-test-environment.mjs';
 import { assertModelTakeover, modelPriority } from './fixtures/desktop-host-boot/model-panel.mjs';
+import { assertClientIdentity, clientComponents } from './fixtures/desktop-host-boot/client-identity.mjs';
 
 // These are dependency-free contract checks. No Electron, browser, installer,
 // package manager, real account, provider or user-home operation is performed.
@@ -70,8 +71,9 @@ test('serialized main identity reads installed resources without an import callb
   await mkdir(join(appRoot, 'dsh'), { recursive: true });
   await writeFile(anchor, JSON.stringify({ name: 'isolated-runtime-anchor', private: true }));
   const expected = { appRoot, hostVersion: '0.2.1-rc.2', cordisVersion: '4.0.5',
-    sdkNames: ['@deepseek-ai/dsh'], publicComponents: ['@deepseek-ai/dsh-client-ui-slots'] };
-  const packages = [...expected.sdkNames, ...expected.publicComponents, '@deepseek-ai/cordis'];
+    sdkNames: ['@deepseek-ai/dsh'],
+    clientComponents: clientComponents(['@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-client-ui-renderer']) };
+  const packages = [...expected.sdkNames, ...expected.clientComponents.dynamic, '@deepseek-ai/cordis'];
   for (const name of packages) {
     const directory = join(appRoot, 'dsh', 'node_modules', name); await mkdir(directory, { recursive: true });
     await writeFile(join(directory, 'package.json'), JSON.stringify({ name,
@@ -94,6 +96,10 @@ test('serialized main identity reads installed resources without an import callb
     assert.equal(result.manifests[name].version, name === '@deepseek-ai/cordis' ? expected.cordisVersion : expected.hostVersion);
   }
   assert.equal(result.appRoot, appRoot);
+  // The shell seed intentionally has no standalone package.json here. A
+  // non-seed client component is still mandatory in the actual resources.
+  assert.equal(result.manifests['@deepseek-ai/dsh-client-ui-slots'], undefined);
+  await assert.rejects(evaluate({ app }, { ...expected, clientComponents: clientComponents(['@deepseek-ai/dsh-client-missing']) }), /Cannot find module/);
   const sdkDirectory = join(appRoot, 'dsh', 'node_modules', '@deepseek-ai/dsh');
   await writeFile(join(sdkDirectory, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh', version: '0.2.1-rc.1' }));
   await assert.rejects(evaluate({ app }, expected), /Actual SDK identity mismatch/);
@@ -101,6 +107,49 @@ test('serialized main identity reads installed resources without an import callb
   await writeFile(join(foreign, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh', version: expected.hostVersion }));
   await rm(sdkDirectory, { recursive: true }); await symlink(foreign, sdkDirectory, 'junction');
   await assert.rejects(evaluate({ app }, expected), /SDK outside official resources/);
+});
+
+test('actual client probe verifies shell seeds, boot release, dynamic module sources and real service instances', async () => {
+  const slotsName = '@deepseek-ai/dsh-client-ui-slots', primitivesName = '@deepseek-ai/dsh-client-ui-primitives';
+  const rendererName = '@deepseek-ai/dsh-client-ui-renderer', connectionName = '@deepseek-ai/dsh-client-connection';
+  const expected = { appVersion: '0.2.1-rc.2', hostVersion: '0.2.1-rc.2',
+    publicComponents: [slotsName, primitivesName, rendererName, connectionName] };
+  assert.deepEqual(clientComponents(expected.publicComponents), { static: [slotsName, primitivesName], dynamic: [rendererName, connectionName] });
+  class Context {}
+  class Service {}
+  class SlotRegistry extends Service { snapshot() { return []; } }
+  const exports = new Map([
+    ['@deepseek-ai/cordis', { Context, Service }],
+    [slotsName, { SlotCore: class {}, standardHookPropName() {} }], [primitivesName, { Menu() {} }],
+    [rendererName, { SlotRegistry }], [connectionName, {}],
+  ]);
+  const release = { version: expected.hostVersion, commit: 'fixture-official-commit' }, rev = 'fixture-boot-rev';
+  const rows = [rendererName, connectionName].map(id => ({ id, rev: 'fixture-module-rev', url: `plugins/??${id}/client.js&rev=fixture-module-rev` }));
+  const modules = { version: 'client', manifest: { release, rev, modules: rows },
+    import: async name => exports.get(name), loadCache: new Map(rows.map(row => [row.id, { id: row.id, exports: exports.get(row.id) }])) };
+  const scope = { root: new Context(), slots: new SlotRegistry(), modules,
+    loader: { internal: modules, entries: () => [] }, uiConversation: { events: { entries: () => [] }, views: { entries: () => [] } }, effect: fn => fn() };
+  let registration;
+  const window = { dshDesktop: { protocolVersion: 1 }, __DSH_BOOT__: { release, rev },
+    __ModuleLoader__: { load: value => { registration = value; } } };
+  runInNewContext(await readFile(new URL('./fixtures/desktop-host-boot/client.js', import.meta.url), 'utf8'), { window });
+  const plugin = registration.factory(name => { assert(exports.has(name), 'No ignored seed require'); return exports.get(name); });
+  plugin.apply({ inject: (_services, apply) => apply(scope) });
+  const identity = JSON.parse(JSON.stringify((await window.__OMD_DESKTOP_HOST_BOOT__()).identity));
+  assertClientIdentity(identity, expected);
+  for (const [mutate, message] of [
+    [value => { value.release.version = '0.2.1-rc.1'; }, /boot module release/],
+    [value => { delete value.seeds[slotsName]; }, /Required shell seed/],
+    [value => { value.seeds[slotsName].sameAsFactory = false; }, /shell factory export/],
+    [value => { value.dynamic = value.dynamic.filter(row => row.id !== connectionName); }, /Required dynamic client module/],
+    [value => { value.dynamic[0].url = 'https://external.invalid/client.js'; }, /revisioned module source/],
+    [value => { value.dynamic[0].materialized = false; }, /really loaded/],
+  ]) {
+    const invalid = structuredClone(identity); mutate(invalid); assert.throws(() => assertClientIdentity(invalid, expected), message);
+  }
+  scope.slots = { snapshot: () => [] };
+  const invalidService = JSON.parse(JSON.stringify((await window.__OMD_DESKTOP_HOST_BOOT__()).identity));
+  assert.throws(() => assertClientIdentity(invalidService, expected), /Real service instance/);
 });
 
 test('rc.2 input accepts only the frozen current bundle and its exact isolated paths', async t => {

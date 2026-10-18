@@ -27,6 +27,16 @@ label declaration owner unchanged. The exact `模型与思考强度` button must
 visible; the additive `OMD 模式与思考强度` fallback does not satisfy this check.
 No model button is clicked.
 
+Identity follows the fixed rc.2 packaging split. Seven Host SDK packages and
+Cordis retain their actual resources/name/version/path checks. The official
+shell's static seeds (currently ui-slots and ui-primitives in OMD's inject list)
+need no standalone main-process package.json: their real module-table exports,
+shell/boot release and Cordis/SlotRegistry service instances are checked in the
+renderer. Every dynamic inject component still requires a matching package in
+official resources plus a revisioned, materialized row in the real client table.
+The seed classification is pinned to official `packages/client/web/src/seed.ts`
+and `platform.ts`; unknown/missing dynamic components fail, never catch-ignore.
+
 HOME, DSH_HOME, userData, profiles, XDG/AppData and package-manager caches are
 temporary; the app/installer receive an environment allowlist without Actions
 tokens. Home `cordis.patch.yml` is the final configuration layer and restores
