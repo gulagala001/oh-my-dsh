@@ -29,12 +29,12 @@ async function directory(t) {
   return path;
 }
 
-async function archive(t, files = entries(), helperMode = 0o755) {
+async function archive(t, files = entries(), helperMode = 0o755, ordinaryMode = 0o644) {
   const path = await directory(t);
   for (const [name, bytes] of files) {
     await mkdir(dirname(join(path, name)), { recursive: true });
     await writeFile(join(path, name), bytes);
-    if (name === 'package/vendor/opencu/' + helper) await chmod(join(path, name), helperMode);
+    await chmod(join(path, name), name === 'package/vendor/opencu/' + helper ? helperMode : ordinaryMode);
   }
   const output = join(path, 'actual.tgz');
   execFileSync('tar', ['--format=ustar', '-czf', output, '-C', path, ...files.keys()]);
@@ -109,4 +109,9 @@ test('a changed package manifest cannot redefine the expected vendor hashes', as
   const files = entries(); files.set('package/vendor/opencu.json', Buffer.from('{"files":{}}'));
   const packed = await archive(t, files);
   assert.throws(() => verifyDeliveryArchive(packed, baseline), /Packed vendor\/opencu.json differs from HEAD/);
+});
+
+test('actual tgz ordinary vendor files cannot retain temporary 0600 modes', async t => {
+  const packed = await archive(t, entries(), 0o755, 0o600);
+  assert.throws(() => verifyDeliveryArchive(packed, baseline), /Packed OpenCU file must be 0644/);
 });

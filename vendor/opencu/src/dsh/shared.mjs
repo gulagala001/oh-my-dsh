@@ -1,3 +1,4 @@
+import { registerExtensionDownload } from '../extension/distribution.mjs';
 import { readFile } from 'node:fs/promises';
 import { Context } from '@deepseek-ai/cordis';
 import { createScope, scopeOf } from '@deepseek-ai/dsh-scope';
@@ -116,6 +117,7 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
     entry.service = { request: entry.request, acquire: (owner, options) => acquireOpenCU(owner, options), installTools: (scope, options) => installTools(scope, options), get leaseCount() { return entry.leases.size; } };
     entry.unprovide = root.provide('opencu', entry.service);
     entry.rpcFiber = root.inject(['connection', 'attachments'], async connectionCtx => {
+      connectionCtx.effect(() => registerExtensionDownload(connectionCtx), 'opencu: static extension download');
       const resources = JSON.parse(await readFile(new URL('../../lib/rea-assets/manifest.json', import.meta.url), 'utf8'));
       for (const { file, asset = file } of resources) connectionCtx.effect(() => connectionCtx.connection.fetch.register({
         path: `/api/opencu/rea-assets/${file}`, methods: ['GET'], requestBody: 'buffered',

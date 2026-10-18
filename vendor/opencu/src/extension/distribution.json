@@ -1,0 +1,25 @@
+{
+  "packageVersion": "2.0.0-dsh.0.2.1-rc.2",
+  "extensionVersion": "0.2.0",
+  "manifestKeySha256": "98b602d9937b77441bdc77b57a653029e83acf95f2e0ee88b1efe20763cabbe1",
+  "files": {
+    "README.md": "96bab308adff9b4399907a4bf08ae89c7a92e77a2963cc5d34616a2917c59a6a",
+    "accessibility.js": "1d5c37201d723ed9e8c913c82e5dae0014789c8ac59d0b05c9c25cba0e214405",
+    "background.js": "8368c026605929959992d9992bb96878ec7f0cd1a6c6bba6cd3c163d598a0310",
+    "cdp-locator.d.ts": "9a2e97ddf5d1b7d0f2cf8f880e3b6d6508cca4aa2e9b5a85695326acb2c42342",
+    "cdp-locator.js": "0fe84e4ab10fb52df1b4d1d0929f34472410297458e413e8754cbfe988f3ff48",
+    "connection-details.js": "9d187286e47e9fa25603580224ea5cf78e6232b27562986d46d38d6a44793afd",
+    "content.js": "ce2c2deb0962ff237dc4742d6e941931d2a464c0b5817cc1fa9cdbb20f9b9ff7",
+    "dom-locator.js": "1a06b4fc36dde584badcc1965a53120a89a390e760bf1068f2885a6d66efccd2",
+    "frame-router.d.ts": "c852387b5dc03ebd94bfaf971204eb3b66a38be0c88aaab9e0561eb888788a4a",
+    "frame-router.js": "24f456e89c73c4bc08cc0ccf95d5e1358a2dfd7f75acf58ef99570e9ca733728",
+    "keyboard.d.ts": "263cce12d1f44009963b658ce87befb70582427be9b163a52e43c01c0c9426de",
+    "keyboard.js": "12f55b96fae8d2ef4ac001121a66aa2b29057564f53d7a6775a79d45a8eaa65a",
+    "manifest.json": "d5a6b51d1966cd536fa23e2051d61c4ac3ef9403d0c2d0f0c72e4362c8b3b415",
+    "options.css": "fd90f3db1cecce51fb03cc8a42ae13c7dfa536cc2a23398f6ba9cdbc37d79122",
+    "options.html": "94b11299ae15eaf6373501f66332b6629cc77dadd88f397fbe405016a12133ba",
+    "options.js": "cb17a38e1a43f711987bc342413ca475ec2d2f6d76a8c0aaa7c51d3f779c8762",
+    "page-cursor.js": "d337ab11eb3515940be0f287bc4060c49964b23296756c43bf5f660648f35b89",
+    "pairing.js": "cea5b39167c8880b44e015da83c3fef2b043d9b3f8349cc5aad3832064824b54"
+  }
+}
