@@ -6,8 +6,14 @@ OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表列的是已发�
 
 | DSH 宿主 / Host | OMD 插件 / Plugin | 可粘贴安装的包 / Package |
 | --- | --- | --- |
-| 0.2.1-rc.2 | 0.2.1-rc.2.omd.0.18.6 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.6/trisoul_x-0.2.1-rc.2.omd.0.18.6.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.6) |
-| 0.2.1-rc.1 | 0.2.1-rc.1.omd.0.18.6 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.18.6/trisoul_x-0.2.1-rc.1.omd.0.18.6.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.18.6) |
+| 0.2.1-rc.2 | 0.2.1-rc.2.omd.0.18.7 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.7/trisoul_x-0.2.1-rc.2.omd.0.18.7.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.7) |
+| 0.2.1-rc.1 | 0.2.1-rc.1.omd.0.18.7 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.18.7/trisoul_x-0.2.1-rc.1.omd.0.18.7.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.18.7) |
+
+## 0.18.7 更新 / Changes
+
+内置 OpenCU 2.0.6，为真实 REA 地址建议补齐当前会话的 ThreadScope／RouteScope，修复该建议入口触发的 `Missing scope instance`；保留选择建议、Escape 关闭和继续编辑。
+
+Bundles OpenCU 2.0.6 with the current conversation's ThreadScope/RouteScope for the original REA address suggestions, fixing `Missing scope instance` in that suggestion entry while preserving selection, Escape dismissal and continued editing.
 
 ## Release 里的文件怎么选？ / Which asset?
 
@@ -19,7 +25,7 @@ OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表列的是已发�
 | metadata.json | 发行版本及来源信息。 / Release metadata. |
 | GitHub 自动生成的 Source code | 源码归档，供开发者使用，不填入普通插件安装步骤。 / Source archives for developers. |
 
-宿主适配与校验文件：[rc.2 适配源码](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.6/host-adapters.zip) · [rc.2 校验值](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.6/SHA256SUMS) · [rc.1 适配源码](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.18.6/host-adapters.zip) · [rc.1 校验值](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.18.6/SHA256SUMS)
+宿主适配与校验文件：[rc.2 适配源码](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.7/host-adapters.zip) · [rc.2 校验值](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.7/SHA256SUMS) · [rc.1 适配源码](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.18.7/host-adapters.zip) · [rc.1 校验值](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.18.7/SHA256SUMS)
 
 这些发行**不包含配套完整桌面安装器**。对话、主题、任务和记忆可按插件步骤安装；完整内置浏览器、批注和原生监看需要匹配宿主构建。见[安装条件](install.md#computer-use)。These releases do not include a complete desktop installer; full desktop CU requires a matching host build.
 
@@ -29,7 +35,7 @@ OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表列的是已发�
 
 ## 上一版 / Previous release
 
-OMD 0.18.4：[DSH rc.2](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.4) · [DSH rc.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.18.4)。
+OMD 0.18.6：[DSH rc.2](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.6) · [DSH rc.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.18.6)。
 
 ## 旧版用户 / Older hosts
 

@@ -89,7 +89,7 @@ For standalone use, choose either method in the [OpenCU installation guide](docs
 1. **Copy to AI:** send the complete installation instruction so AI can check your actual host, version and data directories, then install.
 2. **Use the interface:** open **Plugins → “+ Add plugin” in the top right**, paste the matching fixed package URL into the input for a package name / GitHub repository address / local path, and click **Install**.
 
-OpenCU **2.0.5** provides separate fixed packages for `0.2.1-rc.1` and `0.2.1-rc.2`, with copyable URLs in the guide; do not mix them with `0.2.0-rc.*`. Keep the original profile, `DSH_HOME`, data and third-party plugins when upgrading, then restart the affected instance.
+OpenCU **2.0.6** provides separate fixed packages for `0.2.1-rc.1` and `0.2.1-rc.2`, with copyable URLs in the guide; do not mix them with `0.2.0-rc.*`. Keep the original profile, `DSH_HOME`, data and third-party plugins when upgrading, then restart the affected instance.
 
 Fixed Releases do not include a complete desktop installer. The full embedded browser, native monitoring and related UI require matching Host/Client/preload source adapters; installing the plugin alone does not supply them. New main-branch fixes are not automatically included in fixed packages; see [release information](docs/releases.md).
 

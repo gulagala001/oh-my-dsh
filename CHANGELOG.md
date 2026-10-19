@@ -1,3 +1,11 @@
+## 0.18.7（DSH 0.2.1-rc.1 / rc.2）
+
+- 内置 OpenCU 2.0.6，为真实 REA 地址建议补齐当前会话的 ThreadScope／RouteScope，修复建议入口触发的 `Missing scope instance`。
+- 保留地址建议选择、Escape 关闭和后续编辑，以及 DSH 原生输入与既有配置。
+
+- Bundles OpenCU 2.0.6 with the current conversation's ThreadScope/RouteScope for the original REA address suggestions, fixing `Missing scope instance` in that suggestion entry.
+- Preserves suggestion selection, Escape dismissal, continued editing, native DSH input and existing preferences.
+
 ## 0.18.6（DSH 0.2.1-rc.1 / rc.2）
 
 - 默认直接复用 DSH 原生主题，移除独立默认皮肤对侧栏、顶栏、输入区、消息和过程区的额外视觉覆盖。
