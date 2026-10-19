@@ -9,24 +9,28 @@ const schemas = [
 ];
 
 test('real SDKs project supported operation schemas and preserve their parameter documentation', () => {
-  for (const { parameters } of schemas) assert.doesNotThrow(() => assertSupportedJsonSchema(parameters));
+  for (const { parameters } of schemas) {
+    assert.equal(parameters.type, 'object', 'Native function APIs require an object root');
+    assert.equal(Object.hasOwn(parameters, 'oneOf'), false, 'Do not send a root union to native function APIs');
+    assert.doesNotThrow(() => assertSupportedJsonSchema(parameters));
+  }
   for (const format of ['function-body', 'repl']) {
     const sdk = renderToolsSdk(schemas, format);
     assert.doesNotMatch(sdk, /(?:todo_write|verify_link): unknown/);
-    assert.match(sdk, /op: "view" \| "transcript"/);
-    assert.match(sdk, /op: "run" \| "view"/);
+    assert.match(sdk, /op: "excerpt" \| "add" \| "edit" \| "remove" \| "check" \| "view" \| "transcript" \| "pause_turn"/);
+    assert.match(sdk, /op: "link" \| "run" \| "unlink" \| "view"/);
     assert.match(sdk, /from: string/);
-    assert.match(sdk, /anchor: \{/);
+    assert.match(sdk, /anchor\?: \{/);
     assert.match(sdk, /title\?: string/);
     assert.match(sdk, /anchor\?: \{[\s\S]*?\} & Record<string, JsonValue> \| null/);
-    assert.match(sdk, /updates: \{/);
+    assert.match(sdk, /updates\?: \{/);
     assert.ok(sdk.includes('opening words of the block, verbatim'));
     assert.ok(sdk.includes('Each link belongs to exactly one task.'));
   }
   const python = renderToolsSdkPy(schemas);
-  assert.match(python, /class VerifyLinkArgs\d+\(TypedDict\)/);
-  assert.match(python, /op: Literal\["run", "view"\]/);
-  assert.match(python, /links: list\[/);
+  assert.match(python, /class VerifyLinkArgs\(TypedDict\)/);
+  assert.match(python, /op: Literal\["link", "run", "unlink", "view"\]/);
+  assert.match(python, /links: NotRequired\[list\[/);
   assert.ok(python.includes('Each link belongs to exactly one task.'));
   // The unchanged public `from` key is a Python keyword. The host renderer
   // cannot express that TypedDict and still falls back to open dictionaries.
@@ -34,7 +38,22 @@ test('real SDKs project supported operation schemas and preserve their parameter
   assert.doesNotMatch(python, /async def (?:todo_write|verify_link)\(self, args: Any\)/);
 });
 
-test('real schema validator retains operation, required entry and nested anchor constraints', () => {
+test('published object schemas and local validation retain operation, required entry and nested anchor constraints', async () => {
+  const tools = new Map();
+  let calls = 0;
+  const run = () => { calls++; return { text: 'valid' }; };
+  registerTasks({ tools: { register: tool => tools.set(tool.name, tool) }, sessionProjections: { register() {} } },
+    { execTaskMap: run, execCheck: run, execVerifyLink: run });
+  const exec = { agent: { session: { id: 'task-arguments', header: { cwd: '/synthetic/project' } } } };
+  const validCall = async (name, args) => {
+    assert.deepEqual(validateJsonSchemaValue(tools.get(name).parameters, args), [], JSON.stringify(args));
+    assert.equal(await tools.get(name).execute(args, exec), 'valid');
+  };
+  const invalidCall = async (name, args) => {
+    const before = calls;
+    await assert.rejects(tools.get(name).execute(args, exec), /Rejected/, JSON.stringify(args));
+    assert.equal(calls, before, 'Invalid arguments never reach or change the ledger');
+  };
   const anchor = { from: 'alpha', to: 'omega' };
   const valid = [
     { op: 'view' }, { op: 'transcript' }, { op: 'pause_turn', reason: 'user stop' },
@@ -52,15 +71,15 @@ test('real schema validator retains operation, required entry and nested anchor 
     { op: 'remove' }, { op: 'check' }, { op: 'check', updates: [{ id: 'T1', done: 'yes' }] },
     { op: 'check', updates: [{ id: 'T1', done: true, extra: 1 }] }, { op: 'view', msg: 1.5 },
   ];
-  for (const value of valid) assert.deepEqual(validateJsonSchemaValue(TASK_PARAMETERS, value), [], JSON.stringify(value));
-  for (const value of invalid) assert.ok(validateJsonSchemaValue(TASK_PARAMETERS, value).length, JSON.stringify(value));
+  for (const value of valid) await validCall('todo_write', value);
+  for (const value of invalid) await invalidCall('todo_write', value);
   for (const value of [{ op: 'view' }, { op: 'run' }, { op: 'run', tasks: ['T1'] },
     { op: 'link', links: [{ task: 'T1', kind: 'text', note: 'observed', reason: 'manual' }] }, { op: 'unlink', ids: ['L1'] }]) {
-    assert.deepEqual(validateJsonSchemaValue(VERIFICATION_PARAMETERS, value), [], JSON.stringify(value));
+    await validCall('verify_link', value);
   }
   for (const value of [{}, { view: true }, { op: 'link' }, { op: 'unlink' },
     { op: 'link', links: [{ kind: 'text' }] }, { op: 'link', links: [{ task: 'T1', kind: 'other' }] }]) {
-    assert.ok(validateJsonSchemaValue(VERIFICATION_PARAMETERS, value).length, JSON.stringify(value));
+    await invalidCall('verify_link', value);
   }
 });
 
