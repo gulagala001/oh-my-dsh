@@ -11,7 +11,7 @@ Oh My DSH（OMD）是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek
 
 > **安装：** [复制指令给 AI](docs/install.md#ai) · [在“添加插件”中安装](docs/install.md#gui)。OMD 已内置 OpenCU。
 
-当前版本：**OMD 0.18.7**，提供匹配 DSH 0.2.1-rc.1／rc.2 的[独立安装包](docs/releases.md)。
+当前版本：**OMD 0.18.8**，提供匹配 DSH 0.2.1-rc.1／rc.2 的[独立安装包](docs/releases.md)。
 
 <a id="features"></a>
 
