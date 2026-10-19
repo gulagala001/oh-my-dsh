@@ -115,10 +115,15 @@ export class DreamStore {
         if(source.kind==='withdrawn'&&eligible)throw Error('发布时来源已恢复，不能撤回其贡献');
       }
       for (const source of sources) this.putSource(source);
+      // An invalid parent's first batch starts a new body without the old one.
+      // Atomically discard that body's coverage too: after an interruption,
+      // only sources actually rebuilt into the new body may be skipped.
+      if (old?.invalid && (kind === 'project' || kind === 'global'))
+        this.db.prepare('DELETE FROM progress WHERE node=?').run(key);
       for (const item of consumed) this.db.prepare('INSERT INTO progress VALUES(?,?,?,?) ON CONFLICT(node,source) DO UPDATE SET fingerprint=excluded.fingerprint,data=excluded.data').run(key, item.key, item.fingerprint, encode(item));
       // Source coverage is committed even if the concise text did not change.
       // Its new provenance still needs a revision for parent invalidation.
-      if (old && old.summary === summary && consumed.length === 0) return old;
+      if (old && !old.invalid && old.summary === summary && consumed.length === 0) return old;
       const revision = baseRevision + 1, ref = `memory:${digest(key)}:${revision}`;
       const value = { key, kind, target, revision, ref, summary, updatedAt: this.now() };
       const previous = old?.ref;

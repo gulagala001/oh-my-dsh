@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { apiSessionTarget } from './api-session.mjs';
 import { validateSessionId } from './hub-store.mjs';
 
-export const ULTRA_WORKFLOW_ON = "Ultra is on: optimize for the most exhaustive, correct answer — not the fastest or cheapest. Use the Workflow tool on every substantive task to delegate its concrete requirements to subagents; token cost is not a constraint. See the **Ultra** section and quality patterns in the workflow authoring reference. Solo only on conversational/trivial turns.";
+export const ULTRA_WORKFLOW_ON = "Ultra Workflow mode is on. Use the Workflow tool on substantive tasks to delegate concrete requirements under the shared Ultra quality and initiative requirements. See the workflow authoring reference for the actual tool API.";
 export const ULTRA_OFF = "Ultra is off. Its standing multi-agent authorization and selected collaboration strategy no longer apply; follow the user's current task and the tools' ordinary guidance.";
 export const ULTRA_SUBMODES = new Set(['workflow', 'team', 'free']);
 const modes = new Set(['off', 'ultra']);
@@ -71,9 +71,12 @@ export class UltracodeControl {
   constructor(ctx, isOmd, store) {
     this.ctx = ctx; this.isOmd = isOmd; this.store = store;
     this.folds = new WeakMap(); this.claims = new WeakMap(); this.frames = new WeakMap(); this.active = new WeakMap(); this.fresh = new WeakSet(); this.writes = new Map();
+    const quality = promptText('runtime/ultra-quality.md');
     const texts = { workflow: promptText('runtime/workflow-authoring.md'), team: promptText('runtime/ultra-team.md'), free: promptText('runtime/ultra-free.md') };
-    this.guides = Object.fromEntries(Object.entries(texts).map(([mode, text]) =>
-      [mode, { text, hash: createHash('sha256').update(text).digest('hex') }]));
+    this.guides = Object.fromEntries(Object.entries(texts).map(([mode, strategy]) => {
+      const text = quality + '\n\n' + strategy;
+      return [mode, { text, hash: createHash('sha256').update(text).digest('hex') }];
+    }));
   }
   fold(session) {
     let state = this.folds.get(session);

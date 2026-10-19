@@ -2,6 +2,18 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.2.omd.0.18.3",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "统一 Ultra 质量要求与协作主动性",
+      "notes": [
+        "Workflow、Agent Team、自由共用同一质量与主动性要求，按实际任务委派并持续完善，不规定固定人数或流程。",
+        "修复 Dream 项目与全局记忆重建的续跑进度，避免旧消费记录导致来源遗漏。",
+        "内置 OpenCU 2.0.3，改善 JavaScript 超时、取消、输入释放和原生组合键持键保护。",
+        "整合会话热替换与文档保存、断线恢复的生命周期修复。"
+      ]
+    },
+    {
       "version": "0.2.1-rc.2.omd.0.18.2",
       "severity": "normal",
       "unpublished": false,

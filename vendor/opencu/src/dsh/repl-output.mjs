@@ -1,5 +1,17 @@
 import { inspect } from 'node:util';
 
+// Structured-cloned Errors omit custom fields such as code, details and cause.
+export function serializeReplError(error, depth = 0) {
+  return { name: error?.name, message: error?.message ?? String(error), code: error?.code, details: error?.details,
+    ...(error?.cause && depth < 8 ? { cause: serializeReplError(error.cause, depth + 1) } : {}) };
+}
+export function deserializeReplError(value) {
+  const constructors = { Error, TypeError, RangeError, ReferenceError, SyntaxError, EvalError, URIError };
+  const Constructor = Object.hasOwn(constructors, value.name) ? constructors[value.name] : Error;
+  const error = new Constructor(value.message);
+  return Object.assign(error, value, value.cause ? { cause: deserializeReplError(value.cause) } : {});
+}
+
 /** Display text only: API values stay unchanged, and every outputs entry is a string. */
 export function replOutput(value) {
   if (typeof value === 'string') return value;

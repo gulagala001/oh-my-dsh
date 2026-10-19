@@ -20,6 +20,10 @@ class Failure(Exception):
         self.code = code
 
 
+class ChordAlreadyHeld(Failure):
+    pass
+
+
 def fail(code, message):
     raise Failure(code, message)
 
@@ -466,11 +470,22 @@ def act(t, action, expected):
         input_event('key', keycode(action['key']), kind == 'key_down', expected)
     elif kind == 'press_key':
         chord = key_chord(action['key'])
-        for key in chord:
+        with input_lock:
             check(t, expected)
-            input_event('key', key, True, expected)
-        for key in reversed(chord):
-            input_event('key', key, False)
+            if any(key in keys or held_key(key) for key in chord):
+                raise ChordAlreadyHeld('INPUT_ALREADY_HELD', 'pressKey cannot reuse an already held key; no input was dispatched')
+            acquired = []
+            try:
+                for key in chord:
+                    check(t, expected)
+                    try:
+                        input_event('key', key, True, expected)
+                    finally:
+                        if key in keys:
+                            acquired.append(key)
+            finally:
+                for key in reversed(acquired):
+                    input_event('key', key, False)
     elif kind == 'scroll':
         if 'x' in action or 'elementId' in action:
             move(point(t, action))
@@ -591,7 +606,10 @@ def reply(request):
     try:
         value = dict(id=request['id'], ok=True, result=perform(request['method'], request.get('params', {}), request['epoch']))
     except Exception as error:
-        details = dict(release=release()) if request['method'] == 'act' else {}
+        if isinstance(error, ChordAlreadyHeld):
+            details = dict(inputDispatched=False, retryable=False)
+        else:
+            details = dict(release=release()) if request['method'] == 'act' else {}
         value = dict(id=request['id'], ok=False, error=dict(code=getattr(error, 'code', 'NATIVE_FAILURE'), message=str(error), details=details))
     with output_lock:
         print(json.dumps(value), flush=True)

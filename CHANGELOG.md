@@ -1,3 +1,15 @@
+## 0.18.3（DSH 0.2.1-rc.2）
+
+- Ultra 的 Workflow、Agent Team、自由共用同一质量与主动性要求；实质任务默认及时委派并持续完善，只区分协作方式，不固定人数或流程。
+- 修复 Dream 项目／全局记忆重建时旧消费进度导致后续来源遗漏的问题。
+- 内置 OpenCU 2.0.3：JavaScript 同步超时可终止，取消和重置隔离迟到结果，原生组合键保留已有持键。
+- 整合会话热替换消费门控、文档保存排空与断线恢复的生命周期修复。
+
+- Ultra Workflow, Agent Team and Free share the same quality and initiative requirements while retaining their own collaboration methods, without fixed team sizes or phases.
+- Fixes stale consumption progress during project/global memory rebuilds.
+- Bundles OpenCU 2.0.3 with terminable JavaScript execution, cancellation/reset isolation and held-key protection.
+- Includes conversation hot-reload gating and document save/disconnect lifecycle fixes.
+
 ## 0.18.2（DSH 0.2.1-rc.1 / rc.2）
 
 ### 问题修复
