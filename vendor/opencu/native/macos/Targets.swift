@@ -158,6 +158,15 @@ final class TargetStore {
         return try resolve(saved)
     }
 
+    func visibleWindow(_ saved: [String: Any]) -> WindowRecord? {
+        guard let current = try? validated(saved), let running = try? app(current), !running.isHidden,
+              let windowID = current["windowId"] as? Int,
+              let rows = CGWindowListCopyWindowInfo(.optionIncludingWindow, CGWindowID(windowID)) as? [[String: Any]],
+              let row = rows.first, row[kCGWindowIsOnscreen as String] as? Bool == true,
+              let record = windowRecord(row), record.id == windowID, record.pid == running.processIdentifier else { return nil }
+        return record
+    }
+
     func launch(_ reference: [String: Any]) throws -> [String: Any] {
         let url: URL
         if let bundle = reference["bundleId"] as? String, let found = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) { url = found }

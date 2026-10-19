@@ -224,7 +224,7 @@ final class NativeService {
         }
         if !semantic && (["move", "click", "double_click", "right_click", "mouse_down", "drag"].contains(type) || type == "scroll" && (action["x"] != nil || action["elementId"] != nil)) {
             try requireInput(); try cursor.prepare(); try input.check()
-            cursor.track { [weak self] in self?.targets.verify(target)["valid"] as? Bool == true }
+            cursor.track { [weak self] in self?.targets.visibleWindow(target) }
         }
         switch type {
         case "select_text":

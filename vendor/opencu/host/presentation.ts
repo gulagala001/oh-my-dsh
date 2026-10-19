@@ -13,7 +13,7 @@ interface RecordEntry {
   owner: BrowserWindow; window: BrowserWindow; hidden: boolean; generation: number; ready: Promise<void>
   positioned: { x: number; y: number } | null; geometry: string; follow: () => void; dispose: () => void
   drag: (active: boolean, targetId?: string) => void; ignoreClickUntil: number
-  hitRegions: HitRegion[]; syncPointer: () => void; floating: boolean | null
+  hitRegions: HitRegion[]; syncPointer: () => void
   motion: PresentationMotion; animate: () => void; frameIds: string[]
   resize: (active: boolean, targetId?: string, edge?: ResizeEdge) => void
   hide: (immediate?: boolean) => void; exitGeneration: number; finishHide: () => void
@@ -53,10 +53,11 @@ export class OpenCUPresentations {
     const motion = new PresentationMotion()
     const record: RecordEntry = { owner, window, hidden: true, generation: 0, positioned: null, geometry: '',
       ready: Promise.resolve(), follow: () => {}, dispose: () => {}, drag: () => {}, ignoreClickUntil: 0,
-      hitRegions: [], syncPointer: () => {}, floating: null, motion, animate: () => {}, frameIds: [], resize: () => {},
+      hitRegions: [], syncPointer: () => {}, motion, animate: () => {}, frameIds: [], resize: () => {},
       hide: () => {}, exitGeneration: 0, finishHide: () => {}, renderMotion: () => {}, stopMotion: () => {}, pin: () => {},
       contrast: { sequence: 0, pending: false, sampledAt: 0, changedAt: 0, white: 1, confirmations: 0, rect: null } }
     window.webContents.setZoomFactor(1)
+    window.setAlwaysOnTop(owner.isAlwaysOnTop())
     let hideTimer: ReturnType<typeof setTimeout> | undefined
     let motionTimer: ReturnType<typeof setInterval> | undefined
     let pointerTimer: ReturnType<typeof setInterval> | undefined, ignoringMouse: boolean | undefined
@@ -195,6 +196,7 @@ export class OpenCUPresentations {
     }
     const endDrag = (): void => { record.drag(false); record.resize(false) }
     const raise = (): void => { follow(); if (!window.isDestroyed() && window.isVisible()) window.moveTop() }
+    const syncLevel = (): void => { if (!window.isDestroyed()) window.setAlwaysOnTop(owner.isAlwaysOnTop()) }
     window.on('close', hide)
     window.on('blur', endDrag)
     window.on('show', trackPointer); window.on('hide', untrackPointer)
@@ -202,11 +204,13 @@ export class OpenCUPresentations {
     window.webContents.on('will-navigate', event => { event.preventDefault() })
     owner.on('move', follow); owner.on('resize', follow); owner.on('show', follow)
     owner.on('hide', follow); owner.on('minimize', follow); owner.on('restore', follow); owner.on('focus', raise)
+    owner.on('always-on-top-changed', syncLevel)
     record.dispose = () => {
       record.transfer?.cancel(); record.transfer = undefined
       record.generation++; stopMotion(); clearTimeout(hideTimer); clearInterval(pointerTimer); motion.cancel()
       owner.removeListener('move', follow); owner.removeListener('resize', follow); owner.removeListener('show', follow)
       owner.removeListener('hide', follow); owner.removeListener('minimize', follow); owner.removeListener('restore', follow); owner.removeListener('focus', raise)
+      owner.removeListener('always-on-top-changed', syncLevel)
       sender.removeListener('destroyed', record.dispose)
       window.removeListener('closed', record.dispose)
       window.removeListener('close', hide)
@@ -306,7 +310,7 @@ export class OpenCUPresentations {
         await Promise.race([transfer.ready, new Promise<never>((_, reject) => { timeout = setTimeout(() => reject(new Error('The handoff renderer did not become ready')), 2000) })])
         if (record.transfer !== transfer || record.window.isDestroyed() || !owner.isVisible() || owner.isMinimized()) throw new Error('The monitoring handoff owner changed')
         // Paint the ready copy before the dock conceals its source; never hand off through a blank frame.
-        record.window.showInactive(); record.window.moveTop()
+        record.window.showInactive(); if (owner.isFocused()) record.window.moveTop()
         return { prepared: true }
       } catch (error) {
         if (record.transfer === transfer) {
@@ -323,7 +327,7 @@ export class OpenCUPresentations {
       if (operation === 'transfer-run') {
         if (record.hidden || record.window.isDestroyed() || record.owner.isDestroyed() || !record.owner.isVisible()
           || record.owner.isMinimized() || this.layouts.get(sender)?.suppressed) throw new Error('The monitoring handoff owner is not visible')
-        record.window.showInactive(); record.window.moveTop()
+        record.window.showInactive(); if (record.owner.isFocused()) record.window.moveTop()
         const flight = transfer.run(performance.now()); record.animate(); record.syncPointer()
         let timeout: ReturnType<typeof setTimeout> | undefined
         try { await Promise.race([flight, new Promise<never>((_, reject) => { timeout = setTimeout(() => reject(new Error('The monitoring handoff timed out')), 2000) })]) }
@@ -364,12 +368,6 @@ export class OpenCUPresentations {
     if (record.geometry !== geometry) {
       record.geometry = geometry
       sender.send('dsh-desktop:opencu-presentation-event', { type: 'geometry', width: size.width / zoom, height: size.height / zoom })
-    }
-    const floating = frames.some(frame => (frame.active === true || record.window.isFocused())
-      && (frame.backend !== 'browser' || frame.provider !== 'dsh' || frame.isDetached === true))
-    if (record.floating !== floating) {
-      record.floating = floating; record.window.setAlwaysOnTop(floating, 'floating')
-      if (record.owner.isFocused() && record.window.isVisible()) record.window.moveTop()
     }
     record.hidden = false
     record.follow()

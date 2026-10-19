@@ -6,6 +6,33 @@
 
 已装 OMD，无需再装 OpenCU；请按 [OMD 中文指南](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md)／[OMD English guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install_EN.md) 更新。OMD includes OpenCU; no separate installation is needed.
 
+## 2.0.5
+
+## 中文
+
+- 修复 macOS 鼠标事件的目标窗口身份与窗口内坐标，恢复后台原生点击、滚轮与拖拽。
+- 将原生光标裁到目标窗口，并遵循实际窗口遮挡与层级；目标隐藏或移位后隐藏光标。
+- Electron 预览随所属窗口层级显示，更新、重新显示与窗口转移时不再无条件置顶。
+
+## English
+
+- Fixes target-window identity and local coordinates in macOS pointer events for background native clicks, scrolling and dragging.
+- Clips the native cursor to its target window and respects occlusion and window order; hides the cursor when its target is hidden or moved.
+- Keeps Electron previews in their owner window order, including updates, redisplay and window transfers, without unconditional raising.
+
+OMD 用户随 OMD 0.18.5 更新内置 OpenCU，无需重复安装。 / OMD users receive bundled OpenCU through OMD 0.18.5.
+
+### 当前固定下载 / Current fixed downloads
+
+| DSH | OpenCU | 固定包 / Fixed package | 发行页 / Release |
+| --- | --- | --- | --- |
+| `0.2.1-rc.1` | `2.0.5-dsh.0.2.1-rc.1` | [opencu-2.0.5-dsh.0.2.1-rc.1.tgz](https://github.com/gulagala001/opencu/releases/download/v2.0.5-dsh.0.2.1-rc.1/opencu-2.0.5-dsh.0.2.1-rc.1.tgz) | [0.2.1-rc.1](https://github.com/gulagala001/opencu/releases/tag/v2.0.5-dsh.0.2.1-rc.1) |
+| `0.2.1-rc.2` | `2.0.5-dsh.0.2.1-rc.2` | [opencu-2.0.5-dsh.0.2.1-rc.2.tgz](https://github.com/gulagala001/opencu/releases/download/v2.0.5-dsh.0.2.1-rc.2/opencu-2.0.5-dsh.0.2.1-rc.2.tgz) | [0.2.1-rc.2](https://github.com/gulagala001/opencu/releases/tag/v2.0.5-dsh.0.2.1-rc.2) |
+
+每份固定发行同时提供 `host-adapters.zip`、`metadata.json` 和 `SHA256SUMS`。宿主适配源码不是完整桌面安装器；完整界面仍需匹配的 Host／Client／preload。 / Each fixed Release also includes `host-adapters.zip`, `metadata.json` and `SHA256SUMS`. Host adapters are source materials, not a complete desktop installer; the full UI still needs matching Host, Client and preload builds.
+
+## 历史发行 / Previous releases
+
 ## 2.0.4
 
 ## 中文
@@ -22,16 +49,6 @@
 
 OMD 用户随 OMD 0.18.4 更新内置 OpenCU，无需重复安装。 / OMD users receive bundled OpenCU through OMD 0.18.4.
 
-### 当前固定下载 / Current fixed downloads
-
-| DSH | OpenCU | 固定包 / Fixed package | 发行页 / Release |
-| --- | --- | --- | --- |
-| `0.2.1-rc.1` | `2.0.4-dsh.0.2.1-rc.1` | [opencu-2.0.4-dsh.0.2.1-rc.1.tgz](https://github.com/gulagala001/opencu/releases/download/v2.0.4-dsh.0.2.1-rc.1/opencu-2.0.4-dsh.0.2.1-rc.1.tgz) | [0.2.1-rc.1](https://github.com/gulagala001/opencu/releases/tag/v2.0.4-dsh.0.2.1-rc.1) |
-| `0.2.1-rc.2` | `2.0.4-dsh.0.2.1-rc.2` | [opencu-2.0.4-dsh.0.2.1-rc.2.tgz](https://github.com/gulagala001/opencu/releases/download/v2.0.4-dsh.0.2.1-rc.2/opencu-2.0.4-dsh.0.2.1-rc.2.tgz) | [0.2.1-rc.2](https://github.com/gulagala001/opencu/releases/tag/v2.0.4-dsh.0.2.1-rc.2) |
-
-每份固定发行同时提供 `host-adapters.zip`、`metadata.json` 和 `SHA256SUMS`。宿主适配源码不是完整桌面安装器；完整界面仍需匹配的 Host／Client／preload。 / Each fixed Release also includes `host-adapters.zip`, `metadata.json` and `SHA256SUMS`. Host adapters are source materials, not a complete desktop installer; the full UI still needs matching Host, Client and preload builds.
-
-## 历史发行 / Previous releases
 
 ## 2.0.2
 

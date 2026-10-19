@@ -1,3 +1,13 @@
+## 0.18.5（DSH 0.2.1-rc.1 / rc.2）
+
+- 内置 OpenCU 2.0.5，修复 macOS 后台鼠标事件缺少目标窗口身份和局部坐标导致点击无效的问题，保留请求的修饰键与输入释放机制。
+- 原生光标限制在目标窗口范围并跟随其层级，窗口被遮挡时光标也被遮挡；隐藏或移动目标后清除旧光标。
+- 预览悬浮窗跟随 DSH 主窗口层级，任务更新、重新显示和转移动画不会将其独立提升为全局置顶。
+
+- Bundles OpenCU 2.0.5 with correctly bound macOS background pointer events, preserving requested modifiers and input release.
+- Clips the native cursor to its target window and follows its stacking order, hiding stale cursors when the target hides or moves.
+- Keeps preview windows at their DSH owner's stacking level during updates, display and transfer animations.
+
 ## 0.18.4（DSH 0.2.1-rc.1 / rc.2）
 
 - 2026-10-19 同版本修订：修复 Todo／验证工具在原生函数调用中因参数 schema 顶层不是 object 而被模型服务拒绝；保留 TypeScript／Python SDK 参数说明和每种操作的执行前校验。此前下载本版的用户需重新安装更新后的包。

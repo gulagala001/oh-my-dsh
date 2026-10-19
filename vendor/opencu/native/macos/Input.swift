@@ -86,8 +86,9 @@ final class InputStore {
     }
 
     private func post(_ event: CGEvent, keyboard: Bool = false, releasing: Bool = false) throws {
+        var event = event
         if let target = destination {
-            _ = try targets.validated(target)
+            let current = try targets.validated(target)
             let pid = pid_t(target["pid"] as? Int ?? 0)
             guard pid > 0, let windowId = target["windowId"] as? Int else { throw NativeFailure("TARGET_IDENTITY_REQUIRED", "Targeted input requires a live window and process.") }
             if keyboard && !releasing {
@@ -95,6 +96,30 @@ final class InputStore {
                 guard let focused = attribute(root, kAXFocusedWindowAttribute), CFEqual(focused, window) else {
                     throw NativeFailure("BACKGROUND_KEYBOARD_UNAVAILABLE", "The selected window is not this application's keyboard window. Use an AX element action, or explicitly request foreground input; no window was activated.")
                 }
+            }
+            if let native = NSEvent(cgEvent: event), [.leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp,
+                .otherMouseDown, .otherMouseUp, .mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged].contains(native.type) {
+                let location = event.location, top = NSScreen.screens.first?.frame.maxY ?? 0
+                guard let bound = NSEvent.mouseEvent(with: native.type,
+                    location: NSPoint(x: location.x, y: top - location.y), modifierFlags: native.modifierFlags,
+                    timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: windowId, context: nil,
+                    eventNumber: 0, clickCount: Int(event.getIntegerValueField(.mouseEventClickState)),
+                    pressure: Float(event.getDoubleValueField(.mouseEventPressure)))?.cgEvent else {
+                    throw NativeFailure("INPUT_EVENT_FAILED", "Could not bind the pointer event to the selected window.")
+                }
+                bound.location = location
+                bound.setIntegerValueField(.mouseEventButtonNumber, value: event.getIntegerValueField(.mouseEventButtonNumber))
+                event = bound
+            }
+            if !keyboard {
+                guard let address = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGEventSetWindowLocation"),
+                      let bounds = current["bounds"] as? [String: Double], let originX = bounds["x"], let originY = bounds["y"] else {
+                    throw NativeFailure("BACKGROUND_POINTER_UNAVAILABLE", "The selected window has no supported local pointer route; no event was posted.")
+                }
+                let setWindowLocation = unsafeBitCast(address, to: (@convention(c) (CGEvent, CGPoint) -> Void).self)
+                let location = event.location
+                event.setIntegerValueField(CGEventField(rawValue: 51)!, value: Int64(windowId))
+                setWindowLocation(event, CGPoint(x: location.x - originX, y: location.y - originY))
             }
             event.setIntegerValueField(.eventTargetUnixProcessID, value: Int64(pid))
             event.setIntegerValueField(.mouseEventWindowUnderMousePointer, value: Int64(windowId))
