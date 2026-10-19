@@ -9,7 +9,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { desktopInputs, desktopIdentity, assertDesktopPaths, assertExternalBackends, digest, inside } from './fixtures/desktop-host-boot/inputs.mjs';
 import { prepareEnvironment } from '../scripts/desktop-test-environment.mjs';
 import { assertComputerBrowserPanel } from './fixtures/desktop-host-boot/settings-panel.mjs';
-import { assertModelTakeover, modelPriority } from './fixtures/desktop-host-boot/model-panel.mjs';
+import { assertNativeModelSeat, modelPriority } from './fixtures/desktop-host-boot/model-panel.mjs';
 import { assertClientIdentity, assertHostUiIdentity, assertBlankNavigation } from './fixtures/desktop-host-boot/client-identity.mjs';
 import { cleanupFixture, closeFixtureServer } from './fixtures/process.mjs';
 
@@ -257,7 +257,7 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     for (const name of ['conversation.input.model', 'conversation.input.model.label', 'conversation.chat.node', 'settings.section'])
       assert.equal(slots.filter(row => row.name === name).length, 1, 'Single declared slot: ' + name);
     const model = slots.find(row => row.name === 'conversation.input.model');
-    assertModelTakeover(model, stockPriority);
+    assertNativeModelSeat(model, stockPriority);
     assert.equal(slots.find(row => row.name === 'conversation.input.model.label').declaredBy, stockLabel.declaredBy,
       'Native rc.2 model label declaration retains its actual stock owner');
     const chat = slots.find(row => row.name === 'conversation.chat.node');
@@ -280,7 +280,7 @@ test('official rc.2 Desktop installs frozen OMD and cold-boots its real UI with 
     assert.deepEqual(errors, []); assert.equal(providerRequests.length, 0);
     assert.equal(report.launches.length, 2); assert.equal(report.shutdowns.length, 2);
     report.checks = ['official-rc2-identities', 'dsh-app-renderer', 'frozen-tgz-installed', 'natural-cold-restart',
-      'uiConversation-definitions', 'omd-model-priority-takeover-and-visible-button', 'combined-computer-browser-panel-visible-and-switches-explicitly-off',
+      'uiConversation-definitions', 'native-model-seat-and-visible-omd-panel', 'combined-computer-browser-panel-visible-and-switches-explicitly-off',
       'three-external-backends-disabled-no-cu-actions', 'model-calls-zero'];
     report.phase = 'checks-complete';
   } catch (error) { report.status = 'failed'; report.failure = redact(error.stack ?? error.message); throw error; }

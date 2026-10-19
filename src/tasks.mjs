@@ -1,5 +1,6 @@
 import { promptText } from './cc-adaptation/texts.mjs';
 import { z } from 'zod';
+import { validateJsonSchemaValue } from '@deepseek-ai/dsh-tools';
 import { randomUUID } from 'node:crypto';
 import { createTodoStore } from './todolist.mjs';
 import { tasksFromLegacy } from './task-context.mjs';
@@ -36,9 +37,9 @@ const TASK_PROPERTIES = {
   updates: {"type":"array","description":"Required for check: each entry is {\"id\": task id, \"done\": true or false}","items":{"type":"object","properties":{"id":{"type":"string"},"done":{"type":"boolean"}},"required":["id","done"],"additionalProperties":false}},
 };
 
-// SDK projection accepts complete oneOf arms, not constraints layered over
-// sibling properties. Keep every arm self-contained so validation and SDK
-// projection share the operation-specific fields and requiredness.
+// Native function APIs require an object at the root. Publish that portable
+// shape to both native tools and SDKs; enforce the complete operation-specific
+// branches locally before the ledger can change.
 function operationParameters(properties, variants) {
   return { oneOf: variants.map(({ op, required = [], properties: overrides = {} }) => ({
     type: 'object', properties: { ...properties, ...overrides,
@@ -56,7 +57,8 @@ function taskEntries(required, anchored = false) {
   } };
 }
 
-export const TASK_PARAMETERS = operationParameters(TASK_PROPERTIES, [
+export const TASK_PARAMETERS = { type: 'object', properties: TASK_PROPERTIES, required: ['op'] };
+const TASK_OPERATIONS = operationParameters(TASK_PROPERTIES, [
   { op: 'excerpt', required: ['from', 'to', 'tasks'], properties: { tasks: taskEntries(['title', 'anchor'], true) } },
   { op: 'add', required: ['tasks'], properties: { tasks: taskEntries(['title', 'anchor'], true) } },
   { op: 'edit', required: ['tasks'], properties: { tasks: taskEntries(['id']) } },
@@ -73,7 +75,8 @@ const VERIFICATION_PROPERTIES = {
   tasks: {"type":"array","items":{"type":"string"},"description":"Optional for run: which tasks' linked tests to execute (default: every task with test links)"},
   ids: {"type":"array","items":{"type":"string"},"description":"Required for unlink: link ids to withdraw"},
 };
-export const VERIFICATION_PARAMETERS = operationParameters(VERIFICATION_PROPERTIES, [
+export const VERIFICATION_PARAMETERS = { type: 'object', properties: VERIFICATION_PROPERTIES, required: ['op'] };
+const VERIFICATION_OPERATIONS = operationParameters(VERIFICATION_PROPERTIES, [
   { op: 'link', required: ['links'] },
   { op: 'unlink', required: ['ids'] },
   { op: ['run', 'view'] },
@@ -153,21 +156,24 @@ export function registerTasks(ctx, store = createTodoStore()) {
   const pending = new Map();
   const definitions = [
     {
-      name: 'todo_write', description: TASK_DESCRIPTION, parameters: TASK_PARAMETERS, title: '任务',
+      name: 'todo_write', description: TASK_DESCRIPTION, parameters: TASK_PARAMETERS, operations: TASK_OPERATIONS, title: '任务',
       run: (args, session) => args.op === 'check' ? store.execCheck(session, args.updates) : store.execTaskMap(session, args),
     },
     {
-      name: 'verify_link', description: VERIFICATION_DESCRIPTION, parameters: VERIFICATION_PARAMETERS, title: '验证',
+      name: 'verify_link', description: VERIFICATION_DESCRIPTION, parameters: VERIFICATION_PARAMETERS, operations: VERIFICATION_OPERATIONS, title: '验证',
       run: (args, session, exec) => store.execVerifyLink(session, args, currentDirectory(ctx, session), exec.signal, createVerificationRunner(ctx, exec)),
     },
   ];
-  for (const { name, description, parameters, title, run } of definitions) ctx.tools.register({
+  for (const { name, description, parameters, operations, title, run } of definitions) ctx.tools.register({
     name, description, parameters,
     output: { schema: { type: 'string' }, render: (_args, text) => [{ type: 'text', text }] },
     execute(args, exec) {
       const { agent, signal } = exec, session = agent.session;
       const job = (pending.get(session.id) || Promise.resolve()).catch(() => {}).then(async () => {
         signal?.throwIfAborted();
+        const schema = operations.oneOf.find(branch => branch.properties.op.enum.includes(args?.op)) ?? parameters;
+        const errors = validateJsonSchemaValue(schema, args);
+        if (errors.length) throw new Error('Rejected: ' + errors.join('; '));
         const result = await run(args, session, exec);
         if (result.isError) throw new Error(result.text);
         return result.text;

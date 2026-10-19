@@ -21,9 +21,8 @@ test-only package reads the actual public conversation registries and
 Host `llm/stream` listener throws on every call; a loopback-only provider also
 fails any request. Counts cover installation, both boots and shutdown.
 
-Model-seat takeover requires one active occupant at the captured stock priority
-minus 0.5, with the stock-priority occupant retained but inactive and the native
-label declaration owner unchanged. One visible button must have the accessible
+Model decoration preserves one registered active occupant at the captured stock
+priority, with the native label declaration owner unchanged. One visible button must have the accessible
 name `模型与思考强度`, optionally followed by `：` and nonempty model/effort details;
 the additive `OMD 模式与思考强度` fallback does not satisfy this check.
 No model button is clicked.
@@ -75,7 +74,7 @@ matching versions and imported callbacks. In the renderer there is one actual
 replacement rows. The real conversation service must descend from that cached
 module's exact apply callback through its public fiber parents. All other
 dynamic-row checks remain. Installed bytes/hash, version-dialog client/server
-agreement, actual conversation/slot registrations and model takeover are still
+agreement, actual conversation/slot registrations and model decoration are still
 required; missing replacements or wrong sources/versions fail.
 
 Process `env.HOME`, Node `os.homedir()`, DSH_HOME, userData, profiles, XDG/AppData
