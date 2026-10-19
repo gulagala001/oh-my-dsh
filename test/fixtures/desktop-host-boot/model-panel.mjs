@@ -8,10 +8,8 @@ export function modelPriority(slot) {
   return active[0].priority;
 }
 
-export function assertModelTakeover(slot, stockPriority) {
+export function assertNativeModelSeat(slot, stockPriority) {
   assert(Number.isFinite(stockPriority), 'Capture the actual stock model priority before installation');
-  assert.equal(modelPriority(slot), stockPriority - 0.5, 'OMD takes over the stock model seat at priority minus 0.5');
-  const retained = slot.occupants.filter(row => row.priority === stockPriority);
-  assert.equal(retained.length, 1, 'Original stock-priority occupant remains registered');
-  assert.equal(retained[0].active, false, 'OMD shadows the retained stock occupant');
+  assert.equal(modelPriority(slot), stockPriority, 'OMD decoration preserves the native model priority');
+  assert.equal(slot.occupants.length, 1, 'Native model entry remains the sole registered occupant');
 }

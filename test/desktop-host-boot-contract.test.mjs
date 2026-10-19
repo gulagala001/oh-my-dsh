@@ -11,7 +11,7 @@ import { spawnSync } from 'node:child_process';
 import { desktopInputs, desktopIdentity, assertDesktopPaths, assertExternalBackends, digest, inside, repoRoot } from './fixtures/desktop-host-boot/inputs.mjs';
 import { desktopEnvironment } from '../scripts/desktop-test-environment.mjs';
 import { assertComputerBrowserPanel } from './fixtures/desktop-host-boot/settings-panel.mjs';
-import { assertModelTakeover, modelPriority } from './fixtures/desktop-host-boot/model-panel.mjs';
+import { assertNativeModelSeat, modelPriority } from './fixtures/desktop-host-boot/model-panel.mjs';
 import { assertClientIdentity, assertHostUiIdentity, assertBlankNavigation, uiReplacements, clientComponents } from './fixtures/desktop-host-boot/client-identity.mjs';
 
 // These are dependency-free contract checks. No Electron, browser, installer,
@@ -30,18 +30,15 @@ test('real external backend gate rejects any missing, enabled or non-boolean set
   }
 });
 
-test('model takeover evidence rejects unchanged stock UI, missing stock and multiple active occupants', () => {
+test('native model seat evidence rejects priority changes, shadow entries and multiple active occupants', () => {
   const stock = { kind: 'single', occupants: [{ priority: 3, active: true }] };
   const priority = modelPriority(stock);
-  // Registrant display names are deliberately identical: takeover evidence
-  // comes from the public numeric priority/active contract, never owner names.
-  const installed = { kind: 'single', occupants: [
-    { priority: 3, active: false, registrant: 'apply' }, { priority: 2.5, active: true, registrant: 'apply' },
-  ] };
-  assertModelTakeover(installed, priority);
-  assert.throws(() => assertModelTakeover(stock, priority), /priority minus 0.5/);
-  assert.throws(() => assertModelTakeover({ ...installed, occupants: [installed.occupants[1]] }, priority), /stock-priority occupant/);
-  assert.throws(() => assertModelTakeover({ ...installed, occupants: installed.occupants.map(row => ({ ...row, active: true })) }, priority), /Exactly one elected/);
+  // Component decoration leaves the native registration intact. The rendered
+  // OMD button and native label owner are checked separately in real Desktop.
+  assertNativeModelSeat(stock, priority);
+  assert.throws(() => assertNativeModelSeat({ ...stock, occupants: [{ priority: 2.5, active: true }] }, priority), /preserves the native model priority/);
+  assert.throws(() => assertNativeModelSeat({ ...stock, occupants: [...stock.occupants, { priority: 3.5, active: false }] }, priority), /sole registered occupant/);
+  assert.throws(() => assertNativeModelSeat({ ...stock, occupants: [...stock.occupants, { priority: 3.5, active: true }] }, priority), /Exactly one elected/);
 });
 
 function archive(manifest) {
