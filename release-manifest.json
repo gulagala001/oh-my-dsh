@@ -2,6 +2,26 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.2.omd.0.18.8",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "修复 /btw 侧问启动",
+      "notes": [
+        "修复 /btw 侧问在 DSH 0.2.1 rc.1／rc.2 上因旧 subagents 接口无法启动的问题。",
+        "改用 startActivation 启动原生 fork 子会话，答案只回到指令结果；取消时结束子运行。"
+      ]
+    },
+    {
+      "version": "0.2.1-rc.1.omd.0.18.8",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "修复 /btw 侧问启动",
+      "notes": [
+        "修复 /btw 侧问在 DSH 0.2.1 rc.1／rc.2 上因旧 subagents 接口无法启动的问题。",
+        "改用 startActivation 启动原生 fork 子会话，答案只回到指令结果；取消时结束子运行。"
+      ]
+    },
+    {
       "version": "0.2.1-rc.2.omd.0.18.7",
       "severity": "normal",
       "unpublished": false,

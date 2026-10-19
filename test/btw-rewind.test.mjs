@@ -21,17 +21,18 @@ test('/btw keeps child lifecycle and uses the parent Codex cache key at the real
   const sessions = new Map([[parent.id, parent]]);
   ctx.reflect.provide('sessions', { get: id => sessions.get(id) });
   ctx.reflect.provide('tools', { guard(fn) { guarded.push(fn); return () => guarded.splice(guarded.indexOf(fn), 1); } });
-  let command, child, direct = false;
+  let command, child, activation, direct = false;
   ctx.reflect.provide('commands', { register(value) { command = value; return () => {}; } });
   ctx.reflect.provide('subagents', {
     getProvider: () => ({ inheritsParentContext: true }),
-    async start(_provider, request) {
+    async startActivation(spec) {
+      activation = spec;
       child = { id: 'child', inheritedEventCount: 0, header: { origin: 'subagent', parentSession: parent.id }, snapshotEvents: () => [] };
       sessions.set(child.id, child);
       ctx.emit('agent/created', { agent: { session: child } });
       const result = (async () => {
         const options = Object.freeze({ ...reference, sessionId: child.id,
-          messages: Object.freeze([createUserMessage({ source: { kind: 'user' }, content: request.prompt })]) });
+          messages: Object.freeze([createUserMessage({ source: { kind: 'user' }, content: spec.request.prompt })]) });
         if (direct) await collect(ctx.llm.stream(markAgentLoopRequest(options)));
         else {
           const prepared = await ctx.llm.prepareCall({ provider: reference.provider, model: reference.model });
@@ -40,7 +41,7 @@ test('/btw keeps child lifecycle and uses the parent Codex cache key at the real
         ctx.emit('session/event', child, { type: 'assistant/message', data: { usage: { inputTokens: 10, outputTokens: 1, cacheReadTokens: 4096 } } });
         return { stopReason: 'completed', output: [{ type: 'text', text: '回答' }] };
       })();
-      return { id: child.id, result, dispose: async () => {} };
+      return { childId: child.id, result, dispose: async () => {} };
     },
   });
   let compatibility;
@@ -56,6 +57,9 @@ test('/btw keeps child lifecycle and uses the parent Codex cache key at the real
   const result = await invoke();
   assert.equal(result.kind, 'success');
   assert.match(result.text, /缓存读取：4096 tokens/);
+  assert.equal(activation.provider, 'fork');
+  assert.equal(activation.delivery, 'caller', '答案只回到指令结果，不进入父会话上下文');
+  assert.match(activation.label, /^omd-btw:v1:/);
   assert.deepEqual(seen, ['parent', 'child']);
   assert.deepEqual(sent.map(options => options.sessionId), ['parent', 'parent']);
   assert.deepEqual(sent[1].messages.slice(0, reference.messages.length), reference.messages);

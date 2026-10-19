@@ -1,3 +1,11 @@
+## 0.18.8（DSH 0.2.1-rc.1 / rc.2）
+
+- 修复 `/btw` 侧问在 DSH 0.2.1 rc.1／rc.2 上启动失败（`ctx.subagents.start is not a function`）：宿主已移除一次性 fork 入口，改用 `startActivation` 以调用方交付启动原生 fork 子会话，答案只回到指令结果，取消时结束子运行。
+- 其他功能与内置 OpenCU 2.0.6 不变。
+
+- Fixes `/btw` side questions failing to start on DSH 0.2.1 rc.1/rc.2 with `ctx.subagents.start is not a function`: the one-shot fork entry no longer exists, so the native fork sub-context now starts through `startActivation` with caller delivery, keeps its answer in the command result, and ends the child when cancelled.
+- No other functional or bundled OpenCU changes.
+
 ## 0.18.7（DSH 0.2.1-rc.1 / rc.2）
 
 - 内置 OpenCU 2.0.6，为真实 REA 地址建议补齐当前会话的 ThreadScope／RouteScope，修复建议入口触发的 `Missing scope instance`。

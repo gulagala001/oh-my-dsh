@@ -11,7 +11,7 @@ Oh My DSH (OMD) enhances [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 
 > **Install:** [Copy instructions to an AI](docs/install_EN.md#ai) · [Use Add Plugin](docs/install_EN.md#gui). OMD includes OpenCU.
 
-Current release: **OMD 0.18.7**, with [separate packages](docs/releases.md) for DSH 0.2.1-rc.1 and rc.2.
+Current release: **OMD 0.18.8**, with [separate packages](docs/releases.md) for DSH 0.2.1-rc.1 and rc.2.
 
 <a id="features"></a>
 
