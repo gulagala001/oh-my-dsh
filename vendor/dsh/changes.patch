@@ -30,12 +30,14 @@ index 90b26c19..445c032a 100644
        },
      }, {
 diff --git a/packages/client/ui-conversation/src/client/apply.ts b/packages/client/ui-conversation/src/client/apply.ts
+index e567bd1a..9d57a00f 100644
 --- a/packages/client/ui-conversation/src/client/apply.ts
 +++ b/packages/client/ui-conversation/src/client/apply.ts
 @@ -1,6 +1,7 @@
  /** Registers the target-neutral Conversation assembly, shell, input, and docks. */
  import type {} from '@deepseek-ai/dsh-client-product-analytics/client'
- import type { Context } from '@deepseek-ai/cordis'
+-import type { Context } from '@deepseek-ai/cordis'
++import type { Context, Fiber } from '@deepseek-ai/cordis'
 +import { createElement, useSyncExternalStore, type ComponentProps } from 'react'
  import z from '@deepseek-ai/schemastery'
  import type { ISessions, SessionBinding } from '@deepseek-ai/dsh-api-session-controller/client'
@@ -61,7 +63,7 @@ diff --git a/packages/client/ui-conversation/src/client/apply.ts b/packages/clie
    maxConcurrentFileUploads: z.natural().min(1).default(2),
  })
  
-@@ -152,7 +155,7 @@
+@@ -152,9 +155,13 @@
   * Mount the Conversation core and target-neutral presentation.
   * @param ctx - Client root context.
   */
@@ -69,8 +71,14 @@ diff --git a/packages/client/ui-conversation/src/client/apply.ts b/packages/clie
 +export async function apply(ctx: Context, config: Config = Config({})): Promise<void> {
    const sessions = ctx.sessions
    const slots = ctx.slots
++  // The parent OMD plugin is still LOADING while awaiting this child.
++  const lifecycle = ctx.get('omdConversationLifecycle', false) as {
++    begin(owner: Fiber): { ready(): void; dispose(): void }
++  } | undefined
    // Schemastery's field default is materialized before Cordis calls apply.
-@@ -188,7 +191,7 @@
+   const maxConcurrentFileUploads = config.maxConcurrentFileUploads as number
+   const workspaceNavigation = ctx.get('uiWorkspace') as unknown as WorkspaceNavigation
+@@ -188,7 +195,7 @@
    const t = ctx.locale.bind(NS)
    const conversationStore = createConversationStore()
    const submissionPolicy = new ComposerSubmissionPolicy(
@@ -79,7 +87,18 @@ diff --git a/packages/client/ui-conversation/src/client/apply.ts b/packages/clie
    )
  
    ctx.effect(() => () => { submissionPolicy.dispose() })
-@@ -557,12 +560,21 @@
+@@ -308,6 +315,10 @@
+ 
+   // Conversation assembly and input share the Session binding lifecycle. The
+   // source roster is installed before any consuming Slot entry.
++  // Suspend on the owner's synchronous lifecycle event, before Cordis starts
++  // parallel disposal of this source roster and the controller.
++  const provider = lifecycle?.begin(ctx.fiber)
++  ctx.effect(() => () => { provider?.dispose() }, 'ui-conversation: presentation lifecycle')
+   ctx.uiSession.provide({
+     hooks: ['conversation', 'input'],
+     props: ['inputActions'],
+@@ -557,12 +568,21 @@
      },
    }, InputBar)
  
@@ -102,7 +121,7 @@ diff --git a/packages/client/ui-conversation/src/client/apply.ts b/packages/clie
      yield registerConversationRoot()
      yield registerConversationContent()
      yield registerConversationSession()
-@@ -571,11 +583,13 @@
+@@ -571,11 +591,14 @@
      yield registerComposerBar()
    })
  
@@ -113,6 +132,7 @@ diff --git a/packages/client/ui-conversation/src/client/apply.ts b/packages/clie
      maxConcurrentFileUploads,
    })
 +  ready.set(true)
++  provider?.ready()
 +
    ctx.plugin(todoDockEntry)
    ctx.plugin(queueDockEntry)

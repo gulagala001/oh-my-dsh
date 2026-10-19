@@ -111,6 +111,11 @@ export async function createController({dataDir, browser, native} = {}) {
       if (closedBackends.has(name)) continue;
       try {
         const result = await backend.release({targets: [...selected.values()].filter(target => target.backend === name).map(json), dismissDialogs});
+        for (const id of result?.retiredTargetIds ?? []) {
+          if (selected.get(id)?.backend !== name) continue;
+          selected.delete(id); userActivity.delete(id); observedActivity.delete(id); previews.delete(id);
+          if (activeTargetId === id) activeTargetId = [...selected.keys()].at(-1) ?? null;
+        }
         if (result?.released !== true || result.failures?.length || result.errors?.length) {
           failures.push({backend: name, ...result, released: false});
         }

@@ -662,9 +662,10 @@ async function disconnect(reason = 'User disconnected', cause, temporary = false
   try { await chrome.storage.session.remove('authorization'); } catch (error) { errors.push(error); }
   try { await chrome.action.setBadgeText({ text: '' }); } catch (error) { errors.push(error); }
   await commandChain.catch(() => {});
-  try { await releaseAll(); } catch (error) { status.releaseError = errorJSON(error); errors.push(error); }
+  let released = false;
+  try { await releaseAll(); released = true; } catch (error) { status.releaseError = errorJSON(error); errors.push(error); }
   if (c) {
-    try { const { downloadEvents = [] } = await chrome.storage.local.get('downloadEvents'); await api('disconnect', { events: downloadEvents.slice(0, 500) }, c); }
+    try { const { downloadEvents = [] } = await chrome.storage.local.get('downloadEvents'); await api('disconnect', { events: downloadEvents.slice(0, 500), released }, c); }
     catch (error) { if (temporary) status.transportError = errorJSON(error); else errors.push(error); }
   }
   try { cleanupFailure(errors); }

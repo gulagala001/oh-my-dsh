@@ -57,7 +57,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
     return Array.isArray(result?.released) && result.released.length > 0 && result.released.every(itemOK);
   }
   async function release({targets = []} = {}) {
-    const failures = [], results = [];
+    const failures = [], results = [], retiredTargetIds = [];
     const unavailable = new Set([...targets.map(providerName), ...Object.keys(releaseUnavailable)]);
     for (const [provider, backend] of [['browser', browser], ['extension', extension], ['dsh', dsh]]) if (backend) unavailable.delete(provider);
     for (const provider of unavailable) {
@@ -84,7 +84,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
           const result = await extension.release(unwrap(target, 'extension'));
           results.push({provider: 'extension', targetId: target.id, result});
           if (!acknowledged(result)) { held.set(target.id, target); failures.push({provider: 'extension', targetId: target.id, code: 'RELEASE_UNACKNOWLEDGED', result}); }
-          else held.delete(target.id);
+          else { held.delete(target.id); if (result.retired === true) { retiredTargetIds.push(target.id); stale.delete(target.id); } }
         } catch (error) {
           held.set(target.id, target);
           failures.push({provider: 'extension', targetId: target.id, outcome: 'unknown', ...errorJSON(error)});
@@ -98,7 +98,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
         if (!acknowledged(result) && !(empty && pending.size === 0)) failures.push({provider: 'extension', code: 'RELEASE_UNACKNOWLEDGED', outcome: 'unknown', result});
       } catch (error) { failures.push({provider: 'extension', outcome: 'unknown', ...errorJSON(error)}); }
     }
-    return {released: failures.length === 0, failures, results};
+    return {released: failures.length === 0, failures, results, retiredTargetIds};
   }
   const composite = {
     kind: 'browser',

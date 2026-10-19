@@ -1,5 +1,5 @@
 import { randomUUID, timingSafeEqual } from 'node:crypto';
-import { mkdir, readFile, appendFile, writeFile, stat } from 'node:fs/promises';
+import { mkdir, readFile, appendFile, writeFile, stat, rename, open, unlink } from 'node:fs/promises';
 import { join, resolve, isAbsolute } from 'node:path';
 import { ExtensionError, EXTENSION_PATH, PROTOCOL_VERSION, parseTarget, targetId, normalizeAction } from './protocol.mjs';
 import { createDeliveryStore } from '../browser/deliveries.mjs';
@@ -13,6 +13,9 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
   if (!dataDir) throw failure('INVALID_DATA_DIR', 'A private dataDir is required for persistent download events.');
   const dir = resolve(dataDir), eventsFile = join(dir, 'extension-downloads.jsonl');
   const sessions = new Map(), pending = new Map(), downloads = new Map(), eventIds = new Set();
+  const retired = new Set(), retirementsFile = join(dir, 'extension-retirements.json');
+  const connectionKey = ({ instanceId, browserInstanceId, epoch }) => JSON.stringify([instanceId, browserInstanceId, epoch]);
+  let retirements = Promise.resolve();
   const deliveryStore = createDeliveryStore(dir), importing = new Map(), importErrors = new Map();
   function retainDownload(download) {
     if (download.durableDownloadConsent !== true || download.state !== 'complete' || download.exists === false || !isAbsolute(download.filename || '')) return;
@@ -28,6 +31,8 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
   const ready = (async () => {
     await deliveryStore;
     await mkdir(dir, { recursive: true, mode: 0o700 });
+    try { for (const key of JSON.parse(await readFile(retirementsFile, 'utf8'))) retired.add(key); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
     let text = '';
     try { text = await readFile(eventsFile, 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
     needsSeparator = !!text && !text.endsWith('\n');
@@ -38,6 +43,22 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
     }
     for (const download of downloads.values()) retainDownload(download);
   })();
+
+  async function retire(session) {
+    const key = connectionKey(session);
+    const work = retirements.catch(() => {}).then(async () => {
+      if (retired.has(key)) return;
+      const next = new Set([...retired, key]), temporary = retirementsFile + '.' + randomUUID() + '.tmp';
+      try {
+        const file = await open(temporary, 'wx', 0o600);
+        try { await file.writeFile(JSON.stringify([...next]) + '\n'); await file.sync(); } finally { await file.close(); }
+        await rename(temporary, retirementsFile);
+      } finally { await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
+      retired.add(key);
+    });
+    retirements = work;
+    await work;
+  }
 
   function expire(session, reason) {
     sessions.delete(session.sessionId);
@@ -183,6 +204,7 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
         if (closing) throw failure('CLOSING', 'Extension backend is shutting down; new connections are not accepted.');
         if (value.protocol !== PROTOCOL_VERSION || value.authorized !== true || value.debuggerConsent !== true) throw failure('CONSENT_REQUIRED', 'User connection and debugger consent are required.');
         for (const key of ['instanceId', 'browserInstanceId', 'epoch']) if (!/^[a-zA-Z0-9_-]{8,100}$/.test(value[key] || '')) throw failure('INVALID_IDENTITY', `Invalid ${key}.`);
+        if (retired.has(connectionKey(value))) throw failure('STALE_CONNECTION', 'This connection epoch has retired; reconnect with a fresh epoch.');
         for (const existing of sessions.values()) if (existing.instanceId === value.instanceId) expire(existing, 'Extension reconnected.');
         const session = { sessionId: randomUUID(), instanceId: value.instanceId, browserInstanceId: value.browserInstanceId,
           epoch: value.epoch, origin, durableDownloadConsent: value.durableDownloadConsent === true && (!authentication.pair || authentication.pair.durableDownloadConsent),
@@ -213,7 +235,11 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
         }
         send(res, 200, { accepted: true }, origin); return;
       }
-      if (routeName === 'disconnect') { await persistEvents(session, value.events); expire(session, 'User disconnected extension.'); send(res, 200, { disconnected: true }, origin); return; }
+      if (routeName === 'disconnect') {
+        await persistEvents(session, value.events);
+        if (value.released === true && !value.failures?.length && !value.errors?.length) await retire(session);
+        expire(session, 'User disconnected extension.'); send(res, 200, { disconnected: true }, origin); return;
+      }
       throw failure('NOT_FOUND', 'Unknown extension protocol route.');
     } catch (error) {
       const status = ['UNAUTHORIZED'].includes(error.code) ? 401 : /UNTRUSTED|CONSENT/.test(error.code || '') ? 403 : error.code === 'STALE_CONNECTION' ? 409 : 400;
@@ -246,7 +272,8 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
     async disconnect(instanceId) {
       const session = [...sessions.values()].find(session => session.instanceId === instanceId);
       if (!session) return { disconnected: true };
-      await request(session, 'disconnect');
+      if (!session.disconnectReleased) { await request(session, 'disconnect'); session.disconnectReleased = true; }
+      await retire(session);
       expire(session, 'User disconnected this browser profile.');
       return { disconnected: true };
     },
@@ -363,7 +390,12 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
       }
     },
     async release(target) {
-      if (target && !target.targets) { const { session, identity } = sessionFor(target); return request(session, 'release', { identity }); }
+      if (target && !target.targets) {
+        await ready;
+        const identity = parseTarget(target);
+        if (retired.has(connectionKey(identity))) return { released: true, retired: true };
+        const { session } = sessionFor(target); return request(session, 'release', { identity });
+      }
       const failures = [];
       for (const session of sessions.values()) {
         try { await request(session, 'release', {}); } catch (error) { failures.push(error.toJSON?.() ?? { message: error.message }); }
@@ -394,10 +426,11 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
         for (const session of [...sessions.values()]) {
           try {
             await request(session, 'release', {}, 5000);
+            await retire(session);
             expire(session, 'OpenCU closed.');
           } catch (error) { errors.push(error.toJSON?.() ?? { message: error.message }); }
         }
-        await persistence; await Promise.allSettled([...importing.values()]); await (await deliveryStore).flush();
+        await persistence; await retirements; await Promise.allSettled([...importing.values()]); await (await deliveryStore).flush();
         if (errors.length) throw new ExtensionError('RELEASE_FAILED', 'Some extension targets could not acknowledge release.', { errors });
         closed = true; clearInterval(sweep); if (mounted) server.off('request', listener);
       })().finally(() => { closeWork = undefined; });

@@ -14,6 +14,7 @@ import shellCss from './shell.css';
 import { createOpenCU } from '../../vendor/opencu/lib/client.factory.mjs';
 import { createChat } from '../../lib/host/ui-chat.factory.mjs';
 import { createChatSettings } from './chat-settings.mjs';
+import { installConversationLifecycle } from './conversation-lifecycle.mjs';
 
 import versionCss from './version-info.css';
 import { whaleCss } from './brand.mjs';
@@ -94,6 +95,7 @@ const cx = (...parts) => parts.filter(Boolean).join(' ');
 const hostConversation = createConversation(require), hostChat = createChat(require), openCU = createOpenCU(require);
 export const inject = [...new Set(['slots', 'sidebarRightTabs', 'sidebarRight', 'theme', 'configForms', 'layout', 'modules', 'remote.session', 'remote.subagents', 'remote.agentPresets', ...hostConversation.inject, ...hostChat.inject])].filter(name => name !== 'uiConversation');
 export async function apply(ctx) {
+  ctx.provide('omdConversationLifecycle', installConversationLifecycle(ctx));
   applySessionTimeZone(ctx);
   applyRewindCompatibility(ctx);
   applyDeepSeekWorkbench(ctx);

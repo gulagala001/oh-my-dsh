@@ -1,6 +1,6 @@
 /** Registers the target-neutral Conversation assembly, shell, input, and docks. */
 import type {} from '@deepseek-ai/dsh-client-product-analytics/client'
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context, Fiber } from '@deepseek-ai/cordis'
 import { createElement, useSyncExternalStore, type ComponentProps } from 'react'
 import z from '@deepseek-ai/schemastery'
 import type { ISessions, SessionBinding } from '@deepseek-ai/dsh-api-session-controller/client'
@@ -158,6 +158,10 @@ function concreteConversation(ctx: Context): ConversationController {
 export async function apply(ctx: Context, config: Config = Config({})): Promise<void> {
   const sessions = ctx.sessions
   const slots = ctx.slots
+  // The parent OMD plugin is still LOADING while awaiting this child.
+  const lifecycle = ctx.get('omdConversationLifecycle', false) as {
+    begin(owner: Fiber): { ready(): void; dispose(): void }
+  } | undefined
   // Schemastery's field default is materialized before Cordis calls apply.
   const maxConcurrentFileUploads = config.maxConcurrentFileUploads as number
   const workspaceNavigation = ctx.get('uiWorkspace') as unknown as WorkspaceNavigation
@@ -311,6 +315,10 @@ export async function apply(ctx: Context, config: Config = Config({})): Promise<
 
   // Conversation assembly and input share the Session binding lifecycle. The
   // source roster is installed before any consuming Slot entry.
+  // Suspend on the owner's synchronous lifecycle event, before Cordis starts
+  // parallel disposal of this source roster and the controller.
+  const provider = lifecycle?.begin(ctx.fiber)
+  ctx.effect(() => () => { provider?.dispose() }, 'ui-conversation: presentation lifecycle')
   ctx.uiSession.provide({
     hooks: ['conversation', 'input'],
     props: ['inputActions'],
@@ -589,6 +597,7 @@ export async function apply(ctx: Context, config: Config = Config({})): Promise<
     maxConcurrentFileUploads,
   })
   ready.set(true)
+  provider?.ready()
 
   ctx.plugin(todoDockEntry)
   ctx.plugin(queueDockEntry)

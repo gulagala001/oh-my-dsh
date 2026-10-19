@@ -19,7 +19,10 @@ interface ObservationState {
   elements: Map<string, FrameElement>
   frameRouter?: CDPFrameRouter
   pending: Promise<unknown>
+  cancellation: AbortController
   capture?: Promise<unknown>
+  release?: Promise<unknown>
+  navigation?: Promise<void>
   debuggerUsers: number
   ownsDebugger: boolean
   inputActive?: boolean
@@ -34,7 +37,7 @@ interface ObservationState {
   rendererExited?: boolean
 }
 const states = new WeakMap<WebContents, ObservationState>()
-const operations = new AsyncLocalStorage<{ fence: DialogFence; inputDispatched: boolean; operation: string }>()
+const operations = new AsyncLocalStorage<{ fence: DialogFence; inputDispatched: boolean; operation: string; signal: AbortSignal; guard<T>(work: () => Promise<T>): Promise<T> }>()
 function dispatchesInput(method: string, params: Record<string, unknown>, operation?: string): boolean {
   if (method === 'Target.sendMessageToTarget' && typeof params.message === 'string') {
     try { method = JSON.parse(params.message).method } catch { return false }
@@ -109,7 +112,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
   }
   let state = states.get(guest)
   if (!state) {
-    state = { elements: new Map(), pending: Promise.resolve(), debuggerUsers: 0, ownsDebugger: false, uploadGeneration: 0, documentGeneration: 0, identityScope: randomUUID(),
+    state = { elements: new Map(), pending: Promise.resolve(), cancellation: new AbortController(), debuggerUsers: 0, ownsDebugger: false, uploadGeneration: 0, documentGeneration: 0, identityScope: randomUUID(),
       inputKeys: new Map(), inputButtons: new Set(), releasingInputs: new Map(), inputPosition: { x: 0, y: 0 } }
     states.set(guest, state)
     const tracked = state
@@ -125,6 +128,14 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
     guest.on('did-navigate-in-page', invalidate)
   }
   const current = state, uploadGeneration = state.uploadGeneration, documentGeneration = state.documentGeneration
+  if (operation === 'releaseInput' && current.release) return current.release
+  if (operation === 'releaseInput') {
+    current.cancellation.abort(Object.assign(new Error('Browser operation interrupted by input release'), { code: 'CONTROL_STOPPED' }))
+    current.cancellation = new AbortController()
+    current.elements.clear(); delete current.observationId
+    delete current.capture
+  }
+  const signal = current.cancellation.signal
   if (current.rendererExited || guest.isCrashed()) {
     if (operation === 'releaseInput') {
       current.inputKeys.clear(); current.inputButtons.clear(); current.inputActive = false
@@ -134,9 +145,22 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
   }
   const siteInvocation = operation === 'invokeSiteTool' ? beginSiteTool(guest, args.requestId) : undefined
   if (operation === 'capture' && current.capture) return current.capture
-  const work = (operation === 'capture' ? Promise.resolve() : current.pending).then(async () => {
-    const context = { fence: dialogs.fence(), inputDispatched: false, operation }
+  const work = (['capture', 'releaseInput'].includes(operation) ? Promise.resolve() : Promise.all([current.pending, current.navigation])).then(async () => {
+    signal.throwIfAborted()
+    let removeAbort = (): void => {}
+    const interrupted = new Promise<never>((_resolve, reject) => {
+      signal.addEventListener('abort', abort, { once: true })
+      function abort(): void { reject(signal.reason) }
+      removeAbort = () => signal.removeEventListener('abort', abort)
+      if (signal.aborted) abort()
+    })
+    const context = { fence: dialogs.fence(), inputDispatched: false, operation, signal,
+      async guard<T>(work: () => Promise<T>): Promise<T> {
+        signal.throwIfAborted()
+        return Promise.race([Promise.resolve().then(() => { signal.throwIfAborted(); return work() }), interrupted])
+      } }
     const execute = async (): Promise<unknown> => {
+    signal.throwIfAborted()
     siteInvocation?.controller.signal.throwIfAborted()
     if (guest.isDestroyed()) throw new Error('The browser guest is closed')
     dialogs.assertClear()
@@ -153,7 +177,14 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       return { entries: guest.navigationHistory.getAllEntries(), index: guest.navigationHistory.getActiveIndex() }
     }
     if (operation === 'restoreNavigation') {
-      await guest.navigationHistory.restore(resolveOpenCUNavigation(args, allowedNavigation))
+      const restored = guest.navigationHistory.restore(resolveOpenCUNavigation(args, allowedNavigation))
+      // Native restore cannot be cancelled. Release may pass it, but subsequent
+      // ordinary commands still wait for its actual completion.
+      const navigation = restored.then(() => {}, () => {})
+      current.navigation = navigation
+      void navigation.then(() => { if (current.navigation === navigation) delete current.navigation })
+      await restored
+      signal.throwIfAborted()
       current.elements.clear()
       return { restored: true, url: guest.getURL(), index: guest.navigationHistory.getActiveIndex() }
     }
@@ -165,7 +196,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
     const send = (method: string, params: object = {}): Promise<any> => {
       if (current.rendererExited || guest.isCrashed()) return Promise.reject(guestExited())
       const active = operations.getStore()
-      return (active?.fence ?? dialogs).guard(() => {
+      const dispatch = () => (active?.fence ?? dialogs).guard(() => {
         const data = params as Record<string, unknown>
         const releasedKey = method === 'Input.dispatchKeyEvent' && data.type === 'keyUp' ? String(data.key) : undefined
         const releasedButton = method === 'Input.dispatchMouseEvent' && data.type === 'mouseReleased' ? String(data.button) : undefined
@@ -173,8 +204,10 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         if (releaseId && current.releasingInputs.has(releaseId)) return current.releasingInputs.get(releaseId)!
         const ack = new Promise((resolve, reject) => {
         const gone = (): void => { finish(); reject(guestExited()) }
-        const finish = (): void => { guest.off('render-process-gone', gone) }
+        const cancelled = (): void => { finish(); reject(active!.signal.reason) }
+        const finish = (): void => { guest.off('render-process-gone', gone); active?.signal.removeEventListener('abort', cancelled) }
         guest.once('render-process-gone', gone)
+        active?.signal.addEventListener('abort', cancelled, { once: true })
         if (dispatchesInput(method, data, active?.operation)) {
           if (active) active.inputDispatched = true
         }
@@ -192,6 +225,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         }
         return ack
       })
+      return active ? active.guard(dispatch) : dispatch()
     } // CDP replies vary by method; validate at their consumers below.
     let releaseSend = send
     let objectId: string | undefined
@@ -228,14 +262,15 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         const generation = current.documentGeneration
         if (args.elementId != null && !entry || args.observationId !== undefined && args.observationId !== current.observationId) throw Object.assign(new Error('STALE_ELEMENT: observe the current editable element again'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
         const validate = async (): Promise<void> => {
+          signal.throwIfAborted()
           if (guest.isDestroyed() || current.rendererExited || guest.isCrashed()) throw guestExited()
           if (current.documentGeneration !== generation || entry && current.elements.get(String(args.elementId)) !== entry) throw Object.assign(new Error('STALE_ELEMENT: the selected editable document changed'),{code:'STALE_ELEMENT',details:{inputDispatched:false}})
           if (entry?.route) await current.frameRouter!.validate(entry.route)
         }
-        const elementSend = (method:string,params:object={}):Promise<any> => context.fence.guard(() => (entry?.route?.send ?? send)(method,params))
+        const elementSend = (method:string,params:object={}):Promise<any> => context.guard(() => context.fence.guard(() => (entry?.route?.send ?? send)(method,params)))
         return await runTextEdit(elementSend,operation,args,{
           backendNodeId:entry?.backendNodeId,contextId:entry?.route?.contextId,validate,
-          onFocus:()=>{context.inputDispatched=true;current.inputActive=true},
+          onFocus:()=>{signal.throwIfAborted();context.inputDispatched=true;current.inputActive=true},
           beforeFocus:async()=>{
             await guest.hostWebContents?.executeJavaScript(`(() => { const view=[...document.querySelectorAll('webview')].find(item=>item.getWebContentsId()===${guest.id});if(!view)throw new Error('Browser input guest is detached');if(document.activeElement===view)view.blur();view.focus(); })()`)
             await send('Emulation.setFocusEmulationEnabled',{enabled:true})
@@ -252,6 +287,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
           await guest.hostWebContents?.executeJavaScript(`(() => { const view = [...document.querySelectorAll('webview')].find(item => item.getWebContentsId() === ${guest.id}); if (!view) throw new Error('Browser input guest is detached'); if (${operation === 'insertText'} && document.activeElement === view) view.blur(); view.focus(); })()`)
         }
         await send('Emulation.setFocusEmulationEnabled', { enabled: true })
+        signal.throwIfAborted()
         const releasing = operation === 'input' && (args.type === 'keyUp' || args.type === 'mouseUp')
         if (guest.isDestroyed() || !releasing && (current.documentGeneration !== generation || args.elementId != null && !current.elements.has(String(args.elementId)))) throw new Error('STALE_ELEMENT: document changed before input dispatch')
         const inputElement = args.elementId != null ? current.elements.get(String(args.elementId)) : undefined
@@ -260,6 +296,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
           if (inputElement.route.owners.length && (operation === 'insertText' || args.type === 'keyDown')) await current.frameRouter!.focus(inputElement as FrameElement & {route:NonNullable<FrameElement['route']>})
         }
         if (!releasing && current.documentGeneration !== generation) throw new Error('STALE_ELEMENT: document changed before input dispatch')
+        signal.throwIfAborted()
         if (operation === 'insertText') {
           if (typeof args.text !== 'string') throw new Error('insertText requires text')
           await insertMarkedText(args.text, async () => {
@@ -281,6 +318,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
             if (!['none', 'left', 'middle', 'right'].includes(String(args.button ?? 'none'))) throw new Error('Invalid mouse button')
             current.inputPosition = { x: Number(args.x), y: Number(args.y) }
             if (type === 'mousePressed' && inputElement?.route) await current.frameRouter!.checkPoint(inputElement as FrameElement & {route:NonNullable<FrameElement['route']>}, current.inputPosition)
+            signal.throwIfAborted()
             if (type === 'mousePressed') current.inputButtons.add(String(args.button))
             await send('Input.dispatchMouseEvent', { type, x: args.x, y: args.y, button: args.button ?? 'none', buttons: args.buttons ?? 0, clickCount: args.clickCount ?? 0, modifiers,
               ...(type === 'mouseWheel' ? { deltaX: args.deltaX ?? 0, deltaY: args.deltaY ?? 0 } : {}) })
@@ -338,6 +376,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
           return () => {guest.debugger.removeListener('message', receive)}
         })
         const result = await runCDPLocator(send, { ...args, operation }, (backendNodeId, route) => {
+          signal.throwIfAborted()
           if (generation !== current.documentGeneration) throw new Error('STALE_ELEMENT: document changed while resolving locator')
           const elementId = `${current.identityScope}:${route.frameId}:${route.documentId}:${backendNodeId}`
           current.elements.set(elementId, {backendNodeId,route})
@@ -349,6 +388,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       if (operation === 'observe') {
         const generation = current.documentGeneration
         const live = (): void => {
+          signal.throwIfAborted()
           if (guest.isDestroyed()) throw new Error('The browser guest is closed')
           if (generation !== current.documentGeneration) throw Object.assign(new Error('STALE_OBSERVATION: the document changed during observation'), { code: 'STALE_OBSERVATION' })
         }
@@ -373,6 +413,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       }
       const generation = current.documentGeneration
       const live = (): void => {
+        signal.throwIfAborted()
         if (guest.isDestroyed()) throw new Error('The browser guest is closed')
         if (generation !== current.documentGeneration) throw new Error('STALE_ELEMENT: the document changed during the element operation')
       }
@@ -390,9 +431,9 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       } else {entry = elementId ? current.elements.get(elementId) : undefined; backendNodeId = entry?.backendNodeId}
       if (!backendNodeId || args.observationId !== undefined && args.observationId !== current.observationId) throw new Error('STALE_ELEMENT: observe the current document again')
       const routedSend = entry?.route?.send ?? send
-      const elementSend = (method: string, params: object = {}): Promise<any> => context.fence.guard(() => {
+      const elementSend = (method: string, params: object = {}): Promise<any> => context.guard(() => context.fence.guard(() => {
         return routedSend(method, params)
-      })
+      }))
       releaseSend = elementSend
       if (entry?.route) await current.frameRouter!.validate(entry.route)
       if (operation === 'point' && entry?.route) return current.frameRouter!.point(entry as FrameElement & {route:NonNullable<FrameElement['route']>})
@@ -471,7 +512,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       throw error
     } finally {
       try {
-        if (objectId && !context.fence.interrupted && !dialogs.pending() && !guest.isDestroyed() && !current.rendererExited && !guest.isCrashed() && guest.debugger.isAttached()) await releaseSend('Runtime.releaseObject', { objectId })
+        if (objectId && !signal.aborted && !context.fence.interrupted && !dialogs.pending() && !guest.isDestroyed() && !current.rendererExited && !guest.isCrashed() && guest.debugger.isAttached()) await releaseSend('Runtime.releaseObject', { objectId })
       } finally {
         current.debuggerUsers--
         if (!current.debuggerUsers && current.ownsDebugger && !current.inputActive && !current.frameRouter) {
@@ -481,12 +522,12 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       }
     }
     }
-    try { return await operations.run(context, () => context.fence.guard(execute)) }
+    try { return await operations.run(context, () => context.guard(() => context.fence.guard(execute))) }
     catch (error) {
       const failure = error as Error & {details?:Record<string,unknown>}
       failure.details = { ...failure.details, inputDispatched: context.inputDispatched || failure.details?.inputDispatched === true }
       throw error
-    } finally { context.fence.close() }
+    } finally { removeAbort(); context.fence.close() }
   })
   if (operation === 'capture') {
     const capture = work.finally(() => { if (current.capture === capture) delete current.capture })
@@ -497,5 +538,10 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
     siteInvocation.finish(error?.code === 'SITE_TOOL_CANCEL_FAILED' ? error : undefined)
   })
   current.pending = work.catch(() => undefined)
+  if (operation === 'releaseInput') {
+    const release = work.finally(() => { if (current.release === release) delete current.release })
+    current.release = release
+    return release
+  }
   return work
 }

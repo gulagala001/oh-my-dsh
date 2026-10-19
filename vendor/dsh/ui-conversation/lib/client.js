@@ -19700,6 +19700,7 @@ window.__ModuleLoader__.load({
 		async function apply(ctx, config = Config({})) {
 			const sessions = ctx.sessions;
 			const slots = ctx.slots;
+			const lifecycle = ctx.get("omdConversationLifecycle", false);
 			const maxConcurrentFileUploads = config.maxConcurrentFileUploads;
 			const workspaceNavigation = ctx.get("uiWorkspace");
 			const uiConversation = new UiConversation(ctx, sessions);
@@ -19913,6 +19914,10 @@ window.__ModuleLoader__.load({
 					}
 				}), "ui-conversation: File action");
 			});
+			const provider = lifecycle?.begin(ctx.fiber);
+			ctx.effect(() => () => {
+				provider?.dispose();
+			}, "ui-conversation: presentation lifecycle");
 			ctx.uiSession.provide({
 				hooks: ["conversation", "input"],
 				props: ["inputActions"],
@@ -20252,6 +20257,7 @@ window.__ModuleLoader__.load({
 				maxConcurrentFileUploads
 			});
 			ready.set(true);
+			provider?.ready();
 			ctx.plugin(todoDockEntry);
 			ctx.plugin(queueDockEntry);
 		}
