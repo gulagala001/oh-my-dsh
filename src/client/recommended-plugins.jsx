@@ -1,3 +1,5 @@
+import { Icon } from './native-icons.jsx';
+import { Button, Input, Select, Switch } from './native-controls.jsx';
 import React, { useId, useState } from 'react';
 import { recommendedPlugins } from './recommended-plugins.mjs';
 import { usePollingAction } from './use-polling-action.mjs';
@@ -27,12 +29,7 @@ async function pluginApi(input, signal) {
 }
 
 function PluginIcon({ kind = 'plugin', size = 20 }) {
-  const paths = {
-    plugin: 'M9 3H4v6h2a3 3 0 1 1 0 6H4v6h6v-2a3 3 0 1 1 6 0v2h5v-6h-2a3 3 0 1 1 0-6h2V3h-6v2a3 3 0 1 1-6 0V3Z',
-    search: 'm20 20-5-5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0',
-    arrow: 'M14 4h6v6M20 4 10 14M10 4H4v16h16v-6',
-  };
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[kind]}/></svg>;
+  return <Icon name={kind === 'arrow' ? 'external' : kind} size={size}/>;
 }
 
 export function RecommendedPlugins({ plugins = recommendedPlugins }) {
@@ -52,13 +49,13 @@ export function RecommendedPlugins({ plugins = recommendedPlugins }) {
       <div className="tx-recommended-heading-actions">{plugins.length > 0 && <span className="tx-badge">{plugins.length} 个推荐</span>}<a className="tx-button" href="https://github.com/gulagala001/oh-my-dsh/issues/new?template=plugin-submission.yml" target="_blank" rel="noopener noreferrer">提交插件 / 申请适配<PluginIcon kind="arrow" size={13}/></a></div>
     </header>
     <p className="tx-recommended-submit-hint">只需仓库地址和一句用途，自己的插件或推荐他人的开源插件都可以。AI 按需批量检查，维护者确认后收录。</p>
-    <div className="tx-recommended-auto"><div><strong>自动更新推荐插件</strong><p>默认关闭。开启后，DSH 运行期间每 6 小时在会话空闲时检查，只更新已安装、启用且已核验的发行包，固定到核验版本；源码快照需手动更新，内置工作台随 OMD 更新。需要重启时会提示。</p>{state?.checkedAt && <small>上次自动检查：{new Date(state.checkedAt).toLocaleString()}</small>}</div><input type="checkbox" role="switch" aria-label="自动更新推荐插件" checked={state?.autoUpdate === true} disabled={!state || pending || !!error} onChange={event => void act({ action: 'settings', autoUpdate: event.target.checked })}/></div>
-    {error && <div className="tx-alert tx-alert-error" role="alert">{error}<button type="button" className="tx-button tx-quiet" disabled={pending} onClick={() => void refresh()}>重新读取</button></div>}
+    <div className="tx-recommended-auto"><div><strong>自动更新推荐插件</strong><p>默认关闭。开启后，DSH 运行期间每 6 小时在会话空闲时检查，只更新已安装、启用且已核验的发行包，固定到核验版本；源码快照需手动更新，内置工作台随 OMD 更新。需要重启时会提示。</p>{state?.checkedAt && <small>上次自动检查：{new Date(state.checkedAt).toLocaleString()}</small>}</div><Switch label="自动更新推荐插件" checked={state?.autoUpdate === true} disabled={!state || pending || !!error} onChange={value => void act({ action: 'settings', autoUpdate: value })}/></div>
+    {error && <div className="tx-alert tx-alert-error" role="alert">{error}<Button size="sm" variant="outline" type="button" className="tx-button tx-quiet" disabled={pending} onClick={() => void refresh()}>重新读取</Button></div>}
     {requestError && <div className="tx-alert tx-alert-error" role="alert">{requestError}</div>}
     {plugins.length > 0 ? <>
       <div className="tx-recommended-toolbar">
-        <label className="tx-recommended-search"><PluginIcon kind="search" size={16}/><input type="search" aria-label="搜索推荐插件" placeholder="搜索插件、作者或功能" value={query} onChange={event => setQuery(event.target.value)}/></label>
-        {categories.length > 1 && <select aria-label="插件分类" value={selected} onChange={event => setCategory(event.target.value)}><option value="">全部分类</option>{categories.map(value => <option key={value} value={value}>{value}</option>)}</select>}
+        <Input className="omd-native-search" icon={<PluginIcon kind="search" size={16}/>} type="search" aria-label="搜索推荐插件" placeholder="搜索插件、作者或功能" value={query} onChange={event => setQuery(event.target.value)}/>
+        {categories.length > 1 && <Select aria-label="插件分类" value={selected} onChange={event => setCategory(event.target.value)}><option value="">全部分类</option>{categories.map(value => <option key={value} value={value}>{value}</option>)}</Select>}
       </div>
       <p className="tx-recommended-count" role="status">{matches.length} 个插件{selected ? ` · ${selected}` : ''}</p>
       {matches.length > 0 ? <div className="tx-recommended-grid">{matches.map(plugin => { const installed = state?.plugins.find(item => item.id === plugin.id), busy = state?.busy?.id === plugin.id ? state.busy : null;
@@ -71,10 +68,10 @@ export function RecommendedPlugins({ plugins = recommendedPlugins }) {
         {review && installed?.installed && installed.version !== review.version && <p className="tx-recommended-result tx-warn">当前安装版本与目录固定构建不同。{unavailable ? '安装与更新暂未开放；已有安装和数据将保留。' : '旧版可点“更新”；更高版本不会自动降级。'}</p>}
         {unavailable && <p className="tx-recommended-result tx-warn">{unavailable}</p>}
         <p className="tx-recommended-version">{plugin.bundled ? !installed ? '正在读取启用状态…' : `${installed.enabled ? '已内置·默认启用' : '已内置·未启用'}${installed.version ? ' · v' + installed.version : ''}` : plugin.manualInstall ? '需按项目说明配置' : !installed ? '正在读取安装状态…' : installed.installed ? `${installed.enabled ? '已安装' : '已安装 · 未启用'}${installed.version ? ' · v' + installed.version : ''}` : '未安装'}{installed?.restartRequired && <span className="tx-badge tx-warn">待重启</span>}</p>
-        {plugin.bundled ? <div className="tx-recommended-actions">{[['chat', '打开网页聊天'], ['platform', '打开账号页 / 开放平台']].map(([page, label]) => <button key={page} type="button" className={`tx-button${page === 'chat' ? ' tx-primary' : ''}`} disabled={!installed?.enabled || !!error} onClick={() => window.dispatchEvent(new CustomEvent('deepseek-workbench:open', { detail: { page } }))}>{label}</button>)}</div> : plugin.manualInstall ? <p className="tx-recommended-result">{plugin.manualInstall}</p> : <div className="tx-recommended-actions">{installed?.installed ? <><button type="button" className="tx-button tx-primary" disabled={!!unavailable || pending || !!state?.busy || !!error} onClick={() => void act({ id: plugin.id, action: 'update' })}>{busy?.action === 'update' ? (busy.automatic ? '自动更新中…' : '更新中…') : '更新'}</button><button type="button" className="tx-button" disabled={pending || !!state?.busy || !!error || !installed.removable} onClick={() => void act({ id: plugin.id, action: 'uninstall' })}>{busy?.action === 'uninstall' ? '卸载中…' : '卸载'}</button></> : <button type="button" className="tx-button tx-primary" disabled={!!unavailable || !installed || pending || !!state?.busy || !!error} onClick={() => void act({ id: plugin.id, action: 'install' })}>{busy?.action === 'install' ? '安装中…' : '安装'}</button>}</div>}
+        {plugin.bundled ? <div className="tx-recommended-actions">{[['chat', '打开网页聊天'], ['platform', '打开账号页 / 开放平台']].map(([page, label]) => <Button key={page} type="button" className={`tx-button${page === 'chat' ? ' tx-primary' : ''}`} disabled={!installed?.enabled || !!error} onClick={() => window.dispatchEvent(new CustomEvent('deepseek-workbench:open', { detail: { page } }))}>{label}</Button>)}</div> : plugin.manualInstall ? <p className="tx-recommended-result">{plugin.manualInstall}</p> : <div className="tx-recommended-actions">{installed?.installed ? <><Button size="sm" variant="outline" type="button" className="tx-button tx-primary" disabled={!!unavailable || pending || !!state?.busy || !!error} onClick={() => void act({ id: plugin.id, action: 'update' })}>{busy?.action === 'update' ? (busy.automatic ? '自动更新中…' : '更新中…') : '更新'}</Button><Button size="sm" variant="outline" type="button" className="tx-button" disabled={pending || !!state?.busy || !!error || !installed.removable} onClick={() => void act({ id: plugin.id, action: 'uninstall' })}>{busy?.action === 'uninstall' ? '卸载中…' : '卸载'}</Button></> : <Button size="sm" variant="outline" type="button" className="tx-button tx-primary" disabled={!!unavailable || !installed || pending || !!state?.busy || !!error} onClick={() => void act({ id: plugin.id, action: 'install' })}>{busy?.action === 'install' ? '安装中…' : '安装'}</Button>}</div>}
         {(installed?.error || installed?.message) && <p className={installed.error ? 'tx-recommended-result tx-error' : 'tx-recommended-result'} role={installed.error ? 'alert' : 'status'}>{installed.error || installed.message}</p>}
         <footer>{plugin.category && <span className="tx-badge">{plugin.category}</span>}{plugin.upstream && <a className="tx-recommended-link" href={plugin.upstream.url} target="_blank" rel="noopener noreferrer" aria-label={`查看原作 ${plugin.upstream.name}（新窗口）`}>原作者项目<PluginIcon kind="arrow" size={13}/></a>}<a className="tx-recommended-link" href={plugin.url} target="_blank" rel="noopener noreferrer" aria-label={`查看 ${plugin.name} ${plugin.bundled ? '使用说明' : '项目'}（新窗口）`}>{plugin.bundled ? '使用说明' : '查看项目'}<PluginIcon kind="arrow" size={13}/></a></footer>
-      </article>; })}</div> : <div className="tx-recommended-empty"><span className="tx-recommended-empty-icon"><PluginIcon kind="search" size={26}/></span><h4>没有找到匹配的插件</h4><p>试试其他关键词，或查看全部推荐。</p><button type="button" className="tx-button" onClick={clear}>清除筛选</button></div>}
+      </article>; })}</div> : <div className="tx-recommended-empty"><span className="tx-recommended-empty-icon"><PluginIcon kind="search" size={26}/></span><h4>没有找到匹配的插件</h4><p>试试其他关键词，或查看全部推荐。</p><Button size="sm" variant="outline" type="button" className="tx-button" onClick={clear}>清除筛选</Button></div>}
     </> : <div className="tx-recommended-empty"><span className="tx-recommended-empty-icon"><PluginIcon size={28}/></span><h4>推荐清单正在整理</h4><p>这里将展示精选的第三方插件。<br/>你可以在这里了解插件用途、作者，并前往项目页面。</p><span className="tx-recommended-coming">敬请期待</span></div>}
   </section>;
 }

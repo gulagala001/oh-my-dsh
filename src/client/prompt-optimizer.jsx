@@ -1,3 +1,5 @@
+import { Icon } from './native-icons.jsx';
+import { Button, Input, Select, Switch, SegmentedControl, isSelectMenuTarget } from './native-controls.jsx';
 import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { createOptimizerPreferences, DraftOptimizer, OPTIMIZER_MODES, optimizerRequirements } from './prompt-optimizer-state.mjs';
@@ -5,8 +7,8 @@ import css from './prompt-optimizer.css';
 import { isSubagentSession, useMainConversation } from './main-conversation.mjs';
 
 const descriptions = { basic: '只润色表达，保留原意和限制。', structured: '整理已有目标、约束与交付要求。', planning: '将现有任务组织为可执行的步骤。' };
-function Sparkle() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="m10 3 2.1 6.9L19 12l-6.9 2.1L10 21l-2.1-6.9L1 12l6.9-2.1L10 3ZM20 2v6M17 5h6"/></svg>; }
-function Toggle({ children, checked, onChange, disabled }) { return <label className="omd-opt-toggle"><span>{children}</span><input type="checkbox" role="switch" checked={checked} disabled={disabled} onChange={e => onChange(e.target.checked)}/></label>; }
+function Sparkle() { return <Icon name="spark" size={16}/>; }
+function Toggle({ children, checked, onChange, disabled }) { return <label className="omd-opt-toggle"><span>{children}</span><Switch label={children} checked={checked} disabled={disabled} onChange={onChange}/></label>; }
 
 export function applyPromptOptimizer(ctx, { draftLock } = {}) {
   const preferences = createOptimizerPreferences(), controllers = new Map(), drafts = new Map();
@@ -80,8 +82,8 @@ export function applyPromptOptimizer(ctx, { draftLock } = {}) {
       if (!open || !prefs.enabled) return;
       const place = () => { const rect = anchor.current?.getBoundingClientRect(); if (!rect) return; const width = Math.min(380, window.innerWidth - 16); setPosition({ width, left: Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8)), bottom: Math.max(8, window.innerHeight - rect.top + 8), maxHeight: Math.max(100, rect.top - 16) }); };
       place(); window.addEventListener('resize', place); window.addEventListener('scroll', place, true);
-      const outside = event => { if (!anchor.current?.contains(event.target) && !panel.current?.contains(event.target)) close(); };
-      const escape = event => { if (event.key === 'Escape') { close(); anchor.current?.querySelector('button')?.focus(); } };
+      const outside = event => { if (!anchor.current?.contains(event.target) && !panel.current?.contains(event.target) && !isSelectMenuTarget(event.target)) close(); };
+      const escape = event => { if (event.key === 'Escape' && !event.defaultPrevented && !isSelectMenuTarget(event.target)) { close(); anchor.current?.querySelector('button')?.focus(); } };
       document.addEventListener('pointerdown', outside); document.addEventListener('keydown', escape);
       return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
     }, [open, prefs.enabled]);
@@ -92,27 +94,27 @@ export function applyPromptOptimizer(ctx, { draftLock } = {}) {
     const locked = controller.locked(), editingBlocked = locked || !!state.busy;
     const canOptimize = !locked && Boolean(input?.draft.trim()) && input.phase === 'plain' && !/^\s*\//.test(input.draft);
     return <div className="omd-opt-entry omd-opt-theme" ref={anchor} onPointerEnter={enter} onPointerLeave={leave}>
-      <button type="button" className="omd-opt-star" aria-label={prefs.automatic ? '关闭自动润色' : '启用自动润色'} aria-pressed={prefs.automatic} title={prefs.automatic ? '自动轻润色已开启 · 点击关闭' : '提示词优化 · 点击开启自动轻润色'} onClick={() => set({ automatic: !prefs.automatic })} data-busy={state.busy || undefined}><Sparkle/></button>
-      <button type="button" className="omd-opt-expand" aria-label="展开提示词优化" aria-expanded={open} aria-controls={id} onClick={() => { clearTimeout(timer.current); const next = !(open && pinned.current); pinned.current = next; setOpen(next); }}>⌃</button>
-      {state.busy && <button type="button" className="omd-opt-stop" aria-label="停止提示词优化" onClick={() => controller.cancel()}>停止</button>}
+      <Button size="sm" variant="outline" type="button" className="omd-opt-star" aria-label={prefs.automatic ? '关闭自动润色' : '启用自动润色'} aria-pressed={prefs.automatic} title={prefs.automatic ? '自动轻润色已开启 · 点击关闭' : '提示词优化 · 点击开启自动轻润色'} onClick={() => set({ automatic: !prefs.automatic })} data-busy={state.busy || undefined}><Sparkle/></Button>
+      <Button size="sm" variant="outline" type="button" className="omd-opt-expand" aria-label="展开提示词优化" aria-expanded={open} aria-controls={id} onClick={() => { clearTimeout(timer.current); const next = !(open && pinned.current); pinned.current = next; setOpen(next); }}>⌃</Button>
+      {state.busy && <Button size="sm" variant="outline" type="button" className="omd-opt-stop" aria-label="停止提示词优化" onClick={() => controller.cancel()}>停止</Button>}
       {open && createPortal(<section id={id} ref={panel} className="omd-opt-drawer omd-opt-theme" style={position} role="dialog" aria-label="提示词优化" onPointerEnter={() => clearTimeout(timer.current)} onPointerLeave={leave} onFocus={() => { pinned.current = true; }}>
-        <header><strong><Sparkle/>提示词优化</strong><span>跟随当前模型</span><button type="button" aria-label="关闭提示词优化抽屉" onClick={close}>×</button></header>
-        <div className="omd-opt-modes" role="group" aria-label="优化模式">{OPTIMIZER_MODES.map(([mode, label]) => <button type="button" key={mode} disabled={!!state.busy} aria-pressed={mode === prefs.mode} onClick={() => set({ mode })}>{label}</button>)}</div>
-        <p className="omd-opt-hint">{descriptions[prefs.mode]}</p>
+        <header><strong><Sparkle/>提示词优化</strong><span>跟随当前模型</span><Button size="sm" variant="outline" type="button" aria-label="关闭提示词优化抽屉" onClick={close}>×</Button></header>
+        <SegmentedControl id={id+"-mode"} label="优化模式" value={prefs.mode} disabled={!!state.busy} options={OPTIMIZER_MODES.map(([value, label]) => ({ value, label }))} onChange={mode => set({ mode })}/>
+        <p className="omd-opt-hint" role="tabpanel" id={id+"-mode-"+prefs.mode+"-panel"} aria-labelledby={id+"-mode-"+prefs.mode}>{descriptions[prefs.mode]}</p>
         <Toggle checked={prefs.automatic} onChange={automatic => set({ automatic })}>每次发送前自动润色</Toggle><p className="omd-opt-hint">固定轻润色 · 成功后自动发送</p>
         <div className="omd-opt-requirements">
-          <label className="omd-opt-actions">额外要求 <select aria-label="额外要求预设" value={prefs.requirementPreset} disabled={!!state.busy} onChange={event => changeRequirements(() => preferences.selectRequirementPreset(event.target.value))}><option value="">自定义</option>{prefs.requirementPresets.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+          <label className="omd-opt-actions">额外要求 <Select aria-label="额外要求预设" value={prefs.requirementPreset} disabled={!!state.busy} onChange={event => changeRequirements(() => preferences.selectRequirementPreset(event.target.value))}><option value="">自定义</option>{prefs.requirementPresets.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</Select></label>
           <textarea aria-label="额外优化要求" rows={3} maxLength={64000} disabled={!!state.busy} placeholder="可选，例如：保留技术细节，使用简体中文" value={requirements} onChange={event => changeRequirements(() => preferences.setRequirements(event.target.value))}/>
-          <div className="omd-opt-preset-save"><input aria-label="要求预设名称" maxLength={80} disabled={!!state.busy} placeholder="预设名称" value={presetName} onChange={event => setPresetName(event.target.value)}/><button type="button" disabled={!!state.busy} onClick={() => changeRequirements(() => preferences.saveRequirementPreset(presetName))}>{selectedPreset ? '保存修改' : '保存预设'}</button></div>
-          {selectedPreset && <div className="omd-opt-actions"><span>{Object.hasOwn(prefs.requirementDrafts, selectedPreset.id) ? '要求已暂存，保存修改可更新预设' : '已选择保存的预设'}</span><div><button type="button" disabled={!!state.busy} onClick={() => changeRequirements(() => preferences.saveRequirementPreset(presetName, true))}>另存为预设</button><button type="button" disabled={!!state.busy} onClick={() => changeRequirements(() => preferences.removeRequirementPreset())}>删除预设</button></div></div>}
+          <div className="omd-opt-preset-save"><Input aria-label="要求预设名称" maxLength={80} disabled={!!state.busy} placeholder="预设名称" value={presetName} onChange={event => setPresetName(event.target.value)}/><Button size="sm" variant="outline" type="button" disabled={!!state.busy} onClick={() => changeRequirements(() => preferences.saveRequirementPreset(presetName))}>{selectedPreset ? '保存修改' : '保存预设'}</Button></div>
+          {selectedPreset && <div className="omd-opt-actions"><span>{Object.hasOwn(prefs.requirementDrafts, selectedPreset.id) ? '要求已暂存，保存修改可更新预设' : '已选择保存的预设'}</span><div><Button size="sm" variant="outline" type="button" disabled={!!state.busy} onClick={() => changeRequirements(() => preferences.saveRequirementPreset(presetName, true))}>另存为预设</Button><Button size="sm" variant="outline" type="button" disabled={!!state.busy} onClick={() => changeRequirements(() => preferences.removeRequirementPreset())}>删除预设</Button></div></div>}
           <p className="omd-opt-hint">用于首次和后续优化；留空沿用原行为。切换保留已编辑要求，刷新后仍可使用。</p>
         </div>
-        <div className="omd-opt-actions"><span>范围：当前草稿</span><button type="button" className="omd-opt-primary" disabled={locked || (!state.busy && !canOptimize)} onClick={() => state.busy ? controller.cancel() : void controller.run()}>{state.busy ? '停止优化' : '开始优化'}</button></div>
-        {state.versions.length > 0 && <div className="omd-opt-history"><div className="omd-opt-actions"><label>版本 <select aria-label="提示词版本" value={state.cursor} disabled={editingBlocked} onChange={event => controller.selectVersion(Number(event.target.value))}>{state.versions.map((version, i) => <option key={i} value={i}>{version}</option>)}</select></label><div><button type="button" disabled={editingBlocked || state.cursor <= 0} onClick={() => controller.selectVersion(state.cursor - 1)}>撤销</button><button type="button" disabled={editingBlocked || state.cursor >= state.versions.length - 1} onClick={() => controller.selectVersion(state.cursor + 1)}>重做</button><button type="button" disabled={editingBlocked || state.cursor === 0} onClick={() => controller.selectVersion(0)}>恢复原稿</button></div></div>
-          <div className="omd-opt-refine"><input aria-label="继续优化要求" placeholder="例如：更短一点，保留限制" value={instruction} onChange={event => setInstruction(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); event.stopPropagation(); refine(); } }}/><button type="button" disabled={!!state.busy || !canOptimize} onClick={refine}>继续优化</button></div>
+        <div className="omd-opt-actions"><span>范围：当前草稿</span><Button size="sm" variant="primary" type="button" className="omd-opt-primary" disabled={locked || (!state.busy && !canOptimize)} onClick={() => state.busy ? controller.cancel() : void controller.run()}>{state.busy ? '停止优化' : '开始优化'}</Button></div>
+        {state.versions.length > 0 && <div className="omd-opt-history"><div className="omd-opt-actions"><label>版本 <Select aria-label="提示词版本" value={state.cursor} disabled={editingBlocked} onChange={event => controller.selectVersion(Number(event.target.value))}>{state.versions.map((version, i) => <option key={i} value={i}>{version}</option>)}</Select></label><div><Button size="sm" variant="outline" type="button" disabled={editingBlocked || state.cursor <= 0} onClick={() => controller.selectVersion(state.cursor - 1)}>撤销</Button><Button size="sm" variant="outline" type="button" disabled={editingBlocked || state.cursor >= state.versions.length - 1} onClick={() => controller.selectVersion(state.cursor + 1)}>重做</Button><Button size="sm" variant="outline" type="button" disabled={editingBlocked || state.cursor === 0} onClick={() => controller.selectVersion(0)}>恢复原稿</Button></div></div>
+          <div className="omd-opt-refine"><Input aria-label="继续优化要求" placeholder="例如：更短一点，保留限制" value={instruction} onChange={event => setInstruction(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); event.stopPropagation(); refine(); } }}/><Button size="sm" variant="outline" type="button" disabled={!!state.busy || !canOptimize} onClick={refine}>继续优化</Button></div>
         </div>}
-        {state.candidate && <div className="omd-opt-candidate"><strong>优化结果待应用</strong><pre>{state.candidate.draft}</pre><button type="button" disabled={editingBlocked} onClick={() => controller.applyCandidate()}>应用此结果</button></div>}
-        {state.recoveries.map(({ id, draft }) => <div className="omd-opt-candidate" key={id}><strong>保留的草稿版本</strong><pre>{draft}</pre><button type="button" disabled={editingBlocked} onClick={() => controller.inspectRecovery(id)}>查看这份原稿与版本</button></div>)}
+        {state.candidate && <div className="omd-opt-candidate"><strong>优化结果待应用</strong><pre>{state.candidate.draft}</pre><Button size="sm" variant="outline" type="button" disabled={editingBlocked} onClick={() => controller.applyCandidate()}>应用此结果</Button></div>}
+        {state.recoveries.map(({ id, draft }) => <div className="omd-opt-candidate" key={id}><strong>保留的草稿版本</strong><pre>{draft}</pre><Button size="sm" variant="outline" type="button" disabled={editingBlocked} onClick={() => controller.inspectRecovery(id)}>查看这份原稿与版本</Button></div>)}
         {(localError || state.error) && <p className="omd-opt-error" role="alert">{localError || state.error}</p>}
         {state.message && <p className="omd-opt-hint" role="status">{state.message}</p>}
       </section>, document.body)}

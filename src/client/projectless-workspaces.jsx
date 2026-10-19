@@ -1,3 +1,5 @@
+import { Icon } from './native-icons.jsx';
+import { Button } from './native-controls.jsx';
 import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ProjectlessDrafts } from './projectless-state.mjs';
 import css from './projectless-workspaces.css';
@@ -55,18 +57,18 @@ export function applyProjectlessWorkspaces(ctx) {
     };
     if (pending || managed) return <>
       <span className="omd-projectless-picker"/>
-      <button ref={anchor} type="button" className="omd-projectless-trigger" aria-haspopup="menu" aria-expanded={open}
+      <Button size="sm" variant="ghost" ref={anchor} type="button" className="omd-projectless-trigger" aria-haspopup="menu" aria-expanded={open}
         disabled={drafts.isBusy(id)} onClick={() => setOpen(value => !value)} title="未选择工作区；发送后使用此聊天的独立文件夹">
-        <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><path d="M2.5 6V4.5h5L9 6h8.5v9.5h-15Z"/></svg>
+        <Icon name="folder" size={16}/>
         选择工作区
-      </button>
+      </Button>
       <Original {...props} open={open} anchorRef={anchor} selectedId={undefined} onPick={pick} onClose={() => setOpen(false)}/>
     </>;
     return <>
-      <button type="button" className="omd-workspace-clear" aria-label="取消工作区" title="不在工作区中工作"
+      <Button size="sm" variant="ghost" type="button" className="omd-workspace-clear" aria-label="取消工作区" title="不在工作区中工作"
         disabled={!id || !props.selectedId} onClick={() => { props.onClose(); try { drafts.mark(id); } catch { drafts.shell(id).notify('error', '浏览器无法保存草稿，请检查存储空间后重试'); } }}>
-        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m4 4 8 8M4 12l8-8"/></svg>
-      </button>
+        <Icon name="close" size={14}/>
+      </Button>
       <Original {...props} onPick={pick}/>
     </>;
   });

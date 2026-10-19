@@ -1,3 +1,4 @@
+import { Button } from './native-controls.jsx';
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { StateDot, IconChevronDownOutlineRegular, useAnchoredPosition, useDismissOnOutsidePointer } from '@deepseek-ai/dsh-client-ui-primitives';
@@ -38,10 +39,10 @@ function WorkflowProgress({ ctx, ...props }) {
   if (!current || !renderPanel) return null;
   const phase = workflowPhaseLabel(current.data);
   return <>
-    <button ref={trigger} type="button" className="omd-workflow-trigger" aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? id : undefined}
+    <Button size="sm" variant="ghost" ref={trigger} type="button" className="omd-workflow-trigger" aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? id : undefined}
       aria-label={`Workflow：${current.data.name} · ${phase} · ${statuses[current.data.status]}`} onClick={() => setOpen(value => !value)}>
       <StateDot state={dots[current.data.status] ?? 'idle'}/><span>Workflow</span><span className="omd-workflow-phase">{phase}</span><IconChevronDownOutlineRegular/>
-    </button>
+    </Button>
     {open && createPortal(<div ref={panel} id={id} tabIndex={-1} role="dialog" aria-label="Workflow 阶段与子代理" className="omd-workflow-popover"
       style={position ?? { visibility: 'hidden', left: 0, top: 0 }}>
       {workflows.map(node => renderPanel({ ...props, node, key: node.id }))}

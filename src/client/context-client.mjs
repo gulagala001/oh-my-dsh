@@ -1,3 +1,5 @@
+import { Icon } from './native-icons.jsx';
+import { Button, Input, Select, Switch } from './native-controls.jsx';
 import { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
 export { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
 import { createPoller } from './polling.mjs';
@@ -30,19 +32,8 @@ export function createContextUI(React) {
   const suffix = id => '?session=' + encodeURIComponent(id || '');
   const fmt = value => Number(value || 0).toLocaleString();
   const frequencyNames = { always: '频繁', medium: '适中', slow: '较少', custom: '自定义' };
-  const paths = {
-    settings: 'M4 7h16M4 17h16M8 4v6M16 14v6', clock: 'M12 8v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
-    context: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h5', layers: 'm12 3 10 6-10 6L2 9l10-6ZM2 13l10 6 10-6M2 17l10 6 10-6',
-    check: 'm5 12 4 4L19 6', chevron: 'm9 5 7 7-7 7', arrow: 'm14 5-7 7 7 7', close: 'm6 6 12 12M6 18 18 6',
-    refresh: 'M20 7v5h-5M4 17v-5h5M5 8a7 7 0 0 1 12-3l3 3M19 16A7 7 0 0 1 7 19l-3-3',
-    search: 'm20 20-5-5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0', more: 'M4 12h2m5 0h2m5 0h2',
-    lock: 'M6 10h12v11H6ZM8 10V7a4 4 0 0 1 8 0v3', globe: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18Z',
-    task: 'm4 6 2 2 3-4M12 6h8M4 14l2 2 3-4M12 14h8M12 20h8', monitor: 'M3 17h4l3-10 4 14 3-10h4',
-    computer: 'M3 4h18v13H3ZM8 21h8M12 17v4', memory: 'M8 3h8l4 4v10l-4 4H8l-4-4V7l4-4ZM9 8h6v8H9Z',
-    spark: 'm12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z', info: 'M12 11v6M12 7v1M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
-  };
-  const icon = (name, size = 16) => h('svg', { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.65, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true }, h('path', { d: paths[name] || paths.context }));
-  const button = (text, onClick, options = {}) => h('button', { type: 'button', onClick, disabled: options.disabled, className: 'cx-btn ' + (options.primary ? 'cx-primary ' : '') + (options.quiet ? 'cx-quiet ' : '') + (options.className || ''), title: options.title, 'aria-label': options.label || (typeof text === 'string' ? text : undefined) }, options.icon && icon(options.icon), text);
+  const icon = (name, size = 16) => h(Icon, { name, size });
+  const button = (text, onClick, options = {}) => h(Button, { type: 'button', size: 'sm', variant: options.primary ? 'primary' : options.quiet ? 'ghost' : 'outline', onClick, disabled: options.disabled, className: 'cx-btn ' + (options.primary ? 'cx-primary ' : '') + (options.quiet ? 'cx-quiet ' : '') + (options.className || ''), title: options.title, 'aria-label': options.label || (typeof text === 'string' ? text : undefined) }, options.icon && icon(options.icon), text);
   const badge = (text, tone = '') => h('span', { className: 'cx-pill ' + (tone && 'cx-tone-' + tone) }, text);
   const alert = (text, error) => text && h('div', { className: 'cx-alert ' + (error ? 'cx-error' : ''), role: error ? 'alert' : 'status' }, icon(error ? 'info' : 'check'), h('span', null, text));
   const heading = (text, sub, name, action) => h('header', { className: 'cx-head' }, h('div', { className: 'cx-head-title' }, name && h('span', { className: 'cx-head-icon' }, icon(name, 19)), h('div', null, h('h2', null, text), h('p', null, sub))), action);
@@ -50,7 +41,7 @@ export function createContextUI(React) {
   const section = (text, sub, children, right) => h('section', { className: 'cx-section' }, h('div', { className: 'cx-section-head' }, h('div', null, h('h3', null, text), sub && h('p', null, sub)), right), children);
   const fold = (text, sub, children, open = false) => h('details', { className: 'cx-fold', open: open || undefined }, h('summary', null, h('span', null, h('strong', null, text), sub && h('small', null, sub)), icon('chevron', 14)), h('div', { className: 'cx-fold-body' }, children));
   const empty = (text, sub, name = 'layers') => h('div', { className: 'cx-empty' }, h('span', { className: 'cx-empty-icon' }, icon(name, 23)), h('h3', null, text), h('p', null, sub));
-  const segments = (label, value, options, change, disabled = false) => h('div', { className: 'cx-segments', role: 'group', 'aria-label': label }, ...options.map(([id, text]) => h('button', { key: id, type: 'button', disabled, 'aria-pressed': id === value, onClick: () => change(id) }, text)));
+  const segments = (label, value, options, change, disabled = false) => h('div', { className: 'omd-native-segments', role: 'group', 'aria-label': label }, ...options.map(([id, text]) => h(Button, { key: id, type: 'button', size: 'sm', variant: id === value ? 'primary' : 'outline', disabled, 'aria-pressed': id === value, onClick: () => change(id) }, text)));
   const pageTabs = (value, options, change) => h('nav', { className: 'cx-tabs', 'aria-label': '设置分类' }, ...options.map(([id, text]) => h('button', { key: id, type: 'button', 'aria-current': id === value ? 'page' : undefined, onClick: () => change(id) }, text)));
   const duration = ms => Number(ms) >= 60000 ? Number(ms) / 60000 + ' 分钟' : Number(ms || 0) / 1000 + ' 秒';
   class ComponentsPanel extends React.Component {
@@ -83,7 +74,7 @@ export function createContextUI(React) {
       catch (error) { let actual = previous; try { actual = await this.call(); } catch {} if (this.alive) this.setState({ data: actual, error: error.message }); }
       finally { if (this.alive) this.setState({ busy: false }); }
     };
-    toggle = (key, label, value, hint) => h('label', { className: 'cx-toggle' }, h('span', null, h('strong', null, label), h('small', null, hint)), h('input', { type: 'checkbox', role: 'switch', 'aria-label': label, checked: value, disabled: this.state.busy, onChange: e => this.act({ action: 'settings', patch: { [key]: e.target.checked } }) }));
+    toggle = (key, label, value, hint) => h('label', { className: 'cx-toggle' }, h('span', null, h('strong', null, label), h('small', null, hint)), h(Switch, { label, checked: value, disabled: this.state.busy, onChange: next => this.act({ action: 'settings', patch: { [key]: next } }) }));
     prepare = component => this.act({ action: 'prepare', component });
     copy = async text => { try { await navigator.clipboard.writeText(text); this.setState({ saved: '已复制' }); } catch (error) { this.setState({ error: error.message }); } };
     row(title, ready, operation, hint, action) {
@@ -162,7 +153,7 @@ export function createContextUI(React) {
     undo = () => this.setState({ config: { ...this.saved }, routing: contextRouteMode(this.saved), custom: false, error: '', status: '' });
     number(key, label, min = 0, hint, scale = 1, disabled = false) {
       const value = this.state.config[key];
-      return field(label, h('input', { type: 'number', required: true, disabled, min, step: 1 / scale, value: value === '' ? '' : (value ?? 0) / scale, onChange: e => {
+      return field(label, h(Input, { type: 'number', required: true, disabled, min, step: 1 / scale, value: value === '' ? '' : (value ?? 0) / scale, onChange: e => {
         const raw = e.target.value, [coefficient, exponent = '0'] = raw.split(/e/i);
         // Scales are powers of ten. Shift the decimal before converting to a
         // number, so 1.001 seconds is 1001 ms without rounding invalid fractions.
@@ -170,7 +161,7 @@ export function createContextUI(React) {
       } }), hint);
     }
     toggle(key, label, hint) {
-      return h('label', { className: 'cx-toggle' }, h('span', null, h('strong', null, label), hint && h('small', null, hint)), h('input', { type: 'checkbox', role: 'switch', checked: Boolean(this.state.config[key]), onChange: e => this.set(key, e.target.checked), 'aria-label': label }));
+      return h('label', { className: 'cx-toggle' }, h('span', null, h('strong', null, label), hint && h('small', null, hint)), h(Switch, { label, checked: Boolean(this.state.config[key]), onChange: next => this.set(key, next) }));
     }
     chooseRoute = mode => {
       if (mode === 'follow') this.setState(s => ({ routing: mode, config: { ...s.config, backgroundMode: 'unified', unifiedBackground: { provider: '', model: '', temperature: 0.7, effort: 'off' } }, status: '' }));
@@ -183,10 +174,10 @@ export function createContextUI(React) {
       const listId = 'cx-model-' + key;
       const efforts = [...new Set(['off', 'low', 'medium', 'high', 'max', r.effort || 'off'])];
       return h('div', { className: 'cx-route' }, h('div', { className: 'cx-route-label' }, icon('layers', 14), label), h('div', { className: 'cx-grid' },
-        field('提供方', h('select', { value: r.provider || '', onChange: e => update('provider', e.target.value), 'aria-label': label + '提供方' }, h('option', { value: '' }, '跟随主模型'), !this.state.directory.some(p => p.id === r.provider) && r.provider && h('option', { value: r.provider }, r.provider), ...this.state.directory.map(p => h('option', { value: p.id, key: p.id }, p.name || p.id)))),
+        field('提供方', h(Select, { value: r.provider || '', onChange: e => update('provider', e.target.value), 'aria-label': label + '提供方' }, h('option', { value: '' }, '跟随主模型'), !this.state.directory.some(p => p.id === r.provider) && r.provider && h('option', { value: r.provider }, r.provider), ...this.state.directory.map(p => h('option', { value: p.id, key: p.id }, p.name || p.id)))),
         field('模型', h('input', { list: listId, value: r.model || '', placeholder: '跟随主模型', onChange: e => update('model', e.target.value), 'aria-label': label + '模型' })),
-        field('推理强度', h('select', { value: r.effort || 'off', onChange: e => update('effort', e.target.value), 'aria-label': label + '推理强度' }, ...efforts.map(v => h('option', { key: v, value: v }, v)))),
-        field('Temperature', h('input', { type: 'number', min: 0, max: 2, step: 0.1, value: r.temperature ?? '', placeholder: '提供方默认', onChange: e => update('temperature', e.target.value === '' ? undefined : Number(e.target.value)), 'aria-label': label + 'Temperature' }))), h('datalist', { id: listId }, ...models.map(m => h('option', { key: m.id, value: m.id }))));
+        field('推理强度', h(Select, { value: r.effort || 'off', onChange: e => update('effort', e.target.value), 'aria-label': label + '推理强度' }, ...efforts.map(v => h('option', { key: v, value: v }, v)))),
+        field('Temperature', h(Input, { type: 'number', min: 0, max: 2, step: 0.1, value: r.temperature ?? '', placeholder: '提供方默认', onChange: e => update('temperature', e.target.value === '' ? undefined : Number(e.target.value)), 'aria-label': label + 'Temperature' }))), h('datalist', { id: listId }, ...models.map(m => h('option', { key: m.id, value: m.id }))));
     }
     frequency() {
       const c = this.state.config, value = this.state.custom ? 'custom' : contextFrequencyOf(c);
@@ -211,7 +202,7 @@ export function createContextUI(React) {
         section('Auto Compact', '独立于宿主自动压缩，在 OMD 压缩模式下同样生效。达到阈值即启动处理，结果就绪后立即应用。', h(React.Fragment, null,
           this.toggle('autoCompactEnabled', '启用 Auto Compact', '默认关闭。按当前上下文总 token 数触发，不受普通预处理频率、自动替换开关或冷却步数限制；工具往返与受保护提示词保持完整。'),
           this.number('autoCompactThreshold', '触发阈值 · tokens', 1, '可设任意正整数。当前上下文达到或超过此值时启动；原始记录始终可回查。', 1, !c.autoCompactEnabled),
-          field('压缩内容', h('select', { value: c.autoCompactMode || 'detail', disabled: !c.autoCompactEnabled, onChange: e => this.set('autoCompactMode', e.target.value) },
+          field('压缩内容', h(Select, { value: c.autoCompactMode || 'detail', disabled: !c.autoCompactEnabled, onChange: e => this.set('autoCompactMode', e.target.value) },
             h('option', { value: 'detail' }, '摘要＋资料'), h('option', { value: 'brief' }, '仅摘要')), '摘要＋资料保留详细文档与附件；仅摘要让资料退出当前上下文，但保留存档。'))),
         section('空闲预处理', '默认关闭；不影响按新事件数量触发的正常预处理，也不影响手动操作。', h(React.Fragment, null,
           this.toggle('idlePreprocessEnabled', '空闲时自动预处理', '仅在会话真正空闲且有待处理内容时触发；模型或工具运行中不计时。'),
@@ -231,7 +222,7 @@ export function createContextUI(React) {
           c.budgetHintsEnabled && h('div', { style: { paddingInlineStart: 20 } },
             this.toggle('budgetEveryStep', '每轮注入预算', '默认关闭，沿用原状态规则。开启后按所选间隔额外注入预算，不重复投递 Todo 或完整运行状态。'),
             c.budgetEveryStep && h('div', { className: 'cx-grid' },
-              field('预算注入频率', h('select', { 'aria-label': '预算注入频率', value: customBudgetFrequency ? 'custom' : String(c.budgetInjectionEvery ?? 1), onChange: e => {
+              field('预算注入频率', h(Select, { 'aria-label': '预算注入频率', value: customBudgetFrequency ? 'custom' : String(c.budgetInjectionEvery ?? 1), onChange: e => {
                 const custom = e.target.value === 'custom'; this.setState({ customBudgetFrequency: custom });
                 if (!custom) this.set('budgetInjectionEvery', Number(e.target.value));
               } }, ...intervals.map(n => h('option', { key: n, value: String(n) }, n === 1 ? '每轮' : `每 ${n} 轮`)), h('option', { value: 'custom' }, '自定义间隔')), '轮次指主执行模型调用；原有节点更新始终保留。'),
@@ -255,7 +246,7 @@ export function createContextUI(React) {
           mode === 'follow' ? h('div', { className: 'cx-info' }, icon('layers'), h('p', null, '预处理 AI 和中枢使用当前会话的提供方与模型。')) : mode === 'unified' ? this.route('unifiedBackground', '预处理与中枢') : h(React.Fragment, null, this.route('background', '预处理 AI'), this.route('surgeon', '中枢 AI')),
           c.memoryCacheEnabled && h('p', { className: 'cx-hint' }, '记忆缓存模式已开启：预处理跟随最近成功的主执行请求。中枢继续使用这里的配置，预处理模型配置保留供关闭后使用。'))),
         section('人格', '选择一个搭子，或保留你自己的完整人设。保存后作用于后续请求。', h(React.Fragment, null,
-          field('人格预设', h('select', { value: personalityPreset(c), onChange: e => this.choosePersonality(e.target.value) },
+          field('人格预设', h(Select, { value: personalityPreset(c), onChange: e => this.choosePersonality(e.target.value) },
             h('option', { value: 'custom' }, '自定义'), ...Object.entries(PERSONALITY_PRESETS).map(([id, preset]) => h('option', { key: id, value: id }, preset.name)), h('option', { value: 'off' }, '关闭人格')),
             '切换内置预设或关闭人格都会保留自定义内容；升级后沿用已有身份设置。'),
           personalityPreset(c) === 'off' ? h('p', { className: 'cx-hint' }, '已关闭人格描述；仍保留原有工作能力和执行规则。') : field('身份提示词', h('textarea', { rows: 9, readOnly: personalityPreset(c) !== 'custom', value: personalityText(c), onChange: e => this.editPersonality(e.target.value), placeholder: '描述助手是谁，以及主要帮助你做什么' }), personalityPreset(c) === 'custom' ? '留空可移除身份描述。自定义内容随设置保存，切换预设不会丢失。' : '这是内置预设原文。可复制到自定义后修改。'),
@@ -286,7 +277,7 @@ export function createContextUI(React) {
           h('div', { className: 'cx-body' }, alert(error, true), h('fieldset', { className: 'cx-fields', disabled: busy }, page === 'basic' ? this.renderBasic() : page === 'models' ? this.renderModels() : page === 'experimental' ? this.renderExperimental() : page === 'advanced' ? this.renderAdvanced() : this.renderGlobal())),
           h('footer', { className: 'cx-savebar' }, h('span', { className: 'cx-save-status', role: 'status' }, icon(status || this.state.globalStatus ? 'check' : 'info', 13), footStatus), h('div', { className: 'cx-actions' },
             button('撤销', isGlobal ? () => this.setState({ globalText: this.state.globalSaved, globalStatus: '' }) : this.undo, { quiet: true, disabled: busy || !(isGlobal ? globalDirty : dirty) }),
-            h('button', { type: 'submit', className: 'cx-btn cx-primary', disabled: busy || !(isGlobal ? globalDirty && this.state.globalLoaded && !this.state.globalConflict && !this.state.globalLoading : dirty) }, icon(busy ? 'clock' : 'check'), busy ? '保存中…' : isGlobal ? '保存全局背景' : '保存设置')))));
+            h(Button, { type: 'submit', size: 'sm', variant: 'primary', className: 'cx-btn cx-primary', disabled: busy || !(isGlobal ? globalDirty && this.state.globalLoaded && !this.state.globalConflict && !this.state.globalLoading : dirty) }, icon(busy ? 'clock' : 'check'), busy ? '保存中…' : isGlobal ? '保存全局背景' : '保存设置')))));
     }
   }
   class ScopeControl extends React.Component {
@@ -328,7 +319,7 @@ export function createContextUI(React) {
     render() {
       const d = this.state.data;
       return h('div', { className: 'cx-scope-chip', title: this.state.error || (d?.locked || this.props.locked ? '本会话已绑定范围' : '新会话的记忆范围') }, icon(d?.scope === 'global'?'globe':d?.scope === 'project' ? 'layers' : 'lock', 13),
-        d ? h('select', { 'aria-label': '会话范围', disabled: d.locked || this.props.locked || this.state.busy, value: d.scope, onChange: e => this.change(e.target.value) }, h('option', { value: 'session' }, '会话隔离'), h('option', { value: 'project' }, '项目共享'),h('option',{value:'global'},'全局记忆'))
+        d ? h(Select, { 'aria-label': '会话范围', disabled: d.locked || this.props.locked || this.state.busy, value: d.scope, onChange: e => this.change(e.target.value) }, h('option', { value: 'session' }, '会话隔离'), h('option', { value: 'project' }, '项目共享'),h('option',{value:'global'},'全局记忆'))
           : h('span', { role: 'status' }, this.state.error ? '范围暂不可读' : '读取范围…'),
         this.state.error && button('', this.load, { label: '重试会话范围', title: this.state.error, icon: 'refresh', className: 'cx-scope-retry', disabled: this.state.busy || this.state.loading }));
     }
@@ -349,11 +340,12 @@ export function createContextUI(React) {
 }
 
 export const CONTEXT_CSS = `
+.cx-field textarea{box-sizing:border-box;width:100%;min-height:150px;resize:vertical;font:inherit;color:inherit;background:var(--dsw-specific-input-major);border:1px solid var(--dsw-alias-border-l3);border-radius:8px;padding:8px 12px;}
 .cx-panel,.cx-integrated,.cx-scope-chip{
   --cx-bg:var(--dsw-alias-bg-base,Canvas);--cx-text:var(--dsw-alias-label-primary,CanvasText);
   --cx-muted:var(--dsw-alias-label-tertiary,GrayText);--cx-line:color-mix(in srgb,var(--cx-text) 11%,var(--cx-bg));
   --cx-soft:color-mix(in srgb,var(--cx-text) 3%,var(--cx-bg));--cx-hover:color-mix(in srgb,var(--cx-text) 5%,var(--cx-bg));
-  --cx-blue:color-mix(in srgb,#3978e7 80%,var(--cx-text));--cx-tint:color-mix(in srgb,var(--cx-blue) 7%,var(--cx-bg));
+  --cx-blue:var(--dsw-alias-state-business-primary);--cx-tint:color-mix(in srgb,var(--cx-blue) 7%,var(--cx-bg));
   --cx-red:var(--dsw-alias-state-error-primary,#be555e);color:var(--cx-text);font-family:inherit;font-variant-numeric:tabular-nums;
 }
 .cx-panel,.cx-integrated,.cx-panel *,.cx-integrated *{box-sizing:border-box}
@@ -369,14 +361,14 @@ export const CONTEXT_CSS = `
 .cx-body{flex:1;min-height:0;overflow:auto;padding:0 22px 23px;scrollbar-width:thin;scrollbar-color:var(--cx-line) transparent;overscroll-behavior:contain}
 .cx-body:has(>.cx-section:first-child){padding-top:0}.cx-section{padding:21px 0;border-bottom:1px solid var(--cx-line)}.cx-section:last-child{border-bottom:0}
 .cx-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.cx-section-head>div{min-width:0}.cx-section-head p{font-size:11px;color:var(--cx-muted);margin-top:4px}
-.cx-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font:inherit;font-size:12px;line-height:1.5;min-height:32px;padding:6px 11px;border:1px solid var(--cx-line);border-radius:8px;background:var(--cx-bg);color:var(--cx-text);white-space:nowrap;cursor:pointer;transition:background .14s,border-color .14s}
-.cx-btn:hover:not(:disabled){background:var(--cx-hover);border-color:color-mix(in srgb,var(--cx-text) 22%,var(--cx-bg))}.cx-btn.cx-primary{background:#2864d7;border-color:#2864d7;color:#fff;box-shadow:0 1px 2px #15347110}.cx-btn.cx-primary:hover:not(:disabled){background:#2158c3;border-color:#2158c3}
-.cx-btn.cx-quiet{background:transparent;border-color:transparent;color:var(--cx-muted)}.cx-btn.cx-quiet:hover:not(:disabled){color:var(--cx-text);background:var(--cx-hover);border-color:transparent}
-.cx-btn:disabled{opacity:.45;cursor:default;box-shadow:none}.cx-btn.cx-primary:disabled{color:var(--cx-muted);background:var(--cx-soft);border-color:var(--cx-line);opacity:.8}
-.cx-panel button:focus-visible,.cx-panel summary:focus-visible,.cx-navigation button:focus-visible,.cx-scope-chip:focus-within{outline:2px solid var(--cx-blue);outline-offset:3px}
-.cx-panel input:not([type=checkbox]),.cx-panel select,.cx-panel textarea{width:100%;min-width:0;border:1px solid var(--cx-line);border-radius:8px;padding:9px 11px;background:var(--cx-bg);color:var(--cx-text);font:inherit;font-size:12px;line-height:1.6;outline:none;transition:border-color .15s,box-shadow .15s}
-.cx-panel input:not([type=checkbox]):focus,.cx-panel select:focus,.cx-panel textarea:focus{border-color:var(--cx-blue);box-shadow:0 0 0 3px var(--cx-tint)}.cx-panel input::placeholder,.cx-panel textarea::placeholder{color:var(--cx-muted);opacity:.75}
-.cx-panel textarea{resize:vertical;line-height:1.9;min-height:150px}.cx-panel input[type=checkbox]{accent-color:#2864d7;width:14px;height:14px;margin:0;flex-shrink:0}.cx-panel input:disabled,.cx-panel textarea:disabled{opacity:.65}
+html[data-omd-skin] .cx-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font:inherit;font-size:12px;line-height:1.5;min-height:32px;padding:6px 11px;border:1px solid var(--cx-line);border-radius:8px;background:var(--cx-bg);color:var(--cx-text);white-space:nowrap;cursor:pointer;transition:background .14s,border-color .14s}
+html[data-omd-skin] .cx-btn:hover:not(:disabled){background:var(--cx-hover);border-color:color-mix(in srgb,var(--cx-text) 22%,var(--cx-bg))}html[data-omd-skin] .cx-btn.cx-primary{background:var(--cx-blue);border-color:var(--cx-blue);color:#fff;box-shadow:0 1px 2px #15347110}html[data-omd-skin] .cx-btn.cx-primary:hover:not(:disabled){background:#2158c3;border-color:#2158c3}
+html[data-omd-skin] .cx-btn.cx-quiet{background:transparent;border-color:transparent;color:var(--cx-muted)}html[data-omd-skin] .cx-btn.cx-quiet:hover:not(:disabled){color:var(--cx-text);background:var(--cx-hover);border-color:transparent}
+html[data-omd-skin] .cx-btn:disabled{opacity:.45;cursor:default;box-shadow:none}html[data-omd-skin] .cx-btn.cx-primary:disabled{color:var(--cx-muted);background:var(--cx-soft);border-color:var(--cx-line);opacity:.8}
+html[data-omd-skin] .cx-panel button:focus-visible,html[data-omd-skin] .cx-panel summary:focus-visible,html[data-omd-skin] .cx-navigation button:focus-visible,html[data-omd-skin] .cx-scope-chip:focus-within{outline:2px solid var(--cx-blue);outline-offset:3px}
+html[data-omd-skin] .cx-panel input:not([type=checkbox]),html[data-omd-skin] .cx-panel select,html[data-omd-skin] .cx-panel textarea{width:100%;min-width:0;border:1px solid var(--cx-line);border-radius:8px;padding:9px 11px;background:var(--cx-bg);color:var(--cx-text);font:inherit;font-size:12px;line-height:1.6;outline:none;transition:border-color .15s,box-shadow .15s}
+html[data-omd-skin] .cx-panel input:not([type=checkbox]):focus,html[data-omd-skin] .cx-panel select:focus,html[data-omd-skin] .cx-panel textarea:focus{border-color:var(--cx-blue);box-shadow:0 0 0 3px var(--cx-tint)}html[data-omd-skin] .cx-panel input::placeholder,html[data-omd-skin] .cx-panel textarea::placeholder{color:var(--cx-muted);opacity:.75}
+html[data-omd-skin] .cx-panel textarea{resize:vertical;line-height:1.9;min-height:150px}html[data-omd-skin] .cx-panel input[type=checkbox]{accent-color:#2864d7;width:14px;height:14px;margin:0;flex-shrink:0}html[data-omd-skin] .cx-panel input:disabled,html[data-omd-skin] .cx-panel textarea:disabled{opacity:.65}
 .cx-field{display:flex;flex-direction:column;gap:7px;min-width:0;margin:9px 0}.cx-field>span{font-size:11px;color:var(--cx-muted)}.cx-field small{font-size:10px}
 .cx-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 16px}.cx-fields{border:0;margin:0;padding:0;min-width:0}.cx-fields:disabled{opacity:.72}
 .cx-settings-form{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
@@ -397,7 +389,7 @@ export const CONTEXT_CSS = `
 .cx-panel .cx-toggle input::after{content:'';position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px #0002;transition:transform .14s}.cx-panel .cx-toggle input:checked{background:var(--omd-switch-on,var(--cx-blue))}.cx-panel .cx-toggle input:checked::after{transform:translateX(14px)}.cx-panel .cx-toggle input:focus-visible{outline:2px solid var(--cx-blue);outline-offset:3px}
 .cx-choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.cx-choice{border:1px solid var(--cx-line);border-radius:11px;padding:14px;background:var(--cx-bg);color:var(--cx-text);font:inherit;text-align:left;cursor:pointer;min-width:0}
 .cx-choice[aria-pressed=true]{border-color:color-mix(in srgb,var(--cx-blue) 58%,var(--cx-line));background:var(--cx-tint)}.cx-choice>.cx-row{color:var(--cx-muted);margin-bottom:12px}.cx-choice[aria-pressed=true]>.cx-row{color:var(--cx-blue)}.cx-choice strong{display:block;font-size:12px;font-weight:600;margin-bottom:5px}.cx-choice small{font-size:10px;display:block;line-height:1.7}
-.cx-radio{display:grid;place-items:center;width:14px;height:14px;border:1px solid var(--cx-line);border-radius:50%}.cx-radio svg{visibility:hidden}.cx-choice[aria-pressed=true] .cx-radio{color:#fff;background:#2864d7;border-color:#2864d7}.cx-choice[aria-pressed=true] .cx-radio svg{visibility:visible}
+.cx-radio{display:grid;place-items:center;width:14px;height:14px;border:1px solid var(--cx-line);border-radius:50%}.cx-radio svg{visibility:hidden}.cx-choice[aria-pressed=true] .cx-radio{color:#fff;background:var(--cx-blue);border-color:var(--cx-blue)}.cx-choice[aria-pressed=true] .cx-radio svg{visibility:visible}
 .cx-route{margin-top:15px;border:1px solid var(--cx-line);border-radius:11px;padding:14px}.cx-route-label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;margin-bottom:7px;color:var(--cx-muted)}
 .cx-fold{margin:12px 0;border:1px solid var(--cx-line);border-radius:11px;overflow:hidden}.cx-fold>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px;cursor:pointer;list-style:none}.cx-fold>summary::-webkit-details-marker{display:none}.cx-fold>summary strong{display:block;font-size:12px;font-weight:550}.cx-fold>summary small{display:block;font-size:10px;color:var(--cx-muted);margin-top:4px}.cx-fold>summary>svg{color:var(--cx-muted);transition:transform .14s}.cx-fold[open]>summary>svg{transform:rotate(90deg)}.cx-fold[open]>summary{border-bottom:1px solid var(--cx-line);background:var(--cx-soft)}.cx-fold-body{padding:11px 15px 16px}
 .cx-component-row{padding:14px 0;border-top:1px solid var(--cx-line)}.cx-component-row>.cx-row{justify-content:space-between}.cx-component-project{padding:10px 12px;margin:8px 0;background:var(--cx-soft);border-radius:8px}.cx-component-path{display:block;min-width:0;overflow-wrap:anywhere;font-size:11px}.cx-component-project>.cx-row{align-items:flex-start;justify-content:space-between;gap:12px}.cx-components>.cx-hint{margin-bottom:20px}

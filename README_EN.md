@@ -2,7 +2,7 @@
 
 <h1 align="center">Oh My DSH</h1>
 <p align="center"><strong>Better agent instructions. A workspace that feels yours. Longer work, less repetition.</strong></p>
-<p align="center">System prompts · Five themes · Computer use · Annotations · Usage monitoring · Memory & auto compaction</p>
+<p align="center">System prompts · Native DSH & four optional themes · Computer use · Annotations · Usage monitoring · Memory & auto compaction</p>
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong> · <a href="#quickstart">Install</a> · <a href="docs/getting-started_EN.md">First steps</a> · <a href="docs/README_EN.md">Documentation</a></p>
 
 **Turn the DSH you already use into a more complete AI workspace.**
@@ -11,6 +11,8 @@ Oh My DSH (OMD) enhances [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 
 > **Install:** [Copy instructions to an AI](docs/install_EN.md#ai) · [Use Add Plugin](docs/install_EN.md#gui). OMD includes OpenCU.
 
+Current release: **OMD 0.18.6**, with [separate packages](docs/releases.md) for DSH 0.2.1-rc.1 and rc.2.
+
 <a id="features"></a>
 
 ## One plugin. A more complete working day.
@@ -18,7 +20,7 @@ Oh My DSH (OMD) enhances [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 | What you want | What OMD adds |
 | --- | --- |
 | **Work that moves beyond an answer** | System instructions for understanding requirements, working with code, using tools, delivering and checking results. |
-| **An interface you enjoy opening** | Five themes, light/dark modes and 28 palettes, with configurable layout, materials, fonts and backgrounds. |
+| **An interface you enjoy opening** | Native DSH & four optional themes, light/dark modes and 28 palettes, with configurable layout, materials, fonts and backgrounds. |
 | **An agent that can act outside the chat** | Bundled OpenCU for browser and desktop tasks, with pages, activity and previews in the conversation. |
 | **“Change this” without re-explaining everything** | Annotate a page, image or supported content and bring the location and feedback back into the draft. |
 | **Continuity across long work** | Context preparation, Auto Compact and Dream, with original requirements and sources available for recall. |
@@ -45,9 +47,9 @@ These are execution strategies, not an intelligence upgrade or a success-rate gu
 
 ## 02 / Change the atmosphere, not just the accent color
 
-![Real interfaces in OMD Default, Codex Desktop, iOS Liquid Glass, Claude CLI and Google Material](docs/images/release/themes.jpg)
+![Theme previews from an earlier release](docs/images/release/themes.jpg)
 
-**OMD Default · Codex Desktop · iOS Liquid Glass · Claude CLI · Google Material**
+**DSH Native · Codex Desktop · iOS Liquid Glass · Claude CLI · Google Material**
 
 Choose a restrained desktop, translucent glass, a terminal-inspired workspace or expressive Material styling. Each has its own layout and materials, with light and dark modes. Themes, **28 palettes** and custom backgrounds are independent, so changing a theme does not mean starting over.
 

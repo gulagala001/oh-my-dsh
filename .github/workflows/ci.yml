@@ -74,7 +74,7 @@ jobs:
           import { readFileSync } from 'node:fs';
           const shell = readFileSync('src/client/shell.css', 'utf8');
           const bundle = readFileSync('lib/client.js', 'utf8');
-          const scope = "html.trisoul-shell[data-platform='darwin'] [data-sidebar-collapsed] .wSkVaW_header[data-window-drag]";
+          const scope = "html.trisoul-shell[data-omd-layout][data-platform='darwin'] [data-sidebar-collapsed] .wSkVaW_header[data-window-drag]";
           for (const name of ['header', 'titleRow']) {
             const start = shell.indexOf(scope + (name === 'header' ? '' : ' .wSkVaW_' + name) + ' {');
             assert.ok(start >= 0, 'Missing scoped source rule: ' + name);

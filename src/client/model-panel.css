@@ -52,3 +52,8 @@ html[data-omd-reduce-effects] .omd-model-panel *::after{animation:none!important
 .omd-ultra-description { margin: 6px 2px 2px; min-height: 32px; color: var(--dsw-alias-label-tertiary,#888); font-size: 11px; line-height: 16px; }
 .omd-model-trigger[data-mode=ultra] .omd-model-caption { display: inline; max-width: none; flex-shrink: 0; }
 @media(pointer:coarse) { .omd-ultra-submodes span { min-height: 36px; } }
+
+.omd-model-back { transform: rotate(180deg); }
+
+.omd-model-search > span { flex: 1; min-width: 0; }
+.omd-model-options button { height: auto; min-height: 36px; white-space: normal; }

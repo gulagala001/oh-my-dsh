@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Button, Modal, IconInfoOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
 import { version as CLIENT_VERSION } from '../../package.json';
 import { VersionUpdate } from './version-update.jsx';
 
@@ -10,7 +11,7 @@ const timeText = time => time == null ? '尚未成功检查' : new Date(time).to
 export function VersionInfo() {
   const [data, setData] = useState({ currentVersion: CLIENT_VERSION, status: 'unknown', severity: 'none', releases: [] });
   const [open, setOpen] = useState(false), [busy, setBusy] = useState(false);
-  const button = useRef(null), dialog = useRef(null), active = useRef(false), pending = useRef(null), abort = useRef(null), titleId = useId();
+  const active = useRef(false), pending = useRef(null), abort = useRef(null), titleId = useId();
   const load = useCallback((refresh = false) => {
     if (pending.current) return pending.current;
     const controller = new AbortController(); abort.current = controller;
@@ -35,33 +36,23 @@ export function VersionInfo() {
     void tick(); document.addEventListener('visibilitychange', visible);
     return () => { active.current = false; clearTimeout(timer); document.removeEventListener('visibilitychange', visible); abort.current?.abort(); };
   }, [load]);
-  useEffect(() => {
-    const element = dialog.current;
-    if (!open) { if (element?.open) element.close(); return; }
-    const place = () => {
-      const rect = button.current?.getBoundingClientRect(); if (!rect || !element) return;
-      const width = Math.min(380, window.innerWidth - 24);
-      element.style.left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)) + 'px';
-      const top = Math.min(rect.bottom + 10, Math.max(12, window.innerHeight - 180));
-      element.style.top = top + 'px'; element.style.maxHeight = Math.max(120, window.innerHeight - top - 12) + 'px';
-    };
-    place(); if (!element.open) element.showModal();
-    window.addEventListener('resize', place);
-    return () => { window.removeEventListener('resize', place); if (element.open) element.close(); button.current?.focus(); };
-  }, [open]);
   const severity = data.status === 'update' ? data.severity : 'none';
   const updates = Array.isArray(data.releases) ? data.releases : [];
-  return <span className="omd-version" onClick={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>
-    <button ref={button} type="button" className="omd-version-trigger" data-update-level={severity}
+  return <span className="omd-version" onClick={event => event.stopPropagation()} onKeyDown={event => { if (!open) event.stopPropagation(); }}>
+    <Button type="button" variant="ghost" size="sm" className="omd-version-trigger" data-update-level={severity}
       aria-label="关于 Oh My DSH" aria-haspopup="dialog" aria-expanded={open} aria-describedby={titleId + '-hint'}
       title={'Oh My DSH ' + data.currentVersion + ' · ' + statusText(data)} onClick={() => { setOpen(true); void load(); }}>
-      <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.45" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 8.7v5"/><circle cx="10" cy="6.1" r=".85" fill="currentColor" stroke="none"/></svg>
+      <IconInfoOutlineRegular size={17}/>
       {severity !== 'none' && <span className={'omd-update-dot omd-update-' + severity} aria-hidden="true"/>}
-    </button>
+    </Button>
     <span id={titleId + '-hint'} className="omd-version-sr">{statusText(data)}{data.stale ? '，上次检查结果' : ''}</span>
-    <dialog ref={dialog} className="omd-version-dialog" aria-labelledby={titleId} onCancel={event => { event.preventDefault(); setOpen(false); }} onClose={event => { if (!event.currentTarget.open) setOpen(false); }}
-      onClick={event => { if (event.target === event.currentTarget) { const r = event.currentTarget.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) setOpen(false); } }}>
-      {open && <><header><h2 id={titleId}>关于 Oh My DSH</h2><button type="button" className="omd-version-close" aria-label="关闭版本信息" onClick={() => setOpen(false)}>×</button></header>
+    <Modal open={open} title="关于 Oh My DSH" closeLabel="关闭版本信息" onClose={() => setOpen(false)} className="omd-version-dialog" contentClassName="omd-version-content"
+      footer={<><Button type="button" variant="outline" size="sm" disabled={busy} data-modal-autofocus={busy ? undefined : ''} onClick={() => void load(true)}>{busy ? '正在检查…' : '检查更新'}</Button>
+        <span className="omd-version-links">
+          {data.status === 'update' && data.latestVersion && <a href={'https://github.com/gulagala001/oh-my-dsh/releases/tag/v' + encodeURIComponent(data.latestVersion.replace(/^v/, ''))} target="_blank" rel="noopener noreferrer">查看新版说明 ↗</a>}
+          <a href="https://github.com/gulagala001/oh-my-dsh/releases" target="_blank" rel="noopener noreferrer">查看发布记录 ↗</a>
+        </span></>}>
+      {open && <>
       <dl><div><dt>当前版本</dt><dd data-testid="omd-current-version">{data.currentVersion}</dd></div><div><dt>{data.hostVersion ? '最新兼容版本' : '最新版本'}</dt><dd>{data.latestVersion || '尚未确认'}</dd></div></dl>
       <p className={'omd-version-status omd-level-' + severity} role="status">{statusText(data)}{data.stale ? '（上次检查结果）' : ''}</p>
       {data.error && <p className="omd-version-error" role="alert">{data.error}</p>}
@@ -75,13 +66,9 @@ export function VersionInfo() {
       <p className="omd-version-meta">检查公开发布信息，不上传会话内容。点击“更新”才会安装。</p>
       {data.currentVersion !== CLIENT_VERSION && <p className="omd-version-error">服务已更新，当前界面仍为 {CLIENT_VERSION}。{window.location.protocol === 'dsh-app:'
         ? '请等待任务结束，使用“重启应用与 Host”，或完整退出应用后重新打开。仅刷新页面不能完成切换。'
-        : <button type="button" onClick={() => window.location.reload()}>刷新界面</button>}</p>}
-      <footer><button type="button" className="omd-version-check" disabled={busy} onClick={() => void load(true)}>{busy ? '正在检查…' : '检查更新'}</button>
-        <span className="omd-version-links">
-          {data.status === 'update' && data.latestVersion && <a href={'https://github.com/gulagala001/oh-my-dsh/releases/tag/v' + encodeURIComponent(data.latestVersion.replace(/^v/, ''))} target="_blank" rel="noopener noreferrer">查看新版说明 ↗</a>}
-          <a href="https://github.com/gulagala001/oh-my-dsh/releases" target="_blank" rel="noopener noreferrer">查看发布记录 ↗</a>
-        </span></footer></>}
-    </dialog>
+        : <Button type="button" variant="outline" size="sm" onClick={() => window.location.reload()}>刷新界面</Button>}</p>}
+      </>}
+    </Modal>
   </span>;
 }
 

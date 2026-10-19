@@ -2,8 +2,11 @@
 // composer dock items. Colours come from DSH theme aliases only.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useAnchoredPosition, useDismissOnOutsidePointer } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Tag as NativeTag, StateDot, useAnchoredPosition, useDismissOnOutsidePointer } from '@deepseek-ai/dsh-client-ui-primitives';
 import { createPoller } from '../polling.mjs';
+import { Icon } from '../native-icons.jsx';
+export { Icon } from '../native-icons.jsx';
+import { Button as NativeButton, Input, Select as NativeSelect } from '../native-controls.jsx';
 
 export const cx = (...parts) => parts.filter(Boolean).join(' ');
 
@@ -16,30 +19,6 @@ export const api = async (path, value, signal) => {
 };
 export const qs = values => new URLSearchParams(Object.entries(values).filter(([, v]) => v !== undefined && v !== null && v !== '')).toString();
 
-const paths = {
-  overview: 'M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-3H4zM14 7h6V4h-6z',
-  context: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h5',
-  memory: 'M12 4a4 4 0 0 0-4 4 4 4 0 0 0-3 6.5A3.5 3.5 0 0 0 9 20h1V4.6A4 4 0 0 0 12 4ZM12 4a4 4 0 0 1 4 4 4 4 0 0 1 3 6.5A3.5 3.5 0 0 1 15 20h-1V4.6',
-  calls: 'M4 6h16M4 12h16M4 18h10',
-  events: 'M12 8v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
-  evidence: 'm4 6 2 2 3-4M12 6h8M4 14l2 2 3-4M12 14h8M12 20h8',
-  refresh: 'M20 7v5h-5M4 17v-5h5M5 8a7 7 0 0 1 12-3l3 3M19 16A7 7 0 0 1 7 19l-3-3',
-  search: 'm20 20-5-5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0',
-  chevron: 'm9 5 7 7-7 7', down: 'm6 9 6 6 6-6', arrow: 'M5 12h14m-5-5 5 5-5 5', close: 'm6 6 12 12M6 18 18 6',
-  check: 'm5 12 4 4L19 6', spark: 'm12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z',
-  layers: 'm12 3 10 6-10 6L2 9l10-6ZM2 13l10 6 10-6', compress: 'M4 9h16M4 15h16M12 3v4m0 0-2-2m2 2 2-2M12 21v-4m0 0-2 2m2-2 2 2',
-  hub: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM12 3v6M12 15v6M3 12h6M15 12h6',
-  play: 'M7 5v14l11-7z', stop: 'M7 7h10v10H7z', more: 'M5 12h.01M12 12h.01M19 12h.01',
-  settings: 'M4 7h16M4 17h16M8 4v6M16 14v6', info: 'M12 11v6M12 7v1M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
-  external: 'M14 4h6v6M20 4l-9 9M18 14v6H4V6h6', globe: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18Z',
-  folder: 'M3 6h6l2 2h10v11H3z', lock: 'M6 10h12v11H6ZM8 10V7a4 4 0 0 1 8 0v3', bolt: 'M13 3 5 14h6l-1 7 8-11h-6z',
-  coin: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM9 9h4.5a2 2 0 0 1 0 4H10m0 0h4a2 2 0 0 1 0 4H9M12 7v2m0 8v-2',
-  input: 'M12 3v18m-7-7 7 7 7-7', output: 'M12 21V3m-7 7 7-7 7 7', cache: 'M3 5h18v4H3zM5 9v12h14V9M10 13h4',
-  omd: 'M4 5h16v14H4zM4 9h16M8 13h3M8 16h6',
-};
-export function Icon({ name, size = 16, className }) {
-  return <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] || paths.info}/></svg>;
-}
 
 export function Card({ title, extra, children, className, flush, icon }) {
   return <section className={cx('omc-card', flush && 'omc-flush', className)}>
@@ -58,41 +37,45 @@ export function Stat({ label, value, unit, sub, tone, icon, onClick, title }) {
 }
 
 export function Tag({ tone = 'gray', children, title, dot }) {
-  return <span className={cx('omc-tag', `omc-tag-${tone}`)} title={title}>{dot && <i/>}{children}</span>;
+  const nativeTone = { gray: 'neutral', green: 'success', blue: 'info', amber: 'warning', red: 'danger', violet: 'info' }[tone] ?? 'neutral';
+  return <span title={title} className="omc-native-tag"><NativeTag tone={nativeTone}>{dot && <Dot tone={tone}/>} {children}</NativeTag></span>;
 }
-export function Dot({ tone = 'gray', pulse }) { return <i className={cx('omc-dot', `omc-dot-${tone}`, pulse && 'omc-pulse')} aria-hidden="true"/>; }
+export function Dot({ tone = 'gray', pulse }) { return <StateDot state={pulse ? 'ongoing' : ({ green: 'done', amber: 'warning', red: 'error' }[tone] ?? 'idle')} size={8}/>; }
 
 export function Seg({ value, options, onChange, label, size }) {
-  return <div className={cx('omc-seg', size === 'sm' && 'omc-seg-sm')} role="group" aria-label={label}>
-    {options.map(([id, text, count]) => <button key={id} type="button" aria-pressed={value === id} onClick={() => onChange(id)}>{text}{count != null && <b>{count}</b>}</button>)}
+  return <div className="omd-native-segments" role="group" aria-label={label}>
+    {options.map(([id, text, count]) => <NativeButton key={id} type="button" size="sm"
+      variant={id === value ? 'primary' : 'outline'} aria-pressed={id === value} onClick={() => onChange(id)}>
+      {text}{count != null && <b>{count}</b>}
+    </NativeButton>)}
   </div>;
 }
 
 export function Select({ value, options, onChange, label, width }) {
-  return <label className="omc-select" style={width ? { width } : undefined}>
-    <select aria-label={label} value={value} onChange={e => onChange(e.target.value)}>
-      {options.map(([id, text]) => <option key={id} value={id}>{text}</option>)}
-    </select><Icon name="down" size={13}/>
-  </label>;
+  return <NativeSelect aria-label={label} value={value} style={width ? { width } : undefined}
+    onChange={event => onChange(event.target.value)}>
+    {options.map(([id, text]) => <option key={id} value={id}>{text}</option>)}
+  </NativeSelect>;
 }
 
 export function Search({ value, onChange, placeholder }) {
   const [draft, setDraft] = useState(value || '');
   useEffect(() => setDraft(value || ''), [value]);
   useEffect(() => { if (draft === (value || '')) return; const t = setTimeout(() => onChange(draft), 320); return () => clearTimeout(t); }, [draft]);
-  return <label className="omc-search"><Icon name="search" size={14}/><input value={draft} placeholder={placeholder} aria-label={placeholder} onChange={e => setDraft(e.target.value)}/>{draft && <button type="button" aria-label="清空" onClick={() => { setDraft(''); onChange(''); }}><Icon name="close" size={12}/></button>}</label>;
+  return <div className="omc-search"><Input icon={<Icon name="search" size={14}/>} value={draft} placeholder={placeholder} aria-label={placeholder} onChange={e => setDraft(e.target.value)}/>{draft && <NativeButton type="button" variant="ghost" size="sm" aria-label="清空" onClick={() => { setDraft(''); onChange(''); }}><Icon name="close" size={12}/></NativeButton>}</div>;
 }
 
 export function Button({ children, icon, onClick, kind, disabled, title, busy, type = 'button' }) {
-  return <button type={type} className={cx('omc-btn', kind && `omc-btn-${kind}`, busy && 'omc-busy')} onClick={onClick} disabled={disabled || busy} title={title}>
+  return <NativeButton type={type} size="sm" variant={kind === 'primary' ? 'primary' : 'outline'}
+    className={cx('omc-btn', kind && `omc-btn-${kind}`, busy && 'omc-busy')} onClick={onClick} disabled={disabled || busy} title={title}>
     {icon && <Icon name={busy ? 'refresh' : icon} size={14} className={busy ? 'omc-spin' : undefined}/>}{children}
-  </button>;
+  </NativeButton>;
 }
 export function IconButton({ icon, label, onClick, disabled, spin }) {
-  return <button type="button" className="omc-icon-btn" aria-label={label} title={label} onClick={onClick} disabled={disabled}><Icon name={icon} size={15} className={spin ? 'omc-spin' : undefined}/></button>;
+  return <NativeButton type="button" size="sm" variant="ghost" className="omc-icon-btn" aria-label={label} title={label} onClick={onClick} disabled={disabled}><Icon name={icon} size={15} className={spin ? 'omc-spin' : undefined}/></NativeButton>;
 }
 export function LinkButton({ children, onClick }) {
-  return <button type="button" className="omc-link" onClick={onClick}>{children}<Icon name="chevron" size={12}/></button>;
+  return <NativeButton type="button" size="sm" variant="ghost" onClick={onClick}>{children}<Icon name="chevron" size={12}/></NativeButton>;
 }
 
 export function Empty({ icon = 'layers', title, children, action }) {
@@ -134,9 +117,9 @@ export function Pager({ page, pages, total, onPage, label }) {
   return <div className="omc-pager">
     <span>{label ?? `共 ${total.toLocaleString()} 条`}</span>
     <div>
-      <button type="button" className="omc-icon-btn" aria-label="上一页" disabled={page <= 1} onClick={() => onPage(page - 1)}><Icon name="chevron" size={13} className="omc-flip"/></button>
+      <NativeButton size="sm" variant="ghost" type="button" className="omc-icon-btn" aria-label="上一页" disabled={page <= 1} onClick={() => onPage(page - 1)}><Icon name="chevron" size={13} className="omc-flip"/></NativeButton>
       <b>{page}</b><span>/ {Math.max(1, pages)}</span>
-      <button type="button" className="omc-icon-btn" aria-label="下一页" disabled={page >= pages} onClick={() => onPage(page + 1)}><Icon name="chevron" size={13}/></button>
+      <NativeButton size="sm" variant="ghost" type="button" className="omc-icon-btn" aria-label="下一页" disabled={page >= pages} onClick={() => onPage(page + 1)}><Icon name="chevron" size={13}/></NativeButton>
     </div>
   </div>;
 }
@@ -322,7 +305,7 @@ export function Drawer({ title, onClose, children, actions }) {
   }, []);
   return <div className="omc-drawer" ref={ref} tabIndex={-1} role="dialog" aria-label={title}
     onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } }}>
-    <header className="omc-drawer-head"><button type="button" className="omc-btn" onClick={onClose}><Icon name="chevron" size={13} className="omc-flip"/>返回</button><strong>{title}</strong>{actions}</header>
+    <header className="omc-drawer-head"><NativeButton size="sm" variant="ghost" type="button" className="omc-btn" onClick={onClose}><Icon name="chevron" size={13} className="omc-flip"/>返回</NativeButton><strong>{title}</strong>{actions}</header>
     <div className="omc-drawer-body">{children}</div>
   </div>;
 }

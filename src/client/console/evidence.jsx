@@ -1,3 +1,4 @@
+import { Button as NativeButton } from '../native-controls.jsx';
 import React, { useState } from 'react';
 import { api, qs, usePoll, Card, Stat, Tag, Empty, Skeleton, Alert, Icon, StackBar } from './ui.jsx';
 import { clock } from './model.mjs';
@@ -28,12 +29,12 @@ export function EvidenceSection({ sessionId, visible }) {
       {tasks.length ? <ul className="omc-tasks">{tasks.map((task, i) => {
         const id = task.id || i, isOpen = open === id;
         return <li key={id} className={isOpen ? 'omc-open' : undefined}>
-          <button type="button" className="omc-task-row" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : id)}>
+          <NativeButton size="sm" variant="ghost" type="button" className="omc-task-row" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : id)}>
             <span className={`omc-check ${task.status === 'completed' ? 'omc-on' : ''}`}>{task.status === 'completed' && <Icon name="check" size={11}/>}</span>
             <span className="omc-task-title">{task.content}</span>
             {task.links?.some(l => l.lastRun?.pass) ? <Tag tone="green">测试通过</Tag> : task.links?.length ? <Tag tone="blue">有证据</Tag> : <Tag tone="amber">待验证</Tag>}
             <Icon name="chevron" size={12}/>
-          </button>
+          </NativeButton>
           {isOpen && <div className="omc-detail">
             <div className="omc-quote">{task.source || '尚未绑定需求原文'}{task.anchor && <small>消息 {task.sourceMessage} · 摘录 {task.sourceExcerpt}</small>}</div>
             {(task.links || []).map(link => { const [label, tone] = verdict(link); return <div className="omc-evidence" key={link.id}>

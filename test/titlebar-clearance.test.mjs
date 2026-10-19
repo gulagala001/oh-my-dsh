@@ -7,7 +7,7 @@ const shell = await readFile(new URL('../src/client/shell.css', import.meta.url)
 const compiled = await transform(shell, { loader: 'css', minify: true });
 // A source/build contract guard, not a native window or browser geometry test.
 // The browser matrix must also exercise the real host CSS and title/tab boxes.
-const selector = "html.trisoul-shell[data-platform='darwin'] [data-sidebar-collapsed] .wSkVaW_header[data-window-drag]";
+const selector = "html.trisoul-shell[data-omd-layout][data-platform='darwin'] [data-sidebar-collapsed] .wSkVaW_header[data-window-drag]";
 const rule = name => {
   const start = shell.indexOf(`${selector}${name === 'header' ? '' : ' .wSkVaW_' + name} {`);
   assert.ok(start >= 0, `Missing narrowly scoped ${name} window-chrome rule`);
@@ -29,8 +29,8 @@ test('titleRow does not reserve the host band a second time', () => {
 
 test('compiled CSS retains the platform/state gates and skin precedence', () => {
   assert.deepEqual(compiled.warnings, []);
-  assert.match(compiled.code, /html\.trisoul-shell\[data-platform=darwin\] \[data-sidebar-collapsed\] \.wSkVaW_header\[data-window-drag\]\{padding-inline-start:var\(--dsh-frame-leading-clearance,\s*0px\)!important\}/);
-  assert.match(compiled.code, /html\.trisoul-shell\[data-platform=darwin\] \[data-sidebar-collapsed\] \.wSkVaW_header\[data-window-drag\] \.wSkVaW_titleRow\{padding-inline-start:0!important\}/);
+  assert.match(compiled.code, /html\.trisoul-shell\[data-omd-layout\]\[data-platform=darwin\] \[data-sidebar-collapsed\] \.wSkVaW_header\[data-window-drag\]\{padding-inline-start:var\(--dsh-frame-leading-clearance,\s*0px\)!important\}/);
+  assert.match(compiled.code, /html\.trisoul-shell\[data-omd-layout\]\[data-platform=darwin\] \[data-sidebar-collapsed\] \.wSkVaW_header\[data-window-drag\] \.wSkVaW_titleRow\{padding-inline-start:0!important\}/);
 });
 
 test('the vendored host still exposes the titleRow and native drag contract', async () => {

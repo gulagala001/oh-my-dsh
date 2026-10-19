@@ -1,3 +1,4 @@
+import { Button as NativeButton } from '../native-controls.jsx';
 // Composer dock items. Native statistics entries are shadowed by the same id
 // at a lower priority (the documented ui-chat replacement rule); the native
 // readings are kept and each popover gains a jump into the OMD console.
@@ -28,12 +29,12 @@ function useIsOmd(props) {
   const preset = props.useSessions(s => s.byId?.[props.sessionId]?.projectionValues?.agentPreset);
   return main && OMD_PRESETS.includes(preset);
 }
-const Jump = ({ section, extra, children = '在控制台查看' }) => <button type="button" className="omc-pop-jump" onClick={() => openConsole(section, extra)}>{children}<Icon name="chevron" size={12}/></button>;
+const Jump = ({ section, extra, children = '在控制台查看' }) => <NativeButton size="sm" variant="ghost" type="button" className="omc-pop-jump" onClick={() => openConsole(section, extra)}>{children}<Icon name="chevron" size={12}/></NativeButton>;
 
 function Pill({ seat, stat, icon, label, aria, title, value, children, footer, tone, className }) {
   return <span ref={seat.rootRef} className={cx('omc-pill-anchor', className)} data-composer-stat={stat}>
-    <button type="button" className={cx('omc-pill', tone && `omc-pill-${tone}`)} aria-haspopup="dialog" aria-expanded={seat.open} aria-label={aria}
-      onClick={() => seat.setOpen(!seat.open)}>{icon}{label != null && <span className="omc-pill-label">{label}</span>}</button>
+    <NativeButton size="sm" variant="ghost" type="button" className={cx('omc-pill', tone && `omc-pill-${tone}`)} aria-haspopup="dialog" aria-expanded={seat.open} aria-label={aria}
+      onClick={() => seat.setOpen(!seat.open)}>{icon}{label != null && <span className="omc-pill-label">{label}</span>}</NativeButton>
     <Popover seat={seat} title={title} value={value} icon={icon} footer={footer}>{children}</Popover>
   </span>;
 }

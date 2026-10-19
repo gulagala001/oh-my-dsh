@@ -1,3 +1,5 @@
+import { Button, Input } from './native-controls.jsx';
+import { Icon } from './native-icons.jsx';
 import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { effortChoices } from '../model-efforts.mjs';
@@ -27,8 +29,8 @@ async function modeApi(sessionId, body, signal) {
   if (!response.ok) throw new Error(value.error || `HTTP ${response.status}`);
   return value;
 }
-function Chevron({ back = false }) { return <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d={back ? 'm12 5-5 5 5 5' : 'm7 5 5 5-5 5'}/></svg>; }
-function Reset() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 9V4m0 5h5M4.7 8a8 8 0 1 1-.5 6"/></svg>; }
+function Chevron({ back = false }) { return <Icon name="chevron" size={14} className={back ? 'omd-model-back' : undefined}/>; }
+function Reset() { return <Icon name="refresh" size={16}/>; }
 
 function ModelPanel({ ctx, sessionId, locked, available, directory, load, renderSlot, additive = false }) {
   const state = useStore(directory);
@@ -182,17 +184,17 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
   };
   if (!available) return null;
   return <>
-    <button ref={trigger} type="button" className="omd-model-trigger" data-mode={activeMode} disabled={locked} aria-label={`${additive ? 'OMD 模式与思考强度' : '模型与思考强度'}：${modelName} · ${savedLabel}${activeMode === 'ultra' ? ` · ${submode.label}` : ''}`} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? id : undefined}
+    <Button size="sm" variant="ghost" ref={trigger} type="button" className="omd-model-trigger" data-mode={activeMode} disabled={locked} aria-label={`${additive ? 'OMD 模式与思考强度' : '模型与思考强度'}：${modelName} · ${savedLabel}${activeMode === 'ultra' ? ` · ${submode.label}` : ''}`} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? id : undefined}
       onClick={() => { if (open) close(); else { setPane(selected ? 'effort' : 'model'); setQuery(''); setOpen(true); load(); void refresh(); } }}>
       <span>{additive && activeMode !== 'ultra' ? 'OMD' : renderModelLabel(group, model, 'trigger')}</span><span className="omd-model-caption">· {savedLabel}{activeMode === 'ultra' ? ` · ${submode.label}` : ''}</span><span aria-hidden="true">⌃</span>
-    </button>
+    </Button>
     {open && createPortal(<section ref={panel} id={id} className="omd-model-panel" data-pane={pane} style={position} role="dialog" aria-label="模型与思考强度" aria-busy={busy} tabIndex={-1} onKeyDown={keyDown}>
       {pane === 'effort' ? <>
         <header className="omd-effort-heading">
           <h2 key={label} className={level?.mode === 'ultra' ? 'omd-effort-ultra' : ''}>{label}</h2>
-          <button type="button" className="omd-model-reset" aria-label="恢复默认思考强度" title="恢复默认思考强度" disabled={busy || !model || !mode}
-            onClick={() => void save({provider:selected.provider,model:selected.model}, 'off', model.reasoning?.defaultEffort)}><Reset/></button>
-          <button ref={modelButton} type="button" className="omd-model-current" onClick={() => { setPane('model'); setQuery(''); }}><span>{renderModelLabel(group, model, 'menu')}</span><Chevron/></button>
+          <Button size="sm" variant="ghost" type="button" className="omd-model-reset" aria-label="恢复默认思考强度" title="恢复默认思考强度" disabled={busy || !model || !mode}
+            onClick={() => void save({provider:selected.provider,model:selected.model}, 'off', model.reasoning?.defaultEffort)}><Reset/></Button>
+          <Button size="sm" variant="ghost" ref={modelButton} type="button" className="omd-model-current" onClick={() => { setPane('model'); setQuery(''); }}><span>{renderModelLabel(group, model, 'menu')}</span><Chevron/></Button>
         </header>
         <div className="omd-effort-control" data-ultra={level?.mode === 'ultra' || undefined} data-dragging={dragging || undefined} style={{'--effort-progress':`${choices.length > 1 ? value / (choices.length - 1) * 100 : 0}%`,'--effort-ratio':choices.length > 1 ? value / (choices.length - 1) : 0}}>
           <div className="omd-effort-track" aria-hidden="true"><div className="omd-effort-fill"><i className="omd-effort-glow"/>{particles.map((style,i) => <i key={i} className="omd-effort-particle" style={style}/>)}</div>
@@ -219,14 +221,14 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
         <div className="omd-effort-notice" data-visible={mode?.pending || undefined} role="status">{mode?.pending ? '已保存，下一轮生效。' : ''}</div>
         {state.routable === false && <p className="omd-model-error">当前模型不可用，请选择其他模型。</p>}
       </> : <>
-        <div className="omd-model-search"><button type="button" aria-label="返回思考强度" onClick={() => setPane('effort')}><Chevron back/></button><input ref={search} type="search" aria-label="搜索模型" placeholder="搜索模型" value={query} onChange={e=>setQuery(e.target.value)}/></div>
+        <div className="omd-model-search"><Button size="sm" variant="ghost" type="button" aria-label="返回思考强度" onClick={() => setPane('effort')}><Chevron back/></Button><Input ref={search} type="search" aria-label="搜索模型" placeholder="搜索模型" value={query} onChange={e=>setQuery(e.target.value)}/></div>
         <div className="omd-model-options" role="listbox" aria-label="模型">
-          {state.groups.map(group => { const models = group.models.filter(item => `${group.name} ${item.name} ${item.id}`.toLowerCase().includes(query.toLowerCase())); return !models.length ? null : <div role="group" aria-label={group.name} key={group.id}><div className="omd-model-provider">{group.name}</div>{models.map(item => <button type="button" role="option" aria-selected={sameRoute(selected,{provider:group.id,model:item.id})} key={item.id} disabled={busy || !mode} onClick={() => void chooseModel(group.id,item)}><span>{renderModelLabel(group, item, 'option')}</span>{sameRoute(selected,{provider:group.id,model:item.id}) && <span aria-hidden="true">✓</span>}</button>)}</div>; })}
+          {state.groups.map(group => { const models = group.models.filter(item => `${group.name} ${item.name} ${item.id}`.toLowerCase().includes(query.toLowerCase())); return !models.length ? null : <div role="group" aria-label={group.name} key={group.id}><div className="omd-model-provider">{group.name}</div>{models.map(item => <Button size="sm" variant="ghost" type="button" role="option" aria-selected={sameRoute(selected,{provider:group.id,model:item.id})} key={item.id} disabled={busy || !mode} onClick={() => void chooseModel(group.id,item)}><span>{renderModelLabel(group, item, 'option')}</span>{sameRoute(selected,{provider:group.id,model:item.id}) && <span aria-hidden="true">✓</span>}</Button>)}</div>; })}
           {state.status === 'loading' && <p className="omd-model-status">正在加载模型…</p>}
           {state.status !== 'loading' && !state.groups.some(group => group.models.some(item => `${group.name} ${item.name} ${item.id}`.toLowerCase().includes(query.toLowerCase()))) && <p className="omd-model-status">没有匹配的模型</p>}
         </div>
       </>}
-      {(error || state.error || state.failures.length > 0) && <div className="omd-model-error" role="alert"><span>{error || state.error || state.failures.map(f=>`${f.name}：${f.message}`).join('；')}</span><button type="button" disabled={busy} onClick={() => { load(); void refresh(); }}>重试</button></div>}
+      {(error || state.error || state.failures.length > 0) && <div className="omd-model-error" role="alert"><span>{error || state.error || state.failures.map(f=>`${f.name}：${f.message}`).join('；')}</span><Button size="sm" variant="ghost" type="button" disabled={busy} onClick={() => { load(); void refresh(); }}>重试</Button></div>}
     </section>, document.body)}
   </>;
 }

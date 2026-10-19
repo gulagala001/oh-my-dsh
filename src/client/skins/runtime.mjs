@@ -8,7 +8,7 @@ import { createBackgroundRuntime, backgroundDefaults } from './background.mjs';
 import { appearanceCoordinator } from './coordinator.mjs';
 import { createAttributeMarkers } from '../attribute-markers.mjs';
 export const STORAGE_KEY = 'omd.skins.v1';
-export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss = '', surfaceMarkers) {
+export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss = '', surfaceMarkers, layoutBaseCss = '') {
   const recovery = new URLSearchParams(location.search).get('omd-skin') === 'default';
   let state = { active: false, skins: [], palettes: paletteCatalog([]), selected: 'default', palette: 'theme', reduceEffects: false, advanced: advancedDefaults(), background: { ...backgroundDefaults, name: '', url: '', loading: false, error: '' }, error: '' };
   let disposeTokens, style, customStyle, disposed = false, logoSequence = 0, owning = false;
@@ -93,7 +93,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
       if (active) { root.classList.add('omd'); root.dataset.omdSkin = active.skin.id; }
       if (active?.skin.layout) root.dataset.omdLayout = active.skin.layout;
       style = document.createElement('style'); style.dataset.omdSkinStyle = active?.skin.id || 'default';
-      style.textContent = tokenCss(composed, 'html[data-omd-colors]') + '\n' + adapterCss + '\n' + (active?.css || '')
+      style.textContent = (active ? layoutBaseCss + '\n' : '') + tokenCss(composed, 'html[data-omd-colors]') + '\n' + adapterCss + '\n' + (active?.css || '')
         + (active?.skin.layout ? '\n' + (layouts[active.skin.layout] || '') : '');
       document.head.append(style);
     }
