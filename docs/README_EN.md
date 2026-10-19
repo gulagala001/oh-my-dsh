@@ -8,7 +8,7 @@ Start with what you want to do. OMD retains your DSH models, conversations, tool
 
 **[Install and match versions](install_EN.md) → [First steps](getting-started_EN.md) → [Everyday usage](usage_EN.md)**
 
-Installation offers two routes: **[give an AI the instructions](install_EN.md#ai)** or **[paste a URL into Add Plugin](install_EN.md#gui)**. DSH 0.2.1-rc.2 uses OMD 0.18.2; rc.1 also uses OMD 0.18.2. Both include OpenCU. [Downloads and release scope](releases.md).
+Installation offers two routes: **[give an AI the instructions](install_EN.md#ai)** or **[paste a URL into Add Plugin](install_EN.md#gui)**. DSH 0.2.1-rc.2 uses OMD 0.18.3; rc.1 also uses OMD 0.18.3. Both include OpenCU. [Downloads and release scope](releases.md).
 
 ## Find your topic
 
