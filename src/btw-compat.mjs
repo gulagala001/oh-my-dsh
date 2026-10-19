@@ -151,9 +151,20 @@ export function createBtwCompatibility(ctx) {
         state.useRequestContext = captured !== completed.get(state.parent);
         const provider = ctx.subagents.getProvider('fork');
         if (!provider?.inheritsParentContext) throw Error('/btw 需要原生上下文继承 fork；不会切换到其他 provider。');
-        const run = await ctx.subagents.start('fork', { ...request, label: BTW_LABEL_PREFIX + state.id });
-        state.child = run.id;
-        return run;
+        // rc.1/rc.2 移除了 ctx.subagents.start：fork 只提供 prepareContinuable，唯一入口是
+        // startActivation。caller 交付让答案只回到指令结果，不进入父会话上下文。
+        const activation = await ctx.subagents.startActivation({
+          provider: 'fork',
+          label: BTW_LABEL_PREFIX + state.id,
+          request: { prompt: request.prompt, parent: request.parent, ...request.maxDepth === undefined ? {} : { maxDepth: request.maxDepth } },
+          signal: request.signal,
+          delivery: 'caller',
+        });
+        state.child = activation.childId;
+        // 取消要落到子会话：startActivation 只在受理前看信号，续接子会话由 dispose 结束。
+        const dispose = () => activation.dispose();
+        request.signal?.addEventListener('abort', () => { dispose().catch(() => {}); }, { once: true });
+        return { id: activation.childId, result: activation.result, dispose };
       },
     },
   };
