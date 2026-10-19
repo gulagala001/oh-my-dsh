@@ -1,11 +1,12 @@
+import { Icon } from './native-icons.jsx';
 import { applyAppearanceBrand } from './appearance-brand.jsx';
 import { createPoller } from './polling.mjs';
 import { createConversation } from '../../lib/host/ui-conversation.factory.mjs';
 import { installDesktopLifecycle } from './desktop-lifecycle.mjs';
 import { applySessionTimeZone } from './session-time-zone.mjs';
 import { applyRewindCompatibility } from './rewind-compat.jsx';
-import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { Menu } from '@deepseek-ai/dsh-client-ui-primitives';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Button, Menu, Modal } from '@deepseek-ai/dsh-client-ui-primitives';
 import { applyConsole } from './console/shell.jsx';
 import { openConsole } from './console/nav.mjs';
 import css from './style.css';
@@ -52,7 +53,7 @@ function BetterTodoChip(props) {
 }
 function BetterTodoSessionChip({ sessionId, useSessionStatus }) {
   const [state, setState] = useState(null), [open, setOpen] = useState(false), [saving, setSaving] = useState(false), [error, setError] = useState('');
-  const [notice, setNotice] = useState(false), dialog = useRef(null), noticeId = useId();
+  const [notice, setNotice] = useState(false);
   const running = useSessionStatus(s => s.get(sessionId)?.running), active = useRef(sessionId), revision = useRef(0), writing = useRef(null); active.current = sessionId;
   const load = useCallback(async () => {
     if (writing.current?.sessionId === sessionId) return;
@@ -61,7 +62,6 @@ function BetterTodoSessionChip({ sessionId, useSessionStatus }) {
     catch (e) { if (active.current === sessionId && revision.current === ticket) setError(e.message); }
   }, [sessionId]);
   useEffect(() => { setOpen(false); setSaving(false); setError(''); setNotice(false); }, [sessionId]);
-  useEffect(() => { if (notice && !dialog.current?.open) dialog.current?.showModal(); else if (!notice) dialog.current?.close(); }, [notice]);
   useEffect(() => { void load(); }, [load, running]);
   const ready = state?.sessionId === sessionId;
   const toggle = async key => {
@@ -77,17 +77,17 @@ function BetterTodoSessionChip({ sessionId, useSessionStatus }) {
     } catch (e) { if (active.current === sessionId) setError(e.message); }
     finally { if (writing.current === write) writing.current = null; if (active.current === sessionId) setSaving(false); }
   };
-  const chip = <button type="button" className={cx('tx-scope-chip', 'tx-bt-chip', ready && !state.todo && !state.verification && 'tx-bt-off')} aria-label="BT · Better Todo" aria-haspopup="menu" aria-expanded={open} title="Better Todo · 收尾提醒" onClick={() => { void load(); setOpen(!open); }}><strong>BT</strong><span>▾</span></button>;
+  const chip = <Button size="sm" variant="ghost" type="button" className={cx('tx-scope-chip', 'tx-bt-chip', ready && !state.todo && !state.verification && 'tx-bt-off')} aria-label="BT · Better Todo" aria-haspopup="menu" aria-expanded={open} title="Better Todo · 收尾提醒" onClick={() => { void load(); setOpen(!open); }}><strong>BT</strong><Icon name="down" size={12}/></Button>;
   const items = [{ type: 'label', id: 'title', text: 'Better Todo' }, ...[
     ['todo', '待办完成提醒', '仍有未完成待办时提醒继续'],
     ['verification', '验证完成提醒', '缺少验证证据时提醒，含文字证据复核'],
-  ].map(([id, label, hint]) => ({ id, disabled: !ready || saving, label: <span className="tx-bt-option"><span><strong>{label}</strong><small>{hint}</small></span><span className="tx-bt-state"><small>{ready ? state[id] ? '开' : '关' : '…'}</small><i className={cx('tx-bt-toggle', ready && state[id] && 'tx-on')} aria-hidden="true"/></span></span> })),
+  ].map(([id, label, hint]) => ({ id, disabled: !ready || saving, label: <span className="tx-bt-option"><span><strong>{label}</strong><small>{hint}</small></span><span className="tx-bt-state"><small>{ready ? state[id] ? '开' : '关' : '…'}</small>{ready && state[id] && <Icon name="check" size={14}/>}</span></span> })),
     { type: 'separator', id: 'sep' }, { id: 'evidence', label: <span className="tx-bt-option"><span><strong>查看任务证据</strong><small>需求原文、验证命令与结果</small></span><span className="tx-bt-state">›</span></span> }];
   return <><Menu open={open} anchor={chip} items={items} footer={[{ type: 'label', id: 'status', text: error || '仅本会话 · 可随时更改' }]} onSelect={id => { if (id === 'evidence') { setOpen(false); openConsole('evidence'); } else toggle(id); }} onClose={() => setOpen(false)} portal side="top" align="end" compact autoFocus/>
-    <dialog ref={dialog} className="tx-bt-notice" aria-labelledby={noticeId} aria-describedby={noticeId+'-body'} onCancel={()=>setNotice(false)} onClose={()=>setNotice(false)}>
-      <h2 id={noticeId}>验证完成提醒</h2><p id={noticeId+'-body'}>此选项将会带来更高的任务完成率，同时也会消耗更多时间和 token。</p>
-      <div><button type="button" autoFocus onClick={()=>setNotice(false)}>知道了</button></div>
-    </dialog></>;
+    <Modal open={notice} title="验证完成提醒" closeLabel="关闭" onClose={() => setNotice(false)}
+      footer={<Button type="button" variant="primary" data-modal-autofocus onClick={() => setNotice(false)}>知道了</Button>}>
+      <p>此选项将会带来更高的任务完成率，同时也会消耗更多时间和 token。</p>
+    </Modal></>;
 }
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
@@ -121,6 +121,7 @@ export async function apply(ctx) {
   ctx.effect(() => {
     const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css + '\n' + shellCss + '\n' + whaleCss + '\n' + versionCss + '\n' + workbenchCss; document.head.appendChild(tag);
     const runtime = getAppearanceRuntime();
+    // Feature integration scope only; native DSH never installs the selectable skin base.
     const sync = () => document.documentElement.classList.toggle('trisoul-shell', runtime.getSnapshot().active !== false);
     const off = runtime.subscribe(sync); sync();
     return () => { off(); tag.remove(); document.documentElement.classList.remove('trisoul-shell'); };

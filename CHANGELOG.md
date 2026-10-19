@@ -1,3 +1,15 @@
+## 0.18.6（DSH 0.2.1-rc.1 / rc.2）
+
+- 默认直接复用 DSH 原生主题，移除独立默认皮肤对侧栏、顶栏、输入区、消息和过程区的额外视觉覆盖。
+- 通用按钮、输入、选择器、开关、复选框、版本弹窗、状态标签、图标和上下文折叠使用 DSH 真实组件与必要薄适配。
+- 保留四个可选主题及独立配色、背景、高级定制，兼容已有 `default` 设置；保留模型／Ultra、BT、记忆／Dream、优化器、控制台、总览、子会话和电脑操作。
+- 保留现有配置、历史、附件、用户数据和第三方插件；内置 OpenCU 继续为 2.0.5，宿主不变。
+
+- Uses the native DSH theme directly by default, removing extra visual overrides from the sidebar, header, composer, messages and process area.
+- Shares real DSH controls, dialogs, status tags, icons and context disclosure rows through thin adapters.
+- Preserves the four optional themes, palettes, backgrounds, advanced preferences and existing `default` settings, along with all functional extensions and third-party plugins.
+- Keeps bundled OpenCU 2.0.5 and the matching host unchanged.
+
 ## 0.18.5（DSH 0.2.1-rc.1 / rc.2）
 
 - 内置 OpenCU 2.0.5，修复 macOS 后台鼠标事件缺少目标窗口身份和局部坐标导致点击无效的问题，保留请求的修饰键与输入释放机制。

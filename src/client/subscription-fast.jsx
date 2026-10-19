@@ -1,3 +1,5 @@
+import { Button } from './native-controls.jsx';
+import { Icon } from './native-icons.jsx';
 import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { decorateSlot } from './slot-decoration.mjs';
@@ -33,7 +35,7 @@ export function SubscriptionFast({ ctx, sessionId, loadSpeed, setSpeed }) {
   }, [scope]);
   if (!setSpeed || state?.scope !== scope || !state?.visible || selected && !['codex', 'openai-codex'].includes(selected.provider)) return null;
   const enabled = state.tier === 'fast';
-  return <><button type="button" aria-label="Fast 模式" aria-pressed={enabled} disabled={busy}
+  return <><Button size="sm" variant="ghost" type="button" aria-label="Fast 模式" aria-pressed={enabled} disabled={busy}
     title={error || (enabled ? 'Fast 已开启 · 点击关闭' : 'Fast 已关闭 · 点亮闪电开启')}
     style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28,
       padding: 4, border: 0, borderRadius: 6, background: 'transparent', cursor: busy ? 'wait' : 'pointer',
@@ -52,8 +54,8 @@ export function SubscriptionFast({ ctx, sessionId, loadSpeed, setSpeed }) {
         else setError('Fast 设置未保存，请重试');
       }, () => { if (ticket === generation.current) { writing.current = false; setBusy(false); setError('Fast 设置未保存，请重试'); } });
     }}>
-    <svg width="18" height="18" viewBox="0 0 24 24" fill={enabled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 10-12h-7l1-8Z"/></svg>
-  </button>
+    <Icon name="bolt" size={18}/>
+  </Button>
     {error && createPortal(<div role="alert" aria-live="assertive" aria-atomic="true"
       style={{ position: 'fixed', top: 12, right: 12, zIndex: 1200, maxWidth: 'calc(100vw - 24px)',
         boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8, pointerEvents: 'none',

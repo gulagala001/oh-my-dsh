@@ -198,9 +198,9 @@ html.omd[data-omd-layout="codex-desktop"] {
   & .codex-setting-group .omd-appearance-help { margin: 0; padding: 0 12px 12px; line-height: 18px; }
   & .codex-appearance .omd-appearance-actions { margin-top: 20px; }
   & .codex-appearance .codex-switch { appearance: none; position: relative; flex: 0 0 auto; width: 30px; height: 18px; margin: 0; border: 0; border-radius: 99px; background: var(--omd-selected); cursor: pointer; }
-  & .codex-switch::after { content: ""; width: 14px; height: 14px; border-radius: 50%; position: absolute; top: 2px; left: 2px; background: white; box-shadow: 0 1px 2px #00000020; transition: transform 120ms; }
-  & .codex-switch:checked { background: var(--omd-accent); }
-  & .codex-switch:checked::after { transform: translateX(12px); background: var(--omd-on-accent); }
+  & .codex-switch > span { width: 14px; height: 14px; top: 2px; left: 2px; }
+  & .codex-switch[aria-checked="true"] { background: var(--omd-accent); }
+  & .codex-switch[aria-checked="true"] > span { transform: translateX(12px); background: var(--omd-on-accent); }
   & .cx-toggle input:checked::after, & .tx-bt-toggle.tx-on::before { background: var(--omd-on-accent); }
   & .codex-switch:focus-visible { outline: 2px solid var(--omd-focus); outline-offset: 3px; }
   & .codex-import { position: relative; display: inline-flex; padding: 5px 10px; background: var(--omd-subtle); border: 1px solid var(--omd-border); border-radius: 7px; overflow: hidden; cursor: pointer; }

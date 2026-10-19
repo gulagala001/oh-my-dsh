@@ -142,14 +142,14 @@
     glass: { name: 'iOS Liquid Glass', description: '通透材质、圆角面板与柔和的空间层次。' },
     terminal: { name: 'Claude CLI', description: '暖黑与纸白、陶土橙与等宽终端布局。' },
     material: { name: 'Google Material', description: 'Material 配色与舒展的导航、输入和设置。' },
-    omd: { name: 'OMD 默认', description: '保留熟悉的 DSH 布局与蓝色强调。' },
+    omd: { name: 'DSH 原生', description: '直接使用 DSH 原生主题与组件。' },
   };
   if (english) {
     themes.codex.description = 'A cool gray sidebar, system fonts, and clear content hierarchy.';
     themes.glass.description = 'Translucent surfaces, rounded panels, and gentle depth.';
     themes.terminal.description = 'Dark and paper-white surfaces, terracotta accents, and a monospace layout.';
     themes.material.description = 'Material colors with spacious navigation, input, and settings.';
-    themes.omd = { name: 'OMD Default', description: 'The familiar DSH layout with blue accents.' };
+    themes.omd = { name: 'DSH Native', description: 'Uses the original DSH theme and components.' };
   }
   let activeTheme = 'codex';
   async function renderTheme() {

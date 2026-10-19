@@ -1,3 +1,4 @@
+import { Button as NativeButton } from '../native-controls.jsx';
 // The single OMD entry in the native right sidebar: one console tab with its
 // own navigation. Former OMD tab kinds stay registered (without guide
 // entries) and hand over to the console, so saved layouts keep working.
@@ -62,8 +63,8 @@ function ConsolePage(props) {
       </div>
     </header>
     <div className="omc-frame">
-      <nav className="omc-nav" aria-label="控制台分区">{nav2.map(([id, title, icon]) => <button key={id} type="button" aria-current={section === id ? 'page' : undefined}
-        onClick={() => go(id)}><Icon name={icon} size={15}/><span>{title}</span></button>)}</nav>
+      <nav className="omc-nav" aria-label="控制台分区">{nav2.map(([id, title, icon]) => <NativeButton size="sm" variant="ghost" key={id} type="button" aria-current={section === id ? 'page' : undefined}
+        onClick={() => go(id)}><Icon name={icon} size={15}/><span>{title}</span></NativeButton>)}</nav>
       <main className="omc-main" key={tick}>
         <Body sessionId={props.sessionId} visible={visible} range={range} period={period} params={route.params} go={go}/>
       </main>

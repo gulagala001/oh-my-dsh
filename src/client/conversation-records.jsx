@@ -1,19 +1,20 @@
+import { DisclosureRow } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Icon } from './native-icons.jsx';
 import { sourceName } from '../message-source.mjs';
-import React, { useId, useState, useSyncExternalStore } from 'react';
+import React, { useState, useSyncExternalStore } from 'react';
 import { decorateSlotComponent } from './slot-decoration.mjs';
 import { compactionGroups, taskInjectionDefinition, supersededTaskInjections } from './conversation-records.mjs';
 import { btwRecordDefinition } from './btw-record.mjs';
 import css from './conversation-records.css';
 
 function Record({ title, hint, kind, children }) {
-  const [open, setOpen] = useState(false), id = useId();
+  const [open, setOpen] = useState(false);
   return <div className="omd-context-record" data-omd-record={kind}>
-    <button type="button" className="omd-record-toggle" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d={kind === 'compaction' ? 'M4 5h16M4 12h16M4 19h16M8 2v6M16 9v6M8 16v6' : 'M5 4h14v16H5zM8 8h8M8 12h8M8 16h5'}/></svg>
-      <span className="omd-record-title">{title}</span><span className="omd-record-hint">{hint}</span>
-      <svg className="omd-record-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
-    </button>
-    <div id={id} className="omd-record-body" hidden={!open}>{open && children}</div>
+    <DisclosureRow icon={<Icon name={kind === 'compaction' ? 'compress' : 'context'} size={15}/>}
+      title={title} open={open} expandable expandOnRowClick keepContentWhenOpen
+      onToggle={() => setOpen(value => !value)} collapsedContent={<span className="omd-record-hint">{hint}</span>}>
+      <div className="omd-record-body">{children}</div>
+    </DisclosureRow>
   </div>;
 }
 

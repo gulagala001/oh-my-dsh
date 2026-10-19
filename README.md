@@ -2,7 +2,7 @@
 
 <h1 align="center">Oh My DSH</h1>
 <p align="center"><strong>更懂任务的提示词，更顺手的界面，更连贯的长任务。</strong></p>
-<p align="center">系统提示词增强 · 五套主题 · 电脑操作 · 侧栏批注 · 用量监控 · 记忆与自动压缩</p>
+<p align="center">系统提示词增强 · DSH 原生与四套可选主题 · 电脑操作 · 侧栏批注 · 用量监控 · 记忆与自动压缩</p>
 <p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a> · <a href="#quickstart">安装</a> · <a href="docs/getting-started.md">第一次使用</a> · <a href="docs/README.md">完整文档</a></p>
 
 **把你已经在用的 DSH，变成更完整的 AI 工作台。**
@@ -11,6 +11,8 @@ Oh My DSH（OMD）是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek
 
 > **安装：** [复制指令给 AI](docs/install.md#ai) · [在“添加插件”中安装](docs/install.md#gui)。OMD 已内置 OpenCU。
 
+当前版本：**OMD 0.18.6**，提供匹配 DSH 0.2.1-rc.1／rc.2 的[独立安装包](docs/releases.md)。
+
 <a id="features"></a>
 
 ## 一个插件，把日常工作的几块短板补齐
@@ -18,7 +20,7 @@ Oh My DSH（OMD）是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek
 | 你想要的 | OMD 带来的变化 |
 | --- | --- |
 | **不只是回答，而是把任务做下去** | 系统提示词覆盖需求理解、代码工作、工具使用、交付与核验，并随实际工具和模式适配。 |
-| **每天打开，都看着顺眼** | 五套主题、明暗模式、28 套配色；布局、材质、字体与背景可以按自己的习惯调整。 |
+| **每天打开，都看着顺眼** | DSH 原生与四套可选主题、明暗模式、28 套配色；布局、材质、字体与背景可以按自己的习惯调整。 |
 | **让 AI 走出聊天框** | 内置 OpenCU，操作浏览器与桌面应用，在会话中看到页面、活动和预览。 |
 | **“改这里”不用来回解释** | 在网页、图片或支持的内容旁留下批注，把具体位置和意见带回对话。 |
 | **聊得长，也能接着做** | 上下文整理、Auto Compact 与 Dream 分工协作；关键要求与原始资料可以回查。 |
@@ -45,9 +47,9 @@ OMD 把智能体的工作方法放在系统层：先理解目标与约束，读�
 
 ## 02 / 不止换色，连工作氛围一起换
 
-![五套主题的真实界面：OMD 默认、Codex Desktop、iOS Liquid Glass、Claude CLI 与 Google Material](docs/images/release/themes.jpg)
+![主题界面参考（此前发行截图）](docs/images/release/themes.jpg)
 
-**OMD 默认 · Codex Desktop · iOS Liquid Glass · Claude CLI · Google Material**
+**DSH 原生 · Codex Desktop · iOS Liquid Glass · Claude CLI · Google Material**
 
 喜欢克制的桌面布局、通透玻璃、终端风格，还是更鲜明的 Material？五套外观各有自己的布局与材质，均支持明暗模式。主题与 **28 套配色**、自定义背景相互独立，切换主题不必重新配置一切。
 

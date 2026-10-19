@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Input } from '../native-controls.jsx';
 import { api, qs, usePoll, Drawer, Card, Button, Alert, Empty, Search, Select, Table, Pager } from './ui.jsx';
 
 const rates = [['inputTokens', '未缓存输入'], ['cacheReadTokens', '缓存读'], ['cacheWriteTokens', '缓存写'], ['outputTokens', '输出']];
@@ -57,10 +58,10 @@ export function PricesDrawer({ onClose, onSaved }) {
       {prices && <form className="omc-form" onSubmit={save}>
         {prices.map(p => <Card key={p.id} title={`${p.provider || '提供方'} / ${p.model || '模型'}`} extra={<Button disabled={busy} onClick={() => setPrices(list => list.filter(row => row.id !== p.id))}>移除</Button>}>
           <div className="omc-form-grid">
-            <label>提供方<input required maxLength={256} disabled={busy} value={p.provider} onChange={e => change(p.id, 'provider', e.target.value)}/></label>
-            <label>模型<input required maxLength={256} disabled={busy} value={p.model} onChange={e => change(p.id, 'model', e.target.value)}/></label>
-            <label>币种<input required pattern="[A-Za-z]{3}" maxLength={3} disabled={busy} value={p.currency} onChange={e => change(p.id, 'currency', e.target.value)}/></label>
-            {rates.map(([key, label]) => <label key={key}>{label} / 百万 Token<input type="number" min="0" step="any" placeholder="未知" disabled={busy} value={p[key] ?? ''} onChange={e => change(p.id, key, e.target.value)}/></label>)}
+            <label>提供方<Input required maxLength={256} disabled={busy} value={p.provider} onChange={e => change(p.id, 'provider', e.target.value)}/></label>
+            <label>模型<Input required maxLength={256} disabled={busy} value={p.model} onChange={e => change(p.id, 'model', e.target.value)}/></label>
+            <label>币种<Input required pattern="[A-Za-z]{3}" maxLength={3} disabled={busy} value={p.currency} onChange={e => change(p.id, 'currency', e.target.value)}/></label>
+            {rates.map(([key, label]) => <label key={key}>{label} / 百万 Token<Input type="number" min="0" step="any" placeholder="未知" disabled={busy} value={p[key] ?? ''} onChange={e => change(p.id, key, e.target.value)}/></label>)}
           </div>
         </Card>)}
         <div className="omc-summary-line"><Button disabled={busy} onClick={() => setPrices(list => [...list, blank()])}>添加覆盖</Button><Button type="submit" kind="primary" busy={busy}>保存覆盖</Button></div>

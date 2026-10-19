@@ -113,21 +113,17 @@ index 22ae5bac..12ab3ac8 100644
          // Consecutive image blocks share one gallery so several images tile
          // into rows instead of each opening a one-image group of its own.
 diff --git a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css
-index c7797443..44070ca0 100644
+index c7797443..87bb61b8 100644
 --- a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css
 +++ b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css
-@@ -84,8 +84,9 @@
- }
+@@ -85,6 +85,7 @@
  
  .body {
--  --dsh-chat-flow-gap: 6px;
--  max-height: min(400px, 50vh);
-+  --dsh-chat-flow-gap: 2px;
+   --dsh-chat-flow-gap: 6px;
 +  position: relative;
-+  max-height: min(280px, 45vh);
+   max-height: min(400px, 50vh);
    overflow-y: auto;
    overscroll-behavior-y: auto;
-   scrollbar-gutter: stable;
 @@ -148,3 +149,5 @@
      transition: none;
    }

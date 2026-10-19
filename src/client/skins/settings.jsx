@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createSkinRuntime } from './runtime.mjs';
 import { MAX_SKIN_BYTES } from './format.mjs';
 import adapterCss from './adapter.css';
+import layoutBaseCss from './layout-base.css';
 import appearanceCss from './appearance.css';
 import { ThemeSelect, AppearanceSelect, EffectsToggle, ThemeImport, ThemeActions } from './controls.jsx';
 import { Personalization } from './personalization.jsx';
@@ -77,7 +78,7 @@ export function applySkins(ctx) {
   });
   applySidebarPresentation(ctx);
   let runtime;
-  ctx.effect(() => { runtime = createSkinRuntime(ctx, adapterCss, { 'ios-liquid': iosLiquidLayout, 'codex-desktop': codexDesktopLayout, 'claude-cli-terminal': claudeTerminalLayout, [MATERIAL_LAYOUT]: materialLayout }, appearanceCss, surfaces); return () => runtime.dispose(); });
+  ctx.effect(() => { runtime = createSkinRuntime(ctx, adapterCss, { 'ios-liquid': iosLiquidLayout, 'codex-desktop': codexDesktopLayout, 'claude-cli-terminal': claudeTerminalLayout, [MATERIAL_LAYOUT]: materialLayout }, appearanceCss, surfaces, layoutBaseCss); return () => runtime.dispose(); });
   applyMaterialIntegration(ctx, () => runtime);
   applyCodexIntegration(ctx, () => runtime);
   applyTerminalPresentation(ctx, () => runtime);

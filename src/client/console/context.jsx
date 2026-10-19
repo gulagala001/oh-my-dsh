@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api, qs, usePoll, useReader, useAction, Card, Stat, Tag, Seg, Table, Steps, StackBar, Ring, Empty, Skeleton, Alert, Button, KV, Icon, Drawer } from './ui.jsx';
 import { k, ago, clock, composition } from './model.mjs';
+import { Checkbox } from '../native-controls.jsx';
 
 const MODE = { raw: ['原文', 'gray'], detail: ['摘要＋资料', 'blue'], brief: ['仅摘要', 'green'] };
 const CHOICE = { keep: '保留原文', detail: '摘要＋资料', brief: '仅摘要' };
@@ -118,8 +119,9 @@ export function ContextSection({ sessionId, visible, go, params }) {
       <Table rows={shown.slice().reverse()} rowKey={r => r.id} expanded={expanded} onRow={(r, key) => setExpanded(expanded === key ? null : key)}
         empty={<Empty icon="layers" title={records.length ? '当前筛选没有内容' : '还没有分段摘要'}>{records.length ? null : adaptive ? '后台决定整理后出现在这里。' : '达到预处理频率后自动生成。'}</Empty>}
         columns={[
-          { key: 'sel', title: '', width: 28, render: r => <input type="checkbox" aria-label="选择" checked={selected.includes(r.id)} disabled={!r.live || locked}
-            onClick={e => e.stopPropagation()} onChange={e => setSelected(e.target.checked ? [...selected, r.id] : selected.filter(x => x !== r.id))}/> },
+          { key: 'sel', title: '', width: 28, render: r => <span className="omc-checkbox-cell" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+            <Checkbox className="omc-record-checkbox" label="选择" checked={selected.includes(r.id)} disabled={!r.live || locked}
+              onChange={checked => setSelected(checked ? [...selected, r.id] : selected.filter(x => x !== r.id))}/></span> },
           { key: 'time', title: '时间段', render: r => <span className="omc-mono">{r.timeStart ? clock(r.timeStart).slice(0, 11) : '—'}{r.timeEnd ? '–' + clock(r.timeEnd).slice(6, 11) : ''}</span> },
           { key: 'mode', title: '状态', render: r => <>{<Tag tone={MODE[r.mode]?.[1]}>{MODE[r.mode]?.[0] || r.mode}</Tag>}{!r.live && <Tag tone="gray">已退出</Tag>}</> },
           { key: 'events', title: '原文', align: 'right', render: r => `${r.originalEventCount} 条` },

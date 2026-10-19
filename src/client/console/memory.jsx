@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { api, qs, usePoll, useReader, useAction, Card, Tag, Seg, Search, Table, Empty, Skeleton, Alert, Button, KV, Drawer, StackBar, Dot, Icon } from './ui.jsx';
 import { k, clock, ago } from './model.mjs';
 import { RecordDrawer } from './context.jsx';
+import { Button as NativeButton, Input, Select as NativeSelect, Switch, Checkbox } from '../native-controls.jsx';
 
 const JOB = { queued: ['排队', 'gray'], running: ['整理中', 'blue'], paused: ['已停止', 'amber'], budget: ['等待额度', 'amber'], failed: ['失败', 'red'], complete: ['完成', 'green'] };
 const SCOPE = { session: '会话', project: '项目', global: '全局' };
@@ -129,7 +130,7 @@ function JobLine({ job, busy, onJob }) {
 
 function MemoryText({ text }) {
   const [open, setOpen] = useState(false), value = String(text || ''), long = value.length > 320;
-  return <><p className="omc-prose">{long && !open ? value.slice(0, 320) + '…' : value}</p>{long && <button type="button" className="omc-link" onClick={() => setOpen(!open)}>{open ? '收起' : '展开全部'}</button>}</>;
+  return <><p className="omc-prose">{long && !open ? value.slice(0, 320) + '…' : value}</p>{long && <NativeButton type="button" size="sm" variant="ghost" onClick={() => setOpen(!open)}>{open ? '收起' : '展开全部'}</NativeButton>}</>;
 }
 
 function SourceView({ value: v, onRead, onDoc }) {
@@ -140,8 +141,8 @@ function SourceView({ value: v, onRead, onDoc }) {
         {v.seq != null && <Button onClick={() => onRead({ sessionId: v.sessionId, from: v.seq, to: v.seq })}>原始事件</Button>}</div>
     </Card>
     {(v.sources || v.entries || []).length > 0 && <Card flush title="引用来源">
-      <ul className="omc-sources">{(v.sources || v.entries).map((s, i) => <li key={s.reference || i}><button type="button" onClick={() => onRead({ reference: s.reference })}>
-        <Icon name={s.kind === 'memory' ? 'memory' : 'context'} size={14}/><span><b>{s.presentation?.title || s.kind}</b>{s.presentation?.preview && <small>{s.presentation.preview}</small>}</span><Icon name="chevron" size={12}/></button></li>)}</ul>
+      <ul className="omc-sources">{(v.sources || v.entries).map((s, i) => <li key={s.reference || i}><NativeButton type="button" size="sm" variant="ghost" onClick={() => onRead({ reference: s.reference })}>
+        <Icon name={s.kind === 'memory' ? 'memory' : 'context'} size={14}/><span><b>{s.presentation?.title || s.kind}</b>{s.presentation?.preview && <small>{s.presentation.preview}</small>}</span><Icon name="chevron" size={12}/></NativeButton></li>)}</ul>
     </Card>}
     <div className="omc-detail-foot">{v.nextCursor && <Button onClick={() => onRead({ ...v.args, cursor: v.nextCursor })}>继续读取</Button>}
       {v.nextSources && <Button onClick={() => onRead({ reference: v.reference, query: 'sources', cursor: v.nextSources })}>更多来源</Button>}</div>
@@ -196,18 +197,20 @@ function DreamSettings({ onClose, folders: initialFolders, onSaved }) {
   return <Drawer title="自动 Dream 设置" onClose={onClose}>
     <Alert action={!s && <Button onClick={() => setRevision(value => value + 1)}>重试</Button>}>{error}</Alert><Alert tone="info">{dirty ? '' : notice}</Alert>
     {!s ? !error && <Skeleton rows={6}/> : <form className="omc-form" onSubmit={save}>
-      <label className="omc-switch-row"><span><b>启用自动 Dream</b><small>定时检查新增摘要；没有新材料不调用模型。</small></span><input type="checkbox" role="switch" checked={s.enabled} onChange={e => set('enabled', e.target.checked)}/></label>
+      <div className="omc-switch-row"><span className="omc-switch-hint"><b>启用自动 Dream</b><small>定时检查新增摘要；没有新材料不调用模型。</small></span><Switch label="启用自动 Dream" checked={s.enabled} onChange={checked => set('enabled', checked)}/></div>
       <div className="omc-form-grid">
-        <label><span>检查间隔 · 分钟</span><input type="number" min={1} step="any" required value={s.interval} onChange={e => set('interval', e.target.value)}/></label>
-        <label><span>原文整理等待 · 天</span><input type="number" min={0.001} step="any" required value={s.deep} onChange={e => set('deep', e.target.value)}/></label>
-        <label><span>每日 token 上限</span><input type="number" min={0} step={1} required value={s.daily} onChange={e => set('daily', e.target.value)}/></label>
-        <label><span>固定后台提供方</span><select value={s.provider} onChange={e => set('provider', e.target.value)}><option value="">沿用后台模型</option>{directory.map(p => <option key={p.id} value={p.id}>{p.name || p.id}</option>)}</select></label>
-        <label><span>固定后台模型</span><input list="omc-dream-models" value={s.model} placeholder="自动执行需固定提供方与模型" onChange={e => set('model', e.target.value)}/><datalist id="omc-dream-models">{models.map(m => <option key={m.id} value={m.id}/>)}</datalist></label>
+        <label><span>检查间隔 · 分钟</span><Input type="number" min={1} step="any" required value={s.interval} onChange={e => set('interval', e.target.value)}/></label>
+        <label><span>原文整理等待 · 天</span><Input type="number" min={0.001} step="any" required value={s.deep} onChange={e => set('deep', e.target.value)}/></label>
+        <label><span>每日 token 上限</span><Input type="number" min={0} step={1} required value={s.daily} onChange={e => set('daily', e.target.value)}/></label>
+        <label><span>固定后台提供方</span><NativeSelect aria-label="固定后台提供方" value={s.provider} onChange={e => set('provider', e.target.value)}><option value="">沿用后台模型</option>{directory.map(p => <option key={p.id} value={p.id}>{p.name || p.id}</option>)}</NativeSelect></label>
+        <label><span>固定后台模型</span><Input list="omc-dream-models" value={s.model} placeholder="自动执行需固定提供方与模型" onChange={e => set('model', e.target.value)}/><datalist id="omc-dream-models">{models.map(m => <option key={m.id} value={m.id}/>)}</datalist></label>
       </div>
       <fieldset className="omc-folders"><legend>整理的文件夹 <small>不勾选表示全部</small></legend>
-        {folders.filter(f => f?.folder).map(f => <label key={f.folder} title={f.folder}><input type="checkbox" checked={s.folders.includes(f.folder)}
-          onChange={e => set('folders', e.target.checked ? [...s.folders, f.folder] : s.folders.filter(x => x !== f.folder))}/>
-          <span><b>{folderName(f.folder)}</b>{f.exists === false && <Tag tone="red">已删除</Tag>}<small>{f.folder}</small></span><em>{(f.projects || []).length} 个项目</em></label>)}
+        {folders.filter(f => f?.folder).map(f => <div className="omc-folder-row" key={f.folder} title={f.folder}
+          onClick={e => { if (!e.target.closest('label')) set('folders', s.folders.includes(f.folder) ? s.folders.filter(x => x !== f.folder) : [...s.folders, f.folder]); }}>
+          <Checkbox label={folderName(f.folder)} checked={s.folders.includes(f.folder)}
+            onChange={checked => set('folders', checked ? [...s.folders, f.folder] : s.folders.filter(x => x !== f.folder))}/>
+          <span className="omc-folder-detail">{f.exists === false && <Tag tone="red">已删除</Tag>}<small>{f.folder}</small></span><em>{(f.projects || []).length} 个项目</em></div>)}
         {!folders.length && <p className="omc-hint">尚未读取到工作区文件夹。</p>}
       </fieldset>
       <p className="omc-hint">长度上限：会话 1,200、项目 2,400、全局 600 字符；原始档案保留。</p>

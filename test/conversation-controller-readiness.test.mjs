@@ -29,10 +29,10 @@ async function fixture() {
     entries() { return []; }
     subscribe() { return noop; }
     registerFactory(options) { return this.ctx.effect(() => { factories.set(options.name, options); return () => factories.delete(options.name); }); }
-    register(options) {
+    register(options, component) {
       const ctx = this.ctx;
       return ctx.effect(() => {
-        const row = { options, ctx }; entries.add(row);
+        const row = { options, component, ctx }; entries.add(row);
         for (const wait of waits) wait.reconcile();
         return () => { entries.delete(row); };
       });
@@ -72,6 +72,7 @@ async function fixture() {
     UiConversation: uiConversation, InputHub: class {}, ComposerBlockRegistry: class {},
     ComposerSubmissionPolicy: class { busyEnter = store('queue'); dispose() {} },
     createSnapshotStore: store, createConversationStore: () => ({}), resolveActiveView: noop,
+    createElement: (type, props) => ({ type, props }), useSyncExternalStore: (_subscribe, getSnapshot) => getSnapshot(),
     resolveSlotLabel: value => value, NS: 'conversation', zh: {}, en: {},
     CONVERSATION_SETTINGS_NAMESPACE: 'conversation', todoDockEntry: { apply: noop }, queueDockEntry: { apply: noop },
   };
@@ -94,11 +95,14 @@ async function fixture() {
   return { root, owner, entries, factories, waits, resolve, reject, slots, queue: queue.queueDockEntry };
 }
 
-test('production assembly waits for controller readiness before publishing selected-session composer', async () => {
+test('production declares the slot tree first and waits for controller readiness before rendering a Session', async () => {
   const f = await fixture();
-  assert.equal([...f.entries].some(row => row.options.name === 'main'), false);
+  const main = [...f.entries].find(row => row.options.name === 'main');
+  assert(main, 'Native consumers need the complete slot tree before the controller becomes available');
+  assert.equal(main.component({}), null, 'The selected Session must stay unmounted while its controller is loading');
   assert.equal(f.root.get('conversation'), undefined);
   f.resolve(); await f.owner;
+  assert.notEqual(main.component({}), null, 'The ready gate admits the selected Session after controller startup');
   for (const name of ['main', 'main.conversation', 'conversation.session', 'conversation.header',
     'conversation.session.header', 'conversation.composer.bar']) assert([...f.entries].some(row => row.options.name === name), name);
   const composer = [...f.entries].find(row => row.options.name === 'conversation.composer.bar');

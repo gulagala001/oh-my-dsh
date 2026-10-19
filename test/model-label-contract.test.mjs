@@ -17,6 +17,8 @@ function load(pane) {
   runInNewContext(code, { module, exports: module.exports, require: name => {
     if (name === 'react') return hooks;
     if (name === 'react-dom') return { createPortal: node => node };
+    if (name === './native-controls.jsx') return { Button: 'button', Input: 'input' };
+    if (name === './native-icons.jsx') return { Icon: () => null };
     if (name.endsWith('.css')) return { default: '' };
     if (name.includes('model-efforts')) return { effortChoices: () => [] };
     if (name.includes('main-conversation')) return { useMainConversation: () => true };

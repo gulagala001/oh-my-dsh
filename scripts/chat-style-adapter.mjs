@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 const reviewedSource = {
   commits: ['1600d8a1e140dcde43a1a0941940a0480712c011', '687f282e8625c6b8d11ff58211a90524be2e4317'],
-  sha256: '57b60fbc4bd429ee4e7619e68a4f2ddf063f47b6697b9a185c1c671e3ca27f4f',
+  sha256: '5345409ad105881250939dbb478f8cb01f5a14dad94b0aa446b4280b80427f55',
 };
 const before = '.EvIC1a_column:has(>.EvIC1a_older)>[data-slot="conversation.chat.flow"]>';
 const after = '.EvIC1a_column>.EvIC1a_older~[data-slot="conversation.chat.flow"]>';

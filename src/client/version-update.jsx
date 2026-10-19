@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button } from './native-controls.jsx';
 import { usePollingAction } from './use-polling-action.mjs';
 
 async function updateApi(version, signal) {
@@ -23,8 +24,8 @@ export function VersionUpdate({ version, stale }) {
       ? '请使用应用菜单中的“重启应用与 Host”，或完整退出应用后重新打开。'
       : '请按原方式重启 DSH 服务，再刷新页面。'}重启后“当前版本”才会改变。</p>
       : <>
-        {version && <button type="button" className="omd-version-install" disabled={!state?.available || !!error || stale || installing}
-          onClick={() => void act(version)}>{installing ? '更新中…' : state?.phase === 'failed' || requestError ? '重试更新' : '更新'}</button>}
+        {version && <Button type="button" variant="primary" size="sm" disabled={!state?.available || !!error || stale || installing}
+          onClick={() => void act(version)}>{installing ? '更新中…' : state?.phase === 'failed' || requestError ? '重试更新' : '更新'}</Button>}
         <p className="omd-version-update-hint" role={installing ? 'status' : undefined}>{installing ? progress
           : stale ? '请先重新检查更新，确认最新发布信息。' : state?.blockedReason || (version ? `安装 ${version}，重启 DSH 后生效。` : '')}</p>
       </>}

@@ -1,0 +1,131 @@
+/* Shared styling for explicitly selected skins; DSH native uses its own CSS. */
+/* Use public data attributes first. The remaining module selectors belong to
+   the matching-host contract and need real DOM verification in central UI QA. */
+html[data-omd-skin] {
+  --tx-shell-text: var(--dsw-alias-label-primary, CanvasText);
+  --tx-shell-muted: var(--dsw-alias-label-secondary, GrayText);
+  --tx-shell-bg: var(--dsw-alias-bg-base, Canvas);
+  --tx-shell-line: color-mix(in srgb, var(--tx-shell-text) 10%, var(--tx-shell-bg));
+  --tx-shell-hover: color-mix(in srgb, var(--tx-shell-text) 4%, var(--tx-shell-bg));
+  --dsw-specific-sidebar-fill: color-mix(in srgb, var(--tx-shell-text) 2.5%, var(--tx-shell-bg));
+  -webkit-font-smoothing: antialiased;
+}
+/* The shell and central column are paint boundaries, not scrollports. A
+   spanning header/right-pane focus can otherwise scroll the central column
+   sideways, moving the transcript and composer under the sidebar. */
+html[data-omd-skin] :is(.pI_x6G_frame, .pI_x6G_centerCol, [data-omd-surface="frame"], [data-omd-surface="conversation"]) { overflow: clip; }
+html[data-omd-skin] .wSkVaW_root {
+  --dsh-chat-content-width: min(var(--dsh-chat-user-width, 760px), max(160px, calc(var(--dsh-conversation-column-width, 840px) - 64px)));
+  --dsh-composer-card-max-width: calc(var(--dsh-chat-content-width) + 32px);
+  container-type: inline-size;
+  container-name: omd-conversation;
+}
+/* Bottom-only sticky positioning can follow the transcript upward when a
+   disclosure collapses while its scroll offset is retained. Both edges keep
+   the native seat at the scrollport floor, using the host's live seat height. */
+html[data-omd-skin] [data-conversation-content][data-content-phase='active'] > [data-conversation-scroll]:not(:has([data-conversation-composer-overlay])) > [data-composer-seat] {
+  top: calc(100% - var(--dsh-composer-height, 0px));
+}
+html[data-omd-skin] .wSkVaW_header { min-height: 56px; padding: 10px 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border-bottom: 1px solid var(--tx-shell-line); }
+html[data-omd-skin] .wSkVaW_titleRow { flex: 1 1 240px; min-width: 0; }
+html[data-omd-skin] .wSkVaW_headerUtilities { margin-left: 10px; gap: 5px; }
+html[data-omd-skin] .wSkVaW_tabs { order: -1; flex: 0 0 auto; align-items: center; margin: 0; gap: 2px; padding: 2px; border-radius: 8px; background: var(--tx-shell-hover); }
+html[data-omd-skin] .wSkVaW_tab { padding: 5px 10px; border-radius: 6px; font-size: 12px; line-height: 18px; font-weight: 400; }
+html[data-omd-skin] .wSkVaW_tab:after { display: none; }
+html[data-omd-skin] .wSkVaW_tabActive { background: var(--tx-shell-bg); color: var(--tx-shell-text); box-shadow: 0 1px 3px #00000008; }
+/* Flex skins can place tabs before the host's title row. Move the frame's
+   existing macOS chrome clearance to the whole header so every control clears
+   the lights and shell.leading seat. The host reduces it in window fullscreen.
+   These geometry constraints must also override skin padding shorthands. */
+html[data-omd-skin][data-platform='darwin'] [data-sidebar-collapsed] .wSkVaW_header[data-window-drag] {
+  padding-inline-start: var(--dsh-frame-leading-clearance, 0px) !important;
+}
+html[data-omd-skin][data-platform='darwin'] [data-sidebar-collapsed] .wSkVaW_header[data-window-drag] .wSkVaW_titleRow {
+  padding-inline-start: 0 !important;
+}
+html[data-omd-skin] [data-composer-card] {
+  border: 1px solid var(--tx-shell-line);
+  border-radius: 20px;
+  box-shadow: 0 2px 8px #00000004;
+  gap: 8px;
+  padding-top: 12px;
+  background: var(--dsw-specific-input-major, var(--tx-shell-bg));
+}
+html[data-omd-skin] [data-composer-card]:focus-within { border-color: color-mix(in srgb, #3877e8 26%, var(--tx-shell-line)); box-shadow: 0 2px 12px #00000008; }
+html[data-omd-skin] [data-composer-input] { min-height: 42px; padding: 4px 16px 0; font-size: var(--dsh-content-font-size, 15px); line-height: 25px; }
+html[data-omd-skin] [data-composer-placeholder] { left: 16px; font-size: 14px; color: var(--tx-shell-muted); }
+html[data-omd-skin] .uV2eYG_row { gap: 8px; padding: 4px 10px 10px; }
+html[data-omd-skin] :is(.uV2eYG_tools, .uV2eYG_modes, .uV2eYG_trailing) { gap: 7px; }
+html[data-omd-skin] .uV2eYG_add { background: transparent; width: 28px; height: 28px; color: var(--tx-shell-muted); }
+html[data-omd-skin] .uV2eYG_add:hover:not(:disabled) { background: var(--tx-shell-hover); }
+html[data-omd-skin] .uV2eYG_primary { width: 30px; height: 30px; transform: none; }
+html[data-omd-skin] .pXSMma_headline { font-size: 27px; font-weight: 500; letter-spacing: -.6px; gap: 12px; margin-bottom: 20px; }
+html[data-omd-skin] .pXSMma_previewBadge { font-size: 11px; line-height: 18px; font-weight: 400; color: var(--tx-shell-muted); background: var(--tx-shell-hover); border: 0; }
+html[data-omd-skin] .pXSMma_workspace { color: var(--tx-shell-muted); font-size: 12px; }
+html[data-omd-skin] .pXSMma_folder { color: var(--tx-shell-muted); }
+html[data-omd-skin] [data-slot='conversation.hero.brand.mark'] .tx-brand-mark { width: 64px; height: 64px; }
+
+/* Project navigation: compact rows, a quiet create action and a clear selection. */
+html[data-omd-skin] .hHd-Xa_root { border-right: 0; }
+html[data-omd-skin] .hHd-Xa_logoRow { height: 50px; margin-bottom: 6px; padding-bottom: 4px; }
+html[data-omd-skin] .hHd-Xa_newSession { justify-content: flex-start; border: 0; background: transparent; box-shadow: none; padding-left: 9px; font-size: 13px; font-weight: 500; }
+html[data-omd-skin] .hHd-Xa_newSession:hover { background: var(--tx-shell-hover); }
+html[data-omd-skin] .hHd-Xa_collapsed .hHd-Xa_newSession { justify-content: center; padding-left: 0; }
+html[data-omd-skin] .YDXeBa_title { font-size: 13px; }
+html[data-omd-skin] .YDXeBa_projectRow { height: 33px; font-weight: 500; }
+html[data-omd-skin] .YDXeBa_sessionRow { margin-block: 1px; border-radius: 7px; }
+html[data-omd-skin] .YDXeBa_sessionRow .YDXeBa_title { color: var(--dsw-alias-label-secondary, var(--tx-shell-text)); font-size: 13px; }
+html[data-omd-skin] .YDXeBa_sessionRow.YDXeBa_selected { background: color-mix(in srgb, #3877e8 8%, var(--tx-shell-bg)); }
+html[data-omd-skin] .YDXeBa_sessionRow.YDXeBa_selected .YDXeBa_title { color: var(--tx-shell-text); font-weight: 500; }
+html[data-omd-skin] :is(.YDXeBa_time, .YDXeBa_meta) { font-size: 11px; }
+html[data-omd-skin] .YDXeBa_rowActions { gap: 8px; }
+html[data-omd-skin] .bhn1Oq_searchButton { color: var(--tx-shell-muted); }
+html[data-omd-skin] [role=dialog]:not(.tx-cu-share-dialog) { border-radius: 16px; }
+@media (max-width: 760px) {
+  html[data-omd-skin] .wSkVaW_header { padding: 8px 12px; gap: 6px; }
+  html[data-omd-skin] .wSkVaW_titleRow { flex-basis: 200px; }
+  html[data-omd-skin] [data-composer-card] { border-radius: 16px; }
+  html[data-omd-skin] .uV2eYG_row { gap: 5px; padding-inline: 8px; }
+  html[data-omd-skin] :is(.uV2eYG_tools, .uV2eYG_modes, .uV2eYG_trailing) { gap: 4px; }
+}
+@media (max-width: 540px) {
+  html[data-omd-skin] .wSkVaW_titleRow { flex-basis: 100%; }
+  html[data-omd-skin] .wSkVaW_tabs { margin-left: 0; }
+}
+/* Process details read as a disclosure, with the response itself in focus. */
+html[data-omd-skin] .l_V-RG_root { height: 26px; border-bottom: 0; padding-bottom: 0; }
+html[data-omd-skin] .l_V-RG_label { font-size: 12px; color: var(--tx-shell-muted); }
+html[data-omd-skin] [data-disclosure-row] { min-height: 28px; font-size: 12px; }
+/* The process is one operation list, not a paragraph-spaced stack of cards.
+   Keep the host renderers, file actions and result bodies fully intact. */
+html[data-omd-skin] [data-chat-flow-kind=tool-call] { --dsh-chat-flow-gap: 2px; }
+html[data-omd-skin] [data-turn-process-member] { --dsh-chat-flow-gap: 2px; }
+html[data-omd-skin] [data-chat-flow-key]:has(.tx-cu-group, [data-cu-process-context]) { --dsh-chat-flow-gap: 2px; }
+html[data-omd-skin] .tx-cu-group [data-disclosure-row] { height: 26px; min-height: 26px; }
+html[data-omd-skin] .tx-cu-group-toggle[aria-expanded=true] { padding-bottom: 6px; }
+/* Streaming titles use the remaining space; outcome badges must never wrap
+   and change the process height as the title grows or switches activities. */
+html[data-omd-skin] .tx-cu-group-toggle { width: 100%; min-width: 0; }
+html[data-omd-skin] .tx-cu-group-toggle > :nth-child(2) { flex: 1; min-width: 0; }
+html[data-omd-skin] .tx-cu-group-toggle > :is([data-process-count], [data-process-failures], [data-process-stopped]) { flex: none; white-space: nowrap; }
+html[data-omd-skin] [data-chat-flow-kind=assistant-step]:has(.tx-cu-group) { --dsh-chat-flow-gap: 2px; }
+html[data-omd-skin] [data-turn-process-member][data-chat-flow-kind=context] [data-disclosure-row],
+html[data-omd-skin] [data-variant=think] [data-disclosure-row] { height: 26px; min-height: 26px; }
+/* The host fixes a collapsed Think container at 24px. Match its row so the
+   next operation never overlaps its 26px hit area. Expanded text stays auto. */
+html[data-omd-skin] .lcKema_root:not([data-expanded]) { height: 26px; }
+html[data-omd-skin] [data-chat-flow-kind=tool-call] :is(.o3BgMG_row, .CY-8Ka_root) { height: 26px; min-height: 26px; }
+html[data-omd-skin] [data-chat-flow-kind=tool-call] :is(.o3BgMG_title, .CY-8Ka_title) { font-size: var(--dsh-content-font-size-secondary, 13px); font-weight: 400; }
+html[data-omd-skin] [data-chat-flow-kind=tool-call] :is(.o3BgMG_sep, .CY-8Ka_sep) { background: transparent; width: 0; margin-inline: 3px; }
+html[data-omd-skin] [data-chat-flow-kind=tool-call] .o3BgMG_fileLink { color: var(--dsw-alias-label-tertiary, var(--tx-shell-muted)); }
+html[data-omd-skin] [data-chat-flow-kind=tool-call] .o3BgMG_fileLink:hover { color: var(--tx-shell-text); }
+html[data-omd-skin] [data-chat-flow-kind=context] [data-disclosure-row][aria-expanded=false] :is([data-context-source], .XrJvXW_sep) { display: none; }
+html[data-omd-skin] .hWmORq_actions { margin-top: 12px; }
+html[data-omd-skin] .xzv4MW_actions { gap: 5px; }
+html[data-omd-skin] :is(.xzv4MW_timeStart, .xzv4MW_timeEnd) { font-size: 11px; }
+html[data-omd-skin] .Q51KRG_trigger { font-size: 11px; gap: 4px; padding-inline: 6px; }
+html[data-omd-skin] .Sixlwa_bubble { border-radius: 18px; padding: 11px 16px; }
+
+/* Prose separates operation segments; only rows inside a list stay tightly spaced. */
+html[data-omd-skin] [data-chat-flow-kind=assistant-step][data-chat-group-part=response][data-turn-process-member] { --dsh-chat-flow-gap: 16px; }
+html[data-omd-skin] [data-chat-flow-key]:has([data-cu-group]) { --dsh-chat-flow-gap: 8px; }
