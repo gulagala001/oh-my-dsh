@@ -65,6 +65,7 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
     entry.presentation = createPresentationHost({ runtime: entry.runtime, activity: entry.activity, browserHost: entry.browserHost });
     entry.request = async (endpoint, args = {}, { signal, attachments, sessionKey, modelProjection = false } = {}) => {
       signal?.throwIfAborted();
+      if (endpoint.startsWith('recovery/')) throw new Error('Recovery confirmation is available only in browser connection settings');
       if (entry.retiring && !['stop', 'browser/poll', 'browser/result', 'browser/disconnect'].includes(endpoint)) throw new Error('OpenCU is releasing the last lease; retry after cleanup');
       if (endpoint === 'settings/read') return { ok: true, settings: await entry.preferences.read() };
       if (endpoint === 'settings/write') return { ok: true, settings: await entry.preferences.write(args.key, args.value) };
@@ -135,6 +136,7 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
           try {
             const { method, args = {} } = await request.json();
             if (typeof method !== 'string' || !args || typeof args !== 'object' || Array.isArray(args)) return Response.json(failure(new Error('Invalid OpenCU request')), { status: 400 });
+            if (method.startsWith('recovery/')) return Response.json(await entry.runtime.uiRecovery(method.slice(9), args));
             if (method === 'config') return Response.json({ ok: true, config: publicConfig(entry.config()) });
             return Response.json(await entry.request(method, args, { signal: request.signal, attachments: connectionCtx.attachments }));
           } catch (error) { return Response.json(failure(error)); }

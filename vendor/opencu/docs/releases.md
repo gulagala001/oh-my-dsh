@@ -6,32 +6,28 @@
 
 已装 OMD，无需再装 OpenCU；请按 [OMD 中文指南](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md)／[OMD English guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install_EN.md) 更新。OMD includes OpenCU; no separate installation is needed.
 
-## 2.0.3
+## 2.0.4
 
 ## 中文
 
-- 将电脑 JavaScript 执行放入独立 worker，隔离 CPU 密集或同步代码，保留会话绑定与可恢复的停止边界。
-- 修复 Windows、Linux X11 和 Wayland 持键／持鼠操作对已按住输入的处理，保持按下、移动和释放语义一致。
-- 修复断线后的输入释放与持久恢复，隔离取消后迟到的观察结果。
-- 改进 Electron、浏览器扩展及共享文档服务的释放顺序；保存失败保留编辑状态并允许重试，未确认释放时继续阻断控制。
-- rc.1／rc.2 使用各自固定 SDK、前端与根依赖锁，保留 macOS Helper 签名及扩展身份。
+- 为扩展断线后的输入释放增加身份与凭据绑定的回执；未知释放状态继续阻断操作。
+- 支持人工确认旧浏览器连接恢复，以及冷启动后连接新标签继续工作。
+- 保留可终止的 JavaScript worker、持键释放及共享文档恢复修复。
 
 ## English
 
-- Runs computer JavaScript in a separate worker, isolating CPU-heavy or synchronous code while preserving session bindings and recoverable stop boundaries.
-- Fixes held-key and held-button handling on Windows, Linux X11 and Wayland so press, move and release operations remain consistent.
-- Repairs input release and durable recovery after disconnect, and isolates observation results that arrive after cancellation.
-- Improves release ordering across Electron, the browser extension and shared document services. Failed saves retain the editing state and allow retry; unconfirmed release continues to block control.
-- Builds rc.1 and rc.2 with their own fixed SDK, frontend and root dependency locks, preserving the macOS Helper signature and extension identity.
+- Binds extension disconnect release receipts to connection identity and credentials; unknown release continues to block input.
+- Restores old browser connections after human confirmation and resumes through a new tab after a cold start.
+- Preserves cancellable JavaScript workers, held-input release and shared-document recovery fixes.
 
-OMD 用户随 OMD 0.18.3 更新内置 OpenCU，无需重复安装。 / OMD users receive bundled OpenCU through OMD 0.18.3; no separate installation is needed.
+OMD 用户随 OMD 0.18.4 更新内置 OpenCU，无需重复安装。 / OMD users receive bundled OpenCU through OMD 0.18.4.
 
 ### 当前固定下载 / Current fixed downloads
 
 | DSH | OpenCU | 固定包 / Fixed package | 发行页 / Release |
 | --- | --- | --- | --- |
-| `0.2.1-rc.1` | `2.0.3-dsh.0.2.1-rc.1` | [opencu-2.0.3-dsh.0.2.1-rc.1.tgz](https://github.com/gulagala001/opencu/releases/download/v2.0.3-dsh.0.2.1-rc.1/opencu-2.0.3-dsh.0.2.1-rc.1.tgz) | [0.2.1-rc.1](https://github.com/gulagala001/opencu/releases/tag/v2.0.3-dsh.0.2.1-rc.1) |
-| `0.2.1-rc.2` | `2.0.3-dsh.0.2.1-rc.2` | [opencu-2.0.3-dsh.0.2.1-rc.2.tgz](https://github.com/gulagala001/opencu/releases/download/v2.0.3-dsh.0.2.1-rc.2/opencu-2.0.3-dsh.0.2.1-rc.2.tgz) | [0.2.1-rc.2](https://github.com/gulagala001/opencu/releases/tag/v2.0.3-dsh.0.2.1-rc.2) |
+| `0.2.1-rc.1` | `2.0.4-dsh.0.2.1-rc.1` | [opencu-2.0.4-dsh.0.2.1-rc.1.tgz](https://github.com/gulagala001/opencu/releases/download/v2.0.4-dsh.0.2.1-rc.1/opencu-2.0.4-dsh.0.2.1-rc.1.tgz) | [0.2.1-rc.1](https://github.com/gulagala001/opencu/releases/tag/v2.0.4-dsh.0.2.1-rc.1) |
+| `0.2.1-rc.2` | `2.0.4-dsh.0.2.1-rc.2` | [opencu-2.0.4-dsh.0.2.1-rc.2.tgz](https://github.com/gulagala001/opencu/releases/download/v2.0.4-dsh.0.2.1-rc.2/opencu-2.0.4-dsh.0.2.1-rc.2.tgz) | [0.2.1-rc.2](https://github.com/gulagala001/opencu/releases/tag/v2.0.4-dsh.0.2.1-rc.2) |
 
 每份固定发行同时提供 `host-adapters.zip`、`metadata.json` 和 `SHA256SUMS`。宿主适配源码不是完整桌面安装器；完整界面仍需匹配的 Host／Client／preload。 / Each fixed Release also includes `host-adapters.zip`, `metadata.json` and `SHA256SUMS`. Host adapters are source materials, not a complete desktop installer; the full UI still needs matching Host, Client and preload builds.
 

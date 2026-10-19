@@ -1,4 +1,4 @@
-import { randomUUID, timingSafeEqual } from 'node:crypto';
+import { randomUUID, timingSafeEqual, createHash } from 'node:crypto';
 import { mkdir, readFile, appendFile, writeFile, stat, rename, open, unlink } from 'node:fs/promises';
 import { join, resolve, isAbsolute } from 'node:path';
 import { ExtensionError, EXTENSION_PATH, PROTOCOL_VERSION, parseTarget, targetId, normalizeAction } from './protocol.mjs';
@@ -14,6 +14,8 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
   const dir = resolve(dataDir), eventsFile = join(dir, 'extension-downloads.jsonl');
   const sessions = new Map(), pending = new Map(), downloads = new Map(), eventIds = new Set();
   const retired = new Set(), retirementsFile = join(dir, 'extension-retirements.json');
+  const releaseLeases = new Map(), releaseLeasesFile = join(dir, 'extension-release-leases.json');
+  const digest = value => createHash('sha256').update(value).digest('hex');
   const connectionKey = ({ instanceId, browserInstanceId, epoch }) => JSON.stringify([instanceId, browserInstanceId, epoch]);
   let retirements = Promise.resolve();
   const deliveryStore = createDeliveryStore(dir), importing = new Map(), importErrors = new Map();
@@ -33,6 +35,8 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
     await mkdir(dir, { recursive: true, mode: 0o700 });
     try { for (const key of JSON.parse(await readFile(retirementsFile, 'utf8'))) retired.add(key); }
     catch (error) { if (error.code !== 'ENOENT') throw error; }
+    try { for (const lease of JSON.parse(await readFile(releaseLeasesFile, 'utf8'))) releaseLeases.set(lease.key, lease); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
     let text = '';
     try { text = await readFile(eventsFile, 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
     needsSeparator = !!text && !text.endsWith('\n');
@@ -44,20 +48,54 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
     for (const download of downloads.values()) retainDownload(download);
   })();
 
-  async function retire(session) {
+  async function persistPrivate(path, value) {
+    const temporary = path + '.' + randomUUID() + '.tmp';
+    try {
+      const file = await open(temporary, 'wx', 0o600);
+      try { await file.writeFile(JSON.stringify(value) + '\n'); await file.sync(); } finally { await file.close(); }
+      await rename(temporary, path);
+    } finally { await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
+  }
+  function retirementWork(callback) {
+    const work = retirements.catch(() => {}).then(callback);
+    // Callers retain the failure; a rejected receipt must not poison shutdown.
+    retirements = work.catch(() => {});
+    return work;
+  }
+  async function retireNow(session) {
     const key = connectionKey(session);
-    const work = retirements.catch(() => {}).then(async () => {
-      if (retired.has(key)) return;
-      const next = new Set([...retired, key]), temporary = retirementsFile + '.' + randomUUID() + '.tmp';
-      try {
-        const file = await open(temporary, 'wx', 0o600);
-        try { await file.writeFile(JSON.stringify([...next]) + '\n'); await file.sync(); } finally { await file.close(); }
-        await rename(temporary, retirementsFile);
-      } finally { await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
-      retired.add(key);
+    if (retired.has(key)) return;
+    await persistPrivate(retirementsFile, [...retired, key]);
+    retired.add(key);
+  }
+  function retire(session) { return retirementWork(() => retireNow(session)); }
+  async function acceptConnection(session, value, authentication) {
+    return retirementWork(async () => {
+      if (closed || closing) throw failure('CLOSING', 'Extension backend is shutting down.');
+      const receipts = value.releaseReceipts ?? [];
+      if (!Array.isArray(receipts) || receipts.length > 500) throw failure('INVALID_RELEASE_RECEIPT', 'At most 500 release receipts are accepted.');
+      // A fresh credential or another extension installation cannot certify an old owner.
+      for (const receipt of receipts) {
+        if (!receipt || typeof receipt !== 'object' || receipt.instanceId !== session.instanceId || typeof receipt.ticket !== 'string' || receipt.ticket.length > 256) throw failure('INVALID_RELEASE_RECEIPT', 'Release receipt ownership is invalid.');
+        const lease = releaseLeases.get(connectionKey(receipt));
+        if (!lease || lease.origin !== session.origin || lease.credentialDigest !== authentication.credentialDigest || lease.ticketDigest !== digest(receipt.ticket)) throw failure('INVALID_RELEASE_RECEIPT', 'Release receipt does not match its original connection and credential.');
+      }
+      const key = connectionKey(session);
+      if (retired.has(key) || releaseLeases.has(key)) throw failure('STALE_CONNECTION', 'Use a fresh connection epoch.');
+      const acknowledgedReleases = [];
+      for (const receipt of receipts) {
+        await retireNow(receipt);
+        for (const existing of sessions.values()) if (connectionKey(existing) === connectionKey(receipt)) expire(existing, 'Browser confirmed release of this connection.');
+        acknowledgedReleases.push(connectionKey(receipt));
+      }
+      const releaseTicket = randomUUID() + randomUUID();
+      const lease = { key, origin: session.origin, credentialDigest: authentication.credentialDigest, ticketDigest: digest(releaseTicket) };
+      await persistPrivate(releaseLeasesFile, [...releaseLeases.values(), lease]);
+      releaseLeases.set(key, lease);
+      for (const existing of sessions.values()) if (existing.instanceId === session.instanceId) expire(existing, 'Extension reconnected.');
+      sessions.set(session.sessionId, session); pairing?.connected(session.instanceId);
+      return { releaseTicket, acknowledgedReleases: [...new Set(acknowledgedReleases)] };
     });
-    retirements = work;
-    await work;
   }
 
   function expire(session, reason) {
@@ -84,10 +122,10 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
     const origin = checkOrigin(req);
     const supplied = /^Bearer (\S+)$/.exec(req.headers.authorization || '')?.[1] || '';
     const pair = pairing?.authenticate(origin, value.instanceId, supplied);
-    if (pair) return {origin, pair};
+    if (pair) return {origin, pair, credentialDigest: digest(supplied)};
     const a = Buffer.from(supplied), b = Buffer.from(token);
     if (a.length !== b.length || !timingSafeEqual(a, b)) throw failure('UNAUTHORIZED', 'Invalid or revoked OpenCU pairing credential.');
-    return {origin};
+    return {origin, credentialDigest: digest(supplied)};
   }
   function send(res, status, value, origin) {
     if (res.destroyed || res.writableEnded) return;
@@ -205,15 +243,14 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
         if (value.protocol !== PROTOCOL_VERSION || value.authorized !== true || value.debuggerConsent !== true) throw failure('CONSENT_REQUIRED', 'User connection and debugger consent are required.');
         for (const key of ['instanceId', 'browserInstanceId', 'epoch']) if (!/^[a-zA-Z0-9_-]{8,100}$/.test(value[key] || '')) throw failure('INVALID_IDENTITY', `Invalid ${key}.`);
         if (retired.has(connectionKey(value))) throw failure('STALE_CONNECTION', 'This connection epoch has retired; reconnect with a fresh epoch.');
-        for (const existing of sessions.values()) if (existing.instanceId === value.instanceId) expire(existing, 'Extension reconnected.');
         const session = { sessionId: randomUUID(), instanceId: value.instanceId, browserInstanceId: value.browserInstanceId,
-          epoch: value.epoch, origin, durableDownloadConsent: value.durableDownloadConsent === true && (!authentication.pair || authentication.pair.durableDownloadConsent),
+          epoch: value.epoch, origin, credentialDigest: authentication.credentialDigest, durableDownloadConsent: value.durableDownloadConsent === true && (!authentication.pair || authentication.pair.durableDownloadConsent),
           label: String(value.label || 'Chrome / Edge').slice(0, 100), queue: [], lastSeen: Date.now() };
-        sessions.set(session.sessionId, session); pairing?.connected(value.instanceId);
-        send(res, 200, { protocol: PROTOCOL_VERSION, sessionId: session.sessionId, pollIntervalMs: 500 }, origin); return;
+        const releases = await acceptConnection(session, value, authentication);
+        send(res, 200, { protocol: PROTOCOL_VERSION, sessionId: session.sessionId, pollIntervalMs: 500, ...releases }, origin); return;
       }
       const session = sessions.get(value.sessionId);
-      if (!session || session.origin !== origin || session.epoch !== value.epoch || authentication.pair && session.instanceId !== value.instanceId) throw failure('STALE_CONNECTION', 'The connection epoch expired; reconnect and observe the browser again.');
+      if (!session || session.origin !== origin || session.credentialDigest !== authentication.credentialDigest || session.epoch !== value.epoch || authentication.pair && session.instanceId !== value.instanceId) throw failure('STALE_CONNECTION', 'The connection epoch expired; reconnect and observe the browser again.');
       session.lastSeen = Date.now();
       if (routeName === 'poll') {
         const ack = await persistEvents(session, value.events);
@@ -258,6 +295,19 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
   const backend = {
     kind: 'extension', name: 'Chrome / Edge extension', path: EXTENSION_PATH, handleRequest,
     routeIntegrationRequired: !!server && !mounted,
+    // Private integration only: the caller must authenticate an explicit human
+    // browser-closure confirmation. This method is never a protocol route.
+    async confirmClosedTargets(targets) {
+      await ready;
+      if (!Array.isArray(targets) || !targets.length || targets.length > 500) throw failure('INVALID_ARGUMENT', 'Choose specific unresolved browser targets.');
+      const identities = targets.map(target => ({ identity: parseTarget(target), id: targetId(parseTarget(target)) }));
+      return retirementWork(async () => {
+        if (closed || closing) throw failure('CLOSING', 'Extension backend is shutting down.');
+        for (const {identity} of identities) if ([...sessions.values()].some(session => session.instanceId === identity.instanceId && session.browserInstanceId === identity.browserInstanceId)) throw failure('BROWSER_STILL_CONNECTED', 'This browser instance is connected; disconnect and release it normally.');
+        for (const {identity} of identities) await retireNow(identity);
+        return { released: true, retiredTargetIds: [...new Set(identities.map(value => value.id))], confirmation: 'human-confirmed-browser-closed' };
+      });
+    },
     connections() {
       return [...sessions.values()].map(({ instanceId, browserInstanceId, epoch, label, lastSeen, origin }) => ({
         instanceId, browserInstanceId, epoch, label, lastSeen, extensionId: new URL(origin).hostname,

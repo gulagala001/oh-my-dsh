@@ -653,6 +653,21 @@ function cleanupFailure(errors) {
   if (errors.length === 1) throw errors[0];
   if (errors.length) fail('DISCONNECT_FAILED', errors.map(error => error.message).join('; '), { errors: errors.map(errorJSON) });
 }
+const receiptKey = owner => JSON.stringify([owner.instanceId, owner.browserInstanceId, owner.epoch]);
+async function receiptScope(c) {
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${c.hostId || c.endpoint}|${c.token}`));
+  return [...new Uint8Array(bytes)].map(n => n.toString(16).padStart(2, '0')).join('');
+}
+async function rememberReleased(owner) {
+  if (!owner?.releaseTicket) return;
+  const saved = await chrome.storage.local.get(['releaseReceipts', 'releaseOwner']);
+  const receipts = saved.releaseReceipts || [];
+  const receipt = { instanceId: owner.instanceId, browserInstanceId: owner.browserInstanceId, epoch: owner.epoch,
+    ticket: owner.releaseTicket, scope: owner.receiptScope };
+  if (!receipts.some(item => item.scope === receipt.scope && receiptKey(item) === receiptKey(receipt))) receipts.push(receipt);
+  await chrome.storage.local.set({ releaseReceipts: receipts });
+  if (saved.releaseOwner && receiptKey(saved.releaseOwner) === receiptKey(owner)) await chrome.storage.local.remove('releaseOwner');
+}
 async function disconnect(reason = 'User disconnected', cause, temporary = false) {
   const c = connection, errors = [];
   if (!temporary) { try { await pairing.pause(c?.hostId); } catch (error) { errors.push(error); } }
@@ -663,7 +678,7 @@ async function disconnect(reason = 'User disconnected', cause, temporary = false
   try { await chrome.action.setBadgeText({ text: '' }); } catch (error) { errors.push(error); }
   await commandChain.catch(() => {});
   let released = false;
-  try { await releaseAll(); released = true; } catch (error) { status.releaseError = errorJSON(error); errors.push(error); }
+  try { await releaseAll(); await rememberReleased(c); released = true; } catch (error) { status.releaseError = errorJSON(error); errors.push(error); }
   if (c) {
     try { const { downloadEvents = [] } = await chrome.storage.local.get('downloadEvents'); await api('disconnect', { events: downloadEvents.slice(0, 500), released }, c); }
     catch (error) { if (temporary) status.transportError = errorJSON(error); else errors.push(error); }
@@ -710,7 +725,7 @@ async function loop(c) {
               try { await pairing.pause(c.hostId); } catch (error) { errors.push(error); }
               try { await chrome.storage.session.remove('authorization'); } catch (error) { errors.push(error); }
               let released;
-              try { released = await releaseAll(); } catch (error) { errors.push(error); }
+              try { released = await releaseAll(); await rememberReleased(c); } catch (error) { errors.push(error); }
               cleanupFailure(errors);
               result = { ok: true, result: released };
             } else result = { ok: true, result: await command(message, token) };
@@ -749,15 +764,24 @@ async function connect(input, restoring = false) {
   const epoch = controlEpoch;
   try {
     await releaseAll();
+    await rememberReleased((await chrome.storage.local.get('releaseOwner')).releaseOwner);
     const local = await chrome.storage.local.get('instanceId'), session = await chrome.storage.session.get('browserInstanceId');
     const instanceId = local.instanceId || crypto.randomUUID(), browserInstanceId = session.browserInstanceId || crypto.randomUUID();
     await chrome.storage.local.set({ instanceId, port: Number(input.port) }); await chrome.storage.session.set({ browserInstanceId });
     const c = { endpoint: endpoint(input.port), token: input.token, hostId: input.hostId, instanceId, browserInstanceId, epoch: crypto.randomUUID(),
       durableDownloadConsent: input.durableDownloadConsent === true };
-    const result = await api('connect', { protocol: 1, authorized: true, debuggerConsent: true, durableDownloadConsent: c.durableDownloadConsent, instanceId, browserInstanceId, epoch: c.epoch,
+    c.receiptScope = await receiptScope(c);
+    const pendingReceipts = ((await chrome.storage.local.get('releaseReceipts')).releaseReceipts || []).filter(item => item.scope === c.receiptScope && item.instanceId === c.instanceId);
+    const result = await api('connect', { releaseReceipts: pendingReceipts.map(({scope, ...receipt}) => receipt), protocol: 1, authorized: true, debuggerConsent: true, durableDownloadConsent: c.durableDownloadConsent, instanceId, browserInstanceId, epoch: c.epoch,
       label: /Edg\//.test(navigator.userAgent) ? 'Microsoft Edge' : 'Google Chrome' }, c);
-    c.sessionId = result.sessionId; connection = c;
+    c.sessionId = result.sessionId; c.releaseTicket = result.releaseTicket; connection = c;
     try {
+    if (c.releaseTicket) {
+      const savedReceipts = (await chrome.storage.local.get('releaseReceipts')).releaseReceipts || [];
+      const acknowledged = new Set(result.acknowledgedReleases || []);
+      await chrome.storage.local.set({ releaseOwner: { instanceId, browserInstanceId, epoch: c.epoch, releaseTicket: c.releaseTicket, receiptScope: c.receiptScope },
+        releaseReceipts: savedReceipts.filter(item => item.scope !== c.receiptScope || !acknowledged.has(receiptKey(item))) });
+    }
       if (epoch !== controlEpoch) fail('CONTROL_STOPPED', 'Connection was cancelled.');
       await chrome.storage.session.set({ authorization: { port: Number(input.port), token: input.token, ...(input.hostId ? {hostId: input.hostId} : {}), consent: true, durableDownloadConsent: c.durableDownloadConsent } });
       await chrome.action.setBadgeBackgroundColor({ color: '#2477ff' }); await chrome.action.setBadgeText({ text: 'ON' });
@@ -798,6 +822,7 @@ async function restore() {
     catch (error) { status.releaseError = errorJSON(error); await chrome.storage.session.remove('authorization'); return; }
   }
   await chrome.storage.session.set({ attachedTabs: [], heldInputs: [] });
+  await rememberReleased((await chrome.storage.local.get('releaseOwner')).releaseOwner);
   if (status.releaseError === releaseError) delete status.releaseError;
   if (saved.authorization && !saved.authorization.hostId) {
     try { await connect(saved.authorization, true); }

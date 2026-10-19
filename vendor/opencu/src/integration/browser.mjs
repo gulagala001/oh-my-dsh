@@ -102,6 +102,11 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
   }
   const composite = {
     kind: 'browser',
+    async confirmClosedTargets(targets) {
+      alive();
+      if (!extension?.confirmClosedTargets) fail('UNSUPPORTED_OPERATION', 'Extension recovery is unavailable');
+      return extension.confirmClosedTargets(targets.map(target => unwrap(target, 'extension')));
+    },
     async listBrowsers() {
       alive();
       return [...(await browser?.listBrowsers?.() ?? []), ...(extension?.connections?.() ?? []).map(item =>

@@ -2,6 +2,28 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.2.omd.0.18.4",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "恢复完整 Ultra 质量要求并修复电脑操作恢复",
+      "notes": [
+        "三种Ultra模式完整共享原Workflow的投入、质量方法和代理交付要求，不固定人数与流程。",
+        "修复搜索执行权限与Todo／验证工具参数投影。",
+        "内置OpenCU2.0.4，补齐断线释放回执与旧连接恢复。"
+      ]
+    },
+    {
+      "version": "0.2.1-rc.1.omd.0.18.4",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "恢复完整 Ultra 质量要求并修复电脑操作恢复",
+      "notes": [
+        "三种Ultra模式完整共享原Workflow的投入、质量方法和代理交付要求，不固定人数与流程。",
+        "修复搜索执行权限与Todo／验证工具参数投影。",
+        "内置OpenCU2.0.4，补齐断线释放回执与旧连接恢复。"
+      ]
+    },
+    {
       "version": "0.2.1-rc.2.omd.0.18.3",
       "severity": "normal",
       "unpublished": false,

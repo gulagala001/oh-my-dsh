@@ -1,6 +1,6 @@
 {
   "name": "opencu",
-  "version": "2.0.3-dsh.0.2.1-rc.2",
+  "version": "2.0.4-dsh.0.2.1-rc.2",
   "description": "Computer-use plugin with original REA browser, annotation and monitoring components for DSH",
   "type": "module",
   "engines": {
@@ -57,6 +57,15 @@
     "DEVELOPMENT.md",
     "docs/"
   ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:client": "node scripts/build-client.mjs",
+    "build:native": "node scripts/build-native.mjs",
+    "build:targets": "node scripts/build-targets.mjs",
+    "pack": "node scripts/pack.mjs",
+    "test": "node --test test/core.controller.test.mjs",
+    "prepack": "node scripts/check-extension-distribution.mjs && node scripts/check-public-files.mjs"
+  },
   "dependencies": {
     "playwright": "1.63.0",
     "sharp": "0.35.5"
@@ -86,13 +95,5 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gulagala001/opencu.git"
-  },
-  "scripts": {
-    "build": "node scripts/build.mjs",
-    "build:client": "node scripts/build-client.mjs",
-    "build:native": "node scripts/build-native.mjs",
-    "build:targets": "node scripts/build-targets.mjs",
-    "pack": "node scripts/pack.mjs",
-    "test": "node --test test/core.controller.test.mjs"
   }
 }

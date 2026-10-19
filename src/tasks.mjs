@@ -8,11 +8,11 @@ import { currentDirectory } from './working-directory.mjs';
 const TASK_ENTRY_SCHEMA = { type: 'object', properties: {
   id: { type: 'string', description: 'Required for edit: the existing task ID. Omit for excerpt/add.' },
   title: { type: 'string', description: 'Required for excerpt/add. For edit, omit to preserve the existing title.' },
-  anchor: { type: ['object', 'null'], description: 'Required for every excerpt/add entry: both quotes must lie inside the selected excerpt. For a title-only edit, omit or pass null.', properties: {
+  anchor: { oneOf: [{ type: 'object', properties: {
     excerpt: { type: 'string', description: 'Existing excerpt ID for add/edit when needed to disambiguate.' },
     from: { type: 'string', description: 'Opening words copied from inside the excerpt.' },
     to: { type: 'string', description: 'Closing words copied from inside the same excerpt.' },
-  }, required: ['from', 'to'] },
+  }, required: ['from', 'to'] }, { type: 'null' }], description: 'Required for every excerpt/add entry: both quotes must lie inside the selected excerpt. For a title-only edit, omit or pass null.' },
 } };
 const VERIFICATION_LINK_SCHEMA = { type: 'object', required: ['task', 'kind'], properties: {
   task: { type: 'string', description: 'Existing task ID returned by todo_write, for example T1. Each link belongs to exactly one task.' },
@@ -25,44 +25,59 @@ const VERIFICATION_LINK_SCHEMA = { type: 'object', required: ['task', 'kind'], p
 
 // Original task_map and todo wording, merged as recorded in PROMPT_CHANGES.md.
 export const TASK_DESCRIPTION = promptText('tools/todo-write.md');
-export const TASK_PARAMETERS = {
-  type: 'object', required: ['op'], properties: {
-    op: {"type":"string","enum":["excerpt","add","edit","remove","check","view","transcript","pause_turn"],"description":"Operation kind"},
-    reason: { type: 'string', description: 'Required for pause_turn: the concrete blocker or user stop request, and what is needed to continue. Tasks and evidence remain unchanged.' },
-    from: {"type":"string","description":"Required for excerpt: opening words of the block, verbatim, unique within its message"},
-    to: {"type":"string","description":"Required for excerpt: closing words of the block, verbatim, unique within its message"},
-    msg: {"type":"integer","description":"Only for excerpt when the quote appears in more than one user message: which message, using the [n] numbering from op:transcript"},
-    tasks: {"type":"array","items":TASK_ENTRY_SCHEMA,"description":"Required for excerpt/add/edit: each entry is {\"id\": edit only — the task to change, \"title\": one line stating what the task requires, \"anchor\": {\"excerpt\": excerpt id — only needed when the quote appears in more than one excerpt, \"from\": opening words of the sub-range, verbatim, \"to\": closing words, verbatim}}."},
-    ids: {"type":"array","items":{"type":"string"},"description":"Required for remove: ids of the tasks to delete"},
-    updates: {"type":"array","description":"Required for check: each entry is {\"id\": task id, \"done\": true or false}","items":{"type":"object","properties":{"id":{"type":"string"},"done":{"type":"boolean"}},"required":["id","done"],"additionalProperties":false}},
-  },
-  // Creation needs an anchored title; editing must keep supporting omitted
-  // titles/anchors. Make those requirements conditional on the actual op.
-  oneOf: [
-    { properties: { op: { const: 'excerpt' }, tasks: { items: { required: ['title', 'anchor'], properties: { anchor: { type: 'object' } } } } }, required: ['from', 'to', 'tasks'] },
-    { properties: { op: { const: 'add' }, tasks: { items: { required: ['title', 'anchor'], properties: { anchor: { type: 'object' } } } } }, required: ['tasks'] },
-    { properties: { op: { const: 'edit' }, tasks: { items: { required: ['id'] } } }, required: ['tasks'] },
-    { properties: { op: { const: 'remove' } }, required: ['ids'] },
-    { properties: { op: { const: 'check' } }, required: ['updates'] },
-    { properties: { op: { const: 'pause_turn' } }, required: ['reason'] },
-    { properties: { op: { enum: ['view', 'transcript'] } } },
-  ],
+const TASK_PROPERTIES = {
+  op: {"type":"string","enum":["excerpt","add","edit","remove","check","view","transcript","pause_turn"],"description":"Operation kind"},
+  reason: { type: 'string', description: 'Required for pause_turn: the concrete blocker or user stop request, and what is needed to continue. Tasks and evidence remain unchanged.' },
+  from: {"type":"string","description":"Required for excerpt: opening words of the block, verbatim, unique within its message"},
+  to: {"type":"string","description":"Required for excerpt: closing words of the block, verbatim, unique within its message"},
+  msg: {"type":"integer","description":"Only for excerpt when the quote appears in more than one user message: which message, using the [n] numbering from op:transcript"},
+  tasks: {"type":"array","items":TASK_ENTRY_SCHEMA,"description":"Required for excerpt/add/edit: each entry is {\"id\": edit only — the task to change, \"title\": one line stating what the task requires, \"anchor\": {\"excerpt\": excerpt id — only needed when the quote appears in more than one excerpt, \"from\": opening words of the sub-range, verbatim, \"to\": closing words, verbatim}}."},
+  ids: {"type":"array","items":{"type":"string"},"description":"Required for remove: ids of the tasks to delete"},
+  updates: {"type":"array","description":"Required for check: each entry is {\"id\": task id, \"done\": true or false}","items":{"type":"object","properties":{"id":{"type":"string"},"done":{"type":"boolean"}},"required":["id","done"],"additionalProperties":false}},
 };
 
+// SDK projection accepts complete oneOf arms, not constraints layered over
+// sibling properties. Keep every arm self-contained so validation and SDK
+// projection share the operation-specific fields and requiredness.
+function operationParameters(properties, variants) {
+  return { oneOf: variants.map(({ op, required = [], properties: overrides = {} }) => ({
+    type: 'object', properties: { ...properties, ...overrides,
+      op: { ...properties.op, enum: Array.isArray(op) ? op : [op] },
+    }, required: ['op', ...required],
+  })) };
+}
+
+function taskEntries(required, anchored = false) {
+  return { ...TASK_PROPERTIES.tasks, items: { ...TASK_ENTRY_SCHEMA, required,
+    properties: { ...TASK_ENTRY_SCHEMA.properties,
+      ...(anchored ? { anchor: { ...TASK_ENTRY_SCHEMA.properties.anchor.oneOf[0],
+        description: TASK_ENTRY_SCHEMA.properties.anchor.description } } : {}),
+    },
+  } };
+}
+
+export const TASK_PARAMETERS = operationParameters(TASK_PROPERTIES, [
+  { op: 'excerpt', required: ['from', 'to', 'tasks'], properties: { tasks: taskEntries(['title', 'anchor'], true) } },
+  { op: 'add', required: ['tasks'], properties: { tasks: taskEntries(['title', 'anchor'], true) } },
+  { op: 'edit', required: ['tasks'], properties: { tasks: taskEntries(['id']) } },
+  { op: 'remove', required: ['ids'] },
+  { op: 'check', required: ['updates'] },
+  { op: 'pause_turn', required: ['reason'] },
+  { op: ['view', 'transcript'] },
+]);
+
 export const VERIFICATION_DESCRIPTION = promptText('tools/verify-link.md');
-export const VERIFICATION_PARAMETERS = {
-  type: 'object', required: ['op'], properties: {
-    op: {"type":"string","enum":["link","run","unlink","view"],"description":"Operation kind"},
-    links: {"type":"array","description":"Required for link: each entry is {\"task\": task id, \"kind\": \"test\" or \"text\", \"path\": for test — the test file path (relative to the session working directory); for text — optional supporting file, \"note\": for text — one line naming what was observed (command, output, or file and place), \"reason\": for text — one line on why no higher rung of the evidence ladder is runnable here, \"cmd\": for test — optional; the exact command that runs this test the way the repository runs it (e.g. \"npx vitest run tests/x.test.ts\", \"go test ./pkg/...\", \"cargo test alias\"); without cmd the file is run bare by its extension (node / pytest / bash / pwsh)}. Custom cmd runs in PowerShell on Windows and bash elsewhere.","items":VERIFICATION_LINK_SCHEMA},
-    tasks: {"type":"array","items":{"type":"string"},"description":"Optional for run: which tasks' linked tests to execute (default: every task with test links)"},
-    ids: {"type":"array","items":{"type":"string"},"description":"Required for unlink: link ids to withdraw"},
-  },
-  oneOf: [
-    { properties: { op: { const: 'link' } }, required: ['links'] },
-    { properties: { op: { const: 'unlink' } }, required: ['ids'] },
-    { properties: { op: { enum: ['run', 'view'] } } },
-  ],
+const VERIFICATION_PROPERTIES = {
+  op: {"type":"string","enum":["link","run","unlink","view"],"description":"Operation kind"},
+  links: {"type":"array","description":"Required for link: each entry is {\"task\": task id, \"kind\": \"test\" or \"text\", \"path\": for test — the test file path (relative to the session working directory); for text — optional supporting file, \"note\": for text — one line naming what was observed (command, output, or file and place), \"reason\": for text — one line on why no higher rung of the evidence ladder is runnable here, \"cmd\": for test — optional; the exact command that runs this test the way the repository runs it (e.g. \"npx vitest run tests/x.test.ts\", \"go test ./pkg/...\", \"cargo test alias\"); without cmd the file is run bare by its extension (node / pytest / bash / pwsh)}. Custom cmd runs in PowerShell on Windows and bash elsewhere.","items":VERIFICATION_LINK_SCHEMA},
+  tasks: {"type":"array","items":{"type":"string"},"description":"Optional for run: which tasks' linked tests to execute (default: every task with test links)"},
+  ids: {"type":"array","items":{"type":"string"},"description":"Required for unlink: link ids to withdraw"},
 };
+export const VERIFICATION_PARAMETERS = operationParameters(VERIFICATION_PROPERTIES, [
+  { op: 'link', required: ['links'] },
+  { op: 'unlink', required: ['ids'] },
+  { op: ['run', 'view'] },
+]);
 
 export function currentTaskSnapshot(session, cached) {
   const value = session?.snapshotEvents().findLast(e => e.type === 'todo/write')?.data ?? cached;

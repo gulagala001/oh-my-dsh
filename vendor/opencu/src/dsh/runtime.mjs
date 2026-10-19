@@ -45,7 +45,7 @@ export function createPluginRuntime(options = {}) {
   const sidebarDownloads = createSidebarDownloads(() => dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR));
   const deliveryFiles = createDeliveryFiles(() => dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR));
   const appApprovals = createAppApprovals(() => dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR), () => options.onAppApprovalsChanged?.());
-  let imageRegistry, startedConfig, reconfiguring;
+  let imageRegistry, startedConfig, reconfiguring, recoveryOffer;
   const configurationKey = config => JSON.stringify([config.browserEnabled, config.nativeEnabled, config.extensionEnabled, config.managedHeadless === true]);
   async function start() {
     if (disposed) throw new Error('OpenCU plugin is unloading');
@@ -366,6 +366,23 @@ export function createPluginRuntime(options = {}) {
     }
   }
   return {
+    // Called only by the authenticated settings HTTP handler, never the model dispatcher.
+    async uiRecovery(method, args = {}) {
+      const runtime = await start();
+      if (method === 'prepare') {
+        const current = await runtime.getState();
+        const state = current.state, connected = runtime.extensionConnections();
+        const failed = new Set((state.releaseErrors || []).flatMap(item => item.failures || []).filter(item => item.code === 'STALE_TARGET').map(item => item.targetId));
+        const targets = state.targets.filter(target => failed.has(target.id) && target.provider === 'extension'
+          && !connected.some(item => item.instanceId === target.identity.instanceId && item.browserInstanceId === target.identity.browserInstanceId));
+        if (!state.releasePending || !targets.length) throw error('NO_ORPHANED_CONNECTIONS', 'No offline browser connection needs manual recovery. Reconnect the original browser and retry release.');
+        recoveryOffer = { nonce: randomUUID(), expires: Date.now() + 60000, targetIds: targets.map(target => target.id), expectedReleaseErrors: JSON.stringify(state.releaseErrors) };
+        return { ok: true, nonce: recoveryOffer.nonce, targets: targets.map(target => ({ id: target.id, title: target.title })) };
+      }
+      const offer = recoveryOffer; recoveryOffer = undefined;
+      if (method !== 'confirm' || args.confirmedClosed !== true || !offer || offer.nonce !== args.nonce || Date.now() > offer.expires) throw error('RECOVERY_CONFIRMATION_REQUIRED', 'Review and confirm the closed browser connections in settings');
+      return runtime.recoverClosedTargets(offer);
+    },
     pendingAppApprovals: () => appApprovals.snapshot(),
     forgetSession: sessionId => appApprovals.forgetSession(sessionId),
     get dataDir() { return dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR); },

@@ -14,7 +14,7 @@
   "buildInputs": {
     "packageManager": "pnpm@11.28.5",
     "sha256": {
-      "package-lock.json": "4826df6ec25754f122523a9936ffdc404e446e737dd8a1bcd77c3abaf2e73119",
+      "package-lock.json": "6b0ba1bf9235db61f6c283db3db9c568737a8ad6ee23ab54631b2b70d77a8267",
       "package.json": "50484913eac5bd32203976bcb8cf464898363ba65fe4c05fda5f7490f88d7096",
       "pnpm-lock.yaml": "98aa09fc8a2abd6789fe7b4c18dc12cec0094119d738a0a3f56a186ef1bd316e",
       "pnpm-workspace.yaml": "87d8bf565068239d69c43cfa18b8c74fb95779fddb431b51d0a779e77e70a4bd"

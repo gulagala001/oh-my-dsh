@@ -12,6 +12,7 @@ import { apiSessionTarget } from './api-session.mjs';
 import { installLoaderLifecycleCompatibility } from './loader-lifecycle-compat.mjs';
 import { installToolSchedulerCompatibility } from './tool-scheduler-compat.mjs';
 import { installToolCancellationPresentation } from './tool-cancellation.mjs';
+import { installSearchCompatibility } from './search-compat.mjs';
 import { monitorSelection, compactMonitorSnapshot, unavailableMonitorMetrics } from './monitoring.mjs';
 import { handleMonitorApi } from './monitor-api.mjs';
 import { coldNativeMonitorTarget } from './monitor-session.mjs';
@@ -66,6 +67,7 @@ export async function apply(ctx, config) {
   installFileUploadCompatibility(ctx);
   const legacy = await legacySettings(ctx, 'trisoul-x', Config, ['opencu']);
   const directory = legacy.value.dataDir || config.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'trisoul-x');
+  installSearchCompatibility(ctx, directory);
   await migrateSessionStorage(ctx, directory);
   installToolSchedulerCompatibility(ctx);
   installToolCancellationPresentation(ctx);

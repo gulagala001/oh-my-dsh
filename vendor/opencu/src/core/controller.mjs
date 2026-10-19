@@ -153,6 +153,15 @@ export async function createController({dataDir, browser, native} = {}) {
   const controller = {
     listTargets: () => response(() => serial(inventory)),
     openTarget: (request = {}) => response(() => serial(async () => {
+      alive();
+      // Recover cold state only for an explicit new tab after all prior release
+      // obligations are acknowledged. An explicit stop remains stopped.
+      if (mode === 'recovery_required' && request.backend !== 'native') {
+        const operationEpoch = epoch, {browsers} = await inventory();
+        if (!request.browserId || browsers.filter(item => item.id === request.browserId).length !== 1) fail('AMBIGUOUS_TARGET', 'Choose one connected browser ID');
+        await releaseAll(); checkOperation(operationEpoch);
+        aborter = new AbortController(); mode = 'active'; await persist();
+      }
       controlAllowed();
       if (request.backend==='native') {
         const operationEpoch=epoch, backend=backends.get('native');
@@ -364,6 +373,22 @@ export async function createController({dataDir, browser, native} = {}) {
         }
         throw error;
       }
+    })),
+    recoverClosedTargets: (request = {}) => response(() => serial(async () => {
+      alive();
+      if (!releasePending || JSON.stringify(releaseErrors) !== request.expectedReleaseErrors) fail('RECOVERY_CHANGED', 'Recovery state changed; review the current pending connections again');
+      const ids = new Set(request.targetIds);
+      if (!ids.size) fail('INVALID_ARGUMENT', 'Choose the exact closed browser connections');
+      const targets = [...ids].map(id => targetFor(id).target);
+      if (targets.some(target => target.backend !== 'browser' || target.provider !== 'extension')) fail('INVALID_ARGUMENT', 'Only closed extension connections can be confirmed');
+      const result = await backends.get('browser').confirmClosedTargets(targets);
+      if (result?.released !== true) fail('RELEASE_FAILED', 'Closed connection confirmation was not persisted');
+      block('stopped');
+      for (const id of ids) { selected.delete(id); userActivity.delete(id); observedActivity.delete(id); previews.delete(id); }
+      if (ids.has(activeTargetId)) activeTargetId = null;
+      await releaseAll();
+      mode = 'recovery_required'; await persist();
+      return {state: snapshot()};
     })),
     getState: () => response(async () => ({state: snapshot()})),
     preview: (request = {}) => response(async () => {

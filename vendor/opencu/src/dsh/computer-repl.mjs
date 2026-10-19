@@ -364,7 +364,7 @@ export function createComputerRepl(request, report = () => {}) {
       newTab: async (url, options) => createTab(browserId, url, options),
     });
     repl.context.cua = {
-      getState: async (options = {}) => { const result = await call('state', options); const live = await call('targets'); const state = { ...result.state, targets: live.targets, browsers: live.browsers ?? result.browsers ?? [], ...(live.errors?.length ? { errors: live.errors } : {}) }; if (options.emit !== false) emit(state); return displayed(state); },
+      getState: async (options = {}) => { const result = await call('state', options); const live = await call('targets'); const state = { ...result.state, targets: live.targets.map(target => Object.fromEntries(['id','backend','provider','browserId','title','url','identity','supported','active','error'].filter(key => target[key] !== undefined).map(key => [key,target[key]]))), browsers: live.browsers ?? result.browsers ?? [], ...(live.errors?.length ? { errors: live.errors } : {}) }; if (options.emit !== false) emit(state); return displayed(state); },
       listTabs,
       listApps: async () => (await inventory()).filter(target=>target.backend==='native'),
       listBrowsers: async () => (await call('targets')).browsers??[],
