@@ -17,7 +17,8 @@
     "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
-    "scripts/check-package.mjs"
+    "scripts/check-package.mjs",
+    "README_EN.md"
   ],
   "engines": {
     "node": ">=22.19",
