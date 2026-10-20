@@ -20,6 +20,11 @@
     "source": "webview/assets/ada-f94b9812889e.js"
   },
   {
+    "file": "andromeeda-2cb6599a29ac.js",
+    "sha256": "bd38a36237823cf201862acdb4517f14916e1f8b9f1685aa5a45f23dcf46edde",
+    "source": "webview/assets/andromeeda-2cb6599a29ac.js"
+  },
+  {
     "file": "angular-html-af8a1b408ff5.js",
     "sha256": "d02b503bb388a0fff7e0c6273dc1623e0c5c224adf103acb485eb4117da56e30",
     "source": "webview/assets/angular-html-af8a1b408ff5.js"
@@ -125,9 +130,19 @@
     "source": "webview/assets/tsx-b05f45ec50d2.js"
   },
   {
+    "file": "aurora-x-e53d8d26ecd2.js",
+    "sha256": "052f2832d43e7ecc1230b06485881a286ee2d6404b61eb05274dcb551eed74ed",
+    "source": "webview/assets/aurora-x-e53d8d26ecd2.js"
+  },
+  {
     "file": "awk-a8f356715551.js",
     "sha256": "91d793a5608854389ba741e2ae1cc1c89b83a41148dcad4b8d76e950dac92c7b",
     "source": "webview/assets/awk-a8f356715551.js"
+  },
+  {
+    "file": "ayu-dark-78a530b730a9.js",
+    "sha256": "f2b2ac5ef92522c9582aacd1afe8c9cdc0217c392e73bcd4a18b1affb13e3387",
+    "source": "webview/assets/ayu-dark-78a530b730a9.js"
   },
   {
     "file": "ballerina-beab98e8c318.js",
@@ -208,6 +223,26 @@
     "file": "python-fdf8b6adcc28.js",
     "sha256": "fa0ec7b0d9fa1b7ab8464fd62873b7b7adda6ffbfa7ae01610561ce462d56cb7",
     "source": "webview/assets/python-fdf8b6adcc28.js"
+  },
+  {
+    "file": "catppuccin-frappe-9bde9311682a.js",
+    "sha256": "a48c16281c201e2e8b79b468f0ddf4142dc0f2e50b69e935fd0ec5562a424b0d",
+    "source": "webview/assets/catppuccin-frappe-9bde9311682a.js"
+  },
+  {
+    "file": "catppuccin-latte-c859792586f5.js",
+    "sha256": "e0e2830f1496946a66a11a6b9e97d1212619f048fb386d895c0ddf5c5aa4e8f9",
+    "source": "webview/assets/catppuccin-latte-c859792586f5.js"
+  },
+  {
+    "file": "catppuccin-macchiato-c5e79761050b.js",
+    "sha256": "916c67a2058b19b6d62e5dbdd8e494803fc70b54a487589bce278278d804e6f8",
+    "source": "webview/assets/catppuccin-macchiato-c5e79761050b.js"
+  },
+  {
+    "file": "catppuccin-mocha-34ae79243631.js",
+    "sha256": "215b1c7bb889a75de224a6dba38308300ea04312f28d68a666f78ffca80110eb",
+    "source": "webview/assets/catppuccin-mocha-34ae79243631.js"
   },
   {
     "file": "clarity-3366c891cc4f.js",
@@ -330,6 +365,11 @@
     "source": "webview/assets/d-279b60731012.js"
   },
   {
+    "file": "dark-plus-25b7adc7cc07.js",
+    "sha256": "4b9197c6a28cffa88ed86e549efcd50c6ffd42728db353cd35539d17ee2624f7",
+    "source": "webview/assets/dark-plus-25b7adc7cc07.js"
+  },
+  {
     "file": "dart-be8b4aea8c63.js",
     "sha256": "7b23f7ad4f34704e1b44e764f9573c8be5293c2257c9a7269941c29172b5b203",
     "source": "webview/assets/dart-be8b4aea8c63.js"
@@ -360,9 +400,24 @@
     "source": "webview/assets/docker-211209ca40bd.js"
   },
   {
+    "file": "docx-preview-8513c2dacad2.js",
+    "sha256": "7302f9d120a6b54000e511b152d04a4648e56d5d6796fb859a1b6749f529024b",
+    "source": "webview/assets/docx-preview-8513c2dacad2.js"
+  },
+  {
     "file": "dotenv-ea2094339639.js",
     "sha256": "a08f4502ff7853ca28ca0556cbc63009c8dd9d3011de1865a09ec00350b23b48",
     "source": "webview/assets/dotenv-ea2094339639.js"
+  },
+  {
+    "file": "dracula-8891153859a3.js",
+    "sha256": "53790d18fafe79bda46a2af7dd288a1a71e79241a92dae2cb7c5cb471683ac2a",
+    "source": "webview/assets/dracula-8891153859a3.js"
+  },
+  {
+    "file": "dracula-soft-eb9efbb79084.js",
+    "sha256": "f1b65ade8955dff75a02f22d3477e59dc9540f87df69028228c4dbfde65621c1",
+    "source": "webview/assets/dracula-soft-eb9efbb79084.js"
   },
   {
     "file": "dream-maker-22eaa93dab95.js",
@@ -433,6 +488,16 @@
     "file": "markdown-1c15c2fc01dc.js",
     "sha256": "c89ab0c9753185eec2faedae275ef59c59a6c40e430a9386f287250c8b485fe4",
     "source": "webview/assets/markdown-1c15c2fc01dc.js"
+  },
+  {
+    "file": "everforest-dark-483f6d991548.js",
+    "sha256": "4d841026038758e219ec27f73c5ee8555ded175928cffa1f5612bf80220bac9c",
+    "source": "webview/assets/everforest-dark-483f6d991548.js"
+  },
+  {
+    "file": "everforest-light-18283206f02c.js",
+    "sha256": "1e80aec9aabf7ea7f43d21c4a4a673e37b9783eb6a9aaac43ce9b310b8daee94",
+    "source": "webview/assets/everforest-light-18283206f02c.js"
   },
   {
     "file": "fennel-9239f307e200.js",
@@ -515,6 +580,41 @@
     "source": "webview/assets/git-rebase-fda593e0d064.js"
   },
   {
+    "file": "github-dark-cf07ac7cec63.js",
+    "sha256": "378c5f655751ec44faf7b1005623cf381277cc8acb46490c783fabbd358bcf7a",
+    "source": "webview/assets/github-dark-cf07ac7cec63.js"
+  },
+  {
+    "file": "github-dark-default-1ac838adf0ef.js",
+    "sha256": "279db3048e6eb9fea981f087fcfcbc88724955f99e84b53a3a287559b0b76ce6",
+    "source": "webview/assets/github-dark-default-1ac838adf0ef.js"
+  },
+  {
+    "file": "github-dark-dimmed-324d34ca5f88.js",
+    "sha256": "ca518ff2f302959a4cdb4fcc893905de66063016b034a2a9d6aac2bf44e3a755",
+    "source": "webview/assets/github-dark-dimmed-324d34ca5f88.js"
+  },
+  {
+    "file": "github-dark-high-contrast-65a6f9b4f068.js",
+    "sha256": "cdafce6ec076c7d149689fc42357b11d405e5bf8cd7b00762354d8f89c927c94",
+    "source": "webview/assets/github-dark-high-contrast-65a6f9b4f068.js"
+  },
+  {
+    "file": "github-light-b6839bf48699.js",
+    "sha256": "59aa1f0a8b6b7f647f1cf0d20a6b596e77cc074da9cd789fcdd303dbf2f295f6",
+    "source": "webview/assets/github-light-b6839bf48699.js"
+  },
+  {
+    "file": "github-light-default-db54bcec6d71.js",
+    "sha256": "6a4071cf267757e4861008dfa7a403802a18f43503c40567f1a71368a3769357",
+    "source": "webview/assets/github-light-default-db54bcec6d71.js"
+  },
+  {
+    "file": "github-light-high-contrast-34c628d06244.js",
+    "sha256": "8ddca182ffa4e8bf80894007c02dfce902f105c7f3f0951c2b5ccacb06bed2a9",
+    "source": "webview/assets/github-light-high-contrast-34c628d06244.js"
+  },
+  {
     "file": "gleam-dd19dd0309d8.js",
     "sha256": "785cb7c9039fbd6f0ede67ce83e3c2827f6b443ab05712e37095d54118149a76",
     "source": "webview/assets/gleam-dd19dd0309d8.js"
@@ -558,6 +658,36 @@
     "file": "groovy-8e5da8b0bd63.js",
     "sha256": "80fc6e9daa182907ba6c9ce37e855dbb581649e841032d7bf51b129f5b7a5239",
     "source": "webview/assets/groovy-8e5da8b0bd63.js"
+  },
+  {
+    "file": "gruvbox-dark-hard-282b0ae07404.js",
+    "sha256": "57c8bc785987194bac5c0114843a6f874b55c77d31d4a81762a44429fecad9ef",
+    "source": "webview/assets/gruvbox-dark-hard-282b0ae07404.js"
+  },
+  {
+    "file": "gruvbox-dark-medium-37dfefe54d99.js",
+    "sha256": "420c189f291ece034ed07cfa5fcfa0a235a7f46247c200f5761076e59e3ebf35",
+    "source": "webview/assets/gruvbox-dark-medium-37dfefe54d99.js"
+  },
+  {
+    "file": "gruvbox-dark-soft-a5f77905d812.js",
+    "sha256": "4d766d487a931630219a346738897399d4c6a24e1621f75d2b1d3bf54b903828",
+    "source": "webview/assets/gruvbox-dark-soft-a5f77905d812.js"
+  },
+  {
+    "file": "gruvbox-light-hard-94c787faae91.js",
+    "sha256": "2fadfd4b657ae4d7a9db96db43f2f1e286b30d4f02dbb3647f4e93e8d9cdf66e",
+    "source": "webview/assets/gruvbox-light-hard-94c787faae91.js"
+  },
+  {
+    "file": "gruvbox-light-medium-4ca4b98d15bb.js",
+    "sha256": "6cf6f9b2a2d2ef9ac73b924f04cbd8d12a9b77589b813be9cb8958170381f911",
+    "source": "webview/assets/gruvbox-light-medium-4ca4b98d15bb.js"
+  },
+  {
+    "file": "gruvbox-light-soft-373ba35b84a2.js",
+    "sha256": "f19de062633e3df53e9ddb4bdd4546c0846c8fb33bdc674007415b190aa82263",
+    "source": "webview/assets/gruvbox-light-soft-373ba35b84a2.js"
   },
   {
     "file": "hack-3d79c40b8b82.js",
@@ -610,14 +740,19 @@
     "source": "webview/assets/hlsl-a292573f74ca.js"
   },
   {
-    "file": "html-e0b96e3e1725.js",
-    "sha256": "00bf7dc9180d1e4f47c489c683146b07ef590acb39f29f23d1c78ad19ac2dfa9",
-    "source": "webview/assets/html-e0b96e3e1725.js"
+    "file": "houston-aa9e454f50e2.js",
+    "sha256": "e2486aa842362ac475afacca63c07d570b9ccaac4f8ab6fdf75c55e718e182e0",
+    "source": "webview/assets/houston-aa9e454f50e2.js"
   },
   {
     "file": "html-derivative-60c0018e2a7c.js",
     "sha256": "e76bf207d4994ba1c44735366c15391a050b17564dbc35d6173d5f4772e24f7a",
     "source": "webview/assets/html-derivative-60c0018e2a7c.js"
+  },
+  {
+    "file": "html-e0b96e3e1725.js",
+    "sha256": "00bf7dc9180d1e4f47c489c683146b07ef590acb39f29f23d1c78ad19ac2dfa9",
+    "source": "webview/assets/html-e0b96e3e1725.js"
   },
   {
     "file": "http-16302150f64d.js",
@@ -715,6 +850,21 @@
     "source": "webview/assets/r-24747feccd98.js"
   },
   {
+    "file": "kanagawa-dragon-c234ef14f850.js",
+    "sha256": "21296fabdc9d20ea6358232427f9c3a37aa0fe82e72cb714112a9924d4107445",
+    "source": "webview/assets/kanagawa-dragon-c234ef14f850.js"
+  },
+  {
+    "file": "kanagawa-lotus-ef2b8d7a9f92.js",
+    "sha256": "799b6d8b41af0f13d068f6c304df2bbe5e81ea9ce0dad7eb28eb3c114fa26b30",
+    "source": "webview/assets/kanagawa-lotus-ef2b8d7a9f92.js"
+  },
+  {
+    "file": "kanagawa-wave-779528c78cda.js",
+    "sha256": "17220c74fb78ba388b2c4b508a1877883d67bd80eb167762caae98b001b47617",
+    "source": "webview/assets/kanagawa-wave-779528c78cda.js"
+  },
+  {
     "file": "kdl-f3749ab4bee8.js",
     "sha256": "923644ca7df962ea063bb3cb8f35526e2befb27434f5ed00bfdfc6588c1629b0",
     "source": "webview/assets/kdl-f3749ab4bee8.js"
@@ -728,6 +878,11 @@
     "file": "kusto-5a4764ed9968.js",
     "sha256": "d39ce33c99bac82a69407689686f9c193dcc959753ccb98ed7224d91c32ace3b",
     "source": "webview/assets/kusto-5a4764ed9968.js"
+  },
+  {
+    "file": "laserwave-a92866e18773.js",
+    "sha256": "73ba0a180ed30c7e6cfdadf43eb0d6bade82c7340eb4a25fee45d8c69e6333d3",
+    "source": "webview/assets/laserwave-a92866e18773.js"
   },
   {
     "file": "latex-60a93e5746e6.js",
@@ -753,6 +908,11 @@
     "file": "less-4e351974aeb6.js",
     "sha256": "41746d5daebb15af9f3a0efda42734875c976b66d83e3233aa09247c864f9100",
     "source": "webview/assets/less-4e351974aeb6.js"
+  },
+  {
+    "file": "light-plus-21c3ee55e0df.js",
+    "sha256": "3f4ec58615bfbd83b5efa6db04c6ab12801d00042fc317fa8b0ea6d506e01b1a",
+    "source": "webview/assets/light-plus-21c3ee55e0df.js"
   },
   {
     "file": "liquid-1ad990f3e8af.js",
@@ -800,6 +960,31 @@
     "source": "webview/assets/marko-4aec0bbd7e63.js"
   },
   {
+    "file": "material-theme-92a39983b0fd.js",
+    "sha256": "ddcfcfffbbb3179c5288398f156b4c2ebad462f43cfbad0b3187ebd4305dfb1b",
+    "source": "webview/assets/material-theme-92a39983b0fd.js"
+  },
+  {
+    "file": "material-theme-darker-578f7701bce7.js",
+    "sha256": "438d7052394ba3f4efac2929c325ccd2662de5761cc97152ade4235698af005a",
+    "source": "webview/assets/material-theme-darker-578f7701bce7.js"
+  },
+  {
+    "file": "material-theme-lighter-8a7feaff643e.js",
+    "sha256": "a0bbc4721d656ccf76849bcc47b4b0275e43c1a347e725e987bbf308d8e2ef6f",
+    "source": "webview/assets/material-theme-lighter-8a7feaff643e.js"
+  },
+  {
+    "file": "material-theme-ocean-1ca9c81066e7.js",
+    "sha256": "8fec345274df3e90fc993495a4d1385a2934d76a97485b133762e428219e0f2b",
+    "source": "webview/assets/material-theme-ocean-1ca9c81066e7.js"
+  },
+  {
+    "file": "material-theme-palenight-63d2473cce7c.js",
+    "sha256": "0029dc7a40950dec9437bfb398cbf391b1437ffae573348dfc76b24141a62e3d",
+    "source": "webview/assets/material-theme-palenight-63d2473cce7c.js"
+  },
+  {
     "file": "matlab-64ab9b10628f.js",
     "sha256": "b07a183f7221bbf800a1c945ca11fc22aef078837aa109478c9f0767b1ce316c",
     "source": "webview/assets/matlab-64ab9b10628f.js"
@@ -825,6 +1010,16 @@
     "source": "webview/assets/mermaid-54e250569eb6.js"
   },
   {
+    "file": "min-dark-4146579cd2f9.js",
+    "sha256": "c6cb777816ba35d9c72b3e8e8c97afeea55b785bb006a57d8b475bd65151c99c",
+    "source": "webview/assets/min-dark-4146579cd2f9.js"
+  },
+  {
+    "file": "min-light-821abd82ec05.js",
+    "sha256": "42481802b9224159b93399cafb460b5f1bafdb6effa6ab3c9d0cefd5c8eb1b33",
+    "source": "webview/assets/min-light-821abd82ec05.js"
+  },
+  {
     "file": "mipsasm-bb936f7899ac.js",
     "sha256": "9509e97eddd520fbdfb011055bef22965b27c80cc7c299237aa399a378f57663",
     "source": "webview/assets/mipsasm-bb936f7899ac.js"
@@ -833,6 +1028,11 @@
     "file": "mojo-b6e83dbb224e.js",
     "sha256": "dd4d328b43a7c48441489b5a109e31667c13aba6c3471f3c501b5839c4645e6c",
     "source": "webview/assets/mojo-b6e83dbb224e.js"
+  },
+  {
+    "file": "monokai-cf83b852637d.js",
+    "sha256": "0274d5595cee66907877eabe34221fa60d878235b92011cceb897dce625c46a8",
+    "source": "webview/assets/monokai-cf83b852637d.js"
   },
   {
     "file": "move-cecb4c703761.js",
@@ -855,6 +1055,11 @@
     "source": "webview/assets/nginx-871d90573e4d.js"
   },
   {
+    "file": "night-owl-9523f1771173.js",
+    "sha256": "c4d6586dad604541d3750a936450ae10e63b06ca7e299fca12d1351891d1cb70",
+    "source": "webview/assets/night-owl-9523f1771173.js"
+  },
+  {
     "file": "nim-9edfb6eed9c0.js",
     "sha256": "f1c4f78152b98baf5ecd775bd3a6dfcc442e44f1ccd5fbea4d7572e09e809ee7",
     "source": "webview/assets/nim-9edfb6eed9c0.js"
@@ -863,6 +1068,11 @@
     "file": "nix-d578d0a1042b.js",
     "sha256": "ac1bbc581b63e048d3d8ad8698cd3f5a9a4f43881ade6b74426e871475930769",
     "source": "webview/assets/nix-d578d0a1042b.js"
+  },
+  {
+    "file": "nord-1e5b8199cbad.js",
+    "sha256": "16490761f1dded1f713ba5d4a49bc84fd9772e33a2263a25e72b1b0ae267bb65",
+    "source": "webview/assets/nord-1e5b8199cbad.js"
   },
   {
     "file": "nushell-26bdb8be0341.js",
@@ -883,6 +1093,16 @@
     "file": "ocaml-83dc9e2f60cc.js",
     "sha256": "d0457313ed529a9f2f7c8d9df5adba0b0c5128872a4f0061f42b037f31bca383",
     "source": "webview/assets/ocaml-83dc9e2f60cc.js"
+  },
+  {
+    "file": "one-dark-pro-ff8bcd6e7f2f.js",
+    "sha256": "9b9ae0981d07e79b35f159ebafd90942958e894b64bf8859e1ce72807dd0811b",
+    "source": "webview/assets/one-dark-pro-ff8bcd6e7f2f.js"
+  },
+  {
+    "file": "one-light-10859d10bab4.js",
+    "sha256": "77fbfbca89dfffe99376fa14bfe8f18cb07a1db24362a6e82642845214c4d21d",
+    "source": "webview/assets/one-light-10859d10bab4.js"
   },
   {
     "file": "openscad-8dbac786f981.js",
@@ -910,9 +1130,64 @@
     "source": "webview/assets/php-c02d2a7395b0.js"
   },
   {
+    "file": "pierre-dark-9df91733ee13.js",
+    "sha256": "03b580c3c4824160cde0e68019b54a78f33add8fb2b878056d7ba58c33d7a7a9",
+    "source": "webview/assets/pierre-dark-9df91733ee13.js"
+  },
+  {
+    "file": "pierre-dark-protanopia-deuteranopia-c3d5327d6144.js",
+    "sha256": "ef6d6d9670c86fe2df813b43a69372de203b19984ceb674a54f6ae49fa8c2f51",
+    "source": "webview/assets/pierre-dark-protanopia-deuteranopia-c3d5327d6144.js"
+  },
+  {
+    "file": "pierre-dark-soft-fd6c6d57b940.js",
+    "sha256": "9eb35c670742065fa0bf6bf4ab912dc5a0c3bb6969c541f06ea9b6b2517596c2",
+    "source": "webview/assets/pierre-dark-soft-fd6c6d57b940.js"
+  },
+  {
+    "file": "pierre-dark-tritanopia-826b09779d5d.js",
+    "sha256": "96a97eb5c39768a75ced46ee95bc1ba5a3fb385e82dc677ea083740a5c54d6d3",
+    "source": "webview/assets/pierre-dark-tritanopia-826b09779d5d.js"
+  },
+  {
+    "file": "pierre-dark-vibrant-7a8f86cccc59.js",
+    "sha256": "5dd8e00ad90cb68b4a068ce1b88548b353c6973fe23348d3e1e63ccd6173c189",
+    "source": "webview/assets/pierre-dark-vibrant-7a8f86cccc59.js"
+  },
+  {
+    "file": "pierre-light-211eb620338a.js",
+    "sha256": "5eb8cdaf18419ead74a7970bc8dc84b8f9fc408184b4194c4cba2c50c0aefda0",
+    "source": "webview/assets/pierre-light-211eb620338a.js"
+  },
+  {
+    "file": "pierre-light-protanopia-deuteranopia-ed55e6b94ddd.js",
+    "sha256": "7e0fa7c8b8b8d9cd38e010ef083adfc06afd624c3de43386a16041d976d4d548",
+    "source": "webview/assets/pierre-light-protanopia-deuteranopia-ed55e6b94ddd.js"
+  },
+  {
+    "file": "pierre-light-soft-5dbb1ea290bc.js",
+    "sha256": "e1d68f36deab393bf7cf229a02184a02303137c86b89b0274b18a523ee606577",
+    "source": "webview/assets/pierre-light-soft-5dbb1ea290bc.js"
+  },
+  {
+    "file": "pierre-light-tritanopia-4f4f113c182c.js",
+    "sha256": "1cc537cce32209d4b145608beb1d62bf91f873439c6aa9b5dbcadc05e78976b0",
+    "source": "webview/assets/pierre-light-tritanopia-4f4f113c182c.js"
+  },
+  {
+    "file": "pierre-light-vibrant-a1392f477aa7.js",
+    "sha256": "a5da43822cca4486d860dcd9e0cd55f938361037ee818ef0f4c0d81f9001aff3",
+    "source": "webview/assets/pierre-light-vibrant-a1392f477aa7.js"
+  },
+  {
     "file": "pkl-c9b132f7a245.js",
     "sha256": "74767a7339226050348d6f01720095cb70b60f42522a53424c17af8267fb2bed",
     "source": "webview/assets/pkl-c9b132f7a245.js"
+  },
+  {
+    "file": "plastic-627376cc8563.js",
+    "sha256": "5b27fe577a4dc8b35b56dd16225f701e899e42b3fa5245e12a51b23b88543a60",
+    "source": "webview/assets/plastic-627376cc8563.js"
   },
   {
     "file": "plsql-d1c904d1ee6e.js",
@@ -923,6 +1198,11 @@
     "file": "po-419584ab95fc.js",
     "sha256": "15debfc5766aa01138d40f188996e86f5b23df8e42f66239b62f23e2811016ae",
     "source": "webview/assets/po-419584ab95fc.js"
+  },
+  {
+    "file": "poimandres-13953b6d1087.js",
+    "sha256": "7e4d6a499083aec91f116a36fe6c033a22cdd7b09f5126941fe7c6001ad1da7e",
+    "source": "webview/assets/poimandres-13953b6d1087.js"
   },
   {
     "file": "polar-141fe9dfbdaf.js",
@@ -1015,6 +1295,11 @@
     "source": "webview/assets/razor-c8065f2c6a05.js"
   },
   {
+    "file": "red-51c3175c05bb.js",
+    "sha256": "7b15ba0a5f76c1f83223cf80498d2975b0bf7dfb47bf4c86f0fc05c0413d6178",
+    "source": "webview/assets/red-51c3175c05bb.js"
+  },
+  {
     "file": "reg-88e8c66af7db.js",
     "sha256": "d00346624b44f9891f6241cace37dae18561909c35e0e8e7363054495c66dbd3",
     "source": "webview/assets/reg-88e8c66af7db.js"
@@ -1033,6 +1318,21 @@
     "file": "riscv-e69e16dc5131.js",
     "sha256": "25ba2ace9cf66d560f2ada4f175d00ac9c9b1b07f76612536ce000b0dc7d2614",
     "source": "webview/assets/riscv-e69e16dc5131.js"
+  },
+  {
+    "file": "rose-pine-4bc192932e00.js",
+    "sha256": "6afed8bc3d14433818a8ee57f1d9616f79598b1348e144266c6b92cb7f5ba601",
+    "source": "webview/assets/rose-pine-4bc192932e00.js"
+  },
+  {
+    "file": "rose-pine-dawn-652a0ac320c5.js",
+    "sha256": "89c384a9c239690fce86c33c046b5f3fbca0af6691460a48eb7dbd75d3a4a57e",
+    "source": "webview/assets/rose-pine-dawn-652a0ac320c5.js"
+  },
+  {
+    "file": "rose-pine-moon-ffc4552dd43f.js",
+    "sha256": "e7f57f6dc649af9e4b1c70c927f2c366354d83fa6741fb0d28058f97f47e4721",
+    "source": "webview/assets/rose-pine-moon-ffc4552dd43f.js"
   },
   {
     "file": "rosmsg-6ebd2bc6b086.js",
@@ -1100,9 +1400,34 @@
     "source": "webview/assets/shellsession-176ea3a6b2e8.js"
   },
   {
+    "file": "slack-dark-5518314b78cf.js",
+    "sha256": "7c938bc979081902c61547898ace3e32406954ea3803bc017c749e9d0a5faa3e",
+    "source": "webview/assets/slack-dark-5518314b78cf.js"
+  },
+  {
+    "file": "slack-ochin-3ca815a621b6.js",
+    "sha256": "168c4f59c2c4da1eb2bc53c963c45b319d01071f2bfcf09e286ee652e8030315",
+    "source": "webview/assets/slack-ochin-3ca815a621b6.js"
+  },
+  {
     "file": "smalltalk-79dd4baca0b8.js",
     "sha256": "3b658d8431651138bcd6d068f2f19ba8db1b7e8baeca42e96b0748ce881aee3c",
     "source": "webview/assets/smalltalk-79dd4baca0b8.js"
+  },
+  {
+    "file": "snazzy-light-d1099ad3fde4.js",
+    "sha256": "67ea68dd09642812365b691654619cbca196030c60ada001cab75bb0a64bac99",
+    "source": "webview/assets/snazzy-light-d1099ad3fde4.js"
+  },
+  {
+    "file": "solarized-dark-bb8154983fce.js",
+    "sha256": "2a0c07c223f2b68f89a708cdbb1823b28bd8745e57941d062179bcbf101f1022",
+    "source": "webview/assets/solarized-dark-bb8154983fce.js"
+  },
+  {
+    "file": "solarized-light-dae007c14bfa.js",
+    "sha256": "ebe09020279c8b17e111102ad3d43720f43629d8b0b277ef79015cb3f1f31a75",
+    "source": "webview/assets/solarized-light-dae007c14bfa.js"
   },
   {
     "file": "solidity-e120e2c70d65.js",
@@ -1165,6 +1490,11 @@
     "source": "webview/assets/swift-72e666e4c455.js"
   },
   {
+    "file": "synthwave-84-66b079f5e409.js",
+    "sha256": "1de7193312cd155e63b361513754c53df6d720ba5c464851c68a1a4093fba7f8",
+    "source": "webview/assets/synthwave-84-66b079f5e409.js"
+  },
+  {
     "file": "system-verilog-f59007365ead.js",
     "sha256": "2903d772df956f7a1267b4835d69071f501d13d3f994b316c8825c9d258563a9",
     "source": "webview/assets/system-verilog-f59007365ead.js"
@@ -1203,6 +1533,11 @@
     "file": "tex-f9292bf27eba.js",
     "sha256": "e06440a2b68574ba64f51bb2f5b7f6729a041161f1f03d567fa1a790da7afa9d",
     "source": "webview/assets/tex-f9292bf27eba.js"
+  },
+  {
+    "file": "tokyo-night-d32150b86f5a.js",
+    "sha256": "3bca0900b2ea5a877bf050e363c8c82b7512d74bb3fc69719d85327fcfcf0535",
+    "source": "webview/assets/tokyo-night-d32150b86f5a.js"
   },
   {
     "file": "toml-20f56a2d5853.js",
@@ -1270,6 +1605,11 @@
     "source": "webview/assets/verilog-b38469302e31.js"
   },
   {
+    "file": "vesper-516e6d31b397.js",
+    "sha256": "463050fb737cc59f3999b6fdac6c35424a6b66e0f256dc04962c8b83c8345689",
+    "source": "webview/assets/vesper-516e6d31b397.js"
+  },
+  {
     "file": "vhdl-d4b7bcdb12b6.js",
     "sha256": "3a75fe6746b122089b20c3e7f0dc18c8c00fcca0df73d5be3c09326892e10cef",
     "source": "webview/assets/vhdl-d4b7bcdb12b6.js"
@@ -1278,6 +1618,21 @@
     "file": "viml-f9063f64ebee.js",
     "sha256": "9b0b4171d212ca140c1a504dc0b91259ae0836ccaf9593b4177b75e0c050b494",
     "source": "webview/assets/viml-f9063f64ebee.js"
+  },
+  {
+    "file": "vitesse-black-f2ccd94b2e91.js",
+    "sha256": "1d5be3cdf1ba752ae042954829955d71be02821515ddba7457805e36bc244c7d",
+    "source": "webview/assets/vitesse-black-f2ccd94b2e91.js"
+  },
+  {
+    "file": "vitesse-dark-440e5100083e.js",
+    "sha256": "e13c0c044e5a4ddd4d3dba94df8e992eeda6c93142b17bcffaed76c0aa20be6b",
+    "source": "webview/assets/vitesse-dark-440e5100083e.js"
+  },
+  {
+    "file": "vitesse-light-6e2536f24106.js",
+    "sha256": "9e7854f9925e3937063004ed0b20a7004766bd910b6f0e3bbd95ed3dae87c13e",
+    "source": "webview/assets/vitesse-light-6e2536f24106.js"
   },
   {
     "file": "vue-eb78715a4a6b.js",
@@ -1308,6 +1663,11 @@
     "file": "wasm-1fb480ce33a1.js",
     "sha256": "86528b44a062c27b276c6b19bf1054c5402b6658b106511e99df951549f126b5",
     "source": "webview/assets/wasm-1fb480ce33a1.js"
+  },
+  {
+    "file": "wasm-7a831618ae1c.js",
+    "sha256": "e4736b39570736258f92323c06e8bafd615e3895c1fe273bf6c445fa7b111eaa",
+    "source": "webview/assets/wasm-7a831618ae1c.js"
   },
   {
     "file": "wenyan-1c9f004946f8.js",

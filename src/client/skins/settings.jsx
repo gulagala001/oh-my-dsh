@@ -17,11 +17,11 @@ import claudeTerminalLayout from './claude-cli-terminal/layout.css';
 import { applyTerminalPresentation } from './claude-cli-terminal/presentation.jsx';
 import glyphLayout from '../../../plugins/glyph-theme/src/theme/layout.css';
 import { applyGlyphIntegration } from './glyph-motion/integration.jsx';
-import { HistorySizeSetting } from '../history-settings.jsx';
 import { applySidebarPresentation } from '../sidebar.jsx';
 import { createSurfaceMarkers } from './surfaces.mjs';
 import { AppearanceDrafts, useAppearanceDrafts } from './advanced.jsx';
 import { glyphOwnership } from '../../../plugins/glyph-theme/src/shared/ownership.mjs';
+import { appearanceCoordinator } from './coordinator.mjs';
 
 function AppearanceSettings({ runtime }) {
   const state = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot);
@@ -63,7 +63,6 @@ function AppearanceSettings({ runtime }) {
     <p className="omd-appearance-help">选择 .omd-skin.json 文件；导入同一主题会更新已有版本。</p>
     <div className="omd-appearance-actions"><ThemeActions {...{ runtime, state, act }}/></div>
     <Personalization {...{ runtime, state, act }}/>
-    <HistorySizeSetting/>
   </section>}</AppearanceDrafts.Provider>;
 }
 export function applySkins(ctx) {
@@ -89,6 +88,17 @@ export function applySkins(ctx) {
   applyCodexIntegration(ctx, () => runtime);
   applyTerminalPresentation(ctx, () => runtime);
   applyGlyphIntegration(ctx, () => runtime);
-  ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'omd-appearance', order: 15, label: () => '外观' }, () => <AppearanceSettings runtime={runtime}/>));
+  ctx.slots.inject('settings.section', () => {
+    const coordinator = appearanceCoordinator();
+    let release;
+    const sync = () => {
+      // The native settings navigation lists the full ledger, including
+      // shadowed entries. Withdraw our page while the theme manager owns it.
+      if (coordinator.hasProvider('dsh-theme-plugin')) { release?.(); release = undefined; }
+      else if (!release) release = ctx.slots.register({ name: 'settings.section', id: 'omd-appearance', order: 15, label: () => '外观' }, () => <AppearanceSettings runtime={runtime}/>);
+    };
+    const unsubscribe = coordinator.subscribe(sync); sync();
+    return () => { unsubscribe(); release?.(); };
+  });
   return () => runtime;
 }

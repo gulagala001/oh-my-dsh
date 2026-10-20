@@ -116,6 +116,7 @@
     "docs",
     "vendor",
     "!vendor/opencu/lib/client.js",
+    "!vendor/opencu/lib/client.factory.mjs",
     "release-manifest.json",
     "CHANGELOG.md"
   ],

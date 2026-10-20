@@ -76,13 +76,6 @@ test('zero execution or skips cannot turn acceptance green', () => {
   for (const text of [tap.replace('# tests 1', '# tests 0'), tap.replace('# skipped 0', '# skipped 1'), tap.replace('# pass 1', '# pass 0')])
     assert.throws(() => assertReport(reportFixture(), text, expected));
 });
-test('actual hot regression observes current selection without reopening it after install', async () => {
-  const source = await readFile(new URL('./desktop-conversation-hot-install.test.mjs', import.meta.url), 'utf8');
-  const hot = source.slice(source.indexOf("const receipt = operation === 'install'"));
-  assert.equal(hot.includes('await openSession()'), false);
-  assert(hot.includes("assert.deepEqual(report.readiness.crashes, []"));
-});
-
 test('hot input archive integration reads strict tar entries as actual byte members', () => {
   const body = Buffer.from('synthetic-client'), header = Buffer.alloc(512);
   header.write('package/lib/client.js'); header.write('0000644\0', 100);

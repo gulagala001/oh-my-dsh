@@ -91,7 +91,7 @@ For standalone use, choose either method in the [OpenCU installation guide](docs
 
 OpenCU **2.0.6** provides separate fixed packages for `0.2.1-rc.1` and `0.2.1-rc.2`, with copyable URLs in the guide; do not mix them with `0.2.0-rc.*`. Keep the original profile, `DSH_HOME`, data and third-party plugins when upgrading, then restart the affected instance.
 
-Fixed Releases do not include a complete desktop installer. The full embedded browser, native monitoring and related UI require matching Host/Client/preload source adapters; installing the plugin alone does not supply them. New main-branch fixes are not automatically included in fixed packages; see [release information](docs/releases.md).
+Fixed Releases do not include a complete desktop installer. The full embedded browser, native monitoring and related UI require matching Host/Client/preload source adapters; installing the plugin alone does not supply them. New main-branch fixes are not automatically included in fixed packages; see the [changelog](CHANGELOG.md).
 
 ## Platform boundaries
 

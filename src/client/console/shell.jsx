@@ -1,9 +1,7 @@
 import { Button as NativeButton } from '../native-controls.jsx';
-// The single OMD entry in the native right sidebar: one console tab with its
-// own navigation. Former OMD tab kinds stay registered (without guide
-// entries) and hand over to the console, so saved layouts keep working.
+// The single OMD entry in the native right sidebar: one console tab with its own navigation.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Icon, Seg, Select, IconButton, cx } from './ui.jsx';
+import { Icon, Seg, Select, IconButton, ConsoleRefresh, cx } from './ui.jsx';
 import { SECTIONS, HIDDEN_SECTIONS, PERIODS, RANGES } from './model.mjs';
 import { CONSOLE_KIND, NAV_EVENT, bindSidebar } from './nav.mjs';
 import { Overview } from './overview.jsx';
@@ -57,32 +55,19 @@ function ConsolePage(props) {
   return <div ref={root} className={cx('omc-root omc-console', layout && 'omc-wide')} data-section={section}>
     <header className="omc-head">
       <div className="omc-head-tools">
-        {!sessionOnly && <Seg size="sm" label="范围" value={range} onChange={setR} options={RANGES}/>}
-        {!sessionOnly && <Select label="时间" value={period} onChange={setP} options={PERIODS}/>}
+        <Seg size="sm" label="范围" value={range} onChange={setR} options={RANGES} disabled={sessionOnly}/>
+        <Select label="时间" value={period} onChange={setP} options={PERIODS} disabled={sessionOnly}/>
         <IconButton icon="refresh" label="刷新" onClick={() => setTick(t => t + 1)}/>
       </div>
     </header>
     <div className="omc-frame">
       <nav className="omc-nav" aria-label="控制台分区">{nav2.map(([id, title, icon]) => <NativeButton size="sm" variant="ghost" key={id} type="button" aria-current={section === id ? 'page' : undefined}
         onClick={() => go(id)}><Icon name={icon} size={15}/><span>{title}</span></NativeButton>)}</nav>
-      <main className="omc-main" key={tick}>
-        <Body sessionId={props.sessionId} visible={visible} range={range} period={period} params={route.params} go={go}/>
+      <main className="omc-main">
+        <ConsoleRefresh.Provider value={tick}><Body sessionId={props.sessionId} visible={visible} range={range} period={period} params={route.params} go={go}/></ConsoleRefresh.Provider>
       </main>
     </div>
   </div>;
-}
-
-const LEGACY = {
-  'trisoul-x-context': 'evidence', 'trisoul-x-pipeline': 'context', 'trisoul-x-memory': 'memory', 'trisoul-x-monitor': 'overview',
-};
-const WORKBENCH_SECTIONS = { tasks: 'evidence', context: 'context', memory: 'memory', monitor: 'overview' };
-function Redirect({ section, useTabInfo }) {
-  const { tab } = useTabInfo();
-  const target = section ?? WORKBENCH_SECTIONS[tab.navigation?.params?.section] ?? 'overview';
-  useEffect(() => {
-    if (tab.visible) tab.actions.openTab(CONSOLE_KIND, { replaceTab: true, params: { section: target, nonce: Date.now() } });
-  }, [tab.visible, tab.id, target, tab.actions]);
-  return <div className="omc-root omc-redirect">正在打开 OMD 控制台…</div>;
 }
 
 export function applyConsole(ctx, { composerStats = [], performanceMode } = {}) {
@@ -92,10 +77,5 @@ export function applyConsole(ctx, { composerStats = [], performanceMode } = {}) 
   ctx.effect(() => ctx.sidebarRightTabs.register({ id, kind: CONSOLE_KIND, title: () => 'OMD', keepMounted: true,
     guide: [{ id: 'omd-console', order: 40, title: () => 'OMD 控制台', description: () => '上下文、记忆、调用与后台日志', icon: p => <Icon name="omd" {...p}/> }] }));
   ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({ name: 'sidebar.right.pane.tab', key: id }, ConsolePage));
-  for (const [kind, section] of [...Object.entries(LEGACY), ['trisoul-x-workbench', undefined]]) {
-    const legacyId = `trisoul_x/${kind}`;
-    ctx.effect(() => ctx.sidebarRightTabs.register({ id: legacyId, kind, title: () => 'OMD', guide: [] }));
-    ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({ name: 'sidebar.right.pane.tab', key: legacyId }, props => <Redirect {...props} section={section}/>));
-  }
   applyDock(ctx, composerStats, performanceMode);
 }

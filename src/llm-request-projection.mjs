@@ -51,3 +51,20 @@ export function installRequestProjection(ctx, project) {
     };
   });
 }
+
+// describe() serializes every active plugin schema. Request hooks read one
+// provider profile; share a short-lived snapshot, refreshed on native updates.
+const profiles = new WeakMap();
+export function providerProfile(ctx, provider) {
+  const settings = ctx.settings;
+  if (!settings) return undefined;
+  let cached = profiles.get(settings);
+  if (!cached || Date.now() - cached.at > 1000) {
+    cached = { at: Date.now(), providers: settings.describe().find(entry => entry.ns === 'llm-pi-ai')?.value?.providers };
+    profiles.set(settings, cached);
+  }
+  return cached.providers?.[provider];
+}
+export function trackProviderProfiles(ctx) {
+  ctx.on('settings/document-updated', ns => { if (ns === 'llm-pi-ai' && ctx.settings) profiles.delete(ctx.settings); }, { global: true });
+}

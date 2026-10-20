@@ -66,7 +66,6 @@ const localHostImport = specifier => {
   if (/^@deepseek-ai\/dsh-(bash|pwsh)-local$/.test(specifier)) return `${root}vendor/dsh/${specifier.split('dsh-')[1]}/src/index.ts`;
   if (/^\.\.\/\.\.\/\.\.\/(session|subagent)\//.test(specifier)) return `${root}vendor/dsh/${specifier.split('/').slice(4).join('/')}`;
   if (specifier === '@deepseek-ai/dsh-session-persistence-jsonl/src/lease.ts') return `${root}vendor/dsh/session-persistence-jsonl/src/lease.ts`;
-  if (hostLayout.subagentDriver && specifier === '@deepseek-ai/dsh-subagent-in-process-driver/src/index.ts') return `${root}vendor/dsh/subagent-in-process-driver/src/index.ts`;
 };
 const hostEnums = await createHostConstEnums({ root, snapshot,
   entryPoints: [...modules.map(hostEntry), `${root}src/session-migration-support.ts`], resolveImport: localHostImport });

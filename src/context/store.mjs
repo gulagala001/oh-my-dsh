@@ -5,7 +5,7 @@ import { hash } from './core.mjs';
 export class ContextStore {
   constructor(directory, { maxDiskCacheBytes = 16 * 1024 * 1024 } = {}) {
     this.dir = resolve(directory, 'context-v1');
-    this.cache = new Map(); this.diskCache = new Map(); this.diskCacheBytes = 0; this.readErrors = new Map(); this.writes = new Map();
+    this.cache = new Map(); this.diskCache = new Map(); this.diskCacheBytes = 0; this.readErrors = new Map(); this.writes = new Map(); this.dirty = new Set();
     this.maxDiskCacheBytes = Math.max(0, maxDiskCacheBytes);
     mkdirSync(join(this.dir, 'sessions'), { recursive: true, mode: 0o700 });
   }
@@ -50,9 +50,15 @@ export class ContextStore {
     if (!s.binding && binding) { s.binding = { scope: binding.scope === 'project' ? 'project' : 'session', project: binding.project, title: binding.title || id }; this.save(s); }
     return s;
   }
-  save(s) { this.write(this.path(s.id), s); this.cache.set(s.id, s); }
+  save(s) { this.write(this.path(s.id), s); this.cache.set(s.id, s); this.dirty.delete(s.id); }
+  // Step and event counters ride on the next save; release flushes them.
+  touch(s) { this.cache.set(s.id, s); this.dirty.add(s.id); }
+  flush(id) {
+    for (const key of id === undefined ? [...this.dirty] : [id]) if (this.dirty.has(key) && this.cache.has(key)) this.save(this.cache.get(key));
+  }
   release(id) {
-    this.cache.delete(id); this.writes.delete(this.path(id));
+    try { this.flush(id); } catch {}
+    this.cache.delete(id); this.writes.delete(this.path(id)); this.dirty.delete(id);
     this.dropDiskCache(basename(this.path(id)));
   }
   all({ tolerateInvalid = false, requiredId } = {}) {

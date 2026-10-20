@@ -51,13 +51,13 @@ function Geometry({ ctx }) {
   return <span ref={ref} hidden/>;
 }
 
-export function applyCodexIntegration(ctx, getRuntime) {
+export function applyCodexIntegration(ctx, getRuntime, { priority = 0 } = {}) {
   function Shell() {
     const runtime = getRuntime();
     const state = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot);
     return isCodex(state) ? <Geometry ctx={ctx}/> : null;
   }
-  ctx.slots.inject('shell.overlay', () => ctx.slots.register({ name: 'shell.overlay', id: 'omd-codex-geometry', order: 10 }, Shell));
+  ctx.slots.inject('shell.overlay', () => ctx.slots.register({ name: 'shell.overlay', id: 'omd-codex-geometry', order: 10, priority }, Shell));
   const name = 'conversation.session.header.corner';
   ctx.slots.inject(name, () => decorateSlotComponent(ctx.slots, name, () => true, original => {
     const Original = original.component;

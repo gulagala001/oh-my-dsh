@@ -6,7 +6,7 @@ import { GlyphBrand } from '../../../../plugins/glyph-theme/src/theme/brand.jsx'
 
 const enabled = state => state.active !== false && state.skins.find(s => s.id === state.selected)?.layout === 'glyph-motion';
 
-export function applyGlyphIntegration(ctx, getRuntime) {
+export function applyGlyphIntegration(ctx, getRuntime, { priority = 0 } = {}) {
   function Renderer() {
     const runtime = getRuntime();
     const state = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot);
@@ -17,7 +17,7 @@ export function applyGlyphIntegration(ctx, getRuntime) {
     return active ? createPortal(<canvas ref={ref} className="omd-glyph-canvas" aria-hidden="true"/>, document.body) : null;
   }
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({
-    name: 'shell.overlay', id: 'omd-glyph-renderer', order: 20,
+    name: 'shell.overlay', id: 'omd-glyph-renderer', order: 20, priority,
   }, Renderer));
   for (const name of ['conversation.hero.brand.mark', 'sidebar.brand.mark']) {
     ctx.slots.inject(name, () => decorateSlotComponent(ctx.slots, name, () => true, original => {

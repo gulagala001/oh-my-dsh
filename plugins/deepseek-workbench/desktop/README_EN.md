@@ -30,4 +30,4 @@ node desktop/check-host.mjs /absolute/patched-dsh-source /absolute/toolchain
 
 This checks real guest-boundary types and syntax in every changed TypeScript file. It does not replace a full desktop build, signing or native platform verification. It does not install dependencies or launch or modify an installed DSH instance.
 
-Host policy lives in [deepseek-browser-policy.ts](deepseek-browser-policy.ts); its JavaScript form is reused by plugin checks. Attribution is in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).
+Host policy lives in [deepseek-browser-policy.ts](deepseek-browser-policy.ts). Attribution is in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).

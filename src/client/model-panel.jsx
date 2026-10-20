@@ -1,4 +1,5 @@
 import { Button, Input } from './native-controls.jsx';
+import { Menu } from '@deepseek-ai/dsh-client-ui-primitives';
 import { Icon } from './native-icons.jsx';
 import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
@@ -6,6 +7,7 @@ import { effortChoices } from '../model-efforts.mjs';
 import css from './model-panel.css';
 import { useMainConversation } from './main-conversation.mjs';
 import { decorateSlotComponent } from './slot-decoration.mjs';
+import { preferredUltraSubmode, readUltraSubmode, rememberUltraSubmode } from './ultra-submode-preference.mjs';
 
 const emptyStore = { subscribe: () => () => {}, getSnapshot: () => undefined };
 const useStore = store => useSyncExternalStore(fn => store.subscribe(fn), () => store.getSnapshot());
@@ -21,6 +23,7 @@ const ultraSubmodes = [
   { id: 'free', label: '自由', description: '由模型自行组织多 AI 协作，专注完成任务。' },
 ];
 const sameRoute = (a, b) => a?.provider === b?.provider && a?.model === b?.model;
+const inUltraMenu = target => Boolean(target?.closest?.('[role="menu"]')?.querySelector('[data-omd-ultra-option]'));
 async function modeApi(sessionId, body, signal) {
   const response = await fetch(`trisoul-x/api/model-mode?session=${encodeURIComponent(sessionId)}`, {
     signal, ...(body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
@@ -43,6 +46,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
   const [open, setOpen] = useState(false), [pane, setPane] = useState('effort'), [query, setQuery] = useState('');
   const [draft, setDraft] = useState(null), [dragging, setDragging] = useState(false);
   const [submodeDraft, setSubmodeDraft] = useState(null);
+  const [submodeOpen, setSubmodeOpen] = useState(false);
   const [position, setPosition] = useState({ visibility: 'hidden' });
   const trigger = useRef(null), panel = useRef(null), slider = useRef(null), search = useRef(null), modelButton = useRef(null);
   const live = useRef(true), ticket = useRef(0), writing = useRef(false), draggingRef = useRef(false), draftRef = useRef(null), commitTimer = useRef();
@@ -85,8 +89,9 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
   const label = selectedIndex < 0 && draft === null ? effective ?? '默认' : level?.label ?? '默认';
   const savedLabel = selectedIndex < 0 ? effective ?? '默认' : choices[selectedIndex]?.label ?? '默认';
   const busy = saving || state.pending !== null, sliderDisabled = busy || !mode || !model || choices.length < 2;
+  useEffect(() => { if (!open || pane !== 'effort' || level?.mode !== 'ultra') setSubmodeOpen(false); }, [open, pane, level?.mode]);
 
-  const close = (focus = false) => { clearTimeout(commitTimer.current); gestureRevision.current = null; focusAfterSave.current = null; setOpen(false); setDraft(null); draftRef.current = null; setDragging(false); draggingRef.current = false; if (focus) trigger.current?.focus(); };
+  const close = (focus = false) => { clearTimeout(commitTimer.current); gestureRevision.current = null; focusAfterSave.current = null; setSubmodeOpen(false); setOpen(false); setDraft(null); draftRef.current = null; setDragging(false); draggingRef.current = false; if (focus) trigger.current?.focus(); };
   useLayoutEffect(() => {
     if (!open) return;
     const place = () => {
@@ -97,7 +102,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
     };
     place(); const observer = new ResizeObserver(place); observer.observe(panel.current);
     window.addEventListener('resize', place); window.addEventListener('scroll', place, true);
-    const outside = event => { if (!trigger.current?.contains(event.target) && !panel.current?.contains(event.target)) close(); };
+    const outside = event => { if (!trigger.current?.contains(event.target) && !panel.current?.contains(event.target) && !inUltraMenu(event.target)) close(); };
     document.addEventListener('pointerdown', outside);
     return () => { observer.disconnect(); window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); document.removeEventListener('pointerdown', outside); };
   }, [open]);
@@ -117,7 +122,8 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
     target?.focus({ preventScroll: true });
   }, [busy, open, pane, sliderDisabled]);
 
-  const save = async (route, nextMode, reasoningEffort, nextSubmode = nextMode === 'off' ? mode?.savedSubmode ?? submode.id : submode.id) => {
+  const save = async (route, nextMode, reasoningEffort, nextSubmode = nextMode === 'off' ? mode?.savedSubmode ?? submode.id
+    : activeMode === 'ultra' ? submode.id : preferredUltraSubmode(submodes, submode.id), remember = false) => {
     if (!mode || writing.current || locked) return false;
     writing.current = true; ++ticket.current;
     // Native disabled controls lose focus. Keep Escape/Tab available while
@@ -133,22 +139,25 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
         const next = await modeApi(sessionId, { ...route, reasoningEffort, mode: nextMode, submode: nextSubmode, expectedRevision: revision });
         if (!live.current) return false;
         setMode(next);
+        if (next.mode === 'ultra' && (remember || readUltraSubmode() === undefined)) rememberUltraSubmode(next.savedSubmode ?? next.submode);
         const queued = pendingSubmode.current; pendingSubmode.current = null;
         if (queued === null || next.mode === 'ultra' && queued === next.submode) break;
         // A submode click made while Ultra is saving follows that write, using
         // its returned revision instead of racing it with the stale selection.
-        nextMode = 'ultra'; reasoningEffort = undefined; nextSubmode = queued; revision = next.revision;
+        nextMode = 'ultra'; reasoningEffort = undefined; nextSubmode = queued; revision = next.revision; remember = true;
       }
       return true;
     } catch (e) { if (live.current) setError(e.message); return false; }
     finally { writing.current = false; pendingSubmode.current = null; if (live.current) { setSaving(false); setSubmodeDraft(null); setDraft(null); draftRef.current = null; } }
   };
   const chooseSubmode = next => {
+    if (!submodes.some(item => item.id === next) || locked || !mode || !selected || state.pending !== null) return;
+    setSubmodeOpen(false);
     clearTimeout(commitTimer.current); gestureRevision.current = null;
     draggingRef.current = false; setDragging(false);
     setSubmodeDraft(next);
     if (writing.current) { pendingSubmode.current = next; return; }
-    void save({ provider: selected.provider, model: selected.model }, 'ultra', undefined, next);
+    void save({ provider: selected.provider, model: selected.model }, 'ultra', undefined, next, true);
   };
   const commit = index => {
     clearTimeout(commitTimer.current);
@@ -169,6 +178,13 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
       && panel.current && (document.activeElement === panel.current || document.activeElement === origin)) setPane('effort');
   };
   const keyDown = event => {
+    if (event.defaultPrevented) return;
+    if (event.key === 'Escape' && submodeOpen) {
+      event.preventDefault(); event.stopPropagation(); setSubmodeOpen(false);
+      panel.current?.querySelector('.omd-ultra-mode-button')?.focus({preventScroll:true});
+      return;
+    }
+    if (inUltraMenu(event.target)) return;
     if (event.key === 'Escape') {
       event.preventDefault(); event.stopPropagation();
       if (pane === 'model') { setPane('effort'); queueMicrotask(() => modelButton.current?.focus()); } else close(true);
@@ -191,7 +207,18 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
     {open && createPortal(<section ref={panel} id={id} className="omd-model-panel" data-pane={pane} style={position} role="dialog" aria-label="模型与思考强度" aria-busy={busy} tabIndex={-1} onKeyDown={keyDown}>
       {pane === 'effort' ? <>
         <header className="omd-effort-heading">
-          <h2 key={label} className={level?.mode === 'ultra' ? 'omd-effort-ultra' : ''}>{label}</h2>
+          <h2 key={label} className={level?.mode === 'ultra' ? 'omd-effort-ultra' : ''}>
+            {level?.mode === 'ultra' ? <Menu open={submodeOpen} onClose={() => setSubmodeOpen(false)}
+              portal side="top" align="center" autoFocus selectedId={submode.id}
+              items={submodes.map(item => ({id:item.id,disabled:busy || locked,
+                label:<span className="omd-ultra-menu-option" data-omd-ultra-option={item.id}><strong>{item.label}</strong><small>{item.description}</small></span>}))}
+              onSelect={chooseSubmode}
+              anchor={<Button type="button" variant="ghost" size="sm" className="omd-ultra-mode-button"
+                disabled={locked || !mode || !selected || state.pending !== null} aria-label={`Ultra 协作方式：${submode.label}`}
+                aria-haspopup="menu" aria-expanded={submodeOpen} title={`当前：${submode.label} · 点击选择协作方式`}
+                onClick={() => setSubmodeOpen(value => !value)}>Ultra<Icon name="down" size={12}/></Button>}/>
+              : label}
+          </h2>
           <Button size="sm" variant="ghost" type="button" className="omd-model-reset" aria-label="恢复默认思考强度" title="恢复默认思考强度" disabled={busy || !model || !mode}
             onClick={() => void save({provider:selected.provider,model:selected.model}, 'off', model.reasoning?.defaultEffort)}><Reset/></Button>
           <Button size="sm" variant="ghost" ref={modelButton} type="button" className="omd-model-current" onClick={() => { setPane('model'); setQuery(''); }}><span>{renderModelLabel(group, model, 'menu')}</span><Chevron/></Button>
@@ -208,16 +235,6 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
             onKeyUp={event => { if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(event.key)) commit(draftRef.current ?? value); }}
             onBlur={() => { if (!draggingRef.current && draftRef.current !== null) commit(draftRef.current); }}/>
         </div>
-        {level?.mode === 'ultra' && <div className="omd-ultra-options">
-          <div className="omd-ultra-submodes" role="radiogroup" aria-label="Ultra 协作方式">
-            {submodes.map(item => <label key={item.id} data-selected={submode.id === item.id || undefined}>
-              <input type="radio" name={`${id}-submode`} value={item.id} checked={(activeMode === 'ultra' || submodeDraft !== null) && submode.id === item.id} tabIndex={submode.id === item.id ? 0 : -1} disabled={locked || !mode || !selected || state.pending !== null}
-                onChange={() => chooseSubmode(item.id)}/>
-              <span>{item.label}</span>
-            </label>)}
-          </div>
-          <p className="omd-ultra-description">{submode.description}</p>
-        </div>}
         <div className="omd-effort-notice" data-visible={mode?.pending || undefined} role="status">{mode?.pending ? '已保存，下一轮生效。' : ''}</div>
         {state.routable === false && <p className="omd-model-error">当前模型不可用，请选择其他模型。</p>}
       </> : <>

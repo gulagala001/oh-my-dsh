@@ -165,7 +165,12 @@ export function DreamDockItem(props) {
   const { data: live, refresh } = usePoll(signal => api(`/monitor/live?${qs({ session: props.sessionId })}`, undefined, signal), props.sessionId, { enabled: isOmd, interval: seat.open ? 3000 : 8000 });
   const data = live?.dream, job = data?.job;
   if (!isOmd || !(data?.activeJobs || data?.queuedJobs)) return null;
-  const stop = async () => { if (job) { await api(`/dream/job?${qs({ session: props.sessionId })}`, { id: job.id, action: 'stop' }).catch(() => {}); refresh(); } };
+  const stop = async () => {
+    if (!job) return;
+    try { await api(`/dream/job?${qs({ session: props.sessionId })}`, { id: job.id, action: 'stop' }); }
+    catch (error) { try { props.ctx?.conversation.input.for(props.ctx.sessions.scope(props.sessionId)).notify('error', '停止 Dream 失败：' + error.message); } catch {} }
+    refresh();
+  };
   const scope = { session: '会话', project: '项目', global: '全局' }[job?.scope] || '';
   return <Pill seat={seat} stat="omd-dream" icon={<Dot tone="pink" pulse={Boolean(data.activeJobs)}/>} aria="Dream 整理中"
     label={job ? `Dream ${job.done || 0}/${job.total ?? '—'}` : 'Dream 排队'} title={`Dream ${scope}整理`} footer={<Jump section="memory"/>}>
@@ -183,6 +188,6 @@ export function applyDock(ctx, composerStats, readMode) {
       yield ctx.slots.register({ name: 'conversation.composer.dock', id, order, priority: -10 }, native[id]);
     }
     yield ctx.slots.register({ name: 'conversation.composer.dock', id: 'omd-context', order: 20 }, ContextDockItem);
-    yield ctx.slots.register({ name: 'conversation.composer.dock', id: 'omd-dream', order: 21 }, DreamDockItem);
+    yield ctx.slots.register({ name: 'conversation.composer.dock', id: 'omd-dream', order: 21 }, props => <DreamDockItem {...props} ctx={ctx}/>);
   });
 }

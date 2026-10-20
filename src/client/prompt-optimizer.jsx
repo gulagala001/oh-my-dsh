@@ -1,5 +1,5 @@
 import { Icon } from './native-icons.jsx';
-import { Button, Input, Select, Switch, SegmentedControl, isSelectMenuTarget } from './native-controls.jsx';
+import { Button, Input, Select, SegmentedControl, isSelectMenuTarget } from './native-controls.jsx';
 import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { createOptimizerPreferences, DraftOptimizer, OPTIMIZER_MODES, optimizerRequirements } from './prompt-optimizer-state.mjs';
@@ -8,7 +8,6 @@ import { isSubagentSession, useMainConversation } from './main-conversation.mjs'
 
 const descriptions = { basic: '只润色表达，保留原意和限制。', structured: '整理已有目标、约束与交付要求。', planning: '将现有任务组织为可执行的步骤。' };
 function Sparkle() { return <Icon name="spark" size={16}/>; }
-function Toggle({ children, checked, onChange, disabled }) { return <label className="omd-opt-toggle"><span>{children}</span><Switch label={children} checked={checked} disabled={disabled} onChange={onChange}/></label>; }
 
 export function applyPromptOptimizer(ctx, { draftLock } = {}) {
   const preferences = createOptimizerPreferences(), controllers = new Map(), drafts = new Map();
@@ -40,20 +39,6 @@ export function applyPromptOptimizer(ctx, { draftLock } = {}) {
     });
     return () => { closed = true; off(); for (const controller of controllers.values()) controller.dispose(); controllers.clear(); drafts.clear(); preferences.dispose(); tag.remove(); };
   });
-  function Settings() {
-    const prefs = useSyncExternalStore(preferences.subscribe, preferences.getSnapshot), [error, setError] = useState('');
-    const set = patch => { try { preferences.set(patch); setError(''); } catch { setError('浏览器无法保存设置，原设置保持不变。'); } };
-    return <section className="omd-opt-settings omd-opt-theme">
-      <h2>提示词优化</h2><p>使用当前会话的模型，优化发送前的草稿。</p>
-      <Toggle checked={prefs.enabled} onChange={enabled => set({ enabled })}>显示提示词优化入口</Toggle>
-      <p>默认显示输入框星星。悬浮或展开抽屉可选择模式、回退版本并继续修改。</p>
-      <Toggle checked={prefs.automatic} disabled={!prefs.enabled} onChange={automatic => set({ automatic })}>每次发送前自动润色</Toggle>
-      <p>星星点亮时，每次发送先使用最低档“轻润色”，成功后自动发送。可随时点击星星关闭。润色会额外调用一次当前模型。</p>
-      <p>额外要求与命名预设保存在当前浏览器，刷新后仍可使用，不同会话复用。切换会话保留原稿、版本与继续优化要求，发送后开始新的草稿；刷新页面后版本记录清空，当前草稿由宿主保存。</p>
-      {error && <p role="alert">{error}</p>}
-      <small>优化模板源自 <a href="https://github.com/linshenkx/prompt-optimizer/tree/93c37090846dd7ba9619a0ebc152f205624df9f1" target="_blank" rel="noreferrer">Prompt Optimizer（MIT 版本）</a>。</small>
-    </section>;
-  }
   function Optimizer(props) {
     const main = useMainConversation(props);
     return main ? <MainOptimizer {...props}/> : null;
@@ -70,20 +55,18 @@ export function applyPromptOptimizer(ctx, { draftLock } = {}) {
     const requirements = optimizerRequirements(prefs), selectedPreset = prefs.requirementPresets.find(p => p.id === prefs.requirementPreset);
     useLayoutEffect(() => { setPresetName(selectedPreset?.name ?? ''); }, [prefs.requirementPreset, selectedPreset?.name]);
     const instruction = state.instruction, setInstruction = instruction => controller.publish({ instruction });
-    const id = useId(), anchor = useRef(null), panel = useRef(null), timer = useRef(null), pinned = useRef(false);
+    const id = useId(), anchor = useRef(null), panel = useRef(null);
     const [position, setPosition] = useState({ left: 8, bottom: 60, width: 370, maxHeight: 500 });
-    useEffect(() => { controller.activate(); return () => { clearTimeout(timer.current); controller.deactivate(); }; }, [controller]);
-    useEffect(() => { if (!prefs.enabled) { setOpen(false); clearTimeout(timer.current); } }, [prefs.enabled]);
-    useEffect(() => { if (state.candidate || state.error) { pinned.current = true; setOpen(true); } }, [state.candidate, state.error]);
-    const close = () => { clearTimeout(timer.current); pinned.current = false; setOpen(false); };
-    const enter = () => { clearTimeout(timer.current); timer.current = setTimeout(() => setOpen(true), 220); };
-    const leave = () => { clearTimeout(timer.current); if (!pinned.current && !state.busy && !panel.current?.contains(document.activeElement)) timer.current = setTimeout(() => setOpen(false), 300); };
+    useEffect(() => { controller.activate(); return () => controller.deactivate(); }, [controller]);
+    useEffect(() => { if (!prefs.enabled) setOpen(false); }, [prefs.enabled]);
+    useEffect(() => { if (state.candidate || state.error) setOpen(true); }, [state.candidate, state.error]);
+    const close = () => setOpen(false);
     useLayoutEffect(() => {
       if (!open || !prefs.enabled) return;
       const place = () => { const rect = anchor.current?.getBoundingClientRect(); if (!rect) return; const width = Math.min(380, window.innerWidth - 16); setPosition({ width, left: Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8)), bottom: Math.max(8, window.innerHeight - rect.top + 8), maxHeight: Math.max(100, rect.top - 16) }); };
       place(); window.addEventListener('resize', place); window.addEventListener('scroll', place, true);
       const outside = event => { if (!anchor.current?.contains(event.target) && !panel.current?.contains(event.target) && !isSelectMenuTarget(event.target)) close(); };
-      const escape = event => { if (event.key === 'Escape' && !event.defaultPrevented && !isSelectMenuTarget(event.target)) { close(); anchor.current?.querySelector('button')?.focus(); } };
+      const escape = event => { const active = document.activeElement; if (event.key === 'Escape' && !event.defaultPrevented && !isSelectMenuTarget(event.target) && (active === document.body || anchor.current?.contains(active) || panel.current?.contains(active))) { event.preventDefault(); close(); anchor.current?.querySelector('button')?.focus(); } };
       document.addEventListener('pointerdown', outside); document.addEventListener('keydown', escape);
       return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
     }, [open, prefs.enabled]);
@@ -93,15 +76,14 @@ export function applyPromptOptimizer(ctx, { draftLock } = {}) {
     if (!prefs.enabled) return null;
     const locked = controller.locked(), editingBlocked = locked || !!state.busy;
     const canOptimize = !locked && Boolean(input?.draft.trim()) && input.phase === 'plain' && !/^\s*\//.test(input.draft);
-    return <div className="omd-opt-entry omd-opt-theme" ref={anchor} onPointerEnter={enter} onPointerLeave={leave}>
+    return <div className="omd-opt-entry omd-opt-theme" ref={anchor}>
       <Button size="sm" variant="outline" type="button" className="omd-opt-star" aria-label={prefs.automatic ? '关闭自动润色' : '启用自动润色'} aria-pressed={prefs.automatic} title={prefs.automatic ? '自动轻润色已开启 · 点击关闭' : '提示词优化 · 点击开启自动轻润色'} onClick={() => set({ automatic: !prefs.automatic })} data-busy={state.busy || undefined}><Sparkle/></Button>
-      <Button size="sm" variant="outline" type="button" className="omd-opt-expand" aria-label="展开提示词优化" aria-expanded={open} aria-controls={id} onClick={() => { clearTimeout(timer.current); const next = !(open && pinned.current); pinned.current = next; setOpen(next); }}>⌃</Button>
+      <Button size="sm" variant="outline" type="button" className="omd-opt-expand" aria-label="展开提示词优化" aria-expanded={open} aria-controls={id} onClick={() => setOpen(value => !value)}>⌃</Button>
       {state.busy && <Button size="sm" variant="outline" type="button" className="omd-opt-stop" aria-label="停止提示词优化" onClick={() => controller.cancel()}>停止</Button>}
-      {open && createPortal(<section id={id} ref={panel} className="omd-opt-drawer omd-opt-theme" style={position} role="dialog" aria-label="提示词优化" onPointerEnter={() => clearTimeout(timer.current)} onPointerLeave={leave} onFocus={() => { pinned.current = true; }}>
+      {open && createPortal(<section id={id} ref={panel} className="omd-opt-drawer omd-opt-theme" style={position} role="dialog" aria-label="提示词优化">
         <header><strong><Sparkle/>提示词优化</strong><span>跟随当前模型</span><Button size="sm" variant="outline" type="button" aria-label="关闭提示词优化抽屉" onClick={close}>×</Button></header>
         <SegmentedControl id={id+"-mode"} label="优化模式" value={prefs.mode} disabled={!!state.busy} options={OPTIMIZER_MODES.map(([value, label]) => ({ value, label }))} onChange={mode => set({ mode })}/>
         <p className="omd-opt-hint" role="tabpanel" id={id+"-mode-"+prefs.mode+"-panel"} aria-labelledby={id+"-mode-"+prefs.mode}>{descriptions[prefs.mode]}</p>
-        <Toggle checked={prefs.automatic} onChange={automatic => set({ automatic })}>每次发送前自动润色</Toggle><p className="omd-opt-hint">固定轻润色 · 成功后自动发送</p>
         <div className="omd-opt-requirements">
           <label className="omd-opt-actions">额外要求 <Select aria-label="额外要求预设" value={prefs.requirementPreset} disabled={!!state.busy} onChange={event => changeRequirements(() => preferences.selectRequirementPreset(event.target.value))}><option value="">自定义</option>{prefs.requirementPresets.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</Select></label>
           <textarea aria-label="额外优化要求" rows={3} maxLength={64000} disabled={!!state.busy} placeholder="可选，例如：保留技术细节，使用简体中文" value={requirements} onChange={event => changeRequirements(() => preferences.setRequirements(event.target.value))}/>
@@ -117,12 +99,13 @@ export function applyPromptOptimizer(ctx, { draftLock } = {}) {
         {state.recoveries.map(({ id, draft }) => <div className="omd-opt-candidate" key={id}><strong>保留的草稿版本</strong><pre>{draft}</pre><Button size="sm" variant="outline" type="button" disabled={editingBlocked} onClick={() => controller.inspectRecovery(id)}>查看这份原稿与版本</Button></div>)}
         {(localError || state.error) && <p className="omd-opt-error" role="alert">{localError || state.error}</p>}
         {state.message && <p className="omd-opt-hint" role="status">{state.message}</p>}
+        <p className="omd-opt-hint">点亮星星即每次发送前自动轻润色。优化模板源自 <a href="https://github.com/linshenkx/prompt-optimizer/tree/93c37090846dd7ba9619a0ebc152f205624df9f1" target="_blank" rel="noreferrer">Prompt Optimizer（MIT 版本）</a>。</p>
       </section>, document.body)}
     </div>;
   }
-  ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'omd-prompt-optimizer', order: 18, label: () => '提示词优化' }, Settings));
   ctx.slots.inject('conversation.input.right', () => ctx.slots.register({ name: 'conversation.input.right', id: 'omd-prompt-optimizer', order: 90 }, Optimizer));
   return {
+    preferences,
     transferDraft(from, to) {
       const saved = controllerFor(from)?.navigationState({ deactivate: false });
       // Observe admission before the target composer mounts. Its pending/error

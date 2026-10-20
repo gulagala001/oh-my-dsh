@@ -39,18 +39,12 @@ html[data-omd-reduce-effects] .omd-model-panel *::after{animation:none!important
 @keyframes omd-effort-sheen { 0%,15% { transform: translateX(-70%); } 70%,100% { transform: translateX(100%); } }
 @media(prefers-reduced-motion:reduce) { .omd-model-panel *::before,.omd-model-panel *::after { animation: none!important; transition: none!important; } }
 
-.omd-ultra-options { padding: 1px 0 3px; }
-.omd-ultra-submodes { display: flex; gap: 2px; padding: 3px; border-radius: 9px; background: color-mix(in srgb,currentColor 6%,transparent); }
-.omd-ultra-submodes label { position: relative; flex: 1; min-width: 0; }
-.omd-ultra-submodes input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.omd-ultra-submodes span { display: flex; align-items: center; justify-content: center; height: 28px; padding: 0 2px; border-radius: 6px; white-space: nowrap; font-size: 11px; color: var(--dsw-alias-label-secondary,#777); }
-.omd-ultra-submodes label[data-selected] span { background: var(--dsw-alias-bg-base,Canvas); color: var(--dsw-alias-label-primary,CanvasText); box-shadow: 0 1px 3px #00000012; }
-.omd-ultra-submodes input:focus-visible + span { outline: 2px solid #4d7ff5; outline-offset: 2px; }
-.omd-ultra-submodes input:disabled { cursor: default; }
-.omd-ultra-submodes input:disabled + span { opacity: .45; }
-.omd-ultra-description { margin: 6px 2px 2px; min-height: 32px; color: var(--dsw-alias-label-tertiary,#888); font-size: 11px; line-height: 16px; }
+.omd-effort-heading .omd-ultra-mode-button { display:inline-flex; align-items:center; gap:5px; vertical-align:top; height:24px; min-height:0; padding:0 4px; color:#6886ef; line-height:24px; font-size:inherit; font-weight:inherit; }
+.omd-ultra-menu-option { display:flex; flex-direction:column; gap:3px; max-width:260px; padding:3px 0; white-space:normal; }
+.omd-ultra-menu-option strong { font-size:12px; font-weight:600; }
+.omd-ultra-menu-option small { color:var(--dsw-alias-label-tertiary,#888); font-size:11px; line-height:1.5; }
+[role="menu"]:has([data-omd-ultra-option]) { z-index:1300; }
 .omd-model-trigger[data-mode=ultra] .omd-model-caption { display: inline; max-width: none; flex-shrink: 0; }
-@media(pointer:coarse) { .omd-ultra-submodes span { min-height: 36px; } }
 
 .omd-model-back { transform: rotate(180deg); }
 

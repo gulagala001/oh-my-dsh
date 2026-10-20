@@ -1,9 +1,14 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+
+const FRAME_LIMIT = 5, EXPANDED_FRAME_LIMIT = 10, MAX_CAPTURE_BACKOFF = 15000;
 
 /** Monitoring has its own capture path; display changes never select a tool target. */
 export function createPresentationHost({ runtime, activity, browserHost }) {
   const owners = new Map(), videoTargets = new Set(), hiddenTasks = new Set(), placements = new Map(), yieldedTargets = new Map();
-  const hiddenTargets = new Map();
+  const hiddenTargets = new Map(), expandedOwners = new Set();
+  // Image revisions only need to be unique per host instance; never hash the image bytes.
+  const imageInstance = randomUUID().slice(0, 8);
+  let imageSequence = 0;
   const captures = new Map(), renderFailures = new Map();
   let mediaGeneration = 0;
   const transientCaptureErrors = new Set(['PRESENTATION_TIMEOUT', 'CAPTURE_FAILED', 'CAPTURE_TIMEOUT', 'VIDEO_CAPTURE_FAILED',
@@ -17,6 +22,10 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
     rendererId, target.threadID, target.id, target.backend, canonical(target.identity ?? null),
   ])).digest('hex');
   const manuallyHidden = (target, rendererId) => hiddenTargets.get(targetKey(rendererId, target.threadID, target.id))?.visibilityKey === visibilityKey(target, rendererId);
+  // Moving a target into the sidebar hides its preview for the current activity; it is restorable like a closed one.
+  const yielded = (target, group) => yieldedTargets.get(target.id)?.activity === group.activity.get(target.threadID);
+  const eligible = (target, group, ownerId) => !hiddenTasks.has(target.threadID) && !manuallyHidden(target, ownerId) && !yielded(target, group);
+  const frameLimit = ownerId => expandedOwners.has(ownerId) ? EXPANDED_FRAME_LIMIT : FRAME_LIMIT;
   const renderFailure = (rendererId, frame) => {
     const failure = renderFailures.get(targetKey(rendererId, frame.threadID, frame.presentationID));
     return failure?.identity === frame.visibilityKey && failure.mediaGeneration === frame.mediaGeneration ? failure : null;
@@ -71,13 +80,26 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
     }
     return grouped;
   }
+  function shownTargets(group, ownerId) {
+    return [...group.targets.values()].filter(target => eligible(target, group, ownerId)).slice(-frameLimit(ownerId)).reverse();
+  }
+  function overflowCounts(ownerId, group) {
+    if (!group) return {};
+    const shown = new Set(shownTargets(group, ownerId).map(target => target.id)), counts = {};
+    for (const target of group.targets.values()) {
+      if (eligible(target, group, ownerId) && !shown.has(target.id)) counts[target.threadID] = (counts[target.threadID] ?? 0) + 1;
+    }
+    return counts;
+  }
   function taskState(rendererId, { compactImages = false, knownImages } = {}) {
     const group = groups().get(rendererId), owner = owners.get(rendererId);
     const activeTaskIds = [...group?.activity.keys() ?? []];
     return { activeTaskIds, revision, globalHidden: false,
       taskVisibilities: Object.fromEntries(activeTaskIds.map(id => [id, hiddenTasks.has(id) || owner?.hidden ? 'hidden' : 'shown'])),
       hiddenTargetCounts: Object.fromEntries(activeTaskIds.map(id => [id,
-        [...group.targets.values()].filter(target => target.threadID === id && manuallyHidden(target, rendererId)).length])),
+        [...group.targets.values()].filter(target => target.threadID === id && !hiddenTasks.has(id)
+          && (manuallyHidden(target, rendererId) || yielded(target, group))).length])),
+      overflowCounts: overflowCounts(rendererId, group), expanded: expandedOwners.has(rendererId),
       placements: Object.fromEntries(activeTaskIds.map(id => [id, placements.get(id) ?? 'pinned'])),
       frames: owner?.hidden ? [] : (owner?.frames ?? []).filter(frame => activeTaskIds.includes(frame.threadID)).map(frame => {
         const failure = renderFailure(rendererId, frame);
@@ -105,6 +127,9 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
       requested = true;
     }
     const failed = error => {
+      // Repeated failures back off instead of recapturing every frame interval.
+      record.failures = (record.failures ?? 0) + 1;
+      record.nextCaptureAt = Date.now() + Math.min((target.backend === 'native' ? 100 : 600) * 2 ** record.failures, MAX_CAPTURE_BACKOFF);
       const errorCode = error?.code ?? 'PRESENTATION_ERROR', message = error?.message ?? 'Preview capture failed';
       if (record.lastGood && transientCaptureErrors.has(errorCode)) {
         record.staleSince ??= Date.now();
@@ -142,8 +167,8 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
               iconDataURL: result.preview.iconDataURL ?? target.iconDataURL ?? target.favicon,
               width: preview.width, height: preview.height, kind: preview.kind,
               timestamp: sameImage ? previous.timestamp : preview.timestamp, mediaGeneration: record.mediaGeneration };
-          if (record.value.imageDataURL) record.value.imageRevision = previous?.imageDataURL === record.value.imageDataURL
-            ? previous.imageRevision : createHash('sha256').update(JSON.stringify([target.id, target.threadID])).update(record.value.imageDataURL).digest('hex');
+          if (record.value.imageDataURL) record.value.imageRevision = sameImage && previous.imageRevision ? previous.imageRevision : `${imageInstance}.${++imageSequence}`;
+          record.failures = 0;
           record.lastGood = record.value;
           // Keep freshness outside the presentation signature while healthy so a
           // static browser frame still deduplicates. Expose it when updates fail.
@@ -177,9 +202,7 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
         let owner = owners.get(ownerId);
         if (!owner) { owner = { available: true, visible: false, rendered: false, error: null, hidden: false, generation: 0, targetIds: [], frames: [] }; owners.set(ownerId, owner); }
         if (owner.hidden) continue;
-        const targets = [...group.targets.values()].filter(target => !hiddenTasks.has(target.threadID)
-          && !manuallyHidden(target, ownerId)
-          && yieldedTargets.get(target.id)?.activity !== group.activity.get(target.threadID)).slice(-5).reverse(), generation = owner.generation;
+        const targets = shownTargets(group, ownerId), generation = owner.generation;
         owner.targetIds = targets.map(target => target.id);
         const frames = targets.flatMap(target => {
           const value = capture(target, ownerId, generation, requested)
@@ -246,7 +269,7 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
         return runtime.request('presentationContrast', { rect, ownerPid: owner.ownerPid });
       }
       if (!group) throw new Error('The monitoring window is no longer connected');
-      if (method !== 'hideAll' && !group.activity.has(args.sessionId)) throw new Error('The monitored task does not belong to this window');
+      if (!['hideAll', 'expand'].includes(method) && !group.activity.has(args.sessionId)) throw new Error('The monitored task does not belong to this window');
       const owner = owners.get(args.rendererId);
       if (method === 'hideAll') for (const id of group.activity.keys()) hiddenTasks.add(id);
       else if (method === 'hideTask') hiddenTasks.add(args.sessionId);
@@ -261,6 +284,9 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
           renderFailures.delete(key);
         }
         if (owner) { owner.hidden = false; owner.presentationSignature = null; }
+      }
+      else if (method === 'expand') {
+        if (args.expanded) expandedOwners.add(args.rendererId); else expandedOwners.delete(args.rendererId);
       }
       else if (method === 'placement') {
         if (!['home', 'pinned'].includes(args.placement)) throw new Error('Unsupported monitoring placement');
@@ -296,6 +322,14 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
         await presentFrames(event.rendererId, owner, floating);
         revision++; void refresh();
         await releaseUnusedVideo();
+        return { ok: true };
+      }
+      if (event.type === 'retry') {
+        for (const record of captures.values()) if (record.ownerId === event.rendererId && record.threadID === event.sessionId && record.targetId === event.targetId) {
+          record.failures = 0; record.nextCaptureAt = 0;
+        }
+        renderFailures.delete(targetKey(event.rendererId, event.sessionId, event.targetId));
+        void refresh();
         return { ok: true };
       }
       if (event.type === 'focus') {
@@ -340,7 +374,7 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
       return { ok: true };
     },
     async close() {
-      closed = true; unsubscribe(); clearTimeout(timer); captures.clear(); hiddenTargets.clear(); renderFailures.clear();
+      closed = true; unsubscribe(); clearTimeout(timer); captures.clear(); hiddenTargets.clear(); renderFailures.clear(); expandedOwners.clear();
       for (const owner of owners.values()) { owner.hidden = true; owner.generation++; owner.visible = false; owner.frames = []; }
       const results = await Promise.allSettled([refreshing, releaseUnusedVideo(), browserHost.closePresentations()]);
       const failures = results.filter(result => result.status === 'rejected').map(result => result.reason);

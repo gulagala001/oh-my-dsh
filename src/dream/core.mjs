@@ -1,6 +1,5 @@
 import { createHash } from 'node:crypto';
 
-export const DREAM_SCHEMA = 1;
 export const LIMITS = Object.freeze({ session: 1200, project: 2400, global: 600, page: 20, input: 16000, read: 4000 });
 export const digest = value => createHash('sha256').update(typeof value === 'string' ? value : JSON.stringify(value)).digest('hex');
 export const nodeKey = (kind, id = '') => kind === 'global' ? 'global' : `${kind}:${id}`;
@@ -30,9 +29,6 @@ export function summaryIdentity(record) {
 export function summaryFingerprint(record) {
   // Representation carriers/version changes are not new source content.
   return digest([summaryIdentity(record), record.summary, record.decisions || []]);
-}
-export function summaryMaterial(record) {
-  return [record.summary, ...(record.decisions || []).map(d => `用户决定（event ${d.seq}）：${d.text}`)].filter(Boolean).join('\n');
 }
 export function validateMemory(value, kind, allowedRefs) {
   if (!value || typeof value.summary !== 'string' || !value.summary.trim()) throw Error('Dream 没有返回有效短记忆');

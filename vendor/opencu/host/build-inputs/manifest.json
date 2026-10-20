@@ -2,19 +2,6 @@
   "formatVersion": 1,
   "description": "Preserved SDK manifests, complete pnpm graphs and workspace settings used for OpenCU host builds. Root npm locks are separate source-install graphs; rc1 was regenerated against its declared host.",
   "targets": {
-    "rc2": {
-      "sha256": {
-        "package.json": "260c0ff915bb91595462c7ff9305a63e541169e722945334bedd95c3249b0336",
-        "pnpm-lock.yaml": "581dc8f9d60de957daf580bf89e5664367299f21976462963efb2c2ad850053c"
-      }
-    },
-    "alpha3": {
-      "sha256": {
-        "package.json": "139efe687b1521e6a40ae1c0637b7a6238bce74a98d302b65c7cac18155a93e5",
-        "pnpm-lock.yaml": "2501906aedb1718ab01a18f4d99ad00f8a7f8384d3d0a386a9d998ba3cc33abe",
-        "pnpm-workspace.yaml": "7bb7466eba5be40dd2499d879a000407c9ad2e7ec13cf463f240e88ce898e5f6"
-      }
-    },
     "rc1": {
       "sha256": {
         "package-lock.json": "3e46708a5ef41b89930573b08dd17774876bdc62cf670ce2124e8454221bf001",

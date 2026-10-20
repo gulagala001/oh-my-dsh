@@ -13,7 +13,7 @@ export async function handleMonitorApi({ hub, ctx, req, res, url, send }) {
     const offset = Number(url.searchParams.get('offset') || 0), limit = Number(url.searchParams.get('limit') || 30);
     if (query.length > 200 || provider.length > 256 || !Number.isInteger(offset) || offset < 0 || offset > 100000
       || !Number.isInteger(limit) || limit < 1 || limit > 100) throw Error('价格筛选无效');
-    hub.pricing?.refresh();
+    hub.pricing?.refresh(); await hub.pricing?.loaded();
     res.setHeader('Cache-Control', 'no-store');
     send(res, 200, hub.pricing ? hub.pricing.catalog({ query, provider, offset, limit }) : monitorPriceCatalog({ query, provider, offset, limit }));
     return true;
@@ -58,6 +58,7 @@ export async function handleMonitorApi({ hub, ctx, req, res, url, send }) {
     send(res, 404, { error: '会话不存在' }); return true;
   }
   res.setHeader('Cache-Control', 'no-store');
+  if (!['context', 'usage'].includes(url.searchParams.get('view'))) await hub.pricing?.loaded();
   send(res, 200, monitorSnapshot({ hub, ctx, params: url.searchParams, id, session, agent, stored }));
   return true;
 }
@@ -131,7 +132,7 @@ export function monitorSnapshot({ hub, ctx, params, id, session, agent, stored }
   return { ...data, sessionId: id, actions: selection.actions,
     actionsScope: '当前会话范围的累计计数，不随时间筛选变化',
     running: agent?.status ?? 'idle', liveCalls, meter, frame, toolsTokens, contextCapacity,
-    contextHistory: stored?.contextHistory || [], budget, dream, resources,
+    budget, dream, resources,
     coverage: { ...data.coverage, partial: data.coverage.partial || Boolean(unreadable),
       message: [data.coverage.message, ...warnings].filter(Boolean).join(' ') } };
 }

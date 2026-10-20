@@ -171,7 +171,7 @@ export class ContextPipeline {
       s.failures.prepare.newEvents = (s.failures.prepare.newEvents || 0) + 1;
       s.failures.prepare.lastEventSeq = event.seq;
     }
-    this.store.save(s); this.arm(agent);
+    this.store.touch(s); this.arm(agent);
     if (this.mode(session) === 'adaptive') { void this.adaptive.check(agent); return; }
     if (s.eventsSincePrepare >= this.config().digestEvery) void this.prepare(agent, false);
   }
@@ -612,7 +612,7 @@ export class ContextPipeline {
   async preStep(agent, signal, route) {
     if (delegated(agent.session)) return;
     this.agents.set(agent.session.id, agent);
-    const s = this.state(agent.session); s.steps++; this.store.save(s);
+    const s = this.state(agent.session); s.steps++; this.store.touch(s);
     // agent/request is a proposal; adapter defaults are resolved by the native
     // host afterwards. Compare the same effective knobs as llm/stream capture.
     if (route && s.pending?.source === 'adaptive' && !s.transaction && !s.manualQueue.length) {
@@ -824,6 +824,9 @@ ${r.summary}`).join('\n\n') || 'No matching saved summaries.';
     if (id) { this.agents.delete(id); this.idleSince.delete(id); }
     else { this.agents.clear(); this.idleSince.clear(); }
     const pending = [...this.jobs].filter(([key]) => !id || key.startsWith(id + ':')).map(([, job]) => job);
-    return Promise.allSettled(pending).then(() => { for (const key of ids) this.releaseState(key); });
+    return Promise.allSettled(pending).then(() => {
+      for (const key of ids) this.releaseState(key);
+      if (!id) try { this.store.flush(); } catch (error) { this.hub.ctx.logger?.warn?.(error.message); }
+    });
   }
 }

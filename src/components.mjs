@@ -5,7 +5,7 @@ import { currentDirectory } from './working-directory.mjs';
 export class Components {
   constructor(ctx, hub) {
     this.ctx = ctx; this.hub = hub;
-    this.operations = new Map(); this.records = new Map(); this.controller = new AbortController();
+    this.operations = new Map(); this.records = new Map(); this.roots = new Map(); this.controller = new AbortController();
     this.automatic = hub.config().componentAutoSetup !== false;
     const configuration = () => JSON.stringify([hub.config().codegraphEnabled, hub.config().componentAutoSetup]);
     let previous = configuration();
@@ -39,7 +39,9 @@ export class Components {
   }
   project(cwd, { retry = false } = {}) {
     if (this.hub.config().codegraphEnabled === false || this.closed) return;
-    void this.hub.codegraph.ensureProject(cwd, { retry }).catch(() => {}); // The components page retains the actionable failure.
+    // Every request names its cwd; skip path resolution while that root stays ready.
+    if (!retry && this.hub.codegraph.projects?.get(this.roots.get(cwd))?.status === 'ready') return;
+    void this.hub.codegraph.ensureProject(cwd, { retry }).then(root => { this.roots.set(cwd, root); }, () => {}); // The components page retains the actionable failure.
   }
   reconfigure() {
     if (this.writingSettings) return Promise.resolve();

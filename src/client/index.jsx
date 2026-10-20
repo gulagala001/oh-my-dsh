@@ -7,7 +7,7 @@ import { installDesktopLifecycle } from './desktop-lifecycle.mjs';
 import { applySessionTimeZone } from './session-time-zone.mjs';
 import { apply as applyRewind, inject as rewindInject } from '../../vendor/rewind/src/client/index.jsx';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Menu, Modal } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Button, Menu } from '@deepseek-ai/dsh-client-ui-primitives';
 import { applyConsole } from './console/shell.jsx';
 import { openConsole } from './console/nav.mjs';
 import css from './style.css';
@@ -20,7 +20,8 @@ import { installConversationLifecycle } from './conversation-lifecycle.mjs';
 
 import versionCss from './version-info.css';
 import { whaleCss } from './brand.mjs';
-import { createContextUI } from './context-client.mjs';
+import { applyOmdSettings } from './omd-settings.jsx';
+import { bindSettingsNavigation } from './settings-nav.mjs';
 import { applyHistorySize } from './history-settings.jsx';
 import { applySkins } from './skins/settings.jsx';
 import { applyConversationRecords } from './conversation-records.jsx';
@@ -36,7 +37,6 @@ import { applyProjectlessWorkspaces } from './projectless-workspaces.jsx';
 import { apply as applyDeepSeekWorkbench } from '../../plugins/deepseek-workbench/src/client/index.jsx';
 
 export { CONTEXT_UI_VERSION as contextUIVersion } from './context-client.mjs';
-const { ContextSettings, applyStyle } = createContextUI(React);
 
 const api = async (path, value, signal) => {
   const response = await fetch(`trisoul-x/api${path}`, value === undefined ? { signal } : { signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
@@ -54,7 +54,6 @@ function BetterTodoChip(props) {
 }
 function BetterTodoSessionChip({ sessionId, useSessionStatus }) {
   const [state, setState] = useState(null), [open, setOpen] = useState(false), [saving, setSaving] = useState(false), [error, setError] = useState('');
-  const [notice, setNotice] = useState(false);
   const running = useSessionStatus(s => s.get(sessionId)?.running), active = useRef(sessionId), revision = useRef(0), writing = useRef(null); active.current = sessionId;
   const load = useCallback(async () => {
     if (writing.current?.sessionId === sessionId) return;
@@ -62,7 +61,7 @@ function BetterTodoSessionChip({ sessionId, useSessionStatus }) {
     try { const next = await api('/better-todo' + suffix(sessionId)); if (active.current === sessionId && revision.current === ticket) { setState({ sessionId, ...next }); setError(''); } }
     catch (e) { if (active.current === sessionId && revision.current === ticket) setError(e.message); }
   }, [sessionId]);
-  useEffect(() => { setOpen(false); setSaving(false); setError(''); setNotice(false); }, [sessionId]);
+  useEffect(() => { setOpen(false); setSaving(false); setError(''); }, [sessionId]);
   useEffect(() => { void load(); }, [load, running]);
   const ready = state?.sessionId === sessionId;
   const toggle = async key => {
@@ -71,24 +70,18 @@ function BetterTodoSessionChip({ sessionId, useSessionStatus }) {
     setSaving(true); setError('');
     try {
       const next = await api('/better-todo' + suffix(sessionId), { [key]: !state[key] });
-      if (active.current === sessionId) {
-        setState({ sessionId, ...next });
-        if (key === 'verification' && !state.verification && next.verification) { setOpen(false); setNotice(true); }
-      }
+      if (active.current === sessionId) setState({ sessionId, ...next });
     } catch (e) { if (active.current === sessionId) setError(e.message); }
     finally { if (writing.current === write) writing.current = null; if (active.current === sessionId) setSaving(false); }
   };
   const chip = <Button size="sm" variant="ghost" type="button" className={cx('tx-scope-chip', 'tx-bt-chip', ready && !state.todo && !state.verification && 'tx-bt-off')} aria-label="BT · Better Todo" aria-haspopup="menu" aria-expanded={open} title="Better Todo · 收尾提醒" onClick={() => { void load(); setOpen(!open); }}><strong>BT</strong><Icon name="down" size={12}/></Button>;
   const items = [{ type: 'label', id: 'title', text: 'Better Todo' }, ...[
     ['todo', '待办完成提醒', '仍有未完成待办时提醒继续'],
-    ['verification', '验证完成提醒', '缺少验证证据时提醒，含文字证据复核'],
-  ].map(([id, label, hint]) => ({ id, disabled: !ready || saving, label: <span className="tx-bt-option"><span><strong>{label}</strong><small>{hint}</small></span><span className="tx-bt-state"><small>{ready ? state[id] ? '开' : '关' : '…'}</small>{ready && state[id] && <Icon name="check" size={14}/>}</span></span> })),
+    ['verification', '验证完成提醒', '缺少验证证据时提醒，含文字证据复核；完成率更高，也更耗时间和 token'],
+  ].map(([id, label, hint]) => ({ id, disabled: !ready || saving, label: <span className="tx-bt-option"><span><strong>{label}</strong><small>{hint}</small></span></span> })),
     { type: 'separator', id: 'sep' }, { id: 'evidence', label: <span className="tx-bt-option"><span><strong>查看任务证据</strong><small>需求原文、验证命令与结果</small></span><span className="tx-bt-state">›</span></span> }];
-  return <><Menu open={open} anchor={chip} items={items} footer={[{ type: 'label', id: 'status', text: error || '仅本会话 · 可随时更改' }]} onSelect={id => { if (id === 'evidence') { setOpen(false); openConsole('evidence'); } else toggle(id); }} onClose={() => setOpen(false)} portal side="top" align="end" compact autoFocus/>
-    <Modal open={notice} title="验证完成提醒" closeLabel="关闭" onClose={() => setNotice(false)}
-      footer={<Button type="button" variant="primary" data-modal-autofocus onClick={() => setNotice(false)}>知道了</Button>}>
-      <p>此选项将会带来更高的任务完成率，同时也会消耗更多时间和 token。</p>
-    </Modal></>;
+  return <><Menu open={open} anchor={chip} items={items} selection="check" selectedIds={ready ? ['todo', 'verification'].filter(id => state[id]) : []} footer={[{ type: 'label', id: 'status', text: error || '仅本会话 · 可随时更改' }]} onSelect={id => { if (id === 'evidence') { setOpen(false); openConsole('evidence'); } else toggle(id); }} onClose={() => setOpen(false)} portal side="top" align="end" compact autoFocus/>
+</>;
 }
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
@@ -111,7 +104,8 @@ export async function apply(ctx) {
   await ctx.plugin(hostChat, { settings: chatSettings });
   await applyRewind(ctx);
   await ctx.plugin(openCU);
-  projectlessDrafts.transferOptimizer = applyPromptOptimizer(ctx, { draftLock: projectlessDrafts }).transferDraft;
+  const optimizer = applyPromptOptimizer(ctx, { draftLock: projectlessDrafts });
+  projectlessDrafts.transferOptimizer = optimizer.transferDraft;
   applyModelPanel(ctx);
   applySubscriptionFast(ctx);
   applyMemoryPermissions(ctx);
@@ -131,11 +125,11 @@ export async function apply(ctx) {
     return () => { off(); tag.remove(); document.documentElement.classList.remove('trisoul-shell'); };
   });
   applyAppearanceBrand(ctx, getAppearanceRuntime);
-  ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'trisoul-x', order: 16, label: () => 'Oh My DSH' }, ContextSettings));
+  applyOmdSettings(ctx, { optimizer: optimizer.preferences });
+  ctx.effect(() => bindSettingsNavigation(ctx));
   ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({ name: 'conversation.session.header.utilities', id: 'trisoul-running', order: 25 }, RunningMarker));
   ctx.slots.inject('conversation.input.right', () => ctx.slots.register({ name: 'conversation.input.right', id: 'trisoul-better-todo', order: 100 }, BetterTodoChip));
   applyConsole(ctx, { composerStats: JSON.parse(__OMD_COMPOSER_STATS__),
     performanceMode: { get: () => chatSettings.getSnapshot()?.value?.performanceUsage, subscribe: listener => chatSettings.subscribe(listener) } });
-  applyStyle(ctx);
   applyConversationRecords(ctx);
 }

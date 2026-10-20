@@ -13,9 +13,9 @@ Send the entire block to an AI that can operate your computer:
 ```text
 Please install or upgrade standalone OpenCU in my DSH setup.
 
-First read the project's canonical installation guide and fixed Release list:
+First read the project's canonical installation guide and changelog (with fixed package URLs for each version):
 https://github.com/gulagala001/opencu/blob/main/docs/install_EN.md
-https://github.com/gulagala001/opencu/blob/main/docs/releases.md
+https://github.com/gulagala001/opencu/blob/main/CHANGELOG.md
 
 Identify the desktop or Web instance I use, its full DSH version, actual profile, DSH_HOME and existing plugins. If OMD is installed, do not install OpenCU again; follow the OMD installation guide instead:
 https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install_EN.md
@@ -53,7 +53,7 @@ https://github.com/gulagala001/opencu/releases/download/v2.0.6-dsh.0.2.1-rc.1/op
 - Both fixed Releases include the plugin and `host-adapters.zip` source materials, **not a complete desktop installer**. The full embedded browser, native monitoring and related UI need matching Host, Client and preload source adapters and a host build. Installing the plugin does not supply those host changes. Builders can follow the [developer instructions (Chinese)](../DEVELOPMENT.md#构建和本地插件包).
 - Web capabilities depend on the service machine, backend and permissions. They do not directly grant control over the computer visiting the page.
 - Before upgrading, back up and keep the original profile, `DSH_HOME`, data directory and third-party plugins. Install the matching package and restart the affected instance. Do not create or reset configuration for an upgrade.
-- **Main-branch updates do not update fixed Releases.** These URLs do not automatically include later fixes. See the [Release list](releases.md) for published packages and checksums.
+- **Main-branch updates do not update fixed Releases.** These URLs do not automatically include later fixes. See the [changelog](../CHANGELOG.md) for published packages and checksums.
 
 <details>
 <summary>CLI supplement (for AI or users who prefer the terminal)</summary>

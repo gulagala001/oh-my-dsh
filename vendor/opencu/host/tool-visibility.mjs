@@ -1,5 +1,5 @@
 /** Keep CU calls in normal tool groups without changing their REA renderer. */
-export async function applyToolVisibility(patch, base, target) {
+export async function applyToolVisibility(patch, base) {
   const computerCalls = `const computerCalls = new WeakMap<ToolCallBlock, boolean>()
 function containsComputerCall(block: ToolCallBlock): boolean {
   const cached = computerCalls.get(block)
@@ -12,22 +12,7 @@ function containsComputerCall(block: ToolCallBlock): boolean {
 }
 
 `;
-  if (target === 'rc2') {
-    await patch(base + 'process-groups.ts', [[
-      computerCalls + `function independent(node: ChatNode): boolean {
-  return INDEPENDENT.has(node.kind) || node.kind === 'tool-call' && containsComputerCall(node.data.root)
-}
-
-`, ''
-    ], [
-      '  ConversationGroupDefinition, ConversationGroupInput, GroupKey, GroupSnapshot, ToolCallBlock,',
-      '  ConversationGroupDefinition, ConversationGroupInput, GroupKey, GroupSnapshot,'
-    ], [
-      '\n    || independent(previous) !== independent(current)', ''
-    ], [
-      '      if (independent(node)) {', '      if (INDEPENDENT.has(node.kind)) {'
-    ]], '      if (INDEPENDENT.has(node.kind)) {');
-  } else await patch(base + 'tool.ts', [[
+  await patch(base + 'tool.ts', [[
     computerCalls, ''
   ], [
     "    const groupTree = containsComputerCall(projected) ? 'turn' : undefined\n", ''

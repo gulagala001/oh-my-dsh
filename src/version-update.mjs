@@ -20,7 +20,9 @@ const unpublishedReason = (release, version, includeUnpublished) => {
 };
 export function versionInstallSpec(version) {
   parseVersion(version);
-  return 'github:gulagala001/oh-my-dsh#v' + version.replace(/^v/, '');
+  // Release assets carry the built package; main does not track build output.
+  const bare = version.replace(/^v/, '');
+  return `https://github.com/gulagala001/oh-my-dsh/releases/download/v${bare}/${PACKAGE}-${bare}.tgz`;
 }
 
 // Updating an existing bundle uses the host's transaction and requires a restart.

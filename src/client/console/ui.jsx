@@ -1,6 +1,6 @@
 // OMD console kit: one visual language for every console section and the
 // composer dock items. Colours come from DSH theme aliases only.
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Tag as NativeTag, StateDot, useAnchoredPosition, useDismissOnOutsidePointer } from '@deepseek-ai/dsh-client-ui-primitives';
 import { createPoller } from '../polling.mjs';
@@ -42,17 +42,17 @@ export function Tag({ tone = 'gray', children, title, dot }) {
 }
 export function Dot({ tone = 'gray', pulse }) { return <StateDot state={pulse ? 'ongoing' : ({ green: 'done', amber: 'warning', red: 'error' }[tone] ?? 'idle')} size={8}/>; }
 
-export function Seg({ value, options, onChange, label, size }) {
+export function Seg({ value, options, onChange, label, size, disabled }) {
   return <div className="omd-native-segments" role="group" aria-label={label}>
-    {options.map(([id, text, count]) => <NativeButton key={id} type="button" size="sm"
+    {options.map(([id, text, count]) => <NativeButton key={id} type="button" size="sm" disabled={disabled}
       variant={id === value ? 'primary' : 'outline'} aria-pressed={id === value} onClick={() => onChange(id)}>
       {text}{count != null && <b>{count}</b>}
     </NativeButton>)}
   </div>;
 }
 
-export function Select({ value, options, onChange, label, width }) {
-  return <NativeSelect aria-label={label} value={value} style={width ? { width } : undefined}
+export function Select({ value, options, onChange, label, width, disabled }) {
+  return <NativeSelect aria-label={label} value={value} disabled={disabled} style={width ? { width } : undefined}
     onChange={event => onChange(event.target.value)}>
     {options.map(([id, text]) => <option key={id} value={id}>{text}</option>)}
   </NativeSelect>;
@@ -216,17 +216,25 @@ export function Steps({ steps }) {
 }
 
 /** Visible-gated polling with stale-delivery protection. */
+// The console's refresh button bumps this; every poll re-reads in place.
+export const ConsoleRefresh = createContext(0);
 export function usePoll(read, key, { enabled = true, interval = 3000 } = {}) {
   const [state, setState] = useState({ key: null, data: null, error: '' });
-  const ref = useRef(null), readRef = useRef(read); readRef.current = read;
+  const ref = useRef(null), readRef = useRef(read), intervalRef = useRef(interval); readRef.current = read;
+  // Polling faster (for example, an opened popover) reads at once.
+  if (interval < intervalRef.current) queueMicrotask(() => ref.current?.refresh());
+  intervalRef.current = interval;
+  const refreshTick = useContext(ConsoleRefresh);
+  useEffect(() => { if (refreshTick) ref.current?.refresh(); }, [refreshTick]);
   useEffect(() => {
     if (!enabled) return;
-    const poller = createPoller({ interval, read: signal => readRef.current(signal),
+    // A changed interval applies to the next read; it does not restart the poller.
+    const poller = createPoller({ interval: () => intervalRef.current, read: signal => readRef.current(signal),
       onData: data => setState({ key, data, error: '' }),
       onError: error => setState(old => ({ key, data: old.key === key ? old.data : null, error: error.message })) });
     ref.current = poller; poller.start();
     return () => { poller.stop(); ref.current = null; };
-  }, [key, enabled, interval]);
+  }, [key, enabled]);
   const refresh = useCallback(() => ref.current?.refresh(), []);
   return { data: state.key === key ? state.data : null, error: state.key === key ? state.error : '', refresh };
 }
@@ -280,7 +288,16 @@ export function usePopover() {
   useDismissOnOutsidePointer(rootRef, open, setOpen, panelRef);
   useEffect(() => {
     if (!open) return;
-    const key = e => { if (e.key === 'Escape') setOpen(false); };
+    // Escape closes only this layer: focus must be inside it (or nowhere),
+    // and the key is marked handled so outer layers stay open.
+    const key = e => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      const active = document.activeElement;
+      const inside = !active || active === document.body || rootRef.current?.contains(active) || panelRef.current?.contains(active);
+      if (!inside) return;
+      e.preventDefault(); setOpen(false);
+      rootRef.current?.querySelector('button')?.focus({ preventScroll: true });
+    };
     document.addEventListener('keydown', key);
     return () => document.removeEventListener('keydown', key);
   }, [open]);
@@ -304,7 +321,7 @@ export function Drawer({ title, onClose, children, actions }) {
     return () => { if (prev?.isConnected) prev.focus?.({ preventScroll: true }); };
   }, []);
   return <div className="omc-drawer" ref={ref} tabIndex={-1} role="dialog" aria-label={title}
-    onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } }}>
+    onKeyDown={e => { if (e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); e.stopPropagation(); onClose(); } }}>
     <header className="omc-drawer-head"><NativeButton size="sm" variant="ghost" type="button" className="omc-btn" onClick={onClose}><Icon name="chevron" size={13} className="omc-flip"/>返回</NativeButton><strong>{title}</strong>{actions}</header>
     <div className="omc-drawer-body">{children}</div>
   </div>;

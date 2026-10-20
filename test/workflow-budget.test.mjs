@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { HubStore } from '../src/hub-store.mjs';
-import { WorkflowBudget, workflowTokenTarget } from '../src/workflow-budget.mjs';
+import { WorkflowBudget, workflowTokenTarget } from '../vendor/workflow/src/budget.mjs';
 const human = (text, id = 'message') => ({ id, source: { kind: 'user' }, content: [{ type: 'text', text }] });
 const session = (id, parentSession) => ({ id, header: { ...(parentSession ? { parentSession, origin: 'subagent' } : {}) } });
 const response = (seq, count, type = 'assistant/message') => ({ seq, type, data: { message: { source: { kind: 'model' } }, usage: count === undefined ? undefined : { inputTokens: 100, outputTokens: count, reasoningTokens: Math.floor(count / 2) } } });

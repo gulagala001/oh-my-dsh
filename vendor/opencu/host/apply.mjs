@@ -409,7 +409,7 @@ await patch(desktop + 'opencu-extensions.ts', [
 ]);
 for (const extension of ['js', 'd.ts']) pending.set(desktop + `opencu-rea-context-menu.${extension}`, await readFile(new URL(`./rea-context-menu.${extension}`, import.meta.url), 'utf8'));
 await applyComposerReferences(patch, 'packages/client/ui-conversation/src/client/');
-await applyToolVisibility(patch, 'packages/client/ui-chat/src/client/conversation-nodes/', target.id);
+await applyToolVisibility(patch, 'packages/client/ui-chat/src/client/conversation-nodes/');
 const backgroundMarker = '// opencu-background-input:v1';
 await patch(guests, [
   ["import { cancelSiteTool } from './opencu-site-tools.ts'", `import { cancelSiteTool } from './opencu-site-tools.ts'\n${backgroundMarker}`],

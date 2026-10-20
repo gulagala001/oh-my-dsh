@@ -1,6 +1,6 @@
 import { registerContextCommands } from './context/commands.mjs';
 import { installPromptAdapter } from './cc-adaptation/adapter.mjs';
-import { MAIN_PERSONA } from './prompts.mjs';
+import { mainPrompt as MAIN_PERSONA } from './cc-adaptation/texts.mjs';
 import { ReplacementCanvas } from './context/host.mjs';
 import { registerContextRecall } from './context/recall.mjs';
 import { NOTE_DESCRIPTION } from './context/prompts.mjs';

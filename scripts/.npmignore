@@ -1,6 +1,4 @@
 # Internal engineering fixtures stay in Git, outside the installed plugin.
 /simulate.mjs
 /simulator/
-/check-plugin-coexist.mjs
 /*.test.mjs
-/host-const-enums-observer.mjs

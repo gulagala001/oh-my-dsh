@@ -1,10 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { api, qs, usePoll, useReader, useAction, Card, Tag, Seg, Search, Table, Empty, Skeleton, Alert, Button, KV, Drawer, StackBar, Dot, Icon } from './ui.jsx';
 import { k, clock, ago } from './model.mjs';
 import { RecordDrawer } from './context.jsx';
-import { Button as NativeButton, Input, Select as NativeSelect, Switch, Checkbox } from '../native-controls.jsx';
+import { Button as NativeButton } from '../native-controls.jsx';
+import { openOmdSettings } from '../settings-nav.mjs';
 
 const JOB = { queued: ['排队', 'gray'], running: ['整理中', 'blue'], paused: ['已停止', 'amber'], budget: ['等待额度', 'amber'], failed: ['失败', 'red'], complete: ['完成', 'green'] };
+const openDreamSettings = () => { try { openOmdSettings('dream'); } catch (error) { console.error(error); } };
 const SCOPE = { session: '会话', project: '项目', global: '全局' };
 const folderName = path => path === '@unclassified' ? '未归类' : path?.split(/[\\/]/).filter(Boolean).at(-1) || '项目';
 
@@ -15,9 +17,8 @@ export function MemorySection({ sessionId, visible, params }) {
   const [project, setProject] = useState(''), [target, setTarget] = useState(null);
   const [search, setSearch] = useState(''), [cursors, setCursors] = useState(['']), [page, setPage] = useState(0);
   const sources = useReader(sessionId), documents = useReader(sessionId), reader = sources.value, doc = documents.value;
-  const [settings, setSettings] = useState(false);
   useEffect(() => { setTarget(null); setProject(''); setCursors(['']); setPage(0); }, [sessionId]);
-  useEffect(() => { if (params?.layer) setLayer(params.layer); if (params?.focus === 'settings') setSettings(true); }, [params?.nonce]);
+  useEffect(() => { if (params?.layer) setLayer(params.layer); if (params?.focus === 'settings') openDreamSettings(); }, [params?.nonce]);
   useEffect(() => { setCursors(['']); setPage(0); }, [layer, project, target, search]);
   const pid = project || d?.session?.project || '';
   const sid = target?.id || sessionId;
@@ -45,7 +46,7 @@ export function MemorySection({ sessionId, visible, params }) {
         <StackBar legend={false} total={daily || 1} parts={[{ key: 'u', name: '已用', value: used, color: used / daily > .9 ? 'var(--omc-red)' : 'var(--omc-pink)' }]}/>
         <p className="omc-hint">{d.usage?.resetsAt ? `${clock(d.usage.resetsAt).slice(0, 11)} 重置 · 手动与自动共用` : ''}</p>
       </Card>
-      <Card title="自动整理" icon="refresh" extra={<Button icon="settings" onClick={() => setSettings(true)}>设置</Button>}>
+      <Card title="自动整理" icon="refresh" extra={<Button icon="settings" onClick={openDreamSettings}>设置</Button>}>
         <div className="omc-big"><Dot tone={d.settings?.enabled ? 'green' : 'gray'}/> {d.settings?.enabled ? '已开启' : '已关闭'}</div>
         <p className="omc-hint">{d.settings?.enabled ? `每 ${Math.round((d.settings.intervalMs || 0) / 60000)} 分钟检查 · ${d.settings.model ? d.settings.model : '未固定后台模型'}` : '开启后按项目整理共享会话，再更新全局短记忆。'}</p>
         {d.notice && <Alert tone="warn">{d.notice}</Alert>}
@@ -113,7 +114,6 @@ export function MemorySection({ sessionId, visible, params }) {
     </Drawer>}
     {doc && <RecordDrawer record={doc} sessionId={sid} onClose={() => documents.close()}
       assetBase={(r, i) => `trisoul-x/api/dream/asset?${qs({ sessionId: r.requestSessionId || r.sessionId, id: r.id, asset: i + 1 })}`}/>}
-    {settings && <DreamSettings onClose={() => setSettings(false)} folders={d.folders || []} onSaved={refresh}/>}
   </div>;
 }
 
@@ -147,74 +147,4 @@ function SourceView({ value: v, onRead, onDoc }) {
     <div className="omc-detail-foot">{v.nextCursor && <Button onClick={() => onRead({ ...v.args, cursor: v.nextCursor })}>继续读取</Button>}
       {v.nextSources && <Button onClick={() => onRead({ reference: v.reference, query: 'sources', cursor: v.nextSources })}>更多来源</Button>}</div>
   </>;
-}
-
-const unitValue = (ms, unit) => String(Number((ms / unit).toFixed(Math.ceil(Math.log10(unit)))));
-function DreamSettings({ onClose, folders: initialFolders, onSaved }) {
-  const [folders, setFolders] = useState(initialFolders), [s, setS] = useState(null), [saved, setSaved] = useState(null), [directory, setDirectory] = useState([]);
-  const [revision, setRevision] = useState(0), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
-  const operation = useRef(null);
-  useEffect(() => {
-    const owner = { controller: new AbortController(), saving: false }; operation.current = owner;
-    const { signal } = owner.controller;
-    setError('');
-    void (async () => {
-      try {
-        const [value, state] = await Promise.all([api('/dream/settings', undefined, signal), api('/state', undefined, signal)]);
-        if (signal.aborted) return;
-        const draft = { enabled: value.enabled, interval: unitValue(value.intervalMs, 60000), deep: unitValue(value.deepAgeMs, 86400000), daily: String(value.dailyTokens),
-          provider: value.provider || '', model: value.model || '', folders: Array.isArray(value.dreamProjects) ? value.dreamProjects : [] };
-        setS(draft); setSaved(draft); setDirectory(state.directory || []); if (Array.isArray(value.folders)) setFolders(value.folders);
-      } catch (error) { if (!signal.aborted) setError(error.message); }
-    })();
-    return () => owner.controller.abort();
-  }, [revision]);
-  const set = (key, value) => { setNotice(''); setS(old => ({ ...old, [key]: value, ...(key === 'provider' ? { model: '' } : {}) })); };
-  const patch = () => {
-    if (!s || !saved) return {};
-    const out = {};
-    if (s.enabled !== saved.enabled) out.dreamAutoEnabled = s.enabled;
-    if (s.interval !== saved.interval) out.dreamIntervalMs = Math.round(Number(s.interval) * 60000);
-    if (s.deep !== saved.deep) out.dreamDeepAgeMs = Math.round(Number(s.deep) * 86400000);
-    if (s.daily !== saved.daily) out.dreamDailyTokens = Number(s.daily);
-    if (s.provider !== saved.provider || s.model !== saved.model) { out.dreamProvider = s.provider; out.dreamModel = s.model; }
-    if ([...s.folders].sort().join('\n') !== [...saved.folders].sort().join('\n')) out.dreamProjects = [...s.folders];
-    return out;
-  };
-  const dirty = Object.keys(patch()).length > 0, models = directory.find(p => p.id === s?.provider)?.models || [];
-  const save = async event => {
-    event.preventDefault();
-    const owner = operation.current;
-    if (!dirty || owner.saving || owner.controller.signal.aborted) return;
-    owner.saving = true; setBusy(true); setError(''); setNotice('');
-    const submitted = s;
-    try {
-      await api('/dream/settings', patch());
-      if (!owner.controller.signal.aborted) { setSaved(submitted); setNotice('已保存'); onSaved(); }
-    } catch (error) { if (!owner.controller.signal.aborted) setError(error.message); }
-    finally { owner.saving = false; if (!owner.controller.signal.aborted) setBusy(false); }
-  };
-  return <Drawer title="自动 Dream 设置" onClose={onClose}>
-    <Alert action={!s && <Button onClick={() => setRevision(value => value + 1)}>重试</Button>}>{error}</Alert><Alert tone="info">{dirty ? '' : notice}</Alert>
-    {!s ? !error && <Skeleton rows={6}/> : <form className="omc-form" onSubmit={save}>
-      <div className="omc-switch-row"><span className="omc-switch-hint"><b>启用自动 Dream</b><small>定时检查新增摘要；没有新材料不调用模型。</small></span><Switch label="启用自动 Dream" checked={s.enabled} onChange={checked => set('enabled', checked)}/></div>
-      <div className="omc-form-grid">
-        <label><span>检查间隔 · 分钟</span><Input type="number" min={1} step="any" required value={s.interval} onChange={e => set('interval', e.target.value)}/></label>
-        <label><span>原文整理等待 · 天</span><Input type="number" min={0.001} step="any" required value={s.deep} onChange={e => set('deep', e.target.value)}/></label>
-        <label><span>每日 token 上限</span><Input type="number" min={0} step={1} required value={s.daily} onChange={e => set('daily', e.target.value)}/></label>
-        <label><span>固定后台提供方</span><NativeSelect aria-label="固定后台提供方" value={s.provider} onChange={e => set('provider', e.target.value)}><option value="">沿用后台模型</option>{directory.map(p => <option key={p.id} value={p.id}>{p.name || p.id}</option>)}</NativeSelect></label>
-        <label><span>固定后台模型</span><Input list="omc-dream-models" value={s.model} placeholder="自动执行需固定提供方与模型" onChange={e => set('model', e.target.value)}/><datalist id="omc-dream-models">{models.map(m => <option key={m.id} value={m.id}/>)}</datalist></label>
-      </div>
-      <fieldset className="omc-folders"><legend>整理的文件夹 <small>不勾选表示全部</small></legend>
-        {folders.filter(f => f?.folder).map(f => <div className="omc-folder-row" key={f.folder} title={f.folder}
-          onClick={e => { if (!e.target.closest('label')) set('folders', s.folders.includes(f.folder) ? s.folders.filter(x => x !== f.folder) : [...s.folders, f.folder]); }}>
-          <Checkbox label={folderName(f.folder)} checked={s.folders.includes(f.folder)}
-            onChange={checked => set('folders', checked ? [...s.folders, f.folder] : s.folders.filter(x => x !== f.folder))}/>
-          <span className="omc-folder-detail">{f.exists === false && <Tag tone="red">已删除</Tag>}<small>{f.folder}</small></span><em>{(f.projects || []).length} 个项目</em></div>)}
-        {!folders.length && <p className="omc-hint">尚未读取到工作区文件夹。</p>}
-      </fieldset>
-      <p className="omc-hint">长度上限：会话 1,200、项目 2,400、全局 600 字符；原始档案保留。</p>
-      <div className="omc-detail-foot"><Button onClick={() => setS(saved)} disabled={!dirty}>撤销</Button><Button type="submit" kind="primary" icon="check" busy={busy} disabled={!dirty}>保存</Button></div>
-    </form>}
-  </Drawer>;
 }

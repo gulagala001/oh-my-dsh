@@ -46,7 +46,7 @@ const unwrapInactive = component => {
   return component;
 };
 
-// Pinned to DSH 0.2.1-alpha.2: SlotCore.register records a StoredEntry with a
+// DSH 0.2.1 rc.1/rc.2: SlotCore.register records a StoredEntry with a
 // writable component; inject/store/locale/children live on that SAME entry.
 // The renderer caches inject and renderSlot authority by entry identity. A
 // shadow registration cannot inherit children (exclusive declarations), and
@@ -73,7 +73,7 @@ export function decorateSlotComponent(slots, name, accepts, decorate) {
     }
     const Probe = () => null;
     Probe[refreshEntry] = true;
-    // Lowest priority wins in alpha.2. No children/store/inject/locale are
+    // Lowest priority wins. No children/store/inject/locale are
     // re-declared, and observers can identify this transient ledger entry.
     publisher.register({ name, key: original.options.key, id: original.options.id, priority }, Probe)();
   }

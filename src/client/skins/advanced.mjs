@@ -18,12 +18,15 @@ export const numberFields = {
   'radius-composer': ['输入框圆角', 0, 40, 1, 'px'], 'radius-message': ['消息圆角', 0, 32, 1, 'px'],
   'border-width': ['边框粗细', 0, 3, 0.5, 'px'], 'panel-blur': ['面板背景模糊', 0, 24, 1, 'px'],
 };
-export const advancedDefaults = () => ({ enabled: false, common: {}, light: {}, dark: {}, brand: { logo: 'theme', name: '', image: '', title: 'omd', titleText: '' } });
+// Product wording/defaults differ between OMD and the standalone theme manager.
+// productTitle: null means that product has no own browser-title option.
+export const OMD_BRAND = { themeLogo: '默认标识（Oh My DSH）', productLogo: 'Oh My DSH', productTitle: 'Oh My DSH', placeholder: 'Oh My DSH' };
+export const advancedDefaults = (product = OMD_BRAND) => ({ enabled: false, common: {}, light: {}, dark: {}, brand: { logo: 'theme', name: '', image: '', title: product.productTitle ? 'omd' : 'native', titleText: '' } });
 const colorKeys = new Set(colorGroups.flatMap(([, fields]) => Object.keys(fields)));
 const object = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const cleanText = value => typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 60) : '';
-export function normalizeAdvanced(value) {
-  value = object(value); const result = advancedDefaults(), common = object(value.common), brand = object(value.brand);
+export function normalizeAdvanced(value, product = OMD_BRAND) {
+  value = object(value); const result = advancedDefaults(product), common = object(value.common), brand = object(value.brand);
   result.enabled = value.enabled === true;
   for (const mode of ['light', 'dark']) for (const [key, color] of Object.entries(object(value[mode]))) {
     if (colorKeys.has(key) && typeof color === 'string' && /^#[\da-f]{6}$/i.test(color)) result[mode][key] = color.toLowerCase();
@@ -34,7 +37,7 @@ export function normalizeAdvanced(value) {
   for (const key of ['font-ui', 'font-body', 'font-mono']) if (Object.hasOwn(fontChoices, common[key])) result.common[key] = common[key];
   if (['none', 'soft', 'raised'].includes(common.shadow)) result.common.shadow = common.shadow;
   if (['theme', 'native', 'omd', 'custom'].includes(brand.logo)) result.brand.logo = brand.logo;
-  if (['native', 'omd', 'custom'].includes(brand.title)) result.brand.title = brand.title;
+  if ((product.productTitle ? ['native', 'omd', 'custom'] : ['native', 'custom']).includes(brand.title)) result.brand.title = brand.title;
   result.brand.name = cleanText(brand.name); result.brand.titleText = cleanText(brand.titleText);
   // Only locally decoded/re-encoded raster images can be used as a logo.
   if (typeof brand.image === 'string' && brand.image.length <= 180000 && /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(brand.image)) result.brand.image = brand.image;
@@ -83,10 +86,10 @@ export function advancedCss(settings) {
       'code-size': ['pre, code, pre code', 'font-size'],
       'line-height': ['[data-chat-flow-kind], .hWmORq_body, .Sixlwa_bubble, [data-composer-input]', 'line-height'],
       'radius-control': [`button:not([role=switch]), select:not(.cx-scope-chip select), ${nativeInputShell}, ${standaloneInput}:not([type=checkbox]):not([type=radio]):not([type=range]):not([data-composer-input]), .YDXeBa_sessionRow`, 'border-radius'],
-      'radius-panel': ['.VOzbGW_panel, [role=menu], dialog, .tx-card, .cx-card, [data-sidebar-right-panel][data-sidebar-right-open]', 'border-radius'],
+      'radius-panel': ['.VOzbGW_panel, [role=menu], dialog, .omd-set-card, [data-sidebar-right-panel][data-sidebar-right-open]', 'border-radius'],
       'radius-composer': ['[data-composer-card]', 'border-radius'],
       'radius-message': ['.Sixlwa_bubble, .tx-cu-user-bubble', 'border-radius'],
-      'border-width': ['[data-composer-card], .VOzbGW_panel, .tx-card, .cx-card, pre', 'border-width'],
+      'border-width': ['[data-composer-card], .VOzbGW_panel, .omd-set-card, pre', 'border-width'],
       shadow: ['[data-composer-card], .VOzbGW_panel, [role=menu], [data-sidebar-right-panel][data-sidebar-right-open]', 'box-shadow'],
     }[key];
     if (targets) css += paint(...targets, value);

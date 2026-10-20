@@ -13,9 +13,9 @@
 ```text
 请帮我在现有 DSH 中安装或升级独立 OpenCU。
 
-先阅读项目安装指南和固定发行清单：
+先阅读项目安装指南和更新日志（含各版本固定包地址）：
 https://github.com/gulagala001/opencu/blob/main/docs/install.md
-https://github.com/gulagala001/opencu/blob/main/docs/releases.md
+https://github.com/gulagala001/opencu/blob/main/CHANGELOG.md
 
 自动核对我要使用的桌面或 Web 实例、DSH 完整版本、实际 profile、DSH_HOME 和已有插件。若已安装 OMD，不要重复安装 OpenCU，转按 OMD 官方安装指南处理：
 https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md
@@ -53,7 +53,7 @@ https://github.com/gulagala001/opencu/releases/download/v2.0.6-dsh.0.2.1-rc.1/op
 - 两个固定 Release 提供插件和 `host-adapters.zip` 源码材料，**没有完整桌面安装器**。完整内置浏览器、原生监看及相关界面需要匹配的 Host、Client、preload 源码适配和构建；只装插件不会自动补齐宿主。需要源码适配时，由构建者参考[开发文档](../DEVELOPMENT.md#构建和本地插件包)。
 - Web 的能力取决于服务所在机器、后端和授权，不会直接获得访问网页的那台电脑的控制权。
 - 升级先备份，沿用原 profile、`DSH_HOME` 和数据目录，保留第三方插件；安装匹配包后重启受影响实例。不要为升级新建或重置配置。
-- **主干源码更新不等于固定 Release 已更新。** 上述 URL 不会自动包含后来合入的修复；公开包和校验文件以[发行清单](releases.md)为准。
+- **主干源码更新不等于固定 Release 已更新。** 上述 URL 不会自动包含后来合入的修复；公开包和校验文件以[更新日志](../CHANGELOG.md)列出的 Release 附件为准。
 
 <details>
 <summary>CLI 补充（供 AI 或习惯命令行的用户参考）</summary>

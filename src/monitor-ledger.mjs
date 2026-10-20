@@ -103,13 +103,6 @@ export function monitorUsage(usage) {
   }
   return result;
 }
-export function monitorInput(usage) {
-  const u = monitorUsage(usage);
-  if (u.totalTokens !== null && u.outputTokens !== null && u.totalTokens >= u.outputTokens) return u.totalTokens - u.outputTokens;
-  return ['inputTokens', 'cacheReadTokens', 'cacheWriteTokens'].every(key => u[key] !== null)
-    ? u.inputTokens + u.cacheReadTokens + u.cacheWriteTokens : null;
-}
-
 export function monitorQuery(params, now = Date.now()) {
   const get = key => params instanceof URLSearchParams ? params.get(key) : params?.[key];
   const range = get('range') || 'session', period = get('period') || 'all', status = get('status') || 'all';
@@ -145,7 +138,7 @@ export class MonitorLedger {
       mkdirSync(join(directory, 'monitor-v1'), { recursive: true, mode: 0o700 });
       this.db = new DatabaseSync(join(directory, 'monitor-v1', 'usage.sqlite'));
       // Monitoring must not delay execution behind another process's database lock.
-      this.db.exec(`PRAGMA busy_timeout=50; PRAGMA journal_mode=WAL;
+      this.db.exec(`PRAGMA busy_timeout=50; PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;
         CREATE TABLE IF NOT EXISTS calls(id TEXT PRIMARY KEY,sessionId TEXT,kind TEXT NOT NULL,
           at REAL NOT NULL,provider TEXT,model TEXT,status TEXT NOT NULL,source TEXT NOT NULL,
           turn INTEGER,step INTEGER,eventSeq INTEGER,startedAt REAL,durationMs REAL,effort TEXT,error TEXT,

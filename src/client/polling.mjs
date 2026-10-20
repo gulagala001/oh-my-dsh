@@ -21,7 +21,7 @@ export function createPoller({ read, onData, onError = () => {}, interval = 2500
       clearTimeout(deadline); own.signal.removeEventListener('abort', onAbort);
       if (ticket === generation) {
         controller = undefined;
-        if (active && visible()) timer = setTimeout(refresh, interval);
+        if (active && visible()) timer = setTimeout(refresh, typeof interval === 'function' ? interval() : interval);
       }
     }
   }

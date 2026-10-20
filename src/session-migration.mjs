@@ -1,9 +1,8 @@
-import { readdir, readFile, open, rename, mkdir, stat, realpath } from 'node:fs/promises';
+import { readdir, readFile, open, rename, mkdir, stat, realpath, writeFile } from 'node:fs/promises';
 import { isDeepStrictEqual } from 'node:util';
 import { join, dirname, basename } from 'node:path';
 import { sourceHash, hash } from './context/core.mjs';
 import { userDocument } from './context/materials.mjs';
-import { loadMigrationSupport } from '../lib/host/session-migration.mjs';
 import { normalizeLegacyV0Row } from './session-legacy-v0.mjs';
 import { hasLegacyPluginSources } from './session-legacy-sources.mjs';
 
@@ -335,13 +334,54 @@ async function readHeader(path, compression, support) {
   } finally { await file.close(); }
 }
 
-// Native publication is exclusive and retains predecessor generations. The
-// journal is durable before publication; a crash resumes sidecar writes once.
+// Bump when migration rules change, so archives left unmigrated are re-examined.
+const MIGRATION_RULES = 1;
+const canonicalLogVersion = (name, compression) => {
+  const suffix = compression === 'zstd' ? '.zstd' : '';
+  if (!name.endsWith(suffix)) return undefined;
+  const match = /^session(?:\.v([1-9][0-9]*))?\.jsonl$/u.exec(name.slice(0, name.length - suffix.length));
+  return match && (match[1] === undefined ? 0 : Number(match[1]));
+};
+// Filenames only: session directories whose newest generation predates V4, and
+// migration journals. Ordinary V4 archives need no header reads or host codecs.
+async function legacyInventory(root, compression) {
+  const legacy = [], journals = [];
+  async function walk(path, depth) {
+    let entries; try { entries = await readdir(path, { withFileTypes: true }); } catch (e) { if (e.code === 'ENOENT') return; throw e; }
+    const versions = entries.filter(e => e.isFile()).map(e => canonicalLogVersion(e.name, compression)).filter(Number.isSafeInteger);
+    if (versions.length) {
+      if (Math.max(...versions) < 4) legacy.push(path);
+      if (entries.some(e => e.isFile() && e.name === 'omd-v4-migration.json')) journals.push(join(path, 'omd-v4-migration.json'));
+      return;
+    }
+    if (depth > 0) for (const entry of entries) if (entry.isDirectory()) await walk(join(path, entry.name), depth - 1);
+  }
+  await walk(root, 2);
+  return { legacy: legacy.sort(), journals };
+}
+
 export async function migrateSessionStorage(ctx, dataDir, providedSupport) {
   const backend = ctx.get('sessionPersistence');
   if (!backend?.config?.root) return; // Memory/other backends own their formats.
-  const support = providedSupport ?? await loadMigrationSupport(ctx);
   const root = backend.config.root, compression = backend.config.compression ?? 'zstd';
+  const markerPath = join(dataDir, 'session-migration.json');
+  const marker = await optionalJson(markerPath).catch(() => null);
+  const inventory = await legacyInventory(root, compression);
+  // Unreadable journals take the strict full path below and fail there.
+  const openJournal = (await Promise.all(inventory.journals.map(path => optionalJson(path).catch(() => null)))).some(journal => !journal?.complete);
+  const settled = marker?.rules === MIGRATION_RULES && marker.root === root && marker.compression === compression
+    && Array.isArray(marker.legacy) && inventory.legacy.every(path => marker.legacy.includes(path));
+  if (!openJournal && (!inventory.legacy.length || settled)) return;
+  const support = providedSupport ?? await (await import('../lib/host/session-migration.mjs')).loadMigrationSupport(ctx);
+  await migrateArchives(ctx, dataDir, support, root, compression);
+  // Archives still below V4 were examined and intentionally left in place.
+  try { await mkdir(dataDir, { recursive: true }); await writeFile(markerPath, JSON.stringify({ rules: MIGRATION_RULES, root, compression, legacy: (await legacyInventory(root, compression)).legacy }) + '\n'); }
+  catch (error) { ctx.logger.warn?.('会话迁移检查记录未保存，下次启动将重新检查：%s', error.message); }
+}
+
+// Native publication is exclusive and retains predecessor generations. The
+// journal is durable before publication; a crash resumes sidecar writes once.
+async function migrateArchives(ctx, dataDir, support, root, compression) {
   const discovered = [];
   async function directories(path, depth) {
     let entries; try { entries = await readdir(path, { withFileTypes: true }); } catch (e) { if (e.code === 'ENOENT') return; throw e; }

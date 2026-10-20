@@ -1,5 +1,5 @@
-import { advancedDefaults, normalizeAdvanced, advancedTokens, advancedCss, prepareLogo } from './advanced.mjs';
-import { bundledSkins } from './bundled.mjs';
+import { advancedDefaults, normalizeAdvanced, advancedTokens, advancedCss, prepareLogo, OMD_BRAND } from './advanced.mjs';
+import { bundledSkins, bundledAssets } from './bundled.mjs';
 import { validateSkin, compileSkinCss } from './format.mjs';
 import { liveHostTokens, tokenCss, customTokenCss } from './mapping.mjs';
 import { composePalette, paletteCatalog } from './palette.mjs';
@@ -8,9 +8,14 @@ import { createBackgroundRuntime, backgroundDefaults } from './background.mjs';
 import { appearanceCoordinator } from './coordinator.mjs';
 import { createAttributeMarkers } from '../attribute-markers.mjs';
 export const STORAGE_KEY = 'omd.skins.v1';
-export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss = '', surfaceMarkers, layoutBaseCss = '') {
+// OMD and the standalone theme manager ship this file unchanged; product
+// differences are options. assetUrl maps a bundled skin file to its route.
+export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss = '', surfaceMarkers, layoutBaseCss = '', options = {}) {
+  const { storageKey = STORAGE_KEY, defaultSkin = 'glyph-motion', owner = { id: 'omd', priority: 0 }, tokenOwner = 'trisoul_x/skin',
+    brand = OMD_BRAND, assetUrl = file => `trisoul-x/api/skins/${file}` } = options;
+  const defaults = () => advancedDefaults(brand);
   const recovery = new URLSearchParams(location.search).get('omd-skin') === 'default';
-  let state = { active: false, skins: [], palettes: paletteCatalog([]), selected: 'default', palette: 'theme', reduceEffects: false, advanced: advancedDefaults(), background: { ...backgroundDefaults, name: '', url: '', loading: false, error: '' }, error: '' };
+  let state = { active: false, skins: [], palettes: paletteCatalog([]), selected: 'default', palette: 'theme', reduceEffects: false, advanced: defaults(), background: { ...backgroundDefaults, name: '', url: '', loading: false, error: '' }, error: '' };
   let disposeTokens, style, customStyle, disposed = false, logoSequence = 0, owning = false;
   const effectsRoot = document.documentElement;
   const effectsMarkers = createAttributeMarkers('data-omd-reduce-effects');
@@ -20,14 +25,30 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     const skin = validateSkin(value, CSS.supports.bind(CSS));
     return { skin, css: compileSkinCss(skin.css, skin.id) };
   };
-  const bundled = new Map(bundledSkins.map(value => { const item = prepare(value); item.skin = { ...item.skin, builtin: true }; return [item.skin.id, item]; }));
+  const bundled = new Map(bundledSkins.map(value => {
+    const asset = bundledAssets[value.id];
+    const item = asset ? { skin: validateSkin(value, CSS.supports.bind(CSS)), css: null, asset } : prepare(value);
+    item.skin = { ...item.skin, builtin: true }; return [item.skin.id, item];
+  }));
+  // Fonts and native CSS of large built-ins load on first use; their tokens
+  // and layout apply at once, then the theme re-applies with the full body.
+  const load = item => {
+    if (item.css !== null || item.loading || item.failed) return;
+    item.loading = fetch(assetUrl(item.asset)).then(response => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.text();
+    }).then(text => { item.css = compileSkinCss(text, item.skin.id); }, () => {
+      item.failed = true;
+      state = { ...state, error: `${item.skin.name} 的字体与样式未能加载，已先使用它的配色；重新选择该主题即可重试。` };
+    }).finally(() => { item.loading = null; if (!disposed && prepared.get(state.selected) === item) { apply(); emit(); } });
+  };
   let prepared = new Map();
   const emit = () => { state = { ...state }; for (const fn of listeners) fn(); };
   const read = () => {
-    const next = { ...state, skins: [], selected: 'default', palette: 'theme', reduceEffects: false, advanced: advancedDefaults(), error: '' };
+    const next = { ...state, skins: [], selected: 'default', palette: 'theme', reduceEffects: false, advanced: defaults(), error: '' };
     const ready = new Map(bundled), savedIds = new Set();
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
       if (saved.skins !== undefined && !Array.isArray(saved.skins)) throw new Error('皮肤列表损坏');
       for (const item of saved.skins || []) {
         try {
@@ -37,12 +58,12 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
         } catch { next.error = '部分皮肤数据无效，已跳过；可重新导入。'; }
       }
       if (ready.has(saved.selected)) next.selected = saved.selected;
-      else if (saved.selected === undefined) next.selected = 'glyph-motion';
+      else if (saved.selected === undefined) next.selected = defaultSkin;
       if (ready.has(saved.palette) || extraPalettes.some(p => p.id === saved.palette)) next.palette = saved.palette;
       next.reduceEffects = saved.reduceEffects === true;
-      next.advanced = normalizeAdvanced(saved.advanced);
+      next.advanced = normalizeAdvanced(saved.advanced, brand);
     } catch { next.error = '无法读取皮肤记录，已使用默认外观。'; }
-    if (recovery) { next.selected = 'default'; next.palette = 'theme'; next.advanced = advancedDefaults(); next.advanced.brand = { ...next.advanced.brand, logo: 'native', title: 'native' }; }
+    if (recovery) { next.selected = 'default'; next.palette = 'theme'; next.advanced = defaults(); next.advanced.brand = { ...next.advanced.brand, logo: 'native', title: 'native' }; }
     next.skins = [...ready.values()].map(item => item.skin);
     next.palettes = paletteCatalog(next.skins);
     if (JSON.stringify(next.advanced.brand) !== JSON.stringify(state.advanced.brand)) ++logoSequence;
@@ -81,6 +102,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     owning = true;
     const root = document.documentElement;
     const active = prepared.get(state.selected);
+    if (active?.css === null) load(active);
     const source = state.palettes.find(p => p.id === state.palette);
     const composed = composePalette(active?.skin, source);
     background.setEnabled(active?.skin.layout !== 'glyph-motion');
@@ -105,13 +127,13 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
       customStyle.textContent = customTokenCss(overrides) + '\n' + advancedCss(state.advanced);
       document.head.append(customStyle);
     }
-    if (composed && !disposeTokens) disposeTokens = ctx.theme.overrideTokens('trisoul_x/skin', liveHostTokens());
+    if (composed && !disposeTokens) disposeTokens = ctx.theme.overrideTokens(tokenOwner, liveHostTokens());
     // Existing layers keep their order. The native presenter still needs to
     // refresh metadata from the body's newly computed CSS variable palette.
     else ctx.emit('theme/change', ctx.theme.getTheme());
   };
   const save = next => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ skins: next.skins.filter(skin => !skin.builtin), selected: next.selected, palette: next.palette, reduceEffects: next.reduceEffects, advanced: next.advanced })); }
+    try { localStorage.setItem(storageKey, JSON.stringify({ skins: next.skins.filter(skin => !skin.builtin), selected: next.selected, palette: next.palette, reduceEffects: next.reduceEffects, advanced: next.advanced })); }
     catch { throw new Error('浏览器存储不可用或空间不足，未更改皮肤。请移除不用的皮肤后重试。'); }
     state = { ...next, palettes: paletteCatalog(next.skins), error: '' }; apply(); emit();
   };
@@ -120,7 +142,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
   // Appearance handoff must not silently restore movement in model controls.
   syncEffects();
   const offTheme = ctx.on('theme/change', syncMode);
-  const unregisterAppearance = appearanceCoordinator().register({ id: 'omd', priority: 0,
+  const unregisterAppearance = appearanceCoordinator().register({ ...owner,
     select: () => ({ key: 'omd-global' }),
     mount: () => {
       state = { ...state, active: true }; apply(); emit();
@@ -128,7 +150,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     },
   });
   const onStorage = event => {
-    if (event.key === STORAGE_KEY || event.key === null) { read(); apply(); emit(); }
+    if (event.key === storageKey || event.key === null) { read(); apply(); emit(); }
   };
   window.addEventListener('storage', onStorage);
   // The phone layout presents navigation as a full sheet. Use the host action
@@ -150,6 +172,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
   return {
     getSnapshot: () => state,
     background,
+    brand,
     subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn); },
     getAppearance: () => ctx.theme.getTheme().preference,
     async setAppearance(value) {
@@ -162,6 +185,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     },
     select(id) {
       if (id !== 'default' && !prepared.has(id)) throw new Error('皮肤不存在，请重新导入');
+      if (prepared.get(id)?.failed) prepared.get(id).failed = false;
       save({ ...state, selected: id });
     },
     selectPalette(id) {
@@ -184,7 +208,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
       catch (error) { if (previous) prepared.set(id, previous); throw error; }
     },
     setAdvanced(value) {
-      const advanced = normalizeAdvanced(value);
+      const advanced = normalizeAdvanced(value, brand);
       if (JSON.stringify(advanced.brand) !== JSON.stringify(state.advanced.brand)) ++logoSequence;
       save({ ...state, advanced });
     },
@@ -192,7 +216,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
       const seq = ++logoSequence, image = await prepareLogo(file);
       if (!disposed && seq === logoSequence) save({ ...state, advanced: { ...state.advanced, brand: { ...state.advanced.brand, logo: 'custom', image } } });
     },
-    resetAdvanced() { ++logoSequence; save({ ...state, advanced: advancedDefaults() }); },
+    resetAdvanced() { ++logoSequence; save({ ...state, advanced: defaults() }); },
     reduceEffects: value => save({ ...state, reduceEffects: value }),
     reset() {
       const next = { ...state, selected: 'default' };
@@ -203,7 +227,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
       if (disposed) return; disposed = true; ++logoSequence;
       unregisterAppearance();
       offTheme(); window.removeEventListener('storage', onStorage); document.removeEventListener('click', onNavigation, true);
-      state = { ...state, selected: 'default', palette: 'theme', advanced: advancedDefaults() }; apply(); background.dispose(); listeners.clear();
+      state = { ...state, selected: 'default', palette: 'theme', advanced: defaults() }; apply(); background.dispose(); listeners.clear();
       effectsMarkers.dispose();
     },
   };

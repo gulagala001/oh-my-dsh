@@ -12,7 +12,7 @@ import { promptText } from './cc-adaptation/texts.mjs';
 import { setRuntimeContext } from './task-context.mjs';
 import { DreamService } from './dream/service.mjs';
 import { randomUUID } from 'node:crypto';
-import { MonitorLedger, monitorInput, reportedMonitorUsage } from './monitor-ledger.mjs';
+import { MonitorLedger, reportedMonitorUsage } from './monitor-ledger.mjs';
 import { monitorTokenChunk } from './monitor-call.mjs';
 import { MonitorPricing } from './monitor-pricing.mjs';
 
@@ -29,7 +29,6 @@ export const contentText = (blocks = []) => blocks.flatMap(b => {
   if (b.type === 'tool-result') return [`${b.isError ? '[error] ' : ''}${contentText(b.content)}`];
   return [];
 }).join('\n');
-export const eventText = (session, e) => contentText(session.deriveEventMessage(e)?.content);
 export class Hub extends Service {
   constructor(ctx, config) {
     super(ctx, 'trisoulX');
@@ -37,7 +36,6 @@ export class Hub extends Service {
     this.store = new HubStore(config.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), NS));
     this.monitor = new MonitorLedger(this.store.dir);
     this.pricing = new MonitorPricing(this.store.dir);
-    ctx.effect(() => { void this.pricing.start(); });
     this.context = new ContextPipeline(this, createHostAdapter(this));
     this.efforts = createEffortResolver(ctx); this.agents = new Map();
     this.live = new Map(); this.calls = new Map(); this.requestStarts = new Map(); this.taskReviews = new Map();
@@ -117,12 +115,9 @@ export class Hub extends Service {
     const custom = this.config().backgroundMode === 'unified' ? this.config().unifiedBackground : this.config()[['coordinate', 'compactFull'].includes(kind) ? 'surgeon' : 'background'] ?? {};
     return { provider: custom.provider || main.provider, model: custom.model || main.model, temperature: custom.temperature, effort: custom.effort ?? 'off' };
   }
+  // Calls are attributed to the request step that started them.
   captureFrame(agent, turn, step) {
-    const session = agent.session, state = this.store.state(session.id), meter = this.ctx.tokenMeter.measure(session);
-    state.pendingFrame = { at: Date.now(), turn, step, totalTokens: meter.totalTokens, nodes: meter.nodes.map(n => {
-      const e = session.eventAt(n.seq), msg = e ? session.deriveEventMessage(e) : undefined;
-      return { seq: n.seq, kind: msg?.source?.compactionId ? 'checkpoint' : sourceName(msg?.source) || msg?.source?.kind || e?.type || (e ? 'unknown' : 'missing'), tokens: n.tokens ?? n.heuristicTokens ?? null };
-    }) };
+    this.store.state(agent.session.id).pendingFrame = { at: Date.now(), turn, step };
   }
   record(session, kind, entry) {
     entry = { ...entry, usage: reportedMonitorUsage(entry.usage, entry.hasOutput) };
@@ -141,12 +136,9 @@ export class Hub extends Service {
     const call = { at: Date.now(), turn: frame?.turn, step: frame?.step, sessionId: session.id, kind, ...entry,
       id: entry.id || randomUUID(), usage: entry.usage ?? null,
       effort: Object.hasOwn(entry, 'effort') ? entry.effort : (['main', 'subagent'].includes(kind) ? recent?.reasoningEffort ?? null : null) };
-    if (['main', 'subagent'].includes(kind) && frame) {
-      const inputTokens = monitorInput(entry.usage);
-      state.contextHistory ??= []; state.contextHistory.push({ ...frame, callId: call.id, sessionId: session.id, eventSeq: entry.eventSeq,
-        inputTokens, cacheReadTokens: entry.usage?.cacheReadTokens });
-      state.contextHistory = state.contextHistory.slice(-80); delete state.pendingFrame;
-    }
+    if (['main', 'subagent'].includes(kind) && frame) delete state.pendingFrame;
+    // Retired per-call context frames had no reader; drop them from the archive.
+    delete state.contextHistory;
     const completed = frame ? null : session.snapshotEvents().findLast(e => e.type === 'step/end');
     call.turn ??= completed?.data.turn; call.step ??= completed?.data.step;
     state.activity.push(call);

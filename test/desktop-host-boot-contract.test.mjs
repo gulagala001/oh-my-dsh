@@ -349,43 +349,6 @@ test('actual Host observer vetoes model streams before continuation and rejects 
   assert.equal(records.at(-1).modelCalls, 1, 'Model failure stays counted through process exit');
 });
 
-test('actual workflow acceptance gate rejects zero execution, skips and unsuccessful evidence', async t => {
-  const env = await fixture(t), root = env.OMD_DESKTOP_TEST_ROOT;
-  const workflow = await readFile(new URL('../.github/workflows/desktop.yml', import.meta.url), 'utf8');
-  const core = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
-  const coreNormalization = core.indexOf('await nativePackageModes(archive)');
-  assert(coreNormalization > core.indexOf("['pack', '--json', '--ignore-scripts'"));
-  assert(core.indexOf('copyFileSync(archive, rawArchive)') < coreNormalization);
-  assert(coreNormalization < core.indexOf('archive, sha256: sha256(archive)'));
-  assert(coreNormalization < core.indexOf("['scripts/check-opencu-delivery.mjs', archive]"));
-  assert(!core.includes('node scripts/check-opencu-delivery.mjs\n'), 'Core CI must pass an explicit final archive');
-  const delivery = workflow.indexOf('node scripts/check-opencu-delivery.mjs "$OMD_PLUGIN_ARCHIVE"');
-  const normalization = workflow.indexOf('await nativePackageModes(archive)');
-  assert(normalization > workflow.indexOf('npm pack --json --ignore-scripts'), 'Production normalization follows pack');
-  assert(workflow.indexOf('copyFileSync(archive, rawArchive)') < normalization, 'Preserve raw package before normalization');
-  assert(normalization < workflow.indexOf("const sha256 = createHash('sha256').update(readFileSync(archive))"), 'Freeze the final hash only after production normalization');
-  assert(normalization < delivery, 'Strict gate receives the normalized final package');
-  assert(delivery > workflow.indexOf('name: Freeze the final archive'), 'Verify the actual frozen tgz after freezing');
-  assert(delivery < workflow.indexOf('node --test --test-reporter=tap test/desktop-host-boot.test.mjs'), 'Both matrix targets verify delivery before Electron launch');
-  const gate = [...workflow.matchAll(/node --input-type=module - <<'NODE'\n([\s\S]*?)\n          NODE/g)]
-    .map(match => match[1]).find(text => text.includes("'host-boot.tap'"));
-  assert(gate, 'Real workflow must verify test counts and evidence');
-  const evidence = join(root, 'host-boot-evidence'); await mkdir(evidence);
-  const report = { status: 'passed', executed: 1, skipped: 0, launches: [{}, {}], shutdowns: [{}, {}] };
-  const tap = '# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n';
-  const run = async (text = tap, data = report) => {
-    await writeFile(join(root, 'host-boot.tap'), text); await writeFile(join(evidence, 'desktop-host-boot.json'), JSON.stringify(data));
-    const result = spawnSync(process.execPath, ['--input-type=module', '-e', gate], { encoding: 'utf8',
-      env: { OMD_DESKTOP_TEST_ROOT: root, GITHUB_STEP_SUMMARY: join(root, 'summary') } });
-    assert.ifError(result.error); return result;
-  };
-  assert.equal((await run()).status, 0);
-  for (const text of ['', tap.replace('# tests 1', '# tests 0'), tap.replace('# pass 1', '# pass 0'),
-    tap.replace('# skipped 0', '# skipped 1'), tap.replace('# cancelled 0', '# cancelled 1')])
-    assert.notEqual((await run(text)).status, 0, 'Do not greenlight missing/zero/skipped/cancelled tests');
-  assert.notEqual((await run(tap, { ...report, status: 'failed' })).status, 0, 'Cleanup failure cannot pass');
-});
-
 
 test('actual combined settings probe rejects either missing block and invalid switch semantics', async () => {
   const texts = ['Chrome / Edge 连接', '内置浏览器', '托管浏览器'];

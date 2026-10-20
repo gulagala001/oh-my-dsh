@@ -33,7 +33,7 @@ export async function createRuntime(options = {}) {
       const { createExtensionBackend } = await import('./extension/backend.mjs');
       extension = createExtensionBackend({ token: options.token, dataDir: join(dataDir, 'extension'), pairing: options.browserPairing });
     }
-    const { createCompositeBrowserBackend, createExtensionMountHook } = await import('./integration/browser.mjs');
+    const { createCompositeBrowserBackend, createExtensionMountHook } = await import('./browser/composite.mjs');
     // provider belongs to the composite inventory, not the plain Playwright inventory.
     const plainBrowser = browser && { ...browser, select(reference) {
       if (reference && typeof reference === 'object') {

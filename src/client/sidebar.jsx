@@ -235,6 +235,23 @@ function bindTreeKeyboard(root) {
 
 export function applySidebarPresentation(ctx) {
   ctx.effect(() => {
+    // Both appearance providers share the native sidebar. Keep one keyboard
+    // and observer binding, and rebind to a surviving owner on unload.
+    const key = Symbol.for('dsh.appearance.sidebar.v1');
+    const shared = document[key] ??= { owners: new Map(), current: null, dispose: null };
+    const owner = Symbol();
+    const sync = () => {
+      const next = shared.owners.keys().next().value;
+      if (next === shared.current) return;
+      shared.dispose?.(); shared.dispose = null; shared.current = next;
+      if (next) shared.dispose = shared.owners.get(next)();
+    };
+    shared.owners.set(owner, () => mountSidebarPresentation(ctx)); sync();
+    return () => { shared.owners.delete(owner); sync(); if (!shared.owners.size) delete document[key]; };
+  });
+}
+
+function mountSidebarPresentation(ctx) {
     const style = document.createElement('style'); style.dataset.omdSidebarStyle = ''; style.textContent = css; document.head.append(style);
     const navMarkers = createNavMarkers();
     const owned = new Map();
@@ -281,5 +298,4 @@ export function applySidebarPresentation(ctx) {
     observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'data-omd-surface'] });
     sync();
     return () => { observer.disconnect(); cancelAnimationFrame(syncFrame); for (const [root, record] of owned) restore(root, record); owned.clear(); navMarkers.dispose(); style.remove(); };
-  });
 }

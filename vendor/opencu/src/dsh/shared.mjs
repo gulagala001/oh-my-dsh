@@ -1,5 +1,8 @@
 import { registerExtensionDownload } from '../extension/distribution.mjs';
-import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { readFile, stat } from 'node:fs/promises';
+
+const staticTags = new Map();
 import { Context } from '@deepseek-ai/cordis';
 import { createScope, scopeOf } from '@deepseek-ai/dsh-scope';
 import { createPluginRuntime } from './runtime.mjs';
@@ -149,8 +152,18 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
         ['/api/opencu/presentation.js', 'presentation.js', 'text/javascript; charset=utf-8'],
         ['/api/opencu/cursor', 'cursor.html', 'text/html; charset=utf-8'],
         ['/api/opencu/page-cursor.js', 'page-cursor.js', 'text/javascript; charset=utf-8'],
+        ['/api/opencu/page-annotations.js', 'page-annotations.js', 'text/javascript; charset=utf-8'],
       ]) connectionCtx.effect(() => connectionCtx.connection.fetch.register({ path, methods: ['GET'], requestBody: 'buffered',
-        async fetch() { return new Response(await readFile(new URL(`../../lib/${file}`, import.meta.url)), { headers: { 'Content-Type': type, 'Cache-Control': 'no-store' } }); },
+        // Large bundles revalidate by content hash instead of re-downloading on every open.
+        async fetch(request) {
+          const url = new URL(`../../lib/${file}`, import.meta.url), info = await stat(url), version = `${info.size}:${info.mtimeMs}`;
+          let cached = staticTags.get(file);
+          const headers = etag => ({ 'Content-Type': type, 'Cache-Control': 'no-cache', ETag: etag });
+          if (cached?.version === version && request?.headers?.get?.('if-none-match') === cached.etag) return new Response(null, { status: 304, headers: headers(cached.etag) });
+          const bytes = await readFile(url);
+          if (cached?.version !== version) staticTags.set(file, cached = { version, etag: `"${createHash('sha256').update(bytes).digest('base64url')}"` });
+          return new Response(bytes, { headers: headers(cached.etag) });
+        },
       }), `opencu: ${file}`);
     });
     roots.set(root, entry);

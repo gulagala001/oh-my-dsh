@@ -1,15 +1,19 @@
 import { paintField } from './field.mjs';
 import { createCharacterScene } from './scene.mjs';
 import { createWhalePainter } from './whale.mjs';
+import { createCharacterIcons } from './icons.mjs';
 import { readEffort, paintEffort } from './effort.mjs';
 import {prepareWaves,ULTRA_DURATION,ULTRA_INTERVAL,ULTRA_RELEASE,CLICK_DURATION} from './waves.mjs';
 
 // The host owns every hit target, editor, setting and session. Only visible
-// chrome is replaced, with fillText as the sole on-screen drawing primitive.
+// chrome is rendered with characters; icons live in their native DOM bounds.
 const EXTERNAL = '[data-glyph-external], [data-message-attachments], iframe, [data-document-preview], [data-file-preview], .monaco-editor, .cm-editor, .omd-glyph-canvas';
 const PANEL = '[role="dialog"], [role="menu"], [role="listbox"], [role="tooltip"], .VOzbGW_panel, .omd-model-panel';
 const BOX = '[data-composer-card], [data-omd-nav-part="create"], [class$="_newSession"], [role="treeitem"][aria-selected="true"], .Sixlwa_bubble, .tx-cu-user-bubble, pre, fieldset, '+PANEL;
 const CONTROL = 'button, [role="button"], [role="tab"], [role="menuitem"], [role="option"], input, textarea, select, [role="switch"], [role="checkbox"], [role="radio"]';
+const COMPOSER = '[data-content-phase="active"] [data-composer-seat]';
+const READABLE = '[data-composer-card], '+COMPOSER+', .Sixlwa_bubble, .tx-cu-user-bubble, [data-chat-flow-kind="assistant-step"], [data-chat-flow-kind] pre, [data-chat-flow-kind] table, [data-message-attachments]';
+const FLOATING = '[class*="_headline"], [class*="_heroWorkspaceRow"]';
 
 export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   const g = canvas.getContext('2d');
@@ -17,12 +21,16 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   const root = document.documentElement, motion = matchMedia('(prefers-reduced-motion: reduce)');
   const whale = createWhalePainter(), marked = new Set(), cache = new Map(), rings = [], bursts = [];
   const scene = createCharacterScene();
+  const characterIcons = createCharacterIcons();
+  const labelMask = document.createElement('canvas');
+  let labelMaskKey, labelMaskRect;
   const trails = [];
   const clickWaves = [];
   const pointer = { x: -1000, y: -1000 }, font = '"SFMono-Regular", Menlo, monospace';
   let stopped = false, frame, last = 0, dirty = true, measured = 0, width = 0, height = 0;
-  let ink, muted, accent, line, icons = [], boxes = [], brands = [], controls = [], ranges = [], covers = [], scrollbars = [];
+  let ink, muted, accent, line, boxes = [], brands = [], controls = [], ranges = [], covers = [], scrollbars = [];
   let divider, rightDivider, header, owner, clip, conversation, fieldRect, obstacles=[], effortElement, effortPeak = false, artwork = false;
+  let ownerLayer=0;
   let ultraMode=false,nextUltraWave=Infinity,ultraAnchor;
   function emitUltra(input,now) {
     const r=input.getBoundingClientRect();
@@ -44,7 +52,8 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   function glyph(char, x, y, color = ink, alpha = 1, size = 10) {
     if (clip && !inside(clip, x, y)) return;
     if (artwork && obstacles.some(r => x > r.left - (r.pad??10) && x < r.right + (r.pad??10) && y > r.top - (r.pad??10) && y < r.bottom + (r.pad??10))) return;
-    if (covers.some(c => inside(c.r, x, y) && c.el !== owner && !c.el.contains(owner) && !owner?.contains(c.el))) return;
+    if (covers.some(c => c.layer>=ownerLayer && inside(c.r, x, y) && c.el !== owner && !c.el.contains(owner) && !owner?.contains(c.el)
+      && !(c.composer && owner?.closest(PANEL)))) return;
     g.globalAlpha = Math.max(0, Math.min(1, alpha)); g.fillStyle = color;
     g.font = `${size}px ${font}`; g.fillText(char, x, y);
   }
@@ -61,6 +70,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   function pixels(svg, r) {
     const cols=Math.max(8,Math.min(160,Math.ceil(r.width/4))), rows=Math.max(8,Math.min(120,Math.ceil(r.height/4)));
     const clone = svg.cloneNode(true);
+    for(const layer of clone.querySelectorAll('[data-glyph-content]'))layer.remove();
     for (const name of ['class', 'style', 'data-glyph-icon']) clone.removeAttribute(name);
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); clone.setAttribute('width',String(cols*3)); clone.setAttribute('height',String(rows*3)); clone.setAttribute('color','#fff');
     const source = new XMLSerializer().serializeToString(clone).replaceAll('currentColor','#fff');
@@ -86,6 +96,59 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(source);
     return item;
   }
+  function measureFloatingLabels() {
+    const text = [], icons = [];
+    for (const el of document.querySelectorAll(FLOATING)) {
+      if (!visible(el)) continue;
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      for (let node=walker.nextNode(); node; node=walker.nextNode()) {
+        if (!node.textContent.trim() || node.parentElement.closest('svg')) continue;
+        const style = getComputedStyle(node.parentElement);
+        const range = document.createRange(); range.selectNodeContents(node);
+        const add = (value, r) => text.push({value, x:r.left, y:r.top, width:r.width, height:r.height, font:style.font, spacing:style.letterSpacing});
+        const rects = [...range.getClientRects()];
+        if (rects.length===1) add(node.textContent,rects[0]);
+        else {
+          // Preserve wrapped labels without guessing their line breaks.
+          let offset=0;
+          for (const char of node.textContent) {
+            range.setStart(node,offset); range.setEnd(node,offset+char.length); offset+=char.length;
+            if (char.trim()) add(char,range.getBoundingClientRect());
+          }
+        }
+      }
+      for (const svg of el.querySelectorAll('svg')) {
+        const r=visible(svg);
+        if (r) icons.push({x:r.left,y:r.top,width:r.width,height:r.height});
+      }
+    }
+    const key=JSON.stringify([text,icons]);
+    if (key===labelMaskKey) return;
+    labelMaskKey=key;
+    const parts=[...text,...icons];
+    if (!parts.length) {labelMaskRect=null;return;}
+    const left=Math.floor(Math.min(...parts.map(r=>r.x))-8),top=Math.floor(Math.min(...parts.map(r=>r.y))-8);
+    const right=Math.ceil(Math.max(...parts.map(r=>r.x+r.width))+8),bottom=Math.ceil(Math.max(...parts.map(r=>r.y+r.height))+8);
+    const dpr=Math.min(devicePixelRatio||1,2);
+    labelMask.width=Math.ceil((right-left)*dpr); labelMask.height=Math.ceil((bottom-top)*dpr);
+    labelMaskRect={left,top,width:right-left,height:bottom-top};
+    const mask=labelMask.getContext('2d');
+    mask.setTransform(dpr,0,0,dpr,-left*dpr,-top*dpr);
+    mask.fillStyle=mask.strokeStyle=mask.shadowColor='#fff';
+    mask.shadowBlur=4*dpr; mask.lineWidth=2; mask.lineJoin='round';
+    for (const part of text) {
+      mask.font=part.font; mask.letterSpacing=part.spacing==='normal'?'0px':part.spacing;
+      const metrics=mask.measureText(part.value);
+      const ascent=metrics.fontBoundingBoxAscent??metrics.actualBoundingBoxAscent;
+      const descent=metrics.fontBoundingBoxDescent??metrics.actualBoundingBoxDescent;
+      const baseline=part.y+(part.height-ascent-descent)/2+ascent;
+      mask.strokeText(part.value,part.x,baseline); mask.fillText(part.value,part.x,baseline);
+    }
+    // Icons need only a small feathered clearing, never the button's hit area.
+    for (const r of icons) {
+      mask.beginPath(); mask.roundRect(r.x+2,r.y+2,Math.max(1,r.width-4),Math.max(1,r.height-4),3); mask.fill();
+    }
+  }
   function measure() {
     const dpr=Math.min(devicePixelRatio||1,2); width=innerWidth; height=innerHeight;
     if(canvas.width!==Math.round(width*dpr)||canvas.height!==Math.round(height*dpr)) {
@@ -100,35 +163,26 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     divider=shell?.querySelector('[data-omd-surface="sidebar-column"]');
     rightDivider=shell?.querySelector('[data-omd-surface="workbench-column"]');
     header=shell?.querySelector('.wSkVaW_header');
-    covers=[...document.querySelectorAll(PANEL+', iframe, [data-glyph-external]')].map(el=>({el,r:visible(el)||(!el.hidden&&el.getBoundingClientRect())})).filter(c=>c.r?.width>2&&c.r?.height>2&&getComputedStyle(c.el).visibility!=='hidden');
+    covers=[...document.querySelectorAll(PANEL+', '+COMPOSER+', iframe, [data-glyph-external]')].map(el=>({el,layer:Number(getComputedStyle(el).zIndex)||0,composer:el.hasAttribute('data-composer-seat'),r:visible(el)||(!el.hidden&&el.getBoundingClientRect())})).filter(c=>c.r?.width>2&&c.r?.height>2&&getComputedStyle(c.el).visibility!=='hidden');
     conversation=shell?.querySelector('[data-omd-surface="conversation"]');fieldRect=conversation&&visible(conversation);
     brands=[...document.querySelectorAll('.omd-glyph-brand')].map(el=>{
       const r=visible(el),small=el.dataset.glyphSize==='small';
       return {el,r,small,clip:small?r:fieldRect,scene:small?r:fieldRect||r};
     }).filter(v=>v.r);
-    obstacles=[...document.querySelectorAll('[data-composer-card], [data-chat-flow-kind] pre, [data-chat-flow-kind] table, [data-message-attachments], .wSkVaW_header, '+PANEL)].map(el=>visible(el)).filter(Boolean);
-    // Keep actual message lines readable, while allowing the water to move
-    // through paragraph gaps in an already-open conversation.
+    obstacles=[...document.querySelectorAll(READABLE+', .wSkVaW_header, '+PANEL)].map(el=>visible(el)).filter(Boolean);
+    // Other streamed/tool rows still protect their text while letting the
+    // water pass through the surrounding gaps.
     for(const row of document.querySelectorAll('[data-chat-flow-kind]')){
       if(!visible(row))continue;
       const walker=document.createTreeWalker(row,NodeFilter.SHOW_TEXT);
       for(let node=walker.nextNode();node;node=walker.nextNode()){
-        if(!node.textContent.trim())continue;
+        if(!node.textContent.trim()||node.parentElement?.closest('[data-glyph-content]'))continue;
         const range=document.createRange();range.selectNodeContents(node);
         for(const r of range.getClientRects())if(r.width>0&&r.height>0&&r.bottom>=0&&r.top<height)
           obstacles.push({left:r.left,top:r.top,right:r.right,bottom:r.bottom,pad:4});
       }
     }
-    // The hero's container includes its whale. Protect the actual title text,
-    // not that entire container, so the artwork can leave its original slot.
-    for(const el of document.querySelectorAll('[class*="_headline"]')) {
-      const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);
-      for(let node=walker.nextNode();node;node=walker.nextNode()) {
-        if(!node.textContent.trim())continue;
-        const range=document.createRange();range.selectNodeContents(node);
-        obstacles.push(...[...range.getClientRects()].filter(r=>r.width>0&&r.height>0));
-      }
-    }
+    measureFloatingLabels();
     if(fieldRect&&!brands.some(v=>!v.small)&&conversation.querySelector('[data-chat-flow-kind]')) {
       const w=Math.min(400,fieldRect.width*.6),h=Math.min(240,fieldRect.height*.4);
       brands.push({el:conversation,small:false,ambient:true,scene:fieldRect,clip:fieldRect,
@@ -140,7 +194,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
       let r=visible(el); const hiddenToggle=!r&&['checkbox','radio'].includes(el.type)&&getComputedStyle(el).opacity==='0';
       if(hiddenToggle)r=visible(el.parentElement);
       if(!r||el.closest('[data-composer-input]')||el.type==='file') continue;
-      if(conversation?.contains(el))obstacles.push(r);
+      if(conversation?.contains(el)&&!el.closest(FLOATING))obstacles.push(r);
       const role=el.getAttribute('role'), type=el.type;
       const toggle=['switch','checkbox','radio'].includes(role)||['checkbox','radio'].includes(type);
       const range=type==='range';
@@ -162,18 +216,18 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
       nextUltraWave=Infinity;
     }else if(selected&&(!ultraMode||ultraAnchor!==peakRange.el))nextUltraWave=now;
     ultraMode=selected;ultraAnchor=peakRange?.el;
-    icons=[];const current=new Set();
+    const current=new Set();
     for(const el of document.querySelectorAll('svg')) {
       // Brand lettering is an SVG in the native shell. Rasterizing a 13 px
       // wordmark into 4 px glyphs makes both the name and logo unreadable.
       if(el.closest('[data-omd-nav-part="brand"], [class*="_logoRow"]'))continue;
       const r=visible(el,true);if(!r||el.closest('[data-glyph-control],.omd-effort-control'))continue;
       const item=pixels(el,r);if(!item.pixels)continue;
-      if(!el.hasAttribute('data-glyph-icon'))el.setAttribute('data-glyph-icon','');
-      current.add(el);marked.add(el);icons.push({el,r,item,clip:clipping(el)});
+      characterIcons.mount(el,item,r);
+      current.add(el);marked.add(el);
     }
     for(const el of marked) if(!el.isConnected||el.hasAttribute('data-glyph-icon')&&!current.has(el)||el.hasAttribute('data-glyph-control')&&!currentControls.has(el)) {
-      el.removeAttribute('data-glyph-icon');el.removeAttribute('data-glyph-control');marked.delete(el);
+      characterIcons.remove(el);el.removeAttribute('data-glyph-control');marked.delete(el);
     }
     scrollbars=[...document.querySelectorAll('[data-conversation-scroll], [role="menu"], [role="listbox"], [class*="_content"], [class*="_scroll"], [class*="_list"], .omd-model-options')].filter(el=>el.scrollHeight>el.clientHeight+4&&/(auto|scroll)/.test(getComputedStyle(el).overflowY)).map(el=>({el,r:visible(el),clip:clipping(el)})).filter(v=>v.r);
     dirty=false;
@@ -211,10 +265,15 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
       glyph('[',r.left+2,r.top+r.height/2,ink,alpha,12);glyph(']',r.right-2,r.top+r.height/2,ink,alpha,12);
     }
   }
-  function bind(v) {owner=v.el;clip=v.clip||null;}
+  function own(el) {
+    owner=el;ownerLayer=0;
+    for(const cover of covers)if(cover.el===el||cover.el.contains(el))ownerLayer=Math.max(ownerLayer,cover.layer);
+  }
+  function bind(v) {own(v.el);clip=v.clip||null;}
   function draw(now) {
     frame=undefined;if(stopped||document.hidden)return;
-    const quiet=still();if(!quiet&&now-last<32){wake();return;}last=now;
+    // Scroll/layout updates must not wait for the background's 30 fps budget.
+    const quiet=still();if(!quiet&&!dirty&&now-last<32){wake();return;}last=now;
     if(dirty||now-measured>250){measure();measured=now;}
     const time=quiet?0:now/1000;g.clearRect(0,0,width,height);
     if(!quiet&&ultraMode&&ultraAnchor?.isConnected&&now>=nextUltraWave){
@@ -235,23 +294,29 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     }
     while(clickWaves.length&&now-clickWaves[0].time>=CLICK_DURATION)clickWaves.shift();
     const water=prepareWaves(quiet?[]:clickWaves,quiet?[]:bursts,now,Math.hypot(width,height));
-    clip=fieldRect;owner=conversation;artwork=true;
+    clip=fieldRect;own(conversation);artwork=true;
     scene.paint(now,trails,quiet,glyph,accent,water);
     artwork=false;
+    // Let the scene run behind hero labels, clearing only their letterforms
+    // with a soft edge instead of punching rectangular holes in the water.
+    if(labelMaskRect) {
+      const r=labelMaskRect;
+      g.save();g.globalAlpha=1;g.globalCompositeOperation='destination-out';
+      g.drawImage(labelMask,r.left,r.top,r.width,r.height);g.restore();
+    }
     clip=null;
     for(const [el,side] of[[divider,'right'],[rightDivider,'left']]){
-      const r=el&&visible(el);owner=el;if(r?.width>20)edge(r[side],24,r[side],height-24,time);
+      const r=el&&visible(el);own(el);if(r?.width>20)edge(r[side],24,r[side],height-24,time);
     }
-    if(header){const r=visible(header);owner=header;if(r)edge(r.left+26,r.bottom,r.right-26,r.bottom,time);}
+    if(header){const r=visible(header);own(header);if(r)edge(r.left+26,r.bottom,r.right-26,r.bottom,time);}
     for(const v of boxes){bind(v);box(v,time);}
     for(const v of brands)if(v.small){bind(v);whale(v,time,glyph,accent,muted,pointer);}
     for(const v of controls){bind(v);control(v,time);}
     for(const v of scrollbars){bind(v);const {el,r}=v;const travel=r.height-16, thumb=Math.max(20,travel*el.clientHeight/el.scrollHeight),start=r.top+8+(travel-thumb)*el.scrollTop/(el.scrollHeight-el.clientHeight);for(let y=r.top+8;y<r.bottom-8;y+=8)glyph(y>=start&&y<=start+thumb?'┃':'·',r.right-4,y,muted,.65,9);}
     for(const v of ranges){bind(v);paintEffort(v,time,glyph,ink,muted,quiet);}
-    for(const v of icons){bind(v);for(const p of v.item.pixels)glyph(p.a>.65?'+':'·',v.r.left+(p.x+.5)*v.r.width/v.item.cols,v.r.top+(p.y+.5)*v.r.height/v.item.rows,ink,p.a,Math.max(4,Math.min(v.r.width/v.item.cols,v.r.height/v.item.rows)+1));}
     clip=null;
     if(!quiet){
-      for(let i=rings.length-1;i>=0;i--){const ring=rings[i],age=(now-ring.time)/650;if(age>=1){rings.splice(i,1);continue;}owner=ring.el;const radius=6+age*46;for(let k=0;k<16;k++){const a=k/16*Math.PI*2;glyph(age<.4?'+':'·',ring.x+Math.cos(a)*radius,ring.y+Math.sin(a)*radius,accent,(1-age)*.7,9);}}
+      for(let i=rings.length-1;i>=0;i--){const ring=rings[i],age=(now-ring.time)/650;if(age>=1){rings.splice(i,1);continue;}own(ring.el);const radius=6+age*46;for(let k=0;k<16;k++){const a=k/16*Math.PI*2;glyph(age<.4?'+':'·',ring.x+Math.cos(a)*radius,ring.y+Math.sin(a)*radius,accent,(1-age)*.7,9);}}
       wake();
     }
   }
@@ -287,5 +352,5 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   const listeners=[['scroll',invalidate,true],['pointermove',move,{passive:true}],['pointerdown',click,true],['pointerleave',leave],['focusin',invalidate],['focusout',invalidate],['visibilitychange',visibility],['input',effortChanged,true],['change',invalidate,true]];
   for(const args of listeners)document.addEventListener(...args);
   window.addEventListener('resize',invalidate);motion.addEventListener('change',invalidate);wake();
-  return()=>{stopped=true;cancelAnimationFrame(frame);observer.disconnect();window.removeEventListener('resize',invalidate);motion.removeEventListener('change',invalidate);for(const args of listeners)document.removeEventListener(...args);for(const el of marked){el.removeAttribute('data-glyph-icon');el.removeAttribute('data-glyph-control');}cache.clear();};
+  return()=>{stopped=true;cancelAnimationFrame(frame);observer.disconnect();characterIcons.clear();window.removeEventListener('resize',invalidate);motion.removeEventListener('change',invalidate);for(const args of listeners)document.removeEventListener(...args);for(const el of marked){el.removeAttribute('data-glyph-icon');el.removeAttribute('data-glyph-control');}cache.clear();};
 }

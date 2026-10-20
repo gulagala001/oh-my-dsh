@@ -83,7 +83,7 @@ export class RecommendedPluginManager {
     if (this.getHostVersion) await this.refreshHost();
     const bundles = await this.manager.listBundles();
     const entries = this.catalog.some(plugin => plugin.bundled) ? await this.manager.listPlugins() : [];
-    return { autoUpdate: this.getConfig().recommendedPluginsAutoUpdate === true, checkedAt: this.checkedAt, busy: this.current,
+    return { autoUpdate: this.getConfig().recommendedPluginsAutoUpdate === true, checkedAt: this.checkedAt, busy: this.current, updating: this.checking === true,
       plugins: this.catalog.map(plugin => {
         plugin = resolveRecommendedPlugin(plugin, this.hostVersion);
         if (plugin.bundled) {
@@ -240,9 +240,12 @@ export class RecommendedPluginManager {
       message: ({ uninstall: '已卸载', update: '更新已完成', install: '已安装并启用', enable: '已开启', disable: '已关闭' }[action]) + (restartRequired ? '，重启 DSH 后生效' : ''),
     });
   }
-  async tick() {
-    if (this.closed || this.job || this.checking || !this.getConfig().recommendedPluginsAutoUpdate || this.isRunning()
-      || this.checkedAt != null && this.now() - this.checkedAt < AUTO_UPDATE_INTERVAL) return;
+  async tick() { return this.updateAll({ manual: false }); }
+  // Automatic checks follow the opt-in, interval and idle gates. A manual
+  // request checks now; both skip bundled, manual, unavailable and inactive rows.
+  async updateAll({ manual = false } = {}) {
+    const allowed = () => !this.closed && !this.job && (manual || this.getConfig().recommendedPluginsAutoUpdate && !this.isRunning());
+    if (this.checking || !allowed() || !manual && this.checkedAt != null && this.now() - this.checkedAt < AUTO_UPDATE_INTERVAL) return;
     this.checking = true;
     try {
       if (this.getHostVersion) await this.refreshHost();
@@ -250,11 +253,11 @@ export class RecommendedPluginManager {
       for (const entry of this.catalog) {
         if (entry.bundled) continue;
         const plugin = resolveRecommendedPlugin(entry, this.hostVersion);
-        if (this.closed || this.job || !this.getConfig().recommendedPluginsAutoUpdate || this.isRunning()) return;
+        if (!allowed()) return;
         const bundle = bundles.find(item => item.name === plugin.packageName);
-        if (plugin.review?.version && !plugin.review.source && !plugin.manualInstall && !this.unavailable(plugin) && bundle?.installed && bundle.enabled && !bundle.readOnlyReason) await this.start(plugin.id, 'update', true);
+        if (plugin.review?.version && !plugin.review.source && !plugin.manualInstall && !this.unavailable(plugin) && bundle?.installed && bundle.enabled && !bundle.readOnlyReason) await this.start(plugin.id, 'update', !manual);
       }
-      if (!this.closed && this.getConfig().recommendedPluginsAutoUpdate && !this.isRunning()) this.checkedAt = this.now();
+      if (!this.closed && (manual || this.getConfig().recommendedPluginsAutoUpdate && !this.isRunning())) this.checkedAt = this.now();
     } finally { this.checking = false; }
   }
   close() {
@@ -284,6 +287,8 @@ export function mountRecommendedPlugins(ctx, hub) {
         if (req.method === 'POST') {
           const input = await readJsonBody(req, { maxBytes: 8192 });
           if (input.action === 'settings') await service.settings(input.autoUpdate);
+          // Already running checks or jobs keep their state; report it unchanged.
+          else if (input.action === 'update-all') void service.updateAll({ manual: true }).catch(error => scope.logger.warn(error.message));
           else void service.start(input.id, input.action);
         } else if (req.method !== 'GET') { send(405, { error: 'Method not allowed' }); return; }
         send(200, await service.status());

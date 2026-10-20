@@ -6,7 +6,6 @@ import { homedir } from 'node:os';
 import { isAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { realpath } from 'node:fs/promises';
 import { migrateSessionStorage } from './session-migration.mjs';
-import { sourceName } from './message-source.mjs';
 import { currentDirectory } from './working-directory.mjs';
 import { apiSessionTarget } from './api-session.mjs';
 import { installLoaderLifecycleCompatibility } from './loader-lifecycle-compat.mjs';
@@ -21,11 +20,11 @@ import { monitorCallStream } from './monitor-call.mjs';
 import { validateSessionId } from './hub-store.mjs';
 import { createVersionService, handleVersionApi } from './version.mjs';
 import { VersionUpdater, handleVersionUpdateApi } from './version-update.mjs';
+import { handleSkinAsset } from './skin-assets.mjs';
 import { installImageBudget } from './image-budget.mjs';
 import { Config } from './config.mjs';
 import { neutralizeHostEnvironment } from './cc-adaptation/environment.mjs';
 import { Hub } from "./hub.mjs";
-import { eventText } from './hub.mjs';
 import { installContextErrorRecovery } from './context/host.mjs';
 import { currentTasks, restoreTaskProjection } from './tasks.mjs';
 import { ensureSystemHead } from './system-head.mjs';
@@ -34,10 +33,9 @@ import { publishDreamMemory } from './dream/publication.mjs';
 import { handleDreamApi } from './dream/api.mjs';
 import { installTraceCleanup } from './context/trace.mjs';
 import { installAdaptiveCapture } from './context/adaptive.mjs';
-import { installResponsesReasoningCompatibility } from './responses-reasoning-compat.mjs';
-import { installCommandCodeRetry } from './commandcode-retry.mjs';
-import { installCommandCodeChatCompatibility } from './commandcode-chat-compat.mjs';
+import { installCommandCodeCompatibility } from './commandcode-compat.mjs';
 import { installComputerUseImageCompatibility } from './computer-use-image-compat.mjs';
+import { trackProviderProfiles } from './llm-request-projection.mjs';
 import { repairShadows } from './context/shadow.mjs';
 import { TODO_NUDGE } from './todolist.mjs';
 import { message } from './hub.mjs';
@@ -47,7 +45,7 @@ import { CodegraphRuntime } from './codegraph.mjs';
 import { Components, mountComponents } from './components.mjs';
 import { runtimeContext } from './runtime-state.mjs';
 import { TaskBudgets, consumeBudgetAliases } from './task-budget.mjs';
-import { WorkflowBudget } from './workflow-budget.mjs';
+import { WorkflowBudget } from '../vendor/workflow/src/budget.mjs';
 import { UltracodeControl, installUltracodeProjection } from './ultracode.mjs';
 import { installOverviewProjection } from './session-overview-projection.mjs';
 import { setRuntimeContext, taskContextMeta } from './task-context.mjs';
@@ -168,10 +166,9 @@ export async function apply(ctx, config) {
   ctx.on('system-prompt/assemble', (_assembly, context, next) => context?.agent && !isBtwSession(context.agent.session)
     ? hub.ultracode.assemble(context.agent, next) : next(), { global: true, prepend: true });
   installBackground(ctx, hub, isX);
+  trackProviderProfiles(ctx);
   installImageBudget(ctx, isX);
-  installCommandCodeRetry(ctx);
-  installResponsesReasoningCompatibility(ctx);
-  installCommandCodeChatCompatibility(ctx);
+  installCommandCodeCompatibility(ctx, isX);
   installComputerUseImageCompatibility(ctx, isX);
   installTraceCleanup(ctx, isX, hub.context);
   installAdaptiveCapture(ctx, session => isX(session) && !isBtwSession(session), hub.context);
@@ -225,7 +222,10 @@ export async function apply(ctx, config) {
       // Explicit full compaction and opt-in Auto Compact may await model work here.
       setRuntimeContext(agent.session, () => runtimeContext(agent, hub, { messages, turn, step }));
       await hub.context.preStep(agent, signal, route);
-      if ((!hub.config().budgetHintsEnabled || hub.budgets.saved(agent.session)?.visible === false)
+      const hints = hub.config();
+      // preStep already retired every runtime block when both hints are off.
+      if ((hints.stateHintsEnabled || hints.budgetHintsEnabled || Number(agent.session.header.delegationDepth) > 0)
+        && (!hints.budgetHintsEnabled || hub.budgets.saved(agent.session)?.visible === false)
         && agent.session.deriveMessages().some(m => /^(?:预算(?:：|$)|Budget(?::|$))/m.test(taskContextMeta(m)?.runtime?.text ?? ''))) {
         await hub.context.stripRuntime(agent.session);
       }
@@ -327,6 +327,7 @@ export async function apply(ctx, config) {
         const url = new URL(req.url, 'http://localhost'), id = url.searchParams.get('session');
         if (await handleVersionApi({ req, res, url, service: versionService, send })) return;
         if (rejectUntrusted(ctx, req, res)) return;
+        if (await handleSkinAsset(req, res, url)) return;
         if (await handleTemporaryChatApi({ service: temporaryChats, req, res, url })) return;
         if (url.pathname === '/trisoul-x/api/projectless-workspace') {
           if (req.method === 'GET') {
@@ -371,7 +372,7 @@ export async function apply(ctx, config) {
           try { if (session) meter = ctx.tokenMeter.measure(session); } catch {}
           const liveCalls = [...hub.live.values()].filter(call => !id || url.searchParams.get('range') === 'all' || ids.has(call.sessionId));
           res.setHeader('Cache-Control', 'no-store');
-          send(res, 200, { ...compactMonitorSnapshot({ metrics, actions, meter, liveCalls, sessionCount: all.length, running: agent?.status ?? 'idle' }), unreadableArchives: hub.store.monitorErrors.size }); return;
+          send(res, 200, compactMonitorSnapshot({ metrics, actions, meter, liveCalls, sessionCount: all.length, running: agent?.status ?? 'idle' })); return;
         }
         const readTarget = async () => {
           const reading = new AbortController();
@@ -407,30 +408,19 @@ export async function apply(ctx, config) {
           send(res, 200, hub.taskReminders(scopeSession)); return;
         }
         if (url.pathname === '/trisoul-x/api/state' && req.method === 'GET') {
+          // Settings read config and providers; the record view reads notes and tasks.
+          // Usage and context meters are served by /monitor and /context.
           const directory = id ? [] : await Promise.all(ctx.llm.listProviders().map(async provider => ({ ...provider, models: await ctx.llm.listModels(provider.id).catch(() => []) })));
-          const query = monitorQuery({ session: id || '', range: url.searchParams.get('range') || 'session' });
-          const { ids, selected: all, metrics: legacyMetrics, actions } = monitorSelection(hub.store.monitorStates(), id, query.range);
-          let metrics;
-          try { metrics = hub.monitor.query(all, ids, query).metrics; }
-          catch { metrics = unavailableMonitorMetrics(legacyMetrics); }
-          const unreadableArchives = hub.store.monitorErrors.size;
-          const meter = session ? ctx.tokenMeter.measure(session) : null;
-          const liveCalls = [...hub.live.values()].filter(call => !id || url.searchParams.get('range') === 'all' || ids.has(call.sessionId));
           res.setHeader('Cache-Control', 'no-store');
           send(res, 200, {
-            config: hub.config(), directory, metrics, actions, unreadableArchives, sessionCount: all.length, contextHistory: stored?.contextHistory || [],
+            config: hub.config(), directory,
             notes: stored?.notes || [],
             legacyContext: stored && (stored.status || stored.pins?.length || stored.memoryContext?.doc || stored.checkpoint || stored.digests?.length || stored.probe || stored.probeNotes?.length) ? {
               status: stored.status, pins: stored.pins, workdoc: stored.memoryContext?.doc, checkpoint: stored.checkpoint,
               digests: stored.digests, probe: stored.probe, probeNotes: stored.probeNotes,
             } : null,
-            contextPipeline: session && session.header.origin !== 'subagent' ? hub.context.view(session) : null,
             tasks: currentTasks(session, stored?.taskList ?? stored?.tasks), taskRelease: stored?.taskRelease,
-            activity: all.flatMap(s => s.activity).sort((a, b) => b.at - a.at).slice(0, 60),
-            live: id ? ([...hub.live.values()].find(call => call.sessionId === id) ?? null) : [...hub.live.values()],
-            liveCalls,
-            scope: hub.scope(scopeSession), running: agent?.status ?? 'idle', meter,
-            frame: session ? meter.nodes.map(n => { const e = session.eventAt(n.seq), m = e ? session.deriveEventMessage(e) : null; return { seq: n.seq, role: m?.role, kind: sourceName(m?.source) || m?.source?.kind || e?.type || 'unknown', tokens: n.tokens ?? n.heuristicTokens, chars: e ? eventText(session, e).length : null, checkpoint: Boolean(m?.source?.compactionId) }; }) : [],
+            scope: hub.scope(scopeSession), running: agent?.status ?? 'idle',
             route: session?.requestHeader()?.config ? { provider: session.requestHeader().config.provider, model: session.requestHeader().config.model } : null,
           }); return;
         }

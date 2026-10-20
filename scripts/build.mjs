@@ -3,7 +3,8 @@ import './build-deepseek-workbench.mjs';
 import './build-overview-native.mjs';
 import './build-permission-native.mjs';
 import { build } from 'esbuild';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { whaleSvg } from '../src/client/brand.mjs';
 import { packSkin } from './pack-skin.mjs';
@@ -17,6 +18,19 @@ await packSkin(fileURLToPath(new URL('../plugins/glyph-theme/src/theme/', import
   fileURLToPath(new URL('../src/client/skins/bundled/glyph-motion.json', import.meta.url)));
 await import('./build-glyph-theme.mjs');
 
+// Large skin bodies (inline fonts, native CSS) are served as content-hashed
+// files and load on first use; metadata and palettes stay in the bundle.
+const bundledDir = new URL('../src/client/skins/bundled/', import.meta.url), skinAssets = {};
+for (const name of await readdir(bundledDir)) if (name.endsWith('.css')) await rm(new URL(name, bundledDir));
+for (const skin of ['google-material-expressive', 'claude-cli-terminal']) {
+  const path = new URL(`${skin}.json`, bundledDir), value = JSON.parse(await readFile(path, 'utf8'));
+  const file = `${skin}.${createHash('sha256').update(value.css).digest('hex').slice(0, 12)}.css`;
+  await writeFile(new URL(file, bundledDir), value.css);
+  await writeFile(path, JSON.stringify({ ...value, css: '' }, null, 2) + '\n');
+  skinAssets[skin] = file;
+}
+await writeFile(new URL('assets.json', bundledDir), JSON.stringify(skinAssets, null, 2) + '\n');
+
 // The host mounts plugin-declared presets. Keep one authored composition;
 // the PTC variant only adds its tool presentation.
 const composition = await readFile(new URL('../presets/trisoul-x/agent.cordis.yml', import.meta.url), 'utf8');
@@ -29,11 +43,18 @@ await writeFile(new URL('../presets/cordis.patch.yml', import.meta.url),
   presets.map(([id, name, description, plugins], order) => `    - id: preset-${id}\n      name: '@deepseek-ai/dsh-agent-preset'\n      config:\n        id: ${id}\n        name: ${JSON.stringify(name)}\n        description: ${JSON.stringify(description)}\n        order: ${order}\n        plugins:\n${plugins.trimEnd().split('\n').map(line => '          ' + line).join('\n')}\n`).join(''));
 
 await mkdir(new URL('../lib/', import.meta.url), { recursive: true });
+// OpenCU ships only its ModuleLoader client; OMD bundles the same body as an ES factory.
+const LOADER_HEAD = 'window.__ModuleLoader__.load({id:"opencu",factory:(require)=>{var module={exports:{}};var exports=module.exports;';
+const LOADER_TAIL = 'return module.exports;}});';
+const openCUClient = (await readFile(new URL('../vendor/opencu/lib/client.js', import.meta.url), 'utf8')).trimEnd();
+if (!openCUClient.startsWith(LOADER_HEAD) || !openCUClient.endsWith(LOADER_TAIL)) throw new Error('Unexpected OpenCU client wrapper');
+await writeFile(new URL('../vendor/opencu/lib/client.factory.mjs', import.meta.url),
+  `export function createOpenCU(require) {\nvar module={exports:{}};var exports=module.exports;\n${openCUClient.slice(LOADER_HEAD.length, -LOADER_TAIL.length)}\nreturn module.exports;\n}\n`);
 const logo = new URL('../docs/images/logo.svg', import.meta.url);
 await mkdir(new URL('./', logo), { recursive: true });
 await writeFile(logo, whaleSvg('omd-logo').replace('aria-hidden="true"', 'role="img" aria-label="Oh My DSH"'));
 // Capability detection on the bundled host chat: the composer statistics
-// entries differ between hosts (alpha.3 activity+usage, rc.2 stats). OMD
+// entries are read from the host build instead of being hard-coded. OMD
 // shadows exactly the ids its host ships, by the documented same-id rule.
 const hostChat = await readFile(new URL('../lib/host/ui-chat.factory.mjs', import.meta.url), 'utf8');
 const composerStats = [...hostChat.matchAll(/name: "conversation\.composer\.dock",\s*id: "(\w+)",\s*order: (\d+)/g)].map(m => ({ id: m[1], order: Number(m[2]) }));
@@ -42,7 +63,7 @@ await build({
   entryPoints: [fileURLToPath(new URL('../src/client/index.jsx', import.meta.url))],
   outfile: fileURLToPath(new URL('../lib/client.js', import.meta.url)),
   bundle: true, platform: 'browser', format: 'cjs', target: 'es2022',
-  minifySyntax: true, minifyWhitespace: true, keepNames: true,
+  minifySyntax: true, minifyWhitespace: true, minifyIdentifiers: true, keepNames: true, charset: 'utf8',
   external: ['react-dom', 'react', 'react/jsx-runtime', '@deepseek-ai/cordis', '@deepseek-ai/dsh-client-ui-primitives', '@deepseek-ai/dsh-api-session-controller/client'],
   banner: { js: 'window.__ModuleLoader__.load({id:"trisoul_x",factory:(require)=>{var module={exports:{}};var exports=module.exports;' },
   footer: { js: 'return module.exports;}});' },

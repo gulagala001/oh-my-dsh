@@ -8,7 +8,7 @@ const statusText = data => data.status === 'update' ? data.severity === 'require
   : data.status === 'current' ? data.hostUpgrade ? '已是当前 DSH 的最新版' : '已是最新版' : data.status === 'ahead' ? '当前版本高于发布记录' : '尚未确认最新版本';
 const timeText = time => time == null ? '尚未成功检查' : new Date(time).toLocaleString('zh-CN', { hour12: false });
 
-export function VersionInfo() {
+export function VersionInfo({ row = false, onCheck } = {}) {
   const [data, setData] = useState({ currentVersion: CLIENT_VERSION, status: 'unknown', severity: 'none', releases: [] });
   const [open, setOpen] = useState(false), [busy, setBusy] = useState(false);
   const active = useRef(false), pending = useRef(null), abort = useRef(null), titleId = useId();
@@ -38,7 +38,10 @@ export function VersionInfo() {
   }, [load]);
   const severity = data.status === 'update' ? data.severity : 'none';
   const updates = Array.isArray(data.releases) ? data.releases : [];
-  return <span className="omd-version" onClick={event => event.stopPropagation()} onKeyDown={event => { if (!open) event.stopPropagation(); }}>
+  const trigger = row ? <>
+    <span className="omd-version-row-text"><span>Oh My DSH {data.currentVersion}</span><span>{statusText(data)}{data.stale ? '（上次检查结果）' : ''}</span></span>
+    <Button type="button" variant="outline" size="sm" disabled={busy} aria-haspopup="dialog" aria-expanded={open} onClick={() => { setOpen(true); void load(true); onCheck?.(); }}>{busy ? '正在检查…' : '检查更新'}</Button>
+  </> : <>
     <Button type="button" variant="ghost" size="sm" className="omd-version-trigger" data-update-level={severity}
       aria-label="关于 Oh My DSH" aria-haspopup="dialog" aria-expanded={open} aria-describedby={titleId + '-hint'}
       title={'Oh My DSH ' + data.currentVersion + ' · ' + statusText(data)} onClick={() => { setOpen(true); void load(); }}>
@@ -46,6 +49,9 @@ export function VersionInfo() {
       {severity !== 'none' && <span className={'omd-update-dot omd-update-' + severity} aria-hidden="true"/>}
     </Button>
     <span id={titleId + '-hint'} className="omd-version-sr">{statusText(data)}{data.stale ? '，上次检查结果' : ''}</span>
+  </>;
+  return <span className={'omd-version' + (row ? ' omd-version-row' : '')} onClick={event => event.stopPropagation()} onKeyDown={event => { if (!open) event.stopPropagation(); }}>
+    {trigger}
     <Modal open={open} title="关于 Oh My DSH" closeLabel="关闭版本信息" onClose={() => setOpen(false)} className="omd-version-dialog" contentClassName="omd-version-content"
       footer={<><Button type="button" variant="outline" size="sm" disabled={busy} data-modal-autofocus={busy ? undefined : ''} onClick={() => void load(true)}>{busy ? '正在检查…' : '检查更新'}</Button>
         <span className="omd-version-links">

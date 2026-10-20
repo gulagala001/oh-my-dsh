@@ -1,0 +1,76 @@
+/* Layout adapter for the Oh My DSH settings page. Controls are DSH primitives;
+   colors come from DSH tokens through the --cx-* variables that skins remap. */
+.omd-settings {
+  --cx-bg: var(--dsw-alias-bg-base, Canvas); --cx-text: var(--dsw-alias-label-primary, CanvasText);
+  --cx-muted: var(--dsw-alias-label-tertiary, GrayText); --cx-line: color-mix(in srgb, var(--cx-text) 10%, var(--cx-bg));
+  --cx-soft: color-mix(in srgb, var(--cx-text) 3%, var(--cx-bg)); --cx-hover: color-mix(in srgb, var(--cx-text) 5%, var(--cx-bg));
+  --cx-blue: var(--dsw-alias-state-business-primary); --cx-tint: color-mix(in srgb, var(--cx-blue) 7%, var(--cx-bg));
+  --cx-red: var(--dsw-alias-state-error-primary, #be555e);
+  position: relative; display: flex; flex-direction: column; height: 100%; min-height: 0; width: 100%; box-sizing: border-box;
+  color: var(--cx-text); font-size: 13px; line-height: 1.6; container: omdset / inline-size;
+}
+.omd-settings *, .omd-settings *::before, .omd-settings *::after { box-sizing: border-box; }
+.omd-settings :is(h2, h3, p) { margin: 0; }
+.omd-set-body { flex: 1; min-height: 0; overflow: auto; padding: 4px 22px 28px; scrollbar-width: thin; overscroll-behavior: contain; }
+.omd-set-group { margin-top: 22px; }
+.omd-set-group:first-child { margin-top: 8px; }
+.omd-set-group > h3 { font-size: 13px; font-weight: 600; margin: 0 0 8px 2px; }
+.omd-set-card { border: .5px solid var(--dsw-alias-settings-card-stroke, var(--cx-line)); background: var(--dsw-alias-settings-card-fill, transparent); border-radius: 12px; }
+.omd-set-row { display: block; width: 100%; padding: 12px 14px; border: 0; border-top: .5px solid var(--cx-line); background: none; color: inherit; font: inherit; text-align: left; }
+.omd-set-card > .omd-set-row:first-child, .omd-set-card > :first-child > .omd-set-row:first-child { border-top: 0; }
+.omd-set-row[data-disabled] { opacity: .6; }
+.omd-set-line { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.omd-set-copy { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.omd-set-copy strong { font-size: 13px; font-weight: 500; }
+.omd-set-copy small, .omd-set-field small, .omd-set-route > small, .omd-set-folders > small { font-size: 12px; color: var(--cx-muted); line-height: 1.55; }
+.omd-set-control { flex: none; display: flex; align-items: center; gap: 8px; max-width: 60%; }
+.omd-set-credit a, .omd-set-link { color: var(--cx-muted); text-decoration: none; }
+.omd-set-credit a:hover, .omd-set-link:hover { color: var(--cx-text); text-decoration: underline; }
+.omd-set-link { display: inline-flex; align-items: center; gap: 4px; margin-top: 14px; font-size: 12px; }
+.omd-set-nav { display: flex; align-items: center; gap: 12px; cursor: pointer; color: inherit; }
+.omd-set-nav:hover { background: var(--cx-hover); }
+.omd-set-card > .omd-set-nav:last-child { border-radius: 0 0 12px 12px; }
+.omd-set-nav:focus-visible { outline: 2px solid var(--cx-blue); outline-offset: -2px; }
+.omd-set-status { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; color: var(--cx-muted); overflow-wrap: anywhere; }
+.omd-set-status > span { flex: 1; min-width: 0; }
+.omd-set-error { color: var(--cx-red); }
+.omd-set-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin-top: 10px; }
+.omd-set-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.omd-set-field > span { font-size: 12px; color: var(--cx-muted); }
+.omd-set-field > :is(input, .omd-native-select), .omd-set-field > .omd-native-select > span, .omd-set-field > .omd-native-select button[aria-haspopup="menu"], .omd-set-field > span:has(> input) { width: 100%; }
+.omd-set-field[data-invalid] input { border-color: var(--cx-red); }
+.omd-set-invalid { color: var(--cx-red) !important; }
+.omd-set-wide { grid-column: 1 / -1; }
+.omd-set-field textarea { width: 100%; min-height: 120px; resize: vertical; font: inherit; font-size: 12px; line-height: 1.8; color: inherit; background: var(--dsw-specific-input-major, var(--cx-bg)); border: 1px solid var(--dsw-alias-border-l3, var(--cx-line)); border-radius: 8px; padding: 8px 12px; outline: none; }
+.omd-set-field textarea:focus { border-color: var(--cx-blue); }
+.omd-set-field textarea[readonly] { color: var(--cx-muted); }
+.omd-set-name { margin-top: 10px; }
+.omd-set-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.omd-set-actions > .omd-set-status { margin: 0 auto 0 0; }
+.omd-set-compare { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--cx-line); }
+.omd-set-route { margin-top: 12px; }
+.omd-set-route .omd-set-fields { margin-top: 6px; }
+.omd-set-sub { margin: 8px 0 0 12px; border-left: 2px solid var(--cx-line); }
+.omd-set-sub .omd-set-row { padding: 8px 0 8px 12px; border-top: 0; }
+.omd-set-folders { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
+.omd-set-folder { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.omd-set-advanced { margin-top: 22px; }
+.omd-set-advanced > summary { cursor: pointer; width: fit-content; font-size: 13px; font-weight: 600; margin-left: 2px; color: var(--cx-muted); }
+.omd-set-advanced > summary:hover, .omd-set-advanced[open] > summary { color: var(--cx-text); }
+.omd-set-advanced .omd-set-group:first-of-type { margin-top: 12px; }
+.omd-set-subhead { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 8px 0 14px; }
+.omd-set-subhead h2 { font-size: 17px; font-weight: 600; }
+.omd-set-back { transform: rotate(180deg); }
+.omd-settings .omd-native-search { margin-bottom: 12px; }
+.omd-set-notice { position: absolute; z-index: 2; bottom: 12px; left: 22px; right: 22px; box-shadow: 0 4px 16px color-mix(in srgb, var(--cx-text) 10%, transparent); display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 10px; font-size: 12px;
+  color: var(--cx-red); background: color-mix(in srgb, var(--cx-red) 8%, var(--cx-bg)); border: .5px solid color-mix(in srgb, var(--cx-red) 30%, var(--cx-bg)); }
+.omd-set-notice > span { flex: 1; min-width: 0; }
+.omd-set-empty { padding: 40px 0; text-align: center; color: var(--cx-muted); }
+.omd-version-row { display: inline-flex; align-items: center; gap: 10px; }
+.omd-version-row-text { display: flex; flex-direction: column; align-items: flex-end; font-size: 12px; color: var(--cx-muted); }
+@container omdset (max-width: 460px) {
+  .omd-set-body { padding: 4px 14px 22px; }
+  .omd-set-line { flex-wrap: wrap; }
+  .omd-set-control { max-width: 100%; }
+  .omd-set-fields { grid-template-columns: 1fr; }
+}

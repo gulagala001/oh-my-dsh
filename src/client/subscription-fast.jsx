@@ -1,7 +1,6 @@
 import { Button } from './native-controls.jsx';
 import { Icon } from './native-icons.jsx';
 import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { createPortal } from 'react-dom';
 import { decorateSlot } from './slot-decoration.mjs';
 import { useMainConversation } from './main-conversation.mjs';
 
@@ -15,6 +14,10 @@ export function SubscriptionFast({ ctx, sessionId, loadSpeed, setSpeed }) {
   const scope = `${sessionId}/${selected?.provider ?? ''}/${selected?.model ?? ''}`;
   const [state, setState] = useState(null), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const generation = useRef(0), revision = useRef(0), writing = useRef(false), reading = useRef(loadSpeed);
+  useEffect(() => {
+    if (!error) return;
+    try { ctx.conversation.input.for(ctx.sessions.scope(sessionId)).notify('error', error); } catch {}
+  }, [error]);
   reading.current = loadSpeed;
   useEffect(() => {
     const ticket = ++generation.current;
@@ -39,7 +42,7 @@ export function SubscriptionFast({ ctx, sessionId, loadSpeed, setSpeed }) {
     title={error || (enabled ? 'Fast 已开启 · 点击关闭' : 'Fast 已关闭 · 点亮闪电开启')}
     style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28,
       padding: 4, border: 0, borderRadius: 6, background: 'transparent', cursor: busy ? 'wait' : 'pointer',
-      color: enabled ? '#4d6fe9' : 'var(--dsw-alias-label-secondary)' }}
+      color: enabled ? 'var(--dsw-alias-state-business-primary)' : 'var(--dsw-alias-label-secondary)' }}
     onClick={() => {
       if (busy || writing.current) return;
       const ticket = generation.current, tier = enabled ? 'standard' : 'fast';
@@ -56,12 +59,6 @@ export function SubscriptionFast({ ctx, sessionId, loadSpeed, setSpeed }) {
     }}>
     <Icon name="bolt" size={18}/>
   </Button>
-    {error && createPortal(<div role="alert" aria-live="assertive" aria-atomic="true"
-      style={{ position: 'fixed', top: 12, right: 12, zIndex: 1200, maxWidth: 'calc(100vw - 24px)',
-        boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8, pointerEvents: 'none',
-        border: '1px solid var(--dsw-alias-border-l3, #bbb)', background: 'var(--dsw-alias-bg-layer-2, Canvas)',
-        color: 'var(--dsw-alias-state-error-primary, #b84949)', fontSize: 14, lineHeight: '20px',
-        overflowWrap: 'anywhere', boxShadow: '0 4px 16px #0003' }}>{error}</div>, document.body)}
   </>;
 }
 

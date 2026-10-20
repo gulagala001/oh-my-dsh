@@ -1,7 +1,6 @@
 import React from 'react';
 import { ThemeSelect, AppearanceSelect, EffectsToggle, ThemeImport, ThemeActions } from '../controls.jsx';
 import { Personalization } from '../personalization.jsx';
-import { HistorySizeSetting } from '../../history-settings.jsx';
 
 export function CodexAppearance({ runtime, state, act, importFile, error }) {
   return <section className="tx-app omd-appearance codex-appearance">
@@ -27,8 +26,6 @@ export function CodexAppearance({ runtime, state, act, importFile, error }) {
       </div>
     </div>
     <Personalization {...{ runtime, state, act }}/>
-    <h3>对话</h3>
-    <div className="codex-setting-group"><HistorySizeSetting/></div>
     <div className="omd-appearance-actions"><ThemeActions {...{ runtime, state, act }}/></div>
     <p className="omd-appearance-help">外观设置自动保存到当前浏览器；名称和数值在离开输入框、按 Enter 或关闭设置时保存。</p>
   </section>;

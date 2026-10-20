@@ -95,9 +95,9 @@ function SettingsNavigation() {
   return <button ref={ref} type="button" className="gm-settings-toggle" aria-label="设置分类" aria-expanded={overview} onClick={() => setOverview(value => !value)}><MaterialIcon name={overview ? 'arrow_back' : 'menu'}/><span>{overview ? '设置' : label}</span></button>;
 }
 
-export function applyMaterialIntegration(ctx, getRuntime) {
+export function applyMaterialIntegration(ctx, getRuntime, { priority = 0 } = {}) {
   function Shell() { const runtime = getRuntime(); const state = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot); return isMaterial(state) ? <Navigation ctx={ctx}/> : null; }
   function SettingsAction() { const runtime = getRuntime(); const state = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot); return isMaterial(state) ? <SettingsNavigation/> : null; }
-  ctx.slots.inject('shell.overlay', () => ctx.slots.register({ name: 'shell.overlay', id: 'omd-material-navigation', order: 10 }, Shell));
-  ctx.slots.inject('settings.action', () => ctx.slots.register({ name: 'settings.action', id: 'omd-material-settings-navigation', order: -10 }, SettingsAction));
+  ctx.slots.inject('shell.overlay', () => ctx.slots.register({ name: 'shell.overlay', id: 'omd-material-navigation', order: 10, priority }, Shell));
+  ctx.slots.inject('settings.action', () => ctx.slots.register({ name: 'settings.action', id: 'omd-material-settings-navigation', order: -10, priority }, SettingsAction));
 }

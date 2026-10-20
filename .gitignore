@@ -9,6 +9,10 @@ dist/
 data/
 .credentials.yaml
 *.tgz
+# Build output: only release tag commits carry it (git add -f).
+/lib/
+/plugins/*/lib/
+/vendor/opencu/lib/client.factory.mjs
 /cu-artifacts/
 /native/computer-use/windows/bin/
 /native/computer-use/windows/obj/

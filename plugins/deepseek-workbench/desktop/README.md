@@ -30,4 +30,4 @@ node desktop/check-host.mjs /absolute/patched-dsh-source /absolute/toolchain
 
 此命令检查浏览器边界真实类型，以及所有改动 TypeScript 的语法；不会替代完整桌面构建、签名或平台实机验证。它不安装依赖，不启动或修改已安装 DSH。
 
-宿主策略见 [deepseek-browser-policy.ts](deepseek-browser-policy.ts)，JavaScript 版本供插件检查复用。来源许可见 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)。
+宿主策略见 [deepseek-browser-policy.ts](deepseek-browser-policy.ts)。来源许可见 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)。

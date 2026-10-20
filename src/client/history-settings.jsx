@@ -1,5 +1,3 @@
-import { Select } from './native-controls.jsx';
-import React, { useEffect, useState } from 'react';
 import { SessionEventStream } from '@deepseek-ai/dsh-api-session-controller/client';
 
 export const HISTORY_SIZE_KEY = 'omd.historyPageSize.v1';
@@ -34,21 +32,4 @@ export function applyHistorySize(ctx) {
     });
     return () => { active = false; restore.forEach(fn => fn()); };
   });
-}
-
-export function HistorySizeSetting() {
-  const [size, setSize] = useState(historySize), [error, setError] = useState('');
-  useEffect(() => {
-    const sync = event => { if (event.key === HISTORY_SIZE_KEY || event.key === null) setSize(historySize()); };
-    window.addEventListener('storage', sync); return () => window.removeEventListener('storage', sync);
-  }, []);
-  return <>
-    <label className="omd-appearance-row">每次加载历史<Select aria-label="每次加载历史" value={size} onChange={event => {
-      const value = Number(event.target.value);
-      try { localStorage.setItem(HISTORY_SIZE_KEY, String(value)); setSize(value); setError(''); }
-      catch { setError('浏览器无法保存加载数量，原设置保持不变。'); }
-    }}>{HISTORY_SIZES.map(value => <option key={value} value={value}>{value} 条{value === 200 ? '（默认）' : ''}</option>)}</Select></label>
-    <p className="omd-appearance-help">用于初次打开对话和“加载更早”。保存在当前浏览器，已加载的记录与折叠状态不受影响。</p>
-    {error && <p role="alert">{error}</p>}
-  </>;
 }

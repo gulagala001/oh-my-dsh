@@ -65,7 +65,6 @@ if (!git(['tag', '--points-at', 'HEAD']).trim().split('\n').includes(officialTag
 const tag = officialTag;
 const modules = { 'session-persistence-jsonl': 'session/session-persistence-jsonl', jobs: 'jobs/jobs', 'jobs-local': 'jobs/jobs-local', 'tool-jobs': 'jobs/tool-jobs', shell: 'shell/shell', 'tool-bash': 'shell/tool-bash', 'tool-pwsh': 'shell/tool-pwsh', 'bash-local': 'shell/bash-local', 'pwsh-local': 'shell/pwsh-local', 'bash-sandbox': 'shell/bash-sandbox', 'pwsh-sandbox': 'shell/pwsh-sandbox', tools: 'core/tools', 'ui-conversation': 'client/ui-conversation' };
 Object.assign(modules, { workflow: 'workflow/workflow', 'workflow-ptc': 'workflow/workflow-ptc', 'tool-workflow': 'workflow/tool-workflow' });
-if (hostLayout.subagentDriver) modules['subagent-in-process-driver'] = 'subagent/subagent-in-process-driver';
 async function ownedSource(path) {
   const entry = await lstat(path);
   if ((!entry.isFile() && !entry.isDirectory()) || !inside(source, path) || await realpath(path) !== path) throw new Error(`Refusing non-owned staging source ${path}`);
@@ -122,7 +121,6 @@ async function retire(name) {
   } catch (error) { if (error.code === 'ENOENT') return; throw error; }
   await rm(target, { recursive: true });
 }
-if (!hostLayout.subagentDriver) await retire('subagent-in-process-driver');
 for (const [name, path] of Object.entries(modules)) {
   const target = join(destination, name);
   await retire(name); await mkdir(target, { recursive: true });

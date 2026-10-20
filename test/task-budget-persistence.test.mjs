@@ -29,7 +29,7 @@ function fixture(t, ownBudget = budget()) {
 test('enabled budget saves the complete accounted call once and cold-recovers', t => {
   const f = fixture(t);
   f.state.contextHistory = Array.from({ length: 80 }, (_, n) => ({ at: n, nodes: [{ seq: n, tokens: 7 }] }));
-  f.state.pendingFrame = { at: 99, turn: 1, step: 2, totalTokens: 125, nodes: [{ seq: 100, tokens: 125 }] };
+  f.state.pendingFrame = { at: 99, turn: 1, step: 2 };
   f.state.activity = Array.from({ length: 60 }, (_, n) => ({ id: `prior-${n}` }));
   f.record();
   assert.equal(f.writes.length, 1);
@@ -37,7 +37,7 @@ test('enabled budget saves the complete accounted call once and cold-recovers', 
   assert.deepEqual(restored, JSON.parse(JSON.stringify(f.state)));
   assert.equal(restored.budget.tokens, 135); assert.equal(restored.budget.rounds, 1);
   assert.equal(restored.metrics.main.calls, 1); assert.equal(restored.activity.length, 60);
-  assert.equal(restored.contextHistory.length, 80); assert.equal(restored.contextHistory.at(-1).callId, 'call-1');
+  assert.equal('contextHistory' in restored, false);
   assert.equal('pendingFrame' in restored, false); assert.equal(f.calls.length, 1);
   assert.equal(f.calls[0].id, restored.activity.at(-1).id);
 });

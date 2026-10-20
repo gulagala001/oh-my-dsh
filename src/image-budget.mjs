@@ -1,5 +1,6 @@
 import { IMAGE_OFFLOAD_REQUIRED_CODE, isAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { requestImageDimensions } from '@deepseek-ai/dsh-attachment';
+import { providerProfile } from './llm-request-projection.mjs';
 
 export const IMAGE_BATCH_POLICY = Object.freeze({ triggerRatio: 0.9, targetRatio: 0.6, keepNewest: 2 });
 const DEFAULT_LIMIT = 20 * 1024 * 1024;
@@ -37,15 +38,12 @@ export function installImageBudget(ctx, isManagedSession) {
   // caches immutable request versions; include the complete resize policy key.
   const caches = new WeakMap();
   ctx.on('llm/stream', async function* (options, next) {
-    const session = options.sessionId && ctx.sessions.get(options.sessionId);
-    const profile = ctx.settings.describe().find(entry => entry.ns === 'llm-pi-ai')?.value?.providers?.[options.provider];
+    const session = isAgentLoopRequest(options) && options.sessionId && ctx.sessions.get(options.sessionId);
     const attachments = ctx.get('attachments');
-    if (!isAgentLoopRequest(options) || !session || !isManagedSession(session)
-      || session.header?.origin === 'subagent' || !profile || !attachments?.readImageRequest) {
-      yield* next(); return;
-    }
-    const blocks = options.messages.flatMap(message => images(message.content));
-    if (!blocks.length) { yield* next(); return; }
+    const blocks = session && isManagedSession(session) && session.header?.origin !== 'subagent' && attachments?.readImageRequest
+      ? options.messages.flatMap(message => images(message.content)) : [];
+    const profile = blocks.length ? providerProfile(ctx, options.provider) : undefined;
+    if (!profile) { yield* next(); return; }
     let plan;
     try {
       options.signal?.throwIfAborted();

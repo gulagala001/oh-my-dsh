@@ -30,7 +30,7 @@ export function createBtwCompatibility(ctx) {
   ctx.effect(() => {
     const runtime = ctx.llm[symbols.original] || ctx.llm;
     const previous = Object.getOwnPropertyDescriptor(runtime, 'forAdapter'), original = runtime.forAdapter;
-    // rc.2 / alpha.3 expose no independent cache key. Codex derives its wire
+    // rc.1 / rc.2 expose no independent cache key. Codex derives its wire
     // cache key from sessionId, so change it only AFTER middleware and replay
     // filtering; guards, monitoring and durable events must still own the child.
     if (typeof original !== 'function') throw Error('/btw 无法安装当前宿主的缓存键适配。');

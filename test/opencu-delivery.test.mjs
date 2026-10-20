@@ -14,7 +14,6 @@ const client = Buffer.from('window.__ModuleLoader__.load({ id: "synthetic" });\n
 const helper = 'native/bin/darwin-arm64/OpenCU Helper.app/Contents/MacOS/opencu-native';
 const vendor = {
   'lib/client.js': Buffer.from('synthetic classic client\n'),
-  'lib/client.factory.mjs': Buffer.from('export function createOpenCU() {}\n'),
   'src/dsh/shared.mjs': Buffer.from('export const synthetic = true;\n'),
   [helper]: Buffer.from('synthetic helper bytes; never executed\n'),
 };
@@ -60,7 +59,7 @@ test('rebuilt root runtime must equal HEAD even for a whitespace-only change', a
 
 test('actual tgz matches every vendor hash with only the classic client excluded', async t => {
   const result = verifyDeliveryArchive(await archive(t), baseline);
-  assert.equal(result.vendorMembers, 3);
+  assert.equal(result.vendorMembers, 2);
   assert.equal(result.rootClientSha256, hash(client));
   assert.deepEqual(result.helpers, [{ file: helper, mode: '0755' }]);
 });

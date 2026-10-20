@@ -1,6 +1,6 @@
 # 插件投稿与兼容
 
-[文档目录](README.md) · [推荐插件页面](usage.md#推荐插件页面显示) · [插件共存](plugin-compatibility.md) · [贡献说明](../CONTRIBUTING.md)
+[文档目录](README.md) · [扩展功能与第三方](usage.md#扩展功能与第三方) · [插件共存](plugin-compatibility.md) · [贡献说明](../CONTRIBUTING.md)
 
 推荐插件需要核对完整宿主版本、原作者、固定工件与校验值。下方历史记录保留原版本范围，当前安装条件见[版本配对](install.md)。
 

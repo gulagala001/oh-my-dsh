@@ -220,9 +220,9 @@ export function accountSettingsAction(ctx) {
   const sectionId = entries?.some(row => row.options?.id === 'account') ? 'account' : entries?.some(row => row.options?.id === FALLBACK_ACCOUNT_ID) ? FALLBACK_ACCOUNT_ID : 'account';
   const settings = service(ctx, 'uiSettings');
   if (typeof settings?.openSection === 'function') return () => settings.openSection(sectionId);
-  // Published alpha.2 provides the native root settings store through its
-  // public Slot entry, rather than a uiSettings service. Its create() returns
-  // the existing singleton; no replacement component or store is installed.
+  // DSH rc.1/rc.2 expose the native root settings store only through its public
+  // Slot entry (no uiSettings service). Its create() returns the existing
+  // singleton; no replacement component or store is installed.
   const entry = ctx.slots?.entriesOfSlot?.('sidebar.settings')?.find(row => row.locale === 'settings' && row.component?.name === 'SettingsRoot' && typeof row.store?.create === 'function');
   const instance = entry?.store.create();
   const snapshot = instance?.getSnapshot?.();

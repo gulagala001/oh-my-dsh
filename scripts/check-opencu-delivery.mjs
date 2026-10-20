@@ -14,8 +14,10 @@ const nativeHelper = /^native\/bin\/darwin-(?:arm64|x64)\/OpenCU Helper\.app\/Co
 // Run after the standard build. Runtime bytes have no path/whitespace exemption.
 export async function deliveryBaseline(directory = root) {
   const committed = file => execFileSync('git', ['show', `HEAD:${file}`], { cwd: directory, maxBuffer: 64 * 1024 * 1024 });
-  const client = committed('lib/client.js');
-  assert(client.equals(await readFile(join(directory, 'lib/client.js'))), 'Rebuilt lib/client.js differs from HEAD; rebuild and commit the actual runtime bytes');
+  const tracked = file => execFileSync('git', ['ls-files', '--', file], { cwd: directory, encoding: 'utf8' }).trim() !== '';
+  const client = await readFile(join(directory, 'lib/client.js'));
+  // Only release tag commits carry the built runtime; main ignores lib/.
+  if (tracked('lib/client.js')) assert(client.equals(committed('lib/client.js')), 'Rebuilt lib/client.js differs from HEAD; rebuild and commit the actual runtime bytes');
   const manifest = committed('vendor/opencu.json');
   assert(manifest.equals(await readFile(join(directory, 'vendor/opencu.json'))), 'vendor/opencu.json differs from HEAD');
   return { client, manifest };
@@ -61,7 +63,8 @@ export function verifyDeliveryArchive(archive, baseline) {
   assert(files.get('package/vendor/opencu.json')?.bytes.equals(baseline.manifest), 'Packed vendor/opencu.json differs from HEAD');
   const manifest = JSON.parse(baseline.manifest), expected = new Map(Object.entries(manifest.files));
   assert(expected.has('lib/client.js'), 'OpenCU manifest must include the classic client');
-  // This is the sole existing package.json files exclusion, not a count-based allowance.
+  // OMD bundles OpenCU's client into its own; package.json excludes the classic client.
+  // The factory derived during sync is never in the OpenCU manifest.
   expected.delete('lib/client.js');
   assert([...expected.keys()].some(name => nativeHelper.test(name)), 'OpenCU manifest must include a macOS helper');
   const prefix = 'package/vendor/opencu/', found = new Set(), helpers = [];

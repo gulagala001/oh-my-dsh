@@ -29,6 +29,10 @@ test('native helper stays executable through npm packing and both OpenCU sync in
     for (const name of ['macos-identity.mjs', 'protocol.mjs']) {
       await copyFile(join(root, 'vendor/opencu/src/native', name), join(bundled, 'src/native', name));
     }
+    await mkdir(join(bundled, 'extension'), {recursive: true});
+    for (const name of ['click-options.js', 'key-options.js']) {
+      await copyFile(join(root, 'vendor/opencu/extension', name), join(bundled, 'extension', name));
+    }
     await mkdir(join(bundled, 'native/macos'), {recursive: true});
     await copyFile(join(root, 'vendor/opencu/native/macos/signing-identity.json'), join(bundled, 'native/macos/signing-identity.json'));
     await cp(bundled, source, {recursive: true});
@@ -36,9 +40,9 @@ test('native helper stays executable through npm packing and both OpenCU sync in
     await cp(join(root, 'vendor/opencu', `native/bin/darwin-${process.arch}/OpenCU Helper.app`), join(source, `native/bin/darwin-${process.arch}/OpenCU Helper.app`), {recursive: true});
     await chmod(join(source, command), 0o644);
     const manifest = JSON.parse(await readFile(join(root, 'vendor/opencu/package.json'), 'utf8'));
-    await writeFile(join(source, 'package.json'), JSON.stringify({name: manifest.name, version: manifest.version, files: ['src', 'lib', 'native'], exports: {'./integration': './src/dsh/index.mjs'}, peerDependencies: manifest.peerDependencies, opencu: manifest.opencu}));
+    await writeFile(join(source, 'package.json'), JSON.stringify({name: manifest.name, version: manifest.version, files: ['src', 'lib', 'native', 'extension'], exports: {'./integration': './src/dsh/index.mjs'}, peerDependencies: manifest.peerDependencies, opencu: manifest.opencu}));
     await mkdir(join(source, 'lib'));
-    await writeFile(join(source, 'lib/client.factory.mjs'), 'export {};\n');
+    await writeFile(join(source, 'lib/client.js'), 'window.__ModuleLoader__.load({id:"opencu",factory:(require)=>{var module={exports:{}};var exports=module.exports;return module.exports;}});\n');
     await copyFile(join(root, 'package.json'), join(host, 'package.json'));
     const npm = process.env.OMD_NPM_ENTRY;
     const packed = await exec(npm ? process.execPath : 'npm', [...(npm ? [npm] : []), 'pack', '--json', '--ignore-scripts', '--pack-destination', directory], {cwd: source, maxBuffer: 8 * 1024 * 1024});

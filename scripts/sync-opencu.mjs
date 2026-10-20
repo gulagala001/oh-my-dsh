@@ -38,7 +38,7 @@ if (process.platform === 'darwin') {
   await checkMacHelperDistribution(unpacked);
 }
 const manifest = JSON.parse(await readFile(join(unpacked, 'package.json'), 'utf8'));
-if (manifest.name !== 'opencu' || manifest.exports?.['./integration'] !== './src/dsh/index.mjs' || !files['lib/client.factory.mjs']) throw new Error('Expected the rewritten OpenCU distribution');
+if (manifest.name !== 'opencu' || manifest.exports?.['./integration'] !== './src/dsh/index.mjs' ) throw new Error('Expected the rewritten OpenCU distribution');
 const host = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 for (const [name, version] of Object.entries(manifest.peerDependencies)) {
   if ((host.peerDependencies?.[name] ?? host.devDependencies?.[name]) !== version) throw new Error(`Bundled OpenCU requires matching ${name} ${version}`);

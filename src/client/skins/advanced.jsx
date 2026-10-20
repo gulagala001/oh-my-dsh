@@ -1,7 +1,6 @@
 import { Button, Input, Select, Switch } from '../native-controls.jsx';
 import React, { createContext, useContext, useMemo, useState, useEffect, useRef } from 'react';
-import { colorGroups, fontChoices, numberFields } from './advanced.mjs';
-import { VersionInfo } from '../version-info.jsx';
+import { colorGroups, fontChoices, numberFields, OMD_BRAND } from './advanced.mjs';
 
 export const AppearanceDrafts = createContext(null);
 export function useAppearanceDrafts() {
@@ -56,7 +55,7 @@ function NumberSetting({ label, value, min, max, step, save, register }) {
   return <Input type="number" aria-label={label} min={min} max={max} step={step} placeholder="主题" value={draft} onChange={e => { dirty.current = true; setDraft(e.target.value); }} onBlur={commit} onKeyDown={e => commitOnEnter(e, commit)}/>;
 }
 export function AdvancedAppearance({ runtime, state, act }) {
-  const config = state.advanced;
+  const config = state.advanced, labels = runtime.brand || OMD_BRAND;
   const advanced = useRef(null), drafts = useContext(AppearanceDrafts);
   const { register } = drafts;
   useEffect(() => {
@@ -108,16 +107,16 @@ export function AdvancedAppearance({ runtime, state, act }) {
     <div className="omd-advanced-body">
       <h3>Logo 与浏览器标题</h3>
       <p className="omd-appearance-help">独立于主题和下面的定制开关。名称输入在离开输入框、按 Enter 或关闭设置时保存。选择 DSH 原样时，让原生标识或其他插件接管显示。</p>
-      <label className="omd-appearance-row"><span>Logo 与名称</span><Select aria-label="Logo 与名称" value={config.brand.logo} onChange={e => brand('logo', e.target.value, true)}><option value="theme">默认标识（Oh My DSH）</option><option value="native">保留 DSH 原样</option><option value="omd">Oh My DSH</option><option value="custom">自定义标识</option></Select></label>
+      <label className="omd-appearance-row"><span>Logo 与名称</span><Select aria-label="Logo 与名称" value={config.brand.logo} onChange={e => brand('logo', e.target.value, true)}><option value="theme">{labels.themeLogo}</option><option value="native">保留 DSH 原样</option><option value="omd">{labels.productLogo}</option><option value="custom">自定义标识</option></Select></label>
       {config.brand.logo === 'custom' && <>
-        <TextSetting label="显示名称" value={config.brand.name} placeholder="Oh My DSH" save={value => brand('name', value)} register={register}/>
+        <TextSetting label="显示名称" value={config.brand.name} placeholder={labels.placeholder} save={value => brand('name', value)} register={register}/>
         <label className="omd-appearance-row"><span>Logo 图片<small>本地 PNG、JPEG、WebP，最多 2 MB</small></span><input type="file" aria-label="Logo 图片" accept="image/png,image/jpeg,image/webp" disabled={uploading} onChange={async e => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; setUploading(true); await act(() => runtime.uploadLogo(file)); setUploading(false); }}/></label>
         {config.brand.image && <div className="omd-custom-logo-preview"><img src={config.brand.image} alt="自定义 Logo 预览"/><Button size="sm" variant="outline" type="button" className="tx-button" onClick={() => brand('image', '')}>移除 Logo 图片</Button></div>}
         <p className="omd-appearance-help">用于左上角、欢迎页及浏览器图标；未上传图片时使用 OMD 标识。图片只保存在本地。</p>
       </>}
-      <label className="omd-appearance-row"><span>浏览器标题</span><Select aria-label="浏览器标题" value={config.brand.title} onChange={e => brand('title', e.target.value, true)}><option value="omd">Oh My DSH</option><option value="native">保留 DSH 原样</option><option value="custom">自定义名称</option></Select></label>
-      {config.brand.title === 'custom' && <TextSetting label="标题名称" value={config.brand.titleText} placeholder="Oh My DSH" save={value => brand('titleText', value)} register={register}/>}
-      <p className="omd-appearance-help">只修改产品名称，会话名称仍随当前会话更新。{config.brand.logo === 'native' && <>关于插件与更新 <VersionInfo/></>}</p>
+      <label className="omd-appearance-row"><span>浏览器标题</span><Select aria-label="浏览器标题" value={config.brand.title} onChange={e => brand('title', e.target.value, true)}>{labels.productTitle && <option value="omd">{labels.productTitle}</option>}<option value="native">保留 DSH 原样</option><option value="custom">自定义名称</option></Select></label>
+      {config.brand.title === 'custom' && <TextSetting label="标题名称" value={config.brand.titleText} placeholder={labels.placeholder} save={value => brand('titleText', value)} register={register}/>}
+      <p className="omd-appearance-help">只修改产品名称，会话名称仍随当前会话更新。</p>
       <h3>精细外观</h3>
       <label className="omd-appearance-row"><span>启用高级外观定制<small>未修改的项目跟随主题；关闭后保留设置</small></span><Switch label="启用高级外观定制" checked={config.enabled} onChange={enabled => { act(() => runtime.setAdvanced({ ...runtime.getSnapshot().advanced, enabled }), true); }}/></label>
       {config.enabled && <>

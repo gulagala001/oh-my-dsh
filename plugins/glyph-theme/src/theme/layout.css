@@ -48,7 +48,9 @@ html[data-omd-layout="glyph-motion"] :is(button, [role="button"]):focus-visible 
   outline: 1px dotted var(--omd-accent);
   outline-offset: 4px;
 }
-html[data-omd-layout="glyph-motion"] [data-glyph-icon] { visibility: hidden !important; }
+html[data-omd-layout="glyph-motion"] svg[data-glyph-icon] { visibility: visible !important; }
+html[data-omd-layout="glyph-motion"] svg[data-glyph-icon] > :not([data-glyph-content]) { visibility: hidden !important; }
+html[data-omd-layout="glyph-motion"] [data-glyph-content] { pointer-events: none; user-select: none; -webkit-user-select: none; }
 /* Keep the host's shared sidebar geometry, including its 56px collapsed rail.
    A separate margin on each section breaks their common icon column. */
 html[data-omd-layout="glyph-motion"] [data-omd-nav-part="create"] {
@@ -207,3 +209,13 @@ html[data-omd-layout="glyph-motion"] ::-webkit-scrollbar { width: 8px; height: 8
 html[data-omd-layout="glyph-motion"] ::-webkit-scrollbar-thumb { background: transparent; }
 html[data-omd-layout="glyph-motion"] input::file-selector-button { border: 0 !important; background: transparent !important; color: var(--omd-text); font: inherit; padding: 8px 12px; }
 html[data-omd-layout="glyph-motion"] .glyph-wordmark { display: inline; white-space: nowrap; line-height: 1; }
+
+/* Opaque reading and writing surfaces keep scrolled messages from bleeding
+   through the sticky composer. Character borders and outer water stay active. */
+html[data-omd-layout="glyph-motion"] [data-content-phase="active"] [data-composer-seat] {
+  background-color: var(--omd-bg) !important;
+}
+html[data-omd-layout="glyph-motion"] :is([data-composer-card], .Sixlwa_bubble, .tx-cu-user-bubble, [data-chat-flow-kind="assistant-step"]) {
+  background-color: var(--omd-surface-solid) !important;
+  color: var(--omd-text);
+}

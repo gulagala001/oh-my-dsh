@@ -13,7 +13,7 @@ export class DreamStore {
     mkdirSync(join(directory, 'dream-v1'), { recursive: true, mode: 0o700 });
     this.now = now; this.owner = randomUUID(); this.closed = false;
     this.db = new DatabaseSync(join(directory, 'dream-v1', 'memory.sqlite'));
-    this.db.exec(`PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;
+    this.db.exec(`PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;
       CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,data TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY,project TEXT NOT NULL,shared INTEGER NOT NULL,title TEXT NOT NULL,activity REAL NOT NULL,data TEXT NOT NULL);
       CREATE INDEX IF NOT EXISTS sessions_project ON sessions(project,shared,id);

@@ -1,7 +1,6 @@
 import React from 'react';
 import { ThemeSelect, AppearanceSelect, EffectsToggle, ThemeImport, ThemeActions } from '../controls.jsx';
 import { Personalization } from '../personalization.jsx';
-import { HistorySizeSetting } from '../../history-settings.jsx';
 
 export function MaterialIcon({ name, size = 24, ...props }) {
   return <span {...props} className={'gm-symbol ' + (props.className || '')} style={{ fontSize: size }} aria-hidden="true">{name}</span>;
@@ -25,8 +24,6 @@ export function MaterialAppearance({ runtime, state, act, importFile, error }) {
     <Personalization {...{ runtime, state, act }}/>
     <h2 className="gm-group-label">字体</h2>
     <div className="gm-type-specimen"><span className="gm-type-sample">Aa 字</span><div><strong>Google Sans Flex · Noto Sans SC</strong><p>清晰的中英文阅读体验</p><code>const idea = 'Hello, 世界';</code><small>Google Sans Code</small></div></div>
-    <h2 className="gm-group-label">对话记录</h2>
-    <div className="gm-setting-group gm-history"><HistorySizeSetting/></div>
     <h2 className="gm-group-label">管理主题</h2>
     <div className="gm-setting-group">
       <label className="omd-appearance-row gm-setting-row gm-import"><MaterialIcon name="file_upload"/><span><strong>导入主题</strong><small>选择 .omd-skin.json 文件</small></span><ThemeImport importFile={importFile}/></label>

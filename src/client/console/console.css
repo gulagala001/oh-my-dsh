@@ -33,7 +33,6 @@
 .omc-wide .omc-nav button { border: 0; border-radius: var(--omc-radius-sm); padding: 8px 10px; margin: 0; }
 .omc-wide .omc-nav button[aria-current="page"] { background: color-mix(in srgb, var(--omc-accent) 11%, transparent); color: var(--omc-accent); }
 .omc-wide .omc-main { padding: 18px 22px 32px; }
-.omc-redirect { padding: 24px; color: var(--omc-muted); }
 
 .omc-section { display: flex; flex-direction: column; gap: 12px; max-width: 1280px; }
 .omc-grid-2, .omc-grid-3 { display: grid; gap: 12px; grid-template-columns: 1fr; }

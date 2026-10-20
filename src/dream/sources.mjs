@@ -9,6 +9,11 @@ import { isBtwSession, btwDescriptor } from '../btw-policy.mjs';
 
 const ignoredTools = new Set(['recall', 'memory_search', 'todo_write', 'verify_link', 'todos']);
 const unreadableSessionErrors = new Set(['SessionPersistenceCorruptionError', 'SessionFormatUnsupportedError']);
+// Successful reads persist their source revision so restarts skip unchanged
+// archives. Bump when inspection output changes, to rebuild every index entry.
+const INSPECTION_RULES = 'v1:';
+// Activity is a coarse ordering signal; coalesce per-event writes.
+const ACTIVITY_FLUSH_MS = 2000;
 // Source text is encoded in input JSON, then again inside the request message.
 // Count that escaping while retaining offsets into the original source text.
 const requestTextBytes = text => {
@@ -24,7 +29,7 @@ const userText = e => (e.data?.content || []).filter(b => b.type === 'text').map
 const material = blocks => (blocks || []).flatMap(b => b.type === 'text' ? [b.text || ''] : b.type === 'tool-result' ? [b.isError ? '[observed tool error]' : '[observed tool result]', material(b.content)] : ['reasoning','tool-call'].includes(b.type) ? [] : [`[${b.type} attachment reference retained; contents not read]`]).join('\n');
 
 export class DreamSources {
-  constructor(hub, store) { this.hub=hub; this.ctx=hub.ctx; this.store=store; this.revisions=new Map();this.catalogHeaders=new Map();this.lifecycle=new AbortController();this.pending=new Set();this.closing=null; }
+  constructor(hub, store) { this.hub=hub; this.ctx=hub.ctx; this.store=store; this.revisions=new Map();this.activity=new Map();this.activityTimer=null;this.catalogHeaders=new Map();this.lifecycle=new AbortController();this.pending=new Set();this.closing=null; }
   track(run) {
     this.lifecycle.signal.throwIfAborted();
     const task=run();this.pending.add(task);
@@ -33,6 +38,7 @@ export class DreamSources {
   signal(signal) { return signal?AbortSignal.any([signal,this.lifecycle.signal]):this.lifecycle.signal; }
   close() {
     if(this.closing)return this.closing;
+    this.flushActivity();
     this.lifecycle.abort(Error('Dream 来源读取正在退出'));
     return this.closing=Promise.allSettled([...this.pending]);
   }
@@ -118,7 +124,7 @@ export class DreamSources {
     // Keep verified scope and completed memory. An unreadable archive cannot
     // admit new facts or participate in shared aggregation until read succeeds.
     if(!old&&!header)return false;
-    this.store.saveSession({...old,id,...scope,title:old?.title||header?.title||id,
+    this.store.saveSession({...old,id,...scope,title:old?.title||header?.title||id,sourceRevision:undefined,
       available:false,shared:false,readError:String(error.message).slice(0,4000),
       createdAt:old?.createdAt||Number(header?.createdAt)||0,cwd:header?.cwd||old?.cwd||''});
     if(publishWarnings) {
@@ -134,7 +140,8 @@ export class DreamSources {
     const found=new Set(entries.map(entry=>entry.header.id)),warnings=[];
     for(const entry of entries) {
       signal?.throwIfAborted();
-      const id=entry.header.id, old=this.store.session(id), previous=this.revisions.get(id);
+      const id=entry.header.id, old=this.store.session(id);
+      const previous=this.revisions.has(id)?this.revisions.get(id):old?.sourceRevision?.startsWith(INSPECTION_RULES)?old.sourceRevision.slice(INSPECTION_RULES.length):undefined;
       const scope=await this.safeScope(entry.header,false,signal);
       if(scope.scopeError) {
         signal.throwIfAborted();
@@ -151,7 +158,11 @@ export class DreamSources {
         }
       }
       this.revisions.set(id,entry.revision);
-      const current=this.store.session(id);
+      let current=this.store.session(id);
+      // Unreadable archives keep retrying after restart; only verified reads persist.
+      if(current&&!current.readError&&typeof entry.revision==='string'&&current.sourceRevision!==INSPECTION_RULES+entry.revision) {
+        current={...current,sourceRevision:INSPECTION_RULES+entry.revision};this.store.saveSession(current);
+      }
       if(current?.readError)warnings.push({sessionId:id,title:current.title,project:current.project,scope:current.mode,error:current.readError});
     }
     for(const old of this.store.sessions())if(!found.has(old.id)&&old.available!==false&&!this.ctx.sessions?.get?.(old.id)){this.store.saveSession({...old,available:false,shared:false});this.revisions.delete(old.id);}
@@ -164,19 +175,30 @@ export class DreamSources {
     if(isBtwSession(session)) {
       const old=this.store.session(session.id);
       this.store.saveSession({...old,id:session.id,title:old?.title||header.title||session.id,...this.scope({...header,id:session.id},true),activity:0,createdAt:header.createdAt||0,cwd:header.cwd||''});
-      this.revisions.delete(session.id);return;
+      this.revisions.set(session.id,undefined);return;
     }
     if(event.type==='session/title'&&typeof event.data?.title==='string'){
       const old=this.store.session(session.id);
       this.store.saveSession(old?{...old,title:event.data.title}:{id:session.id,title:event.data.title,...this.scope({...header,id:session.id}),activity:0,createdAt:header.createdAt||0,cwd:header.cwd||''});
-      this.revisions.delete(session.id);return;
+      this.revisions.set(session.id,undefined);return;
     }
     const genuine=actualUser(event)||(['assistant/message','tool/result','tool/call'].includes(event.type)&&!sourceName(messageOf(event)?.source));
-    if(!genuine)return;
-    const old=this.store.session(session.id), scope=this.scope({...header,id:session.id});
-    this.store.saveSession({ ...old,id:session.id,title:old?.title||header.title||session.id,...scope,...(old?.readError?{shared:false}:{}),
-      activity:Math.max(old?.activity||0,eventTime(event)||0),createdAt:header.createdAt||old?.createdAt||0,cwd:header.cwd||'' });
-    this.revisions.delete(session.id);
+    if(!genuine) { if(event.type==='turn/end')this.flushActivity(session.id); return; }
+    // An unknown in-memory revision forces the next sync to re-read this source.
+    this.revisions.set(session.id,undefined);
+    this.activity.set(session.id,{session,at:Math.max(this.activity.get(session.id)?.at||0,eventTime(event)||0)});
+    if(!this.activityTimer) { this.activityTimer=setTimeout(()=>this.flushActivity(),ACTIVITY_FLUSH_MS);this.activityTimer.unref?.(); }
+  }
+  flushActivity(only) {
+    for(const id of only===undefined?[...this.activity.keys()]:this.activity.has(only)?[only]:[]) {
+      const {session,at}=this.activity.get(id);this.activity.delete(id);
+      try {
+        const header=session.header, old=this.store.session(id), scope=this.scope({...header,id});
+        this.store.saveSession({ ...old,id,title:old?.title||header.title||id,...scope,...(old?.readError?{shared:false}:{}),
+          activity:Math.max(old?.activity||0,at),createdAt:header.createdAt||old?.createdAt||0,cwd:header.cwd||'' });
+      } catch(error) { this.ctx.logger?.warn?.('Dream 会话活动记录未保存：%s',error.message); }
+    }
+    if(!this.activity.size&&this.activityTimer) { clearTimeout(this.activityTimer);this.activityTimer=null; }
   }
   async read(id,signal) { return this.track(()=>this.readSnapshot(id,this.signal(signal))); }
   async readSnapshot(id,signal) {

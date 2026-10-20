@@ -1,4 +1,4 @@
-import bundled from './monitor-prices.json' with { type: 'json' };
+import { readFileSync } from 'node:fs';
 import { readFile, writeFile, rename, mkdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -100,39 +100,50 @@ function createPricing(data) {
     },
   };
 }
-const defaults = createPricing(bundled);
-export const monitorCallPrice = (call, custom) => defaults.price(call, custom);
-export const monitorPriceCatalog = options => defaults.catalog(options);
+// The 1.6 MB bundled table is parsed on first monitor use, not at startup.
+let bundledPricing;
+const bundled = () => bundledPricing ??= (data => ({ data, pricing: createPricing(data) }))(
+  JSON.parse(readFileSync(new URL('./monitor-prices.json', import.meta.url), 'utf8')));
+export const monitorCallPrice = (call, custom) => bundled().pricing.price(call, custom);
+export const monitorPriceCatalog = options => bundled().pricing.catalog(options);
+// The cache keeps the parsed table; older caches kept the raw upstream document.
+function cachedPriceData(data, fetchedAt) {
+  const text = value => typeof value === 'string';
+  if (!data || typeof data.providers !== 'object' || !Array.isArray(data.entries) || data.fetchedAt !== new Date(fetchedAt).toISOString()
+    || Object.keys(data.providers).length < 20 || data.entries.length < 500
+    || !data.entries.every(e => text(e?.provider) && text(e.model) && text(e.canonical) && text(e.name)
+      && known(e.cost?.input) && known(e.cost.output) && (e.cost.tiers === undefined || Array.isArray(e.cost.tiers)))) throw Error('价格缓存无效');
+  return data;
+}
 
 const DAY = 86400000, MAX_BYTES = 32 * 1024 * 1024;
 export class MonitorPricing {
   constructor(directory, { fetch: fetcher = globalThis.fetch, now = Date.now } = {}) {
     this.directory = directory; this.file = join(directory, 'monitor-prices-cache.json');
-    this.fetch = fetcher; this.now = now; this.current = defaults; this.updatedAt = bundled.fetchedAt;
-    this.nextAt = 0; this.closed = false; this.pending = null; this.error = null;
-    this.ready = this.load();
+    this.fetch = fetcher; this.now = now; this.current = null; this.updatedAt = null;
+    this.nextAt = 0; this.closed = false; this.pending = null; this.error = null; this.ready = null;
   }
+  // Prices load and refresh only once the monitor is opened.
+  loaded() { return this.ready ??= this.load(); }
   async load() {
+    const fallback = bundled();
+    this.current = fallback.pricing; this.updatedAt = fallback.data.fetchedAt;
     try {
       const saved = JSON.parse(await readFile(this.file, 'utf8'));
-      if (typeof saved.raw !== 'string' || !known(saved.fetchedAt) || saved.fetchedAt > this.now()) return;
-      const data = parseMonitorPriceSource(saved.raw, saved.fetchedAt);
+      if (!known(saved.fetchedAt) || saved.fetchedAt > this.now()) return;
+      const data = typeof saved.raw === 'string' ? parseMonitorPriceSource(saved.raw, saved.fetchedAt) : cachedPriceData(saved.data, saved.fetchedAt);
       if (!this.closed && saved.fetchedAt >= Date.parse(this.updatedAt)) {
         this.current = createPricing(data); this.updatedAt = data.fetchedAt;
         this.nextAt = saved.fetchedAt + DAY;
       }
     } catch {}
   }
-  async start() {
-    await this.ready;
-    if (this.closed || this.timer) return;
-    this.timer = setInterval(() => { void this.refresh(); }, 3600000); this.timer.unref?.();
-    return this.refresh();
-  }
-  price(call, custom) { return this.current.price(call, custom); }
-  catalog(options) { return { ...this.current.catalog(options), updating: Boolean(this.pending), error: this.error, nextUpdateAt: this.nextAt }; }
+  price(call, custom) { return (this.current ?? bundled().pricing).price(call, custom); }
+  catalog(options) { return { ...(this.current ?? bundled().pricing).catalog(options), updating: Boolean(this.pending), error: this.error, nextUpdateAt: this.nextAt }; }
   refresh() {
-    if (this.closed || this.now() < this.nextAt) return this.pending;
+    if (this.closed) return this.pending;
+    if (!this.timer) { this.timer = setInterval(() => { void this.refresh(); }, 3600000); this.timer.unref?.(); }
+    if (this.now() < this.nextAt) return this.pending;
     if (this.pending) return this.pending;
     this.pending = this.update().catch(error => {
       if (!this.closed) { this.error = String(error.message); this.nextAt = this.now() + 3600000; }
@@ -140,7 +151,7 @@ export class MonitorPricing {
     return this.pending;
   }
   async update() {
-    await this.ready;
+    await this.loaded();
     if (this.closed || this.now() < this.nextAt) return;
     this.controller = new AbortController();
     const signal = AbortSignal.any([this.controller.signal, AbortSignal.timeout(20000)]);
@@ -159,7 +170,7 @@ export class MonitorPricing {
     const temporary = this.file + '.' + randomUUID() + '.tmp';
     try {
       await mkdir(this.directory, { recursive: true });
-      await writeFile(temporary, JSON.stringify({ fetchedAt, raw }), { mode: 0o600 });
+      await writeFile(temporary, JSON.stringify({ fetchedAt, data }), { mode: 0o600 });
       await rename(temporary, this.file);
     } catch (error) {
       this.error = `价格已更新，缓存保存失败：${error.message}`;
