@@ -37,6 +37,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
         } catch { next.error = '部分皮肤数据无效，已跳过；可重新导入。'; }
       }
       if (ready.has(saved.selected)) next.selected = saved.selected;
+      else if (saved.selected === undefined) next.selected = 'glyph-motion';
       if (ready.has(saved.palette) || extraPalettes.some(p => p.id === saved.palette)) next.palette = saved.palette;
       next.reduceEffects = saved.reduceEffects === true;
       next.advanced = normalizeAdvanced(saved.advanced);
@@ -82,7 +83,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     const active = prepared.get(state.selected);
     const source = state.palettes.find(p => p.id === state.palette);
     const composed = composePalette(active?.skin, source);
-    background.setEnabled(true);
+    background.setEnabled(active?.skin.layout !== 'glyph-motion');
     background.reduceEffects(state.reduceEffects);
     if (!composed) { disposeTokens?.(); disposeTokens = undefined; }
     if (!composed && !state.advanced.enabled) return;

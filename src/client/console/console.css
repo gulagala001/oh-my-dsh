@@ -92,12 +92,8 @@ html[data-omd-skin] .omc-btn-primary{ background: var(--omc-accent); border-colo
 html[data-omd-skin] .omc-btn-primary:hover:not(:disabled){ background: color-mix(in srgb, var(--omc-accent) 86%, #000); }
 html[data-omd-skin] .omc-btn-danger{ background: var(--omc-red); border-color: transparent; color: #fff; }
 html[data-omd-skin] .omc-icon-btn{ width: 28px; padding: 0; border-color: transparent; background: none; color: var(--omc-muted); }
-html[data-omd-skin] .omc-search { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px; border: 1px solid var(--omc-line); border-radius: var(--omc-radius-sm); background: var(--omc-bg); color: var(--omc-muted); min-width: 160px; flex: 1 1 160px; max-width: 280px; }
 .omc-search { display: inline-flex; align-items: center; gap: 6px; min-width: 0; flex: 1 1 160px; max-width: 280px; }
 .omc-search > span { flex: 1; min-width: 0; }
-html[data-omd-skin] .omc-search input{ flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--omc-text); font: inherit; font-size: 12.5px; }
-html[data-omd-skin] .omc-search button{ border: 0; background: none; color: var(--omc-muted); cursor: pointer; padding: 0; display: grid; }
-html[data-omd-skin] .omc-search:focus-within{ border-color: var(--omc-accent); outline: none; }
 .omc-toolbar, .omc-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .omc-summary-line { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--omc-muted); padding: 0 2px; }
 .omc-summary-line b { color: var(--omc-text); font-weight: 600; }

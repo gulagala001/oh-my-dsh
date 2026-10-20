@@ -115,6 +115,44 @@ function assertActive(f, version) {
   assert.equal(f.ctx.get('nativeSibling'), f.sibling);
 }
 
+test('native feature switch installs once, then disables and re-enables without package removal', options, async t => {
+  const f = await fixture(t, { enabled: false });
+  await f.manager.removeBundle('addon');
+  await f.service.start('addon', 'enable');
+  assertActive(f, 2);
+  assert.equal((await f.view()).enabled, true);
+  const commands = f.commands();
+  await f.service.start('addon', 'disable');
+  assert.equal((await f.view()).enabled, false);
+  assert.equal((await f.view()).installed, true);
+  assert.equal(f.ctx.get('nativeVersion'), undefined);
+  assert.ok(readProfileManifest('test', f.dir).dependencies.addon);
+  await f.service.start('addon', 'enable');
+  assertActive(f, 2);
+  assert.deepEqual(f.commands(), commands);
+});
+
+test('native bundled feature switch persists only its own entry and preserves sibling plugins', options, async t => {
+  const f = await fixture(t);
+  f.service.catalog = [{ id: 'built-in', bundled: true, moduleName: pathToFileURL(join(f.dir, 'node_modules/core/sibling.mjs')).href }];
+  const view = async () => (await f.service.status()).plugins[0];
+  assert.equal((await view()).enabled, true, JSON.stringify(await f.manager.listPlugins()));
+  assert.equal((await view()).active, true);
+  assert.equal((await view()).readOnly, false);
+  await f.service.start('built-in', 'disable');
+  assert.equal((await view()).error, '');
+  assert.equal((await view()).enabled, false);
+  assert.equal((await view()).active, false);
+  assert.equal(f.ctx.get('nativeSibling'), undefined);
+  assert.equal(f.ctx.get('nativeVersion'), 1);
+  await f.service.start('built-in', 'enable');
+  assert.equal((await view()).enabled, true);
+  assert.equal((await view()).active, true);
+  assert.ok(f.ctx.get('nativeSibling'));
+  assert.equal(f.ctx.get('nativeVersion'), 1);
+  assert.deepEqual(f.commands(), []);
+});
+
 async function assertAbsent(f) {
   assert.equal((await f.view()).installed, false);
   assert.equal(readProfileManifest('test', f.dir).dependencies.addon, undefined);

@@ -1,3 +1,5 @@
+import { nativeInputShell, standaloneInput } from './format.mjs';
+
 // Explicit visual overrides: omitted values always follow the selected theme.
 export const fontChoices = {
   system: ['系统字体', 'system-ui, -apple-system, "Segoe UI", sans-serif'],
@@ -80,7 +82,7 @@ export function advancedCss(settings) {
       'body-size': ['[data-chat-flow-kind], .hWmORq_body, .Sixlwa_bubble, .tx-cu-user-bubble, [data-composer-input]', 'font-size'],
       'code-size': ['pre, code, pre code', 'font-size'],
       'line-height': ['[data-chat-flow-kind], .hWmORq_body, .Sixlwa_bubble, [data-composer-input]', 'line-height'],
-      'radius-control': ['button:not([role=switch]), select:not(.cx-scope-chip select), input:not([type=checkbox]):not([type=radio]):not([type=range]):not([data-composer-input]), .YDXeBa_sessionRow', 'border-radius'],
+      'radius-control': [`button:not([role=switch]), select:not(.cx-scope-chip select), ${nativeInputShell}, ${standaloneInput}:not([type=checkbox]):not([type=radio]):not([type=range]):not([data-composer-input]), .YDXeBa_sessionRow`, 'border-radius'],
       'radius-panel': ['.VOzbGW_panel, [role=menu], dialog, .tx-card, .cx-card, [data-sidebar-right-panel][data-sidebar-right-open]', 'border-radius'],
       'radius-composer': ['[data-composer-card]', 'border-radius'],
       'radius-message': ['.Sixlwa_bubble, .tx-cu-user-bubble', 'border-radius'],

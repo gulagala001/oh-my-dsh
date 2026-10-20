@@ -4,12 +4,28 @@ import { extractConversationFromPage, pageFunctionScript } from './extraction.mj
 export async function pageCommand(command, readStatus, readPreview) {
   if (location.origin !== 'https://chat.deepseek.com') throw Error('请先打开 DeepSeek 聊天。');
   const input = document.querySelector('textarea[name="search"]');
-  const controls = Array.from(document.querySelectorAll('button,[role="button"]'));
   const label = node => (node.getAttribute('aria-label') || node.getAttribute('title') || node.textContent || '').trim();
   if (command.type === 'new') {
-    const button = controls.find(node => /^(新对话|开启新对话|New chat|Start new chat)$/i.test(label(node)));
-    if (!button) throw Error('官网的新对话入口尚不可用，请重新加载后重试。');
-    button.click(); return { dispatched: true };
+    // The official new-chat action opens ROOT (/). Navigate through the owned
+    // adapter so collapsed/icon-only sidebars need no label or private handler.
+    return { navigateTo: location.origin + '/' };
+  }
+  if (['think', 'search'].includes(command.type)) {
+    const pattern = command.type === 'think' ? /^(?:深度思考|DeepThink)(?:\s*\(R1\))?$/i : /^(联网搜索|搜索|Search)$/i;
+    const toggles = Array.from(document.querySelectorAll('button,[role="button"],div.ds-toggle-button[aria-pressed]'));
+    const button = toggles.find(node => pattern.test(label(node)));
+    if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true' || button.classList.contains('ds-toggle-button--disabled')) throw Error('当前网页模型不支持此操作。');
+    const before = readStatus()[command.type];
+    const enabled = typeof command.enabled === 'boolean' ? command.enabled : !before?.enabled;
+    if (before?.enabled === enabled) return { dispatched: false, status: readStatus() };
+    button.click();
+    const deadline = Date.now() + 1500;
+    do {
+      await new Promise(resolve => setTimeout(resolve, 50));
+      const status = readStatus();
+      if (status[command.type]?.enabled === enabled) return { dispatched: true, status };
+    } while (Date.now() < deadline);
+    throw Error('尚未确认官网开关状态，请检查官网页面后重试。');
   }
   if (!input || input.disabled || input.readOnly) throw Error('网页输入框尚不可用，请先完成登录或等待回复结束。');
   if (command.type === 'send') {
@@ -54,13 +70,6 @@ export async function pageCommand(command, readStatus, readPreview) {
     } while (Date.now() < deadline);
     return { dispatched: true, accepted: false, error: '尚未确认官网发送结果，输入内容已保留。请先检查官网页面，避免重复发送。' };
   }
-  if (['think', 'search'].includes(command.type)) {
-    const pattern = command.type === 'think' ? /^(?:深度思考|DeepThink)(?:\s*\(R1\))?$/i : /^(联网搜索|搜索|Search)$/i;
-    const toggles = Array.from(document.querySelectorAll('button,[role="button"],div.ds-toggle-button[aria-pressed]'));
-    const button = toggles.find(node => pattern.test(label(node)));
-    if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true' || button.classList.contains('ds-toggle-button--disabled')) throw Error('当前网页模型不支持此操作。');
-    button.click(); return { dispatched: true };
-  }
   if (command.type === 'upload') {
     if (!Array.isArray(command.files) || command.files.length > 20) throw Error('附件数量超过限制。');
     const data = new DataTransfer(); let total = 0;
@@ -82,9 +91,10 @@ export function pageStatus() {
   const option = pattern => {
     const node = toggles.find(node => pattern.test(text(node)));
     if (!node) return null;
-    const key = Object.keys(node).find(key => key.startsWith('__reactFiber$'));
-    let enabled = node.getAttribute('aria-pressed') === 'true';
-    for (let fiber = node[key], depth = 0; fiber && depth < 8; fiber = fiber.return, depth++) if (typeof fiber.memoizedProps?.enabled === 'boolean') { enabled = fiber.memoizedProps.enabled; break; }
+    // React's DOM fiber can point at the previous commit. The rendered pressed
+    // attribute is current and must not be overwritten with stale owner props.
+    const pressed = node.getAttribute('aria-pressed');
+    const enabled = pressed === 'true' || pressed === null && node.classList.contains('ds-toggle-button--selected');
     return { enabled, disabled: Boolean(node.disabled) || node.getAttribute('aria-disabled') === 'true' || node.classList.contains('ds-toggle-button--disabled') };
   };
   let generating = Boolean(input?.readOnly);

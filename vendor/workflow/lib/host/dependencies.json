@@ -1,0 +1,34 @@
+{
+  "workflow-ptc": [
+    "@deepseek-ai/dsh-brand",
+    "@deepseek-ai/dsh-llm",
+    "@deepseek-ai/dsh-session",
+    "@deepseek-ai/dsh-session-persistence",
+    "@deepseek-ai/dsh-tools",
+    "@deepseek-ai/dsh-util-values",
+    "@deepseek-ai/dsh-workflow",
+    "@deepseek-ai/node-addon-system/flock",
+    "@deepseek-ai/schemastery",
+    "koffi",
+    "node:child_process",
+    "node:crypto",
+    "node:fs",
+    "node:fs/promises",
+    "node:os",
+    "node:path",
+    "node:vm"
+  ],
+  "tool-workflow": [
+    "@deepseek-ai/dsh-tools",
+    "@deepseek-ai/schemastery"
+  ],
+  "workflow-spawn": [
+    "@deepseek-ai/dsh-session",
+    "@deepseek-ai/dsh-session-persistence",
+    "@deepseek-ai/node-addon-system/flock",
+    "node:child_process",
+    "node:crypto",
+    "node:fs/promises",
+    "node:path"
+  ]
+}

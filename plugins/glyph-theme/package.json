@@ -1,0 +1,44 @@
+{
+  "name": "dsh-glyph-theme",
+  "version": "1.0.0-dsh.0.2.1-rc.2",
+  "description": "DSH 的完整动态字符主题：黑白、DeepSeek 字符鲸鱼和交互波纹。",
+  "type": "module",
+  "license": "MIT",
+  "main": "src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "scripts/check-package.mjs"
+  ],
+  "engines": {
+    "node": ">=22.19",
+    "dsh": "0.2.1-rc.2"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-theme",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-primitives",
+        "@deepseek-ai/dsh-client-ui-layout"
+      ]
+    }
+  },
+  "scripts": {
+    "prepack": "node scripts/check-package.mjs"
+  }
+}

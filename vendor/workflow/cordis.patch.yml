@@ -1,0 +1,14 @@
+# Preserve native registrations for Loader dependency identity and uninstall.
+- id: workflow-ptc
+  disabled: true
+- id: tool-workflow
+  disabled: true
+- insert:
+    - id: dsh-workflow-runtime
+      name: dsh-workflow-plus
+    - id: dsh-workflow-spawn
+      name: dsh-workflow-plus/spawn
+    - id: dsh-workflow-engine
+      name: dsh-workflow-plus/engine
+    - id: dsh-workflow-tool
+      name: dsh-workflow-plus/tool

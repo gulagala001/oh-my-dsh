@@ -66,7 +66,9 @@
     "./ptc": "./src/ptc.mjs",
     "./host/*": "./lib/host/*.mjs",
     "./host/ui-chat": "./src/host/ui-chat.mjs",
-    "./deepseek-workbench": "./plugins/deepseek-workbench/src/index.mjs"
+    "./deepseek-workbench": "./plugins/deepseek-workbench/src/index.mjs",
+    "./workflow": "./vendor/workflow/src/index.mjs",
+    "./rewind": "./vendor/rewind/src/index.mjs"
   },
   "dsh": {
     "bundle": {
@@ -95,7 +97,8 @@
         "@deepseek-ai/dsh-client-ui-workspace",
         "@deepseek-ai/dsh-api-workspace-controller",
         "@deepseek-ai/dsh-client-ui-conversation",
-        "@deepseek-ai/dsh-client-ui-input-trigger"
+        "@deepseek-ai/dsh-client-ui-input-trigger",
+        "@deepseek-ai/dsh-client-ui-commands"
       ]
     }
   },

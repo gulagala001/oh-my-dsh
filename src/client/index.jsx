@@ -2,9 +2,10 @@ import { Icon } from './native-icons.jsx';
 import { applyAppearanceBrand } from './appearance-brand.jsx';
 import { createPoller } from './polling.mjs';
 import { createConversation } from '../../lib/host/ui-conversation.factory.mjs';
+import { installTemporaryChat } from './temporary-chat.jsx';
 import { installDesktopLifecycle } from './desktop-lifecycle.mjs';
 import { applySessionTimeZone } from './session-time-zone.mjs';
-import { applyRewindCompatibility } from './rewind-compat.jsx';
+import { apply as applyRewind, inject as rewindInject } from '../../vendor/rewind/src/client/index.jsx';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Menu, Modal } from '@deepseek-ai/dsh-client-ui-primitives';
 import { applyConsole } from './console/shell.jsx';
@@ -23,19 +24,19 @@ import { createContextUI } from './context-client.mjs';
 import { applyHistorySize } from './history-settings.jsx';
 import { applySkins } from './skins/settings.jsx';
 import { applyConversationRecords } from './conversation-records.jsx';
-import { applyRecommendedPlugins } from './recommended-plugins.jsx';
+import { applyFeatureClients } from './recommended-plugins.jsx';
 import { applyPromptOptimizer } from './prompt-optimizer.jsx';
 import { applyModelPanel } from './model-panel.jsx';
 import { applySubscriptionFast } from './subscription-fast.jsx';
+import { applyMemoryPermissions } from './permission-memory.jsx';
 import { useMainConversation } from './main-conversation.mjs';
-import { applyWorkflowStatus } from './workflow-status.jsx';
-import { applyWorkflowHeader } from './workflow-header.jsx';
+import { apply as applyWorkflowClient } from '../../vendor/workflow/src/client/index.jsx';
 import { applySessionOverview } from './session-overview.jsx';
 import { applyProjectlessWorkspaces } from './projectless-workspaces.jsx';
 import { apply as applyDeepSeekWorkbench } from '../../plugins/deepseek-workbench/src/client/index.jsx';
 
 export { CONTEXT_UI_VERSION as contextUIVersion } from './context-client.mjs';
-const { ContextSettings, ScopeChip, applyStyle } = createContextUI(React);
+const { ContextSettings, applyStyle } = createContextUI(React);
 
 const api = async (path, value, signal) => {
   const response = await fetch(`trisoul-x/api${path}`, value === undefined ? { signal } : { signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
@@ -93,12 +94,14 @@ function BetterTodoSessionChip({ sessionId, useSessionStatus }) {
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 
 const hostConversation = createConversation(require), hostChat = createChat(require), openCU = createOpenCU(require);
-export const inject = [...new Set(['slots', 'sidebarRightTabs', 'sidebarRight', 'theme', 'configForms', 'layout', 'modules', 'remote.session', 'remote.subagents', 'remote.agentPresets', ...hostConversation.inject, ...hostChat.inject])].filter(name => name !== 'uiConversation');
+// The embedded Conversation plugin provides both services during apply().
+// Waiting for either here would prevent their provider from ever starting.
+export const inject = [...new Set(['slots', 'sidebarRightTabs', 'sidebarRight', 'theme', 'configForms', 'layout', 'modules', 'remote.session', 'remote.subagents', 'remote.agentPresets', ...hostConversation.inject, ...hostChat.inject, ...rewindInject])].filter(name => name !== 'uiConversation' && name !== 'conversation');
 export async function apply(ctx) {
   ctx.provide('omdConversationLifecycle', installConversationLifecycle(ctx));
   applySessionTimeZone(ctx);
-  applyRewindCompatibility(ctx);
-  applyDeepSeekWorkbench(ctx);
+  applyFeatureClients(ctx, { 'dsh-deepseek-workbench': applyDeepSeekWorkbench });
+  ctx.inject(['commandUi', 'sidebarRight', 'sidebarRightTabs'], installTemporaryChat);
   applyHistorySize(ctx);
   installDesktopLifecycle(ctx);
   const projectlessDrafts = applyProjectlessWorkspaces(ctx);
@@ -106,12 +109,13 @@ export async function apply(ctx) {
   const chatSettings = createChatSettings(() => ctx.configForms.get('omd-ui-chat'), () => () => {});
   ctx.effect(() => () => chatSettings.dispose());
   await ctx.plugin(hostChat, { settings: chatSettings });
+  await applyRewind(ctx);
   await ctx.plugin(openCU);
   projectlessDrafts.transferOptimizer = applyPromptOptimizer(ctx, { draftLock: projectlessDrafts }).transferDraft;
   applyModelPanel(ctx);
   applySubscriptionFast(ctx);
-  applyWorkflowStatus(ctx);
-  applyWorkflowHeader(ctx);
+  applyMemoryPermissions(ctx);
+  await applyWorkflowClient(ctx);
   applySessionOverview(ctx, openCU);
   function RunningMarker(props) {
     const running = props.useSessionStatus(s => Boolean(s.get(props.sessionId)?.running));
@@ -128,9 +132,7 @@ export async function apply(ctx) {
   });
   applyAppearanceBrand(ctx, getAppearanceRuntime);
   ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'trisoul-x', order: 16, label: () => 'Oh My DSH' }, ContextSettings));
-  applyRecommendedPlugins(ctx);
   ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({ name: 'conversation.session.header.utilities', id: 'trisoul-running', order: 25 }, RunningMarker));
-  ctx.slots.inject('conversation.input.left', () => ctx.slots.register({ name: 'conversation.input.left', id: 'trisoul-memory-scope', order: 50 }, ScopeChip));
   ctx.slots.inject('conversation.input.right', () => ctx.slots.register({ name: 'conversation.input.right', id: 'trisoul-better-todo', order: 100 }, BetterTodoChip));
   applyConsole(ctx, { composerStats: JSON.parse(__OMD_COMPOSER_STATS__),
     performanceMode: { get: () => chatSettings.getSnapshot()?.value?.performanceUsage, subscribe: listener => chatSettings.subscribe(listener) } });

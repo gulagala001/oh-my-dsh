@@ -5,6 +5,8 @@
       name: trisoul_x/deepseek-workbench
     - id: omd-opencu
       name: trisoul_x/opencu
+    - id: omd-rewind
+      name: trisoul_x/rewind
 
 - id: agent-preset-registry
   config:
@@ -37,6 +39,8 @@
 - insert:
     - id: omd-jobs
       name: trisoul_x/host/jobs-local
+    - id: omd-workflow-runtime
+      name: trisoul_x/workflow
     - id: omd-workflow-spawn
       name: trisoul_x/host/workflow-spawn
     - id: omd-bash-sandbox

@@ -1,5 +1,6 @@
 import z from '@deepseek-ai/schemastery';
 import { DEFAULT_IDENTITY } from './cc-adaptation/identity.mjs';
+import { personalityPatch, personalityPreset } from './cc-adaptation/personality.mjs';
 import { CONTEXT_FREQUENCY_PRESETS } from './frequency.mjs';
 
 const route = z.object({ provider: z.string().default(''), model: z.string().default(''), temperature: z.number().default(0.7), effort: z.string().default('off') });
@@ -36,7 +37,8 @@ export const Config = z.object({
   traceEnabled: z.boolean().default(true),
   traceMaxChars: z.number().step(1).min(0).default(0),
   identityPrompt: z.string().default(DEFAULT_IDENTITY),
-  identityPreset: z.union(['custom', 'default', 'hardcore', 'softie', 'off']).default('custom'),
+  identityPreset: z.string().default('custom'),
+  identitySavedPresets: z.array(z.object({ id: z.string().required(), name: z.string().required(), text: z.string().required() })).default([]),
   identityCustomPrompt: z.string(),
   stateHintsEnabled: z.boolean().default(false),
   budgetHintsEnabled: z.boolean().default(false),
@@ -76,6 +78,7 @@ for (const [key, field] of Object.entries(Config.dict)) if (!['dataDir', 'projec
 // Defaults apply to omitted values. An explicit null is not a numeric or
 // boolean setting; use the same schema for API writes and pipeline options.
 export function contextConfig(raw = {}) {
+  personalityPatch(raw, personalityPreset(raw));
   for (const [key, value] of Object.entries(raw)) {
     const type = Config.dict[key]?.type;
     if (value === null && ['number', 'boolean'].includes(type)) throw new Error(key + ' expected ' + type + ', got null');

@@ -43,12 +43,18 @@ export function validateSkin(value, supports) {
   }
   if (typeof (value.css ?? '') !== 'string') throw new Error('css 必须是文本');
   // Layouts are shipped, tested host adapters; imported skins cannot inject layout CSS.
-  if (value.layout !== undefined && !['ios-liquid', 'codex-desktop', 'claude-cli-terminal', 'google-material-expressive'].includes(value.layout)) throw new Error('不支持的皮肤布局');
+  if (value.layout !== undefined && !['ios-liquid', 'codex-desktop', 'claude-cli-terminal', 'google-material-expressive', 'glyph-motion'].includes(value.layout)) throw new Error('不支持的皮肤布局');
   const result = { schemaVersion: SKIN_VERSION, id: value.id, name: value.name.trim(), version: value.version.trim(), tokens, css: value.css || '' };
   if (value.layout) result.layout = value.layout;
   if (new TextEncoder().encode(JSON.stringify(result)).length > MAX_SKIN_BYTES) throw new Error('皮肤包不能超过 1 MB');
   return result;
 }
+
+// REA Input and inline searches own their border on the shell. Their inner
+// editor stays unboxed. CSS-module local names survive desktop/npm hash changes.
+export const nativeInputShell = ':is(span[class*="_wrap"]:has(> input[class*="_input"]), [class*="_search"]:has(> input[class*="_searchInput"]))';
+export const standaloneInput = `input:not(${nativeInputShell} > input)`;
+const textInput = `${standaloneInput}:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([data-composer-input])`;
 
 // Semantic aliases are owned by OMD, not by skin authors. Host module names stay here.
 export const parts = {
@@ -66,8 +72,8 @@ export const parts = {
   segments: '.cx-segments, .tx-segments',
   segment: '.cx-segments > button, .tx-segments > button',
   // The scope chip owns its border and focus ring; its select is an unboxed label.
-  'form-control': 'select:not(.cx-scope-chip select), input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([data-composer-input]), textarea:not([data-composer-input])',
-  'field-input': 'input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), textarea:not([data-composer-input])',
+  'form-control': `${nativeInputShell}, select:not(.cx-scope-chip select), ${textInput}, textarea:not([data-composer-input])`,
+  'field-input': `${nativeInputShell}, ${textInput}:not([type="file"]), textarea:not([data-composer-input])`,
   select: 'select:not(.cx-scope-chip select)', checkbox: 'input[type="checkbox"]:not([role="switch"])',
   switch: 'input[role="switch"], button[role="switch"]',
   'file-input': 'input[type="file"]',
@@ -151,7 +157,9 @@ export function compileSkinCss(css, id, Sheet = CSSStyleSheet) {
     const selectors = rule.selectorText.split(',').map(s => {
       const m = s.trim().match(/^\.omd(?:\[data-appearance=["']?(light|dark)["']?\])?(?:\s+\[data-omd-part=["']?([a-z][a-z0-9-]*)["']?\])?(?:\[data-omd-state=["']?(selected|checked|disabled)["']?\])?((?::(?:hover|active|focus-visible|focus-within|disabled|checked))?)$/);
       if (!m || m[2] && !parts[m[2]] || m[3] && !m[2]) throw new Error(`不支持的皮肤选择器：${s}`);
-      return scope + (m[1] ? `[data-appearance="${m[1]}"]` : '') + (m[2] ? ` :where(${parts[m[2]]})` : '') + (partStates[m[3]] || '') + m[4];
+      const focus = ['form-control', 'field-input'].includes(m[2]) && m[4] === ':focus-visible'
+        ? ':is(:focus-visible, :has(> input:focus-visible))' : m[4];
+      return scope + (m[1] ? `[data-appearance="${m[1]}"]` : '') + (m[2] ? ` :where(${parts[m[2]]})` : '') + (partStates[m[3]] || '') + focus;
     });
     let start = 0;
     const declarations = [...cssBoundaries(body, ';'), body.length].map(end => {

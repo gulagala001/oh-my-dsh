@@ -4,7 +4,6 @@ import { Context } from '@deepseek-ai/cordis';
 import { LlmRuntime, LlmAdapter, createUserMessage, markAgentLoopRequest, isAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { createBtwCompatibility } from '../src/btw-compat.mjs';
 import { cacheUsageText } from '../src/btw-policy.mjs';
-import { rewindMessages, rewindPortalTargets } from '../src/client/rewind-compat.mjs';
 
 const collect = async stream => { for await (const _ of stream) {} };
 
@@ -82,24 +81,4 @@ test('/btw reports real zero and undisclosed cache usage distinctly', () => {
   assert.equal(cacheUsageText([{ cacheReadTokens: 0 }]), '缓存读取：0 tokens（未命中）');
   assert.match(cacheUsageText([{}]), /未知/);
   assert.match(cacheUsageText([{ cacheReadTokens: 4096 }, {}]), /未知/);
-});
-
-test('rewind follows mutable chat nodes, opening steering, and only its own session', () => {
-  const human = seq => ({ type: 'user/message', seq, surfaceOp: 'append', data: { source: { kind: 'user' }, content: [{ type: 'text', text: `问题 ${seq}` }] } });
-  const events = [{ type: 'turn/start', seq: 1 }, human(2), human(3), { type: 'turn/end', seq: 4 },
-    { type: 'turn/start', seq: 5 }, { type: 'user/message', seq: 6, surfaceOp: 'append', data: { source: { kind: 'plugin:notice' } } }, human(7)];
-  const messages = rewindMessages(events.map(event => ({ event })));
-  assert.deepEqual([...messages.keys()], [2, 7], 'later steering is not an unsupported rewind anchor');
-  const nodes = new Map(), order = ['first', 'second'];
-  const chat = { nodes, order };
-  const row = (key, sessionId) => ({ dataset: { chatAnchorKey: key }, closest: () => ({ dataset: { conversationSession: sessionId } }), querySelector: () => key + '-actions' });
-  const rows = [row('first', 'viewed'), row('second', 'viewed'), row('first', 'another')];
-  const document = { querySelectorAll: () => rows };
-  assert.equal(rewindPortalTargets(chat, messages, 'viewed', document).length, 0);
-  nodes.set('first', { kind: 'user', data: { seq: 2 } });
-  nodes.set('second', { kind: 'steering', data: { seq: 7 } });
-  assert.deepEqual(rewindPortalTargets(chat, messages, 'viewed', document).map(target => target.matched.messageSeq), [2, 7]);
-  assert.equal(chat.order, order, 'node upserts do not require a new order identity');
-  nodes.set('second', { kind: 'steering', data: { seq: 3 } });
-  assert.deepEqual(rewindPortalTargets(chat, messages, 'viewed', document).map(target => target.matched.messageSeq), [2]);
 });

@@ -1,0 +1,209 @@
+/* The native REA tree still owns layout, content, focus and actions.
+   Its graphical chrome is replaced by the glyph renderer in renderer.mjs. */
+html[data-omd-layout="glyph-motion"] {
+  --dsw-specific-sidebar-fill: var(--omd-bg);
+  --tx-shell-line: transparent;
+  --tx-shell-hover: transparent;
+  --dsh-composer-card-radius: 0px;
+  --dsh-content-font-family: var(--omd-font-body);
+  --dsh-chat-content-width: 800px;
+}
+html[data-omd-layout="glyph-motion"] body {
+  background: var(--omd-bg);
+  font-family: var(--omd-font-ui);
+}
+html[data-omd-layout="glyph-motion"] :is(
+  [data-omd-surface="frame"], [data-omd-surface="sidebar-column"],
+  [data-omd-surface="sidebar"], [data-omd-surface="conversation"],
+  [data-omd-surface="workbench-column"], .wSkVaW_root, .wSkVaW_header,
+  [data-conversation-scroll], [data-composer-seat], [data-composer-card],
+  [data-composer-card] *, [data-omd-nav-part], [role="treeitem"],
+  .Sixlwa_bubble, .tx-cu-user-bubble, .wSkVaW_tabs, .wSkVaW_tab,
+  .tx-stats-line, [data-composer-stat]
+) {
+  box-shadow: none !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
+  border-color: transparent !important;
+}
+html[data-omd-layout="glyph-motion"] :is(
+  [data-omd-surface="sidebar"], [data-omd-surface="sidebar-column"],
+  [data-omd-nav-part], [role="treeitem"], [data-composer-seat],
+  [data-composer-card], [data-composer-card] *, .Sixlwa_bubble,
+  .tx-cu-user-bubble, .wSkVaW_tabs, .wSkVaW_tab
+) { background-color: transparent !important; }
+html[data-omd-layout="glyph-motion"] :is(button, [role="button"], select, input, textarea) {
+  font-family: var(--omd-font-ui);
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+html[data-omd-layout="glyph-motion"] :is(button, [role="button"]) {
+  transition: none !important;
+  animation: none !important;
+}
+html[data-omd-layout="glyph-motion"] :is(button, [role="button"]):hover {
+  color: var(--omd-accent);
+}
+html[data-omd-layout="glyph-motion"] :is(button, [role="button"]):focus-visible {
+  outline: 1px dotted var(--omd-accent);
+  outline-offset: 4px;
+}
+html[data-omd-layout="glyph-motion"] [data-glyph-icon] { visibility: hidden !important; }
+/* Keep the host's shared sidebar geometry, including its 56px collapsed rail.
+   A separate margin on each section breaks their common icon column. */
+html[data-omd-layout="glyph-motion"] [data-omd-nav-part="create"] {
+  color: var(--omd-accent);
+}
+html[data-omd-layout="glyph-motion"] [data-omd-surface="sidebar"]:not([class~="hHd-Xa_collapsed"]) [data-omd-nav-part="create"] { padding-inline: 8px; }
+html[data-omd-layout="glyph-motion"] [data-omd-surface="sidebar"]:not([class~="hHd-Xa_collapsed"]) [class$="_newSessionContent"] { justify-content: flex-start; gap: 8px; }
+html[data-omd-layout="glyph-motion"] [data-omd-surface="sidebar"]:not([class~="hHd-Xa_collapsed"]) [class$="_newSessionContent"] > svg { width: 16px; height: 16px; }
+html[data-omd-layout="glyph-motion"] [data-omd-surface="sidebar"][class~="hHd-Xa_collapsed"] [class$="_newSessionContent"] { gap: 0; }
+html[data-omd-layout="glyph-motion"] [data-omd-surface="sidebar"] [role="treeitem"][class*="_projectRow"] { padding-left: 10px; gap: 8px; }
+html[data-omd-layout="glyph-motion"] [data-omd-surface="sidebar"] [role="treeitem"][class*="_sessionRow"] { padding-left: 14px; }
+html[data-omd-layout="glyph-motion"] [data-omd-nav-part="footer"] button[data-collapsed="false"][data-signed-out="true"] {
+  margin-left: 4px; width: calc(100% - 8px); padding-inline: 8px; gap: 8px;
+}
+html[data-omd-layout="glyph-motion"] [data-omd-nav-part="footer"] button[data-collapsed="false"][data-signed-out="true"] > svg { width: 16px; height: 16px; }
+html[data-omd-layout="glyph-motion"] [data-omd-nav-part="section-label"] {
+  color: var(--omd-muted);
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+html[data-omd-layout="glyph-motion"] .wSkVaW_header {
+  min-height: 72px;
+  padding-inline: 30px;
+  letter-spacing: .02em;
+}
+html[data-omd-layout="glyph-motion"] [data-composer-card] {
+  padding: 22px 25px 16px;
+  border: 0 !important;
+  margin-top: 18px;
+  overflow: visible;
+}
+html[data-omd-layout="glyph-motion"] [data-composer-input] {
+  font-size: 14px;
+  line-height: 1.9;
+  caret-color: var(--omd-accent);
+  min-height: 64px;
+}
+html[data-omd-layout="glyph-motion"] [data-composer-card] :is(button, [role="button"]) {
+  color: var(--omd-muted);
+}
+html[data-omd-layout="glyph-motion"] [data-composer-card] button[type="submit"] {
+  color: var(--omd-accent);
+}
+html[data-omd-layout="glyph-motion"] :is(.Sixlwa_bubble, .tx-cu-user-bubble) {
+  color: var(--omd-text);
+  padding: 18px 24px;
+  border-radius: 0;
+}
+html[data-omd-layout="glyph-motion"] [data-chat-flow-kind="assistant-step"] {
+  line-height: 1.9;
+}
+html[data-omd-layout="glyph-motion"] :is(pre, code) {
+  font-family: var(--omd-font-mono);
+  background: transparent !important;
+  border-radius: 0;
+}
+.omd-glyph-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 8; }
+.omd-glyph-brand { display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.omd-glyph-brand[data-glyph-size="small"] { width: 28px; height: 24px; }
+.omd-glyph-brand[data-glyph-size="hero"] { width: min(520px, 65vw); height: 190px; }
+html[data-omd-layout="glyph-motion"] [class*="_heroBrand"],
+html[data-omd-layout="glyph-motion"] [class*="_headline"]:has(.omd-glyph-brand) {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+html[data-omd-layout="glyph-motion"] [class*="_titleRow"]:has(.omd-glyph-brand) {
+  flex-direction: column;
+}
+html[data-omd-layout="glyph-motion"] [class*="_headline"] {
+  font-family: var(--omd-font-ui);
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--omd-accent);
+}
+html[data-omd-layout="glyph-motion"] [data-composer-input] { color: var(--omd-text); }
+html[data-omd-layout="glyph-motion"] [data-composer-input]::placeholder { color: var(--omd-muted); opacity: 1; }
+html[data-omd-layout="glyph-motion"] :is([data-omd-nav-part="create"], [role="tab"][aria-selected="true"]) { font-weight: 600; }
+html[data-omd-layout="glyph-motion"] [class*="_previewBadge"] {
+  color: var(--omd-muted);
+  background: transparent;
+  border: 0;
+  font-size: 10px;
+  letter-spacing: .12em;
+}
+@media (max-width: 700px) {
+  .omd-glyph-brand[data-glyph-size="hero"] { width: 280px; height: 130px; }
+  html[data-omd-layout="glyph-motion"] [data-composer-card] { padding-inline: 18px; }
+}
+
+/* All native/third-party UI chrome shares the character surface. Embedded
+   documents, code editors and media keep their own rendering and semantics. */
+html[data-omd-layout="glyph-motion"] *:not(:where([data-glyph-external], [data-glyph-external] *, .monaco-editor, .monaco-editor *, .cm-editor, .cm-editor *)) {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
+  animation: none !important;
+  transition: none !important;
+}
+html[data-omd-layout="glyph-motion"] :is(button, [role="button"], [role="tab"], [role="option"], [role="menuitem"], input, textarea, select, pre, code, [data-disclosure-row], .omd-ultra-submodes, .omd-ultra-submodes span) {
+  background-color: transparent !important;
+  color: var(--omd-text);
+}
+html[data-omd-layout="glyph-motion"] :is([role="dialog"], [role="menu"], [role="listbox"], [role="tooltip"], .VOzbGW_panel, .omd-model-panel) {
+  background: var(--omd-surface-solid) !important;
+  color: var(--omd-text);
+  font-family: var(--omd-font-ui);
+  overflow: auto;
+}
+html[data-omd-layout="glyph-motion"] .omd-model-panel { padding: 18px 20px 12px; width: min(320px, calc(100vw - 24px)); }
+html[data-omd-layout="glyph-motion"] .omd-model-panel[data-pane="effort"] { overflow: visible; }
+html[data-omd-layout="glyph-motion"] .omd-effort-control { margin-block: 10px; }
+html[data-omd-layout="glyph-motion"] :is(.omd-effort-track, .omd-effort-thumb, [data-glyph-control] > *) { visibility: hidden !important; }
+html[data-omd-layout="glyph-motion"] :is(.omd-effort-heading h2, .omd-model-trigger[data-mode="ultra"] .omd-model-caption, .omd-brand-dsh) {
+  background: transparent !important;
+  color: var(--omd-text) !important;
+  -webkit-text-fill-color: var(--omd-text) !important;
+}
+html[data-omd-layout="glyph-motion"] [data-glyph-control] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  color: transparent !important;
+  background: transparent !important;
+  border: 0 !important;
+}
+html[data-omd-layout="glyph-motion"] input[data-glyph-control]::-webkit-slider-thumb { appearance: none; background: transparent; border: 0; }
+html[data-omd-layout="glyph-motion"] input[data-glyph-control]::-moz-range-thumb { background: transparent; border: 0; }
+html[data-omd-layout="glyph-motion"] [data-glyph-control]::before,
+html[data-omd-layout="glyph-motion"] [data-glyph-control]::after { visibility: hidden !important; }
+html[data-omd-layout="glyph-motion"] :is(button, [role="button"], input, textarea, select):focus-visible { outline: none !important; }
+html[data-omd-layout="glyph-motion"] :is(button, [role="button"], [role="tab"], [role="option"])[aria-selected="true"] { font-weight: 600; }
+html[data-omd-layout="glyph-motion"] :is(button, input, textarea):disabled { opacity: .45; }
+html[data-omd-layout="glyph-motion"] :is(hr, [role="separator"]) { border: 0; height: 12px; background: transparent; overflow: hidden; }
+html[data-omd-layout="glyph-motion"] :is(hr, [role="separator"])::after { content: '· · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · ·'; white-space: nowrap; color: var(--omd-border); font: 10px var(--omd-font-mono); }
+html[data-omd-layout="glyph-motion"] ::selection { background: var(--omd-text); color: var(--omd-bg); }
+.omd-glyph-canvas { z-index: 2147483000; }
+.omd-glyph-brand[data-glyph-size="hero"] { height: 210px; }
+@media (max-width: 700px) {
+  .omd-glyph-brand[data-glyph-size="hero"] { height: 150px; }
+  html[data-omd-layout="glyph-motion"] [class*="_headline"] { font-size: 20px; }
+}
+@media (forced-colors: active) {
+  html[data-omd-layout="glyph-motion"] { --omd-bg: Canvas; --omd-surface-solid: Canvas; --omd-text: CanvasText; --omd-muted: GrayText; --omd-border: GrayText; --omd-accent: Highlight; }
+}
+html[data-omd-layout="glyph-motion"] .tx-wordmark span { color: var(--omd-text) !important; }
+html[data-omd-layout="glyph-motion"] [data-omd-surface="sidebar"] :is([class*="_logoRow"], [data-omd-nav-part="brand"]) strong { font-size: 14px; font-weight: 650; letter-spacing: -.015em; color: var(--omd-text); }
+.omd-glyph-nav-brand { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 24px; flex: none; color: var(--omd-text); }
+.omd-glyph-nav-brand svg { display: block; visibility: visible; }
+html[data-omd-layout="glyph-motion"] .omd-ultra-submodes span { padding-inline: 24px 4px; }
+html[data-omd-layout="glyph-motion"] * { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+html[data-omd-layout="glyph-motion"] ::-webkit-scrollbar { width: 8px; height: 8px; background: transparent; }
+html[data-omd-layout="glyph-motion"] ::-webkit-scrollbar-thumb { background: transparent; }
+html[data-omd-layout="glyph-motion"] input::file-selector-button { border: 0 !important; background: transparent !important; color: var(--omd-text); font: inherit; padding: 8px 12px; }
+html[data-omd-layout="glyph-motion"] .glyph-wordmark { display: inline; white-space: nowrap; line-height: 1; }

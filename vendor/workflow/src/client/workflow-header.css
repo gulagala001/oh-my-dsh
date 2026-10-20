@@ -1,0 +1,8 @@
+.omd-workflow-header { display: flex; align-items: center; gap: 6px; min-width: 0; -webkit-app-region: no-drag; }
+.omd-workflow-trigger { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 280px; min-height: 28px; padding: 3px 6px; border: 0; border-radius: var(--dsw-radius-sm); background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; font-size: 12px; cursor: pointer; }
+.omd-workflow-trigger:hover, .omd-workflow-trigger[aria-expanded=true] { background: var(--dsw-alias-interactive-bg-hover); }
+.omd-workflow-trigger:focus-visible { outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color); }
+.omd-workflow-trigger > svg { width: 14px; height: 14px; flex: none; }
+.omd-workflow-phase { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.omd-workflow-popover { position: fixed; z-index: 100; width: min(520px, calc(100vw - 24px)); max-height: min(560px, calc(100vh - 100px)); overflow: auto; box-sizing: border-box; padding: 8px; border: .5px solid var(--dsw-alias-border-l2); border-radius: var(--dsw-radius-lg); background: var(--dsw-specific-menu); color: var(--dsw-alias-label-primary); box-shadow: var(--dsw-elevation-prominent); backdrop-filter: var(--dsw-menu-backdrop-filter); }
+.omd-workflow-popover > section + section { margin-top: 8px; }

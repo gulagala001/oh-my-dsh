@@ -5,6 +5,7 @@ import { extraPalettes } from './palettes.mjs';
 export const paletteNames = {
   'codex-desktop': '黑白灰', 'claude-cli-terminal': '暖砂',
   'ios-liquid-glass': '冰蓝', 'google-material-expressive': '晴空蓝',
+  'glyph-motion': '字符黑白',
 };
 export function paletteCatalog(skins) {
   return [...skins.map(({ id, name, tokens }) => ({ id, name: paletteNames[id] || name,

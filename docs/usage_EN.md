@@ -114,9 +114,9 @@ Each session retains up to 20 versions. Within the page, switching retains unsen
 
 ## Settings and Saving
 
-Settings include Common, Base components, Model/identity, Experimental, Advanced, Global background. Use **Save settings** for ordinary changes; component toggles save immediately. Only edited fields are sent. Edits made during saving remain and need another save. Migration reads the live legacy configuration rather than letting an old overlay swallow new settings.
+Settings include Common, Base components, Third-party, Model/identity, Experimental, Advanced, Global background. Use **Save settings** for ordinary changes; component toggles save immediately. Only edited fields are sent. Edits made during saving remain and need another save. Migration reads the live legacy configuration rather than letting an old overlay swallow new settings.
 
-Personalities include Default, Hard, Soft, Custom, Off. Preview/copy to Custom; switching retains saved custom content, with effect on the next main request. Global background is user-maintained. On conflict, **Read latest version**, compare, merge/adopt, then save; reading does not overwrite a draft. Dream does not edit this background.
+Choose a built-in personality, Custom, a saved preset, or Off. Name a custom personality and use **Save as preset**; saved presets can be edited, renamed, updated, saved as a new copy, or deleted. These operations save immediately for subsequent requests. Deleting the selected preset retains its text in Custom; built-in presets remain available. Use **Save settings** to apply selection changes or direct edits to Custom. Global background is user-maintained. On conflict, **Read latest version**, compare, merge/adopt, then save; reading does not overwrite a draft. Dream does not edit this background.
 
 Five themes, 28 palettes, backgrounds, section colors, fonts, logos/titles, and reduced motion remain independent. [Appearance (Chinese)](skins.md)
 
@@ -152,9 +152,11 @@ After matching the build and permissions, ask the assistant to open a site, insp
 
 Non-CU work targets matching DSH on Windows/macOS/Linux without native desktop dependencies; this candidate remains unaccepted. Old public 0.10 prerequisites follow its release docs. This page expands no Linux desktop, Windows multi-screen, or account promise. New CU's common single-screen journeys and Windows 125%/150%/200% need separate real-device results.
 
-## Recommended Plugins
+## Extension Features and Third-party
 
-The directory lists purpose, original author, source, full host, fixed artifact, SHA-256, and state. The current profile's native manager installs. Unknown combinations/missing artifacts/unpublished targets are not made installable. Cross-host switching is explicit/manual and preserves data. Automatic updates do not cross hosts, approve scripts, or restart. Recommendation writes and response bodies have 10-second limits; a lost receipt triggers state reading rather than endless writing or blind duplicate installation.
+Open **Settings → Oh My DSH → Common** for DeepSeek Workbench, interactive answers, and agent presets. Community features have their own **Third-party** subpage. Each compact row has a short description and a switch: first use installs and enables the feature; switching off disables it while retaining configuration and data. Version, source, update, and uninstall controls are under **Details**. Built-in btw and rewind are no longer duplicated as recommendations.
+
+The current profile’s native manager handles installation and activation, retaining exact host, fixed release, and SHA-256 checks. Incompatible entries or additional configuration requirements are explained. Automatic updates default off and apply only to installed, enabled features; they do not cross hosts, approve install scripts, or restart DSH. Lost acknowledgements trigger a fresh state read rather than duplicate installation.
 
 **IUI, OMAA, Subscriptions and Intent remain independent projects**, each needing a matching host build. OMD retains their entries, tools, configuration and user data rather than taking over their accounts or business features. [Compatibility](plugin-compatibility_EN.md)
 
@@ -166,9 +168,13 @@ Intent understanding, Subscriptions, IUI, and OMAA are optional. Do not invent r
 
 ## Side Questions and Turn Rewind
 
-`/btw question` uses the latest dispatched main-request prefix while main work runs, without tools. `/btw cancel` stops only the side question. Codex subscription requests reuse the parent cache key only at adapter dispatch; guards and logs still belong to the independent child. Cache reads use provider-reported usage, undisclosed values are not zero, and server-side hits are not guaranteed. Cold start waits for a verifiable main prefix; no project/global Dream propagation. Original author: JasonQQ. Turn Rewind by Anionex has a historical alpha.1 refusal for fixed `0.3.9`; match its required host version and retain native version checks. [Authors/licenses](../THIRD_PARTY_NOTICES.md)
+### Temporary sidebar chat
 
-When Turn Rewind is installed and enabled, OMD keeps its original action, preview, and confirmation dialog. Actions match the viewed session's actual turn-opening user message, including openings classified as steering. Delayed loading, remounted rows, and in-place node updates refresh the match; later interleaved messages are not advertised as rewind points. The original dialog still offers messages-only rewind when no file checkpoint exists.
+Run `/侧栏` to open an independent temporary text chat using the currently selected model. It starts without the main conversation context, keeps messages in memory, and stops the response and clears them when closed. This text chat does not execute workspace tools. `/侧栏（网页版）` opens a temporary chat with the DeepSeek website account; closing deletes its own website conversation, and a failed cleanup keeps the panel open for retry. Both preserve the main conversation and its position.
+
+`/btw question` uses the latest dispatched main-request prefix while main work runs, without tools. `/btw cancel` stops only the side question. Codex subscription requests reuse the parent cache key only at adapter dispatch; guards and logs still belong to the independent child. Cache reads use provider-reported usage, undisclosed values are not zero, and server-side hits are not guaranteed. Cold start waits for a verifiable main prefix; no project/global Dream propagation. Original author: JasonQQ. [Authors/licenses](../THIRD_PARTY_NOTICES.md)
+
+OMD bundles `@gulagala001/dsh-undo-plugin`. Double Esc while idle or `/rewind` opens the rewind list above the composer; `/undo` restores the last rewind. Both require confirmation. While running, double Esc keeps the Stop behavior. The action next to a user message's Copy button opens confirmation, then withdraws that message and the following conversation in place. Available checkpoints also restore tool-generated file changes; older messages without backups explicitly show conversation-only recovery. Text, images and files return to the composer. Undo restores the previous conversation and files. External changes block conflicting restores and preserve the backups. This OMD version and the standalone plugin share one service and action; disabling either retains the remaining owner's functionality. Avoid enabling other history-mutating rewind plugins together. The old Turn Rewind recommendation and dedicated compatibility layer have been removed; existing third-party installations and data are retained.
 
 ## Data and Maintenance
 

@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "id": "glyph-motion",
+  "name": "Glyph · 动态字符",
+  "version": "1.0.0",
+  "tokens": {
+    "common": {
+      "font-ui": "\"SF Mono\", \"SFMono-Regular\", Menlo, \"PingFang SC\", monospace",
+      "font-body": "\"SF Mono\", \"SFMono-Regular\", Menlo, \"PingFang SC\", monospace",
+      "font-mono": "\"SF Mono\", \"SFMono-Regular\", Menlo, monospace",
+      "font-size": "13px",
+      "line-height": "1.8",
+      "gap": "8px",
+      "radius-control": "0px",
+      "radius-panel": "0px",
+      "radius-composer": "0px",
+      "shadow": "none",
+      "duration": "0ms"
+    },
+    "light": {
+      "bg": "#ffffff",
+      "surface": "#ffffff",
+      "surface-solid": "#ffffff",
+      "sidebar": "#ffffff",
+      "text": "#080808",
+      "muted": "#585858",
+      "border": "#939393",
+      "hover": "transparent",
+      "selected": "transparent",
+      "accent": "#000000",
+      "on-accent": "#ffffff",
+      "focus": "#111111",
+      "success": "#363636",
+      "warning": "#525252",
+      "danger": "#181818",
+      "code-bg": "transparent"
+    },
+    "dark": {
+      "bg": "#050505",
+      "surface": "#080808",
+      "surface-solid": "#0b0b0b",
+      "sidebar": "#050505",
+      "text": "#f5f5f5",
+      "muted": "#aaaaaa",
+      "border": "#555555",
+      "hover": "transparent",
+      "selected": "transparent",
+      "accent": "#ffffff",
+      "on-accent": "#050505",
+      "focus": "#ffffff",
+      "success": "#dddddd",
+      "warning": "#cccccc",
+      "danger": "#ffffff",
+      "code-bg": "transparent"
+    }
+  },
+  "css": "\n",
+  "layout": "glyph-motion"
+}

@@ -1,5 +1,0 @@
-# Standalone and bundled distributions exclude engineering fixtures.
-/test/
-/node_modules/
-/work/
-*.log

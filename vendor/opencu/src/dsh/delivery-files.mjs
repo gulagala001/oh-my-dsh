@@ -52,70 +52,82 @@ export function createDeliveryFiles(getDataDir) {
     });
     tail = work.catch(() => {}); return work;
   }
+  async function resolveFile(ref, attachments, signal) {
+    signal?.throwIfAborted();
+    const id = key(ref);
+    for (;;) {
+      let operation = pending.get(id);
+      if (!operation) {
+        operation = { signal };
+        operation.work = (async () => {
+          const longName = Buffer.byteLength(ref.name) > 255;
+          let folder = join(directory, ref.attachmentId.slice(7)), path = join(folder, ref.name);
+          const check = async () => {
+            const actual = await realpath(path);
+            if (!actual.startsWith(`${await realpath(directory)}${sep}`)) throw new Error('Delivered file escaped storage');
+            const file = await open(actual, constants.O_RDONLY | constants.O_NOFOLLOW);
+            try { if (!(await file.stat()).isFile()) throw new Error('Delivered file is not a regular file'); }
+            finally { await file.close(); }
+            return actual;
+          };
+          try { return await check(); }
+          catch (error) { if (error.code !== 'ENOENT' && !(longName && error.code === 'ENAMETOOLONG')) throw error; }
+          if (longName) {
+            // Keep full-name identity separate from the shortened private filename.
+            folder = join(directory, 'long-names', createHash('sha256').update(id).digest('hex'));
+            path = join(folder, storedName(ref.name));
+            try { return await check(); }
+            catch (error) { if (error.code !== 'ENOENT') throw error; }
+          }
+          await mkdir(folder, { recursive: true, mode: 0o700 });
+          const temporary = join(folder, `${randomUUID()}.pending`);
+          const file = await open(temporary, 'wx', 0o600), hash = createHash('sha256');
+          let size = 0;
+          try {
+            for await (const chunk of attachments.readFileStream(ref, signal)) {
+              signal?.throwIfAborted(); hash.update(chunk); size += chunk.length;
+              let offset = 0;
+              while (offset < chunk.length) offset += (await file.write(chunk, offset, chunk.length - offset)).bytesWritten;
+            }
+            if (size !== ref.bytes || `sha256:${hash.digest('hex')}` !== ref.attachmentId) throw new Error('Delivered attachment bytes changed');
+            await file.close(); signal?.throwIfAborted(); await rename(temporary, path);
+            return await check();
+          } finally { await file.close(); await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
+        })().finally(() => pending.delete(id));
+        pending.set(id, operation);
+      }
+      let abort;
+      try {
+        const cancelled = signal && new Promise((_, reject) => {
+          abort = () => reject(signal.reason);
+          signal.addEventListener('abort', abort, { once: true });
+          if (signal.aborted) abort();
+        });
+        const path = await (cancelled ? Promise.race([operation.work, cancelled]) : operation.work);
+        signal?.throwIfAborted();
+        return { ok: true, path, file: ref };
+      } catch (error) {
+        signal?.throwIfAborted();
+        // Another caller's cancellation must not fail this live request.
+        if (!operation.signal?.aborted) throw error;
+      } finally { if (abort) signal.removeEventListener('abort', abort); }
+    }
+  }
   return {
     retain: ref => retainAll([ref]),
     retainAll,
     async resolve({ attachmentId, name }, attachments, signal) {
-      await tail; await ready(); signal?.throwIfAborted();
-      const id = `${attachmentId}:${name}`, ref = registry[id];
+      await tail; await ready();
+      const ref = registry[`${attachmentId}:${name}`];
       if (!ref) throw new Error('The file is not in this OpenCU delivery registry');
-      for (;;) {
-        let operation = pending.get(id);
-        if (!operation) {
-          operation = { signal };
-          operation.work = (async () => {
-            const longName = Buffer.byteLength(ref.name) > 255;
-            let folder = join(directory, ref.attachmentId.slice(7)), path = join(folder, ref.name);
-            const check = async () => {
-              const actual = await realpath(path);
-              if (!actual.startsWith(`${await realpath(directory)}${sep}`)) throw new Error('Delivered file escaped storage');
-              const file = await open(actual, constants.O_RDONLY | constants.O_NOFOLLOW);
-              try { if (!(await file.stat()).isFile()) throw new Error('Delivered file is not a regular file'); }
-              finally { await file.close(); }
-              return actual;
-            };
-            try { return await check(); }
-            catch (error) { if (error.code !== 'ENOENT' && !(longName && error.code === 'ENAMETOOLONG')) throw error; }
-            if (longName) {
-              // Keep full-name identity separate from the shortened private filename.
-              folder = join(directory, 'long-names', createHash('sha256').update(id).digest('hex'));
-              path = join(folder, storedName(ref.name));
-              try { return await check(); }
-              catch (error) { if (error.code !== 'ENOENT') throw error; }
-            }
-            await mkdir(folder, { recursive: true, mode: 0o700 });
-            const temporary = join(folder, `${randomUUID()}.pending`);
-            const file = await open(temporary, 'wx', 0o600), hash = createHash('sha256');
-            let size = 0;
-            try {
-              for await (const chunk of attachments.readFileStream(ref, signal)) {
-                signal?.throwIfAborted(); hash.update(chunk); size += chunk.length;
-                let offset = 0;
-                while (offset < chunk.length) offset += (await file.write(chunk, offset, chunk.length - offset)).bytesWritten;
-              }
-              if (size !== ref.bytes || `sha256:${hash.digest('hex')}` !== ref.attachmentId) throw new Error('Delivered attachment bytes changed');
-              await file.close(); signal?.throwIfAborted(); await rename(temporary, path);
-              return await check();
-            } finally { await file.close(); await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
-          })().finally(() => pending.delete(id));
-          pending.set(id, operation);
-        }
-        let abort;
-        try {
-          const cancelled = signal && new Promise((_, reject) => {
-            abort = () => reject(signal.reason);
-            signal.addEventListener('abort', abort, { once: true });
-            if (signal.aborted) abort();
-          });
-          const path = await (cancelled ? Promise.race([operation.work, cancelled]) : operation.work);
-          signal?.throwIfAborted();
-          return { ok: true, path, file: ref };
-        } catch (error) {
-          signal?.throwIfAborted();
-          // Another caller's cancellation must not fail this live request.
-          if (!operation.signal?.aborted) throw error;
-        } finally { if (abort) signal.removeEventListener('abort', abort); }
-      }
+      return resolveFile(ref, attachments, signal);
+    },
+    async resolveAttachment(ref, attachments, signal) {
+      ref = structuredClone(ref);
+      validate(ref);
+      await ready();
+      // User uploads belong to DSH's attachment store, not the delivery index.
+      return resolveFile(ref, attachments, signal);
     },
     async close() { await tail; await Promise.all([...pending.values()].map(operation => operation.work)); },
   };

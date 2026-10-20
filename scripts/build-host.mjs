@@ -1,7 +1,6 @@
 import { build } from 'esbuild';
 import { mkdir, readFile, writeFile, rm, realpath, readdir, lstat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { createRequire, isBuiltin } from 'node:module';
 import { createHash } from 'node:crypto';
 import { join, relative, isAbsolute } from 'node:path';
 import { createHostConstEnums } from './host-const-enums.mjs';
@@ -11,7 +10,6 @@ import { buildChatStyleFactory } from './chat-style-adapter.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 if (process.platform === 'darwin') await checkMacHelperDistribution(join(root, 'vendor/opencu'));
-const requireBuild = createRequire(import.meta.url);
 const snapshot = JSON.parse(await readFile(`${root}vendor/dsh.json`, 'utf8'));
 const chatSnapshot = JSON.parse(await readFile(`${root}vendor/dsh/ui-chat.json`, 'utf8'));
 const hostLayout = hostTarget(snapshot.version);
@@ -62,25 +60,15 @@ for (const [directory, manifest] of [['vendor/dsh', snapshot], ['vendor/dsh/ui-c
     if (!local || local === '..' || local.startsWith('..\\') || local.startsWith('../') || isAbsolute(local) || !found.has(path)) throw new Error(`Missing or invalid snapshot path: ${directory}/${path}`);
   }
 }
-// A stable virtual filename keeps dependency labels independent of checkout
-// location, including builds that reuse node_modules from another directory.
-const acornDependency = { name: 'workflow-acorn', setup(b) {
-  b.onResolve({ filter: /^acorn$/ }, () => ({ path: 'acorn', namespace: 'omd-dependency' }));
-  b.onLoad({ filter: /^acorn$/, namespace: 'omd-dependency' }, async () => ({ contents: await readFile(requireBuild.resolve('acorn'), 'utf8'), loader: 'js' }));
-} };
-const modules = ['jobs-local', 'tool-jobs', 'tool-bash', 'tool-pwsh', 'bash-sandbox', 'pwsh-sandbox', 'workflow-ptc', 'tool-workflow', 'workflow-spawn'];
-const hostEntry = name => `${root}vendor/dsh/${name === 'workflow-spawn' ? 'workflow-ptc/src/spawn.ts' : `${name}/src/index.ts`}`;
-const hostAliases = { '@deepseek-ai/dsh-tools': 'tools/src/json-schema.ts', '@deepseek-ai/dsh-workflow': 'workflow/src/index.ts', '@deepseek-ai/dsh-llm': 'llm/src/error.ts' };
+const modules = ['jobs-local', 'tool-jobs', 'tool-bash', 'tool-pwsh', 'bash-sandbox', 'pwsh-sandbox'];
+const hostEntry = name => `${root}vendor/dsh/${name}/src/index.ts`;
 const localHostImport = specifier => {
   if (/^@deepseek-ai\/dsh-(bash|pwsh)-local$/.test(specifier)) return `${root}vendor/dsh/${specifier.split('dsh-')[1]}/src/index.ts`;
   if (/^\.\.\/\.\.\/\.\.\/(session|subagent)\//.test(specifier)) return `${root}vendor/dsh/${specifier.split('/').slice(4).join('/')}`;
   if (specifier === '@deepseek-ai/dsh-session-persistence-jsonl/src/lease.ts') return `${root}vendor/dsh/session-persistence-jsonl/src/lease.ts`;
   if (hostLayout.subagentDriver && specifier === '@deepseek-ai/dsh-subagent-in-process-driver/src/index.ts') return `${root}vendor/dsh/subagent-in-process-driver/src/index.ts`;
 };
-const enumOptions = { root, snapshot };
-const guestEnums = await createHostConstEnums({ ...enumOptions, entryPoints: [`${root}vendor/dsh/workflow-ptc/src/guest.ts`],
-  resolveImport: specifier => hostAliases[specifier] && `${root}vendor/dsh/${hostAliases[specifier]}` });
-const hostEnums = await createHostConstEnums({ ...enumOptions, ts: guestEnums.ts,
+const hostEnums = await createHostConstEnums({ root, snapshot,
   entryPoints: [...modules.map(hostEntry), `${root}src/session-migration-support.ts`], resolveImport: localHostImport });
 async function ownedOutput(path, directory = false) {
   try {
@@ -96,25 +84,8 @@ for (const name of [...modules, 'ui-conversation', 'ui-chat', 'session-migration
 }
 for (const name of ['bash-local.mjs', 'pwsh-local.mjs', 'tools.mjs', 'tools.factory.mjs']) await ownedOutput(join(outputRoot, name));
 await mkdir(outputRoot, { recursive: true });
-// The workflow VM is transported as one self-contained ESM source string. Its
-// only external imports may be Node builtins, never plugin/host package paths.
-const guest = await build({ entryPoints: [`${root}vendor/dsh/workflow-ptc/src/guest.ts`], bundle: true,
-  platform: 'node', target: 'node22', format: 'esm', write: false, metafile: true,
-  treeShaking: true, ignoreAnnotations: false,
-  // Use the pinned pure source helpers, not native package barrels that read
-  // package.json through import.meta.url (the guest runs from a data URL).
-  plugins: [{ name: 'workflow-guest-helpers', setup(b) {
-    b.onResolve({ filter: /^@deepseek-ai\/dsh-(tools|workflow|llm)$/ }, args => ({ path: `${root}vendor/dsh/${hostAliases[args.path]}`, sideEffects: false }));
-  } }, acornDependency, guestEnums.plugin],
-});
-guestEnums.assertExternal(guest);
-await guestEnums.assertOutput(guest);
-const guestImports = Object.values(guest.metafile.outputs).flatMap(output => output.imports).filter(item => item.external && !isBuiltin(item.path));
-if (guestImports.length) throw new Error(`Workflow guest has external package imports: ${guestImports.map(item => item.path).join(', ')}`);
-// Normalize esbuild's dependency-location comments in the transported source.
-const guestSource = guest.outputFiles[0].text.replace(/^\/\/ (?:.*\/)?node_modules\//gm, '// node_modules/');
 for (const name of modules) {
-  const reference = name === 'workflow-spawn' ? 'subagent-spawn-in-process' : name;
+  const reference = name;
   const result = await build({ entryPoints: [hostEntry(name)], outfile: `${root}lib/host/${name}.factory.mjs`,
     platform: 'node', target: 'node22', format: 'cjs', bundle: true, packages: 'external', metafile: true,
     supported: { 'dynamic-import': false },
@@ -126,13 +97,17 @@ for (const name of modules) {
         const path = localHostImport(args.path);
         if (path) return { path };
       });
-      b.onLoad({ filter: /workflow-ptc[\\/]src[\\/]guest-source\.ts$/ }, () => ({ contents: `export const WORKFLOW_GUEST_SOURCE = ${JSON.stringify(guestSource)};`, loader: 'ts' }));
-    } }, acornDependency, hostEnums.plugin],
+    } }, hostEnums.plugin],
   });
   hostEnums.assertExternal(result);
   await hostEnums.assertOutput(result);
   const dependencies = [...new Set(Object.values(result.metafile.outputs).flatMap(o => o.imports.filter(i => i.external).map(i => i.path)))];
   await writeFile(`${root}lib/host/${name}.mjs`, `import { createModule } from './${name}.factory.mjs';\nimport { mountHostComponent } from '../../src/host-component.mjs';\nexport const name = 'omd-host-${name}';\nexport const inject = ['loader'];\nexport const apply = (ctx, config) => mountHostComponent(ctx, ${JSON.stringify(reference)}, createModule, ${JSON.stringify(dependencies)}, config);\n`);
+}
+// Workflow is maintained in the independent dsh-workflow-plus module.
+for (const [name, entry] of [['workflow-ptc', 'engine'], ['tool-workflow', 'tool'], ['workflow-spawn', 'spawn']]) {
+  await writeFile(`${root}lib/host/${name}.mjs`, `export * from '../../vendor/workflow/src/${entry}.mjs';\n`);
+  await writeFile(`${root}lib/host/${name}.factory.mjs`, `export { createModule } from '../../vendor/workflow/lib/host/${name}.factory.mjs';\n`);
 }
 // Retire only known outputs from the earlier direct-entry build, never user data.
 for (const name of ['bash-local.mjs', 'pwsh-local.mjs', 'tools.mjs', 'tools.factory.mjs']) {

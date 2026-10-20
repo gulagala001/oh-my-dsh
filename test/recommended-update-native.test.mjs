@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-test('native rc.2 recommended update lifecycle (seven SDK cases)', { timeout: 125000 }, () => {
+test('native rc.2 feature and update lifecycle (nine SDK cases)', { timeout: 125000 }, () => {
   const suite = fileURLToPath(new URL('./fixtures/recommended-native-lifecycle.mjs', import.meta.url));
   const env = { ...process.env, NO_COLOR: '1' };
   // A nested runner must not inherit the outer node:test worker context.
@@ -19,8 +19,8 @@ test('native rc.2 recommended update lifecycle (seven SDK cases)', { timeout: 12
   assert.ifError(result.error);
   assert.equal(result.signal, null, result.stdout + result.stderr);
   assert.equal(result.status, 0, result.stdout + result.stderr);
-  // Exit zero alone also accepts an empty/skipped recursive runner: require all seven SDK cases.
-  for (const [field, count] of Object.entries({ tests: 7, pass: 7, fail: 0, cancelled: 0, skipped: 0, todo: 0 })) {
+  // Exit zero alone also accepts an empty/skipped recursive runner: require all nine SDK cases.
+  for (const [field, count] of Object.entries({ tests: 9, pass: 9, fail: 0, cancelled: 0, skipped: 0, todo: 0 })) {
     assert.match(result.stdout, new RegExp(`^# ${field} ${count}$`, 'm'), `Missing native TAP summary: ${field}=${count}`);
   }
 });

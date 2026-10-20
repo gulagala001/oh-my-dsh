@@ -84,3 +84,5 @@ Focus on implementation and delivery; keep testing minimal. Run minimal build/st
 - When runtime checks are needed, use isolated data and profiles and leave the working DSH instance unchanged.
 
 See [context preparation and original recall (Chinese)](context-workflow.md) for images, context budgets, and idle preprocessing, and [third-party notices](../THIRD_PARTY_NOTICES.md) for sources and licenses.
+
+**Bundled rewind:** `node scripts/sync-rewind.mjs ../rewind` synchronizes a completed standalone build and records the exact host and file hashes in `vendor/rewind.json`. Rebuild OMD after synchronization. The standalone and bundled owners share one runtime.

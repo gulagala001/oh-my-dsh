@@ -174,7 +174,7 @@ html.omd[data-omd-layout="codex-desktop"] {
   & :is(.cx-field, .tx-field) { gap: 6px; margin-block: 10px; }
   & :is(.cx-field, .tx-field, .cx-toggle) { font-size: 13px; }
   & :is(.cx-toggle, .tx-toggle) { min-height: 38px; padding-block: 7px; }
-  & .VOzbGW_options :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]), select) { min-height: 30px; font-size: 13px; padding: 5px 9px; }
+  & .VOzbGW_options :is(input:not(span[class*="_wrap"] > input, [class*="_search"] > input[class*="_searchInput"]):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]), select) { min-height: 30px; font-size: 13px; padding: 5px 9px; }
   & .VOzbGW_options textarea { font-size: 13px; padding: 9px 10px; line-height: 1.6; }
   & :is(.cx-tabs, .tx-tabs) { display: flex; flex-wrap: wrap; gap: 3px; padding: 3px; border-radius: 8px; background: var(--omd-subtle); border: 1px solid var(--omd-pane-line); }
   & :is(.cx-tabs, .tx-tabs) > button { padding: 6px 8px; font-size: 12px; border: 0; border-radius: 6px; }

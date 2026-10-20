@@ -245,6 +245,19 @@ export function createPluginRuntime(options = {}) {
     }
     if (endpoint === 'downloads/remove') return sidebarDownloads.remove(args.id, args.since);
     if (endpoint === 'files/resolve') return deliveryFiles.resolve(args, attachments, signal);
+    if (endpoint === 'sources/resolve') {
+      if (args.kind === 'file') return deliveryFiles.resolveAttachment(args.attachment, attachments, signal);
+      if (args.kind !== 'image') throw error('INVALID_ARGUMENT', 'A source image or file attachment is required');
+      const stored = await attachments.readImage(args.attachment, signal);
+      signal?.throwIfAborted();
+      const ref = stored.ref;
+      const extension = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' }[ref.mediaType];
+      if (!extension) throw error('INVALID_IMAGE', 'Unsupported stored image format');
+      const name = ref.name || `image-${ref.attachmentId.slice(7, 19)}`;
+      const file = await attachments.saveFileStream({ data: (async function* () { yield stored.data; })(),
+        name: /\.(png|jpe?g|webp|gif)$/i.test(name) ? name : `${name}.${extension}`, signal });
+      return deliveryFiles.resolveAttachment(file, attachments, signal);
+    }
     if (endpoint === 'reconfigure' && !starting) return { ok: true, config: publicConfig(getConfig()) };
     const runtime = await start();
     signal?.throwIfAborted();

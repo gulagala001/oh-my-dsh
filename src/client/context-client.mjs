@@ -3,8 +3,8 @@ import { Button, Input, Select, Switch } from './native-controls.jsx';
 import { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
 export { CONTEXT_FREQUENCY_PRESETS } from '../frequency.mjs';
 import { createPoller } from './polling.mjs';
-import { useMainConversation } from './main-conversation.mjs';
-import { PERSONALITY_PRESETS, personalityPreset, personalityText, personalityPatch } from '../cc-adaptation/personality.mjs';
+import { FeatureSettings } from './recommended-plugins.jsx';
+import { PERSONALITY_PRESETS, personalityPreset, personalityText, personalityPatch, savedPersonalityPresets, savePersonalityPreset, deletePersonalityPreset } from '../cc-adaptation/personality.mjs';
 
 export const CONTEXT_UI_VERSION = '1.3.0';
 export function contextFrequencyOf(config = {}) {
@@ -29,7 +29,6 @@ export function createContextUI(React) {
     const response = await fetch('trisoul-x/api' + path, body === undefined ? { signal } : { signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await response.json(); if (!response.ok) throw Object.assign(Error(data.error || 'HTTP ' + response.status), { statusCode: response.status }); return data;
   };
-  const suffix = id => '?session=' + encodeURIComponent(id || '');
   const fmt = value => Number(value || 0).toLocaleString();
   const frequencyNames = { always: '频繁', medium: '适中', slow: '较少', custom: '自定义' };
   const icon = (name, size = 16) => h(Icon, { name, size });
@@ -129,8 +128,35 @@ export function createContextUI(React) {
         ...(preserveDraft ? {} : { globalText: latest.text, globalLatest: null }) });
     };
     set = (key, value) => this.setState(s => ({ config: { ...s.config, [key]: value }, status: '', ...(Object.hasOwn(CONTEXT_FREQUENCY_PRESETS.medium, key) ? { custom: true } : {}) }));
-    choosePersonality = preset => this.setState(s => ({ config: { ...s.config, ...personalityPatch(s.config, preset) }, status: '' }));
-    editPersonality = text => this.setState(s => ({ config: { ...s.config, identityPreset: 'custom', identityPrompt: text, identityCustomPrompt: text }, status: '' }));
+    choosePersonality = preset => this.setState(s => ({ config: { ...s.config, ...personalityPatch(s.config, preset) }, personalityName: null, personalityDraft: null, personalityError: '', status: '' }));
+    editPersonality = text => this.setState(s => ({ config: { ...s.config, identityPreset: 'custom', identityPrompt: text, identityCustomPrompt: text }, personalityName: personalityPreset(s.config) === 'custom' ? s.personalityName : null, personalityDraft: null, personalityError: '', status: '' }));
+    persistPersonality = async makePatch => {
+      if (this.state.busy) return;
+      let patch;
+      try { patch = makePatch(this.state.config); }
+      catch (error) { this.setState({ personalityError: error.message }); return; }
+      // Commit only the preset operation. Keep drafts from other settings tabs.
+      const drafts = contextSettingsPatch(this.saved, this.state.config);
+      for (const key of ['identityPreset', 'identityPrompt', 'identityCustomPrompt', 'identitySavedPresets']) delete drafts[key];
+      this.setState({ busy: true, personalityError: '', status: '' });
+      try {
+        const next = await api('/settings', patch);
+        window.dispatchEvent(new CustomEvent('omd:settings-saved', { detail: next }));
+        if (this.alive) {
+          this.saved = next;
+          this.setState({ config: { ...next, ...drafts }, personalityName: null, personalityDraft: null, status: '人格预设已保存' });
+        }
+      } catch (error) { if (this.alive) this.setState({ personalityError: error.message }); }
+      finally { if (this.alive) this.setState({ busy: false }); }
+    };
+    savePersonality = update => this.persistPersonality(config => {
+      const selected = savedPersonalityPresets(config).find(preset => preset.id === personalityPreset(config));
+      return savePersonalityPreset(config, { id: update ? selected?.id : undefined,
+        name: this.state.personalityName ?? selected?.name ?? '', text: this.state.personalityDraft ?? personalityText(config) });
+    });
+    deletePersonality = () => this.persistPersonality(config => deletePersonalityPreset({
+      ...config, identityPrompt: this.state.personalityDraft ?? personalityText(config),
+    }, personalityPreset(config)));
     pickPreset = name => {
       if (name === 'custom') { this.setState({ custom: true }); return; }
       this.setState(s => ({ config: { ...s.config, ...contextFrequencyPatch(name) }, custom: false, status: '' }));
@@ -150,7 +176,7 @@ export function createContextUI(React) {
       catch (e) { if (this.alive) this.setState({ globalError: e.message, ...(e.statusCode === 409 ? { globalConflict: true, globalLatest: null } : {}) }); }
       finally { if (this.alive) this.setState({ busy: false }); }
     };
-    undo = () => this.setState({ config: { ...this.saved }, routing: contextRouteMode(this.saved), custom: false, error: '', status: '' });
+    undo = () => this.setState({ config: { ...this.saved }, routing: contextRouteMode(this.saved), custom: false, personalityName: null, personalityDraft: null, personalityError: '', error: '', status: '' });
     number(key, label, min = 0, hint, scale = 1, disabled = false) {
       const value = this.state.config[key];
       return field(label, h(Input, { type: 'number', required: true, disabled, min, step: 1 / scale, value: value === '' ? '' : (value ?? 0) / scale, onChange: e => {
@@ -192,7 +218,7 @@ export function createContextUI(React) {
     renderBasic() {
       const c = this.state.config;
       return h(React.Fragment, null,
-        section('界面', null, this.toggle('recommendedPluginsPageEnabled', '显示推荐插件页面', '默认开启。关闭仅隐藏设置中的推荐插件页面，不卸载插件，也不改变自动更新设置。保存后立即生效。')),
+        h(FeatureSettings),
         this.frequency(),
         section('预处理范围', '默认整窗处理，受保护内容保留，但不阻断范围。', h(React.Fragment, null,
           this.toggle('preprocessBoundaries', '按消息边界分段', '默认关闭；开启恢复兼容分段。系统提示词、前置 CoT、近期保留区和完整工具往返始终受保护。'),
@@ -241,16 +267,31 @@ export function createContextUI(React) {
     }
     renderModels() {
       const c = this.state.config, mode = this.state.routing;
+      const preset = personalityPreset(c), saved = savedPersonalityPresets(c), selected = saved.find(value => value.id === preset);
+      const editable = preset === 'custom' || !!selected;
+      const name = this.state.personalityName ?? selected?.name ?? '';
       return h(React.Fragment, null,
         section('后台模型', '主执行模型仍在 DSH 的模型设置中选择。', h(React.Fragment, null, segments('后台模型配置方式', mode, [['follow', '跟随主模型'], ['unified', '统一配置'], ['separate', '分别配置']], this.chooseRoute),
           mode === 'follow' ? h('div', { className: 'cx-info' }, icon('layers'), h('p', null, '预处理 AI 和中枢使用当前会话的提供方与模型。')) : mode === 'unified' ? this.route('unifiedBackground', '预处理与中枢') : h(React.Fragment, null, this.route('background', '预处理 AI'), this.route('surgeon', '中枢 AI')),
           c.memoryCacheEnabled && h('p', { className: 'cx-hint' }, '记忆缓存模式已开启：预处理跟随最近成功的主执行请求。中枢继续使用这里的配置，预处理模型配置保留供关闭后使用。'))),
         section('人格', '选择一个搭子，或保留你自己的完整人设。保存后作用于后续请求。', h(React.Fragment, null,
           field('人格预设', h(Select, { value: personalityPreset(c), onChange: e => this.choosePersonality(e.target.value) },
-            h('option', { value: 'custom' }, '自定义'), ...Object.entries(PERSONALITY_PRESETS).map(([id, preset]) => h('option', { key: id, value: id }, preset.name)), h('option', { value: 'off' }, '关闭人格')),
+            h('option', { value: 'custom' }, '自定义'), ...Object.entries(PERSONALITY_PRESETS).map(([id, preset]) => h('option', { key: id, value: id }, preset.name)),
+            ...saved.map(value => h('option', { key: value.id, value: value.id }, value.name)), h('option', { value: 'off' }, '关闭人格')),
             '切换内置预设或关闭人格都会保留自定义内容；升级后沿用已有身份设置。'),
-          personalityPreset(c) === 'off' ? h('p', { className: 'cx-hint' }, '已关闭人格描述；仍保留原有工作能力和执行规则。') : field('身份提示词', h('textarea', { rows: 9, readOnly: personalityPreset(c) !== 'custom', value: personalityText(c), onChange: e => this.editPersonality(e.target.value), placeholder: '描述助手是谁，以及主要帮助你做什么' }), personalityPreset(c) === 'custom' ? '留空可移除身份描述。自定义内容随设置保存，切换预设不会丢失。' : '这是内置预设原文。可复制到自定义后修改。'),
-          Object.hasOwn(PERSONALITY_PRESETS, personalityPreset(c)) && button('复制到自定义', () => this.editPersonality(personalityText(c)), { quiet: true }))));
+          preset === 'off' ? h('p', { className: 'cx-hint' }, '已关闭人格描述；仍保留原有工作能力和执行规则。') : field('身份提示词', h('textarea', { rows: 9, readOnly: !editable,
+            value: selected ? this.state.personalityDraft ?? selected.text : personalityText(c),
+            onChange: e => selected ? this.setState({ personalityDraft: e.target.value, personalityError: '' }) : this.editPersonality(e.target.value), placeholder: '描述助手是谁，以及主要帮助你做什么' }),
+            selected ? '编辑后点“更新预设”，也可改名后另存一份。' : editable ? '可直接使用，也可命名保存为预设。' : '这是内置预设原文。可复制到自定义后修改。'),
+          Object.hasOwn(PERSONALITY_PRESETS, preset) && button('复制到自定义', () => this.editPersonality(personalityText(c)), { quiet: true }),
+          editable && h(React.Fragment, null,
+            field('预设名称', h(Input, { value: name, maxLength: 80, placeholder: '为这份人设起个名字', onChange: e => this.setState({ personalityName: e.target.value, personalityError: '' }) })),
+            alert(this.state.personalityError, true),
+            h('div', { className: 'cx-actions' },
+              selected && button('更新预设', () => this.savePersonality(true), { disabled: !name.trim(), primary: true }),
+              button(selected ? '另存为新预设' : '保存为预设', () => this.savePersonality(false), { disabled: !name.trim(), primary: !selected }),
+              selected && button('删除预设', this.deletePersonality, { quiet: true })),
+            h('p', { className: 'cx-hint' }, '保存、更新和删除预设立即生效。删除当前预设会将正文保留在“自定义”中。')))));
     }
     renderGlobal() {
       return h(React.Fragment, null, alert(this.state.globalError, true),
@@ -271,65 +312,16 @@ export function createContextUI(React) {
       const dirty = c && Object.keys(contextSettingsPatch(this.saved, c)).length > 0;
       const isGlobal = page === 'global', globalDirty = this.state.globalText !== this.state.globalSaved;
       const footStatus = isGlobal ? this.state.globalStatus || (globalDirty ? '有未保存的更改' : '仅用户手动维护') : status || (dirty ? '有未保存的更改' : '已与当前设置同步');
-      return h('div', { className: 'cx-panel cx-settings', 'data-context-ui': CONTEXT_UI_VERSION }, heading('偏好设置', '模型、上下文与项目摘要', 'settings'),
-        pageTabs(page, [['basic', '常用'], ['components', '基础组件'], ['models', '模型与身份'], ['experimental', '实验性功能'], ['advanced', '高级'], ['global', '全局背景']], value => this.setState({ page: value })),
-        page === 'components' ? h(ComponentsPanel) : !c ? h('div', { className: 'cx-body' }, alert(error, true), empty('正在读取设置', '保留已保存的参数，不自动套用任何档位。'), error && button('重试', this.loadSettings, { icon: 'refresh' })) : h('form', { className: 'cx-settings-form', onSubmit: isGlobal ? e => { e.preventDefault(); this.saveGlobal(); } : this.save },
+      return h('div', { className: 'cx-panel cx-settings', 'data-context-ui': CONTEXT_UI_VERSION }, heading('偏好设置', '功能、模型、上下文与项目摘要', 'settings'),
+        pageTabs(page, [['basic', '常用'], ['components', '基础组件'], ['third-party', '第三方'], ['models', '模型与身份'], ['experimental', '实验性功能'], ['advanced', '高级'], ['global', '全局背景']], value => this.setState({ page: value })),
+        page === 'third-party' ? h('div', { className: 'cx-body' }, h(FeatureSettings, { section: 'third-party' })) : page === 'components' ? h(ComponentsPanel) : !c ? h('div', { className: 'cx-body' }, alert(error, true), empty('正在读取设置', '保留已保存的参数，不自动套用任何档位。'), error && button('重试', this.loadSettings, { icon: 'refresh' })) : h('form', { className: 'cx-settings-form', onSubmit: isGlobal ? e => { e.preventDefault(); this.saveGlobal(); } : this.save },
           h('div', { className: 'cx-body' }, alert(error, true), h('fieldset', { className: 'cx-fields', disabled: busy }, page === 'basic' ? this.renderBasic() : page === 'models' ? this.renderModels() : page === 'experimental' ? this.renderExperimental() : page === 'advanced' ? this.renderAdvanced() : this.renderGlobal())),
           h('footer', { className: 'cx-savebar' }, h('span', { className: 'cx-save-status', role: 'status' }, icon(status || this.state.globalStatus ? 'check' : 'info', 13), footStatus), h('div', { className: 'cx-actions' },
             button('撤销', isGlobal ? () => this.setState({ globalText: this.state.globalSaved, globalStatus: '' }) : this.undo, { quiet: true, disabled: busy || !(isGlobal ? globalDirty : dirty) }),
             h(Button, { type: 'submit', size: 'sm', variant: 'primary', className: 'cx-btn cx-primary', disabled: busy || !(isGlobal ? globalDirty && this.state.globalLoaded && !this.state.globalConflict && !this.state.globalLoading : dirty) }, icon(busy ? 'clock' : 'check'), busy ? '保存中…' : isGlobal ? '保存全局背景' : '保存设置')))));
     }
   }
-  class ScopeControl extends React.Component {
-    state = { data: null, error: '', busy: false, loading: false };
-    revision = 0;
-    componentDidMount() { this.alive = true; this.load(); }
-    componentDidUpdate(prev) {
-      if (prev.sessionId !== this.props.sessionId) {
-        ++this.revision; this.writing = null;
-        this.setState({ data: null, error: '', busy: false, loading: false }, this.load);
-      } else if (prev.locked !== this.props.locked) this.load();
-    }
-    componentWillUnmount() { this.alive = false; ++this.revision; this.writing = null; }
-    load = async () => {
-      if (this.writing) return;
-      const id = this.props.sessionId, ticket = ++this.revision;
-      const active = () => this.alive && id === this.props.sessionId && ticket === this.revision;
-      this.setState({ loading: true });
-      try { const data = await api('/scope' + suffix(id)); if (active()) this.setState({ data, error: '' }); }
-      catch (e) { if (active()) this.setState({ data: null, error: e.message }); }
-      finally { if (active()) this.setState({ loading: false }); }
-    };
-    change = async scope => {
-      if (this.writing) return;
-      const id = this.props.sessionId, write = {};
-      this.writing = write; ++this.revision;
-      const active = () => this.alive && id === this.props.sessionId && this.writing === write;
-      this.setState({ busy: true, loading: false, error: '' });
-      try { const data = await api('/scope' + suffix(id), { scope }); if (active()) this.setState({ data }); }
-      catch (e) {
-        if (active()) {
-          this.setState({ error: e.message });
-          // Recover the actual selection without erasing the failed write.
-          try { const data = await api('/scope' + suffix(id)); if (active()) this.setState({ data }); }
-          catch (recoveryError) { if (active()) this.setState({ data: null, error: e.message + '；重新读取范围失败：' + recoveryError.message }); }
-        }
-      } finally { if (active()) { this.writing = null; this.setState({ busy: false, loading: false }); } }
-    };
-    render() {
-      const d = this.state.data;
-      return h('div', { className: 'cx-scope-chip', title: this.state.error || (d?.locked || this.props.locked ? '本会话已绑定范围' : '新会话的记忆范围') }, icon(d?.scope === 'global'?'globe':d?.scope === 'project' ? 'layers' : 'lock', 13),
-        d ? h(Select, { 'aria-label': '会话范围', disabled: d.locked || this.props.locked || this.state.busy, value: d.scope, onChange: e => this.change(e.target.value) }, h('option', { value: 'session' }, '会话隔离'), h('option', { value: 'project' }, '项目共享'),h('option',{value:'global'},'全局记忆'))
-          : h('span', { role: 'status' }, this.state.error ? '范围暂不可读' : '读取范围…'),
-        this.state.error && button('', this.load, { label: '重试会话范围', title: this.state.error, icon: 'refresh', className: 'cx-scope-retry', disabled: this.state.busy || this.state.loading }));
-    }
-  }
-  const ScopeChip = props => {
-    const main = useMainConversation(props);
-    const locked = props.useSessions(s => s.byId[props.sessionId]?.blank === false);
-    return main ? h(ScopeControl, { ...props, locked }) : null;
-  };
-  return { ContextSettings, ScopeChip, applyStyle(ctx) {
+  return { ContextSettings, applyStyle(ctx) {
     ctx.effect(() => {
       const style = document.createElement('style');
       style.dataset.plugin = 'trisoul-context-v1'; style.dataset.version = CONTEXT_UI_VERSION;
@@ -341,7 +333,7 @@ export function createContextUI(React) {
 
 export const CONTEXT_CSS = `
 .cx-field textarea{box-sizing:border-box;width:100%;min-height:150px;resize:vertical;font:inherit;color:inherit;background:var(--dsw-specific-input-major);border:1px solid var(--dsw-alias-border-l3);border-radius:8px;padding:8px 12px;}
-.cx-panel,.cx-integrated,.cx-scope-chip{
+.cx-panel,.cx-integrated{
   --cx-bg:var(--dsw-alias-bg-base,Canvas);--cx-text:var(--dsw-alias-label-primary,CanvasText);
   --cx-muted:var(--dsw-alias-label-tertiary,GrayText);--cx-line:color-mix(in srgb,var(--cx-text) 11%,var(--cx-bg));
   --cx-soft:color-mix(in srgb,var(--cx-text) 3%,var(--cx-bg));--cx-hover:color-mix(in srgb,var(--cx-text) 5%,var(--cx-bg));
@@ -365,9 +357,9 @@ html[data-omd-skin] .cx-btn{display:inline-flex;align-items:center;justify-conte
 html[data-omd-skin] .cx-btn:hover:not(:disabled){background:var(--cx-hover);border-color:color-mix(in srgb,var(--cx-text) 22%,var(--cx-bg))}html[data-omd-skin] .cx-btn.cx-primary{background:var(--cx-blue);border-color:var(--cx-blue);color:#fff;box-shadow:0 1px 2px #15347110}html[data-omd-skin] .cx-btn.cx-primary:hover:not(:disabled){background:#2158c3;border-color:#2158c3}
 html[data-omd-skin] .cx-btn.cx-quiet{background:transparent;border-color:transparent;color:var(--cx-muted)}html[data-omd-skin] .cx-btn.cx-quiet:hover:not(:disabled){color:var(--cx-text);background:var(--cx-hover);border-color:transparent}
 html[data-omd-skin] .cx-btn:disabled{opacity:.45;cursor:default;box-shadow:none}html[data-omd-skin] .cx-btn.cx-primary:disabled{color:var(--cx-muted);background:var(--cx-soft);border-color:var(--cx-line);opacity:.8}
-html[data-omd-skin] .cx-panel button:focus-visible,html[data-omd-skin] .cx-panel summary:focus-visible,html[data-omd-skin] .cx-navigation button:focus-visible,html[data-omd-skin] .cx-scope-chip:focus-within{outline:2px solid var(--cx-blue);outline-offset:3px}
-html[data-omd-skin] .cx-panel input:not([type=checkbox]),html[data-omd-skin] .cx-panel select,html[data-omd-skin] .cx-panel textarea{width:100%;min-width:0;border:1px solid var(--cx-line);border-radius:8px;padding:9px 11px;background:var(--cx-bg);color:var(--cx-text);font:inherit;font-size:12px;line-height:1.6;outline:none;transition:border-color .15s,box-shadow .15s}
-html[data-omd-skin] .cx-panel input:not([type=checkbox]):focus,html[data-omd-skin] .cx-panel select:focus,html[data-omd-skin] .cx-panel textarea:focus{border-color:var(--cx-blue);box-shadow:0 0 0 3px var(--cx-tint)}html[data-omd-skin] .cx-panel input::placeholder,html[data-omd-skin] .cx-panel textarea::placeholder{color:var(--cx-muted);opacity:.75}
+html[data-omd-skin] .cx-panel button:focus-visible,html[data-omd-skin] .cx-panel summary:focus-visible,html[data-omd-skin] .cx-navigation button:focus-visible{outline:2px solid var(--cx-blue);outline-offset:3px}
+html[data-omd-skin] .cx-panel select,html[data-omd-skin] .cx-panel textarea{width:100%;min-width:0;border:1px solid var(--cx-line);border-radius:8px;padding:9px 11px;background:var(--cx-bg);color:var(--cx-text);font:inherit;font-size:12px;line-height:1.6;outline:none;transition:border-color .15s,box-shadow .15s}
+html[data-omd-skin] .cx-panel select:focus,html[data-omd-skin] .cx-panel textarea:focus{border-color:var(--cx-blue);box-shadow:0 0 0 3px var(--cx-tint)}html[data-omd-skin] .cx-panel input::placeholder,html[data-omd-skin] .cx-panel textarea::placeholder{color:var(--cx-muted);opacity:.75}
 html[data-omd-skin] .cx-panel textarea{resize:vertical;line-height:1.9;min-height:150px}html[data-omd-skin] .cx-panel input[type=checkbox]{accent-color:#2864d7;width:14px;height:14px;margin:0;flex-shrink:0}html[data-omd-skin] .cx-panel input:disabled,html[data-omd-skin] .cx-panel textarea:disabled{opacity:.65}
 .cx-field{display:flex;flex-direction:column;gap:7px;min-width:0;margin:9px 0}.cx-field>span{font-size:11px;color:var(--cx-muted)}.cx-field small{font-size:10px}
 .cx-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 16px}.cx-fields{border:0;margin:0;padding:0;min-width:0}.cx-fields:disabled{opacity:.72}
@@ -413,8 +405,6 @@ html[data-omd-skin] .cx-panel textarea{resize:vertical;line-height:1.9;min-heigh
 .cx-session{margin:22px 0}.cx-session-head{display:flex;align-items:center;gap:10px;margin-bottom:15px}.cx-session-head>div{min-width:0;flex:1}.cx-session-head h3{overflow-wrap:anywhere;font-size:12px}.cx-session-head small{font-size:9px}.cx-session-icon{display:grid;place-items:center;width:30px;height:32px;border:1px solid var(--cx-line);border-radius:8px;color:var(--cx-muted);flex-shrink:0}
 .cx-timeline{margin-left:15px;padding-left:22px;border-left:1px solid var(--cx-line)}.cx-timeline-record{position:relative;padding:0 0 19px;margin-bottom:5px}.cx-timeline-record:last-child{padding-bottom:0}.cx-timeline-dot{position:absolute;top:6px;left:-27px;width:9px;height:9px;border:2px solid var(--cx-bg);border-radius:50%;background:color-mix(in srgb,var(--cx-blue) 65%,var(--cx-bg));box-shadow:0 0 0 1px var(--cx-line)}.cx-timeline-record time{font-size:10px;color:var(--cx-muted)}.cx-timeline-record>.cx-prose{margin:7px 0 8px}.cx-timeline-record .cx-record-footer{padding-bottom:9px;border-bottom:1px solid var(--cx-line)}
 .cx-reader{position:absolute;inset:0;z-index:5;background:var(--cx-bg);display:flex;flex-direction:column;outline:none}.cx-reader-head{display:flex;align-items:center;gap:10px;padding:12px 17px;border-bottom:1px solid var(--cx-line);flex-shrink:0}.cx-reader-head>strong{flex:1;font-size:13px}.cx-record-meta{display:flex;flex-direction:column;gap:6px;padding:20px 0 0}.cx-record-meta code{font-size:11px}.cx-document{padding:21px 0;border-bottom:1px solid var(--cx-line)}.cx-document pre{max-height:none;margin:0}.cx-global-editor{min-height:295px!important}
-.cx-scope-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border:1px solid var(--cx-line);border-radius:7px;max-width:140px;line-height:1.4;font-size:11px;color:var(--cx-muted);background:var(--cx-bg)}.cx-scope-chip select{border:0;background:transparent;color:inherit;font:inherit;padding:0;min-width:0;outline:none;cursor:pointer}.cx-scope-chip select:disabled{opacity:1;appearance:none;cursor:default}
-.cx-scope-chip .cx-scope-retry{width:22px;min-width:22px;height:22px;padding:3px;border:0;background:transparent;color:inherit}
 @container cx (max-width:400px){.cx-head{padding:18px 16px 15px}.cx-body{padding:0 16px 20px}.cx-tabs{padding:0 16px;gap:19px}.cx-savebar{padding:11px 15px}.cx-frequency-preview>div{padding:10px}.cx-frequency-preview strong{font-size:22px}.cx-frequency-preview small{font-size:9px}.cx-grid{gap:2px 11px}.cx-choice{padding:12px}.cx-stage{gap:5px}.cx-stage small{font-size:8.5px}.cx-stage strong{font-size:10px}.cx-pipeline-card{padding:13px}.cx-pipeline-action{justify-content:flex-start}.cx-pipeline-action small{width:100%}.cx-record{padding:12px}.cx-selection{gap:6px;flex-wrap:wrap}.cx-selection .cx-actions{margin-left:auto}.cx-save-status{max-width:45%}.cx-head-title{gap:9px}}
 @container cx (max-width:320px){.cx-grid{grid-template-columns:1fr}.cx-choice-grid{grid-template-columns:1fr}.cx-settings .cx-segments{flex-direction:column}.cx-tabs{gap:14px}.cx-tabs button{font-size:11px}.cx-frequency-preview{gap:5px}.cx-frequency-preview>div{padding:8px}.cx-frequency-preview small{width:100%}.cx-stage .cx-dot{display:none}.cx-save-status svg{display:none}.cx-record-check time{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.cx-panel *{animation:none!important;transition:none!important}}

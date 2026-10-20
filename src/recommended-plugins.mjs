@@ -82,18 +82,27 @@ export class RecommendedPluginManager {
   async status() {
     if (this.getHostVersion) await this.refreshHost();
     const bundles = await this.manager.listBundles();
+    const entries = this.catalog.some(plugin => plugin.bundled) ? await this.manager.listPlugins() : [];
     return { autoUpdate: this.getConfig().recommendedPluginsAutoUpdate === true, checkedAt: this.checkedAt, busy: this.current,
       plugins: this.catalog.map(plugin => {
         plugin = resolveRecommendedPlugin(plugin, this.hostVersion);
         if (plugin.bundled) {
-          const enabled = this.getBundledPluginState(plugin)?.enabled === true;
-          return { id: plugin.id, bundled: true, installed: true, enabled, removable: false, version: plugin.version ?? null,
-            unavailable: enabled ? null : '内置工作台尚未启用，请检查宿主插件配置并重启 DSH。' };
+          const rows = entries.filter(row => row.moduleName === plugin.moduleName);
+          const row = rows.length === 1 ? rows[0] : undefined;
+          const enabled = row?.enabled === true;
+          return { id: plugin.id, bundled: true, installed: true, enabled, active: row?.fiberPhase === 'active', removable: false, version: plugin.version ?? null,
+            ...this.records.get(plugin.id),
+            readOnly: !row || !!row.readOnlyReason,
+            unavailable: !row ? '未找到可管理的功能入口，请重新读取状态。' : row.readOnlyReason ? '此功能由宿主配置管理。' : null,
+            ...(!enabled && this.getBundledPluginState(plugin)?.enabled === true && !this.records.get(plugin.id)?.restartRequired
+              ? { message: '内置入口已关闭，独立安装仍在提供此功能。' } : {}),
+          };
         }
         const bundle = bundles.find(item => item.name === plugin.packageName);
         const record = this.records.get(plugin.id);
-        const needsBuildSwitch = !!plugin.hostBuilds && !!bundle?.installed && !!bundle.version && !!plugin.review && bundle.version !== plugin.review.version && !bundle.version.startsWith(this.hostVersion + '.iui.');
-        return { id: plugin.id, installed: !!bundle?.installed, enabled: !!bundle?.enabled, removable: !!bundle?.removable && !bundle?.readOnlyReason, unavailable: this.unavailable(plugin),
+        const installed = !!bundle?.installed || bundle?.availability === 'installation';
+        const needsBuildSwitch = !!plugin.hostBuilds && installed && !!bundle.version && !!plugin.review && !bundle.version.startsWith(this.hostVersion + '.' + (plugin.versionSuffix || 'iui') + '.');
+        return { id: plugin.id, installed, enabled: !!bundle?.enabled, readOnly: !!bundle?.readOnlyReason, removable: !!bundle?.removable && !bundle?.readOnlyReason, unavailable: this.unavailable(plugin),
           version: bundle?.version || null, ...record,
           ...(plugin.hostBuilds ? { hostVersion: this.hostVersion, review: plugin.review ?? null, expectedVersion: plugin.review?.version ?? null, needsBuildSwitch,
             ...(needsBuildSwitch && !record?.error ? { message: this.unavailable(plugin)
@@ -111,11 +120,11 @@ export class RecommendedPluginManager {
   start(id, action, automatic = false) {
     const entry = this.catalog.find(item => item.id === id);
     const plugin = entry && resolveRecommendedPlugin(entry, this.hostVersion);
-    if (!plugin || !['install', 'update', 'uninstall'].includes(action)) throw Error('未知的插件操作');
-    if (plugin.bundled) throw Error('内置插件随 OMD 管理，请通过 OMD 更新，不能在推荐页安装、更新或卸载');
-    if (plugin.manualInstall) throw Error(plugin.manualInstall);
+    if (!plugin || !['install', 'update', 'uninstall', 'enable', 'disable'].includes(action)) throw Error('未知的插件操作');
+    if (plugin.bundled && !['enable', 'disable'].includes(action)) throw Error('内置功能随 OMD 更新');
+    if (plugin.manualInstall && !['enable', 'disable', 'uninstall'].includes(action)) throw Error(plugin.manualInstall);
     const unavailable = this.unavailable(plugin);
-    if (unavailable && action !== 'uninstall' && (this.hostResolved || entry.unavailable && !entry.unavailableHosts)) throw Error(unavailable);
+    if (unavailable && ['install', 'update'].includes(action) && (this.hostResolved || entry.unavailable && !entry.unavailableHosts)) throw Error(unavailable);
     if (this.closed) throw Error('插件管理已停止');
     if (this.job) throw Error('另一个插件操作正在进行，请稍候');
     this.current = { id, action, automatic, startedAt: this.now(), requestId: randomUUID() };
@@ -126,14 +135,27 @@ export class RecommendedPluginManager {
     return this.job;
   }
   async run(plugin, action, automatic) {
-    if (plugin.bundled) throw Error('内置插件随 OMD 管理，请通过 OMD 更新');
+    if (plugin.bundled) {
+      const rows = (await this.manager.listPlugins()).filter(row => row.moduleName === plugin.moduleName);
+      if (rows.length !== 1 || rows[0].readOnlyReason) throw Error('未找到可修改的功能入口，请到宿主“插件”页面检查');
+      this.abort.signal.throwIfAborted();
+      return this.finish(plugin, action, await this.manager.setPluginEnabled(rows[0].entryId, action === 'enable'));
+    }
     const entry = plugin;
     if (this.getHostVersion) await this.refreshHost();
     const operationHost = this.hostVersion;
     plugin = resolveRecommendedPlugin(entry, operationHost);
-    if (action !== 'uninstall' && this.unavailable(plugin)) throw Error(this.unavailable(plugin));
     let bundle = (await this.manager.listBundles()).find(item => item.name === plugin.packageName);
     this.abort.signal.throwIfAborted();
+    const present = !!bundle?.installed || bundle?.availability === 'installation';
+    if (['enable', 'disable'].includes(action)) {
+      if (bundle?.readOnlyReason) throw Error('此插件由宿主管理，无法在这里修改');
+      if (present) return this.finish(plugin, action, await this.manager.setBundleEnabled(plugin.packageName, action === 'enable'));
+      if (action === 'disable') return this.finish(plugin, action, { application: 'applied' });
+      // Enabling an absent feature is one operation: download, install and activate.
+      action = 'install';
+    }
+    if (action !== 'uninstall' && (plugin.manualInstall || this.unavailable(plugin))) throw Error(plugin.manualInstall || this.unavailable(plugin));
     if (action === 'install' && bundle?.installed) throw Error('插件已经安装，请使用更新');
     if (action !== 'install' && !bundle?.installed) throw Error('插件尚未安装');
     if (bundle?.readOnlyReason) throw Error('此插件由宿主管理，无法在这里修改');
@@ -166,7 +188,7 @@ export class RecommendedPluginManager {
           && version.startsWith(current.version + '-omd.');
         const reviewedBuildMigration = !!plugin.hostBuilds && plugin.review?.dsh === this.hostVersion && /^[a-f0-9]{64}$/.test(plugin.review?.sha256 ?? '')
           && [...Object.entries(plugin.historicalHostBuilds ?? {}), ...Object.entries(plugin.hostBuilds)].some(([host, build]) => host !== this.hostVersion && build.version === current?.version);
-        if (automatic && plugin.hostBuilds && current?.version && !current.version.startsWith(this.hostVersion + '.iui.')) { this.records.set(plugin.id, { ...this.records.get(plugin.id), message: '宿主已变更，请手动更新为对应核验构建；界面状态数据将保留。', error: '' }); return false; }
+        if (automatic && plugin.hostBuilds && current?.version && !current.version.startsWith(this.hostVersion + '.' + (plugin.versionSuffix || 'iui') + '.')) { this.records.set(plugin.id, { ...this.records.get(plugin.id), message: '宿主已变更，请手动更新为对应核验构建；界面状态数据将保留。', error: '' }); return false; }
         if (comparison !== null && ((comparison < 0 && !reviewedForkMigration && !reviewedBuildMigration) || (comparison === 0 && !plugin.review?.source && this.records.get(plugin.id)?.failedInstallVersion !== version))) {
           this.records.set(plugin.id, { ...this.records.get(plugin.id), message: plugin.review ? (current.version === version ? '已是核验版本' : '当前版本高于核验版本，未降级') : '已是最新版本', error: '' });
           return false;
@@ -198,10 +220,13 @@ export class RecommendedPluginManager {
         result = await this.manager.installBundle(spec, { enabled, requestId: this.current.requestId });
       }
     }
+    this.finish(plugin, action, result, version);
+  }
+  finish(plugin, action, result, version) {
     if (result.application === 'failed') {
       const pending = result.pendingBuilds || [];
       this.records.set(plugin.id, { ...this.records.get(plugin.id), pendingBuilds: pending,
-        ...(action !== 'uninstall' && result.stage === 'enable' && result.bundle === plugin.packageName ? { failedInstallVersion: version } : {}),
+        ...(version && result.stage === 'enable' && result.bundle === plugin.packageName ? { failedInstallVersion: version } : {}),
       });
       const message = result.error?.code === 'incompatible-version' ? pluginManagementError(result.error)
         : result.error?.diagnostic || result.packageResult?.output || result.error?.code || '插件操作失败';
@@ -212,7 +237,7 @@ export class RecommendedPluginManager {
     if (!['applied', 'restart-required'].includes(result.application)) throw Error('未能确认插件操作结果，请到宿主“插件”页面检查');
     const restartRequired = result.application === 'restart-required';
     this.records.set(plugin.id, { ...this.records.get(plugin.id), failedInstallVersion: undefined, restartRequired, error: '',
-      message: (action === 'uninstall' ? '已卸载' : action === 'update' ? '更新已完成' : '安装已完成') + (restartRequired ? '，重启 DSH 后生效' : ''),
+      message: ({ uninstall: '已卸载', update: '更新已完成', install: '已安装并启用', enable: '已开启', disable: '已关闭' }[action]) + (restartRequired ? '，重启 DSH 后生效' : ''),
     });
   }
   async tick() {
@@ -234,7 +259,7 @@ export class RecommendedPluginManager {
   }
   close() {
     this.closed = true; this.abort.abort();
-    if (this.current?.action !== 'uninstall' && this.current?.requestId) void this.manager.cancelInstall(this.current.requestId).catch(() => {});
+    if (['install', 'enable', 'update'].includes(this.current?.action) && this.current?.requestId) void this.manager.cancelInstall(this.current.requestId).catch(() => {});
   }
 }
 

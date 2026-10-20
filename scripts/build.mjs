@@ -1,6 +1,7 @@
 import './build-host.mjs';
 import './build-deepseek-workbench.mjs';
 import './build-overview-native.mjs';
+import './build-permission-native.mjs';
 import { build } from 'esbuild';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +12,10 @@ for (const skin of ['google-material-expressive', 'ios-liquid-glass', 'codex-des
   await packSkin(fileURLToPath(new URL(`../src/client/skins/${skin}/`, import.meta.url)),
     fileURLToPath(new URL(`../src/client/skins/bundled/${skin}.json`, import.meta.url)));
 }
+
+await packSkin(fileURLToPath(new URL('../plugins/glyph-theme/src/theme/', import.meta.url)),
+  fileURLToPath(new URL('../src/client/skins/bundled/glyph-motion.json', import.meta.url)));
+await import('./build-glyph-theme.mjs');
 
 // The host mounts plugin-declared presets. Keep one authored composition;
 // the PTC variant only adds its tool presentation.

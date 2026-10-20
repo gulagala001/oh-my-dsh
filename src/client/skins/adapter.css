@@ -20,7 +20,7 @@ html.omd[data-omd-skin] :where(.tx-app,.tx-scope-chip,.tx-stats-line,.tx-bt-opti
 html.omd[data-omd-skin] :where([data-composer-card]) { border-color: var(--omd-border); border-radius: var(--omd-radius-composer); box-shadow: var(--omd-shadow); gap: var(--omd-gap); }
 html.omd[data-omd-skin] :where([data-composer-card]):focus-within { border-color: var(--omd-focus); }
 html.omd[data-omd-skin] :where([data-composer-input]) { font-family: var(--omd-font-body); line-height: var(--omd-line-height); }
-html.omd[data-omd-skin] :where(.YDXeBa_sessionRow,button:not([role=switch]),input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea) { border-radius: var(--omd-radius-control); }
+html.omd[data-omd-skin] :where(.YDXeBa_sessionRow,button:not([role=switch]),span[class*="_wrap"]:has(> input[class*="_input"]),[class*="_search"]:has(> input[class*="_searchInput"]),input:not(span[class*="_wrap"] > input, [class*="_search"] > input[class*="_searchInput"]):not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea) { border-radius: var(--omd-radius-control); }
 html.omd[data-omd-skin] .YDXeBa_sessionRow.YDXeBa_selected { background: var(--omd-selected); }
 html.omd[data-omd-skin] :where(.cx-card,.tx-card,[role=dialog],dialog,[role=menu]) { border-radius: var(--omd-radius-panel); }
 html.omd[data-omd-skin] :where(pre,code) { font-family: var(--omd-font-mono); }

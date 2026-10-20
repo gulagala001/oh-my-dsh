@@ -18,7 +18,7 @@ html.omd[data-omd-layout="google-material-expressive"][data-appearance] body {
 }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] :is(button,input,select,textarea) { font-family: var(--omd-font-ui); }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] :is(pre,code,kbd,samp,pre *,code *) { font-family: var(--omd-font-mono); }
-html.omd[data-omd-layout="google-material-expressive"][data-appearance] :is(button,[role=button],input,select,textarea):focus-visible { outline: 2px solid var(--omd-focus); outline-offset: 3px; }
+html.omd[data-omd-layout="google-material-expressive"][data-appearance] :is(button,[role=button],input:not(span[class*="_wrap"] > input, [class*="_search"] > input[class*="_searchInput"]),select,textarea):focus-visible { outline: 2px solid var(--omd-focus); outline-offset: 3px; }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] ::selection { background: var(--omd-selected); color: var(--omd-on-selected); }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] .gm-symbol { font-family: "OMD Material Symbols"; font-weight: 400; font-style: normal; line-height: 1; letter-spacing: normal; text-transform: none; white-space: nowrap; word-wrap: normal; direction: ltr; font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased; flex: none; display: inline-block; width: 1em; height: 1em; overflow: hidden; }
 
@@ -103,7 +103,7 @@ html.omd[data-omd-layout="google-material-expressive"][data-appearance] ._8HJdBW
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] ._8HJdBW_themeCube[aria-pressed=true] { background: var(--omd-selected); color: var(--omd-on-selected); border: 2px solid var(--omd-accent); }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] ._WvWnq_section > :first-child { border-radius: 20px 20px 8px 8px; }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] ._WvWnq_section > :last-child { border-radius: 8px 8px 20px 20px; }
-html.omd[data-omd-layout="google-material-expressive"][data-appearance] .VOzbGW_options :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select,textarea) { box-sizing: border-box; min-width: 0; max-width: 100%; min-height: 44px; border-radius: 12px; padding: 10px 14px; font-size: 14px; line-height: 22px; }
+html.omd[data-omd-layout="google-material-expressive"][data-appearance] .VOzbGW_options :is(input:not(span[class*="_wrap"] > input, [class*="_search"] > input[class*="_searchInput"]):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select,textarea) { box-sizing: border-box; min-width: 0; max-width: 100%; min-height: 44px; border-radius: 12px; padding: 10px 14px; font-size: 14px; line-height: 22px; }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] .VOzbGW_options :is(input:disabled,select:disabled,textarea:disabled) { opacity: .55; cursor: not-allowed; }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] .VOzbGW_options :is(input[aria-invalid=true],textarea[aria-invalid=true]) { border-color: var(--omd-danger); }
 html.omd[data-omd-layout="google-material-expressive"][data-appearance] :is(.VOzbGW_options,.tx-workbench) :is(.tx-button,.cx-btn,.gm-tonal-button,.gm-text-button) { min-height: 40px; padding: 9px 20px; border-radius: 24px; font-size: 13px; font-weight: 500; }

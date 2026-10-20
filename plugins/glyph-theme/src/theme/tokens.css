@@ -1,0 +1,49 @@
+.omd {
+  --omd-font-ui: "SF Mono", "SFMono-Regular", Menlo, "PingFang SC", monospace;
+  --omd-font-body: "SF Mono", "SFMono-Regular", Menlo, "PingFang SC", monospace;
+  --omd-font-mono: "SF Mono", "SFMono-Regular", Menlo, monospace;
+  --omd-font-size: 13px;
+  --omd-line-height: 1.8;
+  --omd-gap: 8px;
+  --omd-radius-control: 0px;
+  --omd-radius-panel: 0px;
+  --omd-radius-composer: 0px;
+  --omd-shadow: none;
+  --omd-duration: 0ms;
+}
+.omd[data-appearance="light"] {
+  --omd-bg: #ffffff;
+  --omd-surface: #ffffff;
+  --omd-surface-solid: #ffffff;
+  --omd-sidebar: #ffffff;
+  --omd-text: #080808;
+  --omd-muted: #585858;
+  --omd-border: #939393;
+  --omd-hover: transparent;
+  --omd-selected: transparent;
+  --omd-accent: #000000;
+  --omd-on-accent: #ffffff;
+  --omd-focus: #111111;
+  --omd-success: #363636;
+  --omd-warning: #525252;
+  --omd-danger: #181818;
+  --omd-code-bg: transparent;
+}
+.omd[data-appearance="dark"] {
+  --omd-bg: #050505;
+  --omd-surface: #080808;
+  --omd-surface-solid: #0b0b0b;
+  --omd-sidebar: #050505;
+  --omd-text: #f5f5f5;
+  --omd-muted: #aaaaaa;
+  --omd-border: #555555;
+  --omd-hover: transparent;
+  --omd-selected: transparent;
+  --omd-accent: #ffffff;
+  --omd-on-accent: #050505;
+  --omd-focus: #ffffff;
+  --omd-success: #dddddd;
+  --omd-warning: #cccccc;
+  --omd-danger: #ffffff;
+  --omd-code-bg: transparent;
+}

@@ -1,0 +1,3 @@
+- insert:
+    - id: dsh-undo-plugin
+      name: "@gulagala001/dsh-undo-plugin"

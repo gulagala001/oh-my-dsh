@@ -196,7 +196,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
             onClick={() => void save({provider:selected.provider,model:selected.model}, 'off', model.reasoning?.defaultEffort)}><Reset/></Button>
           <Button size="sm" variant="ghost" ref={modelButton} type="button" className="omd-model-current" onClick={() => { setPane('model'); setQuery(''); }}><span>{renderModelLabel(group, model, 'menu')}</span><Chevron/></Button>
         </header>
-        <div className="omd-effort-control" data-ultra={level?.mode === 'ultra' || undefined} data-dragging={dragging || undefined} style={{'--effort-progress':`${choices.length > 1 ? value / (choices.length - 1) * 100 : 0}%`,'--effort-ratio':choices.length > 1 ? value / (choices.length - 1) : 0}}>
+        <div className="omd-effort-control" data-effort-value={value} data-effort-max={choices.length - 1} data-ultra={level?.mode === 'ultra' || undefined} data-dragging={dragging || undefined} style={{'--effort-progress':`${choices.length > 1 ? value / (choices.length - 1) * 100 : 0}%`,'--effort-ratio':choices.length > 1 ? value / (choices.length - 1) : 0}}>
           <div className="omd-effort-track" aria-hidden="true"><div className="omd-effort-fill"><i className="omd-effort-glow"/>{particles.map((style,i) => <i key={i} className="omd-effort-particle" style={style}/>)}</div>
             <div className="omd-effort-ticks">{choices.map((_,i) => <i key={i} data-selected={i<=value||undefined} style={{left:`${choices.length > 1 ? i/(choices.length-1)*100 : 0}%`}}/>)}</div>
           </div><div className="omd-effort-thumb" aria-hidden="true"/>

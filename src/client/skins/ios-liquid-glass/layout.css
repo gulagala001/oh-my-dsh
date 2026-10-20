@@ -152,7 +152,7 @@ html.omd[data-omd-layout="ios-liquid"] :is(.cx-tabs,.tx-tabs) > button { padding
 html.omd[data-omd-layout="ios-liquid"] :is(.cx-field,.tx-field,.cx-toggle) { padding-block: 13px; }
 html.omd[data-omd-layout="ios-liquid"] :is(.cx-segments,.tx-segments) { padding: 3px; }
 html.omd[data-omd-layout="ios-liquid"] :is(.tx-button,.cx-btn) { min-height: 36px; padding: 8px 16px; font-weight: 550; }
-html.omd[data-omd-layout="ios-liquid"] :is(.VOzbGW_options,.cx-settings) :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select) { min-height: 36px; }
+html.omd[data-omd-layout="ios-liquid"] :is(.VOzbGW_options,.cx-settings) :is(input:not(span[class*="_wrap"] > input, [class*="_search"] > input[class*="_searchInput"]):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select) { min-height: 36px; }
 html.omd[data-omd-layout="ios-liquid"] :is(.VOzbGW_options,.cx-settings) input[type=checkbox]:not([role=switch]) {
   appearance: none; -webkit-appearance: none; width: 44px; height: 26px; flex: 0 0 44px;
   position: relative; border: 0; border-radius: 999px; background: #78788045; cursor: pointer;

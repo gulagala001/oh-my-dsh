@@ -160,14 +160,14 @@ html.omd[data-omd-layout="claude-cli-terminal"] :is(.oY77xG_selector,.hVGvvW_sel
 html.omd[data-omd-layout="claude-cli-terminal"] ._8HJdBW_cubeRow { gap: 6px; }
 html.omd[data-omd-layout="claude-cli-terminal"] ._8HJdBW_themeCube { border-radius: 2px; background: var(--omd-surface); min-height: 36px; padding: 6px 12px; flex-direction: row; gap: 8px; }
 html.omd[data-omd-layout="claude-cli-terminal"] ._8HJdBW_themeCube._8HJdBW_selected { border-color: var(--omd-accent); color: var(--omd-accent); }
-html.omd[data-omd-layout="claude-cli-terminal"] :is(.VOzbGW_options,.cx-settings) :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select) { min-height: 32px; max-width: 100%; box-sizing: border-box; font-size: 12px; }
+html.omd[data-omd-layout="claude-cli-terminal"] :is(.VOzbGW_options,.cx-settings) :is(input:not(span[class*="_wrap"] > input, [class*="_search"] > input[class*="_searchInput"]):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select) { min-height: 32px; max-width: 100%; box-sizing: border-box; font-size: 12px; }
 html.omd[data-omd-layout="claude-cli-terminal"] :is(.VOzbGW_options,.cx-settings) textarea { line-height: 1.65; font-size: 12px; resize: vertical; }
 html.omd[data-omd-layout="claude-cli-terminal"] input[type=checkbox]:not([role=switch]) { appearance: auto; width: 16px; height: 16px; flex: 0 0 16px; }
 html.omd[data-omd-layout="claude-cli-terminal"] .cx-toggle input::after { content: none; }
 html.omd[data-omd-layout="claude-cli-terminal"] .cx-btn.cx-primary:not(:disabled) { background: var(--omd-button-bg); color: var(--omd-button-fg); border-color: var(--omd-button-bg); box-shadow: none; }
 html.omd[data-omd-layout="claude-cli-terminal"] .cx-btn.cx-primary:hover:not(:disabled) { background: var(--omd-button-hover); }
 html.omd[data-omd-layout="claude-cli-terminal"] :is(.tx-button,.cx-btn,.zGbnIq_addButton,.zGbnIq_secondaryButton) { min-height: 32px; border-radius: 2px; padding: 5px 10px; font-size: 12px; font-weight: 400; }
-html.omd[data-omd-layout="claude-cli-terminal"] :is(button,input,select,textarea):focus-visible { outline: 2px solid var(--omd-focus); outline-offset: 2px; }
+html.omd[data-omd-layout="claude-cli-terminal"] :is(button,input:not(span[class*="_wrap"] > input, [class*="_search"] > input[class*="_searchInput"]),select,textarea):focus-visible { outline: 2px solid var(--omd-focus); outline-offset: 2px; }
 html.omd[data-omd-layout="claude-cli-terminal"] :is(button,input,select,textarea):disabled { opacity: .5; }
 
 /* Workbench, menus, file previews: chrome only; never filter real media. */

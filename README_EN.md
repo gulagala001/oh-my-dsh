@@ -2,7 +2,7 @@
 
 <h1 align="center">Oh My DSH</h1>
 <p align="center"><strong>Better agent instructions. A workspace that feels yours. Longer work, less repetition.</strong></p>
-<p align="center">System prompts · Native DSH & four optional themes · Computer use · Annotations · Usage monitoring · Memory & auto compaction</p>
+<p align="center">System prompts · Glyph character theme by default, plus five other appearances · Computer use · Annotations · Usage monitoring · Memory & auto compaction</p>
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong> · <a href="#quickstart">Install</a> · <a href="docs/getting-started_EN.md">First steps</a> · <a href="docs/README_EN.md">Documentation</a></p>
 
 **Turn the DSH you already use into a more complete AI workspace.**
@@ -20,7 +20,7 @@ Current release: **OMD 0.18.8**, with [separate packages](docs/releases.md) for 
 | What you want | What OMD adds |
 | --- | --- |
 | **Work that moves beyond an answer** | System instructions for understanding requirements, working with code, using tools, delivering and checking results. |
-| **An interface you enjoy opening** | Native DSH & four optional themes, light/dark modes and 28 palettes, with configurable layout, materials, fonts and backgrounds. |
+| **An interface you enjoy opening** | Glyph character theme by default, plus five other appearances, light/dark modes and 29 palettes, with configurable layout, materials, fonts and backgrounds. |
 | **An agent that can act outside the chat** | Bundled OpenCU for browser and desktop tasks, with pages, activity and previews in the conversation. |
 | **“Change this” without re-explaining everything** | Annotate a page, image or supported content and bring the location and feedback back into the draft. |
 | **Continuity across long work** | Context preparation, Auto Compact and Dream, with original requirements and sources available for recall. |
@@ -51,7 +51,7 @@ These are execution strategies, not an intelligence upgrade or a success-rate gu
 
 **DSH Native · Codex Desktop · iOS Liquid Glass · Claude CLI · Google Material**
 
-Choose a restrained desktop, translucent glass, a terminal-inspired workspace or expressive Material styling. Each has its own layout and materials, with light and dark modes. Themes, **28 palettes** and custom backgrounds are independent, so changing a theme does not mean starting over.
+Choose a restrained desktop, translucent glass, a terminal-inspired workspace or expressive Material styling. Each has its own layout and materials, with light and dark modes. Themes, **29 palettes** and custom backgrounds are independent, so changing a theme does not mean starting over.
 
 Adjust fonts, section colors, logos and browser titles. Reduce transparency and motion when you want a quieter workspace. Themes do not include the corresponding brands' models or accounts.
 

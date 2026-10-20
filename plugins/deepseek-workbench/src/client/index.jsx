@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { CHAT_URL, PLATFORM_URL, createBrowserAdapter, httpUrl } from './browser-adapter.mjs';
@@ -9,6 +9,8 @@ import { statusScript, previewScript, commandScript } from './native-chat-bridge
 import { initializeHostCapabilities } from './host-capabilities.mjs';
 import css from './style.css';
 import nativeCss from './native-chat.css';
+import { installTemporarySidebar } from './temporary-sidebar.jsx';
+import { recoverTemporaryChats, liveTemporaryOwners } from './temporary-web.mjs';
 
 export const inject = ['slots'];
 export const PANEL_ID = 'dsh-deepseek-workbench/chat';
@@ -37,15 +39,15 @@ function useBackendState(enabled = true) {
   return [state, () => setRevision(value => value + 1)];
 }
 function WarningList({ warnings }) { return warnings?.length ? <div className="dswb-notice" role="status">{warnings.map((text, index) => <p key={index}>{text}</p>)}</div> : null; }
-export function BrowserPage({ ctx, url = CHAT_URL, workspace = 'deepseek-workbench', chat = true, native = false, ownerSignal, notify = () => {} }) {
+export function BrowserPage({ ctx, url = CHAT_URL, workspace = 'deepseek-workbench', chat = true, native = false, temporary, ownerSignal, notify = () => {} }) {
   const container = useRef(null), adapter = useRef(null), alive = useRef(true), generation = useRef(0), draft = useRef(null);
   const [frame, setFrame] = useState({ loading: true, ready: false, url, warnings: [] });
   const [revision, setRevision] = useState(0), [operation, setOperation] = useState(''), [error, setError] = useState('');
   const imported = useRef(null), lastLoginState = useRef('');
   const [backend, retryBackend] = useBackendState(chat);
-  const verificationStarted = useRef(false);
+  const verificationStarted = useRef(false), cleanupRecovery = useRef(false);
   useEffect(() => {
-    if (!native || !backend.demoVerify || !frame.ready || frame.loading || verificationStarted.current) return;
+    if (temporary || !native || !backend.demoVerify || !frame.ready || frame.loading || verificationStarted.current) return;
     verificationStarted.current = true;
     const report = value => api('/verification-result', value).catch(() => {});
     void (async () => {
@@ -74,7 +76,7 @@ export function BrowserPage({ ctx, url = CHAT_URL, workspace = 'deepseek-workben
       } catch (failure) { await report({ phase: 'failed', error: failure.message }); }
     })();
   }, [native, backend.demoVerify, frame.ready, frame.loading]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     alive.current = true;
     ++generation.current;
     const controller = new AbortController();
@@ -83,8 +85,12 @@ export function BrowserPage({ ctx, url = CHAT_URL, workspace = 'deepseek-workben
     if (ownerSignal?.aborted) controller.abort();
     setFrame({ loading: true, ready: false, url, warnings: [] });
     setError(''); setOperation('');
-    createBrowserAdapter({ bridge: window.dshDesktop?.browser, container: container.current, workspace, url, signal: controller.signal, onState: setFrame }).then(value => { if (!controller.signal.aborted) adapter.current = value; }, failure => { if (!controller.signal.aborted) { setFrame(old => ({ ...old, loading: false })); setError(failure.message); } });
-    return () => { alive.current = false; ++generation.current; ownerSignal?.removeEventListener('abort', abort); controller.abort(); adapter.current = null; };
+    createBrowserAdapter({ bridge: window.dshDesktop?.browser, container: container.current, workspace, url, signal: controller.signal, onState: value => { temporary?.observe(value.url); setFrame(value); } }).then(value => { if (!controller.signal.aborted) { adapter.current = value; if (temporary) { temporary.adapter = value; if (temporary.closed) void value?.dispose(); } } }, failure => { if (!controller.signal.aborted) { setFrame(old => ({ ...old, loading: false })); setError(failure.message); } });
+    return () => { alive.current = false; ++generation.current; ownerSignal?.removeEventListener('abort', abort); if (temporary && !temporary.closed && adapter.current) {
+      const page = adapter.current, holding = document.createElement('div');
+      holding.hidden = true; document.body.append(holding); holding.append(page.element);
+      void temporary.close().catch(failure => console.error('临时网页聊天清理待重试:', failure.message)).finally(() => { liveTemporaryOwners.delete(temporary.token); controller.abort(); holding.remove(); });
+    } else controller.abort(); adapter.current = null; };
   }, [url, workspace, revision, ownerSignal]);
   const openImported = async (result, ticket) => {
     const sessions = service(ctx, 'sessions'), workspaceUI = service(ctx, 'uiWorkspace');
@@ -93,7 +99,7 @@ export function BrowserPage({ ctx, url = CHAT_URL, workspace = 'deepseek-workben
     if (alive.current && generation.current === ticket) workspaceUI.openSession(result.sessionId);
   };
   const extract = async () => {
-    if (operation) return;
+    if (temporary || operation) return;
     const ticket = generation.current;
     const current = () => alive.current && generation.current === ticket;
     setOperation('extract'); setError('');
@@ -114,10 +120,12 @@ export function BrowserPage({ ctx, url = CHAT_URL, workspace = 'deepseek-workben
     finally { if (current()) setOperation(''); }
   };
   const retry = () => { setError(''); if (chat) retryBackend(); if (frame.ready) adapter.current?.reload(); else setRevision(value => value + 1); };
-  if (native) return <NativeChat frame={frame} adapter={adapter} guest={<div className="dswb-viewport" ref={container} aria-busy={frame.loading}/>}
+  if (native) return <NativeChat temporary={temporary} frame={frame} adapter={adapter} guest={<div className="dswb-viewport" ref={container} aria-busy={frame.loading}/>}
     error={error || (backend.error ? '迁移服务不可用：' + backend.error : '')} setError={setError} onImport={extract} importing={operation === 'extract' ? '读取消息…' : operation === 'import' ? '正在迁移…' : ''}
     canImport={frame.ready && !frame.loading && !operation && backend.enabled} retry={retry} onExternal={() => external(frame.url || url)} warnings={<WarningList warnings={[...frame.warnings, ...(!backend.loading && !backend.error && !backend.enabled ? ['迁移服务已停用，请启用 DeepSeek Workbench 插件后重试。'] : [])]}/>}
-    onStatus={value => { if (!backend.demoOpen) return; const state = { ready: value.ready === true, signIn: value.signIn === true };
+    onStatus={value => {
+      if (!temporary && value.ready && adapter.current && !cleanupRecovery.current) { cleanupRecovery.current = true; void recoverTemporaryChats(adapter.current, localStorage, liveTemporaryOwners).catch(failure => setError('上次临时对话清理失败：' + failure.message)); }
+      if (!backend.demoOpen) return; const state = { ready: value.ready === true, signIn: value.signIn === true };
       const key = JSON.stringify(state); if (key !== lastLoginState.current) { lastLoginState.current = key; void api('/login-state', state).catch(() => {}); } }}/ >;
   return <div className="dswb-page" data-deepseek-workbench={chat ? 'chat' : 'platform'}>
     <div className="dswb-toolbar" role="toolbar" aria-label={chat ? 'DeepSeek 网页聊天' : 'API 开放平台'}>
@@ -293,7 +301,7 @@ function mountClient(ctx) {
     }).catch(error => { if (!diagnostics.signal.aborted) console.error('Workbench capability initialization failed', error); });
     return keep(() => { abortDiagnostics(); lifetime.signal.removeEventListener('abort', abortDiagnostics); if (openChat.current === open) openChat.current = null; disposeSlot?.(); });
   };
-  if (typeof ctx.inject === 'function') ctx.inject(['layout'], installMain);
+  if (typeof ctx.inject === 'function') { ctx.inject(['layout'], installMain); ctx.inject(['sidebarRight', 'sidebarRightTabs', 'commandUi'], scope => { installTemporarySidebar(scope, BrowserPage); }); }
   else if (ctx.layout) installMain(ctx);
   if (typeof ctx.slots.inject === 'function') ctx.slots.inject('settings.section', () => {
     if (stopped) return () => {};

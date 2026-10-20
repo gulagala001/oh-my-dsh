@@ -15,10 +15,13 @@ import { MaterialAppearance } from './google-material-expressive/appearance.jsx'
 import { applyMaterialIntegration, MATERIAL_LAYOUT } from './google-material-expressive/integration.jsx';
 import claudeTerminalLayout from './claude-cli-terminal/layout.css';
 import { applyTerminalPresentation } from './claude-cli-terminal/presentation.jsx';
+import glyphLayout from '../../../plugins/glyph-theme/src/theme/layout.css';
+import { applyGlyphIntegration } from './glyph-motion/integration.jsx';
 import { HistorySizeSetting } from '../history-settings.jsx';
 import { applySidebarPresentation } from '../sidebar.jsx';
 import { createSurfaceMarkers } from './surfaces.mjs';
 import { AppearanceDrafts, useAppearanceDrafts } from './advanced.jsx';
+import { glyphOwnership } from '../../../plugins/glyph-theme/src/shared/ownership.mjs';
 
 function AppearanceSettings({ runtime }) {
   const state = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot);
@@ -64,6 +67,9 @@ function AppearanceSettings({ runtime }) {
   </section>}</AppearanceDrafts.Provider>;
 }
 export function applySkins(ctx) {
+  // Claim before applying OMD tokens, so a standalone installation releases its
+  // style/attributes synchronously and cannot clear the new owner's palette.
+  ctx.effect(() => glyphOwnership().claimOmd());
   const surfaces = createSurfaceMarkers();
   ctx.effect(() => {
     let frame;
@@ -78,10 +84,11 @@ export function applySkins(ctx) {
   });
   applySidebarPresentation(ctx);
   let runtime;
-  ctx.effect(() => { runtime = createSkinRuntime(ctx, adapterCss, { 'ios-liquid': iosLiquidLayout, 'codex-desktop': codexDesktopLayout, 'claude-cli-terminal': claudeTerminalLayout, [MATERIAL_LAYOUT]: materialLayout }, appearanceCss, surfaces, layoutBaseCss); return () => runtime.dispose(); });
+  ctx.effect(() => { runtime = createSkinRuntime(ctx, adapterCss, { 'ios-liquid': iosLiquidLayout, 'codex-desktop': codexDesktopLayout, 'claude-cli-terminal': claudeTerminalLayout, 'glyph-motion': glyphLayout, [MATERIAL_LAYOUT]: materialLayout }, appearanceCss, surfaces, layoutBaseCss); return () => runtime.dispose(); });
   applyMaterialIntegration(ctx, () => runtime);
   applyCodexIntegration(ctx, () => runtime);
   applyTerminalPresentation(ctx, () => runtime);
+  applyGlyphIntegration(ctx, () => runtime);
   ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'omd-appearance', order: 15, label: () => '外观' }, () => <AppearanceSettings runtime={runtime}/>));
   return () => runtime;
 }

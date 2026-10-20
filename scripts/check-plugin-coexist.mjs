@@ -67,7 +67,6 @@ const report = { version: 1, kind: 'real-plugin-ecosystem', startedAt: new Date(
     'Host runtime outbound network is blocked except the synthetic provider; native installation may fetch package dependencies.',
     'Subscriptions business tools are checked for scoped visibility and unchanged live schemas; external authenticated search/media generation is not exercised.',
     'Complete invocation-neutral skill metadata is compared with the original host; actual model-invocable bodies succeed, model-prohibited calls explicitly refuse, and user-invocable slash gestures inject canonical instructions. Neither-invocable entries stay visible without execution.',
-    'Turn Rewind is checked for native installation, root activation and lifecycle; no workspace rollback is exercised.',
     'Non-CU OMD enhancements remain enabled; fixed transitional CU and auto-setup are disabled, and CodeGraph native indexing/optional binaries are not exercised.',
     'No plugin compatibility claim is inferred from successful package installation alone.'] };
 let host;

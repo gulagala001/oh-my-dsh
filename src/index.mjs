@@ -56,6 +56,7 @@ import { mountRecommendedPlugins } from './recommended-plugins.mjs';
 import { createPromptOptimizer, handlePromptOptimizerApi } from './prompt-optimizer.mjs';
 import { installBtwCompatibility } from './btw-compat.mjs';
 import { isBtwSession } from './btw-policy.mjs';
+import { TemporaryChats, handleTemporaryChatApi } from './temporary-chat.mjs';
 import { createProjectlessWorkspaceService } from './projectless-workspaces.mjs';
 
 export { Config };
@@ -87,6 +88,8 @@ export async function apply(ctx, config) {
   hub.budgets = new TaskBudgets(hub);
   hub.workflowBudget = new WorkflowBudget(hub.store);
   ctx.effect(() => () => { for (const agent of hub.agents.values()) hub.budgets.dispose(agent.session); });
+  const temporaryChats = new TemporaryChats(ctx);
+  ctx.effect(() => () => temporaryChats.dispose());
   const promptOptimizer = createPromptOptimizer(ctx, hub);
   ctx.effect(() => () => promptOptimizer.dispose());
   hub.codegraph = new CodegraphRuntime({ cacheDir: join(hub.store.dir, 'components', 'codegraph'), enabled: hub.config().codegraphEnabled !== false, autoInstall: hub.config().componentAutoSetup !== false });
@@ -324,6 +327,7 @@ export async function apply(ctx, config) {
         const url = new URL(req.url, 'http://localhost'), id = url.searchParams.get('session');
         if (await handleVersionApi({ req, res, url, service: versionService, send })) return;
         if (rejectUntrusted(ctx, req, res)) return;
+        if (await handleTemporaryChatApi({ service: temporaryChats, req, res, url })) return;
         if (url.pathname === '/trisoul-x/api/projectless-workspace') {
           if (req.method === 'GET') {
             send(res, 200, { managed: await projectless.owns(url.searchParams.get('cwd') || '') }); return;
