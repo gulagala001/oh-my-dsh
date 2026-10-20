@@ -4,7 +4,7 @@
   "source": "opencu@2.0.6-dsh.0.2.1-rc.2",
   "policy": "rewritten-plugin",
   "hostVersion": "0.2.1-rc.2",
-  "archiveSha256": "795114b13a4ae7c08289f3b0a357bb920373f27bf01641da170ce0aa16dbe246",
+  "archiveSha256": "fcc416a513f3229d28f4faef7ae2a0425df7fc8375c8aaa71261e764d741e476",
   "files": {
     "DEVELOPMENT.md": "93a023bba2d75c43725477af776d9f55e5ef14a4d50aa6788ded0763fdeafec6",
     "README.md": "c978c6f4a3966b16b81a16df2c9381405e08d94255a0bed43e08f5a5b1005cbb",
@@ -662,7 +662,7 @@
     "native/windows/Activity.cs": "5ee9dace021e3970e3a493ccc25f654da78add476c46436b97ebc6e542d2ce1d",
     "native/windows/OpenCU.cs": "32c9b727888c285714c1659a7b92b1bd4dca6e4a36f5cafb4052417b3cbece14",
     "native/windows/helper.ps1": "a509cd49a9213089a8dc36337c3a939f89c484d722bba3b8b6bbeccf81ca4993",
-    "package.json": "592a65dd3b3ca6488474b2e995d962834972bb5de5469ed737ed84e08cd5a196",
+    "package.json": "40e1d797871804267767695430325c340a70960109ddaee519c0e32f83593e63",
     "src/browser/actions.mjs": "c3691936d1eca4c6c5b7ca4207444e40d55002f715240e588d43c60932a92986",
     "src/browser/backend.mjs": "55aae6a2e6ec1cd8ada04a54e66336832ec46e57b55849b0e7dd25f6435816d3",
     "src/browser/composite.mjs": "b1a82b008c5a68391ffc287fc28e056732f278ec94dfba639fabfc6be24b87e9",

@@ -63,7 +63,7 @@
     "build:targets": "node scripts/build-targets.mjs",
     "pack": "node scripts/pack.mjs",
     "test": "node --experimental-vm-modules --test test/*.test.mjs",
-    "prepack": "node scripts/check-extension-distribution.mjs && node scripts/check-public-files.mjs"
+    "prepack": "node scripts/build.mjs && node scripts/check-extension-distribution.mjs && node scripts/check-public-files.mjs"
   },
   "dependencies": {
     "playwright": "1.63.0",
