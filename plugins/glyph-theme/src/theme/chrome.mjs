@@ -25,7 +25,7 @@ export function createCharacterChrome() {
     // Establish containing blocks together, without reparenting native nodes.
     anchors.update(hosts);
     stacking.update(contexts);
-    for(const [el,{r,padding,host}] of wanted) {
+    for(const [el,{host}] of wanted) {
       let layer=layers.get(el);
       if(!layer||layer.canvas.parentElement!==host) {
         layer?.canvas.remove();layer?.caption?.remove();
@@ -38,13 +38,23 @@ export function createCharacterChrome() {
         const caption=document.createElement('span');caption.className='omd-glyph-caption';caption.setAttribute('aria-hidden','true');
         el.appendChild(caption);layer.caption=caption;
       }
-      const hr=host.getBoundingClientRect(),hs=getComputedStyle(host),dpr=Math.min(devicePixelRatio||1,2);
+    }
+    // Read every host before updating any canvas size/style. Interleaving these
+    // reads and writes forced a full layout for each visible control.
+    const geometry=new Map(),dpr=Math.min(devicePixelRatio||1,2);
+    for(const {host} of wanted.values())if(!geometry.has(host)) {
+      const hr=host.getBoundingClientRect(),hs=getComputedStyle(host);
       // clientLeft/clientTop round half-pixel borders on Retina displays.
       const borderLeft=parseFloat(hs.borderLeftWidth)||0,borderTop=parseFloat(hs.borderTopWidth)||0;
+      geometry.set(host,{left:hr.left+borderLeft-host.scrollLeft,top:hr.top+borderTop-host.scrollTop});
+    }
+    for(const [el,{r,padding,host}] of wanted) {
+      const layer=layers.get(el),origin=geometry.get(host);
       const w=r.width+padding*2,h=r.height+padding*2;
       const {canvas,g}=layer;
       if(canvas.width!==Math.ceil(w*dpr)||canvas.height!==Math.ceil(h*dpr)){canvas.width=Math.ceil(w*dpr);canvas.height=Math.ceil(h*dpr);}
-      canvas.style.cssText=`left:${r.left-hr.left-borderLeft+host.scrollLeft-padding}px;top:${r.top-hr.top-borderTop+host.scrollTop-padding}px;width:${w}px;height:${h}px`;
+      const css=`left:${r.left-origin.left-padding}px;top:${r.top-origin.top-padding}px;width:${w}px;height:${h}px`;
+      if(layer.css!==css){canvas.style.cssText=css;layer.css=css;}
       layer.r=r;layer.padding=padding;layer.dpr=dpr;
       g.setTransform(dpr,0,0,dpr,(padding-r.left)*dpr,(padding-r.top)*dpr);
       g.textAlign='center';g.textBaseline='middle';

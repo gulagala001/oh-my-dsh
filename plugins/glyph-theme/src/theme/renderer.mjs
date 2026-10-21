@@ -3,6 +3,7 @@ import { createCharacterScene } from './scene.mjs';
 import { createWhalePainter } from './whale.mjs';
 import { createCharacterIcons } from './icons.mjs';
 import { createCharacterChrome } from './chrome.mjs';
+import { createOcclusionIndex } from './occlusion.mjs';
 import { createAttributeMarkers } from '../shared/attribute-markers.mjs';
 import { NATIVE_CONTENT, isChromeIcon, isBareToggle, inClosedDetails } from './semantics.mjs';
 import { readEffort, paintEffort } from './effort.mjs';
@@ -37,6 +38,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   let ink, muted, accent, line, boxes = [], brands = [], controls = [], ranges = [], covers = [];
   let divider, rightDivider, header, owner, clip, conversation, fieldRect, obstacles=[], effortElement, effortPeak = false, artwork = false;
   let ownerLayer=0;
+  let occluded=()=>false;
   let ultraMode=false,nextUltraWave=Infinity,ultraAnchor;
   function emitUltra(input,now) {
     const r=input.getBoundingClientRect();
@@ -57,16 +59,18 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   const inside = (r, x, y) => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
   function glyph(char, x, y, color = ink, alpha = 1, size = 10) {
     if (!local && clip && !inside(clip, x, y)) return;
-    if (artwork && obstacles.some(r => x > r.left - (r.pad??10) && x < r.right + (r.pad??10) && y > r.top - (r.pad??10) && y < r.bottom + (r.pad??10))) return;
-    if (!local && covers.some(c => c.layer>=ownerLayer && inside(c.r, x, y) && c.el !== owner && !c.el.contains(owner) && !owner?.contains(c.el)
+    if (artwork && occluded(x,y)) return;
+    if (!local && !artwork && covers.some(c => c.layer>=ownerLayer && inside(c.r, x, y) && c.el !== owner && !c.el.contains(owner) && !owner?.contains(c.el)
       && !(c.composer && owner?.closest(PANEL)))) return;
     g.globalAlpha = Math.max(0, Math.min(1, alpha)); g.fillStyle = color;
     g.font = `${size}px ${font}`; g.fillText(char, x, y);
   }
   function pixels(svg, r) {
     const cols=Math.max(8,Math.min(160,Math.ceil(r.width/4))), rows=Math.max(8,Math.min(120,Math.ceil(r.height/4)));
-    const clone = svg.cloneNode(true);
-    for(const layer of clone.querySelectorAll('[data-glyph-content]'))layer.remove();
+    // Do not clone hundreds of our generated SVG text nodes just to discard
+    // them on every measurement. Only native icon geometry is sampled.
+    const clone = svg.cloneNode(false);
+    for(const child of svg.childNodes)if(!child.matches?.('[data-glyph-content]'))clone.appendChild(child.cloneNode(true));
     for (const name of ['class', 'style', 'data-glyph-icon']) clone.removeAttribute(name);
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); clone.setAttribute('width',String(cols*3)); clone.setAttribute('height',String(rows*3)); clone.setAttribute('color','#fff');
     const source = new XMLSerializer().serializeToString(clone).replaceAll('currentColor','#fff');
@@ -249,6 +253,12 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
       ...brands.filter(v=>v.small),
       ...rings.filter(v=>v.el.isConnected).map(v=>({el:v.el,r:v.el.getBoundingClientRect()})),
     ]);
+    own(conversation);
+    occluded=createOcclusionIndex([
+      ...obstacles.map(r=>{const pad=r.pad??10;return {left:r.left-pad,top:r.top-pad,right:r.right+pad,bottom:r.bottom+pad};}),
+      ...covers.filter(c=>c.layer>=ownerLayer&&c.el!==owner&&!c.el.contains(owner)&&!owner?.contains(c.el)
+        &&!(c.composer&&owner?.closest(PANEL))).map(c=>c.r),
+    ],width,height);
     dirty=false;
   }
   function edge(x1,y1,x2,y2,time,bright=false) {
@@ -273,7 +283,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     const {el,r,toggle,role,checked,mixed,disabled,inline}=v,alpha=disabled?.35:1;
     const focused=el===document.activeElement,hover=inside(r,pointer.x,pointer.y);
     if(toggle) {
-      const char=mixed?'[−]':role==='switch'?(checked?'[●··]':'[··○]'):role==='radio'?(checked?'(●)':'( )'):(checked?'[×]':'[ ]');
+      const char=mixed?'[−]':role==='switch'?(checked?'[··●]':'[○··]'):role==='radio'?(checked?'(●)':'( )'):(checked?'[×]':'[ ]');
       glyph(char,inline?r.left+12:r.left+r.width/2,r.top+r.height/2,checked?ink:muted,alpha,11);return;
     }
     const selected=el.getAttribute('aria-selected')==='true'||el.getAttribute('aria-pressed')==='true'||el.getAttribute('aria-current');
@@ -288,7 +298,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     for(const cover of covers)if(cover.el===el||cover.el.contains(el))ownerLayer=Math.max(ownerLayer,cover.layer);
   }
   function bind(v) {
-    own(v.el);g=chrome.context(v.el);local=true;clip=null;
+    g=chrome.context(v.el);local=true;clip=null;
     return !!g;
   }
   function draw(now) {
@@ -368,7 +378,12 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     invalidate();
   };
   const visibility=()=>{if(document.hidden){cancelAnimationFrame(frame);frame=undefined;rings.length=bursts.length=trails.length=clickWaves.length=0;}else invalidate();};
-  const observer=new MutationObserver(invalidate);
+  const decoration=node=>node.nodeType===1&&node.matches('.omd-glyph-chrome,.omd-glyph-caption,[data-glyph-content]');
+  const observer=new MutationObserver(records=>{
+    // Our canvases and SVG glyph groups do not change native layout. Do not
+    // feed their insertion/removal back into another whole-document measure.
+    if(records.some(record=>record.type!=='childList'||![...record.addedNodes,...record.removedNodes].every(decoration)))invalidate();
+  });
   observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['aria-selected','aria-expanded','aria-checked','aria-valuenow','data-content-phase','data-effort-value','data-effort-max','disabled','checked','open','hidden']});
   observer.observe(root,{attributes:true,attributeFilter:['data-appearance','data-omd-palette','data-omd-custom']});
   const listeners=[['scroll',invalidate,true],['pointermove',move,{passive:true}],['pointerdown',click,true],['pointerleave',leave],['focusin',invalidate],['focusout',invalidate],['visibilitychange',visibility],['input',effortChanged,true],['change',invalidate,true]];
