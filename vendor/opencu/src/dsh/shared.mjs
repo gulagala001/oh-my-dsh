@@ -130,7 +130,7 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
         path: `/api/opencu/rea-assets/${file}`, methods: ['GET'], requestBody: 'buffered',
         async fetch() {
           const type = file.endsWith('.wasm') ? 'application/wasm' : file.endsWith('.css') ? 'text/css' : file.endsWith('.svg') ? 'image/svg+xml' : file.endsWith('.png') ? 'image/png' : file.endsWith('.woff2') ? 'font/woff2' : 'text/javascript';
-          return new Response(await readFile(new URL(`../../lib/rea-assets/${asset}`, import.meta.url)), { headers: { 'Content-Type': type, 'Cache-Control': /-[a-f0-9]+\./.test(file) ? 'private, max-age=31536000, immutable' : 'no-cache' } });
+          return new Response(await readFile(new URL(`../../lib/rea-assets/${asset}`, import.meta.url)), { headers: { 'Content-Type': type, 'Cache-Control': /-(?:[a-f0-9]+|[A-Z0-9]{8})\./.test(file) ? 'private, max-age=31536000, immutable' : 'no-cache' } });
         },
       }), `opencu: REA resource ${file}`);
       connectionCtx.effect(() => connectionCtx.connection.fetch.register({

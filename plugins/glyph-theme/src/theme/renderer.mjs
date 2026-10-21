@@ -35,7 +35,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   const trails = [];
   const clickWaves = [];
   const pointer = { x: -1000, y: -1000 }, font = '"SFMono-Regular", Menlo, monospace';
-  let stopped = false, frame, last = 0, dirty = true, width = 0, height = 0;
+  let stopped = false, frame, last = 0, dirty = true, width = 0, height = 0, measurements;
   const candidateCache=new Map(), resized=new Set();
   const candidates=selector=>{if(!candidateCache.has(selector))candidateCache.set(selector,[...document.querySelectorAll(selector)]);return candidateCache.get(selector);};
   const resizeObserver=new ResizeObserver(invalidate);
@@ -54,11 +54,16 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   }
   const still = () => reduced || motion.matches;
   function visible(el, acceptHidden = false) {
-    if (!el.isConnected) return null;
-    const r = el.getBoundingClientRect();
+    if (!el.isConnected || el.closest(EXTERNAL) || inClosedDetails(el)
+      || el.checkVisibility?.({ contentVisibilityAuto: true }) === false) return null;
+    let value = measurements?.get(el);
+    if (!value) {
+      value = { rect: el.getBoundingClientRect() };
+      measurements?.set(el, value);
+    }
+    const r = value.rect;
     if (r.width < 2 || r.height < 2 || r.bottom < 0 || r.top > height || r.right < 0 || r.left > width) return null;
-    if (el.closest(EXTERNAL) || inClosedDetails(el)) return null;
-    const style = getComputedStyle(el);
+    const style = value.style ??= getComputedStyle(el);
     if (style.opacity === '0' || !acceptHidden && style.visibility === 'hidden') return null;
     return r;
   }
@@ -159,6 +164,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     }
   }
   function measure() {
+    measurements = new Map();
     const dpr=Math.min(devicePixelRatio||1,2); width=innerWidth; height=innerHeight;
     if(canvas.width!==Math.round(width*dpr)||canvas.height!==Math.round(height*dpr)) {
       canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);
@@ -179,7 +185,6 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
       for(const el of panel.querySelectorAll('header, footer, thead, th, [class*="header"], [class*="Header"], [class*="footer"], [class*="Footer"], [class*="toolbar"], [class*="savebar"], [role="alert"]'))
         if(['sticky','fixed'].includes(getComputedStyle(el).position))solid.set(el,'');
     }
-    opaque.update(solid);
     covers=candidates(PANEL+', '+COMPOSER+', '+WORKBENCH+', '+NATIVE_CONTENT).filter(el=>!el.hidden&&!inClosedDetails(el)&&el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true})).map(el=>({el,layer:Number(getComputedStyle(el).zIndex)||0,composer:el.hasAttribute('data-composer-seat'),r:el.getBoundingClientRect()})).filter(c=>c.r.width>2&&c.r.height>2);
     conversation=shell?.querySelector('[data-omd-surface="conversation"]');fieldRect=conversation&&visible(conversation);
     brands=candidates('.omd-glyph-brand').map(el=>{
@@ -226,7 +231,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
           r=visible(field)||r;
       }
       // Native controls keep their hit areas; only their visual primitives disappear.
-      if(toggle||range) { if(!el.hasAttribute('data-glyph-control')) el.setAttribute('data-glyph-control','');marked.add(el);currentControls.add(el); }
+      if(toggle||range) { marked.add(el);currentControls.add(el); }
       const value={el,r,inline:hiddenToggle,toggle,role:role||type,checked:el.checked||el.getAttribute('aria-checked')==='true',mixed:el.indeterminate||el.getAttribute('aria-checked')==='mixed',disabled:el.disabled||el.getAttribute('aria-disabled')==='true'};
       if(range) {
         const effort=el.closest('.omd-effort-control');
@@ -243,17 +248,24 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
       nextUltraWave=Infinity;
     }else if(selected&&(!ultraMode||ultraAnchor!==peakRange.el))nextUltraWave=now;
     ultraMode=selected;ultraAnchor=peakRange?.el;
-    const current=new Set();
+    const current=new Set(), iconUpdates=[];
     for(const el of candidates('svg')) {
       // Brand lettering is an SVG in the native shell. Rasterizing a 13 px
       // wordmark into 4 px glyphs makes both the name and logo unreadable.
       if(el.closest('[data-omd-nav-part="brand"], [class*="_logoRow"]'))continue;
       const r=visible(el,true);if(!r||el.closest('[data-glyph-control],.omd-effort-control'))continue;
+      if(currentControls.has(el.closest(CONTROL)))continue;
       if(!isChromeIcon(el,r))continue;
       const item=pixels(el,r);if(!item.pixels?.length)continue;
-      characterIcons.mount(el,item,r);
+      iconUpdates.push({el,item,r});
       current.add(el);marked.add(el);
     }
+    // Complete geometry reads before changing native SVGs or control markers.
+    // Interleaving them forced a full transcript layout for each visible icon.
+    measurements = undefined;
+    opaque.update(solid);
+    for(const el of currentControls)if(!el.hasAttribute('data-glyph-control'))el.setAttribute('data-glyph-control','');
+    for(const {el,item,r} of iconUpdates)characterIcons.mount(el,item,r);
     for(const el of marked) if(!el.isConnected||el.hasAttribute('data-glyph-icon')&&!current.has(el)||el.hasAttribute('data-glyph-control')&&!currentControls.has(el)) {
       characterIcons.remove(el);el.removeAttribute('data-glyph-control');marked.delete(el);
     }
