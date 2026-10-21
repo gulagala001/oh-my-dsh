@@ -10,6 +10,7 @@ import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { whaleSvg } from '../src/client/brand.mjs';
 import { packSkin } from './pack-skin.mjs';
+import { pageScriptDefines } from '../plugins/deepseek-workbench/scripts/page-script-defines.mjs';
 
 for (const skin of ['google-material-expressive', 'ios-liquid-glass', 'codex-desktop', 'claude-cli-terminal']) {
   await packSkin(fileURLToPath(new URL(`../src/client/skins/${skin}/`, import.meta.url)),
@@ -61,7 +62,7 @@ await writeFile(logo, whaleSvg('omd-logo').replace('aria-hidden="true"', 'role="
 const hostChat = await readFile(new URL('../lib/host/ui-chat.factory.mjs', import.meta.url), 'utf8');
 const composerStats = [...hostChat.matchAll(/name: "conversation\.composer\.dock",\s*id: "(\w+)",\s*order: (\d+)/g)].map(m => ({ id: m[1], order: Number(m[2]) }));
 await build({
-  define: { __OMD_COMPOSER_STATS__: JSON.stringify(JSON.stringify(composerStats)) },
+  define: { ...pageScriptDefines, __OMD_COMPOSER_STATS__: JSON.stringify(JSON.stringify(composerStats)) },
   entryPoints: [fileURLToPath(new URL('../src/client/index.jsx', import.meta.url))],
   outfile: fileURLToPath(new URL('../lib/client.js', import.meta.url)),
   bundle: true, platform: 'browser', format: 'cjs', target: 'es2022',

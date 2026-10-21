@@ -1,10 +1,12 @@
 import { build } from 'esbuild';
 import { mkdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { pageScriptDefines } from './page-script-defines.mjs';
 
 const root = new URL('../', import.meta.url);
 await mkdir(new URL('lib/', root), { recursive: true });
 await build({ entryPoints: [fileURLToPath(new URL('src/client/index.jsx', root))], outfile: fileURLToPath(new URL('lib/client.js', root)),
+  define: pageScriptDefines,
   bundle: true, platform: 'browser', format: 'cjs', target: 'es2022', minifySyntax: true, minifyWhitespace: true, keepNames: true,
   external: ['react', 'react-dom', 'react/jsx-runtime', '@deepseek-ai/cordis', '@deepseek-ai/dsh-client-ui-primitives'],
   banner: { js: 'window.__ModuleLoader__.load({id:"dsh-deepseek-workbench",factory:(require)=>{var module={exports:{}};var exports=module.exports;' },

@@ -68,7 +68,8 @@ export async function temporaryPageCommand(command) {
   if (deleted !== true) throw Error('官网尚未确认删除临时对话，请保持登录并重试关闭。');
   return { deleted: true, id: command.id };
 }
-export const temporaryScript = command => `(()=>{const __name=fn=>fn;return (${temporaryPageCommand.toString()})(${JSON.stringify(command)})})()`;
+const temporaryPageSource = typeof __DSWB_TEMPORARY_SOURCE__ === 'string' ? __DSWB_TEMPORARY_SOURCE__ : temporaryPageCommand.toString();
+export const temporaryScript = command => `(${temporaryPageSource})(${JSON.stringify(command)})`;
 
 const ledgerKey = 'dsh-deepseek-workbench.pending-temporary.v1';
 export const liveTemporaryOwners = new Set();

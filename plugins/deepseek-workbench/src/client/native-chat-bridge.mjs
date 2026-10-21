@@ -1,4 +1,4 @@
-import { extractConversationFromPage, pageFunctionScript } from './extraction.mjs';
+import { extractPageSource, pageFunctionScript } from './extraction.mjs';
 
 /** Operate only the visible official composer. No account store or credential reads. */
 export async function pageCommand(command, readStatus, readPreview) {
@@ -120,6 +120,8 @@ export function pageStatus() {
     think: option(/^(?:深度思考|DeepThink)(?:\s*\(R1\))?$/i), search: option(/^(联网搜索|搜索|Search)$/i), history, alerts };
 }
 
-export const statusScript = pageFunctionScript(pageStatus);
-export const previewScript = pageFunctionScript(extractConversationFromPage, { preview: true });
-export const commandScript = command => `(()=>{const __name=(fn)=>fn;return (${pageCommand.toString()})(${JSON.stringify(command)},${pageStatus.toString()},${extractConversationFromPage.toString()})})()`;
+const statusPageSource = typeof __DSWB_STATUS_SOURCE__ === 'string' ? __DSWB_STATUS_SOURCE__ : pageStatus.toString();
+const commandPageSource = typeof __DSWB_COMMAND_SOURCE__ === 'string' ? __DSWB_COMMAND_SOURCE__ : pageCommand.toString();
+export const statusScript = pageFunctionScript(statusPageSource);
+export const previewScript = pageFunctionScript(extractPageSource, { preview: true });
+export const commandScript = command => `(${commandPageSource})(${JSON.stringify(command)},${statusPageSource},${extractPageSource})`;

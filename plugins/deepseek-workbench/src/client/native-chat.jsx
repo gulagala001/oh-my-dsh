@@ -41,6 +41,7 @@ export function NativeChat({ frame, adapter, guest, error, setError, onImport, i
   const [snapshot, setSnapshot] = useState({ ready: false, history: [], alerts: [] });
   const [messages, setMessages] = useState([]), [text, setText] = useState(''), [busy, setBusy] = useState('');
   const [inspect, setInspect] = useState(false), [history, setHistory] = useState(false);
+  const [readError, setReadError] = useState('');
   const [files, setFiles] = useState([]);
   const input = useRef(null), scroll = useRef(null), picker = useRef(null), current = useRef(''), previewBusy = useRef(false), follow = useRef(true), signingIn = useRef(false), commandBusy = useRef(false);
   const showWebsite = inspect && (!temporary || snapshot.signIn && /^https:\/\/chat\.deepseek\.com\/(sign_in|sign_up|authorized)(?:[/?#]|$)/.test(frame.url));
@@ -96,7 +97,8 @@ export function NativeChat({ frame, adapter, guest, error, setError, onImport, i
             return [...result, ...updates.values()];
           });
         }
-      } catch (failure) { if (!stopped && !/未找到可识别/.test(failure.message)) setError(failure.message); }
+        if (!stopped && page === adapter.current) setReadError('');
+      } catch (failure) { if (!stopped && !/未找到可识别/.test(failure.message)) setReadError(failure.message); }
       finally { previewBusy.current = false; if (!stopped) timer = setTimeout(poll, 1000); }
     };
     void poll();
@@ -147,7 +149,7 @@ export function NativeChat({ frame, adapter, guest, error, setError, onImport, i
       {(!temporary || snapshot.signIn) && <Button size="sm" type="button" className="dswb-more" aria-label={showWebsite ? '返回原生聊天' : '登录或检查官网页面'} title={showWebsite ? '返回聊天' : '登录或检查官网页面'} disabled={!!temporary && (temporary.closing || busy !== '')} onClick={() => setInspect(value => !value)}>⋯</Button>}
     </div></header>
     {history && <div className="dswb-history" role="dialog" aria-label="DeepSeek 历史对话"><div><strong>历史对话</strong><Button size="sm" onClick={() => setHistory(false)} aria-label="关闭历史对话">×</Button></div>{snapshot.history.length ? snapshot.history.map(item => <Button size="sm" key={item.url} disabled={busy !== '' || Boolean(importing) || frame.loading} onClick={() => { setHistory(false); setText(''); void adapter.current?.navigate(item.url).catch(failure => setError(failure.message)); }}>{item.title}</Button>) : <p>暂无已加载的历史对话</p>}</div>}
-    {(error || frame.error) && <div className="dswb-error" role="alert">{error || frame.error} {!temporary && <Button size="sm" onClick={() => setInspect(true)}>检查官网页面</Button>}{!temporary?.armed && <Button size="sm" onClick={retry}>重新加载</Button>}</div>}
+    {(error || frame.error || readError) && <div className="dswb-error" role="alert">{error || frame.error || readError} {!temporary && <Button size="sm" onClick={() => setInspect(true)}>检查官网页面</Button>}{!temporary?.armed && <Button size="sm" onClick={retry}>重新加载</Button>}</div>}
     {warnings}
     {snapshot.alerts.length > 0 && <div className="dswb-notice" role="status">{snapshot.alerts.join(' · ')}</div>}
     <div className={`dswb-official-page${showWebsite ? ' is-visible' : ''}`} aria-hidden={!showWebsite}>{guest}</div>

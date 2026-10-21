@@ -286,9 +286,10 @@ export async function extractConversationFromPage({ preview = false } = {}) {
   if (document.querySelector('[data-thinking],[data-role="reasoning"],[data-message-role="reasoning"]')) warnings.push('思考过程未作为回复历史迁移。');
   return finish({ url, title: clean(document.title) || 'DeepSeek 会话', messages, warnings: [...new Set(warnings)] });
 }
-/** keepNames builds add __name inside serialized functions; seat the harmless
- * naming helper in the guest rather than leaking the bundler's outer scope. */
+// Build entrypoints freeze guest functions before minification can add or
+// rename outer-scope helpers. The fallback supports direct source execution.
+export const extractPageSource = typeof __DSWB_EXTRACT_SOURCE__ === 'string' ? __DSWB_EXTRACT_SOURCE__ : extractConversationFromPage.toString();
 export function pageFunctionScript(fn, args = {}) {
-  return `(()=>{const __name=(fn)=>fn;return (${fn.toString()})(${JSON.stringify(args)})})()`;
+  return `(${typeof fn === 'string' ? fn : fn.toString()})(${JSON.stringify(args)})`;
 }
-export const extractionScript = pageFunctionScript(extractConversationFromPage);
+export const extractionScript = pageFunctionScript(extractPageSource);
