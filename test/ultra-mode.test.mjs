@@ -12,7 +12,7 @@ function fixture(saved, teamEnabled = false) {
   const tools = { schemas: () => [{ name: 'workflow', parameters: { properties: { resumeFromRunId: {} } } }, ...teamEnabled ? teamTools : []] };
   const agent = { session, status: 'idle', ctx: { get: () => tools } };
   const state = { id: session.id, ultracode: saved };
-  const store = { peek: () => state, state: () => state, save: next => Object.assign(state, next) };
+  const store = { peek: () => state, state: () => state, update: (_state, patch) => Object.assign(state, patch), save: next => Object.assign(state, next) };
   const ctx = { agents: { get: () => agent }, sessions: { flush: async () => {} },
     llm: { resolveModelInfo: async () => ({ reasoning: { efforts: [{ id: 'xhigh' }, { id: 'max' }] } }) },
     get: name => name === 'sessionController' ? { selectModel: async input => {

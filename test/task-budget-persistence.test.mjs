@@ -112,3 +112,14 @@ test('cyclic ancestor metadata terminates and direct budget callers still persis
   assert.deepEqual(f.writes.map(w => w.name), ['sessions/own.json', 'sessions/parent.json']);
   assert.equal(f.recover('own').budget.tokens, 135); assert.equal(f.recover('parent').budget.tokens, 135);
 });
+
+test('session control edits publish only persisted values while retaining the live state identity', t => {
+  const f = fixture(t, null); f.store.save(f.state);
+  const before = structuredClone(f.state), write = f.store.write.bind(f.store);
+  const patch = { memoryScope: 'session', notes: [{ text: 'A saved note', at: 1000 }] };
+  f.store.write = () => { throw Error('control save failed'); };
+  assert.throws(() => f.store.update(f.state, patch), /control save failed/);
+  assert.deepEqual(f.state, before); assert.deepEqual(f.recover('own'), before);
+  f.store.write = write; f.store.update(f.state, patch);
+  assert.equal(f.state, f.store.state('own')); assert.deepEqual(f.recover('own'), { ...before, ...patch });
+});

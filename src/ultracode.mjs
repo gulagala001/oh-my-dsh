@@ -93,8 +93,7 @@ export class UltracodeControl {
   }
   persist(session, patch) {
     const state = this.store.state(session.id), next = { ...state.ultracode, ...patch };
-    this.store.save({ ...state, ultracode: next });
-    state.ultracode = next;
+    this.store.update(state, { ultracode: next });
   }
   eligible(agent) {
     if (!agent || agent.session.header.origin === 'subagent' || !this.isOmd(agent.session)) return false;

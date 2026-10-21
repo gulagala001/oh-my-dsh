@@ -83,7 +83,7 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
         await classify(fresh);
         if (projectless||scopeLocked(fresh)) { send(res, 409, { error: '会话已开始或属于非工作区 Chat，隔离范围不能中途扩大' }); return true; }
         state = id ? hub.store.peek(id) : null;
-        if (id) { state ??= hub.store.state(id); state.memoryScope = input.scope; hub.store.save(state); }
+        if (id) { state ??= hub.store.state(id); hub.store.update(state, { memoryScope: input.scope }); }
         else await ctx.settings.update('oh-my-dsh', { memoryScope: input.scope });
       }
       reading.signal.throwIfAborted();

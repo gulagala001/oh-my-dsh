@@ -42,6 +42,11 @@ export class HubStore {
     return value;
   }
   save(state) { validateSessionId(state.id); this.write(`sessions/${state.id}.json`, state); }
+  update(state, patch) {
+    this.save({ ...state, ...patch });
+    Object.assign(state, patch); this.states.set(state.id, state);
+    return state;
+  }
   // Statistics do not need to retain every archived conversation body in RAM.
   // Active mutable states take precedence over archived snapshots.
   monitorStates() {

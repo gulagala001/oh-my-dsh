@@ -46,18 +46,17 @@ export class ContextPipeline {
     const s = this.state(session);
     if (s.transaction || this.manualSessions.has(session.id)) throw Error('当前压缩尚未完成，请完成后切换模式');
     if (this.mode(session) === mode) return this.view(session);
+    const preparedHandoff = mode === 'pipeline' && s.pending?.source === 'adaptive' && this.agents.has(session.id);
+    this.store.update(s, { compressionMode: mode, compressionModeRevision: (s.compressionModeRevision || 0) + 1,
+      adaptive: {}, pending: ['coordinator', 'adaptive'].includes(s.pending?.source) ? null : s.pending,
+      ...(preparedHandoff ? { review: { ...s.review, needed: true } } : {}) });
     for (const kind of ['prepare', 'coordinate', 'adaptive']) this.controllers.get(session.id + ':' + kind)?.abort(Error('压缩模式已切换'));
     for (const [key, timer] of this.timers) if (key.startsWith(session.id + ':')) { clearTimeout(timer); this.timers.delete(key); this.reviewTimers.delete(key); }
     this.idleSince.delete(session.id); this.adaptive.drop(session.id);
     this.cachedPreparation.drop(session.id);
-    const preparedHandoff = mode === 'pipeline' && s.pending?.source === 'adaptive';
-    if (['coordinator', 'adaptive'].includes(s.pending?.source)) s.pending = null;
-    s.compressionMode = mode; s.compressionModeRevision = (s.compressionModeRevision || 0) + 1;
-    s.adaptive = {}; this.store.save(s);
-    if (preparedHandoff && this.agents.has(session.id)) {
+    if (preparedHandoff) {
       // A mode change cancels the old decision, not its validated archive.
       // Explicitly review that shared preparation once, respecting minGap.
-      s.review.needed = true; this.store.save(s);
       void this.coordinate(this.agents.get(session.id), true);
     }
     return this.view(session);
@@ -499,7 +498,7 @@ export class ContextPipeline {
     });
     this.jobs.set(key, job); return job;
   }
-  async applyReady(agent, { manual = false, ids, mode = 'detail', ignoreCooldown = false, sourceCommandId, source, retainTrace = true, route } = {}) {
+  async applyReady(agent, { manual = false, ids, mode = 'detail', ignoreCooldown = false, sourceCommandId, source, retainTrace = true, route, manualRequestKey } = {}) {
     const session = agent.session, s = this.state(session), cfg = this.config();
     if (manual && this.manualSessions.get(session.id) === 'auto-compact' && source !== 'auto-compact') throw Error('本会话正在 Auto Compact，请稍候');
     if (s.transaction) return applyTransaction(session, s, s.transaction, this.store, this.adapter);
@@ -553,6 +552,7 @@ export class ContextPipeline {
       if (manual) throw error; return null;
     }
     if (!tx) { s.pending = null; this.store.save(s); return null; }
+    if (manualRequestKey) tx.manualRequestKey = manualRequestKey;
     const outcome = await applyTransaction(session, s, tx, this.store, this.adapter);
     this.hub.action(session, 'contextReplacements', 1);
     this.replacementEvent(session, outcome, manual);
@@ -581,7 +581,7 @@ export class ContextPipeline {
     await this.autoCompact.check(agent, signal);
     return { changed: Boolean(result), queued: false, result };
   }
-  async runManual(agent, { operation, sourceCommandId }, signal) {
+  async runManual(agent, { operation, sourceCommandId }, signal, manualRequestKey) {
     const session = agent.session, id = session.id, s = this.state(session);
     if (this.closed) throw Error('上下文组件已关闭');
     if (this.manualSessions.has(id)) throw Error('本会话正在压缩，请勿重复提交');
@@ -606,43 +606,70 @@ export class ContextPipeline {
       if (operation === 'full') {
         const tx = await compactFull(this, agent, joined, sourceCommandId);
         joined.throwIfAborted();
+        if (tx && manualRequestKey) tx.manualRequestKey = manualRequestKey;
         result = tx ? await applyTransaction(session, s, tx, this.store, this.adapter) : null;
         if (result) { this.hub.action(session, 'contextReplacements', 1); this.replacementEvent(session, result, true); }
       } else {
         const ids = activeRecords(s).filter(r => r.mode !== 'brief' && liveSpan(session, r)).map(r => r.id);
-        result = await this.applyReady(agent, { manual: true, ids, mode: 'brief', sourceCommandId, source: 'compact-p', retainTrace: false });
+        result = await this.applyReady(agent, { manual: true, ids, mode: 'brief', sourceCommandId, source: 'compact-p', retainTrace: false, manualRequestKey });
         s.review.needed = false; s.review.newRecords = 0;
       }
       delete s.failures[operation === 'full' ? 'compactFull' : 'compactProcessed']; this.store.save(s);
       return result;
     } catch (error) {
-      this.reportError(agent, operation === 'full' ? 'compactFull' : 'compactProcessed', error);
+      if (!joined.aborted) this.reportError(agent, operation === 'full' ? 'compactFull' : 'compactProcessed', error);
       throw error;
     } finally { this.manualSessions.delete(id); this.controllers.delete(key); this.releaseState(id); }
   }
   async preStep(agent, signal, route) {
     if (delegated(agent.session)) return;
+    signal?.throwIfAborted();
+    if (this.closed) throw Error('上下文组件已关闭');
     this.agents.set(agent.session.id, agent);
+    const checkOwner = () => {
+      signal?.throwIfAborted();
+      if (this.closed || this.agents.get(agent.session.id) !== agent) throw Error('会话上下文已释放');
+    };
     await this.hub.bc?.applyChoice(agent.session, signal);
+    checkOwner();
     const s = this.state(agent.session); s.steps++; this.store.touch(s);
     // agent/request is a proposal; adapter defaults are resolved by the native
     // host afterwards. Compare the same effective knobs as llm/stream capture.
     if (route && s.pending?.source === 'adaptive' && !s.transaction && !s.manualQueue.length) {
       route = (await this.hub.ctx.llm?.prepareCall?.(route, signal))?.config ?? route;
-      signal?.throwIfAborted();
+      checkOwner();
     }
     // Auto Compact is opt-in and completes threshold work before this request.
     await this.autoCompact.check(agent, signal);
+    checkOwner();
+    const manual = s.manualQueue[0], manualRequestKey = manual && hash(manual);
     const recovered = s.transaction ? await this.applyReady(agent) : null;
+    checkOwner();
     if (!this.hub.config().stateHintsEnabled && !this.hub.config().budgetHintsEnabled) await this.stripRuntime(agent.session);
+    checkOwner();
     await this.retireLegacyInjections(agent.session);
-    const manual = s.manualQueue[0];
+    checkOwner();
     let result;
     if (manual) {
-      try { result = recovered && manual.operation && recovered.source === (manual.operation === 'full' ? 'compact-f' : 'compact-p') ? recovered : manual.operation ? await this.runManual(agent, manual, signal) : await this.applyReady(agent, { ...manual, manual: true }); s.manualQueue.shift(); this.store.save(s); }
-      catch (error) { if (s.transaction) throw error; s.manualQueue.shift(); this.store.notice(s, error.message); }
+      let failure;
+      try {
+        result = recovered?.manualRequestKey === manualRequestKey ? recovered : manual.operation
+          ? await this.runManual(agent, manual, signal, manualRequestKey)
+          : await this.applyReady(agent, { ...manual, manual: true, manualRequestKey });
+        checkOwner();
+      } catch (error) {
+        if (signal?.aborted || s.transaction || this.closed || this.agents.get(agent.session.id) !== agent) throw error;
+        failure = error;
+      }
+      // Successful replacements acknowledge their request in the write-ahead
+      // commit. No-op/failed work retires here, outside the execution catch so
+      // a failed save cannot consume another request or masquerade as success.
+      this.store.update(s, { manualQueue: s.manualQueue.filter(item => hash(item) !== manualRequestKey),
+        ...(failure ? { notices: [...s.notices, { at: Date.now(), text: failure.message }].slice(-40) }
+          : manual.operation ? { failures: Object.fromEntries(Object.entries(s.failures).filter(([kind]) => kind !== (manual.operation === 'full' ? 'compactFull' : 'compactProcessed'))) } : {}) });
     } else result = await this.applyReady(agent, { route });
     if (repairShadows(agent.session)) await this.adapter.flush(agent.session);
+    checkOwner();
     this.publishMemory(agent.session);
     this.start(agent);
     return result;
@@ -705,8 +732,8 @@ export class ContextPipeline {
     if (args.mode !== undefined && !['detail', 'brief'].includes(args.mode)) throw new Error('手动替换只能应用已有摘要或文档');
     for (const id of args.ids || []) if (!s.records.some(r => r.id === id && !r.mergedInto && liveSpan(session, r))) throw new Error('选中摘要不在本会话可替换范围');
     const request = args.operation ? { operation: args.operation, ...(args.sourceCommandId ? { sourceCommandId: args.sourceCommandId } : {}) } : { ids: args.ids, mode: args.mode || 'detail' };
-    if (!s.manualQueue.some(q => hash(q) === hash(request))) s.manualQueue.push(request);
-    this.store.save(s); return { queued: true, changed: false };
+    if (!s.manualQueue.some(q => hash(q) === hash(request))) this.store.update(s, { manualQueue: [...s.manualQueue, request] });
+    return { queued: true, changed: false };
   }
   reconfigure() {
     const cfg = this.config();

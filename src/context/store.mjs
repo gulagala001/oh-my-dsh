@@ -47,10 +47,17 @@ export class ContextStore {
       this.cache.set(id, s);
     }
     const s = this.cache.get(id);
-    if (!s.binding && binding) { s.binding = { scope: binding.scope === 'project' ? 'project' : 'session', project: binding.project, title: binding.title || id }; this.save(s); }
+    if (!s.binding && binding) this.update(s, { binding: { scope: binding.scope === 'project' ? 'project' : 'session', project: binding.project, title: binding.title || id } });
     return s;
   }
   save(s) { this.write(this.path(s.id), s); this.cache.set(s.id, s); this.dirty.delete(s.id); }
+  // User controls become visible only after persistence succeeds. Keep the
+  // live object identity used by in-flight jobs; patches replace changed fields.
+  update(s, patch) {
+    this.write(this.path(s.id), { ...s, ...patch });
+    Object.assign(s, patch); this.cache.set(s.id, s); this.dirty.delete(s.id);
+    return s;
+  }
   // Step and event counters ride on the next save; release flushes them.
   touch(s) { this.cache.set(s.id, s); this.dirty.add(s.id); }
   flush(id) {

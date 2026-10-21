@@ -6,7 +6,8 @@ import { PersonaSettings } from '../../plugins/persona/src/client/settings.jsx';
 import { recommendedPlugins } from './recommended-plugins.mjs';
 import { pluginApi } from './recommended-plugins.jsx';
 import { usePollingAction } from './use-polling-action.mjs';
-import { createPoller } from './polling.mjs';
+import { createSettingsState } from './settings-state.mjs';
+import { scaledSettingValue, savedBackground } from './settings-values.mjs';
 import { HISTORY_SIZE_KEY, HISTORY_SIZES, historySize } from './history-settings.jsx';
 import { VersionInfo } from './version-info.jsx';
 import { subscribeSettingsAnchor, takeSettingsAnchor } from './settings-nav.mjs';
@@ -46,16 +47,13 @@ function Toggle({ title, hint, checked, onChange, disabled, extra }) {
 function NumberField({ label, hint, value, min = 0, max = Infinity, scale = 1, integer = true, optional = false, disabled, onCommit }) {
   const shown = value === undefined || value === null || value === '' ? '' : String(Number(value) / scale);
   const [draft, setDraft] = useState(shown), [invalid, setInvalid] = useState(false), focused = useRef(false);
-  useEffect(() => { if (!focused.current) { setDraft(shown); setInvalid(false); } }, [shown]);
+  useEffect(() => { if (!focused.current) { setDraft(shown); setInvalid(false); } }, [shown, disabled]);
   const commit = () => {
     const raw = draft.trim();
     if (raw === '' && optional) { setInvalid(false); if (shown !== '') onCommit(undefined); return; }
     const display = Number(raw);
-    if (raw === '' || !/^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(raw) || !(display >= min && display <= max)) { setInvalid(true); return; }
-    // Scales are powers of ten. Shift the decimal before converting so 1.001 s is 1001 ms exactly.
-    const [coefficient, exponent = '0'] = raw.split(/e/i);
-    const stored = Number(coefficient + 'e' + (Number(exponent) + Math.log10(scale)));
-    if (integer && !Number.isInteger(stored)) { setInvalid(true); return; }
+    const stored = scaledSettingValue(raw, scale, integer);
+    if (!Number.isFinite(stored) || !(display >= min && display <= max)) { setInvalid(true); return; }
     setInvalid(false);
     if (stored !== Number(value)) onCommit(stored);
   };
@@ -80,44 +78,21 @@ function Fields({ children }) { return <div className="omd-set-fields">{children
 // Every change is written at once; a rejected write restores the stored value.
 function useConfig(report) {
   const [view, setView] = useState({ config: null, directory: [], error: '' });
-  const queue = useRef(Promise.resolve()), inflight = useRef(0), alive = useRef(true);
-  const load = useCallback(async () => {
-    try { const state = await api('/state'); if (alive.current) setView({ config: { ...state.config }, directory: state.directory || [], error: '' }); }
-    catch (error) { if (alive.current) setView(view => ({ ...view, error: error.message })); }
-  }, []);
-  useEffect(() => { alive.current = true; void load(); return () => { alive.current = false; }; }, [load]);
-  const commit = useCallback(patch => {
-    if (!patch || !Object.keys(patch).length) return queue.current.then(() => true);
-    setView(view => ({ ...view, config: { ...view.config, ...patch } }));
-    inflight.current++;
-    queue.current = queue.current.then(async () => {
-      try {
-        const next = await api('/settings', patch);
-        window.dispatchEvent(new CustomEvent('omd:settings-saved', { detail: next }));
-        if (alive.current && inflight.current === 1) setView(view => ({ ...view, config: { ...next } }));
-        return true;
-      } catch (error) {
-        report('保存失败，已恢复原值：' + error.message);
-        try { const state = await api('/state'); if (alive.current) setView(view => ({ ...view, config: { ...state.config } })); } catch {}
-        return false;
-      } finally { inflight.current--; }
-    });
-    return queue.current;
+  const current = useRef(null);
+  useEffect(() => {
+    const owner = createSettingsState({ read: () => api('/state'), write: patch => api('/settings', patch),
+      onChange: setView, onError: report,
+      onSaved: config => window.dispatchEvent(new CustomEvent('omd:settings-saved', { detail: config })) });
+    current.current = owner; void owner.load();
+    return () => { owner.dispose(); if (current.current === owner) current.current = null; };
   }, [report]);
-  return { ...view, commit, reload: load };
+  const commit = useCallback(patch => current.current?.commit(patch) ?? Promise.resolve(false), []);
+  const reload = useCallback(() => current.current?.load(), []);
+  return { ...view, commit, reload };
 }
 
-function usePoll(read, interval) {
-  const [state, setState] = useState(null), [error, setError] = useState(''), poller = useRef(null);
-  useEffect(() => {
-    poller.current = createPoller({ read, onData: value => { setState(value); setError(''); }, onError: e => setError(e.message), interval });
-    poller.current.start();
-    return () => poller.current.stop();
-  }, [read, interval]);
-  return { state, setState, error, refresh: () => poller.current?.refresh() };
-}
-const readComponents = signal => request('oh-my-dsh/components', undefined, signal);
-const readDream = signal => api('/dream/settings', undefined, signal);
+const componentApi = (body, signal) => request('oh-my-dsh/components', body, signal);
+const dreamApi = (body, signal) => api('/dream/settings', body, signal);
 
 // ---- Features ---------------------------------------------------------------
 
@@ -147,17 +122,7 @@ function FeatureRow({ plugin, features, thirdParty }) {
 }
 
 function CodeGraphRow({ components }) {
-  const { state: d, error, setState } = components;
-  const [busy, setBusy] = useState(false), [actionError, setActionError] = useState('');
-  const act = async body => {
-    if (busy) return;
-    setBusy(true); setActionError('');
-    if (body.patch && d) setState({ ...d, ...(typeof body.patch.componentAutoSetup === 'boolean' ? { automatic: body.patch.componentAutoSetup } : {}),
-      codegraph: { ...d.codegraph, ...(typeof body.patch.codegraphEnabled === 'boolean' ? { enabled: body.patch.codegraphEnabled } : {}) } });
-    try { setState(await request('oh-my-dsh/components', body)); }
-    catch (e) { setActionError(e.message); try { setState(await request('oh-my-dsh/components')); } catch {} }
-    finally { setBusy(false); }
-  };
+  const { state: d, error, pending: busy, requestError: actionError, act } = components;
   const cg = d?.codegraph;
   const retry = (label, body) => <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => void act(body)}>{label}</Button>;
   const name = path => path.split(/[\\/]/).filter(Boolean).pop() || path;
@@ -199,23 +164,24 @@ function Frequency({ config: c, commit }) {
 }
 
 function Dream({ dream, commit }) {
-  const { state: s, error } = dream;
+  const { state: s, error, pending, requestError } = dream;
   if (!s) return <Row title="自动 Dream" hint={error || '正在读取…'}/>;
   const folders = (s.folders || []).filter(f => f?.folder), chosen = s.dreamProjects || [];
   const toggleFolder = (folder, on) => commit({ dreamProjects: on ? [...new Set([...chosen, folder])] : chosen.filter(x => x !== folder) });
   const name = path => path.split(/[\\/]/).filter(Boolean).pop() || path;
   return <>
-    <Toggle title="自动 Dream" hint="定时检查新增摘要并整理长期记忆；没有新材料不调用模型。模型在“后台模型”中设置。" checked={s.enabled} onChange={v => commit({ dreamAutoEnabled: v })}
+    <Status error>{requestError || error}</Status>
+    <Toggle disabled={pending} title="自动 Dream" hint="定时检查新增摘要并整理长期记忆；没有新材料不调用模型。模型在“后台模型”中设置。" checked={s.enabled} onChange={v => commit({ dreamAutoEnabled: v })}
       extra={s.enabled && <>
         <Fields>
-          <NumberField label="检查间隔 · 分钟" value={s.intervalMs} min={0.001} scale={60000} onCommit={v => commit({ dreamIntervalMs: v })}/>
-          <NumberField label="原文整理等待 · 天" value={s.deepAgeMs} min={0.001} scale={86400000} onCommit={v => commit({ dreamDeepAgeMs: v })}/>
-          <NumberField label="每日 token 上限" value={s.dailyTokens} min={0} onCommit={v => commit({ dreamDailyTokens: v })}/>
+          <NumberField disabled={pending} label="检查间隔 · 分钟" value={s.intervalMs} min={0.001} scale={60000} onCommit={v => commit({ dreamIntervalMs: v })}/>
+          <NumberField disabled={pending} label="原文整理等待 · 天" value={s.deepAgeMs} min={0.001} scale={86400000} onCommit={v => commit({ dreamDeepAgeMs: v })}/>
+          <NumberField disabled={pending} label="每日 token 上限" value={s.dailyTokens} min={0} onCommit={v => commit({ dreamDailyTokens: v })}/>
         </Fields>
         <div className="omd-set-folders" role="group" aria-label="整理的文件夹">
           <small>整理的文件夹 · 不勾选表示全部</small>
           {folders.map(f => <div className="omd-set-folder" key={f.folder} title={f.folder}>
-            <Checkbox label={name(f.folder)} checked={chosen.includes(f.folder)} onChange={on => toggleFolder(f.folder, on)}/>
+            <Checkbox disabled={pending} label={name(f.folder)} checked={chosen.includes(f.folder)} onChange={on => toggleFolder(f.folder, on)}/>
             <small>{f.exists === false ? '已删除 · ' : ''}{(f.projects || []).length} 个项目</small>
           </div>)}
           {!folders.length && <small>尚未读取到工作区文件夹。</small>}
@@ -242,11 +208,13 @@ function RouteEditor({ title, value, directory, onChange }) {
 }
 
 function BackgroundModels({ config: c, directory, commit, dream, commitDream }) {
-  const [routing, setRouting] = useState(() => contextRouteMode(c));
-  const choose = mode => {
-    setRouting(mode);
-    if (mode === 'follow') void commit({ backgroundMode: 'unified', unifiedBackground: { ...ROUTE } });
-    else void commit({ backgroundMode: mode === 'separate' ? 'separate' : 'unified' });
+  const [editUnified, setEditUnified] = useState(false);
+  const savedRouting = contextRouteMode(c), routing = savedRouting === 'follow' && editUnified ? 'unified' : savedRouting;
+  const choose = async mode => {
+    setEditUnified(mode === 'unified');
+    const saved = await commit(mode === 'follow' ? { backgroundMode: 'unified', unifiedBackground: { ...ROUTE } }
+      : { backgroundMode: mode === 'separate' ? 'separate' : 'unified' });
+    if (!saved) setEditUnified(false);
   };
   const s = dream.state, [pendingProvider, setPendingProvider] = useState(null);
   const dreamProvider = pendingProvider ?? s?.provider ?? '';
@@ -261,11 +229,11 @@ function BackgroundModels({ config: c, directory, commit, dream, commitDream }) 
     {c.memoryCacheEnabled && <Row hint="记忆缓存模式已开启：预处理跟随最近成功的主执行请求，中枢继续使用这里的配置。"/>}
     {s && <Row title="Dream" hint={pendingProvider ? '再选择模型后生效。' : routeEmpty && s.enabled && !s.provider ? '跟随主模型时，自动 Dream 需要指定提供方与模型。' : '默认沿用上面的后台模型。'}
       extra={dreamProvider && <Fields>
-        <label className="omd-set-field"><span>模型</span><Choice aria-label="Dream 模型" value={pendingProvider ? '' : s.model}
+        <label className="omd-set-field"><span>模型</span><Choice disabled={dream.pending} aria-label="Dream 模型" value={pendingProvider ? '' : s.model}
           options={[...(pendingProvider ? [{ value: '', label: '请选择' }] : []), ...(s.model && !pendingProvider && !dreamModels.some(m => m.id === s.model) ? [{ value: s.model, label: s.model }] : []), ...dreamModels.map(m => ({ value: m.id, label: m.name || m.id }))]}
           onChange={model => { if (!model) return; setPendingProvider(null); void commitDream({ dreamProvider, dreamModel: model }); }}/></label>
       </Fields>}>
-      <Choice aria-label="Dream 提供方" value={dreamProvider}
+      <Choice disabled={dream.pending} aria-label="Dream 提供方" value={dreamProvider}
         options={[{ value: '', label: '沿用后台模型' }, ...directory.map(p => ({ value: p.id, label: p.name || p.id }))]}
         onChange={provider => { if (!provider) { setPendingProvider(null); void commitDream({ dreamProvider: '', dreamModel: '' }); } else setPendingProvider(provider); }}/>
     </Row>}
@@ -289,7 +257,7 @@ function GlobalBackground() {
   const save = async () => {
     if (g.busy || !g.loaded || g.conflict) return;
     setG(old => ({ ...old, busy: true, error: '', status: '' }));
-    try { const value = await api('/context/global', { text: g.text, revision: g.revision }); setG(old => ({ ...old, text: value.text, saved: value.text, revision: value.revision, status: '已保存', conflict: false, latest: null, busy: false })); }
+    try { const value = await api('/context/global', { text: g.text, revision: g.revision }); setG(old => savedBackground(old, value, g.text)); }
     catch (e) { setG(old => ({ ...old, busy: false, error: e.message, ...(e.statusCode === 409 ? { conflict: true, latest: null } : {}) })); }
   };
   const adopt = keepDraft => setG(old => old.latest ? { ...old, saved: old.latest.text, revision: old.latest.revision, conflict: false, error: '', status: '', ...(keepDraft ? {} : { text: old.latest.text, latest: null }) } : old);
@@ -384,20 +352,13 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
     const report = useCallback(message => setNotice(message), []);
     const { config: c, directory, error, commit, reload } = useConfig(report);
     const features = usePollingAction(pluginApi, 2000);
-    const components = usePoll(readComponents, 2500);
-    const dream = usePoll(readDream, 30000);
+    const components = usePollingAction(componentApi, 2500);
+    const dream = usePollingAction(dreamApi, 30000);
     const prefs = useSyncExternalStore(optimizer.subscribe, optimizer.getSnapshot);
     const [page, setPage] = useState('main');
     const body = useRef(null), mainScroll = useRef(0), advanced = useRef(null);
 
-    const commitDream = useCallback(async patch => {
-      const previous = dream.state;
-      dream.setState(old => old && { ...old, ...('dreamAutoEnabled' in patch ? { enabled: patch.dreamAutoEnabled } : {}), ...('dreamIntervalMs' in patch ? { intervalMs: patch.dreamIntervalMs } : {}),
-        ...('dreamDeepAgeMs' in patch ? { deepAgeMs: patch.dreamDeepAgeMs } : {}), ...('dreamDailyTokens' in patch ? { dailyTokens: patch.dreamDailyTokens } : {}),
-        ...('dreamProvider' in patch ? { provider: patch.dreamProvider, model: patch.dreamModel } : {}), ...('dreamProjects' in patch ? { dreamProjects: patch.dreamProjects } : {}) });
-      try { dream.setState(await api('/dream/settings', patch)); }
-      catch (e) { report('保存失败，已恢复原值：' + e.message); dream.setState(previous); dream.refresh(); }
-    }, [dream.state, report]);
+    const commitDream = dream.act;
     const setPref = patch => { try { optimizer.set(patch); } catch { report('浏览器无法保存设置，原设置保持不变。'); } };
 
     const go = next => {
@@ -424,6 +385,7 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
     const content = page === 'third-party' ? <ThirdParty features={features} onBack={() => go('main')}/> : !c ? <div className="omd-set-empty">
       {error ? <Status error action={<Button type="button" size="sm" variant="ghost" onClick={reload}>重试</Button>}>{error}</Status> : <p>正在读取设置…</p>}
     </div> : <>
+      <Status error action={<Button type="button" size="sm" variant="ghost" onClick={reload}>重新读取</Button>}>{error}</Status>
       <Group title="功能">
         {features.error && <Status error action={<Button type="button" size="sm" variant="ghost" onClick={() => features.refresh()}>重新读取</Button>}>{features.error}</Status>}
         {features.requestError && <Status error>{features.requestError}</Status>}
@@ -495,8 +457,8 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
           </Fields>}/>
         </Group>
         <Group title="其他">
-          <Toggle title="启动时自动准备依赖" hint="关闭后，代码理解需要手动准备运行环境。" checked={components.state?.automatic} disabled={!components.state}
-            onChange={v => request('oh-my-dsh/components', { action: 'settings', patch: { componentAutoSetup: v } }).then(components.setState, e => report(e.message))}/>
+          <Toggle title="启动时自动准备依赖" hint="关闭后，代码理解需要手动准备运行环境。" checked={components.state?.automatic} disabled={!components.state || components.pending}
+            onChange={v => components.act({ action: 'settings', patch: { componentAutoSetup: v } })}/>
           <HistorySize/>
         </Group>
       </details>

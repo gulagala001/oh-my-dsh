@@ -91,8 +91,7 @@ export class Hub extends Service {
   }
   setTaskReminders(session, patch) {
     const state = this.store.state(session.id), previous = this.taskReminders(session), next = { ...previous, ...patch };
-    this.store.save({ ...state, betterTodo: next });
-    state.betterTodo = next;
+    this.store.update(state, { betterTodo: next });
     if (next.todo !== previous.todo || next.verification !== previous.verification) this.todoStore?.resetTurnControl(session);
     if (!next.verification) this.taskReviews.delete(session.id);
     return next;

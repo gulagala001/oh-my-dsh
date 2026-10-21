@@ -158,9 +158,14 @@ export async function applyTransaction(session, state, tx, store, adapter) {
       shadowedSeqs: [...new Set(native.flatMap(o => o.native.shadowedSeqs || []))],
       shadowedTokenCount: native.reduce((n, o) => n + (o.native.shadowedTokenCount || 0), 0),
       id: tx.id, source: tx.source, at: Date.now(), inputChars: tx.inputChars, outputChars: tx.outputChars,
+      ...(tx.manualRequestKey ? { manualRequestKey: tx.manualRequestKey } : {}),
       inputTokens: tx.inputTokens, outputTokens: tx.outputTokens, stats: tx.stats || null,
       operations: tx.operations.map(o => ({ kind: o.kind, seqs: o.resolvedSeqs || o.seqs, resultSeq: tx.applied[o.id], recordId: o.recordId })) };
-    store.save(state);
+    // Recovery completes the same queued request without another model call.
+    // Compute against the current queue so requests appended during the model
+    // call survive. The transaction remains recoverable if this commit fails.
+    if (tx.manualRequestKey) store.update(state, { manualQueue: state.manualQueue.filter(item => hash(item) !== tx.manualRequestKey) });
+    else store.save(state);
     return state.lastReplacement;
   } catch (error) {
     // Keep the write-ahead transaction. A restart can finish the same operations once.

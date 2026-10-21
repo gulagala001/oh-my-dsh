@@ -141,13 +141,13 @@ export class BillionContext {
   }
   identity(session) {
     const s = this.state(session);
-    if (!s.bc) { s.bc = { conversationId: session.id, revision: 0 }; this.hub.context.store.save(s); }
+    if (!s.bc) this.hub.context.store.update(s, { bc: { conversationId: session.id, revision: 0 } });
     return s.bc;
   }
   rebase(session, reason) {
     const s = this.state(session), previous = s.bc;
-    s.bc = { ...previous, conversationId: session.id, needsBoundary: true, revision: (previous?.revision || 0) + 1, reason };
-    this.meters.delete(session.id); this.hub.context.store.save(s);
+    this.hub.context.store.update(s, { bc: { ...previous, conversationId: session.id, needsBoundary: true, revision: (previous?.revision || 0) + 1, reason } });
+    this.meters.delete(session.id);
     return s.bc;
   }
   reconcile(session) {
@@ -169,7 +169,7 @@ export class BillionContext {
     if (backend === 'bc') await this.connect();
     if (this.selections.get(session.id) !== selection) return { queued: Boolean(this.state(session).pendingBackend), backend: this.backend(session), superseded: true };
     const s = this.state(session);
-    s.pendingBackend = backend; delete s.backendError; this.hub.context.store.save(s);
+    this.hub.context.store.update(s, { pendingBackend: backend, backendError: undefined });
     if (agent && agent.status !== 'idle') return { queued: true, backend: this.backend(session), pendingBackend: backend };
     const run = signal => this.applyChoice(session, signal);
     if (agent?.runMaintenance) await agent.runMaintenance(run); else await run();
@@ -181,7 +181,7 @@ export class BillionContext {
     try { return await this.commitChoice(session, signal); }
     catch (error) {
       if (s.pendingBackend === backend && this.selections.get(session.id) === selection) {
-        delete s.pendingBackend; s.backendError = error.message; this.hub.context.store.save(s);
+        this.hub.context.store.update(s, { pendingBackend: undefined, backendError: error.message });
       }
       throw error;
     }
@@ -217,10 +217,10 @@ export class BillionContext {
       }
     }
     if (this.closed || selection !== this.selections.get(session.id) || s.pendingBackend !== backend) return;
-    s.pending = null; p.adaptive.drop(session.id); p.cachedPreparation.drop(session.id);
-    s.contextBackend = backend; delete s.pendingBackend; delete s.backendError;
-    s.compressionModeRevision = (s.compressionModeRevision || 0) + 1;
-    this.rebase(session, '上下文管理方式切换'); p.store.save(s);
+    p.store.update(s, { pending: null, contextBackend: backend, pendingBackend: undefined, backendError: undefined,
+      compressionModeRevision: (s.compressionModeRevision || 0) + 1,
+      bc: { ...s.bc, conversationId: session.id, needsBoundary: true, revision: (s.bc?.revision || 0) + 1, reason: '上下文管理方式切换' } });
+    this.meters.delete(session.id); p.adaptive.drop(session.id); p.cachedPreparation.drop(session.id);
     const agent = p.agents.get(session.id);
     if (agent && backend === 'omd') void p.coordinate(agent, true);
   }

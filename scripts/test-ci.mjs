@@ -7,6 +7,7 @@ const core = [
   'file-upload-compat', 'context-original-search-boundary', 'background-owner-reload', 'recommended-update',
   'context-store-cache', 'context-coordinate-release',
   'model-reply', 'temporary-chat',
+  'context-controls', 'settings-state',
 ].map(name => `test/${name}.test.mjs`);
 core.push('test/opencu-browser-generation.test.mjs');
 core.push('test/opencu-app-approval-session-cancel.test.mjs');

@@ -20,7 +20,7 @@ export function apply(ctx) {
   hub.todoStore = registerTasks(ctx, hub.todoStore);
   ctx.tools.register({ name: 'note', description: NOTE_DESCRIPTION,
     parameters: { type: 'object', properties: { text: { type: 'string', description: 'Note content' } }, required: ['text'] }, output: result,
-    async execute({ text }, { agent }) { const state = hub.store.state(agent.session.id); state.notes.push({ text, at: Date.now() }); hub.store.save(state); return text; },
+    async execute({ text }, { agent }) { const state = hub.store.state(agent.session.id); hub.store.update(state, { notes: [...state.notes, { text, at: Date.now() }] }); return text; },
   });
   registerContextRecall(ctx, hub);
   installCatalog(ctx, hub);

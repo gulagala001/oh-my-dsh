@@ -51,7 +51,7 @@ export function renderBudget(budget, { language = 'zh' } = {}) {
 export class TaskBudgets {
   constructor(hub, now = Date.now) { this.hub = hub; this.now = now; this.clocks = new Map(); this.waiting = new Map(); }
   saved(session) { return this.hub.store.state(session.id).budget; }
-  save(session, budget) { const state = this.hub.store.state(session.id); this.hub.store.save({ ...state, budget }); state.budget = budget; }
+  save(session, budget) { this.hub.store.update(this.hub.store.state(session.id), { budget }); }
   tick(session, running, now = this.now()) {
     const budget = this.saved(session), since = this.clocks.get(session.id);
     if (!budget?.configured || !budget.visible) { this.clocks.delete(session.id); return; }
