@@ -30,7 +30,26 @@ export function createCharacterIcons() {
     group.setAttribute('dominant-baseline','central');
     const size=Math.max(4,Math.min(rect.width/item.cols,rect.height/item.rows)+1);
     group.setAttribute('font-size',String(size*bounds.height/rect.height));
+    // Explicit positions keep each character's anchor and baseline. Only join
+    // fully opaque runs: sharing opacity on translucent text would change
+    // how overlapping characters blend.
+    let opaqueX = [], opaqueY = [];
+    const flush = () => {
+      if (!opaqueX.length) return;
+      const text = document.createElementNS(NS, 'text');
+      text.setAttribute('x', opaqueX.join(' '));
+      text.setAttribute('y', opaqueY.join(' '));
+      text.textContent = '+'.repeat(opaqueX.length);
+      group.appendChild(text);
+      opaqueX = []; opaqueY = [];
+    };
     for (const p of item.pixels) {
+      if (p.a === 1) {
+        opaqueX.push(bounds.x+(p.x+.5)*bounds.width/item.cols);
+        opaqueY.push(bounds.y+(p.y+.5)*bounds.height/item.rows);
+        continue;
+      }
+      flush();
       const text = document.createElementNS(NS,'text');
       text.setAttribute('x',String(bounds.x+(p.x+.5)*bounds.width/item.cols));
       text.setAttribute('y',String(bounds.y+(p.y+.5)*bounds.height/item.rows));
@@ -38,6 +57,7 @@ export function createCharacterIcons() {
       text.textContent=p.a>.65?'+':'·';
       group.appendChild(text);
     }
+    flush();
     svg.appendChild(group);
     svg.setAttribute('data-glyph-icon','');
     mounted.set(svg,{group,item,key});
