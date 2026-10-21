@@ -23,7 +23,25 @@ export function applyProjectlessWorkspaces(ctx) {
       }).catch(error => { if (!drafts.lifetime.signal.aborted) drafts.shell(id).notify('error', error.message); });
     }
     workspace.startSession = start;
-    return () => { if (workspace.startSession === start) workspace.startSession = original; drafts.dispose(); style.remove(); };
+    // The native Ungrouped row renders a create button but its onCreate skips
+    // groups without a Workspace. Keep that row and route only its button to
+    // the existing projectless draft flow, without inheriting a Workspace.
+    const onUngroupedCreate = event => {
+      if (event.defaultPrevented || event.button !== 0 || !(event.target instanceof Element)) return;
+      const button = event.target.closest('button');
+      if (!button || button.disabled || !button.closest('[class*="_rowActions"]')
+        || button.closest('[role="treeitem"]')?.dataset.rowKey !== 'workspace:') return;
+      event.preventDefault(); event.stopPropagation();
+      const sessions = ctx.sessions.list.getSnapshot();
+      const id = drafts.current() ?? sessions.ids.find(id => sessions.byId[id]?.cwd);
+      if (id) void drafts.startDraft(id);
+    };
+    document.addEventListener('click', onUngroupedCreate, true);
+    return () => {
+      document.removeEventListener('click', onUngroupedCreate, true);
+      if (workspace.startSession === start) workspace.startSession = original;
+      drafts.dispose(); style.remove();
+    };
   });
   // Install before the owned Conversation provider. Transform its registration
   // once, retaining the original child-slot declarations and their authority.

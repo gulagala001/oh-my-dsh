@@ -277,6 +277,8 @@ export class ProjectlessDrafts {
       const sourceRef = this.ctx.sessions.retain(from, { source: 'workspaceOperation' });
       let targetRef;
       try {
+        await sourceRef.ready;
+        if (navigation.aborted || this.lifetime.signal.aborted) return;
         // Native blank Sessions are hidden drafts. Reuse an existing directory
         // only for this unsent carrier; send() always allocates its own cwd.
         const cwd = this.ctx.sessions.list.getSnapshot().byId[from].cwd;
