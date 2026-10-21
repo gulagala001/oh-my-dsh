@@ -471,8 +471,20 @@ export function createComputerRepl(request, report = () => {}) {
             rejectEvaluation = reject;
             execution.run(current, () => evaluationRepl.eval(`${args.code}\n`, evaluationRepl.context, 'opencu-computer-use', (error, value) => error ? reject(error) : resolve(value)));
           });
-          const value = await Promise.race([evaluation, interrupted]);
-          await Promise.all([...current.pending]);
+          let outcome = await Promise.race([evaluation, interrupted])
+            .then(value => ({value}), error => ({failed: true, error}));
+          current.signal.throwIfAborted();
+          // A failed evaluation can still own dispatched calls. Keep its deadline
+          // and execution context until every call settles, including follow-up
+          // calls started by a completion. Cancellation still interrupts this wait.
+          while (current.pending.size) {
+            const results = await Promise.race([Promise.allSettled([...current.pending]), interrupted]);
+            const failure = results.find(result => result.status === 'rejected' && result.reason?.code === 'RELEASE_FAILED')
+              ?? results.find(result => result.status === 'rejected');
+            if (failure && (!outcome.failed || failure.reason?.code === 'RELEASE_FAILED')) outcome = {failed: true, error: failure.reason};
+          }
+          if (outcome.failed) throw outcome.error;
+          const {value} = outcome;
           current.signal.throwIfAborted();
           if (generation !== runGeneration) throw new Error('Computer session reset');
           // Auto-displayed (or explicitly suppressed) API returns are not a second REPL output.
